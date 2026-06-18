@@ -1,0 +1,8 @@
+.build/
+build/
+.swiftpm/
+*.tiff
+*.profraw
+.codegraph
+.omo/
+.DS_Store

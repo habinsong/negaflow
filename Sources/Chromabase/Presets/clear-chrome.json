@@ -1,0 +1,24 @@
+{
+  "name": "Clear Chrome",
+  "version": 1,
+  "filmTypes": ["colorNegative", "colorPositive"],
+  "tone": {
+    "exposure": 0.0,
+    "density": 0.18,
+    "contrast": 0.18,
+    "highlightRollOff": 0.22,
+    "blackSoftness": 0.1,
+    "midtoneLift": 0.0
+  },
+  "color": {
+    "warmth": -0.02,
+    "tint": -0.02,
+    "colorDepth": -0.12,
+    "saturation": -0.08
+  },
+  "texture": {
+    "grain": 0.04,
+    "sharpness": 0.16,
+    "halation": 0.02
+  }
+}

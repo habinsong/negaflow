@@ -1,0 +1,24 @@
+{
+  "name": "Warm Lab",
+  "version": 1,
+  "filmTypes": ["colorNegative"],
+  "tone": {
+    "exposure": 0.04,
+    "density": 0.14,
+    "contrast": 0.06,
+    "highlightRollOff": 0.4,
+    "blackSoftness": 0.22,
+    "midtoneLift": 0.05
+  },
+  "color": {
+    "warmth": 0.16,
+    "tint": 0.02,
+    "colorDepth": 0.1,
+    "saturation": 0.04
+  },
+  "texture": {
+    "grain": 0.05,
+    "sharpness": 0.1,
+    "halation": 0.05
+  }
+}

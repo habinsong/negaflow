@@ -1,0 +1,24 @@
+{
+  "name": "Soft Print",
+  "version": 1,
+  "filmTypes": ["colorNegative"],
+  "tone": {
+    "exposure": 0.05,
+    "density": 0.08,
+    "contrast": -0.08,
+    "highlightRollOff": 0.5,
+    "blackSoftness": 0.32,
+    "midtoneLift": 0.06
+  },
+  "color": {
+    "warmth": 0.06,
+    "tint": 0.01,
+    "colorDepth": 0.04,
+    "saturation": -0.05
+  },
+  "texture": {
+    "grain": 0.06,
+    "sharpness": 0.06,
+    "halation": 0.04
+  }
+}
