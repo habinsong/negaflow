@@ -57,7 +57,7 @@ public struct ScannerReport: Codable, Sendable {
 
     public init(descriptor: ScannerDescriptor, backend: BackendType,
                 backendAvailable: Bool, capabilities: ScannerCapabilities) {
-        self.app = "Negaflow"
+        self.app = "negaflow"
         self.appVersion = "0.1.0"
         self.generatedAt = Date()
         self.scanner = ScannerInfo(descriptor)

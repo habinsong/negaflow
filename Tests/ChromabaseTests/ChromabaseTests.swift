@@ -122,6 +122,45 @@ final class ChromabaseTests: XCTestCase {
         }
     }
 
+    func testLowRangeColorNegativeDevelopsToVisiblePositive() {
+        let width = 48
+        let height = 32
+        let base = SIMD3<Double>(0.224, 0.094, 0.067)
+        var bytes = [UInt8](repeating: 0, count: width * height * 4)
+        for y in 0..<height {
+            for x in 0..<width {
+                let i = (y * width + x) * 4
+                let isBorder = y < 3 || y >= height - 3 || x < 3 || x >= width - 3
+                let positiveLuma = Double(x) / Double(width - 1)
+                let dense = SIMD3<Double>(
+                    base.x * (0.18 + positiveLuma * 0.50),
+                    base.y * (0.16 + positiveLuma * 0.48),
+                    base.z * (0.14 + positiveLuma * 0.45)
+                )
+                let sample = isBorder ? base : dense
+                bytes[i] = UInt8(max(0, min(255, Int(sample.x * 255))))
+                bytes[i + 1] = UInt8(max(0, min(255, Int(sample.y * 255))))
+                bytes[i + 2] = UInt8(max(0, min(255, Int(sample.z * 255))))
+                bytes[i + 3] = 255
+            }
+        }
+
+        let image = makeTestImage(bytes: bytes, width: width, height: height)
+        var params = DevelopParameters()
+        params.filmType = .colorNegative
+        let output = ChromabaseEngine().develop(
+            image: image,
+            base: FilmBase(rgb: base, source: .border),
+            params: params
+        )
+        let rendered = renderRGBA8(output, width: width, height: height)
+        let stats = lumaStats(rendered)
+
+        XCTAssertGreaterThan(stats.p95, 145, "저노출 raw 컬러 네거티브가 현상 후에도 검붉게 죽으면 안 된다.")
+        XCTAssertGreaterThan(stats.mean, 70, "저노출 raw 컬러 네거티브는 기본 현상만으로도 화면에서 식별 가능해야 한다.")
+        XCTAssertLessThan(stats.p05, 80, "검은 필름 홀더/암부는 검은 기준을 유지해야 한다.")
+    }
+
     func testColorNegativeExportsJPEGAndTIFFFromSameDevelopedImage() throws {
         let fixture = makeSyntheticColorNegativeFixture()
         var params = DevelopParameters()

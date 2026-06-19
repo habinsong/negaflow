@@ -7,25 +7,27 @@ import ImageIO
 //
 // JPEG 95% 기본 / 16bit TIFF 옵션 / Raw 보관. (plan §4.2)
 // 출력은 sRGB로 변환 (plan §8.3 MVP).
+// EXIF(scanner/dpi/film/software) 자동 주입.
 public enum ExportEngine {
     public static func write(_ image: CIImage, to url: URL, format: ExportFormat,
-                             using context: CIContext) throws {
+                             using context: CIContext, metadata: ExportMeta? = nil) throws {
         switch format {
         case .jpeg:
-            try writeJPEG(image, to: url, using: context, quality: 0.95)
+            try writeJPEG(image, to: url, using: context, quality: 0.95, metadata: metadata)
         case .tiff16:
-            try writeTIFF(image, to: url, using: context, bitsPerComponent: 16)
+            try writeTIFF(image, to: url, using: context, bitsPerComponent: 16, metadata: metadata)
         case .rawScanTIFF:
-            try writeTIFF(image, to: url, using: context, bitsPerComponent: 16)
+            try writeTIFF(image, to: url, using: context, bitsPerComponent: 16, metadata: metadata)
         }
     }
 
     static func writeJPEG(_ image: CIImage, to url: URL, using context: CIContext,
-                          quality: CGFloat) throws {
+                          quality: CGFloat, metadata: ExportMeta? = nil) throws {
         let cs = CGColorSpace(name: CGColorSpace.sRGB)!
-        let props: [CFString: Any] = [
+        var props: [CFString: Any] = [
             kCGImageDestinationLossyCompressionQuality: quality,
         ]
+        props.merge(metadataProperties(metadata)) { _, new in new }
         let cg = context.createCGImage(image, from: image.extent, format: .RGBA8, colorSpace: cs)
         guard let cg else { throw ChromabaseError.writeFailed("createCGImage nil: \(url.path)") }
         guard let dest = CGImageDestinationCreateWithURL(url as CFURL, "public.jpeg" as CFString, 1, nil)
@@ -37,7 +39,7 @@ public enum ExportEngine {
     }
 
     static func writeTIFF(_ image: CIImage, to url: URL, using context: CIContext,
-                          bitsPerComponent: Int) throws {
+                          bitsPerComponent: Int, metadata: ExportMeta? = nil) throws {
         let cs = CGColorSpace(name: CGColorSpace.sRGB)!
         guard let dest = CGImageDestinationCreateWithURL(url as CFURL, "public.tiff" as CFString, 1, nil)
         else { throw ChromabaseError.writeFailed(url.path) }
@@ -45,10 +47,63 @@ public enum ExportEngine {
         let format: CIFormat = bitsPerComponent == 16 ? .RGBAh : .RGBA8
         let cg = context.createCGImage(image, from: image.extent, format: format, colorSpace: cs)
         guard let cg else { throw ChromabaseError.writeFailed(url.path) }
-        CGImageDestinationAddImage(dest, cg, nil)
+        let props = metadataProperties(metadata) as CFDictionary
+        CGImageDestinationAddImage(dest, cg, props)
         guard CGImageDestinationFinalize(dest) else {
             throw ChromabaseError.writeFailed(url.path)
         }
+    }
+
+    /// ExportMeta → CGImageDestination props(EXIF + TIFF dictionary).
+    /// transform이 픽셀에 구워졌으므로 orientation=1.
+    static func metadataProperties(_ meta: ExportMeta?) -> [CFString: Any] {
+        guard let meta = meta else { return [:] }
+        var exif: [String: Any] = [:]
+        var tiff: [String: Any] = [:]
+        if let make = meta.scannerModel {
+            // Make = 제조사, Model = 모델명. scannerModel 이 "Plustek OpticFilm 8200i" 면
+            // 첫 토큰을 Make, 나머지를 Model 로 분리.
+            let parts = make.split(separator: " ", maxSplits: 1).map(String.init)
+            exif["Make"] = parts.first
+            tiff["Make"] = parts.first
+            exif["Model"] = parts.count > 1 ? parts[1] : make
+            tiff["Model"] = parts.count > 1 ? parts[1] : make
+        }
+        if let dpi = meta.resolutionDPI, dpi > 0 {
+            exif["XResolution"] = dpi as NSNumber
+            exif["YResolution"] = dpi as NSNumber
+            exif["ResolutionUnit"] = 2   // inches
+            tiff["XResolution"] = dpi as NSNumber
+            tiff["YResolution"] = dpi as NSNumber
+            tiff["ResolutionUnit"] = 2
+        }
+        let df = DateFormatter()
+        df.dateFormat = "yyyy:MM:dd HH:mm:ss"
+        exif["DateTimeOriginal"] = df.string(from: Date())
+        exif["DateTimeDigitized"] = df.string(from: Date())
+        if let software = meta.software { exif["Software"] = software; tiff["Software"] = software }
+        if let film = meta.filmType { exif["UserComment"] = "FilmType: \(film)" }
+        exif["Orientation"] = 1   // transform 구움
+        var props: [CFString: Any] = [:]
+        props[kCGImagePropertyExifDictionary] = exif
+        props[kCGImagePropertyTIFFDictionary] = tiff
+        props[kCGImagePropertyOrientation] = 1
+        return props
+    }
+}
+
+/// 출력 파일에 들어갈 EXIF/TIFF 메타데이터.
+public struct ExportMeta: Sendable {
+    public var scannerModel: String?
+    public var resolutionDPI: Int?
+    public var filmType: String?
+    public var software: String?
+    public init(scannerModel: String? = nil, resolutionDPI: Int? = nil,
+                filmType: String? = nil, software: String? = nil) {
+        self.scannerModel = scannerModel
+        self.resolutionDPI = resolutionDPI
+        self.filmType = filmType
+        self.software = software
     }
 }
 
@@ -71,6 +126,9 @@ public struct Sidecar: Codable, Sendable {
 
     public struct CropRect: Codable, Sendable {
         public var x: Double; public var y: Double; public var w: Double; public var h: Double
+        public init(x: Double, y: Double, w: Double, h: Double) {
+            self.x = x; self.y = y; self.w = w; self.h = h
+        }
     }
     public struct BaseSample: Codable, Sendable {
         public var r: Double; public var g: Double; public var b: Double
@@ -79,6 +137,9 @@ public struct Sidecar: Codable, Sendable {
     }
     public struct ExportRecord: Codable, Sendable {
         public var path: String; public var format: String; public var at: Date
+        public init(path: String, format: String, at: Date) {
+            self.path = path; self.format = format; self.at = at
+        }
     }
 
     public init(filmType: FilmType, parameters: DevelopParameters) {

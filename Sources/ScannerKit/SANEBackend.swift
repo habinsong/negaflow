@@ -84,7 +84,19 @@ public final class SANEBackend: ScannerBackend, @unchecked Sendable {
     /// 안정적인 장치 식별자 기반. scannerID 접두사(sane-)를 벗긴 값이
     /// "genesys:libusb:..." 형태이므로, 그 안의 vid/pid 가 아니라 -L 의 동일
     /// 모델 문자열(PLUSTEK ... OpticFilm ...)을 기준으로 현재 주소를 찾는다.
+    ///
+    /// 최적화: 주소는 TTL 5초 캐싱. USB 주소는 리셋 시에만 바뀌므로, 연속 스캔/배치에서
+    /// 매번 -L 를 돌릴 필요가 없다. notConnected 시 즉시 무효화.
+    private nonisolated(unsafe) var cachedAddress: String?
+    private nonisolated(unsafe) var cachedAddressAt: Date = .distantPast
+    private let addressCacheTTL: TimeInterval = 5.0
+
     func currentDeviceAddress() async throws -> String {
+        // 캐시 유효하면 재사용.
+        if let cached = cachedAddress,
+           Date().timeIntervalSince(cachedAddressAt) < addressCacheTTL {
+            return cached
+        }
         let out = try await runScanimage(args: ["-L"])
         // `device `genesys:libusb:000:011' is a PLUSTEK OpticFilm 8100 flatbed scanner`
         let regex = try NSRegularExpression(
@@ -93,9 +105,21 @@ public final class SANEBackend: ScannerBackend, @unchecked Sendable {
         let range = NSRange(out.startIndex..., in: out)
         if let m = regex.firstMatch(in: out, range: range),
            let addrRange = Range(m.range(at: 1), in: out) {
-            return "genesys:" + String(out[addrRange])
+            let addr = "genesys:" + String(out[addrRange])
+            cachedAddress = addr
+            cachedAddressAt = Date()
+            return addr
         }
+        // 실패 시 캐시 무효화.
+        cachedAddress = nil
+        cachedAddressAt = .distantPast
         throw ScannerError(.notConnected, "scanimage -L 이 장치를 찾지 못함 (주소 재획득 실패)")
+    }
+
+    /// 캐시 강제 무효화(장치 점유/재연결 등).
+    public func invalidateAddressCache() {
+        cachedAddress = nil
+        cachedAddressAt = .distantPast
     }
 
     /// scanimage -A 출력을 ScannerCapabilities로 변환한다.
@@ -441,16 +465,33 @@ public final class SANEBackend: ScannerBackend, @unchecked Sendable {
     /// 시작 전에 이전 scanimage 좀비 프로세스를 정리한다.
     /// 좀비가 USB 장치를 붙잡고 있으면 새 스캔이 "Invalid argument" 로 실패한다
     /// (실제로 발생한 버그). scanimage 바이너리 경로로 ps 를 돌려 잔류분을 죽인다.
+    ///
+    /// 최적화: 잔류 프로세스가 실제로 존재할 때만 정리 + 대기. 이전에는 매 스캔마다
+    /// 무조건 1초 대기를 해서 배치/단일 스캔 모두 지연의 원인이 됐다. pgrep 로
+    /// 잔류분이 없으면 즉시 반환(0초 비용).
     private func reapZombieScanimages() {
-        // 현재 실행 예정인 scanimage 와 동일한 절대경로로 돈 잔류 프로세스만 정리.
         let path = scanimage
+        // 1) 잔류 scanimage 가 있는지 먼저 확인(비활성 pkill).
+        let probe = Process()
+        probe.launchPath = "/bin/sh"
+        probe.arguments = ["-c", "pgrep -f '\(path)' || true"]
+        let probePipe = Pipe()
+        probe.standardOutput = probePipe
+        try? probe.run(); probe.waitUntilExit()
+        let out = (try? probePipe.fileHandleForReading.readToEnd()) ?? Data()
+        let count = String(data: out, encoding: .utf8)?
+            .split(separator: "\n")
+            .filter { !$0.isEmpty }
+            .count ?? 0
+        guard count > 0 else { return }   // 잔류 없음 → 즉시 반환(1초 대기 생략)
+
+        // 2) 잔류가 있으면 정리.
         let task = Process()
         task.launchPath = "/bin/sh"
         task.arguments = ["-c", "pkill -9 -f '\(path)' || true"]
-        // 자기 자신(이번 호출)은 아직 시작 전이므로 안전.
         try? task.run()
         task.waitUntilExit()
-        // 정리 후 USB 가 해제되도록 충분히 대기(너무 짧으면 첫 스캔이 open 실패).
+        // USB 해제 대기(좀비가 있었을 때만).
         Thread.sleep(forTimeInterval: 1.0)
     }
 
@@ -462,7 +503,7 @@ public final class SANEBackend: ScannerBackend, @unchecked Sendable {
         let proc = Process()
         proc.executableURL = URL(fileURLWithPath: scanimage)
         proc.arguments = args
-        proc.environment = Self.makeSaneEnvironment()
+        proc.environment = makeSaneEnvironmentWithDefaultDevice()
         let outPipe = Pipe()
         let errPipe = Pipe()
         proc.standardOutput = outPipe
@@ -497,7 +538,7 @@ public final class SANEBackend: ScannerBackend, @unchecked Sendable {
             let proc = Process()
             proc.executableURL = URL(fileURLWithPath: scanimage)
             proc.arguments = args
-            proc.environment = Self.makeSaneEnvironment()
+            proc.environment = makeSaneEnvironmentWithDefaultDevice()
             self.stderrBuffer = ""
             try? FileManager.default.removeItem(at: outputURL)
             FileManager.default.createFile(atPath: outputURL.path, contents: nil)
@@ -595,6 +636,18 @@ public final class SANEBackend: ScannerBackend, @unchecked Sendable {
             .filter { FileManager.default.fileExists(atPath: $0) }
         if !libdirs.isEmpty, env["SANE_BACKENDS_PATH"] == nil {
             env["SANE_BACKENDS_PATH"] = libdirs.joined(separator: ":")
+        }
+        return env
+    }
+
+    /// 인스턴스용 환경 — 정적 버전에 캐시된 기본 디바이스를 얹는다.
+    /// SANE_DEFAULT_DEVICE 가 있으면 scanimage -L 가 probe 없이 그 장치를 바로 연다.
+    func makeSaneEnvironmentWithDefaultDevice() -> [String: String] {
+        var env = Self.makeSaneEnvironment()
+        // 캐시된 주소가 유효하면 기본 디바이스로 주입.
+        if let cached = cachedAddress,
+           Date().timeIntervalSince(cachedAddressAt) < addressCacheTTL {
+            env["SANE_DEFAULT_DEVICE"] = cached
         }
         return env
     }

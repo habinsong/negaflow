@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>Negaflow</h1>
+  <h1>negaflow</h1>
   <p>macOS Native Film Scanning & Developing Application for Plustek OpticFilm</p>
 
   [![macOS](https://img.shields.io/badge/macOS-13.0+-black.svg?logo=apple)](#)
@@ -15,7 +15,7 @@
 
 ## 프로젝트 소개 (About The Project)
 
-**Negaflow**는 Plustek OpticFilm 스캐너 사용자를 위한 macOS 네이티브 필름 스캔 및 현상 애플리케이션입니다.
+**negaflow**는 Plustek OpticFilm 스캐너 사용자를 위한 macOS 네이티브 필름 스캔 및 현상 애플리케이션입니다.
 
 기존의 복잡한 스캔 소프트웨어 워크플로에서 벗어나, 원본 스캔부터 최종 색감 보정 및 출력(JPEG/TIFF)까지 단일 앱에서 직관적으로 처리할 수 있도록 설계되었습니다. 내장된 **Chromabase 색감 엔진**을 통해 고품질의 네거티브 반전과 현대적인 톤 매핑을 제공합니다.
 
@@ -39,8 +39,8 @@
 
 ```bash
 # 1. 저장소 클론
-git clone <repo> Negaflow
-cd Negaflow
+git clone <repo> negaflow
+cd negaflow
 
 # 2. SANE 백엔드 설치 (Homebrew)
 brew install sane-backends
@@ -76,7 +76,7 @@ swift build
 
 ## 하드웨어 호환성 (Supported Hardware)
 
-Negaflow는 장치의 특정 모델명을 코드에 고정(Hardcoding)하지 않고, 스캐너가 시스템에 보고하는 **기능(Capability)**을 기반으로 작동합니다.
+negaflow는 장치의 특정 모델명을 코드에 고정(Hardcoding)하지 않고, 스캐너가 시스템에 보고하는 **기능(Capability)**을 기반으로 작동합니다.
 
 * **완전 검증됨 (Verified):** Plustek OpticFilm 8200i
 * **호환 예정 (Compatible):** Plustek OpticFilm 8100, 8300i
@@ -90,7 +90,7 @@ Negaflow는 장치의 특정 모델명을 코드에 고정(Hardcoding)하지 않
 
 1. **ScannerKit:** 스캐너 통신을 담당하는 하드웨어 추상화 계층입니다. (현재 기본 백엔드로 SANE 사용)
 2. **Chromabase:** 필름 데이터의 색상 변환과 네거티브 반전 수학을 처리하는 핵심 엔진입니다.
-3. **NegaflowApp / negaflow:** 사용자 상호작용을 담당하는 SwiftUI 데스크톱 앱 및 CLI입니다.
+3. **negaflowApp / negaflow:** 사용자 상호작용을 담당하는 SwiftUI 데스크톱 앱 및 CLI입니다.
 
 ## 라이선스 (License)
 

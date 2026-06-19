@@ -102,20 +102,25 @@ public final class ChromabaseEngine: @unchecked Sendable {
 
         if params.filmType.requiresInversion {
             // ─── 네거티브 계열: 오렌지 마스크 제거 + 반전 (plan §8.4) ───
-            // 2. Film base 추정(없으면 자동).
+            // 1. Film base 추정(없으면 자동). 이 값은 raw 좌표계 기준이므로
+            //    반전보다 먼저 AutoLevels를 적용하면 I/base가 틀어진다.
             let fb = base ?? FilmBaseEstimator.estimate(from: img) ??
                      FilmBase(rgb: SIMD3(0.9, 0.65, 0.45), source: .auto)
-            // 3-4. 오렌지 마스크 제거 + 네거티브 반전 (density-based)
+            // 2-3. 오렌지 마스크 제거 + 네거티브 반전 (density-based)
             img = NegativeInversion.apply(to: img, base: fb)
+            // 4. SANE raw 저노출은 반전 후 positive 좌표계에서 레벨을 편다.
+            img = AutoLevels.apply(to: img)
             // 5-8. 채널 균형 + 노출 + 톤 커브 + 컬러
             img = ColorModel.apply(to: img, params: params)
             img = ToneMapper.applyExposure(to: img, stops: params.exposure)
             img = ToneMapper.applyToneCurves(to: img, params: params)
         } else {
             // ─── 포지티브/슬라이드 계열: 반전 없음, 슬라이드 특성 톤/컬러 ───
+            // 1. Auto Levels — SANE genesys 백엔드는 감마/노출 보정 없이 raw 데이터를
+            //    내보낸다. 포지티브는 raw 직후에 데이터를 정상 범위로 편다.
+            img = AutoLevels.apply(to: img)
             // 슬라이드는 이미 양화 상태. 높은 밀도, 선명한 컬러, 딥 블랙,
             // 하이라이트 보호가 핵심이다 (plan §8.9 Deep Slide 참고).
-            img = AutoLevels.apply(to: img)
             img = PositiveDevelop.applyBaseGrade(to: img, filmType: params.filmType)
             img = ColorModel.apply(to: img, params: params)
             img = ToneMapper.applyExposure(to: img, stops: params.exposure)
@@ -131,12 +136,13 @@ public final class ChromabaseEngine: @unchecked Sendable {
 
     /// 파일 → 파일 현상 + 출력.
     public func developFile(input: URL, output: URL, format: ExportFormat,
-                            base: FilmBase?, params: DevelopParameters) throws {
+                            base: FilmBase?, params: DevelopParameters,
+                            metadata: ExportMeta? = nil) throws {
         guard let inputImg = loadImage(input) else {
             throw ChromabaseError.loadFailed(input.path)
         }
         let developed = develop(image: inputImg, base: base, params: params)
-        try ExportEngine.write(developed, to: output, format: format, using: ci)
+        try ExportEngine.write(developed, to: output, format: format, using: ci, metadata: metadata)
     }
 
     // MARK: helpers

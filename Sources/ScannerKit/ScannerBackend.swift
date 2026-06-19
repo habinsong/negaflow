@@ -51,18 +51,25 @@ public final class ScannerRegistry: @unchecked Sendable {
     }
 
     /// 등록된 모든 백엔드에서 장치를 수집한다.
+    ///
+    /// 최적화: 백엔드별로 동시에 probe 한다(TaskGroup). 이전에는 순차 실행이라
+    /// Mock(즉시)이 SANE(수초)을 기다렸다. SANE 백엔드 수가 하나뿐이더라도 다른
+    /// 백엔드가 즉시 반환하므로 UI 가 빨리 채워진다.
     public func detectAll() async throws -> [(backend: BackendType, devices: [ScannerDescriptor])] {
-        var out: [(BackendType, [ScannerDescriptor])] = []
-        for b in backends {
-            do {
-                let devices = try await b.detectScanners()
-                out.append((b.backendType, devices))
-            } catch {
-                // 한 백엔드 실패가 전체를 막지 않게 한다.
-                out.append((b.backendType, []))
+        let snapshot = backends
+        return await withTaskGroup(of: (Int, BackendType, [ScannerDescriptor]).self) { group in
+            for (idx, b) in snapshot.enumerated() {
+                group.addTask {
+                    let devs = (try? await b.detectScanners()) ?? []
+                    return (idx, b.backendType, devs)
+                }
             }
+            var collected: [(Int, BackendType, [ScannerDescriptor])] = []
+            for await r in group { collected.append(r) }
+            // 원래 backends 순서대로 정렬.
+            collected.sort { $0.0 < $1.0 }
+            return collected.map { ($0.1, $0.2) }
         }
-        return out
     }
 
     /// 특정 장치 ID를 지원하는 백엔드를 찾는다.

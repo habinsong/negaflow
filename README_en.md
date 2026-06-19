@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>Negaflow</h1>
+  <h1>negaflow</h1>
   <p>macOS Native Film Scanning & Developing Application for Plustek OpticFilm</p>
 
   [![macOS](https://img.shields.io/badge/macOS-13.0+-black.svg?logo=apple)](#)
@@ -15,9 +15,9 @@
 
 ## About The Project
 
-**Negaflow** is a macOS-native film scanning and developing application designed exclusively for Plustek OpticFilm scanners. 
+**negaflow** is a macOS-native film scanning and developing application designed exclusively for Plustek OpticFilm scanners. 
 
-It completely bypasses the legacy workflows of traditional scanning software. Instead, Negaflow captures the high-bit-depth raw scan data and directly pipes it into its built-in **Chromabase color engine**. This unified approach ensures seamless orange mask removal, accurate negative inversion, and modern tone mapping, all within a single app.
+It completely bypasses the legacy workflows of traditional scanning software. Instead, negaflow captures the high-bit-depth raw scan data and directly pipes it into its built-in **Chromabase color engine**. This unified approach ensures seamless orange mask removal, accurate negative inversion, and modern tone mapping, all within a single app.
 
 ## Key Features
 
@@ -39,8 +39,8 @@ Clone the repository and build the application using the provided shell script.
 
 ```bash
 # 1. Clone the repository
-git clone <repo> Negaflow
-cd Negaflow
+git clone <repo> negaflow
+cd negaflow
 
 # 2. Install SANE backend (via Homebrew)
 brew install sane-backends
@@ -76,7 +76,7 @@ swift build
 
 ## Supported Hardware
 
-Negaflow avoids hardcoded device names. Instead, it dynamically queries the scanner's **Capabilities** to enable features.
+negaflow avoids hardcoded device names. Instead, it dynamically queries the scanner's **Capabilities** to enable features.
 
 * **Verified:** Plustek OpticFilm 8200i
 * **Compatible Targets:** Plustek OpticFilm 8100, 8300i
@@ -90,7 +90,7 @@ The codebase is strictly layered to separate hardware communication from mathema
 
 1. **ScannerKit:** The hardware abstraction layer (currently defaulting to SANE).
 2. **Chromabase:** The core mathematical engine handling color transformations and density inversions.
-3. **NegaflowApp / negaflow:** The user-facing interfaces (SwiftUI desktop app and CLI).
+3. **negaflowApp / negaflow:** The user-facing interfaces (SwiftUI desktop app and CLI).
 
 ## License
 

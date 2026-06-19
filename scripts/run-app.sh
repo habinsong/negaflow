@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# scripts/run-app.sh — Negaflow GUI 앱을 빌드하고 실행한다.
+# scripts/run-app.sh — negaflow GUI 앱을 빌드하고 실행한다.
 #
 # 왜 이 스크립트가 필요한가?
 #   Xcode 26 SDK에서 SPM CLI 링커(swift run / swift build)가 SwiftUI가 의존하는
@@ -27,15 +27,15 @@ case "${1:-run}" in
 esac
 
 BUILD_DIR="$ROOT/build"
-APP_BUNDLE="$BUILD_DIR/Negaflow.app"
-DERIVED="$BUILD_DIR/DerivedData"
+APP_BUNDLE="$BUILD_DIR/negaflowApp.app"
+DERIVED="${NEGAFLOW_DERIVED_DATA_PATH:-$BUILD_DIR/DerivedData.$(id -un)}"
 
-echo "[run-app] building NegaflowApp ($CONFIG) via xcodebuild..."
+echo "[run-app] building negaflowApp ($CONFIG) via xcodebuild..."
 mkdir -p "$BUILD_DIR"
 
-# 1) xcodebuild 로 패키지 빌드. 스킴은 product 이름(Negaflow)을 따른다.
+# 1) xcodebuild 로 패키지 빌드. 스킴은 product 이름(negaflowApp)을 따른다.
 xcodebuild \
-  -scheme Negaflow \
+  -scheme negaflowApp \
   -configuration "$CONFIG" \
   -destination 'generic/platform=macOS' \
   -derivedDataPath "$DERIVED" \
@@ -43,10 +43,10 @@ xcodebuild \
   build 2>&1 | tail -40
 
 # 2) 산출 실행파일을 찾는다.
-BIN=$(find "$DERIVED/Build/Products/$CONFIG" -maxdepth 2 -type f -name "NegaflowApp" 2>/dev/null | head -1 || true)
+BIN=$(find "$DERIVED/Build/Products/$CONFIG" -maxdepth 2 -type f -name "negaflowApp" 2>/dev/null | head -1 || true)
 if [ -z "$BIN" ]; then
-  # NegaflowApp 실행파일이 번들로 안 나올 수도 있다 → 직접 실행파일을 .app로 포장.
-  BIN=$(find "$DERIVED/Build/Products/$CONFIG" -maxdepth 3 -type f -perm +111 -name "Negaflow*" 2>/dev/null | grep -v "\.app/" | head -1 || true)
+  # negaflowApp 실행파일이 번들로 안 나올 수도 있다 → 직접 실행파일을 .app로 포장.
+  BIN=$(find "$DERIVED/Build/Products/$CONFIG" -maxdepth 3 -type f -perm +111 -name "negaflowApp*" 2>/dev/null | grep -v "\.app/" | head -1 || true)
 fi
 if [ -z "$BIN" ]; then
   echo "[run-app] ERROR: 빌드 산출물을 찾을 수 없습니다. 위 xcodebuild 로그를 확인하세요." >&2
@@ -55,7 +55,7 @@ fi
 echo "[run-app] binary: $BIN"
 
 if [ -e "$APP_BUNDLE" ] && [ ! -w "$APP_BUNDLE" ]; then
-  ARCHIVED_BUNDLE="$BUILD_DIR/Negaflow.app.unwritable.$(date +%Y%m%d%H%M%S)"
+  ARCHIVED_BUNDLE="$BUILD_DIR/negaflowApp.app.unwritable.$(date +%Y%m%d%H%M%S)"
   mv "$APP_BUNDLE" "$ARCHIVED_BUNDLE" || {
     echo "[run-app] ERROR: 기존 $APP_BUNDLE 를 옮길 수 없습니다. 소유권을 확인하세요." >&2
     exit 1
@@ -66,18 +66,18 @@ fi
 # 3) 간단한 .app 번들로 포장 (open 으로 띄우기 위해).
 rm -rf "$APP_BUNDLE"
 mkdir -p "$APP_BUNDLE/Contents/MacOS"
-cp "$BIN" "$APP_BUNDLE/Contents/MacOS/Negaflow"
+cp "$BIN" "$APP_BUNDLE/Contents/MacOS/negaflowApp"
 
 cat > "$APP_BUNDLE/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>CFBundleName</key><string>Negaflow</string>
+  <key>CFBundleName</key><string>negaflowApp</string>
   <key>CFBundleIdentifier</key><string>com.negaflow.app</string>
   <key>CFBundleVersion</key><string>1</string>
   <key>CFBundleShortVersionString</key><string>0.1.0</string>
-  <key>CFBundleExecutable</key><string>Negaflow</string>
+  <key>CFBundleExecutable</key><string>negaflowApp</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>LSMinimumSystemVersion</key><string>13.0</string>
   <key>NSHighResolutionCapable</key><true/>
@@ -86,7 +86,7 @@ cat > "$APP_BUNDLE/Contents/Info.plist" <<'PLIST'
 PLIST
 
 # Chromabase 프리셋 리소스 번들이 산출물 옆에 있으면 같이 복사 (런타임에 Presets 로드용).
-PRESET_BUNDLE=$(find "$DERIVED/Build/Products/$CONFIG" -name "Negaflow_Chromabase.bundle" 2>/dev/null | head -1 || true)
+PRESET_BUNDLE=$(find "$DERIVED/Build/Products/$CONFIG" -name "negaflow_Chromabase.bundle" 2>/dev/null | head -1 || true)
 if [ -n "$PRESET_BUNDLE" ]; then
   cp -R "$PRESET_BUNDLE" "$APP_BUNDLE/Contents/Resources/" 2>/dev/null || \
     mkdir -p "$APP_BUNDLE/Contents/Resources" && cp -R "$PRESET_BUNDLE" "$APP_BUNDLE/Contents/Resources/"

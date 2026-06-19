@@ -78,10 +78,15 @@ public enum AutoLevels {
         let scaled = image.transformed(by: CGAffineTransform(
             scaleX: CGFloat(scale), y: CGFloat(scale)))
 
-        let cs = CGColorSpace(name: CGColorSpace.genericRGBLinear)
+        // 샘플링은 메인 develop 체인과 동일한 sRGB 색공간에서 읽어야
+        // CIColorMatrix 가 적용될 때 값이 일관된다(불일치 시 흰 화면 버그).
+        let cs = CGColorSpace(name: CGColorSpace.sRGB)
             ?? CGColorSpaceCreateDeviceRGB()
         var bitmap = [UInt8](repeating: 0, count: targetW * targetH * 4)
-        let ciCtx = CIContext(options: [.workingColorSpace: NSNull()])
+        let ciCtx = CIContext(options: [
+            .workingColorSpace: cs as Any,
+            .outputColorSpace: cs as Any,
+        ])
         ciCtx.render(scaled, toBitmap: &bitmap, rowBytes: targetW * 4,
                      bounds: CGRect(x: 0, y: 0, width: targetW, height: targetH),
                      format: .RGBA8, colorSpace: cs)

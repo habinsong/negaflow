@@ -1,6 +1,6 @@
 # Scanner Backend Strategy
 
-How Negaflow talks to a Plustek OpticFilm on macOS.
+How negaflow talks to a Plustek OpticFilm on macOS.
 
 ## TL;DR
 
@@ -51,7 +51,7 @@ $ scanimage -A -d genesys:libusb:000:010
 - A **real 3600 dpi / 16-bit RGB TIFF** was captured (5088×3401, ~99 MB, 42 s) and successfully developed through Chromabase.
 
 ### What this means
-- Negaflow's scanner layer is **SANE first**.
+- negaflow's scanner layer is **SANE first**.
 - ICA stays as an inactive bridge (`InactiveImageCaptureBackend`) so a future model that does expose itself to Image Capture can slot in without architectural change.
 - IR channel capture is **not** exposed by the genesys backend on this device. IR dust removal remains a Phase 5 research item, exactly as the plan's risk section allows.
 
@@ -122,4 +122,4 @@ scanimage -d 'genesys:libusb:000:010' \
 negaflow develop raw_3600_16bit.tiff out.jpg --look rich-neutral
 ```
 
-> Note: USB device addresses (`libusb:000:NNN`) re-enumerate on replug. Always re-run `scanimage -L` and use the current address. Negaflow's `SANEBackend` does this in `detectScanners()`.
+> Note: USB device addresses (`libusb:000:NNN`) re-enumerate on replug. Always re-run `scanimage -L` and use the current address. negaflow's `SANEBackend` does this in `detectScanners()`.

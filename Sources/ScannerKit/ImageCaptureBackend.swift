@@ -1,6 +1,6 @@
 import Foundation
 // ImageCaptureCore는 앱 타겟에서만 임포트한다(SPM 라이브러리 타겟에서 ICA 의존성 분리).
-// 여기서는 백엔드 인터페이스만 제공하고, 실제 ICA 연동은 NegaflowApp에서 수행한다.
+// 여기서는 백엔드 인터페이스만 제공하고, 실제 ICA 연동은 negaflowApp에서 수행한다.
 
 // MARK: - ImageCaptureBackend (plan §6.2 — 골격)
 //
@@ -9,7 +9,7 @@ import Foundation
 //   제조사 ICA 드라이버가 없기 때문이다. 따라서 현재 이 백엔드는 비활성 상태로,
 //   미래 호환 모델(8300i 등이 ICA에 노출되는 경우)을 대비해 프로토콜만 갖춘다.
 //
-//   실제 ICA 드라이버가 설치된 환경에서는 NegaflowApp 계층의
+//   실제 ICA 드라이버가 설치된 환경에서는 negaflowApp 계층의
 //   ImageCaptureBridge가 이 프로토콜을 구현한다.
 public protocol ImageCaptureBridge: ScannerBackend {
     /// ICA가 장치를 발견했는지 여부. 앱 시작 시 한 번 검증용.
