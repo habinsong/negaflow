@@ -66,7 +66,7 @@ struct CLI {
         print("bitDepths   : \(cap.supportedBitDepths.map(\.rawValue))")
         print("infrared    : \(cap.supportsInfrared)")
         print("transparency: \(cap.supportsTransparency)")
-        print("multiExp    : \(cap.supportsMultiExposure)")
+        print("multiSample : \(cap.supportsMultiExposure)")
         print("scanArea    : \(cap.maxScanArea.widthMM)×\(cap.maxScanArea.heightMM) mm")
     }
 
@@ -108,9 +108,9 @@ struct CLI {
         guard let device else { fail("no scanner detected") }
         let backend = registry.backend(for: device.id)!
         let label = dpi == 0 ? "preview" : "\(dpi)dpi"
-        let bracketed = !preview && (hdr || !filmType.requiresInversion)
+        let multiSample = !preview && hdr
         let filmLabel = filmType.requiresInversion ? "" : "_positive"
-        let hdrLabel = bracketed ? "_hdr" : ""
+        let hdrLabel = multiSample ? "_hdr" : ""
         let out = URL(fileURLWithPath: "scan_\(label)\(filmLabel)\(hdrLabel).tiff")
         var opts = ScanOptions.strongDefault(scannerID: device.id)
         opts.resolution = Resolution(dpi)
@@ -118,7 +118,7 @@ struct CLI {
         opts.filmType = filmType
         opts.multiExposureEnabled = hdr
         opts.temporaryOutputURL = out
-        print("[scan] \(device.displayName) @ \(dpi == 0 ? "preview" : "\(dpi)dpi") film=\(filmType.rawValue) hdr=\(bracketed ? "on" : "off") → \(out.lastPathComponent)")
+        print("[scan] \(device.displayName) @ \(dpi == 0 ? "preview" : "\(dpi)dpi") film=\(filmType.rawValue) multiSample=\(multiSample ? "on" : "off") → \(out.lastPathComponent)")
         let progress: @Sendable (ScanProgress) -> Void = { Self.logProgress($0) }
         let result = preview
             ? try await backend.startPreviewScan(opts, progress: progress)
@@ -135,6 +135,8 @@ struct CLI {
         let outURL = URL(fileURLWithPath: args[3])
         var lookName = "neutral"
         var filmType: FilmType? = nil
+        var scannerRaw = false
+        var ice: Double = 0
         var i = 4
         while i < args.count {
             if args[i] == "--look", i + 1 < args.count { lookName = args[i + 1]; i += 2 }
@@ -143,6 +145,9 @@ struct CLI {
             }
             else if args[i] == "--positive" { filmType = .colorPositive; i += 1 }
             else if args[i] == "--bw-positive" { filmType = .bwPositive; i += 1 }
+            else if args[i] == "--raw" { scannerRaw = true; i += 1 }
+            else if args[i] == "--ice", i + 1 < args.count { ice = Double(args[i + 1]) ?? 1.0; i += 2 }
+            else if args[i] == "--ice" { ice = 1.0; i += 1 }
             else { i += 1 }
         }
         // --film-type이 없으면 입력 포맷/파일명에서 힌트를 얻거나 네거티브 기본.
@@ -153,19 +158,57 @@ struct CLI {
         let preset = lookName == "none" ? nil : PresetRegistry.load(named: lookName)
         var params = DevelopParameters()
         params.filmType = resolvedFilmType
+        i = 4
+        while i < args.count {
+            let key = args[i]
+            guard i + 1 < args.count else {
+                i += 1
+                continue
+            }
+            let value = Double(args[i + 1]) ?? 0
+            switch key {
+            case "--exposure": params.exposure = value; i += 2
+            case "--contrast": params.contrast = value; i += 2
+            case "--highlights", "--highlight": params.highlight = value; i += 2
+            case "--shadows", "--shadow": params.shadow = value; i += 2
+            case "--whites": params.whites = value; i += 2
+            case "--blacks": params.blacks = value; i += 2
+            case "--density": params.density = value; i += 2
+            default: i += 1
+            }
+        }
         if let p = preset { params = DevelopParameters(preset: p, overrides: params) }
         params.filmType = resolvedFilmType   // preset 머지 후에도 filmType 보존
+        if ice > 0 { params.defectRemoval = min(max(ice, 0), 1) }
 
         // 네거티브일 때만 필름 베이스 추정. 포지티브/슬라이드는 불필요.
-        let base: FilmBase? = resolvedFilmType.requiresInversion
-            ? engine.estimateFilmBase(at: inURL, mode: .auto)
-            : nil
+        let base: FilmBase?
+        if resolvedFilmType.requiresInversion, scannerRaw,
+           let raw = engine.loadScannerImage(inURL) {
+            base = engine.estimateFilmBase(in: raw, mode: .auto)
+        } else if resolvedFilmType.requiresInversion {
+            base = engine.estimateFilmBase(at: inURL, mode: .auto)
+        } else {
+            base = nil
+        }
         if let b = base {
             print("[develop] film base (auto): \(String(format: "%.3f %.3f %.3f", b.rgb.x, b.rgb.y, b.rgb.z)) [\(b.source.rawValue)]")
         }
         print("[develop] input=\(kind) filmType=\(resolvedFilmType.rawValue) look=\(lookName) → \(outURL.lastPathComponent)")
-        let format: ExportFormat = outURL.pathExtension.lowercased().contains("tif") ? .tiff16 : .jpeg
-        try engine.developFile(input: inURL, output: outURL, format: format, base: base, params: params)
+        let format: ExportFormat
+        switch outURL.pathExtension.lowercased() {
+        case "tif", "tiff":
+            format = .tiff16
+        case "png":
+            format = .png
+        default:
+            format = .jpeg
+        }
+        if scannerRaw {
+            try engine.developScannerFile(input: inURL, output: outURL, format: format, base: base, params: params)
+        } else {
+            try engine.developFile(input: inURL, output: outURL, format: format, base: base, params: params)
+        }
         print("[develop] → \(outURL.path)")
     }
 
@@ -280,6 +323,14 @@ struct CLI {
             --film-type <T>              colorNegative|colorPositive|bwNegative|bwPositive
             --positive                   shorthand for --film-type colorPositive
             --bw-positive                shorthand for --film-type bwPositive
+            --exposure <stops>           Basic Tone exposure
+            --contrast <v>               Basic Tone contrast (-1...1)
+            --highlights <v>             Basic Tone highlights (-1...1)
+            --shadows <v>                Basic Tone shadows (-1...1)
+            --whites <v>                 Basic Tone whites (-1...1)
+            --blacks <v>                 Basic Tone blacks (-1...1)
+            --density <v>                Basic Tone density (-1...1)
+            --ice [strength]             software dust/scratch removal (0...1, default 1)
             (input formats: tiff/jpeg/png/dng/raw/cr2/nef/...)
           report                         export scanner report JSON
           selftest                       synthetic negative → develop (no hardware)

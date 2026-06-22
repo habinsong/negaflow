@@ -1640,6 +1640,24 @@ negaflow의 성공은 스캐너 제어보다 색감에서 결정된다.
 Chromabase가 SilverFast 기본값보다 더 쓰고 싶은 결과물을 만들어야 한다.
 그게 이 프로젝트의 핵심이다.
 
-추가로, 위 계획서에서 가장 중요한 판단은 ImageCaptureCore 먼저, SANE fallback입니다. Apple 공식 프레임워크가 스캐너 탐지와 스캔 수행을 지원하므로 macOS 단독 앱의 1순위는 ImageCaptureCore가 맞습니다. 다만 Plustek 필름 스캐너의 IR/16bit/투과 유닛 제어가 충분히 열릴지는 8200i 실기 검증 전에는 확정할 수 없어서, SANE/scanimage를 fallback으로 두는 구조가 안전합니다.  
+### 23. 현재 구현 상태와 검증 기준
 
-8100/8200/8300을 모두 욕심내는 건 가능하지만, 문서상 표현은 반드시 Verified / Compatible Target / Experimental로 나눠야 합니다. 8200i는 사용자 테스트가 가능하니 Verified, 8100은 공식 제품 설명과 SANE 지원 목록 근거가 있으니 Compatible Target, 8300i는 최신 macOS 설치 정보와 VueScan 호환 설명이 있으나 직접 테스트가 없으니 Compatible Target이 맞습니다.  
+이 계획서의 초기 `ImageCaptureCore 우선, SANE fallback` 판단은 실제 장치 검증으로 대체한다. 현재 구현은 `scanimage + genesys`를 주 경로로 사용하며, 실제 Plustek OpticFilm 8100에서 Demo를 끈 상태로 3600 dpi / 16-bit RGB 연속 2프레임 스캔과 Chromabase 현상을 완료했다. ImageCaptureCore는 장치를 노출하는 미래 모델을 위한 비활성 브리지로 남긴다.
+
+현재 데스크톱 작업 흐름은 다음과 같다.
+
+1. 좌측 프레임 목록에서 롤의 스캔본을 선택한다.
+2. 중앙 캔버스에서 확대·축소·이동·크롭과 원본/현상 비교를 수행한다.
+3. 우측 인스펙터는 `Scan → Base → 도구 → Basic Tone → Tone Curve → Color → Calibration → Detail & Effects → Export` 순서로 작업한다.
+4. 현상 섹션은 헤더 전체를 눌러 열고 닫으며, 각 섹션은 독립 초기화를 제공한다.
+5. 회전·좌우/상하 반전은 현재 프레임과 같은 앱 세션의 이후 스캔에 유지한다. 크롭은 프레임 전용이며, 앱 재시작 또는 변형 초기화로 방향 템플릿은 `R0`으로 돌아간다.
+
+성능 기준도 UI 동작에 포함한다. 현상 렌더는 백그라운드에서 수행하고, 짧은 조절 연속 입력은 최신 수정본만 반영하며, 히스토그램 샘플링은 이미지 변경 시에만 수행한다. 이 기준을 어기는 동기 렌더·반복 샘플링·프레임 간 잘못된 상태 복사는 회귀로 간주한다.
+
+지원 상태는 실제 검증을 기준으로 표현한다.
+
+* **Verified:** Plustek OpticFilm 8100
+* **Compatible Target:** Plustek OpticFilm 8200i, 8300i
+* **Experimental:** 구형 OpticFilm 라인업과 IR 경로
+
+검증 명령은 `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test`와 `bash scripts/run-app.sh build`다. GUI 변경은 실제 앱에서 `Scan → 회전/반전 → Scan Next`까지 확인하고, Demo 결과만으로 하드웨어 기능을 통과 처리하지 않는다.

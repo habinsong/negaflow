@@ -49,6 +49,14 @@ public struct ImageTransform: Codable, Sendable, Equatable {
 
     public static let identity = ImageTransform()
 
+    public var orientationTemplate: ImageTransform {
+        ImageTransform(
+            rotation: rotation,
+            flipHorizontal: flipHorizontal,
+            flipVertical: flipVertical
+        )
+    }
+
     public var isIdentity: Bool {
         rotation == .deg0 && !flipHorizontal && !flipVertical && cropRect == nil
     }

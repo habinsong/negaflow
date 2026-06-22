@@ -3,6 +3,7 @@ import AppKit
 import Chromabase
 import ScannerKit
 import CoreImage
+import UniformTypeIdentifiers
 
 // MARK: - ContentView (명시적 3칼럼 — 겹침 없는 순정 레이아웃)
 //
@@ -22,11 +23,11 @@ struct ContentView: View {
             // 3칼럼 본문 — 명시적 HSplitView.
             HSplitView {
                 sidebar
-                    .frame(minWidth: 180, idealWidth: 220, maxWidth: 300)
+                    .frame(minWidth: 150, idealWidth: 180, maxWidth: 230)
                 centerPane
-                    .frame(minWidth: 520, maxWidth: .infinity, maxHeight: .infinity)
+                    .frame(minWidth: 560, maxWidth: .infinity, maxHeight: .infinity)
                 inspectorPane
-                    .frame(minWidth: 260, idealWidth: 300, maxWidth: 380)
+                    .frame(minWidth: 220, idealWidth: 252, maxWidth: 304)
             }
         }
         .task { await model.refreshDevices() }
@@ -48,6 +49,8 @@ struct ContentView: View {
             if model.isDetecting {
                 ProgressView().controlSize(.small)
                 Text("감지 중…").font(.caption).foregroundStyle(.secondary)
+            } else if model.demoMode {
+                statusBadge("Demo", .blue)
             } else if !model.hasSANE {
                 statusBadge("대기", .orange)
             } else {
@@ -77,9 +80,17 @@ struct ContentView: View {
     }
 
     var devicePicker: some View {
-        Picker("", selection: $model.selectedDeviceID) {
-            if model.hasSANE {
-                ForEach(model.devices.filter { $0.backendType == .sane }) {
+        Picker("", selection: Binding(
+            get: { model.selectedDeviceID },
+            set: {
+                model.selectedDeviceID = $0
+                Task { await model.loadCapabilities() }
+            }
+        )) {
+            if model.demoMode {
+                Text(AppModel.mockDisplayName).tag(AppModel.mockDeviceID as String?)
+            } else if model.hasSANE {
+                ForEach(model.saneDevices) {
                     Text("\($0.displayName)").tag($0.id as String?)
                 }
             } else {
@@ -89,7 +100,8 @@ struct ContentView: View {
         .pickerStyle(.menu)
         .labelsHidden()
         .frame(maxWidth: 240)
-        .disabled(!model.hasSANE)
+        .disabled(model.demoMode || !model.hasSANE)
+        .help(model.activeScannerDisplayName)
     }
 
     func statusBadge(_ text: String, _ color: Color) -> some View {
@@ -137,6 +149,7 @@ struct ContentView: View {
                     NoScannerView(onRefresh: { Task { await model.refreshDevices() } })
                 } else if let frame = model.selectedFrame {
                     CanvasView(frame: frame, cropMode: cropModeBinding(for: frame))
+                        .id(frame.id)
                 } else {
                     ContentUnavailableView("프레임을 선택하세요", systemImage: "photo.on.rectangle")
                         .foregroundStyle(.white.opacity(0.4))
@@ -193,7 +206,6 @@ struct ContentView: View {
                     if let frame = model.selectedFrame {
                         DevelopWorkflowInspector(frame: frame, cropMode: cropModeBinding(for: frame))
                         Divider()
-                        ScanSection(collapsedByDefault: true)
                         ExportSection()
                     } else {
                         ScanSection(collapsedByDefault: false)
@@ -265,7 +277,47 @@ struct FrameRowView: View {
     }
 }
 
-// MARK: - CanvasView (줌/팬 + before/after + crop 오버레이 + 히스토그램)
+private let canvasCoordinateSpace = "negaflow.canvas"
+
+private func clampedUnitRect(_ rect: CGRect, minimumSize: CGFloat = 0.035) -> CGRect {
+    let width = min(max(rect.width, minimumSize), 1)
+    let height = min(max(rect.height, minimumSize), 1)
+    let x = min(max(rect.minX, 0), 1 - width)
+    let y = min(max(rect.minY, 0), 1 - height)
+    return CGRect(x: x, y: y, width: width, height: height)
+}
+
+private func unitRect(from a: CGPoint, to b: CGPoint) -> CGRect {
+    clampedUnitRect(CGRect(
+        x: min(a.x, b.x),
+        y: min(a.y, b.y),
+        width: abs(a.x - b.x),
+        height: abs(a.y - b.y)
+    ))
+}
+
+private func engineCrop(from visibleCrop: CGRect, existingCrop: SIMD4<Double>?) -> SIMD4<Double>? {
+    let visible = clampedUnitRect(visibleCrop)
+    guard visible.width < 0.995 || visible.height < 0.995 else {
+        return existingCrop
+    }
+    let crop = SIMD4(
+        Double(visible.minX),
+        Double(1 - visible.maxY),
+        Double(visible.width),
+        Double(visible.height)
+    )
+    guard let existingCrop else {
+        return crop
+    }
+    return SIMD4(
+        existingCrop.x + crop.x * existingCrop.z,
+        existingCrop.y + crop.y * existingCrop.w,
+        crop.z * existingCrop.z,
+        crop.w * existingCrop.w
+    )
+}
+
 struct CanvasView: View {
     @ObservedObject var frame: ScanFrame
     @EnvironmentObject var model: AppModel
@@ -274,61 +326,55 @@ struct CanvasView: View {
     @State private var lastScale: CGFloat = 1.0
     @State private var offset: CGSize = .zero
     @State private var lastOffset: CGSize = .zero
-    // crop 핸들 (정규화 0~1)
-    @State private var cropRect: CGRect = CGRect(x: 0.2, y: 0.2, width: 0.6, height: 0.6)
+    @State private var cropRect: CGRect = CGRect(x: 0, y: 0, width: 1, height: 1)
+
+    private let minScale: CGFloat = 0.2
+    private let maxScale: CGFloat = 12
 
     var body: some View {
         GeometryReader { geo in
+            let image = displayedImage
+            let imageSize = image?.size
             ZStack(alignment: .topLeading) {
                 Color.black
-                if let img = displayedImage {
-                    let fit = fitScale(img.size, in: geo.size) * scale
-                    let imgW = img.size.width * fit
-                    let imgH = img.size.height * fit
-                    // 이미지는 캔버스 중앙에 배치.
-                    let imgX = (geo.size.width - imgW) / 2 + offset.width
-                    let imgY = (geo.size.height - imgH) / 2 + offset.height
+                if let img = image {
+                    let imageFrame = fittedImageFrame(for: img.size, in: geo.size)
                     Image(nsImage: img)
-                        .resizable().aspectRatio(contentMode: .fit)
-                        .frame(width: imgW, height: imgH)
-                        .position(x: imgX + imgW/2, y: imgY + imgH/2)
-                        .gesture(MagnificationGesture().onChanged { v in scale = max(0.5, min(6, lastScale * v)) }
-                            .onEnded { _ in lastScale = scale })
-                        .gesture(DragGesture().onChanged { g in
-                            if !cropMode {
-                                offset = CGSize(width: lastOffset.width + g.translation.width,
-                                                height: lastOffset.height + g.translation.height)
-                            }
-                        }.onEnded { _ in lastOffset = offset })
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: imageFrame.width, height: imageFrame.height)
+                        .position(x: imageFrame.midX, y: imageFrame.midY)
                         .onTapGesture(count: 2) {
-                            withAnimation { scale = 1; lastScale = 1; offset = .zero; lastOffset = .zero }
+                            resetViewport()
                         }
-                    // crop 오버레이 (cropMode 일 때만) — 이미지 영역에 맞춰 정렬.
                     if cropMode {
-                        CropOverlay(cropRect: $cropRect,
-                                    imageFrame: CGRect(x: imgX, y: imgY, width: imgW, height: imgH),
-                                    onApply: {
-                            frame.imageTransform.cropRect = SIMD4(cropRect.minX, cropRect.minY,
-                                                                   cropRect.width, cropRect.height)
-                            cropMode = false
-                            Task { await model.developFrame(frame) }
-                        }, onReset: {
-                            cropRect = CGRect(x: 0.1, y: 0.1, width: 0.8, height: 0.8)
-                            frame.imageTransform.cropRect = nil
-                            Task { await model.developFrame(frame) }
-                        })
+                        CropOverlay(
+                            cropRect: $cropRect,
+                            imageFrame: imageFrame,
+                            onApply: applyCrop,
+                            onReset: resetCrop,
+                            onCancel: { cropMode = false }
+                        )
                     }
+                    canvasHUD(imageSize: img.size, canvasSize: geo.size)
                 }
-                // 좌상단: before/after 토글
                 if frame.developedImage != nil {
                     beforeAfterToggle.padding(10)
                 }
             }
+            .coordinateSpace(name: canvasCoordinateSpace)
+            .contentShape(Rectangle())
+            .gesture(panGesture(imageSize: imageSize, canvasSize: geo.size))
+            .simultaneousGesture(zoomGesture(imageSize: imageSize, canvasSize: geo.size))
         }
         .onChange(of: cropMode) { _, isOn in
-            guard isOn else { return }
-            if let existing = frame.imageTransform.cropRect {
-                cropRect = CGRect(x: existing.x, y: existing.y, width: existing.z, height: existing.w)
+            if isOn {
+                cropRect = CGRect(x: 0, y: 0, width: 1, height: 1)
+            }
+        }
+        .onChange(of: frame.imageTransform.displayName) { _, _ in
+            if !cropMode {
+                resetViewport(animated: false)
             }
         }
     }
@@ -336,6 +382,27 @@ struct CanvasView: View {
     var displayedImage: NSImage? {
         frame.showDeveloped ? (frame.developedImage ?? frame.rawPreviewImage)
                             : (frame.rawPreviewImage ?? frame.developedImage)
+    }
+
+    @ViewBuilder
+    func canvasHUD(imageSize: NSSize, canvasSize: CGSize) -> some View {
+        VStack {
+            Spacer()
+            HStack {
+                Spacer()
+                CanvasToolHUD(
+                    zoomText: "\(Int((scale * 100).rounded()))%",
+                    cropMode: cropMode,
+                    onZoomOut: { setScale(scale / 1.25, imageSize: imageSize, canvasSize: canvasSize) },
+                    onZoomIn: { setScale(scale * 1.25, imageSize: imageSize, canvasSize: canvasSize) },
+                    onFit: { resetViewport() },
+                    onActualSize: { setScale(actualSizeScale(imageSize, in: canvasSize), imageSize: imageSize, canvasSize: canvasSize) },
+                    onCrop: { withAnimation(.snappy(duration: 0.18)) { cropMode.toggle() } }
+                )
+                .padding(.trailing, 14)
+                .padding(.bottom, 12)
+            }
+        }
     }
 
     var beforeAfterToggle: some View {
@@ -355,78 +422,259 @@ struct CanvasView: View {
     }
 
     private func fitScale(_ s: NSSize, in c: CGSize) -> CGFloat {
-        min(c.width / s.width, c.height / s.height)
+        guard s.width > 0, s.height > 0, c.width > 0, c.height > 0 else { return 1 }
+        return min(c.width / s.width, c.height / s.height)
+    }
+
+    private func fittedImageFrame(for imageSize: NSSize, in canvasSize: CGSize) -> CGRect {
+        let fit = fitScale(imageSize, in: canvasSize) * scale
+        let width = imageSize.width * fit
+        let height = imageSize.height * fit
+        return CGRect(
+            x: (canvasSize.width - width) / 2 + offset.width,
+            y: (canvasSize.height - height) / 2 + offset.height,
+            width: width,
+            height: height
+        )
+    }
+
+    private func actualSizeScale(_ imageSize: NSSize, in canvasSize: CGSize) -> CGFloat {
+        min(max(1 / fitScale(imageSize, in: canvasSize), minScale), maxScale)
+    }
+
+    private func resetViewport(animated: Bool = true) {
+        let updates = {
+            scale = 1
+            lastScale = 1
+            offset = .zero
+            lastOffset = .zero
+        }
+        if animated {
+            withAnimation(.snappy(duration: 0.18)) { updates() }
+        } else {
+            updates()
+        }
+    }
+
+    private func setScale(_ newScale: CGFloat, imageSize: NSSize, canvasSize: CGSize) {
+        let clamped = min(max(newScale, minScale), maxScale)
+        withAnimation(.snappy(duration: 0.16)) {
+            scale = clamped
+            lastScale = clamped
+            offset = clampedOffset(offset, imageSize: imageSize, canvasSize: canvasSize, scale: clamped)
+            lastOffset = offset
+        }
+    }
+
+    private func panGesture(imageSize: NSSize?, canvasSize: CGSize) -> some Gesture {
+        DragGesture(minimumDistance: 0, coordinateSpace: .named(canvasCoordinateSpace))
+            .onChanged { value in
+                guard let imageSize, !cropMode else { return }
+                let proposed = CGSize(
+                    width: lastOffset.width + value.translation.width,
+                    height: lastOffset.height + value.translation.height
+                )
+                offset = clampedOffset(proposed, imageSize: imageSize, canvasSize: canvasSize, scale: scale)
+            }
+            .onEnded { _ in
+                lastOffset = offset
+            }
+    }
+
+    private func zoomGesture(imageSize: NSSize?, canvasSize: CGSize) -> some Gesture {
+        MagnificationGesture()
+            .onChanged { value in
+                guard let imageSize else { return }
+                let next = min(max(lastScale * value, minScale), maxScale)
+                scale = next
+                offset = clampedOffset(offset, imageSize: imageSize, canvasSize: canvasSize, scale: next)
+            }
+            .onEnded { _ in
+                lastScale = scale
+                lastOffset = offset
+            }
+    }
+
+    private func clampedOffset(_ proposed: CGSize, imageSize: NSSize, canvasSize: CGSize, scale: CGFloat) -> CGSize {
+        let fit = fitScale(imageSize, in: canvasSize) * scale
+        let imageWidth = imageSize.width * fit
+        let imageHeight = imageSize.height * fit
+        let limitX = max(48, (imageWidth - canvasSize.width) / 2 + 96)
+        let limitY = max(48, (imageHeight - canvasSize.height) / 2 + 96)
+        return CGSize(
+            width: min(max(proposed.width, -limitX), limitX),
+            height: min(max(proposed.height, -limitY), limitY)
+        )
+    }
+
+    private func applyCrop() {
+        frame.updateTransform {
+            $0.cropRect = engineCrop(from: cropRect, existingCrop: $0.cropRect)
+        }
+        cropMode = false
+        resetViewport()
+        Task { await model.developFrame(frame) }
+    }
+
+    private func resetCrop() {
+        cropRect = CGRect(x: 0, y: 0, width: 1, height: 1)
+        frame.updateTransform { $0.cropRect = nil }
+        resetViewport()
+        Task { await model.developFrame(frame) }
     }
 }
 
-// MARK: - CropOverlay (드래그 가능한 사각형 — 4모서리 핸들)
-//
-// 정규화 cropRect(0~1, imageFrame 기준)를 화면에 표시. 4개 모서리 핸들로 조절.
-// 본체 드래그는 지원 안 함(단순화) — 핸들로 크기만. 적용/리셋 버튼은 콜백.
+struct CanvasToolHUD: View {
+    let zoomText: String
+    let cropMode: Bool
+    let onZoomOut: () -> Void
+    let onZoomIn: () -> Void
+    let onFit: () -> Void
+    let onActualSize: () -> Void
+    let onCrop: () -> Void
+
+    var body: some View {
+        HStack(spacing: 6) {
+            CanvasToolButton(systemName: "minus.magnifyingglass", help: "축소", action: onZoomOut)
+            CanvasToolButton(systemName: "plus.magnifyingglass", help: "확대", action: onZoomIn)
+            Button(action: onFit) {
+                Text(zoomText)
+                    .font(.caption2.monospacedDigit().weight(.medium))
+                    .frame(width: 46, height: 28)
+            }
+            .buttonStyle(.plain)
+            .help("화면에 맞추기")
+            CanvasToolButton(systemName: "1.magnifyingglass", help: "원본 크기", action: onActualSize)
+            CanvasToolButton(systemName: "crop", help: "크롭", isActive: cropMode, action: onCrop)
+        }
+        .padding(4)
+        .liquidSurface(cornerRadius: 10, interactive: true)
+    }
+}
+
+struct CanvasToolButton: View {
+    let systemName: String
+    let help: String
+    var isActive: Bool = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 13, weight: .semibold))
+                .frame(width: 28, height: 28)
+                .foregroundStyle(isActive ? Color.accentColor : Color.primary)
+        }
+        .buttonStyle(.plain)
+        .help(help)
+        .accessibilityLabel(help)
+    }
+}
+
+private enum CropHandle: CaseIterable {
+    case topLeft
+    case top
+    case topRight
+    case right
+    case bottomRight
+    case bottom
+    case bottomLeft
+    case left
+}
+
 struct CropOverlay: View {
     @Binding var cropRect: CGRect
-    let imageFrame: CGRect          // 화면 좌표에서 이미지가 차지하는 영역
+    let imageFrame: CGRect
     let onApply: () -> Void
     let onReset: () -> Void
+    let onCancel: () -> Void
+    @State private var dragStartRect: CGRect?
+    @State private var dragStartPoint: CGPoint?
 
     var body: some View {
         let r = screenRect
         ZStack {
-            // 외부 어두운 마스크 — 사각형 구멍(even-odd fill).
+            Rectangle()
+                .fill(Color.clear)
+                .frame(width: imageFrame.width, height: imageFrame.height)
+                .position(x: imageFrame.midX, y: imageFrame.midY)
+                .contentShape(Rectangle())
+                .gesture(createGesture)
             Color.black.opacity(0.45)
+                .allowsHitTesting(false)
                 .mask {
                     GeometryReader { g in
                         Path { p in
                             p.addRect(CGRect(origin: .zero, size: g.size))
                             p.addRect(r)
-                            p.addRect(r)   // even-odd 구멍
                         }
                         .fill(style: FillStyle(eoFill: true))
                     }
                 }
-            // crop 사각형 테두리 + 3분할 가이드.
-            ZStack {
-                RoundedRectangle(cornerRadius: 2)
-                    .stroke(Color.white, lineWidth: 1.5)
-                GeometryReader { g in
-                    let w = g.size.width / 3, h = g.size.height / 3
-                    Path { p in
-                        for i in 1...2 {
-                            p.move(to: CGPoint(x: w * CGFloat(i), y: 0))
-                            p.addLine(to: CGPoint(x: w * CGFloat(i), y: g.size.height))
-                            p.move(to: CGPoint(x: 0, y: h * CGFloat(i)))
-                            p.addLine(to: CGPoint(x: g.size.width, y: h * CGFloat(i)))
-                        }
-                    }.stroke(Color.white.opacity(0.3), lineWidth: 0.5)
-                }
+            selectionFrame(r)
+                .allowsHitTesting(hasActiveCrop)
+            ForEach(handlePoints(r), id: \.0) { handle, pt in
+                handleView(for: handle)
+                    .position(pt)
+                    .gesture(handleGesture(handle))
             }
-            .frame(width: r.width, height: r.height)
-            .position(x: r.midX, y: r.midY)
-            // 4 모서리 핸들.
-            ForEach(handles(r), id: \.0) { name, pt in
-                handleView.position(pt).gesture(handleDrag(name: name))
-            }
-            // 적용/리셋 버튼 — 사각형 아래.
-            VStack {
-                Spacer()
-                HStack {
-                    Spacer()
-                    Button("적용", action: onApply).buttonStyle(.borderedProminent).font(.caption)
-                    Button("리셋", action: onReset).font(.caption)
-                }
-                .padding(8)
-            }
+            cropActionBar(r)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    var handleView: some View {
+    private func selectionFrame(_ r: CGRect) -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 2)
+                .stroke(Color.white, lineWidth: 1.5)
+            GeometryReader { g in
+                let w = g.size.width / 3
+                let h = g.size.height / 3
+                Path { p in
+                    for i in 1...2 {
+                        p.move(to: CGPoint(x: w * CGFloat(i), y: 0))
+                        p.addLine(to: CGPoint(x: w * CGFloat(i), y: g.size.height))
+                        p.move(to: CGPoint(x: 0, y: h * CGFloat(i)))
+                        p.addLine(to: CGPoint(x: g.size.width, y: h * CGFloat(i)))
+                    }
+                }
+                .stroke(Color.white.opacity(0.34), lineWidth: 0.5)
+            }
+        }
+        .frame(width: r.width, height: r.height)
+        .contentShape(Rectangle())
+        .position(x: r.midX, y: r.midY)
+        .gesture(moveGesture)
+    }
+
+    private func handleView(for handle: CropHandle) -> some View {
         RoundedRectangle(cornerRadius: 2)
             .fill(Color.white)
             .overlay(RoundedRectangle(cornerRadius: 2).stroke(Color.black.opacity(0.4), lineWidth: 1))
-            .frame(width: 14, height: 14)
+            .frame(
+                width: (handle == .top || handle == .bottom) ? 24 : 14,
+                height: (handle == .left || handle == .right) ? 24 : 14
+            )
+            .shadow(color: .black.opacity(0.25), radius: 2, x: 0, y: 1)
     }
 
-    // 정규화 → 화면 좌표.
+    private func cropActionBar(_ r: CGRect) -> some View {
+        HStack(spacing: 6) {
+            Button("적용", action: onApply)
+                .buttonStyle(.borderedProminent)
+            Button("전체", action: onReset)
+            Button("취소", action: onCancel)
+        }
+        .font(.caption)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .liquidSurface(cornerRadius: 8, interactive: true)
+        .position(
+            x: min(max(r.midX, imageFrame.minX + 86), imageFrame.maxX - 86),
+            y: min(max(r.maxY + 30, imageFrame.minY + 28), imageFrame.maxY - 28)
+        )
+    }
+
     var screenRect: CGRect {
         guard imageFrame.width > 0, imageFrame.height > 0 else { return .zero }
         return CGRect(
@@ -437,43 +685,104 @@ struct CropOverlay: View {
         )
     }
 
-    func handles(_ r: CGRect) -> [(String, CGPoint)] {
-        [ ("tl", CGPoint(x: r.minX, y: r.minY)),
-          ("tr", CGPoint(x: r.maxX, y: r.minY)),
-          ("bl", CGPoint(x: r.minX, y: r.maxY)),
-          ("br", CGPoint(x: r.maxX, y: r.maxY)) ]
+    var hasActiveCrop: Bool {
+        cropRect.width < 0.995 || cropRect.height < 0.995
     }
 
-    func handleDrag(name: String) -> some Gesture {
-        DragGesture(minimumDistance: 0).onChanged { g in
-            guard imageFrame.width > 0, imageFrame.height > 0 else { return }
-            let nx = (g.location.x - imageFrame.minX) / imageFrame.width
-            let ny = (g.location.y - imageFrame.minY) / imageFrame.height
-            var c = cropRect
-            switch name {
-            case "tl":
-                let mx = min(nx, c.maxX - 0.05), my = min(ny, c.maxY - 0.05)
-                let dx = c.minX - mx, dy = c.minY - my
-                c.origin.x = max(0, mx); c.origin.y = max(0, my)
-                c.size.width += dx; c.size.height += dy
-            case "tr":
-                let my = min(ny, c.maxY - 0.05)
-                c.origin.y = max(0, my)
-                c.size.height = max(0.05, c.maxY - c.minY)
-                c.size.width = max(0.05, min(nx, 1) - c.minX)
-            case "bl":
-                let mx = min(nx, c.maxX - 0.05)
-                let dx = c.minX - mx
-                c.origin.x = max(0, mx)
-                c.size.width += dx
-                c.size.height = max(0.05, min(ny, 1) - c.minY)
-            case "br":
-                c.size.width = max(0.05, min(nx, 1) - c.minX)
-                c.size.height = max(0.05, min(ny, 1) - c.minY)
-            default: break
+    private func handlePoints(_ r: CGRect) -> [(CropHandle, CGPoint)] {
+        [
+            (.topLeft, CGPoint(x: r.minX, y: r.minY)),
+            (.top, CGPoint(x: r.midX, y: r.minY)),
+            (.topRight, CGPoint(x: r.maxX, y: r.minY)),
+            (.right, CGPoint(x: r.maxX, y: r.midY)),
+            (.bottomRight, CGPoint(x: r.maxX, y: r.maxY)),
+            (.bottom, CGPoint(x: r.midX, y: r.maxY)),
+            (.bottomLeft, CGPoint(x: r.minX, y: r.maxY)),
+            (.left, CGPoint(x: r.minX, y: r.midY))
+        ]
+    }
+
+    var createGesture: some Gesture {
+        DragGesture(minimumDistance: 0, coordinateSpace: .named(canvasCoordinateSpace))
+            .onChanged { value in
+                if dragStartPoint == nil {
+                    dragStartPoint = unitPoint(value.startLocation)
+                }
+                guard let start = dragStartPoint else { return }
+                cropRect = unitRect(from: start, to: unitPoint(value.location))
             }
-            cropRect = c
-        }
+            .onEnded { _ in
+                dragStartPoint = nil
+            }
+    }
+
+    var moveGesture: some Gesture {
+        DragGesture(minimumDistance: 0, coordinateSpace: .named(canvasCoordinateSpace))
+            .onChanged { value in
+                if dragStartRect == nil {
+                    dragStartRect = cropRect
+                }
+                guard let start = dragStartRect, imageFrame.width > 0, imageFrame.height > 0 else { return }
+                let dx = value.translation.width / imageFrame.width
+                let dy = value.translation.height / imageFrame.height
+                cropRect = movedRect(start.offsetBy(dx: dx, dy: dy))
+            }
+            .onEnded { _ in
+                dragStartRect = nil
+            }
+    }
+
+    private func handleGesture(_ handle: CropHandle) -> some Gesture {
+        DragGesture(minimumDistance: 0, coordinateSpace: .named(canvasCoordinateSpace))
+            .onChanged { value in
+                if dragStartRect == nil {
+                    dragStartRect = cropRect
+                }
+                guard let start = dragStartRect else { return }
+                let p = unitPoint(value.location)
+                var next = start
+                switch handle {
+                case .topLeft:
+                    next = CGRect(x: p.x, y: p.y, width: start.maxX - p.x, height: start.maxY - p.y)
+                case .top:
+                    next = CGRect(x: start.minX, y: p.y, width: start.width, height: start.maxY - p.y)
+                case .topRight:
+                    next = CGRect(x: start.minX, y: p.y, width: p.x - start.minX, height: start.maxY - p.y)
+                case .right:
+                    next = CGRect(x: start.minX, y: start.minY, width: p.x - start.minX, height: start.height)
+                case .bottomRight:
+                    next = CGRect(x: start.minX, y: start.minY, width: p.x - start.minX, height: p.y - start.minY)
+                case .bottom:
+                    next = CGRect(x: start.minX, y: start.minY, width: start.width, height: p.y - start.minY)
+                case .bottomLeft:
+                    next = CGRect(x: p.x, y: start.minY, width: start.maxX - p.x, height: p.y - start.minY)
+                case .left:
+                    next = CGRect(x: p.x, y: start.minY, width: start.maxX - p.x, height: start.height)
+                }
+                cropRect = clampedUnitRect(next)
+            }
+            .onEnded { _ in
+                dragStartRect = nil
+            }
+    }
+
+    private func unitPoint(_ point: CGPoint) -> CGPoint {
+        guard imageFrame.width > 0, imageFrame.height > 0 else { return .zero }
+        return CGPoint(
+            x: min(max((point.x - imageFrame.minX) / imageFrame.width, 0), 1),
+            y: min(max((point.y - imageFrame.minY) / imageFrame.height, 0), 1)
+        )
+    }
+
+    private func movedRect(_ rect: CGRect) -> CGRect {
+        let width = min(max(rect.width, 0.035), 1)
+        let height = min(max(rect.height, 0.035), 1)
+        return CGRect(
+            x: min(max(rect.minX, 0), 1 - width),
+            y: min(max(rect.minY, 0), 1 - height),
+            width: width,
+            height: height
+        )
     }
 }
 
@@ -549,11 +858,13 @@ enum HistogramToneRegion: CaseIterable {
 
     func apply(to frame: ScanFrame, value: Double) {
         let clamped = min(max(value, limits.lowerBound), limits.upperBound)
-        switch self {
-        case .shadow: frame.params.shadow = clamped
-        case .density: frame.params.density = clamped
-        case .exposure: frame.params.exposure = clamped
-        case .highlight: frame.params.highlight = clamped
+        frame.updateParams { params in
+            switch self {
+            case .shadow: params.shadow = clamped
+            case .density: params.density = clamped
+            case .exposure: params.exposure = clamped
+            case .highlight: params.highlight = clamped
+            }
         }
     }
 
@@ -568,6 +879,7 @@ struct InteractiveHistogramView: View {
     @ObservedObject var frame: ScanFrame
     let onChange: () -> Void
     @State private var bins: (r: [Int], g: [Int], b: [Int])?
+    @State private var sampledImageID: ObjectIdentifier?
     @State private var hoverRegion: HistogramToneRegion?
     @State private var dragRegion: HistogramToneRegion?
     @State private var dragStartValue: Double?
@@ -576,7 +888,6 @@ struct InteractiveHistogramView: View {
         self.image = image
         self._frame = ObservedObject(wrappedValue: frame)
         self.onChange = onChange
-        self._bins = State(initialValue: HistogramSampler.compute(image))
     }
 
     var body: some View {
@@ -665,8 +976,8 @@ struct InteractiveHistogramView: View {
         }
         .frame(height: 118)
         .liquidSurface(cornerRadius: 14, interactive: true)
-        .onAppear { bins = HistogramSampler.compute(image) }
-        .onChange(of: ObjectIdentifier(image)) { _, _ in bins = HistogramSampler.compute(image) }
+        .onAppear { refreshBinsIfNeeded() }
+        .onChange(of: ObjectIdentifier(image)) { _, _ in refreshBinsIfNeeded(force: true) }
     }
 
     func activeBand(_ region: HistogramToneRegion, size: CGSize) -> some View {
@@ -677,7 +988,7 @@ struct InteractiveHistogramView: View {
     }
 
     func valueText(for region: HistogramToneRegion) -> String {
-        "\(region.title) \(String(format: "%+.2f", region.value(in: frame)))"
+        "\(region.title) \(signedControlText(region.value(in: frame)))"
     }
 
     func dragGesture(width: CGFloat) -> some Gesture {
@@ -697,6 +1008,13 @@ struct InteractiveHistogramView: View {
                 dragRegion = nil
                 dragStartValue = nil
             }
+    }
+
+    private func refreshBinsIfNeeded(force: Bool = false) {
+        let imageID = ObjectIdentifier(image)
+        guard force || sampledImageID != imageID else { return }
+        sampledImageID = imageID
+        bins = HistogramSampler.compute(image)
     }
 }
 
@@ -744,36 +1062,74 @@ struct ScanSection: View {
                 controls
                     .padding(.top, 8)
             } label: {
-                Label("Scan", systemImage: "scanner")
-                    .font(.subheadline.weight(.semibold))
+                header(font: .subheadline.weight(.semibold))
             }
         } else {
             VStack(alignment: .leading, spacing: 8) {
-                Label("Scan", systemImage: "scanner")
-                    .font(.headline)
+                header(font: .headline)
                 controls
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
+    func header(font: Font) -> some View {
+        HStack(spacing: 8) {
+            Label("Scan", systemImage: "scanner")
+                .font(font)
+            Spacer()
+            Text("Frame \(model.frames.count + 1)")
+                .font(.caption2.monospacedDigit())
+                .foregroundStyle(.secondary)
+        }
+    }
+
     var controls: some View {
         VStack(alignment: .leading, spacing: 8) {
-            InspectorControlRow("Film") {
-                Picker("Film", selection: $model.filmType) {
-                    ForEach(FilmType.allCases, id: \.self) { Text($0.displayName).tag($0) }
-                }
-                .labelsHidden()
+            HStack(spacing: 8) {
+                Text(model.activeScannerDisplayName)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                Spacer()
+                Text("\(model.filmType.displayName) · \(resolutionText)")
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(.secondary)
             }
-            InspectorControlRow("Resolution") {
-                Picker("Resolution", selection: $model.resolutionChoice) {
-                    Text("Preview").tag(Resolution.preview)
-                    ForEach(resolutions, id: \.self) { Text("\($0.dpi) dpi").tag($0) }
+            Group {
+                InspectorControlRow("Film") {
+                    Picker("Film", selection: $model.filmType) {
+                        ForEach(FilmType.allCases, id: \.self) { Text($0.displayName).tag($0) }
+                    }
+                    .labelsHidden()
                 }
-                .labelsHidden()
+                InspectorControlRow("Resolution") {
+                    Picker("Resolution", selection: $model.resolutionChoice) {
+                        Text("Preview").tag(Resolution.preview)
+                        ForEach(resolutions, id: \.self) { Text("\($0.dpi) dpi").tag($0) }
+                    }
+                    .labelsHidden()
+                }
+                InspectorControlRow("Bit Depth") {
+                    Picker("Bit Depth", selection: $model.bitDepthChoice) {
+                        ForEach(bitDepths, id: \.self) { Text("\($0.rawValue)-bit").tag($0) }
+                    }
+                    .labelsHidden()
+                }
+                InspectorControlRow("Mode") {
+                    Picker("Mode", selection: $model.colorModeChoice) {
+                        ForEach(colorModes, id: \.self) { Text($0.rawValue.capitalized).tag($0) }
+                    }
+                    .labelsHidden()
+                }
+                Toggle("Multi-Sample", isOn: $model.multiExposureEnabled)
+                    .font(.caption)
+                    .disabled(model.resolutionChoice == .preview)
+                Stepper("프레임: \(batchCount)", value: $batchCount, in: 1...12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
-            Stepper("프레임: \(batchCount)", value: $batchCount, in: 1...12)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            .disabled(model.isScanning)
             HStack {
                 Button {
                     Task { await model.runScan(preview: true) }
@@ -793,7 +1149,7 @@ struct ScanSection: View {
                     Button {
                         Task { await model.scanFrames(count: batchCount, preview: false) }
                     } label: {
-                        Text(batchCount > 1 ? "스캔 ×\(batchCount)" : "스캔")
+                        Text(scanButtonTitle)
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
@@ -805,10 +1161,30 @@ struct ScanSection: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    var scanButtonTitle: String {
+        if batchCount > 1 { return "Scan ×\(batchCount)" }
+        return model.selectedFrame == nil ? "Scan" : "Scan Next"
+    }
+
+    var resolutionText: String {
+        model.resolutionChoice == .preview ? "Preview" : "\(model.resolutionChoice.dpi) dpi"
+    }
+
     var resolutions: [Resolution] {
         let fromCap = (model.capabilities?.supportedResolutions ?? [.r900, .r1800, .r3600, .r7200])
             .filter { $0.dpi > 0 }
         return fromCap.isEmpty ? [.r3600, .r7200] : fromCap
+    }
+
+    var bitDepths: [BitDepth] {
+        let fromCap = model.capabilities?.supportedBitDepths ?? [.eight, .sixteen]
+        return fromCap.isEmpty ? [.sixteen] : fromCap
+    }
+
+    var colorModes: [ColorMode] {
+        let fromCap = model.capabilities?.supportedModes ?? [.color, .gray]
+        let visible = fromCap.filter { $0 == .color || $0 == .gray }
+        return visible.isEmpty ? [.color] : visible
     }
 }
 
@@ -836,7 +1212,9 @@ struct InspectorControlRow<Control: View>: View {
 
 enum InspectorPanel: CaseIterable {
     case tone
+    case curve
     case color
+    case calibration
     case detail
 }
 
@@ -844,14 +1222,24 @@ struct DevelopWorkflowInspector: View {
     @EnvironmentObject var model: AppModel
     @ObservedObject var frame: ScanFrame
     @Binding var cropMode: Bool
-    @State private var expandedPanel: InspectorPanel = .tone
+    @State private var expandedPanel: InspectorPanel? = .tone
     @State private var redevelopTask: Task<Void, Never>?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             if let image = displayedImage {
                 InteractiveHistogramView(image: image, frame: frame) { scheduleRedevelop(frame) }
+                    .disabled(model.isScanning)
             }
+
+            ScanSection(collapsedByDefault: false)
+
+            BaseControlSection(
+                frame: frame,
+                baseMode: baseModeBinding,
+                manualBaseBinding: manualBaseBinding(channel:)
+            )
+            .disabled(model.isScanning)
 
             ToolStripSection(frame: frame, cropMode: $cropMode)
 
@@ -859,7 +1247,9 @@ struct DevelopWorkflowInspector: View {
                 title: "Basic Tone",
                 systemImage: "slider.horizontal.3",
                 isExpanded: expandedPanel == .tone,
-                toggle: { toggle(.tone) }
+                toggle: { toggle(.tone) },
+                reset: { reset(.tone) },
+                contentDisabled: model.isScanning
             ) {
                 Picker("Look", selection: Binding(
                     get: { frame.preset },
@@ -870,31 +1260,69 @@ struct DevelopWorkflowInspector: View {
                 }
                 .pickerStyle(.menu)
                 InspectorSlider("Exposure", value: toneBinding(\.exposure), range: -2...2)
+                InspectorSlider("Contrast", value: toneBinding(\.contrast), range: -1...1)
+                InspectorSlider("Highlights", value: toneBinding(\.highlight), range: -1...1)
+                InspectorSlider("Shadows", value: toneBinding(\.shadow), range: -1...1)
+                InspectorSlider("Whites", value: toneBinding(\.whites), range: -1...1)
+                InspectorSlider("Blacks", value: toneBinding(\.blacks), range: -1...1)
                 InspectorSlider("Density", value: toneBinding(\.density), range: -1...1)
-                InspectorSlider("Highlight", value: toneBinding(\.highlight), range: -1...1)
-                InspectorSlider("Shadow", value: toneBinding(\.shadow), range: -1...1)
+            }
+
+            WorkflowSection(
+                title: "Tone Curve",
+                systemImage: "point.topleft.down.curvedto.point.bottomright.up",
+                isExpanded: expandedPanel == .curve,
+                toggle: { toggle(.curve) },
+                reset: { reset(.curve) },
+                contentDisabled: model.isScanning
+            ) {
+                InspectorSlider("Highlights", value: toneBinding(\.curveHighlights), range: -1...1)
+                InspectorSlider("Lights", value: toneBinding(\.curveLights), range: -1...1)
+                InspectorSlider("Darks", value: toneBinding(\.curveDarks), range: -1...1)
+                InspectorSlider("Shadows", value: toneBinding(\.curveShadows), range: -1...1)
             }
 
             WorkflowSection(
                 title: "Color",
                 systemImage: "eyedropper.halffull",
                 isExpanded: expandedPanel == .color,
-                toggle: { toggle(.color) }
+                toggle: { toggle(.color) },
+                reset: { reset(.color) },
+                contentDisabled: model.isScanning
             ) {
                 InspectorSlider("Warmth", value: toneBinding(\.warmth), range: -1...1)
                 InspectorSlider("Tint", value: toneBinding(\.tint), range: -1...1)
+                InspectorSlider("Vibrance", value: toneBinding(\.vibrance), range: -1...1)
+                InspectorSlider("Saturation", value: toneBinding(\.saturation), range: -1...1)
                 InspectorSlider("Color Depth", value: toneBinding(\.colorDepth), range: -1...1)
             }
 
             WorkflowSection(
-                title: "Detail",
+                title: "Calibration",
+                systemImage: "camera.filters",
+                isExpanded: expandedPanel == .calibration,
+                toggle: { toggle(.calibration) },
+                reset: { reset(.calibration) },
+                contentDisabled: model.isScanning
+            ) {
+                InspectorSlider("Red Primary", value: toneBinding(\.redPrimary), range: -1...1)
+                InspectorSlider("Green Primary", value: toneBinding(\.greenPrimary), range: -1...1)
+                InspectorSlider("Blue Primary", value: toneBinding(\.bluePrimary), range: -1...1)
+            }
+
+            WorkflowSection(
+                title: "Detail & Effects",
                 systemImage: "camera.macro",
                 isExpanded: expandedPanel == .detail,
-                toggle: { toggle(.detail) }
+                toggle: { toggle(.detail) },
+                reset: { reset(.detail) },
+                contentDisabled: model.isScanning
             ) {
                 InspectorSlider("Grain", value: toneBinding(\.grain), range: 0...1)
                 InspectorSlider("Sharpness", value: toneBinding(\.sharpness), range: 0...1)
+                InspectorSlider("Clarity", value: toneBinding(\.clarity), range: -1...1)
                 InspectorSlider("Halation", value: toneBinding(\.halation), range: 0...1)
+                InspectorSlider("Vignette", value: toneBinding(\.vignette), range: -1...1)
             }
         }
     }
@@ -906,27 +1334,139 @@ struct DevelopWorkflowInspector: View {
 
     func toggle(_ panel: InspectorPanel) {
         withAnimation(.snappy(duration: 0.18)) {
-            expandedPanel = panel
+            expandedPanel = expandedPanel == panel ? nil : panel
         }
+    }
+
+    func reset(_ panel: InspectorPanel) {
+        let defaults = DevelopParameters()
+        frame.updateParams { params in
+            switch panel {
+            case .tone:
+                frame.preset = model.presets.first(where: { $0.id == "neutral" })
+                params.exposure = defaults.exposure
+                params.contrast = defaults.contrast
+                params.highlight = defaults.highlight
+                params.shadow = defaults.shadow
+                params.whites = defaults.whites
+                params.blacks = defaults.blacks
+                params.density = defaults.density
+            case .curve:
+                params.curveHighlights = defaults.curveHighlights
+                params.curveLights = defaults.curveLights
+                params.curveDarks = defaults.curveDarks
+                params.curveShadows = defaults.curveShadows
+            case .color:
+                params.warmth = defaults.warmth
+                params.tint = defaults.tint
+                params.vibrance = defaults.vibrance
+                params.saturation = defaults.saturation
+                params.colorDepth = defaults.colorDepth
+            case .calibration:
+                params.redPrimary = defaults.redPrimary
+                params.greenPrimary = defaults.greenPrimary
+                params.bluePrimary = defaults.bluePrimary
+            case .detail:
+                params.grain = defaults.grain
+                params.sharpness = defaults.sharpness
+                params.clarity = defaults.clarity
+                params.halation = defaults.halation
+                params.vignette = defaults.vignette
+            }
+        }
+        scheduleRedevelop(frame)
     }
 
     func toneBinding(_ keyPath: WritableKeyPath<DevelopParameters, Double>) -> Binding<Double> {
         Binding(
             get: { frame.params[keyPath: keyPath] },
-            set: {
-                frame.params[keyPath: keyPath] = $0
+            set: { value in
+                frame.updateParams { $0[keyPath: keyPath] = value }
+                scheduleRedevelop(frame)
+            }
+        )
+    }
+
+    var baseModeBinding: Binding<DevelopParameters.BaseMode> {
+        Binding(
+            get: { frame.params.baseEstimationMode },
+            set: { mode in
+                frame.updateParams { params in
+                    params.baseEstimationMode = mode
+                    if mode == .manual, params.manualBaseRGB == nil {
+                        params.manualBaseRGB = frame.baseRGB ?? SIMD3(0.90, 0.65, 0.45)
+                    }
+                }
+                scheduleRedevelop(frame)
+            }
+        )
+    }
+
+    func manualBaseBinding(channel: Int) -> Binding<Double> {
+        Binding(
+            get: {
+                let rgb = frame.params.manualBaseRGB ?? frame.baseRGB ?? SIMD3(0.90, 0.65, 0.45)
+                switch channel {
+                case 0: return rgb.x
+                case 1: return rgb.y
+                default: return rgb.z
+                }
+            },
+            set: { value in
+                var rgb = frame.params.manualBaseRGB ?? frame.baseRGB ?? SIMD3(0.90, 0.65, 0.45)
+                let clamped = min(max(value, 0), 1)
+                switch channel {
+                case 0: rgb.x = clamped
+                case 1: rgb.y = clamped
+                default: rgb.z = clamped
+                }
+                frame.updateParams {
+                    $0.manualBaseRGB = rgb
+                    $0.baseEstimationMode = .manual
+                }
                 scheduleRedevelop(frame)
             }
         )
     }
 
     func scheduleRedevelop(_ frame: ScanFrame) {
+        guard !model.isScanning else { return }
         redevelopTask?.cancel()
         redevelopTask = Task {
-            try? await Task.sleep(nanoseconds: 260_000_000)
+            try? await Task.sleep(nanoseconds: 120_000_000)
             guard !Task.isCancelled else { return }
             await model.developFrame(frame)
         }
+    }
+}
+
+struct BaseControlSection: View {
+    @ObservedObject var frame: ScanFrame
+    let baseMode: Binding<DevelopParameters.BaseMode>
+    let manualBaseBinding: (Int) -> Binding<Double>
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Label("Base", systemImage: "camera.metering.center.weighted")
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                Picker("Base", selection: baseMode) {
+                    Text("Auto").tag(DevelopParameters.BaseMode.auto)
+                    Text("Manual").tag(DevelopParameters.BaseMode.manual)
+                }
+                .labelsHidden()
+                .frame(maxWidth: 128)
+                .disabled(!frame.filmType.requiresInversion)
+            }
+            if frame.params.baseEstimationMode == .manual {
+                InspectorSlider("Base R", value: manualBaseBinding(0), range: 0...1)
+                InspectorSlider("Base G", value: manualBaseBinding(1), range: 0...1)
+                InspectorSlider("Base B", value: manualBaseBinding(2), range: 0...1)
+            }
+        }
+        .padding(.vertical, 2)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -938,9 +1478,12 @@ struct ToolStripSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             toolRow
-            Text(frame.imageTransform.displayName)
-                .font(.caption2.monospacedDigit())
-                .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("현재 · \(frame.imageTransform.displayName)")
+                Text("다음 스캔 · \(model.nextScanOrientation.displayName)")
+            }
+            .font(.caption2.monospacedDigit())
+            .foregroundStyle(.secondary)
         }
     }
 
@@ -961,32 +1504,23 @@ struct ToolStripSection: View {
                 withAnimation(.snappy(duration: 0.18)) { cropMode.toggle() }
             }
             ToolIconButton(systemName: "rotate.left", help: "왼쪽으로 회전") {
-                frame.imageTransform.rotation = frame.imageTransform.rotation.rotatedCounterClockwise()
-                redevelop()
+                model.rotate(frame, clockwise: false)
             }
             ToolIconButton(systemName: "rotate.right", help: "오른쪽으로 회전") {
-                frame.imageTransform.rotation = frame.imageTransform.rotation.rotatedClockwise()
-                redevelop()
+                model.rotate(frame, clockwise: true)
             }
             ToolIconButton(systemName: "arrow.left.and.right", help: "좌우 반전", isActive: frame.imageTransform.flipHorizontal) {
-                frame.imageTransform.flipHorizontal.toggle()
-                redevelop()
+                model.flipHorizontally(frame)
             }
             ToolIconButton(systemName: "arrow.up.and.down", help: "상하 반전", isActive: frame.imageTransform.flipVertical) {
-                frame.imageTransform.flipVertical.toggle()
-                redevelop()
+                model.flipVertically(frame)
             }
             Spacer()
-            ToolIconButton(systemName: "arrow.counterclockwise", help: "변형 초기화", isDisabled: frame.imageTransform.isIdentity) {
-                frame.imageTransform = .identity
+            ToolIconButton(systemName: "arrow.counterclockwise", help: "현재 및 다음 스캔 변형 초기화", isDisabled: frame.imageTransform.isIdentity && model.nextScanOrientation.isIdentity && !cropMode) {
                 cropMode = false
-                redevelop()
+                model.resetTransform(frame)
             }
         }
-    }
-
-    func redevelop() {
-        Task { await model.developFrame(frame) }
     }
 }
 
@@ -1018,6 +1552,8 @@ struct WorkflowSection<Content: View>: View {
     let systemImage: String
     let isExpanded: Bool
     let toggle: () -> Void
+    let reset: (() -> Void)?
+    let contentDisabled: Bool
     let content: Content
 
     init(
@@ -1025,35 +1561,57 @@ struct WorkflowSection<Content: View>: View {
         systemImage: String,
         isExpanded: Bool,
         toggle: @escaping () -> Void,
+        reset: (() -> Void)? = nil,
+        contentDisabled: Bool = false,
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
         self.systemImage = systemImage
         self.isExpanded = isExpanded
         self.toggle = toggle
+        self.reset = reset
+        self.contentDisabled = contentDisabled
         self.content = content()
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Button(action: toggle) {
-                HStack(spacing: 8) {
-                    Image(systemName: systemImage)
-                        .frame(width: 18)
-                    Text(title)
-                        .font(.subheadline.weight(.semibold))
-                    Spacer()
-                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
+            HStack(spacing: 8) {
+                Button(action: toggle) {
+                    HStack(spacing: 8) {
+                        Image(systemName: systemImage)
+                            .frame(width: 18)
+                        Text(title)
+                            .font(.subheadline.weight(.semibold))
+                        Spacer()
+                        Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 6)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                if let reset {
+                    Button(action: reset) {
+                        Image(systemName: "arrow.counterclockwise")
+                            .font(.caption.weight(.semibold))
+                            .frame(width: 24, height: 24)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(contentDisabled)
+                    .help("\(title) 초기화")
+                    .accessibilityLabel("\(title) 초기화")
                 }
             }
-            .buttonStyle(.plain)
             if isExpanded {
                 VStack(alignment: .leading, spacing: 10) {
                     content
                 }
-                .transition(.opacity.combined(with: .move(edge: .top)))
+                .disabled(contentDisabled)
+                .opacity(contentDisabled ? 0.55 : 1)
+                .transition(.opacity)
             }
             Divider()
         }
@@ -1077,13 +1635,17 @@ struct InspectorSlider: View {
                 Text(title)
                     .font(.caption)
                 Spacer()
-                Text(String(format: "%+.2f", value))
+                Text(signedControlText(value))
                     .font(.caption2.monospacedDigit())
                     .foregroundStyle(.secondary)
             }
             Slider(value: $value, in: range)
         }
     }
+}
+
+private func signedControlText(_ value: Double) -> String {
+    abs(value) < 0.005 ? "0.00" : String(format: "%+.2f", value)
 }
 
 // MARK: - ExportSection
@@ -1097,6 +1659,7 @@ struct ExportSection: View {
             InspectorControlRow("Format") {
                 Picker("Format", selection: $format) {
                     Text("JPEG").tag(ExportFormat.jpeg)
+                    Text("PNG").tag(ExportFormat.png)
                     Text("TIFF 16-bit").tag(ExportFormat.tiff16)
                 }
                 .labelsHidden()
@@ -1120,10 +1683,28 @@ struct ExportSection: View {
     }
     func exportUsingPanel(_ frame: ScanFrame) {
         let panel = NSSavePanel()
-        panel.allowedContentTypes = format == .jpeg ? [.jpeg] : [.tiff]
-        panel.nameFieldStringValue = "frame\(frame.scanIndex).\(format == .jpeg ? "jpg" : "tif")"
+        panel.allowedContentTypes = [format.contentType]
+        panel.nameFieldStringValue = "frame\(frame.scanIndex).\(format.fileExtension)"
         if panel.runModal() == .OK, let url = panel.url {
             model.exportFrame(frame, to: url, format: format, writeSidecar: writeSidecar)
+        }
+    }
+}
+
+private extension ExportFormat {
+    var contentType: UTType {
+        switch self {
+        case .jpeg: return .jpeg
+        case .png: return .png
+        case .tiff16, .rawScanTIFF: return .tiff
+        }
+    }
+
+    var fileExtension: String {
+        switch self {
+        case .jpeg: return "jpg"
+        case .png: return "png"
+        case .tiff16, .rawScanTIFF: return "tif"
         }
     }
 }

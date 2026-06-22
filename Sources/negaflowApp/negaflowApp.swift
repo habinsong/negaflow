@@ -23,6 +23,9 @@ struct negaflowApp: App {
 // MARK: - AppModel
 @MainActor
 final class AppModel: ObservableObject {
+    static let mockDeviceID = "mock"
+    static let mockDisplayName = "Plustek OpticFilm 8200i (Demo)"
+
     let saneBackend = SANEBackend()
     let mockBackend = MockScannerBackend()
 
@@ -46,19 +49,35 @@ final class AppModel: ObservableObject {
     // 스캔 옵션(다음 스캔에 적용)
     @Published var filmType: FilmType = .colorNegative
     @Published var resolutionChoice: Resolution = .r3600
+    @Published var bitDepthChoice: BitDepth = .sixteen
+    @Published var colorModeChoice: ColorMode = .color
+    @Published var multiExposureEnabled: Bool = false
+    @Published private(set) var nextScanOrientation: ImageTransform = .identity
 
     @Published var capabilities: ScannerCapabilities?
     @Published var diagnostics: String = ""
 
     let presets: [LookPreset] = PresetRegistry.loadAll()
+    private var lastProgressUpdateAt: Date = .distantPast
+    private var lastProgressFraction: Double = -1
+    private var lastProgressPhase: ScanPhase = .idle
+    private var lastProgressMessage: String = ""
+    private var activeDevelopmentFrameIDs = Set<UUID>()
 
     var backend: ScannerBackend? { demoMode ? mockBackend : (hasSANE ? saneBackend : nil) }
+    var saneDevices: [ScannerDescriptor] { devices.filter { $0.backendType == .sane } }
     var hasSANE: Bool { devices.contains { $0.backendType == .sane } }
     var hasScanner: Bool { backend != nil }
     var canScan: Bool { hasScanner && !isScanning }
     var effectiveScannerID: String? {
-        if demoMode { return "mock" }
-        return devices.first(where: { $0.backendType == .sane })?.id
+        if demoMode { return Self.mockDeviceID }
+        return saneDevices.first(where: { $0.id == selectedDeviceID })?.id ?? saneDevices.first?.id
+    }
+    var activeScannerDisplayName: String {
+        if demoMode { return Self.mockDisplayName }
+        return saneDevices.first(where: { $0.id == selectedDeviceID })?.displayName
+            ?? saneDevices.first?.displayName
+            ?? "스캐너 없음"
     }
     var selectedFrame: ScanFrame? {
         guard let id = selectedFrameID else { return nil }
@@ -75,22 +94,39 @@ final class AppModel: ObservableObject {
         saneBackend.invalidateAddressCache()
         let sane = (try? await saneBackend.detectScanners()) ?? []
         devices = sane
-        if hasSANE, selectedDeviceID == nil {
-            selectedDeviceID = sane.first?.id
+        if demoMode {
+            selectedDeviceID = Self.mockDeviceID
             await loadCapabilities()
+        } else if hasSANE {
+            if selectedDeviceID == nil || !saneDevices.contains(where: { $0.id == selectedDeviceID }) {
+                selectedDeviceID = saneDevices.first?.id
+            }
+            await loadCapabilities()
+        } else {
+            selectedDeviceID = nil
+            capabilities = nil
         }
-        statusMessage = !hasSANE ? (demoMode ? "Demo 모드" : "스캐너 연결 대기 중") : "Ready"
+        statusMessage = demoMode ? "Demo 모드" : (hasSANE ? "Ready" : "스캐너 연결 대기 중")
     }
 
     func toggleDemo(_ on: Bool) {
         demoMode = on
-        if on { selectedDeviceID = "mock"; Task { await loadCapabilities() }; statusMessage = "Demo 모드" }
-        else { statusMessage = hasSANE ? "Ready" : "스캐너 연결 대기 중" }
+        if on {
+            selectedDeviceID = Self.mockDeviceID
+            statusMessage = "Demo 모드"
+        } else {
+            selectedDeviceID = saneDevices.first?.id
+            statusMessage = hasSANE ? "Ready" : "스캐너 연결 대기 중"
+        }
+        Task { await loadCapabilities() }
     }
 
     func loadCapabilities() async {
         guard let id = effectiveScannerID, let b = backend else { return }
         capabilities = try? await b.getCapabilities(scannerID: id)
+        if capabilities?.supportsMultiExposure != true {
+            multiExposureEnabled = false
+        }
     }
 
     // MARK: scan (단일 + 배치)
@@ -115,9 +151,10 @@ final class AppModel: ObservableObject {
             } else {
                 opts = ScanOptions.strongDefault(scannerID: id)
                 opts.resolution = resolutionChoice
-                opts.bitDepth = .sixteen
+                opts.bitDepth = bitDepthChoice
+                opts.colorMode = colorModeChoice
                 opts.filmType = filmType
-                opts.multiExposureEnabled = !filmType.requiresInversion
+                opts.multiExposureEnabled = multiExposureEnabled && capabilities?.supportsMultiExposure == true
             }
             opts.temporaryOutputURL = SANEBackend.makeTempURL(prefix: "negaflow_app", suffix: ".tiff")
             scanPhase = preview ? .previewScanning : .scanningRGB
@@ -137,9 +174,14 @@ final class AppModel: ObservableObject {
                     : try await backend.startFullScan(opts, progress: { [weak self] p in
                         Task { @MainActor in self?.update(remap(p)) }
                     })
-                let frame = ScanFrame(scanIndex: frames.count + 1, rawScanURL: result.rawFileURL, filmType: filmType)
+                let frame = ScanFrame(
+                    scanIndex: frames.count + 1,
+                    rawScanURL: result.rawFileURL,
+                    filmType: filmType,
+                    initialTransform: nextScanOrientation
+                )
                 frame.preset = presets.first(where: { $0.id == "neutral" })
-                frame.params.filmType = filmType
+                frame.updateParams { $0.filmType = filmType }
                 frames.append(frame)
                 selectedFrameID = frame.id
                 statusMessage = "Frame \(frame.scanIndex) 스캔 완료: \(result.width)×\(result.height)"
@@ -172,112 +214,180 @@ final class AppModel: ObservableObject {
         if selectedFrameID == frame.id { selectedFrameID = frames.last?.id }
     }
 
+    func rotate(_ frame: ScanFrame, clockwise: Bool) {
+        frame.updateTransform {
+            $0.rotation = clockwise
+                ? $0.rotation.rotatedClockwise()
+                : $0.rotation.rotatedCounterClockwise()
+        }
+        updateOrientationTemplate(from: frame)
+    }
+
+    func flipHorizontally(_ frame: ScanFrame) {
+        frame.updateTransform { $0.flipHorizontal.toggle() }
+        updateOrientationTemplate(from: frame)
+    }
+
+    func flipVertically(_ frame: ScanFrame) {
+        frame.updateTransform { $0.flipVertical.toggle() }
+        updateOrientationTemplate(from: frame)
+    }
+
+    func resetTransform(_ frame: ScanFrame) {
+        frame.imageTransform = .identity
+        nextScanOrientation = .identity
+        Task { await developFrame(frame) }
+    }
+
+    private func updateOrientationTemplate(from frame: ScanFrame) {
+        nextScanOrientation = frame.imageTransform.orientationTemplate
+        Task { await developFrame(frame) }
+    }
+
     // MARK: develop (엔진 호출 — 색감 로직은 그대로)
     func developFrame(_ frame: ScanFrame) async {
+        frame.developRevision += 1
+        frame.updateParams { $0.filmType = frame.filmType }
+        guard activeDevelopmentFrameIDs.insert(frame.id).inserted else { return }
+        await renderLatestDevelopment(for: frame)
+    }
+
+    private func renderLatestDevelopment(for frame: ScanFrame) async {
         frame.isDeveloping = true
         scanPhase = .processingNegative
-        let engine = ChromabaseEngine()
-        frame.params.filmType = frame.filmType
-        let base: FilmBase? = frame.filmType.requiresInversion
-            ? engine.estimateFilmBase(at: frame.rawScanURL, mode: frame.params.baseEstimationMode,
-                                      manual: frame.params.manualBaseRGB)
-            : nil
-        frame.baseRGB = base?.rgb
-        guard let input = engine.loadImage(frame.rawScanURL) else {
-            statusMessage = "이미지 로드 실패: \(frame.rawScanURL.lastPathComponent)"
-            scanPhase = .error
-            frame.isDeveloping = false
-            return
+        var revision = frame.developRevision
+
+        while true {
+            let baseKey = FilmBaseCacheKey(
+                filmType: frame.filmType,
+                mode: frame.params.baseEstimationMode,
+                manualBaseRGB: frame.params.manualBaseRGB
+            )
+            let snapshot = DevelopFrameSnapshot(
+                rawScanURL: frame.rawScanURL,
+                filmType: frame.filmType,
+                params: frame.params,
+                preset: frame.preset,
+                imageTransform: frame.imageTransform,
+                cachedBase: frame.cachedBaseKey == baseKey ? frame.cachedBase : nil,
+                baseKey: baseKey,
+                needsRawPreview: frame.rawPreviewImage == nil || frame.rawPreviewTransform != frame.imageTransform
+            )
+
+            do {
+                let result = try await Task.detached(priority: .userInitiated) {
+                    try DevelopFrameRenderer.render(snapshot)
+                }.value
+                guard frame.developRevision == revision else {
+                    revision = frame.developRevision
+                    continue
+                }
+                frame.cachedBase = result.base
+                frame.cachedBaseKey = snapshot.baseKey
+                frame.baseRGB = result.base?.rgb
+                if let rawPreview = result.rawPreview {
+                    frame.rawPreviewImage = NSImage(
+                        cgImage: rawPreview,
+                        size: NSSize(width: rawPreview.width, height: rawPreview.height)
+                    )
+                    frame.rawPreviewTransform = snapshot.imageTransform
+                }
+                frame.developedImage = NSImage(
+                    cgImage: result.developed,
+                    size: NSSize(width: result.developed.width, height: result.developed.height)
+                )
+                scanPhase = .complete
+                frame.isDeveloping = false
+                activeDevelopmentFrameIDs.remove(frame.id)
+                statusMessage = "현상 완료"
+                return
+            } catch {
+                guard frame.developRevision == revision else {
+                    revision = frame.developRevision
+                    continue
+                }
+                statusMessage = "이미지 로드 실패: \(frame.rawScanURL.lastPathComponent)"
+                scanPhase = .error
+                frame.isDeveloping = false
+                activeDevelopmentFrameIDs.remove(frame.id)
+                return
+            }
         }
-        loadRawPreview(frame)
-        var effectiveParams: DevelopParameters
-        if let preset = frame.preset { effectiveParams = DevelopParameters(preset: preset, overrides: frame.params) }
-        else { effectiveParams = frame.params }
-        effectiveParams.filmType = frame.filmType
-        effectiveParams.imageTransform = frame.imageTransform
-        let out = engine.develop(image: input, base: base, params: effectiveParams)
-        // developCurrent 의 sRGB working space 통일(흰 화면 버그 방지) — 그대로 유지.
-        let ctx = CIContext(options: [
-            .useSoftwareRenderer: false,
-            .workingColorSpace: CGColorSpace(name: CGColorSpace.sRGB) as Any,
-            .outputColorSpace: CGColorSpace(name: CGColorSpace.sRGB) as Any,
-        ])
-        let cs = CGColorSpace(name: CGColorSpace.sRGB)!
-        if let cg = ctx.createCGImage(out, from: out.extent, format: .RGBA8, colorSpace: cs) {
-            frame.developedImage = NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))
-        }
-        scanPhase = .complete
-        frame.isDeveloping = false
-        statusMessage = "현상 완료"
     }
 
     func loadRawPreview(_ frame: ScanFrame) {
-        let engine = ChromabaseEngine()
-        guard let input = engine.loadImage(frame.rawScanURL) else { return }
-        let image = ImageTransformStage.apply(to: input, transform: frame.imageTransform)
-        let ctx = CIContext(options: [.useSoftwareRenderer: false])
-        let cs = CGColorSpace(name: CGColorSpace.sRGB)!
-        if let cg = ctx.createCGImage(image, from: image.extent, format: .RGBA8, colorSpace: cs) {
-            frame.rawPreviewImage = NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))
+        let snapshot = DevelopFrameSnapshot(
+            rawScanURL: frame.rawScanURL,
+            filmType: frame.filmType,
+            params: frame.params,
+            preset: frame.preset,
+            imageTransform: frame.imageTransform,
+            cachedBase: nil,
+            baseKey: FilmBaseCacheKey(
+                filmType: frame.filmType,
+                mode: frame.params.baseEstimationMode,
+                manualBaseRGB: frame.params.manualBaseRGB
+            ),
+            needsRawPreview: true
+        )
+        Task {
+            let rawPreview = try? await Task.detached(priority: .utility) {
+                try DevelopFrameRenderer.renderRawPreview(snapshot)
+            }.value
+            guard let rawPreview else { return }
+            frame.rawPreviewImage = NSImage(
+                cgImage: rawPreview,
+                size: NSSize(width: rawPreview.width, height: rawPreview.height)
+            )
+            frame.rawPreviewTransform = snapshot.imageTransform
         }
     }
 
     func exportFrame(_ frame: ScanFrame, to url: URL, format: ExportFormat, writeSidecar: Bool = true) {
-        let engine = ChromabaseEngine()
-        frame.params.filmType = frame.filmType
-        let base: FilmBase? = frame.filmType.requiresInversion
-            ? engine.estimateFilmBase(at: frame.rawScanURL, mode: frame.params.baseEstimationMode,
-                                      manual: frame.params.manualBaseRGB)
-            : nil
         var effectiveParams = frame.preset.map { DevelopParameters(preset: $0, overrides: frame.params) } ?? frame.params
         effectiveParams.filmType = frame.filmType
         effectiveParams.imageTransform = frame.imageTransform
-        let meta = ExportMeta(
+        let baseKey = FilmBaseCacheKey(
+            filmType: frame.filmType,
+            mode: frame.params.baseEstimationMode,
+            manualBaseRGB: frame.params.manualBaseRGB
+        )
+        let cachedBase = frame.cachedBaseKey == baseKey ? frame.cachedBase : nil
+        let snapshot = ExportFrameSnapshot(
+            rawScanURL: frame.rawScanURL,
+            outputURL: url,
+            format: format,
+            filmType: frame.filmType,
+            params: effectiveParams,
+            baseMode: frame.params.baseEstimationMode,
+            manualBaseRGB: frame.params.manualBaseRGB,
+            cachedBase: cachedBase,
             scannerModel: devices.first(where: { $0.backendType == .sane })?.displayName ?? (demoMode ? "Mock" : nil),
             resolutionDPI: frame.developedImage != nil ? resolutionChoice.dpi : nil,
-            filmType: frame.filmType.rawValue,
-            software: "negaflow 0.1.0"
+            backendUsed: (backend?.backendType).map { $0.rawValue },
+            presetName: frame.preset?.id,
+            cropRect: frame.imageTransform.cropRect,
+            writeSidecar: writeSidecar
         )
-        do {
-            try engine.developFile(input: frame.rawScanURL, output: url, format: format,
-                                   base: base, params: effectiveParams, metadata: meta)
-            if writeSidecar { writeSidecarFor(frame, exportURL: url, format: format, base: base) }
-            statusMessage = "내보내기 완료 → \(url.lastPathComponent)"
-        } catch {
-            statusMessage = "내보내기 실패: \(error.localizedDescription)"
+        frame.isDeveloping = true
+        statusMessage = "내보내는 중..."
+        Task {
+            do {
+                let result = try await Task.detached(priority: .userInitiated) {
+                    try ExportFrameWriter.write(snapshot)
+                }.value
+                if let base = result.base {
+                    frame.cachedBaseKey = baseKey
+                    frame.cachedBase = base
+                    frame.baseRGB = base.rgb
+                }
+                frame.isDeveloping = false
+                statusMessage = "내보내기 완료 → \(url.lastPathComponent)"
+            } catch {
+                frame.isDeveloping = false
+                statusMessage = "내보내기 실패: \(error.localizedDescription)"
+            }
         }
-    }
-
-    /// 프레임의 현상 파라미터/transform/crop/base를 sidecar JSON 으로 저장.
-    /// raw 스캔 옆(<name>.negaflow.json) + export 옆(<name>.negaflow.json) 둘 다.
-    func writeSidecarFor(_ frame: ScanFrame, exportURL: URL?, format: ExportFormat, base: FilmBase?) {
-        var s = Sidecar(filmType: frame.filmType, parameters: frame.params)
-        s.scannerModel = devices.first(where: { $0.backendType == .sane })?.displayName
-        s.backendUsed = (backend?.backendType).map { $0.rawValue }
-        s.scanResolution = resolutionChoice.dpi
-        s.bitDepth = 16
-        s.presetName = frame.preset?.id
-        if let c = frame.imageTransform.cropRect {
-            s.crop = Sidecar.CropRect(x: c.x, y: c.y, w: c.z, h: c.w)
-        }
-        if let b = base { s.baseSample = Sidecar.BaseSample(b) }
-        // raw 스캔 옆.
-        let rawSidecar = rawSidecarURL(for: frame.rawScanURL)
-        try? s.write(to: rawSidecar)
-        // export 파일 옆(export 시).
-        if let exportURL = exportURL {
-            let exportSidecar = exportURL.deletingPathExtension()
-                .appendingPathExtension("negaflow.json")
-            var s2 = s
-            s2.exportHistory.append(Sidecar.ExportRecord(
-                path: exportURL.path, format: format.rawValue, at: Date()))
-            try? s2.write(to: exportSidecar)
-        }
-    }
-
-    /// raw 스캔 옆의 sidecar 경로.
-    func rawSidecarURL(for rawURL: URL) -> URL {
-        rawURL.deletingPathExtension().appendingPathExtension("negaflow.json")
     }
 
     func runDiagnostics() async {
@@ -295,8 +405,238 @@ final class AppModel: ObservableObject {
     }
 
     private func update(_ p: ScanProgress) {
+        let now = Date()
+        let nextFraction = p.fraction ?? scanFraction
+        let message = p.message.isEmpty ? p.phase.rawValue : p.message
+        let phaseChanged = p.phase != lastProgressPhase
+        let messageChanged = message != lastProgressMessage
+        let fractionMoved = abs(nextFraction - lastProgressFraction) >= 0.015
+        let timeElapsed = now.timeIntervalSince(lastProgressUpdateAt) >= 0.20
+        guard phaseChanged || messageChanged || fractionMoved || timeElapsed else { return }
+        lastProgressUpdateAt = now
+        lastProgressFraction = nextFraction
+        lastProgressPhase = p.phase
+        lastProgressMessage = message
         scanPhase = p.phase
-        scanFraction = p.fraction ?? scanFraction
-        statusMessage = p.message.isEmpty ? p.phase.rawValue : p.message
+        scanFraction = nextFraction
+        statusMessage = message
+    }
+}
+
+private struct ExportFrameSnapshot: Sendable {
+    let rawScanURL: URL
+    let outputURL: URL
+    let format: ExportFormat
+    let filmType: FilmType
+    let params: DevelopParameters
+    let baseMode: DevelopParameters.BaseMode
+    let manualBaseRGB: SIMD3<Double>?
+    let cachedBase: FilmBase?
+    let scannerModel: String?
+    let resolutionDPI: Int?
+    let backendUsed: String?
+    let presetName: String?
+    let cropRect: SIMD4<Double>?
+    let writeSidecar: Bool
+}
+
+private struct ExportFrameResult: @unchecked Sendable {
+    let base: FilmBase?
+}
+
+private enum ExportFrameWriter {
+    static func write(_ snapshot: ExportFrameSnapshot) throws -> ExportFrameResult {
+        let engine = ChromabaseEngine()
+        guard let rawInput = engine.loadScannerImage(snapshot.rawScanURL) else {
+            throw ChromabaseError.loadFailed(snapshot.rawScanURL.path)
+        }
+        let base = snapshot.filmType.requiresInversion
+            ? snapshot.cachedBase ?? engine.estimateFilmBase(
+                in: rawInput,
+                mode: snapshot.baseMode,
+                manual: snapshot.manualBaseRGB
+            )
+            : nil
+        let meta = ExportMeta(
+            scannerModel: snapshot.scannerModel,
+            resolutionDPI: snapshot.resolutionDPI,
+            filmType: snapshot.filmType.rawValue,
+            software: "negaflow 0.1.0"
+        )
+        let developed = engine.developScanner(image: rawInput, base: base, params: snapshot.params)
+        try ExportEngine.write(developed, to: snapshot.outputURL, format: snapshot.format, using: renderContext(), metadata: meta)
+        if snapshot.writeSidecar {
+            writeSidecars(for: snapshot, base: base)
+        }
+        return ExportFrameResult(base: base)
+    }
+
+    private static func renderContext() -> CIContext {
+        CIContext(options: [
+            .useSoftwareRenderer: false,
+            .workingColorSpace: CGColorSpace(name: CGColorSpace.linearSRGB) as Any,
+            .outputColorSpace: CGColorSpace(name: CGColorSpace.sRGB) as Any,
+        ])
+    }
+
+    private static func writeSidecars(for snapshot: ExportFrameSnapshot, base: FilmBase?) {
+        var sidecar = Sidecar(filmType: snapshot.filmType, parameters: snapshot.params)
+        sidecar.scannerModel = snapshot.scannerModel
+        sidecar.backendUsed = snapshot.backendUsed
+        sidecar.scanResolution = snapshot.resolutionDPI
+        sidecar.bitDepth = 16
+        sidecar.presetName = snapshot.presetName
+        if let crop = snapshot.cropRect {
+            sidecar.crop = Sidecar.CropRect(x: crop.x, y: crop.y, w: crop.z, h: crop.w)
+        }
+        if let base {
+            sidecar.baseSample = Sidecar.BaseSample(base)
+        }
+        try? sidecar.write(to: rawSidecarURL(for: snapshot.rawScanURL))
+
+        let exportSidecar = snapshot.outputURL
+            .deletingPathExtension()
+            .appendingPathExtension("negaflow.json")
+        var exportSidecarBody = sidecar
+        exportSidecarBody.exportHistory.append(Sidecar.ExportRecord(
+            path: snapshot.outputURL.path,
+            format: snapshot.format.rawValue,
+            at: Date()
+        ))
+        try? exportSidecarBody.write(to: exportSidecar)
+    }
+
+    private static func rawSidecarURL(for rawURL: URL) -> URL {
+        rawURL.deletingPathExtension().appendingPathExtension("negaflow.json")
+    }
+}
+
+private struct DevelopFrameSnapshot: Sendable {
+    let rawScanURL: URL
+    let filmType: FilmType
+    let params: DevelopParameters
+    let preset: LookPreset?
+    let imageTransform: ImageTransform
+    let cachedBase: FilmBase?
+    let baseKey: FilmBaseCacheKey
+    let needsRawPreview: Bool
+}
+
+private struct DevelopFrameRenderResult: @unchecked Sendable {
+    let base: FilmBase?
+    let rawPreview: CGImage?
+    let developed: CGImage
+}
+
+private enum DevelopFrameRenderError: Error {
+    case loadFailed
+    case rawPreviewFailed
+    case developedFailed
+}
+
+private enum DevelopFrameRenderer {
+    private static let displayMaxDimension: CGFloat = 3600
+    private static let sharedRenderContext = CIContext(options: [
+        .useSoftwareRenderer: false,
+        .workingColorSpace: CGColorSpace(name: CGColorSpace.linearSRGB) as Any,
+        .outputColorSpace: CGColorSpace(name: CGColorSpace.sRGB) as Any,
+    ])
+
+    static func render(_ snapshot: DevelopFrameSnapshot) throws -> DevelopFrameRenderResult {
+        let engine = ChromabaseEngine()
+        guard let rawInput = engine.loadScannerImage(snapshot.rawScanURL) else {
+            throw DevelopFrameRenderError.loadFailed
+        }
+        let base = snapshot.filmType.requiresInversion
+            ? snapshot.cachedBase ?? engine.estimateFilmBase(
+                in: rawInput,
+                mode: snapshot.params.baseEstimationMode,
+                manual: snapshot.params.manualBaseRGB
+            )
+            : nil
+        let context = renderContext()
+        let rawPreview = snapshot.needsRawPreview
+            ? try renderRawPreview(
+                from: displayProxy(rawInput),
+                transform: snapshot.imageTransform,
+                context: context
+            )
+            : nil
+        let developed = try renderDeveloped(
+            input: rawInput,
+            base: base,
+            snapshot: snapshot,
+            engine: engine,
+            context: context
+        )
+        return DevelopFrameRenderResult(base: base, rawPreview: rawPreview, developed: developed)
+    }
+
+    static func renderRawPreview(_ snapshot: DevelopFrameSnapshot) throws -> CGImage {
+        let engine = ChromabaseEngine()
+        guard let rawInput = engine.loadScannerImage(snapshot.rawScanURL) else {
+            throw DevelopFrameRenderError.loadFailed
+        }
+        return try renderRawPreview(
+            from: displayProxy(rawInput),
+            transform: snapshot.imageTransform,
+            context: renderContext()
+        )
+    }
+
+    private static func renderDeveloped(
+        input: CIImage,
+        base: FilmBase?,
+        snapshot: DevelopFrameSnapshot,
+        engine: ChromabaseEngine,
+        context: CIContext
+    ) throws -> CGImage {
+        var effectiveParams: DevelopParameters
+        if let preset = snapshot.preset {
+            effectiveParams = DevelopParameters(preset: preset, overrides: snapshot.params)
+        } else {
+            effectiveParams = snapshot.params
+        }
+        effectiveParams.filmType = snapshot.filmType
+        effectiveParams.imageTransform = snapshot.imageTransform
+        let out = displayProxy(engine.developScanner(image: input, base: base, params: effectiveParams))
+        let colorSpace = CGColorSpace(name: CGColorSpace.sRGB)!
+        guard let cg = context.createCGImage(out, from: out.extent, format: .RGBA8, colorSpace: colorSpace) else {
+            throw DevelopFrameRenderError.developedFailed
+        }
+        return cg
+    }
+
+    private static func renderRawPreview(
+        from input: CIImage,
+        transform: ImageTransform,
+        context: CIContext
+    ) throws -> CGImage {
+        let image = ImageTransformStage.apply(to: input, transform: transform)
+        let colorSpace = CGColorSpace(name: CGColorSpace.sRGB)!
+        guard let cg = context.createCGImage(image, from: image.extent, format: .RGBA8, colorSpace: colorSpace) else {
+            throw DevelopFrameRenderError.rawPreviewFailed
+        }
+        return cg
+    }
+
+    private static func displayProxy(_ input: CIImage) -> CIImage {
+        let extent = input.extent.integral
+        let maxSide = max(extent.width, extent.height)
+        guard maxSide > displayMaxDimension else {
+            return input
+        }
+        let scale = displayMaxDimension / maxSide
+        let scaledSize = CGSize(width: extent.width * scale, height: extent.height * scale)
+        return input
+            .applyingFilter("CILanczosScaleTransform", parameters: [
+                "inputScale": scale,
+                "inputAspectRatio": 1.0,
+            ])
+            .cropped(to: CGRect(origin: .zero, size: scaledSize))
+    }
+
+    private static func renderContext() -> CIContext {
+        sharedRenderContext
     }
 }

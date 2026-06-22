@@ -13,6 +13,7 @@ public struct ScanOptions: Codable, Sendable, Equatable {
     public var scanArea: ScanArea
     public var infraredEnabled: Bool
     public var multiExposureEnabled: Bool
+    public var hardwareExposureTime: Int?
     public var outputRawTIFF: Bool
     public var temporaryOutputURL: URL?
 
@@ -25,6 +26,7 @@ public struct ScanOptions: Codable, Sendable, Equatable {
         scanArea: ScanArea = .fullFrame35mm,
         infraredEnabled: Bool = false,
         multiExposureEnabled: Bool = false,
+        hardwareExposureTime: Int? = nil,
         outputRawTIFF: Bool = true,
         temporaryOutputURL: URL? = nil
     ) {
@@ -36,6 +38,7 @@ public struct ScanOptions: Codable, Sendable, Equatable {
         self.scanArea = scanArea
         self.infraredEnabled = infraredEnabled
         self.multiExposureEnabled = multiExposureEnabled
+        self.hardwareExposureTime = hardwareExposureTime
         self.outputRawTIFF = outputRawTIFF
         self.temporaryOutputURL = temporaryOutputURL
     }

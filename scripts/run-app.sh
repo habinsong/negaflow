@@ -86,15 +86,19 @@ cat > "$APP_BUNDLE/Contents/Info.plist" <<'PLIST'
 PLIST
 
 # Chromabase 프리셋 리소스 번들이 산출물 옆에 있으면 같이 복사 (런타임에 Presets 로드용).
-PRESET_BUNDLE=$(find "$DERIVED/Build/Products/$CONFIG" -name "negaflow_Chromabase.bundle" 2>/dev/null | head -1 || true)
+PRESET_BUNDLE=$(find "$DERIVED/Build/Products/$CONFIG" -iname "*_Chromabase.bundle" 2>/dev/null | head -1 || true)
 if [ -n "$PRESET_BUNDLE" ]; then
-  cp -R "$PRESET_BUNDLE" "$APP_BUNDLE/Contents/Resources/" 2>/dev/null || \
-    mkdir -p "$APP_BUNDLE/Contents/Resources" && cp -R "$PRESET_BUNDLE" "$APP_BUNDLE/Contents/Resources/"
+  mkdir -p "$APP_BUNDLE/Contents/Resources"
+  cp -R "$PRESET_BUNDLE" "$APP_BUNDLE/Contents/Resources/"
 fi
 
 echo "[run-app] bundle: $APP_BUNDLE"
 
 if [ "$DO_RUN" -eq 1 ]; then
   echo "[run-app] launching…"
-  open "$APP_BUNDLE"
+  if [ -n "${NEGAFLOW_SCANIMAGE_PATH:-}" ]; then
+    "$APP_BUNDLE/Contents/MacOS/negaflowApp" &
+  else
+    open "$APP_BUNDLE"
+  fi
 fi

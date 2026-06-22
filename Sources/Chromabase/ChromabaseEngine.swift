@@ -24,39 +24,114 @@ public struct DevelopParameters: Codable, Sendable, Equatable {
 
     // Tone (plan §8.7) — 기본 UI
     public var exposure: Double = 0.0        // stops
+    public var contrast: Double = 0.0
     public var density: Double = 0.0         // -1...1
     public var highlight: Double = 0.0       // -1...1 (roll-off)
     public var shadow: Double = 0.0          // -1...1 (black softness)
+    public var whites: Double = 0.0
+    public var blacks: Double = 0.0
+    public var curveHighlights: Double = 0.0
+    public var curveLights: Double = 0.0
+    public var curveDarks: Double = 0.0
+    public var curveShadows: Double = 0.0
 
     // Color (plan §8.8) — 기본 UI
     public var warmth: Double = 0.0          // -1...1
     public var tint: Double = 0.0            // -1...1
     public var colorDepth: Double = 0.0      // -1...1 (saturation)
+    public var vibrance: Double = 0.0
+    public var saturation: Double = 0.0
+    public var redPrimary: Double = 0.0
+    public var greenPrimary: Double = 0.0
+    public var bluePrimary: Double = 0.0
 
     // Texture
     public var grain: Double = 0.0           // 0...1
     public var sharpness: Double = 0.0       // 0...1
     public var halation: Double = 0.0        // 0...1
+    public var clarity: Double = 0.0
+    public var vignette: Double = 0.0
     public var imageTransform: ImageTransform = .identity
+
+    // 소프트웨어 ICE (먼지/스크래치 제거). IR 없이 RGB-only로 동작.
+    public var defectRemoval: Double = 0.0   // 0...1 (0 = off, strength)
 
     public enum BaseMode: String, Codable, Sendable { case auto, manual }
 
     public init() {}
+
+    enum CodingKeys: String, CodingKey {
+        case filmType, baseEstimationMode, manualBaseRGB
+        case exposure, contrast, density, highlight, shadow, whites, blacks
+        case curveHighlights, curveLights, curveDarks, curveShadows
+        case warmth, tint, colorDepth, vibrance, saturation
+        case redPrimary, greenPrimary, bluePrimary
+        case grain, sharpness, halation, clarity, vignette, imageTransform
+        case defectRemoval
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        filmType = try c.decodeIfPresent(FilmType.self, forKey: .filmType) ?? .colorNegative
+        baseEstimationMode = try c.decodeIfPresent(BaseMode.self, forKey: .baseEstimationMode) ?? .auto
+        manualBaseRGB = try c.decodeIfPresent(SIMD3<Double>.self, forKey: .manualBaseRGB)
+        exposure = try c.decodeIfPresent(Double.self, forKey: .exposure) ?? 0
+        contrast = try c.decodeIfPresent(Double.self, forKey: .contrast) ?? 0
+        density = try c.decodeIfPresent(Double.self, forKey: .density) ?? 0
+        highlight = try c.decodeIfPresent(Double.self, forKey: .highlight) ?? 0
+        shadow = try c.decodeIfPresent(Double.self, forKey: .shadow) ?? 0
+        whites = try c.decodeIfPresent(Double.self, forKey: .whites) ?? 0
+        blacks = try c.decodeIfPresent(Double.self, forKey: .blacks) ?? 0
+        curveHighlights = try c.decodeIfPresent(Double.self, forKey: .curveHighlights) ?? 0
+        curveLights = try c.decodeIfPresent(Double.self, forKey: .curveLights) ?? 0
+        curveDarks = try c.decodeIfPresent(Double.self, forKey: .curveDarks) ?? 0
+        curveShadows = try c.decodeIfPresent(Double.self, forKey: .curveShadows) ?? 0
+        warmth = try c.decodeIfPresent(Double.self, forKey: .warmth) ?? 0
+        tint = try c.decodeIfPresent(Double.self, forKey: .tint) ?? 0
+        colorDepth = try c.decodeIfPresent(Double.self, forKey: .colorDepth) ?? 0
+        vibrance = try c.decodeIfPresent(Double.self, forKey: .vibrance) ?? 0
+        saturation = try c.decodeIfPresent(Double.self, forKey: .saturation) ?? 0
+        redPrimary = try c.decodeIfPresent(Double.self, forKey: .redPrimary) ?? 0
+        greenPrimary = try c.decodeIfPresent(Double.self, forKey: .greenPrimary) ?? 0
+        bluePrimary = try c.decodeIfPresent(Double.self, forKey: .bluePrimary) ?? 0
+        grain = try c.decodeIfPresent(Double.self, forKey: .grain) ?? 0
+        sharpness = try c.decodeIfPresent(Double.self, forKey: .sharpness) ?? 0
+        halation = try c.decodeIfPresent(Double.self, forKey: .halation) ?? 0
+        clarity = try c.decodeIfPresent(Double.self, forKey: .clarity) ?? 0
+        vignette = try c.decodeIfPresent(Double.self, forKey: .vignette) ?? 0
+        imageTransform = try c.decodeIfPresent(ImageTransform.self, forKey: .imageTransform) ?? .identity
+        defectRemoval = try c.decodeIfPresent(Double.self, forKey: .defectRemoval) ?? 0
+    }
 
     /// LookPreset의 값을 얹은 뒤 사용자 조절을 적용한다.
     public init(preset: LookPreset, overrides: DevelopParameters) {
         self = preset.baseParameters
         // preset 값에 사용자 델타를 더한다.
         exposure   += overrides.exposure
+        contrast   += overrides.contrast
         density    += overrides.density
         highlight  += overrides.highlight
         shadow     += overrides.shadow
+        whites     += overrides.whites
+        blacks     += overrides.blacks
+        curveHighlights += overrides.curveHighlights
+        curveLights     += overrides.curveLights
+        curveDarks      += overrides.curveDarks
+        curveShadows    += overrides.curveShadows
         warmth     += overrides.warmth
         tint       += overrides.tint
         colorDepth += overrides.colorDepth
+        vibrance   += overrides.vibrance
+        saturation += overrides.saturation
+        redPrimary += overrides.redPrimary
+        greenPrimary += overrides.greenPrimary
+        bluePrimary += overrides.bluePrimary
         grain      = max(grain, overrides.grain)
         sharpness  = max(sharpness, overrides.sharpness)
         halation   = max(halation, overrides.halation)
+        clarity    += overrides.clarity
+        vignette   += overrides.vignette
+        defectRemoval = max(defectRemoval, overrides.defectRemoval)
         imageTransform = overrides.imageTransform
         filmType   = overrides.filmType
         baseEstimationMode = overrides.baseEstimationMode
@@ -79,26 +154,58 @@ public final class ChromabaseEngine: @unchecked Sendable {
 
     private let ci = CIContext(options: [
         .useSoftwareRenderer: false,
-        .workingColorSpace: NSNull(),   // 결과 색공간은 출력 시 명시
+        .workingColorSpace: CGColorSpace(name: CGColorSpace.linearSRGB) as Any,
     ])
 
     /// 원본을 로드하고 FilmBase를 추정한다.
     public func estimateFilmBase(at url: URL, mode: DevelopParameters.BaseMode,
                                  manual: SIMD3<Double>? = nil) -> FilmBase? {
         guard let img = loadImage(url) else { return nil }
+        return estimateFilmBase(in: img, mode: mode, manual: manual)
+    }
+
+    public func estimateFilmBase(in image: CIImage, mode: DevelopParameters.BaseMode,
+                                 manual: SIMD3<Double>? = nil) -> FilmBase? {
         switch mode {
         case .manual:
             if let m = manual { return FilmBase(rgb: m, source: .manual) }
             fallthrough
         case .auto:
-            return FilmBaseEstimator.estimate(from: img)
+            return FilmBaseEstimator.estimate(from: image)
         }
     }
 
     /// 전체 현상 파이프라인을 돌려 결과 CIImage를 반환한다.
     public func develop(image input: CIImage, base: FilmBase?, params: DevelopParameters) -> CIImage {
-        var img = ImageTransformStage.apply(to: input, transform: params.imageTransform)
-        let extent = img.extent
+        let linear = CGColorSpace(name: CGColorSpace.linearSRGB)!
+        let sampleColorSpace = input.colorSpace?.name == linear.name
+            ? linear
+            : CGColorSpace(name: CGColorSpace.sRGB)!
+        return develop(
+            image: input,
+            base: base,
+            params: params,
+            sampleColorSpace: sampleColorSpace
+        )
+    }
+
+    public func developScanner(image input: CIImage, base: FilmBase?, params: DevelopParameters) -> CIImage {
+        // 노이즈 감소는 반전 전 raw(오렌지 상태)가 아니라 반전 후 positive에서 수행한다.
+        // raw 네거티브의 chroma/luma 분리는 의미가 없어 데이터를 망가뜨린다.
+        develop(
+            image: input,
+            base: base,
+            params: params,
+            sampleColorSpace: CGColorSpace(name: CGColorSpace.linearSRGB)!
+        )
+    }
+
+    private func develop(image input: CIImage,
+                         base: FilmBase?,
+                         params: DevelopParameters,
+                         sampleColorSpace: CGColorSpace) -> CIImage {
+        var img = input
+        let extent = input.extent
 
         if params.filmType.requiresInversion {
             // ─── 네거티브 계열: 오렌지 마스크 제거 + 반전 (plan §8.4) ───
@@ -108,8 +215,9 @@ public final class ChromabaseEngine: @unchecked Sendable {
                      FilmBase(rgb: SIMD3(0.9, 0.65, 0.45), source: .auto)
             // 2-3. 오렌지 마스크 제거 + 네거티브 반전 (density-based)
             img = NegativeInversion.apply(to: img, base: fb)
-            // 4. SANE raw 저노출은 반전 후 positive 좌표계에서 레벨을 편다.
-            img = AutoLevels.apply(to: img)
+            img = ScannerNoiseReduction.reduceShadowChroma(in: img)
+            img = ScannerPrintGrade.apply(to: img)
+            img = ScannerOutputGrade.apply(to: img)
             // 5-8. 채널 균형 + 노출 + 톤 커브 + 컬러
             img = ColorModel.apply(to: img, params: params)
             img = ToneMapper.applyExposure(to: img, stops: params.exposure)
@@ -118,7 +226,7 @@ public final class ChromabaseEngine: @unchecked Sendable {
             // ─── 포지티브/슬라이드 계열: 반전 없음, 슬라이드 특성 톤/컬러 ───
             // 1. Auto Levels — SANE genesys 백엔드는 감마/노출 보정 없이 raw 데이터를
             //    내보낸다. 포지티브는 raw 직후에 데이터를 정상 범위로 편다.
-            img = AutoLevels.apply(to: img)
+            img = AutoLevels.apply(to: img, sampleColorSpace: sampleColorSpace)
             // 슬라이드는 이미 양화 상태. 높은 밀도, 선명한 컬러, 딥 블랙,
             // 하이라이트 보호가 핵심이다 (plan §8.9 Deep Slide 참고).
             img = PositiveDevelop.applyBaseGrade(to: img, filmType: params.filmType)
@@ -127,11 +235,18 @@ public final class ChromabaseEngine: @unchecked Sendable {
             img = ToneMapper.applyToneCurves(to: img, params: params)
         }
 
+        // 8.5 소프트웨어 ICE — 먼지/스크래치 제거. positive 상태에서 적용(임계값 의미 안정).
+        if params.defectRemoval > 1e-3 {
+            img = SoftwareICE.apply(to: img, strength: params.defectRemoval)
+        }
+
         // 9. 텍스처
         img = TextureStage.apply(to: img, params: params)
 
-        // 10. extent를 원본에 한정 (필터 체인이 무한 extent를 만들지 않게).
-        return img.cropped(to: extent)
+        return ImageTransformStage.apply(
+            to: img.cropped(to: extent),
+            transform: params.imageTransform
+        )
     }
 
     /// 파일 → 파일 현상 + 출력.
@@ -145,10 +260,24 @@ public final class ChromabaseEngine: @unchecked Sendable {
         try ExportEngine.write(developed, to: output, format: format, using: ci, metadata: metadata)
     }
 
+    public func developScannerFile(input: URL, output: URL, format: ExportFormat,
+                                   base: FilmBase?, params: DevelopParameters,
+                                   metadata: ExportMeta? = nil) throws {
+        guard let inputImg = loadScannerImage(input) else {
+            throw ChromabaseError.loadFailed(input.path)
+        }
+        let developed = developScanner(image: inputImg, base: base, params: params)
+        try ExportEngine.write(developed, to: output, format: format, using: ci, metadata: metadata)
+    }
+
     // MARK: helpers
     /// 파일 로드는 ImageLoader로 위임. TIFF/JPEG/PNG/DNG/RAW 모두 지원.
     public func loadImage(_ url: URL) -> CIImage? {
         ImageLoader.load(url, allowRaw: true)
+    }
+
+    public func loadScannerImage(_ url: URL) -> CIImage? {
+        ImageLoader.loadScannerTIFF(url)
     }
 }
 
@@ -165,6 +294,7 @@ public enum ChromabaseError: Error, LocalizedError {
 
 public enum ExportFormat: String, Sendable {
     case jpeg
+    case png
     case tiff16
     case rawScanTIFF
 }

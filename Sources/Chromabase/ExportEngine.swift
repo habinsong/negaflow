@@ -14,6 +14,8 @@ public enum ExportEngine {
         switch format {
         case .jpeg:
             try writeJPEG(image, to: url, using: context, quality: 0.95, metadata: metadata)
+        case .png:
+            try writePNG(image, to: url, using: context, metadata: metadata)
         case .tiff16:
             try writeTIFF(image, to: url, using: context, bitsPerComponent: 16, metadata: metadata)
         case .rawScanTIFF:
@@ -38,13 +40,25 @@ public enum ExportEngine {
         }
     }
 
+    static func writePNG(_ image: CIImage, to url: URL, using context: CIContext,
+                         metadata: ExportMeta? = nil) throws {
+        let cs = CGColorSpace(name: CGColorSpace.sRGB)!
+        guard let cg = context.createCGImage(image, from: image.extent, format: .RGBA8, colorSpace: cs)
+        else { throw ChromabaseError.writeFailed("createCGImage nil: \(url.path)") }
+        guard let dest = CGImageDestinationCreateWithURL(url as CFURL, "public.png" as CFString, 1, nil)
+        else { throw ChromabaseError.writeFailed("CGImageDestinationCreateWithURL nil: \(url.path)") }
+        CGImageDestinationAddImage(dest, cg, metadataProperties(metadata) as CFDictionary)
+        guard CGImageDestinationFinalize(dest) else {
+            throw ChromabaseError.writeFailed("CGImageDestinationFinalize failed: \(url.path)")
+        }
+    }
+
     static func writeTIFF(_ image: CIImage, to url: URL, using context: CIContext,
                           bitsPerComponent: Int, metadata: ExportMeta? = nil) throws {
         let cs = CGColorSpace(name: CGColorSpace.sRGB)!
         guard let dest = CGImageDestinationCreateWithURL(url as CFURL, "public.tiff" as CFString, 1, nil)
         else { throw ChromabaseError.writeFailed(url.path) }
-        // 16bit 출력을 위해 CIContext를 통해 비트깊이를 지정한 CGImage를 만든다.
-        let format: CIFormat = bitsPerComponent == 16 ? .RGBAh : .RGBA8
+        let format: CIFormat = bitsPerComponent == 16 ? .RGBA16 : .RGBA8
         let cg = context.createCGImage(image, from: image.extent, format: format, colorSpace: cs)
         guard let cg else { throw ChromabaseError.writeFailed(url.path) }
         let props = metadataProperties(metadata) as CFDictionary

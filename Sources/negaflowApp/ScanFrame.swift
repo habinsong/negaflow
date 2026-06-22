@@ -3,6 +3,12 @@ import AppKit
 import Chromabase
 import ScannerKit
 
+struct FilmBaseCacheKey: Equatable, Sendable {
+    let filmType: FilmType
+    let mode: DevelopParameters.BaseMode
+    let manualBaseRGB: SIMD3<Double>?
+}
+
 // MARK: - ScanFrame (배치/세션 스캔의 단위)
 //
 // 한 프레임 = 하나의 raw 스캔 + 그 프레임만의 현상 파라미터/transform/결과.
@@ -26,17 +32,39 @@ final class ScanFrame: ObservableObject, Identifiable {
     @Published var showDeveloped: Bool = true
     @Published var isDeveloping: Bool = false
 
-    init(scanIndex: Int, rawScanURL: URL, filmType: FilmType) {
+    var rawPreviewTransform: ImageTransform?
+    var developRevision: Int = 0
+    var cachedBaseKey: FilmBaseCacheKey?
+    var cachedBase: FilmBase?
+
+    init(
+        scanIndex: Int,
+        rawScanURL: URL,
+        filmType: FilmType,
+        initialTransform: ImageTransform = .identity
+    ) {
         self.scanIndex = scanIndex
         self.rawScanURL = rawScanURL
         self.scannedAt = Date()
         self.filmType = filmType
         self.params = DevelopParameters()
-        self.imageTransform = .identity
+        self.imageTransform = initialTransform
     }
 
     /// 표시용 이름.
     var displayName: String { "Frame \(scanIndex)" }
+
+    func updateParams(_ body: (inout DevelopParameters) -> Void) {
+        var next = params
+        body(&next)
+        params = next
+    }
+
+    func updateTransform(_ body: (inout ImageTransform) -> Void) {
+        var next = imageTransform
+        body(&next)
+        imageTransform = next
+    }
 }
 
 extension ScanFrame: Hashable {

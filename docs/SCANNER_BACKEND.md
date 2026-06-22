@@ -4,17 +4,17 @@ How negaflow talks to a Plustek OpticFilm on macOS.
 
 ## TL;DR
 
-| Backend | Role on 8200i today |
+| Backend | Role on the current 8100 test hardware |
 |---|---|
 | **SANE (`scanimage` + `genesys`)** | **Primary.** Verified end-to-end. |
 | **Mock** | Development/demo. No hardware required. |
-| **ImageCaptureCore** | **Inactive.** The 8200i never appears in `ICDeviceBrowser`. Kept as a bridge for any future model that does. |
+| **ImageCaptureCore** | **Inactive.** The 8100 does not appear in `ICDeviceBrowser`. Kept as a bridge for any future model that does. |
 
 ---
 
 ## 1. Why SANE is primary (not ICA)
 
-The original plan (`develop_plan.md` §6) assumed ImageCaptureCore would be first choice and SANE a fallback. Phase 0 hardware testing on a real **Plustek OpticFilm 8200i** proved the opposite.
+The original plan (`develop_plan.md` §6) assumed ImageCaptureCore would be first choice and SANE a fallback. Hardware testing on a real **Plustek OpticFilm 8100** proved the opposite.
 
 ### Evidence (Phase 0, 2026-06-17, this machine)
 
@@ -24,14 +24,14 @@ ioreg -p IOUSB -l
   "USB Product Name" = "Film Scanner"
   "USB Vendor Name"  = "Plustek INC"
   "idVendor"  = 1971   (0x07b3 Plustek)
-  "idProduct" = 4876   (0x130C OpticFilm 8200i)
+  "idProduct" = 4876   (0x130C OpticFilm 8100)
 ```
 
 **ImageCaptureCore** — the scanner is **not** exposed:
 ```
 ICDeviceBrowser (browsedDeviceTypeMask = .scanner) → 0 devices
 ```
-The OpticFilm has no manufacturer ICA driver that registers it with macOS Image Capture, so `ICScannerDevice` never sees it. This is the single biggest risk in the plan (§16.1), now confirmed real.
+The OpticFilm has no manufacturer ICA driver that registers it with macOS Image Capture, so `ICScannerDevice` never sees it. This is the single biggest risk in the plan (§16.1), now confirmed on the current test hardware.
 
 **SANE** — the scanner **is** usable:
 ```
@@ -46,7 +46,7 @@ $ scanimage -A -d genesys:libusb:000:010
   -l/-t/-x/-y  (mm geometry)
 ```
 - Backend is **`genesys`** (Genesys Logic chipset), not `plustek`.
-- SANE labels the 8200i as an "OpticFilm 8100" — same chipset, overlapping firmware reports. This is precisely why we never branch on a model string.
+- The live device reports itself as an "OpticFilm 8100". This is precisely why the app never branches on a model string.
 - **16-bit, 7200 dpi and the transparency unit all open.**
 - A **real 3600 dpi / 16-bit RGB TIFF** was captured (5088×3401, ~99 MB, 42 s) and successfully developed through Chromabase.
 
@@ -123,3 +123,11 @@ negaflow develop raw_3600_16bit.tiff out.jpg --look rich-neutral
 ```
 
 > Note: USB device addresses (`libusb:000:NNN`) re-enumerate on replug. Always re-run `scanimage -L` and use the current address. negaflow's `SANEBackend` does this in `detectScanners()`.
+
+---
+
+## 6. Current app verification
+
+The GUI is verified against the real SANE path with Demo disabled. A successful workflow is: detect the OpticFilm 8100, complete a 3600 dpi / 16-bit RGB scan, rotate or flip the completed frame, then use `Scan Next` and confirm the next frame inherits only the orientation. The following frame must not inherit a crop rectangle.
+
+The app keeps the orientation template in memory only. Closing and reopening the app resets it to `R0`; choosing the transform reset control clears both the current frame transform and the next-scan orientation.

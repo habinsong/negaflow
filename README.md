@@ -11,7 +11,7 @@
 
 <br/>
 
-> **상태 알림:** 본 프로젝트는 현재 **초기 개발 단계(Under Active Development)**입니다. 하드웨어 지원 범위 및 API 구조 등은 향후 변경될 수 있습니다.
+> **상태 알림:** 실제 SANE 스캔과 프레임 단위 현상 워크플로를 제공하는 개발 중인 앱입니다. 지원 범위와 출력 품질은 계속 검증합니다.
 
 ## 프로젝트 소개 (About The Project)
 
@@ -25,6 +25,10 @@
 * **강력한 색감 파이프라인:** Chromabase 엔진이 필름 베이스 색상 추정, 오렌지 마스크 제거, 하이라이트 롤오프를 자동화합니다.
 * **통합 포맷 지원:** 스캐너를 통한 필름(컬러 네거티브/슬라이드/흑백) 현상은 물론, 디지털 카메라를 이용한 스캔본(RAW/DNG)의 현상도 지원합니다.
 * **프로덕션 레벨 프리셋:** 사진의 분위기에 맞춰 즉시 적용 가능한 6가지 룩(Neutral, Rich Neutral, Soft Print, Clear Chrome, Warm Lab, Deep Slide)을 내장하고 있습니다.
+* **프레임 기반 롤 워크플로:** `Scan Next`로 같은 세션에 다음 프레임을 추가하고, 좌측 목록에서 각 프레임의 원본·현상·출력 상태를 독립적으로 관리합니다.
+* **사진 우선 편집 화면:** 확대·축소·이동·드래그 크롭, 원본/현상 비교, 조작 가능한 히스토그램, 회전·좌우/상하 반전 도구를 제공합니다.
+* **세션 방향 유지:** 회전과 반전은 현재 프레임에 적용하는 동시에 이후 스캔에 유지됩니다. 크롭은 다음 프레임에 복사하지 않으며, 앱을 다시 열면 방향 기본값으로 돌아갑니다.
+* **단계적 현상 조절:** Basic Tone, Tone Curve, Color, Calibration, Detail & Effects는 각각 열고 닫을 수 있으며, 섹션별 초기화가 가능합니다.
 
 ## 시스템 요구 사항 (Prerequisites)
 
@@ -55,7 +59,13 @@ bash scripts/run-app.sh
 ```bash
 bash scripts/run-app.sh run
 ```
-단일 윈도우 인터페이스 내에서 프리뷰 캔버스 시청, 현상 컨트롤 조작, 실시간 히스토그램 확인이 가능합니다.
+단일 윈도우는 프레임 목록, 중앙 캔버스, 우측 인스펙터로 구성됩니다. 우측 인스펙터는 `Scan → Base → 도구 → Tone → Color → Detail → Export` 순서이며, 활성 섹션만 펼쳐 작업할 수 있습니다.
+
+1. 실제 스캐너를 선택하고 `Scan` 또는 `Scan Next`를 누릅니다.
+2. 중앙 캔버스에서 확대·축소, 이동, 크롭과 원본/현상 비교를 수행합니다.
+3. 우측 도구 스트립에서 방향을 맞춥니다. 표시되는 `다음 스캔` 값이 이후 프레임에 적용될 방향입니다.
+4. 현상 섹션을 열어 조절하고, 필요한 섹션의 초기화 아이콘으로 수동 조절만 되돌립니다.
+5. JPEG 또는 16-bit TIFF와 선택적 sidecar JSON을 출력합니다.
 
 ### 커맨드라인 도구 (CLI)
 자동화된 스크립트 작성이나 헤드리스(Headless) 환경에서의 빠른 현상을 위해 CLI 도구를 제공합니다.
@@ -78,11 +88,20 @@ swift build
 
 negaflow는 장치의 특정 모델명을 코드에 고정(Hardcoding)하지 않고, 스캐너가 시스템에 보고하는 **기능(Capability)**을 기반으로 작동합니다.
 
-* **완전 검증됨 (Verified):** Plustek OpticFilm 8200i
-* **호환 예정 (Compatible):** Plustek OpticFilm 8100, 8300i
+* **완전 검증됨 (Verified):** Plustek OpticFilm 8100 — 실제 3600 dpi / 16-bit RGB 연속 2프레임 스캔과 현상 완료 확인
+* **호환 대상 (Compatible):** Plustek OpticFilm 8200i, 8300i
 * **실험적 지원 (Experimental):** OpticFilm 7200i, 7400, 7600i 등 구형 라인업
 
 *(스캐너 하드웨어가 없는 경우에도, 앱 내부의 **Demo** 기능을 켜서 Mock 백엔드와 샘플 스캔본으로 전체 색감 엔진 로직을 시연해 볼 수 있습니다.)*
+
+## 검증
+
+```bash
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
+bash scripts/run-app.sh build
+```
+
+자동 테스트는 색감 엔진, 이미지 변형, SANE 기능 감지와 다중 노출 병합을 검증합니다. GUI 변경은 실제 앱에서 Demo를 끈 스캐너 상태로 `Scan → 회전/반전 → Scan Next` 흐름까지 확인합니다.
 
 ## 아키텍처 구조 (Architecture)
 

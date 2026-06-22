@@ -24,15 +24,24 @@ public enum AutoLevels {
     ///   - whiteClip: 화이트포인트로 사용할 상위 백분위(기본 0.1%)
     public static func apply(to image: CIImage,
                              blackClip: Double = 0.005,
-                             whiteClip: Double = 0.001) -> CIImage {
+                             whiteClip: Double = 0.001,
+                             sampleColorSpace: CGColorSpace? = nil) -> CIImage {
         // 샘플링을 위해 작은 영역으로 축소(CIAreaAverage 로는 히스토그램이 안 나옴).
         // 대신 작은 축소본을 렌더링해서 픽셀을 직접 읽는다.
-        guard let (black, white) = sampleBlackWhite(image, blackClip: blackClip, whiteClip: whiteClip) else {
+        guard let (black, white) = sampleBlackWhite(
+            image,
+            blackClip: blackClip,
+            whiteClip: whiteClip,
+            sampleColorSpace: sampleColorSpace
+        ) else {
             return image   // 샘플링 실패 시 원본 반환(무해)
         }
         // 의미 있는 보정인지 검사(이미 펴져 있으면 건너뛴다 — 무해성).
         let whiteR = white.x, whiteG = white.y, whiteB = white.z
         let blackR = black.x, blackG = black.y, blackB = black.z
+        let minimumRange = 0.04
+        let maximumRange = max(whiteR - blackR, max(whiteG - blackG, whiteB - blackB))
+        guard maximumRange >= minimumRange else { return image }
         // white 가 이미 0.95 이상이고 black 이 0.05 이하면 보정 불필요.
         if whiteR > 0.95 && whiteG > 0.95 && whiteB > 0.95 &&
            blackR < 0.05 && blackG < 0.05 && blackB < 0.05 {
@@ -42,21 +51,25 @@ public enum AutoLevels {
         // CIColorMatrix + CIColorControls 로 per-channel 스트레치를 근사.
         // out = (in - black) / (white - black)
         //   = in * (1/(white-black)) + (-black/(white-black))
-        let outputWhite = 0.88
-        let scale = SIMD3(
-            outputWhite / max(0.001, whiteR - blackR),
-            outputWhite / max(0.001, whiteG - blackG),
-            outputWhite / max(0.001, whiteB - blackB)
-        )
-        let bias = SIMD3(-blackR * scale.x, -blackG * scale.y, -blackB * scale.z)
+        let linear = CGColorSpace(name: CGColorSpace.linearSRGB)
+        let outputWhite = sampleColorSpace?.name == linear?.name ? 0.70 : 0.88
+        func transform(_ black: Double, _ white: Double) -> (scale: Double, bias: Double) {
+            let range = white - black
+            guard range >= minimumRange else { return (1, 0) }
+            let scale = outputWhite / range
+            return (scale, -black * scale)
+        }
+        let red = transform(blackR, whiteR)
+        let green = transform(blackG, whiteG)
+        let blue = transform(blackB, whiteB)
 
         var stretched = image.applyingFilter("CIColorMatrix", parameters: [
-            "inputRVector": CIVector(x: CGFloat(scale.x), y: 0, z: 0, w: 0),
-            "inputGVector": CIVector(x: 0, y: CGFloat(scale.y), z: 0, w: 0),
-            "inputBVector": CIVector(x: 0, y: 0, z: CGFloat(scale.z), w: 0),
+            "inputRVector": CIVector(x: CGFloat(red.scale), y: 0, z: 0, w: 0),
+            "inputGVector": CIVector(x: 0, y: CGFloat(green.scale), z: 0, w: 0),
+            "inputBVector": CIVector(x: 0, y: 0, z: CGFloat(blue.scale), w: 0),
             "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
-            "inputBiasVector": CIVector(x: CGFloat(bias.x), y: CGFloat(bias.y),
-                                        z: CGFloat(bias.z), w: 0),
+            "inputBiasVector": CIVector(x: CGFloat(red.bias), y: CGFloat(green.bias),
+                                        z: CGFloat(blue.bias), w: 0),
         ])
         stretched = stretched.applyingFilter("CIColorClamp", parameters: [
             "inputMinComponents": CIVector(x: 0, y: 0, z: 0, w: 1),
@@ -66,7 +79,10 @@ public enum AutoLevels {
     }
 
     /// 작은 축소본을 렌더링해서 채널별 black/white 포인트(p백분위) 검출.
-    static func sampleBlackWhite(_ image: CIImage, blackClip: Double, whiteClip: Double)
+    static func sampleBlackWhite(_ image: CIImage,
+                                 blackClip: Double,
+                                 whiteClip: Double,
+                                 sampleColorSpace: CGColorSpace? = nil)
         -> (black: SIMD3<Double>, white: SIMD3<Double>)? {
         let extent = image.extent
         guard extent.width > 4, extent.height > 4 else { return nil }
@@ -78,27 +94,27 @@ public enum AutoLevels {
         let scaled = image.transformed(by: CGAffineTransform(
             scaleX: CGFloat(scale), y: CGFloat(scale)))
 
-        // 샘플링은 메인 develop 체인과 동일한 sRGB 색공간에서 읽어야
-        // CIColorMatrix 가 적용될 때 값이 일관된다(불일치 시 흰 화면 버그).
-        let cs = CGColorSpace(name: CGColorSpace.sRGB)
+        let cs = sampleColorSpace
+            ?? CGColorSpace(name: CGColorSpace.sRGB)
             ?? CGColorSpaceCreateDeviceRGB()
-        var bitmap = [UInt8](repeating: 0, count: targetW * targetH * 4)
+        var bitmap = [Float](repeating: 0, count: targetW * targetH * 4)
         let ciCtx = CIContext(options: [
             .workingColorSpace: cs as Any,
             .outputColorSpace: cs as Any,
         ])
-        ciCtx.render(scaled, toBitmap: &bitmap, rowBytes: targetW * 4,
+        ciCtx.render(scaled, toBitmap: &bitmap,
+                     rowBytes: targetW * 4 * MemoryLayout<Float>.size,
                      bounds: CGRect(x: 0, y: 0, width: targetW, height: targetH),
-                     format: .RGBA8, colorSpace: cs)
+                     format: .RGBAf, colorSpace: cs)
 
         let n = targetW * targetH
         var rVals = [Double](repeating: 0, count: n)
         var gVals = [Double](repeating: 0, count: n)
         var bVals = [Double](repeating: 0, count: n)
         for i in 0..<n {
-            rVals[i] = Double(bitmap[i*4])     / 255.0
-            gVals[i] = Double(bitmap[i*4 + 1]) / 255.0
-            bVals[i] = Double(bitmap[i*4 + 2]) / 255.0
+            rVals[i] = Double(bitmap[i*4])
+            gVals[i] = Double(bitmap[i*4 + 1])
+            bVals[i] = Double(bitmap[i*4 + 2])
         }
         _ = scaled
         rVals.sort(); gVals.sort(); bVals.sort()

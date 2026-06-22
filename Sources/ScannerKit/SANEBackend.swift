@@ -19,11 +19,25 @@ public final class SANEBackend: ScannerBackend, @unchecked Sendable {
     public let backendType: BackendType = .sane
     private let scanimage: String
     private var lastError: ScannerError?
-    static let positiveHDRBrightnessBrackets = [100, 30, -45]
+    static let multiSamplePassCount = 3
+    static let hardwareExposureTimes = [11_000, 14_000, 30_000]
+    static var hardwareExposureSamplesPerStop: Int {
+        let raw = ProcessInfo.processInfo.environment["NEGAFLOW_HWEXP_SAMPLES"] ?? ""
+        let parsed = Int(raw) ?? 1
+        return min(max(parsed, 1), 4)
+    }
+
+    static func hardwareExposurePlan(samplesPerStop: Int = hardwareExposureSamplesPerStop) -> [Int] {
+        hardwareExposureTimes.flatMap { exposure in
+            Array(repeating: exposure, count: min(max(samplesPerStop, 1), 4))
+        }
+    }
 
     /// nil이면 PATH에서 `scanimage`를 찾는다.
     public init(scanimagePath: String? = nil) {
-        self.scanimage = scanimagePath ?? Self.findScanimage()
+        self.scanimage = scanimagePath
+            ?? ProcessInfo.processInfo.environment["NEGAFLOW_SCANIMAGE_PATH"]
+            ?? Self.findScanimage()
     }
 
     public func getLastError() -> ScannerError? { lastError }
@@ -129,6 +143,7 @@ public final class SANEBackend: ScannerBackend, @unchecked Sendable {
         var modes: [ColorMode] = []
         var bitDepths: [BitDepth] = []
         var supportsTransparency = false
+        var supportsHardwareExposure = false
 
         for raw in dump.split(separator: "\n") {
             let line = String(raw)
@@ -159,6 +174,9 @@ public final class SANEBackend: ScannerBackend, @unchecked Sendable {
                     supportsTransparency = true
                 }
             }
+            if line.contains("--scan-exposure-time") {
+                supportsHardwareExposure = true
+            }
         }
         // 디폴트 보정 (비어 있으면 8200i 검증값)
         if resolutions.isEmpty { resolutions = [.r900, .r1800, .r3600, .r7200] }
@@ -173,7 +191,7 @@ public final class SANEBackend: ScannerBackend, @unchecked Sendable {
             supportsTransparency: supportsTransparency,
             // genesys 백엔드는 8200i에서 IR 옵션을 노출하지 않는다. (Phase 5 과제)
             supportsInfrared: false,
-            supportsMultiExposure: false,
+            supportsMultiExposure: supportsHardwareExposure,
             supportsScanArea: true,
             supportsLampWarmupStatus: true,
             outputFormats: ["tiff", "pnm"]
@@ -208,38 +226,28 @@ public final class SANEBackend: ScannerBackend, @unchecked Sendable {
         let outURL = options.temporaryOutputURL
             ?? Self.makeTempURL(prefix: "negaflow_scan", suffix: ".tiff")
 
-        if Self.shouldUseBracketedScan(options) {
-            return try await startBracketedFullScan(options, outputURL: outURL, progress: progress)
+        if options.multiExposureEnabled, options.resolution != .preview {
+            return try await startSoftwareMultiPassScan(options, outputURL: outURL, progress: progress)
         }
 
         // 중요: USB 장치 주소(libusb:bus:dev)는 스캐너 리셋/재열거로 매번 바뀐다.
         // scannerID에 박힌 과거 주소로 open하면 "Invalid argument"로 실패한다.
         // 따라서 스캔 직전에 반드시 scanimage -L 로 현재 주소를 다시 얻는다.
-        let devname = await resolveDeviceAddress(for: options)
-        let args = makeScanimageArgs(devname: devname, options: options)
-
+        // 그래도 -L 시점과 open 시점 사이에 주소가 바뀔 수 있으므로, open 실패 시
+        // 캐시를 무효화하고 새 주소로 1회 재시도한다.
         progress(ScanProgress(phase: .warmingLamp, fraction: 0.02, message: "Warming lamp"))
         progress(ScanProgress(phase: .scanningRGB, fraction: 0.1, message: "Scanning RGB"))
 
         let t0 = Date()
-        do {
-            let ec = try await runScanimageTo(args: args, outputURL: outURL, progress: progress)
-            guard ec == 0 else {
-                let stderr = takeStderr()
-                let detail = stderr.isEmpty ? "scanimage exit \(ec)" : "scanimage exit \(ec): \(stderr)"
-                self.lastError = ScannerError(.ioFailure, detail)
-                throw lastError!
-            }
-        } catch let err as ScannerError {
-            throw err
-        } catch {
-            self.lastError = ScannerError(.ioFailure, error.localizedDescription)
-            throw error
-        }
+        try await runSingleAcquisition(
+            options: options,
+            outputURL: outURL,
+            brightness: nil,
+            staleRetryProgress: 0.05,
+            progress: progress
+        )
         let duration = Date().timeIntervalSince(t0)
         progress(ScanProgress(phase: .complete, fraction: 1.0, message: "Scan complete"))
-
-        // 결과 메타데이터는 ImageIO로 채운다.
         let (w, h) = Self.imageSize(at: outURL)
         return ScanResult(
             rawFileURL: outURL,
@@ -252,41 +260,134 @@ public final class SANEBackend: ScannerBackend, @unchecked Sendable {
         )
     }
 
-    private func startBracketedFullScan(
+    private func startSoftwareMultiPassScan(
         _ options: ScanOptions,
         outputURL: URL,
         progress: @escaping @Sendable (ScanProgress) -> Void
     ) async throws -> ScanResult {
         let t0 = Date()
-        let labels = ["shadows", "midtones", "highlights"]
-        let urls = labels.map { Self.makeTempURL(prefix: "negaflow_hdr_\($0)", suffix: ".tiff") }
+        let usesHardwareExposure = await supportsHardwareExposure(for: options)
+        let exposurePlan = usesHardwareExposure ? Self.hardwareExposurePlan() : []
+        let passCount = usesHardwareExposure ? exposurePlan.count : Self.multiSamplePassCount
+        let labels = (0..<passCount).map { "sample\($0 + 1)" }
+        let urls = labels.map { Self.makeTempURL(prefix: "negaflow_multipass_\($0)", suffix: ".tiff") }
         defer {
-            for url in urls { try? FileManager.default.removeItem(at: url) }
+            if !Self.shouldKeepMultiPassArtifacts {
+                for url in urls {
+                    try? FileManager.default.removeItem(at: url)
+                }
+            }
         }
 
         progress(ScanProgress(phase: .warmingLamp, fraction: 0.02, message: "Warming lamp"))
-
-        for (index, brightness) in Self.positiveHDRBrightnessBrackets.enumerated() {
-            let label = labels[index]
-            let devname = await resolveDeviceAddress(for: options)
-            let args = makeScanimageArgs(devname: devname, options: options, brightness: brightness)
-            let fraction = 0.08 + (Double(index) * 0.27)
+        for index in 0..<passCount {
+            let base = 0.08 + Double(index) * (0.75 / Double(passCount))
+            var passOptions = options
+            if usesHardwareExposure {
+                passOptions.hardwareExposureTime = exposurePlan[index]
+            }
             progress(ScanProgress(
                 phase: .scanningRGB,
-                fraction: fraction,
-                message: "HDR \(label) scan"
+                fraction: base,
+                message: usesHardwareExposure
+                    ? "Exposure bracket \(index + 1)/\(passCount) @ \(exposurePlan[index])"
+                    : "Multi-sample \(index + 1)/\(passCount)"
             ))
+            try await runSingleAcquisition(
+                options: passOptions,
+                outputURL: urls[index],
+                brightness: nil,
+                staleRetryProgress: base,
+                progress: progress
+            )
+        }
 
+        progress(ScanProgress(phase: .processingNegative, fraction: 0.86, message: "Averaging multi-sample scan"))
+        do {
+            if usesHardwareExposure {
+                try Self.mergeHardwareExposureScans(
+                    sampleURLs: urls,
+                    exposureTimes: exposurePlan,
+                    outputURL: outputURL
+                )
+            } else {
+                try Self.averageMultiSampleScans(
+                    sampleURLs: urls,
+                    outputURL: outputURL
+                )
+            }
+        } catch {
+            self.lastError = ScannerError(.ioFailure, "multi-sample merge failed: \(error.localizedDescription)")
+            throw lastError!
+        }
+
+        let duration = Date().timeIntervalSince(t0)
+        progress(ScanProgress(phase: .complete, fraction: 1.0, message: "Multi-sample scan complete"))
+        let (w, h) = Self.imageSize(at: outputURL)
+        var warnings = usesHardwareExposure ? [
+            "Hardware scan-exposure-time bracket \(Self.hardwareExposureTimes) used with \(Self.hardwareExposureSamplesPerStop) sample(s) per exposure; same-exposure samples reduce random/color noise before clipped/low-signal regions are filled from alternate exposures."
+        ] : [
+            "SANE genesys does not expose scan-exposure-time on this device; averaged \(Self.multiSamplePassCount) identical 16-bit passes for random-noise reduction, not hardware HDR."
+        ]
+        if Self.shouldKeepMultiPassArtifacts {
+            warnings.append("Multi-pass intermediate TIFFs kept: \(urls.map(\.path).joined(separator: ", "))")
+        }
+        return ScanResult(
+            rawFileURL: outputURL,
+            width: w,
+            height: h,
+            resolution: options.resolution,
+            bitDepth: options.bitDepth,
+            hasInfraredChannel: false,
+            scanDuration: duration,
+            backendUsed: .sane,
+            warnings: warnings
+        )
+    }
+
+    private func supportsHardwareExposure(for options: ScanOptions) async -> Bool {
+        guard let capabilities = try? await getCapabilities(scannerID: options.scannerID) else {
+            return false
+        }
+        return capabilities.supportsMultiExposure
+    }
+
+    private static var shouldKeepMultiPassArtifacts: Bool {
+        let value = ProcessInfo.processInfo.environment["NEGAFLOW_KEEP_MULTIPASS"] ?? ""
+        return value == "1" || value.lowercased() == "true"
+    }
+
+    private func runSingleAcquisition(
+        options: ScanOptions,
+        outputURL: URL,
+        brightness: Int?,
+        staleRetryProgress: Double,
+        progress: @escaping @Sendable (ScanProgress) -> Void
+    ) async throws {
+        var lastStderr = ""
+        for attempt in 0..<2 {
+            if attempt > 0 {
+                invalidateAddressCache()
+            }
+            let devname = await resolveDeviceAddress(for: options)
+            let args = makeScanimageArgs(devname: devname, options: options, brightness: brightness)
             do {
-                let ec = try await runScanimageTo(args: args, outputURL: urls[index], progress: progress)
-                guard ec == 0 else {
-                    let stderr = takeStderr()
-                    let detail = stderr.isEmpty
-                        ? "scanimage exit \(ec) during HDR \(label) scan"
-                        : "scanimage exit \(ec) during HDR \(label) scan: \(stderr)"
-                    self.lastError = ScannerError(.ioFailure, detail)
-                    throw lastError!
+                let ec = try await runScanimageTo(args: args, outputURL: outputURL, progress: progress)
+                if ec == 0 {
+                    return
                 }
+                lastStderr = takeStderr()
+                if attempt == 0, Self.isStaleDeviceError(lastStderr) {
+                    progress(ScanProgress(
+                        phase: .warmingLamp,
+                        fraction: staleRetryProgress,
+                        message: "Re-detecting scanner"
+                    ))
+                    continue
+                }
+                let detail = lastStderr.isEmpty ? "scanimage exit \(ec)" : "scanimage exit \(ec): \(lastStderr)"
+                self.lastError = ScannerError(.ioFailure, detail)
+                throw lastError!
             } catch let err as ScannerError {
                 throw err
             } catch {
@@ -294,39 +395,22 @@ public final class SANEBackend: ScannerBackend, @unchecked Sendable {
                 throw error
             }
         }
-
-        progress(ScanProgress(phase: .processingNegative, fraction: 0.88, message: "Merging HDR scan"))
-        do {
-            try Self.mergeBracketedScans(
-                shadowURL: urls[0],
-                midtoneURL: urls[1],
-                highlightURL: urls[2],
-                outputURL: outputURL
-            )
-        } catch {
-            self.lastError = ScannerError(.ioFailure, "HDR merge failed: \(error.localizedDescription)")
-            throw lastError!
-        }
-
-        let duration = Date().timeIntervalSince(t0)
-        progress(ScanProgress(phase: .complete, fraction: 1.0, message: "HDR scan complete"))
-
-        let (w, h) = Self.imageSize(at: outputURL)
-        return ScanResult(
-            rawFileURL: outputURL,
-            width: w, height: h,
-            resolution: options.resolution,
-            bitDepth: options.bitDepth,
-            hasInfraredChannel: false,
-            scanDuration: duration,
-            backendUsed: .sane,
-            warnings: ["HDR bracket scan: brightness +100/+30/-45"]
-        )
+        let detail = lastStderr.isEmpty ? "scanimage 재시도 실패" : "scanimage 재시도 실패: \(lastStderr)"
+        self.lastError = ScannerError(.ioFailure, detail)
+        throw lastError!
     }
 
-    private static func shouldUseBracketedScan(_ options: ScanOptions) -> Bool {
-        options.resolution != .preview
-            && !options.filmType.requiresInversion
+    /// "open of device ... failed: Invalid argument" 등 USB 주소가 만료됐을 때
+    /// 나타나는 전형적 오류인지 판별. 이 경우 주소를 다시 얻어 재시도하면 보통 성공한다.
+    static func isStaleDeviceError(_ stderr: String) -> Bool {
+        let s = stderr.lowercased()
+        return s.contains("invalid argument")
+            || s.contains("open of device")
+            || s.contains("failed to open")
+            || s.contains("device busy")
+            || s.contains("no such device")
+            || s.contains("i/o error")
+            || s.contains("device i/o")
     }
 
     private func resolveDeviceAddress(for options: ScanOptions) async -> String {
@@ -351,16 +435,15 @@ public final class SANEBackend: ScannerBackend, @unchecked Sendable {
         throw lastError ?? ScannerError(.notConnected, "scanimage -L 이 장치를 찾지 못함")
     }
 
-    private func makeScanimageArgs(
-        devname: String,
-        options: ScanOptions,
-        brightness: Int? = nil
-    ) -> [String] {
+    func makeScanimageArgs(devname: String, options: ScanOptions, brightness: Int? = nil) -> [String] {
         var args: [String] = ["-d", devname]
         args += ["--mode", options.colorMode == .gray ? "Gray" : "Color"]
         args += ["--source", "Transparency Adapter"]
         if let brightness {
             args += ["--brightness=\(brightness)"]
+        }
+        if let exposureTime = options.hardwareExposureTime {
+            args += ["--scan-exposure-time=\(exposureTime)"]
         }
         if options.resolution == .preview { args += ["--preview=yes"] }
         if options.resolution.dpi > 0 { args += ["--resolution", "\(options.resolution.dpi)"] }
@@ -371,83 +454,531 @@ public final class SANEBackend: ScannerBackend, @unchecked Sendable {
         return args
     }
 
-    private static func mergeBracketedScans(
-        shadowURL: URL,
-        midtoneURL: URL,
-        highlightURL: URL,
-        outputURL: URL
-    ) throws {
-        guard let shadow = CIImage(contentsOf: shadowURL),
-              let midtone = CIImage(contentsOf: midtoneURL),
-              let highlight = CIImage(contentsOf: highlightURL) else {
-            throw ScannerError(.ioFailure, "HDR bracket TIFF 로드 실패")
+    static func averageMultiSampleScans(sampleURLs: [URL], outputURL: URL) throws {
+        let images = sampleURLs.compactMap { Chromabase.ImageLoader.loadScannerTIFF($0) }
+        guard images.count == sampleURLs.count, !images.isEmpty else {
+            throw ScannerError(.ioFailure, "multi-sample TIFF 로드 실패")
+        }
+        let bitmap = try averageMultiSampleBitmap(images)
+        try writeRGB16TIFF(bitmap.pixels, width: bitmap.width, height: bitmap.height, to: outputURL)
+    }
+
+    static func mergeHardwareExposureScans(sampleURLs: [URL], exposureTimes: [Int], outputURL: URL) throws {
+        let images = sampleURLs.compactMap { Chromabase.ImageLoader.loadScannerTIFF($0) }
+        guard images.count == sampleURLs.count, !images.isEmpty else {
+            throw ScannerError(.ioFailure, "hardware exposure TIFF 로드 실패")
+        }
+        let bitmap = try mergeHardwareExposureBitmap(images, exposureTimes: exposureTimes)
+        try writeRGB16TIFF(bitmap.pixels, width: bitmap.width, height: bitmap.height, to: outputURL)
+    }
+
+    static func averageMultiSampleScans(_ images: [CIImage]) -> CIImage {
+        guard let first = images.first else {
+            return CIImage.empty()
+        }
+        guard let linear = CGColorSpace(name: CGColorSpace.linearSRGB),
+              let averaged = try? alignedAverageRGBAf(images, colorSpace: linear) else {
+            return first
+        }
+        return CIImage(
+            bitmapData: Data(bytes: averaged.pixels, count: averaged.pixels.count * MemoryLayout<Float>.size),
+            bytesPerRow: averaged.width * 4 * MemoryLayout<Float>.size,
+            size: CGSize(width: averaged.width, height: averaged.height),
+            format: .RGBAf,
+            colorSpace: linear
+        )
+    }
+
+    static func averageMultiSampleBitmap(_ images: [CIImage]) throws -> (pixels: [UInt16], width: Int, height: Int) {
+        guard !images.isEmpty,
+              let linear = CGColorSpace(name: CGColorSpace.linearSRGB) else {
+            throw ScannerError(.ioFailure, "multi-sample TIFF 로드 실패")
+        }
+        let averaged = try alignedAverageRGBAf(images, colorSpace: linear)
+        var pixels = [UInt16](repeating: 0, count: averaged.width * averaged.height * 3)
+        var out = 0
+        for index in stride(from: 0, to: averaged.pixels.count, by: 4) {
+            pixels[out] = UInt16(min(max(averaged.pixels[index], 0), 1) * 65535)
+            pixels[out + 1] = UInt16(min(max(averaged.pixels[index + 1], 0), 1) * 65535)
+            pixels[out + 2] = UInt16(min(max(averaged.pixels[index + 2], 0), 1) * 65535)
+            out += 3
+        }
+        return (pixels, averaged.width, averaged.height)
+    }
+
+    static func mergeHardwareExposureBitmap(
+        _ images: [CIImage],
+        exposureTimes: [Int]
+    ) throws -> (pixels: [UInt16], width: Int, height: Int) {
+        guard images.count == exposureTimes.count, !images.isEmpty,
+              let linear = CGColorSpace(name: CGColorSpace.linearSRGB) else {
+            throw ScannerError(.ioFailure, "hardware exposure 입력 오류")
+        }
+        guard let referenceExposure = referenceExposureTime(from: exposureTimes),
+              referenceExposure > 0 else {
+            throw ScannerError(.ioFailure, "hardware exposure 기준값 오류")
+        }
+        let normalized = try alignedExposureNormalizedRGBAf(
+            images,
+            exposureTimes: exposureTimes,
+            referenceExposure: referenceExposure,
+            colorSpace: linear
+        )
+        var pixels = [UInt16](repeating: 0, count: normalized.width * normalized.height * 3)
+        var out = 0
+        for index in stride(from: 0, to: normalized.pixels.count, by: 4) {
+            pixels[out] = UInt16(min(max(normalized.pixels[index], 0), 1) * 65535)
+            pixels[out + 1] = UInt16(min(max(normalized.pixels[index + 1], 0), 1) * 65535)
+            pixels[out + 2] = UInt16(min(max(normalized.pixels[index + 2], 0), 1) * 65535)
+            out += 3
+        }
+        return (pixels, normalized.width, normalized.height)
+    }
+
+    private static func alignedAverageRGBAf(
+        _ images: [CIImage],
+        colorSpace linear: CGColorSpace
+    ) throws -> (pixels: [Float], width: Int, height: Int) {
+        guard let first = images.first else {
+            throw ScannerError(.ioFailure, "multi-sample TIFF 로드 실패")
+        }
+        let extent = first.extent.integral
+        let width = Int(extent.width)
+        let height = Int(extent.height)
+        guard width > 0, height > 0 else {
+            throw ScannerError(.ioFailure, "multi-sample TIFF 크기 오류")
         }
 
-        let extent = midtone.extent.integral
-        let shadowImage = shadow.cropped(to: extent)
-        let midtoneImage = midtone.cropped(to: extent)
-        let highlightImage = highlight.cropped(to: extent)
+        let context = CIContext(options: [
+            .workingColorSpace: linear,
+            .outputColorSpace: linear,
+        ])
+        let rendered = images.map { image in
+            renderRGBAf(image.cropped(to: extent), width: width, height: height, context: context, colorSpace: linear)
+        }
+        guard let reference = rendered.first else {
+            throw ScannerError(.ioFailure, "multi-sample TIFF 로드 실패")
+        }
+        let offsets = rendered.map { estimateIntegerOffset(reference: reference, sample: $0, width: width, height: height) }
+        var accumulator = [Float](repeating: 0, count: width * height * 4)
+        var counts = [Float](repeating: 0, count: width * height)
+        for (sample, offset) in zip(rendered, offsets) {
+            accumulateAligned(sample, offset: offset, width: width, height: height, into: &accumulator, counts: &counts)
+        }
+        for pixel in 0..<(width * height) {
+            let count = max(counts[pixel], 1)
+            let offset = pixel * 4
+            accumulator[offset] = min(max(accumulator[offset] / count, 0), 1)
+            accumulator[offset + 1] = min(max(accumulator[offset + 1] / count, 0), 1)
+            accumulator[offset + 2] = min(max(accumulator[offset + 2] / count, 0), 1)
+            accumulator[offset + 3] = 1
+        }
+        return (accumulator, width, height)
+    }
 
-        let luma = midtoneImage.applyingFilter("CIColorMatrix", parameters: [
-            "inputRVector": CIVector(x: 0.2126, y: 0.7152, z: 0.0722, w: 0),
-            "inputGVector": CIVector(x: 0.2126, y: 0.7152, z: 0.0722, w: 0),
-            "inputBVector": CIVector(x: 0.2126, y: 0.7152, z: 0.0722, w: 0),
-            "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
-            "inputBiasVector": CIVector(x: 0, y: 0, z: 0, w: 0),
-        ]).cropped(to: extent)
-
-        let darkMask = clampMask(
-            luma.applyingFilter("CIColorInvert")
-                .applyingFilter("CIColorControls", parameters: [
-                    "inputSaturation": 0,
-                    "inputContrast": 1.7,
-                    "inputBrightness": -0.28,
-                ])
-        ).cropped(to: extent)
-
-        let brightMask = clampMask(
-            luma.applyingFilter("CIColorControls", parameters: [
-                "inputSaturation": 0,
-                "inputContrast": 1.7,
-                "inputBrightness": -0.28,
-            ])
-        ).cropped(to: extent)
-
-        let shadowMerged = shadowImage.applyingFilter("CIBlendWithMask", parameters: [
-            "inputBackgroundImage": midtoneImage,
-            "inputMaskImage": darkMask,
-        ]).cropped(to: extent)
-
-        let merged = highlightImage.applyingFilter("CIBlendWithMask", parameters: [
-            "inputBackgroundImage": shadowMerged,
-            "inputMaskImage": brightMask,
-        ]).cropped(to: extent)
-        let toneMapped = merged.applyingFilter("CIHighlightShadowAdjust", parameters: [
-            "inputShadowAmount": 0.75,
-            "inputHighlightAmount": 0.28,
-        ]).cropped(to: extent)
-
-        let context = CIContext(options: [.useSoftwareRenderer: false])
-        let colorSpace = CGColorSpace(name: CGColorSpace.sRGB)!
-        guard let cg = context.createCGImage(toneMapped, from: toneMapped.extent, format: .RGBAh, colorSpace: colorSpace) else {
-            throw ScannerError(.ioFailure, "HDR 병합 이미지 생성 실패")
+    private static func alignedExposureNormalizedRGBAf(
+        _ images: [CIImage],
+        exposureTimes: [Int],
+        referenceExposure: Int,
+        colorSpace linear: CGColorSpace
+    ) throws -> (pixels: [Float], width: Int, height: Int) {
+        let first = images[0]
+        let extent = first.extent.integral
+        let width = Int(extent.width)
+        let height = Int(extent.height)
+        guard width > 0, height > 0 else {
+            throw ScannerError(.ioFailure, "hardware exposure TIFF 크기 오류")
         }
 
-        try? FileManager.default.removeItem(at: outputURL)
-        guard let destination = CGImageDestinationCreateWithURL(outputURL as CFURL, "public.tiff" as CFString, 1, nil) else {
-            throw ScannerError(.ioFailure, "HDR TIFF 출력 생성 실패")
+        let context = CIContext(options: [
+            .workingColorSpace: linear,
+            .outputColorSpace: linear,
+        ])
+        let rendered = images.map { image in
+            renderRGBAf(image.cropped(to: extent), width: width, height: height, context: context, colorSpace: linear)
         }
-        CGImageDestinationAddImage(destination, cg, nil)
-        guard CGImageDestinationFinalize(destination) else {
-            throw ScannerError(.ioFailure, "HDR TIFF 출력 저장 실패")
+        let normalized = zip(rendered, exposureTimes).map { sample, exposureTime in
+            normalizeExposure(sample, exposureTime: exposureTime, referenceExposure: referenceExposure)
+        }
+        let referenceIndex = exposureTimes.enumerated()
+            .min { abs($0.element - referenceExposure) < abs($1.element - referenceExposure) }?
+            .offset ?? 0
+        let reference = normalized[referenceIndex]
+        let offsets = normalized.map { estimateIntegerOffset(reference: reference, sample: $0, width: width, height: height) }
+        var merged = [Float](repeating: 0, count: width * height * 4)
+
+        for y in 0..<height {
+            for x in 0..<width {
+                let destination = (y * width + x) * 4
+                for channel in 0..<3 {
+                    merged[destination + channel] = mergedHardwareExposureValue(
+                        x: x,
+                        y: y,
+                        channel: channel,
+                        rendered: rendered,
+                        normalized: normalized,
+                        exposureTimes: exposureTimes,
+                        referenceExposure: referenceExposure,
+                        referenceIndex: referenceIndex,
+                        offsets: offsets,
+                        width: width,
+                        height: height
+                    )
+                }
+                merged[destination + 3] = 1
+            }
+        }
+        return (merged, width, height)
+    }
+
+    private static func normalizeExposure(_ pixels: [Float], exposureTime: Int, referenceExposure: Int) -> [Float] {
+        let scale = Float(referenceExposure) / Float(exposureTime)
+        var out = pixels
+        for index in stride(from: 0, to: out.count, by: 4) {
+            out[index] *= scale
+            out[index + 1] *= scale
+            out[index + 2] *= scale
+            out[index + 3] = 1
+        }
+        return out
+    }
+
+    private static func mergedHardwareExposureValue(
+        x: Int,
+        y: Int,
+        channel: Int,
+        rendered: [[Float]],
+        normalized: [[Float]],
+        exposureTimes: [Int],
+        referenceExposure: Int,
+        referenceIndex: Int,
+        offsets: [(x: Int, y: Int)],
+        width: Int,
+        height: Int
+    ) -> Float {
+        let referenceSource = alignedSourceIndex(
+            x: x,
+            y: y,
+            channel: channel,
+            offset: offsets[referenceIndex],
+            width: width,
+            height: height
+        )
+        let fallback = (y * width + x) * 4 + channel
+        let baselineIndex = referenceSource ?? min(fallback, normalized[referenceIndex].count - 1)
+        let baselineRaw = rendered[referenceIndex][baselineIndex]
+
+        var value = alternateExposureValue(
+            x: x,
+            y: y,
+            channel: channel,
+            rendered: rendered,
+            normalized: normalized,
+            exposureTimes: exposureTimes,
+            offsets: offsets,
+            width: width,
+            height: height,
+            matching: { $0 == referenceExposure }
+        ) ?? normalized[referenceIndex][baselineIndex]
+        if let short = alternateExposureValue(
+            x: x,
+            y: y,
+            channel: channel,
+            rendered: rendered,
+            normalized: normalized,
+            exposureTimes: exposureTimes,
+            offsets: offsets,
+            width: width,
+            height: height,
+            matching: { $0 < referenceExposure }
+        ) {
+            let amount = smoothstep(edge0: 0.82, edge1: 0.97, x: baselineRaw)
+            value = mix(value, short, amount)
+        }
+        if let long = alternateExposureValue(
+            x: x,
+            y: y,
+            channel: channel,
+            rendered: rendered,
+            normalized: normalized,
+            exposureTimes: exposureTimes,
+            offsets: offsets,
+            width: width,
+            height: height,
+            matching: { $0 > referenceExposure }
+        ) {
+            let amount = (1 - smoothstep(edge0: 0.010, edge1: 0.045, x: baselineRaw)) * 0.48
+            value = mix(value, long, amount)
+        }
+        return min(max(value, 0), 1)
+    }
+
+    static func referenceExposureTime(from exposureTimes: [Int]) -> Int? {
+        let unique = Array(Set(exposureTimes)).sorted()
+        guard !unique.isEmpty else { return nil }
+        return unique[unique.count / 2]
+    }
+
+    private static func alternateExposureValue(
+        x: Int,
+        y: Int,
+        channel: Int,
+        rendered: [[Float]],
+        normalized: [[Float]],
+        exposureTimes: [Int],
+        offsets: [(x: Int, y: Int)],
+        width: Int,
+        height: Int,
+        matching predicate: (Int) -> Bool
+    ) -> Float? {
+        var weightedSum: Float = 0
+        var weightSum: Float = 0
+        for index in rendered.indices where predicate(exposureTimes[index]) {
+            guard let source = alignedSourceIndex(
+                x: x,
+                y: y,
+                channel: channel,
+                offset: offsets[index],
+                width: width,
+                height: height
+            ) else {
+                continue
+            }
+            let rawValue = rendered[index][source]
+            let weight = exposureTrustWeight(rawValue)
+            weightedSum += normalized[index][source] * weight
+            weightSum += weight
+        }
+        guard weightSum > 0.0001 else { return nil }
+        return weightedSum / weightSum
+    }
+
+    private static func alignedSourceIndex(
+        x: Int,
+        y: Int,
+        channel: Int,
+        offset: (x: Int, y: Int),
+        width: Int,
+        height: Int
+    ) -> Int? {
+        let sx = x + offset.x
+        let sy = y + offset.y
+        guard sx >= 0, sx < width, sy >= 0, sy < height else { return nil }
+        return (sy * width + sx) * 4 + channel
+    }
+
+    private static func exposureTrustWeight(_ rawValue: Float) -> Float {
+        if rawValue >= 0.985 { return 0.02 }
+        if rawValue >= 0.90 {
+            return max(0.05, (0.985 - rawValue) / 0.085)
+        }
+        if rawValue <= 0.006 { return 0.02 }
+        if rawValue <= 0.035 {
+            return max(0.05, (rawValue - 0.006) / 0.029)
+        }
+        return 1
+    }
+
+    private static func mix(_ a: Float, _ b: Float, _ amount: Float) -> Float {
+        let t = min(max(amount, 0), 1)
+        return a + (b - a) * t
+    }
+
+    private static func smoothstep(edge0: Float, edge1: Float, x: Float) -> Float {
+        guard edge0 != edge1 else { return x >= edge1 ? 1 : 0 }
+        let t = min(max((x - edge0) / (edge1 - edge0), 0), 1)
+        return t * t * (3 - 2 * t)
+    }
+
+    private static func renderRGBAf(
+        _ image: CIImage,
+        width: Int,
+        height: Int,
+        context: CIContext,
+        colorSpace linear: CGColorSpace
+    ) -> [Float] {
+        var buffer = [Float](repeating: 0, count: width * height * 4)
+        buffer.withUnsafeMutableBytes { rawBuffer in
+            context.render(
+                image,
+                toBitmap: rawBuffer.baseAddress!,
+                rowBytes: width * 4 * MemoryLayout<Float>.size,
+                bounds: CGRect(x: 0, y: 0, width: width, height: height),
+                format: .RGBAf,
+                colorSpace: linear
+            )
+        }
+        return buffer
+    }
+
+    private static func estimateIntegerOffset(
+        reference: [Float],
+        sample: [Float],
+        width: Int,
+        height: Int
+    ) -> (x: Int, y: Int) {
+        let baselineError = meanLumaAbsoluteError(reference: reference, sample: sample, width: width, height: height, dx: 0, dy: 0)
+        let texture = meanNeighborLumaDelta(reference, width: width, height: height)
+        guard texture > 0.015 else { return (0, 0) }
+        var bestOffset = (x: 0, y: 0)
+        var bestError = baselineError
+        for dy in -2...2 {
+            for dx in -2...2 {
+                let error = meanLumaAbsoluteError(reference: reference, sample: sample, width: width, height: height, dx: dx, dy: dy)
+                if error < bestError {
+                    bestError = error
+                    bestOffset = (dx, dy)
+                }
+            }
+        }
+        return bestError < baselineError * 0.72 ? bestOffset : (0, 0)
+    }
+
+    private static func meanLumaAbsoluteError(
+        reference: [Float],
+        sample: [Float],
+        width: Int,
+        height: Int,
+        dx: Int,
+        dy: Int
+    ) -> Double {
+        let step = max(1, min(width, height) / 96)
+        let inset = 4 + max(abs(dx), abs(dy))
+        var total = 0.0
+        var count = 0
+        var y = inset
+        while y < height - inset {
+            var x = inset
+            while x < width - inset {
+                let sx = x + dx
+                let sy = y + dy
+                total += abs(
+                    localMeanLuma(reference, x: x, y: y, width: width, height: height)
+                        - localMeanLuma(sample, x: sx, y: sy, width: width, height: height)
+                )
+                count += 1
+                x += step
+            }
+            y += step
+        }
+        return count == 0 ? .greatestFiniteMagnitude : total / Double(count)
+    }
+
+    private static func accumulateAligned(
+        _ sample: [Float],
+        offset: (x: Int, y: Int),
+        width: Int,
+        height: Int,
+        into accumulator: inout [Float],
+        counts: inout [Float]
+    ) {
+        for y in 0..<height {
+            let sy = y + offset.y
+            guard sy >= 0, sy < height else { continue }
+            for x in 0..<width {
+                let sx = x + offset.x
+                guard sx >= 0, sx < width else { continue }
+                let source = (sy * width + sx) * 4
+                let destination = (y * width + x) * 4
+                accumulator[destination] += sample[source]
+                accumulator[destination + 1] += sample[source + 1]
+                accumulator[destination + 2] += sample[source + 2]
+                counts[y * width + x] += 1
+            }
         }
     }
 
-    private static func clampMask(_ image: CIImage) -> CIImage {
-        image.applyingFilter("CIColorClamp", parameters: [
-            "inputMinComponents": CIVector(x: 0, y: 0, z: 0, w: 1),
-            "inputMaxComponents": CIVector(x: 1, y: 1, z: 1, w: 1),
+    private static func luma(_ pixels: [Float], at index: Int) -> Double {
+        Double(pixels[index]) * 0.2126
+            + Double(pixels[index + 1]) * 0.7152
+            + Double(pixels[index + 2]) * 0.0722
+    }
+
+    private static func meanNeighborLumaDelta(_ pixels: [Float], width: Int, height: Int) -> Double {
+        let step = max(1, min(width, height) / 96)
+        let inset = 4
+        var total = 0.0
+        var count = 0
+        var y = inset
+        while y < height - inset {
+            var x = inset
+            while x < width - inset - 1 {
+                let nextX = min(width - inset - 1, x + step)
+                total += abs(
+                    localMeanLuma(pixels, x: x, y: y, width: width, height: height)
+                        - localMeanLuma(pixels, x: nextX, y: y, width: width, height: height)
+                )
+                count += 1
+                x += step
+            }
+            y += step
+        }
+        return count == 0 ? 0 : total / Double(count)
+    }
+
+    private static func localMeanLuma(_ pixels: [Float], x: Int, y: Int, width: Int, height: Int) -> Double {
+        var total = 0.0
+        var count = 0
+        for yy in max(0, y - 2)...min(height - 1, y + 2) {
+            for xx in max(0, x - 2)...min(width - 1, x + 2) {
+                total += luma(pixels, at: (yy * width + xx) * 4)
+                count += 1
+            }
+        }
+        return total / Double(max(count, 1))
+    }
+
+    private static func writeLinearTIFF(_ image: CIImage, to url: URL) throws {
+        let linear = CGColorSpace(name: CGColorSpace.linearSRGB)!
+        let context = CIContext(options: [
+            .workingColorSpace: linear,
+            .outputColorSpace: linear,
         ])
+        guard let cg = context.createCGImage(image, from: image.extent, format: .RGBAh, colorSpace: linear) else {
+            throw ScannerError(.ioFailure, "multi-pass TIFF 이미지 생성 실패")
+        }
+        try? FileManager.default.removeItem(at: url)
+        guard let destination = CGImageDestinationCreateWithURL(url as CFURL, "public.tiff" as CFString, 1, nil) else {
+            throw ScannerError(.ioFailure, "multi-pass TIFF 출력 생성 실패")
+        }
+        CGImageDestinationAddImage(destination, cg, nil)
+        guard CGImageDestinationFinalize(destination) else {
+            throw ScannerError(.ioFailure, "multi-pass TIFF 출력 저장 실패")
+        }
+    }
+
+    private static func writeRGB16TIFF(_ pixels: [UInt16], width: Int, height: Int, to url: URL) throws {
+        let bigEndianPixels = pixels.map(\.bigEndian)
+        var data = Data(count: bigEndianPixels.count * MemoryLayout<UInt16>.size)
+        data.withUnsafeMutableBytes { destination in
+            bigEndianPixels.withUnsafeBytes { source in
+                destination.copyMemory(from: source)
+            }
+        }
+        guard let provider = CGDataProvider(data: data as CFData),
+              let image = CGImage(
+                width: width,
+                height: height,
+                bitsPerComponent: 16,
+                bitsPerPixel: 48,
+                bytesPerRow: width * 3 * MemoryLayout<UInt16>.size,
+                space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.none.rawValue),
+                provider: provider,
+                decode: nil,
+                shouldInterpolate: false,
+                intent: .defaultIntent
+              ) else {
+            throw ScannerError(.ioFailure, "multi-sample RGB16 이미지 생성 실패")
+        }
+        try? FileManager.default.removeItem(at: url)
+        guard let destination = CGImageDestinationCreateWithURL(url as CFURL, "public.tiff" as CFString, 1, nil) else {
+            throw ScannerError(.ioFailure, "multi-sample TIFF 출력 생성 실패")
+        }
+        CGImageDestinationAddImage(destination, image, nil)
+        guard CGImageDestinationFinalize(destination) else {
+            throw ScannerError(.ioFailure, "multi-sample TIFF 출력 저장 실패")
+        }
     }
 
     public func cancelScan() async {
@@ -607,11 +1138,20 @@ public final class SANEBackend: ScannerBackend, @unchecked Sendable {
         if let v = ProcessInfo.processInfo.environment["SANE_CONFIG_DIR"],
            FileManager.default.fileExists(atPath: v) { return v }
         // 2) Homebrew 표준 경로 후보.
+        let overrideConfigDir = ProcessInfo.processInfo.environment["NEGAFLOW_SCANIMAGE_PATH"]
+            .map {
+                URL(fileURLWithPath: $0)
+                    .deletingLastPathComponent()
+                    .deletingLastPathComponent()
+                    .appendingPathComponent("etc/sane.d")
+                    .path
+            }
         let candidates = [
+            overrideConfigDir,
             "/opt/homebrew/etc/sane.d",
             "/usr/local/etc/sane.d",
             "/etc/sane.d",
-        ]
+        ].compactMap { $0 }
         for c in candidates {
             if FileManager.default.fileExists(atPath: c) { return c }
         }
@@ -624,15 +1164,22 @@ public final class SANEBackend: ScannerBackend, @unchecked Sendable {
     static func makeSaneEnvironment() -> [String: String] {
         var env = ProcessInfo.processInfo.environment
         // Homebrew 경로를 PATH 앞에 추가(libsane*.dylib 해석 + 일반 도구 접근).
-        let brew = "/opt/homebrew/bin:/opt/homebrew/sbin"
+        let toolPrefix = ProcessInfo.processInfo.environment["NEGAFLOW_SCANIMAGE_PATH"]
+            .map { URL(fileURLWithPath: $0).deletingLastPathComponent().path }
+        let pathPrefixes = [toolPrefix, "/opt/homebrew/bin", "/opt/homebrew/sbin"]
+            .compactMap { $0 }
+            .joined(separator: ":")
         let existing = env["PATH"] ?? "/usr/bin:/bin"
-        env["PATH"] = "\(brew):\(existing)"
+        env["PATH"] = "\(pathPrefixes):\(existing)"
         // SANE 설정 디렉토리.
         if let cfg = findSaneConfigDir() {
             env["SANE_CONFIG_DIR"] = cfg
         }
         // 백엔드 라이브러리 경로(SANE가 .so/.dylib 를 찾는 위치).
-        let libdirs = ["/opt/homebrew/lib/sane", "/usr/local/lib/sane"]
+        let overrideLibDir = ProcessInfo.processInfo.environment["NEGAFLOW_SCANIMAGE_PATH"]
+            .map { URL(fileURLWithPath: $0).deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("lib/sane").path }
+        let libdirs = [overrideLibDir, "/opt/homebrew/lib/sane", "/usr/local/lib/sane"]
+            .compactMap { $0 }
             .filter { FileManager.default.fileExists(atPath: $0) }
         if !libdirs.isEmpty, env["SANE_BACKENDS_PATH"] == nil {
             env["SANE_BACKENDS_PATH"] = libdirs.joined(separator: ":")

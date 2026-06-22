@@ -61,13 +61,15 @@ public struct LookPreset: Codable, Sendable, Identifiable, Equatable, Hashable {
     /// 프리셋을 DevelopParameters 기본값으로 변환한다.
     public var baseParameters: DevelopParameters {
         var p = DevelopParameters()
-        p.density    = tone.density + tone.contrast * 0.4
+        p.density    = tone.density
+        p.contrast   = tone.contrast
         p.highlight  = tone.highlightRollOff
         p.shadow     = tone.blackSoftness
         p.exposure   = tone.exposure + (tone.midtoneLift ?? 0) * 0.1
         p.warmth     = color.warmth
         p.tint       = color.tint
-        p.colorDepth = color.colorDepth + color.saturation
+        p.colorDepth = color.colorDepth
+        p.saturation = color.saturation
         p.grain      = texture.grain
         p.sharpness  = texture.sharpness
         p.halation   = texture.halation

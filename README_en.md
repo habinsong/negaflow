@@ -11,7 +11,7 @@
 
 <br/>
 
-> **Status Notice:** This project is currently **Under Active Development**. APIs, project structures, and hardware support are subject to change.
+> **Status Notice:** The app now provides a real SANE scan-to-development workflow. Hardware coverage and output quality continue to be verified.
 
 ## About The Project
 
@@ -25,6 +25,10 @@ It completely bypasses the legacy workflows of traditional scanning software. In
 * **Chromabase Pipeline:** An automated color engine that handles film base color estimation, density inversion, and highlight roll-off mathematically.
 * **Unified Format Support:** Processes not only scanner film formats (Color Negative, Slide, B&W) but also digital camera scans (RAW/DNG files).
 * **Production-Ready Looks:** Comes with 6 built-in presets (Neutral, Rich Neutral, Soft Print, Clear Chrome, Warm Lab, Deep Slide) ready for immediate use.
+* **Frame-Based Roll Workflow:** `Scan Next` adds the next frame in the current session, while each frame keeps its own raw scan, development state, and export result.
+* **Photo-First Editor:** The canvas supports zoom, pan, drag crop, raw/developed comparison, an interactive histogram, and rotate/flip tools.
+* **Session Orientation:** Rotation and flips apply to the current frame and become the default for following scans. Crop never carries forward, and the orientation template resets when the app restarts.
+* **Progressive Development Controls:** Basic Tone, Tone Curve, Color, Calibration, and Detail & Effects can be opened or closed independently and reset by section.
 
 ## Prerequisites
 
@@ -55,7 +59,13 @@ bash scripts/run-app.sh
 ```bash
 bash scripts/run-app.sh run
 ```
-Provides a single-window interface containing a preview canvas, development parameter controls, and a real-time histogram.
+The single window is split into a frame list, a central canvas, and a right inspector. The inspector follows `Scan → Base → Tools → Tone → Color → Detail → Export`, keeping only the section being used open.
+
+1. Select the connected scanner and choose `Scan` or `Scan Next`.
+2. Use the central canvas for zoom, pan, crop, and raw/developed comparison.
+3. Set orientation in the tool strip; the displayed `Next scan` value is inherited by later frames.
+4. Open the required development section and use its reset control to clear only that section's manual adjustments.
+5. Export JPEG or 16-bit TIFF with an optional sidecar JSON file.
 
 ### Command Line Interface (CLI)
 A robust CLI is available for automated scripting, batch processing, or headless testing.
@@ -78,11 +88,20 @@ swift build
 
 negaflow avoids hardcoded device names. Instead, it dynamically queries the scanner's **Capabilities** to enable features.
 
-* **Verified:** Plustek OpticFilm 8200i
-* **Compatible Targets:** Plustek OpticFilm 8100, 8300i
+* **Verified:** Plustek OpticFilm 8100 — real consecutive 3600 dpi / 16-bit RGB scans and development completed
+* **Compatible Targets:** Plustek OpticFilm 8200i, 8300i
 * **Experimental:** Legacy OpticFilm series (e.g., 7200i, 7400, 7600i)
 
 *(If you do not have scanner hardware, you can toggle **Demo** mode in the app to test the Chromabase engine using a Mock backend and bundled sample scans.)*
+
+## Verification
+
+```bash
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
+bash scripts/run-app.sh build
+```
+
+Automated tests cover the color engine, image transforms, SANE capability discovery, and bracket merging. GUI changes are exercised on the real scanner path with Demo disabled using `Scan → rotate/flip → Scan Next`.
 
 ## Architecture
 

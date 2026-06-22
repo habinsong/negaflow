@@ -11,9 +11,9 @@ public enum ColorModel {
 
         // Warmth: 온도. R/B 균형 이동. warmth > 0 → 따뜻하게(R↑ B↓).
         if abs(params.warmth) > 1e-3 {
-            let r = 1.0 + params.warmth * 0.12
-            let b = 1.0 - params.warmth * 0.12
-            let g = 1.0 + params.warmth * 0.02
+            let r = 1.0 + params.warmth * 0.18
+            let b = 1.0 - params.warmth * 0.18
+            let g = 1.0 + params.warmth * 0.03
             img = img.applyingFilter("CIColorMatrix", parameters: [
                 "inputRVector": CIVector(x: CGFloat(r), y: 0, z: 0, w: 0),
                 "inputGVector": CIVector(x: 0, y: CGFloat(g), z: 0, w: 0),
@@ -24,8 +24,8 @@ public enum ColorModel {
 
         // Tint: 녹/마젠타 축. G vs (R+B) 균형.
         if abs(params.tint) > 1e-3 {
-            let g = 1.0 + params.tint * 0.10
-            let rb = 1.0 - params.tint * 0.05
+            let g = 1.0 + params.tint * 0.24
+            let rb = 1.0 - params.tint * 0.12
             img = img.applyingFilter("CIColorMatrix", parameters: [
                 "inputGVector": CIVector(x: 0, y: CGFloat(g), z: 0, w: 0),
                 "inputRVector": CIVector(x: CGFloat(rb), y: 0, z: 0, w: 0),
@@ -44,7 +44,44 @@ public enum ColorModel {
             ])
         }
 
+        if abs(params.vibrance) > 1e-3 {
+            img = applyVibrance(to: img, amount: params.vibrance * 0.8)
+        }
+
+        if abs(params.saturation) > 1e-3 {
+            img = img.applyingFilter("CIColorControls", parameters: [
+                "inputSaturation": NSNumber(value: 1.0 + params.saturation * 0.6),
+                "inputContrast": 1.0,
+                "inputBrightness": 0.0,
+            ])
+        }
+
+        if abs(params.redPrimary) > 1e-3 || abs(params.greenPrimary) > 1e-3 || abs(params.bluePrimary) > 1e-3 {
+            let r = 1.0 + params.redPrimary * 0.16
+            let g = 1.0 + params.greenPrimary * 0.16
+            let b = 1.0 + params.bluePrimary * 0.16
+            img = img.applyingFilter("CIColorMatrix", parameters: [
+                "inputRVector": CIVector(x: CGFloat(r), y: 0, z: 0, w: 0),
+                "inputGVector": CIVector(x: 0, y: CGFloat(g), z: 0, w: 0),
+                "inputBVector": CIVector(x: 0, y: 0, z: CGFloat(b), w: 0),
+                "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
+            ])
+        }
+
         return img
+    }
+
+    private static func applyVibrance(to image: CIImage, amount: Double) -> CIImage {
+        if let filter = CIFilter(name: "CIVibrance") {
+            filter.setValue(image, forKey: kCIInputImageKey)
+            filter.setValue(amount, forKey: "inputAmount")
+            return filter.outputImage ?? image
+        }
+        return image.applyingFilter("CIColorControls", parameters: [
+            "inputSaturation": NSNumber(value: 1.0 + amount * 0.25),
+            "inputContrast": 1.0,
+            "inputBrightness": 0.0,
+        ])
     }
 }
 
@@ -81,6 +118,21 @@ public enum TextureStage {
                     "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
                 ])
                 img = img.composited(over: monochromeNoise.cropped(to: extent))
+            }
+        }
+
+        if abs(params.clarity) > 1e-3 {
+            if params.clarity > 0 {
+                img = img.applyingFilter("CIUnsharpMask", parameters: [
+                    "inputRadius": NSNumber(value: 6.0 + params.clarity * 6.0),
+                    "inputIntensity": NSNumber(value: 0.18 + params.clarity * 0.35),
+                ])
+            } else {
+                img = img.applyingFilter("CIColorControls", parameters: [
+                    "inputSaturation": 1.0,
+                    "inputContrast": NSNumber(value: 1.0 + params.clarity * 0.18),
+                    "inputBrightness": 0.0,
+                ])
             }
         }
 
@@ -122,6 +174,14 @@ public enum TextureStage {
             ])
         }
 
-        return img.clamped(to: image.extent)
+        if abs(params.vignette) > 1e-3,
+           let filter = CIFilter(name: "CIVignette") {
+            filter.setValue(img, forKey: kCIInputImageKey)
+            filter.setValue(params.vignette * 1.8, forKey: "inputIntensity")
+            filter.setValue(min(image.extent.width, image.extent.height) * 0.45, forKey: "inputRadius")
+            img = filter.outputImage ?? img
+        }
+
+        return img.cropped(to: image.extent)
     }
 }

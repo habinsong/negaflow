@@ -62,6 +62,13 @@ public enum ImageLoader {
         return CIImage(cgImage: cg)
     }
 
+    public static func loadScannerTIFF(_ url: URL) -> CIImage? {
+        guard let src = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let cg = CGImageSourceCreateImageAtIndex(src, 0, nil),
+              let linear = CGColorSpace(name: CGColorSpace.linearSRGB) else { return nil }
+        return CIImage(cgImage: cg, options: [.colorSpace: linear])
+    }
+
     // MARK: RAW / DNG
     //
     // CIRAWFilter는 디지털 카메라 RAW를 16bit linear로 전개한다.

@@ -25,52 +25,140 @@ public enum ToneMapper {
         var img = image
         let extent = image.extent
 
-        // Density: 중간톤 밀도. 대비 + 미드톤 리프트로 근사.
-        // density > 0 → 더 쫀득한 인화 느낌 (plan §8.9 Rich Neutral).
-        if abs(params.density) > 1e-3 {
-            let contrast = 1.0 + params.density * 0.22
-            let brightness = params.density * 0.02
-            img = img.applyingFilter("CIColorControls", parameters: [
-                "inputContrast": NSNumber(value: contrast),
-                "inputBrightness": NSNumber(value: brightness),
-                "inputSaturation": 1.0,
-            ])
+        if hasBasicToneChange(params) {
+            img = applyBasicTone(to: img, params: params)
         }
 
-        // Highlight roll-off: 하이라이트 부드럽게 깎기.
-        // 라이트 쪽 감마를 올려 하이라이트를 압축.
-        if abs(params.highlight) > 1e-3 {
-            // highlight > 0 → 하이라이트 회복(감마 올림), < 0 → 더 자극적으로
-            let power = 1.0 - params.highlight * 0.35
-            let clampedPow = max(0.45, min(1.6, power))
-            img = img.applyingFilter("CIGammaAdjust", parameters: [
-                "inputPower": NSNumber(value: clampedPow),
-            ])
+        img = applyParametricCurve(to: img, params: params)
+        return img.cropped(to: extent)
+    }
+
+    private static func hasBasicToneChange(_ params: DevelopParameters) -> Bool {
+        [
+            params.contrast,
+            params.density,
+            params.highlight,
+            params.shadow,
+            params.whites,
+            params.blacks,
+        ].contains { abs($0) > 1e-3 }
+    }
+
+    private static func applyBasicTone(to image: CIImage, params: DevelopParameters) -> CIImage {
+        guard let kernel = ChromabaseMetalKernels.colorKernel(named: "basicTone") else { return image }
+        return kernel.apply(extent: image.extent, arguments: [
+            image,
+            Float(params.contrast),
+            Float(params.density),
+            Float(params.highlight),
+            Float(params.shadow),
+            Float(params.whites),
+            Float(params.blacks),
+        ])?.cropped(to: image.extent) ?? image
+    }
+
+    private static func applyParametricCurve(to image: CIImage, params: DevelopParameters) -> CIImage {
+        let values = [
+            params.curveHighlights, params.curveLights,
+            params.curveDarks, params.curveShadows,
+        ]
+        guard values.contains(where: { abs($0) > 1e-3 }) else {
+            return image
         }
 
-        // Shadow softness: 섀도우가 막히지 않게 리프트.
-        if abs(params.shadow) > 1e-3 {
-            // shadow > 0 → 섀도우 열기(블랙 포인트 올림), < 0 → 더 깊게
-            let blackPoint = max(-0.15, min(0.15, params.shadow * 0.12))
-            // CIColorControls는 음수 밝기로 흑점을 내리는 효과; 리프트는 오프셋으로.
-            if params.shadow > 0 {
-                img = img.applyingFilter("CIColorMatrix", parameters: [
-                    "inputRVector": CIVector(x: 1, y: 0, z: 0, w: 0),
-                    "inputGVector": CIVector(x: 0, y: 1, z: 0, w: 0),
-                    "inputBVector": CIVector(x: 0, y: 0, z: 1, w: 0),
-                    "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
-                    "inputBiasVector": CIVector(x: CGFloat(blackPoint), y: CGFloat(blackPoint),
-                                                z: CGFloat(blackPoint), w: 0),
-                ])
-            } else {
-                img = img.applyingFilter("CIColorControls", parameters: [
-                    "inputBrightness": NSNumber(value: blackPoint),
-                    "inputContrast": 1.0,
-                    "inputSaturation": 1.0,
-                ])
+        guard let kernel = ChromabaseMetalKernels.colorKernel(named: "parametricToneCurve") else { return image }
+        let bands = parametricCurveBands(for: image)
+        return kernel.apply(extent: image.extent, arguments: [
+            image,
+            Float(params.curveHighlights),
+            Float(params.curveLights),
+            Float(params.curveDarks),
+            Float(params.curveShadows),
+            Float(bands.shadowLow),
+            Float(bands.shadowHigh),
+            Float(bands.darkLow),
+            Float(bands.darkHigh),
+            Float(bands.lightLow),
+            Float(bands.lightHigh),
+            Float(bands.highlightLow),
+            Float(bands.highlightHigh),
+        ])?.cropped(to: image.extent) ?? image
+    }
+
+    private struct ParametricCurveBands {
+        let shadowLow: Double
+        let shadowHigh: Double
+        let darkLow: Double
+        let darkHigh: Double
+        let lightLow: Double
+        let lightHigh: Double
+        let highlightLow: Double
+        let highlightHigh: Double
+    }
+
+    private static func parametricCurveBands(for image: CIImage) -> ParametricCurveBands {
+        guard let sampled = sampleLumaPercentiles(from: image) else {
+            return ParametricCurveBands(
+                shadowLow: 0.05,
+                shadowHigh: 0.24,
+                darkLow: 0.18,
+                darkHigh: 0.36,
+                lightLow: 0.34,
+                lightHigh: 0.68,
+                highlightLow: 0.36,
+                highlightHigh: 0.50
+            )
+        }
+        let p10 = sampled[0]
+        let p35 = max(sampled[1], p10 + 0.025)
+        let p65 = max(sampled[2], p35 + 0.025)
+        let p90 = max(sampled[3], p65 + 0.025)
+        return ParametricCurveBands(
+            shadowLow: max(0.0, p10 - 0.020),
+            shadowHigh: p35,
+            darkLow: p35,
+            darkHigh: p65,
+            lightLow: p65,
+            lightHigh: p90,
+            highlightLow: p65,
+            highlightHigh: min(1.0, p90 + 0.030)
+        )
+    }
+
+    private static func sampleLumaPercentiles(from image: CIImage) -> [Double]? {
+        let extent = image.extent.integral
+        guard extent.width > 8, extent.height > 8,
+              let linear = CGColorSpace(name: CGColorSpace.linearSRGB) else { return nil }
+        let targetW = max(64, min(256, Int(extent.width)))
+        let scale = Double(targetW) / Double(extent.width)
+        let targetH = max(1, Int(Double(extent.height) * scale))
+        let scaled = image.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+        var bitmap = [Float](repeating: 0, count: targetW * targetH * 4)
+        CIContext(options: [.workingColorSpace: linear, .outputColorSpace: linear]).render(
+            scaled,
+            toBitmap: &bitmap,
+            rowBytes: targetW * 4 * MemoryLayout<Float>.size,
+            bounds: CGRect(x: 0, y: 0, width: targetW, height: targetH),
+            format: .RGBAf,
+            colorSpace: linear
+        )
+        let insetX = max(1, Int(Double(targetW) * 0.04))
+        let insetY = max(1, Int(Double(targetH) * 0.04))
+        var luma = [Double]()
+        luma.reserveCapacity(targetW * targetH)
+        for y in insetY..<max(insetY + 1, targetH - insetY) {
+            for x in insetX..<max(insetX + 1, targetW - insetX) {
+                let i = (y * targetW + x) * 4
+                luma.append(Double(bitmap[i]) * 0.2126 + Double(bitmap[i + 1]) * 0.7152 + Double(bitmap[i + 2]) * 0.0722)
             }
         }
-
-        return img.clamped(to: extent)
+        guard luma.count >= 64 else { return nil }
+        luma.sort()
+        func pct(_ fraction: Double) -> Double {
+            let index = max(0, min(luma.count - 1, Int(Double(luma.count - 1) * fraction)))
+            return min(max(luma[index], 0.0), 1.0)
+        }
+        return [pct(0.10), pct(0.35), pct(0.65), pct(0.90)]
     }
+
 }
