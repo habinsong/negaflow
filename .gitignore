@@ -6,3 +6,34 @@ build/
 .codegraph
 .omo/
 .DS_Store
+
+# AI 도구 메모리/설정 (절대 커밋 금지)
+CLAUDE.md
+CODEX.md
+GEMINI.md
+GLM*.md
+.cursorrules
+.claude/
+.debug-journal.md
+
+# 대용량 아카이브
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+
+# 샘플 이미지 / 로컬 분석 데이터
+samples/
+LUT_target/
+
+# Python 캐시
+__pycache__/
+*.pyc
+
+# 로컬 작업 메모 / 초안 설계 (공개 대상 아님)
+HIGHLIGHT_TONE_REDESIGN.md
+SEMI_AUTO_ICE_DESIGN.md
+NEGAFLOW_LIGHTROOM_EXPANSION.md
+docs/SOFTWARE_ICE_PLAN.md
+docs/SOFTWARE_ICE_STATUS*.md

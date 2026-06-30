@@ -9,11 +9,18 @@ final class ToneMapperControlsTests: XCTestCase {
             ChromabaseMetalKernels.availableKernelNames,
             [
                 "basicTone",
+                "calibrationPrimaries",
+                "colorGrade",
+                "colorMixerHSL",
+                "ditherAdd",
+                "filmGrain",
+                "gamutSoftClip",
+                "highlightDesaturate",
+                "mainTargetGrade",
                 "parametricToneCurve",
-                "scannerDynamicRange",
+                "despeckle",
                 "scannerLowSatChroma",
                 "scannerMidtoneChroma",
-                "scannerOutputGrade",
             ]
         )
     }
@@ -53,11 +60,12 @@ final class ToneMapperControlsTests: XCTestCase {
     func testHighlightShadowWhiteBlackControlsTargetTheirToneRanges() {
         let baseline = renderLinearRGBA8(applyTone(DevelopParameters()))
 
-        var recoverHighlights = DevelopParameters()
-        recoverHighlights.highlight = 1
-        let recovered = renderLinearRGBA8(applyTone(recoverHighlights))
-        XCTAssertLessThan(meanLuma(recovered, xRange: 104..<124), meanLuma(baseline, xRange: 104..<124) - 8)
-        XCTAssertLessThan(abs(meanLuma(recovered, xRange: 8..<28) - meanLuma(baseline, xRange: 8..<28)), 8)
+        // Highlights는 Lightroom 규약을 따른다: +1은 명부를 밝게(올린다), 암부는 거의 불변.
+        var brighterHighlights = DevelopParameters()
+        brighterHighlights.highlight = 1
+        let brightenedHi = renderLinearRGBA8(applyTone(brighterHighlights))
+        XCTAssertGreaterThan(meanLuma(brightenedHi, xRange: 104..<124), meanLuma(baseline, xRange: 104..<124) + 8)
+        XCTAssertLessThan(abs(meanLuma(brightenedHi, xRange: 8..<28) - meanLuma(baseline, xRange: 8..<28)), 8)
 
         var openShadows = DevelopParameters()
         openShadows.shadow = 1

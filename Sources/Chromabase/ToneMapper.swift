@@ -134,7 +134,7 @@ public enum ToneMapper {
         let targetH = max(1, Int(Double(extent.height) * scale))
         let scaled = image.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
         var bitmap = [Float](repeating: 0, count: targetW * targetH * 4)
-        CIContext(options: [.workingColorSpace: linear, .outputColorSpace: linear]).render(
+        SamplingContextPool.context(workingColorSpace: linear).render(
             scaled,
             toBitmap: &bitmap,
             rowBytes: targetW * 4 * MemoryLayout<Float>.size,

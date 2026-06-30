@@ -17,13 +17,16 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-CONFIG="Debug"
+# 기본은 Release: 컴파일러 최적화(-O / whole-module)로 CPU 코드(AutoLevels 픽셀 샘플링,
+# 퍼센타일 정렬, transform 등)가 Debug(-Onone) 대비 수배 빨라진다 — 이미지 처리 앱이라 체감이 크다.
+CONFIG="Release"
 DO_RUN=1
 case "${1:-run}" in
   build)   DO_RUN=0 ;;
   release) CONFIG="Release" ;;
+  debug)   CONFIG="Debug" ;;
   run|"")  ;;
-  *) echo "usage: $0 [run|build|release]"; exit 2 ;;
+  *) echo "usage: $0 [run|build|release|debug]"; exit 2 ;;
 esac
 
 BUILD_DIR="$ROOT/build"

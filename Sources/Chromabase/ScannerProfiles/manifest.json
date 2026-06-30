@@ -1,0 +1,66 @@
+{
+  "profileCount": 15,
+  "profiles": [
+    {
+      "id": "noritsu__color-nega__fuji-c200",
+      "profileHash": "sha256:109032576c5bc379faf178c8f836def25e555be02d511dcb2f78e068867b39d9"
+    },
+    {
+      "id": "noritsu__color-nega__kodak-ektar-100",
+      "profileHash": "sha256:5283571fae45eafd2df7647bedaa703864141c5d4ead332a6eb4e0eb3d77af4e"
+    },
+    {
+      "id": "noritsu__color-nega__kodak-portra-160",
+      "profileHash": "sha256:5f77ab1b197586d539e19efa4ef84c82ecea14643dc0fa073b4e5aebd10485a8"
+    },
+    {
+      "id": "noritsu__color-nega__kodak-portra-400",
+      "profileHash": "sha256:7db1f0bd9109b7ae66b7cc77181dc2e16739af06f37bbdd3a38f9a6d9effb535"
+    },
+    {
+      "id": "noritsu__color-nega__kodak-portra-800",
+      "profileHash": "sha256:1ee379d36b5aedade7525fa88f2577e40808147f39bed14fcfc0f5ad9a572cfd"
+    },
+    {
+      "id": "noritsu__color-nega__kodak-pro-image-100",
+      "profileHash": "sha256:0e5484586e6dfbe189be5af74657bc645ae5f4a0248803be629dd1aa6e1aa9c8"
+    },
+    {
+      "id": "noritsu__color-nega__kodak-ultramax-400",
+      "profileHash": "sha256:e89ad8c44736d10501296e3933d1d0f6e0fd9a619d58e321c970c52c5a89cd41"
+    },
+    {
+      "id": "noritsu__color-nega__kodak-vision3-250d",
+      "profileHash": "sha256:205e8c41bbabd2cc4aabc13127d0197f3dc1ec4efce8838e7ecdfbccf32f424f"
+    },
+    {
+      "id": "noritsu__color-nega__kodak-vision3-50d",
+      "profileHash": "sha256:61a43c885f6f553983afe8a320d91d658236f866b927ed6ed378aa6742fc9f44"
+    },
+    {
+      "id": "noritsu__color-slide__kodak-ektachrome-100",
+      "profileHash": "sha256:c05be188101cd4cf0111942c7856ce1097fcdf528a621a6a3013d06352d9e160"
+    },
+    {
+      "id": "noritsu__color-slide__kodak-ektachrome-100d",
+      "profileHash": "sha256:00468bd38cf666a02d7546c29e0acd0b7a8de05b9daca26afff9347c09093c0c"
+    },
+    {
+      "id": "sp-3000__color-nega__kodak-ektar-100",
+      "profileHash": "sha256:0fa9c82addd9a3b061d551a3892d4e27e020cfcea62e1baad8fd48750bcdd4b7"
+    },
+    {
+      "id": "sp-3000__color-nega__kodak-portra-160",
+      "profileHash": "sha256:3ec40cbdaa9c1529d7c96710d53a9e6d200f2edfd629e57f55668d7dd29894cf"
+    },
+    {
+      "id": "sp-3000__color-nega__kodak-vision3-250d",
+      "profileHash": "sha256:53b61910d057388d3fb2254728c4b3c0d8f9d086578ac160c002b431a1f5d84f"
+    },
+    {
+      "id": "sp-3000__color-slide__kodak-ektachrome-100d",
+      "profileHash": "sha256:c9e852fb8cd452a04b05fe914bcdee9fbdd9376d3cd32fa53459b36d290c89d3"
+    }
+  ],
+  "schemaVersion": 1
+}

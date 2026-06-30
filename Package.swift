@@ -30,7 +30,7 @@ let package = Package(
         .target(
             name: "Chromabase",
             path: "Sources/Chromabase",
-            resources: [.copy("Presets")],
+            resources: [.copy("Presets"), .copy("ScannerProfiles")],
             linkerSettings: [
                 .linkedFramework("CoreImage"),
                 .linkedFramework("CoreGraphics"),

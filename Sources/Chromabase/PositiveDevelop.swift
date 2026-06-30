@@ -18,31 +18,26 @@ public enum PositiveDevelop {
         let extent = image.extent
         var img = image
 
-        let baseScale = 1.08
-        let baseBias = -0.03
-        img = img.applyingFilter("CIColorMatrix", parameters: [
-            "inputRVector": CIVector(x: baseScale, y: 0, z: 0, w: 0),
-            "inputGVector": CIVector(x: 0, y: baseScale, z: 0, w: 0),
-            "inputBVector": CIVector(x: 0, y: 0, z: baseScale, w: 0),
-            "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
-            "inputBiasVector": CIVector(x: baseBias, y: baseBias, z: baseBias, w: 0),
-        ])
-
-        // (a) 흑점 회복: 딥 블랙을 위해 살짝 어둡게 시작.
-        // 스캐너 양화는 종종 블랙이 0.02~0.04 정도에 걸쳐 평탄하다.
+        // 미드톤 대비(밀도)는 아주 약하게만. 과거 contrast 1.10 + bias -0.03은 피벗 아래
+        // (암부)를 강하게 눌러 "어두운 곳은 전부 검정"으로 뭉갰다. Raw에선 보이던 암부가
+        // Developed에서 사라지던 원인. 대비를 낮추고 음수 bias를 제거한다.
         img = img.applyingFilter("CIColorControls", parameters: [
             "inputBrightness": NSNumber(value: 0.0),
-            "inputContrast":   NSNumber(value: 1.10),   // 미드톤 대비 = 밀도 회복
+            "inputContrast":   NSNumber(value: 1.04),
             "inputSaturation": NSNumber(value: 1.0),
         ])
 
-        // (b) 하이라이트 roll-off: 슬라이드 하이라이트 보호.
-        // 감마를 살짝 올려 라이트 쪽을 압축.
-        img = img.applyingFilter("CIGammaAdjust", parameters: [
-            "inputPower": NSNumber(value: 1.0),
+        // 톤 커브: 암부 계조를 살리고(0 근처를 0으로 뭉개지 않음) 하이라이트는 숄더로
+        // 1.0 직전에서 굴려 클리핑을 막는다. 슬라이드의 딥 블랙은 유지하되 디테일을 남긴다.
+        img = img.applyingFilter("CIToneCurve", parameters: [
+            "inputPoint0": CIVector(x: 0.00, y: 0.010),
+            "inputPoint1": CIVector(x: 0.22, y: 0.205),
+            "inputPoint2": CIVector(x: 0.50, y: 0.510),
+            "inputPoint3": CIVector(x: 0.80, y: 0.815),
+            "inputPoint4": CIVector(x: 1.00, y: 0.965),
         ])
 
-        // (c) B&W 포지티브면 채도 제거.
+        // B&W 포지티브면 채도 제거.
         if filmType == .bwPositive {
             img = img.applyingFilter("CIColorControls", parameters: [
                 "inputSaturation": NSNumber(value: 0.0),

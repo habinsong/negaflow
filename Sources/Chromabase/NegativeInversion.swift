@@ -35,6 +35,26 @@ public enum NegativeInversion {
         return applyCube(to: image, stats: stats)
     }
 
+    /// 필름 Dmin/Dmax 프리셋을 적용한 반전. dmin(베이스 투과율)과 dmaxNorm(필름 물성 정규화)을
+    /// 장면 추정이 아닌 제조사 특성곡선에서 가져온다. 장면 의존적 보라/염료분리 딜레마를 회피:
+    ///   • dmaxNorm이 채널별(필름 물성) → 염료 분리 보존.
+    ///   • 장면 히스토그램에 의존 안 함 → 파란 하늘이 B dmaxNorm을 폭발시키지 않음 → 보라 없음.
+    /// base는 preset.dminTransmission으로 호출측에서 세팅해 전달한다.
+    public static func apply(to image: CIImage, base: FilmBase, preset: FilmStockDmin) -> CIImage {
+        let dmin = base.rgb
+        let dmaxNorm = preset.dmaxNorm
+        // blackInput(paper black)은 장면의 밝은 피사체 분포에서 추정. 반전 미드/명부 톤 매핑용.
+        // 프리셋은 Dmin/Dmax(필름 물성)만 고정하고, paper black은 여전히 장면에서 잡는다(negadoctor와 일치).
+        let blackInput: SIMD3<Double>
+        if let sampled = sampleStats(image, base: base)?.blackInput {
+            blackInput = sampled
+        } else {
+            blackInput = fallbackStats(base: base).blackInput
+        }
+        let stats = ChannelStats(dmin: dmin, dmaxNorm: dmaxNorm, blackInput: blackInput)
+        return applyCube(to: image, stats: stats)
+    }
+
     // MARK: 채널별 통계 샘플링
 
     static func sampleStats(_ image: CIImage, base: FilmBase) -> ChannelStats? {
@@ -49,7 +69,7 @@ public enum NegativeInversion {
         let scaled = image.transformed(by: CGAffineTransform(scaleX: CGFloat(scale), y: CGFloat(scale)))
 
         var bitmap = [Float](repeating: 0, count: targetW * targetH * 4)
-        CIContext(options: [.workingColorSpace: linear, .outputColorSpace: linear]).render(
+        SamplingContextPool.context(workingColorSpace: linear).render(
             scaled,
             toBitmap: &bitmap,
             rowBytes: targetW * 4 * MemoryLayout<Float>.size,
@@ -79,24 +99,54 @@ public enum NegativeInversion {
             return s[idx]
         }
 
-        // Dmin = 가장 밝은 투과율(p99.8). 베이스 추정값이 더 밝으면 그쪽을 신뢰.
+        // Dmin = 필름 베이스 투과율(미노광).
+        // 두 정보원: (1) base.rgb(FilmBaseEstimator 또는 사용자 manual picker 또는 프리셋),
+        //            (2) sampledDmin(p99.8, 장면에서 가장 밝은 픽셀).
+        //
+        // Manual 모드(source==.manual): 사용자가 명시한 base 의 **채널 비율(R:G:B)** 만 Dmin 에 반영하고,
+        // 절대 밝기는 sampledDmin(장면 실측)을 따른다. 이렇게 하면:
+        //   • Manual R/G/B 슬라이더가 Dmin 비율에 반영된다(WB/색 균형 조정).
+        //   • sampledDmin 의 밝기가 염료 분리(dye separation)와 채도를 보존한다.
+        //   • base 가 sampledDmin 보다 밝아도 sampledDmin 밝기를 쓰므로 밝기 과대/염료 분리 감소 없음.
+        // Auto 모드(source==.border/.auto): sampledDmin 과 base 를 결합(둘 다 미노광 추정).
         let sampledDmin = SIMD3(pct(red, 0.998), pct(green, 0.998), pct(blue, 0.998))
-        let dmin = SIMD3(
-            max(sampledDmin.x, base.rgb.x * 0.5),
-            max(sampledDmin.y, base.rgb.y * 0.5),
-            max(sampledDmin.z, base.rgb.z * 0.5)
-        )
+        let dmin: SIMD3<Double>
+        if base.source == .manual {
+            // base 비율 정규화 후 sampledDmin 평균 밝기로 스케일.
+            let baseAvg = (base.rgb.x + base.rgb.y + base.rgb.z) / 3
+            let sampleAvg = (sampledDmin.x + sampledDmin.y + sampledDmin.z) / 3
+            let ratioScale = baseAvg > 1e-3 ? sampleAvg / baseAvg : 1.0
+            dmin = SIMD3(
+                min(base.rgb.x * ratioScale, 1.0),
+                min(base.rgb.y * ratioScale, 1.0),
+                min(base.rgb.z * ratioScale, 1.0)
+            )
+        } else {
+            dmin = SIMD3(
+                max(sampledDmin.x, base.rgb.x * 0.5),
+                max(sampledDmin.y, base.rgb.y * 0.5),
+                max(sampledDmin.z, base.rgb.z * 0.5)
+            )
+        }
         // 가장 밀도 높은 장면(밝은 피사체) = p0.2 투과율.
         let densest = SIMD3(
             max(pct(red, 0.002), 1e-5),
             max(pct(green, 0.002), 1e-5),
             max(pct(blue, 0.002), 1e-5)
         )
-        // 채널별 최대 밀도(정규화 분모).
+        // 채널별 최대 밀도(정규화 분모). 염료 분리(dye separation)를 보존하려면 채널별이어야 한다.
+        // 단 densest에 물성 하한(밀도 1.8D)을 둬, 파란 하늘 같은 극단 장면이 B 채널 densest만
+        // 비정상적으로 낮춰 dmaxNorm_B를 폭발시키는 것(→ 보라/청록 hue shift)을 막는다.
+        // 이 하한은 보라를 크게 줄이면서 염료 분리는 그대로 보존한다.
+        let densestFloor = SIMD3(
+            max(densest.x, dmin.x * pow(10.0, -1.8)),
+            max(densest.y, dmin.y * pow(10.0, -1.8)),
+            max(densest.z, dmin.z * pow(10.0, -1.8))
+        )
         let dmaxNorm = SIMD3(
-            max(0.4, log10(dmin.x / densest.x)),
-            max(0.4, log10(dmin.y / densest.y)),
-            max(0.4, log10(dmin.z / densest.z))
+            max(0.4, log10(dmin.x / densestFloor.x)),
+            max(0.4, log10(dmin.y / densestFloor.y)),
+            max(0.4, log10(dmin.z / densestFloor.z))
         )
         let paperBlackInput = SIMD3(pct(red, 0.90), pct(green, 0.90), pct(blue, 0.90)) * 0.97
         let stats = ChannelStats(dmin: dmin, dmaxNorm: dmaxNorm, blackInput: paperBlackInput)
@@ -156,22 +206,37 @@ public enum NegativeInversion {
         let dimension = 96
         // 페이퍼 감마(대비). 1/1.3 ≈ 0.77 → 미드톤 적정. negadoctor 페이퍼 그레이드 근사.
         let gamma = 1.0 / 1.3
-        let knee = 0.70   // 하이라이트 롤오프 시작점
+        let knee = 0.82   // 하이라이트 롤오프 시작점(높일수록 명부 압축↓ → 명부 계조 보존)
 
         // 입력 black point를 정규화 밀도 좌표로 변환.
         func dnOf(_ t: Double, _ c: Int) -> Double {
             max(0.0, log10(stats.dmin[c] / max(t, 1e-5)) / stats.dmaxNorm[c])
         }
-        let blackDn = SIMD3(dnOf(stats.blackInput.x, 0), dnOf(stats.blackInput.y, 1), dnOf(stats.blackInput.z, 2))
+        let perChannelBlackDn = SIMD3(
+            dnOf(stats.blackInput.x, 0), dnOf(stats.blackInput.y, 1), dnOf(stats.blackInput.z, 2)
+        )
+        // 페이퍼 곡선의 toe 기준점은 세 채널 공통값(기하평균)을 쓴다.
+        // negadoctor 모델: Dmin 제거(밀도 정규화)로 WB를 잡은 뒤, 페이퍼 감마·톤 곡선은
+        // RGB 3채널에 **동일 곡선**을 적용해 hue를 보존한다. toe를 채널별로 다르게 두면
+        // 같은 휘도의 중립 회색이 각기 다른 멱함수(pow(dn/toe, 2.45))를 타서 R≠G≠B로
+        // hue가 틀어진다 — 이게 미드톤 보라/청록 캐스트의 근본 원인. WB(밀도 정규화)는
+        // dmin/dmaxNorm에서 이미 채널별로 처리되므로 toe까지 채널별로 할 필요가 없다.
+        let safeBlack = SIMD3(
+            max(perChannelBlackDn.x, 1e-3),
+            max(perChannelBlackDn.y, 1e-3),
+            max(perChannelBlackDn.z, 1e-3)
+        )
+        let blackDn = exp((log(safeBlack.x) + log(safeBlack.y) + log(safeBlack.z)) / 3.0)
 
         var cube = [Float](repeating: 0, count: dimension * dimension * dimension * 4)
-        // 채널별로 분리되므로 1D 곡선을 미리 계산해 둔다.
+        // 채널별로 분리되므로 1D 곡선을 미리 계산해 둔다. toe는 세 채널 동일값이므로
+        // 출력 곡선 형태는 같고, dmin/dmaxNorm만 채널별(=WB)로 다르다.
         func curve(_ c: Int) -> [Double] {
             (0..<dimension).map { i in
                 let t = Double(i) / Double(dimension - 1)
                 return positiveValue(transmission: t,
                                      dmin: stats.dmin[c], dmaxNorm: stats.dmaxNorm[c],
-                                     blackDn: blackDn[c],
+                                     blackDn: blackDn,
                                      gamma: gamma, knee: knee)
             }
         }

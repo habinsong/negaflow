@@ -71,6 +71,33 @@ final class ColorModelControlsTests: XCTestCase {
         }
     }
 
+    func testCalibrationPrimaryControlsMoveTheirOwnChannelsAtMinusOneAndPlusOne() {
+        let baseline = renderLinearRGBA8(applyColor(DevelopParameters()))
+        let controls: [(String, WritableKeyPath<DevelopParameters, Double>, Int)] = [
+            ("Red Primary", \.redPrimary, 0),
+            ("Green Primary", \.greenPrimary, 1),
+            ("Blue Primary", \.bluePrimary, 2),
+        ]
+
+        for (name, keyPath, channel) in controls {
+            var lower = DevelopParameters()
+            lower[keyPath: keyPath] = -1
+            var higher = DevelopParameters()
+            higher[keyPath: keyPath] = 1
+
+            XCTAssertLessThan(
+                channelMean(renderLinearRGBA8(applyColor(lower)), channel: channel),
+                channelMean(baseline, channel: channel) - 18,
+                "\(name) -1은 해당 RGB 채널 평균을 충분히 낮춰야 합니다."
+            )
+            XCTAssertGreaterThan(
+                channelMean(renderLinearRGBA8(applyColor(higher)), channel: channel),
+                channelMean(baseline, channel: channel) + 18,
+                "\(name) +1은 해당 RGB 채널 평균을 충분히 높여야 합니다."
+            )
+        }
+    }
+
     private func applyColor(_ params: DevelopParameters) -> CIImage {
         ColorModel.apply(to: makeColorPatch(), params: params)
     }

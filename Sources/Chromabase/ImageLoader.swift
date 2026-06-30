@@ -69,6 +69,20 @@ public enum ImageLoader {
         return CIImage(cgImage: cg, options: [.colorSpace: linear])
     }
 
+    /// 스캐너 raw 도메인(16bit linear) CGImage를 LZW 무손실 압축 TIFF로 저장한다.
+    /// ICE 적용된 raw를 메모리에서 내려놓을 때 디스크 백킹으로 쓰고, `loadScannerTIFF`가 항상
+    /// linearSRGB로 재해석하므로 round-trip 정밀도·색공간이 보존된다.
+    @discardableResult
+    public static func saveScannerTIFF(_ cg: CGImage, to url: URL) -> Bool {
+        guard let dest = CGImageDestinationCreateWithURL(url as CFURL, "public.tiff" as CFString, 1, nil)
+        else { return false }
+        let props: [CFString: Any] = [
+            kCGImagePropertyTIFFDictionary: [kCGImagePropertyTIFFCompression: 5],  // 5 = LZW
+        ]
+        CGImageDestinationAddImage(dest, cg, props as CFDictionary)
+        return CGImageDestinationFinalize(dest)
+    }
+
     // MARK: RAW / DNG
     //
     // CIRAWFilter는 디지털 카메라 RAW를 16bit linear로 전개한다.

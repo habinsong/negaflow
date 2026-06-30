@@ -25,7 +25,9 @@ public enum AutoLevels {
     public static func apply(to image: CIImage,
                              blackClip: Double = 0.005,
                              whiteClip: Double = 0.001,
-                             sampleColorSpace: CGColorSpace? = nil) -> CIImage {
+                             sampleColorSpace: CGColorSpace? = nil,
+                             outputWhite outputWhiteOverride: Double? = nil,
+                             outputBlack: Double = 0.0) -> CIImage {
         // 샘플링을 위해 작은 영역으로 축소(CIAreaAverage 로는 히스토그램이 안 나옴).
         // 대신 작은 축소본을 렌더링해서 픽셀을 직접 읽는다.
         guard let (black, white) = sampleBlackWhite(
@@ -52,12 +54,15 @@ public enum AutoLevels {
         // out = (in - black) / (white - black)
         //   = in * (1/(white-black)) + (-black/(white-black))
         let linear = CGColorSpace(name: CGColorSpace.linearSRGB)
-        let outputWhite = sampleColorSpace?.name == linear?.name ? 0.70 : 0.88
+        let outputWhite = outputWhiteOverride ?? (sampleColorSpace?.name == linear?.name ? 0.70 : 0.88)
+        // out = outputBlack + (in - black) * (outputWhite - outputBlack) / range.
+        // outputBlack > 0이면 가장 어두운 값을 0이 아니라 작은 floor로 보내 암부 계조를
+        // 남긴다(슬라이드 암부 뭉개짐 방지). 네거티브는 기본 0이라 동작이 그대로다.
         func transform(_ black: Double, _ white: Double) -> (scale: Double, bias: Double) {
             let range = white - black
             guard range >= minimumRange else { return (1, 0) }
-            let scale = outputWhite / range
-            return (scale, -black * scale)
+            let scale = (outputWhite - outputBlack) / range
+            return (scale, outputBlack - black * scale)
         }
         let red = transform(blackR, whiteR)
         let green = transform(blackG, whiteG)
@@ -98,10 +103,7 @@ public enum AutoLevels {
             ?? CGColorSpace(name: CGColorSpace.sRGB)
             ?? CGColorSpaceCreateDeviceRGB()
         var bitmap = [Float](repeating: 0, count: targetW * targetH * 4)
-        let ciCtx = CIContext(options: [
-            .workingColorSpace: cs as Any,
-            .outputColorSpace: cs as Any,
-        ])
+        let ciCtx = SamplingContextPool.context(workingColorSpace: cs)
         ciCtx.render(scaled, toBitmap: &bitmap,
                      rowBytes: targetW * 4 * MemoryLayout<Float>.size,
                      bounds: CGRect(x: 0, y: 0, width: targetW, height: targetH),

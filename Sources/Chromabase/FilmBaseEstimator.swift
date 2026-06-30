@@ -75,7 +75,7 @@ public enum FilmBaseEstimator {
 
         let cs = CGColorSpace(name: CGColorSpace.genericRGBLinear) ?? CGColorSpaceCreateDeviceRGB()
         var bitmap = [Float](repeating: 0, count: targetW * targetH * 4)
-        let ctx = CIContext(options: [.workingColorSpace: NSNull()])
+        let ctx = SamplingContextPool.context(workingColorSpace: nil)
         ctx.render(scaled, toBitmap: &bitmap,
                    rowBytes: targetW * 4 * MemoryLayout<Float>.size,
                    bounds: CGRect(x: 0, y: 0, width: targetW, height: targetH),
@@ -132,7 +132,7 @@ public enum FilmBaseEstimator {
 
         let cs = CGColorSpace(name: CGColorSpace.genericRGBLinear) ?? CGColorSpaceCreateDeviceRGB()
         var bitmap = [Float](repeating: 0, count: targetW * targetH * 4)
-        let ctx = CIContext(options: [.workingColorSpace: NSNull()])
+        let ctx = SamplingContextPool.context(workingColorSpace: nil)
         ctx.render(scaled, toBitmap: &bitmap,
                    rowBytes: targetW * 4 * MemoryLayout<Float>.size,
                    bounds: CGRect(x: 0, y: 0, width: targetW, height: targetH),
@@ -167,11 +167,27 @@ public enum FilmBaseEstimator {
         )
     }
 
+    /// 필름 베이스 후보 판정. 과거엔 `r > g*1.12 && g > b*1.05`로 "진한 주황"만 강제했으나,
+    /// 이는 Kodak Portra/Gold 계열만 통과시키고 Fuji 황/옅은 베이스, Vision3(ECN-2), 퇴색 분홍
+    /// 베이스를 전부 탈락시켜 fallback (0.9,0.65,0.45) 로 떨어지게 했다(→ 반전 캐스트의 근원).
+    ///
+    /// 물리적 정의로 교체: 컬러 네거티브 베이스(미노광 + 잔류 염료)는 **항상 R≥G≥B 단조**다.
+    /// 오렌지 마스크는 마젠타+황 염료의 조합이므로 R이 가장 높고 B가 가장 낮으며, 그 비율은
+    /// 필름/현상마다 다르다(Fuji는 더 황/투명, Kodak은 더 진한 주황, ECN-2는 또 다름).
+    /// 따라서 색 강도가 아니라 **R≥G≥B 단조성**만으로 후보를 식별한다. luma 범위는 미노광/염료
+    /// 투과율의 합리적 범위로 유지.
     static func isFilmBaseCandidate(r: Double, g: Double, b: Double) -> Bool {
         let luma = (r + g + b) / 3
-        guard luma >= 0.03, luma <= 0.82 else { return false }
-        guard r > g * 1.12, g > b * 1.05 else { return false }
-        return r - b >= 0.025
+        // luma 상한: 미노광 베이스는 스캐너에서 중간~밝게 나오지만, 거의 흰(0.90+) 무필름 빈 공간
+        // (홀더/마운트 간극)은 베이스가 아니다. 0.85 상한은 Fuji 옅은/황 베이스(최대 ~0.82)까지 커버.
+        guard luma >= 0.03, luma <= 0.85 else { return false }
+        // R≥G≥B 단조 (허용 오차: 노이즈/베이스 불균일성). 컬러 네거티브 베이스는 항상 R≥G≥B.
+        let eps = 0.01
+        guard r >= g - eps, g >= b - eps else { return false }
+        // R-B 최소 분리: 진짜 베이스(마젠타+황 염료)는 R이 B보다 유의미하게 높다. 필름마다 강도가
+        // 다르나(Fuji 옅음, Kodak 진함), 거의 중립 회색에 가까운 무필름 빈 공간(R-B≈0.1)과 구분하기
+        // 위해 0.06 하한. Fuji 황 베이스(0.82,0.70,0.56 → R-B=0.26)도 여유 통과.
+        return (r - b) >= 0.06
     }
 
     /// 영역의 평균 RGB를 구한다 (CIAreaAverage).
@@ -184,7 +200,7 @@ public enum FilmBaseEstimator {
         ])
         guard let out = filter?.outputImage else { return nil }
         var bitmap = [Float](repeating: 0, count: 4)
-        let ctx = CIContext(options: [.workingColorSpace: NSNull()])
+        let ctx = SamplingContextPool.context(workingColorSpace: nil)
         ctx.render(out, toBitmap: &bitmap,
                    rowBytes: 4 * MemoryLayout<Float>.size,
                    bounds: CGRect(x: 0, y: 0, width: 1, height: 1),

@@ -12,16 +12,57 @@ import CoreImage
 //
 // 이전 구현의 `apply`는 중심 가중치가 큰 커널(샤픈)이라 노이즈를 증폭했다 — 제거했다.
 enum ScannerNoiseReduction {
+    private enum ChromaProfile {
+        case shadow
+        case main
+        case postGrade
+
+        var smallRadius: Double {
+            switch self {
+            case .shadow: return 3.2
+            case .main: return 3.8
+            case .postGrade: return 3.2
+            }
+        }
+
+        var largeRadius: Double {
+            switch self {
+            case .shadow: return 12.0
+            case .main: return 18.0
+            case .postGrade: return 9.0
+            }
+        }
+
+        var strength: Double {
+            switch self {
+            case .shadow: return 0.78
+            case .main: return 1.0
+            case .postGrade: return 0.95
+            }
+        }
+    }
+
     /// 라이트 톤의 컬러 노이즈 제거(약). 반전 후 positive에 적용한다.
     static func apply(to image: CIImage) -> CIImage {
         reduceColorNoise(in: image, chromaRadius: 2.0, lumaRadius: 0.8, shadowBias: false)
     }
 
-    /// 암부 컬러 노이즈를 더 강하게 정리하고, 암부 휘도 노이즈도 약하게 평활한다.
+    /// 암부 컬러 노이즈를 정리하되, 미드톤의 실제 색 채도는 보존한다.
+    /// 전역 chroma 블러를 약하게 둬(반경↓) 중간톤 채색 디테일이 뭉개져 탈색되지 않게 한다.
     static func reduceShadowChroma(in image: CIImage) -> CIImage {
-        let base = reduceColorNoise(in: image, chromaRadius: 2.8, lumaRadius: 0, shadowBias: false)
-        let shadows = reduceColorNoise(in: base, chromaRadius: 5.2, lumaRadius: 1.2, shadowBias: true)
-        return reduceMidtoneChroma(in: neutralizeLowSaturationMagenta(in: shadows))
+        let base = reduceColorNoise(in: image, chromaRadius: 1.6, lumaRadius: 0, shadowBias: false)
+        let shadows = reduceColorNoise(in: base, chromaRadius: 4.4, lumaRadius: 1.0, shadowBias: true)
+        return reduceMidtoneChroma(in: neutralizeLowSaturationMagenta(in: shadows), profile: .shadow)
+    }
+
+    static func reduceMainTargetChroma(in image: CIImage) -> CIImage {
+        let base = reduceColorNoise(in: image, chromaRadius: 2.4, lumaRadius: 0, shadowBias: false)
+        let shadows = reduceColorNoise(in: base, chromaRadius: 4.4, lumaRadius: 0.55, shadowBias: true)
+        return reduceMidtoneChroma(in: neutralizeLowSaturationMagenta(in: shadows), profile: .main)
+    }
+
+    static func reducePostGradeChroma(in image: CIImage) -> CIImage {
+        reduceMidtoneChroma(in: image, profile: .postGrade)
     }
 
     // MARK: 구현
@@ -52,7 +93,12 @@ enum ScannerNoiseReduction {
             ? luma.applyingFilter("CIGaussianBlur", parameters: ["inputRadius": lumaRadius]).cropped(to: extent)
             : luma
         // 재결합: smoothedLuma + (blurredChroma - 0.5)
-        let denoised = CIFilter(name: "CIAdditionCompositing", parameters: [
+        // CIAdditionCompositing은 premultiplied RGB뿐 아니라 **알파까지 더해**(1+1=2) 알파를
+        // 부풀린다. 그러면 뒤의 CIColorMatrix(예: AutoLevels)가 알파를 1로 정규화하는 순간
+        // premultiplied RGB가 알파로 나뉘어 전체가 ~절반으로 어두워진다(하이라이트가 화이트에
+        // 도달 못 함). CILinearDodgeBlendMode는 색은 src+dst로 더하되 알파는 source-over로
+        // 1을 유지하므로 이 버그가 없다.
+        let denoised = CIFilter(name: "CILinearDodgeBlendMode", parameters: [
             kCIInputImageKey: smoothedLuma,
             kCIInputBackgroundImageKey: blurredChroma.applyingFilter("CIColorMatrix", parameters: [
                 "inputBiasVector": CIVector(x: -0.5, y: -0.5, z: -0.5, w: 0),
@@ -62,7 +108,7 @@ enum ScannerNoiseReduction {
         guard shadowBias else { return denoised }
 
         // 암부 마스크: luma < 0.30 영역에만 적용(밝은 영역은 원본 유지).
-        let scaledDeepChroma = CIFilter(name: "CIAdditionCompositing", parameters: [
+        let scaledDeepChroma = CIFilter(name: "CILinearDodgeBlendMode", parameters: [
             kCIInputImageKey: smoothedLuma,
             kCIInputBackgroundImageKey: blurredChroma.applyingFilter("CIColorMatrix", parameters: [
                 "inputRVector": CIVector(x: 0.34, y: 0, z: 0, w: 0),
@@ -94,19 +140,48 @@ enum ScannerNoiseReduction {
         return kernel.apply(extent: extent, arguments: [image, blurred])?.cropped(to: extent) ?? image
     }
 
-    private static func reduceMidtoneChroma(in image: CIImage) -> CIImage {
+    private static func reduceMidtoneChroma(in image: CIImage, profile: ChromaProfile) -> CIImage {
         let extent = image.extent
         let luma = luminance(of: image)
         let chroma = chromaImage(from: image).cropped(to: extent)
-        let guidedChroma = CIFilter(name: "CIGuidedFilter", parameters: [
+        let smallChroma = profile == .postGrade
+            ? chroma.applyingFilter("CIGaussianBlur", parameters: ["inputRadius": profile.smallRadius]).cropped(to: extent)
+            : guidedChroma(
+                chroma,
+                guide: luma,
+                radius: profile.smallRadius,
+                epsilon: 0.0012,
+                fallbackRadius: profile.smallRadius * 1.25
+            )
+        let largeChroma = guidedChroma(
+            chroma,
+            guide: luma,
+            radius: profile.largeRadius,
+            epsilon: 0.0045,
+            fallbackRadius: profile.largeRadius * 0.85
+        )
+        guard let kernel = ChromabaseMetalKernels.colorKernel(named: "scannerMidtoneChroma") else { return image }
+        return kernel.apply(extent: extent, arguments: [
+            image,
+            smallChroma,
+            largeChroma,
+            profile.strength,
+        ])?.cropped(to: extent) ?? image
+    }
+
+    private static func guidedChroma(_ chroma: CIImage,
+                                     guide luma: CIImage,
+                                     radius: Double,
+                                     epsilon: Double,
+                                     fallbackRadius: Double) -> CIImage {
+        let extent = chroma.extent
+        return CIFilter(name: "CIGuidedFilter", parameters: [
             kCIInputImageKey: chroma,
             "inputGuideImage": luma,
-            "inputRadius": 7.0,
-            "inputEpsilon": 0.0018,
+            "inputRadius": radius,
+            "inputEpsilon": epsilon,
         ])?.outputImage?.cropped(to: extent)
-            ?? chroma.applyingFilter("CIGaussianBlur", parameters: ["inputRadius": 5.4]).cropped(to: extent)
-        guard let kernel = ChromabaseMetalKernels.colorKernel(named: "scannerMidtoneChroma") else { return image }
-        return kernel.apply(extent: extent, arguments: [image, guidedChroma])?.cropped(to: extent) ?? image
+            ?? chroma.applyingFilter("CIGaussianBlur", parameters: ["inputRadius": fallbackRadius]).cropped(to: extent)
     }
 
     private static func luminance(of image: CIImage) -> CIImage {

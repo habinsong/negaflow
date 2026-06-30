@@ -1,0 +1,6203 @@
+{
+  "color": {
+    "high_chroma": {
+      "count": 37,
+      "max": 25.170323012314693,
+      "mean": 8.373242234193851,
+      "median": 7.117792731994034,
+      "min": 2.7345704508510704,
+      "p10": 4.085593265266991,
+      "p90": 13.52268185791502
+    },
+    "high_gb": {
+      "count": 37,
+      "max": 8.98205371680524,
+      "mean": 2.588020026858928,
+      "median": 2.5766931408824405,
+      "min": -4.530599615358597,
+      "p10": -1.1258713198707424,
+      "p90": 5.720258075574208
+    },
+    "high_rg": {
+      "count": 37,
+      "max": 3.7462436116436493,
+      "mean": -4.382612334934042,
+      "median": -3.5169561807410616,
+      "min": -30.354150554220723,
+      "p10": -8.26243741407377,
+      "p90": 0.584157204855125
+    },
+    "mean_b": {
+      "count": 37,
+      "max": 180.1059821802935,
+      "mean": 154.51252892515157,
+      "median": 159.94534486373166,
+      "min": 79.92195597484277,
+      "p10": 134.24640859538783,
+      "p90": 171.15493228511528
+    },
+    "mean_g": {
+      "count": 37,
+      "max": 178.88467610062892,
+      "mean": 153.7696175987308,
+      "median": 158.36179035639415,
+      "min": 78.63931656184486,
+      "p10": 130.20646205450737,
+      "p90": 169.65260272536688
+    },
+    "mean_r": {
+      "count": 37,
+      "max": 180.04502410901466,
+      "mean": 157.3543259674769,
+      "median": 163.26903668763106,
+      "min": 83.05184276729558,
+      "p10": 133.97805576519914,
+      "p90": 172.19493941299788
+    },
+    "mid_chroma": {
+      "count": 37,
+      "max": 36.47394374379894,
+      "mean": 18.610450950573007,
+      "median": 16.179774145739042,
+      "min": 8.870549441529937,
+      "p10": 11.271228559065653,
+      "p90": 28.26450611406389
+    },
+    "mid_gb": {
+      "count": 37,
+      "max": 18.479749324246015,
+      "mean": -4.472007192892287,
+      "median": -7.322896669106754,
+      "min": -21.633053461974754,
+      "p10": -12.714766927262822,
+      "p90": 5.633651553460638
+    },
+    "mid_rg": {
+      "count": 37,
+      "max": 32.75209150638666,
+      "mean": 11.732317544710446,
+      "median": 9.911902824432048,
+      "min": -7.745313931812618,
+      "p10": 1.4890942145029271,
+      "p90": 25.082925351557577
+    },
+    "shadow_chroma": {
+      "count": 37,
+      "max": 31.549341133670538,
+      "mean": 17.67552305527781,
+      "median": 17.53679785295005,
+      "min": 9.940093733802685,
+      "p10": 13.568666039410626,
+      "p90": 20.68016392926232
+    },
+    "shadow_gb": {
+      "count": 37,
+      "max": 7.175261324037763,
+      "mean": -7.3592232770230295,
+      "median": -8.549161875413299,
+      "min": -29.814702758053336,
+      "p10": -15.681515432103424,
+      "p90": 4.538261221279736
+    },
+    "shadow_rg": {
+      "count": 37,
+      "max": 33.99773519165217,
+      "mean": 17.53868049946563,
+      "median": 18.91835552468868,
+      "min": -0.11304488029907134,
+      "p10": 10.597536041657946,
+      "p90": 22.92179453090859
+    }
+  },
+  "coverageCandidates": [
+    {
+      "axis": "crispest_detail",
+      "candidates": [
+        {
+          "contrastP90P10": 0.6525576470588235,
+          "midChroma": 21.06062703571188,
+          "p50": 0.8316760784313727,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000036.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000036"
+        },
+        {
+          "contrastP90P10": 0.7959443137254901,
+          "midChroma": 23.614998447296877,
+          "p50": 0.6268258823529411,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000030.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000030"
+        },
+        {
+          "contrastP90P10": 0.7818894117647059,
+          "midChroma": 21.987469831627536,
+          "p50": 0.6279294117647058,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000031.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000031"
+        }
+      ]
+    },
+    {
+      "axis": "highest_contrast",
+      "candidates": [
+        {
+          "contrastP90P10": 0.9412627450980392,
+          "midChroma": 28.323189894166628,
+          "p50": 0.9496109803921569,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000032.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000032"
+        },
+        {
+          "contrastP90P10": 0.9300596078431372,
+          "midChroma": 24.573130279071886,
+          "p50": 0.9395294117647058,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000034.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000034"
+        },
+        {
+          "contrastP90P10": 0.9258596078431371,
+          "midChroma": 27.068452942650328,
+          "p50": 0.9091678431372548,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000033.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000033"
+        }
+      ]
+    },
+    {
+      "axis": "highest_grain_proxy",
+      "candidates": [
+        {
+          "contrastP90P10": 0.4119231372549019,
+          "midChroma": 28.874331512650727,
+          "p50": 0.6743458823529412,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000003.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000003"
+        },
+        {
+          "contrastP90P10": 0.380694117647059,
+          "midChroma": 13.097516823206519,
+          "p50": 0.6276980392156863,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000005.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000005"
+        },
+        {
+          "contrastP90P10": 0.5147780392156861,
+          "midChroma": 23.742170707281943,
+          "p50": 0.4931733333333333,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000007.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000007"
+        }
+      ]
+    },
+    {
+      "axis": "highest_luminance",
+      "candidates": [
+        {
+          "contrastP90P10": 0.9412627450980392,
+          "midChroma": 28.323189894166628,
+          "p50": 0.9496109803921569,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000032.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000032"
+        },
+        {
+          "contrastP90P10": 0.9300596078431372,
+          "midChroma": 24.573130279071886,
+          "p50": 0.9395294117647058,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000034.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000034"
+        },
+        {
+          "contrastP90P10": 0.9258596078431371,
+          "midChroma": 27.068452942650328,
+          "p50": 0.9091678431372548,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000033.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000033"
+        }
+      ]
+    },
+    {
+      "axis": "lowest_contrast",
+      "candidates": [
+        {
+          "contrastP90P10": 0.3070831372549021,
+          "midChroma": 14.831644449504337,
+          "p50": 0.698158431372549,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000006.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000006"
+        },
+        {
+          "contrastP90P10": 0.3179466666666666,
+          "midChroma": 28.225383593995396,
+          "p50": 0.7056580392156863,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000004.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000004"
+        },
+        {
+          "contrastP90P10": 0.380694117647059,
+          "midChroma": 13.097516823206519,
+          "p50": 0.6276980392156863,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000005.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000005"
+        }
+      ]
+    },
+    {
+      "axis": "lowest_grain_proxy",
+      "candidates": [
+        {
+          "contrastP90P10": 0.9412627450980392,
+          "midChroma": 28.323189894166628,
+          "p50": 0.9496109803921569,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000032.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000032"
+        },
+        {
+          "contrastP90P10": 0.9258596078431371,
+          "midChroma": 27.068452942650328,
+          "p50": 0.9091678431372548,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000033.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000033"
+        },
+        {
+          "contrastP90P10": 0.9300596078431372,
+          "midChroma": 24.573130279071886,
+          "p50": 0.9395294117647058,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000034.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000034"
+        }
+      ]
+    },
+    {
+      "axis": "lowest_luminance",
+      "candidates": [
+        {
+          "contrastP90P10": 0.5361168627450981,
+          "midChroma": 12.244836517766412,
+          "p50": 0.26801019607843135,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000001.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000001"
+        },
+        {
+          "contrastP90P10": 0.5147780392156861,
+          "midChroma": 23.742170707281943,
+          "p50": 0.4931733333333333,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000007.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000007"
+        },
+        {
+          "contrastP90P10": 0.7978227450980393,
+          "midChroma": 12.047160151671866,
+          "p50": 0.5175749019607843,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000002.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000002"
+        }
+      ]
+    },
+    {
+      "axis": "most_muted",
+      "candidates": [
+        {
+          "contrastP90P10": 0.7777458823529412,
+          "midChroma": 8.870549441529937,
+          "p50": 0.8179607843137254,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000021.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000021"
+        },
+        {
+          "contrastP90P10": 0.7149898039215685,
+          "midChroma": 10.011007418010852,
+          "p50": 0.7762282352941177,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000022.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000022"
+        },
+        {
+          "contrastP90P10": 0.6681733333333333,
+          "midChroma": 10.219356360129499,
+          "p50": 0.761350588235294,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000018.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000018"
+        }
+      ]
+    },
+    {
+      "axis": "most_vivid",
+      "candidates": [
+        {
+          "contrastP90P10": 0.5111827450980393,
+          "midChroma": 36.47394374379894,
+          "p50": 0.5926784313725489,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000013.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000013"
+        },
+        {
+          "contrastP90P10": 0.4511701960784314,
+          "midChroma": 34.23900078478145,
+          "p50": 0.7331898039215687,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000014.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000014"
+        },
+        {
+          "contrastP90P10": 0.4119231372549019,
+          "midChroma": 28.874331512650727,
+          "p50": 0.6743458823529412,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000003.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000003"
+        }
+      ]
+    },
+    {
+      "axis": "smoothest_detail",
+      "candidates": [
+        {
+          "contrastP90P10": 0.4379717647058824,
+          "midChroma": 15.519331589663514,
+          "p50": 0.7039788235294118,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000008.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000008"
+        },
+        {
+          "contrastP90P10": 0.5147780392156861,
+          "midChroma": 23.742170707281943,
+          "p50": 0.4931733333333333,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000007.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000007"
+        },
+        {
+          "contrastP90P10": 0.4245400784313724,
+          "midChroma": 18.07616956007558,
+          "p50": 0.7574447058823529,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000009.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000009"
+        }
+      ]
+    },
+    {
+      "axis": "strongest_blue_bias",
+      "candidates": [
+        {
+          "contrastP90P10": 0.5147780392156861,
+          "midChroma": 23.742170707281943,
+          "p50": 0.4931733333333333,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000007.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000007"
+        },
+        {
+          "contrastP90P10": 0.4245400784313724,
+          "midChroma": 18.07616956007558,
+          "p50": 0.7574447058823529,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000009.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000009"
+        },
+        {
+          "contrastP90P10": 0.4379717647058824,
+          "midChroma": 15.519331589663514,
+          "p50": 0.7039788235294118,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000008.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000008"
+        }
+      ]
+    },
+    {
+      "axis": "strongest_cyan_green_bias",
+      "candidates": [
+        {
+          "contrastP90P10": 0.5147780392156861,
+          "midChroma": 23.742170707281943,
+          "p50": 0.4931733333333333,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000007.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000007"
+        },
+        {
+          "contrastP90P10": 0.5361168627450981,
+          "midChroma": 12.244836517766412,
+          "p50": 0.26801019607843135,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000001.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000001"
+        },
+        {
+          "contrastP90P10": 0.4245400784313724,
+          "midChroma": 18.07616956007558,
+          "p50": 0.7574447058823529,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000009.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000009"
+        }
+      ]
+    },
+    {
+      "axis": "strongest_red_warm_bias",
+      "candidates": [
+        {
+          "contrastP90P10": 0.9412627450980392,
+          "midChroma": 28.323189894166628,
+          "p50": 0.9496109803921569,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000032.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000032"
+        },
+        {
+          "contrastP90P10": 0.9258596078431371,
+          "midChroma": 27.068452942650328,
+          "p50": 0.9091678431372548,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000033.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000033"
+        },
+        {
+          "contrastP90P10": 0.9300596078431372,
+          "midChroma": 24.573130279071886,
+          "p50": 0.9395294117647058,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000034.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000034"
+        }
+      ]
+    },
+    {
+      "axis": "strongest_yellow_green_bias",
+      "candidates": [
+        {
+          "contrastP90P10": 0.6727844705882353,
+          "midChroma": 23.5186622210875,
+          "p50": 0.7127521568627451,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000035.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000035"
+        },
+        {
+          "contrastP90P10": 0.4511701960784314,
+          "midChroma": 34.23900078478145,
+          "p50": 0.7331898039215687,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000014.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000014"
+        },
+        {
+          "contrastP90P10": 0.4119231372549019,
+          "midChroma": 28.874331512650727,
+          "p50": 0.6743458823529412,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000003.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000003"
+        }
+      ]
+    }
+  ],
+  "displayName": "NORITSU color nega kodak pro image 100",
+  "filmKey": "kodak pro image 100",
+  "id": "noritsu__color-nega__kodak-pro-image-100",
+  "imageCount": 37,
+  "kind": "color nega",
+  "neutralAxis": {
+    "neutral_a_median": {
+      "count": 37,
+      "max": 3.953299840157909,
+      "mean": 1.6407714988720479,
+      "median": 1.6611575810398516,
+      "min": -0.7476028204351226,
+      "p10": 0.15970981705305531,
+      "p90": 3.1670923802120803
+    },
+    "neutral_b_median": {
+      "count": 37,
+      "max": 1.618095679124698,
+      "mean": -0.7745344763783922,
+      "median": -1.0638291478839157,
+      "min": -2.4037003138691393,
+      "p10": -1.991097882391223,
+      "p90": 0.8719325297623822
+    }
+  },
+  "profileHash": "sha256:0e5484586e6dfbe189be5af74657bc645ae5f4a0248803be629dd1aa6e1aa9c8",
+  "rollCount": 1,
+  "scanner": "NORITSU",
+  "sceneBuckets": [
+    {
+      "color": {
+        "high_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "high_gb": {
+          "count": 1,
+          "max": 3.352339960885388,
+          "mean": 3.352339960885388,
+          "median": 3.352339960885388,
+          "min": 3.352339960885388,
+          "p10": 3.352339960885388,
+          "p90": 3.352339960885388
+        },
+        "high_rg": {
+          "count": 1,
+          "max": -3.678221229071127,
+          "mean": -3.678221229071127,
+          "median": -3.678221229071127,
+          "min": -3.678221229071127,
+          "p10": -3.678221229071127,
+          "p90": -3.678221229071127
+        },
+        "mean_b": {
+          "count": 1,
+          "max": 158.61645125786163,
+          "mean": 158.61645125786163,
+          "median": 158.61645125786163,
+          "min": 158.61645125786163,
+          "p10": 158.61645125786163,
+          "p90": 158.61645125786163
+        },
+        "mean_g": {
+          "count": 1,
+          "max": 157.45995911949683,
+          "mean": 157.45995911949683,
+          "median": 157.45995911949683,
+          "min": 157.45995911949683,
+          "p10": 157.45995911949683,
+          "p90": 157.45995911949683
+        },
+        "mean_r": {
+          "count": 1,
+          "max": 162.41756289308177,
+          "mean": 162.41756289308177,
+          "median": 162.41756289308177,
+          "min": 162.41756289308177,
+          "p10": 162.41756289308177,
+          "p90": 162.41756289308177
+        },
+        "mid_chroma": {
+          "count": 1,
+          "max": 14.160921704088869,
+          "mean": 14.160921704088869,
+          "median": 14.160921704088869,
+          "min": 14.160921704088869,
+          "p10": 14.160921704088869,
+          "p90": 14.160921704088869
+        },
+        "mid_gb": {
+          "count": 1,
+          "max": -7.368879180064795,
+          "mean": -7.368879180064795,
+          "median": -7.368879180064795,
+          "min": -7.368879180064795,
+          "p10": -7.368879180064795,
+          "p90": -7.368879180064795
+        },
+        "mid_rg": {
+          "count": 1,
+          "max": 11.914339996535325,
+          "mean": 11.914339996535325,
+          "median": 11.914339996535325,
+          "min": 11.914339996535325,
+          "p10": 11.914339996535325,
+          "p90": 11.914339996535325
+        },
+        "neutral_a_median": {
+          "count": 1,
+          "max": 2.0649531832015557,
+          "mean": 2.0649531832015557,
+          "median": 2.0649531832015557,
+          "min": 2.0649531832015557,
+          "p10": 2.0649531832015557,
+          "p90": 2.0649531832015557
+        },
+        "neutral_b_median": {
+          "count": 1,
+          "max": -1.5409242870005584,
+          "mean": -1.5409242870005584,
+          "median": -1.5409242870005584,
+          "min": -1.5409242870005584,
+          "p10": -1.5409242870005584,
+          "p90": -1.5409242870005584
+        },
+        "shadow_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "shadow_gb": {
+          "count": 1,
+          "max": -9.029862652413017,
+          "mean": -9.029862652413017,
+          "median": -9.029862652413017,
+          "min": -9.029862652413017,
+          "p10": -9.029862652413017,
+          "p90": -9.029862652413017
+        },
+        "shadow_rg": {
+          "count": 1,
+          "max": 19.697073301697102,
+          "mean": 19.697073301697102,
+          "median": 19.697073301697102,
+          "min": 19.697073301697102,
+          "p10": 19.697073301697102,
+          "p90": 19.697073301697102
+        }
+      },
+      "family": "blue_yellow_balance",
+      "imageCount": 12,
+      "name": "balanced_gb",
+      "representativeCandidates": [
+        {
+          "contrastP90P10": 0.7219788235294118,
+          "midChroma": 11.012238176155353,
+          "p50": 0.7888266666666666,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000023.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000023"
+        },
+        {
+          "contrastP90P10": 0.6889074509803922,
+          "midChroma": 12.475997570461073,
+          "p50": 0.8204149019607843,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000019.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000019"
+        },
+        {
+          "contrastP90P10": 0.6681733333333333,
+          "midChroma": 10.219356360129499,
+          "p50": 0.761350588235294,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000018.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000018"
+        },
+        {
+          "contrastP90P10": 0.7149898039215685,
+          "midChroma": 10.011007418010852,
+          "p50": 0.7762282352941177,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000022.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000022"
+        }
+      ],
+      "texture": {
+        "texture_grain_proxy_mean": {
+          "count": 1,
+          "max": 0.006910965874052297,
+          "mean": 0.006910965874052297,
+          "median": 0.006910965874052297,
+          "min": 0.006910965874052297,
+          "p10": 0.006910965874052297,
+          "p90": 0.006910965874052297
+        },
+        "texture_grain_proxy_p90": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_luma_gradient_mean": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_sharpness_p95": {
+          "count": 1,
+          "max": 0.2172760000000002,
+          "mean": 0.2172760000000002,
+          "median": 0.2172760000000002,
+          "min": 0.2172760000000002,
+          "p10": 0.2172760000000002,
+          "p90": 0.2172760000000002
+        },
+        "texture_sharpness_p99": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        }
+      },
+      "tone": {
+        "clip_black_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "clip_white_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "contrast_p90_p10": {
+          "count": 1,
+          "max": 0.749890431372549,
+          "mean": 0.749890431372549,
+          "median": 0.749890431372549,
+          "min": 0.749890431372549,
+          "p10": 0.749890431372549,
+          "p90": 0.749890431372549
+        },
+        "p10": {
+          "count": 1,
+          "max": 0.11635294117647058,
+          "mean": 0.11635294117647058,
+          "median": 0.11635294117647058,
+          "min": 0.11635294117647058,
+          "p10": 0.11635294117647058,
+          "p90": 0.11635294117647058
+        },
+        "p50": {
+          "count": 1,
+          "max": 0.7825274509803921,
+          "mean": 0.7825274509803921,
+          "median": 0.7825274509803921,
+          "min": 0.7825274509803921,
+          "p10": 0.7825274509803921,
+          "p90": 0.7825274509803921
+        },
+        "p90": {
+          "count": 1,
+          "max": 0.8911392156862745,
+          "mean": 0.8911392156862745,
+          "median": 0.8911392156862745,
+          "min": 0.8911392156862745,
+          "p10": 0.8911392156862745,
+          "p90": 0.8911392156862745
+        }
+      }
+    },
+    {
+      "color": {
+        "high_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "high_gb": {
+          "count": 1,
+          "max": 2.609482873903815,
+          "mean": 2.609482873903815,
+          "median": 2.609482873903815,
+          "min": 2.609482873903815,
+          "p10": 2.609482873903815,
+          "p90": 2.609482873903815
+        },
+        "high_rg": {
+          "count": 1,
+          "max": -1.8449948388369108,
+          "mean": -1.8449948388369108,
+          "median": -1.8449948388369108,
+          "min": -1.8449948388369108,
+          "p10": -1.8449948388369108,
+          "p90": -1.8449948388369108
+        },
+        "mean_b": {
+          "count": 1,
+          "max": 162.73675838574422,
+          "mean": 162.73675838574422,
+          "median": 162.73675838574422,
+          "min": 162.73675838574422,
+          "p10": 162.73675838574422,
+          "p90": 162.73675838574422
+        },
+        "mean_g": {
+          "count": 1,
+          "max": 161.31697012578616,
+          "mean": 161.31697012578616,
+          "median": 161.31697012578616,
+          "min": 161.31697012578616,
+          "p10": 161.31697012578616,
+          "p90": 161.31697012578616
+        },
+        "mean_r": {
+          "count": 1,
+          "max": 165.14359486373166,
+          "mean": 165.14359486373166,
+          "median": 165.14359486373166,
+          "min": 165.14359486373166,
+          "p10": 165.14359486373166,
+          "p90": 165.14359486373166
+        },
+        "mid_chroma": {
+          "count": 1,
+          "max": 14.63211874921881,
+          "mean": 14.63211874921881,
+          "median": 14.63211874921881,
+          "min": 14.63211874921881,
+          "p10": 14.63211874921881,
+          "p90": 14.63211874921881
+        },
+        "mid_gb": {
+          "count": 1,
+          "max": -11.853575905169151,
+          "mean": -11.853575905169151,
+          "median": -11.853575905169151,
+          "min": -11.853575905169151,
+          "p10": -11.853575905169151,
+          "p90": -11.853575905169151
+        },
+        "mid_rg": {
+          "count": 1,
+          "max": 3.1080468591015062,
+          "mean": 3.1080468591015062,
+          "median": 3.1080468591015062,
+          "min": 3.1080468591015062,
+          "p10": 3.1080468591015062,
+          "p90": 3.1080468591015062
+        },
+        "neutral_a_median": {
+          "count": 1,
+          "max": 1.5454249632668726,
+          "mean": 1.5454249632668726,
+          "median": 1.5454249632668726,
+          "min": 1.5454249632668726,
+          "p10": 1.5454249632668726,
+          "p90": 1.5454249632668726
+        },
+        "neutral_b_median": {
+          "count": 1,
+          "max": -1.3850393575905144,
+          "mean": -1.3850393575905144,
+          "median": -1.3850393575905144,
+          "min": -1.3850393575905144,
+          "p10": -1.3850393575905144,
+          "p90": -1.3850393575905144
+        },
+        "shadow_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "shadow_gb": {
+          "count": 1,
+          "max": -10.970961966081532,
+          "mean": -10.970961966081532,
+          "median": -10.970961966081532,
+          "min": -10.970961966081532,
+          "p10": -10.970961966081532,
+          "p90": -10.970961966081532
+        },
+        "shadow_rg": {
+          "count": 1,
+          "max": 16.053639392623197,
+          "mean": 16.053639392623197,
+          "median": 16.053639392623197,
+          "min": 16.053639392623197,
+          "p10": 16.053639392623197,
+          "p90": 16.053639392623197
+        }
+      },
+      "family": "blue_yellow_balance",
+      "imageCount": 12,
+      "name": "blue_bias",
+      "representativeCandidates": [
+        {
+          "contrastP90P10": 0.7084901960784313,
+          "midChroma": 11.811002973523587,
+          "p50": 0.7509388235294118,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000015.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000015"
+        },
+        {
+          "contrastP90P10": 0.8813427450980392,
+          "midChroma": 11.825521729079568,
+          "p50": 0.8795733333333332,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000024.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000024"
+        },
+        {
+          "contrastP90P10": 0.380694117647059,
+          "midChroma": 13.097516823206519,
+          "p50": 0.6276980392156863,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000005.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000005"
+        },
+        {
+          "contrastP90P10": 0.4245400784313724,
+          "midChroma": 18.07616956007558,
+          "p50": 0.7574447058823529,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000009.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000009"
+        }
+      ],
+      "texture": {
+        "texture_grain_proxy_mean": {
+          "count": 1,
+          "max": 0.007069586149053786,
+          "mean": 0.007069586149053786,
+          "median": 0.007069586149053786,
+          "min": 0.007069586149053786,
+          "p10": 0.007069586149053786,
+          "p90": 0.007069586149053786
+        },
+        "texture_grain_proxy_p90": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_luma_gradient_mean": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_sharpness_p95": {
+          "count": 1,
+          "max": 0.13667658823529416,
+          "mean": 0.13667658823529416,
+          "median": 0.13667658823529416,
+          "min": 0.13667658823529416,
+          "p10": 0.13667658823529416,
+          "p90": 0.13667658823529416
+        },
+        "texture_sharpness_p99": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        }
+      },
+      "tone": {
+        "clip_black_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "clip_white_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "contrast_p90_p10": {
+          "count": 1,
+          "max": 0.6116341176470588,
+          "mean": 0.6116341176470588,
+          "median": 0.6116341176470588,
+          "min": 0.6116341176470588,
+          "p10": 0.6116341176470588,
+          "p90": 0.6116341176470588
+        },
+        "p10": {
+          "count": 1,
+          "max": 0.2125976470588235,
+          "mean": 0.2125976470588235,
+          "median": 0.2125976470588235,
+          "min": 0.2125976470588235,
+          "p10": 0.2125976470588235,
+          "p90": 0.2125976470588235
+        },
+        "p50": {
+          "count": 1,
+          "max": 0.7541917647058823,
+          "mean": 0.7541917647058823,
+          "median": 0.7541917647058823,
+          "min": 0.7541917647058823,
+          "p10": 0.7541917647058823,
+          "p90": 0.7541917647058823
+        },
+        "p90": {
+          "count": 1,
+          "max": 0.8817913725490195,
+          "mean": 0.8817913725490195,
+          "median": 0.8817913725490195,
+          "min": 0.8817913725490195,
+          "p10": 0.8817913725490195,
+          "p90": 0.8817913725490195
+        }
+      }
+    },
+    {
+      "color": {
+        "high_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "high_gb": {
+          "count": 1,
+          "max": -0.3229614312925264,
+          "mean": -0.3229614312925264,
+          "median": -0.3229614312925264,
+          "min": -0.3229614312925264,
+          "p10": -0.3229614312925264,
+          "p90": -0.3229614312925264
+        },
+        "high_rg": {
+          "count": 1,
+          "max": -6.091018758314135,
+          "mean": -6.091018758314135,
+          "median": -6.091018758314135,
+          "min": -6.091018758314135,
+          "p10": -6.091018758314135,
+          "p90": -6.091018758314135
+        },
+        "mean_b": {
+          "count": 1,
+          "max": 151.05457023060796,
+          "mean": 151.05457023060796,
+          "median": 151.05457023060796,
+          "min": 151.05457023060796,
+          "p10": 151.05457023060796,
+          "p90": 151.05457023060796
+        },
+        "mean_g": {
+          "count": 1,
+          "max": 152.02733962264148,
+          "mean": 152.02733962264148,
+          "median": 152.02733962264148,
+          "min": 152.02733962264148,
+          "p10": 152.02733962264148,
+          "p90": 152.02733962264148
+        },
+        "mean_r": {
+          "count": 1,
+          "max": 155.3886006289308,
+          "mean": 155.3886006289308,
+          "median": 155.3886006289308,
+          "min": 155.3886006289308,
+          "p10": 155.3886006289308,
+          "p90": 155.3886006289308
+        },
+        "mid_chroma": {
+          "count": 1,
+          "max": 23.5186622210875,
+          "mean": 23.5186622210875,
+          "median": 23.5186622210875,
+          "min": 23.5186622210875,
+          "p10": 23.5186622210875,
+          "p90": 23.5186622210875
+        },
+        "mid_gb": {
+          "count": 1,
+          "max": 2.695286081997409,
+          "mean": 2.695286081997409,
+          "median": 2.695286081997409,
+          "min": 2.695286081997409,
+          "p10": 2.695286081997409,
+          "p90": 2.695286081997409
+        },
+        "mid_rg": {
+          "count": 1,
+          "max": 16.801960562397795,
+          "mean": 16.801960562397795,
+          "median": 16.801960562397795,
+          "min": 16.801960562397795,
+          "p10": 16.801960562397795,
+          "p90": 16.801960562397795
+        },
+        "neutral_a_median": {
+          "count": 1,
+          "max": 1.0867705426410024,
+          "mean": 1.0867705426410024,
+          "median": 1.0867705426410024,
+          "min": 1.0867705426410024,
+          "p10": 1.0867705426410024,
+          "p90": 1.0867705426410024
+        },
+        "neutral_b_median": {
+          "count": 1,
+          "max": -0.43694150719564284,
+          "mean": -0.43694150719564284,
+          "median": -0.43694150719564284,
+          "min": -0.43694150719564284,
+          "p10": -0.43694150719564284,
+          "p90": -0.43694150719564284
+        },
+        "shadow_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "shadow_gb": {
+          "count": 1,
+          "max": 1.0193740053080234,
+          "mean": 1.0193740053080234,
+          "median": 1.0193740053080234,
+          "min": 1.0193740053080234,
+          "p10": 1.0193740053080234,
+          "p90": 1.0193740053080234
+        },
+        "shadow_rg": {
+          "count": 1,
+          "max": 17.37195645660183,
+          "mean": 17.37195645660183,
+          "median": 17.37195645660183,
+          "min": 17.37195645660183,
+          "p10": 17.37195645660183,
+          "p90": 17.37195645660183
+        }
+      },
+      "family": "blue_yellow_balance",
+      "imageCount": 13,
+      "name": "yellow_green_bias",
+      "representativeCandidates": [
+        {
+          "contrastP90P10": 0.6214964705882352,
+          "midChroma": 21.559404688740322,
+          "p50": 0.7605215686274509,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000020.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000020"
+        },
+        {
+          "contrastP90P10": 0.6525576470588235,
+          "midChroma": 21.06062703571188,
+          "p50": 0.8316760784313727,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000036.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000036"
+        },
+        {
+          "contrastP90P10": 0.7959443137254901,
+          "midChroma": 23.614998447296877,
+          "p50": 0.6268258823529411,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000030.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000030"
+        },
+        {
+          "contrastP90P10": 0.7818894117647059,
+          "midChroma": 21.987469831627536,
+          "p50": 0.6279294117647058,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000031.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000031"
+        }
+      ],
+      "texture": {
+        "texture_grain_proxy_mean": {
+          "count": 1,
+          "max": 0.00776024553050867,
+          "mean": 0.00776024553050867,
+          "median": 0.00776024553050867,
+          "min": 0.00776024553050867,
+          "p10": 0.00776024553050867,
+          "p90": 0.00776024553050867
+        },
+        "texture_grain_proxy_p90": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_luma_gradient_mean": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_sharpness_p95": {
+          "count": 1,
+          "max": 0.22377796078431378,
+          "mean": 0.22377796078431378,
+          "median": 0.22377796078431378,
+          "min": 0.22377796078431378,
+          "p10": 0.22377796078431378,
+          "p90": 0.22377796078431378
+        },
+        "texture_sharpness_p99": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        }
+      },
+      "tone": {
+        "clip_black_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "clip_white_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "contrast_p90_p10": {
+          "count": 1,
+          "max": 0.6525576470588235,
+          "mean": 0.6525576470588235,
+          "median": 0.6525576470588235,
+          "min": 0.6525576470588235,
+          "p10": 0.6525576470588235,
+          "p90": 0.6525576470588235
+        },
+        "p10": {
+          "count": 1,
+          "max": 0.19758117647058826,
+          "mean": 0.19758117647058826,
+          "median": 0.19758117647058826,
+          "min": 0.19758117647058826,
+          "p10": 0.19758117647058826,
+          "p90": 0.19758117647058826
+        },
+        "p50": {
+          "count": 1,
+          "max": 0.7056580392156863,
+          "mean": 0.7056580392156863,
+          "median": 0.7056580392156863,
+          "min": 0.7056580392156863,
+          "p10": 0.7056580392156863,
+          "p90": 0.7056580392156863
+        },
+        "p90": {
+          "count": 1,
+          "max": 0.8375529411764706,
+          "mean": 0.8375529411764706,
+          "median": 0.8375529411764706,
+          "min": 0.8375529411764706,
+          "p10": 0.8375529411764706,
+          "p90": 0.8375529411764706
+        }
+      }
+    },
+    {
+      "color": {
+        "high_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "high_gb": {
+          "count": 1,
+          "max": 2.5766931408824405,
+          "mean": 2.5766931408824405,
+          "median": 2.5766931408824405,
+          "min": 2.5766931408824405,
+          "p10": 2.5766931408824405,
+          "p90": 2.5766931408824405
+        },
+        "high_rg": {
+          "count": 1,
+          "max": -2.925617810028683,
+          "mean": -2.925617810028683,
+          "median": -2.925617810028683,
+          "min": -2.925617810028683,
+          "p10": -2.925617810028683,
+          "p90": -2.925617810028683
+        },
+        "mean_b": {
+          "count": 1,
+          "max": 157.45074947589097,
+          "mean": 157.45074947589097,
+          "median": 157.45074947589097,
+          "min": 157.45074947589097,
+          "p10": 157.45074947589097,
+          "p90": 157.45074947589097
+        },
+        "mean_g": {
+          "count": 1,
+          "max": 156.0241111111111,
+          "mean": 156.0241111111111,
+          "median": 156.0241111111111,
+          "min": 156.0241111111111,
+          "p10": 156.0241111111111,
+          "p90": 156.0241111111111
+        },
+        "mean_r": {
+          "count": 1,
+          "max": 161.5660890985325,
+          "mean": 161.5660890985325,
+          "median": 161.5660890985325,
+          "min": 161.5660890985325,
+          "p10": 161.5660890985325,
+          "p90": 161.5660890985325
+        },
+        "mid_chroma": {
+          "count": 1,
+          "max": 19.59666235474281,
+          "mean": 19.59666235474281,
+          "median": 19.59666235474281,
+          "min": 19.59666235474281,
+          "p10": 19.59666235474281,
+          "p90": 19.59666235474281
+        },
+        "mid_gb": {
+          "count": 1,
+          "max": -5.924624463519024,
+          "mean": -5.924624463519024,
+          "median": -5.924624463519024,
+          "min": -5.924624463519024,
+          "p10": -5.924624463519024,
+          "p90": -5.924624463519024
+        },
+        "mid_rg": {
+          "count": 1,
+          "max": 17.082193484193212,
+          "mean": 17.082193484193212,
+          "median": 17.082193484193212,
+          "min": 17.082193484193212,
+          "p10": 17.082193484193212,
+          "p90": 17.082193484193212
+        },
+        "neutral_a_median": {
+          "count": 1,
+          "max": 2.1590807071089206,
+          "mean": 2.1590807071089206,
+          "median": 2.1590807071089206,
+          "min": 2.1590807071089206,
+          "p10": 2.1590807071089206,
+          "p90": 2.1590807071089206
+        },
+        "neutral_b_median": {
+          "count": 1,
+          "max": -1.4715994995202542,
+          "mean": -1.4715994995202542,
+          "median": -1.4715994995202542,
+          "min": -1.4715994995202542,
+          "p10": -1.4715994995202542,
+          "p90": -1.4715994995202542
+        },
+        "shadow_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "shadow_gb": {
+          "count": 1,
+          "max": -6.262882480484361,
+          "mean": -6.262882480484361,
+          "median": -6.262882480484361,
+          "min": -6.262882480484361,
+          "p10": -6.262882480484361,
+          "p90": -6.262882480484361
+        },
+        "shadow_rg": {
+          "count": 1,
+          "max": 19.966048711550734,
+          "mean": 19.966048711550734,
+          "median": 19.966048711550734,
+          "min": 19.966048711550734,
+          "p10": 19.966048711550734,
+          "p90": 19.966048711550734
+        }
+      },
+      "family": "contrast",
+      "imageCount": 13,
+      "name": "hard_contrast",
+      "representativeCandidates": [
+        {
+          "contrastP90P10": 0.8640047058823529,
+          "midChroma": 19.59666235474281,
+          "p50": 0.8650713725490196,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000026.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000026"
+        },
+        {
+          "contrastP90P10": 0.8675709803921569,
+          "midChroma": 14.115396960115506,
+          "p50": 0.8775662745098038,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000027.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000027"
+        },
+        {
+          "contrastP90P10": 0.8813427450980392,
+          "midChroma": 11.825521729079568,
+          "p50": 0.8795733333333332,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000024.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000024"
+        },
+        {
+          "contrastP90P10": 0.8493474509803921,
+          "midChroma": 17.098402648665672,
+          "p50": 0.8675364705882351,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000028.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000028"
+        }
+      ],
+      "texture": {
+        "texture_grain_proxy_mean": {
+          "count": 1,
+          "max": 0.005218456802360934,
+          "mean": 0.005218456802360934,
+          "median": 0.005218456802360934,
+          "min": 0.005218456802360934,
+          "p10": 0.005218456802360934,
+          "p90": 0.005218456802360934
+        },
+        "texture_grain_proxy_p90": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_luma_gradient_mean": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_sharpness_p95": {
+          "count": 1,
+          "max": 0.2296142745098044,
+          "mean": 0.2296142745098044,
+          "median": 0.2296142745098044,
+          "min": 0.2296142745098044,
+          "p10": 0.2296142745098044,
+          "p90": 0.2296142745098044
+        },
+        "texture_sharpness_p99": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        }
+      },
+      "tone": {
+        "clip_black_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "clip_white_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "contrast_p90_p10": {
+          "count": 1,
+          "max": 0.8675709803921569,
+          "mean": 0.8675709803921569,
+          "median": 0.8675709803921569,
+          "min": 0.8675709803921569,
+          "p10": 0.8675709803921569,
+          "p90": 0.8675709803921569
+        },
+        "p10": {
+          "count": 1,
+          "max": 0.052829019607843135,
+          "mean": 0.052829019607843135,
+          "median": 0.052829019607843135,
+          "min": 0.052829019607843135,
+          "p10": 0.052829019607843135,
+          "p90": 0.052829019607843135
+        },
+        "p50": {
+          "count": 1,
+          "max": 0.8675364705882351,
+          "mean": 0.8675364705882351,
+          "median": 0.8675364705882351,
+          "min": 0.8675364705882351,
+          "p10": 0.8675364705882351,
+          "p90": 0.8675364705882351
+        },
+        "p90": {
+          "count": 1,
+          "max": 0.9249239215686275,
+          "mean": 0.9249239215686275,
+          "median": 0.9249239215686275,
+          "min": 0.9249239215686275,
+          "p10": 0.9249239215686275,
+          "p90": 0.9249239215686275
+        }
+      }
+    },
+    {
+      "color": {
+        "high_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "high_gb": {
+          "count": 1,
+          "max": 3.352339960885388,
+          "mean": 3.352339960885388,
+          "median": 3.352339960885388,
+          "min": 3.352339960885388,
+          "p10": 3.352339960885388,
+          "p90": 3.352339960885388
+        },
+        "high_rg": {
+          "count": 1,
+          "max": -3.4545217310525516,
+          "mean": -3.4545217310525516,
+          "median": -3.4545217310525516,
+          "min": -3.4545217310525516,
+          "p10": -3.4545217310525516,
+          "p90": -3.4545217310525516
+        },
+        "mean_b": {
+          "count": 1,
+          "max": 158.6702709643606,
+          "mean": 158.6702709643606,
+          "median": 158.6702709643606,
+          "min": 158.6702709643606,
+          "p10": 158.6702709643606,
+          "p90": 158.6702709643606
+        },
+        "mean_g": {
+          "count": 1,
+          "max": 157.1563071278826,
+          "mean": 157.1563071278826,
+          "median": 157.1563071278826,
+          "min": 157.1563071278826,
+          "p10": 157.1563071278826,
+          "p90": 157.1563071278826
+        },
+        "mean_r": {
+          "count": 1,
+          "max": 163.2930283018868,
+          "mean": 163.2930283018868,
+          "median": 163.2930283018868,
+          "min": 163.2930283018868,
+          "p10": 163.2930283018868,
+          "p90": 163.2930283018868
+        },
+        "mid_chroma": {
+          "count": 1,
+          "max": 12.14350027199233,
+          "mean": 12.14350027199233,
+          "median": 12.14350027199233,
+          "min": 12.14350027199233,
+          "p10": 12.14350027199233,
+          "p90": 12.14350027199233
+        },
+        "mid_gb": {
+          "count": 1,
+          "max": -6.9154673999437435,
+          "mean": -6.9154673999437435,
+          "median": -6.9154673999437435,
+          "min": -6.9154673999437435,
+          "p10": -6.9154673999437435,
+          "p90": -6.9154673999437435
+        },
+        "mid_rg": {
+          "count": 1,
+          "max": 8.021501235340352,
+          "mean": 8.021501235340352,
+          "median": 8.021501235340352,
+          "min": 8.021501235340352,
+          "p10": 8.021501235340352,
+          "p90": 8.021501235340352
+        },
+        "neutral_a_median": {
+          "count": 1,
+          "max": 1.853915944309236,
+          "mean": 1.853915944309236,
+          "median": 1.853915944309236,
+          "min": 1.853915944309236,
+          "p10": 1.853915944309236,
+          "p90": 1.853915944309236
+        },
+        "neutral_b_median": {
+          "count": 1,
+          "max": -0.7841766394915822,
+          "mean": -0.7841766394915822,
+          "median": -0.7841766394915822,
+          "min": -0.7841766394915822,
+          "p10": -0.7841766394915822,
+          "p90": -0.7841766394915822
+        },
+        "shadow_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "shadow_gb": {
+          "count": 1,
+          "max": -9.278455536189956,
+          "mean": -9.278455536189956,
+          "median": -9.278455536189956,
+          "min": -9.278455536189956,
+          "p10": -9.278455536189956,
+          "p90": -9.278455536189956
+        },
+        "shadow_rg": {
+          "count": 1,
+          "max": 19.86211848016248,
+          "mean": 19.86211848016248,
+          "median": 19.86211848016248,
+          "min": 19.86211848016248,
+          "p10": 19.86211848016248,
+          "p90": 19.86211848016248
+        }
+      },
+      "family": "contrast",
+      "imageCount": 12,
+      "name": "normal_contrast",
+      "representativeCandidates": [
+        {
+          "contrastP90P10": 0.6681733333333333,
+          "midChroma": 10.219356360129499,
+          "p50": 0.761350588235294,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000018.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000018"
+        },
+        {
+          "contrastP90P10": 0.6889074509803922,
+          "midChroma": 12.475997570461073,
+          "p50": 0.8204149019607843,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000019.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000019"
+        },
+        {
+          "contrastP90P10": 0.7219788235294118,
+          "midChroma": 11.012238176155353,
+          "p50": 0.7888266666666666,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000023.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000023"
+        },
+        {
+          "contrastP90P10": 0.7084901960784313,
+          "midChroma": 11.811002973523587,
+          "p50": 0.7509388235294118,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000015.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000015"
+        }
+      ],
+      "texture": {
+        "texture_grain_proxy_mean": {
+          "count": 1,
+          "max": 0.007292383623371465,
+          "mean": 0.007292383623371465,
+          "median": 0.007292383623371465,
+          "min": 0.007292383623371465,
+          "p10": 0.007292383623371465,
+          "p90": 0.007292383623371465
+        },
+        "texture_grain_proxy_p90": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_luma_gradient_mean": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_sharpness_p95": {
+          "count": 1,
+          "max": 0.22740094117647058,
+          "mean": 0.22740094117647058,
+          "median": 0.22740094117647058,
+          "min": 0.22740094117647058,
+          "p10": 0.22740094117647058,
+          "p90": 0.22740094117647058
+        },
+        "texture_sharpness_p99": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        }
+      },
+      "tone": {
+        "clip_black_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "clip_white_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "contrast_p90_p10": {
+          "count": 1,
+          "max": 0.6986988235294118,
+          "mean": 0.6986988235294118,
+          "median": 0.6986988235294118,
+          "min": 0.6986988235294118,
+          "p10": 0.6986988235294118,
+          "p90": 0.6986988235294118
+        },
+        "p10": {
+          "count": 1,
+          "max": 0.16979176470588236,
+          "mean": 0.16979176470588236,
+          "median": 0.16979176470588236,
+          "min": 0.16979176470588236,
+          "p10": 0.16979176470588236,
+          "p90": 0.16979176470588236
+        },
+        "p50": {
+          "count": 1,
+          "max": 0.7609360784313725,
+          "mean": 0.7609360784313725,
+          "median": 0.7609360784313725,
+          "min": 0.7609360784313725,
+          "p10": 0.7609360784313725,
+          "p90": 0.7609360784313725
+        },
+        "p90": {
+          "count": 1,
+          "max": 0.8533886274509803,
+          "mean": 0.8533886274509803,
+          "median": 0.8533886274509803,
+          "min": 0.8533886274509803,
+          "p10": 0.8533886274509803,
+          "p90": 0.8533886274509803
+        }
+      }
+    },
+    {
+      "color": {
+        "high_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "high_gb": {
+          "count": 1,
+          "max": 2.2884204841144538,
+          "mean": 2.2884204841144538,
+          "median": 2.2884204841144538,
+          "min": 2.2884204841144538,
+          "p10": 2.2884204841144538,
+          "p90": 2.2884204841144538
+        },
+        "high_rg": {
+          "count": 1,
+          "max": -4.752742150732487,
+          "mean": -4.752742150732487,
+          "median": -4.752742150732487,
+          "min": -4.752742150732487,
+          "p10": -4.752742150732487,
+          "p90": -4.752742150732487
+        },
+        "mean_b": {
+          "count": 1,
+          "max": 162.04642138364778,
+          "mean": 162.04642138364778,
+          "median": 162.04642138364778,
+          "min": 162.04642138364778,
+          "p10": 162.04642138364778,
+          "p90": 162.04642138364778
+        },
+        "mean_g": {
+          "count": 1,
+          "max": 162.75321278825996,
+          "mean": 162.75321278825996,
+          "median": 162.75321278825996,
+          "min": 162.75321278825996,
+          "p10": 162.75321278825996,
+          "p90": 162.75321278825996
+        },
+        "mean_r": {
+          "count": 1,
+          "max": 163.78685691823898,
+          "mean": 163.78685691823898,
+          "median": 163.78685691823898,
+          "min": 163.78685691823898,
+          "p10": 163.78685691823898,
+          "p90": 163.78685691823898
+        },
+        "mid_chroma": {
+          "count": 1,
+          "max": 16.797750574869546,
+          "mean": 16.797750574869546,
+          "median": 16.797750574869546,
+          "min": 16.797750574869546,
+          "p10": 16.797750574869546,
+          "p90": 16.797750574869546
+        },
+        "mid_gb": {
+          "count": 1,
+          "max": -9.715485177330194,
+          "mean": -9.715485177330194,
+          "median": -9.715485177330194,
+          "min": -9.715485177330194,
+          "p10": -9.715485177330194,
+          "p90": -9.715485177330194
+        },
+        "mid_rg": {
+          "count": 1,
+          "max": 2.7096759476717125,
+          "mean": 2.7096759476717125,
+          "median": 2.7096759476717125,
+          "min": 2.7096759476717125,
+          "p10": 2.7096759476717125,
+          "p90": 2.7096759476717125
+        },
+        "neutral_a_median": {
+          "count": 1,
+          "max": 1.0382720534209828,
+          "mean": 1.0382720534209828,
+          "median": 1.0382720534209828,
+          "min": 1.0382720534209828,
+          "p10": 1.0382720534209828,
+          "p90": 1.0382720534209828
+        },
+        "neutral_b_median": {
+          "count": 1,
+          "max": -0.3631595781663277,
+          "mean": -0.3631595781663277,
+          "median": -0.3631595781663277,
+          "min": -0.3631595781663277,
+          "p10": -0.3631595781663277,
+          "p90": -0.3631595781663277
+        },
+        "shadow_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "shadow_gb": {
+          "count": 1,
+          "max": -10.37361014999453,
+          "mean": -10.37361014999453,
+          "median": -10.37361014999453,
+          "min": -10.37361014999453,
+          "p10": -10.37361014999453,
+          "p90": -10.37361014999453
+        },
+        "shadow_rg": {
+          "count": 1,
+          "max": 13.49424957104007,
+          "mean": 13.49424957104007,
+          "median": 13.49424957104007,
+          "min": 13.49424957104007,
+          "p10": 13.49424957104007,
+          "p90": 13.49424957104007
+        }
+      },
+      "family": "contrast",
+      "imageCount": 12,
+      "name": "soft_contrast",
+      "representativeCandidates": [
+        {
+          "contrastP90P10": 0.380694117647059,
+          "midChroma": 13.097516823206519,
+          "p50": 0.6276980392156863,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000005.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000005"
+        },
+        {
+          "contrastP90P10": 0.5112117647058825,
+          "midChroma": 14.432593048933283,
+          "p50": 0.6734964705882354,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000010.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000010"
+        },
+        {
+          "contrastP90P10": 0.4379717647058824,
+          "midChroma": 15.519331589663514,
+          "p50": 0.7039788235294118,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000008.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000008"
+        },
+        {
+          "contrastP90P10": 0.3070831372549021,
+          "midChroma": 14.831644449504337,
+          "p50": 0.698158431372549,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000006.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000006"
+        }
+      ],
+      "texture": {
+        "texture_grain_proxy_mean": {
+          "count": 1,
+          "max": 0.008507723260797177,
+          "mean": 0.008507723260797177,
+          "median": 0.008507723260797177,
+          "min": 0.008507723260797177,
+          "p10": 0.008507723260797177,
+          "p90": 0.008507723260797177
+        },
+        "texture_grain_proxy_p90": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_luma_gradient_mean": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_sharpness_p95": {
+          "count": 1,
+          "max": 0.07309749019607847,
+          "mean": 0.07309749019607847,
+          "median": 0.07309749019607847,
+          "min": 0.07309749019607847,
+          "p10": 0.07309749019607847,
+          "p90": 0.07309749019607847
+        },
+        "texture_sharpness_p99": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        }
+      },
+      "tone": {
+        "clip_black_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "clip_white_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "contrast_p90_p10": {
+          "count": 1,
+          "max": 0.4445709803921569,
+          "mean": 0.4445709803921569,
+          "median": 0.4445709803921569,
+          "min": 0.4445709803921569,
+          "p10": 0.4445709803921569,
+          "p90": 0.4445709803921569
+        },
+        "p10": {
+          "count": 1,
+          "max": 0.3671850980392157,
+          "mean": 0.3671850980392157,
+          "median": 0.3671850980392157,
+          "min": 0.3671850980392157,
+          "p10": 0.3671850980392157,
+          "p90": 0.3671850980392157
+        },
+        "p50": {
+          "count": 1,
+          "max": 0.6747525490196078,
+          "mean": 0.6747525490196078,
+          "median": 0.6747525490196078,
+          "min": 0.6747525490196078,
+          "p10": 0.6747525490196078,
+          "p90": 0.6747525490196078
+        },
+        "p90": {
+          "count": 1,
+          "max": 0.8074827450980393,
+          "mean": 0.8074827450980393,
+          "median": 0.8074827450980393,
+          "min": 0.8074827450980393,
+          "p10": 0.8074827450980393,
+          "p90": 0.8074827450980393
+        }
+      }
+    },
+    {
+      "color": {
+        "high_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "high_gb": {
+          "count": 1,
+          "max": 2.4534853183231746,
+          "mean": 2.4534853183231746,
+          "median": 2.4534853183231746,
+          "min": 2.4534853183231746,
+          "p10": 2.4534853183231746,
+          "p90": 2.4534853183231746
+        },
+        "high_rg": {
+          "count": 1,
+          "max": -3.5169561807410616,
+          "mean": -3.5169561807410616,
+          "median": -3.5169561807410616,
+          "min": -3.5169561807410616,
+          "p10": -3.5169561807410616,
+          "p90": -3.5169561807410616
+        },
+        "mean_b": {
+          "count": 1,
+          "max": 150.8097746331237,
+          "mean": 150.8097746331237,
+          "median": 150.8097746331237,
+          "min": 150.8097746331237,
+          "p10": 150.8097746331237,
+          "p90": 150.8097746331237
+        },
+        "mean_g": {
+          "count": 1,
+          "max": 153.26965618448637,
+          "mean": 153.26965618448637,
+          "median": 153.26965618448637,
+          "min": 153.26965618448637,
+          "p10": 153.26965618448637,
+          "p90": 153.26965618448637
+        },
+        "mean_r": {
+          "count": 1,
+          "max": 157.19195492662473,
+          "mean": 157.19195492662473,
+          "median": 157.19195492662473,
+          "min": 157.19195492662473,
+          "p10": 157.19195492662473,
+          "p90": 157.19195492662473
+        },
+        "mid_chroma": {
+          "count": 1,
+          "max": 21.06062703571188,
+          "mean": 21.06062703571188,
+          "median": 21.06062703571188,
+          "min": 21.06062703571188,
+          "p10": 21.06062703571188,
+          "p90": 21.06062703571188
+        },
+        "mid_gb": {
+          "count": 1,
+          "max": -3.3941515814792496,
+          "mean": -3.3941515814792496,
+          "median": -3.3941515814792496,
+          "min": -3.3941515814792496,
+          "p10": -3.3941515814792496,
+          "p90": -3.3941515814792496
+        },
+        "mid_rg": {
+          "count": 1,
+          "max": 15.60062519537719,
+          "mean": 15.60062519537719,
+          "median": 15.60062519537719,
+          "min": 15.60062519537719,
+          "p10": 15.60062519537719,
+          "p90": 15.60062519537719
+        },
+        "neutral_a_median": {
+          "count": 1,
+          "max": 1.9283311841141944,
+          "mean": 1.9283311841141944,
+          "median": 1.9283311841141944,
+          "min": 1.9283311841141944,
+          "p10": 1.9283311841141944,
+          "p90": 1.9283311841141944
+        },
+        "neutral_b_median": {
+          "count": 1,
+          "max": -1.0638291478839157,
+          "mean": -1.0638291478839157,
+          "median": -1.0638291478839157,
+          "min": -1.0638291478839157,
+          "p10": -1.0638291478839157,
+          "p90": -1.0638291478839157
+        },
+        "shadow_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "shadow_gb": {
+          "count": 1,
+          "max": 0.36324785253021297,
+          "mean": 0.36324785253021297,
+          "median": 0.36324785253021297,
+          "min": 0.36324785253021297,
+          "p10": 0.36324785253021297,
+          "p90": 0.36324785253021297
+        },
+        "shadow_rg": {
+          "count": 1,
+          "max": 18.5425814830841,
+          "mean": 18.5425814830841,
+          "median": 18.5425814830841,
+          "min": 18.5425814830841,
+          "p10": 18.5425814830841,
+          "p90": 18.5425814830841
+        }
+      },
+      "family": "detail",
+      "imageCount": 13,
+      "name": "crisp_detail",
+      "representativeCandidates": [
+        {
+          "contrastP90P10": 0.820307450980392,
+          "midChroma": 25.276619685704446,
+          "p50": 0.8154345098039216,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000037.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000037"
+        },
+        {
+          "contrastP90P10": 0.7825121568627451,
+          "midChroma": 16.179774145739042,
+          "p50": 0.7278611764705882,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000017.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000017"
+        },
+        {
+          "contrastP90P10": 0.7778020392156861,
+          "midChroma": 15.525299824197024,
+          "p50": 0.6882925490196078,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000016.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000016"
+        },
+        {
+          "contrastP90P10": 0.7219788235294118,
+          "midChroma": 11.012238176155353,
+          "p50": 0.7888266666666666,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000023.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000023"
+        }
+      ],
+      "texture": {
+        "texture_grain_proxy_mean": {
+          "count": 1,
+          "max": 0.0067215395582101165,
+          "mean": 0.0067215395582101165,
+          "median": 0.0067215395582101165,
+          "min": 0.0067215395582101165,
+          "p10": 0.0067215395582101165,
+          "p90": 0.0067215395582101165
+        },
+        "texture_grain_proxy_p90": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_luma_gradient_mean": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_sharpness_p95": {
+          "count": 1,
+          "max": 0.3522671372549023,
+          "mean": 0.3522671372549023,
+          "median": 0.3522671372549023,
+          "min": 0.3522671372549023,
+          "p10": 0.3522671372549023,
+          "p90": 0.3522671372549023
+        },
+        "texture_sharpness_p99": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        }
+      },
+      "tone": {
+        "clip_black_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "clip_white_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "contrast_p90_p10": {
+          "count": 1,
+          "max": 0.7825121568627451,
+          "mean": 0.7825121568627451,
+          "median": 0.7825121568627451,
+          "min": 0.7825121568627451,
+          "p10": 0.7825121568627451,
+          "p90": 0.7825121568627451
+        },
+        "p10": {
+          "count": 1,
+          "max": 0.0688078431372549,
+          "mean": 0.0688078431372549,
+          "median": 0.0688078431372549,
+          "min": 0.0688078431372549,
+          "p10": 0.0688078431372549,
+          "p90": 0.0688078431372549
+        },
+        "p50": {
+          "count": 1,
+          "max": 0.7762282352941177,
+          "mean": 0.7762282352941177,
+          "median": 0.7762282352941177,
+          "min": 0.7762282352941177,
+          "p10": 0.7762282352941177,
+          "p90": 0.7762282352941177
+        },
+        "p90": {
+          "count": 1,
+          "max": 0.8840768627450979,
+          "mean": 0.8840768627450979,
+          "median": 0.8840768627450979,
+          "min": 0.8840768627450979,
+          "p10": 0.8840768627450979,
+          "p90": 0.8840768627450979
+        }
+      }
+    },
+    {
+      "color": {
+        "high_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "high_gb": {
+          "count": 1,
+          "max": 2.645595767412658,
+          "mean": 2.645595767412658,
+          "median": 2.645595767412658,
+          "min": 2.645595767412658,
+          "p10": 2.645595767412658,
+          "p90": 2.645595767412658
+        },
+        "high_rg": {
+          "count": 1,
+          "max": -4.6687381473511635,
+          "mean": -4.6687381473511635,
+          "median": -4.6687381473511635,
+          "min": -4.6687381473511635,
+          "p10": -4.6687381473511635,
+          "p90": -4.6687381473511635
+        },
+        "mean_b": {
+          "count": 1,
+          "max": 160.46146593291405,
+          "mean": 160.46146593291405,
+          "median": 160.46146593291405,
+          "min": 160.46146593291405,
+          "p10": 160.46146593291405,
+          "p90": 160.46146593291405
+        },
+        "mean_g": {
+          "count": 1,
+          "max": 159.3515277777778,
+          "mean": 159.3515277777778,
+          "median": 159.3515277777778,
+          "min": 159.3515277777778,
+          "p10": 159.3515277777778,
+          "p90": 159.3515277777778
+        },
+        "mean_r": {
+          "count": 1,
+          "max": 164.63858490566037,
+          "mean": 164.63858490566037,
+          "median": 164.63858490566037,
+          "min": 164.63858490566037,
+          "p10": 164.63858490566037,
+          "p90": 164.63858490566037
+        },
+        "mid_chroma": {
+          "count": 1,
+          "max": 18.347532501704244,
+          "mean": 18.347532501704244,
+          "median": 18.347532501704244,
+          "min": 18.347532501704244,
+          "p10": 18.347532501704244,
+          "p90": 18.347532501704244
+        },
+        "mid_gb": {
+          "count": 1,
+          "max": -6.132852597920113,
+          "mean": -6.132852597920113,
+          "median": -6.132852597920113,
+          "min": -6.132852597920113,
+          "p10": -6.132852597920113,
+          "p90": -6.132852597920113
+        },
+        "mid_rg": {
+          "count": 1,
+          "max": 13.05699722849213,
+          "mean": 13.05699722849213,
+          "median": 13.05699722849213,
+          "min": 13.05699722849213,
+          "p10": 13.05699722849213,
+          "p90": 13.05699722849213
+        },
+        "neutral_a_median": {
+          "count": 1,
+          "max": 1.536531909558922,
+          "mean": 1.536531909558922,
+          "median": 1.536531909558922,
+          "min": 1.536531909558922,
+          "p10": 1.536531909558922,
+          "p90": 1.536531909558922
+        },
+        "neutral_b_median": {
+          "count": 1,
+          "max": -1.32533617365099,
+          "mean": -1.32533617365099,
+          "median": -1.32533617365099,
+          "min": -1.32533617365099,
+          "p10": -1.32533617365099,
+          "p90": -1.32533617365099
+        },
+        "shadow_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "shadow_gb": {
+          "count": 1,
+          "max": -10.09997275271239,
+          "mean": -10.09997275271239,
+          "median": -10.09997275271239,
+          "min": -10.09997275271239,
+          "p10": -10.09997275271239,
+          "p90": -10.09997275271239
+        },
+        "shadow_rg": {
+          "count": 1,
+          "max": 21.531433261156387,
+          "mean": 21.531433261156387,
+          "median": 21.531433261156387,
+          "min": 21.531433261156387,
+          "p10": 21.531433261156387,
+          "p90": 21.531433261156387
+        }
+      },
+      "family": "detail",
+      "imageCount": 12,
+      "name": "normal_detail",
+      "representativeCandidates": [
+        {
+          "contrastP90P10": 0.8813427450980392,
+          "midChroma": 11.825521729079568,
+          "p50": 0.8795733333333332,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000024.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000024"
+        },
+        {
+          "contrastP90P10": 0.8640047058823529,
+          "midChroma": 19.59666235474281,
+          "p50": 0.8650713725490196,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000026.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000026"
+        },
+        {
+          "contrastP90P10": 0.7084901960784313,
+          "midChroma": 11.811002973523587,
+          "p50": 0.7509388235294118,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000015.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000015"
+        },
+        {
+          "contrastP90P10": 0.8992941176470588,
+          "midChroma": 14.34788878464701,
+          "p50": 0.8871443137254901,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000025.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000025"
+        }
+      ],
+      "texture": {
+        "texture_grain_proxy_mean": {
+          "count": 1,
+          "max": 0.005871338861216246,
+          "mean": 0.005871338861216246,
+          "median": 0.005871338861216246,
+          "min": 0.005871338861216246,
+          "p10": 0.005871338861216246,
+          "p90": 0.005871338861216246
+        },
+        "texture_grain_proxy_p90": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_luma_gradient_mean": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_sharpness_p95": {
+          "count": 1,
+          "max": 0.21035592156862762,
+          "mean": 0.21035592156862762,
+          "median": 0.21035592156862762,
+          "min": 0.21035592156862762,
+          "p10": 0.21035592156862762,
+          "p90": 0.21035592156862762
+        },
+        "texture_sharpness_p99": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        }
+      },
+      "tone": {
+        "clip_black_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "clip_white_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "contrast_p90_p10": {
+          "count": 1,
+          "max": 0.8135466666666666,
+          "mean": 0.8135466666666666,
+          "median": 0.8135466666666666,
+          "min": 0.8135466666666666,
+          "p10": 0.8135466666666666,
+          "p90": 0.8135466666666666
+        },
+        "p10": {
+          "count": 1,
+          "max": 0.06502862745098038,
+          "mean": 0.06502862745098038,
+          "median": 0.06502862745098038,
+          "min": 0.06502862745098038,
+          "p10": 0.06502862745098038,
+          "p90": 0.06502862745098038
+        },
+        "p50": {
+          "count": 1,
+          "max": 0.8427431372549019,
+          "mean": 0.8427431372549019,
+          "median": 0.8427431372549019,
+          "min": 0.8427431372549019,
+          "p10": 0.8427431372549019,
+          "p90": 0.8427431372549019
+        },
+        "p90": {
+          "count": 1,
+          "max": 0.8936772549019607,
+          "mean": 0.8936772549019607,
+          "median": 0.8936772549019607,
+          "min": 0.8936772549019607,
+          "p10": 0.8936772549019607,
+          "p90": 0.8936772549019607
+        }
+      }
+    },
+    {
+      "color": {
+        "high_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "high_gb": {
+          "count": 1,
+          "max": 2.5757921541866153,
+          "mean": 2.5757921541866153,
+          "median": 2.5757921541866153,
+          "min": 2.5757921541866153,
+          "p10": 2.5757921541866153,
+          "p90": 2.5757921541866153
+        },
+        "high_rg": {
+          "count": 1,
+          "max": -3.6182055652240876,
+          "mean": -3.6182055652240876,
+          "median": -3.6182055652240876,
+          "min": -3.6182055652240876,
+          "p10": -3.6182055652240876,
+          "p90": -3.6182055652240876
+        },
+        "mean_b": {
+          "count": 1,
+          "max": 163.93779035639415,
+          "mean": 163.93779035639415,
+          "median": 163.93779035639415,
+          "min": 163.93779035639415,
+          "p10": 163.93779035639415,
+          "p90": 163.93779035639415
+        },
+        "mean_g": {
+          "count": 1,
+          "max": 162.75321278825996,
+          "mean": 162.75321278825996,
+          "median": 162.75321278825996,
+          "min": 162.75321278825996,
+          "p10": 162.75321278825996,
+          "p90": 162.75321278825996
+        },
+        "mean_r": {
+          "count": 1,
+          "max": 163.96735953878405,
+          "mean": 163.96735953878405,
+          "median": 163.96735953878405,
+          "min": 163.96735953878405,
+          "p10": 163.96735953878405,
+          "p90": 163.96735953878405
+        },
+        "mid_chroma": {
+          "count": 1,
+          "max": 14.63211874921881,
+          "mean": 14.63211874921881,
+          "median": 14.63211874921881,
+          "min": 14.63211874921881,
+          "p10": 14.63211874921881,
+          "p90": 14.63211874921881
+        },
+        "mid_gb": {
+          "count": 1,
+          "max": -9.715485177330194,
+          "mean": -9.715485177330194,
+          "median": -9.715485177330194,
+          "min": -9.715485177330194,
+          "p10": -9.715485177330194,
+          "p90": -9.715485177330194
+        },
+        "mid_rg": {
+          "count": 1,
+          "max": 2.7096759476717125,
+          "mean": 2.7096759476717125,
+          "median": 2.7096759476717125,
+          "min": 2.7096759476717125,
+          "p10": 2.7096759476717125,
+          "p90": 2.7096759476717125
+        },
+        "neutral_a_median": {
+          "count": 1,
+          "max": 1.4168089542820825,
+          "mean": 1.4168089542820825,
+          "median": 1.4168089542820825,
+          "min": 1.4168089542820825,
+          "p10": 1.4168089542820825,
+          "p90": 1.4168089542820825
+        },
+        "neutral_b_median": {
+          "count": 1,
+          "max": 0.16674885633837233,
+          "mean": 0.16674885633837233,
+          "median": 0.16674885633837233,
+          "min": 0.16674885633837233,
+          "p10": 0.16674885633837233,
+          "p90": 0.16674885633837233
+        },
+        "shadow_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "shadow_gb": {
+          "count": 1,
+          "max": -12.093981217797836,
+          "mean": -12.093981217797836,
+          "median": -12.093981217797836,
+          "min": -12.093981217797836,
+          "p10": -12.093981217797836,
+          "p90": -12.093981217797836
+        },
+        "shadow_rg": {
+          "count": 1,
+          "max": 13.49424957104007,
+          "mean": 13.49424957104007,
+          "median": 13.49424957104007,
+          "min": 13.49424957104007,
+          "p10": 13.49424957104007,
+          "p90": 13.49424957104007
+        }
+      },
+      "family": "detail",
+      "imageCount": 12,
+      "name": "smooth_detail",
+      "representativeCandidates": [
+        {
+          "contrastP90P10": 0.5112117647058825,
+          "midChroma": 14.432593048933283,
+          "p50": 0.6734964705882354,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000010.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000010"
+        },
+        {
+          "contrastP90P10": 0.380694117647059,
+          "midChroma": 13.097516823206519,
+          "p50": 0.6276980392156863,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000005.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000005"
+        },
+        {
+          "contrastP90P10": 0.4379717647058824,
+          "midChroma": 15.519331589663514,
+          "p50": 0.7039788235294118,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000008.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000008"
+        },
+        {
+          "contrastP90P10": 0.5383796078431371,
+          "midChroma": 12.796543583980714,
+          "p50": 0.6751592156862745,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000012.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000012"
+        }
+      ],
+      "texture": {
+        "texture_grain_proxy_mean": {
+          "count": 1,
+          "max": 0.007879448137971928,
+          "mean": 0.007879448137971928,
+          "median": 0.007879448137971928,
+          "min": 0.007879448137971928,
+          "p10": 0.007879448137971928,
+          "p90": 0.007879448137971928
+        },
+        "texture_grain_proxy_p90": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_luma_gradient_mean": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_sharpness_p95": {
+          "count": 1,
+          "max": 0.07309749019607847,
+          "mean": 0.07309749019607847,
+          "median": 0.07309749019607847,
+          "min": 0.07309749019607847,
+          "p10": 0.07309749019607847,
+          "p90": 0.07309749019607847
+        },
+        "texture_sharpness_p99": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        }
+      },
+      "tone": {
+        "clip_black_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "clip_white_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "contrast_p90_p10": {
+          "count": 1,
+          "max": 0.47459176470588244,
+          "mean": 0.47459176470588244,
+          "median": 0.47459176470588244,
+          "min": 0.47459176470588244,
+          "p10": 0.47459176470588244,
+          "p90": 0.47459176470588244
+        },
+        "p10": {
+          "count": 1,
+          "max": 0.3535933333333333,
+          "mean": 0.3535933333333333,
+          "median": 0.3535933333333333,
+          "min": 0.3535933333333333,
+          "p10": 0.3535933333333333,
+          "p90": 0.3535933333333333
+        },
+        "p50": {
+          "count": 1,
+          "max": 0.6866588235294118,
+          "mean": 0.6866588235294118,
+          "median": 0.6866588235294118,
+          "min": 0.6866588235294118,
+          "p10": 0.6866588235294118,
+          "p90": 0.6866588235294118
+        },
+        "p90": {
+          "count": 1,
+          "max": 0.8329054901960784,
+          "mean": 0.8329054901960784,
+          "median": 0.8329054901960784,
+          "min": 0.8329054901960784,
+          "p10": 0.8329054901960784,
+          "p90": 0.8329054901960784
+        }
+      }
+    },
+    {
+      "color": {
+        "high_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "high_gb": {
+          "count": 1,
+          "max": 2.5766931408824405,
+          "mean": 2.5766931408824405,
+          "median": 2.5766931408824405,
+          "min": 2.5766931408824405,
+          "p10": 2.5766931408824405,
+          "p90": 2.5766931408824405
+        },
+        "high_rg": {
+          "count": 1,
+          "max": -3.2108744210368343,
+          "mean": -3.2108744210368343,
+          "median": -3.2108744210368343,
+          "min": -3.2108744210368343,
+          "p10": -3.2108744210368343,
+          "p90": -3.2108744210368343
+        },
+        "mean_b": {
+          "count": 1,
+          "max": 160.70306918238995,
+          "mean": 160.70306918238995,
+          "median": 160.70306918238995,
+          "min": 160.70306918238995,
+          "p10": 160.70306918238995,
+          "p90": 160.70306918238995
+        },
+        "mean_g": {
+          "count": 1,
+          "max": 159.49124737945493,
+          "mean": 159.49124737945493,
+          "median": 159.49124737945493,
+          "min": 159.49124737945493,
+          "p10": 159.49124737945493,
+          "p90": 159.49124737945493
+        },
+        "mean_r": {
+          "count": 1,
+          "max": 164.68587421383648,
+          "mean": 164.68587421383648,
+          "median": 164.68587421383648,
+          "min": 164.68587421383648,
+          "p10": 164.68587421383648,
+          "p90": 164.68587421383648
+        },
+        "mid_chroma": {
+          "count": 1,
+          "max": 19.59666235474281,
+          "mean": 19.59666235474281,
+          "median": 19.59666235474281,
+          "min": 19.59666235474281,
+          "p10": 19.59666235474281,
+          "p90": 19.59666235474281
+        },
+        "mid_gb": {
+          "count": 1,
+          "max": -7.322896669106754,
+          "mean": -7.322896669106754,
+          "median": -7.322896669106754,
+          "min": -7.322896669106754,
+          "p10": -7.322896669106754,
+          "p90": -7.322896669106754
+        },
+        "mid_rg": {
+          "count": 1,
+          "max": 18.529430227117146,
+          "mean": 18.529430227117146,
+          "median": 18.529430227117146,
+          "min": 18.529430227117146,
+          "p10": 18.529430227117146,
+          "p90": 18.529430227117146
+        },
+        "neutral_a_median": {
+          "count": 1,
+          "max": 2.1590807071089206,
+          "mean": 2.1590807071089206,
+          "median": 2.1590807071089206,
+          "min": 2.1590807071089206,
+          "p10": 2.1590807071089206,
+          "p90": 2.1590807071089206
+        },
+        "neutral_b_median": {
+          "count": 1,
+          "max": -1.352193131641205,
+          "mean": -1.352193131641205,
+          "median": -1.352193131641205,
+          "min": -1.352193131641205,
+          "p10": -1.352193131641205,
+          "p90": -1.352193131641205
+        },
+        "shadow_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "shadow_gb": {
+          "count": 1,
+          "max": -8.549161875413299,
+          "mean": -8.549161875413299,
+          "median": -8.549161875413299,
+          "min": -8.549161875413299,
+          "p10": -8.549161875413299,
+          "p90": -8.549161875413299
+        },
+        "shadow_rg": {
+          "count": 1,
+          "max": 20.96616788798591,
+          "mean": 20.96616788798591,
+          "median": 20.96616788798591,
+          "min": 20.96616788798591,
+          "p10": 20.96616788798591,
+          "p90": 20.96616788798591
+        }
+      },
+      "family": "luminance",
+      "imageCount": 13,
+      "name": "high_key",
+      "representativeCandidates": [
+        {
+          "contrastP90P10": 0.8640047058823529,
+          "midChroma": 19.59666235474281,
+          "p50": 0.8650713725490196,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000026.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000026"
+        },
+        {
+          "contrastP90P10": 0.8813427450980392,
+          "midChroma": 11.825521729079568,
+          "p50": 0.8795733333333332,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000024.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000024"
+        },
+        {
+          "contrastP90P10": 0.8675709803921569,
+          "midChroma": 14.115396960115506,
+          "p50": 0.8775662745098038,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000027.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000027"
+        },
+        {
+          "contrastP90P10": 0.8493474509803921,
+          "midChroma": 17.098402648665672,
+          "p50": 0.8675364705882351,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000028.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000028"
+        }
+      ],
+      "texture": {
+        "texture_grain_proxy_mean": {
+          "count": 1,
+          "max": 0.005218456802360934,
+          "mean": 0.005218456802360934,
+          "median": 0.005218456802360934,
+          "min": 0.005218456802360934,
+          "p10": 0.005218456802360934,
+          "p90": 0.005218456802360934
+        },
+        "texture_grain_proxy_p90": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_luma_gradient_mean": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_sharpness_p95": {
+          "count": 1,
+          "max": 0.2140568235294121,
+          "mean": 0.2140568235294121,
+          "median": 0.2140568235294121,
+          "min": 0.2140568235294121,
+          "p10": 0.2140568235294121,
+          "p90": 0.2140568235294121
+        },
+        "texture_sharpness_p99": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        }
+      },
+      "tone": {
+        "clip_black_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "clip_white_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "contrast_p90_p10": {
+          "count": 1,
+          "max": 0.8675709803921569,
+          "mean": 0.8675709803921569,
+          "median": 0.8675709803921569,
+          "min": 0.8675709803921569,
+          "p10": 0.8675709803921569,
+          "p90": 0.8675709803921569
+        },
+        "p10": {
+          "count": 1,
+          "max": 0.052829019607843135,
+          "mean": 0.052829019607843135,
+          "median": 0.052829019607843135,
+          "min": 0.052829019607843135,
+          "p10": 0.052829019607843135,
+          "p90": 0.052829019607843135
+        },
+        "p50": {
+          "count": 1,
+          "max": 0.8675364705882351,
+          "mean": 0.8675364705882351,
+          "median": 0.8675364705882351,
+          "min": 0.8675364705882351,
+          "p10": 0.8675364705882351,
+          "p90": 0.8675364705882351
+        },
+        "p90": {
+          "count": 1,
+          "max": 0.9249239215686275,
+          "mean": 0.9249239215686275,
+          "median": 0.9249239215686275,
+          "min": 0.9249239215686275,
+          "p10": 0.9249239215686275,
+          "p90": 0.9249239215686275
+        }
+      }
+    },
+    {
+      "color": {
+        "high_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "high_gb": {
+          "count": 1,
+          "max": 2.2884204841144538,
+          "mean": 2.2884204841144538,
+          "median": 2.2884204841144538,
+          "min": 2.2884204841144538,
+          "p10": 2.2884204841144538,
+          "p90": 2.2884204841144538
+        },
+        "high_rg": {
+          "count": 1,
+          "max": -4.752742150732487,
+          "mean": -4.752742150732487,
+          "median": -4.752742150732487,
+          "min": -4.752742150732487,
+          "p10": -4.752742150732487,
+          "p90": -4.752742150732487
+        },
+        "mean_b": {
+          "count": 1,
+          "max": 146.49662945492662,
+          "mean": 146.49662945492662,
+          "median": 146.49662945492662,
+          "min": 146.49662945492662,
+          "p10": 146.49662945492662,
+          "p90": 146.49662945492662
+        },
+        "mean_g": {
+          "count": 1,
+          "max": 142.31469758909856,
+          "mean": 142.31469758909856,
+          "median": 142.31469758909856,
+          "min": 142.31469758909856,
+          "p10": 142.31469758909856,
+          "p90": 142.31469758909856
+        },
+        "mean_r": {
+          "count": 1,
+          "max": 146.16509643605872,
+          "mean": 146.16509643605872,
+          "median": 146.16509643605872,
+          "min": 146.16509643605872,
+          "p10": 146.16509643605872,
+          "p90": 146.16509643605872
+        },
+        "mid_chroma": {
+          "count": 1,
+          "max": 15.17847213685068,
+          "mean": 15.17847213685068,
+          "median": 15.17847213685068,
+          "min": 15.17847213685068,
+          "p10": 15.17847213685068,
+          "p90": 15.17847213685068
+        },
+        "mid_gb": {
+          "count": 1,
+          "max": -4.303158434254499,
+          "mean": -4.303158434254499,
+          "median": -4.303158434254499,
+          "min": -4.303158434254499,
+          "p10": -4.303158434254499,
+          "p90": -4.303158434254499
+        },
+        "mid_rg": {
+          "count": 1,
+          "max": 4.685283567780374,
+          "mean": 4.685283567780374,
+          "median": 4.685283567780374,
+          "min": 4.685283567780374,
+          "p10": 4.685283567780374,
+          "p90": 4.685283567780374
+        },
+        "neutral_a_median": {
+          "count": 1,
+          "max": 1.5325415720550615,
+          "mean": 1.5325415720550615,
+          "median": 1.5325415720550615,
+          "min": 1.5325415720550615,
+          "p10": 1.5325415720550615,
+          "p90": 1.5325415720550615
+        },
+        "neutral_b_median": {
+          "count": 1,
+          "max": -0.7245639358642836,
+          "mean": -0.7245639358642836,
+          "median": -0.7245639358642836,
+          "min": -0.7245639358642836,
+          "p10": -0.7245639358642836,
+          "p90": -0.7245639358642836
+        },
+        "shadow_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "shadow_gb": {
+          "count": 1,
+          "max": -8.202242801066339,
+          "mean": -8.202242801066339,
+          "median": -8.202242801066339,
+          "min": -8.202242801066339,
+          "p10": -8.202242801066339,
+          "p90": -8.202242801066339
+        },
+        "shadow_rg": {
+          "count": 1,
+          "max": 12.185482898323803,
+          "mean": 12.185482898323803,
+          "median": 12.185482898323803,
+          "min": 12.185482898323803,
+          "p10": 12.185482898323803,
+          "p90": 12.185482898323803
+        }
+      },
+      "family": "luminance",
+      "imageCount": 12,
+      "name": "low_key",
+      "representativeCandidates": [
+        {
+          "contrastP90P10": 0.380694117647059,
+          "midChroma": 13.097516823206519,
+          "p50": 0.6276980392156863,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000005.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000005"
+        },
+        {
+          "contrastP90P10": 0.5383796078431371,
+          "midChroma": 12.796543583980714,
+          "p50": 0.6751592156862745,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000012.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000012"
+        },
+        {
+          "contrastP90P10": 0.5112117647058825,
+          "midChroma": 14.432593048933283,
+          "p50": 0.6734964705882354,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000010.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000010"
+        },
+        {
+          "contrastP90P10": 0.3070831372549021,
+          "midChroma": 14.831644449504337,
+          "p50": 0.698158431372549,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000006.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000006"
+        }
+      ],
+      "texture": {
+        "texture_grain_proxy_mean": {
+          "count": 1,
+          "max": 0.007864431436519312,
+          "mean": 0.007864431436519312,
+          "median": 0.007864431436519312,
+          "min": 0.007864431436519312,
+          "p10": 0.007864431436519312,
+          "p90": 0.007864431436519312
+        },
+        "texture_grain_proxy_p90": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_luma_gradient_mean": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_sharpness_p95": {
+          "count": 1,
+          "max": 0.12557264705882348,
+          "mean": 0.12557264705882348,
+          "median": 0.12557264705882348,
+          "min": 0.12557264705882348,
+          "p10": 0.12557264705882348,
+          "p90": 0.12557264705882348
+        },
+        "texture_sharpness_p99": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        }
+      },
+      "tone": {
+        "clip_black_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "clip_white_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "contrast_p90_p10": {
+          "count": 1,
+          "max": 0.5254474509803921,
+          "mean": 0.5254474509803921,
+          "median": 0.5254474509803921,
+          "min": 0.5254474509803921,
+          "p10": 0.5254474509803921,
+          "p90": 0.5254474509803921
+        },
+        "p10": {
+          "count": 1,
+          "max": 0.267756862745098,
+          "mean": 0.267756862745098,
+          "median": 0.267756862745098,
+          "min": 0.267756862745098,
+          "p10": 0.267756862745098,
+          "p90": 0.267756862745098
+        },
+        "p50": {
+          "count": 1,
+          "max": 0.6278137254901961,
+          "mean": 0.6278137254901961,
+          "median": 0.6278137254901961,
+          "min": 0.6278137254901961,
+          "p10": 0.6278137254901961,
+          "p90": 0.6278137254901961
+        },
+        "p90": {
+          "count": 1,
+          "max": 0.8277411764705883,
+          "mean": 0.8277411764705883,
+          "median": 0.8277411764705883,
+          "min": 0.8277411764705883,
+          "p10": 0.8277411764705883,
+          "p90": 0.8277411764705883
+        }
+      }
+    },
+    {
+      "color": {
+        "high_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "high_gb": {
+          "count": 1,
+          "max": 3.352339960885388,
+          "mean": 3.352339960885388,
+          "median": 3.352339960885388,
+          "min": 3.352339960885388,
+          "p10": 3.352339960885388,
+          "p90": 3.352339960885388
+        },
+        "high_rg": {
+          "count": 1,
+          "max": -3.1428189874898607,
+          "mean": -3.1428189874898607,
+          "median": -3.1428189874898607,
+          "min": -3.1428189874898607,
+          "p10": -3.1428189874898607,
+          "p90": -3.1428189874898607
+        },
+        "mean_b": {
+          "count": 1,
+          "max": 160.50630136268344,
+          "mean": 160.50630136268344,
+          "median": 160.50630136268344,
+          "min": 160.50630136268344,
+          "p10": 160.50630136268344,
+          "p90": 160.50630136268344
+        },
+        "mean_g": {
+          "count": 1,
+          "max": 161.39135901467506,
+          "mean": 161.39135901467506,
+          "median": 161.39135901467506,
+          "min": 161.39135901467506,
+          "p10": 161.39135901467506,
+          "p90": 161.39135901467506
+        },
+        "mean_r": {
+          "count": 1,
+          "max": 164.8165141509434,
+          "mean": 164.8165141509434,
+          "median": 164.8165141509434,
+          "min": 164.8165141509434,
+          "p10": 164.8165141509434,
+          "p90": 164.8165141509434
+        },
+        "mid_chroma": {
+          "count": 1,
+          "max": 15.849552867701277,
+          "mean": 15.849552867701277,
+          "median": 15.849552867701277,
+          "min": 15.849552867701277,
+          "p10": 15.849552867701277,
+          "p90": 15.849552867701277
+        },
+        "mid_gb": {
+          "count": 1,
+          "max": -7.553233009151256,
+          "mean": -7.553233009151256,
+          "median": -7.553233009151256,
+          "min": -7.553233009151256,
+          "p10": -7.553233009151256,
+          "p90": -7.553233009151256
+        },
+        "mid_rg": {
+          "count": 1,
+          "max": 6.802235915802157,
+          "mean": 6.802235915802157,
+          "median": 6.802235915802157,
+          "min": 6.802235915802157,
+          "p10": 6.802235915802157,
+          "p90": 6.802235915802157
+        },
+        "neutral_a_median": {
+          "count": 1,
+          "max": 1.163329680675923,
+          "mean": 1.163329680675923,
+          "median": 1.163329680675923,
+          "min": 1.163329680675923,
+          "p10": 1.163329680675923,
+          "p90": 1.163329680675923
+        },
+        "neutral_b_median": {
+          "count": 1,
+          "max": -0.9557240047225024,
+          "mean": -0.9557240047225024,
+          "median": -0.9557240047225024,
+          "min": -0.9557240047225024,
+          "p10": -0.9557240047225024,
+          "p90": -0.9557240047225024
+        },
+        "shadow_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "shadow_gb": {
+          "count": 1,
+          "max": -9.287321830448928,
+          "mean": -9.287321830448928,
+          "median": -9.287321830448928,
+          "min": -9.287321830448928,
+          "p10": -9.287321830448928,
+          "p90": -9.287321830448928
+        },
+        "shadow_rg": {
+          "count": 1,
+          "max": 19.86211848016248,
+          "mean": 19.86211848016248,
+          "median": 19.86211848016248,
+          "min": 19.86211848016248,
+          "p10": 19.86211848016248,
+          "p90": 19.86211848016248
+        }
+      },
+      "family": "luminance",
+      "imageCount": 12,
+      "name": "mixed_key",
+      "representativeCandidates": [
+        {
+          "contrastP90P10": 0.6681733333333333,
+          "midChroma": 10.219356360129499,
+          "p50": 0.761350588235294,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000018.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000018"
+        },
+        {
+          "contrastP90P10": 0.7219788235294118,
+          "midChroma": 11.012238176155353,
+          "p50": 0.7888266666666666,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000023.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000023"
+        },
+        {
+          "contrastP90P10": 0.7084901960784313,
+          "midChroma": 11.811002973523587,
+          "p50": 0.7509388235294118,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000015.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000015"
+        },
+        {
+          "contrastP90P10": 0.7149898039215685,
+          "midChroma": 10.011007418010852,
+          "p50": 0.7762282352941177,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000022.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000022"
+        }
+      ],
+      "texture": {
+        "texture_grain_proxy_mean": {
+          "count": 1,
+          "max": 0.0075003679021676435,
+          "mean": 0.0075003679021676435,
+          "median": 0.0075003679021676435,
+          "min": 0.0075003679021676435,
+          "p10": 0.0075003679021676435,
+          "p90": 0.0075003679021676435
+        },
+        "texture_grain_proxy_p90": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_luma_gradient_mean": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_sharpness_p95": {
+          "count": 1,
+          "max": 0.21340639215686275,
+          "mean": 0.21340639215686275,
+          "median": 0.21340639215686275,
+          "min": 0.21340639215686275,
+          "p10": 0.21340639215686275,
+          "p90": 0.21340639215686275
+        },
+        "texture_sharpness_p99": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        }
+      },
+      "tone": {
+        "clip_black_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "clip_white_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "contrast_p90_p10": {
+          "count": 1,
+          "max": 0.6572682352941176,
+          "mean": 0.6572682352941176,
+          "median": 0.6572682352941176,
+          "min": 0.6572682352941176,
+          "p10": 0.6572682352941176,
+          "p90": 0.6572682352941176
+        },
+        "p10": {
+          "count": 1,
+          "max": 0.20941325490196078,
+          "mean": 0.20941325490196078,
+          "median": 0.20941325490196078,
+          "min": 0.20941325490196078,
+          "p10": 0.20941325490196078,
+          "p90": 0.20941325490196078
+        },
+        "p50": {
+          "count": 1,
+          "max": 0.7420643137254903,
+          "mean": 0.7420643137254903,
+          "median": 0.7420643137254903,
+          "min": 0.7420643137254903,
+          "p10": 0.7420643137254903,
+          "p90": 0.7420643137254903
+        },
+        "p90": {
+          "count": 1,
+          "max": 0.8578270588235294,
+          "mean": 0.8578270588235294,
+          "median": 0.8578270588235294,
+          "min": 0.8578270588235294,
+          "p10": 0.8578270588235294,
+          "p90": 0.8578270588235294
+        }
+      }
+    },
+    {
+      "color": {
+        "high_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "high_gb": {
+          "count": 1,
+          "max": 2.324533377623297,
+          "mean": 2.324533377623297,
+          "median": 2.324533377623297,
+          "min": 2.324533377623297,
+          "p10": 2.324533377623297,
+          "p90": 2.324533377623297
+        },
+        "high_rg": {
+          "count": 1,
+          "max": -5.05462066074675,
+          "mean": -5.05462066074675,
+          "median": -5.05462066074675,
+          "min": -5.05462066074675,
+          "p10": -5.05462066074675,
+          "p90": -5.05462066074675
+        },
+        "mean_b": {
+          "count": 1,
+          "max": 154.60895125786163,
+          "mean": 154.60895125786163,
+          "median": 154.60895125786163,
+          "min": 154.60895125786163,
+          "p10": 154.60895125786163,
+          "p90": 154.60895125786163
+        },
+        "mean_g": {
+          "count": 1,
+          "max": 154.23850157232704,
+          "mean": 154.23850157232704,
+          "median": 154.23850157232704,
+          "min": 154.23850157232704,
+          "p10": 154.23850157232704,
+          "p90": 154.23850157232704
+        },
+        "mean_r": {
+          "count": 1,
+          "max": 156.5636609014675,
+          "mean": 156.5636609014675,
+          "median": 156.5636609014675,
+          "min": 156.5636609014675,
+          "p10": 156.5636609014675,
+          "p90": 156.5636609014675
+        },
+        "mid_chroma": {
+          "count": 1,
+          "max": 18.542352256468675,
+          "mean": 18.542352256468675,
+          "median": 18.542352256468675,
+          "min": 18.542352256468675,
+          "p10": 18.542352256468675,
+          "p90": 18.542352256468675
+        },
+        "mid_gb": {
+          "count": 1,
+          "max": -3.5205436322308685,
+          "mean": -3.5205436322308685,
+          "median": -3.5205436322308685,
+          "min": -3.5205436322308685,
+          "p10": -3.5205436322308685,
+          "p90": -3.5205436322308685
+        },
+        "mid_rg": {
+          "count": 1,
+          "max": 10.940210042421946,
+          "mean": 10.940210042421946,
+          "median": 10.940210042421946,
+          "min": 10.940210042421946,
+          "p10": 10.940210042421946,
+          "p90": 10.940210042421946
+        },
+        "neutral_a_median": {
+          "count": 1,
+          "max": 2.0437059456115576,
+          "mean": 2.0437059456115576,
+          "median": 2.0437059456115576,
+          "min": 2.0437059456115576,
+          "p10": 2.0437059456115576,
+          "p90": 2.0437059456115576
+        },
+        "neutral_b_median": {
+          "count": 1,
+          "max": -1.0965076436797423,
+          "mean": -1.0965076436797423,
+          "median": -1.0965076436797423,
+          "min": -1.0965076436797423,
+          "p10": -1.0965076436797423,
+          "p90": -1.0965076436797423
+        },
+        "shadow_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "shadow_gb": {
+          "count": 1,
+          "max": -7.339000286461685,
+          "mean": -7.339000286461685,
+          "median": -7.339000286461685,
+          "min": -7.339000286461685,
+          "p10": -7.339000286461685,
+          "p90": -7.339000286461685
+        },
+        "shadow_rg": {
+          "count": 1,
+          "max": 18.55419558227343,
+          "mean": 18.55419558227343,
+          "median": 18.55419558227343,
+          "min": 18.55419558227343,
+          "p10": 18.55419558227343,
+          "p90": 18.55419558227343
+        }
+      },
+      "family": "neutral_axis_warmth",
+      "imageCount": 12,
+      "name": "balanced_neutral",
+      "representativeCandidates": [
+        {
+          "contrastP90P10": 0.7778020392156861,
+          "midChroma": 15.525299824197024,
+          "p50": 0.6882925490196078,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000016.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000016"
+        },
+        {
+          "contrastP90P10": 0.6889074509803922,
+          "midChroma": 12.475997570461073,
+          "p50": 0.8204149019607843,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000019.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000019"
+        },
+        {
+          "contrastP90P10": 0.7084901960784313,
+          "midChroma": 11.811002973523587,
+          "p50": 0.7509388235294118,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000015.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000015"
+        },
+        {
+          "contrastP90P10": 0.6214964705882352,
+          "midChroma": 21.559404688740322,
+          "p50": 0.7605215686274509,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000020.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000020"
+        }
+      ],
+      "texture": {
+        "texture_grain_proxy_mean": {
+          "count": 1,
+          "max": 0.007783127992877524,
+          "mean": 0.007783127992877524,
+          "median": 0.007783127992877524,
+          "min": 0.007783127992877524,
+          "p10": 0.007783127992877524,
+          "p90": 0.007783127992877524
+        },
+        "texture_grain_proxy_p90": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_luma_gradient_mean": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_sharpness_p95": {
+          "count": 1,
+          "max": 0.21927392156862746,
+          "mean": 0.21927392156862746,
+          "median": 0.21927392156862746,
+          "min": 0.21927392156862746,
+          "p10": 0.21927392156862746,
+          "p90": 0.21927392156862746
+        },
+        "texture_sharpness_p99": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        }
+      },
+      "tone": {
+        "clip_black_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "clip_white_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "contrast_p90_p10": {
+          "count": 1,
+          "max": 0.6986988235294118,
+          "mean": 0.6986988235294118,
+          "median": 0.6986988235294118,
+          "min": 0.6986988235294118,
+          "p10": 0.6986988235294118,
+          "p90": 0.6986988235294118
+        },
+        "p10": {
+          "count": 1,
+          "max": 0.140101568627451,
+          "mean": 0.140101568627451,
+          "median": 0.140101568627451,
+          "min": 0.140101568627451,
+          "p10": 0.140101568627451,
+          "p90": 0.140101568627451
+        },
+        "p50": {
+          "count": 1,
+          "max": 0.7420643137254903,
+          "mean": 0.7420643137254903,
+          "median": 0.7420643137254903,
+          "min": 0.7420643137254903,
+          "p10": 0.7420643137254903,
+          "p90": 0.7420643137254903
+        },
+        "p90": {
+          "count": 1,
+          "max": 0.8452545098039216,
+          "mean": 0.8452545098039216,
+          "median": 0.8452545098039216,
+          "min": 0.8452545098039216,
+          "p10": 0.8452545098039216,
+          "p90": 0.8452545098039216
+        }
+      }
+    },
+    {
+      "color": {
+        "high_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "high_gb": {
+          "count": 1,
+          "max": 2.4789763360939645,
+          "mean": 2.4789763360939645,
+          "median": 2.4789763360939645,
+          "min": 2.4789763360939645,
+          "p10": 2.4789763360939645,
+          "p90": 2.4789763360939645
+        },
+        "high_rg": {
+          "count": 1,
+          "max": -3.182159757559944,
+          "mean": -3.182159757559944,
+          "median": -3.182159757559944,
+          "min": -3.182159757559944,
+          "p10": -3.182159757559944,
+          "p90": -3.182159757559944
+        },
+        "mean_b": {
+          "count": 1,
+          "max": 160.00100786163523,
+          "mean": 160.00100786163523,
+          "median": 160.00100786163523,
+          "min": 160.00100786163523,
+          "p10": 160.00100786163523,
+          "p90": 160.00100786163523
+        },
+        "mean_g": {
+          "count": 1,
+          "max": 158.62879874213837,
+          "mean": 158.62879874213837,
+          "median": 158.62879874213837,
+          "min": 158.62879874213837,
+          "p10": 158.62879874213837,
+          "p90": 158.62879874213837
+        },
+        "mean_r": {
+          "count": 1,
+          "max": 163.67020073375264,
+          "mean": 163.67020073375264,
+          "median": 163.67020073375264,
+          "min": 163.67020073375264,
+          "p10": 163.67020073375264,
+          "p90": 163.67020073375264
+        },
+        "mid_chroma": {
+          "count": 1,
+          "max": 15.505709297621689,
+          "mean": 15.505709297621689,
+          "median": 15.505709297621689,
+          "min": 15.505709297621689,
+          "p10": 15.505709297621689,
+          "p90": 15.505709297621689
+        },
+        "mid_gb": {
+          "count": 1,
+          "max": -8.781742737317906,
+          "mean": -8.781742737317906,
+          "median": -8.781742737317906,
+          "min": -8.781742737317906,
+          "p10": -8.781742737317906,
+          "p90": -8.781742737317906
+        },
+        "mid_rg": {
+          "count": 1,
+          "max": 8.676305964736486,
+          "mean": 8.676305964736486,
+          "median": 8.676305964736486,
+          "min": 8.676305964736486,
+          "p10": 8.676305964736486,
+          "p90": 8.676305964736486
+        },
+        "neutral_a_median": {
+          "count": 1,
+          "max": 1.8949403026439875,
+          "mean": 1.8949403026439875,
+          "median": 1.8949403026439875,
+          "min": 1.8949403026439875,
+          "p10": 1.8949403026439875,
+          "p90": 1.8949403026439875
+        },
+        "neutral_b_median": {
+          "count": 1,
+          "max": -1.876113817758307,
+          "mean": -1.876113817758307,
+          "median": -1.876113817758307,
+          "min": -1.876113817758307,
+          "p10": -1.876113817758307,
+          "p90": -1.876113817758307
+        },
+        "shadow_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "shadow_gb": {
+          "count": 1,
+          "max": -9.316565672531148,
+          "mean": -9.316565672531148,
+          "median": -9.316565672531148,
+          "min": -9.316565672531148,
+          "p10": -9.316565672531148,
+          "p90": -9.316565672531148
+        },
+        "shadow_rg": {
+          "count": 1,
+          "max": 19.85121263863892,
+          "mean": 19.85121263863892,
+          "median": 19.85121263863892,
+          "min": 19.85121263863892,
+          "p10": 19.85121263863892,
+          "p90": 19.85121263863892
+        }
+      },
+      "family": "neutral_axis_warmth",
+      "imageCount": 12,
+      "name": "cool_neutral",
+      "representativeCandidates": [
+        {
+          "contrastP90P10": 0.8675709803921569,
+          "midChroma": 14.115396960115506,
+          "p50": 0.8775662745098038,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000027.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000027"
+        },
+        {
+          "contrastP90P10": 0.7219788235294118,
+          "midChroma": 11.012238176155353,
+          "p50": 0.7888266666666666,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000023.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000023"
+        },
+        {
+          "contrastP90P10": 0.8640047058823529,
+          "midChroma": 19.59666235474281,
+          "p50": 0.8650713725490196,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000026.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000026"
+        },
+        {
+          "contrastP90P10": 0.8992941176470588,
+          "midChroma": 14.34788878464701,
+          "p50": 0.8871443137254901,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000025.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000025"
+        }
+      ],
+      "texture": {
+        "texture_grain_proxy_mean": {
+          "count": 1,
+          "max": 0.00623603043851973,
+          "mean": 0.00623603043851973,
+          "median": 0.00623603043851973,
+          "min": 0.00623603043851973,
+          "p10": 0.00623603043851973,
+          "p90": 0.00623603043851973
+        },
+        "texture_grain_proxy_p90": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_luma_gradient_mean": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_sharpness_p95": {
+          "count": 1,
+          "max": 0.21262903921568665,
+          "mean": 0.21262903921568665,
+          "median": 0.21262903921568665,
+          "min": 0.21262903921568665,
+          "p10": 0.21262903921568665,
+          "p90": 0.21262903921568665
+        },
+        "texture_sharpness_p99": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        }
+      },
+      "tone": {
+        "clip_black_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "clip_white_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "contrast_p90_p10": {
+          "count": 1,
+          "max": 0.8159298039215686,
+          "mean": 0.8159298039215686,
+          "median": 0.8159298039215686,
+          "min": 0.8159298039215686,
+          "p10": 0.8159298039215686,
+          "p90": 0.8159298039215686
+        },
+        "p10": {
+          "count": 1,
+          "max": 0.08601843137254901,
+          "mean": 0.08601843137254901,
+          "median": 0.08601843137254901,
+          "min": 0.08601843137254901,
+          "p10": 0.08601843137254901,
+          "p90": 0.08601843137254901
+        },
+        "p50": {
+          "count": 1,
+          "max": 0.8145670588235294,
+          "mean": 0.8145670588235294,
+          "median": 0.8145670588235294,
+          "min": 0.8145670588235294,
+          "p10": 0.8145670588235294,
+          "p90": 0.8145670588235294
+        },
+        "p90": {
+          "count": 1,
+          "max": 0.9019317647058823,
+          "mean": 0.9019317647058823,
+          "median": 0.9019317647058823,
+          "min": 0.9019317647058823,
+          "p10": 0.9019317647058823,
+          "p90": 0.9019317647058823
+        }
+      }
+    },
+    {
+      "color": {
+        "high_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "high_gb": {
+          "count": 1,
+          "max": 4.876718467940606,
+          "mean": 4.876718467940606,
+          "median": 4.876718467940606,
+          "min": 4.876718467940606,
+          "p10": 4.876718467940606,
+          "p90": 4.876718467940606
+        },
+        "high_rg": {
+          "count": 1,
+          "max": -3.3920872813640415,
+          "mean": -3.3920872813640415,
+          "median": -3.3920872813640415,
+          "min": -3.3920872813640415,
+          "p10": -3.3920872813640415,
+          "p90": -3.3920872813640415
+        },
+        "mean_b": {
+          "count": 1,
+          "max": 164.52721174004193,
+          "mean": 164.52721174004193,
+          "median": 164.52721174004193,
+          "min": 164.52721174004193,
+          "p10": 164.52721174004193,
+          "p90": 164.52721174004193
+        },
+        "mean_g": {
+          "count": 1,
+          "max": 166.2307568134172,
+          "mean": 166.2307568134172,
+          "median": 166.2307568134172,
+          "min": 166.2307568134172,
+          "p10": 166.2307568134172,
+          "p90": 166.2307568134172
+        },
+        "mean_r": {
+          "count": 1,
+          "max": 167.39991404612158,
+          "mean": 167.39991404612158,
+          "median": 167.39991404612158,
+          "min": 167.39991404612158,
+          "p10": 167.39991404612158,
+          "p90": 167.39991404612158
+        },
+        "mid_chroma": {
+          "count": 1,
+          "max": 18.07616956007558,
+          "mean": 18.07616956007558,
+          "median": 18.07616956007558,
+          "min": 18.07616956007558,
+          "p10": 18.07616956007558,
+          "p90": 18.07616956007558
+        },
+        "mid_gb": {
+          "count": 1,
+          "max": -0.34249912982906494,
+          "mean": -0.34249912982906494,
+          "median": -0.34249912982906494,
+          "min": -0.34249912982906494,
+          "p10": -0.34249912982906494,
+          "p90": -0.34249912982906494
+        },
+        "mid_rg": {
+          "count": 1,
+          "max": 9.911902824432048,
+          "mean": 9.911902824432048,
+          "median": 9.911902824432048,
+          "min": 9.911902824432048,
+          "p10": 9.911902824432048,
+          "p90": 9.911902824432048
+        },
+        "neutral_a_median": {
+          "count": 1,
+          "max": 1.0867705426410024,
+          "mean": 1.0867705426410024,
+          "median": 1.0867705426410024,
+          "min": 1.0867705426410024,
+          "p10": 1.0867705426410024,
+          "p90": 1.0867705426410024
+        },
+        "neutral_b_median": {
+          "count": 1,
+          "max": 0.6607745727314818,
+          "mean": 0.6607745727314818,
+          "median": 0.6607745727314818,
+          "min": 0.6607745727314818,
+          "p10": 0.6607745727314818,
+          "p90": 0.6607745727314818
+        },
+        "shadow_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "shadow_gb": {
+          "count": 1,
+          "max": -7.641466094076115,
+          "mean": -7.641466094076115,
+          "median": -7.641466094076115,
+          "min": -7.641466094076115,
+          "p10": -7.641466094076115,
+          "p90": -7.641466094076115
+        },
+        "shadow_rg": {
+          "count": 1,
+          "max": 17.709823314509727,
+          "mean": 17.709823314509727,
+          "median": 17.709823314509727,
+          "min": 17.709823314509727,
+          "p10": 17.709823314509727,
+          "p90": 17.709823314509727
+        }
+      },
+      "family": "neutral_axis_warmth",
+      "imageCount": 13,
+      "name": "warm_neutral",
+      "representativeCandidates": [
+        {
+          "contrastP90P10": 0.6463631372549019,
+          "midChroma": 11.443888814339186,
+          "p50": 0.7330235294117647,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000011.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000011"
+        },
+        {
+          "contrastP90P10": 0.4245400784313724,
+          "midChroma": 18.07616956007558,
+          "p50": 0.7574447058823529,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000009.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000009"
+        },
+        {
+          "contrastP90P10": 0.5383796078431371,
+          "midChroma": 12.796543583980714,
+          "p50": 0.6751592156862745,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000012.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000012"
+        },
+        {
+          "contrastP90P10": 0.5112117647058825,
+          "midChroma": 14.432593048933283,
+          "p50": 0.6734964705882354,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000010.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000010"
+        }
+      ],
+      "texture": {
+        "texture_grain_proxy_mean": {
+          "count": 1,
+          "max": 0.007066241945381388,
+          "mean": 0.007066241945381388,
+          "median": 0.007066241945381388,
+          "min": 0.007066241945381388,
+          "p10": 0.007066241945381388,
+          "p90": 0.007066241945381388
+        },
+        "texture_grain_proxy_p90": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_luma_gradient_mean": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_sharpness_p95": {
+          "count": 1,
+          "max": 0.1299312156862746,
+          "mean": 0.1299312156862746,
+          "median": 0.1299312156862746,
+          "min": 0.1299312156862746,
+          "p10": 0.1299312156862746,
+          "p90": 0.1299312156862746
+        },
+        "texture_sharpness_p99": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        }
+      },
+      "tone": {
+        "clip_black_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "clip_white_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "contrast_p90_p10": {
+          "count": 1,
+          "max": 0.6463631372549019,
+          "mean": 0.6463631372549019,
+          "median": 0.6463631372549019,
+          "min": 0.6463631372549019,
+          "p10": 0.6463631372549019,
+          "p90": 0.6463631372549019
+        },
+        "p10": {
+          "count": 1,
+          "max": 0.27631137254901955,
+          "mean": 0.27631137254901955,
+          "median": 0.27631137254901955,
+          "min": 0.27631137254901955,
+          "p10": 0.27631137254901955,
+          "p90": 0.27631137254901955
+        },
+        "p50": {
+          "count": 1,
+          "max": 0.7056580392156863,
+          "mean": 0.7056580392156863,
+          "median": 0.7056580392156863,
+          "min": 0.7056580392156863,
+          "p10": 0.7056580392156863,
+          "p90": 0.7056580392156863
+        },
+        "p90": {
+          "count": 1,
+          "max": 0.8750337254901961,
+          "mean": 0.8750337254901961,
+          "median": 0.8750337254901961,
+          "min": 0.8750337254901961,
+          "p10": 0.8750337254901961,
+          "p90": 0.8750337254901961
+        }
+      }
+    },
+    {
+      "color": {
+        "high_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "high_gb": {
+          "count": 1,
+          "max": 4.950893689866291,
+          "mean": 4.950893689866291,
+          "median": 4.950893689866291,
+          "min": 4.950893689866291,
+          "p10": 4.950893689866291,
+          "p90": 4.950893689866291
+        },
+        "high_rg": {
+          "count": 1,
+          "max": -0.48888253757918676,
+          "mean": -0.48888253757918676,
+          "median": -0.48888253757918676,
+          "min": -0.48888253757918676,
+          "p10": -0.48888253757918676,
+          "p90": -0.48888253757918676
+        },
+        "mean_b": {
+          "count": 1,
+          "max": 160.88542295597483,
+          "mean": 160.88542295597483,
+          "median": 160.88542295597483,
+          "min": 160.88542295597483,
+          "p10": 160.88542295597483,
+          "p90": 160.88542295597483
+        },
+        "mean_g": {
+          "count": 1,
+          "max": 160.89029821802933,
+          "mean": 160.89029821802933,
+          "median": 160.89029821802933,
+          "min": 160.89029821802933,
+          "p10": 160.89029821802933,
+          "p90": 160.89029821802933
+        },
+        "mean_r": {
+          "count": 1,
+          "max": 165.14359486373166,
+          "mean": 165.14359486373166,
+          "median": 165.14359486373166,
+          "min": 165.14359486373166,
+          "p10": 165.14359486373166,
+          "p90": 165.14359486373166
+        },
+        "mid_chroma": {
+          "count": 1,
+          "max": 13.45597027204811,
+          "mean": 13.45597027204811,
+          "median": 13.45597027204811,
+          "min": 13.45597027204811,
+          "p10": 13.45597027204811,
+          "p90": 13.45597027204811
+        },
+        "mid_gb": {
+          "count": 1,
+          "max": -7.687667262345336,
+          "mean": -7.687667262345336,
+          "median": -7.687667262345336,
+          "min": -7.687667262345336,
+          "p10": -7.687667262345336,
+          "p90": -7.687667262345336
+        },
+        "mid_rg": {
+          "count": 1,
+          "max": 8.995631189453732,
+          "mean": 8.995631189453732,
+          "median": 8.995631189453732,
+          "min": 8.995631189453732,
+          "p10": 8.995631189453732,
+          "p90": 8.995631189453732
+        },
+        "neutral_a_median": {
+          "count": 1,
+          "max": 2.0058107195155377,
+          "mean": 2.0058107195155377,
+          "median": 2.0058107195155377,
+          "min": 2.0058107195155377,
+          "p10": 2.0058107195155377,
+          "p90": 2.0058107195155377
+        },
+        "neutral_b_median": {
+          "count": 1,
+          "max": -0.918238651635081,
+          "mean": -0.918238651635081,
+          "median": -0.918238651635081,
+          "min": -0.918238651635081,
+          "p10": -0.918238651635081,
+          "p90": -0.918238651635081
+        },
+        "shadow_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "shadow_gb": {
+          "count": 1,
+          "max": -9.458229739986454,
+          "mean": -9.458229739986454,
+          "median": -9.458229739986454,
+          "min": -9.458229739986454,
+          "p10": -9.458229739986454,
+          "p90": -9.458229739986454
+        },
+        "shadow_rg": {
+          "count": 1,
+          "max": 19.28806278117789,
+          "mean": 19.28806278117789,
+          "median": 19.28806278117789,
+          "min": 19.28806278117789,
+          "p10": 19.28806278117789,
+          "p90": 19.28806278117789
+        }
+      },
+      "family": "red_cyan_balance",
+      "imageCount": 12,
+      "name": "balanced_rg",
+      "representativeCandidates": [
+        {
+          "contrastP90P10": 0.7778020392156861,
+          "midChroma": 15.525299824197024,
+          "p50": 0.6882925490196078,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000016.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000016"
+        },
+        {
+          "contrastP90P10": 0.6889074509803922,
+          "midChroma": 12.475997570461073,
+          "p50": 0.8204149019607843,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000019.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000019"
+        },
+        {
+          "contrastP90P10": 0.6463631372549019,
+          "midChroma": 11.443888814339186,
+          "p50": 0.7330235294117647,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000011.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000011"
+        },
+        {
+          "contrastP90P10": 0.6681733333333333,
+          "midChroma": 10.219356360129499,
+          "p50": 0.761350588235294,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000018.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000018"
+        }
+      ],
+      "texture": {
+        "texture_grain_proxy_mean": {
+          "count": 1,
+          "max": 0.006493180029678899,
+          "mean": 0.006493180029678899,
+          "median": 0.006493180029678899,
+          "min": 0.006493180029678899,
+          "p10": 0.006493180029678899,
+          "p90": 0.006493180029678899
+        },
+        "texture_grain_proxy_p90": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_luma_gradient_mean": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_sharpness_p95": {
+          "count": 1,
+          "max": 0.21262903921568665,
+          "mean": 0.21262903921568665,
+          "median": 0.21262903921568665,
+          "min": 0.21262903921568665,
+          "p10": 0.21262903921568665,
+          "p90": 0.21262903921568665
+        },
+        "texture_sharpness_p99": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        }
+      },
+      "tone": {
+        "clip_black_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "clip_white_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "contrast_p90_p10": {
+          "count": 1,
+          "max": 0.7777739607843137,
+          "mean": 0.7777739607843137,
+          "median": 0.7777739607843137,
+          "min": 0.7777739607843137,
+          "p10": 0.7777739607843137,
+          "p90": 0.7777739607843137
+        },
+        "p10": {
+          "count": 1,
+          "max": 0.10013098039215686,
+          "mean": 0.10013098039215686,
+          "median": 0.10013098039215686,
+          "min": 0.10013098039215686,
+          "p10": 0.10013098039215686,
+          "p90": 0.10013098039215686
+        },
+        "p50": {
+          "count": 1,
+          "max": 0.7471870588235294,
+          "mean": 0.7471870588235294,
+          "median": 0.7471870588235294,
+          "min": 0.7471870588235294,
+          "p10": 0.7471870588235294,
+          "p90": 0.7471870588235294
+        },
+        "p90": {
+          "count": 1,
+          "max": 0.8878870588235294,
+          "mean": 0.8878870588235294,
+          "median": 0.8878870588235294,
+          "min": 0.8878870588235294,
+          "p10": 0.8878870588235294,
+          "p90": 0.8878870588235294
+        }
+      }
+    },
+    {
+      "color": {
+        "high_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "high_gb": {
+          "count": 1,
+          "max": 3.0048734393313907,
+          "mean": 3.0048734393313907,
+          "median": 3.0048734393313907,
+          "min": 3.0048734393313907,
+          "p10": 3.0048734393313907,
+          "p90": 3.0048734393313907
+        },
+        "high_rg": {
+          "count": 1,
+          "max": -4.223867972002253,
+          "mean": -4.223867972002253,
+          "median": -4.223867972002253,
+          "min": -4.223867972002253,
+          "p10": -4.223867972002253,
+          "p90": -4.223867972002253
+        },
+        "mean_b": {
+          "count": 1,
+          "max": 158.50887893081762,
+          "mean": 158.50887893081762,
+          "median": 158.50887893081762,
+          "min": 158.50887893081762,
+          "p10": 158.50887893081762,
+          "p90": 158.50887893081762
+        },
+        "mean_g": {
+          "count": 1,
+          "max": 155.0151650943396,
+          "mean": 155.0151650943396,
+          "median": 155.0151650943396,
+          "min": 155.0151650943396,
+          "p10": 155.0151650943396,
+          "p90": 155.0151650943396
+        },
+        "mean_r": {
+          "count": 1,
+          "max": 160.496856918239,
+          "mean": 160.496856918239,
+          "median": 160.496856918239,
+          "min": 160.496856918239,
+          "p10": 160.496856918239,
+          "p90": 160.496856918239
+        },
+        "mid_chroma": {
+          "count": 1,
+          "max": 13.765054936069902,
+          "mean": 13.765054936069902,
+          "median": 13.765054936069902,
+          "min": 13.765054936069902,
+          "p10": 13.765054936069902,
+          "p90": 13.765054936069902
+        },
+        "mid_gb": {
+          "count": 1,
+          "max": -10.365323972690149,
+          "mean": -10.365323972690149,
+          "median": -10.365323972690149,
+          "min": -10.365323972690149,
+          "p10": -10.365323972690149,
+          "p90": -10.365323972690149
+        },
+        "mid_rg": {
+          "count": 1,
+          "max": 2.2633517192381305,
+          "mean": 2.2633517192381305,
+          "median": 2.2633517192381305,
+          "min": 2.2633517192381305,
+          "p10": 2.2633517192381305,
+          "p90": 2.2633517192381305
+        },
+        "neutral_a_median": {
+          "count": 1,
+          "max": 0.9433702900294578,
+          "mean": 0.9433702900294578,
+          "median": 0.9433702900294578,
+          "min": 0.9433702900294578,
+          "p10": 0.9433702900294578,
+          "p90": 0.9433702900294578
+        },
+        "neutral_b_median": {
+          "count": 1,
+          "max": -0.9627235543303303,
+          "mean": -0.9627235543303303,
+          "median": -0.9627235543303303,
+          "min": -0.9627235543303303,
+          "p10": -0.9627235543303303,
+          "p90": -0.9627235543303303
+        },
+        "shadow_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "shadow_gb": {
+          "count": 1,
+          "max": -11.617166318245953,
+          "mean": -11.617166318245953,
+          "median": -11.617166318245953,
+          "min": -11.617166318245953,
+          "p10": -11.617166318245953,
+          "p90": -11.617166318245953
+        },
+        "shadow_rg": {
+          "count": 1,
+          "max": 15.524670632791223,
+          "mean": 15.524670632791223,
+          "median": 15.524670632791223,
+          "min": 15.524670632791223,
+          "p10": 15.524670632791223,
+          "p90": 15.524670632791223
+        }
+      },
+      "family": "red_cyan_balance",
+      "imageCount": 12,
+      "name": "cyan_green_bias",
+      "representativeCandidates": [
+        {
+          "contrastP90P10": 0.5112117647058825,
+          "midChroma": 14.432593048933283,
+          "p50": 0.6734964705882354,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000010.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000010"
+        },
+        {
+          "contrastP90P10": 0.380694117647059,
+          "midChroma": 13.097516823206519,
+          "p50": 0.6276980392156863,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000005.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000005"
+        },
+        {
+          "contrastP90P10": 0.3070831372549021,
+          "midChroma": 14.831644449504337,
+          "p50": 0.698158431372549,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000006.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000006"
+        },
+        {
+          "contrastP90P10": 0.7219788235294118,
+          "midChroma": 11.012238176155353,
+          "p50": 0.7888266666666666,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000023.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000023"
+        }
+      ],
+      "texture": {
+        "texture_grain_proxy_mean": {
+          "count": 1,
+          "max": 0.007766237598799805,
+          "mean": 0.007766237598799805,
+          "median": 0.007766237598799805,
+          "min": 0.007766237598799805,
+          "p10": 0.007766237598799805,
+          "p90": 0.007766237598799805
+        },
+        "texture_grain_proxy_p90": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_luma_gradient_mean": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_sharpness_p95": {
+          "count": 1,
+          "max": 0.07309749019607847,
+          "mean": 0.07309749019607847,
+          "median": 0.07309749019607847,
+          "min": 0.07309749019607847,
+          "p10": 0.07309749019607847,
+          "p90": 0.07309749019607847
+        },
+        "texture_sharpness_p99": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        }
+      },
+      "tone": {
+        "clip_black_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "clip_white_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "contrast_p90_p10": {
+          "count": 1,
+          "max": 0.5129949019607842,
+          "mean": 0.5129949019607842,
+          "median": 0.5129949019607842,
+          "min": 0.5129949019607842,
+          "p10": 0.5129949019607842,
+          "p90": 0.5129949019607842
+        },
+        "p10": {
+          "count": 1,
+          "max": 0.267756862745098,
+          "mean": 0.267756862745098,
+          "median": 0.267756862745098,
+          "min": 0.267756862745098,
+          "p10": 0.267756862745098,
+          "p90": 0.267756862745098
+        },
+        "p50": {
+          "count": 1,
+          "max": 0.7010686274509803,
+          "mean": 0.7010686274509803,
+          "median": 0.7010686274509803,
+          "min": 0.7010686274509803,
+          "p10": 0.7010686274509803,
+          "p90": 0.7010686274509803
+        },
+        "p90": {
+          "count": 1,
+          "max": 0.8368247058823529,
+          "mean": 0.8368247058823529,
+          "median": 0.8368247058823529,
+          "min": 0.8368247058823529,
+          "p10": 0.8368247058823529,
+          "p90": 0.8368247058823529
+        }
+      }
+    },
+    {
+      "color": {
+        "high_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "high_gb": {
+          "count": 1,
+          "max": 0.01397525608064143,
+          "mean": 0.01397525608064143,
+          "median": 0.01397525608064143,
+          "min": 0.01397525608064143,
+          "p10": 0.01397525608064143,
+          "p90": 0.01397525608064143
+        },
+        "high_rg": {
+          "count": 1,
+          "max": -6.058963983122965,
+          "mean": -6.058963983122965,
+          "median": -6.058963983122965,
+          "min": -6.058963983122965,
+          "p10": -6.058963983122965,
+          "p90": -6.058963983122965
+        },
+        "mean_b": {
+          "count": 1,
+          "max": 153.95974109014676,
+          "mean": 153.95974109014676,
+          "median": 153.95974109014676,
+          "min": 153.95974109014676,
+          "p10": 153.95974109014676,
+          "p90": 153.95974109014676
+        },
+        "mean_g": {
+          "count": 1,
+          "max": 155.03356394129978,
+          "mean": 155.03356394129978,
+          "median": 155.03356394129978,
+          "min": 155.03356394129978,
+          "p10": 155.03356394129978,
+          "p90": 155.03356394129978
+        },
+        "mean_r": {
+          "count": 1,
+          "max": 158.40629140461215,
+          "mean": 158.40629140461215,
+          "median": 158.40629140461215,
+          "min": 158.40629140461215,
+          "p10": 158.40629140461215,
+          "p90": 158.40629140461215
+        },
+        "mid_chroma": {
+          "count": 1,
+          "max": 24.573130279071886,
+          "mean": 24.573130279071886,
+          "median": 24.573130279071886,
+          "min": 24.573130279071886,
+          "p10": 24.573130279071886,
+          "p90": 24.573130279071886
+        },
+        "mid_gb": {
+          "count": 1,
+          "max": 2.393559225102649,
+          "mean": 2.393559225102649,
+          "median": 2.393559225102649,
+          "min": 2.393559225102649,
+          "p10": 2.393559225102649,
+          "p90": 2.393559225102649
+        },
+        "mid_rg": {
+          "count": 1,
+          "max": 23.614034038660662,
+          "mean": 23.614034038660662,
+          "median": 23.614034038660662,
+          "min": 23.614034038660662,
+          "p10": 23.614034038660662,
+          "p90": 23.614034038660662
+        },
+        "neutral_a_median": {
+          "count": 1,
+          "max": 2.1590807071089206,
+          "mean": 2.1590807071089206,
+          "median": 2.1590807071089206,
+          "min": 2.1590807071089206,
+          "p10": 2.1590807071089206,
+          "p90": 2.1590807071089206
+        },
+        "neutral_b_median": {
+          "count": 1,
+          "max": -1.0638291478839157,
+          "mean": -1.0638291478839157,
+          "median": -1.0638291478839157,
+          "min": -1.0638291478839157,
+          "p10": -1.0638291478839157,
+          "p90": -1.0638291478839157
+        },
+        "shadow_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "shadow_gb": {
+          "count": 1,
+          "max": -0.1364611132275826,
+          "mean": -0.1364611132275826,
+          "median": -0.1364611132275826,
+          "min": -0.1364611132275826,
+          "p10": -0.1364611132275826,
+          "p90": -0.1364611132275826
+        },
+        "shadow_rg": {
+          "count": 1,
+          "max": 19.736376565727102,
+          "mean": 19.736376565727102,
+          "median": 19.736376565727102,
+          "min": 19.736376565727102,
+          "p10": 19.736376565727102,
+          "p90": 19.736376565727102
+        }
+      },
+      "family": "red_cyan_balance",
+      "imageCount": 13,
+      "name": "red_warm_bias",
+      "representativeCandidates": [
+        {
+          "contrastP90P10": 0.820307450980392,
+          "midChroma": 25.276619685704446,
+          "p50": 0.8154345098039216,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000037.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000037"
+        },
+        {
+          "contrastP90P10": 0.6214964705882352,
+          "midChroma": 21.559404688740322,
+          "p50": 0.7605215686274509,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000020.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000020"
+        },
+        {
+          "contrastP90P10": 0.6525576470588235,
+          "midChroma": 21.06062703571188,
+          "p50": 0.8316760784313727,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000036.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000036"
+        },
+        {
+          "contrastP90P10": 0.8640047058823529,
+          "midChroma": 19.59666235474281,
+          "p50": 0.8650713725490196,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000026.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000026"
+        }
+      ],
+      "texture": {
+        "texture_grain_proxy_mean": {
+          "count": 1,
+          "max": 0.0066296953054523254,
+          "mean": 0.0066296953054523254,
+          "median": 0.0066296953054523254,
+          "min": 0.0066296953054523254,
+          "p10": 0.0066296953054523254,
+          "p90": 0.0066296953054523254
+        },
+        "texture_grain_proxy_p90": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_luma_gradient_mean": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_sharpness_p95": {
+          "count": 1,
+          "max": 0.22806921568627458,
+          "mean": 0.22806921568627458,
+          "median": 0.22806921568627458,
+          "min": 0.22806921568627458,
+          "p10": 0.22806921568627458,
+          "p90": 0.22806921568627458
+        },
+        "texture_sharpness_p99": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        }
+      },
+      "tone": {
+        "clip_black_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "clip_white_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "contrast_p90_p10": {
+          "count": 1,
+          "max": 0.7959443137254901,
+          "mean": 0.7959443137254901,
+          "median": 0.7959443137254901,
+          "min": 0.7959443137254901,
+          "p10": 0.7959443137254901,
+          "p90": 0.7959443137254901
+        },
+        "p10": {
+          "count": 1,
+          "max": 0.06376941176470588,
+          "mean": 0.06376941176470588,
+          "median": 0.06376941176470588,
+          "min": 0.06376941176470588,
+          "p10": 0.06376941176470588,
+          "p90": 0.06376941176470588
+        },
+        "p50": {
+          "count": 1,
+          "max": 0.8154345098039216,
+          "mean": 0.8154345098039216,
+          "median": 0.8154345098039216,
+          "min": 0.8154345098039216,
+          "p10": 0.8154345098039216,
+          "p90": 0.8154345098039216
+        },
+        "p90": {
+          "count": 1,
+          "max": 0.8840768627450979,
+          "mean": 0.8840768627450979,
+          "median": 0.8840768627450979,
+          "min": 0.8840768627450979,
+          "p10": 0.8840768627450979,
+          "p90": 0.8840768627450979
+        }
+      }
+    },
+    {
+      "color": {
+        "high_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "high_gb": {
+          "count": 1,
+          "max": 4.143074952495738,
+          "mean": 4.143074952495738,
+          "median": 4.143074952495738,
+          "min": 4.143074952495738,
+          "p10": 4.143074952495738,
+          "p90": 4.143074952495738
+        },
+        "high_rg": {
+          "count": 1,
+          "max": -2.9990883161608224,
+          "mean": -2.9990883161608224,
+          "median": -2.9990883161608224,
+          "min": -2.9990883161608224,
+          "p10": -2.9990883161608224,
+          "p90": -2.9990883161608224
+        },
+        "mean_b": {
+          "count": 1,
+          "max": 160.10673689727463,
+          "mean": 160.10673689727463,
+          "median": 160.10673689727463,
+          "min": 160.10673689727463,
+          "p10": 160.10673689727463,
+          "p90": 160.10673689727463
+        },
+        "mean_g": {
+          "count": 1,
+          "max": 157.1563071278826,
+          "mean": 157.1563071278826,
+          "median": 157.1563071278826,
+          "min": 157.1563071278826,
+          "p10": 157.1563071278826,
+          "p90": 157.1563071278826
+        },
+        "mean_r": {
+          "count": 1,
+          "max": 163.18902306079661,
+          "mean": 163.18902306079661,
+          "median": 163.18902306079661,
+          "min": 163.18902306079661,
+          "p10": 163.18902306079661,
+          "p90": 163.18902306079661
+        },
+        "mid_chroma": {
+          "count": 1,
+          "max": 11.818262351301577,
+          "mean": 11.818262351301577,
+          "median": 11.818262351301577,
+          "min": 11.818262351301577,
+          "p10": 11.818262351301577,
+          "p90": 11.818262351301577
+        },
+        "mid_gb": {
+          "count": 1,
+          "max": -7.841737390556247,
+          "mean": -7.841737390556247,
+          "median": -7.841737390556247,
+          "min": -7.841737390556247,
+          "p10": -7.841737390556247,
+          "p90": -7.841737390556247
+        },
+        "mid_rg": {
+          "count": 1,
+          "max": 5.221725279995837,
+          "mean": 5.221725279995837,
+          "median": 5.221725279995837,
+          "min": 5.221725279995837,
+          "p10": 5.221725279995837,
+          "p90": 5.221725279995837
+        },
+        "neutral_a_median": {
+          "count": 1,
+          "max": 1.7203291427720646,
+          "mean": 1.7203291427720646,
+          "median": 1.7203291427720646,
+          "min": 1.7203291427720646,
+          "p10": 1.7203291427720646,
+          "p90": 1.7203291427720646
+        },
+        "neutral_b_median": {
+          "count": 1,
+          "max": -0.7868119896570158,
+          "mean": -0.7868119896570158,
+          "median": -0.7868119896570158,
+          "min": -0.7868119896570158,
+          "p10": -0.7868119896570158,
+          "p90": -0.7868119896570158
+        },
+        "shadow_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "shadow_gb": {
+          "count": 1,
+          "max": -11.617166318245953,
+          "mean": -11.617166318245953,
+          "median": -11.617166318245953,
+          "min": -11.617166318245953,
+          "p10": -11.617166318245953,
+          "p90": -11.617166318245953
+        },
+        "shadow_rg": {
+          "count": 1,
+          "max": 19.28806278117789,
+          "mean": 19.28806278117789,
+          "median": 19.28806278117789,
+          "min": 19.28806278117789,
+          "p10": 19.28806278117789,
+          "p90": 19.28806278117789
+        }
+      },
+      "family": "saturation",
+      "imageCount": 12,
+      "name": "muted",
+      "representativeCandidates": [
+        {
+          "contrastP90P10": 0.7219788235294118,
+          "midChroma": 11.012238176155353,
+          "p50": 0.7888266666666666,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000023.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000023"
+        },
+        {
+          "contrastP90P10": 0.7084901960784313,
+          "midChroma": 11.811002973523587,
+          "p50": 0.7509388235294118,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000015.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000015"
+        },
+        {
+          "contrastP90P10": 0.6889074509803922,
+          "midChroma": 12.475997570461073,
+          "p50": 0.8204149019607843,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000019.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000019"
+        },
+        {
+          "contrastP90P10": 0.6681733333333333,
+          "midChroma": 10.219356360129499,
+          "p50": 0.761350588235294,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000018.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000018"
+        }
+      ],
+      "texture": {
+        "texture_grain_proxy_mean": {
+          "count": 1,
+          "max": 0.007265757720156135,
+          "mean": 0.007265757720156135,
+          "median": 0.007265757720156135,
+          "min": 0.007265757720156135,
+          "p10": 0.007265757720156135,
+          "p90": 0.007265757720156135
+        },
+        "texture_grain_proxy_p90": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_luma_gradient_mean": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_sharpness_p95": {
+          "count": 1,
+          "max": 0.17858176470588252,
+          "mean": 0.17858176470588252,
+          "median": 0.17858176470588252,
+          "min": 0.17858176470588252,
+          "p10": 0.17858176470588252,
+          "p90": 0.17858176470588252
+        },
+        "texture_sharpness_p99": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        }
+      },
+      "tone": {
+        "clip_black_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "clip_white_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "contrast_p90_p10": {
+          "count": 1,
+          "max": 0.6986988235294118,
+          "mean": 0.6986988235294118,
+          "median": 0.6986988235294118,
+          "min": 0.6986988235294118,
+          "p10": 0.6986988235294118,
+          "p90": 0.6986988235294118
+        },
+        "p10": {
+          "count": 1,
+          "max": 0.14302274509803922,
+          "mean": 0.14302274509803922,
+          "median": 0.14302274509803922,
+          "min": 0.14302274509803922,
+          "p10": 0.14302274509803922,
+          "p90": 0.14302274509803922
+        },
+        "p50": {
+          "count": 1,
+          "max": 0.7561447058823529,
+          "mean": 0.7561447058823529,
+          "median": 0.7561447058823529,
+          "min": 0.7561447058823529,
+          "p10": 0.7561447058823529,
+          "p90": 0.7561447058823529
+        },
+        "p90": {
+          "count": 1,
+          "max": 0.8533886274509803,
+          "mean": 0.8533886274509803,
+          "median": 0.8533886274509803,
+          "min": 0.8533886274509803,
+          "p10": 0.8533886274509803,
+          "p90": 0.8533886274509803
+        }
+      }
+    },
+    {
+      "color": {
+        "high_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "high_gb": {
+          "count": 1,
+          "max": 2.740280132672126,
+          "mean": 2.740280132672126,
+          "median": 2.740280132672126,
+          "min": 2.740280132672126,
+          "p10": 2.740280132672126,
+          "p90": 2.740280132672126
+        },
+        "high_rg": {
+          "count": 1,
+          "max": -1.8449948388369108,
+          "mean": -1.8449948388369108,
+          "median": -1.8449948388369108,
+          "min": -1.8449948388369108,
+          "p10": -1.8449948388369108,
+          "p90": -1.8449948388369108
+        },
+        "mean_b": {
+          "count": 1,
+          "max": 163.2789858490566,
+          "mean": 163.2789858490566,
+          "median": 163.2789858490566,
+          "min": 163.2789858490566,
+          "p10": 163.2789858490566,
+          "p90": 163.2789858490566
+        },
+        "mean_g": {
+          "count": 1,
+          "max": 161.31697012578616,
+          "mean": 161.31697012578616,
+          "median": 161.31697012578616,
+          "min": 161.31697012578616,
+          "p10": 161.31697012578616,
+          "p90": 161.31697012578616
+        },
+        "mean_r": {
+          "count": 1,
+          "max": 165.19088417190778,
+          "mean": 165.19088417190778,
+          "median": 165.19088417190778,
+          "min": 165.19088417190778,
+          "p10": 165.19088417190778,
+          "p90": 165.19088417190778
+        },
+        "mid_chroma": {
+          "count": 1,
+          "max": 15.852536984968033,
+          "mean": 15.852536984968033,
+          "median": 15.852536984968033,
+          "min": 15.852536984968033,
+          "p10": 15.852536984968033,
+          "p90": 15.852536984968033
+        },
+        "mid_gb": {
+          "count": 1,
+          "max": -11.221434327513663,
+          "mean": -11.221434327513663,
+          "median": -11.221434327513663,
+          "min": -11.221434327513663,
+          "p10": -11.221434327513663,
+          "p90": -11.221434327513663
+        },
+        "mid_rg": {
+          "count": 1,
+          "max": 9.216433057130303,
+          "mean": 9.216433057130303,
+          "median": 9.216433057130303,
+          "min": 9.216433057130303,
+          "p10": 9.216433057130303,
+          "p90": 9.216433057130303
+        },
+        "neutral_a_median": {
+          "count": 1,
+          "max": 1.6397197570435056,
+          "mean": 1.6397197570435056,
+          "median": 1.6397197570435056,
+          "min": 1.6397197570435056,
+          "p10": 1.6397197570435056,
+          "p90": 1.6397197570435056
+        },
+        "neutral_b_median": {
+          "count": 1,
+          "max": -1.4420040733398891,
+          "mean": -1.4420040733398891,
+          "median": -1.4420040733398891,
+          "min": -1.4420040733398891,
+          "p10": -1.4420040733398891,
+          "p90": -1.4420040733398891
+        },
+        "shadow_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "shadow_gb": {
+          "count": 1,
+          "max": -9.316565672531148,
+          "mean": -9.316565672531148,
+          "median": -9.316565672531148,
+          "min": -9.316565672531148,
+          "p10": -9.316565672531148,
+          "p90": -9.316565672531148
+        },
+        "shadow_rg": {
+          "count": 1,
+          "max": 18.73766790191246,
+          "mean": 18.73766790191246,
+          "median": 18.73766790191246,
+          "min": 18.73766790191246,
+          "p10": 18.73766790191246,
+          "p90": 18.73766790191246
+        }
+      },
+      "family": "saturation",
+      "imageCount": 12,
+      "name": "normal_saturation",
+      "representativeCandidates": [
+        {
+          "contrastP90P10": 0.7778020392156861,
+          "midChroma": 15.525299824197024,
+          "p50": 0.6882925490196078,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000016.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000016"
+        },
+        {
+          "contrastP90P10": 0.7825121568627451,
+          "midChroma": 16.179774145739042,
+          "p50": 0.7278611764705882,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000017.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000017"
+        },
+        {
+          "contrastP90P10": 0.8675709803921569,
+          "midChroma": 14.115396960115506,
+          "p50": 0.8775662745098038,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000027.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000027"
+        },
+        {
+          "contrastP90P10": 0.4245400784313724,
+          "midChroma": 18.07616956007558,
+          "p50": 0.7574447058823529,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000009.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000009"
+        }
+      ],
+      "texture": {
+        "texture_grain_proxy_mean": {
+          "count": 1,
+          "max": 0.006893890751795752,
+          "mean": 0.006893890751795752,
+          "median": 0.006893890751795752,
+          "min": 0.006893890751795752,
+          "p10": 0.006893890751795752,
+          "p90": 0.006893890751795752
+        },
+        "texture_grain_proxy_p90": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_luma_gradient_mean": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_sharpness_p95": {
+          "count": 1,
+          "max": 0.21262903921568665,
+          "mean": 0.21262903921568665,
+          "median": 0.21262903921568665,
+          "min": 0.21262903921568665,
+          "p10": 0.21262903921568665,
+          "p90": 0.21262903921568665
+        },
+        "texture_sharpness_p99": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        }
+      },
+      "tone": {
+        "clip_black_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "clip_white_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "contrast_p90_p10": {
+          "count": 1,
+          "max": 0.7151798431372548,
+          "mean": 0.7151798431372548,
+          "median": 0.7151798431372548,
+          "min": 0.7151798431372548,
+          "p10": 0.7151798431372548,
+          "p90": 0.7151798431372548
+        },
+        "p10": {
+          "count": 1,
+          "max": 0.15780156862745098,
+          "mean": 0.15780156862745098,
+          "median": 0.15780156862745098,
+          "min": 0.15780156862745098,
+          "p10": 0.15780156862745098,
+          "p90": 0.15780156862745098
+        },
+        "p50": {
+          "count": 1,
+          "max": 0.7589831372549019,
+          "mean": 0.7589831372549019,
+          "median": 0.7589831372549019,
+          "min": 0.7589831372549019,
+          "p10": 0.7589831372549019,
+          "p90": 0.7589831372549019
+        },
+        "p90": {
+          "count": 1,
+          "max": 0.8858701960784313,
+          "mean": 0.8858701960784313,
+          "median": 0.8858701960784313,
+          "min": 0.8858701960784313,
+          "p10": 0.8858701960784313,
+          "p90": 0.8858701960784313
+        }
+      }
+    },
+    {
+      "color": {
+        "high_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "high_gb": {
+          "count": 1,
+          "max": 1.0009072464112876,
+          "mean": 1.0009072464112876,
+          "median": 1.0009072464112876,
+          "min": 1.0009072464112876,
+          "p10": 1.0009072464112876,
+          "p90": 1.0009072464112876
+        },
+        "high_rg": {
+          "count": 1,
+          "max": -5.945389013338286,
+          "mean": -5.945389013338286,
+          "median": -5.945389013338286,
+          "min": -5.945389013338286,
+          "p10": -5.945389013338286,
+          "p90": -5.945389013338286
+        },
+        "mean_b": {
+          "count": 1,
+          "max": 150.8097746331237,
+          "mean": 150.8097746331237,
+          "median": 150.8097746331237,
+          "min": 150.8097746331237,
+          "p10": 150.8097746331237,
+          "p90": 150.8097746331237
+        },
+        "mean_g": {
+          "count": 1,
+          "max": 152.02733962264148,
+          "mean": 152.02733962264148,
+          "median": 152.02733962264148,
+          "min": 152.02733962264148,
+          "p10": 152.02733962264148,
+          "p90": 152.02733962264148
+        },
+        "mean_r": {
+          "count": 1,
+          "max": 157.19195492662473,
+          "mean": 157.19195492662473,
+          "median": 157.19195492662473,
+          "min": 157.19195492662473,
+          "p10": 157.19195492662473,
+          "p90": 157.19195492662473
+        },
+        "mid_chroma": {
+          "count": 1,
+          "max": 25.276619685704446,
+          "mean": 25.276619685704446,
+          "median": 25.276619685704446,
+          "min": 25.276619685704446,
+          "p10": 25.276619685704446,
+          "p90": 25.276619685704446
+        },
+        "mid_gb": {
+          "count": 1,
+          "max": 2.393559225102649,
+          "mean": 2.393559225102649,
+          "median": 2.393559225102649,
+          "min": 2.393559225102649,
+          "p10": 2.393559225102649,
+          "p90": 2.393559225102649
+        },
+        "mid_rg": {
+          "count": 1,
+          "max": 17.820225097139783,
+          "mean": 17.820225097139783,
+          "median": 17.820225097139783,
+          "min": 17.820225097139783,
+          "p10": 17.820225097139783,
+          "p90": 17.820225097139783
+        },
+        "neutral_a_median": {
+          "count": 1,
+          "max": 1.0867705426410024,
+          "mean": 1.0867705426410024,
+          "median": 1.0867705426410024,
+          "min": 1.0867705426410024,
+          "p10": 1.0867705426410024,
+          "p90": 1.0867705426410024
+        },
+        "neutral_b_median": {
+          "count": 1,
+          "max": -0.7860914090137283,
+          "mean": -0.7860914090137283,
+          "median": -0.7860914090137283,
+          "min": -0.7860914090137283,
+          "p10": -0.7860914090137283,
+          "p90": -0.7860914090137283
+        },
+        "shadow_chroma": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "shadow_gb": {
+          "count": 1,
+          "max": -1.6977043552890052,
+          "mean": -1.6977043552890052,
+          "median": -1.6977043552890052,
+          "min": -1.6977043552890052,
+          "p10": -1.6977043552890052,
+          "p90": -1.6977043552890052
+        },
+        "shadow_rg": {
+          "count": 1,
+          "max": 17.37195645660183,
+          "mean": 17.37195645660183,
+          "median": 17.37195645660183,
+          "min": 17.37195645660183,
+          "p10": 17.37195645660183,
+          "p90": 17.37195645660183
+        }
+      },
+      "family": "saturation",
+      "imageCount": 13,
+      "name": "vivid",
+      "representativeCandidates": [
+        {
+          "contrastP90P10": 0.820307450980392,
+          "midChroma": 25.276619685704446,
+          "p50": 0.8154345098039216,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000037.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000037"
+        },
+        {
+          "contrastP90P10": 0.7959443137254901,
+          "midChroma": 23.614998447296877,
+          "p50": 0.6268258823529411,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000030.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000030"
+        },
+        {
+          "contrastP90P10": 0.7818894117647059,
+          "midChroma": 21.987469831627536,
+          "p50": 0.6279294117647058,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000031.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000031"
+        },
+        {
+          "contrastP90P10": 0.4119231372549019,
+          "midChroma": 28.874331512650727,
+          "p50": 0.6743458823529412,
+          "realFile": "LUT_target/REAL/NORITSU/color nega/Kodak Pro image 100/000003.jpg",
+          "stem": "NORITSU/color nega/Kodak Pro image 100/000003"
+        }
+      ],
+      "texture": {
+        "texture_grain_proxy_mean": {
+          "count": 1,
+          "max": 0.007460647682516882,
+          "mean": 0.007460647682516882,
+          "median": 0.007460647682516882,
+          "min": 0.007460647682516882,
+          "p10": 0.007460647682516882,
+          "p90": 0.007460647682516882
+        },
+        "texture_grain_proxy_p90": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_luma_gradient_mean": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "texture_sharpness_p95": {
+          "count": 1,
+          "max": 0.22806921568627458,
+          "mean": 0.22806921568627458,
+          "median": 0.22806921568627458,
+          "min": 0.22806921568627458,
+          "p10": 0.22806921568627458,
+          "p90": 0.22806921568627458
+        },
+        "texture_sharpness_p99": {
+          "count": 0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        }
+      },
+      "tone": {
+        "clip_black_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "clip_white_pct": {
+          "count": 1,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "min": 0.0,
+          "p10": 0.0,
+          "p90": 0.0
+        },
+        "contrast_p90_p10": {
+          "count": 1,
+          "max": 0.7818894117647059,
+          "mean": 0.7818894117647059,
+          "median": 0.7818894117647059,
+          "min": 0.7818894117647059,
+          "p10": 0.7818894117647059,
+          "p90": 0.7818894117647059
+        },
+        "p10": {
+          "count": 1,
+          "max": 0.0688078431372549,
+          "mean": 0.0688078431372549,
+          "median": 0.0688078431372549,
+          "min": 0.0688078431372549,
+          "p10": 0.0688078431372549,
+          "p90": 0.0688078431372549
+        },
+        "p50": {
+          "count": 1,
+          "max": 0.7127521568627451,
+          "mean": 0.7127521568627451,
+          "median": 0.7127521568627451,
+          "min": 0.7127521568627451,
+          "p10": 0.7127521568627451,
+          "p90": 0.7127521568627451
+        },
+        "p90": {
+          "count": 1,
+          "max": 0.864752156862745,
+          "mean": 0.864752156862745,
+          "median": 0.864752156862745,
+          "min": 0.864752156862745,
+          "p10": 0.864752156862745,
+          "p90": 0.864752156862745
+        }
+      }
+    }
+  ],
+  "schemaVersion": 1,
+  "singleRollLimited": true,
+  "sourceProfiles": [
+    "SOURCE/NORITSU/color nega/Kodak Pro image 100/profile.json"
+  ],
+  "texture": {
+    "texture_grain_proxy_mean": {
+      "count": 37,
+      "max": 0.009924910786567355,
+      "mean": 0.006904915119446308,
+      "median": 0.007100392189894478,
+      "min": 0.0032795382342759626,
+      "p10": 0.004336813785089148,
+      "p90": 0.009025371369338847
+    },
+    "texture_grain_proxy_p90": {
+      "count": 37,
+      "max": 0.020377045751633883,
+      "mean": 0.014013599717364423,
+      "median": 0.014352374727668926,
+      "min": 0.0065370283224401365,
+      "p10": 0.00874428235294121,
+      "p90": 0.018487222657952076
+    },
+    "texture_luma_gradient_mean": {
+      "count": 37,
+      "max": 0.17068487517621425,
+      "mean": 0.06457818677896879,
+      "median": 0.058750152633602455,
+      "min": 0.029431432928727047,
+      "p10": 0.031689039537906666,
+      "p90": 0.11108894021347096
+    },
+    "texture_sharpness_p95": {
+      "count": 37,
+      "max": 0.7145532549019609,
+      "mean": 0.247488153683095,
+      "median": 0.21120125490196118,
+      "min": 0.06498823529411779,
+      "p10": 0.06708470588235294,
+      "p90": 0.5821703372549023
+    },
+    "texture_sharpness_p99": {
+      "count": 37,
+      "max": 1.1254792784313734,
+      "mean": 0.5199759970323273,
+      "median": 0.49925566274509836,
+      "min": 0.08265647058823523,
+      "p10": 0.10436396549019628,
+      "p90": 0.9598948831372587
+    }
+  },
+  "tone": {
+    "clip_black_pct": {
+      "count": 37,
+      "max": 0.00010482180293501048,
+      "mean": 2.833021700946229e-06,
+      "median": 0.0,
+      "min": 0.0,
+      "p10": 0.0,
+      "p90": 0.0
+    },
+    "clip_white_pct": {
+      "count": 37,
+      "max": 0.0004192872117400419,
+      "mean": 2.8330217009462295e-05,
+      "median": 0.0,
+      "min": 0.0,
+      "p10": 0.0,
+      "p90": 0.00010482180293501048
+    },
+    "contrast_p90_p10": {
+      "count": 37,
+      "max": 0.9412627450980392,
+      "mean": 0.6763246507684155,
+      "median": 0.7084901960784313,
+      "min": 0.3070831372549021,
+      "p10": 0.41949330196078427,
+      "p90": 0.8952216470588236
+    },
+    "p10": {
+      "count": 37,
+      "max": 0.5108462745098039,
+      "mean": 0.18777689878113407,
+      "median": 0.12199686274509804,
+      "min": 0.04084235294117647,
+      "p10": 0.04983764705882353,
+      "p90": 0.40552596078431363
+    },
+    "p50": {
+      "count": 37,
+      "max": 0.9496109803921569,
+      "mean": 0.739894880763116,
+      "median": 0.7509388235294118,
+      "min": 0.26801019607843135,
+      "p10": 0.6131669019607843,
+      "p90": 0.882601725490196
+    },
+    "p90": {
+      "count": 37,
+      "max": 0.9823835294117647,
+      "mean": 0.8641015495495495,
+      "median": 0.8677725490196079,
+      "min": 0.6522713725490196,
+      "p10": 0.7696870588235294,
+      "p90": 0.9411774117647058
+    }
+  },
+  "validationStatus": "realOnly"
+}

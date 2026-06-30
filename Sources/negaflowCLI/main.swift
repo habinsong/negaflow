@@ -27,6 +27,7 @@ struct CLI {
             case "capabilities": try await capabilities()
             case "scan":         try await scan()
             case "develop":      try await develop()
+            case "list-scanner-profiles": listScannerProfiles()
             case "report":       try await report()
             case "selftest":     try await selftest()
             default:             printHelp()
@@ -129,25 +130,46 @@ struct CLI {
 
     func develop() async throws {
         guard args.count > 3 else {
-            fail("usage: negaflow develop <in> <out> [--look name] [--film-type T] [--positive] [--raw]")
+            fail("usage: negaflow develop <in> <out> [--look name] [--scanner-profile id] [--film-type T] [--positive] [--raw]")
         }
         let inURL = URL(fileURLWithPath: args[2])
         let outURL = URL(fileURLWithPath: args[3])
         var lookName = "neutral"
+        var scannerProfileID: String?
         var filmType: FilmType? = nil
         var scannerRaw = false
         var ice: Double = 0
+        var developTarget: DevelopTarget = .main
+        var iceMaskURL: URL?
+        var iceOverlayURL: URL?
         var i = 4
         while i < args.count {
             if args[i] == "--look", i + 1 < args.count { lookName = args[i + 1]; i += 2 }
+            else if args[i] == "--scanner-profile", i + 1 < args.count {
+                scannerProfileID = args[i + 1]; i += 2
+            }
             else if args[i] == "--film-type", i + 1 < args.count {
                 filmType = FilmType(rawValue: args[i + 1]); i += 2
             }
             else if args[i] == "--positive" { filmType = .colorPositive; i += 1 }
             else if args[i] == "--bw-positive" { filmType = .bwPositive; i += 1 }
             else if args[i] == "--raw" { scannerRaw = true; i += 1 }
-            else if args[i] == "--ice", i + 1 < args.count { ice = Double(args[i + 1]) ?? 1.0; i += 2 }
-            else if args[i] == "--ice" { ice = 1.0; i += 1 }
+            else if args[i] == "--target", i + 1 < args.count {
+                developTarget = DevelopTarget(rawValue: args[i + 1]) ?? .main; i += 2
+            }
+            else if args[i] == "--ice" {
+                if i + 1 < args.count, let value = Double(args[i + 1]) {
+                    ice = value; i += 2
+                } else {
+                    ice = 1.0; i += 1
+                }
+            }
+            else if args[i] == "--ice-mask", i + 1 < args.count {
+                iceMaskURL = URL(fileURLWithPath: args[i + 1]); i += 2
+            }
+            else if args[i] == "--ice-overlay", i + 1 < args.count {
+                iceOverlayURL = URL(fileURLWithPath: args[i + 1]); i += 2
+            }
             else { i += 1 }
         }
         // --film-type이 없으면 입력 포맷/파일명에서 힌트를 얻거나 네거티브 기본.
@@ -156,8 +178,14 @@ struct CLI {
 
         let engine = ChromabaseEngine()
         let preset = lookName == "none" ? nil : PresetRegistry.load(named: lookName)
+        let scannerProfile = scannerProfileID.flatMap { ScannerProfileRegistry.load(named: $0) }
+        if scannerProfileID != nil && scannerProfile == nil {
+            fail("unknown scanner profile: \(scannerProfileID ?? "")")
+        }
         var params = DevelopParameters()
         params.filmType = resolvedFilmType
+        params.developTarget = developTarget
+        params.scannerProfileID = scannerProfile?.id
         i = 4
         while i < args.count {
             let key = args[i]
@@ -174,11 +202,19 @@ struct CLI {
             case "--whites": params.whites = value; i += 2
             case "--blacks": params.blacks = value; i += 2
             case "--density": params.density = value; i += 2
+            case "--noise-reduction", "--nr": params.noiseReduction = value; i += 2
+            case "--scanner-profile": i += 2
+            case "--target": i += 2
+            case "--ice-mask", "--ice-overlay": i += 2
+            case "--ice":
+                i += Double(args[i + 1]) == nil ? 1 : 2
             default: i += 1
             }
         }
         if let p = preset { params = DevelopParameters(preset: p, overrides: params) }
         params.filmType = resolvedFilmType   // preset 머지 후에도 filmType 보존
+        params.developTarget = developTarget
+        params.scannerProfileID = scannerProfile?.id
         if ice > 0 { params.defectRemoval = min(max(ice, 0), 1) }
 
         // 네거티브일 때만 필름 베이스 추정. 포지티브/슬라이드는 불필요.
@@ -194,7 +230,8 @@ struct CLI {
         if let b = base {
             print("[develop] film base (auto): \(String(format: "%.3f %.3f %.3f", b.rgb.x, b.rgb.y, b.rgb.z)) [\(b.source.rawValue)]")
         }
-        print("[develop] input=\(kind) filmType=\(resolvedFilmType.rawValue) look=\(lookName) → \(outURL.lastPathComponent)")
+        let profileLabel = scannerProfile?.id ?? "none"
+        print("[develop] input=\(kind) target=\(developTarget.rawValue) filmType=\(resolvedFilmType.rawValue) look=\(lookName) scannerProfile=\(profileLabel) → \(outURL.lastPathComponent)")
         let format: ExportFormat
         switch outURL.pathExtension.lowercased() {
         case "tif", "tiff":
@@ -210,6 +247,64 @@ struct CLI {
             try engine.developFile(input: inURL, output: outURL, format: format, base: base, params: params)
         }
         print("[develop] → \(outURL.path)")
+        if iceMaskURL != nil || iceOverlayURL != nil {
+            try writeICEDebugOutputs(
+                input: inURL,
+                scannerRaw: scannerRaw,
+                engine: engine,
+                base: base,
+                params: params,
+                maskURL: iceMaskURL,
+                overlayURL: iceOverlayURL
+            )
+        }
+    }
+
+    func listScannerProfiles() {
+        let profiles = ScannerProfileRegistry.loadAll()
+        if profiles.isEmpty {
+            print("No scanner profiles bundled.")
+            return
+        }
+        for profile in profiles {
+            let limited = profile.singleRollLimited ? " single-roll-limited" : ""
+            print("\(profile.id)\t\(profile.scanner)\t\(profile.kind)\t\(profile.filmKey)\t\(profile.validationStatus.rawValue)\(limited)")
+        }
+    }
+
+    func writeICEDebugOutputs(input: URL,
+                              scannerRaw: Bool,
+                              engine: ChromabaseEngine,
+                              base: FilmBase?,
+                              params: DevelopParameters,
+                              maskURL: URL?,
+                              overlayURL: URL?) throws {
+        let source = scannerRaw ? engine.loadScannerImage(input) : engine.loadImage(input)
+        guard let source else { throw ChromabaseError.loadFailed(input.path) }
+        var debugParams = params
+        debugParams.defectRemoval = 0
+        let developed = scannerRaw
+            ? engine.developScanner(image: source, base: base, params: debugParams)
+            : engine.develop(image: source, base: base, params: debugParams)
+        let iceParams = SoftwareICEParameters(
+            strength: max(params.defectRemoval, 1),
+            dustSensitivity: 0.65,
+            scratchSensitivity: 0.85,
+            protectDetail: 0.85
+        )
+        let mask = SoftwareICE.detectMask(in: developed, parameters: iceParams)
+        let context = CIContext(options: [
+            .workingColorSpace: CGColorSpace(name: CGColorSpace.linearSRGB) as Any,
+        ])
+        if let maskURL {
+            try ExportEngine.write(mask, to: maskURL, format: .png, using: context)
+            print("[develop] ice mask → \(maskURL.path)")
+        }
+        if let overlayURL {
+            let overlay = SoftwareICE.overlayMask(on: developed, mask: mask, opacity: 0.72)
+            try ExportEngine.write(overlay, to: overlayURL, format: .png, using: context)
+            print("[develop] ice overlay → \(overlayURL.path)")
+        }
     }
 
     /// 파일명/포맷에서 필름 종류 추정. "_positive"/"slide"가 있으면 포지티브.
@@ -319,8 +414,11 @@ struct CLI {
           scan [--dpi 3600] [--preview] [--positive] [--hdr]
                                          run a scan
           develop <in> <out> [opts]      develop an image → JPEG/TIFF
+          list-scanner-profiles          list bundled NORITSU/SP-3000 profiles
             --look <name>                none|neutral|rich-neutral|soft-print|clear-chrome|warm-lab|deep-slide
+            --scanner-profile <id>       apply bundled scanner/film profile before look controls
             --film-type <T>              colorNegative|colorPositive|bwNegative|bwPositive
+            --target <main>              develop target (default main)
             --positive                   shorthand for --film-type colorPositive
             --bw-positive                shorthand for --film-type bwPositive
             --exposure <stops>           Basic Tone exposure
@@ -331,6 +429,8 @@ struct CLI {
             --blacks <v>                 Basic Tone blacks (-1...1)
             --density <v>                Basic Tone density (-1...1)
             --ice [strength]             software dust/scratch removal (0...1, default 1)
+            --ice-mask <png>             write software ICE defect mask
+            --ice-overlay <png>          write red software ICE mask overlay
             (input formats: tiff/jpeg/png/dng/raw/cr2/nef/...)
           report                         export scanner report JSON
           selftest                       synthetic negative → develop (no hardware)
