@@ -21,7 +21,6 @@ struct DevelopWorkflowInspector: View {
     @Binding var regionICEMode: Bool
     @State private var expandedPanel: InspectorPanel? = .tone
     @State private var autoMatchScannerProfile = false
-    @State private var autoSyncBatchWB = false
     @FocusState private var focusedSlider: InspectorSliderFocus?
 
     var body: some View {
@@ -41,10 +40,7 @@ struct DevelopWorkflowInspector: View {
                 scannerProfileID: scannerProfileIDBinding,
                 scannerProfiles: matchingScannerProfiles,
                 autoMatchScannerProfile: $autoMatchScannerProfile,
-                autoMatchAction: applyAutoMatchedScannerProfile,
-                canSyncBatchWB: model.frames.count > 1,
-                autoSyncBatchWB: $autoSyncBatchWB,
-                syncBatchAction: syncBatchWBFromCurrent
+                autoMatchAction: applyAutoMatchedScannerProfile
             )
             .disabled(model.isScanning)
 
@@ -62,6 +58,24 @@ struct DevelopWorkflowInspector: View {
             .buttonStyle(.bordered)
             .disabled(model.isScanning)
             .help("Geometry(회전/크롭)를 제외한 모든 보정 값을 초기화합니다")
+
+            // 자동 보정 — 라이트룸 Auto Tone(⌘U) / Auto White Balance(⇧⌘U). 현상 결과를 분석해
+            // 톤/색을 한 번에 맞춘 뒤, 아래 슬라이더로 미세조정한다(델타 누적 → 다시 눌러도 수렴).
+            HStack(spacing: 8) {
+                Button { model.autoTone(frame) } label: {
+                    Label("Auto Tone", systemImage: "wand.and.stars").frame(maxWidth: .infinity)
+                }
+                .keyboardShortcut("u", modifiers: .command)
+                .help("자동 톤 ⌘U — 히스토그램으로 노출·대비·하이라이트·섀도우·화이트·블랙·바이브런스 보정")
+                Button { model.autoWhiteBalance(frame) } label: {
+                    Label("Auto WB", systemImage: "drop.halffull").frame(maxWidth: .infinity)
+                }
+                .keyboardShortcut("u", modifiers: [.command, .shift])
+                .help("자동 화이트 밸런스 ⇧⌘U — gray-world 로 Warmth·Tint 무채색 보정")
+            }
+            .controlSize(.large)
+            .buttonStyle(.bordered)
+            .disabled(model.isScanning || frame.developedImage == nil)
 
             WorkflowSection(
                 title: "Basic Tone",
@@ -636,14 +650,7 @@ struct DevelopWorkflowInspector: View {
         )
     }
 
-    func syncBatchWBFromCurrent() {
-        model.syncBatchWB(from: frame)
-    }
-
-    func syncBatchWBIfNeeded() {
-        guard autoSyncBatchWB else { return }
-        syncBatchWBFromCurrent()
-    }
+    func syncBatchWBIfNeeded() { }   // Auto Sync WB(배치 WB 동기화) 제거됨 — 기존 호출부 호환용 no-op
 
     func scheduleRedevelop(_ frame: ScanFrame) {
         // 레이트 throttle은 모델이 담당한다(리딩+트레일링 ~22fps). 매 틱 동기 리비전 증가로 루프를

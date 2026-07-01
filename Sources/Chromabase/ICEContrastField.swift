@@ -12,8 +12,13 @@ struct ICEContrastField {
     /// 스크래치 ridge 프로파일용 감마 채널 최대값. 한 염료층만 파인(한 채널만 밝은)
     /// 스크래치도 luma처럼 희석되지 않고 그대로 드러난다(채널 OR).
     let bright: [Float]
-    /// 먼지용 양극성 top-hat 크기(채널 OR, ≥0). 감마 대비 단위.
+    /// 먼지용 양극성 top-hat 크기(채널 OR, ≥0). 감마 대비 단위. 멀티스케일(4/8/12)이라 뚱뚱한
+    /// 먼지까지 잡지만, 밀집 곡선 사이의 "골"도 채워 가는 곡선을 큰 blob 으로 오인할 수 있다.
     let dustMag: [Float]
+    /// 가는 구조 전용 top-hat(작은 SE radius 4 only). 곡선 간격(>SE)보다 작아 곡선 사이를 채우지
+    /// 않으므로, 꼬불꼬불 머리카락·가는 스크래치의 선 자체만 잡는다 — dustMag 의 곡선-사이-채움 문제를
+    /// 피해 가는 결함을 "가는 선"으로 보존한다.
+    let thinMag: [Float]
     /// 국소 텍스처(그레인) 대비 수준. 임계를 국소 통계로 끌어올린다(a contrario 정신).
     let noiseScale: [Float]
     /// 처리 가능 영역. 클리핑된 흰 명부/순흑 경계의 "넓은 평탄" 영역만 제외.
@@ -54,6 +59,7 @@ struct ICEContrastField {
         // 먼지를. 큰 SE일수록 흐릿하고 넓은(저대비) 먼지의 약한 신호를 더 많이 모은다. 어느
         // 스케일에서도 SE보다 큰 정상 면은 top-hat≈0이라 보존된다.
         var mag = [Float](repeating: 0, count: n)
+        var thin = [Float](repeating: 0, count: n)   // radius 4 전용(가는 구조)
         for radius in [4, 8, 12] {
             for c in 0..<3 {
                 let opened = ICEMorphology.opening(ch[c], width: width, height: height, radius: radius)
@@ -61,10 +67,12 @@ struct ICEContrastField {
                 for i in 0..<n {
                     let d = max(ch[c][i] - opened[i], closed[i] - ch[c][i])
                     if d > mag[i] { mag[i] = max(0, d) }
+                    if radius == 4, d > thin[i] { thin[i] = max(0, d) }
                 }
             }
         }
         self.dustMag = mag
+        self.thinMag = thin
         self.noiseScale = ICEMorphology.boxMean(mag, width: width, height: height, radius: 12)
     }
 }

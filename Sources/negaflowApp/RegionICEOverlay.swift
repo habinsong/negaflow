@@ -22,6 +22,10 @@ struct RegionICEOverlay: View {
             gestureLayer
             controlBar
         }
+        .onChange(of: frame.isRemovingDefects) { _, removing in
+            // 제거(통합 빌드) 종료 → Region 세션을 닫는다(버튼 프로그래스바가 사라지고 오버레이 종료).
+            if !removing, frame.iceIsRemoving { model.clearRegionICESession(frame) }
+        }
     }
 
     // MARK: 미리보기(빨강 컴포넌트)
@@ -97,7 +101,7 @@ struct RegionICEOverlay: View {
                 Divider().frame(height: 16)
                 HStack(spacing: 6) {
                     Image(systemName: "slider.horizontal.3").font(.caption2).foregroundStyle(.secondary)
-                    Slider(value: $frame.iceSensitivity, in: 0.7...3.0,
+                    Slider(value: $frame.iceSensitivity, in: 0.7...6.0,
                            onEditingChanged: { editing in if !editing { model.redetectRegion(frame) } })
                         .frame(width: 110)
                 }
@@ -105,13 +109,26 @@ struct RegionICEOverlay: View {
                 Button(action: { model.cancelRegionICE(frame) }) { Image(systemName: "xmark") }
                     .help("취소").disabled(frame.iceIsRemoving)
                 Button(action: { model.commitRegionICE(frame) }) {
-                    if frame.iceIsRemoving { ProgressView().controlSize(.small) }
-                    else { Label("제거", systemImage: "wand.and.stars") }
+                    if frame.iceIsRemoving {
+                        ProgressView().controlSize(.small).scaleEffect(0.7).frame(width: 16, height: 16)
+                    } else {
+                        Label("제거", systemImage: "wand.and.stars")
+                    }
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(frame.iceIsRemoving || !hasSelectable)
             } else {
                 Text("결함 영역을 드래그하세요").font(.caption).foregroundStyle(.secondary)
+                if frame.canUndoDefects {
+                    Divider().frame(height: 16)
+                    // 반자동 되돌리기. 통합 편집(defectEdits)이라 마지막 편집이 브러시든 반자동이든
+                    // 되돌린다 — 두 도구가 한 히스토리를 공유한다.
+                    Button(action: { model.undoDefects(frame) }) {
+                        Label("되돌리기", systemImage: "arrow.uturn.backward")
+                    }
+                    .help("마지막 결함 제거 취소(브러시·반자동 공통)")
+                    .disabled(frame.isRemovingDefects)
+                }
             }
         }
         .padding(.horizontal, 12).padding(.vertical, 8)

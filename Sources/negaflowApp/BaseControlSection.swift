@@ -11,9 +11,6 @@ struct BaseControlSection: View {
     let scannerProfiles: [ScannerProfile]
     let autoMatchScannerProfile: Binding<Bool>
     let autoMatchAction: () -> Void
-    let canSyncBatchWB: Bool
-    let autoSyncBatchWB: Binding<Bool>
-    let syncBatchAction: () -> Void
 
     private let baseModes: [DevelopParameters.BaseMode] = [.auto, .preset, .manual]
 
@@ -72,28 +69,6 @@ struct BaseControlSection: View {
                 InspectorSlider("Base G", value: manualBaseBinding(1), range: 0...1)
                 InspectorSlider("Base B", value: manualBaseBinding(2), range: 0...1)
             }
-
-            InspectorRow("Auto Sync WB") {
-                Toggle("", isOn: autoSyncBatchWB)
-                    .labelsHidden()
-                    .toggleStyle(.switch)
-                    .disabled(!canSyncBatchWB)
-                    .onChange(of: autoSyncBatchWB.wrappedValue) { _, enabled in
-                        // 켜는 즉시 현재 프레임의 WB를 나머지 프레임에 1회 반영한다. 이후 Warmth/Tint/
-                        // Base 편집은 syncBatchWBIfNeeded()가 이어서 동기화한다.
-                        if enabled { syncBatchAction() }
-                    }
-            }
-
-            Button {
-                syncBatchAction()
-            } label: {
-                Text("Sync WB")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.large)
-            .disabled(!canSyncBatchWB)
         }
     }
 }

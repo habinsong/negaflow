@@ -68,6 +68,10 @@ public struct DevelopParameters: Codable, Sendable, Equatable {
     public var colorGrading = ColorGrading()     // 색보정 3영역 휠
     public var calibration = CalibrationAdjust() // Calibration primary Hue/Sat
 
+    // 슬라이드 필름 특성 룩(좌측 Film 탭). 현상 원본(플랫) 위에 데이터시트 유도 룩을 얹는 특수 기능.
+    public var filmEmulation: FilmEmulation = .none
+    public var filmEmulationIntensity: Double = 1.0   // 0...1
+
     // Texture
     public var grain: Double = 0.0           // 0...1
     public var sharpness: Double = 0.0       // 0...1
@@ -94,6 +98,7 @@ public struct DevelopParameters: Codable, Sendable, Equatable {
         case warmth, tint, colorDepth, vibrance, saturation
         case redPrimary, greenPrimary, bluePrimary
         case pointCurves, colorMixer, colorGrading, calibration
+        case filmEmulation, filmEmulationIntensity
         case grain, sharpness, halation, clarity, vignette, imageTransform
         case defectRemoval
         case noiseReduction
@@ -130,6 +135,8 @@ public struct DevelopParameters: Codable, Sendable, Equatable {
         colorMixer = try c.decodeIfPresent(ColorMixer.self, forKey: .colorMixer) ?? ColorMixer()
         colorGrading = try c.decodeIfPresent(ColorGrading.self, forKey: .colorGrading) ?? ColorGrading()
         calibration = try c.decodeIfPresent(CalibrationAdjust.self, forKey: .calibration) ?? CalibrationAdjust()
+        filmEmulation = try c.decodeIfPresent(FilmEmulation.self, forKey: .filmEmulation) ?? .none
+        filmEmulationIntensity = try c.decodeIfPresent(Double.self, forKey: .filmEmulationIntensity) ?? 1.0
         grain = try c.decodeIfPresent(Double.self, forKey: .grain) ?? 0
         sharpness = try c.decodeIfPresent(Double.self, forKey: .sharpness) ?? 0
         halation = try c.decodeIfPresent(Double.self, forKey: .halation) ?? 0
@@ -168,6 +175,8 @@ public struct DevelopParameters: Codable, Sendable, Equatable {
         colorMixer = overrides.colorMixer
         colorGrading = overrides.colorGrading
         calibration = overrides.calibration
+        filmEmulation = overrides.filmEmulation
+        filmEmulationIntensity = overrides.filmEmulationIntensity
         grain      = max(grain, overrides.grain)
         sharpness  = max(sharpness, overrides.sharpness)
         halation   = max(halation, overrides.halation)
@@ -415,6 +424,15 @@ public final class ChromabaseEngine: @unchecked Sendable {
         img = ColorMixerStage.apply(to: img, mixer: params.colorMixer)
         img = ColorGradingStage.apply(to: img, grading: params.colorGrading)
         img = CalibrationStage.apply(to: img, calibration: params.calibration)
+
+        // 8.4.y 슬라이드 필름 특성 룩(좌측 Film 탭). 모든 사용자 색/톤 보정 뒤, 텍스처/그레인 전에
+        //   얹는 창의적 최종 룩(데이터시트 유도 E100 / Velvia 50). 채도 부스트가 만든 out-of-gamut 는
+        //   아래 최종 gamutSoftClip 이 hue 보존하며 정리한다.
+        img = FilmEmulationStage.apply(
+            to: img,
+            emulation: params.filmEmulation,
+            intensity: params.filmEmulationIntensity
+        )
 
         // 8.5 소프트웨어 ICE — 먼지/스크래치 제거. positive 상태에서 적용(임계값 의미 안정).
         if params.defectRemoval > 1e-3 {

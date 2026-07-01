@@ -110,9 +110,20 @@ enum SoftwareICEDefectDetector {
         let rgba = renderRGBAf(source, width: w, height: h, context: context)
         let field = ICEContrastField(rgba: rgba, width: w, height: h)
         let dust = ICEDustDetector.candidates(field, sensitivity: tuning.dustSensitivity, aggressive: false)
-        let scratch = ICEScratchDetector.candidates(field, sensitivity: tuning.scratchSensitivity,
-                                                    protectDetail: tuning.protectDetail,
-                                                    preferredAngle: preferredAngle, aggressive: false)
+        // 스크래치·가는 구조를 히스테리시스(strong/weak)로 낸다. strong 은 기존 보수 임계, weak 는
+        // 절대 임계만 낮추고 SNR floor(그레인 안전선)는 유지 — buildLabeled 가 strong 코어를 포함한
+        // 컴포넌트만 채택하므로, 조각나거나 저대비로 끊긴 가늘고 긴 스크래치·불규칙 곡선을 잇되
+        // 그레인은 strong 코어가 없어 컴포넌트를 만들지 못한다(Canny 이중 임계 정신).
+        let (ridgeStrong, ridgeWeak) = ICEScratchDetector.candidatesLeveled(
+            field, sensitivity: tuning.scratchSensitivity, protectDetail: tuning.protectDetail,
+            preferredAngle: preferredAngle, aggressive: false)
+        // 가는 구조(꼬불꼬불 머리카락·가는 스크래치)를 thinMag(작은 SE)로 잡아 scratch 후보에 합친다.
+        // dustMag 멀티스케일은 밀집 곡선 사이를 채워 큰 blob 으로 오인하므로, 가는 결함은 thinMag 로
+        // 선 자체만 잡고 scratch 의 길이/aspect·가는곡선 게이트로 통과시킨다.
+        let (thinStrong, thinWeak) = ICEDustDetector.thinCandidatesLeveled(
+            field, sensitivity: tuning.scratchSensitivity, aggressive: false)
+        let scratchStrong = (0..<(w * h)).map { ridgeStrong[$0] || thinStrong[$0] }
+        let scratch = (0..<(w * h)).map { ridgeWeak[$0] || thinWeak[$0] }
         // 형태 게이트를 민감도(s∈0~1)로 완화한다. grain/하늘은 이미 후보 임계에서 걸러지므로
         // 형태를 풀어도 폭발하지 않는다 — 직선·컴팩트 가정을 완화해 곡선/꼬불꼬불·뚱뚱·짧은 결함을 살린다.
         //   dust aspect 상한 4→8(꼬불꼬불·길쭉), scratch 최소 길이↓(중간 길이 선), 최소 aspect 2.5→1.8.
@@ -126,6 +137,7 @@ enum SoftwareICEDefectDetector {
         let minThick = 4
         let maxThick = Int(12 + s * 12)
         return ICEComponentMask.buildLabeled(width: w, height: h, dust: dust, scratch: scratch,
+                                             scratchStrong: scratchStrong,
                                              maxDustArea: maxDustArea, minScratchLength: minScratchLength,
                                              minScratchAspect: minScratchAspect, dustMaxAspect: dustMaxAspect,
                                              minThickDefect: minThick, maxThickDefect: maxThick)

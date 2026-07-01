@@ -143,8 +143,12 @@ enum ICEComponentMask {
     /// 후보 → 게이트 통과 컴포넌트에 라벨을 부여한다. build 와 같은 면적/aspect/길이 기준을 쓰되
     /// RGBA8 대신 라벨맵+컴포넌트 목록을 낸다(클릭 제외 편집용). 페인팅(dust dilate/hole-fill,
     /// scratch dilate)은 하지 않는다 — 그건 renderMask 가 build 와 동일하게 처리한다.
+    /// - scratchStrong: 히스테리시스 코어(full-threshold) 마스크. 주어지면 scratch(=strong∪weak)의
+    ///   연결요소 중 strong 픽셀을 하나라도 포함한 것만 채택한다 — weak 만으로 된 컴포넌트(그레인/
+    ///   저대비 텍스처)를 버려, 조각/저대비로 끊긴 결함만 grain-safe 하게 잇는다.
     static func buildLabeled(width: Int, height: Int,
                              dust: [Bool], scratch: [Bool],
+                             scratchStrong: [Bool]? = nil,
                              maxDustArea: Int, minScratchLength: Int,
                              minScratchAspect: Double = 2.5,
                              dustMaxAspect: Double = 4.0,
@@ -165,8 +169,13 @@ enum ICEComponentMask {
                                            minX: minX, minY: minY, maxX: maxX, maxY: maxY))
         }
         forEachComponent(scratch, width: width, height: height) { comp, minX, maxX, minY, maxY in
+            // 히스테리시스: strong 코어(full-threshold)가 하나라도 있어야 채택 — weak 만으로 된
+            // 컴포넌트(그레인/저대비 텍스처)는 버린다. 조각/저대비로 끊긴 결함만 grain-safe 하게 잇는다.
+            if let strong = scratchStrong, !comp.contains(where: { strong[$0] }) { return }
             let boxW = maxX - minX + 1, boxH = maxY - minY + 1
             let longSide = max(boxW, boxH), shortSide = max(1, min(boxW, boxH))
+            // aspect 스펙트럼은 dust 게이트(≤dustMaxAspect)와 이 스크래치 게이트(≥minScratchAspect)가
+            // 함께 커버한다 — 불규칙(중간 aspect) 결함은 dust 로, 가늘고 긴(고 aspect) 결함은 여기로.
             guard longSide >= minScratchLength, Double(longSide) / Double(shortSide) >= minScratchAspect else { return }
             let id = nextID; nextID += 1
             // 먼지와 겹치는 픽셀은 먼지 라벨을 유지(겹침은 드묾). 빈 픽셀만 스크래치로 라벨링.

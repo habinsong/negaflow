@@ -95,7 +95,7 @@ final class ScanFrame: ObservableObject, Identifiable {
     @Published var iceActive: Bool = false           // 검출 결과(빨강)를 표시 중
     @Published var iceIsDetecting: Bool = false
     @Published var iceIsRemoving: Bool = false
-    @Published var iceSensitivity: Double = 1.85   // 슬라이더 0.7~3.0 의 정중앙(기본)
+    @Published var iceSensitivity: Double = 6.0    // 슬라이더 0.7~6.0 최대(기본) — 형태 게이트 최대 완화
     @Published var iceExcludedIDs: Set<Int32> = []   // 클릭으로 제외한 컴포넌트
     @Published var icePreview: [ICEPreviewComponent] = []   // 화면 표시용(base 정규 점)
     var iceLabelField: ICELabelField?                // base ROI 로컬 라벨맵

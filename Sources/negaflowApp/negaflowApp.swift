@@ -116,7 +116,13 @@ final class AppModel: ObservableObject {
     @Published var frames: [ScanFrame] = []
     @Published var selectedFrameID: UUID? {
         didSet {
-            guard selectedFrameID != oldValue, let frame = selectedFrame else { return }
+            guard selectedFrameID != oldValue else { return }
+            // 이전 프레임의 Region ICE 세션(미리보기 라벨맵·점·진행 중 검출)을 내려놓는다 — 세션은
+            // 휘발이므로 다른 프레임으로 이동하면 메모리에 둘 이유가 없다(다 쓴 메모리 즉시 해제).
+            if let prev = frames.first(where: { $0.id == oldValue }), prev.iceActive || prev.iceIsDetecting {
+                cancelRegionICE(prev)
+            }
+            guard let frame = selectedFrame else { return }
             ensureCleanedRawResident(frame)   // 선택 프레임의 cleaned raw를 메모리에 적재(FIFO)
             markDevelopedResident(frame)       // 풀해상도 발색 버퍼 FIFO 갱신(선택 프레임은 항상 유지)
             // 메모리 압박으로 풀해상도 버퍼가 내려간 프레임으로 재진입하면 즉시 재현상해 채운다.

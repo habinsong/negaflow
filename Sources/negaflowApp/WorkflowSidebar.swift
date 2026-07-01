@@ -4,6 +4,7 @@ enum WorkflowSidebarTab: String, CaseIterable, Identifiable {
     case library
     case versions
     case presets
+    case film
     case output
 
     var id: Self { self }
@@ -13,6 +14,7 @@ enum WorkflowSidebarTab: String, CaseIterable, Identifiable {
         case .library: return "Library"
         case .versions: return "Versions"
         case .presets: return "Presets"
+        case .film: return "Film"
         case .output: return "Output"
         }
     }
@@ -22,6 +24,7 @@ enum WorkflowSidebarTab: String, CaseIterable, Identifiable {
         case .library: return "rectangle.stack"
         case .versions: return "clock.arrow.circlepath"
         case .presets: return "slider.horizontal.below.square.and.square.filled"
+        case .film: return "camera.filters"
         case .output: return "square.and.arrow.up"
         }
     }
@@ -114,6 +117,12 @@ struct WorkflowSidebar: View {
                 UserPresetSection(frame: frame)
             } else {
                 SidebarEmptyState(title: "프레임 없음", systemImage: "photo.on.rectangle")
+            }
+        case .film:
+            if let frame {
+                FilmEmulationSection(frame: frame)
+            } else {
+                SidebarEmptyState(title: "프레임 없음", systemImage: "camera.filters")
             }
         case .output:
             if frame != nil {

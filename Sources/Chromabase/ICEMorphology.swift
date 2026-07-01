@@ -15,18 +15,14 @@ enum ICEMorphology {
                  width: width, height: height, radius: radius)
     }
 
-    /// 분리형 국소 최소(erosion). O(N·r).
+    /// 분리형 국소 최소(erosion). monotonic-deque sliding min 으로 반경 무관 O(N).
     static func morphMin(_ src: [Float], width: Int, height: Int, radius: Int) -> [Float] {
-        separable(src, width: width, height: height, radius: radius, seed: .greatestFiniteMagnitude) {
-            $1 < $0 ? $1 : $0
-        }
+        separableExtreme(src, width: width, height: height, radius: radius, isMax: false)
     }
 
-    /// 분리형 국소 최대(dilation). O(N·r).
+    /// 분리형 국소 최대(dilation). monotonic-deque sliding max 로 반경 무관 O(N).
     static func morphMax(_ src: [Float], width: Int, height: Int, radius: Int) -> [Float] {
-        separable(src, width: width, height: height, radius: radius, seed: -.greatestFiniteMagnitude) {
-            $1 > $0 ? $1 : $0
-        }
+        separableExtreme(src, width: width, height: height, radius: radius, isMax: true)
     }
 
     /// 적분영상 기반 박스 평균. O(N).
@@ -54,30 +50,45 @@ enum ICEMorphology {
         return out
     }
 
-    /// 분리형(수평→수직) 누적 연산 공통 구현.
-    private static func separable(_ src: [Float], width w: Int, height h: Int, radius r: Int,
-                                  seed: Float, _ combine: (Float, Float) -> Float) -> [Float] {
+    /// 분리형(수평→수직) 국소 극값. van Herk/Gil-Werman 계열의 monotonic-deque sliding
+    /// min/max — 창 크기(2r+1)와 무관하게 픽셀당 amortized 상수 연산이다(O(N)). 결과는 기존
+    /// naïve 구현과 **동일**: 각 위치에서 클램프 윈도우 [max(0,i-r), min(n-1,i+r)]의 극값.
+    private static func separableExtreme(_ src: [Float], width w: Int, height h: Int,
+                                         radius r: Int, isMax: Bool) -> [Float] {
         var tmp = [Float](repeating: 0, count: w * h)
+        var deque = [Int](repeating: 0, count: max(w, h))   // 단조 deque(라인마다 재사용)
         for y in 0..<h {
-            let base = y * w
-            for x in 0..<w {
-                var acc = seed
-                let x0 = max(0, x - r), x1 = min(w - 1, x + r)
-                var xx = x0
-                while xx <= x1 { acc = combine(acc, src[base + xx]); xx += 1 }
-                tmp[base + x] = acc
-            }
+            sweepLine(src, &tmp, base: y * w, n: w, stride: 1, r: r, deque: &deque, isMax: isMax)
         }
         var out = [Float](repeating: 0, count: w * h)
         for x in 0..<w {
-            for y in 0..<h {
-                var acc = seed
-                let y0 = max(0, y - r), y1 = min(h - 1, y + r)
-                var yy = y0
-                while yy <= y1 { acc = combine(acc, tmp[yy * w + x]); yy += 1 }
-                out[y * w + x] = acc
-            }
+            sweepLine(tmp, &out, base: x, n: h, stride: w, r: r, deque: &deque, isMax: isMax)
         }
         return out
+    }
+
+    /// 한 라인(길이 n, stride 간격)에서 클램프 윈도우 sliding min/max. deque 는 라인 인덱스를
+    /// 값 단조 순으로 유지 — front 가 현재 윈도우 극값이다.
+    private static func sweepLine(_ src: [Float], _ dst: inout [Float],
+                                  base: Int, n: Int, stride: Int, r: Int,
+                                  deque: inout [Int], isMax: Bool) {
+        var head = 0, tail = 0          // deque 점유 구간 [head, tail)
+        var addIdx = 0
+        for x in 0..<n {
+            let hi = min(n - 1, x + r)
+            while addIdx <= hi {
+                let v = src[base + addIdx * stride]
+                if isMax {
+                    while tail > head && src[base + deque[tail - 1] * stride] <= v { tail -= 1 }
+                } else {
+                    while tail > head && src[base + deque[tail - 1] * stride] >= v { tail -= 1 }
+                }
+                deque[tail] = addIdx; tail += 1
+                addIdx += 1
+            }
+            let lo = max(0, x - r)
+            while deque[head] < lo { head += 1 }
+            dst[base + x * stride] = src[base + deque[head] * stride]
+        }
     }
 }

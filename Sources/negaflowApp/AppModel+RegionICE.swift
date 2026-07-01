@@ -33,11 +33,13 @@ extension AppModel {
 
         let transform = frame.imageTransform
         var params = regionICEParameters
-        // 슬라이더(0.7~3.0)를 검출기 정규 민감도(0~1)로 매핑. 오른쪽일수록 임계↓ + 형태 게이트
-        // 완화(꼬불꼬불/뚱뚱한 먼지·짧은 스크래치까지)로 함께 작용한다.
-        let s = max(0, min(1, (frame.iceSensitivity - 0.7) / (3.0 - 0.7)))
+        // 슬라이더(0.7~6.0)를 검출 강도로 매핑. detector 임계는 내부에서 s≤1 로 clamp(그레인 안전 —
+        // 실제 필름 그레인 폭발 방지)되고, 여기선 형태 게이트 강도까지 포함해 1.5 까지 전달한다.
+        // 슬라이더 우측 절반(3.0~6.0)에서 임계는 그대로 두고 형태 게이트만 더 풀어(aspect↑/최소길이↓/
+        // 두께↑/면적↑) 얇고 불규칙한 결함을 grain-safe 하게 추가로 잡는다.
+        let s = max(0, min(1.5, (frame.iceSensitivity - 0.7) / (3.0 - 0.7)))
         params.dustSensitivity = s
-        params.scratchSensitivity = min(1, s + 0.1)
+        params.scratchSensitivity = min(1.5, s + 0.1)
         let preCG = frame.cleanedRawImage
         let preURL = frame.cleanedRawDiskURL
         let rawURL = frame.rawScanURL
@@ -134,8 +136,10 @@ extension AppModel {
         let maskBytes = SoftwareICE.componentMaskBytes(field: field, excluded: excluded)
         let edit = DefectEdit.region(mask: Data(maskBytes), roi: roiYup,
                                      width: field.width, height: field.height)
-        clearRegionICESession(frame)         // 세션(오버레이) 종료
-        appendDefectEdit(edit, to: frame)    // 통합 빌드 — 진행/완료 표시는 isRemovingDefects 가 담당
+        // 세션은 바로 닫지 않는다 — 빌드 동안 "제거" 버튼에 작은 프로그래스바를 보이고, 빌드
+        // (isRemovingDefects) 종료 시 오버레이 onChange 가 clearRegionICESession 으로 닫는다.
+        frame.iceIsRemoving = true
+        appendDefectEdit(edit, to: frame)    // 통합 빌드(brush·region 누적)
     }
 
     func cancelRegionICE(_ frame: ScanFrame) {
@@ -147,6 +151,7 @@ extension AppModel {
 
     func clearRegionICESession(_ frame: ScanFrame) {
         frame.iceActive = false
+        frame.iceIsRemoving = false
         frame.iceLabelField = nil
         frame.iceBaseSize = nil
         frame.iceROICIyup = nil
