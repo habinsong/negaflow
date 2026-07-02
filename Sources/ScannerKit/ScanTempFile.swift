@@ -4,8 +4,7 @@ import ImageIO
 
 // MARK: - ScanTempFile
 //
-// 스캔 임시 파일/이미지 크기 조회 같은 범용 헬퍼. 특정 백엔드(SANE 등)와 무관하며,
-// 과거 SANEBackend 에 붙어 있던 static 유틸을 SANE 분리 후에도 쓸 수 있게 여기로 옮겼다.
+// 스캔 임시 파일/이미지 크기 조회 같은 범용 헬퍼. 특정 백엔드와 무관하게 쓴다.
 public enum ScanTempFile {
     /// 임시 디렉토리에 겹치지 않는 스크래치 파일 URL을 만든다(스캔 산출 TIFF 등).
     public static func makeURL(prefix: String, suffix: String) -> URL {

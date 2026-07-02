@@ -9,7 +9,7 @@ import AppKit
 // MARK: - MockScannerBackend
 //
 // 하드웨어가 없거나 스캐너가 점유 중일 때도 앱 전체 흐름을 실행할 수 있게 하는 가상 백엔드.
-// plan §4.3 — 사용자는 백엔드 종류를 모른다. Mock이든 SANE이든 동일한 UX.
+// 사용자는 백엔드 종류를 몰라도 동일한 스캔 UX를 쓴다.
 //
 // 실제 네거티브 TIFF가 samples/에 있으면 그것을 스캔 결과로 반환해서,
 // 하드웨어 없이도 Chromabase 엔진 end-to-end를 시연할 수 있다.

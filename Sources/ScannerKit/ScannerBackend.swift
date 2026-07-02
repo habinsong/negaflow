@@ -3,7 +3,7 @@ import Foundation
 // MARK: - ScannerBackend protocol (plan §7.1)
 
 /// 모든 스캐너 백엔드가 구현해야 하는 추상 인터페이스.
-/// UI는 이 프로토콜에만 의존한다 — ImageCaptureCore/SANE/Mock을 구분하지 않는다 (plan §4.3).
+/// UI는 이 프로토콜에만 의존한다. 실제 하드웨어 구현은 외부 플러그인 뒤에 숨긴다.
 public protocol ScannerBackend: AnyObject {
     var backendType: BackendType { get }
 
@@ -32,18 +32,16 @@ public protocol ScannerBackend: AnyObject {
 
 /// 사용 가능한 백엔드를 우선순위대로 보관하고, 장치를 가장 잘 지원하는 백엔드를 고른다.
 ///
-/// SANE 백엔드는 GPL 라이센스 때문에 negaflow(Apache-2.0)에서 분리되어 외부 프로세스
-/// 플러그인으로 제공된다. 레지스트리는 설치된 플러그인을 발견해 primary로, Mock은 항상
-/// 보험으로 깔아둔다.
-///   1. 설치된 스캐너 플러그인(ExternalScannerBackend) — 예: SANE 플러그인
-///   2. Mock             — 하드웨어/플러그인 없는 개발/데모
+/// 하드웨어 스캐너는 외부 프로세스 플러그인이 담당하고, Mock은 하드웨어 없는 개발/데모 경로를 제공한다.
+///   1. 설치된 스캐너 플러그인(ExternalScannerBackend)
+///   2. Mock
 public final class ScannerRegistry: @unchecked Sendable {
     public private(set) var backends: [ScannerBackend]
     private let queue = DispatchQueue(label: "negaflow.scanner.registry")
 
     public init(backends: [ScannerBackend]) { self.backends = backends }
 
-    /// 기본 레지스트리. 설치된 스캐너 플러그인을 발견해 primary로 두고, Mock은 항상 보험으로 깔아둔다.
+    /// 기본 레지스트리. 설치된 스캐너 플러그인을 먼저 등록하고, Mock은 항상 폴백으로 둔다.
     public static func `default`() -> ScannerRegistry {
         let plugins = ScannerPluginHost.discover().map { ExternalScannerBackend(plugin: $0) }
         return ScannerRegistry(backends: plugins + [MockScannerBackend()])
@@ -51,9 +49,8 @@ public final class ScannerRegistry: @unchecked Sendable {
 
     /// 등록된 모든 백엔드에서 장치를 수집한다.
     ///
-    /// 최적화: 백엔드별로 동시에 probe 한다(TaskGroup). 이전에는 순차 실행이라
-    /// Mock(즉시)이 SANE(수초)을 기다렸다. SANE 백엔드 수가 하나뿐이더라도 다른
-    /// 백엔드가 즉시 반환하므로 UI 가 빨리 채워진다.
+    /// 최적화: 백엔드별로 동시에 probe 한다(TaskGroup). 느린 하드웨어 플러그인이 있어도
+    /// Mock과 다른 백엔드가 즉시 반환하므로 UI가 빨리 채워진다.
     public func detectAll() async throws -> [(backend: BackendType, devices: [ScannerDescriptor])] {
         let snapshot = backends
         return await withTaskGroup(of: (Int, BackendType, [ScannerDescriptor]).self) { group in

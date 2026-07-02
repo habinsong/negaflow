@@ -3,7 +3,7 @@ import Foundation
 // MARK: - ScannerDescriptor (plan §7.2)
 
 /// 감지된 스캐너 한 대의 정보 모델.
-/// UI는 이 값만 보고, ImageCaptureCore/SANE 같은 백엔드 이름을 사용자에게 드러내지 않는다.
+/// UI는 이 값만 보고, 구체 백엔드 이름을 사용자에게 드러내지 않는다.
 public struct ScannerDescriptor: Codable, Sendable, Equatable, Identifiable {
     /// 백엔드 내부 식별자. 예: "plustek-8200i-usb-001"
     public let id: String
