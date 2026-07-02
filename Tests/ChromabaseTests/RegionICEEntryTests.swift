@@ -43,7 +43,7 @@ final class RegionICEEntryTests: XCTestCase {
         let field = ICEComponentMask.buildLabeled(width: w, height: h, dust: dust, scratch: scratch,
                                                   maxDustArea: maxDustArea, minScratchLength: minLen,
                                                   minScratchAspect: 2.5)
-        let rendered = ICEComponentMask.renderMask(field, excluded: [], maxHoleArea: maxDustArea, dustDilate: dilate)
+        let rendered = ICEComponentMask.renderMask(field, excluded: [], dustDilate: dilate)
         XCTAssertEqual(built, rendered, "buildLabeled+renderMask가 build와 다른 마스크를 냄")
     }
 
@@ -57,7 +57,7 @@ final class RegionICEEntryTests: XCTestCase {
         let roi = CGRect(x: 0, y: 0, width: w, height: h)
         let field = SoftwareICE.detectComponents(in: img, roi: roi, parameters: params)
         XCTAssertFalse(field.isEmpty, "세로 스크래치가 검출되어야 한다")
-        let maskBytes = ICEComponentMask.renderMask(field, excluded: [], maxHoleArea: w * h, dustDilate: 2)
+        let maskBytes = ICEComponentMask.renderMask(field, excluded: [], dustDilate: 2)
         let out = render(SoftwareICE.repair(image: img, roi: roi, mask: ciImage(maskBytes, w, h)), w, h)
         XCTAssertLessThan(abs(lum(out, w, dx, 80) - base), 24, "스크래치가 제거되어야 한다")
         XCTAssertLessThan(abs(lum(out, w, 20, 80) - base), 6, "결함 없는 배경은 보존되어야 한다")
@@ -75,7 +75,7 @@ final class RegionICEEntryTests: XCTestCase {
         let roi = CGRect(x: 0, y: 0, width: w, height: h)
         let field = SoftwareICE.detectComponents(in: img, roi: roi, parameters: params)
         XCTAssertFalse(field.isEmpty, "점 먼지가 검출되어야 한다")
-        let maskBytes = ICEComponentMask.renderMask(field, excluded: [], maxHoleArea: w * h, dustDilate: 2)
+        let maskBytes = ICEComponentMask.renderMask(field, excluded: [], dustDilate: 2)
         let out = render(SoftwareICE.repair(image: img, roi: roi, mask: ciImage(maskBytes, w, h)), w, h)
         XCTAssertLessThan(abs(lum(out, w, dotX, dotY) - base), 26, "점 먼지가 그 위치에서 제거되어야 한다")
         XCTAssertLessThan(abs(lum(out, w, dotX, dotY + 40) - base), 6, "먼지 아래(결함 없음)는 보존")
@@ -95,7 +95,7 @@ final class RegionICEEntryTests: XCTestCase {
         guard let excludeID = field.nearestComponentID(atX: 40, y: 60, radius: 3) else {
             return XCTFail("좌측 스크래치 컴포넌트를 찾지 못함")
         }
-        let maskBytes = ICEComponentMask.renderMask(field, excluded: [excludeID], maxHoleArea: w * h, dustDilate: 2)
+        let maskBytes = ICEComponentMask.renderMask(field, excluded: [excludeID], dustDilate: 2)
         let out = render(SoftwareICE.repair(image: img, roi: roi, mask: ciImage(maskBytes, w, h)), w, h)
         XCTAssertGreaterThan(lum(out, w, 40, 60) - base, 30, "제외한 스크래치는 남아야 한다")
         XCTAssertLessThan(abs(lum(out, w, 110, 60) - base), 24, "제외하지 않은 스크래치는 제거되어야 한다")
@@ -167,7 +167,7 @@ final class RegionICEEntryTests: XCTestCase {
         let params = SoftwareICEParameters(strength: 1, dustSensitivity: 1.0, scratchSensitivity: 1.0, protectDetail: 0.6)
         let field = SoftwareICE.detectComponents(in: img, roi: CGRect(x: 0, y: 0, width: w, height: h), parameters: params)
         XCTAssertLessThan(field.components.count, 20, "결함 없는 평면을 대량 오검출하면 안 된다(검출 \(field.components.count)개)")
-        let maskBytes = ICEComponentMask.renderMask(field, excluded: [], maxHoleArea: w * h, dustDilate: 2)
+        let maskBytes = ICEComponentMask.renderMask(field, excluded: [], dustDilate: 2)
         var covered = 0
         for i in 0..<(w * h) where maskBytes[i * 4] > 0 { covered += 1 }
         let ratio = Double(covered) / Double(w * h)
@@ -226,11 +226,71 @@ final class RegionICEEntryTests: XCTestCase {
         let params = SoftwareICEParameters(strength: 1, dustSensitivity: 1.0, scratchSensitivity: 1.0, protectDetail: 0.6)
         let field = SoftwareICE.detectComponents(in: img, roi: roi, parameters: params)
         XCTAssertFalse(field.isEmpty, "두꺼운 스크래치가 검출돼야 한다")
-        let maskBytes = ICEComponentMask.renderMask(field, excluded: [], maxHoleArea: w * h, dustDilate: 2)
+        let maskBytes = ICEComponentMask.renderMask(field, excluded: [], dustDilate: 2)
         XCTAssertGreaterThan(Int(maskBytes[(100 * w + 99) * 4]), 0, "두꺼운 스크래치의 폭 중앙이 마스크에 포함돼야 한다")
         let out = render(SoftwareICE.repair(image: img, roi: roi, mask: ciImage(maskBytes, w, h)), w, h)
         XCTAssertLessThan(abs(lum(out, w, 99, 100) - base), 28, "두꺼운 스크래치 폭 중앙이 제거돼야 한다")
         XCTAssertLessThan(abs(lum(out, w, 30, 100) - base), 6, "결함 없는 배경은 보존돼야 한다")
+    }
+
+    // 12) 회귀 가드: 고리(loop)로 말린 결함(둥근 머리카락 등)의 안쪽 "정상 영역"이 커밋 마스크에
+    //     포함되면 안 된다. 과거 버그: 커밋 마스크 렌더(componentMaskBytes→renderMask)가 내부 hole
+    //     채움을 ROI 전체 면적 한도(사실상 무제한)로 수행하고 dilate(r2)가 근접 고리를 닫아, 고리 안
+    //     정상 콘텐츠가 통째로 마스크→재합성되어 "일부분 블러" 패치가 생겼다. 이 픽셀들은 빨강
+    //     미리보기(comp.pixels)에 없어 사용자에게 보이지도 않았다.
+    func testLoopDefectInteriorNotWiped() {
+        let w = 240, h = 240, base = 120, cx = 120, cy = 120
+        var px = [UInt8](repeating: 255, count: w * h * 4)
+        for y in 0..<h {
+            for x in 0..<w {
+                // 검출 임계 아래 세로 줄무늬(±10) — 안쪽이 재합성되면 사라지는 측정 가능한 구조.
+                let v = base + (((x / 3) % 2 == 0) ? 10 : -10)
+                let o = (y * w + x) * 4
+                px[o] = UInt8(v); px[o + 1] = UInt8(v); px[o + 2] = UInt8(v)
+            }
+        }
+        let clean = px
+        for yy in (cy - 31)...(cy + 31) {          // 반지름 28, 두께 ~2.6 밝은 고리(말린 머리카락)
+            for xx in (cx - 31)...(cx + 31) {
+                let d = Double((xx - cx) * (xx - cx) + (yy - cy) * (yy - cy)).squareRoot()
+                guard abs(d - 28) <= 1.3 else { continue }
+                let o = (yy * w + xx) * 4
+                px[o] = 245; px[o + 1] = 245; px[o + 2] = 245
+            }
+        }
+        let img = ciImage(px, w, h)
+        let roi = CGRect(x: 0, y: 0, width: w, height: h)
+        let params = SoftwareICEParameters(strength: 1, dustSensitivity: 1.0, scratchSensitivity: 1.0, protectDetail: 0.6)
+        let field = SoftwareICE.detectComponents(in: img, roi: roi, parameters: params)
+        XCTAssertFalse(field.isEmpty, "고리 결함이 검출되어야 한다")
+        let maskBytes = SoftwareICE.componentMaskBytes(field: field, excluded: [])   // 커밋과 동일 진입점
+        var interiorMasked = 0, interiorCount = 0
+        for yy in (cy - 20)...(cy + 20) {
+            for xx in (cx - 20)...(cx + 20) where (xx - cx) * (xx - cx) + (yy - cy) * (yy - cy) <= 400 {
+                if maskBytes[(yy * w + xx) * 4] > 0 { interiorMasked += 1 }
+                interiorCount += 1
+            }
+        }
+        let maskedFrac = Double(interiorMasked) / Double(interiorCount)
+        let out = render(SoftwareICE.repair(image: img, roi: roi, mask: ciImage(maskBytes, w, h)), w, h)
+        var diff = 0
+        for yy in (cy - 20)...(cy + 20) {
+            for xx in (cx - 20)...(cx + 20) where (xx - cx) * (xx - cx) + (yy - cy) * (yy - cy) <= 400 {
+                diff += abs(lum(out, w, xx, yy) - lum(clean, w, xx, yy))
+            }
+        }
+        let avgInterior = Double(diff) / Double(interiorCount)
+        var ringResid = 0, ringCount = 0
+        for a in stride(from: 0.0, to: 360.0, by: 45.0) {
+            let xx = cx + Int((28 * cos(a * .pi / 180)).rounded())
+            let yy = cy + Int((28 * sin(a * .pi / 180)).rounded())
+            ringResid += abs(lum(out, w, xx, yy) - lum(clean, w, xx, yy)); ringCount += 1
+        }
+        print(String(format: "[loop] interior masked=%.0f%% interior change=%.2f ring residual=%d",
+                     maskedFrac * 100, avgInterior, ringResid / ringCount))
+        XCTAssertLessThan(maskedFrac, 0.05, "고리 안 정상 영역이 커밋 마스크에 포함됨(미리보기에 없는 픽셀)")
+        XCTAssertLessThan(avgInterior, 3.0, "고리 안 정상 줄무늬가 재합성됨(일부분 블러 회귀)")
+        XCTAssertLessThan(ringResid / ringCount, 30, "고리 결함 자체는 제거되어야 한다")
     }
 
     // 11) 통합 편집 누적 불변식: 두 영역을 순차로 복원하면 둘 다 제거되고, 먼저 복원한 것이 나중

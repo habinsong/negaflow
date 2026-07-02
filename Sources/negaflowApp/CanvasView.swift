@@ -30,6 +30,7 @@ struct CanvasView: View {
     @Binding var cropMode: Bool
     @Binding var brushMode: Bool
     @Binding var regionICEMode: Bool
+    @Binding var localDodgeBurnMode: Bool
     @State private var scale: CGFloat = 1.0
     @State private var lastScale: CGFloat = 1.0
     @State private var offset: CGSize = .zero
@@ -40,6 +41,16 @@ struct CanvasView: View {
     @State private var brushThickness: CGFloat = 0.010
     @State private var brushStrokes: [DefectStroke] = []
     @State private var brushCurrent: [CGPoint] = []
+    @State private var localMode: LocalDodgeBurnMode = .dodge
+    @State private var localShape: LocalDodgeBurnToolShape = .brush
+    @State private var localAmount: Double = 0.45
+    @State private var localThickness: Double = 0.06
+    @State private var localFeather: Double = 0.04
+    @State private var localBrushStrokes: [LocalDodgeBurnStroke] = []
+    @State private var localCurrentPoints: [LocalDodgeBurnPoint] = []
+    @State private var localDragStart: LocalDodgeBurnPoint?
+    @State private var localDragCurrent: LocalDodgeBurnPoint?
+    @State private var localPolygonPoints: [LocalDodgeBurnPoint] = []
     @State private var compareMode: CanvasCompareMode = .developed
     @State private var previousCompareMode: CanvasCompareMode = .raw
     @AppStorage("compare.beforeContent") private var beforeContentRaw: String = CompareBeforeContent.unedited.rawValue
@@ -75,6 +86,19 @@ struct CanvasView: View {
                     }
                     if regionICEMode {
                         RegionICEOverlay(frame: frame, imageFrame: imageFrame)
+                    }
+                    if localDodgeBurnMode {
+                        LocalDodgeBurnOverlay(
+                            shape: $localShape,
+                            brushStrokes: $localBrushStrokes,
+                            currentPoints: $localCurrentPoints,
+                            dragStart: $localDragStart,
+                            dragCurrent: $localDragCurrent,
+                            polygonPoints: $localPolygonPoints,
+                            mode: localMode,
+                            thickness: localThickness,
+                            imageFrame: imageFrame
+                        )
                     }
                     canvasHUD(imageSize: img.size, canvasSize: geo.size)
                     debugStageBadge
@@ -354,6 +378,27 @@ struct CanvasView: View {
                 }
                 .padding(.top, 12)
             }
+            if localDodgeBurnMode {
+                HStack {
+                    Spacer()
+                    LocalDodgeBurnControlBar(
+                        mode: $localMode,
+                        shape: $localShape,
+                        amount: $localAmount,
+                        thickness: $localThickness,
+                        feather: $localFeather,
+                        appliedCount: frame.params.localDodgeBurn.count,
+                        canApply: canApplyLocalDodgeBurnDraft,
+                        canUndoDraft: canUndoLocalDodgeBurnDraft,
+                        onApply: applyLocalDodgeBurn,
+                        onUndo: undoLocalDodgeBurnDraft,
+                        onClearDraft: clearLocalDodgeBurnDraft,
+                        onResetApplied: resetLocalDodgeBurn
+                    )
+                    Spacer()
+                }
+                .padding(.top, 12)
+            }
             Spacer()
             HStack {
                 Spacer()
@@ -362,13 +407,15 @@ struct CanvasView: View {
                     cropMode: cropMode,
                     brushMode: brushMode,
                     regionICEMode: regionICEMode,
+                    localDodgeBurnMode: localDodgeBurnMode,
                     onZoomOut: { setScale(scale / 1.25, imageSize: imageSize, canvasSize: canvasSize) },
                     onZoomIn: { setScale(scale * 1.25, imageSize: imageSize, canvasSize: canvasSize) },
                     onFit: { resetViewport() },
                     onActualSize: { setScale(actualSizeScale(imageSize, in: canvasSize), imageSize: imageSize, canvasSize: canvasSize) },
-                    onCrop: { withAnimation(.snappy(duration: 0.18)) { cropMode.toggle(); if cropMode { brushMode = false; regionICEMode = false } } },
-                    onBrush: { withAnimation(.snappy(duration: 0.18)) { brushMode.toggle(); if brushMode { cropMode = false; regionICEMode = false } } },
-                    onRegionICE: { withAnimation(.snappy(duration: 0.18)) { regionICEMode.toggle(); if regionICEMode { cropMode = false; brushMode = false } } }
+                    onCrop: { withAnimation(.snappy(duration: 0.18)) { cropMode.toggle(); if cropMode { brushMode = false; regionICEMode = false; localDodgeBurnMode = false } } },
+                    onBrush: { withAnimation(.snappy(duration: 0.18)) { brushMode.toggle(); if brushMode { cropMode = false; regionICEMode = false; localDodgeBurnMode = false } } },
+                    onRegionICE: { withAnimation(.snappy(duration: 0.18)) { regionICEMode.toggle(); if regionICEMode { cropMode = false; brushMode = false; localDodgeBurnMode = false } } },
+                    onLocalDodgeBurn: { withAnimation(.snappy(duration: 0.18)) { localDodgeBurnMode.toggle(); if localDodgeBurnMode { cropMode = false; brushMode = false; regionICEMode = false } } }
                 )
                 .padding(.trailing, 14)
                 .padding(.bottom, 12)
@@ -382,6 +429,92 @@ struct CanvasView: View {
         brushStrokes.removeAll()
         // 표시 좌표 스트로크를 base 좌표로 변환·누적하고 ICE를 재적용(변형/재현상 후에도 유지).
         model.applyDefectStrokes(strokes, to: frame)
+    }
+
+    private var canApplyLocalDodgeBurnDraft: Bool {
+        switch localShape {
+        case .brush:
+            return !localBrushStrokes.isEmpty || !localCurrentPoints.isEmpty
+        case .radial, .linear:
+            return localDragStart != nil && localDragCurrent != nil
+        case .polygon:
+            return localPolygonPoints.count >= 3
+        }
+    }
+
+    private var canUndoLocalDodgeBurnDraft: Bool {
+        switch localShape {
+        case .brush:
+            return !localBrushStrokes.isEmpty || !localCurrentPoints.isEmpty
+        case .radial, .linear:
+            return localDragStart != nil || localDragCurrent != nil
+        case .polygon:
+            return !localPolygonPoints.isEmpty
+        }
+    }
+
+    private func applyLocalDodgeBurn() {
+        guard let mask = localDodgeBurnMaskFromDraft() else { return }
+        let adjustment = LocalDodgeBurnAdjustment(mode: localMode, amount: localAmount, mask: mask)
+        frame.updateParams { $0.localDodgeBurn.append(adjustment) }
+        clearLocalDodgeBurnDraft()
+        model.requestDevelop(frame)
+    }
+
+    private func localDodgeBurnMaskFromDraft() -> LocalDodgeBurnMask? {
+        switch localShape {
+        case .brush:
+            var strokes = localBrushStrokes
+            if !localCurrentPoints.isEmpty {
+                strokes.append(LocalDodgeBurnStroke(points: localCurrentPoints, thickness: localThickness, feather: localFeather))
+            }
+            return strokes.isEmpty ? nil : .brush(strokes: strokes.map {
+                LocalDodgeBurnStroke(points: $0.points, thickness: $0.thickness, feather: localFeather)
+            })
+        case .radial:
+            guard let start = localDragStart, let current = localDragCurrent else { return nil }
+            let dx = current.x - start.x
+            let dy = current.y - start.y
+            let radius = max(0.01, hypot(dx * max(1, referenceImage?.size.width ?? 1), dy * max(1, referenceImage?.size.height ?? 1)) / max(1, min(referenceImage?.size.width ?? 1, referenceImage?.size.height ?? 1)))
+            return .radial(center: start, radius: radius, feather: localFeather)
+        case .linear:
+            guard let start = localDragStart, let current = localDragCurrent else { return nil }
+            return .linear(start: start, end: current, feather: localFeather)
+        case .polygon:
+            guard localPolygonPoints.count >= 3 else { return nil }
+            return .polygon(points: localPolygonPoints, feather: localFeather)
+        }
+    }
+
+    private func undoLocalDodgeBurnDraft() {
+        switch localShape {
+        case .brush:
+            if !localCurrentPoints.isEmpty {
+                localCurrentPoints = []
+            } else {
+                _ = localBrushStrokes.popLast()
+            }
+        case .radial, .linear:
+            localDragStart = nil
+            localDragCurrent = nil
+        case .polygon:
+            _ = localPolygonPoints.popLast()
+        }
+    }
+
+    private func clearLocalDodgeBurnDraft() {
+        localBrushStrokes = []
+        localCurrentPoints = []
+        localDragStart = nil
+        localDragCurrent = nil
+        localPolygonPoints = []
+    }
+
+    private func resetLocalDodgeBurn() {
+        guard !frame.params.localDodgeBurn.isEmpty else { return }
+        frame.updateParams { $0.localDodgeBurn = [] }
+        clearLocalDodgeBurnDraft()
+        model.requestDevelop(frame)
     }
 
     var beforeAfterToggle: some View {
@@ -516,7 +649,7 @@ struct CanvasView: View {
     private func panGesture(imageSize: NSSize?, canvasSize: CGSize) -> some Gesture {
         DragGesture(minimumDistance: 0, coordinateSpace: .named(canvasCoordinateSpace))
             .onChanged { value in
-                guard let imageSize, !cropMode, !brushMode, !regionICEMode else { return }
+                guard let imageSize, !cropMode, !brushMode, !regionICEMode, !localDodgeBurnMode else { return }
                 let proposed = CGSize(
                     width: lastOffset.width + value.translation.width,
                     height: lastOffset.height + value.translation.height

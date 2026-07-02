@@ -125,12 +125,16 @@ enum ICEScratchDetector {
         // 임계(그레인 안전선)는 s≤1 로 clamp — 슬라이더가 1.5 까지 올라가도(형태 게이트 완화용)
         // 임계는 안 낮춘다(실제 필름 그레인 폭발 방지).
         let s = min(1.0, sensitivity)
-        // 적분 응답에 대한 임계. 방향 적분이 이미 노이즈를 줄이므로 낮게 둘 수 있다.
-        let absBase = Float((aggressive ? 0.020 : 0.034) - s * (aggressive ? 0.016 : 0.014))
+        // 적분 응답에 대한 임계. 방향 적분이 이미 노이즈를 줄이므로 낮게 둘 수 있다. 단 브러시도
+        // 그레인의 적분 잔차(~0.01) 아래로는 못 내려간다 — 하회하면 그레인 위 오검출 줄무늬가
+        // 칠 영역에 대량 발생해 복원이 칠을 통째로 재합성한다(전체 블러).
+        let absBase = Float((aggressive ? 0.026 : 0.034) - s * (aggressive ? 0.014 : 0.014))
         // weak 는 절대 임계를 절반으로만 낮춘다(조각/저대비 gap 연결용). SNR floor 는 그대로.
         let absThreshold = weak ? absBase * 0.5 : absBase
         // 적분 응답의 국소 평균(=방향 텍스처 수준)의 k배 이상이어야 통과 — 그레인 안전선(불변).
-        let kFloor = Float((aggressive ? 2.0 : 4.0) - s * (aggressive ? 1.0 : 0.8))
+        // 적분(25샘플 평균)으로 분포가 좁아져 있어 k≈1.9(브러시)면 그레인 통과율이 사실상 0이다.
+        // 과거 1.1은 국소 평균 바로 위 요동까지 통과시켜 그레인/텍스처 면에서 대량 오검출됐다.
+        let kFloor = Float((aggressive ? 2.8 : 4.0) - s * (aggressive ? 1.0 : 0.8))
         let shortFloor = absThreshold * 0.6
         let valid = field.valid
         let directional = preferredAngle != nil

@@ -7,7 +7,7 @@ struct ExportSection: View {
 
     private let dpiOptions: [Int] = [0, 72, 150, 240, 300, 600]
     private let longEdgeOptions: [Int] = [0, 1024, 2048, 4096, 6000]
-    private let quickDPIOptions: [Int] = [72, 150, 240, 300, 600]
+    private let quickDPIOptions: [Int] = [0, 72, 150, 240, 300, 600]
 
     var body: some View {
         Section {
@@ -23,9 +23,19 @@ struct ExportSection: View {
                 }
             }
 
+            Toggle("Soft Proof", isOn: $model.softProofEnabled)
+
+            if model.softProofEnabled {
+                Picker("Proof", selection: $model.softProofSimulation) {
+                    ForEach(SoftProofSimulation.allCases, id: \.self) { simulation in
+                        Text(simulation.uiLabel).tag(simulation)
+                    }
+                }
+            }
+
             Picker("DPI", selection: $model.exportDPI) {
                 ForEach(dpiOptions, id: \.self) { dpi in
-                    Text(dpi == 0 ? "Scan DPI" : "\(dpi) dpi").tag(dpi)
+                    Text(dpi == 0 ? "Source DPI" : "\(dpi) dpi").tag(dpi)
                 }
             }
 
@@ -35,10 +45,20 @@ struct ExportSection: View {
                 }
             }
 
+            Toggle("Main Flat Master", isOn: $model.exportWriteMainFlatMaster)
+                .help("보정본 옆에 Target main 무보정본을 -main-flat 파일로 함께 저장")
+
             Toggle("Sidecar (JSON + XMP)", isOn: $model.exportWriteSidecar)
                 .help("현상 파라미터를 <이름>.negaflow.json 과 <이름>.xmp 로 저장")
 
             if let frame = model.selectedFrame {
+                LabeledContent("Source") {
+                    Text(frame.sourceSummary)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+
                 Button {
                     model.exportWithPanel(frame)
                 } label: {
@@ -61,7 +81,7 @@ struct ExportSection: View {
 
             Picker("DPI", selection: $model.quickExportDPI) {
                 ForEach(quickDPIOptions, id: \.self) { dpi in
-                    Text("\(dpi) dpi").tag(dpi)
+                    Text(dpi == 0 ? "Source DPI" : "\(dpi) dpi").tag(dpi)
                 }
             }
 

@@ -7,6 +7,7 @@ struct ToolStripSection: View {
     @Binding var cropMode: Bool
     @Binding var brushMode: Bool
     @Binding var regionICEMode: Bool
+    @Binding var localDodgeBurnMode: Bool
 
     var body: some View {
         InspectorCard {
@@ -91,18 +92,25 @@ struct ToolStripSection: View {
     var buttons: some View {
         HStack(spacing: 6) {
             ToolIconButton(systemName: "paintbrush.pointed.fill", help: "결함 브러시 — 먼지/스크래치 위를 칠하면 그 안에서만 제거", isActive: brushMode) {
-                withAnimation(.snappy(duration: 0.18)) { brushMode.toggle(); if brushMode { cropMode = false; regionICEMode = false } }
+                withAnimation(.snappy(duration: 0.18)) { brushMode.toggle(); if brushMode { cropMode = false; regionICEMode = false; localDodgeBurnMode = false } }
             }
 
             ToolIconButton(systemName: "scope", help: "영역 ICE — 영역을 드래그하면 결함을 자동 검출(빨강), 클릭 제외 후 제거", isActive: regionICEMode) {
                 withAnimation(.snappy(duration: 0.18)) {
                     regionICEMode.toggle()
-                    if regionICEMode { cropMode = false; brushMode = false } else { model.cancelRegionICE(frame) }
+                    if regionICEMode { cropMode = false; brushMode = false; localDodgeBurnMode = false } else { model.cancelRegionICE(frame) }
+                }
+            }
+
+            ToolIconButton(systemName: "circle.lefthalf.filled", help: "Dodge/Burn 마스크", isActive: localDodgeBurnMode) {
+                withAnimation(.snappy(duration: 0.18)) {
+                    localDodgeBurnMode.toggle()
+                    if localDodgeBurnMode { cropMode = false; brushMode = false; regionICEMode = false }
                 }
             }
 
             ToolIconButton(systemName: "crop", help: "크롭 영역", isActive: cropMode) {
-                withAnimation(.snappy(duration: 0.18)) { cropMode.toggle(); if cropMode { brushMode = false; regionICEMode = false } }
+                withAnimation(.snappy(duration: 0.18)) { cropMode.toggle(); if cropMode { brushMode = false; regionICEMode = false; localDodgeBurnMode = false } }
             }
 
             ToolIconButton(systemName: "rotate.left", help: "왼쪽으로 90도 회전") {

@@ -18,7 +18,9 @@ struct ContentView: View {
     @State private var cropFrameID: UUID?
     @State private var brushFrameID: UUID?
     @State private var regionICEFrameID: UUID?
+    @State private var localDodgeBurnFrameID: UUID?
     @State private var selectedSidebarTab: WorkflowSidebarTab = .library
+    @State private var isDropTargeted = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -30,25 +32,37 @@ struct ContentView: View {
                         selectedTab: $selectedSidebarTab,
                         frame: model.selectedFrame
                     )
-                    .frame(width: 400)
+                    .frame(width: 440)
                 }
                 centerPane
                     .frame(minWidth: 560, maxWidth: .infinity, maxHeight: .infinity)
                 if isInspectorVisible {
                     inspectorPane
-                        .frame(width: 360)
+                        .frame(width: 440)
                 }
             }
         }
         .background(Color(nsColor: .windowBackgroundColor))
+        .onDrop(of: [.fileURL], isTargeted: $isDropTargeted) { providers in
+            model.handleDrop(providers)
+        }
+        .overlay {
+            if isDropTargeted {
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(Color.accentColor, lineWidth: 3)
+                    .background(Color.accentColor.opacity(0.06))
+                    .allowsHitTesting(false)
+                    .padding(6)
+            }
+        }
         .task { await model.refreshDevices() }
     }
 
     var toolbar: some View {
         HStack(spacing: 10) {
-            devicePicker
-
-            scanQuickControls
+            if model.hasScanner {
+                scanQuickControls
+            }
 
             if model.isDetecting || model.isScanning {
                 ProgressView()
@@ -71,7 +85,6 @@ struct ContentView: View {
         .focusEffectDisabled()
     }
 
-    /// 스캐너명 우측 — 좌측탭 Library의 Preview / Scan Next 와 동일 동작(Scan 설정 그대로 사용).
     var scanQuickControls: some View {
         HStack(spacing: 2) {
             ToolbarActionButton(
@@ -203,36 +216,6 @@ struct ContentView: View {
         }
     }
 
-    var devicePicker: some View {
-        Menu {
-            if model.hasSANE {
-                ForEach(model.saneDevices) { device in
-                    Button(device.displayName) {
-                        model.selectedDeviceID = device.id
-                        Task { await model.loadCapabilities() }
-                    }
-                }
-            }
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "scanner")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.secondary)
-                Text(model.activeScannerDisplayName)
-                    .font(.callout)
-                    .lineLimit(1)
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(.secondary)
-            }
-            .contentShape(Rectangle())
-        }
-        .menuStyle(.borderlessButton)
-        .fixedSize()
-        .disabled(model.demoMode || !model.hasSANE)
-        .help(model.activeScannerDisplayName)
-    }
-
     func statusBadge(_ text: String, _ color: Color) -> some View {
         Text(text)
             .font(.caption.weight(.medium))
@@ -258,7 +241,7 @@ struct ContentView: View {
 
                     if model.frames.isEmpty {
                         ContentUnavailableView(
-                            "스캔 없음",
+                            "이미지 없음",
                             systemImage: "film"
                         )
                         .frame(maxWidth: .infinity, minHeight: 106)
@@ -358,12 +341,17 @@ struct ContentView: View {
                         frame: frame,
                         cropMode: cropModeBinding(for: frame),
                         brushMode: brushModeBinding(for: frame),
-                        regionICEMode: regionICEModeBinding(for: frame)
+                        regionICEMode: regionICEModeBinding(for: frame),
+                        localDodgeBurnMode: localDodgeBurnModeBinding(for: frame)
                     )
                         .id(frame.id)
                 } else {
-                    ContentUnavailableView("프레임 없음", systemImage: "photo.on.rectangle")
-                        .foregroundStyle(.secondary)
+                    ContentUnavailableView {
+                        Label("이미지를 가져오세요", systemImage: "photo.badge.plus")
+                    } description: {
+                        Text("파일을 창에 드래그앤드롭하거나 좌측 Library의 가져오기 항목을 사용하세요.\n스캐너를 쓰려면 좌측에서 스캐너를 불러오세요.")
+                    }
+                    .foregroundStyle(.secondary)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -432,7 +420,8 @@ struct ContentView: View {
                             frame: frame,
                             cropMode: cropModeBinding(for: frame),
                             brushMode: brushModeBinding(for: frame),
-                            regionICEMode: regionICEModeBinding(for: frame)
+                            regionICEMode: regionICEModeBinding(for: frame),
+                            localDodgeBurnMode: localDodgeBurnModeBinding(for: frame)
                         )
                     } else {
                         ContentUnavailableView(
@@ -444,7 +433,8 @@ struct ContentView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .topLeading)
-                .padding(.horizontal, 12)
+                .padding(.leading, 8)
+                .padding(.trailing, 20)
                 .padding(.vertical, 14)
             }
             .scrollContentBackground(.hidden)
@@ -463,11 +453,15 @@ struct ContentView: View {
                 Text(model.selectedFrame?.compactDisplayName ?? "No Frame")
                     .font(.caption2.monospacedDigit())
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
                     .multilineTextAlignment(.trailing)
                 if let frame = model.selectedFrame {
                     Text("\(frame.params.developTarget.displayName) · \(frame.filmType.displayName)")
                         .font(.caption2.monospacedDigit())
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
                         .multilineTextAlignment(.trailing)
                 }
             }
@@ -482,7 +476,7 @@ struct ContentView: View {
             get: { cropFrameID == frame.id },
             set: { isOn in
                 cropFrameID = isOn ? frame.id : nil
-                if isOn { brushFrameID = nil; regionICEFrameID = nil }
+                if isOn { brushFrameID = nil; regionICEFrameID = nil; localDodgeBurnFrameID = nil }
             }
         )
     }
@@ -492,7 +486,7 @@ struct ContentView: View {
             get: { brushFrameID == frame.id },
             set: { isOn in
                 brushFrameID = isOn ? frame.id : nil
-                if isOn { cropFrameID = nil; regionICEFrameID = nil }
+                if isOn { cropFrameID = nil; regionICEFrameID = nil; localDodgeBurnFrameID = nil }
             }
         )
     }
@@ -502,8 +496,18 @@ struct ContentView: View {
             get: { regionICEFrameID == frame.id },
             set: { isOn in
                 regionICEFrameID = isOn ? frame.id : nil
-                if isOn { cropFrameID = nil; brushFrameID = nil }
+                if isOn { cropFrameID = nil; brushFrameID = nil; localDodgeBurnFrameID = nil }
                 else { model.cancelRegionICE(frame) }   // 모드 종료 시 진행 중 세션 정리
+            }
+        )
+    }
+
+    func localDodgeBurnModeBinding(for frame: ScanFrame) -> Binding<Bool> {
+        Binding(
+            get: { localDodgeBurnFrameID == frame.id },
+            set: { isOn in
+                localDodgeBurnFrameID = isOn ? frame.id : nil
+                if isOn { cropFrameID = nil; brushFrameID = nil; regionICEFrameID = nil }
             }
         )
     }

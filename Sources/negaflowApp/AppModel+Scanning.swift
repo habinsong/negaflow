@@ -9,23 +9,31 @@ extension AppModel {
     func refreshDevices() async {
         isDetecting = true
         defer { isDetecting = false }
-        _ = SaneConfigTuner.tune()   // dll.conf 최적화(idempotent)
-        saneBackend.invalidateAddressCache()
-        let sane = (try? await saneBackend.detectScanners()) ?? []
-        devices = sane
+        // 설치된 스캐너 플러그인을 발견하고, 각 플러그인에서 장치를 조회한다.
+        // negaflow 자체엔 스캐너 코드가 없다 — 전부 외부 프로세스 플러그인이 담당한다.
+        let plugins = ScannerPluginHost.discover()
+        installedScannerPlugins = plugins
+        pluginBackends = plugins.map { ExternalScannerBackend(plugin: $0) }
+        var discovered: [ScannerDescriptor] = []
+        for backend in pluginBackends {
+            discovered.append(contentsOf: (try? await backend.detectScanners()) ?? [])
+        }
+        devices = discovered
         if demoMode {
             selectedDeviceID = Self.mockDeviceID
             await loadCapabilities()
-        } else if hasSANE {
-            if selectedDeviceID == nil || !saneDevices.contains(where: { $0.id == selectedDeviceID }) {
-                selectedDeviceID = saneDevices.first?.id
+        } else if !scannerDevices.isEmpty {
+            if selectedDeviceID == nil || !scannerDevices.contains(where: { $0.id == selectedDeviceID }) {
+                selectedDeviceID = scannerDevices.first?.id
             }
             await loadCapabilities()
         } else {
             selectedDeviceID = nil
             capabilities = nil
         }
-        statusMessage = demoMode ? "Demo 모드" : (hasSANE ? "Ready" : "스캐너 연결 대기 중")
+        statusMessage = demoMode ? "Demo 모드"
+            : (!scannerDevices.isEmpty ? "Ready"
+               : (hasScannerPlugin ? "스캐너 연결 대기 중" : "스캐너 플러그인 없음 — 이미지 가져오기로 시작하세요"))
     }
 
     func toggleDemo(_ on: Bool) {
@@ -34,8 +42,9 @@ extension AppModel {
             selectedDeviceID = Self.mockDeviceID
             statusMessage = "Demo 모드"
         } else {
-            selectedDeviceID = saneDevices.first?.id
-            statusMessage = hasSANE ? "Ready" : "스캐너 연결 대기 중"
+            selectedDeviceID = scannerDevices.first?.id
+            statusMessage = !scannerDevices.isEmpty ? "Ready"
+                : (hasScannerPlugin ? "스캐너 연결 대기 중" : "스캐너 플러그인 없음")
         }
         Task { await loadCapabilities() }
     }
@@ -45,6 +54,9 @@ extension AppModel {
         capabilities = try? await b.getCapabilities(scannerID: id)
         if capabilities?.supportsMultiExposure != true {
             multiExposureEnabled = false
+        }
+        if capabilities?.supportsInfrared != true {
+            infraredEnabled = false
         }
     }
 
@@ -74,8 +86,9 @@ extension AppModel {
                 opts.colorMode = colorModeChoice
                 opts.filmType = filmType
                 opts.multiExposureEnabled = multiExposureEnabled && (capabilities?.supportsMultiExposure == true)
+                opts.infraredEnabled = infraredEnabled && (capabilities?.supportsInfrared == true)
             }
-            opts.temporaryOutputURL = SANEBackend.makeTempURL(prefix: "negaflow_app", suffix: ".tiff")
+            opts.temporaryOutputURL = ScanTempFile.makeURL(prefix: "negaflow_app", suffix: ".tiff")
             scanPhase = preview ? .previewScanning : .scanningRGB
             do {
                 let remap: @Sendable (ScanProgress) -> ScanProgress = { p in
@@ -97,6 +110,10 @@ extension AppModel {
                     scanIndex: frames.count + 1,
                     rawScanURL: result.rawFileURL,
                     filmType: filmType,
+                    sourcePixelWidth: result.width,
+                    sourcePixelHeight: result.height,
+                    sourceResolutionDPI: result.resolution.dpi,
+                    sourceBitDepth: result.bitDepth.rawValue,
                     initialTransform: nextScanOrientation
                 )
                 frame.preset = presets.first(where: { $0.id == "neutral" })
@@ -107,7 +124,8 @@ extension AppModel {
                 }
                 frames.append(frame)
                 selectedFrameID = frame.id
-                statusMessage = "Frame \(frame.scanIndex) 스캔 완료: \(result.width)×\(result.height)"
+                let dpiText = result.resolution.dpi > 0 ? " @ \(result.resolution.dpi)dpi" : ""
+                statusMessage = "Frame \(frame.scanIndex) 스캔 완료: \(result.width)×\(result.height)\(dpiText)"
                 // 현상을 await하지 않고 백그라운드로 띄운다 → 스캐너가 현상 동안 유휴하지 않고
                 // 다음 프레임 하드웨어 스캔을 곧바로 시작한다(배치 처리량↑). 품질/해상도는 불변.
                 // 현상 진행은 프레임 썸네일 스피너 + 하단 processing 상태로 표시된다.
@@ -138,14 +156,17 @@ extension AppModel {
     func runDiagnostics() async {
         guard let id = effectiveScannerID, let b = backend else { diagnostics = "활성 스캐너가 없습니다."; return }
         let cap = (try? await b.getCapabilities(scannerID: id)) ?? ScannerCapabilities()
+        let pluginList = installedScannerPlugins.isEmpty
+            ? "(설치된 플러그인 없음)"
+            : installedScannerPlugins.map { "\($0.name) [\($0.id)]" }.joined(separator: ", ")
         diagnostics = """
-        Scanner   : \(devices.first(where: { $0.backendType == .sane })?.displayName ?? (demoMode ? "Mock" : id))
+        Scanner   : \(demoMode ? Self.mockDisplayName : (scannerDevices.first?.displayName ?? id))
         Backend   : \(b.backendType.rawValue)
+        Plugins   : \(pluginList)
         Resol.    : \(cap.supportedResolutions.map(\.dpi))
         Modes     : \(cap.supportedModes.map(\.rawValue))
         BitDepth  : \(cap.supportedBitDepths.map(\.rawValue))
         IR        : \(cap.supportsInfrared)
-        dll tuned : \(SaneConfigTuner.isTuned)
         """
     }
 

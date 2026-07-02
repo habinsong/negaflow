@@ -9,6 +9,7 @@ final class ToneMapperControlsTests: XCTestCase {
             ChromabaseMetalKernels.availableKernelNames,
             [
                 "basicTone",
+                "bwToning",
                 "calibrationPrimaries",
                 "colorGrade",
                 "colorMixerHSL",

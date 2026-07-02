@@ -25,6 +25,26 @@ public enum ExportEngine {
         }
     }
 
+    @discardableResult
+    public static func writePaired(
+        _ image: CIImage,
+        mainFlatMaster: CIImage?,
+        to url: URL,
+        format: ExportFormat,
+        using context: CIContext,
+        metadata: ExportMeta? = nil,
+        options: ExportOptions = .standard,
+        writeMainFlatMaster: Bool = false
+    ) throws -> ExportWriteResult {
+        try write(image, to: url, format: format, using: context, metadata: metadata, options: options)
+        guard writeMainFlatMaster, format != .rawScanTIFF, let mainFlatMaster else {
+            return ExportWriteResult(outputURL: url, mainFlatMasterURL: nil)
+        }
+        let mainFlatURL = ExportPairing.mainFlatMasterURL(for: url)
+        try write(mainFlatMaster, to: mainFlatURL, format: format, using: context, metadata: metadata, options: options)
+        return ExportWriteResult(outputURL: url, mainFlatMasterURL: mainFlatURL)
+    }
+
     /// 긴 변을 `longEdge`로 맞춰 비율 유지 축소(업스케일 안 함). nil이면 원본 그대로.
     static func resized(_ image: CIImage, longEdge: Int?) -> CIImage {
         guard let longEdge, longEdge > 0 else { return image }
@@ -96,6 +116,7 @@ public enum ExportEngine {
     /// transform이 픽셀에 구워졌으므로 orientation=1.
     static func metadataProperties(_ meta: ExportMeta?) -> [CFString: Any] {
         guard let meta = meta else { return [:] }
+        var props: [CFString: Any] = [:]
         var exif: [String: Any] = [:]
         var tiff: [String: Any] = [:]
         if let make = meta.scannerModel {
@@ -108,6 +129,8 @@ public enum ExportEngine {
             tiff["Model"] = parts.count > 1 ? parts[1] : make
         }
         if let dpi = meta.resolutionDPI, dpi > 0 {
+            props[kCGImagePropertyDPIWidth] = dpi as NSNumber
+            props[kCGImagePropertyDPIHeight] = dpi as NSNumber
             exif["XResolution"] = dpi as NSNumber
             exif["YResolution"] = dpi as NSNumber
             exif["ResolutionUnit"] = 2   // inches
@@ -122,11 +145,34 @@ public enum ExportEngine {
         if let software = meta.software { exif["Software"] = software; tiff["Software"] = software }
         if let film = meta.filmType { exif["UserComment"] = "FilmType: \(film)" }
         exif["Orientation"] = 1   // transform 구움
-        var props: [CFString: Any] = [:]
         props[kCGImagePropertyExifDictionary] = exif
         props[kCGImagePropertyTIFFDictionary] = tiff
         props[kCGImagePropertyOrientation] = 1
         return props
+    }
+}
+
+public struct ExportWriteResult: Sendable, Equatable {
+    public let outputURL: URL
+    public let mainFlatMasterURL: URL?
+
+    public init(outputURL: URL, mainFlatMasterURL: URL? = nil) {
+        self.outputURL = outputURL
+        self.mainFlatMasterURL = mainFlatMasterURL
+    }
+}
+
+public enum ExportPairing {
+    public static let mainFlatSuffix = "main-flat"
+
+    public static func mainFlatMasterURL(for outputURL: URL) -> URL {
+        let ext = outputURL.pathExtension
+        let base = outputURL.deletingPathExtension()
+        let sibling = base
+            .deletingLastPathComponent()
+            .appendingPathComponent("\(base.lastPathComponent)-\(mainFlatSuffix)")
+        guard !ext.isEmpty else { return sibling }
+        return sibling.appendingPathExtension(ext)
     }
 }
 
@@ -142,6 +188,19 @@ public struct ExportMeta: Sendable {
         self.resolutionDPI = resolutionDPI
         self.filmType = filmType
         self.software = software
+    }
+}
+
+public extension DevelopParameters {
+    func mainFlatMasterParameters() -> DevelopParameters {
+        var master = DevelopParameters()
+        master.filmType = filmType
+        master.developTarget = .main
+        master.baseEstimationMode = baseEstimationMode
+        master.manualBaseRGB = manualBaseRGB
+        master.filmStockDminID = filmStockDminID
+        master.imageTransform = imageTransform
+        return master
     }
 }
 

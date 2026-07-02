@@ -1,13 +1,13 @@
 import XCTest
-import CoreGraphics
-import CoreImage
-import ImageIO
-import Chromabase
+import Foundation
 @testable import ScannerKit
 
+// negaflow(Apache-2.0)의 ScannerKit 테스트. SANE 관련 테스트는 GPL 분리로 인해 외부
+// 플러그인 패키지(negaflow-scanner-sane)로 이관되었다. 여기서는 라이센스-중립 코어와
+// 외부 프로세스 플러그인 계약(발견 + JSON/CLI 매핑)만 검증한다.
 final class ScannerKitTests: XCTestCase {
     func testScanOptionsStrongDefault() {
-        let o = ScanOptions.strongDefault(scannerID: "sane-test")
+        let o = ScanOptions.strongDefault(scannerID: "plugin:sane:test")
         XCTAssertEqual(o.resolution, .r3600)
         XCTAssertEqual(o.bitDepth, .sixteen)
         XCTAssertEqual(o.colorMode, .color)
@@ -24,536 +24,146 @@ final class ScannerKitTests: XCTestCase {
     }
 
     func testBackendTypeFromScannerID() {
+        XCTAssertEqual(BackendType(fromScannerID: "plugin:sane:genesys:libusb:000:010"), .plugin)
         XCTAssertEqual(BackendType(fromScannerID: "sane-genesys:libusb:000:010"), .sane)
         XCTAssertEqual(BackendType(fromScannerID: "ica-xyz"), .imageCaptureCore)
         XCTAssertEqual(BackendType(fromScannerID: "mock-1"), .mock)
     }
 
-    func testParseSaneCapabilitiesDump() {
-        let dump = """
-        All options specific to device `genesys:libusb:000:010':
-          Scan Mode:
-            --mode Color|Gray [Gray]
-            --depth 16 [16]
-            --resolution 7200|3600|2400|1200|600dpi [600]
-            --source Transparency Adapter [Transparency Adapter]
-            --brightness -100..100 (in steps of 1) [0]
-            --gamma-table 0..65535,... [inactive]
-        """
-        let cap = SANEBackend.parseCapabilities(dump)
-        XCTAssertTrue(cap.supportedResolutions.contains(.r7200))
-        XCTAssertTrue(cap.supportedResolutions.contains(.r3600))
-        XCTAssertTrue(cap.supportedModes.contains(.color))
-        XCTAssertTrue(cap.supportedBitDepths.contains(.sixteen))
-        XCTAssertTrue(cap.supportsTransparency)
-        XCTAssertFalse(cap.supportsInfrared)   // genesys는 IR 노출 안 함
-        XCTAssertFalse(cap.supportsMultiExposure, "brightness/gamma-table은 센서 노출 브라케팅이 아니다.")
-    }
-
-    func testParseSaneCapabilitiesMarksHardwareExposureOnlyForScanExposureTime() {
-        let dump = """
-        All options specific to device `genesys:libusb:000:010':
-          Scan Mode:
-            --mode Color|Gray [Gray]
-            --depth 16 [16]
-            --resolution 7200|3600|2400|1200|600dpi [600]
-            --source Transparency Adapter [Transparency Adapter]
-            --scan-exposure-time 11000..65535 [18000] [advanced]
-        """
-        let cap = SANEBackend.parseCapabilities(dump)
-
-        XCTAssertTrue(cap.supportsMultiExposure)
-    }
-
-    func testMultiSampleAverageReducesMidtoneRandomNoise() {
-        let width = 48
-        let height = 24
-        let linear = CGColorSpace(name: CGColorSpace.linearSRGB)!
-
-        func makeImage(phase: Int) -> CIImage {
-            var pixels = [Float](repeating: 1, count: width * height * 4)
-            for y in 0..<height {
-                for x in 0..<width {
-                    let i = (y * width + x) * 4
-                    let sign: Float = ((x + y + phase) % 3 == 0) ? 1 : -0.5
-                    let value: Float = 0.48 + sign * 0.045
-                    pixels[i] = value
-                    pixels[i + 1] = value
-                    pixels[i + 2] = value
-                    pixels[i + 3] = 1
-                }
-            }
-            return CIImage(
-                bitmapData: Data(bytes: pixels, count: pixels.count * MemoryLayout<Float>.size),
-                bytesPerRow: width * 4 * MemoryLayout<Float>.size,
-                size: CGSize(width: width, height: height),
-                format: .RGBAf,
-                colorSpace: linear
-            )
-        }
-
-        let midtone = makeImage(phase: 0)
-        let merged = SANEBackend.averageMultiSampleScans([
-            makeImage(phase: 1),
-            midtone,
-            makeImage(phase: 2),
-        ])
-        let context = CIContext(options: [.workingColorSpace: linear, .outputColorSpace: linear])
-        var baseline = [Float](repeating: 0, count: width * height * 4)
-        var output = [Float](repeating: 0, count: width * height * 4)
-        context.render(midtone, toBitmap: &baseline, rowBytes: width * 4 * MemoryLayout<Float>.size,
-                       bounds: CGRect(x: 0, y: 0, width: width, height: height),
-                       format: .RGBAf, colorSpace: linear)
-        context.render(merged, toBitmap: &output, rowBytes: width * 4 * MemoryLayout<Float>.size,
-                       bounds: CGRect(x: 0, y: 0, width: width, height: height),
-                       format: .RGBAf, colorSpace: linear)
-
-        XCTAssertLessThan(lumaStandardDeviation(output), lumaStandardDeviation(baseline) * 0.45)
-    }
-
-    func testHardwareExposurePlanRepeatsEachExposureForNoiseReduction() {
-        XCTAssertEqual(
-            SANEBackend.hardwareExposurePlan(samplesPerStop: 2),
-            [11_000, 11_000, 14_000, 14_000, 30_000, 30_000]
-        )
-    }
-
-    func testMultiSampleBitmapPreservesSixteenBitChannelScale() throws {
-        let width = 2
-        let height = 1
-        let linear = CGColorSpace(name: CGColorSpace.linearSRGB)!
-        let values: [Float] = [
-            1.0 / 65535.0, 2.0 / 65535.0, 3.0 / 65535.0, 1,
-            300.0 / 65535.0, 400.0 / 65535.0, 500.0 / 65535.0, 1,
-        ]
-        let image = CIImage(
-            bitmapData: Data(bytes: values, count: values.count * MemoryLayout<Float>.size),
-            bytesPerRow: width * 4 * MemoryLayout<Float>.size,
-            size: CGSize(width: width, height: height),
-            format: .RGBAf,
-            colorSpace: linear
-        )
-        let bitmap = try SANEBackend.averageMultiSampleBitmap([image, image, image])
-
-        XCTAssertEqual(bitmap.width, width)
-        XCTAssertEqual(bitmap.height, height)
-        XCTAssertEqual(bitmap.pixels[0], 1)
-        XCTAssertEqual(bitmap.pixels[1], 2)
-        XCTAssertEqual(bitmap.pixels[2], 3)
-        XCTAssertEqual(bitmap.pixels[3], 300)
-        XCTAssertEqual(bitmap.pixels[4], 400)
-        XCTAssertEqual(bitmap.pixels[5], 500)
-    }
-
-    func testMultiSampleBitmapUsesRawArithmeticMeanWithoutMedianNormalization() throws {
-        let width = 24
-        let height = 12
-        let linear = CGColorSpace(name: CGColorSpace.linearSRGB)!
-
-        func makeSolidImage(_ value: Float) -> CIImage {
-            var pixels = [Float](repeating: 1, count: width * height * 4)
-            for index in stride(from: 0, to: pixels.count, by: 4) {
-                pixels[index] = value
-                pixels[index + 1] = value
-                pixels[index + 2] = value
-            }
-            return CIImage(
-                bitmapData: Data(bytes: pixels, count: pixels.count * MemoryLayout<Float>.size),
-                bytesPerRow: width * 4 * MemoryLayout<Float>.size,
-                size: CGSize(width: width, height: height),
-                format: .RGBAf,
-                colorSpace: linear
-            )
-        }
-
-        let bitmap = try SANEBackend.averageMultiSampleBitmap([
-            makeSolidImage(0.20),
-            makeSolidImage(0.40),
-            makeSolidImage(0.80),
-        ])
-
-        let expected = Int(((0.20 + 0.40 + 0.80) / 3.0) * 65535.0)
-        XCTAssertEqual(Int(bitmap.pixels[0]), expected, accuracy: 1)
-        XCTAssertEqual(Int(bitmap.pixels[1]), expected, accuracy: 1)
-        XCTAssertEqual(Int(bitmap.pixels[2]), expected, accuracy: 1)
-    }
-
-    func testHardwareExposureMergeUsesShortExposureForClippedHighlights() throws {
-        let width = 4
-        let height = 1
-        let linear = CGColorSpace(name: CGColorSpace.linearSRGB)!
-
-        func makeImage(_ values: [Float]) -> CIImage {
-            var pixels = [Float]()
-            for value in values {
-                pixels += [value, value, value, 1]
-            }
-            return CIImage(
-                bitmapData: Data(bytes: pixels, count: pixels.count * MemoryLayout<Float>.size),
-                bytesPerRow: width * 4 * MemoryLayout<Float>.size,
-                size: CGSize(width: width, height: height),
-                format: .RGBAf,
-                colorSpace: linear
-            )
-        }
-
-        let exposureTimes = [11_000, 14_000, 30_000]
-        let sceneAtReference: [Float] = [0.08, 0.24, 0.72, 0.96]
-        let images = exposureTimes.map { exposure -> CIImage in
-            let scale = Float(exposure) / 14_000.0
-            return makeImage(sceneAtReference.map { min($0 * scale, 1.0) })
-        }
-
-        let bitmap = try SANEBackend.mergeHardwareExposureBitmap(images, exposureTimes: exposureTimes)
-        let highlight = Double(bitmap.pixels[9]) / 65535.0
-
-        XCTAssertGreaterThan(highlight, 0.93)
-        XCTAssertLessThan(highlight, 1.0, "긴 노출 클립값 1.0을 그대로 쓰지 않고 짧은 노출에서 복원해야 한다.")
-    }
-
-    func testHardwareExposureMergePreservesNormalExposureMidtones() throws {
-        let width = 5
-        let height = 1
-        let linear = CGColorSpace(name: CGColorSpace.linearSRGB)!
-
-        func makeImage(_ values: [Float]) -> CIImage {
-            var pixels = [Float]()
-            for value in values {
-                pixels += [value, value, value, 1]
-            }
-            return CIImage(
-                bitmapData: Data(bytes: pixels, count: pixels.count * MemoryLayout<Float>.size),
-                bytesPerRow: width * 4 * MemoryLayout<Float>.size,
-                size: CGSize(width: width, height: height),
-                format: .RGBAf,
-                colorSpace: linear
-            )
-        }
-
-        let exposureTimes = [11_000, 14_000, 30_000]
-        let sceneAtReference: [Float] = [0.02, 0.12, 0.32, 0.55, 0.76]
-        let images = exposureTimes.map { exposure -> CIImage in
-            let scale = Float(exposure) / 14_000.0
-            return makeImage(sceneAtReference.map { min($0 * scale, 1.0) })
-        }
-
-        let bitmap = try SANEBackend.mergeHardwareExposureBitmap(images, exposureTimes: exposureTimes)
-
-        for pixel in 1..<sceneAtReference.count {
-            let output = Double(bitmap.pixels[pixel * 3]) / 65535.0
-            XCTAssertEqual(
-                output,
-                Double(sceneAtReference[pixel]),
-                accuracy: 0.025,
-                "중간톤은 14k 기준 패스의 raw 스케일을 유지해야 한다."
-            )
-        }
-    }
-
-    func testHardwareExposureMergeAveragesRepeatedNormalExposureNoise() throws {
-        let width = 3
-        let height = 1
-        let linear = CGColorSpace(name: CGColorSpace.linearSRGB)!
-
-        func makeImage(_ values: [Float]) -> CIImage {
-            var pixels = [Float]()
-            for value in values {
-                pixels += [value, value, value, 1]
-            }
-            return CIImage(
-                bitmapData: Data(bytes: pixels, count: pixels.count * MemoryLayout<Float>.size),
-                bytesPerRow: width * 4 * MemoryLayout<Float>.size,
-                size: CGSize(width: width, height: height),
-                format: .RGBAf,
-                colorSpace: linear
-            )
-        }
-
-        let images = [
-            makeImage([0.12, 0.35, 0.88]),
-            makeImage([0.12, 0.35, 0.88]),
-            makeImage([0.20, 0.48, 0.76]),
-            makeImage([0.20, 0.52, 0.76]),
-            makeImage([0.36, 0.90, 1.0]),
-            makeImage([0.36, 0.90, 1.0]),
-        ]
-        let exposureTimes = [11_000, 11_000, 14_000, 14_000, 30_000, 30_000]
-
-        let bitmap = try SANEBackend.mergeHardwareExposureBitmap(images, exposureTimes: exposureTimes)
-        let midtone = Double(bitmap.pixels[4]) / 65535.0
-
-        XCTAssertEqual(
-            midtone,
-            0.50,
-            accuracy: 0.015,
-            "동일 14k 노출 반복 샘플은 HDR merge 전에 평균되어 랜덤 노이즈를 줄여야 한다."
-        )
-    }
-
-    func testHardwareExposureMergeKeepsLongExposureFromDominatingShadows() throws {
-        let width = 1
-        let height = 1
-        let linear = CGColorSpace(name: CGColorSpace.linearSRGB)!
-
-        func makeImage(_ value: Float) -> CIImage {
-            let pixels: [Float] = [value, value, value, 1]
-            return CIImage(
-                bitmapData: Data(bytes: pixels, count: pixels.count * MemoryLayout<Float>.size),
-                bytesPerRow: width * 4 * MemoryLayout<Float>.size,
-                size: CGSize(width: width, height: height),
-                format: .RGBAf,
-                colorSpace: linear
-            )
-        }
-
-        let exposureTimes = [11_000, 14_000, 30_000]
-        let images = [
-            makeImage(0.007),
-            makeImage(0.012),
-            makeImage(0.080),
-        ]
-
-        let bitmap = try SANEBackend.mergeHardwareExposureBitmap(images, exposureTimes: exposureTimes)
-        let output = Double(bitmap.pixels[0]) / 65535.0
-
-        XCTAssertLessThan(output, 0.030, "long exposure가 암부 저신호를 전부 지배하면 색비/컬러 노이즈가 long pass 바이어스를 따라간다.")
-        XCTAssertGreaterThan(output, 0.012, "긴 노출 보강은 완전히 끄지 말고 최저 신호의 계조만 보강해야 한다.")
-    }
-
-    func testSaneScanArgsIncludeHardwareExposureTimeWhenRequested() {
-        let backend = SANEBackend(scanimagePath: "/tmp/sane-head-install/bin/scanimage")
-        var options = ScanOptions.strongDefault(scannerID: "sane-genesys:libusb:000:010")
-        options.hardwareExposureTime = 30_000
-
-        let args = backend.makeScanimageArgs(
-            devname: "genesys:libusb:000:010",
-            options: options
-        )
-
-        XCTAssertTrue(args.contains("--scan-exposure-time=30000"))
-    }
-
-    func testMultiSampleBitmapAlignsOnePixelPassShiftBeforeAveraging() throws {
-        let width = 32
-        let height = 20
-        let linear = CGColorSpace(name: CGColorSpace.linearSRGB)!
-
-        func makeEdgeImage(shiftX: Int) -> CIImage {
-            var pixels = [Float](repeating: 1, count: width * height * 4)
-            for y in 0..<height {
-                for x in 0..<width {
-                    let sourceX = x - shiftX
-                    let value: Float = sourceX < width / 2 ? 0.18 : 0.78
-                    let offset = (y * width + x) * 4
-                    pixels[offset] = value
-                    pixels[offset + 1] = value
-                    pixels[offset + 2] = value
-                    pixels[offset + 3] = 1
-                }
-            }
-            return CIImage(
-                bitmapData: Data(bytes: pixels, count: pixels.count * MemoryLayout<Float>.size),
-                bytesPerRow: width * 4 * MemoryLayout<Float>.size,
-                size: CGSize(width: width, height: height),
-                format: .RGBAf,
-                colorSpace: linear
-            )
-        }
-
-        let bitmap = try SANEBackend.averageMultiSampleBitmap([
-            makeEdgeImage(shiftX: 0),
-            makeEdgeImage(shiftX: 1),
-            makeEdgeImage(shiftX: 0),
-        ])
-
-        let left = bitmap.pixels[((height / 2 * width + width / 2 - 1) * 3)]
-        let right = bitmap.pixels[((height / 2 * width + width / 2) * 3)]
-        XCTAssertGreaterThan(
-            Int(right) - Int(left),
-            30_000,
-            "multi-pass 평균 전에 1px 패스 밀림을 정렬하지 않으면 에지가 흐려진다."
-        )
-    }
-
-    func testMultiSampleFileMergePreservesScannerRawLinearScale() throws {
-        let dir = URL(fileURLWithPath: NSTemporaryDirectory())
-            .appendingPathComponent("scannerkit_\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: dir) }
-
-        let sampleURLs = (0..<3).map { dir.appendingPathComponent("sample_\($0).tiff") }
-        let outputURL = dir.appendingPathComponent("merged.tiff")
-        for url in sampleURLs {
-            try writeScannerRGB16TIFF(
-                pixels: [0.24, 0.10, 0.07],
-                width: 1,
-                height: 1,
-                to: url
-            )
-        }
-
-        try SANEBackend.averageMultiSampleScans(sampleURLs: sampleURLs, outputURL: outputURL)
-        guard let merged = Chromabase.ImageLoader.loadScannerTIFF(outputURL) else {
-            return XCTFail("merged scanner TIFF should load")
-        }
-        let context = CIContext(options: [
-            .workingColorSpace: CGColorSpace(name: CGColorSpace.linearSRGB) as Any,
-            .outputColorSpace: CGColorSpace(name: CGColorSpace.linearSRGB) as Any,
-        ])
-        var pixel = [Float](repeating: 0, count: 4)
-        context.render(
-            merged,
-            toBitmap: &pixel,
-            rowBytes: 4 * MemoryLayout<Float>.size,
-            bounds: CGRect(x: 0, y: 0, width: 1, height: 1),
-            format: .RGBAf,
-            colorSpace: CGColorSpace(name: CGColorSpace.linearSRGB)!
-        )
-
-        XCTAssertEqual(Double(pixel[0]), 0.24, accuracy: 0.001)
-        XCTAssertEqual(Double(pixel[1]), 0.10, accuracy: 0.001)
-        XCTAssertEqual(Double(pixel[2]), 0.07, accuracy: 0.001)
-        XCTAssertNil(
-            CGImageSourceCopyPropertiesAtIndex(
-                CGImageSourceCreateWithURL(outputURL as CFURL, nil)!,
-                0,
-                nil
-            ).flatMap { ($0 as NSDictionary)[kCGImagePropertyProfileName] },
-            "merged raw scanner TIFF should not embed an ICC profile that changes scanner sample interpretation"
-        )
-    }
-
     func testScannerReportSerialization() throws {
-        let d = ScannerDescriptor(id: "sane-x", displayName: "Plustek OpticFilm 8200i",
+        let d = ScannerDescriptor(id: "plugin:sane:x", displayName: "Plustek OpticFilm 8200i",
                                   vendor: "Plustek", model: "OpticFilm 8200i",
-                                  backendType: .sane, verifiedStatus: .verified)
-        let r = ScannerReport(descriptor: d, backend: .sane,
+                                  backendType: .plugin, verifiedStatus: .verified)
+        let r = ScannerReport(descriptor: d, backend: .plugin,
                               backendAvailable: true, capabilities: ScannerCapabilities())
         let data = try JSONEncoder().encode(r)
         XCTAssertGreaterThan(data.count, 50)
     }
 
-    // MARK: - SANE 환경 (GUI exit-1 버그 수정 회귀 테스트)
+    // MARK: - 외부 플러그인 발견 + 프로토콜 매핑
     //
-    // GUI .app 환경에서 scanimage 가 "open of device failed: Invalid argument"
-    // (exit 1)로 실패하는 근본 원인은 SANE_CONFIG_DIR / PATH 누락이었다.
-    // makeSaneEnvironment() 는 반드시 Homebrew 경로를 포함해야 한다.
+    // 가짜 플러그인(고정 JSON을 반환하는 셸 스크립트)을 임시 플러그인 디렉토리에 설치해,
+    // ScannerPluginHost.discover() 와 ExternalScannerBackend 의 detect/capabilities/scan
+    // JSON 매핑을 검증한다. 실제 스캐너/실제 이미지는 사용하지 않는다.
 
-    func testSaneEnvironmentIncludesHomebrewPath() {
-        let env = SANEBackend.makeSaneEnvironment()
-        let path = env["PATH"] ?? ""
-        XCTAssertTrue(path.contains("/opt/homebrew/bin") || path.contains("/usr/local/bin"),
-                      "SANE 환경의 PATH 에 Homebrew 경로가 있어야 GUI 앱이 scanimage 를 찾는다. PATH=\(path)")
-    }
+    func testDiscoverAndExternalBackendProtocol() async throws {
+        let dir = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("negaflow-plugins-\(UUID().uuidString)", isDirectory: true)
+        let pluginDir = dir.appendingPathComponent("fake", isDirectory: true)
+        try FileManager.default.createDirectory(at: pluginDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
 
-    func testSaneEnvironmentHasConfigDirWhenHomebrewInstalled() throws {
-        // 이 머신에는 /opt/homebrew/etc/sane.d 가 있으므로 SANE_CONFIG_DIR 가 잡혀야 한다.
-        let fm = FileManager.default
-        let homebrewSane = fm.fileExists(atPath: "/opt/homebrew/etc/sane.d")
-                     || fm.fileExists(atPath: "/usr/local/etc/sane.d")
-        guard homebrewSane else {
-            throw XCTSkip("Homebrew sane-backends 미설치 — SANE_CONFIG_DIR 검증 생략")
-        }
-        let env = SANEBackend.makeSaneEnvironment()
-        XCTAssertNotNil(env["SANE_CONFIG_DIR"], "SANE_CONFIG_DIR 가 주입되어야 scanimage 가 백엔드 설정을 찾는다.")
-        if let cfg = env["SANE_CONFIG_DIR"] {
-            XCTAssertTrue(fm.fileExists(atPath: cfg))
-        }
-    }
+        let execURL = pluginDir.appendingPathComponent("fake-scanner")
+        try Self.fakePluginScript.write(to: execURL, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: execURL.path)
 
-    func testFindSaneConfigDirResolvesHomebrew() {
-        if let dir = SANEBackend.findSaneConfigDir() {
-            XCTAssertTrue(FileManager.default.fileExists(atPath: dir))
-        }
-    }
-
-    // MARK: - USB 주소 재획득 회귀 테스트
-    //
-    // 스캐너의 libusb 주소는 리셋마다 바뀐다(010 ↔ 011). scanimage -L 출력에서
-    // 현재 주소를 올바로 파싱해 내는지 검증. 주소가 틀리면 "Invalid argument" 로 open 실패.
-
-    func testParseDeviceAddressFromScanimageListOutput() {
-        // scanimage -L 표준 출력 형식.
-        let listOutput = """
-        device `genesys:libusb:000:011' is a PLUSTEK OpticFilm 8100 flatbed scanner
-
-        No scanners were identified.
-        """
-        // 정규식이 동일하게 동작하는지 — 첫 줄의 주소만 잡아야 함.
-        let regex = try! NSRegularExpression(
-            pattern: "device `genesys:(libusb:[0-9]+:[0-9]+)' is a ([^\\s]+)\\s+(.+?) (?:flatbed |film )?scanner"
+        let manifest = ScannerPluginManifest(
+            schemaVersion: 1, id: "fake", name: "Fake Scanner Plugin",
+            executable: "fake-scanner", kind: "scanner", license: "MIT"
         )
-        let range = NSRange(listOutput.startIndex..., in: listOutput)
-        let match = regex.firstMatch(in: listOutput, range: range)
-        XCTAssertNotNil(match)
-        if let match,
-           let r = Range(match.range(at: 1), in: listOutput) {
-            XCTAssertEqual(String(listOutput[r]), "libusb:000:011")
-        }
+        let manifestData = try JSONEncoder().encode(manifest)
+        try manifestData.write(to: pluginDir.appendingPathComponent("manifest.json"))
+
+        setenv("NEGAFLOW_PLUGINS_DIR", dir.path, 1)
+        defer { unsetenv("NEGAFLOW_PLUGINS_DIR") }
+
+        let plugins = ScannerPluginHost.discover()
+        XCTAssertEqual(plugins.count, 1)
+        let plugin = try XCTUnwrap(plugins.first)
+        XCTAssertEqual(plugin.id, "fake")
+
+        let backend = ExternalScannerBackend(plugin: plugin)
+
+        // detect → 외부 id 는 plugin:<id>:<내부id> 로 감싸진다.
+        let devices = try await backend.detectScanners()
+        XCTAssertEqual(devices.count, 1)
+        let device = try XCTUnwrap(devices.first)
+        XCTAssertEqual(device.id, "plugin:fake:dev0")
+        XCTAssertEqual(device.backendType, .plugin)
+        XCTAssertTrue(backend.owns(scannerID: device.id))
+
+        // capabilities → wire JSON 이 ScannerCapabilities 로 매핑된다.
+        let caps = try await backend.getCapabilities(scannerID: device.id)
+        XCTAssertTrue(caps.supportedResolutions.contains(.r3600))
+        XCTAssertTrue(caps.supportedResolutions.contains(.r7200))
+        XCTAssertTrue(caps.supportedModes.contains(.color))
+        XCTAssertTrue(caps.supportedBitDepths.contains(.sixteen))
+
+        // scan → NDJSON 진행률 이벤트가 전달되고, result 가 ScanResult 로 매핑된다.
+        let output = ScanTempFile.makeURL(prefix: "fake_scan", suffix: ".tiff")
+        defer { try? FileManager.default.removeItem(at: output) }
+        var opts = ScanOptions.strongDefault(scannerID: device.id)
+        opts.temporaryOutputURL = output
+        let progressPhases = ProgressCollector()
+        let result = try await backend.startFullScan(opts) { p in progressPhases.add(p.phase) }
+        XCTAssertEqual(result.rawFileURL.path, output.path)
+        XCTAssertEqual(result.width, 10)
+        XCTAssertEqual(result.height, 8)
+        XCTAssertEqual(result.backendUsed, .plugin)
+        XCTAssertTrue(progressPhases.phases.contains(.scanningRGB))
     }
 
-    func testStaleDeviceErrorDetection() {
-        // USB 주소 만료 시 나타나는 전형적 오류들 → 재시도 트리거.
-        XCTAssertTrue(SANEBackend.isStaleDeviceError(
-            "scanimage: open of device genesys:libusb:000:010 failed: Invalid argument"))
-        XCTAssertTrue(SANEBackend.isStaleDeviceError("Error during device I/O"))
-        XCTAssertTrue(SANEBackend.isStaleDeviceError("scanimage: open of device ... failed: Device busy"))
-        // 무관한 오류는 재시도하지 않는다.
-        XCTAssertFalse(SANEBackend.isStaleDeviceError("scanimage: out of memory"))
-        XCTAssertFalse(SANEBackend.isStaleDeviceError(""))
+    func testExternalBackendDrainsVerbosePluginStderrDuringDetect() async throws {
+        let dir = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("negaflow-plugins-\(UUID().uuidString)", isDirectory: true)
+        let pluginDir = dir.appendingPathComponent("fake-verbose", isDirectory: true)
+        try FileManager.default.createDirectory(at: pluginDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let execURL = pluginDir.appendingPathComponent("fake-verbose-scanner")
+        try Self.verboseStderrPluginScript.write(to: execURL, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: execURL.path)
+
+        let manifest = ScannerPluginManifest(
+            schemaVersion: 1, id: "fake-verbose", name: "Verbose Fake Scanner Plugin",
+            executable: "fake-verbose-scanner", kind: "scanner", license: "MIT"
+        )
+        try JSONEncoder().encode(manifest).write(to: pluginDir.appendingPathComponent("manifest.json"))
+
+        setenv("NEGAFLOW_PLUGINS_DIR", dir.path, 1)
+        defer { unsetenv("NEGAFLOW_PLUGINS_DIR") }
+
+        let plugin = try XCTUnwrap(ScannerPluginHost.discover().first)
+        let backend = ExternalScannerBackend(plugin: plugin)
+        let devices = try await backend.detectScanners()
+        XCTAssertEqual(devices.first?.id, "plugin:fake-verbose:dev0")
     }
 
-    // MARK: - 좀비 scanimage 정리 회귀 테스트
-    //
-    // 좀비 scanimage 프로세스가 USB 장치를 점유하면 모든 새 스캔이 실패한다.
-    // reapZombieScanimages() 로직이 살아있는 pkill 패턴을 생성하는지 확인(실행은 부작용 방지용으로 스킵).
+    /// detect/capabilities/scan 서브커맨드에 고정 JSON을 반환하는 가짜 플러그인 셸.
+    static let fakePluginScript = """
+    #!/bin/bash
+    case "$1" in
+      detect)
+        echo '{"devices":[{"id":"dev0","displayName":"Fake Scanner","vendor":"Test","model":"T1","connectionType":"usb","verifiedStatus":"experimental"}]}'
+        ;;
+      capabilities)
+        echo '{"resolutionsDPI":[3600,7200],"modes":["color","gray"],"bitDepths":[8,16],"supportsInfrared":false}'
+        ;;
+      scan)
+        payload=$(cat)
+        out=$(printf '%s' "$payload" | sed -n 's/.*"outputPath":"\\([^"]*\\)".*/\\1/p')
+        : > "$out"
+        echo '{"type":"progress","phase":"scanningRGB","fraction":0.5,"message":"scanning"}'
+        printf '{"type":"result","width":10,"height":8,"path":"%s","resolutionDPI":3600,"bitDepth":16}\\n' "$out"
+        ;;
+    esac
+    """
 
-    func testZombieReapDoesNotThrowOnCleanSystem() {
-        // 실제 pkill 은 부작용이 크므로, 명령 문자열이 올바른지만 검증.
-        // reapZombieScanimages 는 private 이므로, 여기서는 scanimage 경로가
-        // resolve 됨만 확인(경로가 nil 이면 pkill 패턴이 무의미).
-        let path = SANEBackend.findScanimage()
-        XCTAssertFalse(path.isEmpty, "scanimage 경로가 비어 있으면 좀비 정리가 동작하지 않는다")
-    }
+    static let verboseStderrPluginScript = """
+    #!/bin/bash
+    case "$1" in
+      detect)
+        perl -e 'print STDERR "diagnostic line\\n" x 20000'
+        echo '{"devices":[{"id":"dev0","displayName":"Verbose Fake Scanner","vendor":"Test","model":"T2","connectionType":"usb","verifiedStatus":"experimental"}]}'
+        ;;
+    esac
+    """
+}
 
-    private func lumaStandardDeviation(_ pixels: [Float]) -> Double {
-        var values: [Double] = []
-        values.reserveCapacity(pixels.count / 4)
-        for index in stride(from: 0, to: pixels.count, by: 4) {
-            let red = Double(pixels[index])
-            let green = Double(pixels[index + 1])
-            let blue = Double(pixels[index + 2])
-            values.append(red * 0.2126 + green * 0.7152 + blue * 0.0722)
-        }
-        let mean = values.reduce(0, +) / Double(values.count)
-        let variance = values.reduce(0) { $0 + pow($1 - mean, 2) } / Double(values.count)
-        return sqrt(variance)
-    }
-
-    private func writeScannerRGB16TIFF(pixels: [Double], width: Int, height: Int, to url: URL) throws {
-        let samples = pixels.map { UInt16(min(max($0, 0), 1) * 65535).bigEndian }
-        let data = Data(bytes: samples, count: samples.count * MemoryLayout<UInt16>.size)
-        guard let provider = CGDataProvider(data: data as CFData),
-              let image = CGImage(
-                width: width,
-                height: height,
-                bitsPerComponent: 16,
-                bitsPerPixel: 48,
-                bytesPerRow: width * 3 * MemoryLayout<UInt16>.size,
-                space: CGColorSpaceCreateDeviceRGB(),
-                bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.none.rawValue),
-                provider: provider,
-                decode: nil,
-                shouldInterpolate: false,
-                intent: .defaultIntent
-              ),
-              let destination = CGImageDestinationCreateWithURL(url as CFURL, "public.tiff" as CFString, 1, nil) else {
-            throw ScannerError(.ioFailure, "test TIFF 생성 실패")
-        }
-        CGImageDestinationAddImage(destination, image, nil)
-        guard CGImageDestinationFinalize(destination) else {
-            throw ScannerError(.ioFailure, "test TIFF 저장 실패")
-        }
-    }
-
+/// scan 진행률 콜백에서 phase를 안전하게 모은다.
+private final class ProgressCollector: @unchecked Sendable {
+    private let lock = NSLock()
+    private var _phases: [ScanPhase] = []
+    func add(_ p: ScanPhase) { lock.lock(); _phases.append(p); lock.unlock() }
+    var phases: [ScanPhase] { lock.lock(); defer { lock.unlock() }; return _phases }
 }

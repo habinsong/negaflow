@@ -8,7 +8,9 @@ enum InspectorPanel: CaseIterable {
     case color
     case colorMixer
     case colorGrading
+    case bwToning
     case calibration
+    case localDodgeBurn
     case detail
     case debug
 }
@@ -19,6 +21,7 @@ struct DevelopWorkflowInspector: View {
     @Binding var cropMode: Bool
     @Binding var brushMode: Bool
     @Binding var regionICEMode: Bool
+    @Binding var localDodgeBurnMode: Bool
     @State private var expandedPanel: InspectorPanel? = .tone
     @State private var autoMatchScannerProfile = false
     @FocusState private var focusedSlider: InspectorSliderFocus?
@@ -44,7 +47,13 @@ struct DevelopWorkflowInspector: View {
             )
             .disabled(model.isScanning)
 
-            ToolStripSection(frame: frame, cropMode: $cropMode, brushMode: $brushMode, regionICEMode: $regionICEMode)
+            ToolStripSection(
+                frame: frame,
+                cropMode: $cropMode,
+                brushMode: $brushMode,
+                regionICEMode: $regionICEMode,
+                localDodgeBurnMode: $localDodgeBurnMode
+            )
                 .disabled(model.isScanning)
 
             Button(role: .destructive) {
@@ -85,16 +94,6 @@ struct DevelopWorkflowInspector: View {
                 reset: { reset(.tone) },
                 contentDisabled: model.isScanning
             ) {
-                InspectorRow("Look") {
-                    Picker("Look", selection: Binding(
-                        get: { frame.preset },
-                        set: { frame.preset = $0; scheduleRedevelop(frame) }
-                    )) {
-                        Text("없음").tag(LookPreset?.none)
-                        ForEach(model.presets) { Text($0.name).tag(LookPreset?.some($0)) }
-                    }
-                    .labelsHidden()
-                }
                 InspectorSlider("Exposure", value: toneBinding(\.exposure), range: -2...2, focusID: .exposure, focusedSlider: $focusedSlider)
                 InspectorSlider("Contrast", value: toneBinding(\.contrast), range: -1...1, focusID: .contrast, focusedSlider: $focusedSlider)
                 InspectorSlider("Highlights", value: toneBinding(\.highlight), range: -1...1, focusID: .highlight, focusedSlider: $focusedSlider)
@@ -157,6 +156,19 @@ struct DevelopWorkflowInspector: View {
                 ColorGradingSection(grading: colorGradingBinding, onChange: { scheduleRedevelop(frame) })
             }
 
+            if isBWToningAvailable {
+                WorkflowSection(
+                    title: "B&W Toning",
+                    systemImage: "circle.righthalf.filled",
+                    isExpanded: expandedPanel == .bwToning,
+                    toggle: { toggle(.bwToning) },
+                    reset: { reset(.bwToning) },
+                    contentDisabled: model.isScanning
+                ) {
+                    BWToningSection(toning: bwToningBinding, onChange: { scheduleRedevelop(frame) })
+                }
+            }
+
             WorkflowSection(
                 title: "Calibration",
                 systemImage: "camera.filters",
@@ -170,6 +182,26 @@ struct DevelopWorkflowInspector: View {
                 calibrationPrimary("Green Primary", hue: \.greenHue, sat: \.greenSat)
                 Divider().opacity(0.35)
                 calibrationPrimary("Blue Primary", hue: \.blueHue, sat: \.blueSat)
+            }
+
+            WorkflowSection(
+                title: "Dodge / Burn",
+                systemImage: "circle.lefthalf.filled",
+                isExpanded: expandedPanel == .localDodgeBurn,
+                toggle: { toggle(.localDodgeBurn) },
+                reset: { reset(.localDodgeBurn) },
+                contentDisabled: model.isScanning
+            ) {
+                InspectorRow("Tool") {
+                    Toggle("", isOn: $localDodgeBurnMode)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                }
+                InspectorRow("Masks") {
+                    Text("\(frame.params.localDodgeBurn.count)")
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
             }
 
             WorkflowSection(
@@ -236,6 +268,11 @@ struct DevelopWorkflowInspector: View {
             guard let focusedSlider, !visibleSliderOrder.contains(focusedSlider) else { return }
             self.focusedSlider = nil
         }
+        .onChange(of: frame.filmType) { _, _ in
+            if expandedPanel == .bwToning && !isBWToningAvailable {
+                expandedPanel = nil
+            }
+        }
     }
 
     var displayedImage: NSImage? {
@@ -278,11 +315,15 @@ struct DevelopWorkflowInspector: View {
                 params.colorMixer = defaults.colorMixer
             case .colorGrading:
                 params.colorGrading = defaults.colorGrading
+            case .bwToning:
+                params.bwToning = defaults.bwToning
             case .calibration:
                 params.redPrimary = defaults.redPrimary
                 params.greenPrimary = defaults.greenPrimary
                 params.bluePrimary = defaults.bluePrimary
                 params.calibration = defaults.calibration
+            case .localDodgeBurn:
+                params.localDodgeBurn = defaults.localDodgeBurn
             case .detail:
                 params.noiseReduction = defaults.noiseReduction
                 params.grain = defaults.grain
@@ -367,6 +408,14 @@ struct DevelopWorkflowInspector: View {
         Binding(get: { frame.params.colorGrading },
                 set: { v in frame.updateParams { $0.colorGrading = v } })
     }
+    var bwToningBinding: Binding<BWToning> {
+        Binding(get: { frame.params.bwToning },
+                set: { v in frame.updateParams { $0.bwToning = v } })
+    }
+
+    var isBWToningAvailable: Bool {
+        frame.filmType == .bwNegative || frame.filmType == .bwPositive
+    }
 
     func calibBinding(_ keyPath: WritableKeyPath<CalibrationAdjust, Double>) -> Binding<Double> {
         Binding(
@@ -405,6 +454,8 @@ struct DevelopWorkflowInspector: View {
             p.saturation = d.saturation; p.colorDepth = d.colorDepth
             p.redPrimary = d.redPrimary; p.greenPrimary = d.greenPrimary; p.bluePrimary = d.bluePrimary
             p.colorMixer = d.colorMixer; p.colorGrading = d.colorGrading; p.calibration = d.calibration
+            p.bwToning = d.bwToning
+            p.localDodgeBurn = d.localDodgeBurn
             p.grain = d.grain; p.sharpness = d.sharpness; p.clarity = d.clarity
             p.halation = d.halation; p.vignette = d.vignette; p.noiseReduction = d.noiseReduction
         }
@@ -422,12 +473,14 @@ struct DevelopWorkflowInspector: View {
             return [.warmth, .tint, .vibrance, .saturation, .colorDepth]
         case .calibration:
             return []
+        case .bwToning:
+            return []
         case .detail:
             var ids: [InspectorSliderFocus] = []
             if frame.params.noiseReduction > 1e-3 { ids.append(.noiseReduction) }
             ids.append(contentsOf: [.grain, .sharpness, .clarity, .halation, .vignette])
             return ids
-        case .colorMixer, .colorGrading, .debug, nil:
+        case .colorMixer, .colorGrading, .localDodgeBurn, .debug, nil:
             return []
         }
     }

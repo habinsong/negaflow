@@ -42,7 +42,7 @@ final class RegionICEHardCasesTests: XCTestCase {
         let img = ci(px, w, h)
         let roi = CGRect(x: 0, y: 0, width: w, height: h)
         let field = SoftwareICE.detectComponents(in: img, roi: roi, parameters: params)
-        let mask = ICEComponentMask.renderMask(field, excluded: [], maxHoleArea: w * h, dustDilate: 2)
+        let mask = ICEComponentMask.renderMask(field, excluded: [], dustDilate: 2)
         var covered = 0
         for (x, y) in defect where mask[(y * w + x) * 4] > 0 { covered += 1 }
         let coverage = defect.isEmpty ? 0 : Double(covered) / Double(defect.count)

@@ -102,9 +102,9 @@ struct CLI {
                 i += 1
             }
         }
-        // SANE 우선으로 장치 하나 고른다.
+        // 설치된 스캐너 플러그인 우선으로 장치 하나 고른다(없으면 첫 장치 = Mock).
         let all = try await registry.detectAll()
-        let device = all.flatMap(\.devices).first(where: { $0.backendType == .sane })
+        let device = all.flatMap(\.devices).first(where: { $0.backendType == .plugin })
             ?? all.flatMap(\.devices).first
         guard let device else { fail("no scanner detected") }
         let backend = registry.backend(for: device.id)!
@@ -407,7 +407,7 @@ struct CLI {
     func fail(_ m: String) -> Never { FileHandle.standardError.write(Data("\(m)\n".utf8)); exit(2) }
     func printHelp() {
         print("""
-        negaflow — macOS-native film scanning & developing
+        negaflow — macOS-native film importing, scanning & developing
         commands:
           detect                         detect scanners
           capabilities <scannerID>       dump capabilities
@@ -418,7 +418,7 @@ struct CLI {
             --look <name>                none|neutral|rich-neutral|soft-print|clear-chrome|warm-lab|deep-slide
             --scanner-profile <id>       apply bundled scanner/film profile before look controls
             --film-type <T>              colorNegative|colorPositive|bwNegative|bwPositive
-            --target <main>              develop target (default main)
+            --target <main|print>        develop target (default main)
             --positive                   shorthand for --film-type colorPositive
             --bw-positive                shorthand for --film-type bwPositive
             --exposure <stops>           Basic Tone exposure

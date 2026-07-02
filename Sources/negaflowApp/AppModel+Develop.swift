@@ -32,6 +32,11 @@ extension AppModel {
         }
     }
 
+    func refreshSoftProofPreviewIfNeeded() {
+        guard let frame = selectedFrame, frame.hasDevelopedOnce else { return }
+        requestDevelop(frame)
+    }
+
     // MARK: develop (엔진 호출 — 색감 로직은 그대로)
     func developFrame(_ frame: ScanFrame) async {
         // filmType 동기화는 실제로 다를 때만(슬라이더 핫패스에서 불필요한 @Published 발행 방지).
@@ -77,6 +82,7 @@ extension AppModel {
                     try DevelopFrameRenderer.render(interactive)
                 }.value
                 applyBaseCache(fast, to: frame, baseKey: baseKey)
+                applyPreviewRawCache(fast, to: frame, maxDimension: interactive.proxyMaxDimension)
                 frame.developedImage = NSImage(
                     cgImage: fast.developed,
                     size: NSSize(width: fast.developed.width, height: fast.developed.height)
@@ -126,6 +132,7 @@ extension AppModel {
                     continue
                 }
                 applyBaseCache(result, to: frame, baseKey: baseKey)
+                applyPreviewRawCache(result, to: frame, maxDimension: full.proxyMaxDimension)
                 frame.cachedDevelopedBase = result.developedBase   // ICE 적용 전 base
                 if let rawBase = result.rawBase { frame.cachedRawBase = rawBase }
                 if let rawPreview = result.rawPreview {
@@ -184,7 +191,9 @@ extension AppModel {
     ) -> DevelopFrameSnapshot {
         DevelopFrameSnapshot(
             rawScanURL: frame.rawScanURL,
+            sourceKind: frame.sourceKind,
             preloadedRaw: frame.cleanedRawImage,
+            preloadedPreviewRaw: cachedPreviewRaw(for: frame, maxDimension: proxyMaxDimension),
             cleanedRawURL: frame.cleanedRawDiskURL,
             filmType: frame.filmType,
             params: frame.params,
@@ -195,6 +204,7 @@ extension AppModel {
             needsRawPreview: needsRawPreview,
             needsNeutralPreview: needsNeutralPreview,
             needsDebugPreviews: needsDebugPreviews,
+            softProof: softProofSettings,
             proxyMaxDimension: proxyMaxDimension,
             needsThumbnail: needsThumbnail
         )
@@ -215,6 +225,28 @@ extension AppModel {
         frame.cachedBase = result.base
         frame.cachedBaseKey = baseKey
         frame.baseRGB = result.base?.rgb
+    }
+
+    private func cachedPreviewRaw(for frame: ScanFrame, maxDimension: CGFloat) -> DevelopFramePreviewRaw? {
+        if maxDimension <= DevelopFrameRenderer.interactiveMaxDimension + 0.5 {
+            return frame.cachedInteractivePreviewRawRevision == frame.cleanRawRevision
+                ? frame.cachedInteractivePreviewRaw
+                : nil
+        }
+        return frame.cachedSettledPreviewRawRevision == frame.cleanRawRevision
+            ? frame.cachedSettledPreviewRaw
+            : nil
+    }
+
+    private func applyPreviewRawCache(_ result: DevelopFrameRenderResult, to frame: ScanFrame, maxDimension: CGFloat) {
+        guard let previewRaw = result.previewRaw else { return }
+        if maxDimension <= DevelopFrameRenderer.interactiveMaxDimension + 0.5 {
+            frame.cachedInteractivePreviewRaw = previewRaw
+            frame.cachedInteractivePreviewRawRevision = frame.cleanRawRevision
+        } else {
+            frame.cachedSettledPreviewRaw = previewRaw
+            frame.cachedSettledPreviewRawRevision = frame.cleanRawRevision
+        }
     }
 
     private func developFailed(_ frame: ScanFrame, revision: Int) {
@@ -242,13 +274,14 @@ extension AppModel {
         if developInFlight > 1 {
             processingDetail = "현상 중 \(developInFlight)장"
         } else {
-            processingDetail = interactive ? "프리뷰 생성 중" : "고해상도 현상 중"
+            processingDetail = interactive ? "프리뷰 생성 중 (1600px)" : "정착 프리뷰 생성 중 (3600px)"
         }
     }
 
     func loadRawPreview(_ frame: ScanFrame) {
         let snapshot = DevelopFrameSnapshot(
             rawScanURL: frame.rawScanURL,
+            sourceKind: frame.sourceKind,
             preloadedRaw: frame.cleanedRawImage,
             cleanedRawURL: frame.cleanedRawDiskURL,
             filmType: frame.filmType,

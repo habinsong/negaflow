@@ -102,12 +102,22 @@ final class ChromaDenoiseTests: XCTestCase {
         XCTAssertGreaterThan(sOut, sIn * 0.85, "saturated real color must be preserved")
     }
 
+    func testStrengthZeroReturnsInputUnchanged() {
+        let input = makeFixture()
+        let out = ChromaDenoise.apply(to: input, strength: 0)
+        let bi = render(input)
+        let bo = render(out)
+        for i in stride(from: 0, to: bi.count, by: 17) {
+            XCTAssertEqual(bo[i], bi[i], accuracy: 0.000001)
+        }
+    }
+
     func testRemovesShadowWhiteSpecklesAndMidtoneColorBlotchesWithoutFlatteningImage() {
         let width = 160
         let height = 112
         let clean = makeShadowMidtoneFixture(width: width, height: height, noisy: false)
         let noisy = makeShadowMidtoneFixture(width: width, height: height, noisy: true)
-        let out = ChromaDenoise.apply(to: noisy, strength: 1.0)
+        let out = ChromaDenoise.apply(to: noisy, strength: 0.7)
         let bc = render(clean, width: width, height: height)
         let bi = render(noisy, width: width, height: height)
         let bo = render(out, width: width, height: height)
@@ -129,8 +139,8 @@ final class ChromaDenoiseTests: XCTestCase {
         print(String(format: "[real-noise] shadow %.4f->%.4f | mid chroma %.4f->%.4f | color %.4f->%.4f | edge %.4f->%.4f",
                      shadowIn, shadowOut, midChromaIn, midChromaOut, colorIn, colorOut, noisyEdge, outEdge))
 
-        XCTAssertLessThan(shadowOut, shadowIn * 0.58, "암부 흰 speckle은 luma 구조를 밀지 않고 줄어야 한다")
-        XCTAssertLessThan(midChromaOut, midChromaIn * 0.45, "중간톤 컬러 얼룩은 실제 휘도 구조와 분리해 줄어야 한다")
+        XCTAssertLessThan(shadowOut, shadowIn * 0.50, "암부 흰 speckle은 기본 NR 강도에서도 luma 구조를 밀지 않고 줄어야 한다")
+        XCTAssertLessThan(midChromaOut, midChromaIn * 0.32, "중간톤 컬러 얼룩은 기본 NR 강도에서도 실제 휘도 구조와 분리해 줄어야 한다")
         XCTAssertGreaterThan(colorOut, colorIn * 0.82, "실제 고채도 색은 노이즈로 오인해 탈색하면 안 된다")
         XCTAssertGreaterThan(outEdge, noisyEdge * 0.92, "엣지 대비를 플랫하게 더 밀면 안 된다")
     }

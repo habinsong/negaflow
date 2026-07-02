@@ -8,7 +8,8 @@ import Chromabase
 /// 어떤 백엔드가 장치를 제어하는지. 사용자에게는 절대 노출되지 않는 내부 값.
 public enum BackendType: String, Codable, Sendable {
     case imageCaptureCore   // Apple ImageCaptureCore (plan §6.2)
-    case sane               // scanimage / SANE wrapper (plan §6.3)
+    case sane               // (구) 내장 SANE wrapper — 현재는 외부 플러그인으로 분리됨
+    case plugin             // 외부 프로세스 스캐너 플러그인(설치형, negaflow와 독립)
     case mock               // 개발/데모용 가상 스캐너
 }
 

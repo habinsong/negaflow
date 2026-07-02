@@ -45,7 +45,6 @@ enum SoftwareICEDefectDetector {
         // 브러시 영역(있으면). 사용자가 결함 위치를 직접 칠했으므로 공격적으로(임계↓, 민감도↑) 본다.
         // 전역 자동 검출(brush==nil)은 보수적으로 — "주변과 크게 다른" 결함만 잡는다.
         let region = brush.map { renderRegion($0, extent: extent, width: dW, height: dH, context: context) }
-        let regionArea = region?.reduce(0) { $0 + ($1 ? 1 : 0) } ?? 0
         let aggressive = brush != nil
         let boost = aggressive ? 0.2 : 0.0
         let dustSens = min(1.0, tuning.dustSensitivity + boost)
@@ -57,16 +56,22 @@ enum SoftwareICEDefectDetector {
             field, sensitivity: scratchSens, protectDetail: tuning.protectDetail,
             region: region, preferredAngle: preferredAngle, aggressive: aggressive)
 
-        // 먼지 면적 상한: 전역은 작은 blob만(halo 오검출 방지). 브러시 영역에선 사용자가 결함을
-        // 지목했으므로 짧고 두꺼운(뚱뚱한) 먼지·굵은 곡선도 허용한다. 단 칠한 영역 대비 비율로
-        // 제한해, 칠 영역 전체를 통째로 결함 처리(=정상 구조 훼손)하지 않게 한다.
-        let maxDustArea = region == nil ? 150 : max(400, Int(Double(regionArea) * 0.6))
+        // 먼지 면적 상한 = "물리 먼지 크기" 상한(detectComponents 와 동일 공식). 브러시로 얼마나
+        // 길게/넓게 칠했는지와 무관해야 한다 — 과거 칠 면적 비례(0.6×regionArea) 상한은 긴
+        // 스트로크에서 칠 크기의 오검출 덩어리를 먼지로 통과시켜 "칠 영역 통째 와이프(블러)"를
+        // 만들었다. detectScale 로 환산해 검출 해상도와도 무관하게 물리 크기가 일정하다.
+        let detectScale = Double(max(image.extent.width, image.extent.height)) * scale / 1800.0
+        let physicalDust = max(150, Int((detectScale * detectScale * 150).rounded()))
+        let maxDustArea = region == nil ? 150 : Int(Double(physicalDust) * (1.0 + dustSens * 5.0))
         let bytes = ICEComponentMask.build(
             width: dW, height: dH,
             dust: dust, scratch: scratch,
             maxDustArea: maxDustArea,
             minScratchLength: region == nil ? max(10, dW / 120) : 3,
             minScratchAspect: region == nil ? 2.5 : 1.8,
+            // 스크래치는 정의상 가늘다. 평균 두께가 이를 넘는 연결요소는 결함이 아니라 텍스처/
+            // 그레인 오검출의 병합 덩어리 — 칠 영역 와이프를 막는 마지막 방벽(브러시 경로만).
+            maxScratchThickness: region == nil ? .infinity : max(6.0, 3.0 * detectScale),
             dustDilate: region == nil ? 0 : 2
         )
 
@@ -136,11 +141,13 @@ enum SoftwareICEDefectDetector {
         // 채우는 한도(~24px) 안이라, 마스크가 폭 중앙까지 덮여 복원(onion-peel)이 완전 제거한다.
         let minThick = 4
         let maxThick = Int(12 + s * 12)
+        // bright 를 넘겨 dust 내부 hole 을 검출 시점에 재질 게이트(물리 한도 + 결함 톤)로 확정한다.
         return ICEComponentMask.buildLabeled(width: w, height: h, dust: dust, scratch: scratch,
                                              scratchStrong: scratchStrong,
                                              maxDustArea: maxDustArea, minScratchLength: minScratchLength,
                                              minScratchAspect: minScratchAspect, dustMaxAspect: dustMaxAspect,
-                                             minThickDefect: minThick, maxThickDefect: maxThick)
+                                             minThickDefect: minThick, maxThickDefect: maxThick,
+                                             bright: field.bright)
     }
 
     // MARK: render

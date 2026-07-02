@@ -11,7 +11,7 @@
 #   bash scripts/run-app.sh build      # 빌드만 (실행 안 함)
 #   bash scripts/run-app.sh release    # 릴리스 빌드 후 실행
 #
-# 요구사항: Xcode 26 (swift 6.3), 선택적으로 8200i USB 연결 + SANE 설치.
+# 요구사항: Xcode 26 (swift 6.3). 실제 SANE 스캔은 별도 negaflow-scanner-sane 플러그인 설치 시 활성화.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -82,7 +82,7 @@ cat > "$APP_BUNDLE/Contents/Info.plist" <<'PLIST'
   <key>CFBundleShortVersionString</key><string>0.1.0</string>
   <key>CFBundleExecutable</key><string>negaflowApp</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>LSMinimumSystemVersion</key><string>13.0</string>
+  <key>LSMinimumSystemVersion</key><string>14.0</string>
   <key>NSHighResolutionCapable</key><true/>
 </dict>
 </plist>

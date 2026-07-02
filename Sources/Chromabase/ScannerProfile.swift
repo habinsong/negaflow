@@ -163,7 +163,7 @@ public enum ScannerProfileMatcher {
 
     private static func scannerNames(for target: DevelopTarget) -> [String] {
         switch target {
-        case .main:
+        case .main, .print:
             return []
         case .noritsu:
             return ["NORITSU"]

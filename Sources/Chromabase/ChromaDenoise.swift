@@ -18,6 +18,7 @@ public enum ChromaDenoise {
         // develop은 linear 공간이라 암부 노이즈 진폭이 압축돼 임계 아래로 떨어진다. 감마로 암부를
         // 들어올린 도메인에서 검출/교체해야 암부 grain·색 speckle이 잡힌다(ICE 검출과 같은 이유).
         let s = min(max(strength, 0), 1)
+        let effectiveStrength = min(1.0, s * 1.28)
         let p = 0.45
         let lifted = image.applyingFilter("CIGammaAdjust", parameters: ["inputPower": p]).cropped(to: extent)
         // median은 엣지를 보존하면서 grain을 제거한다(중앙값 특성 — 평균 blur와 달리 step edge가 안 번짐).
@@ -27,13 +28,13 @@ public enum ChromaDenoise {
         let med7 = median(med5)   // ≈7x7 — 더 매끈한 타깃(큰 grain까지). median이라 엣지는 그대로.
         let luma = luminance(of: lifted)
         let lumaField = luma.applyingFilter("CIGaussianBlur", parameters: [
-            "inputRadius": 1.4 + s * 1.8,
+            "inputRadius": 1.6 + effectiveStrength * 2.2,
         ]).cropped(to: extent)
         let broadChroma = lifted.applyingFilter("CIGaussianBlur", parameters: [
-            "inputRadius": 6.0 + s * 4.0,
+            "inputRadius": 7.0 + effectiveStrength * 6.0,
         ]).cropped(to: extent)
         let despeckled = kernel.apply(extent: extent, arguments: [
-            lifted, med5, med7, broadChroma, lumaField, s,
+            lifted, med5, med7, broadChroma, lumaField, effectiveStrength,
         ])?.cropped(to: extent) ?? lifted
         // 역감마로 원 도메인 복원.
         return despeckled.applyingFilter("CIGammaAdjust", parameters: ["inputPower": 1.0 / p]).cropped(to: extent)

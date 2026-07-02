@@ -5,6 +5,7 @@ struct CanvasToolHUD: View {
     let cropMode: Bool
     let brushMode: Bool
     let regionICEMode: Bool
+    let localDodgeBurnMode: Bool
     let onZoomOut: () -> Void
     let onZoomIn: () -> Void
     let onFit: () -> Void
@@ -12,6 +13,7 @@ struct CanvasToolHUD: View {
     let onCrop: () -> Void
     let onBrush: () -> Void
     let onRegionICE: () -> Void
+    let onLocalDodgeBurn: () -> Void
 
     var body: some View {
         HStack(spacing: 6) {
@@ -37,6 +39,10 @@ struct CanvasToolHUD: View {
                              isActive: regionICEMode,
                              activeTint: .red,
                              action: onRegionICE)
+            CanvasToolButton(systemName: "circle.lefthalf.filled",
+                             help: "Dodge/Burn 마스크",
+                             isActive: localDodgeBurnMode,
+                             action: onLocalDodgeBurn)
         }
         .padding(4)
         .liquidSurface(cornerRadius: 10, interactive: true)

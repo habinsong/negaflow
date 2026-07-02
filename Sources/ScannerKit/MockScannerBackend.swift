@@ -78,7 +78,7 @@ public final class MockScannerBackend: ScannerBackend, @unchecked Sendable {
             progress(ScanProgress(phase: .scanningRGB, fraction: 0.5, message: "Scanning RGB"))
             try? await Task.sleep(nanoseconds: 300_000_000)
             progress(ScanProgress(phase: .complete, fraction: 1.0, message: "Scan complete"))
-            let (w, h) = SANEBackend.imageSize(at: url)
+            let (w, h) = ScanTempFile.imageSize(at: url)
             return ScanResult(
                 rawFileURL: url, width: w, height: h,
                 resolution: options.resolution, bitDepth: options.bitDepth,
@@ -87,7 +87,7 @@ public final class MockScannerBackend: ScannerBackend, @unchecked Sendable {
         }
         // 없으면 합성 네거티브(오렌지 마스크 + 그라데이션) 생성.
         let outURL = options.temporaryOutputURL
-            ?? SANEBackend.makeTempURL(prefix: "negaflow_mock", suffix: ".tiff")
+            ?? ScanTempFile.makeURL(prefix: "negaflow_mock", suffix: ".tiff")
         let w = 1200, h = 800
         try Self.writeSyntheticNegative(width: w, height: h, to: outURL)
         for f in stride(from: 0.1, through: 0.9, by: 0.2) {

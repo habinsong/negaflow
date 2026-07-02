@@ -10,6 +10,24 @@ struct FilmBaseCacheKey: Equatable, Sendable {
     let filmStockDminID: String?
 }
 
+// MARK: - FrameSource (프레임 raw 입력의 출처)
+//
+// 로더가 원본 파일을 어떻게 해석할지 결정한다.
+//   scannerTIFF  — 스캐너 산출 16bit linear TIFF. loadScannerTIFF(linear 강제)로 로드.
+//   importedFile — 사용자가 가져온 RAW/DNG/TIFF/PNG/JPG 등. ImageLoader.load(RAW 데모사이크 +
+//                  파일 색공간 보존)로 로드해야 색이 맞는다.
+enum FrameSource: Sendable {
+    case scannerTIFF
+    case importedFile
+
+    var originLabel: String {
+        switch self {
+        case .scannerTIFF: return "Scan"
+        case .importedFile: return "Import"
+        }
+    }
+}
+
 // MARK: - ScanFrame (배치/세션 스캔의 단위)
 //
 // 한 프레임 = 하나의 raw 스캔 + 그 프레임만의 현상 파라미터/transform/결과.
@@ -20,6 +38,11 @@ final class ScanFrame: ObservableObject, Identifiable {
     let id: UUID = UUID()
     let scanIndex: Int                    // 롤 내 순서 (1-based 표시용)
     let rawScanURL: URL
+    let sourceKind: FrameSource           // raw 입력 출처(로더 분기용)
+    let sourcePixelWidth: Int?
+    let sourcePixelHeight: Int?
+    let sourceResolutionDPI: Int?
+    let sourceBitDepth: Int?
     let scannedAt: Date
     let sourceFrameID: UUID?
     let sourceFrameDisplayName: String?
@@ -70,6 +93,10 @@ final class ScanFrame: ObservableObject, Identifiable {
     var cachedDevelopedBase: CGImage?
     var cachedRawBase: CGImage?
     var cachedNeutralBase: CGImage?
+    var cachedInteractivePreviewRaw: DevelopFramePreviewRaw?
+    var cachedInteractivePreviewRawRevision: Int = -1
+    var cachedSettledPreviewRaw: DevelopFramePreviewRaw?
+    var cachedSettledPreviewRawRevision: Int = -1
 
     // 적용된 결함 제거 편집(브러시 + 반자동 통합, 순서 보존). 모든 현상/변형/export에서 유지된다.
     // cleaned raw = 원본 raw + defectEdits 순차 적용 → 브러시·반자동이 서로 되살아나지 않는다.
@@ -111,6 +138,11 @@ final class ScanFrame: ObservableObject, Identifiable {
         scanIndex: Int,
         rawScanURL: URL,
         filmType: FilmType,
+        sourceKind: FrameSource = .scannerTIFF,
+        sourcePixelWidth: Int? = nil,
+        sourcePixelHeight: Int? = nil,
+        sourceResolutionDPI: Int? = nil,
+        sourceBitDepth: Int? = nil,
         initialTransform: ImageTransform = .identity,
         scannedAt: Date = Date(),
         sourceFrameID: UUID? = nil,
@@ -119,6 +151,11 @@ final class ScanFrame: ObservableObject, Identifiable {
     ) {
         self.scanIndex = scanIndex
         self.rawScanURL = rawScanURL
+        self.sourceKind = sourceKind
+        self.sourcePixelWidth = sourcePixelWidth.flatMap { $0 > 0 ? $0 : nil }
+        self.sourcePixelHeight = sourcePixelHeight.flatMap { $0 > 0 ? $0 : nil }
+        self.sourceResolutionDPI = sourceResolutionDPI.flatMap { $0 > 0 ? $0 : nil }
+        self.sourceBitDepth = sourceBitDepth.flatMap { $0 > 0 ? $0 : nil }
         self.scannedAt = scannedAt
         self.sourceFrameID = sourceFrameID
         self.sourceFrameDisplayName = sourceFrameDisplayName
@@ -144,6 +181,22 @@ final class ScanFrame: ObservableObject, Identifiable {
     var rootFrameID: UUID { sourceFrameID ?? id }
 
     var rootFrameDisplayName: String { sourceFrameDisplayName ?? "Frame \(scanIndex)" }
+
+    var sourceSummary: String {
+        var parts: [String] = []
+        if let sourcePixelWidth, let sourcePixelHeight {
+            parts.append("\(sourcePixelWidth)×\(sourcePixelHeight) px")
+        }
+        if let sourceResolutionDPI {
+            parts.append("\(sourceResolutionDPI) dpi")
+        } else if sourceKind == .importedFile {
+            parts.append("DPI 미지정")
+        }
+        if let sourceBitDepth {
+            parts.append("\(sourceBitDepth)-bit")
+        }
+        return parts.isEmpty ? sourceKind.originLabel : parts.joined(separator: " · ")
+    }
 
     var selectionSummary: String {
         let ratingText = rating > 0 ? "\(rating) star" : "Unrated"
@@ -184,6 +237,13 @@ final class ScanFrame: ObservableObject, Identifiable {
         var next = imageTransform
         body(&next)
         imageTransform = next
+    }
+
+    func clearPreviewRawCaches() {
+        cachedInteractivePreviewRaw = nil
+        cachedInteractivePreviewRawRevision = -1
+        cachedSettledPreviewRaw = nil
+        cachedSettledPreviewRawRevision = -1
     }
 }
 

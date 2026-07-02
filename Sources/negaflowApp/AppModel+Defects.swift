@@ -264,6 +264,7 @@ extension AppModel {
         frame.cachedDevelopedBase = nil
         frame.cachedRawBase = nil
         frame.cachedNeutralBase = nil
+        frame.clearPreviewRawCaches()
         if !frame.debugPreviewImages.isEmpty { frame.debugPreviewImages = [:] }
         if !frame.debugMetrics.isEmpty { frame.debugMetrics = [:] }
     }
@@ -275,6 +276,7 @@ extension AppModel {
         if let url = frame.cleanedRawDiskURL { try? FileManager.default.removeItem(at: url) }
         frame.cleanedRawDiskURL = nil
         frame.cleanedRawEditCount = 0
+        frame.clearPreviewRawCaches()
         residentCleanedRawIDs.removeAll { $0 == frame.id }
     }
 

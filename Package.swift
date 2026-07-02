@@ -1,11 +1,14 @@
 // swift-tools-version: 5.9
 import PackageDescription
 
-// negaflow — macOS-native film scanning & developing app
-//   ScannerKit  : scanner-control abstraction (ICA / SANE / Mock)
+// negaflow — macOS-native film developing app (image import + optional scanner plugins)
+//   ScannerKit  : scanner abstraction + external-process plugin host (Mock 내장, SANE는 외부 플러그인)
 //   Chromabase  : color developing engine (negative inversion + looks)
 //   negaflow    : CLI (engine self-test on a synthetic negative)
-//   negaflowApp : SwiftUI app (Scan / Develop / Export)
+//   negaflowApp : SwiftUI app (Import / Scan / Develop / Export)
+//
+// 스캐너(SANE)는 GPL 라이센스라 negaflow(Apache-2.0)에서 분리되어 외부 프로세스 플러그인으로
+// 제공된다(별도 저장소: https://github.com/habinsong/negaflow-scanner-sane.git).
 //
 // GUI 앱(negaflowApp)은 SPM CLI 링커가 Xcode 26 SDK의 비공개 SwiftUICore를
 // 링크하지 못해 swift run/swift build로 직접 실행할 수 없다. 대신 Xcode 빌드

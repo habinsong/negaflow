@@ -51,7 +51,7 @@ final class RegionICEFaintDefectTests: XCTestCase {
         let img = ci(px, w, h)
         let roi = CGRect(x: 0, y: 0, width: w, height: h)
         let field = SoftwareICE.detectComponents(in: img, roi: roi, parameters: params)
-        let mask = ICEComponentMask.renderMask(field, excluded: [], maxHoleArea: w * h, dustDilate: 2)
+        let mask = ICEComponentMask.renderMask(field, excluded: [], dustDilate: 2)
         var covered = 0
         for (dx, dy) in defect where mask[(dy * w + dx) * 4] > 0 { covered += 1 }
         let coverage = Double(covered) / Double(defect.count)
@@ -94,7 +94,7 @@ final class RegionICEFaintDefectTests: XCTestCase {
         let img = ci(px, w, h)
         let roi = CGRect(x: 0, y: 0, width: w, height: h)
         let field = SoftwareICE.detectComponents(in: img, roi: roi, parameters: params)
-        let mask = ICEComponentMask.renderMask(field, excluded: [], maxHoleArea: w * h, dustDilate: 2)
+        let mask = ICEComponentMask.renderMask(field, excluded: [], dustDilate: 2)
         var covered = 0
         for (dx, dy) in defect where mask[(dy * w + dx) * 4] > 0 { covered += 1 }
         let coverage = Double(covered) / Double(defect.count)
@@ -112,7 +112,7 @@ final class RegionICEFaintDefectTests: XCTestCase {
         let img = ci(px, w, h)
         let roi = CGRect(x: 0, y: 0, width: w, height: h)
         let field = SoftwareICE.detectComponents(in: img, roi: roi, parameters: params)
-        let mask = ICEComponentMask.renderMask(field, excluded: [], maxHoleArea: w * h, dustDilate: 2)
+        let mask = ICEComponentMask.renderMask(field, excluded: [], dustDilate: 2)
         var covered = 0
         for y in y0...y1 where mask[(y * w + x) * 4] > 0 { covered += 1 }
         let coverage = Double(covered) / Double(y1 - y0 + 1)

@@ -190,11 +190,11 @@ public enum SoftwareICE {
 
     /// 편집된 컴포넌트(excluded 제외)를 렌더한 결함 마스크(RGBA8, 흰색=제거). 편집 히스토리에 저장해
     /// 두었다가 repair(image:roi:mask:)로 재적용하기 위한 진입점 — 무거운 ICELabelField 전체 대신
-    /// roi 크기의 마스크 bytes 만 보관하면 되므로 메모리에 가볍다.
+    /// roi 크기의 마스크 bytes 만 보관하면 되므로 메모리에 가볍다. 마스크 = 컴포넌트 픽셀 + 팽창뿐
+    /// (위상 hole 채움 없음 — 결함 재질 중앙은 검출 시점에 이미 pixels 에 포함, 미리보기와 일치).
     public static func componentMaskBytes(field: ICELabelField, excluded: Set<Int32>,
                                           dustDilate: Int = 2) -> [UInt8] {
-        ICEComponentMask.renderMask(field, excluded: excluded,
-                                    maxHoleArea: field.width * field.height, dustDilate: dustDilate)
+        ICEComponentMask.renderMask(field, excluded: excluded, dustDilate: dustDilate)
     }
 
     /// 편집된 컴포넌트(excluded 제외)를 마스크로 렌더해 ROI 안을 복원한다. ICEComponentMask 내부에
@@ -203,8 +203,7 @@ public enum SoftwareICE {
     public static func repairComponents(image: CIImage, roi: CGRect, field: ICELabelField,
                                         excluded: Set<Int32>, dustDilate: Int = 2) -> CIImage? {
         guard !field.isEmpty, field.width > 0, field.height > 0 else { return nil }
-        let maskBytes = ICEComponentMask.renderMask(field, excluded: excluded,
-                                                    maxHoleArea: field.width * field.height, dustDilate: dustDilate)
+        let maskBytes = ICEComponentMask.renderMask(field, excluded: excluded, dustDilate: dustDilate)
         let linear = CGColorSpace(name: CGColorSpace.linearSRGB)!
         let maskCI = CIImage(
             bitmapData: Data(maskBytes), bytesPerRow: field.width * 4,

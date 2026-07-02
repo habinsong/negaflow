@@ -82,12 +82,21 @@ final class AppModel: ObservableObject {
     static let mockDisplayName = "Plustek OpticFilm 8200i (Demo)"
     private static let canvasBackgroundKey = "canvasBackground"
     private static let appearanceModeKey = "appearanceMode"
+    private static let softProofEnabledKey = "softProof.enabled"
+    private static let softProofSimulationKey = "softProof.simulation"
+    private static let exportWriteMainFlatMasterKey = "export.writeMainFlatMaster"
 
-    let saneBackend = SANEBackend()
+    // 내장 시뮬레이터(negaflow 자체 코드, GPL 무관). 플러그인 없이도 스캐너 워크플로우를 데모/검증.
     let mockBackend = MockScannerBackend()
+    // 발견된 외부 스캐너 플러그인 백엔드. refreshDevices()에서 재구성한다(비-Published).
+    var pluginBackends: [ExternalScannerBackend] = []
 
     @Published var demoMode: Bool = false
     @Published var devices: [ScannerDescriptor] = []
+    // 설치된 스캐너 플러그인(있으면 "스캐너 불러오기"가 활성). UI 안내/진단용.
+    @Published var installedScannerPlugins: [InstalledScannerPlugin] = []
+    // 좌측 Library 탭에서 "스캐너 불러오기"로 스캐너 컨트롤을 펼쳤는지.
+    @Published var showScannerControls: Bool = false
     @Published var selectedDeviceID: String?
     @Published var isDetecting: Bool = false
 
@@ -157,6 +166,8 @@ final class AppModel: ObservableObject {
     @Published var bitDepthChoice: BitDepth = .sixteen
     @Published var colorModeChoice: ColorMode = .color
     @Published var multiExposureEnabled: Bool = false
+    // IR(적외선) 채널 스캔. 스캐너/플러그인이 실제로 IR 옵션을 노출할 때만(capabilities.supportsInfrared) 유효.
+    @Published var infraredEnabled: Bool = false
     @Published var nextScanOrientation: ImageTransform = .identity
     // 좌우/상하 Before·After 비교가 화면에 떠 있는지. 무보정 프리뷰는 이 값이 true일 때만 렌더한다
     // (비교를 안 볼 땐 추가 현상 패스·메모리를 쓰지 않음).
@@ -178,7 +189,22 @@ final class AppModel: ObservableObject {
         didSet { UserDefaults.standard.set(exportFormat.rawValue, forKey: "export.format") }
     }
     @Published var exportColorSpace: ExportColorSpace = .sRGB {
-        didSet { UserDefaults.standard.set(exportColorSpace.rawValue, forKey: "export.colorSpace") }
+        didSet {
+            UserDefaults.standard.set(exportColorSpace.rawValue, forKey: "export.colorSpace")
+            if softProofEnabled { refreshSoftProofPreviewIfNeeded() }
+        }
+    }
+    @Published var softProofEnabled: Bool = false {
+        didSet {
+            UserDefaults.standard.set(softProofEnabled, forKey: Self.softProofEnabledKey)
+            refreshSoftProofPreviewIfNeeded()
+        }
+    }
+    @Published var softProofSimulation: SoftProofSimulation = .profileOnly {
+        didSet {
+            UserDefaults.standard.set(softProofSimulation.rawValue, forKey: Self.softProofSimulationKey)
+            if softProofEnabled { refreshSoftProofPreviewIfNeeded() }
+        }
     }
     /// 0 = 미지정(스캔 DPI 사용).
     @Published var exportDPI: Int = 0 {
@@ -189,10 +215,13 @@ final class AppModel: ObservableObject {
         didSet { UserDefaults.standard.set(exportLongEdge, forKey: "export.longEdge") }
     }
     @Published var exportWriteSidecar: Bool = false
+    @Published var exportWriteMainFlatMaster: Bool = false {
+        didSet { UserDefaults.standard.set(exportWriteMainFlatMaster, forKey: Self.exportWriteMainFlatMasterKey) }
+    }
     @Published var quickExportFormat: ExportFormat = .jpeg {
         didSet { UserDefaults.standard.set(quickExportFormat.rawValue, forKey: "export.quick.format") }
     }
-    @Published var quickExportDPI: Int = 300 {
+    @Published var quickExportDPI: Int = 0 {
         didSet { UserDefaults.standard.set(quickExportDPI, forKey: "export.quick.dpi") }
     }
     /// nil = ~/Downloads.
@@ -204,7 +233,13 @@ final class AppModel: ObservableObject {
         ExportOptions(colorSpace: exportColorSpace, dpi: exportDPI,
                       longEdge: exportLongEdge > 0 ? exportLongEdge : nil)
     }
-    /// Quick Export: 미리 선택된 포맷/DPI, 원본 해상도 유지, sRGB.
+    var softProofSettings: SoftProofSettings {
+        SoftProofSettings(
+            isEnabled: softProofEnabled,
+            colorSpace: exportColorSpace,
+            simulation: softProofSimulation
+        )
+    }
     var quickExportOptions: ExportOptions {
         ExportOptions(colorSpace: .sRGB, dpi: quickExportDPI, longEdge: nil)
     }
@@ -225,19 +260,26 @@ final class AppModel: ObservableObject {
     var lastProgressMessage: String = ""
     var activeDevelopmentFrameIDs = Set<UUID>()
 
-    var backend: ScannerBackend? { demoMode ? mockBackend : (hasSANE ? saneBackend : nil) }
-    var saneDevices: [ScannerDescriptor] { devices.filter { $0.backendType == .sane } }
-    var hasSANE: Bool { devices.contains { $0.backendType == .sane } }
+    // 스캐너는 외부 플러그인이 제공한다. demo면 내장 Mock, 아니면 선택 장치를 소유한 플러그인 백엔드.
+    var backend: ScannerBackend? {
+        if demoMode { return mockBackend }
+        guard let id = effectiveScannerID else { return nil }
+        return pluginBackends.first(where: { $0.owns(scannerID: id) }) ?? pluginBackends.first
+    }
+    /// 플러그인이 보고한 스캐너 장치들(사용자에겐 백엔드 종류를 숨긴다).
+    var scannerDevices: [ScannerDescriptor] { devices.filter { $0.backendType == .plugin } }
+    /// 스캐너 플러그인이 하나라도 설치되어 있는가(장치 연결 여부와 별개).
+    var hasScannerPlugin: Bool { !installedScannerPlugins.isEmpty }
     var hasScanner: Bool { backend != nil }
     var canScan: Bool { hasScanner && !isScanning }
     var effectiveScannerID: String? {
         if demoMode { return Self.mockDeviceID }
-        return saneDevices.first(where: { $0.id == selectedDeviceID })?.id ?? saneDevices.first?.id
+        return scannerDevices.first(where: { $0.id == selectedDeviceID })?.id ?? scannerDevices.first?.id
     }
     var activeScannerDisplayName: String {
         if demoMode { return Self.mockDisplayName }
-        return saneDevices.first(where: { $0.id == selectedDeviceID })?.displayName
-            ?? saneDevices.first?.displayName
+        return scannerDevices.first(where: { $0.id == selectedDeviceID })?.displayName
+            ?? scannerDevices.first?.displayName
             ?? "스캐너 없음"
     }
     var selectedFrame: ScanFrame? {
@@ -257,11 +299,16 @@ final class AppModel: ObservableObject {
         let defaults = UserDefaults.standard
         if let raw = defaults.string(forKey: "export.format"), let v = ExportFormat(rawValue: raw) { exportFormat = v }
         if let raw = defaults.string(forKey: "export.colorSpace"), let v = ExportColorSpace(rawValue: raw) { exportColorSpace = v }
+        softProofEnabled = defaults.bool(forKey: Self.softProofEnabledKey)
+        if let raw = defaults.string(forKey: Self.softProofSimulationKey),
+           let v = SoftProofSimulation(rawValue: raw) {
+            softProofSimulation = v
+        }
         exportDPI = defaults.integer(forKey: "export.dpi")
         exportLongEdge = defaults.integer(forKey: "export.longEdge")
+        exportWriteMainFlatMaster = defaults.bool(forKey: Self.exportWriteMainFlatMasterKey)
         if let raw = defaults.string(forKey: "export.quick.format"), let v = ExportFormat(rawValue: raw) { quickExportFormat = v }
-        let qd = defaults.integer(forKey: "export.quick.dpi")
-        quickExportDPI = qd > 0 ? qd : 300
+        quickExportDPI = defaults.integer(forKey: "export.quick.dpi")
         quickExportFolderPath = defaults.string(forKey: "export.quick.folder")
         userDevelopPresets = loadUserDevelopPresets()
         // 구버전이 디스크에 남겼을 수 있는 ICE 임시 캐시를 시작 시 청소한다(현재는 메모리 캐시라

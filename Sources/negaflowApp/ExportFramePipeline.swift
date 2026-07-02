@@ -6,6 +6,8 @@ import AppKit
 
 struct ExportFrameSnapshot: @unchecked Sendable {
     let rawScanURL: URL
+    // raw 입력 출처(로더 분기). 기본은 스캐너 TIFF.
+    var sourceKind: FrameSource = .scannerTIFF
     // ICE 적용된 raw(메모리 CGImage). 있으면 이걸 입력으로 써서 결함 제거가 export에도 반영된다.
     let preloadedRaw: CGImage?
     // 메모리 적재본이 없을 때의 디스크 백킹(ICE 적용된 raw TIFF).
@@ -29,11 +31,13 @@ struct ExportFrameSnapshot: @unchecked Sendable {
     let developHistory: [DevelopHistoryEntry]
     let developSnapshots: [Sidecar.DevelopSnapshotRecord]
     let writeSidecar: Bool
+    let writeMainFlatMaster: Bool
     let exportOptions: ExportOptions
 }
 
 struct ExportFrameResult: @unchecked Sendable {
     let base: FilmBase?
+    let mainFlatMasterURL: URL?
 }
 
 enum ExportFrameWriter {
@@ -45,7 +49,9 @@ enum ExportFrameWriter {
             rawInput = CIImage(cgImage: pre, options: [.colorSpace: linear])
         } else if let url = snapshot.cleanedRawURL, let ci = ImageLoader.loadScannerTIFF(url) {
             rawInput = ci
-        } else if let loaded = engine.loadScannerImage(snapshot.rawScanURL) {
+        } else if let loaded = (snapshot.sourceKind == .importedFile
+                                ? engine.loadImportedImage(snapshot.rawScanURL)
+                                : engine.loadScannerImage(snapshot.rawScanURL)) {
             rawInput = loaded
         } else {
             throw ChromabaseError.loadFailed(snapshot.rawScanURL.path)
@@ -67,11 +73,23 @@ enum ExportFrameWriter {
             software: "negaflow 0.1.0"
         )
         let developed = engine.developScanner(image: rawInput, base: base, params: snapshot.params)
-        try ExportEngine.write(developed, to: snapshot.outputURL, format: snapshot.format, using: renderContext(), metadata: meta, options: snapshot.exportOptions)
+        let mainFlatMaster = (snapshot.writeMainFlatMaster && snapshot.format != .rawScanTIFF)
+            ? engine.developScanner(image: rawInput, base: base, params: snapshot.params.mainFlatMasterParameters())
+            : nil
+        let exportResult = try ExportEngine.writePaired(
+            developed,
+            mainFlatMaster: mainFlatMaster,
+            to: snapshot.outputURL,
+            format: snapshot.format,
+            using: renderContext(),
+            metadata: meta,
+            options: snapshot.exportOptions,
+            writeMainFlatMaster: snapshot.writeMainFlatMaster
+        )
         if snapshot.writeSidecar {
             writeSidecars(for: snapshot, base: base)
         }
-        return ExportFrameResult(base: base)
+        return ExportFrameResult(base: base, mainFlatMasterURL: exportResult.mainFlatMasterURL)
     }
 
     private static func renderContext() -> CIContext {

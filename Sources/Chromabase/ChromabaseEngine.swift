@@ -18,12 +18,14 @@ import ImageIO
 /// 사용자가 조절하는 현상 파라미터. plan §8.7/§8.8.
 public enum DevelopTarget: String, Codable, Sendable, CaseIterable {
     case main
+    case print
     case noritsu
     case sp3000 = "sp-3000"
 
     public var displayName: String {
         switch self {
         case .main: return "main"
+        case .print: return "print"
         case .noritsu: return "NORITSU"
         case .sp3000: return "SP-3000"
         }
@@ -67,6 +69,7 @@ public struct DevelopParameters: Codable, Sendable, Equatable {
     public var colorMixer = ColorMixer()         // HSL 8색
     public var colorGrading = ColorGrading()     // 색보정 3영역 휠
     public var calibration = CalibrationAdjust() // Calibration primary Hue/Sat
+    public var bwToning = BWToning()
 
     // 슬라이드 필름 특성 룩(좌측 Film 탭). 현상 원본(플랫) 위에 데이터시트 유도 룩을 얹는 특수 기능.
     public var filmEmulation: FilmEmulation = .none
@@ -87,6 +90,8 @@ public struct DevelopParameters: Codable, Sendable, Equatable {
     // luma는 보존(그레인/디테일 유지), chroma residual만 비대칭(B>R)으로 제거 → 맨들거림/탈색 방지.
     public var noiseReduction: Double = 0.0  // 0...1 (0 = off, strength)
 
+    public var localDodgeBurn: [LocalDodgeBurnAdjustment] = []
+
     public enum BaseMode: String, Codable, Sendable { case auto, manual, preset }
 
     public init() {}
@@ -97,11 +102,12 @@ public struct DevelopParameters: Codable, Sendable, Equatable {
         case curveHighlights, curveLights, curveDarks, curveShadows
         case warmth, tint, colorDepth, vibrance, saturation
         case redPrimary, greenPrimary, bluePrimary
-        case pointCurves, colorMixer, colorGrading, calibration
+        case pointCurves, colorMixer, colorGrading, calibration, bwToning
         case filmEmulation, filmEmulationIntensity
         case grain, sharpness, halation, clarity, vignette, imageTransform
         case defectRemoval
         case noiseReduction
+        case localDodgeBurn
     }
 
     public init(from decoder: Decoder) throws {
@@ -135,6 +141,7 @@ public struct DevelopParameters: Codable, Sendable, Equatable {
         colorMixer = try c.decodeIfPresent(ColorMixer.self, forKey: .colorMixer) ?? ColorMixer()
         colorGrading = try c.decodeIfPresent(ColorGrading.self, forKey: .colorGrading) ?? ColorGrading()
         calibration = try c.decodeIfPresent(CalibrationAdjust.self, forKey: .calibration) ?? CalibrationAdjust()
+        bwToning = try c.decodeIfPresent(BWToning.self, forKey: .bwToning) ?? BWToning()
         filmEmulation = try c.decodeIfPresent(FilmEmulation.self, forKey: .filmEmulation) ?? .none
         filmEmulationIntensity = try c.decodeIfPresent(Double.self, forKey: .filmEmulationIntensity) ?? 1.0
         grain = try c.decodeIfPresent(Double.self, forKey: .grain) ?? 0
@@ -145,6 +152,7 @@ public struct DevelopParameters: Codable, Sendable, Equatable {
         imageTransform = try c.decodeIfPresent(ImageTransform.self, forKey: .imageTransform) ?? .identity
         defectRemoval = try c.decodeIfPresent(Double.self, forKey: .defectRemoval) ?? 0
         noiseReduction = try c.decodeIfPresent(Double.self, forKey: .noiseReduction) ?? 0
+        localDodgeBurn = try c.decodeIfPresent([LocalDodgeBurnAdjustment].self, forKey: .localDodgeBurn) ?? []
     }
 
     /// LookPreset의 값을 얹은 뒤 사용자 조절을 적용한다.
@@ -175,6 +183,7 @@ public struct DevelopParameters: Codable, Sendable, Equatable {
         colorMixer = overrides.colorMixer
         colorGrading = overrides.colorGrading
         calibration = overrides.calibration
+        bwToning = overrides.bwToning
         filmEmulation = overrides.filmEmulation
         filmEmulationIntensity = overrides.filmEmulationIntensity
         grain      = max(grain, overrides.grain)
@@ -184,6 +193,7 @@ public struct DevelopParameters: Codable, Sendable, Equatable {
         vignette   += overrides.vignette
         defectRemoval = max(defectRemoval, overrides.defectRemoval)
         noiseReduction = max(noiseReduction, overrides.noiseReduction)
+        localDodgeBurn = overrides.localDodgeBurn
         imageTransform = overrides.imageTransform
         filmType   = overrides.filmType
         developTarget = overrides.developTarget
@@ -312,6 +322,19 @@ public final class ChromabaseEngine: @unchecked Sendable {
         )
     }
 
+    public func developScannerPreview(
+        image input: CIImage,
+        base: FilmBase?,
+        params: DevelopParameters,
+        maxDimension: CGFloat
+    ) -> CIImage {
+        developScanner(
+            image: Self.scannerPreviewProxy(input, maxDimension: maxDimension),
+            base: base,
+            params: params
+        )
+    }
+
     public func developDebugFramesScanner(
         image input: CIImage,
         base: FilmBase?,
@@ -322,6 +345,19 @@ public final class ChromabaseEngine: @unchecked Sendable {
             base: base,
             params: params,
             sampleColorSpace: CGColorSpace(name: CGColorSpace.linearSRGB)!
+        )
+    }
+
+    public func developDebugFramesScannerPreview(
+        image input: CIImage,
+        base: FilmBase?,
+        params: DevelopParameters,
+        maxDimension: CGFloat
+    ) -> [DevelopDebugFrame] {
+        developDebugFramesScanner(
+            image: Self.scannerPreviewProxy(input, maxDimension: maxDimension),
+            base: base,
+            params: params
         )
     }
 
@@ -392,6 +428,9 @@ public final class ChromabaseEngine: @unchecked Sendable {
                 // Auto 모드는 이 단계를 거치지 않는다(이미 NeutralBalance 가 채널 균형 담당).
                 img = applyManualBaseAdjustment(to: img, base: fb.rgb)
             }
+            if params.developTarget == .print {
+                img = applyFinishedPrintTarget(to: img, extent: extent)
+            }
             // 5-8. 채널 균형 + 노출 + 톤 커브 + 컬러
             img = ColorModel.apply(to: img, params: params)
             img = ToneMapper.applyExposure(to: img, stops: params.exposure)
@@ -412,6 +451,9 @@ public final class ChromabaseEngine: @unchecked Sendable {
             img = PositiveDevelop.applyBaseGrade(to: img, filmType: params.filmType)
             if let profile = scannerProfile(for: params) {
                 img = ScannerProfileGrade.apply(to: img, profile: profile)
+            }
+            if params.developTarget == .print {
+                img = applyFinishedPrintTarget(to: img, extent: extent)
             }
             img = ColorModel.apply(to: img, params: params)
             img = ToneMapper.applyExposure(to: img, stops: params.exposure)
@@ -444,6 +486,10 @@ public final class ChromabaseEngine: @unchecked Sendable {
             img = ChromaDenoise.apply(to: img, strength: params.noiseReduction)
         }
 
+        if !params.localDodgeBurn.isEmpty {
+            img = LocalDodgeBurnStage.apply(to: img, adjustments: params.localDodgeBurn)
+        }
+
         // 9. 텍스처
         img = TextureStage.apply(to: img, params: params)
 
@@ -456,6 +502,7 @@ public final class ChromabaseEngine: @unchecked Sendable {
                 "inputBVector": CIVector(x: 0.2126, y: 0.7152, z: 0.0722, w: 0),
                 "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
             ]).cropped(to: extent)
+            img = BWToningStage.apply(to: img, toning: params.bwToning, filmType: params.filmType)
         }
 
         // 최종 gamut 매핑: 프로파일 그레이드·유저 조정(채도/노출/커브)·텍스처가 민 out-of-gamut를
@@ -605,6 +652,24 @@ public final class ChromabaseEngine: @unchecked Sendable {
             .cropped(to: extent)
     }
 
+    private func applyFinishedPrintTarget(to image: CIImage, extent: CGRect) -> CIImage {
+        image
+            .applyingFilter("CIColorControls", parameters: [
+                kCIInputContrastKey: 1.08,
+                kCIInputSaturationKey: 1.06,
+                kCIInputBrightnessKey: -0.006,
+            ])
+            .applyingFilter("CIVibrance", parameters: ["inputAmount": 0.16])
+            .applyingFilter("CIToneCurve", parameters: [
+                "inputPoint0": CIVector(x: 0.00, y: 0.018),
+                "inputPoint1": CIVector(x: 0.20, y: 0.155),
+                "inputPoint2": CIVector(x: 0.50, y: 0.520),
+                "inputPoint3": CIVector(x: 0.82, y: 0.885),
+                "inputPoint4": CIVector(x: 1.00, y: 0.990),
+            ])
+            .cropped(to: extent)
+    }
+
     /// 최후의 베이스 추정 폴백. FilmBaseEstimator가 완전히 실패한 경우에만 도달.
     ///
     /// 베이스(Dmin)는 darktable negadoctor / PhotoVision 모두 "노광되지 않고 현상된 필름 영역"의
@@ -715,6 +780,30 @@ public final class ChromabaseEngine: @unchecked Sendable {
 
     public func loadScannerImage(_ url: URL) -> CIImage? {
         ImageLoader.loadScannerTIFF(url)
+    }
+
+    /// 가져온 파일(사용자 이미지) 전용 로더. 카메라 RAW/DNG 데모사이크 + 임베디드 색상 프로필 존중
+    /// + 프로필 없는 16bit 스캐너 raw(VueScan/SilverFast)를 linear 로 해석한다.
+    public func loadImportedImage(_ url: URL) -> CIImage? {
+        ImageLoader.loadImported(url)
+    }
+
+    private static func scannerPreviewProxy(_ input: CIImage, maxDimension: CGFloat) -> CIImage {
+        guard maxDimension > 0 else { return input }
+        let extent = input.extent.integral
+        let maxSide = max(extent.width, extent.height)
+        guard maxSide > maxDimension, extent.width > 0, extent.height > 0 else {
+            return input
+        }
+        let scale = maxDimension / maxSide
+        let scaledSize = CGSize(width: extent.width * scale, height: extent.height * scale)
+        let normalized = input.transformed(by: CGAffineTransform(translationX: -extent.minX, y: -extent.minY))
+        return normalized
+            .applyingFilter("CILanczosScaleTransform", parameters: [
+                "inputScale": scale,
+                "inputAspectRatio": 1.0,
+            ])
+            .cropped(to: CGRect(origin: .zero, size: scaledSize))
     }
 }
 

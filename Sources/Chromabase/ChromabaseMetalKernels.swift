@@ -106,6 +106,33 @@ enum ChromabaseMetalKernels {
         return float4(clamp(rgb, 0.0, 1.0), src.a);
     }
 
+    [[stitchable]] float4 bwToning(coreimage::sample_t src, float3 shadowTint, float3 highlightTint, float2 control) {
+        float3 ycoef = float3(0.2126, 0.7152, 0.0722);
+        float y = clamp(dot(src.rgb, ycoef), 0.0, 1.0);
+        float strength = clamp(control.x, 0.0, 1.0);
+        float mode = control.y;
+
+        float shadowReach = mix(0.68, 0.92, mode);
+        float highlightReach = mix(0.38, 0.76, mode);
+        float shadowWeight = (1.0 - smoothstep(0.18, shadowReach, y));
+        float highlightWeight = smoothstep(1.0 - highlightReach, 0.98, y);
+        float crossover = smoothstep(0.22, 0.86, y);
+        float3 tint = mix(shadowTint, highlightTint, crossover);
+
+        float tintY = max(dot(tint, ycoef), 0.001);
+        float3 toned = y * (tint / tintY);
+        float toneMask = clamp(shadowWeight * mix(0.95, 0.68, mode) + highlightWeight * mix(0.30, 0.72, mode), 0.0, 1.0);
+        float amount = strength * mix(0.18, 0.36, mode) * toneMask;
+
+        float density = mix(
+            1.0 - 0.060 * strength * shadowWeight,
+            1.0 - 0.026 * strength * smoothstep(0.36, 0.92, y),
+            mode
+        );
+        float3 rgb = mix(float3(y), toned, amount) * density;
+        return float4(clamp(rgb, 0.0, 1.0), src.a);
+    }
+
     // Calibration — R(0°)/G(120°)/B(240°) primary 의 hue 회전 + saturation 스케일(넓은 밴드).
     [[stitchable]] float4 calibrationPrimaries(coreimage::sample_t src, float3 hue, float3 sat) {
         float3 hsl = rgb2hsl(clamp(src.rgb, 0.0, 1.0));
@@ -346,8 +373,8 @@ enum ChromabaseMetalKernels {
         outY = mix(outY, cy, clamp(brightSpike, 0.0, 0.92));
         float lumaFieldDev = abs(outY - fy);
         float fieldW = smoothstep(mix(0.020, 0.004, strength), mix(0.065, 0.022, strength), lumaFieldDev);
-        fieldW *= shadowBase * tone * edgeGuard * (0.25 + 0.55 * strength);
-        outY = mix(outY, fy, clamp(fieldW, 0.0, 0.68));
+        fieldW *= shadowBase * tone * edgeGuard * (0.30 + 0.60 * strength);
+        outY = mix(outY, fy, clamp(fieldW, 0.0, 0.78));
 
         // 컬러 노이즈 픽셀: 국소 median chroma에서 벗어난 outlier만 교체. 실색(균일/구조적)은 보존.
         float chromaDev = length(sc - mc);
@@ -356,11 +383,11 @@ enum ChromabaseMetalKernels {
         float3 outC = mix(sc, mc, chromaW);
         float blotchDev = length(outC - bc);
         float blotchW = smoothstep(mix(0.030, 0.006, strength), mix(0.090, 0.026, strength), blotchDev);
-        blotchW *= tone * edgeGuard * colorGuard * (0.35 + 0.55 * strength);
-        outC = mix(outC, bc, clamp(blotchW, 0.0, 0.88));
-        float neutralSurface = (1.0 - smoothstep(0.060, 0.240, length(bc))) * edgeGuard * tone;
-        float chromaFieldW = smoothstep(mix(0.014, 0.003, strength), mix(0.055, 0.018, strength), length(outC - bc));
-        outC = mix(outC, outC * 0.46 + bc * 0.54, clamp(chromaFieldW * neutralSurface * strength, 0.0, 0.72));
+        blotchW *= tone * edgeGuard * colorGuard * (0.48 + 0.64 * strength);
+        outC = mix(outC, bc, clamp(blotchW, 0.0, 0.96));
+        float neutralSurface = (1.0 - smoothstep(0.110, 0.350, length(bc))) * edgeGuard * tone * colorGuard;
+        float chromaFieldW = smoothstep(mix(0.010, 0.002, strength), mix(0.038, 0.012, strength), length(outC));
+        outC = mix(outC, float3(0.0), clamp(chromaFieldW * neutralSurface * strength, 0.0, 0.82));
 
         return float4(clamp(float3(outY) + outC, float3(0.0), float3(1.0)), src.a);
     }

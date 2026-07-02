@@ -32,22 +32,21 @@ public protocol ScannerBackend: AnyObject {
 
 /// 사용 가능한 백엔드를 우선순위대로 보관하고, 장치를 가장 잘 지원하는 백엔드를 고른다.
 ///
-/// Phase 0 검증 결과에 따른 기본 우선순위:
-///   1. SANE (genesys)  — 8200i에서 16bit/7200dpi/투과유닛 전부 검증됨
-///   2. ImageCaptureCore — macOS 네이티브지만 8200i 미노출(제조사 ICA 드라이버 없음)
-///   3. Mock             — 하드웨어 없는 개발/데모
+/// SANE 백엔드는 GPL 라이센스 때문에 negaflow(Apache-2.0)에서 분리되어 외부 프로세스
+/// 플러그인으로 제공된다. 레지스트리는 설치된 플러그인을 발견해 primary로, Mock은 항상
+/// 보험으로 깔아둔다.
+///   1. 설치된 스캐너 플러그인(ExternalScannerBackend) — 예: SANE 플러그인
+///   2. Mock             — 하드웨어/플러그인 없는 개발/데모
 public final class ScannerRegistry: @unchecked Sendable {
     public private(set) var backends: [ScannerBackend]
     private let queue = DispatchQueue(label: "negaflow.scanner.registry")
 
     public init(backends: [ScannerBackend]) { self.backends = backends }
 
-    /// 기본 레지스트리. 검증된 SANE을 primary로, Mock은 항상 보험으로 깔아둔다.
-    public static func `default`(scanimagePath: String? = nil) -> ScannerRegistry {
-        ScannerRegistry(backends: [
-            SANEBackend(scanimagePath: scanimagePath),
-            MockScannerBackend(),
-        ])
+    /// 기본 레지스트리. 설치된 스캐너 플러그인을 발견해 primary로 두고, Mock은 항상 보험으로 깔아둔다.
+    public static func `default`() -> ScannerRegistry {
+        let plugins = ScannerPluginHost.discover().map { ExternalScannerBackend(plugin: $0) }
+        return ScannerRegistry(backends: plugins + [MockScannerBackend()])
     }
 
     /// 등록된 모든 백엔드에서 장치를 수집한다.
@@ -72,16 +71,22 @@ public final class ScannerRegistry: @unchecked Sendable {
         }
     }
 
-    /// 특정 장치 ID를 지원하는 백엔드를 찾는다.
+    /// 특정 장치 ID를 지원하는 백엔드를 찾는다. 플러그인 장치는 소유 플러그인으로 우선 매칭한다.
     public func backend(for scannerID: String) -> ScannerBackend? {
-        backends.first(where: { $0.backendType == BackendType(fromScannerID: scannerID) })
+        if let owner = backends
+            .compactMap({ $0 as? ExternalScannerBackend })
+            .first(where: { $0.owns(scannerID: scannerID) }) {
+            return owner
+        }
+        return backends.first(where: { $0.backendType == BackendType(fromScannerID: scannerID) })
     }
 }
 
 extension BackendType {
-    /// scannerID 접두사에서 백엔드 종류를 유추. "sane-...", "ica-...", "mock-..."
+    /// scannerID 접두사에서 백엔드 종류를 유추. "plugin:...", "ica-...", "mock-..."
     public init(fromScannerID id: String) {
-        if id.hasPrefix("sane-")      { self = .sane }
+        if id.hasPrefix("plugin:")    { self = .plugin }
+        else if id.hasPrefix("sane-") { self = .sane }
         else if id.hasPrefix("ica-")  { self = .imageCaptureCore }
         else                          { self = .mock }
     }

@@ -97,11 +97,9 @@ struct WorkflowSidebar: View {
     var selectedContent: some View {
         switch selectedTab {
         case .library:
-            ScanSection()
+            LibrarySourceSection()
             if let frame {
                 RollOverviewSection(frame: frame)
-            } else {
-                SidebarEmptyState(title: "스캔 대기", systemImage: "film")
             }
         case .versions:
             if let frame {

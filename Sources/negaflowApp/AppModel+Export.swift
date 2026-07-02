@@ -13,7 +13,14 @@ extension AppModel {
         panel.allowedContentTypes = [exportFormat.exportContentType]
         panel.nameFieldStringValue = "frame\(frame.scanIndex).\(exportFormat.fileExtension)"
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        exportFrame(frame, to: url, format: exportFormat, writeSidecar: exportWriteSidecar, options: exportOptions)
+        exportFrame(
+            frame,
+            to: url,
+            format: exportFormat,
+            writeSidecar: exportWriteSidecar,
+            writeMainFlatMaster: exportWriteMainFlatMaster,
+            options: exportOptions
+        )
     }
 
     /// Quick Export: 저장 패널 없이 미리 선택된 폴더에 미리 선택된 포맷/DPI로 즉시 저장한다.
@@ -22,6 +29,17 @@ extension AppModel {
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let url = uniqueExportURL(in: folder, baseName: "frame\(frame.scanIndex)", ext: quickExportFormat.fileExtension)
         exportFrame(frame, to: url, format: quickExportFormat, writeSidecar: false, options: quickExportOptions)
+    }
+
+    /// 사이드카에 기록할 소스 모델명. 스캔 프레임은 활성 스캐너/플러그인명, 가져온 파일은 nil.
+    private func exportSourceModel(for frame: ScanFrame) -> String? {
+        switch frame.sourceKind {
+        case .importedFile:
+            return nil
+        case .scannerTIFF:
+            if demoMode { return AppModel.mockDisplayName }
+            return scannerDevices.first?.displayName
+        }
     }
 
     /// 같은 폴더에 동명 파일이 있으면 -1, -2 … 를 붙여 겹치지 않게 한다.
@@ -37,6 +55,7 @@ extension AppModel {
     }
 
     func exportFrame(_ frame: ScanFrame, to url: URL, format: ExportFormat, writeSidecar: Bool = false,
+                     writeMainFlatMaster: Bool = false,
                      options: ExportOptions = .standard) {
         var effectiveParams = frame.preset.map { DevelopParameters(preset: $0, overrides: frame.params) } ?? frame.params
         effectiveParams.filmType = frame.filmType
@@ -54,6 +73,7 @@ extension AppModel {
         let useICE = format != .rawScanTIFF
         let snapshot = ExportFrameSnapshot(
             rawScanURL: frame.rawScanURL,
+            sourceKind: frame.sourceKind,
             preloadedRaw: useICE ? frame.cleanedRawImage : nil,
             cleanedRawURL: useICE ? frame.cleanedRawDiskURL : nil,
             outputURL: url,
@@ -63,8 +83,8 @@ extension AppModel {
             baseMode: frame.params.baseEstimationMode,
             manualBaseRGB: frame.params.manualBaseRGB,
             cachedBase: cachedBase,
-            scannerModel: devices.first(where: { $0.backendType == .sane })?.displayName ?? (demoMode ? "Mock" : nil),
-            resolutionDPI: frame.hasDevelopedOnce ? resolutionChoice.dpi : nil,
+            scannerModel: exportSourceModel(for: frame),
+            resolutionDPI: frame.sourceResolutionDPI,
             backendUsed: (backend?.backendType).map { $0.rawValue },
             presetName: frame.preset?.id,
             scannerProfileID: effectiveParams.scannerProfileID,
@@ -75,6 +95,7 @@ extension AppModel {
             developHistory: frame.developHistory,
             developSnapshots: frame.developSnapshots.map(\.sidecarRecord),
             writeSidecar: writeSidecar,
+            writeMainFlatMaster: writeMainFlatMaster,
             exportOptions: options
         )
         frame.isDeveloping = true
@@ -90,7 +111,11 @@ extension AppModel {
                     frame.baseRGB = base.rgb
                 }
                 frame.isDeveloping = false
-                statusMessage = "내보내기 완료 → \(url.lastPathComponent)"
+                if let mainFlatURL = result.mainFlatMasterURL {
+                    statusMessage = "내보내기 완료 → \(url.lastPathComponent) + \(mainFlatURL.lastPathComponent)"
+                } else {
+                    statusMessage = "내보내기 완료 → \(url.lastPathComponent)"
+                }
             } catch {
                 frame.isDeveloping = false
                 statusMessage = "내보내기 실패: \(error.localizedDescription)"
