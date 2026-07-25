@@ -211,8 +211,12 @@ extension AppModel {
         }
         markDevelopedResident(frame)
         let softProofIsStale = frame.displayedSoftProofRevision != softProofConfigurationRevision
-        if (frame.developedImage == nil || softProofIsStale),
-           frame.hasDevelopedOnce {
+        let restoredDevelopmentIsMissing = frame.developedImage == nil
+            && frame.initialThumbnailSeedTask == nil
+            && frame.isSourceAvailable
+        let selectedDevelopmentIsNeeded = restoredDevelopmentIsMissing
+            || (softProofIsStale && frame.hasDevelopedOnce)
+        if selectedDevelopmentIsNeeded {
             let selectedID = frame.id
             selectedFrameDevelopTask = Task { [weak self, weak frame] in
                 guard let self, let frame,

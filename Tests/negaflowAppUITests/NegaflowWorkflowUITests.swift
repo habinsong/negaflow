@@ -136,7 +136,7 @@ final class NegaflowWorkflowUITests: XCTestCase {
         let restoredCard = app.descendants(matching: .any)
             .matching(identifier: "negaflow.frame-card").firstMatch
         XCTAssertTrue(restoredCard.waitForExistence(timeout: 20))
-        XCTAssertEqual(restoredCard.value as? String, "online")
+        XCTAssertTrue(waitUntil(timeout: 10) { restoredCard.value as? String == "online" })
     }
 
     func testTreeFileRowDragToFolderMovesSourceFile() throws {

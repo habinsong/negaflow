@@ -2,6 +2,7 @@ import Combine
 import XCTest
 import AppKit
 import Chromabase
+import ScannerKit
 @testable import negaflowApp
 
 final class AppModelFrameStoreTests: XCTestCase {
@@ -85,6 +86,33 @@ final class AppModelFrameStoreTests: XCTestCase {
             XCTAssertEqual(model.selectedFrame?.id, second.id)
             XCTAssertEqual(model.residentDevelopedIDs, [second.id])
         }
+    }
+
+    @MainActor
+    func testSelectingRestoredUndevelopedFrameStartsDevelopment() async throws {
+        let sourceURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("negaflow-restored-undeveloped-\(UUID().uuidString).tiff")
+        try MockScannerBackend.writeSyntheticNegative(width: 64, height: 48, to: sourceURL)
+        defer { try? FileManager.default.removeItem(at: sourceURL) }
+
+        let model = AppModel()
+        let frame = ScanFrame(
+            scanIndex: 1,
+            rawScanURL: sourceURL,
+            filmType: .colorNegative,
+            sourceKind: .importedFile
+        )
+        model.frames = [frame]
+        model.updateInteractionScope([frame.id])
+
+        model.selectedFrameID = frame.id
+
+        let deadline = Date().addingTimeInterval(10)
+        while !frame.hasDevelopedOnce, Date() < deadline {
+            try await Task.sleep(nanoseconds: 20_000_000)
+        }
+        XCTAssertTrue(frame.hasDevelopedOnce)
+        XCTAssertNotNil(frame.developedImage)
     }
 
     func testFrameFacadeForwardsObjectWillChange() async {
