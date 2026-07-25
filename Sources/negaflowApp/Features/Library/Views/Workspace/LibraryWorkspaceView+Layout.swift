@@ -246,5 +246,6 @@ private struct LibraryControlsTabButton: View {
         .buttonStyle(.plain)
         .help(title)
         .accessibilityLabel(title)
+        .accessibilityIdentifier("negaflow.library.controls.\(tab.rawValue)")
     }
 }

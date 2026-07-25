@@ -43,7 +43,9 @@ struct ContentView: View {
 
     @MainActor
     init() {
-        self.init(workspacePresentationStore: WorkspacePresentationStore())
+        self.init(
+            workspacePresentationStore: AppModelFactory.makeWorkspacePresentationStore()
+        )
     }
 
     @MainActor

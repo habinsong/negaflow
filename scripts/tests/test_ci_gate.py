@@ -34,6 +34,8 @@ class CIGateTests(unittest.TestCase):
         self.assertIn("SANE_" + "CONFIG_DIR", boundary)
         self.assertIn("scan" + "image", boundary)
         self.assertIn("negaflow-scanner-sane", boundary)
+        self.assertIn("git grep", boundary)
+        self.assertNotIn("if rg ", boundary)
 
     def test_static_gate_verifies_code_and_resource_provenance(self) -> None:
         gate = (ROOT / "scripts/ci/verify-static.sh").read_text(encoding="utf-8")

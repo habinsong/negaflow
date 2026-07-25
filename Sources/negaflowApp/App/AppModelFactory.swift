@@ -49,6 +49,15 @@ enum AppModelFactory {
         return model
     }
 
+    static func makeWorkspacePresentationStore(
+        configuration: AppLaunchConfiguration? = .current
+    ) -> WorkspacePresentationStore {
+        guard let configuration else { return WorkspacePresentationStore() }
+        return WorkspacePresentationStore(
+            defaults: isolatedDefaults(for: configuration.uiTestRoot)
+        )
+    }
+
     private static func isolatedDefaults(for root: URL) -> UserDefaults {
         let identifier = root.path.data(using: .utf8)?.base64EncodedString() ?? UUID().uuidString
         let safeIdentifier = identifier

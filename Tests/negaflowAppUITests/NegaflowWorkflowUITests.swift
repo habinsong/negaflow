@@ -119,7 +119,7 @@ final class NegaflowWorkflowUITests: XCTestCase {
         XCTAssertFalse(export.isEnabled)
 
         frameCard.rightClick()
-        let relink = app.menuItems["negaflow.relink-source"]
+        let relink = app.menuItems["Locate Original"]
         XCTAssertTrue(relink.waitForExistence(timeout: 10))
         relink.click()
         app.typeKey("g", modifierFlags: [.command, .shift])
@@ -142,9 +142,7 @@ final class NegaflowWorkflowUITests: XCTestCase {
     func testTreeFileRowDragToFolderMovesSourceFile() throws {
         launch(importSyntheticNegative: true, demoScanner: false, dropTargetFolder: true)
 
-        let library = app.buttons["negaflow.workspace.library"]
-        XCTAssertTrue(library.waitForExistence(timeout: 15))
-        library.click()
+        openLibraryFiles()
 
         let fileRow = app.buttons.matching(identifier: "negaflow.library.file-row").firstMatch
         XCTAssertTrue(fileRow.waitForExistence(timeout: 20))
@@ -160,9 +158,7 @@ final class NegaflowWorkflowUITests: XCTestCase {
     func testGridFrameCardDragToFolderMovesSourceFile() throws {
         launch(importSyntheticNegative: true, demoScanner: false, dropTargetFolder: true)
 
-        let library = app.buttons["negaflow.workspace.library"]
-        XCTAssertTrue(library.waitForExistence(timeout: 15))
-        library.click()
+        openLibraryFiles()
 
         let card = app.descendants(matching: .any)
             .matching(identifier: "negaflow.frame-card").firstMatch
@@ -186,6 +182,17 @@ final class NegaflowWorkflowUITests: XCTestCase {
             },
             "source file was not moved to DropTarget"
         )
+    }
+
+    private func openLibraryFiles() {
+        let library = app.buttons["negaflow.workspace.library"]
+        XCTAssertTrue(library.waitForExistence(timeout: 15))
+        library.click()
+        XCTAssertTrue(waitUntil(timeout: 5) { library.isSelected })
+
+        let files = app.buttons["negaflow.library.controls.files"]
+        XCTAssertTrue(files.waitForExistence(timeout: 10))
+        files.click()
     }
 
     private func launch(

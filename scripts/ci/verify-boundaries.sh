@@ -9,11 +9,12 @@ if find Sources Tests -iname '*sane*' -print -quit | grep -q .; then
   exit 1
 fi
 
-if rg -n \
+if git grep -n -E \
     'SANE_CONFIG_DIR|scanimage|libsane|sane-backends|sane/sane\.h' \
+    -- \
     Sources Tests scripts Package.swift \
-    --glob '!scripts/ci/verify-boundaries.sh' \
-    --glob '!scripts/ci/verify-provenance.py'; then
+    ':(exclude)scripts/ci/verify-boundaries.sh' \
+    ':(exclude)scripts/ci/verify-provenance.py'; then
   echo "[ci-boundary] ERROR: 메인 저장소에 SANE 전용 구현 또는 런타임 처리가 있습니다." >&2
   exit 1
 fi

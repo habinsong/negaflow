@@ -48,4 +48,49 @@ final class AppLaunchConfigurationTests: XCTestCase {
         XCTAssertEqual(model.appLanguage, .english)
         XCTAssertTrue(model.demoMode)
     }
+
+    @MainActor
+    func testFactoryIsolatesWorkspacePresentationForUITestRoot() {
+        let token = UUID().uuidString
+        let firstRoot = URL(
+            fileURLWithPath: "/tmp/negaflow-e2e-first-\(token)",
+            isDirectory: true
+        )
+        let secondRoot = URL(
+            fileURLWithPath: "/tmp/negaflow-e2e-second-\(token)",
+            isDirectory: true
+        )
+        let firstConfiguration = AppLaunchConfiguration(
+            uiTestRoot: firstRoot,
+            importsSyntheticNegative: false,
+            enablesDemoScanner: false,
+            preparesCorruptCatalog: false,
+            createsDropTargetFolder: false
+        )
+        let secondConfiguration = AppLaunchConfiguration(
+            uiTestRoot: secondRoot,
+            importsSyntheticNegative: false,
+            enablesDemoScanner: false,
+            preparesCorruptCatalog: false,
+            createsDropTargetFolder: false
+        )
+
+        let first = AppModelFactory.makeWorkspacePresentationStore(
+            configuration: firstConfiguration
+        )
+        first.module = .library
+
+        XCTAssertEqual(
+            AppModelFactory.makeWorkspacePresentationStore(
+                configuration: firstConfiguration
+            ).module,
+            .library
+        )
+        XCTAssertEqual(
+            AppModelFactory.makeWorkspacePresentationStore(
+                configuration: secondConfiguration
+            ).module,
+            .develop
+        )
+    }
 }
