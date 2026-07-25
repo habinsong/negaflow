@@ -4,6 +4,17 @@ import Chromabase
 
 @MainActor
 final class DevelopInspectorBindingsTests: XCTestCase {
+    func testGrainMendDefaultsUseMaximumSensitivityAndMicroSpecksInBothModes() {
+        let frame = Self.makeFrame()
+
+        for automaticMode in [true, false] {
+            frame.defectAutoMode = automaticMode
+
+            XCTAssertEqual(frame.defectSensitivity, 6.0)
+            XCTAssertTrue(frame.defectMicroSpecks)
+        }
+    }
+
     func testNoiseReductionToggleUsesDefaultStrengthAndCallsChange() {
         let frame = Self.makeFrame()
         var changeCount = 0

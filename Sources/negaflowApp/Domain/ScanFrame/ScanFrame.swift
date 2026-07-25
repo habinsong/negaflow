@@ -273,8 +273,8 @@ final class ScanFrame: ObservableObject, Identifiable {
     @Published var defectActive: Bool = false           // 검출 결과(빨강)를 표시 중
     @Published var defectIsDetecting: Bool = false
     @Published var defectIsRemoving: Bool = false
-    @Published var defectSensitivity: Double = 0.7    // FILM-R 자동 안전 기준 기본값. 6.0은 사용자 선택 최대
-    @Published var defectMicroSpecks: Bool = false      // 미세 입자는 오검출 위험이 있어 명시적으로 켠다
+    @Published var defectSensitivity: Double = 6.0      // Grain Mend 자동·가이드 공통 기본값은 슬라이더 최대
+    @Published var defectMicroSpecks: Bool = true       // Grain Mend 자동·가이드 모두 미세입자 검출을 기본 활성화
     // 자동/가이드 구분: true면 진입 즉시 전체 프레임을 검출(ROI 드래그 없음), false면 ROI 드래그.
     // 두 모드는 같은 검출 오버레이(RegionDefectOverlay)·세션 저장소를 공유한다.
     @Published var defectAutoMode: Bool = false
