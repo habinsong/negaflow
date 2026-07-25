@@ -13,6 +13,11 @@ final class ExportAvailabilityStore: ObservableObject {
     private var frameObservations: [UUID: FrameObservation] = [:]
 
     func observe(_ frames: [ScanFrame]) {
+        let observationSetChanged = frames.count != frameObservations.count
+            || frames.contains { frame in
+                guard let existing = frameObservations[frame.id] else { return true }
+                return existing.frame !== frame
+            }
         var observations: [UUID: FrameObservation] = [:]
         observations.reserveCapacity(frames.count)
 
@@ -38,5 +43,8 @@ final class ExportAvailabilityStore: ObservableObject {
         }
 
         frameObservations = observations
+        if observationSetChanged {
+            revision &+= 1
+        }
     }
 }
