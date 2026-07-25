@@ -3,6 +3,7 @@ import ScannerKit
 
 extension AppModel {
     func startApplication(configuration: AppLaunchConfiguration? = .current) async {
+        bindFrameCacheResidencySettings()
         await restoreLibraryOnLaunch()
         if configuration?.enablesDemoScanner == true {
             await refreshDevices()

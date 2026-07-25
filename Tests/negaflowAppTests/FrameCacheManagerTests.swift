@@ -135,7 +135,7 @@ final class FrameCacheManagerTests: XCTestCase {
             XCTAssertEqual(frame.imageTransform, transform)
             XCTAssertEqual(frame.rating, index % 6)
             XCTAssertEqual(frame.defectEdits.count, 1)
-            XCTAssertEqual(frame.defectEdits[0].title, "dust layer \(index)")
+            XCTAssertEqual(frame.defectEdits[0].label, .guided(count: index))
             XCTAssertNotNil(frame.thumbnailImage)
             XCTAssertTrue(frame.hasDevelopedOnce)
 
@@ -177,13 +177,13 @@ final class FrameCacheManagerTests: XCTestCase {
             return frame.params.scannerProfileID == "roll-profile-\(index)"
                 && frame.params.imageTransform == Self.makeTransform(index: index)
                 && frame.imageTransform == Self.makeTransform(index: index)
-                && frame.defectEdits.first?.title == "dust layer \(index)"
+                && frame.defectEdits.first?.label == .guided(count: index)
                 && frame.rating == index % 6
                 && frame.thumbnailImage != nil
                 && frame.hasDevelopedOnce
         }
         let stateBleedDetected = Set(frames.compactMap(\.params.scannerProfileID)).count != frames.count
-            || Set(frames.compactMap { $0.defectEdits.first?.title }).count != frames.count
+            || Set(frames.compactMap { $0.defectEdits.first?.label }).count != frames.count
 
         try Self.writeJSONReportIfRequested(
             RollStressReport(
@@ -207,7 +207,7 @@ final class FrameCacheManagerTests: XCTestCase {
             FrameStateFIFOReport(
                 framesProcessed: frames.count,
                 distinctScannerProfileIDs: Set(frames.compactMap(\.params.scannerProfileID)).count,
-                distinctDefectLayers: Set(frames.compactMap { $0.defectEdits.first?.title }).count,
+                distinctDefectLayers: Set(frames.compactMap { $0.defectEdits.first?.label }).count,
                 stateRoundtripsExactly: stateRoundtripsExactly,
                 stateBleedDetected: stateBleedDetected,
                 nonResidentDevelopedBuffersEvicted: developedEvictedCount,
@@ -272,8 +272,8 @@ final class FrameCacheManagerTests: XCTestCase {
         DefectEditItem(
             edit: .region(mask: .raw(Data([255, 255, 255, 255])), roi: CGRect(x: 0, y: 0, width: 1, height: 1), width: 1, height: 1),
             strength: index.isMultiple(of: 2) ? 0.75 : 1.0,
-            title: "dust layer \(index)",
-            summary: "dust 1",
+            label: .guided(count: index),
+            summaryKind: .classBreakdown(DefectClassBreakdown(counts: [], meanConfidence: 0)),
             preview: [],
             baseSize: CGSize(width: 1, height: 1)
         )

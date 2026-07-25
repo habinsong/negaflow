@@ -2,7 +2,7 @@ import Foundation
 
 @MainActor
 final class FrameCacheManager {
-    let policy: FrameCachePolicy
+    private(set) var policy: FrameCachePolicy
     private(set) var pressureLevel: FrameCachePressureLevel = .normal
 
     var maxResidentCleanedRaw: Int { currentLimits.cleanedRaw }
@@ -19,6 +19,24 @@ final class FrameCacheManager {
     }
 
     private var currentLimits: FrameCacheLimits { policy.limits(for: pressureLevel) }
+
+    /// 설정에서 상주 한도를 바꾼다. 낮추면 초과분을 즉시 축출한다(메모리 압박 강등과 같은 경로).
+    func updateNormalLimits(
+        _ limits: FrameCacheLimits,
+        selectedFrameID: UUID?,
+        frames: [ScanFrame],
+        evictCleanedRaw: (ScanFrame) -> Void,
+        evictDeveloped: (ScanFrame) -> Void
+    ) {
+        guard policy.normalLimits != limits else { return }
+        policy = FrameCachePolicy(normalLimits: limits)
+        trimCleanedRaw(frames: frames, onEvict: evictCleanedRaw)
+        trimDeveloped(
+            selectedFrameID: selectedFrameID,
+            frames: frames,
+            evictBuffers: evictDeveloped
+        )
+    }
 
     /// FIFO 재등록 후 한도 초과분을 축출한다. 축출 프레임은 `onEvict`로 넘기며,
     /// 호출자가 메모리 이미지와 재생성 가능한 임시 상태를 내려놓는다.

@@ -62,6 +62,8 @@ final class AppModel: ObservableObject {
     @Published var interactionScopeFrameIDs: [UUID]?
     var frameSelectionAnchorID: UUID?
     let frameCacheManager = FrameCacheManager()
+    /// 상주 프레임 한도 설정(자동/수동). 설정 화면이 바인딩하고, 바뀌면 캐시 한도에 즉시 반영된다.
+    let frameCacheResidencyStore = FrameCacheResidencyStore()
     private var memoryPressureMonitor: MemoryPressureMonitor?
     let pixelSamplerStore = PixelSamplerStore()
     let developController = DevelopController()

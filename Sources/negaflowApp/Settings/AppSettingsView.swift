@@ -20,6 +20,7 @@ struct AppSettingsView: View {
                     }
                 }
                 Toggle(model.text(AppLocalizedPhrase.developerMode), isOn: $model.developerMode)
+                MemoryCacheSettingsSection(store: model.frameCacheResidencyStore)
                 SupportBundleSettingsSection()
             }
             .tabItem { Label(model.text(.settingsGeneralTab), systemImage: "gearshape") }
