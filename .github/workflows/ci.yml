@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Swift, contracts, and GUI test build
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+          echo "DEVELOPER_DIR=$(xcode-select -p)" >> "$GITHUB_ENV"
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Run release-quality gate
+        env:
+          NEGAFLOW_CI_GUI: '1'
+          NEGAFLOW_CI_GUI_RUN: '1'
+        run: bash scripts/ci-gate.sh
+      - name: Upload GUI test result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Negaflow-GUI-tests-${{ github.sha }}
+          path: build/NegaflowE2E.xcresult
+          if-no-files-found: warn
+          retention-days: 14
+
+  release-smoke:
+    name: Unsigned release artifact smoke
+    needs: quality
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: echo "DEVELOPER_DIR=$(xcode-select -p)" >> "$GITHUB_ENV"
+      - name: Build local release artifacts
+        env:
+          NEGAFLOW_RELEASE_MODE: local
+        run: bash scripts/build-release.sh
+      - name: Upload release smoke artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Negaflow-release-smoke-${{ github.sha }}
+          path: build/release-artifacts/*
+          if-no-files-found: error
+          retention-days: 14

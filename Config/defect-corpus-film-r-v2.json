@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "articleID": 21803304,
+  "articleVersion": 2,
+  "doi": "10.6084/m9.figshare.21803304.v2",
+  "license": "CC BY 4.0",
+  "expectedPairCount": 44,
+  "expectedTotalBytes": 437570872,
+  "smokeCases": [
+    "cinestill50d_half_1"
+  ]
+}

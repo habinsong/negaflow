@@ -1,0 +1,101 @@
+name: Distribution
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: distribution-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  notarized-artifacts:
+    name: Developer ID signed and notarized artifacts
+    runs-on: macos-26
+    timeout-minutes: 90
+    environment: distribution
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate required secrets
+        env:
+          DEVELOPER_ID_P12_BASE64: ${{ secrets.NEGAFLOW_DEVELOPER_ID_P12_BASE64 }}
+          DEVELOPER_ID_P12_PASSWORD: ${{ secrets.NEGAFLOW_DEVELOPER_ID_P12_PASSWORD }}
+          CODESIGN_IDENTITY: ${{ secrets.NEGAFLOW_CODESIGN_IDENTITY }}
+          INSTALLER_ID_P12_BASE64: ${{ secrets.NEGAFLOW_INSTALLER_ID_P12_BASE64 }}
+          INSTALLER_ID_P12_PASSWORD: ${{ secrets.NEGAFLOW_INSTALLER_ID_P12_PASSWORD }}
+          INSTALLER_SIGN_IDENTITY: ${{ secrets.NEGAFLOW_INSTALLER_SIGN_IDENTITY }}
+          NOTARY_KEY_BASE64: ${{ secrets.NEGAFLOW_NOTARY_PRIVATE_KEY_BASE64 }}
+          NOTARY_KEY_ID: ${{ secrets.NEGAFLOW_NOTARY_KEY_ID }}
+          NOTARY_ISSUER_ID: ${{ secrets.NEGAFLOW_NOTARY_ISSUER_ID }}
+        run: |
+          set +x
+          for name in DEVELOPER_ID_P12_BASE64 DEVELOPER_ID_P12_PASSWORD CODESIGN_IDENTITY \
+                      INSTALLER_ID_P12_BASE64 INSTALLER_ID_P12_PASSWORD INSTALLER_SIGN_IDENTITY \
+                      NOTARY_KEY_BASE64 NOTARY_KEY_ID NOTARY_ISSUER_ID; do
+            if [ -z "${!name:-}" ]; then
+              echo "missing required distribution secret: $name" >&2
+              exit 2
+            fi
+          done
+      - name: Configure signing and notarization keychain
+        env:
+          DEVELOPER_ID_P12_BASE64: ${{ secrets.NEGAFLOW_DEVELOPER_ID_P12_BASE64 }}
+          DEVELOPER_ID_P12_PASSWORD: ${{ secrets.NEGAFLOW_DEVELOPER_ID_P12_PASSWORD }}
+          INSTALLER_ID_P12_BASE64: ${{ secrets.NEGAFLOW_INSTALLER_ID_P12_BASE64 }}
+          INSTALLER_ID_P12_PASSWORD: ${{ secrets.NEGAFLOW_INSTALLER_ID_P12_PASSWORD }}
+          NOTARY_KEY_BASE64: ${{ secrets.NEGAFLOW_NOTARY_PRIVATE_KEY_BASE64 }}
+          NOTARY_KEY_ID: ${{ secrets.NEGAFLOW_NOTARY_KEY_ID }}
+          NOTARY_ISSUER_ID: ${{ secrets.NEGAFLOW_NOTARY_ISSUER_ID }}
+        run: |
+          set +x
+          KEYCHAIN="$RUNNER_TEMP/negaflow-signing.keychain-db"
+          P12="$RUNNER_TEMP/developer-id.p12"
+          INSTALLER_P12="$RUNNER_TEMP/developer-id-installer.p12"
+          API_KEY="$RUNNER_TEMP/AuthKey_${NOTARY_KEY_ID}.p8"
+          KEYCHAIN_PASSWORD="$(uuidgen)$(uuidgen)"
+          printf '%s' "$DEVELOPER_ID_P12_BASE64" | base64 --decode > "$P12"
+          printf '%s' "$INSTALLER_ID_P12_BASE64" | base64 --decode > "$INSTALLER_P12"
+          printf '%s' "$NOTARY_KEY_BASE64" | base64 --decode > "$API_KEY"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$P12" -k "$KEYCHAIN" -P "$DEVELOPER_ID_P12_PASSWORD" -T /usr/bin/codesign
+          security import "$INSTALLER_P12" -k "$KEYCHAIN" -P "$INSTALLER_ID_P12_PASSWORD" \
+            -T /usr/bin/pkgbuild -T /usr/bin/productsign
+          security set-key-partition-list -S apple-tool:,apple: -s \
+            -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" >/dev/null
+          security list-keychains -d user -s "$KEYCHAIN"
+          xcrun notarytool store-credentials negaflow-ci \
+            --key "$API_KEY" \
+            --key-id "$NOTARY_KEY_ID" \
+            --issuer "$NOTARY_ISSUER_ID" \
+            --keychain "$KEYCHAIN"
+          rm -f "$P12" "$INSTALLER_P12" "$API_KEY"
+      - name: Run release-quality gate
+        run: bash scripts/ci-gate.sh
+      - name: Build signed and notarized artifacts
+        env:
+          NEGAFLOW_RELEASE_MODE: distribution
+          NEGAFLOW_CODESIGN_IDENTITY: ${{ secrets.NEGAFLOW_CODESIGN_IDENTITY }}
+          NEGAFLOW_INSTALLER_SIGN_IDENTITY: ${{ secrets.NEGAFLOW_INSTALLER_SIGN_IDENTITY }}
+          NEGAFLOW_NOTARY_KEYCHAIN_PROFILE: negaflow-ci
+        run: bash scripts/build-release.sh
+      - name: Verify final artifacts
+        run: |
+          shasum -a 256 -c build/release-artifacts/*-SHA256SUMS.txt
+          for app in build/release-apps/*/Negaflow.app; do
+            xcrun stapler validate "$app"
+            spctl --assess --type execute --verbose=4 "$app"
+          done
+          for artifact in build/release-artifacts/*.dmg build/release-artifacts/*.pkg; do
+            xcrun stapler validate "$artifact"
+          done
+      - name: Upload notarized artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Negaflow-notarized-${{ github.sha }}
+          path: build/release-artifacts/*
+          if-no-files-found: error
+          retention-days: 30

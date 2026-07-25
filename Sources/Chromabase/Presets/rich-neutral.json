@@ -1,0 +1,24 @@
+{
+  "name": "Rich Neutral",
+  "version": 2,
+  "filmTypes": ["colorNegative"],
+  "tone": {
+    "exposure": 0.0,
+    "density": 0.18,
+    "contrast": 0.14,
+    "highlightRollOff": 0.20,
+    "blackSoftness": -0.03,
+    "midtoneLift": 0.0
+  },
+  "color": {
+    "warmth": 0.0,
+    "tint": 0.0,
+    "colorDepth": 0.16,
+    "saturation": 0.04
+  },
+  "texture": {
+    "grain": 0.0,
+    "sharpness": 0.10,
+    "halation": 0.0
+  }
+}

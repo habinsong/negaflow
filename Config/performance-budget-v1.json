@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "policy": "macos-26-arm64-core-safety-ceilings",
+  "applicability": {
+    "architecture": "arm64",
+    "minimumPhysicalMemoryBytes": 8589934592
+  },
+  "reports": {
+    "catalog.json": [
+      {"scenario": "json-encode", "frameCount": 50000, "p95MaximumMilliseconds": 12000, "maxRSSAfterMaximumBytes": 4294967296, "bytesPerFrameMaximum": 2500},
+      {"scenario": "json-decode", "frameCount": 50000, "p95MaximumMilliseconds": 30000, "maxRSSAfterMaximumBytes": 4294967296, "bytesPerFrameMaximum": 2500},
+      {"scenario": "atomic-write-new-primary", "frameCount": 50000, "p95MaximumMilliseconds": 500, "maxRSSAfterMaximumBytes": 4294967296, "bytesPerFrameMaximum": 2500},
+      {"scenario": "primary-file-load", "frameCount": 50000, "p95MaximumMilliseconds": 30000, "maxRSSAfterMaximumBytes": 4294967296, "bytesPerFrameMaximum": 2500}
+    ],
+    "catalog-sqlite.json": [
+      {"scenario": "sqlite-upsert-commit", "frameCount": 50000, "p95MaximumMilliseconds": 30000, "maxRSSAfterMaximumBytes": 4294967296, "bytesPerFrameMaximum": 5000},
+      {"scenario": "sqlite-primary-load", "frameCount": 50000, "p95MaximumMilliseconds": 30000, "maxRSSAfterMaximumBytes": 4294967296, "bytesPerFrameMaximum": 5000},
+      {"scenario": "sqlite-no-change-commit", "frameCount": 50000, "p95MaximumMilliseconds": 30000, "maxRSSAfterMaximumBytes": 4294967296, "bytesPerFrameMaximum": 5000}
+    ],
+    "library-query.json": [
+      {"scenario": "context-index-build", "frameCount": 50000, "p95MaximumMilliseconds": 200, "maxRSSAfterMaximumBytes": 1073741824},
+      {"scenario": "filtered-name-sort", "frameCount": 50000, "p95MaximumMilliseconds": 1000, "maxRSSAfterMaximumBytes": 1073741824},
+      {"scenario": "interactive-filter-input-order", "frameCount": 50000, "p95MaximumMilliseconds": 2500, "maxRSSAfterMaximumBytes": 1073741824},
+      {"scenario": "match-all-name-sort", "frameCount": 50000, "p95MaximumMilliseconds": 500, "maxRSSAfterMaximumBytes": 1073741824}
+    ]
+  }
+}

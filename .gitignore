@@ -1,0 +1,116 @@
+# SwiftPM / Xcode 빌드 부산물
+.build/
+build/
+.swiftpm/
+DerivedData/
+xcuserdata/
+*.xcuserstate
+*.xcresult/
+*.xcarchive/
+*.dSYM/
+*.xccovreport
+*.xccovarchive
+*.profraw
+*.profdata
+*.app/
+*.dmg
+*.pkg
+
+# 로컬 환경 / 자격 증명
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.p12
+*.mobileprovision
+
+# 로컬 이미지 / 분석 입력
+*.tiff
+!Sources/ScannerKit/Resources/Frame.tiff
+!Sources/ScannerKit/Resources/Frame_Perforation.tiff
+!Sources/ScannerKit/Resources/Roll.tiff
+!Sources/ScannerKit/Resources/Roll_Perforation.tiff
+
+# macOS / 편집기 메타데이터
+.DS_Store
+._*
+.AppleDouble
+.LSOverride
+.Spotlight-V100/
+.Trashes/
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# AI 도구 메모리/설정 (절대 커밋 금지)
+.codegraph
+.omo/
+AGENTS.md
+CLAUDE.md
+DESIGN.md
+CODEX.md
+GEMINI.md
+GLM*.md
+.cursorrules
+.claude/
+.codex/
+.cursor/
+.gemini/
+.windsurf/
+.cline/
+.roo/
+.aider*
+.debug-journal.md
+
+# 로컬 임시 파일 / 로그 / 캐시
+.cache/
+tmp/
+temp/
+*.tmp
+*.temp
+*.log
+*.trace/
+*.bak
+*.orig
+
+# 대용량 아카이브
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+
+# 샘플 이미지 / 로컬 분석 데이터
+samples/
+LUT_target/
+
+# Python 캐시
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+.coverage
+.coverage.*
+htmlcov/
+
+# 로컬 작업 메모 / 초안 설계 (공개 대상 아님)
+HIGHLIGHT_TONE_REDESIGN.md
+GRAINMEND_DESIGN.md
+NEGAFLOW_LIGHTROOM_EXPANSION.md
+/PERFORMANCE_STRESS_AUDIT_*.md
+/UI_UX_IMPLEMENTATION_REQUESTS.md
+
+# 일회성 코드 감사 / 청크 생성물
+/all_swift_files.txt
+/chunk_*
+/review_chunk_*.md
+/codebase_map.md
+/codebase_technical_debt.md
+/]+

@@ -1,0 +1,81 @@
+{
+  "profileCount": 15,
+  "profiles": [
+    {
+      "id": "noritsu__color-nega__fuji-c200",
+      "profileHash": "sha256:2d6d46739eea9c4db3b08febafaf8b7a250bedb66edae8bb9c7e24ee63eefb8e",
+      "fileSHA256": "sha256:ba4d28ef039fcd5305a4fd8cb74379736f06928376c53938ce369c2e14bf5169"
+    },
+    {
+      "id": "noritsu__color-nega__kodak-ektar-100",
+      "profileHash": "sha256:7adf6fa75bf6ad94f2692cb2bbf6c8f9ed5fda6fb7c8687a655e69a813945b48",
+      "fileSHA256": "sha256:34d00cb751c8b835564cacd40dfe9dd92aac47202bd8e93c530dea382981ec45"
+    },
+    {
+      "id": "noritsu__color-nega__kodak-portra-160",
+      "profileHash": "sha256:84d5da481d53e00363d193481f12a4733846528e96401717adc0af11c291d774",
+      "fileSHA256": "sha256:bf7881d571a6ef4e764290cf737eceea2d4ea61ab76c9b484647b02620eb19c7"
+    },
+    {
+      "id": "noritsu__color-nega__kodak-portra-400",
+      "profileHash": "sha256:2fc82e71b771137f91e952513fed1248a837b18db4ee2a2ba5bd3388fa81da17",
+      "fileSHA256": "sha256:87553d65993dcb4f116867b0526ebbf3525669106334d1e79599a197420377af"
+    },
+    {
+      "id": "noritsu__color-nega__kodak-portra-800",
+      "profileHash": "sha256:145d7ccf1a357f30aa5a1b559929e1fd37c09878c3809ca5d1039d5f9e695f2e",
+      "fileSHA256": "sha256:570d4d458a416d54539097d155dcbf6cb6c1e7a9da36780f5a4e26ac923e4b28"
+    },
+    {
+      "id": "noritsu__color-nega__kodak-pro-image-100",
+      "profileHash": "sha256:053469b4b04b99477e11e338030923a845f43a54488dcfd1b1366dc42e32c942",
+      "fileSHA256": "sha256:bb534b5ce62a3c71c5a3480fb9a2f31bdbde2495be31579b2941c1689d3b1189"
+    },
+    {
+      "id": "noritsu__color-nega__kodak-ultramax-400",
+      "profileHash": "sha256:732c440568ab0c40e00cf1ad5f4931190e52c6b16f724daf9067b1065d135310",
+      "fileSHA256": "sha256:fd28650f8b41aed695fe78b4738779c20c5a89fbd783a9861b6531a94ef36320"
+    },
+    {
+      "id": "noritsu__color-nega__kodak-vision3-250d",
+      "profileHash": "sha256:e44f5b00354d28103a35a2d4f391eaa4415421cea6613c74a7b14c1b62594892",
+      "fileSHA256": "sha256:d792a7521e8cc6ebf5a6b6e183ec7611cfbe1d27eeb7ddf5cf251da9ce58db3c"
+    },
+    {
+      "id": "noritsu__color-nega__kodak-vision3-50d",
+      "profileHash": "sha256:823dc984b5eb5468de6be39a69a1103d006c46d716bd8d53b04b99d9d48347c8",
+      "fileSHA256": "sha256:29a5e9225b3bf1f3e77bfd4fa7893f961090eeaab2100caca34bc63d57bf9834"
+    },
+    {
+      "id": "noritsu__color-slide__kodak-ektachrome-100",
+      "profileHash": "sha256:388280e1a4d8faea6f2932aa313ddd2aeb82b8fe8ccb631f0f8799c0179fbc84",
+      "fileSHA256": "sha256:b52f967081efb516aba105dc20510d107ca20299794065c8625ca1f9146cfd2e"
+    },
+    {
+      "id": "noritsu__color-slide__kodak-ektachrome-100d",
+      "profileHash": "sha256:9e0bf700a8b9969298ab249c6274892e46ff860d7539f7450b84b7c57bc9b3e6",
+      "fileSHA256": "sha256:59d8f58595456c204f606a55c2386014f064ad1d401babd5125db42ffe9960f0"
+    },
+    {
+      "id": "sp-3000__color-nega__kodak-ektar-100",
+      "profileHash": "sha256:c6f151487a607f0c60e46deee5fa03f95ef2a33afa52067cb30d6e8455fdb128",
+      "fileSHA256": "sha256:0de70e813601601486534086d83857e81f53e7fec5d31419bce9b55fad7decb7"
+    },
+    {
+      "id": "sp-3000__color-nega__kodak-portra-160",
+      "profileHash": "sha256:80f3e0a41fdfee06a05322c7160315fbc12e9beffaf4aa7d0f63d5e0a4a56723",
+      "fileSHA256": "sha256:7d422e0f23713262704b66ebbc376cf0fe259d5a019e031d91de4be4ac537084"
+    },
+    {
+      "id": "sp-3000__color-nega__kodak-vision3-250d",
+      "profileHash": "sha256:b7728cc74c6d452efa113e1e1aa36006f16228016138b490ba88fb745281c111",
+      "fileSHA256": "sha256:19b772a858ce176189b4b7334bbce34f699f362e6c41af40ff7085e5ca2ee977"
+    },
+    {
+      "id": "sp-3000__color-slide__kodak-ektachrome-100d",
+      "profileHash": "sha256:96c6351c870d2f2520a52bf443951cbc041b8e44d2d75600c35a50b042b554cb",
+      "fileSHA256": "sha256:4860fd9638edd69d5d79a0984ef0630eec10b007e830704f88b51a5e77b58a1b"
+    }
+  ],
+  "schemaVersion": 2
+}

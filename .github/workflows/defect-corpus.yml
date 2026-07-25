@@ -1,0 +1,36 @@
+name: GrainMend corpus
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  film-r-v2:
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch pinned FILM-R v2 corpus
+        run: python3 scripts/defect-corpus/fetch-film-r.py --all
+      - name: Build and evaluate GrainMend RGB automatic
+        env:
+          DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer
+        run: |
+          swift run -c release negaflow defect-bench build/defect-corpus/film-r-v2 \
+            --reference-dir build/defect-corpus/film-r-v2 \
+            --out build/defect-corpus/film-r-v2-report \
+            --sensitivity 0.7 --metrics-only --crops 0
+          python3 scripts/defect-corpus/evaluate-quality.py \
+            --config Config/defect-removal-film-r-v2-baseline.json \
+            --report build/defect-corpus/film-r-v2-report/report.json \
+            --output build/defect-corpus/film-r-v2-report/quality-gate.json
+      - name: Upload quality evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: GrainMend-FILM-R-v2-${{ github.sha }}
+          path: build/defect-corpus/film-r-v2-report/
+          if-no-files-found: error
+          retention-days: 30

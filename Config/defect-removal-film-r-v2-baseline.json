@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "policy": "film-r-v2-safe-auto-quality-floor",
+  "corpus": {
+    "doi": "10.6084/m9.figshare.21803304.v2",
+    "expectedPairCount": 44,
+    "sensitivity": 0.7
+  },
+  "baseline": {
+    "improvedImageCount": 34,
+    "regressedImageCount": 6,
+    "meanPSNRDelta": 0.46593382910355763,
+    "medianPSNRDelta": 0.11805037520010586,
+    "worstPSNRDelta": -1.3378161270542748,
+    "weightedImprovedPixelFraction": 0.0002925088904755185,
+    "weightedRegressedPixelFraction": 0.00017124925154135334,
+    "changedPixelFraction": 0.0004299926621671536
+  },
+  "qualityFloor": {
+    "improvedImageCount": 30,
+    "regressedImageCount": 10,
+    "meanPSNRDelta": 0.0,
+    "medianPSNRDelta": 0.0,
+    "worstPSNRDelta": -1.5,
+    "weightedImprovedPixelFraction": 0.0002,
+    "weightedRegressedPixelFraction": 0.0003,
+    "changedPixelFraction": 0.0006
+  },
+  "tolerance": {
+    "psnrDB": 0.01,
+    "pixelFraction": 0.00005
+  }
+}

@@ -1,0 +1,45 @@
+name: Performance
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Benchmark scope
+        required: true
+        default: core
+        type: choice
+        options:
+          - core
+          - full
+
+permissions:
+  contents: read
+
+concurrency:
+  group: performance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark:
+    runs-on: macos-26
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+          echo "DEVELOPER_DIR=$(xcode-select -p)" >> "$GITHUB_ENV"
+      - name: Run opt-in performance suite
+        env:
+          NEGAFLOW_PERF: '1'
+          NEGAFLOW_PERF_MODE: ${{ inputs.mode }}
+        run: bash scripts/run-performance-suite.sh
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Negaflow-performance-${{ github.sha }}
+          path: build/performance/*.json
+          if-no-files-found: error
+          retention-days: 30
