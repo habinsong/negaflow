@@ -47,8 +47,9 @@ struct DefectEditItemRecord: Codable, Equatable, Sendable {
     var kind: Kind
     var enabled: Bool
     var strength: Double
-    var title: String
-    var summary: String
+    /// 레이어 이름·요약은 값으로 보관한다 — 문자열로 저장하면 언어가 굳는다.
+    var label: DefectEditLabel
+    var summaryKind: DefectEditSummary
     var baseSize: CGSize?
     var preview: [DefectPreviewComponentRecord]
     var strokes: [DefectStrokeRecord]?

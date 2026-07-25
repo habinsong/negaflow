@@ -8,8 +8,8 @@ extension DefectEditItemRecord {
         id = item.id
         enabled = item.enabled
         strength = item.strength
-        title = item.title
-        summary = item.summary
+        label = item.label
+        summaryKind = item.summaryKind
         baseSize = item.baseSize
         preview = item.preview.map {
             DefectPreviewComponentRecord(
@@ -121,8 +121,8 @@ extension DefectEditItemRecord {
             edit: edit,
             enabled: enabled,
             strength: strength,
-            title: title,
-            summary: summary,
+            label: label,
+            summaryKind: summaryKind,
             preview: preview.map {
                 DefectMaskPreviewComponent(
                     classification: $0.classification,

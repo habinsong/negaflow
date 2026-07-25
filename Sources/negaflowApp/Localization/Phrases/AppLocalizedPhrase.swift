@@ -54,7 +54,18 @@ enum AppLocalizedPhrase: CaseIterable {
     case detectingDefectsStatus
     case detectingDefectsFailedStatus
     case noDefectsStatus
-    case automaticDefectSafetyStoppedStatus
+    case automaticDefectFalsePositiveRiskStatus
+    case settingsMemoryCacheSection
+    case settingsMemoryCacheModeAutomatic
+    case settingsMemoryCacheModeManual
+    case settingsMemoryCacheInstalledMemoryFormat
+    case settingsMemoryCacheCleanedRawLabel
+    case settingsMemoryCacheDevelopedLabel
+    case settingsMemoryCacheFramesFormat
+    case settingsMemoryCacheEstimateFormat
+    case settingsMemoryCacheAutomaticHelp
+    case settingsMemoryCacheManualHelp
+    case settingsMemoryCacheResetToAutomatic
     case defectsCountFormat
     case confidenceSummaryFormat
     case grainMendIREditTitleFormat

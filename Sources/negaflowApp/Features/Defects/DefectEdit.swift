@@ -68,10 +68,10 @@ struct DefectEditItem: Identifiable {
     var enabled: Bool = true
     /// 복원 블렌드 강도(0~1). 1 = 완전 대체, 낮추면 원본과 섞는다.
     var strength: Double = 1.0
-    /// 레이어 이름("브러시 3획", "영역 12개").
-    let title: String
-    /// 분류/confidence 요약("먼지 7 · 가로 스크래치 2 · 평균 확신 82%").
-    let summary: String
+    /// 레이어 이름의 원재료. 표시 시점에 현재 언어로 만든다(문자열을 저장하면 언어가 굳는다).
+    let label: DefectEditLabel
+    /// 분류/confidence 요약의 원재료.
+    let summaryKind: DefectEditSummary
     /// 마스크 오버레이 점(region 전용, base 정규). 브러시는 스트로크 자체로 그린다.
     let preview: [DefectMaskPreviewComponent]
     /// preview/스트로크 좌표 변환에 쓰는 raw 픽셀 크기(회전/크롭 정합).
@@ -79,6 +79,14 @@ struct DefectEditItem: Identifiable {
     /// 강도 1.0 결과 패치 캐시(런타임 전용). 이 레이어가 계산될 때의 베이스(앞선 레이어들의 결과)
     /// 기준이라, 앞선 레이어가 바뀌면 호출측이 무효화한다. 강도/켜기 변경 시 재계산 없이 합성만 한다.
     var cachedPatches: [DefectPatch]?
+
+    func title(language: AppLanguage) -> String {
+        label.title(language: language)
+    }
+
+    func summary(language: AppLanguage) -> String {
+        summaryKind.text(language: language)
+    }
 
     var isBrush: Bool {
         if case .brush = edit { return true }

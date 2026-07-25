@@ -23,25 +23,7 @@ extension AppModel {
                 return
             }
             let baseSize = CGSize(width: detection.width, height: detection.height)
-            var counts: [DefectClass: Int] = [:]
-            var confidenceSum = 0.0
-            for component in detection.components {
-                counts[component.classification, default: 0] += 1
-                confidenceSum += component.confidence
-            }
-            let classSummary = DefectClass.allCases
-                .compactMap { classification in
-                    counts[classification].map {
-                        "\(classification.displayName(language: appLanguage)) \($0)"
-                    }
-                }
-                .joined(separator: " · ")
-            let meanConfidence = confidenceSum / Double(detection.components.count)
-            let summary = text(
-                AppLocalizedPhrase.confidenceSummaryFormat,
-                classSummary,
-                meanConfidence * 100
-            )
+            let breakdown = DefectClassBreakdown(components: detection.components)
             let preview = detection.components.map { component in
                 DefectMaskPreviewComponent(
                     classification: component.classification,
@@ -53,11 +35,8 @@ extension AppModel {
             }
             let item = DefectEditItem(
                 edit: .infrared(clusters: detection.clusters),
-                title: text(
-                    AppLocalizedPhrase.grainMendIREditTitleFormat,
-                    detection.components.count
-                ),
-                summary: summary,
+                label: .infrared(count: detection.components.count),
+                summaryKind: .classBreakdown(breakdown),
                 preview: preview,
                 baseSize: baseSize
             )

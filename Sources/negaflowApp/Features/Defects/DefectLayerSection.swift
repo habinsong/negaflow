@@ -124,7 +124,7 @@ private struct DefectLayerRow: View {
                         : (item.isClone ? "rectangle.on.rectangle" : "scope"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Text(item.title).font(.callout).lineLimit(1)
+                Text(item.title(language: model.appLanguage)).font(.callout).lineLimit(1)
                 Spacer()
 
                 // 마스크 표시(검출 위치를 분류색으로 오버레이).
@@ -147,7 +147,7 @@ private struct DefectLayerRow: View {
                 .disabled(frame.isRemovingDefects)
             }
             HStack(spacing: 8) {
-                Text(item.summary)
+                Text(item.summary(language: model.appLanguage))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)

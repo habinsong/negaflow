@@ -14,8 +14,8 @@ extension AppModel {
                          thickness: stroke.thickness)
         }
         let item = DefectEditItem(edit: .brush(mapped),
-                                  title: text(AppLocalizedPhrase.grainMendBrushEditTitleFormat, mapped.count),
-                                  summary: text(AppLocalizedPhrase.brushEditSummary),
+                                  label: .brush(strokeCount: mapped.count),
+                                  summaryKind: .brush,
                                   preview: [], baseSize: nil)
         appendDefectEdit(item, to: frame)
     }

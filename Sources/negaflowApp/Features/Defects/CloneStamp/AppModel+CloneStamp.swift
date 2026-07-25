@@ -19,8 +19,8 @@ extension AppModel {
         let stroke = CloneStampStroke(points: basePoints, offset: offset,
                                       diameter: diameterPx, hardness: min(max(hardness, 0), 1))
         let item = DefectEditItem(edit: .clone([stroke]),
-                                  title: text(AppLocalizedPhrase.cloneStampEditTitleFormat, Int(diameterPx)),
-                                  summary: text(AppLocalizedPhrase.cloneStampEditSummary),
+                                  label: .clone(diameterPixels: Int(diameterPx)),
+                                  summaryKind: .clone,
                                   preview: [], baseSize: baseSize)
         guard appendDefectEdit(item, to: frame) else { return existingOffset }
         return offset
