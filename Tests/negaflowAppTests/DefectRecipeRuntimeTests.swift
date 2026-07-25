@@ -506,8 +506,8 @@ final class DefectRecipeRuntimeTests: XCTestCase {
             )]),
             enabled: true,
             strength: strength,
-            title: "brush",
-            summary: "",
+            label: .brush(strokeCount: 1),
+            summaryKind: .classBreakdown(DefectClassBreakdown(counts: [], meanConfidence: 0)),
             preview: [],
             baseSize: nil
         )
@@ -525,8 +525,8 @@ final class DefectRecipeRuntimeTests: XCTestCase {
             ),
             enabled: true,
             strength: strength,
-            title: "region",
-            summary: "",
+            label: .guided(count: 1),
+            summaryKind: .classBreakdown(DefectClassBreakdown(counts: [], meanConfidence: 0)),
             preview: [],
             baseSize: CGSize(width: width, height: height)
         )

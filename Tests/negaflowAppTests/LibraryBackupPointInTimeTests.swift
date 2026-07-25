@@ -28,7 +28,7 @@ final class LibraryBackupPointInTimeTests: XCTestCase {
             rawScanURL: URL(fileURLWithPath: "/offline/frozen.tif"),
             filmType: .colorNegative
         )
-        var before = makeEdit(title: "before")
+        var before = makeEdit(label: .guided(count: 1))
         before.id = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
         frame.customDisplayName = "Before freeze"
         frame.defectEdits = [before]
@@ -59,11 +59,11 @@ final class LibraryBackupPointInTimeTests: XCTestCase {
         ).canOpenSafely)
     }
 
-    private func makeEdit(title: String) -> DefectEditItem {
+    private func makeEdit(label: DefectEditLabel) -> DefectEditItem {
         DefectEditItem(
             edit: .brush([]),
-            title: title,
-            summary: "",
+            label: label,
+            summaryKind: .brush,
             preview: [],
             baseSize: nil
         )

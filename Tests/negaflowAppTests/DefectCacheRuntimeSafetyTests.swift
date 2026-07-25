@@ -163,8 +163,8 @@ final class DefectCacheRuntimeSafetyTests: XCTestCase {
                 points: [CGPoint(x: 0.25, y: 0.5)],
                 thickness: 0.03
             )]),
-            title: "brush",
-            summary: "",
+            label: .brush(strokeCount: 1),
+            summaryKind: .classBreakdown(DefectClassBreakdown(counts: [], meanConfidence: 0)),
             preview: [],
             baseSize: nil
         )

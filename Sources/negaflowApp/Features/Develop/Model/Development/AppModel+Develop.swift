@@ -125,6 +125,7 @@ extension AppModel {
                 cgImage: thumbnail,
                 size: NSSize(width: thumbnail.width, height: thumbnail.height)
             )
+            frame.thumbnailTransform = snapshot.imageTransform
             persistThumbnail(for: frame, cgImage: thumbnail)
             applyPreviewRawCache(preview, to: frame, maxDimension: snapshot.proxyMaxDimension)
         } catch {

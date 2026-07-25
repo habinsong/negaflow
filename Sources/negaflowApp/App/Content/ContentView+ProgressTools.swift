@@ -6,34 +6,11 @@ import CoreImage
 import UniformTypeIdentifiers
 
 extension ContentView {
+    /// 하단 바 진행 슬롯 — 현상 진행 텍스트 전용이다. 스캔 진행률(막대 + %)은 캔버스 위
+    /// ScanProgressOverlay 하나로만 보여준다(하단 바에 중복 표시하지 않는다).
     @ViewBuilder
     var statusProgressSlot: some View {
-        if model.isScanning {
-            TimelineView(.periodic(from: .now, by: 0.25)) { context in
-                let fraction = model.displayedScanFraction(at: context.date)
-                HStack(spacing: 8) {
-                    if model.batchTotal > 1 {
-                        ProgressView(
-                            value: Double(model.batchIndex) + fraction,
-                            total: Double(model.batchTotal)
-                        )
-                        .frame(width: 150)
-                        Text(model.text(AppLocalizedPhrase.batchFrameProgressFormat, model.batchIndex + 1, model.batchTotal))
-                            .font(.caption2.monospacedDigit())
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ProgressView(value: fraction)
-                            .frame(width: 150)
-                        Text("\(Int((fraction * 100).rounded()))%")
-                            .font(.caption2.monospacedDigit())
-                            .foregroundStyle(.secondary)
-                            .frame(width: 34, alignment: .trailing)
-                    }
-                }
-            }
-        } else {
-            DevelopProgressStatusView(controller: model.developController)
-        }
+        DevelopProgressStatusView(controller: model.developController)
     }
 
     func cropModeBinding(for frame: ScanFrame) -> Binding<Bool> {

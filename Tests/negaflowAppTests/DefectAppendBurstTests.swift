@@ -296,8 +296,8 @@ final class DefectAppendBurstTests: XCTestCase {
                 points: [CGPoint(x: x, y: y)],
                 thickness: 0.06
             )]),
-            title: "brush",
-            summary: "",
+            label: .brush(strokeCount: 1),
+            summaryKind: .classBreakdown(DefectClassBreakdown(counts: [], meanConfidence: 0)),
             preview: [],
             baseSize: nil
         )
@@ -311,8 +311,8 @@ final class DefectAppendBurstTests: XCTestCase {
                 width: 8,
                 height: 8
             ),
-            title: "region",
-            summary: "",
+            label: .guided(count: 1),
+            summaryKind: .classBreakdown(DefectClassBreakdown(counts: [], meanConfidence: 0)),
             preview: [],
             baseSize: CGSize(width: 24, height: 18)
         )

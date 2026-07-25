@@ -32,8 +32,8 @@ final class DefectBakeTests: XCTestCase {
                 points: [CGPoint(x: 0.1, y: 0.2), CGPoint(x: 0.3, y: 0.4)],
                 thickness: 0.05
             )]),
-            title: "brush",
-            summary: "b",
+            label: .brush(strokeCount: 1),
+            summaryKind: .classBreakdown(DefectClassBreakdown(counts: [], meanConfidence: 0)),
             preview: [],
             baseSize: nil
         )
@@ -44,8 +44,8 @@ final class DefectBakeTests: XCTestCase {
                 width: 32,
                 height: 24
             ),
-            title: "region",
-            summary: "r",
+            label: .guided(count: 1),
+            summaryKind: .classBreakdown(DefectClassBreakdown(counts: [], meanConfidence: 0)),
             preview: [],
             baseSize: CGSize(width: 80, height: 60)
         )
@@ -87,7 +87,7 @@ final class DefectBakeTests: XCTestCase {
         frame.cleanedRawDiskURL = cache
         frame.cleanedRawEditCount = 2
         frame.defectEdits = [
-            DefectEditItem(edit: .brush([]), title: "brush", summary: "", preview: [], baseSize: nil)
+            DefectEditItem(edit: .brush([]), label: .brush(strokeCount: 1), summaryKind: .classBreakdown(DefectClassBreakdown(counts: [], meanConfidence: 0)), preview: [], baseSize: nil)
         ]
 
         let record = LibraryFrameRecord(frame: frame)
@@ -109,7 +109,7 @@ final class DefectBakeTests: XCTestCase {
         try Data("CACHE".utf8).write(to: cache)
         frame.cleanedRawDiskURL = cache
         frame.defectEdits = [
-            DefectEditItem(edit: .brush([]), title: "brush", summary: "", preview: [], baseSize: nil)
+            DefectEditItem(edit: .brush([]), label: .brush(strokeCount: 1), summaryKind: .classBreakdown(DefectClassBreakdown(counts: [], meanConfidence: 0)), preview: [], baseSize: nil)
         ]
         let model = AppModel()
 

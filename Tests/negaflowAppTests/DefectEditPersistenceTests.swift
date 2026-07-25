@@ -131,8 +131,8 @@ final class DefectEditPersistenceTests: XCTestCase {
         let first = try DefectRecipeFingerprint.sha256(items: [record])
         let repeated = try DefectRecipeFingerprint.sha256(items: [record])
         var presentationOnly = record
-        presentationOnly.title = "localized title"
-        presentationOnly.summary = "localized summary"
+        presentationOnly.label = .brush(strokeCount: 99)
+        presentationOnly.summaryKind = .clone
         presentationOnly.baseSize = CGSize(width: 4000, height: 3000)
         presentationOnly.preview = [DefectPreviewComponentRecord(
             classification: .dust,
@@ -441,8 +441,8 @@ final class DefectEditPersistenceTests: XCTestCase {
             kind: .brush,
             enabled: true,
             strength: strength,
-            title: "brush",
-            summary: "dust",
+            label: .brush(strokeCount: 1),
+            summaryKind: .brush,
             baseSize: nil,
             preview: [],
             strokes: [DefectStrokeRecord(
@@ -463,8 +463,8 @@ final class DefectEditPersistenceTests: XCTestCase {
             kind: .region,
             enabled: true,
             strength: 0.75,
-            title: "region",
-            summary: "dust",
+            label: .guided(count: 1),
+            summaryKind: .classBreakdown(DefectClassBreakdown(counts: [], meanConfidence: 0)),
             baseSize: CGSize(width: 2, height: 2),
             preview: [],
             strokes: nil,

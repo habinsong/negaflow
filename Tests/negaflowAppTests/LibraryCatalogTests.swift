@@ -146,7 +146,7 @@ final class LibraryCatalogTests: XCTestCase {
             filmType: .colorNegative
         )
         frame.defectEdits = [DefectEditItem(
-            edit: .brush([]), title: "brush", summary: "", preview: [], baseSize: nil
+            edit: .brush([]), label: .brush(strokeCount: 1), summaryKind: .classBreakdown(DefectClassBreakdown(counts: [], meanConfidence: 0)), preview: [], baseSize: nil
         )]
 
         let record = LibraryFrameRecord(frame: frame)

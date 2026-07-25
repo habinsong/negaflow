@@ -569,8 +569,8 @@ final class AppModelFrameStoreTests: XCTestCase {
         second.defectEdits = [
             DefectEditItem(
                 edit: .brush([]),
-                title: "brush",
-                summary: "",
+                label: .brush(strokeCount: 1),
+                summaryKind: .classBreakdown(DefectClassBreakdown(counts: [], meanConfidence: 0)),
                 preview: [],
                 baseSize: nil
             )

@@ -54,24 +54,27 @@ extension ContentView {
 
     // MARK: status bar — 하단, 한 줄
     var statusBar: some View {
-        ZStack {
-            HStack(spacing: 10) {
+        StatusBarMessageRow(
+            center: model.statusCenter,
+            isScanning: model.isScanning,
+            leading: {
                 StatusPhaseIndicator(
                     phase: model.scanPhase,
                     language: model.appLanguage,
                     errorLog: model.errorLog
                 )
+            },
+            collapsible: {
                 statusProgressSlot
                     .frame(width: 244, alignment: .leading)
-                Spacer()
-                compactFilmstripItemSizeHUD
-                bottomSortMenu
+            },
+            trailing: {
+                HStack(spacing: 10) {
+                    compactFilmstripItemSizeHUD
+                    bottomSortMenu
+                }
             }
-            CenterStatusMessageOverlay(
-                center: model.statusCenter,
-                isScanning: model.isScanning
-            )
-        }
+        )
         .padding(.horizontal, 10)
         .frame(height: statusBarHeight)
         .adaptivePanelSurface(.bar)
@@ -175,50 +178,3 @@ extension ContentView {
 
 }
 
-/// 상태 메시지 텍스트 + 자동 dismiss. StatusMessageCenter 를 직접 관찰하므로 메시지 갱신은
-/// 이 뷰만 다시 그린다(ContentView 전역 무효화 없음 — 관찰 경계 축소 1단계).
-/// isScanning 은 여전히 AppModel 발행이라 부모가 갱신해 파라미터로 내려온다.
-struct CenterStatusMessageOverlay: View {
-    @ObservedObject var center: StatusMessageCenter
-    let isScanning: Bool
-    @State private var visible = false
-    @State private var dismissTask: Task<Void, Never>?
-
-    var body: some View {
-        ZStack {
-            if visible {
-                Text(center.message)
-                    .font(.caption)
-                    .lineLimit(1)
-                    .minimumScaleFactor(AppTypography.minimumScaleFactor)
-                    .allowsTightening(true)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: 320)
-                    .padding(.horizontal, 170)
-                    .allowsHitTesting(false)
-                    .transition(.opacity)
-            }
-        }
-        .onChange(of: center.message) { _, _ in scheduleDismissal() }
-        .onChange(of: isScanning) { _, _ in scheduleDismissal() }
-        .onDisappear { dismissTask?.cancel() }
-    }
-
-    private func scheduleDismissal() {
-        dismissTask?.cancel()
-        guard !center.message.isEmpty else {
-            visible = false
-            return
-        }
-        visible = true
-        guard !isScanning else { return }
-        let message = center.message
-        dismissTask = Task {
-            try? await Task.sleep(nanoseconds: 3_000_000_000)
-            guard !Task.isCancelled, center.message == message else { return }
-            withAnimation(.easeOut(duration: 0.18)) {
-                visible = false
-            }
-        }
-    }
-}

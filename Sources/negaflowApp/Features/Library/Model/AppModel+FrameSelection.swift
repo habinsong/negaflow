@@ -178,8 +178,9 @@ extension AppModel {
         let oldValue = frameStore.selectedFrameID
         guard id != oldValue else { return }
         developController.cancelPendingDevelopRequest()
+        // 취소만 하고 핸들은 남긴다 — handleSelectedFrameChange 가 이 루프의 정리를 기다린 뒤
+        // 새 현상을 시작해야 "이미 진행 중"으로 오인돼 요청이 버려지지 않는다.
         selectedFrameDevelopTask?.cancel()
-        selectedFrameDevelopTask = nil
         frameStore.selectedFrameID = id
         handleSelectedFrameChange(from: oldValue)
     }
@@ -210,17 +211,17 @@ extension AppModel {
             rebuildCleanedRaw(frame)
         }
         markDevelopedResident(frame)
-        let softProofIsStale = frame.displayedSoftProofRevision != softProofConfigurationRevision
-        let restoredDevelopmentIsMissing = frame.developedImage == nil
-            && frame.initialThumbnailSeedTask == nil
-            && frame.isSourceAvailable
-        let selectedDevelopmentIsNeeded = restoredDevelopmentIsMissing
-            || (softProofIsStale && frame.hasDevelopedOnce)
-        if selectedDevelopmentIsNeeded {
+        if selectedFrameNeedsDevelopment(frame) {
             let selectedID = frame.id
+            // 방금 취소한 이전 선택 현상 루프가 정리(endFrame)될 때까지 기다린 뒤 시작한다.
+            // 정리 전에 시작하면 beginFrame 이 "이미 진행 중"으로 보고 요청을 버리는데, 그 진행 중
+            // 루프는 이미 취소돼 아무도 다시 렌더하지 않는다(프리뷰가 영영 갱신되지 않던 경로).
+            let previousDevelopTask = selectedFrameDevelopTask
             selectedFrameDevelopTask = Task { [weak self, weak frame] in
-                guard let self, let frame,
-                      self.selectedFrameID == selectedID else { return }
+                await previousDevelopTask?.value
+                guard let self, let frame, !Task.isCancelled,
+                      self.selectedFrameID == selectedID,
+                      self.selectedFrameNeedsDevelopment(frame) else { return }
                 await self.developFrame(
                     frame,
                     preserveThumbnail: true,
@@ -238,6 +239,23 @@ extension AppModel {
                   frame.destinationGamutOverlayImage == nil {
             requestDevelop(frame)
         }
+    }
+
+    /// 선택된 프레임이 지금 현상(또는 정착 마무리)을 필요로 하는가.
+    ///  - 복원 직후처럼 현상 결과가 아예 없을 때
+    ///  - 인터랙티브 프록시만 발행되고 정착 패스가 취소된 채 남았을 때(저화질 프리뷰 고착)
+    ///  - 프루프 설정 세대가 표시본보다 앞설 때
+    func selectedFrameNeedsDevelopment(_ frame: ScanFrame) -> Bool {
+        guard frame.isSourceAvailable else {
+            return frame.displayedSoftProofRevision != softProofConfigurationRevision
+                && frame.hasDevelopedOnce
+        }
+        if frame.developedImage == nil {
+            return frame.initialThumbnailSeedTask == nil
+        }
+        if !frame.developedIsSettled { return true }
+        return frame.displayedSoftProofRevision != softProofConfigurationRevision
+            && frame.hasDevelopedOnce
     }
 
     private func normalizedInteractionFrameIDs(_ orderedFrameIDs: [UUID]) -> [UUID] {

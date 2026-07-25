@@ -910,8 +910,8 @@ final class ExportFrameSnapshotBuilderTests: XCTestCase {
         frame.defectEdits = [
             DefectEditItem(
                 edit: .brush([]),
-                title: "Required recipe",
-                summary: "",
+                label: .guided(count: 1),
+                summaryKind: .classBreakdown(DefectClassBreakdown(counts: [], meanConfidence: 0)),
                 preview: [],
                 baseSize: nil
             ),
@@ -949,8 +949,8 @@ final class ExportFrameSnapshotBuilderTests: XCTestCase {
         frame.defectEdits = [
             DefectEditItem(
                 edit: .brush([]),
-                title: "Rebuild recipe",
-                summary: "",
+                label: .guided(count: 1),
+                summaryKind: .classBreakdown(DefectClassBreakdown(counts: [], meanConfidence: 0)),
                 preview: [],
                 baseSize: nil
             ),
@@ -1066,8 +1066,8 @@ final class ExportFrameSnapshotBuilderTests: XCTestCase {
         frame.defectEdits = [
             DefectEditItem(
                 edit: .brush([]),
-                title: "Unbound recipe",
-                summary: "",
+                label: .guided(count: 1),
+                summaryKind: .classBreakdown(DefectClassBreakdown(counts: [], meanConfidence: 0)),
                 preview: [],
                 baseSize: nil
             ),
@@ -1106,8 +1106,8 @@ final class ExportFrameSnapshotBuilderTests: XCTestCase {
         let frame = ScanFrame(scanIndex: 4, rawScanURL: rawURL, filmType: .colorPositive)
         let item = DefectEditItem(
             edit: .brush([]),
-            title: "Bound recipe",
-            summary: "",
+            label: .guided(count: 1),
+            summaryKind: .classBreakdown(DefectClassBreakdown(counts: [], meanConfidence: 0)),
             preview: [],
             baseSize: nil
         )

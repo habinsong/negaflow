@@ -62,6 +62,7 @@ extension AppModel {
             frame.rawPreviewImage = image
             if shouldPublishRawThumbnail {
                 frame.thumbnailImage = image
+                frame.thumbnailTransform = transform
                 self.persistThumbnail(for: frame, cgImage: cg)
             }
         }

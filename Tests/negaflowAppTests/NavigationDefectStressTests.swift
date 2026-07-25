@@ -58,8 +58,8 @@ final class NavigationDefectStressTests: XCTestCase {
             let mask = DefectCompressedData.raw(Data([255, 255, 255, 255])).compressed()
             let item = DefectEditItem(
                 edit: .region(mask: mask, roi: CGRect(x: 10, y: 10, width: 1, height: 1), width: 1, height: 1),
-                title: "region \(index)",
-                summary: "",
+                label: .guided(count: 1),
+                summaryKind: .classBreakdown(DefectClassBreakdown(counts: [], meanConfidence: 0)),
                 preview: [],
                 baseSize: CGSize(width: 2_400, height: 1_600)
             )

@@ -250,8 +250,8 @@ final class ExportTrackingRuntimeTests: XCTestCase {
         frame.defectEdits = [
             DefectEditItem(
                 edit: .brush([]),
-                title: "Active",
-                summary: "",
+                label: .guided(count: 1),
+                summaryKind: .classBreakdown(DefectClassBreakdown(counts: [], meanConfidence: 0)),
                 preview: [],
                 baseSize: nil
             ),
@@ -501,8 +501,8 @@ final class ExportTrackingRuntimeTests: XCTestCase {
         frame.defectEdits = [
             DefectEditItem(
                 edit: .brush([]),
-                title: "Unbound",
-                summary: "",
+                label: .guided(count: 1),
+                summaryKind: .classBreakdown(DefectClassBreakdown(counts: [], meanConfidence: 0)),
                 preview: [],
                 baseSize: nil
             ),

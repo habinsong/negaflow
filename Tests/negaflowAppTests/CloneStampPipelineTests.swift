@@ -193,7 +193,7 @@ final class CloneStampPipelineTests: XCTestCase {
             offset: CGVector(dx: 0.05, dy: -0.07),
             diameter: 32, hardness: 0.65
         )
-        let item = DefectEditItem(edit: .clone([stroke]), title: "clone", summary: "clone",
+        let item = DefectEditItem(edit: .clone([stroke]), label: .clone(diameterPixels: 24), summaryKind: .clone,
                                   preview: [], baseSize: CGSize(width: 100, height: 80))
         let record = DefectEditItemRecord(item: item)
         XCTAssertEqual(record.kind, .clone)

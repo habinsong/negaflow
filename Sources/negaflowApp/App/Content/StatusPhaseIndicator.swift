@@ -5,14 +5,15 @@ import ScannerKit
 ///
 /// - 점: 최근 오류가 있으면 빨강(지속) — 클릭하면 최근 오류 목록 팝오버, 호버하면 최신 오류 툴팁.
 ///   오류가 없으면 단계 색(완료=초록/대기=회색/그 외=파랑)이고 상호작용하지 않는다.
-/// - 단계 텍스트: 평소엔 단계 이름을 표시하지만, 오류 단계("오류")는 3초 뒤 사라진다(토스트와 동일).
-///   새 오류가 들어오면 다시 표시되고 타이머가 재시작된다. 폭(92pt)은 유지해 진행 슬롯이 안 밀린다.
+/// - 단계 텍스트: 단계가 바뀌면 이름을 띄우고 **3초 뒤 사라진다**(토스트와 동일). 상태가 계속
+///   붙어 있으면 하단 바가 늘 지저분하고 중앙 메시지와 겹칠 여지도 커진다. 새 단계나 새 오류가
+///   들어오면 다시 표시되고 타이머가 재시작된다. 폭(92pt)은 유지해 진행 슬롯이 안 밀린다.
 struct StatusPhaseIndicator: View {
     let phase: ScanPhase
     let language: AppLanguage
     @ObservedObject var errorLog: AppErrorLog
 
-    @State private var errorTextVisible = true
+    @State private var phaseTextVisible = true
     @State private var hideTask: Task<Void, Never>?
     @State private var showPopover = false
 
@@ -50,12 +51,12 @@ struct StatusPhaseIndicator: View {
             phaseText
                 .frame(width: 92, alignment: .leading)
         }
-        .onAppear { applyError(phase) }
-        .onChange(of: phase) { _, newPhase in applyError(newPhase) }
+        .onAppear { applyPhase(phase) }
+        .onChange(of: phase) { _, newPhase in applyPhase(newPhase) }
         .onChange(of: errorLog.entries.count) { _, _ in
             // 이미 .error 상태에서 새 오류가 들어오면(phase 값은 그대로) 텍스트를 다시 띄우고 재시작.
             if phase == .error {
-                errorTextVisible = true
+                phaseTextVisible = true
                 scheduleHide()
             }
         }
@@ -63,7 +64,7 @@ struct StatusPhaseIndicator: View {
 
     @ViewBuilder
     private var phaseText: some View {
-        if phase == .error && !errorTextVisible {
+        if !phaseTextVisible {
             Color.clear.frame(height: 1)
         } else {
             Text(phase.displayName(language: language))
@@ -73,10 +74,10 @@ struct StatusPhaseIndicator: View {
         }
     }
 
-    private func applyError(_ phase: ScanPhase) {
+    private func applyPhase(_ phase: ScanPhase) {
         hideTask?.cancel()
-        errorTextVisible = true
-        if phase == .error { scheduleHide() }
+        phaseTextVisible = true
+        scheduleHide()
     }
 
     private func scheduleHide() {
@@ -84,7 +85,7 @@ struct StatusPhaseIndicator: View {
         hideTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 3_000_000_000)
             guard !Task.isCancelled else { return }
-            withAnimation(.easeOut(duration: 0.18)) { errorTextVisible = false }
+            withAnimation(.easeOut(duration: 0.18)) { phaseTextVisible = false }
         }
     }
 }

@@ -73,8 +73,8 @@ final class LibraryQueryIndexTests: XCTestCase {
 
         let defect = DefectEditItem(
             edit: .brush([]),
-            title: "test",
-            summary: "",
+            label: .guided(count: 1),
+            summaryKind: .classBreakdown(DefectClassBreakdown(counts: [], meanConfidence: 0)),
             preview: [],
             baseSize: nil
         )
@@ -124,8 +124,8 @@ final class LibraryQueryIndexTests: XCTestCase {
 
         frame.defectEdits = [DefectEditItem(
             edit: .brush([]),
-            title: "test",
-            summary: "",
+            label: .guided(count: 1),
+            summaryKind: .classBreakdown(DefectClassBreakdown(counts: [], meanConfidence: 0)),
             preview: [],
             baseSize: nil
         )]

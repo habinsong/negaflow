@@ -87,11 +87,14 @@ extension AppModel {
                 }
                 frame.developedPreviewTransform = interactive.imageTransform
                 frame.displayedSoftProofRevision = interactive.softProofRevision
+                // 프록시 결과다 — 정착 패스가 끝나기 전에 취소되면 저화질로 남는다는 표시.
+                frame.developedIsSettled = false
                 if let thumbnailBase = fast.thumbnailBase {
                     frame.cachedThumbnailBase = thumbnailBase
                 }
                 if let thumb = fast.thumbnail {
                     frame.thumbnailImage = NSImage(cgImage: thumb, size: NSSize(width: thumb.width, height: thumb.height))
+                    frame.thumbnailTransform = interactive.imageTransform
                 }
                 frame.hasDevelopedOnce = true
                 frame.displayedCleanRawRevision = max(
@@ -137,7 +140,10 @@ extension AppModel {
                         || frame.mainPreviewTransform != frame.imageTransform
                         || frame.mainPreviewDevelopRevision != frame.developRevision),
                 needsDebugPreviews: frame.debugOverlayEnabled,
-                needsThumbnail: !preserveThumbnail,
+                // 방향이 어긋난 썸네일은 preserveThumbnail 이어도 다시 그린다 — 프레임을 회전한
+                // 뒤(또는 시드 시점과 변형이 달라진 뒤) 썸네일만 옛 방향으로 남던 문제를 막는다.
+                needsThumbnail: !preserveThumbnail
+                    || frame.thumbnailTransform != frame.imageTransform,
                 proxyMaxDimension: DevelopFrameRenderer.fullMaxDimension
             )
             developController.updateProcessingDetail(
@@ -210,8 +216,10 @@ extension AppModel {
                 }
                 frame.developedPreviewTransform = full.imageTransform
                 frame.displayedSoftProofRevision = full.softProofRevision
+                frame.developedIsSettled = true
                 if let thumb = result.thumbnail {
                     frame.thumbnailImage = NSImage(cgImage: thumb, size: NSSize(width: thumb.width, height: thumb.height))
+                    frame.thumbnailTransform = full.imageTransform
                     // 정착 패스마다 디스크 썸네일을 현상 결과로 덮어쓴다(표준 방식 — 라이브러리/
                     // 필름스트립이 재시작 후에도 마지막 현상 상태를 보여준다). 드래그 중 인터랙티브
                     // 패스는 건너뛰므로 디스크 IO 는 정착 시점 1회다.

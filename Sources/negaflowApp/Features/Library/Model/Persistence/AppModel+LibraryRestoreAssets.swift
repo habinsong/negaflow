@@ -53,6 +53,7 @@ extension AppModel {
                     job.frame.thumbnailImage = NSImage(
                         cgImage: cg, size: NSSize(width: cg.width, height: cg.height)
                     )
+                    job.frame.thumbnailTransform = job.transform
                     cache.store(cg, for: job.frame.id, at: job.thumbURL)
                 }
             }

@@ -112,7 +112,7 @@ final class DefectSidecarResourceLimitTests: XCTestCase {
     ) -> DefectEditItemRecord {
         DefectEditItemRecord(
             id: UUID(), kind: kind, enabled: true, strength: 1,
-            title: "", summary: "", baseSize: nil, preview: [],
+            label: .brush(strokeCount: 0), summaryKind: .brush, baseSize: nil, preview: [],
             strokes: strokes, regionMask: nil, regionROI: nil,
             regionWidth: nil, regionHeight: nil, clusters: nil
         )

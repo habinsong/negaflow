@@ -23,8 +23,8 @@ final class LibraryManualBackupTests: XCTestCase {
         )
         let edit = DefectEditItem(
             edit: .brush([]),
-            title: "terminate recipe",
-            summary: "",
+            label: .guided(count: 1),
+            summaryKind: .classBreakdown(DefectClassBreakdown(counts: [], meanConfidence: 0)),
             preview: [],
             baseSize: nil
         )
@@ -71,8 +71,8 @@ final class LibraryManualBackupTests: XCTestCase {
         )
         let edit = DefectEditItem(
             edit: .brush([]),
-            title: "manual backup recipe",
-            summary: "",
+            label: .guided(count: 1),
+            summaryKind: .classBreakdown(DefectClassBreakdown(counts: [], meanConfidence: 0)),
             preview: [],
             baseSize: nil
         )
