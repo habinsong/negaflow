@@ -22,7 +22,7 @@ extension DefectBenchRunner {
                 entry.imageName, entry.width, entry.height, entry.defectTotal, classes,
                 entry.meanConfidence, entry.candidatePixelFraction * 100,
                 entry.changedPixelFraction * 100,
-                entry.automaticSafetySuppressed ? "stopped" : "applied", psnrDelta,
+                entry.automaticFalsePositiveRisk ? "risk" : "ok", psnrDelta,
                 entry.detectMilliseconds, entry.repairMilliseconds
             )
         }

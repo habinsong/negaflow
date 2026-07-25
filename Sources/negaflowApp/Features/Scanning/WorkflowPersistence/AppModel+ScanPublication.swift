@@ -160,7 +160,7 @@ extension AppModel {
         if frame.infraredScanURL != nil { runInfraredClean(frame) }
         if let roi = publication.regionDefectDisplayROI,
            let sensitivity = publication.regionDefectSensitivity {
-            frame.defectSensitivity = sensitivity
+            frame.defectGuidedSensitivity = sensitivity
             runRegionDetect(frame, displayROI: roi)
         }
         return true

@@ -42,7 +42,7 @@ final class DefectBenchRunnerTests: XCTestCase {
         XCTAssertGreaterThan(entry.changedPixelCount, 0, "복원으로 픽셀이 바뀌어야 한다")
         XCTAssertLessThan(entry.changedPixelFraction, 0.10, "과잉 수정(광역 와이프) 금지")
         XCTAssertGreaterThan(entry.candidatePixelFraction, 0)
-        XCTAssertFalse(entry.automaticSafetySuppressed)
+        XCTAssertFalse(entry.automaticFalsePositiveRisk)
         XCTAssertGreaterThan(entry.meanConfidence, 0.2)
         XCTAssertGreaterThan(entry.detectMilliseconds, 0)
 
@@ -126,7 +126,7 @@ final class DefectBenchRunnerTests: XCTestCase {
             defectTotal: 0,
             meanConfidence: 0,
             candidatePixelFraction: 0,
-            automaticSafetySuppressed: false,
+            automaticFalsePositiveRisk: false,
             changedPixelCount: 0,
             changedPixelFraction: 0,
             meanChangedDelta: 0,

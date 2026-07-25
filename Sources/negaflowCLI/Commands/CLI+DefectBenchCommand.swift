@@ -61,7 +61,7 @@ extension CLI {
                              entry.defectTotal, classes, entry.meanConfidence,
                              entry.candidatePixelFraction * 100,
                              entry.changedPixelFraction * 100,
-                             entry.automaticSafetySuppressed ? "stopped" : "applied",
+                             entry.automaticFalsePositiveRisk ? "risk" : "ok",
                              entry.detectMilliseconds, entry.repairMilliseconds))
             } catch {
                 FileHandle.standardError.write(Data("  실패: \(error)\n".utf8))

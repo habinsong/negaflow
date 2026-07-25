@@ -119,9 +119,16 @@ final class ScanFrame: ObservableObject, Identifiable {
     // 필름스트립용 경량 썸네일(긴 변 ~360px). developedImage 와 달리 비활성 프레임에서도 유지된다
     // (메모리 FIFO 제거 대상이 아님) — 풀해상도 버퍼를 내려놓아도 썸네일은 남아 스트립이 비지 않는다.
     @Published var thumbnailImage: NSImage?
+    /// 현재 썸네일이 반영한 방향 변형. 프레임의 imageTransform 과 다르면 썸네일이 본 이미지와
+    /// 다른 방향으로 보인다 — 다음 정착 현상에서 다시 그린다. nil = 이전 세션 캐시라 알 수 없음.
+    var thumbnailTransform: ImageTransform?
     // 한 번이라도 현상이 완료됐는지. developedImage 가 메모리 압박으로 내려갈 수 있으므로,
     // "현상됨" 여부(내보내기 가능/상태 표시)는 이 플래그로 판단한다.
     @Published var hasDevelopedOnce: Bool = false
+    /// 현재 developedImage 가 **정착(풀해상도) 패스** 결과인지. 인터랙티브 프록시 패스만 끝난
+    /// 상태에서 프레임을 빠르게 넘기면 정착 패스가 취소된 채로 남아 저화질 프리뷰가 그대로
+    /// 보였다 — 프레임을 다시 선택했을 때 정착 패스를 이어서 돌릴지 판단하는 근거다.
+    var developedIsSettled: Bool = false
     @Published var showDeveloped: Bool = true
     @Published var isDeveloping: Bool = false
     // 결함 제거 재생성 중 여부. 현상(isDeveloping)과 분리해, 값만 바꿔 재현상할 때
@@ -273,7 +280,9 @@ final class ScanFrame: ObservableObject, Identifiable {
     @Published var defectActive: Bool = false           // 검출 결과(빨강)를 표시 중
     @Published var defectIsDetecting: Bool = false
     @Published var defectIsRemoving: Bool = false
-    @Published var defectSensitivity: Double = 6.0      // Grain Mend 자동·가이드 공통 기본값은 슬라이더 최대
+    // 민감도는 자동·가이드가 따로다(범위·매핑이 다르다 — GrainMendSensitivity). 기본값은 둘 다 최대.
+    @Published var defectAutoSensitivity: Double = GrainMendSensitivity.defaultValue(automatic: true)
+    @Published var defectGuidedSensitivity: Double = GrainMendSensitivity.defaultValue(automatic: false)
     @Published var defectMicroSpecks: Bool = true       // Grain Mend 자동·가이드 모두 미세입자 검출을 기본 활성화
     // 자동/가이드 구분: true면 진입 즉시 전체 프레임을 검출(ROI 드래그 없음), false면 ROI 드래그.
     // 두 모드는 같은 검출 오버레이(RegionDefectOverlay)·세션 저장소를 공유한다.

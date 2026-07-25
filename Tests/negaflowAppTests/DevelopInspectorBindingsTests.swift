@@ -7,12 +7,31 @@ final class DevelopInspectorBindingsTests: XCTestCase {
     func testGrainMendDefaultsUseMaximumSensitivityAndMicroSpecksInBothModes() {
         let frame = Self.makeFrame()
 
-        for automaticMode in [true, false] {
-            frame.defectAutoMode = automaticMode
+        XCTAssertEqual(frame.defectAutoSensitivity, GrainMendSensitivity.automaticRange.upperBound)
+        XCTAssertEqual(frame.defectGuidedSensitivity, GrainMendSensitivity.guidedRange.upperBound)
+        XCTAssertTrue(frame.defectMicroSpecks)
+    }
 
-            XCTAssertEqual(frame.defectSensitivity, 6.0)
-            XCTAssertTrue(frame.defectMicroSpecks)
-        }
+    /// 자동과 가이드는 별개 계약이다 — 가이드 슬라이더 범위와 검출기 민감도 상한이 자동의 1.5배.
+    func testGuidedSensitivityRangeAndDetectorMappingAreOneAndAHalfTimesAutomatic() {
+        XCTAssertEqual(GrainMendSensitivity.automaticRange, 0.7...6.0)
+        XCTAssertEqual(GrainMendSensitivity.guidedRange, 0.7...9.0)
+        // 슬라이더 최대값이 1.5배다(하한은 두 모드가 공유하므로 폭이 아니라 상한을 비교한다).
+        XCTAssertEqual(
+            GrainMendSensitivity.guidedRange.upperBound,
+            1.5 * GrainMendSensitivity.automaticRange.upperBound,
+            accuracy: 1e-9
+        )
+        XCTAssertEqual(
+            GrainMendSensitivity.guidedRange.lowerBound,
+            GrainMendSensitivity.automaticRange.lowerBound,
+            accuracy: 1e-9
+        )
+        XCTAssertEqual(GrainMendSensitivity.detectorSensitivity(6.0, automatic: true), 1.0, accuracy: 1e-9)
+        XCTAssertEqual(GrainMendSensitivity.detectorSensitivity(9.0, automatic: false), 1.5, accuracy: 1e-9)
+        // 범위를 벗어난 저장값도 모드 상한을 넘지 않는다.
+        XCTAssertEqual(GrainMendSensitivity.detectorSensitivity(99, automatic: true), 1.0, accuracy: 1e-9)
+        XCTAssertEqual(GrainMendSensitivity.detectorSensitivity(0, automatic: false), 0, accuracy: 1e-9)
     }
 
     func testNoiseReductionToggleUsesDefaultStrengthAndCallsChange() {

@@ -37,16 +37,20 @@ extension AppModel {
 
         let transform = frame.imageTransform
         var params = regionDefectParameters
-        // 슬라이더 전체 범위(0.7~6.0)를 detector가 정의한 0~1 민감도에 선형 매핑한다.
-        // 3.0에서 이미 최대를 넘기던 이전 매핑은 6.0을 1.5로 전달해 형태 게이트와
-        // 먼지 면적 상한을 의도보다 과도하게 풀었다. 자동 기본값은 검증된 보수 하한 0.7이다.
-        let s = max(0, min(1, (frame.defectSensitivity - 0.7) / (6.0 - 0.7)))
-        params.dustSensitivity = s
-        params.scratchSensitivity = min(1, s + 0.1)
-        params.detectMicroSpecks = frame.defectMicroSpecks
         // 자동 모드: 0..1 ROI 가 변환/반올림으로 extent 와 1px 어긋나도 전역 자동 계약(보수 검출 +
         // 구조선 격자 배제)을 강제한다 — 이게 없으면 부분 ROI로 오판돼 오검출이 폭증한다.
         let wholeFrameAuto = frame.defectAutoMode
+        // 자동과 가이드는 슬라이더 범위도 검출기 민감도 상한도 다르다(GrainMendSensitivity).
+        let automatic = wholeFrameAuto
+        let s = GrainMendSensitivity.detectorSensitivity(
+            automatic ? frame.defectAutoSensitivity : frame.defectGuidedSensitivity,
+            automatic: automatic
+        )
+        params.dustSensitivity = s
+        params.scratchSensitivity = min(
+            GrainMendSensitivity.maximumDetectorSensitivity(automatic: automatic), s + 0.1
+        )
+        params.detectMicroSpecks = frame.defectMicroSpecks
         let preCG = frame.cleanedRawImage
         // 프레임 선택만으로 full-size cleaned raw를 RAM에 중복 적재하지 않는다. 영역 결함 제거를 실제로
         // 시작한 시점에만 검증된 디스크 백킹을 CIImage로 열어 필요한 ROI를 읽는다.
@@ -145,8 +149,9 @@ extension AppModel {
                 frame.defectROICIyup = computed.roiYup
                 frame.defectExcludedIDs = []
                 frame.defectPreview = computed.preview
-                if computed.field.automaticSafetySuppressed {
-                    self.statusMessage = self.text(AppLocalizedPhrase.automaticDefectSafetyStoppedStatus)
+                // 위험 표시는 경고일 뿐 검출 결과를 줄이지 않는다 — 제외는 사용자가 클릭으로 한다.
+                if computed.field.automaticFalsePositiveRisk {
+                    self.statusMessage = self.text(AppLocalizedPhrase.automaticDefectFalsePositiveRiskStatus)
                 } else {
                     self.statusMessage = computed.field.isEmpty
                         ? self.text(AppLocalizedPhrase.noDefectsStatus)
@@ -295,16 +300,7 @@ extension AppModel {
                 )
             }
             // Defect Layer 메타데이터: 분류별 개수 + 평균 confidence 요약, 마스크 오버레이용 미리보기 점.
-            var counts: [DefectClass: Int] = [:]
-            var confidenceSum = 0.0
-            for c in survivors {
-                counts[c.classification, default: 0] += 1
-                confidenceSum += c.confidence
-            }
-            let classSummary = DefectClass.allCases
-                .compactMap { cls in counts[cls].map { "\(cls.displayName(language: language)) \($0)" } }
-                .joined(separator: " · ")
-            let meanConfidence = survivors.isEmpty ? 0 : confidenceSum / Double(survivors.count)
+            let breakdown = DefectClassBreakdown(components: survivors)
             let preview = defectPreview
                 .filter { !excluded.contains($0.id) }
                 .map { DefectMaskPreviewComponent(classification: $0.classification,
@@ -321,16 +317,14 @@ extension AppModel {
                     frame.isRemovingDefects = false
                     return
                 }
-                let summary = self.text(
-                    AppLocalizedPhrase.confidenceSummaryFormat, classSummary, meanConfidence * 100
-                )
-                let titlePhrase: AppLocalizedPhrase = frame.defectAutoMode
-                    ? .grainMendAutoEditTitleFormat
-                    : .grainMendGuidedEditTitleFormat
+                let label: DefectEditLabel = frame.defectAutoMode
+                    ? .automatic(count: survivors.count)
+                    : .guided(count: survivors.count)
                 let item = DefectEditItem(
                     edit: edit,
-                    title: self.text(titlePhrase, survivors.count),
-                    summary: summary, preview: preview, baseSize: baseSize
+                    label: label,
+                    summaryKind: .classBreakdown(breakdown),
+                    preview: preview, baseSize: baseSize
                 )
                 if !self.appendDefectEdit(item, to: frame) {
                     // recipe 검증 실패 시 검출 결과는 유지하고 버튼만 다시 활성화한다.

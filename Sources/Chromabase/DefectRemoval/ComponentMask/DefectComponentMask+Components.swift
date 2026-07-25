@@ -131,7 +131,7 @@ extension DefectComponentMask {
         struct Line {
             let cx: Int; let cy: Int
             let minX: Int; let maxX: Int; let minY: Int; let maxY: Int
-            let angle: Double; let index: Int
+            let angle: Double; let length: Double; let index: Int
         }
         var lines: [Line] = []
         for (i, c) in scratch.enumerated() {
@@ -141,19 +141,41 @@ extension DefectComponentMask {
             for p in c.pixels { sx += p % width; sy += p / width }
             lines.append(Line(cx: sx / c.pixels.count, cy: sy / c.pixels.count,
                               minX: c.minX, maxX: c.maxX, minY: c.minY, maxY: c.maxY,
-                              angle: m.angleDegrees, index: i))
+                              angle: m.angleDegrees, length: m.length, index: i))
         }
         guard lines.count >= gridLineMinField else { return [] }
         var drop = Set<Int>()
 
+        /// 두 선이 "끊긴 같은 결함의 조각"인가 — 평행하고 같은 축 위(축 이탈 ≤ 허용)면 참.
+        /// 이런 조각은 서로를 이웃 선으로 세지 않는다(하나의 스크래치가 스스로를 기각하는 것 방지).
+        @inline(__always) func sameLineFragment(_ a: Line, _ b: Line) -> Bool {
+            guard orientationDifference(a.angle, b.angle) <= gridLineOrientTol else { return false }
+            let rad = a.angle * .pi / 180
+            // a 의 주축에 대한 b 중심점의 수직 거리.
+            let offset = abs(Double(b.cy - a.cy) * cos(rad) - Double(b.cx - a.cx) * sin(rad))
+            return offset <= gridLineCollinearOffset
+        }
+
+        /// 구조 텍스처 판정에 표를 던질 수 있는 이웃인가 — 자기 자신이 아니고, 같은 결함의 조각도
+        /// 아니고, 길이가 비슷해야 한다. 규칙 구조(벽돌·블라인드·격자)는 길이가 고르지만 스크래치는
+        /// 주변 잔선보다 훨씬 길다 — 짧은 잔선이 긴 스크래치를 구조로 몰아세우지 못하게 한다.
+        @inline(__always) func votesAsStructureNeighbour(_ subject: Int, _ other: Int) -> Bool {
+            guard other != subject else { return true }   // 자신 포함 계약 유지
+            guard !sameLineFragment(lines[subject], lines[other]) else { return false }
+            let longer = max(lines[subject].length, lines[other].length)
+            let shorter = max(1.0, min(lines[subject].length, lines[other].length))
+            return longer / shorter <= gridLineComparableLengthRatio
+        }
+
         // A) 국소 밀도: 중심점이 반경 rD(Chebyshev) 안에 있는 다른 선 수. dash 는 짧아 중심점이
         //    위치를 잘 대표하므로 곡선/방사형/격자에서 방향 무관하게 텍스처 밀집을 잡는다.
+        //    같은 축 위 조각은 제외한다 — 조각난 스크래치 하나는 텍스처가 아니다.
         let rD = max(gridLineRadiusMin, min(width, height) / gridLineRadiusDivisor)
         var buckets = [Int: [Int]]()
         for (li, l) in lines.enumerated() {
             buckets[(l.cx / rD) * 1_000_003 + (l.cy / rD), default: []].append(li)
         }
-        for l in lines {
+        for (i, l) in lines.enumerated() {
             var near = 0
             let bx = l.cx / rD, by = l.cy / rD
             outer: for nx in (bx - 1)...(bx + 1) {
@@ -161,6 +183,7 @@ extension DefectComponentMask {
                     for li in buckets[nx * 1_000_003 + ny] ?? [] {
                         let o = lines[li]
                         if abs(o.cx - l.cx) <= rD, abs(o.cy - l.cy) <= rD {
+                            guard votesAsStructureNeighbour(i, li) else { continue }
                             near += 1
                             if near >= gridLineDenseCount { break outer }
                         }
@@ -181,18 +204,26 @@ extension DefectComponentMask {
         var isCore = [Bool](repeating: false, count: lines.count)
         for (i, l) in lines.enumerated() {
             var along = 0, perp = 0
-            for o in lines where nearBox(l, o) {
+            for (j, o) in lines.enumerated() where nearBox(l, o) {
                 let d = orientationDifference(o.angle, l.angle)
-                if d <= gridLineOrientTol { along += 1 }
-                else if abs(d - 90) <= gridLineOrientTol { perp += 1 }
+                if d <= gridLineOrientTol {
+                    guard votesAsStructureNeighbour(i, j) else { continue }
+                    along += 1
+                } else if abs(d - 90) <= gridLineOrientTol,
+                          votesAsStructureNeighbour(i, j) {
+                    perp += 1
+                }
             }
             isCore[i] = along >= gridLineParallelField
                 || (along >= gridLineMinAlong && perp >= gridLineMinPerp)
         }
         for (i, l) in lines.enumerated() where !drop.contains(l.index) {
             if isCore[i] { drop.insert(l.index); continue }
+            // 코어에 인접-평행한 가장자리 선까지 확장 배제하되, 코어보다 훨씬 긴 선은 그 구조의
+            // 일부가 아니다(구조를 가로지르는 스크래치).
             for (j, o) in lines.enumerated() where isCore[j] && nearBox(l, o)
-                && orientationDifference(o.angle, l.angle) <= gridLineOrientTol {
+                && orientationDifference(o.angle, l.angle) <= gridLineOrientTol
+                && votesAsStructureNeighbour(i, j) {
                 drop.insert(l.index); break
             }
         }

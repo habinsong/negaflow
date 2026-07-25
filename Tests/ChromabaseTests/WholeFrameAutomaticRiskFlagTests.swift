@@ -1,11 +1,14 @@
 import XCTest
 @testable import Chromabase
 
-final class WholeFrameAutomaticSafetyTests: XCTestCase {
-    func testDropsOnlyComponentsTouchingLocallyDenseTile() {
+/// 자동(전체 프레임) 모드의 후보 밀도 판정은 **경고 전용**이다. 예전에는 밀도가 높으면 검출 결과를
+/// 통째로 버렸지만(자동을 사실상 쓸 수 없게 만들었다), 이제는 컴포넌트를 하나도 버리지 않고
+/// automaticFalsePositiveRisk 플래그만 세운다 — 제외 판단은 사용자가 한다.
+final class WholeFrameAutomaticRiskFlagTests: XCTestCase {
+    func testKeepsEveryComponentEvenWhenOneTileIsLocallyDense() {
         let width = 1_024
         let height = 1_024
-        let densePixels = (0..<100).map { pixel in
+        let densePixels = (0..<400).map { pixel in
             (pixel / 20) * width + pixel % 20
         }
         let isolatedPixels = [200 * width + 200, 200 * width + 201]
@@ -15,56 +18,43 @@ final class WholeFrameAutomaticSafetyTests: XCTestCase {
             pixelGroups: [densePixels, isolatedPixels]
         )
 
-        let safe = SoftwareDefectRemoval.applyingWholeFrameAutomaticSafety(to: field)
+        let flagged = SoftwareDefectRemoval.applyingWholeFrameAutomaticRiskFlag(to: field)
 
-        XCTAssertFalse(safe.automaticSafetySuppressed)
-        XCTAssertEqual(safe.components.map(\.id), [1])
-        XCTAssertEqual(safe.componentID(atX: 200, y: 200), 1)
-        XCTAssertNil(safe.componentID(atX: 0, y: 0))
+        XCTAssertTrue(flagged.automaticFalsePositiveRisk)
+        XCTAssertEqual(flagged.components.map(\.id), [0, 1])
+        XCTAssertEqual(flagged.componentID(atX: 0, y: 0), 0)
+        XCTAssertEqual(flagged.componentID(atX: 200, y: 200), 1)
     }
 
-    func testSuppressesFrameWhenOneTileHasSevereCandidateDensity() {
-        let width = 1_024
-        let height = 1_024
-        let densePixels = (0..<400).map { pixel in
-            (pixel / 20) * width + pixel % 20
-        }
-        let field = makeField(width: width, height: height, pixelGroups: [densePixels])
-
-        let safe = SoftwareDefectRemoval.applyingWholeFrameAutomaticSafety(to: field)
-
-        XCTAssertTrue(safe.automaticSafetySuppressed)
-        XCTAssertTrue(safe.components.isEmpty)
-    }
-
-    func testSuppressesDiffuseCandidatesAboveWholeFrameLimit() {
+    func testFlagsDiffuseCandidatesAboveWholeFrameLimitWithoutDropping() {
         let width = 1_200
         let height = 1_200
         let pixels = stride(from: 0, to: width * height, by: 1_400).map { $0 }
         let field = makeField(width: width, height: height, pixelGroups: [pixels])
 
-        let safe = SoftwareDefectRemoval.applyingWholeFrameAutomaticSafety(to: field)
+        let flagged = SoftwareDefectRemoval.applyingWholeFrameAutomaticRiskFlag(to: field)
 
-        XCTAssertTrue(safe.automaticSafetySuppressed)
-        XCTAssertTrue(safe.components.isEmpty)
+        XCTAssertTrue(flagged.automaticFalsePositiveRisk)
+        XCTAssertEqual(flagged.components.count, 1)
+        XCTAssertEqual(flagged.components[0].pixelCount, pixels.count)
         XCTAssertEqual(
-            safe.automaticCandidatePixelFraction ?? 0,
+            flagged.automaticCandidatePixelFraction ?? 0,
             Double(pixels.count) / Double(width * height),
             accuracy: 0.000_000_1
         )
     }
 
-    func testKeepsSparseCandidatesAndRecordsDensity() {
+    func testKeepsSparseCandidatesWithoutRaisingRisk() {
         let width = 1_200
         let height = 1_200
         let pixels = stride(from: 0, to: width * height, by: 4_000).map { $0 }
         let field = makeField(width: width, height: height, pixelGroups: [pixels])
 
-        let safe = SoftwareDefectRemoval.applyingWholeFrameAutomaticSafety(to: field)
+        let flagged = SoftwareDefectRemoval.applyingWholeFrameAutomaticRiskFlag(to: field)
 
-        XCTAssertFalse(safe.automaticSafetySuppressed)
-        XCTAssertEqual(safe.components.count, 1)
-        XCTAssertEqual(safe.automaticCandidatePixelFraction ?? 0, 0.00025, accuracy: 0.000_000_1)
+        XCTAssertFalse(flagged.automaticFalsePositiveRisk)
+        XCTAssertEqual(flagged.components.count, 1)
+        XCTAssertEqual(flagged.automaticCandidatePixelFraction ?? 0, 0.00025, accuracy: 0.000_000_1)
     }
 
     private func makeField(width: Int, height: Int, pixelGroups: [[Int]]) -> DefectLabelField {

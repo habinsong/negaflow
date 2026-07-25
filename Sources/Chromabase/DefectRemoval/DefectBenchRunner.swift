@@ -21,8 +21,8 @@ public struct DefectBenchEntry: Codable, Sendable {
     public let meanConfidence: Double
     /// 팽창 전 검출 컴포넌트가 차지하는 원픽셀 비율. 자동 모드의 과검출 밀도를 감시한다.
     public let candidatePixelFraction: Double
-    /// 자동 안전선이 과도한 후보 밀도를 감지해 복원을 적용하지 않았는지 여부.
-    public let automaticSafetySuppressed: Bool
+    /// 자동 모드가 오검출 위험이 높다고 표시했는지 여부(경고 전용 — 복원은 그대로 적용된다).
+    public let automaticFalsePositiveRisk: Bool
     /// |Δ| > 2/255 로 바뀐 픽셀 수/비율(과잉 수정 감시용).
     public let changedPixelCount: Int
     public let changedPixelFraction: Double
@@ -149,7 +149,7 @@ public enum DefectBenchRunner {
             meanConfidence: field.components.isEmpty ? 0 : confidenceSum / Double(field.components.count),
             candidatePixelFraction: field.automaticCandidatePixelFraction
                 ?? Double(candidatePixelCount) / Double(w * h),
-            automaticSafetySuppressed: field.automaticSafetySuppressed,
+            automaticFalsePositiveRisk: field.automaticFalsePositiveRisk,
             changedPixelCount: changed,
             changedPixelFraction: Double(changed) / Double(w * h),
             meanChangedDelta: changed > 0 ? changedDeltaSum / Double(changed) : 0,

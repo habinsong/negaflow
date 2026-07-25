@@ -52,7 +52,8 @@ struct RegionDefectOverlay: View {
                 Divider().frame(height: 16)
                 HStack(spacing: 6) {
                     Image(systemName: "slider.horizontal.3").font(.caption2).foregroundStyle(.secondary)
-                    Slider(value: $frame.defectSensitivity, in: 0.7...6.0,
+                    // 자동과 가이드는 슬라이더 범위가 다르다 — 값도 따로 저장한다.
+                    Slider(value: sensitivity, in: GrainMendSensitivity.range(automatic: frame.defectAutoMode),
                            onEditingChanged: { editing in if !editing { model.redetectRegion(frame) } })
                         .frame(width: 110)
                         .disabled(frame.defectIsRemoving || frame.isRemovingDefects)
@@ -71,7 +72,11 @@ struct RegionDefectOverlay: View {
                 .buttonStyle(.borderedProminent)
                 .disabled(frame.defectIsRemoving || !hasSelectable)
             } else {
-                Text(model.text(AppLocalizedPhrase.dragDefectRegion)).font(.caption).foregroundStyle(.secondary)
+                // 자동과 가이드는 별개 도구다 — 대기 안내도 섞지 않는다(자동에는 드래그가 없다).
+                Text(model.text(frame.defectAutoMode
+                                ? AppLocalizedPhrase.autoDefectHelp
+                                : AppLocalizedPhrase.dragDefectRegion))
+                    .font(.caption).foregroundStyle(.secondary)
                 microSpecksToggle
                 if frame.canUndoDefects {
                     Divider().frame(height: 16)
@@ -120,9 +125,15 @@ struct RegionDefectOverlay: View {
             .disabled(frame.defectIsRemoving || frame.isRemovingDefects)
     }
 
+    /// 모드별 민감도 저장소. 자동과 가이드는 슬라이더 범위·매핑이 달라 값을 공유하지 않는다.
+    private var sensitivity: Binding<Double> {
+        frame.defectAutoMode ? $frame.defectAutoSensitivity : $frame.defectGuidedSensitivity
+    }
+
     private var detectSummary: String {
-        if frame.defectLabelField?.automaticSafetySuppressed == true {
-            return model.text(AppLocalizedPhrase.automaticDefectSafetyStoppedStatus)
+        // 자동 오검출 위험은 경고만 — 검출 결과는 그대로 남아 있고 제외는 사용자가 한다.
+        if frame.defectLabelField?.automaticFalsePositiveRisk == true {
+            return model.text(AppLocalizedPhrase.automaticDefectFalsePositiveRiskStatus)
         }
         let total = frame.defectPreview.count
         let excluded = frame.defectExcludedIDs.count

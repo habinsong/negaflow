@@ -31,7 +31,7 @@ extension AppModel {
         return PreviewScanCarryover(
             transform: frame.imageTransform,
             defectDisplayROI: regionDisplayROI(from: frame),
-            defectSensitivity: frame.defectSensitivity
+            defectSensitivity: frame.defectGuidedSensitivity
         )
     }
 

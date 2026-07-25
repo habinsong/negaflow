@@ -236,7 +236,7 @@ extension AppModel {
                 let dpiText = result.resolution.dpi > 0 ? " @ \(result.resolution.dpi)dpi" : ""
                 statusMessage = text(AppLocalizedPhrase.frameScanCompleteFormat, frame.scanIndex, result.width, result.height, dpiText)
                 if !preview, i == 0, let previewCarryover, let roi = previewCarryover.defectDisplayROI {
-                    frame.defectSensitivity = previewCarryover.defectSensitivity
+                    frame.defectGuidedSensitivity = previewCarryover.defectSensitivity
                     runRegionDetect(frame, displayROI: roi)
                 }
                 // 현상을 await하지 않고 백그라운드로 띄운다 → 스캐너가 현상 동안 유휴하지 않고

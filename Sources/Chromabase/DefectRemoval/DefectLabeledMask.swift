@@ -44,19 +44,20 @@ public struct DefectLabelField: Sendable {
     /// 픽셀별 컴포넌트 id(-1 = 배경). 클릭 위치 → 컴포넌트 조회에 쓴다.
     public let labels: [Int32]
     public let components: [DefectComponent]
-    /// 전체 프레임 자동 검출이 과도한 후보 밀도를 감지해 결과 적용을 중단했는지 여부.
-    public let automaticSafetySuppressed: Bool
-    /// 자동 안전 판정 직전 원픽셀 후보 비율. 가이드 필드에는 nil이다.
+    /// 전체 프레임 자동 검출에서 후보 밀도가 높아 오검출 위험이 큰지 여부. **경고 표시 전용**이다 —
+    /// 검출 결과를 버리거나 줄이지 않는다(사용자가 컴포넌트를 보고 직접 제외한다).
+    public let automaticFalsePositiveRisk: Bool
+    /// 위험 판정에 쓴 원픽셀 후보 비율. 가이드 필드에는 nil이다.
     public let automaticCandidatePixelFraction: Double?
 
     public init(width: Int, height: Int, labels: [Int32], components: [DefectComponent],
-                automaticSafetySuppressed: Bool = false,
+                automaticFalsePositiveRisk: Bool = false,
                 automaticCandidatePixelFraction: Double? = nil) {
         self.width = width
         self.height = height
         self.labels = labels
         self.components = components
-        self.automaticSafetySuppressed = automaticSafetySuppressed
+        self.automaticFalsePositiveRisk = automaticFalsePositiveRisk
         self.automaticCandidatePixelFraction = automaticCandidatePixelFraction
     }
 

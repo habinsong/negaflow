@@ -31,15 +31,13 @@ public enum SoftwareDefectRemoval {
     /// 전체 ROI 복원과 픽셀 단위로 동일하다 — 호출측이 저장/재계산 창을 결함 크기 비례로
     /// 줄이는 근거다(여백 미달 crop 은 결과가 달라질 수 있으므로 금지).
     public static let repairContextRadius = 264
-    /// 전체 프레임 자동 모드가 한 번에 건드릴 수 있는 검출 원픽셀 비율의 상한.
-    /// FILM-R v2 44쌍에서 이 값을 넘긴 네 장 중 세 장이 큰 오검출이었으므로 자동은 중단하고,
-    /// 사용자가 범위를 한정하는 가이드 경로로 넘긴다. 가이드·브러시·IR에는 적용하지 않는다.
+    /// 전체 프레임 자동 모드에서 "오검출 위험 높음" 경고를 띄우는 검출 원픽셀 비율 기준.
+    /// FILM-R v2 44쌍에서 이 값을 넘긴 프레임 상당수가 실제로 큰 오검출이었다. 다만 정상 구조가
+    /// 대량 검출된 경우와 실제로 먼지가 많은 장면은 RGB만으로 구분할 수 없으므로 **검출 결과를
+    /// 버리지 않고 경고만** 한다 — 최종 판단(컴포넌트 클릭 제외)은 사용자가 한다.
     static let wholeFrameAutomaticCandidateFractionLimit = 0.0006
-    /// 텍스처·구조선이 결함처럼 몰리는 구역을 자동에서만 배제하는 지역 후보 밀도 상한.
-    /// 타일 크기는 해상도에 비례해 2K~3K FILM-R에서는 약 128px가 된다.
+    /// 같은 경고의 지역 밀도 기준. 타일 크기는 해상도에 비례해 2K~3K FILM-R에서는 약 128px가 된다.
     static let wholeFrameAutomaticLocalDensityLimit = 0.02
-    /// 이 밀도를 넘는 구역은 일부 컴포넌트 제거만으로 안전을 보장하기 어려워 자동 전체를 중지한다.
-    static let wholeFrameAutomaticSevereLocalDensityLimit = 0.05
 
     private struct RegionDefectTileResult {
         let dx0: Int
@@ -194,7 +192,7 @@ public enum SoftwareDefectRemoval {
                                                                 rejectLineGrid: rejectLineGrid,
                                                                 preferredAngle: preferredAngle)
             guard shouldCancel?() != true else { return emptyField() }
-            return wholeFrameAuto ? applyingWholeFrameAutomaticSafety(to: field) : field
+            return wholeFrameAuto ? applyingWholeFrameAutomaticRiskFlag(to: field) : field
         }
 
         // 큰 ROI: overlap-tile. 각 타일을 halo 만큼 넓혀 검출하고, 결과 픽셀은 비중첩 core에서만
@@ -253,41 +251,17 @@ public enum SoftwareDefectRemoval {
         if shouldCancel?() == true { return emptyField() }
 
         let field = stitchRegionDefectTiles(results.snapshot(), width: rw, height: rh)
-        return wholeFrameAuto ? applyingWholeFrameAutomaticSafety(to: field) : field
+        return wholeFrameAuto ? applyingWholeFrameAutomaticRiskFlag(to: field) : field
     }
 
-    /// 자동 모드는 고밀도 후보를 그대로 복원하지 않는다. 정상 구조가 대량 검출된 최악 사례와
-    /// 실제로 먼지가 많은 장면을 RGB만으로 안전하게 구분할 수 없으므로, 이런 경우에는 빈 필드와
-    /// 명시적인 안전 중지 상태를 반환한다. 사용자는 가이드로 범위를 좁혀 같은 검출기를 쓸 수 있다.
-    static func applyingWholeFrameAutomaticSafety(to field: DefectLabelField) -> DefectLabelField {
+    /// 자동(전체 프레임) 결과에 오검출 위험 플래그만 붙인다. **컴포넌트는 하나도 버리지 않는다.**
+    /// 정상 구조가 대량 검출된 경우와 실제로 먼지가 많은 장면을 단일 RGB 이미지로 구분할 수 없어서
+    /// 예전에는 자동을 통째로 중지했지만, 그러면 정작 먼지·스크래치가 많은 프레임에서 자동을 전혀
+    /// 쓸 수 없었다. 이제는 결과를 그대로 돌려주고 UI가 경고만 표시한다 — 제외는 사용자가 한다.
+    static func applyingWholeFrameAutomaticRiskFlag(to field: DefectLabelField) -> DefectLabelField {
         let area = field.width.multipliedReportingOverflow(by: field.height)
-        guard !area.overflow, area.partialValue > 0 else {
-            return DefectLabelField(
-                width: field.width,
-                height: field.height,
-                labels: [],
-                components: [],
-                automaticSafetySuppressed: true,
-                automaticCandidatePixelFraction: nil
-            )
-        }
-        let originalCandidatePixels = field.components.reduce(into: 0) { count, component in
-            let addition = count.addingReportingOverflow(component.pixelCount)
-            count = addition.overflow ? area.partialValue : addition.partialValue
-        }
-        let local = droppingLocallyDenseAutomaticCandidates(from: field)
-        if local.maximumDensity > wholeFrameAutomaticSevereLocalDensityLimit {
-            return DefectLabelField(
-                width: field.width,
-                height: field.height,
-                labels: [],
-                components: [],
-                automaticSafetySuppressed: true,
-                automaticCandidatePixelFraction:
-                    Double(originalCandidatePixels) / Double(area.partialValue)
-            )
-        }
-        let candidatePixels = local.field.components.reduce(into: 0) { count, component in
+        guard !area.overflow, area.partialValue > 0 else { return field }
+        let candidatePixels = field.components.reduce(into: 0) { count, component in
             let addition = count.addingReportingOverflow(component.pixelCount)
             count = addition.overflow ? area.partialValue : addition.partialValue
         }
@@ -296,38 +270,27 @@ public enum SoftwareDefectRemoval {
             wholeFrameAutomaticCandidateFractionLimit,
             512.0 / Double(area.partialValue)
         )
-        guard fraction <= fractionLimit else {
-            return DefectLabelField(
-                width: field.width,
-                height: field.height,
-                labels: [],
-                components: [],
-                automaticSafetySuppressed: true,
-                automaticCandidatePixelFraction: fraction
-            )
-        }
+        let risk = fraction > fractionLimit
+            || maximumLocalCandidateDensity(of: field) > wholeFrameAutomaticLocalDensityLimit
         return DefectLabelField(
             width: field.width,
             height: field.height,
-            labels: local.field.labels,
-            components: local.field.components,
+            labels: field.labels,
+            components: field.components,
+            automaticFalsePositiveRisk: risk,
             automaticCandidatePixelFraction: fraction
         )
     }
 
-    /// 비정상적으로 후보가 몰린 국소 타일과 겹치는 컴포넌트를 자동 결과에서만 제거한다.
-    /// 단일 RGB 이미지의 정상 텍스처와 실제 고밀도 먼지를 완전히 구분할 수 없으므로, 공격적으로
-    /// 복원하기보다 가이드에서 사용자가 범위를 좁히도록 하는 쪽으로 실패한다.
-    private static func droppingLocallyDenseAutomaticCandidates(
-        from field: DefectLabelField
-    ) -> (field: DefectLabelField, maximumDensity: Double) {
+    /// 후보가 가장 몰린 국소 타일의 밀도. 경고 판정 입력이며 컴포넌트를 거르지 않는다.
+    private static func maximumLocalCandidateDensity(of field: DefectLabelField) -> Double {
         guard !field.components.isEmpty,
-              min(field.width, field.height) >= 1_024 else { return (field, 0) }
+              min(field.width, field.height) >= 1_024 else { return 0 }
         let tileSide = max(64, max(field.width, field.height) / 24)
         let columns = (field.width + tileSide - 1) / tileSide
         let rows = (field.height + tileSide - 1) / tileSide
         let tileCount = columns.multipliedReportingOverflow(by: rows)
-        guard !tileCount.overflow, tileCount.partialValue > 0 else { return (field, 0) }
+        guard !tileCount.overflow, tileCount.partialValue > 0 else { return 0 }
         var counts = [Int](repeating: 0, count: tileCount.partialValue)
         for component in field.components {
             for pixel in component.pixels {
@@ -337,46 +300,16 @@ public enum SoftwareDefectRemoval {
                 counts[(y / tileSide) * columns + x / tileSide] += 1
             }
         }
-        var crowded = [Bool](repeating: false, count: counts.count)
         var maximumDensity = 0.0
         for row in 0..<rows {
             let tileHeight = min(tileSide, field.height - row * tileSide)
             for column in 0..<columns {
                 let tileWidth = min(tileSide, field.width - column * tileSide)
-                let index = row * columns + column
-                let density = Double(counts[index]) / Double(tileWidth * tileHeight)
+                let density = Double(counts[row * columns + column]) / Double(tileWidth * tileHeight)
                 maximumDensity = max(maximumDensity, density)
-                crowded[index] = density > wholeFrameAutomaticLocalDensityLimit
             }
         }
-        guard crowded.contains(true) else { return (field, maximumDensity) }
-
-        let droppedIDs = Set(field.components.compactMap { component -> Int32? in
-            component.pixels.contains { pixel in
-                guard pixel >= 0, pixel < field.width * field.height else { return true }
-                let y = pixel / field.width
-                let x = pixel - y * field.width
-                return crowded[(y / tileSide) * columns + x / tileSide]
-            } ? component.id : nil
-        })
-        guard !droppedIDs.isEmpty else { return (field, maximumDensity) }
-        let kept = field.components.filter { !droppedIDs.contains($0.id) }
-        var labels = field.labels
-        for component in field.components where droppedIDs.contains(component.id) {
-            for pixel in component.pixels
-                where labels.indices.contains(pixel) && labels[pixel] == component.id {
-                labels[pixel] = -1
-            }
-        }
-        return (
-            DefectLabelField(
-                width: field.width,
-                height: field.height,
-                labels: labels,
-                components: kept
-            ),
-            maximumDensity
-        )
+        return maximumDensity
     }
 
     /// 각 타일의 비중첩 core 픽셀을 전역 좌표로 옮기고 경계에서 8-연결 union한 뒤 라벨/픽셀을
