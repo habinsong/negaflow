@@ -30,22 +30,13 @@ case "$RELEASE_MODE" in
     ;;
 esac
 
-build_variant() {
-  local architecture="$1"
+build_universal_products() {
+  local architecture="universal"
   local derived_data="$BUILD_DIR/DerivedData.release.$architecture"
   local variant_root="$BUILD_DIR/release-apps/$architecture"
   local saved_app="$variant_root/Negaflow.app"
   local saved_dsym="$variant_root/Negaflow.app.dSYM"
   local built_dsym
-  local version
-  local build
-  local base_name
-  local notary_zip
-  local final_zip
-  local final_dmg
-  local final_pkg
-  local final_dsym
-  local final_checksums
 
   NEGAFLOW_BUILD_ARCHITECTURES="$architecture" \
   NEGAFLOW_DERIVED_DATA_PATH="$derived_data" \
@@ -62,6 +53,70 @@ build_variant() {
   mkdir -p "$variant_root"
   ditto "$APP_BUNDLE" "$saved_app"
   ditto "$built_dsym" "$saved_dsym"
+}
+
+derive_arm64_products() {
+  local source_root="$BUILD_DIR/release-apps/universal"
+  local variant_root="$BUILD_DIR/release-apps/arm64"
+  local source_app="$source_root/Negaflow.app"
+  local source_dsym="$source_root/Negaflow.app.dSYM"
+  local saved_app="$variant_root/Negaflow.app"
+  local saved_dsym="$variant_root/Negaflow.app.dSYM"
+  local executable_name
+  local source_executable
+  local saved_executable
+  local source_dwarf
+  local saved_dwarf
+  local sign_identity="${NEGAFLOW_CODESIGN_IDENTITY:--}"
+
+  executable_name="$(plutil -extract CFBundleExecutable raw "$source_app/Contents/Info.plist")"
+  source_executable="$source_app/Contents/MacOS/$executable_name"
+  source_dwarf="$(find "$source_dsym/Contents/Resources/DWARF" -maxdepth 1 -type f -print -quit)"
+  if [ ! -x "$source_executable" ] || [ -z "$source_dwarf" ]; then
+    echo "[build-release] ERROR: universal 앱 또는 dSYM 산출물이 올바르지 않습니다." >&2
+    exit 1
+  fi
+
+  rm -rf "$variant_root"
+  mkdir -p "$variant_root"
+  ditto "$source_app" "$saved_app"
+  ditto "$source_dsym" "$saved_dsym"
+
+  saved_executable="$saved_app/Contents/MacOS/$executable_name"
+  saved_dwarf="$saved_dsym/Contents/Resources/DWARF/$(basename "$source_dwarf")"
+  lipo "$source_executable" -thin arm64 -output "$saved_executable.thin"
+  mv "$saved_executable.thin" "$saved_executable"
+  chmod +x "$saved_executable"
+  lipo "$source_dwarf" -thin arm64 -output "$saved_dwarf.thin"
+  mv "$saved_dwarf.thin" "$saved_dwarf"
+  rm -rf "$saved_dsym/Contents/Resources/Relocations/x86_64"
+
+  bash "$ROOT/scripts/sign-app.sh" "$saved_app" "$sign_identity"
+  if [ "$(lipo -archs "$saved_executable")" != "arm64" ]; then
+    echo "[build-release] ERROR: arm64 실행파일 슬라이스 생성에 실패했습니다." >&2
+    exit 1
+  fi
+  if [ "$(dwarfdump --uuid "$saved_executable" | awk '{print $2}')" \
+      != "$(dwarfdump --uuid "$saved_dsym" | awk '{print $2}')" ]; then
+    echo "[build-release] ERROR: arm64 앱과 dSYM UUID가 일치하지 않습니다." >&2
+    exit 1
+  fi
+}
+
+publish_variant() {
+  local architecture="$1"
+  local variant_root="$BUILD_DIR/release-apps/$architecture"
+  local saved_app="$variant_root/Negaflow.app"
+  local saved_dsym="$variant_root/Negaflow.app.dSYM"
+  local version
+  local build
+  local base_name
+  local notary_zip
+  local final_zip
+  local final_dmg
+  local final_pkg
+  local final_dsym
+  local final_checksums
 
   version="$(plutil -extract CFBundleShortVersionString raw "$saved_app/Contents/Info.plist")"
   build="$(plutil -extract CFBundleVersion raw "$saved_app/Contents/Info.plist")"
@@ -101,7 +156,9 @@ build_variant() {
   fi
 }
 
-build_variant arm64
-build_variant universal
+build_universal_products
+derive_arm64_products
+publish_variant arm64
+publish_variant universal
 
 echo "[build-release] complete: mode=$RELEASE_MODE output=$OUTPUT_DIR"
