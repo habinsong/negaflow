@@ -1,155 +1,156 @@
-# 출시 전 실기기 점검표
+# Real-device QA checklist
 
-[문서 홈](../README.md)
+[Docs home](../README.md)
 
-자동 테스트와 빌드로 확인할 수 없는 항목입니다. 최종 화면 확인과 실제 장비 확인은 사용자가
-맡습니다. 적용되는 필수 항목에 결과와 근거가 모두 있어야 출시 후보를 승인할 수 있습니다.
+These are the items automated tests and builds cannot confirm. The final look on screen and the
+real hardware are checked by the user. A release candidate is approved only when every
+applicable required item has a result and its evidence.
 
-결과는 `PASS`, `FAIL`, `BLOCKED`, `N/A` 중 하나로 적습니다. `FAIL`, `BLOCKED`, `N/A`에는 이유가
-필요합니다.
+Write each result as `PASS`, `FAIL`, `BLOCKED`, or `N/A`. `FAIL`, `BLOCKED`, and `N/A` need a
+reason.
 
 > [!IMPORTANT]
-> 이 표를 채우지 않은 빌드에는 실기기, 최종 화질, 서명, 공증 검증이 끝났다고 표시하지
-> 않습니다. 자동 테스트 통과는 이 점검을 대신하지 않습니다.
+> A build without this table filled in is not marked as checked for real hardware, final image
+> quality, signing, or notarization. Passing automated tests is not the same thing.
 
-## 실행 기록
+## Run record
 
-- 출시 후보:
-- 앱 버전과 빌드:
-- 커밋 또는 소스 사본:
-- macOS 버전:
-- Mac 모델, 아키텍처, 메모리:
-- 화면, 배율, HDR 상태:
-- 스캐너 플러그인 버전:
-- 스캐너 모델과 연결:
-- 확인한 사람:
-- 날짜:
+- Release candidate:
+- App version and build:
+- Commit or source copy:
+- macOS version:
+- Mac model, architecture, memory:
+- Display, scale, HDR state:
+- Scanner plugin version:
+- Scanner model and connection:
+- Checked by:
+- Date:
 
-## 1. 설치와 첫 실행
+## 1. Install and first launch
 
-| 결과 | 확인할 내용 | 근거 또는 문제 |
+| Result | What to check | Evidence or problem |
 |---|---|---|
-|  | ZIP/DMG 체크섬이 공개된 값과 같습니다. |  |
-|  | 깨끗한 사용자 계정에서 `/Applications`로 복사하고 실행됩니다. |  |
-|  | Gatekeeper에 예상한 서명자와 공증 상태가 나옵니다. |  |
-|  | 첫 실행 때 문서에 적은 앱 자료만 만듭니다. |  |
-|  | 스캐너 플러그인이 없어도 가짜 장치나 기능이 켜지지 않습니다. |  |
-|  | 앱 정보, 버전, 빌드, 라이선스, 도움말이 맞습니다. |  |
+|  | The ZIP/DMG checksum matches the published value. |  |
+|  | On a clean user account it copies to `/Applications` and launches. |  |
+|  | Gatekeeper shows the expected signer and notarization state. |  |
+|  | First launch creates only the app data the documentation lists. |  |
+|  | With no scanner plugin, no fake device or capability turns on. |  |
+|  | App info, version, build, license, and help are right. |  |
 
-## 2. 가져오기, 현상, 내보내기
+## 2. Import, develop, export
 
-JPEG, TIFF, 현재 디코더가 읽는 DNG/RAW, 고해상도 파일을 적어도 하나씩 씁니다. 실행 전후에
-원본 SHA-256을 기록합니다.
+Use at least one JPEG, one TIFF, a DNG/RAW the current decoder reads, and a high-resolution
+file. Record the source SHA-256 before and after the run.
 
-| 결과 | 확인할 내용 | 근거 또는 문제 |
+| Result | What to check | Evidence or problem |
 |---|---|---|
-|  | 가져오기 전후의 원본 바이트가 같습니다. |  |
-|  | 중복 가져오기 경고와 선택지가 이해하기 쉽습니다. |  |
-|  | 처음 상태가 수동 보정과 `main` 타깃입니다. |  |
-|  | 자르기, 방향, 톤, 색, 디테일, 부분 보정, 실행 취소가 맞게 작동합니다. |  |
-|  | 원본/현상 비교와 잘림 표시가 내보낸 결과와 맞습니다. |  |
-|  | JPEG와 16-bit TIFF가 열리고 메타데이터가 맞습니다. |  |
-|  | 이름 충돌, 취소, 실패, 이어 하기가 일부 파일을 성공으로 남기지 않습니다. |  |
-|  | 필요한 편집 기록이나 캐시가 없으면 원본 대신 내보내지 않고 오류가 납니다. |  |
+|  | The source bytes are the same before and after import. |  |
+|  | The duplicate import warning and its choices are easy to follow. |  |
+|  | The starting state is manual correction with the `main` target. |  |
+|  | Crop, orientation, tone, color, detail, local adjustment, and undo work as expected. |  |
+|  | The original/developed comparison and the clipping display match the export. |  |
+|  | JPEG and 16-bit TIFF open, and their metadata is right. |  |
+|  | Name conflicts, cancel, failure, and resume never leave part of the files marked as done. |  |
+|  | When required edit history or cache is missing, it errors instead of exporting the source. |  |
 
-## 3. 카탈로그, 백업, 오프라인 원본
+## 3. Catalog, backup, offline originals
 
-| 결과 | 확인할 내용 | 근거 또는 문제 |
+| Result | What to check | Evidence or problem |
 |---|---|---|
-|  | 다시 실행하면 프레임, 선택, 롤·컬렉션, 별점, 편집이 돌아옵니다. |  |
-|  | 저장을 끊어도 마지막 정상 카탈로그와 백업이 남습니다. |  |
-|  | 카탈로그가 없거나 깨지면 빈 라이브러리로 열지 않고 복구 화면에서 멈춥니다. |  |
-|  | 백업 생성, 복원 미리보기, 복원, 다시 실행이 성공합니다. |  |
-|  | 오프라인 원본을 분명히 표시하고 원본을 대신 내보내지 않습니다. |  |
-|  | 올바른 원본은 다시 연결되고 다른 파일은 거부됩니다. |  |
-|  | 라이브러리에서 제거해도 원본은 지워지지 않습니다. |  |
-|  | 휴지통 이동은 직접 고르는 동작이며 가상 사본이 있어도 모호하지 않습니다. |  |
+|  | Relaunching brings back frames, selection, rolls and collections, ratings, and edits. |  |
+|  | Cutting a save short still leaves the last healthy catalog and backup. |  |
+|  | A missing or broken catalog stops at the recovery screen instead of opening empty. |  |
+|  | Creating a backup, previewing a restore, restoring, and relaunching all work. |  |
+|  | Offline originals are marked clearly, and the source is not exported in their place. |  |
+|  | The correct original relinks and a different file is refused. |  |
+|  | Removing from the library does not delete the original. |  |
+|  | Moving to Trash is a deliberate choice and stays clear when virtual copies exist. |  |
 
-## 4. 창, 화면, 손쉬운 사용
+## 4. Windows, display, accessibility
 
-최소 창 크기, 큰 창, Retina 배율, 동작 줄이기, 대비 증가, VoiceOver, 전체 키보드 접근, 한국어가
-아닌 언어 하나를 확인합니다.
+Check the minimum window size, a large window, Retina scale, Reduce Motion, Increase Contrast,
+VoiceOver, full keyboard access, and one language other than Korean.
 
-| 결과 | 확인할 내용 | 근거 또는 문제 |
+| Result | What to check | Evidence or problem |
 |---|---|---|
-|  | 사이드바, 캔버스, 검사기, 시트, 설정, 도움말의 버튼이 잘리지 않습니다. |  |
-|  | 창 크기를 바꿔도 패널 폭과 캔버스 초점이 쓸 만합니다. |  |
-|  | 다시 실행하면 지원하는 화면 배치가 돌아옵니다. |  |
-|  | 글자가 정한 크기보다 작아지지 않고 중요한 값이 잘리지 않습니다. |  |
-|  | 슬라이더, 휠, 커브, 분할 버튼, 토글, 선택 항목의 상태를 읽을 수 있습니다. |  |
-|  | VoiceOver의 이름, 값, 힌트, 증감, 선택 변경이 맞습니다. |  |
-|  | 키보드 순서가 화면 흐름을 따르고 초점이 갇히지 않습니다. |  |
-|  | 동작 줄이기에서 불필요한 움직임이 사라지고 대비 증가에서도 읽을 수 있습니다. |  |
-|  | 제품 문구는 언어를 바꾸고 기술 ID는 그대로 둡니다. |  |
-|  | Liquid Glass 표면에 눈에 띄는 그림자가 없습니다. |  |
+|  | Buttons in the sidebar, canvas, inspector, sheets, settings, and help are not cut off. |  |
+|  | Resizing the window keeps panel width and canvas focus usable. |  |
+|  | Relaunching restores the supported screen layout. |  |
+|  | Text never drops below the set size and important values are not truncated. |  |
+|  | Sliders, wheels, curves, split buttons, toggles, and selections can be read. |  |
+|  | VoiceOver names, values, hints, increments, and selection changes are right. |  |
+|  | Keyboard order follows the visual flow and focus is not trapped. |  |
+|  | Reduce Motion removes needless movement, and Increase Contrast stays readable. |  |
+|  | Product copy changes language while technical IDs stay as they are. |  |
+|  | Liquid Glass surfaces show no visible shadow. |  |
 
-## 5. 외부 플러그인과 실제 스캐너
+## 5. External plugins and real scanners
 
-SANE 구현은 별도 `negaflow-scanner-sane` 배포본에서 설치하고 설정합니다. 플러그인과 장치 근거는
-그 저장소와 이 기록에 함께 남깁니다.
+The SANE implementation is installed and configured from the separate `negaflow-scanner-sane`
+release. Plugin and device evidence goes in that repository and in this record.
 
-| 결과 | 확인할 내용 | 근거 또는 문제 |
+| Result | What to check | Evidence or problem |
 |---|---|---|
-|  | 처음 보는 플러그인은 사용자가 직접 승인해야 합니다. |  |
-|  | 플러그인을 지우거나 바꾸면 이전 승인이 무효가 됩니다. |  |
-|  | 장치 찾기에 플러그인이 보고한 실제 장치만 나옵니다. |  |
-|  | 해상도, 비트 심도, 모드, 영역, 미리보기, 노출, IR은 보고된 기능만 보입니다. |  |
-|  | 지원하지 않는 기능은 숨기거나 정확한 비활성 이유를 보여 줍니다. |  |
-|  | 미리보기, 본 스캔, 취소, 시간 초과, 연결 해제, 플러그인 종료가 안전하게 끝납니다. |  |
-|  | 결과의 크기, 비트 심도, 영역, 적용 설정이 보고값과 맞습니다. |  |
-|  | CLI `detect --json`과 `capabilities <id> --json`이 앱 화면과 맞습니다. |  |
-|  | 플러그인 파일, 의존성, 설정, 로그가 본체 앱과 저장소 밖에 있습니다. |  |
+|  | A plugin seen for the first time has to be approved by the user. |  |
+|  | Deleting or replacing a plugin voids the earlier approval. |  |
+|  | Device discovery shows only the real devices the plugin reported. |  |
+|  | Resolution, bit depth, mode, area, preview, exposure, and IR show only reported capabilities. |  |
+|  | Unsupported capabilities are hidden or give an accurate reason for being off. |  |
+|  | Preview, full scan, cancel, timeout, disconnect, and plugin shutdown all end safely. |  |
+|  | The result size, bit depth, area, and applied settings match what was reported. |  |
+|  | CLI `detect --json` and `capabilities <id> --json` agree with the app screen. |  |
+|  | Plugin files, dependencies, configuration, and logs live outside the app and this repository. |  |
 
-## 6. GrainMend와 화질
+## 6. GrainMend and image quality
 
-컬러 네거티브, 지원되는 염료식 흑백, 일반 은염 흑백, 슬라이드, 깨끗한 프레임, 먼지, 스크래치,
-그레인, 얼굴, 하늘, 촘촘한 무늬를 골고루 확인합니다.
+Cover color negative, supported dye-based black and white, ordinary silver black and white,
+slides, clean frames, dust, scratches, grain, faces, sky, and fine patterns.
 
-| 결과 | 확인할 내용 | 근거 또는 문제 |
+| Result | What to check | Evidence or problem |
 |---|---|---|
-|  | GrainMend가 제3자 하드웨어 IR 청소와 같다고 표시하지 않습니다. |  |
-|  | 대상 결함을 줄이면서 질감과 가장자리를 지나치게 해치지 않습니다. |  |
-|  | 깨끗한 프레임의 오검출이 받아들일 만합니다. |  |
-|  | RGB와 IR이 맞고, 어긋나거나 지원하지 않는 필름은 분명하게 실패합니다. |  |
-|  | IR이 필름 종류의 한계를 지키며 원본 자료를 보존합니다. |  |
-|  | 전후 100% 크롭과 마스크를 설정값, 앱 버전과 함께 보관합니다. |  |
+|  | GrainMend is not presented as the same thing as third-party hardware IR cleaning. |  |
+|  | Target defects go down without wrecking texture and edges. |  |
+|  | False detections on clean frames stay acceptable. |  |
+|  | RGB and IR line up, and misaligned or unsupported film fails clearly. |  |
+|  | IR keeps to the film-type limits and preserves the source material. |  |
+|  | Before and after 100% crops and masks are kept with the settings and app version. |  |
 
-## 7. 성능과 메모리
+## 7. Performance and memory
 
-| 결과 | 확인할 내용 | 근거 또는 문제 |
+| Result | What to check | Evidence or problem |
 |---|---|---|
-|  | 24 MP 사진을 반복 조절하고 이동해도 반응이 쓸 만합니다. |  |
-|  | 48 MP 사진을 반복 조절하고 이동해도 반응이 쓸 만합니다. |  |
-|  | 3600 DPI와 7200 DPI 스캔 크기의 현상·내보내기가 끝납니다. |  |
-|  | 48프레임 롤을 처리해도 다른 프레임의 상태가 섞이지 않습니다. |  |
-|  | 메모리 압박 때 선택하지 않은 캐시만 비우고 현재 프레임은 유지합니다. |  |
-|  | 큰 카탈로그의 검색, 필터, 정렬이 시험한 Mac에서 쓸 만합니다. |  |
-|  | 긴 작업의 열, 메모리, 디스크 사용량을 기록합니다. |  |
+|  | Repeated adjustment and panning on a 24 MP photo stays usable. |  |
+|  | Repeated adjustment and panning on a 48 MP photo stays usable. |  |
+|  | Develop and export finish at 3600 DPI and 7200 DPI scan sizes. |  |
+|  | Working through a 48-frame roll never mixes state between frames. |  |
+|  | Under memory pressure only unselected caches are dropped and the current frame stays. |  |
+|  | Search, filter, and sort on a large catalog stay usable on the Mac under test. |  |
+|  | Heat, memory, and disk use during long jobs are recorded. |  |
 
-## 8. 업그레이드와 출시
+## 8. Upgrade and release
 
-| 결과 | 확인할 내용 | 근거 또는 문제 |
+| Result | What to check | Evidence or problem |
 |---|---|---|
-|  | 업그레이드 뒤 기존 카탈로그와 사이드카가 보존됩니다. |  |
-|  | 지원하지 않는 이전 버전·스키마가 안전하게 실패하고 복구 방법을 알려 줍니다. |  |
-|  | 출시 묶음에 앱, dSYM, 체크섬, 라이선스, 필요한 목록이 있습니다. |  |
-|  | 테스트 자료, 원본, 인증 정보, 플러그인 구현이 묶음에 들어가지 않습니다. |  |
-|  | 알려진 문제와 장치·프로파일 근거가 출시 노트와 맞습니다. |  |
+|  | Existing catalogs and sidecars survive the upgrade. |  |
+|  | Unsupported older versions and schemas fail safely and say how to recover. |  |
+|  | The release bundle has the app, dSYM, checksums, license, and the lists it needs. |  |
+|  | Test material, originals, credentials, and the plugin implementation are not in the bundle. |  |
+|  | Known issues and device/profile evidence match the release notes. |  |
 
-출시 결정: `APPROVE`, `REJECT`, `BLOCKED`
+Release decision: `APPROVE`, `REJECT`, `BLOCKED`
 
-- 결정:
-- 막는 문제 ID:
-- 받아들인 비필수 문제 ID와 이유:
-- 근거 묶음 위치:
-- 서명:
+- Decision:
+- Blocking issue IDs:
+- Accepted non-blocking issue IDs and why:
+- Where the evidence is kept:
+- Signature:
 
-다음 문제가 하나라도 재현되면 수정하고 다시 확인하기 전까지 자동 `REJECT`입니다.
+Any of the following reproduces means an automatic `REJECT` until it is fixed and checked again.
 
-- 원본 변경
-- 카탈로그를 조용히 초기화
-- 내보내기 실패 때 원본으로 대체
-- 가짜 스캐너 기능 표시
-- 출력 일부만 공개
-- 서명이나 공증 불일치
-- 자료 손실
+- Changing the source
+- Quietly resetting the catalog
+- Falling back to the source when an export fails
+- Showing fake scanner capabilities
+- Publishing only part of the output
+- A signing or notarization mismatch
+- Data loss

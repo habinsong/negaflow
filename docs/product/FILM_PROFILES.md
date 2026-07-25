@@ -1,41 +1,41 @@
-# 필름 프로파일
+# Film profiles
 
-[문서 홈](../README.md)
+[Docs home](../README.md)
 
-번들 스캐너 프로파일은 내려받은 LUT나 이름만 붙인 프리셋이 아닙니다. 프로젝트 작성자가 직접
-촬영하고 정리한 필름 스캔을 분석해 JSON으로 만들었습니다.
+The bundled scanner profiles are not downloaded LUTs or presets with a name slapped on. The
+project author shot and sorted the film scans, analyzed them, and turned the result into JSON.
 
-| 항목 | 현재 값 |
+| Item | Current value |
 |---|---:|
-| 필름 종류 기본값 | 27 |
-| 창작 룩 | 6 |
-| 스캐너 프로파일 | 15 |
-| 롤 관측 | 25 |
-| 이미지 관측 | 928 |
-| 검증 상태 | 모두 `realOnly` |
+| Film type defaults | 27 |
+| Creative looks | 6 |
+| Scanner profiles | 15 |
+| Roll observations | 25 |
+| Image observations | 928 |
+| Validation status | all `realOnly` |
 
 > [!NOTE]
-> `928`은 프로파일별 관측을 더한 값입니다. 서로 다른 사진 928장이라는 뜻은 아닙니다.
+> `928` is the sum of observations per profile. It does not mean 928 different photographs.
 
-## 서로 다른 세 자료
+## Three separate kinds of data
 
-| 자료 | 형식 | 쓰임 | 수 |
+| Data | Format | Used for | Count |
 |---|---|---|---:|
-| Film stock | Swift | Dmin/Dmax와 필름 종류 기본값 | 27 |
-| Look preset | JSON | 사용자가 고르는 창작 룩 | 6 |
-| Scanner profile | JSON | 실제 스캔에서 본 상대 톤·색 통계 | 15 |
+| Film stock | Swift | Dmin/Dmax and film type defaults | 27 |
+| Look preset | JSON | Creative looks you pick | 6 |
+| Scanner profile | JSON | Relative tone and color statistics seen in real scans | 15 |
 
-필름 이름 27개가 색 정확도 프로파일 27개라는 뜻은 아닙니다. 룩 6개도 스캐너 프로파일과
-다릅니다. 아래 내용은 세 번째 자료만 다룹니다.
+27 film names do not mean 27 color accuracy profiles. The 6 looks are a different thing from
+scanner profiles. What follows is about the third kind only.
 
-## 현재 번들
+## What is bundled today
 
-`Sources/Chromabase/ScannerProfiles/`에 15개가 있습니다.
+`Sources/Chromabase/ScannerProfiles/` holds 15 of them.
 
 <details>
-<summary>15개 프로파일 모두 보기</summary>
+<summary>See all 15 profiles</summary>
 
-| 스캐너 | 필름 종류 | 필름 | 롤 관측 | 이미지 관측 | 상태 |
+| Scanner | Film type | Film | Roll observations | Image observations | Status |
 |---|---|---|---:|---:|---|
 | NORITSU | color nega | Fuji C200 | 3 | 111 | `realOnly` |
 | NORITSU | color nega | Kodak Ektar 100 | 2 | 76 | `realOnly` |
@@ -52,71 +52,74 @@
 | SP-3000 | color nega | Kodak Portra 160 | 1 | 38 | `realOnly` |
 | SP-3000 | color nega | Kodak Vision3 250D | 2 | 71 | `realOnly` |
 | SP-3000 | color slide | Kodak Ektachrome 100D | 1 | 37 | `realOnly` |
-| **합계** |  |  | **25** | **928** | **15개 `realOnly`** |
+| **Total** |  |  | **25** | **928** | **15 `realOnly`** |
 
 </details>
 
-25와 928은 프로파일 그룹별 관측값의 합입니다. 같은 물리 롤이나 사진이 두 스캐너 그룹에
-들어갈 수 있습니다. 고유한 롤 25개, 고유한 사진 928장이라는 뜻은 아닙니다.
+25 and 928 are sums of observations per profile group. The same physical roll or photograph can
+land in two scanner groups. They do not mean 25 unique rolls or 928 unique photographs.
 
-## 만드는 순서
+## How they are built
 
 ```mermaid
 flowchart LR
-    A["직접 촬영한 필름"] --> B["롤·필름·스캐너별 정리"]
-    B --> C["프레임 분석"]
-    C --> D["밝기·색·중립축·질감 통계"]
-    D --> E["장면 분류와 대표 프레임"]
-    E --> F["롤별 원본 JSON"]
-    F --> G["필름·스캐너 그룹 집계"]
-    G --> H["배포용 JSON과 SHA-256"]
+    A["Film shot for this project"] --> B["Sort by roll, film, scanner"]
+    B --> C["Analyze frames"]
+    C --> D["Brightness, color, neutral axis, texture statistics"]
+    D --> E["Scene grouping and representative frames"]
+    E --> F["Per-roll source JSON"]
+    F --> G["Aggregate by film and scanner group"]
+    G --> H["Distribution JSON and SHA-256"]
 ```
 
-### 1. 촬영과 분류
+### 1. Shooting and sorting
 
-원본은 스캐너, 필름 종류, 필름 이름, 롤 이름으로 나눕니다. 분석 전에 회전과 파일 해석을
-확인합니다. 빈 파일이나 읽지 못하는 파일은 수에 넣지 않습니다.
+Sources are split by scanner, film type, film name, and roll name. Rotation and file parsing are
+confirmed before analysis. Empty or unreadable files do not count.
 
-### 2. 프레임 측정
+### 2. Frame measurement
 
-각 프레임에서 다음 값을 잽니다.
+These values are measured on each frame.
 
-- 밝기 백분위와 양끝 잘림
-- 어두운·중간·밝은 영역의 채널 관계
-- 채도와 색상 분포
-- 낮은 채도 픽셀의 Lab 중립축
-- 기울기, 선명도, 그레인 참고값
+- Brightness percentiles and clipping at both ends
+- Channel relationships in shadows, midtones, and highlights
+- Saturation and hue distribution
+- The Lab neutral axis of low-saturation pixels
+- Gradient, sharpness, and a grain reference value
 
-이 값은 장면 관측입니다. 한 장의 노출이나 피사체를 스캐너의 고정 성질로 단정하지 않습니다.
+These are scene observations. One frame's exposure or subject is never declared a fixed property
+of the scanner.
 
-### 3. 장면 분류
+### 3. Scene grouping
 
-밝기, 대비, 채도, 색상 범위로 장면을 나눕니다. 한 종류의 장면이 전체 프로파일을 끌고 가지
-않도록 그룹별 수와 분포를 남깁니다.
+Scenes are grouped by brightness, contrast, saturation, and hue range. The count and distribution
+per group are recorded so one kind of scene cannot drag the whole profile.
 
-### 4. 대표 프레임
+### 4. Representative frames
 
-사람이 원본을 다시 볼 수 있도록 다음 프레임을 따로 기록합니다.
+These frames are recorded separately so a person can go back to the source.
 
-- 대비가 가장 높은 프레임
-- 디테일이 가장 선명한 프레임
-- 그레인 참고값이 가장 높은 프레임
-- 밝기와 채도 범위를 대표하는 프레임
+- The highest contrast frame
+- The sharpest frame
+- The frame with the highest grain reference value
+- Frames that represent the brightness and saturation range
 
-### 5. 롤과 그룹 집계
+### 5. Roll and group aggregation
 
-`scripts/compile_scanner_profiles.py`가 롤별 자료를 필름·스캐너 그룹으로 묶습니다. 빈 구간을
-관측값 0으로 꾸미지 않습니다. 모든 값이 유한한지와 실제 표본 수를 확인합니다.
+`scripts/compile_scanner_profiles.py` groups per-roll data into film and scanner groups. Empty
+bins are not dressed up as zero observations. It confirms that every value is finite and that the
+sample counts are real.
 
-### 6. JSON과 해시
+### 6. JSON and hashes
 
-최종 파일에는 스키마, ID, 원본 수, 원본 경로, 집계 통계, 검증 상태, `profileHash`가 들어갑니다.
-검사기는 필드, 수, 유한값, 파일명과 ID, 원본 수, 해시를 확인합니다.
+The final file carries the schema, ID, source counts, source paths, aggregate statistics,
+validation status, and `profileHash`. The checker verifies fields, counts, finite values, file
+name against ID, source counts, and the hash.
 
-## JSON 모양
+## Shape of the JSON
 
 <details>
-<summary>프로파일 JSON 예시</summary>
+<summary>Example profile JSON</summary>
 
 ```json
 {
@@ -145,90 +148,94 @@ flowchart LR
 
 </details>
 
-## 주요 항목
+## Main entries
 
-| 항목 | 내용 | 주의할 점 |
+| Entry | Content | Watch out for |
 |---|---|---|
-| `tone` | 밝기 분포와 양끝 잘림 | 한 프레임의 노출을 장비 특성으로 보지 않음 |
-| `color` | 어두운·중간·밝은 영역의 채널과 채도 | 절대 색행렬이 아닌 관측 분포 |
-| `neutralAxis` | 낮은 채도 픽셀의 Lab `a*`, `b*` | 중립 물체가 없는 장면도 있어 표본 수를 함께 기록 |
-| `hueResponse` | 색상 구간별 채도 변화와 색상 회전 | 두 장비 자료가 충분히 맞을 때만 상대 비교 |
-| `texture` | 기울기, 선명도, 그레인 참고값 | 장비 샤프닝 값으로 바로 쓰지 않음 |
-| `sceneBuckets` | 장면별 통계와 대표 프레임 | 사람이 출처를 다시 확인할 수 있게 함 |
+| `tone` | Brightness distribution and clipping at both ends | One frame's exposure is not a machine property |
+| `color` | Channels and saturation in shadows, midtones, highlights | An observed distribution, not an absolute color matrix |
+| `neutralAxis` | Lab `a*` and `b*` of low-saturation pixels | Some scenes have no neutral object, so sample counts go with it |
+| `hueResponse` | Saturation change and hue rotation per hue bin | Relative comparison only when both machines' data lines up |
+| `texture` | Gradient, sharpness, grain reference value | Not used directly as a machine sharpening value |
+| `sceneBuckets` | Per-scene statistics and representative frames | Lets a person trace the source again |
 
-`HS` 타깃의 밝기 채널 샤프닝은 `texture`에서 측정한 장비 상수가 아닙니다. 실제 그레인을 새로
-만들지도 않습니다. `SP`, `MAIN`, `PRINT`에는 이 샤프닝을 넣지 않습니다.
+The brightness channel sharpening in the `HS` target is not a machine constant measured from
+`texture`. It does not synthesize new grain either. `SP`, `MAIN`, and `PRINT` do not include that
+sharpening.
 
-## 증거 상태
+## Evidence status
 
-| 상태 | 뜻 | 사용 범위 |
+| Status | Meaning | Where it can be used |
 |---|---|---|
-| `draft` | 자료나 스키마가 덜 만들어짐 | 번들·자동 사용 금지 |
-| `realOnly` | 실제 스캔은 있으나 별도 기준 자료가 없음 | 수동 선택만, 정확도 주장 금지 |
-| `pairedSmoke` | 쌍 자료로 처리 경로만 확인 | 품질 증거로 사용 금지 |
-| `pairedValidated` | 보정·검증 자료와 회귀 검사를 통과 | 정책이 허용할 때 자동 선택 가능 |
+| `draft` | Data or schema is unfinished | Not for bundling or automatic use |
+| `realOnly` | Real scans exist, but there is no separate reference material | Manual selection only, no accuracy claims |
+| `pairedSmoke` | Paired material confirms the processing path only | Not usable as quality evidence |
+| `pairedValidated` | Passed calibration and validation material plus regression checks | Automatic selection allowed if policy permits |
 
-현재 15개는 모두 `realOnly`입니다. 실제 자료에서 나온 관측이라는 점은 확인할 수 있지만,
-장비와 같은 결과를 낸다고 말할 수는 없습니다.
+All 15 today are `realOnly`. You can confirm they came from observations of real material, but
+not that they produce the same result as the machine.
 
-장비 정확도를 말하려면 다음 자료가 더 필요합니다.
+Claiming machine accuracy needs more material.
 
-- 같은 물리 프레임을 확인할 ID
-- 보정 자료와 분리한 검증 자료
-- 기준 이미지의 생성 조건
-- 스캐너 설정과 작업자의 선택
-- 타깃 batch, 조명, 측정 방법
-- 이미지별 합격 기준
+- An ID that confirms the same physical frame
+- Validation material kept apart from calibration
+- The conditions under which reference images were produced
+- Scanner settings and operator choices
+- Target batch, illumination, measurement method
+- A per-image pass criterion
 
-## 앱에서 쓰는 방법
+## How the app uses them
 
-### 수동 선택
+### Manual selection
 
-현재는 모델명이나 파일 정보만 보고 자동 선택하지 않습니다. 사용자가 `HS` 또는 `SP` 타깃과
-프로파일을 직접 고릅니다. 자동 매칭은 `pairedValidated`만 허용하므로 현재 번들에는 적용되지
-않습니다.
+Nothing is selected automatically today from a model name or file information. You pick the `HS`
+or `SP` target and the profile yourself. Automatic matching is allowed only for
+`pairedValidated`, so it does not apply to the current bundle.
 
-### 두 스캐너의 상대 차이
+### The relative difference between two scanners
 
-장면의 절대 통계를 그대로 쓰지 않고, 두 장비에 대응하는 그룹의 차이만 제한적으로 씁니다.
+Absolute scene statistics are not used as-is. Only the difference between matching groups from
+the two machines is used, and in a limited way.
 
-- 정리한 롤 이름 묶음이 같아야 합니다.
-- 이미지 수 차이는 15% 이하여야 합니다.
-- 색상 구간은 양쪽 표본 수가 기준을 넘어야 합니다.
-- 방향이 뒤집히는 값은 적용하지 않습니다.
-- 서로 반대인 gain 사이의 값은 로그 영역에서 계산합니다.
-- 톤은 Rec.709 감마 밝기에 한 번 적용하고 Lab 색 성분은 보존합니다.
+- The tidied set of roll names has to match.
+- The image count has to differ by 15% or less.
+- A hue bin needs sample counts above the threshold on both sides.
+- Values whose direction flips are not applied.
+- Values between opposing gains are computed in the log domain.
+- Tone is applied once to Rec.709 gamma brightness, and the Lab color components are preserved.
 
-원본 프로파일에는 프레임별 SHA-256이 없습니다. 롤 이름이 같아도 정확히 같은 프레임을 짝지었다는
-증거는 아닙니다.
+The source profiles carry no per-frame SHA-256. Matching roll names are not evidence that the
+exact same frames were paired.
 
-### 흑백과 포지티브
+### Black and white, and positive
 
-흑백에서는 색 성분을 빼고 상대 톤만 씁니다. 포지티브는 한 롤의 절대 밝기를 다른 사진에
-옮기지 않습니다. 다만 `HS`와 `SP`의 기본 스타일은 포지티브에서 절반 강도로 들어가므로
-언제나 `MAIN`과 같은 결과는 아닙니다.
+For black and white, the color components are dropped and only relative tone is used. For
+positive, the absolute brightness of one roll is not carried onto another photograph. That said,
+the base styles of `HS` and `SP` do apply to positives at half strength, so the result is not
+always the same as `MAIN`.
 
-### 질감
+### Texture
 
-같은 프레임의 쌍 자료가 없으면 `texture`를 장비 고유 샤프닝이나 그레인 값으로 쓰지 않습니다.
-초점, 피사체, JPEG 처리, 랩 작업자의 선택이 값에 섞여 있기 때문입니다.
+Without paired material from the same frame, `texture` is not used as a machine-specific
+sharpening or grain value. Focus, subject, JPEG processing, and the lab operator's choices are
+all mixed into those numbers.
 
-## 파일 무결성
+## File integrity
 
-`ScannerProfileRegistry`는 15개 중 일부만 열지 않습니다.
+`ScannerProfileRegistry` never opens just some of the 15.
 
-1. 목록 스키마를 읽습니다.
-2. 모든 파일의 존재와 SHA-256을 확인합니다.
-3. 각 JSON의 `profileHash`를 다시 계산합니다.
-4. ID, 파일명, 스키마, 상태, 수, 유한값을 확인합니다.
-5. 하나라도 틀리면 전체 묶음을 거부합니다.
-6. 모두 맞는 읽기 전용 스냅샷만 캐시합니다.
+1. Read the manifest schema.
+2. Confirm that every file exists and check its SHA-256.
+3. Recompute `profileHash` in each JSON.
+4. Check the ID, file name, schema, status, counts, and finite values.
+5. If any of it is off, refuse the whole bundle.
+6. Cache only a read-only snapshot where everything matched.
 
-내보내기 기록에는 실제로 쓴 프로파일 ID와 SHA-256을 남깁니다.
+The export record keeps the profile ID and SHA-256 that were actually used.
 
-## 확인 명령
+## Commands to check
 
-프로파일 규격 검사:
+Profile contract check:
 
 ```bash
 python3 scripts/validate_scanner_profiles.py \
@@ -236,7 +243,7 @@ python3 scripts/validate_scanner_profiles.py \
   --profiles Sources/Chromabase/ScannerProfiles
 ```
 
-다시 만들기:
+Rebuilding:
 
 ```bash
 python3 scripts/compile_scanner_profiles.py \
@@ -245,7 +252,7 @@ python3 scripts/compile_scanner_profiles.py \
   --resource-out Sources/Chromabase/ScannerProfiles
 ```
 
-REAL/TARGET 품질 검사:
+REAL/TARGET quality gate:
 
 ```bash
 python3 scripts/evaluate_profile_quality.py \
@@ -257,19 +264,20 @@ python3 scripts/evaluate_profile_quality.py \
   --report build/profile-quality-report.json
 ```
 
-현재 저장소에는 출시 주장에 쓸 REAL/TARGET 목록과 승인 기준이 없습니다. 합성 테스트는 검사
-코드의 실패 조건만 확인하며 프로파일 정확도를 증명하지 않습니다.
+The repository currently has no REAL/TARGET manifest or accepted baseline to back a release
+claim. The synthetic tests only confirm the failure conditions of the checking code; they do not
+prove profile accuracy.
 
-## 참고 자료
+## References
 
 - [Kodak Professional Portra 400 technical data](https://www.kodakprofessional.com/sites/default/files/wysiwyg/pro/resources/e4050_portra_400.pdf)
 - [darktable negadoctor](https://docs.darktable.org/usermanual/4.6/en/module-reference/processing-modules/negadoctor/)
 
-위 자료에서 프로파일 숫자를 가져오지는 않았습니다. 필름 베이스, 장면 톤, 장비 스타일을 따로
-다뤄야 한다는 배경을 확인할 때만 참고했습니다. JSON 값은 직접 촬영한 원본과 저장소의 분석 코드로
-만듭니다.
+No profile numbers were taken from those sources. They were read as background for why film base,
+scene tone, and machine style have to be handled separately. The JSON values come from material
+shot for this project and the analysis code in the repository.
 
-## 코드와 관련 문서
+## Code and related documents
 
 - `Sources/Chromabase/ScannerProfiles/`
 - `Sources/Chromabase/Profiles/ScannerProfile/`
@@ -277,6 +285,6 @@ python3 scripts/evaluate_profile_quality.py \
 - `scripts/compile_scanner_profiles.py`
 - `scripts/validate_scanner_profiles.py`
 - `scripts/evaluate_profile_quality.py`
-- [프로파일 품질 검사](../reference/PROFILE_QUALITY_GATE.md)
-- [IT8 색 검사](../reference/IT8_COLOR_VALIDATION.md)
-- [크로마 엔진](CHROMA_ENGINE.md)
+- [Scanner profile quality gate](../reference/PROFILE_QUALITY_GATE.md)
+- [IT8 color validation](../reference/IT8_COLOR_VALIDATION.md)
+- [Chroma Engine](CHROMA_ENGINE.md)

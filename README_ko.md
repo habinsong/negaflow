@@ -7,7 +7,7 @@
 <p align="center">아날로그 필름을 위한 카메라/스캐너 스캔과 현상과 출력까지 전과정을 지원하는 macOS 앱</p>
 
 <p align="center">
-  <a href="docs/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.0%20release-EF8B26" alt="출시 상태"></a>
+  <a href="docs/ko/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.0%20release-EF8B26" alt="출시 상태"></a>
   <a href="#요구-사항"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 이상"></a>
   <a href="Package.swift"><img src="https://img.shields.io/badge/Swift-5.9+-F05138?logo=swift&logoColor=white" alt="Swift 5.9 이상"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0 라이선스"></a>
@@ -88,7 +88,7 @@ GitHub에 공개하는 배포 파일은 Developer ID로 서명하고 Apple 공�
 
 현상 엔진은 **Chroma Engine**, 먼지와 스크래치 복원 기능은 **GrainMend**라는 이름을 사용하며 독자 개발한 프로세스 과정입니다.<br>
 이미지 파일만 가져와도 현상과 내보내기를 사용할 수 있으며 **스캐너 연결은 별도 플러그인이 있을 때만 활성화**됩니다.
-> 확인을 마친 범위는 [프로젝트 상태](docs/product/PROJECT_STATUS.md)에 기록합니다.
+> 확인을 마친 범위는 [프로젝트 상태](docs/ko/product/PROJECT_STATUS.md)에 기록합니다.
 
 
 ---
@@ -108,7 +108,7 @@ GitHub에 공개하는 배포 파일은 Developer ID로 서명하고 Apple 공�
 - `EXPIRED`: 오래된 필름 복구
 
 출력에는 sRGB, Display P3, Adobe RGB나 사용자 RGB ICC를 쓸 수 있습니다.
-반전과 색 처리 순서는 [크로마 엔진 문서](docs/product/CHROMA_ENGINE.md)에서 볼 수 있습니다.
+반전과 색 처리 순서는 [크로마 엔진 문서](docs/ko/product/CHROMA_ENGINE.md)에서 볼 수 있습니다.
 
 
 
@@ -141,7 +141,7 @@ GitHub에 공개하는 배포 파일은 Developer ID로 서명하고 Apple 공�
 **GrainMend RGB**는 하드웨어 적외선 클리닝과 다른 소프트웨어 방식의 독자적 방식이며, <br>
 **GrainMend IR**은 스캐너의 적외선 채널을 사용하며 Digital ICE, iSRD, SRDx의 구현이나 호환 모드가 아닙니다.
 
-구현 방식과 품질·성능 기준은 [GrainMend 문서](docs/product/GRAINMEND.md)에 있습니다.
+구현 방식과 품질·성능 기준은 [GrainMend 문서](docs/ko/product/GRAINMEND.md)에 있습니다.
 
 ---
 
@@ -160,7 +160,7 @@ GitHub에 공개하는 배포 파일은 Developer ID로 서명하고 Apple 공�
 
 `928`장은 각 프로파일의 관측값을 더한 수치입니다. 같은 필름이 여러 장비에 중복 집계될 수 있으므로 서로 다른 사진 928장을 뜻하지는 않습니다. <br>
 그러나 실제 928장의 스캔본을 직접 확인하며 오탐지/오검출 문제 파일은 제외한 수치이며 각종 데이터 실측을 바탕으로 프로파일을 만들었습니다.<br>
-자료 구성과 관련 개발 과정은 [필름 프로파일 문서](docs/product/FILM_PROFILES.md)에 적었습니다.
+자료 구성과 관련 개발 과정은 [필름 프로파일 문서](docs/ko/product/FILM_PROFILES.md)에 적었습니다.
 
 ---
 
@@ -241,7 +241,7 @@ SANE 장치는 별도 GPL 프로젝트인
 | `negaflowApp` | 라이브러리, 현상, 스캔과 내보내기 화면        |
 | `negaflowCLI` | 현상, 스캔, 벤치마크와 자체 점검 명령        |
 
-모듈 사이의 데이터 흐름은 [제품 구조 문서](docs/architecture/PRODUCT_ARCHITECTURE.md)에 있습니다.
+모듈 사이의 데이터 흐름은 [제품 구조 문서](docs/ko/architecture/PRODUCT_ARCHITECTURE.md)에 있습니다.
 
 ## 개발 확인
 
@@ -263,12 +263,12 @@ bash scripts/ci-gate.sh
 
 | 문서                                                 | 내용                              |
 | -------------------------------------------------- | ------------------------------- |
-| [크로마 엔진](docs/product/CHROMA_ENGINE.md)            | 필름 베이스, 반전, 색 처리와 현상 순서         |
-| [GrainMend](docs/product/GRAINMEND.md)             | 결함 검출과 복원, IR, 편집 기록, 성능과 품질 기준 |
-| [필름 프로파일](docs/product/FILM_PROFILES.md)           | 촬영 자료 분석과 프로파일 생성               |
-| [제품 구조](docs/architecture/PRODUCT_ARCHITECTURE.md) | 앱, 엔진, 스캐너, 저장과 내보내기 구조         |
-| [프로젝트 상태](docs/product/PROJECT_STATUS.md)          | 구현 상태, 측정 결과와 남은 검증             |
-| [실기기·화질 점검표](docs/validation/REAL_QA_CHECKLIST.md) | 실제 장비와 화면에서 확인할 항목              |
+| [크로마 엔진](docs/ko/product/CHROMA_ENGINE.md)            | 필름 베이스, 반전, 색 처리와 현상 순서         |
+| [GrainMend](docs/ko/product/GRAINMEND.md)             | 결함 검출과 복원, IR, 편집 기록, 성능과 품질 기준 |
+| [필름 프로파일](docs/ko/product/FILM_PROFILES.md)           | 촬영 자료 분석과 프로파일 생성               |
+| [제품 구조](docs/ko/architecture/PRODUCT_ARCHITECTURE.md) | 앱, 엔진, 스캐너, 저장과 내보내기 구조         |
+| [프로젝트 상태](docs/ko/product/PROJECT_STATUS.md)          | 구현 상태, 측정 결과와 남은 검증             |
+| [실기기·화질 점검표](docs/ko/validation/REAL_QA_CHECKLIST.md) | 실제 장비와 화면에서 확인할 항목              |
 
 ---
 ## 라이선스

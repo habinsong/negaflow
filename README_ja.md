@@ -7,7 +7,7 @@
 <p align="center">アナログフィルムのカメラ複写・スキャンから現像までを支える macOS アプリ</p>
 
 <p align="center">
-  <a href="docs/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.0%20release-EF8B26" alt="リリース状況"></a>
+  <a href="docs/ja/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.0%20release-EF8B26" alt="リリース状況"></a>
   <a href="#動作環境"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 以降"></a>
   <a href="Package.swift"><img src="https://img.shields.io/badge/Swift-5.9+-F05138?logo=swift&logoColor=white" alt="Swift 5.9 以降"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0 ライセンス"></a>
@@ -42,7 +42,7 @@ negaflow は、スキャンしたフィルムやデジタルカメラで複写�
 > 結局のところ、道具はきちんと動き、気軽に使えて、速く、面倒なことを正しく片づけてくれるのが一番です。<br>
 > **negaflow** は独立して開発しているネイティブ macOS アプリで、フィルムラボと個人の両方の作業を取り入れています。
 >
-> 確認済みの範囲は[プロジェクトの状況](docs/product/PROJECT_STATUS.md)に記録しています。<br>
+> 確認済みの範囲は[プロジェクトの状況](docs/ja/product/PROJECT_STATUS.md)に記録しています。<br>
 > **ニエプスが最初の写真を撮ってから200年となる、この夏を記念して。**
 
 ---
@@ -96,7 +96,7 @@ Chroma Engine は `Chromabase` モジュールに入っているフィルム反�
 - `EXPIRED`: 古いフィルムの救済
 
 出力には sRGB、Display P3、Adobe RGB、または任意の RGB ICC を使えます。<br>
-反転と色処理の順序は [Chroma Engine](docs/product/CHROMA_ENGINE.md)にあります。
+反転と色処理の順序は [Chroma Engine](docs/ja/product/CHROMA_ENGINE.md)にあります。
 
 ## GrainMend
 
@@ -124,7 +124,7 @@ GrainMend は、フィルムのゴミ、ピンホール、キズ、乳剤の傷�
 GrainMend RGB はハードウェアの赤外線クリーニングとは別の方式です。<br>
 GrainMend IR も Digital ICE、iSRD、SRDx の実装や互換モードではありません。
 
-実装方法と画質・性能の基準は [GrainMend](docs/product/GRAINMEND.md)にあります。
+実装方法と画質・性能の基準は [GrainMend](docs/ja/product/GRAINMEND.md)にあります。
 
 ## フィルムプロファイル
 
@@ -139,7 +139,7 @@ GrainMend IR も Digital ICE、iSRD、SRDx の実装や互換モードではあ�
 `928` はプロファイルごとの観測数を足した値です。<br>
 同じフィルムが複数のスキャナーに重複して数えられるため、異なる写真が 928 枚あるという意味ではありません。<br>
 元になった 928 件のスキャンはすべて自分で確認し、誤検出や見逃しのあるファイルを測定前に除外しました。<br>
-資料と生成手順は [フィルムプロファイル](docs/product/FILM_PROFILES.md)に記載しています。
+資料と生成手順は [フィルムプロファイル](docs/ja/product/FILM_PROFILES.md)に記載しています。
 
 ## 基本の使い方
 
@@ -217,7 +217,7 @@ negaflow 本体は SANE コードを含まず、リンクもしません。
 | `negaflowApp` | ライブラリ、現像、スキャン、書き出しの画面 |
 | `negaflowCLI` | 現像、スキャン、ベンチマーク、自己診断コマンド |
 
-モジュール間のデータの流れは [製品構成](docs/architecture/PRODUCT_ARCHITECTURE.md)にあります。
+モジュール間のデータの流れは [製品構成](docs/ja/architecture/PRODUCT_ARCHITECTURE.md)にあります。
 
 ## 開発時の確認
 
@@ -239,12 +239,12 @@ bash scripts/ci-gate.sh
 
 | ドキュメント | 内容 |
 |---|---|
-| [Chroma Engine](docs/product/CHROMA_ENGINE.md) | フィルムベース、反転、色処理、現像順序 |
-| [GrainMend](docs/product/GRAINMEND.md) | 欠陥の検出と修復、IR、編集履歴、性能と画質基準 |
-| [フィルムプロファイル](docs/product/FILM_PROFILES.md) | 撮影資料の分析とプロファイル生成 |
-| [製品構成](docs/architecture/PRODUCT_ARCHITECTURE.md) | アプリ、エンジン、スキャナー、保存、書き出し |
-| [プロジェクトの状況](docs/product/PROJECT_STATUS.md) | 実装状況、測定結果、残っている確認 |
-| [実機・画質確認表](docs/validation/REAL_QA_CHECKLIST.md) | 実機と画面で確認する項目 |
+| [Chroma Engine](docs/ja/product/CHROMA_ENGINE.md) | フィルムベース、反転、色処理、現像順序 |
+| [GrainMend](docs/ja/product/GRAINMEND.md) | 欠陥の検出と修復、IR、編集履歴、性能と画質基準 |
+| [フィルムプロファイル](docs/ja/product/FILM_PROFILES.md) | 撮影資料の分析とプロファイル生成 |
+| [製品構成](docs/ja/architecture/PRODUCT_ARCHITECTURE.md) | アプリ、エンジン、スキャナー、保存、書き出し |
+| [プロジェクトの状況](docs/ja/product/PROJECT_STATUS.md) | 実装状況、測定結果、残っている確認 |
+| [実機・画質確認表](docs/ja/validation/REAL_QA_CHECKLIST.md) | 実機と画面で確認する項目 |
 
 ## ライセンス
 

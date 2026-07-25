@@ -1,66 +1,68 @@
-# Negaflow 문서
+# Negaflow documentation
 
-필요한 문서부터 바로 찾을 수 있도록 내용별로 나눴습니다.
+Split by subject so you can open the one you need first.
+
+English · [한국어](ko/README.md) · [日本語](ja/README.md) · [简体中文](zh-Hans/README.md) · [Français](fr/README.md) · [Deutsch](de/README.md)
 
 ```mermaid
 flowchart LR
-    A["제품을 먼저 알고 싶다"] --> P["product"]
-    B["코드와 데이터 흐름을 본다"] --> R["architecture"]
-    C["형식과 수치를 확인한다"] --> S["reference"]
-    D["출시 가능 여부를 확인한다"] --> V["validation"]
+    A["I want to know the product"] --> P["product"]
+    B["I want the code and data flow"] --> R["architecture"]
+    C["I want formats and numbers"] --> S["reference"]
+    D["I want to know if it can ship"] --> V["validation"]
 ```
 
 > [!NOTE]
-> 현재 버전은 `1.0.0`입니다. 구현 여부와 실제로 확인한 범위는
-> [지금 어디까지 됐나](product/PROJECT_STATUS.md)를 기준으로 봅니다.
+> The current version is `1.0.0`. What is built and what was actually checked
+> is tracked in [Project status](product/PROJECT_STATUS.md).
 
-## 제품
+## Product
 
-| 문서 | 먼저 볼 때 |
+| Document | Read it when |
 |---|---|
-| [크로마 엔진](product/CHROMA_ENGINE.md) | 필름 반전과 현상 순서가 궁금할 때 |
-| [GrainMend](product/GRAINMEND.md) | 먼지·스크래치 복원이 어떻게 작동하는지 볼 때 |
-| [필름 프로파일](product/FILM_PROFILES.md) | 번들 프로파일의 출처와 한계를 확인할 때 |
-| [지금 어디까지 됐나](product/PROJECT_STATUS.md) | 구현, 측정, 배포 상태를 확인할 때 |
+| [Chroma Engine](product/CHROMA_ENGINE.md) | You want the film inversion and develop order |
+| [GrainMend](product/GRAINMEND.md) | You want to see how dust and scratch repair works |
+| [Film profiles](product/FILM_PROFILES.md) | You want where the bundled profiles came from, and their limits |
+| [Project status](product/PROJECT_STATUS.md) | You want the implementation, measurement, and release state |
 
-## 구조
+## Architecture
 
-| 문서 | 다루는 내용 |
+| Document | What it covers |
 |---|---|
-| [제품 구조](architecture/PRODUCT_ARCHITECTURE.md) | 앱, 엔진, 저장소, 출력 사이의 데이터 흐름 |
-| [카탈로그 저장 구조](architecture/CATALOG_STORAGE.md) | SQLite 선택 이유, 이전 방식, 측정값 |
-| [스캐너 플러그인 구조](architecture/SCANNER_PLUGINS.md) | 외부 프로세스, 승인, 스캔 파일 공개 |
-| [라이브러리 보존 아카이브](architecture/LIBRARY_ARCHIVE.md) | 원본과 편집 기록을 묶어 보관하는 방식 |
+| [Product architecture](architecture/PRODUCT_ARCHITECTURE.md) | Data flow between app, engine, storage, and export |
+| [Catalog storage](architecture/CATALOG_STORAGE.md) | Why SQLite, the old format, and the measurements |
+| [Scanner plugin architecture](architecture/SCANNER_PLUGINS.md) | External process, approval, scan file disclosure |
+| [Library archive](architecture/LIBRARY_ARCHIVE.md) | How originals and edit history are stored together |
 
-## 규격
+## Reference
 
-| 문서 | 다루는 내용 |
+| Document | What it covers |
 |---|---|
-| [CLI 스캐너 JSON](reference/CLI_JSON.md) | `detect --json`, `capabilities --json` 출력 형식 |
-| [렌더 기록](reference/RENDER_MANIFEST.md) | 원본, 편집 값, 출력 파일의 SHA-256 관계 |
-| [고정 인화 응답](reference/PRINT_RESPONSE.md) | `shoulder-print-response-v4`의 식과 기준점 |
-| [스캐너 프로파일 품질 검사](reference/PROFILE_QUALITY_GATE.md) | REAL/TARGET 쌍 자료의 출시 판정 규칙 |
-| [스캐너 노이즈 프로파일](reference/SCANNER_NOISE_PROFILES.md) | 반복 스캔 측정과 자동 적용 조건 |
-| [GrainMend IR이 피해야 할 필름](reference/INFRARED_LIMITS.md) | 흑백, Kodachrome, RGB/IR 정렬 한계 |
-| [IT8 색 검사](reference/IT8_COLOR_VALIDATION.md) | 패치 측정, 증거 등급, 합성 회귀 |
+| [Scanner CLI JSON](reference/CLI_JSON.md) | Output shape of `detect --json` and `capabilities --json` |
+| [Render manifest](reference/RENDER_MANIFEST.md) | SHA-256 links between source, edit values, and output file |
+| [Fixed print response](reference/PRINT_RESPONSE.md) | The formula and anchors of `shoulder-print-response-v4` |
+| [Scanner profile quality gate](reference/PROFILE_QUALITY_GATE.md) | Release rules for REAL/TARGET pair material |
+| [Scanner noise profiles](reference/SCANNER_NOISE_PROFILES.md) | Repeat-scan measurement and when it applies automatically |
+| [Film GrainMend IR should avoid](reference/INFRARED_LIMITS.md) | Black and white, Kodachrome, RGB/IR alignment limits |
+| [IT8 color validation](reference/IT8_COLOR_VALIDATION.md) | Patch measurement, evidence grades, synthetic regression |
 
-## 검증
+## Validation
 
-| 문서 | 쓰는 때 |
+| Document | Use it when |
 |---|---|
-| [출시 전 실기기 점검표](validation/REAL_QA_CHECKLIST.md) | 실제 Mac, 화면, 스캐너, 필름을 확인할 때 |
-| [GrainMend 실제 스캔 비교](validation/GRAINMEND_CORPUS.md) | FILM-R v2 44쌍을 다시 측정할 때 |
+| [Real-device QA checklist](validation/REAL_QA_CHECKLIST.md) | You check a real Mac, display, scanner, and film |
+| [GrainMend real scan comparison](validation/GRAINMEND_CORPUS.md) | You measure the 44 FILM-R v2 pairs again |
 
-## 출처와 배포
+## Provenance and distribution
 
-| 문서 | 쓰는 때 |
+| Document | Use it when |
 |---|---|
-| [코드와 리소스 출처](legal/PROVENANCE.md) | Apache/GPL 경계와 번들 리소스 해시를 확인할 때 |
-| [`TRADEMARKS.md`](../TRADEMARKS.md) | 필름·스캐너·제품 이름의 식별 목적을 확인할 때 |
+| [Code and resource provenance](legal/PROVENANCE.md) | You check the Apache/GPL boundary and bundled resource hashes |
+| [`TRADEMARKS.md`](../TRADEMARKS.md) | You check how film, scanner, and product names are used |
 
-## 읽는 법
+## How these are written
 
-- 제품 설명에는 지금 사용자가 보는 동작만 적습니다.
-- 구조 문서에는 책임과 데이터 이동을 적습니다.
-- 규격 문서의 코드값, 필드명, 해시는 원문 그대로 둡니다.
-- 검증 문서는 통과한 것과 아직 확인하지 않은 것을 나눠 적습니다.
+- Product documents describe only what a user sees today.
+- Architecture documents describe responsibilities and how data moves.
+- Code values, field names, and hashes in reference documents stay as they are.
+- Validation documents separate what passed from what is not checked yet.

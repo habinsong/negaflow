@@ -1,81 +1,83 @@
-# 스캐너 노이즈 프로파일
+# Scanner noise profiles
 
-[문서 홈](../README.md)
+[Docs home](../README.md)
 
-노이즈 프로파일은 일반 사진 한 장에서 만들 수 없습니다. 사진의 고주파 성분에는 피사체와 필름
-그레인이 섞여 있기 때문입니다.
+You cannot build a noise profile from one ordinary photograph. The high-frequency part of a
+photograph mixes the subject with film grain.
 
-같은 설정으로 평탄하거나 단계가 있는 표적을 적어도 세 번 스캔해야 합니다. 같은 위치의 픽셀이
-얼마나 흔들리는지 보고 신호 밝기별 분산을 구합니다.
+Scan a flat or stepped target at least three times with the same settings. How much the pixel
+at the same position moves gives the variance per signal level.
 
-- [ISO 15739:2023](https://www.iso.org/standard/82233.html)은 디지털 이미징 장치의 신호별
-  노이즈 측정과 보고 방법을 정합니다.
-- [ISO 21550:2004](https://www.iso.org/standard/35939.html)은 투과·반사 스캐너의 동적 범위
-  측정 방법을 정합니다.
+- [ISO 15739:2023](https://www.iso.org/standard/82233.html) sets how noise per signal is
+  measured and reported for digital imaging devices.
+- [ISO 21550:2004](https://www.iso.org/standard/35939.html) sets how the dynamic range of
+  transmissive and reflective scanners is measured.
 
-ISO 15739의 주 대상은 디지털 카메라입니다. Negaflow가 스캐너도 같은 규격이라고 주장하는 것은
-아닙니다. 반복 측정과 신호별 분산이라는 원칙만 참고합니다.
+ISO 15739 is written for digital cameras. Negaflow does not claim scanners fall under the same
+standard. Only the ideas of repeated measurement and variance per signal are borrowed.
 
 > [!NOTE]
-> 현재 번들에는 자동 적용할 수 있는 `holdoutValidated` 장치 노이즈 프로파일이 없습니다.
-> 기존 프로파일의 질감 수치를 센서 노이즈 측정값으로 대신 쓰지 않습니다.
+> There is no `holdoutValidated` device noise profile in the current bundle, so none applies
+> automatically. Texture numbers from existing profiles are not used as sensor noise data.
 
-## 한 프로파일이 묶는 조건
+## What one profile covers
 
-`ScannerNoiseProfile`은 다음 값이 모두 같을 때만 맞는 프로파일로 봅니다.
+`ScannerNoiseProfile` counts as a match only when all of these are the same.
 
-- 스캐너 제조사와 모델
-- 해상도 DPI
-- 채널당 비트 심도
-- 컬러 모드
-- 다중 노출 사용 여부
+- Scanner maker and model
+- Resolution in DPI
+- Bit depth per channel
+- Color mode
+- Whether multi-exposure is on
 
-비슷한 모델이나 다른 해상도의 값을 대신 쓰지 않습니다. 정확히 맞는 자동 프로파일이 둘 이상이면
-하나를 임의로 고르지 않고 실패합니다.
+Values from a similar model or another resolution are not borrowed. If more than one automatic
+profile matches exactly, it fails instead of picking one.
 
-최소 3회의 같은 장면 linear RGB 스캔에서 채널별로 다음 식을 맞춥니다.
+From at least three linear RGB scans of the same scene, this is fitted per channel.
 
 ```math
 \operatorname{variance}(x) = m_{\mathrm{shot}}x + b_{\mathrm{read}}
 ```
 
-프로파일에 함께 적는 값:
+Written down with the profile:
 
-- 보정 자료 SHA-256
-- 측정 프레임 수와 표본 수
-- 관측한 신호 범위
-- 회귀 R²
-- 검증한 노이즈 제거 강도
+- SHA-256 of the calibration material
+- Number of measured frames and samples
+- The signal range that was observed
+- Regression R²
+- The noise reduction strength that was validated
 
-강도의 코드상 최대치는 비정상 계산을 막는 안전장치일 뿐 화질 합격선이 아닙니다.
+The maximum strength in code only guards against a broken calculation. It is not a quality
+pass mark.
 
-## 상태
+## States
 
-| 상태 | 뜻 | 자동 적용 |
+| State | Meaning | Applies automatically |
 |---|---|---|
-| `draft` | 측정이나 조정이 끝나지 않음 | 안 함 |
-| `measured` | 실기기 반복 측정은 있으나 독립 검증이 없음 | 안 함 |
-| `holdoutValidated` | 별도 검증 자료로 강도를 확인함 | 조건이 정확히 맞을 때만 |
+| `draft` | Measurement or tuning is unfinished | No |
+| `measured` | Repeated measurement on a real device, no independent validation | No |
+| `holdoutValidated` | Strength checked against separate validation material | Only on an exact match |
 
-자동 적용에는 `holdoutValidated` 프로파일 하나가 정확히 맞아야 합니다. 보정 자료와 검증 자료의
-SHA-256, 파일 구조 검사도 모두 통과해야 합니다. `draft`와 `measured`는 기존 일반 설정을
-바꾸지 못합니다.
+Automatic use needs exactly one `holdoutValidated` profile that matches. The SHA-256 of the
+calibration and validation material and the file structure checks have to pass too. `draft` and
+`measured` cannot change the existing general settings.
 
-## 현재 상태
+## Where it stands
 
-저장소의 NORITSU와 SP-3000 색 프로파일에는 실제 장면의 `texture` 값이 있습니다. 하지만 이 값에는
-피사체, 초점, 필름 그레인이 섞여 있어 센서 노이즈 자료로 쓸 수 없습니다.
+The NORITSU and SP-3000 color profiles in the repository carry `texture` values from real
+scenes. Those values mix subject, focus, and film grain, so they are no use as sensor noise
+data.
 
-반복 평탄 표적과 별도 검증 자료가 아직 없습니다. 그래서 검증된 장치 노이즈 프로파일은
-번들하지 않았고, 자동 경로는 기존 일반 설정을 씁니다.
+Repeated flat targets and separate validation material do not exist yet. No validated device
+noise profile is bundled, and the automatic path uses the existing general settings.
 
-실제 프로파일을 넣으려면 다음 자료가 모두 필요합니다.
+Adding a real profile needs all of this.
 
-1. 같은 장치·해상도·비트 심도·컬러 모드·다중 노출 설정의 linear 스캔 3회 이상
-2. 보정 자료의 파일 목록과 SHA-256
-3. 보정에 쓰지 않은 검증 장면과 SHA-256
-4. 노이즈 감소와 디테일·필름 그레인 보존을 함께 비교한 결과
-5. 실제 사용자의 100% 확대 확인
+1. Three or more linear scans with the same device, resolution, bit depth, color mode, and multi-exposure setting
+2. The file list and SHA-256 of the calibration material
+3. A validation scene that was not used for calibration, with its SHA-256
+4. A comparison of noise reduction against detail and film grain preservation
+5. A 100% zoom check by a real user
 
-실기기 캡처는 `/Users/songhabin/negaflow-scanner-sane` 플러그인에서 처리합니다. SANE 옵션과
-장치 제어 코드는 이 저장소에 넣지 않습니다.
+Capture on real hardware is handled by the `negaflow-scanner-sane` plugin. SANE options and
+device control code do not go into this repository.

@@ -7,7 +7,7 @@
 <p align="center">支持胶片翻拍、扫描和完整显影流程的 macOS 应用</p>
 
 <p align="center">
-  <a href="docs/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.0%20release-EF8B26" alt="发布状态"></a>
+  <a href="docs/zh-Hans/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.0%20release-EF8B26" alt="发布状态"></a>
   <a href="#系统要求"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 或更高版本"></a>
   <a href="Package.swift"><img src="https://img.shields.io/badge/Swift-5.9+-F05138?logo=swift&logoColor=white" alt="Swift 5.9 或更高版本"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0 许可证"></a>
@@ -42,7 +42,7 @@ negaflow 是一款 macOS 应用，用于导入、反相和显影扫描胶片或�
 > 归根到底，工具最重要的是好用、顺手、够快，并能把琐碎的事情正确处理好。<br>
 > **negaflow** 是独立开发的原生 macOS 应用，把胶片实验室和个人使用者的工作方式都融了进来。
 >
-> 已经完成的检查记录在[项目状态](docs/product/PROJECT_STATUS.md)中。<br>
+> 已经完成的检查记录在[项目状态](docs/zh-Hans/product/PROJECT_STATUS.md)中。<br>
 > **谨以此纪念尼埃普斯拍下第一张照片200周年的这个夏天。**
 
 ---
@@ -96,7 +96,7 @@ Chroma Engine 是 `Chromabase` 模块中的胶片反相和显影引擎。<br>
 - `EXPIRED`：老胶片修复
 
 输出可使用 sRGB、Display P3、Adobe RGB 或自定义 RGB ICC。<br>
-反相和色彩处理顺序见 [Chroma Engine](docs/product/CHROMA_ENGINE.md)。
+反相和色彩处理顺序见 [Chroma Engine](docs/zh-Hans/product/CHROMA_ENGINE.md)。
 
 ## GrainMend
 
@@ -122,7 +122,7 @@ GrainMend 用于修复胶片上的灰尘、针孔、划痕和乳剂损伤。<br>
 GrainMend RGB 与硬件红外除尘的工作方式不同。<br>
 GrainMend IR 也不是 Digital ICE、iSRD 或 SRDx 的实现或兼容模式。
 
-实现方式以及画质、性能标准见 [GrainMend](docs/product/GRAINMEND.md)。
+实现方式以及画质、性能标准见 [GrainMend](docs/zh-Hans/product/GRAINMEND.md)。
 
 ## 胶片配置文件
 
@@ -136,7 +136,7 @@ GrainMend IR 也不是 Digital ICE、iSRD 或 SRDx 的实现或兼容模式。
 `928` 是各配置文件组观测数的总和，不代表 928 张互不相同的照片。<br>
 同一卷胶片可能在多个扫描仪组中重复统计。<br>
 我逐一检查了作为来源的 928 份扫描，并在测量前排除了存在误检或漏检的文件。<br>
-数据构成和生成过程见[胶片配置文件](docs/product/FILM_PROFILES.md)。
+数据构成和生成过程见[胶片配置文件](docs/zh-Hans/product/FILM_PROFILES.md)。
 
 ## 基本使用顺序
 
@@ -214,7 +214,7 @@ negaflow 主应用不包含或链接 SANE 代码。
 | `negaflowApp` | 图库、显影、扫描和导出界面 |
 | `negaflowCLI` | 显影、扫描、基准测试和自检命令 |
 
-模块之间的数据流见[产品结构](docs/architecture/PRODUCT_ARCHITECTURE.md)。
+模块之间的数据流见[产品结构](docs/zh-Hans/architecture/PRODUCT_ARCHITECTURE.md)。
 
 ## 开发检查
 
@@ -236,12 +236,12 @@ bash scripts/ci-gate.sh
 
 | 文档 | 内容 |
 |---|---|
-| [Chroma Engine](docs/product/CHROMA_ENGINE.md) | 片基、反相、色彩处理和显影顺序 |
-| [GrainMend](docs/product/GRAINMEND.md) | 缺陷检测与修复、IR、编辑记录、性能和画质标准 |
-| [胶片配置文件](docs/product/FILM_PROFILES.md) | 拍摄资料分析和配置文件生成 |
-| [产品结构](docs/architecture/PRODUCT_ARCHITECTURE.md) | 应用、引擎、扫描仪、存储和导出 |
-| [项目状态](docs/product/PROJECT_STATUS.md) | 实现状态、测量结果和待验证内容 |
-| [真机与画质检查表](docs/validation/REAL_QA_CHECKLIST.md) | 需要真机或人工查看的项目 |
+| [Chroma Engine](docs/zh-Hans/product/CHROMA_ENGINE.md) | 片基、反相、色彩处理和显影顺序 |
+| [GrainMend](docs/zh-Hans/product/GRAINMEND.md) | 缺陷检测与修复、IR、编辑记录、性能和画质标准 |
+| [胶片配置文件](docs/zh-Hans/product/FILM_PROFILES.md) | 拍摄资料分析和配置文件生成 |
+| [产品结构](docs/zh-Hans/architecture/PRODUCT_ARCHITECTURE.md) | 应用、引擎、扫描仪、存储和导出 |
+| [项目状态](docs/zh-Hans/product/PROJECT_STATUS.md) | 实现状态、测量结果和待验证内容 |
+| [真机与画质检查表](docs/zh-Hans/validation/REAL_QA_CHECKLIST.md) | 需要真机或人工查看的项目 |
 
 ## 许可证
 

@@ -15,6 +15,47 @@ READMES = (
     "README_fr.md",
     "README_de.md",
 )
+# English is the default and lives at the top of docs/. Every other language is a
+# sibling folder holding the same set of documents.
+TRANSLATIONS = ("ko", "ja", "zh-Hans", "fr", "de")
+DOCS_HOME_LINKS = {
+    "": "[Docs home](../README.md)",
+    "ko": "[문서 홈](../README.md)",
+    "ja": "[ドキュメントホーム](../README.md)",
+    "zh-Hans": "[文档首页](../README.md)",
+    "fr": "[Accueil de la documentation](../README.md)",
+    "de": "[Dokumentationsstart](../README.md)",
+}
+README_LANGUAGES = {
+    "README.md": "",
+    "README_ko.md": "ko",
+    "README_ja.md": "ja",
+    "README_zh-Hans.md": "zh-Hans",
+    "README_fr.md": "fr",
+    "README_de.md": "de",
+}
+CANONICAL_PRODUCT_DOCS = (
+    "product/PROJECT_STATUS.md",
+    "product/CHROMA_ENGINE.md",
+    "product/GRAINMEND.md",
+    "product/FILM_PROFILES.md",
+    "architecture/PRODUCT_ARCHITECTURE.md",
+    "validation/REAL_QA_CHECKLIST.md",
+)
+
+
+def docs_root(language: str) -> Path:
+    return ROOT / "docs" / language if language else ROOT / "docs"
+
+
+def documents_in(language: str) -> list[Path]:
+    base = docs_root(language)
+    found = []
+    for document in sorted(base.rglob("*.md")):
+        if not language and document.relative_to(base).parts[0] in TRANSLATIONS:
+            continue
+        found.append(document)
+    return found
 
 
 class DocumentationStateTests(unittest.TestCase):
@@ -47,15 +88,30 @@ class DocumentationStateTests(unittest.TestCase):
         self.assertEqual(ignored, [], f"ignored local documentation links: {ignored}")
 
     def test_docs_index_lists_every_markdown_document(self) -> None:
-        index = (ROOT / "docs/README.md").read_text(encoding="utf-8")
-        for document in sorted((ROOT / "docs").rglob("*.md")):
-            if document.name == "README.md":
-                continue
-            relative = document.relative_to(ROOT / "docs").as_posix()
-            with self.subTest(document=relative):
-                text = document.read_text(encoding="utf-8")
-                self.assertIn(f"({relative})", index)
-                self.assertIn("[문서 홈](../README.md)", text)
+        for language in ("", *TRANSLATIONS):
+            base = docs_root(language)
+            index = (base / "README.md").read_text(encoding="utf-8")
+            for document in documents_in(language):
+                if document.name == "README.md":
+                    continue
+                relative = document.relative_to(base).as_posix()
+                with self.subTest(language=language or "en", document=relative):
+                    text = document.read_text(encoding="utf-8")
+                    self.assertIn(f"({relative})", index)
+                    self.assertIn(DOCS_HOME_LINKS[language], text)
+
+    def test_every_language_carries_the_same_documents(self) -> None:
+        english = {
+            document.relative_to(docs_root("")).as_posix()
+            for document in documents_in("")
+        }
+        for language in TRANSLATIONS:
+            translated = {
+                document.relative_to(docs_root(language)).as_posix()
+                for document in documents_in(language)
+            }
+            with self.subTest(language=language):
+                self.assertEqual(translated, english)
 
     def test_docs_use_balanced_supported_markdown_blocks(self) -> None:
         for document in sorted((ROOT / "docs").rglob("*.md")):
@@ -67,15 +123,12 @@ class DocumentationStateTests(unittest.TestCase):
                 self.assertNotRegex(text, r"[├└│▼]")
 
     def test_every_readme_links_the_canonical_product_docs(self) -> None:
-        for name in READMES:
+        for name, language in README_LANGUAGES.items():
+            prefix = f"docs/{language}/" if language else "docs/"
             with self.subTest(name=name):
                 text = (ROOT / name).read_text(encoding="utf-8")
-                self.assertIn("docs/product/PROJECT_STATUS.md", text)
-                self.assertIn("docs/product/CHROMA_ENGINE.md", text)
-                self.assertIn("docs/product/GRAINMEND.md", text)
-                self.assertIn("docs/product/FILM_PROFILES.md", text)
-                self.assertIn("docs/architecture/PRODUCT_ARCHITECTURE.md", text)
-                self.assertIn("docs/validation/REAL_QA_CHECKLIST.md", text)
+                for document in CANONICAL_PRODUCT_DOCS:
+                    self.assertIn(prefix + document, text)
 
     def test_localized_readmes_keep_the_korean_structure_and_commands(self) -> None:
         def structure(text: str) -> tuple[list[int], int, list[str]]:
@@ -111,7 +164,9 @@ class DocumentationStateTests(unittest.TestCase):
                     self.assertIn(token, text)
 
     def test_status_describes_sqlite_primary_and_json_interchange_boundary(self) -> None:
-        status = (ROOT / "docs/product/PROJECT_STATUS.md").read_text(encoding="utf-8")
+        # Korean is the source the other languages are written from, so the wording
+        # of the storage boundary is pinned there.
+        status = (ROOT / "docs/ko/product/PROJECT_STATUS.md").read_text(encoding="utf-8")
         self.assertIn("기본 저장소는 `library.sqlite`", status)
         self.assertIn("백업·아카이브 교환 형식", status)
         self.assertIn("증거가 맞지 않으면 닫힌 상태로 실패", status)
@@ -127,7 +182,9 @@ class DocumentationStateTests(unittest.TestCase):
             (ROOT / name).read_text(encoding="utf-8")
             for name in READMES
         ]
-        texts.append((ROOT / "docs/architecture/SCANNER_PLUGINS.md").read_text(encoding="utf-8"))
+        for language in ("", *TRANSLATIONS):
+            plugins = docs_root(language) / "architecture/SCANNER_PLUGINS.md"
+            texts.append(plugins.read_text(encoding="utf-8"))
         combined = "\n".join(texts)
         self.assertNotIn("brew install " + "sane-" + "backends", combined)
         self.assertNotIn("scan" + "image -L", combined)
@@ -135,7 +192,7 @@ class DocumentationStateTests(unittest.TestCase):
         self.assertIn("negaflow-scanner-sane", combined)
 
     def test_real_qa_owns_manual_evidence_and_blocking_rules(self) -> None:
-        qa = (ROOT / "docs/validation/REAL_QA_CHECKLIST.md").read_text(encoding="utf-8")
+        qa = (ROOT / "docs/ko/validation/REAL_QA_CHECKLIST.md").read_text(encoding="utf-8")
         self.assertIn("최종 화면 확인과 실제 장비 확인은 사용자가", qa)
         self.assertIn("실제 스캐너", qa)
         self.assertIn("자동 `REJECT`", qa)

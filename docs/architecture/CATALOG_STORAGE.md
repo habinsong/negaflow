@@ -1,29 +1,30 @@
-# 카탈로그 저장 구조
+# Catalog storage
 
-[문서 홈](../README.md)
+[Docs home](../README.md)
 
-현재 기본 저장소는 `library.sqlite`입니다. 기존 `library.json`은 이전 자료를 옮기거나 진단용
-파일을 만들 때만 씁니다. 두 파일을 동시에 갱신하는 `dual-write` 방식은 쓰지 않습니다.
+The main store is `library.sqlite`. The old `library.json` is used only to bring older material
+across or to write a diagnostic file. Nothing updates both files at once, so there is no
+`dual-write`.
 
-백업과 보존 아카이브에는 기기 사이에서 옮길 수 있는 JSON 표현을 넣습니다. 실행 중인 SQLite
-파일 자체는 넣지 않습니다.
+Backups and preservation archives carry a JSON form that moves between machines. The running
+SQLite file does not go in.
 
-| 구분 | 형식 | 용도 |
+| Kind | Format | Used for |
 |---|---|---|
-| 기본 카탈로그 | SQLite | 앱 실행, 검색, 저장, 복구 |
-| 이전 자료 | JSON | 기존 카탈로그 가져오기 |
-| 백업·보존 아카이브 | JSON 표현 | 다른 기기로 이동하거나 복원 |
+| Main catalog | SQLite | Running the app, search, save, recovery |
+| Older material | JSON | Importing an existing catalog |
+| Backup and preservation archive | JSON form | Moving to another machine, or restoring |
 
 > [!IMPORTANT]
-> 카탈로그가 없거나 손상됐을 때 빈 라이브러리로 시작하지 않습니다. 복구할 수 있는 정상 세대가
-> 확인될 때까지 원본 카탈로그와 사진 파일을 그대로 둡니다.
+> A missing or damaged catalog does not start an empty library. The original catalog and the
+> photo files stay untouched until a healthy generation is found.
 
-## 실측 결과
+## Measurements
 
-다음 명령으로 같은 Mac에서 JSON과 SQLite를 비교했습니다.
+JSON and SQLite were compared on the same Mac with these commands.
 
 <details>
-<summary>측정 명령</summary>
+<summary>Measurement commands</summary>
 
 ```bash
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
@@ -41,91 +42,96 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
 
 </details>
 
-측정 환경은 2026-07-12, Mac14,3, arm64, 8코어, 메모리 24 GiB, macOS 26.5, Swift Release
-빌드입니다. 다른 Mac의 속도를 보장하는 수치는 아닙니다. 같은 환경에서 회귀를 찾기 위한
-기준값입니다.
+Measured on 2026-07-12: Mac14,3, arm64, 8 cores, 24 GiB memory, macOS 26.5, Swift Release
+build. These numbers say nothing about another Mac. They are a baseline for catching
+regressions in the same setup.
 
-| 프레임 | JSON 크기 | 인코딩 p50 | 디코딩 p50 | 파일 읽기 p50 |
+| Frames | JSON size | Encode p50 | Decode p50 | File read p50 |
 |---:|---:|---:|---:|---:|
-| 1,000 | 2,192,671바이트 | 98 ms | 241 ms | 231 ms |
-| 10,000 | 21,934,841바이트 | 811 ms | 2,301 ms | 2,299 ms |
-| 50,000 | 109,721,335바이트 | 2,746 ms | 7,353 ms | 7,397 ms |
+| 1,000 | 2,192,671 bytes | 98 ms | 241 ms | 231 ms |
+| 10,000 | 21,934,841 bytes | 811 ms | 2,301 ms | 2,299 ms |
+| 50,000 | 109,721,335 bytes | 2,746 ms | 7,353 ms | 7,397 ms |
 
-50,000프레임 JSON 인코딩 때 resident memory는 약 191 MiB, max RSS는 약 107 MiB 늘었습니다.
-같은 자료의 메모리 검색 준비는 32.86 ms, 전체 이름 정렬은 86.01 ms, 필터 후 이름 정렬은
-158.37 ms였습니다. 필터 투영을 네 번 연속 실행한 p50은 512.80 ms였습니다.
+Encoding 50,000 frames to JSON grew resident memory by about 191 MiB and max RSS by about
+107 MiB. On the same material, preparing the in-memory search took 32.86 ms, sorting all names
+took 86.01 ms, and sorting names after a filter took 158.37 ms. Four filter projections in a row
+had a p50 of 512.80 ms.
 
-현재 SQLite 행 저장소의 50,000프레임 Release p95:
+The SQLite row store at 50,000 frames, Release p95:
 
-| 작업 | p95 |
+| Operation | p95 |
 |---|---:|
-| 새 커밋 | 3,714 ms |
-| 기본 파일 읽기 | 7,446 ms |
-| 변경 없는 커밋 | 3,856 ms |
-| 프레임당 크기 | 약 4,211바이트 |
+| New commit | 3,714 ms |
+| Reading the main file | 7,446 ms |
+| Commit with no changes | 3,856 ms |
+| Size per frame | about 4,211 bytes |
 
-백업은 데이터베이스 전체를 `Data`로 올리지 않습니다. 복제를 지원하는 임시 사본을 만든 뒤
-원자적으로 바꿉니다. 백업 전 검사도 모든 프레임을 디코딩하지 않고 SQLite 무결성과 스키마만
-확인합니다. 이 변경으로 변경 없는 커밋 p95가 11,245 ms에서 3,856 ms로 줄었습니다.
+A backup does not pull the whole database into `Data`. It makes a temporary copy that supports
+replication, then swaps it atomically. The pre-backup check does not decode every frame either:
+it checks SQLite integrity and the schema. That took the p95 for a commit with no changes from
+11,245 ms down to 3,856 ms.
 
-## SQLite를 고른 이유
+## Why SQLite
 
-- 여러 행의 변경을 한 트랜잭션으로 묶을 수 있습니다.
-- 행과 인덱스로 필요한 프레임만 읽을 수 있습니다.
-- macOS의 SQLite C API를 써서 새 패키지를 추가하지 않아도 됩니다.
-- 손상된 저장소를 빈 라이브러리로 취급하지 않는 현재 복구 원칙을 유지할 수 있습니다.
+- Many row changes fit in one transaction.
+- Rows and indexes let it read only the frames it needs.
+- The SQLite C API on macOS means no new package.
+- The current recovery rule survives: a damaged store is never treated as an empty library.
 
-현재는 `journal_mode=DELETE`, `synchronous=FULL`을 씁니다. WAL은 데이터베이스와 `-wal` 파일을
-한 묶음으로 다뤄야 하기 때문입니다. 실행 중인 데이터베이스를 임의로 복사하지 않고, 연결을
-닫은 뒤 확인한 기본 파일만 복구 사본으로 만듭니다.
+Right now it runs `journal_mode=DELETE` and `synchronous=FULL`. WAL would mean handling the
+database and the `-wal` file as one unit. The running database is never copied on a whim. Only
+the main file, checked after the connection closes, becomes a recovery copy.
 
-## 코드의 책임
+## Who does what in the code
 
-- `CatalogStore`: 연결, 트랜잭션, 스키마 버전, 무결성 검사
-- `CatalogMigration`: 읽기 전용 JSON 가져오기와 버전별 변환
-- 엔티티 테이블: 프레임, 원본, 순서, 롤, 폴더, 컬렉션, 검색, 스캔 작업
-- `LibraryBackupStore`: 이동 가능한 JSON 백업, 복원 사전 검사, 복구 정보
+- `CatalogStore`: connection, transactions, schema version, integrity checks
+- `CatalogMigration`: read-only JSON import and per-version conversion
+- Entity tables: frames, originals, ordering, rolls, folders, collections, search, scan jobs
+- `LibraryBackupStore`: portable JSON backup, restore pre-checks, recovery information
 
-현상 값과 버전별 편집 기록은 엔티티마다 JSON BLOB으로 저장합니다. 원본 픽셀, 썸네일,
-GrainMend 캐시는 데이터베이스에 넣지 않습니다.
+Develop values and versioned edit history are stored as a JSON BLOB per entity. Source pixels,
+thumbnails, and GrainMend caches stay out of the database.
 
-아직 검색·정렬용 열과 인덱스가 충분하지 않아 시작할 때 전체 카탈로그를 메모리에 올립니다.
-그래서 현재 SQLite 읽기 시간은 JSON과 비슷합니다. 다음 단계는 필요한 열과 프레임만 읽는
-인덱스 조회입니다.
+There are still not enough columns and indexes for search and sorting, so the whole catalog
+loads into memory at startup. That is why SQLite read time looks like JSON today. Next comes
+index lookups that read only the columns and frames in use.
 
-## 이전 JSON을 옮기는 순서
+## Moving older JSON across
 
 ```mermaid
 flowchart LR
-    A["기존 JSON의 버전과 LibraryCatalogHealth 검사"] --> B["임시 SQLite 생성"]
-    B --> C["한 트랜잭션으로 자료 이전"]
-    C --> D["ID·순서·소속·작업 비교"]
-    D --> E["integrity_check와 안전 조건 확인"]
-    E --> F["JSON은 복구 세대로 보존"]
-    F --> G["SQLite를 기본 저장소로 전환"]
-    A -. 실패 .-> H["기존 JSON 유지"]
-    B -. 실패 .-> H
-    C -. 실패 .-> H
-    D -. 실패 .-> H
-    E -. 실패 .-> H
+    A["Check JSON version and LibraryCatalogHealth"] --> B["Create a temporary SQLite"]
+    B --> C["Move the material in one transaction"]
+    C --> D["Compare IDs, order, membership, jobs"]
+    D --> E["Check integrity_check and the safety conditions"]
+    E --> F["Keep the JSON as a recovery generation"]
+    F --> G["Switch to SQLite as the main store"]
+    A -. fails .-> H["Keep the existing JSON"]
+    B -. fails .-> H
+    C -. fails .-> H
+    D -. fails .-> H
+    E -. fails .-> H
 ```
 
-하나라도 실패하면 기존 JSON을 그대로 둡니다. 빈 카탈로그로 시작하지 않습니다. 중간 파일과
-표식이 남았을 때도 원본 SHA-256과 두 카탈로그가 맞아야 이어서 진행합니다.
+If any step fails, the existing JSON stays as it is. It never starts with an empty catalog. Even
+when intermediate files and markers are left behind, work continues only when the source SHA-256
+and both catalogs agree.
 
-SQLite로 옮긴 뒤에는 JSON으로 자동 복귀하지 않습니다. 이전 앱이 JSON을 수정해 저장소가 둘로
-갈라지는 일을 막기 위해 최소 읽기 버전과 이전 완료 표식을 확인합니다.
+After the move there is no automatic fall back to JSON. To stop an older app from editing the
+JSON and splitting the store in two, the minimum read version and the migration marker are
+checked.
 
-## 고르지 않은 방식
+## What was not chosen
 
-- **카탈로그 전체를 JSON 하나에 저장:** 단순하지만 50,000프레임 읽기에 약 7.4초가 걸리고,
-  저장할 때마다 전체 파일을 다시 씁니다.
-- **프레임마다 JSON 파일을 나눔:** 일부 쓰기는 줄지만 여러 엔티티를 한 번에 저장하고 관계를
-  검증하는 코드를 직접 만들어야 합니다.
-- **Core Data로 즉시 교체:** 가능한 선택이지만 현재의 Codable 변환과 복구 계약을 한꺼번에
-  다시 만들어야 합니다. 실제 시제품이 raw SQLite보다 낫다는 측정이 나오면 다시 검토합니다.
+- **The whole catalog in one JSON file:** simple, but reading 50,000 frames takes about
+  7.4 seconds, and every save rewrites the file.
+- **One JSON file per frame:** some writes shrink, but saving several entities at once and
+  validating their relationships means writing that code by hand.
+- **Switching to Core Data now:** possible, but it means rebuilding the Codable conversion and
+  the recovery contract in one move. Worth revisiting if a real prototype measures better than
+  raw SQLite.
 
-## 참고 자료
+## Sources
 
 - [Apple: Tuning for Performance and Responsiveness](https://developer.apple.com/library/archive/documentation/General/Conceptual/MOSXAppProgrammingGuide/Performance/Performance.html)
 - [Apple: Reducing disk writes](https://developer.apple.com/documentation/xcode/reducing-disk-writes)

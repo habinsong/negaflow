@@ -1,33 +1,34 @@
-# CLI 스캐너 JSON
+# Scanner CLI JSON
 
-[문서 홈](../README.md)
+[Docs home](../README.md)
 
-스크립트나 다른 앱이 스캐너 정보를 읽을 때 쓰는 규격입니다. 실제 스캐너 구현과는 분리되어
-있습니다. CLI는 `ScannerKit`이 받은 장치 정보와 기능만 JSON으로 바꿉니다.
+This is the shape a script or another app reads scanner information from. It stays separate
+from the scanner implementation. The CLI only turns the device information and capabilities
+that `ScannerKit` received into JSON.
 
-| 항목 | 계약 |
+| Item | Contract |
 |---|---|
-| 지원 명령 | `detect --json`, `capabilities <scannerID> --json` |
-| stdout | JSON 문서 하나와 마지막 줄바꿈 |
-| stderr | 진단 로그 |
-| 현재 스키마 | `negaflow.scanner-cli`, 버전 `1` |
+| Supported commands | `detect --json`, `capabilities <scannerID> --json` |
+| stdout | One JSON document and a final newline |
+| stderr | Diagnostic log |
+| Current schema | `negaflow.scanner-cli`, version `1` |
 
-## 명령
+## Commands
 
 ```bash
 negaflow detect [--demo] --json
 negaflow capabilities <scannerID> [--demo] --json
 ```
 
-현재 `--json`은 위 두 읽기 전용 명령에서만 쓸 수 있습니다. 파일을 바꾸거나 진행 상황을
-보내는 `scan`, `develop` 명령에 붙이면 `unsupported_json_command` 오류로 끝납니다.
+For now `--json` works only on those two read-only commands. Put it on `scan` or `develop`,
+which change files or report progress, and it ends with an `unsupported_json_command` error.
 
-## 공통 형식
+## Common shape
 
-성공과 실패 모두 stdout에 JSON 문서 하나만 씁니다. 마지막에는 줄바꿈이 들어갑니다.
+Success and failure both write one JSON document to stdout, with a newline at the end.
 
 <details>
-<summary>성공 응답 예시</summary>
+<summary>Example of a success response</summary>
 
 ```json
 {
@@ -42,13 +43,13 @@ negaflow capabilities <scannerID> [--demo] --json
 
 </details>
 
-실패하면 `status`는 `error`, `payload`는 `null`입니다. `error`에는 바뀌지 않는 기계용 코드와
-사람이 읽는 설명이 들어갑니다. 진단 로그는 stderr로 보냅니다. stdout에는 로그나 진행률을
-섞지 않습니다.
+On failure `status` is `error` and `payload` is `null`. `error` carries a machine code that does
+not change and a description for people. Diagnostic logs go to stderr. Logs and progress never
+get mixed into stdout.
 
-## 기능 정보
+## Capability information
 
-`capabilities`의 `payload`에는 다음 필드가 모두 들어갑니다.
+The `payload` of `capabilities` always carries all of these fields.
 
 - `resolutionsDPI`, `modes`, `bitDepths`
 - `sourceModes`, `transparencyModes`
@@ -61,22 +62,22 @@ negaflow capabilities <scannerID> [--demo] --json
 - `minScanArea`, `maxScanArea`, `scanAreaUnit`
 - `outputFormats`, `estimatedScanSpeeds`
 
-장치가 알려 주지 않은 값은 추측하지 않습니다. 값에 맞춰 `null`, 빈 배열, `false`, 또는
-플러그인이 보낸 `disabledReasons`를 그대로 씁니다.
+Values the device did not report are not guessed. Depending on the value it uses `null`, an
+empty array, `false`, or the `disabledReasons` the plugin sent.
 
-`estimatedScanSpeeds`는 다음 객체의 배열이며 DPI 오름차순입니다.
+`estimatedScanSpeeds` is an array of this object, sorted by ascending DPI.
 
 ```json
 { "dpi": 3600, "seconds": 42.0 }
 ```
 
-앱 화면과 CLI는 같은 `ScannerCapabilities`를 읽습니다. 일치 검사에서는 화면에 열린 기능과
-JSON 필드가 같은 값을 따르는지 확인합니다.
+The app screen and the CLI read the same `ScannerCapabilities`. The consistency check confirms
+that the controls opened on screen follow the same values as the JSON fields.
 
-## 버전 규칙
+## Version rules
 
-- 기존 필드의 뜻이나 자료형을 바꾸지 않습니다.
-- 새 선택 필드는 이전 프로그램이 모르는 필드를 무시할 수 있을 때만 추가합니다.
-- 필드 삭제, 이름 변경, 자료형 변경 때는 `schemaVersion`을 올립니다.
-- 해상도, 모드, 비트 심도는 플러그인 순서를 지킵니다.
-- 예상 속도만 DPI로 정렬합니다.
+- The meaning and type of an existing field do not change.
+- A new optional field goes in only when older programs can ignore fields they do not know.
+- Removing a field, renaming it, or changing its type raises `schemaVersion`.
+- Resolutions, modes, and bit depths keep the plugin's order.
+- Only the estimated speeds are sorted by DPI.

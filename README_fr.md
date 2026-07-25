@@ -7,7 +7,7 @@
 <p align="center">Une application macOS pour numériser et développer les films, au scanner ou à l’appareil photo</p>
 
 <p align="center">
-  <a href="docs/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.0%20release-EF8B26" alt="État de la version"></a>
+  <a href="docs/fr/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.0%20release-EF8B26" alt="État de la version"></a>
   <a href="#prérequis"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 ou version ultérieure"></a>
   <a href="Package.swift"><img src="https://img.shields.io/badge/Swift-5.9+-F05138?logo=swift&logoColor=white" alt="Swift 5.9 ou version ultérieure"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Licence Apache 2.0"></a>
@@ -45,7 +45,7 @@ Les commandes du scanner n’apparaissent que si un module externe est installé
 > Un outil de ce genre doit avant tout bien fonctionner, rester simple, aller vite et s’occuper correctement du travail répétitif.<br>
 > Développé de façon indépendante comme une application macOS native, **negaflow** rassemble des habitudes de laboratoire et des pratiques personnelles.
 >
-> Les vérifications terminées sont notées dans [État du projet](docs/product/PROJECT_STATUS.md). <br>
+> Les vérifications terminées sont notées dans [État du projet](docs/fr/product/PROJECT_STATUS.md). <br>
 > **Pour cet été qui marque les 200 ans de la première photographie de Niépce.**
 
 ---
@@ -99,7 +99,7 @@ Cibles de développement :
 - `EXPIRED` : récupération de films anciens
 
 La sortie accepte sRGB, Display P3, Adobe RGB ou un profil ICC RGB personnalisé.<br>
-L’ordre de l’inversion et du traitement couleur est décrit dans [Chroma Engine](docs/product/CHROMA_ENGINE.md).
+L’ordre de l’inversion et du traitement couleur est décrit dans [Chroma Engine](docs/fr/product/CHROMA_ENGINE.md).
 
 ## GrainMend
 
@@ -127,7 +127,7 @@ Si le module du scanner fournit un canal infrarouge, le résultat IR rejoint le 
 GrainMend RGB ne fonctionne pas comme le nettoyage infrarouge matériel.<br>
 GrainMend IR n’est ni une implémentation ni un mode compatible de Digital ICE, iSRD ou SRDx.
 
-La mise en œuvre et les contrôles de qualité et de performance sont décrits dans [GrainMend](docs/product/GRAINMEND.md).
+La mise en œuvre et les contrôles de qualité et de performance sont décrits dans [GrainMend](docs/fr/product/GRAINMEND.md).
 
 ## Profils de film
 
@@ -142,7 +142,7 @@ L’application vérifie aussi le SHA-256 de chaque profil et du manifeste.
 `928` est la somme des observations de tous les groupes de profils, et non 928 photos différentes.<br>
 Le même film peut compter dans plusieurs groupes de scanners.<br>
 J’ai examiné moi-même les 928 scans sources et écarté avant mesure les fichiers présentant de fausses détections ou des défauts manqués.<br>
-Les données et leur fabrication sont décrites dans [Profils de film](docs/product/FILM_PROFILES.md).
+Les données et leur fabrication sont décrites dans [Profils de film](docs/fr/product/FILM_PROFILES.md).
 
 ## Parcours de base
 
@@ -220,7 +220,7 @@ L’application negaflow ne contient ni ne lie le code SANE.
 | `negaflowApp` | Interface de bibliothèque, développement, scan et export |
 | `negaflowCLI` | Commandes de développement, scan, banc d’essai et autotest |
 
-Le flux de données entre les modules est décrit dans [Architecture du produit](docs/architecture/PRODUCT_ARCHITECTURE.md).
+Le flux de données entre les modules est décrit dans [Architecture du produit](docs/fr/architecture/PRODUCT_ARCHITECTURE.md).
 
 ## Vérifications de développement
 
@@ -242,12 +242,12 @@ Le matériel, la qualité d’image finale, la signature et la notarisation dema
 
 | Document | Contenu |
 |---|---|
-| [Chroma Engine](docs/product/CHROMA_ENGINE.md) | Base du film, inversion, couleur et ordre du développement |
-| [GrainMend](docs/product/GRAINMEND.md) | Détection, réparation, IR, historique, performance et qualité |
-| [Profils de film](docs/product/FILM_PROFILES.md) | Analyse des sources et création des profils |
-| [Architecture du produit](docs/architecture/PRODUCT_ARCHITECTURE.md) | Application, moteur, scanner, stockage et export |
-| [État du projet](docs/product/PROJECT_STATUS.md) | État de l’implémentation, mesures et vérifications restantes |
-| [Liste de QA réelle](docs/validation/REAL_QA_CHECKLIST.md) | Points à vérifier sur le matériel et à l’écran |
+| [Chroma Engine](docs/fr/product/CHROMA_ENGINE.md) | Base du film, inversion, couleur et ordre du développement |
+| [GrainMend](docs/fr/product/GRAINMEND.md) | Détection, réparation, IR, historique, performance et qualité |
+| [Profils de film](docs/fr/product/FILM_PROFILES.md) | Analyse des sources et création des profils |
+| [Architecture du produit](docs/fr/architecture/PRODUCT_ARCHITECTURE.md) | Application, moteur, scanner, stockage et export |
+| [État du projet](docs/fr/product/PROJECT_STATUS.md) | État de l’implémentation, mesures et vérifications restantes |
+| [Liste de QA réelle](docs/fr/validation/REAL_QA_CHECKLIST.md) | Points à vérifier sur le matériel et à l’écran |
 
 ## Licence
 

@@ -1,53 +1,54 @@
-# 렌더 기록
+# Render manifest
 
-[문서 홈](../README.md)
+[Docs home](../README.md)
 
-사이드카의 `renderManifest`는 원본, 편집 값, 최종 파일을 SHA-256으로 잇습니다. 파일 경로는
-기록하지 않습니다.
+`renderManifest` in the sidecar links the source, the edit values, and the final file with
+SHA-256. File paths are not recorded.
 
 ```mermaid
 flowchart LR
-    A["원본 바이트"] --> D["renderManifest v3"]
-    B["현상·GrainMend·출력 설정"] --> D
-    C["프로파일·렌더러·디코더 정보"] --> D
-    E["완성된 출력 파일"] --> D
-    D --> F["사이드카"]
+    A["Source bytes"] --> D["renderManifest v3"]
+    B["Develop, GrainMend, export settings"] --> D
+    C["Profile, renderer, decoder info"] --> D
+    E["Finished output file"] --> D
+    D --> F["Sidecar"]
 ```
 
 > [!IMPORTANT]
-> `renderManifest`는 파일과 설정 사이의 해시 관계를 남기는 기록입니다. 디지털 서명이나
-> 인증서가 없으므로 C2PA Content Credentials라고 부르지 않습니다.
+> `renderManifest` is a record of hash relationships between files and settings. There is no
+> digital signature and no certificate, so it is not called C2PA Content Credentials.
 
-v3에 들어가는 값:
+What v3 holds:
 
-- 원본 바이트 수, SHA-256, `sha-256` 알고리즘 이름
-- 실제 렌더 입력 종류
-- GrainMend 캐시 파일 또는 메모리 입력의 확인 범위
-- 현상, GrainMend, 출력 설정의 SHA-256
-- 스캐너 프로파일 SHA-256
-- 디코더 출처와 크로마 엔진 렌더러 버전
-- 최종 파일의 SHA-256, 바이트 수, 픽셀 크기, 형식
+- Source byte count, SHA-256, and the algorithm name `sha-256`
+- Which render input was actually used
+- The checked scope of the GrainMend cache file or memory input
+- SHA-256 of the develop, GrainMend, and export settings
+- SHA-256 of the scanner profile
+- Decoder origin and chroma engine renderer version
+- SHA-256, byte count, pixel size, and format of the final file
 
-인코더가 파일 쓰기를 끝내면 ImageIO로 다시 열어 픽셀 크기를 확인하고 파일 전체의 해시를
-계산합니다. 그 뒤에 사이드카를 씁니다. v3 검사가 실패하면 완성된 출력 묶음으로 공개하지
-않습니다.
+After the encoder finishes writing, the file is opened again with ImageIO to confirm the pixel
+size, and the whole file is hashed. The sidecar is written after that. If the v3 check fails,
+the result is not published as a finished output set.
 
-## GrainMend 입력
+## GrainMend input
 
-- `cleanedMemory`: 메모리 픽셀의 표준 해시가 없으므로 확인 범위를
-  `sourceAndDevelopRecipe`로 기록합니다. GrainMend 편집 기록의 SHA-256은 꼭 넣습니다.
-- `cleanedFile`: GrainMend 캐시 파일 전체와 편집 기록을 모두 해시합니다.
+- `cleanedMemory`: pixels in memory have no standard hash, so the checked scope is recorded as
+  `sourceAndDevelopRecipe`. The SHA-256 of the GrainMend edit history is always included.
+- `cleanedFile`: the whole GrainMend cache file and the edit history are both hashed.
 
-이전 v1과 v2 파일도 읽을 수 있습니다. 당시 없었던 출력 해시나 GrainMend 기록 해시를 나중에
-추측해 채우지는 않습니다.
+Old v1 and v2 files still open. Output hashes or GrainMend history hashes that did not exist
+back then are not filled in later by guessing.
 
-## C2PA와 다른 점
+## How this differs from C2PA
 
-이 기록에는 디지털 서명, 인증서, 신뢰 체인, 내장 claim store가 없습니다. 따라서 C2PA
-Content Credentials라고 부르지 않습니다. C2PA의 hard binding과 처리 이력 원칙, PREMIS의
-무결성 개념을 참고했지만 실제로 확인할 수 있는 SHA-256 값만 담습니다.
+There is no digital signature, certificate, trust chain, or embedded claim store here. That is
+why it is not called C2PA Content Credentials. The hard binding and processing history ideas of
+C2PA and the integrity idea of PREMIS were useful as references, but only SHA-256 values that
+can be checked go in.
 
-참고 자료:
+Sources:
 
 - [C2PA Content Credentials 2.2](https://spec.c2pa.org/specifications/specifications/2.2/specs/C2PA_Specification.html)
 - [C2PA hard-binding guidance](https://spec.c2pa.org/specifications/specifications/2.4/guidance/Guidance.html)

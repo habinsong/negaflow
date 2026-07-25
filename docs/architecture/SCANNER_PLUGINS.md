@@ -1,139 +1,143 @@
-# 스캐너 플러그인 구조
+# Scanner plugin architecture
 
-[문서 홈](../README.md)
+[Docs home](../README.md)
 
-Negaflow의 기본 입력은 이미지 가져오기입니다. 실제 스캐너는 외부 플러그인이 있을 때만
-연결합니다.
+The default input for Negaflow is importing images. A real scanner is connected only when an
+external plugin is present.
 
 > [!IMPORTANT]
-> 앱은 스캐너 모델명으로 기능을 추측하지 않습니다. 플러그인이 보고한 기능만 화면과 요청에
-> 사용하며, 데모 장치는 사용자가 직접 데모 모드를 골랐을 때만 나타납니다.
+> The app does not guess capabilities from a scanner model name. Only what the plugin reports
+> goes into the screen and the requests, and the demo device shows up only when you pick demo
+> mode yourself.
 
-## 구성
+## Parts
 
-| 구성 | 역할 |
+| Part | Role |
 |---|---|
-| 이미지 가져오기 | RAW, DNG, TIFF, PNG, JPEG를 현상 경로로 보냅니다. |
-| 외부 플러그인 | 별도 프로세스로 실제 장치를 다루고 JSON으로 통신합니다. |
-| 데모 스캐너 | 개발용 `Negaflow Scanner`와 `Negaflow Flatbed Scanner`를 제공합니다. 직접 데모를 골라야 씁니다. |
-| ImageCaptureCore 연결 | macOS Image Capture 장치를 위한 비활성 호환 코드입니다. |
+| Image import | Sends RAW, DNG, TIFF, PNG, and JPEG into the develop path. |
+| External plugin | Runs as its own process, drives the real device, talks JSON. |
+| Demo scanner | Provides `Negaflow Scanner` and `Negaflow Flatbed Scanner` for development. You have to select demo to use it. |
+| ImageCaptureCore link | Inactive compatibility code for macOS Image Capture devices. |
 
-이 저장소에는 SANE 구현이 없습니다. SANE 코드는 별도 GPL 프로젝트에 있습니다.
+There is no SANE implementation in this repository. That code sits in a separate GPL project.
 
 - <https://github.com/habinsong/negaflow-scanner-sane>
 
-## 연결 구조
+## How it connects
 
 ```mermaid
 flowchart LR
-    UI["negaflow 화면"] --> SK["ScannerKit"]
+    UI["negaflow screen"] --> SK["ScannerKit"]
     SK --> EXT["ExternalScannerBackend"]
     SK --> DEMO["MockScannerBackend"]
     SK --> ICC["InactiveImageCaptureBackend"]
-    EXT --> PLUGIN["설치한 외부 플러그인"]
-    DEMO --> SYNTH["개발용 합성 이미지"]
-    ICC --> OFF["현재 비활성"]
+    EXT --> PLUGIN["installed external plugin"]
+    DEMO --> SYNTH["synthetic images for development"]
+    ICC --> OFF["inactive for now"]
 ```
 
-화면은 `ScannerBackend`만 봅니다. 플러그인의 장치 ID는 앱에서
-`plugin:<pluginId>:<deviceId>`로 표시합니다.
+The screen sees only `ScannerBackend`. A plugin device ID appears in the app as
+`plugin:<pluginId>:<deviceId>`.
 
-플러그인을 실행할 때는 `plugin:<pluginId>:`를 떼고 플러그인 자체의 장치 ID만 보냅니다.
+When the plugin runs, `plugin:<pluginId>:` is stripped and only the plugin's own device ID is
+sent.
 
-## 플러그인 찾기
+## Finding plugins
 
-기본 폴더는 `~/Library/Application Support/negaflow/Plugins/<id>/manifest.json`입니다.
+The default folder is `~/Library/Application Support/negaflow/Plugins/<id>/manifest.json`.
 
-테스트와 로컬 개발에서는 `NEGAFLOW_PLUGINS_DIR`로 다른 폴더를 지정할 수 있습니다.
+For tests and local development, `NEGAFLOW_PLUGINS_DIR` points at another folder.
 
-| 필드 | 규칙 |
+| Field | Rule |
 |---|---|
-| `schemaVersion` | 현재 정확히 `1` |
-| `protocolVersion` | 생략하면 `1`, 지원값은 `1`과 `2` |
-| `id` | 플러그인 고유 ID |
-| `name` | 화면에 표시할 이름 |
-| `kind` | 플러그인 종류 |
-| `license` | 배포 라이선스 |
-| `homepage` | 프로젝트 주소 |
-| `executable` | 실행 파일 경로 |
+| `schemaVersion` | Exactly `1` today |
+| `protocolVersion` | `1` if omitted, `1` and `2` supported |
+| `id` | Unique plugin ID |
+| `name` | Name shown on screen |
+| `kind` | Plugin kind |
+| `license` | Distribution license |
+| `homepage` | Project address |
+| `executable` | Path to the executable |
 
-`id`는 1~64자의 ASCII 값입니다. 첫 글자는 영문자나 숫자, 나머지는 영문자, 숫자, `.`, `_`,
-`-`만 쓸 수 있습니다. `:`는 장치 ID 구분자라 허용하지 않습니다.
+`id` is 1 to 64 ASCII characters. The first is a letter or digit; the rest are letters, digits,
+`.`, `_`, or `-`. `:` is the device ID separator, so it is not allowed.
 
-목록과 실행 파일이 모두 맞아야 플러그인을 엽니다. 이전·미래 스키마나 모르는 프로토콜을
-추측해 읽지 않습니다.
+A plugin opens only when the manifest and the executable both check out. Older or future schemas
+and unknown protocols are not read by guesswork.
 
-### 파일 안전 검사
+### File safety checks
 
 > [!WARNING]
-> 목록이나 실행 파일의 바이트가 바뀌면 이전 승인을 폐기합니다. 실행 직전에도 소유권, 권한,
-> 심볼릭 링크 여부와 SHA-256을 다시 확인합니다.
+> If the bytes of the manifest or the executable change, the earlier approval is discarded.
+> Ownership, permissions, symlink status, and SHA-256 are checked again right before running.
 
-- 플러그인 폴더, 목록, 실행 파일은 현재 사용자 소유여야 합니다.
-- 그룹이나 다른 사용자가 쓸 수 있으면 거부합니다.
-- 심볼릭 링크는 거부합니다.
-- 목록과 실행 파일의 SHA-256을 기록합니다.
-- 처음 쓸 때 사용자가 승인해야 합니다.
-- 파일 바이트가 바뀌면 승인을 무효로 합니다.
-- 실행 직전에 ID를 다시 계산합니다.
+- The plugin folder, manifest, and executable have to be owned by the current user.
+- Writable by group or others is refused.
+- Symlinks are refused.
+- The SHA-256 of the manifest and the executable is recorded.
+- The user approves it the first time it is used.
+- Changed file bytes void the approval.
+- The IDs are recomputed right before running.
 
-## 명령
+## Commands
 
-플러그인은 별도 프로세스로 실행합니다.
+The plugin runs as its own process.
 
-| 명령 | 결과 |
+| Command | Result |
 |---|---|
-| `detect` | JSON 장치 목록 |
-| `capabilities <deviceId>` | JSON 기능 목록. `detect`가 보고한 장치 ID·제조사·모델 JSON을 stdin으로 받을 수 있음 |
-| `scan` | stdin으로 설정 JSON, stdout으로 진행 NDJSON과 마지막 결과 |
+| `detect` | JSON device list |
+| `capabilities <deviceId>` | JSON capability list. Can take the device ID, vendor, and model JSON reported by `detect` on stdin |
+| `scan` | Settings JSON on stdin; progress NDJSON and a final result on stdout |
 
-## 스캔 프로토콜
+## Scan protocol
 
-### 버전 1
+### Version 1
 
-기존 호환 규격입니다. 요청과 NDJSON에 `protocolVersion`, `requestID`, `sequence`가 없습니다.
-실제 적용 설정을 보고하지 못하므로 결과는 `.unknownLegacy(protocolVersion: 1)`로 기록합니다.
-요청값을 검증된 적용값처럼 복사하지 않습니다.
+The older compatibility spec. Requests and NDJSON have no `protocolVersion`, `requestID`, or
+`sequence`. It cannot report the settings that were actually applied, so the result is recorded
+as `.unknownLegacy(protocolVersion: 1)`. Request values are not copied over as if they had been
+verified.
 
-### 버전 2
+### Version 2
 
-목록에 `"protocolVersion": 2`가 있을 때만 씁니다.
+Used only when the manifest carries `"protocolVersion": 2`.
 
-요청에 들어가는 값:
+What goes into a request:
 
 - `protocolVersion: 2`
-- 앱이 만든 UUID `requestID`
+- A `requestID` UUID created by the app
 
-`capabilities` 응답은 선택 필드 `capabilityToken`을 돌려줄 수 있습니다. 앱은 이 값을 해석하지
-않고 같은 장치의 다음 v2 `scan` 요청에만 그대로 전달합니다. v1 요청에는 넣지 않으며, 다른
-장치의 토큰을 섞지 않습니다. 플러그인은 토큰의 형식과 유효성을 직접 검사해야 합니다.
+A `capabilities` response may return the optional field `capabilityToken`. The app does not
+interpret it. It passes the value through to the next v2 `scan` request for the same device, and
+nowhere else. It is left out of v1 requests, and tokens are never mixed between devices. The
+plugin has to check the token's format and validity itself.
 
-앱은 같은 backend에 속한 다른 모델로 잘못 재연결되는 일을 막을 수 있도록, 직전 `detect`가
-보고한 `deviceID`, `vendor`, `model`을 `capabilities`의 선택적 stdin JSON으로 다시 전달합니다.
-기존 플러그인은 이 입력을 무시할 수 있으며, 장치 주소가 바뀔 수 있는 플러그인은 capability
-스냅샷에 이 동일성을 묶어 다음 `scan`에서도 검증해야 합니다.
+To stop a wrong reconnection to another model on the same backend, the app passes the
+`deviceID`, `vendor`, and `model` from the last `detect` back in as optional stdin JSON for
+`capabilities`. Existing plugins can ignore this input. A plugin whose device address can change
+should tie that identity into the capability snapshot and check it again on the next `scan`.
 
-각 NDJSON 이벤트는 같은 버전과 요청 ID를 반복하고, 이전보다 큰 0 이상의 `sequence`를 가져야
-합니다. 이벤트는 `progress`, `result`, `error`만 허용합니다.
+Every NDJSON event repeats the same version and request ID, and carries a `sequence` of zero or
+more that is larger than the one before. Only `progress`, `result`, and `error` are allowed.
 
-`result`와 `error`는 마지막 이벤트입니다. 뒤에 이벤트가 오면 실패합니다. 오류로 끝나지 않은
-스캔에는 `result`가 정확히 하나 있어야 합니다.
+`result` and `error` are final events. Anything after them fails. A scan that did not end in an
+error has exactly one `result`.
 
-다음 문제는 모두 닫힌 상태로 실패합니다.
+All of these fail closed.
 
-- 읽을 수 없는 이벤트
-- 빠지거나 다른 버전·요청 ID
-- 중복되거나 거꾸로 된 순서
-- 모르는 이벤트
-- 결과 중복
-- 마지막 이벤트 뒤의 추가 출력
-- 잘못된 UTF-8
+- An event that cannot be read
+- A missing or different version or request ID
+- A repeated or out-of-order sequence
+- An unknown event
+- A duplicate result
+- Extra output after the final event
+- Invalid UTF-8
 
-v2 규격 위반은 일반 시간 제한을 기다리지 않고 플러그인을 바로 끝냅니다.
+A v2 spec violation ends the plugin immediately instead of waiting for the usual time limit.
 
-### 실제 적용 설정
+### Settings that were actually applied
 
-v2 `result`에는 `appliedOptions`가 꼭 있어야 합니다.
+A v2 `result` must carry `appliedOptions`.
 
 - `deviceID`, `resolutionDPI`, `bitDepth`, `colorMode`, `filmType`
 - `scanArea`: `originXMM`, `originYMM`, `widthMM`, `heightMM`
@@ -141,98 +145,104 @@ v2 `result`에는 `appliedOptions`가 꼭 있어야 합니다.
 - `hardwareExposureTime`, `brightnessAdjustment`, `contrastAdjustment`
 - `outputRawTIFF`
 
-마지막 세 조절값은 `null`이어도 키가 있어야 합니다.
+Those last three adjustments need their keys present even when the value is `null`.
 
-`resolutionDPI: 0`은 미리보기라는 뜻입니다. 미리보기가 0이 아니거나 본 스캔이 0이면 거부합니다.
-모르는 값, 다른 장치, 결과 상단과 `appliedOptions`가 다른 해상도·비트 심도·IR 상태도 거부합니다.
+`resolutionDPI: 0` means preview. A preview that is not 0, or a full scan that is 0, is refused.
+Unknown values, a different device, and a resolution, bit depth, or IR state that disagrees
+between the result header and `appliedOptions` are refused as well.
 
-검사를 통과하면 플러그인 ID 대신 앱의 스캐너 ID와 요청 ID를 기록하고, 최종 출력 경로를
-남깁니다. 이때만 `.verified(options)`로 표시합니다.
+Once the checks pass, the app records its own scanner ID and request ID instead of the plugin
+ID, and keeps the final output path. Only then is it marked `.verified(options)`.
 
-`ScanResult.resolution`과 `bitDepth`는 v1에서 요청값을 임시 동작값으로 쓸 수 있습니다. 출처를
-나타내는 `reportedResolution`, `reportedBitDepth`는 결과가 직접 보고한 올바른 값만 넣습니다.
+`ScanResult.resolution` and `bitDepth` may fall back to the requested values in v1. The fields
+that show the origin, `reportedResolution` and `reportedBitDepth`, take only correct values the
+result reported itself.
 
-## 평판 스캔 영역
+## Positioned flatbed scan area
 
-다음 기능을 플러그인이 함께 보고해야 위치를 고르는 평판 스캔을 켭니다.
+A flatbed scan with a chosen position turns on only when the plugin reports all of these.
 
-- 미리보기
+- Preview
 - `supportsPositionedScanArea`
-- mm 단위 `scanOriginXRange`, `scanOriginYRange`
-- mm 단위 `scanWidthRange`, `scanHeightRange`
+- `scanOriginXRange` and `scanOriginYRange` in mm
+- `scanWidthRange` and `scanHeightRange` in mm
 
-앱은 고른 영역을 플러그인의 간격에 맞춰 바깥쪽으로 넓히고 영역마다 본 스캔 작업을 하나씩
-만듭니다. 모델명으로 이 기능을 추측하지 않습니다. 선택 필드가 없는 이전 플러그인은 고정
-프레임 흐름을 유지합니다.
+The app expands the chosen area outward to the plugin's step size and makes one full scan job
+per area. It never guesses this from a model name. Older plugins without the optional fields
+keep the fixed frame flow.
 
-## 프로세스 한계와 취소
+## Process limits and cancellation
 
-- stdout 누적 상한: 4 MiB
-- stderr 누적 상한: 1 MiB
+- stdout cap: 4 MiB
+- stderr cap: 1 MiB
 
-상한을 넘으면 프로세스를 끝내고 실패합니다. 정리할 때는 이미 도착한 바이트만 읽습니다.
-자식 프로세스가 파이프를 물려받았더라도 EOF를 기다리지 않습니다.
+Going over the cap ends the process and fails. During cleanup, only the bytes that already
+arrived are read. Even if a child process inherited the pipe, nothing waits for EOF.
 
-`cancelScan()`은 플러그인이 끝나고 파이프 처리기가 닫히며 다음 작업 자리가 비워진 뒤에야
-돌아옵니다.
+`cancelScan()` returns after the plugin has ended, the pipe handlers are closed, and the slot
+for the next job is free.
 
-## 스캔 파일 공개
+## Publishing the scan file
 
-플러그인은 앱이 준 정확한 `outputPath`에 원본 이미지를 쓰고 결과에도 같은 경로를 돌려줘야
-합니다. 이 경로는 최종 폴더와 같은 디스크의 임시 위치입니다.
+The plugin writes the source image to exactly the `outputPath` the app gave it, and returns the
+same path in the result. That path is a temporary location on the same disk as the final folder.
 
 ```mermaid
 sequenceDiagram
     participant App as negaflow
-    participant Plugin as 외부 플러그인
-    participant Temp as 임시 폴더
-    participant Library as 최종 스캔 폴더
+    participant Plugin as external plugin
+    participant Temp as temporary folder
+    participant Library as final scan folder
 
-    App->>Plugin: 설정 JSON과 outputPath
-    Plugin->>Temp: 스캔 파일 기록
-    Plugin-->>App: result와 같은 outputPath
-    App->>Temp: 형식·크기·경로 검사
-    alt 검사 통과
-        App->>Library: 원자적으로 공개
-    else 취소·실패·잘못된 출력
-        App->>Temp: 임시 자료 삭제
+    App->>Plugin: settings JSON and outputPath
+    Plugin->>Temp: write the scan file
+    Plugin-->>App: result with the same outputPath
+    App->>Temp: check format, size, path
+    alt checks pass
+        App->>Library: publish atomically
+    else cancel, failure, wrong output
+        App->>Temp: delete the temporary material
     end
 ```
 
-앱은 다음을 확인합니다.
+The app confirms:
 
-- 비어 있지 않은 일반 파일
-- ImageIO로 읽을 수 있는 이미지
-- 예상한 형식과 픽셀 크기
-- 요청과 결과의 경로가 같음
+- A regular file that is not empty
+- An image ImageIO can read
+- The expected format and pixel size
+- The same path in the request and the result
 
-모두 맞을 때만 최종 위치로 옮깁니다. 취소, 시간 초과, 잘못된 출력, 플러그인 실패 때는 임시
-폴더를 지우고 일부 스캔을 공개하지 않습니다.
+Only then does it move to the final location. On cancel, timeout, wrong output, or plugin
+failure, the temporary folder is deleted and no partial scan is published.
 
-v2 IR 파일도 앱이 준 임시 폴더 안에 있어야 합니다. 파일 종류, 읽기, 픽셀 크기를 확인합니다.
-v1은 이미 배포된 플러그인 호환을 위해 외부 IR 경로를 받을 수 있습니다.
+A v2 IR file also has to sit inside the temporary folder the app gave. File type, readability,
+and pixel size are checked. v1 can take an external IR path, for compatibility with plugins
+already in the field.
 
-## SANE 경계
+## The SANE boundary
 
-SANE 구현, 의존성, 설정, 장치별 처리, 테스트, 배포 문서는 모두 별도
-[`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane) 저장소에 둡니다.
+The SANE implementation, its dependencies, configuration, device-specific processing, tests, and
+release documentation all live in the separate
+[`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane) repository.
 
-이 저장소는 장치와 무관한 외부 프로세스 규격만 문서화하고 검사합니다. 이미지 파일만 가져오는
-사용자는 스캐너 플러그인이 없어도 됩니다.
+This repository documents and checks the device-independent external process spec only. Anyone
+who just imports image files does not need a scanner plugin.
 
-Negaflow 본체는 SANE 구현을 링크하거나 앱 배포물에 넣지 않습니다. 플러그인은 별도 저장소,
-실행파일, 소스 배포물과 GPL 라이선스를 가집니다. 이 문서는 구조를 기록하며 파생 저작물 여부를
-단정하지 않습니다. 실제 배포 전에는 두 산출물의 포함 파일과 통신 계약을 다시 검사합니다.
+The Negaflow app does not link the SANE implementation or put it in the app distribution. The
+plugin has its own repository, executable, source distribution, and GPL license. This document
+records the structure; it does not settle whether something is a derivative work. Before an
+actual release, the files in both artifacts and the communication contract are checked again.
 
-## 확인
+## Checks
 
-본체 테스트는 가짜 외부 플러그인을 실제 프로세스로 실행해 다음을 확인합니다.
+The app tests run a fake external plugin as a real process and confirm:
 
-- 플러그인 찾기
-- 장치 찾기
-- 기능 연결
-- 진행 이벤트
-- 최종 결과
-- 취소와 실패 정리
+- Finding plugins
+- Finding devices
+- Capability wiring
+- Progress events
+- The final result
+- Cleanup after cancel and failure
 
-SANE 구현은 플러그인 저장소의 SwiftPM 테스트와 Release 빌드에서 따로 확인합니다.
+The SANE implementation is checked separately, in the plugin repository's SwiftPM tests and
+Release build.
