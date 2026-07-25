@@ -43,6 +43,7 @@ final class AppModel: ObservableObject {
     @Published var batchTotal = 0
     @Published var batchIndex = 0
     let exportBatchStore = ExportBatchStore()
+    let exportAvailabilityStore = ExportAvailabilityStore()
     @Published var selectedExportRecipeID: UUID?
     @Published var isPrintPackageExporting = false
     @Published var activeWorkspaceModule: WorkspaceModule = .develop {

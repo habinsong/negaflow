@@ -20,6 +20,7 @@ extension AppModel {
             observations[frame.id] = frameObservations[frame.id] ?? observeFrameChanges(frame)
         }
         frameObservations = observations
+        exportAvailabilityStore.observe(currentFrames)
         refreshLibraryFrameQueryObservations(currentFrames)
         scheduleLibrarySave()
     }

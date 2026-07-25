@@ -90,31 +90,10 @@ struct WorkspaceToolbar: View {
                 toolbarDivider
             }
 
-            ToolbarActionButton(
-                systemName: "bolt.badge.checkmark",
-                title: model.text(.commandQuickExport),
-                help: model.text(
-                    AppLocalizedPhrase.quickExportHelpFormat,
-                    model.text(.commandQuickExport),
-                    model.quickExportFormat.uiLabel,
-                    model.quickExportDPI,
-                    model.quickExportFolderDisplay
-                ),
-                accessibilityIdentifier: "negaflow.quick-export",
-                isDisabled: !model.canExportSelection
-            ) {
-                model.quickExportSelection(for: selectedWorkspaceModule)
-            }
-            toolbarDivider
-            ToolbarActionButton(
-                systemName: "square.and.arrow.up",
-                title: compactExportTitle,
-                help: model.text(.commandExport),
-                accessibilityIdentifier: "negaflow.export",
-                isDisabled: !model.canExportSelection
-            ) {
-                model.exportSelectionToFolder(for: selectedWorkspaceModule)
-            }
+            WorkspaceExportActions(
+                availabilityStore: model.exportAvailabilityStore,
+                selectedWorkspaceModule: selectedWorkspaceModule
+            )
         }
         .padding(.leading, 1)
         .padding(.trailing, 12)
@@ -174,10 +153,6 @@ struct WorkspaceToolbar: View {
             .fill(Color.secondary.opacity(0.42))
             .frame(width: 1, height: 14)
             .frame(width: 9)
-    }
-
-    private var compactExportTitle: String {
-        model.text(.commandExport)
     }
 
     private var toolbarBackgroundDoubleClickArea: some View {
@@ -290,6 +265,45 @@ struct WorkspaceToolbar: View {
         .popover(isPresented: $showDiagnostics) {
             DiagnosticsReportView(center: model.diagnosticsCenter)
                 .environmentObject(model)
+        }
+    }
+}
+
+private struct WorkspaceExportActions: View {
+    @EnvironmentObject private var model: AppModel
+    @ObservedObject var availabilityStore: ExportAvailabilityStore
+    let selectedWorkspaceModule: WorkspaceModule
+
+    var body: some View {
+        ToolbarActionButton(
+            systemName: "bolt.badge.checkmark",
+            title: model.text(.commandQuickExport),
+            help: model.text(
+                AppLocalizedPhrase.quickExportHelpFormat,
+                model.text(.commandQuickExport),
+                model.quickExportFormat.uiLabel,
+                model.quickExportDPI,
+                model.quickExportFolderDisplay
+            ),
+            accessibilityIdentifier: "negaflow.quick-export",
+            isDisabled: !model.canExportSelection
+        ) {
+            model.quickExportSelection(for: selectedWorkspaceModule)
+        }
+
+        Rectangle()
+            .fill(Color.secondary.opacity(0.42))
+            .frame(width: 1, height: 14)
+            .frame(width: 9)
+
+        ToolbarActionButton(
+            systemName: "square.and.arrow.up",
+            title: model.text(.commandExport),
+            help: model.text(.commandExport),
+            accessibilityIdentifier: "negaflow.export",
+            isDisabled: !model.canExportSelection
+        ) {
+            model.exportSelectionToFolder(for: selectedWorkspaceModule)
         }
     }
 }
