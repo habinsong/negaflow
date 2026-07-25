@@ -17,7 +17,7 @@ jobs:
     timeout-minutes: 90
     environment: distribution
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Validate required secrets
         env:
           DEVELOPER_ID_P12_BASE64: ${{ secrets.NEGAFLOW_DEVELOPER_ID_P12_BASE64 }}
@@ -93,7 +93,7 @@ jobs:
             xcrun stapler validate "$artifact"
           done
       - name: Upload notarized artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Negaflow-notarized-${{ github.sha }}
           path: build/release-artifacts/*

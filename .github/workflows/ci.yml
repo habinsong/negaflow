@@ -20,7 +20,7 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Toolchain
         run: |
           xcodebuild -version
@@ -35,7 +35,7 @@ jobs:
         run: bash scripts/ci-gate.sh
       - name: Upload GUI test result
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Negaflow-GUI-tests-${{ github.sha }}
           path: build/NegaflowE2E.xcresult
@@ -49,7 +49,7 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Toolchain
         run: echo "DEVELOPER_DIR=$(xcode-select -p)" >> "$GITHUB_ENV"
       - name: Build local release artifacts
@@ -57,7 +57,7 @@ jobs:
           NEGAFLOW_RELEASE_MODE: local
         run: bash scripts/build-release.sh
       - name: Upload release smoke artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Negaflow-release-smoke-${{ github.sha }}
           path: build/release-artifacts/*

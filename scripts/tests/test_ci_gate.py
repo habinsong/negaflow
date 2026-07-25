@@ -52,7 +52,7 @@ class CIGateTests(unittest.TestCase):
         self.assertIn("runs-on: macos-26", workflow)
         self.assertIn("NEGAFLOW_CI_GUI: '1'", workflow)
         self.assertIn("startsWith(github.ref, 'refs/tags/v')", workflow)
-        self.assertIn("actions/upload-artifact@v4", workflow)
+        self.assertIn("actions/upload-artifact@v7", workflow)
 
     def test_grainmend_workflow_uses_the_pinned_quality_sensitivity(self) -> None:
         workflow = (ROOT / ".github/workflows/defect-corpus.yml").read_text(encoding="utf-8")

@@ -11,7 +11,7 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Fetch pinned FILM-R v2 corpus
         run: python3 scripts/defect-corpus/fetch-film-r.py --all
       - name: Build and evaluate GrainMend RGB automatic
@@ -28,7 +28,7 @@ jobs:
             --output build/defect-corpus/film-r-v2-report/quality-gate.json
       - name: Upload quality evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: GrainMend-FILM-R-v2-${{ github.sha }}
           path: build/defect-corpus/film-r-v2-report/
