@@ -65,7 +65,10 @@ For most Macs, use the Universal PKG.
 
 The PKG installs `Negaflow.app` directly in `/Applications`.<br>
 DMG and ZIP builds are available on the same release page for manual installation.<br>
-Release files published on GitHub are signed with Developer ID and notarized by Apple.
+Current GitHub release files are ad-hoc signed and are not notarized by Apple.<br>
+macOS may block the first launch. After attempting to open Negaflow, review the warning in
+**System Settings → Privacy & Security** and choose **Open Anyway** only if the downloaded
+file's SHA-256 checksum matches the checksum published with the release.
 
 > Scanner hardware requires a separate scanner plugin.<br>
 > SANE scanners use [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane).
