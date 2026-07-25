@@ -27,16 +27,21 @@ extension ExternalScannerBackend {
             self.terminationGracePeriod = max(0, terminationGracePeriod)
         }
 
+        /// 실기 필름 스캐너 기준으로 잡은 상한이다. 예전 값(detect 15초 / capabilities 20초)은
+        /// 실제 하드웨어보다 짧았다 — Plustek OpticFilm 8100에서 장치 open 한 번이 7초,
+        /// 장치 목록 조회가 4초라 capabilities 한 번이 쉽게 20초를 넘긴다. 그러면 호스트가
+        /// USB 전송 도중에 플러그인을 SIGTERM/SIGKILL 하고, 스캐너가 반쯤 열린 상태로 남아
+        /// 다음 요청이 몇 분씩 멈춘다. 넉넉히 주고 취소는 사용자 조작에 맡긴다.
         static func policy(for args: [String]) -> ProcessTimeoutPolicy {
             switch args.first {
             case "detect":
-                return ProcessTimeoutPolicy(wallTimeout: 15, terminationGracePeriod: 1)
+                return ProcessTimeoutPolicy(wallTimeout: 90, terminationGracePeriod: 2)
             case "capabilities":
-                return ProcessTimeoutPolicy(wallTimeout: 20, terminationGracePeriod: 1)
+                return ProcessTimeoutPolicy(wallTimeout: 180, terminationGracePeriod: 2)
             case "scan":
-                return ProcessTimeoutPolicy(wallTimeout: 7_200, terminationGracePeriod: 3)
+                return ProcessTimeoutPolicy(wallTimeout: 7_200, terminationGracePeriod: 5)
             default:
-                return ProcessTimeoutPolicy(wallTimeout: 30, terminationGracePeriod: 1)
+                return ProcessTimeoutPolicy(wallTimeout: 60, terminationGracePeriod: 1)
             }
         }
     }
