@@ -32,8 +32,11 @@ struct WorkspaceToolbar: View {
     @Binding var isFilmstripVisible: Bool
     @Binding var selectedWorkspaceModule: WorkspaceModule
     @Binding var showDiagnostics: Bool
-    private let trafficLightReserve: CGFloat = 86
+    /// 전체화면에서는 신호등 버튼이 숨겨지므로 왼쪽 자리를 비워 둘 필요가 없다.
+    var isWindowFullScreen: Bool = false
     private let rightPanelToolbarWidth = WorkspaceToolbarLayout.rightClusterWidth
+
+    private var trafficLightReserve: CGFloat { isWindowFullScreen ? 12 : 86 }
 
     var body: some View {
         GeometryReader { proxy in

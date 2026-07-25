@@ -30,44 +30,38 @@ extension ContentView {
                 .zIndex(0)
             case .develop:
                 let layout = WorkspaceAdaptiveLayout(availableWidth: availableWidth)
-                let sharedPanelWidth = layout.panelIdealWidth(CGFloat(panelWidth))
-                HSplitView {
+                HStack(spacing: 0) {
                     if isSidebarVisible {
-                        WorkflowSidebar(
-                            selectedTab: $selectedSidebarTab,
-                            frame: model.actionableFrame
-                        )
-                        .frame(
-                            minWidth: layout.panelMinimumWidth,
-                            idealWidth: sharedPanelWidth,
-                            maxWidth: layout.panelIdealMaximumWidth
-                        )
-                        .reportWorkspacePanelWidth(.sidebar)
+                        WorkspaceResizablePanel(
+                            storedWidth: $sidebarPanelWidth,
+                            range: layout.panelWidthRange,
+                            edge: .trailing
+                        ) {
+                            WorkflowSidebar(
+                                selectedTab: $selectedSidebarTab,
+                                frame: model.actionableFrame
+                            )
+                        }
+                        Divider()
                     }
                     centerPane
-                        .frame(
-                            minWidth: layout.centerMinimumWidth,
-                            maxWidth: .infinity,
-                            maxHeight: .infinity
-                        )
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     if isInspectorVisible {
-                        WorkspaceInspectorPane(
-                            cropMode: { cropModeBinding(for: $0) },
-                            brushMode: { brushModeBinding(for: $0) },
-                            regionDefectMode: { regionDefectModeBinding(for: $0) },
-                            cloneStampMode: { cloneStampModeBinding(for: $0) },
-                            basePickerMode: { basePickerModeBinding(for: $0) }
-                        )
-                            .frame(
-                                minWidth: layout.panelMinimumWidth,
-                                idealWidth: sharedPanelWidth,
-                                maxWidth: layout.panelIdealMaximumWidth
+                        Divider()
+                        WorkspaceResizablePanel(
+                            storedWidth: $inspectorPanelWidth,
+                            range: layout.panelWidthRange,
+                            edge: .leading
+                        ) {
+                            WorkspaceInspectorPane(
+                                cropMode: { cropModeBinding(for: $0) },
+                                brushMode: { brushModeBinding(for: $0) },
+                                regionDefectMode: { regionDefectModeBinding(for: $0) },
+                                cloneStampMode: { cloneStampModeBinding(for: $0) },
+                                basePickerMode: { basePickerModeBinding(for: $0) }
                             )
-                            .reportWorkspacePanelWidth(.inspector)
+                        }
                     }
-                }
-                .onPreferenceChange(WorkspacePanelWidthPreferenceKey.self) { widths in
-                    persistWorkspacePanelWidths(widths, layout: layout)
                 }
                 .zIndex(0)
             case .print:
@@ -75,19 +69,6 @@ extension ContentView {
                     .zIndex(0)
             }
         }
-    }
-
-    func persistWorkspacePanelWidths(
-        _ widths: [WorkspacePanelID: CGFloat],
-        layout: WorkspaceAdaptiveLayout
-    ) {
-        guard layout.persistsPanelWidths else { return }
-        let currentWidth = CGFloat(panelWidth)
-        let changedWidth = [widths[.sidebar], widths[.inspector]]
-            .compactMap { $0 }
-            .max { abs($0 - currentWidth) < abs($1 - currentWidth) }
-        guard let changedWidth, abs(currentWidth - changedWidth) > 0.5 else { return }
-        panelWidth = Double(layout.panelIdealWidth(changedWidth))
     }
 
     func restoreWorkspaceActiveFrameIfReady() {

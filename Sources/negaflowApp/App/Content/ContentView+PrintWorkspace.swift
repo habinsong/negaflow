@@ -4,41 +4,35 @@ extension ContentView {
     @ViewBuilder
     func printWorkspaceContent(availableWidth: CGFloat) -> some View {
         let layout = WorkspaceAdaptiveLayout(availableWidth: availableWidth)
-        let sharedPanelWidth = layout.panelIdealWidth(CGFloat(panelWidth))
-        HSplitView {
+        HStack(spacing: 0) {
             if isSidebarVisible {
-                PrintWorkspaceSidebar(
-                    settingsStore: printWorkspaceStore,
-                    selectedTab: $selectedPrintSidebarTab,
-                    selectedFolderID: $librarySelectedFolderID
-                )
-                .frame(
-                    minWidth: layout.panelMinimumWidth,
-                    idealWidth: sharedPanelWidth,
-                    maxWidth: layout.panelIdealMaximumWidth
-                )
-                .reportWorkspacePanelWidth(.sidebar)
+                WorkspaceResizablePanel(
+                    storedWidth: $sidebarPanelWidth,
+                    range: layout.panelWidthRange,
+                    edge: .trailing
+                ) {
+                    PrintWorkspaceSidebar(
+                        settingsStore: printWorkspaceStore,
+                        selectedTab: $selectedPrintSidebarTab,
+                        selectedFolderID: $librarySelectedFolderID
+                    )
+                }
+                Divider()
             }
 
             printCenterPane
-                .frame(
-                    minWidth: layout.centerMinimumWidth,
-                    maxWidth: .infinity,
-                    maxHeight: .infinity
-                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             if isInspectorVisible {
-                PrintWorkspaceInspector(settingsStore: printWorkspaceStore)
-                    .frame(
-                        minWidth: layout.panelMinimumWidth,
-                        idealWidth: sharedPanelWidth,
-                        maxWidth: layout.panelIdealMaximumWidth
-                    )
-                    .reportWorkspacePanelWidth(.inspector)
+                Divider()
+                WorkspaceResizablePanel(
+                    storedWidth: $inspectorPanelWidth,
+                    range: layout.panelWidthRange,
+                    edge: .leading
+                ) {
+                    PrintWorkspaceInspector(settingsStore: printWorkspaceStore)
+                }
             }
-        }
-        .onPreferenceChange(WorkspacePanelWidthPreferenceKey.self) { widths in
-            persistWorkspacePanelWidths(widths, layout: layout)
         }
     }
 

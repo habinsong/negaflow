@@ -18,8 +18,13 @@ struct ContentView: View {
     @AppStorage("workspace.leftPanelVisible") var isSidebarVisible = true
     @AppStorage("workspace.rightPanelVisible") var isInspectorVisible = true
     @AppStorage("workspace.bottomStripVisible") var isFilmstripVisible = true
-    @AppStorage("workspace.panelWidth.v2") var panelWidth = Double(WorkspaceAdaptiveLayout.developPanelDefaultWidth)
+    // 좌측탭/우측탭 폭은 각각 따로 기억한다 — 한쪽을 끌었다고 반대쪽이 따라 움직이지 않는다.
+    @AppStorage("workspace.sidebarWidth.v3") var sidebarPanelWidth
+        = Double(WorkspaceAdaptiveLayout.developPanelDefaultWidth)
+    @AppStorage("workspace.inspectorWidth.v3") var inspectorPanelWidth
+        = Double(WorkspaceAdaptiveLayout.developPanelDefaultWidth)
     @State var showDiagnostics = false
+    @State var isWindowFullScreen = false
     @State var cropFrameID: UUID?
     @State var brushFrameID: UUID?
     @State var regionDefectFrameID: UUID?
@@ -63,7 +68,8 @@ struct ContentView: View {
                 isInspectorVisible: $isInspectorVisible,
                 isFilmstripVisible: $isFilmstripVisible,
                 selectedWorkspaceModule: $selectedWorkspaceModule,
-                showDiagnostics: $showDiagnostics
+                showDiagnostics: $showDiagnostics,
+                isWindowFullScreen: isWindowFullScreen
             )
             .zIndex(1)
             Divider()
@@ -86,7 +92,7 @@ struct ContentView: View {
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("negaflow.main")
         .background(Color(nsColor: .windowBackgroundColor))
-        .background(MainWindowChromeConfigurator())
+        .background(MainWindowChromeConfigurator(isFullScreen: $isWindowFullScreen))
         .ignoresSafeArea(.container, edges: .top)
         .onDrop(
             of: [.fileURL],

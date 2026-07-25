@@ -7,27 +7,19 @@ extension LibraryWorkspaceView {
         availableWidth: CGFloat
     ) -> some View {
         let layout = WorkspaceAdaptiveLayout(availableWidth: availableWidth)
-        return HSplitView {
-            libraryControls(projection: projection)
-                .frame(
-                    minWidth: layout.libraryControlsMinimumWidth,
-                    idealWidth: layout.libraryControlsIdealWidth(CGFloat(controlsWidth)),
-                    maxWidth: layout.libraryControlsMaximumWidth
-                )
-                .reportWorkspacePanelWidth(.libraryControls)
+        return HStack(spacing: 0) {
+            WorkspaceResizablePanel(
+                storedWidth: $controlsWidth,
+                range: layout.libraryControlsWidthRange,
+                edge: .trailing
+            ) {
+                libraryControls(projection: projection)
+            }
+
+            Divider()
 
             libraryBrowser(projection: projection, framesByID: framesByID)
-                .frame(
-                    minWidth: layout.libraryBrowserMinimumWidth,
-                    maxWidth: .infinity,
-                    maxHeight: .infinity
-                )
-        }
-        .onPreferenceChange(WorkspacePanelWidthPreferenceKey.self) { widths in
-            guard layout.persistsPanelWidths,
-                  let width = widths[.libraryControls],
-                  abs(controlsWidth - Double(width)) > 0.5 else { return }
-            controlsWidth = Double(width)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 

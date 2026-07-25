@@ -134,8 +134,10 @@ struct BaseControlSection: View {
                 .lineLimit(1)
                 .minimumScaleFactor(AppTypography.minimumScaleFactor)
                 .frame(width: 86, alignment: .leading)
+            // 상한만 둔다 — 패널을 좁히면 세 컨트롤이 남은 폭을 똑같이 나눠 함께 줄어든다
+            // (고정 폭이면 좁은 패널에서 오른쪽이 잘렸다).
             control()
-                .frame(width: basePresetPickerWidth)
+                .frame(maxWidth: basePresetPickerWidth)
                 .frame(minHeight: 24)
         }
         .frame(maxWidth: .infinity, minHeight: 26)
