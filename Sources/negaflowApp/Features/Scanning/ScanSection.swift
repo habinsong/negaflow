@@ -297,7 +297,7 @@ struct ScannerControlsSection: View {
             .disabled(model.isDetecting)
 
             Toggle(isOn: Binding(get: { model.demoMode }, set: { model.toggleDemo($0) })) {
-                Label(model.text(AppLocalizedPhrase.scannerSimulator), systemImage: "wand.and.stars")
+                Label(model.text(AppLocalizedPhrase.scannerSimulator), systemImage: "cpu")
             }
             .help(model.text(AppLocalizedPhrase.scannerSimulatorHelp))
         } header: {

@@ -347,6 +347,8 @@ extension AppLocalization {
         .vignette: "周辺光量",
         .developerDebug: "開発者向けデバッグ",
         .developerMode: "開発者モード",
+        .defaultDefectMicroSpecks: "微細粒子を既定で検出",
+        .defaultDefectMicroSpecksHelp: "新しいコマの初期値です。コマごとにチェックボックスがあるので、写真ごとに切り替えられます。",
         .debugOverlay: "デバッグオーバーレイ",
         .stage: "ステージ",
         .full: "全体",

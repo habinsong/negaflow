@@ -347,6 +347,8 @@ extension AppLocalization {
             .vignette: "Vignette",
             .developerDebug: "Developer Debug",
             .developerMode: "Developer Mode",
+            .defaultDefectMicroSpecks: "Detect micro specks by default",
+            .defaultDefectMicroSpecksHelp: "Starting value for new frames. Each frame keeps its own checkbox, so you can still turn it on or off per photo.",
             .debugOverlay: "Debug Overlay",
             .stage: "Stage",
             .full: "Full",

@@ -41,6 +41,12 @@ final class PresentationPreferencesStore: ObservableObject {
         didSet { defaults.set(clippingOverlayEnabled, forKey: Keys.clippingOverlayEnabled) }
     }
 
+    // GrainMend 미세 입자 검출의 **시작값**이다. 이미 열려 있는 프레임의 선택은 바꾸지 않는다 —
+    // 프레임별 체크박스가 언제나 우선한다.
+    @Published var defaultDefectMicroSpecks = true {
+        didSet { defaults.set(defaultDefectMicroSpecks, forKey: DefectDetectionDefaults.microSpecksKey) }
+    }
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         if let raw = defaults.string(forKey: Keys.appearanceMode),
@@ -62,5 +68,6 @@ final class PresentationPreferencesStore: ObservableObject {
         }
         developerMode = defaults.bool(forKey: Keys.developerMode)
         clippingOverlayEnabled = defaults.bool(forKey: Keys.clippingOverlayEnabled)
+        defaultDefectMicroSpecks = DefectDetectionDefaults.microSpecks(defaults: defaults)
     }
 }

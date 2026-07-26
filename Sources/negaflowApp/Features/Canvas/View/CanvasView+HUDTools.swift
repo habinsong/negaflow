@@ -40,20 +40,15 @@ extension CanvasView {
         .accessibilityHidden(true)
     }
 
+    /// Return 은 크롭에만 이 숨은 버튼으로 걸린다. GrainMend(자동/가이드/브러시)는 컨트롤 바의
+    /// 실제 실행 버튼이 직접 `.defaultAction` 을 가진다 — 화면에 보이는 그 버튼과 1:1 로 대응하고,
+    /// 같은 Return 이 두 경로로 중복 실행되지 않는다.
     var canApplyActiveTool: Bool {
         cropMode
-            || (brushMode && !brushStrokes.isEmpty)
-            || (regionDefectMode && frame.hasRegionDefectPreview && !frame.defectIsRemoving)
     }
 
     func applyActiveTool() {
-        if cropMode {
-            applyCrop()
-        } else if brushMode {
-            applyBrush()
-        } else if regionDefectMode {
-            model.commitRegionDefect(frame)
-        }
+        if cropMode { applyCrop() }
     }
 
     func applyBrush() {

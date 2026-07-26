@@ -347,6 +347,8 @@ extension AppLocalization {
         .vignette: "暗角",
         .developerDebug: "开发者调试",
         .developerMode: "开发者模式",
+        .defaultDefectMicroSpecks: "默认检测微小颗粒",
+        .defaultDefectMicroSpecksHelp: "新照片的初始值。每张照片都有各自的复选框，仍可单独开启或关闭。",
         .debugOverlay: "调试叠加",
         .stage: "阶段",
         .full: "全图",

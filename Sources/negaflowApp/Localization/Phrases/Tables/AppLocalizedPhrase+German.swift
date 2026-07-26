@@ -347,6 +347,8 @@ extension AppLocalization {
         .vignette: "Vignettierung",
         .developerDebug: "Entwickler-Debug",
         .developerMode: "Entwicklermodus",
+        .defaultDefectMicroSpecks: "Mikropartikel standardmäßig erkennen",
+        .defaultDefectMicroSpecksHelp: "Startwert für neue Bilder. Jedes Bild behält sein eigenes Kontrollkästchen und lässt sich weiterhin einzeln umschalten.",
         .debugOverlay: "Debug-Overlay",
         .stage: "Stufe",
         .full: "Ganzes Bild",

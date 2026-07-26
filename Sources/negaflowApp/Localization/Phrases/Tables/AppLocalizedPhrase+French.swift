@@ -347,6 +347,8 @@ extension AppLocalization {
         .vignette: "Vignettage",
         .developerDebug: "Débogage développeur",
         .developerMode: "Mode développeur",
+        .defaultDefectMicroSpecks: "Détecter les micro-particules par défaut",
+        .defaultDefectMicroSpecksHelp: "Valeur de départ des nouvelles vues. Chaque vue garde sa propre case, vous pouvez donc l'activer ou la désactiver photo par photo.",
         .debugOverlay: "Incrustation de débogage",
         .stage: "Étape",
         .full: "Plein cadre",

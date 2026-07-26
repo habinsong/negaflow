@@ -66,10 +66,12 @@ struct RegionDefectOverlay: View {
                     if frame.defectIsRemoving {
                         ProgressView().controlSize(.small).scaleEffect(0.7).frame(width: 16, height: 16)
                     } else {
-                        Label(model.text(AppLocalizedPhrase.removeDefects), systemImage: "wand.and.stars")
+                        Label(model.text(AppLocalizedPhrase.removeDefects), systemImage: "bandage")
                     }
                 }
                 .buttonStyle(.borderedProminent)
+                // Return 으로 바로 제거한다 — 검출 결과를 확인한 뒤 손이 키보드에 있는 채로 끝낸다.
+                .keyboardShortcut(.defaultAction)
                 .disabled(frame.defectIsRemoving || !hasSelectable)
             } else {
                 // 자동과 가이드는 별개 도구다 — 대기 안내도 섞지 않는다(자동에는 드래그가 없다).

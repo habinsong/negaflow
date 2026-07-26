@@ -35,7 +35,7 @@ struct UserPresetSection: View {
 
                 TransferButton(
                     title: model.text(AppLocalizedPhrase.apply),
-                    systemName: "wand.and.stars",
+                    systemName: "checkmark.circle",
                     help: model.text(AppLocalizedPhrase.applyUserPresetHelp),
                     isDisabled: selectedPreset == nil
                 ) {

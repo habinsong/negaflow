@@ -20,6 +20,11 @@ struct AppSettingsView: View {
                     }
                 }
                 Toggle(model.text(AppLocalizedPhrase.developerMode), isOn: $model.developerMode)
+                Toggle(
+                    model.text(AppLocalizedPhrase.defaultDefectMicroSpecks),
+                    isOn: $model.defaultDefectMicroSpecks
+                )
+                .help(model.text(AppLocalizedPhrase.defaultDefectMicroSpecksHelp))
                 MemoryCacheSettingsSection(store: model.frameCacheResidencyStore)
                 SupportBundleSettingsSection()
             }

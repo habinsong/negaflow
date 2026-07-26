@@ -30,9 +30,12 @@ struct BrushControlBar: View {
                 .help(model.text(AppLocalizedPhrase.resetAppliedDefects)).disabled(!hasAppliedDefects || isBusy)
             Button(action: onApply) {
                 if isBusy { ProgressView().controlSize(.small) }
-                else { Label(model.text(AppLocalizedPhrase.removeDefects), systemImage: "wand.and.stars") }
+                else { Label(model.text(AppLocalizedPhrase.removeDefects), systemImage: "bandage") }
             }
-            .buttonStyle(.borderedProminent).disabled(!hasStrokes || isBusy)
+            .buttonStyle(.borderedProminent)
+            // 칠한 뒤 Return 으로 바로 제거한다(자동/가이드와 같은 계약).
+            .keyboardShortcut(.defaultAction)
+            .disabled(!hasStrokes || isBusy)
         }
         .padding(.horizontal, 12).padding(.vertical, 8)
         .adaptiveCapsuleSurface(.ultraThin)

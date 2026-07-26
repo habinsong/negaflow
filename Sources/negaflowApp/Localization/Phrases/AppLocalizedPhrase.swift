@@ -295,6 +295,8 @@ enum AppLocalizedPhrase: CaseIterable {
     case vignette
     case developerDebug
     case developerMode
+    case defaultDefectMicroSpecks
+    case defaultDefectMicroSpecksHelp
     case debugOverlay
     case stage
     case full

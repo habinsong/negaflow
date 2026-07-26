@@ -347,6 +347,8 @@ extension AppLocalization {
             .vignette: "비네트",
             .developerDebug: "개발자 디버그",
             .developerMode: "개발자 모드",
+            .defaultDefectMicroSpecks: "미세 입자 기본 검출",
+            .defaultDefectMicroSpecksHelp: "새 프레임의 시작값입니다. 프레임마다 체크박스가 따로 있어 사진별로 켜고 끌 수 있습니다.",
             .debugOverlay: "디버그 오버레이",
             .stage: "단계",
             .full: "전체",
