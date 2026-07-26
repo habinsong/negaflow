@@ -24,15 +24,26 @@
 
 ---
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/ko/develop-dark.webp">
+    <img src="docs/images/ko/develop-light.webp" alt="negaflow — 현상 화면">
+  </picture>
+</p>
+
 **negaflow**는 스캐너로 스캔한 필름이나 디지털 카메라로 촬영한 필름을 불러와서 현상하는 **MacOS** 앱입니다. <br>
-간단히 요약하면, 아날로그 필름을 디지털로 변환하는 전과정을 손쉽게 지원하는 프로세스입니다.<br><br>
+현상 엔진은 **Chroma Engine**, 먼지와 스크래치 복원 기능은 **GrainMend**라는 이름을 사용하며<br>
+독자 개발한 프로세스 전 과정을 담았습니다. 이처럼 손쉽게 필름을 현상/보정/출력하는 과정을 하나의 앱에서 지원합니다.<br> <br>
+간단히 요약하면, 아날로그 필름을 디지털로 변환하는 전과정을 손쉽게 지원하는 프로세스입니다.<br>
+이미지 파일만 가져와도 현상과 내보내기를 사용할 수 있으며 **스캐너 연결은 별도 플러그인이 있을 때만 활성화**됩니다.<br><br>
+
 
 > 요즘의 아날로그 유행의 성장과 다르게 지금의 아날로그 사진 프로세스는 정체기라고 할수 있죠.<br>
 > 필름을 아날로그 인화하는 방식이 아닌 이상, 아날로그를 디지털로 변환하는 과정을 거쳐야 비로소 우리 눈에 보여집니다. <br>
 > <br>
 > 그러나 그 모든 과정이 멈춰가고 있습니다. <br>
 > 필름랩, 현상소는 점점 없어져 제조사와 제품에 대한 지원이 줄어들고 있기 때문이죠.
->
+
 > <br>
 > 본 프로젝트는 다양한 경험을 통해 느낀 불편함과 새로운 기능이 있었으며 좋겠다라는 생각에서 시작했습니다. <br>
 > 35mm 필름과 중형 필름을 사용하면서 알게된 경험과 지식을 바탕으로 하나부터 열까지 모두 직접 개발했습니다.<br>
@@ -51,7 +62,8 @@
 ## 설치
 
 [GitHub Releases](https://github.com/habinsong/negaflow/releases)에서 현재 버전을 내려받습니다.<br>
-대부분의 Mac에서는 Universal PKG를 사용하면 됩니다.
+대부분의 Mac에서는 Universal pkg를 사용하면 됩니다.
+실리콘 맥(M 시리즈) 는 arm64 pkg를 사용하면 됩니다.
 
 | 설치 파일 | 지원하는 Mac |
 |---|---|
@@ -64,7 +76,8 @@
 
 PKG는 `negaflow.app`을 `/Applications`에 바로 설치합니다.<br>
 직접 설치할 때 사용할 수 있는 DMG와 ZIP도 같은 릴리스 페이지에서 제공합니다.<br>
-GitHub에 공개하는 배포 파일은 Developer ID로 서명하고 Apple 공증까지 마친 뒤 제공합니다.
+애플 개발자 인증이 없기 때문에 설정 - 개인정보 보호 및 보안에서  '그래도 열기' 를 눌러야만 앱이 실행됩니다.
+
 
 > 실제 스캐너를 연결하려면 별도 스캐너 플러그인이 필요합니다.<br>
 > SANE 스캐너는 [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane)을 사용합니다.
@@ -86,8 +99,7 @@ GitHub에 공개하는 배포 파일은 Developer ID로 서명하고 Apple 공�
 
 컬러와 흑백, 네거티브와 포지티브 모두 다루며 보정 내용은 원본과 따로 저장합니다.<br>
 
-현상 엔진은 **Chroma Engine**, 먼지와 스크래치 복원 기능은 **GrainMend**라는 이름을 사용하며 독자 개발한 프로세스 과정입니다.<br>
-이미지 파일만 가져와도 현상과 내보내기를 사용할 수 있으며 **스캐너 연결은 별도 플러그인이 있을 때만 활성화**됩니다.
+
 > 확인을 마친 범위는 [프로젝트 상태](docs/ko/product/PROJECT_STATUS.md)에 기록합니다.
 
 
@@ -107,7 +119,7 @@ GitHub에 공개하는 배포 파일은 Developer ID로 서명하고 Apple 공�
 - `F135`, `HR`: 랩 장비 계열 현상
 - `EXPIRED`: 오래된 필름 복구
 
-출력에는 sRGB, Display P3, Adobe RGB나 사용자 RGB ICC를 쓸 수 있습니다.
+출력에는 sRGB, Display P3, Adobe RGB나 사용자 RGB ICC를 쓸 수 있습니다.<br>
 반전과 색 처리 순서는 [크로마 엔진 문서](docs/ko/product/CHROMA_ENGINE.md)에서 볼 수 있습니다.
 
 
@@ -152,14 +164,11 @@ GitHub에 공개하는 배포 파일은 Developer ID로 서명하고 Apple 공�
 <br>
 
 `realOnly`는 실제 스캔 자료로 만들었지만 독립된 기준 스캔 쌍으로 정확도를 검증한 단계는 아니라는 뜻입니다. <br>
-프로파일은 스캐너 이름만 보고 자동으로 적용하지 않습니다.
-
-사용자가 직접 선택해야 합니다. 파일과 목록의 SHA-256도 함께 제공합니다.
+프로파일은 스캐너 이름만 보고 자동으로 적용하지 않습니다. 사용자가 직접 선택해야 합니다. 파일과 목록의 SHA-256도 함께 제공합니다.
 
 <br>
 
-`928`장은 각 프로파일의 관측값을 더한 수치입니다. 같은 필름이 여러 장비에 중복 집계될 수 있으므로 서로 다른 사진 928장을 뜻하지는 않습니다. <br>
-그러나 실제 928장의 스캔본을 직접 확인하며 오탐지/오검출 문제 파일은 제외한 수치이며 각종 데이터 실측을 바탕으로 프로파일을 만들었습니다.<br>
+`928`장은 각 프로파일의 관측값을 더한 수치입니다. 같은 필름이 여러 장비에 중복 집계될 수 있으므로 서로 다른 사진 928장을 뜻하지는 않습니다. 그러나 실제 928장의 스캔본을 직접 확인하며 오탐지/오검출 문제 파일은 제외한 수치이며 각종 데이터 실측을 바탕으로 프로파일을 만들었습니다.<br><br>
 자료 구성과 관련 개발 과정은 [필름 프로파일 문서](docs/ko/product/FILM_PROFILES.md)에 적었습니다.
 
 ---
@@ -171,6 +180,20 @@ GitHub에 공개하는 배포 파일은 Developer ID로 서명하고 Apple 공�
 3. 크로마 엔진에서 색과 톤을 조절합니다.
 4. 필요한 사진에 GrainMend를 적용합니다.
 5. 비교 보기와 히스토그램으로 결과를 확인한 뒤 인화 또는 내보냅니다.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/ko/library-dark.webp">
+    <img src="docs/images/ko/library-light.webp" alt="negaflow — 라이브러리 화면">
+  </picture>
+</p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/ko/print-dark.webp">
+    <img src="docs/images/ko/print-light.webp" alt="negaflow — 인화 화면">
+  </picture>
+</p>
 
 <br><br>
 **사람이 사용하기 쉽게 만들었습니다. 단축키,폴더 경로, 프리셋, 보정 등.. 모든 것을 커스텀해서 사용할 수 있습니다. <br>

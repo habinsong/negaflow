@@ -24,6 +24,13 @@
 
 ---
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/fr/develop-dark.webp">
+    <img src="docs/images/fr/develop-light.webp" alt="negaflow — Développement">
+  </picture>
+</p>
+
 negaflow est une application macOS qui importe, inverse et développe les films numérisés ou reproduits avec un appareil photo numérique.<br>
 Elle traite les films couleur ou noir et blanc, négatifs ou positifs.<br>
 Les corrections sont enregistrées séparément du fichier d’origine.<br>
@@ -45,8 +52,7 @@ Les commandes du scanner n’apparaissent que si un module externe est installé
 > Un outil de ce genre doit avant tout bien fonctionner, rester simple, aller vite et s’occuper correctement du travail répétitif.<br>
 > Développé de façon indépendante comme une application macOS native, **negaflow** rassemble des habitudes de laboratoire et des pratiques personnelles.
 >
-> Les vérifications terminées sont notées dans [État du projet](docs/fr/product/PROJECT_STATUS.md). <br>
-> **Pour cet été qui marque les 200 ans de la première photographie de Niépce.**
+> **Célébrons cet été le bicentenaire de la toute première photographie de Niépce.**
 
 ---
 
@@ -66,7 +72,11 @@ Le PKG Universal convient à la plupart des Mac.
 
 Le PKG installe directement `negaflow.app` dans `/Applications`.<br>
 Des versions DMG et ZIP destinées à l’installation manuelle sont proposées sur la même page.<br>
-Les fichiers publiés sur GitHub sont signés avec un Developer ID et notariés par Apple.
+Les fichiers actuellement publiés sur GitHub sont signés en ad-hoc et ne sont pas notariés par Apple.<br>
+macOS peut donc bloquer le premier lancement. Après avoir tenté d’ouvrir negaflow, consultez
+l’avertissement dans **Réglages Système → Confidentialité et sécurité**, puis choisissez
+**Ouvrir quand même** uniquement si la somme de contrôle SHA-256 du fichier téléchargé
+correspond à celle publiée avec la version.
 
 > L’utilisation d’un scanner physique demande un module scanner séparé.<br>
 > Les scanners SANE utilisent [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane).
@@ -77,9 +87,11 @@ Les fichiers publiés sur GitHub sont signés avec un Developer ID et notariés 
 - Exposition, contraste, courbes, HSL, étalonnage couleur et virage noir et blanc
 - Netteté, réduction du bruit, grain, vignettage et halo
 - Réparation des poussières et rayures avec GrainMend
-- Rouleaux, dossiers, collections, notes, piles et copies virtuelles
+- Pellicules, dossiers, collections, notes, piles et copies virtuelles
 - Zoom, recadrage, rotation, comparaisons, histogramme et affichage de l’écrêtage
 - Export JPEG et TIFF 16 bits, profils ICC et mises en page d’impression
+
+> Les vérifications terminées sont notées dans [État du projet](docs/fr/product/PROJECT_STATUS.md). <br>
 
 ## Chroma Engine
 
@@ -103,31 +115,32 @@ L’ordre de l’inversion et du traitement couleur est décrit dans [Chroma Eng
 
 ## GrainMend
 
-GrainMend répare les poussières, trous d’épingle, rayures et dégâts d’émulsion.<br>
-Le nom `GrainMend` reste le même dans toutes les langues ; seuls les noms des outils et l’aide sont traduits.
+**GrainMend répare les défauts du film : poussières, trous d’épingle, rayures et dégâts d’émulsion.** <br>
 
-| Outil | Usage |
+
+| GrainMend RGB | Usage |
 |---|---|
-| Auto | Cherche et répare les défauts dans toute l’image. |
+| Auto | Cherche et répare les défauts dans toute la photo. |
 | Guidé | Cherche les défauts dans la zone que vous indiquez. |
-| Pinceau | Permet de peindre directement la zone à réparer. |
+| Pinceau | Permet de peindre directement l’endroit à réparer. |
 | Tampon de duplication | Copie les pixels depuis un point source choisi. |
 
-Auto et Guidé utilisent la texture voisine pour combler un défaut.<br>
-Ils vérifient aussi la direction et les structures proches pour ne pas confondre une ligne ou une grille avec une rayure.<br>
-Chaque résultat est conservé dans un calque GrainMend.<br>
-Vous pouvez régler son intensité, afficher son masque, le désactiver ou le supprimer.
 
-Auto corrige les défauts courants sur toute l’image.<br>
-Si les détections deviennent trop denses pour une application sûre, Auto s’arrête sans modifier l’image et propose de limiter la zone avec Guidé.<br>
-Guidé vise les poussières variées introduites pendant la numérisation.<br>
-Le pinceau reprend les défauts manqués, tandis que le tampon de duplication copie directement une source choisie vers la cible.
+Les outils Auto et Guidé de **GrainMend RGB** comblent un défaut à partir de la texture voisine et <br>
+examinent aussi la direction et les structures alentour, pour ne pas effacer comme rayure une ligne ou une grille de l’image. <br>
+Chaque résultat est conservé dans un calque GrainMend. <br><br>
+> Auto retire les défauts courants d’une photo. Si les candidats deviennent trop denses pour être appliqués sans risque, il s’arrête sans modifier l’image et vous oriente vers Guidé. <br>
+> Guidé vise les poussières variées apparues au moment de la numérisation. Le Pinceau répare ce que les passes automatiques ont manqué, et le Tampon copie les pixels source que vous choisissez. <br>
+Chaque calque **GrainMend RGB** peut voir son intensité modifiée, son masque affiché, et peut être désactivé ou supprimé séparément.
 
-Si le module du scanner fournit un canal infrarouge, le résultat IR rejoint le même historique.<br>
-GrainMend RGB ne fonctionne pas comme le nettoyage infrarouge matériel.<br>
-GrainMend IR n’est ni une implémentation ni un mode compatible de Digital ICE, iSRD ou SRDx.
 
-La mise en œuvre et les contrôles de qualité et de performance sont décrits dans [GrainMend](docs/fr/product/GRAINMEND.md).
+
+Si le module scanner fournit un canal infrarouge, **GrainMend IR** ajoute sa détection au même historique d’édition.<br><br>
+
+**GrainMend RGB** est une méthode logicielle indépendante, distincte du nettoyage infrarouge matériel, et <br>
+**GrainMend IR** utilise le canal infrarouge du scanner : ce n’est ni une implémentation ni un mode de compatibilité de Digital ICE, iSRD ou SRDx.
+
+L’implémentation et les critères de qualité et de performance sont dans [GrainMend](docs/fr/product/GRAINMEND.md).
 
 ## Profils de film
 
@@ -151,6 +164,20 @@ Les données et leur fabrication sont décrites dans [Profils de film](docs/fr/p
 3. Réglez la couleur et la tonalité dans Chroma Engine.
 4. Appliquez GrainMend aux images qui en ont besoin.
 5. Contrôlez le résultat avec les comparaisons et l’histogramme, puis imprimez-le ou exportez-le.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/fr/library-dark.webp">
+    <img src="docs/images/fr/library-light.webp" alt="negaflow — Photothèque">
+  </picture>
+</p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/fr/print-dark.webp">
+    <img src="docs/images/fr/print-light.webp" alt="negaflow — Impression">
+  </picture>
+</p>
 
 L’interface a été faite pour les personnes qui travaillent vraiment avec des photos, pas comme une maquette générique produite par une IA.<br>
 Une personne qui pratique la photographie doit pouvoir s’y retrouver facilement.

@@ -24,6 +24,13 @@
 
 ---
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/zh-Hans/develop-dark.webp">
+    <img src="docs/images/zh-Hans/develop-light.webp" alt="negaflow — 显影界面">
+  </picture>
+</p>
+
 negaflow 是一款 macOS 应用，用于导入、反相和显影扫描胶片或数码相机翻拍的胶片。<br>
 它支持彩色和黑白、负片和正片，所有调整都会与原始文件分开保存。<br>
 从图库管理到显影和打印，它覆盖了胶片数字化处理的完整流程。
@@ -42,8 +49,7 @@ negaflow 是一款 macOS 应用，用于导入、反相和显影扫描胶片或�
 > 归根到底，工具最重要的是好用、顺手、够快，并能把琐碎的事情正确处理好。<br>
 > **negaflow** 是独立开发的原生 macOS 应用，把胶片实验室和个人使用者的工作方式都融了进来。
 >
-> 已经完成的检查记录在[项目状态](docs/zh-Hans/product/PROJECT_STATUS.md)中。<br>
-> **谨以此纪念尼埃普斯拍下第一张照片200周年的这个夏天。**
+> **谨以此夏，纪念尼埃普斯拍下人类第一张照片二百周年。**
 
 ---
 
@@ -63,7 +69,10 @@ negaflow 是一款 macOS 应用，用于导入、反相和显影扫描胶片或�
 
 PKG 会把 `negaflow.app` 直接安装到 `/Applications`。<br>
 同一发布页面还提供用于手动安装的 DMG 和 ZIP。<br>
-在 GitHub 上发布的文件均使用 Developer ID 签名，并已通过 Apple 公证。
+目前在 GitHub 上发布的文件为 ad-hoc 签名，并未通过 Apple 公证。<br>
+因此 macOS 可能会拦下首次启动。请先尝试打开 negaflow，然后在
+**系统设置 → 隐私与安全性**中查看该提示，并仅在下载文件的 SHA-256 校验和
+与发布页公布的一致时，选择**仍要打开**。
 
 > 使用实体扫描仪还需要单独安装扫描仪插件。<br>
 > SANE 扫描仪使用 [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane)。
@@ -74,9 +83,11 @@ PKG 会把 `negaflow.app` 直接安装到 `/Applications`。<br>
 - 曝光、对比度、曲线、HSL、色彩分级和黑白调色
 - 锐化、降噪、颗粒、暗角和光晕
 - 使用 GrainMend 修复灰尘和划痕
-- 胶卷、文件夹、收藏、评分、堆叠和虚拟副本
-- 缩放、裁剪、旋转、对比视图、直方图和裁切提示
+- 胶卷、文件夹、收藏、星级、堆叠和虚拟副本
+- 缩放、裁剪、旋转、对比视图、直方图和剪切提示
 - 导出 JPEG 和 16-bit TIFF，支持 ICC 配置文件和打印版式
+
+> 已完成的检查记录在[项目状态](docs/zh-Hans/product/PROJECT_STATUS.md)中。 <br>
 
 ## Chroma Engine
 
@@ -100,27 +111,30 @@ Chroma Engine 是 `Chromabase` 模块中的胶片反相和显影引擎。<br>
 
 ## GrainMend
 
-GrainMend 用于修复胶片上的灰尘、针孔、划痕和乳剂损伤。<br>
-所有语言中的界面名称都固定为 `GrainMend`，只有工具名和帮助文字会翻译。
+**GrainMend 用于修复胶片上的灰尘、针孔、划痕和乳剂损伤等缺陷。** <br>
 
-| 工具 | 用途 |
+
+| GrainMend RGB | 使用方式 |
 |---|---|
-| 自动 | 在整张图像中查找并修复缺陷。 |
+| 自动 | 在整张照片中查找并修复缺陷。 |
 | 引导 | 在你标出的区域内查找缺陷。 |
 | 画笔 | 直接涂出需要修复的位置。 |
 | 仿制图章 | 把指定位置的像素复制到另一处。 |
 
-自动和引导工具会参考周围纹理填补缺陷。<br>
-它们也会检查方向和附近结构，避免把画面中的线条或网格当成划痕删掉。<br>
-每次修复都会保存为 GrainMend 图层，可以调整强度、查看蒙版、单独关闭或删除。
 
-自动工具处理整张照片中常见的缺陷；引导工具针对扫描过程中产生的各种灰尘。<br>
-如果候选区域过于密集，无法安全应用，自动工具会在不修改图像的情况下停止，并提示使用引导工具缩小处理范围。<br>
-画笔用于补掉自动处理遗漏的缺陷，仿制图章则把指定来源直接复制到修复位置。
+**GrainMend RGB** 的自动和引导会参考周围纹理填补缺陷， <br>
+同时检查方向与附近结构，避免把画面中的线条或网格当成划痕抹掉。 <br>
+修复结果会保留为 GrainMend 图层。 <br><br>
+> 自动用于清除照片上常见的缺陷。当候选过于密集、无法安全应用时，它会在不修改图像的情况下停止，并提示改用引导。 <br>
+> 引导针对扫描过程中产生的各种灰尘。画笔用于补上自动没能发现的缺陷，仿制图章则复制你选定的来源像素。 <br>
+每个 **GrainMend RGB** 图层都可以调整强度、查看蒙版，也可以单独关闭或删除。
 
-如果扫描仪插件提供红外通道，IR 检测结果也会加入同一份编辑记录。<br>
-GrainMend RGB 与硬件红外除尘的工作方式不同。<br>
-GrainMend IR 也不是 Digital ICE、iSRD 或 SRDx 的实现或兼容模式。
+
+
+如果扫描仪插件提供红外通道，**GrainMend IR** 的检测结果也会加入同一份编辑记录。<br><br>
+
+**GrainMend RGB** 是有别于硬件红外除尘的独立软件方案， <br>
+**GrainMend IR** 使用扫描仪的红外通道，并非 Digital ICE、iSRD 或 SRDx 的实现或兼容模式。
 
 实现方式以及画质、性能标准见 [GrainMend](docs/zh-Hans/product/GRAINMEND.md)。
 
@@ -145,6 +159,20 @@ GrainMend IR 也不是 Digital ICE、iSRD 或 SRDx 的实现或兼容模式。
 3. 在 Chroma Engine 中调整颜色和色调。
 4. 对需要的照片使用 GrainMend。
 5. 用对比视图和直方图检查结果，然后打印或导出。
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/zh-Hans/library-dark.webp">
+    <img src="docs/images/zh-Hans/library-light.webp" alt="negaflow — 图库界面">
+  </picture>
+</p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/zh-Hans/print-dark.webp">
+    <img src="docs/images/zh-Hans/print-light.webp" alt="negaflow — 打印界面">
+  </picture>
+</p>
 
 界面是为真正处理照片的人做的，不是泛泛的 AI 生成样稿。<br>
 只要把摄影当作爱好，就应该能很快找到熟悉的操作方式。

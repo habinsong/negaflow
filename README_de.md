@@ -24,6 +24,13 @@
 
 ---
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/de/develop-dark.webp">
+    <img src="docs/images/de/develop-light.webp" alt="negaflow — Entwicklung">
+  </picture>
+</p>
+
 negaflow ist eine macOS-App zum Importieren, Invertieren und Entwickeln von Filmscans und Kamera-Reproduktionen.<br>
 Sie verarbeitet Farb- und Schwarzweißfilm, Negative und Positive.<br>
 Bearbeitungen werden getrennt von der Originaldatei gespeichert.<br>
@@ -45,8 +52,7 @@ Scanner-Funktionen erscheinen nur, wenn ein separates Plug-in installiert ist.
 > So ein Werkzeug muss vor allem zuverlässig sein, leicht von der Hand gehen, schnell reagieren und Routinearbeit ordentlich erledigen.<br>
 > **negaflow** wird unabhängig als native macOS-App entwickelt und verbindet Abläufe aus Filmlaboren mit der Arbeit zu Hause.
 >
-> Abgeschlossene Prüfungen stehen im [Projektstatus](docs/de/product/PROJECT_STATUS.md). <br>
-> **Für diesen Sommer, 200 Jahre nach Niépces erster Fotografie.**
+> **Diesem Sommer gewidmet — zweihundert Jahre seit Niépces erster Fotografie.**
 
 ---
 
@@ -66,7 +72,11 @@ Für die meisten Macs ist das Universal-PKG vorgesehen.
 
 Das PKG installiert `negaflow.app` direkt unter `/Applications`.<br>
 DMG- und ZIP-Dateien für die manuelle Installation stehen auf derselben Release-Seite bereit.<br>
-Auf GitHub veröffentlichte Dateien werden mit einer Developer ID signiert und von Apple notarisiert.
+Die derzeit auf GitHub veröffentlichten Dateien sind ad-hoc signiert und nicht von Apple notarisiert.<br>
+macOS kann den ersten Start deshalb blockieren. Versuchen Sie zunächst, negaflow zu öffnen, prüfen Sie
+dann den Hinweis unter **Systemeinstellungen → Datenschutz & Sicherheit** und wählen Sie
+**Trotzdem öffnen** nur dann, wenn die SHA-256-Prüfsumme der geladenen Datei mit der
+bei der Version veröffentlichten übereinstimmt.
 
 > Für einen echten Scanner ist ein separates Scanner-Plug-in erforderlich.<br>
 > SANE-Scanner verwenden [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane).
@@ -78,8 +88,10 @@ Auf GitHub veröffentlichte Dateien werden mit einer Developer ID signiert und v
 - Schärfung, Rauschminderung, Korn, Vignette und Halation
 - Staub- und Kratzerreparatur mit GrainMend
 - Filme, Ordner, Sammlungen, Bewertungen, Stapel und virtuelle Kopien
-- Zoom, Zuschnitt, Drehung, Vergleichsansichten, Histogramm und Clipping-Anzeige
+- Zoom, Zuschnitt, Drehung, Vergleichsansichten, Histogramm und Beschnittwarnung
 - JPEG- und 16-Bit-TIFF-Export, ICC-Profile und Drucklayouts
+
+> Abgeschlossene Prüfungen stehen im [Projektstatus](docs/de/product/PROJECT_STATUS.md). <br>
 
 ## Chroma Engine
 
@@ -103,29 +115,30 @@ Die Reihenfolge von Invertierung und Farbverarbeitung steht unter [Chroma Engine
 
 ## GrainMend
 
-GrainMend repariert Staub, Pinholes, Kratzer und Emulsionsschäden.<br>
-Der Name `GrainMend` bleibt in allen Sprachen gleich; nur Werkzeugnamen und Hilfetexte werden übersetzt.
+**GrainMend repariert Filmfehler: Staub, Pinholes, Kratzer und Emulsionsschäden.** <br>
 
-| Werkzeug | Aufgabe |
+
+| GrainMend RGB | Aufgabe |
 |---|---|
 | Auto | Findet und repariert Fehler im ganzen Bild. |
 | Geführt | Sucht Fehler in einem markierten Bereich. |
-| Pinsel | Lässt den zu reparierenden Bereich direkt übermalen. |
+| Pinsel | Lässt die zu reparierende Stelle direkt übermalen. |
 | Kopierstempel | Kopiert Pixel von einem gewählten Quellpunkt. |
 
-Auto und Geführt füllen Fehler mit Textur aus der Umgebung.<br>
-Dabei prüfen sie auch Richtung und benachbarte Strukturen, damit Linien oder Gitter im Motiv nicht als Kratzer verschwinden.<br>
-Jedes Ergebnis bleibt als GrainMend-Ebene erhalten.<br>
-Stärke, Maskenanzeige, Aktivierung und Löschen lassen sich einzeln steuern.
 
-Auto beseitigt die üblichen Fehler im ganzen Bild.<br>
-Werden zu viele Kandidaten erkannt, stoppt Auto ohne Bildänderung und verweist auf einen kleineren Bereich mit Geführt.<br>
-Geführt ist für die unterschiedlichen Staubspuren gedacht, die beim Scannen entstehen.<br>
-Der Pinsel kümmert sich um übersehene Stellen; der Kopierstempel überträgt eine selbst gewählte Quelle direkt an das Ziel.
+Auto und Geführt in **GrainMend RGB** füllen einen Fehler mit Textur aus der Umgebung und <br>
+prüfen dabei Richtung und benachbarte Strukturen, damit Linien oder Gitter im Motiv nicht als Kratzer verschwinden. <br>
+Jedes Ergebnis bleibt als GrainMend-Ebene erhalten. <br><br>
+> Auto beseitigt die üblichen Fehler eines Bildes. Werden die Kandidaten zu dicht, um sie sicher anzuwenden, stoppt es ohne Bildänderung und verweist auf Geführt. <br>
+> Geführt ist für die unterschiedlichen Staubspuren gedacht, die beim Scannen entstehen. Der Pinsel repariert, was die automatischen Durchgänge übersehen haben, und der Kopierstempel überträgt die selbst gewählten Quellpixel. <br>
+Bei jeder **GrainMend RGB**-Ebene lassen sich Stärke ändern, Maske ansehen sowie einzeln deaktivieren oder löschen.
 
-Wenn das Scanner-Plug-in einen Infrarotkanal liefert, kommt auch dessen Erkennung in dieselbe Bearbeitungshistorie.<br>
-GrainMend RGB arbeitet anders als hardwarebasierte Infrarotreinigung.<br>
-GrainMend IR ist keine Implementierung oder Kompatibilitätsfunktion für Digital ICE, iSRD oder SRDx.
+
+
+Liefert das Scanner-Plug-in einen Infrarotkanal, ergänzt **GrainMend IR** seine Erkennung in derselben Bearbeitungshistorie.<br><br>
+
+**GrainMend RGB** ist ein eigenständiges Softwareverfahren und unterscheidet sich von hardwarebasierter Infrarotreinigung; <br>
+**GrainMend IR** nutzt den Infrarotkanal des Scanners und ist keine Implementierung oder Kompatibilitätsfunktion für Digital ICE, iSRD oder SRDx.
 
 Umsetzung sowie Qualitäts- und Leistungskontrollen stehen unter [GrainMend](docs/de/product/GRAINMEND.md).
 
@@ -151,6 +164,20 @@ Daten und Erzeugung sind unter [Filmprofile](docs/de/product/FILM_PROFILES.md) b
 3. Farbe und Ton in Chroma Engine einstellen.
 4. GrainMend auf die benötigten Bilder anwenden.
 5. Ergebnis in Vergleichsansichten und Histogramm prüfen und anschließend drucken oder exportieren.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/de/library-dark.webp">
+    <img src="docs/images/de/library-light.webp" alt="negaflow — Mediathek">
+  </picture>
+</p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/de/print-dark.webp">
+    <img src="docs/images/de/print-light.webp" alt="negaflow — Druck">
+  </picture>
+</p>
 
 Die Oberfläche ist für Menschen gebaut, die wirklich mit Fotos arbeiten, nicht als beliebiger KI-generierter Entwurf.<br>
 Wer Fotografie als Hobby betreibt, soll sich darin ohne Umwege zurechtfinden.
