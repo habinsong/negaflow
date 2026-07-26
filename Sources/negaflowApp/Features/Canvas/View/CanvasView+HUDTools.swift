@@ -25,6 +25,10 @@ extension CanvasView {
                 .keyboardShortcut(.defaultAction)
                 .disabled(!canApplyActiveTool)
 
+            Button("") { deactivateActiveTool() }
+                .keyboardShortcut(.cancelAction)
+                .disabled(!hasActiveTool)
+
             Button("") { zoomBy(1.25, imageSize: imageSize, canvasSize: canvasSize) }
                 .keyboardShortcut("+", modifiers: [])
                 .disabled(imageSize == nil)
@@ -49,6 +53,28 @@ extension CanvasView {
 
     func applyActiveTool() {
         if cropMode { applyCrop() }
+    }
+
+    /// ESC 로 해제할 도구가 있는가. 적용이 이미 돌고 있으면 중간에 끊지 않는다.
+    var hasActiveTool: Bool {
+        (cropMode || brushMode || regionDefectMode || cloneStampMode || basePickerMode)
+            && !frame.defectIsRemoving
+            && !frame.isRemovingDefects
+    }
+
+    /// ESC = 활성 도구 해제. 우측 탭의 토글을 다시 누른 것과 같되, 도구가 들고 있던 임시 상태
+    /// (크롭 편집, 칠한 스트로크, 검출 세션)도 함께 정리한다.
+    func deactivateActiveTool() {
+        withAnimation(.snappy(duration: 0.18)) {
+            if cropMode { cancelCrop() }
+            if brushMode { brushStrokes.removeAll() }
+            if regionDefectMode { model.cancelRegionDefect(frame) }
+            cropMode = false
+            brushMode = false
+            regionDefectMode = false
+            cloneStampMode = false
+            basePickerMode = false
+        }
     }
 
     func applyBrush() {
