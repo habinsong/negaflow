@@ -2,12 +2,13 @@
 
 [Docs home](../README.md)
 
-These are the items automated tests and builds cannot confirm. The final look on screen and the
-real hardware are checked by the user. A release candidate is approved only when every
-applicable required item has a result and its evidence.
+These are the items automated tests and builds cannot confirm.
+The final look on screen and the real hardware are checked by the user.
+A release candidate is approved only when every applicable required item has a result and its
+evidence.
 
-Write each result as `PASS`, `FAIL`, `BLOCKED`, or `N/A`. `FAIL`, `BLOCKED`, and `N/A` need a
-reason.
+Write each result as `PASS`, `FAIL`, `BLOCKED`, or `N/A`.
+`FAIL`, `BLOCKED`, and `N/A` need a reason.
 
 > [!IMPORTANT]
 > A build without this table filled in is not marked as checked for real hardware, final image
@@ -39,8 +40,8 @@ reason.
 
 ## 2. Import, develop, export
 
-Use at least one JPEG, one TIFF, a DNG/RAW the current decoder reads, and a high-resolution
-file. Record the source SHA-256 before and after the run.
+Use at least one JPEG, one TIFF, a DNG/RAW the current decoder reads, and a high-resolution file.
+Record the source SHA-256 before and after the run.
 
 | Result | What to check | Evidence or problem |
 |---|---|---|
@@ -87,7 +88,8 @@ VoiceOver, full keyboard access, and one language other than Korean.
 ## 5. External plugins and real scanners
 
 The SANE implementation is installed and configured from the separate `negaflow-scanner-sane`
-release. Plugin and device evidence goes in that repository and in this record.
+release.
+Plugin and device evidence goes in that repository and in this record.
 
 | Result | What to check | Evidence or problem |
 |---|---|---|
@@ -103,8 +105,8 @@ release. Plugin and device evidence goes in that repository and in this record.
 
 ## 6. GrainMend and image quality
 
-Cover color negative, supported dye-based black and white, ordinary silver black and white,
-slides, clean frames, dust, scratches, grain, faces, sky, and fine patterns.
+Cover color negative, supported dye-based black and white, ordinary silver black and white, slides,
+clean frames, dust, scratches, grain, faces, sky, and fine patterns.
 
 | Result | What to check | Evidence or problem |
 |---|---|---|

@@ -2,9 +2,9 @@
 
 [Accueil de la documentation](../README.md)
 
-C'est la forme dans laquelle un script ou une autre application lit les informations du
-scanner. Elle reste séparée de l'implémentation du scanner. La CLI se contente de convertir en
-JSON les informations et capacités reçues par `ScannerKit`.
+C'est la forme dans laquelle un script ou une autre application lit les informations du scanner.
+Elle reste séparée de l'implémentation du scanner.
+La CLI se contente de convertir en JSON les informations et capacités reçues par `ScannerKit`.
 
 | Élément | Contrat |
 |---|---|
@@ -20,9 +20,9 @@ negaflow detect [--demo] --json
 negaflow capabilities <scannerID> [--demo] --json
 ```
 
-Pour l'instant, `--json` ne fonctionne que sur ces deux commandes en lecture seule. Ajoutez-le à
-`scan` ou `develop`, qui modifient des fichiers ou émettent une progression, et cela se termine
-par une erreur `unsupported_json_command`.
+Pour l'instant, `--json` ne fonctionne que sur ces deux commandes en lecture seule.
+Ajoutez-le à `scan` ou `develop`, qui modifient des fichiers ou émettent une progression,
+et cela se termine par une erreur `unsupported_json_command`.
 
 ## Forme commune
 
@@ -44,9 +44,10 @@ Succès comme échec écrivent un seul document JSON sur stdout, avec un saut de
 
 </details>
 
-En cas d'échec, `status` vaut `error` et `payload` vaut `null`. `error` porte un code machine
-qui ne change pas et une description destinée aux humains. Les journaux de diagnostic partent
-sur stderr. Journaux et progression ne sont jamais mêlés à stdout.
+En cas d'échec, `status` vaut `error` et `payload` vaut `null`.
+`error` porte un code machine qui ne change pas et une description destinée aux humains.
+Les journaux de diagnostic partent sur stderr.
+Journaux et progression ne sont jamais mêlés à stdout.
 
 ## Informations de capacités
 
@@ -63,8 +64,9 @@ Le `payload` de `capabilities` porte toujours tous ces champs.
 - `minScanArea`, `maxScanArea`, `scanAreaUnit`
 - `outputFormats`, `estimatedScanSpeeds`
 
-Les valeurs que l'appareil n'a pas signalées ne sont pas devinées. Selon le cas, on utilise
-`null`, un tableau vide, `false`, ou les `disabledReasons` envoyés par le plugin.
+Les valeurs que l'appareil n'a pas signalées ne sont pas devinées.
+Selon le cas, on utilise `null`, un tableau vide, `false`,
+ou les `disabledReasons` envoyés par le plugin.
 
 `estimatedScanSpeeds` est un tableau de cet objet, trié par DPI croissants.
 
@@ -72,9 +74,9 @@ Les valeurs que l'appareil n'a pas signalées ne sont pas devinées. Selon le ca
 { "dpi": 3600, "seconds": 42.0 }
 ```
 
-L'écran de l'application et la CLI lisent les mêmes `ScannerCapabilities`. Le contrôle de
-cohérence confirme que les commandes ouvertes à l'écran suivent les mêmes valeurs que les champs
-JSON.
+L'écran de l'application et la CLI lisent les mêmes `ScannerCapabilities`.
+Le contrôle de cohérence confirme que les commandes ouvertes à l'écran suivent les mêmes valeurs que
+les champs JSON.
 
 ## Règles de version
 

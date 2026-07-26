@@ -2,9 +2,9 @@
 
 [Docs home](../README.md)
 
-This is the shape a script or another app reads scanner information from. It stays separate
-from the scanner implementation. The CLI only turns the device information and capabilities
-that `ScannerKit` received into JSON.
+This is the shape a script or another app reads scanner information from.
+It stays separate from the scanner implementation.
+The CLI only turns the device information and capabilities that `ScannerKit` received into JSON.
 
 | Item | Contract |
 |---|---|
@@ -20,8 +20,9 @@ negaflow detect [--demo] --json
 negaflow capabilities <scannerID> [--demo] --json
 ```
 
-For now `--json` works only on those two read-only commands. Put it on `scan` or `develop`,
-which change files or report progress, and it ends with an `unsupported_json_command` error.
+For now `--json` works only on those two read-only commands.
+Put it on `scan` or `develop`, which change files or report progress,
+and it ends with an `unsupported_json_command` error.
 
 ## Common shape
 
@@ -43,9 +44,9 @@ Success and failure both write one JSON document to stdout, with a newline at th
 
 </details>
 
-On failure `status` is `error` and `payload` is `null`. `error` carries a machine code that does
-not change and a description for people. Diagnostic logs go to stderr. Logs and progress never
-get mixed into stdout.
+On failure `status` is `error` and `payload` is `null`.
+`error` carries a machine code that does not change and a description for people.
+Diagnostic logs go to stderr. Logs and progress never get mixed into stdout.
 
 ## Capability information
 
@@ -62,8 +63,9 @@ The `payload` of `capabilities` always carries all of these fields.
 - `minScanArea`, `maxScanArea`, `scanAreaUnit`
 - `outputFormats`, `estimatedScanSpeeds`
 
-Values the device did not report are not guessed. Depending on the value it uses `null`, an
-empty array, `false`, or the `disabledReasons` the plugin sent.
+Values the device did not report are not guessed.
+Depending on the value it uses `null`, an empty array, `false`,
+or the `disabledReasons` the plugin sent.
 
 `estimatedScanSpeeds` is an array of this object, sorted by ascending DPI.
 
@@ -71,8 +73,9 @@ empty array, `false`, or the `disabledReasons` the plugin sent.
 { "dpi": 3600, "seconds": 42.0 }
 ```
 
-The app screen and the CLI read the same `ScannerCapabilities`. The consistency check confirms
-that the controls opened on screen follow the same values as the JSON fields.
+The app screen and the CLI read the same `ScannerCapabilities`.
+The consistency check confirms that the controls opened on screen follow the same values as the JSON
+fields.
 
 ## Version rules
 

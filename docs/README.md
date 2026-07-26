@@ -2,7 +2,8 @@
 
 Split by subject so you can open the one you need first.
 
-English · [한국어](ko/README.md) · [日本語](ja/README.md) · [简体中文](zh-Hans/README.md) · [Français](fr/README.md) · [Deutsch](de/README.md)
+English · [한국어](ko/README.md) · [日本語](ja/README.md) · [简体中文](zh-Hans/README.md) ·
+[Français](fr/README.md) · [Deutsch](de/README.md)
 
 ```mermaid
 flowchart LR

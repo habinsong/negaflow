@@ -2,8 +2,8 @@
 
 [Docs home](../README.md)
 
-`renderManifest` in the sidecar links the source, the edit values, and the final file with
-SHA-256. File paths are not recorded.
+`renderManifest` in the sidecar links the source, the edit values, and the final file with SHA-256.
+File paths are not recorded.
 
 ```mermaid
 flowchart LR
@@ -28,25 +28,27 @@ What v3 holds:
 - Decoder origin and chroma engine renderer version
 - SHA-256, byte count, pixel size, and format of the final file
 
-After the encoder finishes writing, the file is opened again with ImageIO to confirm the pixel
-size, and the whole file is hashed. The sidecar is written after that. If the v3 check fails,
-the result is not published as a finished output set.
+After the encoder finishes writing, the file is opened again with ImageIO to confirm the pixel size,
+and the whole file is hashed. The sidecar is written after that.
+If the v3 check fails, the result is not published as a finished output set.
 
 ## GrainMend input
 
 - `cleanedMemory`: pixels in memory have no standard hash, so the checked scope is recorded as
-  `sourceAndDevelopRecipe`. The SHA-256 of the GrainMend edit history is always included.
+`sourceAndDevelopRecipe`. The SHA-256 of the GrainMend edit history is always included.
 - `cleanedFile`: the whole GrainMend cache file and the edit history are both hashed.
 
-Old v1 and v2 files still open. Output hashes or GrainMend history hashes that did not exist
-back then are not filled in later by guessing.
+Old v1 and v2 files still open.
+Output hashes or GrainMend history hashes that did not exist back then are not filled in later by
+guessing.
 
 ## How this differs from C2PA
 
-There is no digital signature, certificate, trust chain, or embedded claim store here. That is
-why it is not called C2PA Content Credentials. The hard binding and processing history ideas of
-C2PA and the integrity idea of PREMIS were useful as references, but only SHA-256 values that
-can be checked go in.
+There is no digital signature, certificate, trust chain, or embedded claim store here.
+That is why it is not called C2PA Content Credentials.
+The hard binding and processing history ideas of C2PA and the integrity idea of PREMIS were useful
+as references,
+but only SHA-256 values that can be checked go in.
 
 Sources:
 

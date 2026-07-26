@@ -2,12 +2,13 @@
 
 [Accueil de la documentation](../README.md)
 
-Voici les points que les tests automatisés et les builds ne peuvent pas confirmer. Le rendu final
-à l'écran et le matériel réel sont vérifiés par l'utilisateur. Une version candidate n'est
-approuvée que si chaque point requis applicable a un résultat et sa preuve.
+Voici les points que les tests automatisés et les builds ne peuvent pas confirmer.
+Le rendu final à l'écran et le matériel réel sont vérifiés par l'utilisateur.
+Une version candidate n'est approuvée que si chaque point requis applicable a un résultat et sa
+preuve.
 
-Notez chaque résultat comme `PASS`, `FAIL`, `BLOCKED` ou `N/A`. `FAIL`, `BLOCKED` et `N/A`
-demandent une raison.
+Notez chaque résultat comme `PASS`, `FAIL`, `BLOCKED` ou `N/A`.
+`FAIL`, `BLOCKED` et `N/A` demandent une raison.
 
 > [!IMPORTANT]
 > Un build dont ce tableau n'est pas rempli n'est pas marqué comme vérifié pour le matériel réel,
@@ -40,8 +41,8 @@ demandent une raison.
 
 ## 2. Import, développement, export
 
-Utilisez au moins un JPEG, un TIFF, un DNG/RAW que le décodeur actuel lit, et un fichier haute
-résolution. Notez le SHA-256 de la source avant et après l'exécution.
+Utilisez au moins un JPEG, un TIFF, un DNG/RAW que le décodeur actuel lit,
+et un fichier haute résolution. Notez le SHA-256 de la source avant et après l'exécution.
 
 | Résultat | À vérifier | Preuve ou problème |
 |---|---|---|
@@ -69,9 +70,9 @@ résolution. Notez le SHA-256 de la source avant et après l'exécution.
 
 ## 4. Fenêtres, affichage, accessibilité
 
-Vérifiez la taille de fenêtre minimale, une grande fenêtre, l'échelle Retina, Réduire les
-animations, Augmenter le contraste, VoiceOver, l'accès clavier complet et une langue autre que
-le coréen.
+Vérifiez la taille de fenêtre minimale, une grande fenêtre, l'échelle Retina,
+Réduire les animations, Augmenter le contraste, VoiceOver,
+l'accès clavier complet et une langue autre que le coréen.
 
 | Résultat | À vérifier | Preuve ou problème |
 |---|---|---|
@@ -89,8 +90,8 @@ le coréen.
 ## 5. Plugins externes et scanners réels
 
 L'implémentation SANE s'installe et se configure depuis la distribution séparée
-`negaflow-scanner-sane`. Les preuves sur le plugin et l'appareil vont dans ce dépôt et dans cette
-fiche.
+`negaflow-scanner-sane` .
+Les preuves sur le plugin et l'appareil vont dans ce dépôt et dans cette fiche.
 
 | Résultat | À vérifier | Preuve ou problème |
 |---|---|---|
@@ -106,9 +107,9 @@ fiche.
 
 ## 6. GrainMend et qualité d'image
 
-Couvrez négatif couleur, noir et blanc chromogène pris en charge, noir et blanc argentique
-ordinaire, diapositives, images propres, poussières, rayures, grain, visages, ciel et motifs
-fins.
+Couvrez négatif couleur, noir et blanc chromogène pris en charge,
+noir et blanc argentique ordinaire, diapositives, images propres, poussières, rayures, grain,
+visages, ciel et motifs fins.
 
 | Résultat | À vérifier | Preuve ou problème |
 |---|---|---|
@@ -149,8 +150,8 @@ Décision de publication : `APPROVE`, `REJECT`, `BLOCKED`
 - Emplacement du lot de preuves :
 - Signature :
 
-Si l'un des points suivants se reproduit, c'est un `REJECT` automatique jusqu'à correction et
-nouvelle vérification.
+Si l'un des points suivants se reproduit,
+c'est un `REJECT` automatique jusqu'à correction et nouvelle vérification.
 
 - Modification de la source
 - Réinitialisation silencieuse du catalogue

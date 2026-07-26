@@ -2,20 +2,20 @@
 
 [Docs home](../README.md)
 
-This is where the Apache-2.0 distribution scope of the negaflow app is written down. It is not
-a legal opinion. It is a provenance record so the repository and the release artifacts can be
-checked again.
+This is where the Apache-2.0 distribution scope of the negaflow app is written down.
+It is not a legal opinion.
+It is a provenance record so the repository and the release artifacts can be checked again.
 
 ## Code
 
-`Sources`, `Tests`, and `scripts` are Swift, Python, and shell code written for negaflow. The
-app has no C/C++/Objective-C source, no external package, no static or dynamic library, and no
-vendored source tree. Only the system frameworks Apple ships with macOS are linked.
+`Sources`, `Tests`, and `scripts` are Swift, Python, and shell code written for negaflow.
+The app has no C/C++/Objective-C source, no external package, no static or dynamic library,
+and no vendored source tree. Only the system frameworks Apple ships with macOS are linked.
 
-Film inversion uses the published sensitometry ideas of density, toe, straight line, and
-shoulder. The curves and coefficients here come from negaflow's four photometric anchors, not
-from a third-party program's formulas or constants. The equations and the derivation are in
-[fixed print response](../reference/PRINT_RESPONSE.md).
+Film inversion uses the published sensitometry ideas of density, toe, straight line, and shoulder.
+The curves and coefficients here come from negaflow's four photometric anchors,
+not from a third-party program's formulas or constants.
+The equations and the derivation are in [fixed print response](../reference/PRINT_RESPONSE.md).
 
 GrainMend IR runs in this order.
 
@@ -24,40 +24,42 @@ GrainMend IR runs in this order.
 3. Subtract the scene leakage, then compute relative contrast against the local mean.
 4. Build the defect mask from a trimmed local noise threshold, connected components, and orientation.
 
-This code does not link or port SANE's IR correction. Published papers and product pages are
-background for confirming the physical limits of film and infrared. Taking a method or a
-principle is one thing, copying the expression of code is another. The U.S. Copyright Office
-draws the same line between methods and systems and their concrete expression.
+This code does not link or port SANE's IR correction.
+Published papers and product pages are background for confirming the physical limits of film and
+infrared.
+Taking a method or a principle is one thing, copying the expression of code is another. The U.S.
+Copyright Office draws the same line between methods and systems and their concrete expression.
 
 - [U.S. Copyright Office Circular 33](https://www.copyright.gov/circs/circ33.pdf)
 - [SANE backends source repository](https://gitlab.com/sane-project/backends)
 
 ## SANE plugin boundary
 
-The app has no `scanimage`, no SANE headers, no backend configuration, and no device-specific
-processing code. It talks to the installed external program through a versioned JSON/NDJSON
-contract only. The real SANE work ships as a separate GPL-2.0-or-later repository and
-executable.
+The app has no `scanimage`, no SANE headers, no backend configuration,
+and no device-specific processing code.
+It talks to the installed external program through a versioned JSON/NDJSON contract only.
+The real SANE work ships as a separate GPL-2.0-or-later repository and executable.
 
-Being a separate process does not settle the license question by itself. The GNU FAQ says pipe
-or command-line communication usually looks like separate programs, but that the answer can
-change if the communication is too intimate. So the contract exchanges device-independent
-requests, capabilities, progress, and result file information, and shares no SANE data
-structures.
+Being a separate process does not settle the license question by itself.
+The GNU FAQ says pipe or command-line communication usually looks like separate programs,
+but that the answer can change if the communication is too intimate.
+So the contract exchanges device-independent requests, capabilities, progress,
+and result file information, and shares no SANE data structures.
 
 - [GNU license FAQ: aggregates and separate programs](https://www.gnu.org/licenses/gpl-faq.en.html)
 - [Apache License 2.0 and GPL compatibility](https://www.apache.org/licenses/GPL-compatibility)
 - [Scanner plugin architecture](../architecture/SCANNER_PLUGINS.md)
 
-The release check confirms again that no plugin, SANE executable, or library slipped into the
-app bundle. The plugin side ships its own `LICENSE`, `COPYING`, complete corresponding source,
+The release check confirms again that no plugin, SANE executable,
+or library slipped into the app bundle.
+The plugin side ships its own `LICENSE`, `COPYING`, complete corresponding source,
 and third-party notices.
 
 ## Bundled resources
 
 [`Config/bundled-resource-provenance-v1.json`](../../Config/bundled-resource-provenance-v1.json)
-pins the declared origin, license, and SHA-256 of every resource that goes into the app and the
-source tree.
+pins the declared origin, license,
+and SHA-256 of every resource that goes into the app and the source tree.
 
 | Group | Origin | What ships |
 |---|---|---|
@@ -67,18 +69,22 @@ source tree.
 | Scanner profiles | Built from scan measurements the maintainer keeps | Numeric profiles, without the source scans |
 
 The camera and color space metadata you can see in the TIFF files is container information from
-shooting and encoding. `sourceProfiles` in a scanner profile is the logical path of local
-measurement material at build time, and those source photographs do not ship.
+shooting and encoding.
+`sourceProfiles` in a scanner profile is the logical path of local measurement material at build
+time,
+and those source photographs do not ship.
 
-FILM-R v2 material is downloaded only during quality measurement. The images never enter the
-repository or the app. The DOI version, CC BY 4.0, file sizes, and hashes are pinned in
-[`Config/defect-corpus-film-r-v2.json`](../../Config/defect-corpus-film-r-v2.json).
+FILM-R v2 material is downloaded only during quality measurement.
+The images never enter the repository or the app. The DOI version, CC BY 4.0, file sizes,
+and hashes are pinned in
+[`Config/defect-corpus-film-r-v2.json`](../../Config/defect-corpus-film-r-v2.json) .
 
 ## Names and interoperability
 
-Film, scanner, color space, XMP namespace, and product names identify targets and keep files
-interoperable. No trademark ownership or affiliation is claimed. The full scope is in
-[`TRADEMARKS.md`](../../TRADEMARKS.md).
+Film, scanner, color space, XMP namespace,
+and product names identify targets and keep files interoperable.
+No trademark ownership or affiliation is claimed.
+The full scope is in [`TRADEMARKS.md`](../../TRADEMARKS.md).
 
 ## Automated checks and what they miss
 
@@ -90,8 +96,8 @@ interoperable. No trademark ownership or affiliation is claimed. The full scope 
 - A change that makes the release script put the SANE plugin in the app
 - FILM-R image material in the repository
 
-The check stops obvious regressions in the current tree. It does not prove similarity against
-the whole internet, rights to photographic or profile inputs, patents, trademarks, or legal
-outcomes in any country. When an origin changes, review the declaration together with the hash.
-When it is unclear, take the resource out of the release and ask the rights holder or a
-specialist.
+The check stops obvious regressions in the current tree.
+It does not prove similarity against the whole internet, rights to photographic or profile inputs,
+patents, trademarks, or legal outcomes in any country.
+When an origin changes, review the declaration together with the hash.
+When it is unclear, take the resource out of the release and ask the rights holder or a specialist.

@@ -42,9 +42,9 @@ flowchart LR
     J --> K["Espace écran ou sortie"]
 ```
 
-L'image de travail est traitée dans un espace linéaire en virgule flottante 32 bits. Seules les
-opérations qui demandent du gamma convertissent, à leur étape fixée. L'encodage pour un écran ou
-un format de fichier arrive en dernier.
+L'image de travail est traitée dans un espace linéaire en virgule flottante 32 bits.
+Seules les opérations qui demandent du gamma convertissent, à leur étape fixée.
+L'encodage pour un écran ou un format de fichier arrive en dernier.
 
 Documentation Core Image d'Apple :
 
@@ -53,20 +53,22 @@ Documentation Core Image d'Apple :
 - [workingColorSpace](https://developer.apple.com/documentation/coreimage/cicontext/workingcolorspace)
 - [Guide de performance Core Image](https://developer.apple.com/library/archive/documentation/GraphicsImaging/Conceptual/CoreImaging/ci_performance/ci_performance.html)
 
-`CIContext` n'est pas recréé à chaque rendu. Il est réutilisé, séparé par usage : affichage,
-analyse, export. L'aperçu ne calcule que la taille nécessaire et la dernière version d'édition.
+`CIContext` n'est pas recréé à chaque rendu.
+Il est réutilisé, séparé par usage : affichage, analyse, export.
+L'aperçu ne calcule que la taille nécessaire et la dernière version d'édition.
 L'export refait le rendu à la taille source.
 
 ## Support du film
 
 ### Pourquoi le mesurer
 
-La partie non exposée d'un négatif est un point de référence qui combine le film, le
-développement et la source lumineuse du scan. Le masque orange du négatif couleur s'y trouve
-aussi. Un support faux fausse ensuite toutes les densités et tous les rapports entre canaux.
+La partie non exposée d'un négatif est un point de référence qui combine le film,
+le développement et la source lumineuse du scan.
+Le masque orange du négatif couleur s'y trouve aussi.
+Un support faux fausse ensuite toutes les densités et tous les rapports entre canaux.
 
-Les données Portra 400 de Kodak consignent elles aussi séparément la densité minimale, les
-courbes caractéristiques et la densité spectrale des colorants.
+Les données Portra 400 de Kodak consignent elles aussi séparément la densité minimale,
+les courbes caractéristiques et la densité spectrale des colorants.
 
 - [Kodak Professional Portra 400 technical data](https://www.kodakprofessional.com/sites/default/files/wysiwyg/pro/resources/e4050_portra_400.pdf)
 
@@ -80,9 +82,10 @@ courbes caractéristiques et la densité spectrale des colorants.
 - Avec plusieurs bandes de film sur une même planche, des zones séparées se lisent ensemble.
 - Une frontière où porte-film et film se mêlent inspire moins confiance que l'intérieur.
 
-Il cherche la distribution de luminosité sur une image d'analyse réduite, regroupe les zones
-connexes, puis écarte les candidats hors film. Quand plusieurs bandes passent les conditions,
-elles sont calculées ensemble. Le résultat consigne aussi la méthode retenue et la confiance.
+Il cherche la distribution de luminosité sur une image d'analyse réduite,
+regroupe les zones connexes, puis écarte les candidats hors film.
+Quand plusieurs bandes passent les conditions, elles sont calculées ensemble.
+Le résultat consigne aussi la méthode retenue et la confiance.
 
 ### Choix de la méthode
 
@@ -92,8 +95,8 @@ elles sont calculées ensemble. Le résultat consigne aussi la méthode retenue 
 | `Film` | Utilise la mesure comme Dmin, le film choisi fournissant surtout `dmaxNorm`. Les valeurs par défaut du film et de la source n'interviennent qu'en cas d'échec de mesure. |
 | `Auto` | Utilise l'analyse spatiale, et retombe sur la méthode par les bords en cas d'échec. |
 
-Sans valeur manuelle, ou avec un identifiant de film erroné, il passe à la méthode sûre
-suivante. L'objet le plus clair de la scène n'est jamais pris tel quel comme support du film.
+Sans valeur manuelle, ou avec un identifiant de film erroné, il passe à la méthode sûre suivante.
+L'objet le plus clair de la scène n'est jamais pris tel quel comme support du film.
 
 ## Densité optique et inversion
 
@@ -103,8 +106,9 @@ La densité vient de la transmittance linéaire `T` et du support `Dmin` par can
 D = \log_{10}\left(\frac{D_{\min}}{T}\right)
 ```
 
-`D = 0` signifie que l'entrée égale le support non exposé. Perforations et rétroéclairage
-peuvent passer en négatif. Ces valeurs restent finies et ne sont pas écrêtées sur place.
+`D = 0` signifie que l'entrée égale le support non exposé. Perforations et rétroéclairage peuvent
+passer en négatif.
+Ces valeurs restent finies et ne sont pas écrêtées sur place.
 
 ### Données par type de film
 
@@ -116,23 +120,23 @@ La table actuelle contient 27 noms de films : négatifs couleur, noir et blanc, 
 - La plage de densité par canal
 - Une plage sûre quand un faible contraste fait vaciller la mesure automatique
 
-Certaines valeurs approchent des courbes lues dans des documents publics, d'autres ont été prises
-prudemment. 27 noms ne signifient pas 27 profils couleur validés. Dès que le support est mesuré,
-la mesure prime.
+Certaines valeurs approchent des courbes lues dans des documents publics,
+d'autres ont été prises prudemment. 27 noms ne signifient pas 27 profils couleur validés.
+Dès que le support est mesuré, la mesure prime.
 
 ### Réponse de tirage fixe
 
-`MAIN` transforme la densité, support soustrait, en une courbe strictement croissante. Les
-coefficients ne sont pas un préréglage caché : ils viennent de quatre points d'ancrage.
+`MAIN` transforme la densité, support soustrait, en une courbe strictement croissante.
+Les coefficients ne sont pas un préréglage caché : ils viennent de quatre points d'ancrage.
 
 - Le point noir du support
 - Le gris moyen 18 %
 - Le blanc de la plage de densité mesurée
 - La marge pour la lumière réfléchie
 
-La courbe actuelle est une exponentielle étirée et possède une réciproque sur toute la plage. Le
-test aller-retour sur négatifs synthétiques utilise cette réciproque. Équations et valeurs sont
-dans [réponse de tirage fixe](../reference/PRINT_RESPONSE.md).
+La courbe actuelle est une exponentielle étirée et possède une réciproque sur toute la plage.
+Le test aller-retour sur négatifs synthétiques utilise cette réciproque. Équations et valeurs sont
+dans [réponse de tirage fixe](../reference/PRINT_RESPONSE.md) .
 
 Où s'arrête le chemin par défaut et où commencent les fonctions automatiques :
 
@@ -150,10 +154,11 @@ Où s'arrête le chemin par défaut et où commencent les fonctions automatiques
 | Light source | Comment la source lumineuse du scan a agi sur chaque canal | Gain par canal, correction basée sur le support |
 | Scanner target | Quel style de tonalité et de couleur a le résultat | Statistiques relatives de scans réalisés pour ce projet |
 
-Séparer ces trois évite l'erreur qui consiste à faire porter à un seul nom de film les propriétés
-de l'émulsion, la couleur de la source et le style de rendu d'un laboratoire. Quand un support
-réel existe, la mesure passe avant les valeurs par défaut de la source. Les statistiques de
-scanner ne servent pas directement de matrice couleur absolue pour une scène.
+Séparer ces trois évite l'erreur qui consiste à faire porter à un seul nom de film les propriétés de
+l'émulsion,
+la couleur de la source et le style de rendu d'un laboratoire.
+Quand un support réel existe, la mesure passe avant les valeurs par défaut de la source.
+Les statistiques de scanner ne servent pas directement de matrice couleur absolue pour une scène.
 
 Les données sont décrites dans [profils de film](FILM_PROFILES.md).
 
@@ -161,28 +166,31 @@ Les données sont décrites dans [profils de film](FILM_PROFILES.md).
 
 ### `MAIN`
 
-La valeur par défaut du développement courant. Elle n'intègre ni style de scanner non choisi, ni
-Auto Levels, Auto Color, Auto Tone ou Auto White Balance. La mesure du support et de la plage de
-densité, ainsi que le vibrance limité des scènes peu saturées, font partie de l'inversion de base.
+La valeur par défaut du développement courant.
+Elle n'intègre ni style de scanner non choisi, ni Auto Levels, Auto Color,
+Auto Tone ou Auto White Balance. La mesure du support et de la plage de densité,
+ainsi que le vibrance limité des scènes peu saturées, font partie de l'inversion de base.
 
 ### `PRINT`
 
-L'image de travail est celle de `MAIN`. Un ICC imprimante RVB valide est appliqué une seule fois,
-à la fin de l'export. Un profil absent ou invalide fait échouer, sans repli sur le sRGB ni sur des
-valeurs de papier arbitraires.
+L'image de travail est celle de `MAIN`.
+Un ICC imprimante RVB valide est appliqué une seule fois, à la fin de l'export.
+Un profil absent ou invalide fait échouer,
+sans repli sur le sRGB ni sur des valeurs de papier arbitraires.
 
 ### `HS`, `SP`
 
 Deux étapes.
 
 1. `documentedCharacter` : `SP` utilise un caractère de base limité, tiré de six paires du même
-   négatif passées par SP-3000 et par negaflow MAIN. `HS` construit son caractère de tonalité, de
-   neutre et de couleur à partir d'orientations publiées et des valeurs de conception du projet.
+négatif passées par SP-3000 et par negaflow MAIN. `HS` construit son caractère de tonalité,
+de neutre et de couleur à partir d'orientations publiées et des valeurs de conception du projet.
 2. `scannerSignature` : seule la différence relative des groupes dont les noms de films et le
-   nombre d'images concordent sur les deux machines s'ajoute.
+nombre d'images concordent sur les deux machines s'ajoute.
 
-`HS` comprend une accentuation sur le canal de luminosité. Ce rayon et cette intensité n'ont pas
-été mesurés sur la machine réelle. `SP` ne l'inclut pas.
+`HS` comprend une accentuation sur le canal de luminosité. Ce rayon et cette intensité n'ont pas été
+mesurés sur la machine réelle.
+`SP` ne l'inclut pas.
 
 Tous les profils actuels sont `realOnly`.
 
@@ -194,15 +202,15 @@ Tous les profils actuels sont `realOnly`.
 ### `F135`, `HR`
 
 Ce sont deux styles de minilab construits par le projet, pas des clones de machines mesurées.
-`F135` emploie une courbe en S proche du tirage avec des tons moyens chauds ; `HR` des noirs
-profonds et une direction neutre et bleue plus calme. Aucune prétention à avoir validé et cloné
-une machine précise.
+`F135` emploie une courbe en S proche du tirage avec des tons moyens chauds ;
+`HR` des noirs profonds et une direction neutre et bleue plus calme.
+Aucune prétention à avoir validé et cloné une machine précise.
 
 ### `EXPIRED`
 
-Une cible de récupération pour les films anciens. Elle ne désature pas systématiquement et
-n'étire pas la plage : elle s'en tient à des corrections limitées, dans les limites des preuves
-actuelles.
+Une cible de récupération pour les films anciens.
+Elle ne désature pas systématiquement et n'étire pas la plage :
+elle s'en tient à des corrections limitées, dans les limites des preuves actuelles.
 
 ## Réglages de développement
 
@@ -213,14 +221,15 @@ actuelles.
 | Détail et effets | Netteté, clarté, correction de voile, grain, vignetage, halation, réduction de bruit |
 | Correction locale | Masques radial, linéaire, polygonal, pinceau, plus densité plus et densité moins |
 
-Ces valeurs sont enregistrées comme un historique d'édition par étapes. GrainMend et la
-correction locale ordinaire diffèrent par leur but et par leur mode d'enregistrement.
+Ces valeurs sont enregistrées comme un historique d'édition par étapes.
+GrainMend et la correction locale ordinaire diffèrent par leur but et par leur mode
+d'enregistrement.
 
 ## Gestion des couleurs
 
-Si l'entrée porte un ICC valide, cet espace est lu. Les calculs internes se font dans l'espace de
-travail linéaire retenu, et le passage à un espace de sortie a lieu à l'affichage, à l'épreuvage
-écran et à l'export.
+Si l'entrée porte un ICC valide, cet espace est lu.
+Les calculs internes se font dans l'espace de travail linéaire retenu,
+et le passage à un espace de sortie a lieu à l'affichage, à l'épreuvage écran et à l'export.
 
 Principales sorties prises en charge :
 
@@ -229,13 +238,13 @@ Principales sorties prises en charge :
 - Adobe RGB
 - Un ICC imprimante/sortie RVB choisi par l'utilisateur
 
-Le nom, la taille en octets et le SHA-256 du profil imprimante sont figés au démarrage de
-l'export. Si le fichier change pendant le rendu, tout s'arrête.
+Le nom, la taille en octets et le SHA-256 du profil imprimante sont figés au démarrage de l'export.
+Si le fichier change pendant le rendu, tout s'arrête.
 
 Rien n'affirme que le chemin actuel Core Image et ColorSync donne une intention de rendu et une
-black-point compensation identiques bit à bit sur toutes les versions de macOS. Une telle garantie
-demanderait d'abord un chemin de tampon ColorSync distinct et des contrôles mémoire sur les
-grandes images 16 bits.
+black-point compensation identiques bit à bit sur toutes les versions de macOS.
+Une telle garantie demanderait d'abord un chemin de tampon ColorSync distinct et des contrôles
+mémoire sur les grandes images 16 bits.
 
 ## Performance et sûreté
 
@@ -254,10 +263,10 @@ grandes images 16 bits.
 5. Paires REAL/TARGET : un contrôle qualité d'appareil avec du matériel de validation distinct
 6. Vérification sur matériel réel : scanner, film, écran et tirage
 
-Un bon résultat sur IT8 synthétique ne prouve pas la justesse absolue sur des négatifs réels. Le
-jugement de qualité des profils scanner suit
+Un bon résultat sur IT8 synthétique ne prouve pas la justesse absolue sur des négatifs réels.
+Le jugement de qualité des profils scanner suit
 [contrôle qualité des profils scanner](../reference/PROFILE_QUALITY_GATE.md) et
-[validation colorimétrique IT8](../reference/IT8_COLOR_VALIDATION.md).
+[validation colorimétrique IT8](../reference/IT8_COLOR_VALIDATION.md) .
 
 ## Où se trouve le code
 
@@ -269,5 +278,6 @@ jugement de qualité des profils scanner suit
 - `Sources/Chromabase/Imaging/`
 - `Sources/Chromabase/Export/`
 
-La version produit actuelle est `1.0.0`. L'historique d'édition et les schémas de profils
-continueront de passer par une procédure de validation avant de changer.
+La version produit actuelle est `1.0.0`.
+L'historique d'édition et les schémas de profils continueront de passer par une procédure de
+validation avant de changer.

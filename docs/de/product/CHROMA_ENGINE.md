@@ -2,8 +2,8 @@
 
 [Dokumentationsstart](../README.md)
 
-Die Chroma Engine kehrt Film um und entwickelt ihn. Der Code liegt im Modul `Chromabase`. App und
-CLI nutzen dasselbe Modul, gleiche Eingabe läuft also durch dieselbe Schrittfolge.
+Die Chroma Engine kehrt Film um und entwickelt ihn. Der Code liegt im Modul `Chromabase`.
+App und CLI nutzen dasselbe Modul, gleiche Eingabe läuft also durch dieselbe Schrittfolge.
 
 | Auf einen Blick | Inhalt |
 |---|---|
@@ -42,9 +42,9 @@ flowchart LR
     J --> K["Bildschirm- oder Ausgabefarbraum"]
 ```
 
-Das Arbeitsbild läuft in einem linearen Farbraum mit 32-Bit-Gleitkomma. Nur Rechenschritte, die
-Gamma brauchen, wandeln an ihrer festen Stelle um. Die Kodierung für Bildschirm oder Dateiformat
-kommt zuletzt.
+Das Arbeitsbild läuft in einem linearen Farbraum mit 32-Bit-Gleitkomma.
+Nur Rechenschritte, die Gamma brauchen, wandeln an ihrer festen Stelle um.
+Die Kodierung für Bildschirm oder Dateiformat kommt zuletzt.
 
 Apples Core-Image-Dokumentation:
 
@@ -54,19 +54,20 @@ Apples Core-Image-Dokumentation:
 - [Core-Image-Leistungsleitfaden](https://developer.apple.com/library/archive/documentation/GraphicsImaging/Conceptual/CoreImaging/ci_performance/ci_performance.html)
 
 `CIContext` wird nicht für jeden Render neu gebaut, sondern nach Zweck getrennt wiederverwendet:
-Anzeige, Analyse, Export. Die Vorschau rechnet nur die nötige Größe und die neueste
-Bearbeitungsversion. Der Export rendert erneut in Quellgröße.
+Anzeige, Analyse, Export.
+Die Vorschau rechnet nur die nötige Größe und die neueste Bearbeitungsversion.
+Der Export rendert erneut in Quellgröße.
 
 ## Filmträger
 
 ### Warum messen
 
-Der unbelichtete Teil eines Negativs ist ein Bezugspunkt aus Film, Entwicklung und
-Scanlichtquelle. Auch die Orangemaske des Farbnegativs steckt darin. Ist der Träger falsch,
-verschieben sich danach alle Dichten und Kanalverhältnisse.
+Der unbelichtete Teil eines Negativs ist ein Bezugspunkt aus Film, Entwicklung und Scanlichtquelle.
+Auch die Orangemaske des Farbnegativs steckt darin.
+Ist der Träger falsch, verschieben sich danach alle Dichten und Kanalverhältnisse.
 
-Auch Kodaks Daten zu Portra 400 halten Mindestdichte, Kennlinien und spektrale Farbstoffdichte
-getrennt fest.
+Auch Kodaks Daten zu Portra 400 halten Mindestdichte,
+Kennlinien und spektrale Farbstoffdichte getrennt fest.
 
 - [Kodak Professional Portra 400 technical data](https://www.kodakprofessional.com/sites/default/files/wysiwyg/pro/resources/e4050_portra_400.pdf)
 
@@ -80,10 +81,10 @@ getrennt fest.
 - Liegen mehrere Filmstreifen auf einem Blatt, lassen sich getrennte Bereiche zusammen lesen.
 - Einer Grenze, an der Halter und Film sich mischen, wird weniger getraut als dem Inneren.
 
-Auf einem verkleinerten Analysebild wird die Helligkeitsverteilung gesucht, zusammenhängende
-Bereiche werden gruppiert, danach fallen Kandidaten außerhalb des Films weg. Bestehen mehrere
-Streifen die Bedingungen, werden sie gemeinsam gerechnet. Das Ergebnis hält auch die gewählte
-Methode und die Konfidenz fest.
+Auf einem verkleinerten Analysebild wird die Helligkeitsverteilung gesucht,
+zusammenhängende Bereiche werden gruppiert, danach fallen Kandidaten außerhalb des Films weg.
+Bestehen mehrere Streifen die Bedingungen, werden sie gemeinsam gerechnet.
+Das Ergebnis hält auch die gewählte Methode und die Konfidenz fest.
 
 ### Die Methode wählen
 
@@ -93,8 +94,8 @@ Methode und die Konfidenz fest.
 | `Film` | Nutzt die Messung als Dmin; der gewählte Film liefert vor allem `dmaxNorm`. Film- und Lichtquellenvorgaben greifen nur, wenn die Messung scheitert. |
 | `Auto` | Nutzt die räumliche Analyse und fällt bei Fehlschlag auf die randbasierte Methode zurück. |
 
-Ohne manuellen Wert oder mit falscher Film-ID geht es zur nächsten sicheren Methode. Das hellste
-Objekt der Szene wird nie direkt als Filmträger genommen.
+Ohne manuellen Wert oder mit falscher Film-ID geht es zur nächsten sicheren Methode.
+Das hellste Objekt der Szene wird nie direkt als Filmträger genommen.
 
 ## Optische Dichte und Umkehr
 
@@ -104,8 +105,9 @@ Die Dichte ergibt sich aus der linearen Transmission `T` und dem Träger `Dmin` 
 D = \log_{10}\left(\frac{D_{\min}}{T}\right)
 ```
 
-`D = 0` heißt, die Eingabe entspricht dem unbelichteten Träger. Perforation oder Hintergrundlicht
-können negativ werden. Diese Werte bleiben endlich und werden nicht sofort beschnitten.
+`D = 0` heißt, die Eingabe entspricht dem unbelichteten Träger.
+Perforation oder Hintergrundlicht können negativ werden.
+Diese Werte bleiben endlich und werden nicht sofort beschnitten.
 
 ### Daten zu Filmtypen
 
@@ -117,14 +119,14 @@ Wofür die Daten dienen:
 - Der Dichtebereich je Kanal
 - Ein sicherer Bereich, wenn geringer Kontrast die automatische Messung schwanken lässt
 
-Manche Werte nähern Kurven aus öffentlichem Material an, manche sind bewusst konservativ gesetzt.
-27 Namen bedeuten keine 27 geprüften Farbprofile. Sobald der Träger gemessen ist, gilt die
-Messung.
+Manche Werte nähern Kurven aus öffentlichem Material an,
+manche sind bewusst konservativ gesetzt. 27 Namen bedeuten keine 27 geprüften Farbprofile.
+Sobald der Träger gemessen ist, gilt die Messung.
 
 ### Feste Printantwort
 
-`MAIN` überführt die um den Träger verringerte Dichte in eine monoton steigende Kurve. Die
-Koeffizienten sind kein verstecktes Preset, sondern folgen aus vier Ankerpunkten.
+`MAIN` überführt die um den Träger verringerte Dichte in eine monoton steigende Kurve.
+Die Koeffizienten sind kein verstecktes Preset, sondern folgen aus vier Ankerpunkten.
 
 - Der Schwarzpunkt des Trägers
 - 18-%-Mittelgrau
@@ -132,8 +134,9 @@ Koeffizienten sind kein verstecktes Preset, sondern folgen aus vier Ankerpunkten
 - Reserve für reflektiertes Licht
 
 Die heutige Kurve ist eine gestreckte Exponentialfunktion und hat über den ganzen Bereich eine
-Umkehrfunktion. Der Hin-und-zurück-Test mit synthetischen Negativen nutzt genau diese. Gleichungen
-und Zahlen stehen in [feste Printantwort](../reference/PRINT_RESPONSE.md).
+Umkehrfunktion.
+Der Hin-und-zurück-Test mit synthetischen Negativen nutzt genau diese.
+Gleichungen und Zahlen stehen in [feste Printantwort](../reference/PRINT_RESPONSE.md).
 
 Wo der Standardweg endet und die Automatik beginnt:
 
@@ -152,9 +155,9 @@ Wo der Standardweg endet und die Automatik beginnt:
 | Scanner target | Welchen Ton- und Farbstil hat das Ergebnis | Relative Statistik aus eigens erstellten Scans |
 
 Diese Trennung verhindert den Fehler, einen Filmnamen zugleich für Emulsionseigenschaften,
-Lichtquellenfarbe und den Ausgabestil eines Labors stehen zu lassen. Liegt ein echter Träger vor,
-gilt die Messung vor den Vorgaben der Lichtquelle. Auch Scannerstatistiken dienen nicht direkt als
-absolute Farbmatrix einer Szene.
+Lichtquellenfarbe und den Ausgabestil eines Labors stehen zu lassen.
+Liegt ein echter Träger vor, gilt die Messung vor den Vorgaben der Lichtquelle.
+Auch Scannerstatistiken dienen nicht direkt als absolute Farbmatrix einer Szene.
 
 Die Daten beschreibt [Filmprofile](FILM_PROFILES.md).
 
@@ -162,29 +165,31 @@ Die Daten beschreibt [Filmprofile](FILM_PROFILES.md).
 
 ### `MAIN`
 
-Der Standard für gewöhnliche Entwicklung. Weder ein nicht gewählter Scannerstil noch Auto Levels,
-Auto Color, Auto Tone oder Auto White Balance fließen ein. Die Messung von Träger und
-Dichtebereich sowie das begrenzte Vibrance bei wenig gesättigten Szenen gehören zur
-Grundumkehrung.
+Der Standard für gewöhnliche Entwicklung.
+Weder ein nicht gewählter Scannerstil noch Auto Levels, Auto Color,
+Auto Tone oder Auto White Balance fließen ein.
+Die Messung von Träger und Dichtebereich sowie das begrenzte Vibrance bei wenig gesättigten Szenen
+gehören zur Grundumkehrung.
 
 ### `PRINT`
 
-Das Arbeitsbild entspricht `MAIN`. Am Ende des Exports wird einmal ein gültiges
-RGB-Drucker-ICC angewendet. Fehlt das Profil oder ist es ungültig, scheitert der Lauf, statt auf
-sRGB oder beliebige Papierwerte auszuweichen.
+Das Arbeitsbild entspricht `MAIN`.
+Am Ende des Exports wird einmal ein gültiges RGB-Drucker-ICC angewendet.
+Fehlt das Profil oder ist es ungültig, scheitert der Lauf,
+statt auf sRGB oder beliebige Papierwerte auszuweichen.
 
 ### `HS`, `SP`
 
 Zwei Stufen.
 
 1. `documentedCharacter`: `SP` nutzt einen begrenzten Grundcharakter aus sechs Paaren desselben
-   Negativs über SP-3000 und negaflow MAIN. `HS` baut Ton-, Neutral- und Farbcharakter aus
-   veröffentlichter Richtung und den Entwurfswerten des Projekts.
+Negativs über SP-3000 und negaflow MAIN. `HS` baut Ton-,
+Neutral- und Farbcharakter aus veröffentlichter Richtung und den Entwurfswerten des Projekts.
 2. `scannerSignature`: Hinzu kommt nur die relative Differenz jener Gruppen, deren Filmnamen und
-   Bildzahlen auf beiden Maschinen übereinstimmen.
+Bildzahlen auf beiden Maschinen übereinstimmen.
 
-`HS` enthält eine Schärfung im Helligkeitskanal. Radius und Stärke stammen nicht aus einer Messung
-an der echten Maschine. `SP` enthält sie nicht.
+`HS` enthält eine Schärfung im Helligkeitskanal.
+Radius und Stärke stammen nicht aus einer Messung an der echten Maschine. `SP` enthält sie nicht.
 
 Alle heutigen Profile sind `realOnly`.
 
@@ -195,14 +200,15 @@ Alle heutigen Profile sind `realOnly`.
 
 ### `F135`, `HR`
 
-Das sind zwei vom Projekt gebaute Minilab-Stile, keine vermessenen Maschinenklone. `F135` nutzt
-eine printnahe S-Kurve mit warmen Mitten, `HR` tiefe Schwarztöne und eine ruhige neutrale, bläuliche
-Richtung. Es wird nicht behauptet, eine bestimmte Maschine geprüft und nachgebaut zu haben.
+Das sind zwei vom Projekt gebaute Minilab-Stile, keine vermessenen Maschinenklone.
+`F135` nutzt eine printnahe S-Kurve mit warmen Mitten,
+`HR` tiefe Schwarztöne und eine ruhige neutrale, bläuliche Richtung.
+Es wird nicht behauptet, eine bestimmte Maschine geprüft und nachgebaut zu haben.
 
 ### `EXPIRED`
 
-Ein Rettungsziel für alten Film. Es entsättigt nicht pauschal und dehnt den Bereich nicht, sondern
-bleibt bei begrenzten Korrekturen im Rahmen der vorhandenen Belege.
+Ein Rettungsziel für alten Film. Es entsättigt nicht pauschal und dehnt den Bereich nicht,
+sondern bleibt bei begrenzten Korrekturen im Rahmen der vorhandenen Belege.
 
 ## Entwicklungsregler
 
@@ -213,14 +219,14 @@ bleibt bei begrenzten Korrekturen im Rahmen der vorhandenen Belege.
 | Detail und Effekte | Schärfe, Klarheit, Dunst entfernen, Filmkorn, Vignette, Halation, Rauschminderung |
 | Lokale Korrektur | Radiale, lineare, polygonale und Pinselmasken sowie Abwedeln und Nachbelichten |
 
-Diese Werte werden als schrittweiser Bearbeitungsverlauf gespeichert. GrainMend und gewöhnliche
-lokale Korrektur unterscheiden sich in Zweck und Speicherform.
+Diese Werte werden als schrittweiser Bearbeitungsverlauf gespeichert.
+GrainMend und gewöhnliche lokale Korrektur unterscheiden sich in Zweck und Speicherform.
 
 ## Farbmanagement
 
-Trägt die Eingabe ein gültiges ICC, wird dieser Farbraum gelesen. Die interne Rechnung läuft im
-festgelegten linearen Arbeitsraum; der Wechsel in einen Ausgabefarbraum geschieht bei Anzeige,
-Softproof und Export.
+Trägt die Eingabe ein gültiges ICC, wird dieser Farbraum gelesen.
+Die interne Rechnung läuft im festgelegten linearen Arbeitsraum;
+der Wechsel in einen Ausgabefarbraum geschieht bei Anzeige, Softproof und Export.
 
 Wichtige unterstützte Ausgaben:
 
@@ -229,12 +235,16 @@ Wichtige unterstützte Ausgaben:
 - Adobe RGB
 - Ein vom Nutzer gewähltes RGB-Drucker-/Ausgabe-ICC
 
-Name, Bytezahl und SHA-256 des Druckerprofils werden zu Beginn des Exports festgehalten. Ändert
-sich die Datei während des Renderns, bricht der Lauf ab.
+Name,
+Bytezahl und SHA-256 des Druckerprofils werden zu Beginn des Exports festgehalten. Ändert sich die
+Datei während des Renderns,
+bricht der Lauf ab.
 
-Es wird nicht behauptet, dass der heutige Weg über Core Image und ColorSync auf jedem macOS
-Rendering Intent und Black Point Compensation bitgleich erzeugt. Dafür bräuchte es zuerst einen
-eigenen ColorSync-Pufferweg und Speicherprüfungen für große 16-Bit-Bilder.
+Es wird nicht behauptet,
+dass der heutige Weg über Core Image und ColorSync auf jedem macOS Rendering Intent und Black Point
+Compensation bitgleich erzeugt.
+Dafür bräuchte es zuerst einen eigenen ColorSync-Pufferweg und Speicherprüfungen für große
+16-Bit-Bilder.
 
 ## Leistung und Sicherheit
 
@@ -253,10 +263,10 @@ eigenen ColorSync-Pufferweg und Speicherprüfungen für große 16-Bit-Bilder.
 5. REAL/TARGET-Paare: eine Gerätequalitätsprüfung mit eigenem Prüfmaterial
 6. Prüfung an echter Hardware: Scanner, Film, Display und Ausdruck
 
-Ein gutes Ergebnis im synthetischen IT8 belegt keine absolute Genauigkeit an echten Negativen. Für
-die Qualität von Scannerprofilen gelten
+Ein gutes Ergebnis im synthetischen IT8 belegt keine absolute Genauigkeit an echten Negativen.
+Für die Qualität von Scannerprofilen gelten
 [Qualitätsprüfung der Scannerprofile](../reference/PROFILE_QUALITY_GATE.md) und
-[IT8-Farbprüfung](../reference/IT8_COLOR_VALIDATION.md).
+[IT8-Farbprüfung](../reference/IT8_COLOR_VALIDATION.md) .
 
 ## Wo der Code liegt
 
@@ -268,5 +278,5 @@ die Qualität von Scannerprofilen gelten
 - `Sources/Chromabase/Imaging/`
 - `Sources/Chromabase/Export/`
 
-Die aktuelle Produktversion ist `1.0.0`. Bearbeitungsverlauf und Profilschemata werden auch
-künftig erst nach einem Prüfverfahren geändert.
+Die aktuelle Produktversion ist `1.0.0`.
+Bearbeitungsverlauf und Profilschemata werden auch künftig erst nach einem Prüfverfahren geändert.

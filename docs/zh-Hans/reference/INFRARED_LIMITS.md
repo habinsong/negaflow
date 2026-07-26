@@ -19,8 +19,8 @@
 
 ## 自动应用的范围
 
-`FilmType` 只区分彩色与黑白、负片与正片，没有信息能分辨染料型黑白与银盐，也分不出普通反转片
-和 Kodachrome。
+`FilmType` 只区分彩色与黑白、负片与正片，没有信息能分辨染料型黑白与银盐，
+也分不出普通反转片和 Kodachrome。
 
 | 胶片类型 | 自动 IR | 原因 |
 |---|---|---|
@@ -32,8 +32,8 @@
 
 ## 对齐检查
 
-`InfraredDefectRemoval` 会比较 IR 的渗漏纹理和 RGB 红通道，找出整数偏移，结果里带
-`AlignmentDiagnostics`。
+`InfraredDefectRemoval` 会比较 IR 的渗漏纹理和 RGB 红通道，找出整数偏移，
+结果里带 `AlignmentDiagnostics`。
 
 | 状态 | 含义 |
 |---|---|
@@ -43,10 +43,10 @@
 | `weakCorrelation` | 相关性没过阈值 |
 | `searchLimitReached` | 最优点压在搜索边界上 |
 
-后三种不会用 `(0,0)` 代替，而是以 `alignmentUnreliable` 错误中断。最优点压在搜索边界时，不管
-偏移多大都算失败。
+后三种不会用 `(0,0)` 代替，而是以 `alignmentUnreliable` 错误中断。
+最优点压在搜索边界时，不管偏移多大都算失败。
 
-自动测试代替不了真实设备上的 RGB/IR 对齐和逐种胶片的结果。真机确认按
-[实机检查表](../validation/REAL_QA_CHECKLIST.md)里的 IR 项目做。
+自动测试代替不了真实设备上的 RGB/IR 对齐和逐种胶片的结果。
+真机确认按 [实机检查表](../validation/REAL_QA_CHECKLIST.md)里的 IR 项目做。
 
 SANE 的设备控制和采集代码只放在独立仓库 `negaflow-scanner-sane` 里。

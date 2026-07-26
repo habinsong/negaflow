@@ -7,12 +7,13 @@ Wo es liegt:
 - Swift: `PrintResponse` in `Sources/Chromabase/Film/NegativeInversion.swift`
 - Metal: der Kernel `negativeInvert`
 - Fixierender Test:
-  `NegativeInversionCalibrationTests.testPrintResponseDerivesFromPhotometricContract`
+`NegativeInversionCalibrationTests.testPrintResponseDerivesFromPhotometricContract`
 
 ## Die Kurve
 
-Eine Filmkennlinie erklärt Belichtung gegen Dichte über Fuß, Geradenteil und Schulter. negaflow
-nähert die Schulter im Dichtebereich mit einer gestreckten Exponentialkurve an.
+Eine Filmkennlinie erklärt Belichtung gegen Dichte über Fuß,
+Geradenteil und Schulter. negaflow nähert die Schulter im Dichtebereich mit einer gestreckten
+Exponentialkurve an.
 
 ```math
 \begin{aligned}
@@ -22,23 +23,23 @@ d &= \frac{D}{d_{\max}} \\
 \end{aligned}
 ```
 
-`A`, `r` und `s` sind Kurzformen von `amplitude`, `rate` und `shape` im Code. `d_{\max}` ist
-`dmaxNorm`.
+`A`, `r` und `s` sind Kurzformen von `amplitude`, `rate` und `shape` im Code.
+`d_{\max}` ist `dmaxNorm`.
 
 - `D`: optische Dichte ohne den Filmträger
 - `d`: dieser Wert geteilt durch den genutzten Dichtebereich
 - `P`: lineare Ausgabehelligkeit
 
-Die Kurve steigt über den ganzen Bereich. Für `d ≥ 0` landet die Ausgabe in
-`[baseToe, ceiling)`. Werte unter null, etwa ein Hintergrundlicht heller als der Träger oder die
-Perforation, werden nicht auf null beschnitten. Sie laufen als endliche positive Werte weiter.
+Die Kurve steigt über den ganzen Bereich. Für `d ≥ 0` landet die Ausgabe in `[baseToe, ceiling)`.
+Werte unter null, etwa ein Hintergrundlicht heller als der Träger oder die Perforation,
+werden nicht auf null beschnitten. Sie laufen als endliche positive Werte weiter.
 
 ```math
 y(-|d|) = 2\log_{10}(P_{\mathrm{toe}}) - y(|d|)
 ```
 
-Auch die Umkehrfunktion hat eine geschlossene Form. Sie dient synthetischen Negativen und
-Hin-und-zurück-Prüfungen.
+Auch die Umkehrfunktion hat eine geschlossene Form.
+Sie dient synthetischen Negativen und Hin-und-zurück-Prüfungen.
 
 ```math
 d = \frac{\left[\ln\left(\frac{A}{y_{\mathrm{ceil}}-\log_{10}(P)}\right)\right]^{1/s}}{r}
@@ -72,9 +73,9 @@ r &= r_{\mathrm{white}}^{1/s}
 
 ## Standard-Dichtebereich
 
-`normalRange` ist nicht die physikalische Maximaldichte des Films. Es ist der Bereich, den eine
-normal belichtete Szene nutzt. Er zählt vor allem, wenn der Träger nicht gemessen werden konnte
-oder der Szenenkontrast sehr gering ist.
+`normalRange` ist nicht die physikalische Maximaldichte des Films.
+Es ist der Bereich, den eine normal belichtete Szene nutzt. Er zählt vor allem,
+wenn der Träger nicht gemessen werden konnte oder der Szenenkontrast sehr gering ist.
 
 ```math
 \begin{aligned}
@@ -88,14 +89,13 @@ oder der Szenenkontrast sehr gering ist.
 - Schwarzweiß `3.5`: Praxis der Schwarzweißvergrößerung mit längerem Geradenteil
 - `0.60D`: Mittelgraudichte einer normal belichteten Szene
 
-`applySceneRanged` misst statt dieses Werts den Dichtebereich, den das Bild je Kanal wirklich
-nutzt.
+`applySceneRanged` misst statt dieses Werts den Dichtebereich, den das Bild je Kanal wirklich nutzt.
 
 ## Was sich in v4 geändert hat
 
-Früher gab es eine in drei Abschnitte geteilte Funktion und feste Presets. v4 nutzt eine Kurve
-und vier Ankerpunkte. Es gibt keine Abschnittsgrenzen, und jeder Wert lässt sich in Code und
-Tests nachvollziehen.
+Früher gab es eine in drei Abschnitte geteilte Funktion und feste Presets. v4 nutzt eine Kurve und
+vier Ankerpunkte.
+Es gibt keine Abschnittsgrenzen, und jeder Wert lässt sich in Code und Tests nachvollziehen.
 
 Gegenüber dem alten Ergebnis:
 
@@ -107,13 +107,13 @@ Gegenüber dem alten Ergebnis:
 
 ## Quellen und Umfang
 
-Fuß, Geradenteil, Schulter und Gamma stammen aus der veröffentlichten Sensitometrie. Kein
-Kurvenkoeffizient aus dieser Literatur wurde übernommen. negaflow rechnet seine eigenen aus den
+Fuß, Geradenteil, Schulter und Gamma stammen aus der veröffentlichten Sensitometrie.
+Kein Kurvenkoeffizient aus dieser Literatur wurde übernommen. negaflow rechnet seine eigenen aus den
 vier Ankerpunkten oben.
 
 - [Sensitometry](https://en.wikipedia.org/wiki/Sensitometry)
 - [Hurter–Driffield Characteristic Curve](https://studyguides.com/study-methods/overview/cmpanf83znm1201neitjb4waw)
 - [Vergleich von RA-4-Papieren](https://tinker.koraks.nl/photography/on-a-color-mission-comparing-two-ra4-color-papers/)
 
-Bekannte Kontrastumfänge von RA-4-Material werden nicht direkt übernommen. Der Kontrast dieser
-Kurve kommt aus dem `shape`, das sich aus den vier Ankerpunkten ergibt.
+Bekannte Kontrastumfänge von RA-4-Material werden nicht direkt übernommen.
+Der Kontrast dieser Kurve kommt aus dem `shape`, das sich aus den vier Ankerpunkten ergibt.

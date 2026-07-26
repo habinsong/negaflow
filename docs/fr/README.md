@@ -2,7 +2,8 @@
 
 Classée par sujet pour ouvrir directement celle qu'il vous faut.
 
-[English](../README.md) · [한국어](../ko/README.md) · [日本語](../ja/README.md) · [简体中文](../zh-Hans/README.md) · Français · [Deutsch](../de/README.md)
+[English](../README.md) · [한국어](../ko/README.md) · [日本語](../ja/README.md) ·
+[简体中文](../zh-Hans/README.md) · Français · [Deutsch](../de/README.md)
 
 ```mermaid
 flowchart LR

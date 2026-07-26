@@ -2,8 +2,8 @@
 
 [文档首页](../README.md)
 
-这是脚本或其他应用读取扫描仪信息用的规格，和实际的扫描仪实现分开。CLI 只是把 `ScannerKit`
-收到的设备信息和功能转成 JSON。
+这是脚本或其他应用读取扫描仪信息用的规格，和实际的扫描仪实现分开。
+CLI 只是把 `ScannerKit` 收到的设备信息和功能转成 JSON。
 
 | 项目 | 约定 |
 |---|---|
@@ -19,8 +19,8 @@ negaflow detect [--demo] --json
 negaflow capabilities <scannerID> [--demo] --json
 ```
 
-目前 `--json` 只能用在上面两个只读命令上。加在会改文件或发进度的 `scan`、`develop` 上，会以
-`unsupported_json_command` 错误结束。
+目前 `--json` 只能用在上面两个只读命令上。
+加在会改文件或发进度的 `scan`、`develop` 上，会以 `unsupported_json_command` 错误结束。
 
 ## 通用格式
 
@@ -42,7 +42,7 @@ negaflow capabilities <scannerID> [--demo] --json
 
 </details>
 
-失败时 `status` 是 `error`，`payload` 是 `null`。`error` 里有不会变的机器码和给人看的说明。
+失败时 `status` 是 `error`，`payload` 是 `null`。 `error` 里有不会变的机器码和给人看的说明。
 诊断日志走 stderr，stdout 里不混日志和进度。
 
 ## 功能信息
@@ -68,8 +68,8 @@ negaflow capabilities <scannerID> [--demo] --json
 { "dpi": 3600, "seconds": 42.0 }
 ```
 
-应用界面和 CLI 读的是同一份 `ScannerCapabilities`。一致性检查会确认界面上打开的功能和 JSON
-字段遵循同样的值。
+应用界面和 CLI 读的是同一份 `ScannerCapabilities`。
+一致性检查会确认界面上打开的功能和 JSON 字段遵循同样的值。
 
 ## 版本规则
 

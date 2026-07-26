@@ -2,8 +2,9 @@
 
 [Docs home](../README.md)
 
-negaflow is a macOS app. You import or scan film images, then go through inversion, develop,
-GrainMend, output, and preservation. Every edit is kept apart from the original.
+negaflow is a macOS app.
+You import or scan film images, then go through inversion, develop, GrainMend, output,
+and preservation. Every edit is kept apart from the original.
 
 > [!IMPORTANT]
 > Originals, edit history, caches, and output files are different material. Losing a cache must
@@ -63,9 +64,9 @@ Not a scanner driver. It owns the contract that connects an external plugin.
 - Scan sessions and job history
 - The demo scanner you have to turn on yourself
 
-The SANE implementation lives in a separate GPL project,
-[`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane). The app and the
-plugin talk over JSON and the CLI only.
+The SANE implementation lives in a separate GPL project, [`negaflow-scanner-sane`](https:
+//github.com/habinsong/negaflow-scanner-sane).
+The app and the plugin talk over JSON and the CLI only.
 
 ### `negaflowCLI`
 
@@ -123,21 +124,22 @@ An installed plugin can report these capabilities.
 - IR
 - Batch and holder behavior
 
-The app never invents a capability from a table of model names. When a scan finishes, the settings
-the plugin actually applied and the output file are checked again.
+The app never invents a capability from a table of model names. When a scan finishes,
+the settings the plugin actually applied and the output file are checked again.
 
 ### Original ID
 
-A file path alone does not identify an original. The values the current contract needs are kept:
-file observations, byte count, modification time, SHA-256, and a persistent bookmark.
+A file path alone does not identify an original.
+The values the current contract needs are kept: file observations, byte count, modification time,
+SHA-256, and a persistent bookmark.
 
 If a file moved, the path changes only when you relink it yourself or bookmark recovery succeeds.
 
 ## Catalog
 
-The main store is `library.sqlite`. The old `library.json` is used to bring confirmed older
-material across, or to write a backup that can move between machines. The two stores are never
-updated at once.
+The main store is `library.sqlite`.
+The old `library.json` is used to bring confirmed older material across,
+or to write a backup that can move between machines. The two stores are never updated at once.
 
 What goes into SQLite:
 
@@ -161,8 +163,8 @@ What does not:
 5. Check SQLite integrity and the app's safety conditions.
 6. Switch the main store over only when all of it lines up.
 
-A JSON file that failed is not treated as an empty catalog. The numbers and the decision behind
-them are in [Catalog storage](CATALOG_STORAGE.md).
+A JSON file that failed is not treated as an empty catalog.
+The numbers and the decision behind them are in [Catalog storage](CATALOG_STORAGE.md).
 
 ## Library
 
@@ -173,12 +175,14 @@ Organizing:
 - Grid, compare, survey
 - Reviewing duplicate candidates
 
-Several virtual copies can share one original. Before an original is deleted, its references are
-checked first. Removing something from the library only changes catalog references. Moving to the
-Trash is a separate action.
+Several virtual copies can share one original.
+Before an original is deleted, its references are checked first.
+Removing something from the library only changes catalog references.
+Moving to the Trash is a separate action.
 
-Edits survive an external disk going away. The original is marked offline and you relink it by
-file or by folder. If the ID is not the one expected, nothing is swapped automatically.
+Edits survive an external disk going away.
+The original is marked offline and you relink it by file or by folder.
+If the ID is not the one expected, nothing is swapped automatically.
 
 ## Develop and GrainMend
 
@@ -191,15 +195,16 @@ Each frame carries:
 - Version history
 - Export state
 
-While you adjust, a lower-resolution preview is used. A finished result reaches the screen only
-when its frame ID and edit version still match the current selection.
+While you adjust, a lower-resolution preview is used.
+A finished result reaches the screen only when its frame ID and edit version still match the current
+selection.
 
-Export does not save the preview bitmap on screen. It rebuilds the full-resolution image from the
-original and the edit values it pinned.
+Export does not save the preview bitmap on screen.
+It rebuilds the full-resolution image from the original and the edit values it pinned.
 
-GrainMend keeps automatic, guided, brush, clone stamp, and IR in an ordered list. Caches are
-derived files. If a result cannot be rebuilt from the original and the edit history, the export
-fails.
+GrainMend keeps automatic, guided, brush, clone stamp, and IR in an ordered list.
+Caches are derived files.
+If a result cannot be rebuilt from the original and the edit history, the export fails.
 
 More detail is in [GrainMend](../product/GRAINMEND.md).
 
@@ -208,7 +213,7 @@ More detail is in [GrainMend](../product/GRAINMEND.md).
 - **History and Snapshot:** record a develop state yourself, then compare it or go back to it.
 - **Virtual Copy:** another branch of edits without duplicating the original file.
 - **Copy/Paste:** paste a chosen range such as tone, color, detail, or geometry. Masks that need
-  original coordinates get their safety conditions checked.
+original coordinates get their safety conditions checked.
 
 ## Export
 
@@ -260,11 +265,11 @@ Supported layouts:
 - Mixed-size bundle
 - Custom layout
 
-The ICC is applied once, to the final output, after the page layout is done. Neither the original
-scan TIFF nor `-main-flat` gets a printer profile.
+The ICC is applied once, to the final output, after the page layout is done.
+Neither the original scan TIFF nor `-main-flat` gets a printer profile.
 
-Without a valid RGB printer ICC, no other profile is substituted. The bytes and SHA-256 of the
-profile you chose go into the output record.
+Without a valid RGB printer ICC, no other profile is substituted.
+The bytes and SHA-256 of the profile you chose go into the output record.
 
 ## Preservation archive
 
@@ -276,9 +281,9 @@ What goes into `.negaflowarchive`:
 - The GrainMend history that is needed
 - The relationship between virtual copies and the original they share
 
-Thumbnails, previews, GrainMend caches, and exported files can be rebuilt, so they stay out. It
-uses the RFC 8493 BagIt structure with a SHA-256 list, and every file and relationship is checked
-before the bundle moves to its final location.
+Thumbnails, previews, GrainMend caches, and exported files can be rebuilt, so they stay out.
+It uses the RFC 8493 BagIt structure with a SHA-256 list,
+and every file and relationship is checked before the bundle moves to its final location.
 
 - [Library archive](LIBRARY_ARCHIVE.md)
 - [RFC 8493](https://www.rfc-editor.org/info/rfc8493/)
@@ -298,12 +303,12 @@ When a plugin is found, these are checked.
 
 If the file changed, the earlier approval is not reused.
 
-Protocol v2 uses a request ID and a sequence number, and requires exactly one final result. Output
-size has a ceiling, and after a timeout or a cancel the process and its pipes are cleaned up.
+Protocol v2 uses a request ID and a sequence number, and requires exactly one final result.
+Output size has a ceiling, and after a timeout or a cancel the process and its pipes are cleaned up.
 
-A plugin never publishes a file to the final location itself. The app hands it a temporary
-location, checks format, size, ID, and the settings actually applied, then moves the file into the
-app's storage.
+A plugin never publishes a file to the final location itself.
+The app hands it a temporary location, checks format, size, ID, and the settings actually applied,
+then moves the file into the app's storage.
 
 The full contract is in [Scanner plugin architecture](SCANNER_PLUGINS.md).
 
@@ -325,12 +330,12 @@ Catalog:
 - Integrity checks
 - Measured at 50,000 frames
 
-Today the whole catalog is loaded into memory at startup. On the same Mac, reading SQLite took
-about 7.4 seconds, close to JSON. Reading only the rows needed, through an index, is the next
-step.
+Today the whole catalog is loaded into memory at startup.
+On the same Mac, reading SQLite took about 7.4 seconds, close to JSON.
+Reading only the rows needed, through an index, is the next step.
 
-The performance limits in the repository are wide ceilings meant to catch a large regression. They
-are not a promise that every supported Mac feels comfortable.
+The performance limits in the repository are wide ceilings meant to catch a large regression.
+They are not a promise that every supported Mac feels comfortable.
 
 ## What is verified
 

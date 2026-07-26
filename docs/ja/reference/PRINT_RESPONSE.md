@@ -7,12 +7,12 @@
 - Swift: `Sources/Chromabase/Film/NegativeInversion.swift`の`PrintResponse`
 - Metal: `negativeInvert`カーネル
 - 固定検査:
-  `NegativeInversionCalibrationTests.testPrintResponseDerivesFromPhotometricContract`
+`NegativeInversionCalibrationTests.testPrintResponseDerivesFromPhotometricContract`
 
 ## 曲線
 
-フィルムの特性曲線は、露光と濃度の関係をトウ、直線部、ショルダーに分けて説明します。negaflowは
-濃度領域のショルダーをstretched exponential曲線で近似します。
+フィルムの特性曲線は、露光と濃度の関係をトウ、直線部、ショルダーに分けて説明します。
+negaflowは濃度領域のショルダーをstretched exponential曲線で近似します。
 
 ```math
 \begin{aligned}
@@ -22,15 +22,16 @@ d &= \frac{D}{d_{\max}} \\
 \end{aligned}
 ```
 
-`A`、`r`、`s`はコードの`amplitude`、`rate`、`shape`を短く書いた記号です。`d_{\max}`は
-`dmaxNorm`です。
+`A`、`r`、`s`はコードの`amplitude`、`rate`、`shape`を短く書いた記号です。
+`d_{\max}`は `dmaxNorm`です。
 
 - `D`: フィルムベースを引いた光学濃度
 - `d`: 使う濃度範囲で割った値
 - `P`: 線形の出力の明るさ
 
-曲線は全区間で上がり続けます。`d ≥ 0`のとき出力は`[baseToe, ceiling)`に入ります。ベースより
-明るいバックライトやパーフォレーションのような負の値も0で切らず、有限の正の値として続きます。
+曲線は全区間で上がり続けます。 `d ≥ 0`のとき出力は`[baseToe, ceiling)`に入ります。
+ベースより明るいバックライトやパーフォレーションのような負の値も0で切らず、
+有限の正の値として続きます。
 
 ```math
 y(-|d|) = 2\log_{10}(P_{\mathrm{toe}}) - y(|d|)
@@ -70,8 +71,8 @@ r &= r_{\mathrm{white}}^{1/s}
 
 ## 既定の濃度範囲
 
-`normalRange`はフィルムの物理的な最大濃度ではありません。正常露光の場面が使う範囲です。ベースを
-測れなかったときや、場面のコントラストがとても低いときに効いてきます。
+`normalRange`はフィルムの物理的な最大濃度ではありません。正常露光の場面が使う範囲です。
+ベースを測れなかったときや、場面のコントラストがとても低いときに効いてきます。
 
 ```math
 \begin{aligned}
@@ -85,12 +86,13 @@ r &= r_{\mathrm{white}}^{1/s}
 - 白黒`3.5`: 長い直線部を使う白黒プリントの習慣
 - `0.60D`: 正常露光の場面の中間グレー濃度
 
-`applySceneRanged`はこの値を使わず、フレームがチャンネルごとに実際に使っている濃度範囲を測ります。
+`applySceneRanged`はこの値を使わず、
+フレームがチャンネルごとに実際に使っている濃度範囲を測ります。
 
 ## v4で変えたところ
 
-前の方式は3区間に分けた関数と固定プリセットでした。v4は1本の曲線と4つの基準点にしました。区間の
-境目がなく、どの値もコードとテストで追えます。
+前の方式は3区間に分けた関数と固定プリセットでした。 v4は1本の曲線と4つの基準点にしました。
+区間の境目がなく、どの値もコードとテストで追えます。
 
 前の結果との差:
 
@@ -102,12 +104,12 @@ r &= r_{\mathrm{white}}^{1/s}
 
 ## 参考資料と範囲
 
-トウ、直線部、ショルダー、ガンマという枠組みは公開された感光学のものです。文献の曲線係数は
-写していません。negaflowの係数は上の4つの基準点から自分で計算します。
+トウ、直線部、ショルダー、ガンマという枠組みは公開された感光学のものです。
+文献の曲線係数は写していません。 negaflowの係数は上の4つの基準点から自分で計算します。
 
 - [Sensitometry](https://en.wikipedia.org/wiki/Sensitometry)
 - [Hurter–Driffield Characteristic Curve](https://studyguides.com/study-methods/overview/cmpanf83znm1201neitjb4waw)
 - [RA-4用紙の比較](https://tinker.koraks.nl/photography/on-a-color-mission-comparing-two-ra4-color-papers/)
 
-RA-4資料で知られるコントラスト範囲はそのまま使いません。この曲線のコントラストは、4つの基準点
-から出た`shape`が決めます。
+RA-4資料で知られるコントラスト範囲はそのまま使いません。
+この曲線のコントラストは、4つの基準点から出た`shape`が決めます。

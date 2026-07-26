@@ -2,7 +2,8 @@
 
 Nach Themen getrennt, damit Sie direkt das passende Dokument öffnen.
 
-[English](../README.md) · [한국어](../ko/README.md) · [日本語](../ja/README.md) · [简体中文](../zh-Hans/README.md) · [Français](../fr/README.md) · Deutsch
+[English](../README.md) · [한국어](../ko/README.md) · [日本語](../ja/README.md) ·
+[简体中文](../zh-Hans/README.md) · [Français](../fr/README.md) · Deutsch
 
 ```mermaid
 flowchart LR

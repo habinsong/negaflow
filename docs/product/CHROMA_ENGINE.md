@@ -2,8 +2,8 @@
 
 [Docs home](../README.md)
 
-Chroma Engine inverts and develops film. The code sits in the `Chromabase` module. The app and
-the CLI use the same module, so the same input goes through the same order of steps.
+Chroma Engine inverts and develops film. The code sits in the `Chromabase` module.
+The app and the CLI use the same module, so the same input goes through the same order of steps.
 
 | At a glance | Detail |
 |---|---|
@@ -42,9 +42,9 @@ flowchart LR
     J --> K["Display or output color space"]
 ```
 
-The working image is processed in a 32-bit floating point linear color space. Only the
-operations that need gamma convert at their fixed step. Encoding for a screen or a file format
-happens at the end.
+The working image is processed in a 32-bit floating point linear color space.
+Only the operations that need gamma convert at their fixed step.
+Encoding for a screen or a file format happens at the end.
 
 Apple's Core Image documentation:
 
@@ -53,20 +53,21 @@ Apple's Core Image documentation:
 - [workingColorSpace](https://developer.apple.com/documentation/coreimage/cicontext/workingcolorspace)
 - [Core Image performance guide](https://developer.apple.com/library/archive/documentation/GraphicsImaging/Conceptual/CoreImaging/ci_performance/ci_performance.html)
 
-`CIContext` is not rebuilt for every render. It is reused, split by purpose: display, analysis,
-export. The preview computes only the size it needs and the latest edit version. Export renders
-again at source size.
+`CIContext` is not rebuilt for every render.
+It is reused, split by purpose: display, analysis, export.
+The preview computes only the size it needs and the latest edit version.
+Export renders again at source size.
 
 ## Film base
 
 ### Why measure it
 
-The unexposed part of a negative is a reference point that combines film, development, and the
-scan light source. The orange mask of color negative is in there too. Get the base wrong and
-every density and channel relationship after it goes wrong.
+The unexposed part of a negative is a reference point that combines film, development,
+and the scan light source. The orange mask of color negative is in there too.
+Get the base wrong and every density and channel relationship after it goes wrong.
 
-Kodak's Portra 400 data also records minimum density, characteristic curves, and dye spectral
-density separately.
+Kodak's Portra 400 data also records minimum density, characteristic curves,
+and dye spectral density separately.
 
 - [Kodak Professional Portra 400 technical data](https://www.kodakprofessional.com/sites/default/files/wysiwyg/pro/resources/e4050_portra_400.pdf)
 
@@ -80,9 +81,10 @@ density separately.
 - With several film strips on one sheet, separated areas can be read together.
 - A boundary where holder and film mix is trusted less than the interior.
 
-It finds the brightness distribution on a downscaled analysis image, groups connected areas, then
-removes candidates that lie outside the film. When several strips pass the conditions, they are
-computed together. The result also records which method was chosen and how confident it is.
+It finds the brightness distribution on a downscaled analysis image, groups connected areas,
+then removes candidates that lie outside the film.
+When several strips pass the conditions, they are computed together.
+The result also records which method was chosen and how confident it is.
 
 ### Choosing the method
 
@@ -92,8 +94,8 @@ computed together. The result also records which method was chosen and how confi
 | `Film` | Uses the measurement as Dmin, and the chosen film mainly supplies `dmaxNorm`. Film and light source defaults come in only when the measurement fails. |
 | `Auto` | Uses spatial analysis, and falls back to the edge-based method on failure. |
 
-Without a manual value, or with a wrong film ID, it moves to the next safe method. The brightest
-object in the scene is never taken straight as the film base.
+Without a manual value, or with a wrong film ID, it moves to the next safe method.
+The brightest object in the scene is never taken straight as the film base.
 
 ## Optical density and inversion
 
@@ -108,8 +110,8 @@ Those values stay finite and are not clipped on the spot.
 
 ### Film type data
 
-The current table holds 27 film names, covering color negative, black and white, and motion
-picture negative.
+The current table holds 27 film names, covering color negative, black and white,
+and motion picture negative.
 
 What the data is for:
 
@@ -117,23 +119,23 @@ What the data is for:
 - Per-channel density range
 - A safe range when low contrast makes automatic measurement wobble
 
-Some values were approximated by reading curves in public material, and some were set
-conservatively. 27 names do not mean 27 validated color profiles. Once the base is measured, the
-measurement wins.
+Some values were approximated by reading curves in public material,
+and some were set conservatively. 27 names do not mean 27 validated color profiles.
+Once the base is measured, the measurement wins.
 
 ### Fixed print response
 
-`MAIN` turns base-subtracted density into a monotonically rising curve. The coefficients are not
-a hidden preset; they are computed from four anchors.
+`MAIN` turns base-subtracted density into a monotonically rising curve.
+The coefficients are not a hidden preset; they are computed from four anchors.
 
 - The black point of the base
 - 18% mid gray
 - White at the measured density range
 - Headroom for reflected light
 
-The current curve is a stretched exponential and has an inverse across the whole range. The
-round-trip test on synthetic negatives uses that inverse. The equations and numbers are in
-[fixed print response](../reference/PRINT_RESPONSE.md).
+The current curve is a stretched exponential and has an inverse across the whole range.
+The round-trip test on synthetic negatives uses that inverse.
+The equations and numbers are in [fixed print response](../reference/PRINT_RESPONSE.md).
 
 Where the default path ends and automatic features begin:
 
@@ -151,10 +153,10 @@ Where the default path ends and automatic features begin:
 | Light source | How did the scan light source affect each channel | Channel gain, base-driven correction |
 | Scanner target | What tone and color style does the result have | Relative statistics from scans shot for this project |
 
-Keeping these three apart avoids the mistake of letting one film name stand for emulsion
-properties, light source color, and a lab's output style at once. When a real base exists, the
-measurement wins over light source defaults. Scanner statistics are not used directly as an
-absolute color matrix for a scene.
+Keeping these three apart avoids the mistake of letting one film name stand for emulsion properties,
+light source color, and a lab's output style at once.
+When a real base exists, the measurement wins over light source defaults.
+Scanner statistics are not used directly as an absolute color matrix for a scene.
 
 The data is described in [film profiles](FILM_PROFILES.md).
 
@@ -162,28 +164,29 @@ The data is described in [film profiles](FILM_PROFILES.md).
 
 ### `MAIN`
 
-The default for ordinary development. It does not fold in an unselected scanner style, Auto
-Levels, Auto Color, Auto Tone, or Auto White Balance. Base and density range measurement and the
-limited low-saturation vibrance are part of the basic inversion.
+The default for ordinary development.
+It does not fold in an unselected scanner style, Auto Levels, Auto Color, Auto Tone,
+or Auto White Balance.
+Base and density range measurement and the limited low-saturation vibrance are part of the basic
+inversion.
 
 ### `PRINT`
 
 The working image matches `MAIN`. A valid RGB printer ICC is applied once, at the end of export.
-A missing or invalid profile fails instead of falling back to sRGB or some arbitrary paper
-values.
+A missing or invalid profile fails instead of falling back to sRGB or some arbitrary paper values.
 
 ### `HS`, `SP`
 
 Two stages.
 
 1. `documentedCharacter`: `SP` uses a limited base character taken from six pairs of the same
-   negative through SP-3000 and negaflow MAIN. `HS` builds its tone, neutral, and color character
-   from published direction plus this project's design values.
+negative through SP-3000 and negaflow MAIN. `HS` builds its tone, neutral,
+and color character from published direction plus this project's design values.
 2. `scannerSignature`: only the relative difference from groups whose roll names and image counts
-   match across both machines is added.
+match across both machines is added.
 
-`HS` includes sharpening on the brightness channel. That radius and strength were not measured
-from the real machine. `SP` does not include it.
+`HS` includes sharpening on the brightness channel.
+That radius and strength were not measured from the real machine. `SP` does not include it.
 
 Every profile today is `realOnly`.
 
@@ -194,14 +197,15 @@ Every profile today is `realOnly`.
 
 ### `F135`, `HR`
 
-These are two minilab styles built by the project, not measured machine clones. `F135` uses a
-print-like S-curve with warm midtones; `HR` uses deep blacks and a calm neutral and blue
-direction. No claim is made of validating and cloning a specific machine.
+These are two minilab styles built by the project, not measured machine clones.
+`F135` uses a print-like S-curve with warm midtones;
+`HR` uses deep blacks and a calm neutral and blue direction.
+No claim is made of validating and cloning a specific machine.
 
 ### `EXPIRED`
 
-A recovery target for old film. It does not blanket-desaturate or stretch the range, and stays
-within limited correction that the current evidence supports.
+A recovery target for old film. It does not blanket-desaturate or stretch the range,
+and stays within limited correction that the current evidence supports.
 
 ## Develop controls
 
@@ -212,14 +216,14 @@ within limited correction that the current evidence supports.
 | Detail and effects | Sharpness, clarity, dehaze, film grain, vignette, halation, noise reduction |
 | Local adjustment | Radial, linear, polygon, brush masks, dodge and burn |
 
-These values are stored as a step-by-step edit history. GrainMend and ordinary local adjustment
-differ in purpose and in how they are stored.
+These values are stored as a step-by-step edit history.
+GrainMend and ordinary local adjustment differ in purpose and in how they are stored.
 
 ## Color management
 
-If the input carries a valid ICC, that color space is read. Internal math runs in the fixed
-linear working space, and the switch to an output space happens at display, soft proof, and
-export.
+If the input carries a valid ICC, that color space is read.
+Internal math runs in the fixed linear working space,
+and the switch to an output space happens at display, soft proof, and export.
 
 Main supported outputs:
 
@@ -228,12 +232,13 @@ Main supported outputs:
 - Adobe RGB
 - A user-selected RGB printer/output ICC
 
-The printer profile's name, byte count, and SHA-256 are pinned when export starts. If the file
-changes during the render, the run stops.
+The printer profile's name, byte count, and SHA-256 are pinned when export starts.
+If the file changes during the render, the run stops.
 
 No claim is made that the current Core Image and ColorSync path produces bit-identical rendering
-intent and black-point compensation on every macOS version. That guarantee would need a separate
-ColorSync buffer path and memory checks for large 16-bit images first.
+intent and black-point compensation on every macOS version.
+That guarantee would need a separate ColorSync buffer path and memory checks for large 16-bit images
+first.
 
 ## Performance and safety
 
@@ -252,9 +257,9 @@ ColorSync buffer path and memory checks for large 16-bit images first.
 5. REAL/TARGET pairs: a device quality gate with separate validation material
 6. Real hardware: an actual scanner, film, display, and print
 
-A good synthetic IT8 result does not prove absolute accuracy on real negatives. Judging scanner
-profile quality follows [profile quality gate](../reference/PROFILE_QUALITY_GATE.md) and
-[IT8 color validation](../reference/IT8_COLOR_VALIDATION.md).
+A good synthetic IT8 result does not prove absolute accuracy on real negatives.
+Judging scanner profile quality follows [profile quality gate](../reference/PROFILE_QUALITY_GATE.md)
+and [IT8 color validation](../reference/IT8_COLOR_VALIDATION.md) .
 
 ## Where the code lives
 
@@ -266,5 +271,6 @@ profile quality follows [profile quality gate](../reference/PROFILE_QUALITY_GATE
 - `Sources/Chromabase/Imaging/`
 - `Sources/Chromabase/Export/`
 
-The current product version is `1.0.0`. The edit history and profile schemas will keep going
-through a validation process before they change in later versions.
+The current product version is `1.0.0`.
+The edit history and profile schemas will keep going through a validation process before they change
+in later versions.

@@ -2,7 +2,7 @@
 
 [文档首页](../README.md)
 
-这份文档记录当前的实现和验证状态。README 讲产品和用法，docs 里的各篇文档负责细节规格和决定。
+这份文档记录当前的实现和验证状态。 README 讲产品和用法，docs 里的各篇文档负责细节规格和决定。
 
 ## 基本信息
 
@@ -40,22 +40,23 @@
 
 ## 目录
 
-主存储是 `library.sqlite`。已有的 `library.json` 以只读方式打开，检查健康状态并备份后，迁到
-临时 SQLite。只有两份目录的内容和 SQLite 完整性都对得上，才切换主存储。
+主存储是 `library.sqlite`。
+已有的 `library.json` 以只读方式打开，检查健康状态并备份后，迁到临时 SQLite。
+只有两份目录的内容和 SQLite 完整性都对得上，才切换主存储。
 
-续做中断的工作时，若证据对不上就以关闭状态失败。JSON 仍作为可迁移的备份与归档交换格式保留，但
-不会同时使用两个主存储。
+续做中断的工作时，若证据对不上就以关闭状态失败。
+JSON 仍作为可迁移的备份与归档交换格式保留，但不会同时使用两个主存储。
 
 细节见[目录存储结构](../architecture/CATALOG_STORAGE.md)。
 
 ## 扫描仪
 
-本仓库里只有与设备无关的外部进程宿主和 JSON 规格。SANE 的实现、依赖、配置和分发文件都不放。
-那部分代码在独立的 GPL 项目
-[`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane) 里。
+本仓库里只有与设备无关的外部进程宿主和 JSON 规格。 SANE 的实现、依赖、配置和分发文件都不放。
+那部分代码在独立的 GPL 项目 [`negaflow-scanner-sane`](https:
+//github.com/habinsong/negaflow-scanner-sane) 里。
 
-应用只显示已安装插件报告的功能，不会靠型号名去猜功能。除非用户选择演示，否则不会用假的扫描仪
-顶替。
+应用只显示已安装插件报告的功能，不会靠型号名去猜功能。
+除非用户选择演示，否则不会用假的扫描仪顶替。
 
 详细规格：
 
@@ -83,13 +84,13 @@ bash scripts/build-release.sh
 
 </details>
 
-跑一次 `build-release.sh`，会分别构建 Apple Silicon（`arm64`）和 Universal（`arm64`、`x86_64`）
-应用，并生成 ZIP、PKG、DMG、dSYM 和 SHA-256 清单。本地用临时签名；真正分发需要 Developer ID
-Application 和 Developer ID Installer 两种签名。
+跑一次 `build-release.sh`，会分别构建 Apple Silicon（`arm64`）和 Universal（`arm64`、
+`x86_64`）应用，并生成 ZIP、 PKG、 DMG、 dSYM 和 SHA-256 清单。
+本地用临时签名；真正分发需要 Developer ID Application 和 Developer ID Installer 两种签名。
 
-手动的 `Distribution` workflow 使用受保护的 Developer ID 和 App Store Connect API 密钥。它把
-应用归档、DMG 和 PKG 送给 Apple，贴上公证票据后，再次核对校验和与 Gatekeeper。没有真实的
-workflow 运行和 Apple 的回应，就不会说外部签名和公证已经成功。
+手动的 `Distribution` workflow 使用受保护的 Developer ID 和 App Store Connect API 密钥。
+它把应用归档、DMG 和 PKG 送给 Apple，贴上公证票据后，再次核对校验和与 Gatekeeper。
+没有真实的 workflow 运行和 Apple 的回应，就不会说外部签名和公证已经成功。
 
 ## 性能测量
 
@@ -130,14 +131,14 @@ FILM-R v2 素材用 DOI、44 对、437,570,872 字节和 Figshare 的 MD5 信息
 | 最差 PSNR 变化 | -18.952 dB | -1.338 dB |
 | 改善 / 变差 / 持平 | 11 / 33 / 0 | 34 / 6 / 4 |
 
-除观测值回归检查外，还检查这些绝对下限：平均和中位 PSNR 不低于 0 dB、变差不超过 10 张、最差
-不低于 -1.5 dB。自动安全线在 3 张上停止了修复，这时会引导用户改用引导模式。
+除观测值回归检查外，还检查这些绝对下限：平均和中位 PSNR 不低于 0 dB、变差不超过 10 张、
+最差不低于 -1.5 dB。自动安全线在 3 张上停止了修复，这时会引导用户改用引导模式。
 
-FILM-R 只验证 GrainMend RGB 的自动路径。它不能作为等同硬件 IR，或真实扫描仪 RGB・IR 对齐质量
-的依据。
+FILM-R 只验证 GrainMend RGB 的自动路径。
+它不能作为等同硬件 IR，或真实扫描仪 RGB・IR 对齐质量的依据。
 
-手动的 `GrainMend corpus` workflow 会取回 44 对素材，跑 Release 默认路径，然后做回归检查并上传
-报告。
+手动的 `GrainMend corpus` workflow 会取回 44 对素材，跑 Release 默认路径，
+然后做回归检查并上传报告。
 
 ## 自动检查解决不了的项目
 
@@ -147,8 +148,8 @@ FILM-R 只验证 GrainMend RGB 的自动路径。它不能作为等同硬件 IR�
 - Developer ID、公证、Gatekeeper、在干净 Mac 上安装
 - 所有受支持 Mac 上的性能
 
-最终画面和实机确认由用户负责。不拿构建成功当替代，结果记在
-[实机检查表](../validation/REAL_QA_CHECKLIST.md)里。
+最终画面和实机确认由用户负责。
+不拿构建成功当替代，结果记在 [实机检查表](../validation/REAL_QA_CHECKLIST.md)里。
 
 ## 各项内容以哪份文档为准
 

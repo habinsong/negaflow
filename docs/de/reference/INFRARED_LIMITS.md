@@ -21,8 +21,9 @@ Belege:
 
 ## Wo es automatisch greift
 
-`FilmType` unterscheidet nur Farbe und Schwarzweiß, Negativ und Positiv. Nichts darin trennt
-chromogenes Schwarzweiß von silberbasiertem oder ein normales Dia von Kodachrome.
+`FilmType` unterscheidet nur Farbe und Schwarzweiß, Negativ und Positiv.
+Nichts darin trennt chromogenes Schwarzweiß von silberbasiertem oder ein normales Dia von
+Kodachrome.
 
 | Filmtyp | Automatisches IR | Grund |
 |---|---|---|
@@ -30,13 +31,14 @@ chromogenes Schwarzweiß von silberbasiertem oder ein normales Dia von Kodachrom
 | Farbpositiv | Aus | Ob es Kodachrome ist, lässt sich nicht feststellen |
 | Schwarzweiß-Negativ und -Positiv | Aus | Chromogen und silberbasiert sind nicht auseinanderzuhalten |
 
-Das heißt nicht, dass IR bei chromogenem Schwarzweiß oder einem normalen Farbdia nie ginge. Die
-vorhandenen Daten bestätigen das Filmmaterial nicht, also wird nichts geraten.
+Das heißt nicht, dass IR bei chromogenem Schwarzweiß oder einem normalen Farbdia nie ginge.
+Die vorhandenen Daten bestätigen das Filmmaterial nicht, also wird nichts geraten.
 
 ## Ausrichtungsprüfung
 
-`InfraredDefectRemoval` vergleicht die Durchschlagstextur im IR mit dem Rotkanal des RGB und
-sucht einen ganzzahligen Versatz. Das Ergebnis trägt `AlignmentDiagnostics`.
+`InfraredDefectRemoval` vergleicht die Durchschlagstextur im IR mit dem Rotkanal des RGB und sucht
+einen ganzzahligen Versatz.
+Das Ergebnis trägt `AlignmentDiagnostics`.
 
 | Zustand | Bedeutung |
 |---|---|
@@ -46,13 +48,12 @@ sucht einen ganzzahligen Versatz. Das Ergebnis trägt `AlignmentDiagnostics`.
 | `weakCorrelation` | Die Korrelation bleibt unter der Schwelle |
 | `searchLimitReached` | Das Optimum liegt auf der Suchgrenze |
 
-Die letzten drei werden nicht durch `(0,0)` ersetzt. Sie brechen mit dem Fehler
-`alignmentUnreliable` ab. Liegt das Optimum auf der Suchgrenze, gilt das unabhängig vom Betrag
-des Versatzes als Fehlschlag.
+Die letzten drei werden nicht durch `(0,0)` ersetzt.
+Sie brechen mit dem Fehler `alignmentUnreliable` ab.
+Liegt das Optimum auf der Suchgrenze, gilt das unabhängig vom Betrag des Versatzes als Fehlschlag.
 
-Automatische Tests ersetzen weder die RGB/IR-Ausrichtung am echten Gerät noch Ergebnisse je
-Film. Prüfungen am echten Scanner folgen den IR-Punkten der
-[Checkliste für echte Geräte](../validation/REAL_QA_CHECKLIST.md).
+Automatische Tests ersetzen weder die RGB/IR-Ausrichtung am echten Gerät noch Ergebnisse je Film.
+Prüfungen am echten Scanner folgen den IR-Punkten der
+[Checkliste für echte Geräte](../validation/REAL_QA_CHECKLIST.md) .
 
-SANE-Gerätesteuerung und Aufnahmecode liegen nur im separaten Repository
-`negaflow-scanner-sane`.
+SANE-Gerätesteuerung und Aufnahmecode liegen nur im separaten Repository `negaflow-scanner-sane`.

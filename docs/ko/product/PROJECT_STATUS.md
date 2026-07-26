@@ -2,8 +2,8 @@
 
 [문서 홈](../README.md)
 
-현재 구현과 검증 상태를 기록하는 기준 문서입니다. README는 제품과 사용법을 설명하고, docs의
-각 문서는 세부 규격과 결정을 맡습니다.
+현재 구현과 검증 상태를 기록하는 기준 문서입니다.
+README는 제품과 사용법을 설명하고, docs의 각 문서는 세부 규격과 결정을 맡습니다.
 
 ## 기본 정보
 
@@ -41,23 +41,24 @@
 
 ## 카탈로그
 
-기본 저장소는 `library.sqlite`입니다. 기존 `library.json`은 읽기 전용으로 열어 건강 상태를
-확인하고 백업한 뒤 임시 SQLite로 옮깁니다. 두 카탈로그의 내용과 SQLite 무결성이 모두 맞을
-때만 기본 저장소로 바꿉니다.
+기본 저장소는 `library.sqlite`입니다.
+기존 `library.json`은 읽기 전용으로 열어 건강 상태를 확인하고 백업한 뒤 임시 SQLite로 옮깁니다.
+두 카탈로그의 내용과 SQLite 무결성이 모두 맞을 때만 기본 저장소로 바꿉니다.
 
-중간 작업을 이어갈 때 증거가 맞지 않으면 닫힌 상태로 실패합니다. JSON은 이동 가능한
-백업·아카이브 교환 형식으로 남지만 두 기본 저장소를 동시에 쓰지는 않습니다.
+중간 작업을 이어갈 때 증거가 맞지 않으면 닫힌 상태로 실패합니다.
+JSON은 이동 가능한 백업·아카이브 교환 형식으로 남지만 두 기본 저장소를 동시에 쓰지는 않습니다.
 
 자세한 내용은 [카탈로그 저장 구조](../architecture/CATALOG_STORAGE.md)에 있습니다.
 
 ## 스캐너
 
-이 저장소에는 장치와 무관한 외부 프로세스 호스트와 JSON 규격만 있습니다. SANE 구현, 의존성,
-설정, 배포 파일은 넣지 않습니다. 해당 코드는 별도 GPL 프로젝트
-[`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane)에 있습니다.
+이 저장소에는 장치와 무관한 외부 프로세스 호스트와 JSON 규격만 있습니다.
+SANE 구현, 의존성, 설정, 배포 파일은 넣지 않습니다.
+해당 코드는 별도 GPL 프로젝트 [`negaflow-scanner-sane`](https:
+//github.com/habinsong/negaflow-scanner-sane)에 있습니다.
 
-앱은 설치한 플러그인이 보고한 기능만 보여 줍니다. 모델명으로 기능을 추측하지 않습니다. 사용자가
-데모를 고르지 않으면 가짜 스캐너로 대신하지 않습니다.
+앱은 설치한 플러그인이 보고한 기능만 보여 줍니다. 모델명으로 기능을 추측하지 않습니다.
+사용자가 데모를 고르지 않으면 가짜 스캐너로 대신하지 않습니다.
 
 자세한 규격:
 
@@ -85,18 +86,20 @@ bash scripts/build-release.sh
 
 </details>
 
-`build-release.sh` 한 번으로 Apple Silicon(`arm64`)과 Universal(`arm64`, `x86_64`) 앱을
-각각 빌드하고 ZIP, PKG, DMG, dSYM, SHA-256 목록을 만듭니다. 로컬에서는 임시 서명을 쓰며,
+`build-release.sh` 한 번으로 Apple Silicon(`arm64`)과 Universal(`arm64`,
+`x86_64`) 앱을 각각 빌드하고 ZIP, PKG, DMG, dSYM, SHA-256 목록을 만듭니다.
+로컬에서는 임시 서명을 쓰며,
 실제 배포에는 Developer ID Application과 Developer ID Installer 서명이 모두 필요합니다.
 
 수동 `Distribution` workflow는 보호된 Developer ID와 App Store Connect API 키를 사용합니다.
-앱 아카이브, DMG와 PKG를 Apple에 보내고 공증 티켓을 붙인 뒤 체크섬과 Gatekeeper를 다시
-확인합니다. 실제 workflow와 Apple 응답이 없으면 외부 서명과 공증에 성공했다고 말하지 않습니다.
+앱 아카이브,
+DMG와 PKG를 Apple에 보내고 공증 티켓을 붙인 뒤 체크섬과 Gatekeeper를 다시 확인합니다.
+실제 workflow와 Apple 응답이 없으면 외부 서명과 공증에 성공했다고 말하지 않습니다.
 
 ## 성능 측정
 
-성능 검사는 카탈로그, 라이브러리 검색, 고해상도 조절, GrainMend 영역 처리, 실제 픽셀 롤을
-다룹니다.
+성능 검사는 카탈로그, 라이브러리 검색, 고해상도 조절, GrainMend 영역 처리,
+실제 픽셀 롤을 다룹니다.
 
 최근 한 Mac의 Release 측정:
 
@@ -123,8 +126,8 @@ bash scripts/run-performance-suite.sh
 
 FILM-R v2 자료는 DOI, 44쌍, 437,570,872바이트, Figshare MD5 정보로 고정했습니다.
 
-출시 자동 경로는 민감도 0.7과 과검출 안전선을 적용했습니다. 직전 회귀 기준 3.0과 비교한
-결과입니다.
+출시 자동 경로는 민감도 0.7과 과검출 안전선을 적용했습니다.
+직전 회귀 기준 3.0과 비교한 결과입니다.
 
 | 지표 | 직전 기준 3.0 | 안전 자동 0.7 |
 |---|---:|---:|
@@ -134,15 +137,15 @@ FILM-R v2 자료는 DOI, 44쌍, 437,570,872바이트, Figshare MD5 정보로 고
 | 최저 PSNR 변화 | -18.952 dB | -1.338 dB |
 | 개선 / 악화 / 동일 이미지 | 11 / 33 / 0 | 34 / 6 / 4 |
 
-관측값 회귀 검사와 별도로 평균·중앙 PSNR 0 dB 이상, 악화 10장 이하, 최저 -1.5 dB 이상의
-절대 하한을 검사합니다. 자동 안전선이 3장에서 복원을 중지했고, 이 경우 가이드 사용을
-안내합니다.
+관측값 회귀 검사와 별도로 평균·중앙 PSNR 0 dB 이상, 악화 10장 이하,
+최저 -1.5 dB 이상의 절대 하한을 검사합니다.
+자동 안전선이 3장에서 복원을 중지했고, 이 경우 가이드 사용을 안내합니다.
 
-FILM-R은 GrainMend RGB 자동 경로만 검증합니다. 하드웨어 IR과의 동등함이나 실제 스캐너
-RGB·IR 정렬 품질을 주장할 근거는 아닙니다.
+FILM-R은 GrainMend RGB 자동 경로만 검증합니다.
+하드웨어 IR과의 동등함이나 실제 스캐너 RGB·IR 정렬 품질을 주장할 근거는 아닙니다.
 
-수동 `GrainMend corpus` workflow는 44쌍을 받고 Release 기본 경로를 실행한 뒤 회귀 검사와
-보고서 업로드를 합니다.
+수동 `GrainMend corpus` workflow는 44쌍을 받고 Release 기본 경로를 실행한 뒤 회귀 검사와 보고서
+업로드를 합니다.
 
 ## 자동 검사로 끝나지 않는 항목
 
@@ -152,8 +155,9 @@ RGB·IR 정렬 품질을 주장할 근거는 아닙니다.
 - Developer ID, 공증, Gatekeeper, 깨끗한 Mac 설치
 - 지원하는 모든 Mac의 성능
 
-최종 화면과 실기기 확인은 사용자가 맡습니다. 빌드 성공으로 대신하지 않고
-[출시 전 실기기 점검표](../validation/REAL_QA_CHECKLIST.md)에 결과를 남깁니다.
+최종 화면과 실기기 확인은 사용자가 맡습니다.
+빌드 성공으로 대신하지 않고 [출시 전 실기기 점검표](../validation/REAL_QA_CHECKLIST.md) 에
+결과를 남깁니다.
 
 ## 문서 기준
 

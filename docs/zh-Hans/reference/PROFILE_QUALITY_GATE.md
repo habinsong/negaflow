@@ -2,15 +2,15 @@
 
 [文档首页](../README.md)
 
-`scripts/evaluate_profile_quality.py` 用来检查扫描仪配置文件的改动有没有比已批准的基准更差。它
-比较由 `LUT_target/analyze_lut_target.py` 生成的两份 `SOURCE/summary.json`，并且只用没参与调参
-的验证样本来做判定。
+`scripts/evaluate_profile_quality.py` 用来检查扫描仪配置文件的改动有没有比已批准的基准更差。
+它比较由 `LUT_target/analyze_lut_target.py` 生成的两份 `SOURCE/summary.json`，
+并且只用没参与调参的验证样本来做判定。
 
 这个工具不会替你定义“好的颜色”。哪些数值该降、哪些该升、允许变化多少，都要由人写进素材清单。
 不提供默认的合格值。
 
-目前仓库里没有 REAL/TARGET 图像配对。因此既没有真实的素材清单，也没有批准基准和真实设备上的
-合格结果。合成测试只验证检查器本身的代码。
+目前仓库里没有 REAL/TARGET 图像配对。
+因此既没有真实的素材清单，也没有批准基准和真实设备上的合格结果。合成测试只验证检查器本身的代码。
 
 > [!WARNING]
 > 仅凭当前仓库无法批准扫描仪的色彩准确度。真正的发布判定需要固定的 REAL/TARGET 配对、未用于
@@ -26,8 +26,8 @@
 - 整理后的原始胶卷名称集合相同。
 - 图像数量差异不超过 15%。
 
-原始配置文件里没有逐帧 ID 或 SHA-256。胶卷名相同，并不能证明配的是完全相同的画幅。因此不能说
-结果与真实设备一致。
+原始配置文件里没有逐帧 ID 或 SHA-256。胶卷名相同，并不能证明配的是完全相同的画幅。
+因此不能说结果与真实设备一致。
 
 应用规则：
 
@@ -42,19 +42,19 @@
 ## 厂商资料能确认到哪一步
 
 - [Fujifilm Frontier 570/SP-3000 指南](https://www.photolabdigital.com/fuji_frontier570_en%5B1%5D.pdf)
-  公开了 area CCD、Hyper-tone、Hyper-sharpness 等功能名称，但没有公开传递函数和设置值。
+公开了 area CCD、Hyper-tone、Hyper-sharpness 等功能名称，但没有公开传递函数和设置值。
 - [Noritsu HS-1800 产品信息](https://www.noritsu.eu/hardware/noritsu-film-scanner.html)
-  公开了支持格式、分辨率和处理量，但没有给出固定的色彩传递函数。
+公开了支持格式、分辨率和处理量，但没有给出固定的色彩传递函数。
 - [Noritsu 专利 US 7,589,863](https://patents.google.com/patent/US7589863/en) 描述了迷你冲扩店里
-  由操作者选择密度、层次和锐化的流程。
+由操作者选择密度、层次和锐化的流程。
 
-这些资料说明处理会随场景和操作者变化，并不会提供复刻 HS-1800 或 SP-3000 的固定常数。negaflow
-不会从产品名去猜这些值。
+这些资料说明处理会随场景和操作者变化，并不会提供复刻 HS-1800 或 SP-3000 的固定常数。
+negaflow 不会从产品名去猜这些值。
 
 ## 素材清单 schema v1
 
-清单和它固定的输入素材放在一起，例如 `LUT_target/quality/corpus-v1.json`。路径以清单文件所在
-位置为基准；给了 `--data-root` 时，就以该路径为基准。
+清单和它固定的输入素材放在一起，例如 `LUT_target/quality/corpus-v1.json`。
+路径以清单文件所在位置为基准；给了 `--data-root` 时，就以该路径为基准。
 
 <details>
 <summary>素材清单示例</summary>
@@ -136,14 +136,15 @@
 python3 LUT_target/analyze_lut_target.py
 ```
 
-批准发布之前，把候选的整份 `SOURCE/summary.json` 保存为下一个批准基准文件。在候选通过审议之前，
-不覆盖已有的批准文件。把批准文件的确切 SHA-256 填进 `acceptedBaselineSHA256`。
+批准发布之前，把候选的整份 `SOURCE/summary.json` 保存为下一个批准基准文件。
+在候选通过审议之前，不覆盖已有的批准文件。
+把批准文件的确切 SHA-256 填进 `acceptedBaselineSHA256`。
 
-候选与基准的摘要里，清单中列出的样本必须各出现恰好一次。缺失、重复、处理失败，或出现清单之外的
-样本，都属于输入错误。
+候选与基准的摘要里，清单中列出的样本必须各出现恰好一次。
+缺失、重复、处理失败，或出现清单之外的样本，都属于输入错误。
 
-`calibration` 样本可以用于拟合配置文件，但不参与判定。`holdout` 样本不参与调参和挑选。验证数值
-按样本逐个比较，因此不能用平均改善掩盖某一张变差。
+`calibration` 样本可以用于拟合配置文件，但不参与判定。 `holdout` 样本不参与调参和挑选。
+验证数值按样本逐个比较，因此不能用平均改善掩盖某一张变差。
 
 ```mermaid
 flowchart LR
@@ -180,8 +181,9 @@ python3 scripts/evaluate_profile_quality.py \
 | `holdout` | 只校验验证用文件 | 用于快速排查 |
 | `none` | 不校验图像文件 | 不能 |
 
-默认是 `all`。报告里记录所用模式、清单与摘要文件的哈希、文件校验结果，以及验证样本逐个的比较和
-计数。stdout 和 `--report` 文件写入同一份 JSON，文件保存是原子的。
+默认是 `all`。
+报告里记录所用模式、清单与摘要文件的哈希、文件校验结果，以及验证样本逐个的比较和计数。
+stdout 和 `--report` 文件写入同一份 JSON，文件保存是原子的。
 
 退出码：
 

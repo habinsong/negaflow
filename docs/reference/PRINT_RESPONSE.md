@@ -7,13 +7,13 @@ Where it lives:
 - Swift: `PrintResponse` in `Sources/Chromabase/Film/NegativeInversion.swift`
 - Metal: the `negativeInvert` kernel
 - Pinning test:
-  `NegativeInversionCalibrationTests.testPrintResponseDerivesFromPhotometricContract`
+`NegativeInversionCalibrationTests.testPrintResponseDerivesFromPhotometricContract`
 
 ## The curve
 
-A film characteristic curve explains exposure against density as a toe, a straight line, and a
-shoulder. negaflow approximates the shoulder in the density domain with a stretched exponential
-curve.
+A film characteristic curve explains exposure against density as a toe, a straight line,
+and a shoulder. negaflow approximates the shoulder in the density domain with a stretched
+exponential curve.
 
 ```math
 \begin{aligned}
@@ -23,23 +23,23 @@ d &= \frac{D}{d_{\max}} \\
 \end{aligned}
 ```
 
-`A`, `r`, and `s` are short forms of `amplitude`, `rate`, and `shape` in the code. `d_{\max}` is
-`dmaxNorm`.
+`A`, `r`, and `s` are short forms of `amplitude`, `rate`, and `shape` in the code.
+`d_{\max}` is `dmaxNorm`.
 
 - `D`: optical density with the film base removed
 - `d`: that value divided by the density range in use
 - `P`: linear output brightness
 
-The curve rises across the whole range. For `d ≥ 0` the output lands inside
-`[baseToe, ceiling)`. Values below zero, such as a backlight brighter than the base or the
-perforation, are not clipped to zero. They carry on as finite positive numbers.
+The curve rises across the whole range. For `d ≥ 0` the output lands inside `[baseToe, ceiling)`.
+Values below zero, such as a backlight brighter than the base or the perforation,
+are not clipped to zero. They carry on as finite positive numbers.
 
 ```math
 y(-|d|) = 2\log_{10}(P_{\mathrm{toe}}) - y(|d|)
 ```
 
-The inverse has a closed form too. It is used to build synthetic negatives and run round-trip
-checks.
+The inverse has a closed form too.
+It is used to build synthetic negatives and run round-trip checks.
 
 ```math
 d = \frac{\left[\ln\left(\frac{A}{y_{\mathrm{ceil}}-\log_{10}(P)}\right)\right]^{1/s}}{r}
@@ -73,9 +73,9 @@ r &= r_{\mathrm{white}}^{1/s}
 
 ## Default density range
 
-`normalRange` is not the film's physical maximum density. It is the range a normally exposed
-scene uses. It mostly matters when the base could not be measured, or when scene contrast is
-very low.
+`normalRange` is not the film's physical maximum density.
+It is the range a normally exposed scene uses.
+It mostly matters when the base could not be measured, or when scene contrast is very low.
 
 ```math
 \begin{aligned}
@@ -89,14 +89,14 @@ very low.
 - Black and white `3.5`: black and white printing practice of using a longer straight line
 - `0.60D`: mid gray density of a normally exposed scene
 
-`applySceneRanged` measures the density range the frame actually uses per channel instead of
-taking this value.
+`applySceneRanged` measures the density range the frame actually uses per channel instead of taking
+this value.
 
 ## What changed in v4
 
-The old approach used a function split into three sections plus fixed presets. v4 uses one
-curve and four anchors. There are no section boundaries, and every value can be traced in the
-code and the tests.
+The old approach used a function split into three sections plus fixed presets. v4 uses one curve and
+four anchors.
+There are no section boundaries, and every value can be traced in the code and the tests.
 
 Against the old result:
 
@@ -108,13 +108,13 @@ Against the old result:
 
 ## Sources and scope
 
-Toe, straight line, shoulder, and gamma come from published sensitometry. None of the curve
-coefficients in that literature were copied. negaflow computes its own from the four anchors
-above.
+Toe, straight line, shoulder, and gamma come from published sensitometry.
+None of the curve coefficients in that literature were copied. negaflow computes its own from the
+four anchors above.
 
 - [Sensitometry](https://en.wikipedia.org/wiki/Sensitometry)
 - [Hurter–Driffield Characteristic Curve](https://studyguides.com/study-methods/overview/cmpanf83znm1201neitjb4waw)
 - [RA-4 paper comparison](https://tinker.koraks.nl/photography/on-a-color-mission-comparing-two-ra4-color-papers/)
 
-The contrast ranges known for RA-4 material are not used directly. The contrast of this curve
-comes from the `shape` derived from the four anchors.
+The contrast ranges known for RA-4 material are not used directly.
+The contrast of this curve comes from the `shape` derived from the four anchors.

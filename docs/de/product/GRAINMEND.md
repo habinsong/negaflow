@@ -2,8 +2,8 @@
 
 [Dokumentationsstart](../README.md)
 
-GrainMend repariert Staub, Pinholes, Kratzer und Emulsionsschäden auf Film. Nichts wird ins Original
-eingebrannt; das Ergebnis bleibt ein geordneter Bearbeitungsverlauf.
+GrainMend repariert Staub, Pinholes, Kratzer und Emulsionsschäden auf Film.
+Nichts wird ins Original eingebrannt; das Ergebnis bleibt ein geordneter Bearbeitungsverlauf.
 
 | Werkzeug | Wo es hinschaut | Wie es repariert |
 |---|---|---|
@@ -13,9 +13,9 @@ eingebrannt; das Ergebnis bleibt ein geordneter Bearbeitungsverlauf.
 | Klonstempel | Der Quellpunkt, den Sie wählen | Kopiert echte Originalpixel mit festem Versatz |
 | IR | Der Infrarotkanal des Scanners | IR findet die Stelle, RGB baut die Pixel neu auf |
 
-Der Entwicklungsbildschirm hat automatisch, geführt, Pinsel und Klonstempel. IR lässt sich im
-Scan-Schritt einschalten, wenn das Plugin die Funktion meldet. Ist der Scan fertig, kommt sein
-Ergebnis in dieselbe GrainMend-Ebenenliste.
+Der Entwicklungsbildschirm hat automatisch, geführt, Pinsel und Klonstempel.
+IR lässt sich im Scan-Schritt einschalten, wenn das Plugin die Funktion meldet.
+Ist der Scan fertig, kommt sein Ergebnis in dieselbe GrainMend-Ebenenliste.
 
 > [!CAUTION]
 > GrainMend RGB arbeitet anders als eine IR-Reinigung in Hardware. GrainMend IR ist auch keine
@@ -31,8 +31,8 @@ Filmdefekte und die Struktur des Bildes sitzen in denselben Pixeln.
 - Emulsionsschäden verändern Farbe und Textur zugleich.
 - In hoher Auflösung ist Filmkorn so groß wie ein kleiner Defekt.
 
-Wer hohe Frequenzen im Ganzen wegnimmt, nimmt Korn und Kanten gleich mit. GrainMend trennt
-Erkennung, Klassifizierung, Reparatur und Speicherung.
+Wer hohe Frequenzen im Ganzen wegnimmt, nimmt Korn und Kanten gleich mit.
+GrainMend trennt Erkennung, Klassifizierung, Reparatur und Speicherung.
 
 ## Reihenfolge der Arbeit
 
@@ -50,66 +50,72 @@ flowchart LR
     J --> K["Zum Bearbeitungsverlauf hinzufügen"]
 ```
 
-Erkennungsmaske und repariertes Ergebnis bleiben getrennt. Genau das erlaubt es, die Maske zu
-prüfen, nur einen Teil der Defekte anzuwenden oder die Reparatur neu aufzubauen.
+Erkennungsmaske und repariertes Ergebnis bleiben getrennt.
+Genau das erlaubt es, die Maske zu prüfen,
+nur einen Teil der Defekte anzuwenden oder die Reparatur neu aufzubauen.
 
 ## Werkzeuge
 
 ### Automatisch
 
-Über das ganze Bild findet es nur Defekte, bei denen es sicher ist. Einen kleinen Defekt zu
-übersehen ist besser, als eine große Struktur fälschlich wegzuputzen. Es schleicht sich nie in die
-Standardentwicklung; Sie müssen es ausführen, bevor irgendetwas hinzukommt.
+Über das ganze Bild findet es nur Defekte, bei denen es sicher ist.
+Einen kleinen Defekt zu übersehen ist besser, als eine große Struktur fälschlich wegzuputzen.
+Es schleicht sich nie in die Standardentwicklung; Sie müssen es ausführen,
+bevor irgendetwas hinzukommt.
 
 ### Geführt
 
-Sie wählen ein Rechteck, und nur dieser Bereich und seine Umgebung werden analysiert. Da Sie schon
-auf den Defekt gezeigt haben, geht es beherzter an kleine Punkte, blasse Defekte und dichte Nester
-als die Automatik.
+Sie wählen ein Rechteck, und nur dieser Bereich und seine Umgebung werden analysiert.
+Da Sie schon auf den Defekt gezeigt haben, geht es beherzter an kleine Punkte,
+blasse Defekte und dichte Nester als die Automatik.
 
-Es liest weiter, als das Ergebnis reicht, damit die umgebenden Pixel für die Reparatur nicht am Rand
-des Bereichs abgeschnitten werden. Der aktuelle maximale Kontextradius liegt bei 264 Pixeln.
+Es liest weiter, als das Ergebnis reicht,
+damit die umgebenden Pixel für die Reparatur nicht am Rand des Bereichs abgeschnitten werden.
+Der aktuelle maximale Kontextradius liegt bei 264 Pixeln.
 
 ### Pinsel
 
-Sie malen die zu reparierende Stelle selbst. Das Gemalte wird nicht mit einer Farbe zugedeckt. Nahe
-der Maske wird ein passender Quell-Patch gesucht, und Struktur und Textur werden weitergeführt. Wenn
-kein Patch passt, kann eingeschränkt auf den erkennungsbasierten Weg zurückgegriffen werden.
+Sie malen die zu reparierende Stelle selbst. Das Gemalte wird nicht mit einer Farbe zugedeckt.
+Nahe der Maske wird ein passender Quell-Patch gesucht, und Struktur und Textur werden weitergeführt.
+Wenn kein Patch passt, kann eingeschränkt auf den erkennungsbasierten Weg zurückgegriffen werden.
 
 ### Klonstempel
 
-`⌥` Klick wählt den Quellpunkt, dann malen Sie auf das Ziel. Ohne automatische Erkennung: der
-Versatz zwischen beiden Punkten bleibt erhalten, und die echten Pixel werden kopiert.
+`⌥` Klick wählt den Quellpunkt, dann malen Sie auf das Ziel.
+Ohne automatische Erkennung: der Versatz zwischen beiden Punkten bleibt erhalten,
+und die echten Pixel werden kopiert.
 
-Der Bearbeitungsverlauf hält Durchmesser, Härte, Koordinaten und Versatz fest. Das gilt nach
-Drehung, Spiegelung oder Beschnitt weiterhin für dieselben Originalkoordinaten. Versätze rasten auf
-ganze Pixel ein, und außerhalb des Bildes wird nichts angewandt.
+Der Bearbeitungsverlauf hält Durchmesser, Härte, Koordinaten und Versatz fest.
+Das gilt nach Drehung, Spiegelung oder Beschnitt weiterhin für dieselben Originalkoordinaten.
+Versätze rasten auf ganze Pixel ein, und außerhalb des Bildes wird nichts angewandt.
 
 ### IR
 
-Nur dann benutzt, wenn das Plugin einen echten IR-Kanal liefert und Größe und Bereich zum RGB
-passen. IR ist das Material, das den Defekt lokalisiert. Die endgültigen Pixel kommen aus demselben
-Reparierer wie bei RGB.
+Nur dann benutzt,
+wenn das Plugin einen echten IR-Kanal liefert und Größe und Bereich zum RGB passen.
+IR ist das Material, das den Defekt lokalisiert.
+Die endgültigen Pixel kommen aus demselben Reparierer wie bei RGB.
 
 ## Defekte im RGB finden
 
 ### Unterschied zur Umgebung
 
 Die Helligkeit wechselt von Bild zu Bild, deshalb gibt es keinen einzelnen globalen Schwellenwert.
-Der Unterschied zur umgebenden Helligkeit, die lokale Varianz und die Richtung ergeben Kandidaten
-für hellen Staub und dunkle Defekte.
+Der Unterschied zur umgebenden Helligkeit,
+die lokale Varianz und die Richtung ergeben Kandidaten für hellen Staub und dunkle Defekte.
 
 ### Maske aufräumen
 
-Vereinzeltes Rauschen fällt weg, unterbrochene Defekte werden verbunden, dann werden Pixel, die sich
-in einer von 8 Richtungen berühren, zu einem Klumpen. Eine große Fläche kann in Kacheln zerlegt
-werden, aber ein Klumpen über einer Kachelgrenze wird in Gesamtkoordinaten wieder zusammengeführt.
+Vereinzeltes Rauschen fällt weg, unterbrochene Defekte werden verbunden, dann werden Pixel,
+die sich in einer von 8 Richtungen berühren, zu einem Klumpen.
+Eine große Fläche kann in Kacheln zerlegt werden,
+aber ein Klumpen über einer Kachelgrenze wird in Gesamtkoordinaten wieder zusammengeführt.
 
 ### Unterschiede in der Auflösung
 
-Dasselbe Staubkorn hat bei 1200 dpi und bei 7200 dpi nicht dieselbe Pixelgröße. Wenn die
-Auflösungsangabe verlässlich ist, richten sich die Grenzen nach der echten Größe. Ohne sie wird das
-Scannermodell nicht geraten, sondern eine zurückhaltende Pixelregel verwendet.
+Dasselbe Staubkorn hat bei 1200 dpi und bei 7200 dpi nicht dieselbe Pixelgröße.
+Wenn die Auflösungsangabe verlässlich ist, richten sich die Grenzen nach der echten Größe.
+Ohne sie wird das Scannermodell nicht geraten, sondern eine zurückhaltende Pixelregel verwendet.
 
 ### Klassifizierung
 
@@ -122,15 +128,16 @@ An jedem Klumpen wird gemessen:
 - Ob er in eine nahe Kante übergeht
 - Sein Verhältnis zu anderen Klumpen
 
-Das Ergebnis teilt sich in Staub, Pinhole, Kratzer nach Richtung, Emulsionsschaden und
-Mikropartikel, jeweils mit einer Konfidenz.
+Das Ergebnis teilt sich in Staub, Pinhole, Kratzer nach Richtung,
+Emulsionsschaden und Mikropartikel, jeweils mit einer Konfidenz.
 
 ### Linien, die zum Bild gehören, nicht wegputzen
 
 Kabel, Geländer, Gebäudekanten, Fensterrahmen und Schrift dürfen nicht als Kratzer gelesen werden.
-Parallelen, Raster, die Fortsetzung von Kanten und Linien, die an der Szenenstruktur hängen, bekommen
-eine eigene Prüfung. Die Automatik blockt Fehltreffer härter ab; das geführte Werkzeug wiegt zudem
-mit, dass Sie die Stelle gewählt haben.
+Parallelen, Raster, die Fortsetzung von Kanten und Linien, die an der Szenenstruktur hängen,
+bekommen eine eigene Prüfung.
+Die Automatik blockt Fehltreffer härter ab; das geführte Werkzeug wiegt zudem mit,
+dass Sie die Stelle gewählt haben.
 
 ## Reparatur
 
@@ -142,9 +149,9 @@ mit, dass Sie die Stelle gewählt haben.
 
 Die Stärke ist das Mischungsverhältnis zwischen fertigem Patch und Original.
 
-Manchmal kann eine automatische Reparatur nicht wissen, was darunter lag. Fehlt brauchbare Textur in
-der Umgebung, oder hat der Defekt eine ganze wichtige Struktur verdeckt, braucht es Pinsel,
-Klonstempel oder eine eigene, genaue Nacharbeit.
+Manchmal kann eine automatische Reparatur nicht wissen, was darunter lag.
+Fehlt brauchbare Textur in der Umgebung, oder hat der Defekt eine ganze wichtige Struktur verdeckt,
+braucht es Pinsel, Klonstempel oder eine eigene, genaue Nacharbeit.
 
 ## IR-Verarbeitung
 
@@ -155,30 +162,34 @@ Klonstempel oder eine eigene, genaue Nacharbeit.
 - Beide Bilder haben dieselbe Pixelgröße und denselben erwarteten Bereich.
 - Die Dateien sind lesbar und bestehen die Prüfung der Original-ID.
 
-Auch wenn ein Modellname als IR-fähig bekannt ist, wird IR weder im Bildschirm noch in einer Anfrage
-benutzt, solange das Plugin es nicht meldet.
+Auch wenn ein Modellname als IR-fähig bekannt ist,
+wird IR weder im Bildschirm noch in einer Anfrage benutzt, solange das Plugin es nicht meldet.
 
 ### Ausrichtung
 
-Optik und Sensorauslesung können RGB und IR um einige Pixel auseinanderrücken. Erst läuft eine
-weite Suche, dann eine enge, um den Versatz festzulegen. Die Konfidenz des Maximums und ob es am
-Rand des Suchbereichs landete, werden beide festgehalten.
+Optik und Sensorauslesung können RGB und IR um einige Pixel auseinanderrücken.
+Erst läuft eine weite Suche, dann eine enge, um den Versatz festzulegen.
+Die Konfidenz des Maximums und ob es am Rand des Suchbereichs landete, werden beide festgehalten.
 
-Eine niedrige Konfidenz oder ein bestes Ergebnis, das am Ende der Suche klebt, gilt nicht als
-Erfolg.
+Eine niedrige Konfidenz oder ein bestes Ergebnis, das am Ende der Suche klebt,
+gilt nicht als Erfolg.
 
 ### Das Szenenmuster abziehen
 
-Filmfarbstoffe und Dichte können bis ins IR durchschlagen. Die logarithmische Helligkeit des roten
-Kanals wird in 64 Klassen geteilt, und in jeder Klasse wird der Mittelwert gebildet, nachdem die
-oberen und unteren 10 % der IR-Werte wegfallen. Leere Klassen werden aus den Nachbarn interpoliert
-und mit einem kurzen symmetrischen Kern geglättet. Das Abziehen dieser nichtparametrischen Kurve
-mindert das Szenenmuster, und spärlicher dunkler Staub bleibt aus der Klassenstatistik heraus.
+Filmfarbstoffe und Dichte können bis ins IR durchschlagen.
+Die logarithmische Helligkeit des roten Kanals wird in 64 Klassen geteilt,
+und in jeder Klasse wird der Mittelwert gebildet,
+nachdem die oberen und unteren 10 % der IR-Werte wegfallen.
+Leere Klassen werden aus den Nachbarn interpoliert und mit einem kurzen symmetrischen Kern
+geglättet.
+Das Abziehen dieser nichtparametrischen Kurve mindert das Szenenmuster,
+und spärlicher dunkler Staub bleibt aus der Klassenstatistik heraus.
 
-Was übrig bleibt, wird in Kontrast relativ zum lokalen Mittel umgerechnet. Damit ein großer Defekt
-den Rauschboden um sich herum nicht anhebt, wird die Rauscheingabe am minimalen Erkennungskontrast
-beschnitten, bevor die adaptive Schwelle berechnet wird. Zusammenhängende dunkle Bereiche an Halter
-und Filmrand kommen aus der Maske heraus.
+Was übrig bleibt, wird in Kontrast relativ zum lokalen Mittel umgerechnet.
+Damit ein großer Defekt den Rauschboden um sich herum nicht anhebt,
+wird die Rauscheingabe am minimalen Erkennungskontrast beschnitten,
+bevor die adaptive Schwelle berechnet wird.
+Zusammenhängende dunkle Bereiche an Halter und Filmrand kommen aus der Maske heraus.
 
 ### Sicherheitsbedingungen
 
@@ -208,18 +219,19 @@ Was jeder Eintrag trägt:
 - Originalbild und Bearbeitungsversion
 - Der reparierte Patch, oder die Werte, um ihn neu aufzubauen
 
-Eine frühere Reparatur verändert die Eingabe einer späteren, deshalb gehört auch die Reihenfolge der
-Liste zum Bearbeitungsverlauf.
+Eine frühere Reparatur verändert die Eingabe einer späteren,
+deshalb gehört auch die Reihenfolge der Liste zum Bearbeitungsverlauf.
 
-Das Original wird nicht verändert. Der GrainMend-Verlauf liegt in einem Sidecar, das die App
-verwaltet. SHA-256 des Originals, Bearbeitungsversion und ein Fingerabdruck des Verlaufs binden die
-Eingabe zusammen. Fehlt das Sidecar oder ist es beschädigt, wird der Cache nicht wie ein Original
-behandelt.
+Das Original wird nicht verändert.
+Der GrainMend-Verlauf liegt in einem Sidecar, das die App verwaltet. SHA-256 des Originals,
+Bearbeitungsversion und ein Fingerabdruck des Verlaufs binden die Eingabe zusammen.
+Fehlt das Sidecar oder ist es beschädigt, wird der Cache nicht wie ein Original behandelt.
 
-Der GrainMend-Cache ist eine abgeleitete Datei für schnelle Anzeige und erneutes Rendern. Fehlt er
-oder besteht er seine Prüfung nicht, wird er aus Original und Bearbeitungsverlauf neu aufgebaut.
-Lässt sich das Ergebnis, das ein Export braucht, nicht erzeugen, scheitert der Export, statt das
-Original unterzuschieben.
+Der GrainMend-Cache ist eine abgeleitete Datei für schnelle Anzeige und erneutes Rendern.
+Fehlt er oder besteht er seine Prüfung nicht,
+wird er aus Original und Bearbeitungsverlauf neu aufgebaut.
+Lässt sich das Ergebnis, das ein Export braucht, nicht erzeugen, scheitert der Export,
+statt das Original unterzuschieben.
 
 ## Leistung
 
@@ -242,8 +254,9 @@ Gemessen am 25.07.2026 auf einem Release-Build, Mac14,3, arm64, 24 GiB Speicher,
 | Geführter Dichtestress | 1280×960, 8 Bilder × 3 Durchläufe | Median 0,423 s, p95 0,488 s, max 0,526 s |
 | IR-Erkennung | 6000×4000, 24 MP | 1,042 s, Speicherspitze +249,2 MiB |
 
-Über 24 Dichtestress-Durchläufe lag die geringste Maskenabdeckung an Defektstellen bei 99,80 %, der
-höchste mittlere Restfehler bei 2,70/255. Das sind Regressionsmessungen auf synthetischer Eingabe.
+Über 24 Dichtestress-Durchläufe lag die geringste Maskenabdeckung an Defektstellen bei 99, 80 %,
+der höchste mittlere Restfehler bei 2, 70/255.
+Das sind Regressionsmessungen auf synthetischer Eingabe.
 Sie versprechen keine Verarbeitungszeiten auf einem anderen Mac oder auf echtem Film.
 
 ## Benchmark
@@ -269,21 +282,25 @@ Die RGB-Regression nutzt die 44 Paare aus beschädigt und fachmännisch restauri
 - Paare: 44
 - Gesamtgröße: 437.570.872 Bytes
 
-Der am 25.07.2026 ausgelieferte automatische Weg arbeitet mit Empfindlichkeit 0,7 und einer
-Sicherheitslinie gegen Übererkennung. Gegenüber der vorherigen Basis 3.0 stiegen von den 44
-FILM-R-Bildern die verbesserten von 11 auf 34, und die verschlechterten fielen von 33 auf 6. Die
-mittlere PSNR-Änderung ging von -1,688 dB auf +0,466 dB, der schlechteste Fall von -18,952 dB auf
+Der am 25.07.2026 ausgelieferte automatische Weg arbeitet mit Empfindlichkeit 0,
+7 und einer Sicherheitslinie gegen Übererkennung.
+Gegenüber der vorherigen Basis 3.0 stiegen von den 44 FILM-R-Bildern die verbesserten von 11 auf 34,
+und die verschlechterten fielen von 33 auf 6.
+Die mittlere PSNR-Änderung ging von -1, 688 dB auf +0, 466 dB, der schlechteste Fall von -18,
+952 dB auf
 -1,338 dB. Gewichtete verschlechterte Pixel fielen von 0,792 % auf 0,017 %.
 
-Trifft die Automatik auf eine hohe Kandidatendichte, hört sie auf anzuwenden und verweist auf das
-geführte Werkzeug. Diese Sicherheitslinie gilt weder für das geführte Werkzeug, bei dem Sie den
-Bereich setzen, noch für Pinsel, Klonstempel oder IR. Auch mit besseren Ergebnissen haben 6 Bilder
-weiterhin ein niedrigeres PSNR als die fachmännische Restaurierung. Nichts davon beweist, dass jedes
-Bild besser wird, dass RGB und IR gleichwertig sind, oder irgendetwas über die IR-Qualität eines
-echten Scanners.
+Trifft die Automatik auf eine hohe Kandidatendichte,
+hört sie auf anzuwenden und verweist auf das geführte Werkzeug.
+Diese Sicherheitslinie gilt weder für das geführte Werkzeug, bei dem Sie den Bereich setzen,
+noch für Pinsel, Klonstempel oder IR.
+Auch mit besseren Ergebnissen haben 6 Bilder weiterhin ein niedrigeres PSNR als die fachmännische
+Restaurierung.
+Nichts davon beweist, dass jedes Bild besser wird, dass RGB und IR gleichwertig sind,
+oder irgendetwas über die IR-Qualität eines echten Scanners.
 
 Die vollständige Tabelle und die Befehle stehen in
-[GrainMend-Vergleich an echten Scans](../validation/GRAINMEND_CORPUS.md).
+[GrainMend-Vergleich an echten Scans](../validation/GRAINMEND_CORPUS.md) .
 
 Die IR-Grenzen je Film und die Bedingungen, unter denen die Ausrichtung scheitert, sind in
 [Filme, die GrainMend IR meidet](../reference/INFRARED_LIMITS.md) gesammelt.
@@ -304,8 +321,8 @@ Die IR-Grenzen je Film und die Bedingungen, unter denen die Ausrichtung scheiter
 - Wiederholtes Hinzufügen und Widerrufen
 - Bildzugehörigkeit während der Bewegung im Bildschirm
 
-Manche Leistungstests laufen nur mit gesetzter Umgebungsvariable. Dass eine Testdatei vorhanden ist,
-behauptet nicht, dass sie in jeder Umgebung gelaufen ist.
+Manche Leistungstests laufen nur mit gesetzter Umgebungsvariable.
+Dass eine Testdatei vorhanden ist, behauptet nicht, dass sie in jeder Umgebung gelaufen ist.
 
 ## Namen und Marken
 
@@ -315,7 +332,7 @@ behauptet nicht, dass sie in jeder Umgebung gelaufen ist.
 - `iSRD`, `SRDx` und `SilverFast` sind Marken von LaserSoft Imaging.
 - Diese Namen dienen nur dem technischen Vergleich und der Produktkennzeichnung.
 - GrainMend behauptet weder Verbindung noch Kompatibilität noch Gleichwertigkeit mit fremder
-  Technik.
+Technik.
 
 ## Wo der Code liegt
 

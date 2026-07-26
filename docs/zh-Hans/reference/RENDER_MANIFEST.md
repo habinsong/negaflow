@@ -27,13 +27,13 @@ v3 里有这些值：
 - 解码器来源和色彩引擎渲染器版本
 - 最终文件的 SHA-256、字节数、像素尺寸和格式
 
-编码器写完文件后，会用 ImageIO 再打开一次确认像素尺寸，并对整个文件计算哈希，之后才写附属
-文件。v3 检查没通过，就不会作为完成的输出组公开。
+编码器写完文件后，会用 ImageIO 再打开一次确认像素尺寸，并对整个文件计算哈希，之后才写附属文件。
+v3 检查没通过，就不会作为完成的输出组公开。
 
 ## GrainMend 输入
 
 - `cleanedMemory`：内存里的像素没有标准哈希，所以确认范围记成 `sourceAndDevelopRecipe`。
-  GrainMend 编辑记录的 SHA-256 一定会写进去。
+GrainMend 编辑记录的 SHA-256 一定会写进去。
 - `cleanedFile`：GrainMend 缓存文件整体和编辑记录都计算哈希。
 
 以前的 v1 和 v2 文件照样能读。当时没有的输出哈希或 GrainMend 记录哈希，不会事后靠猜补上。
@@ -41,8 +41,8 @@ v3 里有这些值：
 ## 和 C2PA 的区别
 
 这里没有数字签名、证书、信任链，也没有内嵌 claim store，所以不叫 C2PA Content Credentials。
-C2PA 的 hard binding 和处理历史思路、PREMIS 的完整性思路都参考过，但写进去的只有能核对的
-SHA-256。
+C2PA 的 hard binding 和处理历史思路、 PREMIS 的完整性思路都参考过，
+但写进去的只有能核对的 SHA-256。
 
 参考：
 

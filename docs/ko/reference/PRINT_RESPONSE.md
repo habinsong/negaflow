@@ -7,7 +7,7 @@
 - Swift: `Sources/Chromabase/Film/NegativeInversion.swift`의 `PrintResponse`
 - Metal: `negativeInvert` 커널
 - 고정 검사:
-  `NegativeInversionCalibrationTests.testPrintResponseDerivesFromPhotometricContract`
+`NegativeInversionCalibrationTests.testPrintResponseDerivesFromPhotometricContract`
 
 ## 곡선
 
@@ -30,7 +30,7 @@ d &= \frac{D}{d_{\max}} \\
 - `P`: 선형 출력 밝기
 
 곡선은 전 구간에서 계속 증가합니다. `d ≥ 0`일 때 출력은 `[baseToe, ceiling)` 안에 있습니다.
-베이스보다 밝은 백라이트나 퍼포레이션처럼 `d < 0`인 값도 0으로 잘라내지 않고 유한한 양수로
+베이스보다 밝은 백라이트나 퍼포레이션처럼 `d < 0` 인 값도 0으로 잘라내지 않고 유한한 양수로
 이어집니다.
 
 ```math
@@ -71,8 +71,8 @@ r &= r_{\mathrm{white}}^{1/s}
 
 ## 기본 밀도 범위
 
-`normalRange`는 필름의 물리적 최대 밀도가 아니라 정상 노출 장면이 쓰는 범위입니다. 베이스를
-측정하지 못했거나 장면 대비가 매우 낮을 때만 주로 영향을 줍니다.
+`normalRange`는 필름의 물리적 최대 밀도가 아니라 정상 노출 장면이 쓰는 범위입니다.
+베이스를 측정하지 못했거나 장면 대비가 매우 낮을 때만 주로 영향을 줍니다.
 
 ```math
 \begin{aligned}
@@ -90,8 +90,9 @@ r &= r_{\mathrm{white}}^{1/s}
 
 ## v4에서 바뀐 점
 
-이전 방식은 세 구간으로 나뉜 함수와 고정 프리셋을 썼습니다. v4는 한 곡선과 네 기준점으로
-바꿨습니다. 구간 경계가 없고 모든 값의 유도를 코드와 테스트에서 확인할 수 있습니다.
+이전 방식은 세 구간으로 나뉜 함수와 고정 프리셋을 썼습니다.
+v4는 한 곡선과 네 기준점으로 바꿨습니다.
+구간 경계가 없고 모든 값의 유도를 코드와 테스트에서 확인할 수 있습니다.
 
 이전 결과와의 차이:
 
@@ -103,12 +104,12 @@ r &= r_{\mathrm{white}}^{1/s}
 
 ## 참고 자료와 범위
 
-검정점, 직선부, 숄더와 감마라는 틀은 공개된 사진 감광학에서 가져왔습니다. 이 문헌의 곡선
-계수를 복사하지 않았습니다. negaflow의 계수는 위 네 기준점에서 따로 계산합니다.
+검정점, 직선부, 숄더와 감마라는 틀은 공개된 사진 감광학에서 가져왔습니다.
+이 문헌의 곡선 계수를 복사하지 않았습니다. negaflow의 계수는 위 네 기준점에서 따로 계산합니다.
 
 - [Sensitometry](https://en.wikipedia.org/wiki/Sensitometry)
 - [Hurter–Driffield Characteristic Curve](https://studyguides.com/study-methods/overview/cmpanf83znm1201neitjb4waw)
 - [RA-4 용지 비교](https://tinker.koraks.nl/photography/on-a-color-mission-comparing-two-ra4-color-papers/)
 
-RA-4 자료에 알려진 대비 범위를 직접 쓰지 않습니다. 현재 곡선의 대비는 네 기준점에서 나온
-`shape`가 정합니다.
+RA-4 자료에 알려진 대비 범위를 직접 쓰지 않습니다.
+현재 곡선의 대비는 네 기준점에서 나온 `shape`가 정합니다.

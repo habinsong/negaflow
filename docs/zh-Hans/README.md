@@ -2,7 +2,8 @@
 
 按内容分开，方便直接打开需要的那一份。
 
-[English](../README.md) · [한국어](../ko/README.md) · [日本語](../ja/README.md) · 简体中文 · [Français](../fr/README.md) · [Deutsch](../de/README.md)
+[English](../README.md) · [한국어](../ko/README.md) · [日本語](../ja/README.md) · 简体中文 ·
+[Français](../fr/README.md) · [Deutsch](../de/README.md)
 
 ```mermaid
 flowchart LR

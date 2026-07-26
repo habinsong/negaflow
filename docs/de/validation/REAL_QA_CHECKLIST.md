@@ -2,12 +2,13 @@
 
 [Dokumentationsstart](../README.md)
 
-Das sind die Punkte, die automatische Tests und Builds nicht bestätigen können. Das Endergebnis
-auf dem Bildschirm und die echte Hardware prüft der Nutzer. Ein Release-Kandidat wird erst
-freigegeben, wenn jeder zutreffende Pflichtpunkt ein Ergebnis und einen Beleg hat.
+Das sind die Punkte, die automatische Tests und Builds nicht bestätigen können.
+Das Endergebnis auf dem Bildschirm und die echte Hardware prüft der Nutzer.
+Ein Release-Kandidat wird erst freigegeben,
+wenn jeder zutreffende Pflichtpunkt ein Ergebnis und einen Beleg hat.
 
-Tragen Sie jedes Ergebnis als `PASS`, `FAIL`, `BLOCKED` oder `N/A` ein. `FAIL`, `BLOCKED` und
-`N/A` brauchen eine Begründung.
+Tragen Sie jedes Ergebnis als `PASS`, `FAIL`, `BLOCKED` oder `N/A` ein.
+`FAIL`, `BLOCKED` und `N/A` brauchen eine Begründung.
 
 > [!IMPORTANT]
 > Ein Build ohne ausgefüllte Tabelle gilt nicht als geprüft für echte Geräte, endgültige
@@ -39,8 +40,8 @@ Tragen Sie jedes Ergebnis als `PASS`, `FAIL`, `BLOCKED` oder `N/A` ein. `FAIL`, 
 
 ## 2. Import, Entwicklung, Export
 
-Nehmen Sie mindestens ein JPEG, ein TIFF, ein DNG/RAW, das der aktuelle Decoder liest, und eine
-hochauflösende Datei. Notieren Sie den Quell-SHA-256 vor und nach dem Durchlauf.
+Nehmen Sie mindestens ein JPEG, ein TIFF, ein DNG/RAW, das der aktuelle Decoder liest,
+und eine hochauflösende Datei. Notieren Sie den Quell-SHA-256 vor und nach dem Durchlauf.
 
 | Ergebnis | Was zu prüfen ist | Beleg oder Problem |
 |---|---|---|
@@ -68,9 +69,8 @@ hochauflösende Datei. Notieren Sie den Quell-SHA-256 vor und nach dem Durchlauf
 
 ## 4. Fenster, Anzeige, Bedienungshilfen
 
-Prüfen Sie die kleinste Fenstergröße, ein großes Fenster, Retina-Skalierung, Bewegung
-reduzieren, Kontrast erhöhen, VoiceOver, vollen Tastaturzugriff und eine andere Sprache als
-Koreanisch.
+Prüfen Sie die kleinste Fenstergröße, ein großes Fenster, Retina-Skalierung, Bewegung reduzieren,
+Kontrast erhöhen, VoiceOver, vollen Tastaturzugriff und eine andere Sprache als Koreanisch.
 
 | Ergebnis | Was zu prüfen ist | Beleg oder Problem |
 |---|---|---|
@@ -88,7 +88,8 @@ Koreanisch.
 ## 5. Externe Plugins und echte Scanner
 
 Die SANE-Umsetzung wird aus der separaten Auslieferung `negaflow-scanner-sane` installiert und
-eingerichtet. Belege zu Plugin und Gerät gehören in jenes Repository und in dieses Protokoll.
+eingerichtet.
+Belege zu Plugin und Gerät gehören in jenes Repository und in dieses Protokoll.
 
 | Ergebnis | Was zu prüfen ist | Beleg oder Problem |
 |---|---|---|
@@ -146,8 +147,8 @@ Auslieferungsentscheidung: `APPROVE`, `REJECT`, `BLOCKED`
 - Ablageort der Belege:
 - Unterschrift:
 
-Tritt einer der folgenden Punkte auf, gilt bis zur Korrektur und erneuten Prüfung automatisch
-`REJECT`.
+Tritt einer der folgenden Punkte auf,
+gilt bis zur Korrektur und erneuten Prüfung automatisch `REJECT`.
 
 - Die Quelle wird verändert
 - Der Katalog wird stillschweigend zurückgesetzt

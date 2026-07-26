@@ -3,7 +3,8 @@
 [Dokumentationsstart](../README.md)
 
 Eine Katalogsicherung soll die App schnell wieder zum Laufen bringen und enthält deshalb keine
-Originalfotos. Das Archiv `.negaflowarchive` fasst folgendes Material in einem Paket zusammen.
+Originalfotos.
+Das Archiv `.negaflowarchive` fasst folgendes Material in einem Paket zusammen.
 
 | Enthalten | Weggelassen |
 |---|---|
@@ -12,8 +13,9 @@ Originalfotos. Das Archiv `.negaflowarchive` fasst folgendes Material in einem P
 | Der noch benötigte GrainMend-Bearbeitungsverlauf | Neu erzeugbare GrainMend-Caches |
 | Die Verbindung von virtuellen Kopien und geteilten Originalen | Exportierte Dateien |
 
-Die laufende SQLite-Datei kommt nicht hinein. Alles, was sich neu erzeugen lässt, bleibt
-ebenfalls draußen: Miniaturen, Vorschauen, GrainMend-Caches, exportierte Dateien.
+Die laufende SQLite-Datei kommt nicht hinein.
+Alles, was sich neu erzeugen lässt, bleibt ebenfalls draußen: Miniaturen, Vorschauen,
+GrainMend-Caches, exportierte Dateien.
 
 > [!WARNING]
 > Scheitert der Archivlauf, wird das vorhandene Archiv nicht überschrieben. Originale, fremde
@@ -23,8 +25,8 @@ ebenfalls draußen: Miniaturen, Vorschauen, GrainMend-Caches, exportierte Dateie
 
 Das Paket folgt dem Ordneraufbau von [RFC 8493 BagIt](https://www.rfc-editor.org/rfc/rfc8493.html).
 SHA-256-Listen werden für Inhalts- und Verwaltungsdateien getrennt geschrieben.
-`negaflow-archive.json` verbindet Bild-IDs mit den IDs der gespeicherten Dateien. Nutzen mehrere
-virtuelle Kopien dasselbe Original, werden dessen Bytes einmal gespeichert.
+`negaflow-archive.json` verbindet Bild-IDs mit den IDs der gespeicherten Dateien.
+Nutzen mehrere virtuelle Kopien dasselbe Original, werden dessen Bytes einmal gespeichert.
 
 Der temporäre Ordner wandert erst an seinen endgültigen Platz, wenn alles Folgende passt.
 
@@ -44,17 +46,19 @@ flowchart LR
     F --> G["Vorhandenes Archiv und Originale behalten"]
 ```
 
-Bei einem Fehlschlag bleibt das vorhandene Archiv liegen. Gelöscht wird nur der unfertige
-temporäre Ordner. Originale, fremde XMP-Dateien und der laufende Katalog bleiben unberührt.
+Bei einem Fehlschlag bleibt das vorhandene Archiv liegen.
+Gelöscht wird nur der unfertige temporäre Ordner.
+Originale, fremde XMP-Dateien und der laufende Katalog bleiben unberührt.
 
 ## Grenzen
 
-Originalformate bleiben, wie sie sind. Nichts wird der Langzeitkompatibilität zuliebe
-umgewandelt. PREMIS-Erhaltungsereignisse und -Akteure sowie die Migration in empfohlene Formate
-liegen außerhalb von v1.
+Originalformate bleiben, wie sie sind. Nichts wird der Langzeitkompatibilität zuliebe umgewandelt.
+PREMIS-Erhaltungsereignisse und -Akteure sowie die Migration in empfohlene Formate liegen außerhalb
+von v1.
 
-Ein Archiv ist noch keine Langzeitsicherung. Legen Sie Kopien auf andere Medien und an einen
-anderen Ort und prüfen Sie die Hashes regelmäßig erneut.
+Ein Archiv ist noch keine Langzeitsicherung.
+Legen Sie Kopien auf andere Medien und an einen anderen Ort und prüfen Sie die Hashes regelmäßig
+erneut.
 
 Quellen:
 
