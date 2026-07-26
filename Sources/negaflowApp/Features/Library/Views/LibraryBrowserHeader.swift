@@ -19,69 +19,67 @@ struct LibraryBrowserHeader: View {
     let onClearAllFilters: () -> Void
     let onSelectAll: () -> Void
 
+    // 폭 변화에 흔들리지 않는 단순 배치다. 예전에는 GeometryReader + ScrollView(.horizontal) +
+    // frame(minWidth: proxy.size.width) 조합이었는데, 좌측 패널을 끄는 동안 매 프레임 proxy 가
+    // 바뀌면 스크롤 콘텐츠 폭이 함께 바뀌면서 ScrollView 가 오프셋을 다시 잡는다 — 그게 헤더가
+    // 좌우로 깜빡이며 튀던 원인이다. 제목이 먼저 줄고 오른쪽 컨트롤은 제자리를 지킨다(툴바 관례).
     var body: some View {
-        GeometryReader { proxy in
-            ScrollView(.horizontal) {
-                HStack(spacing: 16) {
-                    HStack(spacing: 6) {
-                        Text(organizerTitle)
-                            .font(.headline.weight(.semibold))
-                            .lineLimit(1)
-                        Text(model.text(
-                            AppLocalizedPhrase.libraryResultCountFormat,
-                            projection.matchedCount,
-                            projection.sourceCount
-                        ))
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                    }
-                    .fixedSize()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                    HStack(spacing: 8) {
-                        if usesStoredDefinition {
-                            activeStoredSearchBar
-                        }
-                    }
-                    .fixedSize(horizontal: true, vertical: false)
-
-                    HStack(spacing: 8) {
-                        if !usesStoredDefinition {
-                            filterButton
-                            if quickFilters.isActive {
-                                Button(action: onClearAllFilters) {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .foregroundStyle(.tertiary)
-                                        .frame(width: 22, height: 22)
-                                }
-                                .buttonStyle(.plain)
-                                .help(model.text(AppLocalizedPhrase.clearFilters))
-                                .accessibilityLabel(model.text(AppLocalizedPhrase.clearFilters))
-                            }
-                        }
-
-                        sortMenu
-                        LibraryCullingModePicker(
-                            mode: $cullingMode,
-                            selectionCount: model.actionableSelectedFrames.count
-                        )
-                        LibraryDuplicateCandidateButton(
-                            orderedFrameIDs: projection.orderedFrameIDs
-                        )
-                        if cullingMode == .grid {
-                            cardSizeControl
-                        }
-                    }
-                    .fixedSize(horizontal: true, vertical: false)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .frame(minWidth: proxy.size.width, alignment: .leading)
+        HStack(spacing: 16) {
+            HStack(spacing: 6) {
+                Text(organizerTitle)
+                    .font(.headline.weight(.semibold))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Text(model.text(
+                    AppLocalizedPhrase.libraryResultCountFormat,
+                    projection.matchedCount,
+                    projection.sourceCount
+                ))
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .fixedSize()
             }
-            .scrollIndicators(.hidden)
+            .layoutPriority(-1)
+
+            if usesStoredDefinition {
+                activeStoredSearchBar
+                    .fixedSize(horizontal: true, vertical: false)
+            }
+
+            Spacer(minLength: 8)
+
+            HStack(spacing: 8) {
+                if !usesStoredDefinition {
+                    filterButton
+                    if quickFilters.isActive {
+                        Button(action: onClearAllFilters) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.tertiary)
+                                .frame(width: 22, height: 22)
+                        }
+                        .buttonStyle(.plain)
+                        .help(model.text(AppLocalizedPhrase.clearFilters))
+                        .accessibilityLabel(model.text(AppLocalizedPhrase.clearFilters))
+                    }
+                }
+
+                sortMenu
+                LibraryCullingModePicker(
+                    mode: $cullingMode,
+                    selectionCount: model.actionableSelectedFrames.count
+                )
+                LibraryDuplicateCandidateButton(
+                    orderedFrameIDs: projection.orderedFrameIDs
+                )
+                if cullingMode == .grid {
+                    cardSizeControl
+                }
+            }
+            .fixedSize(horizontal: true, vertical: false)
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
         .frame(height: 44)
     }
 
