@@ -19,8 +19,8 @@
 
 ## 自动应用的范围
 
-`FilmType` 只区分彩色与黑白、负片与正片，没有信息能分辨染料型黑白与银盐，
-也分不出普通反转片和 Kodachrome。
+`FilmType` 只区分彩色与黑白、负片与正片，没有信息能分辨染料型黑白与银盐，也分不出普通反转片和
+Kodachrome。
 
 | 胶片类型 | 自动 IR | 原因 |
 |---|---|---|
@@ -32,8 +32,8 @@
 
 ## 对齐检查
 
-`InfraredDefectRemoval` 会比较 IR 的渗漏纹理和 RGB 红通道，找出整数偏移，
-结果里带 `AlignmentDiagnostics`。
+`InfraredDefectRemoval` 会比较 IR 的渗漏纹理和 RGB 红通道，找出整数偏移，结果里带
+`AlignmentDiagnostics`。
 
 | 状态 | 含义 |
 |---|---|

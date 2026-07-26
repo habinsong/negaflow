@@ -56,8 +56,8 @@ Ils servent de référence pour repérer une régression dans le même environne
 
 L'encodage JSON de 50 000 images a fait grimper la mémoire résidente d'environ 191 Mio et le max RSS
 d'environ 107 Mio.
-Sur le même matériel, préparer la recherche en mémoire a pris 32, 86 ms, trier tous les noms 86,
-01 ms, et trier les noms après filtre 158, 37 ms.
+Sur le même matériel, préparer la recherche en mémoire a pris 32,86 ms, trier tous les noms 86,01
+ms, et trier les noms après filtre 158,37 ms.
 Quatre projections de filtre d'affilée : p50 de 512,80 ms.
 
 Magasin de lignes SQLite, 50 000 images, p95 en Release :
@@ -71,8 +71,8 @@ Magasin de lignes SQLite, 50 000 images, p95 en Release :
 
 Une sauvegarde ne tire pas toute la base dans `Data`.
 Elle fabrique une copie temporaire compatible avec la réplication, puis l'échange de façon atomique.
-Le contrôle préalable ne décode pas toutes les images non plus :
-il vérifie l'intégrité SQLite et le schéma.
+Le contrôle préalable ne décode pas toutes les images non plus : il vérifie l'intégrité SQLite et le
+schéma.
 Le p95 d'un commit sans modification est ainsi passé de 11 245 ms à 3 856 ms.
 
 ## Pourquoi SQLite
@@ -85,8 +85,8 @@ Le p95 d'un commit sans modification est ainsi passé de 11 245 ms à 3 856 ms.
 Aujourd'hui, `journal_mode=DELETE` et `synchronous=FULL`.
 WAL obligerait à traiter la base et le fichier `-wal` comme un tout.
 La base en service n'est jamais copiée au hasard.
-Seul le fichier principal, vérifié après fermeture de la connexion,
-devient une copie de récupération.
+Seul le fichier principal, vérifié après fermeture de la connexion, devient une copie de
+récupération.
 
 ## Qui fait quoi dans le code
 
@@ -96,11 +96,10 @@ devient une copie de récupération.
 - `LibraryBackupStore` : sauvegarde JSON transférable, contrôles avant restauration, informations de récupération
 
 Les valeurs de développement et l'historique d'édition versionné sont stockés en BLOB JSON par
-entité. Pixels sources,
-vignettes et caches GrainMend restent hors de la base.
+entité. Pixels sources, vignettes et caches GrainMend restent hors de la base.
 
-Les colonnes et index de recherche et de tri ne suffisent pas encore,
-donc tout le catalogue est chargé en mémoire au démarrage.
+Les colonnes et index de recherche et de tri ne suffisent pas encore, donc tout le catalogue est
+chargé en mémoire au démarrage.
 C'est pourquoi le temps de lecture SQLite ressemble à celui du JSON aujourd'hui.
 Ensuite viendront des recherches par index limitées aux colonnes et images utiles.
 
@@ -122,8 +121,8 @@ flowchart LR
 ```
 
 Si une étape échoue, le JSON existant reste tel quel. Rien ne démarre sur un catalogue vide.
-Même avec des fichiers intermédiaires et des marqueurs restants,
-on ne continue que si le SHA-256 source et les deux catalogues concordent.
+Même avec des fichiers intermédiaires et des marqueurs restants, on ne continue que si le SHA-256
+source et les deux catalogues concordent.
 
 Après le passage, aucun retour automatique au JSON.
 Pour empêcher une ancienne version de l'application de modifier le JSON et de scinder le stockage,

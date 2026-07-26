@@ -2,8 +2,9 @@
 
 [Docs home](../README.md)
 
-Infrared cleaning reads the visible image and the infrared image separately,
-then overlays them to find defects. It does not fit every film.
+Infrared cleaning reads the visible image and the infrared image separately, then overlays them to
+find defects.
+It does not fit every film.
 
 - Normal color film and dye-based black and white film can use IR.
 - Ordinary black and white film keeps its silver, which blocks IR and can produce a wrong defect map.
@@ -22,8 +23,8 @@ Evidence:
 ## Where it applies automatically
 
 `FilmType` only tells color from black and white and negative from positive.
-There is nothing in it to separate dye-based black and white from silver,
-or a normal slide from Kodachrome.
+There is nothing in it to separate dye-based black and white from silver, or a normal slide from
+Kodachrome.
 
 | Film type | Automatic IR | Why |
 |---|---|---|
@@ -53,6 +54,6 @@ If the best point lands on the search boundary, that counts as a failure whateve
 
 Automated tests do not stand in for RGB/IR alignment on a real device or for per-film results.
 Real scanner checks follow the IR items in the
-[real-device QA checklist](../validation/REAL_QA_CHECKLIST.md) .
+[real-device QA checklist](../validation/REAL_QA_CHECKLIST.md).
 
 SANE device control and capture code live only in the separate `negaflow-scanner-sane` repository.

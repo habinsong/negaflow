@@ -42,7 +42,7 @@ negaflow capabilities <scannerID> [--demo] --json
 
 </details>
 
-失败时 `status` 是 `error`，`payload` 是 `null`。 `error` 里有不会变的机器码和给人看的说明。
+失败时 `status` 是 `error`，`payload` 是 `null`。`error` 里有不会变的机器码和给人看的说明。
 诊断日志走 stderr，stdout 里不混日志和进度。
 
 ## 功能信息

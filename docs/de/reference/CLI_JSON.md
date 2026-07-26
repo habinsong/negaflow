@@ -21,8 +21,8 @@ negaflow capabilities <scannerID> [--demo] --json
 ```
 
 Vorerst funktioniert `--json` nur bei diesen beiden lesenden Befehlen.
-An `scan` oder `develop`, die Dateien ändern oder Fortschritt melden,
-endet es mit dem Fehler `unsupported_json_command`.
+An `scan` oder `develop`, die Dateien ändern oder Fortschritt melden, endet es mit dem Fehler
+`unsupported_json_command`.
 
 ## Gemeinsame Form
 
@@ -64,8 +64,8 @@ Das `payload` von `capabilities` führt immer alle diese Felder.
 - `outputFormats`, `estimatedScanSpeeds`
 
 Werte, die das Gerät nicht gemeldet hat, werden nicht geraten.
-Je nach Wert stehen dort `null`, ein leeres Array,
-`false` oder die vom Plugin gesendeten `disabledReasons`.
+Je nach Wert stehen dort `null`, ein leeres Array, `false` oder die vom Plugin gesendeten
+`disabledReasons`.
 
 `estimatedScanSpeeds` ist ein Array dieses Objekts, aufsteigend nach DPI.
 
@@ -73,8 +73,9 @@ Je nach Wert stehen dort `null`, ein leeres Array,
 { "dpi": 3600, "seconds": 42.0 }
 ```
 
-App-Oberfläche und CLI lesen dieselben `ScannerCapabilities`. Die Abgleichprüfung bestätigt,
-dass die auf dem Bildschirm geöffneten Bedienelemente denselben Werten folgen wie die JSON-Felder.
+App-Oberfläche und CLI lesen dieselben `ScannerCapabilities`.
+Die Abgleichprüfung bestätigt, dass die auf dem Bildschirm geöffneten Bedienelemente denselben
+Werten folgen wie die JSON-Felder.
 
 ## Versionsregeln
 

@@ -21,8 +21,8 @@ negaflow capabilities <scannerID> [--demo] --json
 ```
 
 今のところ`--json`は上の2つの読み取り専用コマンドだけで使えます。
-ファイルを変えたり進捗を送る `scan`、
-`develop`に付けると`unsupported_json_command`エラーで終わります。
+ファイルを変えたり進捗を送る `scan`、`develop`に付けると`unsupported_json_command`エラーで終わり
+ます。
 
 ## 共通の形
 
@@ -63,8 +63,9 @@ stdoutにログや進捗を混ぜません。
 - `minScanArea`、`maxScanArea`、`scanAreaUnit`
 - `outputFormats`、`estimatedScanSpeeds`
 
-装置が知らせなかった値は推測しません。値に応じて`null`、空の配列、 `false`、
-またはプラグインが送った`disabledReasons`をそのまま使います。
+装置が知らせなかった値は推測しません。
+値に応じて`null`、空の配列、`false`、またはプラグインが送った`disabledReasons`をそのまま使います
+。
 
 `estimatedScanSpeeds`は次のオブジェクトの配列で、DPIの昇順です。
 

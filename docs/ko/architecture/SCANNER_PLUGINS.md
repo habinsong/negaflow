@@ -110,15 +110,13 @@ flowchart LR
 v1 요청에는 넣지 않으며, 다른 장치의 토큰을 섞지 않습니다.
 플러그인은 토큰의 형식과 유효성을 직접 검사해야 합니다.
 
-앱은 같은 backend에 속한 다른 모델로 잘못 재연결되는 일을 막을 수 있도록,
-직전 `detect`가 보고한 `deviceID`, `vendor`,
-`model`을 `capabilities`의 선택적 stdin JSON으로 다시 전달합니다.
-기존 플러그인은 이 입력을 무시할 수 있으며,
-장치 주소가 바뀔 수 있는 플러그인은 capability 스냅샷에 이 동일성을 묶어 다음 `scan` 에서도
-검증해야 합니다.
+앱은 같은 backend에 속한 다른 모델로 잘못 재연결되는 일을 막을 수 있도록, 직전 `detect`가 보고한
+`deviceID`, `vendor`, `model`을 `capabilities`의 선택적 stdin JSON으로 다시 전달합니다.
+기존 플러그인은 이 입력을 무시할 수 있으며, 장치 주소가 바뀔 수 있는 플러그인은 capability
+스냅샷에 이 동일성을 묶어 다음 `scan`에서도 검증해야 합니다.
 
-각 NDJSON 이벤트는 같은 버전과 요청 ID를 반복하고,
-이전보다 큰 0 이상의 `sequence`를 가져야 합니다.
+각 NDJSON 이벤트는 같은 버전과 요청 ID를 반복하고, 이전보다 큰 0 이상의 `sequence`를 가져야
+합니다.
 이벤트는 `progress`, `result`, `error`만 허용합니다.
 
 `result`와 `error`는 마지막 이벤트입니다. 뒤에 이벤트가 오면 실패합니다.
@@ -155,8 +153,8 @@ v2 `result`에는 `appliedOptions`가 꼭 있어야 합니다.
 이때만 `.verified(options)`로 표시합니다.
 
 `ScanResult.resolution`과 `bitDepth`는 v1에서 요청값을 임시 동작값으로 쓸 수 있습니다.
-출처를 나타내는 `reportedResolution`,
-`reportedBitDepth`는 결과가 직접 보고한 올바른 값만 넣습니다.
+출처를 나타내는 `reportedResolution`, `reportedBitDepth`는 결과가 직접 보고한 올바른 값만
+넣습니다.
 
 ## 평판 스캔 영역
 
@@ -180,12 +178,12 @@ v2 `result`에는 `appliedOptions`가 꼭 있어야 합니다.
 상한을 넘으면 프로세스를 끝내고 실패합니다. 정리할 때는 이미 도착한 바이트만 읽습니다.
 자식 프로세스가 파이프를 물려받았더라도 EOF를 기다리지 않습니다.
 
-`cancelScan()` 은 플러그인이 끝나고 파이프 처리기가 닫히며 다음 작업 자리가 비워진 뒤에야
+`cancelScan()`은 플러그인이 끝나고 파이프 처리기가 닫히며 다음 작업 자리가 비워진 뒤에야
 돌아옵니다.
 
 ## 스캔 파일 공개
 
-플러그인은 앱이 준 정확한 `outputPath` 에 원본 이미지를 쓰고 결과에도 같은 경로를 돌려줘야
+플러그인은 앱이 준 정확한 `outputPath`에 원본 이미지를 쓰고 결과에도 같은 경로를 돌려줘야
 합니다.
 이 경로는 최종 폴더와 같은 디스크의 임시 위치입니다.
 
@@ -214,17 +212,17 @@ sequenceDiagram
 - 예상한 형식과 픽셀 크기
 - 요청과 결과의 경로가 같음
 
-모두 맞을 때만 최종 위치로 옮깁니다. 취소, 시간 초과, 잘못된 출력,
-플러그인 실패 때는 임시 폴더를 지우고 일부 스캔을 공개하지 않습니다.
+모두 맞을 때만 최종 위치로 옮깁니다.
+취소, 시간 초과, 잘못된 출력, 플러그인 실패 때는 임시 폴더를 지우고 일부 스캔을 공개하지
+않습니다.
 
 v2 IR 파일도 앱이 준 임시 폴더 안에 있어야 합니다. 파일 종류, 읽기, 픽셀 크기를 확인합니다.
 v1은 이미 배포된 플러그인 호환을 위해 외부 IR 경로를 받을 수 있습니다.
 
 ## SANE 경계
 
-SANE 구현, 의존성, 설정, 장치별 처리, 테스트,
-배포 문서는 모두 별도 [`negaflow-scanner-sane`](https:
-//github.com/habinsong/negaflow-scanner-sane) 저장소에 둡니다.
+SANE 구현, 의존성, 설정, 장치별 처리, 테스트, 배포 문서는 모두 별도
+[`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane) 저장소에 둡니다.
 
 이 저장소는 장치와 무관한 외부 프로세스 규격만 문서화하고 검사합니다.
 이미지 파일만 가져오는 사용자는 스캐너 플러그인이 없어도 됩니다.

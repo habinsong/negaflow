@@ -3,8 +3,8 @@
 [文档首页](../README.md)
 
 `scripts/evaluate_profile_quality.py` 用来检查扫描仪配置文件的改动有没有比已批准的基准更差。
-它比较由 `LUT_target/analyze_lut_target.py` 生成的两份 `SOURCE/summary.json`，
-并且只用没参与调参的验证样本来做判定。
+它比较由 `LUT_target/analyze_lut_target.py` 生成的两份 `SOURCE/summary.json`，并且只用没参与调参
+的验证样本来做判定。
 
 这个工具不会替你定义“好的颜色”。哪些数值该降、哪些该升、允许变化多少，都要由人写进素材清单。
 不提供默认的合格值。
@@ -143,7 +143,7 @@ python3 LUT_target/analyze_lut_target.py
 候选与基准的摘要里，清单中列出的样本必须各出现恰好一次。
 缺失、重复、处理失败，或出现清单之外的样本，都属于输入错误。
 
-`calibration` 样本可以用于拟合配置文件，但不参与判定。 `holdout` 样本不参与调参和挑选。
+`calibration` 样本可以用于拟合配置文件，但不参与判定。`holdout` 样本不参与调参和挑选。
 验证数值按样本逐个比较，因此不能用平均改善掩盖某一张变差。
 
 ```mermaid
@@ -197,5 +197,6 @@ stdout 和 `--report` 文件写入同一份 JSON，文件保存是原子的。
 python3 -m unittest scripts/tests/test_evaluate_profile_quality.py
 ```
 
-测试用临时合成文件覆盖正常比较、变差、哈希变化、错误的 schema 与数值、重复・缺失・失败的样本，
-以及空素材。它不能证明真实扫描仪输出的质量。
+测试用临时合成文件覆盖正常比较、变差、哈希变化、错误的 schema 与数值、重复・缺失・失败的样本，以
+及空素材。
+它不能证明真实扫描仪输出的质量。

@@ -4,7 +4,8 @@
 
 negaflow est une application macOS.
 Vous importez ou scannez des images de film, puis viennent l'inversion, le développement, GrainMend,
-la sortie et la conservation. Chaque modification est conservée à part de l'original.
+la sortie et la conservation.
+Chaque modification est conservée à part de l'original.
 
 > [!IMPORTANT]
 > Originaux, historique d'édition, caches et fichiers de sortie sont des matériaux différents.
@@ -66,8 +67,8 @@ Ce n'est pas un pilote de scanner. Il porte le contrat qui relie un plugin exter
 - Sessions de scan et historique des travaux
 - Le scanner de démonstration, que vous devez activer vous-même
 
-L'implémentation SANE vit dans un projet GPL séparé, [`negaflow-scanner-sane`](https:
-//github.com/habinsong/negaflow-scanner-sane).
+L'implémentation SANE vit dans un projet GPL séparé,
+[`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane).
 L'application et le plugin ne communiquent que par JSON et par la CLI.
 
 ### `negaflowCLI`
@@ -128,23 +129,23 @@ Un plugin installé peut déclarer les fonctions suivantes.
 - Comportement des lots et du passe-vues
 
 L'application n'invente jamais une fonction à partir d'une table de noms de modèles.
-Quand un scan se termine,
-les réglages réellement appliqués par le plugin et le fichier de sortie sont revérifiés.
+Quand un scan se termine, les réglages réellement appliqués par le plugin et le fichier de sortie
+sont revérifiés.
 
 ### Identifiant de l'original
 
 Un chemin de fichier ne suffit pas à identifier un original.
-Les valeurs exigées par le contrat actuel sont conservées : observations sur le fichier,
-nombre d'octets, date de modification, SHA-256 et un bookmark persistant.
+Les valeurs exigées par le contrat actuel sont conservées : observations sur le fichier, nombre
+d'octets, date de modification, SHA-256 et un bookmark persistant.
 
-Si un fichier a bougé,
-le chemin ne change que lorsque vous le reliez vous-même ou que la restauration du bookmark réussit.
+Si un fichier a bougé, le chemin ne change que lorsque vous le reliez vous-même ou que la
+restauration du bookmark réussit.
 
 ## Catalogue
 
 Le stockage principal est `library.sqlite`.
-L'ancien `library.json` ne sert qu'à faire passer du matériel ancien vérifié,
-ou à écrire une sauvegarde transportable.
+L'ancien `library.json` ne sert qu'à faire passer du matériel ancien vérifié, ou à écrire une
+sauvegarde transportable.
 Les deux stockages ne sont jamais mis à jour en même temps.
 
 Ce qui va dans SQLite :
@@ -201,15 +202,16 @@ Chaque image porte :
 - Historique de versions
 - État d'export
 
-Pendant les réglages,
-un aperçu en basse résolution est utilisé. Un résultat terminé n'atteint l'écran que si son
-identifiant d'image et sa version d'édition correspondent toujours à la sélection en cours.
+Pendant les réglages, un aperçu en basse résolution est utilisé. Un résultat terminé n'atteint
+l'écran que si son identifiant d'image et sa version d'édition correspondent toujours à la sélection
+en cours.
 
 L'export n'enregistre pas le bitmap d'aperçu affiché. Il reconstruit l'image en pleine résolution à
 partir de l'original et des valeurs d'édition figées.
 
-GrainMend garde l'automatique, le guidé, la brosse,
-le tampon de duplication et l'IR dans une liste ordonnée. Les caches sont des fichiers dérivés.
+GrainMend garde l'automatique, le guidé, la brosse, le tampon de duplication et l'IR dans une liste
+ordonnée.
+Les caches sont des fichiers dérivés.
 Si un résultat ne peut pas être reconstruit depuis l'original et l'historique, l'export échoue.
 
 Plus de détail dans [GrainMend](../product/GRAINMEND.md).
@@ -275,9 +277,8 @@ Mises en page prises en charge :
 L'ICC est appliqué une fois, à la sortie finale, une fois la mise en page terminée.
 Ni le TIFF de scan d'origine ni `-main-flat` ne reçoit de profil d'imprimante.
 
-Sans ICC imprimante RVB valide,
-aucun autre profil n'est substitué. Les octets et le SHA-256 du profil que vous avez choisi entrent
-dans le manifeste de sortie.
+Sans ICC imprimante RVB valide, aucun autre profil n'est substitué. Les octets et le SHA-256 du
+profil que vous avez choisi entrent dans le manifeste de sortie.
 
 ## Archive de conservation
 
@@ -289,17 +290,17 @@ Ce qui entre dans `.negaflowarchive` :
 - L'historique GrainMend nécessaire
 - La relation entre les copies virtuelles et l'original qu'elles partagent
 
-Vignettes, aperçus, caches GrainMend et fichiers exportés peuvent être reconstruits,
-donc ils restent dehors. La structure BagIt de la RFC 8493 est utilisée avec une liste SHA-256,
-et chaque fichier et chaque relation sont vérifiés avant que le lot ne rejoigne son emplacement
-final.
+Vignettes, aperçus, caches GrainMend et fichiers exportés peuvent être reconstruits, donc ils
+restent dehors.
+La structure BagIt de la RFC 8493 est utilisée avec une liste SHA-256, et chaque fichier et chaque
+relation sont vérifiés avant que le lot ne rejoigne son emplacement final.
 
 - [Archive de bibliothèque](LIBRARY_ARCHIVE.md)
 - [RFC 8493](https://www.rfc-editor.org/info/rfc8493/)
 - [PREMIS](https://www.loc.gov/standards/premis/)
 
-La conservation à long terme demande aussi un autre support,
-une copie hors site et des vérifications d'empreintes régulières.
+La conservation à long terme demande aussi un autre support, une copie hors site et des
+vérifications d'empreintes régulières.
 
 ## Sécurité des plugins scanner
 
@@ -313,15 +314,14 @@ Quand un plugin est trouvé, ceci est vérifié.
 
 Si le fichier a changé, l'approbation précédente n'est pas réutilisée.
 
-Le protocole v2 utilise un identifiant de requête et un numéro de séquence,
-et exige exactement un résultat final.
-La taille de sortie a un plafond, et après un délai dépassé ou une annulation,
-le processus et ses tubes sont nettoyés.
+Le protocole v2 utilise un identifiant de requête et un numéro de séquence, et exige exactement un
+résultat final.
+La taille de sortie a un plafond, et après un délai dépassé ou une annulation, le processus et ses
+tubes sont nettoyés.
 
 Un plugin ne publie jamais lui-même un fichier à l'emplacement final.
-L'application lui donne un emplacement temporaire, vérifie le format, la taille,
-l'identifiant et les réglages réellement appliqués,
-puis déplace le fichier dans son propre stockage.
+L'application lui donne un emplacement temporaire, vérifie le format, la taille, l'identifiant et
+les réglages réellement appliqués, puis déplace le fichier dans son propre stockage.
 
 Le contrat complet est dans [Architecture des plugins scanner](SCANNER_PLUGINS.md).
 

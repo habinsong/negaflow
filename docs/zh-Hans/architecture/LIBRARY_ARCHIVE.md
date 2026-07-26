@@ -20,8 +20,8 @@
 
 ## 文件结构和检查
 
-包按 [RFC 8493 BagIt](https: //www.rfc-editor.org/rfc/rfc8493.html) 的目录结构组织，
-内容文件和管理文件的 SHA-256 清单分开记录。
+包按 [RFC 8493 BagIt](https://www.rfc-editor.org/rfc/rfc8493.html) 的目录结构组织，内容文件和管
+理文件的 SHA-256 清单分开记录。
 `negaflow-archive.json` 把画面 ID 和保存文件 ID 连起来。
 多个虚拟副本用同一个原件时，原件字节只存一份。
 

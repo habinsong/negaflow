@@ -2,8 +2,9 @@
 
 [문서 홈](../README.md)
 
-negaflow는 필름 이미지를 가져오거나 스캔한 뒤 반전, 현상, GrainMend, 출력,
-보존으로 이어지는 macOS 앱입니다. 모든 편집은 원본과 따로 저장합니다.
+negaflow는 필름 이미지를 가져오거나 스캔한 뒤 반전, 현상, GrainMend, 출력, 보존으로 이어지는
+macOS 앱입니다.
+모든 편집은 원본과 따로 저장합니다.
 
 > [!IMPORTANT]
 > 원본, 편집 기록, 캐시, 출력 파일은 서로 다른 자료입니다. 캐시가 없어져도 원본과 편집 기록은
@@ -62,8 +63,8 @@ flowchart LR
 - 스캔 세션과 작업 기록
 - 직접 켜야 하는 데모 스캐너
 
-SANE 구현은 별도 GPL 프로젝트 [`negaflow-scanner-sane`](https:
-//github.com/habinsong/negaflow-scanner-sane)에 있습니다.
+SANE 구현은 별도 GPL 프로젝트
+[`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane)에 있습니다.
 본체와 플러그인은 JSON과 CLI로만 통신합니다.
 
 ### `negaflowCLI`
@@ -127,8 +128,9 @@ flowchart LR
 
 ### 원본 ID
 
-파일 경로만으로 원본을 판단하지 않습니다. 파일 관측값, 바이트 수, 수정 시각, SHA-256,
-persistent bookmark처럼 현재 규격에 필요한 값을 남깁니다.
+파일 경로만으로 원본을 판단하지 않습니다.
+파일 관측값, 바이트 수, 수정 시각, SHA-256, persistent bookmark처럼 현재 규격에 필요한 값을
+남깁니다.
 
 파일이 옮겨졌다면 사용자가 다시 연결하거나 bookmark 복구가 성공했을 때만 경로를 바꿉니다.
 

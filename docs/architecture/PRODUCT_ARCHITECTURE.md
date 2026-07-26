@@ -3,8 +3,9 @@
 [Docs home](../README.md)
 
 negaflow is a macOS app.
-You import or scan film images, then go through inversion, develop, GrainMend, output,
-and preservation. Every edit is kept apart from the original.
+You import or scan film images, then go through inversion, develop, GrainMend, output, and
+preservation.
+Every edit is kept apart from the original.
 
 > [!IMPORTANT]
 > Originals, edit history, caches, and output files are different material. Losing a cache must
@@ -64,8 +65,8 @@ Not a scanner driver. It owns the contract that connects an external plugin.
 - Scan sessions and job history
 - The demo scanner you have to turn on yourself
 
-The SANE implementation lives in a separate GPL project, [`negaflow-scanner-sane`](https:
-//github.com/habinsong/negaflow-scanner-sane).
+The SANE implementation lives in a separate GPL project,
+[`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane).
 The app and the plugin talk over JSON and the CLI only.
 
 ### `negaflowCLI`
@@ -124,8 +125,9 @@ An installed plugin can report these capabilities.
 - IR
 - Batch and holder behavior
 
-The app never invents a capability from a table of model names. When a scan finishes,
-the settings the plugin actually applied and the output file are checked again.
+The app never invents a capability from a table of model names.
+When a scan finishes, the settings the plugin actually applied and the output file are checked
+again.
 
 ### Original ID
 
@@ -138,8 +140,9 @@ If a file moved, the path changes only when you relink it yourself or bookmark r
 ## Catalog
 
 The main store is `library.sqlite`.
-The old `library.json` is used to bring confirmed older material across,
-or to write a backup that can move between machines. The two stores are never updated at once.
+The old `library.json` is used to bring confirmed older material across, or to write a backup that
+can move between machines.
+The two stores are never updated at once.
 
 What goes into SQLite:
 
@@ -282,8 +285,8 @@ What goes into `.negaflowarchive`:
 - The relationship between virtual copies and the original they share
 
 Thumbnails, previews, GrainMend caches, and exported files can be rebuilt, so they stay out.
-It uses the RFC 8493 BagIt structure with a SHA-256 list,
-and every file and relationship is checked before the bundle moves to its final location.
+It uses the RFC 8493 BagIt structure with a SHA-256 list, and every file and relationship is checked
+before the bundle moves to its final location.
 
 - [Library archive](LIBRARY_ARCHIVE.md)
 - [RFC 8493](https://www.rfc-editor.org/info/rfc8493/)

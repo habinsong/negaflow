@@ -2,8 +2,9 @@
 
 [Dokumentationsstart](../README.md)
 
-Der Hauptspeicher ist `library.sqlite`. Das alte `library.json` dient nur noch dazu,
-ältere Bestände zu übernehmen oder eine Diagnosedatei zu schreiben.
+Der Hauptspeicher ist `library.sqlite`.
+Das alte `library.json` dient nur noch dazu, ältere Bestände zu übernehmen oder eine Diagnosedatei
+zu schreiben.
 Nichts aktualisiert beide Dateien gleichzeitig, also gibt es kein `dual-write`.
 
 Sicherungen und Erhaltungsarchive enthalten eine JSON-Form, die sich zwischen Geräten bewegen lässt.
@@ -52,10 +53,10 @@ Sie sind eine Basis, um Rückschritte in derselben Umgebung zu finden.
 | 10.000 | 21.934.841 Byte | 811 ms | 2.301 ms | 2.299 ms |
 | 50.000 | 109.721.335 Byte | 2.746 ms | 7.353 ms | 7.397 ms |
 
-Beim JSON-Kodieren von 50.000 Bildern stieg der Resident Memory um rund 191 MiB,
-der Max RSS um rund 107 MiB.
-Beim selben Material dauerte das Vorbereiten der Suche im Speicher 32, 86 ms,
-das Sortieren aller Namen 86, 01 ms und das Sortieren nach Filter 158, 37 ms.
+Beim JSON-Kodieren von 50.000 Bildern stieg der Resident Memory um rund 191 MiB, der Max RSS um rund
+107 MiB.
+Beim selben Material dauerte das Vorbereiten der Suche im Speicher 32,86 ms, das Sortieren aller
+Namen 86,01 ms und das Sortieren nach Filter 158,37 ms.
 Vier Filterprojektionen hintereinander: p50 von 512,80 ms.
 
 SQLite-Zeilenspeicher, 50.000 Bilder, Release-p95:
@@ -69,8 +70,8 @@ SQLite-Zeilenspeicher, 50.000 Bilder, Release-p95:
 
 Eine Sicherung zieht nicht die ganze Datenbank in `Data`.
 Sie legt eine replizierbare temporäre Kopie an und tauscht sie atomar aus.
-Auch die Prüfung davor dekodiert nicht jedes Bild,
-sondern sieht sich SQLite-Integrität und Schema an.
+Auch die Prüfung davor dekodiert nicht jedes Bild, sondern sieht sich SQLite-Integrität und Schema
+an.
 Damit fiel der p95 eines Commits ohne Änderungen von 11.245 ms auf 3.856 ms.
 
 ## Warum SQLite
@@ -95,8 +96,8 @@ Nur die Hauptdatei, geprüft nach dem Schließen der Verbindung, wird zur Wieder
 Entwicklungswerte und versionierter Bearbeitungsverlauf liegen je Entität als JSON-BLOB.
 Quellpixel, Miniaturen und GrainMend-Caches bleiben außerhalb der Datenbank.
 
-Für Suche und Sortierung fehlen noch Spalten und Indizes,
-daher lädt beim Start der ganze Katalog in den Speicher.
+Für Suche und Sortierung fehlen noch Spalten und Indizes, daher lädt beim Start der ganze Katalog in
+den Speicher.
 Deshalb sieht die SQLite-Lesezeit heute aus wie bei JSON.
 Als Nächstes kommen Indexabfragen, die nur die genutzten Spalten und Bilder lesen.
 
@@ -118,12 +119,12 @@ flowchart LR
 ```
 
 Scheitert ein Schritt, bleibt das vorhandene JSON, wie es ist. Es startet nie mit leerem Katalog.
-Auch wenn Zwischendateien und Markierungen liegen bleiben, geht es nur weiter,
-wenn der Quell-SHA-256 und beide Kataloge übereinstimmen.
+Auch wenn Zwischendateien und Markierungen liegen bleiben, geht es nur weiter, wenn der
+Quell-SHA-256 und beide Kataloge übereinstimmen.
 
 Nach dem Umzug gibt es keinen automatischen Rückweg zu JSON.
-Damit eine ältere App das JSON nicht verändert und den Speicher teilt,
-werden Mindestleseversion und Migrationsmarkierung geprüft.
+Damit eine ältere App das JSON nicht verändert und den Speicher teilt, werden Mindestleseversion und
+Migrationsmarkierung geprüft.
 
 ## Was nicht gewählt wurde
 

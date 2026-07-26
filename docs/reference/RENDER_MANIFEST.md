@@ -29,7 +29,8 @@ What v3 holds:
 - SHA-256, byte count, pixel size, and format of the final file
 
 After the encoder finishes writing, the file is opened again with ImageIO to confirm the pixel size,
-and the whole file is hashed. The sidecar is written after that.
+and the whole file is hashed.
+The sidecar is written after that.
 If the v3 check fails, the result is not published as a finished output set.
 
 ## GrainMend input
@@ -47,8 +48,7 @@ guessing.
 There is no digital signature, certificate, trust chain, or embedded claim store here.
 That is why it is not called C2PA Content Credentials.
 The hard binding and processing history ideas of C2PA and the integrity idea of PREMIS were useful
-as references,
-but only SHA-256 values that can be checked go in.
+as references, but only SHA-256 values that can be checked go in.
 
 Sources:
 

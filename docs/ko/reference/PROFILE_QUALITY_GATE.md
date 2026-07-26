@@ -2,13 +2,14 @@
 
 [문서 홈](../README.md)
 
-`scripts/evaluate_profile_quality.py` 는 스캐너 프로파일 변경이 승인된 기준보다 나빠지지
-않았는지 검사합니다.
-`LUT_target/analyze_lut_target.py`가 만든 `SOURCE/summary.json` 두 개를 비교하며,
-프로파일 조정에 쓰지 않은 검증 사례만 판정에 사용합니다.
+`scripts/evaluate_profile_quality.py`는 스캐너 프로파일 변경이 승인된 기준보다 나빠지지 않았는지
+검사합니다.
+`LUT_target/analyze_lut_target.py`가 만든 `SOURCE/summary.json` 두 개를 비교하며, 프로파일
+조정에 쓰지 않은 검증 사례만 판정에 사용합니다.
 
-이 도구가 “좋은 색”을 정해 주지는 않습니다. 어떤 수치를 낮춰야 하는지, 높여야 하는지,
-얼마까지 변해도 되는지는 자료 목록에 사람이 직접 적어야 합니다.
+이 도구가 “좋은 색”을 정해 주지는 않습니다.
+어떤 수치를 낮춰야 하는지, 높여야 하는지, 얼마까지 변해도 되는지는 자료 목록에 사람이 직접
+적어야 합니다.
 기본 합격값을 임의로 제공하지 않습니다.
 
 현재 저장소에는 REAL/TARGET 이미지 쌍이 없습니다.
@@ -21,7 +22,7 @@
 
 ## 현재 프로파일을 앱에서 쓰는 범위
 
-사용자가 `NORITSU` 나 `FUJI` 타깃을 직접 고르면 번들의 `realOnly` 그룹에서 제한된 상대 차이를 쓸
+사용자가 `NORITSU`나 `FUJI` 타깃을 직접 고르면 번들의 `realOnly` 그룹에서 제한된 상대 차이를 쓸
 수 있습니다.
 
 필요한 조건:
@@ -47,8 +48,8 @@
 ## 제조사 자료로 확인할 수 있는 범위
 
 - [Fujifilm Frontier 570/SP-3000 안내서](https://www.photolabdigital.com/fuji_frontier570_en%5B1%5D.pdf)는
-area CCD와 Hyper-tone,
-Hyper-sharpness 같은 기능 이름을 공개하지만 전달 함수와 설정값은 공개하지 않습니다.
+area CCD와 Hyper-tone, Hyper-sharpness 같은 기능 이름을 공개하지만 전달 함수와 설정값은 공개하지
+않습니다.
 - [Noritsu HS-1800 제품 정보](https://www.noritsu.eu/hardware/noritsu-film-scanner.html)는
 지원 형식, 해상도, 처리량을 공개하지만 고정 색 전달 함수는 제공하지 않습니다.
 - [Noritsu 특허 US 7,589,863](https://patents.google.com/patent/US7589863/en)는 미니랩에서
@@ -191,9 +192,10 @@ python3 scripts/evaluate_profile_quality.py \
 | `holdout` | 검증 파일만 확인 | 빠른 진단용 |
 | `none` | 이미지 파일 확인 안 함 | 아니요 |
 
-기본값은 `all`입니다. 보고서에는 사용한 모드, 목록과 요약 파일의 해시, 파일 확인 결과,
-검증 사례별 비교와 수를 기록합니다. stdout과 `--report` 파일에 같은 JSON을 씁니다.
-파일은 원자적으로 저장합니다.
+기본값은 `all`입니다.
+보고서에는 사용한 모드, 목록과 요약 파일의 해시, 파일 확인 결과, 검증 사례별 비교와 수를
+기록합니다.
+stdout과 `--report` 파일에 같은 JSON을 씁니다. 파일은 원자적으로 저장합니다.
 
 종료 코드:
 
@@ -208,4 +210,5 @@ python3 -m unittest scripts/tests/test_evaluate_profile_quality.py
 ```
 
 테스트는 임시 합성 파일로 정상 비교, 악화, 해시 변경, 잘못된 스키마와 숫자, 중복·누락·실패 사례,
-빈 자료를 확인합니다. 실제 스캐너 출력의 품질을 증명하지 않습니다.
+빈 자료를 확인합니다.
+실제 스캐너 출력의 품질을 증명하지 않습니다.

@@ -2,10 +2,10 @@
 
 [ドキュメントホーム](../README.md)
 
-`scripts/evaluate_profile_quality.py`は、
-スキャナープロファイルの変更が承認済みの基準より悪くなっていないかを検査します。
-`LUT_target/analyze_lut_target.py`が作った`SOURCE/summary.json`を 2つ比べ、
-プロファイルの調整に使っていない検証事例だけを判定に使います。
+`scripts/evaluate_profile_quality.py`は、スキャナープロファイルの変更が承認済みの基準より悪くな
+っていないかを検査します。
+`LUT_target/analyze_lut_target.py`が作った`SOURCE/summary.json`を 2つ比べ、プロファイルの調整に
+使っていない検証事例だけを判定に使います。
 
 この道具が「良い色」を決めてくれるわけではありません。
 どの数値を下げるか、上げるか、どこまでの変化を許すかは、人が資料の目録に書きます。
@@ -21,8 +21,8 @@
 
 ## いまのプロファイルをアプリが使う範囲
 
-ユーザーが`NORITSU`や`FUJI`のターゲットを自分で選んだときだけ、
-同梱の`realOnly`グループから限られた相対差を使えます。
+ユーザーが`NORITSU`や`FUJI`のターゲットを自分で選んだときだけ、同梱の`realOnly`グループから限ら
+れた相対差を使えます。
 
 必要な条件:
 
@@ -60,7 +60,7 @@ negaflowは製品名からそうした値を推測しません。
 ## 資料目録のスキーマv1
 
 目録は、固定する入力資料のそばに置きます。例: `LUT_target/quality/corpus-v1.json`。
-パスは目録ファイルの位置が基準です。 `--data-root`を与えると、そのパスが基準になります。
+パスは目録ファイルの位置が基準です。`--data-root`を与えると、そのパスが基準になります。
 
 <details>
 <summary>資料目録の例</summary>
@@ -135,7 +135,7 @@ negaflowは製品名からそうした値を推測しません。
 - `allowedRegression`は0以上の有限な数です。真偽値は受け取りません。
 - 向きは`lowerIsBetter`、`higherIsBetter`、`absoluteLowerIsBetter`だけ受け取ります。
 
-`absoluteLowerIsBetter`は0からの絶対値を比べます。 0が検討済みの基準のときにだけ使います。
+`absoluteLowerIsBetter`は0からの絶対値を比べます。0が検討済みの基準のときにだけ使います。
 
 ## 候補と承認基準の準備
 
@@ -189,9 +189,10 @@ python3 scripts/evaluate_profile_quality.py \
 | `holdout` | 検証ファイルだけ確認 | 素早い診断用 |
 | `none` | 画像ファイルを確認しない | いいえ |
 
-既定は`all`です。レポートには、使ったモード、目録と要約ファイルのハッシュ、ファイル確認の結果、
-検証事例ごとの比較と数を記録します。 stdoutと`--report`のファイルに同じJSONを書きます。
-ファイルは原子的に保存します。
+既定は`all`です。
+レポートには、使ったモード、目録と要約ファイルのハッシュ、ファイル確認の結果、検証事例ごとの比較
+と数を記録します。
+stdoutと`--report`のファイルに同じJSONを書きます。ファイルは原子的に保存します。
 
 終了コード:
 
@@ -205,5 +206,6 @@ python3 scripts/evaluate_profile_quality.py \
 python3 -m unittest scripts/tests/test_evaluate_profile_quality.py
 ```
 
-テストは一時的な合成ファイルで、正常な比較、悪化、ハッシュの変更、誤ったスキーマと数値、
-重複・欠落・失敗の事例、空の資料を確認します。実機の出力の品質を示すものではありません。
+テストは一時的な合成ファイルで、正常な比較、悪化、ハッシュの変更、誤ったスキーマと数値、重複・欠
+落・失敗の事例、空の資料を確認します。
+実機の出力の品質を示すものではありません。

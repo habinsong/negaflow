@@ -8,8 +8,8 @@
 ## 代码
 
 `Sources`、`Tests`、`scripts` 是为 negaflow 写的 Swift、Python 和 Shell 代码。
-主体里没有 C/C++/Objective-C 源码、外部包、静态或动态库，也没有 vendored 源码树，
-只链接 Apple 在 macOS 上提供的系统框架。
+主体里没有 C/C++/Objective-C 源码、外部包、静态或动态库，也没有 vendored 源码树，只链接 Apple 在
+macOS 上提供的系统框架。
 
 胶片反转用的是公开感光学里的密度、趾部、直线部和肩部这套概念。
 这里的曲线和系数出自 negaflow 自己的四个光度基准点，没有照抄第三方程序的公式或常数。
@@ -44,7 +44,7 @@ GNU FAQ 也写到：管道或命令行通信通常看起来像独立程序，但
 - [扫描仪插件结构](../architecture/SCANNER_PLUGINS.md)
 
 发布检查会再确认一次：应用包里没有混进插件、SANE 可执行文件或库。
-插件那边自带 `LICENSE`、 `COPYING`、完整的对应源码和第三方声明。
+插件那边自带 `LICENSE`、`COPYING`、完整的对应源码和第三方声明。
 
 ## 内置资源
 
@@ -61,9 +61,9 @@ GNU FAQ 也写到：管道或命令行通信通常看起来像独立程序，但
 TIFF 里能看到的相机和色彩空间元数据，是拍摄与编码留下的容器信息。
 扫描仪配置文件里的 `sourceProfiles` 是生成时本地测量资料的逻辑路径，那些原始照片不分发。
 
-FILM-R v2 素材只在做质量测量时下载，图像本身不会进仓库，也不会进应用。 DOI 版本、 CC BY 4.0、
-文件大小和哈希固定在
-[`Config/defect-corpus-film-r-v2.json`](../../../Config/defect-corpus-film-r-v2.json) 。
+FILM-R v2 素材只在做质量测量时下载，图像本身不会进仓库，也不会进应用。
+DOI 版本、CC BY 4.0、文件大小和哈希固定在
+[`Config/defect-corpus-film-r-v2.json`](../../../Config/defect-corpus-film-r-v2.json)。
 
 ## 名称与互操作
 

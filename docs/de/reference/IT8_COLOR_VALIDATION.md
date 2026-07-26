@@ -3,8 +3,8 @@
 [Dokumentationsstart](../README.md)
 
 Farbtreue wird nicht am Bildschirm freigegeben.
-Ein IT8-Bild und die Referenzdatei zu seinem physischen Target werden als Paar festgelegt,
-und jedes Feld wird als Zahl festgehalten.
+Ein IT8-Bild und die Referenzdatei zu seinem physischen Target werden als Paar festgelegt, und jedes
+Feld wird als Zahl festgehalten.
 
 > [!IMPORTANT]
 > Öffentliches IT8-Material zeigt Rückschritte in Prüfprogramm und Farbrechnung. Die Genauigkeit
@@ -19,8 +19,8 @@ und jedes Feld wird als Zahl festgehalten.
 | `deviceCharacterization` | Ein bestätigtes physisches Target, an einem echten Gerät gemessen | Genauigkeit anderer Targets oder Geräte |
 | `syntheticModel` | Den mathematischen Hin- und Rückweg eines unabhängigen synthetischen Modells | Genauigkeit von echtem Film oder Gerät |
 
-`deviceCharacterization` braucht Hersteller, Material,
-Seriennummer und Charge des physischen Targets.
+`deviceCharacterization` braucht Hersteller, Material, Seriennummer und Charge des physischen
+Targets.
 Weicht auch nur eine Angabe vom Kopf der Referenzdatei ab, wird nichts bewertet.
 
 Die Durchlicht-Targets IT8.7/1 und ISO 12641-1 gelten für positive Durchlichtvorlagen.
@@ -43,10 +43,10 @@ Diese zwei Dateien von FADGI/OpenDICE bilden ein Paar.
   - Felder: 264 Lab-Werte von `A1` bis `L22`
   - Spalte 16: density
 
-Die Rechte zur Weitergabe sind nicht geklärt,
-deshalb liegen die Dateien weder im Repository noch in der App.
+Die Rechte zur Weitergabe sind nicht geklärt, deshalb liegen die Dateien weder im Repository noch in
+der App.
 Sie laden sie selbst herunter und verbinden sie über das
-[Beispielmanifest](../../reference/IT8_FADGI_OPENDICE.example.json) .
+[Beispielmanifest](../../reference/IT8_FADGI_OPENDICE.example.json).
 Die Stufe in diesem Beispiel ist `algorithmRegression`.
 Wer sie in `deviceCharacterization` umbenennt, wird vom Prüfprogramm abgewiesen.
 
@@ -97,23 +97,25 @@ trägt sie ein.
 
 </details>
 
-`MANUFACTURER`, `MATERIAL`, `SERIAL` und der Chargenkopf (eines von `BATCH`, `BATCH_ID`,
-`PROD_DATE`) müssen zeichengenau mit der Referenzdatei übereinstimmen.
+`MANUFACTURER`, `MATERIAL`, `SERIAL` und der Chargenkopf (eines von `BATCH`, `BATCH_ID`, `PROD_DATE`
+) müssen zeichengenau mit der Referenzdatei übereinstimmen.
 Die oberste `targetID` muss `serial` entsprechen, `batchID` dem `batchValue`.
 
 Dieser Eintrag zeigt nur, dass Eingabe und Referenzdatei zusammenpassen.
-Er liest das Etikett nicht aus dem Bild und beglaubigt die Eingabe nicht unabhängig. Fehlen Angaben,
-tritt weder das nächstgelegene Datum noch eine allgemeine Referenzdatei an ihre Stelle.
+Er liest das Etikett nicht aus dem Bild und beglaubigt die Eingabe nicht unabhängig.
+Fehlen Angaben, tritt weder das nächstgelegene Datum noch eine allgemeine Referenzdatei an ihre
+Stelle.
 
-Enthält die Referenzdatei Angaben zu Lichtart oder Beobachter,
-werden sie gegen den D50/2°-Vertrag geprüft. Ein Widerspruch bricht ab.
-`measurement.renderingIntent` kann die Core-Image-Umrechnung derzeit nicht direkt festlegen,
-deshalb steht im Bericht `manifestDeclarationNotControlledByEvaluator`.
+Enthält die Referenzdatei Angaben zu Lichtart oder Beobachter, werden sie gegen den D50/2°-Vertrag
+geprüft.
+Ein Widerspruch bricht ab.
+`measurement.renderingIntent` kann die Core-Image-Umrechnung derzeit nicht direkt festlegen, deshalb
+steht im Bericht `manifestDeclarationNotControlledByEvaluator`.
 
 ## `PRINT`-Ausgabe
 
-IT8.7/1 gilt für Eingabegeräte. Für die Druckerausgabe braucht es ein RGB-Drucker-ICC,
-das aus echten Messungen der Kombination
+IT8.7/1 gilt für Eingabegeräte.
+Für die Druckerausgabe braucht es ein RGB-Drucker-ICC, das aus echten Messungen der Kombination
 `printer + paper + ink/chemistry + driver/process condition` entstanden ist.
 
 Reihenfolge von Prüfung und Anwendung:
@@ -125,9 +127,8 @@ Reihenfolge von Prüfung und Anwendung:
 5. Nicht auf `rawScanTIFF` und `-main-flat` anwenden.
 6. Fehlt das Profil oder passt es nicht, scheitert der Lauf vor jeder temporären Ausgabe. sRGB springt nicht ein.
 
-Es wird nicht behauptet,
-dass der heutige Weg über Core Image und ColorSync Rendering Intent und Black Point Compensation auf
-jedem macOS bitgenau festlegt.
+Es wird nicht behauptet, dass der heutige Weg über Core Image und ColorSync Rendering Intent und
+Black Point Compensation auf jedem macOS bitgenau festlegt.
 
 ## `MAIN`-Regression mit synthetischen Feldern
 
@@ -141,8 +142,8 @@ y_{\mathrm{ceil}} -
 ```
 
 `d` ist die optische Dichte nach Abzug von Dmin, danach normiert.
-Die Koeffizienten sind keine gespeicherten Presets,
-sondern werden aus diesen vier Ankerpunkten berechnet.
+Die Koeffizienten sind keine gespeicherten Presets, sondern werden aus diesen vier Ankerpunkten
+berechnet.
 
 | Ankerpunkt | Wert |
 |---|---:|
@@ -152,22 +153,22 @@ sondern werden aus diesen vier Ankerpunkten berechnet.
 | Reserve für reflektiertes Licht | `0.90` |
 
 Auf dieser Kurve ist `0D` linear `0.001`, `0.6D` gleich `0.18` und `3D` gleich `0.882836683855`.
-Die Ausgabe bleibt in einem offenen Intervall,
-sodass Schwarz und Weiß im normalen Bereich nicht direkt auf 8-Bit `0/255` kleben.
+Die Ausgabe bleibt in einem offenen Intervall, sodass Schwarz und Weiß im normalen Bereich nicht
+direkt auf 8-Bit `0/255` kleben.
 
 Es ist keine automatische Belichtungsanpassung nach Szenenhistogramm und steht für die Genauigkeit
 keines bestimmten Films und keiner bestimmten Maschine.
 Die Gleichungen stehen in [feste Printantwort](PRINT_RESPONSE.md).
 
 `MainSyntheticIT8RoundTripTests` macht aus den 264 Referenzfeldern über die Umkehrfunktion Negative
-und führt sie durch den gesamten `MAIN` -Weg zurück.
+und führt sie durch den gesamten `MAIN`-Weg zurück.
 Lab D50/2° und `DeltaE00` werden je Feld geprüft. Das ist eine `syntheticModel`-Regression.
 
 ## Regression des relativen NORITSU/FUJI-Stils
 
 Eine Referenzdatei mit 264 Lab-D50-Feldern von `A1` bis `L22` wird per SHA-256 festgelegt.
-Jedes Feld wird zu einem synthetischen Negativ, danach laufen die Wege `MAIN`,
-`NORITSU` und `FUJI` je zweimal.
+Jedes Feld wird zu einem synthetischen Negativ, danach laufen die Wege `MAIN`, `NORITSU` und `FUJI`
+je zweimal.
 
 ```bash
 swift run negaflow scanner-relative-it8-bench \
@@ -176,13 +177,12 @@ swift run negaflow scanner-relative-it8-bench \
   --out /path/to/scanner-relative-it8-report.json
 ```
 
-Der Bericht führt RGB und Lab je Feld, `DeltaE00` gegen die Referenz,
-relatives `DeltaE00` zwischen den Zielen sowie Hinweise auf Beschnitt und nicht endliche Werte.
+Der Bericht führt RGB und Lab je Feld, `DeltaE00` gegen die Referenz, relatives `DeltaE00` zwischen
+den Zielen sowie Hinweise auf Beschnitt und nicht endliche Werte.
 Die Monotonie des neutralen Verlaufs liest man aus der Dichtespalte `A16...L16`.
 
-Farben, die nach der Umrechnung in lineares sRGB außerhalb von 0...1 liegen,
-lassen sich als synthetisches Negativ nicht exakt erzeugen und werden auf den darstellbaren Bereich
-begrenzt.
+Farben, die nach der Umrechnung in lineares sRGB außerhalb von 0...1 liegen, lassen sich als
+synthetisches Negativ nicht exakt erzeugen und werden auf den darstellbaren Bereich begrenzt.
 Statistiken über den weiten Bereich sind daher Beobachtungen und keine Bestehensgrenze.
 
 Die Nachweisstufe ist immer `syntheticModel`, die Entscheidung immer `notEvaluated`.
@@ -191,9 +191,8 @@ Für die Genauigkeit echter Maschinen braucht es Scans desselben physischen Nega
 Maschinen und eigenes Prüfmaterial.
 
 D50/2° wurde nicht aus dem Kopf der Referenzdatei bestätigt.
-Lab als D50/2° zu lesen ist der eigene Vertrag der Bench,
-deshalb lautet `colorimetryInterpretationProvenance`
-`benchmarkContractNotVerifiedFromReferenceHeader` .
+Lab als D50/2° zu lesen ist der eigene Vertrag der Bench, deshalb lautet
+`colorimetryInterpretationProvenance` `benchmarkContractNotVerifiedFromReferenceHeader`.
 
 Ergebnisse von vor `shoulder-print-response-v4` werden nicht als Ergebnisse des heutigen Algorithmus
 weiterverwendet.

@@ -2,8 +2,9 @@
 
 [Dokumentationsstart](../README.md)
 
-Die Infrarotreinigung liest sichtbares und infrarotes Bild getrennt und legt sie übereinander,
-um Defekte zu finden. Das passt nicht zu jedem Film.
+Die Infrarotreinigung liest sichtbares und infrarotes Bild getrennt und legt sie übereinander, um
+Defekte zu finden.
+Das passt nicht zu jedem Film.
 
 - Normaler Farbfilm und chromogener Schwarzweißfilm können IR nutzen.
 - Gewöhnlicher Schwarzweißfilm behält sein Silber, blockt damit IR und liefert eine falsche Defektkarte.
@@ -54,6 +55,6 @@ Liegt das Optimum auf der Suchgrenze, gilt das unabhängig vom Betrag des Versat
 
 Automatische Tests ersetzen weder die RGB/IR-Ausrichtung am echten Gerät noch Ergebnisse je Film.
 Prüfungen am echten Scanner folgen den IR-Punkten der
-[Checkliste für echte Geräte](../validation/REAL_QA_CHECKLIST.md) .
+[Checkliste für echte Geräte](../validation/REAL_QA_CHECKLIST.md).
 
 SANE-Gerätesteuerung und Aufnahmecode liegen nur im separaten Repository `negaflow-scanner-sane`.

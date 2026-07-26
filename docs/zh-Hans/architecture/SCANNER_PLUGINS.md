@@ -17,7 +17,7 @@ negaflow 默认的输入是导入图像。只有存在外部插件时，才连�
 | 演示扫描仪 | 提供开发用的 `negaflow Scanner` 和 `negaflow Flatbed Scanner`，要自己选演示才会用到。 |
 | ImageCaptureCore 连接 | 面向 macOS Image Capture 设备、目前未启用的兼容代码。 |
 
-本仓库里没有 SANE 实现。 SANE 代码在独立的 GPL 项目里。
+本仓库里没有 SANE 实现。SANE 代码在独立的 GPL 项目里。
 
 - <https://github.com/habinsong/negaflow-scanner-sane>
 
@@ -103,12 +103,12 @@ flowchart LR
 
 `capabilities` 的响应可以返回可选字段 `capabilityToken`。
 应用不解释这个值，只把它原样传给同一设备的下一次 v2 `scan` 请求。
-v1 请求里不放，也不会把不同设备的 token 混用。 token 的格式和有效性由插件自己检查。
+v1 请求里不放，也不会把不同设备的 token 混用。token 的格式和有效性由插件自己检查。
 
-为了避免误连到同一 backend 下的其他型号，应用会把上一次 `detect` 报告的 `deviceID`、 `vendor`、
+为了避免误连到同一 backend 下的其他型号，应用会把上一次 `detect` 报告的 `deviceID`、`vendor`、
 `model`，作为 `capabilities` 的可选 stdin JSON 再传一次。
-既有插件可以忽略这个输入；设备地址可能变化的插件，应把这份同一性绑进 capability 快照，
-并在下一次 `scan` 时再次校验。
+既有插件可以忽略这个输入；设备地址可能变化的插件，应把这份同一性绑进 capability 快照，并在下一次
+`scan` 时再次校验。
 
 每个 NDJSON 事件都要重复相同的版本和请求 ID，并带一个比前一个更大、且不小于 0 的 `sequence`。
 事件只允许 `progress`、`result`、`error`。
@@ -141,8 +141,8 @@ v2 的 `result` 必须带 `appliedOptions`。
 最后三个调整值即使是 `null`，键也必须存在。
 
 `resolutionDPI: 0` 表示预览。预览不为 0，或正式扫描为 0，都会被拒绝。
-不认识的值、不同的设备，以及结果头部与 `appliedOptions` 之间对不上的分辨率、位深、 IR 状态，
-同样拒绝。
+不认识的值、不同的设备，以及结果头部与 `appliedOptions` 之间对不上的分辨率、位深、IR 状态，同样
+拒绝。
 
 检查通过后，记录的是应用自己的扫描仪 ID 和请求 ID，而不是插件 ID，并保留最终输出路径。
 只有这时才标记为 `.verified(options)`。
@@ -208,9 +208,8 @@ v2 的 IR 文件同样要在应用给出的临时目录里。会检查文件类�
 
 ## SANE 边界
 
-SANE 的实现、依赖、配置、按设备的处理、测试和分发文档，
-全部放在独立仓库 [`negaflow-scanner-sane`](https:
-//github.com/habinsong/negaflow-scanner-sane)。
+SANE 的实现、依赖、配置、按设备的处理、测试和分发文档，全部放在独立仓库
+[`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane)。
 
 本仓库只记录和检查与设备无关的外部进程规格。只导入图像文件的用户不需要扫描仪插件。
 

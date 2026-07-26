@@ -12,8 +12,8 @@ Où ça se trouve :
 ## La courbe
 
 Une courbe caractéristique de film explique l'exposition face à la densité en trois parties : pied,
-partie droite,
-épaule. negaflow approche l'épaule dans le domaine des densités par une exponentielle étirée.
+partie droite, épaule. negaflow approche l'épaule dans le domaine des densités par une exponentielle
+étirée.
 
 ```math
 \begin{aligned}
@@ -31,8 +31,9 @@ d &= \frac{D}{d_{\max}} \\
 - `P` : luminosité de sortie linéaire
 
 La courbe monte sur toute la plage. Pour `d ≥ 0`, la sortie tombe dans `[baseToe, ceiling)`.
-Les valeurs négatives, comme un rétroéclairage plus lumineux que le support ou les perforations,
-ne sont pas ramenées à zéro. Elles continuent en nombres positifs finis.
+Les valeurs négatives, comme un rétroéclairage plus lumineux que le support ou les perforations, ne
+sont pas ramenées à zéro.
+Elles continuent en nombres positifs finis.
 
 ```math
 y(-|d|) = 2\log_{10}(P_{\mathrm{toe}}) - y(|d|)
@@ -75,8 +76,8 @@ r &= r_{\mathrm{white}}^{1/s}
 
 `normalRange` n'est pas la densité maximale physique du film.
 C'est la plage qu'utilise une scène normalement exposée.
-Elle compte surtout quand le support n'a pas pu être mesuré,
-ou quand le contraste de la scène est très faible.
+Elle compte surtout quand le support n'a pas pu être mesuré, ou quand le contraste de la scène est
+très faible.
 
 ```math
 \begin{aligned}
@@ -90,8 +91,8 @@ ou quand le contraste de la scène est très faible.
 - Noir et blanc `3.5` : habitude du tirage noir et blanc, qui utilise une partie droite plus longue
 - `0.60D` : densité du gris moyen d'une scène normalement exposée
 
-`applySceneRanged` mesure la plage de densité que l'image utilise réellement, canal par canal,
-au lieu de prendre cette valeur.
+`applySceneRanged` mesure la plage de densité que l'image utilise réellement, canal par canal, au
+lieu de prendre cette valeur.
 
 ## Ce qui a changé en v4
 

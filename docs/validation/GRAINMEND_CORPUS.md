@@ -45,10 +45,10 @@ All 44 pairs:
 python3 scripts/defect-corpus/fetch-film-r.py --all
 ```
 
-If the Figshare file CDN blocks automated requests,
-download the ZIP from the dataset page with `Download all` and verify it as it is.
-Extraction finishes only when the file names, sizes,
-and Figshare MD5 in the ZIP all match the pinned contract.
+If the Figshare file CDN blocks automated requests, download the ZIP from the dataset page with
+`Download all` and verify it as it is.
+Extraction finishes only when the file names, sizes, and Figshare MD5 in the ZIP all match the
+pinned contract.
 
 ```bash
 python3 scripts/defect-corpus/fetch-film-r.py \
@@ -82,8 +82,8 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
 </details>
 
 `--metrics-only` skips the large PNGs.
-Drop the option and it also writes `before`, `after`, `diff`, `mask`,
-and 100% crops for manual review.
+Drop the option and it also writes `before`, `after`, `diff`, `mask`, and 100% crops for manual
+review.
 
 What the report carries:
 
@@ -93,13 +93,14 @@ What the report carries:
 - Change in PSNR
 - Share of pixels whose error against the reference went down or up
 
-The FILM-R paper uses PSNR, SSIM, and LPIPS together. This repository adds no new ML dependency,
-so it computes only PSNR and absolute error from the standard library.
+The FILM-R paper uses PSNR, SSIM, and LPIPS together.
+This repository adds no new ML dependency, so it computes only PSNR and absolute error from the
+standard library.
 
 These numbers alone do not approve a release.
 Hand restorations carry editing judgement and JPEG differences too.
 The automatic quality floor for re-running the same material and settings is pinned in
-`Config/defect-removal-film-r-v2-baseline.json` .
+`Config/defect-removal-film-r-v2-baseline.json`.
 The final call needs `before`, `after`, `diff`, `mask`, and the 100% crops side by side.
 
 > [!CAUTION]
@@ -113,8 +114,8 @@ It cannot prove RAW decoding, film inversion accuracy, IR alignment, or how a re
 ## Result on 2026-07-25
 
 All 44 pairs ran on a Release build with `--metrics-only --crops 0`.
-The previous regression baseline at sensitivity 3.0 was compared against 0.7,
-the automatic path for the release.
+The previous regression baseline at sensitivity 3.0 was compared against 0.7, the automatic path for
+the release.
 
 | Metric | Previous baseline 3.0 | Safe auto 0.7 |
 |---|---:|---:|
@@ -131,8 +132,9 @@ the automatic path for the release.
 The old app default was 6.0, more aggressive even than the 3.0 baseline.
 The automatic path for the release drops to 0.7, and micro-speck detection is off by default.
 When candidates exceed 2% of a tile, components touching that tile are dropped.
-If any tile goes over 5%, or total candidates after filtering go over 0.06%,
-automatic repair is not applied to that photo. The user can narrow the area with Guided instead.
+If any tile goes over 5%, or total candidates after filtering go over 0.06%, automatic repair is not
+applied to that photo.
+The user can narrow the area with Guided instead.
 
 This safety line applies to Auto only.
 It does not restrict detection range or repair behavior for Guided, Brush, Clone Stamp, or IR.
@@ -146,14 +148,14 @@ absolute floors.
 - Weighted worsened pixels at 0.03% or less
 - Total changed pixels at 0.06% or less
 
-Against the previous baseline this run improved 23 more images, worsened 27 fewer,
-and lifted the worst case by 17.614 dB.
+Against the previous baseline this run improved 23 more images, worsened 27 fewer, and lifted the
+worst case by 17.614 dB.
 Six images still score lower in PSNR than the expert restoration.
-FILM-R gives real damage and hand restorations,
-and it also carries the ambiguity of restoration judgement.
-The material and the paper are at [the FILM-R project](https:
-//daniela997.github.io/FilmDamageSimulator/) and [the FILM-R paper](https:
-//arxiv.org/abs/2302.10004).
+FILM-R gives real damage and hand restorations, and it also carries the ambiguity of restoration
+judgement.
+The material and the paper are at
+[the FILM-R project](https://daniela997.github.io/FilmDamageSimulator/) and
+[the FILM-R paper](https://arxiv.org/abs/2302.10004).
 
 Dropping dense candidates from Auto lines up with earlier image restoration work on cutting false
 detections in textured areas.

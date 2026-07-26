@@ -45,7 +45,7 @@ python3 scripts/defect-corpus/fetch-film-r.py
 python3 scripts/defect-corpus/fetch-film-r.py --all
 ```
 
-Figshare 파일 CDN이 자동 요청을 차단하면 데이터셋 페이지에서 `Download all` 로 받은 ZIP을 그대로
+Figshare 파일 CDN이 자동 요청을 차단하면 데이터셋 페이지에서 `Download all`로 받은 ZIP을 그대로
 검증해 풀 수 있습니다.
 ZIP의 파일명, 크기와 Figshare MD5가 고정 계약과 모두 맞아야 추출이 완료됩니다.
 
@@ -97,7 +97,7 @@ FILM-R 논문은 PSNR, SSIM, LPIPS를 함께 씁니다.
 
 이 숫자만으로 출시를 승인하지는 않습니다. 수동 복원본에도 편집 판단과 JPEG 차이가 들어갑니다.
 다만 같은 자료와 설정으로 다시 실행하는 자동 품질 하한은
-`Config/defect-removal-film-r-v2-baseline.json` 에 고정합니다.
+`Config/defect-removal-film-r-v2-baseline.json`에 고정합니다.
 최종 판정에는 `before`, `after`, `diff`, `mask`와 100% 크롭을 함께 봐야 합니다.
 
 > [!CAUTION]
@@ -126,15 +126,14 @@ RAW 디코딩, 필름 반전 정확도, IR 정렬, 실제 스캐너 동작을 �
 
 기존 앱 기본값은 6.0이었고, 직전 3.0 기준보다도 공격적이었습니다.
 출시 자동 경로는 0.7로 낮추고 미세 이물 검출은 기본에서 껐습니다.
-후보가 한 타일의 2%를 넘으면 그 타일에 닿은 성분을 제외하고,
-5%를 넘는 타일이 있거나 필터 후 전체 후보가 0.06%를 넘으면 그 사진의 자동 복원을 적용하지
-않습니다.
+후보가 한 타일의 2%를 넘으면 그 타일에 닿은 성분을 제외하고, 5%를 넘는 타일이 있거나 필터 후
+전체 후보가 0.06%를 넘으면 그 사진의 자동 복원을 적용하지 않습니다.
 이때 사용자는 가이드로 영역을 좁혀 처리할 수 있습니다.
 
 이 안전선은 자동에만 적용됩니다.
 가이드, 브러시, 복제 도장, IR의 검출 범위와 복원 동작을 자동 기준으로 제한하지 않습니다.
 
-`Config/defect-removal-film-r-v2-baseline.json` 은 관측값 회귀 기준과 함께 다음 절대 하한도
+`Config/defect-removal-film-r-v2-baseline.json`은 관측값 회귀 기준과 함께 다음 절대 하한도
 검사합니다.
 
 - 개선 30장 이상, 악화 10장 이하
@@ -143,12 +142,12 @@ RAW 디코딩, 필름 반전 정확도, IR 정렬, 실제 스캐너 동작을 �
 - 가중 악화 픽셀 0.03% 이하
 - 전체 변경 픽셀 0.06% 이하
 
-이번 결과는 직전 기준보다 개선 이미지가 23장 늘고, 악화 이미지가 27장 줄었으며,
-최악 사례는 17.614 dB 나아졌습니다. 그래도 6장은 전문가 복원본보다 PSNR이 낮습니다.
+이번 결과는 직전 기준보다 개선 이미지가 23장 늘고, 악화 이미지가 27장 줄었으며, 최악 사례는
+17.614 dB 나아졌습니다.
+그래도 6장은 전문가 복원본보다 PSNR이 낮습니다.
 FILM-R은 실제 손상본과 수동 복원본을 제공하지만 복원 판단의 모호함도 포함합니다.
-자료와 논문은 [FILM-R 프로젝트](https:
-//daniela997.github.io/FilmDamageSimulator/)와 [FILM-R 논문](https:
-//arxiv.org/abs/2302.10004)에서 확인할 수 있습니다.
+자료와 논문은 [FILM-R 프로젝트](https://daniela997.github.io/FilmDamageSimulator/)와
+[FILM-R 논문](https://arxiv.org/abs/2302.10004)에서 확인할 수 있습니다.
 
 고밀도 후보를 자동에서 제외한 이유는 질감이 많은 영역의 오검출을 줄이는 기존 영상 복원 연구와도
 맞습니다.

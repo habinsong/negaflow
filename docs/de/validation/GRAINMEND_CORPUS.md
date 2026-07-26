@@ -45,10 +45,10 @@ Alle 44 Paare:
 python3 scripts/defect-corpus/fetch-film-r.py --all
 ```
 
-Blockt das Datei-CDN von Figshare automatische Anfragen,
-laden Sie das ZIP auf der Datensatzseite über `Download all` und prüfen Sie es unverändert.
-Das Entpacken gelingt nur, wenn Dateinamen,
-Größen und Figshare-MD5 im ZIP alle zum festgelegten Vertrag passen.
+Blockt das Datei-CDN von Figshare automatische Anfragen, laden Sie das ZIP auf der Datensatzseite
+über `Download all` und prüfen Sie es unverändert.
+Das Entpacken gelingt nur, wenn Dateinamen, Größen und Figshare-MD5 im ZIP alle zum festgelegten
+Vertrag passen.
 
 ```bash
 python3 scripts/defect-corpus/fetch-film-r.py \
@@ -66,8 +66,8 @@ python3 scripts/defect-corpus/fetch-film-r.py --case portra400_135_1
 
 ## Vergleich ausführen
 
-Legen Sie die beschädigten Dateien und die Restaurierungen, deren Namen auf `_restored` enden,
-in denselben Ordner.
+Legen Sie die beschädigten Dateien und die Restaurierungen, deren Namen auf `_restored` enden, in
+denselben Ordner.
 
 <details open>
 <summary>Befehl für die 44 Paare</summary>
@@ -83,8 +83,8 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
 </details>
 
 `--metrics-only` schreibt keine großen PNGs.
-Ohne die Option entstehen zusätzlich `before`, `after`, `diff`,
-`mask` und 100-%-Ausschnitte für die Sichtprüfung.
+Ohne die Option entstehen zusätzlich `before`, `after`, `diff`, `mask` und 100-%-Ausschnitte für die
+Sichtprüfung.
 
 Was im Bericht steht:
 
@@ -101,9 +101,9 @@ Fehler mit der Standardbibliothek.
 Diese Zahlen allein geben keine Auslieferung frei.
 Auch Handrestaurierungen enthalten gestalterische Entscheidungen und JPEG-Unterschiede.
 Die automatische Qualitätsuntergrenze für einen erneuten Lauf mit demselben Material und denselben
-Einstellungen steht in `Config/defect-removal-film-r-v2-baseline.json` .
-Für die endgültige Entscheidung braucht es `before`, `after`, `diff`,
-`mask` und die 100-%-Ausschnitte nebeneinander.
+Einstellungen steht in `Config/defect-removal-film-r-v2-baseline.json`.
+Für die endgültige Entscheidung braucht es `before`, `after`, `diff`, `mask` und die
+100-%-Ausschnitte nebeneinander.
 
 > [!CAUTION]
 > Die Bildqualität von GrainMend wird nicht über PSNR oder mittleren Fehler allein freigegeben.
@@ -111,14 +111,14 @@ Für die endgültige Entscheidung braucht es `before`, `after`, `diff`,
 > Differenzbild, Maske und 100-%-Ausschnitten zusammen.
 
 Mit diesem Material lässt sich nur der GrainMend-RGB-Pfad auf gerenderten Bildern prüfen.
-Es belegt weder RAW-Dekodierung noch Genauigkeit der Filmumkehr,
-IR-Ausrichtung oder das Verhalten eines echten Scanners.
+Es belegt weder RAW-Dekodierung noch Genauigkeit der Filmumkehr, IR-Ausrichtung oder das Verhalten
+eines echten Scanners.
 
 ## Ergebnis vom 2026-07-25
 
 Alle 44 Paare liefen auf einem Release-Build mit `--metrics-only --crops 0`.
-Die bisherige Regressionsbasis mit Empfindlichkeit 3.0 wurde gegen 0.7 verglichen,
-den automatischen Pfad der Auslieferung.
+Die bisherige Regressionsbasis mit Empfindlichkeit 3.0 wurde gegen 0.7 verglichen, den automatischen
+Pfad der Auslieferung.
 
 | Kennzahl | Bisherige Basis 3.0 | Sicheres Auto 0.7 |
 |---|---:|---:|
@@ -133,17 +133,16 @@ den automatischen Pfad der Auslieferung.
 | Automatischer Sicherheitsstopp | keiner | 3 Bilder |
 
 Der alte Standardwert der App lag bei 6.0 und war noch offensiver als die Basis 3.0.
-Der automatische Pfad der Auslieferung geht auf 0.7 herunter,
-und die Erkennung feinster Partikel ist standardmäßig aus. Übersteigen die Kandidaten 2 % einer
-Kachel,
-fallen die Komponenten weg, die diese Kachel berühren.
-Geht eine Kachel über 5 %, oder liegen die Kandidaten nach der Filterung insgesamt über 0, 06 %,
-wird auf dieses Foto keine automatische Reparatur angewendet.
+Der automatische Pfad der Auslieferung geht auf 0.7 herunter, und die Erkennung feinster Partikel
+ist standardmäßig aus. Übersteigen die Kandidaten 2 % einer Kachel, fallen die Komponenten weg, die
+diese Kachel berühren.
+Geht eine Kachel über 5 %, oder liegen die Kandidaten nach der Filterung insgesamt über 0,06 %, wird
+auf dieses Foto keine automatische Reparatur angewendet.
 Der Nutzer kann den Bereich stattdessen mit Guided eingrenzen.
 
 Diese Sicherheitslinie gilt nur für Auto.
-Erkennungsbereich und Reparaturverhalten von Guided, Pinsel,
-Klonstempel und IR werden davon nicht eingeschränkt.
+Erkennungsbereich und Reparaturverhalten von Guided, Pinsel, Klonstempel und IR werden davon nicht
+eingeschränkt.
 
 `Config/defect-removal-film-r-v2-baseline.json` prüft neben der beobachteten Regressionsbasis diese
 absoluten Untergrenzen.
@@ -154,17 +153,16 @@ absoluten Untergrenzen.
 - Gewichtete verschlechterte Pixel bei höchstens 0,03 %
 - Insgesamt geänderte Pixel bei höchstens 0,06 %
 
-Gegenüber der bisherigen Basis verbessert dieser Lauf 23 Bilder mehr,
-verschlechtert 27 weniger und hebt den schlechtesten Fall um 17, 614 dB.
+Gegenüber der bisherigen Basis verbessert dieser Lauf 23 Bilder mehr, verschlechtert 27 weniger und
+hebt den schlechtesten Fall um 17,614 dB.
 Sechs Bilder liegen im PSNR trotzdem unter der fachlichen Restaurierung.
 FILM-R liefert echte Schäden und Handrestaurierungen und trägt zugleich die Unschärfe
 restauratorischer Entscheidungen.
-Material und Aufsatz stehen beim [FILM-R-Projekt](https:
-//daniela997.github.io/FilmDamageSimulator/) und im [FILM-R-Aufsatz](https:
-//arxiv.org/abs/2302.10004).
+Material und Aufsatz stehen beim [FILM-R-Projekt](https://daniela997.github.io/FilmDamageSimulator/)
+und im [FILM-R-Aufsatz](https://arxiv.org/abs/2302.10004).
 
-Dichte Kandidaten aus Auto herauszunehmen passt zu früheren Arbeiten der Bildrestaurierung,
-die Fehlfunde in strukturreichen Bereichen senken.
+Dichte Kandidaten aus Auto herauszunehmen passt zu früheren Arbeiten der Bildrestaurierung, die
+Fehlfunde in strukturreichen Bereichen senken.
 Trotzdem lässt sich aus diesem Ergebnis nichts davon behaupten.
 
 - Das automatische Ergebnis schlägt bei jedem Foto die Handrestaurierung.

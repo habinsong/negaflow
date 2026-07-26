@@ -66,8 +66,8 @@ Der unbelichtete Teil eines Negativs ist ein Bezugspunkt aus Film, Entwicklung u
 Auch die Orangemaske des Farbnegativs steckt darin.
 Ist der Träger falsch, verschieben sich danach alle Dichten und Kanalverhältnisse.
 
-Auch Kodaks Daten zu Portra 400 halten Mindestdichte,
-Kennlinien und spektrale Farbstoffdichte getrennt fest.
+Auch Kodaks Daten zu Portra 400 halten Mindestdichte, Kennlinien und spektrale Farbstoffdichte
+getrennt fest.
 
 - [Kodak Professional Portra 400 technical data](https://www.kodakprofessional.com/sites/default/files/wysiwyg/pro/resources/e4050_portra_400.pdf)
 
@@ -81,8 +81,8 @@ Kennlinien und spektrale Farbstoffdichte getrennt fest.
 - Liegen mehrere Filmstreifen auf einem Blatt, lassen sich getrennte Bereiche zusammen lesen.
 - Einer Grenze, an der Halter und Film sich mischen, wird weniger getraut als dem Inneren.
 
-Auf einem verkleinerten Analysebild wird die Helligkeitsverteilung gesucht,
-zusammenhängende Bereiche werden gruppiert, danach fallen Kandidaten außerhalb des Films weg.
+Auf einem verkleinerten Analysebild wird die Helligkeitsverteilung gesucht, zusammenhängende
+Bereiche werden gruppiert, danach fallen Kandidaten außerhalb des Films weg.
 Bestehen mehrere Streifen die Bedingungen, werden sie gemeinsam gerechnet.
 Das Ergebnis hält auch die gewählte Methode und die Konfidenz fest.
 
@@ -119,8 +119,8 @@ Wofür die Daten dienen:
 - Der Dichtebereich je Kanal
 - Ein sicherer Bereich, wenn geringer Kontrast die automatische Messung schwanken lässt
 
-Manche Werte nähern Kurven aus öffentlichem Material an,
-manche sind bewusst konservativ gesetzt. 27 Namen bedeuten keine 27 geprüften Farbprofile.
+Manche Werte nähern Kurven aus öffentlichem Material an, manche sind bewusst konservativ gesetzt. 27
+Namen bedeuten keine 27 geprüften Farbprofile.
 Sobald der Träger gemessen ist, gilt die Messung.
 
 ### Feste Printantwort
@@ -166,8 +166,8 @@ Die Daten beschreibt [Filmprofile](FILM_PROFILES.md).
 ### `MAIN`
 
 Der Standard für gewöhnliche Entwicklung.
-Weder ein nicht gewählter Scannerstil noch Auto Levels, Auto Color,
-Auto Tone oder Auto White Balance fließen ein.
+Weder ein nicht gewählter Scannerstil noch Auto Levels, Auto Color, Auto Tone oder Auto White
+Balance fließen ein.
 Die Messung von Träger und Dichtebereich sowie das begrenzte Vibrance bei wenig gesättigten Szenen
 gehören zur Grundumkehrung.
 
@@ -175,16 +175,17 @@ gehören zur Grundumkehrung.
 
 Das Arbeitsbild entspricht `MAIN`.
 Am Ende des Exports wird einmal ein gültiges RGB-Drucker-ICC angewendet.
-Fehlt das Profil oder ist es ungültig, scheitert der Lauf,
-statt auf sRGB oder beliebige Papierwerte auszuweichen.
+Fehlt das Profil oder ist es ungültig, scheitert der Lauf, statt auf sRGB oder beliebige Papierwerte
+auszuweichen.
 
 ### `HS`, `SP`
 
 Zwei Stufen.
 
 1. `documentedCharacter`: `SP` nutzt einen begrenzten Grundcharakter aus sechs Paaren desselben
-Negativs über SP-3000 und negaflow MAIN. `HS` baut Ton-,
-Neutral- und Farbcharakter aus veröffentlichter Richtung und den Entwurfswerten des Projekts.
+Negativs über SP-3000 und negaflow MAIN.
+`HS` baut Ton-, Neutral- und Farbcharakter aus veröffentlichter Richtung und den Entwurfswerten des
+Projekts.
 2. `scannerSignature`: Hinzu kommt nur die relative Differenz jener Gruppen, deren Filmnamen und
 Bildzahlen auf beiden Maschinen übereinstimmen.
 
@@ -201,14 +202,15 @@ Alle heutigen Profile sind `realOnly`.
 ### `F135`, `HR`
 
 Das sind zwei vom Projekt gebaute Minilab-Stile, keine vermessenen Maschinenklone.
-`F135` nutzt eine printnahe S-Kurve mit warmen Mitten,
-`HR` tiefe Schwarztöne und eine ruhige neutrale, bläuliche Richtung.
+`F135` nutzt eine printnahe S-Kurve mit warmen Mitten, `HR` tiefe Schwarztöne und eine ruhige
+neutrale, bläuliche Richtung.
 Es wird nicht behauptet, eine bestimmte Maschine geprüft und nachgebaut zu haben.
 
 ### `EXPIRED`
 
-Ein Rettungsziel für alten Film. Es entsättigt nicht pauschal und dehnt den Bereich nicht,
-sondern bleibt bei begrenzten Korrekturen im Rahmen der vorhandenen Belege.
+Ein Rettungsziel für alten Film.
+Es entsättigt nicht pauschal und dehnt den Bereich nicht, sondern bleibt bei begrenzten Korrekturen
+im Rahmen der vorhandenen Belege.
 
 ## Entwicklungsregler
 
@@ -225,8 +227,8 @@ GrainMend und gewöhnliche lokale Korrektur unterscheiden sich in Zweck und Spei
 ## Farbmanagement
 
 Trägt die Eingabe ein gültiges ICC, wird dieser Farbraum gelesen.
-Die interne Rechnung läuft im festgelegten linearen Arbeitsraum;
-der Wechsel in einen Ausgabefarbraum geschieht bei Anzeige, Softproof und Export.
+Die interne Rechnung läuft im festgelegten linearen Arbeitsraum; der Wechsel in einen
+Ausgabefarbraum geschieht bei Anzeige, Softproof und Export.
 
 Wichtige unterstützte Ausgaben:
 
@@ -235,14 +237,11 @@ Wichtige unterstützte Ausgaben:
 - Adobe RGB
 - Ein vom Nutzer gewähltes RGB-Drucker-/Ausgabe-ICC
 
-Name,
-Bytezahl und SHA-256 des Druckerprofils werden zu Beginn des Exports festgehalten. Ändert sich die
-Datei während des Renderns,
-bricht der Lauf ab.
+Name, Bytezahl und SHA-256 des Druckerprofils werden zu Beginn des Exports festgehalten. Ändert sich
+die Datei während des Renderns, bricht der Lauf ab.
 
-Es wird nicht behauptet,
-dass der heutige Weg über Core Image und ColorSync auf jedem macOS Rendering Intent und Black Point
-Compensation bitgleich erzeugt.
+Es wird nicht behauptet, dass der heutige Weg über Core Image und ColorSync auf jedem macOS
+Rendering Intent und Black Point Compensation bitgleich erzeugt.
 Dafür bräuchte es zuerst einen eigenen ColorSync-Pufferweg und Speicherprüfungen für große
 16-Bit-Bilder.
 
@@ -266,7 +265,7 @@ Dafür bräuchte es zuerst einen eigenen ColorSync-Pufferweg und Speicherprüfun
 Ein gutes Ergebnis im synthetischen IT8 belegt keine absolute Genauigkeit an echten Negativen.
 Für die Qualität von Scannerprofilen gelten
 [Qualitätsprüfung der Scannerprofile](../reference/PROFILE_QUALITY_GATE.md) und
-[IT8-Farbprüfung](../reference/IT8_COLOR_VALIDATION.md) .
+[IT8-Farbprüfung](../reference/IT8_COLOR_VALIDATION.md).
 
 ## Wo der Code liegt
 

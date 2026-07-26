@@ -4,16 +4,17 @@
 
 `scripts/evaluate_profile_quality.py` checks that a change to a scanner profile did not come out
 worse than the accepted baseline.
-It compares two `SOURCE/summary.json` files produced by `LUT_target/analyze_lut_target.py`,
-and only the validation cases that were kept out of profile tuning count toward the decision.
+It compares two `SOURCE/summary.json` files produced by `LUT_target/analyze_lut_target.py`, and only
+the validation cases that were kept out of profile tuning count toward the decision.
 
-The tool does not decide what "good color" is. Which numbers should go down, which should go up,
-and how much movement is acceptable are written into the corpus manifest by a person.
+The tool does not decide what "good color" is.
+Which numbers should go down, which should go up, and how much movement is acceptable are written
+into the corpus manifest by a person.
 No default pass values are handed out.
 
 There is no REAL/TARGET image pair in this repository today.
-So there is no real corpus manifest, no accepted baseline,
-and no pass result from a real device either.
+So there is no real corpus manifest, no accepted baseline, and no pass result from a real device
+either.
 The synthetic tests check the checker's code and nothing else.
 
 > [!WARNING]
@@ -23,8 +24,8 @@ The synthetic tests check the checker's code and nothing else.
 
 ## How far the app uses the current profiles
 
-When you pick the `NORITSU` or `FUJI` target yourself,
-a limited relative difference from the bundled `realOnly` group can be used.
+When you pick the `NORITSU` or `FUJI` target yourself, a limited relative difference from the
+bundled `realOnly` group can be used.
 
 Conditions:
 
@@ -49,8 +50,8 @@ Rules for applying it:
 ## What manufacturer material can confirm
 
 - The [Fujifilm Frontier 570/SP-3000 guide](https://www.photolabdigital.com/fuji_frontier570_en%5B1%5D.pdf)
-names features like the area CCD, Hyper-tone, and Hyper-sharpness,
-but publishes no transfer function or setting values.
+names features like the area CCD, Hyper-tone, and Hyper-sharpness, but publishes no transfer
+function or setting values.
 - [Noritsu HS-1800 product information](https://www.noritsu.eu/hardware/noritsu-film-scanner.html)
 lists supported formats, resolution, and throughput, but gives no fixed color transfer function.
 - [Noritsu patent US 7,589,863](https://patents.google.com/patent/US7589863/en) describes the
@@ -62,9 +63,9 @@ such values from a product name.
 
 ## Corpus manifest schema v1
 
-The manifest sits next to the input material it pins,
-for example `LUT_target/quality/corpus-v1.json`. Paths are relative to the manifest file.
-With `--data-root`, that path becomes the base instead.
+The manifest sits next to the input material it pins, for example
+`LUT_target/quality/corpus-v1.json`.
+Paths are relative to the manifest file. With `--data-root`, that path becomes the base instead.
 
 <details>
 <summary>Example manifest</summary>
@@ -148,8 +149,8 @@ Use it only when zero is the reviewed reference.
 python3 LUT_target/analyze_lut_target.py
 ```
 
-Before approving a release,
-keep the candidate's whole `SOURCE/summary.json` as the next accepted baseline file.
+Before approving a release, keep the candidate's whole `SOURCE/summary.json` as the next accepted
+baseline file.
 The existing accepted file is not overwritten until the candidate has passed review.
 Put the exact SHA-256 of the accepted file into `acceptedBaselineSHA256`.
 
@@ -157,8 +158,9 @@ The candidate and baseline summaries have to contain each case from the manifest
 A missing case, a duplicate, a processing failure, or a case outside the manifest is an input error.
 
 `calibration` cases can be used to fit the profile. They do not count toward the decision.
-`holdout` cases stay out of tuning and selection. Validation numbers are compared case by case,
-so an average improvement cannot hide one image getting worse.
+`holdout` cases stay out of tuning and selection.
+Validation numbers are compared case by case, so an average improvement cannot hide one image
+getting worse.
 
 ```mermaid
 flowchart LR
@@ -196,8 +198,8 @@ File verification modes:
 | `none` | Does not check image files | No |
 
 The default is `all`.
-The report records the mode that was used, the hashes of the manifest and summary files,
-the file verification result, and the per-case comparison and counts for the validation set.
+The report records the mode that was used, the hashes of the manifest and summary files, the file
+verification result, and the per-case comparison and counts for the validation set.
 The same JSON goes to stdout and to the `--report` file. The file is saved atomically.
 
 Exit codes:

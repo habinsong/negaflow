@@ -62,12 +62,13 @@ Export renders again at source size.
 
 ### Why measure it
 
-The unexposed part of a negative is a reference point that combines film, development,
-and the scan light source. The orange mask of color negative is in there too.
+The unexposed part of a negative is a reference point that combines film, development, and the scan
+light source.
+The orange mask of color negative is in there too.
 Get the base wrong and every density and channel relationship after it goes wrong.
 
-Kodak's Portra 400 data also records minimum density, characteristic curves,
-and dye spectral density separately.
+Kodak's Portra 400 data also records minimum density, characteristic curves, and dye spectral
+density separately.
 
 - [Kodak Professional Portra 400 technical data](https://www.kodakprofessional.com/sites/default/files/wysiwyg/pro/resources/e4050_portra_400.pdf)
 
@@ -81,8 +82,8 @@ and dye spectral density separately.
 - With several film strips on one sheet, separated areas can be read together.
 - A boundary where holder and film mix is trusted less than the interior.
 
-It finds the brightness distribution on a downscaled analysis image, groups connected areas,
-then removes candidates that lie outside the film.
+It finds the brightness distribution on a downscaled analysis image, groups connected areas, then
+removes candidates that lie outside the film.
 When several strips pass the conditions, they are computed together.
 The result also records which method was chosen and how confident it is.
 
@@ -110,8 +111,8 @@ Those values stay finite and are not clipped on the spot.
 
 ### Film type data
 
-The current table holds 27 film names, covering color negative, black and white,
-and motion picture negative.
+The current table holds 27 film names, covering color negative, black and white, and motion picture
+negative.
 
 What the data is for:
 
@@ -119,8 +120,8 @@ What the data is for:
 - Per-channel density range
 - A safe range when low contrast makes automatic measurement wobble
 
-Some values were approximated by reading curves in public material,
-and some were set conservatively. 27 names do not mean 27 validated color profiles.
+Some values were approximated by reading curves in public material, and some were set
+conservatively. 27 names do not mean 27 validated color profiles.
 Once the base is measured, the measurement wins.
 
 ### Fixed print response
@@ -165,8 +166,8 @@ The data is described in [film profiles](FILM_PROFILES.md).
 ### `MAIN`
 
 The default for ordinary development.
-It does not fold in an unselected scanner style, Auto Levels, Auto Color, Auto Tone,
-or Auto White Balance.
+It does not fold in an unselected scanner style, Auto Levels, Auto Color, Auto Tone, or Auto White
+Balance.
 Base and density range measurement and the limited low-saturation vibrance are part of the basic
 inversion.
 
@@ -180,8 +181,9 @@ A missing or invalid profile fails instead of falling back to sRGB or some arbit
 Two stages.
 
 1. `documentedCharacter`: `SP` uses a limited base character taken from six pairs of the same
-negative through SP-3000 and negaflow MAIN. `HS` builds its tone, neutral,
-and color character from published direction plus this project's design values.
+negative through SP-3000 and negaflow MAIN.
+`HS` builds its tone, neutral, and color character from published direction plus this project's
+design values.
 2. `scannerSignature`: only the relative difference from groups whose roll names and image counts
 match across both machines is added.
 
@@ -198,14 +200,15 @@ Every profile today is `realOnly`.
 ### `F135`, `HR`
 
 These are two minilab styles built by the project, not measured machine clones.
-`F135` uses a print-like S-curve with warm midtones;
-`HR` uses deep blacks and a calm neutral and blue direction.
+`F135` uses a print-like S-curve with warm midtones; `HR` uses deep blacks and a calm neutral and
+blue direction.
 No claim is made of validating and cloning a specific machine.
 
 ### `EXPIRED`
 
-A recovery target for old film. It does not blanket-desaturate or stretch the range,
-and stays within limited correction that the current evidence supports.
+A recovery target for old film.
+It does not blanket-desaturate or stretch the range, and stays within limited correction that the
+current evidence supports.
 
 ## Develop controls
 
@@ -222,8 +225,8 @@ GrainMend and ordinary local adjustment differ in purpose and in how they are st
 ## Color management
 
 If the input carries a valid ICC, that color space is read.
-Internal math runs in the fixed linear working space,
-and the switch to an output space happens at display, soft proof, and export.
+Internal math runs in the fixed linear working space, and the switch to an output space happens at
+display, soft proof, and export.
 
 Main supported outputs:
 
@@ -259,7 +262,7 @@ first.
 
 A good synthetic IT8 result does not prove absolute accuracy on real negatives.
 Judging scanner profile quality follows [profile quality gate](../reference/PROFILE_QUALITY_GATE.md)
-and [IT8 color validation](../reference/IT8_COLOR_VALIDATION.md) .
+and [IT8 color validation](../reference/IT8_COLOR_VALIDATION.md).
 
 ## Where the code lives
 

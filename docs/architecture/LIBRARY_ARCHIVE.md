@@ -13,8 +13,8 @@ The `.negaflowarchive` archive keeps the following material in one package.
 | The link between virtual copies and shared originals | Exported files |
 
 The running SQLite file is not included.
-Anything that can be rebuilt is also left out: thumbnails, previews, GrainMend caches,
-exported files.
+Anything that can be rebuilt is also left out: thumbnails, previews, GrainMend caches, exported
+files.
 
 > [!WARNING]
 > If the archive fails to build, the existing archive is not overwritten. Originals,

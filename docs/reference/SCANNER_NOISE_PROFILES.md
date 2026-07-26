@@ -70,8 +70,8 @@ The NORITSU and SP-3000 color profiles in the repository carry `texture` values 
 Those values mix subject, focus, and film grain, so they are no use as sensor noise data.
 
 Repeated flat targets and separate validation material do not exist yet.
-No validated device noise profile is bundled,
-and the automatic path uses the existing general settings.
+No validated device noise profile is bundled, and the automatic path uses the existing general
+settings.
 
 Adding a real profile needs all of this.
 

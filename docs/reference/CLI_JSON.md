@@ -21,8 +21,8 @@ negaflow capabilities <scannerID> [--demo] --json
 ```
 
 For now `--json` works only on those two read-only commands.
-Put it on `scan` or `develop`, which change files or report progress,
-and it ends with an `unsupported_json_command` error.
+Put it on `scan` or `develop`, which change files or report progress, and it ends with an
+`unsupported_json_command` error.
 
 ## Common shape
 
@@ -64,8 +64,8 @@ The `payload` of `capabilities` always carries all of these fields.
 - `outputFormats`, `estimatedScanSpeeds`
 
 Values the device did not report are not guessed.
-Depending on the value it uses `null`, an empty array, `false`,
-or the `disabledReasons` the plugin sent.
+Depending on the value it uses `null`, an empty array, `false`, or the `disabledReasons` the plugin
+sent.
 
 `estimatedScanSpeeds` is an array of this object, sorted by ascending DPI.
 

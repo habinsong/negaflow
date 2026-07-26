@@ -54,8 +54,8 @@ JSON은 이동 가능한 백업·아카이브 교환 형식으로 남지만 두 
 
 이 저장소에는 장치와 무관한 외부 프로세스 호스트와 JSON 규격만 있습니다.
 SANE 구현, 의존성, 설정, 배포 파일은 넣지 않습니다.
-해당 코드는 별도 GPL 프로젝트 [`negaflow-scanner-sane`](https:
-//github.com/habinsong/negaflow-scanner-sane)에 있습니다.
+해당 코드는 별도 GPL 프로젝트
+[`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane)에 있습니다.
 
 앱은 설치한 플러그인이 보고한 기능만 보여 줍니다. 모델명으로 기능을 추측하지 않습니다.
 사용자가 데모를 고르지 않으면 가짜 스캐너로 대신하지 않습니다.
@@ -86,20 +86,20 @@ bash scripts/build-release.sh
 
 </details>
 
-`build-release.sh` 한 번으로 Apple Silicon(`arm64`)과 Universal(`arm64`,
-`x86_64`) 앱을 각각 빌드하고 ZIP, PKG, DMG, dSYM, SHA-256 목록을 만듭니다.
-로컬에서는 임시 서명을 쓰며,
-실제 배포에는 Developer ID Application과 Developer ID Installer 서명이 모두 필요합니다.
+`build-release.sh` 한 번으로 Apple Silicon(`arm64`)과 Universal(`arm64`, `x86_64`) 앱을 각각
+빌드하고 ZIP, PKG, DMG, dSYM, SHA-256 목록을 만듭니다.
+로컬에서는 임시 서명을 쓰며, 실제 배포에는 Developer ID Application과 Developer ID Installer
+서명이 모두 필요합니다.
 
 수동 `Distribution` workflow는 보호된 Developer ID와 App Store Connect API 키를 사용합니다.
-앱 아카이브,
-DMG와 PKG를 Apple에 보내고 공증 티켓을 붙인 뒤 체크섬과 Gatekeeper를 다시 확인합니다.
+앱 아카이브, DMG와 PKG를 Apple에 보내고 공증 티켓을 붙인 뒤 체크섬과 Gatekeeper를 다시
+확인합니다.
 실제 workflow와 Apple 응답이 없으면 외부 서명과 공증에 성공했다고 말하지 않습니다.
 
 ## 성능 측정
 
-성능 검사는 카탈로그, 라이브러리 검색, 고해상도 조절, GrainMend 영역 처리,
-실제 픽셀 롤을 다룹니다.
+성능 검사는 카탈로그, 라이브러리 검색, 고해상도 조절, GrainMend 영역 처리, 실제 픽셀 롤을
+다룹니다.
 
 최근 한 Mac의 Release 측정:
 
@@ -137,8 +137,8 @@ FILM-R v2 자료는 DOI, 44쌍, 437,570,872바이트, Figshare MD5 정보로 고
 | 최저 PSNR 변화 | -18.952 dB | -1.338 dB |
 | 개선 / 악화 / 동일 이미지 | 11 / 33 / 0 | 34 / 6 / 4 |
 
-관측값 회귀 검사와 별도로 평균·중앙 PSNR 0 dB 이상, 악화 10장 이하,
-최저 -1.5 dB 이상의 절대 하한을 검사합니다.
+관측값 회귀 검사와 별도로 평균·중앙 PSNR 0 dB 이상, 악화 10장 이하, 최저 -1.5 dB 이상의 절대
+하한을 검사합니다.
 자동 안전선이 3장에서 복원을 중지했고, 이 경우 가이드 사용을 안내합니다.
 
 FILM-R은 GrainMend RGB 자동 경로만 검증합니다.
@@ -156,8 +156,8 @@ FILM-R은 GrainMend RGB 자동 경로만 검증합니다.
 - 지원하는 모든 Mac의 성능
 
 최종 화면과 실기기 확인은 사용자가 맡습니다.
-빌드 성공으로 대신하지 않고 [출시 전 실기기 점검표](../validation/REAL_QA_CHECKLIST.md) 에
-결과를 남깁니다.
+빌드 성공으로 대신하지 않고 [출시 전 실기기 점검표](../validation/REAL_QA_CHECKLIST.md)에 결과를
+남깁니다.
 
 ## 문서 기준
 

@@ -3,8 +3,8 @@
 [Accueil de la documentation](../README.md)
 
 Les profils de scanner fournis ne sont pas des LUT téléchargées ni des préréglages rebaptisés.
-L'auteur du projet a photographié et trié les scans de film, les a analysés,
-et a transformé le résultat en JSON.
+L'auteur du projet a photographié et trié les scans de film, les a analysés, et a transformé le
+résultat en JSON.
 
 | Élément | Valeur actuelle |
 |---|---:|
@@ -119,10 +119,10 @@ Le script confirme que chaque valeur est finie et que les comptes d'échantillon
 
 ### 6. JSON et empreintes
 
-Le fichier final porte le schéma, l'identifiant, les comptes et chemins des sources,
-les statistiques agrégées, l'état de validation et `profileHash`.
-Le contrôleur vérifie les champs, les comptes, les valeurs finies,
-le nom de fichier face à l'identifiant, les comptes de sources et l'empreinte.
+Le fichier final porte le schéma, l'identifiant, les comptes et chemins des sources, les
+statistiques agrégées, l'état de validation et `profileHash`.
+Le contrôleur vérifie les champs, les comptes, les valeurs finies, le nom de fichier face à
+l'identifiant, les comptes de sources et l'empreinte.
 
 ## Forme du JSON
 
@@ -168,7 +168,7 @@ le nom de fichier face à l'identifiant, les comptes de sources et l'empreinte.
 | `sceneBuckets` | Statistiques par scène et vues représentatives | Permet à une personne de retracer la source |
 
 L'accentuation du canal de luminosité dans la cible `HS` n'est pas une constante machine mesurée
-depuis `texture` .
+depuis `texture`.
 Elle ne synthétise pas non plus de nouveau grain.
 `SP`, `MAIN` et `PRINT` n'incluent pas cette accentuation.
 
@@ -182,8 +182,8 @@ Elle ne synthétise pas non plus de nouveau grain.
 | `pairedValidated` | A passé le matériel de calibration et de validation, plus les contrôles de régression | Sélection automatique permise si la politique l'autorise |
 
 Les 15 profils actuels sont tous `realOnly`.
-Vous pouvez confirmer qu'ils viennent d'observations de matériel réel,
-mais pas qu'ils produisent le même résultat que la machine.
+Vous pouvez confirmer qu'ils viennent d'observations de matériel réel, mais pas qu'ils produisent le
+même résultat que la machine.
 
 Revendiquer la précision de la machine demande plus de matériel.
 
@@ -201,14 +201,14 @@ Revendiquer la précision de la machine demande plus de matériel.
 Rien n'est sélectionné automatiquement aujourd'hui à partir d'un nom de modèle ou d'informations de
 fichier.
 Vous choisissez vous-même la cible `HS` ou `SP` et le profil.
-L'appariement automatique n'est permis que pour `pairedValidated`,
-donc il ne s'applique pas au lot actuel.
+L'appariement automatique n'est permis que pour `pairedValidated`, donc il ne s'applique pas au lot
+actuel.
 
 ### La différence relative entre deux scanners
 
 Les statistiques de scène absolues ne sont pas reprises telles quelles.
-Seule la différence entre groupes correspondants des deux machines est utilisée,
-et de façon limitée.
+Seule la différence entre groupes correspondants des deux machines est utilisée, et de façon
+limitée.
 
 - L'ensemble nettoyé des noms de films doit concorder.
 - Le nombre d'images ne doit pas différer de plus de 15 %.
@@ -224,18 +224,18 @@ appariées.
 
 ### Noir et blanc, et positif
 
-Pour le noir et blanc,
-les composantes de couleur sont écartées et seule la tonalité relative est utilisée.
+Pour le noir et blanc, les composantes de couleur sont écartées et seule la tonalité relative est
+utilisée.
 Pour le positif, la luminosité absolue d'un film n'est pas reportée sur une autre photographie.
-Cela dit, les styles de base de `HS` et `SP` s'appliquent bien aux positifs à demi intensité,
-donc le résultat n'est pas toujours le même que `MAIN`.
+Cela dit, les styles de base de `HS` et `SP` s'appliquent bien aux positifs à demi intensité, donc
+le résultat n'est pas toujours le même que `MAIN`.
 
 ### Texture
 
-Sans matériel apparié issu de la même vue,
-`texture` n'est pas utilisé comme valeur d'accentuation ou de grain propre à une machine.
-La mise au point, le sujet,
-le traitement JPEG et les choix de l'opérateur du labo sont tous mêlés dans ces chiffres.
+Sans matériel apparié issu de la même vue, `texture` n'est pas utilisé comme valeur d'accentuation
+ou de grain propre à une machine.
+La mise au point, le sujet, le traitement JPEG et les choix de l'opérateur du labo sont tous mêlés
+dans ces chiffres.
 
 ## Intégrité des fichiers
 
@@ -283,8 +283,8 @@ python3 scripts/evaluate_profile_quality.py \
 
 Le dépôt n'a aujourd'hui ni manifeste REAL/TARGET ni référence acceptée pour appuyer une
 revendication de publication.
-Les tests synthétiques ne confirment que les conditions d'échec du code de contrôle ;
-ils ne prouvent pas la précision des profils.
+Les tests synthétiques ne confirment que les conditions d'échec du code de contrôle ; ils ne
+prouvent pas la précision des profils.
 
 ## Références
 
@@ -292,8 +292,8 @@ ils ne prouvent pas la précision des profils.
 - [darktable negadoctor](https://docs.darktable.org/usermanual/4.6/en/module-reference/processing-modules/negadoctor/)
 
 Aucun chiffre de profil ne vient de ces sources.
-Elles ont été lues comme contexte pour comprendre pourquoi la base du film,
-la tonalité de la scène et le style de la machine doivent être traités séparément.
+Elles ont été lues comme contexte pour comprendre pourquoi la base du film, la tonalité de la scène
+et le style de la machine doivent être traités séparément.
 Les valeurs du JSON viennent du matériel photographié pour ce projet et du code d'analyse du dépôt.
 
 ## Code et documents liés

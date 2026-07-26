@@ -18,7 +18,7 @@ negaflowの既定の入力は画像の取り込みです。
 | デモスキャナー | 開発用の`negaflow Scanner`と`negaflow Flatbed Scanner`を出します。自分でデモを選んだときだけ使います。 |
 | ImageCaptureCore連携 | macOS Image Capture装置向けの、いまは動かない互換コードです。 |
 
-このリポジトリにSANEの実装はありません。 SANEのコードは別のGPLプロジェクトにあります。
+このリポジトリにSANEの実装はありません。SANEのコードは別のGPLプロジェクトにあります。
 
 - <https://github.com/habinsong/negaflow-scanner-sane>
 
@@ -92,8 +92,9 @@ flowchart LR
 ### バージョン1
 
 以前からの互換規格です。要求とNDJSONに`protocolVersion`、`requestID`、`sequence`がありません。
-実際に適用した設定を報告できないので、結果は`.unknownLegacy(protocolVersion:
-1)`として記録します。要求値を検証済みの適用値のように写すことはしません。
+実際に適用した設定を報告できないので、結果は`.unknownLegacy(protocolVersion: 1)`として記録します
+。
+要求値を検証済みの適用値のように写すことはしません。
 
 ### バージョン2
 
@@ -109,11 +110,11 @@ flowchart LR
 v1の要求には入れず、別の装置のトークンを混ぜません。
 トークンの形式と有効性は、プラグインが自分で確認します。
 
-同じbackendの別モデルへ誤って再接続するのを防ぐため、
-アプリは直前の`detect`が報告した `deviceID`、 `vendor`、 `model`を、
-`capabilities`の任意のstdin JSONとして渡し直します。既存のプラグインはこの入力を無視できます。
-装置アドレスが変わり得るプラグインは、この同一性をcapability のスナップショットに結び付け、
-次の`scan`でも確認してください。
+同じbackendの別モデルへ誤って再接続するのを防ぐため、アプリは直前の`detect`が報告した `deviceID`
+、`vendor`、`model`を、`capabilities`の任意のstdin JSONとして渡し直します。
+既存のプラグインはこの入力を無視できます。
+装置アドレスが変わり得るプラグインは、この同一性をcapability のスナップショットに結び付け、次の
+`scan`でも確認してください。
 
 各NDJSONイベントは、同じバージョンと要求IDを繰り返し、前より大きい0以上の`sequence`を持ちます。
 イベントは`progress`、`result`、`error`だけです。
@@ -146,15 +147,17 @@ v2の`result`には`appliedOptions`が必ず要ります。
 最後の3つの調整値は、`null`でもキーが必要です。
 
 `resolutionDPI: 0`はプレビューという意味です。
-プレビューが0でない、または本スキャンが0のときは拒否します。知らない値、別の装置、
-結果の先頭と`appliedOptions`で食い違う解像度・ビット深度・IR の状態も拒否します。
+プレビューが0でない、または本スキャンが0のときは拒否します。
+知らない値、別の装置、結果の先頭と`appliedOptions`で食い違う解像度・ビット深度・IR の状態も拒否
+します。
 
-検査を通ると、プラグインIDではなくアプリのスキャナーIDと要求IDを記録し、
-最終の出力パスを残します。このときだけ`.verified(options)`と表示します。
+検査を通ると、プラグインIDではなくアプリのスキャナーIDと要求IDを記録し、最終の出力パスを残します
+。
+このときだけ`.verified(options)`と表示します。
 
 `ScanResult.resolution`と`bitDepth`は、v1では要求値を一時的な動作値として使えます。
-出どころを示す`reportedResolution`、 `reportedBitDepth`には、
-結果が自分で報告した正しい値だけを入れます。
+出どころを示す`reportedResolution`、`reportedBitDepth`には、結果が自分で報告した正しい値だけを入
+れます。
 
 ## 平面スキャンの領域
 
@@ -165,8 +168,9 @@ v2の`result`には`appliedOptions`が必ず要ります。
 - mm単位の`scanOriginXRange`、`scanOriginYRange`
 - mm単位の`scanWidthRange`、`scanHeightRange`
 
-アプリは選んだ領域をプラグインの刻みに合わせて外側へ広げ、
-領域ごとに本スキャンの作業を1つ作ります。モデル名からこの機能を推測することはありません。
+アプリは選んだ領域をプラグインの刻みに合わせて外側へ広げ、領域ごとに本スキャンの作業を1つ作りま
+す。
+モデル名からこの機能を推測することはありません。
 任意フィールドがない以前のプラグインは、固定フレームの流れのままです。
 
 ## プロセスの上限と取り消し
@@ -210,8 +214,8 @@ sequenceDiagram
 - 要求と結果のパスが同じ
 
 すべて合ったときだけ最終位置へ移します。
-取り消し、時間切れ、誤った出力、プラグインの失敗のときは一時フォルダーを消し、
-途中までのスキャンは公開しません。
+取り消し、時間切れ、誤った出力、プラグインの失敗のときは一時フォルダーを消し、途中までのスキャン
+は公開しません。
 
 v2のIRファイルも、アプリが渡した一時フォルダーの中にある必要があります。
 ファイルの種類、読み込み、ピクセルの大きさを確認します。
@@ -219,9 +223,8 @@ v1は、すでに出回っているプラグインとの互換のために外部
 
 ## SANEの境界
 
-SANEの実装、依存、設定、機種ごとの処理、テスト、配布のドキュメントは、
-すべて別リポジトリの [`negaflow-scanner-sane`](https:
-//github.com/habinsong/negaflow-scanner-sane)に置きます。
+SANEの実装、依存、設定、機種ごとの処理、テスト、配布のドキュメントは、すべて別リポジトリの
+[`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane)に置きます。
 
 このリポジトリは、装置に依存しない外部プロセスの規格だけを記録し、検査します。
 画像ファイルだけ取り込むユーザーには、スキャナープラグインは要りません。

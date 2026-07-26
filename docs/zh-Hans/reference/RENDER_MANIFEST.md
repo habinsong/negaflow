@@ -41,8 +41,8 @@ GrainMend 编辑记录的 SHA-256 一定会写进去。
 ## 和 C2PA 的区别
 
 这里没有数字签名、证书、信任链，也没有内嵌 claim store，所以不叫 C2PA Content Credentials。
-C2PA 的 hard binding 和处理历史思路、 PREMIS 的完整性思路都参考过，
-但写进去的只有能核对的 SHA-256。
+C2PA 的 hard binding 和处理历史思路、PREMIS 的完整性思路都参考过，但写进去的只有能核对的 SHA-256
+。
 
 参考：
 

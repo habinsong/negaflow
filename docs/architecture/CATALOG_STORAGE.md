@@ -93,8 +93,8 @@ Only the main file, checked after the connection closes, becomes a recovery copy
 Develop values and versioned edit history are stored as a JSON BLOB per entity.
 Source pixels, thumbnails, and GrainMend caches stay out of the database.
 
-There are still not enough columns and indexes for search and sorting,
-so the whole catalog loads into memory at startup.
+There are still not enough columns and indexes for search and sorting, so the whole catalog loads
+into memory at startup.
 That is why SQLite read time looks like JSON today.
 Next comes index lookups that read only the columns and frames in use.
 
@@ -116,12 +116,12 @@ flowchart LR
 ```
 
 If any step fails, the existing JSON stays as it is. It never starts with an empty catalog.
-Even when intermediate files and markers are left behind,
-work continues only when the source SHA-256 and both catalogs agree.
+Even when intermediate files and markers are left behind, work continues only when the source
+SHA-256 and both catalogs agree.
 
 After the move there is no automatic fall back to JSON.
-To stop an older app from editing the JSON and splitting the store in two,
-the minimum read version and the migration marker are checked.
+To stop an older app from editing the JSON and splitting the store in two, the minimum read version
+and the migration marker are checked.
 
 ## What was not chosen
 

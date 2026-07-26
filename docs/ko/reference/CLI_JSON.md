@@ -21,8 +21,8 @@ negaflow capabilities <scannerID> [--demo] --json
 ```
 
 현재 `--json`은 위 두 읽기 전용 명령에서만 쓸 수 있습니다.
-파일을 바꾸거나 진행 상황을 보내는 `scan`,
-`develop` 명령에 붙이면 `unsupported_json_command` 오류로 끝납니다.
+파일을 바꾸거나 진행 상황을 보내는 `scan`, `develop` 명령에 붙이면 `unsupported_json_command`
+오류로 끝납니다.
 
 ## 공통 형식
 

@@ -51,8 +51,8 @@ flowchart LR
 ```
 
 Le masque de détection et le résultat réparé restent séparés.
-C'est ce qui permet d'inspecter le masque,
-de n'appliquer qu'une partie des défauts ou de refaire la réparation.
+C'est ce qui permet d'inspecter le masque, de n'appliquer qu'une partie des défauts ou de refaire la
+réparation.
 
 ## Outils
 
@@ -60,17 +60,17 @@ de n'appliquer qu'une partie des défauts ou de refaire la réparation.
 
 Sur toute la photo, il ne trouve que les défauts dont il est sûr.
 Manquer un petit défaut vaut mieux qu'effacer à tort une grande structure.
-Il ne se glisse jamais dans le développement par défaut :
-vous devez le lancer pour que quoi que ce soit s'ajoute.
+Il ne se glisse jamais dans le développement par défaut : vous devez le lancer pour que quoi que ce
+soit s'ajoute.
 
 ### Guidé
 
 Vous choisissez un rectangle, et seuls cet espace et ses abords sont analysés.
-Comme vous avez déjà désigné le défaut, il va chercher les petits points,
-les défauts pâles et les amas denses plus franchement que l'automatique.
+Comme vous avez déjà désigné le défaut, il va chercher les petits points, les défauts pâles et les
+amas denses plus franchement que l'automatique.
 
-Il lit plus large que le résultat qu'il produit,
-pour que les pixels voisins servant à la réparation ne soient pas coupés au bord de la zone.
+Il lit plus large que le résultat qu'il produit, pour que les pixels voisins servant à la réparation
+ne soient pas coupés au bord de la zone.
 Le rayon de contexte maximal actuel est de 264 pixels.
 
 ### Brosse
@@ -86,8 +86,8 @@ Quand aucun patch ne convient, il peut retomber de façon limitée sur la voie d
 Aucune détection automatique : il garde le décalage entre les deux points et copie les vrais pixels.
 
 L'historique d'édition retient le diamètre, la dureté, les coordonnées et le décalage.
-Cela s'applique encore aux mêmes coordonnées d'origine après une rotation,
-un miroir ou un recadrage.
+Cela s'applique encore aux mêmes coordonnées d'origine après une rotation, un miroir ou un
+recadrage.
 Les décalages s'alignent sur des pixels entiers, et rien hors de l'image n'est appliqué.
 
 ### IR
@@ -102,15 +102,15 @@ Les pixels finaux sortent du même réparateur que pour le RGB.
 ### Différence avec le voisinage
 
 La luminosité change d'une photo à l'autre, donc pas de seuil global unique.
-L'écart avec la luminosité voisine,
-la variance locale et la direction produisent les candidats poussière claire et défaut sombre.
+L'écart avec la luminosité voisine, la variance locale et la direction produisent les candidats
+poussière claire et défaut sombre.
 
 ### Nettoyage du masque
 
-Le bruit isolé est retiré, les défauts interrompus sont reliés,
-puis les pixels qui se touchent dans l'une des 8 directions forment un même bloc.
-Une grande zone peut être découpée en tuiles,
-mais un bloc à cheval sur une bordure est refusionné en coordonnées d'image entière.
+Le bruit isolé est retiré, les défauts interrompus sont reliés, puis les pixels qui se touchent dans
+l'une des 8 directions forment un même bloc.
+Une grande zone peut être découpée en tuiles, mais un bloc à cheval sur une bordure est refusionné
+en coordonnées d'image entière.
 
 ### Différences de résolution
 
@@ -129,16 +129,17 @@ Chaque bloc est mesuré sur :
 - S'il se prolonge dans un contour proche
 - Sa relation avec les autres blocs
 
-Le résultat se répartit en poussière, micro-trou, rayures par direction,
-dégât d'émulsion et micro-particules, chacun avec une confiance.
+Le résultat se répartit en poussière, micro-trou, rayures par direction, dégât d'émulsion et
+micro-particules, chacun avec une confiance.
 
 ### Ne pas effacer les lignes qui appartiennent à la photo
 
-Câbles, rambardes, angles de bâtiment,
-cadres de fenêtre et lettres ne doivent pas être lus comme des rayures. Lignes parallèles, grilles,
-continuité des contours et lignes rattachées à la structure de la scène ont leur propre contrôle.
-L'automatique bloque plus fort les faux positifs ;
-le guidé tient compte aussi du fait que vous avez choisi l'endroit.
+Câbles, rambardes, angles de bâtiment, cadres de fenêtre et lettres ne doivent pas être lus comme
+des rayures.
+Lignes parallèles, grilles, continuité des contours et lignes rattachées à la structure de la scène
+ont leur propre contrôle.
+L'automatique bloque plus fort les faux positifs ; le guidé tient compte aussi du fait que vous avez
+choisi l'endroit.
 
 ## Réparation
 
@@ -152,9 +153,8 @@ concorde.
 L'intensité est le rapport de mélange entre le patch terminé et l'original.
 
 Parfois une réparation automatique ne peut pas savoir ce qu'il y avait dessous.
-S'il n'y a pas de texture voisine utilisable,
-ou si le défaut couvrait une structure importante entière, il faut la brosse,
-le tampon ou un travail de précision à part.
+S'il n'y a pas de texture voisine utilisable, ou si le défaut couvrait une structure importante
+entière, il faut la brosse, le tampon ou un travail de précision à part.
 
 ## Traitement IR
 
@@ -165,33 +165,31 @@ le tampon ou un travail de précision à part.
 - Les deux images ont la même taille en pixels et la même zone attendue.
 - Les fichiers sont lisibles et passent le contrôle d'identifiant de l'original.
 
-Même si un nom de modèle est connu pour avoir l'IR,
-il n'est utilisé ni à l'écran ni dans une requête tant que le plugin ne le déclare pas.
+Même si un nom de modèle est connu pour avoir l'IR, il n'est utilisé ni à l'écran ni dans une
+requête tant que le plugin ne le déclare pas.
 
 ### Alignement
 
 L'optique et la lecture du capteur peuvent décaler RGB et IR de quelques pixels.
 Une recherche large passe d'abord, puis une recherche étroite, pour fixer le décalage.
-La confiance du pic, et le fait qu'il ait atterri en bord de plage de recherche,
-sont tous deux consignés.
+La confiance du pic, et le fait qu'il ait atterri en bord de plage de recherche, sont tous deux
+consignés.
 
-Une confiance faible, ou un meilleur point collé au bout de la recherche,
-ne compte pas comme une réussite.
+Une confiance faible, ou un meilleur point collé au bout de la recherche, ne compte pas comme une
+réussite.
 
 ### Soustraire le motif de la scène
 
 Les colorants et la densité du film peuvent transparaître dans l'IR.
-La luminosité logarithmique du canal rouge est répartie en 64 intervalles,
-et dans chacun la moyenne est prise après avoir écarté les 10 % supérieurs et inférieurs des valeurs
-IR.
+La luminosité logarithmique du canal rouge est répartie en 64 intervalles, et dans chacun la moyenne
+est prise après avoir écarté les 10 % supérieurs et inférieurs des valeurs IR.
 Les intervalles vides sont interpolés depuis leurs voisins et lissés par un court noyau symétrique.
-Soustraire cette courbe non paramétrique réduit le motif de la scène,
-et la poussière sombre éparse reste hors des statistiques d'intervalle.
+Soustraire cette courbe non paramétrique réduit le motif de la scène, et la poussière sombre éparse
+reste hors des statistiques d'intervalle.
 
 Ce qui reste est converti en contraste relatif à la moyenne locale.
-Pour qu'un grand défaut ne relève pas le plancher de bruit autour de lui,
-l'entrée de bruit est écrêtée au contraste de détection minimal avant de calculer le seuil
-adaptatif.
+Pour qu'un grand défaut ne relève pas le plancher de bruit autour de lui, l'entrée de bruit est
+écrêtée au contraste de détection minimal avant de calculer le seuil adaptatif.
 Les régions sombres connexes au passe-vues et au bord du film sont retirées du masque.
 
 ### Conditions de sécurité
@@ -222,8 +220,8 @@ Ce que porte chaque entrée :
 - Image d'origine et version d'édition
 - Le patch réparé, ou les valeurs nécessaires pour le reconstruire
 
-Une réparation antérieure change l'entrée de la suivante,
-donc l'ordre de la liste fait aussi partie de l'historique d'édition.
+Une réparation antérieure change l'entrée de la suivante, donc l'ordre de la liste fait aussi partie
+de l'historique d'édition.
 
 L'original n'est pas modifié. L'historique GrainMend est stocké dans un sidecar géré par
 l'application.
@@ -231,10 +229,10 @@ SHA-256 de l'original, version d'édition et empreinte de l'historique lient l'e
 Si le sidecar manque ou est cassé, le cache n'est pas traité comme un original.
 
 Le cache GrainMend est un fichier dérivé, là pour l'affichage rapide et le rendu à nouveau.
-S'il manque ou échoue à son contrôle,
-il est reconstruit depuis l'original et l'historique d'édition.
-Si le résultat dont un export a besoin ne peut pas être produit,
-l'export échoue au lieu de substituer l'original.
+S'il manque ou échoue à son contrôle, il est reconstruit depuis l'original et l'historique
+d'édition.
+Si le résultat dont un export a besoin ne peut pas être produit, l'export échoue au lieu de
+substituer l'original.
 
 ## Performance
 
@@ -257,9 +255,8 @@ Mesuré le 25/07/2026 sur une build Release, Mac14,3, arm64, 24 Gio de mémoire,
 | Stress guidé dense | 1280×960, 8 images × 3 passes | médiane 0,423 s, p95 0,488 s, max 0,526 s |
 | Détection IR | 6000×4000, 24 Mpx | 1,042 s, pic de mémoire +249,2 Mio |
 
-Sur 24 passes de stress dense,
-la couverture minimale du masque aux emplacements de défaut était de 99, 80 %,
-et l'erreur résiduelle moyenne maximale de 2, 70/255.
+Sur 24 passes de stress dense, la couverture minimale du masque aux emplacements de défaut était de
+99,80 %, et l'erreur résiduelle moyenne maximale de 2,70/255.
 Ce sont des mesures de régression sur entrées synthétiques.
 Elles ne promettent pas des temps de traitement sur un autre Mac ni sur du film réel.
 
@@ -286,26 +283,26 @@ La régression RGB utilise les 44 paires endommagé/restauré par un expert de F
 - Paires : 44
 - Taille totale : 437 570 872 octets
 
-La voie automatique livrée le 25/07/2026 applique une sensibilité de 0,
-7 et une ligne de sécurité contre la surdétection.
+La voie automatique livrée le 25/07/2026 applique une sensibilité de 0,7 et une ligne de sécurité
+contre la surdétection.
 Face à la base 3.0 précédente, sur les 44 images FILM-R celles qui s'améliorent passent de 11 à 34,
 et celles qui se dégradent de 33 à 6.
-La variation moyenne de PSNR passe de -1, 688 dB à +0, 466 dB, et le pire cas de -18, 952 dB à -1,
-338 dB. Les pixels dégradés pondérés tombent de 0,792 % à 0,017 %.
+La variation moyenne de PSNR passe de -1,688 dB à +0,466 dB, et le pire cas de -18,952 dB à -1,338
+dB.
+Les pixels dégradés pondérés tombent de 0,792 % à 0,017 %.
 
-Quand l'automatique rencontre une forte densité de candidats,
-il arrête d'appliquer et vous oriente vers le guidé. Cette ligne de sécurité ne s'applique ni au
-guidé,
-où vous fixez la plage, ni à la brosse, ni au tampon, ni à l'IR.
+Quand l'automatique rencontre une forte densité de candidats, il arrête d'appliquer et vous oriente
+vers le guidé. Cette ligne de sécurité ne s'applique ni au guidé, où vous fixez la plage, ni à la
+brosse, ni au tampon, ni à l'IR.
 Même avec de meilleurs résultats, 6 images gardent un PSNR inférieur à la restauration experte.
-Rien de tout cela ne prouve que chaque photo s'améliore, que RGB et IR se valent,
-ni quoi que ce soit sur la qualité IR d'un scanner réel.
+Rien de tout cela ne prouve que chaque photo s'améliore, que RGB et IR se valent, ni quoi que ce
+soit sur la qualité IR d'un scanner réel.
 
 Le tableau complet et les commandes sont dans
-[Comparaison GrainMend sur scans réels](../validation/GRAINMEND_CORPUS.md) .
+[Comparaison GrainMend sur scans réels](../validation/GRAINMEND_CORPUS.md).
 
 Les limites IR par film et les conditions d'échec de l'alignement sont réunies dans
-[Films que GrainMend IR doit éviter](../reference/INFRARED_LIMITS.md) .
+[Films que GrainMend IR doit éviter](../reference/INFRARED_LIMITS.md).
 
 ## Couverture des tests
 

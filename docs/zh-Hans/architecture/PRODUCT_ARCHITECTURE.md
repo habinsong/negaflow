@@ -62,8 +62,9 @@ flowchart LR
 - 扫描会话和作业记录
 - 需要自己打开的演示扫描仪
 
-SANE 实现在另一个 GPL 项目 [`negaflow-scanner-sane`](https:
-//github.com/habinsong/negaflow-scanner-sane) 里。主体和插件只通过 JSON 和 CLI 通信。
+SANE 实现在另一个 GPL 项目
+[`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane) 里。
+主体和插件只通过 JSON 和 CLI 通信。
 
 ### `negaflowCLI`
 
@@ -126,7 +127,7 @@ flowchart LR
 ### 原始文件 ID
 
 不只凭文件路径判断原始文件。
-会保留当前规格需要的值：文件观测值、字节数、修改时间、SHA-256、 persistent bookmark。
+会保留当前规格需要的值：文件观测值、字节数、修改时间、SHA-256、persistent bookmark。
 
 文件被移动过时，只有用户重新链接，或者 bookmark 恢复成功，才会改路径。
 

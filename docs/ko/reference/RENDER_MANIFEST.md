@@ -44,8 +44,9 @@ v3에 들어가는 값:
 ## C2PA와 다른 점
 
 이 기록에는 디지털 서명, 인증서, 신뢰 체인, 내장 claim store가 없습니다.
-따라서 C2PA Content Credentials라고 부르지 않습니다. C2PA의 hard binding과 처리 이력 원칙,
-PREMIS의 무결성 개념을 참고했지만 실제로 확인할 수 있는 SHA-256 값만 담습니다.
+따라서 C2PA Content Credentials라고 부르지 않습니다.
+C2PA의 hard binding과 처리 이력 원칙, PREMIS의 무결성 개념을 참고했지만 실제로 확인할 수 있는
+SHA-256 값만 담습니다.
 
 참고 자료:
 

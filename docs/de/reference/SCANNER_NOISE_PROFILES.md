@@ -13,9 +13,8 @@ Rauschen je Signal bei digitalen Bildaufnahmegeräten.
 - [ISO 21550:2004](https://www.iso.org/standard/35939.html) regelt die Messung des
 Dynamikumfangs von Durchlicht- und Auflichtscannern.
 
-ISO 15739 ist für Digitalkameras geschrieben. negaflow behauptet nicht,
-dass Scanner unter dieselbe Norm fallen. Übernommen sind nur die Gedanken der wiederholten Messung
-und der Varianz je Signal.
+ISO 15739 ist für Digitalkameras geschrieben. negaflow behauptet nicht, dass Scanner unter dieselbe
+Norm fallen. Übernommen sind nur die Gedanken der wiederholten Messung und der Varianz je Signal.
 
 > [!NOTE]
 > Im aktuellen Bundle gibt es kein `holdoutValidated`-Geräterauschprofil, also wird auch keines
@@ -70,8 +69,8 @@ Die NORITSU- und SP-3000-Farbprofile im Repository tragen `texture`-Werte aus ec
 Darin stecken Motiv, Schärfe und Filmkorn, also taugen sie nicht als Sensorrauschdaten.
 
 Wiederholte Flat-Targets und separates Prüfmaterial gibt es noch nicht.
-Ein geprüftes Geräterauschprofil liegt nicht bei,
-und der automatische Pfad nutzt die bestehenden allgemeinen Einstellungen.
+Ein geprüftes Geräterauschprofil liegt nicht bei, und der automatische Pfad nutzt die bestehenden
+allgemeinen Einstellungen.
 
 Für ein echtes Profil braucht es all das.
 

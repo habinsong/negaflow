@@ -22,8 +22,8 @@ IT8 이미지와 그 물리 타깃에 맞는 기준 파일을 한 쌍으로 고�
 기준 파일 머리말과 하나라도 다르면 평가하지 않습니다.
 
 IT8.7/1과 ISO 12641-1 투과 타깃은 포지티브 투과 원고용입니다.
-이 결과로 컬러 네거티브의 오렌지 마스크, 염료 간섭, C-41 편차,
-NORITSU/FUJI 출력 정확도를 말할 수 없습니다.
+이 결과로 컬러 네거티브의 오렌지 마스크, 염료 간섭, C-41 편차, NORITSU/FUJI 출력 정확도를 말할
+수 없습니다.
 그 주장은 같은 컬러 네거티브를 두 경로에서 처리한 쌍 자료와 별도 검증 묶음이 필요합니다.
 
 ## 공개된 회귀 검사 자료
@@ -41,7 +41,7 @@ FADGI/OpenDICE의 다음 두 파일을 한 쌍으로 씁니다.
   - 16열: density
 
 재배포 권한을 확인하지 못했기 때문에 파일을 저장소나 앱에 넣지 않습니다.
-사용자가 직접 받은 파일을 [예제 목록](../../reference/IT8_FADGI_OPENDICE.example.json) 에
+사용자가 직접 받은 파일을 [예제 목록](../../reference/IT8_FADGI_OPENDICE.example.json)에
 연결합니다.
 이 예제의 등급은 `algorithmRegression`입니다.
 이름만 `deviceCharacterization`으로 바꾸면 검사기가 거부합니다.
@@ -93,8 +93,8 @@ L/a/b 차이, CIEDE2000을 기록합니다.
 
 </details>
 
-`MANUFACTURER`, `MATERIAL`, `SERIAL`, 배치 머리말(`BATCH`, `BATCH_ID`,
-`PROD_DATE` 중 하나)이 기준 파일과 글자까지 같아야 합니다.
+`MANUFACTURER`, `MATERIAL`, `SERIAL`, 배치 머리말(`BATCH`, `BATCH_ID`, `PROD_DATE` 중 하나)이
+기준 파일과 글자까지 같아야 합니다.
 최상위 `targetID`는 `serial`, `batchID`는 `batchValue`와 같아야 합니다.
 
 이 기록은 작업자가 적은 값과 기준 파일이 맞는다는 것만 보여 줍니다.
@@ -102,8 +102,8 @@ L/a/b 차이, CIEDE2000을 기록합니다.
 정보가 없으면 가장 가까운 날짜나 범용 기준 파일로 대신하지 않습니다.
 
 기준 파일에 조명 또는 관찰자 정보가 있으면 D50/2° 계약과 맞는지 확인합니다. 모순되면 중단합니다.
-`measurement.renderingIntent` 는 현재 Core Image 변환을 직접 고정하지 못하므로 보고서에
-`manifestDeclarationNotControlledByEvaluator` 라고 남깁니다.
+`measurement.renderingIntent`는 현재 Core Image 변환을 직접 고정하지 못하므로 보고서에
+`manifestDeclarationNotControlledByEvaluator`라고 남깁니다.
 
 ## `PRINT` 출력
 
@@ -147,12 +147,12 @@ y_{\mathrm{ceil}} -
 이 곡선에서 `0D`는 linear `0.001`, `0.6D`는 `0.18`, `3D`는 `0.882836683855`입니다.
 출력이 열린 구간 안에 있어 정상 범위의 검정과 흰색이 8-bit `0/255`로 바로 잘리지 않습니다.
 
-장면 히스토그램으로 노출을 자동 조정하는 식이 아니며,
-특정 필름이나 장비의 정확도를 뜻하지 않습니다.
+장면 히스토그램으로 노출을 자동 조정하는 식이 아니며, 특정 필름이나 장비의 정확도를 뜻하지
+않습니다.
 수식은 [고정 인화 응답](PRINT_RESPONSE.md)에 있습니다.
 
-`MainSyntheticIT8RoundTripTests` 는 264개 기준 패치를 역함수로 네거티브화한 뒤 전체 `MAIN`
-경로로 되돌립니다.
+`MainSyntheticIT8RoundTripTests`는 264개 기준 패치를 역함수로 네거티브화한 뒤 전체 `MAIN` 경로로
+되돌립니다.
 Lab D50/2°와 `DeltaE00`을 패치마다 검사합니다. 이는 `syntheticModel` 회귀입니다.
 
 ## NORITSU/FUJI 상대 스타일 회귀
@@ -167,8 +167,9 @@ swift run negaflow scanner-relative-it8-bench \
   --out /path/to/scanner-relative-it8-report.json
 ```
 
-보고서에는 패치별 RGB와 Lab, 기준 대비 `DeltaE00`, 타깃끼리의 상대 `DeltaE00`,
-잘림과 비유한값 표시를 넣습니다. 중립 계조의 단조성은 `A16...L16` 밀도열에서 봅니다.
+보고서에는 패치별 RGB와 Lab, 기준 대비 `DeltaE00`, 타깃끼리의 상대 `DeltaE00`, 잘림과 비유한값
+표시를 넣습니다.
+중립 계조의 단조성은 `A16...L16` 밀도열에서 봅니다.
 
 linear sRGB로 바꿨을 때 0...1 밖인 색은 합성 네거티브로 정확히 만들 수 없어 표시 가능한 범위로
 제한합니다.
@@ -179,8 +180,8 @@ linear sRGB로 바꿨을 때 0...1 밖인 색은 합성 네거티브로 정확�
 실제 장비 정확도에는 같은 물리 네거티브의 양쪽 장비 스캔과 별도 검증 자료가 필요합니다.
 
 기준 파일 머리말에서 D50/2°를 확인한 것은 아닙니다.
-Lab 값을 D50/2°로 읽는 벤치 자체의 계약이므로 `colorimetryInterpretationProvenance` 는
-`benchmarkContractNotVerifiedFromReferenceHeader` 입니다.
+Lab 값을 D50/2°로 읽는 벤치 자체의 계약이므로 `colorimetryInterpretationProvenance`는
+`benchmarkContractNotVerifiedFromReferenceHeader`입니다.
 
 `shoulder-print-response-v4` 이전 결과는 현재 알고리즘의 결과로 재사용하지 않습니다.
 

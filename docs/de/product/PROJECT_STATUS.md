@@ -2,8 +2,9 @@
 
 [Dokumentationsstart](../README.md)
 
-Dieses Dokument hält fest, was gebaut und was geprüft ist. Das README erklärt Produkt und Bedienung,
-die Dokumente unter docs tragen die genauen Spezifikationen und Entscheidungen.
+Dieses Dokument hält fest, was gebaut und was geprüft ist.
+Das README erklärt Produkt und Bedienung, die Dokumente unter docs tragen die genauen
+Spezifikationen und Entscheidungen.
 
 ## Grunddaten
 
@@ -43,13 +44,13 @@ die Dokumente unter docs tragen die genauen Spezifikationen und Entscheidungen.
 ## Katalog
 
 Der Hauptspeicher ist `library.sqlite`.
-Ein vorhandenes `library.json` wird schreibgeschützt geöffnet, auf Gesundheit geprüft,
-gesichert und in ein temporäres SQLite überführt.
+Ein vorhandenes `library.json` wird schreibgeschützt geöffnet, auf Gesundheit geprüft, gesichert und
+in ein temporäres SQLite überführt.
 Erst wenn Inhalt beider Kataloge und SQLite-Integrität zusammenpassen, wird umgeschaltet.
 
 Passt beim Fortsetzen unterbrochener Arbeit ein Beleg nicht, scheitert es im geschlossenen Zustand.
-JSON bleibt das übertragbare Austauschformat für Sicherung und Archiv,
-aber zwei Hauptspeicher laufen nie gleichzeitig.
+JSON bleibt das übertragbare Austauschformat für Sicherung und Archiv, aber zwei Hauptspeicher
+laufen nie gleichzeitig.
 
 Die Einzelheiten stehen in [Katalogspeicherung](../architecture/CATALOG_STORAGE.md).
 
@@ -58,8 +59,8 @@ Die Einzelheiten stehen in [Katalogspeicherung](../architecture/CATALOG_STORAGE.
 In diesem Repository liegen nur ein geräteunabhängiger Host für externe Prozesse und die
 JSON-Spezifikation.
 SANE-Umsetzung, Abhängigkeiten, Konfiguration und Auslieferungsdateien gehören nicht dazu.
-Dieser Code liegt im separaten GPL-Projekt [`negaflow-scanner-sane`](https:
-//github.com/habinsong/negaflow-scanner-sane).
+Dieser Code liegt im separaten GPL-Projekt
+[`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane).
 
 Die App zeigt nur, was das installierte Plugin gemeldet hat.
 Aus einem Modellnamen werden keine Fähigkeiten abgeleitet.
@@ -92,14 +93,15 @@ bash scripts/build-release.sh
 </details>
 
 Ein Lauf von `build-release.sh` baut die Apps für Apple Silicon (`arm64`) und Universal (`arm64`,
-`x86_64`) und schreibt ZIP, PKG, DMG, dSYM und die SHA-256-Liste. Lokal wird ad hoc signiert.
+`x86_64`) und schreibt ZIP, PKG, DMG, dSYM und die SHA-256-Liste.
+Lokal wird ad hoc signiert.
 Für die echte Auslieferung braucht es sowohl eine Developer-ID-Application- als auch eine
 Developer-ID-Installer-Signatur.
 
 Der manuelle Workflow `Distribution` nutzt die geschützte Developer ID und den App-Store-Connect-
 API-Schlüssel.
-Er schickt App-Archiv, DMG und PKG an Apple,
-heftet das Notarisierungsticket an und prüft danach Prüfsummen und Gatekeeper erneut.
+Er schickt App-Archiv, DMG und PKG an Apple, heftet das Notarisierungsticket an und prüft danach
+Prüfsummen und Gatekeeper erneut.
 Ohne echten Workflow-Lauf und Antwort von Apple wird nichts über externe Signatur und Notarisierung
 behauptet.
 
@@ -126,14 +128,14 @@ Für andere Macs sagen diese Werte nichts zu. Neue Messungen entstehen mit diese
 bash scripts/run-performance-suite.sh
 ```
 
-Die Grenzen für macOS 26 arm64 in `Config/performance-budget-v1.json` sind weite Obergrenzen,
-um große Rückschritte zu fangen.
+Die Grenzen für macOS 26 arm64 in `Config/performance-budget-v1.json` sind weite Obergrenzen, um
+große Rückschritte zu fangen.
 Sie einzuhalten heißt nicht, dass sich jede Verzögerung gut anfühlt.
 
 ## GrainMend-Messungen
 
-Das FILM-R-v2-Material ist über DOI, 44 Paare,
-437.570.872 Byte und die MD5-Angaben von Figshare festgelegt.
+Das FILM-R-v2-Material ist über DOI, 44 Paare, 437.570.872 Byte und die MD5-Angaben von Figshare
+festgelegt.
 
 Der automatische Pfad der Auslieferung läuft mit Empfindlichkeit 0.7 und einer Sicherheitslinie
 gegen Überdetektion.
@@ -147,9 +149,8 @@ Hier gegen die bisherige Regressionsbasis 3.0.
 | Schlechteste PSNR-Änderung | -18,952 dB | -1,338 dB |
 | Bilder besser / schlechter / gleich | 11 / 33 / 0 | 34 / 6 / 4 |
 
-Neben der beobachteten Regressionsprüfung gelten absolute Untergrenzen:
-mittlerer und medianer PSNR bei 0 dB oder besser,
-höchstens 10 verschlechterte Bilder und ein schlechtester Fall von
+Neben der beobachteten Regressionsprüfung gelten absolute Untergrenzen: mittlerer und medianer PSNR
+bei 0 dB oder besser, höchstens 10 verschlechterte Bilder und ein schlechtester Fall von
 -1,5 dB oder besser. Die automatische Sicherheitslinie stoppte die Reparatur bei 3 Bildern; in
 diesem Fall verweist die App auf Guided.
 
@@ -169,8 +170,8 @@ macht die Regressionsprüfung und lädt den Bericht hoch.
 - Leistung auf allen unterstützten Macs
 
 Das Endergebnis auf dem Bildschirm und die echte Hardware liegen beim Nutzer.
-Ein erfolgreicher Build ersetzt das nicht;
-die Ergebnisse gehören in die [Checkliste für echte Geräte](../validation/REAL_QA_CHECKLIST.md).
+Ein erfolgreicher Build ersetzt das nicht; die Ergebnisse gehören in die
+[Checkliste für echte Geräte](../validation/REAL_QA_CHECKLIST.md).
 
 ## Welches Dokument gilt wofür
 

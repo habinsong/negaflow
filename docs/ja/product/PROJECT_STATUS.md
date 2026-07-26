@@ -41,13 +41,14 @@ READMEは製品と使い方を説明し、docsの各ドキュメントが細か�
 
 ## カタログ
 
-主な保存先は`library.sqlite`です。既存の`library.json`は読み取り専用で開いて健全性を確認し、
-バックアップしてから一時SQLiteへ移します。
+主な保存先は`library.sqlite`です。
+既存の`library.json`は読み取り専用で開いて健全性を確認し、バックアップしてから一時SQLiteへ移しま
+す。
 2つのカタログの内容とSQLiteの整合性がどちらも合ったときだけ、主な保存先を切り替えます。
 
 途中の作業を続けるときに証拠が合わなければ、閉じた状態で失敗します。
-JSONは移動できるバックアップ・アーカイブの交換形式として残りますが、
-2つの主保存先を同時には使いません。
+JSONは移動できるバックアップ・アーカイブの交換形式として残りますが、2つの主保存先を同時には使い
+ません。
 
 詳しくは[カタログ保存構造](../architecture/CATALOG_STORAGE.md)にあります。
 
@@ -55,8 +56,8 @@ JSONは移動できるバックアップ・アーカイブの交換形式とし�
 
 このリポジトリにあるのは、装置に依存しない外部プロセスのホストとJSON規格だけです。
 SANEの実装、依存、設定、配布ファイルは入れません。
-そのコードは別のGPLプロジェクト [`negaflow-scanner-sane`](https:
-//github.com/habinsong/negaflow-scanner-sane)にあります。
+そのコードは別のGPLプロジェクト
+[`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane)にあります。
 
 アプリは、インストールしたプラグインが報告した機能だけを見せます。
 モデル名から機能を推測しません。
@@ -88,20 +89,20 @@ bash scripts/build-release.sh
 
 </details>
 
-`build-release.sh`を一度実行すると、 Apple Silicon(`arm64`)とUniversal(`arm64`、
-`x86_64`)のアプリをそれぞれビルドし、 ZIP、 PKG、 DMG、 dSYM、 SHA-256の一覧を作ります。
-ローカルでは一時的な署名を使い、
-実際の配布にはDeveloper ID ApplicationとDeveloper ID Installerの署名が両方必要です。
+`build-release.sh`を一度実行すると、Apple Silicon(`arm64`)とUniversal(`arm64`、`x86_64`)のアプリ
+をそれぞれビルドし、ZIP、PKG、DMG、dSYM、SHA-256の一覧を作ります。
+ローカルでは一時的な署名を使い、実際の配布にはDeveloper ID ApplicationとDeveloper ID Installerの
+署名が両方必要です。
 
 手動の`Distribution` workflowは、保護されたDeveloper IDとApp Store Connect APIキーを使います。
-アプリアーカイブ、 DMG、 PKGをAppleに送り、公証チケットを貼り付けてから、
-チェックサムとGatekeeper をもう一度確認します。
+アプリアーカイブ、DMG、PKGをAppleに送り、公証チケットを貼り付けてから、チェックサムとGatekeeper
+をもう一度確認します。
 実際のworkflowとAppleの応答がなければ、外部署名と公証に成功したとは言いません。
 
 ## 性能測定
 
-性能検査は、カタログ、ライブラリ検索、高解像度の調整、 GrainMendの領域処理、
-実際のピクセルのロールを対象にします。
+性能検査は、カタログ、ライブラリ検索、高解像度の調整、GrainMendの領域処理、実際のピクセルのロー
+ルを対象にします。
 
 あるMacでの最近のRelease測定:
 
@@ -121,8 +122,8 @@ bash scripts/build-release.sh
 bash scripts/run-performance-suite.sh
 ```
 
-`Config/performance-budget-v1.json`のmacOS 26 arm64の制限は、
-大きな退行を捕まえるための広い上限です。
+`Config/performance-budget-v1.json`のmacOS 26 arm64の制限は、大きな退行を捕まえるための広い上限
+です。
 通ったからといって、すべての遅延が快適だという意味ではありません。
 
 ## GrainMendの測定
@@ -139,15 +140,15 @@ FILM-R v2の資料は、DOI、44ペア、437,570,872バイト、FigshareのMD5�
 | 最低PSNR変化 | -18.952 dB | -1.338 dB |
 | 改善 / 悪化 / 同じ画像 | 11 / 33 / 0 | 34 / 6 / 4 |
 
-観測値の回帰検査とは別に、平均と中央のPSNRが0 dB以上、悪化10枚以下、
-最低-1.5 dB以上という絶対的な下限も検査します。
+観測値の回帰検査とは別に、平均と中央のPSNRが0 dB以上、悪化10枚以下、最低-1.5 dB以上という絶対的
+な下限も検査します。
 自動の安全線は3枚で復元を止め、その場合はガイドの使用を案内します。
 
 FILM-RはGrainMend RGBの自動経路だけを検証します。
 ハードウェアIRとの同等性や、実機スキャナーの RGB・IR整列の品質を主張する根拠にはなりません。
 
-手動の`GrainMend corpus` workflowは44ペアを取得し、 Releaseの既定経路を実行してから、
-回帰検査とレポートのアップロードを行います。
+手動の`GrainMend corpus` workflowは44ペアを取得し、Releaseの既定経路を実行してから、回帰検査とレ
+ポートのアップロードを行います。
 
 ## 自動検査で終わらない項目
 
@@ -158,7 +159,7 @@ FILM-RはGrainMend RGBの自動経路だけを検証します。
 - 対応するすべてのMacでの性能
 
 最終的な画面と実機の確認はユーザーが担当します。
-ビルド成功で代用せず、 [実機点検リスト](../validation/REAL_QA_CHECKLIST.md)に結果を残します。
+ビルド成功で代用せず、[実機点検リスト](../validation/REAL_QA_CHECKLIST.md)に結果を残します。
 
 ## どのドキュメントが基準か
 

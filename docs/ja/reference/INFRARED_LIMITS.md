@@ -35,8 +35,9 @@
 
 ## 整列検査
 
-`InfraredDefectRemoval`は、 IRの漏れ込みテクスチャとRGBの赤チャンネルを比べ、
-整数オフセットを探します。結果には`AlignmentDiagnostics`が付きます。
+`InfraredDefectRemoval`は、IRの漏れ込みテクスチャとRGBの赤チャンネルを比べ、整数オフセットを探し
+ます。
+結果には`AlignmentDiagnostics`が付きます。
 
 | 状態 | 意味 |
 |---|---|
@@ -46,7 +47,7 @@
 | `weakCorrelation` | 相関が基準を超えない |
 | `searchLimitReached` | 最適点が検索の境界に乗っている |
 
-後ろの3つを`(0,0)`で代替することはありません。 `alignmentUnreliable`エラーで止めます。
+後ろの3つを`(0,0)`で代替することはありません。`alignmentUnreliable`エラーで止めます。
 最適点が検索の境界に乗った場合は、オフセットの大きさに関係なく失敗にします。
 
 自動テストは、実機のRGB/IR整列やフィルムごとの結果の代わりにはなりません。

@@ -50,7 +50,7 @@
 검색 경계에 걸렸다면 오프셋의 크기와 상관없이 실패로 처리합니다.
 
 자동 테스트는 실제 장치의 RGB/IR 정렬과 필름별 결과를 대신하지 못합니다.
-실제 스캐너 확인은 [출시 전 실기기 점검표](../validation/REAL_QA_CHECKLIST.md) 의 IR 항목을
+실제 스캐너 확인은 [출시 전 실기기 점검표](../validation/REAL_QA_CHECKLIST.md)의 IR 항목을
 따릅니다.
 
 SANE 장치 제어와 캡처 코드는 별도 저장소 `negaflow-scanner-sane`에만 둡니다.

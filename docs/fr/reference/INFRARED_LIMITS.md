@@ -2,8 +2,9 @@
 
 [Accueil de la documentation](../README.md)
 
-Le nettoyage infrarouge lit l'image visible et l'image infrarouge séparément,
-puis les superpose pour trouver les défauts. Cette méthode ne convient pas à tous les films.
+Le nettoyage infrarouge lit l'image visible et l'image infrarouge séparément, puis les superpose
+pour trouver les défauts.
+Cette méthode ne convient pas à tous les films.
 
 - Les films couleur courants et les films noir et blanc chromogènes acceptent l'IR.
 - Les films noir et blanc ordinaires gardent leur argent, qui bloque l'IR et fausse la carte des défauts.
@@ -22,8 +23,8 @@ Justification :
 ## Où il s'applique automatiquement
 
 `FilmType` distingue seulement couleur et noir et blanc, négatif et positif.
-Rien n'y sépare un noir et blanc chromogène d'un argentique,
-ni une diapositive courante d'un Kodachrome.
+Rien n'y sépare un noir et blanc chromogène d'un argentique, ni une diapositive courante d'un
+Kodachrome.
 
 | Type de film | IR automatique | Pourquoi |
 |---|---|---|
@@ -51,13 +52,13 @@ Le résultat porte `AlignmentDiagnostics`.
 
 Les trois derniers ne sont pas remplacés par `(0,0)`.
 Le traitement s'arrête sur une erreur `alignmentUnreliable`.
-Si l'optimum tombe sur la limite de recherche,
-c'est un échec quelle que soit l'amplitude du décalage.
+Si l'optimum tombe sur la limite de recherche, c'est un échec quelle que soit l'amplitude du
+décalage.
 
 Les tests automatisés ne remplacent pas l'alignement RVB/IR sur un appareil réel ni les résultats
 film par film.
 Les contrôles sur scanner réel suivent les points IR de la
-[checklist QA sur matériel réel](../validation/REAL_QA_CHECKLIST.md) .
+[checklist QA sur matériel réel](../validation/REAL_QA_CHECKLIST.md).
 
 Le pilotage des périphériques SANE et le code de capture ne vivent que dans le dépôt séparé
-`negaflow-scanner-sane` .
+`negaflow-scanner-sane`.

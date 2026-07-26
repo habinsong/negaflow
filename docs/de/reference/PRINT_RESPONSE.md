@@ -11,9 +11,8 @@ Wo es liegt:
 
 ## Die Kurve
 
-Eine Filmkennlinie erklärt Belichtung gegen Dichte über Fuß,
-Geradenteil und Schulter. negaflow nähert die Schulter im Dichtebereich mit einer gestreckten
-Exponentialkurve an.
+Eine Filmkennlinie erklärt Belichtung gegen Dichte über Fuß, Geradenteil und Schulter. negaflow
+nähert die Schulter im Dichtebereich mit einer gestreckten Exponentialkurve an.
 
 ```math
 \begin{aligned}
@@ -31,8 +30,9 @@ d &= \frac{D}{d_{\max}} \\
 - `P`: lineare Ausgabehelligkeit
 
 Die Kurve steigt über den ganzen Bereich. Für `d ≥ 0` landet die Ausgabe in `[baseToe, ceiling)`.
-Werte unter null, etwa ein Hintergrundlicht heller als der Träger oder die Perforation,
-werden nicht auf null beschnitten. Sie laufen als endliche positive Werte weiter.
+Werte unter null, etwa ein Hintergrundlicht heller als der Träger oder die Perforation, werden nicht
+auf null beschnitten.
+Sie laufen als endliche positive Werte weiter.
 
 ```math
 y(-|d|) = 2\log_{10}(P_{\mathrm{toe}}) - y(|d|)
@@ -74,8 +74,9 @@ r &= r_{\mathrm{white}}^{1/s}
 ## Standard-Dichtebereich
 
 `normalRange` ist nicht die physikalische Maximaldichte des Films.
-Es ist der Bereich, den eine normal belichtete Szene nutzt. Er zählt vor allem,
-wenn der Träger nicht gemessen werden konnte oder der Szenenkontrast sehr gering ist.
+Es ist der Bereich, den eine normal belichtete Szene nutzt.
+Er zählt vor allem, wenn der Träger nicht gemessen werden konnte oder der Szenenkontrast sehr gering
+ist.
 
 ```math
 \begin{aligned}

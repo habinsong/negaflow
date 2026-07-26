@@ -3,8 +3,8 @@
 [Docs home](../README.md)
 
 Color accuracy is not passed by looking at a screen.
-An IT8 image and the reference file that belongs to its physical target are pinned as a pair,
-and every patch is written down as numbers.
+An IT8 image and the reference file that belongs to its physical target are pinned as a pair, and
+every patch is written down as numbers.
 
 > [!IMPORTANT]
 > Public IT8 material can confirm regressions in the checker and the color math. It cannot prove
@@ -25,8 +25,8 @@ If even one of them differs from the reference file header, nothing is evaluated
 IT8.7/1 and ISO 12641-1 transmissive targets are for positive transmissive originals.
 These results say nothing about the orange mask of color negative, dye interaction, C-41 variation,
 or NORITSU/FUJI output accuracy.
-Those claims need paired material of the same color negative run through both paths,
-plus a separate validation set.
+Those claims need paired material of the same color negative run through both paths, plus a separate
+validation set.
 
 ## Public regression material
 
@@ -94,18 +94,19 @@ For a real device measurement, the operator reads these off the target label and
 
 </details>
 
-`MANUFACTURER`, `MATERIAL`, `SERIAL`, and the batch header (one of `BATCH`, `BATCH_ID`,
-`PROD_DATE`) have to match the reference file character for character.
+`MANUFACTURER`, `MATERIAL`, `SERIAL`, and the batch header (one of `BATCH`, `BATCH_ID`, `PROD_DATE`)
+have to match the reference file character for character.
 The top-level `targetID` has to equal `serial`, and `batchID` has to equal `batchValue`.
 
 This record only shows that what the operator wrote and the reference file agree.
 It does not read the label from the image or independently certify the operator's input.
 When the details are missing, the nearest date or a generic reference file is not substituted.
 
-If the reference file carries illuminant or observer information,
-it is checked against the D50/2° contract. A contradiction stops the run.
-`measurement.renderingIntent` cannot pin the Core Image conversion directly today,
-so the report says `manifestDeclarationNotControlledByEvaluator`.
+If the reference file carries illuminant or observer information, it is checked against the D50/2°
+contract.
+A contradiction stops the run.
+`measurement.renderingIntent` cannot pin the Core Image conversion directly today, so the report
+says `manifestDeclarationNotControlledByEvaluator`.
 
 ## `PRINT` output
 
@@ -147,23 +148,22 @@ The coefficients are not stored presets; they are computed from these four ancho
 | Reflected light headroom | `0.90` |
 
 On this curve `0D` is linear `0.001`, `0.6D` is `0.18`, and `3D` is `0.882836683855`.
-The output stays inside an open interval,
-so black and white in the normal range do not clip straight to 8-bit `0/255`.
+The output stays inside an open interval, so black and white in the normal range do not clip
+straight to 8-bit `0/255`.
 
-It is not an exposure auto-adjustment from a scene histogram,
-and it does not stand for the accuracy of any particular film or machine.
+It is not an exposure auto-adjustment from a scene histogram, and it does not stand for the accuracy
+of any particular film or machine.
 The equations are in [fixed print response](PRINT_RESPONSE.md).
 
 `MainSyntheticIT8RoundTripTests` turns the 264 reference patches into negatives with the inverse
-function,
-then brings them back through the whole `MAIN` path.
+function, then brings them back through the whole `MAIN` path.
 Lab D50/2° and `DeltaE00` are checked per patch. This is a `syntheticModel` regression.
 
 ## NORITSU/FUJI relative style regression
 
 A reference file with 264 Lab D50 patches from `A1` to `L22` is pinned by SHA-256.
-Each patch becomes a synthetic negative, then the `MAIN`, `NORITSU`,
-and `FUJI` paths each run twice.
+Each patch becomes a synthetic negative, then the `MAIN`, `NORITSU`, and `FUJI` paths each run
+twice.
 
 ```bash
 swift run negaflow scanner-relative-it8-bench \
@@ -172,13 +172,12 @@ swift run negaflow scanner-relative-it8-bench \
   --out /path/to/scanner-relative-it8-report.json
 ```
 
-The report carries RGB and Lab per patch, `DeltaE00` against the reference,
-relative `DeltaE00` between targets, and flags for clipping and non-finite values.
+The report carries RGB and Lab per patch, `DeltaE00` against the reference, relative `DeltaE00`
+between targets, and flags for clipping and non-finite values.
 Monotonicity of the neutral ramp is read from the `A16...L16` density column.
 
 Colors that fall outside 0...1 once converted to linear sRGB cannot be built exactly as a synthetic
-negative,
-so they are limited to the displayable range.
+negative, so they are limited to the displayable range.
 Wide-range statistics are therefore observations, not a pass mark.
 
 The evidence grade is always `syntheticModel` and the decision is always `notEvaluated`.
@@ -187,8 +186,8 @@ Real machine accuracy needs scans of the same physical negative on both machines
 validation material.
 
 D50/2° was not confirmed from the reference file header.
-It is the bench's own contract for reading Lab as D50/2°,
-so `colorimetryInterpretationProvenance` is `benchmarkContractNotVerifiedFromReferenceHeader`.
+It is the bench's own contract for reading Lab as D50/2°, so `colorimetryInterpretationProvenance`
+is `benchmarkContractNotVerifiedFromReferenceHeader`.
 
 Results from before `shoulder-print-response-v4` are not reused as results of the current algorithm.
 

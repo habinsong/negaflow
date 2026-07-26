@@ -114,10 +114,10 @@ It confirms that every value is finite and that the sample counts are real.
 
 ### 6. JSON and hashes
 
-The final file carries the schema, ID, source counts, source paths, aggregate statistics,
-validation status, and `profileHash`.
-The checker verifies fields, counts, finite values, file name against ID, source counts,
-and the hash.
+The final file carries the schema, ID, source counts, source paths, aggregate statistics, validation
+status, and `profileHash`.
+The checker verifies fields, counts, finite values, file name against ID, source counts, and the
+hash.
 
 ## Shape of the JSON
 
@@ -163,7 +163,7 @@ and the hash.
 | `sceneBuckets` | Per-scene statistics and representative frames | Lets a person trace the source again |
 
 The brightness channel sharpening in the `HS` target is not a machine constant measured from
-`texture` .
+`texture`.
 It does not synthesize new grain either. `SP`, `MAIN`, and `PRINT` do not include that sharpening.
 
 ## Evidence status
@@ -175,8 +175,9 @@ It does not synthesize new grain either. `SP`, `MAIN`, and `PRINT` do not includ
 | `pairedSmoke` | Paired material confirms the processing path only | Not usable as quality evidence |
 | `pairedValidated` | Passed calibration and validation material plus regression checks | Automatic selection allowed if policy permits |
 
-All 15 today are `realOnly`. You can confirm they came from observations of real material,
-but not that they produce the same result as the machine.
+All 15 today are `realOnly`.
+You can confirm they came from observations of real material, but not that they produce the same
+result as the machine.
 
 Claiming machine accuracy needs more material.
 
@@ -193,8 +194,8 @@ Claiming machine accuracy needs more material.
 
 Nothing is selected automatically today from a model name or file information.
 You pick the `HS` or `SP` target and the profile yourself.
-Automatic matching is allowed only for `pairedValidated`,
-so it does not apply to the current bundle.
+Automatic matching is allowed only for `pairedValidated`, so it does not apply to the current
+bundle.
 
 ### The relative difference between two scanners
 
@@ -215,13 +216,13 @@ Matching roll names are not evidence that the exact same frames were paired.
 
 For black and white, the color components are dropped and only relative tone is used.
 For positive, the absolute brightness of one roll is not carried onto another photograph.
-That said, the base styles of `HS` and `SP` do apply to positives at half strength,
-so the result is not always the same as `MAIN`.
+That said, the base styles of `HS` and `SP` do apply to positives at half strength, so the result is
+not always the same as `MAIN`.
 
 ### Texture
 
-Without paired material from the same frame,
-`texture` is not used as a machine-specific sharpening or grain value.
+Without paired material from the same frame, `texture` is not used as a machine-specific sharpening
+or grain value.
 Focus, subject, JPEG processing, and the lab operator's choices are all mixed into those numbers.
 
 ## File integrity
@@ -269,8 +270,8 @@ python3 scripts/evaluate_profile_quality.py \
 ```
 
 The repository currently has no REAL/TARGET manifest or accepted baseline to back a release claim.
-The synthetic tests only confirm the failure conditions of the checking code;
-they do not prove profile accuracy.
+The synthetic tests only confirm the failure conditions of the checking code; they do not prove
+profile accuracy.
 
 ## References
 
@@ -278,8 +279,8 @@ they do not prove profile accuracy.
 - [darktable negadoctor](https://docs.darktable.org/usermanual/4.6/en/module-reference/processing-modules/negadoctor/)
 
 No profile numbers were taken from those sources.
-They were read as background for why film base, scene tone,
-and machine style have to be handled separately.
+They were read as background for why film base, scene tone, and machine style have to be handled
+separately.
 The JSON values come from material shot for this project and the analysis code in the repository.
 
 ## Code and related documents

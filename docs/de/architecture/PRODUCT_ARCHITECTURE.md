@@ -3,8 +3,9 @@
 [Dokumentationsstart](../README.md)
 
 negaflow ist eine macOS-App.
-Sie importieren oder scannen Filmbilder, danach folgen Umkehr, Entwicklung, GrainMend,
-Ausgabe und Aufbewahrung. Jede Bearbeitung wird getrennt vom Original abgelegt.
+Sie importieren oder scannen Filmbilder, danach folgen Umkehr, Entwicklung, GrainMend, Ausgabe und
+Aufbewahrung.
+Jede Bearbeitung wird getrennt vom Original abgelegt.
 
 > [!IMPORTANT]
 > Originale, Bearbeitungsverlauf, Caches und Ausgabedateien sind verschiedenes Material. Ein
@@ -67,8 +68,8 @@ Kein Scannertreiber. Es trägt den Vertrag, der ein externes Plugin anbindet.
 - Scan-Sitzungen und Auftragsverlauf
 - Der Demo-Scanner, den Sie selbst einschalten müssen
 
-Die SANE-Umsetzung liegt in einem eigenen GPL-Projekt, [`negaflow-scanner-sane`](https:
-//github.com/habinsong/negaflow-scanner-sane).
+Die SANE-Umsetzung liegt in einem eigenen GPL-Projekt,
+[`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane).
 App und Plugin sprechen ausschließlich über JSON und die CLI miteinander.
 
 ### `negaflowCLI`
@@ -138,13 +139,14 @@ Ein Dateipfad allein identifiziert kein Original.
 Aufbewahrt werden die Werte, die der aktuelle Vertrag braucht: Dateibeobachtungen, Bytezahl,
 Änderungszeit, SHA-256 und ein persistentes Bookmark.
 
-Wurde eine Datei verschoben, ändert sich der Pfad nur,
-wenn Sie sie selbst neu verknüpfen oder die Bookmark-Wiederherstellung gelingt.
+Wurde eine Datei verschoben, ändert sich der Pfad nur, wenn Sie sie selbst neu verknüpfen oder die
+Bookmark-Wiederherstellung gelingt.
 
 ## Katalog
 
-Der Hauptspeicher ist `library.sqlite`. Die alte `library.json` dient nur dazu,
-geprüftes älteres Material herüberzuholen oder eine übertragbare Sicherung zu schreiben.
+Der Hauptspeicher ist `library.sqlite`.
+Die alte `library.json` dient nur dazu, geprüftes älteres Material herüberzuholen oder eine
+übertragbare Sicherung zu schreiben.
 Die beiden Speicher werden nie gleichzeitig aktualisiert.
 
 Was in SQLite kommt:
@@ -201,8 +203,8 @@ Jedes Bild trägt:
 - Exportstatus
 
 Während des Einstellens dient eine Vorschau in niedriger Auflösung.
-Ein fertiges Ergebnis erreicht den Bildschirm nur,
-wenn Bild-ID und Bearbeitungsversion noch zur aktuellen Auswahl passen.
+Ein fertiges Ergebnis erreicht den Bildschirm nur, wenn Bild-ID und Bearbeitungsversion noch zur
+aktuellen Auswahl passen.
 
 Der Export speichert nicht die Vorschau-Bitmap vom Bildschirm.
 Er baut das Bild in voller Auflösung aus dem Original und den festgehaltenen Bearbeitungswerten neu
@@ -288,16 +290,17 @@ Was in `.negaflowarchive` kommt:
 - Der benötigte GrainMend-Verlauf
 - Die Beziehung zwischen virtuellen Kopien und dem geteilten Original
 
-Miniaturen, Vorschauen, GrainMend-Caches und exportierte Dateien lassen sich neu erzeugen,
-also bleiben sie draußen. Verwendet wird die BagIt-Struktur nach RFC 8493 mit einer SHA-256-Liste,
-und jede Datei und jede Beziehung wird geprüft, bevor das Paket an seinen endgültigen Ort wandert.
+Miniaturen, Vorschauen, GrainMend-Caches und exportierte Dateien lassen sich neu erzeugen, also
+bleiben sie draußen.
+Verwendet wird die BagIt-Struktur nach RFC 8493 mit einer SHA-256-Liste, und jede Datei und jede
+Beziehung wird geprüft, bevor das Paket an seinen endgültigen Ort wandert.
 
 - [Bibliotheksarchiv](LIBRARY_ARCHIVE.md)
 - [RFC 8493](https://www.rfc-editor.org/info/rfc8493/)
 - [PREMIS](https://www.loc.gov/standards/premis/)
 
-Langfristige Aufbewahrung braucht zusätzlich ein anderes Medium,
-eine Kopie an einem anderen Ort und regelmäßige Hash-Prüfungen.
+Langfristige Aufbewahrung braucht zusätzlich ein anderes Medium, eine Kopie an einem anderen Ort und
+regelmäßige Hash-Prüfungen.
 
 ## Sicherheit der Scanner-Plugins
 
@@ -312,13 +315,12 @@ Wird ein Plugin gefunden, wird dies geprüft.
 Hat sich die Datei geändert, wird die frühere Freigabe nicht weiterverwendet.
 
 Protokoll v2 nutzt eine Anfrage-ID und eine Folgenummer und verlangt genau ein Endergebnis.
-Die Ausgabegröße hat eine Obergrenze,
-und nach Zeitüberschreitung oder Abbruch werden Prozess und Pipes aufgeräumt.
+Die Ausgabegröße hat eine Obergrenze, und nach Zeitüberschreitung oder Abbruch werden Prozess und
+Pipes aufgeräumt.
 
 Ein Plugin legt nie selbst eine Datei am endgültigen Ort offen.
-Die App gibt ihm einen temporären Ort, prüft Format, Größe,
-ID und die tatsächlich angewandten Einstellungen und verschiebt die Datei dann in den Speicher der
-App.
+Die App gibt ihm einen temporären Ort, prüft Format, Größe, ID und die tatsächlich angewandten
+Einstellungen und verschiebt die Datei dann in den Speicher der App.
 
 Der vollständige Vertrag steht in [Scanner-Plugin-Struktur](SCANNER_PLUGINS.md).
 

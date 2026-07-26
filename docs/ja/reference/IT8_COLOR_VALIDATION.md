@@ -3,8 +3,8 @@
 [ドキュメントホーム](../README.md)
 
 画面を見て色の正確さを合格にすることはしません。
-IT8の画像と、その物理ターゲットに対応する基準ファイルを1組で固定し、
-パッチごとに数値を記録します。
+IT8の画像と、その物理ターゲットに対応する基準ファイルを1組で固定し、パッチごとに数値を記録します
+。
 
 > [!IMPORTANT]
 > 公開のIT8資料で確認できるのは、検査器と色計算の退行までです。実機のスキャナーやカラーネガの
@@ -23,8 +23,8 @@ IT8の画像と、その物理ターゲットに対応する基準ファイル�
 基準ファイルの見出しと1つでも違えば評価しません。
 
 IT8.7/1とISO 12641-1の透過ターゲットは、ポジ透過原稿向けです。
-この結果からカラーネガのオレンジマスク、色素の干渉、 C-41のばらつき、
-NORITSU/FUJIの出力の正確さを語ることはできません。
+この結果からカラーネガのオレンジマスク、色素の干渉、C-41のばらつき、NORITSU/FUJIの出力の正確さを
+語ることはできません。
 それを言うには、同じカラーネガを両方の経路で処理したペア資料と、別の検証一式が必要です。
 
 ## 公開されている回帰検査の資料
@@ -42,7 +42,7 @@ FADGI/OpenDICEの次の2ファイルを1組で使います。
   - 16列: density
 
 再配布の権利を確認できていないため、ファイルはリポジトリにもアプリにも入れません。
-ユーザーが自分で受け取ったファイルを [例の目録](../../reference/IT8_FADGI_OPENDICE.example.json)
+ユーザーが自分で受け取ったファイルを[例の目録](../../reference/IT8_FADGI_OPENDICE.example.json)
 に結び付けます。
 この例の等級は`algorithmRegression`です。
 名前だけ`deviceCharacterization`に変えると、検査器が拒否します。
@@ -93,8 +93,8 @@ swift run negaflow it8-bench docs/reference/IT8_FADGI_OPENDICE.example.json \
 
 </details>
 
-`MANUFACTURER`、 `MATERIAL`、 `SERIAL`、バッチの見出し(`BATCH`、 `BATCH_ID`、
-`PROD_DATE`のいずれか) が、基準ファイルと文字まで同じである必要があります。
+`MANUFACTURER`、`MATERIAL`、`SERIAL`、バッチの見出し(`BATCH`、`BATCH_ID`、`PROD_DATE`のいずれか)
+が、基準ファイルと文字まで同じである必要があります。
 最上位の`targetID`は`serial`と、`batchID`は `batchValue`と一致していなければなりません。
 
 この記録が示すのは、作業者が書いた値と基準ファイルが合っていることだけです。
@@ -103,14 +103,14 @@ swift run negaflow it8-bench docs/reference/IT8_FADGI_OPENDICE.example.json \
 
 基準ファイルに照明や観察者の情報があれば、D50/2°の契約と合うかを確認します。
 矛盾すれば中断します。
-`measurement.renderingIntent`は今のところCore Imageの変換を直接固定できないので、
-レポートには`manifestDeclarationNotControlledByEvaluator`と残します。
+`measurement.renderingIntent`は今のところCore Imageの変換を直接固定できないので、レポートには
+`manifestDeclarationNotControlledByEvaluator`と残します。
 
 ## `PRINT`出力
 
-IT8.7/1は入力装置向けです。プリンター出力には、
-`printer + paper + ink/chemistry + driver/process condition` の組み合わせを実際に測って作った
-RGB の printer ICC が必要です。
+IT8.7/1は入力装置向けです。
+プリンター出力には、`printer + paper + ink/chemistry + driver/process condition`の組み合わせを実
+際に測って作った RGBのprinter ICCが必要です。
 
 検査と適用の順序:
 
@@ -121,9 +121,8 @@ RGB の printer ICC が必要です。
 5. `rawScanTIFF`と`-main-flat`には適用しません。
 6. プロファイルがない、または違うときは、一時出力の前に失敗させます。sRGBで代用しません。
 
-今のCore ImageとColorSyncの経路が、
-レンダリングインテントとblack-point compensationをすべての macOSでビット単位に固定する、
-とは主張しません。
+今のCore ImageとColorSyncの経路が、レンダリングインテントとblack-point compensationをすべての
+macOSでビット単位に固定する、とは主張しません。
 
 ## `MAIN`の合成パッチ回帰
 
@@ -149,13 +148,13 @@ y_{\mathrm{ceil}} -
 この曲線では`0D`がlinear `0.001`、`0.6D`が`0.18`、`3D`が`0.882836683855`です。
 出力が開いた区間に入るので、通常の範囲の黒と白が8-bitの`0/255`にそのまま張り付きません。
 
-場面のヒストグラムから露出を自動調整する式ではなく、
-特定のフィルムや機材の正確さを表すものでもありません。
+場面のヒストグラムから露出を自動調整する式ではなく、特定のフィルムや機材の正確さを表すものでもあ
+りません。
 式は[固定プリント応答](PRINT_RESPONSE.md)にあります。
 
-`MainSyntheticIT8RoundTripTests`は、 264個の基準パッチを逆関数でネガにしてから、
-`MAIN`の経路全体で戻します。 Lab D50/2°と`DeltaE00`をパッチごとに検査します。
-これは`syntheticModel`の回帰です。
+`MainSyntheticIT8RoundTripTests`は、264個の基準パッチを逆関数でネガにしてから、`MAIN`の経路全体
+で戻します。
+Lab D50/2°と`DeltaE00`をパッチごとに検査します。これは`syntheticModel`の回帰です。
 
 ## NORITSU/FUJIの相対スタイル回帰
 
@@ -169,19 +168,21 @@ swift run negaflow scanner-relative-it8-bench \
   --out /path/to/scanner-relative-it8-report.json
 ```
 
-レポートには、パッチごとのRGBとLab、基準に対する`DeltaE00`、ターゲット同士の相対`DeltaE00`、
-クリップと非有限値の表示を入れます。中立階調の単調性は`A16...L16`の濃度列で見ます。
+レポートには、パッチごとのRGBとLab、基準に対する`DeltaE00`、ターゲット同士の相対`DeltaE00`、クリ
+ップと非有限値の表示を入れます。
+中立階調の単調性は`A16...L16`の濃度列で見ます。
 
-linear sRGBに変えたときに0...1の外へ出る色は、合成ネガとして正確に作れないので、
-表示できる範囲に制限します。したがって広い範囲の統計は観測値であって、合格の基準ではありません。
+linear sRGBに変えたときに0...1の外へ出る色は、合成ネガとして正確に作れないので、表示できる範囲に
+制限します。
+したがって広い範囲の統計は観測値であって、合格の基準ではありません。
 
 証拠等級は常に`syntheticModel`、判定は常に`notEvaluated`です。
 プロファイルの目録や各ファイルの SHA-256が1つでも違えば中断します。
 実機の正確さには、同じ物理ネガを両方の機材でスキャンした資料と、別の検証資料が要ります。
 
 基準ファイルの見出しでD50/2°を確認したわけではありません。
-LabをD50/2°として読むのはベンチ自身の契約なので、
-`colorimetryInterpretationProvenance`は `benchmarkContractNotVerifiedFromReferenceHeader`です。
+LabをD50/2°として読むのはベンチ自身の契約なので、`colorimetryInterpretationProvenance`は
+`benchmarkContractNotVerifiedFromReferenceHeader`です。
 
 `shoulder-print-response-v4`より前の結果を、今のアルゴリズムの結果として使い回すことはしません。
 

@@ -3,8 +3,7 @@
 [Accueil de la documentation](../README.md)
 
 C'est le document de référence pour ce qui est fait et ce qui a été vérifié. Le README explique le
-produit et son usage ;
-les documents de docs portent les spécifications et les décisions détaillées.
+produit et son usage ; les documents de docs portent les spécifications et les décisions détaillées.
 
 ## Informations de base
 
@@ -44,24 +43,24 @@ les documents de docs portent les spécifications et les décisions détaillées
 ## Catalogue
 
 Le stockage principal est `library.sqlite`.
-Un `library.json` existant est ouvert en lecture seule, contrôlé, sauvegardé,
-puis transféré vers un SQLite temporaire.
+Un `library.json` existant est ouvert en lecture seule, contrôlé, sauvegardé, puis transféré vers un
+SQLite temporaire.
 Il ne devient stockage principal que si le contenu des deux catalogues et l'intégrité SQLite
 concordent.
 
 À la reprise d'un travail interrompu, des preuves discordantes font échouer en position fermée.
-Le JSON reste le format d'échange transférable pour sauvegarde et archive,
-mais deux stockages principaux ne sont jamais utilisés en même temps.
+Le JSON reste le format d'échange transférable pour sauvegarde et archive, mais deux stockages
+principaux ne sont jamais utilisés en même temps.
 
 Le détail est dans [stockage du catalogue](../architecture/CATALOG_STORAGE.md).
 
 ## Scanners
 
 Ce dépôt contient un hôte de processus externe indépendant des appareils et la spécification JSON.
-L'implémentation SANE, ses dépendances,
-sa configuration et ses fichiers de distribution n'y sont pas.
-Ce code vit dans le projet GPL séparé [`negaflow-scanner-sane`](https:
-//github.com/habinsong/negaflow-scanner-sane).
+L'implémentation SANE, ses dépendances, sa configuration et ses fichiers de distribution n'y sont
+pas.
+Ce code vit dans le projet GPL séparé
+[`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane).
 
 L'application n'affiche que ce que le plugin installé a signalé. Elle ne devine pas de capacités
 d'après un nom de modèle.
@@ -94,21 +93,21 @@ bash scripts/build-release.sh
 </details>
 
 Un seul passage de `build-release.sh` construit les applications Apple Silicon (`arm64`) et
-Universal (`arm64`,
-`x86_64`), puis écrit ZIP, PKG, DMG, dSYM et la liste SHA-256. En local, la signature est ad-hoc.
+Universal (`arm64`, `x86_64`), puis écrit ZIP, PKG, DMG, dSYM et la liste SHA-256.
+En local, la signature est ad-hoc.
 Une vraie publication demande une signature Developer ID Application et une signature Developer ID
 Installer.
 
 Le workflow manuel `Distribution` utilise le Developer ID protégé et la clé d'API App Store Connect.
 Il envoie l'archive de l'application, le DMG et le PKG à Apple, agrafe le ticket de notarisation,
 puis revérifie les sommes de contrôle et Gatekeeper.
-Sans exécution réelle du workflow et réponse d'Apple,
-rien n'est affirmé sur la signature externe et la notarisation.
+Sans exécution réelle du workflow et réponse d'Apple, rien n'est affirmé sur la signature externe et
+la notarisation.
 
 ## Mesures de performance
 
-Les contrôles de performance couvrent le catalogue, la recherche dans la bibliothèque,
-les réglages en haute résolution, le travail par zone de GrainMend et un film de pixels réels.
+Les contrôles de performance couvrent le catalogue, la recherche dans la bibliothèque, les réglages
+en haute résolution, le travail par zone de GrainMend et un film de pixels réels.
 
 Mesures Release récentes sur un Mac :
 
@@ -129,14 +128,14 @@ De nouvelles mesures viennent de cette commande.
 bash scripts/run-performance-suite.sh
 ```
 
-Les limites macOS 26 arm64 de `Config/performance-budget-v1.json` sont des plafonds larges,
-faits pour attraper les grosses régressions.
+Les limites macOS 26 arm64 de `Config/performance-budget-v1.json` sont des plafonds larges, faits
+pour attraper les grosses régressions.
 Les respecter ne veut pas dire que chaque latence est agréable à l'usage.
 
 ## Mesures GrainMend
 
-Le matériel FILM-R v2 est figé par DOI, 44 paires,
-437 570 872 octets et les informations MD5 de Figshare.
+Le matériel FILM-R v2 est figé par DOI, 44 paires, 437 570 872 octets et les informations MD5 de
+Figshare.
 
 Le chemin automatique de la version publiée tourne à la sensibilité 0.7 avec une limite de sécurité
 contre la surdétection.
@@ -150,18 +149,17 @@ Voici la comparaison avec l'ancienne référence de régression à 3.0.
 | Pire variation de PSNR | -18,952 dB | -1,338 dB |
 | Images améliorées / dégradées / identiques | 11 / 33 / 0 | 34 / 6 / 4 |
 
-En plus du contrôle de régression observé, des planchers absolus s'appliquent :
-PSNR moyen et médian à 0 dB ou mieux, au plus 10 images dégradées, et un pire cas à -1,
-5 dB ou mieux. La limite de sécurité automatique a stoppé la réparation sur 3 images,
-et l'application oriente alors vers le mode Guidé.
+En plus du contrôle de régression observé, des planchers absolus s'appliquent : PSNR moyen et médian
+à 0 dB ou mieux, au plus 10 images dégradées, et un pire cas à -1,5 dB ou mieux.
+La limite de sécurité automatique a stoppé la réparation sur 3 images, et l'application oriente
+alors vers le mode Guidé.
 
 FILM-R valide le chemin automatique de GrainMend RGB, rien d'autre.
 Ce n'est pas une base pour revendiquer une équivalence avec l'IR matériel ni la qualité d'alignement
 RVB/IR d'un scanner réel.
 
-Le workflow manuel `GrainMend corpus` récupère les 44 paires,
-exécute le chemin par défaut en Release,
-puis fait le contrôle de régression et téléverse le rapport.
+Le workflow manuel `GrainMend corpus` récupère les 44 paires, exécute le chemin par défaut en
+Release, puis fait le contrôle de régression et téléverse le rapport.
 
 ## Ce que les contrôles automatiques ne règlent pas
 
@@ -171,8 +169,9 @@ puis fait le contrôle de régression et téléverse le rapport.
 - Developer ID, notarisation, Gatekeeper, installation sur un Mac vierge
 - Performance sur tous les Mac pris en charge
 
-Le rendu final et le matériel réel relèvent de l'utilisateur. Un build réussi ne les remplace pas ;
-les résultats vont dans la [checklist QA sur matériel réel](../validation/REAL_QA_CHECKLIST.md).
+Le rendu final et le matériel réel relèvent de l'utilisateur.
+Un build réussi ne les remplace pas ; les résultats vont dans la
+[checklist QA sur matériel réel](../validation/REAL_QA_CHECKLIST.md).
 
 ## Quel document fait référence
 

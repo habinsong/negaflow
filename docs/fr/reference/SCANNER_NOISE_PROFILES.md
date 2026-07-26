@@ -33,8 +33,8 @@ Seules les idées de mesure répétée et de variance par signal sont reprises.
 - Multi-exposition activée ou non
 
 Les valeurs d'un modèle voisin ou d'une autre résolution ne sont pas empruntées.
-Si plusieurs profils automatiques correspondent exactement,
-l'opération échoue au lieu d'en choisir un.
+Si plusieurs profils automatiques correspondent exactement, l'opération échoue au lieu d'en choisir
+un.
 
 À partir d'au moins trois numérisations RVB linéaires de la même scène, on ajuste ceci par canal.
 
@@ -62,20 +62,20 @@ Ce n'est pas un seuil de qualité.
 | `holdoutValidated` | Intensité vérifiée sur un matériel de validation distinct | Seulement en correspondance exacte |
 
 L'usage automatique demande exactement un profil `holdoutValidated` correspondant.
-Les SHA-256 des matériels de calibration et de validation,
-ainsi que les contrôles de structure de fichier, doivent passer aussi.
+Les SHA-256 des matériels de calibration et de validation, ainsi que les contrôles de structure de
+fichier, doivent passer aussi.
 `draft` et `measured` ne peuvent pas modifier les réglages généraux existants.
 
 ## Où on en est
 
 Les profils colorimétriques NORITSU et SP-3000 du dépôt portent des valeurs `texture` issues de
 scènes réelles.
-Ces valeurs mêlent sujet, mise au point et grain du film :
-elles ne servent pas comme données de bruit de capteur.
+Ces valeurs mêlent sujet, mise au point et grain du film : elles ne servent pas comme données de
+bruit de capteur.
 
 Les mires plates répétées et un matériel de validation distinct n'existent pas encore.
-Aucun profil de bruit validé n'est fourni,
-et le chemin automatique utilise les réglages généraux existants.
+Aucun profil de bruit validé n'est fourni, et le chemin automatique utilise les réglages généraux
+existants.
 
 Ajouter un vrai profil demande tout ceci.
 

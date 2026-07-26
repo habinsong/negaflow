@@ -95,8 +95,8 @@ The plugin runs as its own process.
 
 The older compatibility spec.
 Requests and NDJSON have no `protocolVersion`, `requestID`, or `sequence`.
-It cannot report the settings that were actually applied,
-so the result is recorded as `.unknownLegacy(protocolVersion: 1)`.
+It cannot report the settings that were actually applied, so the result is recorded as
+`.unknownLegacy(protocolVersion: 1)`.
 Request values are not copied over as if they had been verified.
 
 ### Version 2
@@ -118,10 +118,10 @@ To stop a wrong reconnection to another model on the same backend, the app passe
 `vendor`, and `model` from the last `detect` back in as optional stdin JSON for `capabilities`.
 Existing plugins can ignore this input.
 A plugin whose device address can change should tie that identity into the capability snapshot and
-check it again on the next `scan` .
+check it again on the next `scan`.
 
-Every NDJSON event repeats the same version and request ID,
-and carries a `sequence` of zero or more that is larger than the one before.
+Every NDJSON event repeats the same version and request ID, and carries a `sequence` of zero or more
+that is larger than the one before.
 Only `progress`, `result`, and `error` are allowed.
 
 `result` and `error` are final events. Anything after them fails.
@@ -152,15 +152,16 @@ A v2 `result` must carry `appliedOptions`.
 Those last three adjustments need their keys present even when the value is `null`.
 
 `resolutionDPI: 0` means preview. A preview that is not 0, or a full scan that is 0, is refused.
-Unknown values, a different device, and a resolution, bit depth,
-or IR state that disagrees between the result header and `appliedOptions` are refused as well.
+Unknown values, a different device, and a resolution, bit depth, or IR state that disagrees between
+the result header and `appliedOptions` are refused as well.
 
 Once the checks pass, the app records its own scanner ID and request ID instead of the plugin ID,
-and keeps the final output path. Only then is it marked `.verified(options)`.
+and keeps the final output path.
+Only then is it marked `.verified(options)`.
 
 `ScanResult.resolution` and `bitDepth` may fall back to the requested values in v1.
-The fields that show the origin, `reportedResolution` and `reportedBitDepth`,
-take only correct values the result reported itself.
+The fields that show the origin, `reportedResolution` and `reportedBitDepth`, take only correct
+values the result reported itself.
 
 ## Positioned flatbed scan area
 
@@ -185,13 +186,13 @@ Going over the cap ends the process and fails.
 During cleanup, only the bytes that already arrived are read.
 Even if a child process inherited the pipe, nothing waits for EOF.
 
-`cancelScan()` returns after the plugin has ended, the pipe handlers are closed,
-and the slot for the next job is free.
+`cancelScan()` returns after the plugin has ended, the pipe handlers are closed, and the slot for
+the next job is free.
 
 ## Publishing the scan file
 
-The plugin writes the source image to exactly the `outputPath` the app gave it,
-and returns the same path in the result.
+The plugin writes the source image to exactly the `outputPath` the app gave it, and returns the same
+path in the result.
 That path is a temporary location on the same disk as the final folder.
 
 ```mermaid
@@ -219,18 +220,19 @@ The app confirms:
 - The expected format and pixel size
 - The same path in the request and the result
 
-Only then does it move to the final location. On cancel, timeout, wrong output, or plugin failure,
-the temporary folder is deleted and no partial scan is published.
+Only then does it move to the final location.
+On cancel, timeout, wrong output, or plugin failure, the temporary folder is deleted and no partial
+scan is published.
 
 A v2 IR file also has to sit inside the temporary folder the app gave.
-File type, readability, and pixel size are checked. v1 can take an external IR path,
-for compatibility with plugins already in the field.
+File type, readability, and pixel size are checked. v1 can take an external IR path, for
+compatibility with plugins already in the field.
 
 ## The SANE boundary
 
-The SANE implementation, its dependencies, configuration, device-specific processing, tests,
-and release documentation all live in the separate [`negaflow-scanner-sane`](https:
-//github.com/habinsong/negaflow-scanner-sane) repository.
+The SANE implementation, its dependencies, configuration, device-specific processing, tests, and
+release documentation all live in the separate
+[`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane) repository.
 
 This repository documents and checks the device-independent external process spec only.
 Anyone who just imports image files does not need a scanner plugin.
@@ -238,8 +240,8 @@ Anyone who just imports image files does not need a scanner plugin.
 The negaflow app does not link the SANE implementation or put it in the app distribution.
 The plugin has its own repository, executable, source distribution, and GPL license.
 This document records the structure; it does not settle whether something is a derivative work.
-Before an actual release,
-the files in both artifacts and the communication contract are checked again.
+Before an actual release, the files in both artifacts and the communication contract are checked
+again.
 
 ## Checks
 
@@ -252,5 +254,5 @@ The app tests run a fake external plugin as a real process and confirm:
 - The final result
 - Cleanup after cancel and failure
 
-The SANE implementation is checked separately,
-in the plugin repository's SwiftPM tests and Release build.
+The SANE implementation is checked separately, in the plugin repository's SwiftPM tests and Release
+build.

@@ -37,11 +37,11 @@ flowchart LR
 ```
 
 L'écran ne voit que `ScannerBackend`.
-L'identifiant d'appareil d'un plugin apparaît dans l'application comme `plugin: <pluginId>:
-<deviceId>`.
+L'identifiant d'appareil d'un plugin apparaît dans l'application comme
+`plugin:<pluginId>:<deviceId>`.
 
-Au lancement du plugin, `plugin: <pluginId>:
-` est retiré et seul l'identifiant d'appareil propre au plugin est envoyé.
+Au lancement du plugin, `plugin:<pluginId>:` est retiré et seul l'identifiant d'appareil propre au
+plugin est envoyé.
 
 ## Trouver les plugins
 
@@ -96,9 +96,10 @@ Le plugin tourne dans son propre processus.
 
 ### Version 1
 
-L'ancienne spécification de compatibilité. Les requêtes et le NDJSON n'ont ni `protocolVersion`,
-ni `requestID`, ni `sequence`. Elle ne peut pas signaler les réglages réellement appliqués,
-donc le résultat est consigné comme `.unknownLegacy(protocolVersion: 1)`.
+L'ancienne spécification de compatibilité. Les requêtes et le NDJSON n'ont ni `protocolVersion`, ni
+`requestID`, ni `sequence`.
+Elle ne peut pas signaler les réglages réellement appliqués, donc le résultat est consigné comme
+`.unknownLegacy(protocolVersion: 1)`.
 Les valeurs demandées ne sont pas recopiées comme si elles avaient été vérifiées.
 
 ### Version 2
@@ -111,20 +112,19 @@ Ce qui entre dans une requête :
 - Un `requestID` UUID créé par l'application
 
 Une réponse `capabilities` peut renvoyer le champ facultatif `capabilityToken`.
-L'application ne l'interprète pas :
-elle le transmet tel quel à la prochaine requête `scan` v2 du même appareil, et nulle part ailleurs.
+L'application ne l'interprète pas : elle le transmet tel quel à la prochaine requête `scan` v2 du
+même appareil, et nulle part ailleurs.
 Il n'entre pas dans les requêtes v1, et les jetons ne se mélangent jamais entre appareils.
 C'est au plugin de contrôler le format et la validité du jeton.
 
-Pour éviter une reconnexion erronée à un autre modèle du même backend,
-l'application renvoie les `deviceID`,
-`vendor` et `model` du dernier `detect` en JSON facultatif sur stdin de `capabilities`.
+Pour éviter une reconnexion erronée à un autre modèle du même backend, l'application renvoie les
+`deviceID`, `vendor` et `model` du dernier `detect` en JSON facultatif sur stdin de `capabilities`.
 Les plugins existants peuvent ignorer cette entrée.
 Un plugin dont l'adresse d'appareil peut changer devrait lier cette identité à l'instantané de
 capacités et la revérifier au `scan` suivant.
 
-Chaque événement NDJSON répète la même version et le même identifiant de requête,
-et porte une `sequence` supérieure ou égale à zéro, plus grande que la précédente.
+Chaque événement NDJSON répète la même version et le même identifiant de requête, et porte une
+`sequence` supérieure ou égale à zéro, plus grande que la précédente.
 Seuls `progress`, `result` et `error` sont admis.
 
 `result` et `error` sont des événements finaux. Tout ce qui suit fait échouer.
@@ -140,8 +140,8 @@ Tous ces cas échouent en position fermée.
 - De la sortie après l'événement final
 - De l'UTF-8 invalide
 
-Une violation de la spécification v2 termine le plugin tout de suite,
-sans attendre la limite de temps habituelle.
+Une violation de la spécification v2 termine le plugin tout de suite, sans attendre la limite de
+temps habituelle.
 
 ### Réglages réellement appliqués
 
@@ -156,19 +156,17 @@ Un `result` v2 doit porter `appliedOptions`.
 Ces trois derniers réglages doivent avoir leur clé présente même à `null`.
 
 `resolutionDPI: 0` signifie aperçu.
-Un aperçu différent de 0, ou un scan complet à 0, est refusé. Les valeurs inconnues,
-un autre appareil, et une résolution,
-une profondeur de bits ou un état IR qui divergent entre l'en-tête du résultat et `appliedOptions`
-sont refusés aussi.
+Un aperçu différent de 0, ou un scan complet à 0, est refusé. Les valeurs inconnues, un autre
+appareil, et une résolution, une profondeur de bits ou un état IR qui divergent entre l'en-tête du
+résultat et `appliedOptions` sont refusés aussi.
 
-Une fois les contrôles passés,
-l'application consigne son propre identifiant de scanner et l'identifiant de requête à la place de
-celui du plugin,
-et garde le chemin de sortie final. C'est seulement là qu'elle marque `.verified(options)`.
+Une fois les contrôles passés, l'application consigne son propre identifiant de scanner et
+l'identifiant de requête à la place de celui du plugin, et garde le chemin de sortie final.
+C'est seulement là qu'elle marque `.verified(options)`.
 
 `ScanResult.resolution` et `bitDepth` peuvent retomber sur les valeurs demandées en v1.
-Les champs qui indiquent l'origine, `reportedResolution` et `reportedBitDepth`,
-ne reçoivent que des valeurs correctes signalées par le résultat lui-même.
+Les champs qui indiquent l'origine, `reportedResolution` et `reportedBitDepth`, ne reçoivent que des
+valeurs correctes signalées par le résultat lui-même.
 
 ## Zone de scan positionnée à plat
 
@@ -193,8 +191,8 @@ Au-delà du plafond, le processus est terminé et l'opération échoue.
 Au nettoyage, seuls les octets déjà arrivés sont lus.
 Même si un processus enfant a hérité du tube, rien n'attend l'EOF.
 
-`cancelScan()` ne revient qu'une fois le plugin terminé,
-les gestionnaires de tubes fermés et la place libérée pour la tâche suivante.
+`cancelScan()` ne revient qu'une fois le plugin terminé, les gestionnaires de tubes fermés et la
+place libérée pour la tâche suivante.
 
 ## Publication du fichier de scan
 
@@ -228,8 +226,8 @@ L'application vérifie :
 - Le même chemin dans la requête et dans le résultat
 
 Le déplacement vers l'emplacement final n'a lieu qu'ensuite.
-En cas d'annulation, d'expiration, de sortie incorrecte ou d'échec du plugin,
-le dossier temporaire est supprimé et aucun scan partiel n'est publié.
+En cas d'annulation, d'expiration, de sortie incorrecte ou d'échec du plugin, le dossier temporaire
+est supprimé et aucun scan partiel n'est publié.
 
 Un fichier IR v2 doit lui aussi se trouver dans le dossier temporaire fourni.
 Type de fichier, lecture et taille en pixels sont contrôlés.
@@ -237,10 +235,9 @@ La v1 peut accepter un chemin IR externe, pour rester compatible avec les plugin
 
 ## La frontière SANE
 
-L'implémentation SANE, ses dépendances, sa configuration, le traitement propre aux appareils,
-les tests et la documentation de distribution vivent tous dans le dépôt séparé
-[`negaflow-scanner-sane`](https:
-//github.com/habinsong/negaflow-scanner-sane).
+L'implémentation SANE, ses dépendances, sa configuration, le traitement propre aux appareils, les
+tests et la documentation de distribution vivent tous dans le dépôt séparé
+[`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane).
 
 Ce dépôt documente et contrôle uniquement la spécification de processus externe indépendante des
 appareils.
@@ -249,8 +246,8 @@ Qui importe seulement des fichiers image n'a pas besoin de plugin scanner.
 L'application negaflow ne lie pas l'implémentation SANE et ne la place pas dans sa distribution.
 Le plugin a son dépôt, son exécutable, sa distribution source et sa licence GPL.
 Ce document consigne la structure ; il ne tranche pas la question de l'œuvre dérivée.
-Avant une publication réelle,
-les fichiers présents dans les deux artefacts et le contrat de communication sont recontrôlés.
+Avant une publication réelle, les fichiers présents dans les deux artefacts et le contrat de
+communication sont recontrôlés.
 
 ## Vérifications
 
@@ -263,5 +260,5 @@ Les tests de l'application lancent un faux plugin externe comme un vrai processu
 - Le résultat final
 - Le nettoyage après annulation et après échec
 
-L'implémentation SANE est vérifiée à part,
-dans les tests SwiftPM et le build Release du dépôt du plugin.
+L'implémentation SANE est vérifiée à part, dans les tests SwiftPM et le build Release du dépôt du
+plugin.

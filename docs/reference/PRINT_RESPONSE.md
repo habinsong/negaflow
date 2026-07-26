@@ -11,9 +11,9 @@ Where it lives:
 
 ## The curve
 
-A film characteristic curve explains exposure against density as a toe, a straight line,
-and a shoulder. negaflow approximates the shoulder in the density domain with a stretched
-exponential curve.
+A film characteristic curve explains exposure against density as a toe, a straight line, and a
+shoulder. negaflow approximates the shoulder in the density domain with a stretched exponential
+curve.
 
 ```math
 \begin{aligned}
@@ -31,8 +31,9 @@ d &= \frac{D}{d_{\max}} \\
 - `P`: linear output brightness
 
 The curve rises across the whole range. For `d ≥ 0` the output lands inside `[baseToe, ceiling)`.
-Values below zero, such as a backlight brighter than the base or the perforation,
-are not clipped to zero. They carry on as finite positive numbers.
+Values below zero, such as a backlight brighter than the base or the perforation, are not clipped to
+zero.
+They carry on as finite positive numbers.
 
 ```math
 y(-|d|) = 2\log_{10}(P_{\mathrm{toe}}) - y(|d|)

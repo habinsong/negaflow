@@ -2,8 +2,8 @@
 
 [Accueil de la documentation](../README.md)
 
-Le `renderManifest` du fichier annexe relie la source,
-les valeurs d'édition et le fichier final par des SHA-256.
+Le `renderManifest` du fichier annexe relie la source, les valeurs d'édition et le fichier final par
+des SHA-256.
 Les chemins de fichiers ne sont pas enregistrés.
 
 ```mermaid
@@ -29,9 +29,8 @@ Ce que contient la v3 :
 - Origine du décodeur et version du moteur de rendu chroma
 - SHA-256, nombre d'octets, taille en pixels et format du fichier final
 
-Quand l'encodeur a fini d'écrire,
-le fichier est rouvert avec ImageIO pour confirmer la taille en pixels,
-puis l'ensemble du fichier est haché. Le fichier annexe est écrit après.
+Quand l'encodeur a fini d'écrire, le fichier est rouvert avec ImageIO pour confirmer la taille en
+pixels, puis l'ensemble du fichier est haché. Le fichier annexe est écrit après.
 Si le contrôle v3 échoue, le résultat n'est pas publié comme ensemble de sortie terminé.
 
 ## Entrée GrainMend
@@ -47,8 +46,8 @@ après coup au jugé.
 
 ## Différence avec C2PA
 
-Ici, pas de signature numérique, pas de certificat, pas de chaîne de confiance,
-pas de claim store intégré. C'est pourquoi on ne parle pas de C2PA Content Credentials.
+Ici, pas de signature numérique, pas de certificat, pas de chaîne de confiance, pas de claim store
+intégré. C'est pourquoi on ne parle pas de C2PA Content Credentials.
 Le hard binding et l'historique de traitement de C2PA, ainsi que la notion d'intégrité de PREMIS,
 ont servi de références, mais seuls des SHA-256 vérifiables sont consignés.
 
