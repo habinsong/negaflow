@@ -201,6 +201,57 @@ final class TransformFastPathTests: XCTestCase {
         )
     }
 
+    // MARK: 회전 뒤 뒤집기는 화면에 보이는 축을 따른다
+
+    /// 변형 순서가 flip → rotate 라서, 소스 축으로 토글하면 90/270 에서 좌우 뒤집기가 상하로 나온다.
+    /// 사용자가 누르는 축은 화면 축이므로 회전 상태와 무관하게 보이는 대로 뒤집혀야 한다.
+    private func assertFlipFollowsScreen(rotation: ImageRotation,
+                                         horizontal: Bool,
+                                         line: UInt = #line) async throws {
+        let model = AppModel()
+        let source = try XCTUnwrap(Self.makePatternCGImage(width: 8, height: 6))
+        let frame = Self.makeFrame()
+        frame.imageTransform = ImageTransform(rotation: rotation)
+        frame.cachedDevelopedBase = source
+        model.frames = [frame]
+
+        // 기대 = "지금 화면에 보이는 그림"을 그 축으로 뒤집은 결과.
+        let onScreen = ImageTransformStage.apply(
+            to: CIImage(cgImage: source),
+            transform: ImageTransform(rotation: rotation)
+        )
+        let expected = ImageTransformStage.apply(
+            to: onScreen,
+            transform: horizontal
+                ? ImageTransform(flipHorizontal: true)
+                : ImageTransform(flipVertical: true)
+        )
+
+        if horizontal { model.flipHorizontally(frame) } else { model.flipVertically(frame) }
+        try await waitUntil("transform task 종료", timeout: 8) { frame.transformTask == nil }
+
+        let actual = ImageTransformStage.apply(
+            to: CIImage(cgImage: source),
+            transform: frame.imageTransform
+        )
+        XCTAssertEqual(actual.extent, expected.extent, line: line)
+        XCTAssertEqual(Self.rgbaBytes(actual), Self.rgbaBytes(expected),
+                       "\(rotation) 회전에서 \(horizontal ? "좌우" : "상하") 뒤집기가 화면 기준이어야 한다",
+                       line: line)
+    }
+
+    func testHorizontalFlipFollowsScreenAfterQuarterTurns() async throws {
+        for rotation in [ImageRotation.deg0, .deg90, .deg180, .deg270] {
+            try await assertFlipFollowsScreen(rotation: rotation, horizontal: true)
+        }
+    }
+
+    func testVerticalFlipFollowsScreenAfterQuarterTurns() async throws {
+        for rotation in [ImageRotation.deg0, .deg90, .deg180, .deg270] {
+            try await assertFlipFollowsScreen(rotation: rotation, horizontal: false)
+        }
+    }
+
     private static func rgbaBytes(_ image: CIImage) -> [UInt8] {
         let extent = image.extent.integral
         var bytes = [UInt8](repeating: 0, count: Int(extent.width * extent.height) * 4)

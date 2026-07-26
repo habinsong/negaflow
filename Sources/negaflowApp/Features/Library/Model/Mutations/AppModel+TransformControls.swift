@@ -113,22 +113,28 @@ extension AppModel {
 
 private extension ImageTransform {
     mutating func toggleHorizontalFlipPreservingCrop() {
-        flipHorizontal.toggle()
-        mirrorPostRotationCrop(horizontalSourceFlip: true)
+        toggleFlipPreservingCrop(displayHorizontal: true)
     }
 
     mutating func toggleVerticalFlipPreservingCrop() {
-        flipVertical.toggle()
-        mirrorPostRotationCrop(horizontalSourceFlip: false)
+        toggleFlipPreservingCrop(displayHorizontal: false)
     }
 
-    mutating func mirrorPostRotationCrop(horizontalSourceFlip: Bool) {
+    /// 사용자가 누르는 축은 **화면에 보이는** 축이다. 변형 순서가 flip → rotate 라서 90/270 회전에서는
+    /// 소스 수평 플립이 화면에서는 수직으로 나타난다 — 그래서 회전한 뒤 "좌우 뒤집기"를 누르면
+    /// 상하가 뒤집혔다. 화면 축을 소스 축으로 옮겨 토글한다.
+    mutating func toggleFlipPreservingCrop(displayHorizontal: Bool) {
+        let rotationSwapsAxes = rotation == .deg90 || rotation == .deg270
+        if displayHorizontal != rotationSwapsAxes {
+            flipHorizontal.toggle()
+        } else {
+            flipVertical.toggle()
+        }
+
         straightenAngle = -straightenAngle
         guard var cropRect else { return }
-
-        let rotationSwapsAxes = rotation == .deg90 || rotation == .deg270
-        let mirrorsDisplayHorizontally = horizontalSourceFlip != rotationSwapsAxes
-        if mirrorsDisplayHorizontally {
+        // cropRect 는 회전 뒤(=화면) 좌표계라 누른 축 그대로 미러한다.
+        if displayHorizontal {
             cropRect.x = 1 - cropRect.x - cropRect.z
         } else {
             cropRect.y = 1 - cropRect.y - cropRect.w
