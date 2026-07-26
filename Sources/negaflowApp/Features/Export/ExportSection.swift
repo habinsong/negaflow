@@ -29,14 +29,15 @@ struct ExportSection: View {
             exportSelectedSettings
 
             if model.actionableFrame != nil {
-                Button {
-                    (onExport ?? model.exportSelectionToFolder)()
-                } label: {
-                    exportButtonTitle(model.text(.commandExport))
-                        .frame(maxWidth: .infinity)
-                }
-                .disabled(!model.canExportSelection)
-                .buttonStyle(.borderedProminent)
+                ExportActionPill(
+                    title: exportButtonTitle(model.text(.commandExport)),
+                    systemImage: "square.and.arrow.up",
+                    revealHelp: model.text(AppLocalizedPhrase.showInFinder),
+                    isProminent: true,
+                    isActionEnabled: model.canExportSelection,
+                    action: { (onExport ?? model.exportSelectionToFolder)() },
+                    reveal: { revealExportFolder(root: model.exportFolderURL) }
+                )
                 .controlSize(.large)
             }
         } header: {
@@ -67,14 +68,14 @@ struct ExportSection: View {
             }
 
             if model.actionableFrame != nil {
-                Button {
-                    (onQuickExport ?? model.quickExportSelection)()
-                } label: {
-                    exportButtonTitle(model.text(.commandQuickExport))
-                        .frame(maxWidth: .infinity)
-                }
-                .disabled(!model.canQuickExportSelection)
-                .buttonStyle(.bordered)
+                ExportActionPill(
+                    title: exportButtonTitle(model.text(.commandQuickExport)),
+                    systemImage: "bolt",
+                    revealHelp: model.text(AppLocalizedPhrase.showInFinder),
+                    isActionEnabled: model.canQuickExportSelection,
+                    action: { (onQuickExport ?? model.quickExportSelection)() },
+                    reveal: { revealExportFolder(root: model.quickExportFolderURL) }
+                )
                 .controlSize(.large)
             }
         } header: {
@@ -254,14 +255,16 @@ struct ExportSection: View {
         }
     }
 
-    @ViewBuilder
-    private func exportButtonTitle(_ title: String) -> some View {
+    private func exportButtonTitle(_ title: String) -> String {
         let count = model.exportSelection.count
-        if count > 1 {
-            Text(verbatim: "\(title) (\(count))")
-        } else {
-            Text(title)
-        }
+        return count > 1 ? "\(title) (\(count))" : title
+    }
+
+    /// 사진이 실제로 저장되는 세부 폴더(`<루트>/<날짜>/<출처 폴더>`)를 Finder 로 연다.
+    private func revealExportFolder(root: URL) {
+        NSWorkspace.shared.open(
+            ExportRevealLocator.folder(root: root, group: model.actionableFrame?.storageGroupName)
+        )
     }
 
     private func chooseQuickExportFolder() {
