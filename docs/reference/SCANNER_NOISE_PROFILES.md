@@ -13,7 +13,7 @@ at the same position moves gives the variance per signal level.
 - [ISO 21550:2004](https://www.iso.org/standard/35939.html) sets how the dynamic range of
   transmissive and reflective scanners is measured.
 
-ISO 15739 is written for digital cameras. Negaflow does not claim scanners fall under the same
+ISO 15739 is written for digital cameras. negaflow does not claim scanners fall under the same
 standard. Only the ideas of repeated measurement and variance per signal are borrowed.
 
 > [!NOTE]

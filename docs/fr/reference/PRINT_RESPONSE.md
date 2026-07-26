@@ -12,7 +12,7 @@ Où ça se trouve :
 ## La courbe
 
 Une courbe caractéristique de film explique l'exposition face à la densité en trois parties :
-pied, partie droite, épaule. Negaflow approche l'épaule dans le domaine des densités par une
+pied, partie droite, épaule. negaflow approche l'épaule dans le domaine des densités par une
 exponentielle étirée.
 
 ```math
@@ -109,7 +109,7 @@ Face à l'ancien résultat :
 ## Sources et périmètre
 
 Pied, partie droite, épaule et gamma viennent de la sensitométrie publiée. Aucun coefficient de
-courbe de cette littérature n'a été copié. Negaflow calcule les siens à partir des quatre points
+courbe de cette littérature n'a été copié. negaflow calcule les siens à partir des quatre points
 d'ancrage ci-dessus.
 
 - [Sensitometry](https://en.wikipedia.org/wiki/Sensitometry)

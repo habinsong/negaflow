@@ -178,7 +178,7 @@ sRGB oder beliebige Papierwerte auszuweichen.
 Zwei Stufen.
 
 1. `documentedCharacter`: `SP` nutzt einen begrenzten Grundcharakter aus sechs Paaren desselben
-   Negativs über SP-3000 und Negaflow MAIN. `HS` baut Ton-, Neutral- und Farbcharakter aus
+   Negativs über SP-3000 und negaflow MAIN. `HS` baut Ton-, Neutral- und Farbcharakter aus
    veröffentlichter Richtung und den Entwurfswerten des Projekts.
 2. `scannerSignature`: Hinzu kommt nur die relative Differenz jener Gruppen, deren Filmnamen und
    Bildzahlen auf beiden Maschinen übereinstimmen.

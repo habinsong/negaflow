@@ -2,16 +2,16 @@
 
 [文档首页](../README.md)
 
-这里写的是 Negaflow 主体的 Apache-2.0 分发范围。它不是法律意见书，而是一份来源记录，方便日后
+这里写的是 negaflow 主体的 Apache-2.0 分发范围。它不是法律意见书，而是一份来源记录，方便日后
 重新核对仓库和发布产物。
 
 ## 代码
 
-`Sources`、`Tests`、`scripts` 是为 Negaflow 写的 Swift、Python 和 Shell 代码。主体里没有
+`Sources`、`Tests`、`scripts` 是为 negaflow 写的 Swift、Python 和 Shell 代码。主体里没有
 C/C++/Objective-C 源码、外部包、静态或动态库，也没有 vendored 源码树，只链接 Apple 在 macOS
 上提供的系统框架。
 
-胶片反转用的是公开感光学里的密度、趾部、直线部和肩部这套概念。这里的曲线和系数出自 Negaflow
+胶片反转用的是公开感光学里的密度、趾部、直线部和肩部这套概念。这里的曲线和系数出自 negaflow
 自己的四个光度基准点，没有照抄第三方程序的公式或常数。公式和推导见
 [固定印相响应](../reference/PRINT_RESPONSE.md)。
 
@@ -55,7 +55,7 @@ GrainMend IR 按这个顺序工作。
 |---|---|---|
 | ScannerKit TIFF | 维护者拍摄并整理的排版素材 | 4 个 TIFF |
 | 应用图标 | 维护者的项目美术素材 | 原始 PNG、构建用 PNG、ICNS |
-| 风格预设 | 为 Negaflow 写的数值 | 6 个 JSON |
+| 风格预设 | 为 negaflow 写的数值 | 6 个 JSON |
 | 扫描仪配置文件 | 由维护者保存的扫描测量生成 | 数值配置文件，不含原始扫描 |
 
 TIFF 里能看到的相机和色彩空间元数据，是拍摄与编码留下的容器信息。扫描仪配置文件里的

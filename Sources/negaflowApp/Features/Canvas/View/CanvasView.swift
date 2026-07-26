@@ -138,6 +138,10 @@ struct CanvasView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
                 .allowsHitTesting(false)
             }
+            // 확대하면 imageFrame 이 캔버스 크기를 넘는다. ZStack 은 자식이 자기 bounds 밖으로
+            // 그려도 자르지 않으므로, 넘친 픽셀이 좌우 패널과 상단 툴바 위로 그려진다(패널을
+            // 덮거나 툴바와의 이음새로 비침) — 캔버스 영역에서 잘라낸다.
+            .clipped()
             .coordinateSpace(name: canvasCoordinateSpace)
             .onContinuousHover(coordinateSpace: .named(canvasCoordinateSpace)) { phase in
                 switch phase {

@@ -271,7 +271,7 @@ RGB 回归用的是 FILM-R v2 的损伤版与专家修复版共 44 对。
 
 ## 名称与商标
 
-`GrainMend` 是 Negaflow 自己的功能名。
+`GrainMend` 是 negaflow 自己的功能名。
 
 - `Digital ICE` 可能是 Eastman Kodak Company 或相关权利人的商标。
 - `iSRD`、`SRDx`、`SilverFast` 是 LaserSoft Imaging 的商标。

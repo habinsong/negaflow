@@ -166,7 +166,7 @@ D = \log_{10}\left(\frac{D_{\min}}{T}\right)
 
 2段階で処理します。
 
-1. `documentedCharacter`: `SP`は、SP-3000とNegaflow MAINで同じネガを処理した6組から得た、限られた
+1. `documentedCharacter`: `SP`は、SP-3000とnegaflow MAINで同じネガを処理した6組から得た、限られた
    基本性格を使います。`HS`は、公開されている方向とプロジェクトの設計値でトーン、中立、色の性格を
    作ります。
 2. `scannerSignature`: 両方の機材でロール名と画像数が合うグループの相対差だけを足します。

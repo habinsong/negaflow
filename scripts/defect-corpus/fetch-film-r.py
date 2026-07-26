@@ -19,7 +19,7 @@ from urllib.request import Request, urlopen
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CONFIG = REPOSITORY_ROOT / "Config" / "defect-corpus-film-r-v2.json"
 DEFAULT_OUTPUT = REPOSITORY_ROOT / "build" / "defect-corpus" / "film-r-v2"
-USER_AGENT = "Negaflow-Defect-Corpus/1.0 (+https://github.com/)"
+USER_AGENT = "negaflow-Defect-Corpus/1.0 (+https://github.com/)"
 
 
 def open_url(url: str, timeout: int):

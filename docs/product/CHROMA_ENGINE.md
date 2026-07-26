@@ -177,7 +177,7 @@ values.
 Two stages.
 
 1. `documentedCharacter`: `SP` uses a limited base character taken from six pairs of the same
-   negative through SP-3000 and Negaflow MAIN. `HS` builds its tone, neutral, and color character
+   negative through SP-3000 and negaflow MAIN. `HS` builds its tone, neutral, and color character
    from published direction plus this project's design values.
 2. `scannerSignature`: only the relative difference from groups whose roll names and image counts
    match across both machines is added.

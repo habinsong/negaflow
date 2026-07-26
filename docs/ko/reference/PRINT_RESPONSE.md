@@ -12,7 +12,7 @@
 ## 곡선
 
 필름의 특성곡선은 노출과 밀도의 관계를 검정점, 직선부, 숄더로 나눠 설명합니다.
-Negaflow는 밀도 영역의 숄더를 stretched exponential 곡선으로 근사합니다.
+negaflow는 밀도 영역의 숄더를 stretched exponential 곡선으로 근사합니다.
 
 ```math
 \begin{aligned}
@@ -104,7 +104,7 @@ r &= r_{\mathrm{white}}^{1/s}
 ## 참고 자료와 범위
 
 검정점, 직선부, 숄더와 감마라는 틀은 공개된 사진 감광학에서 가져왔습니다. 이 문헌의 곡선
-계수를 복사하지 않았습니다. Negaflow의 계수는 위 네 기준점에서 따로 계산합니다.
+계수를 복사하지 않았습니다. negaflow의 계수는 위 네 기준점에서 따로 계산합니다.
 
 - [Sensitometry](https://en.wikipedia.org/wiki/Sensitometry)
 - [Hurter–Driffield Characteristic Curve](https://studyguides.com/study-methods/overview/cmpanf83znm1201neitjb4waw)

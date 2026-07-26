@@ -56,7 +56,7 @@ Regeln für die Anwendung:
   den Minilab-Ablauf, bei dem eine bedienende Person Dichte, Gradation und Schärfung wählt.
 
 Dieses Material zeigt, dass die Verarbeitung mit Szene und Bedienung wechselt. Konstanten zum
-Nachbau eines HS-1800 oder SP-3000 liefert es nicht. Negaflow leitet solche Werte nicht aus einem
+Nachbau eines HS-1800 oder SP-3000 liefert es nicht. negaflow leitet solche Werte nicht aus einem
 Produktnamen ab.
 
 ## Korpusmanifest, Schema v1

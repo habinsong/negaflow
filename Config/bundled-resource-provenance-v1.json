@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "scope": "Resources distributed in the Negaflow source tree or application bundle",
+  "scope": "Resources distributed in the negaflow source tree or application bundle",
   "declaration": "Origins below are the maintainer's publication record. SHA-256 values make later substitutions visible; they do not replace an ownership or license review.",
   "groups": [
     {
       "id": "scanner-layout-fixtures",
-      "origin": "Photographed and prepared by the Negaflow maintainer for ScannerKit layout resources. Camera metadata in the TIFF containers records the local capture.",
+      "origin": "Photographed and prepared by the negaflow maintainer for ScannerKit layout resources. Camera metadata in the TIFF containers records the local capture.",
       "license": "Apache-2.0",
       "files": [
         {
@@ -28,7 +28,7 @@
     },
     {
       "id": "application-artwork",
-      "origin": "Negaflow maintainer-provided application artwork. AppIcon-App-1024.png and AppIcon.icns are build variants generated from the project artwork by scripts/generate-app-icon.sh.",
+      "origin": "negaflow maintainer-provided application artwork. AppIcon-App-1024.png and AppIcon.icns are build variants generated from the project artwork by scripts/generate-app-icon.sh.",
       "license": "Apache-2.0",
       "files": [
         {
@@ -47,7 +47,7 @@
     },
     {
       "id": "look-presets",
-      "origin": "Original Negaflow preset values authored for this project.",
+      "origin": "Original negaflow preset values authored for this project.",
       "license": "Apache-2.0",
       "files": [
         {

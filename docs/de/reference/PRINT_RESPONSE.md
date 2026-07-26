@@ -11,7 +11,7 @@ Wo es liegt:
 
 ## Die Kurve
 
-Eine Filmkennlinie erklärt Belichtung gegen Dichte über Fuß, Geradenteil und Schulter. Negaflow
+Eine Filmkennlinie erklärt Belichtung gegen Dichte über Fuß, Geradenteil und Schulter. negaflow
 nähert die Schulter im Dichtebereich mit einer gestreckten Exponentialkurve an.
 
 ```math
@@ -108,7 +108,7 @@ Gegenüber dem alten Ergebnis:
 ## Quellen und Umfang
 
 Fuß, Geradenteil, Schulter und Gamma stammen aus der veröffentlichten Sensitometrie. Kein
-Kurvenkoeffizient aus dieser Literatur wurde übernommen. Negaflow rechnet seine eigenen aus den
+Kurvenkoeffizient aus dieser Literatur wurde übernommen. negaflow rechnet seine eigenen aus den
 vier Ankerpunkten oben.
 
 - [Sensitometry](https://en.wikipedia.org/wiki/Sensitometry)

@@ -2,20 +2,20 @@
 
 [Accueil de la documentation](../README.md)
 
-On note ici le périmètre de distribution Apache-2.0 de l'application Negaflow. Ce n'est pas un
+On note ici le périmètre de distribution Apache-2.0 de l'application negaflow. Ce n'est pas un
 avis juridique. C'est un relevé de provenance, pour pouvoir revérifier le dépôt et les
 artefacts de publication.
 
 ## Code
 
-`Sources`, `Tests` et `scripts` sont du code Swift, Python et shell écrit pour Negaflow.
+`Sources`, `Tests` et `scripts` sont du code Swift, Python et shell écrit pour negaflow.
 L'application n'a pas de source C/C++/Objective-C, pas de paquet externe, pas de bibliothèque
 statique ou dynamique, pas d'arborescence vendorisée. Seuls les frameworks système livrés par
 Apple avec macOS sont liés.
 
 L'inversion du film reprend les notions publiées de sensitométrie : densité, pied, partie
 droite, épaule. Les courbes et les coefficients viennent des quatre points d'ancrage
-photométriques de Negaflow, pas des formules ou constantes d'un programme tiers. Les équations
+photométriques de negaflow, pas des formules ou constantes d'un programme tiers. Les équations
 et la dérivation sont dans [réponse de tirage fixe](../reference/PRINT_RESPONSE.md).
 
 GrainMend IR procède dans cet ordre.
@@ -65,7 +65,7 @@ l'application et l'arborescence source.
 |---|---|---|
 | TIFF ScannerKit | Matériel de mise en page photographié et préparé par le mainteneur | 4 fichiers TIFF |
 | Icône de l'application | Illustration du projet, fournie par le mainteneur | PNG source, PNG de build, ICNS |
-| Préréglages de rendu | Valeurs écrites pour Negaflow | 6 fichiers JSON |
+| Préréglages de rendu | Valeurs écrites pour negaflow | 6 fichiers JSON |
 | Profils de scanner | Construits à partir de mesures de scan conservées par le mainteneur | Profils numériques, sans les scans sources |
 
 Les métadonnées d'appareil et d'espace colorimétrique visibles dans les TIFF sont des

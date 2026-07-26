@@ -285,7 +285,7 @@ FILM-Rの44枚のうち良くなった写真は11枚から34枚に増え、悪�
 
 ## 名前と商標
 
-`GrainMend`はNegaflow独自の機能名です。
+`GrainMend`はnegaflow独自の機能名です。
 
 - `Digital ICE`は、Eastman Kodak Companyまたは関連する権利者の商標である可能性があります。
 - `iSRD`、`SRDx`、`SilverFast`はLaserSoft Imagingの商標です。

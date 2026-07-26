@@ -13,7 +13,7 @@ dont bouge le pixel au même endroit donne la variance par niveau de signal.
 - [ISO 21550:2004](https://www.iso.org/standard/35939.html) fixe la mesure de la plage dynamique
   des scanners à transmission et à réflexion.
 
-L'ISO 15739 est écrite pour les appareils photo numériques. Negaflow ne prétend pas que les
+L'ISO 15739 est écrite pour les appareils photo numériques. negaflow ne prétend pas que les
 scanners relèvent de la même norme. Seules les idées de mesure répétée et de variance par
 signal sont reprises.
 

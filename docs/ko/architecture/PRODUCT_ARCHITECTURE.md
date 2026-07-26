@@ -2,7 +2,7 @@
 
 [문서 홈](../README.md)
 
-Negaflow는 필름 이미지를 가져오거나 스캔한 뒤 반전, 현상, GrainMend, 출력, 보존으로 이어지는
+negaflow는 필름 이미지를 가져오거나 스캔한 뒤 반전, 현상, GrainMend, 출력, 보존으로 이어지는
 macOS 앱입니다. 모든 편집은 원본과 따로 저장합니다.
 
 > [!IMPORTANT]

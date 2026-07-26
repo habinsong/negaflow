@@ -2,7 +2,7 @@
 
 [Docs home](../README.md)
 
-Negaflow is a macOS app. You import or scan film images, then go through inversion, develop,
+negaflow is a macOS app. You import or scan film images, then go through inversion, develop,
 GrainMend, output, and preservation. Every edit is kept apart from the original.
 
 > [!IMPORTANT]

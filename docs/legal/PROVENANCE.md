@@ -2,18 +2,18 @@
 
 [Docs home](../README.md)
 
-This is where the Apache-2.0 distribution scope of the Negaflow app is written down. It is not
+This is where the Apache-2.0 distribution scope of the negaflow app is written down. It is not
 a legal opinion. It is a provenance record so the repository and the release artifacts can be
 checked again.
 
 ## Code
 
-`Sources`, `Tests`, and `scripts` are Swift, Python, and shell code written for Negaflow. The
+`Sources`, `Tests`, and `scripts` are Swift, Python, and shell code written for negaflow. The
 app has no C/C++/Objective-C source, no external package, no static or dynamic library, and no
 vendored source tree. Only the system frameworks Apple ships with macOS are linked.
 
 Film inversion uses the published sensitometry ideas of density, toe, straight line, and
-shoulder. The curves and coefficients here come from Negaflow's four photometric anchors, not
+shoulder. The curves and coefficients here come from negaflow's four photometric anchors, not
 from a third-party program's formulas or constants. The equations and the derivation are in
 [fixed print response](../reference/PRINT_RESPONSE.md).
 
@@ -63,7 +63,7 @@ source tree.
 |---|---|---|
 | ScannerKit TIFF | Layout material shot and prepared by the maintainer | 4 TIFF files |
 | App icon | Project artwork from the maintainer | Source PNG, build PNG, ICNS |
-| Look presets | Values written for Negaflow | 6 JSON files |
+| Look presets | Values written for negaflow | 6 JSON files |
 | Scanner profiles | Built from scan measurements the maintainer keeps | Numeric profiles, without the source scans |
 
 The camera and color space metadata you can see in the TIFF files is container information from

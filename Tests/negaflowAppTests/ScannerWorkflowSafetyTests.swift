@@ -803,8 +803,8 @@ final class ScannerWorkflowSafetyTests: XCTestCase {
         await model.loadCapabilities()
 
         XCTAssertEqual(model.selectableScannerDevices.map(\.displayName), [
-            "Negaflow Scanner",
-            "Negaflow Flatbed Scanner",
+            "negaflow Scanner",
+            "negaflow Flatbed Scanner",
         ])
         XCTAssertEqual(model.effectiveScannerID, AppModel.mockDeviceID)
         XCTAssertFalse(model.usesFlatbedRegionWorkflow)

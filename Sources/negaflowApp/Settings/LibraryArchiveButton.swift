@@ -15,7 +15,7 @@ struct LibraryArchiveButton: View {
     private func presentSavePanel() {
         let panel = NSSavePanel()
         panel.canCreateDirectories = true
-        panel.nameFieldStringValue = "Negaflow Library.negaflowarchive"
+        panel.nameFieldStringValue = "negaflow Library.negaflowarchive"
         panel.prompt = model.archiveText(.save)
         guard let window = NSApp.keyWindow ?? NSApp.mainWindow else { return }
         panel.beginSheetModal(for: window) { response in

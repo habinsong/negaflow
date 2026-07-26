@@ -82,7 +82,7 @@ class ReleaseArtifactScriptTests(unittest.TestCase):
         self.assertIn("NEGAFLOW_INSTALLER_SIGN_IDENTITY", body)
         self.assertIn("NEGAFLOW_NOTARY_PRIVATE_KEY_BASE64", body)
         self.assertIn("NEGAFLOW_RELEASE_MODE: distribution", body)
-        self.assertIn("for app in build/release-apps/*/Negaflow.app; do", body)
+        self.assertIn("for app in build/release-apps/*/negaflow.app; do", body)
         self.assertIn('xcrun stapler validate "$app"', body)
         self.assertIn('spctl --assess --type execute --verbose=4 "$app"', body)
         self.assertIn(
@@ -91,7 +91,7 @@ class ReleaseArtifactScriptTests(unittest.TestCase):
             body,
         )
         self.assertIn('xcrun stapler validate "$artifact"', body)
-        self.assertNotIn("stapler validate build/Negaflow.app", body)
+        self.assertNotIn("stapler validate build/negaflow.app", body)
         self.assertNotIn("NEGAFLOW_RELEASE_MODE: local", body)
 
 

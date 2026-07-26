@@ -11,7 +11,7 @@
 
 ## 曲线
 
-胶片特性曲线把曝光和密度的关系分成趾部、直线部和肩部来说明。Negaflow 用 stretched exponential
+胶片特性曲线把曝光和密度的关系分成趾部、直线部和肩部来说明。negaflow 用 stretched exponential
 曲线近似密度域里的肩部。
 
 ```math
@@ -101,7 +101,7 @@ r &= r_{\mathrm{white}}^{1/s}
 
 ## 参考资料和范围
 
-趾部、直线部、肩部和伽马这套框架来自公开的感光学。文献里的曲线系数没有照抄，Negaflow 的系数由
+趾部、直线部、肩部和伽马这套框架来自公开的感光学。文献里的曲线系数没有照抄，negaflow 的系数由
 上面四个基准点自己算出来。
 
 - [Sensitometry](https://en.wikipedia.org/wiki/Sensitometry)

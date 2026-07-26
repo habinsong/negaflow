@@ -54,14 +54,14 @@ negaflow 是一款 macOS 应用，用于导入、反相和显影扫描胶片或�
 
 | 下载文件 | 支持的 Mac |
 |---|---|
-| `Negaflow-1.0.0-1-macOS-universal.pkg` | Apple Silicon 和 Intel |
-| `Negaflow-1.0.0-1-macOS-arm64.pkg` | 仅 Apple Silicon |
+| `negaflow-1.0.0-1-macOS-universal.pkg` | Apple Silicon 和 Intel |
+| `negaflow-1.0.0-1-macOS-arm64.pkg` | 仅 Apple Silicon |
 
 1. 下载适合当前 Mac 的 PKG。
 2. 打开 PKG，并按安装器提示操作。
-3. 从 `/Applications` 启动 **Negaflow**。
+3. 从 `/Applications` 启动 **negaflow**。
 
-PKG 会把 `Negaflow.app` 直接安装到 `/Applications`。<br>
+PKG 会把 `negaflow.app` 直接安装到 `/Applications`。<br>
 同一发布页面还提供用于手动安装的 DMG 和 ZIP。<br>
 在 GitHub 上发布的文件均使用 Developer ID 签名，并已通过 Apple 公证。
 
@@ -247,6 +247,6 @@ bash scripts/ci-gate.sh
 
 negaflow 主项目采用 [Apache License 2.0](LICENSE) 发布。
 
-Negaflow 与 Kodak、Fujifilm、Noritsu、LaserSoft Imaging 或其他商标权利人没有合作或赞助关系。<br>
+negaflow 与 Kodak、Fujifilm、Noritsu、LaserSoft Imaging 或其他商标权利人没有合作或赞助关系。<br>
 产品名称只用于标识测量对象或兼容目标。<br>
 详情见[商标声明](TRADEMARKS.md)。

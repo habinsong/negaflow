@@ -286,7 +286,7 @@ RGB 회귀에는 FILM-R v2의 손상본과 전문가 복원본 44쌍을 씁니�
 
 ## 이름과 상표
 
-`GrainMend`는 Negaflow의 자체 기능명입니다.
+`GrainMend`는 negaflow의 자체 기능명입니다.
 
 - `Digital ICE`는 Eastman Kodak Company 또는 관련 권리자의 상표일 수 있습니다.
 - `iSRD`, `SRDx`, `SilverFast`는 LaserSoft Imaging의 상표입니다.

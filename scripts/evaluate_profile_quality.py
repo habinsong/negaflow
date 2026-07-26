@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Evaluate a versioned Negaflow profile corpus against an accepted baseline.
+"""Evaluate a versioned negaflow profile corpus against an accepted baseline.
 
 The evaluator consumes the paired ``summary.json`` written by
 ``LUT_target/analyze_lut_target.py``.  It does not create quality thresholds:

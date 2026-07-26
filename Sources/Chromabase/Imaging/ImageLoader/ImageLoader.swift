@@ -58,7 +58,7 @@ public enum ImageLoader {
         }
     }
 
-    /// Apple CIRAWFilter의 기본 1.0은 full global tone curve다. Negaflow source decode는
+    /// Apple CIRAWFilter의 기본 1.0은 full global tone curve다. negaflow source decode는
     /// develop 단계 전 linear response를 유지하므로 0.0을 명시한다.
     public static let defaultRAWBoostAmount = 0.0
 

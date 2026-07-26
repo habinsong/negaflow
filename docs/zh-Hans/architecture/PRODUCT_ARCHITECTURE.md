@@ -2,7 +2,7 @@
 
 [文档首页](../README.md)
 
-Negaflow 是一个 macOS 应用。导入或扫描胶片图像之后，接着是反转、显影、GrainMend、输出和保存。
+negaflow 是一个 macOS 应用。导入或扫描胶片图像之后，接着是反转、显影、GrainMend、输出和保存。
 所有编辑都和原始文件分开存放。
 
 > [!IMPORTANT]

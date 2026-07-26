@@ -71,7 +71,7 @@ fi
 VERSION="$(plutil -extract CFBundleShortVersionString raw "$INFO_PLIST")"
 BUILD="$(plutil -extract CFBundleVersion raw "$INFO_PLIST")"
 BUNDLE_IDENTIFIER="$(plutil -extract CFBundleIdentifier raw "$INFO_PLIST")"
-BASE_NAME="Negaflow-$VERSION-$BUILD-macOS-$ARCHITECTURE_LABEL"
+BASE_NAME="negaflow-$VERSION-$BUILD-macOS-$ARCHITECTURE_LABEL"
 ZIP_NAME="$BASE_NAME.zip"
 DMG_NAME="$BASE_NAME.dmg"
 PKG_NAME="$BASE_NAME.pkg"
@@ -88,7 +88,7 @@ done
 
 STAGING_ROOT="$(mktemp -d /tmp/negaflow-release-artifacts.XXXXXX)"
 trap 'rm -rf "$STAGING_ROOT"' EXIT
-APP_COPY="$STAGING_ROOT/Negaflow.app"
+APP_COPY="$STAGING_ROOT/negaflow.app"
 DMG_ROOT="$STAGING_ROOT/dmg-root"
 mkdir -p "$DMG_ROOT"
 ditto "$APP_BUNDLE" "$APP_COPY"
@@ -110,10 +110,10 @@ pkgbuild "${PKG_ARGS[@]}" "$STAGING_ROOT/$PKG_NAME" >/dev/null
 if [ -n "${NEGAFLOW_INSTALLER_SIGN_IDENTITY:-}" ]; then
   pkgutil --check-signature "$STAGING_ROOT/$PKG_NAME" >/dev/null
 fi
-ditto "$APP_COPY" "$DMG_ROOT/Negaflow.app"
+ditto "$APP_COPY" "$DMG_ROOT/negaflow.app"
 ln -s /Applications "$DMG_ROOT/Applications"
 hdiutil create \
-  -volname "Negaflow $VERSION" \
+  -volname "negaflow $VERSION" \
   -srcfolder "$DMG_ROOT" \
   -format UDZO \
   -ov \

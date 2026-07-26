@@ -784,7 +784,7 @@ def compile_profiles(source: Path, out_dir: Path, resource_out: Path | None) -> 
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Compile Negaflow scanner aggregate profiles.")
+    parser = argparse.ArgumentParser(description="Compile negaflow scanner aggregate profiles.")
     parser.add_argument("--source", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--resource-out", type=Path)

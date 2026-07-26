@@ -2,7 +2,7 @@
 
 [Docs home](../README.md)
 
-The default input for Negaflow is importing images. A real scanner is connected only when an
+The default input for negaflow is importing images. A real scanner is connected only when an
 external plugin is present.
 
 > [!IMPORTANT]
@@ -16,7 +16,7 @@ external plugin is present.
 |---|---|
 | Image import | Sends RAW, DNG, TIFF, PNG, and JPEG into the develop path. |
 | External plugin | Runs as its own process, drives the real device, talks JSON. |
-| Demo scanner | Provides `Negaflow Scanner` and `Negaflow Flatbed Scanner` for development. You have to select demo to use it. |
+| Demo scanner | Provides `negaflow Scanner` and `negaflow Flatbed Scanner` for development. You have to select demo to use it. |
 | ImageCaptureCore link | Inactive compatibility code for macOS Image Capture devices. |
 
 There is no SANE implementation in this repository. That code sits in a separate GPL project.
@@ -228,7 +228,7 @@ release documentation all live in the separate
 This repository documents and checks the device-independent external process spec only. Anyone
 who just imports image files does not need a scanner plugin.
 
-The Negaflow app does not link the SANE implementation or put it in the app distribution. The
+The negaflow app does not link the SANE implementation or put it in the app distribution. The
 plugin has its own repository, executable, source distribution, and GPL license. This document
 records the structure; it does not settle whether something is a derivative work. Before an
 actual release, the files in both artifacts and the communication contract are checked again.

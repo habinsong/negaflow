@@ -54,14 +54,14 @@ negaflow は、スキャンしたフィルムやデジタルカメラで複写�
 
 | ダウンロード | 対応するMac |
 |---|---|
-| `Negaflow-1.0.0-1-macOS-universal.pkg` | Apple Silicon、Intel |
-| `Negaflow-1.0.0-1-macOS-arm64.pkg` | Apple Siliconのみ |
+| `negaflow-1.0.0-1-macOS-universal.pkg` | Apple Silicon、Intel |
+| `negaflow-1.0.0-1-macOS-arm64.pkg` | Apple Siliconのみ |
 
 1. Macに合うPKGをダウンロードします。
 2. PKGを開き、インストーラの案内に従います。
-3. `/Applications`から**Negaflow**を起動します。
+3. `/Applications`から**negaflow**を起動します。
 
-PKGは`Negaflow.app`を`/Applications`へ直接インストールします。<br>
+PKGは`negaflow.app`を`/Applications`へ直接インストールします。<br>
 手動インストール用のDMGとZIPも同じリリースページにあります。<br>
 GitHubで公開するファイルは、Developer IDで署名し、Appleの公証を済ませたものです。
 
@@ -250,6 +250,6 @@ bash scripts/ci-gate.sh
 
 negaflow 本体は [Apache License 2.0](LICENSE) で配布します。
 
-Negaflow は Kodak、Fujifilm、Noritsu、LaserSoft Imaging、その他の商標権者と提携しておらず、支援も受けていません。<br>
+negaflow は Kodak、Fujifilm、Noritsu、LaserSoft Imaging、その他の商標権者と提携しておらず、支援も受けていません。<br>
 製品名は測定対象や互換対象を示す場合にだけ使います。<br>
 詳しくは [商標について](TRADEMARKS.md)をご覧ください。

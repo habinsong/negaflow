@@ -5,7 +5,7 @@ import ScannerKit
 enum LibraryDateField: String, Codable, Equatable, Sendable {
     /// 명시적 timezone이 있는 원본 콘텐츠 절대시각. 달력 날짜 검색과 혼동하지 않는다.
     case contentInstant
-    /// Negaflow catalog에 스캔 또는 가져온 시각.
+    /// negaflow catalog에 스캔 또는 가져온 시각.
     case scannedOrImportedDate
 }
 

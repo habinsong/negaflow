@@ -160,7 +160,7 @@ D = \log_{10}\left(\frac{D_{\min}}{T}\right)
 
 分两步处理。
 
-1. `documentedCharacter`：`SP` 使用从 SP-3000 与 Negaflow MAIN 处理同一批负片的六对样本中得到的
+1. `documentedCharacter`：`SP` 使用从 SP-3000 与 negaflow MAIN 处理同一批负片的六对样本中得到的
    有限基本性格。`HS` 则用公开的方向加本项目的设计值，构建影调、中性和色彩性格。
 2. `scannerSignature`：只叠加两台设备上胶卷名与图像数量相符的组之间的相对差异。
 

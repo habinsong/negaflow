@@ -18,8 +18,8 @@ public final class MockScannerBackend: ScannerBackend, @unchecked Sendable {
     public static let scannerDescriptors: [ScannerDescriptor] = [
         ScannerDescriptor(
             id: filmScannerID,
-            displayName: "Negaflow Scanner",
-            vendor: "Negaflow",
+            displayName: "negaflow Scanner",
+            vendor: "negaflow",
             model: "OpticFilm 8200i",
             backendType: .mock,
             connectionType: .internalBus,
@@ -28,8 +28,8 @@ public final class MockScannerBackend: ScannerBackend, @unchecked Sendable {
         ),
         ScannerDescriptor(
             id: flatbedScannerID,
-            displayName: "Negaflow Flatbed Scanner",
-            vendor: "Negaflow",
+            displayName: "negaflow Flatbed Scanner",
+            vendor: "negaflow",
             model: "Flatbed Scanner Simulator",
             backendType: .mock,
             connectionType: .internalBus,

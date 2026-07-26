@@ -85,7 +85,7 @@ final class DiskStorageStoreTests: XCTestCase {
         XCTAssertEqual(store.scanPreviewsURL, DiskStorageStore.defaultScanPreviewsURL())
     }
 
-    func testDesktopModePlacesEveryManagedFolderUnderDesktopNegaflow() {
+    func testDesktopModePlacesEveryManagedFolderUnderDesktopnegaflow() {
         let store = DiskStorageStore(defaults: defaults)
         store.locationMode = .desktop
 

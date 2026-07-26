@@ -40,7 +40,7 @@ enum LibraryArchiveBagIt {
         let bytes = payloads.reduce(Int64(0)) { $0 + $1.byteCount }
         let text = """
         Bagging-Date: \(formatter.string(from: createdAt))
-        Bag-Software-Agent: Negaflow
+        Bag-Software-Agent: negaflow
         Payload-Oxum: \(bytes).\(payloads.count)
 
         """

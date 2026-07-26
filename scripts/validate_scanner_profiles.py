@@ -2,7 +2,7 @@
 # /// script
 # requires-python = ">=3.11"
 # ///
-"""Fail-closed validation for Negaflow scanner profile resources."""
+"""Fail-closed validation for negaflow scanner profile resources."""
 
 from __future__ import annotations
 
@@ -787,7 +787,7 @@ def paired(profiles_path: Path, source: Path, target: Path) -> JsonObject:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Validate Negaflow scanner profiles. Paired mode is a coverage smoke check, "
+            "Validate negaflow scanner profiles. Paired mode is a coverage smoke check, "
             "not a pairedValidated promotion or release-quality gate."
         )
     )

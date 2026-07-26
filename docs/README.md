@@ -1,4 +1,4 @@
-# Negaflow documentation
+# negaflow documentation
 
 Split by subject so you can open the one you need first.
 

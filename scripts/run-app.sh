@@ -66,7 +66,7 @@ case "${1:-run}" in
 esac
 
 BUILD_DIR="$ROOT/build"
-APP_BUNDLE="$BUILD_DIR/Negaflow.app"
+APP_BUNDLE="$BUILD_DIR/negaflow.app"
 DERIVED="${NEGAFLOW_DERIVED_DATA_PATH:-$BUILD_DIR/DerivedData.$(id -un)}"
 
 echo "[run-app] building negaflowApp ($CONFIG, $BUILD_ARCHITECTURES) via xcodebuild..."
@@ -112,7 +112,7 @@ echo "[run-app] binary: $BIN"
 echo "[run-app] architectures: $BIN_ARCHITECTURES"
 
 if [ -e "$APP_BUNDLE" ] && [ ! -w "$APP_BUNDLE" ]; then
-  ARCHIVED_BUNDLE="$BUILD_DIR/Negaflow.app.unwritable.$(date +%Y%m%d%H%M%S)"
+  ARCHIVED_BUNDLE="$BUILD_DIR/negaflow.app.unwritable.$(date +%Y%m%d%H%M%S)"
   mv "$APP_BUNDLE" "$ARCHIVED_BUNDLE" || {
     echo "[run-app] ERROR: 기존 $APP_BUNDLE 를 옮길 수 없습니다. 소유권을 확인하세요." >&2
     exit 1
@@ -135,7 +135,7 @@ SIGN_IDENTITY="${NEGAFLOW_CODESIGN_IDENTITY:--}"
 bash "$ROOT/scripts/sign-app.sh" "$APP_BUNDLE" "$SIGN_IDENTITY"
 
 plutil -lint "$APP_BUNDLE/Contents/Info.plist" >/dev/null
-test -x "$APP_BUNDLE/Contents/MacOS/Negaflow"
+test -x "$APP_BUNDLE/Contents/MacOS/negaflow"
 
 echo "[run-app] bundle: $APP_BUNDLE"
 

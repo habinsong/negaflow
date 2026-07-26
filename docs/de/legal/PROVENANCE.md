@@ -2,20 +2,20 @@
 
 [Dokumentationsstart](../README.md)
 
-Hier steht der Apache-2.0-Auslieferungsumfang der Negaflow-App. Das ist kein Rechtsgutachten,
+Hier steht der Apache-2.0-Auslieferungsumfang der negaflow-App. Das ist kein Rechtsgutachten,
 sondern ein Herkunftsnachweis, damit Repository und Release-Artefakte erneut geprüft werden
 können.
 
 ## Code
 
-`Sources`, `Tests` und `scripts` sind Swift-, Python- und Shell-Code, geschrieben für Negaflow.
+`Sources`, `Tests` und `scripts` sind Swift-, Python- und Shell-Code, geschrieben für negaflow.
 Die App enthält keinen C/C++/Objective-C-Quelltext, kein externes Paket, keine statische oder
 dynamische Bibliothek und keinen fremden Quellbaum. Gebunden werden nur die Systemframeworks,
 die Apple mit macOS ausliefert.
 
 Die Filmumkehr nutzt die veröffentlichten Begriffe der Sensitometrie: Dichte, Fuß, Geradenteil,
 Schulter. Kurven und Koeffizienten stammen aus den vier photometrischen Ankerpunkten von
-Negaflow, nicht aus Formeln oder Konstanten eines fremden Programms. Gleichungen und Herleitung
+negaflow, nicht aus Formeln oder Konstanten eines fremden Programms. Gleichungen und Herleitung
 stehen in [feste Printantwort](../reference/PRINT_RESPONSE.md).
 
 GrainMend IR arbeitet in dieser Reihenfolge.
@@ -64,7 +64,7 @@ legt erklärte Herkunft, Lizenz und SHA-256 jeder Ressource fest, die in App und
 |---|---|---|
 | ScannerKit-TIFF | Vom Betreuer aufgenommenes und aufbereitetes Layoutmaterial | 4 TIFF-Dateien |
 | App-Symbol | Projektgrafik vom Betreuer | Quell-PNG, Build-PNG, ICNS |
-| Look-Presets | Für Negaflow geschriebene Werte | 6 JSON-Dateien |
+| Look-Presets | Für negaflow geschriebene Werte | 6 JSON-Dateien |
 | Scannerprofile | Aus Scanmessungen des Betreuers erzeugt | Numerische Profile, ohne die Quellscans |
 
 Die Kamera- und Farbraum-Metadaten in den TIFF-Dateien sind Containerangaben aus Aufnahme und

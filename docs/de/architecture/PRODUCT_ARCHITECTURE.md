@@ -2,7 +2,7 @@
 
 [Dokumentationsstart](../README.md)
 
-Negaflow ist eine macOS-App. Sie importieren oder scannen Filmbilder, danach folgen Umkehr,
+negaflow ist eine macOS-App. Sie importieren oder scannen Filmbilder, danach folgen Umkehr,
 Entwicklung, GrainMend, Ausgabe und Aufbewahrung. Jede Bearbeitung wird getrennt vom Original
 abgelegt.
 

@@ -309,7 +309,7 @@ behauptet nicht, dass sie in jeder Umgebung gelaufen ist.
 
 ## Namen und Marken
 
-`GrainMend` ist Negaflows eigener Funktionsname.
+`GrainMend` ist negaflows eigener Funktionsname.
 
 - `Digital ICE` kann eine Marke der Eastman Kodak Company oder eines verbundenen Rechteinhabers sein.
 - `iSRD`, `SRDx` und `SilverFast` sind Marken von LaserSoft Imaging.

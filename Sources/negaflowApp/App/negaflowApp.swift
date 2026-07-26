@@ -10,8 +10,8 @@ final class AppModel: ObservableObject {
     // 기존 demo catalog/shortcut 호환을 위해 8200i 계열 내부 ID를 기본값으로 유지한다.
     static let mockDeviceID = MockScannerBackend.filmScannerID
     static let mockFlatbedDeviceID = MockScannerBackend.flatbedScannerID
-    static let mockDisplayName = "Negaflow Scanner"
-    static let mockFlatbedDisplayName = "Negaflow Flatbed Scanner"
+    static let mockDisplayName = "negaflow Scanner"
+    static let mockFlatbedDisplayName = "negaflow Flatbed Scanner"
 
     let mockBackend: ScannerBackend
     var pluginBackends: [ExternalScannerBackend] = []

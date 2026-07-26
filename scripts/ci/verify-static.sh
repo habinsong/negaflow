@@ -6,7 +6,7 @@ cd "$ROOT"
 
 git diff --check
 bash -n scripts/*.sh scripts/ci/*.sh
-plutil -lint Config/NegaflowApp-Info.plist Config/Negaflow.entitlements >/dev/null
+plutil -lint Config/negaflowApp-Info.plist Config/negaflow.entitlements >/dev/null
 for resource in Sources/negaflowApp/Resources/*.lproj/*.stringsdict \
                 Sources/negaflowApp/Resources/*.lproj/InfoPlist.strings; do
   plutil -lint "$resource" >/dev/null

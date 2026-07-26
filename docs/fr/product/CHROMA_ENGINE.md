@@ -176,7 +176,7 @@ valeurs de papier arbitraires.
 Deux étapes.
 
 1. `documentedCharacter` : `SP` utilise un caractère de base limité, tiré de six paires du même
-   négatif passées par SP-3000 et par Negaflow MAIN. `HS` construit son caractère de tonalité, de
+   négatif passées par SP-3000 et par negaflow MAIN. `HS` construit son caractère de tonalité, de
    neutre et de couleur à partir d'orientations publiées et des valeurs de conception du projet.
 2. `scannerSignature` : seule la différence relative des groupes dont les noms de films et le
    nombre d'images concordent sur les deux machines s'ajoute.

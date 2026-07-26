@@ -37,7 +37,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: Negaflow-GUI-tests-${{ github.sha }}
+          name: negaflow-GUI-tests-${{ github.sha }}
           path: build/NegaflowE2E.xcresult
           if-no-files-found: warn
           retention-days: 14
@@ -59,7 +59,7 @@ jobs:
       - name: Upload release smoke artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: Negaflow-release-smoke-${{ github.sha }}
+          name: negaflow-release-smoke-${{ github.sha }}
           path: build/release-artifacts/*
           if-no-files-found: error
           retention-days: 14

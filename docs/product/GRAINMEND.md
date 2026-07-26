@@ -303,7 +303,7 @@ is not a claim that it ran in every environment.
 
 ## Names and trademarks
 
-`GrainMend` is Negaflow's own feature name.
+`GrainMend` is negaflow's own feature name.
 
 - `Digital ICE` may be a trademark of Eastman Kodak Company or a related rights holder.
 - `iSRD`, `SRDx`, and `SilverFast` are trademarks of LaserSoft Imaging.

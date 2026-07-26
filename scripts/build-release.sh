@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="$ROOT/build"
-APP_BUNDLE="$BUILD_DIR/Negaflow.app"
+APP_BUNDLE="$BUILD_DIR/negaflow.app"
 OUTPUT_DIR="${NEGAFLOW_RELEASE_OUTPUT_DIR:-$BUILD_DIR/release-artifacts}"
 RELEASE_MODE="${NEGAFLOW_RELEASE_MODE:-local}"
 
@@ -34,8 +34,8 @@ build_universal_products() {
   local architecture="universal"
   local derived_data="$BUILD_DIR/DerivedData.release.$architecture"
   local variant_root="$BUILD_DIR/release-apps/$architecture"
-  local saved_app="$variant_root/Negaflow.app"
-  local saved_dsym="$variant_root/Negaflow.app.dSYM"
+  local saved_app="$variant_root/negaflow.app"
+  local saved_dsym="$variant_root/negaflow.app.dSYM"
   local built_dsym
 
   NEGAFLOW_BUILD_ARCHITECTURES="$architecture" \
@@ -58,10 +58,10 @@ build_universal_products() {
 derive_arm64_products() {
   local source_root="$BUILD_DIR/release-apps/universal"
   local variant_root="$BUILD_DIR/release-apps/arm64"
-  local source_app="$source_root/Negaflow.app"
-  local source_dsym="$source_root/Negaflow.app.dSYM"
-  local saved_app="$variant_root/Negaflow.app"
-  local saved_dsym="$variant_root/Negaflow.app.dSYM"
+  local source_app="$source_root/negaflow.app"
+  local source_dsym="$source_root/negaflow.app.dSYM"
+  local saved_app="$variant_root/negaflow.app"
+  local saved_dsym="$variant_root/negaflow.app.dSYM"
   local executable_name
   local source_executable
   local saved_executable
@@ -106,8 +106,8 @@ derive_arm64_products() {
 publish_variant() {
   local architecture="$1"
   local variant_root="$BUILD_DIR/release-apps/$architecture"
-  local saved_app="$variant_root/Negaflow.app"
-  local saved_dsym="$variant_root/Negaflow.app.dSYM"
+  local saved_app="$variant_root/negaflow.app"
+  local saved_dsym="$variant_root/negaflow.app.dSYM"
   local version
   local build
   local base_name
@@ -120,7 +120,7 @@ publish_variant() {
 
   version="$(plutil -extract CFBundleShortVersionString raw "$saved_app/Contents/Info.plist")"
   build="$(plutil -extract CFBundleVersion raw "$saved_app/Contents/Info.plist")"
-  base_name="Negaflow-$version-$build-macOS-$architecture"
+  base_name="negaflow-$version-$build-macOS-$architecture"
 
   if [ "$RELEASE_MODE" = "distribution" ]; then
     notary_zip="$variant_root/$base_name-notary.zip"

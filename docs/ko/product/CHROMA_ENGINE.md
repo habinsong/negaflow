@@ -166,7 +166,7 @@ D = \log_{10}\left(\frac{D_{\min}}{T}\right)
 
 두 단계로 처리합니다.
 
-1. `documentedCharacter`: `SP`는 SP-3000과 Negaflow MAIN의 같은 네거티브 6쌍에서 얻은 제한된
+1. `documentedCharacter`: `SP`는 SP-3000과 negaflow MAIN의 같은 네거티브 6쌍에서 얻은 제한된
    기본 성격을 씁니다. `HS`는 공개된 방향과 프로젝트의 설계값으로 톤, 중립, 색 성격을 만듭니다.
 2. `scannerSignature`: 두 장비에서 롤 이름과 이미지 수가 맞는 그룹의 상대 차이만 더합니다.
 

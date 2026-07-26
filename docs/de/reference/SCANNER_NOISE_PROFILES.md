@@ -13,7 +13,7 @@ Wie stark das Pixel an derselben Stelle wandert, ergibt die Varianz je Signalhel
 - [ISO 21550:2004](https://www.iso.org/standard/35939.html) regelt die Messung des
   Dynamikumfangs von Durchlicht- und Auflichtscannern.
 
-ISO 15739 ist für Digitalkameras geschrieben. Negaflow behauptet nicht, dass Scanner unter
+ISO 15739 ist für Digitalkameras geschrieben. negaflow behauptet nicht, dass Scanner unter
 dieselbe Norm fallen. Übernommen sind nur die Gedanken der wiederholten Messung und der Varianz
 je Signal.
 

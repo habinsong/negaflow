@@ -23,7 +23,7 @@ class ReleaseSecurityScriptTests(unittest.TestCase):
                 ROOT / "Sources/Chromabase/ScannerProfiles",
                 chromabase_bundle / "ScannerProfiles",
             )
-            app = temporary / "Negaflow.app"
+            app = temporary / "negaflow.app"
             subprocess.run(
                 [
                     "bash",
@@ -62,9 +62,9 @@ class ReleaseSecurityScriptTests(unittest.TestCase):
     def test_notarization_requires_keychain_profile_before_network(self) -> None:
         with tempfile.TemporaryDirectory(prefix="negaflow-notary-test-") as raw:
             temporary = Path(raw)
-            archive = temporary / "Negaflow.zip"
+            archive = temporary / "negaflow.zip"
             archive.write_bytes(b"preflight")
-            app = temporary / "Negaflow.app"
+            app = temporary / "negaflow.app"
             (app / "Contents").mkdir(parents=True)
             result = subprocess.run(
                 [
@@ -91,7 +91,7 @@ class ReleaseSecurityScriptTests(unittest.TestCase):
         self.assertIn("--type install", notarize)
         self.assertNotIn("altool", notarize)
 
-        with (ROOT / "Config/Negaflow.entitlements").open("rb") as stream:
+        with (ROOT / "Config/negaflow.entitlements").open("rb") as stream:
             entitlements = plistlib.load(stream)
         self.assertEqual(entitlements, {})
         self.assertNotIn("com.apple.security.get-task-allow", entitlements)

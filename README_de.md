@@ -57,14 +57,14 @@ Für die meisten Macs ist das Universal-PKG vorgesehen.
 
 | Download | Unterstützte Macs |
 |---|---|
-| `Negaflow-1.0.0-1-macOS-universal.pkg` | Apple Silicon und Intel |
-| `Negaflow-1.0.0-1-macOS-arm64.pkg` | Nur Apple Silicon |
+| `negaflow-1.0.0-1-macOS-universal.pkg` | Apple Silicon und Intel |
+| `negaflow-1.0.0-1-macOS-arm64.pkg` | Nur Apple Silicon |
 
 1. Laden Sie das passende PKG herunter.
 2. Öffnen Sie es und folgen Sie Installer.
-3. Starten Sie **Negaflow** aus `/Applications`.
+3. Starten Sie **negaflow** aus `/Applications`.
 
-Das PKG installiert `Negaflow.app` direkt unter `/Applications`.<br>
+Das PKG installiert `negaflow.app` direkt unter `/Applications`.<br>
 DMG- und ZIP-Dateien für die manuelle Installation stehen auf derselben Release-Seite bereit.<br>
 Auf GitHub veröffentlichte Dateien werden mit einer Developer ID signiert und von Apple notarisiert.
 
@@ -253,6 +253,6 @@ Scanner-spezifisches Verhalten, endgültige Bildqualität, Signatur und Notarisi
 
 Das negaflow-Hauptprojekt wird unter der [Apache License 2.0](LICENSE) veröffentlicht.
 
-Negaflow ist weder mit Kodak, Fujifilm, Noritsu, LaserSoft Imaging noch mit anderen Markeninhabern verbunden oder von ihnen unterstützt.<br>
+negaflow ist weder mit Kodak, Fujifilm, Noritsu, LaserSoft Imaging noch mit anderen Markeninhabern verbunden oder von ihnen unterstützt.<br>
 Produktnamen dienen nur zur Benennung eines Mess- oder Kompatibilitätsziels.<br>
 Siehe [Markenhinweis](TRADEMARKS.md).

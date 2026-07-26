@@ -11,7 +11,7 @@
 
 ## 曲線
 
-フィルムの特性曲線は、露光と濃度の関係をトウ、直線部、ショルダーに分けて説明します。Negaflowは
+フィルムの特性曲線は、露光と濃度の関係をトウ、直線部、ショルダーに分けて説明します。negaflowは
 濃度領域のショルダーをstretched exponential曲線で近似します。
 
 ```math
@@ -103,7 +103,7 @@ r &= r_{\mathrm{white}}^{1/s}
 ## 参考資料と範囲
 
 トウ、直線部、ショルダー、ガンマという枠組みは公開された感光学のものです。文献の曲線係数は
-写していません。Negaflowの係数は上の4つの基準点から自分で計算します。
+写していません。negaflowの係数は上の4つの基準点から自分で計算します。
 
 - [Sensitometry](https://en.wikipedia.org/wiki/Sensitometry)
 - [Hurter–Driffield Characteristic Curve](https://studyguides.com/study-methods/overview/cmpanf83znm1201neitjb4waw)

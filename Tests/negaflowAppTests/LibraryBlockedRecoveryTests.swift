@@ -58,8 +58,8 @@ final class LibraryBlockedRecoveryTests: XCTestCase {
             appVersion: "1.2.3",
             failureCode: "corrupt",
             lifecycleCode: "blocked",
-            catalogPath: "~/Library/Application Support/Negaflow/library.json",
-            backupDirectoryPath: "~/Library/Application Support/Negaflow/Backups",
+            catalogPath: "~/Library/Application Support/negaflow/library.json",
+            backupDirectoryPath: "~/Library/Application Support/negaflow/Backups",
             pendingRestoreID: nil,
             generations: [generation]
         ).text

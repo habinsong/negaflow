@@ -309,7 +309,7 @@ présence d'un fichier de test n'est pas une affirmation qu'il a tourné dans to
 
 ## Noms et marques
 
-`GrainMend` est le nom de fonction propre à Negaflow.
+`GrainMend` est le nom de fonction propre à negaflow.
 
 - `Digital ICE` peut être une marque d'Eastman Kodak Company ou d'un ayant droit lié.
 - `iSRD`, `SRDx` et `SilverFast` sont des marques de LaserSoft Imaging.

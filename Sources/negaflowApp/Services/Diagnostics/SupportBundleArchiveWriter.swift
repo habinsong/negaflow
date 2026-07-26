@@ -71,7 +71,7 @@ enum SupportBundleArchiveWriter {
     }
 
     private static let readme = """
-    Negaflow Support Bundle
+    negaflow Support Bundle
 
     Paths, file names, source identifiers, and personal image metadata are omitted.
     Location and plugin identifiers are represented only by per-bundle salted hashes.

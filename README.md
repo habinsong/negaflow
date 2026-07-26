@@ -56,17 +56,17 @@ For most Macs, use the Universal PKG.
 
 | Download | Mac |
 |---|---|
-| `Negaflow-1.0.0-1-macOS-universal.pkg` | Apple Silicon and Intel |
-| `Negaflow-1.0.0-1-macOS-arm64.pkg` | Apple Silicon only |
+| `negaflow-1.0.0-1-macOS-universal.pkg` | Apple Silicon and Intel |
+| `negaflow-1.0.0-1-macOS-arm64.pkg` | Apple Silicon only |
 
 1. Download the PKG for the Mac.
 2. Open it and follow the onscreen instructions.
-3. Launch **Negaflow** from `/Applications`.
+3. Launch **negaflow** from `/Applications`.
 
-The PKG installs `Negaflow.app` directly in `/Applications`.<br>
+The PKG installs `negaflow.app` directly in `/Applications`.<br>
 DMG and ZIP builds are available on the same release page for manual installation.<br>
 Current GitHub release files are ad-hoc signed and are not notarized by Apple.<br>
-macOS may block the first launch. After attempting to open Negaflow, review the warning in
+macOS may block the first launch. After attempting to open negaflow, review the warning in
 **System Settings → Privacy & Security** and choose **Open Anyway** only if the downloaded
 file's SHA-256 checksum matches the checksum published with the release.
 
@@ -255,6 +255,6 @@ Scanner-specific behavior, final image quality, signing, and notarization are se
 
 The main negaflow project is distributed under the [Apache License 2.0](LICENSE).
 
-Negaflow is not affiliated with or sponsored by Kodak, Fujifilm, Noritsu, LaserSoft Imaging, or other trademark owners.<br>
+negaflow is not affiliated with or sponsored by Kodak, Fujifilm, Noritsu, LaserSoft Imaging, or other trademark owners.<br>
 Product names are used only to identify a measured or compatible target.<br>
 See [Trademark Notice](TRADEMARKS.md).

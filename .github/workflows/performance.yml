@@ -39,7 +39,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: Negaflow-performance-${{ github.sha }}
+          name: negaflow-performance-${{ github.sha }}
           path: build/performance/*.json
           if-no-files-found: error
           retention-days: 30

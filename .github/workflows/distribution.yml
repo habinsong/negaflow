@@ -85,7 +85,7 @@ jobs:
       - name: Verify final artifacts
         run: |
           shasum -a 256 -c build/release-artifacts/*-SHA256SUMS.txt
-          for app in build/release-apps/*/Negaflow.app; do
+          for app in build/release-apps/*/negaflow.app; do
             xcrun stapler validate "$app"
             spctl --assess --type execute --verbose=4 "$app"
           done
@@ -95,7 +95,7 @@ jobs:
       - name: Upload notarized artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: Negaflow-notarized-${{ github.sha }}
+          name: negaflow-notarized-${{ github.sha }}
           path: build/release-artifacts/*
           if-no-files-found: error
           retention-days: 30

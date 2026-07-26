@@ -12,7 +12,7 @@ Where it lives:
 ## The curve
 
 A film characteristic curve explains exposure against density as a toe, a straight line, and a
-shoulder. Negaflow approximates the shoulder in the density domain with a stretched exponential
+shoulder. negaflow approximates the shoulder in the density domain with a stretched exponential
 curve.
 
 ```math
@@ -109,7 +109,7 @@ Against the old result:
 ## Sources and scope
 
 Toe, straight line, shoulder, and gamma come from published sensitometry. None of the curve
-coefficients in that literature were copied. Negaflow computes its own from the four anchors
+coefficients in that literature were copied. negaflow computes its own from the four anchors
 above.
 
 - [Sensitometry](https://en.wikipedia.org/wiki/Sensitometry)

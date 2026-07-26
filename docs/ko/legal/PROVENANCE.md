@@ -2,17 +2,17 @@
 
 [문서 홈](../README.md)
 
-이 문서는 Negaflow 본체의 Apache-2.0 배포 범위를 기록합니다. 법률 의견서가 아니라, 현재
+이 문서는 negaflow 본체의 Apache-2.0 배포 범위를 기록합니다. 법률 의견서가 아니라, 현재
 저장소와 출시 산출물을 다시 검사할 수 있게 만든 출처 기록입니다.
 
 ## 코드
 
-`Sources`, `Tests`, `scripts`의 구현은 Negaflow를 위해 작성한 Swift, Python, 셸 코드입니다.
+`Sources`, `Tests`, `scripts`의 구현은 negaflow를 위해 작성한 Swift, Python, 셸 코드입니다.
 본체에는 C/C++/Objective-C 소스, 외부 패키지, 정적·동적 라이브러리, vendored 소스 트리가
 없습니다. Apple이 macOS에서 제공하는 시스템 프레임워크만 링크합니다.
 
 필름 반전은 공개된 사진 감광학의 밀도, 토우, 직선부, 숄더 개념을 사용합니다. 현재 구현의
-곡선과 계수는 Negaflow의 네 광도 기준점에서 유도하며 제3자 프로그램의 수식이나 상수를
+곡선과 계수는 negaflow의 네 광도 기준점에서 유도하며 제3자 프로그램의 수식이나 상수를
 복사하지 않습니다. 식과 유도 과정은 [고정 인화 응답](../reference/PRINT_RESPONSE.md)에
 있습니다.
 
@@ -33,7 +33,7 @@ GrainMend IR은 다음 순서로 작동합니다.
 
 ## SANE 플러그인 경계
 
-Negaflow 본체에는 `scanimage`, SANE 헤더, 백엔드 설정, 장치별 처리 코드가 없습니다. 본체는
+negaflow 본체에는 `scanimage`, SANE 헤더, 백엔드 설정, 장치별 처리 코드가 없습니다. 본체는
 설치된 외부 프로그램과 버전이 있는 JSON/NDJSON 계약으로만 통신합니다. 실제 SANE 구현은 별도
 GPL-2.0-or-later 저장소와 실행파일로 배포합니다.
 
@@ -59,7 +59,7 @@ GPL-2.0-or-later 저장소와 실행파일로 배포합니다.
 |---|---|---|
 | ScannerKit TIFF | 유지관리자가 촬영·정리한 레이아웃 자료 | 4개 TIFF |
 | 앱 아이콘 | 유지관리자가 제공한 프로젝트 아트워크 | 원본 PNG, 빌드용 PNG, ICNS |
-| 룩 프리셋 | Negaflow용으로 작성한 값 | 6개 JSON |
+| 룩 프리셋 | negaflow용으로 작성한 값 | 6개 JSON |
 | 스캐너 프로파일 | 유지관리자가 관리하는 스캔 측정에서 생성 | 원본 스캔을 제외한 수치 프로파일 |
 
 TIFF에 보이는 카메라와 색공간 메타데이터는 촬영·인코딩 과정의 컨테이너 정보입니다.

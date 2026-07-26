@@ -54,8 +54,8 @@ final class ScannerKitTests: XCTestCase {
             MockScannerBackend.flatbedScannerID,
         ])
         XCTAssertEqual(devices.map(\.displayName), [
-            "Negaflow Scanner",
-            "Negaflow Flatbed Scanner",
+            "negaflow Scanner",
+            "negaflow Flatbed Scanner",
         ])
     }
 

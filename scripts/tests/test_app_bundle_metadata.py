@@ -27,7 +27,7 @@ class AppBundleMetadataTests(unittest.TestCase):
             )
             (products / "negaflow_negaflowApp.bundle").mkdir()
 
-            app = temporary / "Negaflow.app"
+            app = temporary / "negaflow.app"
             subprocess.run(
                 [
                     "bash",
@@ -49,9 +49,9 @@ class AppBundleMetadataTests(unittest.TestCase):
             with (app / "Contents/Info.plist").open("rb") as stream:
                 metadata = plistlib.load(stream)
 
-            self.assertEqual(metadata["CFBundleDisplayName"], "Negaflow")
-            self.assertEqual(metadata["CFBundleName"], "Negaflow")
-            self.assertEqual(metadata["CFBundleExecutable"], "Negaflow")
+            self.assertEqual(metadata["CFBundleDisplayName"], "negaflow")
+            self.assertEqual(metadata["CFBundleName"], "negaflow")
+            self.assertEqual(metadata["CFBundleExecutable"], "negaflow")
             self.assertEqual(metadata["CFBundleIdentifier"], "com.songhabin.negaflow.tests")
             self.assertEqual(metadata["CFBundleShortVersionString"], "1.2.3")
             self.assertEqual(metadata["CFBundleVersion"], "42")
@@ -66,7 +66,7 @@ class AppBundleMetadataTests(unittest.TestCase):
             self.assertEqual(metadata["CFBundleLocalizations"], list(LOCALES))
 
             resources = app / "Contents/Resources"
-            self.assertTrue((app / "Contents/MacOS/Negaflow").is_file())
+            self.assertTrue((app / "Contents/MacOS/negaflow").is_file())
             self.assertGreater((resources / "AppIcon.icns").stat().st_size, 0)
             self.assertTrue((resources / "negaflow_Chromabase.bundle").is_dir())
             self.assertTrue((resources / "negaflow_negaflowApp.bundle").is_dir())
@@ -108,7 +108,7 @@ class AppBundleMetadataTests(unittest.TestCase):
                     str(ROOT / "scripts/package-app.sh"),
                     "/bin/echo",
                     str(products),
-                    str(temporary / "Negaflow.app"),
+                    str(temporary / "negaflow.app"),
                     "1.2.3",
                     "42",
                     "com.songhabin.negaflow.tests",
@@ -145,7 +145,7 @@ class AppBundleMetadataTests(unittest.TestCase):
                     str(ROOT / "scripts/package-app.sh"),
                     "/bin/echo",
                     str(products),
-                    str(temporary / "Negaflow.app"),
+                    str(temporary / "negaflow.app"),
                     "1.2.3",
                     "42",
                     "com.songhabin.negaflow.tests",
@@ -183,7 +183,7 @@ class AppBundleMetadataTests(unittest.TestCase):
                     str(ROOT / "scripts/package-app.sh"),
                     "/bin/echo",
                     str(products),
-                    str(temporary / "Negaflow.app"),
+                    str(temporary / "negaflow.app"),
                     "1.2.3",
                     "42",
                     "com.songhabin.negaflow.tests",

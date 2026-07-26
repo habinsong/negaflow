@@ -240,7 +240,7 @@ final class ScannerRelativeIT8BenchmarkTests: XCTestCase {
         }
         let source = """
         IT8.7/1
-        ORIGINATOR "Negaflow syntheticModel test"
+        ORIGINATOR "negaflow syntheticModel test"
         DESCRIPTOR "No physical device accuracy claim"
         NUMBER_OF_FIELDS 4
         BEGIN_DATA_FORMAT

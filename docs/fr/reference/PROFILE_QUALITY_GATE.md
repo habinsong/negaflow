@@ -57,7 +57,7 @@ Règles d'application :
   de minilab où un opérateur choisit densité, gradation et accentuation.
 
 Ce matériel montre que le traitement change avec la scène et l'opérateur. Il ne fournit pas de
-constantes pour reproduire un HS-1800 ou un SP-3000. Negaflow ne devine pas ces valeurs à partir
+constantes pour reproduire un HS-1800 ou un SP-3000. negaflow ne devine pas ces valeurs à partir
 d'un nom de produit.
 
 ## Schéma v1 du manifeste de corpus

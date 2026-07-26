@@ -55,7 +55,7 @@ Rules for applying it:
   minilab flow where an operator chooses density, gradation, and sharpening.
 
 This material shows that processing changes with the scene and the operator. It does not hand
-over constants for reproducing an HS-1800 or an SP-3000. Negaflow does not guess such values
+over constants for reproducing an HS-1800 or an SP-3000. negaflow does not guess such values
 from a product name.
 
 ## Corpus manifest schema v1

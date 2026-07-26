@@ -55,14 +55,14 @@
 
 | 설치 파일 | 지원하는 Mac |
 |---|---|
-| `Negaflow-1.0.0-1-macOS-universal.pkg` | Apple Silicon, Intel |
-| `Negaflow-1.0.0-1-macOS-arm64.pkg` | Apple Silicon 전용 |
+| `negaflow-1.0.0-1-macOS-universal.pkg` | Apple Silicon, Intel |
+| `negaflow-1.0.0-1-macOS-arm64.pkg` | Apple Silicon 전용 |
 
 1. 사용하는 Mac에 맞는 PKG를 내려받습니다.
 2. PKG를 열고 설치 프로그램의 안내에 따라 진행합니다.
-3. `/Applications`에서 **Negaflow**를 실행합니다.
+3. `/Applications`에서 **negaflow**를 실행합니다.
 
-PKG는 `Negaflow.app`을 `/Applications`에 바로 설치합니다.<br>
+PKG는 `negaflow.app`을 `/Applications`에 바로 설치합니다.<br>
 직접 설치할 때 사용할 수 있는 DMG와 ZIP도 같은 릴리스 페이지에서 제공합니다.<br>
 GitHub에 공개하는 배포 파일은 Developer ID로 서명하고 Apple 공증까지 마친 뒤 제공합니다.
 
@@ -275,5 +275,5 @@ bash scripts/ci-gate.sh
 
 **negaflow**는 [Apache License 2.0](LICENSE)으로 배포됩니다.
 
-**Negaflow**는 Kodak, Fujifilm, Noritsu, LaserSoft Imaging 또는 다른 상표권자와 제휴하거나 후원받지 않습니다. <br>
+**negaflow**는 Kodak, Fujifilm, Noritsu, LaserSoft Imaging 또는 다른 상표권자와 제휴하거나 후원받지 않습니다. <br>
 제품명은 호환 대상이나 측정 대상을 식별할 때만 사용합니다. 자세한 내용은 [상표 고지](TRADEMARKS.md)에 있습니다.

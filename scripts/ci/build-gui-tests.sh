@@ -31,7 +31,7 @@ xcodebuild -quiet \
   "$ACTION"
 
 APP="build/DerivedData.ci/Build/Products/Debug/negaflowApp.app"
-[ "$(plutil -extract CFBundleDisplayName raw "$APP/Contents/Info.plist")" = "Negaflow" ]
+[ "$(plutil -extract CFBundleDisplayName raw "$APP/Contents/Info.plist")" = "negaflow" ]
 [ "$(plutil -extract CFBundleIconFile raw "$APP/Contents/Info.plist")" = "AppIcon" ]
 test -s "$APP/Contents/Resources/AppIcon.icns"
 

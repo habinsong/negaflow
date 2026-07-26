@@ -1,6 +1,6 @@
 # Trademarks and Third-Party Names
 
-Negaflow is an independent, open-source film-scanning and color-profiling tool.
+negaflow is an independent, open-source film-scanning and color-profiling tool.
 Its source code is distributed under the Apache License 2.0. That license covers
 this project's own code only; it does **not** grant any rights to third-party
 trademarks, film names, scanner names, product names, published datasheets,
@@ -11,14 +11,14 @@ reference scans, logos, packaging, or proprietary scanner software.
 Film, scanner, minilab, laboratory, process, and target names that appear in this
 software, its documentation, or its bundled profile data are used **only to
 identify** the physical film stocks, scanner models, laboratory target systems, or
-profile families that Negaflow approximates, measures, characterizes, or
+profile families that negaflow approximates, measures, characterizes, or
 interoperates with. Such use is nominative and descriptive. It does not imply that
-those names are Negaflow's, nor that Negaflow reproduces any trademark owner's
+those names are negaflow's, nor that negaflow reproduces any trademark owner's
 proprietary output, look, or technology.
 
 ## No affiliation or endorsement
 
-Negaflow is **not** affiliated with, endorsed by, sponsored by, certified by, or
+negaflow is **not** affiliated with, endorsed by, sponsored by, certified by, or
 approved by Eastman Kodak Company, Kodak Alaris, FUJIFILM Corporation, Noritsu Koki
 Co., Ltd., CineStill Film, Lomographische AG / Lomography, Harman Technology Ltd,
 ORWO / ORWO Net, LaserSoft Imaging AG (SilverFast), Hamrick Software (VueScan),
@@ -53,7 +53,7 @@ any manufacturer.
 
 ## GrainMend defect removal
 
-**GrainMend** is the product name for Negaflow's dust-and-scratch removal feature.
+**GrainMend** is the product name for negaflow's dust-and-scratch removal feature.
 Its RGB and infrared paths are independent implementations based on published imaging principles. It
 is not "Digital ICE", "iSRD", "SRDx", "FARE", or any other branded dust-and-scratch
 system, and does not claim equivalence to hardware infrared cleaning.

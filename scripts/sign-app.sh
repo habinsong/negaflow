@@ -9,7 +9,7 @@ fi
 APP_BUNDLE="$1"
 SIGN_IDENTITY="${2:--}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ENTITLEMENTS="$ROOT/Config/Negaflow.entitlements"
+ENTITLEMENTS="$ROOT/Config/negaflow.entitlements"
 
 if [ ! -d "$APP_BUNDLE/Contents" ]; then
   echo "[sign-app] ERROR: 앱 번들이 아닙니다: $APP_BUNDLE" >&2

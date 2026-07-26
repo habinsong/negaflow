@@ -2,7 +2,7 @@
 
 [Accueil de la documentation](../README.md)
 
-L'entrée par défaut de Negaflow est l'import d'images. Un scanner réel n'est branché que si un
+L'entrée par défaut de negaflow est l'import d'images. Un scanner réel n'est branché que si un
 plugin externe est présent.
 
 > [!IMPORTANT]
@@ -16,7 +16,7 @@ plugin externe est présent.
 |---|---|
 | Import d'images | Envoie RAW, DNG, TIFF, PNG et JPEG vers le chemin de développement. |
 | Plugin externe | Tourne dans son propre processus, pilote l'appareil réel, communique en JSON. |
-| Scanner de démonstration | Fournit `Negaflow Scanner` et `Negaflow Flatbed Scanner` pour le développement. Il faut choisir la démo pour s'en servir. |
+| Scanner de démonstration | Fournit `negaflow Scanner` et `negaflow Flatbed Scanner` pour le développement. Il faut choisir la démo pour s'en servir. |
 | Lien ImageCaptureCore | Code de compatibilité inactif pour les appareils macOS Image Capture. |
 
 Il n'y a pas d'implémentation SANE dans ce dépôt. Ce code vit dans un projet GPL séparé.
@@ -237,7 +237,7 @@ tests et la documentation de distribution vivent tous dans le dépôt séparé
 Ce dépôt documente et contrôle uniquement la spécification de processus externe indépendante des
 appareils. Qui importe seulement des fichiers image n'a pas besoin de plugin scanner.
 
-L'application Negaflow ne lie pas l'implémentation SANE et ne la place pas dans sa distribution.
+L'application negaflow ne lie pas l'implémentation SANE et ne la place pas dans sa distribution.
 Le plugin a son dépôt, son exécutable, sa distribution source et sa licence GPL. Ce document
 consigne la structure ; il ne tranche pas la question de l'œuvre dérivée. Avant une publication
 réelle, les fichiers présents dans les deux artefacts et le contrat de communication sont
