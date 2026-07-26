@@ -58,7 +58,7 @@ enum HistogramToneRegion: CaseIterable {
 
     var limits: ClosedRange<Double> {
         switch self {
-        case .exposure: return -2...2
+        case .exposure: return DevelopToneRange.exposure
         default: return -1...1
         }
     }

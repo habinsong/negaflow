@@ -49,7 +49,7 @@ struct DevelopAdjustmentSections: View {
             toggle: { toggle(.tone) },
             reset: { reset(.tone) }
         ) {
-            InspectorSlider(model.text(AppLocalizedPhrase.exposure), value: toneBinding(\.exposure), range: -2...2, focusID: .exposure, focusedSlider: focusedSlider)
+            InspectorSlider(model.text(AppLocalizedPhrase.exposure), value: toneBinding(\.exposure), range: DevelopToneRange.exposure, focusID: .exposure, focusedSlider: focusedSlider)
             InspectorSlider(model.text(AppLocalizedPhrase.contrast), value: toneBinding(\.contrast), range: -1...1, focusID: .contrast, focusedSlider: focusedSlider)
             InspectorSlider(model.text(AppLocalizedPhrase.toneHighlights), value: toneBinding(\.highlight), range: -1...1, focusID: .highlight, focusedSlider: focusedSlider)
             InspectorSlider(model.text(AppLocalizedPhrase.shadows), value: toneBinding(\.shadow), range: -1...1, focusID: .shadow, focusedSlider: focusedSlider)

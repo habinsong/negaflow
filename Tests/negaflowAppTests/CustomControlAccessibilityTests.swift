@@ -67,7 +67,9 @@ final class CustomControlAccessibilityTests: XCTestCase {
         HistogramToneRegion.exposure.apply(to: frame, value: 99)
         HistogramToneRegion.shadow.apply(to: frame, value: -99)
 
-        XCTAssertEqual(frame.params.exposure, 2)
+        // 히스토그램 드래그도 슬라이더와 같은 범위를 써야 한다 — 값을 박아 두면 범위를 넓혔을 때
+        // 조작 경로마다 상한이 갈린다(노출은 세 곳에 따로 하드코딩되어 있었다).
+        XCTAssertEqual(frame.params.exposure, DevelopToneRange.exposure.upperBound)
         XCTAssertEqual(frame.params.shadow, -1)
     }
 

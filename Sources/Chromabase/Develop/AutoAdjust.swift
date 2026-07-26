@@ -193,6 +193,9 @@ public enum AutoAdjust {
     /// 감광(노출 −)을 발동하는 실질 클리핑 비율. 소수 스펙큘러(<5%)는 노출 대신
     /// Highlights 복구가 담당한다.
     static let clipRecoveryThreshold = 0.05
+    /// 자동 톤이 스스로 낼 수 있는 노출 한도(스톱). 슬라이더 범위(DevelopToneRange.exposure)보다
+    /// 좁게 둬 자동 결과가 사용자가 손으로 갈 수 있는 끝까지 밀어붙이지는 않게 한다.
+    static let autoExposureLimit = 3.0
 
     public static func autoTone(_ s: ImageStats) -> ToneDelta {
         var d = ToneDelta()
@@ -219,11 +222,14 @@ public enum AutoAdjust {
         //    넘지 않게. 감광은 실질 클리핑(≥5%)의 복구 전용 — 소수 스펙큘러 때문에 장면
         //    전체를 어둡게 만들지 않는다(그건 Highlights 가 담당). 노출만 linear 도메인
         //    (2^ev 물리) — 이후 슬라이더 역산은 basicTone 커널과 같은 sRGB 감마 도메인.
-        var ev = clamp(log2(midGrayLinear / max(p50, 1e-4)), 0, 1.5)
+        //    한도는 ±3 스톱이다 — 슬라이드 필름의 노출 부족은 1.5스톱으로 복구가 안 된다.
+        //    실제 리프트는 아래 headroomCap(하이라이트 여유)이 다시 눌러 주므로, 이 한도를 넓혀도
+        //    여유가 없는 장면에서는 그만큼 올라가지 않는다.
+        var ev = clamp(log2(midGrayLinear / max(p50, 1e-4)), 0, autoExposureLimit)
         let headroomCap = max(0, log2(0.95 / max(p98, 1e-4)))
         ev = min(ev, headroomCap)
         if clipHigh >= clipRecoveryThreshold {
-            ev = clamp(log2(0.92 / max(p995, 1e-4)), -1.2, 0)
+            ev = clamp(log2(0.92 / max(p995, 1e-4)), -autoExposureLimit, 0)
         }
         d.exposure = ev
         let gain = pow(2.0, ev)

@@ -11,7 +11,7 @@ enum DevelopInspectorKeyboardController {
     ) -> Bool {
         switch slider {
         case .exposure:
-            nudgeParam(\.exposure, range: -2...2, frame: frame, direction: direction, coarse: coarse)
+            nudgeParam(\.exposure, range: DevelopToneRange.exposure, frame: frame, direction: direction, coarse: coarse)
         case .contrast:
             nudgeParam(\.contrast, range: -1...1, frame: frame, direction: direction, coarse: coarse)
         case .highlight:

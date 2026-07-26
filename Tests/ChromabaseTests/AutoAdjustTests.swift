@@ -166,7 +166,7 @@ final class AutoAdjustTests: XCTestCase {
     }
 
     /// 어두운 미드(노출 상한 이내): 노출이 미드 앵커를 채우면 density 잔차는 작아야 한다.
-    /// (상한 1.5스탑을 넘는 극단 저조도는 density 가 이어받는 것이 설계 — 별도 케이스.)
+    /// (노출 상한을 넘는 극단 저조도는 density 가 이어받는 것이 설계 — 별도 케이스.)
     func testAutoToneDarkMidtonesPreferExposureOverDensity() {
         // p50 sRGB ≈ 0.353 (linear ≈ 0.10) — 노출 +0.82 스탑으로 앵커(0.18) 도달 가능.
         let d = AutoAdjust.autoTone(stats(0.35, 0.35, 0.35, spike(90), sat: 0.3))
@@ -174,11 +174,12 @@ final class AutoAdjustTests: XCTestCase {
         XCTAssertLessThan(abs(d.density), 0.15, "노출이 채운 뒤 density 는 잔차만")
     }
 
-    /// 노출 상한(1.5스탑)을 넘는 극단 저조도: 남은 미드 잔차를 density(−, 미드 리프트)가
-    /// 이어받는다 — 노출/농도의 역할 분담.
+    /// 노출 상한(AutoAdjust.autoExposureLimit)을 넘는 극단 저조도: 남은 미드 잔차를
+    /// density(−, 미드 리프트)가 이어받는다 — 노출/농도의 역할 분담.
     func testAutoToneDensityTakesOverBeyondExposureCap() {
-        let d = AutoAdjust.autoTone(stats(0.25, 0.25, 0.25, spike(64), sat: 0.3))
-        XCTAssertEqual(d.exposure, 1.5, accuracy: 1e-9, "노출은 상한까지")
+        // p50 sRGB ≈ 0.12 (linear ≈ 0.013) — 미드 앵커까지 3스탑을 넘게 필요하다.
+        let d = AutoAdjust.autoTone(stats(0.12, 0.12, 0.12, spike(31), sat: 0.3))
+        XCTAssertEqual(d.exposure, AutoAdjust.autoExposureLimit, accuracy: 1e-9, "노출은 상한까지")
         XCTAssertLessThan(d.density, -0.1, "남은 잔차는 density(미드 리프트)가 담당")
     }
 
