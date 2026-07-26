@@ -4,17 +4,17 @@ import Foundation
 ///
 /// 자동과 가이드는 **서로 다른 도구**다 — 범위도, 기본값도, 검출기 민감도 매핑도 공유하지 않는다.
 ///  - 자동: 사용자가 위치를 지목하지 않은 전체 프레임 검출. 검출기 민감도 0~1.
-///  - 가이드: 사용자가 ROI 로 범위를 지목한 검출. 자동의 1.5배까지 올라간다.
+///  - 가이드: 사용자가 ROI 로 범위를 지목한 검출. 검출기 민감도 0~1.
 ///
-/// 1 을 넘는 민감도는 검출 임계·SNR 게이트를 낮추지 않는다(그레인 안전선은 검출기 안에서 s≤1 로
-/// clamp 된다). 넘는 만큼은 형태 게이트(면적/aspect/길이/두께)만 완화한다 — 사용자가 결함 위치를
-/// 지목한 가이드에서만 그렇게 풀어도 되는 이유다.
+/// 두 도구 모두 검출기 민감도 상한은 1 이다. 1 을 넘겨 형태 게이트(면적/aspect/길이/두께)까지
+/// 풀면 그레인이 굵은 장면에서 텍스처가 통째로 한 덩어리 결함이 되어 ROI 를 뭉갠다 —
+/// 2026-07-26 흑백 네거티브 실측으로 가이드 상한을 1.5 에서 되돌렸다.
 enum GrainMendSensitivity {
     static let automaticRange: ClosedRange<Double> = 0.7...6.0
-    static let guidedRange: ClosedRange<Double> = 0.7...9.0
+    static let guidedRange: ClosedRange<Double> = 0.7...6.0
 
-    /// 가이드가 슬라이더 최대에서 검출기에 전달하는 민감도(= 자동 최대의 1.5배).
-    static let guidedMaximumDetectorSensitivity = 1.5
+    /// 가이드가 슬라이더 최대에서 검출기에 전달하는 민감도(= 자동과 동일).
+    static let guidedMaximumDetectorSensitivity = 1.0
 
     static func range(automatic: Bool) -> ClosedRange<Double> {
         automatic ? automaticRange : guidedRange
@@ -25,7 +25,7 @@ enum GrainMendSensitivity {
         range(automatic: automatic).upperBound
     }
 
-    /// 슬라이더 값 → 검출기 민감도(자동 0~1, 가이드 0~1.5).
+    /// 슬라이더 값 → 검출기 민감도(자동·가이드 모두 0~1).
     static func detectorSensitivity(_ value: Double, automatic: Bool) -> Double {
         let bounds = range(automatic: automatic)
         let span = bounds.upperBound - bounds.lowerBound

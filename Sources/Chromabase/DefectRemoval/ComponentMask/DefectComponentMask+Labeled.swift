@@ -22,9 +22,12 @@ extension DefectComponentMask {
         let chunky = chunkyMap(dustComps, width: width, height: height)
         var acceptedDust: [RawComponent] = []
         for c in dustComps {
-            // 히스테리시스: strong 코어가 하나라도 있어야 채택 — weak 프린지만으로 된 컴포넌트
+            // 히스테리시스: strong 코어가 있어야 채택 — weak 프린지만으로 된 컴포넌트
             // (그레인/저대비 텍스처)는 버린다.
-            let hasStrong = dustStrong.map { map in c.pixels.contains(where: { map[$0] }) } ?? true
+            let strongCount = dustStrong.map { map in
+                c.pixels.reduce(0) { $0 + (map[$1] ? 1 : 0) }
+            }
+            let hasStrong = strongCount.map { $0 > 0 } ?? true
             let hasTrustedEvidence = dustTrustedStrong.map { map in
                 c.pixels.contains(where: { map[$0] })
             } ?? false
@@ -32,6 +35,13 @@ extension DefectComponentMask {
             // 구제한다. 긴 띠·창문 같은 정상 구조는 이 크기 상한을 넘으므로 strong 우회가 불가능하다.
             let compactTrusted = hasTrustedEvidence && c.pixels.count <= 16
             if !hasStrong, !compactTrusted { continue }
+            // 코어 밀도: 커진 컴포넌트일수록 strong 이 그만큼 차 있어야 한다. weak 연결로 뭉친
+            // 그레인·텍스처 카펫은 여기서 통째로 걸리고, 작은 결함은 비율이 높아 그대로 통과한다.
+            // strong 없이 절대 대비 증거로 구제된 작은 컴포넌트(compactTrusted)는 대상이 아니다.
+            if let strongCount, hasStrong,
+               Double(strongCount) / Double(max(1, c.pixels.count)) < dustMinStrongFraction {
+                continue
+            }
             let trusted = hasStrong ? hasTrustedEvidence : compactTrusted
             // 낮은 임계의 micro-only 경로가 새로 만든 1~2px 컴포넌트는 필름 입자와 구분할 증거가
             // 부족하므로 채택하지 않는다. 기존 보수/큰 이물 strong은 이 제한을 받지 않는다.

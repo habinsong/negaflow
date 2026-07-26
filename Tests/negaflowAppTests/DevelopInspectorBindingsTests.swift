@@ -12,25 +12,20 @@ final class DevelopInspectorBindingsTests: XCTestCase {
         XCTAssertTrue(frame.defectMicroSpecks)
     }
 
-    /// 자동과 가이드는 별개 계약이다 — 가이드 슬라이더 범위와 검출기 민감도 상한이 자동의 1.5배.
-    func testGuidedSensitivityRangeAndDetectorMappingAreOneAndAHalfTimesAutomatic() {
+    /// 검출기 민감도 상한은 두 모드 모두 1 이다.
+    ///
+    /// 가이드만 1.5 까지 올려 형태 게이트(면적/aspect/길이/두께)를 더 풀었더니, 그레인이 굵은
+    /// 흑백 네거티브에서 텍스처가 통째로 한 덩어리 결함이 되어 ROI 를 뭉갰다(2026-07-26 실측).
+    /// 그래서 1 로 되돌렸다 — 두 모드는 값을 따로 저장할 뿐 상한 계약은 같다.
+    func testGuidedSensitivityCeilingMatchesAutomatic() {
         XCTAssertEqual(GrainMendSensitivity.automaticRange, 0.7...6.0)
-        XCTAssertEqual(GrainMendSensitivity.guidedRange, 0.7...9.0)
-        // 슬라이더 최대값이 1.5배다(하한은 두 모드가 공유하므로 폭이 아니라 상한을 비교한다).
-        XCTAssertEqual(
-            GrainMendSensitivity.guidedRange.upperBound,
-            1.5 * GrainMendSensitivity.automaticRange.upperBound,
-            accuracy: 1e-9
-        )
-        XCTAssertEqual(
-            GrainMendSensitivity.guidedRange.lowerBound,
-            GrainMendSensitivity.automaticRange.lowerBound,
-            accuracy: 1e-9
-        )
+        XCTAssertEqual(GrainMendSensitivity.guidedRange, 0.7...6.0)
+        XCTAssertEqual(GrainMendSensitivity.guidedMaximumDetectorSensitivity, 1.0, accuracy: 1e-9)
         XCTAssertEqual(GrainMendSensitivity.detectorSensitivity(6.0, automatic: true), 1.0, accuracy: 1e-9)
-        XCTAssertEqual(GrainMendSensitivity.detectorSensitivity(9.0, automatic: false), 1.5, accuracy: 1e-9)
-        // 범위를 벗어난 저장값도 모드 상한을 넘지 않는다.
+        XCTAssertEqual(GrainMendSensitivity.detectorSensitivity(6.0, automatic: false), 1.0, accuracy: 1e-9)
+        // 범위를 벗어난 저장값(1.5 시절의 9.0 포함)도 모드 상한을 넘지 않는다.
         XCTAssertEqual(GrainMendSensitivity.detectorSensitivity(99, automatic: true), 1.0, accuracy: 1e-9)
+        XCTAssertEqual(GrainMendSensitivity.detectorSensitivity(9.0, automatic: false), 1.0, accuracy: 1e-9)
         XCTAssertEqual(GrainMendSensitivity.detectorSensitivity(0, automatic: false), 0, accuracy: 1e-9)
     }
 
