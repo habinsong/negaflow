@@ -283,9 +283,14 @@ final class ScanFrame: ObservableObject, Identifiable {
     // 민감도는 자동·가이드가 따로다(범위·매핑이 다르다 — GrainMendSensitivity). 기본값은 둘 다 최대.
     @Published var defectAutoSensitivity: Double = GrainMendSensitivity.defaultValue(automatic: true)
     @Published var defectGuidedSensitivity: Double = GrainMendSensitivity.defaultValue(automatic: false)
-    // 시작값은 설정 > 일반의 기본값을 따른다(앱을 다시 켜도 유지). 프레임별 체크박스가 언제나
-    // 우선하므로 설정은 강제가 아니라 출발점이다.
-    @Published var defectMicroSpecks: Bool = DefectDetectionDefaults.microSpecks()
+    // 시작값은 설정 > 일반의 기본값을 따른다(앱을 다시 켜도 유지). 자동과 가이드는 별개 도구라
+    // 값을 공유하지 않는다(민감도와 같은 계약). 프레임별 체크박스가 언제나 우선하므로 설정은
+    // 강제가 아니라 출발점이다.
+    @Published var defectAutoMicroSpecks: Bool = DefectDetectionDefaults.autoMicroSpecks()
+    @Published var defectGuidedMicroSpecks: Bool = DefectDetectionDefaults.guidedMicroSpecks()
+
+    /// 현재 모드가 쓰는 미세 입자 설정.
+    var defectMicroSpecks: Bool { defectAutoMode ? defectAutoMicroSpecks : defectGuidedMicroSpecks }
     // 자동/가이드 구분: true면 진입 즉시 전체 프레임을 검출(ROI 드래그 없음), false면 ROI 드래그.
     // 두 모드는 같은 검출 오버레이(RegionDefectOverlay)·세션 저장소를 공유한다.
     @Published var defectAutoMode: Bool = false

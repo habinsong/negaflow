@@ -348,7 +348,7 @@ extension AppLocalization {
         .developerDebug: "開発者向けデバッグ",
         .developerMode: "開発者モード",
         .defaultDefectMicroSpecks: "微細粒子を既定で検出",
-        .defaultDefectMicroSpecksHelp: "新しいコマの初期値です。コマごとにチェックボックスがあるので、写真ごとに切り替えられます。",
+        .defaultDefectMicroSpecksHelp: "新しいコマの初期値で、自動とガイドを別々に覚えます。コマごとにチェックボックスがあるので、写真ごとに切り替えられます。",
         .debugOverlay: "デバッグオーバーレイ",
         .stage: "ステージ",
         .full: "全体",

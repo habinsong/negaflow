@@ -20,10 +20,16 @@ struct AppSettingsView: View {
                     }
                 }
                 Toggle(model.text(AppLocalizedPhrase.developerMode), isOn: $model.developerMode)
-                Toggle(
-                    model.text(AppLocalizedPhrase.defaultDefectMicroSpecks),
-                    isOn: $model.defaultDefectMicroSpecks
-                )
+                LabeledContent(model.text(AppLocalizedPhrase.defaultDefectMicroSpecks)) {
+                    // 자동과 가이드는 별개 도구라 시작값도 따로 고른다.
+                    HStack(spacing: 16) {
+                        Toggle(model.text(AppLocalizedPhrase.autoDefect),
+                               isOn: $model.defaultAutoDefectMicroSpecks)
+                        Toggle(model.text(AppLocalizedPhrase.guidedDefect),
+                               isOn: $model.defaultGuidedDefectMicroSpecks)
+                    }
+                    .toggleStyle(.checkbox)
+                }
                 .help(model.text(AppLocalizedPhrase.defaultDefectMicroSpecksHelp))
                 MemoryCacheSettingsSection(store: model.frameCacheResidencyStore)
                 SupportBundleSettingsSection()

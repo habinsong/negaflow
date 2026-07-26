@@ -119,7 +119,12 @@ struct RegionDefectOverlay: View {
         Toggle(model.text(AppLocalizedPhrase.defectMicroSpeck), isOn: Binding(
             get: { frame.defectMicroSpecks },
             set: { newValue in
-                frame.defectMicroSpecks = newValue
+                // 자동과 가이드는 값을 공유하지 않는다 — 지금 쓰는 모드 쪽만 바꾼다.
+                if frame.defectAutoMode {
+                    frame.defectAutoMicroSpecks = newValue
+                } else {
+                    frame.defectGuidedMicroSpecks = newValue
+                }
                 if frame.defectActive, !frame.defectIsDetecting { model.redetectRegion(frame) }
             }))
             .toggleStyle(.checkbox)

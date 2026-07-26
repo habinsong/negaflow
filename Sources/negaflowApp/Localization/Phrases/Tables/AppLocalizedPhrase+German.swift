@@ -348,7 +348,7 @@ extension AppLocalization {
         .developerDebug: "Entwickler-Debug",
         .developerMode: "Entwicklermodus",
         .defaultDefectMicroSpecks: "Mikropartikel standardmäßig erkennen",
-        .defaultDefectMicroSpecksHelp: "Startwert für neue Bilder. Jedes Bild behält sein eigenes Kontrollkästchen und lässt sich weiterhin einzeln umschalten.",
+        .defaultDefectMicroSpecksHelp: "Startwert für neue Bilder, getrennt für Automatik und Geführt gespeichert. Jedes Bild behält sein eigenes Kontrollkästchen und lässt sich weiterhin einzeln umschalten.",
         .debugOverlay: "Debug-Overlay",
         .stage: "Stufe",
         .full: "Ganzes Bild",
