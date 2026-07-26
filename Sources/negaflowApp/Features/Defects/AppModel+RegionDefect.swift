@@ -259,7 +259,6 @@ extension AppModel {
         let detectRevision = frame.defectDetectRevision
         let baseSize = frame.defectBaseSize
         let defectPreview = frame.defectPreview
-        let language = appLanguage
         Task.detached(priority: .userInitiated) { [weak self, weak frame] in
             let survivors = field.components.filter { !excluded.contains($0.id) }
             // 마스크를 "생존 결함 bbox + 팽창 + 복원 문맥 여백" 창에만 직접 렌더해 저장한다.
