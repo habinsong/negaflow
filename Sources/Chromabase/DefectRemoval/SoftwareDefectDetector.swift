@@ -127,9 +127,32 @@ enum SoftwareDefectDetector {
                               preferredAngle: Double? = nil,
                               fieldParallel: Bool = true,
                               context: CIContext = DefectContext.detect) -> DefectLabelField {
+        detectLabeledWithResponse(in: image, extent: extent, tuning: tuning, maxDustArea: maxDustArea,
+                                  classificationMaxDustArea: classificationMaxDustArea,
+                                  extendedDustScales: extendedDustScales, detectSpecks: detectSpecks,
+                                  rejectLineGrid: rejectLineGrid, preferredAngle: preferredAngle,
+                                  fieldParallel: fieldParallel, context: context).field
+    }
+
+    /// detectLabeled 와 동일하되 스크래치 방향 적분 응답도 함께 낸다. 타일 검출이 이 응답을 전역
+    /// 맵으로 모아 두면 stitch 이후 프레임 전체에서 연장 증거 판정을 할 수 있다 — 타일 안에서는
+    /// 연장 구간이 halo 밖으로 나가 판정 자체가 불가능하다. 응답은 이미 계산된 값을 넘길 뿐이라
+    /// 검출 비용은 늘지 않는다.
+    /// - deferContinuationFilter: true 면 타일 로컬 연장 판정을 건너뛴다(전역에서 대신 한다).
+    static func detectLabeledWithResponse(in image: CIImage, extent: CGRect, tuning: Tuning,
+                                          maxDustArea: Int,
+                                          classificationMaxDustArea: Int? = nil,
+                                          extendedDustScales: Bool = false,
+                                          detectSpecks: Bool = false,
+                                          rejectLineGrid: Bool = false,
+                                          deferContinuationFilter: Bool = false,
+                                          preferredAngle: Double? = nil,
+                                          fieldParallel: Bool = true,
+                                          context: CIContext = DefectContext.detect)
+        -> (field: DefectLabelField, scratchResponse: [Float]) {
         let w = Int(extent.width.rounded()), h = Int(extent.height.rounded())
         guard w > 2, h > 2 else {
-            return DefectLabelField(width: max(1, w), height: max(1, h), labels: [], components: [])
+            return (DefectLabelField(width: max(1, w), height: max(1, h), labels: [], components: []), [])
         }
         let source = image.cropped(to: extent)
         let rgba = renderRGBAf(source, width: w, height: h, context: context)
@@ -144,7 +167,7 @@ enum SoftwareDefectDetector {
         // 절대 임계만 낮추고 SNR floor(그레인 안전선)는 유지 — buildLabeled 가 strong 코어를 포함한
         // 컴포넌트만 채택하므로, 조각나거나 저대비로 끊긴 가늘고 긴 스크래치·불규칙 곡선을 잇되
         // 그레인은 strong 코어가 없어 컴포넌트를 만들지 못한다(Canny 이중 임계 정신).
-        var (scratchStrong, scratch) = DefectScratchDetector.candidatesLeveled(
+        var (scratchStrong, scratch, scratchResponse) = DefectScratchDetector.candidatesLeveled(
             field, sensitivity: tuning.scratchSensitivity, protectDetail: tuning.protectDetail,
             preferredAngle: preferredAngle, aggressive: false, parallel: fieldParallel)
         // 가는 구조(꼬불꼬불 머리카락·가는 스크래치)를 thinMag(작은 SE)로 잡아 scratch 후보에 합친다.
@@ -178,7 +201,8 @@ enum SoftwareDefectDetector {
                                                     grainFieldSmallMax: extendedDustScales
                                                         ? DefectComponentMask.constrainedRegionGrainFieldSmallMax
                                                         : DefectComponentMask.grainFieldSmallMax,
-                                                    rejectLineGrid: rejectLineGrid)
+                                                    rejectLineGrid: rejectLineGrid,
+                                                    scratchResponse: deferContinuationFilter ? nil : scratchResponse)
         // v2: 물리 분류(dust/pinhole/방향별 scratch/emulsion) + confidence. 검출 채택은 위에서
         // 이미 끝났고 여기는 메타데이터만 채운다 — 임계·게이트 불변.
         for i in 0..<(w * h) where dustStrong[i] { scratchStrong[i] = true }
@@ -186,12 +210,12 @@ enum SoftwareDefectDetector {
         let classified = DefectClassifier.classify(field: labeled, contrast: field, strong: scratchStrong,
                                             pinholeMaxArea: max(16, classificationArea / 25),
                                             emulsionMinArea: max(200, classificationArea / 3))
-        guard detectSpecks else { return classified }
+        guard detectSpecks else { return (classified, scratchResponse) }
         // 미세 입자 추가 패스(옵트인). 같은 rgba/valid 를 재사용하고 결과에 컴포넌트만 더한다 —
         // 기존 검출 임계·게이트·라벨은 불변이다(겹치는 입자는 기존 결과 우선).
         let specks = DefectSpeckDetector.detect(rgba: rgba, width: w, height: h,
                                                 valid: field.valid, sensitivity: tuning.dustSensitivity)
-        return DefectSpeckDetector.merged(into: classified, specks: specks)
+        return (DefectSpeckDetector.merged(into: classified, specks: specks), scratchResponse)
     }
 
     // MARK: render

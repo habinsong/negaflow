@@ -37,6 +37,7 @@ public enum DefectBenchRunner {
     public static func run(imageURL: URL, referenceURL: URL? = nil, outputDir: URL,
                            writeArtifacts: Bool = true,
                            sensitivity: Double = 0.7,
+                           detectMicroSpecks: Bool = false,
                            cropCount: Int = 8, cropSize: Int = 256) throws -> DefectBenchEntry {
         guard let image = ImageLoader.load(imageURL) else {
             throw ChromabaseError.writeFailed("이미지를 열 수 없습니다: \(imageURL.path)")
@@ -52,7 +53,8 @@ public enum DefectBenchRunner {
                        reference: reference,
                        referenceName: referenceURL?.lastPathComponent,
                        writeArtifacts: writeArtifacts,
-                       sensitivity: sensitivity, cropCount: cropCount, cropSize: cropSize)
+                       sensitivity: sensitivity, detectMicroSpecks: detectMicroSpecks,
+                       cropCount: cropCount, cropSize: cropSize)
     }
 
     /// CIImage 를 벤치한다(테스트가 합성 이미지로 직접 호출하는 진입점).
@@ -60,6 +62,7 @@ public enum DefectBenchRunner {
                            reference: CIImage? = nil, referenceName: String? = nil,
                            writeArtifacts: Bool = true,
                            sensitivity: Double = 0.7,
+                           detectMicroSpecks: Bool = false,
                            cropCount: Int = 8, cropSize: Int = 256) throws -> DefectBenchEntry {
         try FileManager.default.createDirectory(at: outputDir, withIntermediateDirectories: true)
         let extent = image.extent.integral
@@ -69,7 +72,8 @@ public enum DefectBenchRunner {
         // 영역 결함 제거 슬라이더 전체 범위(0.7~6.0)를 detector가 정의한 0~1 민감도로 매핑한다.
         let s = max(0, min(1, (sensitivity - 0.7) / (6.0 - 0.7)))
         let params = SoftwareDefectParameters(strength: 1, dustSensitivity: s,
-                                           scratchSensitivity: min(1, s + 0.1), protectDetail: 0.6)
+                                           scratchSensitivity: min(1, s + 0.1), protectDetail: 0.6,
+                                           detectMicroSpecks: detectMicroSpecks)
 
         let detectStart = DispatchTime.now()
         let field = SoftwareDefectRemoval.detectComponents(

@@ -48,6 +48,8 @@ public enum SoftwareDefectRemoval {
         let coreX1: Int
         let coreY1: Int
         let field: DefectLabelField
+        /// 타일의 스크래치 방향 적분 응답(타일 로컬, y-down). 전역 연장 판정용으로만 모은다.
+        let scratchResponse: [Float]
     }
 
     private struct MappedDefectComponent {
@@ -225,14 +227,19 @@ public enum SoftwareDefectRemoval {
                 let dx1 = min(rw, coreX1 + effectiveHalo), dy1 = min(rh, coreY1 + effectiveHalo)
                 let detectRect = CGRect(x: extent.minX + CGFloat(dx0), y: extent.minY + CGFloat(dy0),
                                         width: CGFloat(dx1 - dx0), height: CGFloat(dy1 - dy0))
-                let field = SoftwareDefectDetector.detectLabeled(in: image, extent: detectRect, tuning: tuning,
-                                                                   maxDustArea: maxDustArea,
-                                                                   classificationMaxDustArea: classificationMaxDustArea,
-                                                                   extendedDustScales: constrainedRegion,
-                                                                   detectSpecks: parameters.detectMicroSpecks,
-                                                                   rejectLineGrid: rejectLineGrid,
-                                                                   preferredAngle: preferredAngle,
-                                                                   fieldParallel: false)
+                let detected = SoftwareDefectDetector.detectLabeledWithResponse(
+                    in: image, extent: detectRect, tuning: tuning,
+                    maxDustArea: maxDustArea,
+                    classificationMaxDustArea: classificationMaxDustArea,
+                    extendedDustScales: constrainedRegion,
+                    detectSpecks: parameters.detectMicroSpecks,
+                    rejectLineGrid: rejectLineGrid,
+                    // 연장 판정은 타일 안에서 하지 않는다 — 연장 구간이 halo 밖으로 나가고
+                    // 컴포넌트도 타일 경계에서 잘려 판정 자체가 성립하지 않는다. stitch 후 전역에서 한다.
+                    deferContinuationFilter: rejectLineGrid,
+                    preferredAngle: preferredAngle,
+                    fieldParallel: false)
+                let field = detected.field
                 let r = RegionDefectTileResult(
                     dx0: dx0,
                     // detector 라벨 행은 bitmap 순서(y-down), dy0/dy1과 CIImage ROI는 y-up이다.
@@ -243,14 +250,29 @@ public enum SoftwareDefectRemoval {
                     coreY0: rh - coreY1,
                     coreX1: coreX1,
                     coreY1: rh - coreY0,
-                    field: field
+                    field: field,
+                    scratchResponse: rejectLineGrid ? detected.scratchResponse : []
                 )
                 results.set(r, at: t)
             }
         }
         if shouldCancel?() == true { return emptyField() }
 
-        let field = stitchRegionDefectTiles(results.snapshot(), width: rw, height: rh)
+        let tiles = results.snapshot()
+        var field = stitchRegionDefectTiles(tiles, width: rw, height: rh)
+        // 구조선 배제는 타일 안에서만 판정된다 — 프레임 전체에 퍼진 구조(난간·줄눈)는 타일당 선
+        // 개수가 판정 최소치에 못 미치고, 연장 증거는 halo 밖을 볼 수 없어 아예 성립하지 않는다.
+        // 전역 좌표에서 같은 판정을 한 번에 돌린다.
+        if rejectLineGrid {
+            var responseMap = DefectScratchResponseMap(sourceWidth: rw, sourceHeight: rh)
+            for case let tile? in tiles where !tile.scratchResponse.isEmpty {
+                let tileHeight = tile.scratchResponse.count / max(1, tile.dw)
+                responseMap.merge(tile: tile.scratchResponse, tileWidth: tile.dw, tileHeight: tileHeight,
+                                  originX: tile.dx0, originY: tile.fieldY0)
+            }
+            field = rejectingGlobalStructureLines(field, radiusReference: min(tw, th),
+                                                  responseMap: responseMap)
+        }
         return wholeFrameAuto ? applyingWholeFrameAutomaticRiskFlag(to: field) : field
     }
 

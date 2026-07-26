@@ -13,7 +13,7 @@ import Chromabase
 extension CLI {
     func defectBench() async throws {
         guard args.count > 2 else {
-            fail("usage: negaflow defect-bench <image-or-dir> [--out dir] [--sensitivity 0.7] [--crops 8] [--crop-size 256] [--reference-dir dir] [--metrics-only]")
+            fail("usage: negaflow defect-bench <image-or-dir> [--out dir] [--sensitivity 0.7] [--crops 8] [--crop-size 256] [--reference-dir dir] [--metrics-only] [--micro-specks]")
         }
         let input = URL(fileURLWithPath: args[2])
         var outDir = input.hasDirectoryPath
@@ -24,6 +24,7 @@ extension CLI {
         var cropSize = 256
         var referenceDirectory: URL?
         var metricsOnly = false
+        var microSpecks = false
         var i = 3
         while i < args.count {
             if args[i] == "--out", i + 1 < args.count { outDir = URL(fileURLWithPath: args[i + 1]); i += 2 }
@@ -34,6 +35,7 @@ extension CLI {
                 referenceDirectory = URL(fileURLWithPath: args[i + 1]); i += 2
             }
             else if args[i] == "--metrics-only" { metricsOnly = true; i += 1 }
+            else if args[i] == "--micro-specks" { microSpecks = true; i += 1 }
             else { i += 1 }
         }
 
@@ -52,7 +54,9 @@ extension CLI {
                                            referenceURL: input.referenceURL,
                                            outputDir: outDir,
                                            writeArtifacts: !metricsOnly,
-                                           sensitivity: sensitivity, cropCount: crops, cropSize: cropSize)
+                                           sensitivity: sensitivity,
+                                           detectMicroSpecks: microSpecks,
+                                           cropCount: crops, cropSize: cropSize)
                 }
                 entries.append(entry)
                 let classes = entry.defectCounts.sorted { $0.key < $1.key }

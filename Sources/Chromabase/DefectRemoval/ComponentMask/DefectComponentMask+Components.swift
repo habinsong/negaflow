@@ -126,8 +126,14 @@ extension DefectComponentMask {
     ///   A) 방향 무관 국소 밀도 — dash 텍스처(곡선/방사형/격자 포함)를 잡는다.
     ///   B) 방향 기반 평행/격자 — 성긴 긴 구조선(펜스·창살)을 잡는다.
     /// 고립 스크래치·조각난 단일 스크래치(이웃 소수, 평행 동반 없음)는 두 메커니즘 모두 보존한다.
-    static func gridLineDrops(scratch: [RawComponent], width: Int, height: Int) -> Set<Int> {
+    /// - radiusReference: 밀도/구조 반경을 계산하는 기준 변(px). nil 이면 이미지 짧은 변이다.
+    ///   전역(프레임 전체) 재판정처럼 더 큰 좌표계에서 부를 때 이 값을 타일 기준으로 고정하면
+    ///   판정의 **물리적 반경**이 이미지 크기와 무관하게 일정해진다 — 안 그러면 같은 임계가 큰
+    ///   스캔에서만 공격적으로 변해(반경이 비례해 커져) 진짜 스크래치까지 구조로 몰린다.
+    static func gridLineDrops(scratch: [RawComponent], width: Int, height: Int,
+                              radiusReference: Int? = nil) -> Set<Int> {
         guard scratch.count >= gridLineMinField else { return [] }
+        let reference = max(1, radiusReference ?? min(width, height))
         struct Line {
             let cx: Int; let cy: Int
             let minX: Int; let maxX: Int; let minY: Int; let maxY: Int
@@ -170,7 +176,7 @@ extension DefectComponentMask {
         // A) 국소 밀도: 중심점이 반경 rD(Chebyshev) 안에 있는 다른 선 수. dash 는 짧아 중심점이
         //    위치를 잘 대표하므로 곡선/방사형/격자에서 방향 무관하게 텍스처 밀집을 잡는다.
         //    같은 축 위 조각은 제외한다 — 조각난 스크래치 하나는 텍스처가 아니다.
-        let rD = max(gridLineRadiusMin, min(width, height) / gridLineRadiusDivisor)
+        let rD = max(gridLineRadiusMin, reference / gridLineRadiusDivisor)
         var buckets = [Int: [Int]]()
         for (li, l) in lines.enumerated() {
             buckets[(l.cx / rD) * 1_000_003 + (l.cy / rD), default: []].append(li)
@@ -196,7 +202,7 @@ extension DefectComponentMask {
         // B) 방향 기반(성긴 긴 구조선). 확장 bbox 중첩으로 이웃 판정 — 긴 두 선은 중심점이 멀어도
         //    실제로 교차/근접하면 확장 bbox 가 겹친다. 평행 규칙 필드 또는 직교 격자면 코어로 보고,
         //    코어에 인접-평행한 가장자리 선까지 2-패스로 확장 배제한다. O(n²)(타일당 수백).
-        let rS = max(gridLineRadiusMin, min(width, height) / gridLineStructRadiusDivisor)
+        let rS = max(gridLineRadiusMin, reference / gridLineStructRadiusDivisor)
         @inline(__always) func nearBox(_ a: Line, _ b: Line) -> Bool {
             a.minX - rS <= b.maxX && b.minX - rS <= a.maxX
                 && a.minY - rS <= b.maxY && b.minY - rS <= a.maxY

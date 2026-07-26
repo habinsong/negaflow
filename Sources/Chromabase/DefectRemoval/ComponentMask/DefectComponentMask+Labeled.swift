@@ -12,7 +12,8 @@ extension DefectComponentMask {
                              dustTrustedStrong: [Bool]? = nil,
                              microDustMinArea: Int = 1,
                              grainFieldSmallMax: Int = DefectComponentMask.grainFieldSmallMax,
-                             rejectLineGrid: Bool = false) -> DefectLabelField {
+                             rejectLineGrid: Bool = false,
+                             scratchResponse: [Float]? = nil) -> DefectLabelField {
         var labels = [Int32](repeating: -1, count: width * height)
         var components: [DefectComponent] = []
         var nextID: Int32 = 0
@@ -68,9 +69,15 @@ extension DefectComponentMask {
                                     width: width, smallMax: grainFieldSmallMax)
         // 격자/규칙 선 구조 배제(전역 자동 전용). 보도블럭·벽돌·창틀 등 서로 직교하는 두 방향
         // 선이 밀집한 곳의 스크래치 컴포넌트를 버린다 — 고립·평행 다발 스크래치는 보존된다.
-        let gridDrops = rejectLineGrid
+        var gridDrops = rejectLineGrid
             ? gridLineDrops(scratch: acceptedScratch, width: width, height: height)
             : []
+        // 연장 증거 배제(같은 자동 전용 계약). 개수 기반인 위 판정이 놓치는 **고립 구조선 하나**를
+        // 잡는다 — 양 끝 바깥으로 같은 선이 계속되면 원본 이미지의 구조지 필름 결함이 아니다.
+        if rejectLineGrid, let scratchResponse {
+            gridDrops.formUnion(DefectStructureLineFilter.continuationDrops(
+                scratch: acceptedScratch, response: scratchResponse, width: width, height: height))
+        }
 
         for (i, c) in acceptedDust.enumerated() where !drops.dust.contains(i) {
             let id = nextID; nextID += 1

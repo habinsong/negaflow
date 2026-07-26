@@ -59,10 +59,13 @@ enum DefectScratchDetector {
     /// SNR floor(그레인 안전선)는 strong 과 동일하게 유지한다 — weak 픽셀은 컴포넌트를 새로 만들지
     /// 못하고(호출측이 strong 코어 포함 컴포넌트만 채택), 이미 검출된 결함을 잇는(조각/저대비 gap
     /// 연결) 역할만 한다. 그레인은 strong 코어가 없어 컴포넌트가 생기지 않는다(Canny 이중 임계 정신).
+    /// - Returns: response 는 방향 적분 응답(best) — 임계 전 연속값이라 "그 자리에 결맞은 선이
+    ///   있는가"를 후보 밖에서도 읽을 수 있다. 구조선 연장 판정(DefectStructureLineFilter)이
+    ///   재사용한다. 이미 계산된 맵을 그대로 넘길 뿐이라 후보 산출은 불변이다.
     static func candidatesLeveled(_ field: DefectContrastField, sensitivity: Double, protectDetail: Double,
                                   region: [Bool]? = nil, preferredAngle: Double? = nil,
                                   aggressive: Bool = false,
-                                  parallel: Bool = true) -> (strong: [Bool], weak: [Bool]) {
+                                  parallel: Bool = true) -> (strong: [Bool], weak: [Bool], response: [Float]) {
         // Region 경로: 다중 스케일 적분. 짧은 적분(curveHalf)이 급곡 결함의 결맞음을 보존해 같은
         // 임계에서 곡선 스크래치·불규칙 먼지의 strong 코어를 살린다(a contrario floor 비율은 유지).
         let maps = computeMaps(field, protectDetail: protectDetail,
@@ -72,7 +75,7 @@ enum DefectScratchDetector {
                           region: region, preferredAngle: preferredAngle, aggressive: aggressive, weak: false)
         let weak = gate(field, maps, sensitivity: sensitivity, protectDetail: protectDetail,
                         region: region, preferredAngle: preferredAngle, aggressive: aggressive, weak: true)
-        return (strong, weak)
+        return (strong, weak, maps.best)
     }
 
     /// 공유 맵(best/bestPerp/localRidge/floor) 계산. 8방향을 병렬로 돌리고 max-reduce 한다.
