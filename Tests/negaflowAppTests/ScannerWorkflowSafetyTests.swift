@@ -140,7 +140,8 @@ final class ScannerWorkflowSafetyTests: XCTestCase {
         XCTAssertEqual(model.selectedFrameID, previewFrame.id)
         XCTAssertEqual(model.actionableFrame?.id, previewFrame.id)
         // 첫 썸네일 시드는 백그라운드 디코드다(메인 스레드 무정지) — 완료 후 원본 프리뷰 보장.
-        XCTAssertNotNil(previewFrame.initialThumbnailSeedTask)
+        // 참조는 끝나는 즉시 정리되므로(축출된 프레임이 "시드 중"으로 오해되지 않게), 남아 있을
+        // 때만 기다린다. 계약은 참조의 수명이 아니라 완료 뒤 rawPreviewImage 가 채워지는 것이다.
         if let seed = previewFrame.initialThumbnailSeedTask { await seed.value }
         XCTAssertNotNil(previewFrame.rawPreviewImage)
         await waitForDevelopedThumbnail(previewFrame)
@@ -164,9 +165,8 @@ final class ScannerWorkflowSafetyTests: XCTestCase {
         for frame in model.frames {
             XCTAssertFalse(frame.isPreviewScan)
             // 첫 썸네일 시드는 백그라운드 디코드로 옮겨졌다(스캔 완료 때 풀 TIFF 디코드가 메인
-            // 스레드를 잡지 않도록). 시드 태스크가 곧바로 예약되는 것까지가 발행 계약이고,
-            // 완료 후에는 원본 프리뷰가 반드시 채워져야 한다.
-            XCTAssertNotNil(frame.initialThumbnailSeedTask)
+            // 스레드를 잡지 않도록). 참조는 끝나는 즉시 정리되므로 남아 있을 때만 기다리고,
+            // 발행 계약은 완료 후 원본 프리뷰가 반드시 채워지는 것으로 확인한다.
             if let seed = frame.initialThumbnailSeedTask { await seed.value }
             XCTAssertNotNil(frame.rawPreviewImage)
             await waitForDevelopedThumbnail(frame)

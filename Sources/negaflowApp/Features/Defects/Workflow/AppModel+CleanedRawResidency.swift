@@ -89,6 +89,9 @@ extension AppModel {
     /// 재진입 시 raw(또는 cleaned raw)에서 재현상해 즉시 복원한다.
     func evictDevelopBuffers(_ frame: ScanFrame) {
         frame.developedImage = nil
+        // 결과를 내려놓았으니 "정착 완료" 표시도 함께 내린다 — 이미지 없이 settled 로 남으면
+        // 상태가 모순되고, 재진입 판정이 첫 조건을 스치는 경로에서 저해상도로 굳을 수 있다.
+        frame.developedIsSettled = false
         frame.clippingOverlayImage = nil
         frame.destinationGamutOverlayImage = nil
         frame.rawPreviewImage = nil

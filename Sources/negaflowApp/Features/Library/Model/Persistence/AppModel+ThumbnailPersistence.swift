@@ -37,7 +37,17 @@ extension AppModel {
         let transform = frame.imageTransform
         let shouldPublishRawThumbnail = !frame.filmType.requiresInversion
         frame.initialThumbnailSeedTask?.cancel()
+        frame.initialThumbnailSeedGeneration &+= 1
+        let seedGeneration = frame.initialThumbnailSeedGeneration
         frame.initialThumbnailSeedTask = Task { [weak self, weak frame] in
+            // 끝나면 참조를 지운다 — 남겨 두면 "시드 진행 중"으로 오해돼 축출된 프레임이 다시
+            // 현상되지 않는다. 자기가 설치한 태스크일 때만 지우므로, 취소된 옛 태스크가 새
+            // 참조를 덮어쓰는 레이스는 생기지 않는다.
+            defer {
+                if let frame, frame.initialThumbnailSeedGeneration == seedGeneration {
+                    frame.initialThumbnailSeedTask = nil
+                }
+            }
             // 대기 중 취소 → 슬롯 미획득(CancellationError) — release 없이 종료한다.
             guard (try? await AppModel.thumbnailSeedSemaphore.acquire()) != nil else { return }
             let cg: CGImage?
@@ -52,8 +62,6 @@ extension AppModel {
                 }.value
             }
             await AppModel.thumbnailSeedSemaphore.release()
-            // 완료된 태스크 참조는 그대로 둔다 — 여기서 nil 로 지우면 취소된 옛 태스크가 새로
-            // 설치된 태스크 참조를 지우는 레이스가 생긴다(await 하는 쪽은 완료 즉시 반환).
             guard let self, let frame, let cg,
                   !Task.isCancelled,
                   self.ownsFrame(frame),

@@ -180,7 +180,13 @@ final class ScanFrame: ObservableObject, Identifiable {
     var transformTask: Task<Void, Never>?
     // 가져오기/스캔 직후 첫 썸네일 시드(백그라운드 디코드). developFrameAfterFastPreview 가
     // 시드 → 현상 순서를 보존하기 위해 await 한다.
+    //
+    // **진행 중일 때만** non-nil 이어야 한다. 이 참조는 "현상을 미룰지" 판정에도 쓰이므로
+    // (selectedFrameNeedsDevelopment), 완료 뒤에도 남아 있으면 캐시에서 축출된 프레임이 영영
+    // 재현상되지 않는다. 세대 번호로 자기가 설치한 태스크일 때만 정리한다 — 취소된 옛 태스크가
+    // 새로 설치된 참조를 지우는 레이스는 그대로 막힌다.
     var initialThumbnailSeedTask: Task<Void, Never>?
+    var initialThumbnailSeedGeneration: Int = 0
 
     // 적용된 결함 제거 편집(브러시 + 가이드 통합, 순서 보존). 모든 현상/변형/export에서 유지된다.
     // cleaned raw = 원본 raw + defectEdits(켜진 항목만) 순차 적용 → 브러시·가이드가 서로 되살아나지
