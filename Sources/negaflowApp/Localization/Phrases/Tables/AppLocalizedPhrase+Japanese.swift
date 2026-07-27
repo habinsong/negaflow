@@ -239,6 +239,7 @@ extension AppLocalization {
         .resolution: "解像度",
         .preview: "プレビュー",
         .bitDepth: "ビット深度",
+        .bitDepthUnavailable: "このスキャナーはビット深度オプションを報告しないためスキャンできません。",
         .colorMode: "モード",
         .perforation: "パーフォレーション",
         .filmFrameFormat: "フレーム形式",

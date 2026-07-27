@@ -187,6 +187,7 @@ enum AppLocalizedPhrase: CaseIterable {
     case resolution
     case preview
     case bitDepth
+    case bitDepthUnavailable
     case colorMode
     case perforation
     case filmFrameFormat

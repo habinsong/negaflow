@@ -239,6 +239,7 @@ extension AppLocalization {
         .resolution: "Résolution",
         .preview: "Aperçu",
         .bitDepth: "Profondeur de bits",
+        .bitDepthUnavailable: "Ce scanner ne signale aucune option de profondeur de bits ; la numérisation est impossible.",
         .colorMode: "Mode",
         .perforation: "Perforations",
         .filmFrameFormat: "Format d’image",

@@ -239,6 +239,7 @@ extension AppLocalization {
             .resolution: "해상도",
             .preview: "프리뷰",
             .bitDepth: "심도",
+            .bitDepthUnavailable: "이 스캐너가 심도 옵션을 보고하지 않아 스캔할 수 없습니다.",
             .colorMode: "모드",
             .perforation: "퍼포레이션",
             .filmFrameFormat: "프레임 규격",

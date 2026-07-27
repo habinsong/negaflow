@@ -84,9 +84,21 @@ struct ScannerControlsSection: View {
                 .frame(maxWidth: .infinity, alignment: .trailing)
             }
 
-            Picker(model.text(AppLocalizedPhrase.bitDepth), selection: $model.bitDepthChoice) {
-                ForEach(bitDepths, id: \.self) { bitDepth in
-                    Text(bitDepthLabel(bitDepth)).tag(bitDepth)
+            // 심도를 보고하지 않는 스캐너는 스캔 자체가 불가능하다(canScan). 빈 Picker만 두면
+            // 프리뷰/스캔이 왜 잠겼는지 알 수 없으므로 사유를 대신 보여준다.
+            if bitDepths.isEmpty {
+                Label(
+                    model.text(AppLocalizedPhrase.bitDepthUnavailable),
+                    systemImage: "exclamationmark.triangle"
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Picker(model.text(AppLocalizedPhrase.bitDepth), selection: $model.bitDepthChoice) {
+                    ForEach(bitDepths, id: \.self) { bitDepth in
+                        Text(bitDepthLabel(bitDepth)).tag(bitDepth)
+                    }
                 }
             }
 

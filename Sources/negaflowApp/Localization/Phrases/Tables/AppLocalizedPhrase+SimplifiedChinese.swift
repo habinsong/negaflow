@@ -239,6 +239,7 @@ extension AppLocalization {
         .resolution: "分辨率",
         .preview: "预览",
         .bitDepth: "位深度",
+        .bitDepthUnavailable: "此扫描仪未报告位深度选项，因此无法扫描。",
         .colorMode: "模式",
         .perforation: "齿孔",
         .filmFrameFormat: "画幅格式",

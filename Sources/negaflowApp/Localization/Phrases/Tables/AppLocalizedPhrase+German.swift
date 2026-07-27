@@ -239,6 +239,7 @@ extension AppLocalization {
         .resolution: "Auflösung",
         .preview: "Vorschau",
         .bitDepth: "Bittiefe",
+        .bitDepthUnavailable: "Dieser Scanner meldet keine Bittiefe-Option und kann daher nicht scannen.",
         .colorMode: "Modus",
         .perforation: "Perforation",
         .filmFrameFormat: "Bildformat",
