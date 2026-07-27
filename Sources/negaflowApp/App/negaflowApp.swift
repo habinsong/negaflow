@@ -144,6 +144,8 @@ final class AppModel: ObservableObject {
 
     /// 현상 파이프라인이 현재 사용할 프로세스 계열. 스캐너의 원본 필름 분류와 독립적으로 바꿀 수 있다.
     @Published var filmType: FilmType = .colorNegative
+    /// 프로세스 목록에서 디지털 사진을 고른 상태인지. 프레임이 없을 때의 표시 기본값이다.
+    @Published var isDigitalSource = false
     /// 스캐너 요청과 스캔 원본 폴더 분류에 사용하는 물리 필름 종류.
     @Published var scanFilmType: FilmType = .colorNegative
     /// 스캔 결과에 처음 적용할 현상 프로세스. 기본값은 `scanFilmType`과 함께 움직인다.
@@ -160,6 +162,8 @@ final class AppModel: ObservableObject {
     @Published var scannerContrast: Double = 0
     @Published var scanFrameFormat: FilmFrameFormat = .fullFrame35mm
     @Published var scannerSimulatorIncludesPerforation = false
+    @Published var scannerSimulatorFrameOrientation: FilmFrameOrientation = .landscape
+    @Published var scannerSimulatorFrameCount = 6
     @Published var selectedHardwareScanArea: ScanArea?
     var flatbedScanRegionRevision: UInt64 = 0
     @Published var flatbedScanRegions: [FlatbedScanRegion] = [] {

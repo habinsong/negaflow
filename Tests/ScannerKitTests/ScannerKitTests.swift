@@ -373,8 +373,12 @@ final class ScannerKitTests: XCTestCase {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let output = directory.appendingPathComponent("region.tiff")
+        let previewOutput = directory.appendingPathComponent("preview.tiff")
         let backend = MockScannerBackend()
         backend.sampleNegativesDir = nil
+        var previewOptions = ScanOptions.preview(scannerID: MockScannerBackend.flatbedScannerID)
+        previewOptions.temporaryOutputURL = previewOutput
+        let preview = try await backend.startPreviewScan(previewOptions) { _ in }
         var options = ScanOptions.strongDefault(scannerID: MockScannerBackend.flatbedScannerID)
         options.scanArea = ScanArea(originXMM: 20, originYMM: 30, widthMM: 60, heightMM: 30)
         options.temporaryOutputURL = output
@@ -383,7 +387,7 @@ final class ScannerKitTests: XCTestCase {
 
         let cropRect = try XCTUnwrap(MockScannerBackend.flatbedPreviewCropRect(
             for: options.scanArea,
-            imageSize: CGSize(width: 3_701, height: 401)
+            imageSize: CGSize(width: preview.width, height: preview.height)
         ))
         let outputRatio = Double(result.width) / Double(result.height)
         let selectedPreviewRatio = Double(cropRect.width / cropRect.height)
@@ -393,7 +397,7 @@ final class ScannerKitTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: output.path))
     }
 
-    func testMockSimulatorPerforationSwitchesFrameAndRollSamples() async throws {
+    func testMockSimulatorPerforationSwitchesFrameSampleAndKeepsPhysicalRollCanvas() async throws {
         let directory = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("negaflow-mock-perforation-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -415,8 +419,8 @@ final class ScannerKitTests: XCTestCase {
         var rollOptions = ScanOptions.preview(scannerID: MockScannerBackend.flatbedScannerID)
         rollOptions.temporaryOutputURL = directory.appendingPathComponent("roll-perforation.tiff")
         let perforatedRoll = try await backend.startPreviewScan(rollOptions) { _ in }
-        XCTAssertEqual(perforatedRoll.width, 3_735)
-        XCTAssertEqual(perforatedRoll.height, 1_898)
+        XCTAssertEqual(perforatedRoll.width, 1_400)
+        XCTAssertEqual(perforatedRoll.height, 1_980)
     }
 
     func testMockFlatbedRegionMapsPhysicalAreaIntoPreviewPixels() throws {

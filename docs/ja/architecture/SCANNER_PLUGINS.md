@@ -226,6 +226,10 @@ v1は、すでに出回っているプラグインとの互換のために外部
 SANEの実装、依存、設定、機種ごとの処理、テスト、配布のドキュメントは、すべて別リポジトリの
 [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane)に置きます。
 
+そのプロジェクトは、Homebrew標準SANEを使うmacOS 14以降の標準版と、公式SANE 1.4.0に
+upstreamの`coolscan2`/`coolscan3`割り当て修正だけを適用するmacOS 26以降のCoolscan版を
+別々に配布します。標準版はCoolscanを強制的にブロックしませんが、この修正は含みません。
+
 このリポジトリは、装置に依存しない外部プロセスの規格だけを記録し、検査します。
 画像ファイルだけ取り込むユーザーには、スキャナープラグインは要りません。
 

@@ -2,17 +2,28 @@ import Foundation
 import CoreImage
 import CoreGraphics
 
-// MARK: - FilmEmulation (슬라이드 필름 특성 시뮬레이션)
+// MARK: - FilmEmulation (필름 특성 시뮬레이션)
 //
-// 현상 결과는 log/raw 처럼 플랫한 positive 다. 이 스테이지는 그 위에 **특정 슬라이드 필름의
-// 물리적 색·톤 응답**을 재현한다. 대충 룩만 흉내내는 게 아니라, 공식 데이터시트의 채널별
-// 특성곡선·분광 염료밀도·MTF 와 컬러 필름 화학(inter-image effect)을 모델로 옮겨, 밝기·장면이
-// 달라도 같은 필름 응답이 일관되게 나오도록 한다.
+// 현상 결과는 log/raw 처럼 플랫한 positive 다. 이 스테이지는 그 위에 **특정 필름의 색·톤 응답**을
+// 재현한다. 대충 룩만 흉내내는 게 아니라, 공식 데이터시트의 채널별 특성곡선·분광 염료밀도·MTF 와
+// 컬러 필름 화학(inter-image effect)을 모델로 옮겨, 밝기·장면이 달라도 같은 필름 응답이 일관되게
+// 나오도록 한다.
 //
-// 근거 데이터시트:
-//   • Kodak EKTACHROME Film E100 (Pub. E-4000) — CHARACTERISTIC/SPECTRAL/MTF 그래프
-//   • Kodak EKTACHROME 100D 5294 (Pub. H-1-5294) — 동일 계열 시네 버전
-//   • FUJICHROME Velvia 50 [RVP50] (Ref. AF3-0221E2) — 전 그래프
+// 슬라이드(E-6)는 관측 대상이 필름 자체라 데이터시트 곡선이 곧 최종 응답이다. 네거티브(C-41)는
+// 필름 자체가 최종 결과물이 아니므로, 데이터시트 특성(대비·관용도·염료 특성)에 그 필름이 인화/
+// 스캔되어 **렌더된 뒤의** 응답을 합쳐 모델링한다. 그래서 네거티브 프로파일은 전반적으로 대비가
+// 낮고 토우가 들려 있다(긴 toe = 넓은 섀도우 관용도).
+//
+// 근거 자료(제조사 데이터시트 우선, 정성 서술은 제조사 문구 기준):
+//   • Kodak EKTACHROME Film E100 (Pub. E-4000), EKTACHROME 100D 5294 (H-1-5294)
+//   • FUJICHROME Velvia 50 [RVP50] (Ref. AF3-0221E2)
+//   • FUJICHROME PROVIA 100F Professional [RDPIII] (Ref. AF3-036E) — RMS 8, 초고선예도
+//   • KODAK PROFESSIONAL PORTRA 160 (E-4051) / 400 (E-4050) / 800 (E-4040)
+//   • KODAK PROFESSIONAL EKTAR 100 (E-4046) — "world's finest grain", 고채도
+//   • KODAK ULTRAMAX 400 (E-7023) — T-GRAIN, 넓은 관용도, 선명한 채도
+//   • FUJICOLOR PRO 400H (Ref. AF3-176E) — 4번째 감광층, 중립 그레이·연조
+//   • FUJICOLOR C200 (Ref. AF3-0249E) — Superia 200 계열, 소비자용
+//   • Kodak ColorPlus 200 — 제조사 기술 데이터시트가 없어 제품 정보 수준만 반영
 //
 // 모델 3축(각 데이터시트 개념에 대응):
 //   1) 채널별 특성곡선 T_r/T_g/T_b (D-logE)  → 대비 + 밝기대별 색 크로스오버(섀도우/하이라이트 캐스트).
@@ -24,19 +35,65 @@ import CoreGraphics
 //
 // 위 모델로 절차적 3D LUT(CIColorCubeWithColorSpace, sRGB 공간)를 생성·캐시한다. 특정 컷에
 // 오버핏하지 않도록 모든 계수는 hue/휘도 일반 규칙으로만 동작한다.
+//
+// 이 스테이지는 현상 프로세스(FilmType)를 입력으로 받지 않는다. 즉 어떤 프로세스로 현상했든
+// 결과 positive 위에 동일하게 적용된다 — 필름 프리셋은 소스가 아니라 룩이기 때문이다.
 
 public enum FilmEmulation: String, Codable, Sendable, CaseIterable, Identifiable {
     case none
+    // 슬라이드(E-6)
     case ektachromeE100
+    case provia100F
     case velvia50
+    // 네거티브(C-41)
+    case portra160
+    case portra400
+    case portra800
+    case ektar100
+    case ultramax400
+    case colorPlus200
+    case fujicolorC200
+    case pro400H
+
+    public enum Kind: Sendable {
+        case slide
+        case negative
+    }
 
     public var id: String { rawValue }
 
+    /// `.none` 은 어느 그룹에도 속하지 않는다(목록 맨 위 단독 항목).
+    public var kind: Kind? {
+        switch self {
+        case .none:
+            return nil
+        case .ektachromeE100, .provia100F, .velvia50:
+            return .slide
+        case .portra160, .portra400, .portra800, .ektar100,
+             .ultramax400, .colorPlus200, .fujicolorC200, .pro400H:
+            return .negative
+        }
+    }
+
+    public static func films(of kind: Kind) -> [FilmEmulation] {
+        allCases.filter { $0.kind == kind }
+    }
+
+    /// 필름 상표는 그 실물 필름을 지목하기 위한 지시적(nominative) 사용이다. TRADEMARKS.md 참고.
     public var displayName: String {
         switch self {
         case .none:           return "None"
         case .ektachromeE100: return "Kodak Ektachrome E100"
+        case .provia100F:     return "Fujichrome Provia 100F"
         case .velvia50:       return "Fujichrome Velvia 50"
+        case .portra160:      return "Kodak Portra 160"
+        case .portra400:      return "Kodak Portra 400"
+        case .portra800:      return "Kodak Portra 800"
+        case .ektar100:       return "Kodak Ektar 100"
+        case .ultramax400:    return "Kodak UltraMax 400"
+        case .colorPlus200:   return "Kodak ColorPlus 200"
+        case .fujicolorC200:  return "Fujicolor C200"
+        case .pro400H:        return "Fujicolor Pro 400H"
         }
     }
 }
@@ -68,97 +125,6 @@ public enum FilmEmulationStage {
             ])
         }
         return img.cropped(to: extent)
-    }
-}
-
-// MARK: - Profile (데이터시트 유도 파라미터)
-
-/// 채널 특성곡선 파라미터. sRGB-감마 0..1 도메인에서 동작(감마≈로그라 D-logE 형태를 잘 근사).
-struct ToneCurveParams {
-    var contrast: Double   // S-커브 강도(0 = 없음). 데이터시트 straight-line gamma.
-    var black: Double      // toe. +면 딥 블랙(크러시), -면 섀도우 리프트.
-    var white: Double      // shoulder(<1 이면 하이라이트 압축).
-    var lift: Double       // 채널 수직 오프셋 → 밝기대별 색 캐스트(크로스오버).
-    var pivot: Double      // S 변곡점 위치(중간톤 밝기/색 편향).
-}
-
-struct FilmEmulationProfile {
-    var toneR: ToneCurveParams
-    var toneG: ToneCurveParams
-    var toneB: ToneCurveParams
-    // 색 매트릭스(행합=1 → 무채색 보존). 대각=채도, 비대각=염료 불요흡수/IIE 색보정(hue 회전).
-    var mR: SIMD3<Double>
-    var mG: SIMD3<Double>
-    var mB: SIMD3<Double>
-    // 밝기대별 색 크로스오버(휘도 가중 틴트). 톤커브가 아니라 여기서 명시적으로 제어한다.
-    //   Velvia = 쿨 섀도우 + 웜 하이라이트. E100 = 거의 중립(미세 쿨).
-    var shadowTint: SIMD3<Double>
-    var highlightTint: SIMD3<Double>
-    // inter-image effect: 노출·채도 가중 채도 부스트.
-    var iie: Double
-    var iieHue: [Double]   // 6색 앵커(R,Y,G,C,B,M) 추가 가중
-    // MTF acutance
-    var acutance: (radius: Double, intensity: Double)
-
-    static func of(_ emulation: FilmEmulation) -> FilmEmulationProfile {
-        switch emulation {
-        case .none:
-            return FilmEmulationProfile(
-                toneR: ToneCurveParams(contrast: 0, black: 0, white: 1, lift: 0, pivot: 0.5),
-                toneG: ToneCurveParams(contrast: 0, black: 0, white: 1, lift: 0, pivot: 0.5),
-                toneB: ToneCurveParams(contrast: 0, black: 0, white: 1, lift: 0, pivot: 0.5),
-                mR: SIMD3(1, 0, 0), mG: SIMD3(0, 1, 0), mB: SIMD3(0, 0, 1),
-                shadowTint: .zero, highlightTint: .zero,
-                iie: 0, iieHue: [0, 0, 0, 0, 0, 0], acutance: (1.0, 0)
-            )
-
-        case .ektachromeE100:
-            // E100(E-4000): "low contrast tonal scale", "matched color records for a neutral tone
-            // scale", "consistent gray scale rendition throughout the tonal range", "moderately
-            // enhanced color saturation", "pleasing natural skin". 저대비·넓은 관용도·중립.
-            //   - 톤: 낮은 대비, 채널 균등(전 계조 뉴트럴). 섀도우 살짝 리프트(관용도).
-            //   - 매트릭스: 절제된 채도(대각 ~1.055). 스킨 보호 위해 R 은 특히 약하게.
-            //   - 크로스오버: 미세 쿨(전 계조에서 아주 옅게). E100 의 "약간 쿨/클린".
-            //   - IIE: 약하게. acutance: 선명하되 깔끔.
-            return FilmEmulationProfile(
-                toneR: ToneCurveParams(contrast: 0.20, black: -0.014, white: 1.0, lift: 0, pivot: 0.5),
-                toneG: ToneCurveParams(contrast: 0.20, black: -0.014, white: 1.0, lift: 0, pivot: 0.5),
-                toneB: ToneCurveParams(contrast: 0.21, black: -0.012, white: 1.0, lift: 0, pivot: 0.5),
-                mR: SIMD3( 1.055, -0.030, -0.025),
-                mG: SIMD3(-0.020,  1.055, -0.035),
-                mB: SIMD3(-0.018, -0.032,  1.050),
-                shadowTint: SIMD3(-0.004, 0.000, 0.009),
-                highlightTint: SIMD3(-0.003, 0.000, 0.005),
-                iie: 0.08,
-                //        R     Y     G     C     B     M
-                iieHue: [0.00, 0.00, 0.03, 0.05, 0.05, 0.00],
-                acutance: (1.0, 0.12)
-            )
-
-        case .velvia50:
-            // Velvia 50(RVP50): "world's highest color saturation", 고대비·딥 섀도우, 그린·레드
-            // 강조 + 블루 극대화 + 마젠타 부가, 스킨 마젠타 경향, 섀도우 쿨. MTF 100% 초과.
-            //   - 톤: 강한 대비, 딥 블랙. 채널 대비는 균등에 가깝게(색 크로스오버는 톤이 아니라 아래
-            //     틴트로 제어). 블루만 아주 살짝 대비↑.
-            //   - 매트릭스: 강한 채도(대각 ~1.20~1.22) + hue 회전. G 는 블루를 더 빼 옐로-그린(시그니처),
-            //     B 는 그린을 더 빼 퓨어/딥 블루, R 은 딥 레드.
-            //   - 크로스오버: 쿨 섀도우 + 웜 하이라이트(Velvia 시그니처).
-            //   - IIE: 강하게(밝고 채도 있는 곳에서 색이 산다). acutance: 강함.
-            return FilmEmulationProfile(
-                toneR: ToneCurveParams(contrast: 0.50, black: 0.034, white: 0.99,  lift: 0, pivot: 0.5),
-                toneG: ToneCurveParams(contrast: 0.50, black: 0.034, white: 0.99,  lift: 0, pivot: 0.5),
-                toneB: ToneCurveParams(contrast: 0.53, black: 0.036, white: 0.985, lift: 0, pivot: 0.5),
-                mR: SIMD3( 1.220, -0.120, -0.100),
-                mG: SIMD3(-0.080,  1.205, -0.125),
-                mB: SIMD3(-0.055, -0.165,  1.220),
-                shadowTint: SIMD3(-0.012, -0.004, 0.020),
-                highlightTint: SIMD3(0.016, 0.004, -0.012),
-                iie: 0.32,
-                //        R     Y     G     C     B     M
-                iieHue: [0.12, 0.00, 0.20, 0.06, 0.24, 0.14],
-                acutance: (1.2, 0.22)
-            )
-        }
     }
 }
 

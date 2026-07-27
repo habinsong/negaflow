@@ -132,9 +132,14 @@ final class ScannerWorkflowSafetyTests: XCTestCase {
         XCTAssertTrue(model.canStartFullScan)
         await model.scanFrames(count: 12, preview: false)
 
-        XCTAssertEqual(backend.fullRequestCount, 2)
+        // 첫 요청은 유리판 전체를 뜬 프리뷰고, 그 뒤가 영역별 본 스캔이다.
+        XCTAssertEqual(backend.fullRequestCount, 3)
         XCTAssertEqual(
-            backend.fullRequests.map(\.scanArea),
+            backend.fullRequests.first?.scanArea,
+            ScanArea(originXMM: 1, originYMM: 2, widthMM: 200, heightMM: 100)
+        )
+        XCTAssertEqual(
+            backend.fullRequests.dropFirst().map(\.scanArea),
             [
                 ScanArea(originXMM: 21, originYMM: 22, widthMM: 40, heightMM: 30),
                 ScanArea(originXMM: 101, originYMM: 42, widthMM: 50, heightMM: 20),
@@ -157,6 +162,70 @@ final class ScannerWorkflowSafetyTests: XCTestCase {
         XCTAssertNil(model.flatbedPreviewFrameID)
         XCTAssertNil(model.flatbedPreviewScanArea)
         XCTAssertTrue(model.flatbedScanRegions.isEmpty)
+    }
+
+    /// 평판 프리뷰는 그 위에서 필름 영역을 잡는 작업면이다. 기존 25dpi 경로로는
+    /// 프레임 자동 검출이 시작조차 못 한다.
+    func testFlatbedPreviewRequestsAnExplicitWorkableResolution() async throws {
+        let epsonFlatbedResolutions = [
+            50, 60, 72, 75, 100, 120, 133, 144, 150, 160, 200, 300, 600,
+            1_200, 2_400, 3_200, 4_800, 6_400, 12_800,
+        ].map(Resolution.init)
+        let backend = ScannerWorkflowBackend(capabilities: ScannerCapabilities(
+            supportedResolutions: epsonFlatbedResolutions,
+            supportedModes: [.color],
+            supportedBitDepths: [.eight, .sixteen],
+            supportsPreview: true,
+            supportsTransparency: true,
+            supportsScanArea: true,
+            supportsPositionedScanArea: true,
+            maxScanArea: ScanArea(originXMM: 0, originYMM: 0, widthMM: 203.2, heightMM: 254),
+            minScanArea: ScanArea(originXMM: 0, originYMM: 0, widthMM: 1, heightMM: 1)
+        ))
+        let fixture = try await makePersistentFixture(backend: backend)
+        defer { fixture.cleanup() }
+        let model = fixture.model
+        model.demoMode = true
+        await model.loadCapabilities()
+
+        await model.runScan(preview: true)
+
+        XCTAssertEqual(backend.previewRequestCount, 0, "해상도를 명시한 프리뷰는 백엔드 프리뷰 경로로 보내지 않는다.")
+        XCTAssertEqual(backend.fullRequests.map(\.resolution), [Resolution(300)])
+        XCTAssertEqual(backend.fullRequests.first?.bitDepth, .eight)
+        XCTAssertEqual(
+            backend.fullRequests.first?.outputRawTIFF,
+            true,
+            "외부 플러그인의 full scan 계약은 TIFF 산출물을 요구한다."
+        )
+        XCTAssertEqual(
+            backend.fullRequests.first?.scanArea,
+            ScanArea(originXMM: 0, originYMM: 0, widthMM: 203.2, heightMM: 254),
+            "프리뷰는 유리판 전체를 떠야 그 위에서 영역을 잡을 수 있다."
+        )
+        XCTAssertNotNil(model.flatbedPreviewFrame)
+    }
+
+    /// 필름 전용 스캐너는 영역을 잡을 필요가 없으므로 백엔드 프리뷰 경로를 그대로 쓴다.
+    func testDedicatedFilmScannerKeepsTheBackendPreviewPath() async throws {
+        let backend = ScannerWorkflowBackend(capabilities: ScannerCapabilities(
+            supportedResolutions: [.r3600, Resolution(300)],
+            supportedModes: [.color],
+            supportedBitDepths: [.eight, .sixteen],
+            supportsPreview: true,
+            supportsTransparency: true
+        ))
+        let fixture = try await makePersistentFixture(backend: backend)
+        defer { fixture.cleanup() }
+        let model = fixture.model
+        model.demoMode = true
+        await model.loadCapabilities()
+
+        await model.runScan(preview: true)
+
+        XCTAssertFalse(model.usesFlatbedRegionWorkflow)
+        XCTAssertEqual(backend.previewRequestCount, 1)
+        XCTAssertEqual(backend.fullRequestCount, 0)
     }
 
     func testMockFlatbedFullScansLeaveLastSelectedFrameImmediatelyRenderable() async throws {
@@ -229,7 +298,7 @@ final class ScannerWorkflowSafetyTests: XCTestCase {
             let expectedCount = includesPerforation ? 18 : 6
             XCTAssertEqual(model.flatbedScanRegions.count, expectedCount)
             let rows = Dictionary(grouping: model.flatbedScanRegions) {
-                Int(($0.unitRect.midY * CGFloat(expectedRows)).rounded(.down))
+                Int(($0.unitRect.midY * 10_000).rounded())
             }
             XCTAssertEqual(rows.count, expectedRows)
             XCTAssertTrue(rows.values.allSatisfy { $0.count == 6 })
@@ -239,6 +308,7 @@ final class ScannerWorkflowSafetyTests: XCTestCase {
                     && $0.unitRect.maxX <= 1
                     && $0.unitRect.maxY <= 1
                     && $0.straightenAngle.isFinite
+                    && $0.source == .automatic
             })
 
             let detectedRegions = model.flatbedScanRegions
@@ -274,8 +344,11 @@ final class ScannerWorkflowSafetyTests: XCTestCase {
             (.halfFrame35mm, 11),
             (.medium645, 4),
             (.medium66, 3),
+            (.medium67, 2),
+            (.medium68, 2),
             (.medium69, 2),
             (.medium612, 1),
+            (.medium617, 1),
         ]
 
         for testCase in cases {
@@ -287,6 +360,7 @@ final class ScannerWorkflowSafetyTests: XCTestCase {
             model.selectedDeviceID = MockScannerBackend.flatbedScannerID
             await model.loadCapabilities()
             await model.selectScanFrameFormat(testCase.format)
+            model.setScannerSimulatorFrameCount(testCase.expectedCount)
 
             XCTAssertTrue(model.usesFlatbedRegionWorkflow, testCase.format.displayName)
             XCTAssertEqual(model.scanFrameFormat, testCase.format)
@@ -393,7 +467,8 @@ final class ScannerWorkflowSafetyTests: XCTestCase {
         let model = AppModel()
         let region = FlatbedScanRegion(
             unitRect: CGRect(x: 0.1, y: 0.2, width: 0.3, height: 0.4),
-            straightenAngle: 1.5
+            straightenAngle: 1.5,
+            source: .automatic
         )
         model.flatbedScanRegions = [region]
         let revision = model.flatbedScanRegionRevision
@@ -404,10 +479,11 @@ final class ScannerWorkflowSafetyTests: XCTestCase {
         )
 
         XCTAssertEqual(model.flatbedScanRegions.only?.straightenAngle, 0)
+        XCTAssertEqual(model.flatbedScanRegions.only?.source, .manual)
         XCTAssertNotEqual(model.flatbedScanRegionRevision, revision)
     }
 
-    func testPositionedFlatbedRejectsPluginOutputWithWrongAspectRatio() async throws {
+    func testAutomaticPositionedFlatbedRejectsNonMockOutputWithWrongAspectRatio() async throws {
         let backend = ScannerWorkflowBackend(
             capabilities: ScannerCapabilities(
                 supportedResolutions: [.r3600],
@@ -420,7 +496,48 @@ final class ScannerWorkflowSafetyTests: XCTestCase {
                 maxScanArea: ScanArea(widthMM: 200, heightMM: 100),
                 minScanArea: ScanArea(widthMM: 1, heightMM: 1)
             ),
-            resultBackendType: .plugin,
+            backendType: .imageCaptureCore,
+            resultBackendType: .imageCaptureCore,
+            distortsFullScanAspect: true
+        )
+        let fixture = try await makePersistentFixture(backend: backend)
+        defer { fixture.cleanup() }
+        let model = fixture.model
+        model.demoMode = true
+        await model.loadCapabilities()
+
+        await model.runScan(preview: true)
+        model.flatbedScanRegions = [FlatbedScanRegion(
+            unitRect: CGRect(x: 0.1, y: 0.2, width: 0.2, height: 0.3),
+            source: .automatic
+        )]
+        await model.runScan(preview: false)
+
+        // 평판 프리뷰도 해상도를 명시한 스캔이라 같은 진입점을 쓴다. 영역 스캔은 그 다음 1건.
+        XCTAssertEqual(backend.fullRequestCount, 2)
+        XCTAssertEqual(model.frames.count, 1)
+        XCTAssertTrue(model.frames.only?.isPreviewScan == true)
+        XCTAssertNotNil(model.flatbedPreviewFrameID)
+        XCTAssertEqual(model.scanSessions.only?.jobs.only?.state, .failed)
+        let outputURL = try XCTUnwrap(backend.fullRequests.last?.temporaryOutputURL)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: outputURL.path))
+    }
+
+    func testManualFlatbedRegionAcceptsNonMockOutputRegardlessOfFrameAspect() async throws {
+        let backend = ScannerWorkflowBackend(
+            capabilities: ScannerCapabilities(
+                supportedResolutions: [.r3600],
+                supportedModes: [.color],
+                supportedBitDepths: [.eight, .sixteen],
+                supportsPreview: true,
+                supportsTransparency: true,
+                supportsScanArea: true,
+                supportsPositionedScanArea: true,
+                maxScanArea: ScanArea(widthMM: 200, heightMM: 100),
+                minScanArea: ScanArea(widthMM: 1, heightMM: 1)
+            ),
+            backendType: .imageCaptureCore,
+            resultBackendType: .imageCaptureCore,
             distortsFullScanAspect: true
         )
         let fixture = try await makePersistentFixture(backend: backend)
@@ -433,15 +550,18 @@ final class ScannerWorkflowSafetyTests: XCTestCase {
         model.addFlatbedScanRegion(
             unitRect: CGRect(x: 0.1, y: 0.2, width: 0.2, height: 0.3)
         )
+        XCTAssertEqual(model.flatbedScanRegions.only?.source, .manual)
+        XCTAssertTrue(model.canStartFullScan)
         await model.runScan(preview: false)
 
-        XCTAssertEqual(backend.fullRequestCount, 1)
+        XCTAssertEqual(backend.fullRequestCount, 2)
+        XCTAssertEqual(
+            model.scanSessions.only?.jobs.only?.state,
+            .succeeded,
+            String(describing: model.scanSessions.only?.jobs.only?.failure)
+        )
         XCTAssertEqual(model.frames.count, 1)
-        XCTAssertTrue(model.frames.only?.isPreviewScan == true)
-        XCTAssertNotNil(model.flatbedPreviewFrameID)
-        XCTAssertEqual(model.scanSessions.only?.jobs.only?.state, .failed)
-        let outputURL = try XCTUnwrap(backend.fullRequests.only?.temporaryOutputURL)
-        XCTAssertFalse(FileManager.default.fileExists(atPath: outputURL.path))
+        XCTAssertFalse(model.frames.only?.isPreviewScan == true)
     }
 
     func testPositionedAreaWithoutPreviewRetainsFixedFrameWorkflow() async throws {
@@ -856,6 +976,76 @@ final class ScannerWorkflowSafetyTests: XCTestCase {
             model.hardwareScanAreaBounds?.maximum,
             ScanArea(widthMM: 210, heightMM: 297)
         )
+        model.setScannerSimulatorFrameCount(4)
+        model.setScannerSimulatorFrameOrientation(.portrait)
+        XCTAssertEqual(model.scannerSimulatorFrameCount, 4)
+        XCTAssertEqual(model.scannerSimulatorFrameOrientation, .portrait)
+        XCTAssertEqual(backend.simulatorFrameCount, 4)
+        XCTAssertEqual(backend.simulatorFrameOrientation, .portrait)
+    }
+
+    func testFlatbedScannerSimulatorHandlesMixedOrientationsAndMissingSlots() async throws {
+        let backend = MockScannerBackend()
+        let fixture = try await makePersistentFixture(backend: backend)
+        defer { fixture.cleanup() }
+        let model = fixture.model
+        model.demoMode = true
+        model.selectedDeviceID = MockScannerBackend.flatbedScannerID
+        await model.loadCapabilities()
+        await model.selectScanFrameFormat(.medium67)
+        backend.setSimulatorFrameLayout(
+            orientations: [.landscape, .portrait, .landscape, .portrait, .landscape, .portrait],
+            missingFrameIndices: [1, 4]
+        )
+
+        await model.runScan(preview: true)
+
+        XCTAssertEqual(model.flatbedScanRegions.count, 4)
+        XCTAssertTrue(model.flatbedScanRegions.allSatisfy { $0.source == .automatic })
+        let previewFrame = try XCTUnwrap(model.flatbedPreviewFrame)
+        let previewWidth = Double(try XCTUnwrap(previewFrame.sourcePixelWidth))
+        let previewHeight = Double(try XCTUnwrap(previewFrame.sourcePixelHeight))
+        let aspects: [Double] = model.flatbedScanRegions.map { region in
+            let pixelWidth = Double(region.unitRect.width) * previewWidth
+            let pixelHeight = Double(region.unitRect.height) * previewHeight
+            return pixelWidth / pixelHeight
+        }
+        XCTAssertTrue(aspects.contains {
+            abs($0 / FilmFrameOrientation.landscape.aspect(for: .medium67) - 1) <= 0.12
+        })
+        XCTAssertTrue(aspects.contains {
+            abs($0 / FilmFrameOrientation.portrait.aspect(for: .medium67) - 1) <= 0.12
+        })
+
+        await model.runScan(preview: false)
+
+        XCTAssertEqual(model.scanSessions.only?.jobs.count, 4)
+        XCTAssertTrue(model.scanSessions.only?.jobs.allSatisfy { $0.state == .succeeded } == true)
+        XCTAssertEqual(model.frames.count, 4)
+    }
+
+    func testFlatbedScannerSimulatorUniformControlsClearCustomMissingLayout() {
+        let backend = MockScannerBackend()
+        backend.setSimulatorFrameLayout(
+            orientations: [.landscape, .portrait, .landscape, .portrait],
+            missingFrameIndices: [1, 3]
+        )
+
+        backend.setSimulatorFrameCount(6)
+
+        XCTAssertEqual(backend.simulatorFrameCount, 6)
+        XCTAssertNil(backend.simulatorFrameOrientations)
+        XCTAssertTrue(backend.simulatorMissingFrameIndices.isEmpty)
+
+        backend.setSimulatorFrameLayout(
+            orientations: [.portrait, .landscape, .portrait],
+            missingFrameIndices: [0]
+        )
+        backend.setSimulatorFrameOrientation(.landscape)
+
+        XCTAssertEqual(backend.simulatorFrameOrientation, .landscape)
+        XCTAssertNil(backend.simulatorFrameOrientations)
+        XCTAssertTrue(backend.simulatorMissingFrameIndices.isEmpty)
     }
 
     func testRestoreMarksRunningInterruptedAndDoesNotAutoRunQueuedHardware() async throws {
@@ -1469,7 +1659,7 @@ private final class DeferredCapabilitiesBackend: ScannerBackend, @unchecked Send
 }
 
 private final class ScannerWorkflowBackend: ScannerBackend, @unchecked Sendable {
-    let backendType: BackendType = .mock
+    let backendType: BackendType
     let capabilities: ScannerCapabilities
     let suspendScans: Bool
     let resultBackendType: BackendType
@@ -1485,11 +1675,13 @@ private final class ScannerWorkflowBackend: ScannerBackend, @unchecked Sendable 
     init(
         capabilities: ScannerCapabilities,
         suspendScans: Bool = false,
+        backendType: BackendType = .mock,
         resultBackendType: BackendType = .mock,
         distortsFullScanAspect: Bool = false
     ) {
         self.capabilities = capabilities
         self.suspendScans = suspendScans
+        self.backendType = backendType
         self.resultBackendType = resultBackendType
         self.distortsFullScanAspect = distortsFullScanAspect
     }
@@ -1502,7 +1694,7 @@ private final class ScannerWorkflowBackend: ScannerBackend, @unchecked Sendable 
             displayName: "Plustek OpticFilm 8200i (Demo)",
             vendor: "Plustek",
             model: "OpticFilm 8200i",
-            backendType: .mock,
+            backendType: backendType,
             connectionType: .internalBus,
             verifiedStatus: .verified,
             driverVersion: "test"
@@ -1572,19 +1764,18 @@ private final class ScannerWorkflowBackend: ScannerBackend, @unchecked Sendable 
         var appliedOptions = options
         appliedOptions.temporaryOutputURL = rawFileURL
         let size: (width: Int, height: Int)
-        if resultBackendType == .plugin {
-            if distortsFullScanAspect, options.resolution != .preview {
-                size = (1_600, 1_600)
-            } else {
-                let ratio = options.scanArea.widthMM / options.scanArea.heightMM
-                if ratio >= 1 {
-                    size = (1_600, max(1, Int((1_600 / ratio).rounded())))
-                } else {
-                    size = (max(1, Int((1_600 * ratio).rounded())), 1_600)
-                }
-            }
+        if distortsFullScanAspect,
+           resultBackendType != .mock,
+           options.scanArea != capabilities.maxScanArea {
+            size = (1_600, 1_600)
         } else {
-            size = (32, 24)
+            let longestSide = resultBackendType == .mock ? 32 : 1_600
+            let ratio = options.scanArea.widthMM / options.scanArea.heightMM
+            if ratio >= 1 {
+                size = (longestSide, max(1, Int((Double(longestSide) / ratio).rounded())))
+            } else {
+                size = (max(1, Int((Double(longestSide) * ratio).rounded())), longestSide)
+            }
         }
         return ScanResult(
             rawFileURL: rawFileURL,
@@ -1592,6 +1783,8 @@ private final class ScannerWorkflowBackend: ScannerBackend, @unchecked Sendable 
             height: size.height,
             resolution: options.resolution,
             bitDepth: options.bitDepth,
+            reportedResolution: resultBackendType != .mock ? options.resolution : nil,
+            reportedBitDepth: resultBackendType != .mock ? options.bitDepth : nil,
             backendUsed: resultBackendType,
             appliedOptionsEvidence: .verified(appliedOptions)
         )

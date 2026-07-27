@@ -158,8 +158,8 @@ private struct DevelopDefaultsSection: View {
     var body: some View {
         Section {
             Picker(model.text(AppLocalizedPhrase.process), selection: developmentProcessBinding) {
-                ForEach(FilmType.allCases, id: \.self) { filmType in
-                    Text(filmType.developmentProcessName).tag(filmType)
+                ForEach(DevelopmentProcess.allCases, id: \.self) { process in
+                    Text(process.displayName).tag(process)
                 }
             }
 
@@ -217,9 +217,11 @@ private struct DevelopDefaultsSection: View {
     }
 
     private var profileAndLookRow: some View {
+        // 양쪽에 fixedSize를 걸면 사이드바가 좁아질 때 줄어드는 대신 행을 넘겨서 오른쪽이
+        // 잘린다. 룩은 번들 프리셋뿐이라 이름이 짧으니 고정폭으로 두고, 길이가 들쭉날쭉한
+        // 필름 프로파일이 남는 폭을 흡수하며 말줄임되게 한다.
         HStack(spacing: 8) {
             filmProfileControl
-                .fixedSize(horizontal: true, vertical: false)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             Picker(model.text(AppLocalizedPhrase.look), selection: lookPresetBinding) {
@@ -231,7 +233,6 @@ private struct DevelopDefaultsSection: View {
             .pickerStyle(.menu)
             .fixedSize(horizontal: true, vertical: false)
             .disabled(model.actionableFrame == nil)
-            .frame(maxWidth: .infinity, alignment: .trailing)
         }
     }
 
@@ -248,7 +249,7 @@ private struct DevelopDefaultsSection: View {
             Picker(model.text(AppLocalizedPhrase.filmProfile), selection: scannerProfileBinding) {
                 Text(targetFamily.displayName(language: model.appLanguage)).tag(String?.none)
                 ForEach(filteredScannerProfiles) { profile in
-                    Text(profile.filmKey.capitalized).tag(profile.id as String?)
+                    Text(profile.compactFilmName).tag(profile.id as String?)
                 }
             }
             .labelsHidden()
@@ -289,9 +290,9 @@ private struct DevelopDefaultsSection: View {
         )
     }
 
-    private var developmentProcessBinding: Binding<FilmType> {
+    private var developmentProcessBinding: Binding<DevelopmentProcess> {
         Binding(
-            get: { activeFilmType },
+            get: { model.activeDevelopmentProcess },
             set: { model.applyDevelopmentProcess($0, to: model.actionableFrame) }
         )
     }

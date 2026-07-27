@@ -112,12 +112,16 @@ extension AppModel {
                         }
                     )
                 }.value
-                if !flatbedRegions.isEmpty,
-                   result.backendUsed != .mock,
+                let flatbedRegion = flatbedRegions.indices.contains(ordinal - 1)
+                    ? flatbedRegions[ordinal - 1]
+                    : nil
+                if flatbedRegion?.source == .automatic,
                    !FlatbedScanRegionGeometry.outputMatchesPhysicalAspect(
                        width: result.width,
                        height: result.height,
-                       scanArea: requestedOptions.scanArea
+                       scanArea: requestedOptions.scanArea,
+                       relativeTolerance: 0.02,
+                       minimumPixelTolerance: 3
                    ) {
                     Self.removeUncommittedScanOutput(
                         result.rawFileURL,

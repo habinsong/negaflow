@@ -240,6 +240,11 @@ SANE-Umsetzung, Abhängigkeiten, Konfiguration, gerätespezifische Verarbeitung,
 Auslieferungsdokumentation liegen alle im separaten Repository
 [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane).
 
+Dieses Projekt veröffentlicht eine Standardvariante ab macOS 14 mit Homebrews normalem SANE sowie
+eine getrennte Coolscan-Variante ab macOS 26, die offizielles SANE 1.4.0 nur mit dem upstream
+`coolscan2`/`coolscan3`-Allokationsfix baut. Die Standardvariante blockiert Coolscan nicht, enthält
+diesen Fix aber nicht.
+
 Dieses Repository dokumentiert und prüft ausschließlich die geräteunabhängige Spezifikation für
 externe Prozesse.
 Wer nur Bilddateien importiert, braucht kein Scanner-Plugin.

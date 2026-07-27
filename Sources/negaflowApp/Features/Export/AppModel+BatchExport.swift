@@ -151,7 +151,10 @@ extension AppModel {
             }
         }
         exportBatchStore.finish()
-        if !persistExportBatchCheckpoint() {
+        if exportBatchStore.retryableItemIDs.isEmpty {
+            // 재시도할 항목 없이 끝난 배치는 재개 기록을 남기지 않는다.
+            discardExportBatchCheckpoint()
+        } else if !persistExportBatchCheckpoint() {
             checkpointPersistenceFailed = true
         }
         guard !checkpointPersistenceFailed else { return }

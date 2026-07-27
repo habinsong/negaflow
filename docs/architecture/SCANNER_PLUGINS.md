@@ -234,6 +234,11 @@ The SANE implementation, its dependencies, configuration, device-specific proces
 release documentation all live in the separate
 [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane) repository.
 
+That project publishes a standard macOS 14+ installer using Homebrew's stock SANE and a separate
+macOS 26+ Coolscan installer that builds official SANE 1.4.0 with the minimal upstream
+`coolscan2`/`coolscan3` allocation fix. The standard path does not proactively block Coolscan, but
+it does not contain that fix.
+
 This repository documents and checks the device-independent external process spec only.
 Anyone who just imports image files does not need a scanner plugin.
 

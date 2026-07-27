@@ -28,6 +28,12 @@ extension AppModel {
         }
     }
 
+    // 체크포인트는 중단된 배치를 재개하기 위한 기록이다. 재개할 항목이 없는데도 파일을
+    // 남기면, 프레임이 라이브러리에서 사라진 뒤부터 매 실행마다 복원 불가를 보고한다.
+    func discardExportBatchCheckpoint() {
+        try? FileManager.default.removeItem(at: exportBatchCheckpointURL)
+    }
+
     func restoreExportBatchCheckpoint() {
         let checkpoint: ExportBatchCheckpoint
         do {
@@ -39,6 +45,11 @@ extension AppModel {
             return
         } catch {
             reportExportBatchCheckpointFailure("checkpoint-read")
+            return
+        }
+        guard checkpoint.items.contains(where: { $0.state != .succeeded }) else {
+            // 전부 성공한 배치는 재개할 것도 재시도할 것도 없다. 실패가 아니므로 조용히 지운다.
+            discardExportBatchCheckpoint()
             return
         }
         let framesByID = Dictionary(uniqueKeysWithValues: frames.map { ($0.id, $0) })

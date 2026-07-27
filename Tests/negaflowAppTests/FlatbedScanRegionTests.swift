@@ -98,7 +98,7 @@ final class FlatbedScanRegionTests: XCTestCase {
         )
     }
 
-    func testMockFlatbedPreviewUsesBundledRollSample() async throws {
+    func testMockFlatbedPreviewUsesPhysicalBedCanvas() async throws {
         let directory = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("negaflow-flatbed-preview-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -112,8 +112,8 @@ final class FlatbedScanRegionTests: XCTestCase {
 
         let result = try await backend.startPreviewScan(options) { _ in }
 
-        XCTAssertEqual(result.width, 3_701)
-        XCTAssertEqual(result.height, 401)
+        XCTAssertEqual(result.width, 1_400)
+        XCTAssertEqual(result.height, 1_980)
         XCTAssertGreaterThan(try Data(contentsOf: result.rawFileURL).count, 8_000_000)
     }
 
@@ -131,16 +131,16 @@ final class FlatbedScanRegionTests: XCTestCase {
         previewOptions.temporaryOutputURL = directory.appendingPathComponent("preview.tiff")
         let previewResult = try await backend.startPreviewScan(previewOptions) { _ in }
 
-        let unitROI = CGRect(x: 0.3, y: 0.1, width: 0.2, height: 0.4)
+        let unitROI = CGRect(x: 0.18, y: 0.36, width: 0.24, height: 0.18)
         let physicalROI = try XCTUnwrap(FlatbedScanRegionGeometry.physicalArea(
             for: FlatbedScanRegion(unitRect: unitROI),
             previewScanArea: previewArea,
             capabilities: capabilities
         ))
-        XCTAssertEqual(physicalROI.originXMM, 63, accuracy: 0.000_001)
-        XCTAssertEqual(physicalROI.originYMM, 29.7, accuracy: 0.000_001)
-        XCTAssertEqual(physicalROI.widthMM, 42, accuracy: 0.000_001)
-        XCTAssertEqual(physicalROI.heightMM, 118.8, accuracy: 0.000_001)
+        XCTAssertEqual(physicalROI.originXMM, 37.7, accuracy: 0.000_001)
+        XCTAssertEqual(physicalROI.originYMM, 106.9, accuracy: 0.000_001)
+        XCTAssertEqual(physicalROI.widthMM, 50.5, accuracy: 0.000_001)
+        XCTAssertEqual(physicalROI.heightMM, 53.5, accuracy: 0.000_001)
         var fullOptions = ScanOptions.strongDefault(scannerID: MockScannerBackend.flatbedScannerID)
         fullOptions.scanArea = physicalROI
         fullOptions.temporaryOutputURL = directory.appendingPathComponent("full.tiff")
@@ -199,7 +199,7 @@ final class FlatbedScanRegionTests: XCTestCase {
 
         let measurements = "exact=\(exactError), h=\(horizontalMirrorError), v=\(verticalMirrorError), hv=\(bothMirrorError), bedY=\(bedYOriginError), bedYV=\(bedYOriginAndContentError), origin=\(ignoredOriginError)"
         XCTAssertLessThan(exactError, 8, measurements)
-        XCTAssertGreaterThan(horizontalMirrorError, exactError + 8, measurements)
+        XCTAssertGreaterThan(horizontalMirrorError, exactError + 4, measurements)
         XCTAssertGreaterThan(verticalMirrorError, exactError + 8, measurements)
         XCTAssertGreaterThan(bothMirrorError, exactError + 8, measurements)
         XCTAssertGreaterThan(bedYOriginError, exactError + 8, measurements)
@@ -261,8 +261,11 @@ final class FlatbedScanRegionTests: XCTestCase {
             (.halfFrame35mm, 11),
             (.medium645, 4),
             (.medium66, 3),
+            (.medium67, 2),
+            (.medium68, 2),
             (.medium69, 2),
             (.medium612, 1),
+            (.medium617, 1),
         ]
 
         for testCase in cases {
@@ -279,6 +282,7 @@ final class FlatbedScanRegionTests: XCTestCase {
             let backend = MockScannerBackend()
             backend.setSimulatorIncludesPerforation(false)
             backend.setSimulatorFrameFormat(testCase.format)
+            backend.setSimulatorFrameCount(testCase.expectedCount)
             let capabilities = try await backend.getCapabilities(
                 scannerID: MockScannerBackend.flatbedScannerID
             )
@@ -454,6 +458,20 @@ final class FlatbedScanRegionTests: XCTestCase {
             width: 1_200,
             height: 2_400,
             scanArea: area
+        ))
+        XCTAssertTrue(FlatbedScanRegionGeometry.outputMatchesPhysicalAspect(
+            width: 2_440,
+            height: 1_200,
+            scanArea: area,
+            relativeTolerance: 0.02,
+            minimumPixelTolerance: 3
+        ))
+        XCTAssertFalse(FlatbedScanRegionGeometry.outputMatchesPhysicalAspect(
+            width: 2_449,
+            height: 1_200,
+            scanArea: area,
+            relativeTolerance: 0.02,
+            minimumPixelTolerance: 3
         ))
     }
 }

@@ -9,9 +9,12 @@ extension AppModel {
               capabilities.supportsPositionedScanArea != true
                 || capabilities.supportsPreview,
               let maximum = hardwareScanAreaBounds?.maximum else { return [] }
-        return FilmFrameFormat.allCases.filter {
-            $0.stripWidthMM <= maximum.widthMM
-                && $0.stripHeightMM <= maximum.heightMM
+        return FilmFrameFormat.allCases.filter { format in
+            let standard = format.stripWidthMM <= maximum.widthMM
+                && format.stripHeightMM <= maximum.heightMM
+            let rotated = format.stripHeightMM <= maximum.widthMM
+                && format.stripWidthMM <= maximum.heightMM
+            return standard || rotated
         }
     }
 
@@ -163,7 +166,8 @@ extension AppModel {
             .map {
                 FlatbedScanRegion(
                     unitRect: $0.normalizedRect,
-                    straightenAngle: $0.straightenAngle
+                    straightenAngle: $0.straightenAngle,
+                    source: .automatic
                 )
             }
         flatbedScanRegions = regions
@@ -209,6 +213,7 @@ extension AppModel {
         guard let index = flatbedScanRegions.firstIndex(where: { $0.id == id }) else { return }
         flatbedScanRegions[index].unitRect = clampedUnitRect(unitRect)
         flatbedScanRegions[index].straightenAngle = 0
+        flatbedScanRegions[index].source = .manual
         selectedFlatbedScanRegionID = id
     }
 

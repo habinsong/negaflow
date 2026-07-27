@@ -123,6 +123,32 @@ struct ScannerControlsSection: View {
                 )
             }
 
+            if model.demoMode, model.usesFlatbedRegionWorkflow {
+                Picker(
+                    model.text(.printOrientation),
+                    selection: Binding(
+                        get: { model.scannerSimulatorFrameOrientation },
+                        set: { model.setScannerSimulatorFrameOrientation($0) }
+                    )
+                ) {
+                    Text(model.text(.printOrientationLandscape))
+                        .tag(FilmFrameOrientation.landscape)
+                    Text(model.text(.printOrientationPortrait))
+                        .tag(FilmFrameOrientation.portrait)
+                }
+                Stepper(
+                    model.text(
+                        AppLocalizedPhrase.framesFormat,
+                        model.scannerSimulatorFrameCount
+                    ),
+                    value: Binding(
+                        get: { model.scannerSimulatorFrameCount },
+                        set: { model.setScannerSimulatorFrameCount($0) }
+                    ),
+                    in: 1...48
+                )
+            }
+
             if model.usesFlatbedRegionWorkflow {
                 flatbedRegionControls
             } else {

@@ -90,7 +90,7 @@ extension Detector {
             topSigma = max(2, Double(height) * 0.03)
             bottomSigma = topSigma
         } else {
-            let edgeWindow = max(3, Int(Double(height) * 0.08))
+            let edgeWindow = max(3, Int(Double(height) * 0.20))
             topRange = boundedRange(
                 partition.lowerBound,
                 partition.lowerBound + edgeWindow,
@@ -101,9 +101,9 @@ extension Detector {
                 partition.upperBound,
                 limit: edgeScores.count
             )
-            topTarget = Double(partition.lowerBound) + Double(height) * 0.02
-            bottomTarget = Double(partition.lowerBound) + Double(height) * 0.98
-            topSigma = max(2, Double(height) * 0.015)
+            topTarget = Double(partition.lowerBound) + Double(height) * 0.05
+            bottomTarget = Double(partition.lowerBound) + Double(height) * 0.95
+            topSigma = max(2, Double(height) * 0.06)
             bottomSigma = topSigma
         }
         let top = weightedMaximumIndex(
@@ -134,22 +134,20 @@ extension Detector {
     func detectStrip(
         aperture: Range<Int>,
         partition: Range<Int>,
-        horizontalEdgeScores: [Double]
+        horizontalEdgeScores: [Double],
+        verticalEdgeScores: [Double]
     ) -> DetectedStrip? {
-        let nominalFrameAspect = frameFormat.stripFrameAspect
+        let nominalFrameAspect = frameAspect
         let rawCount = Double(image.width) / (Double(aperture.count) * nominalFrameAspect)
         let columnCount = Int(rawCount.rounded())
         guard columnCount >= 1, columnCount <= 48 else { return nil }
         let pitch = Double(image.width) / Double(columnCount)
         let inferredAspect = pitch / Double(aperture.count)
-        let minimumAspect = nominalFrameAspect * 0.82
-        let maximumAspect = nominalFrameAspect * 1.18
+        let minimumAspect = nominalFrameAspect * 0.90
+        let maximumAspect = nominalFrameAspect * 1.10
         guard (minimumAspect...maximumAspect).contains(inferredAspect) else { return nil }
 
-        let edgeScores = horizontalGradientColumnQuantiles(
-            yRange: aperture,
-            quantile: 0.75
-        )
+        let edgeScores = verticalEdgeScores
         guard edgeScores.count == image.width - 1 else { return nil }
         let scoreFloor = max(median(edgeScores), 1.0 / 255.0)
         let strongThreshold = scoreFloor * 5

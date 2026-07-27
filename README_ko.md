@@ -7,7 +7,7 @@
 <p align="center">아날로그 필름을 위한 카메라/스캐너 스캔과 현상과 출력까지 전과정을 지원하는 macOS 앱</p>
 
 <p align="center">
-  <a href="docs/ko/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.0%20release-EF8B26" alt="출시 상태"></a>
+  <a href="docs/ko/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.1%20release-EF8B26" alt="출시 상태"></a>
   <a href="#요구-사항"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 이상"></a>
   <a href="Package.swift"><img src="https://img.shields.io/badge/Swift-5.9+-F05138?logo=swift&logoColor=white" alt="Swift 5.9 이상"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0 라이선스"></a>
@@ -67,8 +67,8 @@
 
 | 설치 파일 | 지원하는 Mac |
 |---|---|
-| `negaflow-1.0.0-1-macOS-universal.pkg` | Apple Silicon, Intel |
-| `negaflow-1.0.0-1-macOS-arm64.pkg` | Apple Silicon 전용 |
+| `negaflow-1.0.1-1-macOS-universal.pkg` | Apple Silicon, Intel |
+| `negaflow-1.0.1-1-macOS-arm64.pkg` | Apple Silicon 전용 |
 
 1. 사용하는 Mac에 맞는 PKG를 내려받습니다.
 2. PKG를 열고 설치 프로그램의 안내에 따라 진행합니다.

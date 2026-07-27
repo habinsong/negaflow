@@ -10,6 +10,8 @@ struct InspectorSlider: View {
     let focusID: InspectorSliderFocus?
     let focusedSlider: FocusState<InspectorSliderFocus?>.Binding?
     let doubleClickResetValue: Double?
+    /// 0...1 값을 퍼센트로 보여주고 퍼센트로 입력받는다.
+    let showsPercent: Bool
 
     init(
         _ title: String,
@@ -17,7 +19,8 @@ struct InspectorSlider: View {
         range: ClosedRange<Double>,
         focusID: InspectorSliderFocus? = nil,
         focusedSlider: FocusState<InspectorSliderFocus?>.Binding? = nil,
-        doubleClickResetValue: Double? = 0
+        doubleClickResetValue: Double? = 0,
+        showsPercent: Bool = false
     ) {
         self.title = title
         self._value = value
@@ -25,6 +28,7 @@ struct InspectorSlider: View {
         self.focusID = focusID
         self.focusedSlider = focusedSlider
         self.doubleClickResetValue = doubleClickResetValue
+        self.showsPercent = showsPercent
     }
 
     @ViewBuilder
@@ -47,12 +51,22 @@ struct InspectorSlider: View {
                 Text(title)
                     .font(.caption)
                 Spacer()
-                EditableSliderValueText(
-                    value: value,
-                    displayText: signedControlText(value),
-                    inputRange: range,
-                    onCommit: { value = $0 }
-                )
+                if showsPercent {
+                    EditableSliderValueText(
+                        value: value,
+                        displayText: percentControlText(value),
+                        inputRange: (range.lowerBound * 100)...(range.upperBound * 100),
+                        inputText: { percentInputText($0) },
+                        onCommit: { value = $0 / 100 }
+                    )
+                } else {
+                    EditableSliderValueText(
+                        value: value,
+                        displayText: signedControlText(value),
+                        inputRange: range,
+                        onCommit: { value = $0 }
+                    )
+                }
             }
             ResettableSlider(value: $value, in: range, resetValue: doubleClickResetValue)
         }

@@ -22,6 +22,17 @@ extension DevelopTarget {
     }
 }
 
+extension ScannerProfile {
+    /// 좁은 사이드바에서도 필름을 구분할 수 있게 제조사 접두어를 뗀 이름.
+    /// "kodak ektachrome 100d" -> "Ektachrome 100D". 제조사를 빼면 코드만 남는 두 토막
+    /// 이름("fuji c200")은 이미 짧으므로 그대로 둔다.
+    var compactFilmName: String {
+        let words = filmKey.split(separator: " ")
+        guard words.count > 2 else { return filmKey.capitalized }
+        return words.dropFirst().joined(separator: " ").capitalized
+    }
+}
+
 extension FilmType {
     func displayName(language: AppLanguage) -> String {
         switch self {

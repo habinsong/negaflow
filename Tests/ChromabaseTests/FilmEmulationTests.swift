@@ -109,6 +109,155 @@ final class FilmEmulationTests: XCTestCase {
         XCTAssertGreaterThan(full, half + 0.005, "intensity 1.0 은 0.5 보다 강해야 합니다.")
     }
 
+    // MARK: 목록 구성 (UI 계약)
+
+    func testFilmListIsGroupedIntoSlideAndNegativeWithNoneFirst() {
+        XCTAssertEqual(FilmEmulation.allCases.first, FilmEmulation.none)
+        XCTAssertNil(FilmEmulation.none.kind)
+        XCTAssertEqual(FilmEmulation.films(of: .slide), [.ektachromeE100, .provia100F, .velvia50])
+        XCTAssertEqual(FilmEmulation.films(of: .negative), [
+            .portra160, .portra400, .portra800, .ektar100,
+            .ultramax400, .colorPlus200, .fujicolorC200, .pro400H,
+        ])
+        // 모든 항목은 .none 을 빼면 반드시 한 그룹에 속한다(목록에서 누락되지 않는다).
+        XCTAssertEqual(
+            FilmEmulation.allCases.count,
+            1 + FilmEmulation.films(of: .slide).count + FilmEmulation.films(of: .negative).count
+        )
+    }
+
+    func testDefaultIntensityIsHalf() {
+        XCTAssertEqual(DevelopParameters().filmEmulationIntensity, 0.5, accuracy: 1e-9)
+    }
+
+    // MARK: 프로파일 불변식
+
+    /// 색 매트릭스 행합=1 — 무채색을 물들이지 않는다는 모델의 전제. 새 필름을 넣을 때 가장 깨지기 쉽다.
+    func testEveryProfileMatrixPreservesNeutrals() {
+        for film in FilmEmulation.allCases {
+            let p = FilmEmulationProfile.of(film)
+            for (name, row) in [("R", p.mR), ("G", p.mG), ("B", p.mB)] {
+                XCTAssertEqual(row.x + row.y + row.z, 1.0, accuracy: 1e-9,
+                               "\(film.rawValue) m\(name) 행합이 1이 아닙니다.")
+            }
+            XCTAssertEqual(p.iieHue.count, 6, "\(film.rawValue) iieHue 앵커는 6개여야 합니다.")
+        }
+    }
+
+    /// 네거티브는 필름 자체가 최종 결과물이 아니라 렌더된 응답을 모델링한다 — 슬라이드보다 대비가
+    /// 낮고 토우가 들려(넓은 섀도우 관용도) 있어야 한다.
+    func testNegativeProfilesAreFlatterAndLiftedComparedToSlides() {
+        let slideContrast = FilmEmulation.films(of: .slide)
+            .map { FilmEmulationProfile.of($0).toneG.contrast }
+        let lowestSlideContrast = slideContrast.min() ?? 0
+        for film in FilmEmulation.films(of: .negative) where film != .ektar100 {
+            let p = FilmEmulationProfile.of(film)
+            XCTAssertLessThan(p.toneG.contrast, lowestSlideContrast,
+                              "\(film.rawValue) 는 슬라이드보다 대비가 낮아야 합니다.")
+            XCTAssertLessThan(p.toneG.black, 0,
+                              "\(film.rawValue) 는 토우가 들려 있어야 합니다(섀도우 관용도).")
+        }
+    }
+
+    /// Portra 3형제: 160 → 400 → 800 순으로 대비·채도가 올라가고 언더 관용도(토우 리프트)도 커진다.
+    func testPortraFamilyOrdering() {
+        let p160 = FilmEmulationProfile.of(.portra160)
+        let p400 = FilmEmulationProfile.of(.portra400)
+        let p800 = FilmEmulationProfile.of(.portra800)
+        XCTAssertLessThan(p160.toneG.contrast, p400.toneG.contrast)
+        XCTAssertLessThan(p400.toneG.contrast, p800.toneG.contrast)
+        XCTAssertLessThan(p160.mG.y, p400.mG.y)
+        XCTAssertLessThan(p400.mG.y, p800.mG.y)
+        // "best-in-class underexposure latitude" — 800 의 토우가 가장 많이 들린다.
+        XCTAssertLessThan(p800.toneG.black, p400.toneG.black)
+        XCTAssertLessThan(p400.toneG.black, p160.toneG.black)
+        // 감도가 낮을수록 입자가 곱다 → 엣지 강조가 강하다.
+        XCTAssertGreaterThan(p160.acutance.intensity, p800.acutance.intensity)
+    }
+
+    /// Ektar 는 네거티브 중 유일하게 고채도·고대비를 지향하고, 토우를 들지 않는다(좁은 관용도).
+    func testEktarIsTheOutlierAmongNegatives() {
+        let ektar = FilmEmulationProfile.of(.ektar100)
+        for film in FilmEmulation.films(of: .negative) where film != .ektar100 {
+            let p = FilmEmulationProfile.of(film)
+            XCTAssertGreaterThan(ektar.mG.y, p.mG.y, "Ektar 채도 > \(film.rawValue)")
+            XCTAssertGreaterThan(ektar.toneG.contrast, p.toneG.contrast, "Ektar 대비 > \(film.rawValue)")
+        }
+        XCTAssertGreaterThan(ektar.toneG.black, 0, "Ektar 는 섀도우 관용도가 좁아 토우를 들지 않습니다.")
+    }
+
+    // MARK: 슬라이드 3종 위치 (E100 < Provia < Velvia)
+
+    func testSlideSaturationOrdering() {
+        let green = solidRGB(0.14, 0.42, 0.16)
+        let e100 = meanChroma(render(FilmEmulationStage.apply(to: green, emulation: .ektachromeE100, intensity: 1)))
+        let provia = meanChroma(render(FilmEmulationStage.apply(to: green, emulation: .provia100F, intensity: 1)))
+        let velvia = meanChroma(render(FilmEmulationStage.apply(to: green, emulation: .velvia50, intensity: 1)))
+        XCTAssertGreaterThan(provia, e100 + 0.005, "Provia 채도 > E100.")
+        XCTAssertGreaterThan(velvia, provia + 0.01, "Velvia 채도 > Provia.")
+    }
+
+    func testSlideContrastOrdering() {
+        let dark = solid(0.16), light = solid(0.72)
+        func spread(_ f: FilmEmulation) -> Double {
+            let d = meanLuma(render(FilmEmulationStage.apply(to: dark, emulation: f, intensity: 1)))
+            let l = meanLuma(render(FilmEmulationStage.apply(to: light, emulation: f, intensity: 1)))
+            return l - d
+        }
+        XCTAssertGreaterThan(spread(.provia100F), spread(.ektachromeE100) + 0.005)
+        XCTAssertGreaterThan(spread(.velvia50), spread(.provia100F) + 0.005)
+    }
+
+    // MARK: 네거티브 렌더 특성
+
+    /// 네거티브는 렌더된 응답이라 슬라이드보다 톤 스프레드가 좁다(Portra 400 vs E100).
+    func testPortra400RendersFlatterThanE100() {
+        let dark = solid(0.16), light = solid(0.72)
+        func spread(_ f: FilmEmulation) -> Double {
+            let d = meanLuma(render(FilmEmulationStage.apply(to: dark, emulation: f, intensity: 1)))
+            let l = meanLuma(render(FilmEmulationStage.apply(to: light, emulation: f, intensity: 1)))
+            return l - d
+        }
+        XCTAssertLessThan(spread(.portra400), spread(.ektachromeE100) - 0.01)
+    }
+
+    /// Ektar 는 언더노출 섀도우가 블루-시안으로 기운다(반복 관측되는 고유 특성).
+    func testEktarShadowsTiltBlueCyan() {
+        let dark = render(FilmEmulationStage.apply(to: solid(0.14), emulation: .ektar100, intensity: 1))
+        XCTAssertGreaterThan(dark.b, dark.r + 0.005, "Ektar 섀도우는 R 보다 B 가 높아야 합니다.")
+    }
+
+    /// Kodak 소비자/인물용 계열은 하이라이트가 웜(R>B)으로 기운다.
+    func testKodakHighlightsTiltWarm() {
+        for film in [FilmEmulation.portra800, .ultramax400, .colorPlus200] {
+            let light = render(FilmEmulationStage.apply(to: solid(0.68), emulation: film, intensity: 1))
+            XCTAssertGreaterThan(light.r, light.b + 0.004,
+                                 "\(film.rawValue) 하이라이트는 웜이어야 합니다.")
+        }
+    }
+
+    /// 같은 보급형 ISO 200 이라도 Fuji 쪽이 Kodak 보다 쿨하다.
+    func testC200IsCoolerThanColorPlusInHighlights() {
+        func warmth(_ f: FilmEmulation) -> Double {
+            let c = render(FilmEmulationStage.apply(to: solid(0.72), emulation: f, intensity: 1))
+            return c.r - c.b
+        }
+        XCTAssertGreaterThan(warmth(.colorPlus200), warmth(.fujicolorC200) + 0.005)
+    }
+
+    /// PRO 400H — "faithful reproduction of neutral grays over a wide exposure range".
+    func testPro400HKeepsNeutralsNeutralAndIsTheSoftestFilm() {
+        for v in [0.14, 0.38, 0.66] as [Float] {
+            let out = render(FilmEmulationStage.apply(to: solid(v), emulation: .pro400H, intensity: 1))
+            XCTAssertLessThan(meanChroma(out), 0.01,
+                              "PRO 400H 는 밝기 \(v) 중립 그레이를 물들이면 안 됩니다.")
+        }
+        let softest = FilmEmulation.allCases
+            .filter { $0 != .none }
+            .min(by: { FilmEmulationProfile.of($0).toneG.contrast < FilmEmulationProfile.of($1).toneG.contrast })
+        XCTAssertEqual(softest, .pro400H)
+    }
+
     // MARK: helpers
 
     private func solid(_ v: Float) -> CIImage { solidRGB(v, v, v) }

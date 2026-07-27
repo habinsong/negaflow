@@ -239,6 +239,11 @@ L'implémentation SANE, ses dépendances, sa configuration, le traitement propre
 tests et la documentation de distribution vivent tous dans le dépôt séparé
 [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane).
 
+Ce projet publie une version standard pour macOS 14 ou ultérieur avec le SANE standard de Homebrew,
+et une version Coolscan séparée pour macOS 26 ou ultérieur, qui compile SANE 1.4.0 officiel avec
+uniquement le correctif upstream d'allocation `coolscan2`/`coolscan3`. La version standard ne bloque
+pas Coolscan, mais ne contient pas ce correctif.
+
 Ce dépôt documente et contrôle uniquement la spécification de processus externe indépendante des
 appareils.
 Qui importe seulement des fichiers image n'a pas besoin de plugin scanner.

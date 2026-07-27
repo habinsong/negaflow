@@ -93,6 +93,19 @@ extension AppModel {
                 if let bounds = capabilities.physicalScanAreaBounds {
                     opts.scanArea = bounds.maximum
                 }
+                // 평판 프리뷰는 그 위에서 필름 영역을 잡는 작업면이라 해상도를 장치 기본값에
+                // 맡길 수 없다. 25dpi로 동작하던 기존 경로의 크기로는 프레임 자동 검출이
+                // 시작조차 못 한다. 필름 전용 스캐너 프리뷰는 훑어보기라 지금처럼 백엔드
+                // 프리뷰 경로를 그대로 쓴다.
+                if usesFlatbedRegionWorkflow,
+                   let previewResolution = Self.preferredFlatbedPreviewResolution(
+                       in: capabilities.supportedResolutions
+                   ) {
+                    opts.resolution = previewResolution
+                    // 외부 플러그인 계약상 양수 dpi는 full scan 요청이며 TIFF 산출물이
+                    // 필수다. 앱에서는 결과만 프리뷰로 취급한다.
+                    opts.outputRawTIFF = true
+                }
             } else {
                 opts = ScanOptions.strongDefault(scannerID: id)
                 opts.resolution = resolutionChoice
@@ -133,7 +146,9 @@ extension AppModel {
             scanPhase = preview ? .previewScanning : .scanningRGB
             statusMessage = preview ? text(AppLocalizedPhrase.previewScanPreparing) : text(AppLocalizedPhrase.filmScanPreparing)
             do {
-                let result = preview
+                // 해상도를 명시한 프리뷰는 백엔드 프리뷰 경로(해상도 미지정 계약)로 보낼 수
+                // 없다. 저해상도 본 스캔으로 뜨고, 프레임만 프리뷰로 다룬다.
+                let result = opts.resolution == .preview
                     ? try await backend.startPreviewScan(opts, progress: { [weak self] p in
                         Task { @MainActor in self?.update(p, sessionID: sessionID) }
                     })
@@ -170,11 +185,12 @@ extension AppModel {
                         )
                     }
                     appliedFlatbedPreviewArea = appliedOptions.scanArea
-                    if backend.backendType != .mock,
-                       !FlatbedScanRegionGeometry.outputMatchesPhysicalAspect(
+                    if !FlatbedScanRegionGeometry.outputMatchesPhysicalAspect(
                            width: result.width,
                            height: result.height,
-                           scanArea: appliedOptions.scanArea
+                           scanArea: appliedOptions.scanArea,
+                           relativeTolerance: 0.02,
+                           minimumPixelTolerance: 3
                        ) {
                         Self.removeUncommittedScanOutput(
                             result.rawFileURL,

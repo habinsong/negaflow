@@ -35,6 +35,10 @@ public enum DevelopTarget: String, Codable, Sendable, CaseIterable {
 public struct DevelopParameters: Codable, Sendable, Equatable {
     // Base
     public var filmType: FilmType = .colorNegative
+    /// 소스가 필름이 아니라 디지털 사진일 때 true. 현상 경로는 filmType 그대로(포지티브
+    /// 파이프라인)를 쓰고 프로세스 목록에 표시할 이름만 달라진다. nil = 필름이며, 기존
+    /// 프레임의 레시피 지문을 바꾸지 않도록 기본값을 nil로 둔다.
+    public var isDigitalSource: Bool?
     public var developTarget: DevelopTarget = .main
     public var scannerProfileID: String?
     public var baseEstimationMode: BaseMode = .auto
@@ -83,7 +87,9 @@ public struct DevelopParameters: Codable, Sendable, Equatable {
 
     // 슬라이드 필름 특성 룩(좌측 Film 탭). 현상 원본(플랫) 위에 데이터시트 유도 룩을 얹는 특수 기능.
     public var filmEmulation: FilmEmulation = .none
-    public var filmEmulationIntensity: Double = 1.0   // 0...1
+    /// 0...1. 기본 0.5 — 필름 룩은 절반쯤 얹었을 때가 출발점으로 쓸 만하고, 100% 는 룩을 끝까지
+    /// 민 상태라 기본값으로 적절하지 않다.
+    public var filmEmulationIntensity: Double = 0.5
 
     // Texture
     public var grain: Double = 0.0           // 0...1
@@ -118,7 +124,8 @@ public struct DevelopParameters: Codable, Sendable, Equatable {
     public init() {}
 
     enum CodingKeys: String, CodingKey {
-        case filmType, developTarget, scannerProfileID, baseEstimationMode, manualBaseRGB, filmStockDminID
+        case filmType, isDigitalSource, developTarget, scannerProfileID, baseEstimationMode
+        case manualBaseRGB, filmStockDminID
         case lightSourceProfileID, autoLevels, autoNeutralBalance
         case exposure, contrast, density, highlight, shadow, whites, blacks
         case curveHighlights, curveLights, curveDarks, curveShadows
@@ -137,6 +144,7 @@ public struct DevelopParameters: Codable, Sendable, Equatable {
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         filmType = try c.decodeIfPresent(FilmType.self, forKey: .filmType) ?? .colorNegative
+        isDigitalSource = try c.decodeIfPresent(Bool.self, forKey: .isDigitalSource)
         developTarget = try c.decodeIfPresent(DevelopTarget.self, forKey: .developTarget) ?? .main
         scannerProfileID = try c.decodeIfPresent(String.self, forKey: .scannerProfileID)
         baseEstimationMode = try c.decodeIfPresent(BaseMode.self, forKey: .baseEstimationMode) ?? .auto
@@ -170,6 +178,8 @@ public struct DevelopParameters: Codable, Sendable, Equatable {
         calibration = try c.decodeIfPresent(CalibrationAdjust.self, forKey: .calibration) ?? CalibrationAdjust()
         bwToning = try c.decodeIfPresent(BWToning.self, forKey: .bwToning) ?? BWToning()
         filmEmulation = try c.decodeIfPresent(FilmEmulation.self, forKey: .filmEmulation) ?? .none
+        // 키가 없던 시절 데이터는 100% 로 렌더되던 값이다. 기본값이 50% 로 바뀌었다고 해서
+        // 이미 저장된 프레임의 룩까지 바꾸지는 않는다.
         filmEmulationIntensity = try c.decodeIfPresent(Double.self, forKey: .filmEmulationIntensity) ?? 1.0
         grain = try c.decodeIfPresent(Double.self, forKey: .grain) ?? 0
         sharpness = try c.decodeIfPresent(Double.self, forKey: .sharpness) ?? 0
@@ -234,6 +244,7 @@ public struct DevelopParameters: Codable, Sendable, Equatable {
         localDodgeBurn = overrides.localDodgeBurn
         imageTransform = overrides.imageTransform
         filmType   = overrides.filmType
+        isDigitalSource = overrides.isDigitalSource
         developTarget = overrides.developTarget
         scannerProfileID = overrides.scannerProfileID
         baseEstimationMode = overrides.baseEstimationMode

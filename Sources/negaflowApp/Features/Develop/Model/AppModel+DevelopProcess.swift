@@ -2,8 +2,25 @@ import Chromabase
 import Foundation
 
 extension AppModel {
+    /// 프로세스 목록과 메뉴가 현재 선택으로 표시할 항목. 프레임이 있으면 프레임 기준이다.
+    var activeDevelopmentProcess: DevelopmentProcess {
+        guard let frame = actionableFrame else {
+            return DevelopmentProcess(filmType: filmType, isDigitalSource: isDigitalSource)
+        }
+        return DevelopmentProcess(
+            filmType: frame.filmType,
+            isDigitalSource: frame.params.isDigitalSource
+        )
+    }
+
     func applyDevelopmentProcess(_ newFilmType: FilmType, to frame: ScanFrame?) {
+        applyDevelopmentProcess(.film(newFilmType), to: frame)
+    }
+
+    func applyDevelopmentProcess(_ process: DevelopmentProcess, to frame: ScanFrame?) {
+        let newFilmType = process.filmType
         filmType = newFilmType
+        isDigitalSource = process.isDigitalSource
         if frame?.isPreviewScan == true || activeScanSessionID != nil || frame == nil {
             scanDevelopFilmType = newFilmType
         }
@@ -24,6 +41,8 @@ extension AppModel {
         frame.filmType = newFilmType
         frame.updateParams {
             $0.filmType = newFilmType
+            // 필름이면 nil로 되돌려 기존 프레임의 레시피 지문을 그대로 유지한다.
+            $0.isDigitalSource = process.isDigitalSource ? true : nil
             $0.scannerProfileID = compatibleProfileID
         }
         Task { await developFrame(frame) }

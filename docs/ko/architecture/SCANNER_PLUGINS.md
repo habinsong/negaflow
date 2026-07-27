@@ -224,6 +224,10 @@ v1은 이미 배포된 플러그인 호환을 위해 외부 IR 경로를 받을 
 SANE 구현, 의존성, 설정, 장치별 처리, 테스트, 배포 문서는 모두 별도
 [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane) 저장소에 둡니다.
 
+해당 프로젝트는 Homebrew 기본 SANE을 쓰는 macOS 14 이상 일반판과, 공식 SANE 1.4.0에
+upstream `coolscan2`/`coolscan3` 할당 수정만 적용해 빌드하는 macOS 26 이상 Coolscan판을
+따로 배포합니다. 일반판은 Coolscan을 강제로 차단하지 않지만 해당 수정은 포함하지 않습니다.
+
 이 저장소는 장치와 무관한 외부 프로세스 규격만 문서화하고 검사합니다.
 이미지 파일만 가져오는 사용자는 스캐너 플러그인이 없어도 됩니다.
 

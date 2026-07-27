@@ -211,6 +211,10 @@ v2 的 IR 文件同样要在应用给出的临时目录里。会检查文件类�
 SANE 的实现、依赖、配置、按设备的处理、测试和分发文档，全部放在独立仓库
 [`negaflow-scanner-sane`](https://github.com/habinsong/negaflow-scanner-sane)。
 
+该项目分别发布使用 Homebrew 标准 SANE 的 macOS 14+ 标准版，以及在官方 SANE 1.4.0
+上只应用 upstream `coolscan2`/`coolscan3` 分配修复的 macOS 26+ Coolscan 版。
+标准版不会主动阻止 Coolscan，但不包含该修复。
+
 本仓库只记录和检查与设备无关的外部进程规格。只导入图像文件的用户不需要扫描仪插件。
 
 negaflow 主体不链接 SANE 实现，也不把它放进应用分发物。

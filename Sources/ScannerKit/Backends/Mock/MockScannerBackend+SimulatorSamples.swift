@@ -29,20 +29,33 @@ extension MockScannerBackend {
     static func writeFlatbedPreview(
         includesPerforation: Bool,
         frameFormat: FilmFrameFormat = .fullFrame35mm,
+        frameOrientation: FilmFrameOrientation = .landscape,
+        frameCount: Int = 6,
+        frameOrientations: [FilmFrameOrientation]? = nil,
+        missingFrameIndices: Set<Int> = [],
         to url: URL
     ) throws {
-        if frameFormat == .fullFrame35mm {
-            try copySimulatorSample(
-                baseName: "Roll",
-                includesPerforation: includesPerforation,
-                to: url
-            )
-        } else {
-            try writeSyntheticFlatbedPreview(
-                frameFormat: frameFormat,
-                includesPerforation: includesPerforation,
-                to: url
-            )
+        guard !FileManager.default.fileExists(atPath: url.path) else {
+            throw ScannerError(.ioFailure, "simulator output already exists: \(url.path)")
+        }
+        guard let image = try flatbedPreviewImage(
+            frameFormat: frameFormat,
+            frameOrientation: frameOrientation,
+            frameCount: frameCount,
+            frameOrientations: frameOrientations,
+            missingFrameIndices: missingFrameIndices,
+            includesPerforation: includesPerforation
+        ), let destination = CGImageDestinationCreateWithURL(
+            url as CFURL,
+            "public.tiff" as CFString,
+            1,
+            nil
+        ) else {
+            throw ScannerError(.ioFailure, "simulator format preview image")
+        }
+        CGImageDestinationAddImage(destination, image, nil)
+        guard CGImageDestinationFinalize(destination) else {
+            throw ScannerError(.ioFailure, "simulator format preview write")
         }
     }
 
@@ -50,10 +63,18 @@ extension MockScannerBackend {
         _ area: ScanArea,
         includesPerforation: Bool,
         frameFormat: FilmFrameFormat = .fullFrame35mm,
+        frameOrientation: FilmFrameOrientation = .landscape,
+        frameCount: Int = 6,
+        frameOrientations: [FilmFrameOrientation]? = nil,
+        missingFrameIndices: Set<Int> = [],
         to url: URL
     ) throws -> (width: Int, height: Int) {
         guard let sourceImage = try flatbedPreviewImage(
             frameFormat: frameFormat,
+            frameOrientation: frameOrientation,
+            frameCount: frameCount,
+            frameOrientations: frameOrientations,
+            missingFrameIndices: missingFrameIndices,
             includesPerforation: includesPerforation
         ),
               let cropRect = flatbedPreviewCropRect(
@@ -96,94 +117,134 @@ extension MockScannerBackend {
 
     private static func flatbedPreviewImage(
         frameFormat: FilmFrameFormat,
+        frameOrientation: FilmFrameOrientation,
+        frameCount: Int,
+        frameOrientations: [FilmFrameOrientation]?,
+        missingFrameIndices: Set<Int>,
         includesPerforation: Bool
     ) throws -> CGImage? {
-        if frameFormat == .fullFrame35mm {
-            let sampleURL = try simulatorSampleURL(
-                baseName: "Roll",
-                includesPerforation: includesPerforation
-            )
-            guard let source = CGImageSourceCreateWithURL(sampleURL as CFURL, nil) else {
-                return nil
-            }
-            return CGImageSourceCreateImageAtIndex(source, 0, nil)
-        }
-        return syntheticFlatbedPreviewImage(
+        let content = syntheticFlatbedPreviewImage(
             frameFormat: frameFormat,
+            frameOrientation: frameOrientation,
+            frameCount: frameCount,
+            frameOrientations: frameOrientations,
+            missingFrameIndices: missingFrameIndices,
             includesPerforation: includesPerforation
         )
+        guard let content else { return nil }
+        return embeddedInFlatbedCanvas(content)
     }
 
-    private static func writeSyntheticFlatbedPreview(
-        frameFormat: FilmFrameFormat,
-        includesPerforation: Bool,
-        to url: URL
-    ) throws {
-        guard !FileManager.default.fileExists(atPath: url.path) else {
-            throw ScannerError(.ioFailure, "simulator output already exists: \(url.path)")
+    private static func embeddedInFlatbedCanvas(_ content: CGImage) -> CGImage? {
+        // Mock capability의 210 × 297 mm 작업면과 같은 비율을 유지해야 정규화 ROI가
+        // 실제 장치와 동일한 물리 좌표로 환산된다.
+        let canvasWidth = 1_400
+        let canvasHeight = 1_980
+        let margin = 80.0
+        let availableWidth = Double(canvasWidth) - margin * 2
+        let availableHeight = Double(canvasHeight) - margin * 2
+        let scale = min(
+            availableWidth / Double(content.width),
+            availableHeight / Double(content.height)
+        )
+        guard scale.isFinite, scale > 0,
+              let colorSpace = CGColorSpace(name: CGColorSpace.sRGB),
+              let context = CGContext(
+                  data: nil,
+                  width: canvasWidth,
+                  height: canvasHeight,
+                  bitsPerComponent: 8,
+                  bytesPerRow: canvasWidth * 4,
+                  space: colorSpace,
+                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+                      | CGBitmapInfo.byteOrder32Big.rawValue
+              ) else {
+            return nil
         }
-        guard let image = syntheticFlatbedPreviewImage(
-            frameFormat: frameFormat,
-            includesPerforation: includesPerforation
-        ), let destination = CGImageDestinationCreateWithURL(
-            url as CFURL,
-            "public.tiff" as CFString,
-            1,
-            nil
-        ) else {
-            throw ScannerError(.ioFailure, "simulator format preview image")
-        }
-        CGImageDestinationAddImage(destination, image, nil)
-        guard CGImageDestinationFinalize(destination) else {
-            throw ScannerError(.ioFailure, "simulator format preview write")
-        }
+        context.setFillColor(CGColor(gray: 1, alpha: 1))
+        context.fill(CGRect(x: 0, y: 0, width: canvasWidth, height: canvasHeight))
+        context.interpolationQuality = .high
+        let width = Double(content.width) * scale
+        let height = Double(content.height) * scale
+        context.draw(
+            content,
+            in: CGRect(
+                x: (Double(canvasWidth) - width) / 2,
+                y: (Double(canvasHeight) - height) / 2,
+                width: width,
+                height: height
+            )
+        )
+        return context.makeImage()
     }
 
     private static func syntheticFlatbedPreviewImage(
         frameFormat: FilmFrameFormat,
+        frameOrientation: FilmFrameOrientation,
+        frameCount: Int,
+        frameOrientations: [FilmFrameOrientation]?,
+        missingFrameIndices: Set<Int>,
         includesPerforation: Bool
     ) -> CGImage? {
-        let columns: Int
-        switch frameFormat {
-        case .fullFrame35mm: columns = 6
-        case .square35mm: columns = 8
-        case .halfFrame35mm: columns = 11
-        case .medium645: columns = 4
-        case .medium66: columns = 3
-        case .medium69: columns = 2
-        case .medium612: columns = 1
-        }
+        guard (1...48).contains(frameCount) else { return nil }
+        let orientations = frameOrientations?.count == frameCount
+            ? frameOrientations!
+            : Array(repeating: frameOrientation, count: frameCount)
         let rows = includesPerforation && frameFormat.is35mm ? 3 : 1
         let apertureHeight = 240
-        let frameWidth = max(
-            64,
-            Int((Double(apertureHeight) * frameFormat.stripFrameAspect).rounded())
-        )
+        let frameWidths = orientations.map {
+            max(64, Int((Double(apertureHeight) * $0.aspect(for: frameFormat)).rounded()))
+        }
         let rowPadding = 18
         let rowGap = rows > 1 ? 72 : 0
-        let width = frameWidth * columns
+        let contentWidth = frameWidths.reduce(0, +)
+        let width = max(256, contentWidth + 48)
         let height = rows * (apertureHeight + rowPadding * 2) + (rows - 1) * rowGap
         var pixels = [UInt8](repeating: 246, count: width * height * 4)
+        for offset in stride(from: 3, to: pixels.count, by: 4) {
+            pixels[offset] = 255
+        }
+        var slotRanges: [Range<Int>] = []
+        slotRanges.reserveCapacity(frameCount)
+        var slotStart = (width - contentWidth) / 2
+        for frameWidth in frameWidths {
+            slotRanges.append(slotStart..<(slotStart + frameWidth))
+            slotStart += frameWidth
+        }
 
         for row in 0..<rows {
             let apertureTop = row * (apertureHeight + rowPadding * 2 + rowGap) + rowPadding
             for y in apertureTop..<(apertureTop + apertureHeight) {
-                for x in 0..<width {
-                    let column = x / frameWidth
-                    let localX = x % frameWidth
-                    let offset = (y * width + x) * 4
-                    let boundary = column > 0 && localX < 4
-                    let texture = (x * 7 + y * 11 + row * 29 + column * 37) % 92
-                    if boundary {
-                        pixels[offset] = 242
-                        pixels[offset + 1] = 242
-                        pixels[offset + 2] = 242
-                    } else {
-                        pixels[offset] = UInt8(34 + texture)
-                        pixels[offset + 1] = UInt8(50 + texture / 2)
-                        pixels[offset + 2] = UInt8(72 + texture / 3)
+                for (column, range) in slotRanges.enumerated()
+                    where !missingFrameIndices.contains(column) {
+                    for x in range {
+                        let localX = x - range.lowerBound
+                        let offset = (y * width + x) * 4
+                        let boundary = localX < 8 || range.upperBound - x <= 8
+                        let texture = (x * 7 + y * 11 + row * 29 + column * 37) % 92
+                        if boundary {
+                            pixels[offset] = 246
+                            pixels[offset + 1] = 246
+                            pixels[offset + 2] = 246
+                        } else {
+                            let horizontalTone = localX * 60 / max(range.count - 1, 1)
+                            let verticalTone = y * 70 / max(height - 1, 1)
+                            pixels[offset] = UInt8(
+                                min(235, 24 + texture / 4 + horizontalTone + column * 12)
+                            )
+                            pixels[offset + 1] = UInt8(
+                                min(235, 36 + texture / 5 + verticalTone + row * 18)
+                            )
+                            pixels[offset + 2] = UInt8(
+                                min(
+                                    235,
+                                    52 + texture / 6 + (horizontalTone + verticalTone) / 2
+                                        + column * 7 + row * 9
+                                )
+                            )
+                        }
+                        pixels[offset + 3] = 255
                     }
-                    pixels[offset + 3] = 255
                 }
             }
         }

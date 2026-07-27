@@ -7,7 +7,7 @@
 <p align="center">A macOS app for the analog-film workflow, from camera copy or scanning through development</p>
 
 <p align="center">
-  <a href="docs/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.0%20release-EF8B26" alt="Release status"></a>
+  <a href="docs/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.1%20release-EF8B26" alt="Release status"></a>
   <a href="#requirements"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 or later"></a>
   <a href="Package.swift"><img src="https://img.shields.io/badge/Swift-5.9+-F05138?logo=swift&logoColor=white" alt="Swift 5.9 or later"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0 license"></a>
@@ -62,8 +62,8 @@ For most Macs, use the Universal PKG.
 
 | Download | Mac |
 |---|---|
-| `negaflow-1.0.0-1-macOS-universal.pkg` | Apple Silicon and Intel |
-| `negaflow-1.0.0-1-macOS-arm64.pkg` | Apple Silicon only |
+| `negaflow-1.0.1-1-macOS-universal.pkg` | Apple Silicon and Intel |
+| `negaflow-1.0.1-1-macOS-arm64.pkg` | Apple Silicon only |
 
 1. Download the PKG for the Mac.
 2. Open it and follow the onscreen instructions.

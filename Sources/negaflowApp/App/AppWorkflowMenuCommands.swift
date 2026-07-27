@@ -198,7 +198,8 @@ struct AppWorkflowMenuCommands: Commands {
                     Button {
                         model.performWorkflowShortcutAction(action)
                     } label: {
-                        if (model.actionableFrame?.filmType ?? model.filmType) == filmType {
+                        // 디지털 사진을 고른 상태에서는 같은 계열 필름 프로세스에 체크하지 않는다.
+                        if model.activeDevelopmentProcess == .film(filmType) {
                             Label(filmType.developmentProcessName, systemImage: "checkmark")
                         } else {
                             Text(filmType.developmentProcessName)

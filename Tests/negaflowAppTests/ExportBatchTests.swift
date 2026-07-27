@@ -460,7 +460,8 @@ final class ExportBatchTests: XCTestCase {
         await task.value
 
         XCTAssertEqual(model.exportBatchStore.state(for: plan.id), .succeeded)
-        XCTAssertNotNil(ExportBatchCheckpoint.load(from: model.exportBatchCheckpointURL))
+        // 재시도할 항목이 없으니 기록은 남기지 않지만, 중간 실패는 상태 메시지로 남아야 한다.
+        XCTAssertNil(ExportBatchCheckpoint.load(from: model.exportBatchCheckpointURL))
         XCTAssertEqual(
             model.statusMessage,
             model.text(AppLocalizedPhrase.exportFailedFormat, "checkpoint-save")
@@ -485,11 +486,13 @@ final class ExportBatchTests: XCTestCase {
         XCTAssertEqual(model.exportBatchStore.state(for: plan.id), .succeeded)
         XCTAssertTrue(FileManager.default.fileExists(atPath: plan.outputURL.path))
 
-        var root = try checkpointJSONObject(at: model.exportBatchCheckpointURL)
-        var items = try XCTUnwrap(root["items"] as? [[String: Any]])
-        items[0]["state"] = "running"
-        root["items"] = items
-        try writeCheckpointJSONObject(root, to: model.exportBatchCheckpointURL)
+        // 카탈로그 커밋 직후, 다음 체크포인트 기록 전에 프로세스가 멈춘 상황을 재현한다.
+        model.exportBatchStore.markRunning(plan.id)
+        XCTAssertTrue(model.persistExportBatchCheckpoint())
+        XCTAssertEqual(
+            ExportBatchCheckpoint.load(from: model.exportBatchCheckpointURL)?.items.only?.state,
+            .running
+        )
 
         let restoredModel = makeRestoredModel(frame: first, sourceModel: model)
         restoredModel.restoreExportBatchCheckpoint()
@@ -503,6 +506,61 @@ final class ExportBatchTests: XCTestCase {
             FileManager.default.fileExists(
                 atPath: plan.outputURL.deletingPathExtension().path + "-1.jpg"
             )
+        )
+    }
+
+    func testFullySucceededBatchLeavesNoCheckpointBehind() async throws {
+        let (model, first, _) = try await makeReadyModel()
+        first.hasDevelopedOnce = true
+        let plan = model.makeExportBatchPlans(
+            frames: [first],
+            root: temporaryDirectory.appendingPathComponent("FinishedExports"),
+            format: .jpeg,
+            writeSidecar: false,
+            writeMainFlatMaster: false,
+            writeOriginalRaw: false,
+            options: .standard
+        )[0]
+        model.activeExportBatchPlans = [plan]
+        model.exportBatchStore.begin([plan])
+
+        await model.runExportBatch([plan], maximumConcurrent: 1)
+
+        XCTAssertEqual(model.exportBatchStore.state(for: plan.id), .succeeded)
+        XCTAssertTrue(model.exportBatchStore.retryableItemIDs.isEmpty)
+        XCTAssertFalse(
+            FileManager.default.fileExists(atPath: model.exportBatchCheckpointURL.path)
+        )
+    }
+
+    func testSucceededCheckpointForDeletedFrameIsDiscardedWithoutReportingFailure() async throws {
+        let (model, first, _) = try await makeReadyModel()
+        let plan = persistCheckpoint(
+            model: model,
+            frame: first,
+            printerOutputProfile: try ICCOutputProfileTestFixture.snapshot()
+        )
+        model.exportBatchStore.markFinished(
+            plan.id,
+            result: .completed(outputURL: plan.outputURL, pairedURLs: [])
+        )
+        XCTAssertTrue(model.persistExportBatchCheckpoint())
+
+        // 프레임이 라이브러리에서 지워진 뒤 앱을 다시 여는 상황이다.
+        let restoredModel = makeRestoredModel(frames: [], sourceModel: model)
+        let statusBeforeRestore = restoredModel.statusMessage
+
+        restoredModel.restoreExportBatchCheckpoint()
+
+        XCTAssertTrue(restoredModel.activeExportBatchPlans.isEmpty)
+        XCTAssertTrue(restoredModel.exportBatchStore.items.isEmpty)
+        XCTAssertEqual(restoredModel.statusMessage, statusBeforeRestore)
+        XCTAssertNotEqual(
+            restoredModel.statusMessage,
+            restoredModel.text(AppLocalizedPhrase.exportFailedFormat, "checkpoint-unrestorable")
+        )
+        XCTAssertFalse(
+            FileManager.default.fileExists(atPath: model.exportBatchCheckpointURL.path)
         )
     }
 

@@ -104,14 +104,36 @@ extension AppModel {
         }
     }
 
-    /// 목록에 3600dpi가 없을 때 쓸 필름 스캔 기본 해상도. 가장 가까운 값을 고르고, 같은
-    /// 거리면 큰 쪽을 쓴다. 오름차순 목록의 첫 값을 쓰면 50dpi부터 노출하는 기기(epson2
-    /// 평판: 50|60|…|12800dpi)에서 기본값이 최저 해상도로 떨어진다.
+    /// 필름 스캔 기본 해상도의 목표값. 장치가 이 값을 지원하지 않으면 근사값을 쓴다.
+    static let targetScanDPI = Resolution.r3600.dpi
+
+    /// 평판 프리뷰 목표 해상도. 프리뷰는 그 위에서 필름 영역을 잡는 작업면이라 프레임
+    /// 경계가 보일 만큼은 되어야 하고, 본 스캔만큼 오래 걸리면 의미가 없다.
+    ///
+    /// 300dpi면 8×10 유리판이 3000픽셀, 가장 작은 규격인 하프프레임(18 × 24 mm)이
+    /// 213 × 283픽셀이라 프레임 검출에 여유가 있다. 검출기는 긴 변 2048픽셀로 줄여
+    /// 분석하므로 그 여유분은 검출이 아니라 사람이 눈으로 영역을 잡을 때 쓰인다.
+    static let targetFlatbedPreviewDPI = 300
+
+    /// 목록에 3600dpi가 없을 때 쓸 필름 스캔 기본 해상도. 오름차순 목록의 첫 값을 쓰면
+    /// 50dpi부터 노출하는 기기(epson2 평판: 50|60|…|12800dpi)에서 기본값이 최저 해상도로
+    /// 떨어진다.
     static func preferredScanResolution(in resolutions: [Resolution]) -> Resolution? {
-        if resolutions.contains(.r3600) { return .r3600 }
-        return resolutions.min {
-            let first = abs($0.dpi - Resolution.r3600.dpi)
-            let second = abs($1.dpi - Resolution.r3600.dpi)
+        nearestSupportedResolution(to: targetScanDPI, in: resolutions)
+    }
+
+    /// 평판 프리뷰에 쓸 해상도. 장치가 실제로 지원하는 값 중에서만 고른다.
+    static func preferredFlatbedPreviewResolution(in resolutions: [Resolution]) -> Resolution? {
+        nearestSupportedResolution(to: targetFlatbedPreviewDPI, in: resolutions)
+    }
+
+    /// 목표 dpi에 가장 가까운 지원 값. 같은 거리면 큰 쪽을 쓴다.
+    static func nearestSupportedResolution(to dpi: Int, in resolutions: [Resolution]) -> Resolution? {
+        let usable = resolutions.filter { $0.dpi > 0 }
+        if let exact = usable.first(where: { $0.dpi == dpi }) { return exact }
+        return usable.min {
+            let first = abs($0.dpi - dpi)
+            let second = abs($1.dpi - dpi)
             return first != second ? first < second : $0.dpi > $1.dpi
         }
     }

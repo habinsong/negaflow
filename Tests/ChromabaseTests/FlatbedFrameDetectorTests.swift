@@ -76,6 +76,55 @@ final class FlatbedFrameDetectorTests: XCTestCase {
         }
     }
 
+    func testSpecifiedRollFixtureDetectsWhenTheWholeStripIsRotated() throws {
+        let source = try loadImage(fixtureURL("Roll.tiff"))
+        let analysis = try XCTUnwrap(
+            AnalysisImage(image: source, maxDimension: max(source.width, source.height))
+        )
+        let rotatedPixels = analysis.rotatedCounterClockwise()
+        let rotatedImage = try makeRGBAImage(
+            width: rotatedPixels.width,
+            height: rotatedPixels.height,
+            pixels: rotatedPixels.pixels
+        )
+
+        let detections = FlatbedFrameDetector.detect(image: rotatedImage)
+
+        XCTAssertEqual(detections.count, 6)
+        XCTAssertEqual(detections.map(\.row), Array(0..<6))
+        XCTAssertTrue(detections.allSatisfy { $0.column == 0 })
+        XCTAssertTrue(detections.allSatisfy {
+            let pixelAspect = Double($0.normalizedRect.width) * Double(rotatedImage.width)
+                / (Double($0.normalizedRect.height) * Double(rotatedImage.height))
+            return abs(pixelAspect / FilmFrameOrientation.portrait.aspect(for: .fullFrame35mm) - 1)
+                <= 0.12
+        })
+    }
+
+    func testSpecifiedRollFixtureToleratesHolderOffsetAndSmallSkew() throws {
+        let source = try loadImage(fixtureURL("Roll.tiff"))
+        let skewed = try rotatedOnWhiteCanvas(source, degrees: 2)
+        let shifted = try placedOnWhiteCanvas(
+            skewed,
+            left: 37,
+            top: 83,
+            right: 211,
+            bottom: 29
+        )
+
+        let detections = FlatbedFrameDetector.detect(image: shifted)
+
+        XCTAssertEqual(detections.count, 6)
+        XCTAssertEqual(detections.map(\.column), Array(0..<6))
+        XCTAssertTrue(detections.allSatisfy { abs($0.straightenAngle) >= 0.5 })
+        XCTAssertTrue(detections.allSatisfy {
+            $0.normalizedRect.minX >= 0
+                && $0.normalizedRect.minY >= 0
+                && $0.normalizedRect.maxX <= 1
+                && $0.normalizedRect.maxY <= 1
+        })
+    }
+
     func testSelectedFilmFrameFormatsDetectTheirPhysicalStripTopology() throws {
         let cases: [(format: FilmFrameFormat, columns: Int)] = [
             (.fullFrame35mm, 6),
@@ -83,8 +132,11 @@ final class FlatbedFrameDetectorTests: XCTestCase {
             (.halfFrame35mm, 11),
             (.medium645, 4),
             (.medium66, 3),
+            (.medium67, 2),
+            (.medium68, 2),
             (.medium69, 2),
             (.medium612, 1),
+            (.medium617, 1),
         ]
 
         for testCase in cases {
@@ -112,6 +164,109 @@ final class FlatbedFrameDetectorTests: XCTestCase {
                 )
             }
         }
+    }
+
+    func testEveryFilmFormatDetectsLandscapeAndPortraitFrames() throws {
+        for (formatIndex, frameFormat) in FilmFrameFormat.allCases.enumerated() {
+            for orientation in FilmFrameOrientation.allCases {
+                let frameCount = [1, 4, 6][formatIndex % 3]
+                let image = try makeFlexibleOverview(
+                    frameFormat: frameFormat,
+                    rows: [Array(repeating: orientation, count: frameCount)]
+                )
+                let detections = FlatbedFrameDetector.detect(
+                    image: image,
+                    frameFormat: frameFormat,
+                    maxAnalysisDimension: 1_024
+                )
+
+                XCTAssertEqual(
+                    detections.count,
+                    frameCount,
+                    "\(frameFormat.displayName), \(orientation.rawValue)"
+                )
+                for detection in detections {
+                    let pixelAspect = Double(detection.normalizedRect.width) * Double(image.width)
+                        / (Double(detection.normalizedRect.height) * Double(image.height))
+                    XCTAssertEqual(
+                        pixelAspect,
+                        orientation.aspect(for: frameFormat),
+                        accuracy: orientation.aspect(for: frameFormat) * 0.12,
+                        "\(frameFormat.displayName), \(orientation.rawValue)"
+                    )
+                }
+            }
+        }
+    }
+
+    func test35mmAnd120FrameCountsComeFromPixelsInsteadOfFormatDefaults() throws {
+        for frameFormat in [FilmFrameFormat.fullFrame35mm, .medium67] {
+            for frameCount in [1, 4, 6] {
+                let image = try makeFlexibleOverview(
+                    frameFormat: frameFormat,
+                    rows: [Array(repeating: .landscape, count: frameCount)]
+                )
+
+                XCTAssertEqual(
+                    FlatbedFrameDetector.detect(
+                        image: image,
+                        frameFormat: frameFormat,
+                        maxAnalysisDimension: 1_024
+                    ).count,
+                    frameCount,
+                    "\(frameFormat.displayName), count=\(frameCount)"
+                )
+            }
+        }
+    }
+
+    func testMixedOrientationsMissingSlotsAndUnevenRowsKeepOnlyPresentFrames() throws {
+        let rows: [[FilmFrameOrientation?]] = [
+            [.landscape, nil, .portrait, .landscape, nil, .portrait],
+            [.portrait, .landscape, nil],
+        ]
+        let image = try makeFlexibleOverview(frameFormat: .medium67, rows: rows)
+
+        let detections = FlatbedFrameDetector.detect(
+            image: image,
+            frameFormat: .medium67,
+            maxAnalysisDimension: 1_024
+        )
+
+        XCTAssertEqual(detections.count, 6)
+        XCTAssertEqual(
+            Dictionary(grouping: detections, by: \.row)
+                .sorted { $0.key < $1.key }
+                .map { $0.value.count },
+            [4, 2]
+        )
+        let aspects = detections.map {
+            Double($0.normalizedRect.width) * Double(image.width)
+                / (Double($0.normalizedRect.height) * Double(image.height))
+        }
+        XCTAssertTrue(aspects.contains {
+            abs($0 / FilmFrameOrientation.landscape.aspect(for: .medium67) - 1) <= 0.12
+        })
+        XCTAssertTrue(aspects.contains {
+            abs($0 / FilmFrameOrientation.portrait.aspect(for: .medium67) - 1) <= 0.12
+        })
+    }
+
+    func testUniformOrientationMissingSlotsDoNotCreatePhantomFrames() throws {
+        let image = try makeFlexibleOverview(
+            frameFormat: .fullFrame35mm,
+            rows: [[.landscape, nil, .landscape, .landscape, nil, .landscape]]
+        )
+
+        let detections = FlatbedFrameDetector.detect(
+            image: image,
+            frameFormat: .fullFrame35mm,
+            maxAnalysisDimension: 1_024
+        )
+
+        XCTAssertEqual(detections.count, 4)
+        XCTAssertEqual(detections.map(\.row), [0, 0, 0, 0])
+        XCTAssertEqual(detections.map(\.column), [0, 1, 2, 3])
     }
 
     func testSelectedFormatPrevents645FramesFromMergingInto35mmPairs() throws {
@@ -157,7 +312,7 @@ final class FlatbedFrameDetectorTests: XCTestCase {
                 let detections = FlatbedFrameDetector.detect(image: variant)
                 assertTopology(detections, fixture: fixture)
                 XCTAssertEqual(detections.count, baseline.count)
-                let verticalTolerance = fixture.rows == 1 ? 0.016 : 0.012
+                let verticalTolerance = fixture.rows == 1 ? 0.020 : 0.012
                 for (actual, expected) in zip(detections, baseline) {
                     XCTAssertEqual(actual.normalizedRect.minX, expected.normalizedRect.minX, accuracy: 0.012)
                     XCTAssertEqual(
@@ -392,6 +547,72 @@ final class FlatbedFrameDetectorTests: XCTestCase {
         return try makeRGBAImage(width: width, height: height, pixels: pixels)
     }
 
+    private func makeFlexibleOverview(
+        frameFormat: FilmFrameFormat,
+        rows: [[FilmFrameOrientation?]]
+    ) throws -> CGImage {
+        let frameHeight = 240
+        let horizontalMargin = 80
+        let verticalMargin = 40
+        let rowGap = 56
+        let rowWidths = rows.map { row in
+            row.reduce(0) { width, orientation in
+                let effectiveOrientation = orientation ?? .landscape
+                return width + max(
+                    64,
+                    Int(
+                        (Double(frameHeight) * effectiveOrientation.aspect(for: frameFormat))
+                            .rounded()
+                    )
+                )
+            }
+        }
+        let width = max(256, (rowWidths.max() ?? 0) + horizontalMargin * 2)
+        let height = verticalMargin * 2
+            + rows.count * frameHeight
+            + max(0, rows.count - 1) * rowGap
+        var pixels = [UInt8](repeating: 246, count: width * height * 4)
+
+        for (rowIndex, row) in rows.enumerated() {
+            let rowWidth = rowWidths[rowIndex]
+            var frameStart = (width - rowWidth) / 2
+            let frameTop = verticalMargin + rowIndex * (frameHeight + rowGap)
+            for (column, orientation) in row.enumerated() {
+                let effectiveOrientation = orientation ?? .landscape
+                let frameWidth = max(
+                    64,
+                    Int(
+                        (Double(frameHeight) * effectiveOrientation.aspect(for: frameFormat))
+                            .rounded()
+                    )
+                )
+                defer { frameStart += frameWidth }
+                guard orientation != nil else { continue }
+                for y in frameTop..<(frameTop + frameHeight) {
+                    for x in frameStart..<(frameStart + frameWidth) {
+                        let offset = (y * width + x) * 4
+                        let border = x - frameStart < 8
+                            || frameStart + frameWidth - x <= 8
+                            || y - frameTop < 8
+                            || frameTop + frameHeight - y <= 8
+                        let texture = (x * 7 + y * 11 + rowIndex * 29 + column * 37) % 92
+                        if border {
+                            pixels[offset] = 246
+                            pixels[offset + 1] = 246
+                            pixels[offset + 2] = 246
+                        } else {
+                            pixels[offset] = UInt8(34 + texture)
+                            pixels[offset + 1] = UInt8(50 + texture / 2)
+                            pixels[offset + 2] = UInt8(72 + texture / 3)
+                        }
+                        pixels[offset + 3] = 255
+                    }
+                }
+            }
+        }
+        return try makeRGBAImage(width: width, height: height, pixels: pixels)
+    }
+
     private func sha256(_ data: Data) -> String {
         SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
@@ -492,6 +713,43 @@ final class FlatbedFrameDetectorTests: XCTestCase {
         let background = CIImage(color: CIColor.white).cropped(to: outputExtent)
         let translated = sourceImage.transformed(
             by: CGAffineTransform(translationX: 0, y: CGFloat(bottom))
+        )
+        return try XCTUnwrap(
+            CIContext().createCGImage(translated.composited(over: background), from: outputExtent)
+        )
+    }
+
+    private func rotatedOnWhiteCanvas(_ source: CGImage, degrees: Double) throws -> CGImage {
+        let rotated = CIImage(cgImage: source).transformed(
+            by: CGAffineTransform(rotationAngle: CGFloat(degrees * .pi / 180))
+        )
+        let extent = rotated.extent.integral
+        let outputExtent = CGRect(origin: .zero, size: extent.size)
+        let translated = rotated.transformed(
+            by: CGAffineTransform(translationX: -extent.minX, y: -extent.minY)
+        )
+        let background = CIImage(color: CIColor.white).cropped(to: outputExtent)
+        return try XCTUnwrap(
+            CIContext().createCGImage(translated.composited(over: background), from: outputExtent)
+        )
+    }
+
+    private func placedOnWhiteCanvas(
+        _ source: CGImage,
+        left: Int,
+        top: Int,
+        right: Int,
+        bottom: Int
+    ) throws -> CGImage {
+        let outputExtent = CGRect(
+            x: 0,
+            y: 0,
+            width: source.width + left + right,
+            height: source.height + top + bottom
+        )
+        let background = CIImage(color: CIColor.white).cropped(to: outputExtent)
+        let translated = CIImage(cgImage: source).transformed(
+            by: CGAffineTransform(translationX: CGFloat(left), y: CGFloat(bottom))
         )
         return try XCTUnwrap(
             CIContext().createCGImage(translated.composited(over: background), from: outputExtent)

@@ -43,6 +43,10 @@ public final class MockScannerBackend: ScannerBackend, @unchecked Sendable {
     private var cancelled = false
     public private(set) var simulatorIncludesPerforation = false
     public private(set) var simulatorFrameFormat: FilmFrameFormat = .fullFrame35mm
+    public private(set) var simulatorFrameOrientation: FilmFrameOrientation = .landscape
+    public private(set) var simulatorFrameCount = 6
+    public private(set) var simulatorFrameOrientations: [FilmFrameOrientation]?
+    public private(set) var simulatorMissingFrameIndices: Set<Int> = []
 
     /// 테스트에서 명시적으로 지정한 샘플 네거티브 경로입니다.
     public var sampleNegativesDir: URL?
@@ -55,6 +59,30 @@ public final class MockScannerBackend: ScannerBackend, @unchecked Sendable {
 
     public func setSimulatorFrameFormat(_ frameFormat: FilmFrameFormat) {
         simulatorFrameFormat = frameFormat
+    }
+
+    public func setSimulatorFrameOrientation(_ orientation: FilmFrameOrientation) {
+        simulatorFrameOrientation = orientation
+        simulatorFrameOrientations = nil
+        simulatorMissingFrameIndices = []
+    }
+
+    public func setSimulatorFrameCount(_ count: Int) {
+        simulatorFrameCount = min(max(count, 1), 48)
+        simulatorFrameOrientations = nil
+        simulatorMissingFrameIndices = []
+    }
+
+    public func setSimulatorFrameLayout(
+        orientations: [FilmFrameOrientation],
+        missingFrameIndices: Set<Int> = []
+    ) {
+        guard !orientations.isEmpty, orientations.count <= 48 else { return }
+        simulatorFrameCount = orientations.count
+        simulatorFrameOrientations = orientations
+        simulatorMissingFrameIndices = missingFrameIndices.filter {
+            orientations.indices.contains($0)
+        }
     }
 
     public func getLastError() -> ScannerError? { lastError }
@@ -140,6 +168,10 @@ public final class MockScannerBackend: ScannerBackend, @unchecked Sendable {
         try Self.writeFlatbedPreview(
             includesPerforation: simulatorIncludesPerforation,
             frameFormat: simulatorFrameFormat,
+            frameOrientation: simulatorFrameOrientation,
+            frameCount: simulatorFrameCount,
+            frameOrientations: simulatorFrameOrientations,
+            missingFrameIndices: simulatorMissingFrameIndices,
             to: outURL
         )
         if cancelled { throw ScannerError(.cancelled) }
@@ -178,6 +210,10 @@ public final class MockScannerBackend: ScannerBackend, @unchecked Sendable {
                 options.scanArea,
                 includesPerforation: simulatorIncludesPerforation,
                 frameFormat: simulatorFrameFormat,
+                frameOrientation: simulatorFrameOrientation,
+                frameCount: simulatorFrameCount,
+                frameOrientations: simulatorFrameOrientations,
+                missingFrameIndices: simulatorMissingFrameIndices,
                 to: outURL
             )
             for fraction in stride(from: 0.1, through: 0.9, by: 0.2) {

@@ -221,6 +221,30 @@ extension AppModel {
         }
     }
 
+    func setScannerSimulatorFrameOrientation(_ orientation: FilmFrameOrientation) {
+        guard demoMode, !isScanning, usesFlatbedRegionWorkflow else { return }
+        let shouldRefreshPreview = actionableFrame?.isPreviewScan == true
+        scannerSimulatorFrameOrientation = orientation
+        (mockBackend as? MockScannerBackend)?.setSimulatorFrameOrientation(orientation)
+        resetFlatbedPreviewState()
+        if shouldRefreshPreview {
+            Task { await runScan(preview: true) }
+        }
+    }
+
+    func setScannerSimulatorFrameCount(_ count: Int) {
+        guard demoMode, !isScanning, usesFlatbedRegionWorkflow else { return }
+        let shouldRefreshPreview = actionableFrame?.isPreviewScan == true
+        scannerSimulatorFrameCount = min(max(count, 1), 48)
+        (mockBackend as? MockScannerBackend)?.setSimulatorFrameCount(
+            scannerSimulatorFrameCount
+        )
+        resetFlatbedPreviewState()
+        if shouldRefreshPreview {
+            Task { await runScan(preview: true) }
+        }
+    }
+
     func presentScannerSetup() {
         showScannerControls = true
     }

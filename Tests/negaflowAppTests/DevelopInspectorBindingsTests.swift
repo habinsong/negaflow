@@ -105,6 +105,83 @@ final class DevelopInspectorBindingsTests: XCTestCase {
         XCTAssertEqual(model.scanFilmType, .colorPositive)
     }
 
+    /// 프로세스 목록은 기존 필름 4종 뒤에 디지털 2종이 붙은 순서로 보인다.
+    func testProcessListShowsDigitalEntriesBelowFilmProcesses() {
+        XCTAssertEqual(DevelopmentProcess.allCases.map(\.displayName), [
+            "C-41/ECN-2",
+            "E-6",
+            "D-76",
+            "B&W Reversal",
+            "Digital Color",
+            "Digital B&W",
+        ])
+    }
+
+    func testDigitalProcessKeepsPositivePipelineAndMarksParams() {
+        let model = AppModel()
+        let frame = Self.makeFrame()
+
+        model.applyDevelopmentProcess(.digitalColor, to: frame)
+
+        // 현상 경로는 E-6(colorPositive) 그대로이고 표시 이름만 달라진다.
+        XCTAssertEqual(frame.filmType, .colorPositive)
+        XCTAssertEqual(frame.params.filmType, .colorPositive)
+        XCTAssertEqual(frame.params.isDigitalSource, true)
+        XCTAssertEqual(model.activeDevelopmentProcess, .digitalColor)
+        XCTAssertEqual(DevelopmentProcess.digitalColor.displayName, "Digital Color")
+
+        model.applyDevelopmentProcess(.digitalBW, to: frame)
+
+        XCTAssertEqual(frame.filmType, .bwPositive)
+        XCTAssertEqual(frame.params.isDigitalSource, true)
+        XCTAssertEqual(DevelopmentProcess.digitalBW.displayName, "Digital B&W")
+    }
+
+    func testFilmProcessClearsDigitalMarkerInsteadOfStoringFalse() {
+        let model = AppModel()
+        let frame = Self.makeFrame()
+        model.applyDevelopmentProcess(.digitalColor, to: frame)
+
+        model.applyDevelopmentProcess(.e6, to: frame)
+
+        XCTAssertEqual(frame.filmType, .colorPositive)
+        // false가 아니라 nil이어야 기존 프레임과 인코딩이 같아진다.
+        XCTAssertNil(frame.params.isDigitalSource)
+        XCTAssertEqual(model.activeDevelopmentProcess, .e6)
+        XCTAssertFalse(model.isDigitalSource)
+    }
+
+    /// 디지털 표시는 포지티브 경로에만 있다. 네거티브에 플래그가 남아도 필름으로 읽는다.
+    func testDigitalMarkerOnNegativeFilmFallsBackToFilmProcess() {
+        XCTAssertEqual(
+            DevelopmentProcess(filmType: .colorNegative, isDigitalSource: true),
+            .c41
+        )
+        XCTAssertEqual(
+            DevelopmentProcess(filmType: .bwNegative, isDigitalSource: true),
+            .d76
+        )
+        XCTAssertEqual(DevelopmentProcess(filmType: .colorPositive, isDigitalSource: nil), .e6)
+    }
+
+    /// 필름 프레임의 레시피 지문이 새 필드 때문에 바뀌면 기존 라이브러리가 전부 재현상/재내보내기
+    /// 대상으로 오분류된다. 기본값에서는 키 자체가 인코딩되지 않아야 한다.
+    func testDefaultParametersDoNotEncodeDigitalMarker() throws {
+        let encoded = try JSONEncoder().encode(DevelopParameters())
+        let json = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: encoded) as? [String: Any]
+        )
+        XCTAssertNil(json["isDigitalSource"])
+
+        var digital = DevelopParameters()
+        digital.isDigitalSource = true
+        let restored = try JSONDecoder().decode(
+            DevelopParameters.self,
+            from: try JSONEncoder().encode(digital)
+        )
+        XCTAssertEqual(restored.isDigitalSource, true)
+    }
+
     private static func makeFrame() -> ScanFrame {
         ScanFrame(
             scanIndex: 1,
