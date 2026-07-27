@@ -11,23 +11,27 @@ import XCTest
 // 사라져 정상으로 보이던 것이 이 때문이다.
 @MainActor
 final class EvictedFrameRedevelopTests: XCTestCase {
-    private var createdURLs: [URL] = []
+    // setUp/tearDown 은 nonisolated 라 MainActor 격리된 가변 상태를 만질 수 없다.
+    // 경로만 담은 불변 let 을 두고 폴더째 지운다.
+    private let sandbox = URL(fileURLWithPath: NSTemporaryDirectory())
+        .appendingPathComponent("negaflow-evict-\(UUID().uuidString)", isDirectory: true)
+
+    override func setUpWithError() throws {
+        try FileManager.default.createDirectory(at: sandbox, withIntermediateDirectories: true)
+    }
 
     override func tearDownWithError() throws {
-        for url in createdURLs { try? FileManager.default.removeItem(at: url) }
-        createdURLs = []
+        try? FileManager.default.removeItem(at: sandbox)
     }
 
     /// 소스가 온라인이어야 실제 현상 판정 경로를 탄다 — 파일이 없으면 오프라인 분기로 빠진다.
     private func makeFrame(withImage: Bool = false) -> ScanFrame {
-        let url = URL(fileURLWithPath: NSTemporaryDirectory())
-            .appendingPathComponent("negaflow-evict-\(UUID().uuidString).png")
+        let url = sandbox.appendingPathComponent("\(UUID().uuidString).png")
         if withImage, let data = Self.onePixelPNG() {
             try? data.write(to: url)
         } else {
             FileManager.default.createFile(atPath: url.path, contents: Data([0]))
         }
-        createdURLs.append(url)
         return ScanFrame(scanIndex: 1, rawScanURL: url, filmType: .colorNegative)
     }
 
