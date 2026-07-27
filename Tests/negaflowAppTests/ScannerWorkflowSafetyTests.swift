@@ -31,6 +31,40 @@ final class ScannerWorkflowSafetyTests: XCTestCase {
         XCTAssertTrue(model.frames.isEmpty)
     }
 
+    /// epson2 평판(Epson V700~V850)은 50dpi부터 12800dpi까지 노출하고 3600dpi가 없다.
+    /// 목록의 첫 값을 고르면 기본 해상도가 50dpi로 떨어져 필름 한 컷이 수십 픽셀이 된다.
+    func testResolutionFallsBackToTheNearestFilmResolutionInsteadOfTheLowest() async {
+        let epsonFlatbedResolutions = [
+            50, 60, 72, 75, 100, 150, 200, 300, 400, 600, 800, 1_200,
+            1_600, 1_800, 2_400, 3_200, 4_800, 6_400, 9_600, 12_800,
+        ].map(Resolution.init)
+        let backend = ScannerWorkflowBackend(capabilities: ScannerCapabilities(
+            supportedResolutions: epsonFlatbedResolutions,
+            supportedModes: [.color, .gray],
+            supportedBitDepths: [.eight, .sixteen],
+            supportsPreview: true
+        ))
+        let model = AppModel(scannerDemoBackend: backend)
+        model.demoMode = true
+        model.resolutionChoice = .r3600
+
+        await model.loadCapabilities()
+
+        XCTAssertEqual(model.resolutionChoice, Resolution(3_200))
+    }
+
+    func testNearestResolutionPrefersTheHigherValueOnATie() {
+        XCTAssertEqual(
+            AppModel.preferredScanResolution(in: [Resolution(3_400), Resolution(3_800)]),
+            Resolution(3_800)
+        )
+        XCTAssertEqual(
+            AppModel.preferredScanResolution(in: [Resolution(3_600), Resolution(4_800)]),
+            .r3600
+        )
+        XCTAssertNil(AppModel.preferredScanResolution(in: []))
+    }
+
     func testFullScanClampsSupportedHardwareScanAreaIntoRequestedOptions() async throws {
         let maximum = ScanArea(widthMM: 36, heightMM: 24)
         let backend = ScannerWorkflowBackend(capabilities: ScannerCapabilities(

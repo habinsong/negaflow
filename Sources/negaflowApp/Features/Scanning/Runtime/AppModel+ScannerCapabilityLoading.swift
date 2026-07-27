@@ -91,7 +91,7 @@ extension AppModel {
             .filter { $0.dpi > 0 }
             .sorted()
         if !resolutions.contains(resolutionChoice) {
-            resolutionChoice = resolutions.contains(.r3600) ? .r3600 : (resolutions.first ?? resolutionChoice)
+            resolutionChoice = Self.preferredScanResolution(in: resolutions) ?? resolutionChoice
         }
         if !capabilities.supportedBitDepths.contains(bitDepthChoice) {
             bitDepthChoice = capabilities.supportedBitDepths.contains(.sixteen)
@@ -101,6 +101,18 @@ extension AppModel {
         let modes = capabilities.supportedModes.filter { $0 == .color || $0 == .gray }
         if !modes.contains(colorModeChoice) {
             colorModeChoice = modes.contains(.color) ? .color : (modes.first ?? colorModeChoice)
+        }
+    }
+
+    /// 목록에 3600dpi가 없을 때 쓸 필름 스캔 기본 해상도. 가장 가까운 값을 고르고, 같은
+    /// 거리면 큰 쪽을 쓴다. 오름차순 목록의 첫 값을 쓰면 50dpi부터 노출하는 기기(epson2
+    /// 평판: 50|60|…|12800dpi)에서 기본값이 최저 해상도로 떨어진다.
+    static func preferredScanResolution(in resolutions: [Resolution]) -> Resolution? {
+        if resolutions.contains(.r3600) { return .r3600 }
+        return resolutions.min {
+            let first = abs($0.dpi - Resolution.r3600.dpi)
+            let second = abs($1.dpi - Resolution.r3600.dpi)
+            return first != second ? first < second : $0.dpi > $1.dpi
         }
     }
 
