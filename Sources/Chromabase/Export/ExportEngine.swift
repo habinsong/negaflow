@@ -248,7 +248,13 @@ public enum ExportEngine {
             exif[kCGImagePropertyExifOffsetTime as String] = "+00:00"
         }
         if let software = meta.software { exif["Software"] = software; tiff["Software"] = software }
-        if let film = meta.filmType { exif["UserComment"] = "FilmType: \(film)" }
+        // 필름 스톡은 사용자가 적은 촬영 기록이므로 metadata 를 비우기로 한 정책에서는 싣지 않는다.
+        let filmStock = meta.metadataPolicy == .minimal ? nil : meta.filmStock
+        let filmComment = [
+            meta.filmType.map { "FilmType: \($0)" },
+            filmStock.map { "FilmStock: \($0)" },
+        ].compactMap { $0 }.joined(separator: "; ")
+        if !filmComment.isEmpty { exif["UserComment"] = filmComment }
         exif["Orientation"] = 1   // transform 구움
         props[kCGImagePropertyExifDictionary] = exif
         props[kCGImagePropertyTIFFDictionary] = tiff

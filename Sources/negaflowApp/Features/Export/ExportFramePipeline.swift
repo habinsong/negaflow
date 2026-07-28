@@ -131,11 +131,17 @@ enum ExportFrameWriter {
         let embeddedSourceMetadata = ExportSourceMetadata.read(from: stagedSourceURL)
         let sourceMetadata = snapshot.appMetadataOverlay?.applying(to: embeddedSourceMetadata)
             ?? embeddedSourceMetadata
+        // 촬영 기록을 적어 두면 그 카메라가 EXIF Make/Model 이다 — 사진을 찍은 장비가 스캐너보다
+        // 먼저다. 스캐너 식별자는 사이드카에 그대로 남는다.
+        let filmShot = snapshot.appMetadataOverlay?.filmShot
         let meta = ExportMeta(
-            scannerMake: snapshot.scannerMake,
-            scannerModel: snapshot.scannerDeviceModel ?? snapshot.scannerModel,
+            scannerMake: filmShot?.cameraMake == nil ? snapshot.scannerMake : nil,
+            scannerModel: filmShot?.cameraModel == nil
+                ? (snapshot.scannerDeviceModel ?? snapshot.scannerModel)
+                : nil,
             resolutionDPI: effectiveDPI,
             filmType: snapshot.filmType.rawValue,
+            filmStock: filmShot?.filmStock,
             software: "negaflow \(snapshot.appVersion)",
             sourceDate: snapshot.sourceDate,
             metadataDate: snapshot.metadataDate,

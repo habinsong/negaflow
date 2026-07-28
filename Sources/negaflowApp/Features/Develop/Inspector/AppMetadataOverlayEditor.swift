@@ -17,6 +17,7 @@ struct AppMetadataOverlayEditor: View {
                 TextField(localized(.caption), text: $draft.caption)
                 TextField(localized(.keywords), text: $draft.keywords)
                 TextField(localized(.copyright), text: $draft.copyright)
+                FilmShotMetadataFields(draft: $draft)
                 if hasConflict {
                     HStack(spacing: 6) {
                         Label(localized(.conflict), systemImage: "exclamationmark.triangle")

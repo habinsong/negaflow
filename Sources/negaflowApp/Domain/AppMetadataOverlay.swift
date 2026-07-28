@@ -13,6 +13,8 @@ struct AppMetadataOverlay: Codable, Equatable, Sendable {
     var caption: String?
     var keywords: [String]
     var copyright: String?
+    /// 필름 카메라가 남기지 않는 촬영 기록. 적어 두면 내보낸 파일의 EXIF/TIFF에 실린다.
+    var filmShot: FilmShotMetadata?
     var sourceMetadataSHA256: String?
     var revision: UInt64
     var updatedAt: Date
@@ -22,6 +24,7 @@ struct AppMetadataOverlay: Codable, Equatable, Sendable {
         caption: String? = nil,
         keywords: [String] = [],
         copyright: String? = nil,
+        filmShot: FilmShotMetadata? = nil,
         sourceMetadataSHA256: String?,
         revision: UInt64,
         updatedAt: Date = Date()
@@ -30,6 +33,7 @@ struct AppMetadataOverlay: Codable, Equatable, Sendable {
         self.caption = Self.normalizedText(caption)
         self.keywords = Self.normalizedKeywords(keywords)
         self.copyright = Self.normalizedText(copyright)
+        self.filmShot = filmShot.flatMap { $0.isEmpty ? nil : $0 }
         self.sourceMetadataSHA256 = sourceMetadataSHA256
         self.revision = revision
         self.updatedAt = updatedAt
@@ -37,6 +41,7 @@ struct AppMetadataOverlay: Codable, Equatable, Sendable {
 
     var isEmpty: Bool {
         title == nil && caption == nil && keywords.isEmpty && copyright == nil
+            && (filmShot?.isEmpty ?? true)
     }
 
     var isValid: Bool {
@@ -47,6 +52,7 @@ struct AppMetadataOverlay: Codable, Equatable, Sendable {
                 $0.map { !$0.isEmpty && $0.utf8.count <= Self.maximumTextBytes } ?? true
             }
             && keywords == Self.normalizedKeywords(keywords)
+            && filmShot.map { !$0.isEmpty && $0.isValid } ?? true
             && Self.validSHA256(sourceMetadataSHA256)
     }
 
@@ -69,10 +75,13 @@ struct AppMetadataOverlay: Codable, Equatable, Sendable {
             result.iptc[kCGImagePropertyIPTCCopyrightNotice as String] = .string(copyright)
             result.tiff[kCGImagePropertyTIFFCopyright as String] = .string(copyright)
         }
+        if let filmShot {
+            result = filmShot.applying(to: result)
+        }
         return result
     }
 
-    private static func normalizedText(_ value: String?) -> String? {
+    static func normalizedText(_ value: String?) -> String? {
         guard var value = value?.trimmingCharacters(in: .whitespacesAndNewlines),
               !value.isEmpty else { return nil }
         while value.utf8.count > maximumTextBytes { value.removeLast() }

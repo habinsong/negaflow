@@ -87,6 +87,8 @@ public struct ExportMeta: Sendable {
     public var scannerModel: String?
     public var resolutionDPI: Int?
     public var filmType: String?
+    /// 촬영한 필름 이름. 표준 EXIF 태그가 없어 UserComment에 필름 프로세스와 함께 적는다.
+    public var filmStock: String?
     public var software: String?
     public var sourceDate: Date?
     public var metadataDate: Date?
@@ -94,7 +96,7 @@ public struct ExportMeta: Sendable {
     public var metadataPolicy: ExportMetadataPolicy
 
     public init(scannerMake: String? = nil, scannerModel: String? = nil, resolutionDPI: Int? = nil,
-                filmType: String? = nil, software: String? = nil,
+                filmType: String? = nil, filmStock: String? = nil, software: String? = nil,
                 sourceDate: Date? = nil, metadataDate: Date? = Date(),
                 sourceMetadata: ExportSourceMetadata? = nil,
                 metadataPolicy: ExportMetadataPolicy = .minimal) {
@@ -102,6 +104,7 @@ public struct ExportMeta: Sendable {
         self.scannerModel = scannerModel
         self.resolutionDPI = resolutionDPI
         self.filmType = filmType
+        self.filmStock = filmStock
         self.software = software
         self.sourceDate = sourceDate
         self.metadataDate = metadataDate

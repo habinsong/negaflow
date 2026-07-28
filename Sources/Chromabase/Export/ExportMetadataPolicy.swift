@@ -33,6 +33,8 @@ public struct ExportSourceMetadata: Codable, Equatable, Sendable {
         case boolean(Bool)
         case strings([String])
         case numbers([Double])
+        /// ISOSpeedRatings 처럼 정수 배열만 받는 태그. 실수로 쓰면 ImageIO가 통째로 버린다.
+        case integers([Int])
 
         fileprivate init?(_ value: Any) {
             switch value {
@@ -53,7 +55,11 @@ public struct ExportSourceMetadata: Codable, Equatable, Sendable {
                 self = .strings(values)
             case let values as [NSNumber] where values.count <= 128
                 && values.allSatisfy({ $0.doubleValue.isFinite }):
-                self = .numbers(values.map(\.doubleValue))
+                if values.allSatisfy({ $0.doubleValue.rounded() == $0.doubleValue }) {
+                    self = .integers(values.map(\.intValue))
+                } else {
+                    self = .numbers(values.map(\.doubleValue))
+                }
             default:
                 return nil
             }
@@ -67,6 +73,7 @@ public struct ExportSourceMetadata: Codable, Equatable, Sendable {
             case let .boolean(value): value as NSNumber
             case let .strings(value): value
             case let .numbers(value): value.map { $0 as NSNumber }
+            case let .integers(value): value.map { $0 as NSNumber }
             }
         }
 
@@ -83,6 +90,8 @@ public struct ExportSourceMetadata: Codable, Equatable, Sendable {
             case let .strings(value):
                 return value.joined(separator: ", ")
             case let .numbers(value):
+                return value.map { String($0) }.joined(separator: ", ")
+            case let .integers(value):
                 return value.map { String($0) }.joined(separator: ", ")
             }
         }
