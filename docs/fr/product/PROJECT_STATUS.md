@@ -9,7 +9,7 @@ produit et son usage ; les documents de docs portent les spécifications et les 
 
 | Élément | Valeur actuelle |
 |---|---|
-| Version | `1.0.1` |
+| Version | `1.0.2` |
 | Build | `1` |
 | Système | macOS 14 ou plus récent |
 | Déroulé | import ou scan → développement → export |
@@ -17,7 +17,7 @@ produit et son usage ; les documents de docs portent les spécifications et les 
 | Originaux | Les fichiers d'origine et les fichiers annexes tiers ne sont pas modifiés |
 
 > [!WARNING]
-> L'étiquette `1.0.1` et un build réussi ne signifient pas que la compatibilité avec un scanner
+> L'étiquette `1.0.2` et un build réussi ne signifient pas que la compatibilité avec un scanner
 > réel, la qualité d'image finale, la signature externe ou la notarisation ont été confirmées.
 > Le matériel réel et l'approbation de publication sont consignés dans la checklist plus bas.
 
@@ -27,6 +27,7 @@ produit et son usage ; les documents de docs portent les spécifications et les 
 - Import en double, reliaison des originaux, retrait de la bibliothèque, mise à la corbeille des originaux
 - Contrôle de santé du catalogue, verrou de processus, blocage de récupération, générations de sauvegarde, répétition de restauration, redéveloppement des images sélectionnées
 - Chemin commun de développement et d'export, métadonnées, historique de traitement, historique d'édition, sortie multi-fichiers
+- Appareil, objectif, film et exposition notés puis écrits dans le fichier exporté ; dans l'EXIF, l'appareil de prise de vue prime sur le scanner
 - Une frontière d'observation à faible fréquence qui rafraîchit le bouton d'export selon l'état de développement et de retraitement
 - Découverte et approbation des plugins scanner, contrôle des capacités, protocole v1/v2, annulation, limites de temps, plafonds de sortie
 - Contrôle du propriétaire et des droits du plugin, et validation de la sortie temporaire

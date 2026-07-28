@@ -10,7 +10,7 @@ and decisions.
 
 | Item | Current value |
 |---|---|
-| Version | `1.0.1` |
+| Version | `1.0.2` |
 | Build | `1` |
 | OS | macOS 14 or later |
 | Workflow | import or scan → develop → export |
@@ -18,7 +18,7 @@ and decisions.
 | Originals | Original files and third-party sidecars are not modified |
 
 > [!WARNING]
-> The `1.0.1` label and a successful build do not mean real scanner compatibility, final image
+> The `1.0.2` label and a successful build do not mean real scanner compatibility, final image
 > quality, external signing, or notarization have been confirmed. Real hardware and release
 > approval are recorded separately in the checklist below.
 
@@ -28,6 +28,7 @@ and decisions.
 - Duplicate import, relinking originals, removing from the library, moving originals to Trash
 - Catalog health check, process lock, recovery block, backup generations, restore rehearsal, redeveloping selected frames
 - Shared develop and export path, metadata, processing history, edit history, multi-file output
+- Recorded camera, lens, film and exposure written to the exported file, with the shooting camera taking precedence over the scanner in EXIF
 - A low-frequency observation boundary that refreshes the export button as develop and reprocess state changes
 - Scanner plugin discovery and approval, capability checks, protocol v1/v2, cancellation, time limits, output caps
 - Plugin owner and permission checks, and validation of temporary output
