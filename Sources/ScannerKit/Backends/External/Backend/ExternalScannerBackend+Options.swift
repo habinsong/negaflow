@@ -69,7 +69,14 @@ extension ExternalScannerBackend {
         guard applied.filmType == requestedWire.filmType else {
             throw failure(.ioFailure, "plugin protocol v2 requested/appliedOptions filmType 불일치")
         }
-        guard requestedWire.scanArea == applied.scanArea else {
+        // 플러그인은 스캔 크기를 잘못 계산하는 백엔드를 우회하려고 높이를 1mm 미만으로 맞출 수
+        // 있다. 원점과 폭은 그대로여야 하고, 그 밖의 차이는 다른 영역을 스캔한 것이므로 거부한다.
+        // 통과한 뒤에는 요청이 아니라 이 적용 영역이 결과 검증 기준이 된다.
+        guard let requestedScanArea = requestedWire.scanArea,
+              requestedScanArea.originXMM == applied.scanArea.originXMM,
+              requestedScanArea.originYMM == applied.scanArea.originYMM,
+              requestedScanArea.widthMM == applied.scanArea.widthMM,
+              abs(requestedScanArea.heightMM - applied.scanArea.heightMM) < 1 else {
             throw failure(.ioFailure, "plugin protocol v2 requested/appliedOptions scanArea 불일치")
         }
         guard applied.infrared == requestedWire.infrared else {

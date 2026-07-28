@@ -1572,7 +1572,10 @@ final class ScannerWorkflowSafetyTests: XCTestCase {
         XCTAssertTrue(LibraryCatalogFile.writeSync(data, to: url))
     }
 
-    private func waitForDevelopedThumbnail(_ frame: ScanFrame, timeout: TimeInterval = 5) async {
+    /// 썸네일 현상은 백그라운드에서 끝나므로 기다린다. 계약은 "언젠가 채워진다"이고 시간 자체가
+    /// 아니다. 5초는 부하가 걸린 CI 러너에서 짧아 같은 커밋이 실행마다 다른 결과를 냈다. 한계를
+    /// 넉넉히 두되 단언은 그대로 두어, 끝내 채워지지 않으면 여전히 실패한다.
+    private func waitForDevelopedThumbnail(_ frame: ScanFrame, timeout: TimeInterval = 60) async {
         let deadline = Date().addingTimeInterval(timeout)
         while frame.thumbnailImage == nil, Date() < deadline {
             try? await Task.sleep(nanoseconds: 10_000_000)

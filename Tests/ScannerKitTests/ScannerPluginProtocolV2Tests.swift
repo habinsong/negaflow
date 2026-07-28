@@ -237,6 +237,38 @@ final class ScannerPluginProtocolV2Tests: XCTestCase {
         XCTAssertEqual(result.appliedOptionsEvidence, .verified(options))
     }
 
+    /// 플러그인은 스캔 크기를 잘못 계산하는 백엔드를 우회하려고 높이를 1mm 미만으로 맞출 수 있다.
+    /// 그 조정은 받아들이고, 이후 검증 기준은 요청이 아니라 실제로 적용된 영역이어야 한다.
+    /// 이 계약이 깨지면 epson2 평판 스캔이 통째로 거부된다.
+    func testProtocolV2AcceptsSubMillimetreScanHeightAlignment() async throws {
+        let fixture = try makeBackend(
+            id: "applied-scan-area-aligned",
+            protocolVersion: 2,
+            events: """
+            printf '{"type":"result","protocolVersion":2,"requestID":"%s","sequence":0,"width":10,"height":8,"path":"%s","resolutionDPI":3600,"bitDepth":16,"hasInfrared":false,"appliedOptions":%s}\\n' "$request" "$out" "$applied_aligned_height"
+            """
+        )
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+        let output = fixture.root.appendingPathComponent("published.tiff")
+        var options = ScanOptions.strongDefault(scannerID: "plugin:applied-scan-area-aligned:dev0")
+        options.requestID = fixedRequestID
+        options.temporaryOutputURL = output
+
+        let result = try await fixture.backend.startFullScan(options) { _ in }
+
+        guard case .verified(let applied) = result.appliedOptionsEvidence else {
+            return XCTFail("정렬된 높이는 검증된 적용 옵션으로 받아들여져야 한다")
+        }
+        XCTAssertEqual(applied.scanArea.heightMM, 24.4, accuracy: 1e-9)
+        XCTAssertNotEqual(
+            applied.scanArea.heightMM,
+            options.scanArea.heightMM,
+            "적용 영역이 요청으로 되돌아가면 결과 검증 기준이 사라진다"
+        )
+        XCTAssertEqual(applied.scanArea.widthMM, options.scanArea.widthMM, accuracy: 1e-9)
+        XCTAssertEqual(applied.scanArea.originYMM, options.scanArea.originYMM, accuracy: 1e-9)
+    }
+
     func testProtocolV2RejectsUnrequestedAppliedOptionChanges() async throws {
         try await assertV2Rejected(
             id: "applied-color-mode-change",
@@ -256,6 +288,27 @@ final class ScannerPluginProtocolV2Tests: XCTestCase {
             id: "applied-scan-area-change",
             events: """
             printf '{"type":"result","protocolVersion":2,"requestID":"%s","sequence":0,"width":10,"height":8,"path":"%s","resolutionDPI":3600,"bitDepth":16,"hasInfrared":false,"appliedOptions":%s}\\n' "$request" "$out" "$applied_wrong_scan_area"
+            """,
+            expectedMessage: "requested/appliedOptions scanArea 불일치"
+        )
+        try await assertV2Rejected(
+            id: "applied-scan-area-origin-shift",
+            events: """
+            printf '{"type":"result","protocolVersion":2,"requestID":"%s","sequence":0,"width":10,"height":8,"path":"%s","resolutionDPI":3600,"bitDepth":16,"hasInfrared":false,"appliedOptions":%s}\\n' "$request" "$out" "$applied_shifted_origin"
+            """,
+            expectedMessage: "requested/appliedOptions scanArea 불일치"
+        )
+        try await assertV2Rejected(
+            id: "applied-scan-area-width-change",
+            events: """
+            printf '{"type":"result","protocolVersion":2,"requestID":"%s","sequence":0,"width":10,"height":8,"path":"%s","resolutionDPI":3600,"bitDepth":16,"hasInfrared":false,"appliedOptions":%s}\\n' "$request" "$out" "$applied_widened"
+            """,
+            expectedMessage: "requested/appliedOptions scanArea 불일치"
+        )
+        try await assertV2Rejected(
+            id: "applied-scan-area-height-over-budget",
+            events: """
+            printf '{"type":"result","protocolVersion":2,"requestID":"%s","sequence":0,"width":10,"height":8,"path":"%s","resolutionDPI":3600,"bitDepth":16,"hasInfrared":false,"appliedOptions":%s}\\n' "$request" "$out" "$applied_height_over_budget"
             """,
             expectedMessage: "requested/appliedOptions scanArea 불일치"
         )
@@ -696,6 +749,10 @@ final class ScannerPluginProtocolV2Tests: XCTestCase {
         applied_wrong_color_mode='{"deviceID":"dev0","resolutionDPI":3600,"bitDepth":16,"colorMode":"gray","filmType":"colorNegative","scanArea":{"widthMM":36,"heightMM":24},"infrared":false,"multiExposure":false,"hardwareExposureTime":null,"brightnessAdjustment":null,"contrastAdjustment":null,"outputRawTIFF":true}'
         applied_wrong_film_type='{"deviceID":"dev0","resolutionDPI":3600,"bitDepth":16,"colorMode":"color","filmType":"bwPositive","scanArea":{"widthMM":36,"heightMM":24},"infrared":false,"multiExposure":false,"hardwareExposureTime":null,"brightnessAdjustment":null,"contrastAdjustment":null,"outputRawTIFF":true}'
         applied_wrong_scan_area='{"deviceID":"dev0","resolutionDPI":3600,"bitDepth":16,"colorMode":"color","filmType":"colorNegative","scanArea":{"widthMM":20,"heightMM":10},"infrared":false,"multiExposure":false,"hardwareExposureTime":null,"brightnessAdjustment":null,"contrastAdjustment":null,"outputRawTIFF":true}'
+        applied_aligned_height='{"deviceID":"dev0","resolutionDPI":3600,"bitDepth":16,"colorMode":"color","filmType":"colorNegative","scanArea":{"widthMM":36,"heightMM":24.4},"infrared":false,"multiExposure":false,"hardwareExposureTime":null,"brightnessAdjustment":null,"contrastAdjustment":null,"outputRawTIFF":true}'
+        applied_shifted_origin='{"deviceID":"dev0","resolutionDPI":3600,"bitDepth":16,"colorMode":"color","filmType":"colorNegative","scanArea":{"originYMM":0.4,"widthMM":36,"heightMM":24},"infrared":false,"multiExposure":false,"hardwareExposureTime":null,"brightnessAdjustment":null,"contrastAdjustment":null,"outputRawTIFF":true}'
+        applied_widened='{"deviceID":"dev0","resolutionDPI":3600,"bitDepth":16,"colorMode":"color","filmType":"colorNegative","scanArea":{"widthMM":36.4,"heightMM":24},"infrared":false,"multiExposure":false,"hardwareExposureTime":null,"brightnessAdjustment":null,"contrastAdjustment":null,"outputRawTIFF":true}'
+        applied_height_over_budget='{"deviceID":"dev0","resolutionDPI":3600,"bitDepth":16,"colorMode":"color","filmType":"colorNegative","scanArea":{"widthMM":36,"heightMM":25.4},"infrared":false,"multiExposure":false,"hardwareExposureTime":null,"brightnessAdjustment":null,"contrastAdjustment":null,"outputRawTIFF":true}'
         \(preflight)
         cp "$(dirname "$0")/valid-scan.tiff" "$out"
         \(events)
