@@ -229,30 +229,49 @@ extension AppModel {
             isScanFinalizationInProgress = true
         }
 
+        // 한 프레임의 마무리가 실패하면 그 뒤로는 발행을 멈춘다. 다만 멈춘 뒤의 프레임을
+        // 조용히 잊으면 안 된다. 그러면 작업이 finalizing 상태로 남고 사용자는 어느 컷이
+        // 왜 사라졌는지 알 수 없다. 발행만 멈추고, 남은 프레임은 같은 원인으로 실패 처리한다.
         var canPublishNextManifest = true
         var publishedFrameCount = 0
+        var stopReason: ScannerError?
         for work in finalizationWork {
             do {
                 let manifest = try await work.task.value
-                guard canPublishNextManifest else { continue }
+                guard canPublishNextManifest else {
+                    if let stopReason {
+                        _ = failFinalization(
+                            sessionID: sessionID,
+                            jobID: work.jobID,
+                            error: stopReason
+                        )
+                    }
+                    continue
+                }
                 if publishFinalizedScan(manifest, sessionID: sessionID, jobID: work.jobID) {
                     publishedFrameCount += 1
                 } else {
+                    let persistenceError = ScannerError(
+                        .ioFailure,
+                        text(AppLocalizedPhrase.scanWorkflowPersistenceFailed)
+                    )
                     canPublishNextManifest = false
+                    stopReason = persistenceError
                     setScanWorkflowError(
-                        ScannerError(.ioFailure, text(AppLocalizedPhrase.scanWorkflowPersistenceFailed)),
+                        persistenceError,
                         frameNumber: scanOrdinal(sessionID: sessionID, jobID: work.jobID)
                     )
                 }
             } catch {
-                guard canPublishNextManifest else { continue }
-                canPublishNextManifest = false
                 let scannerError = scannerError(from: error)
                 _ = failFinalization(
                     sessionID: sessionID,
                     jobID: work.jobID,
                     error: scannerError
                 )
+                guard canPublishNextManifest else { continue }
+                canPublishNextManifest = false
+                stopReason = scannerError
                 setScanWorkflowError(
                     scannerError,
                     frameNumber: scanOrdinal(sessionID: sessionID, jobID: work.jobID)
