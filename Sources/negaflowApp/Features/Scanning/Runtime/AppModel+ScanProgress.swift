@@ -25,8 +25,22 @@ extension AppModel {
         statusMessage = message
     }
 
+    /// 여러 컷을 이어 스캔할 때는 배치 전체의 진행률을 보여준다.
+    ///
+    /// 컷 하나의 진행률만 보여주면 실제로는 정상인데 실패처럼 보인다. 백엔드는 본 획득을
+    /// 0.92까지만 매핑하고, 앱이 획득 직후 1로 올리지만 그 대입과 다음 컷의 0 초기화 사이에
+    /// 중단 지점이 없어서 100%가 화면에 그려지는 일이 없다. 그래서 매 컷이 92%에서 멈췄다가
+    /// 0%로 튀는 것처럼 보인다. 사진은 배치가 다 끝난 뒤에야 발행되므로 그때까지 아무것도
+    /// 나타나지 않는다. 배치 기준으로 환산하면 진행률이 되돌아가지 않고 끝까지 올라간다.
     func displayedScanFraction(at _: Date = Date()) -> Double {
-        let base = min(max(scanFraction, 0), 1)
+        let frame = min(max(scanFraction, 0), 1)
+        let base: Double
+        if batchTotal > 1 {
+            let completed = Double(min(max(batchIndex, 0), batchTotal - 1))
+            base = min(max((completed + frame) / Double(batchTotal), 0), 1)
+        } else {
+            base = frame
+        }
         return isScanning ? base : (scanPhase == .complete ? 1 : base)
     }
 

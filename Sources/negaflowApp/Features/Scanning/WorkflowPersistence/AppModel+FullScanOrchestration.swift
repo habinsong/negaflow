@@ -235,16 +235,20 @@ extension AppModel {
         var canPublishNextManifest = true
         var publishedFrameCount = 0
         var stopReason: ScannerError?
+        // 실패로 기록하는 것마저 실패할 수 있다(작업이 이미 finalizing이 아니면 거절된다).
+        // 그 경우까지 조용히 넘어가면 원래 증상으로 되돌아가므로 세어서 드러낸다.
+        var unrecordedOrdinals: [Int] = []
         for work in finalizationWork {
             do {
                 let manifest = try await work.task.value
                 guard canPublishNextManifest else {
-                    if let stopReason {
-                        _ = failFinalization(
-                            sessionID: sessionID,
-                            jobID: work.jobID,
-                            error: stopReason
-                        )
+                    if let stopReason,
+                       !failFinalization(
+                           sessionID: sessionID,
+                           jobID: work.jobID,
+                           error: stopReason
+                       ) {
+                        unrecordedOrdinals.append(scanOrdinal(sessionID: sessionID, jobID: work.jobID))
                     }
                     continue
                 }
@@ -264,12 +268,17 @@ extension AppModel {
                 }
             } catch {
                 let scannerError = scannerError(from: error)
-                _ = failFinalization(
+                let recorded = failFinalization(
                     sessionID: sessionID,
                     jobID: work.jobID,
                     error: scannerError
                 )
-                guard canPublishNextManifest else { continue }
+                guard canPublishNextManifest else {
+                    if !recorded {
+                        unrecordedOrdinals.append(scanOrdinal(sessionID: sessionID, jobID: work.jobID))
+                    }
+                    continue
+                }
                 canPublishNextManifest = false
                 stopReason = scannerError
                 setScanWorkflowError(
@@ -277,6 +286,12 @@ extension AppModel {
                     frameNumber: scanOrdinal(sessionID: sessionID, jobID: work.jobID)
                 )
             }
+        }
+        if let firstUnrecorded = unrecordedOrdinals.first {
+            setScanWorkflowError(
+                ScannerError(.ioFailure, text(AppLocalizedPhrase.scanWorkflowPersistenceFailed)),
+                frameNumber: firstUnrecorded
+            )
         }
 
         _ = closeScanSessionIfTerminal(sessionID)
