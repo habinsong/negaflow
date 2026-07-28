@@ -145,6 +145,7 @@ extension AppLocalization {
         .framesScanCompleteFormat: "已扫描 %d 张",
         .scanCanceled: "扫描已取消",
         .scanWorkflowPersistenceFailed: "无法将扫描状态保存到图库目录。",
+            .exportFolderUnavailableFormat: "无法使用导出文件夹 %@ —— %@",
         .scanWorkflowInvalidState: "扫描工作流状态无效。",
         .scanInterruptedFailureReason: "应用已关闭，无法确认硬件采集是否完成。",
         .scanDeviceUnavailable: "无法验证所选扫描仪。",

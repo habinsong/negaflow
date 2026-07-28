@@ -71,31 +71,26 @@ final class DiskStorageStore: ObservableObject {
     @Published var thumbnailsPath: String? {
         didSet {
             defaults.set(thumbnailsPath, forKey: Keys.thumbnails)
-            activateCustomMode(for: thumbnailsPath)
         }
     }
     @Published var exportPath: String? {
         didSet {
             defaults.set(exportPath, forKey: Keys.export)
-            activateCustomMode(for: exportPath)
         }
     }
     @Published var quickExportPath: String? {
         didSet {
             defaults.set(quickExportPath, forKey: Keys.quickExport)
-            activateCustomMode(for: quickExportPath)
         }
     }
     @Published var scansPath: String? {
         didSet {
             defaults.set(scansPath, forKey: Keys.scans)
-            activateCustomMode(for: scansPath)
         }
     }
     @Published var importedSourcesPath: String? {
         didSet {
             defaults.set(importedSourcesPath, forKey: Keys.importedSources)
-            activateCustomMode(for: importedSourcesPath)
         }
     }
     @Published var cleanedRawPath: String? {
@@ -111,13 +106,11 @@ final class DiskStorageStore: ObservableObject {
                 )
             }
             defaults.set(cleanedRawPath, forKey: Keys.cleanedRaw)
-            activateCustomMode(for: cleanedRawPath)
         }
     }
     @Published var scanPreviewsPath: String? {
         didSet {
             defaults.set(scanPreviewsPath, forKey: Keys.scanPreviews)
-            activateCustomMode(for: scanPreviewsPath)
         }
     }
     @Published var recentCreatedScanFolderPath: String? {
@@ -263,18 +256,25 @@ final class DiskStorageStore: ObservableObject {
         }
     }
 
+    /// 명시적으로 고른 폴더가 있으면 위치 모드와 상관없이 그 폴더를 쓴다. 모드는 경로를 지정하지
+    /// 않은(nil) 폴더가 파생될 루트만 정한다.
+    ///
+    /// 예전에는 `.custom` 모드에서만 지정 경로를 적용했다. 그래서 iCloud·데스크탑·특정 폴더
+    /// 모드에서 내보내기 폴더로 외장 디스크를 고르면 경로는 저장되지만 무시되고, 파일은 조용히
+    /// 내부 루트 아래로 나갔다.
     private func managedURL(named folderName: String, customPath: String?) -> URL {
-        if locationMode == .custom, let customURL = resolved(customPath) {
+        if let customURL = resolved(customPath) {
             return customURL
         }
         return rootURL.appendingPathComponent(folderName, isDirectory: true)
     }
 
     private func cleanedRawURL(for mode: DiskStorageLocationMode) -> URL {
-        if mode != .custom {
-            return rootURL(for: mode).appendingPathComponent(FolderName.cleanedRaw, isDirectory: true)
+        if let custom = resolved(cleanedRawPath) { return custom }
+        if mode == .custom {
+            return CleanedRawCacheFile.defaultDirectoryURL(fileManager: fileManager)
         }
-        return resolved(cleanedRawPath) ?? CleanedRawCacheFile.defaultDirectoryURL(fileManager: fileManager)
+        return rootURL(for: mode).appendingPathComponent(FolderName.cleanedRaw, isDirectory: true)
     }
 
     private func registerCleanedRawDirectoryChange(from oldDirectory: URL?) {

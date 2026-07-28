@@ -145,6 +145,7 @@ extension AppLocalization {
             .framesScanCompleteFormat: "%d frames scanned",
             .scanCanceled: "Scan canceled",
             .scanWorkflowPersistenceFailed: "The scan state could not be saved to the library catalog.",
+            .exportFolderUnavailableFormat: "Cannot use the export folder %@ — %@",
             .scanWorkflowInvalidState: "The scan workflow state is invalid.",
             .scanInterruptedFailureReason: "The app closed before hardware capture completion could be confirmed.",
             .scanDeviceUnavailable: "The selected scanner could not be verified.",

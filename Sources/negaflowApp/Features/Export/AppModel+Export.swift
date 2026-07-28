@@ -110,12 +110,23 @@ extension AppModel {
         let group = FrameStorageNaming.sanitizeComponent(
             frame.storageGroupName ?? FrameStorageNaming.defaultImportGroup
         )
-        return DiskStorageStore.ensureDirectory(
-            root.appendingPathComponent(FrameStorageNaming.dateFolderName(for: date), isDirectory: true)
-                .appendingPathComponent(
-                    group.isEmpty ? FrameStorageNaming.defaultImportGroup : group, isDirectory: true
-                )
-        )
+        let folder = root
+            .appendingPathComponent(FrameStorageNaming.dateFolderName(for: date), isDirectory: true)
+            .appendingPathComponent(
+                group.isEmpty ? FrameStorageNaming.defaultImportGroup : group, isDirectory: true
+            )
+        // 폴더를 못 만들면 그대로 진행해봐야 한참 뒤 엉뚱한 오류로 나타난다. 외장 디스크가 빠졌거나
+        // 쓰기 권한이 없는 경우가 여기서 걸리므로, 경로와 시스템 오류를 그 자리에서 보고한다.
+        do {
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        } catch {
+            statusMessage = text(
+                AppLocalizedPhrase.exportFolderUnavailableFormat,
+                folder.path,
+                (error as NSError).localizedDescription
+            ) + " " + Self.exportVolumeDiagnostic(for: folder)
+        }
+        return folder
     }
 
     /// 스캔 당시 영속 세션에 고정된 장치/백엔드만 내보내기 provenance로 사용한다.
@@ -146,6 +157,35 @@ extension AppModel {
     }
 
     /// primary뿐 아니라 main-flat/original/JSON/XMP 전체가 비어 있는 basename을 고른다.
+    /// 내보내기가 실패했을 때 어느 볼륨에서 막혔는지 실기 없이 판정할 수 있도록 남기는 기술 정보.
+    /// 사용자 문구가 아니라 진단 토큰이므로 번역하지 않는다.
+    static func exportVolumeDiagnostic(for url: URL, fileManager: FileManager = .default) -> String {
+        var probe = url.standardizedFileURL
+        while !fileManager.fileExists(atPath: probe.path), probe.pathComponents.count > 1 {
+            probe = probe.deletingLastPathComponent()
+        }
+        let values = try? probe.resourceValues(forKeys: [
+            .volumeNameKey,
+            .volumeLocalizedFormatDescriptionKey,
+            .volumeIsRemovableKey,
+            .volumeIsInternalKey,
+            .volumeIsReadOnlyKey,
+            .volumeAvailableCapacityForImportantUsageKey,
+        ])
+        let free = values?.volumeAvailableCapacityForImportantUsage
+        return String(
+            format: "[vol=%@ fs=%@ internal=%@ removable=%@ readonly=%@ writable=%@ free=%@ probed=%@]",
+            values?.volumeName ?? "?",
+            values?.volumeLocalizedFormatDescription ?? "?",
+            values?.volumeIsInternal.map { $0 ? "yes" : "no" } ?? "?",
+            values?.volumeIsRemovable.map { $0 ? "yes" : "no" } ?? "?",
+            values?.volumeIsReadOnly.map { $0 ? "yes" : "no" } ?? "?",
+            fileManager.isWritableFile(atPath: probe.path) ? "yes" : "no",
+            free.map { "\($0 / 1_048_576)MB" } ?? "?",
+            probe.path
+        )
+    }
+
     func uniqueExportURL(
         in folder: URL,
         baseName: String,

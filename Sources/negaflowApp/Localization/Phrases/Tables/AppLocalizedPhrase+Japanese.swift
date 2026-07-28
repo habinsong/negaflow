@@ -145,6 +145,7 @@ extension AppLocalization {
         .framesScanCompleteFormat: "%dコマをスキャンしました",
         .scanCanceled: "スキャンをキャンセルしました",
         .scanWorkflowPersistenceFailed: "スキャン状態をライブラリカタログに保存できませんでした。",
+            .exportFolderUnavailableFormat: "書き出しフォルダを使用できません %@ — %@",
         .scanWorkflowInvalidState: "スキャンワークフローの状態が正しくありません。",
         .scanInterruptedFailureReason: "アプリが終了したため、ハードウェアキャプチャの完了を確認できませんでした。",
         .scanDeviceUnavailable: "選択したスキャナーを確認できませんでした。",

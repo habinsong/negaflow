@@ -93,6 +93,7 @@ enum AppLocalizedPhrase: CaseIterable {
     case framesScanCompleteFormat
     case scanCanceled
     case scanWorkflowPersistenceFailed
+    case exportFolderUnavailableFormat
     case scanWorkflowInvalidState
     case scanInterruptedFailureReason
     case scanDeviceUnavailable

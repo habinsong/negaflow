@@ -145,6 +145,7 @@ extension AppLocalization {
         .framesScanCompleteFormat: "%d Bilder gescannt",
         .scanCanceled: "Scan abgebrochen",
         .scanWorkflowPersistenceFailed: "Der Scanstatus konnte nicht im Mediathekskatalog gespeichert werden.",
+            .exportFolderUnavailableFormat: "Exportordner nicht verwendbar %@ — %@",
         .scanWorkflowInvalidState: "Der Status des Scan-Workflows ist ungültig.",
         .scanInterruptedFailureReason: "Die App wurde beendet, bevor der Abschluss der Hardwareaufnahme bestätigt werden konnte.",
         .scanDeviceUnavailable: "Der ausgewählte Scanner konnte nicht verifiziert werden.",

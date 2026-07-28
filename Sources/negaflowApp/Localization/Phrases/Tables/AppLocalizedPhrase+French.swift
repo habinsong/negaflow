@@ -145,6 +145,7 @@ extension AppLocalization {
         .framesScanCompleteFormat: "%d images numérisées",
         .scanCanceled: "Numérisation annulée",
         .scanWorkflowPersistenceFailed: "L’état de numérisation n’a pas pu être enregistré dans le catalogue.",
+            .exportFolderUnavailableFormat: "Dossier d'exportation inutilisable %@ — %@",
         .scanWorkflowInvalidState: "L’état du flux de numérisation n’est pas valide.",
         .scanInterruptedFailureReason: "L’app s’est fermée avant de pouvoir confirmer la fin de la capture matérielle.",
         .scanDeviceUnavailable: "Le scanner sélectionné n’a pas pu être vérifié.",
