@@ -473,6 +473,14 @@ final class FlatbedScanRegionTests: XCTestCase {
             relativeTolerance: 0.02,
             minimumPixelTolerance: 3
         ))
+        XCTAssertEqual(
+            FlatbedScanRegionGeometry.outputAspectDiagnostic(
+                width: 2_449,
+                height: 1_200,
+                scanArea: area
+            ),
+            "[ROI 20.000,30.000 + 60.000×30.000 mm; 2449×1200 px]"
+        )
     }
 }
 

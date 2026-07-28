@@ -65,6 +65,40 @@ final class ScannerWorkflowSafetyTests: XCTestCase {
         XCTAssertNil(AppModel.preferredScanResolution(in: []))
     }
 
+    func testNeutralScannerHardwareAdjustmentsAreNotSent() {
+        let range = ScannerOptionRange(minimum: -100, maximum: 100, step: 1)
+
+        XCTAssertNil(AppModel.scannerHardwareAdjustment(
+            0,
+            range: range,
+            scannerID: "sane-epson2:libusb:000:001",
+            bitDepth: .sixteen
+        ))
+        XCTAssertEqual(AppModel.scannerHardwareAdjustment(
+            12,
+            range: range,
+            scannerID: "sane-epson2:libusb:000:001",
+            bitDepth: .eight
+        ), 12)
+    }
+
+    func testGenesysSixteenBitSilentlyOmitsHardwareToneAdjustments() {
+        let range = ScannerOptionRange(minimum: -100, maximum: 100, step: 1)
+
+        XCTAssertNil(AppModel.scannerHardwareAdjustment(
+            12,
+            range: range,
+            scannerID: "sane-genesys:libusb:000:010",
+            bitDepth: .sixteen
+        ))
+        XCTAssertEqual(AppModel.scannerHardwareAdjustment(
+            12,
+            range: range,
+            scannerID: "sane-genesys:libusb:000:010",
+            bitDepth: .eight
+        ), 12)
+    }
+
     func testFullScanClampsSupportedHardwareScanAreaIntoRequestedOptions() async throws {
         let maximum = ScanArea(widthMM: 36, heightMM: 24)
         let backend = ScannerWorkflowBackend(capabilities: ScannerCapabilities(

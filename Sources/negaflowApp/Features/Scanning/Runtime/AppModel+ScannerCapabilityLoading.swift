@@ -138,9 +138,24 @@ extension AppModel {
         }
     }
 
-    func scannerHardwareAdjustment(_ value: Double, range: ScannerOptionRange?) -> Double? {
+    static func scannerHardwareAdjustment(
+        _ value: Double,
+        range: ScannerOptionRange?,
+        scannerID: String,
+        bitDepth: BitDepth
+    ) -> Double? {
         guard let range else { return nil }
-        return range.clamped(value)
+        let backend = scannerID
+            .replacingOccurrences(of: "sane-", with: "")
+            .split(separator: ":", maxSplits: 1)
+            .first
+            .map(String.init)?
+            .lowercased()
+        if backend == "genesys", bitDepth == .sixteen {
+            return nil
+        }
+        let clamped = range.clamped(value)
+        return clamped == 0 ? nil : clamped
     }
 
 

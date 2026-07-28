@@ -75,4 +75,20 @@ enum FlatbedScanRegionGeometry {
         )
         return abs(Double(width) - expectedWidth) <= allowedPixelError
     }
+
+    static func outputAspectDiagnostic(
+        width: Int,
+        height: Int,
+        scanArea: ScanArea
+    ) -> String {
+        String(
+            format: "[ROI %.3f,%.3f + %.3f×%.3f mm; %d×%d px]",
+            scanArea.originXMM,
+            scanArea.originYMM,
+            scanArea.widthMM,
+            scanArea.heightMM,
+            width,
+            height
+        )
+    }
 }

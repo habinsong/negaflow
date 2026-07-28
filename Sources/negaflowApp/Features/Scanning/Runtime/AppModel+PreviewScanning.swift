@@ -117,8 +117,18 @@ extension AppModel {
                     && capabilities.supportsInfrared
                     && InfraredFilmCompatibility(filmType: scanFilmType).allowsAutomaticCorrection
             }
-            opts.brightnessAdjustment = scannerHardwareAdjustment(scannerBrightness, range: capabilities.brightnessRange)
-            opts.contrastAdjustment = scannerHardwareAdjustment(scannerContrast, range: capabilities.contrastRange)
+            opts.brightnessAdjustment = Self.scannerHardwareAdjustment(
+                scannerBrightness,
+                range: capabilities.brightnessRange,
+                scannerID: opts.scannerID,
+                bitDepth: opts.bitDepth
+            )
+            opts.contrastAdjustment = Self.scannerHardwareAdjustment(
+                scannerContrast,
+                range: capabilities.contrastRange,
+                scannerID: opts.scannerID,
+                bitDepth: opts.bitDepth
+            )
             let scannerAbbrev = FrameStorageNaming.scannerAbbreviation(activeScannerDisplayName)
             if preview {
                 // 프리뷰 스캔은 본 스캔으로 대체되는 휘발 산출물 — 임시 폴더에 남긴다.
@@ -200,6 +210,12 @@ extension AppModel {
                         throw ScannerError(
                             .ioFailure,
                             text(AppLocalizedPhrase.flatbedGeometryMismatch)
+                                + " "
+                                + FlatbedScanRegionGeometry.outputAspectDiagnostic(
+                                    width: result.width,
+                                    height: result.height,
+                                    scanArea: appliedOptions.scanArea
+                                )
                         )
                     }
                 }

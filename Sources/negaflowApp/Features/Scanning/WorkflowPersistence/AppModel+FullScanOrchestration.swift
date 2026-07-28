@@ -131,6 +131,12 @@ extension AppModel {
                     throw ScannerError(
                         .ioFailure,
                         text(AppLocalizedPhrase.flatbedGeometryMismatch)
+                            + " "
+                            + FlatbedScanRegionGeometry.outputAspectDiagnostic(
+                                width: result.width,
+                                height: result.height,
+                                scanArea: requestedOptions.scanArea
+                            )
                     )
                 }
                 guard activeScanSessionID == sessionID,

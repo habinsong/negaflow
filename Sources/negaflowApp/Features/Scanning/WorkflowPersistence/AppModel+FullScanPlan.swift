@@ -194,12 +194,18 @@ extension AppModel {
             options.infraredEnabled = infraredEnabled
                 && capabilities.supportsInfrared
                 && InfraredFilmCompatibility(filmType: scanFilmType).allowsAutomaticCorrection
-            options.brightnessAdjustment = capabilities.brightnessRange.map {
-                $0.clamped(scannerBrightness)
-            }
-            options.contrastAdjustment = capabilities.contrastRange.map {
-                $0.clamped(scannerContrast)
-            }
+            options.brightnessAdjustment = Self.scannerHardwareAdjustment(
+                scannerBrightness,
+                range: capabilities.brightnessRange,
+                scannerID: scannerID,
+                bitDepth: bitDepthChoice
+            )
+            options.contrastAdjustment = Self.scannerHardwareAdjustment(
+                scannerContrast,
+                range: capabilities.contrastRange,
+                scannerID: scannerID,
+                bitDepth: bitDepthChoice
+            )
             let flatbedRegion = flatbedRegions.indices.contains(offset)
                 ? flatbedRegions[offset]
                 : nil
