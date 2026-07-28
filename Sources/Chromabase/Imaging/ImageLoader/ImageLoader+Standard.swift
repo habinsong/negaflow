@@ -7,9 +7,11 @@ extension ImageLoader {
     static func loadStandard(_ url: URL) -> CIImage? {
         guard let src = CGImageSourceCreateWithURL(url as CFURL, nil),
               let cg = CGImageSourceCreateImageAtIndex(src, 0, nil) else { return nil }
+        let props = CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as? [CFString: Any]
+        // 프로필 없는 16bit+ TIFF는 스캐너 raw(linear)다 — 경로가 달라도 같은 파일은 같게 읽어야 한다.
+        let base = profileAwareImage(cg, properties: props, untaggedTIFFRole: .linearScannerRaw)
         // EXIF orientation 반영(orientation 1이면 무연산). 스캐너 raw 경로(loadScannerTIFF)는 별도라 영향 없음.
-        let exif = exifOrientation(CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as? [CFString: Any])
-        let base = CIImage(cgImage: cg)
+        let exif = exifOrientation(props)
         return exif == 1 ? base : base.oriented(forExifOrientation: exif)
     }
 

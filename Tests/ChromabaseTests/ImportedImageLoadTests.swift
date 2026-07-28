@@ -97,13 +97,51 @@ final class ImportedImageLoadTests: XCTestCase {
     //
     // VueScan raw TIFF(16bit, 프로필 없음)는 linear(gamma 1.0). loadImported 는 이를 linear 로 해석해야
     // 한다. 반대로 임베디드 프로필(SilverFast HDRi의 SFprofT 등, 일반 sRGB)은 그 프로필로 색관리해야 한다.
-    func testImportedUntagged16BitTIFFDefaultsToStandardImageRole() throws {
+    // 이전에는 가져오기 기본이 `.standardImage` 였다. 프로필 없는 16bit TIFF는 스캐너
+    // 소프트웨어(SilverFast 48bit, VueScan raw, 스캐너 플러그인)의 linear raw 출력인데 이를 sRGB로
+    // 읽으면 Dmin 실측이 실패하고 반전 결과가 흰색으로 붕뜬다. 실측: 같은 파일을 스캔 경로로 읽으면
+    // 정상, 가져오기 경로로 읽으면 p1=0.68/mean=0.83 으로 밝은 쪽에 뭉쳤다.
+    func testImportedUntagged16BitTIFFIsReadAsLinearScannerRaw() throws {
         let url = try writeUniform16BitTIFF(value: 0.5, colorSpace: CGColorSpaceCreateDeviceRGB())
         defer { try? FileManager.default.removeItem(at: url) }
         let decoded = try XCTUnwrap(ImageLoader.loadImportedDecoded(url))
 
         XCTAssertEqual(decoded.provenance.decoder, .imageIO)
+        XCTAssertEqual(decoded.provenance.untaggedTIFFRole, .linearScannerRaw)
+        XCTAssertEqual(renderMidPixelLuma(decoded.image), 0.5, accuracy: 0.03,
+                       "프로필 없는 16bit TIFF는 linear 값이 보존돼야 한다.")
+    }
+
+    func testImportedCallerCanStillAskForStandardImageRole() throws {
+        // IT8 차트처럼 일반 이미지로 읽어야 하는 호출자는 명시로 예외를 유지한다.
+        let url = try writeUniform16BitTIFF(value: 0.5, colorSpace: CGColorSpaceCreateDeviceRGB())
+        defer { try? FileManager.default.removeItem(at: url) }
+        let decoded = try XCTUnwrap(ImageLoader.loadImportedDecoded(
+            url,
+            untaggedTIFFRole: .standardImage
+        ))
+
         XCTAssertEqual(decoded.provenance.untaggedTIFFRole, .standardImage)
+        XCTAssertLessThan(renderMidPixelLuma(decoded.image), 0.35)
+    }
+
+    func testUntagged8BitTIFFStaysGammaEncoded() throws {
+        // 8bit 스캔은 감마 인코딩이다. bit depth 규칙이 여기까지 번지면 안 된다.
+        let url = try writeSyntheticLinearNegativeTIFF(bitsPerComponent: 8)
+        defer { try? FileManager.default.removeItem(at: url) }
+        let decoded = try XCTUnwrap(ImageLoader.loadImportedDecoded(url))
+        XCTAssertNil(decoded.provenance.untaggedTIFFRole)
+    }
+
+    func testUntagged16BitPNGStaysSRGBByFormatSpecification() throws {
+        // PNG 규격은 색상 청크가 없으면 sRGB다. TIFF에는 그런 기본값이 없어서 규칙을 TIFF로 한정한다.
+        let url = try writeUniform16BitPNG(value: 0.5)
+        defer { try? FileManager.default.removeItem(at: url) }
+        let decoded = try XCTUnwrap(ImageLoader.loadImportedDecoded(url))
+
+        XCTAssertNil(decoded.provenance.untaggedTIFFRole)
+        XCTAssertLessThan(renderMidPixelLuma(decoded.image), 0.35,
+                          "16bit PNG를 linear raw로 오해하면 안 된다.")
     }
 
     func testImportedScannerRawRoleInterpretsUntagged16BitTIFFAsLinear() throws {

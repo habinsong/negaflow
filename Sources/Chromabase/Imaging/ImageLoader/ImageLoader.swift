@@ -133,22 +133,25 @@ public enum ImageLoader {
     ///   • RAW/DNG            → CIRAWFilter 데모사이크(제조사 RAW + VueScan/SilverFast raw DNG).
     ///   • 임베디드 ICC 있음   → 그 프로필로 색관리한다. SilverFast HDRi의 스캐너 프로필
     ///                           (SFprofT=투과/포지티브, SFprofN=네거티브)과 일반 색관리 이미지가 여기 해당.
-    ///   • 프로필 없는 TIFF     → 기본은 일반 이미지로 유지. 호출자가 `.linearScannerRaw`를
-    ///                           명시한 경우에만 linear gamma 1.0으로 해석한다.
+    ///   • 프로필 없는 16bit+   → linear gamma 1.0(스캐너 raw)로 해석한다. 색관리 소프트웨어는
+    ///     TIFF                  16bit 출력에 프로필을 붙이므로, 프로필 없는 16bit TIFF는 스캐너
+    ///                           소프트웨어의 raw 출력이다. 값 도메인을 틀리면 반전이 무너진다
+    ///                           (실측: 같은 파일을 sRGB로 읽으면 Dmin 실측이 실패하고 결과가 흰색으로 붕뜬다).
+    ///                           IT8 차트처럼 일반 이미지로 읽어야 하는 호출자는 `.standardImage`를 명시한다.
     ///   • 그 외                → CGImage가 제공한 색공간을 그대로 사용한다.
     ///
     /// 근거: VueScan raw는 16bit에서 linear(gamma 1.0), 8bit에서 gamma 2.2. SilverFast HDRi는
     /// linear 이며 스캐너 디바이스 프로필을 임베드한다.
     public static func loadImported(
         _ url: URL,
-        untaggedTIFFRole: UntaggedTIFFRole = .standardImage
+        untaggedTIFFRole: UntaggedTIFFRole = .linearScannerRaw
     ) -> CIImage? {
         loadImportedDecoded(url, untaggedTIFFRole: untaggedTIFFRole)?.image
     }
 
     public static func loadImportedDecoded(
         _ url: URL,
-        untaggedTIFFRole: UntaggedTIFFRole = .standardImage
+        untaggedTIFFRole: UntaggedTIFFRole = .linearScannerRaw
     ) -> DecodedImage? {
         // RAW/DNG는 CIRAWFilter가 파일 orientation을 기본 적용하므로 여기서 재적용하지 않는다.
         if kind(of: url) == .rawDng { return loadRAWDecoded(url) }
@@ -226,10 +229,12 @@ public enum ImageLoader {
         guard let cg = thumbnail(from: src, maxDimension: maxDimension, applyOrientation: true) else { return nil }
         let usesLinearSRGB = sourceBitDepth(cg, properties: props) >= 16
         return PreviewImage(
+            // 프록시는 전체 해상도 로더와 같은 규칙으로 읽어야 한다. 규칙이 갈리면 프리뷰와
+            // 최종 렌더가 다른 이미지가 된다.
             image: profileAwareImage(
                 cg,
                 properties: props,
-                untaggedTIFFRole: .standardImage
+                untaggedTIFFRole: .linearScannerRaw
             ),
             sourcePixelSize: size,
             usesLinearSRGB: usesLinearSRGB

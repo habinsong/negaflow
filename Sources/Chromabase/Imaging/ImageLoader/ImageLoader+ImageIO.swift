@@ -11,7 +11,10 @@ extension ImageLoader {
 
     /// 스캐너 raw와 일반 가져오기 양쪽에 같은 입력 색상 규칙을 적용한다. Image I/O가 보고한
     /// 임베디드 ICC는 그대로 두어 Core Image가 작업 색공간으로 변환하게 하고, 프로필 없는
-    /// 16bit+ 픽셀만 VueScan 계열 linear raw로 해석한다.
+    /// 16bit+ TIFF 픽셀만 VueScan/SilverFast 계열 linear raw로 해석한다.
+    ///
+    /// TIFF 로 한정하는 이유: PNG 는 규격상 태그가 없으면 sRGB 다. TIFF 에는 그런 기본값이 없어
+    /// 프로필 없는 16bit TIFF 는 사실상 스캐너 소프트웨어의 raw 출력이다.
     static func profileAwareImage(
         _ cg: CGImage,
         properties: [CFString: Any]?,
