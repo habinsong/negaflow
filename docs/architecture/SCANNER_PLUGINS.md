@@ -165,6 +165,8 @@ values the result reported itself.
 
 ## Positioned flatbed scan area
 
+The preview for this workflow asks for an explicit resolution — the closest supported value to 300 dpi — instead of leaving it to the device. A device default can be as low as 25 dpi, which is far too coarse to place frames on or to detect them. A preview that carries a resolution is an ordinary scan, so it does not use the plug-in's preview path.
+
 A flatbed scan with a chosen position turns on only when the plugin reports all of these.
 
 - Preview

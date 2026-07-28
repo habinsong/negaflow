@@ -171,6 +171,8 @@ die das Ergebnis selbst gemeldet hat.
 
 ## Positionierter Flachbett-Scanbereich
 
+Die Vorschau dieses Ablaufs fordert eine ausdrückliche Auflösung an — den unterstützten Wert, der 300 dpi am nächsten liegt — statt sie dem Gerät zu überlassen. Ein Gerätestandard kann bei 25 dpi liegen und ist damit viel zu grob, um Bilder darauf zu platzieren oder zu erkennen. Eine Vorschau mit Auflösung ist ein gewöhnlicher Scan und nutzt den Vorschaupfad des Plug-ins nicht.
+
 Ein Flachbett-Scan mit gewählter Position schaltet sich nur ein, wenn das Plugin all das meldet.
 
 - Vorschau

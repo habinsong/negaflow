@@ -170,6 +170,8 @@ valeurs correctes signalées par le résultat lui-même.
 
 ## Zone de scan positionnée à plat
 
+L'aperçu de ce flux demande une résolution explicite — la valeur prise en charge la plus proche de 300 ppp — au lieu de la laisser à l'appareil. Une valeur par défaut peut descendre à 25 ppp, bien trop grossière pour y placer des vues ou les détecter. Un aperçu portant une résolution est une numérisation ordinaire et n'emprunte donc pas le chemin d'aperçu du plug-in.
+
 Un scan à plat avec position choisie ne s'active que si le plugin signale tout ceci.
 
 - Aperçu
