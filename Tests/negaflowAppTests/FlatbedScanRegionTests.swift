@@ -479,7 +479,36 @@ final class FlatbedScanRegionTests: XCTestCase {
                 height: 1_200,
                 scanArea: area
             ),
-            "[ROI 20.000,30.000 + 60.000×30.000 mm; 2449×1200 px]"
+            "[ROI 20.000,30.000 + 60.000×30.000 mm; 2449×1200 px;"
+                + " expected 2400.0×1224.5 px; delta +49.0×-24.5 px]"
+        )
+        // 요청과 적용 영역이 다르면(백엔드 정렬) 그 차이도 진단에 남아야 실기 없이 판정할 수 있다.
+        XCTAssertEqual(
+            FlatbedScanRegionGeometry.outputAspectDiagnostic(
+                width: 2_449,
+                height: 1_200,
+                scanArea: area,
+                requestedScanArea: ScanArea(
+                    originXMM: 20,
+                    originYMM: 30,
+                    widthMM: 60,
+                    heightMM: 29.4
+                )
+            ),
+            "[ROI 20.000,30.000 + 60.000×30.000 mm; 2449×1200 px;"
+                + " expected 2400.0×1224.5 px; delta +49.0×-24.5 px;"
+                + " requested 20.000,30.000 + 60.000×29.400 mm]"
+        )
+        // 적용 영역이 요청과 같으면 중복해서 적지 않는다.
+        XCTAssertEqual(
+            FlatbedScanRegionGeometry.outputAspectDiagnostic(
+                width: 2_449,
+                height: 1_200,
+                scanArea: area,
+                requestedScanArea: area
+            ),
+            "[ROI 20.000,30.000 + 60.000×30.000 mm; 2449×1200 px;"
+                + " expected 2400.0×1224.5 px; delta +49.0×-24.5 px]"
         )
     }
 }

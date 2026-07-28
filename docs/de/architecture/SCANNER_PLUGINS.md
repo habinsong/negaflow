@@ -149,7 +149,11 @@ Ein Verstoß gegen die v2-Vorgaben beendet das Plugin sofort, ohne die übliche 
 Ein v2-`result` muss `appliedOptions` enthalten.
 
 - `deviceID`, `resolutionDPI`, `bitDepth`, `colorMode`, `filmType`
-- `scanArea`: `originXMM`, `originYMM`, `widthMM`, `heightMM`
+- `scanArea`: `originXMM`, `originYMM`, `widthMM`, `heightMM` — der Bereich, den das Plug-in
+  tatsächlich an das Backend gesendet hat, keine Kopie der Anfrage. Er kann um weniger als 1 mm
+  angepasst werden, um ein Backend zu umgehen, das die Scangröße falsch berechnet. Die App
+  prüft die zurückgegebene Pixelgröße gegen diesen Bereich; eine Kopie der Anfrage würde die
+  Prüfung aushebeln.
 - `infrared`, `multiExposure`
 - `hardwareExposureTime`, `brightnessAdjustment`, `contrastAdjustment`
 - `outputRawTIFF`

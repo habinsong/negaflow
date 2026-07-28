@@ -139,7 +139,10 @@ v2規格の違反は、通常の時間制限を待たずにプラグインをす
 v2の`result`には`appliedOptions`が必ず要ります。
 
 - `deviceID`、`resolutionDPI`、`bitDepth`、`colorMode`、`filmType`
-- `scanArea`: `originXMM`、`originYMM`、`widthMM`、`heightMM`
+- `scanArea`: `originXMM`、`originYMM`、`widthMM`、`heightMM` — 要求のコピーではなく、
+  プラグインが実際にバックエンドへ送った領域。スキャンサイズを誤計算するバックエンドを
+  回避するため1mm未満で調整されることがある。アプリは返却されたピクセルサイズをこの領域と
+  照合するため、要求をそのまま複製すると検査が無意味になる。
 - `infrared`、`multiExposure`
 - `hardwareExposureTime`、`brightnessAdjustment`、`contrastAdjustment`
 - `outputRawTIFF`

@@ -214,7 +214,8 @@ extension AppModel {
                                 + FlatbedScanRegionGeometry.outputAspectDiagnostic(
                                     width: result.width,
                                     height: result.height,
-                                    scanArea: appliedOptions.scanArea
+                                    scanArea: appliedOptions.scanArea,
+                                    requestedScanArea: opts.scanArea
                                 )
                         )
                     }

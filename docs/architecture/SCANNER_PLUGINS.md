@@ -144,7 +144,10 @@ A v2 spec violation ends the plugin immediately instead of waiting for the usual
 A v2 `result` must carry `appliedOptions`.
 
 - `deviceID`, `resolutionDPI`, `bitDepth`, `colorMode`, `filmType`
-- `scanArea`: `originXMM`, `originYMM`, `widthMM`, `heightMM`
+- `scanArea`: `originXMM`, `originYMM`, `widthMM`, `heightMM` — the area the plug-in actually
+  sent to the backend, not a copy of the request. A plug-in may adjust it by less than 1 mm to
+  work around a backend that miscomputes the scan size. The app checks the returned pixel size
+  against this area, so a copy of the request would defeat the check.
 - `infrared`, `multiExposure`
 - `hardwareExposureTime`, `brightnessAdjustment`, `contrastAdjustment`
 - `outputRawTIFF`

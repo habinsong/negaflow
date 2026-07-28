@@ -115,11 +115,19 @@ extension AppModel {
                 let flatbedRegion = flatbedRegions.indices.contains(ordinal - 1)
                     ? flatbedRegions[ordinal - 1]
                     : nil
+                // 백엔드는 요청 영역을 그대로 쓰지 못할 수 있다. 결과 픽셀은 요청이 아니라
+                // 실제로 적용된 영역과 대조해야 한다(프리뷰 경로와 같은 기준).
+                let verifiedScanArea: ScanArea?
+                switch result.appliedOptionsEvidence {
+                case .verified(let appliedOptions): verifiedScanArea = appliedOptions.scanArea
+                case .unknownLegacy: verifiedScanArea = nil
+                }
+                let comparisonScanArea = verifiedScanArea ?? requestedOptions.scanArea
                 if flatbedRegion?.source == .automatic,
                    !FlatbedScanRegionGeometry.outputMatchesPhysicalAspect(
                        width: result.width,
                        height: result.height,
-                       scanArea: requestedOptions.scanArea,
+                       scanArea: comparisonScanArea,
                        relativeTolerance: 0.02,
                        minimumPixelTolerance: 3
                    ) {
@@ -135,7 +143,8 @@ extension AppModel {
                             + FlatbedScanRegionGeometry.outputAspectDiagnostic(
                                 width: result.width,
                                 height: result.height,
-                                scanArea: requestedOptions.scanArea
+                                scanArea: comparisonScanArea,
+                                requestedScanArea: requestedOptions.scanArea
                             )
                     )
                 }
