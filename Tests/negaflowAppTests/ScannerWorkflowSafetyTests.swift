@@ -226,7 +226,10 @@ final class ScannerWorkflowSafetyTests: XCTestCase {
 
         XCTAssertEqual(backend.previewRequestCount, 0, "해상도를 명시한 프리뷰는 백엔드 프리뷰 경로로 보내지 않는다.")
         XCTAssertEqual(backend.fullRequests.map(\.resolution), [Resolution(300)])
-        XCTAssertEqual(backend.fullRequests.first?.bitDepth, .eight)
+        // 프리뷰도 현상 경로를 그대로 탄다. 프로필 없는 8bit TIFF는 감마 인코딩으로 읽히므로
+        // 선형 raw 백엔드(epson2 gamma=1.0)에서는 프리뷰가 흰색으로 붕떴다. 16bit를 지원하면
+        // 16bit로 요청해 "무프로필 16bit = linear" 규칙 안에 머무른다.
+        XCTAssertEqual(backend.fullRequests.first?.bitDepth, .sixteen)
         XCTAssertEqual(
             backend.fullRequests.first?.outputRawTIFF,
             true,

@@ -88,7 +88,12 @@ extension AppModel {
             var opts: ScanOptions
             if preview {
                 opts = ScanOptions.preview(scannerID: id, filmType: scanFilmType)
-                opts.bitDepth = capabilities.supports(depth: .eight) ? .eight : bitDepthChoice
+                // 프리뷰도 본 스캔과 같은 현상 경로를 탄다. 프로필 없는 8bit TIFF는 감마 인코딩으로
+                // 해석되므로, 선형 raw를 내보내는 백엔드(예: epson2 gamma=1.0)에서는 프리뷰가 흰색으로
+                // 붕뜬다. 16bit를 먼저 요청해 "무프로필 16bit = linear" 규칙 안에 머무르게 한다.
+                opts.bitDepth = capabilities.supports(depth: .sixteen)
+                    ? .sixteen
+                    : (capabilities.supports(depth: .eight) ? .eight : bitDepthChoice)
                 opts.colorMode = capabilities.supports(mode: .color) ? .color : colorModeChoice
                 if let bounds = capabilities.physicalScanAreaBounds {
                     opts.scanArea = bounds.maximum
