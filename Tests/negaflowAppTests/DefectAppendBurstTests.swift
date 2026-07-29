@@ -11,17 +11,12 @@ import XCTest
 ///  - 영역 결함 제거 는 세션 첫 검출에서 디코드한 원본을 세션 동안 재사용한다.
 @MainActor
 final class DefectAppendBurstTests: XCTestCase {
-    // cleaned-raw persist 가 사용자 머신의 실제/iCloud 폴더를 쓰지 않게 per-test temp 로 격리한다.
-    nonisolated(unsafe) private var cleanedRawIsolation: CleanedRawFolderIsolation?
 
     override func setUp() {
         super.setUp()
-        cleanedRawIsolation = CleanedRawFolderIsolation()
     }
 
     override func tearDown() {
-        cleanedRawIsolation?.restore()
-        cleanedRawIsolation = nil
         super.tearDown()
     }
 

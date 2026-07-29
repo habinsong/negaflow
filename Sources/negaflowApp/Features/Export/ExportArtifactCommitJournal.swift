@@ -83,12 +83,7 @@ enum ExportArtifactCommitJournal {
         if let uiTestRoot = launchConfiguration?.uiTestRoot {
             return uiTestRoot.appendingPathComponent("Library/ExportJournals", isDirectory: true)
         }
-        let base = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-            ?? fileManager.homeDirectoryForCurrentUser.appendingPathComponent(
-                "Library/Application Support",
-                isDirectory: true
-            )
-        return base
+        return AppStorageRoot.applicationSupport(fileManager: fileManager)
             .appendingPathComponent("negaflow", isDirectory: true)
             .appendingPathComponent("export-journals", isDirectory: true)
     }

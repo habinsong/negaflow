@@ -5,12 +5,9 @@ import Chromabase
 @MainActor
 final class DefectBakeTests: XCTestCase {
     private var tempDir: URL!
-    // cleaned-raw persist 가 사용자 머신의 실제/iCloud 폴더를 쓰지 않게 per-test temp 로 격리한다.
-    private var cleanedRawIsolation: CleanedRawFolderIsolation?
 
     override func setUp() async throws {
         try await super.setUp()
-        cleanedRawIsolation = CleanedRawFolderIsolation()
         tempDir = FileManager.default.temporaryDirectory
             .appendingPathComponent("negaflow-defect-persistence-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
@@ -19,8 +16,6 @@ final class DefectBakeTests: XCTestCase {
     override func tearDown() async throws {
         try? FileManager.default.removeItem(at: tempDir)
         tempDir = nil
-        cleanedRawIsolation?.restore()
-        cleanedRawIsolation = nil
         try await super.tearDown()
     }
 

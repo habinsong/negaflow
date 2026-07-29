@@ -13,8 +13,6 @@ final class ExportVerificationPerformanceTests: XCTestCase {
         guard ProcessInfo.processInfo.environment["NEGAFLOW_EXPORT_VERIFICATION_PERF"] == "1" else {
             throw XCTSkip("Set NEGAFLOW_EXPORT_VERIFICATION_PERF=1 to run the export verification benchmark.")
         }
-        let isolation = CleanedRawFolderIsolation()
-        defer { isolation.restore() }
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(
             "negaflow-export-verification-benchmark-\(UUID().uuidString)",
             isDirectory: true
@@ -104,8 +102,6 @@ final class ExportVerificationPerformanceTests: XCTestCase {
         guard ProcessInfo.processInfo.environment["NEGAFLOW_EXPORT_VERIFICATION_PERF"] == "1" else {
             throw XCTSkip("Set NEGAFLOW_EXPORT_VERIFICATION_PERF=1 to run the export verification benchmark.")
         }
-        let isolation = CleanedRawFolderIsolation()
-        defer { isolation.restore() }
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(
             "negaflow-export-transaction-benchmark-\(UUID().uuidString)",
             isDirectory: true

@@ -6,17 +6,12 @@ import ScannerKit
 @testable import negaflowApp
 
 final class AppModelFrameStoreTests: XCTestCase {
-    // cleaned-raw persist 가 사용자 머신의 실제/iCloud 폴더를 쓰지 않게 per-test temp 로 격리한다.
-    private var cleanedRawIsolation: CleanedRawFolderIsolation?
 
     override func setUp() {
         super.setUp()
-        cleanedRawIsolation = CleanedRawFolderIsolation()
     }
 
     override func tearDown() {
-        cleanedRawIsolation?.restore()
-        cleanedRawIsolation = nil
         super.tearDown()
     }
 

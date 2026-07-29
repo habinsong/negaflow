@@ -28,7 +28,11 @@ enum CleanedRawCacheFile {
     }
 
     static func defaultDirectoryURL(fileManager: FileManager = .default) -> URL {
-        if let path = UserDefaults.standard.string(forKey: customDirectoryDefaultsKey),
+        // 테스트 프로세스에서는 사용자가 지정한 폴더를 따르지 않는다. 그 값이 iCloud Drive 를
+        // 가리키면 스크래치 TIFF 가 사용자 클라우드를 오염시키고, dematerialize 된 플레이스홀더
+        // 때문에 디렉터리 목록이 비결정적이 된다. 프로세스별 격리 루트가 그 자리를 대신한다.
+        if !AppStorageRoot.isolatesTestProcess,
+           let path = UserDefaults.standard.string(forKey: customDirectoryDefaultsKey),
            !path.isEmpty {
             return URL(fileURLWithPath: path, isDirectory: true)
         }
@@ -36,9 +40,7 @@ enum CleanedRawCacheFile {
     }
 
     static func platformDefaultDirectoryURL(fileManager: FileManager = .default) -> URL {
-        let base = fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first
-            ?? fileManager.temporaryDirectory
-        return base
+        AppStorageRoot.caches(fileManager: fileManager)
             .appendingPathComponent("negaflow", isDirectory: true)
             .appendingPathComponent("cleaned-raw", isDirectory: true)
     }

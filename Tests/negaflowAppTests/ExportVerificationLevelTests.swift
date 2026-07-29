@@ -9,11 +9,9 @@ import ScannerKit
 @MainActor
 final class ExportVerificationLevelTests: XCTestCase {
     private var tempDirectory: URL!
-    private var cleanedRawIsolation: CleanedRawFolderIsolation?
 
     override func setUp() async throws {
         try await super.setUp()
-        cleanedRawIsolation = CleanedRawFolderIsolation()
         tempDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent("negaflow-export-verification-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: tempDirectory, withIntermediateDirectories: true)
@@ -24,8 +22,6 @@ final class ExportVerificationLevelTests: XCTestCase {
             try? FileManager.default.removeItem(at: tempDirectory)
         }
         tempDirectory = nil
-        cleanedRawIsolation?.restore()
-        cleanedRawIsolation = nil
         try await super.tearDown()
     }
 

@@ -87,11 +87,7 @@ enum DefectSidecarFile {
     }
 
     static func defaultDirectoryURL(fileManager: FileManager = .default) -> URL {
-        let base = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-            ?? fileManager.homeDirectoryForCurrentUser.appendingPathComponent(
-                "Library/Application Support", isDirectory: true
-            )
-        return base
+        AppStorageRoot.applicationSupport(fileManager: fileManager)
             .appendingPathComponent("negaflow", isDirectory: true)
             .appendingPathComponent("defects", isDirectory: true)
     }

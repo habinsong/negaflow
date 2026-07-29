@@ -9,12 +9,9 @@ import ImageIO
 final class ExportFrameSnapshotBuilderTests: XCTestCase {
     private var tempDirectory: URL!
     private var ownedCleanedCacheURLs: [URL] = []
-    // cleaned-raw persist 가 사용자 머신의 실제/iCloud 폴더를 쓰지 않게 per-test temp 로 격리한다.
-    private var cleanedRawIsolation: CleanedRawFolderIsolation?
 
     override func setUp() async throws {
         try await super.setUp()
-        cleanedRawIsolation = CleanedRawFolderIsolation()
         tempDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent("negaflow-export-builder-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: tempDirectory, withIntermediateDirectories: true)
@@ -29,8 +26,6 @@ final class ExportFrameSnapshotBuilderTests: XCTestCase {
         }
         ownedCleanedCacheURLs = []
         tempDirectory = nil
-        cleanedRawIsolation?.restore()
-        cleanedRawIsolation = nil
         try await super.tearDown()
     }
 
