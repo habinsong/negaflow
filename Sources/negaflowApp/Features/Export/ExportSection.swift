@@ -56,6 +56,14 @@ struct ExportSection: View {
                 }
             }
 
+            if !usesPaperLayout {
+                Picker(model.text(.exportSizeLabel), selection: $model.quickExportLongEdge) {
+                    ForEach(longEdgeOptions, id: \.self) { edge in
+                        Text(edge == 0 ? model.text(.exportFullSize) : "\(edge) \(model.text(.exportLongEdgeSuffix))").tag(edge)
+                    }
+                }
+            }
+
             quickExportFolderRow
 
             if let filename = model.quickExportNamingPreview() {

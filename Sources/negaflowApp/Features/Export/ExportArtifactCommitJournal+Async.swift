@@ -13,9 +13,12 @@ extension ExportArtifactCommitJournal {
         }.value
     }
 
-    static func completeAsync(transactionID: UUID) async throws {
+    static func completeAsync(
+        transactionID: UUID,
+        level: ExportVerificationLevel = .strict
+    ) async throws {
         try await Task.detached(priority: .userInitiated) {
-            try complete(transactionID: transactionID)
+            try complete(transactionID: transactionID, level: level)
         }.value
     }
 

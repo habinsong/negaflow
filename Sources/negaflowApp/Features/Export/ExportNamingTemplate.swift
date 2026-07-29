@@ -8,6 +8,11 @@ struct ExportNamingContext: Equatable {
     let frameName: String
     let preset: String
     let sequence: Int
+    /// 롤에 적어 둔 코드. 네거티브 봉투의 코드와 파일 이름을 맞추기 위한 토큰이다.
+    var rollCode: String = ""
+    /// 촬영 기록의 필름 이름과 카메라. 비어 있으면 토큰이 사라진다.
+    var film: String = ""
+    var camera: String = ""
 }
 
 enum ExportNamingTemplate {
@@ -15,7 +20,9 @@ enum ExportNamingTemplate {
     static let photoNameSequencePattern = "{name}-{sequence}"
     static let sequenceOnlyPattern = "{sequence}"
     static let maximumPatternBytes = 160
-    static let tokens = ["date", "roll", "frame", "name", "preset", "sequence"]
+    static let tokens = [
+        "date", "roll", "frame", "name", "preset", "sequence", "rollcode", "film", "camera",
+    ]
 
     static func usesSequence(_ pattern: String) -> Bool {
         normalized(pattern).contains("{sequence}")
@@ -54,6 +61,9 @@ enum ExportNamingTemplate {
             "name": context.frameName,
             "preset": context.preset,
             "sequence": padded(context.sequence),
+            "rollcode": context.rollCode,
+            "film": context.film,
+            "camera": context.camera,
         ]
         var rendered = normalized(pattern)
         for token in tokens {

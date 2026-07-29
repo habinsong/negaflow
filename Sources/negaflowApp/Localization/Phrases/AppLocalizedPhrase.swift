@@ -33,6 +33,8 @@ enum AppLocalizedPhrase: CaseIterable {
     case snapshotComparingFormat
     case snapshotNameFormat
     case exportingStatus
+    case exportDownloadingSourcesFormat
+    case exportSourceDownloadFailed
     case exportCompleteFormat
     case exportCompleteWithPairsFormat
     case exportDestinationConflict
@@ -199,6 +201,7 @@ enum AppLocalizedPhrase: CaseIterable {
     case flatbedFramesFormat
     case flatbedFrameFormat
     case flatbedAddFrame
+    case flatbedRemoveFrame
     case flatbedPreviewRequired
     case flatbedGeometryMismatch
     case multiExposure

@@ -71,7 +71,21 @@ enum ExportFrameWriter {
         }
         let stagedLayout = finalLayout.staged(in: stagingDirectory)
 
-        let stagedSourceURL = stagingDirectory.appendingPathComponent(
+        // 디코드 입력으로 쓸 원본 사본은 **원본과 같은 볼륨**의 임시 폴더에 만든다. 같은 볼륨이면
+        // APFS 클론이라 사실상 공짜지만, 예전처럼 대상 폴더 안에 두면 외장/네트워크로 내보낼 때
+        // 원본 전체가 그 볼륨으로 실제 복사됐다가 지워졌다(동기화 폴더면 업로드까지 유발).
+        // 산출물 스테이징은 원자적 rename 때문에 대상 폴더에 그대로 둔다.
+        let sourceStagingDirectory = try makeSourceStagingDirectory(
+            for: snapshot.rawScanURL,
+            fallback: stagingDirectory,
+            fileManager: fileManager
+        )
+        defer {
+            if sourceStagingDirectory != stagingDirectory {
+                try? fileManager.removeItem(at: sourceStagingDirectory)
+            }
+        }
+        let stagedSourceURL = sourceStagingDirectory.appendingPathComponent(
             ".negaflow-source-input"
                 + (snapshot.rawScanURL.pathExtension.isEmpty
                     ? ""
@@ -182,12 +196,34 @@ enum ExportFrameWriter {
             primaryOutputProfile: printerOutputProfile,
             writeMainFlatMaster: snapshot.writeMainFlatMaster
         )
-        let primaryArtifact = try RenderManifestArtifactInspector.inspect(
-            stagedLayout.outputURL,
-            format: snapshot.format,
-            expectedOutputProfileSHA256: printerOutputProfile?.profileSHA256
+        // 산출물 전체 해시는 사이드카(RenderManifest)가 그 값을 요구할 때와 strict 검증에서만
+        // 계산한다. 그 외에는 ICC/픽셀 크기만 확인하고, 커밋 직전 재확인은 파일 identity 로 한다
+        // (저널의 durable 기록은 promotePreparation 이 어차피 실제 해시로 남긴다).
+        let requiresArtifactIdentity = snapshot.writeSidecar
+            || snapshot.verificationLevel.rehashesOnRecheck
+        let primaryArtifact: RenderManifest.OutputArtifact?
+        if requiresArtifactIdentity {
+            primaryArtifact = try RenderManifestArtifactInspector.inspect(
+                stagedLayout.outputURL,
+                format: snapshot.format,
+                expectedOutputProfileSHA256: printerOutputProfile?.profileSHA256
+            )
+        } else {
+            primaryArtifact = nil
+            try RenderManifestArtifactInspector.validate(
+                stagedLayout.outputURL,
+                expectedOutputProfileSHA256: printerOutputProfile?.profileSHA256
+            )
+        }
+        // 재확인용 기준점. dev/inode 뿐 아니라 size/mtime/ctime 까지 담는 sourceFile 식별자를 쓴다 —
+        // 같은 inode 를 제자리에서 다시 쓴 경우도 잡아야 하기 때문이다.
+        let primaryFileIdentity = ExportArtifactFileIdentityInspector.sourceFile(
+            at: stagedLayout.outputURL
         )
         if var completedManifest = renderManifest {
+            guard let primaryArtifact else {
+                throw ChromabaseError.writeFailed("rendered artifact identity is unavailable")
+            }
             completedManifest.outputArtifact = primaryArtifact
             try completedManifest.validate()
             renderManifest = completedManifest
@@ -195,7 +231,8 @@ enum ExportFrameWriter {
         try writeOriginalRawIfNeeded(
             sourceURL: stagedSourceURL,
             expectedIdentity: snapshot.sourceIdentity,
-            to: stagedLayout.originalRawURL
+            to: stagedLayout.originalRawURL,
+            level: snapshot.verificationLevel
         )
         if snapshot.writeSidecar {
             try writeSidecars(
@@ -213,14 +250,30 @@ enum ExportFrameWriter {
             stagedSourceURL: stagedSourceURL
         )
         try validateStagedArtifacts(stagedLayout, fileManager: fileManager)
-        guard try RenderManifestArtifactInspector.inspect(
-            stagedLayout.outputURL,
-            format: snapshot.format,
-            expectedOutputProfileSHA256: printerOutputProfile?.profileSHA256
-        ) == primaryArtifact else {
-            throw ChromabaseError.writeFailed(
-                "rendered artifact changed after profile verification"
+        if snapshot.verificationLevel.rehashesOnRecheck {
+            guard let primaryArtifact,
+                  try RenderManifestArtifactInspector.inspect(
+                      stagedLayout.outputURL,
+                      format: snapshot.format,
+                      expectedOutputProfileSHA256: printerOutputProfile?.profileSHA256
+                  ) == primaryArtifact else {
+                throw ChromabaseError.writeFailed(
+                    "rendered artifact changed after profile verification"
+                )
+            }
+        } else {
+            // 해시 없이도 ICC/픽셀 크기는 다시 확인하고, 바이트 변경은 size/mtime/ctime 으로 잡는다.
+            try RenderManifestArtifactInspector.validate(
+                stagedLayout.outputURL,
+                expectedOutputProfileSHA256: printerOutputProfile?.profileSHA256
             )
+            guard let primaryFileIdentity,
+                  ExportArtifactFileIdentityInspector.sourceFile(at: stagedLayout.outputURL)
+                    == primaryFileIdentity else {
+                throw ChromabaseError.writeFailed(
+                    "rendered artifact changed after profile verification"
+                )
+            }
         }
         try ExportArtifactCommitJournal.promotePreparation(
             transactionID: commitTransactionID,
@@ -238,7 +291,8 @@ enum ExportFrameWriter {
                 transactionID: commitTransactionID,
                 stagedLayout: stagedLayout,
                 finalLayout: finalLayout,
-                fileManager: fileManager
+                fileManager: fileManager,
+                level: snapshot.verificationLevel
             )
             guard ExportArtifactCommitJournal.cleanupOwnedStaging(
                 transactionID: commitTransactionID,
@@ -262,16 +316,42 @@ enum ExportFrameWriter {
         )
     }
 
+    /// 검증된 스테이징 사본을 원본 pair 로 한 번 더 복사한다. standard 는 길이 일치로 판정하고
+    /// (저널이 곧 실제 해시를 남긴다), strict 는 사본 전체를 다시 해시한다.
     private static func writeOriginalRawIfNeeded(
         sourceURL: URL,
         expectedIdentity: RenderManifest.SourceIdentity,
-        to destination: URL?
+        to destination: URL?,
+        level: ExportVerificationLevel
     ) throws {
         guard let destination else { return }
         try FileManager.default.copyItem(at: sourceURL, to: destination)
+        if !level.rehashesOnRecheck {
+            let resolved = destination.resolvingSymlinksInPath()
+            let size = (try? resolved.resourceValues(forKeys: [.fileSizeKey]))?.fileSize
+            guard let size, Int64(size) == expectedIdentity.byteCount else {
+                throw ChromabaseError.writeFailed("original export pair identity mismatch")
+            }
+            return
+        }
         guard try RenderManifest.sourceIdentity(for: destination) == expectedIdentity else {
             throw ChromabaseError.writeFailed("original export pair identity mismatch")
         }
+    }
+
+    /// 원본과 같은 볼륨의 교체용 임시 폴더. 만들 수 없으면(읽기 전용 볼륨 등) 기존처럼
+    /// 산출물 스테이징 폴더를 그대로 쓴다 — 느려질 뿐 동작은 같다.
+    private static func makeSourceStagingDirectory(
+        for sourceURL: URL,
+        fallback: URL,
+        fileManager: FileManager
+    ) throws -> URL {
+        (try? fileManager.url(
+            for: .itemReplacementDirectory,
+            in: .userDomainMask,
+            appropriateFor: sourceURL.resolvingSymlinksInPath(),
+            create: true
+        )) ?? fallback
     }
 
     private static func renderContext() -> CIContext {

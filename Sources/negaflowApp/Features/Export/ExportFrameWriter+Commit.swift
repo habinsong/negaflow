@@ -36,14 +36,16 @@ extension ExportFrameWriter {
         transactionID: UUID,
         stagedLayout: ExportArtifactLayout,
         finalLayout: ExportArtifactLayout,
-        fileManager: FileManager
+        fileManager: FileManager,
+        level: ExportVerificationLevel = .strict
     ) throws {
         for (stagedURL, finalURL) in zip(stagedLayout.allURLs, finalLayout.allURLs) {
             try ExportArtifactCommitJournal.publish(
                 transactionID: transactionID,
                 stagedURL: stagedURL,
                 finalURL: finalURL,
-                fileManager: fileManager
+                fileManager: fileManager,
+                level: level
             )
         }
     }

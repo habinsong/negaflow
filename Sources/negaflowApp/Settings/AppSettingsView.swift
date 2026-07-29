@@ -87,10 +87,28 @@ struct AppSettingsView: View {
                         Text(dpi == 0 ? model.text(.settingsSourceDPI) : "\(dpi) dpi").tag(dpi)
                     }
                 }
+                Picker(model.text(.settingsQuickExportSize), selection: $model.quickExportLongEdge) {
+                    ForEach([0, 1024, 2048, 4096, 6000], id: \.self) { edge in
+                        Text(edge == 0
+                            ? model.text(.exportFullSize)
+                            : "\(edge) \(model.text(.exportLongEdgeSuffix))").tag(edge)
+                    }
+                }
                 LabeledContent(model.text(.settingsQuickExportFolder)) {
                     Text(model.quickExportFolderDisplay)
                         .foregroundStyle(.secondary)
                 }
+
+                Picker(
+                    model.text(.settingsExportVerification),
+                    selection: $model.exportVerificationLevel
+                ) {
+                    Text(model.text(.settingsExportVerificationStandard))
+                        .tag(ExportVerificationLevel.standard)
+                    Text(model.text(.settingsExportVerificationStrict))
+                        .tag(ExportVerificationLevel.strict)
+                }
+                .help(model.text(.settingsExportVerificationHelp))
 
                 ColorManagementSettingsSection()
             }

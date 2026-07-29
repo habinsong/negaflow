@@ -104,8 +104,10 @@ extension AppModel {
             releasePrintPackageArtifacts(artifactLayout)
         }
 
+        let verificationLevel = exportVerificationLevel
         do {
             var plans: [PrintPackageFramePlan] = []
+            var sourceBaselines: [String: ExportFrameSourceVerification] = [:]
             plans.reserveCapacity(selectedFrames.count)
             for frame in selectedFrames {
                 guard await prepareCleanedRawForExport(frame, format: format),
@@ -121,6 +123,7 @@ extension AppModel {
                     throw ChromabaseError.loadFailed("print package source changed before snapshot")
                 }
                 let sourceIdentity = sourceVerification.sourceIdentity
+                sourceBaselines[sourceURL.standardizedFileURL.path] = sourceVerification
                 guard ownsFrame(frame),
                       !frame.isPreviewScan,
                       frame.rawScanURL.standardizedFileURL == sourceURL.standardizedFileURL else {
@@ -141,7 +144,9 @@ extension AppModel {
                     scannerModel: scanSource?.device.displayName,
                     backendUsed: scanSource?.backend.type.rawValue,
                     scannerMake: scanSource?.device.vendor,
-                    scannerDeviceModel: scanSource?.device.model
+                    scannerDeviceModel: scanSource?.device.model,
+                    sourceFileIdentity: sourceVerification.fileIdentity,
+                    verificationLevel: verificationLevel
                 )
                 guard let trackingIdentity = build.trackingIdentity,
                       build.sourceGeneration.matchesCurrentState(
@@ -188,9 +193,12 @@ extension AppModel {
             let sourceGenerations = plans.map {
                 ExportFrameSourceGeneration(snapshot: $0.snapshot)
             }
+            let capturedSourceBaselines = sourceBaselines
             let artifactGenerations = Array(zip(result.outputURLs, result.outputIdentities))
             async let renderedSourceVerifications = ExportFrameSourceGeneration.currentVerifications(
-                for: sourceGenerations
+                for: sourceGenerations,
+                level: verificationLevel,
+                baselines: capturedSourceBaselines
             )
             async let renderedArtifactsMatch: Bool = Task.detached(priority: .userInitiated) {
                 artifactGenerations.allSatisfy { url, identity in
@@ -235,7 +243,9 @@ extension AppModel {
                 throw error
             }
             let catalogSourceVerifications = await ExportFrameSourceGeneration.currentVerifications(
-                for: sourceGenerations
+                for: sourceGenerations,
+                level: verificationLevel,
+                baselines: capturedSourceBaselines
             )
             guard catalogSourceVerifications.count == plans.count,
                   zip(plans, catalogSourceVerifications).allSatisfy({ pair in
@@ -295,7 +305,9 @@ extension AppModel {
             guard acknowledgeCommittedExport(transactionID: result.transactionID) else { return }
             guard await finalizeCommittedExport(transactionID: result.transactionID) else { return }
             let completedSourceVerifications = await ExportFrameSourceGeneration.currentVerifications(
-                for: sourceGenerations
+                for: sourceGenerations,
+                level: verificationLevel,
+                baselines: capturedSourceBaselines
             )
             for (sourceIndex, base) in result.estimatedBases where plans.indices.contains(sourceIndex) {
                 let plan = plans[sourceIndex]

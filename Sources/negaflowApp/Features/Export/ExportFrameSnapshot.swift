@@ -52,6 +52,10 @@ struct ExportFrameSnapshot: @unchecked Sendable {
     let sourceMetadataSHA256: String?
     let cleanedRawFrameID: UUID?
     let cleanedRawIdentity: DefectRecipeIdentity?
+    /// `sourceIdentity` 를 계산한 시점의 원본 stat identity(dev/inode/size/mtime/ctime).
+    /// standard 검증에서 "그 뒤로 바뀌지 않았다"를 전체 재해시 없이 판정하는 기준점이다.
+    var sourceFileIdentity: ExportSourceFileIdentity?
+    var verificationLevel: ExportVerificationLevel = .default
 }
 
 struct ExportFrameResult: @unchecked Sendable {

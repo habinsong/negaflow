@@ -14,6 +14,10 @@ extension AppModel {
             frame.displayName(language: appLanguage)
         )
         let fallback = frameName.isEmpty ? "frame\(frame.scanIndex)" : frameName
+        let shot = frame.appMetadataOverlay?.filmShot
+        let camera = [shot?.cameraMake, shot?.cameraModel]
+            .compactMap { $0 }
+            .joined(separator: " ")
         let context = ExportNamingContext(
             date: date,
             timeZone: timeZone,
@@ -21,7 +25,10 @@ extension AppModel {
             frameIndex: frame.presentationIndex,
             frameName: fallback,
             preset: recipeIdentity?.presetName ?? frame.preset?.id ?? "manual",
-            sequence: sequence
+            sequence: sequence,
+            rollCode: rollRecord(for: frame)?.code ?? "",
+            film: shot?.filmStock ?? "",
+            camera: camera
         )
         return ExportNamingTemplate.render(namingTemplate, context: context) ?? fallback
     }

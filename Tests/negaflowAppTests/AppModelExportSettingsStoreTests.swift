@@ -41,7 +41,8 @@ final class AppModelExportSettingsStoreTests: XCTestCase {
         store.exportNamingTemplate = "{date}-{roll}-{frame}-{sequence}"
         store.exportSequenceStart = 42
         store.quickExportFormat = .png
-        store.quickExportDPI = 150
+        store.quickExportDPI = 300
+        store.quickExportLongEdge = 4096
         let profileData = SoftProof.profile(for: .displayP3)?.iccData
         store.softProofICCProfileData = profileData
         store.softProofICCProfileName = "Display P3 Test"
@@ -64,7 +65,8 @@ final class AppModelExportSettingsStoreTests: XCTestCase {
         XCTAssertEqual(reloaded.exportNamingTemplate, "{date}-{roll}-{frame}-{sequence}")
         XCTAssertEqual(reloaded.exportSequenceStart, 42)
         XCTAssertEqual(reloaded.quickExportFormat, .png)
-        XCTAssertEqual(reloaded.quickExportDPI, 150)
+        XCTAssertEqual(reloaded.quickExportDPI, 300)
+        XCTAssertEqual(reloaded.quickExportLongEdge, 4096)
         XCTAssertEqual(reloaded.softProofICCProfileData, profileData)
         XCTAssertEqual(reloaded.softProofICCProfileName, "Display P3 Test")
         XCTAssertTrue(reloaded.destinationGamutWarningEnabled)
@@ -97,7 +99,32 @@ final class AppModelExportSettingsStoreTests: XCTestCase {
         XCTAssertEqual(store.exportNamingTemplate, ExportNamingTemplate.defaultPattern)
         XCTAssertEqual(store.exportSequenceStart, 1)
         XCTAssertEqual(store.quickExportFormat, .jpeg)
+        XCTAssertEqual(store.quickExportDPI, ExportSettingsStore.defaultQuickExportDPI)
+        XCTAssertEqual(store.quickExportLongEdge, ExportSettingsStore.defaultQuickExportLongEdge)
+    }
+
+    /// 새 기본값은 키가 없을 때만 적용한다 — 사용자가 이미 고른 값(원본 크기/원본 DPI 포함)을
+    /// 업데이트가 조용히 덮어쓰면 안 된다.
+    func testStoredQuickExportSizeAndDPISurviveNewDefaults() {
+        defaults.set(0, forKey: "export.quick.dpi")
+        defaults.set(0, forKey: "export.quick.longEdge")
+
+        let store = ExportSettingsStore(defaults: defaults)
+
         XCTAssertEqual(store.quickExportDPI, 0)
+        XCTAssertEqual(store.quickExportLongEdge, 0)
+
+        let model = AppModel(exportSettingsStore: store)
+        XCTAssertNil(model.quickExportOptions.longEdge)
+        XCTAssertEqual(model.quickExportOptions.dpi, 0)
+    }
+
+    func testNegativeStoredQuickExportSizeIsClampedToFullSize() {
+        defaults.set(-2048, forKey: "export.quick.longEdge")
+
+        let store = ExportSettingsStore(defaults: defaults)
+
+        XCTAssertEqual(store.quickExportLongEdge, 0)
     }
 
     func testAppModelFacadePublishesAndBuildsExportOptions() {
@@ -138,6 +165,10 @@ final class AppModelExportSettingsStoreTests: XCTestCase {
         XCTAssertTrue(model.exportWriteOriginalRaw)
         XCTAssertEqual(model.quickExportOptions.colorSpace, .sRGB)
         XCTAssertEqual(model.quickExportOptions.dpi, 72)
+        XCTAssertEqual(
+            model.quickExportOptions.longEdge,
+            ExportSettingsStore.defaultQuickExportLongEdge
+        )
         XCTAssertEqual(model.quickExportOptions.metadataPolicy, .minimal)
         XCTAssertEqual(model.quickExportOptions.outputSharpening, 0)
         XCTAssertGreaterThanOrEqual(changeCount, 1)

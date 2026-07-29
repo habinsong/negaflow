@@ -116,6 +116,14 @@ extension AppModel {
         Task { await runExportBatch(plans, maximumConcurrent: 2) }
     }
 
+    /// 배치 전체가 쓸 원본을 미리 한 번에 내려받는다. 장마다 멈추는 대신 앞에서 한 구간으로 모은다.
+    func prefetchExportBatchSources(_ plans: [ExportBatchPlan]) async -> Bool {
+        await materializeExportSources(
+            plans.map(\.frame.rawScanURL),
+            reportsGlobalStatus: true
+        )
+    }
+
     func runExportBatch(
         _ plans: [ExportBatchPlan],
         maximumConcurrent: Int
@@ -125,6 +133,10 @@ extension AppModel {
             return
         }
         var checkpointPersistenceFailed = false
+        guard await prefetchExportBatchSources(plans) else {
+            exportBatchStore.finish()
+            return
+        }
         await ExportBatchScheduler.run(plans, maximumConcurrent: maximumConcurrent) { [weak self] plan in
             guard let self else { return }
             guard await exportBatchStore.awaitSchedulingPermission() else { return }

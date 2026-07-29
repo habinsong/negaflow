@@ -183,6 +183,16 @@ extension AppModel {
         set { exportSettingsStore.quickExportDPI = newValue }
     }
 
+    var quickExportLongEdge: Int {
+        get { exportSettingsStore.quickExportLongEdge }
+        set { exportSettingsStore.quickExportLongEdge = max(0, newValue) }
+    }
+
+    var exportVerificationLevel: ExportVerificationLevel {
+        get { exportSettingsStore.exportVerificationLevel }
+        set { exportSettingsStore.exportVerificationLevel = newValue }
+    }
+
     var quickExportFolderPath: String? {
         get { diskStorage.quickExportPath }
         set { diskStorage.quickExportPath = newValue }
@@ -246,7 +256,11 @@ extension AppModel {
     }
 
     var quickExportOptions: ExportOptions {
-        ExportOptions(colorSpace: .sRGB, dpi: quickExportDPI, longEdge: nil)
+        ExportOptions(
+            colorSpace: .sRGB,
+            dpi: quickExportDPI,
+            longEdge: quickExportLongEdge > 0 ? quickExportLongEdge : nil
+        )
     }
 
     var quickExportFolderURL: URL { diskStorage.quickExportURL }

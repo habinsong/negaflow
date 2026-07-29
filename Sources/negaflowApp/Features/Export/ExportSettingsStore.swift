@@ -32,9 +32,18 @@ final class ExportSettingsStore: ObservableObject {
         static let exportOutputSharpeningMedium = "export.outputSharpeningMedium"
         static let quickExportFormat = "export.quick.format"
         static let quickExportDPI = "export.quick.dpi"
+        static let quickExportLongEdge = "export.quick.longEdge"
+        static let exportVerificationLevel = "export.verificationLevel"
         // 빠른 내보내기 폴더 경로는 DiskStorageStore("disk.quickExportFolder")로 이관됐다.
         // 구키("export.quick.folder")는 DiskStorageStore 가 최초 실행 시 이어받는다.
     }
+
+    // 빠른 내보내기 기본값. 화면 공유용 한 장을 즉시 뽑는 용도이므로 원본 크기가 아니라 긴 변
+    // 2048px 로 줄여 인코드/쓰기/업로드 비용을 낮춘다(현상은 풀 해상도로 하고 마지막에 축소하므로
+    // 화질은 슈퍼샘플링된 결과다). DPI 는 픽셀을 리샘플하지 않는 메타데이터/샤픈 기준값이며,
+    // OutputSharpening 의 screen 기준 DPI(144)에 가장 가까운 150 을 기본으로 둔다.
+    static let defaultQuickExportLongEdge = 2048
+    static let defaultQuickExportDPI = 150
 
     private let defaults: UserDefaults
 
@@ -133,8 +142,16 @@ final class ExportSettingsStore: ObservableObject {
     @Published var quickExportFormat: ExportFormat = .jpeg {
         didSet { defaults.set(quickExportFormat.rawValue, forKey: Keys.quickExportFormat) }
     }
-    @Published var quickExportDPI: Int = 0 {
+    @Published var quickExportDPI: Int = ExportSettingsStore.defaultQuickExportDPI {
         didSet { defaults.set(quickExportDPI, forKey: Keys.quickExportDPI) }
+    }
+    @Published var quickExportLongEdge: Int = ExportSettingsStore.defaultQuickExportLongEdge {
+        didSet { defaults.set(quickExportLongEdge, forKey: Keys.quickExportLongEdge) }
+    }
+    @Published var exportVerificationLevel: ExportVerificationLevel = .default {
+        didSet {
+            defaults.set(exportVerificationLevel.rawValue, forKey: Keys.exportVerificationLevel)
+        }
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -227,7 +244,17 @@ final class ExportSettingsStore: ObservableObject {
            value == .jpeg || value == .png {
             quickExportFormat = value
         }
-        quickExportDPI = defaults.integer(forKey: Keys.quickExportDPI)
+        // 저장된 값이 있으면 그대로 존중한다 — 사용자가 고른 값을 새 기본값으로 덮어쓰지 않는다.
+        if defaults.object(forKey: Keys.quickExportDPI) != nil {
+            quickExportDPI = max(0, defaults.integer(forKey: Keys.quickExportDPI))
+        }
+        if defaults.object(forKey: Keys.quickExportLongEdge) != nil {
+            quickExportLongEdge = max(0, defaults.integer(forKey: Keys.quickExportLongEdge))
+        }
+        if let raw = defaults.string(forKey: Keys.exportVerificationLevel),
+           let value = ExportVerificationLevel(rawValue: raw) {
+            exportVerificationLevel = value
+        }
         if exportFormat == .rawScanTIFF {
             exportLongEdge = 0
             exportTIFFCompression = .none

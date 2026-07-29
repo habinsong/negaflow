@@ -324,7 +324,8 @@ enum ExportArtifactCommitJournal {
     static func complete(
         transactionID: UUID,
         in directory: URL = defaultDirectoryURL(),
-        fileManager: FileManager = .default
+        fileManager: FileManager = .default,
+        level: ExportVerificationLevel = .strict
     ) throws {
         let journalURL = url(for: transactionID, in: directory)
         guard fileManager.fileExists(atPath: journalURL.path) else { return }
@@ -335,7 +336,9 @@ enum ExportArtifactCommitJournal {
         )
         guard let record = loadValidRecord(at: journalURL, fileManager: fileManager),
               record.effectiveState == .committed,
-              committedArtifactsAreIntact(record, fileManager: fileManager) else {
+              level.rehashesOnRecheck
+                ? committedArtifactsAreIntact(record, fileManager: fileManager)
+                : committedArtifactOwnershipIsIntact(record) else {
             throw ChromabaseError.writeFailed("committed export artifacts changed")
         }
         try fileManager.removeItem(at: journalURL)
@@ -411,9 +414,13 @@ enum ExportArtifactCommitJournal {
         stagedURL: URL,
         finalURL: URL,
         in directory: URL = defaultDirectoryURL(),
-        fileManager: FileManager = .default
+        fileManager: FileManager = .default,
+        level: ExportVerificationLevel = .strict
     ) throws {
         let journalURL = url(for: transactionID, in: directory)
+        // `artifact.identity` 는 promotePreparation 이 실제 해시로 남긴 durable 기록이다.
+        // standard 는 그 기록을 만든 뒤 파일이 바뀌지 않았음을 stat identity(dev/inode/birthtime)로
+        // 확인하고, strict 는 여기서도 전체 바이트를 다시 해시한다.
         guard let record = loadValidRecord(at: journalURL, fileManager: fileManager),
               record.effectiveState == .published,
               let artifact = record.artifacts.first(where: {
@@ -423,14 +430,16 @@ enum ExportArtifactCommitJournal {
               let expectedFileIdentity = artifact.stagedFileIdentity,
               ExportArtifactFileIdentityInspector.regularFile(at: stagedURL)
                 == expectedFileIdentity,
-              (try? RenderManifest.sourceIdentity(for: stagedURL)) == artifact.identity,
+              !level.rehashesOnRecheck
+                || (try? RenderManifest.sourceIdentity(for: stagedURL)) == artifact.identity,
               !ExportArtifactFileIdentityInspector.entryExists(at: finalURL) else {
             throw ChromabaseError.writeFailed("export artifact ownership changed before publish")
         }
         try ExportArtifactFileOperations.moveExclusively(from: stagedURL, to: finalURL)
         guard ExportArtifactFileIdentityInspector.regularFile(at: finalURL)
                 == expectedFileIdentity,
-              (try? RenderManifest.sourceIdentity(for: finalURL)) == artifact.identity else {
+              !level.rehashesOnRecheck
+                || (try? RenderManifest.sourceIdentity(for: finalURL)) == artifact.identity else {
             throw ChromabaseError.writeFailed("export artifact ownership changed during publish")
         }
     }

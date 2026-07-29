@@ -328,7 +328,8 @@ extension AppModel {
                 try await completion(transactionID)
             } else {
                 try await ExportArtifactCommitJournal.completeAsync(
-                    transactionID: transactionID
+                    transactionID: transactionID,
+                    level: exportVerificationLevel
                 )
             }
             return true
@@ -373,6 +374,30 @@ extension AppModel {
 
     func releaseExportArtifacts(_ layout: ExportArtifactLayout) {
         reservedExportArtifactPaths.subtract(layout.standardizedPaths)
+    }
+
+    /// iCloud 가 로컬 사본을 내린 원본을 먼저 받아둔다. 받는 동안 무엇을 기다리는지 상태로 알린다.
+    /// 로컬 파일만 있으면 즉시 true 를 돌려주므로 일반 경로에는 비용이 없다.
+    @discardableResult
+    func materializeExportSources(
+        _ urls: [URL],
+        reportsGlobalStatus: Bool
+    ) async -> Bool {
+        guard !ExportSourceMaterialization.evictedSources(among: urls).isEmpty else { return true }
+        let ready = await ExportSourceMaterialization.materialize(urls) { [weak self] progress in
+            guard reportsGlobalStatus else { return }
+            Task { @MainActor in
+                self?.statusMessage = self?.text(
+                    AppLocalizedPhrase.exportDownloadingSourcesFormat,
+                    "\(progress.ready)",
+                    "\(progress.total)"
+                ) ?? ""
+            }
+        }
+        if !ready, reportsGlobalStatus {
+            statusMessage = text(AppLocalizedPhrase.exportSourceDownloadFailed)
+        }
+        return ready
     }
 
     func prepareCleanedRawForExport(_ frame: ScanFrame, format: ExportFormat) async -> Bool {

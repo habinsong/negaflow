@@ -77,7 +77,12 @@ enum AppLocalizedText: CaseIterable {
     case settingsQuickExportFormat
     case settingsQuickExportDPI
     case settingsQuickExportFolder
+    case settingsQuickExportSize
     case settingsSourceDPI
+    case settingsExportVerification
+    case settingsExportVerificationStandard
+    case settingsExportVerificationStrict
+    case settingsExportVerificationHelp
     case shortcutKeyField
     case shortcutReset
     case shortcutResetAll

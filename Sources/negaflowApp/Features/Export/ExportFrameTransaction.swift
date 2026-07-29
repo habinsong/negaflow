@@ -48,6 +48,18 @@ extension AppModel {
             releaseExportArtifacts(layout)
         }
 
+        // 원본이 iCloud 에서 축출됐다면 여기서 받아둔다 — 그러지 않으면 첫 읽기에서 아무 표시 없이
+        // 다운로드가 끝날 때까지 멈춘다.
+        guard await materializeExportSources(
+            [frame.rawScanURL],
+            reportsGlobalStatus: reportsGlobalStatus
+        ) else {
+            trace.fail(code: "source_download_failed")
+            return failExport(
+                text(AppLocalizedPhrase.exportSourceDownloadFailed),
+                reportsGlobalStatus: false
+            )
+        }
         guard await prepareCleanedRawForExport(frame, format: format) else {
             trace.fail(code: "defect_recipe_unavailable")
             return failExport(
@@ -63,6 +75,7 @@ extension AppModel {
             )
         }
 
+        let verificationLevel = exportVerificationLevel
         do {
             let sourceURL = frame.rawScanURL
             guard let sourceVerification = await ExportFrameSourceGeneration.capture(
@@ -71,6 +84,10 @@ extension AppModel {
                 throw ChromabaseError.loadFailed("export source changed before snapshot")
             }
             let sourceIdentity = sourceVerification.sourceIdentity
+            // 이 세대를 고정한 stat identity. 이후 재확인은 이걸 기준으로 한다(standard).
+            let sourceBaselines = [
+                sourceURL.standardizedFileURL.path: sourceVerification,
+            ]
             guard ownsFrame(frame), !frame.isPreviewScan,
                   frame.rawScanURL.standardizedFileURL == sourceURL.standardizedFileURL else {
                 throw ChromabaseError.loadFailed("export source changed before snapshot")
@@ -92,7 +109,9 @@ extension AppModel {
                 scannerModel: scanSource?.device.displayName,
                 backendUsed: scanSource?.backend.type.rawValue,
                 scannerMake: scanSource?.device.vendor,
-                scannerDeviceModel: scanSource?.device.model
+                scannerDeviceModel: scanSource?.device.model,
+                sourceFileIdentity: sourceVerification.fileIdentity,
+                verificationLevel: verificationLevel
             )
             guard let trackingIdentity = plan.trackingIdentity,
                   plan.sourceGeneration.matchesCurrentState(
@@ -109,7 +128,9 @@ extension AppModel {
                 try ExportFrameWriter.write(plan.snapshot)
             }.value
             let renderedSourceVerification = await ExportFrameSourceGeneration.currentVerifications(
-                for: [plan.sourceGeneration]
+                for: [plan.sourceGeneration],
+                level: verificationLevel,
+                baselines: sourceBaselines
             ).first ?? nil
             guard plan.sourceGeneration.matchesCurrentState(
                 of: frame,
@@ -148,7 +169,9 @@ extension AppModel {
                 throw error
             }
             let catalogSourceVerification = await ExportFrameSourceGeneration.currentVerifications(
-                for: [plan.sourceGeneration]
+                for: [plan.sourceGeneration],
+                level: verificationLevel,
+                baselines: sourceBaselines
             ).first ?? nil
             guard plan.sourceGeneration.matchesCurrentState(
                 of: frame,
@@ -217,7 +240,9 @@ extension AppModel {
                 return .failed(message: text(AppLocalizedPhrase.libraryCatalogBlockedStatus))
             }
             let completedSourceVerification = await ExportFrameSourceGeneration.currentVerifications(
-                for: [plan.sourceGeneration]
+                for: [plan.sourceGeneration],
+                level: verificationLevel,
+                baselines: sourceBaselines
             ).first ?? nil
             if let base = result.base {
                 ExportFilmBaseCacheCommitter.apply(

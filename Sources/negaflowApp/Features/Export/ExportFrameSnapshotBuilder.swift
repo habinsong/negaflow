@@ -120,12 +120,16 @@ struct ExportFrameSourceGeneration: Equatable, Sendable {
         at rawScanURL: URL
     ) async -> ExportFrameSourceVerification? {
         await Task.detached(priority: .userInitiated) {
-            verify(rawScanURL.standardizedFileURL)
+            verify(rawScanURL.standardizedFileURL, level: .strict, baseline: nil)
         }.value
     }
 
+    /// `baselines`(경로 → 최초 capture 결과)를 주면 standard 수준에서 stat 이 그대로인 원본의
+    /// 전체 재해시를 건너뛴다. stat 이 하나라도 다르면 그 경로만 실제 해시로 판정한다.
     static func currentVerifications(
-        for generations: [Self]
+        for generations: [Self],
+        level: ExportVerificationLevel = .strict,
+        baselines: [String: ExportFrameSourceVerification] = [:]
     ) async -> [ExportFrameSourceVerification?] {
         await Task.detached(priority: .userInitiated) {
             var verificationsByPath: [String: ExportFrameSourceVerification] = [:]
@@ -133,7 +137,11 @@ struct ExportFrameSourceGeneration: Equatable, Sendable {
             for generation in generations {
                 let path = generation.rawScanURL.path
                 guard verificationsByPath[path] == nil, !failedPaths.contains(path) else { continue }
-                if let verification = verify(generation.rawScanURL) {
+                if let verification = verify(
+                    generation.rawScanURL,
+                    level: level,
+                    baseline: baselines[path]
+                ) {
                     verificationsByPath[path] = verification
                 } else {
                     failedPaths.insert(path)
@@ -143,9 +151,23 @@ struct ExportFrameSourceGeneration: Equatable, Sendable {
         }.value
     }
 
-    private static func verify(_ url: URL) -> ExportFrameSourceVerification? {
-        guard let fileIdentityBefore = ExportArtifactFileIdentityInspector.sourceFile(at: url),
-              let sourceIdentity = try? RenderManifest.sourceIdentity(for: url),
+    private static func verify(
+        _ url: URL,
+        level: ExportVerificationLevel,
+        baseline: ExportFrameSourceVerification?
+    ) -> ExportFrameSourceVerification? {
+        guard let fileIdentityBefore = ExportArtifactFileIdentityInspector.sourceFile(at: url) else {
+            return nil
+        }
+        // stat identity 는 dev/inode/size/mtime/ctime 을 모두 포함한다. 내용을 바꾸면 커널이
+        // mtime 과 ctime 을 갱신하고, mtime 을 되돌리는 utimes 호출 자체가 다시 ctime 을 갱신한다.
+        // 전부 동일하면 baseline 해시를 계산한 그 바이트 그대로라는 뜻이므로 재해시가 없어도 된다.
+        if !level.rehashesOnRecheck,
+           let baseline,
+           baseline.fileIdentity == fileIdentityBefore {
+            return baseline
+        }
+        guard let sourceIdentity = try? RenderManifest.sourceIdentity(for: url),
               let fileIdentityAfter = ExportArtifactFileIdentityInspector.sourceFile(at: url),
               fileIdentityAfter == fileIdentityBefore else { return nil }
         return ExportFrameSourceVerification(
@@ -245,7 +267,9 @@ enum ExportFrameSnapshotBuilder {
         scannerDeviceModel: String? = nil,
         metadataDate: Date = Date(),
         appVersion: String = NegaflowProductVersion.applicationVersion(),
-        rendererVersion: String = NegaflowProductVersion.rendererVersion
+        rendererVersion: String = NegaflowProductVersion.rendererVersion,
+        sourceFileIdentity: ExportSourceFileIdentity? = nil,
+        verificationLevel: ExportVerificationLevel = .default
     ) -> ExportFrameBuildPlan {
         var effectiveParams = frame.preset.map { DevelopParameters(preset: $0, overrides: frame.params) } ?? frame.params
         effectiveParams.filmType = frame.filmType
@@ -309,7 +333,9 @@ enum ExportFrameSnapshotBuilder {
             appMetadataOverlay: frame.appMetadataOverlay,
             sourceMetadataSHA256: frame.sourceMetadata?.appMetadataIdentitySHA256(),
             cleanedRawFrameID: cleanedIdentity == nil ? nil : frame.id,
-            cleanedRawIdentity: cleanedIdentity
+            cleanedRawIdentity: cleanedIdentity,
+            sourceFileIdentity: sourceFileIdentity,
+            verificationLevel: verificationLevel
         )
         return ExportFrameBuildPlan(
             snapshot: snapshot,
