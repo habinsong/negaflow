@@ -82,11 +82,14 @@ extension AppModel {
         let physicalRollID = requestedRollID == LibraryRoll.unassignedID
             ? nil
             : requestedRollID
-        return rollStore.assignNewPersistentFrameIDs(
+        guard rollStore.assignNewPersistentFrameIDs(
             newFrames.map(\.id),
             toPhysicalRollID: physicalRollID,
             unassignedCreatedAt: createdAt
-        )
+        ) else { return false }
+        // 롤에 적어 둔 카메라·렌즈·필름을 새 프레임의 빈 칸에 채운다.
+        if let physicalRollID { fillFramesFromRollRecord(rollID: physicalRollID) }
+        return true
     }
 
     /// 원본과 그 가상 사본 전체를 같은 롤로 옮긴다. 전역 프레임 배열과 파일·scanIndex는
@@ -113,11 +116,13 @@ extension AppModel {
             return false
         }
         let createdAt = family.map(\.scannedAt).min() ?? frame.scannedAt
-        return rollStore.moveFrameFamily(
+        guard rollStore.moveFrameFamily(
             family.map(\.id),
             toPhysicalRollID: physicalRollID,
             unassignedCreatedAt: createdAt
-        )
+        ) else { return false }
+        if let physicalRollID { fillFramesFromRollRecord(rollID: physicalRollID) }
+        return true
     }
 
     func rollStateSnapshot() -> RollStoreSnapshot {

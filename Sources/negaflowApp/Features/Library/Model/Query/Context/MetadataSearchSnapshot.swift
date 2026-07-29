@@ -23,19 +23,26 @@ struct MetadataSearchSnapshot {
             contentCalendarDate = nil
             contentCalendarDateInterval = nil
             hasContentDateMetadata = false
-            camera = []
-            lens = []
+            camera = Self.shotCameraValues(overlay?.filmShot)
+            lens = [overlay?.filmShot?.lensModel].compactMap { $0 }
             keywords = overlay?.keywords ?? []
             titleDescription = [overlay?.title, overlay?.caption].compactMap { $0 }
-            allSearchable = titleDescription + keywords + [overlay?.copyright].compactMap { $0 }
+            allSearchable = Self.stableUnique(
+                titleDescription + keywords + [overlay?.copyright].compactMap { $0 }
+                    + camera + lens + Self.shotSearchValues(overlay?.filmShot)
+            )
             var fields: Set<LibraryMetadataField> = []
             if overlay?.title != nil { fields.insert(.title) }
             if overlay?.caption != nil { fields.insert(.description) }
             if !(overlay?.keywords.isEmpty ?? true) { fields.insert(.keywords) }
+            if !camera.isEmpty { fields.insert(.camera) }
+            if !lens.isEmpty { fields.insert(.lens) }
             if overlay != nil { fields.insert(.descriptive) }
             presentFields = fields
             unknownFields = Set(LibraryMetadataField.allCases).subtracting(fields)
-            var textUnknown: Set<LibraryTextField> = [.camera, .lens]
+            var textUnknown: Set<LibraryTextField> = []
+            if camera.isEmpty { textUnknown.insert(.camera) }
+            if lens.isEmpty { textUnknown.insert(.lens) }
             if !fields.contains(.keywords) { textUnknown.insert(.keywords) }
             if !fields.contains(.title) || !fields.contains(.description) {
                 textUnknown.insert(.titleDescription)
@@ -62,10 +69,17 @@ struct MetadataSearchSnapshot {
         contentCalendarDateInterval = resolvedContentDate.value.flatMap {
             Self.calendarDateInterval(for: $0.wallClock)
         }
+        // 촬영 기록(사용자가 적은 카메라·렌즈)은 원본 EXIF와 같은 자격으로 검색된다. 필름 카메라는
+        // EXIF를 남기지 않으므로, 적어 둔 값이 곧 그 프레임의 카메라다.
         let cameraParts = [snapshot.exif?.cameraMake, snapshot.exif?.cameraModel]
             .compactMap { $0 }
-        camera = cameraParts + [cameraParts.joined(separator: " ")].filter { !$0.isEmpty }
-        lens = [snapshot.exif?.lensModel].compactMap { $0 }
+        camera = Self.stableUnique(
+            cameraParts + [cameraParts.joined(separator: " ")].filter { !$0.isEmpty }
+                + Self.shotCameraValues(overlay?.filmShot)
+        )
+        lens = Self.stableUnique(
+            [snapshot.exif?.lensModel, overlay?.filmShot?.lensModel].compactMap { $0 }
+        )
         keywords = Self.stableUnique(
             (snapshot.iptc?.keywords ?? [])
                 + (snapshot.imageMetadataXMPView?.keywords ?? [])
@@ -93,6 +107,7 @@ struct MetadataSearchSnapshot {
             exifText + iptcText + imageXMPText + sidecarText
                 + [overlay?.title, overlay?.caption, overlay?.copyright].compactMap { $0 }
                 + (overlay?.keywords ?? [])
+                + Self.shotSearchValues(overlay?.filmShot)
         )
 
         var fields: Set<LibraryMetadataField> = [.snapshot]
@@ -127,6 +142,21 @@ struct MetadataSearchSnapshot {
         }
         if unknownFields.contains(.descriptive) { textUnknown.insert(.anySearchable) }
         unknownTextFields = textUnknown
+    }
+
+    /// 적어 둔 카메라 — 제조사, 모델, "제조사 모델" 모두로 찾을 수 있어야 한다.
+    private static func shotCameraValues(_ shot: FilmShotMetadata?) -> [String] {
+        guard let shot else { return [] }
+        let parts = [shot.cameraMake, shot.cameraModel].compactMap { $0 }
+        return stableUnique(parts + [parts.joined(separator: " ")].filter { !$0.isEmpty })
+    }
+
+    /// 필름 이름과 ISO도 검색어가 된다("Portra 400으로 찍은 컷").
+    private static func shotSearchValues(_ shot: FilmShotMetadata?) -> [String] {
+        guard let shot else { return [] }
+        return stableUnique(
+            [shot.filmStock, shot.isoSpeed.map(String.init)].compactMap { $0 }
+        )
     }
 
     private static func resolveContentDate(

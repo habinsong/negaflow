@@ -42,14 +42,14 @@ final class FilmShotMetadataTests: XCTestCase {
 
     func testDraftKeepsWritableValuesAndDropsUnreadableNumbers() {
         var draft = AppMetadataOverlayDraft()
-        draft.cameraMake = "  Nikon  "
-        draft.cameraModel = "FM2"
-        draft.lensModel = "Nikkor 50mm f/1.4"
-        draft.filmStock = "Kodak Portra 400"
-        draft.isoSpeed = "400"
-        draft.shutterSpeed = "1/250"
-        draft.aperture = "f/2.8"
-        draft.focalLength = "50mm"
+        draft.shot.cameraMake = "  Nikon  "
+        draft.shot.cameraModel = "FM2"
+        draft.shot.lensModel = "Nikkor 50mm f/1.4"
+        draft.shot.filmStock = "Kodak Portra 400"
+        draft.shot.isoSpeed = "400"
+        draft.shot.shutterSpeed = "1/250"
+        draft.shot.aperture = "f/2.8"
+        draft.shot.focalLength = "50mm"
 
         let shot = draft.filmShotValues
         XCTAssertEqual(shot.cameraMake, "Nikon")
@@ -62,8 +62,8 @@ final class FilmShotMetadataTests: XCTestCase {
         XCTAssertEqual(shot.focalLengthMM, 50)
         XCTAssertTrue(shot.isValid)
 
-        draft.isoSpeed = "high"
-        draft.aperture = "wide"
+        draft.shot.isoSpeed = "high"
+        draft.shot.aperture = "wide"
         XCTAssertNil(draft.filmShotValues.isoSpeed)
         XCTAssertNil(draft.filmShotValues.fNumber)
 

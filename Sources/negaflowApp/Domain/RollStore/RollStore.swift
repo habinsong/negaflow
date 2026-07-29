@@ -63,6 +63,18 @@ final class RollStore: ObservableObject {
         return true
     }
 
+    /// 롤 기록 갱신. 미분류 롤은 여러 촬영이 섞이므로 기록을 갖지 않는다.
+    @discardableResult
+    func updateRecord(id: UUID, record: RollRecord?) -> Bool {
+        guard let index = rolls.firstIndex(where: { $0.id == id && $0.kind == .physical }) else {
+            return false
+        }
+        let resolved = record.flatMap { $0.isEmpty ? nil : $0 }
+        guard rolls[index].record != resolved else { return true }
+        rolls[index].record = resolved
+        return true
+    }
+
     @discardableResult
     func activatePhysicalRoll(id: UUID?) -> Bool {
         guard let id else {

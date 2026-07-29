@@ -144,6 +144,7 @@ struct DevelopWorkflowInspector: View {
         case .info:
             SourceMetadataInspectorView(frame: frame)
             AppMetadataOverlayEditor(frame: frame)
+            RollRecordEditor(frame: frame)
         case .reset:
             resetToolContent
             basicAdjustmentContent

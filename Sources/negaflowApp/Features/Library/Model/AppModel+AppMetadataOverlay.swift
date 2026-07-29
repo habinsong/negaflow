@@ -5,14 +5,7 @@ struct AppMetadataOverlayDraft: Equatable {
     var caption = ""
     var keywords = ""
     var copyright = ""
-    var cameraMake = ""
-    var cameraModel = ""
-    var lensModel = ""
-    var filmStock = ""
-    var isoSpeed = ""
-    var shutterSpeed = ""
-    var aperture = ""
-    var focalLength = ""
+    var shot = FilmShotDraft()
 
     init() {}
 
@@ -21,49 +14,14 @@ struct AppMetadataOverlayDraft: Equatable {
         caption = overlay?.caption ?? ""
         keywords = overlay?.keywords.joined(separator: ", ") ?? ""
         copyright = overlay?.copyright ?? ""
-        let shot = overlay?.filmShot
-        cameraMake = shot?.cameraMake ?? ""
-        cameraModel = shot?.cameraModel ?? ""
-        lensModel = shot?.lensModel ?? ""
-        filmStock = shot?.filmStock ?? ""
-        isoSpeed = shot?.isoSpeed.map(String.init) ?? ""
-        shutterSpeed = shot?.exposureTimeSeconds.map(FilmShotMetadata.exposureTimeText) ?? ""
-        aperture = shot?.fNumber.map { Self.decimalText($0) } ?? ""
-        focalLength = shot?.focalLengthMM.map { Self.decimalText($0) } ?? ""
+        shot = FilmShotDraft(overlay?.filmShot)
     }
 
     var keywordValues: [String] {
         keywords.split(separator: ",", omittingEmptySubsequences: true).map(String.init)
     }
 
-    /// 읽을 수 없는 숫자는 조용히 버린다 — 적히지 않은 것과 같게 취급한다.
-    var filmShotValues: FilmShotMetadata {
-        FilmShotMetadata(
-            cameraMake: cameraMake,
-            cameraModel: cameraModel,
-            lensModel: lensModel,
-            filmStock: filmStock,
-            isoSpeed: Int(isoSpeed.trimmingCharacters(in: .whitespaces)),
-            exposureTimeSeconds: FilmShotMetadata.exposureTime(fromText: shutterSpeed),
-            fNumber: Self.decimalValue(aperture, droppingPrefix: "f/"),
-            focalLengthMM: Self.decimalValue(focalLength, droppingSuffix: "mm")
-        )
-    }
-
-    private static func decimalText(_ value: Double) -> String {
-        value == value.rounded() ? "\(Int(value))" : String(format: "%.1f", value)
-    }
-
-    private static func decimalValue(
-        _ text: String,
-        droppingPrefix prefix: String = "",
-        droppingSuffix suffix: String = ""
-    ) -> Double? {
-        var value = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        if !prefix.isEmpty, value.hasPrefix(prefix) { value.removeFirst(prefix.count) }
-        if !suffix.isEmpty, value.hasSuffix(suffix) { value.removeLast(suffix.count) }
-        return Double(value.trimmingCharacters(in: .whitespaces))
-    }
+    var filmShotValues: FilmShotMetadata { shot.values }
 }
 
 extension AppModel {
@@ -91,6 +49,24 @@ extension AppModel {
             frame.setAppMetadataOverlay(overlay.isEmpty ? nil : overlay)
         }
         invalidateLibraryQueryContext()
+        return true
+    }
+
+    /// 촬영 기록만 갈아 끼운다. 제목·설명·키워드·저작권은 그대로 둔다(롤 기록 채우기 경로).
+    @discardableResult
+    func applyFilmShot(_ shot: FilmShotMetadata, to frame: ScanFrame) -> Bool {
+        guard allowsLibraryMutation, ownsFrame(frame), !frame.isPreviewScan else { return false }
+        let current = frame.appMetadataOverlay
+        let overlay = AppMetadataOverlay(
+            title: current?.title,
+            caption: current?.caption,
+            keywords: current?.keywords ?? [],
+            copyright: current?.copyright,
+            filmShot: shot,
+            sourceMetadataSHA256: frame.sourceMetadata?.appMetadataIdentitySHA256(),
+            revision: (current?.revision ?? 0) + 1
+        )
+        frame.setAppMetadataOverlay(overlay.isEmpty ? nil : overlay)
         return true
     }
 

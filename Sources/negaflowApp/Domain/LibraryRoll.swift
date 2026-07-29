@@ -15,6 +15,8 @@ struct LibraryRoll: Identifiable, Codable, Equatable, Sendable {
     let createdAt: Date
     var filmType: FilmType?
     var frameIDs: [UUID]
+    /// 롤 코드와 카메라·렌즈·필름 기록. 이 롤의 프레임 중 비어 있는 칸을 채우는 원본이다.
+    var record: RollRecord?
 
     static func physical(
         id: UUID = UUID(),
