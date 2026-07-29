@@ -46,7 +46,8 @@ extension CanvasView {
         after: NSImage,
         destinationGamutOverlay: NSImage?,
         clippingOverlay: NSImage?,
-        in imageFrame: CGRect
+        in imageFrame: CGRect,
+        fraction: CGFloat
     ) -> some View {
         ZStack {
             localImage(after, width: imageFrame.width, height: imageFrame.height)
@@ -62,14 +63,11 @@ extension CanvasView {
             }
             HStack(spacing: 0) {
                 localImage(before, width: imageFrame.width, height: imageFrame.height)
-                    .frame(width: imageFrame.width / 2, alignment: .leading)
+                    .frame(width: imageFrame.width * fraction, alignment: .leading)
                     .clipped()
                 Spacer(minLength: 0)
             }
             .frame(width: imageFrame.width, height: imageFrame.height)
-            Rectangle()
-                .fill(.white.opacity(0.75))
-                .frame(width: 1, height: imageFrame.height)
         }
         .frame(width: imageFrame.width, height: imageFrame.height)
         .position(x: imageFrame.midX, y: imageFrame.midY)
@@ -80,7 +78,8 @@ extension CanvasView {
         after: NSImage,
         destinationGamutOverlay: NSImage?,
         clippingOverlay: NSImage?,
-        in imageFrame: CGRect
+        in imageFrame: CGRect,
+        fraction: CGFloat
     ) -> some View {
         ZStack {
             localImage(after, width: imageFrame.width, height: imageFrame.height)
@@ -96,17 +95,32 @@ extension CanvasView {
             }
             VStack(spacing: 0) {
                 localImage(before, width: imageFrame.width, height: imageFrame.height)
-                    .frame(height: imageFrame.height / 2, alignment: .top)
+                    .frame(height: imageFrame.height * fraction, alignment: .top)
                     .clipped()
                 Spacer(minLength: 0)
             }
             .frame(width: imageFrame.width, height: imageFrame.height)
-            Rectangle()
-                .fill(.white.opacity(0.75))
-                .frame(width: imageFrame.width, height: 1)
         }
         .frame(width: imageFrame.width, height: imageFrame.height)
         .position(x: imageFrame.midX, y: imageFrame.midY)
+    }
+
+    func compareDivider(
+        in imageFrame: CGRect,
+        orientation: CanvasCompareOrientation
+    ) -> some View {
+        CanvasCompareDivider(
+            imageFrame: imageFrame,
+            orientation: orientation,
+            accessibilityLabel: model.text(
+                orientation == .vertical
+                    ? AppLocalizedPhrase.compareSplitVertical
+                    : AppLocalizedPhrase.compareSplitHorizontal
+            ),
+            fraction: orientation == .vertical
+                ? $splitVerticalFraction
+                : $splitHorizontalFraction
+        )
     }
 
     func compareLabels(in imageFrame: CGRect, orientation: CanvasCompareOrientation) -> some View {

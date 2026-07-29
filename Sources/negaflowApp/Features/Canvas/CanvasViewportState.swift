@@ -44,6 +44,16 @@ struct CanvasViewportState: Equatable {
         lastOffset = offset
     }
 
+    /// 스크롤은 제스처처럼 시작/끝이 없으므로 이벤트마다 현재 위치에 바로 누적한다.
+    mutating func applyScrollPan(translation: CGSize, imageSize: NSSize, canvasSize: CGSize) {
+        let proposed = CGSize(
+            width: offset.width + translation.width,
+            height: offset.height + translation.height
+        )
+        offset = canvasClampedOffset(proposed, imageSize: imageSize, canvasSize: canvasSize, scale: scale)
+        lastOffset = offset
+    }
+
     mutating func updateMagnification(_ value: CGFloat, imageSize: NSSize, canvasSize: CGSize) {
         let next = clampedScale(lastScale * value)
         scale = next

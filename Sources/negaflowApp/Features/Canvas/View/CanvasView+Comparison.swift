@@ -164,8 +164,11 @@ extension CanvasView {
                         after: after,
                         destinationGamutOverlay: visibleDestinationGamutOverlay,
                         clippingOverlay: visibleClippingOverlay,
-                        in: imageFrame
+                        in: imageFrame,
+                        fraction: splitVerticalFraction
                     )
+                    compareDivider(in: imageFrame, orientation: .vertical)
+                        .zIndex(45)
                     compareLabels(in: imageFrame, orientation: .vertical)
                         .zIndex(40)
                 }
@@ -176,8 +179,11 @@ extension CanvasView {
                         after: after,
                         destinationGamutOverlay: visibleDestinationGamutOverlay,
                         clippingOverlay: visibleClippingOverlay,
-                        in: imageFrame
+                        in: imageFrame,
+                        fraction: splitHorizontalFraction
                     )
+                    compareDivider(in: imageFrame, orientation: .horizontal)
+                        .zIndex(45)
                     compareLabels(in: imageFrame, orientation: .horizontal)
                         .zIndex(40)
                 }

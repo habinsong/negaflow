@@ -32,7 +32,7 @@ struct ScanProgressOverlay: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 9)
-            .liquidSurface(cornerRadius: 10, interactive: false)
+            .cardSurface(cornerRadius: 10)
         }
         .frame(width: 264)
     }

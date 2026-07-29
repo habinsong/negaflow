@@ -59,6 +59,9 @@ struct CanvasView: View {
     @State var cloneStampHardness: CGFloat = 0.5
     @State var compareMode: CanvasCompareMode = .developed
     @State var previousCompareMode: CanvasCompareMode = .raw
+    // 분할선 위치(이미지 기준 비율). 좌/우와 상/하가 각자의 위치를 기억한다.
+    @State var splitVerticalFraction: CGFloat = 0.5
+    @State var splitHorizontalFraction: CGFloat = 0.5
     @State var canvasHUDState = CanvasHUDInteractionState()
     @AppStorage("compare.beforeContent") var beforeContentRaw: String = CompareBeforeContent.unedited.rawValue
     @AppStorage("crop.aspectLocked") var isCropAspectLocked = true
@@ -169,6 +172,16 @@ struct CanvasView: View {
             .contextMenu { canvasBackgroundMenu }
             .background {
                 canvasKeyboardShortcuts(imageSize: imageSize, canvasSize: geo.size)
+            }
+            .background {
+                CanvasScrollPanBridge { translation in
+                    guard let imageSize else { return }
+                    viewport.applyScrollPan(
+                        translation: translation,
+                        imageSize: imageSize,
+                        canvasSize: geo.size
+                    )
+                }
             }
             .onAppear {
                 model.canvasDisplayTargetPixels = displayTargetPixels(imageSize: imageSize, canvasSize: geo.size)
