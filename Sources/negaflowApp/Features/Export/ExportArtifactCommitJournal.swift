@@ -73,7 +73,16 @@ enum ExportArtifactCommitJournal {
         var effectiveState: TransactionState { state ?? .published }
     }
 
-    static func defaultDirectoryURL(fileManager: FileManager = .default) -> URL {
+    static func defaultDirectoryURL(
+        fileManager: FileManager = .default,
+        launchConfiguration: AppLaunchConfiguration? = .current
+    ) -> URL {
+        // UI 테스트는 실행마다 임시 루트를 새로 잡고 끝나면 지운다. 저널만 사용자
+        // Application Support 에 남으면, 앞 테스트가 종료로 끊은 export transaction 이
+        // 산출물 없는 상태로 남아 다음 실행을 복구 화면으로 막는다 — 루트 안에 둔다.
+        if let uiTestRoot = launchConfiguration?.uiTestRoot {
+            return uiTestRoot.appendingPathComponent("Library/ExportJournals", isDirectory: true)
+        }
         let base = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? fileManager.homeDirectoryForCurrentUser.appendingPathComponent(
                 "Library/Application Support",

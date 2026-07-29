@@ -49,6 +49,28 @@ final class AppLaunchConfigurationTests: XCTestCase {
         XCTAssertTrue(model.demoMode)
     }
 
+    /// 저널이 사용자 Application Support 에 남으면 앞선 UI 테스트가 종료로 끊은 export
+    /// transaction 이 산출물 없는 상태로 남아 다음 실행을 복구 화면으로 막는다.
+    func testExportJournalDirectoryFollowsUITestRoot() {
+        let root = URL(fileURLWithPath: "/tmp/negaflow-e2e-journal", isDirectory: true)
+        let configuration = AppLaunchConfiguration(
+            uiTestRoot: root,
+            importsSyntheticNegative: false,
+            enablesDemoScanner: false,
+            preparesCorruptCatalog: false,
+            createsDropTargetFolder: false
+        )
+
+        XCTAssertEqual(
+            ExportArtifactCommitJournal.defaultDirectoryURL(launchConfiguration: configuration).path,
+            root.appendingPathComponent("Library/ExportJournals").path
+        )
+        XCTAssertTrue(
+            ExportArtifactCommitJournal.defaultDirectoryURL(launchConfiguration: nil).path
+                .hasSuffix("negaflow/export-journals")
+        )
+    }
+
     @MainActor
     func testFactoryIsolatesWorkspacePresentationForUITestRoot() {
         let token = UUID().uuidString
