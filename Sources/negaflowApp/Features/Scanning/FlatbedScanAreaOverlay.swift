@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 enum FlatbedRegionHandle: CaseIterable {
@@ -96,7 +97,7 @@ struct FlatbedScanAreaOverlay: View {
                 .gesture(createGesture)
 
             if let start = createStartPoint, let current = createCurrentPoint {
-                let rect = screenRect(for: unitRect(from: start, to: current))
+                let rect = screenRect(for: createdUnitRect(from: start, to: current))
                 Rectangle()
                     .fill(Color.accentColor.opacity(0.08))
                     .overlay {
@@ -192,8 +193,9 @@ struct FlatbedScanAreaOverlay: View {
                     createCurrentPoint = nil
                 }
                 guard let start = createStartPoint else { return }
-                let rect = unitRect(from: start, to: basePoint(value.location))
-                model.addFlatbedScanRegion(unitRect: rect)
+                model.addFlatbedScanRegion(
+                    unitRect: createdUnitRect(from: start, to: basePoint(value.location))
+                )
             }
     }
 
@@ -227,10 +229,32 @@ struct FlatbedScanAreaOverlay: View {
                 )
                 model.updateFlatbedScanRegion(
                     region.id,
-                    unitRect: baseRect(from: proposed)
+                    unitRect: frameAspectAdjusted(
+                        baseRect(from: proposed),
+                        anchoredTo: baseRect(from: start)
+                    )
                 )
             }
             .onEnded { _ in dragStartRect = nil }
+    }
+
+    private func createdUnitRect(from start: CGPoint, to current: CGPoint) -> CGRect {
+        frameAspectAdjusted(
+            unitRect(from: start, to: current),
+            anchoredTo: CGRect(origin: start, size: .zero)
+        )
+    }
+
+    /// 규격 비율로 맞춘다. ⌥를 누르고 있으면 자유 비율(규격 목록에 없는 필름용 탈출구).
+    private func frameAspectAdjusted(_ rect: CGRect, anchoredTo previous: CGRect) -> CGRect {
+        guard let previewArea = model.flatbedPreviewScanArea,
+              !NSEvent.modifierFlags.contains(.option) else { return rect }
+        return clampedUnitRect(FlatbedScanRegionLayout.snappedToFrameAspect(
+            rect,
+            anchoredTo: previous,
+            frameFormat: model.scanFrameFormat,
+            previewArea: previewArea
+        ))
     }
 
     private func screenRect(for baseRect: CGRect) -> CGRect {

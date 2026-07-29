@@ -176,29 +176,18 @@ extension AppModel {
 
     func addFlatbedScanRegion(unitRect: CGRect? = nil) {
         guard usesFlatbedRegionWorkflow, flatbedPreviewFrame != nil else { return }
-        let proposed: CGRect
-        if let unitRect {
-            proposed = unitRect
-        } else if let bounds = hardwareScanAreaBounds,
-                  bounds.maximum.widthMM > 0,
-                  bounds.maximum.heightMM > 0 {
-            let width = min(
-                max(scanFrameFormat.stripWidthMM / bounds.maximum.widthMM, 0.08),
-                0.8
-            )
-            let height = min(
-                max(scanFrameFormat.stripHeightMM / bounds.maximum.heightMM, 0.08),
-                0.8
-            )
-            proposed = CGRect(
-                x: (1 - width) / 2,
-                y: (1 - height) / 2,
-                width: width,
-                height: height
-            )
-        } else {
-            proposed = CGRect(x: 0.25, y: 0.3, width: 0.5, height: 0.4)
-        }
+        // 프레임 좌표는 프리뷰로 실제로 훑은 영역을 기준으로 한다(FlatbedScanRegionGeometry).
+        // 최대 영역으로 계산하면 하드웨어 스캔 영역을 좁혀둔 프리뷰에서 규격 치수가 어긋난다.
+        let previewArea = flatbedPreviewScanArea ?? hardwareScanAreaBounds?.maximum
+        let proposed = unitRect
+            ?? previewArea.flatMap {
+                FlatbedScanRegionLayout.proposedRect(
+                    existing: flatbedScanRegions.map(\.unitRect),
+                    frameFormat: scanFrameFormat,
+                    previewArea: $0
+                )
+            }
+            ?? CGRect(x: 0.25, y: 0.3, width: 0.5, height: 0.4)
         let region = FlatbedScanRegion(unitRect: proposed)
         flatbedScanRegions.append(region)
         selectedFlatbedScanRegionID = region.id

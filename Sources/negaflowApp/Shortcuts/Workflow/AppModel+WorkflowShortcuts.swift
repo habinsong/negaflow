@@ -61,6 +61,10 @@ extension AppModel {
             return canPreview
         case .scanFrame:
             return canScan
+        case .addFlatbedFrame:
+            return usesFlatbedRegionWorkflow && flatbedPreviewFrame != nil && !isScanning
+        case .removeFlatbedFrame:
+            return usesFlatbedRegionWorkflow && selectedFlatbedScanRegionID != nil && !isScanning
         case .quickExport, .exportPhoto:
             return canExportSelection
         }
@@ -199,6 +203,10 @@ extension AppModel {
             Task { await runScan(preview: true) }
         case .scanFrame:
             Task { await scanFrames(count: 1, preview: false) }
+        case .addFlatbedFrame:
+            addFlatbedScanRegion()
+        case .removeFlatbedFrame:
+            deleteSelectedFlatbedScanRegion()
         case .quickExport:
             quickExportSelection(for: activeWorkspaceModule)
         case .exportPhoto:

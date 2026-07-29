@@ -298,6 +298,22 @@ struct AppWorkflowMenuCommands: Commands {
             }
             .workflowKeyboardShortcut(model.shortcut(for: .scanFrame))
             .disabled(!model.canScan)
+
+            if model.usesFlatbedRegionWorkflow {
+                Divider()
+
+                Button(model.text(AppLocalizedPhrase.flatbedAddFrame)) {
+                    model.performWorkflowShortcutAction(.addFlatbedFrame)
+                }
+                .workflowKeyboardShortcut(model.shortcut(for: .addFlatbedFrame))
+                .disabled(!model.canPerformWorkflowShortcutAction(.addFlatbedFrame))
+
+                Button(model.text(AppLocalizedPhrase.flatbedRemoveFrame)) {
+                    model.performWorkflowShortcutAction(.removeFlatbedFrame)
+                }
+                .workflowKeyboardShortcut(model.shortcut(for: .removeFlatbedFrame))
+                .disabled(!model.canPerformWorkflowShortcutAction(.removeFlatbedFrame))
+            }
         }
 
         CommandMenu(model.text(.menuExport)) {

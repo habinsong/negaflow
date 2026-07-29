@@ -104,6 +104,8 @@ enum WorkflowShortcutAction: String, CaseIterable, Codable, Identifiable {
     case toggleScannerSimulator
     case previewScan
     case scanFrame
+    case addFlatbedFrame
+    case removeFlatbedFrame
     case quickExport
     case exportPhoto
     case openHelp
@@ -130,7 +132,8 @@ enum WorkflowShortcutAction: String, CaseIterable, Codable, Identifiable {
         case .showHideSidebar, .showHideFilmstrip, .showHideInspector, .toggleFullScreen,
              .openLibraryWorkspace, .openDevelopWorkspace, .openPrintWorkspace:
             return .view
-        case .detectScanners, .toggleScannerSimulator, .previewScan, .scanFrame:
+        case .detectScanners, .toggleScannerSimulator, .previewScan, .scanFrame,
+             .addFlatbedFrame, .removeFlatbedFrame:
             return .scanner
         case .quickExport, .exportPhoto:
             return .export
@@ -202,6 +205,9 @@ enum WorkflowShortcutAction: String, CaseIterable, Codable, Identifiable {
         case .toggleScannerSimulator: return WorkflowShortcut(key: "d", modifiers: [.command, .option])
         case .previewScan: return WorkflowShortcut(key: "p", modifiers: [.command, .option])
         case .scanFrame: return WorkflowShortcut(key: "s", modifiers: [.command, .option])
+        case .addFlatbedFrame: return WorkflowShortcut(key: "f", modifiers: [.command, .option])
+        case .removeFlatbedFrame:
+            return WorkflowShortcut(key: "delete", modifiers: [.command, .option])
         case .quickExport: return WorkflowShortcut(key: "e", modifiers: [.command])
         case .exportPhoto: return WorkflowShortcut(key: "e", modifiers: [.command, .shift])
         case .openHelp: return WorkflowShortcut(key: "h", modifiers: [.command, .shift])
@@ -319,6 +325,8 @@ enum WorkflowShortcutAction: String, CaseIterable, Codable, Identifiable {
         case .toggleScannerSimulator: return model.text(.commandToggleScannerSimulator)
         case .previewScan: return model.text(.commandPreviewScan)
         case .scanFrame: return model.text(.commandScanFrame)
+        case .addFlatbedFrame: return model.text(AppLocalizedPhrase.flatbedAddFrame)
+        case .removeFlatbedFrame: return model.text(AppLocalizedPhrase.flatbedRemoveFrame)
         case .quickExport: return model.text(.commandQuickExport)
         case .exportPhoto: return model.text(.commandExport)
         case .openHelp: return model.text(.commandNegaflowHelp)
