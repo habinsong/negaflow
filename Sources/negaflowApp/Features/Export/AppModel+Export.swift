@@ -433,10 +433,28 @@ extension AppModel {
         let frameID = frame.id
         let expectedSourceIdentity = identity.sourceIdentity
         let rawURL = frame.rawScanURL
-        return await Task.detached(priority: .userInitiated) {
-            CleanedRawCacheFile.isOwnedCacheURL(url, frameID: frameID)
-                && (try? AppModel.defectSourceIdentity(for: rawURL)) == expectedSourceIdentity
-                && ImageLoader.loadScannerTIFF(url) != nil
+        let revision = frame.cleanRawRevision
+        // 디코드 결과를 버리지 않고 메모리로 올린다. 예전에는 "읽히기는 하나"만 확인하고 버려서,
+        // 곧바로 이어지는 내보내기가 같은 cleaned raw TIFF 를 처음부터 다시 디코드했다.
+        let decoded = await Task.detached(priority: .userInitiated) { () -> CGImage? in
+            guard CleanedRawCacheFile.isOwnedCacheURL(url, frameID: frameID),
+                  (try? AppModel.defectSourceIdentity(for: rawURL)) == expectedSourceIdentity else {
+                return nil
+            }
+            return decodeCleanedRaw(url)
         }.value
+        guard let decoded else { return false }
+        // 대기 중 프레임 상태가 움직였으면 판정만 유지하고 픽셀은 올리지 않는다.
+        guard ownsFrame(frame),
+              frame.rawScanURL == rawURL,
+              frame.cleanRawRevision == revision,
+              frame.defectRecipeIdentity == identity,
+              frame.cleanedRawDiskIdentity == identity else { return true }
+        frame.cleanedRawImage = decoded
+        frame.cleanedRawMemoryIdentity = identity
+        frame.cleanedRawEditCount = frame.defectEdits.count
+        frame.cleanedRawAppliedStamps = frame.defectEdits.map(\.appliedStamp)
+        cleanedRawResidentInsert(frame)
+        return true
     }
 }

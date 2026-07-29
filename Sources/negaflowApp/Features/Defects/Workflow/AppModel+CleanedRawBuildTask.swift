@@ -29,6 +29,12 @@ extension AppModel {
             frame.isRemovingDefects = true
             statusMessage = text(AppLocalizedPhrase.removingDefectsStatus)
         }
+        // 결함 제거 픽셀을 다시 만드는 구간. 내보내기가 이 재빌드를 기다리는 경우가 있어
+        // 원본부터의 전체 재계산인지, 몇 초인지가 로그에 남아야 진단이 된다.
+        let trace = AppDiagnostics.start(
+            fromOriginal ? .cleanedRawRebuild : .cleanedRawBuild,
+            category: .defects
+        )
         let task = Task.detached(priority: .userInitiated) {
             guard let sourceIdentity = try? AppModel.defectSourceIdentity(for: rawURL) else {
                 await self.finishFailedCleanedRawBuild(
@@ -183,6 +189,8 @@ extension AppModel {
                 }
                 return true
             }
+            // 픽셀이 준비된 시점까지가 재빌드 비용이다 — 뒤따르는 현상/저장은 이 구간에 넣지 않는다.
+            trace.finish()
             guard committed else {
                 await self.finishFailedCleanedRawBuild(frame, revision: revision, quiet: quiet)
                 return

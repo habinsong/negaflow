@@ -13,6 +13,8 @@ enum AppDiagnosticOperation: String, Codable, Sendable {
     case developFrame
     case regionDefect
     case infraredDefect
+    case cleanedRawBuild
+    case cleanedRawRebuild
     case exportFrame
     case catalogRestore
     case catalogSave
@@ -23,6 +25,8 @@ enum AppDiagnosticOperation: String, Codable, Sendable {
         case .developFrame: "Develop Frame"
         case .regionDefect: "Region Defect Removal"
         case .infraredDefect: "Infrared Defect Removal"
+        case .cleanedRawBuild: "Cleaned Raw Build"
+        case .cleanedRawRebuild: "Cleaned Raw Rebuild"
         case .exportFrame: "Export Frame"
         case .catalogRestore: "Catalog Restore"
         case .catalogSave: "Catalog Save"
