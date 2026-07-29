@@ -14,7 +14,7 @@ flowchart LR
 ```
 
 > [!NOTE]
-> The current version is `1.0.2`. What is built and what was actually checked
+> The current version is `1.0.3`. What is built and what was actually checked
 > is tracked in [Project status](product/PROJECT_STATUS.md).
 
 ## Product

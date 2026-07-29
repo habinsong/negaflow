@@ -7,7 +7,7 @@
 <p align="center">アナログフィルムのカメラ複写・スキャンから現像までを支える macOS アプリ</p>
 
 <p align="center">
-  <a href="docs/ja/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.2%20release-EF8B26" alt="リリース状況"></a>
+  <a href="docs/ja/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.3%20release-EF8B26" alt="リリース状況"></a>
   <a href="#動作環境"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 以降"></a>
   <a href="Package.swift"><img src="https://img.shields.io/badge/Swift-5.9+-F05138?logo=swift&logoColor=white" alt="Swift 5.9 以降"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0 ライセンス"></a>
@@ -60,8 +60,8 @@ negaflow は、スキャンしたフィルムやデジタルカメラで複写�
 
 | ダウンロード | 対応するMac |
 |---|---|
-| `negaflow-1.0.2-1-macOS-universal.pkg` | Apple Silicon、Intel |
-| `negaflow-1.0.2-1-macOS-arm64.pkg` | Apple Siliconのみ |
+| `negaflow-1.0.3-1-macOS-universal.pkg` | Apple Silicon、Intel |
+| `negaflow-1.0.3-1-macOS-arm64.pkg` | Apple Siliconのみ |
 
 1. Macに合うPKGをダウンロードします。
 2. PKGを開き、インストーラの案内に従います。
@@ -86,6 +86,7 @@ SHA-256チェックサムがリリースに掲載されたものと一致する�
 - ロール、フォルダー、コレクション、評価、スタック、仮想コピー
 - 拡大、切り抜き、回転、比較表示、ヒストグラム、クリッピング表示
 - カメラ、レンズ、フィルム、露出の記録を書き出したファイルの EXIF に記録
+- ロール単位の撮影記録と、カメラ・レンズ・フィルムで探すライブラリ検索
 - JPEG と 16-bit TIFF の書き出し、ICC プロファイル、プリントレイアウト
 
 > 確認を終えた範囲は[プロジェクト状況](docs/ja/product/PROJECT_STATUS.md)に記録しています。 <br>

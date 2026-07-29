@@ -7,7 +7,7 @@
 <p align="center">Une application macOS pour numériser et développer les films, au scanner ou à l’appareil photo</p>
 
 <p align="center">
-  <a href="docs/fr/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.2%20release-EF8B26" alt="État de la version"></a>
+  <a href="docs/fr/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.3%20release-EF8B26" alt="État de la version"></a>
   <a href="#prérequis"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 ou version ultérieure"></a>
   <a href="Package.swift"><img src="https://img.shields.io/badge/Swift-5.9+-F05138?logo=swift&logoColor=white" alt="Swift 5.9 ou version ultérieure"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Licence Apache 2.0"></a>
@@ -63,8 +63,8 @@ Le PKG Universal convient à la plupart des Mac.
 
 | Téléchargement | Mac compatibles |
 |---|---|
-| `negaflow-1.0.2-1-macOS-universal.pkg` | Apple Silicon et Intel |
-| `negaflow-1.0.2-1-macOS-arm64.pkg` | Apple Silicon uniquement |
+| `negaflow-1.0.3-1-macOS-universal.pkg` | Apple Silicon et Intel |
+| `negaflow-1.0.3-1-macOS-arm64.pkg` | Apple Silicon uniquement |
 
 1. Téléchargez le PKG adapté au Mac.
 2. Ouvrez-le et suivez les instructions d’Installer.
@@ -90,6 +90,7 @@ correspond à celle publiée avec la version.
 - Pellicules, dossiers, collections, notes, piles et copies virtuelles
 - Zoom, recadrage, rotation, comparaisons, histogramme et affichage de l’écrêtage
 - Appareil, objectif, film et exposition notés puis écrits dans l’EXIF du fichier exporté
+- Notes de prise de vue au rouleau, et recherche dans la bibliothèque par appareil, objectif ou film
 - Export JPEG et TIFF 16 bits, profils ICC et mises en page d’impression
 
 > Les vérifications terminées sont notées dans [État du projet](docs/fr/product/PROJECT_STATUS.md). <br>
