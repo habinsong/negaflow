@@ -178,24 +178,38 @@ extension ChromabaseEngine {
         let edgeFrac = 0.06
         let ex = max(1, Int(Double(targetW) * edgeFrac))
         let ey = max(1, Int(Double(targetH) * edgeFrac))
-        var rVals: [Double] = [], gVals: [Double] = [], bVals: [Double] = []
+        var edgePixels: [SIMD3<Double>] = []
         for y in 0..<targetH {
             for x in 0..<targetW {
                 let isEdge = x < ex || x >= targetW - ex || y < ey || y >= targetH - ey
                 guard isEdge else { continue }
                 let i = (y * targetW + x) * 4
-                let r = Double(bitmap[i])
-                let g = Double(bitmap[i + 1])
-                let b = Double(bitmap[i + 2])
-                let luma = (r + g + b) / 3
-                guard luma > 0.30, luma < 0.92 else { continue }
-                if neutralBase {
-                    guard abs(r - g) <= 0.08, abs(g - b) <= 0.08 else { continue }
-                } else {
-                    guard r >= g - 0.01, g >= b - 0.01, (r - b) >= 0.04 else { continue }
-                }
-                rVals.append(r); gVals.append(g); bVals.append(b)
+                edgePixels.append(SIMD3(
+                    Double(bitmap[i]), Double(bitmap[i + 1]), Double(bitmap[i + 2])
+                ))
             }
+        }
+        // 어두운 쪽 컷은 이 스캔의 가장자리에서 실제로 나온 밝은 값 기준이다. 고정 컷(옛 0.30)은
+        // 선형 raw 처럼 값이 낮게 실린 스캔에서 표본을 전멸시키고 상수 폴백으로 떨어뜨렸다.
+        let edgeLumas = edgePixels.map { ($0.x + $0.y + $0.z) / 3 }.filter { $0 < 0.92 }.sorted()
+        guard !edgeLumas.isEmpty else { return FilmBase(rgb: fallbackRGB, source: .auto) }
+        let edgePeak = edgeLumas[Int(0.99 * Double(edgeLumas.count - 1))]
+        let lumaFloor = max(0.02, edgePeak * 0.45)
+        var rVals: [Double] = [], gVals: [Double] = [], bVals: [Double] = []
+        for pixel in edgePixels {
+            let (r, g, b) = (pixel.x, pixel.y, pixel.z)
+            let luma = (r + g + b) / 3
+            guard luma >= lumaFloor, luma < 0.92 else { continue }
+            let peak = max(r, max(g, b))
+            if neutralBase {
+                let tolerance = FilmBaseEstimator.maximumNeutralSpreadRatio * peak
+                    + FilmBaseEstimator.neutralSpreadFloor
+                guard abs(r - g) <= tolerance, abs(g - b) <= tolerance else { continue }
+            } else {
+                guard r >= g - 0.01, g >= b - 0.01,
+                      (r - b) >= max(0.003, 0.10 * peak) else { continue }
+            }
+            rVals.append(r); gVals.append(g); bVals.append(b)
         }
         guard rVals.count >= 32 else {
             return FilmBase(rgb: fallbackRGB, source: .auto)

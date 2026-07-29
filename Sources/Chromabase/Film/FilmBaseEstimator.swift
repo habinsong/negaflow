@@ -64,7 +64,8 @@ public enum FilmBaseEstimator {
         // 과거의 CIAreaAverage 스트립 평균은 백라이트/퍼포레이션 픽셀을 그대로 섞어,
         // 가져온 스캔(백라이트 위 필름)에서 베이스가 광원 쪽으로 새는 원인이었다.
         if let grid = sampleGrid {
-            return borderFallback(from: grid, edgeFraction: edgeFraction, excluding: exclusion)?
+            return borderFallback(from: grid, edgeFraction: edgeFraction,
+                                  neutralBase: neutralBase, excluding: exclusion)?
                 .filmBase(source: .border)
         }
 
@@ -87,11 +88,10 @@ public enum FilmBaseEstimator {
         }
         guard !samples.isEmpty else { return nil }
 
-        // 이상치(극단적으로 어둡거나 밝은 스트립) 제거.
-        let filtered = samples.filter { s in
-            let lum = (s.x + s.y + s.z) / 3
-            return lum > 0.25 && lum < 0.97   // 필름 베이스는 보통 이 범위
-        }
+        // 이상치(장면 쪽으로 치우친 어두운 스트립, 준클리핑 무필름) 제거. 어두운 쪽 컷은
+        // 가장 밝은 스트립 기준의 비율이다 — 선형 raw 처럼 전체가 낮게 실린 스캔에서
+        // 고정 컷(옛 0.25)은 네 스트립을 모두 버렸다.
+        let filtered = brightStrips(samples)
         guard !filtered.isEmpty else { return nil }
         let use = filtered
 
@@ -148,11 +148,12 @@ public enum FilmBaseEstimator {
         }
         let hardExcluded = hasHardBright ? dilate(hardBright, grid: grid) : hardBright
 
-        // 후보 판정 + 불변량 A(경계 혼합 셀 제외).
+        // 후보 판정 + 이 스캔의 밝기 바닥 + 불변량 A(경계 혼합 셀 제외).
+        let floor = candidateLumaFloor(for: grid, neutralBase: neutralBase)
         var eligible = [Bool](repeating: false, count: count)
         for sample in grid.samples {
             let i = sample.y * width + sample.x
-            guard !hardExcluded[i],
+            guard !hardExcluded[i], sample.luma >= floor,
                   isFilmBaseCandidate(r: sample.color.x, g: sample.color.y, b: sample.color.z,
                                       neutralBase: neutralBase) else { continue }
             eligible[i] = true
@@ -297,9 +298,10 @@ public enum FilmBaseEstimator {
 
     static func nonFilmExclusion(for grid: FilmBaseSampleGrid,
                                  neutralBase: Bool) -> [Bool]? {
+        let floor = candidateLumaFloor(for: grid, neutralBase: neutralBase)
         let candidates = grid.samples.filter {
-            isFilmBaseCandidate(r: $0.color.x, g: $0.color.y, b: $0.color.z,
-                                neutralBase: neutralBase)
+            $0.luma >= floor && isFilmBaseCandidate(r: $0.color.x, g: $0.color.y, b: $0.color.z,
+                                                    neutralBase: neutralBase)
         }
         let baseMode = brightestCoherentMode(
             candidates: candidates,
@@ -423,8 +425,9 @@ public enum FilmBaseEstimator {
     ) -> FilmBaseMeasurement? {
         let edgeX = max(1, Int(Double(grid.width) * edgeFraction))
         let edgeY = max(1, Int(Double(grid.height) * edgeFraction))
+        let floor = candidateLumaFloor(for: grid, neutralBase: neutralBase)
         let all = grid.samples.filter {
-            !isExcluded($0, in: grid, excluded: excluded) && isFilmBaseCandidate(
+            !isExcluded($0, in: grid, excluded: excluded) && $0.luma >= floor && isFilmBaseCandidate(
                 r: $0.color.x,
                 g: $0.color.y,
                 b: $0.color.z,
@@ -473,8 +476,9 @@ public enum FilmBaseEstimator {
         neutralBase: Bool = false,
         excluding excluded: [Bool]? = nil
     ) -> FilmBaseMeasurement? {
+        let floor = candidateLumaFloor(for: grid, neutralBase: neutralBase)
         let candidates = grid.samples.filter {
-            !isExcluded($0, in: grid, excluded: excluded) && isFilmBaseCandidate(
+            !isExcluded($0, in: grid, excluded: excluded) && $0.luma >= floor && isFilmBaseCandidate(
                 r: $0.color.x,
                 g: $0.color.y,
                 b: $0.color.z,
@@ -505,9 +509,13 @@ public enum FilmBaseEstimator {
     /// 그리드 보더 폴백 — 기존 CIAreaAverage 스트립 폴백과 같은 의미론(상/하/좌/우 스트립
     /// 평균 → 밝기 필터 → 채널 중앙값)을 그리드 위에서 재현하되, 비필름 마스크(백라이트/
     /// 퍼포레이션)만 평균에서 제외한다. 마스크가 없으면 기존 폴백과 동등하다.
+    /// 스트립이 베이스를 보고 있다고 인정할 최소 수준(이 스캔의 베이스 수준 대비).
+    static let stripBaseLevelFraction = 0.5
+
     static func borderFallback(
         from grid: FilmBaseSampleGrid,
         edgeFraction: Double,
+        neutralBase: Bool = false,
         excluding excluded: [Bool]?
     ) -> FilmBaseMeasurement? {
         let edgeX = max(1, Int(Double(grid.width) * edgeFraction))
@@ -530,9 +538,11 @@ public enum FilmBaseEstimator {
             stripMean { $0.x >= grid.width - edgeX },       // right
         ].compactMap { $0 }
         guard !samples.isEmpty else { return nil }
-        let filtered = samples.filter { s in
-            let lum = (s.x + s.y + s.z) / 3
-            return lum > 0.25 && lum < 0.97   // 필름 베이스는 보통 이 범위
+        // 스트립 평균이 이 스캔의 베이스 수준에 못 미치면 그 스트립은 장면(또는 산발적 밝은
+        // 얼룩과 어두운 필름의 혼합)이다 — 약한 폴백이 그것을 베이스로 확정하면 안 된다.
+        let baseLevel = candidateLumaPeak(for: grid, neutralBase: neutralBase)
+        let filtered = brightStrips(samples).filter {
+            ($0.x + $0.y + $0.z) / 3 >= baseLevel * stripBaseLevelFraction
         }
         guard !filtered.isEmpty else { return nil }
         let fallbackSamples = filtered.enumerated().map {
@@ -557,25 +567,73 @@ public enum FilmBaseEstimator {
     /// 필름/현상마다 다르다(Fuji는 더 황/투명, Kodak은 더 진한 주황, ECN-2는 또 다름).
     /// 따라서 색 강도가 아니라 **R≥G≥B 단조성**만으로 후보를 식별한다. luma 범위는 미노광/염료
     /// 투과율의 합리적 범위로 유지.
+    /// 마스크 분리와 중립성은 **비율**로 판정한다. 염료 투과는 곱셈이라 R−B 같은 가산량은
+    /// 노출에 비례해 줄어든다. 고정 가산 임계(옛 0.06)는 선형 raw 처럼 값이 낮게 실리는
+    /// 스캔에서 같은 필름의 베이스를 통째로 탈락시켰다(실측: Kodak계 R<0.075, Fuji계 R<0.097,
+    /// 흑백 luma<0.10 에서 자동 추정이 nil → 상수 폴백으로 반전이 어긋남).
+    /// 노이즈가 비율만으로 통과하지 못하도록 작은 절대 바닥을 함께 둔다.
+    /// 후보의 절대 바닥. 노이즈/블랙을 막되, 선형 raw 의 어두운 베이스(16bit 에서도 유효한
+    /// 값 대역)는 통과시킨다 — sRGB 로 보면 0.1 정도에 해당한다.
+    static let minimumCandidateLuma = 0.012
+    static let minimumMaskRatio = 0.10
+    static let minimumMaskSeparation = 0.004
+    static let maximumNeutralSpreadRatio = 0.12
+    static let neutralSpreadFloor = 0.01
+
+    /// 이 스캔에서 베이스일 수 있는 최소 밝기. 베이스는 필름에서 가장 밝은 곳이므로, 가장 밝은
+    /// 후보보다 한참 어두운 셀은 베이스가 아니라 밀도 높은 장면이다. 비율 판정만으로는 오렌지
+    /// 장면 전체가 후보로 들어오므로(마스크 비율은 밀도와 무관하게 유지된다) 이 바닥이 필요하다.
+    /// 어두운 광원을 베이스로 강등하는 경로(demoteRatioRange 하한 0.12)를 막지 않도록 0.10 을 쓴다.
+    static let candidateFloorFraction = 0.10
+
+    static func candidateLumaFloor(for grid: FilmBaseSampleGrid, neutralBase: Bool) -> Double {
+        candidateLumaPeak(for: grid, neutralBase: neutralBase) * candidateFloorFraction
+    }
+
+    /// 이 스캔에서 베이스일 수 있는 가장 밝은 수준(후보 luma p99).
+    static func candidateLumaPeak(for grid: FilmBaseSampleGrid, neutralBase: Bool) -> Double {
+        let lumas = grid.samples
+            .filter { isFilmBaseCandidate(r: $0.color.x, g: $0.color.y, b: $0.color.z,
+                                          neutralBase: neutralBase) }
+            .map(\.luma)
+        guard !lumas.isEmpty else { return 0 }
+        return FilmBaseStatistics.percentile(lumas, 0.99)
+    }
+
     static func isFilmBaseCandidate(r: Double, g: Double, b: Double,
                                     neutralBase: Bool = false) -> Bool {
         let luma = (r + g + b) / 3
+        let peak = max(r, max(g, b))
         if neutralBase {
-            // B&W 네거티브: 마스크 없는 중립(회색) 베이스. 미노광 베이스는 밝은 회색으로 찍히고
-            // 채널 편차가 작다. 채널 간 차이 ≤ 0.08 (필름 틴트/노이즈 허용).
-            guard luma >= 0.10, luma <= 0.92 else { return false }
-            return abs(r - g) <= 0.08 && abs(g - b) <= 0.08
+            // B&W 네거티브: 마스크 없는 중립(회색) 베이스. 채널 편차는 밝기에 비례해 허용한다
+            // (밝은 베이스에서 ±0.08 이던 폭과 같은 뜻이고, 어두운 스캔에서는 그만큼 좁아진다).
+            guard luma >= minimumCandidateLuma, luma <= 0.92 else { return false }
+            let tolerance = maximumNeutralSpreadRatio * peak + neutralSpreadFloor
+            return abs(r - g) <= tolerance && abs(g - b) <= tolerance
         }
         // luma 상한: 미노광 베이스는 스캐너에서 중간~밝게 나오지만, 거의 흰(0.90+) 무필름 빈 공간
         // (홀더/마운트 간극)은 베이스가 아니다. 0.85 상한은 Fuji 옅은/황 베이스(최대 ~0.82)까지 커버.
-        guard luma >= 0.03, luma <= 0.85 else { return false }
+        guard luma >= minimumCandidateLuma, luma <= 0.85 else { return false }
         // R≥G≥B 단조 (허용 오차: 노이즈/베이스 불균일성). 컬러 네거티브 베이스는 항상 R≥G≥B.
         let eps = 0.01
         guard r >= g - eps, g >= b - eps else { return false }
-        // R-B 최소 분리: 진짜 베이스(마젠타+황 염료)는 R이 B보다 유의미하게 높다. 필름마다 강도가
-        // 다르나(Fuji 옅음, Kodak 진함), 거의 중립 회색에 가까운 무필름 빈 공간(R-B≈0.1)과 구분하기
-        // 위해 0.06 하한. Fuji 황 베이스(0.82,0.70,0.56 → R-B=0.26)도 여유 통과.
-        return (r - b) >= 0.06
+        // R−B 최소 분리(비율): 진짜 베이스(마젠타+황 염료)는 B가 R보다 뚜렷이 낮다. 필름마다
+        // 강도가 다르나(Fuji 옅음 0.32, Kodak 진함 0.8 수준) 거의 중립인 무필름 빈 공간과는
+        // 이 비율로 갈린다 — 노출이 낮아도 비율은 유지된다.
+        guard peak > 0 else { return false }
+        return (r - b) >= max(minimumMaskSeparation, minimumMaskRatio * peak)
+    }
+
+    /// 스트립 평균 중 베이스로 쓸 것들. 준클리핑(무필름)은 절대값으로 자르고, 어두운 쪽은
+    /// 가장 밝은 스트립의 비율로 자른다 — 스캔 전체 노출과 무관하게 같은 판정을 하기 위해서다.
+    static let stripBrightFraction = 0.55
+    static let stripClippingCut = 0.97
+
+    static func brightStrips(_ samples: [SIMD3<Double>]) -> [SIMD3<Double>] {
+        func luma(_ s: SIMD3<Double>) -> Double { (s.x + s.y + s.z) / 3 }
+        let usable = samples.filter { luma($0) < stripClippingCut }
+        guard let brightest = usable.map(luma).max(), brightest > 0 else { return [] }
+        return usable.filter { luma($0) >= brightest * stripBrightFraction }
     }
 
     /// 영역의 평균 RGB를 구한다 (CIAreaAverage).

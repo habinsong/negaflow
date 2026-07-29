@@ -73,17 +73,26 @@ final class UntaggedLinearScanDevelopTests: XCTestCase {
 
         let linear = try XCTUnwrap(ImageLoader.loadImported(url))
         let misread = try XCTUnwrap(ImageLoader.loadImported(url, untaggedTIFFRole: .standardImage))
+        let linearBase = try XCTUnwrap(engine.estimateFilmBase(in: linear, mode: .auto))
+        let misreadBase = try XCTUnwrap(engine.estimateFilmBase(in: misread, mode: .auto))
+
+        // 실측은 값 도메인 자체를 재는 일이다. 올바로 읽으면 픽스처의 미노광 베이스가 그대로
+        // 나오고, sRGB 로 잘못 읽으면 같은 픽셀이 감마 디코드돼 훨씬 어두운 Dmin 이 잡힌다
+        // (베이스 후보 판정은 비율이라 "실측 실패"가 아니라 "틀린 값"으로 나타난다).
+        XCTAssertEqual(linearBase.rgb.x, 0.250, accuracy: 0.03)
+        XCTAssertEqual(linearBase.rgb.y, 0.140, accuracy: 0.03)
+        XCTAssertEqual(linearBase.rgb.z, 0.075, accuracy: 0.03)
+        XCTAssertLessThan(misreadBase.rgb.x, linearBase.rgb.x * 0.5,
+                          "sRGB 오해석은 Dmin 을 훨씬 어둡게 잡는다.")
+
         let linearStats = varianceOfLuma(
-            engine.develop(image: linear, base: engine.estimateFilmBase(in: linear, mode: .auto), params: params),
+            engine.develop(image: linear, base: linearBase, params: params),
             width: 96, height: 72
         )
         let misreadStats = varianceOfLuma(
-            engine.develop(image: misread, base: engine.estimateFilmBase(in: misread, mode: .auto), params: params),
+            engine.develop(image: misread, base: misreadBase, params: params),
             width: 96, height: 72
         )
-
-        XCTAssertGreaterThan(linearStats.range, misreadStats.range,
-                             "linear 해석이 sRGB 오해석보다 넓은 계조를 만들어야 한다.")
         XCTAssertGreaterThan(misreadStats.mean, linearStats.mean,
                              "sRGB 오해석은 결과를 밝은 쪽으로 민다(붕뜸).")
     }
