@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/habinsong/negaflow/security/policy
+    about: Do not disclose vulnerabilities in a public issue. Follow the security policy instead.
+  - name: SANE scanner plugin
+    url: https://github.com/habinsong/negaflow-scanner-sane/issues
+    about: Report SANE backend, device discovery, and plugin installer problems in the plugin repository.

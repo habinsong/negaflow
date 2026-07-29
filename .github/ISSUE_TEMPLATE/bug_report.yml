@@ -1,0 +1,96 @@
+name: Bug report
+description: Report a reproducible problem in negaflow
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a problem. Do not include private photographs, credentials, or vulnerability details.
+        Security issues must follow the [security policy](https://github.com/habinsong/negaflow/security/policy).
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - Import
+        - Library and catalog
+        - Develop and Chroma Engine
+        - GrainMend
+        - Export and print
+        - Scanner UI or plugin integration
+        - CLI
+        - Build or packaging
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: negaflow version
+      description: Use the release version or commit SHA.
+      placeholder: "1.0.3 or a1b2c3d"
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Include the macOS version, Mac model or architecture, and Xcode version when relevant.
+      placeholder: "macOS 14.7, Apple Silicon"
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Provide the smallest repeatable sequence.
+      placeholder: |
+        1. Import or scan ...
+        2. Open ...
+        3. Choose ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include the exact error message when one is shown.
+    validations:
+      required: true
+
+  - type: textarea
+    id: scanner
+    attributes:
+      label: Scanner details
+      description: If relevant, include the scanner model, plugin name and version, and reported capabilities.
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Logs or additional evidence
+      description: Redact file paths and personal metadata. Use synthetic images when a sample is needed.
+      render: shell
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission checks
+      options:
+        - label: I searched the existing issues for this problem.
+          required: true
+        - label: This report does not contain a publicly disclosed security vulnerability or sensitive data.
+          required: true
+        - label: I agree to follow the project's Code of Conduct.
+          required: true

@@ -1,0 +1,65 @@
+name: Feature request
+description: Propose a focused improvement to negaflow
+title: "[Feature]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the workflow problem first. A focused proposal with a concrete use case is easiest to evaluate.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - Import
+        - Library and catalog
+        - Develop and Chroma Engine
+        - GrainMend
+        - Export and print
+        - Scanner UI or plugin integration
+        - CLI
+        - Build, packaging, or documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Workflow problem
+      description: What is difficult or impossible today, and who is affected?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: Describe the result you want without assuming a specific implementation.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Include current workarounds or simpler options you considered.
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Additional context
+      description: Add mockups, examples, measurements, or scanner details when relevant. Do not attach private scans.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission checks
+      options:
+        - label: I searched the existing issues for a similar request.
+          required: true
+        - label: I described any source-file safety or scanner-plugin boundary impact that applies.
+          required: true
+        - label: I agree to follow the project's Code of Conduct.
+          required: true
