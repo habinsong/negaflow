@@ -173,7 +173,7 @@ final class ProofCopyTests: XCTestCase {
         )
     }
 
-    func testPrintWorkspaceMainPreviewAndProofCopyUsePinnedPrinterProfile() throws {
+    func testCPrintPreviewAndProofCopyUsePinnedLabProfile() throws {
         let model = makeModel()
         let original = makeFrame()
         model.frames = [original]
@@ -182,31 +182,32 @@ final class ProofCopyTests: XCTestCase {
             filmType: .colorNegative
         ))
         XCTAssertTrue(model.assignNewPersistentFrames([original], toRollID: roll.id))
-        let printerProfile = try ICCOutputProfileTestFixture.snapshot()
-        XCTAssertTrue(model.setPrinterOutputICCProfile(
-            data: printerProfile.iccProfileData,
-            name: printerProfile.profileName
+        let labProfile = try ICCOutputProfileTestFixture.snapshot()
+        XCTAssertTrue(model.setCPrintProofICCProfile(
+            data: labProfile.iccProfileData,
+            name: labProfile.profileName
         ))
-        model.softProofEnabled = true
+        model.setPrintOutputProcess(.cPrint)
+        model.setCPrintPreviewEnabled(true)
         model.activeWorkspaceModule = .print
         original.updateParams { $0.developTarget = .main }
 
         let workspaceSettings = model.displaySoftProofSettings(for: original)
         XCTAssertEqual(
             workspaceSettings.iccProfileData.map(ICCOutputProfileSnapshot.sha256),
-            printerProfile.profileSHA256
+            labProfile.profileSHA256
         )
 
         let copy = try XCTUnwrap(model.createProofCopy(from: original))
-        XCTAssertEqual(copy.proofCopyConfiguration?.profileName, printerProfile.profileName)
-        XCTAssertEqual(copy.proofCopyConfiguration?.profileSHA256, printerProfile.profileSHA256)
+        XCTAssertEqual(copy.proofCopyConfiguration?.profileName, labProfile.profileName)
+        XCTAssertEqual(copy.proofCopyConfiguration?.profileSHA256, labProfile.profileSHA256)
 
-        model.clearPrinterOutputICCProfile()
+        model.clearCPrintProofICCProfile()
         model.activeWorkspaceModule = .develop
         let pinnedSettings = model.displaySoftProofSettings(for: copy)
         XCTAssertEqual(
             pinnedSettings.iccProfileData.map(ICCOutputProfileSnapshot.sha256),
-            printerProfile.profileSHA256
+            labProfile.profileSHA256
         )
     }
 

@@ -2,7 +2,7 @@ import SwiftUI
 
 struct LibraryFolderTreeView: View {
     @EnvironmentObject private var model: AppModel
-    @State private var expandedFolderIDs: Set<String> = []
+    @StateObject private var expansionStore = LibraryFolderExpansionStore()
     @State private var editingFolderID: String?
     @State private var folderNameDraft = ""
     @State private var renameFrame: ScanFrame?
@@ -10,15 +10,18 @@ struct LibraryFolderTreeView: View {
     let orderedResultFrameIDs: [UUID]?
     let selectedFolderID: Binding<String?>
     let visibleFolderPaths: Set<String>?
+    let frameListMaxHeight: CGFloat?
 
     init(
         orderedResultFrameIDs: [UUID]? = nil,
         selectedFolderID: Binding<String?> = .constant(nil),
-        visibleFolderPaths: Set<String>? = nil
+        visibleFolderPaths: Set<String>? = nil,
+        frameListMaxHeight: CGFloat? = nil
     ) {
         self.orderedResultFrameIDs = orderedResultFrameIDs
         self.selectedFolderID = selectedFolderID
         self.visibleFolderPaths = visibleFolderPaths
+        self.frameListMaxHeight = frameListMaxHeight
     }
 
     var body: some View {
@@ -36,11 +39,7 @@ struct LibraryFolderTreeView: View {
                 }
             }
         }
-        .onAppear {
-            expandedFolderIDs.formUnion(displayedSections.map(\.id))
-        }
         .onChange(of: displayedSections.map(\.id)) { _, ids in
-            expandedFolderIDs.formUnion(ids)
             if let selectedID = selectedFolderID.wrappedValue,
                !ids.contains(selectedID) {
                 selectedFolderID.wrappedValue = nil
@@ -69,24 +68,20 @@ struct LibraryFolderTreeView: View {
 
     @ViewBuilder
     private func folderSection(_ section: LibraryFolderSection) -> some View {
-        let isExpanded = expandedFolderIDs.contains(section.id)
+        let isExpanded = expansionStore.isExpanded(section.id)
         let isSelected = selectedFolderID.wrappedValue == section.id
         let isFolderAvailable = section.folder.map(model.isLibraryFolderAvailable) ?? true
         let orderedFrameIDs = orderedResultFrameIDs ?? sections.flatMap(\.frames).map(\.id)
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 6) {
                 Button {
-                    if let folder = section.folder {
-                        model.removeLibraryFolder(folder)
-                    }
+                    model.removeLibraryFolderSection(section)
                 } label: {
                     Image(systemName: "xmark")
                         .font(.caption2.weight(.bold))
                         .frame(width: 14, height: 14)
                 }
                 .buttonStyle(.plain)
-                .opacity(section.folder == nil ? 0 : 1)
-                .disabled(section.folder == nil)
                 .help(model.text(AppLocalizedPhrase.removeFromLibrary))
 
                 if editingFolderID == section.id {
@@ -112,11 +107,7 @@ struct LibraryFolderTreeView: View {
                 } else {
                     Button {
                         selectedFolderID.wrappedValue = section.id
-                        if isExpanded {
-                            expandedFolderIDs.remove(section.id)
-                        } else {
-                            expandedFolderIDs.insert(section.id)
-                        }
+                        expansionStore.toggle(section.id)
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
@@ -179,79 +170,105 @@ struct LibraryFolderTreeView: View {
 
             if isExpanded {
                 if !section.frames.isEmpty {
-                    ForEach(section.frames) { frame in
-                        Button {
-                            selectedFolderID.wrappedValue = section.id
-                            model.selectFrame(frame, orderedFrameIDs: orderedFrameIDs)
-                        } label: {
-                            HStack(spacing: 6) {
-                                Image(systemName: model.isSourceAvailable(frame) ? "photo" : "exclamationmark.circle")
-                                    .foregroundStyle(model.isFrameSelected(frame) ? Color.accentColor : Color.secondary)
-                                    .frame(width: 14)
-                                if case .scannerTIFF = frame.sourceKind {
-                                    HStack(spacing: 4) {
-                                        Text(frame.displayName(language: model.appLanguage))
-                                            .font(.caption2.weight(.medium))
-                                            .lineLimit(1)
-                                            .fixedSize(horizontal: true, vertical: false)
-                                        Text(verbatim: "(\(frame.sourceFileNameWithExtension))")
-                                            .font(AppTypography.minimumText())
-                                            .foregroundStyle(.secondary)
-                                            .lineLimit(1)
-                                            .truncationMode(.middle)
-                                            .minimumScaleFactor(AppTypography.minimumScaleFactor)
-                                            .layoutPriority(-1)
-                                    }
-                                    .lineLimit(1)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                } else {
-                                    Text(frame.sourceFileNameWithExtension)
-                                        .font(.caption2)
-                                        .lineLimit(1)
-                                }
-                                Spacer(minLength: 0)
-                            }
-                            .padding(.leading, 28)
-                            .padding(.vertical, 2)
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .librarySourceDraggable(
-                            item: LibrarySourceDragItem(frameIDs: model.framesForContextAction(
-                                frame,
-                                within: orderedFrameIDs
-                            ).map(\.id))
-                        )
-                        .foregroundStyle(model.isFrameSelected(frame) ? Color.accentColor : Color.primary)
-                        .accessibilityIdentifier("negaflow.library.file-row")
-                        .accessibilityLabel(frame.displayName(language: model.appLanguage))
-                        .accessibilitySelectionState(
-                            model.isFrameSelected(frame),
-                            selectedValue: model.accessibilityText(.selected),
-                            unselectedValue: model.accessibilityText(.notSelected),
-                            unselectedHint: model.accessibilityText(.select)
-                        )
-                        .contextMenu {
-                            Button(model.text(AppLocalizedPhrase.renamePhoto)) {
-                                renameFrame = frame
-                            }
-                            Button(model.text(AppLocalizedPhrase.showInFinder)) {
-                                model.revealSourceFilesInFinder(model.framesForContextAction(
-                                    frame,
-                                    within: orderedFrameIDs
-                                ))
-                            }
-                            if !model.isSourceAvailable(frame) {
-                                Button(model.text(AppLocalizedPhrase.locateOriginal)) {
-                                    model.presentRelinkPanel(for: frame)
-                                }
+                    if let frameListMaxHeight {
+                        ScrollView(.vertical) {
+                            LazyVStack(alignment: .leading, spacing: 3) {
+                                frameRows(section.frames, sectionID: section.id, orderedFrameIDs: orderedFrameIDs)
                             }
                         }
+                        .frame(
+                            height: min(
+                                frameListMaxHeight,
+                                CGFloat(section.frames.count * 25 - 3)
+                            )
+                        )
+                    } else {
+                        frameRows(section.frames, sectionID: section.id, orderedFrameIDs: orderedFrameIDs)
                     }
                 }
             }
         }
         .padding(.vertical, 2)
+    }
+
+    @ViewBuilder
+    private func frameRows(
+        _ frames: [ScanFrame],
+        sectionID: String,
+        orderedFrameIDs: [UUID]
+    ) -> some View {
+        ForEach(frames) { frame in
+            Button {
+                selectedFolderID.wrappedValue = sectionID
+                model.selectFrame(frame, orderedFrameIDs: orderedFrameIDs)
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: model.isSourceAvailable(frame) ? "photo" : "exclamationmark.circle")
+                        .foregroundStyle(model.isFrameSelected(frame) ? Color.accentColor : Color.secondary)
+                        .frame(width: 14)
+                    if case .scannerTIFF = frame.sourceKind {
+                        HStack(spacing: 4) {
+                            Text(frame.displayName(language: model.appLanguage))
+                                .font(.caption2.weight(.medium))
+                                .lineLimit(1)
+                                .fixedSize(horizontal: true, vertical: false)
+                            Text(verbatim: "(\(frame.sourceFileNameWithExtension))")
+                                .font(AppTypography.minimumText())
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                                .minimumScaleFactor(AppTypography.minimumScaleFactor)
+                                .layoutPriority(-1)
+                        }
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    } else {
+                        Text(frame.sourceFileNameWithExtension)
+                            .font(.caption2)
+                            .lineLimit(1)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.leading, 28)
+                .padding(.vertical, 2)
+                .frame(height: frameListMaxHeight == nil ? nil : 22)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .librarySourceDraggable(count: model.contextActionFrameCount(for: frame)) {
+                LibrarySourceDragItem(
+                    frameIDs: model.framesForContextAction(
+                        frame,
+                        within: orderedFrameIDs
+                    ).map(\.id)
+                )
+            }
+            .foregroundStyle(model.isFrameSelected(frame) ? Color.accentColor : Color.primary)
+            .accessibilityIdentifier("negaflow.library.file-row")
+            .accessibilityLabel(frame.displayName(language: model.appLanguage))
+            .accessibilitySelectionState(
+                model.isFrameSelected(frame),
+                selectedValue: model.accessibilityText(.selected),
+                unselectedValue: model.accessibilityText(.notSelected),
+                unselectedHint: model.accessibilityText(.select)
+            )
+            .contextMenu {
+                Button(model.text(AppLocalizedPhrase.renamePhoto)) {
+                    renameFrame = frame
+                }
+                Button(model.text(AppLocalizedPhrase.showInFinder)) {
+                    model.revealSourceFilesInFinder(model.framesForContextAction(
+                        frame,
+                        within: orderedFrameIDs
+                    ))
+                }
+                if !model.isSourceAvailable(frame) {
+                    Button(model.text(AppLocalizedPhrase.locateOriginal)) {
+                        model.presentRelinkPanel(for: frame)
+                    }
+                }
+            }
+        }
     }
 
     private func beginRenaming(_ section: LibraryFolderSection) {

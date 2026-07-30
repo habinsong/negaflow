@@ -50,8 +50,9 @@ class CIGateTests(unittest.TestCase):
         workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
         self.assertIn("contents: read", workflow)
         self.assertIn("runs-on: macos-26", workflow)
-        # GUI 잡은 빌드만 하는 게 아니라 실제로 테스트를 돌려야 한다.
-        self.assertIn("NEGAFLOW_CI_GUI_RUN: '1'", workflow)
+        # 서명 identity가 없는 호스트에서는 Runner를 실행하지 않고 번들 컴파일을 검증한다.
+        self.assertIn("Build GUI test bundle", workflow)
+        self.assertNotIn("NEGAFLOW_CI_GUI_RUN: '1'", workflow)
         self.assertIn("if: github.event_name == 'workflow_dispatch'", workflow)
         self.assertIn("needs: [static, swift, gui]", workflow)
         self.assertIn("actions/upload-artifact@v7", workflow)

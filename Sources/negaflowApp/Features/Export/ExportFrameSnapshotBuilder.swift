@@ -124,6 +124,52 @@ struct ExportFrameSourceGeneration: Equatable, Sendable {
         }.value
     }
 
+    /// 서로 독립인 한 롤의 원본 generation을 제한된 병렬도로 고정한다. 39장을 직렬 SHA-256
+    /// 하던 인화 패키지 시작 지연을 없애되, 디스크를 과포화하지 않도록 동시 작업 수를 제한한다.
+    static func capture(
+        at rawScanURLs: [URL],
+        maximumConcurrent: Int = 4
+    ) async -> [ExportFrameSourceVerification?] {
+        let standardized = rawScanURLs.map(\.standardizedFileURL)
+        var uniqueURLs: [URL] = []
+        var uniqueIndexByPath: [String: Int] = [:]
+        for url in standardized where uniqueIndexByPath[url.path] == nil {
+            uniqueIndexByPath[url.path] = uniqueURLs.count
+            uniqueURLs.append(url)
+        }
+        guard !uniqueURLs.isEmpty else { return [] }
+
+        let width = max(1, min(maximumConcurrent, uniqueURLs.count))
+        var uniqueResults = [ExportFrameSourceVerification?](
+            repeating: nil,
+            count: uniqueURLs.count
+        )
+        await withTaskGroup(of: (Int, ExportFrameSourceVerification?).self) { group in
+            for index in 0..<width {
+                let url = uniqueURLs[index]
+                group.addTask(priority: .userInitiated) {
+                    (index, verify(url, level: .strict, baseline: nil))
+                }
+            }
+            var nextIndex = width
+            while let (index, verification) = await group.next() {
+                uniqueResults[index] = verification
+                if nextIndex < uniqueURLs.count {
+                    let pendingIndex = nextIndex
+                    let pendingURL = uniqueURLs[pendingIndex]
+                    nextIndex += 1
+                    group.addTask(priority: .userInitiated) {
+                        (pendingIndex, verify(pendingURL, level: .strict, baseline: nil))
+                    }
+                }
+            }
+        }
+        return standardized.map { url in
+            guard let index = uniqueIndexByPath[url.path] else { return nil }
+            return uniqueResults[index]
+        }
+    }
+
     /// `baselines`(경로 → 최초 capture 결과)를 주면 standard 수준에서 stat 이 그대로인 원본의
     /// 전체 재해시를 건너뛴다. stat 이 하나라도 다르면 그 경로만 실제 해시로 판정한다.
     static func currentVerifications(
@@ -310,6 +356,13 @@ enum ExportFrameSnapshotBuilder {
             scannerModel: scannerModel,
             resolutionDPI: frame.sourceResolutionDPI,
             sourceBitDepth: frame.sourceBitDepth,
+            sourcePixelSize: {
+                guard let width = frame.sourcePixelWidth,
+                      let height = frame.sourcePixelHeight,
+                      width > 0,
+                      height > 0 else { return nil }
+                return CGSize(width: width, height: height)
+            }(),
             backendUsed: backendUsed,
             presetName: frame.preset?.id,
             scannerProfileID: effectiveParams.scannerProfileID,

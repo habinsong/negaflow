@@ -2,9 +2,34 @@ import SwiftUI
 import AppKit
 import Chromabase
 
-enum FrameStripPresentationMode {
+/// 카드가 어떤 그림을 보여줄지 정하는 규칙. 결과(`FrameStripPresentationMode`)를 부모 body 에서
+/// 계산해 값으로 넘기면, 현상이 끝나 프레임이 갱신돼도 부모가 다시 그려지기 전까지 카드가
+/// 예전 판단(원본)에 머문다 — 폴더 일괄 적용 뒤 썸네일이 바뀌지 않던 원인이다. 규칙만 넘기고
+/// 판단은 프레임을 관찰하는 카드가 직접 한다.
+enum FrameStripPresentationPolicy: Equatable {
+    /// 라이브러리 필름스트립 — 언제나 원본을 보여준다.
+    case raw
+    /// 현상 결과가 준비돼 있으면 그것을, 아니면 원본을 보여준다.
+    case developedWhenAvailable
+}
+
+enum FrameStripPresentationMode: Equatable {
     case developed
     case raw
+
+    @MainActor
+    static func resolve(
+        for frame: ScanFrame,
+        policy: FrameStripPresentationPolicy
+    ) -> FrameStripPresentationMode {
+        guard policy == .developedWhenAvailable else { return .raw }
+        guard frame.thumbnailImage != nil || frame.developedImage != nil else { return .raw }
+        // 네거티브는 현상 전에도 포지티브 썸네일이 먼저 올라온다. 그 그림이 이미 현상 결과다.
+        return frame.hasDevelopedOnce
+            || (frame.filmType.requiresInversion && frame.thumbnailImage != nil)
+            ? .developed
+            : .raw
+    }
 
     var displaysSubtitle: Bool {
         switch self {
@@ -27,16 +52,14 @@ enum FrameStripPresentationMode {
 
     @MainActor
     func previewImage(for frame: ScanFrame) -> NSImage? {
-        // 네거티브는 현상 썸네일/현상본만 표시한다. 최초 현상이 끝나기 전 rawPreviewImage 로
-        // 폴백하면 필름스트립에 네거티브 원본이 잠깐 노출되므로 빈 자리로 유지한다.
-        if frame.filmType.requiresInversion {
-            return frame.thumbnailImage ?? frame.developedImage
-        }
         switch self {
         case .developed:
+            if frame.filmType.requiresInversion {
+                return frame.thumbnailImage ?? frame.developedImage
+            }
             return frame.thumbnailImage ?? frame.developedImage ?? frame.rawPreviewImage
         case .raw:
-            return frame.thumbnailImage ?? frame.rawPreviewImage ?? frame.developedImage
+            return frame.rawPreviewImage ?? frame.thumbnailImage ?? frame.developedImage
         }
     }
 
@@ -51,11 +74,16 @@ struct FrameStripItemView: View {
     @ObservedObject var frame: ScanFrame
     let isSelected: Bool
     var itemSize: CGSize = CGSize(width: 206, height: 140)
-    var presentationMode: FrameStripPresentationMode = .developed
+    var presentationPolicy: FrameStripPresentationPolicy = .developedWhenAvailable
     var thumbnailAspectRatio: CGFloat? = nil
     var thumbnailTitleSpacing: CGFloat? = nil
     var ratingControlHeight: CGFloat? = nil
     let onSelect: () -> Void
+
+    /// 프레임을 관찰하는 이 뷰 안에서 판단한다 — 현상이 끝나면 곧바로 현상 결과로 바뀐다.
+    private var presentationMode: FrameStripPresentationMode {
+        FrameStripPresentationMode.resolve(for: frame, policy: presentationPolicy)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -144,7 +172,9 @@ struct FrameStripItemView: View {
                               lineWidth: isSelected ? 2 : 1)
         }
         .contentShape(RoundedRectangle(cornerRadius: 9))
-        .liquidSurface(cornerRadius: 9, interactive: true)
+        // 카드는 스크롤에서 수십 장이 동시에 살아 있다. interactive 글래스는 카드마다 포인터를
+        // 따라가는 실시간 변형을 돌려 스크롤 프레임을 갉아먹으므로 정적 표면을 쓴다.
+        .liquidSurface(cornerRadius: 9)
         .accessibilityLabel(model.text(
             AppLocalizedPhrase.frameAccessibilityFormat,
             frame.displayName(language: model.appLanguage),

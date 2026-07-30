@@ -217,8 +217,8 @@ enum LibraryPresentation {
         frame.rawScanURL.deletingLastPathComponent().standardizedFileURL
     }
 
-    static func normalizedFolderPath(_ url: URL) -> String {
-        url.standardizedFileURL.path
+    nonisolated static func normalizedFolderPath(_ url: URL) -> String {
+        url.resolvingSymlinksInPath().standardizedFileURL.path
     }
 
     private static func compare(

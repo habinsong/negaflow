@@ -35,14 +35,20 @@ extension AppModel {
 
     func applyUserDevelopPreset(_ preset: DevelopUserPreset, to frame: ScanFrame) {
         let restoredFrame = restoreSnapshotCompareState()
-        frame.applyUserDevelopPreset(preset, presets: presets)
-        statusMessage = text(AppLocalizedPhrase.userPresetAppliedFormat, preset.name)
-        Task {
-            if let restoredFrame, restoredFrame.id != frame.id {
-                await developFrame(restoredFrame)
-            }
-            await developFrame(frame)
+        let targetFrames = framesForContextAction(frame)
+        guard !targetFrames.isEmpty else { return }
+        for targetFrame in targetFrames {
+            targetFrame.applyUserDevelopPreset(preset, presets: presets)
         }
+        let appliedName = targetFrames.count == 1
+            ? preset.name
+            : "\(preset.name) · \(text(AppLocalizedPhrase.framesFormat, targetFrames.count))"
+        statusMessage = text(AppLocalizedPhrase.userPresetAppliedFormat, appliedName)
+        let targetIDs = Set(targetFrames.map(\.id))
+        let framesToDevelop = restoredFrame.map { restored in
+            targetIDs.contains(restored.id) ? targetFrames : [restored] + targetFrames
+        } ?? targetFrames
+        developFramesAfterSettingsTransfer(framesToDevelop)
     }
 
     func deleteUserDevelopPreset(_ preset: DevelopUserPreset) {

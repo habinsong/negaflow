@@ -91,6 +91,91 @@ final class ImportDuplicateTests: XCTestCase {
         XCTAssertEqual(model.frames.first?.imageTransform, .identity)
         XCTAssertEqual(model.nextScanOrientation, scannerTemplate)
     }
+
+    func testImportDoesNotDevelopAutomaticallyByDefault() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("negaflow-import-manual-develop-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let sourceURL = root.appendingPathComponent("source.tiff")
+        try MockScannerBackend.writeSyntheticNegative(width: 8, height: 6, to: sourceURL)
+        let suiteName = "negaflow-import-manual-develop.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let model = AppModel(
+            presentationPreferencesStore: PresentationPreferencesStore(defaults: defaults),
+            libraryCatalogURL: root.appendingPathComponent("library.json"),
+            libraryDefectDirectoryURL: root.appendingPathComponent("defects", isDirectory: true),
+            libraryBackupDirectoryURL: root.appendingPathComponent("backups", isDirectory: true)
+        )
+        model.activeWorkspaceModule = .library
+
+        model.importImages(urls: [sourceURL])
+        let frame = try XCTUnwrap(model.frames.first)
+        if let seed = frame.initialThumbnailSeedTask {
+            await seed.value
+        }
+        try await Task.sleep(for: .milliseconds(250))
+
+        XCTAssertFalse(model.developsImportsAutomatically)
+        XCTAssertFalse(frame.hasDevelopedOnce)
+        XCTAssertNotNil(frame.rawPreviewImage)
+        XCTAssertNil(frame.developedImage)
+    }
+
+    func testImportDevelopsAutomaticallyWhenPreferenceIsEnabled() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("negaflow-import-auto-develop-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let sourceURL = root.appendingPathComponent("source.tiff")
+        try MockScannerBackend.writeSyntheticNegative(width: 8, height: 6, to: sourceURL)
+        let suiteName = "negaflow-import-auto-develop.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let model = AppModel(
+            presentationPreferencesStore: PresentationPreferencesStore(defaults: defaults),
+            libraryCatalogURL: root.appendingPathComponent("library.json"),
+            libraryDefectDirectoryURL: root.appendingPathComponent("defects", isDirectory: true),
+            libraryBackupDirectoryURL: root.appendingPathComponent("backups", isDirectory: true)
+        )
+        model.activeWorkspaceModule = .library
+        model.developsImportsAutomatically = true
+
+        model.importImages(urls: [sourceURL])
+        let frame = try XCTUnwrap(model.frames.first)
+        let deadline = Date().addingTimeInterval(5)
+        while !frame.hasDevelopedOnce, Date() < deadline {
+            try await Task.sleep(for: .milliseconds(25))
+        }
+
+        XCTAssertTrue(frame.hasDevelopedOnce)
+        XCTAssertNotNil(frame.developedImage)
+    }
+
+    func testProgressAwareImportPublishesCompletedAndTotalCounts() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("negaflow-import-progress-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let firstURL = root.appendingPathComponent("first.tiff")
+        let secondURL = root.appendingPathComponent("second.tiff")
+        try MockScannerBackend.writeSyntheticNegative(width: 8, height: 6, to: firstURL)
+        try MockScannerBackend.writeSyntheticNegative(width: 8, height: 6, to: secondURL)
+        let model = AppModel(
+            libraryCatalogURL: root.appendingPathComponent("library.json"),
+            libraryDefectDirectoryURL: root.appendingPathComponent("defects", isDirectory: true),
+            libraryBackupDirectoryURL: root.appendingPathComponent("backups", isDirectory: true)
+        )
+
+        await model.importImagesWithProgress(urls: [firstURL, secondURL])
+
+        XCTAssertEqual(model.frames.count, 2)
+        XCTAssertEqual(
+            model.libraryImportProgressStore.progress,
+            LibraryTaskProgress(completedCount: 2, totalCount: 2)
+        )
+    }
 }
 
 private extension Array {

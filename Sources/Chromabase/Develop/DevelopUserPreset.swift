@@ -17,9 +17,7 @@ public struct DevelopUserPreset: Identifiable, Codable, Sendable, Equatable {
         self.id = id
         self.name = name
         self.createdAt = createdAt
-        var presetParams = params
-        presetParams.imageTransform = .identity
-        self.params = presetParams
+        self.params = params
         self.presetID = presetID
     }
 }

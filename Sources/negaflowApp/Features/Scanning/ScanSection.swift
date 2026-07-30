@@ -8,7 +8,7 @@ import Foundation
 //
 // "스캐너 불러오기"로 펼쳐지는 하드웨어 스캔 컨트롤(필름 종류/저장 폴더/해상도/비트/모드/
 // 프레임수 + Preview/Scan). 현상 프로세스/Target/Profile은 LibrarySourceSection이 공유로 소유한다.
-// 스캐너/플러그인이 없으면 상태 + 설치 안내 + 시뮬레이터 토글을 보여준다.
+// 설치된 플러그인이 있을 때만 장치 상태와 스캐너 컨트롤을 보여준다.
 struct ScannerControlsSection: View {
     @EnvironmentObject var model: AppModel
     @State private var batchCount: Int = 1
@@ -16,10 +16,12 @@ struct ScannerControlsSection: View {
     @FocusState private var isFolderNameFocused: Bool
 
     var body: some View {
-        if model.hasScanner {
-            controls
-        } else {
-            unavailableState
+        if model.hasScannerPlugin {
+            if model.hasScanner {
+                controls
+            } else {
+                unavailableState
+            }
         }
     }
 
@@ -27,12 +29,19 @@ struct ScannerControlsSection: View {
     @ViewBuilder
     var controls: some View {
         Section {
-            Picker(model.text(AppLocalizedPhrase.scannerLabel), selection: scannerDeviceBinding) {
-                ForEach(model.selectableScannerDevices) { device in
-                    Text(device.displayName).tag(String?.some(device.id))
+            LabeledContent(model.text(AppLocalizedPhrase.scannerLabel)) {
+                HStack(spacing: 6) {
+                    Picker(model.text(AppLocalizedPhrase.scannerLabel), selection: scannerDeviceBinding) {
+                        ForEach(model.selectableScannerDevices) { device in
+                            Text(device.displayName).tag(String?.some(device.id))
+                        }
+                    }
+                    .labelsHidden()
+                    .disabled(model.selectableScannerDevices.isEmpty || model.isScanning)
+
+                    rescanDevicesButton
                 }
             }
-            .disabled(model.selectableScannerDevices.isEmpty || model.isScanning)
 
             Picker(model.text(AppLocalizedPhrase.film), selection: scanFilmTypeBinding) {
                 ForEach(FilmType.allCases, id: \.self) { filmType in
@@ -113,6 +122,10 @@ struct ScannerControlsSection: View {
                 }
             }
 
+            if model.usesFlatbedRegionWorkflow {
+                flatbedDetectionModeControls
+            }
+
             if model.demoMode, model.scanFrameFormat.is35mm {
                 Toggle(
                     model.text(AppLocalizedPhrase.perforation),
@@ -169,7 +182,7 @@ struct ScannerControlsSection: View {
                     .help(infraredHelp)
             }
         } header: {
-            sectionHeader(model.text(AppLocalizedPhrase.scanSection), systemImage: "scanner")
+            scanSectionHeader
         }
         .disabled(model.isScanning)
 
@@ -245,6 +258,30 @@ struct ScannerControlsSection: View {
         }
         if batchCount > 1 { return model.text(AppLocalizedPhrase.scanCountFormat, batchCount) }
         return model.actionableFrame == nil ? model.text(AppLocalizedPhrase.scan) : model.text(AppLocalizedPhrase.scanNext)
+    }
+
+    private var scanSectionHeader: some View {
+        HStack(spacing: 6) {
+            Label(model.text(AppLocalizedPhrase.scanSection), systemImage: "scanner")
+                .font(.subheadline.weight(.semibold))
+            Spacer(minLength: 8)
+        }
+        .textCase(nil)
+    }
+
+    /// 스캐너 다시 찾기. 목록 바로 오른쪽에 둬서 "이 목록을 다시 채운다"가 드러나게 한다.
+    private var rescanDevicesButton: some View {
+        Button {
+            Task { await model.refreshDevices() }
+        } label: {
+            Image(systemName: "arrow.counterclockwise")
+                .frame(width: 16, height: 16)
+        }
+        .buttonStyle(.borderless)
+        .disabled(model.isDetecting || model.isScanning)
+        .help(model.text(.commandDetectScanners))
+        .accessibilityLabel(model.text(.commandDetectScanners))
+        .accessibilityIdentifier("negaflow.scanner.rescan")
     }
 
     var scannerDeviceBinding: Binding<String?> {
@@ -329,7 +366,8 @@ struct ScannerControlsSection: View {
             Button {
                 Task { await model.refreshDevices() }
             } label: {
-                Label(model.text(.commandDetectScanners), systemImage: "arrow.clockwise").frame(maxWidth: .infinity)
+                Label(model.text(.commandDetectScanners), systemImage: "arrow.counterclockwise")
+                    .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
             .disabled(model.isDetecting)
@@ -339,7 +377,7 @@ struct ScannerControlsSection: View {
             }
             .help(model.text(AppLocalizedPhrase.scannerSimulatorHelp))
         } header: {
-            sectionHeader(model.text(AppLocalizedPhrase.scanSection), systemImage: "scanner")
+            scanSectionHeader
         }
     }
 
@@ -416,29 +454,77 @@ struct ScannerControlsSection: View {
 
     @ViewBuilder
     var flatbedRegionControls: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(model.text(
-                    AppLocalizedPhrase.flatbedFramesFormat,
-                    model.flatbedScanRegions.count
-                ))
-                Spacer()
-                if model.selectedFlatbedScanRegionID != nil {
-                    Button(role: .destructive) {
-                        model.deleteSelectedFlatbedScanRegion()
-                    } label: {
-                        Image(systemName: "trash")
-                    }
-                    .help(model.text(AppLocalizedPhrase.delete))
-                }
+        HStack {
+            Text(model.text(
+                AppLocalizedPhrase.flatbedFramesFormat,
+                model.flatbedScanRegions.count
+            ))
+            Spacer()
+
+            Button {
+                model.copySelectedFlatbedScanRegion()
+            } label: {
+                Image(systemName: "doc.on.doc")
             }
+            .help(model.text(AppLocalizedPhrase.flatbedCopyFrame))
+            .disabled(model.selectedFlatbedScanRegionID == nil)
+
+            Button {
+                model.pasteFlatbedScanRegion()
+            } label: {
+                Image(systemName: "doc.on.clipboard")
+            }
+            .help(model.text(AppLocalizedPhrase.flatbedPasteFrame))
+            .disabled(!model.canPasteFlatbedScanRegion)
 
             Button {
                 model.addFlatbedScanRegion()
             } label: {
-                Label(model.text(AppLocalizedPhrase.flatbedAddFrame), systemImage: "plus")
+                Image(systemName: "plus")
             }
+            .help(model.text(AppLocalizedPhrase.flatbedAddFrame))
             .disabled(model.flatbedPreviewFrame == nil)
+
+            Button(role: .destructive) {
+                model.deleteSelectedFlatbedScanRegion()
+            } label: {
+                Image(systemName: "trash")
+            }
+            .help(model.text(AppLocalizedPhrase.flatbedRemoveFrame))
+            .disabled(model.selectedFlatbedScanRegionID == nil)
+        }
+    }
+
+    /// 프레임을 앱이 찾을지 사용자가 놓을지. 옆의 새로고침은 자동이면 다시 찾고, 수동이면
+    /// 지우고 규격 프레임 하나를 놓아 다시 시작할 자리를 만든다.
+    @ViewBuilder
+    var flatbedDetectionModeControls: some View {
+        HStack {
+            Text(model.text(AppLocalizedPhrase.flatbedDetectionMode))
+            Spacer()
+            Picker(
+                model.text(AppLocalizedPhrase.flatbedDetectionMode),
+                selection: Binding(
+                    get: { model.flatbedFrameDetectionMode },
+                    set: { mode in Task { await model.setFlatbedFrameDetectionMode(mode) } }
+                )
+            ) {
+                Text(model.text(AppLocalizedPhrase.flatbedDetectionAutomatic))
+                    .tag(FlatbedFrameDetectionMode.automatic)
+                Text(model.text(AppLocalizedPhrase.flatbedDetectionManual))
+                    .tag(FlatbedFrameDetectionMode.manual)
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .fixedSize()
+
+            Button {
+                Task { await model.refreshFlatbedScanRegions() }
+            } label: {
+                Image(systemName: "arrow.clockwise")
+            }
+            .help(model.text(AppLocalizedPhrase.flatbedRefreshFrames))
+            .disabled(!model.canRefreshFlatbedScanRegions)
         }
     }
 

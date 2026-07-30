@@ -117,6 +117,47 @@ final class PrintCompositionTests: XCTestCase {
         XCTAssertFalse(output.extent.isNull)
     }
 
+    func testPresentationStylesApplyExpectedMonochromeRelationships() throws {
+        let source = CIImage(color: CIColor(red: 0.2, green: 0.45, blue: 0.8))
+            .cropped(to: CGRect(x: 0, y: 0, width: 1, height: 1))
+
+        let cyanotype = try rgba(
+            PrintPresentationRenderer.apply(to: source, style: .cyanotype)
+        )
+        XCTAssertGreaterThan(cyanotype.z, cyanotype.y)
+        XCTAssertGreaterThan(cyanotype.y, cyanotype.x)
+
+        let gelatin = try rgba(
+            PrintPresentationRenderer.apply(to: source, style: .gelatinSilver)
+        )
+        XCTAssertEqual(gelatin.x, gelatin.y, accuracy: 0.001)
+        XCTAssertEqual(gelatin.y, gelatin.z, accuracy: 0.001)
+
+        let black = CIImage(color: .black)
+            .cropped(to: CGRect(x: 0, y: 0, width: 1, height: 1))
+        let glassPlate = try rgba(
+            PrintPresentationRenderer.apply(to: black, style: .glassPlate)
+        )
+        XCTAssertGreaterThan(glassPlate.x, 0.99)
+        XCTAssertEqual(glassPlate.x, glassPlate.y, accuracy: 0.001)
+        XCTAssertEqual(glassPlate.y, glassPlate.z, accuracy: 0.001)
+    }
+
+    func testLegacyCompositionWithoutPresentationStyleDecodesAsStandard() throws {
+        let encoded = try JSONEncoder().encode(PrintCompositionSettings())
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: encoded) as? [String: Any]
+        )
+        object.removeValue(forKey: "presentationStyle")
+
+        let decoded = try JSONDecoder().decode(
+            PrintCompositionSettings.self,
+            from: JSONSerialization.data(withJSONObject: object)
+        )
+
+        XCTAssertEqual(decoded.presentationStyle, .standard)
+    }
+
     func testInvalidLayoutSettingsAreRejected() {
         XCTAssertNil(PrintCompositionLayout.make(
             sourceSize: CGSize(width: 3, height: 2),
@@ -126,5 +167,22 @@ final class PrintCompositionTests: XCTestCase {
             sourceSize: CGSize(width: 3, height: 2),
             settings: PrintCompositionSettings(marginMM: 10, dpi: 2400)
         ))
+    }
+
+    private func rgba(_ image: CIImage) throws -> SIMD4<Float> {
+        var pixels = [Float](repeating: 0, count: 4)
+        let context = CIContext()
+        let colorSpace = try XCTUnwrap(CGColorSpace(name: CGColorSpace.sRGB))
+        pixels.withUnsafeMutableBytes { bytes in
+            context.render(
+                image,
+                toBitmap: bytes.baseAddress!,
+                rowBytes: MemoryLayout<Float>.size * 4,
+                bounds: CGRect(x: 0, y: 0, width: 1, height: 1),
+                format: .RGBAf,
+                colorSpace: colorSpace
+            )
+        }
+        return SIMD4(pixels[0], pixels[1], pixels[2], pixels[3])
     }
 }

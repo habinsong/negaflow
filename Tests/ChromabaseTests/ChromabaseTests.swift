@@ -324,7 +324,7 @@ final class ChromabaseTests: XCTestCase {
         XCTAssertEqual(decoded.filmStockDminID, "kodak-portra-400")
     }
 
-    func testDevelopUserPresetCodablePreservesManualMainSettingsWithoutGeometry() throws {
+    func testDevelopUserPresetCodablePreservesManualMainSettingsAndGeometry() throws {
         var params = DevelopParameters()
         params.developTarget = .main
         params.baseEstimationMode = .preset
@@ -345,14 +345,14 @@ final class ChromabaseTests: XCTestCase {
         XCTAssertNil(preset.params.scannerProfileID)
         XCTAssertEqual(preset.params.exposure, 0.3, accuracy: 1e-9)
         XCTAssertEqual(preset.params.warmth, 0.18, accuracy: 1e-9)
-        XCTAssertEqual(preset.params.imageTransform, .identity)
+        XCTAssertEqual(preset.params.imageTransform, params.imageTransform)
 
         let data = try JSONEncoder().encode(preset)
         let decoded = try JSONDecoder().decode(DevelopUserPreset.self, from: data)
         XCTAssertEqual(decoded.name, "Portra warm")
         XCTAssertEqual(decoded.presetID, "warm-lab")
         XCTAssertEqual(decoded.params.developTarget, .main)
-        XCTAssertEqual(decoded.params.imageTransform, .identity)
+        XCTAssertEqual(decoded.params.imageTransform, params.imageTransform)
     }
 
     func testDevelopKeyboardNudgeUsesFineAndShiftStepsWithinRange() {
@@ -418,7 +418,13 @@ final class ChromabaseTests: XCTestCase {
         destination.noiseReduction = 0.08
         destination.imageTransform = ImageTransform(rotation: .deg270, flipHorizontal: true)
 
-        let scope = DevelopSettingsPasteScope(base: false, tone: true, color: false, detail: true)
+        let scope = DevelopSettingsPasteScope(
+            base: false,
+            tone: true,
+            color: false,
+            detail: true,
+            geometry: false
+        )
         let pasted = scope.applying(source: source, to: destination)
 
         XCTAssertEqual(pasted.filmType, destination.filmType)
@@ -441,6 +447,7 @@ final class ChromabaseTests: XCTestCase {
 
     func testDevelopSettingsPasteScopeBaseKeepsMainManualSourceExplicit() {
         var source = DevelopParameters()
+        source.isDigitalSource = true
         source.developTarget = .main
         source.baseEstimationMode = .manual
         source.manualBaseRGB = SIMD3(0.8, 0.65, 0.42)
@@ -449,6 +456,7 @@ final class ChromabaseTests: XCTestCase {
         source.exposure = 0.33
 
         var destination = DevelopParameters()
+        destination.isDigitalSource = nil
         destination.developTarget = .sp3000
         destination.baseEstimationMode = .auto
         destination.manualBaseRGB = nil
@@ -456,10 +464,17 @@ final class ChromabaseTests: XCTestCase {
         destination.filmStockDminID = nil
         destination.exposure = -0.22
 
-        let pasted = DevelopSettingsPasteScope(base: true, tone: false, color: false, detail: false)
+        let pasted = DevelopSettingsPasteScope(
+            base: true,
+            tone: false,
+            color: false,
+            detail: false,
+            geometry: false
+        )
             .applying(source: source, to: destination)
 
         XCTAssertEqual(pasted.developTarget, .main)
+        XCTAssertEqual(pasted.isDigitalSource, true)
         XCTAssertEqual(pasted.baseEstimationMode, .manual)
         XCTAssertEqual(pasted.manualBaseRGB, source.manualBaseRGB)
         XCTAssertNil(pasted.scannerProfileID)
@@ -489,7 +504,13 @@ final class ChromabaseTests: XCTestCase {
         ]
         let destination = DevelopParameters()
 
-        let base = DevelopSettingsPasteScope(base: true, tone: false, color: false, detail: false)
+        let base = DevelopSettingsPasteScope(
+            base: true,
+            tone: false,
+            color: false,
+            detail: false,
+            geometry: false
+        )
             .applying(source: source, to: destination)
         XCTAssertEqual(base.lightSourceProfileID, source.lightSourceProfileID)
         XCTAssertEqual(base.autoLevels, source.autoLevels)
@@ -497,7 +518,13 @@ final class ChromabaseTests: XCTestCase {
         XCTAssertEqual(base.bwToning, destination.bwToning)
         XCTAssertEqual(base.localDodgeBurn, destination.localDodgeBurn)
 
-        let color = DevelopSettingsPasteScope(base: false, tone: false, color: true, detail: false)
+        let color = DevelopSettingsPasteScope(
+            base: false,
+            tone: false,
+            color: true,
+            detail: false,
+            geometry: false
+        )
             .applying(source: source, to: destination)
         XCTAssertEqual(color.bwToning, source.bwToning)
         XCTAssertEqual(color.filmEmulation, source.filmEmulation)
@@ -505,7 +532,13 @@ final class ChromabaseTests: XCTestCase {
         XCTAssertNil(color.lightSourceProfileID)
         XCTAssertTrue(color.localDodgeBurn.isEmpty)
 
-        let detail = DevelopSettingsPasteScope(base: false, tone: false, color: false, detail: true)
+        let detail = DevelopSettingsPasteScope(
+            base: false,
+            tone: false,
+            color: false,
+            detail: true,
+            geometry: false
+        )
             .applying(source: source, to: destination)
         XCTAssertEqual(detail.localDodgeBurn, source.localDodgeBurn)
         XCTAssertEqual(detail.bwToning, destination.bwToning)

@@ -14,13 +14,14 @@ flowchart LR
 ```
 
 > [!NOTE]
-> 当前版本是 `1.0.3`。做了什么、实际验证到哪一步，都记在
+> 当前版本是 `1.0.4`。做了什么、实际验证到哪一步，都记在
 > [项目状态](product/PROJECT_STATUS.md)里。
 
 ## 产品
 
 | 文档 | 什么时候看 |
 |---|---|
+| [从图库到打印](product/WORKFLOW.md) | 需要了解导入、按文件夹显影、复制粘贴和打印流程时 |
 | [色彩引擎](product/CHROMA_ENGINE.md) | 想了解胶片反转和显影顺序时 |
 | [GrainMend](product/GRAINMEND.md) | 想看灰尘和划痕怎么修复时 |
 | [胶片配置文件](product/FILM_PROFILES.md) | 想确认内置配置文件的来源和限制时 |
@@ -41,6 +42,7 @@ flowchart LR
 |---|---|
 | [扫描仪 CLI JSON](reference/CLI_JSON.md) | `detect --json` 和 `capabilities --json` 的输出形式 |
 | [渲染记录](reference/RENDER_MANIFEST.md) | 原件、编辑值、输出文件之间的 SHA-256 关系 |
+| [印相布局与 C-print 预览](reference/C_PRINT.md) | 7 种布局、成品页导出、渲染优化、仅软打样 ICC 的行为和精度限制 |
 | [固定印相响应](reference/PRINT_RESPONSE.md) | `shoulder-print-response-v4` 的公式和基准点 |
 | [扫描仪配置文件质量判定](reference/PROFILE_QUALITY_GATE.md) | REAL/TARGET 配对素材的发布判定 |
 | [扫描仪噪声配置文件](reference/SCANNER_NOISE_PROFILES.md) | 重复扫描测量与自动应用的条件 |

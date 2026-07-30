@@ -14,13 +14,14 @@ flowchart LR
 ```
 
 > [!NOTE]
-> 現在のバージョンは`1.0.3`です。作ったものと実際に確認した範囲は
+> 現在のバージョンは`1.0.4`です。作ったものと実際に確認した範囲は
 > [プロジェクトの状態](product/PROJECT_STATUS.md)に書いています。
 
 ## 製品
 
 | ドキュメント | 読むとき |
 |---|---|
+| [ライブラリからプリントまで](product/WORKFLOW.md) | 読み込み、フォルダー現像、コピー・ペースト、プリントの流れを見るとき |
 | [クロマエンジン](product/CHROMA_ENGINE.md) | フィルム反転と現像順序を知りたいとき |
 | [GrainMend](product/GRAINMEND.md) | ホコリとキズの復元がどう動くか見るとき |
 | [フィルムプロファイル](product/FILM_PROFILES.md) | 同梱プロファイルの出どころと限界を確認するとき |
@@ -41,6 +42,7 @@ flowchart LR
 |---|---|
 | [スキャナーCLI JSON](reference/CLI_JSON.md) | `detect --json`と`capabilities --json`の出力形式 |
 | [レンダー記録](reference/RENDER_MANIFEST.md) | 原本、編集値、出力ファイルのSHA-256の関係 |
+| [プリントレイアウトとC-printプレビュー](reference/C_PRINT.md) | 7レイアウト、完成ページ出力、レンダリング最適化、プルーフ専用ICCと精度の限界 |
 | [固定プリント応答](reference/PRINT_RESPONSE.md) | `shoulder-print-response-v4`の式と基準点 |
 | [スキャナープロファイル品質判定](reference/PROFILE_QUALITY_GATE.md) | REAL/TARGETペア資料の出荷判定 |
 | [スキャナーノイズプロファイル](reference/SCANNER_NOISE_PROFILES.md) | 繰り返しスキャンの計測と自動適用の条件 |

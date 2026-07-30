@@ -41,6 +41,7 @@ enum AppModelFactory {
             libraryBackupDirectoryURL: root.appendingPathComponent("Library/Backups", isDirectory: true)
         )
         model.appLanguage = .english
+        model.developsImportsAutomatically = configuration.developsImportsAutomatically
         model.demoMode = configuration.enablesDemoScanner
         if configuration.enablesDemoScanner {
             model.selectedDeviceID = AppModel.mockDeviceID

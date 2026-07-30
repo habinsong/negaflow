@@ -50,17 +50,26 @@ enum SourceMovePlanner {
         var moves: [SourceMovePlan.FileMove] = []
         var mappings: [SourceRelinkPlan.Mapping] = []
         var companionMappings: [SourceRelinkPlan.Mapping] = []
+        var reservedDestinationPaths = Set<String>()
         for source in unique {
             let raw = source.rawURL.standardizedFileURL
-            let destination = destinationFolder.standardizedFileURL
-                .appendingPathComponent(raw.lastPathComponent, isDirectory: false)
+            let destination = availableDestinationURL(
+                for: raw,
+                in: destinationFolder,
+                reservedPaths: &reservedDestinationPaths,
+                fileManager: fileManager
+            )
             if raw != destination {
                 moves.append(.init(sourceURL: raw, destinationURL: destination))
                 mappings.append(.init(oldSourceURL: raw, newSourceURL: destination))
             }
             if let infrared = source.infraredURL?.standardizedFileURL {
-                let infraredDestination = destinationFolder.standardizedFileURL
-                    .appendingPathComponent(infrared.lastPathComponent, isDirectory: false)
+                let infraredDestination = availableDestinationURL(
+                    for: infrared,
+                    in: destinationFolder,
+                    reservedPaths: &reservedDestinationPaths,
+                    fileManager: fileManager
+                )
                 if infrared != infraredDestination {
                     moves.append(.init(sourceURL: infrared, destinationURL: infraredDestination))
                     companionMappings.append(.init(
@@ -134,6 +143,45 @@ enum SourceMovePlanner {
         let destinations = moves.map { $0.destinationURL.standardizedFileURL.path }
         return Set(destinations).count == destinations.count
             && moves.allSatisfy { !fileManager.fileExists(atPath: $0.destinationURL.path) }
+    }
+
+    private static func availableDestinationURL(
+        for sourceURL: URL,
+        in destinationFolder: URL,
+        reservedPaths: inout Set<String>,
+        fileManager: FileManager
+    ) -> URL {
+        let folder = destinationFolder.standardizedFileURL
+        let source = sourceURL.standardizedFileURL
+        let original = folder.appendingPathComponent(
+            source.lastPathComponent,
+            isDirectory: false
+        )
+        if original == source {
+            reservedPaths.insert(original.path)
+            return original
+        }
+        if !fileManager.fileExists(atPath: original.path),
+           reservedPaths.insert(original.path).inserted {
+            return original
+        }
+
+        let fileExtension = source.pathExtension
+        let stem = fileExtension.isEmpty
+            ? source.lastPathComponent
+            : source.deletingPathExtension().lastPathComponent
+        var suffix = 2
+        while true {
+            let candidateName = fileExtension.isEmpty
+                ? "\(stem) \(suffix)"
+                : "\(stem) \(suffix).\(fileExtension)"
+            let candidate = folder.appendingPathComponent(candidateName, isDirectory: false)
+            if !fileManager.fileExists(atPath: candidate.path),
+               reservedPaths.insert(candidate.path).inserted {
+                return candidate
+            }
+            suffix += 1
+        }
     }
 
     private static func isDirectory(_ url: URL, fileManager: FileManager) -> Bool {

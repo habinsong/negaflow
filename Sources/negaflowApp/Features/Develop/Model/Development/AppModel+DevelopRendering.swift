@@ -8,6 +8,7 @@ extension AppModel {
     func renderLatestDevelopment(
         for frame: ScanFrame,
         preserveThumbnail: Bool,
+        skipInteractivePreview: Bool,
         selectionBoundFrameID: UUID? = nil
     ) async {
         let trace = AppDiagnostics.start(.developFrame, category: .develop)
@@ -37,91 +38,99 @@ extension AppModel {
                 lightSourceProfileID: frame.params.lightSourceProfileID
             )
 
-            // ── 패스 1: 인터랙티브(표시 크기 적응형 프록시, 발색 결과만). 캔버스가 실제로 쓰는
-            //    디바이스 픽셀 이상으로 렌더해 정착 패스와 화면상 선명도가 같다(해상도 펌핑 없음).
-            //    변형-전 캐시(cachedDevelopedBase)나 비교/디버그 프리뷰는 만들지 않는다(정착 패스에서 채운다).
-            let interactiveDimension = DevelopFrameRenderer.interactiveProxyDimension(
-                displayTargetPixels: canvasDisplayTargetPixels
-            )
-            // 스냅샷이 소비하는 cleaned raw 세대 — 발행 시 displayedCleanRawRevision 에 기록해
-            // 결함 제거 스피너가 "제거가 보이는 시점"에 끝나게 한다.
-            let interactiveCleanRawRevision = frame.cleanRawRevision
-            let interactive = makeSnapshot(
-                for: frame, baseKey: baseKey,
-                needsRawPreview: false, needsNeutralPreview: false, needsDebugPreviews: false,
-                needsThumbnail: frame.thumbnailImage == nil,
-                proxyMaxDimension: interactiveDimension
-            )
-            developController.updateProcessingDetail(
-                interactive: true,
-                proxyPixels: Int(interactiveDimension),
-                isScanning: isScanning,
-                language: appLanguage
-            )
-            do {
-                let fast = try await renderDevelopmentSnapshot(interactive)
-                guard developmentRequestIsCurrent(frame, selectionBoundFrameID: selectionBoundFrameID) else { return }
-                guard softProofRenderRequestIsCurrent(interactive) else {
+            if !skipInteractivePreview {
+                // ── 패스 1: 인터랙티브(표시 크기 적응형 프록시, 발색 결과만). 캔버스가 실제로 쓰는
+                //    디바이스 픽셀 이상으로 렌더해 정착 패스와 화면상 선명도가 같다(해상도 펌핑 없음).
+                //    변형-전 캐시(cachedDevelopedBase)나 비교/디버그 프리뷰는 만들지 않는다(정착 패스에서 채운다).
+                let interactiveDimension = DevelopFrameRenderer.interactiveProxyDimension(
+                    displayTargetPixels: canvasDisplayTargetPixels
+                )
+                // 스냅샷이 소비하는 cleaned raw 세대 — 발행 시 displayedCleanRawRevision 에 기록해
+                // 결함 제거 스피너가 "제거가 보이는 시점"에 끝나게 한다.
+                let interactiveCleanRawRevision = frame.cleanRawRevision
+                let interactive = makeSnapshot(
+                    for: frame, baseKey: baseKey,
+                    needsRawPreview: false, needsNeutralPreview: false, needsDebugPreviews: false,
+                    needsThumbnail: frame.thumbnailImage == nil,
+                    proxyMaxDimension: interactiveDimension
+                )
+                developController.updateProcessingDetail(
+                    interactive: true,
+                    proxyPixels: Int(interactiveDimension),
+                    isScanning: isScanning,
+                    language: appLanguage
+                )
+                do {
+                    let fast = try await renderDevelopmentSnapshot(interactive)
+                    guard developmentRequestIsCurrent(frame, selectionBoundFrameID: selectionBoundFrameID) else {
+                        return
+                    }
+                    guard softProofRenderRequestIsCurrent(interactive) else {
+                        revision = frame.developRevision
+                        continue
+                    }
+                    guard frame.developRevision == revision else {
+                        revision = frame.developRevision
+                        continue
+                    }
+                    applyBaseCache(fast, to: frame, baseKey: baseKey)
+                    applyPreviewRawCache(fast, to: frame, maxDimension: interactive.proxyMaxDimension)
+                    frame.noteDevelopedDisplaySize(
+                        CGSize(width: fast.developed.width, height: fast.developed.height),
+                        authoritative: interactive.proxyMaxDimension >= DevelopFrameRenderer.fullMaxDimension - 0.5
+                    )
+                    frame.developedImage = NSImage(
+                        cgImage: fast.developed,
+                        size: NSSize(width: fast.developed.width, height: fast.developed.height)
+                    )
+                    frame.clippingOverlayImage = fast.clippingOverlay.map {
+                        NSImage(cgImage: $0, size: NSSize(width: $0.width, height: $0.height))
+                    }
+                    frame.destinationGamutOverlayImage = fast.destinationGamutOverlay.map {
+                        NSImage(cgImage: $0, size: NSSize(width: $0.width, height: $0.height))
+                    }
+                    frame.developedPreviewTransform = interactive.imageTransform
+                    frame.displayedSoftProofRevision = interactive.softProofRevision
+                    // 프록시 결과다 — 정착 패스가 끝나기 전에 취소되면 저화질로 남는다는 표시.
+                    frame.developedIsSettled = false
+                    if let thumbnailBase = fast.thumbnailBase {
+                        frame.cachedThumbnailBase = thumbnailBase
+                    }
+                    if let thumb = fast.thumbnail {
+                        frame.thumbnailImage = NSImage(
+                            cgImage: thumb,
+                            size: NSSize(width: thumb.width, height: thumb.height)
+                        )
+                        frame.thumbnailTransform = interactive.imageTransform
+                    }
+                    frame.hasDevelopedOnce = true
+                    frame.displayedCleanRawRevision = max(
+                        frame.displayedCleanRawRevision, interactiveCleanRawRevision
+                    )
+                } catch is CancellationError {
+                    return
+                } catch {
+                    if Task.isCancelled { return }
+                    trace.recordError(error)
+                    developFailed(frame, revision: revision)
+                    if frame.developRevision == revision { return }
                     revision = frame.developRevision
                     continue
                 }
+                // 인터랙티브 후 리비전이 바뀌었으면(드래그 진행) 즉시 다음 인터랙티브로 — 라이브 갱신 유지.
                 guard frame.developRevision == revision else {
                     revision = frame.developRevision
                     continue
                 }
-                applyBaseCache(fast, to: frame, baseKey: baseKey)
-                applyPreviewRawCache(fast, to: frame, maxDimension: interactive.proxyMaxDimension)
-                frame.noteDevelopedDisplaySize(
-                    CGSize(width: fast.developed.width, height: fast.developed.height),
-                    authoritative: interactive.proxyMaxDimension >= DevelopFrameRenderer.fullMaxDimension - 0.5
-                )
-                frame.developedImage = NSImage(
-                    cgImage: fast.developed,
-                    size: NSSize(width: fast.developed.width, height: fast.developed.height)
-                )
-                frame.clippingOverlayImage = fast.clippingOverlay.map {
-                    NSImage(cgImage: $0, size: NSSize(width: $0.width, height: $0.height))
+                // 정착 감지: 추가 편집 없이 settle 윈도우가 지나야 풀해상도로 마무리한다.
+                if !(await waitForDevelopSettle(frame, revision: revision)) {
+                    guard developmentRequestIsCurrent(
+                        frame,
+                        selectionBoundFrameID: selectionBoundFrameID
+                    ) else { return }
+                    revision = frame.developRevision
+                    continue
                 }
-                frame.destinationGamutOverlayImage = fast.destinationGamutOverlay.map {
-                    NSImage(cgImage: $0, size: NSSize(width: $0.width, height: $0.height))
-                }
-                frame.developedPreviewTransform = interactive.imageTransform
-                frame.displayedSoftProofRevision = interactive.softProofRevision
-                // 프록시 결과다 — 정착 패스가 끝나기 전에 취소되면 저화질로 남는다는 표시.
-                frame.developedIsSettled = false
-                if let thumbnailBase = fast.thumbnailBase {
-                    frame.cachedThumbnailBase = thumbnailBase
-                }
-                if let thumb = fast.thumbnail {
-                    frame.thumbnailImage = NSImage(cgImage: thumb, size: NSSize(width: thumb.width, height: thumb.height))
-                    frame.thumbnailTransform = interactive.imageTransform
-                }
-                frame.hasDevelopedOnce = true
-                frame.displayedCleanRawRevision = max(
-                    frame.displayedCleanRawRevision, interactiveCleanRawRevision
-                )
-            } catch is CancellationError {
-                return
-            } catch {
-                if Task.isCancelled { return }
-                trace.recordError(error)
-                developFailed(frame, revision: revision)
-                if frame.developRevision == revision { return }
-                revision = frame.developRevision
-                continue
-            }
-            // 인터랙티브 후 리비전이 바뀌었으면(드래그 진행) 즉시 다음 인터랙티브로 — 라이브 갱신 유지.
-            guard frame.developRevision == revision else {
-                revision = frame.developRevision
-                continue
-            }
-            // 정착 감지: 추가 편집 없이 settle 윈도가 지나야 풀해상도로 마무리. 짧게 폴링해 새 편집이
-            // 오면 즉시 인터랙티브로 복귀(라이브 끊김 없음). 무거운 3600px 렌더를 드래그 경로에서 제외해
-            // 연속 렌더로 인한 GPU(IOSurface) 누적·블랭크 렌더를 막는다.
-            if !(await waitForDevelopSettle(frame, revision: revision)) {
-                guard developmentRequestIsCurrent(frame, selectionBoundFrameID: selectionBoundFrameID) else { return }
-                revision = frame.developRevision
-                continue
             }
             guard developmentRequestIsCurrent(frame, selectionBoundFrameID: selectionBoundFrameID) else { return }
 

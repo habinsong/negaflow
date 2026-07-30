@@ -22,6 +22,7 @@ extension AppModel {
         frameObservations = observations
         exportAvailabilityStore.observe(currentFrames)
         refreshLibraryFrameQueryObservations(currentFrames)
+        updateLibraryFileSystemMonitoring()
         scheduleLibrarySave()
     }
 

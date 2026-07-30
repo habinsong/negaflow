@@ -49,8 +49,17 @@ final class AppModel: ObservableObject {
     @Published var activeWorkspaceModule: WorkspaceModule = .develop {
         didSet {
             guard activeWorkspaceModule != oldValue else { return }
+            guard activeWorkspaceModule == .print || oldValue == .print else { return }
+            let previousProof = displaySoftProofSettings(
+                for: actionableFrame,
+                in: oldValue
+            )
+            let currentProof = displaySoftProofSettings(
+                for: actionableFrame,
+                in: activeWorkspaceModule
+            )
+            guard !softProofSettingsAreEquivalent(previousProof, currentProof) else { return }
             softProofConfigurationRevision &+= 1
-            refreshSoftProofPreviewIfNeeded()
         }
     }
     @Published var libraryCullingMode = LibraryCullingMode.grid
@@ -58,9 +67,11 @@ final class AppModel: ObservableObject {
     let frameStore = FrameStore()
     let rollStore = RollStore()
     let stackStore = StackStore()
+    let libraryImportProgressStore = LibraryImportProgressStore()
     @Published var selectedFrameIDs: Set<UUID> = []
     @Published var interactionScopeFrameIDs: [UUID]?
     var frameSelectionAnchorID: UUID?
+    var softProofRefreshTask: Task<Void, Never>?
     let frameCacheManager = FrameCacheManager()
     /// 상주 프레임 한도 설정(자동/수동). 설정 화면이 바인딩하고, 바뀌면 캐시 한도에 즉시 반영된다.
     let frameCacheResidencyStore = FrameCacheResidencyStore()
@@ -68,8 +79,12 @@ final class AppModel: ObservableObject {
     let pixelSamplerStore = PixelSamplerStore()
     let developController = DevelopController()
     var selectedFrameDevelopTask: Task<Void, Never>?
+    var sequentialLibraryDevelopmentTask: Task<Void, Never>?
+    var printPackagePreviewTask: Task<Void, Never>?
 
-    @Published var libraryFolders: [LibraryFolder] = []
+    @Published var libraryFolders: [LibraryFolder] = [] {
+        didSet { updateLibraryFileSystemMonitoring() }
+    }
     @Published var isSourceMoveInProgress = false
     @Published var sourceAvailabilityRevision: UInt64 = 0
     @Published var libraryQueryGeneration: UInt64 = 0
@@ -87,6 +102,9 @@ final class AppModel: ObservableObject {
     var sourceAvailabilityRefreshID = UUID()
     var folderAvailabilityRefreshTask: Task<Void, Never>?
     var folderAvailabilityRefreshID = UUID()
+    let libraryFileSystemMonitor = LibraryFileSystemMonitor()
+    var pendingLibraryFileSystemRefreshPaths: Set<String> = []
+    var libraryFileSystemRefreshTask: Task<Void, Never>?
 
     let exportSettingsStore: ExportSettingsStore
     let exportRecipeStore: ExportRecipeStore
@@ -170,6 +188,9 @@ final class AppModel: ObservableObject {
         didSet { flatbedScanRegionRevision &+= 1 }
     }
     @Published var selectedFlatbedScanRegionID: UUID?
+    /// 복사해 둔 프레임의 크기(프리뷰 기준 비율). 붙여넣기는 이 크기를 그대로 쓴다.
+    @Published var copiedFlatbedScanRegionSize: CGSize?
+    @Published var flatbedFrameDetectionMode: FlatbedFrameDetectionMode = .automatic
     @Published var flatbedPreviewFrameID: UUID?
     @Published var flatbedPreviewScanArea: ScanArea?
     @Published var infraredEnabled = false

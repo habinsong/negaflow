@@ -8,7 +8,7 @@ import XCTest
 
 @MainActor
 final class SoftProofRefreshTests: XCTestCase {
-    func testPrintWorkspaceInspectorUsesPrinterOutputProfileAsOnlyProofTarget() throws {
+    func testPrintWorkspaceInspectorUsesDedicatedCPrintProofProfile() throws {
         let repositoryRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
@@ -18,13 +18,116 @@ final class SoftProofRefreshTests: XCTestCase {
         )
         let source = try String(contentsOf: sourceURL, encoding: .utf8)
 
-        XCTAssertTrue(source.contains("model.printerOutputICCProfileName"))
-        XCTAssertTrue(source.contains("choosePrinterOutputProfile()"))
-        XCTAssertTrue(source.contains("model.setPrinterOutputICCProfile("))
+        XCTAssertTrue(source.contains("model.cPrintProofICCProfileName"))
+        XCTAssertTrue(source.contains("chooseCPrintProofProfile()"))
+        XCTAssertTrue(source.contains("model.setCPrintProofICCProfile("))
         XCTAssertFalse(source.contains("$model.exportColorSpace"))
+        XCTAssertFalse(source.contains("model.printerOutputICCProfileName"))
+        XCTAssertFalse(source.contains("choosePrinterOutputProfile()"))
+        XCTAssertFalse(source.contains("model.setPrinterOutputICCProfile("))
         XCTAssertFalse(source.contains("model.softProofICCProfileName"))
         XCTAssertFalse(source.contains("chooseSoftProofProfile()"))
         XCTAssertFalse(source.contains("model.setSoftProofICCProfile("))
+    }
+
+    func testSingleImageCanvasObservesOnlyActiveFramePreviewPromotion() throws {
+        let repositoryRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let sourceURL = repositoryRoot.appendingPathComponent(
+            "Sources/negaflowApp/Features/Print/PrintCanvasView.swift"
+        )
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        XCTAssertTrue(source.contains("private struct PrintSingleImagePageView"))
+        XCTAssertTrue(source.contains("@ObservedObject var frame: ScanFrame"))
+        XCTAssertTrue(source.contains("frame: activeFrame"))
+        XCTAssertFalse(source.contains("ForEach(displayedFrames)"))
+        XCTAssertTrue(
+            source.contains(
+                "frame.developedImage\n                ?? frame.rawPreviewImage"
+            )
+        )
+    }
+
+    func testPrintPackageShowsOnePageWhileEveryItemObservesItsOwnFrame() throws {
+        let repositoryRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let sourceURL = repositoryRoot.appendingPathComponent(
+            "Sources/negaflowApp/Features/Print/PrintPackageCanvasView.swift"
+        )
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        XCTAssertTrue(source.contains("@State private var selectedPage"))
+        XCTAssertTrue(source.contains("pageControls(count: preview.pages.count)"))
+        XCTAssertTrue(source.contains("@ObservedObject var frame: ScanFrame"))
+        // 시트 셀은 작다 — 썸네일을 먼저 쓰고, 없을 때만 더 큰 그림으로 내려간다.
+        // 여기서 풀해상도 현상 결과를 먼저 요구하면 올린 장수만큼 무거운 렌더가 줄줄이 돈다.
+        XCTAssertTrue(
+            source.contains(
+                "frame.thumbnailImage ?? frame.developedImage ?? frame.rawPreviewImage"
+            )
+        )
+    }
+
+    func testModuleSwitchInvalidatesOnlyWhenDisplayProofChanges() {
+        let suiteName = "negaflow-module-proof.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.removePersistentDomain(forName: suiteName)
+        let model = AppModel(
+            exportSettingsStore: ExportSettingsStore(defaults: defaults),
+            printWorkspaceSettingsStore: PrintWorkspaceSettingsStore(defaults: defaults)
+        )
+        let initialRevision = model.softProofConfigurationRevision
+
+        model.activeWorkspaceModule = .library
+        model.activeWorkspaceModule = .develop
+
+        XCTAssertEqual(model.softProofConfigurationRevision, initialRevision)
+
+        model.activeWorkspaceModule = .print
+        XCTAssertEqual(model.softProofConfigurationRevision, initialRevision)
+
+        model.activeWorkspaceModule = .develop
+        model.softProofEnabled = true
+        let proofRevision = model.softProofConfigurationRevision
+        model.activeWorkspaceModule = .print
+        XCTAssertEqual(model.softProofConfigurationRevision, proofRevision &+ 1)
+    }
+
+    func testCPrintProfileDoesNotEnterDevelopWorkspacePreview() throws {
+        let suiteName = "negaflow-c-print-proof-scope.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let model = AppModel(
+            exportSettingsStore: ExportSettingsStore(defaults: defaults),
+            printWorkspaceSettingsStore: PrintWorkspaceSettingsStore(defaults: defaults)
+        )
+        let profile = try ICCOutputProfileTestFixture.snapshot()
+        model.setPrintOutputProcess(.cPrint)
+        let revisionBeforeSelection = model.softProofConfigurationRevision
+
+        XCTAssertTrue(model.setCPrintProofICCProfile(
+            data: profile.iccProfileData,
+            name: profile.profileName
+        ))
+        let frame = ScanFrame(
+            scanIndex: 1,
+            rawScanURL: URL(fileURLWithPath: "/tmp/negaflow/c-print-scope.tiff"),
+            filmType: .colorPositive
+        )
+        let printProof = model.displaySoftProofSettings(for: frame, in: .print)
+        let developProof = model.displaySoftProofSettings(for: frame, in: .develop)
+
+        XCTAssertTrue(printProof.isEnabled)
+        XCTAssertEqual(printProof.iccProfileData, profile.iccProfileData)
+        XCTAssertFalse(developProof.isEnabled)
+        XCTAssertNotEqual(developProof.iccProfileData, profile.iccProfileData)
+        XCTAssertEqual(model.softProofConfigurationRevision, revisionBeforeSelection)
     }
 
     func testDisabledPrintProofDoesNotApplyPrinterOutputProfile() throws {
@@ -52,7 +155,7 @@ final class SoftProofRefreshTests: XCTestCase {
         )
     }
 
-    func testProofConfigurationRefreshesEverySelectedPrintFrame() async throws {
+    func testCPrintProfileRefreshesEverySelectedPrintFrame() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("negaflow-proof-refresh-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -62,7 +165,10 @@ final class SoftProofRefreshTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         defaults.removePersistentDomain(forName: suiteName)
         defer { defaults.removePersistentDomain(forName: suiteName) }
-        let model = AppModel(exportSettingsStore: ExportSettingsStore(defaults: defaults))
+        let model = AppModel(
+            exportSettingsStore: ExportSettingsStore(defaults: defaults),
+            printWorkspaceSettingsStore: PrintWorkspaceSettingsStore(defaults: defaults)
+        )
         let frames = try (0..<3).map { index -> ScanFrame in
             let url = directory.appendingPathComponent("frame-\(index).tiff")
             try writeTIFF(to: url, red: UInt8(80 + index * 50))
@@ -76,9 +182,17 @@ final class SoftProofRefreshTests: XCTestCase {
         }
         model.frames = frames
         model.selectedFrameID = frames[0].id
+        model.updateInteractionScope(frames.map(\.id))
         model.selectedFrameIDs = Set(frames.map(\.id))
+        XCTAssertEqual(model.actionableSelectedFrames.map(\.id), frames.map(\.id))
+        model.activeWorkspaceModule = .print
+        model.setPrintOutputProcess(.cPrint)
+        let profile = try ICCOutputProfileTestFixture.snapshot()
 
-        model.softProofEnabled = true
+        XCTAssertTrue(model.setCPrintProofICCProfile(
+            data: profile.iccProfileData,
+            name: profile.profileName
+        ))
 
         let deadline = Date().addingTimeInterval(8)
         while Date() < deadline,
@@ -90,9 +204,11 @@ final class SoftProofRefreshTests: XCTestCase {
 
         let revisions = frames.map { $0.displayedSoftProofRevision.map(String.init) ?? "nil" }
         let imageStates = frames.map { $0.developedImage != nil }
+        let developingStates = frames.map(\.isDeveloping)
+        let settledStates = frames.map(\.developedIsSettled)
         XCTAssertTrue(frames.allSatisfy {
             $0.displayedSoftProofRevision == model.softProofConfigurationRevision
-        }, "revisions=\(revisions) expected=\(model.softProofConfigurationRevision) status=\(model.statusMessage)")
+        }, "revisions=\(revisions) developing=\(developingStates) settled=\(settledStates) expected=\(model.softProofConfigurationRevision) status=\(model.statusMessage)")
         XCTAssertTrue(
             frames.allSatisfy { $0.developedImage != nil },
             "developed=\(imageStates) status=\(model.statusMessage)"

@@ -12,11 +12,15 @@ import ScannerKit
 enum FlatbedScanRegionLayout {
     /// 프레임 사이 간격의 공칭값. 35mm 필름의 프레임 간격이 대략 이 정도다.
     static let frameGapMM: Double = 2
+    /// 방향키 한 번의 이동 거리. 미세 조정이 목적이라 필름 한 칸 간격보다 훨씬 작다.
+    static let nudgeStepMM: Double = 0.5
 
+    /// 다음 프레임을 놓을 자리. `size` 를 주면 규격 대신 그 크기로 놓는다(복사한 프레임 붙여넣기).
     static func proposedRect(
         existing: [CGRect],
         frameFormat: FilmFrameFormat,
-        previewArea: ScanArea
+        previewArea: ScanArea,
+        size overrideSize: CGSize? = nil
     ) -> CGRect? {
         guard previewArea.widthMM.isFinite,
               previewArea.heightMM.isFinite,
@@ -27,17 +31,18 @@ enum FlatbedScanRegionLayout {
             height: frameGapMM / previewArea.heightMM
         )
         guard let last = existing.last, let first = existing.first else {
-            return centered(size: firstFrameSize(
+            return centered(size: overrideSize ?? firstFrameSize(
                 frameFormat: frameFormat,
                 previewArea: previewArea
             ))
         }
+        let size = overrideSize ?? last.size
         // 프레임의 긴 축(mm)이 스트립 진행 축이다. 정사각 프레임은 가로로 진행시킨다.
         let advancesAlongX = last.width * previewArea.widthMM
             >= last.height * previewArea.heightMM
         let next = advancesAlongX
-            ? last.offsetBy(dx: last.width + gap.width, dy: 0)
-            : last.offsetBy(dx: 0, dy: last.height + gap.height)
+            ? CGRect(x: last.maxX + gap.width, y: last.minY, width: size.width, height: size.height)
+            : CGRect(x: last.minX, y: last.maxY + gap.height, width: size.width, height: size.height)
         if fits(next) { return next }
 
         // 스트립 끝. 다음 줄 첫 칸(첫 프레임의 진행축 위치)으로 넘어간다.
@@ -45,16 +50,33 @@ enum FlatbedScanRegionLayout {
             ? CGRect(
                 x: first.minX,
                 y: last.maxY + gap.height,
-                width: last.width,
-                height: last.height
+                width: size.width,
+                height: size.height
             )
             : CGRect(
                 x: last.maxX + gap.width,
                 y: first.minY,
-                width: last.width,
-                height: last.height
+                width: size.width,
+                height: size.height
             )
-        return fits(wrapped) ? wrapped : centered(size: last.size)
+        return fits(wrapped) ? wrapped : centered(size: size)
+    }
+
+    /// 방향키 한 번이 움직일 거리를 프리뷰 기준 비율로 바꾼다. ⇧는 필름 한 칸 간격만큼 크게 민다.
+    static func nudgeStep(previewArea: ScanArea?, coarse: Bool) -> CGSize {
+        let distanceMM = coarse ? frameGapMM : nudgeStepMM
+        guard let previewArea,
+              previewArea.widthMM.isFinite,
+              previewArea.heightMM.isFinite,
+              previewArea.widthMM > 0,
+              previewArea.heightMM > 0 else {
+            // 프리뷰 영역을 모르면 물리 거리로 환산할 수 없다. 눈에 보이는 최소 단위로 민다.
+            return CGSize(width: 0.002, height: 0.002)
+        }
+        return CGSize(
+            width: distanceMM / previewArea.widthMM,
+            height: distanceMM / previewArea.heightMM
+        )
     }
 
     /// 손으로 그리거나 핸들로 조정한 사각형을 선택한 규격의 비율에 맞춘다. 눈으로는 6×7인지

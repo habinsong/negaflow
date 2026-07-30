@@ -25,16 +25,26 @@ extension AppModel {
     }
 
     func refreshSoftProofPreviewIfNeeded() {
-        var candidates = actionableSelectedFrames.filter(\.hasDevelopedOnce)
+        // 인화 패키지 시트는 썸네일 크기 셀에 여러 장을 늘어놓는 화면이다. 프루프 설정이 바뀔
+        // 때마다 선택 전체를 풀해상도로 다시 현상하면 장수만큼 화면이 멈춘다 — 활성 사진만
+        // 최신 프루프로 맞추고, 나머지 셀은 이미 만들어 둔 썸네일을 그대로 쓴다.
+        var candidates = usesPrintPackageLayout
+            ? [actionableFrame].compactMap { $0 }.filter(\.hasDevelopedOnce)
+            : actionableSelectedFrames.filter(\.hasDevelopedOnce)
         if candidates.isEmpty, let frame = actionableFrame, frame.hasDevelopedOnce {
             candidates = [frame]
         }
-        // DevelopController의 일반 슬라이더 throttle은 단일 trailing task를 사용하므로 여기서
-        // 여러 프레임을 연속 requestDevelop하면 중간 프레임이 취소된다. 프루프 설정은 이산 변경이고
-        // 인화 패키지의 모든 선택 프레임이 같은 프로파일 세대를 보여야 하므로 각 프레임을 직접 예약한다.
-        for frame in candidates {
-            Task { [weak self, weak frame] in
-                guard let self, let frame else { return }
+        // 프루프 설정은 이산 변경이며 선택 전체가 같은 프로파일 세대를 보여야 한다. 프레임별
+        // 독립 Task를 동시에 띄우면 큰 원본에서 메모리 피크가 겹치고 일부 작업이 탈락할 수 있으므로,
+        // 최신 세대의 한 Task를 보관하고 선택 순서대로 렌더한다.
+        softProofRefreshTask?.cancel()
+        let revision = softProofConfigurationRevision
+        softProofRefreshTask = Task { [weak self] in
+            guard let self else { return }
+            for frame in candidates {
+                guard !Task.isCancelled,
+                      revision == self.softProofConfigurationRevision else { return }
+                guard self.ownsFrame(frame) else { continue }
                 await self.developFrame(frame, preserveThumbnail: true)
             }
         }
@@ -51,8 +61,13 @@ extension AppModel {
     func developFrame(
         _ frame: ScanFrame,
         preserveThumbnail: Bool = false,
+        skipInteractivePreview: Bool = false,
         selectionBoundFrameID: UUID? = nil
     ) async {
+        guard developmentRequestIsCurrent(frame, selectionBoundFrameID: selectionBoundFrameID) else { return }
+        // 원본을 읽기 전에 iCloud 사본을 먼저 확보한다. 현상 슬롯을 잡은 뒤 커널 대기에 걸리면
+        // 뒤따르는 현상이 전부 멈춘다.
+        guard await materializeDevelopSourceIfNeeded(frame) else { return }
         guard developmentRequestIsCurrent(frame, selectionBoundFrameID: selectionBoundFrameID) else { return }
         guard await prepareCleanedRawForConsumption(frame) else { return }
         guard developmentRequestIsCurrent(frame, selectionBoundFrameID: selectionBoundFrameID) else { return }
@@ -70,6 +85,7 @@ extension AppModel {
         await renderLatestDevelopment(
             for: frame,
             preserveThumbnail: preserveThumbnail,
+            skipInteractivePreview: skipInteractivePreview,
             selectionBoundFrameID: selectionBoundFrameID
         )
     }
@@ -91,10 +107,19 @@ extension AppModel {
         }
         await seedFastPreview(frame)
         // 네거티브는 빠른 포지티브 썸네일을 정착 패스의 고품질 결과로 교체한다.
-        await developFrame(frame, preserveThumbnail: !frame.filmType.requiresInversion)
+        // 이미 fast preview를 발행했으므로 같은 화면용 패스를 한 번 더 만들지 않는다.
+        await developFrame(
+            frame,
+            preserveThumbnail: !frame.filmType.requiresInversion,
+            skipInteractivePreview: true
+        )
     }
 
-    private func seedFastPreview(_ frame: ScanFrame) async {
+    /// 썸네일 크기의 가벼운 현상 프리뷰 한 장만 만든다(정착 패스 없음). 인화 시트처럼 작은
+    /// 셀에 여러 장을 늘어놓을 때, 장마다 풀해상도 현상을 돌리지 않기 위한 경로다.
+    func seedFastPreview(_ frame: ScanFrame) async {
+        guard ownsFrame(frame), frame.thumbnailImage == nil else { return }
+        guard await materializeDevelopSourceIfNeeded(frame) else { return }
         guard ownsFrame(frame), frame.thumbnailImage == nil else { return }
         guard await developController.acquireDevelopSlot() else { return }
         defer { developController.releaseDevelopSlot() }

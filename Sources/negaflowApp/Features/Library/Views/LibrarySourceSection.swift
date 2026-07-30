@@ -14,24 +14,30 @@ struct LibrarySourceSection: View {
     var orderedResultFrameIDs: [UUID]? = nil
     var selectedFolderID: Binding<String?> = .constant(nil)
     var visibleFolderPaths: Set<String>? = nil
+    var scrollsFrameListInternally = false
 
     @ViewBuilder
     var body: some View {
         switch content {
         case .combined:
-            Form {
-                importSections
-                Section {
-                    LibraryFolderTreeView(
-                        orderedResultFrameIDs: orderedResultFrameIDs,
-                        selectedFolderID: selectedFolderID,
-                        visibleFolderPaths: visibleFolderPaths
-                    )
+            GeometryReader { proxy in
+                Form {
+                    importSections
+                    Section {
+                        LibraryFolderTreeView(
+                            orderedResultFrameIDs: orderedResultFrameIDs,
+                            selectedFolderID: selectedFolderID,
+                            visibleFolderPaths: visibleFolderPaths,
+                            frameListMaxHeight: scrollsFrameListInternally
+                                ? max(96, proxy.size.height * 0.36)
+                                : nil
+                        )
+                    }
                 }
+                .formStyle(.grouped)
+                .scrollContentBackground(.hidden)
+                .contextMenu { newFolderButton }
             }
-            .formStyle(.grouped)
-            .scrollContentBackground(.hidden)
-            .contextMenu { newFolderButton }
         case .importing:
             importContent
         case .files:
@@ -51,8 +57,13 @@ struct LibrarySourceSection: View {
     private var importSections: some View {
         Section {
             importActionBar
+                .frame(maxWidth: .infinity)
         } header: {
-            sectionHeader(model.text(.importSection), systemImage: "square.and.arrow.down")
+            HStack(spacing: 8) {
+                sectionHeader(model.text(.importSection), systemImage: "square.and.arrow.down")
+                Spacer(minLength: 8)
+                LibraryImportProgressStatus(store: model.libraryImportProgressStore)
+            }
         }
 
         if model.showScannerControls {
@@ -124,6 +135,20 @@ struct LibrarySourceSection: View {
             .fill(Color.primary.opacity(0.12))
             .frame(width: 1, height: 16)
             .padding(.horizontal, 2)
+    }
+}
+
+/// 가져오기 헤더 오른쪽에 붙는 진행 표시 — 진행 바 + % + 완료/전체.
+private struct LibraryImportProgressStatus: View {
+    @ObservedObject var store: LibraryImportProgressStore
+
+    @ViewBuilder
+    var body: some View {
+        if let progress = store.progress {
+            LibraryTaskProgressView(progress: progress, barWidth: 54)
+                .accessibilityIdentifier("negaflow.import.progress")
+                .transition(.opacity)
+        }
     }
 }
 

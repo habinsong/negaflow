@@ -65,8 +65,10 @@ extension AppModel {
             return usesFlatbedRegionWorkflow && flatbedPreviewFrame != nil && !isScanning
         case .removeFlatbedFrame:
             return usesFlatbedRegionWorkflow && selectedFlatbedScanRegionID != nil && !isScanning
-        case .quickExport, .exportPhoto:
-            return canExportSelection
+        case .quickExport:
+            return canQuickExportSelection(for: activeWorkspaceModule)
+        case .exportPhoto:
+            return canExportSelection(for: activeWorkspaceModule)
         }
     }
 

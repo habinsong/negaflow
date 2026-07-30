@@ -7,6 +7,12 @@ struct AppStandardMenuCommands: Commands {
     @AppStorage("workspace.bottomStripVisible") private var isFilmstripVisible = true
 
     var body: some Commands {
+        CommandGroup(replacing: .appInfo) {
+            OpenAboutNegaflowButton(
+                title: model.text(.commandAboutNegaflow)
+            )
+        }
+
         CommandGroup(after: .newItem) {
             Button(model.text(.commandImportImages)) {
                 model.performWorkflowShortcutAction(.importImages)
@@ -128,6 +134,18 @@ struct AppStandardMenuCommands: Commands {
                 title: model.text(.commandNegaflowHelp),
                 shortcut: model.shortcut(for: .openHelp)
             )
+        }
+    }
+}
+
+private struct OpenAboutNegaflowButton: View {
+    let title: String
+
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Button(title) {
+            openWindow(id: AboutNegaflowView.windowID)
         }
     }
 }

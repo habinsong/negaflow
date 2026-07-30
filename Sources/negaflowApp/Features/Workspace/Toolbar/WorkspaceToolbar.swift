@@ -8,6 +8,14 @@ enum WorkspaceModule: String, CaseIterable, Identifiable {
     case print
 
     var id: Self { self }
+
+    var navigationIndex: Int {
+        switch self {
+        case .library: 0
+        case .develop: 1
+        case .print: 2
+        }
+    }
 }
 
 enum WorkspaceToolbarLayout {
@@ -125,7 +133,9 @@ struct WorkspaceToolbar: View {
                 isSelected: selectedWorkspaceModule == .library,
                 accessibilityIdentifier: "negaflow.workspace.library"
             ) {
-                withAnimation(.snappy(duration: 0.18)) { selectedWorkspaceModule = .library }
+                withAnimation(.snappy(duration: 0.14)) {
+                    selectedWorkspaceModule = .library
+                }
             }
 
             toolbarDivider
@@ -135,7 +145,9 @@ struct WorkspaceToolbar: View {
                 isSelected: selectedWorkspaceModule == .develop,
                 accessibilityIdentifier: "negaflow.workspace.develop"
             ) {
-                withAnimation(.snappy(duration: 0.18)) { selectedWorkspaceModule = .develop }
+                withAnimation(.snappy(duration: 0.14)) {
+                    selectedWorkspaceModule = .develop
+                }
             }
 
             toolbarDivider
@@ -145,7 +157,9 @@ struct WorkspaceToolbar: View {
                 isSelected: selectedWorkspaceModule == .print,
                 accessibilityIdentifier: "negaflow.workspace.print"
             ) {
-                withAnimation(.snappy(duration: 0.18)) { selectedWorkspaceModule = .print }
+                withAnimation(.snappy(duration: 0.14)) {
+                    selectedWorkspaceModule = .print
+                }
             }
         }
         .frame(width: 266)
@@ -289,7 +303,7 @@ private struct WorkspaceExportActions: View {
                 model.quickExportFolderDisplay
             ),
             accessibilityIdentifier: "negaflow.quick-export",
-            isDisabled: !model.canExportSelection
+            isDisabled: !model.canQuickExportSelection(for: selectedWorkspaceModule)
         ) {
             model.quickExportSelection(for: selectedWorkspaceModule)
         }
@@ -304,7 +318,7 @@ private struct WorkspaceExportActions: View {
             title: model.text(.commandExport),
             help: model.text(.commandExport),
             accessibilityIdentifier: "negaflow.export",
-            isDisabled: !model.canExportSelection
+            isDisabled: !model.canExportSelection(for: selectedWorkspaceModule)
         ) {
             model.exportSelectionToFolder(for: selectedWorkspaceModule)
         }

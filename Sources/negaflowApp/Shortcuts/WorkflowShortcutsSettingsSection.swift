@@ -7,7 +7,9 @@ struct WorkflowShortcutsSettingsSection: View {
     @State private var selectedGroup = WorkflowShortcutGroup.library
 
     var body: some View {
-        Section {
+        AppSettingsSection(
+            title: model.text(.settingsShortcutsTab)
+        ) {
             SegmentedPicker(
                 options: WorkflowShortcutGroup.allCases,
                 label: { model.text($0.titleKey) },
@@ -15,36 +17,41 @@ struct WorkflowShortcutsSettingsSection: View {
             )
         }
 
-        Section {
+        AppSettingsSection(
+            title: model.text(selectedGroup.titleKey)
+        ) {
             ForEach(model.workflowShortcutActions.filter { $0.group == selectedGroup }) { action in
                 shortcutRow(for: action)
             }
-        } header: {
-            sectionHeader(
-                model.text(selectedGroup.titleKey),
-                systemImage: selectedGroup.systemImage
-            )
         }
 
         Section {
-            Button {
-                model.resetAllWorkflowShortcuts()
-                rejectedAction = nil
-                recordingAction = nil
-            } label: {
-                Label(model.text(.shortcutResetAll), systemImage: "arrow.counterclockwise")
+            AppSettingsRow(model.text(.shortcutResetAll)) {
+                Button {
+                    resetAllShortcuts()
+                } label: {
+                    Label(
+                        model.text(.shortcutReset),
+                        systemImage: "arrow.counterclockwise"
+                    )
+                }
+                .buttonStyle(.bordered)
             }
         }
+    }
+
+    private func resetAllShortcuts() {
+        model.resetAllWorkflowShortcuts()
+        rejectedAction = nil
+        recordingAction = nil
     }
 
     private func shortcutRow(for action: WorkflowShortcutAction) -> some View {
         let shortcut = model.shortcut(for: action)
 
-        return VStack(alignment: .leading, spacing: 6) {
-            LabeledContent(action.title(in: model)) {
+        return Group {
+            AppSettingsRow(action.title(in: model)) {
                 HStack(spacing: 8) {
-                    Spacer(minLength: 24)
-
                     ShortcutRecorderField(
                         displayString: shortcut.displayString,
                         recordingPrompt: model.text(.shortcutRecordingPrompt),
@@ -68,7 +75,7 @@ struct WorkflowShortcutsSettingsSection: View {
                             rejectedAction = action
                         }
                     )
-                    .frame(width: 148, height: 24)
+                    .frame(maxWidth: .infinity, minHeight: 30)
 
                     if recordingAction == action {
                         ProgressView()
@@ -83,14 +90,19 @@ struct WorkflowShortcutsSettingsSection: View {
                         Label(model.text(.shortcutReset), systemImage: "arrow.uturn.backward")
                     }
                     .labelStyle(.iconOnly)
+                    .buttonStyle(.bordered)
+                    .controlSize(.regular)
                     .help(model.text(.shortcutReset))
+                    .accessibilityLabel(model.text(.shortcutReset))
                 }
+                .frame(maxWidth: .infinity)
             }
 
             if rejectedAction == action {
-                Text(model.text(.shortcutInvalidOrConflict))
-                    .font(.caption)
-                    .foregroundStyle(.red)
+                AppSettingsHelpText(
+                    model.text(.shortcutInvalidOrConflict),
+                    color: .red
+                )
             }
         }
     }

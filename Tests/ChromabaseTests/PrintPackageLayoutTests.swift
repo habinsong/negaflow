@@ -6,6 +6,71 @@ final class PrintPackageLayoutTests: XCTestCase {
     private let landscape = CGSize(width: 3_000, height: 2_000)
     private let portrait = CGSize(width: 2_000, height: 3_000)
 
+    func testContactSheetDefaultsMatchPhysicalGridContract() {
+        let package = PrintPackageSettings()
+
+        XCTAssertEqual(package.contactRows, 7)
+        XCTAssertEqual(package.contactColumns, 6)
+        XCTAssertEqual(package.horizontalSpacingMM, 2)
+        XCTAssertEqual(package.verticalSpacingMM, 2)
+        XCTAssertEqual(package.contactSheetBackground, .black)
+        XCTAssertEqual(package.captionAlignment, .leading)
+    }
+
+    func testAutomaticContactSheetOrientationAndGapsDoNotDependOnFirstPhoto() throws {
+        let package = PrintPackageSettings(
+            mode: .contactSheet,
+            contactRows: 2,
+            contactColumns: 3,
+            horizontalSpacingMM: 2,
+            verticalSpacingMM: 3
+        )
+        let landscapeFirst = try XCTUnwrap(PrintPackageLayout.make(
+            sourceSizes: [landscape, portrait, landscape, portrait],
+            composition: PrintCompositionSettings(
+                paperSize: .a4,
+                orientation: .automatic,
+                marginMM: 11,
+                dpi: 300
+            ),
+            package: package
+        )).first!
+        let portraitFirst = try XCTUnwrap(PrintPackageLayout.make(
+            sourceSizes: [portrait, landscape, portrait, landscape],
+            composition: PrintCompositionSettings(
+                paperSize: .a4,
+                orientation: .automatic,
+                marginMM: 11,
+                dpi: 300
+            ),
+            package: package
+        )).first!
+        let pointsPerMM = 72.0 / 25.4
+
+        XCTAssertEqual(landscapeFirst.canvasSizePoints, portraitFirst.canvasSizePoints)
+        XCTAssertGreaterThan(
+            landscapeFirst.canvasSizePoints.width,
+            landscapeFirst.canvasSizePoints.height
+        )
+        XCTAssertEqual(
+            landscapeFirst.items[1].cellRectPoints.minX
+                - landscapeFirst.items[0].cellRectPoints.maxX,
+            2 * pointsPerMM,
+            accuracy: 1e-9
+        )
+        XCTAssertEqual(
+            landscapeFirst.items[0].cellRectPoints.minY
+                - landscapeFirst.items[3].cellRectPoints.maxY,
+            3 * pointsPerMM,
+            accuracy: 1e-9
+        )
+        XCTAssertEqual(
+            landscapeFirst.contentRectPoints.minX,
+            11 * pointsPerMM,
+            accuracy: 1e-9
+        )
+    }
+
     func testContactSheetPaginatesInTopToBottomRowMajorOrder() throws {
         let sources = Array(repeating: landscape, count: 7)
         let package = PrintPackageSettings(
@@ -54,26 +119,40 @@ final class PrintPackageLayoutTests: XCTestCase {
         XCTAssertEqual(pages[1].items.map(\.sourceIndex), Array(repeating: 1, count: 6))
     }
 
-    func testPicturePackageRepeatsEachPhotoAcrossDeterministicDifferentSizedCells() throws {
+    func testPicturePackagePlacesSelectedPhotosTogetherAndRepeatsOnlyRemainder() throws {
         let package = PrintPackageSettings(
             mode: .picturePackage,
             pictureTemplate: .oneLargeTwoSmall
         )
 
         let pages = try XCTUnwrap(PrintPackageLayout.make(
-            sourceSizes: [landscape, portrait],
+            sourceSizes: [landscape, portrait, landscape, portrait],
             composition: composition(),
             package: package
         ))
 
         XCTAssertEqual(pages.count, 2)
-        XCTAssertEqual(pages[0].items.map(\.sourceIndex), [0, 0, 0])
-        XCTAssertEqual(pages[1].items.map(\.sourceIndex), [1, 1, 1])
+        XCTAssertEqual(pages[0].items.map(\.sourceIndex), [0, 1, 2])
+        XCTAssertEqual(pages[1].items.map(\.sourceIndex), [3, 3, 3])
         XCTAssertGreaterThan(pages[0].items[0].cellRectPoints.area, pages[0].items[1].cellRectPoints.area)
         XCTAssertEqual(
             pages[0].items[1].cellRectPoints.size,
             pages[0].items[2].cellRectPoints.size
         )
+    }
+
+    func testPicturePackageRepeatsOneSelectedPhotoAcrossEveryCell() throws {
+        let pages = try XCTUnwrap(PrintPackageLayout.make(
+            sourceSizes: [landscape],
+            composition: composition(),
+            package: PrintPackageSettings(
+                mode: .picturePackage,
+                pictureTemplate: .fourUp
+            )
+        ))
+
+        XCTAssertEqual(pages.count, 1)
+        XCTAssertEqual(pages[0].items.map(\.sourceIndex), [0, 0, 0, 0])
     }
 
     func testCustomPackagePreservesPageSourceGeometryAndStableZOrder() throws {
@@ -314,7 +393,8 @@ final class PrintPackageLayoutTests: XCTestCase {
         )
 
         let picture = PrintPackageSettings(mode: .picturePackage)
-        XCTAssertEqual(PrintPackageLayout.expectedPageCount(sourceCount: 3, package: picture), 3)
+        XCTAssertEqual(PrintPackageLayout.expectedPageCount(sourceCount: 3, package: picture), 1)
+        XCTAssertEqual(PrintPackageLayout.expectedPageCount(sourceCount: 4, package: picture), 2)
 
         let custom = PrintPackageSettings(
             mode: .customPackage,
@@ -346,6 +426,12 @@ final class PrintPackageLayoutTests: XCTestCase {
             contactColumns: 1
         )
         let picture = PrintPackageSettings(mode: .picturePackage)
+        let pictureCapacity = 3
+        let maximumPictureSources = Array(
+            repeating: landscape,
+            count: PrintPackageSettings.maximumPageCount * pictureCapacity
+        )
+        let tooManyPictureSources = maximumPictureSources + [landscape]
 
         XCTAssertEqual(
             PrintPackageLayout.expectedPageCount(
@@ -371,22 +457,22 @@ final class PrintPackageLayoutTests: XCTestCase {
 
         XCTAssertEqual(
             PrintPackageLayout.expectedPageCount(
-                sourceCount: thirtyTwoSources.count,
+                sourceCount: maximumPictureSources.count,
                 package: picture
             ),
             PrintPackageSettings.maximumPageCount
         )
         XCTAssertNotNil(PrintPackageLayout.make(
-            sourceSizes: thirtyTwoSources,
+            sourceSizes: maximumPictureSources,
             composition: composition(),
             package: picture
         ))
         XCTAssertNil(PrintPackageLayout.expectedPageCount(
-            sourceCount: thirtyThreeSources.count,
+            sourceCount: tooManyPictureSources.count,
             package: picture
         ))
         XCTAssertNil(PrintPackageLayout.make(
-            sourceSizes: thirtyThreeSources,
+            sourceSizes: tooManyPictureSources,
             composition: composition(),
             package: picture
         ))
@@ -394,7 +480,7 @@ final class PrintPackageLayoutTests: XCTestCase {
 
     func testAutomaticPicturePackageOrientationFollowsEachSourcePage() throws {
         let pages = try XCTUnwrap(PrintPackageLayout.make(
-            sourceSizes: [landscape, portrait],
+            sourceSizes: [landscape, portrait, landscape, portrait],
             composition: PrintCompositionSettings(
                 paperSize: .a4,
                 orientation: .automatic,
@@ -425,4 +511,56 @@ final class PrintPackageLayoutTests: XCTestCase {
 
 private extension CGRect {
     var area: CGFloat { width * height }
+
+    /// 사진 비율 용지는 활성 사진의 가로세로비를 그대로 따른다(긴 변 고정).
+    func testPhotoRatioPaperFollowsTheSourceAspect() {
+        let landscape = PrintPaperSize.photoRatio.dimensionsMM(photoAspectRatio: 3.0 / 2.0)
+        XCTAssertEqual(landscape.width, PrintPaperSize.photoRatioLongEdgeMM, accuracy: 0.001)
+        XCTAssertEqual(landscape.height, PrintPaperSize.photoRatioLongEdgeMM * 2 / 3, accuracy: 0.001)
+
+        let portrait = PrintPaperSize.photoRatio.dimensionsMM(photoAspectRatio: 2.0 / 3.0)
+        XCTAssertEqual(portrait.height, PrintPaperSize.photoRatioLongEdgeMM, accuracy: 0.001)
+        XCTAssertEqual(portrait.width, PrintPaperSize.photoRatioLongEdgeMM * 2 / 3, accuracy: 0.001)
+
+        // 비율을 모르면 고정 치수로 되돌아간다.
+        XCTAssertEqual(
+            PrintPaperSize.photoRatio.dimensionsMM(photoAspectRatio: nil),
+            PrintPaperSize.photoRatio.dimensionsMM
+        )
+        // 다른 용지는 사진 비율에 흔들리지 않는다.
+        XCTAssertEqual(
+            PrintPaperSize.a4.dimensionsMM(photoAspectRatio: 3.0 / 2.0),
+            PrintPaperSize.a4.dimensionsMM
+        )
+    }
+
+    /// 사진 비율 용지에서는 한 장을 꽉 채우는 셀이 여백만 남기고 지면을 덮는다.
+    func testPhotoRatioPaperLetsAFullCellFillTheSheet() throws {
+        var package = PrintPackageSettings(mode: .customPackage)
+        package.customItems = [
+            PrintCustomPackageItem(
+                sourceIndex: 0,
+                normalizedRect: CGRect(x: 0, y: 0, width: 1, height: 1)
+            ),
+        ]
+        let composition = PrintCompositionSettings(
+            paperSize: .photoRatio,
+            orientation: .automatic,
+            marginMM: 0,
+            dpi: 72,
+            perforationStyle: .none,
+            photoAspectRatio: 3.0 / 2.0
+        )
+
+        let pages = try XCTUnwrap(PrintPackageLayout.make(
+            sourceSizes: [CGSize(width: 6000, height: 4000)],
+            composition: composition,
+            package: package
+        ))
+
+        let page = pages[0]
+        let destination = page.items[0].destinationRectPoints
+        XCTAssertEqual(destination.width, page.canvasSizePoints.width, accuracy: 0.5)
+        XCTAssertEqual(destination.height, page.canvasSizePoints.height, accuracy: 0.5)
+    }
 }

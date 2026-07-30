@@ -5,22 +5,30 @@ public struct DevelopSettingsPasteScope: Codable, Sendable, Equatable {
     public var tone: Bool
     public var color: Bool
     public var detail: Bool
+    public var geometry: Bool
 
-    public init(base: Bool = true, tone: Bool = true, color: Bool = true, detail: Bool = true) {
+    public init(
+        base: Bool = true,
+        tone: Bool = true,
+        color: Bool = true,
+        detail: Bool = true,
+        geometry: Bool = true
+    ) {
         self.base = base
         self.tone = tone
         self.color = color
         self.detail = detail
+        self.geometry = geometry
     }
 
     public static let all = DevelopSettingsPasteScope()
 
     public var isEmpty: Bool {
-        !base && !tone && !color && !detail
+        !base && !tone && !color && !detail && !geometry
     }
 
     public var isFullDevelopScope: Bool {
-        base && tone && color && detail
+        base && tone && color && detail && geometry
     }
 
     public var displayName: String {
@@ -30,6 +38,7 @@ public struct DevelopSettingsPasteScope: Codable, Sendable, Equatable {
         if tone { groups.append("Tone") }
         if color { groups.append("Color") }
         if detail { groups.append("Detail") }
+        if geometry { groups.append("Geometry") }
         return groups.isEmpty ? "None" : groups.joined(separator: "/")
     }
 
@@ -38,6 +47,7 @@ public struct DevelopSettingsPasteScope: Codable, Sendable, Equatable {
 
         if base {
             next.filmType = source.filmType
+            next.isDigitalSource = source.isDigitalSource
             next.developTarget = source.developTarget
             next.scannerProfileID = source.scannerProfileID
             next.baseEstimationMode = source.baseEstimationMode
@@ -96,7 +106,29 @@ public struct DevelopSettingsPasteScope: Codable, Sendable, Equatable {
             next.localDodgeBurn = source.localDodgeBurn
         }
 
-        next.imageTransform = destination.imageTransform
+        next.imageTransform = geometry ? source.imageTransform : destination.imageTransform
         return next
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case base, tone, color, detail, geometry
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        base = try container.decodeIfPresent(Bool.self, forKey: .base) ?? true
+        tone = try container.decodeIfPresent(Bool.self, forKey: .tone) ?? true
+        color = try container.decodeIfPresent(Bool.self, forKey: .color) ?? true
+        detail = try container.decodeIfPresent(Bool.self, forKey: .detail) ?? true
+        geometry = try container.decodeIfPresent(Bool.self, forKey: .geometry) ?? true
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(base, forKey: .base)
+        try container.encode(tone, forKey: .tone)
+        try container.encode(color, forKey: .color)
+        try container.encode(detail, forKey: .detail)
+        try container.encode(geometry, forKey: .geometry)
     }
 }

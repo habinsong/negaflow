@@ -26,6 +26,11 @@ extension AppModel {
         set { presentationPreferencesStore.developerMode = newValue }
     }
 
+    var developsImportsAutomatically: Bool {
+        get { presentationPreferencesStore.developsImportsAutomatically }
+        set { presentationPreferencesStore.developsImportsAutomatically = newValue }
+    }
+
     /// GrainMend 미세 입자 검출의 시작값(자동). 이미 열려 있는 프레임의 체크 상태는 건드리지 않는다.
     var defaultAutoDefectMicroSpecks: Bool {
         get { presentationPreferencesStore.defaultAutoDefectMicroSpecks }

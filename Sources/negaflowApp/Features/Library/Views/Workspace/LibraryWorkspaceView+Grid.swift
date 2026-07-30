@@ -45,6 +45,7 @@ extension LibraryWorkspaceView {
     ) -> some View {
         LazyVStack(alignment: .leading, spacing: 22) {
             ForEach(projection.folderSections, id: \.id) { section in
+                let folderFrames = section.orderedFrameIDs.compactMap { framesByID[$0] }
                 let visibleFrameIDs = model.stackProjectedFrameIDs(section.orderedFrameIDs)
                 let sectionFrames = frames(
                     orderedBy: visibleFrameIDs,
@@ -60,6 +61,14 @@ extension LibraryWorkspaceView {
                         Text(model.text(AppLocalizedPhrase.frameCountFormat, sectionFrames.count))
                             .font(.caption.monospacedDigit())
                             .foregroundStyle(.secondary)
+                        LibraryFolderDevelopmentControls(
+                            frames: folderFrames,
+                            fallbackProcess: DevelopmentProcess(
+                                filmType: model.filmType,
+                                isDigitalSource: model.isDigitalSource
+                            ),
+                            fallbackTarget: model.developTarget
+                        )
                         Spacer(minLength: 0)
                     }
                     .padding(6)
@@ -112,12 +121,11 @@ extension LibraryWorkspaceView {
         orderedFrameIDs: [UUID],
         folderID: String? = nil
     ) -> some View {
-        let contextFrames = model.framesForContextAction(frame, within: orderedFrameIDs)
-        return FrameStripItemView(
+        FrameStripItemView(
             frame: frame,
             isSelected: model.isFrameSelected(frame),
             itemSize: cardSize,
-            presentationMode: .raw,
+            presentationPolicy: .developedWhenAvailable,
             thumbnailAspectRatio: LibraryGridCardLayout.thumbnailAspectRatio,
             thumbnailTitleSpacing: LibraryGridCardLayout.thumbnailTitleSpacing,
             ratingControlHeight: LibraryGridCardLayout.ratingControlHeight,
@@ -126,81 +134,27 @@ extension LibraryWorkspaceView {
                 model.selectFrame(frame, orderedFrameIDs: orderedFrameIDs)
             }
         )
-        .librarySourceDraggable(
-            item: LibrarySourceDragItem(frameIDs: contextFrames.map(\.id))
-        )
-        .contextMenu {
-            LibraryStackMenu(frame: frame, orderedFrameIDs: orderedFrameIDs)
-            Divider()
-            Button(model.text(.menuDevelop)) {
-                if let folderID { selectedFolderID = folderID }
-                model.selectFrame(frame, orderedFrameIDs: orderedFrameIDs, modifiers: [])
-                onOpenDevelop()
-            }
-            Button(model.text(AppLocalizedPhrase.renamePhoto)) {
-                renameFrame = frame
-            }
-            Menu(model.text(AppLocalizedPhrase.rating)) {
-                Button(model.text(AppLocalizedPhrase.resetRating)) { frame.setRating(0) }
-                ForEach(1...5, id: \.self) { value in
-                    Button(model.text(AppLocalizedPhrase.starHelpFormat, value)) { frame.toggleRating(value) }
-                }
-            }
-            Button(frame.pickState == .picked ? model.text(AppLocalizedPhrase.clearPick) : model.text(AppLocalizedPhrase.picked)) {
-                frame.pickState = frame.pickState == .picked ? .unflagged : .picked
-            }
-            Button(frame.pickState == .rejected ? model.text(AppLocalizedPhrase.clearReject) : model.text(AppLocalizedPhrase.rejected)) {
-                frame.pickState = frame.pickState == .rejected ? .unflagged : .rejected
-            }
-            if !model.manualCollections.isEmpty {
-                let contextFrameIDs = model.framesForContextAction(
+        .librarySourceDraggable(count: model.contextActionFrameCount(for: frame)) {
+            LibrarySourceDragItem(
+                frameIDs: model.framesForContextAction(
                     frame,
                     within: orderedFrameIDs
                 ).map(\.id)
-                Menu(model.text(AppLocalizedPhrase.libraryAddToCollection)) {
-                    ForEach(model.manualCollections) { collection in
-                        Button(collection.name) {
-                            _ = model.addFrameIDs(
-                                contextFrameIDs,
-                                toManualCollection: collection.id
-                            )
-                        }
-                    }
-                }
-                if let collection = activeManualCollection {
-                    Button(model.text(AppLocalizedPhrase.libraryRemoveFromCollection)) {
-                        _ = model.removeFrameIDs(
-                            Set(contextFrameIDs),
-                            fromManualCollection: collection.id
-                        )
-                    }
-                }
-            }
-            Divider()
-            Button(model.text(AppLocalizedPhrase.virtualCopy)) { model.createVirtualCopy(from: frame) }
-            if !model.isSourceAvailable(frame) {
-                Button(model.text(AppLocalizedPhrase.locateOriginal)) {
-                    model.presentRelinkPanel(for: frame)
-                }
-            }
-            Button(model.text(AppLocalizedPhrase.showInFinder)) {
-                model.revealSourceFilesInFinder(contextFrames)
-            }
-            Button(model.text(AppLocalizedPhrase.removeFromLibrary), role: .destructive) {
-                model.removeFramesFromLibrary(
-                    model.framesForContextAction(frame, within: orderedFrameIDs)
-                )
-            }
-            if let plan = model.sourceDeletionPlan(
-                for: model.framesForContextAction(frame, within: orderedFrameIDs)
-            ) {
-                Button(role: .destructive) {
-                    pendingSourceDeletion = plan
-                } label: {
-                    Text(model.text(AppLocalizedPhrase.moveSourceToTrash))
-                        .foregroundStyle(.red)
-                }
-            }
+            )
+        }
+        .contextMenu {
+            LibraryFrameContextMenu(
+                frame: frame,
+                orderedFrameIDs: orderedFrameIDs,
+                folderID: folderID,
+                showsDevelopCommand: true,
+                showsCollectionCommands: true,
+                activeManualCollection: activeManualCollection,
+                onRename: { renameFrame = $0 },
+                onOpenDevelop: onOpenDevelop,
+                onRequestSourceDeletion: { pendingSourceDeletion = $0 },
+                onSelectFolder: { selectedFolderID = $0 }
+            )
         }
     }
 

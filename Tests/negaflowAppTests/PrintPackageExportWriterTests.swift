@@ -81,7 +81,43 @@ final class PrintPackageExportWriterTests: XCTestCase {
         )
     }
 
-    func testPicturePackagePublishesOnePagePerSourceWithExactContributors() throws {
+    func testCompositePreparationDecodesAtCellResolutionBeforeDeveloping() throws {
+        let source = try makeSource(index: 90, width: 2_400, height: 1_600, format: .png)
+
+        let prepared = try ExportDevelopedFrameRenderer.prepareForPrintComposite(
+            source.snapshot,
+            proxyLongEdge: 300
+        )
+
+        XCTAssertLessThanOrEqual(
+            max(prepared.rawInput.extent.width, prepared.rawInput.extent.height),
+            315
+        )
+        XCTAssertLessThanOrEqual(
+            max(prepared.developedImage.extent.width, prepared.developedImage.extent.height),
+            315
+        )
+    }
+
+    func testTIFF16CompositeKeepsSourceDecodePrecisionButDevelopsAtCellResolution() throws {
+        let source = try makeSource(index: 91, width: 2_400, height: 1_600, format: .tiff16)
+
+        let prepared = try ExportDevelopedFrameRenderer.prepareForPrintComposite(
+            source.snapshot,
+            proxyLongEdge: 300
+        )
+
+        XCTAssertEqual(
+            max(prepared.rawInput.extent.width, prepared.rawInput.extent.height),
+            2_400
+        )
+        XCTAssertLessThanOrEqual(
+            max(prepared.developedImage.extent.width, prepared.developedImage.extent.height),
+            315
+        )
+    }
+
+    func testPicturePackagePublishesSelectedSourcesTogetherOnOnePage() throws {
         let printerOutputProfile = try ICCOutputProfileTestFixture.snapshot()
         let sources = try [
             makeSource(index: 1, width: 24, height: 16, format: .jpeg),
@@ -94,7 +130,7 @@ final class PrintPackageExportWriterTests: XCTestCase {
         let artifacts = try XCTUnwrap(PrintPackageArtifactLayout(
             folder: root,
             stem: "package",
-            pageCount: 2,
+            pageCount: 1,
             format: .jpeg
         ))
         let result = try PrintPackageExportWriter.write(
@@ -108,8 +144,8 @@ final class PrintPackageExportWriterTests: XCTestCase {
             journalDirectory: journalDirectory
         )
 
-        XCTAssertEqual(result.contributorPageIndices, [0: [0], 1: [1]])
-        XCTAssertEqual(result.outputURLs.count, 2)
+        XCTAssertEqual(result.contributorPageIndices, [0: [0], 1: [0]])
+        XCTAssertEqual(result.outputURLs.count, 1)
         XCTAssertTrue(result.outputURLs.allSatisfy { FileManager.default.fileExists(atPath: $0.path) })
         for outputURL in result.outputURLs {
             XCTAssertEqual(
@@ -233,7 +269,7 @@ final class PrintPackageExportWriterTests: XCTestCase {
         XCTAssertTrue(journals.isEmpty)
     }
 
-    func testMissingPrinterOutputProfileFailsBeforeCreatingArtifacts() throws {
+    func testMissingPrinterOutputProfileUsesDeliveryColorSpace() throws {
         let source = try makeSource(index: 1, width: 24, height: 16, format: .png)
         let artifacts = try XCTUnwrap(PrintPackageArtifactLayout(
             folder: root,
@@ -242,7 +278,7 @@ final class PrintPackageExportWriterTests: XCTestCase {
             format: .png
         ))
 
-        XCTAssertThrowsError(try PrintPackageExportWriter.write(
+        let result = try PrintPackageExportWriter.write(
             request(
                 sources: [source],
                 package: PrintPackageSettings(
@@ -255,19 +291,16 @@ final class PrintPackageExportWriterTests: XCTestCase {
                 printerOutputProfile: nil
             ),
             journalDirectory: journalDirectory
-        ))
-
-        XCTAssertTrue(artifacts.outputURLs.allSatisfy {
-            !FileManager.default.fileExists(atPath: $0.path)
-        })
-        let rootEntries = try FileManager.default.contentsOfDirectory(
-            at: root,
-            includingPropertiesForKeys: nil
         )
-        XCTAssertFalse(rootEntries.contains {
-            $0.lastPathComponent.hasPrefix(".negaflow-export-")
-        })
-        XCTAssertFalse(FileManager.default.fileExists(atPath: journalDirectory.path))
+
+        XCTAssertEqual(result.outputURLs, artifacts.outputURLs)
+        let expectedData = try XCTUnwrap(
+            ExportColorSpace.sRGB.cgColorSpace.copyICCData() as Data?
+        )
+        XCTAssertEqual(
+            try embeddedICCProfileSHA256(at: artifacts.outputURLs[0]),
+            ICCOutputProfileSnapshot.sha256(expectedData)
+        )
     }
 
     func testPageRasterBudgetRejectsOverlappingFullPageSourcesButAllowsContactSheet() throws {

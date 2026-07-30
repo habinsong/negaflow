@@ -37,6 +37,7 @@ Tragen Sie jedes Ergebnis als `PASS`, `FAIL`, `BLOCKED` oder `N/A` ein.
 |  | Der erste Start legt nur die in der Doku genannten App-Daten an. |  |
 |  | Ohne Scanner-Plugin schaltet sich kein erfundenes Gerät und keine erfundene Funktion ein. |  |
 |  | App-Angaben, Version, Build, Lizenz und Hilfe stimmen. |  |
+|  | Der Info-Dialog zeigt den lokalisierten Niépce-Zweihundertjahrtext fett zwischen „negaflow“ und Version `1.0.4`. |  |
 
 ## 2. Import, Entwicklung, Export
 
@@ -49,6 +50,13 @@ Notieren Sie den Quell-SHA-256 vor und nach dem Durchlauf.
 |  | Die Quell-Bytes sind vor und nach dem Import gleich. |  |
 |  | Warnung und Auswahl beim doppelten Import sind leicht zu verstehen. |  |
 |  | Der Startzustand ist manuelle Korrektur mit dem Ziel `main`. |  |
+|  | Beim Import erscheinen Fortschrittsbalken, Prozentwert und fertig/gesamt; bei gespeichertem Standard Aus werden Fotos nicht automatisch entwickelt. |  |
+|  | Auf Ordner anwenden verarbeitet bereits entwickelte und unentwickelte Fotos neu und zeigt fertig/gesamt. |  |
+|  | Das Einfügen von Einstellungen in eine Mehrfachauswahl überträgt Prozess, Ziel, Zuschnitt, Drehung, Spiegelung, Tonwert, Farbe und Detail auf jedes Foto. |  |
+|  | Miniaturen gescannter Farbnegative, Dias, SW-Negative und SW-Positive erscheinen in Entwicklung und Print entwickelt. |  |
+|  | Das Drucker-Ausgabeprofil gilt für alle wiederholten und gemischten Paketplätze sowie die exportierte Seite, nie für die Entwicklungsvorschau. |  |
+|  | Alle sieben Drucklayouts erscheinen richtig; bei mehreren Fotos erzeugen Einzelbild, Cyanotypie, Glasplatte und Gelatinesilber je Foto eine untereinander scrollbare Seite. |  |
+|  | Bei 39 Fotos zeigen und schreiben Export und Schnellexport je nach Layout eine Kontaktbogenseite, 10 Seiten mit je vier Bildern, eine voreingestellte Benutzerpaketseite oder 39 Einzeldateien. |  |
 |  | Zuschnitt, Ausrichtung, Tonwert, Farbe, Detail, lokale Korrektur und Widerrufen arbeiten wie erwartet. |  |
 |  | Vergleich Original/Entwicklung und Clipping-Anzeige passen zum Export. |  |
 |  | JPEG und 16-Bit-TIFF öffnen sich, und ihre Metadaten stimmen. |  |
@@ -67,6 +75,10 @@ Notieren Sie den Quell-SHA-256 vor und nach dem Durchlauf.
 |  | Das richtige Original verbindet sich neu, eine andere Datei wird abgelehnt. |  |
 |  | Das Entfernen aus der Bibliothek löscht das Original nicht. |  |
 |  | Das Verschieben in den Papierkorb ist eine bewusste Wahl und bleibt auch mit virtuellen Kopien eindeutig. |  |
+|  | Eingeklappte Ordner bleiben nach dem Anlegen eines Ordners und nach einem Neustart eingeklappt. |  |
+|  | Alle entfernbaren Ordner zeigen dieselbe X-Aktion, die das Original erhält. |  |
+|  | Fotos lassen sich zwischen importierten, app-eigenen und Scanner-Ordnern ziehen; Namenskonflikte erhalten einen sicheren neuen Namen. |  |
+|  | Verschieben, Umbenennen und direktes Hinzufügen/Löschen im Finder erscheinen ohne erneuten Scan der ganzen Bibliothek. |  |
 
 ## 4. Fenster, Anzeige, Bedienungshilfen
 
@@ -77,6 +89,7 @@ Kontrast erhöhen, VoiceOver, vollen Tastaturzugriff und eine andere Sprache als
 |---|---|---|
 |  | Schaltflächen in Seitenleiste, Leinwand, Inspektor, Sheets, Einstellungen und Hilfe werden nicht abgeschnitten. |  |
 |  | Beim Ändern der Fenstergröße bleiben Panelbreite und Fokus auf der Leinwand brauchbar. |  |
+|  | In einem kleinen Entwicklungsfenster scrollt nur die Ordner- und Fotoliste; der Rest der Seitenleiste bleibt stehen. |  |
 |  | Ein Neustart stellt das unterstützte Bildschirmlayout wieder her. |  |
 |  | Text fällt nie unter die festgelegte Größe, wichtige Werte werden nicht abgeschnitten. |  |
 |  | Der Zustand von Reglern, Farbrädern, Kurven, geteilten Schaltflächen, Schaltern und Auswahl ist ablesbar. |  |
@@ -126,8 +139,10 @@ Dias, saubere Bilder, Staub, Kratzer, Korn, Gesichter, Himmel und feine Muster a
 |  | Wiederholtes Regeln und Verschieben auf einem 48-MP-Foto bleibt brauchbar. |  |
 |  | Entwicklung und Export laufen bei Scangrößen von 3600 DPI und 7200 DPI durch. |  |
 |  | Ein Film mit 48 Bildern vermischt nie den Zustand zwischen den Bildern. |  |
+|  | Die Druckvorschau mit 39 Fotos und beide Exportpfade vermeiden je Foto eine stabilisierte Vollauflösungsvorschau, bleiben reaktionsfähig und begrenzen den Speicher. |  |
 |  | Bei Speicherdruck fallen nur nicht ausgewählte Caches weg, das aktuelle Bild bleibt. |  |
 |  | Suche, Filter und Sortierung in einem großen Katalog bleiben auf dem getesteten Mac brauchbar. |  |
+|  | Wiederholtes Scrollen in einem Katalog mit 2.000 Fotos in der Release-App lässt den Prozess leben; CPU und Main-Thread-Sample werden aufgezeichnet. |  |
 |  | Wärme, Speicher und Festplattennutzung langer Läufe werden notiert. |  |
 
 ## 8. Aktualisierung und Auslieferung

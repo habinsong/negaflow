@@ -321,13 +321,13 @@ struct AppWorkflowMenuCommands: Commands {
                 model.performWorkflowShortcutAction(.quickExport)
             }
             .workflowKeyboardShortcut(model.shortcut(for: .quickExport))
-            .disabled(!model.canExportSelection)
+            .disabled(!model.canQuickExportSelection(for: model.activeWorkspaceModule))
 
             Button(model.text(.commandExport)) {
                 model.performWorkflowShortcutAction(.exportPhoto)
             }
             .workflowKeyboardShortcut(model.shortcut(for: .exportPhoto))
-            .disabled(!model.canExportSelection)
+            .disabled(!model.canExportSelection(for: model.activeWorkspaceModule))
         }
     }
 

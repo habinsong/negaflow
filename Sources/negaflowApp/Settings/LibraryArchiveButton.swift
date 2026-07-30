@@ -6,9 +6,15 @@ struct LibraryArchiveButton: View {
     @State private var isCreating = false
 
     var body: some View {
-        Button(model.archiveText(.create)) {
+        Button {
             presentSavePanel()
+        } label: {
+            Text(model.archiveText(.create))
+                .lineLimit(1)
+                .minimumScaleFactor(AppTypography.minimumScaleFactor)
+                .frame(maxWidth: .infinity)
         }
+        .frame(maxWidth: .infinity)
         .disabled(isCreating || model.isLibraryMaintenanceInProgress)
     }
 

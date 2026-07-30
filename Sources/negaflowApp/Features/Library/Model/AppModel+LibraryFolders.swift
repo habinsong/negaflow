@@ -109,38 +109,78 @@ extension AppModel {
         let folders = urls.filter { Self.isDirectory($0) }
         let files = urls.filter { !Self.isDirectory($0) }
         if !folders.isEmpty {
-            importFolders(urls: folders)
-        }
-        if !files.isEmpty {
-            importImages(urls: files)
+            let folderTask = importFolders(urls: folders)
+            if !files.isEmpty {
+                Task { [weak self] in
+                    await folderTask.value
+                    await self?.importImagesWithProgress(urls: files)
+                }
+            }
+        } else if !files.isEmpty {
+            Task { [weak self] in
+                await self?.importImagesWithProgress(urls: files)
+            }
         }
     }
 
-    func importFolders(urls: [URL]) {
-        guard allowsLibraryMutation else { return }
-        var importedImageCount = 0
-        var emptyFolderCount = 0
+    @discardableResult
+    func importFolders(urls: [URL]) -> Task<Void, Never> {
+        guard allowsLibraryMutation else { return Task {} }
+        return Task { [weak self] in
+            let prepared = await Task.detached(priority: .userInitiated) {
+                urls.map { url in
+                    let files = Self.importableImageFiles(in: url)
+                    return PreparedFolderImport(
+                        url: url,
+                        files: files
+                    )
+                }
+            }.value
+            guard let self, self.allowsLibraryMutation else { return }
+            var importedImageCount = 0
+            var emptyFolderCount = 0
+            var allFiles: [URL] = []
+            var groupNamesByIdentity: [String: String] = [:]
+            allFiles.reserveCapacity(prepared.reduce(0) { $0 + $1.files.count })
+            groupNamesByIdentity.reserveCapacity(allFiles.capacity)
 
-        for url in urls {
-            registerLibraryFolder(url)
-            let files = Self.importableImageFiles(in: url)
-            if files.isEmpty {
-                emptyFolderCount += 1
-            } else {
-                importedImageCount += files.count
-                // 폴더 가져오기는 디스크 저장(썸네일/내보내기)의 출처 폴더명으로 원본 폴더명을 쓴다.
-                let group = FrameStorageNaming.sanitizeComponent(url.lastPathComponent)
-                importImages(
-                    urls: files,
-                    groupName: group.isEmpty ? FrameStorageNaming.defaultImportGroup : group
+            for item in prepared {
+                self.registerLibraryFolder(item.url)
+                if item.files.isEmpty {
+                    emptyFolderCount += 1
+                } else {
+                    importedImageCount += item.files.count
+                    let group = FrameStorageNaming.sanitizeComponent(item.url.lastPathComponent)
+                    let storageGroup = group.isEmpty
+                        ? FrameStorageNaming.defaultImportGroup
+                        : group
+                    allFiles.append(contentsOf: item.files)
+                    for file in item.files {
+                        groupNamesByIdentity[Self.importIdentity(file)] = storageGroup
+                    }
+                }
+            }
+            if !allFiles.isEmpty {
+                // 전체 폴더를 한 번에 append해 FrameStore 재색인·observation 갱신·카탈로그 예약을
+                // 폴더 수만큼 반복하지 않는다. 파일별 원본 폴더명은 identity 맵이 보존한다.
+                await self.importImagesWithProgress(
+                    urls: allFiles,
+                    groupNamesByIdentity: groupNamesByIdentity
                 )
             }
-        }
 
-        if importedImageCount > 0 {
-            statusMessage = text(AppLocalizedPhrase.folderImportCompleteFormat, importedImageCount, urls.count)
-        } else if emptyFolderCount > 0 {
-            statusMessage = text(AppLocalizedPhrase.folderImportCompleteEmptyFormat, emptyFolderCount)
+            if importedImageCount > 0 {
+                self.statusMessage = self.text(
+                    AppLocalizedPhrase.folderImportCompleteFormat,
+                    importedImageCount,
+                    urls.count
+                )
+            } else if emptyFolderCount > 0 {
+                self.statusMessage = self.text(
+                    AppLocalizedPhrase.folderImportCompleteEmptyFormat,
+                    emptyFolderCount
+                )
+            }
         }
     }
 
@@ -152,13 +192,6 @@ extension AppModel {
         }
         libraryFolders.append(LibraryFolder(url: folderURL))
         scheduleLibrarySave()
-    }
-
-    func registerLibraryFolders(for urls: [URL]) {
-        let folders = Set(urls.map { $0.deletingLastPathComponent().standardizedFileURL })
-        for folder in folders.sorted(by: { $0.path.localizedStandardCompare($1.path) == .orderedAscending }) {
-            registerLibraryFolder(folder)
-        }
     }
 
     /// 폴더 등록과 그 폴더에 속한 프레임만 카탈로그에서 제거한다. 실제 폴더/파일은 유지한다.
@@ -180,11 +213,28 @@ extension AppModel {
         scheduleLibrarySave()
     }
 
-    static func isDirectory(_ url: URL) -> Bool {
+    /// 명시적으로 등록되지 않고 원본 경로에서 파생된 폴더 행도 동일하게 라이브러리에서
+    /// 제거한다. 해당 경로의 프레임만 카탈로그에서 제거하며 실제 폴더와 원본 파일은 유지한다.
+    func removeLibraryFolderSection(_ section: LibraryFolderSection) {
+        if let folder = section.folder {
+            removeLibraryFolder(folder)
+            return
+        }
+        guard allowsLibraryMutation else { return }
+        let path = LibraryPresentation.normalizedFolderPath(
+            URL(fileURLWithPath: section.id, isDirectory: true)
+        )
+        let framesInFolder = frames.filter {
+            LibraryPresentation.normalizedFolderPath(LibraryPresentation.folderURL(for: $0)) == path
+        }
+        removeFramesFromLibrary(framesInFolder)
+    }
+
+    nonisolated static func isDirectory(_ url: URL) -> Bool {
         (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true
     }
 
-    static func importableImageFiles(in folder: URL) -> [URL] {
+    nonisolated static func importableImageFiles(in folder: URL) -> [URL] {
         let keys: Set<URLResourceKey> = [.isRegularFileKey, .isHiddenKey]
         guard let urls = try? FileManager.default.contentsOfDirectory(
             at: folder,
@@ -200,4 +250,9 @@ extension AppModel {
         }
         .sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
     }
+}
+
+private struct PreparedFolderImport: Sendable {
+    let url: URL
+    let files: [URL]
 }

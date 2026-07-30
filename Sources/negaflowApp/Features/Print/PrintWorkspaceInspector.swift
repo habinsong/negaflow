@@ -3,24 +3,59 @@ import Chromabase
 import SwiftUI
 import UniformTypeIdentifiers
 
+enum PrintInspectorTab: String, CaseIterable, Identifiable {
+    case layout
+    case content
+    case output
+
+    var id: Self { self }
+
+    var systemImage: String {
+        switch self {
+        case .layout: "rectangle.inset.filled"
+        case .content: "photo.on.rectangle.angled"
+        case .output: "camera.filters"
+        }
+    }
+}
+
 struct PrintWorkspaceInspector: View {
     @EnvironmentObject private var model: AppModel
     @ObservedObject var settingsStore: PrintWorkspaceSettingsStore
+    @State private var selectedTab = PrintInspectorTab.layout
+    @State private var isAdvancedProofExpanded = false
+
+    init(
+        settingsStore: PrintWorkspaceSettingsStore,
+        initialTab: PrintInspectorTab = .layout
+    ) {
+        self.settingsStore = settingsStore
+        _selectedTab = State(initialValue: initialTab)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
-            inspectorHeader
-            Divider()
-            Form {
-                layoutSection
-                simulationSection
+            VStack(spacing: 0) {
+                inspectorHeader
+                inspectorTabs
             }
-            .formStyle(.grouped)
+            .adaptivePanelSurface(.bar)
+            Divider()
+            ScrollView {
+                selectedTabContent
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 12)
+            }
             .scrollContentBackground(.hidden)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .adaptivePanelSurface(.regular)
         .clipped()
+        .accessibilityIdentifier("negaflow.print.inspector")
+        .onChange(of: settingsStore.layoutMode) { _, mode in
+            guard mode.usesIndividualPages, selectedTab == .content else { return }
+            selectedTab = .layout
+        }
     }
 
     private var inspectorHeader: some View {
@@ -28,52 +63,342 @@ struct PrintWorkspaceInspector: View {
             Label(model.text(.menuPrint), systemImage: "printer")
                 .font(.subheadline.weight(.semibold))
             Spacer(minLength: 8)
-            Text(model.actionableFrame?.compactDisplayName(language: model.appLanguage) ?? model.text(.noFrame))
-                .font(.caption2.monospacedDigit())
+            Text(
+                model.actionableFrame?.compactDisplayName(language: model.appLanguage)
+                    ?? model.text(.noFrame)
+            )
+                .font(.callout.monospacedDigit())
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .minimumScaleFactor(AppTypography.minimumScaleFactor)
+                .frame(maxWidth: 180, alignment: .trailing)
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .adaptivePanelSurface(.bar)
+        .padding(.top, 12)
+        .padding(.bottom, 9)
     }
 
-    private var layoutSection: some View {
-        Section {
-            Picker(model.text(.printLayoutMode), selection: $settingsStore.layoutMode) {
-                ForEach(PrintWorkspaceLayoutMode.allCases, id: \.self) { mode in
-                    Text(layoutModeTitle(mode)).tag(mode)
+    private var inspectorTabs: some View {
+        HStack(spacing: 2) {
+            ForEach(availableTabs) { tab in
+                PrintInspectorTabButton(
+                    title: tabTitle(tab),
+                    systemImage: tab.systemImage,
+                    isSelected: selectedTab == tab
+                ) {
+                    withAnimation(.snappy(duration: 0.18)) { selectedTab = tab }
+                }
+            }
+        }
+        .padding(3)
+        .liquidSurface(cornerRadius: 15)
+        .padding(.horizontal, 12)
+        .padding(.bottom, 10)
+        .accessibilityIdentifier("negaflow.print.inspector.tabs")
+    }
+
+    private var availableTabs: [PrintInspectorTab] {
+        settingsStore.layoutMode.usesIndividualPages
+            ? [.layout, .output]
+            : PrintInspectorTab.allCases
+    }
+
+    private func tabTitle(_ tab: PrintInspectorTab) -> String {
+        switch tab {
+        case .layout: model.text(.printLayoutMode)
+        case .content: model.text(.printContentSection)
+        case .output: model.text(.printOutputSection)
+        }
+    }
+
+    @ViewBuilder
+    private var selectedTabContent: some View {
+        switch selectedTab {
+        case .layout:
+            layoutTab
+        case .content:
+            contentTab
+        case .output:
+            outputTab
+        }
+    }
+
+    private var layoutTab: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            PrintInspectorSection(
+                title: model.text(.printLayoutSection),
+                systemImage: "rectangle.inset.filled"
+            ) {
+                PrintInspectorPairedInlineFields(
+                    leadingTitle: model.text(.printLayoutMode),
+                    leadingControl: {
+                        PrintInspectorPopupPicker(
+                            selection: layoutModeBinding,
+                            options: PrintWorkspaceLayoutMode.allCases.map {
+                                .init($0, title: layoutModeTitle($0))
+                            },
+                            accessibilityLabel: model.text(.printLayoutMode),
+                            horizontalPadding: 6
+                        )
+                        .accessibilityIdentifier("negaflow.print.layout.mode")
+                    },
+                    trailingTitle: model.text(.printPaperSize),
+                    trailingControl: {
+                        PrintInspectorPopupPicker(
+                            selection: $settingsStore.paperSize,
+                            options: PrintPaperSize.allCases.map {
+                                .init($0, title: paperSizeTitle($0))
+                            },
+                            accessibilityLabel: model.text(.printPaperSize),
+                            horizontalPadding: 6
+                        )
+                    }
+                )
+
+                Divider()
+                    .opacity(0.4)
+
+                PrintInspectorStackedField(model.text(.printOrientation)) {
+                    PrintInspectorSegmentedPicker(
+                        options: PrintPaperOrientation.allCases,
+                        label: orientationTitle,
+                        selection: $settingsStore.orientation
+                    )
+                    .accessibilityIdentifier("negaflow.print.layout.orientation")
+                }
+
+                Divider()
+                    .opacity(0.4)
+
+                PrintInspectorSliderRow(
+                    label: model.text(.printMargin),
+                    value: $settingsStore.marginMM,
+                    range: 0...50,
+                    step: 1,
+                    valueText: "\(Int(settingsStore.marginMM.rounded())) mm",
+                    inputFractionDigits: 0
+                )
+            }
+
+            if settingsStore.layoutMode.packageMode != nil {
+                PrintInspectorSection(
+                    title: layoutModeTitle(settingsStore.layoutMode),
+                    systemImage: layoutModeSystemImage(settingsStore.layoutMode)
+                ) {
+                    PrintPackageInspectorControls(
+                        settingsStore: settingsStore,
+                        scope: .layout
+                    )
                 }
             }
 
-            Picker(model.text(.printPaperSize), selection: $settingsStore.paperSize) {
-                ForEach(PrintPaperSize.allCases, id: \.self) { size in
-                    Text(size.uiLabel).tag(size)
+            PrintInspectorSection(
+                title: model.text(.printTemplates),
+                systemImage: "square.stack.3d.up"
+            ) {
+                PrintLayoutTemplateControls(settingsStore: settingsStore)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityIdentifier("negaflow.print.inspector.layout")
+    }
+
+    private var contentTab: some View {
+        PrintInspectorSection(
+            title: model.text(.printContentSection),
+            systemImage: "photo.on.rectangle.angled"
+        ) {
+            PrintPackageInspectorControls(
+                settingsStore: settingsStore,
+                scope: .content
+            )
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityIdentifier("negaflow.print.inspector.content")
+    }
+
+    private var outputTab: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            PrintInspectorSection(
+                title: model.text(.printOutputSection),
+                systemImage: "camera.filters"
+            ) {
+                PrintInspectorStackedField(model.text(.printOutputProcess)) {
+                    PrintInspectorSegmentedPicker(
+                        options: PrintOutputProcess.allCases,
+                        label: outputProcessTitle,
+                        selection: outputProcessBinding
+                    )
+                    .accessibilityIdentifier("negaflow.print.output.process")
                 }
             }
 
-            Picker(model.text(.printOrientation), selection: $settingsStore.orientation) {
-                Text(model.text(.printOrientationAutomatic)).tag(PrintPaperOrientation.automatic)
-                Text(model.text(.printOrientationPortrait)).tag(PrintPaperOrientation.portrait)
-                Text(model.text(.printOrientationLandscape)).tag(PrintPaperOrientation.landscape)
+            if settingsStore.outputProcess == .cPrint {
+                cPrintLabSection
+                cPrintPreviewSection
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityIdentifier("negaflow.print.inspector.output")
+    }
+
+    private var cPrintLabSection: some View {
+        PrintInspectorSection(
+            title: model.text(.printOutputCPrint),
+            systemImage: "photo.badge.checkmark"
+        ) {
+            PrintInspectorPairedInlineFields(
+                leadingTitle: model.text(.printLab),
+                leadingControl: {
+                    PrintInspectorTextField(
+                        prompt: model.text(AppLocalizedPhrase.custom),
+                        text: $settingsStore.cPrintLabName
+                    )
+                },
+                trailingTitle: model.text(.printPaper),
+                trailingControl: {
+                    PrintInspectorTextField(
+                        prompt: model.text(AppLocalizedPhrase.custom),
+                        text: $settingsStore.cPrintPaperName
+                    )
+                }
+            )
+
+            Divider()
+                .opacity(0.4)
+
+            PrintInspectorInlineField(model.text(.printSurface)) {
+                PrintInspectorPopupPicker(
+                    selection: $settingsStore.cPrintPaperSurface,
+                    options: PrintPaperSurface.allCases.map {
+                        .init($0, title: paperSurfaceTitle($0))
+                    },
+                    accessibilityLabel: model.text(.printSurface)
+                )
+            }
+        }
+    }
+
+    private var cPrintPreviewSection: some View {
+        PrintInspectorSection(
+            title: model.text(.printPreview),
+            systemImage: "eye"
+        ) {
+            proofProfileRow
+
+            Divider()
+                .opacity(0.4)
+
+            PrintInspectorBooleanSegmentedField(
+                label: model.text(.printPreview),
+                isOn: cPrintPreviewBinding
+            )
+
+            if model.cPrintProofICCProfileData == nil {
+                PrintInspectorHelpText(
+                    text: model.text(.printPreviewProfileRequired),
+                    systemImage: "exclamationmark.triangle.fill",
+                    tint: .orange
+                )
             }
 
-            HStack(spacing: 10) {
-                Text(model.text(.printMargin))
-                Slider(value: $settingsStore.marginMM, in: 0...50, step: 1)
-                Text("\(Int(settingsStore.marginMM.rounded())) mm")
-                    .font(.caption.monospacedDigit())
-                    .frame(width: 46, alignment: .trailing)
-            }
+            Divider()
+                .opacity(0.4)
 
-            if settingsStore.layoutMode != .singleImage {
-                PrintPackageInspectorControls(settingsStore: settingsStore)
-            }
+            PrintInspectorDisclosure(
+                isExpanded: $isAdvancedProofExpanded,
+                accessibilityLabel: model.text(.printAdvanced)
+            ) {
+                Text(model.text(.printAdvanced))
+                    .font(.callout.weight(.medium))
+            } content: {
+                VStack(alignment: .leading, spacing: PrintInspectorMetrics.verticalSpacing) {
+                    PrintInspectorValueRow(
+                        label: model.text(.printDeliveryColorSpace),
+                        value: model.exportColorSpace.uiLabel
+                    )
 
-            PrintLayoutTemplateControls(settingsStore: settingsStore)
-        } header: {
-            sectionHeader(model.text(.printLayoutSection), systemImage: "rectangle.inset.filled")
+                    Divider()
+                        .opacity(0.4)
+
+                    PrintInspectorBooleanSegmentedField(
+                        label: model.text(.printPaperSimulation),
+                        isOn: paperSimulationBinding
+                    )
+
+                    PrintInspectorBooleanSegmentedField(
+                        label: model.text(AppLocalizedPhrase.colorGamutWarning),
+                        isOn: $model.destinationGamutWarningEnabled
+                    )
+                }
+            }
+        }
+    }
+
+    private var proofProfileRow: some View {
+        PrintInspectorStackedField(model.text(.printProofProfile)) {
+            HStack(spacing: 6) {
+                Button(action: chooseCPrintProofProfile) {
+                    HStack(spacing: 8) {
+                        Text(model.cPrintProofICCProfileName ?? "—")
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                        Spacer(minLength: 8)
+                        Image(systemName: "folder")
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(PrintInspectorTransientButtonStyle())
+                .frame(maxWidth: .infinity)
+                .help(model.text(AppLocalizedPhrase.choose))
+                .accessibilityLabel(model.text(AppLocalizedPhrase.choose))
+
+                if model.cPrintProofICCProfileData != nil {
+                    Button(action: model.clearCPrintProofICCProfile) {
+                        Image(systemName: "xmark")
+                    }
+                    .buttonStyle(
+                        PrintInspectorTransientButtonStyle(
+                            horizontalPadding: 9,
+                            minimumHeight: 30
+                        )
+                    )
+                    .help(model.text(AppLocalizedPhrase.reset))
+                    .accessibilityLabel(model.text(AppLocalizedPhrase.reset))
+                }
+            }
+        }
+    }
+
+    /// 사진 비율 용지는 고정 치수가 아니라 활성 사진을 따라가므로 이름으로 보여준다.
+    private func paperSizeTitle(_ paperSize: PrintPaperSize) -> String {
+        paperSize == .photoRatio ? model.text(.printPaperPhotoRatio) : paperSize.uiLabel
+    }
+
+    private func orientationTitle(_ orientation: PrintPaperOrientation) -> String {
+        switch orientation {
+        case .automatic: model.text(.printOrientationAutomatic)
+        case .portrait: model.text(.printOrientationPortrait)
+        case .landscape: model.text(.printOrientationLandscape)
+        }
+    }
+
+    private func outputProcessTitle(_ process: PrintOutputProcess) -> String {
+        switch process {
+        case .standard: model.text(.printOutputStandard)
+        case .cPrint: model.text(.printOutputCPrint)
+        }
+    }
+
+    private func layoutModeSystemImage(_ mode: PrintWorkspaceLayoutMode) -> String {
+        switch mode {
+        case .singleImage: "photo"
+        case .contactSheet: "rectangle.grid.3x2"
+        case .picturePackage: "rectangle.3.group"
+        case .customPackage: "square.resize"
+        case .cyanotype: "drop.fill"
+        case .glassPlate: "rectangle.on.rectangle"
+        case .gelatin: "circle.lefthalf.filled"
         }
     }
 
@@ -83,77 +408,57 @@ struct PrintWorkspaceInspector: View {
         case .contactSheet: model.text(.printContactSheet)
         case .picturePackage: model.text(.printPicturePackage)
         case .customPackage: model.text(.printCustomPackage)
+        case .cyanotype: model.text(.printCyanotype)
+        case .glassPlate: model.text(.printGlassPlate)
+        case .gelatin: model.text(.printGelatin)
         }
     }
 
-    private var simulationSection: some View {
-        Section {
-            Toggle(model.text(.printFilmSimulation), isOn: filmSimulationBinding)
-                .disabled(model.actionableFrame == nil)
-
-            Toggle(model.text(.exportSoftProofLabel), isOn: $model.softProofEnabled)
-
-            Toggle(model.text(.printPaperSimulation), isOn: paperSimulationBinding)
-                .disabled(!model.softProofEnabled)
-
-            LabeledContent(model.text(.printOutputProfile)) {
-                HStack(spacing: 6) {
-                    Text(model.printerOutputICCProfileName ?? "—")
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                    Button(model.text(.exportChangeFolder)) {
-                        choosePrinterOutputProfile()
-                    }
-                    .controlSize(.small)
-                    if model.printerOutputICCProfileData != nil {
-                        Button(model.text(AppLocalizedPhrase.reset)) {
-                            model.clearPrinterOutputICCProfile()
-                        }
-                        .controlSize(.small)
-                    }
-                }
-            }
-
-            if model.softProofEnabled {
-                Toggle(
-                    model.text(AppLocalizedPhrase.colorGamutWarning),
-                    isOn: $model.destinationGamutWarningEnabled
-                )
-                .disabled(!model.destinationGamutWarningAvailable)
-
-            }
-        } header: {
-            sectionHeader(model.text(.menuPrint), systemImage: "camera.filters")
-        }
-    }
-
-    private var filmSimulationBinding: Binding<Bool> {
+    private var outputProcessBinding: Binding<PrintOutputProcess> {
         Binding(
-            get: { model.actionableFrame?.params.developTarget == .print },
-            set: { enabled in
-                guard let frame = model.actionableFrame else { return }
-                let target: DevelopTarget = enabled ? .print : .main
-                model.developTarget = target
-                model.scannerProfileID = nil
-                frame.updateParams {
-                    $0.developTarget = target
-                    $0.scannerProfileID = nil
+            get: { settingsStore.outputProcess },
+            set: { process in model.setPrintOutputProcess(process) }
+        )
+    }
+
+    private var layoutModeBinding: Binding<PrintWorkspaceLayoutMode> {
+        Binding(
+            get: { settingsStore.layoutMode },
+            set: { mode in
+                settingsStore.layoutMode = mode
+                if mode == .customPackage {
+                    settingsStore.prepareDefaultCustomPackage(
+                        sourceCount: model.actionableSelectedFrames.count
+                    )
                 }
-                Task { await model.developFrame(frame) }
             }
+        )
+    }
+
+    private var cPrintPreviewBinding: Binding<Bool> {
+        Binding(
+            get: { settingsStore.cPrintPreviewEnabled },
+            set: { enabled in model.setCPrintPreviewEnabled(enabled) }
         )
     }
 
     private var paperSimulationBinding: Binding<Bool> {
         Binding(
-            get: { model.softProofEnabled && model.softProofSimulation == .paperAndBlackInk },
-            set: { enabled in
-                model.softProofSimulation = enabled ? .paperAndBlackInk : .profileOnly
-            }
+            get: { settingsStore.cPrintPaperSimulationEnabled },
+            set: { enabled in model.setCPrintPaperSimulationEnabled(enabled) }
         )
     }
 
-    private func choosePrinterOutputProfile() {
+    private func paperSurfaceTitle(_ surface: PrintPaperSurface) -> String {
+        switch surface {
+        case .glossy: model.text(.printSurfaceGlossy)
+        case .matte: model.text(.printSurfaceMatte)
+        case .lustre: model.text(.printSurfaceLustre)
+        case .silk: model.text(.printSurfaceSilk)
+        }
+    }
+
+    private func chooseCPrintProofProfile() {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = false
         panel.canChooseFiles = true
@@ -165,16 +470,20 @@ struct PrintWorkspaceInspector: View {
             guard response == .OK, let url = panel.url else { return }
             Task { @MainActor in
                 guard let data = try? Data(contentsOf: url),
-                      let profile = ICCOutputProfileSnapshot(
-                          profileName: url.deletingPathExtension().lastPathComponent,
-                          iccProfileData: data
-                      ), let colorSpace = profile.validatedColorSpace() else { return }
+                      let colorSpace = SoftProof.rgbOutputColorSpace(fromICCData: data) else {
+                    model.statusMessage = model.text(AppLocalizedPhrase.softProofInvalidICC)
+                    return
+                }
                 let localizedName = NSColorSpace(cgColorSpace: colorSpace)?.localizedName
-                let name = localizedName.flatMap { $0.isEmpty ? nil : $0 } ?? profile.profileName
-                _ = model.setPrinterOutputICCProfile(
+                let fileName = url.deletingPathExtension().lastPathComponent
+                let name = localizedName.flatMap { $0.isEmpty ? nil : $0 } ?? fileName
+                guard model.setCPrintProofICCProfile(
                     data: data,
                     name: name
-                )
+                ) else {
+                    model.statusMessage = model.text(AppLocalizedPhrase.softProofInvalidICC)
+                    return
+                }
             }
         }
     }

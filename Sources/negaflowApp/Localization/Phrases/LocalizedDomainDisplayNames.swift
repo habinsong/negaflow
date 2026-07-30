@@ -98,6 +98,7 @@ extension DevelopSettingsPasteScope {
         if tone { groups.append(AppLocalization.text(AppLocalizedPhrase.basicTone, language: language)) }
         if color { groups.append(AppLocalization.text(AppLocalizedPhrase.color, language: language)) }
         if detail { groups.append(AppLocalization.text(AppLocalizedPhrase.detailEffects, language: language)) }
+        if geometry { groups.append(AppLocalization.text(AppLocalizedPhrase.geometry, language: language)) }
         return groups.isEmpty
             ? AppLocalization.text(AppLocalizedPhrase.none, language: language)
             : groups.joined(separator: "/")

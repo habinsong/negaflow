@@ -50,7 +50,9 @@ extension AppModel {
         set {
             guard newValue != exportSettingsStore.destinationGamutWarningEnabled else { return }
             exportSettingsStore.destinationGamutWarningEnabled = newValue
-            if softProofEnabled { advanceSoftProofConfiguration() }
+            if softProofEnabled || cPrintSoftProofSettings.isEnabled {
+                advanceSoftProofConfiguration()
+            }
         }
     }
 
@@ -64,11 +66,25 @@ extension AppModel {
     var softProofICCProfileName: String? { exportSettingsStore.softProofICCProfileName }
     var printerOutputICCProfileData: Data? { exportSettingsStore.printerOutputICCProfileData }
     var printerOutputICCProfileName: String? { exportSettingsStore.printerOutputICCProfileName }
+    var cPrintProofICCProfileData: Data? {
+        printWorkspaceSettingsStore.cPrintProofICCProfileData
+    }
+    var cPrintProofICCProfileName: String? {
+        printWorkspaceSettingsStore.cPrintProofICCProfileName
+    }
 
     var selectedPrinterOutputProfile: ICCOutputProfileSnapshot? {
         guard let data = printerOutputICCProfileData else { return nil }
         return ICCOutputProfileSnapshot(
             profileName: printerOutputICCProfileName ?? "Printer ICC",
+            iccProfileData: data
+        )
+    }
+
+    var selectedCPrintOutputProfile: ICCOutputProfileSnapshot? {
+        guard let data = cPrintProofICCProfileData else { return nil }
+        return ICCOutputProfileSnapshot(
+            profileName: cPrintProofICCProfileName ?? "C-print ICC",
             iccProfileData: data
         )
     }
@@ -90,6 +106,61 @@ extension AppModel {
         exportSettingsStore.printerOutputICCProfileData = nil
         exportSettingsStore.printerOutputICCProfileName = nil
         advanceSoftProofConfiguration()
+    }
+
+    @discardableResult
+    func setCPrintProofICCProfile(data: Data, name: String) -> Bool {
+        guard let profile = ICCOutputProfileSnapshot(
+            profileName: name,
+            iccProfileData: data
+        ) else { return false }
+        let changed = profile.iccProfileData != printWorkspaceSettingsStore.cPrintProofICCProfileData
+            || profile.profileName != printWorkspaceSettingsStore.cPrintProofICCProfileName
+        let previewWasEnabled = printWorkspaceSettingsStore.cPrintPreviewEnabled
+        printWorkspaceSettingsStore.cPrintProofICCProfileData = profile.iccProfileData
+        printWorkspaceSettingsStore.cPrintProofICCProfileName = profile.profileName
+        printWorkspaceSettingsStore.cPrintPreviewEnabled = true
+        if (changed || !previewWasEnabled), activeWorkspaceModule == .print,
+           printWorkspaceSettingsStore.outputProcess == .cPrint {
+            advanceSoftProofConfiguration()
+        }
+        return true
+    }
+
+    func clearCPrintProofICCProfile() {
+        guard cPrintProofICCProfileData != nil || cPrintProofICCProfileName != nil else { return }
+        let wasDisplayed = activeWorkspaceModule == .print
+            && printWorkspaceSettingsStore.outputProcess == .cPrint
+            && printWorkspaceSettingsStore.cPrintPreviewEnabled
+        printWorkspaceSettingsStore.cPrintPreviewEnabled = false
+        printWorkspaceSettingsStore.cPrintProofICCProfileData = nil
+        printWorkspaceSettingsStore.cPrintProofICCProfileName = nil
+        if wasDisplayed { advanceSoftProofConfiguration() }
+    }
+
+    func setPrintOutputProcess(_ process: PrintOutputProcess) {
+        guard process != printWorkspaceSettingsStore.outputProcess else { return }
+        printWorkspaceSettingsStore.outputProcess = process
+        if activeWorkspaceModule == .print { advanceSoftProofConfiguration() }
+    }
+
+    func setCPrintPreviewEnabled(_ enabled: Bool) {
+        guard enabled != printWorkspaceSettingsStore.cPrintPreviewEnabled else { return }
+        printWorkspaceSettingsStore.cPrintPreviewEnabled = enabled
+        if activeWorkspaceModule == .print,
+           printWorkspaceSettingsStore.outputProcess == .cPrint {
+            advanceSoftProofConfiguration()
+        }
+    }
+
+    func setCPrintPaperSimulationEnabled(_ enabled: Bool) {
+        guard enabled != printWorkspaceSettingsStore.cPrintPaperSimulationEnabled else { return }
+        printWorkspaceSettingsStore.cPrintPaperSimulationEnabled = enabled
+        if activeWorkspaceModule == .print,
+           printWorkspaceSettingsStore.outputProcess == .cPrint,
+           printWorkspaceSettingsStore.cPrintPreviewEnabled {
+            advanceSoftProofConfiguration()
+        }
     }
 
     @discardableResult
@@ -136,8 +207,19 @@ extension AppModel {
         return true
     }
 
-    private func advanceSoftProofConfiguration() {
+    func advanceSoftProofConfiguration() {
         softProofConfigurationRevision &+= 1
+        refreshSoftProofPreviewIfNeeded()
+    }
+
+    func refreshWorkspaceSoftProofPreviewIfNeeded() {
+        var candidates = actionableSelectedFrames.filter(\.hasDevelopedOnce)
+        if candidates.isEmpty, let frame = actionableFrame, frame.hasDevelopedOnce {
+            candidates = [frame]
+        }
+        guard candidates.contains(where: {
+            $0.displayedSoftProofRevision != softProofConfigurationRevision
+        }) else { return }
         refreshSoftProofPreviewIfNeeded()
     }
 
@@ -242,17 +324,52 @@ extension AppModel {
         return settings
     }
 
-    /// 최종 출력 계약과 동일한 프루프 대상을 스냅샷에 고정합니다. PRINT workspace의 합성
-    /// 출력과 `.print` target은 printer ICC를 쓰고, Proof Copy는 생성 당시의 내장 ICC가 우선합니다.
+    var cPrintSoftProofSettings: SoftProofSettings {
+        SoftProofSettings(
+            isEnabled: printWorkspaceSettingsStore.outputProcess == .cPrint
+                && printWorkspaceSettingsStore.cPrintPreviewEnabled
+                && cPrintProofICCProfileData != nil,
+            colorSpace: exportColorSpace,
+            simulation: printWorkspaceSettingsStore.cPrintPaperSimulationEnabled
+                ? .paperAndBlackInk
+                : .profileOnly,
+            iccProfileData: cPrintProofICCProfileData
+        )
+    }
+
+    /// 프루프 대상을 스냅샷에 고정합니다. C-print ICC의 화면 표시는 인화 작업공간에만
+    /// 한정하고, 내보내기는 별도의 불변 output-profile 스냅샷을 사용합니다.
     func displaySoftProofSettings(for frame: ScanFrame?) -> SoftProofSettings {
+        displaySoftProofSettings(for: frame, in: activeWorkspaceModule)
+    }
+
+    func displaySoftProofSettings(
+        for frame: ScanFrame?,
+        in workspaceModule: WorkspaceModule
+    ) -> SoftProofSettings {
         if let configuration = frame?.proofCopyConfiguration,
            let resolved = configuration.resolvedSoftProofSettings {
             return resolved
         }
-        if activeWorkspaceModule == .print || frame?.params.developTarget == .print {
+        if workspaceModule == .print {
+            return cPrintSoftProofSettings
+        }
+        if frame?.params.developTarget == .print {
             return printerSoftProofSettings
         }
         return softProofSettings
+    }
+
+    func softProofSettingsAreEquivalent(
+        _ lhs: SoftProofSettings,
+        _ rhs: SoftProofSettings
+    ) -> Bool {
+        lhs.isEnabled == rhs.isEnabled
+            && lhs.colorSpace == rhs.colorSpace
+            && lhs.simulation == rhs.simulation
+            && lhs.iccProfileData == rhs.iccProfileData
+            && lhs.printerOutputICCProfileData == rhs.printerOutputICCProfileData
+            && lhs.media == rhs.media
     }
 
     var quickExportOptions: ExportOptions {

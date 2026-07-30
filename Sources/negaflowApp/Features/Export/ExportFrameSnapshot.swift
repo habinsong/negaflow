@@ -27,6 +27,7 @@ struct ExportFrameSnapshot: @unchecked Sendable {
     let scannerModel: String?
     let resolutionDPI: Int?
     let sourceBitDepth: Int?
+    let sourcePixelSize: CGSize?
     let backendUsed: String?
     let presetName: String?
     let scannerProfileID: String?

@@ -30,7 +30,7 @@ body:
     attributes:
       label: negaflow version
       description: Use the release version or commit SHA.
-      placeholder: "1.0.3 or a1b2c3d"
+      placeholder: "1.0.4 or a1b2c3d"
     validations:
       required: true
 

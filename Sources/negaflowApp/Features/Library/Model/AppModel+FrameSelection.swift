@@ -42,6 +42,12 @@ extension AppModel {
         selectedFrameIDs.contains(frame.id)
     }
 
+    /// 이 프레임에 대한 일괄 동작이 몇 장을 대상으로 하는지. 드래그 배지처럼 표시에만 쓰는
+    /// 값이라 실제 목록(`framesForContextAction`)을 만들지 않고 O(1)로 답한다.
+    func contextActionFrameCount(for frame: ScanFrame) -> Int {
+        selectedFrameIDs.contains(frame.id) ? selectedFrameIDs.count : 1
+    }
+
     func selectFrame(
         _ frame: ScanFrame,
         orderedFrameIDs: [UUID],
@@ -249,6 +255,11 @@ extension AppModel {
         guard frame.isSourceAvailable else {
             return frame.displayedSoftProofRevision != softProofConfigurationRevision
                 && frame.hasDevelopedOnce
+        }
+        // 라이브러리에서 처음 선택하거나 가져왔다는 이유만으로 현상을 시작하지 않는다.
+        // 한 번도 현상하지 않은 프레임은 폴더 일괄 적용 또는 현상 작업공간 진입이 명시적 시작점이다.
+        if activeWorkspaceModule == .library, !frame.hasDevelopedOnce {
+            return false
         }
         if frame.developedImage == nil {
             return frame.initialThumbnailSeedTask == nil

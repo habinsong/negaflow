@@ -214,7 +214,7 @@ final class ExportFrameSnapshotBuilderTests: XCTestCase {
         )
     }
 
-    func testPrintWriterRejectsMissingProfileWithoutArtifactsStagingOrJournal() throws {
+    func testPrintTargetRejectsMissingProfileWhileCompositionUsesDeliveryColorSpace() throws {
         let printTargetRawURL = tempDirectory.appendingPathComponent("missing-profile-target.tiff")
         try MockScannerBackend.writeSyntheticNegative(
             width: 16,
@@ -268,28 +268,31 @@ final class ExportFrameSnapshotBuilderTests: XCTestCase {
         )
 
         XCTAssertTrue(try exportJournalURLs(referencing: tempDirectory).isEmpty)
-        for plan in [printTargetPlan, compositionPlan] {
-            XCTAssertThrowsError(try ExportFrameWriter.write(plan.snapshot)) { error in
-                guard case let ChromabaseError.writeFailed(message) = error else {
-                    return XCTFail("unexpected error: \(error)")
-                }
-                XCTAssertEqual(
-                    message,
-                    "PRINT export requires a valid RGB printer-class ICC profile"
-                )
+        XCTAssertThrowsError(try ExportFrameWriter.write(printTargetPlan.snapshot)) { error in
+            guard case let ChromabaseError.writeFailed(message) = error else {
+                return XCTFail("unexpected error: \(error)")
             }
-            let layout = ExportArtifactLayout(
-                outputURL: plan.snapshot.outputURL,
-                format: plan.snapshot.format,
-                sourceURL: plan.snapshot.rawScanURL,
-                writeSidecar: plan.snapshot.writeSidecar,
-                writeMainFlatMaster: plan.snapshot.writeMainFlatMaster,
-                writeOriginalRaw: plan.snapshot.writeOriginalRaw
+            XCTAssertEqual(
+                message,
+                "PRINT export requires a valid RGB printer-class ICC profile"
             )
-            for url in layout.allURLs {
-                XCTAssertFalse(FileManager.default.fileExists(atPath: url.path))
-            }
         }
+        let failedLayout = ExportArtifactLayout(
+            outputURL: printTargetPlan.snapshot.outputURL,
+            format: printTargetPlan.snapshot.format,
+            sourceURL: printTargetPlan.snapshot.rawScanURL,
+            writeSidecar: printTargetPlan.snapshot.writeSidecar,
+            writeMainFlatMaster: printTargetPlan.snapshot.writeMainFlatMaster,
+            writeOriginalRaw: printTargetPlan.snapshot.writeOriginalRaw
+        )
+        for url in failedLayout.allURLs {
+            XCTAssertFalse(FileManager.default.fileExists(atPath: url.path))
+        }
+
+        _ = try writeAndComplete(compositionPlan.snapshot)
+        XCTAssertTrue(
+            FileManager.default.fileExists(atPath: compositionPlan.snapshot.outputURL.path)
+        )
         XCTAssertFalse(try FileManager.default.contentsOfDirectory(atPath: tempDirectory.path).contains {
             $0.hasPrefix(".negaflow-export-") && $0.hasSuffix(".tmp")
         })
@@ -341,6 +344,7 @@ final class ExportFrameSnapshotBuilderTests: XCTestCase {
             dpi: 72,
             perforationStyle: .thirtyFiveMillimeter
         )
+        let profile = try ICCOutputProfileTestFixture.snapshot()
         let plan = ExportFrameSnapshotBuilder.build(
             frame: frame,
             sourceIdentity: try RenderManifest.sourceIdentity(for: rawURL),
@@ -350,7 +354,7 @@ final class ExportFrameSnapshotBuilderTests: XCTestCase {
             writeMainFlatMaster: false,
             writeOriginalRaw: false,
             options: ExportOptions(dpi: 72),
-            printerOutputProfile: try ICCOutputProfileTestFixture.snapshot(),
+            printerOutputProfile: profile,
             printComposition: settings,
             scannerModel: nil,
             backendUsed: nil
@@ -365,6 +369,10 @@ final class ExportFrameSnapshotBuilderTests: XCTestCase {
         )
         XCTAssertEqual(properties[kCGImagePropertyPixelWidth] as? Int, 595)
         XCTAssertEqual(properties[kCGImagePropertyPixelHeight] as? Int, 842)
+        XCTAssertEqual(
+            ICCOutputProfileSnapshot.embeddedProfileSHA256(at: outputURL),
+            profile.profileSHA256
+        )
     }
 
     func testImportedFrameDoesNotMislabelImportTimeAsOriginalDate() throws {

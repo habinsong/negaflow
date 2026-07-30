@@ -14,13 +14,14 @@ flowchart LR
 ```
 
 > [!NOTE]
-> Die aktuelle Version ist `1.0.3`. Was gebaut und was tatsächlich geprüft wurde,
+> Die aktuelle Version ist `1.0.4`. Was gebaut und was tatsächlich geprüft wurde,
 > steht im [Projektstand](product/PROJECT_STATUS.md).
 
 ## Produkt
 
 | Dokument | Wann lesen |
 |---|---|
+| [Von der Bibliothek zum Druck](product/WORKFLOW.md) | Für Import, Ordnerentwicklung, Kopieren/Einfügen und Druckablauf |
 | [Chroma Engine](product/CHROMA_ENGINE.md) | Sie wollen Filmumkehr und Entwicklungsreihenfolge |
 | [GrainMend](product/GRAINMEND.md) | Sie wollen sehen, wie Staub- und Kratzerreparatur arbeitet |
 | [Filmprofile](product/FILM_PROFILES.md) | Sie wollen Herkunft und Grenzen der mitgelieferten Profile |
@@ -41,6 +42,7 @@ flowchart LR
 |---|---|
 | [Scanner-CLI-JSON](reference/CLI_JSON.md) | Ausgabeform von `detect --json` und `capabilities --json` |
 | [Render-Protokoll](reference/RENDER_MANIFEST.md) | SHA-256-Verbindung von Quelle, Bearbeitungswerten und Ausgabedatei |
+| [Abzugslayouts und C-Print-Vorschau](reference/C_PRINT.md) | Sieben Layouts, Export fertiger Seiten, optimiertes Rendering, Softproof-ICC und Genauigkeitsgrenzen |
 | [Feste Printantwort](reference/PRINT_RESPONSE.md) | Formel und Ankerpunkte von `shoulder-print-response-v4` |
 | [Qualitätsprüfung der Scannerprofile](reference/PROFILE_QUALITY_GATE.md) | Freigaberegeln für REAL/TARGET-Paarmaterial |
 | [Scanner-Rauschprofile](reference/SCANNER_NOISE_PROFILES.md) | Messung über Wiederholungsscans und automatische Anwendung |

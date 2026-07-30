@@ -23,16 +23,22 @@ enum ExportFrameWriter {
     ) throws -> ExportFrameResult {
         let fileManager = FileManager.default
         let requiresPrinterOutputProfile = snapshot.format != .rawScanTIFF
-            && (snapshot.params.developTarget == .print || snapshot.printComposition != nil)
+            && snapshot.params.developTarget == .print
+        let appliesPrintWorkspaceOutputProfile = snapshot.format != .rawScanTIFF
+            && snapshot.printComposition != nil
         let printerOutputProfile: ICCOutputProfileSnapshot?
-        if requiresPrinterOutputProfile {
-            guard let profile = snapshot.printerOutputProfile,
-                  profile.validatedColorSpace() != nil else {
+        if (requiresPrinterOutputProfile || appliesPrintWorkspaceOutputProfile),
+           let profile = snapshot.printerOutputProfile {
+            guard profile.validatedColorSpace() != nil else {
                 throw ChromabaseError.writeFailed(
                     "PRINT export requires a valid RGB printer-class ICC profile"
                 )
             }
             printerOutputProfile = profile
+        } else if requiresPrinterOutputProfile {
+            throw ChromabaseError.writeFailed(
+                "PRINT export requires a valid RGB printer-class ICC profile"
+            )
         } else {
             printerOutputProfile = nil
         }
@@ -92,9 +98,26 @@ enum ExportFrameWriter {
                     : ".\(snapshot.rawScanURL.pathExtension)"),
             isDirectory: false
         )
+        let printProxyLongEdge: CGFloat?
+        if let composition = snapshot.printComposition,
+           !snapshot.writeMainFlatMaster,
+           !snapshot.writeSidecar {
+            let paper = composition.paperDimensionsMM
+            let outputLongEdge = max(paper.width, paper.height)
+                * CGFloat(composition.dpi) / 25.4
+            printProxyLongEdge = ExportDevelopedFrameRenderer.proxyInputLongEdge(
+                outputLongEdge: outputLongEdge,
+                imageTransform: snapshot.params.imageTransform,
+                sourcePixelSize: snapshot.sourcePixelSize
+            )
+        } else {
+            // Main Flat과 RenderManifest decode provenance는 원본 해상도 decode 계약을 유지한다.
+            printProxyLongEdge = nil
+        }
         let frameRender = try ExportDevelopedFrameRenderer.prepare(
             snapshot,
             stagedSourceURL: stagedSourceURL,
+            proxyLongEdge: printProxyLongEdge,
             fileManager: fileManager
         )
         let scannerProfile = snapshot.scannerProfileID.flatMap { ScannerProfileRegistry.load(named: $0) }

@@ -40,6 +40,31 @@ final class AppLocalizationTests: XCTestCase {
         XCTAssertEqual(model.text(.settingsLanguageTab), "Language")
     }
 
+    func testHistoricalPrintLayoutNamesAreLocalized() {
+        XCTAssertEqual(AppLocalization.text(.printCyanotype, language: .korean), "시아노타입")
+        XCTAssertEqual(AppLocalization.text(.printGlassPlate, language: .korean), "유리건판")
+        XCTAssertEqual(AppLocalization.text(.printGelatin, language: .korean), "젤라틴")
+        XCTAssertEqual(AppLocalization.text(.printGelatin, language: .english), "Gelatin Silver")
+    }
+
+    func testAboutAnniversaryMessageMatchesLocalizedReadmes() {
+        let expected: [AppLanguage: String] = [
+            .english: "Celebrating this summer, the bicentennial of Niépce's first-ever photograph.",
+            .korean: "니엡스가 찍은 최초의 사진으로부터 200주년인 올해 여름을 기념하며.",
+            .japanese: "ニエプスが人類最初の一枚を写してから二百年。その夏に寄せて。",
+            .simplifiedChinese: "谨以此夏，纪念尼埃普斯拍下人类第一张照片二百周年。",
+            .french: "Célébrons cet été le bicentenaire de la toute première photographie de Niépce.",
+            .german: "Diesem Sommer gewidmet — zweihundert Jahre seit Niépces erster Fotografie.",
+        ]
+
+        for (language, message) in expected {
+            XCTAssertEqual(
+                AppLocalization.text(.aboutAnniversaryMessage, language: language),
+                message
+            )
+        }
+    }
+
     func testMenuCatalogUsesProfessionalPhotoWorkflowSections() {
         let menus = AppMenuCatalog(language: .english).menus
 
@@ -354,13 +379,14 @@ final class AppLocalizationTests: XCTestCase {
         XCTAssertEqual(scope.displayName(language: .japanese), "すべての設定")
 
         scope.detail = false
-        XCTAssertEqual(scope.displayName(language: .korean), "베이스/기본 톤/색상")
-        XCTAssertEqual(scope.displayName(language: .simplifiedChinese), "片基/基本色调/颜色")
-        XCTAssertEqual(scope.displayName(language: .german), "Filmbasis/Grundeinstellungen/Farbe")
+        XCTAssertEqual(scope.displayName(language: .korean), "베이스/기본 톤/색상/편집")
+        XCTAssertEqual(scope.displayName(language: .simplifiedChinese), "片基/基本色调/颜色/几何")
+        XCTAssertEqual(scope.displayName(language: .german), "Filmbasis/Grundeinstellungen/Farbe/Geometrie")
 
         scope.base = false
         scope.tone = false
         scope.color = false
+        scope.geometry = false
         XCTAssertEqual(scope.displayName(language: .korean), "없음")
     }
 

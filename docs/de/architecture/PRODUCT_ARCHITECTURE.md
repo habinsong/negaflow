@@ -91,6 +91,7 @@ Die App, die Menschen benutzen, gebaut mit SwiftUI und AppKit.
 - Scan, GrainMend, Export
 - Versionen, Einstellungen, Kurzbefehle
 - Katalog, Cache, Sicherung, Aufbewahrungsarchiv
+- Lokalisierter Info-Dialog, dessen Version aus der gemeinsamen Ressource stammt
 
 ## Ablauf für Benutzer
 
@@ -191,6 +192,12 @@ Bearbeitungen überleben eine getrennte externe Festplatte.
 Das Original wird als offline markiert, und Sie verknüpfen es je Datei oder je Ordner neu.
 Ist die ID nicht die erwartete, wird nichts automatisch getauscht.
 
+Jeder registrierte physische Quellordner erhält genau einen Dateisystem-Watcher. Ereignisse werden
+kurz zusammengefasst, danach wird nur der geänderte Ordner neu gelesen. Die erneute Verknüpfung über
+Bookmarks behält die Katalogordner-ID bei, wenn Finder eine Quelle verschiebt oder umbenennt.
+Direkt neu hinzugefügte Bilder werden ohne Polling und ohne erneuten Scan der ganzen Bibliothek
+importiert.
+
 ## Entwicklung und GrainMend
 
 Jedes Bild trägt:
@@ -271,10 +278,26 @@ Unterstützte Anordnungen:
 
 - Einzelbild
 - Kontaktbogen
-- Paket mit gemischten Größen
-- Eigene Anordnung
+- Bildpaket
+- Benutzerpaket
+- Cyanotypie
+- Glasplatte
+- Gelatinesilber
 
-Das ICC wird einmal auf die endgültige Ausgabe angewandt, nachdem das Seitenlayout steht.
+Einzelbild und die drei historischen Layouts erzeugen für jedes ausgewählte Foto eine untereinander
+angezeigte Seite. Kontaktbogen, Bildpaket und Benutzerpaket zeigen und exportieren ihre fertige
+Seitenzahl. Bei 39 Fotos sind das eine 6 × 7-Kontaktbogenseite, 10 Seiten mit je vier Bildern, eine
+Seite des voreingestellten Benutzerpakets oder 39 Einzeldateien.
+
+Die Paketvorschau verwendet vorhandene Miniaturen und entwickelte Bilder und erzeugt nur bei Bedarf
+eine kleine schnelle Vorschau. Der Export berechnet Platzierungen aus Metadaten, entwickelt nur die
+benötigten Pixel, bereitet gleichzeitig zwei bis vier eindeutige Quellen vor, hält den Core-Image-
+Graphen bis zur Seitenausgabe verbunden und begrenzt Quellraster auf 512 MiB pro Seite.
+
+Jede Platzierung eines Bildpakets beobachtet das ihr zugewiesene Bild. Das Drucker-Ausgabe-ICC wird
+nach dem Layout einmal auf die vollständige fertige Seite angewandt. Dadurch folgen Pakete mit
+wiederholten und mit gemischten Bildern demselben Ausgabevertrag. Bibliothek und
+Entwicklungsvorschau bleiben davon unberührt.
 Weder das ursprüngliche Scan-TIFF noch `-main-flat` bekommt ein Druckerprofil.
 
 Ohne gültiges RGB-Druckerprofil wird kein anderes Profil untergeschoben.

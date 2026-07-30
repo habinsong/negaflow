@@ -219,7 +219,7 @@ final class PrintPackageExportRuntimeTests: XCTestCase {
         XCTAssertFalse(model.isAcknowledgedLibraryTransactionActive)
     }
 
-    func testMissingPrinterOutputProfileFailsBeforeRenderingOrWriting() throws {
+    func testLegacyPrintTargetStillRequiresPrinterOutputProfile() throws {
         let exportRoot = root.appendingPathComponent("Exports", isDirectory: true)
         let diskStore = DiskStorageStore(defaults: defaults)
         diskStore.exportPath = exportRoot.path
@@ -228,7 +228,7 @@ final class PrintPackageExportRuntimeTests: XCTestCase {
         printStore.packageSettings = PrintPackageSettings(
             mode: .contactSheet,
             contactRows: 1,
-            contactColumns: 1
+            contactColumns: 2
         )
         let model = AppModel(
             exportSettingsStore: ExportSettingsStore(defaults: defaults),
@@ -247,6 +247,7 @@ final class PrintPackageExportRuntimeTests: XCTestCase {
         XCTAssertNil(model.selectedPrinterOutputProfile)
 
         let frame = try makeFrame(index: 1, width: 24, height: 16)
+        frame.updateParams { $0.developTarget = .print }
         model.frames = [frame]
         frame.hasDevelopedOnce = true
         frame.displayPixelSize = CGSize(width: 24, height: 16)
@@ -264,6 +265,71 @@ final class PrintPackageExportRuntimeTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: exportRoot.path))
     }
 
+    func testCPrintProfileIsAppliedToCompositeExport() async throws {
+        let exportRoot = root.appendingPathComponent("Exports", isDirectory: true)
+        let diskStore = DiskStorageStore(defaults: defaults)
+        diskStore.exportPath = exportRoot.path
+        let printStore = PrintWorkspaceSettingsStore(defaults: defaults)
+        printStore.outputProcess = .cPrint
+        printStore.layoutMode = .contactSheet
+        printStore.paperSize = .fourBySix
+        printStore.orientation = .landscape
+        printStore.packageSettings = PrintPackageSettings(
+            mode: .contactSheet,
+            contactRows: 1,
+            contactColumns: 2
+        )
+        let model = AppModel(
+            exportSettingsStore: ExportSettingsStore(defaults: defaults),
+            printWorkspaceSettingsStore: printStore,
+            diskStorageStore: diskStore,
+            libraryCatalogURL: root.appendingPathComponent("library.json"),
+            libraryDefectDirectoryURL: root.appendingPathComponent("defects"),
+            libraryBackupDirectoryURL: root.appendingPathComponent("Backups")
+        )
+        let profile = try ICCOutputProfileTestFixture.snapshot()
+        XCTAssertTrue(model.setCPrintProofICCProfile(
+            data: profile.iccProfileData,
+            name: profile.profileName
+        ))
+        await model.restoreLibraryOnLaunch()
+        let first = try makeFrame(index: 1, width: 24, height: 16)
+        let second = try makeFrame(index: 2, width: 16, height: 24)
+        model.frames = [first, second]
+        XCTAssertTrue(model.assignNewPersistentFrames([first, second]))
+        first.hasDevelopedOnce = true
+        second.hasDevelopedOnce = true
+        first.displayPixelSize = CGSize(width: 24, height: 16)
+        second.displayPixelSize = CGSize(width: 16, height: 24)
+        model.updateInteractionScope([first.id, second.id])
+        model.selectedFrameIDs = [first.id, second.id]
+        model.exportFormat = .png
+        model.exportDPI = 72
+        XCTAssertTrue(model.saveLibrary(synchronous: true))
+
+        model.exportPrintSelectionToFolder(
+            settings: printStore.compositionSettings(dpi: 72)
+        )
+        XCTAssertTrue(model.isPrintPackageExporting, model.statusMessage)
+        try await waitForPackageExport(model)
+
+        let outputs = regularFiles(below: exportRoot).filter { $0.pathExtension == "png" }
+        let output = try XCTUnwrap(outputs.first)
+        XCTAssertEqual(outputs.count, 1)
+        XCTAssertEqual(
+            ICCOutputProfileSnapshot.embeddedProfileSHA256(at: output),
+            profile.profileSHA256
+        )
+        let firstEvent = try XCTUnwrap(
+            first.libraryWorkflowTrackingState?.exportTracking.successfulEvents.first
+        )
+        let secondEvent = try XCTUnwrap(
+            second.libraryWorkflowTrackingState?.exportTracking.successfulEvents.first
+        )
+        XCTAssertEqual(firstEvent.artifactPaths, [output.standardizedFileURL.path])
+        XCTAssertEqual(secondEvent.artifactPaths, firstEvent.artifactPaths)
+    }
+
     func testPageLimitFailureIsReportedBeforeRenderingStarts() throws {
         let printStore = PrintWorkspaceSettingsStore(defaults: defaults)
         printStore.layoutMode = .picturePackage
@@ -277,7 +343,7 @@ final class PrintPackageExportRuntimeTests: XCTestCase {
             libraryBackupDirectoryURL: root.appendingPathComponent("Backups")
         )
         try setSyntheticPrinterOutputProfile(on: model)
-        let frames = (0...PrintPackageSettings.maximumPageCount).map { index in
+        let frames = (0...(PrintPackageSettings.maximumPageCount * 3)).map { index in
             let frame = ScanFrame(
                 scanIndex: index + 1,
                 rawScanURL: root.appendingPathComponent("unread-source-\(index).tiff"),
@@ -299,6 +365,228 @@ final class PrintPackageExportRuntimeTests: XCTestCase {
 
         XCTAssertFalse(model.isPrintPackageExporting)
         XCTAssertEqual(model.statusMessage, model.text(.printPackagePageLimit))
+    }
+
+    /// 인화 빠른 내보내기 — 프린터 ICC 없이 배포 색공간만으로 페이지를 쓴다.
+    func testQuickPrintPackageExportWritesPagesWithoutPrinterProfile() async throws {
+        let quickRoot = root.appendingPathComponent("QuickExports", isDirectory: true)
+        let diskStore = DiskStorageStore(defaults: defaults)
+        diskStore.quickExportPath = quickRoot.path
+        let printStore = PrintWorkspaceSettingsStore(defaults: defaults)
+        printStore.layoutMode = .contactSheet
+        printStore.paperSize = .fourBySix
+        printStore.orientation = .landscape
+        printStore.marginMM = 5
+        printStore.packageSettings = PrintPackageSettings(
+            mode: .contactSheet,
+            contactRows: 1,
+            contactColumns: 2,
+            horizontalSpacingMM: 2,
+            verticalSpacingMM: 0
+        )
+        let model = AppModel(
+            exportSettingsStore: ExportSettingsStore(defaults: defaults),
+            printWorkspaceSettingsStore: printStore,
+            diskStorageStore: diskStore,
+            libraryCatalogURL: root.appendingPathComponent("library.json"),
+            libraryDefectDirectoryURL: root.appendingPathComponent("defects"),
+            libraryBackupDirectoryURL: root.appendingPathComponent("Backups")
+        )
+        await model.restoreLibraryOnLaunch()
+        let first = try makeFrame(index: 11, width: 24, height: 16)
+        let second = try makeFrame(index: 12, width: 16, height: 24)
+        model.frames = [first, second]
+        XCTAssertTrue(model.assignNewPersistentFrames([first, second]))
+        first.hasDevelopedOnce = true
+        second.hasDevelopedOnce = true
+        first.displayPixelSize = CGSize(width: 24, height: 16)
+        second.displayPixelSize = CGSize(width: 16, height: 24)
+        model.updateInteractionScope([first.id, second.id])
+        model.selectedFrameIDs = [first.id, second.id]
+        model.quickExportFormat = .jpeg
+        model.quickExportDPI = 72
+
+        model.quickExportPrintSelection(settings: printStore.compositionSettings(dpi: 72))
+        try await waitForPackageExport(model)
+
+        let imageFiles = regularFiles(below: quickRoot).filter { $0.pathExtension == "jpg" }
+        XCTAssertEqual(imageFiles.count, 1, "status=\(model.statusMessage)")
+    }
+
+    /// 여러 장을 고른 인화 시트는 **용지 한 장**만 나온다. 원본은 셀이 요구하는 해상도까지만
+    /// 현상하므로, 장수가 늘어도 풀해상도 현상이 장수만큼 늘지 않는다.
+    func testContactSheetExportWritesOneSheetForEverySelectedPhoto() async throws {
+        let exportRoot = root.appendingPathComponent("SheetExports", isDirectory: true)
+        let diskStore = DiskStorageStore(defaults: defaults)
+        diskStore.exportPath = exportRoot.path
+        let printStore = PrintWorkspaceSettingsStore(defaults: defaults)
+        printStore.layoutMode = .contactSheet
+        printStore.paperSize = .a4
+        printStore.orientation = .landscape
+        printStore.marginMM = 5
+        printStore.packageSettings = PrintPackageSettings(
+            mode: .contactSheet,
+            contactRows: 6,
+            contactColumns: 7,
+            horizontalSpacingMM: 2,
+            verticalSpacingMM: 2
+        )
+        let model = AppModel(
+            exportSettingsStore: ExportSettingsStore(defaults: defaults),
+            printWorkspaceSettingsStore: printStore,
+            diskStorageStore: diskStore,
+            libraryCatalogURL: root.appendingPathComponent("library.json"),
+            libraryDefectDirectoryURL: root.appendingPathComponent("defects"),
+            libraryBackupDirectoryURL: root.appendingPathComponent("Backups")
+        )
+        await model.restoreLibraryOnLaunch()
+        let frames = try (0..<39).map { index -> ScanFrame in
+            let frame = try makeFrame(index: 30 + index, width: 240, height: 160)
+            frame.displayPixelSize = CGSize(width: 240, height: 160)
+            return frame
+        }
+        model.frames = frames
+        XCTAssertTrue(model.assignNewPersistentFrames(frames))
+        model.updateInteractionScope(frames.map(\.id))
+        model.selectedFrameIDs = Set(frames.map(\.id))
+        model.exportFormat = .png
+        model.exportDPI = 72
+
+        XCTAssertFalse(model.canExportSelection)
+        XCTAssertTrue(model.canExportPrintSelection)
+        model.exportPrintSelectionToFolder(settings: model.printCompositionSettings(dpi: 72))
+        try await waitForPackageExport(model)
+
+        let imageFiles = regularFiles(below: exportRoot).filter { $0.pathExtension == "png" }
+        XCTAssertEqual(imageFiles.count, 1, "status=\(model.statusMessage)")
+        let outputPath = try XCTUnwrap(imageFiles.first).standardizedFileURL.path
+        XCTAssertTrue(frames.allSatisfy {
+            $0.libraryWorkflowTrackingState?.exportTracking.successfulEvents
+                .first?.artifactPaths == [outputPath]
+        })
+    }
+
+    /// 단일 이미지 레이아웃은 한 롤 39장을 각각 한 장의 인화 파일로 배치 처리한다.
+    func testSingleImageQuickExportWritesThirtyNinePrints() async throws {
+        let quickRoot = root.appendingPathComponent("SingleQuickExports", isDirectory: true)
+        let diskStore = DiskStorageStore(defaults: defaults)
+        diskStore.quickExportPath = quickRoot.path
+        let printStore = PrintWorkspaceSettingsStore(defaults: defaults)
+        printStore.layoutMode = .singleImage
+        printStore.paperSize = .fourBySix
+        printStore.orientation = .landscape
+        printStore.marginMM = 5
+        let model = AppModel(
+            exportSettingsStore: ExportSettingsStore(defaults: defaults),
+            printWorkspaceSettingsStore: printStore,
+            diskStorageStore: diskStore,
+            libraryCatalogURL: root.appendingPathComponent("single-library.json"),
+            libraryDefectDirectoryURL: root.appendingPathComponent("single-defects"),
+            libraryBackupDirectoryURL: root.appendingPathComponent("SingleBackups")
+        )
+        await model.restoreLibraryOnLaunch()
+        let frames = try (0..<39).map { index -> ScanFrame in
+            let frame = try makeFrame(index: 100 + index, width: 240, height: 160)
+            frame.displayPixelSize = CGSize(width: 240, height: 160)
+            return frame
+        }
+        model.frames = frames
+        XCTAssertTrue(model.assignNewPersistentFrames(frames))
+        model.updateInteractionScope(frames.map(\.id))
+        model.selectedFrameIDs = Set(frames.map(\.id))
+        model.quickExportFormat = .jpeg
+        model.quickExportDPI = 72
+
+        XCTAssertFalse(model.canQuickExportSelection)
+        XCTAssertTrue(model.canQuickExportPrintSelection)
+        model.quickExportPrintSelection(settings: printStore.compositionSettings(dpi: 72))
+        try await waitForBatchExport(model)
+
+        let imageFiles = regularFiles(below: quickRoot).filter { $0.pathExtension == "jpg" }
+        XCTAssertEqual(model.exportBatchStore.items.count, 39)
+        XCTAssertEqual(model.exportBatchStore.completedCount, 39, "status=\(model.statusMessage)")
+        XCTAssertEqual(model.exportBatchStore.failedCount, 0, "status=\(model.statusMessage)")
+        XCTAssertEqual(imageFiles.count, 39, "status=\(model.statusMessage)")
+    }
+
+    func testPicturePackageQuickExportWritesTenPagesForThirtyNinePhotos() async throws {
+        let quickRoot = root.appendingPathComponent("PictureQuickExports", isDirectory: true)
+        let diskStore = DiskStorageStore(defaults: defaults)
+        diskStore.quickExportPath = quickRoot.path
+        let printStore = PrintWorkspaceSettingsStore(defaults: defaults)
+        printStore.layoutMode = .picturePackage
+        printStore.paperSize = .fourBySix
+        printStore.orientation = .landscape
+        printStore.marginMM = 5
+        printStore.packageSettings = PrintPackageSettings(
+            mode: .picturePackage,
+            pictureTemplate: .fourUp
+        )
+        let model = AppModel(
+            exportSettingsStore: ExportSettingsStore(defaults: defaults),
+            printWorkspaceSettingsStore: printStore,
+            diskStorageStore: diskStore,
+            libraryCatalogURL: root.appendingPathComponent("picture-library.json"),
+            libraryDefectDirectoryURL: root.appendingPathComponent("picture-defects"),
+            libraryBackupDirectoryURL: root.appendingPathComponent("PictureBackups")
+        )
+        await model.restoreLibraryOnLaunch()
+        let frames = try makeDevelopedFrames(range: 200..<239)
+        model.frames = frames
+        XCTAssertTrue(model.assignNewPersistentFrames(frames))
+        model.updateInteractionScope(frames.map(\.id))
+        model.selectedFrameIDs = Set(frames.map(\.id))
+        model.quickExportFormat = .jpeg
+        model.quickExportDPI = 72
+
+        model.quickExportPrintSelection(settings: printStore.compositionSettings(dpi: 72))
+        try await waitForPackageExport(model)
+
+        let imageFiles = regularFiles(below: quickRoot).filter { $0.pathExtension == "jpg" }
+        XCTAssertEqual(imageFiles.count, 10, "status=\(model.statusMessage)")
+        XCTAssertTrue(frames.allSatisfy {
+            $0.libraryWorkflowTrackingState?.exportTracking.successfulEvents.count == 1
+        })
+    }
+
+    func testCustomPackageQuickExportWritesOnePageForThirtyNinePhotos() async throws {
+        let quickRoot = root.appendingPathComponent("CustomQuickExports", isDirectory: true)
+        let diskStore = DiskStorageStore(defaults: defaults)
+        diskStore.quickExportPath = quickRoot.path
+        let printStore = PrintWorkspaceSettingsStore(defaults: defaults)
+        printStore.layoutMode = .customPackage
+        printStore.paperSize = .a4
+        printStore.orientation = .landscape
+        printStore.marginMM = 5
+        printStore.packageSettings = PrintPackageSettings(mode: .customPackage)
+        printStore.prepareDefaultCustomPackage(sourceCount: 39)
+        let model = AppModel(
+            exportSettingsStore: ExportSettingsStore(defaults: defaults),
+            printWorkspaceSettingsStore: printStore,
+            diskStorageStore: diskStore,
+            libraryCatalogURL: root.appendingPathComponent("custom-library.json"),
+            libraryDefectDirectoryURL: root.appendingPathComponent("custom-defects"),
+            libraryBackupDirectoryURL: root.appendingPathComponent("CustomBackups")
+        )
+        await model.restoreLibraryOnLaunch()
+        let frames = try makeDevelopedFrames(range: 300..<339)
+        model.frames = frames
+        XCTAssertTrue(model.assignNewPersistentFrames(frames))
+        model.updateInteractionScope(frames.map(\.id))
+        model.selectedFrameIDs = Set(frames.map(\.id))
+        model.quickExportFormat = .jpeg
+        model.quickExportDPI = 72
+
+        model.quickExportPrintSelection(settings: printStore.compositionSettings(dpi: 72))
+        try await waitForPackageExport(model)
+
+        let imageFiles = regularFiles(below: quickRoot).filter { $0.pathExtension == "jpg" }
+        XCTAssertEqual(imageFiles.count, 1, "status=\(model.statusMessage)")
+        let outputPath = try XCTUnwrap(imageFiles.first).standardizedFileURL.path
+        XCTAssertTrue(frames.allSatisfy {
+            $0.libraryWorkflowTrackingState?.exportTracking.successfulEvents
+                .first?.artifactPaths == [outputPath]
+        })
     }
 
     private func setSyntheticPrinterOutputProfile(on model: AppModel) throws {
@@ -324,12 +612,29 @@ final class PrintPackageExportRuntimeTests: XCTestCase {
         return frame
     }
 
+    private func makeDevelopedFrames(range: Range<Int>) throws -> [ScanFrame] {
+        try range.map { index in
+            let frame = try makeFrame(index: index, width: 240, height: 160)
+            frame.hasDevelopedOnce = true
+            frame.displayPixelSize = CGSize(width: 240, height: 160)
+            return frame
+        }
+    }
+
     private func waitForPackageExport(_ model: AppModel) async throws {
         for _ in 0..<500 {
             if !model.isPrintPackageExporting { return }
             try await Task.sleep(nanoseconds: 10_000_000)
         }
         XCTFail("print package export did not finish")
+    }
+
+    private func waitForBatchExport(_ model: AppModel) async throws {
+        for _ in 0..<2_000 {
+            if !model.exportBatchStore.isRunning { return }
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        XCTFail("single-image print export did not finish")
     }
 
     private func regularFiles(below directory: URL) -> [URL] {

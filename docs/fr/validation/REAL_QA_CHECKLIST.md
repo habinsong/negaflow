@@ -38,6 +38,7 @@ Notez chaque résultat comme `PASS`, `FAIL`, `BLOCKED` ou `N/A`.
 |  | Le premier lancement ne crée que les données décrites dans la documentation. |  |
 |  | Sans plugin scanner, aucun appareil ni aucune capacité factice ne s'active. |  |
 |  | Informations, version, build, licence et aide sont justes. |  |
+|  | À propos affiche la phrase localisée du bicentenaire de Niépce en gras entre « negaflow » et la version `1.0.4`. |  |
 
 ## 2. Import, développement, export
 
@@ -50,6 +51,13 @@ Notez le SHA-256 de la source avant et après l'exécution.
 |  | Les octets de la source sont identiques avant et après l'import. |  |
 |  | L'avertissement d'import en double et ses options se comprennent facilement. |  |
 |  | L'état de départ est la correction manuelle avec la cible `main`. |  |
+|  | L’import affiche barre de progression, pourcentage et nombre terminé/total ; aucune photo n’est développée automatiquement si la valeur enregistrée est désactivée. |  |
+|  | Appliquer au dossier retraite aussi les photos déjà développées et affiche le nombre terminé/total. |  |
+|  | Coller des réglages sur une sélection multiple applique procédé, cible, recadrage, rotation, miroir, tonalité, couleur et détail à chaque photo. |  |
+|  | Les vignettes numérisées négatif couleur, diapositive, négatif N&B et positif N&B sont développées dans Développement et Tirage. |  |
+|  | Le profil de sortie imprimante touche toutes les cases répétées ou mixtes et la page exportée, jamais l’aperçu Développement. |  |
+|  | Les sept mises en page s’affichent correctement ; avec plusieurs photos, Image unique, Cyanotype, Plaque de verre et Gélatino-argentique créent une page verticale par photo. |  |
+|  | Avec 39 photos, Export et Exportation rapide affichent et écrivent selon le cas 1 page contact, 10 pages à quatre images, 1 page personnalisée par défaut ou 39 fichiers individuels. |  |
 |  | Recadrage, orientation, tonalité, couleur, détail, correction locale et annulation fonctionnent. |  |
 |  | La comparaison original/développé et l'affichage d'écrêtage correspondent à l'export. |  |
 |  | JPEG et TIFF 16 bits s'ouvrent, et leurs métadonnées sont justes. |  |
@@ -68,6 +76,10 @@ Notez le SHA-256 de la source avant et après l'exécution.
 |  | Le bon original se relie de nouveau et un autre fichier est refusé. |  |
 |  | Retirer de la bibliothèque n'efface pas l'original. |  |
 |  | Mettre à la corbeille est une action choisie, et reste sans ambiguïté avec des copies virtuelles. |  |
+|  | Un dossier replié le reste après la création d’un dossier et après le relancement. |  |
+|  | Tous les dossiers amovibles affichent la même action X, qui conserve l’original. |  |
+|  | Le glisser-déposer fonctionne entre dossiers importés, créés par l’app et issus du scanner ; un conflit de nom reçoit un nouveau nom sûr. |  |
+|  | Les déplacements, renommages et ajouts/suppressions directs dans le Finder apparaissent sans réanalyser toute la bibliothèque. |  |
 
 ## 4. Fenêtres, affichage, accessibilité
 
@@ -79,6 +91,7 @@ coréen.
 |---|---|---|
 |  | Les boutons de la barre latérale, du canevas, de l'inspecteur, des feuilles, des réglages et de l'aide ne sont pas coupés. |  |
 |  | Redimensionner la fenêtre garde la largeur des panneaux et le point de focus du canevas utilisables. |  |
+|  | Dans une petite fenêtre Développement, seule la liste des dossiers et photos défile ; le reste de la barre latérale reste fixe. |  |
 |  | Relancer restaure la disposition d'écran prise en charge. |  |
 |  | Le texte ne descend jamais sous la taille définie et les valeurs importantes ne sont pas tronquées. |  |
 |  | L'état des curseurs, roues, courbes, boutons segmentés, bascules et sélections se lit. |  |
@@ -128,8 +141,10 @@ ordinaire, diapositives, images propres, poussières, rayures, grain, visages, c
 |  | Régler et se déplacer en boucle sur une photo 48 MP reste utilisable. |  |
 |  | Le développement et l'export aboutissent aux tailles de scan 3600 DPI et 7200 DPI. |  |
 |  | Traiter un film de 48 vues ne mélange jamais l'état entre les images. |  |
+|  | L’aperçu Tirage de 39 photos et les deux exports évitent un aperçu pleine résolution stabilisé par photo, restent réactifs et bornent la mémoire. |  |
 |  | Sous pression mémoire, seuls les caches non sélectionnés sont libérés et l'image en cours reste. |  |
 |  | Recherche, filtre et tri sur un grand catalogue restent utilisables sur le Mac testé. |  |
+|  | Le défilement répété d’un catalogue de 2 000 photos dans l’app Release garde le processus vivant ; CPU et échantillon du thread principal sont consignés. |  |
 |  | La chaleur, la mémoire et l'usage disque des traitements longs sont notés. |  |
 
 ## 8. Mise à jour et publication

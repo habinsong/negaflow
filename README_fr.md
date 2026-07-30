@@ -7,7 +7,7 @@
 <p align="center">Une application macOS pour numériser et développer les films, au scanner ou à l’appareil photo</p>
 
 <p align="center">
-  <a href="docs/fr/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.3%20release-EF8B26" alt="État de la version"></a>
+  <a href="docs/fr/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.4%20release-EF8B26" alt="État de la version"></a>
   <a href="#prérequis"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 ou version ultérieure"></a>
   <a href="Package.swift"><img src="https://img.shields.io/badge/Swift-5.9+-F05138?logo=swift&logoColor=white" alt="Swift 5.9 ou version ultérieure"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Licence Apache 2.0"></a>
@@ -63,8 +63,8 @@ Le PKG Universal convient à la plupart des Mac.
 
 | Téléchargement | Mac compatibles |
 |---|---|
-| `negaflow-1.0.3-1-macOS-universal.pkg` | Apple Silicon et Intel |
-| `negaflow-1.0.3-1-macOS-arm64.pkg` | Apple Silicon uniquement |
+| `negaflow-1.0.4-1-macOS-universal.pkg` | Apple Silicon et Intel |
+| `negaflow-1.0.4-1-macOS-arm64.pkg` | Apple Silicon uniquement |
 
 1. Téléchargez le PKG adapté au Mac.
 2. Ouvrez-le et suivez les instructions d’Installer.
@@ -92,6 +92,17 @@ correspond à celle publiée avec la version.
 - Appareil, objectif, film et exposition notés puis écrits dans l’EXIF du fichier exporté
 - Notes de prise de vue au rouleau, et recherche dans la bibliothèque par appareil, objectif ou film
 - Export JPEG et TIFF 16 bits, profils ICC et mises en page d’impression
+- Planches-contact noir/blanc avec grille en mm, légendes libres et export du tirage rendu
+- Réglages de laboratoire, papier et surface C-print avec aperçu d’épreuvage ICC
+- Progression de l’import, développement par dossier avec procédé, cible et avancement
+- État des dossiers mémorisé, déplacement par glisser-déposer et synchronisation avec le Finder
+- Préréglages et copier-coller incluant procédé, cible, réglages, recadrage et orientation
+- Sept mises en page : image unique, planche-contact, package d’images, package personnalisé,
+  cyanotype, plaque de verre et gélatino-argentique
+- Export du tirage et exportation rapide comptés par page : une planche 6 × 7 de 39 photos produit
+  un fichier composé, les dispositions individuelles un lot borné de 39 fichiers
+- Fenêtre À propos multilingue plaçant le message du bicentenaire de Niépce entre le nom de
+  l’application et sa version
 
 > Les vérifications terminées sont notées dans [État du projet](docs/fr/product/PROJECT_STATUS.md). <br>
 
@@ -184,6 +195,28 @@ Les données et leur fabrication sont décrites dans [Profils de film](docs/fr/p
 L’interface a été faite pour les personnes qui travaillent vraiment avec des photos, pas comme une maquette générique produite par une IA.<br>
 Une personne qui pratique la photographie doit pouvoir s’y retrouver facilement.
 
+## De la photothèque à l’impression
+
+Par défaut, l’import d’une image ne lance pas son développement. negaflow crée d’abord la vignette
+de la source et son dossier. Le développement commence lorsque vous appliquez un procédé et une
+cible au dossier, ou lorsque vous ouvrez Développement. Le développement automatique peut être
+activé dans les réglages du flux de travail ; il est désactivé par défaut.
+
+Les dossiers repliés le restent après redémarrage. Une photo peut être glissée vers un autre
+dossier. Si le nom existe déjà, negaflow ajoute un numéro au lieu d’écraser le fichier. Un
+déplacement ou un renommage dans le Finder met à jour la photothèque en ne relisant que le dossier
+modifié.
+
+Le copier-coller des réglages et les préréglages utilisateur comprennent le procédé, la cible, la
+base du film, la tonalité, la couleur, les détails, le recadrage, la rotation, les retournements et
+le redressement. Avec plusieurs photos sélectionnées, le collage s’applique à toute la sélection.
+
+Dans Impression, le profil de sortie de l’imprimante est appliqué à la page composée. Les
+placements répétés et les paquets mélangeant plusieurs photos reçoivent donc tous la même
+conversion. Ce profil ne modifie pas l’aperçu de Développement.
+
+Voir [De la photothèque à l’impression](docs/fr/product/WORKFLOW.md) pour le comportement détaillé.
+
 ## Compilation depuis les sources
 
 ### Prérequis
@@ -274,6 +307,7 @@ Le matériel, la qualité d’image finale, la signature et la notarisation dema
 | [Chroma Engine](docs/fr/product/CHROMA_ENGINE.md) | Base du film, inversion, couleur et ordre du développement |
 | [GrainMend](docs/fr/product/GRAINMEND.md) | Détection, réparation, IR, historique, performance et qualité |
 | [Profils de film](docs/fr/product/FILM_PROFILES.md) | Analyse des sources et création des profils |
+| [De la bibliothèque au tirage](docs/fr/product/WORKFLOW.md) | Import, synchronisation des dossiers, développement groupé, copie des réglages et profils de tirage |
 | [Architecture du produit](docs/fr/architecture/PRODUCT_ARCHITECTURE.md) | Application, moteur, scanner, stockage et export |
 | [État du projet](docs/fr/product/PROJECT_STATUS.md) | État de l’implémentation, mesures et vérifications restantes |
 | [Liste de QA réelle](docs/fr/validation/REAL_QA_CHECKLIST.md) | Points à vérifier sur le matériel et à l’écran |

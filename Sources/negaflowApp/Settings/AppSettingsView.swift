@@ -1,5 +1,5 @@
-import SwiftUI
 import Chromabase
+import SwiftUI
 
 struct AppSettingsView: View {
     @EnvironmentObject private var model: AppModel
@@ -8,151 +8,297 @@ struct AppSettingsView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            settingsForm {
-                Picker(model.text(.settingsLanguagePicker), selection: $model.appLanguage) {
-                    ForEach(AppLanguage.allCases) { language in
-                        Text(language.displayName).tag(language)
-                    }
+            generalPane
+                .tabItem {
+                    Label(
+                        model.text(.settingsGeneralTab),
+                        systemImage: AppSettingsTab.general.systemImage
+                    )
                 }
-                Picker(model.text(.settingsAppearancePicker), selection: $model.appearanceMode) {
-                    ForEach(AppAppearanceMode.allCases) { mode in
-                        Label(appearanceName(mode), systemImage: mode.systemImage).tag(mode)
-                    }
+                .tag(AppSettingsTab.general)
+
+            interfacePane
+                .tabItem {
+                    Label(
+                        model.text(.settingsInterfaceTab),
+                        systemImage: AppSettingsTab.interface.systemImage
+                    )
                 }
-                Toggle(model.text(AppLocalizedPhrase.developerMode), isOn: $model.developerMode)
-                LabeledContent(model.text(AppLocalizedPhrase.defaultDefectMicroSpecks)) {
-                    // 자동과 가이드는 별개 도구라 시작값도 따로 고른다.
-                    HStack(spacing: 16) {
-                        Toggle(model.text(AppLocalizedPhrase.autoDefect),
-                               isOn: $model.defaultAutoDefectMicroSpecks)
-                        Toggle(model.text(AppLocalizedPhrase.guidedDefect),
-                               isOn: $model.defaultGuidedDefectMicroSpecks)
-                    }
-                    .toggleStyle(.checkbox)
+                .tag(AppSettingsTab.interface)
+
+            workflowPane
+                .tabItem {
+                    Label(
+                        model.text(.settingsWorkflowTab),
+                        systemImage: AppSettingsTab.workflow.systemImage
+                    )
                 }
-                .help(model.text(AppLocalizedPhrase.defaultDefectMicroSpecksHelp))
-                MemoryCacheSettingsSection(store: model.frameCacheResidencyStore)
-                SupportBundleSettingsSection()
-            }
-            .tabItem { Label(model.text(.settingsGeneralTab), systemImage: "gearshape") }
-            .tag(AppSettingsTab.general)
+                .tag(AppSettingsTab.workflow)
 
-            settingsForm {
-                Picker(model.text(.settingsCanvasBackgroundPicker), selection: $model.canvasBackground) {
-                    ForEach(CanvasBackground.allCases) { background in
-                        Text(canvasBackgroundName(background)).tag(background)
-                    }
+            scanPane
+                .tabItem {
+                    Label(
+                        model.text(AppLocalizedPhrase.settingsScanTab),
+                        systemImage: AppSettingsTab.scan.systemImage
+                    )
                 }
-            }
-            .tabItem { Label(model.text(.settingsInterfaceTab), systemImage: "sidebar.left") }
-            .tag(AppSettingsTab.interface)
+                .tag(AppSettingsTab.scan)
 
-            settingsForm {
-                Toggle(model.text(.commandToggleScannerSimulator), isOn: Binding(
-                    get: { model.demoMode },
-                    set: { model.toggleDemo($0) }
-                ))
-
-                ScannerTruthSettingsSection()
-            }
-            .tabItem { Label(model.text(.settingsWorkflowTab), systemImage: "rectangle.stack") }
-            .tag(AppSettingsTab.workflow)
-
-            settingsForm {
-                Picker(model.text(.settingsDefaultScanRotationPicker), selection: $model.defaultScanRotation) {
-                    ForEach(ImageRotation.allCases, id: \.self) { rotation in
-                        Text("\(rotation.displayName)°").tag(rotation)
-                    }
+            diskPane
+                .tabItem {
+                    Label(
+                        model.text(AppLocalizedPhrase.settingsDiskTab),
+                        systemImage: AppSettingsTab.disk.systemImage
+                    )
                 }
-                Text(model.text(.settingsDefaultScanRotationHelp))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .tabItem { Label(model.text(.settingsScanTab), systemImage: "scanner") }
-            .tag(AppSettingsTab.scan)
+                .tag(AppSettingsTab.disk)
 
-            settingsForm {
-                DiskStorageSettingsSection()
-            }
-            .tabItem { Label(model.text(AppLocalizedPhrase.settingsDiskTab), systemImage: "externaldrive") }
-            .tag(AppSettingsTab.disk)
-
-            settingsForm {
-                Picker(model.text(.settingsQuickExportFormat), selection: $model.quickExportFormat) {
-                    Text("JPEG").tag(ExportFormat.jpeg)
-                    Text("PNG").tag(ExportFormat.png)
+            exportPane
+                .tabItem {
+                    Label(
+                        model.text(.settingsExportTab),
+                        systemImage: AppSettingsTab.export.systemImage
+                    )
                 }
-                Picker(model.text(.settingsQuickExportDPI), selection: $model.quickExportDPI) {
-                    ForEach([0, 72, 150, 240, 300, 600], id: \.self) { dpi in
-                        Text(dpi == 0 ? model.text(.settingsSourceDPI) : "\(dpi) dpi").tag(dpi)
-                    }
-                }
-                Picker(model.text(.settingsQuickExportSize), selection: $model.quickExportLongEdge) {
-                    ForEach([0, 1024, 2048, 4096, 6000], id: \.self) { edge in
-                        Text(edge == 0
-                            ? model.text(.exportFullSize)
-                            : "\(edge) \(model.text(.exportLongEdgeSuffix))").tag(edge)
-                    }
-                }
-                LabeledContent(model.text(.settingsQuickExportFolder)) {
-                    Text(model.quickExportFolderDisplay)
-                        .foregroundStyle(.secondary)
-                }
+                .tag(AppSettingsTab.export)
 
-                Picker(
-                    model.text(.settingsExportVerification),
-                    selection: $model.exportVerificationLevel
-                ) {
-                    Text(model.text(.settingsExportVerificationStandard))
-                        .tag(ExportVerificationLevel.standard)
-                    Text(model.text(.settingsExportVerificationStrict))
-                        .tag(ExportVerificationLevel.strict)
+            shortcutsPane
+                .tabItem {
+                    Label(
+                        model.text(.settingsShortcutsTab),
+                        systemImage: AppSettingsTab.shortcuts.systemImage
+                    )
                 }
-                .help(model.text(.settingsExportVerificationHelp))
+                .tag(AppSettingsTab.shortcuts)
 
-                ColorManagementSettingsSection()
-            }
-            .tabItem { Label(model.text(.settingsExportTab), systemImage: "square.and.arrow.up") }
-            .tag(AppSettingsTab.export)
-
-            settingsForm {
-                WorkflowShortcutsSettingsSection()
-            }
-            .accessibilityIdentifier("settings.shortcuts")
-            .tabItem { Label(model.text(.settingsShortcutsTab), systemImage: "keyboard") }
-            .tag(AppSettingsTab.shortcuts)
-
-            settingsForm {
-                LegalNoticeSettingsSection()
-            }
-            .tabItem { Label(model.text(.settingsLegalTab), systemImage: "doc.text.magnifyingglass") }
-            .tag(AppSettingsTab.legal)
+            legalPane
+                .tabItem {
+                    Label(
+                        model.text(.settingsLegalTab),
+                        systemImage: AppSettingsTab.legal.systemImage
+                    )
+                }
+                .tag(AppSettingsTab.legal)
         }
-        .padding(20)
-        .frame(width: 760, height: 580)
+        .frame(width: 760, height: 640)
+        .accessibilityIdentifier("settings.window")
     }
 
-    private func settingsForm<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        Form {
-            content()
+    private var generalPane: some View {
+        AppSettingsPane(accessibilityIdentifier: "settings.general") {
+            AppSettingsSection(title: model.text(.settingsGeneralTab)) {
+                AppSettingsRow(model.text(.settingsLanguagePicker)) {
+                    Picker(String(), selection: $model.appLanguage) {
+                        ForEach(AppLanguage.allCases) { language in
+                            Text(language.displayName).tag(language)
+                        }
+                    }
+                    .labelsHidden()
+                }
+
+                AppSettingsRow(model.text(.settingsAppearancePicker)) {
+                    Picker(String(), selection: $model.appearanceMode) {
+                        ForEach(AppAppearanceMode.allCases) { mode in
+                            Label(appearanceName(mode), systemImage: mode.systemImage)
+                                .tag(mode)
+                        }
+                    }
+                    .labelsHidden()
+                }
+
+                AppSettingsToggleRow(
+                    label: model.text(AppLocalizedPhrase.developerMode),
+                    isOn: $model.developerMode
+                )
+            }
+
+            MemoryCacheSettingsSection(store: model.frameCacheResidencyStore)
+            SupportBundleSettingsSection()
         }
-        .formStyle(.grouped)
-        .padding(.top, 8)
+    }
+
+    private var interfacePane: some View {
+        AppSettingsPane(accessibilityIdentifier: "settings.interface") {
+            AppSettingsSection(title: model.text(.settingsInterfaceTab)) {
+                AppSettingsRow(model.text(.settingsCanvasBackgroundPicker)) {
+                    Picker(String(), selection: $model.canvasBackground) {
+                        ForEach(CanvasBackground.allCases) { background in
+                            Text(canvasBackgroundName(background)).tag(background)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.segmented)
+                }
+
+                AppSettingsToggleRow(
+                    label: model.text(AppLocalizedPhrase.colorClippingOverlay),
+                    isOn: $model.clippingOverlayEnabled
+                )
+
+                PixelSamplerSettingsRow(
+                    store: model.pixelSamplerStore,
+                    language: model.appLanguage,
+                    onSetEnabled: { enabled in
+                        model.setPixelSamplerEnabled(enabled)
+                    }
+                )
+            }
+        }
+    }
+
+    private var workflowPane: some View {
+        AppSettingsPane(accessibilityIdentifier: "settings.workflow") {
+            AppSettingsSection(title: model.text(.settingsWorkflowTab)) {
+                AppSettingsToggleRow(
+                    label: model.text(.commandToggleScannerSimulator),
+                    isOn: Binding(
+                        get: { model.demoMode },
+                        set: { model.toggleDemo($0) }
+                    )
+                )
+                AppSettingsToggleRow(
+                    label: model.text(AppLocalizedPhrase.developImportsAutomatically),
+                    isOn: $model.developsImportsAutomatically
+                )
+            }
+
+            AppSettingsSection(
+                title: model.text(AppLocalizedPhrase.defaultDefectMicroSpecks)
+            ) {
+                AppSettingsToggleRow(
+                    label: model.text(AppLocalizedPhrase.autoDefect),
+                    isOn: $model.defaultAutoDefectMicroSpecks
+                )
+                AppSettingsToggleRow(
+                    label: model.text(AppLocalizedPhrase.guidedDefect),
+                    isOn: $model.defaultGuidedDefectMicroSpecks
+                )
+                AppSettingsHelpText(
+                    model.text(AppLocalizedPhrase.defaultDefectMicroSpecksHelp)
+                )
+            }
+        }
+    }
+
+    private var scanPane: some View {
+        AppSettingsPane(accessibilityIdentifier: "settings.scan") {
+            AppSettingsSection(
+                title: model.text(AppLocalizedPhrase.settingsScanTab)
+            ) {
+                AppSettingsRow(
+                    model.text(AppLocalizedPhrase.settingsDefaultScanRotationPicker)
+                ) {
+                    Picker(String(), selection: $model.defaultScanRotation) {
+                        ForEach(ImageRotation.allCases, id: \.self) { rotation in
+                            Text("\(rotation.displayName)°").tag(rotation)
+                        }
+                    }
+                    .labelsHidden()
+                }
+                AppSettingsHelpText(
+                    model.text(AppLocalizedPhrase.settingsDefaultScanRotationHelp)
+                )
+            }
+
+            ScannerTruthSettingsSection()
+        }
+    }
+
+    private var diskPane: some View {
+        AppSettingsPane(accessibilityIdentifier: "settings.disk") {
+            DiskStorageSettingsSection()
+        }
+    }
+
+    private var exportPane: some View {
+        AppSettingsPane(accessibilityIdentifier: "settings.export") {
+            AppSettingsSection(title: model.text(.quickExportSection)) {
+                AppSettingsRow(model.text(.settingsQuickExportFormat)) {
+                    Picker(String(), selection: $model.quickExportFormat) {
+                        Text("JPEG").tag(ExportFormat.jpeg)
+                        Text("PNG").tag(ExportFormat.png)
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.segmented)
+                }
+
+                AppSettingsRow(model.text(.settingsQuickExportDPI)) {
+                    Picker(String(), selection: $model.quickExportDPI) {
+                        ForEach([0, 72, 150, 240, 300, 600], id: \.self) { dpi in
+                            Text(
+                                dpi == 0
+                                    ? model.text(.settingsSourceDPI)
+                                    : "\(dpi) dpi"
+                            )
+                            .tag(dpi)
+                        }
+                    }
+                    .labelsHidden()
+                }
+
+                AppSettingsRow(model.text(.settingsQuickExportSize)) {
+                    Picker(String(), selection: $model.quickExportLongEdge) {
+                        ForEach([0, 1024, 2048, 4096, 6000], id: \.self) { edge in
+                            Text(
+                                edge == 0
+                                    ? model.text(.exportFullSize)
+                                    : "\(edge) \(model.text(.exportLongEdgeSuffix))"
+                            )
+                            .tag(edge)
+                        }
+                    }
+                    .labelsHidden()
+                }
+
+                AppSettingsValueRow(
+                    label: model.text(.settingsQuickExportFolder),
+                    value: model.quickExportFolderDisplay
+                )
+            }
+
+            AppSettingsSection(title: model.text(.settingsExportVerification)) {
+                AppSettingsRow(model.text(.settingsExportVerification)) {
+                    Picker(String(), selection: $model.exportVerificationLevel) {
+                        Text(model.text(.settingsExportVerificationStandard))
+                            .tag(ExportVerificationLevel.standard)
+                        Text(model.text(.settingsExportVerificationStrict))
+                            .tag(ExportVerificationLevel.strict)
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.segmented)
+                }
+                AppSettingsHelpText(model.text(.settingsExportVerificationHelp))
+            }
+
+            ColorManagementSettingsSection()
+        }
+    }
+
+    private var shortcutsPane: some View {
+        AppSettingsPane(accessibilityIdentifier: "settings.shortcuts") {
+            WorkflowShortcutsSettingsSection()
+        }
+    }
+
+    private var legalPane: some View {
+        AppSettingsPane(accessibilityIdentifier: "settings.legal") {
+            LegalNoticeSettingsSection()
+        }
     }
 
     private func appearanceName(_ mode: AppAppearanceMode) -> String {
         switch mode {
-        case .system: return model.text(.appearanceSystem)
-        case .dark: return model.text(.appearanceDark)
-        case .light: return model.text(.appearanceLight)
+        case .system: model.text(.appearanceSystem)
+        case .dark: model.text(.appearanceDark)
+        case .light: model.text(.appearanceLight)
         }
     }
 
     private func canvasBackgroundName(_ background: CanvasBackground) -> String {
         switch background {
-        case .black: return model.text(.canvasBackgroundBlack)
-        case .gray: return model.text(.canvasBackgroundGray)
-        case .white: return model.text(.canvasBackgroundWhite)
+        case .black: model.text(.canvasBackgroundBlack)
+        case .gray: model.text(.canvasBackgroundGray)
+        case .white: model.text(.canvasBackgroundWhite)
         }
     }
 }

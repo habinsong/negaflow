@@ -169,11 +169,12 @@ extension AppModel {
             appliedMappings[oldPath] = candidate
         }
 
+        // 재연결된 원본이 놓인 폴더는 등록하지 않는다. 등록 폴더는 새로고침 시 통째로 다시
+        // 스캔되므로, 사진 한 장을 옮긴 것만으로 그 폴더의 남은 사진이 전부 들어오게 된다.
         updateRegisteredFolder(
             for: plan,
             allMappingsApplied: appliedMappings.count == requestedMappings.count
         )
-        registerLibraryFolders(for: appliedMappings.values.map(\.url))
         refreshSourceAvailability()
         scheduleLibrarySave()
 

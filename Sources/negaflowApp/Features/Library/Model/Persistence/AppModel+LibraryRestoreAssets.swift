@@ -39,7 +39,15 @@ extension AppModel {
                 if let image = ThumbnailDiskCache.load(at: job.thumbURL) {
                     await MainActor.run {
                         guard self.ownsFrame(job.frame) else { return }
-                        if job.frame.thumbnailImage == nil { job.frame.thumbnailImage = image }
+                        if job.frame.filmType.requiresInversion,
+                           !job.frame.hasDevelopedOnce {
+                            if job.frame.rawPreviewImage == nil {
+                                job.frame.rawPreviewImage = image
+                                job.frame.rawPreviewTransform = job.transform
+                            }
+                        } else if job.frame.thumbnailImage == nil {
+                            job.frame.thumbnailImage = image
+                        }
                     }
                     continue
                 }
@@ -49,11 +57,16 @@ extension AppModel {
                 // 원본 픽셀이므로 현상 방향과 맞추기 위해 프레임 변형(회전/플립)을 적용한다.
                 let cg = AppModel.orientedThumbnail(raw, transform: job.transform)
                 await MainActor.run {
-                    guard self.ownsFrame(job.frame), job.frame.thumbnailImage == nil else { return }
-                    job.frame.thumbnailImage = NSImage(
+                    guard self.ownsFrame(job.frame) else { return }
+                    let image = NSImage(
                         cgImage: cg, size: NSSize(width: cg.width, height: cg.height)
                     )
-                    job.frame.thumbnailTransform = job.transform
+                    job.frame.rawPreviewImage = image
+                    job.frame.rawPreviewTransform = job.transform
+                    if !job.frame.filmType.requiresInversion {
+                        job.frame.thumbnailImage = image
+                        job.frame.thumbnailTransform = job.transform
+                    }
                     cache.store(cg, for: job.frame.id, at: job.thumbURL)
                 }
             }

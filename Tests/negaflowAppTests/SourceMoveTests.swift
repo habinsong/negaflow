@@ -91,9 +91,44 @@ final class SourceMoveTests: XCTestCase {
         )
 
         try Data("existing".utf8).write(to: destination.appendingPathComponent("frame.tiff"))
+        let collisionSafePlan = try SourceMovePlanner.files([
+            .init(rawURL: raw, infraredURL: infrared)
+        ], to: destination).get()
         XCTAssertEqual(
-            SourceMovePlanner.files([.init(rawURL: raw, infraredURL: infrared)], to: destination),
-            .failure(.collision)
+            collisionSafePlan.relinkPlan.mappings.first?.newSourceURL,
+            destination.appendingPathComponent("frame 2.tiff")
+        )
+        XCTAssertEqual(
+            collisionSafePlan.relinkPlan.companionMappings.first?.newSourceURL,
+            destination.appendingPathComponent("frame-ir.tiff")
+        )
+    }
+
+    func testFilePlanAssignsUniqueNamesToSameNamedScannerSources() throws {
+        let root = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let firstFolder = root.appendingPathComponent("Scan A", isDirectory: true)
+        let secondFolder = root.appendingPathComponent("Scan B", isDirectory: true)
+        let destination = root.appendingPathComponent("Destination", isDirectory: true)
+        try FileManager.default.createDirectory(at: firstFolder, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: secondFolder, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
+        let first = firstFolder.appendingPathComponent("frame_1.tiff")
+        let second = secondFolder.appendingPathComponent("frame_1.tiff")
+        try Data("first".utf8).write(to: first)
+        try Data("second".utf8).write(to: second)
+
+        let plan = try SourceMovePlanner.files([
+            .init(rawURL: first, infraredURL: nil),
+            .init(rawURL: second, infraredURL: nil),
+        ], to: destination).get()
+
+        XCTAssertEqual(
+            plan.relinkPlan.mappings.map(\.newSourceURL),
+            [
+                destination.appendingPathComponent("frame_1.tiff"),
+                destination.appendingPathComponent("frame_1 2.tiff"),
+            ]
         )
     }
 
@@ -241,6 +276,55 @@ final class SourceMoveTests: XCTestCase {
             return XCTFail("moved catalog was not readable")
         }
         XCTAssertEqual(catalog.frames.first?.rawScanPath, destination.path)
+    }
+
+    @MainActor
+    func testAppModelMovesScannerFileIntoFolderWithSameNamedSource() async throws {
+        let root = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let sourceFolder = root.appendingPathComponent("Scan A", isDirectory: true)
+        let destinationFolder = root.appendingPathComponent("Scan B", isDirectory: true)
+        try FileManager.default.createDirectory(at: sourceFolder, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: destinationFolder, withIntermediateDirectories: true)
+        let movingURL = sourceFolder.appendingPathComponent("frame_1.tiff")
+        let existingURL = destinationFolder.appendingPathComponent("frame_1.tiff")
+        try makeValidTIFF(at: movingURL)
+        try makeValidTIFF(at: existingURL)
+        let catalogURL = root.appendingPathComponent("catalog/library.json")
+        let model = AppModel(
+            libraryCatalogURL: catalogURL,
+            libraryDefectDirectoryURL: root.appendingPathComponent("defects"),
+            libraryBackupDirectoryURL: root.appendingPathComponent("backups")
+        )
+        await model.restoreLibraryOnLaunch()
+        let movingFrame = ScanFrame(
+            scanIndex: 1,
+            rawScanURL: movingURL,
+            filmType: .colorNegative,
+            sourceKind: .scannerTIFF,
+            sourceMetadata: SourceMetadataReader.read(from: movingURL)
+        )
+        let existingFrame = ScanFrame(
+            scanIndex: 2,
+            rawScanURL: existingURL,
+            filmType: .colorNegative,
+            sourceKind: .scannerTIFF,
+            sourceMetadata: SourceMetadataReader.read(from: existingURL)
+        )
+        model.frames = [movingFrame, existingFrame]
+        XCTAssertTrue(model.assignNewPersistentFrames([movingFrame, existingFrame]))
+        let plan = try SourceMovePlanner.files([
+            .init(rawURL: movingURL, infraredURL: nil)
+        ], to: destinationFolder).get()
+
+        let moved = await model.performSourceMove(plan)
+        XCTAssertTrue(moved)
+
+        let movedURL = destinationFolder.appendingPathComponent("frame_1 2.tiff")
+        XCTAssertEqual(movingFrame.rawScanURL.standardizedFileURL, movedURL.standardizedFileURL)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: existingURL.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: movedURL.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: movingURL.path))
     }
 
     private func makeTemporaryDirectory() throws -> URL {

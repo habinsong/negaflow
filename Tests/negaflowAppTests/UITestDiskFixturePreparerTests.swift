@@ -20,7 +20,8 @@ final class UITestDiskFixturePreparerTests: XCTestCase {
             importsSyntheticNegative: false,
             enablesDemoScanner: false,
             preparesCorruptCatalog: true,
-            createsDropTargetFolder: false
+            createsDropTargetFolder: false,
+            developsImportsAutomatically: false
         )
 
         UITestDiskFixturePreparer.prepare(configuration)

@@ -34,7 +34,9 @@ struct ExportSection: View {
                     systemImage: "square.and.arrow.up",
                     revealHelp: model.text(AppLocalizedPhrase.showInFinder),
                     isProminent: true,
-                    isActionEnabled: model.canExportSelection,
+                    isActionEnabled: usesPaperLayout
+                        ? model.canExportPrintSelection
+                        : model.canExportSelection,
                     action: { (onExport ?? model.exportSelectionToFolder)() },
                     reveal: { revealExportFolder(root: model.exportFolderURL) }
                 )
@@ -80,7 +82,9 @@ struct ExportSection: View {
                     title: exportButtonTitle(model.text(.commandQuickExport)),
                     systemImage: "bolt",
                     revealHelp: model.text(AppLocalizedPhrase.showInFinder),
-                    isActionEnabled: model.canQuickExportSelection,
+                    isActionEnabled: usesPaperLayout
+                        ? model.canQuickExportPrintSelection
+                        : model.canQuickExportSelection,
                     action: { (onQuickExport ?? model.quickExportSelection)() },
                     reveal: { revealExportFolder(root: model.quickExportFolderURL) }
                 )
@@ -264,8 +268,12 @@ struct ExportSection: View {
     }
 
     private func exportButtonTitle(_ title: String) -> String {
-        let count = model.exportSelection.count
-        return count > 1 ? "\(title) (\(count))" : title
+        let count = usesPaperLayout
+            ? model.printExportOutputCount
+            : model.exportSelection.count
+        return usesCompositeLayout || count > 1
+            ? "\(title) (\(count))"
+            : title
     }
 
     /// 사진이 실제로 저장되는 세부 폴더(`<루트>/<날짜>/<출처 폴더>`)를 Finder 로 연다.

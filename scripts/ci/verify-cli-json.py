@@ -48,7 +48,10 @@ def main() -> int:
     devices = [device for backend in backends for device in backend["devices"]]
     if not devices:
         raise AssertionError("demo detect returned no devices")
-    scanner_id = devices[0]["id"]
+    # --demo 는 mock 스캐너를 검사하겠다는 뜻이다. 실기가 연결된 개발 머신에서는 실제 장치가
+    # 먼저 잡혀, 이 계약 검사가 하드웨어 응답을 기다리다 시간 초과로 죽는다.
+    mock_devices = [device for device in devices if device.get("backendType") == "mock"]
+    scanner_id = (mock_devices or devices)[0]["id"]
 
     capability, _ = run("capabilities", scanner_id, "--demo", "--json")
     verify_envelope(capability, "capabilities", "ok")

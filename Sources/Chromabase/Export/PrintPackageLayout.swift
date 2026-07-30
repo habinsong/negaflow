@@ -22,7 +22,8 @@ public enum PrintPackageLayout {
                 pageCount = (sourceCount + capacity - 1) / capacity
             }
         case .picturePackage:
-            pageCount = sourceCount
+            let capacity = pictureCellCapacity(package.pictureTemplate)
+            pageCount = (sourceCount + capacity - 1) / capacity
         case .customPackage:
             guard package.customItems.allSatisfy({ $0.sourceIndex < sourceCount }),
                   let highestPage = package.customItems.map(\.pageIndex).max() else { return nil }
@@ -31,35 +32,45 @@ public enum PrintPackageLayout {
         return pageCount <= PrintPackageSettings.maximumPageCount ? pageCount : nil
     }
 
+    /// `forcedQuarterTurns` 는 source 별로 강제할 90° 회전 수(0...3)다. 시트 방향 통일처럼
+    /// 배치 단계에서만 사진을 돌려야 할 때 쓰며, 지정하면 `rotateToFit` 대신 이 값을 따른다.
     public static func make(
         sourceSizes: [CGSize],
         composition: PrintCompositionSettings,
-        package: PrintPackageSettings
+        package: PrintPackageSettings,
+        forcedQuarterTurns: [Int]? = nil
     ) -> [PrintPackagePageLayout]? {
         guard composition.isValid,
               package.isValid,
               sourceSizes.count <= maximumSourceCount,
               sourceSizes.allSatisfy(validSize),
+              forcedQuarterTurns.map({ $0.count == sourceSizes.count }) ?? true,
               expectedPageCount(sourceCount: sourceSizes.count, package: package) != nil else {
             return nil
         }
         guard !sourceSizes.isEmpty else { return [] }
+        let turns = forcedQuarterTurns?.map { ((($0 % 4) + 4) % 4) }
         switch package.mode {
         case .contactSheet:
             guard let page = pageGeometry(
-                sourceSize: sourceSizes[0],
+                sourceSize: CGSize(
+                    width: package.contactColumns,
+                    height: package.contactRows
+                ),
                 composition: composition
             ) else { return nil }
             return contactSheetPages(
                 sourceSizes: sourceSizes,
                 page: page,
-                package: package
+                package: package,
+                forcedQuarterTurns: turns
             )
         case .picturePackage:
             return picturePackagePages(
                 sourceSizes: sourceSizes,
                 composition: composition,
-                package: package
+                package: package,
+                forcedQuarterTurns: turns
             )
         case .customPackage:
             guard let firstSourceIndex = package.customItems
@@ -73,7 +84,8 @@ public enum PrintPackageLayout {
             return customPackagePages(
                 sourceSizes: sourceSizes,
                 page: page,
-                package: package
+                package: package,
+                forcedQuarterTurns: turns
             )
         }
     }
@@ -87,7 +99,7 @@ public enum PrintPackageLayout {
         sourceSize: CGSize,
         composition: PrintCompositionSettings
     ) -> PageGeometry? {
-        let base = composition.paperSize.dimensionsMM
+        let base = composition.paperDimensionsMM
         let pageMM: CGSize
         switch composition.orientation {
         case .automatic:
@@ -112,7 +124,8 @@ public enum PrintPackageLayout {
     private static func contactSheetPages(
         sourceSizes: [CGSize],
         page: PageGeometry,
-        package: PrintPackageSettings
+        package: PrintPackageSettings,
+        forcedQuarterTurns: [Int]?
     ) -> [PrintPackagePageLayout]? {
         let rows = package.contactRows
         let columns = package.contactColumns
@@ -159,6 +172,7 @@ public enum PrintPackageLayout {
                     cellRect: cell,
                     contentMode: package.contentMode,
                     rotateToFit: package.rotateToFit,
+                    forcedQuarterTurns: forcedQuarterTurns?[sourceIndex],
                     captionMode: package.captionMode,
                     captionHeightMM: package.captionHeightMM,
                     zIndex: slot
@@ -174,7 +188,8 @@ public enum PrintPackageLayout {
                     for: items.map(\.cellRectPoints),
                     in: CGRect(origin: .zero, size: page.canvasSize),
                     package: package
-                )
+                ),
+                textItems: pageTextItems(page: page, package: package)
             ))
         }
         return pages
@@ -183,13 +198,22 @@ public enum PrintPackageLayout {
     private static func picturePackagePages(
         sourceSizes: [CGSize],
         composition: PrintCompositionSettings,
-        package: PrintPackageSettings
+        package: PrintPackageSettings,
+        forcedQuarterTurns: [Int]?
     ) -> [PrintPackagePageLayout]? {
+        let capacity = pictureCellCapacity(package.pictureTemplate)
+        let assignments = stride(from: 0, to: sourceSizes.count, by: capacity).map { start in
+            Array(start..<min(start + capacity, sourceSizes.count))
+        }
         var pages: [PrintPackagePageLayout] = []
-        pages.reserveCapacity(sourceSizes.count)
-        for sourceIndex in sourceSizes.indices {
+        pages.reserveCapacity(assignments.count)
+        for (pageIndex, sourceIndices) in assignments.enumerated() {
+            guard let orientationSourceIndex = sourceIndices.first else { return nil }
             guard let page = pageGeometry(
-                sourceSize: sourceSizes[sourceIndex],
+                sourceSize: orientedSize(
+                    sourceSizes[orientationSourceIndex],
+                    quarterTurns: forcedQuarterTurns?[orientationSourceIndex] ?? 0
+                ),
                 composition: composition
             ), let cells = pictureCells(
                 template: package.pictureTemplate,
@@ -200,12 +224,14 @@ public enum PrintPackageLayout {
             var items: [PrintPackageItemLayout] = []
             items.reserveCapacity(cells.count)
             for (slot, cell) in cells.enumerated() {
+                let sourceIndex = sourceIndices[slot % sourceIndices.count]
                 guard let item = makeItem(
                     sourceIndex: sourceIndex,
                     sourceSize: sourceSizes[sourceIndex],
                     cellRect: cell,
                     contentMode: package.contentMode,
                     rotateToFit: package.rotateToFit,
+                    forcedQuarterTurns: forcedQuarterTurns?[sourceIndex],
                     captionMode: package.captionMode,
                     captionHeightMM: package.captionHeightMM,
                     zIndex: slot
@@ -213,7 +239,7 @@ public enum PrintPackageLayout {
                 items.append(item)
             }
             pages.append(PrintPackagePageLayout(
-                pageIndex: sourceIndex,
+                pageIndex: pageIndex,
                 canvasSizePoints: page.canvasSize,
                 contentRectPoints: page.contentRect,
                 items: items,
@@ -221,16 +247,28 @@ public enum PrintPackageLayout {
                     for: cells,
                     in: CGRect(origin: .zero, size: page.canvasSize),
                     package: package
-                )
+                ),
+                textItems: pageTextItems(page: page, package: package)
             ))
         }
         return pages
     }
 
+    private static func pictureCellCapacity(
+        _ template: PrintPicturePackageTemplate
+    ) -> Int {
+        switch template {
+        case .oneLargeTwoSmall: 3
+        case .twoUp: 2
+        case .fourUp: 4
+        }
+    }
+
     private static func customPackagePages(
         sourceSizes: [CGSize],
         page: PageGeometry,
-        package: PrintPackageSettings
+        package: PrintPackageSettings,
+        forcedQuarterTurns: [Int]?
     ) -> [PrintPackagePageLayout]? {
         guard package.customItems.allSatisfy({ $0.sourceIndex < sourceSizes.count }),
               let highestPage = package.customItems.map(\.pageIndex).max() else { return nil }
@@ -262,6 +300,7 @@ public enum PrintPackageLayout {
                     cellRect: cell,
                     contentMode: definition.contentMode,
                     rotateToFit: definition.rotateToFit,
+                    forcedQuarterTurns: forcedQuarterTurns?[definition.sourceIndex],
                     captionMode: package.captionMode,
                     captionHeightMM: package.captionHeightMM,
                     zIndex: definition.zIndex
@@ -277,7 +316,8 @@ public enum PrintPackageLayout {
                     for: items.map(\.cellRectPoints),
                     in: CGRect(origin: .zero, size: page.canvasSize),
                     package: package
-                )
+                ),
+                textItems: pageTextItems(page: page, package: package)
             ))
         }
         return pages
@@ -347,15 +387,17 @@ public enum PrintPackageLayout {
         cellRect: CGRect,
         contentMode: PrintPackageContentMode,
         rotateToFit: Bool,
+        forcedQuarterTurns: Int? = nil,
         captionMode: PrintPackageCaptionMode,
         captionHeightMM: Double,
         zIndex: Int
     ) -> PrintPackageItemLayout? {
-        let captionHeight = captionMode == .none ? 0 : CGFloat(captionHeightMM) * pointsPerMM
+        let usesPerImageCaption = captionMode != .none && captionMode != .customText
+        let captionHeight = usesPerImageCaption ? CGFloat(captionHeightMM) * pointsPerMM : 0
         guard captionHeight >= 0, captionHeight < cellRect.height - 1 else { return nil }
-        let captionRect = captionMode == .none
-            ? nil
-            : CGRect(x: cellRect.minX, y: cellRect.minY, width: cellRect.width, height: captionHeight)
+        let captionRect = usesPerImageCaption
+            ? CGRect(x: cellRect.minX, y: cellRect.minY, width: cellRect.width, height: captionHeight)
+            : nil
         let imageBounds = CGRect(
             x: cellRect.minX,
             y: cellRect.minY + captionHeight,
@@ -372,10 +414,10 @@ public enum PrintPackageLayout {
             imageBounds.width / sourceSize.height,
             imageBounds.height / sourceSize.width
         )
-        let quarterTurns = rotateToFit && rotatedScale > unrotatedScale ? 1 : 0
-        let orientedSize = quarterTurns == 0
-            ? sourceSize
-            : CGSize(width: sourceSize.height, height: sourceSize.width)
+        // 방향을 강제하면 그 값이 우선한다 — 시트를 한 방향으로 통일하는 배치다.
+        let quarterTurns = forcedQuarterTurns
+            ?? (rotateToFit && rotatedScale > unrotatedScale ? 1 : 0)
+        let orientedSize = orientedSize(sourceSize, quarterTurns: quarterTurns)
 
         let destination: CGRect
         let crop: CGRect
@@ -420,6 +462,27 @@ public enum PrintPackageLayout {
         )
     }
 
+    private static func pageTextItems(
+        page: PageGeometry,
+        package: PrintPackageSettings
+    ) -> [PrintPackageTextLayout] {
+        guard package.captionMode == .customText else { return [] }
+        return package.customCaptions.compactMap { caption in
+            guard !caption.text.isEmpty else { return nil }
+            let rect = caption.normalizedRect
+            return PrintPackageTextLayout(
+                text: caption.text,
+                rectPoints: CGRect(
+                    x: rect.minX * page.canvasSize.width,
+                    y: rect.minY * page.canvasSize.height,
+                    width: rect.width * page.canvasSize.width,
+                    height: rect.height * page.canvasSize.height
+                ),
+                alignment: caption.alignment
+            )
+        }
+    }
+
     private static func cropMarks(
         for cells: [CGRect],
         in contentRect: CGRect,
@@ -452,6 +515,13 @@ public enum PrintPackageLayout {
             append(CGPoint(x: cell.maxX, y: cell.maxY), CGPoint(x: cell.maxX, y: topEnd))
         }
         return segments
+    }
+
+    /// 90° 배수 회전 뒤의 크기. 홀수 번 돌면 가로세로가 바뀐다.
+    private static func orientedSize(_ size: CGSize, quarterTurns: Int) -> CGSize {
+        quarterTurns % 2 == 0
+            ? size
+            : CGSize(width: size.height, height: size.width)
     }
 
     private static func validSize(_ size: CGSize) -> Bool {

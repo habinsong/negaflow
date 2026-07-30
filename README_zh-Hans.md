@@ -7,7 +7,7 @@
 <p align="center">支持胶片翻拍、扫描和完整显影流程的 macOS 应用</p>
 
 <p align="center">
-  <a href="docs/zh-Hans/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.3%20release-EF8B26" alt="发布状态"></a>
+  <a href="docs/zh-Hans/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.4%20release-EF8B26" alt="发布状态"></a>
   <a href="#系统要求"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 或更高版本"></a>
   <a href="Package.swift"><img src="https://img.shields.io/badge/Swift-5.9+-F05138?logo=swift&logoColor=white" alt="Swift 5.9 或更高版本"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0 许可证"></a>
@@ -60,8 +60,8 @@ negaflow 是一款 macOS 应用，用于导入、反相和显影扫描胶片或�
 
 | 下载文件 | 支持的 Mac |
 |---|---|
-| `negaflow-1.0.3-1-macOS-universal.pkg` | Apple Silicon 和 Intel |
-| `negaflow-1.0.3-1-macOS-arm64.pkg` | 仅 Apple Silicon |
+| `negaflow-1.0.4-1-macOS-universal.pkg` | Apple Silicon 和 Intel |
+| `negaflow-1.0.4-1-macOS-arm64.pkg` | 仅 Apple Silicon |
 
 1. 下载适合当前 Mac 的 PKG。
 2. 打开 PKG，并按安装器提示操作。
@@ -88,6 +88,15 @@ PKG 会把 `negaflow.app` 直接安装到 `/Applications`。<br>
 - 将相机、镜头、胶片与曝光记录写入导出文件的 EXIF
 - 按胶卷记录拍摄信息，并可按相机、镜头、胶片检索图库
 - 导出 JPEG 和 16-bit TIFF，支持 ICC 配置文件和打印版式
+- 黑白接触印相表、毫米网格、自由说明文字和当前布局印相导出
+- C-print 冲印店、相纸与表面设置，以及冲印店 ICC 软打样预览
+- 导入进度、按文件夹批量设置显影流程与目标，以及处理进度
+- 记住折叠状态的文件夹列表、照片拖放和 Finder 变更自动同步
+- 包含流程、目标、调整、裁剪和方向的预设及复制粘贴
+- 七种印相布局：单张图像、接触印相表、照片套版、自定义套版、蓝晒、玻璃干版和明胶银盐
+- 按成品页计数的印相导出与快速导出：39 张照片的 6 × 7 接触印相表输出为一个合成文件，
+  单张式布局则作为受限并发的 39 文件批处理
+- 在应用名称与版本之间显示尼埃普斯二百周年纪念句的多语言“关于 negaflow”窗口
 
 > 已完成的检查记录在[项目状态](docs/zh-Hans/product/PROJECT_STATUS.md)中。 <br>
 
@@ -179,6 +188,24 @@ Chroma Engine 是 `Chromabase` 模块中的胶片反相和显影引擎。<br>
 界面是为真正处理照片的人做的，不是泛泛的 AI 生成样稿。<br>
 只要把摄影当作爱好，就应该能很快找到熟悉的操作方式。
 
+## 从图库到打印
+
+默认情况下，仅导入图片不会开始显影。negaflow 先建立原始缩略图和文件夹；在文件夹中选择流程
+与目标并点击应用，或进入显影页面时才开始处理。需要自动显影时，可在设置的工作流程中开启，
+默认值为关闭。
+
+文件夹的折叠状态会在重新打开应用后保留。照片可以拖到其他文件夹；目标位置已有同名文件时，
+应用会添加编号而不是覆盖原文件。在 Finder 中移动或重命名原图或文件夹后，图库只重新读取
+发生变化的文件夹并更新位置。
+
+显影设置复制粘贴和用户预设包含流程、目标、胶片片基、色调、颜色、细节、裁剪、旋转、翻转和
+拉直。选择多张照片后，会应用到全部所选照片。
+
+打印页面中的打印机输出配置文件会应用到排版完成后的整页。无论照片套装重复使用同一张照片，
+还是混合多张照片，所有位置都会得到相同的输出转换。它不会改变显影页面的预览。
+
+具体行为见[从图库到打印](docs/zh-Hans/product/WORKFLOW.md)。
+
 ## 从源码构建
 
 ### 系统要求
@@ -269,6 +296,7 @@ bash scripts/ci-gate.sh
 | [Chroma Engine](docs/zh-Hans/product/CHROMA_ENGINE.md) | 片基、反相、色彩处理和显影顺序 |
 | [GrainMend](docs/zh-Hans/product/GRAINMEND.md) | 缺陷检测与修复、IR、编辑记录、性能和画质标准 |
 | [胶片配置文件](docs/zh-Hans/product/FILM_PROFILES.md) | 拍摄资料分析和配置文件生成 |
+| [从图库到打印](docs/zh-Hans/product/WORKFLOW.md) | 导入、文件夹同步、批量显影、设置复制和打印配置文件 |
 | [产品结构](docs/zh-Hans/architecture/PRODUCT_ARCHITECTURE.md) | 应用、引擎、扫描仪、存储和导出 |
 | [项目状态](docs/zh-Hans/product/PROJECT_STATUS.md) | 实现状态、测量结果和待验证内容 |
 | [真机与画质检查表](docs/zh-Hans/validation/REAL_QA_CHECKLIST.md) | 需要真机或人工查看的项目 |

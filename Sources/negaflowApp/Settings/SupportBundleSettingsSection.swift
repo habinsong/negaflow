@@ -9,14 +9,16 @@ struct SupportBundleSettingsSection: View {
 
     var body: some View {
         Section {
-            LabeledContent(localized(.title)) {
-                Button(localized(isExporting ? .creating : .export), action: presentSavePanel)
-                    .disabled(isExporting)
+            AppSettingsRow(localized(.title)) {
+                Button(
+                    localized(isExporting ? .creating : .export),
+                    action: presentSavePanel
+                )
+                .buttonStyle(.bordered)
+                .disabled(isExporting)
             }
             if let resultText {
-                Text(resultText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                AppSettingsHelpText(resultText)
             }
         }
     }

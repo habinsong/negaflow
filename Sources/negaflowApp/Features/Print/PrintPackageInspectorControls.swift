@@ -1,48 +1,65 @@
+import AppKit
 import Chromabase
 import SwiftUI
+
+enum PrintPackageInspectorControlScope {
+    case layout
+    case content
+}
 
 struct PrintPackageInspectorControls: View {
     @EnvironmentObject private var model: AppModel
     @ObservedObject var settingsStore: PrintWorkspaceSettingsStore
+    let scope: PrintPackageInspectorControlScope
+    /// 셀/캡션은 한 번에 하나만 펼친다 — 전부 펼치면 패널이 끝없이 길어진다.
+    @State private var expandedItemIndex: Int?
+    @State private var expandedCaptionIndex: Int?
+
+    private static let captionFontNames: [String] = {
+        let names = Set(NSFontManager.shared.availableFontFamilies + ["Helvetica"])
+        return names.sorted {
+            $0.localizedStandardCompare($1) == .orderedAscending
+        }
+    }()
 
     var body: some View {
-        Group {
-            switch settingsStore.layoutMode {
-            case .singleImage:
-                EmptyView()
-            case .contactSheet:
-                contactSheetControls
-            case .picturePackage:
-                picturePackageControls
-            case .customPackage:
-                customPackageControls
+        switch scope {
+        case .layout:
+            Group {
+                switch settingsStore.layoutMode {
+                case .singleImage, .cyanotype, .glassPlate, .gelatin:
+                    EmptyView()
+                case .contactSheet:
+                    contactSheetControls
+                case .picturePackage:
+                    picturePackageControls
+                case .customPackage:
+                    customPackageControls
+                }
             }
+        case .content:
             commonControls
         }
     }
 
     private var contactSheetControls: some View {
-        Group {
-            HStack(spacing: 10) {
-                Stepper(
-                    model.text(.printRows),
-                    value: packageBinding(\.contactRows),
-                    in: 1...12
-                )
-                Text(verbatim: "\(settingsStore.packageSettings.contactRows)")
-                    .font(.caption.monospacedDigit())
-                    .frame(width: 22, alignment: .trailing)
-            }
-            HStack(spacing: 10) {
-                Stepper(
-                    model.text(.printColumns),
-                    value: packageBinding(\.contactColumns),
-                    in: 1...12
-                )
-                Text(verbatim: "\(settingsStore.packageSettings.contactColumns)")
-                    .font(.caption.monospacedDigit())
-                    .frame(width: 22, alignment: .trailing)
-            }
+        VStack(alignment: .leading, spacing: PrintInspectorMetrics.verticalSpacing) {
+            paperColorField
+
+            Divider()
+                .opacity(0.4)
+
+            PrintInspectorPairedSteppers(
+                leadingTitle: model.text(.printRows),
+                leadingValue: packageBinding(\.contactRows),
+                trailingTitle: model.text(.printColumns),
+                trailingValue: packageBinding(\.contactColumns),
+                range: 1...12
+            )
+
+            Divider()
+                .opacity(0.4)
+
             spacingControl(
                 title: model.text(.printHorizontalSpacing),
                 value: packageBinding(\.horizontalSpacingMM)
@@ -51,26 +68,58 @@ struct PrintPackageInspectorControls: View {
                 title: model.text(.printVerticalSpacing),
                 value: packageBinding(\.verticalSpacingMM)
             )
-            Toggle(
-                model.text(.printRepeatOnePhoto),
+
+            Divider()
+                .opacity(0.4)
+
+            PrintInspectorBooleanSegmentedField(
+                label: model.text(.printRepeatOnePhoto),
                 isOn: packageBinding(\.repeatOnePhotoPerPage)
+            )
+
+            normalizeOrientationField
+        }
+    }
+
+    /// 인화 용지 색 — 모든 인화 레이아웃이 같은 컨트롤을 쓴다.
+    private var paperColorField: some View {
+        PrintInspectorStackedField(model.text(.printContactSheetBackground)) {
+            PrintInspectorSegmentedPicker(
+                options: PrintContactSheetBackground.allCases,
+                label: contactSheetBackgroundTitle,
+                selection: packageBinding(\.contactSheetBackground)
             )
         }
     }
 
+    /// 시트에 올라간 사진을 스캔 기본 방향으로 통일해 배치한다. 프레임 자체의 방향은 그대로다.
+    private var normalizeOrientationField: some View {
+        PrintInspectorBooleanSegmentedField(
+            label: model.text(.printNormalizeOrientation),
+            isOn: packageBinding(\.normalizesSourceOrientation)
+        )
+    }
+
     private var picturePackageControls: some View {
-        Group {
-            Picker(
-                model.text(.printPictureTemplate),
-                selection: packageBinding(\.pictureTemplate)
-            ) {
-                Text(model.text(.printOneLargeTwoSmall))
-                    .tag(PrintPicturePackageTemplate.oneLargeTwoSmall)
-                Text(model.text(.printTwoUp))
-                    .tag(PrintPicturePackageTemplate.twoUp)
-                Text(model.text(.printFourUp))
-                    .tag(PrintPicturePackageTemplate.fourUp)
+        VStack(alignment: .leading, spacing: PrintInspectorMetrics.verticalSpacing) {
+            paperColorField
+
+            Divider()
+                .opacity(0.4)
+
+            PrintInspectorInlineField(model.text(.printPictureTemplate)) {
+                PrintInspectorPopupPicker(
+                    selection: packageBinding(\.pictureTemplate),
+                    options: PrintPicturePackageTemplate.allCases.map {
+                        .init($0, title: pictureTemplateTitle($0))
+                    },
+                    accessibilityLabel: model.text(.printPictureTemplate)
+                )
             }
+
+            Divider()
+                .opacity(0.4)
+
             spacingControl(
                 title: model.text(.printHorizontalSpacing),
                 value: packageBinding(\.horizontalSpacingMM)
@@ -79,15 +128,45 @@ struct PrintPackageInspectorControls: View {
                 title: model.text(.printVerticalSpacing),
                 value: packageBinding(\.verticalSpacingMM)
             )
+
+            Divider()
+                .opacity(0.4)
+
+            normalizeOrientationField
         }
     }
 
     private var customPackageControls: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: PrintInspectorMetrics.verticalSpacing) {
+            paperColorField
+
+            Divider()
+                .opacity(0.4)
+
+            normalizeOrientationField
+
+            Divider()
+                .opacity(0.4)
+
             ForEach(Array(settingsStore.packageSettings.customItems.indices), id: \.self) { index in
-                DisclosureGroup("\(model.text(.printCell)) \(index + 1)") {
+                if index > 0 { Divider() }
+                PrintInspectorDisclosure(
+                    isExpanded: expansionBinding(for: index, in: $expandedItemIndex),
+                    accessibilityLabel: "\(model.text(.printCell)) \(index + 1)"
+                ) {
+                    HStack(spacing: 8) {
+                        Text("\(model.text(.printCell)) \(index + 1)")
+                            .font(.callout.weight(.medium))
+                        Spacer(minLength: 8)
+                        Text(
+                            "\(model.text(.printPage)) "
+                                + "\((customItem(index: index)?.pageIndex ?? 0) + 1)"
+                        )
+                        .font(.callout.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                    }
+                } content: {
                     customItemControls(index: index)
-                        .padding(.top, 6)
                 }
             }
 
@@ -95,8 +174,11 @@ struct PrintPackageInspectorControls: View {
                 addCustomItem()
             } label: {
                 Label(model.text(.printAddCell), systemImage: "plus")
+                    .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PrintInspectorTransientButtonStyle())
+            .frame(maxWidth: .infinity)
+            .padding(.leading, 1)
             .disabled(
                 settingsStore.packageSettings.customItems.count
                     >= PrintPackageSettings.maximumCustomItemCount
@@ -105,143 +187,346 @@ struct PrintPackageInspectorControls: View {
     }
 
     private func customItemControls(index: Int) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Picker(
-                model.text(.printSourcePhoto),
-                selection: customSourceBinding(index: index)
-            ) {
-                if model.actionableSelectedFrames.isEmpty {
-                    Text(model.text(.noFrame)).tag(0)
-                } else {
-                    ForEach(Array(model.actionableSelectedFrames.enumerated()), id: \.element.id) {
-                        sourceIndex, frame in
-                        Text(frame.compactDisplayName(language: model.appLanguage))
-                            .tag(sourceIndex)
-                    }
-                }
-            }
-            .disabled(model.actionableSelectedFrames.isEmpty)
-            HStack(spacing: 8) {
-                Stepper(
-                    model.text(.printPage),
-                    value: customPageBinding(index: index),
-                    in: 0...(PrintPackageSettings.maximumPageCount - 1)
+        VStack(alignment: .leading, spacing: PrintInspectorMetrics.verticalSpacing) {
+            PrintInspectorStackedField(model.text(.printSourcePhoto)) {
+                PrintInspectorPopupPicker(
+                    selection: customSourceBinding(index: index),
+                    options: customSourceOptions,
+                    accessibilityLabel: model.text(.printSourcePhoto),
+                    isEnabled: !model.actionableSelectedFrames.isEmpty
                 )
-                Text(verbatim: "\((customItem(index: index)?.pageIndex ?? 0) + 1)")
-                    .font(.caption.monospacedDigit())
-                    .frame(width: 22, alignment: .trailing)
             }
-            Picker(
-                model.text(.printImageFit),
-                selection: customContentModeBinding(index: index)
-            ) {
-                Text(model.text(.printFit)).tag(PrintPackageContentMode.fit)
-                Text(model.text(.printFill)).tag(PrintPackageContentMode.fill)
+
+            PrintInspectorStepperRow(
+                label: model.text(.printPage),
+                value: customPageBinding(index: index),
+                range: 0...(PrintPackageSettings.maximumPageCount - 1),
+                displayedValue: (customItem(index: index)?.pageIndex ?? 0) + 1
+            )
+
+            Divider()
+                .opacity(0.4)
+
+            PrintInspectorStackedField(model.text(.printImageFit)) {
+                PrintInspectorSegmentedPicker(
+                    options: PrintPackageContentMode.allCases,
+                    label: contentModeTitle,
+                    selection: customContentModeBinding(index: index)
+                )
             }
-            Toggle(
-                model.text(.printRotateToFit),
+
+            PrintInspectorBooleanSegmentedField(
+                label: model.text(.printRotateToFit),
                 isOn: customBoolBinding(index: index, keyPath: \.rotateToFit)
             )
-            normalizedControl(
+
+            Divider()
+                .opacity(0.4)
+
+            layoutNormalizedControl(
                 title: model.text(.printPositionX),
                 value: customRectBinding(index: index, component: .x)
             )
-            normalizedControl(
+            layoutNormalizedControl(
                 title: model.text(.printPositionY),
                 value: customRectBinding(index: index, component: .y)
             )
-            normalizedControl(
+            layoutNormalizedControl(
                 title: model.text(.printWidth),
                 value: customRectBinding(index: index, component: .width)
             )
-            normalizedControl(
+            layoutNormalizedControl(
                 title: model.text(.printHeight),
                 value: customRectBinding(index: index, component: .height)
             )
-            HStack(spacing: 12) {
-                Button {
+
+            HStack(spacing: 6) {
+                PrintInspectorIconButton(
+                    systemImage: "square.2.layers.3d.bottom.filled",
+                    accessibilityLabel: model.accessibilityText(.moveDown)
+                ) {
                     moveCustomItem(index: index, forward: false)
-                } label: {
-                    Image(systemName: "square.2.layers.3d.bottom.filled")
                 }
-                .buttonStyle(.plain)
-                .help(model.accessibilityText(.moveDown))
-                .accessibilityLabel(model.accessibilityText(.moveDown))
-                Button {
+                PrintInspectorIconButton(
+                    systemImage: "square.2.layers.3d.top.filled",
+                    accessibilityLabel: model.accessibilityText(.moveUp)
+                ) {
                     moveCustomItem(index: index, forward: true)
-                } label: {
-                    Image(systemName: "square.2.layers.3d.top.filled")
                 }
-                .buttonStyle(.plain)
-                .help(model.accessibilityText(.moveUp))
-                .accessibilityLabel(model.accessibilityText(.moveUp))
-                Button {
+                PrintInspectorIconButton(
+                    systemImage: "plus.square.on.square",
+                    accessibilityLabel: model.text(.printDuplicateCell)
+                ) {
                     duplicateCustomItem(at: index)
-                } label: {
-                    Label(model.text(.printDuplicateCell), systemImage: "plus.square.on.square")
                 }
-                .buttonStyle(.plain)
-                Button(role: .destructive) {
+                PrintInspectorIconButton(
+                    systemImage: "trash",
+                    accessibilityLabel: model.text(.printDeleteCell),
+                    role: .destructive,
+                    isDisabled: settingsStore.packageSettings.customItems.count <= 1
+                ) {
                     deleteCustomItem(at: index)
-                } label: {
-                    Label(model.text(.printDeleteCell), systemImage: "trash")
                 }
-                .buttonStyle(.plain)
-                .disabled(settingsStore.packageSettings.customItems.count <= 1)
             }
         }
     }
 
     private var commonControls: some View {
-        Group {
+        VStack(alignment: .leading, spacing: PrintInspectorMetrics.verticalSpacing) {
             if settingsStore.layoutMode != .customPackage {
-                Picker(
-                    model.text(.printImageFit),
-                    selection: packageBinding(\.contentMode)
-                ) {
-                    Text(model.text(.printFit)).tag(PrintPackageContentMode.fit)
-                    Text(model.text(.printFill)).tag(PrintPackageContentMode.fill)
+                PrintInspectorStackedField(model.text(.printImageFit)) {
+                    PrintInspectorSegmentedPicker(
+                        options: PrintPackageContentMode.allCases,
+                        label: contentModeTitle,
+                        selection: packageBinding(\.contentMode)
+                    )
                 }
-                Toggle(
-                    model.text(.printRotateToFit),
+
+                PrintInspectorBooleanSegmentedField(
+                    label: model.text(.printRotateToFit),
                     isOn: packageBinding(\.rotateToFit)
+                )
+
+                Divider()
+                    .opacity(0.4)
+            }
+
+            PrintInspectorInlineField(model.text(.printCaption)) {
+                PrintInspectorPopupPicker(
+                    selection: packageBinding(\.captionMode),
+                    options: PrintPackageCaptionMode.allCases.map {
+                        .init($0, title: captionModeTitle($0))
+                    },
+                    accessibilityLabel: model.text(.printCaption)
                 )
             }
 
-            Picker(model.text(.printCaption), selection: packageBinding(\.captionMode)) {
-                Text(model.text(.noLook)).tag(PrintPackageCaptionMode.none)
-                Text(model.text(.printCaptionFileName)).tag(PrintPackageCaptionMode.fileName)
-                Text(model.text(.printCaptionFrameNumber)).tag(PrintPackageCaptionMode.frameNumber)
-                Text(model.text(.printCaptionRating)).tag(PrintPackageCaptionMode.rating)
+            if settingsStore.packageSettings.captionMode != .none {
+                Divider()
+                    .opacity(0.4)
+
+                PrintInspectorInlineField(model.text(.printCaptionFont)) {
+                    PrintInspectorPopupPicker(
+                        selection: packageBinding(\.captionFontName),
+                        options: Self.captionFontNames.map {
+                            .init($0, title: $0)
+                        },
+                        accessibilityLabel: model.text(.printCaptionFont)
+                    )
+                }
+
+                if settingsStore.packageSettings.captionMode == .customText {
+                    Divider()
+                        .opacity(0.4)
+                    customCaptionControls
+                } else {
+                    Divider()
+                        .opacity(0.4)
+                    captionAlignmentControl(selection: packageBinding(\.captionAlignment))
+                }
             }
-            Toggle(model.text(.printCropMarks), isOn: packageBinding(\.showsCropMarks))
+
+            Divider()
+                .opacity(0.4)
+
+            PrintInspectorBooleanSegmentedField(
+                label: model.text(.printCropMarks),
+                isOn: packageBinding(\.showsCropMarks)
+            )
         }
+    }
+
+    private var customCaptionControls: some View {
+        VStack(alignment: .leading, spacing: PrintInspectorMetrics.verticalSpacing) {
+            ForEach(
+                Array(settingsStore.packageSettings.customCaptions.indices),
+                id: \.self
+            ) { index in
+                if index > 0 { Divider() }
+                PrintInspectorDisclosure(
+                    isExpanded: expansionBinding(for: index, in: $expandedCaptionIndex),
+                    accessibilityLabel: "\(model.text(.printCustomCaption)) \(index + 1)"
+                ) {
+                    Text("\(model.text(.printCustomCaption)) \(index + 1)")
+                        .font(.callout.weight(.medium))
+                } content: {
+                    customCaptionFields(index: index)
+                }
+            }
+
+            Button {
+                addCustomCaption()
+            } label: {
+                Label(model.text(.printAddCaption), systemImage: "plus")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(PrintInspectorTransientButtonStyle())
+            .disabled(
+                settingsStore.packageSettings.customCaptions.count
+                    >= PrintPackageSettings.maximumCustomCaptionCount
+            )
+        }
+    }
+
+    private func customCaptionFields(index: Int) -> some View {
+        VStack(alignment: .leading, spacing: PrintInspectorMetrics.verticalSpacing) {
+            PrintInspectorStackedField(model.text(.printCaptionText)) {
+                PrintInspectorTextField(
+                    prompt: model.text(.printCaptionText),
+                    text: customCaptionTextBinding(index: index)
+                )
+            }
+
+            captionAlignmentControl(
+                selection: customCaptionAlignmentBinding(index: index)
+            )
+
+            normalizedControl(
+                title: model.text(.printPositionX),
+                value: customCaptionRectBinding(index: index, component: .x)
+            )
+            normalizedControl(
+                title: model.text(.printPositionY),
+                value: customCaptionRectBinding(index: index, component: .y)
+            )
+            normalizedControl(
+                title: model.text(.printWidth),
+                value: customCaptionRectBinding(index: index, component: .width)
+            )
+            normalizedControl(
+                title: model.text(.printHeight),
+                value: customCaptionRectBinding(index: index, component: .height)
+            )
+
+            Button(role: .destructive) {
+                deleteCustomCaption(at: index)
+            } label: {
+                Label(model.text(.printDeleteCaption), systemImage: "trash")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(
+                PrintInspectorTransientButtonStyle(foregroundStyle: .red)
+            )
+            .disabled(settingsStore.packageSettings.customCaptions.count <= 1)
+        }
+    }
+
+    private var customSourceOptions: [PrintInspectorPopupPicker<Int>.Option] {
+        guard !model.actionableSelectedFrames.isEmpty else {
+            return [.init(0, title: model.text(.noFrame))]
+        }
+        return model.actionableSelectedFrames.enumerated().map { sourceIndex, frame in
+            .init(
+                sourceIndex,
+                title: frame.compactDisplayName(language: model.appLanguage)
+            )
+        }
+    }
+
+    private func contactSheetBackgroundTitle(
+        _ background: PrintContactSheetBackground
+    ) -> String {
+        switch background {
+        case .black: model.text(.canvasBackgroundBlack)
+        case .gray: model.text(.canvasBackgroundGray)
+        case .white: model.text(.canvasBackgroundWhite)
+        }
+    }
+
+    private func pictureTemplateTitle(_ template: PrintPicturePackageTemplate) -> String {
+        switch template {
+        case .oneLargeTwoSmall: model.text(.printOneLargeTwoSmall)
+        case .twoUp: model.text(.printTwoUp)
+        case .fourUp: model.text(.printFourUp)
+        }
+    }
+
+    private func contentModeTitle(_ mode: PrintPackageContentMode) -> String {
+        switch mode {
+        case .fit: model.text(.printFit)
+        case .fill: model.text(.printFill)
+        }
+    }
+
+    private func captionModeTitle(_ mode: PrintPackageCaptionMode) -> String {
+        switch mode {
+        case .none: model.text(.noLook)
+        case .fileName: model.text(.printCaptionFileName)
+        case .frameNumber: model.text(.printCaptionFrameNumber)
+        case .sequenceNumber: model.text(.printCaptionSequenceNumber)
+        case .rating: model.text(.printCaptionRating)
+        case .customText: model.text(.printCaptionCustomText)
+        }
+    }
+
+    private func captionAlignmentTitle(_ alignment: PrintPackageCaptionAlignment) -> String {
+        switch alignment {
+        case .leading: model.text(.printCaptionAlignLeft)
+        case .center: model.text(.printCaptionAlignCenter)
+        case .trailing: model.text(.printCaptionAlignRight)
+        }
+    }
+
+    private func captionAlignmentControl(
+        selection: Binding<PrintPackageCaptionAlignment>
+    ) -> some View {
+        PrintInspectorStackedField(model.text(.printCaptionAlignment)) {
+            PrintInspectorSegmentedPicker(
+                options: PrintPackageCaptionAlignment.allCases,
+                label: captionAlignmentTitle,
+                selection: selection
+            )
+        }
+    }
+
+    /// 아코디언 한 칸의 열림 상태. 새로 열면 이전 칸은 자동으로 닫힌다.
+    private func expansionBinding(
+        for index: Int,
+        in state: Binding<Int?>
+    ) -> Binding<Bool> {
+        Binding(
+            get: { state.wrappedValue == index },
+            set: { isExpanded in state.wrappedValue = isExpanded ? index : nil }
+        )
     }
 
     private func spacingControl(title: String, value: Binding<Double>) -> some View {
         let displayValue = String(format: "%.1f mm", value.wrappedValue)
-        return HStack(spacing: 10) {
-            Text(title)
-            Slider(value: value, in: 0...25, step: 0.5)
-                .accessibilityLabel(title)
-                .accessibilityValue(Text(verbatim: displayValue))
-            Text(verbatim: displayValue)
-                .font(.caption.monospacedDigit())
-                .frame(width: 54, alignment: .trailing)
-        }
+        return PrintInspectorSliderRow(
+            label: title,
+            value: value,
+            range: 0...25,
+            step: 0.5,
+            valueText: displayValue,
+            inputFractionDigits: 1
+        )
+    }
+
+    private func layoutNormalizedControl(
+        title: String,
+        value: Binding<Double>
+    ) -> some View {
+        PrintInspectorSliderRow(
+            label: title,
+            value: value,
+            range: 0...1,
+            step: 0.01,
+            valueText: "\(Int((value.wrappedValue * 100).rounded()))%",
+            inputScale: 100,
+            inputFractionDigits: 0
+        )
     }
 
     private func normalizedControl(title: String, value: Binding<Double>) -> some View {
-        HStack(spacing: 8) {
-            Text(title)
-                .font(.caption)
-            Slider(value: value, in: 0...1, step: 0.01)
-                .accessibilityLabel(title)
-                .accessibilityValue("\(Int((value.wrappedValue * 100).rounded()))%")
-            Text("\(Int((value.wrappedValue * 100).rounded()))%")
-                .font(.caption.monospacedDigit())
-                .frame(width: 34, alignment: .trailing)
-        }
+        PrintInspectorSliderRow(
+            label: title,
+            value: value,
+            range: 0...1,
+            step: 0.01,
+            valueText: "\(Int((value.wrappedValue * 100).rounded()))%",
+            inputScale: 100,
+            inputFractionDigits: 0
+        )
     }
 
     private func packageBinding<Value>(
@@ -319,13 +604,128 @@ struct PrintPackageInspectorControls: View {
 
     private enum RectComponent { case x, y, width, height }
 
+    private func customCaptionTextBinding(index: Int) -> Binding<String> {
+        Binding(
+            get: {
+                guard settingsStore.packageSettings.customCaptions.indices.contains(index) else {
+                    return String()
+                }
+                return settingsStore.packageSettings.customCaptions[index].text
+            },
+            set: { value in
+                updateCustomCaption(index: index) { caption in
+                    var text = value
+                    while text.utf8.count > 512 { text.removeLast() }
+                    caption.text = text
+                }
+            }
+        )
+    }
+
+    private func customCaptionAlignmentBinding(
+        index: Int
+    ) -> Binding<PrintPackageCaptionAlignment> {
+        Binding(
+            get: {
+                guard settingsStore.packageSettings.customCaptions.indices.contains(index) else {
+                    return .leading
+                }
+                return settingsStore.packageSettings.customCaptions[index].alignment
+            },
+            set: { value in
+                updateCustomCaption(index: index) { $0.alignment = value }
+            }
+        )
+    }
+
+    private func customCaptionRectBinding(
+        index: Int,
+        component: RectComponent
+    ) -> Binding<Double> {
+        Binding(
+            get: {
+                guard settingsStore.packageSettings.customCaptions.indices.contains(index) else {
+                    return 0
+                }
+                let rect = settingsStore.packageSettings.customCaptions[index].normalizedRect
+                switch component {
+                case .x: return Double(rect.minX)
+                case .y: return Double(rect.minY)
+                case .width: return Double(rect.width)
+                case .height: return Double(rect.height)
+                }
+            },
+            set: { rawValue in
+                updateCustomCaption(index: index) { caption in
+                    var rect = caption.normalizedRect
+                    let value = CGFloat(min(max(rawValue, 0), 1))
+                    switch component {
+                    case .x:
+                        rect.origin.x = min(value, 1 - rect.width)
+                    case .y:
+                        rect.origin.y = min(value, 1 - rect.height)
+                    case .width:
+                        rect.size.width = max(0.01, min(value, 1 - rect.minX))
+                    case .height:
+                        rect.size.height = max(0.01, min(value, 1 - rect.minY))
+                    }
+                    caption.normalizedRect = rect
+                }
+            }
+        )
+    }
+
+    private func updateCustomCaption(
+        index: Int,
+        _ update: (inout PrintPackageCustomCaption) -> Void
+    ) {
+        var package = settingsStore.packageSettings
+        guard package.customCaptions.indices.contains(index) else { return }
+        update(&package.customCaptions[index])
+        settingsStore.packageSettings = package
+    }
+
+    private func addCustomCaption() {
+        var package = settingsStore.packageSettings
+        guard package.customCaptions.count < PrintPackageSettings.maximumCustomCaptionCount else {
+            return
+        }
+        let offset = CGFloat(package.customCaptions.count % 8) * 0.04
+        package.customCaptions.append(PrintPackageCustomCaption(
+            text: "",
+            normalizedRect: CGRect(
+                x: min(0.55, 0.05 + offset),
+                y: min(0.85, 0.02 + offset),
+                width: 0.4,
+                height: 0.05
+            )
+        ))
+        settingsStore.packageSettings = package
+    }
+
+    private func deleteCustomCaption(at index: Int) {
+        var package = settingsStore.packageSettings
+        guard package.customCaptions.count > 1,
+              package.customCaptions.indices.contains(index) else { return }
+        package.customCaptions.remove(at: index)
+        settingsStore.packageSettings = package
+        expandedCaptionIndex = nil
+    }
+
+    /// 셀 위치·크기 슬라이더.
+    ///
+    /// 세로 위치는 화면과 같게 **위에서부터** 센다. 저장 값은 Quartz(아래가 0)라 그대로 노출하면
+    /// 0% 가 아래를 뜻해 조작이 거꾸로 느껴진다.
+    ///
+    /// 크기를 키울 때는 원점을 밀어 준다. 예전에는 `너비 ≤ 1 - x` 로 잘라내서, x 가 조금이라도
+    /// 있으면 100% 를 줘도 그 값에 닿지 못하고 "용지 전체"가 되지 않았다.
     private func customRectBinding(index: Int, component: RectComponent) -> Binding<Double> {
         Binding(
             get: {
                 guard let rect = customItem(index: index)?.normalizedRect else { return 0 }
                 switch component {
                 case .x: return Double(rect.minX)
-                case .y: return Double(rect.minY)
+                case .y: return Double(1 - rect.maxY)
                 case .width: return Double(rect.width)
                 case .height: return Double(rect.height)
                 }
@@ -338,11 +738,16 @@ struct PrintPackageInspectorControls: View {
                     case .x:
                         rect.origin.x = min(value, 1 - rect.width)
                     case .y:
-                        rect.origin.y = min(value, 1 - rect.height)
+                        // 위에서 잰 값 → 아래가 0 인 원점.
+                        rect.origin.y = max(0, min(1 - value - rect.height, 1 - rect.height))
                     case .width:
-                        rect.size.width = max(0.01, min(value, 1 - rect.minX))
+                        rect.size.width = min(max(value, 0.02), 1)
+                        rect.origin.x = min(rect.origin.x, 1 - rect.width)
                     case .height:
-                        rect.size.height = max(0.01, min(value, 1 - rect.minY))
+                        let topInset = 1 - rect.maxY
+                        rect.size.height = min(max(value, 0.02), 1)
+                        // 위 여백을 유지한 채 아래로 자란다 — 화면에서 본 대로 움직인다.
+                        rect.origin.y = max(0, min(1 - topInset - rect.height, 1 - rect.height))
                     }
                     item.normalizedRect = rect
                 }
@@ -365,6 +770,7 @@ struct PrintPackageInspectorControls: View {
             zIndex: (package.customItems.map(\.zIndex).max() ?? -1) + 1
         ))
         settingsStore.packageSettings = package
+        expandedItemIndex = package.customItems.count - 1
     }
 
     private func duplicateCustomItem(at index: Int) {
@@ -385,6 +791,7 @@ struct PrintPackageInspectorControls: View {
         package.customItems.remove(at: index)
         normalizeCustomPageIndices(&package)
         settingsStore.packageSettings = package
+        expandedItemIndex = nil
     }
 
     private func moveCustomItem(index: Int, forward: Bool) {

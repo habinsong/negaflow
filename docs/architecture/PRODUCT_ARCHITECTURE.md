@@ -88,6 +88,7 @@ The app people use, built with SwiftUI and AppKit.
 - Scan, GrainMend, export
 - Versions, settings, shortcuts
 - Catalog, cache, backup, preservation archive
+- A localized About window whose product version comes from the shared version resource
 
 ## User flow
 
@@ -187,6 +188,11 @@ Edits survive an external disk going away.
 The original is marked offline and you relink it by file or by folder.
 If the ID is not the one expected, nothing is swapped automatically.
 
+Each registered physical source folder has one file-system watcher. Events are coalesced briefly,
+then only the changed folder is rescanned. Bookmark-based relinking preserves the catalog folder ID
+when Finder moves or renames a source, and newly added direct-child images are imported without
+polling or rescanning the whole library.
+
 ## Develop and GrainMend
 
 Each frame carries:
@@ -265,10 +271,25 @@ Supported layouts:
 
 - Single image
 - Contact sheet
-- Mixed-size bundle
-- Custom layout
+- Picture package
+- Custom package
+- Cyanotype
+- Glass plate
+- Gelatin silver
 
-The ICC is applied once, to the final output, after the page layout is done.
+Single image and the three historical layouts make one vertically stacked page per selected photo.
+Contact sheet, picture package, and custom package instead report and export their finished page
+count. For 39 photos that means one 6 × 7 contact-sheet page, 10 four-up picture-package pages, one
+default custom-package page, or 39 individual files.
+
+Package preview reuses available thumbnails and developed images, and only materializes a small
+fast preview when one is missing. Final export calculates placement from metadata, develops only
+the pixels needed for each cell, prepares two to four unique sources at once, keeps the Core Image
+graph connected until the page write, and enforces a 512 MiB per-page source-raster budget.
+
+Every package placement observes the frame assigned to it. The printer output ICC is applied once,
+to the complete final page, after layout is done, so repeated and mixed-source packages use the
+same output contract. It never changes the Library or Develop preview.
 Neither the original scan TIFF nor `-main-flat` gets a printer profile.
 
 Without a valid RGB printer ICC, no other profile is substituted.

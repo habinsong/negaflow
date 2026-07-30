@@ -16,6 +16,18 @@ extension AppModel {
             && selection.allSatisfy { $0.hasDevelopedOnce && !$0.isDeveloping }
     }
 
+    var canQuickExportPrintSelection: Bool {
+        let selection = exportSelection
+        return !selection.isEmpty
+            && !exportBatchStore.isRunning
+            && !isPrintPackageExporting
+            && selection.allSatisfy { !$0.isPreviewScan && !$0.isDeveloping }
+    }
+
+    var canExportPrintSelection: Bool {
+        canQuickExportPrintSelection && ExportNamingTemplate.isValid(exportNamingTemplate)
+    }
+
     func exportSelectionToFolder() {
         guard canExportSelection else { return }
         let printerOutputProfile = selectedPrinterOutputProfile
@@ -77,10 +89,12 @@ extension AppModel {
         recipeIdentity: ExportRecipeIdentity?,
         printRecipeIdentity: ExportRecipeIdentity? = nil
     ) {
-        guard canQuickExportSelection else { return }
+        let canStart = printComposition == nil
+            ? canQuickExportSelection
+            : canQuickExportPrintSelection
+        guard canStart else { return }
         let requiresPrinterOutputProfile = format != .rawScanTIFF
-            && (printComposition != nil
-                || exportSelection.contains { $0.params.developTarget == .print })
+            && exportSelection.contains { $0.params.developTarget == .print }
         guard !requiresPrinterOutputProfile
                 || printerOutputProfile?.validatedColorSpace() != nil else {
             statusMessage = text(.printOutputProfileRequired)

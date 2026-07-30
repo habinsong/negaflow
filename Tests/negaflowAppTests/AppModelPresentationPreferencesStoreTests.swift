@@ -28,12 +28,14 @@ final class AppModelPresentationPreferencesStoreTests: XCTestCase {
         store.canvasBackground = CanvasBackground.white
         store.developerMode = true
         store.clippingOverlayEnabled = true
+        store.developsImportsAutomatically = true
 
         let reloaded = PresentationPreferencesStore(defaults: defaults)
         XCTAssertEqual(reloaded.appearanceMode, AppAppearanceMode.dark)
         XCTAssertEqual(reloaded.canvasBackground, CanvasBackground.white)
         XCTAssertTrue(reloaded.developerMode)
         XCTAssertTrue(reloaded.clippingOverlayEnabled)
+        XCTAssertTrue(reloaded.developsImportsAutomatically)
     }
 
     func testStoreFallsBackForMissingOrInvalidDefaults() {
@@ -45,6 +47,7 @@ final class AppModelPresentationPreferencesStoreTests: XCTestCase {
         XCTAssertEqual(store.appearanceMode, AppAppearanceMode.system)
         XCTAssertEqual(store.canvasBackground, CanvasBackground.black)
         XCTAssertFalse(store.clippingOverlayEnabled)
+        XCTAssertFalse(store.developsImportsAutomatically)
     }
 
     func testCanvasHUDContrastFollowsCanvasBackgroundInsteadOfAppAppearance() {

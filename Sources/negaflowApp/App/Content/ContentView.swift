@@ -38,8 +38,11 @@ struct ContentView: View {
     @State var librarySelectedFolderID: String?
     @State var libraryOrganizerSelection = LibraryOrganizerSelection.all
     @State var isDropTargeted = false
+    @State var workspaceTransitionTask: Task<Void, Never>?
+    @State private var workspaceTransitionMovesForward = true
     @AppStorage("workspace.filmstripSortKey") var filmstripSortKeyRaw = LibrarySortKey.inputOrder.rawValue
     @AppStorage("workspace.filmstripSortAscending") var filmstripSortAscending = true
+    @AppStorage("workspace.filmstripScope") var filmstripScopeRaw = FilmstripScope.all.rawValue
     @AppStorage("workspace.filmstripHeight") var filmstripHeight = FilmstripSizing.defaultHeight
     @AppStorage("workspace.filmstripItemScale") var filmstripItemScale = 1.0
     @State var didAttemptActiveFrameRestore = false
@@ -67,7 +70,7 @@ struct ContentView: View {
                 isSidebarVisible: $isSidebarVisible,
                 isInspectorVisible: $isInspectorVisible,
                 isFilmstripVisible: $isFilmstripVisible,
-                selectedWorkspaceModule: $selectedWorkspaceModule,
+                selectedWorkspaceModule: workspaceModuleBinding,
                 showDiagnostics: $showDiagnostics,
                 isWindowFullScreen: isWindowFullScreen
             )
@@ -76,13 +79,9 @@ struct ContentView: View {
                 .zIndex(1)
             workspaceContent
                 .id(selectedWorkspaceModule)
-                .transition(reduceMotion
-                    ? .opacity
-                    : .opacity.combined(with: .move(
-                        edge: selectedWorkspaceModule == .library ? .leading : .trailing
-                    )))
+                .transition(workspaceModuleTransition)
         }
-        .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: selectedWorkspaceModule)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.14), value: selectedWorkspaceModule)
         .transaction { transaction in
             if AppAccessibilityPresentation.disablesAnimations(reduceMotion: reduceMotion) {
                 transaction.animation = nil
@@ -121,16 +120,21 @@ struct ContentView: View {
             model.refreshExternalBackupDestinationStatus()
             restoreWorkspaceActiveFrameIfReady()
         }
-        .onChange(of: selectedWorkspaceModule) { _, module in
+        .onChange(of: selectedWorkspaceModule) { previousModule, module in
             workspacePresentationStore.module = module
             model.activeWorkspaceModule = module
-            synchronizeDevelopInteractionScope()
-            selectMostRecentDevelopFrameIfNeeded()
+            if module == .develop {
+                model.handleSelectedFrameChange(from: nil)
+            }
+            scheduleWorkspaceTransitionCompletion(
+                from: previousModule,
+                to: module
+            )
         }
         .onChange(of: model.activeWorkspaceModule) { _, module in
             guard selectedWorkspaceModule != module else { return }
-            withAnimation(.snappy(duration: 0.18)) {
-                selectedWorkspaceModule = module
+            withAnimation(.snappy(duration: 0.14)) {
+                selectWorkspaceModule(module)
             }
         }
         .onChange(of: model.developToolShortcutRequest) { _, _ in
@@ -146,12 +150,31 @@ struct ContentView: View {
             restoreWorkspaceActiveFrameIfReady()
         }
         .onChange(of: model.selectedFrameID) { _, frameID in
+            // 범위가 활성 사진 기준이라 사진이 바뀌면 보여줄 목록도 다시 맞춘다.
+            if bottomFilmstripScope != .all {
+                synchronizeDevelopInteractionScope()
+            }
             guard didAttemptActiveFrameRestore else { return }
             workspacePresentationStore.recordActiveFrameID(frameID)
         }
-        .onChange(of: activeDevelopInteractionScopeFrameIDs) { _, _ in
+        .onChange(of: model.frames.map(\.id)) { _, _ in
             synchronizeDevelopInteractionScope()
             selectMostRecentDevelopFrameIfNeeded()
+        }
+        .onChange(of: filmstripSortKeyRaw) { _, _ in
+            synchronizeDevelopInteractionScope()
+            selectMostRecentDevelopFrameIfNeeded()
+        }
+        .onChange(of: filmstripSortAscending) { _, _ in
+            synchronizeDevelopInteractionScope()
+            selectMostRecentDevelopFrameIfNeeded()
+        }
+        .onChange(of: filmstripScopeRaw) { _, _ in
+            synchronizeDevelopInteractionScope()
+            selectMostRecentDevelopFrameIfNeeded()
+        }
+        .onDisappear {
+            workspaceTransitionTask?.cancel()
         }
         .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didMountNotification)) { _ in
             model.refreshSourceAvailability()
@@ -182,5 +205,48 @@ struct ContentView: View {
         }
     }
 
+    func scheduleWorkspaceTransitionCompletion(
+        from previousModule: WorkspaceModule,
+        to module: WorkspaceModule
+    ) {
+        workspaceTransitionTask?.cancel()
+        workspaceTransitionTask = Task { @MainActor in
+            if !reduceMotion {
+                try? await Task.sleep(for: .milliseconds(140))
+            }
+            guard !Task.isCancelled,
+                  selectedWorkspaceModule == module,
+                  module == .develop || module == .print else { return }
+            if previousModule == .library {
+                synchronizeDevelopInteractionScope()
+            }
+            selectMostRecentDevelopFrameIfNeeded()
+            model.refreshWorkspaceSoftProofPreviewIfNeeded()
+        }
+    }
+
+    var workspaceModuleBinding: Binding<WorkspaceModule> {
+        Binding(
+            get: { selectedWorkspaceModule },
+            set: { selectWorkspaceModule($0) }
+        )
+    }
+
+    var workspaceModuleTransition: AnyTransition {
+        guard !reduceMotion else { return .opacity }
+        let insertionEdge: Edge = workspaceTransitionMovesForward ? .trailing : .leading
+        let removalEdge: Edge = workspaceTransitionMovesForward ? .leading : .trailing
+        return .asymmetric(
+            insertion: .opacity.combined(with: .move(edge: insertionEdge)),
+            removal: .opacity.combined(with: .move(edge: removalEdge))
+        )
+    }
+
+    func selectWorkspaceModule(_ module: WorkspaceModule) {
+        guard module != selectedWorkspaceModule else { return }
+        workspaceTransitionMovesForward =
+            module.navigationIndex > selectedWorkspaceModule.navigationIndex
+        selectedWorkspaceModule = module
+    }
 
 }

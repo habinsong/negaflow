@@ -14,13 +14,14 @@ flowchart LR
 ```
 
 > [!NOTE]
-> 현재 버전은 `1.0.3`입니다. 구현 여부와 실제로 확인한 범위는
+> 현재 버전은 `1.0.4`입니다. 구현 여부와 실제로 확인한 범위는
 > [지금 어디까지 됐나](product/PROJECT_STATUS.md)를 기준으로 봅니다.
 
 ## 제품
 
 | 문서 | 먼저 볼 때 |
 |---|---|
+| [라이브러리에서 인화까지](product/WORKFLOW.md) | 가져오기, 폴더 현상, 복사·붙여넣기와 인화 흐름을 볼 때 |
 | [크로마 엔진](product/CHROMA_ENGINE.md) | 필름 반전과 현상 순서가 궁금할 때 |
 | [GrainMend](product/GRAINMEND.md) | 먼지·스크래치 복원이 어떻게 작동하는지 볼 때 |
 | [필름 프로파일](product/FILM_PROFILES.md) | 번들 프로파일의 출처와 한계를 확인할 때 |
@@ -41,6 +42,7 @@ flowchart LR
 |---|---|
 | [CLI 스캐너 JSON](reference/CLI_JSON.md) | `detect --json`, `capabilities --json` 출력 형식 |
 | [렌더 기록](reference/RENDER_MANIFEST.md) | 원본, 편집 값, 출력 파일의 SHA-256 관계 |
+| [인화 레이아웃과 C-print 미리보기](reference/C_PRINT.md) | 7개 레이아웃, 완성 페이지 출력, 렌더 최적화, 프루프 전용 ICC와 정확도 한계 |
 | [고정 인화 응답](reference/PRINT_RESPONSE.md) | `shoulder-print-response-v4`의 식과 기준점 |
 | [스캐너 프로파일 품질 검사](reference/PROFILE_QUALITY_GATE.md) | REAL/TARGET 쌍 자료의 출시 판정 규칙 |
 | [스캐너 노이즈 프로파일](reference/SCANNER_NOISE_PROFILES.md) | 반복 스캔 측정과 자동 적용 조건 |

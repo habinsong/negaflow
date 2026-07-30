@@ -7,23 +7,56 @@ private struct PrintExportRecipeConfiguration: Encodable {
     let composition: PrintCompositionSettings
     let package: PrintPackageSettings?
     let outputProfileSHA256: String?
+    let cPrint: CPrintExportRecipeConfiguration?
+}
+
+private struct CPrintExportRecipeConfiguration: Encodable {
+    let labName: String?
+    let paperName: String?
+    let surface: PrintPaperSurface
+    let proofProfileSHA256: String?
 }
 
 extension AppModel {
+    var printExportOutputCount: Int {
+        let sourceCount = exportSelection.count
+        guard let package = printWorkspaceSettingsStore.effectivePackageSettings(
+            sourceCount: sourceCount
+        ) else {
+            return sourceCount
+        }
+        return PrintPackageLayout.expectedPageCount(
+            sourceCount: sourceCount,
+            package: package
+        ) ?? sourceCount
+    }
+
     func exportSelectionToFolder(for module: WorkspaceModule) {
         if module == .print, exportFormat != .rawScanTIFF {
             exportPrintSelectionToFolder(
-                settings: printWorkspaceSettingsStore.compositionSettings(dpi: exportDPI)
+                settings: printCompositionSettings(dpi: exportDPI)
             )
         } else {
             exportSelectionToFolder()
         }
     }
 
+    func canExportSelection(for module: WorkspaceModule) -> Bool {
+        module == .print && exportFormat != .rawScanTIFF
+            ? canExportPrintSelection
+            : canExportSelection
+    }
+
+    func canQuickExportSelection(for module: WorkspaceModule) -> Bool {
+        module == .print && quickExportFormat != .rawScanTIFF
+            ? canQuickExportPrintSelection
+            : canQuickExportSelection
+    }
+
     func quickExportSelection(for module: WorkspaceModule) {
         if module == .print, quickExportFormat != .rawScanTIFF {
             quickExportPrintSelection(
-                settings: printWorkspaceSettingsStore.compositionSettings(dpi: quickExportDPI)
+                settings: printCompositionSettings(dpi: quickExportDPI)
             )
         } else {
             quickExportSelection()
@@ -31,13 +64,23 @@ extension AppModel {
     }
 
     func exportPrintSelectionToFolder(settings: PrintCompositionSettings) {
-        guard canExportSelection, settings.isValid else { return }
+        guard canExportPrintSelection, settings.isValid else { return }
         if exportFormat == .rawScanTIFF {
             exportSelectionToFolder()
             return
         }
         let options = printExportOptions(exportOptions, dpi: settings.dpi)
-        guard let printerOutputProfile = selectedPrinterOutputProfile else {
+        let requiresPrinterOutputProfile = exportSelection.contains {
+            $0.params.developTarget == .print
+        }
+        let printerOutputProfile = selectedPrintWorkspaceOutputProfile(
+            requiresPrinterOutputProfile: requiresPrinterOutputProfile
+        )
+        guard !hasInvalidStoredCPrintOutputProfile else {
+            statusMessage = text(.printOutputProfileRequired)
+            return
+        }
+        guard !requiresPrinterOutputProfile || printerOutputProfile != nil else {
             statusMessage = text(.printOutputProfileRequired)
             return
         }
@@ -63,7 +106,7 @@ extension AppModel {
                     writeMainFlatMaster: false,
                     writeOriginalRaw: false,
                     namingTemplate: exportNamingTemplate,
-                    outputProfileSHA256: printerOutputProfile.profileSHA256
+                    outputProfileSHA256: printerOutputProfile?.profileSHA256
                 )
             )
             return
@@ -87,19 +130,29 @@ extension AppModel {
                 writeMainFlatMaster: exportWriteMainFlatMaster,
                 writeOriginalRaw: exportWriteOriginalRaw,
                 namingTemplate: exportNamingTemplate,
-                outputProfileSHA256: printerOutputProfile.profileSHA256
+                outputProfileSHA256: printerOutputProfile?.profileSHA256
             )
         )
     }
 
     func quickExportPrintSelection(settings: PrintCompositionSettings) {
-        guard canQuickExportSelection, settings.isValid else { return }
+        guard canQuickExportPrintSelection, settings.isValid else { return }
         if quickExportFormat == .rawScanTIFF {
             quickExportSelection()
             return
         }
         let options = printExportOptions(quickExportOptions, dpi: settings.dpi)
-        guard let printerOutputProfile = selectedPrinterOutputProfile else {
+        let requiresPrinterOutputProfile = exportSelection.contains {
+            $0.params.developTarget == .print
+        }
+        let printerOutputProfile = selectedPrintWorkspaceOutputProfile(
+            requiresPrinterOutputProfile: requiresPrinterOutputProfile
+        )
+        guard !hasInvalidStoredCPrintOutputProfile else {
+            statusMessage = text(.printOutputProfileRequired)
+            return
+        }
+        guard !requiresPrinterOutputProfile || printerOutputProfile != nil else {
             statusMessage = text(.printOutputProfileRequired)
             return
         }
@@ -124,7 +177,7 @@ extension AppModel {
                     writeMainFlatMaster: false,
                     writeOriginalRaw: false,
                     namingTemplate: ExportNamingTemplate.defaultPattern,
-                    outputProfileSHA256: printerOutputProfile.profileSHA256
+                    outputProfileSHA256: printerOutputProfile?.profileSHA256
                 )
             )
             return
@@ -147,7 +200,7 @@ extension AppModel {
                 writeMainFlatMaster: false,
                 writeOriginalRaw: false,
                 namingTemplate: ExportNamingTemplate.defaultPattern,
-                outputProfileSHA256: printerOutputProfile.profileSHA256
+                outputProfileSHA256: printerOutputProfile?.profileSHA256
             )
         )
     }
@@ -191,7 +244,8 @@ extension AppModel {
             export: export,
             composition: effectiveSettings,
             package: package,
-            outputProfileSHA256: outputProfileSHA256
+            outputProfileSHA256: outputProfileSHA256,
+            cPrint: cPrintExportRecipeConfiguration
         )
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
@@ -202,5 +256,35 @@ extension AppModel {
             presetName: nil,
             configurationSHA256: hash
         )
+    }
+
+    private var cPrintExportRecipeConfiguration: CPrintExportRecipeConfiguration? {
+        guard printWorkspaceSettingsStore.outputProcess == .cPrint else { return nil }
+        let labName = printWorkspaceSettingsStore.cPrintLabName
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let paperName = printWorkspaceSettingsStore.cPrintPaperName
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return CPrintExportRecipeConfiguration(
+            labName: labName.isEmpty ? nil : labName,
+            paperName: paperName.isEmpty ? nil : paperName,
+            surface: printWorkspaceSettingsStore.cPrintPaperSurface,
+            proofProfileSHA256: cPrintProofICCProfileData.map(ICCOutputProfileSnapshot.sha256)
+        )
+    }
+
+    private func selectedPrintWorkspaceOutputProfile(
+        requiresPrinterOutputProfile: Bool
+    ) -> ICCOutputProfileSnapshot? {
+        if printWorkspaceSettingsStore.outputProcess == .cPrint,
+           let cPrintProfile = selectedCPrintOutputProfile {
+            return cPrintProfile
+        }
+        return requiresPrinterOutputProfile ? selectedPrinterOutputProfile : nil
+    }
+
+    private var hasInvalidStoredCPrintOutputProfile: Bool {
+        printWorkspaceSettingsStore.outputProcess == .cPrint
+            && cPrintProofICCProfileData != nil
+            && selectedCPrintOutputProfile == nil
     }
 }

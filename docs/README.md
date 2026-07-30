@@ -14,13 +14,14 @@ flowchart LR
 ```
 
 > [!NOTE]
-> The current version is `1.0.3`. What is built and what was actually checked
+> The current version is `1.0.4`. What is built and what was actually checked
 > is tracked in [Project status](product/PROJECT_STATUS.md).
 
 ## Product
 
 | Document | Read it when |
 |---|---|
+| [Library to print workflow](product/WORKFLOW.md) | You need import, folder development, copy/paste, and print behavior |
 | [Chroma Engine](product/CHROMA_ENGINE.md) | You want the film inversion and develop order |
 | [GrainMend](product/GRAINMEND.md) | You want to see how dust and scratch repair works |
 | [Film profiles](product/FILM_PROFILES.md) | You want where the bundled profiles came from, and their limits |
@@ -41,6 +42,7 @@ flowchart LR
 |---|---|
 | [Scanner CLI JSON](reference/CLI_JSON.md) | Output shape of `detect --json` and `capabilities --json` |
 | [Render manifest](reference/RENDER_MANIFEST.md) | SHA-256 links between source, edit values, and output file |
+| [Print layouts and C-print preview](reference/C_PRINT.md) | Seven layouts, finished-page export, optimized rendering, proof-only ICC behavior, and accuracy limits |
 | [Fixed print response](reference/PRINT_RESPONSE.md) | The formula and anchors of `shoulder-print-response-v4` |
 | [Scanner profile quality gate](reference/PROFILE_QUALITY_GATE.md) | Release rules for REAL/TARGET pair material |
 | [Scanner noise profiles](reference/SCANNER_NOISE_PROFILES.md) | Repeat-scan measurement and when it applies automatically |

@@ -7,6 +7,11 @@ public enum PrintPaperSize: String, CaseIterable, Codable, Sendable {
     case fiveBySeven
     case eightByTen
     case a4
+    /// 사진과 같은 비율의 용지. 실제 치수는 사진의 가로세로비에서 만든다(긴 변 10 in 고정).
+    case photoRatio
+
+    /// 사진 비율 용지의 긴 변.
+    public static let photoRatioLongEdgeMM: Double = 254
 
     public var dimensionsMM: CGSize {
         switch self {
@@ -14,7 +19,20 @@ public enum PrintPaperSize: String, CaseIterable, Codable, Sendable {
         case .fiveBySeven: CGSize(width: 127, height: 177.8)
         case .eightByTen: CGSize(width: 203.2, height: 254)
         case .a4: CGSize(width: 210, height: 297)
+        case .photoRatio: CGSize(width: Self.photoRatioLongEdgeMM * 2 / 3, height: Self.photoRatioLongEdgeMM)
         }
+    }
+
+    /// 사진 비율(가로/세로)에서 용지 치수를 만든다. 비율을 모르면 3:2 로 둔다.
+    public func dimensionsMM(photoAspectRatio: Double?) -> CGSize {
+        guard self == .photoRatio,
+              let photoAspectRatio,
+              photoAspectRatio.isFinite,
+              photoAspectRatio > 0 else { return dimensionsMM }
+        let longEdge = Self.photoRatioLongEdgeMM
+        return photoAspectRatio >= 1
+            ? CGSize(width: longEdge, height: longEdge / photoAspectRatio)
+            : CGSize(width: longEdge * photoAspectRatio, height: longEdge)
     }
 
     public var uiLabel: String {
@@ -23,6 +41,7 @@ public enum PrintPaperSize: String, CaseIterable, Codable, Sendable {
         case .fiveBySeven: "5 × 7 in"
         case .eightByTen: "8 × 10 in"
         case .a4: "A4"
+        case .photoRatio: "Photo"
         }
     }
 }
@@ -36,6 +55,40 @@ public enum PrintPaperOrientation: String, CaseIterable, Codable, Sendable {
 public enum PrintPerforationStyle: String, CaseIterable, Codable, Sendable {
     case none
     case thirtyFiveMillimeter
+}
+
+/// 인화 레이아웃이 사진에 적용하는 고정 표현 방식.
+///
+/// 측정 프로파일을 대신하는 장치 정확도 시뮬레이션이 아니라, 공정의 핵심 시각 특성만
+/// 화면과 파일에 동일하게 적용한다.
+public enum PrintPresentationStyle: String, CaseIterable, Codable, Sendable {
+    case standard
+    case cyanotype
+    case glassPlate
+    case gelatinSilver
+}
+
+public struct PrintPresentationAppearance: Equatable, Sendable {
+    public let shadowRGBA: SIMD4<Double>
+    public let highlightRGBA: SIMD4<Double>
+
+    public init(style: PrintPresentationStyle) {
+        switch style {
+        case .standard:
+            shadowRGBA = SIMD4(0, 0, 0, 1)
+            highlightRGBA = SIMD4(1, 1, 1, 1)
+        case .cyanotype:
+            // 시아노타입의 철염 이미지가 갖는 청색 단색 관계만 표현한다.
+            shadowRGBA = SIMD4(0.02, 0.10, 0.36, 1)
+            highlightRGBA = SIMD4(0.96, 0.98, 1, 1)
+        case .glassPlate:
+            shadowRGBA = SIMD4(0, 0, 0, 1)
+            highlightRGBA = SIMD4(1, 1, 1, 1)
+        case .gelatinSilver:
+            shadowRGBA = SIMD4(0, 0, 0, 1)
+            highlightRGBA = SIMD4(1, 1, 1, 1)
+        }
+    }
 }
 
 public struct PrintFilmStripAppearance: Equatable, Sendable {
@@ -65,23 +118,62 @@ public struct PrintCompositionSettings: Codable, Equatable, Sendable {
     public var marginMM: Double
     public var dpi: Int
     public var perforationStyle: PrintPerforationStyle
+    /// `photoRatio` 용지가 따라갈 사진의 가로/세로비. 다른 용지에서는 무시된다.
+    public var photoAspectRatio: Double?
+    public var presentationStyle: PrintPresentationStyle
 
     public init(
         paperSize: PrintPaperSize = .a4,
         orientation: PrintPaperOrientation = .automatic,
         marginMM: Double = 10,
         dpi: Int = 300,
-        perforationStyle: PrintPerforationStyle = .none
+        perforationStyle: PrintPerforationStyle = .none,
+        photoAspectRatio: Double? = nil,
+        presentationStyle: PrintPresentationStyle = .standard
     ) {
         self.paperSize = paperSize
         self.orientation = orientation
         self.marginMM = marginMM
         self.dpi = dpi
         self.perforationStyle = perforationStyle
+        self.photoAspectRatio = photoAspectRatio
+        self.presentationStyle = presentationStyle
+    }
+
+    /// 이 설정이 쓰는 실제 용지 치수.
+    public var paperDimensionsMM: CGSize {
+        paperSize.dimensionsMM(photoAspectRatio: photoAspectRatio)
     }
 
     public var isValid: Bool {
         marginMM.isFinite && (0...50).contains(marginMM) && (72...600).contains(dpi)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case paperSize
+        case orientation
+        case marginMM
+        case dpi
+        case perforationStyle
+        case photoAspectRatio
+        case presentationStyle
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        paperSize = try container.decode(PrintPaperSize.self, forKey: .paperSize)
+        orientation = try container.decode(PrintPaperOrientation.self, forKey: .orientation)
+        marginMM = try container.decode(Double.self, forKey: .marginMM)
+        dpi = try container.decode(Int.self, forKey: .dpi)
+        perforationStyle = try container.decode(
+            PrintPerforationStyle.self,
+            forKey: .perforationStyle
+        )
+        photoAspectRatio = try container.decodeIfPresent(Double.self, forKey: .photoAspectRatio)
+        presentationStyle = try container.decodeIfPresent(
+            PrintPresentationStyle.self,
+            forKey: .presentationStyle
+        ) ?? .standard
     }
 }
 
@@ -104,7 +196,7 @@ public struct PrintCompositionLayout: Equatable, Sendable {
               settings.isValid else { return nil }
 
         let sourceIsLandscape = sourceSize.width >= sourceSize.height
-        let base = settings.paperSize.dimensionsMM
+        let base = settings.paperDimensionsMM
         let pageMM: CGSize
         switch settings.orientation {
         case .automatic:
@@ -234,7 +326,11 @@ public enum PrintCompositionRenderer {
             result = film.composited(over: result)
         }
 
-        let placed = place(image, in: layout.imageRect)
+        let presented = PrintPresentationRenderer.apply(
+            to: image,
+            style: settings.presentationStyle
+        )
+        let placed = place(presented, in: layout.imageRect)
         result = placed.composited(over: result)
 
         for rect in layout.perforationRects {
@@ -280,5 +376,48 @@ public enum PrintCompositionRenderer {
             translationX: -extent.minX,
             y: -extent.minY
         ))
+    }
+}
+
+public enum PrintPresentationRenderer {
+    /// 필터 그래프만 연결하고 여기서는 픽셀을 렌더하지 않는다. 최종 export의 공유 `CIContext`가
+    /// 한 번에 평가하므로 중간 비트맵과 추가 디코드를 만들지 않는다.
+    public static func apply(
+        to image: CIImage,
+        style: PrintPresentationStyle
+    ) -> CIImage {
+        switch style {
+        case .standard:
+            return image
+        case .cyanotype:
+            let palette = PrintPresentationAppearance(style: style)
+            return monochrome(image).applyingFilter(
+                "CIFalseColor",
+                parameters: [
+                    "inputColor0": ciColor(palette.shadowRGBA),
+                    "inputColor1": ciColor(palette.highlightRGBA),
+                ]
+            )
+        case .glassPlate:
+            return monochrome(image).applyingFilter("CIColorInvert")
+        case .gelatinSilver:
+            return monochrome(image)
+        }
+    }
+
+    private static func monochrome(_ image: CIImage) -> CIImage {
+        image.applyingFilter(
+            "CIColorControls",
+            parameters: [kCIInputSaturationKey: 0]
+        )
+    }
+
+    private static func ciColor(_ rgba: SIMD4<Double>) -> CIColor {
+        CIColor(
+            red: CGFloat(rgba.x),
+            green: CGFloat(rgba.y),
+            blue: CGFloat(rgba.z),
+            alpha: CGFloat(rgba.w)
+        )
     }
 }

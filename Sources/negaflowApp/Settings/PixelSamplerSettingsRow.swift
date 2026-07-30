@@ -6,18 +6,18 @@ struct PixelSamplerSettingsRow: View {
     let onSetEnabled: @MainActor @Sendable (Bool) -> Void
 
     var body: some View {
-        LabeledContent(PixelSamplerLocalizedText.enabled.resolved(language: language)) {
-            VStack(alignment: .trailing, spacing: 2) {
-                Toggle("", isOn: Binding(
+        Group {
+            AppSettingsToggleRow(
+                label: PixelSamplerLocalizedText.enabled.resolved(language: language),
+                isOn: Binding(
                     get: { store.isEnabled },
                     set: onSetEnabled
-                ))
-                .labelsHidden()
-                if store.isEnabled {
-                    Text(PixelSamplerLocalizedText.movePointer.resolved(language: language))
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
+                )
+            )
+            if store.isEnabled {
+                AppSettingsHelpText(
+                    PixelSamplerLocalizedText.movePointer.resolved(language: language)
+                )
             }
         }
     }

@@ -7,7 +7,7 @@
 <p align="center">아날로그 필름을 위한 카메라/스캐너 스캔과 현상과 출력까지 전과정을 지원하는 macOS 앱</p>
 
 <p align="center">
-  <a href="docs/ko/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.3%20release-EF8B26" alt="출시 상태"></a>
+  <a href="docs/ko/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.4%20release-EF8B26" alt="출시 상태"></a>
   <a href="#요구-사항"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 이상"></a>
   <a href="Package.swift"><img src="https://img.shields.io/badge/Swift-5.9+-F05138?logo=swift&logoColor=white" alt="Swift 5.9 이상"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0 라이선스"></a>
@@ -67,8 +67,8 @@
 
 | 설치 파일 | 지원하는 Mac |
 |---|---|
-| `negaflow-1.0.3-1-macOS-universal.pkg` | Apple Silicon, Intel |
-| `negaflow-1.0.3-1-macOS-arm64.pkg` | Apple Silicon 전용 |
+| `negaflow-1.0.4-1-macOS-universal.pkg` | Apple Silicon, Intel |
+| `negaflow-1.0.4-1-macOS-arm64.pkg` | Apple Silicon 전용 |
 
 1. 사용하는 Mac에 맞는 PKG를 내려받습니다.
 2. PKG를 열고 설치 프로그램의 안내에 따라 진행합니다.
@@ -95,6 +95,16 @@ PKG는 `negaflow.app`을 `/Applications`에 바로 설치합니다.<br>
 - 카메라, 렌즈, 필름, 노출 기록을 내보낸 파일의 EXIF에 기록
 - 롤 단위 촬영 기록과 카메라·렌즈·필름으로 찾는 라이브러리 검색
 - JPEG와 16-bit TIFF 내보내기, ICC 프로파일과 인화 레이아웃
+- 검정·흰색 콘택트 시트, mm 단위 격자, 글꼴을 고를 수 있는 캡션과 현재 레이아웃 인화 내보내기
+- C-print 인화소·인화지·표면 설정과 인화소 ICC 소프트 프루프 미리보기
+- 가져오기 진행률, 폴더별 현상 프로세스·타깃 일괄 적용과 처리 진행률
+- 접은 상태를 기억하는 폴더 목록, 사진 드래그 이동과 Finder 변경 자동 반영
+- 현상 프로세스, 타깃, 톤·색·디테일, 크롭과 방향을 함께 옮기는 프리셋과 복사·붙여넣기
+- 단일 이미지, 콘택트 시트, 사진 패키지, 사용자 패키지, 시아노타입, 유리건판, 젤라틴의
+  7가지 인화 레이아웃
+- 39장 6 × 7 콘택트 시트는 합성된 한 파일로, 한 장씩 보는 레이아웃은 제한된 39파일
+  배치로 처리하는 페이지 기준 인화 내보내기·빠른 내보내기
+- 앱 이름과 버전 사이에 니엡스 200주년 문구를 표시하는 다국어 관하여 창
 
 
 
@@ -201,6 +211,27 @@ PKG는 `negaflow.app`을 `/Applications`에 바로 설치합니다.<br>
 **사람이 사용하기 쉽게 만들었습니다. 단축키,폴더 경로, 프리셋, 보정 등.. 모든 것을 커스텀해서 사용할 수 있습니다. <br>
 AI가 만든 어떤 이상한 UI/UX 로 구성된 앱이 아닌, 사람이 사용하기 편하게 만든 앱이기에 사진을 취미로 한다면 쉽게 사용할 겁니다.**
 
+## 라이브러리에서 인화까지
+
+이미지를 불러오기만 했을 때는 현상하지 않습니다. 원본 썸네일과 폴더를 먼저 만들고, 현상은
+폴더의 프로세스와 타깃을 고른 뒤 **적용**을 누르거나 현상 화면으로 들어갔을 때 시작합니다.
+자동 현상이 필요한 경우에는 설정의 작업 흐름에서 기본값을 켤 수 있으며 기본값은 꺼짐입니다.
+
+폴더를 접거나 펼친 상태는 앱을 다시 열어도 남습니다. 사진은 폴더 사이로 끌어 옮길 수 있고,
+같은 이름의 파일이 있으면 번호를 붙여 원본을 덮어쓰지 않습니다. Finder에서 원본이나 폴더를
+옮기거나 이름을 바꾸면 라이브러리도 해당 폴더만 다시 읽어 위치를 맞춥니다.
+
+현상 설정 복사·붙여넣기와 사용자 프리셋에는 프로세스, 타깃, 필름 베이스, 톤, 색, 디테일,
+크롭, 회전, 뒤집기와 기울기 보정이 들어갑니다. 여러 사진을 선택하면 선택한 사진 모두에
+한꺼번에 적용합니다.
+
+인화 화면의 프린터 출력 프로파일은 페이지 배치를 마친 전체 결과에 적용됩니다. 사진 패키지에
+같은 사진을 여러 번 넣거나 여러 사진을 섞어도 빠지는 항목이 없습니다. 이 프로파일은 현상
+화면의 미리보기에는 들어가지 않습니다.
+
+자세한 사용 방법과 각 동작이 원본 파일에 미치는 영향은
+[라이브러리에서 인화까지](docs/ko/product/WORKFLOW.md)에 적었습니다.
+
 ## 빌드
 
 ### 요구 사항
@@ -291,6 +322,7 @@ bash scripts/ci-gate.sh
 | [크로마 엔진](docs/ko/product/CHROMA_ENGINE.md)            | 필름 베이스, 반전, 색 처리와 현상 순서         |
 | [GrainMend](docs/ko/product/GRAINMEND.md)             | 결함 검출과 복원, IR, 편집 기록, 성능과 품질 기준 |
 | [필름 프로파일](docs/ko/product/FILM_PROFILES.md)           | 촬영 자료 분석과 프로파일 생성               |
+| [라이브러리에서 인화까지](docs/ko/product/WORKFLOW.md)       | 가져오기, 폴더 동기화, 일괄 현상, 설정 복사와 인화 프로파일 |
 | [제품 구조](docs/ko/architecture/PRODUCT_ARCHITECTURE.md) | 앱, 엔진, 스캐너, 저장과 내보내기 구조         |
 | [프로젝트 상태](docs/ko/product/PROJECT_STATUS.md)          | 구현 상태, 측정 결과와 남은 검증             |
 | [실기기·화질 점검표](docs/ko/validation/REAL_QA_CHECKLIST.md) | 실제 장비와 화면에서 확인할 항목              |

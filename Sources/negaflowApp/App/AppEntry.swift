@@ -67,6 +67,13 @@ struct negaflowApp: App {
             AppMenuCommands(model: model)
         }
 
+        Window(model.text(.commandAboutNegaflow), id: AboutNegaflowView.windowID) {
+            AppearanceSceneRoot(model: model) {
+                AboutNegaflowView(model: model)
+            }
+        }
+        .windowResizability(.contentSize)
+
         Settings {
             AppearanceSceneRoot(model: model) {
                 AppSettingsView()

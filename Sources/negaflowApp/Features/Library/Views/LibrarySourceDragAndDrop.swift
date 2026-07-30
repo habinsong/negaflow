@@ -31,16 +31,20 @@ struct LibrarySourceDragItem: Codable, Sendable {
     }
 }
 
+/// 드래그 대상 목록은 드래그가 시작될 때 계산한다. 카드마다 미리 계산하면 목록 한 장당
+/// 라이브러리 전체를 훑게 되어(선택 투영) 스크롤이 끊긴다. 프리뷰 배지에 쓰는 개수만
+/// 값으로 받는다.
 struct LibrarySourceDraggableModifier: ViewModifier {
-    let item: LibrarySourceDragItem
+    let itemCount: Int
+    let makeItem: () -> LibrarySourceDragItem
 
     func body(content: Content) -> some View {
         content.onDrag {
-            item.itemProvider()
+            makeItem().itemProvider()
         } preview: {
             HStack(spacing: 7) {
                 Image(systemName: "photo.on.rectangle.angled")
-                Text(verbatim: "\(item.frameIDs.count)")
+                Text(verbatim: "\(itemCount)")
                     .monospacedDigit()
             }
             .font(.caption.weight(.semibold))
@@ -205,8 +209,11 @@ struct ExternalFileImportDropDelegate: DropDelegate {
 }
 
 extension View {
-    func librarySourceDraggable(item: LibrarySourceDragItem) -> some View {
-        modifier(LibrarySourceDraggableModifier(item: item))
+    func librarySourceDraggable(
+        count: Int,
+        item: @escaping () -> LibrarySourceDragItem
+    ) -> some View {
+        modifier(LibrarySourceDraggableModifier(itemCount: count, makeItem: item))
     }
 
     func librarySourceDropDestination(

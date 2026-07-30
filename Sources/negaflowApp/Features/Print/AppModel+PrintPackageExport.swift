@@ -31,12 +31,16 @@ extension AppModel {
         package: PrintPackageSettings,
         recipeIdentity: ExportRecipeIdentity?
     ) {
-        guard printerOutputProfile?.validatedColorSpace() != nil else {
+        let selectedFrames = exportSelection
+        let requiresPrinterOutputProfile = selectedFrames.contains {
+            $0.params.developTarget == .print
+        }
+        guard !requiresPrinterOutputProfile
+                || printerOutputProfile?.validatedColorSpace() != nil else {
             statusMessage = text(.printOutputProfileRequired)
             return
         }
-        let selectedFrames = exportSelection
-        guard canQuickExportSelection,
+        guard canQuickExportPrintSelection,
               format != .rawScanTIFF,
               composition.isValid,
               package.isValid,
@@ -106,9 +110,16 @@ extension AppModel {
 
         let verificationLevel = exportVerificationLevel
         do {
-            var plans: [PrintPackageFramePlan] = []
-            var sourceBaselines: [String: ExportFrameSourceVerification] = [:]
-            plans.reserveCapacity(selectedFrames.count)
+            guard await materializeExportSources(
+                selectedFrames.map(\.rawScanURL),
+                reportsGlobalStatus: true
+            ) else {
+                throw ChromabaseError.loadFailed("print package source is unavailable")
+            }
+            statusMessage = text(AppLocalizedPhrase.exportingStatus)
+
+            var layoutSizes: [CGSize] = []
+            layoutSizes.reserveCapacity(selectedFrames.count)
             for frame in selectedFrames {
                 guard await prepareCleanedRawForExport(frame, format: format),
                       ownsFrame(frame),
@@ -116,10 +127,23 @@ extension AppModel {
                       let layoutSize = printPackageLayoutSize(for: frame) else {
                     throw ChromabaseError.loadFailed("print package source is unavailable")
                 }
+                layoutSizes.append(layoutSize)
+            }
+            let initialSourceVerifications = await ExportFrameSourceGeneration.capture(
+                at: selectedFrames.map(\.rawScanURL)
+            )
+            guard initialSourceVerifications.count == selectedFrames.count,
+                  initialSourceVerifications.allSatisfy({ $0 != nil }) else {
+                throw ChromabaseError.loadFailed("print package source changed before snapshot")
+            }
+
+            var plans: [PrintPackageFramePlan] = []
+            var sourceBaselines: [String: ExportFrameSourceVerification] = [:]
+            plans.reserveCapacity(selectedFrames.count)
+            for (index, frame) in selectedFrames.enumerated() {
+                let layoutSize = layoutSizes[index]
                 let sourceURL = frame.rawScanURL
-                guard let sourceVerification = await ExportFrameSourceGeneration.capture(
-                    at: sourceURL
-                ) else {
+                guard let sourceVerification = initialSourceVerifications[index] else {
                     throw ChromabaseError.loadFailed("print package source changed before snapshot")
                 }
                 let sourceIdentity = sourceVerification.sourceIdentity
@@ -139,6 +163,7 @@ extension AppModel {
                     writeMainFlatMaster: false,
                     writeOriginalRaw: false,
                     options: options,
+                    printerOutputProfile: printerOutputProfile,
                     printComposition: nil,
                     exportRecipeIdentity: recipeIdentity,
                     scannerModel: scanSource?.device.displayName,
@@ -168,13 +193,18 @@ extension AppModel {
             }
 
             let request = PrintPackageExportRequest(
-                sources: plans.map { plan in
+                forcedQuarterTurns: printPackageForcedQuarterTurns(
+                    for: plans.map(\.frame),
+                    package: package
+                ),
+                sources: plans.enumerated().map { sourceIndex, plan in
                     PrintPackageExportSource(
                         snapshot: plan.snapshot,
                         layoutSize: plan.layoutSize,
                         caption: PrintPackageCaptionFormatter.caption(
                             for: plan.frame,
-                            mode: package.captionMode
+                            mode: package.captionMode,
+                            sequenceNumber: sourceIndex + 1
                         )
                     )
                 },
@@ -475,7 +505,9 @@ extension AppModel {
         reservedExportArtifactPaths.subtract(layout.standardizedPaths)
     }
 
-    private func printPackageLayoutSize(for frame: ScanFrame) -> CGSize? {
+    /// 인화 패키지 레이아웃이 쓰는 원본 크기. 프리뷰(캔버스)와 내보내기가 같은 값을 써야
+    /// 화면에서 본 배치가 그대로 출력된다. 이미지가 아직 메모리에 없어도 메타데이터로 답한다.
+    func printPackageLayoutSize(for frame: ScanFrame) -> CGSize? {
         if let size = frame.displayPixelSize, validPrintPackageSize(size) { return size }
         if let image = frame.developedImage ?? frame.rawPreviewImage ?? frame.thumbnailImage {
             let size = image.representations.first.map {

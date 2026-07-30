@@ -202,6 +202,12 @@ enum AppLocalizedPhrase: CaseIterable {
     case flatbedFrameFormat
     case flatbedAddFrame
     case flatbedRemoveFrame
+    case flatbedCopyFrame
+    case flatbedPasteFrame
+    case flatbedDetectionMode
+    case flatbedDetectionAutomatic
+    case flatbedDetectionManual
+    case flatbedRefreshFrames
     case flatbedPreviewRequired
     case flatbedGeometryMismatch
     case multiExposure
@@ -300,6 +306,7 @@ enum AppLocalizedPhrase: CaseIterable {
     case vignette
     case developerDebug
     case developerMode
+    case developImportsAutomatically
     case defaultDefectMicroSpecks
     case defaultDefectMicroSpecksHelp
     case debugOverlay
@@ -519,6 +526,8 @@ enum AppLocalizedPhrase: CaseIterable {
     case sortFlag
     case sortRating
     case sortSize
+    case filmstripScope
+    case filmstripScopeFolder
     case renamePhoto
     case photoName
     case rename

@@ -15,13 +15,15 @@ final class AppLaunchConfigurationTests: XCTestCase {
             "NEGAFLOW_UI_TEST_MODE": "1",
             "NEGAFLOW_UI_TEST_ROOT": "/tmp/negaflow-e2e",
             "NEGAFLOW_UI_TEST_IMPORT_SYNTHETIC": "1",
-            "NEGAFLOW_UI_TEST_DEMO": "1"
+            "NEGAFLOW_UI_TEST_DEMO": "1",
+            "NEGAFLOW_UI_TEST_AUTO_DEVELOP": "1"
         ])
 
         XCTAssertEqual(configuration?.uiTestRoot.path, "/tmp/negaflow-e2e")
         XCTAssertEqual(configuration?.importsSyntheticNegative, true)
         XCTAssertEqual(configuration?.enablesDemoScanner, true)
         XCTAssertEqual(configuration?.preparesCorruptCatalog, false)
+        XCTAssertEqual(configuration?.developsImportsAutomatically, true)
     }
 
     @MainActor
@@ -34,7 +36,8 @@ final class AppLaunchConfigurationTests: XCTestCase {
             importsSyntheticNegative: false,
             enablesDemoScanner: true,
             preparesCorruptCatalog: false,
-            createsDropTargetFolder: false
+            createsDropTargetFolder: false,
+            developsImportsAutomatically: false
         )
 
         let model = AppModelFactory.make(configuration: configuration)
@@ -58,7 +61,8 @@ final class AppLaunchConfigurationTests: XCTestCase {
             importsSyntheticNegative: false,
             enablesDemoScanner: false,
             preparesCorruptCatalog: false,
-            createsDropTargetFolder: false
+            createsDropTargetFolder: false,
+            developsImportsAutomatically: false
         )
 
         XCTAssertEqual(
@@ -87,14 +91,16 @@ final class AppLaunchConfigurationTests: XCTestCase {
             importsSyntheticNegative: false,
             enablesDemoScanner: false,
             preparesCorruptCatalog: false,
-            createsDropTargetFolder: false
+            createsDropTargetFolder: false,
+            developsImportsAutomatically: false
         )
         let secondConfiguration = AppLaunchConfiguration(
             uiTestRoot: secondRoot,
             importsSyntheticNegative: false,
             enablesDemoScanner: false,
             preparesCorruptCatalog: false,
-            createsDropTargetFolder: false
+            createsDropTargetFolder: false,
+            developsImportsAutomatically: false
         )
 
         let first = AppModelFactory.makeWorkspacePresentationStore(

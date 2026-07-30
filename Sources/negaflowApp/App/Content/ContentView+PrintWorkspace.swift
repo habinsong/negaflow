@@ -39,6 +39,8 @@ extension ContentView {
     private var printCenterPane: some View {
         VStack(spacing: 0) {
             if let frame = model.actionableFrame {
+                // 선택을 넓힐 때마다 활성 사진이 바뀐다. 여기에 .id(frame.id) 를 걸면 시트가
+                // 통째로 다시 만들어져 방금 추가한 사진이 붙기 전에 화면이 초기화된다.
                 PrintCanvasView(
                     settingsStore: printWorkspaceStore,
                     activeFrame: frame,
@@ -46,7 +48,6 @@ extension ContentView {
                         ? [frame]
                         : model.actionableSelectedFrames
                 )
-                    .id(frame.id)
             } else {
                 ContentUnavailableView(model.text(.noFrame), systemImage: "printer")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)

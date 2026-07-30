@@ -11,6 +11,7 @@ final class PresentationPreferencesStore: ObservableObject {
         static let defaultScanRotation = "defaultScanRotation"
         static let developerMode = "developerMode"
         static let clippingOverlayEnabled = "clippingOverlay.enabled"
+        static let developsImportsAutomatically = "library.developsImportsAutomatically"
     }
 
     private let defaults: UserDefaults
@@ -39,6 +40,15 @@ final class PresentationPreferencesStore: ObservableObject {
 
     @Published var clippingOverlayEnabled = false {
         didSet { defaults.set(clippingOverlayEnabled, forKey: Keys.clippingOverlayEnabled) }
+    }
+
+    @Published var developsImportsAutomatically = false {
+        didSet {
+            defaults.set(
+                developsImportsAutomatically,
+                forKey: Keys.developsImportsAutomatically
+            )
+        }
     }
 
     // GrainMend 미세 입자 검출의 **시작값**이다. 자동과 가이드는 별개 도구라 따로 기억한다.
@@ -76,6 +86,7 @@ final class PresentationPreferencesStore: ObservableObject {
         }
         developerMode = defaults.bool(forKey: Keys.developerMode)
         clippingOverlayEnabled = defaults.bool(forKey: Keys.clippingOverlayEnabled)
+        developsImportsAutomatically = defaults.bool(forKey: Keys.developsImportsAutomatically)
         defaultAutoDefectMicroSpecks = DefectDetectionDefaults.autoMicroSpecks(defaults: defaults)
         defaultGuidedDefectMicroSpecks = DefectDetectionDefaults.guidedMicroSpecks(defaults: defaults)
     }

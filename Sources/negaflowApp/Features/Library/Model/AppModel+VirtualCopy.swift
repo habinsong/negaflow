@@ -73,11 +73,18 @@ extension AppModel {
     @discardableResult
     func createProofCopy(from frame: ScanFrame) -> ScanFrame? {
         let settings = displaySoftProofSettings(for: frame)
+        let usesCPrintProfile = settings.iccProfileData != nil
+            && settings.iccProfileData == cPrintProofICCProfileData
         let usesPrinterProfile = settings.iccProfileData != nil
             && settings.iccProfileData == printerOutputICCProfileData
-        let profileName = usesPrinterProfile
-            ? (printerOutputICCProfileName ?? "Printer ICC")
-            : (softProofICCProfileName ?? exportColorSpace.uiLabel)
+        let profileName: String
+        if usesCPrintProfile {
+            profileName = cPrintProofICCProfileName ?? "C-print ICC"
+        } else if usesPrinterProfile {
+            profileName = printerOutputICCProfileName ?? "Printer ICC"
+        } else {
+            profileName = softProofICCProfileName ?? exportColorSpace.uiLabel
+        }
         guard let configuration = ProofCopyConfiguration(
             settings: settings,
             profileName: profileName

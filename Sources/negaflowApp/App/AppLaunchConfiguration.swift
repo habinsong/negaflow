@@ -8,6 +8,7 @@ struct AppLaunchConfiguration: Equatable {
         static let demoScanner = "NEGAFLOW_UI_TEST_DEMO"
         static let corruptCatalog = "NEGAFLOW_UI_TEST_CORRUPT_CATALOG"
         static let dropTargetFolder = "NEGAFLOW_UI_TEST_DROP_FOLDER"
+        static let developImportsAutomatically = "NEGAFLOW_UI_TEST_AUTO_DEVELOP"
     }
 
     let uiTestRoot: URL
@@ -15,6 +16,7 @@ struct AppLaunchConfiguration: Equatable {
     let enablesDemoScanner: Bool
     let preparesCorruptCatalog: Bool
     let createsDropTargetFolder: Bool
+    let developsImportsAutomatically: Bool
 
     static let current = from(environment: ProcessInfo.processInfo.environment)
 
@@ -29,7 +31,9 @@ struct AppLaunchConfiguration: Equatable {
             importsSyntheticNegative: environment[EnvironmentKey.importSyntheticNegative] == "1",
             enablesDemoScanner: environment[EnvironmentKey.demoScanner] == "1",
             preparesCorruptCatalog: environment[EnvironmentKey.corruptCatalog] == "1",
-            createsDropTargetFolder: environment[EnvironmentKey.dropTargetFolder] == "1"
+            createsDropTargetFolder: environment[EnvironmentKey.dropTargetFolder] == "1",
+            developsImportsAutomatically:
+                environment[EnvironmentKey.developImportsAutomatically] == "1"
         )
     }
 }

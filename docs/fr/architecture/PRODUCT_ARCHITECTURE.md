@@ -90,6 +90,7 @@ L'application que les gens utilisent, faite avec SwiftUI et AppKit.
 - Numérisation, GrainMend, export
 - Versions, réglages, raccourcis
 - Catalogue, cache, sauvegarde, archive de conservation
+- Fenêtre À propos localisée dont la version vient de la ressource commune
 
 ## Parcours utilisateur
 
@@ -191,6 +192,12 @@ Les modifications survivent au débranchement d'un disque externe.
 L'original est marqué hors ligne et vous le reliez par fichier ou par dossier.
 Si l'identifiant n'est pas celui attendu, rien n'est remplacé automatiquement.
 
+Chaque dossier source physique enregistré utilise un seul observateur du système de fichiers. Les
+événements sont regroupés brièvement, puis seul le dossier modifié est relu. Le reliaison par
+signet conserve l’identifiant du dossier de catalogue après un déplacement ou un renommage dans le
+Finder, et les nouvelles images ajoutées directement au dossier sont importées sans sondage ni
+nouvelle analyse de toute la bibliothèque.
+
 ## Développement et GrainMend
 
 Chaque image porte :
@@ -271,10 +278,26 @@ Mises en page prises en charge :
 
 - Image seule
 - Planche contact
-- Lot de tailles mixtes
-- Mise en page personnalisée
+- Package d’images
+- Package personnalisé
+- Cyanotype
+- Plaque de verre
+- Gélatino-argentique
 
-L'ICC est appliqué une fois, à la sortie finale, une fois la mise en page terminée.
+Image seule et les trois mises en page historiques créent une page verticale par photo
+sélectionnée. Planche-contact, package d’images et package personnalisé affichent et exportent leur
+nombre de pages terminées. Pour 39 photos : une page contact 6 × 7, 10 pages à quatre images, une
+page de package personnalisé par défaut ou 39 fichiers individuels.
+
+L’aperçu de package réutilise vignettes et images développées et ne matérialise un petit aperçu
+rapide qu’en cas de manque. L’export calcule les emplacements à partir des métadonnées, ne développe
+que les pixels requis, prépare deux à quatre sources uniques à la fois, conserve le graphe Core
+Image jusqu’à l’écriture et impose un budget de 512 MiB de rasters source par page.
+
+Chaque case d’un package observe l’image qui lui est assignée. L’ICC de sortie imprimante est
+appliqué une seule fois à la page finale complète, après la mise en page : les packages qui répètent
+une photo et ceux qui mélangent plusieurs photos suivent le même contrat. Il ne modifie ni la
+Bibliothèque ni l’aperçu Développement.
 Ni le TIFF de scan d'origine ni `-main-flat` ne reçoit de profil d'imprimante.
 
 Sans ICC imprimante RVB valide, aucun autre profil n'est substitué. Les octets et le SHA-256 du

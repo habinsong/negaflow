@@ -519,6 +519,120 @@ final class SourceRelinkTests: XCTestCase {
         XCTAssertEqual(model.frames.filter { $0.rawScanURL == imageURL }.count, 1)
     }
 
+    @MainActor
+    func testFileSystemSyncRelinksFinderMovedFileWithoutCreatingDuplicateFrame() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("negaflow-file-sync-\(UUID().uuidString)", isDirectory: true)
+        let sourceFolder = directory.appendingPathComponent("Source", isDirectory: true)
+        let destinationFolder = directory.appendingPathComponent("Destination", isDirectory: true)
+        try FileManager.default.createDirectory(at: sourceFolder, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: destinationFolder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let source = sourceFolder.appendingPathComponent("frame.png")
+        let destination = destinationFolder.appendingPathComponent("frame.png")
+        try Self.writePNG(to: source)
+        let frame = ScanFrame(
+            scanIndex: 1,
+            rawScanURL: source,
+            filmType: .colorNegative,
+            sourceKind: .importedFile,
+            sourceMetadata: SourceMetadataReader.read(from: source)
+        )
+        let model = AppModel()
+        model.frames = [frame]
+        model.libraryFolders = [
+            LibraryFolder(url: sourceFolder),
+            LibraryFolder(url: destinationFolder),
+        ]
+
+        try FileManager.default.moveItem(at: source, to: destination)
+        await model.synchronizeLibraryAfterFileSystemChanges(
+            in: [sourceFolder, destinationFolder]
+        )
+
+        XCTAssertEqual(model.frames.count, 1)
+        XCTAssertEqual(frame.rawScanURL.standardizedFileURL, destination.standardizedFileURL)
+        XCTAssertEqual(
+            model.libraryFolders.map { $0.url.standardizedFileURL },
+            [sourceFolder.standardizedFileURL, destinationFolder.standardizedFileURL]
+        )
+    }
+
+    @MainActor
+    func testFileSystemSyncPreservesRegisteredFolderIdentityAfterFinderRename() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("negaflow-folder-sync-\(UUID().uuidString)", isDirectory: true)
+        let originalFolder = directory.appendingPathComponent("Original", isDirectory: true)
+        let renamedFolder = directory.appendingPathComponent("Renamed", isDirectory: true)
+        try FileManager.default.createDirectory(at: originalFolder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let original = originalFolder.appendingPathComponent("frame.png")
+        let renamed = renamedFolder.appendingPathComponent("frame.png")
+        try Self.writePNG(to: original)
+        let frame = ScanFrame(
+            scanIndex: 1,
+            rawScanURL: original,
+            filmType: .colorNegative,
+            sourceKind: .importedFile,
+            sourceMetadata: SourceMetadataReader.read(from: original)
+        )
+        let folder = LibraryFolder(
+            id: UUID(),
+            url: originalFolder,
+            addedAt: Date(timeIntervalSince1970: 1_700_000_000)
+        )
+        let model = AppModel()
+        model.frames = [frame]
+        model.libraryFolders = [folder]
+
+        try FileManager.default.moveItem(at: originalFolder, to: renamedFolder)
+        await model.synchronizeLibraryAfterFileSystemChanges(in: [originalFolder])
+
+        XCTAssertEqual(model.frames.count, 1)
+        XCTAssertEqual(frame.rawScanURL.standardizedFileURL, renamed.standardizedFileURL)
+        XCTAssertEqual(model.libraryFolders.count, 1)
+        XCTAssertEqual(model.libraryFolders[0].id, folder.id)
+        XCTAssertEqual(model.libraryFolders[0].addedAt, folder.addedAt)
+        XCTAssertEqual(model.libraryFolders[0].url.standardizedFileURL, renamedFolder.standardizedFileURL)
+    }
+
+    /// 폴더 감시는 이미 가져온 원본의 이동만 따라간다. 같은 폴더에 새로 생긴 파일은
+    /// 사용자가 명시적으로 가져오기 전까지 라이브러리에 들어오지 않는다.
+    @MainActor
+    func testFileSystemSyncDoesNotImportNewFilesFromChangedFolder() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("negaflow-new-file-sync-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let existingURL = directory.appendingPathComponent("existing.png")
+        let newURL = directory.appendingPathComponent("new.png")
+        try Self.writePNG(to: existingURL)
+        let existing = ScanFrame(
+            scanIndex: 1,
+            rawScanURL: existingURL,
+            filmType: .colorNegative,
+            sourceKind: .importedFile,
+            sourceMetadata: SourceMetadataReader.read(from: existingURL)
+        )
+        let model = AppModel()
+        model.frames = [existing]
+        model.libraryFolders = [LibraryFolder(url: directory)]
+        try Self.writePNG(to: newURL)
+
+        let statusBefore = model.statusMessage
+        let availabilityRevisionBefore = model.sourceAvailabilityRevision
+
+        await model.synchronizeLibraryAfterFileSystemChanges(in: [directory])
+
+        XCTAssertEqual(model.frames.count, 1)
+        XCTAssertEqual(model.frames.filter { $0.rawScanURL == existingURL }.count, 1)
+        XCTAssertTrue(model.frames.filter { $0.rawScanURL == newURL }.isEmpty)
+        // 우리 원본이 그대로면 폴더 이벤트는 아무 일도 하지 않는다. iCloud 가 같은 폴더로
+        // 수백 장을 내려받는 동안 이벤트마다 전체 가용성을 다시 재면 UI 가 멈춘다.
+        XCTAssertEqual(model.statusMessage, statusBefore)
+        XCTAssertEqual(model.sourceAvailabilityRevision, availabilityRevisionBefore)
+    }
+
     private static func writePNG(
         to url: URL,
         width: Int = 2,

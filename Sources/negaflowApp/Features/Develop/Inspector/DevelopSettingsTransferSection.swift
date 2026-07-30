@@ -42,6 +42,7 @@ struct DevelopSettingsTransferSection: View {
                     Toggle(model.text(AppLocalizedPhrase.basicTone), isOn: scopeBinding(\.tone))
                     Toggle(model.text(AppLocalizedPhrase.color), isOn: scopeBinding(\.color))
                     Toggle(model.text(AppLocalizedPhrase.detailEffects), isOn: scopeBinding(\.detail))
+                    Toggle(model.text(AppLocalizedPhrase.geometry), isOn: scopeBinding(\.geometry))
                 } label: {
                     Text(pasteScope.displayName(language: model.appLanguage))
                 }

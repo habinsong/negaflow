@@ -1,8 +1,90 @@
+import AppKit
+import Chromabase
 import XCTest
 @testable import negaflowApp
 
 @MainActor
 final class WorkspaceAdaptiveLayoutTests: XCTestCase {
+    func testFilmstripSkipsAutomaticFarScrollForLargeCatalogs() {
+        XCTAssertTrue(WorkspaceFilmstrip.allowsAutomaticScroll(frameCount: 256))
+        XCTAssertFalse(WorkspaceFilmstrip.allowsAutomaticScroll(frameCount: 257))
+        XCTAssertFalse(WorkspaceFilmstrip.allowsAutomaticScroll(frameCount: 2_000))
+    }
+
+    func testDevelopAndPrintFilmstripsUseDevelopedScannerThumbnailForEveryFilmType() {
+        for (index, filmType) in FilmType.allCases.enumerated() {
+            let frame = ScanFrame(
+                scanIndex: index + 1,
+                rawScanURL: URL(fileURLWithPath: "/tmp/scanner-\(index).tiff"),
+                filmType: filmType,
+                sourceKind: .scannerTIFF
+            )
+            frame.rawPreviewImage = NSImage(size: NSSize(width: 2, height: 2))
+            let developed = NSImage(size: NSSize(width: 3, height: 3))
+            frame.thumbnailImage = developed
+            frame.hasDevelopedOnce = true
+
+            XCTAssertEqual(presentationMode(for: frame, in: .library), .raw)
+            XCTAssertEqual(presentationMode(for: frame, in: .develop), .developed)
+            XCTAssertEqual(presentationMode(for: frame, in: .print), .developed)
+            XCTAssertTrue(
+                presentationMode(for: frame, in: .develop).previewImage(for: frame) === developed
+            )
+        }
+    }
+
+    func testNegativeFastPreviewSwitchesFilmstripBeforeFullDevelopmentSettles() {
+        let frame = ScanFrame(
+            scanIndex: 1,
+            rawScanURL: URL(fileURLWithPath: "/tmp/scanner-fast-preview.tiff"),
+            filmType: .colorNegative,
+            sourceKind: .scannerTIFF
+        )
+        frame.thumbnailImage = NSImage(size: NSSize(width: 3, height: 3))
+
+        XCTAssertFalse(frame.hasDevelopedOnce)
+        XCTAssertEqual(presentationMode(for: frame, in: .develop), .developed)
+        XCTAssertEqual(presentationMode(for: frame, in: .print), .developed)
+    }
+
+    /// 현상 결과가 올라오면 곧바로 현상본으로 바뀌어야 한다 — 카드가 프레임을 관찰하며 직접
+    /// 판단하므로, 부모 화면이 다시 그려지기를 기다리지 않는다.
+    func testGridCardSwitchesToDevelopedRenditionAsSoonAsDevelopmentFinishes() {
+        let frame = ScanFrame(
+            scanIndex: 1,
+            rawScanURL: URL(fileURLWithPath: "/tmp/scanner-folder-apply.tiff"),
+            filmType: .colorPositive,
+            sourceKind: .importedFile
+        )
+        let raw = NSImage(size: NSSize(width: 2, height: 2))
+        frame.rawPreviewImage = raw
+
+        XCTAssertEqual(
+            FrameStripPresentationMode.resolve(for: frame, policy: .developedWhenAvailable),
+            .raw
+        )
+
+        let developed = NSImage(size: NSSize(width: 3, height: 3))
+        frame.thumbnailImage = developed
+        frame.hasDevelopedOnce = true
+
+        let mode = FrameStripPresentationMode.resolve(for: frame, policy: .developedWhenAvailable)
+        XCTAssertEqual(mode, .developed)
+        XCTAssertTrue(mode.previewImage(for: frame) === developed)
+        // 라이브러리 필름스트립은 규칙상 언제나 원본이다.
+        XCTAssertEqual(FrameStripPresentationMode.resolve(for: frame, policy: .raw), .raw)
+    }
+
+    private func presentationMode(
+        for frame: ScanFrame,
+        in workspace: WorkspaceModule
+    ) -> FrameStripPresentationMode {
+        FrameStripPresentationMode.resolve(
+            for: frame,
+            policy: WorkspaceFilmstrip.presentationPolicy(for: workspace)
+        )
+    }
+
     func testRequestedDefaultPanelWidthsAreFourHundredThirtyPoints() {
         XCTAssertEqual(WorkspaceAdaptiveLayout.developPanelDefaultWidth, 430)
         XCTAssertEqual(WorkspaceAdaptiveLayout.libraryControlsDefaultWidth, 430)

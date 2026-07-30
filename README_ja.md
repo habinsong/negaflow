@@ -7,7 +7,7 @@
 <p align="center">アナログフィルムのカメラ複写・スキャンから現像までを支える macOS アプリ</p>
 
 <p align="center">
-  <a href="docs/ja/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.3%20release-EF8B26" alt="リリース状況"></a>
+  <a href="docs/ja/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.4%20release-EF8B26" alt="リリース状況"></a>
   <a href="#動作環境"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 以降"></a>
   <a href="Package.swift"><img src="https://img.shields.io/badge/Swift-5.9+-F05138?logo=swift&logoColor=white" alt="Swift 5.9 以降"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0 ライセンス"></a>
@@ -60,8 +60,8 @@ negaflow は、スキャンしたフィルムやデジタルカメラで複写�
 
 | ダウンロード | 対応するMac |
 |---|---|
-| `negaflow-1.0.3-1-macOS-universal.pkg` | Apple Silicon、Intel |
-| `negaflow-1.0.3-1-macOS-arm64.pkg` | Apple Siliconのみ |
+| `negaflow-1.0.4-1-macOS-universal.pkg` | Apple Silicon、Intel |
+| `negaflow-1.0.4-1-macOS-arm64.pkg` | Apple Siliconのみ |
 
 1. Macに合うPKGをダウンロードします。
 2. PKGを開き、インストーラの案内に従います。
@@ -88,6 +88,16 @@ SHA-256チェックサムがリリースに掲載されたものと一致する�
 - カメラ、レンズ、フィルム、露出の記録を書き出したファイルの EXIF に記録
 - ロール単位の撮影記録と、カメラ・レンズ・フィルムで探すライブラリ検索
 - JPEG と 16-bit TIFF の書き出し、ICC プロファイル、プリントレイアウト
+- 黒・白のコンタクトシート、mm単位グリッド、自由キャプション、現在のレイアウト書き出し
+- C-printのラボ・印画紙・表面設定とラボICCソフトプルーフプレビュー
+- 読み込み進捗、フォルダー単位の現像プロセス・ターゲット適用と進捗表示
+- 折りたたみ状態を記憶するフォルダー一覧、写真のドラッグ移動、Finder変更の自動反映
+- プロセス、ターゲット、補正、クロップ、向きを含むプリセットとコピー・ペースト
+- 単一画像、コンタクトシート、ピクチャーパッケージ、カスタムパッケージ、サイアノタイプ、
+  ガラス乾板、ゼラチンシルバーの7種類のプリントレイアウト
+- 39枚の6 × 7コンタクトシートは合成済みの1ファイル、個別画像レイアウトは制限付き
+  39ファイルのバッチとして扱うページ基準のプリント書き出しとクイック書き出し
+- アプリ名とバージョンの間にニエプス200周年の文を表示する多言語の「negaflowについて」
 
 > 確認を終えた範囲は[プロジェクト状況](docs/ja/product/PROJECT_STATUS.md)に記録しています。 <br>
 
@@ -180,6 +190,26 @@ Chroma Engine は `Chromabase` モジュールに入っているフィルム反�
 画面は、写真を扱う人が使いやすいように作りました。<br>
 AI が形だけ作ったような UI ではなく、写真が趣味なら迷わず使える操作を目指しています。
 
+## ライブラリからプリントまで
+
+画像を読み込んだだけでは、初期設定では現像しません。まず元画像のサムネイルとフォルダーを
+作り、フォルダーでプロセスとターゲットを適用するか、現像画面に入った時点で現像を始めます。
+自動現像は設定のワークフローで有効にでき、初期値はオフです。
+
+フォルダーの折りたたみ状態は再起動後も残ります。写真はフォルダー間でドラッグでき、同名の
+ファイルがある場合は上書きせず番号を付けます。Finderで元画像やフォルダーを移動・改名すると、
+変更されたフォルダーだけを読み直してライブラリの位置を合わせます。
+
+現像設定のコピー・ペーストとユーザープリセットには、プロセス、ターゲット、フィルムベース、
+トーン、色、ディテール、クロップ、回転、反転、傾き補正が含まれます。複数選択時は選択した
+すべての写真に適用します。
+
+プリント画面のプリンター出力プロファイルは、組み上げたページ全体に適用されます。同じ写真を
+繰り返す写真パッケージや複数写真のレイアウトでも、すべての配置に反映されます。現像画面の
+プレビューには入りません。
+
+詳しい動作は[ライブラリからプリントまで](docs/ja/product/WORKFLOW.md)にまとめています。
+
 ## ソースからビルド
 
 ### 動作環境
@@ -270,6 +300,7 @@ bash scripts/ci-gate.sh
 | [Chroma Engine](docs/ja/product/CHROMA_ENGINE.md) | フィルムベース、反転、色処理、現像順序 |
 | [GrainMend](docs/ja/product/GRAINMEND.md) | 欠陥の検出と修復、IR、編集履歴、性能と画質基準 |
 | [フィルムプロファイル](docs/ja/product/FILM_PROFILES.md) | 撮影資料の分析とプロファイル生成 |
+| [ライブラリからプリントまで](docs/ja/product/WORKFLOW.md) | 取り込み、フォルダー同期、一括現像、設定のコピー、プリントプロファイル |
 | [製品構成](docs/ja/architecture/PRODUCT_ARCHITECTURE.md) | アプリ、エンジン、スキャナー、保存、書き出し |
 | [プロジェクトの状況](docs/ja/product/PROJECT_STATUS.md) | 実装状況、測定結果、残っている確認 |
 | [実機・画質確認表](docs/ja/validation/REAL_QA_CHECKLIST.md) | 実機と画面で確認する項目 |

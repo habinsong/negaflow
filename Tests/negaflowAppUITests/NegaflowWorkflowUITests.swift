@@ -14,9 +14,32 @@ final class NegaflowWorkflowUITests: XCTestCase {
         super.tearDown()
     }
 
-    func testImportedNegativeDevelopsAndExports() throws {
+    func testImportedNegativeWaitsForFolderBatchDevelopmentAndExports() throws {
         launch(importSyntheticNegative: true, demoScanner: false)
 
+        let export = app.buttons["negaflow.export"]
+        XCTAssertTrue(export.waitForExistence(timeout: 15))
+        XCTAssertFalse(export.isEnabled)
+
+        let library = app.buttons["negaflow.workspace.library"]
+        XCTAssertTrue(library.waitForExistence(timeout: 15))
+        library.click()
+
+        let folders = app.buttons["Folders"]
+        XCTAssertTrue(folders.waitForExistence(timeout: 10))
+        folders.click()
+
+        let apply = app.buttons
+            .matching(identifier: "negaflow.library.folder-develop-apply")
+            .firstMatch
+        XCTAssertTrue(apply.waitForExistence(timeout: 10))
+        XCTAssertTrue(waitUntil(timeout: 5) { apply.isEnabled })
+        apply.click()
+        XCTAssertTrue(waitUntil(timeout: 90) { export.isEnabled })
+
+        let develop = app.buttons["negaflow.workspace.develop"]
+        XCTAssertTrue(develop.waitForExistence(timeout: 10))
+        develop.click()
         try waitForDevelopedCanvas()
         try exportAndWaitForArtifact()
     }
@@ -57,6 +80,53 @@ final class NegaflowWorkflowUITests: XCTestCase {
         })
     }
 
+    func testPrintInspectorExposesLayoutContentAndCPrintOutput() throws {
+        launch(importSyntheticNegative: true, demoScanner: false, autoDevelopImports: true)
+        try waitForDevelopedCanvas()
+
+        let print = app.buttons["negaflow.workspace.print"]
+        XCTAssertTrue(print.waitForExistence(timeout: 15))
+        print.click()
+
+        let inspector = app.descendants(matching: .any)["negaflow.print.inspector"]
+        XCTAssertTrue(inspector.waitForExistence(timeout: 10))
+        XCTAssertTrue(
+            app.descendants(matching: .any)["negaflow.print.inspector.layout"]
+                .waitForExistence(timeout: 10)
+        )
+
+        let layoutMode = app.descendants(matching: .any)["negaflow.print.layout.mode"]
+        XCTAssertTrue(layoutMode.waitForExistence(timeout: 10))
+        layoutMode.click()
+        let contactSheet = app.menuItems.element(boundBy: 1)
+        XCTAssertTrue(contactSheet.waitForExistence(timeout: 5))
+        contactSheet.click()
+
+        let tabs = app.descendants(matching: .any)["negaflow.print.inspector.tabs"]
+        XCTAssertTrue(tabs.waitForExistence(timeout: 10))
+        XCTAssertGreaterThanOrEqual(tabs.buttons.count, 3)
+        tabs.buttons.element(boundBy: 1).click()
+        XCTAssertTrue(
+            app.descendants(matching: .any)["negaflow.print.inspector.content"]
+                .waitForExistence(timeout: 10)
+        )
+
+        tabs.buttons.element(boundBy: 2).click()
+        XCTAssertTrue(
+            app.descendants(matching: .any)["negaflow.print.inspector.output"]
+                .waitForExistence(timeout: 10)
+        )
+        let outputProcess = app.descendants(matching: .any)["negaflow.print.output.process"]
+        XCTAssertTrue(outputProcess.waitForExistence(timeout: 10))
+        XCTAssertGreaterThanOrEqual(outputProcess.buttons.count, 2)
+        outputProcess.buttons.element(boundBy: 1).click()
+
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Print inspector — C-print output"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+    }
+
     func testHelpMenuDeepLinksToShortcutsAndCommandShiftHOpensQuickStart() {
         launch(importSyntheticNegative: false, demoScanner: false)
 
@@ -83,7 +153,7 @@ final class NegaflowWorkflowUITests: XCTestCase {
     }
 
     func testCorruptCatalogRecoversFromBackupAndSurvivesRelaunch() throws {
-        launch(importSyntheticNegative: true, demoScanner: false)
+        launch(importSyntheticNegative: true, demoScanner: false, autoDevelopImports: true)
         try waitForDevelopedCanvas()
         try waitForCatalogPersistence()
         terminateForRelaunch()
@@ -100,7 +170,7 @@ final class NegaflowWorkflowUITests: XCTestCase {
     }
 
     func testOfflineSourceRelinksAndSurvivesRelaunch() throws {
-        launch(importSyntheticNegative: true, demoScanner: false)
+        launch(importSyntheticNegative: true, demoScanner: false, autoDevelopImports: true)
         try waitForDevelopedCanvas()
         try waitForCatalogPersistence()
         terminateForRelaunch()
@@ -199,7 +269,8 @@ final class NegaflowWorkflowUITests: XCTestCase {
         importSyntheticNegative: Bool,
         demoScanner: Bool,
         corruptCatalog: Bool = false,
-        dropTargetFolder: Bool = false
+        dropTargetFolder: Bool = false,
+        autoDevelopImports: Bool = false
     ) {
         if fixtureRoot == nil {
             fixtureRoot = FileManager.default.temporaryDirectory
@@ -212,6 +283,7 @@ final class NegaflowWorkflowUITests: XCTestCase {
         app.launchEnvironment["NEGAFLOW_UI_TEST_DEMO"] = demoScanner ? "1" : "0"
         app.launchEnvironment["NEGAFLOW_UI_TEST_CORRUPT_CATALOG"] = corruptCatalog ? "1" : "0"
         app.launchEnvironment["NEGAFLOW_UI_TEST_DROP_FOLDER"] = dropTargetFolder ? "1" : "0"
+        app.launchEnvironment["NEGAFLOW_UI_TEST_AUTO_DEVELOP"] = autoDevelopImports ? "1" : "0"
         app.launch()
         XCTAssertTrue(app.descendants(matching: .any)["negaflow.main"].waitForExistence(timeout: 15))
     }

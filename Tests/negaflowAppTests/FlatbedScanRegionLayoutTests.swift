@@ -184,6 +184,51 @@ final class FlatbedScanRegionLayoutTests: XCTestCase {
         )
     }
 
+    /// 붙여넣기는 규격이 아니라 복사해 둔 크기로 놓는다 — 손으로 맞춘 크기를 복제하려는 것이다.
+    func testPasteSizeOverridesTheFormatAndStillAdvancesPastTheLastFrame() throws {
+        let last = CGRect(x: 0.4, y: 0.1, width: 0.1, height: 0.2)
+        let copied = CGSize(width: 0.13, height: 0.26)
+
+        let pasted = try XCTUnwrap(FlatbedScanRegionLayout.proposedRect(
+            existing: [last],
+            frameFormat: .fullFrame35mm,
+            previewArea: portraitBed,
+            size: copied
+        ))
+
+        XCTAssertEqual(pasted.size, copied)
+        let gap = CGFloat(FlatbedScanRegionLayout.frameGapMM / portraitBed.heightMM)
+        // 세로가 긴 프레임이므로 아래로 진행한다.
+        XCTAssertEqual(pasted.minY, last.maxY + gap, accuracy: 0.000_001)
+        XCTAssertEqual(pasted.minX, last.minX, accuracy: 0.000_001)
+    }
+
+    func testNudgeStepIsMeasuredInMillimetres() {
+        let fine = FlatbedScanRegionLayout.nudgeStep(previewArea: portraitBed, coarse: false)
+        XCTAssertEqual(
+            Double(fine.width) * portraitBed.widthMM,
+            FlatbedScanRegionLayout.nudgeStepMM,
+            accuracy: 0.000_001
+        )
+        XCTAssertEqual(
+            Double(fine.height) * portraitBed.heightMM,
+            FlatbedScanRegionLayout.nudgeStepMM,
+            accuracy: 0.000_001
+        )
+
+        let coarse = FlatbedScanRegionLayout.nudgeStep(previewArea: portraitBed, coarse: true)
+        XCTAssertEqual(
+            Double(coarse.height) * portraitBed.heightMM,
+            FlatbedScanRegionLayout.frameGapMM,
+            accuracy: 0.000_001
+        )
+
+        // 프리뷰 영역을 모르면 물리 거리로 환산할 수 없다. 그래도 움직이기는 해야 한다.
+        let unknown = FlatbedScanRegionLayout.nudgeStep(previewArea: nil, coarse: false)
+        XCTAssertGreaterThan(unknown.width, 0)
+        XCTAssertGreaterThan(unknown.height, 0)
+    }
+
     func testDegenerateScanAreaProposesNothing() {
         XCTAssertNil(FlatbedScanRegionLayout.proposedRect(
             existing: [],

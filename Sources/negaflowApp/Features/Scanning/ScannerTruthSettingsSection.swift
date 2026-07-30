@@ -1,137 +1,145 @@
-import SwiftUI
 import ScannerKit
+import SwiftUI
 
 struct ScannerTruthSettingsSection: View {
     @EnvironmentObject private var model: AppModel
 
     var body: some View {
-        Section {
-            if let cap = model.capabilities {
-                capabilityRow(model.text(AppLocalizedPhrase.resolution), value: resolutionSummary(cap))
-                capabilityRow(model.text(AppLocalizedPhrase.bitDepth), value: bitDepthSummary(cap))
+        AppSettingsSection(
+            title: model.text(AppLocalizedPhrase.scannerTruth)
+        ) {
+            if let capabilities = model.capabilities {
+                capabilityRow(
+                    model.text(AppLocalizedPhrase.resolution),
+                    value: resolutionSummary(capabilities)
+                )
+                capabilityRow(
+                    model.text(AppLocalizedPhrase.bitDepth),
+                    value: bitDepthSummary(capabilities)
+                )
                 capabilityRow(
                     model.text(AppLocalizedPhrase.transparency),
-                    value: transparencySummary(cap),
-                    supported: cap.supportsTransparency,
-                    reason: cap.disabledReason(for: "transparency")
+                    value: transparencySummary(capabilities),
+                    supported: capabilities.supportsTransparency,
+                    reason: capabilities.disabledReason(for: "transparency")
                 )
-                brightnessControl(cap)
-                contrastControl(cap)
+                brightnessControl(capabilities)
+                contrastControl(capabilities)
                 capabilityRow(
                     model.text(AppLocalizedPhrase.infrared),
-                    value: cap.supportsInfrared
+                    value: capabilities.supportsInfrared
                         ? model.text(AppLocalizedPhrase.capabilityAvailable)
                         : model.text(AppLocalizedPhrase.capabilityUnavailable),
-                    supported: cap.supportsInfrared,
-                    reason: cap.disabledReason(for: "infrared")
+                    supported: capabilities.supportsInfrared,
+                    reason: capabilities.disabledReason(for: "infrared")
                 )
             } else {
-                Text(model.text(AppLocalizedPhrase.capabilityWaiting))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                AppSettingsHelpText(model.text(AppLocalizedPhrase.capabilityWaiting))
             }
-        } header: {
-            sectionHeader(model.text(AppLocalizedPhrase.scannerTruth), systemImage: "checkmark.shield")
         }
 
         if !model.installedScannerPlugins.isEmpty {
-            Section {
+            AppSettingsSection(
+                title: model.text(AppLocalizedPhrase.scannerPluginApprovalTitle)
+            ) {
                 ScannerPluginTrustRows(plugins: model.installedScannerPlugins)
-            } header: {
-                sectionHeader(
-                    model.text(AppLocalizedPhrase.scannerPluginApprovalTitle),
-                    systemImage: "puzzlepiece.extension"
-                )
             }
         }
     }
 
     @ViewBuilder
-    private func brightnessControl(_ cap: ScannerCapabilities) -> some View {
-        if let range = cap.brightnessRange {
-            VStack(alignment: .leading, spacing: 4) {
-                LabeledContent(model.text(AppLocalizedPhrase.brightness)) {
-                    Text(formatNumber(model.scannerBrightness))
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
-                }
-                Slider(
-                    value: rangeBinding(range, get: { model.scannerBrightness }, set: { model.scannerBrightness = $0 }),
-                    in: range.minimum...range.maximum,
-                    step: max(range.step ?? 1, 0.0001)
-                )
-            }
+    private func brightnessControl(_ capabilities: ScannerCapabilities) -> some View {
+        if let range = capabilities.brightnessRange {
+            sliderControl(
+                model.text(AppLocalizedPhrase.brightness),
+                value: rangeBinding(
+                    range,
+                    get: { model.scannerBrightness },
+                    set: { model.scannerBrightness = $0 }
+                ),
+                range: range
+            )
         } else {
             capabilityRow(
                 model.text(AppLocalizedPhrase.brightness),
                 value: model.text(AppLocalizedPhrase.capabilityUnavailable),
                 supported: false,
-                reason: cap.disabledReason(for: "brightness")
+                reason: capabilities.disabledReason(for: "brightness")
             )
         }
     }
 
     @ViewBuilder
-    private func contrastControl(_ cap: ScannerCapabilities) -> some View {
-        if let range = cap.contrastRange {
-            VStack(alignment: .leading, spacing: 4) {
-                LabeledContent(model.text(AppLocalizedPhrase.contrast)) {
-                    Text(formatNumber(model.scannerContrast))
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
-                }
-                Slider(
-                    value: rangeBinding(range, get: { model.scannerContrast }, set: { model.scannerContrast = $0 }),
-                    in: range.minimum...range.maximum,
-                    step: max(range.step ?? 1, 0.0001)
-                )
-            }
+    private func contrastControl(_ capabilities: ScannerCapabilities) -> some View {
+        if let range = capabilities.contrastRange {
+            sliderControl(
+                model.text(AppLocalizedPhrase.contrast),
+                value: rangeBinding(
+                    range,
+                    get: { model.scannerContrast },
+                    set: { model.scannerContrast = $0 }
+                ),
+                range: range
+            )
         } else {
             capabilityRow(
                 model.text(AppLocalizedPhrase.contrast),
                 value: model.text(AppLocalizedPhrase.capabilityUnavailable),
                 supported: false,
-                reason: cap.disabledReason(for: "contrast")
+                reason: capabilities.disabledReason(for: "contrast")
             )
         }
     }
 
-    @ViewBuilder
-    private func capabilityRow(_ title: String, value: String, supported: Bool = true, reason: String? = nil) -> some View {
-        LabeledContent(title) {
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(value)
-                    .foregroundStyle(supported ? .primary : .secondary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.trailing)
-                if !supported, let reason, !reason.isEmpty {
-                    Text(reason)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(3)
-                        .multilineTextAlignment(.trailing)
-                }
-            }
-        }
+    private func sliderControl(
+        _ label: String,
+        value: Binding<Double>,
+        range: ScannerOptionRange
+    ) -> some View {
+        AppSettingsSliderRow(
+            label: label,
+            value: value,
+            range: range.minimum...max(range.minimum + 0.0001, range.maximum),
+            step: max(range.step ?? 1, 0.0001),
+            valueText: formatNumber(value.wrappedValue)
+        )
     }
 
-    private func resolutionSummary(_ cap: ScannerCapabilities) -> String {
-        let values = cap.supportedResolutions
+    private func capabilityRow(
+        _ title: String,
+        value: String,
+        supported: Bool = true,
+        reason: String? = nil
+    ) -> some View {
+        AppSettingsValueRow(
+            label: title,
+            value: value,
+            supported: supported,
+            reason: reason
+        )
+    }
+
+    private func resolutionSummary(_ capabilities: ScannerCapabilities) -> String {
+        let values = capabilities.supportedResolutions
             .filter { $0.dpi > 0 }
             .map { "\($0.dpi)" }
-        return values.isEmpty ? model.text(AppLocalizedPhrase.capabilityUnavailable) : "\(values.joined(separator: ", ")) dpi"
+        return values.isEmpty
+            ? model.text(AppLocalizedPhrase.capabilityUnavailable)
+            : "\(values.joined(separator: ", ")) dpi"
     }
 
-    private func bitDepthSummary(_ cap: ScannerCapabilities) -> String {
-        let values = cap.supportedBitDepths
+    private func bitDepthSummary(_ capabilities: ScannerCapabilities) -> String {
+        let values = capabilities.supportedBitDepths
             .map { "\($0.rawValue)-bit/ch" }
-        return values.isEmpty ? model.text(AppLocalizedPhrase.capabilityUnavailable) : values.joined(separator: ", ")
+        return values.isEmpty
+            ? model.text(AppLocalizedPhrase.capabilityUnavailable)
+            : values.joined(separator: ", ")
     }
 
-    private func transparencySummary(_ cap: ScannerCapabilities) -> String {
-        let modes = cap.transparencyModes ?? []
+    private func transparencySummary(_ capabilities: ScannerCapabilities) -> String {
+        let modes = capabilities.transparencyModes ?? []
         if !modes.isEmpty { return modes.joined(separator: ", ") }
-        return cap.supportsTransparency
+        return capabilities.supportsTransparency
             ? model.text(AppLocalizedPhrase.capabilityAvailable)
             : model.text(AppLocalizedPhrase.capabilityUnavailable)
     }

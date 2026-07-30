@@ -28,8 +28,9 @@ extension AppModel {
     /// 대량 가져오기/스캔 완료의 시드 디코드 동시 폭 제한 — IO/메모리 폭주 방지(현상 슬롯과 분리).
     static let thumbnailSeedSemaphore = AsyncSemaphore(width: 3)
 
-    /// 가져오기/스캔 직후 원본 프리뷰를 시드한다. 포지티브 원본은 그대로 첫 썸네일로 쓰지만,
-    /// 컬러/흑백 네거티브는 rawPreviewImage 에만 보관하고 thumbnailImage 는 빠른 현상 결과가 처음 채운다.
+    /// 가져오기/스캔 직후 원본 프리뷰를 시드한다. 포지티브 원본은 그대로 첫 현상 썸네일로도 쓰고,
+    /// 컬러/흑백 네거티브는 rawPreviewImage 에만 발행한다. 어느 쪽이든 원본 썸네일 캐시는 저장해
+    /// 자동 현상 OFF인 새 가져오기도 앱 재실행 뒤 원본 썸네일을 즉시 복원한다.
     /// 디코드는 백그라운드(동시 폭 제한)에서 수행한다 — 폴더 가져오기·스캔 완료 때 파일마다 원본
     /// 디코드가 메인 스레드를 잡아 UI 전체가 멎던 병목 제거. 시드 → 현상 순서는
     /// developFrameAfterFastPreview 가 이 태스크를 await 해 기존과 동일하게 유지된다.
@@ -56,7 +57,10 @@ extension AppModel {
             } else {
                 cg = await Task.detached(priority: .userInitiated) {
                     autoreleasepool {
-                        AppModel.rawThumbnailCGImage(for: url, maxPixelSize: 720)
+                        AppModel.rawThumbnailCGImage(
+                            for: url,
+                            maxPixelSize: Int(DevelopFrameRenderer.thumbnailMaxDimension)
+                        )
                             .map { AppModel.orientedThumbnail($0, transform: transform) }
                     }
                 }.value
@@ -68,10 +72,10 @@ extension AppModel {
                   frame.thumbnailImage == nil else { return }
             let image = NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))
             frame.rawPreviewImage = image
+            self.persistThumbnail(for: frame, cgImage: cg)
             if shouldPublishRawThumbnail {
                 frame.thumbnailImage = image
                 frame.thumbnailTransform = transform
-                self.persistThumbnail(for: frame, cgImage: cg)
             }
         }
     }

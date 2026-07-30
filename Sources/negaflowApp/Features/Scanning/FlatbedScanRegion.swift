@@ -7,6 +7,14 @@ enum FlatbedScanRegionSource: Equatable, Sendable {
     case manual
 }
 
+/// 프리뷰가 끝났을 때 프레임을 앱이 찾을지, 사용자가 직접 놓을지.
+enum FlatbedFrameDetectionMode: String, CaseIterable, Identifiable, Sendable {
+    case automatic
+    case manual
+
+    var id: Self { self }
+}
+
 struct FlatbedScanRegion: Identifiable, Equatable, Sendable {
     let id: UUID
     var unitRect: CGRect

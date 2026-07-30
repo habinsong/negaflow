@@ -2,11 +2,14 @@ import Foundation
 import SwiftUI
 
 struct WorkspaceFilmstrip: View {
+    static let automaticScrollFrameLimit = 256
+
     @EnvironmentObject private var model: AppModel
     @AppStorage("workspace.filmstripHeight") private var storedFilmstripHeight = FilmstripSizing.defaultHeight
     @AppStorage("workspace.filmstripItemScale") private var itemScale = 1.0
     @AppStorage("workspace.filmstripSortKey") private var sortKeyRaw = LibrarySortKey.inputOrder.rawValue
     @AppStorage("workspace.filmstripSortAscending") private var sortAscending = true
+    @AppStorage("workspace.filmstripScope") private var scopeRaw = FilmstripScope.all.rawValue
     @State private var liveFilmstripHeight = FilmstripSizing.defaultHeight
     @State private var resizeStartHeight: Double?
     @State private var lockedRowCount: Int?
@@ -61,59 +64,21 @@ struct WorkspaceFilmstrip: View {
                                         frame: frame,
                                         isSelected: model.isFrameSelected(frame),
                                         itemSize: itemSize,
-                                        presentationMode: .raw,
+                                        presentationPolicy: Self.presentationPolicy(
+                                            for: model.activeWorkspaceModule
+                                        ),
                                         thumbnailAspectRatio: FilmstripSizing.thumbnailAspectRatio,
                                         onSelect: { model.selectFrame(frame, orderedFrameIDs: orderedFrameIDs) }
                                     )
                                     .id(frame.id)
                                     .contextMenu {
-                                        LibraryStackMenu(
+                                        LibraryFrameContextMenu(
                                             frame: frame,
-                                            orderedFrameIDs: orderedFrameIDs
+                                            orderedFrameIDs: orderedFrameIDs,
+                                            onRename: { renameFrame = $0 },
+                                            onOpenDevelop: {},
+                                            onRequestSourceDeletion: { pendingSourceDeletion = $0 }
                                         )
-                                        Divider()
-                                        Menu(model.text(AppLocalizedPhrase.rating)) {
-                                            Button(model.text(AppLocalizedPhrase.resetRating)) { frame.setRating(0) }
-                                            ForEach(1...5, id: \.self) { value in
-                                                Button(model.text(AppLocalizedPhrase.starHelpFormat, value)) { frame.toggleRating(value) }
-                                            }
-                                        }
-                                        Button(frame.pickState == .picked ? model.text(AppLocalizedPhrase.clearPick) : model.text(AppLocalizedPhrase.picked)) {
-                                            frame.pickState = frame.pickState == .picked ? .unflagged : .picked
-                                        }
-                                        Button(frame.pickState == .rejected ? model.text(AppLocalizedPhrase.clearReject) : model.text(AppLocalizedPhrase.rejected)) {
-                                            frame.pickState = frame.pickState == .rejected ? .unflagged : .rejected
-                                        }
-                                        Divider()
-                                        Button(model.text(AppLocalizedPhrase.renamePhoto)) { renameFrame = frame }
-                                        Button(model.text(AppLocalizedPhrase.virtualCopy)) { model.createVirtualCopy(from: frame) }
-                                        if !model.isSourceAvailable(frame) {
-                                            Button(model.text(AppLocalizedPhrase.locateOriginal)) {
-                                                model.presentRelinkPanel(for: frame)
-                                            }
-                                            .accessibilityIdentifier("negaflow.relink-source")
-                                        }
-                                        Button(model.text(AppLocalizedPhrase.removeFromLibrary), role: .destructive) {
-                                            model.removeFramesFromLibrary(
-                                                model.framesForContextAction(
-                                                    frame,
-                                                    within: orderedFrameIDs
-                                                )
-                                            )
-                                        }
-                                        if let plan = model.sourceDeletionPlan(
-                                            for: model.framesForContextAction(
-                                                frame,
-                                                within: orderedFrameIDs
-                                            )
-                                        ) {
-                                            Button(role: .destructive) {
-                                                pendingSourceDeletion = plan
-                                            } label: {
-                                                Text(model.text(AppLocalizedPhrase.moveSourceToTrash))
-                                                    .foregroundStyle(.red)
-                                            }
-                                        }
                                     }
                                 }
                             }
@@ -139,12 +104,18 @@ struct WorkspaceFilmstrip: View {
                     }
                 }
                 .onChange(of: model.frames.count) { _, _ in
+                    guard Self.allowsAutomaticScroll(frameCount: visibleFrames.count) else {
+                        return
+                    }
                     guard let id = model.frames.last?.id else { return }
                     withAnimation(.snappy(duration: 0.18)) {
                         proxy.scrollTo(id, anchor: .trailing)
                     }
                 }
                 .onChange(of: model.selectedFrameID) { _, id in
+                    guard Self.allowsAutomaticScroll(frameCount: visibleFrames.count) else {
+                        return
+                    }
                     guard let id else { return }
                     proxy.scrollTo(id, anchor: .center)
                 }
@@ -355,6 +326,19 @@ struct WorkspaceFilmstrip: View {
         LibrarySortKey(rawValue: sortKeyRaw) ?? .inputOrder
     }
 
+    static func allowsAutomaticScroll(frameCount: Int) -> Bool {
+        frameCount <= automaticScrollFrameLimit
+    }
+
+    static func presentationPolicy(
+        for workspace: WorkspaceModule
+    ) -> FrameStripPresentationPolicy {
+        switch workspace {
+        case .library: .raw
+        case .develop, .print: .developedWhenAvailable
+        }
+    }
+
     private var sortKeyBinding: Binding<String> {
         Binding(
             get: { sortKeyRaw },
@@ -362,9 +346,13 @@ struct WorkspaceFilmstrip: View {
         )
     }
 
+    private var scope: FilmstripScope {
+        FilmstripScope(rawValue: scopeRaw) ?? .all
+    }
+
     private var displayedFrames: [ScanFrame] {
         let sorted = LibraryPresentation.sortedFrames(
-            model.frames,
+            scope.filtered(model.frames, reference: model.actionableFrame),
             key: sortKey,
             ascending: sortAscending
         )

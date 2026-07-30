@@ -259,5 +259,5 @@ GrainMend와 일반 부분 보정은 목적과 저장 방식이 다릅니다.
 - `Sources/Chromabase/Imaging/`
 - `Sources/Chromabase/Export/`
 
-현재 제품 버전은 `1.0.3`입니다.
+현재 제품 버전은 `1.0.4`입니다.
 편집 기록과 프로파일 스키마는 이후 버전에서도 검증 절차를 거쳐 바꿉니다.

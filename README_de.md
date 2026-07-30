@@ -7,7 +7,7 @@
 <p align="center">Eine macOS-App für den gesamten Scan- und Entwicklungsprozess analoger Filme</p>
 
 <p align="center">
-  <a href="docs/de/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.3%20release-EF8B26" alt="Veröffentlichungsstatus"></a>
+  <a href="docs/de/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.4%20release-EF8B26" alt="Veröffentlichungsstatus"></a>
   <a href="#voraussetzungen"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 oder neuer"></a>
   <a href="Package.swift"><img src="https://img.shields.io/badge/Swift-5.9+-F05138?logo=swift&logoColor=white" alt="Swift 5.9 oder neuer"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache-2.0-Lizenz"></a>
@@ -63,8 +63,8 @@ Für die meisten Macs ist das Universal-PKG vorgesehen.
 
 | Download | Unterstützte Macs |
 |---|---|
-| `negaflow-1.0.3-1-macOS-universal.pkg` | Apple Silicon und Intel |
-| `negaflow-1.0.3-1-macOS-arm64.pkg` | Nur Apple Silicon |
+| `negaflow-1.0.4-1-macOS-universal.pkg` | Apple Silicon und Intel |
+| `negaflow-1.0.4-1-macOS-arm64.pkg` | Nur Apple Silicon |
 
 1. Laden Sie das passende PKG herunter.
 2. Öffnen Sie es und folgen Sie Installer.
@@ -92,6 +92,16 @@ bei der Version veröffentlichten übereinstimmt.
 - Kamera, Objektiv, Film und Belichtung als Notiz, geschrieben in die EXIF der Exportdatei
 - Aufnahmedaten je Rolle und Suche in der Bibliothek nach Kamera, Objektiv oder Film
 - JPEG- und 16-Bit-TIFF-Export, ICC-Profile und Drucklayouts
+- Schwarz/weiße Kontaktbögen mit mm-Raster, freien Beschriftungen und gerendertem Abzugsexport
+- C-Print-Angaben zu Labor, Papier und Oberfläche mit ICC-Softproof
+- Importfortschritt, Entwicklung pro Ordner mit Prozess, Ziel und Fortschrittsanzeige
+- Gespeicherte Ordnerzustände, Verschieben per Drag-and-drop und Finder-Synchronisierung
+- Vorgaben und Kopieren/Einfügen einschließlich Prozess, Ziel, Korrekturen, Beschnitt und Ausrichtung
+- Sieben Abzugslayouts: Einzelbild, Kontaktbogen, Bildpaket, Benutzerpaket, Cyanotypie,
+  Glasplatte und Silbergelatine
+- Seitenbezogener Abzugs- und Schnellexport: Ein 6 × 7-Kontaktbogen mit 39 Fotos wird zu einer
+  zusammengesetzten Datei, Einzelbildlayouts zu einem begrenzten Stapel aus 39 Dateien
+- Mehrsprachiges Infofenster mit dem Niépce-Zweihundertjahrtext zwischen App-Name und Version
 
 > Abgeschlossene Prüfungen stehen im [Projektstatus](docs/de/product/PROJECT_STATUS.md). <br>
 
@@ -184,6 +194,28 @@ Daten und Erzeugung sind unter [Filmprofile](docs/de/product/FILM_PROFILES.md) b
 Die Oberfläche ist für Menschen gebaut, die wirklich mit Fotos arbeiten, nicht als beliebiger KI-generierter Entwurf.<br>
 Wer Fotografie als Hobby betreibt, soll sich darin ohne Umwege zurechtfinden.
 
+## Von der Bibliothek zum Druck
+
+Ein Import startet standardmäßig keine Entwicklung. negaflow legt zuerst das Quellvorschaubild und
+den Ordner an. Die Entwicklung beginnt, wenn Prozess und Ziel auf einen Ordner angewendet werden
+oder wenn Entwickeln geöffnet wird. Die automatische Entwicklung lässt sich in den
+Arbeitsablauf-Einstellungen einschalten und ist standardmäßig aus.
+
+Eingeklappte Ordner bleiben nach einem Neustart eingeklappt. Fotos können zwischen Ordnern
+verschoben werden. Existiert der Dateiname bereits, ergänzt negaflow eine Nummer, statt die Datei
+zu überschreiben. Verschieben oder Umbenennen im Finder aktualisiert die Bibliothek, wobei nur der
+geänderte Ordner neu gelesen wird.
+
+Kopieren/Einfügen von Entwicklungseinstellungen und Benutzervorgaben umfassen Prozess, Ziel,
+Filmbasis, Ton, Farbe, Details, Beschnitt, Drehung, Spiegelung und Ausrichtung. Bei einer
+Mehrfachauswahl gilt das Einfügen für alle ausgewählten Fotos.
+
+Das Drucker-Ausgabeprofil im Druckbereich wird auf die zusammengesetzte Seite angewendet. Dadurch
+erhalten wiederholte Platzierungen und Pakete mit mehreren Fotos dieselbe Ausgabeumwandlung. Die
+Vorschau in Entwickeln bleibt davon unberührt.
+
+Einzelheiten stehen unter [Von der Bibliothek zum Druck](docs/de/product/WORKFLOW.md).
+
 ## Aus dem Quellcode bauen
 
 ### Voraussetzungen
@@ -274,6 +306,7 @@ Scanner-spezifisches Verhalten, endgültige Bildqualität, Signatur und Notarisi
 | [Chroma Engine](docs/de/product/CHROMA_ENGINE.md) | Filmbasis, Invertierung, Farbe und Entwicklungsfolge |
 | [GrainMend](docs/de/product/GRAINMEND.md) | Erkennung, Reparatur, IR, Historie, Leistung und Qualität |
 | [Filmprofile](docs/de/product/FILM_PROFILES.md) | Analyse der Quelldaten und Profilerzeugung |
+| [Von der Bibliothek zum Print](docs/de/product/WORKFLOW.md) | Import, Ordnersynchronisierung, Stapelentwicklung, Einstellungsübertragung und Printprofile |
 | [Produktarchitektur](docs/de/architecture/PRODUCT_ARCHITECTURE.md) | App, Engine, Scanner, Speicher und Export |
 | [Projektstatus](docs/de/product/PROJECT_STATUS.md) | Implementierung, Messwerte und offene Prüfungen |
 | [Checkliste für reale QA](docs/de/validation/REAL_QA_CHECKLIST.md) | Prüfungen an echter Hardware und am Bildschirm |

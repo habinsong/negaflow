@@ -1,5 +1,5 @@
-import SwiftUI
 import ScannerKit
+import SwiftUI
 
 struct ScannerPluginTrustRows: View {
     @EnvironmentObject private var model: AppModel
@@ -7,7 +7,7 @@ struct ScannerPluginTrustRows: View {
 
     var body: some View {
         ForEach(plugins) { plugin in
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 8) {
                     Label(plugin.name, systemImage: stateSymbol(plugin))
                         .font(.callout.weight(.medium))
@@ -17,26 +17,32 @@ struct ScannerPluginTrustRows: View {
                         .foregroundStyle(stateColor(plugin))
                 }
 
-                LabeledContent(model.text(AppLocalizedPhrase.scannerPluginVersion)) {
-                    Text(plugin.manifest.pluginVersion ?? model.text(AppLocalizedPhrase.scannerPluginNotReported))
-                }
-                LabeledContent(model.text(AppLocalizedPhrase.scannerPluginLicense)) {
-                    Text(plugin.manifest.license ?? model.text(AppLocalizedPhrase.scannerPluginNotReported))
-                }
-                LabeledContent(model.text(AppLocalizedPhrase.scannerPluginManifestPath)) {
-                    technicalValue(plugin.manifestURL.path)
-                }
+                AppSettingsValueRow(
+                    label: model.text(AppLocalizedPhrase.scannerPluginVersion),
+                    value: plugin.manifest.pluginVersion
+                        ?? model.text(AppLocalizedPhrase.scannerPluginNotReported)
+                )
+                AppSettingsValueRow(
+                    label: model.text(AppLocalizedPhrase.scannerPluginLicense),
+                    value: plugin.manifest.license
+                        ?? model.text(AppLocalizedPhrase.scannerPluginNotReported)
+                )
+                technicalRow(
+                    model.text(AppLocalizedPhrase.scannerPluginManifestPath),
+                    value: plugin.manifestURL.path
+                )
                 if let identity = plugin.trustIdentity {
-                    LabeledContent(model.text(AppLocalizedPhrase.scannerPluginManifestHash)) {
-                        technicalValue(identity.manifestSHA256)
-                    }
-                    LabeledContent(model.text(AppLocalizedPhrase.scannerPluginExecutableHash)) {
-                        technicalValue(identity.executableSHA256)
-                    }
+                    technicalRow(
+                        model.text(AppLocalizedPhrase.scannerPluginManifestHash),
+                        value: identity.manifestSHA256
+                    )
+                    technicalRow(
+                        model.text(AppLocalizedPhrase.scannerPluginExecutableHash),
+                        value: identity.executableSHA256
+                    )
                 }
 
-                HStack {
-                    Spacer()
+                AppSettingsRow(stateLabel(plugin)) {
                     if model.scannerPluginApprovalState(for: plugin) == .approved {
                         Button(
                             model.text(AppLocalizedPhrase.scannerPluginRevokeApproval),
@@ -44,6 +50,7 @@ struct ScannerPluginTrustRows: View {
                         ) {
                             Task { await model.revokeScannerPluginApproval(plugin) }
                         }
+                        .buttonStyle(.bordered)
                         .disabled(model.isScanning)
                     } else {
                         Button(model.text(AppLocalizedPhrase.scannerPluginApprove)) {
@@ -62,12 +69,16 @@ struct ScannerPluginTrustRows: View {
         }
     }
 
-    private func technicalValue(_ value: String) -> some View {
-        Text(value)
-            .font(.caption.monospaced())
-            .foregroundStyle(.secondary)
-            .textSelection(.enabled)
-            .multilineTextAlignment(.trailing)
+    private func technicalRow(_ label: String, value: String) -> some View {
+        AppSettingsRow(label) {
+            Text(value)
+                .font(.caption.monospaced())
+                .foregroundStyle(.secondary)
+                .textSelection(.enabled)
+                .lineLimit(2)
+                .truncationMode(.middle)
+                .multilineTextAlignment(.trailing)
+        }
     }
 
     private func stateLabel(_ plugin: InstalledScannerPlugin) -> String {

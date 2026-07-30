@@ -5,15 +5,26 @@ struct LibraryBackupScheduleView: View {
     @ObservedObject var store: LibraryBackupScheduleStore
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            Picker(localized(.schedule), selection: $store.schedule) {
-                ForEach(LibraryBackupSchedule.allCases, id: \.self) { schedule in
-                    Text(scheduleName(schedule)).tag(schedule)
+        Group {
+            AppSettingsRow(localized(.schedule)) {
+                Picker(String(), selection: $store.schedule) {
+                    ForEach(LibraryBackupSchedule.allCases, id: \.self) { schedule in
+                        Text(scheduleName(schedule)).tag(schedule)
+                    }
                 }
+                .labelsHidden()
             }
-            LabeledContent(localized(.lastAttempt)) { Text(dateText(store.lastAttemptAt)) }
-            LabeledContent(localized(.lastSuccess)) { Text(dateText(store.lastSuccessAt)) }
-            LabeledContent(localized(.verification)) {
+
+            AppSettingsValueRow(
+                label: localized(.lastAttempt),
+                value: dateText(store.lastAttemptAt)
+            )
+            AppSettingsValueRow(
+                label: localized(.lastSuccess),
+                value: dateText(store.lastSuccessAt)
+            )
+
+            AppSettingsRow(localized(.verification)) {
                 if let drill = store.lastRestoreDrill {
                     VStack(alignment: .trailing, spacing: 1) {
                         Label(
@@ -30,7 +41,6 @@ struct LibraryBackupScheduleView: View {
                 }
             }
         }
-        .font(.caption)
     }
 
     private func scheduleName(_ schedule: LibraryBackupSchedule) -> String {

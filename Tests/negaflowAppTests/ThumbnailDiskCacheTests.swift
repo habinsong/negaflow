@@ -49,6 +49,52 @@ final class ThumbnailDiskCacheTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: temporaryDirectory.path))
     }
 
+    @MainActor
+    func testNeverDevelopedNegativeRestoresDiskCacheAsRawPreview() async throws {
+        let suiteName = "negaflow-thumbnail-restore.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let diskStorage = DiskStorageStore(defaults: defaults)
+        diskStorage.thumbnailsPath = temporaryDirectory.path
+        let model = AppModel(
+            diskStorageStore: diskStorage,
+            libraryCatalogURL: temporaryDirectory.appendingPathComponent("library.sqlite"),
+            libraryDefectDirectoryURL: temporaryDirectory.appendingPathComponent(
+                "defects",
+                isDirectory: true
+            ),
+            libraryBackupDirectoryURL: temporaryDirectory.appendingPathComponent(
+                "backups",
+                isDirectory: true
+            )
+        )
+        let frame = ScanFrame(
+            scanIndex: 1,
+            rawScanURL: temporaryDirectory.appendingPathComponent("missing-source.tiff"),
+            filmType: .colorNegative,
+            sourceKind: .importedFile
+        )
+        model.frames = [frame]
+
+        model.thumbnailDiskCache.store(
+            try XCTUnwrap(Self.makeImage()),
+            for: frame.id,
+            at: model.thumbnailFileURL(for: frame)
+        )
+        await model.thumbnailDiskCache.waitUntilIdle()
+        model.loadThumbnailsFromDisk(for: [frame])
+
+        let deadline = Date().addingTimeInterval(2)
+        while frame.rawPreviewImage == nil, Date() < deadline {
+            try await Task.sleep(for: .milliseconds(25))
+        }
+
+        XCTAssertNotNil(frame.rawPreviewImage)
+        XCTAssertNil(frame.thumbnailImage)
+        XCTAssertFalse(frame.hasDevelopedOnce)
+    }
+
     private static func makeImage() -> CGImage? {
         let width = 2_048
         let height = 2_048

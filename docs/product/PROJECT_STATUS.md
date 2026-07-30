@@ -10,7 +10,7 @@ and decisions.
 
 | Item | Current value |
 |---|---|
-| Version | `1.0.3` |
+| Version | `1.0.4` |
 | Build | `1` |
 | OS | macOS 14 or later |
 | Workflow | import or scan → develop → export |
@@ -18,7 +18,7 @@ and decisions.
 | Originals | Original files and third-party sidecars are not modified |
 
 > [!WARNING]
-> The `1.0.3` label and a successful build do not mean real scanner compatibility, final image
+> The `1.0.4` label and a successful build do not mean real scanner compatibility, final image
 > quality, external signing, or notarization have been confirmed. Real hardware and release
 > approval are recorded separately in the checklist below.
 
@@ -44,6 +44,22 @@ and decisions.
 - Repeat measurement for scanner noise and the separate validation spec
 - Frame cache cleanup under memory pressure
 - Strict Swift concurrency diagnostics in CI
+- Import progress, automatic development off by default, and persistence of that setting
+- Persistent folder expansion, an internally scrolling Develop file list, and the same remove-from-library action on every folder
+- Photo moves across imported, app-created, and scanner folders, with numbered names on collision
+- Finder file and folder move/rename events, bookmark relinking, and changed-folder-only rescans
+- Per-folder process and target application, including previously developed photos, with batch progress
+- Presets and multi-selection copy/paste including process, target, adjustments, crop, and orientation
+- Developed scanner thumbnails in Develop and Print for every supported film type
+- The shared scanner sidebar stays hidden when no plug-in is installed, while rescan and simulator entry points remain available
+- Large-catalog filmstrips avoid long automatic jumps, build rows lazily, and have an opt-in 2,000-frame actual-pixel stress check
+- Profile preview on every print-package item and printer ICC conversion of the complete composed page
+- A workspace boundary that keeps the C-print proof profile out of Develop and delivery files
+- Seven Print layouts: single image, contact sheet, picture package, custom package, cyanotype, glass plate, and gelatin silver
+- A vertical page stack for multi-selection individual layouts, with historical styles rendered identically by Export and Quick Export
+- Finished-page output counts: 39-photo 6 × 7 contact sheet as one page, four-up picture package as 10 pages, default custom package as one page, or 39 individual files
+- Print preview reuse, source preparation limited to two to four items, a connected Core Image page graph, and a 512 MiB per-page source-raster budget
+- A localized About window with the bold Niépce bicentennial message between the product name and version
 
 ## Catalog
 
@@ -95,6 +111,14 @@ bash scripts/build-release.sh
 
 </details>
 
+`scripts/run-app.sh build` only assembles the app. It does not launch the app or a UI-test runner;
+GUI automation starts only through the separate `scripts/run-gui-e2e.sh` command.
+
+On July 31, 2026, the current worktree passed a strict Swift concurrency build, 1,800 parallel
+tests, and 9 timing-sensitive serial tests. `scripts/run-app.sh build` also produced a fresh arm64
+Release app, and the executable and dSYM UUIDs matched. This does not replace GUI use, real-scanner,
+Developer ID, or notarization checks.
+
 One run of `build-release.sh` builds the Apple Silicon (`arm64`) and Universal (`arm64`, `x86_64`)
 apps and writes ZIP, PKG, DMG, dSYM, and the SHA-256 list.
 Locally it uses an ad-hoc signature.
@@ -123,6 +147,17 @@ Recent Release measurements on one Mac:
 | 50,000-frame filter and name sort | about 158 ms |
 | Quick preview for 48 frames | about 10.6 s, max RSS about 504 MiB |
 | Develop 48 frames | about 20.9 s, max RSS about 1,012 MiB |
+
+On July 31, 2026, the opt-in `PrintExportPerformanceTests` used 39 separate 4,000 × 3,000 TIFF
+sources and 300 DPI JPEG output on this Mac:
+
+| Print output | Export | Quick Export |
+|---|---:|---:|
+| 6 × 7 contact sheet, 39 photos → 1 file | 1.177 s | — |
+| Single image, 39 photos → 39 files | — | 5.234 s |
+| Cyanotype, 39 photos → 39 files | 5.467 s | 5.659 s |
+| Glass plate, 39 photos → 39 files | 5.960 s | 6.278 s |
+| Gelatin silver, 39 photos → 39 files | 6.732 s | 6.697 s |
 
 These do not guarantee performance on another Mac. New measurements come from this command.
 
@@ -177,6 +212,7 @@ A successful build does not stand in for them; results go in the
 | Topic | Reference document |
 |---|---|
 | Current implementation and checks | This document |
+| Library, folder develop, settings transfer, and print workflow | [Library to print workflow](WORKFLOW.md) |
 | Scanner host spec | [Scanner plugin architecture](../architecture/SCANNER_PLUGINS.md) |
 | Scanner CLI JSON | [Scanner CLI JSON](../reference/CLI_JSON.md) |
 | How the catalog is stored | [Catalog storage](../architecture/CATALOG_STORAGE.md) |

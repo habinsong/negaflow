@@ -7,7 +7,7 @@
 <p align="center">A macOS app for the analog-film workflow, from camera copy or scanning through development</p>
 
 <p align="center">
-  <a href="docs/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.3%20release-EF8B26" alt="Release status"></a>
+  <a href="docs/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.4%20release-EF8B26" alt="Release status"></a>
   <a href="#requirements"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 or later"></a>
   <a href="Package.swift"><img src="https://img.shields.io/badge/Swift-5.9+-F05138?logo=swift&logoColor=white" alt="Swift 5.9 or later"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0 license"></a>
@@ -62,8 +62,8 @@ For most Macs, use the Universal PKG.
 
 | Download | Mac |
 |---|---|
-| `negaflow-1.0.3-1-macOS-universal.pkg` | Apple Silicon and Intel |
-| `negaflow-1.0.3-1-macOS-arm64.pkg` | Apple Silicon only |
+| `negaflow-1.0.4-1-macOS-universal.pkg` | Apple Silicon and Intel |
+| `negaflow-1.0.4-1-macOS-arm64.pkg` | Apple Silicon only |
 
 1. Download the PKG for the Mac.
 2. Open it and follow the onscreen instructions.
@@ -90,6 +90,17 @@ file's SHA-256 checksum matches the checksum published with the release.
 - Camera, lens, film, and exposure notes written into the EXIF of the exported file
 - Roll-level shooting notes, and library search by camera, lens, or film
 - JPEG and 16-bit TIFF export, ICC profiles, and print layouts
+- Black/white contact sheets with exact mm grids, selectable caption fonts, and rendered Print Export
+- C-print destination settings, paper-surface preview, and lab ICC soft proof
+- Import progress, per-folder process/target development, and batch progress
+- Persistent folder expansion, photo drag-and-drop, and live Finder synchronization
+- Presets and copy/paste that include process, target, adjustments, crop, and orientation
+- Seven print layouts: single image, contact sheet, picture package, custom package, cyanotype,
+  glass plate, and gelatin silver
+- Page-aware Print Export and Quick Export: a 39-photo 6 × 7 contact sheet is one composed output,
+  while individual-image layouts are a bounded 39-file batch
+- A localized About window that places the Niépce bicentennial message between the app name and
+  version
 
 > Completed checks are recorded in [Project Status](docs/product/PROJECT_STATUS.md). <br>
 
@@ -182,6 +193,28 @@ The data and build process are documented in [Film Profiles](docs/product/FILM_P
 The interface was made for people who actually work with photographs, not as a generic AI-generated mockup.<br>
 Anyone who enjoys photography should be able to find their way around it.
 
+## From library to print
+
+Import does not develop a photo by default. It first creates the source thumbnail and folder entry.
+Development starts when you apply a process and target to a folder or enter Develop. Automatic
+development can be enabled under Workflow in Settings; its default is off.
+
+Collapsed folders stay collapsed after relaunch. Photos can be dragged between folders. If the
+destination already has the same file name, negaflow adds a number instead of overwriting it.
+Moving or renaming a source or folder in Finder updates the library by rescanning only the folder
+that changed.
+
+Develop copy/paste and user presets include process, target, film-base settings, tone, color,
+detail, crop, rotation, flips, and straightening. When several photos are selected, paste applies
+to the whole selection.
+
+A printer output profile in Print is applied to the composed page, so repeated placements and
+mixed-photo packages all receive the same output conversion. It does not change the Develop
+preview.
+
+See [Library to print workflow](docs/product/WORKFLOW.md) for the exact behavior and its effect on
+source files.
+
 ## Build from source
 
 ### Requirements
@@ -272,6 +305,7 @@ Scanner-specific behavior, final image quality, signing, and notarization are se
 | [Chroma Engine](docs/product/CHROMA_ENGINE.md) | Film base, inversion, color processing, and develop order |
 | [GrainMend](docs/product/GRAINMEND.md) | Detection and repair, IR, edit history, performance, and quality checks |
 | [Film profiles](docs/product/FILM_PROFILES.md) | Source analysis and profile generation |
+| [Library-to-print workflow](docs/product/WORKFLOW.md) | Import, folder synchronization, batch develop, settings transfer, and print profiles |
 | [Product architecture](docs/architecture/PRODUCT_ARCHITECTURE.md) | App, engine, scanner, storage, and export |
 | [Project status](docs/product/PROJECT_STATUS.md) | Implementation state, measurements, and work still to verify |
 | [Real-device QA checklist](docs/validation/REAL_QA_CHECKLIST.md) | Checks that require real hardware or a visual review |

@@ -14,13 +14,14 @@ flowchart LR
 ```
 
 > [!NOTE]
-> La version actuelle est `1.0.3`. Ce qui est fait et ce qui a été réellement vérifié
+> La version actuelle est `1.0.4`. Ce qui est fait et ce qui a été réellement vérifié
 > est noté dans [État du projet](product/PROJECT_STATUS.md).
 
 ## Produit
 
 | Document | À lire quand |
 |---|---|
+| [De la photothèque à l’impression](product/WORKFLOW.md) | Pour l’import, le développement par dossier, le copier-coller et l’impression |
 | [Chroma Engine](product/CHROMA_ENGINE.md) | Vous voulez l'inversion du film et l'ordre de développement |
 | [GrainMend](product/GRAINMEND.md) | Vous voulez voir comment la réparation poussière et rayures fonctionne |
 | [Profils de film](product/FILM_PROFILES.md) | Vous voulez l'origine des profils fournis et leurs limites |
@@ -41,6 +42,7 @@ flowchart LR
 |---|---|
 | [JSON de la CLI scanner](reference/CLI_JSON.md) | Forme de sortie de `detect --json` et `capabilities --json` |
 | [Manifeste de rendu](reference/RENDER_MANIFEST.md) | Liens SHA-256 entre source, valeurs d'édition et fichier de sortie |
+| [Mises en page et aperçu C-print](reference/C_PRINT.md) | Sept mises en page, export par page, rendu optimisé, profil ICC d’épreuve et limites de précision |
 | [Réponse de tirage fixe](reference/PRINT_RESPONSE.md) | Formule et points d'ancrage de `shoulder-print-response-v4` |
 | [Contrôle qualité des profils scanner](reference/PROFILE_QUALITY_GATE.md) | Règles de publication du matériel REAL/TARGET |
 | [Profils de bruit des scanners](reference/SCANNER_NOISE_PROFILES.md) | Mesure par scans répétés et conditions d'application automatique |

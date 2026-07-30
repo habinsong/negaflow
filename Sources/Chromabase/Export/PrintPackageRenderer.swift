@@ -18,21 +18,31 @@ public enum PrintPackageRenderer {
         sources: [PrintPackageRenderSource],
         layout: PrintPackagePageLayout,
         dpi: Int,
-        paperColor: CIColor = CIColor(red: 1, green: 1, blue: 1, alpha: 1)
+        paperColor: CIColor = CIColor(red: 1, green: 1, blue: 1, alpha: 1),
+        foregroundColor: CIColor = CIColor(red: 0.08, green: 0.08, blue: 0.08, alpha: 1),
+        captionFontName: String = "Helvetica",
+        captionAlignment: PrintPackageCaptionAlignment = .leading
     ) -> CIImage? {
         guard (72...600).contains(dpi),
               !sources.isEmpty,
+              !captionFontName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              captionFontName.utf8.count <= 256,
               validSize(layout.canvasSizePoints),
               layout.items.allSatisfy({
                   sources.indices.contains($0.sourceIndex)
                       && validRect($0.cellRectPoints)
                       && validRect($0.destinationRectPoints)
                       && validUnitRect($0.sourceUnitCropRect)
-                      && (0...1).contains($0.quarterTurns)
+                      && (0...3).contains($0.quarterTurns)
                       && ($0.captionRectPoints.map(validRect) ?? true)
               }),
               layout.cropMarkSegments.allSatisfy({
                   validPoint($0.start) && validPoint($0.end) && $0.start != $0.end
+              }),
+              layout.textItems.allSatisfy({
+                  !$0.text.isEmpty
+                      && $0.text.utf8.count <= 512
+                      && validRect($0.rectPoints)
               }),
               sources.allSatisfy({ source in
                   validRect(source.image.extent)
@@ -61,10 +71,25 @@ public enum PrintPackageRenderer {
                let captionImage = textImage(
                     caption,
                     rect: scaled(captionRect, by: pixelsPerPoint),
-                    pixelsPerPoint: pixelsPerPoint
+                    pixelsPerPoint: pixelsPerPoint,
+                    color: foregroundColor,
+                    fontName: captionFontName,
+                    alignment: captionAlignment
                ) {
                 result = captionImage.composited(over: result)
             }
+        }
+
+        for textItem in layout.textItems {
+            guard let text = textImage(
+                textItem.text,
+                rect: scaled(textItem.rectPoints, by: pixelsPerPoint),
+                pixelsPerPoint: pixelsPerPoint,
+                color: foregroundColor,
+                fontName: captionFontName,
+                alignment: textItem.alignment
+            ) else { return nil }
+            result = text.composited(over: result)
         }
 
         let lineWidth = max(1, 0.35 * pixelsPerPoint)
@@ -72,7 +97,8 @@ public enum PrintPackageRenderer {
             guard let mark = lineImage(
                 from: scaled(segment.start, by: pixelsPerPoint),
                 to: scaled(segment.end, by: pixelsPerPoint),
-                width: lineWidth
+                width: lineWidth,
+                color: foregroundColor
             ) else { return nil }
             result = mark.composited(over: result)
         }
@@ -85,7 +111,8 @@ public enum PrintPackageRenderer {
         pixelsPerPoint: CGFloat
     ) -> CIImage? {
         var image = normalize(source)
-        if item.quarterTurns == 1 {
+        // 90° 씩 필요한 횟수만큼 돌린다. 시트 방향 통일은 180°/270° 도 쓴다.
+        for _ in 0..<max(0, min(3, item.quarterTurns)) {
             let height = image.extent.height
             image = image.transformed(by: CGAffineTransform(
                 a: 0,
@@ -124,7 +151,10 @@ public enum PrintPackageRenderer {
     private static func textImage(
         _ text: String,
         rect: CGRect,
-        pixelsPerPoint: CGFloat
+        pixelsPerPoint: CGFloat,
+        color: CIColor,
+        fontName: String,
+        alignment: PrintPackageCaptionAlignment
     ) -> CIImage? {
         let width = max(1, Int(rect.width.rounded(.up)))
         let height = max(1, Int(rect.height.rounded(.up)))
@@ -141,22 +171,41 @@ public enum PrintPackageRenderer {
         context.clear(CGRect(x: 0, y: 0, width: width, height: height))
 
         let fontSize = max(6 * pixelsPerPoint, min(CGFloat(height) * 0.58, 10 * pixelsPerPoint))
-        let font = CTFontCreateWithName("Helvetica" as CFString, fontSize, nil)
+        let font = CTFontCreateWithName(fontName as CFString, fontSize, nil)
         let attributes: [CFString: Any] = [
             kCTFontAttributeName: font,
-            kCTForegroundColorAttributeName: CGColor(gray: 0.08, alpha: 1),
+            kCTForegroundColorAttributeName: CGColor(
+                srgbRed: color.red,
+                green: color.green,
+                blue: color.blue,
+                alpha: color.alpha
+            ),
         ]
         let attributed = CFAttributedStringCreate(nil, text as CFString, attributes as CFDictionary)
         let line = CTLineCreateWithAttributedString(attributed!)
         var ascent: CGFloat = 0
         var descent: CGFloat = 0
         var leading: CGFloat = 0
-        _ = CTLineGetTypographicBounds(line, &ascent, &descent, &leading)
+        let lineWidth = CGFloat(CTLineGetTypographicBounds(
+            line,
+            &ascent,
+            &descent,
+            &leading
+        ))
         let padding = max(1, 2 * pixelsPerPoint)
+        let x: CGFloat
+        switch alignment {
+        case .leading:
+            x = padding
+        case .center:
+            x = max(padding, (CGFloat(width) - lineWidth) / 2)
+        case .trailing:
+            x = max(padding, CGFloat(width) - padding - lineWidth)
+        }
         context.saveGState()
         context.clip(to: CGRect(x: 0, y: 0, width: width, height: height))
         context.textPosition = CGPoint(
-            x: padding,
+            x: x,
             y: max(0, (CGFloat(height) - ascent - descent) / 2 + descent)
         )
         CTLineDraw(line, context)
@@ -171,9 +220,15 @@ public enum PrintPackageRenderer {
     private static func lineImage(
         from start: CGPoint,
         to end: CGPoint,
-        width: CGFloat
+        width: CGFloat,
+        color: CIColor
     ) -> CIImage? {
-        let color = CIImage(color: CIColor(red: 0.12, green: 0.12, blue: 0.12, alpha: 0.78))
+        let lineColor = CIImage(color: CIColor(
+            red: color.red,
+            green: color.green,
+            blue: color.blue,
+            alpha: color.alpha * 0.9
+        ))
         if abs(start.y - end.y) < 1e-6 {
             let rect = CGRect(
                 x: min(start.x, end.x),
@@ -181,7 +236,7 @@ public enum PrintPackageRenderer {
                 width: abs(end.x - start.x),
                 height: width
             )
-            return validRect(rect) ? color.cropped(to: rect) : nil
+            return validRect(rect) ? lineColor.cropped(to: rect) : nil
         }
         if abs(start.x - end.x) < 1e-6 {
             let rect = CGRect(
@@ -190,7 +245,7 @@ public enum PrintPackageRenderer {
                 width: width,
                 height: abs(end.y - start.y)
             )
-            return validRect(rect) ? color.cropped(to: rect) : nil
+            return validRect(rect) ? lineColor.cropped(to: rect) : nil
         }
         return nil
     }

@@ -243,4 +243,4 @@ D = \log_{10}\left(\frac{D_{\min}}{T}\right)
 - `Sources/Chromabase/Imaging/`
 - `Sources/Chromabase/Export/`
 
-当前产品版本是 `1.0.3`。编辑记录和配置文件的 schema，在后续版本中同样要走过验证流程才会改动。
+当前产品版本是 `1.0.4`。编辑记录和配置文件的 schema，在后续版本中同样要走过验证流程才会改动。

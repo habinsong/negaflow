@@ -86,6 +86,9 @@ struct FlatbedScanAreaOverlay: View {
     @State private var createStartPoint: CGPoint?
     @State private var createCurrentPoint: CGPoint?
     @State private var dragStartRect: CGRect?
+    /// 프레임 편집 단축키는 이 오버레이가 포커스를 가진 동안에만 산다. ⌘C/⌘V 가 텍스트 필드의
+    /// 복사·붙여넣기를 빼앗지 않게 하는 유일하게 확실한 방법이다.
+    @FocusState private var isFocused: Bool
 
     var body: some View {
         ZStack {
@@ -117,6 +120,40 @@ struct FlatbedScanAreaOverlay: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .focusable()
+        .focused($isFocused)
+        .onKeyPress(.leftArrow, phases: [.down, .repeat]) { nudge(dx: -1, dy: 0, press: $0) }
+        .onKeyPress(.rightArrow, phases: [.down, .repeat]) { nudge(dx: 1, dy: 0, press: $0) }
+        .onKeyPress(.upArrow, phases: [.down, .repeat]) { nudge(dx: 0, dy: -1, press: $0) }
+        .onKeyPress(.downArrow, phases: [.down, .repeat]) { nudge(dx: 0, dy: 1, press: $0) }
+        .background { frameClipboardShortcuts }
+    }
+
+    /// ⌘C/⌘V. 포커스가 없으면 비활성이라 키 이벤트가 그대로 responder chain 으로 흘러간다 —
+    /// 사이드바 텍스트 필드에서 복사·붙여넣기는 평소대로 동작한다.
+    private var frameClipboardShortcuts: some View {
+        Group {
+            Button("") { model.copySelectedFlatbedScanRegion() }
+                .keyboardShortcut("c", modifiers: .command)
+                .disabled(!isFocused || model.selectedFlatbedScanRegion == nil)
+
+            Button("") { model.pasteFlatbedScanRegion() }
+                .keyboardShortcut("v", modifiers: .command)
+                .disabled(!isFocused || !model.canPasteFlatbedScanRegion)
+        }
+        .opacity(0)
+        .frame(width: 0, height: 0)
+        .accessibilityHidden(true)
+    }
+
+    private func nudge(dx: CGFloat, dy: CGFloat, press: KeyPress) -> KeyPress.Result {
+        guard model.selectedFlatbedScanRegion != nil else { return .ignored }
+        model.nudgeSelectedFlatbedScanRegion(
+            dx: dx,
+            dy: dy,
+            coarse: press.modifiers.contains(.shift)
+        )
+        return .handled
     }
 
     private func regionView(_ region: FlatbedScanRegion, number: Int) -> some View {
@@ -138,7 +175,10 @@ struct FlatbedScanAreaOverlay: View {
             Rectangle()
                 .fill(Color.clear)
                 .contentShape(Rectangle())
-                .onTapGesture { model.selectFlatbedScanRegion(region.id) }
+                .onTapGesture {
+                    model.selectFlatbedScanRegion(region.id)
+                    isFocused = true
+                }
                 .gesture(moveGesture(for: region))
             if selected {
                 ForEach(FlatbedRegionHandle.allCases, id: \.self) { handle in
@@ -155,6 +195,23 @@ struct FlatbedScanAreaOverlay: View {
         .position(x: rect.midX, y: rect.midY)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(model.text(AppLocalizedPhrase.flatbedFrameFormat, number))
+        .accessibilityAction(named: Text(model.accessibilityText(.moveLeft))) {
+            moveByAccessibility(region, dx: -1, dy: 0)
+        }
+        .accessibilityAction(named: Text(model.accessibilityText(.moveRight))) {
+            moveByAccessibility(region, dx: 1, dy: 0)
+        }
+        .accessibilityAction(named: Text(model.accessibilityText(.moveUp))) {
+            moveByAccessibility(region, dx: 0, dy: -1)
+        }
+        .accessibilityAction(named: Text(model.accessibilityText(.moveDown))) {
+            moveByAccessibility(region, dx: 0, dy: 1)
+        }
+    }
+
+    private func moveByAccessibility(_ region: FlatbedScanRegion, dx: CGFloat, dy: CGFloat) {
+        model.selectFlatbedScanRegion(region.id)
+        model.nudgeSelectedFlatbedScanRegion(dx: dx, dy: dy)
     }
 
     private func handleView(_ handle: FlatbedRegionHandle) -> some View {
@@ -196,6 +253,7 @@ struct FlatbedScanAreaOverlay: View {
                 model.addFlatbedScanRegion(
                     unitRect: createdUnitRect(from: start, to: basePoint(value.location))
                 )
+                isFocused = true
             }
     }
 

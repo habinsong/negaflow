@@ -409,8 +409,7 @@ final class LibraryPresentationTests: XCTestCase {
         )
     }
 
-    // 라이브러리/필름스트립 카드 모두 썸네일(네거티브는 최초부터 현상본)을 우선하고,
-    // 썸네일이 아직 없을 때만 원본 프리뷰로 대체한다(Lightroom 방식 디스크 캐시와 동일 상태).
+    // 라이브러리 raw 카드는 원본 프리뷰를, 현상 필름스트립은 현상 썸네일을 우선한다.
     func testFrameStripPresentationPrefersThumbnailWithoutVisibleSubtitle() {
         let frame = ScanFrame(
             scanIndex: 1,
@@ -425,12 +424,12 @@ final class LibraryPresentationTests: XCTestCase {
         frame.developedImage = thumbnail
 
         XCTAssertNil(FrameStripPresentationMode.raw.subtitle(for: frame, language: .korean))
-        XCTAssertTrue(FrameStripPresentationMode.raw.previewImage(for: frame) === thumbnail)
+        XCTAssertTrue(FrameStripPresentationMode.raw.previewImage(for: frame) === raw)
         XCTAssertTrue(FrameStripPresentationMode.developed.previewImage(for: frame) === thumbnail)
 
         frame.thumbnailImage = nil
         frame.developedImage = nil
-        XCTAssertNil(FrameStripPresentationMode.raw.previewImage(for: frame))
+        XCTAssertTrue(FrameStripPresentationMode.raw.previewImage(for: frame) === raw)
     }
 
     func testNegativeInitialThumbnailIsFirstPublishedByPositiveDevelopment() async throws {
@@ -451,7 +450,9 @@ final class LibraryPresentationTests: XCTestCase {
 
             XCTAssertNotNil(frame.rawPreviewImage)
             XCTAssertNil(frame.thumbnailImage, "\(filmType) must never publish the raw negative as a thumbnail")
-            XCTAssertNil(FrameStripPresentationMode.raw.previewImage(for: frame))
+            XCTAssertTrue(
+                FrameStripPresentationMode.raw.previewImage(for: frame) === frame.rawPreviewImage
+            )
 
             await model.developFrameAfterFastPreview(frame)
 

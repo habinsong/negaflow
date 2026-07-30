@@ -2,8 +2,8 @@ import AppKit
 import Foundation
 import ImageIO
 
-struct SourceRelinkPlan: Equatable {
-    struct Mapping: Equatable {
+struct SourceRelinkPlan: Equatable, Sendable {
+    struct Mapping: Equatable, Sendable {
         let oldSourceURL: URL
         let newSourceURL: URL
     }

@@ -6,73 +6,90 @@ struct PrintLayoutTemplateControls: View {
     @State private var selectedTemplateID: UUID?
     @State private var templateName = ""
     @State private var operationFailed = false
-    @State private var isExpanded = false
 
     var body: some View {
-        DisclosureGroup(isExpanded: $isExpanded) {
-            VStack(alignment: .leading, spacing: 8) {
-                if !model.printLayoutTemplateStore.templates.isEmpty {
-                    Picker(model.text(.printTemplates), selection: $selectedTemplateID) {
-                        Text(model.text(.noLook)).tag(UUID?.none)
-                        ForEach(model.printLayoutTemplateStore.templates) { template in
-                            Text(template.name).tag(Optional(template.id))
-                        }
-                    }
-                    HStack(spacing: 12) {
-                        Button(model.text(AppLocalizedPhrase.apply)) {
-                            applySelectedTemplate()
-                        }
-                        .disabled(selectedTemplate == nil)
-                        Button(role: .destructive) {
-                            deleteSelectedTemplate()
-                        } label: {
-                            Text(model.text(AppLocalizedPhrase.delete))
-                        }
-                        .disabled(selectedTemplate == nil)
-                    }
+        VStack(alignment: .leading, spacing: PrintInspectorMetrics.verticalSpacing) {
+            if !model.printLayoutTemplateStore.templates.isEmpty {
+                PrintInspectorStackedField(model.text(.printTemplates)) {
+                    PrintInspectorPopupPicker(
+                        selection: $selectedTemplateID,
+                        options: templateOptions,
+                        accessibilityLabel: model.text(.printTemplates)
+                    )
                 }
 
-                HStack(spacing: 8) {
-                    TextField(model.text(.printTemplateName), text: $templateName)
-                        .textFieldStyle(.roundedBorder)
-                        .onChange(of: templateName) { _, value in
-                            let normalized = String(value.prefix(80))
-                            if normalized != value { templateName = normalized }
-                        }
-                    Button(model.text(AppLocalizedPhrase.save)) {
-                        saveTemplate()
+                HStack(spacing: 6) {
+                    Button(model.text(AppLocalizedPhrase.apply)) {
+                        applySelectedTemplate()
                     }
+                    .buttonStyle(PrintInspectorTransientButtonStyle())
+                    .frame(maxWidth: .infinity)
+                    .disabled(selectedTemplate == nil)
+
+                    Button(role: .destructive) {
+                        deleteSelectedTemplate()
+                    } label: {
+                        Text(model.text(AppLocalizedPhrase.delete))
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(
+                        PrintInspectorTransientButtonStyle(foregroundStyle: .red)
+                    )
+                    .frame(maxWidth: .infinity)
+                    .disabled(selectedTemplate == nil)
+                }
+
+                Divider()
+            }
+
+            PrintInspectorInlineField(model.text(.printTemplateName)) {
+                HStack(spacing: 6) {
+                    PrintInspectorTextField(
+                        prompt: model.text(.printTemplateName),
+                        text: $templateName
+                    )
+                    .onChange(of: templateName) { _, value in
+                        let normalized = String(value.prefix(80))
+                        if normalized != value { templateName = normalized }
+                    }
+
+                    Button {
+                        saveTemplate()
+                    } label: {
+                        Label(
+                            model.text(AppLocalizedPhrase.save),
+                            systemImage: "square.and.arrow.down"
+                        )
+                    }
+                    .buttonStyle(PrintInspectorTransientButtonStyle())
                     .disabled(
                         !model.printLayoutTemplateStore.canModify
                             || PrintLayoutTemplate.normalizedName(templateName).isEmpty
                     )
                 }
+            }
 
-                if operationFailed || !model.printLayoutTemplateStore.canModify {
-                    Text(model.text(.printTemplateUpdateFailed))
-                        .font(.caption2)
-                        .foregroundStyle(.red)
-                }
+            if operationFailed || !model.printLayoutTemplateStore.canModify {
+                PrintInspectorHelpText(
+                    text: model.text(.printTemplateUpdateFailed),
+                    systemImage: "exclamationmark.triangle.fill",
+                    tint: .red
+                )
             }
-            .padding(.top, 6)
-        } label: {
-            Button {
-                withAnimation(.snappy(duration: 0.18)) {
-                    isExpanded.toggle()
-                }
-            } label: {
-                Text(model.text(.printTemplates))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(model.text(.printTemplates))
         }
+        .accessibilityLabel(model.text(.printTemplates))
     }
 
     private var selectedTemplate: PrintLayoutTemplate? {
         guard let selectedTemplateID else { return nil }
         return model.printLayoutTemplateStore.templates.first { $0.id == selectedTemplateID }
+    }
+
+    private var templateOptions: [PrintInspectorPopupPicker<UUID?>.Option] {
+        [.init(nil, title: model.text(.noLook))]
+            + model.printLayoutTemplateStore.templates.map {
+                .init(Optional($0.id), title: $0.name)
+            }
     }
 
     private func applySelectedTemplate() {

@@ -59,7 +59,8 @@ struct WorkflowSidebar: View {
                     switch selectedTab {
                     case .library:
                         LibrarySourceSection(
-                            visibleFolderPaths: selectedFrameFolderPaths
+                            visibleFolderPaths: selectedFrameFolderPaths,
+                            scrollsFrameListInternally: true
                         )
                     case .files:
                         LibrarySourceSection(content: .files, showsDevelopDefaults: false)

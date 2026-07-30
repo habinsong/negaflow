@@ -383,7 +383,8 @@ extension AppModel {
         _ urls: [URL],
         reportsGlobalStatus: Bool
     ) async -> Bool {
-        guard !ExportSourceMaterialization.evictedSources(among: urls).isEmpty else { return true }
+        // 축출 여부 확인은 파일 시스템을 만지므로 여기서 미리 하지 않는다 — materialize 가
+        // 백그라운드에서 같은 판정을 하고, 로컬뿐이면 진행률 보고 없이 바로 true 를 준다.
         let ready = await ExportSourceMaterialization.materialize(urls) { [weak self] progress in
             guard reportsGlobalStatus else { return }
             Task { @MainActor in

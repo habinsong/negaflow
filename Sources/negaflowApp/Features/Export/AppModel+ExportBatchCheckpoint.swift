@@ -100,7 +100,7 @@ extension AppModel {
             )
             guard (try? options.validate(for: format)) != nil else { continue }
             let requiresPrinterOutputProfile = format != .rawScanTIFF
-                && (item.printComposition != nil || frame.params.developTarget == .print)
+                && frame.params.developTarget == .print
             guard !requiresPrinterOutputProfile
                     || item.printerOutputProfileSHA256.flatMap({
                         printerOutputProfiles[$0]

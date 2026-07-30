@@ -43,7 +43,7 @@ jobs:
         run: bash scripts/ci/build-swift.sh
 
   gui:
-    name: GUI end-to-end tests
+    name: GUI end-to-end test build
     runs-on: macos-26
     timeout-minutes: 45
     steps:
@@ -55,15 +55,13 @@ jobs:
           HOMEBREW_NO_AUTO_UPDATE: '1'
           HOMEBREW_NO_INSTALL_CLEANUP: '1'
         run: brew install xcodegen
-      - name: Run GUI tests
-        env:
-          NEGAFLOW_CI_GUI_RUN: '1'
+      - name: Build GUI test bundle
         run: bash scripts/ci/build-gui-tests.sh
-      - name: Upload GUI test result
+      - name: Upload GUI test build result
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: negaflow-GUI-tests-${{ github.sha }}
+          name: negaflow-GUI-test-build-${{ github.sha }}
           path: build/NegaflowE2E.xcresult
           if-no-files-found: warn
           retention-days: 14

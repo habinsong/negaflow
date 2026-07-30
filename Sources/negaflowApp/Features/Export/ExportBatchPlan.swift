@@ -62,7 +62,7 @@ extension AppModel {
         let date = Date()
         return frames.enumerated().map { offset, frame in
             let requiresPrinterOutputProfile = format != .rawScanTIFF
-                && (printComposition != nil || frame.params.developTarget == .print)
+                && frame.params.developTarget == .print
             let frameRecipeIdentity = requiresPrinterOutputProfile
                 ? (printRecipeIdentity ?? recipeIdentity)
                 : recipeIdentity

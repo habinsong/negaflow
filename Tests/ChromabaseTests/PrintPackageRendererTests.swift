@@ -35,7 +35,6 @@ final class PrintPackageRendererTests: XCTestCase {
             layout: layout,
             dpi: 72
         ))
-
         XCTAssertEqual(rendered.extent.size.width, 432, accuracy: 1)
         XCTAssertEqual(rendered.extent.size.height, 288, accuracy: 1)
         assertPixel(at: layout.items[0].destinationRectPoints.center, in: rendered, isNear: [255, 0, 0])
@@ -67,7 +66,6 @@ final class PrintPackageRendererTests: XCTestCase {
             layout: layout,
             dpi: 72
         ))
-
         XCTAssertLessThan(layout.items[0].sourceUnitCropRect.width, 0.5)
         assertPixel(at: layout.items[0].destinationRectPoints.center, in: rendered, isNear: [0, 255, 0])
         assertPixel(
@@ -117,6 +115,21 @@ final class PrintPackageRendererTests: XCTestCase {
             layout: layout,
             dpi: 72
         ))
+        let courierRendered = try XCTUnwrap(PrintPackageRenderer.renderPage(
+            sources: [
+                PrintPackageRenderSource(
+                    image: solid(.red, size: CGSize(width: 30, height: 20)),
+                    caption: "frame-001.tiff"
+                ),
+                PrintPackageRenderSource(
+                    image: solid(.blue, size: CGSize(width: 30, height: 20)),
+                    caption: "frame-002.tiff"
+                ),
+            ],
+            layout: layout,
+            dpi: 72,
+            captionFontName: "Courier"
+        ))
 
         XCTAssertEqual(rendered.extent.minX, 0, accuracy: 1e-9)
         XCTAssertEqual(rendered.extent.minY, 0, accuracy: 1e-9)
@@ -124,8 +137,57 @@ final class PrintPackageRendererTests: XCTestCase {
         XCTAssertEqual(rendered.extent.height, layout.canvasSizePoints.height, accuracy: 1)
         let caption = try XCTUnwrap(layout.items[0].captionRectPoints)
         XCTAssertTrue(hasNonWhitePixel(in: caption, image: rendered, stride: 2))
+        XCTAssertNotEqual(
+            rgbaBytes(in: caption, image: rendered),
+            rgbaBytes(in: caption, image: courierRendered)
+        )
         let segment = try XCTUnwrap(layout.cropMarkSegments.first)
         assertPixel(at: segment.midpoint, in: rendered, maximumChannel: 220)
+    }
+
+    func testRendererUsesLightTextAndCropMarksOnBlackContactSheet() throws {
+        let package = PrintPackageSettings(
+            mode: .contactSheet,
+            contactRows: 1,
+            contactColumns: 1,
+            contactSheetBackground: .black,
+            captionMode: .customText,
+            customCaptions: [
+                PrintPackageCustomCaption(
+                    text: "Contact",
+                    normalizedRect: CGRect(x: 0.5, y: 0.02, width: 0.45, height: 0.1),
+                    alignment: .trailing
+                ),
+            ],
+            showsCropMarks: true
+        )
+        let layout = try XCTUnwrap(PrintPackageLayout.make(
+            sourceSizes: [CGSize(width: 30, height: 20)],
+            composition: PrintCompositionSettings(
+                paperSize: .fourBySix,
+                orientation: .landscape,
+                marginMM: 8,
+                dpi: 72
+            ),
+            package: package
+        )).first!
+        let rendered = try XCTUnwrap(PrintPackageRenderer.renderPage(
+            sources: [
+                PrintPackageRenderSource(
+                    image: solid(.red, size: CGSize(width: 30, height: 20))
+                ),
+            ],
+            layout: layout,
+            dpi: 72,
+            paperColor: CIColor(red: 0, green: 0, blue: 0),
+            foregroundColor: CIColor(red: 1, green: 1, blue: 1)
+        ))
+
+        assertPixel(at: CGPoint(x: 2, y: 2), in: rendered, isNear: [0, 0, 0])
+        let segment = try XCTUnwrap(layout.cropMarkSegments.first)
+        assertPixel(at: segment.midpoint, in: rendered, minimumChannel: 220)
+        let textRect = try XCTUnwrap(layout.textItems.first?.rectPoints)
+        XCTAssertTrue(hasNonBlackPixel(in: textRect, image: rendered, stride: 1))
     }
 
     func testRendererConvertsPointLayoutToRequestedDPI() throws {
@@ -291,6 +353,23 @@ final class PrintPackageRendererTests: XCTestCase {
         return bytes
     }
 
+    private func rgbaBytes(in rect: CGRect, image: CIImage) -> [UInt8] {
+        let bounds = rect.integral
+        let width = max(1, Int(bounds.width))
+        let height = max(1, Int(bounds.height))
+        let rowBytes = width * 4
+        var bytes = [UInt8](repeating: 0, count: rowBytes * height)
+        context.render(
+            image,
+            toBitmap: &bytes,
+            rowBytes: rowBytes,
+            bounds: bounds,
+            format: .RGBA8,
+            colorSpace: colorSpace
+        )
+        return bytes
+    }
+
     private func assertPixel(
         at point: CGPoint,
         in image: CIImage,
@@ -324,6 +403,19 @@ final class PrintPackageRendererTests: XCTestCase {
         XCTAssertLessThanOrEqual(actual[2], maximumChannel, file: file, line: line)
     }
 
+    private func assertPixel(
+        at point: CGPoint,
+        in image: CIImage,
+        minimumChannel: UInt8,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        let actual = pixel(at: point, in: image)
+        XCTAssertGreaterThanOrEqual(actual[0], minimumChannel, file: file, line: line)
+        XCTAssertGreaterThanOrEqual(actual[1], minimumChannel, file: file, line: line)
+        XCTAssertGreaterThanOrEqual(actual[2], minimumChannel, file: file, line: line)
+    }
+
     private func hasNonWhitePixel(in rect: CGRect, image: CIImage, stride: Int) -> Bool {
         var y = Int(rect.minY)
         while y < Int(rect.maxY) {
@@ -331,6 +423,20 @@ final class PrintPackageRendererTests: XCTestCase {
             while x < Int(rect.maxX) {
                 let value = pixel(at: CGPoint(x: x, y: y), in: image)
                 if value[0] < 240 || value[1] < 240 || value[2] < 240 { return true }
+                x += stride
+            }
+            y += stride
+        }
+        return false
+    }
+
+    private func hasNonBlackPixel(in rect: CGRect, image: CIImage, stride: Int) -> Bool {
+        var y = Int(rect.minY)
+        while y < Int(rect.maxY) {
+            var x = Int(rect.minX)
+            while x < Int(rect.maxX) {
+                let value = pixel(at: CGPoint(x: x, y: y), in: image)
+                if value[0] > 15 || value[1] > 15 || value[2] > 15 { return true }
                 x += stride
             }
             y += stride

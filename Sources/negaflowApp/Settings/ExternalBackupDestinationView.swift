@@ -6,44 +6,63 @@ struct ExternalBackupDestinationView: View {
     @ObservedObject var store: LibraryBackupDestinationStore
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            HStack {
-                Text(localized(.title)).font(.callout.weight(.semibold))
-                Spacer()
-                Button(localized(store.isConfigured ? .change : .choose), action: chooseDestination)
-                    .controlSize(.small)
-                if store.isConfigured {
-                    Button(localized(.remove)) { model.clearExternalBackupDestination() }
-                        .controlSize(.small)
-                    Button { model.refreshExternalBackupDestinationStatus() } label: {
-                        Image(systemName: "arrow.clockwise")
+        Group {
+            AppSettingsRow(localized(.title)) {
+                HStack(spacing: 6) {
+                    if let path = store.configuredPath {
+                        AppSettingsPathText(
+                            text: (path as NSString).abbreviatingWithTildeInPath
+                        )
+                    } else {
+                        Spacer(minLength: 0)
                     }
-                    .controlSize(.small)
-                    .help(localized(.refresh))
-                    .accessibilityLabel(localized(.refresh))
+
+                    Button(
+                        localized(store.isConfigured ? .change : .choose),
+                        action: chooseDestination
+                    )
+                    .buttonStyle(.bordered)
+
+                    if store.isConfigured {
+                        Button(localized(.remove)) {
+                            model.clearExternalBackupDestination()
+                        }
+                        .buttonStyle(.bordered)
+
+                        Button {
+                            model.refreshExternalBackupDestinationStatus()
+                        } label: {
+                            Image(systemName: "arrow.clockwise")
+                        }
+                        .buttonStyle(.bordered)
+                        .help(localized(.refresh))
+                        .accessibilityLabel(localized(.refresh))
+                    }
                 }
             }
-            if let path = store.configuredPath {
-                Text((path as NSString).abbreviatingWithTildeInPath)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-            }
+
+            statusRow
+
+            AppSettingsValueRow(
+                label: localized(.lastSuccess),
+                value: lastSuccessText
+            )
+        }
+    }
+
+    private var statusRow: some View {
+        HStack(spacing: 8) {
             Label(statusText, systemImage: statusIcon)
-                .font(.caption)
                 .foregroundStyle(statusColor)
+            Spacer(minLength: 8)
             if let info = statusVolumeInfo {
                 Text(capacityText(info))
-                    .font(.caption2.monospacedDigit())
-                    .foregroundStyle(.secondary)
-            }
-            LabeledContent(localized(.lastSuccess)) {
-                Text(lastSuccessText)
-                    .font(.caption)
+                    .monospacedDigit()
                     .foregroundStyle(.secondary)
             }
         }
+        .font(.caption)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .onAppear { model.refreshExternalBackupDestinationStatus() }
     }
 

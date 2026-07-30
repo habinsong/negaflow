@@ -25,7 +25,7 @@ extension ContentView {
                     quickFilters: $libraryQuickFilters,
                     selectedFolderID: $librarySelectedFolderID,
                     organizerSelection: $libraryOrganizerSelection,
-                    onOpenDevelop: { selectedWorkspaceModule = .develop }
+                    onOpenDevelop: { selectWorkspaceModule(.develop) }
                 )
                 .zIndex(0)
             case .develop:

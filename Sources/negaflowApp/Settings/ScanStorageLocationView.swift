@@ -8,38 +8,36 @@ struct ScanStorageLocationView: View {
 
     var body: some View {
         Group {
-            LabeledContent(localized(.originals)) {
+            AppSettingsRow(localized(.originals)) {
                 HStack(spacing: 6) {
-                    Text((store.scansURL.path as NSString).abbreviatingWithTildeInPath)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
+                    AppSettingsPathText(
+                        text: (store.scansURL.path as NSString).abbreviatingWithTildeInPath
+                    )
                     if store.locationMode == .custom {
                         Button(action: chooseFolder) {
-                            Label(localized(.change), systemImage: "folder.badge.gearshape")
+                            Image(systemName: "folder.badge.gearshape")
                         }
                         .buttonStyle(.bordered)
-                        .buttonBorderShape(.capsule)
-                        .controlSize(.small)
-                        .fixedSize()
+                        .help(localized(.change))
+                        .accessibilityLabel(localized(.change))
                     }
                     Button {
                         NSWorkspace.shared.open(DiskStorageStore.ensureDirectory(store.scansURL))
                     } label: {
                         Image(systemName: "folder")
                     }
-                    .buttonStyle(.borderless)
-                    .controlSize(.small)
+                    .buttonStyle(.bordered)
                     .help(model.text(AppLocalizedPhrase.showInFinder))
                     .accessibilityLabel(model.text(AppLocalizedPhrase.showInFinder))
                 }
             }
-            LabeledContent(localized(.estimatedAvailable)) {
-                Text(capacityText)
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
-            }
-            LabeledContent(localized(.storage)) {
+
+            AppSettingsValueRow(
+                label: localized(.estimatedAvailable),
+                value: capacityText
+            )
+
+            AppSettingsRow(localized(.storage)) {
                 Label(storageText, systemImage: storageIcon)
                     .foregroundStyle(.secondary)
             }

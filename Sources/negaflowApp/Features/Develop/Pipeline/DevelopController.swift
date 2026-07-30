@@ -4,7 +4,7 @@ import Foundation
 @MainActor
 final class DevelopController: ObservableObject {
     static let throttleInterval: TimeInterval = 0.045
-    nonisolated static let defaultMaxConcurrentDevelopments = 2
+    nonisolated static let defaultMaxConcurrentDevelopments = 3
 
     @Published private(set) var processingActive: Bool = false
     @Published private(set) var processingDetail: String = ""
@@ -76,6 +76,10 @@ final class DevelopController: ObservableObject {
 
     func endFrame(_ frame: ScanFrame) {
         activeFrameIDs.remove(frame.id)
+    }
+
+    func isDevelopingFrame(_ frame: ScanFrame) -> Bool {
+        activeFrameIDs.contains(frame.id)
     }
 
     func acquireDevelopSlot() async -> Bool {

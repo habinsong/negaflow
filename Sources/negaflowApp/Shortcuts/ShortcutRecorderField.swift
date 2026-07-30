@@ -56,6 +56,7 @@ final class ShortcutRecorderButton: NSButton {
         setButtonType(.momentaryChange)
         bezelStyle = .rounded
         isBordered = true
+        controlSize = .regular
         focusRingType = .exterior
         font = .monospacedSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
     }

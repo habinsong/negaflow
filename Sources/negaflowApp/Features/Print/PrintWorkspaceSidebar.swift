@@ -89,12 +89,12 @@ struct PrintWorkspaceSidebar: View {
                     usesCompositeLayout: settingsStore.layoutMode != .singleImage,
                     onExport: {
                         model.exportPrintSelectionToFolder(
-                            settings: settingsStore.compositionSettings(dpi: model.exportDPI)
+                            settings: model.printCompositionSettings(dpi: model.exportDPI)
                         )
                     },
                     onQuickExport: {
                         model.quickExportPrintSelection(
-                            settings: settingsStore.compositionSettings(dpi: model.quickExportDPI)
+                            settings: model.printCompositionSettings(dpi: model.quickExportDPI)
                         )
                     }
                 )

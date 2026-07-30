@@ -37,6 +37,7 @@ Write each result as `PASS`, `FAIL`, `BLOCKED`, or `N/A`.
 |  | First launch creates only the app data the documentation lists. |  |
 |  | With no scanner plugin, no fake device or capability turns on. |  |
 |  | App info, version, build, license, and help are right. |  |
+|  | About shows the localized Niépce bicentennial sentence in bold between “negaflow” and version `1.0.4`. |  |
 
 ## 2. Import, develop, export
 
@@ -48,6 +49,13 @@ Record the source SHA-256 before and after the run.
 |  | The source bytes are the same before and after import. |  |
 |  | The duplicate import warning and its choices are easy to follow. |  |
 |  | The starting state is manual correction with the `main` target. |  |
+|  | Import shows a progress bar, percent, and completed/total count; imported photos are not developed automatically when the saved default is Off. |  |
+|  | Folder Apply reprocesses already-developed photos as well as untouched photos and reports completed/total progress. |  |
+|  | Pasting settings onto a multi-selection applies process, target, crop, rotation, flips, tone, color, and detail to every selected photo. |  |
+|  | Scanned color negative, slide, B&W negative, and B&W positive thumbnails are developed in Develop and Print. |  |
+|  | A printer output profile affects every repeated or mixed package placement and the exported page, but never the Develop preview. |  |
+|  | All seven Print layouts render correctly; selecting several photos in Single Image, Cyanotype, Glass Plate, or Gelatin Silver creates a vertically scrollable page per photo. |  |
+|  | With 39 photos, both Export and Quick Export report and write 1 contact-sheet page, 10 four-up picture-package pages, 1 default custom-package page, or 39 individual files as appropriate. |  |
 |  | Crop, orientation, tone, color, detail, local adjustment, and undo work as expected. |  |
 |  | The original/developed comparison and the clipping display match the export. |  |
 |  | JPEG and 16-bit TIFF open, and their metadata is right. |  |
@@ -66,6 +74,10 @@ Record the source SHA-256 before and after the run.
 |  | The correct original relinks and a different file is refused. |  |
 |  | Removing from the library does not delete the original. |  |
 |  | Moving to Trash is a deliberate choice and stays clear when virtual copies exist. |  |
+|  | Collapsed folder rows stay collapsed after creating a folder and after relaunching. |  |
+|  | Every removable folder shows the same X action, and using it preserves the source. |  |
+|  | Dragging photos works between imported, app-created, and scanner-created folders; name collisions receive a safe new name. |  |
+|  | Finder move, rename, and direct-child add/remove changes appear without a full-library rescan. |  |
 
 ## 4. Windows, display, accessibility
 
@@ -76,6 +88,7 @@ VoiceOver, full keyboard access, and one language other than Korean.
 |---|---|---|
 |  | Buttons in the sidebar, canvas, inspector, sheets, settings, and help are not cut off. |  |
 |  | Resizing the window keeps panel width and canvas focus usable. |  |
+|  | In a small Develop window, only the folder and photo list scrolls; the rest of the sidebar stays in place. |  |
 |  | Relaunching restores the supported screen layout. |  |
 |  | Text never drops below the set size and important values are not truncated. |  |
 |  | Sliders, wheels, curves, split buttons, toggles, and selections can be read. |  |
@@ -125,8 +138,10 @@ clean frames, dust, scratches, grain, faces, sky, and fine patterns.
 |  | Repeated adjustment and panning on a 48 MP photo stays usable. |  |
 |  | Develop and export finish at 3600 DPI and 7200 DPI scan sizes. |  |
 |  | Working through a 48-frame roll never mixes state between frames. |  |
+|  | A 39-photo Print preview and both export paths avoid per-photo settled full-resolution preview work and remain responsive while memory stays bounded. |  |
 |  | Under memory pressure only unselected caches are dropped and the current frame stays. |  |
 |  | Search, filter, and sort on a large catalog stay usable on the Mac under test. |  |
+|  | Repeatedly scrolling a 2,000-photo Release catalog keeps the process alive; CPU and a main-thread sample are recorded during the run. |  |
 |  | Heat, memory, and disk use during long jobs are recorded. |  |
 
 ## 8. Upgrade and release

@@ -102,6 +102,18 @@ final class EvictedFrameRedevelopTests: XCTestCase {
         frame.initialThumbnailSeedTask?.cancel()
     }
 
+    func testNeverDevelopedLibraryFrameWaitsForExplicitDevelopEntry() {
+        let model = AppModel()
+        let frame = makeFrame()
+        model.frames = [frame]
+        model.activeWorkspaceModule = .library
+
+        XCTAssertFalse(model.selectedFrameNeedsDevelopment(frame))
+
+        model.activeWorkspaceModule = .develop
+        XCTAssertTrue(model.selectedFrameNeedsDevelopment(frame))
+    }
+
     // MARK: 새 시드가 옛 태스크 참조에 지워지지 않는다(레이스 가드)
 
     func testStaleSeedDoesNotClearNewerTaskReference() async {

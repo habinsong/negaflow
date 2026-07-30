@@ -12,6 +12,7 @@ enum AppLocalizedText: CaseIterable {
     case menuExport
     case menuWindow
     case menuHelp
+    case commandAboutNegaflow
     case commandImportImages
     case commandRefreshLibrary
     case commandDeletePhoto
@@ -32,11 +33,14 @@ enum AppLocalizedText: CaseIterable {
     case commandScanFrame
     case commandExport
     case commandQuickExport
+    case commandPrintExport
     case commandSettings
     case commandNegaflowHelp
     case commandKeyboardShortcuts
     case commandDiagnostics
     case commandWorkspaceOptions
+    case aboutAnniversaryMessage
+    case aboutVersionLabel
     case diagnosticsEmpty
     case diagnosticsRecentProblemsTitle
     case diagnosticsClearProblems
@@ -166,17 +170,23 @@ enum AppLocalizedText: CaseIterable {
     case exportSection
     case quickExportSection
     case printLayoutSection
+    case printContentSection
     case printLayoutMode
     case printSingleImage
     case printContactSheet
     case printPicturePackage
     case printCustomPackage
+    case printCyanotype
+    case printGlassPlate
+    case printGelatin
     case printPaperSize
+    case printPaperPhotoRatio
     case printOrientation
     case printOrientationAutomatic
     case printOrientationPortrait
     case printOrientationLandscape
     case printMargin
+    case printContactSheetBackground
     case printRows
     case printColumns
     case printHorizontalSpacing
@@ -186,6 +196,7 @@ enum AppLocalizedText: CaseIterable {
     case printFill
     case printRotateToFit
     case printRepeatOnePhoto
+    case printNormalizeOrientation
     case printPictureTemplate
     case printOneLargeTwoSmall
     case printTwoUp
@@ -193,7 +204,18 @@ enum AppLocalizedText: CaseIterable {
     case printCaption
     case printCaptionFileName
     case printCaptionFrameNumber
+    case printCaptionSequenceNumber
     case printCaptionRating
+    case printCaptionCustomText
+    case printCaptionFont
+    case printCaptionAlignment
+    case printCaptionAlignLeft
+    case printCaptionAlignCenter
+    case printCaptionAlignRight
+    case printCustomCaption
+    case printCaptionText
+    case printAddCaption
+    case printDeleteCaption
     case printCropMarks
     case printTemplates
     case printTemplateName
@@ -214,5 +236,21 @@ enum AppLocalizedText: CaseIterable {
     case printFilmSimulation
     case printPaperSimulation
     case printOutputProfile
+    case printOutputSection
+    case printOutputProcess
+    case printOutputStandard
+    case printOutputCPrint
+    case printLab
+    case printPaper
+    case printSurface
+    case printSurfaceGlossy
+    case printSurfaceMatte
+    case printSurfaceLustre
+    case printSurfaceSilk
+    case printProofProfile
+    case printPreview
+    case printPreviewProfileRequired
+    case printAdvanced
+    case printDeliveryColorSpace
     case printPerforationSimulation
 }
