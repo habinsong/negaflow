@@ -16,7 +16,8 @@ final class AppLaunchConfigurationTests: XCTestCase {
             "NEGAFLOW_UI_TEST_ROOT": "/tmp/negaflow-e2e",
             "NEGAFLOW_UI_TEST_IMPORT_SYNTHETIC": "1",
             "NEGAFLOW_UI_TEST_DEMO": "1",
-            "NEGAFLOW_UI_TEST_AUTO_DEVELOP": "1"
+            "NEGAFLOW_UI_TEST_AUTO_DEVELOP": "1",
+            "NEGAFLOW_UI_TEST_SELECT_ALL": "1"
         ])
 
         XCTAssertEqual(configuration?.uiTestRoot.path, "/tmp/negaflow-e2e")
@@ -24,6 +25,7 @@ final class AppLaunchConfigurationTests: XCTestCase {
         XCTAssertEqual(configuration?.enablesDemoScanner, true)
         XCTAssertEqual(configuration?.preparesCorruptCatalog, false)
         XCTAssertEqual(configuration?.developsImportsAutomatically, true)
+        XCTAssertEqual(configuration?.selectsAllFrames, true)
     }
 
     @MainActor
@@ -37,7 +39,8 @@ final class AppLaunchConfigurationTests: XCTestCase {
             enablesDemoScanner: true,
             preparesCorruptCatalog: false,
             createsDropTargetFolder: false,
-            developsImportsAutomatically: false
+            developsImportsAutomatically: false,
+            selectsAllFrames: false
         )
 
         let model = AppModelFactory.make(configuration: configuration)
@@ -62,7 +65,8 @@ final class AppLaunchConfigurationTests: XCTestCase {
             enablesDemoScanner: false,
             preparesCorruptCatalog: false,
             createsDropTargetFolder: false,
-            developsImportsAutomatically: false
+            developsImportsAutomatically: false,
+            selectsAllFrames: false
         )
 
         XCTAssertEqual(
@@ -92,7 +96,8 @@ final class AppLaunchConfigurationTests: XCTestCase {
             enablesDemoScanner: false,
             preparesCorruptCatalog: false,
             createsDropTargetFolder: false,
-            developsImportsAutomatically: false
+            developsImportsAutomatically: false,
+            selectsAllFrames: false
         )
         let secondConfiguration = AppLaunchConfiguration(
             uiTestRoot: secondRoot,
@@ -100,7 +105,8 @@ final class AppLaunchConfigurationTests: XCTestCase {
             enablesDemoScanner: false,
             preparesCorruptCatalog: false,
             createsDropTargetFolder: false,
-            developsImportsAutomatically: false
+            developsImportsAutomatically: false,
+            selectsAllFrames: false
         )
 
         let first = AppModelFactory.makeWorkspacePresentationStore(

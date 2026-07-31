@@ -54,6 +54,11 @@ enum PrintPaperSurface: String, CaseIterable, Codable, Sendable {
     case silk
 }
 
+enum PrintRulerUnit: String, CaseIterable, Codable, Sendable {
+    case inches
+    case centimeters
+}
+
 @MainActor
 final class PrintWorkspaceSettingsStore: ObservableObject {
     private enum Keys {
@@ -63,14 +68,21 @@ final class PrintWorkspaceSettingsStore: ObservableObject {
         static let perforationStyle = "print.perforationStyle"
         static let layoutMode = "print.layoutMode"
         static let packageSettings = "print.packageSettings"
+        static let paperSurface = "print.paperSurface"
+        static let showsRulers = "print.showsRulers"
+        static let rulerUnit = "print.rulerUnit"
         static let outputProcess = "print.outputProcess"
         static let cPrintLabName = "print.cPrint.labName"
         static let cPrintPaperName = "print.cPrint.paperName"
-        static let cPrintPaperSurface = "print.cPrint.paperSurface"
+        static let legacyCPrintPaperSurface = "print.cPrint.paperSurface"
         static let cPrintProofICCProfileData = "print.cPrint.proofICCProfileData"
         static let cPrintProofICCProfileName = "print.cPrint.proofICCProfileName"
         static let cPrintPreviewEnabled = "print.cPrint.previewEnabled"
         static let cPrintPaperSimulationEnabled = "print.cPrint.paperSimulationEnabled"
+
+        static func sheetColor(_ layoutMode: PrintWorkspaceLayoutMode) -> String {
+            "print.sheetColor.\(layoutMode.rawValue)"
+        }
     }
 
     private let defaults: UserDefaults
@@ -109,8 +121,27 @@ final class PrintWorkspaceSettingsStore: ObservableObject {
     @Published var layoutMode: PrintWorkspaceLayoutMode {
         didSet {
             defaults.set(layoutMode.rawValue, forKey: Keys.layoutMode)
+            sheetColor = Self.restoredSheetColor(for: layoutMode, defaults: defaults)
             normalizeContactSheetGeometry()
         }
+    }
+
+    @Published var sheetColor: PrintContactSheetBackground {
+        didSet {
+            defaults.set(sheetColor.rawValue, forKey: Keys.sheetColor(layoutMode))
+        }
+    }
+
+    @Published var paperSurface: PrintPaperSurface {
+        didSet { defaults.set(paperSurface.rawValue, forKey: Keys.paperSurface) }
+    }
+
+    @Published var showsRulers: Bool {
+        didSet { defaults.set(showsRulers, forKey: Keys.showsRulers) }
+    }
+
+    @Published var rulerUnit: PrintRulerUnit {
+        didSet { defaults.set(rulerUnit.rawValue, forKey: Keys.rulerUnit) }
     }
 
     @Published var packageSettings: PrintPackageSettings {
@@ -132,10 +163,6 @@ final class PrintWorkspaceSettingsStore: ObservableObject {
 
     @Published var cPrintPaperName: String {
         didSet { defaults.set(cPrintPaperName, forKey: Keys.cPrintPaperName) }
-    }
-
-    @Published var cPrintPaperSurface: PrintPaperSurface {
-        didSet { defaults.set(cPrintPaperSurface.rawValue, forKey: Keys.cPrintPaperSurface) }
     }
 
     @Published var cPrintProofICCProfileData: Data? {
@@ -181,8 +208,10 @@ final class PrintWorkspaceSettingsStore: ObservableObject {
         marginMM = Self.normalizedMargin(storedMargin ?? 10)
         perforationStyle = defaults.string(forKey: Keys.perforationStyle)
             .flatMap(PrintPerforationStyle.init(rawValue:)) ?? .none
-        layoutMode = defaults.string(forKey: Keys.layoutMode)
+        let restoredLayoutMode = defaults.string(forKey: Keys.layoutMode)
             .flatMap(PrintWorkspaceLayoutMode.init(rawValue:)) ?? .singleImage
+        layoutMode = restoredLayoutMode
+        let restoredPackageSettings: PrintPackageSettings
         if let data = defaults.data(forKey: Keys.packageSettings),
            var decoded = try? JSONDecoder().decode(PrintPackageSettings.self, from: data),
            decoded.isValid {
@@ -190,17 +219,29 @@ final class PrintWorkspaceSettingsStore: ObservableObject {
             // 버리고 첫 장만 채우는데, 다음 실행에서 그대로 살아나면 다중 선택이 사라진 것처럼
             // 보인다. 시작은 언제나 꺼진 상태이고, 필요하면 그 자리에서 켠다.
             decoded.repeatOnePhotoPerPage = false
-            packageSettings = decoded
+            restoredPackageSettings = decoded
         } else {
-            packageSettings = PrintPackageSettings()
+            restoredPackageSettings = PrintPackageSettings()
         }
+        packageSettings = restoredPackageSettings
+        sheetColor = defaults.string(forKey: Keys.sheetColor(restoredLayoutMode))
+            .flatMap(PrintContactSheetBackground.init(rawValue:))
+            ?? (restoredLayoutMode == .contactSheet
+                ? restoredPackageSettings.contactSheetBackground
+                : Self.defaultSheetColor(for: restoredLayoutMode))
+        paperSurface = (
+            defaults.string(forKey: Keys.paperSurface)
+                ?? defaults.string(forKey: Keys.legacyCPrintPaperSurface)
+        )
+        .flatMap(PrintPaperSurface.init(rawValue:)) ?? .matte
+        showsRulers = defaults.object(forKey: Keys.showsRulers) as? Bool ?? false
+        rulerUnit = defaults.string(forKey: Keys.rulerUnit)
+            .flatMap(PrintRulerUnit.init(rawValue:)) ?? .inches
         // 출력 방식은 기억하지 않는다. C-Print 는 랩에 넘길 때만 켜는 특수 경로인데, 한 번 켠
         // 뒤 다음 실행에서도 켜져 있으면 일반 출력인 줄 알고 프루프가 걸린 결과를 받게 된다.
         outputProcess = .standard
         cPrintLabName = defaults.string(forKey: Keys.cPrintLabName) ?? ""
         cPrintPaperName = defaults.string(forKey: Keys.cPrintPaperName) ?? ""
-        cPrintPaperSurface = defaults.string(forKey: Keys.cPrintPaperSurface)
-            .flatMap(PrintPaperSurface.init(rawValue:)) ?? .glossy
         let storedCPrintProofData = defaults.data(forKey: Keys.cPrintProofICCProfileData)
         let storedCPrintProofName = defaults.string(forKey: Keys.cPrintProofICCProfileName)
         let validCPrintProofData: Data?
@@ -234,7 +275,8 @@ final class PrintWorkspaceSettingsStore: ObservableObject {
             dpi: dpi > 0 ? dpi : 300,
             perforationStyle: perforationStyle,
             photoAspectRatio: photoAspectRatio,
-            presentationStyle: layoutMode.presentationStyle
+            presentationStyle: layoutMode.presentationStyle,
+            sheetBackground: sheetColor
         )
     }
 
@@ -242,6 +284,7 @@ final class PrintWorkspaceSettingsStore: ObservableObject {
         guard let mode = layoutMode.packageMode else { return nil }
         var result = packageSettings
         result.mode = mode
+        result.contactSheetBackground = sheetColor
         if mode == .customPackage, let sourceCount, sourceCount > 0 {
             let maximumSourceIndex = sourceCount - 1
             for index in result.customItems.indices {
@@ -313,6 +356,21 @@ final class PrintWorkspaceSettingsStore: ObservableObject {
     private static func normalizedMargin(_ value: Double) -> Double {
         guard value.isFinite else { return 10 }
         return min(max(value, 0), 50)
+    }
+
+    private static func defaultSheetColor(
+        for layoutMode: PrintWorkspaceLayoutMode
+    ) -> PrintContactSheetBackground {
+        layoutMode == .contactSheet ? .black : .white
+    }
+
+    private static func restoredSheetColor(
+        for layoutMode: PrintWorkspaceLayoutMode,
+        defaults: UserDefaults
+    ) -> PrintContactSheetBackground {
+        defaults.string(forKey: Keys.sheetColor(layoutMode))
+            .flatMap(PrintContactSheetBackground.init(rawValue:))
+            ?? defaultSheetColor(for: layoutMode)
     }
 
     private func normalizeContactSheetGeometry() {

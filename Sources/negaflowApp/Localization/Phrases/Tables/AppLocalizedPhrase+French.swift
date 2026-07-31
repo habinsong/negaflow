@@ -421,6 +421,7 @@ extension AppLocalization {
         .flipVertical: "Symétrie verticale",
         .baseReadoutFormat: "base %.2f %.2f %.2f",
         .batchFrameProgressFormat: "Image %d/%d",
+        .printPageProgressFormat: "Page %d/%d",
         .rating: "Note",
         .resetRating: "Effacer la note",
         .ratingAccessibilityFormat: "Note %d",

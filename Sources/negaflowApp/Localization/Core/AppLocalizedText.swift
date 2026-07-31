@@ -186,6 +186,10 @@ enum AppLocalizedText: CaseIterable {
     case printOrientationPortrait
     case printOrientationLandscape
     case printMargin
+    case printRuler
+    case printRulerUnit
+    case printRulerInches
+    case printRulerCentimeters
     case printContactSheetBackground
     case printRows
     case printColumns

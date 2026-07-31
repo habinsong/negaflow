@@ -421,6 +421,7 @@ extension AppLocalization {
         .flipVertical: "垂直翻转",
         .baseReadoutFormat: "片基 %.2f %.2f %.2f",
         .batchFrameProgressFormat: "照片 %d/%d",
+        .printPageProgressFormat: "页面 %d/%d",
         .rating: "星级",
         .resetRating: "清除星级",
         .ratingAccessibilityFormat: "星级 %d",

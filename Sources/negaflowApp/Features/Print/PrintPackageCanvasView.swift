@@ -109,9 +109,14 @@ struct PrintPackageCanvasView: View {
         page: PrintPackagePageLayout
     ) -> some View {
         GeometryReader { proxy in
+            let paperInset: CGFloat = settingsStore.showsRulers ? 54 : 30
+            let verticalPaperInset: CGFloat = settingsStore.showsRulers ? 54 : 42
             let paperRect = aspectFit(
                 page.canvasSizePoints,
-                in: CGRect(origin: .zero, size: proxy.size).insetBy(dx: 30, dy: 42)
+                in: CGRect(origin: .zero, size: proxy.size).insetBy(
+                    dx: paperInset,
+                    dy: verticalPaperInset
+                )
             )
             let scale = paperRect.width / page.canvasSizePoints.width
             let foregroundColor = pageForegroundColor
@@ -196,12 +201,10 @@ struct PrintPackageCanvasView: View {
                         .zIndex(Double(page.items.count * 3 + textOffset))
                 }
 
-                if settingsStore.outputProcess == .cPrint {
-                    PrintPaperSurfaceOverlay(surface: settingsStore.cPrintPaperSurface)
-                        .frame(width: paperRect.width, height: paperRect.height)
-                        .position(x: paperRect.midX, y: paperRect.midY)
-                        .zIndex(Double(page.items.count * 3 + page.textItems.count))
-                }
+                PrintPaperSurfaceOverlay(surface: settingsStore.paperSurface)
+                    .frame(width: paperRect.width, height: paperRect.height)
+                    .position(x: paperRect.midX, y: paperRect.midY)
+                    .zIndex(Double(page.items.count * 3 + page.textItems.count))
 
                 if package.mode == .customPackage {
                     PrintCustomPackageCanvasOverlay(
@@ -242,6 +245,15 @@ struct PrintPackageCanvasView: View {
                     .frame(width: paperRect.width, height: paperRect.height)
                     .position(x: paperRect.midX, y: paperRect.midY)
                     .zIndex(Double(page.items.count * 3 + page.textItems.count + 3))
+
+                if settingsStore.showsRulers {
+                    PrintPageRulerOverlay(
+                        paperRect: paperRect,
+                        pageSizePoints: page.canvasSizePoints,
+                        unit: settingsStore.rulerUnit
+                    )
+                    .zIndex(Double(page.items.count * 3 + page.textItems.count + 4))
+                }
             }
         }
     }

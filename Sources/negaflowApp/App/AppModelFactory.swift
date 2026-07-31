@@ -29,6 +29,7 @@ enum AppModelFactory {
             exportRecipeStore: ExportRecipeStore(
                 url: root.appendingPathComponent("export-recipes.json")
             ),
+            printWorkspaceSettingsStore: PrintWorkspaceSettingsStore(defaults: defaults),
             presentationPreferencesStore: PresentationPreferencesStore(defaults: defaults),
             workflowShortcutStore: WorkflowShortcutStore(defaults: defaults),
             diskStorageStore: diskStorage,

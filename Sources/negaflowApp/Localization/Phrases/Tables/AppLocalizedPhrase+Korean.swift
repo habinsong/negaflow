@@ -421,6 +421,7 @@ extension AppLocalization {
             .flipVertical: "상하 반전",
             .baseReadoutFormat: "base %.2f %.2f %.2f",
             .batchFrameProgressFormat: "사진 %d/%d",
+            .printPageProgressFormat: "페이지 %d/%d",
             .rating: "별점",
             .resetRating: "별점 초기화",
             .ratingAccessibilityFormat: "별점 %d",

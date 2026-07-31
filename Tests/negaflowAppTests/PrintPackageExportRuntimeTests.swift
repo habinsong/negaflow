@@ -77,7 +77,11 @@ final class PrintPackageExportRuntimeTests: XCTestCase {
         model.exportPrintSelectionToFolder(
             settings: printStore.compositionSettings(dpi: 72)
         )
+        XCTAssertEqual(model.printPackageExportProgress?.completedPages, 0)
+        XCTAssertEqual(model.printPackageExportProgress?.totalPages, 1)
+        XCTAssertEqual(model.printPackageExportProgress?.percent, 0)
         try await waitForPackageExport(model)
+        XCTAssertNil(model.printPackageExportProgress)
 
         let outputFiles = regularFiles(below: exportRoot)
         let imageFiles = outputFiles.filter { $0.pathExtension == "png" }

@@ -9,13 +9,100 @@ final class PrintWorkspaceSettingsStoreTests: XCTestCase {
         let defaults = UserDefaults(suiteName: suiteName)!
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
-        let package = PrintWorkspaceSettingsStore(defaults: defaults).packageSettings
+        let store = PrintWorkspaceSettingsStore(defaults: defaults)
+        store.layoutMode = .contactSheet
+        let package = store.packageSettings
 
+        XCTAssertEqual(store.sheetColor, .black)
+        XCTAssertEqual(store.effectivePackageSettings()?.contactSheetBackground, .black)
         XCTAssertEqual(package.contactSheetBackground, .black)
         XCTAssertEqual(package.contactColumns, 6)
         XCTAssertEqual(package.contactRows, 7)
         XCTAssertEqual(package.horizontalSpacingMM, 2)
         XCTAssertEqual(package.verticalSpacingMM, 2)
+    }
+
+    func testEveryLayoutUsesRequestedSheetAndSurfaceDefaults() {
+        let suiteName = "PrintWorkspaceSettingsStoreTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let store = PrintWorkspaceSettingsStore(defaults: defaults)
+
+        XCTAssertEqual(store.paperSurface, .matte)
+        for mode in PrintWorkspaceLayoutMode.allCases {
+            store.layoutMode = mode
+            XCTAssertEqual(
+                store.sheetColor,
+                mode == .contactSheet ? .black : .white,
+                "unexpected default for \(mode)"
+            )
+            XCTAssertEqual(
+                store.compositionSettings(dpi: 300).sheetBackground,
+                mode == .contactSheet ? .black : .white
+            )
+            if let package = store.effectivePackageSettings(sourceCount: 1) {
+                XCTAssertEqual(
+                    package.contactSheetBackground,
+                    mode == .contactSheet ? .black : .white
+                )
+            }
+        }
+    }
+
+    func testSheetColorPersistsIndependentlyForEachLayout() {
+        let suiteName = "PrintWorkspaceSettingsStoreTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let store = PrintWorkspaceSettingsStore(defaults: defaults)
+
+        store.layoutMode = .singleImage
+        store.sheetColor = .gray
+        store.layoutMode = .contactSheet
+        store.sheetColor = .white
+        store.layoutMode = .cyanotype
+        store.sheetColor = .black
+
+        let restored = PrintWorkspaceSettingsStore(defaults: defaults)
+        XCTAssertEqual(restored.layoutMode, .cyanotype)
+        XCTAssertEqual(restored.sheetColor, .black)
+        restored.layoutMode = .singleImage
+        XCTAssertEqual(restored.sheetColor, .gray)
+        restored.layoutMode = .contactSheet
+        XCTAssertEqual(restored.sheetColor, .white)
+        restored.layoutMode = .picturePackage
+        XCTAssertEqual(restored.sheetColor, .white)
+    }
+
+    func testRulerAndSurfaceDefaultsAndPersistence() {
+        let suiteName = "PrintWorkspaceSettingsStoreTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let store = PrintWorkspaceSettingsStore(defaults: defaults)
+
+        XCTAssertFalse(store.showsRulers)
+        XCTAssertEqual(store.rulerUnit, .inches)
+        XCTAssertEqual(store.paperSurface, .matte)
+
+        store.showsRulers = true
+        store.rulerUnit = .centimeters
+        store.paperSurface = .silk
+
+        let restored = PrintWorkspaceSettingsStore(defaults: defaults)
+        XCTAssertTrue(restored.showsRulers)
+        XCTAssertEqual(restored.rulerUnit, .centimeters)
+        XCTAssertEqual(restored.paperSurface, .silk)
+    }
+
+    func testLegacyCPrintSurfaceMigratesToCommonSurface() {
+        let suiteName = "PrintWorkspaceSettingsStoreTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.set(PrintPaperSurface.glossy.rawValue, forKey: "print.cPrint.paperSurface")
+
+        XCTAssertEqual(
+            PrintWorkspaceSettingsStore(defaults: defaults).paperSurface,
+            .glossy
+        )
     }
 
     /// "사진 한 장씩 반복"이 켜져 있으면 콘택트 시트는 선택한 나머지를 버리고 첫 장만 채운다.
@@ -276,7 +363,7 @@ final class PrintWorkspaceSettingsStoreTests: XCTestCase {
         store.outputProcess = .cPrint
         store.cPrintLabName = "Example Lab"
         store.cPrintPaperName = "Example Paper"
-        store.cPrintPaperSurface = .lustre
+        store.paperSurface = .lustre
         store.cPrintProofICCProfileData = profile.iccProfileData
         store.cPrintProofICCProfileName = profile.profileName
         store.cPrintPreviewEnabled = true
@@ -288,7 +375,7 @@ final class PrintWorkspaceSettingsStoreTests: XCTestCase {
         XCTAssertEqual(restored.outputProcess, .standard)
         XCTAssertEqual(restored.cPrintLabName, "Example Lab")
         XCTAssertEqual(restored.cPrintPaperName, "Example Paper")
-        XCTAssertEqual(restored.cPrintPaperSurface, .lustre)
+        XCTAssertEqual(restored.paperSurface, .lustre)
         XCTAssertEqual(restored.cPrintProofICCProfileData, profile.iccProfileData)
         XCTAssertEqual(restored.cPrintProofICCProfileName, profile.profileName)
         XCTAssertTrue(restored.cPrintPreviewEnabled)

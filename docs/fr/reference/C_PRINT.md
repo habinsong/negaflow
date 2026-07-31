@@ -3,12 +3,14 @@
 [Accueil de la documentation](../README.md)
 
 L’espace Impression réunit la mise en page, l’export de la page et l’aperçu du procédé de sortie. Il
-propose l’image unique, la planche-contact, le package d’images et le package personnalisé.
+propose l’image unique, la planche-contact, le package d’images, le package personnalisé, le
+cyanotype, la plaque de verre et le gélatino-argentique.
 
 ## Planches-contact
 
 Une nouvelle planche-contact utilise par défaut un fond noir, 6 colonnes × 7 lignes et des
-espacements horizontaux et verticaux de 2 mm. Le fond peut être noir ou blanc ; les légendes, textes
+espacements horizontaux et verticaux de 2 mm. Les autres mises en page commencent en blanc. Chaque
+mise en page peut choisir séparément un fond noir, gris ou blanc ; les légendes, textes
 personnalisés, repères de coupe et contours adoptent automatiquement une couleur contrastée.
 
 Les marges, le nombre de lignes et de colonnes et les deux espacements partagent le même calcul
@@ -21,6 +23,16 @@ Les légendes peuvent afficher le nom du fichier, le numéro de vue original, un
 repartant de 1, la note ou un texte personnalisé. Les légendes par image s’alignent à gauche, au
 centre ou à droite. Plusieurs zones de texte personnalisé peuvent être ajoutées, chacune avec son
 texte, son alignement, sa position, sa largeur et sa hauteur.
+
+## Papier et règles
+
+Toutes les mises en page partagent les mêmes réglages de papier : formats photo en pouces de
+3.5 × 5 à 24 × 36, Letter, Tabloid, A3+, ISO A1–A6 et ISO B1–B6. La surface se trouve juste sous la
+couleur de la feuille et propose Mat, Brillant, Lustre et Soie ; Mat est la valeur par défaut.
+
+Les règles sont désactivées par défaut. Leur activation affiche juste dessous le choix in/cm, puis
+une règle horizontale au-dessus de la feuille et une règle verticale à gauche. Chaque pouce ou
+centimètre est numéroté avec de petits repères intermédiaires.
 
 ## Mises en page individuelles et historiques
 
@@ -38,10 +50,13 @@ condition d’observation historique précise.
 ## Exporter le tirage
 
 **Exporter le tirage**, sous Exportation rapide, rend le format et l’orientation du papier, les
-marges, la mise en page, le fond noir ou blanc, les légendes, les textes personnalisés et les
+marges, la mise en page, le fond noir, gris ou blanc, les légendes, les textes personnalisés et les
 repères de coupe. Le format de fichier, le DPI, le dossier, le nom et l’espace colorimétrique de
 livraison viennent des réglages d’export. Les aides d’écran — avertissement de gamut, simulation
 d’épreuvage et reflet de surface — ne sont pas intégrées au fichier.
+
+Pendant l’export du tirage ou l’exportation rapide, le panneau affiche le nombre de pages terminées,
+une barre de progression linéaire et un pourcentage plutôt qu’un indicateur circulaire indéterminé.
 
 ### Nombre de pages et rendu
 
@@ -69,12 +84,13 @@ Tirage et à l’export du tirage.
 
 ## Utilisation de C-print
 
-Le procédé de sortie peut être standard ou C-print. C-print mémorise le laboratoire, le papier et
-la surface, puis utilise le profil ICC RVB fourni par le laboratoire pour une épreuve écran. Sans
-profil mesuré, negaflow n’applique aucun rendu « C-print » générique.
+Le procédé de sortie peut être standard ou C-print. C-print mémorise le laboratoire et le papier,
+puis utilise le profil ICC RVB fourni par le laboratoire pour une épreuve écran. Le réglage commun
+de surface reste dans Mise en page pour tous les procédés et toutes les mises en page. Sans profil
+mesuré, negaflow n’applique aucun rendu « C-print » générique.
 
 1. Dans l’espace Impression, choisissez **C-print** comme procédé de sortie.
-2. Saisissez le laboratoire et le papier, puis choisissez la surface.
+2. Saisissez le laboratoire et le papier. Choisissez la surface dans Mise en page si nécessaire.
 3. Sélectionnez le profil ICC RVB fourni pour ce laboratoire, ce papier et cette machine.
 4. Activez l’aperçu du tirage. La simulation du papier et du noir ainsi que l’avertissement de gamut
    se trouvent dans Avancé.

@@ -3,23 +3,67 @@ import CoreImage
 import Foundation
 
 public enum PrintPaperSize: String, CaseIterable, Codable, Sendable {
+    case photoRatio
+    case threePointFiveByFive
     case fourBySix
     case fiveBySeven
     case eightByTen
+    case tenByTwelve
+    case elevenByFourteen
+    case twelveByEighteen
+    case sixteenByTwenty
+    case twentyByTwentyFour
+    case twentyByThirty
+    case twentyFourByThirtySix
+    case letter
+    case tabloid
+    case a3Plus
+    case a6
+    case a5
     case a4
-    /// 사진과 같은 비율의 용지. 실제 치수는 사진의 가로세로비에서 만든다(긴 변 10 in 고정).
-    case photoRatio
+    case a3
+    case a2
+    case a1
+    case b6
+    case b5
+    case b4
+    case b3
+    case b2
+    case b1
 
     /// 사진 비율 용지의 긴 변.
     public static let photoRatioLongEdgeMM: Double = 254
 
     public var dimensionsMM: CGSize {
         switch self {
+        case .photoRatio:
+            CGSize(width: Self.photoRatioLongEdgeMM * 2 / 3, height: Self.photoRatioLongEdgeMM)
+        case .threePointFiveByFive: CGSize(width: 88.9, height: 127)
         case .fourBySix: CGSize(width: 101.6, height: 152.4)
         case .fiveBySeven: CGSize(width: 127, height: 177.8)
         case .eightByTen: CGSize(width: 203.2, height: 254)
+        case .tenByTwelve: CGSize(width: 254, height: 304.8)
+        case .elevenByFourteen: CGSize(width: 279.4, height: 355.6)
+        case .twelveByEighteen: CGSize(width: 304.8, height: 457.2)
+        case .sixteenByTwenty: CGSize(width: 406.4, height: 508)
+        case .twentyByTwentyFour: CGSize(width: 508, height: 609.6)
+        case .twentyByThirty: CGSize(width: 508, height: 762)
+        case .twentyFourByThirtySix: CGSize(width: 609.6, height: 914.4)
+        case .letter: CGSize(width: 215.9, height: 279.4)
+        case .tabloid: CGSize(width: 279.4, height: 431.8)
+        case .a3Plus: CGSize(width: 329, height: 483)
+        case .a6: CGSize(width: 105, height: 148)
+        case .a5: CGSize(width: 148, height: 210)
         case .a4: CGSize(width: 210, height: 297)
-        case .photoRatio: CGSize(width: Self.photoRatioLongEdgeMM * 2 / 3, height: Self.photoRatioLongEdgeMM)
+        case .a3: CGSize(width: 297, height: 420)
+        case .a2: CGSize(width: 420, height: 594)
+        case .a1: CGSize(width: 594, height: 841)
+        case .b6: CGSize(width: 125, height: 176)
+        case .b5: CGSize(width: 176, height: 250)
+        case .b4: CGSize(width: 250, height: 353)
+        case .b3: CGSize(width: 353, height: 500)
+        case .b2: CGSize(width: 500, height: 707)
+        case .b1: CGSize(width: 707, height: 1_000)
         }
     }
 
@@ -37,11 +81,33 @@ public enum PrintPaperSize: String, CaseIterable, Codable, Sendable {
 
     public var uiLabel: String {
         switch self {
+        case .photoRatio: "Photo"
+        case .threePointFiveByFive: "3.5 × 5 in"
         case .fourBySix: "4 × 6 in"
         case .fiveBySeven: "5 × 7 in"
         case .eightByTen: "8 × 10 in"
+        case .tenByTwelve: "10 × 12 in"
+        case .elevenByFourteen: "11 × 14 in"
+        case .twelveByEighteen: "12 × 18 in"
+        case .sixteenByTwenty: "16 × 20 in"
+        case .twentyByTwentyFour: "20 × 24 in"
+        case .twentyByThirty: "20 × 30 in"
+        case .twentyFourByThirtySix: "24 × 36 in"
+        case .letter: "Letter · 8.5 × 11 in"
+        case .tabloid: "Tabloid · 11 × 17 in"
+        case .a3Plus: "A3+ · 13 × 19 in"
+        case .a6: "A6"
+        case .a5: "A5"
         case .a4: "A4"
-        case .photoRatio: "Photo"
+        case .a3: "A3"
+        case .a2: "A2"
+        case .a1: "A1"
+        case .b6: "B6"
+        case .b5: "B5"
+        case .b4: "B4"
+        case .b3: "B3"
+        case .b2: "B2"
+        case .b1: "B1"
         }
     }
 }
@@ -121,6 +187,7 @@ public struct PrintCompositionSettings: Codable, Equatable, Sendable {
     /// `photoRatio` 용지가 따라갈 사진의 가로/세로비. 다른 용지에서는 무시된다.
     public var photoAspectRatio: Double?
     public var presentationStyle: PrintPresentationStyle
+    public var sheetBackground: PrintContactSheetBackground
 
     public init(
         paperSize: PrintPaperSize = .a4,
@@ -129,7 +196,8 @@ public struct PrintCompositionSettings: Codable, Equatable, Sendable {
         dpi: Int = 300,
         perforationStyle: PrintPerforationStyle = .none,
         photoAspectRatio: Double? = nil,
-        presentationStyle: PrintPresentationStyle = .standard
+        presentationStyle: PrintPresentationStyle = .standard,
+        sheetBackground: PrintContactSheetBackground = .white
     ) {
         self.paperSize = paperSize
         self.orientation = orientation
@@ -138,6 +206,7 @@ public struct PrintCompositionSettings: Codable, Equatable, Sendable {
         self.perforationStyle = perforationStyle
         self.photoAspectRatio = photoAspectRatio
         self.presentationStyle = presentationStyle
+        self.sheetBackground = sheetBackground
     }
 
     /// 이 설정이 쓰는 실제 용지 치수.
@@ -157,6 +226,7 @@ public struct PrintCompositionSettings: Codable, Equatable, Sendable {
         case perforationStyle
         case photoAspectRatio
         case presentationStyle
+        case sheetBackground
     }
 
     public init(from decoder: Decoder) throws {
@@ -174,6 +244,10 @@ public struct PrintCompositionSettings: Codable, Equatable, Sendable {
             PrintPresentationStyle.self,
             forKey: .presentationStyle
         ) ?? .standard
+        sheetBackground = try container.decodeIfPresent(
+            PrintContactSheetBackground.self,
+            forKey: .sheetBackground
+        ) ?? .white
     }
 }
 
@@ -310,7 +384,16 @@ public enum PrintCompositionRenderer {
         ) else { return nil }
 
         let canvasRect = CGRect(origin: .zero, size: layout.canvasSize)
-        let paper = CIImage(color: CIColor(red: 1, green: 1, blue: 1, alpha: 1))
+        let paperColor: CIColor
+        switch settings.sheetBackground {
+        case .black:
+            paperColor = CIColor(red: 0, green: 0, blue: 0, alpha: 1)
+        case .gray:
+            paperColor = CIColor(red: 0.5, green: 0.5, blue: 0.5, alpha: 1)
+        case .white:
+            paperColor = CIColor(red: 1, green: 1, blue: 1, alpha: 1)
+        }
+        let paper = CIImage(color: paperColor)
             .cropped(to: canvasRect)
         var result = paper
 
@@ -337,7 +420,7 @@ public enum PrintCompositionRenderer {
             guard let hole = roundedRectangle(
                 rect: rect,
                 radius: layout.perforationCornerRadius,
-                color: CIColor(red: 1, green: 1, blue: 1, alpha: 1)
+                color: paperColor
             ) else { return nil }
             result = hole.composited(over: result)
         }

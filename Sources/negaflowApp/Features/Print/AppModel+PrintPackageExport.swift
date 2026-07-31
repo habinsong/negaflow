@@ -75,7 +75,13 @@ extension AppModel {
             protectedSources: selectedFrames.map(\.rawScanURL)
         ), reservePrintPackageArtifacts(artifactLayout) else { return }
 
+        let exportID = UUID()
         isPrintPackageExporting = true
+        printPackageExportProgress = PrintPackageExportProgress(
+            exportID: exportID,
+            completedPages: 0,
+            totalPages: pageCount
+        )
         selectedFrames.forEach { $0.isDeveloping = true }
         statusMessage = text(AppLocalizedPhrase.exportingStatus)
         Task {
@@ -87,7 +93,8 @@ extension AppModel {
                 printerOutputProfile: printerOutputProfile,
                 composition: packageComposition,
                 package: package,
-                recipeIdentity: recipeIdentity
+                recipeIdentity: recipeIdentity,
+                exportID: exportID
             )
         }
     }
@@ -100,11 +107,15 @@ extension AppModel {
         printerOutputProfile: ICCOutputProfileSnapshot?,
         composition: PrintCompositionSettings,
         package: PrintPackageSettings,
-        recipeIdentity: ExportRecipeIdentity?
+        recipeIdentity: ExportRecipeIdentity?,
+        exportID: UUID
     ) async {
         defer {
             selectedFrames.forEach { $0.isDeveloping = false }
             isPrintPackageExporting = false
+            if printPackageExportProgress?.exportID == exportID {
+                printPackageExportProgress = nil
+            }
             releasePrintPackageArtifacts(artifactLayout)
         }
 
@@ -216,8 +227,22 @@ extension AppModel {
                 printerOutputProfile: printerOutputProfile,
                 appVersion: NegaflowProductVersion.applicationVersion()
             )
+            let progressHandler: @Sendable (Int, Int) -> Void = {
+                [weak self] completedPages, totalPages in
+                Task { @MainActor [weak self] in
+                    guard self?.printPackageExportProgress?.exportID == exportID else { return }
+                    self?.printPackageExportProgress = PrintPackageExportProgress(
+                        exportID: exportID,
+                        completedPages: completedPages,
+                        totalPages: totalPages
+                    )
+                }
+            }
             let result = try await Task.detached(priority: .userInitiated) {
-                try PrintPackageExportWriter.write(request)
+                try PrintPackageExportWriter.write(
+                    request,
+                    progress: progressHandler
+                )
             }.value
 
             let sourceGenerations = plans.map {

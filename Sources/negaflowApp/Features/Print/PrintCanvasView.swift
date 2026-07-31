@@ -166,9 +166,14 @@ private struct PrintSingleImagePageView: View {
                 ?? frame.rawPreviewImage
                 ?? frame.thumbnailImage,
                let layout = previewLayout(for: image) {
+                let paperInset: CGFloat = settingsStore.showsRulers ? 54 : 30
+                let verticalPaperInset: CGFloat = settingsStore.showsRulers ? 42 : 24
                 let paperRect = aspectFit(
                     layout.canvasSize,
-                    in: CGRect(origin: .zero, size: proxy.size).insetBy(dx: 30, dy: 24)
+                    in: CGRect(origin: .zero, size: proxy.size).insetBy(
+                        dx: paperInset,
+                        dy: verticalPaperInset
+                    )
                 )
                 let scale = paperRect.width / layout.canvasSize.width
                 ZStack(alignment: .topLeading) {
@@ -204,11 +209,9 @@ private struct PrintSingleImagePageView: View {
                             scale: scale
                         ))
 
-                    if settingsStore.outputProcess == .cPrint {
-                        PrintPaperSurfaceOverlay(surface: settingsStore.cPrintPaperSurface)
-                            .frame(width: paperRect.width, height: paperRect.height)
-                            .position(x: paperRect.midX, y: paperRect.midY)
-                    }
+                    PrintPaperSurfaceOverlay(surface: settingsStore.paperSurface)
+                        .frame(width: paperRect.width, height: paperRect.height)
+                        .position(x: paperRect.midX, y: paperRect.midY)
 
                     if model.displaySoftProofSettings(for: frame).isEnabled,
                        model.destinationGamutWarningEnabled,
@@ -248,6 +251,14 @@ private struct PrintSingleImagePageView: View {
                         .stroke(Color.primary.opacity(0.16), lineWidth: 1)
                         .frame(width: paperRect.width, height: paperRect.height)
                         .position(x: paperRect.midX, y: paperRect.midY)
+
+                    if settingsStore.showsRulers {
+                        PrintPageRulerOverlay(
+                            paperRect: paperRect,
+                            pageSizePoints: layout.canvasSize,
+                            unit: settingsStore.rulerUnit
+                        )
+                    }
                 }
             } else {
                 ContentUnavailableView(model.text(.noFrame), systemImage: "printer")
@@ -258,6 +269,14 @@ private struct PrintSingleImagePageView: View {
     }
 
     private var paperColor: Color {
+        switch settingsStore.sheetColor {
+        case .black:
+            return .black
+        case .gray:
+            return Color(white: 0.5)
+        case .white:
+            break
+        }
         guard let rgb = SoftProof.simulatedPaperWhiteRGB(
             for: model.displaySoftProofSettings(for: frame)
         ) else {
@@ -428,5 +447,106 @@ struct PrintPaperSurfaceOverlay: View {
                 lineWidth: 0.45
             )
         }
+    }
+}
+
+struct PrintRulerTick: Equatable {
+    let fraction: CGFloat
+    let label: Int?
+}
+
+enum PrintRulerScale {
+    static func ticks(lengthPoints: CGFloat, unit: PrintRulerUnit) -> [PrintRulerTick] {
+        guard lengthPoints.isFinite, lengthPoints > 0 else { return [] }
+        let pointsPerUnit: CGFloat
+        let subdivisions: Int
+        switch unit {
+        case .inches:
+            pointsPerUnit = 72
+            subdivisions = 4
+        case .centimeters:
+            pointsPerUnit = 72 / 2.54
+            subdivisions = 2
+        }
+        let totalUnits = lengthPoints / pointsPerUnit
+        let lastTick = Int(floor(totalUnits * CGFloat(subdivisions) + 1e-9))
+        return (0...max(0, lastTick)).map { index in
+            let unitValue = CGFloat(index) / CGFloat(subdivisions)
+            return PrintRulerTick(
+                fraction: unitValue / totalUnits,
+                label: index.isMultiple(of: subdivisions) ? index / subdivisions : nil
+            )
+        }
+    }
+}
+
+struct PrintPageRulerOverlay: View {
+    let paperRect: CGRect
+    let pageSizePoints: CGSize
+    let unit: PrintRulerUnit
+
+    var body: some View {
+        Canvas { context, _ in
+            let horizontalTicks = PrintRulerScale.ticks(
+                lengthPoints: pageSizePoints.width,
+                unit: unit
+            )
+            let verticalTicks = PrintRulerScale.ticks(
+                lengthPoints: pageSizePoints.height,
+                unit: unit
+            )
+            let lineColor = Color.primary.opacity(0.58)
+            var baseline = Path()
+            baseline.move(to: CGPoint(x: paperRect.minX, y: paperRect.minY))
+            baseline.addLine(to: CGPoint(x: paperRect.maxX, y: paperRect.minY))
+            baseline.move(to: CGPoint(x: paperRect.minX, y: paperRect.minY))
+            baseline.addLine(to: CGPoint(x: paperRect.minX, y: paperRect.maxY))
+            context.stroke(baseline, with: .color(lineColor), lineWidth: 0.75)
+
+            for tick in horizontalTicks {
+                let x = paperRect.minX + tick.fraction * paperRect.width
+                let length: CGFloat = tick.label == nil ? 4 : 8
+                var path = Path()
+                path.move(to: CGPoint(x: x, y: paperRect.minY))
+                path.addLine(to: CGPoint(x: x, y: paperRect.minY - length))
+                context.stroke(path, with: .color(lineColor), lineWidth: 0.75)
+                if let label = tick.label {
+                    context.draw(
+                        resolvedLabel(label, context: context),
+                        at: CGPoint(x: x, y: paperRect.minY - 10),
+                        anchor: .bottom
+                    )
+                }
+            }
+
+            for tick in verticalTicks {
+                let y = paperRect.minY + tick.fraction * paperRect.height
+                let length: CGFloat = tick.label == nil ? 4 : 8
+                var path = Path()
+                path.move(to: CGPoint(x: paperRect.minX, y: y))
+                path.addLine(to: CGPoint(x: paperRect.minX - length, y: y))
+                context.stroke(path, with: .color(lineColor), lineWidth: 0.75)
+                if let label = tick.label {
+                    context.draw(
+                        resolvedLabel(label, context: context),
+                        at: CGPoint(x: paperRect.minX - 10, y: y),
+                        anchor: .trailing
+                    )
+                }
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    private func resolvedLabel(
+        _ value: Int,
+        context: GraphicsContext
+    ) -> GraphicsContext.ResolvedText {
+        context.resolve(
+            Text(verbatim: "\(value)")
+                .font(.caption2.monospacedDigit().weight(.medium))
+                .foregroundStyle(.secondary)
+        )
     }
 }

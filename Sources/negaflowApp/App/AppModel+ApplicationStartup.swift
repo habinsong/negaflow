@@ -11,6 +11,11 @@ extension AppModel {
             await refreshDevicesOnStartup()
         }
         prepareUITestFixture(configuration)
+        if configuration?.selectsAllFrames == true {
+            let frameIDs = frames.map(\.id)
+            updateInteractionScope(frameIDs)
+            selectedFrameIDs = Set(frameIDs)
+        }
         if configuration == nil {
             await runScheduledBackupIfDue()
         }

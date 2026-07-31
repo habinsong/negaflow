@@ -97,10 +97,8 @@ struct ExportSection: View {
         if !model.exportBatchStore.items.isEmpty || model.isPrintPackageExporting {
             Section {
                 ExportBatchProgressView(store: model.exportBatchStore)
-                if model.isPrintPackageExporting {
-                    ProgressView()
-                        .controlSize(.small)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                if let progress = model.printPackageExportProgress {
+                    PrintPackageExportProgressView(progress: progress)
                 }
             }
         }

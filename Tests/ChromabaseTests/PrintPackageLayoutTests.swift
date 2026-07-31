@@ -494,24 +494,6 @@ final class PrintPackageLayoutTests: XCTestCase {
         XCTAssertLessThan(pages[1].canvasSizePoints.width, pages[1].canvasSizePoints.height)
     }
 
-    private func composition(marginMM: Double = 10) -> PrintCompositionSettings {
-        PrintCompositionSettings(
-            paperSize: .a4,
-            orientation: .portrait,
-            marginMM: marginMM,
-            dpi: 300
-        )
-    }
-
-    private func containsOrTouches(_ rect: CGRect, _ point: CGPoint) -> Bool {
-        point.x >= rect.minX && point.x <= rect.maxX
-            && point.y >= rect.minY && point.y <= rect.maxY
-    }
-}
-
-private extension CGRect {
-    var area: CGFloat { width * height }
-
     /// 사진 비율 용지는 활성 사진의 가로세로비를 그대로 따른다(긴 변 고정).
     func testPhotoRatioPaperFollowsTheSourceAspect() {
         let landscape = PrintPaperSize.photoRatio.dimensionsMM(photoAspectRatio: 3.0 / 2.0)
@@ -522,12 +504,10 @@ private extension CGRect {
         XCTAssertEqual(portrait.height, PrintPaperSize.photoRatioLongEdgeMM, accuracy: 0.001)
         XCTAssertEqual(portrait.width, PrintPaperSize.photoRatioLongEdgeMM * 2 / 3, accuracy: 0.001)
 
-        // 비율을 모르면 고정 치수로 되돌아간다.
         XCTAssertEqual(
             PrintPaperSize.photoRatio.dimensionsMM(photoAspectRatio: nil),
             PrintPaperSize.photoRatio.dimensionsMM
         )
-        // 다른 용지는 사진 비율에 흔들리지 않는다.
         XCTAssertEqual(
             PrintPaperSize.a4.dimensionsMM(photoAspectRatio: 3.0 / 2.0),
             PrintPaperSize.a4.dimensionsMM
@@ -563,4 +543,35 @@ private extension CGRect {
         XCTAssertEqual(destination.width, page.canvasSizePoints.width, accuracy: 0.5)
         XCTAssertEqual(destination.height, page.canvasSizePoints.height, accuracy: 0.5)
     }
+
+    func testPaperCatalogIncludesPhotoInchAndISOABFamilies() {
+        XCTAssertGreaterThanOrEqual(PrintPaperSize.allCases.count, 27)
+        XCTAssertEqual(PrintPaperSize.threePointFiveByFive.dimensionsMM, CGSize(width: 88.9, height: 127))
+        XCTAssertEqual(PrintPaperSize.twentyFourByThirtySix.dimensionsMM, CGSize(width: 609.6, height: 914.4))
+        XCTAssertEqual(PrintPaperSize.a1.dimensionsMM, CGSize(width: 594, height: 841))
+        XCTAssertEqual(PrintPaperSize.a6.dimensionsMM, CGSize(width: 105, height: 148))
+        XCTAssertEqual(PrintPaperSize.b1.dimensionsMM, CGSize(width: 707, height: 1_000))
+        XCTAssertEqual(PrintPaperSize.b6.dimensionsMM, CGSize(width: 125, height: 176))
+        XCTAssertTrue(PrintPaperSize.allCases.allSatisfy {
+            $0.dimensionsMM.width > 0 && $0.dimensionsMM.height > 0
+        })
+    }
+
+    private func composition(marginMM: Double = 10) -> PrintCompositionSettings {
+        PrintCompositionSettings(
+            paperSize: .a4,
+            orientation: .portrait,
+            marginMM: marginMM,
+            dpi: 300
+        )
+    }
+
+    private func containsOrTouches(_ rect: CGRect, _ point: CGPoint) -> Bool {
+        point.x >= rect.minX && point.x <= rect.maxX
+            && point.y >= rect.minY && point.y <= rect.maxY
+    }
+}
+
+private extension CGRect {
+    var area: CGFloat { width * height }
 }

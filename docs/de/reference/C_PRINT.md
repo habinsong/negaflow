@@ -3,13 +3,15 @@
 [Dokumentationsstart](../README.md)
 
 Der Druckbereich verbindet Seitenlayout, Seitenexport und Vorschau des Ausgabeverfahrens.
-Unterstützt werden Einzelbild, Kontaktbogen, Bildpaket und Benutzerpaket.
+Unterstützt werden Einzelbild, Kontaktbogen, Bildpaket, Benutzerpaket, Cyanotypie, Glasplatte und
+Gelatinesilber.
 
 ## Kontaktbögen
 
 Ein neuer Kontaktbogen startet mit schwarzem Hintergrund, 6 Spalten × 7 Zeilen und horizontalen
-sowie vertikalen Abständen von 2 mm. Der Bogen kann auf Weiß umgestellt werden. Beschriftungen,
-freie Texte, Schnittmarken und Seitenkonturen wechseln automatisch zu einer kontrastierenden Farbe.
+sowie vertikalen Abständen von 2 mm. Alle anderen Layouts starten mit Weiß. Jedes Layout kann
+unabhängig Schwarz, Grau oder Weiß wählen. Beschriftungen, freie Texte, Schnittmarken und
+Seitenkonturen wechseln automatisch zu einer kontrastierenden Farbe.
 
 Rand, Zeilen, Spalten und beide Abstände verwenden dieselbe physische Berechnung. Zu große
 Kombinationen werden auf den größten gültigen Abstand begrenzt, statt die Vorschau zu beschädigen.
@@ -21,6 +23,16 @@ Beschriftungen unterstützen Dateiname, ursprüngliche Bildnummer, eine bei 1 be
 Reihenfolgennummer, Bewertung und benutzerdefinierten Text. Bildbeschriftungen lassen sich links,
 mittig oder rechts ausrichten. Mehrere freie Textfelder können mit eigenem Text, eigener
 Ausrichtung, Position, Breite und Höhe beliebig auf dem Bogen platziert werden.
+
+## Papier und Lineale
+
+Alle Layouts verwenden dieselben Papierregler. Verfügbar sind Fotoformate in Zoll von 3.5 × 5 bis
+24 × 36, Letter, Tabloid, A3+, ISO A1–A6 und ISO B1–B6. Oberfläche steht direkt unter Bogenfarbe
+und bietet Matt, Glänzend, Lustre und Seide; Matt ist die Voreinstellung.
+
+Lineale sind standardmäßig aus. Nach dem Einschalten erscheint direkt darunter die Wahl in/cm,
+außerdem ein horizontales Lineal über und ein vertikales Lineal links vom Papier. Ganze Zoll oder
+Zentimeter werden klein beschriftet und durch kürzere Teilstriche unterteilt.
 
 ## Einzelne und historische Abzugslayouts
 
@@ -37,10 +49,13 @@ Chemie, Platte, eines Papiers oder einer Betrachtungsbedingung.
 ## Abzug exportieren
 
 **Abzug exportieren** direkt unter dem Schnellexport rendert Papierformat, Ausrichtung, Rand,
-Layout, schwarzen oder weißen Bogen, Beschriftungen, freie Texte und Schnittmarken. Dateiformat,
+Layout, schwarzen, grauen oder weißen Bogen, Beschriftungen, freie Texte und Schnittmarken. Dateiformat,
 DPI, Ordner, Benennung und Auslieferungsfarbraum stammen aus den Exporteinstellungen. Reine
 Bildschirmhilfen wie Farbumfangwarnung, Softproof-Simulation und Oberflächenglanz werden nicht in
 die Datei eingebrannt.
+
+Während Abzugsexport oder Schnellexport laufen, zeigt der Exportbereich fertige Seiten, einen
+linearen Fortschrittsbalken und Prozent statt eines unbestimmten Kreisindikators.
 
 ### Seitenzahlen und Rendering
 
@@ -69,12 +84,13 @@ Print-Vorschau und den Print-Export.
 
 ## C-Print verwenden
 
-Das Ausgabeverfahren kann Standard oder C-Print sein. C-Print speichert Labor, Papier und
-Oberfläche und verwendet das vom Labor bereitgestellte RGB-ICC-Profil für einen Bildschirm-
-Softproof. Ohne gemessenes Profil wendet negaflow keinen pauschalen „C-Print-Look“ an.
+Das Ausgabeverfahren kann Standard oder C-Print sein. C-Print speichert Labor und Papier und
+verwendet das vom Labor bereitgestellte RGB-ICC-Profil für einen Bildschirm-Softproof. Die
+gemeinsame Oberflächeneinstellung bleibt für alle Verfahren und Layouts im Layout-Tab. Ohne
+gemessenes Profil wendet negaflow keinen pauschalen „C-Print-Look“ an.
 
 1. Wählen Sie im Druckbereich unter Ausgabeverfahren **C-Print**.
-2. Tragen Sie Labor und Papier ein und wählen Sie die Oberfläche.
+2. Tragen Sie Labor und Papier ein. Wählen Sie die Oberfläche bei Bedarf im Layout-Tab.
 3. Wählen Sie das RGB-ICC-Profil für genau dieses Labor, Papier und Gerät.
 4. Aktivieren Sie die Abzugsvorschau. Papier- und Schwarzpunktsimulation sowie Farbumfangwarnung
    befinden sich unter Erweitert.

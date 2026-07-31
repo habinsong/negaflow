@@ -16,6 +16,9 @@ struct ExportBatchProgressView: View {
                         )
                     )
                     Spacer()
+                    Text(verbatim: "\(percent)%")
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
                     if store.failedCount > 0 {
                         Label {
                             Text(verbatim: "\(store.failedCount)")
@@ -33,6 +36,13 @@ struct ExportBatchProgressView: View {
             }
             .controlSize(.small)
         }
+    }
+
+    private var percent: Int {
+        guard !store.items.isEmpty else { return 0 }
+        return Int(
+            (Double(store.finishedCount) / Double(store.items.count) * 100).rounded()
+        )
     }
 
     private var controls: some View {
@@ -61,5 +71,31 @@ struct ExportBatchProgressView: View {
 
     private func localized(_ text: BatchExportLocalizedText) -> String {
         text.resolved(language: model.appLanguage)
+    }
+}
+
+struct PrintPackageExportProgressView: View {
+    @EnvironmentObject private var model: AppModel
+    let progress: PrintPackageExportProgress
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(
+                    model.text(
+                        AppLocalizedPhrase.printPageProgressFormat,
+                        progress.completedPages,
+                        progress.totalPages
+                    )
+                )
+                Spacer()
+                Text(verbatim: "\(progress.percent)%")
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+            }
+            ProgressView(value: progress.fraction, total: 1)
+                .progressViewStyle(.linear)
+        }
+        .controlSize(.small)
     }
 }

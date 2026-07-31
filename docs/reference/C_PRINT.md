@@ -3,13 +3,15 @@
 [Docs home](../README.md)
 
 The Print workspace combines page layout, page export, and output-process preview. It supports
-single-image, contact-sheet, picture-package, and custom-package layouts.
+single image, contact sheet, picture package, custom package, cyanotype, glass plate, and gelatin
+silver.
 
 ## Contact sheets
 
 New contact sheets start with a black sheet, 6 columns × 7 rows, and 2 mm horizontal and vertical
-gaps. The sheet can be switched between black and white. Captions, custom text, crop marks, and page
-outlines automatically use a contrasting color.
+gaps. Every other layout starts with a white sheet. Every layout can switch its sheet independently
+between black, gray, and white; captions, custom text, crop marks, and page outlines automatically
+use a contrasting color.
 
 Margins, row and column counts, and horizontal and vertical gaps use one physical layout contract.
 Impossible combinations are reduced to the largest valid spacing instead of producing a broken
@@ -23,6 +25,16 @@ selected and the same font is used in the preview and print export. Per-image ca
 aligned left, center, or right.
 Custom text supports multiple independent text boxes; each box has its own text, alignment,
 position, width, and height anywhere on the sheet.
+
+## Paper controls and rulers
+
+Every layout uses the same paper controls. The paper catalog includes common photographic inch
+sizes from 3.5 × 5 through 24 × 36, Letter, Tabloid, A3+, ISO A1–A6, and ISO B1–B6. Surface is
+directly below Sheet Color and offers Matte, Glossy, Lustre, and Silk; Matte is the default.
+
+Rulers are off by default. Turning them on reveals an in/cm selector directly below the switch and
+adds a horizontal ruler above the page and a vertical ruler to its left. Whole inches or
+centimeters are numbered, with smaller subdivision ticks between them.
 
 ## Individual and historical layouts
 
@@ -39,9 +51,12 @@ or viewing condition.
 ## Print export
 
 **Print Export**, directly below Quick Export, renders the current page size, orientation, margins,
-layout, black or white sheet, captions, custom text, and crop marks. It uses the format, DPI, folder,
+layout, black, gray, or white sheet, captions, custom text, and crop marks. It uses the format, DPI, folder,
 naming, and delivery color-space settings shown in Export. Screen-only aids—gamut warnings,
 soft-proof simulation, and paper-surface sheen—are not baked into the file.
+
+While either Print Export path is running, the Export panel shows the completed-page count, a
+linear progress bar, and a percentage instead of an indeterminate spinner.
 
 ### Page counts and rendering
 
@@ -69,12 +84,13 @@ and Print Export.
 
 ## C-print use
 
-The output process can be Standard or C-print. C-print records the destination lab, paper, and
-surface, then uses an RGB ICC profile supplied by that lab for an on-screen soft proof. negaflow
+The output process can be Standard or C-print. C-print records the destination lab and paper, then
+uses an RGB ICC profile supplied by that lab for an on-screen soft proof. The common Surface control
+remains in Layout for every output process and layout. negaflow
 does not apply a generic “C-print look” when no measured profile is available.
 
 1. Open the Print workspace and choose **C-print** under Output Process.
-2. Enter the lab and paper, then choose the surface.
+2. Enter the lab and paper. Choose the surface under Layout if needed.
 3. Choose the RGB ICC profile supplied for that lab, paper, and machine.
 4. Turn on Print Preview. Paper and black-ink simulation and gamut warning are under Advanced.
 

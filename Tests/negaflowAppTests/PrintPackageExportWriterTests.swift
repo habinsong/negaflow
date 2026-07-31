@@ -81,6 +81,45 @@ final class PrintPackageExportWriterTests: XCTestCase {
         )
     }
 
+    func testWriterReportsCompletedPageProgressForMultiPageContactSheet() throws {
+        let sources = try (1...3).map {
+            try makeSource(index: $0, width: 24, height: 16, format: .png)
+        }
+        let artifacts = try XCTUnwrap(PrintPackageArtifactLayout(
+            folder: root,
+            stem: "progress",
+            pageCount: 3,
+            format: .png
+        ))
+        let recorder = PageProgressRecorder()
+
+        _ = try PrintPackageExportWriter.write(
+            request(
+                sources: sources,
+                package: PrintPackageSettings(
+                    mode: .contactSheet,
+                    contactRows: 1,
+                    contactColumns: 1
+                ),
+                artifacts: artifacts,
+                format: .png,
+                printerOutputProfile: nil
+            ),
+            journalDirectory: journalDirectory,
+            progress: { recorder.append(completed: $0, total: $1) }
+        )
+
+        XCTAssertEqual(
+            recorder.values,
+            [
+                PageProgressRecorder.Value(completed: 0, total: 3),
+                PageProgressRecorder.Value(completed: 1, total: 3),
+                PageProgressRecorder.Value(completed: 2, total: 3),
+                PageProgressRecorder.Value(completed: 3, total: 3),
+            ]
+        )
+    }
+
     func testCompositePreparationDecodesAtCellResolutionBeforeDeveloping() throws {
         let source = try makeSource(index: 90, width: 2_400, height: 1_600, format: .png)
 
@@ -474,5 +513,27 @@ final class PrintPackageExportWriterTests: XCTestCase {
             try XCTUnwrap(properties[kCGImagePropertyPixelWidth] as? Int),
             try XCTUnwrap(properties[kCGImagePropertyPixelHeight] as? Int)
         )
+    }
+}
+
+private final class PageProgressRecorder: @unchecked Sendable {
+    struct Value: Equatable {
+        let completed: Int
+        let total: Int
+    }
+
+    private let lock = NSLock()
+    private var storage: [Value] = []
+
+    var values: [Value] {
+        lock.lock()
+        defer { lock.unlock() }
+        return storage
+    }
+
+    func append(completed: Int, total: Int) {
+        lock.lock()
+        storage.append(Value(completed: completed, total: total))
+        lock.unlock()
     }
 }

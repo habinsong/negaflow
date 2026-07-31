@@ -44,11 +44,6 @@ struct PrintPackageInspectorControls: View {
 
     private var contactSheetControls: some View {
         VStack(alignment: .leading, spacing: PrintInspectorMetrics.verticalSpacing) {
-            paperColorField
-
-            Divider()
-                .opacity(0.4)
-
             PrintInspectorPairedSteppers(
                 leadingTitle: model.text(.printRows),
                 leadingValue: packageBinding(\.contactRows),
@@ -81,17 +76,6 @@ struct PrintPackageInspectorControls: View {
         }
     }
 
-    /// 인화 용지 색 — 모든 인화 레이아웃이 같은 컨트롤을 쓴다.
-    private var paperColorField: some View {
-        PrintInspectorStackedField(model.text(.printContactSheetBackground)) {
-            PrintInspectorSegmentedPicker(
-                options: PrintContactSheetBackground.allCases,
-                label: contactSheetBackgroundTitle,
-                selection: packageBinding(\.contactSheetBackground)
-            )
-        }
-    }
-
     /// 시트에 올라간 사진을 스캔 기본 방향으로 통일해 배치한다. 프레임 자체의 방향은 그대로다.
     private var normalizeOrientationField: some View {
         PrintInspectorBooleanSegmentedField(
@@ -102,11 +86,6 @@ struct PrintPackageInspectorControls: View {
 
     private var picturePackageControls: some View {
         VStack(alignment: .leading, spacing: PrintInspectorMetrics.verticalSpacing) {
-            paperColorField
-
-            Divider()
-                .opacity(0.4)
-
             PrintInspectorInlineField(model.text(.printPictureTemplate)) {
                 PrintInspectorPopupPicker(
                     selection: packageBinding(\.pictureTemplate),
@@ -138,11 +117,6 @@ struct PrintPackageInspectorControls: View {
 
     private var customPackageControls: some View {
         VStack(alignment: .leading, spacing: PrintInspectorMetrics.verticalSpacing) {
-            paperColorField
-
-            Divider()
-                .opacity(0.4)
-
             normalizeOrientationField
 
             Divider()
@@ -420,16 +394,6 @@ struct PrintPackageInspectorControls: View {
                 sourceIndex,
                 title: frame.compactDisplayName(language: model.appLanguage)
             )
-        }
-    }
-
-    private func contactSheetBackgroundTitle(
-        _ background: PrintContactSheetBackground
-    ) -> String {
-        switch background {
-        case .black: model.text(.canvasBackgroundBlack)
-        case .gray: model.text(.canvasBackgroundGray)
-        case .white: model.text(.canvasBackgroundWhite)
         }
     }
 

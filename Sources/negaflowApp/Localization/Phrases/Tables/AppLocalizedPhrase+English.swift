@@ -421,6 +421,7 @@ extension AppLocalization {
             .flipVertical: "Flip Vertical",
             .baseReadoutFormat: "base %.2f %.2f %.2f",
             .batchFrameProgressFormat: "Frame %d/%d",
+            .printPageProgressFormat: "Page %d/%d",
             .rating: "Rating",
             .resetRating: "Clear Rating",
             .ratingAccessibilityFormat: "Rating %d",

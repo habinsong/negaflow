@@ -369,6 +369,7 @@ enum AppLocalizedPhrase: CaseIterable {
     case flipVertical
     case baseReadoutFormat
     case batchFrameProgressFormat
+    case printPageProgressFormat
     case rating
     case resetRating
     case ratingAccessibilityFormat

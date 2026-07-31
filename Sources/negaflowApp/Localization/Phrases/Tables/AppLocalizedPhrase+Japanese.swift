@@ -421,6 +421,7 @@ extension AppLocalization {
         .flipVertical: "上下反転",
         .baseReadoutFormat: "ベース %.2f %.2f %.2f",
         .batchFrameProgressFormat: "コマ %d/%d",
+        .printPageProgressFormat: "ページ %d/%d",
         .rating: "評価",
         .resetRating: "評価を解除",
         .ratingAccessibilityFormat: "評価 %d",

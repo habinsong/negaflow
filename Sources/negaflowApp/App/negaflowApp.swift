@@ -5,6 +5,21 @@ import CoreImage
 import ScannerKit
 import SwiftUI
 
+struct PrintPackageExportProgress: Equatable, Sendable {
+    let exportID: UUID
+    let completedPages: Int
+    let totalPages: Int
+
+    var fraction: Double {
+        guard totalPages > 0 else { return 0 }
+        return min(max(Double(completedPages) / Double(totalPages), 0), 1)
+    }
+
+    var percent: Int {
+        Int((fraction * 100).rounded())
+    }
+}
+
 @MainActor
 final class AppModel: ObservableObject {
     // 기존 demo catalog/shortcut 호환을 위해 8200i 계열 내부 ID를 기본값으로 유지한다.
@@ -46,6 +61,7 @@ final class AppModel: ObservableObject {
     let exportAvailabilityStore = ExportAvailabilityStore()
     @Published var selectedExportRecipeID: UUID?
     @Published var isPrintPackageExporting = false
+    @Published var printPackageExportProgress: PrintPackageExportProgress?
     @Published var activeWorkspaceModule: WorkspaceModule = .develop {
         didSet {
             guard activeWorkspaceModule != oldValue else { return }

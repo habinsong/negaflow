@@ -90,15 +90,16 @@ file's SHA-256 checksum matches the checksum published with the release.
 - Camera, lens, film, and exposure notes written into the EXIF of the exported file
 - Roll-level shooting notes, and library search by camera, lens, or film
 - JPEG and 16-bit TIFF export, ICC profiles, and print layouts
-- Black/white contact sheets with exact mm grids, selectable caption fonts, and rendered Print Export
-- C-print destination settings, paper-surface preview, and lab ICC soft proof
+- Per-layout black/gray/white sheets, common matte/glossy/lustre/silk previews, photo/ISO paper
+  sizes, and optional in/cm rulers
+- C-print destination settings and lab ICC soft proof
 - Import progress, per-folder process/target development, and batch progress
 - Persistent folder expansion, photo drag-and-drop, and live Finder synchronization
 - Presets and copy/paste that include process, target, adjustments, crop, and orientation
 - Seven print layouts: single image, contact sheet, picture package, custom package, cyanotype,
   glass plate, and gelatin silver
 - Page-aware Print Export and Quick Export: a 39-photo 6 × 7 contact sheet is one composed output,
-  while individual-image layouts are a bounded 39-file batch
+  while individual-image layouts are a bounded 39-file batch, with linear progress and percentage
 - A localized About window that places the Niépce bicentennial message between the app name and
   version
 

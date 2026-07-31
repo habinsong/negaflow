@@ -65,6 +65,7 @@ enum PrintPackageExportWriter {
     static func write(
         _ request: PrintPackageExportRequest,
         journalDirectory: URL = ExportArtifactCommitJournal.defaultDirectoryURL(),
+        progress: @escaping @Sendable (_ completedPages: Int, _ totalPages: Int) -> Void = { _, _ in },
         beforePublish: () throws -> Void = {}
     ) throws -> PrintPackageExportResult {
         let fileManager = FileManager.default
@@ -132,6 +133,7 @@ enum PrintPackageExportWriter {
         let stagedURLs = request.artifactLayout.staged(in: stagingDirectory)
         var estimatedBases: [Int: FilmBase] = [:]
         var contributorPages: [Int: [Int]] = [:]
+        progress(0, pages.count)
 
         for (pageIndex, page) in pages.enumerated() {
             let globalSourceIndices = Array(Set(page.items.map(\.sourceIndex))).sorted()
@@ -218,6 +220,7 @@ enum PrintPackageExportWriter {
                 options: request.options,
                 outputProfile: printerOutputProfile
             )
+            progress(pageIndex + 1, pages.count)
         }
 
         try verifyOriginalSources(request.sources)

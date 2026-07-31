@@ -421,6 +421,7 @@ extension AppLocalization {
         .flipVertical: "Vertikal spiegeln",
         .baseReadoutFormat: "Basis %.2f %.2f %.2f",
         .batchFrameProgressFormat: "Bild %d/%d",
+        .printPageProgressFormat: "Seite %d/%d",
         .rating: "Bewertung",
         .resetRating: "Bewertung entfernen",
         .ratingAccessibilityFormat: "Bewertung %d",

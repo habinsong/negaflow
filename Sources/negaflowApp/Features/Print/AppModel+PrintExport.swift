@@ -267,7 +267,7 @@ extension AppModel {
         return CPrintExportRecipeConfiguration(
             labName: labName.isEmpty ? nil : labName,
             paperName: paperName.isEmpty ? nil : paperName,
-            surface: printWorkspaceSettingsStore.cPrintPaperSurface,
+            surface: printWorkspaceSettingsStore.paperSurface,
             proofProfileSHA256: cPrintProofICCProfileData.map(ICCOutputProfileSnapshot.sha256)
         )
     }

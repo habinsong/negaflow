@@ -178,6 +178,49 @@ struct PrintWorkspaceInspector: View {
                     valueText: "\(Int(settingsStore.marginMM.rounded())) mm",
                     inputFractionDigits: 0
                 )
+
+                Divider()
+                    .opacity(0.4)
+
+                PrintInspectorBooleanSegmentedField(
+                    label: model.text(.printRuler),
+                    isOn: $settingsStore.showsRulers
+                )
+                .accessibilityIdentifier("negaflow.print.layout.ruler")
+
+                if settingsStore.showsRulers {
+                    PrintInspectorStackedField(model.text(.printRulerUnit)) {
+                        PrintInspectorSegmentedPicker(
+                            options: PrintRulerUnit.allCases,
+                            label: rulerUnitTitle,
+                            selection: $settingsStore.rulerUnit
+                        )
+                    }
+                    .accessibilityIdentifier("negaflow.print.layout.ruler-unit")
+                }
+
+                Divider()
+                    .opacity(0.4)
+
+                PrintInspectorStackedField(model.text(.printContactSheetBackground)) {
+                    PrintInspectorSegmentedPicker(
+                        options: PrintContactSheetBackground.allCases,
+                        label: sheetColorTitle,
+                        selection: $settingsStore.sheetColor
+                    )
+                }
+                .accessibilityIdentifier("negaflow.print.layout.sheet-color")
+
+                PrintInspectorInlineField(model.text(.printSurface)) {
+                    PrintInspectorPopupPicker(
+                        selection: $settingsStore.paperSurface,
+                        options: PrintPaperSurface.allCases.map {
+                            .init($0, title: paperSurfaceTitle($0))
+                        },
+                        accessibilityLabel: model.text(.printSurface)
+                    )
+                }
+                .accessibilityIdentifier("negaflow.print.layout.surface")
             }
 
             if settingsStore.layoutMode.packageMode != nil {
@@ -264,18 +307,6 @@ struct PrintWorkspaceInspector: View {
                 }
             )
 
-            Divider()
-                .opacity(0.4)
-
-            PrintInspectorInlineField(model.text(.printSurface)) {
-                PrintInspectorPopupPicker(
-                    selection: $settingsStore.cPrintPaperSurface,
-                    options: PrintPaperSurface.allCases.map {
-                        .init($0, title: paperSurfaceTitle($0))
-                    },
-                    accessibilityLabel: model.text(.printSurface)
-                )
-            }
         }
     }
 
@@ -380,6 +411,21 @@ struct PrintWorkspaceInspector: View {
         case .automatic: model.text(.printOrientationAutomatic)
         case .portrait: model.text(.printOrientationPortrait)
         case .landscape: model.text(.printOrientationLandscape)
+        }
+    }
+
+    private func rulerUnitTitle(_ unit: PrintRulerUnit) -> String {
+        switch unit {
+        case .inches: model.text(.printRulerInches)
+        case .centimeters: model.text(.printRulerCentimeters)
+        }
+    }
+
+    private func sheetColorTitle(_ background: PrintContactSheetBackground) -> String {
+        switch background {
+        case .black: model.text(.canvasBackgroundBlack)
+        case .gray: model.text(.canvasBackgroundGray)
+        case .white: model.text(.canvasBackgroundWhite)
         }
     }
 

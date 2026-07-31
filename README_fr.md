@@ -92,15 +92,16 @@ correspond à celle publiée avec la version.
 - Appareil, objectif, film et exposition notés puis écrits dans l’EXIF du fichier exporté
 - Notes de prise de vue au rouleau, et recherche dans la bibliothèque par appareil, objectif ou film
 - Export JPEG et TIFF 16 bits, profils ICC et mises en page d’impression
-- Planches-contact noir/blanc avec grille en mm, légendes libres et export du tirage rendu
-- Réglages de laboratoire, papier et surface C-print avec aperçu d’épreuvage ICC
+- Feuilles noir/gris/blanc par mise en page, aperçu commun mat/brillant/lustre/soie, formats
+  photo/ISO et règles in/cm facultatives
+- Réglages de laboratoire et papier C-print avec aperçu d’épreuvage ICC
 - Progression de l’import, développement par dossier avec procédé, cible et avancement
 - État des dossiers mémorisé, déplacement par glisser-déposer et synchronisation avec le Finder
 - Préréglages et copier-coller incluant procédé, cible, réglages, recadrage et orientation
 - Sept mises en page : image unique, planche-contact, package d’images, package personnalisé,
   cyanotype, plaque de verre et gélatino-argentique
 - Export du tirage et exportation rapide comptés par page : une planche 6 × 7 de 39 photos produit
-  un fichier composé, les dispositions individuelles un lot borné de 39 fichiers
+  un fichier composé, les dispositions individuelles un lot borné de 39 fichiers, avec barre et pourcentage
 - Fenêtre À propos multilingue plaçant le message du bicentenaire de Niépce entre le nom de
   l’application et sa version
 

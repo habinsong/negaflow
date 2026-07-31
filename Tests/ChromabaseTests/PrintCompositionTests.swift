@@ -117,6 +117,34 @@ final class PrintCompositionTests: XCTestCase {
         XCTAssertFalse(output.extent.isNull)
     }
 
+    func testRendererBakesAllThreeSheetColorsIntoPaperPixels() throws {
+        let input = CIImage(color: CIColor(red: 0.2, green: 0.4, blue: 0.8))
+            .cropped(to: CGRect(x: 0, y: 0, width: 3, height: 2))
+        let expectations: [(PrintContactSheetBackground, Float)] = [
+            (.black, 0),
+            (.gray, 0.5),
+            (.white, 1),
+        ]
+
+        for (sheetBackground, expectedChannel) in expectations {
+            let output = try XCTUnwrap(PrintCompositionRenderer.apply(
+                to: input,
+                settings: PrintCompositionSettings(
+                    paperSize: .fourBySix,
+                    orientation: .landscape,
+                    marginMM: 5,
+                    dpi: 72,
+                    sheetBackground: sheetBackground
+                )
+            ))
+            let pixel = try rgba(output)
+            XCTAssertEqual(pixel.x, expectedChannel, accuracy: 0.001)
+            XCTAssertEqual(pixel.y, expectedChannel, accuracy: 0.001)
+            XCTAssertEqual(pixel.z, expectedChannel, accuracy: 0.001)
+            XCTAssertEqual(pixel.w, 1, accuracy: 0.001)
+        }
+    }
+
     func testPresentationStylesApplyExpectedMonochromeRelationships() throws {
         let source = CIImage(color: CIColor(red: 0.2, green: 0.45, blue: 0.8))
             .cropped(to: CGRect(x: 0, y: 0, width: 1, height: 1))
@@ -149,6 +177,7 @@ final class PrintCompositionTests: XCTestCase {
             JSONSerialization.jsonObject(with: encoded) as? [String: Any]
         )
         object.removeValue(forKey: "presentationStyle")
+        object.removeValue(forKey: "sheetBackground")
 
         let decoded = try JSONDecoder().decode(
             PrintCompositionSettings.self,
@@ -156,6 +185,7 @@ final class PrintCompositionTests: XCTestCase {
         )
 
         XCTAssertEqual(decoded.presentationStyle, .standard)
+        XCTAssertEqual(decoded.sheetBackground, .white)
     }
 
     func testInvalidLayoutSettingsAreRejected() {

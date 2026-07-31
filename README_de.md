@@ -92,15 +92,16 @@ bei der Version veröffentlichten übereinstimmt.
 - Kamera, Objektiv, Film und Belichtung als Notiz, geschrieben in die EXIF der Exportdatei
 - Aufnahmedaten je Rolle und Suche in der Bibliothek nach Kamera, Objektiv oder Film
 - JPEG- und 16-Bit-TIFF-Export, ICC-Profile und Drucklayouts
-- Schwarz/weiße Kontaktbögen mit mm-Raster, freien Beschriftungen und gerendertem Abzugsexport
-- C-Print-Angaben zu Labor, Papier und Oberfläche mit ICC-Softproof
+- Layoutbezogene Bögen in Schwarz/Grau/Weiß, gemeinsame Vorschau für Matt/Glänzend/Lustre/Seide,
+  Foto-/ISO-Formate und optionale in/cm-Lineale
+- C-Print-Angaben zu Labor und Papier mit ICC-Softproof
 - Importfortschritt, Entwicklung pro Ordner mit Prozess, Ziel und Fortschrittsanzeige
 - Gespeicherte Ordnerzustände, Verschieben per Drag-and-drop und Finder-Synchronisierung
 - Vorgaben und Kopieren/Einfügen einschließlich Prozess, Ziel, Korrekturen, Beschnitt und Ausrichtung
 - Sieben Abzugslayouts: Einzelbild, Kontaktbogen, Bildpaket, Benutzerpaket, Cyanotypie,
   Glasplatte und Silbergelatine
 - Seitenbezogener Abzugs- und Schnellexport: Ein 6 × 7-Kontaktbogen mit 39 Fotos wird zu einer
-  zusammengesetzten Datei, Einzelbildlayouts zu einem begrenzten Stapel aus 39 Dateien
+  zusammengesetzten Datei, Einzelbildlayouts zu 39 Dateien, mit linearem Fortschritt und Prozent
 - Mehrsprachiges Infofenster mit dem Niépce-Zweihundertjahrtext zwischen App-Name und Version
 
 > Abgeschlossene Prüfungen stehen im [Projektstatus](docs/de/product/PROJECT_STATUS.md). <br>

@@ -40,7 +40,8 @@ final class VirtualLibraryCatalogStressTests: XCTestCase {
             enablesDemoScanner: false,
             preparesCorruptCatalog: false,
             createsDropTargetFolder: false,
-            developsImportsAutomatically: false
+            developsImportsAutomatically: false,
+            selectsAllFrames: false
         )
         let model = AppModelFactory.make(configuration: configuration)
         model.transitionLibraryLifecycle(to: .ready)
