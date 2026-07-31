@@ -130,7 +130,6 @@ public extension Sidecar {
             <rdf:Description rdf:about=""
                 xmlns:xmp="http://ns.adobe.com/xap/1.0/"
                 xmlns:dc="http://purl.org/dc/elements/1.1/"
-                xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/"
                 xmlns:tiff="http://ns.adobe.com/tiff/1.0/"
                 xmlns:exif="http://ns.adobe.com/exif/1.0/"
                 xmlns:aux="http://ns.adobe.com/exif/1.0/aux/"

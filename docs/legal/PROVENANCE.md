@@ -18,6 +18,13 @@ The curves and coefficients here come from negaflow's four photometric anchors, 
 third-party program's formulas or constants.
 The equations and the derivation are in [fixed print response](../reference/PRINT_RESPONSE.md).
 
+The film-stock Dmin and Dmax presets are the one place where published third-party material reaches
+a shipped constant.
+Those numbers are approximate readings of the characteristic curves in manufacturer datasheets, and
+`FilmStockDmin` marks every entry as `datasheetCurve` or `estimated` so the origin stays visible.
+Numbers read off a published chart are facts about the film, not a copy of anyone's code or text,
+and a measured film base from the scan always wins over them.
+
 GrainMend IR runs in this order.
 
 1. Estimate the integer offset between RGB and IR on its own.

@@ -19,6 +19,14 @@ Les courbes et les coefficients viennent des quatre points d'ancrage photométri
 des formules ou constantes d'un programme tiers.
 Les équations et la dérivation sont dans [réponse de tirage fixe](../reference/PRINT_RESPONSE.md).
 
+Les préréglages Dmin et Dmax par pellicule sont le seul endroit où un document tiers publié aboutit
+à une constante livrée.
+Ces valeurs sont des lectures approchées des courbes caractéristiques des fiches techniques
+constructeur, et `FilmStockDmin` marque chaque entrée `datasheetCurve` ou `estimated` pour que
+l'origine reste visible.
+Un nombre lu sur un graphique publié est un fait sur la pellicule, pas une copie du code ou du texte
+de quelqu'un, et une base film mesurée sur le scan l'emporte toujours sur ces valeurs.
+
 GrainMend IR procède dans cet ordre.
 
 1. Estimer seul le décalage entier entre RVB et IR.

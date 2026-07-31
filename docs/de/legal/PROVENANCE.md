@@ -19,6 +19,14 @@ Kurven und Koeffizienten stammen aus den vier photometrischen Ankerpunkten von n
 Formeln oder Konstanten eines fremden Programms.
 Gleichungen und Herleitung stehen in [feste Printantwort](../reference/PRINT_RESPONSE.md).
 
+Die Dmin- und Dmax-Presets je Filmsorte sind die einzige Stelle, an der veröffentlichtes fremdes
+Material zu einer ausgelieferten Konstante wird.
+Diese Zahlen sind Näherungen, abgelesen aus den Kennlinien der Hersteller-Datenblätter, und
+`FilmStockDmin` markiert jeden Eintrag als `datasheetCurve` oder `estimated`, damit die Herkunft
+sichtbar bleibt.
+Eine aus einem veröffentlichten Diagramm abgelesene Zahl ist eine Tatsache über den Film und keine
+Kopie fremden Codes oder Textes; eine am Scan gemessene Filmbasis geht diesen Werten immer vor.
+
 GrainMend IR arbeitet in dieser Reihenfolge.
 
 1. Den ganzzahligen Versatz zwischen RGB und IR eigenständig schätzen.
