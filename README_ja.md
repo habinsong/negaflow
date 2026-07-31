@@ -7,6 +7,7 @@
 <p align="center">アナログフィルムのカメラ複写・スキャンから現像までを支える macOS アプリ</p>
 
 <p align="center">
+  <a href="https://habinsong.github.io/negaflow-site/ja/"><img src="https://img.shields.io/badge/website-negaflow-1F6FEB" alt="ウェブサイト"></a>
   <a href="docs/ja/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.4%20release-EF8B26" alt="リリース状況"></a>
   <a href="#動作環境"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 以降"></a>
   <a href="Package.swift"><img src="https://img.shields.io/badge/Swift-5.9+-F05138?logo=swift&logoColor=white" alt="Swift 5.9 以降"></a>
@@ -20,6 +21,12 @@
   <a href="README_zh-Hans.md">简体中文</a> ·
   <a href="README_fr.md">Français</a> ·
   <a href="README_de.md">Deutsch</a>
+</p>
+
+<p align="center">
+  <a href="https://habinsong.github.io/negaflow-site/ja/">ウェブサイト</a> ·
+  <a href="https://habinsong.github.io/negaflow-site/ja/camera-scanning/">カメラスキャンのガイド</a> ·
+  <a href="https://habinsong.github.io/negaflow-site/ja/faq/">FAQ</a>
 </p>
 
 ---

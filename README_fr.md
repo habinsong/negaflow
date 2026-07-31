@@ -7,6 +7,7 @@
 <p align="center">Une application macOS pour numériser et développer les films, au scanner ou à l’appareil photo</p>
 
 <p align="center">
+  <a href="https://habinsong.github.io/negaflow-site/fr/"><img src="https://img.shields.io/badge/website-negaflow-1F6FEB" alt="site web"></a>
   <a href="docs/fr/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.4%20release-EF8B26" alt="État de la version"></a>
   <a href="#prérequis"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 ou version ultérieure"></a>
   <a href="Package.swift"><img src="https://img.shields.io/badge/Swift-5.9+-F05138?logo=swift&logoColor=white" alt="Swift 5.9 ou version ultérieure"></a>
@@ -20,6 +21,12 @@
   <a href="README_zh-Hans.md">简体中文</a> ·
   <strong>Français</strong> ·
   <a href="README_de.md">Deutsch</a>
+</p>
+
+<p align="center">
+  <a href="https://habinsong.github.io/negaflow-site/fr/">Site web</a> ·
+  <a href="https://habinsong.github.io/negaflow-site/fr/camera-scanning/">Guide de numérisation à l'appareil</a> ·
+  <a href="https://habinsong.github.io/negaflow-site/fr/faq/">FAQ</a>
 </p>
 
 ---

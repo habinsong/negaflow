@@ -7,6 +7,7 @@
 <p align="center">支持胶片翻拍、扫描和完整显影流程的 macOS 应用</p>
 
 <p align="center">
+  <a href="https://habinsong.github.io/negaflow-site/zh/"><img src="https://img.shields.io/badge/website-negaflow-1F6FEB" alt="网站"></a>
   <a href="docs/zh-Hans/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.4%20release-EF8B26" alt="发布状态"></a>
   <a href="#系统要求"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 或更高版本"></a>
   <a href="Package.swift"><img src="https://img.shields.io/badge/Swift-5.9+-F05138?logo=swift&logoColor=white" alt="Swift 5.9 或更高版本"></a>
@@ -20,6 +21,12 @@
   <strong>简体中文</strong> ·
   <a href="README_fr.md">Français</a> ·
   <a href="README_de.md">Deutsch</a>
+</p>
+
+<p align="center">
+  <a href="https://habinsong.github.io/negaflow-site/zh/">网站</a> ·
+  <a href="https://habinsong.github.io/negaflow-site/zh/camera-scanning/">相机翻拍指南</a> ·
+  <a href="https://habinsong.github.io/negaflow-site/zh/faq/">常见问题</a>
 </p>
 
 ---

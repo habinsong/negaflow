@@ -7,6 +7,7 @@
 <p align="center">Eine macOS-App für den gesamten Scan- und Entwicklungsprozess analoger Filme</p>
 
 <p align="center">
+  <a href="https://habinsong.github.io/negaflow-site/de/"><img src="https://img.shields.io/badge/website-negaflow-1F6FEB" alt="Website"></a>
   <a href="docs/de/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.4%20release-EF8B26" alt="Veröffentlichungsstatus"></a>
   <a href="#voraussetzungen"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 oder neuer"></a>
   <a href="Package.swift"><img src="https://img.shields.io/badge/Swift-5.9+-F05138?logo=swift&logoColor=white" alt="Swift 5.9 oder neuer"></a>
@@ -20,6 +21,12 @@
   <a href="README_zh-Hans.md">简体中文</a> ·
   <a href="README_fr.md">Français</a> ·
   <strong>Deutsch</strong>
+</p>
+
+<p align="center">
+  <a href="https://habinsong.github.io/negaflow-site/de/">Website</a> ·
+  <a href="https://habinsong.github.io/negaflow-site/de/camera-scanning/">Anleitung zum Abfotografieren</a> ·
+  <a href="https://habinsong.github.io/negaflow-site/de/faq/">FAQ</a>
 </p>
 
 ---
