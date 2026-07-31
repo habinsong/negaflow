@@ -107,6 +107,9 @@ NEGAFLOW_LIGHTROOM_EXPANSION.md
 /PERFORMANCE_STRESS_AUDIT_*.md
 /UI_UX_IMPLEMENTATION_REQUESTS.md
 
+# Windows 이식 조사 자료 (로컬 전용, 공개 대상 아님)
+/windows_docs/
+
 # 일회성 코드 감사 / 청크 생성물
 /all_swift_files.txt
 /chunk_*
