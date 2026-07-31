@@ -75,6 +75,7 @@ extension AppModel {
             protectedSources: selectedFrames.map(\.rawScanURL)
         ), reservePrintPackageArtifacts(artifactLayout) else { return }
 
+        cancelPrintPackagePreviewTasks()
         let exportID = UUID()
         isPrintPackageExporting = true
         printPackageExportProgress = PrintPackageExportProgress(

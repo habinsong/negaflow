@@ -1,6 +1,7 @@
 import Chromabase
 import CoreGraphics
 import Foundation
+import AppKit
 import XCTest
 @testable import negaflowApp
 
@@ -8,6 +9,110 @@ import XCTest
 /// 프레임 때문에 배치가 통째로 무너지면 다중 선택이 첫 장만 남은 것처럼 보인다.
 @MainActor
 final class PrintPackagePreviewTests: XCTestCase {
+    func testPackagePreviewChoosesHighestResolutionPositiveImageInsteadOfThumbnailFirst() throws {
+        let thumbnail = try makeImage(pixelWidth: 360)
+        let developed = try makeImage(pixelWidth: 1_200)
+        let packagePreview = try makeImage(pixelWidth: 1_600)
+        let raw = try makeImage(pixelWidth: 2_400)
+
+        XCTAssertIdentical(
+            PrintPackagePreviewResolution.bestImage(
+                developed: developed,
+                packagePreview: packagePreview,
+                thumbnail: thumbnail,
+                raw: raw
+            ),
+            packagePreview
+        )
+        XCTAssertIdentical(
+            PrintPackagePreviewResolution.bestImage(
+                developed: developed,
+                packagePreview: nil,
+                thumbnail: thumbnail,
+                raw: raw
+            ),
+            developed
+        )
+    }
+
+    func testPackagePreviewUsesRawOnlyWhenNoPositivePreviewExists() throws {
+        let raw = try makeImage(pixelWidth: 2_400)
+        XCTAssertIdentical(
+            PrintPackagePreviewResolution.bestImage(
+                developed: nil,
+                packagePreview: nil,
+                thumbnail: nil,
+                raw: raw
+            ),
+            raw
+        )
+    }
+
+    func testPackagePreviewUpgradesOnlyWhenRasterIsSmallerThanDisplayedCell() throws {
+        let thumbnail = try makeImage(pixelWidth: 360)
+        let displayReady = try makeImage(pixelWidth: 1_024)
+        let stretchedThumbnail = try makeImage(pixelWidth: 360, logicalWidth: 6_000)
+
+        XCTAssertTrue(PrintPackagePreviewResolution.needsUpgrade(
+            thumbnail,
+            displayTargetPixels: 900
+        ))
+        XCTAssertTrue(PrintPackagePreviewResolution.needsUpgrade(
+            stretchedThumbnail,
+            displayTargetPixels: 900
+        ))
+        XCTAssertFalse(PrintPackagePreviewResolution.needsUpgrade(
+            displayReady,
+            displayTargetPixels: 900
+        ))
+        XCTAssertEqual(
+            PrintPackagePreviewResolution.renderDimension(for: 900),
+            1_024
+        )
+        XCTAssertEqual(
+            PrintPackagePreviewResolution.renderDimension(for: 4_000),
+            DevelopFrameRenderer.interactiveMaxDimension
+        )
+    }
+
+    func testPackagePreviewCacheIsDiscardedWhenLeavingPrintWorkspace() throws {
+        let model = AppModel()
+        let frame = makeFrame(width: 6_000, height: 4_000)
+        model.frames = [frame]
+        model.activeWorkspaceModule = .print
+        frame.printPackagePreviewImage = try makeImage(pixelWidth: 1_024)
+        frame.printPackagePreviewDevelopRevision = frame.developRevision
+        frame.printPackagePreviewCleanRawRevision = frame.cleanRawRevision
+        frame.printPackagePreviewSourceLocationRevision = frame.sourceLocationRevision
+        frame.printPackagePreviewTransform = frame.imageTransform
+        frame.printPackagePreviewSoftProofRevision = model.softProofConfigurationRevision
+
+        XCTAssertNotNil(model.printPackageDisplayImage(for: frame))
+        model.activeWorkspaceModule = .develop
+
+        XCTAssertNil(frame.printPackagePreviewImage)
+        XCTAssertNil(frame.printPackagePreviewTask)
+        XCTAssertEqual(frame.printPackagePreviewTargetDimension, 0)
+    }
+
+    func testCancellingPreviewTasksPreservesCompletedCacheForExportDisplay() throws {
+        let model = AppModel()
+        let frame = makeFrame(width: 6_000, height: 4_000)
+        let preview = try makeImage(pixelWidth: 1_024)
+        model.frames = [frame]
+        frame.printPackagePreviewImage = preview
+        frame.printPackagePreviewTask = Task {
+            try? await Task.sleep(nanoseconds: 30_000_000_000)
+        }
+        let generation = frame.printPackagePreviewGeneration
+
+        model.cancelPrintPackagePreviewTasks()
+
+        XCTAssertNil(frame.printPackagePreviewTask)
+        XCTAssertIdentical(frame.printPackagePreviewImage, preview)
+        XCTAssertEqual(frame.printPackagePreviewGeneration, generation + 1)
+    }
+
     func testExportCountUsesPrintedPagesForAllFourLayoutsWithThirtyNineFrames() {
         let suiteName = "negaflow-print-output-count-\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
@@ -163,5 +268,23 @@ final class PrintPackagePreviewTests: XCTestCase {
             sourcePixelHeight: height,
             initialTransform: transform
         )
+    }
+
+    private func makeImage(pixelWidth: Int, logicalWidth: CGFloat? = nil) throws -> NSImage {
+        let representation = try XCTUnwrap(NSBitmapImageRep(
+            bitmapDataPlanes: nil,
+            pixelsWide: pixelWidth,
+            pixelsHigh: 1,
+            bitsPerSample: 8,
+            samplesPerPixel: 4,
+            hasAlpha: true,
+            isPlanar: false,
+            colorSpaceName: .deviceRGB,
+            bytesPerRow: 0,
+            bitsPerPixel: 0
+        ))
+        let image = NSImage(size: NSSize(width: logicalWidth ?? CGFloat(pixelWidth), height: 1))
+        image.addRepresentation(representation)
+        return image
     }
 }

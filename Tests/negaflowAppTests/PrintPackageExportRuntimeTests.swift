@@ -542,8 +542,14 @@ final class PrintPackageExportRuntimeTests: XCTestCase {
         model.selectedFrameIDs = Set(frames.map(\.id))
         model.quickExportFormat = .jpeg
         model.quickExportDPI = 72
+        frames.forEach { frame in
+            frame.printPackagePreviewTask = Task {
+                try? await Task.sleep(nanoseconds: 30_000_000_000)
+            }
+        }
 
         model.quickExportPrintSelection(settings: printStore.compositionSettings(dpi: 72))
+        XCTAssertTrue(frames.allSatisfy { $0.printPackagePreviewTask == nil })
         try await waitForPackageExport(model)
 
         let imageFiles = regularFiles(below: quickRoot).filter { $0.pathExtension == "jpg" }

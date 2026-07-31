@@ -64,9 +64,12 @@ final class SoftProofRefreshTests: XCTestCase {
         XCTAssertTrue(source.contains("@State private var selectedPage"))
         XCTAssertTrue(source.contains("pageControls(count: preview.pages.count)"))
         XCTAssertTrue(source.contains("@ObservedObject var frame: ScanFrame"))
-        // 시트 셀은 작다 — 썸네일을 먼저 쓰고, 없을 때만 더 큰 그림으로 내려간다.
-        // 여기서 풀해상도 현상 결과를 먼저 요구하면 올린 장수만큼 무거운 렌더가 줄줄이 돈다.
-        XCTAssertTrue(
+        // 각 셀은 자기 프레임을 관찰하면서, 표시 픽셀에 모자랄 때만 적응형 프리뷰를 요청한다.
+        // 풀해상도 일괄 현상이나 썸네일 우선 확대 경로로 되돌아가면 안 된다.
+        XCTAssertTrue(source.contains("model.printPackageDisplayImage(for: frame)"))
+        XCTAssertTrue(source.contains("preparePrintPackageDisplayPreview("))
+        XCTAssertTrue(source.contains("displayTargetPixels: previewDisplayTargetPixels"))
+        XCTAssertFalse(
             source.contains(
                 "frame.thumbnailImage ?? frame.developedImage ?? frame.rawPreviewImage"
             )

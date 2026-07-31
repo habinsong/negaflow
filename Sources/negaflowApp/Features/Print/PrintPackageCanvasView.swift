@@ -338,6 +338,8 @@ struct PrintPackageCanvasView: View {
 }
 
 private struct PrintPackageFrameItemView: View {
+    @Environment(\.displayScale) private var displayScale
+    @EnvironmentObject private var model: AppModel
     @ObservedObject var frame: ScanFrame
     let item: PrintPackageItemLayout
     let destination: CGRect
@@ -346,9 +348,7 @@ private struct PrintPackageFrameItemView: View {
 
     var body: some View {
         Group {
-            // 셀이 작으므로 썸네일을 먼저 쓴다. 여기서 풀해상도 현상 결과를 요구하면 시트에 올린
-            // 장수만큼 무거운 렌더가 줄줄이 돌아 화면이 끊긴다.
-            if let image = frame.thumbnailImage ?? frame.developedImage ?? frame.rawPreviewImage {
+            if let image = model.printPackageDisplayImage(for: frame) {
                 packageImage(image)
             } else {
                 // 아직 미리보기가 준비되지 않은 셀. 빈 종이로 두면 선택이 누락된 것처럼 보인다.
@@ -366,6 +366,38 @@ private struct PrintPackageFrameItemView: View {
                     .accessibilityHidden(true)
             }
         }
+        .task(id: previewRequestID) {
+            await model.preparePrintPackageDisplayPreview(
+                for: frame,
+                displayTargetPixels: previewDisplayTargetPixels
+            )
+        }
+    }
+
+    private struct PreviewRequestID: Equatable {
+        let frameID: UUID
+        let developRevision: Int
+        let cleanRawRevision: Int
+        let sourceLocationRevision: UInt64
+        let transformRevision: Int
+        let proofRevision: UInt64
+        let targetPixels: Int
+    }
+
+    private var previewDisplayTargetPixels: CGFloat {
+        max(destination.width, destination.height) * max(displayScale, 1)
+    }
+
+    private var previewRequestID: PreviewRequestID {
+        PreviewRequestID(
+            frameID: frame.id,
+            developRevision: frame.developRevision,
+            cleanRawRevision: frame.cleanRawRevision,
+            sourceLocationRevision: frame.sourceLocationRevision,
+            transformRevision: frame.transformRevision,
+            proofRevision: softProofRevision,
+            targetPixels: Int(previewDisplayTargetPixels.rounded(.up))
+        )
     }
 
     @ViewBuilder
@@ -377,6 +409,7 @@ private struct PrintPackageFrameItemView: View {
         let swapsAxes = turns % 2 == 1
         Image(nsImage: image)
             .resizable()
+            .interpolation(.high)
             .aspectRatio(contentMode: mode)
             .frame(
                 width: swapsAxes ? destination.height : destination.width,

@@ -65,6 +65,9 @@ final class AppModel: ObservableObject {
     @Published var activeWorkspaceModule: WorkspaceModule = .develop {
         didSet {
             guard activeWorkspaceModule != oldValue else { return }
+            if oldValue == .print && activeWorkspaceModule != .print {
+                discardPrintPackagePreviews()
+            }
             guard activeWorkspaceModule == .print || oldValue == .print else { return }
             let previousProof = displaySoftProofSettings(
                 for: actionableFrame,

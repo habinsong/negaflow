@@ -119,6 +119,17 @@ final class ScanFrame: ObservableObject, Identifiable {
     // 필름스트립용 경량 썸네일(긴 변 ~360px). developedImage 와 달리 비활성 프레임에서도 유지된다
     // (메모리 FIFO 제거 대상이 아님) — 풀해상도 버퍼를 내려놓아도 썸네일은 남아 스트립이 비지 않는다.
     @Published var thumbnailImage: NSImage?
+    /// 인화 패키지의 큰 셀이 360px 썸네일을 확대하지 않도록, 현재 표시 크기에 맞춰 만든
+    /// 일시적 발색 프리뷰. 인화 작업공간을 벗어나면 버리고 내보내기 원본으로는 사용하지 않는다.
+    @Published var printPackagePreviewImage: NSImage?
+    var printPackagePreviewDevelopRevision: Int = -1
+    var printPackagePreviewCleanRawRevision: Int = -1
+    var printPackagePreviewSourceLocationRevision: UInt64 = 0
+    var printPackagePreviewTransform: ImageTransform?
+    var printPackagePreviewSoftProofRevision: UInt64?
+    var printPackagePreviewTargetDimension: CGFloat = 0
+    var printPackagePreviewTask: Task<Void, Never>?
+    var printPackagePreviewGeneration: UInt64 = 0
     /// 현재 썸네일이 반영한 방향 변형. 프레임의 imageTransform 과 다르면 썸네일이 본 이미지와
     /// 다른 방향으로 보인다 — 다음 정착 현상에서 다시 그린다. nil = 이전 세션 캐시라 알 수 없음.
     var thumbnailTransform: ImageTransform?
