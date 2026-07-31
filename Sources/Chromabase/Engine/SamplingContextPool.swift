@@ -34,9 +34,16 @@ enum SamplingContextPool {
         }
         let options: [CIContextOption: Any]
         if let cs {
-            options = [.workingColorSpace: cs, .outputColorSpace: cs]
+            options = [
+                .cacheIntermediates: false,
+                .workingColorSpace: cs,
+                .outputColorSpace: cs,
+            ]
         } else {
-            options = [.workingColorSpace: NSNull()]
+            options = [
+                .cacheIntermediates: false,
+                .workingColorSpace: NSNull(),
+            ]
         }
         let ctx = CIContext(options: options)
         state.contexts[key] = ctx

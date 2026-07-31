@@ -55,12 +55,7 @@ struct PrintPackageExportResult: Sendable {
 enum PrintPackageExportWriter {
     static let maximumPageSourceRasterBytes: UInt64 = 512 * 1_024 * 1_024
 
-    private static let renderContext = CIContext(options: [
-        .useSoftwareRenderer: false,
-        .cacheIntermediates: false,
-        .workingColorSpace: CGColorSpace(name: CGColorSpace.linearSRGB) as Any,
-        .outputColorSpace: CGColorSpace(name: CGColorSpace.sRGB) as Any,
-    ])
+    private static let renderContext = ChromabaseEngine.sharedLinearRenderContext
 
     static func write(
         _ request: PrintPackageExportRequest,

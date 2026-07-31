@@ -375,6 +375,108 @@ final class ExportFrameSnapshotBuilderTests: XCTestCase {
         )
     }
 
+    func testQuickExportProxyKeepsRequestedOutputDimensionsAndOptions() throws {
+        let rawURL = tempDirectory.appendingPathComponent("quick-proxy-source.tiff")
+        let outputURL = tempDirectory.appendingPathComponent("quick-proxy-output.png")
+        try MockScannerBackend.writeSyntheticNegative(width: 800, height: 600, to: rawURL)
+        let frame = ScanFrame(
+            scanIndex: 1,
+            rawScanURL: rawURL,
+            filmType: .colorPositive,
+            sourcePixelWidth: 800,
+            sourcePixelHeight: 600
+        )
+        let options = ExportOptions(
+            colorSpace: .displayP3,
+            dpi: 150,
+            longEdge: 400,
+            jpegQuality: 0.83,
+            outputSharpening: 0.25
+        )
+        let plan = ExportFrameSnapshotBuilder.build(
+            frame: frame,
+            sourceIdentity: try RenderManifest.sourceIdentity(for: rawURL),
+            outputURL: outputURL,
+            format: .png,
+            writeSidecar: false,
+            writeMainFlatMaster: false,
+            writeOriginalRaw: false,
+            options: options,
+            scannerModel: nil,
+            backendUsed: nil
+        )
+
+        XCTAssertEqual(
+            try XCTUnwrap(ExportFrameWriter.renderProxyLongEdge(for: plan.snapshot)),
+            408,
+            accuracy: 0.001
+        )
+        XCTAssertEqual(plan.snapshot.exportOptions, options)
+
+        _ = try writeAndComplete(plan.snapshot)
+
+        let source = try XCTUnwrap(CGImageSourceCreateWithURL(outputURL as CFURL, nil))
+        let properties = try XCTUnwrap(
+            CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
+        )
+        XCTAssertEqual(properties[kCGImagePropertyPixelWidth] as? Int, 400)
+        XCTAssertEqual(properties[kCGImagePropertyPixelHeight] as? Int, 300)
+    }
+
+    func testFullResolutionAndAuxiliaryExportsDoNotUseRenderProxy() throws {
+        let rawURL = tempDirectory.appendingPathComponent("full-resolution-source.tiff")
+        try MockScannerBackend.writeSyntheticNegative(width: 32, height: 24, to: rawURL)
+        let frame = ScanFrame(
+            scanIndex: 1,
+            rawScanURL: rawURL,
+            filmType: .colorPositive,
+            sourcePixelWidth: 32,
+            sourcePixelHeight: 24
+        )
+        let sourceIdentity = try RenderManifest.sourceIdentity(for: rawURL)
+
+        func snapshot(
+            name: String,
+            format: ExportFormat = .jpeg,
+            writeSidecar: Bool = false,
+            writeMainFlatMaster: Bool = false,
+            options: ExportOptions
+        ) -> ExportFrameSnapshot {
+            ExportFrameSnapshotBuilder.build(
+                frame: frame,
+                sourceIdentity: sourceIdentity,
+                outputURL: tempDirectory.appendingPathComponent(name),
+                format: format,
+                writeSidecar: writeSidecar,
+                writeMainFlatMaster: writeMainFlatMaster,
+                writeOriginalRaw: false,
+                options: options,
+                scannerModel: nil,
+                backendUsed: nil
+            ).snapshot
+        }
+
+        XCTAssertNil(ExportFrameWriter.renderProxyLongEdge(for: snapshot(
+            name: "full.jpg",
+            options: .standard
+        )))
+        XCTAssertNil(ExportFrameWriter.renderProxyLongEdge(for: snapshot(
+            name: "sidecar.jpg",
+            writeSidecar: true,
+            options: ExportOptions(longEdge: 16)
+        )))
+        XCTAssertNil(ExportFrameWriter.renderProxyLongEdge(for: snapshot(
+            name: "main-flat.jpg",
+            writeMainFlatMaster: true,
+            options: ExportOptions(longEdge: 16)
+        )))
+        XCTAssertNil(ExportFrameWriter.renderProxyLongEdge(for: snapshot(
+            name: "raw.tif",
+            format: .rawScanTIFF,
+            options: ExportOptions(longEdge: 16)
+        )))
+    }
+
     func testImportedFrameDoesNotMislabelImportTimeAsOriginalDate() throws {
         let sourceURL = tempDirectory.appendingPathComponent("imported.jpg")
         try Data("imported-source".utf8).write(to: sourceURL)

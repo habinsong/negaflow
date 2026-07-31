@@ -14,6 +14,20 @@ import ImageIO
 // 따라서 DNG/RAW는 CIRAWFilter(filterWithImageURL:)로 데모사이크 처리한다.
 // 이렇게 하면 16bit linear 영역 데이터를 얻어 Chromabase 파이프라인에 그대로 넣을 수 있다.
 public enum ImageLoader {
+    /// ImageIO의 기본 지연 디코드는 같은 CGImage를 여러 CIContext에서 읽을 때 압축 원본을
+    /// context마다 다시 풀 수 있다. 풀해상도 현상/내보내기는 생성 시 한 번 디코드해 캐시한
+    /// 픽셀을 공유한다. 비트 깊이·색공간·픽셀 치수는 바꾸지 않는다.
+    static func createFullyDecodedImage(_ source: CGImageSource) -> CGImage? {
+        CGImageSourceCreateImageAtIndex(
+            source,
+            0,
+            [
+                kCGImageSourceShouldCache: true,
+                kCGImageSourceShouldCacheImmediately: true,
+            ] as CFDictionary
+        )
+    }
+
     public enum Decoder: String, Codable, Sendable {
         case imageIO
         case coreImageRAW
@@ -156,7 +170,7 @@ public enum ImageLoader {
         // RAW/DNG는 CIRAWFilter가 파일 orientation을 기본 적용하므로 여기서 재적용하지 않는다.
         if kind(of: url) == .rawDng { return loadRAWDecoded(url) }
         guard let src = CGImageSourceCreateWithURL(url as CFURL, nil),
-              let cg = CGImageSourceCreateImageAtIndex(src, 0, nil) else {
+              let cg = createFullyDecodedImage(src) else {
             guard let image = loadStandard(url) else { return nil }
             return DecodedImage(
                 image: image,

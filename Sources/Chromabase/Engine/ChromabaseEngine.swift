@@ -37,14 +37,15 @@ public struct FilmBase: Codable, Sendable, Equatable {
 public final class ChromabaseEngine: @unchecked Sendable {
     public init() {}
 
-    // export(파일 쓰기) 전용 컨텍스트. 엔진은 현상 1회마다 새로 생성되므로(`DevelopFrameRenderer`),
-    // 인스턴스 프로퍼티로 두면 미사용 develop 경로에서도 매번 CIContext가 할당돼 메모리가 누적된다.
-    // export에서만 쓰이고 옵션이 고정이라 공유 static으로 둔다(스레드 안전).
-    private static let exportContext = CIContext(options: [
-        .useSoftwareRenderer: false,
-        .workingColorSpace: CGColorSpace(name: CGColorSpace.linearSRGB) as Any,
-    ])
-    private var ci: CIContext { Self.exportContext }
+    /// 통계 readback과 최종 파일 렌더가 같은 Metal/texture 캐시를 공유한다. CIContext는
+    /// 스레드 안전하며, 반복 생성이나 context 사이의 원본 texture 재전송을 피한다.
+    public static var sharedLinearRenderContext: CIContext {
+        SamplingContextPool.context(
+            workingColorSpace: CGColorSpace(name: CGColorSpace.linearSRGB)
+        )
+    }
+
+    private var ci: CIContext { Self.sharedLinearRenderContext }
 
     /// 원본을 로드하고 FilmBase를 추정한다.
     public func estimateFilmBase(at url: URL, mode: DevelopParameters.BaseMode,

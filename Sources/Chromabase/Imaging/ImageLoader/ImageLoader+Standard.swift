@@ -6,7 +6,7 @@ import ImageIO
 extension ImageLoader {
     static func loadStandard(_ url: URL) -> CIImage? {
         guard let src = CGImageSourceCreateWithURL(url as CFURL, nil),
-              let cg = CGImageSourceCreateImageAtIndex(src, 0, nil) else { return nil }
+              let cg = createFullyDecodedImage(src) else { return nil }
         let props = CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as? [CFString: Any]
         // 프로필 없는 16bit+ TIFF는 스캐너 raw(linear)다 — 경로가 달라도 같은 파일은 같게 읽어야 한다.
         let base = profileAwareImage(cg, properties: props, untaggedTIFFRole: .linearScannerRaw)
@@ -21,7 +21,7 @@ extension ImageLoader {
 
     public static func loadScannerTIFFDecoded(_ url: URL) -> DecodedImage? {
         guard let src = CGImageSourceCreateWithURL(url as CFURL, nil),
-              let cg = CGImageSourceCreateImageAtIndex(src, 0, nil) else { return nil }
+              let cg = createFullyDecodedImage(src) else { return nil }
         let props = CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as? [CFString: Any]
         return DecodedImage(
             image: profileAwareImage(

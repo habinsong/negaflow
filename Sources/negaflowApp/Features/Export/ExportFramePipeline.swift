@@ -6,11 +6,7 @@ import AppKit
 
 enum ExportFrameWriter {
     // Apple Core Image 권장대로 context의 kernel/cache 상태를 export 간 재사용한다.
-    private static let sharedRenderContext = CIContext(options: [
-        .useSoftwareRenderer: false,
-        .workingColorSpace: CGColorSpace(name: CGColorSpace.linearSRGB) as Any,
-        .outputColorSpace: CGColorSpace(name: CGColorSpace.sRGB) as Any,
-    ])
+    private static let sharedRenderContext = ChromabaseEngine.sharedLinearRenderContext
 
     static func write(_ snapshot: ExportFrameSnapshot) throws -> ExportFrameResult {
         try write(snapshot, beforeCommit: {})
@@ -98,26 +94,11 @@ enum ExportFrameWriter {
                     : ".\(snapshot.rawScanURL.pathExtension)"),
             isDirectory: false
         )
-        let printProxyLongEdge: CGFloat?
-        if let composition = snapshot.printComposition,
-           !snapshot.writeMainFlatMaster,
-           !snapshot.writeSidecar {
-            let paper = composition.paperDimensionsMM
-            let outputLongEdge = max(paper.width, paper.height)
-                * CGFloat(composition.dpi) / 25.4
-            printProxyLongEdge = ExportDevelopedFrameRenderer.proxyInputLongEdge(
-                outputLongEdge: outputLongEdge,
-                imageTransform: snapshot.params.imageTransform,
-                sourcePixelSize: snapshot.sourcePixelSize
-            )
-        } else {
-            // Main Flat과 RenderManifest decode provenance는 원본 해상도 decode 계약을 유지한다.
-            printProxyLongEdge = nil
-        }
+        let renderProxyLongEdge = renderProxyLongEdge(for: snapshot)
         let frameRender = try ExportDevelopedFrameRenderer.prepare(
             snapshot,
             stagedSourceURL: stagedSourceURL,
-            proxyLongEdge: printProxyLongEdge,
+            proxyLongEdge: renderProxyLongEdge,
             fileManager: fileManager
         )
         let scannerProfile = snapshot.scannerProfileID.flatMap { ScannerProfileRegistry.load(named: $0) }
@@ -360,6 +341,33 @@ enum ExportFrameWriter {
         guard try RenderManifest.sourceIdentity(for: destination) == expectedIdentity else {
             throw ChromabaseError.writeFailed("original export pair identity mismatch")
         }
+    }
+
+    /// 최종 출력보다 큰 입력 픽셀은 현상 전에 줄인다. 2% 여유와 crop/회전 보정분을 더 읽어
+    /// 출력 크기에 필요한 샘플은 모두 보존하며, 최종 크기와 인코딩 품질은 ExportEngine이
+    /// 기존 옵션 그대로 결정한다.
+    static func renderProxyLongEdge(for snapshot: ExportFrameSnapshot) -> CGFloat? {
+        guard snapshot.format != .rawScanTIFF,
+              !snapshot.writeMainFlatMaster,
+              !snapshot.writeSidecar else {
+            // Main Flat과 RenderManifest decode provenance는 원본 해상도 decode 계약을 유지한다.
+            return nil
+        }
+        let outputLongEdge: CGFloat
+        if let composition = snapshot.printComposition {
+            let paper = composition.paperDimensionsMM
+            outputLongEdge = max(paper.width, paper.height)
+                * CGFloat(composition.dpi) / 25.4
+        } else if let longEdge = snapshot.exportOptions.longEdge, longEdge > 0 {
+            outputLongEdge = CGFloat(longEdge)
+        } else {
+            return nil
+        }
+        return ExportDevelopedFrameRenderer.proxyInputLongEdge(
+            outputLongEdge: outputLongEdge,
+            imageTransform: snapshot.params.imageTransform,
+            sourcePixelSize: snapshot.sourcePixelSize
+        )
     }
 
     /// 원본과 같은 볼륨의 교체용 임시 폴더. 만들 수 없으면(읽기 전용 볼륨 등) 기존처럼
