@@ -33,6 +33,9 @@ final class ExportSettingsStore: ObservableObject {
         static let quickExportFormat = "export.quick.format"
         static let quickExportDPI = "export.quick.dpi"
         static let quickExportLongEdge = "export.quick.longEdge"
+        static let quickExportJPEGQuality = "export.quick.jpegQuality"
+        static let exportPNGBitDepth = "export.pngBitDepth"
+        static let quickExportPNGBitDepth = "export.quick.pngBitDepth"
         static let exportVerificationLevel = "export.verificationLevel"
         // 빠른 내보내기 폴더 경로는 DiskStorageStore("disk.quickExportFolder")로 이관됐다.
         // 구키("export.quick.folder")는 DiskStorageStore 가 최초 실행 시 이어받는다.
@@ -44,6 +47,12 @@ final class ExportSettingsStore: ObservableObject {
     // OutputSharpening 의 screen 기준 DPI(144)에 가장 가까운 150 을 기본으로 둔다.
     static let defaultQuickExportLongEdge = 2048
     static let defaultQuickExportDPI = 150
+    /// JPEG 기본값은 두 경로가 같다 — 빠른 내보내기는 크기만 줄이고 인코딩 화질은 양보하지 않는다.
+    static let defaultJPEGQuality = 1.0
+    /// PNG 비트 심도는 용도가 갈린다. 보관용 내보내기는 현상 결과를 그대로 담는 16bit,
+    /// 화면 공유용 빠른 내보내기는 파일이 두 배가 되지 않도록 8bit 다.
+    static let defaultPNGBitDepth: ExportBitDepth = .sixteen
+    static let defaultQuickPNGBitDepth: ExportBitDepth = .eight
 
     private let defaults: UserDefaults
 
@@ -118,7 +127,7 @@ final class ExportSettingsStore: ObservableObject {
     @Published var exportSequenceStart: Int = 1 {
         didSet { defaults.set(exportSequenceStart, forKey: Keys.exportSequenceStart) }
     }
-    @Published var exportJPEGQuality: Double = 0.95 {
+    @Published var exportJPEGQuality: Double = ExportSettingsStore.defaultJPEGQuality {
         didSet { defaults.set(exportJPEGQuality, forKey: Keys.exportJPEGQuality) }
     }
     @Published var exportTIFFCompression: ExportTIFFCompression = .none {
@@ -126,6 +135,9 @@ final class ExportSettingsStore: ObservableObject {
     }
     @Published var exportTIFFBitDepth: ExportTIFFBitDepth = .sixteen {
         didSet { defaults.set(exportTIFFBitDepth.rawValue, forKey: Keys.exportTIFFBitDepth) }
+    }
+    @Published var exportPNGBitDepth: ExportBitDepth = ExportSettingsStore.defaultPNGBitDepth {
+        didSet { defaults.set(exportPNGBitDepth.rawValue, forKey: Keys.exportPNGBitDepth) }
     }
     @Published var exportPreserveAlpha = false {
         didSet { defaults.set(exportPreserveAlpha, forKey: Keys.exportPreserveAlpha) }
@@ -147,6 +159,12 @@ final class ExportSettingsStore: ObservableObject {
     }
     @Published var quickExportLongEdge: Int = ExportSettingsStore.defaultQuickExportLongEdge {
         didSet { defaults.set(quickExportLongEdge, forKey: Keys.quickExportLongEdge) }
+    }
+    @Published var quickExportJPEGQuality: Double = ExportSettingsStore.defaultJPEGQuality {
+        didSet { defaults.set(quickExportJPEGQuality, forKey: Keys.quickExportJPEGQuality) }
+    }
+    @Published var quickExportPNGBitDepth: ExportBitDepth = ExportSettingsStore.defaultQuickPNGBitDepth {
+        didSet { defaults.set(quickExportPNGBitDepth.rawValue, forKey: Keys.quickExportPNGBitDepth) }
     }
     @Published var exportVerificationLevel: ExportVerificationLevel = .default {
         didSet {
@@ -217,14 +235,19 @@ final class ExportSettingsStore: ObservableObject {
         exportSequenceStart = max(1, storedSequenceStart)
         if defaults.object(forKey: Keys.exportJPEGQuality) != nil {
             let quality = defaults.double(forKey: Keys.exportJPEGQuality)
-            exportJPEGQuality = quality.isFinite && (0...1).contains(quality) ? quality : 0.95
+            exportJPEGQuality = quality.isFinite && (0...1).contains(quality)
+                ? quality
+                : Self.defaultJPEGQuality
         }
         if let raw = defaults.string(forKey: Keys.exportTIFFCompression),
            let value = ExportTIFFCompression(rawValue: raw) {
             exportTIFFCompression = value
         }
-        if let value = ExportTIFFBitDepth(rawValue: defaults.integer(forKey: Keys.exportTIFFBitDepth)) {
+        if let value = ExportBitDepth(rawValue: defaults.integer(forKey: Keys.exportTIFFBitDepth)) {
             exportTIFFBitDepth = value
+        }
+        if let value = ExportBitDepth(rawValue: defaults.integer(forKey: Keys.exportPNGBitDepth)) {
+            exportPNGBitDepth = value
         }
         exportPreserveAlpha = defaults.bool(forKey: Keys.exportPreserveAlpha)
         if let raw = defaults.string(forKey: Keys.exportMetadataPolicy),
@@ -250,6 +273,15 @@ final class ExportSettingsStore: ObservableObject {
         }
         if defaults.object(forKey: Keys.quickExportLongEdge) != nil {
             quickExportLongEdge = max(0, defaults.integer(forKey: Keys.quickExportLongEdge))
+        }
+        if defaults.object(forKey: Keys.quickExportJPEGQuality) != nil {
+            let quality = defaults.double(forKey: Keys.quickExportJPEGQuality)
+            quickExportJPEGQuality = quality.isFinite && (0...1).contains(quality)
+                ? quality
+                : Self.defaultJPEGQuality
+        }
+        if let value = ExportBitDepth(rawValue: defaults.integer(forKey: Keys.quickExportPNGBitDepth)) {
+            quickExportPNGBitDepth = value
         }
         if let raw = defaults.string(forKey: Keys.exportVerificationLevel),
            let value = ExportVerificationLevel(rawValue: raw) {

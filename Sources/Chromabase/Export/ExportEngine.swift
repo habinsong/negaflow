@@ -9,6 +9,28 @@ import ImageIO
 // 출력은 sRGB로 변환 (plan §8.3 MVP).
 // EXIF(scanner/dpi/film/software) 자동 주입.
 public enum ExportEngine {
+    // MARK: JPEG 크로마 서브샘플링
+    //
+    // Image I/O의 JPEG 인코더는 품질이 0.995 미만이면 4:2:0 크로마 서브샘플링을 쓴다(실측:
+    // 0.99 → 4:2:0, 0.995 → 4:4:4). 색 해상도가 가로·세로 각각 절반이 되므로 채도 높은 미세
+    // 디테일(간판·네온·컬러 그레인)의 경계가 뭉갠다. 휘도는 영향받지 않는다.
+    //
+    // 서브샘플링을 직접 끄는 공개 옵션이 없어 품질값으로만 제어할 수 있다. 고품질 구간을 고른
+    // 사용자는 화질을 우선한 것이므로, 그 구간에서는 서브샘플링이 꺼지는 최소 품질로 올려
+    // 인코드한다. 파일이 커지는 대신 색 해상도가 보존된다. 그 아래 구간은 사용자가 고른 값을
+    // 그대로 쓴다 — 낮은 품질을 고른 의도는 용량 절감이기 때문이다.
+
+    /// 4:4:4로 인코드되는 최소 품질(실측 임계값).
+    public static let chromaSubsamplingFreeQuality = 0.995
+    /// 이 값 이상을 고르면 서브샘플링 없이 인코드한다.
+    public static let fullChromaQualityThreshold = 0.95
+
+    /// 사용자가 고른 품질을 인코더에 넘길 값으로 변환한다.
+    public static func encodedJPEGQuality(_ quality: Double) -> Double {
+        guard quality.isFinite, quality >= fullChromaQualityThreshold else { return quality }
+        return max(quality, chromaSubsamplingFreeQuality)
+    }
+
     public static func write(_ image: CIImage, to url: URL, format: ExportFormat,
                              using context: CIContext, metadata: ExportMeta? = nil,
                              options: ExportOptions = .standard,
@@ -138,7 +160,7 @@ public enum ExportEngine {
                           metadata: ExportMeta? = nil, options: ExportOptions = .standard,
                           colorSpace: CGColorSpace) throws {
         var props: [CFString: Any] = [
-            kCGImageDestinationLossyCompressionQuality: options.jpegQuality,
+            kCGImageDestinationLossyCompressionQuality: encodedJPEGQuality(options.jpegQuality),
         ]
         props.merge(metadataProperties(metadata)) { _, new in new }
         // 8bit 양자화 직전 dithering으로 명부/하늘 banding 완화(OutputDither). 출력 계층에서만 적용.
@@ -162,13 +184,15 @@ public enum ExportEngine {
     static func writePNG(_ image: CIImage, to url: URL, using context: CIContext,
                          metadata: ExportMeta? = nil, options: ExportOptions = .standard,
                          colorSpace: CGColorSpace) throws {
+        // PNG는 무손실이라 JPEG 같은 품질 손잡이가 없다. 화질을 정하는 값은 비트 심도뿐이다.
+        // dither는 8bit 양자화 banding 완화용이므로 16bit에서는 걸지 않는다(TIFF와 같은 규칙).
         guard let cg = ExportRenderedImage.make(
             image,
             using: context,
             colorSpace: colorSpace,
-            bitDepth: .eight,
+            bitDepth: options.pngBitDepth,
             preserveAlpha: options.preserveAlpha,
-            appliesDither: true
+            appliesDither: options.pngBitDepth == .eight
         )
         else { throw ChromabaseError.writeFailed("createCGImage nil: \(url.path)") }
         guard let dest = CGImageDestinationCreateWithURL(url as CFURL, "public.png" as CFString, 1, nil)

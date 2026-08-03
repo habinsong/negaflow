@@ -245,6 +245,20 @@ Rendering Intent und Black Point Compensation bitgleich erzeugt.
 Dafür bräuchte es zuerst einen eigenen ColorSync-Pufferweg und Speicherprüfungen für große
 16-Bit-Bilder.
 
+## Ausgabekodierung
+
+Formateinstellungen liegen außerhalb der Farbpipeline, entscheiden aber darüber, was in der
+ausgelieferten Datei übrig bleibt.
+
+JPEG speichert Farbe mit geringerer Auflösung als Helligkeit, sofern der Encoder nicht über seine
+Unterabtastungsschwelle hinaus geführt wird. Darunter wird die Chrominanz horizontal und vertikal
+halbiert: Helligkeitsdetails bleiben erhalten, gesättigte Kanten werden weicher. Qualität ab 95 %
+wird deshalb ohne Chroma-Unterabtastung kodiert. Niedrigere Einstellungen behalten den gewählten
+Wert, denn wer sie wählt, will eine kleinere Datei.
+
+PNG und TIFF sind verlustfrei und tasten nie unter. Ihr einziger Qualitätsregler ist die Bittiefe,
+8 oder 16 Bit pro Kanal. Dithering wird nur bei 8 Bit angewendet, wo es Quantisierungsbanding verdeckt.
+
 ## Leistung und Sicherheit
 
 - `CIContext` wird je Zweck wiederverwendet.
@@ -277,5 +291,5 @@ Für die Qualität von Scannerprofilen gelten
 - `Sources/Chromabase/Imaging/`
 - `Sources/Chromabase/Export/`
 
-Die aktuelle Produktversion ist `1.0.4`.
+Die aktuelle Produktversion ist `1.0.5`.
 Bearbeitungsverlauf und Profilschemata werden auch künftig erst nach einem Prüfverfahren geändert.

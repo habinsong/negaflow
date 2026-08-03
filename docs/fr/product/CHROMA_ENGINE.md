@@ -247,6 +247,21 @@ black-point compensation identiques bit à bit sur toutes les versions de macOS.
 Une telle garantie demanderait d'abord un chemin de tampon ColorSync distinct et des contrôles
 mémoire sur les grandes images 16 bits.
 
+## Encodage de sortie
+
+Les réglages de format sont en dehors du pipeline colorimétrique, mais ils décident de ce qui
+subsiste dans le fichier livré.
+
+Le JPEG enregistre la couleur à une résolution inférieure à la luminance, sauf si l'encodeur dépasse
+son seuil de sous-échantillonnage. En dessous, la chrominance est divisée par deux horizontalement
+et verticalement : le détail de luminance reste intact, mais les bords saturés s'adoucissent. Une
+qualité de 95 % ou plus est donc encodée sans sous-échantillonnage de chrominance. Les réglages
+inférieurs conservent la valeur choisie, puisque les choisir revient à demander un fichier plus petit.
+
+Le PNG et le TIFF sont sans perte et ne sous-échantillonnent jamais. Leur seul réglage de qualité est
+la profondeur de bits, 8 ou 16 bits par canal. Le tramage n'est appliqué qu'en 8 bits, où il masque
+les bandes de quantification.
+
 ## Performance et sûreté
 
 - `CIContext` est réutilisé par usage.
@@ -279,6 +294,6 @@ Le jugement de qualité des profils scanner suit
 - `Sources/Chromabase/Imaging/`
 - `Sources/Chromabase/Export/`
 
-La version produit actuelle est `1.0.4`.
+La version produit actuelle est `1.0.5`.
 L'historique d'édition et les schémas de profils continueront de passer par une procédure de
 validation avant de changer.

@@ -14,10 +14,13 @@ public enum ExportTIFFCompression: String, Codable, CaseIterable, Sendable {
     }
 }
 
-public enum ExportTIFFBitDepth: Int, Codable, CaseIterable, Sendable {
+/// 출력 비트 심도. TIFF·PNG 가 함께 쓴다.
+public enum ExportBitDepth: Int, Codable, CaseIterable, Sendable {
     case eight = 8
     case sixteen = 16
 }
+
+public typealias ExportTIFFBitDepth = ExportBitDepth
 
 public enum ExportOptionsError: Error, LocalizedError, Equatable {
     case invalidDPI

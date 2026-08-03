@@ -6,7 +6,7 @@ enum ExportRenderedImage {
         _ image: CIImage,
         using context: CIContext,
         colorSpace: CGColorSpace,
-        bitDepth: ExportTIFFBitDepth,
+        bitDepth: ExportBitDepth,
         preserveAlpha: Bool,
         appliesDither: Bool
     ) -> CGImage? {

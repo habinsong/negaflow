@@ -210,6 +210,42 @@ A recovery target for old film.
 It does not blanket-desaturate or stretch the range, and stays within limited correction that the
 current evidence supports.
 
+## The film look on a digital source
+
+The left Film tab offers slide and color negative stocks.
+For a scan these are a color transform only, because the scan already carries the film's own
+latitude, density response, scatter, and grain in its pixels.
+
+A digital photograph carries none of that.
+Measurement showed what a color transform alone does there: on camera-rendered input the highlight
+steps collapsed to 0.0031, about one fourteenth of the same steps on flat input, while saturation
+still rose. The result reads as a filter, not as film.
+
+So a source marked `Digital Color` or `Digital B&W` runs a separate chain that redoes what film
+does, in order:
+
+1. Undo the camera's display rendering to estimate the exposure the film would receive.
+   Clipped detail does not come back; this is a plausible reconstruction, not recovery.
+2. Add scatter and halation while the image is still linear light, before any density exists.
+   Returning light strikes the red layer first, so the glow is red-weighted, and the light is
+   redistributed rather than added.
+3. Virtual development. A characteristic curve builds density, DIR couplers inhibit neighbouring
+   layers, and a negative then goes through RA-4 paper. A negative's low gamma and the paper's
+   high gamma are two separate curves, which is why highlights lie down instead of clipping.
+4. The stock's color signature, since contrast already came from step 3.
+5. Grain that follows density, and edge response from the datasheet MTF.
+
+Scan sources never enter this chain.
+The switch is the source flag alone, and the scan path is unchanged.
+
+Exposure is rescaled to the latitude of each emulsion. A reversal stock is white about a stop above
+mid grey, so pushing a six-stop digital scene into it unchanged leaves no highlight detail at all.
+The rescale keeps each stock's contrast ranking rather than flattening every film to the same
+response.
+
+Grain and halation become film properties once a stock is selected, so the texture sliders set
+their strength instead of adding a second, separate effect.
+
 ## Develop controls
 
 | Group | Items |
@@ -243,6 +279,19 @@ intent and black-point compensation on every macOS version.
 That guarantee would need a separate ColorSync buffer path and memory checks for large 16-bit images
 first.
 
+## Output encoding
+
+Format settings sit outside the color pipeline, but they decide what survives in the delivered file.
+
+JPEG stores color at a lower resolution than luminance unless the encoder is pushed past its
+subsampling threshold. Below that point chroma is halved both horizontally and vertically, which
+softens saturated edges while luminance detail stays intact. Quality at or above 95% is therefore
+encoded without chroma subsampling. Lower settings keep the value that was chosen, because choosing
+them means asking for a smaller file.
+
+PNG and TIFF are lossless and never subsample. Their only quality control is bit depth, 8 or 16 bits
+per channel. Dithering is applied only at 8 bits, where it hides quantization banding.
+
 ## Performance and safety
 
 - `CIContext` is reused per purpose.
@@ -274,6 +323,6 @@ and [IT8 color validation](../reference/IT8_COLOR_VALIDATION.md).
 - `Sources/Chromabase/Imaging/`
 - `Sources/Chromabase/Export/`
 
-The current product version is `1.0.4`.
+The current product version is `1.0.5`.
 The edit history and profile schemas will keep going through a validation process before they change
 in later versions.

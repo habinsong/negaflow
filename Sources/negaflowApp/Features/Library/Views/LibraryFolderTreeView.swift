@@ -69,7 +69,10 @@ struct LibraryFolderTreeView: View {
     @ViewBuilder
     private func folderSection(_ section: LibraryFolderSection) -> some View {
         let isExpanded = expansionStore.isExpanded(section.id)
+        // 폴더를 직접 고른 경우 외에, 지금 열려 있는 사진이 든 폴더도 같은 강조를 받는다.
+        // 현상·인화처럼 폴더를 직접 고르지 않는 화면에서는 그것이 유일한 위치 단서다.
         let isSelected = selectedFolderID.wrappedValue == section.id
+            || section.frames.contains(where: model.isFrameSelected)
         let isFolderAvailable = section.folder.map(model.isLibraryFolderAvailable) ?? true
         let orderedFrameIDs = orderedResultFrameIDs ?? sections.flatMap(\.frames).map(\.id)
         VStack(alignment: .leading, spacing: 3) {

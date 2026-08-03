@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://habinsong.github.io/negaflow-site/ja/"><img src="https://img.shields.io/badge/website-negaflow-1F6FEB" alt="ウェブサイト"></a>
-  <a href="docs/ja/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.4%20release-EF8B26" alt="リリース状況"></a>
+  <a href="docs/ja/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.5%20release-EF8B26" alt="リリース状況"></a>
   <a href="#動作環境"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 以降"></a>
   <a href="Package.swift"><img src="https://img.shields.io/badge/Swift-5.9+-F05138?logo=swift&logoColor=white" alt="Swift 5.9 以降"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0 ライセンス"></a>
@@ -67,8 +67,8 @@ negaflow は、スキャンしたフィルムやデジタルカメラで複写�
 
 | ダウンロード | 対応するMac |
 |---|---|
-| `negaflow-1.0.4-1-macOS-universal.pkg` | Apple Silicon、Intel |
-| `negaflow-1.0.4-1-macOS-arm64.pkg` | Apple Siliconのみ |
+| `negaflow-1.0.5-1-macOS-universal.pkg` | Apple Silicon、Intel |
+| `negaflow-1.0.5-1-macOS-arm64.pkg` | Apple Siliconのみ |
 
 1. Macに合うPKGをダウンロードします。
 2. PKGを開き、インストーラの案内に従います。

@@ -9,7 +9,7 @@ produit et son usage ; les documents de docs portent les spécifications et les 
 
 | Élément | Valeur actuelle |
 |---|---|
-| Version | `1.0.4` |
+| Version | `1.0.5` |
 | Build | `1` |
 | Système | macOS 14 ou plus récent |
 | Déroulé | import ou scan → développement → export |
@@ -17,7 +17,7 @@ produit et son usage ; les documents de docs portent les spécifications et les 
 | Originaux | Les fichiers d'origine et les fichiers annexes tiers ne sont pas modifiés |
 
 > [!WARNING]
-> L'étiquette `1.0.4` et un build réussi ne signifient pas que la compatibilité avec un scanner
+> L'étiquette `1.0.5` et un build réussi ne signifient pas que la compatibilité avec un scanner
 > réel, la qualité d'image finale, la signature externe ou la notarisation ont été confirmées.
 > Le matériel réel et l'approbation de publication sont consignés dans la checklist plus bas.
 
@@ -27,6 +27,7 @@ produit et son usage ; les documents de docs portent les spécifications et les 
 - Import en double, reliaison des originaux, retrait de la bibliothèque, mise à la corbeille des originaux
 - Contrôle de santé du catalogue, verrou de processus, blocage de récupération, générations de sauvegarde, répétition de restauration, redéveloppement des images sélectionnées
 - Chemin commun de développement et d'export, métadonnées, historique de traitement, historique d'édition, sortie multi-fichiers
+- JPEG encodé sans sous-échantillonnage de chrominance à partir de 95 % de qualité, PNG en 8 ou 16 bits au choix, et un export rapide qui suit ses propres réglages d'encodage
 - Appareil, objectif, film et exposition notés puis écrits dans le fichier exporté ; dans l'EXIF, l'appareil de prise de vue prime sur le scanner
 - Notes du rouleau ne remplissant que les champs vides d'une vue, avec code de rouleau, film et appareil comme jetons de nom de fichier
 - Originaux iCloud évincés rapatriés avant un export, et vérification d'export standard ou stricte

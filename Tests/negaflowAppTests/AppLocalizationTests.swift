@@ -170,13 +170,14 @@ final class AppLocalizationTests: XCTestCase {
     }
 
     func testLibraryViewModeCapsuleUsesCompactLocalizedLabels() {
+        // 캡슐 순서 = LibraryViewMode 선언 순서. 폴더별이 먼저이고 전체가 맨 뒤다.
         let expected: [AppLanguage: [String]] = [
-            .english: ["All", "Folders", "Film Type", "Offline"],
-            .korean: ["전체", "폴더별", "필름 종류", "오프라인"],
-            .japanese: ["すべて", "フォルダー", "フィルムタイプ", "オフライン"],
-            .simplifiedChinese: ["全部", "文件夹", "胶片类型", "离线"],
-            .french: ["Toutes", "Dossiers", "Type de film", "Hors ligne"],
-            .german: ["Alle", "Ordner", "Filmtyp", "Offline"],
+            .english: ["Folders", "Film Type", "Offline", "All"],
+            .korean: ["폴더별", "필름 종류", "오프라인", "전체"],
+            .japanese: ["フォルダー", "フィルムタイプ", "オフライン", "すべて"],
+            .simplifiedChinese: ["文件夹", "胶片类型", "离线", "全部"],
+            .french: ["Dossiers", "Type de film", "Hors ligne", "Toutes"],
+            .german: ["Ordner", "Filmtyp", "Offline", "Alle"],
         ]
 
         for (language, labels) in expected {

@@ -37,7 +37,7 @@ Tragen Sie jedes Ergebnis als `PASS`, `FAIL`, `BLOCKED` oder `N/A` ein.
 |  | Der erste Start legt nur die in der Doku genannten App-Daten an. |  |
 |  | Ohne Scanner-Plugin schaltet sich kein erfundenes Gerät und keine erfundene Funktion ein. |  |
 |  | App-Angaben, Version, Build, Lizenz und Hilfe stimmen. |  |
-|  | Der Info-Dialog zeigt den lokalisierten Niépce-Zweihundertjahrtext fett zwischen „negaflow“ und Version `1.0.4`. |  |
+|  | Der Info-Dialog zeigt den lokalisierten Niépce-Zweihundertjahrtext fett zwischen „negaflow“ und Version `1.0.5`. |  |
 
 ## 2. Import, Entwicklung, Export
 

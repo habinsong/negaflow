@@ -605,9 +605,10 @@ final class ExportEngineTests: XCTestCase {
 
         let options = try JSONDecoder().decode(ExportOptions.self, from: data)
 
-        XCTAssertEqual(options.jpegQuality, 0.95)
+        XCTAssertEqual(options.jpegQuality, 1.0)
         XCTAssertEqual(options.tiffCompression, .none)
         XCTAssertEqual(options.tiffBitDepth, .sixteen)
+        XCTAssertEqual(options.pngBitDepth, .sixteen)
         XCTAssertFalse(options.preserveAlpha)
     }
 
@@ -712,6 +713,109 @@ final class ExportEngineTests: XCTestCase {
                 preserveAlpha
             )
         }
+    }
+
+    // MARK: 크로마 서브샘플링 / PNG 비트 심도
+
+    func testHighJPEGQualityEncodesWithoutChromaSubsampling() throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let image = colorEdgePattern()
+
+        // 고품질 구간(0.95 이상)은 서브샘플링 없이 인코드된다. 그 아래는 사용자가 고른 값 그대로.
+        for quality in [1.0, 0.95] {
+            let url = directory.appendingPathComponent("q\(quality).jpg")
+            try ExportEngine.write(
+                image,
+                to: url,
+                format: .jpeg,
+                using: renderContext(),
+                options: ExportOptions(jpegQuality: quality)
+            )
+            XCTAssertEqual(try jpegLumaSamplingFactor(at: url), "1x1", "quality \(quality)")
+        }
+        let lowURL = directory.appendingPathComponent("low.jpg")
+        try ExportEngine.write(
+            image,
+            to: lowURL,
+            format: .jpeg,
+            using: renderContext(),
+            options: ExportOptions(jpegQuality: 0.8)
+        )
+        XCTAssertEqual(try jpegLumaSamplingFactor(at: lowURL), "2x2")
+    }
+
+    func testJPEGQualityMappingKeepsLowQualityUntouched() {
+        XCTAssertEqual(ExportEngine.encodedJPEGQuality(1.0), 1.0)
+        XCTAssertEqual(ExportEngine.encodedJPEGQuality(0.95), ExportEngine.chromaSubsamplingFreeQuality)
+        XCTAssertEqual(ExportEngine.encodedJPEGQuality(0.9), 0.9)
+        XCTAssertEqual(ExportEngine.encodedJPEGQuality(0.1), 0.1)
+    }
+
+    func testPNGBitDepthMatchesDecodedFile() throws {
+        let directory = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let image = colorEdgePattern()
+
+        for depth in ExportBitDepth.allCases {
+            let url = directory.appendingPathComponent("png\(depth.rawValue).png")
+            try ExportEngine.write(
+                image,
+                to: url,
+                format: .png,
+                using: renderContext(),
+                options: ExportOptions(pngBitDepth: depth)
+            )
+            let source = try XCTUnwrap(CGImageSourceCreateWithURL(url as CFURL, nil))
+            let decoded = try XCTUnwrap(CGImageSourceCreateImageAtIndex(source, 0, nil))
+            XCTAssertEqual(decoded.bitsPerComponent, depth.rawValue)
+        }
+    }
+
+    /// JPEG SOF 마커의 첫(휘도) 컴포넌트 샘플링 팩터. "1x1"이면 4:4:4, "2x2"면 4:2:0이다.
+    private func jpegLumaSamplingFactor(at url: URL) throws -> String {
+        let bytes = [UInt8](try Data(contentsOf: url))
+        var index = 2
+        while index + 12 < bytes.count {
+            guard bytes[index] == 0xFF else {
+                index += 1
+                continue
+            }
+            let marker = bytes[index + 1]
+            let isStartOfFrame = (0xC0...0xCF).contains(marker)
+                && marker != 0xC4 && marker != 0xC8 && marker != 0xCC
+            if isStartOfFrame {
+                let factor = bytes[index + 11]
+                return "\(factor >> 4)x\(factor & 0x0F)"
+            }
+            index += 2 + (Int(bytes[index + 2]) << 8 | Int(bytes[index + 3]))
+        }
+        XCTFail("JPEG SOF marker not found")
+        return ""
+    }
+
+    /// 채도 높은 세로 경계 패턴. 크로마 해상도가 절반이 되면 눈에 띄게 무너지는 입력이다.
+    private func colorEdgePattern() -> CIImage {
+        let width = 64
+        let height = 32
+        var pixels = [UInt8](repeating: 0, count: width * height * 4)
+        for y in 0..<height {
+            for x in 0..<width {
+                let index = (y * width + x) * 4
+                let onStripe = x % 2 == 0
+                pixels[index] = onStripe ? 230 : 20
+                pixels[index + 1] = onStripe ? 20 : 210
+                pixels[index + 2] = onStripe ? 20 : 210
+                pixels[index + 3] = 255
+            }
+        }
+        return CIImage(
+            bitmapData: Data(pixels),
+            bytesPerRow: width * 4,
+            size: CGSize(width: width, height: height),
+            format: .RGBA8,
+            colorSpace: CGColorSpace(name: CGColorSpace.sRGB)!
+        )
     }
 
     private func renderContext() -> CIContext {

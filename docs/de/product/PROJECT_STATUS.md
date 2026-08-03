@@ -10,7 +10,7 @@ Spezifikationen und Entscheidungen.
 
 | Punkt | Aktueller Wert |
 |---|---|
-| Version | `1.0.4` |
+| Version | `1.0.5` |
 | Build | `1` |
 | Betriebssystem | macOS 14 oder neuer |
 | Ablauf | Import oder Scan → Entwicklung → Export |
@@ -18,7 +18,7 @@ Spezifikationen und Entscheidungen.
 | Originale | Originaldateien und fremde Sidecar-Dateien bleiben unverändert |
 
 > [!WARNING]
-> Die Angabe `1.0.4` und ein erfolgreicher Build heißen nicht, dass Scannerkompatibilität,
+> Die Angabe `1.0.5` und ein erfolgreicher Build heißen nicht, dass Scannerkompatibilität,
 > endgültige Bildqualität, externe Signatur oder Notarisierung bestätigt sind. Echte Hardware und
 > die Freigabe zur Auslieferung stehen getrennt in der Checkliste weiter unten.
 
@@ -28,6 +28,7 @@ Spezifikationen und Entscheidungen.
 - Doppelter Import, Originale neu verknüpfen, aus der Bibliothek entfernen, Originale in den Papierkorb legen
 - Katalogprüfung, Prozesssperre, Wiederherstellungssperre, Sicherungsgenerationen, Wiederherstellungsprobe, Neuentwicklung ausgewählter Bilder
 - Gemeinsamer Pfad für Entwicklung und Export, Metadaten, Verarbeitungshistorie, Bearbeitungsverlauf, Ausgabe mehrerer Dateien
+- JPEG ab 95 % Qualität ohne Chroma-Unterabtastung kodiert, PNG wahlweise mit 8 oder 16 Bit, und ein Schnellexport mit eigenen Kodiereinstellungen
 - Notierte Kamera, Objektiv, Film und Belichtung werden in die Exportdatei geschrieben; in den EXIF hat die Aufnahmekamera Vorrang vor dem Scanner
 - Rollennotizen füllen nur die leeren Felder eines Bildes, und Rollencode, Film und Kamera stehen als Dateinamen-Token bereit
 - Ausgelagerte iCloud-Originale werden vor einem Export bereitgestellt, mit Exportprüfung in den Stufen Standard und Streng

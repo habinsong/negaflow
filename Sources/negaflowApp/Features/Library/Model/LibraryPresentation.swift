@@ -1,11 +1,13 @@
 import Foundation
 import Chromabase
 
+/// 캡슐에 나오는 순서가 곧 선언 순서다. 폴더별을 첫 자리에 두고 전체를 맨 뒤로 보낸다 —
+/// 사진을 폴더 단위로 다루는 것이 기본 작업 방식이기 때문이다.
 enum LibraryViewMode: String, CaseIterable, Identifiable {
-    case all
     case folders
     case filmType
     case offline
+    case all
 
     var id: Self { self }
 

@@ -19,7 +19,7 @@ enum LibraryControlsTab: String, CaseIterable, Identifiable {
 
 struct LibraryWorkspaceView: View {
     @EnvironmentObject var model: AppModel
-    @AppStorage("library.viewMode") var viewModeRaw = LibraryViewMode.all.rawValue
+    @AppStorage("library.viewMode") var viewModeRaw = LibraryViewMode.folders.rawValue
     @AppStorage("library.filmTypeSelection") var filmTypeRaw = FilmType.colorNegative.rawValue
     @AppStorage("library.sortKey") var sortKeyRaw = LibrarySortKey.inputOrder.rawValue
     @AppStorage("library.sortAscending") var sortAscending = true

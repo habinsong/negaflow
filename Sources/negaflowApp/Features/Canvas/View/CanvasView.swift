@@ -184,10 +184,10 @@ struct CanvasView: View {
                 }
             }
             .onAppear {
-                model.canvasDisplayTargetPixels = displayTargetPixels(imageSize: imageSize, canvasSize: geo.size)
+                adoptDisplayTarget(displayTargetPixels(imageSize: imageSize, canvasSize: geo.size))
             }
             .onChange(of: displayTargetPixels(imageSize: imageSize, canvasSize: geo.size)) { _, newValue in
-                model.canvasDisplayTargetPixels = newValue
+                adoptDisplayTarget(newValue)
             }
         }
         .environment(\.colorScheme, model.canvasBackground.hudColorScheme)
@@ -246,5 +246,12 @@ struct CanvasView: View {
         }
     }
 
-
+    /// 캔버스가 실제로 쓰는 픽셀 수를 모델에 반영한다.
+    ///
+    /// 여기서 다시 현상을 요청하지 않는다. 표시 크기는 렌더 결과의 종횡비에 의존하고, 프록시
+    /// 치수가 바뀌면 반올림 때문에 종횡비가 미세하게 흔들린다. 그 변화가 다시 이 경로를
+    /// 부르면 요청과 취소가 맞물려 프리뷰가 영영 나오지 않는다.
+    private func adoptDisplayTarget(_ target: CGFloat) {
+        model.canvasDisplayTargetPixels = target
+    }
 }

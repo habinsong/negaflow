@@ -20,11 +20,25 @@ extension ChromabaseEngine {
         // 8.4.y 슬라이드 필름 특성 룩(좌측 Film 탭). 모든 사용자 색/톤 보정 뒤, 텍스처/그레인 전에
         //   얹는 창의적 최종 룩(데이터시트 유도 E100 / Velvia 50). 채도 부스트가 만든 out-of-gamut 는
         //   아래 최종 gamutSoftClip 이 hue 보존하며 정리한다.
-        img = FilmEmulationStage.apply(
-            to: img,
-            emulation: params.filmEmulation,
-            intensity: params.filmEmulationIntensity
-        )
+        //   디지털 사진은 필름 물성이 픽셀에 하나도 없으므로 색 LUT 만으로는 필름이 되지 않는다
+        //   (측정: 카메라 렌더 입력에서 명부 스텝이 0.0031 로 붕괴). 그 소스에 한해 노출 재구성
+        //   → 산란/헐레이션 → 가상 현상 → 색 시그니처 → 그레인 순서로 필름이 하는 일을 다시 한다.
+        //   **필름 스캔은 기존 경로 그대로다.**
+        if params.isDigitalSource == true {
+            img = DigitalFilmLook.apply(
+                to: img,
+                emulation: params.filmEmulation,
+                intensity: params.filmEmulationIntensity,
+                grainOverride: params.grain,
+                halationOverride: params.halation
+            )
+        } else {
+            img = FilmEmulationStage.apply(
+                to: img,
+                emulation: params.filmEmulation,
+                intensity: params.filmEmulationIntensity
+            )
+        }
 
         // 8.5 소프트웨어 결함 제거 — 먼지/스크래치 제거. positive 상태에서 적용(임계값 의미 안정).
         if params.defectRemoval > 1e-3 {
@@ -52,7 +66,10 @@ extension ChromabaseEngine {
         }
 
         // 9. 텍스처
-        img = TextureStage.apply(to: img, params: params)
+        //    디지털 소스에서 필름을 고르면 그레인과 헐레이션은 유제 물성으로 이미 얹혔다.
+        //    같은 효과를 여기서 한 번 더 더하면 이중이 되므로 그 두 축만 비운다
+        //    (선예도/명료도/비네팅은 사용자 조정이라 그대로 간다).
+        img = TextureStage.apply(to: img, params: textureParameters(from: params))
 
         // 10. B&W 필름은 모든 컬러 그레이딩/그레인 이후 최종적으로 중립 그레이스케일로 변환한다.
         //     (그레인/텍스처가 채널별로 색 얼룩을 더하므로 반드시 마지막 단계에서 적용.)
@@ -77,5 +94,15 @@ extension ChromabaseEngine {
             to: img.cropped(to: extent),
             transform: params.imageTransform
         )
+    }
+
+    /// 디지털 소스 + 필름 선택일 때만 그레인/헐레이션 축을 비운 사본을 돌려준다.
+    /// 그 조합에서는 두 효과를 DigitalFilmLook 이 유제 물성으로 이미 적용했다.
+    private func textureParameters(from params: DevelopParameters) -> DevelopParameters {
+        guard params.isDigitalSource == true, params.filmEmulation != .none else { return params }
+        var stripped = params
+        stripped.grain = 0
+        stripped.halation = 0
+        return stripped
     }
 }

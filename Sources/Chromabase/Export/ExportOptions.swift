@@ -40,7 +40,9 @@ public struct ExportOptions: Sendable, Codable, Equatable {
     public var longEdge: Int?
     public var jpegQuality: Double
     public var tiffCompression: ExportTIFFCompression
-    public var tiffBitDepth: ExportTIFFBitDepth
+    public var tiffBitDepth: ExportBitDepth
+    /// PNG는 무손실이라 품질 손잡이가 없다. 화질을 정하는 유일한 값이 비트 심도다.
+    public var pngBitDepth: ExportBitDepth
     public var preserveAlpha: Bool
     public var metadataPolicy: ExportMetadataPolicy
     public var outputSharpening: Double
@@ -50,9 +52,10 @@ public struct ExportOptions: Sendable, Codable, Equatable {
         colorSpace: ExportColorSpace = .sRGB,
         dpi: Int = 0,
         longEdge: Int? = nil,
-        jpegQuality: Double = 0.95,
+        jpegQuality: Double = 1.0,
         tiffCompression: ExportTIFFCompression = .none,
-        tiffBitDepth: ExportTIFFBitDepth = .sixteen,
+        tiffBitDepth: ExportBitDepth = .sixteen,
+        pngBitDepth: ExportBitDepth = .sixteen,
         preserveAlpha: Bool = false,
         metadataPolicy: ExportMetadataPolicy = .minimal,
         outputSharpening: Double = 0,
@@ -64,6 +67,7 @@ public struct ExportOptions: Sendable, Codable, Equatable {
         self.jpegQuality = jpegQuality
         self.tiffCompression = tiffCompression
         self.tiffBitDepth = tiffBitDepth
+        self.pngBitDepth = pngBitDepth
         self.preserveAlpha = preserveAlpha
         self.metadataPolicy = metadataPolicy
         self.outputSharpening = outputSharpening
@@ -72,6 +76,7 @@ public struct ExportOptions: Sendable, Codable, Equatable {
 
     private enum CodingKeys: String, CodingKey {
         case colorSpace, dpi, longEdge, jpegQuality, tiffCompression, tiffBitDepth
+        case pngBitDepth
         case preserveAlpha, metadataPolicy, outputSharpening, outputSharpeningMedium
     }
 
@@ -80,14 +85,18 @@ public struct ExportOptions: Sendable, Codable, Equatable {
         colorSpace = try container.decode(ExportColorSpace.self, forKey: .colorSpace)
         dpi = try container.decode(Int.self, forKey: .dpi)
         longEdge = try container.decodeIfPresent(Int.self, forKey: .longEdge)
-        jpegQuality = try container.decodeIfPresent(Double.self, forKey: .jpegQuality) ?? 0.95
+        jpegQuality = try container.decodeIfPresent(Double.self, forKey: .jpegQuality) ?? 1.0
         tiffCompression = try container.decodeIfPresent(
             ExportTIFFCompression.self,
             forKey: .tiffCompression
         ) ?? .none
         tiffBitDepth = try container.decodeIfPresent(
-            ExportTIFFBitDepth.self,
+            ExportBitDepth.self,
             forKey: .tiffBitDepth
+        ) ?? .sixteen
+        pngBitDepth = try container.decodeIfPresent(
+            ExportBitDepth.self,
+            forKey: .pngBitDepth
         ) ?? .sixteen
         preserveAlpha = try container.decodeIfPresent(Bool.self, forKey: .preserveAlpha) ?? false
         metadataPolicy = try container.decodeIfPresent(

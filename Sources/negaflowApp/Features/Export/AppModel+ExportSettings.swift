@@ -293,6 +293,7 @@ extension AppModel {
             jpegQuality: exportJPEGQuality,
             tiffCompression: exportTIFFCompression,
             tiffBitDepth: exportTIFFBitDepth,
+            pngBitDepth: exportPNGBitDepth,
             preserveAlpha: exportPreserveAlpha,
             metadataPolicy: exportMetadataPolicy,
             outputSharpening: exportOutputSharpening,
@@ -376,7 +377,9 @@ extension AppModel {
         ExportOptions(
             colorSpace: .sRGB,
             dpi: quickExportDPI,
-            longEdge: quickExportLongEdge > 0 ? quickExportLongEdge : nil
+            longEdge: quickExportLongEdge > 0 ? quickExportLongEdge : nil,
+            jpegQuality: quickExportJPEGQuality,
+            pngBitDepth: quickExportPNGBitDepth
         )
     }
 

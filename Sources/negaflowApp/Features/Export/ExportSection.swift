@@ -66,6 +66,8 @@ struct ExportSection: View {
                 }
             }
 
+            quickExportEncodingOptions
+
             quickExportFolderRow
 
             if let filename = model.quickExportNamingPreview() {
@@ -248,6 +250,31 @@ struct ExportSection: View {
         }
     }
 
+    /// 빠른 내보내기의 인코딩 옵션. 포맷별로 화질을 정하는 값만 노출한다 —
+    /// JPEG 는 품질, PNG 는 비트 심도다.
+    @ViewBuilder
+    private var quickExportEncodingOptions: some View {
+        switch model.quickExportFormat {
+        case .jpeg:
+            LabeledContent(exportEncodingText(.jpegQuality)) {
+                HStack(spacing: 8) {
+                    Slider(value: $model.quickExportJPEGQuality, in: 0...1, step: 0.01)
+                    Text(verbatim: "\(Int((model.quickExportJPEGQuality * 100).rounded()))%")
+                        .monospacedDigit()
+                        .frame(width: 40, alignment: .trailing)
+                }
+            }
+        case .png:
+            Picker(exportEncodingText(.pngBitDepth), selection: $model.quickExportPNGBitDepth) {
+                Text(verbatim: "8-bit").tag(ExportBitDepth.eight)
+                Text(verbatim: "16-bit").tag(ExportBitDepth.sixteen)
+            }
+            .pickerStyle(.segmented)
+        case .tiff16, .rawScanTIFF:
+            EmptyView()
+        }
+    }
+
     private var quickExportFolderRow: some View {
         LabeledContent(model.text(.exportFolderLabel)) {
             HStack(spacing: 6) {
@@ -292,6 +319,10 @@ struct ExportSection: View {
     }
 
     private func exportNamingText(_ text: ExportNamingLocalizedText) -> String {
+        text.resolved(language: model.appLanguage)
+    }
+
+    private func exportEncodingText(_ text: ExportEncodingLocalizedText) -> String {
         text.resolved(language: model.appLanguage)
     }
 

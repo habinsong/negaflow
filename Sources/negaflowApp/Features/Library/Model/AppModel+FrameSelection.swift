@@ -217,7 +217,7 @@ extension AppModel {
             rebuildCleanedRaw(frame)
         }
         markDevelopedResident(frame)
-        if selectedFrameNeedsDevelopment(frame) {
+        if selectedFrameNeedsDevelopment(frame) || developmentWaitsForThumbnailSeed(frame) {
             let selectedID = frame.id
             // 방금 취소한 이전 선택 현상 루프가 정리(endFrame)될 때까지 기다린 뒤 시작한다.
             // 정리 전에 시작하면 beginFrame 이 "이미 진행 중"으로 보고 요청을 버리는데, 그 진행 중
@@ -226,6 +226,14 @@ extension AppModel {
             selectedFrameDevelopTask = Task { [weak self, weak frame] in
                 await previousDevelopTask?.value
                 guard let self, let frame, !Task.isCancelled,
+                      self.selectedFrameID == selectedID else { return }
+                // 시드가 도는 동안 현상을 시작하면 같은 원본을 두 번 디코드한다 — 기다렸다가
+                // 다시 판정한다. 기다리지 않고 요청을 버리면, 자동 현상이 꺼진 상태에서 방금
+                // 가져와 선택된 사진은 아무도 현상하지 않아 시드 썸네일 해상도로 고착된다.
+                if let seed = frame.initialThumbnailSeedTask {
+                    await seed.value
+                }
+                guard !Task.isCancelled,
                       self.selectedFrameID == selectedID,
                       self.selectedFrameNeedsDevelopment(frame) else { return }
                 await self.developFrame(
@@ -267,6 +275,19 @@ extension AppModel {
         if !frame.developedIsSettled { return true }
         return frame.displayedSoftProofRevision != softProofConfigurationRevision
             && frame.hasDevelopedOnce
+    }
+
+    /// 시드가 끝나면 현상해야 하는 프레임인가.
+    ///
+    /// selectedFrameNeedsDevelopment 는 같은 원본을 두 번 디코드하지 않으려고 시드가 도는 동안
+    /// false 를 돌려준다. 가져오기는 시드 태스크를 건 **직후** 그 사진을 선택하므로 선택 시점의
+    /// 판정은 항상 false 다 — 그때 요청을 그냥 버리면 시드가 끝난 뒤 아무도 현상을 다시 걸지
+    /// 않는다(자동 현상 OFF 가 기본값). 그래서 미루기만 하고 요청은 유지한다.
+    func developmentWaitsForThumbnailSeed(_ frame: ScanFrame) -> Bool {
+        guard frame.initialThumbnailSeedTask != nil,
+              frame.isSourceAvailable,
+              frame.developedImage == nil else { return false }
+        return !(activeWorkspaceModule == .library && !frame.hasDevelopedOnce)
     }
 
     private func normalizedInteractionFrameIDs(_ orderedFrameIDs: [UUID]) -> [UUID] {

@@ -10,7 +10,11 @@ enum DevelopFrameRenderer {
     // 풀해상도 프리뷰 프록시 상한(정착 패스). 익스포트는 별도 풀해상도 경로라 영향받지 않는다.
     static let fullMaxDimension: CGFloat = 3600
     // 인터랙티브 프록시 폴백(캔버스 표시 크기를 아직 모를 때). 평소엔 표시 크기 기반 적응형.
-    static let interactiveMaxDimension: CGFloat = 1600
+    //
+    // 사진을 처음 열 때는 캔버스가 아직 배치되지 않아 이 값이 쓰인다. 1600px 은 Retina 디스플레이
+    // 절반에도 못 미쳐, 첫 화면이 눈에 띄게 흐렸다. 표시 크기를 알기 전이라도 흐리지 않을 만큼은
+    // 올려 잡는다(정착 패스가 뒤이어 상한까지 올린다).
+    static let interactiveMaxDimension: CGFloat = 2560
     static let fastPreviewMaxDimension: CGFloat = 720
     // 적응형 인터랙티브 프록시 하한/양자화 스텝. 표시 크기보다 작게 렌더하면 업스케일로
     // 흐려졌다가 정착 때 선명해지는 "해상도 펌핑"이 보이므로, 표시 픽셀 이상으로 올림한다.

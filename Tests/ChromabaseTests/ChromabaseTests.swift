@@ -3107,16 +3107,23 @@ final class ChromabaseTests: XCTestCase {
         try ExportEngine.write(output, to: tif, format: .tiff16, using: context)
         try ExportEngine.write(output, to: tiff, format: .tiff16, using: context)
 
-        for url in [jpg, jpeg, png, tif, tiff] {
+        for url in [jpg, jpeg, tif, tiff] {
             let size = (try FileManager.default.attributesOfItem(atPath: url.path)[.size] as? NSNumber)?.intValue ?? 0
             XCTAssertGreaterThan(size, 1024, "\(url.lastPathComponent) 출력이 비어 있으면 안 된다.")
         }
+        // PNG 는 무손실 압축이라 이 평탄한 합성 픽스처에서 1KB 아래로 떨어지는 것이 정상이다.
+        // 크기 대신 디코드된 픽셀 치수로 내용이 온전한지 본다.
+        let pngSize = (try FileManager.default.attributesOfItem(atPath: png.path)[.size] as? NSNumber)?.intValue ?? 0
+        XCTAssertGreaterThan(pngSize, 0, "\(png.lastPathComponent) 출력이 비어 있으면 안 된다.")
+        XCTAssertEqual(pixelDimensions(png)?.width, fixture.width)
+        XCTAssertEqual(pixelDimensions(png)?.height, fixture.height)
         XCTAssertEqual(imageType(jpg), "public.jpeg")
         XCTAssertEqual(imageType(jpeg), "public.jpeg")
         XCTAssertEqual(imageType(png), "public.png")
         XCTAssertEqual(imageType(tif), "public.tiff")
         XCTAssertEqual(imageType(tiff), "public.tiff")
         XCTAssertEqual(bitsPerComponent(tiff), 16)
+        XCTAssertEqual(bitsPerComponent(png), 16)
     }
 
     // MARK: - input format classification
@@ -3494,6 +3501,14 @@ final class ChromabaseTests: XCTestCase {
     private func imageType(_ url: URL) -> String? {
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
         return CGImageSourceGetType(source) as String?
+    }
+
+    private func pixelDimensions(_ url: URL) -> (width: Int, height: Int)? {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
+            return nil
+        }
+        return (image.width, image.height)
     }
 
     private func bitsPerComponent(_ url: URL) -> Int? {

@@ -6,14 +6,29 @@ extension AppModel {
         set { exportSettingsStore.exportJPEGQuality = min(max(newValue, 0), 1) }
     }
 
+    var quickExportJPEGQuality: Double {
+        get { exportSettingsStore.quickExportJPEGQuality }
+        set { exportSettingsStore.quickExportJPEGQuality = min(max(newValue, 0), 1) }
+    }
+
     var exportTIFFCompression: ExportTIFFCompression {
         get { exportSettingsStore.exportTIFFCompression }
         set { exportSettingsStore.exportTIFFCompression = newValue }
     }
 
-    var exportTIFFBitDepth: ExportTIFFBitDepth {
+    var exportTIFFBitDepth: ExportBitDepth {
         get { exportSettingsStore.exportTIFFBitDepth }
         set { exportSettingsStore.exportTIFFBitDepth = newValue }
+    }
+
+    var exportPNGBitDepth: ExportBitDepth {
+        get { exportSettingsStore.exportPNGBitDepth }
+        set { exportSettingsStore.exportPNGBitDepth = newValue }
+    }
+
+    var quickExportPNGBitDepth: ExportBitDepth {
+        get { exportSettingsStore.quickExportPNGBitDepth }
+        set { exportSettingsStore.quickExportPNGBitDepth = newValue }
     }
 
     var exportPreserveAlpha: Bool {

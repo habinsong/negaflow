@@ -98,7 +98,7 @@ struct LibraryBrowserFilterBar: View {
     }
 
     private var viewMode: LibraryViewMode {
-        LibraryViewMode(rawValue: viewModeRaw) ?? .all
+        LibraryViewMode(rawValue: viewModeRaw) ?? .folders
     }
 
     private var offlineFilterBinding: Binding<Bool> {

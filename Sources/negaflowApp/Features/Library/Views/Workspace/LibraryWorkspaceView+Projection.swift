@@ -3,7 +3,7 @@ import SwiftUI
 
 extension LibraryWorkspaceView {
     var viewMode: LibraryViewMode {
-        LibraryViewMode(rawValue: viewModeRaw) ?? .all
+        LibraryViewMode(rawValue: viewModeRaw) ?? .folders
     }
 
     var sortKey: LibrarySortKey {

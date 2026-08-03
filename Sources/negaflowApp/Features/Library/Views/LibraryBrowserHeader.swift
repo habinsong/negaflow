@@ -330,7 +330,7 @@ struct LibraryViewModePicker: View {
     }
 
     private var viewMode: LibraryViewMode {
-        LibraryViewMode(rawValue: viewModeRaw) ?? .all
+        LibraryViewMode(rawValue: viewModeRaw) ?? .folders
     }
 
     private var selectedFilmType: FilmType {

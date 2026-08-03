@@ -89,7 +89,7 @@ final class AppModelExportSettingsStoreTests: XCTestCase {
         XCTAssertEqual(store.exportLongEdge, 0)
         XCTAssertFalse(store.exportWriteMainFlatMaster)
         XCTAssertFalse(store.exportWriteOriginalRaw)
-        XCTAssertEqual(store.exportJPEGQuality, 0.95)
+        XCTAssertEqual(store.exportJPEGQuality, 1.0)
         XCTAssertEqual(store.exportTIFFCompression, .none)
         XCTAssertEqual(store.exportTIFFBitDepth, .sixteen)
         XCTAssertFalse(store.exportPreserveAlpha)
@@ -125,6 +125,27 @@ final class AppModelExportSettingsStoreTests: XCTestCase {
         let store = ExportSettingsStore(defaults: defaults)
 
         XCTAssertEqual(store.quickExportLongEdge, 0)
+    }
+
+    func testQuickExportOptionsCarryEncodingSettings() {
+        let model = AppModel(exportSettingsStore: ExportSettingsStore(defaults: defaults))
+
+        // 기본값: 두 경로 모두 JPEG 최고 품질, PNG 는 보관용 16bit / 공유용 8bit.
+        XCTAssertEqual(model.quickExportJPEGQuality, 1.0)
+        XCTAssertEqual(model.quickExportOptions.jpegQuality, 1.0)
+        XCTAssertEqual(model.exportOptions.pngBitDepth, .sixteen)
+        XCTAssertEqual(model.quickExportOptions.pngBitDepth, .eight)
+
+        // 빠른 내보내기는 자기 설정을 따른다 — 일반 내보내기 값이 새지 않는다.
+        model.quickExportJPEGQuality = 0.7
+        model.quickExportPNGBitDepth = .sixteen
+        model.exportJPEGQuality = 0.4
+        model.exportPNGBitDepth = .eight
+
+        XCTAssertEqual(model.quickExportOptions.jpegQuality, 0.7)
+        XCTAssertEqual(model.quickExportOptions.pngBitDepth, .sixteen)
+        XCTAssertEqual(model.exportOptions.jpegQuality, 0.4)
+        XCTAssertEqual(model.exportOptions.pngBitDepth, .eight)
     }
 
     func testAppModelFacadePublishesAndBuildsExportOptions() {
