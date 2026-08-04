@@ -1,8 +1,9 @@
 # Negaflow Windows
 
 macOS용 Negaflow의 제품 계약을 Windows 네이티브 기술로 독립 구현하는 작업 공간입니다.
-현재 단계는 M0 기준선, M1 native/managed 빌드·Interop 기반, 첫 M2 scalar 수치 계약과 M3 TIFF decode·입력 색상 수직 경로입니다. 제품 전체 이미지 처리나 WinUI 화면이 완성된
-상태가 아니며, 이를 실행 가능한 제품으로 표시하지 않습니다.
+현재 단계는 M0 기준선, M1 native/managed 빌드·Interop 기반, 첫 M2 scalar 수치 계약, M3 TIFF
+decode·입력 색상 수직 경로와 첫 M8 WinUI 셸 기반입니다. 제품 전체 이미지 처리나 실제 제품 기능이
+완성된 상태는 아닙니다.
 
 ## 고정 기준
 
@@ -30,14 +31,21 @@ macOS용 Negaflow의 제품 계약을 Windows 네이티브 기술로 독립 구�
 - 사용자 scanner TIFF 15개 read-only streaming 변환과 whole-frame 최종 float exact parity
 - TIFF decode→scanner color→수동 Dmin 네거티브 반전 수직 경로
 - 일반 이미지 SHA-256 기본 `끔`, 명시적 opt-in Windows CNG 순차 경로
+- Swift 기준 치수와 6개 언어를 쓰는 WinUI 3 Library/Develop/Print/Settings 셸
+- 현재 모니터 작업영역 최대화와 Windows 오른쪽 caption button runtime inset
+- Settings의 일반 이미지 SHA-256 기본 `끔` 표시·저장 기반
 - ABI layout과 capability 불변식을 확인하는 native test
 - 현재 기준선과 canonical asset SHA-256 목록
 - 설치 가능한 Visual Studio workload 선언
 
-현재 네이티브 코드에는 제3자 라이브러리가 없습니다. Windows WIC/ICM과 Win32만 runtime API로
-사용하며 MSVC runtime은 정적으로 링크합니다. 따라서 Release native CLI는 별도 VC++
-Redistributable DLL 설치를 요구하지 않습니다. 관리 Interop은 외부 NuGet package가 없으며 현재 검증에는
-.NET runtime 10.0.10을 사용합니다.
+현재 네이티브 엔진 코드에는 제3자 라이브러리가 없습니다. Windows WIC/ICM과 Win32만 runtime API로
+사용하며 MSVC runtime은 정적으로 링크합니다. 따라서 Release native CLI는 별도 VC++ Redistributable
+DLL 설치를 요구하지 않습니다. 관리 Interop도 외부 NuGet package가 없습니다.
+
+WinUI 셸은 `Microsoft.WindowsAppSDK.Runtime 1.8.260710003`과
+`Microsoft.WindowsAppSDK.WinUI 1.8.260709004`를 직접 고정합니다. 현재 unpackaged build는
+framework-dependent이므로 .NET 10 runtime과 Windows App Runtime 1.8이 필요합니다. 정확한 package graph,
+license와 배포 gate는 `third_party/manifest/components.json`에 기록합니다.
 상세 진행률, 구현 설명, 설치·검증 기록은 [`docs/README.md`](docs/README.md)에서 시작합니다.
 
 ## 빌드
@@ -58,6 +66,12 @@ Visual Studio에 포함된 vcpkg 도구를 사용하며, 제3자 port 버전은 
 ./scripts/build.ps1 -Preset x64-debug
 ./scripts/test.ps1 -Preset x64-debug
 ./scripts/test-interop.ps1 -Preset x64-debug
+```
+
+managed solution build가 끝나면 x64 Debug 셸은 다음 위치에서 실행할 수 있습니다.
+
+```powershell
+.\out\build\managed\Negaflow.Shell\x64\Debug\net10.0-windows10.0.26100.0\win-x64\Negaflow.Shell.exe
 ```
 
 Release 빌드:
@@ -136,9 +150,12 @@ src/Native/imageio/   WIC decode와 소유형 sample
 src/Native/imaging/   scanner source→working 정책과 ICM adapter
 src/Native/abi/       유일한 공개 C ABI
 src/Interop/          C# ABI binding, 안전한 DLL probing과 version validation
+src/Shell.Core/       UI 비종속 표시 상태, 기본값과 적응형 배치 계산
+src/Shell/            WinUI 3 main/Settings 창, localization과 화면 셸
 src/Cli/              WinUI 없는 첫 소비자와 분리된 command
 tests/Native.UnitTests/
 tests/Interop.ContractTests/
+tests/Shell.UnitTests/
 scripts/              로컬과 CI가 함께 사용할 build/test 진입점
 third_party/          실제 payload 기준 공급망 manifest
 ```
@@ -151,6 +168,6 @@ third_party/          실제 payload 기준 공급망 manifest
 4. 필요한 경우에만 libtiff/LittleCMS dependency gate 재평가
 5. 최종 working buffer의 downstream row/tile 처리와 process budget
 6. 실제 ARM64 장치에서 같은 native/scalar/TIFF/hash test 실행
-7. 최소 WinUI shell과 native bootstrap·기본-off SHA 설정 연결
+7. WinUI 셸의 축소 폭·DPI·High Contrast·keyboard matrix와 실제 catalog 연결
 
-WinUI 제품 화면은 위 수치 vertical slice 뒤에 확장합니다.
+현재 WinUI는 실행 가능한 화면 기반일 뿐 실제 제품 기능 완료를 의미하지 않습니다.

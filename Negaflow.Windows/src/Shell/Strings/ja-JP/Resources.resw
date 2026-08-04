@@ -1,0 +1,475 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>1.3</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.3500.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.3500.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="appearanceDark.Content" xml:space="preserve">
+    <value>ダーク</value>
+    <comment>AppLocalizedText.appearanceDark</comment>
+  </data>
+  <data name="appearanceDark.Text" xml:space="preserve">
+    <value>ダーク</value>
+    <comment>AppLocalizedText.appearanceDark</comment>
+  </data>
+  <data name="appearanceLight.Content" xml:space="preserve">
+    <value>ライト</value>
+    <comment>AppLocalizedText.appearanceLight</comment>
+  </data>
+  <data name="appearanceLight.Text" xml:space="preserve">
+    <value>ライト</value>
+    <comment>AppLocalizedText.appearanceLight</comment>
+  </data>
+  <data name="appearanceSystem.Content" xml:space="preserve">
+    <value>システム</value>
+    <comment>AppLocalizedText.appearanceSystem</comment>
+  </data>
+  <data name="appearanceSystem.Text" xml:space="preserve">
+    <value>システム</value>
+    <comment>AppLocalizedText.appearanceSystem</comment>
+  </data>
+  <data name="canvasBackgroundBlack.Content" xml:space="preserve">
+    <value>ブラック</value>
+    <comment>AppLocalizedText.canvasBackgroundBlack</comment>
+  </data>
+  <data name="canvasBackgroundGray.Content" xml:space="preserve">
+    <value>グレー</value>
+    <comment>AppLocalizedText.canvasBackgroundGray</comment>
+  </data>
+  <data name="canvasBackgroundWhite.Content" xml:space="preserve">
+    <value>ホワイト</value>
+    <comment>AppLocalizedText.canvasBackgroundWhite</comment>
+  </data>
+  <data name="capabilityUnavailable.Value" xml:space="preserve">
+    <value>非対応</value>
+    <comment>AppLocalizedPhrase.capabilityUnavailable</comment>
+  </data>
+  <data name="colorClippingOverlay.Header" xml:space="preserve">
+    <value>クリッピング表示</value>
+    <comment>AppLocalizedPhrase.colorClippingOverlay</comment>
+  </data>
+  <data name="commandDiagnostics.Text" xml:space="preserve">
+    <value>診断</value>
+    <comment>AppLocalizedText.commandDiagnostics</comment>
+  </data>
+  <data name="commandExport.Text" xml:space="preserve">
+    <value>書き出し</value>
+    <comment>AppLocalizedText.commandExport</comment>
+  </data>
+  <data name="commandQuickExport.Text" xml:space="preserve">
+    <value>クイック書き出し</value>
+    <comment>AppLocalizedText.commandQuickExport</comment>
+  </data>
+  <data name="commandSettings.Text" xml:space="preserve">
+    <value>設定</value>
+    <comment>AppLocalizedText.commandSettings</comment>
+  </data>
+  <data name="commandSettings.Value" xml:space="preserve">
+    <value>設定</value>
+    <comment>AppLocalizedText.commandSettings</comment>
+  </data>
+  <data name="commandShowHideFilmstrip.Value" xml:space="preserve">
+    <value>フィルムストリップを表示/非表示</value>
+    <comment>AppLocalizedText.commandShowHideFilmstrip</comment>
+  </data>
+  <data name="commandShowHideInspector.Value" xml:space="preserve">
+    <value>インスペクターを表示/非表示</value>
+    <comment>AppLocalizedText.commandShowHideInspector</comment>
+  </data>
+  <data name="commandShowHideSidebar.Value" xml:space="preserve">
+    <value>サイドバーを表示/非表示</value>
+    <comment>AppLocalizedText.commandShowHideSidebar</comment>
+  </data>
+  <data name="commandToggleScannerSimulator.Header" xml:space="preserve">
+    <value>スキャナーシミュレーター</value>
+    <comment>AppLocalizedText.commandToggleScannerSimulator</comment>
+  </data>
+  <data name="commandWorkspaceOptions.Value" xml:space="preserve">
+    <value>ワークスペースオプション</value>
+    <comment>AppLocalizedText.commandWorkspaceOptions</comment>
+  </data>
+  <data name="developerMode.Header" xml:space="preserve">
+    <value>開発者モード</value>
+    <comment>AppLocalizedPhrase.developerMode</comment>
+  </data>
+  <data name="developImportsAutomatically.Header" xml:space="preserve">
+    <value>新しく読み込んだ写真を自動現像</value>
+    <comment>AppLocalizedPhrase.developImportsAutomatically</comment>
+  </data>
+  <data name="emptyCanvasDescription.Text" xml:space="preserve">
+    <value>ファイルをウィンドウへドラッグするか、ライブラリの読み込みを使ってください。
+フィルムをスキャンするにはライブラリからスキャナーを読み込んでください。</value>
+    <comment>AppLocalizedText.emptyCanvasDescription</comment>
+  </data>
+  <data name="emptyCanvasTitle.Text" xml:space="preserve">
+    <value>画像を読み込む</value>
+    <comment>AppLocalizedText.emptyCanvasTitle</comment>
+  </data>
+  <data name="exportFullSize.Text" xml:space="preserve">
+    <value>フル</value>
+    <comment>AppLocalizedText.exportFullSize</comment>
+  </data>
+  <data name="exportSection.Text" xml:space="preserve">
+    <value>書き出し</value>
+    <comment>AppLocalizedText.exportSection</comment>
+  </data>
+  <data name="exportSection.Value" xml:space="preserve">
+    <value>書き出し</value>
+    <comment>AppLocalizedText.exportSection</comment>
+  </data>
+  <data name="filmstripHeightHelp.Value" xml:space="preserve">
+    <value>フィルムストリップの高さを調整</value>
+    <comment>AppLocalizedPhrase.filmstripHeightHelp</comment>
+  </data>
+  <data name="filmstripHeightValueFormat.Value" xml:space="preserve">
+    <value>高さ%dポイント</value>
+    <comment>AppAccessibilityPhrase.filmstripHeightValueFormat</comment>
+  </data>
+  <data name="idleStatus.Value" xml:space="preserve">
+    <value>待機中</value>
+    <comment>AppLocalizedPhrase.idleStatus</comment>
+  </data>
+  <data name="importHint.Text" xml:space="preserve">
+    <value>複数のファイルを選ぶか、画像をウィンドウへドラッグしてください。</value>
+    <comment>AppLocalizedText.importHint</comment>
+  </data>
+  <data name="importImages.Content" xml:space="preserve">
+    <value>画像を読み込む</value>
+    <comment>AppLocalizedText.importImages</comment>
+  </data>
+  <data name="importImages.Text" xml:space="preserve">
+    <value>画像を読み込む</value>
+    <comment>AppLocalizedText.importImages</comment>
+  </data>
+  <data name="importSection.Text" xml:space="preserve">
+    <value>読み込み</value>
+    <comment>AppLocalizedText.importSection</comment>
+  </data>
+  <data name="importSection.Value" xml:space="preserve">
+    <value>読み込み</value>
+    <comment>AppLocalizedText.importSection</comment>
+  </data>
+  <data name="legalAffiliationBody.Text" xml:space="preserve">
+    <value>negaflow は Eastman Kodak Company、Kodak Alaris、FUJIFILM Corporation、Noritsu Koki Co., Ltd.、CineStill Film、Lomographische AG/Lomography、Harman Technology Ltd、ORWO/ORWO Net、またはその他の商標権者と提携、後援、保証、認証、承認されたものではありません。すべての商標、サービスマーク、商号、ロゴ、製品名はそれぞれの所有者に帰属します。</value>
+    <comment>AppLocalizedText.legalAffiliationBody</comment>
+  </data>
+  <data name="legalAffiliationTitle.Text" xml:space="preserve">
+    <value>提携・承認関係はありません</value>
+    <comment>AppLocalizedText.legalAffiliationTitle</comment>
+  </data>
+  <data name="legalLicenseBody.Text" xml:space="preserve">
+    <value>negaflow のソースコードは Apache License 2.0 の下で配布されています。このライセンスは本プロジェクトのコードに適用されるもので、第三者の商標、フィルム名、スキャナー名、製品名、公開データシート、参照スキャン、ロゴ、パッケージ、またはメーカー独自のスキャナーソフトウェアに対する権利を付与するものではありません。</value>
+    <comment>AppLocalizedText.legalLicenseBody</comment>
+  </data>
+  <data name="legalLicenseTitle.Text" xml:space="preserve">
+    <value>オープンソースライセンス</value>
+    <comment>AppLocalizedText.legalLicenseTitle</comment>
+  </data>
+  <data name="legalNamesBody.Text" xml:space="preserve">
+    <value>参照される名称には、Kodak、Kodak Professional、Portra、Ektar、Gold、UltraMax、Pro Image、ColorPlus、Vision3、Ektachrome、Fujifilm、Fuji、Fujicolor、Fujichrome、Superia、Frontier、SP-3000、Noritsu、HS-1800、CineStill、Lomography、Lomo、Harman、Phoenix、ORWO、Wolfen、および関連するフィルム、スキャナー、ミニラボ、処理方式の名称が含まれる場合があります。</value>
+    <comment>AppLocalizedText.legalNamesBody</comment>
+  </data>
+  <data name="legalNamesTitle.Text" xml:space="preserve">
+    <value>参照される名称</value>
+    <comment>AppLocalizedText.legalNamesTitle</comment>
+  </data>
+  <data name="legalProfilesBody.Text" xml:space="preserve">
+    <value>同梱されるフィルムおよびスキャナープロファイルは、negaflow のための互換性メタデータ、および実測または推定に基づく色変換です。公式メーカー製プロファイル、認定カラーチャート、代替スキャナーファームウェア、またはメーカー独自の処理ソフトウェアの複製ではありません。</value>
+    <comment>AppLocalizedText.legalProfilesBody</comment>
+  </data>
+  <data name="legalProfilesTitle.Text" xml:space="preserve">
+    <value>プロファイルとターゲットシステム</value>
+    <comment>AppLocalizedText.legalProfilesTitle</comment>
+  </data>
+  <data name="legalTrademarkBody.Text" xml:space="preserve">
+    <value>negaflow は独立したオープンソースのフィルムスキャンおよびカラープロファイリングツールです。フィルム、スキャナー、ミニラボ、処理方式、ターゲットの名称は、negaflow が近似、測定、または相互運用する対象の実在するフィルム、スキャナーモデル、ラボターゲットシステム、またはプロファイル系列を識別するためにのみ使用されます。</value>
+    <comment>AppLocalizedText.legalTrademarkBody</comment>
+  </data>
+  <data name="legalTrademarkTitle.Text" xml:space="preserve">
+    <value>商標の使用</value>
+    <comment>AppLocalizedText.legalTrademarkTitle</comment>
+  </data>
+  <data name="libraryAllPhotos.Text" xml:space="preserve">
+    <value>すべての写真</value>
+    <comment>AppLocalizedPhrase.libraryAllPhotos</comment>
+  </data>
+  <data name="libraryAllShort.Text" xml:space="preserve">
+    <value>すべて</value>
+    <comment>AppLocalizedPhrase.libraryAllShort</comment>
+  </data>
+  <data name="libraryCollections.Text" xml:space="preserve">
+    <value>コレクション</value>
+    <comment>AppLocalizedPhrase.libraryCollections</comment>
+  </data>
+  <data name="libraryCollections.Value" xml:space="preserve">
+    <value>コレクション</value>
+    <comment>AppLocalizedPhrase.libraryCollections</comment>
+  </data>
+  <data name="libraryFiles.Text" xml:space="preserve">
+    <value>ファイル</value>
+    <comment>AppLocalizedPhrase.libraryFiles</comment>
+  </data>
+  <data name="libraryFiles.Value" xml:space="preserve">
+    <value>ファイル</value>
+    <comment>AppLocalizedPhrase.libraryFiles</comment>
+  </data>
+  <data name="libraryFilmType.Text" xml:space="preserve">
+    <value>フィルムタイプ</value>
+    <comment>AppLocalizedPhrase.libraryFilmType</comment>
+  </data>
+  <data name="libraryFilters.Content" xml:space="preserve">
+    <value>フィルター</value>
+    <comment>AppLocalizedPhrase.libraryFilters</comment>
+  </data>
+  <data name="libraryFolders.Text" xml:space="preserve">
+    <value>フォルダー</value>
+    <comment>AppLocalizedPhrase.libraryFolders</comment>
+  </data>
+  <data name="libraryOffline.Text" xml:space="preserve">
+    <value>オフライン</value>
+    <comment>AppLocalizedPhrase.libraryOffline</comment>
+  </data>
+  <data name="libraryResultCountFormat.Value" xml:space="preserve">
+    <value>%d / %d枚</value>
+    <comment>AppLocalizedPhrase.libraryResultCountFormat</comment>
+  </data>
+  <data name="librarySearchPlaceholder.PlaceholderText" xml:space="preserve">
+    <value>写真を検索</value>
+    <comment>AppLocalizedPhrase.librarySearchPlaceholder</comment>
+  </data>
+  <data name="menuDevelop.Content" xml:space="preserve">
+    <value>現像</value>
+    <comment>AppLocalizedText.menuDevelop</comment>
+  </data>
+  <data name="menuDevelop.Text" xml:space="preserve">
+    <value>現像</value>
+    <comment>AppLocalizedText.menuDevelop</comment>
+  </data>
+  <data name="menuLibrary.Content" xml:space="preserve">
+    <value>ライブラリ</value>
+    <comment>AppLocalizedText.menuLibrary</comment>
+  </data>
+  <data name="menuLibrary.Text" xml:space="preserve">
+    <value>ライブラリ</value>
+    <comment>AppLocalizedText.menuLibrary</comment>
+  </data>
+  <data name="menuPrint.Content" xml:space="preserve">
+    <value>プリント</value>
+    <comment>AppLocalizedText.menuPrint</comment>
+  </data>
+  <data name="menuPrint.Text" xml:space="preserve">
+    <value>プリント</value>
+    <comment>AppLocalizedText.menuPrint</comment>
+  </data>
+  <data name="nextFrame.Value" xml:space="preserve">
+    <value>次のコマ</value>
+    <comment>AppLocalizedPhrase.nextFrame</comment>
+  </data>
+  <data name="noFrame.Text" xml:space="preserve">
+    <value>コマなし</value>
+    <comment>AppLocalizedText.noFrame</comment>
+  </data>
+  <data name="noImages.Text" xml:space="preserve">
+    <value>画像なし</value>
+    <comment>AppLocalizedPhrase.noImages</comment>
+  </data>
+  <data name="noSelection.Text" xml:space="preserve">
+    <value>選択なし</value>
+    <comment>AppLocalizedPhrase.noSelection</comment>
+  </data>
+  <data name="notSelected.Value" xml:space="preserve">
+    <value>未選択</value>
+    <comment>AppAccessibilityPhrase.notSelected</comment>
+  </data>
+  <data name="off.OffContent" xml:space="preserve">
+    <value>オフ</value>
+    <comment>AppAccessibilityPhrase.off</comment>
+  </data>
+  <data name="off.Value" xml:space="preserve">
+    <value>オフ</value>
+    <comment>AppAccessibilityPhrase.off</comment>
+  </data>
+  <data name="on.OnContent" xml:space="preserve">
+    <value>オン</value>
+    <comment>AppAccessibilityPhrase.on</comment>
+  </data>
+  <data name="on.Value" xml:space="preserve">
+    <value>オン</value>
+    <comment>AppAccessibilityPhrase.on</comment>
+  </data>
+  <data name="previousFrame.Value" xml:space="preserve">
+    <value>前のコマ</value>
+    <comment>AppLocalizedPhrase.previousFrame</comment>
+  </data>
+  <data name="printContentSection.Content" xml:space="preserve">
+    <value>内容</value>
+    <comment>AppLocalizedText.printContentSection</comment>
+  </data>
+  <data name="printLayoutMode.Content" xml:space="preserve">
+    <value>レイアウト</value>
+    <comment>AppLocalizedText.printLayoutMode</comment>
+  </data>
+  <data name="printLayoutMode.Text" xml:space="preserve">
+    <value>レイアウト</value>
+    <comment>AppLocalizedText.printLayoutMode</comment>
+  </data>
+  <data name="printLayoutSection.Text" xml:space="preserve">
+    <value>プリントレイアウト</value>
+    <comment>AppLocalizedText.printLayoutSection</comment>
+  </data>
+  <data name="printOutputSection.Content" xml:space="preserve">
+    <value>出力</value>
+    <comment>AppLocalizedText.printOutputSection</comment>
+  </data>
+  <data name="printPaperSize.Text" xml:space="preserve">
+    <value>用紙サイズ</value>
+    <comment>AppLocalizedText.printPaperSize</comment>
+  </data>
+  <data name="printSingleImage.Content" xml:space="preserve">
+    <value>単一画像</value>
+    <comment>AppLocalizedText.printSingleImage</comment>
+  </data>
+  <data name="quickExportSection.Text" xml:space="preserve">
+    <value>クイック書き出し</value>
+    <comment>AppLocalizedText.quickExportSection</comment>
+  </data>
+  <data name="selected.Value" xml:space="preserve">
+    <value>選択済み</value>
+    <comment>AppAccessibilityPhrase.selected</comment>
+  </data>
+  <data name="settingsAppearancePicker.Text" xml:space="preserve">
+    <value>外観</value>
+    <comment>AppLocalizedText.settingsAppearancePicker</comment>
+  </data>
+  <data name="settingsAppearancePicker.Value" xml:space="preserve">
+    <value>外観</value>
+    <comment>AppLocalizedText.settingsAppearancePicker</comment>
+  </data>
+  <data name="settingsCanvasBackgroundPicker.Text" xml:space="preserve">
+    <value>キャンバス背景</value>
+    <comment>AppLocalizedText.settingsCanvasBackgroundPicker</comment>
+  </data>
+  <data name="settingsDiskTab.Text" xml:space="preserve">
+    <value>ディスク</value>
+    <comment>AppLocalizedPhrase.settingsDiskTab</comment>
+  </data>
+  <data name="settingsExportTab.Text" xml:space="preserve">
+    <value>書き出し</value>
+    <comment>AppLocalizedText.settingsExportTab</comment>
+  </data>
+  <data name="settingsGeneralTab.Text" xml:space="preserve">
+    <value>一般</value>
+    <comment>AppLocalizedText.settingsGeneralTab</comment>
+  </data>
+  <data name="settingsInterfaceTab.Text" xml:space="preserve">
+    <value>インターフェイス</value>
+    <comment>AppLocalizedText.settingsInterfaceTab</comment>
+  </data>
+  <data name="settingsLanguagePicker.Text" xml:space="preserve">
+    <value>アプリケーション言語</value>
+    <comment>AppLocalizedText.settingsLanguagePicker</comment>
+  </data>
+  <data name="settingsLegalTab.Text" xml:space="preserve">
+    <value>法的情報</value>
+    <comment>AppLocalizedText.settingsLegalTab</comment>
+  </data>
+  <data name="settingsQuickExportDPI.Text" xml:space="preserve">
+    <value>クイック書き出し DPI</value>
+    <comment>AppLocalizedText.settingsQuickExportDPI</comment>
+  </data>
+  <data name="settingsQuickExportFolder.Text" xml:space="preserve">
+    <value>クイック書き出しフォルダー</value>
+    <comment>AppLocalizedText.settingsQuickExportFolder</comment>
+  </data>
+  <data name="settingsQuickExportFormat.Text" xml:space="preserve">
+    <value>クイック書き出し形式</value>
+    <comment>AppLocalizedText.settingsQuickExportFormat</comment>
+  </data>
+  <data name="settingsQuickExportSize.Text" xml:space="preserve">
+    <value>クイック書き出しサイズ</value>
+    <comment>AppLocalizedText.settingsQuickExportSize</comment>
+  </data>
+  <data name="settingsScanTab.Text" xml:space="preserve">
+    <value>スキャン</value>
+    <comment>AppLocalizedPhrase.settingsScanTab</comment>
+  </data>
+  <data name="settingsShortcutsTab.Text" xml:space="preserve">
+    <value>ショートカット</value>
+    <comment>AppLocalizedText.settingsShortcutsTab</comment>
+  </data>
+  <data name="settingsSourceDPI.Text" xml:space="preserve">
+    <value>元の DPI</value>
+    <comment>AppLocalizedText.settingsSourceDPI</comment>
+  </data>
+  <data name="settingsWorkflowTab.Text" xml:space="preserve">
+    <value>ワークフロー</value>
+    <comment>AppLocalizedText.settingsWorkflowTab</comment>
+  </data>
+  <data name="shortcutResetAll.Content" xml:space="preserve">
+    <value>ショートカットをリセット</value>
+    <comment>AppLocalizedText.shortcutResetAll</comment>
+  </data>
+  <data name="sidebarFiles.Text" xml:space="preserve">
+    <value>ファイル</value>
+    <comment>AppLocalizedText.sidebarFiles</comment>
+  </data>
+  <data name="sidebarFiles.Value" xml:space="preserve">
+    <value>ファイル</value>
+    <comment>AppLocalizedText.sidebarFiles</comment>
+  </data>
+  <data name="sidebarFilm.Value" xml:space="preserve">
+    <value>フィルム</value>
+    <comment>AppLocalizedText.sidebarFilm</comment>
+  </data>
+  <data name="sidebarLibrary.Text" xml:space="preserve">
+    <value>ライブラリ</value>
+    <comment>AppLocalizedText.sidebarLibrary</comment>
+  </data>
+  <data name="sidebarLibrary.Value" xml:space="preserve">
+    <value>ライブラリ</value>
+    <comment>AppLocalizedText.sidebarLibrary</comment>
+  </data>
+  <data name="sidebarOutput.Value" xml:space="preserve">
+    <value>出力</value>
+    <comment>AppLocalizedText.sidebarOutput</comment>
+  </data>
+  <data name="sidebarPresets.Value" xml:space="preserve">
+    <value>プリセット</value>
+    <comment>AppLocalizedText.sidebarPresets</comment>
+  </data>
+  <data name="sidebarVersions.Value" xml:space="preserve">
+    <value>バージョン</value>
+    <comment>AppLocalizedText.sidebarVersions</comment>
+  </data>
+  <data name="sortInputOrder.Text" xml:space="preserve">
+    <value>読み込み順</value>
+    <comment>AppLocalizedPhrase.sortInputOrder</comment>
+  </data>
+</root>

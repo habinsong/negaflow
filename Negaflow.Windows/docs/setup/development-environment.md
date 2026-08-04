@@ -80,6 +80,19 @@ Visual Studio 기존 instance에 `.vsconfig`를 적용할 때의 공식 형식:
 두 명령은 관리자 권한/UAC와 네트워크가 필요할 수 있습니다. 이 기록에서는 본체 update와 필요한
 Windows App SDK C# component 설치가 모두 완료됐습니다.
 
+## WinUI package와 실행 전제
+
+Visual Studio component 설치 여부와 app이 참조하는 NuGet/runtime 버전은 별개입니다. 현재 source graph는
+다음 component package를 중앙 고정하며 집계 `Microsoft.WindowsAppSDK` package는 사용하지 않습니다.
+
+- `Microsoft.WindowsAppSDK.Runtime 1.8.260710003`
+- `Microsoft.WindowsAppSDK.WinUI 1.8.260709004`
+- `Microsoft.Windows.SDK.BuildTools 10.0.26100.7705` build-only
+
+셸은 unpackaged, framework-dependent이므로 개발 PC와 최종 설치 대상에 .NET 10 runtime과 Windows App
+Runtime 1.8이 필요합니다. 개발 PC에서는 실제 x64 셸 실행을 확인했습니다. 제품 installer는 아직 없으므로
+M17에서 prerequisite 설치/탐지, license notice, SBOM과 서명을 함께 닫아야 합니다.
+
 Visual Studio 업데이트처럼 compiler 경로가 바뀐 경우 기존 generated build tree를 직접 삭제하지 않고
 다음 공식 CMake 재구성 명령을 preset별로 한 번 실행합니다.
 
@@ -103,6 +116,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-interop.ps1 -
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-interop.ps1 -Preset x64-release
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-managed.ps1 -Preset arm64-debug
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-managed.ps1 -Preset arm64-release
+```
+
+`build-managed.ps1`은 Interop, Shell.Core, WinUI Shell과 managed test project를 같은 locked solution graph로
+빌드합니다. x64 Debug 셸 실행 위치는 다음과 같습니다.
+
+```powershell
+.\out\build\managed\Negaflow.Shell\x64\Debug\net10.0-windows10.0.26100.0\win-x64\Negaflow.Shell.exe
 ```
 
 ARM64 명령은 x64 호스트에서 cross-build만 수행합니다. 실제 ARM64 test 실행 명령은 ARM64 Windows

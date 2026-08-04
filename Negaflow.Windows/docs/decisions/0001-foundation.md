@@ -28,9 +28,10 @@ Windows 설계 문서는 `9be909c`를 조사 기준으로 사용하지만 실제
 
 ## 의존성
 
-M1 코드에는 Windows SDK 외 제3자 runtime dependency가 없습니다. LittleCMS, libtiff, SQLite,
-LibRaw, WiX와 scanner 구성 요소는 실제 기능이 시작될 때 하나씩 라이선스·ARM64·보안 gate를
-거친 뒤 추가합니다.
+초기 M1 네이티브 엔진과 Interop 경로에는 Windows SDK 외 제3자 runtime dependency가 없습니다.
+후속 WinUI 셸의 Microsoft component package graph는 `third_party/manifest/components.json`에서 별도로
+고정·감사합니다. LittleCMS, libtiff, SQLite, LibRaw, WiX와 scanner 구성 요소는 실제 기능이 시작될 때
+하나씩 라이선스·ARM64·보안 gate를 거친 뒤 추가합니다.
 
 ## 결과
 

@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>Negaflow.Shell.UnitTests</AssemblyName>
+    <RootNamespace>Negaflow.Shell.UnitTests</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Shell.Core\Negaflow.Shell.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\..\baseline\swift-ui-metrics.json"
+             Link="swift-ui-metrics.json"
+             CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

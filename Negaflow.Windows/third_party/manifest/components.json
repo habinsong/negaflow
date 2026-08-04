@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "payload_state": "foundation-source-only",
+  "payload_state": "native-foundation-and-winui-shell-source",
   "components": [
     {
       "name": "Negaflow Windows",
@@ -18,6 +18,21 @@
       "license": "MIT",
       "redistributed": false,
       "source": "https://github.com/microsoft/vcpkg"
+    },
+    {
+      "name": "Microsoft.Windows.SDK.BuildTools",
+      "tool_version": "10.0.26100.7705",
+      "license": "Microsoft Windows SDK license",
+      "redistributed": false,
+      "source": "https://www.nuget.org/packages/Microsoft.Windows.SDK.BuildTools/10.0.26100.7705"
+    },
+    {
+      "name": "Microsoft.Windows.SDK.BuildTools.MSIX",
+      "tool_version": "1.7.20250829.1",
+      "relationship": "transitive-build-only",
+      "license": "Microsoft Windows SDK license",
+      "redistributed": false,
+      "source": "https://www.nuget.org/packages/Microsoft.Windows.SDK.BuildTools.MSIX/1.7.20250829.1"
     }
   ],
   "system_apis_not_redistributed": [
@@ -29,5 +44,82 @@
     "COM",
     "Shell Lightweight Utility APIs"
   ],
-  "third_party_runtime_dependencies": []
+  "deployment_prerequisites": [
+    {
+      "name": ".NET Runtime",
+      "minimum_major_version": "10",
+      "reason": "The current shell is framework-dependent."
+    },
+    {
+      "name": "Windows App Runtime",
+      "minimum_major_minor_version": "1.8",
+      "reason": "The current unpackaged shell uses framework-dependent Windows App SDK deployment."
+    }
+  ],
+  "third_party_runtime_dependencies": [
+    {
+      "name": "Microsoft.WindowsAppSDK.Runtime",
+      "version": "1.8.260710003",
+      "relationship": "direct",
+      "license": "Microsoft Windows App SDK license",
+      "license_source": "https://www.nuget.org/packages/Microsoft.WindowsAppSDK.Runtime/1.8.260710003/License",
+      "current_payload": "framework declaration and bootstrap support; Windows App Runtime remains an installer prerequisite"
+    },
+    {
+      "name": "Microsoft.WindowsAppSDK.WinUI",
+      "version": "1.8.260709004",
+      "relationship": "direct",
+      "license": "Microsoft Windows App SDK license",
+      "license_source": "https://www.nuget.org/packages/Microsoft.WindowsAppSDK.WinUI/1.8.260709004/License",
+      "current_payload": "Microsoft.WinUI.dll and generated XAML resources"
+    },
+    {
+      "name": "Microsoft.WindowsAppSDK.Base",
+      "version": "1.8.251216001",
+      "relationship": "transitive",
+      "license": "Microsoft Windows App SDK license",
+      "license_source": "https://www.nuget.org/packages/Microsoft.WindowsAppSDK.Base/1.8.251216001/License",
+      "current_payload": "build and deployment metadata"
+    },
+    {
+      "name": "Microsoft.WindowsAppSDK.Foundation",
+      "version": "1.8.260709000",
+      "relationship": "transitive",
+      "license": "Microsoft Windows App SDK license",
+      "license_source": "https://www.nuget.org/packages/Microsoft.WindowsAppSDK.Foundation/1.8.260709000/License",
+      "current_payload": "Windows App SDK projections and bootstrap binaries"
+    },
+    {
+      "name": "Microsoft.WindowsAppSDK.InteractiveExperiences",
+      "version": "1.8.260708001",
+      "relationship": "transitive",
+      "license": "Microsoft Windows App SDK license",
+      "license_source": "https://www.nuget.org/packages/Microsoft.WindowsAppSDK.InteractiveExperiences/1.8.260708001/License",
+      "current_payload": "Microsoft.InteractiveExperiences.Projection.dll"
+    },
+    {
+      "name": "Microsoft.Web.WebView2",
+      "version": "1.0.3179.45",
+      "relationship": "transitive",
+      "license": "BSD-3-Clause",
+      "license_source": "https://www.nuget.org/packages/Microsoft.Web.WebView2/1.0.3179.45/License",
+      "current_payload": "WebView2Loader.dll and projections; the current shell does not use web content",
+      "notice_requirement": "Reproduce LICENSE.txt with any binary distribution."
+    },
+    {
+      "name": "runtimepack.Microsoft.Windows.SDK.NET.Ref",
+      "version": "10.0.26100.57",
+      "relationship": "implicit-platform-runtime-pack",
+      "license": "Microsoft Windows SDK license",
+      "current_payload": "Microsoft.Windows.SDK.NET.dll and WinRT.Runtime.dll"
+    }
+  ],
+  "distribution_gate": {
+    "status": "not-release-ready",
+    "required_actions": [
+      "Chain or document installation of the .NET 10 runtime and Windows App Runtime 1.8.",
+      "Include the Microsoft Windows App SDK terms and the Microsoft.Web.WebView2 LICENSE.txt in release notices.",
+      "Generate and review the final installer SBOM from the exact release payload."
+    ]
+  }
 }

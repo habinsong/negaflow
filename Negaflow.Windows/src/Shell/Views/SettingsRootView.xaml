@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Negaflow.Shell.Views.SettingsRootView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    AutomationProperties.AutomationId="settings.window">
+    <Grid Background="{ThemeResource NegaflowWindowBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="90" />
+            <RowDefinition Height="1" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Padding="6,5" ColumnSpacing="2" Background="{ThemeResource NegaflowBarBrush}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Button x:Name="GeneralButton" Grid.Column="0" Tag="General" AutomationProperties.AutomationId="settings.category.general" Click="OnCategoryClick" Style="{StaticResource NegaflowSettingsCategoryButtonStyle}">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="5">
+                    <FontIcon FontSize="22" Glyph="&#xE713;" />
+                    <TextBlock x:Name="GeneralLabel" FontSize="11" />
+                </StackPanel>
+            </Button>
+            <Button x:Name="InterfaceButton" Grid.Column="1" Tag="Interface" AutomationProperties.AutomationId="settings.category.interface" Click="OnCategoryClick" Style="{StaticResource NegaflowSettingsCategoryButtonStyle}">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="5">
+                    <FontIcon FontSize="22" Glyph="&#xE700;" />
+                    <TextBlock x:Name="InterfaceLabel" FontSize="11" />
+                </StackPanel>
+            </Button>
+            <Button x:Name="WorkflowButton" Grid.Column="2" Tag="Workflow" AutomationProperties.AutomationId="settings.category.workflow" Click="OnCategoryClick" Style="{StaticResource NegaflowSettingsCategoryButtonStyle}">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="5">
+                    <FontIcon FontSize="22" Glyph="&#xE8B7;" />
+                    <TextBlock x:Name="WorkflowLabel" FontSize="11" />
+                </StackPanel>
+            </Button>
+            <Button x:Name="ScanButton" Grid.Column="3" Tag="Scan" AutomationProperties.AutomationId="settings.category.scan" Click="OnCategoryClick" Style="{StaticResource NegaflowSettingsCategoryButtonStyle}">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="5">
+                    <FontIcon FontSize="22" Glyph="&#xE950;" />
+                    <TextBlock x:Name="ScanLabel" FontSize="11" />
+                </StackPanel>
+            </Button>
+            <Button x:Name="DiskButton" Grid.Column="4" Tag="Disk" AutomationProperties.AutomationId="settings.category.disk" Click="OnCategoryClick" Style="{StaticResource NegaflowSettingsCategoryButtonStyle}">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="5">
+                    <FontIcon FontSize="22" Glyph="&#xEDA2;" />
+                    <TextBlock x:Name="DiskLabel" FontSize="11" />
+                </StackPanel>
+            </Button>
+            <Button x:Name="ExportSettingsButton" Grid.Column="5" Tag="Export" AutomationProperties.AutomationId="settings.category.export" Click="OnCategoryClick" Style="{StaticResource NegaflowSettingsCategoryButtonStyle}">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="5">
+                    <FontIcon FontSize="22" Glyph="&#xE72D;" />
+                    <TextBlock x:Name="ExportLabel" FontSize="11" />
+                </StackPanel>
+            </Button>
+            <Button x:Name="ShortcutsButton" Grid.Column="6" Tag="Shortcuts" AutomationProperties.AutomationId="settings.category.shortcuts" Click="OnCategoryClick" Style="{StaticResource NegaflowSettingsCategoryButtonStyle}">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="5">
+                    <FontIcon FontSize="22" Glyph="&#xE765;" />
+                    <TextBlock x:Name="ShortcutsLabel" FontSize="11" />
+                </StackPanel>
+            </Button>
+            <Button x:Name="LegalButton" Grid.Column="7" Tag="Legal" AutomationProperties.AutomationId="settings.category.legal" Click="OnCategoryClick" Style="{StaticResource NegaflowSettingsCategoryButtonStyle}">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="5">
+                    <FontIcon FontSize="22" Glyph="&#xE8A5;" />
+                    <TextBlock x:Name="LegalLabel" FontSize="11" />
+                </StackPanel>
+            </Button>
+        </Grid>
+
+        <Border Grid.Row="1" Background="{ThemeResource NegaflowDividerBrush}" />
+
+        <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+            <Grid Padding="26,22,26,28">
+                <StackPanel x:Name="GeneralPage" AutomationProperties.AutomationId="settings.general" Spacing="16">
+                    <TextBlock x:Name="GeneralHeading" FontSize="24" FontWeight="SemiBold" />
+                    <Border Padding="18" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="10">
+                        <StackPanel Spacing="14">
+                            <Grid ColumnSpacing="16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="230" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Uid="settingsLanguagePicker" VerticalAlignment="Center" />
+                                <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" IsEnabled="False" SelectedIndex="0">
+                                    <ComboBoxItem Content="System" />
+                                    <ComboBoxItem Content="English" />
+                                    <ComboBoxItem Content="한국어" />
+                                    <ComboBoxItem Content="日本語" />
+                                    <ComboBoxItem Content="简体中文" />
+                                    <ComboBoxItem Content="Français" />
+                                    <ComboBoxItem Content="Deutsch" />
+                                </ComboBox>
+                            </Grid>
+                            <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
+                            <Grid ColumnSpacing="16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="230" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="AppearanceLabel" VerticalAlignment="Center" />
+                                <ComboBox
+                                    x:Name="AppearanceComboBox"
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Stretch"
+                                    AutomationProperties.AutomationId="settings.appearance"
+                                    SelectionChanged="OnAppearanceSelectionChanged">
+                                    <ComboBoxItem x:Name="SystemAppearanceItem" />
+                                    <ComboBoxItem x:Name="DarkAppearanceItem" />
+                                    <ComboBoxItem x:Name="LightAppearanceItem" />
+                                </ComboBox>
+                            </Grid>
+                            <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
+                            <ToggleSwitch x:Name="DeveloperModeToggle" x:Uid="developerMode" IsEnabled="False" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <StackPanel x:Name="InterfacePage" AutomationProperties.AutomationId="settings.interface" Spacing="16" Visibility="Collapsed">
+                    <TextBlock x:Name="InterfaceHeading" FontSize="24" FontWeight="SemiBold" />
+                    <Border Padding="18" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="10">
+                        <StackPanel Spacing="12">
+                            <Grid ColumnSpacing="16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="230" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Uid="settingsCanvasBackgroundPicker" VerticalAlignment="Center" />
+                                <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" IsEnabled="False" SelectedIndex="0">
+                                    <ComboBoxItem x:Uid="canvasBackgroundBlack" />
+                                    <ComboBoxItem x:Uid="canvasBackgroundGray" />
+                                    <ComboBoxItem x:Uid="canvasBackgroundWhite" />
+                                </ComboBox>
+                            </Grid>
+                            <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
+                            <ToggleSwitch x:Name="ClippingOverlayToggle" x:Uid="colorClippingOverlay" IsEnabled="False" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <StackPanel x:Name="WorkflowPage" AutomationProperties.AutomationId="settings.workflow" Spacing="16" Visibility="Collapsed">
+                    <TextBlock x:Name="WorkflowHeading" FontSize="24" FontWeight="SemiBold" />
+                    <Border Padding="18" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="10">
+                        <StackPanel Spacing="12">
+                            <ToggleSwitch x:Name="ScannerSimulatorToggle" x:Uid="commandToggleScannerSimulator" IsEnabled="False" />
+                            <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
+                            <ToggleSwitch x:Name="DevelopImportsToggle" x:Uid="developImportsAutomatically" IsEnabled="False" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <StackPanel x:Name="ScanPage" AutomationProperties.AutomationId="settings.scan" Spacing="16" Visibility="Collapsed">
+                    <TextBlock x:Name="ScanHeading" FontSize="24" FontWeight="SemiBold" />
+                </StackPanel>
+
+                <StackPanel x:Name="DiskPage" AutomationProperties.AutomationId="settings.disk" Spacing="16" Visibility="Collapsed">
+                    <TextBlock x:Name="DiskHeading" FontSize="24" FontWeight="SemiBold" />
+                    <Border Padding="18" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="10">
+                        <Grid ColumnSpacing="16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock VerticalAlignment="Center" Text="SHA-256" />
+                            <ToggleSwitch
+                                x:Name="ImageHashToggle"
+                                Grid.Column="1"
+                                AutomationProperties.AutomationId="settings.disk.image-sha256"
+                                Toggled="OnImageHashToggled" />
+                        </Grid>
+                    </Border>
+                </StackPanel>
+
+                <StackPanel x:Name="ExportPage" AutomationProperties.AutomationId="settings.export" Spacing="16" Visibility="Collapsed">
+                    <TextBlock x:Name="ExportHeading" FontSize="24" FontWeight="SemiBold" />
+                    <Border Padding="18" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="10">
+                        <StackPanel Spacing="12">
+                            <TextBlock x:Uid="quickExportSection" FontSize="13" FontWeight="SemiBold" />
+                            <Grid ColumnSpacing="16">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="230" /></Grid.ColumnDefinitions>
+                                <TextBlock x:Uid="settingsQuickExportFormat" VerticalAlignment="Center" />
+                                <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" IsEnabled="False" SelectedIndex="0">
+                                    <ComboBoxItem Content="JPEG" />
+                                    <ComboBoxItem Content="PNG" />
+                                </ComboBox>
+                            </Grid>
+                            <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
+                            <Grid ColumnSpacing="16">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="230" /></Grid.ColumnDefinitions>
+                                <TextBlock x:Uid="settingsQuickExportDPI" VerticalAlignment="Center" />
+                                <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" IsEnabled="False" SelectedIndex="0">
+                                    <ComboBoxItem x:Name="SourceDpiItem" />
+                                </ComboBox>
+                            </Grid>
+                            <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
+                            <Grid ColumnSpacing="16">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="230" /></Grid.ColumnDefinitions>
+                                <TextBlock x:Uid="settingsQuickExportSize" VerticalAlignment="Center" />
+                                <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" IsEnabled="False" SelectedIndex="0">
+                                    <ComboBoxItem x:Name="FullSizeItem" />
+                                </ComboBox>
+                            </Grid>
+                            <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
+                            <Grid ColumnSpacing="16">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="230" /></Grid.ColumnDefinitions>
+                                <TextBlock x:Uid="settingsQuickExportFolder" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="—" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <StackPanel x:Name="ShortcutsPage" AutomationProperties.AutomationId="settings.shortcuts" Spacing="16" Visibility="Collapsed">
+                    <TextBlock x:Name="ShortcutsHeading" FontSize="24" FontWeight="SemiBold" />
+                    <Border Padding="18" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="10">
+                        <Button x:Uid="shortcutResetAll" HorizontalAlignment="Left" IsEnabled="False" />
+                    </Border>
+                </StackPanel>
+
+                <StackPanel x:Name="LegalPage" AutomationProperties.AutomationId="settings.legal" Spacing="16" Visibility="Collapsed">
+                    <TextBlock x:Name="LegalHeading" FontSize="24" FontWeight="SemiBold" />
+                    <Border Padding="18" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="10">
+                        <StackPanel Spacing="8">
+                            <TextBlock x:Uid="legalLicenseTitle" FontSize="13" FontWeight="SemiBold" />
+                            <TextBlock x:Uid="legalLicenseBody" IsTextSelectionEnabled="True" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+                    <Border Padding="18" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="10">
+                        <StackPanel Spacing="8">
+                            <TextBlock x:Uid="legalTrademarkTitle" FontSize="13" FontWeight="SemiBold" />
+                            <TextBlock x:Uid="legalTrademarkBody" IsTextSelectionEnabled="True" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+                    <Border Padding="18" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="10">
+                        <StackPanel Spacing="8">
+                            <TextBlock x:Uid="legalNamesTitle" FontSize="13" FontWeight="SemiBold" />
+                            <TextBlock x:Uid="legalNamesBody" IsTextSelectionEnabled="True" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+                    <Border Padding="18" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="10">
+                        <StackPanel Spacing="8">
+                            <TextBlock x:Uid="legalProfilesTitle" FontSize="13" FontWeight="SemiBold" />
+                            <TextBlock x:Uid="legalProfilesBody" IsTextSelectionEnabled="True" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+                    <Border Padding="18" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="10">
+                        <StackPanel Spacing="8">
+                            <TextBlock x:Uid="legalAffiliationTitle" FontSize="13" FontWeight="SemiBold" />
+                            <TextBlock x:Uid="legalAffiliationBody" IsTextSelectionEnabled="True" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

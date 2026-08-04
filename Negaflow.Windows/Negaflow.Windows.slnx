@@ -8,11 +8,23 @@
       <Platform Solution="*|x64" Project="x64" />
       <Platform Solution="*|ARM64" Project="ARM64" />
     </Project>
+    <Project Path="src/Shell.Core/Negaflow.Shell.Core.csproj">
+      <Platform Solution="*|x64" Project="AnyCPU" />
+      <Platform Solution="*|ARM64" Project="AnyCPU" />
+    </Project>
+    <Project Path="src/Shell/Negaflow.Shell.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|ARM64" Project="ARM64" />
+    </Project>
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Interop.ContractTests/Negaflow.Interop.ContractTests.csproj">
       <Platform Solution="*|x64" Project="x64" />
       <Platform Solution="*|ARM64" Project="ARM64" />
+    </Project>
+    <Project Path="tests/Shell.UnitTests/Negaflow.Shell.UnitTests.csproj">
+      <Platform Solution="*|x64" Project="AnyCPU" />
+      <Platform Solution="*|ARM64" Project="AnyCPU" />
     </Project>
   </Folder>
 </Solution>

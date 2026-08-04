@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.26100.0</TargetPlatformMinVersion>
+    <AssemblyName>Negaflow.Shell</AssemblyName>
+    <RootNamespace>Negaflow.Shell</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Platforms>x64;ARM64</Platforms>
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <RuntimeIdentifier Condition="'$(Platform)' == 'x64'">win-x64</RuntimeIdentifier>
+    <RuntimeIdentifier Condition="'$(Platform)' == 'ARM64'">win-arm64</RuntimeIdentifier>
+    <UseWinUI>true</UseWinUI>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <WinUISDKReferences>false</WinUISDKReferences>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained>
+    <EnableMsixTooling>false</EnableMsixTooling>
+    <PublishTrimmed>false</PublishTrimmed>
+    <PublishReadyToRun>false</PublishReadyToRun>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Manifest Include="$(ApplicationManifest)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.Runtime" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Interop\Negaflow.Interop.csproj" />
+    <ProjectReference Include="..\Shell.Core\Negaflow.Shell.Core.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <NativePreset Condition="'$(Platform)' == 'x64' and '$(Configuration)' == 'Debug'">x64-debug</NativePreset>
+    <NativePreset Condition="'$(Platform)' == 'x64' and '$(Configuration)' == 'Release'">x64-release</NativePreset>
+    <NativePreset Condition="'$(Platform)' == 'ARM64' and '$(Configuration)' == 'Debug'">arm64-debug</NativePreset>
+    <NativePreset Condition="'$(Platform)' == 'ARM64' and '$(Configuration)' == 'Release'">arm64-release</NativePreset>
+    <NativeLibrarySource>$(MSBuildThisFileDirectory)..\..\out\build\native\$(NativePreset)\$(Configuration)\Negaflow.Native.dll</NativeLibrarySource>
+  </PropertyGroup>
+
+  <Target Name="CopyNativeEngine" AfterTargets="Build" Condition="Exists('$(NativeLibrarySource)')">
+    <Copy SourceFiles="$(NativeLibrarySource)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
+  </Target>
+</Project>

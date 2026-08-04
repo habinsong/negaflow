@@ -12,7 +12,7 @@
 | ARM64 cross build | 통과 | Debug/Release 전체 target build, CLI/DLL PE `AA64` |
 | ARM64 native run | 미검증 | 실제 ARM64 Windows runner 필요 |
 | .NET 10/C ABI Interop | 기반 통과 | `LibraryImport`, 절대 경로 resolver, ABI/layout 검증. x64 Debug/Release 13개 assertion, ARM64 교차 빌드 |
-| WinUI shell | 미구현 | C# Windows App SDK component 설치 완료. CLI 수치 수직 경로 통과, 다음 구현 단계 |
+| WinUI shell | 첫 기반 통과 | component package 1.8 locked graph, x64 실제 최대화 실행, ARM64 교차 빌드, 6개 언어, 오른쪽 caption inset, Settings와 SHA 기본 `끔` |
 | static runtime 배포 기반 | 통과 | Release CLI 직접 dependency가 Windows 기본 DLL 5개뿐이며 VC++ Redistributable DLL 없음 |
 | float32 pixel contract | 부분 구현 | checked layout/stride/capacity, extended RGB, straight alpha, NaN/Inf 거부 |
 | scalar pointwise | 부분 구현 | exposure와 RGB 3×4 matrix x64 test, ARM64 build |
@@ -22,13 +22,14 @@
 | WIC TIFF decode | 수직 경로 통과 | 단일 read-only stream preflight/decode, Microsoft 기본 decoder 고정, RGB/RGBA 16-bit, none/LZW, ICC 추출, 잘린 LZW 차단, decoded-byte 사전 한도, sink 기반 행 streaming·취소·진행률; 사용자 TIFF 15/15 |
 | scanner→working color | 수직 경로 통과 | untagged linear raw 9개와 embedded ICC→ICM→sRGB16→linear float 6개, 64행 streaming 15/15, whole-frame 최종 float exact 일치 15/15 |
 | 이미지 SHA-256 | opt-in 기반 통과 | 기본 `off`는 파일 I/O 0, 명시적 CNG SHA-256 known-answer/multi-chunk/cancel, 사용자 TIFF opt-in 15/15 |
-| 네이티브 제3자 runtime dependency | 0개 | 빈 vcpkg dependency, WIC/ICM/Win32만 사용 |
+| 네이티브 엔진 제3자 runtime dependency | 0개 | 빈 vcpkg dependency, WIC/ICM/Win32만 사용 |
+| WinUI package graph | 고정·감사 | Runtime/WinUI 1.8 component 직접 참조, WebView2 등 transitive 명세, 취약 package 0, AI/ML/Widgets 제외 |
 | GPU/WARP | 미구현 | M5 이후 |
-| installer/signing | 미구현 | M17 범위 |
+| installer/signing | 미구현 | .NET 10과 Windows App Runtime 1.8 prerequisite 연결, notice/SBOM/signing은 M17 범위 |
 
 현재 build ID는 미커밋 작업을 `-dirty`로 표시합니다. ARM64 test executable은 빌드됐지만 x64
 호스트에서 실행하지 않았으므로 ARM64 runtime 통과로 표시하지 않습니다.
 
-전체 M0~M18 로드맵 진행률은 산출물 기준 약 9%, 현재 M0~M3 기반 구간은 약 39%로 추정합니다.
+전체 M0~M18 로드맵 진행률은 산출물 기준 약 11%, 현재 M0~M3 기반 구간은 약 41%로 추정합니다.
 색상 수직 경로가 실제 코퍼스를 처리했다는 사실과 ColorSync 수치 동등성은 구분합니다. 산정 방식과
 단계별 공백은 `progress/overall-roadmap.md`에 있습니다.
