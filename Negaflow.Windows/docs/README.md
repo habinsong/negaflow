@@ -16,6 +16,7 @@
 - [네이티브 기반](implementation/native-foundation.md)
 - [관리 코드 Interop 기반](implementation/managed-interop-foundation.md)
 - [제한형 TIFF 사전 검사](implementation/tiff-probe.md)
+- [압축 TIFF LZW 의미 사전 검사와 Deflate 격리](implementation/compressed-tiff-preflight.md)
 - [WIC TIFF 디코더](implementation/wic-tiff-decoder.md)
 - [Scanner TIFF에서 working linear-sRGB까지](implementation/scanner-color-to-working.md)
 - [선택형 이미지 SHA-256 구현](implementation/image-content-hash.md)
@@ -36,7 +37,9 @@
 - [2026-08-04 TIFF16 출력·단계 보고 검증](verification/2026-08-04-tiff16-output.md)
 - [2026-08-04 노출·대비·커브 수직 경로 검증](verification/2026-08-04-tone-adjustment.md)
 - [2026-08-04 파이프라인 CPU 시간·단계 진단 검증](verification/2026-08-04-pipeline-diagnostics.md)
+- [2026-08-04 압축 TIFF 사전 검사 검증](verification/2026-08-04-compressed-tiff-preflight.md)
 - [이미지 I/O 조사와 권리 검토](research/image-io-sources.md)
+- [압축 TIFF 사전 검사 공식 근거와 권리 검토](research/compressed-tiff-preflight-sources.md)
 - [출력 encode·게시 근거와 권리 검토](research/output-encode-sources.md)
 - [TIFF16 출력·메타데이터 공식 근거와 권리 검토](research/tiff16-output-sources.md)
 - [네거티브 반전 근거와 권리 조사](research/negative-inversion-sources.md)
@@ -56,6 +59,7 @@
 - [ADR-0008: TIFF16 출력은 최소 메타데이터를 검증한 뒤 게시](decisions/0008-verified-tiff16-minimal-metadata-boundary.md)
 - [ADR-0009: 첫 톤 조정은 macOS 수식과 순서를 보존하고 동적 측정 차이를 명시](decisions/0009-tone-adjustment-scalar-contract.md)
 - [ADR-0010: 저비용 CPU 시간과 진단 전용 픽셀 fingerprint를 분리](decisions/0010-low-cost-pipeline-diagnostics.md)
+- [ADR-0011: LZW는 독립 사전 검사하고 Deflate는 검증기 전까지 격리](decisions/0011-bounded-lzw-preflight-and-deflate-quarantine.md)
 
 ## 사실 우선순위
 

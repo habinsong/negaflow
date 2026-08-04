@@ -104,7 +104,7 @@ WIC의 고수준 `IWICColorTransform`은 저장소 ICC fixture에서는 동작�
 
 - macOS ColorSync golden과 Windows ICM의 channel/ΔE 동등성
 - 네거티브 반전 이후의 색 정확도와 화면 품질
-- LZW code stream 의미 검증, 손상 Deflate와 압축 해제 CPU deadline
+- 독립 Deflate 검증 또는 dependency 결정과 WIC 압축 해제 CPU deadline
 - tile decode와 최종 working/downstream streaming
 - WIC 압축 해제·ICM callback 사이의 CPU deadline과 실제 취소 latency
 - export/ICC embed/readback
@@ -112,3 +112,25 @@ WIC의 고수준 `IWICColorTransform`은 저장소 ICC fixture에서는 동작�
 
 따라서 이 기록은 사용자 코퍼스를 원본 불변 상태로 16-bit decode하고 working float buffer까지 만들 수
 있음을 입증합니다. device-accurate color, ColorSync parity나 완성 제품 품질은 아직 입증하지 않습니다.
+
+## 압축 사전 검사 체크포인트 재검증
+
+같은 날 LZW 의미 사전 검사 도입 뒤 사용자 TIFF 15개와 권리 확인된 저장소 fixture 1개를 합친 16개를
+x64 Release로 다시 읽었습니다. 이번 재검증은 일반 이미지 SHA-256을 명시적으로 끈 채 수행했으며
+파일명·경로·hash를 기록하지 않았습니다.
+
+| 검사 | 결과 |
+|---|---:|
+| 전체/64행 streaming 최종 float exact parity | 16/16 |
+| 사용자 LZW 의미 사전 검사 후 decode | 6/6 |
+| streaming 결과의 full decoded sample 보유 | 0/16 |
+| 사용자 원본 크기·수정 시각·속성 변화 | 0/15 |
+| SHA-256 계산 | 0 |
+
+16개 전체 parity 실행은 통제되지 않은 warm-cache 관찰에서 약 34.9초였습니다. 사용자 LZW 한 개의 CLI
+관찰은 의미 검사와 WIC 전체 decode가 약 1.66초, 64행 scanner→working 준비 전체가 약 2.61초였습니다.
+이는 비교 benchmark나 성능 보증이 아닙니다. LZW compressed byte 전체와 기대 복원 byte 전체가
+accounting됐고 code 수가 0보다 큼을 JSON으로 확인했습니다.
+
+이 체크포인트로 LZW code-stream 의미 검증 공백은 닫혔습니다. 아직 남은 압축 I/O 위험은 독립 Deflate
+검증 또는 dependency 결정, WIC 호출 내부 압축 해제 CPU deadline·선점 취소와 실제 ARM64 실행입니다.

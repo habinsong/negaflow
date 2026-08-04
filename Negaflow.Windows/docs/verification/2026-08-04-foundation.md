@@ -135,3 +135,7 @@ C# `Negaflow.Interop`도 같은 두 export만 source-generated `LibraryImport`�
 - long path, sparse BigTIFF, SMB/removable volume
 - tile decode, 최종 working/downstream streaming과 process memory budget
 - output encode, ICC embed, readback와 atomic publish
+
+이 목록은 최초 기반 체크포인트 당시의 공백입니다. LZW 의미 검사는 후속
+[`2026-08-04-compressed-tiff-preflight.md`](2026-08-04-compressed-tiff-preflight.md)에서 닫혔고 Deflate
+지원과 WIC CPU deadline은 계속 남아 있습니다. 현재 상태는 `../STATUS.md`를 우선합니다.

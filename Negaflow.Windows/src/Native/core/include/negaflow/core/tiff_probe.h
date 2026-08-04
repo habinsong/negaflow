@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <stop_token>
 
 namespace negaflow::core {
 
@@ -24,8 +25,11 @@ enum class TiffProbeStatus : std::uint8_t {
     invalid_dimensions,
     invalid_layout,
     segment_limit_exceeded,
+    compressed_data_limit_exceeded,
+    invalid_compressed_data,
     working_memory_limit_exceeded,
     multiple_directories_unsupported,
+    cancelled,
 };
 
 enum class TiffVariant : std::uint8_t {
@@ -49,7 +53,13 @@ struct TiffProbeLimits final {
     std::uint64_t max_segments{1'048'576ULL};
     std::uint64_t max_single_tag_bytes{64ULL * 1024ULL * 1024ULL};
     std::uint64_t max_icc_profile_bytes{16ULL * 1024ULL * 1024ULL};
+    std::uint64_t max_lzw_compressed_bytes{512ULL * 1024ULL * 1024ULL};
     std::uint64_t max_working_rgba32f_bytes{32ULL * 1024ULL * 1024ULL * 1024ULL};
+};
+
+struct TiffProbeControl final {
+    bool validate_lzw_code_streams{false};
+    std::stop_token stop_token{};
 };
 
 struct TiffProbeInfo final {
@@ -62,6 +72,10 @@ struct TiffProbeInfo final {
     std::uint64_t width{0};
     std::uint64_t height{0};
     std::uint64_t segment_count{0};
+    std::uint64_t compressed_segment_bytes{0};
+    std::uint64_t compressed_bytes_validated{0};
+    std::uint64_t lzw_code_count{0};
+    std::uint64_t lzw_decoded_bytes_validated{0};
     std::uint64_t icc_profile_bytes{0};
     std::uint64_t packed_raster_bytes{0};
     std::uint64_t working_rgba32f_bytes{0};
@@ -76,6 +90,7 @@ struct TiffProbeInfo final {
     std::uint8_t bits_per_sample_count{1};
     std::uint8_t sample_format_count{1};
     std::uint8_t extra_samples_count{0};
+    bool lzw_code_streams_validated{false};
 };
 
 struct TiffProbeResult final {
@@ -99,11 +114,13 @@ public:
 
 [[nodiscard]] TiffProbeResult probe_tiff(
     const TiffRandomAccessReader& reader,
-    const TiffProbeLimits& limits = {}) noexcept;
+    const TiffProbeLimits& limits = {},
+    const TiffProbeControl& control = {}) noexcept;
 
 [[nodiscard]] TiffProbeResult probe_tiff_file(
     const std::filesystem::path& path,
-    const TiffProbeLimits& limits = {}) noexcept;
+    const TiffProbeLimits& limits = {},
+    const TiffProbeControl& control = {}) noexcept;
 
 [[nodiscard]] const char* tiff_probe_status_name(TiffProbeStatus status) noexcept;
 [[nodiscard]] const char* tiff_variant_name(TiffVariant variant) noexcept;

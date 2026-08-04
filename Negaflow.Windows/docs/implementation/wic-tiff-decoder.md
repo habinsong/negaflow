@@ -7,7 +7,9 @@ ICC 해석 정책, scanner role과 working float 변환은 `src/Native/imaging`�
 
 ```text
 read-only IStream 1회 open
-  → 같은 stream의 bounded TIFF preflight
+  → 같은 stream의 bounded TIFF 구조 preflight
+  → decoded-byte 상한 선검사
+  → LZW이면 같은 stream의 독립 code-stream 의미 preflight
   → Microsoft 기본 WIC TIFF decoder 확인
   → 48bpp RGB 또는 64bpp RGBA/PRGBA sample
   → embedded ICC bytes 추출·구조 검증
@@ -33,10 +35,34 @@ WIC COM object, stream과 decoder handle은 함수 밖으로 나가지 않습니
 - contiguous planar (`1`)
 - unsigned integer 16-bit sample
 - RGB 3-channel 또는 RGB+alpha 4-channel
-- compression none (`1`), LZW (`5`) 또는 Deflate (`8`)
+- compression none (`1`) 또는 LZW (`5`)
 - 4-channel이면 ExtraSamples가 associated (`1`) 또는 unassociated (`2`)
 
 조건 밖 입력은 WIC에 맡겨 추측하지 않고 명시적으로 거부합니다.
+
+Deflate (`8`)는 WIC가 형식상 지원하더라도 현재 allowlist에서 격리합니다. 구조상 범위가 맞지만 stored
+block 길이가 segment와 모순되는 합성 입력을 로컬 Microsoft WIC가 성공으로 처리한 관찰이 있었고,
+Microsoft 문서는 compressed stream 무결성의 엄격한 검증을 계약하지 않습니다. 독립 검증기나 검토된
+최소 dependency가 생기기 전에는 정상 Deflate도 같은 `unsupported_layout` 경계에서 거부합니다.
+
+## LZW 의미 사전 검사
+
+LZW 입력은 구조 검사와 decoded-byte 한도를 먼저 통과한 뒤 WIC 호출 전에 다시 같은 read-only stream을
+검사합니다. 검사기는 pixel을 만들지 않고 4,096개 사전 항목의 **복원 문자열 길이**만 보유합니다.
+
+- 각 strip/tile은 ClearCode `256`으로 시작하고 EOI `257`로 끝나야 함
+- literal, 이미 정의된 사전 code와 현재 다음 code인 특수 forward case만 허용
+- TIFF 6.0 early-change에 따라 entry 510/1022/2046 뒤 10/11/12-bit로 전환
+- entry 4094 뒤에는 EOI 또는 ClearCode만 허용하고 Clear 뒤 9-bit로 재설정
+- code는 byte 안에서 high-to-low 순서로 읽고 segment 밖을 읽지 않음
+- strip/tile geometry와 bit depth로 계산한 기대 복원 byte 수와 정확히 일치해야 함
+- EOI 뒤 마지막 byte의 fill bit 값은 무시하지만 추가 byte는 허용하지 않음
+- 전체 LZW compressed segment 기본 상한은 512 MiB이며 4,096 code마다 취소를 확인
+
+검사 결과는 `compressed_segment_bytes`, `compressed_bytes_validated`, `lzw_code_count`,
+`lzw_decoded_bytes_validated`, `lzw_code_streams_validated`로 남습니다. 일반 `--probe-tiff`는 빠른 구조
+검사만 수행하고, 실제 WIC LZW decode 경로에서 의미 검사가 필수입니다. 자세한 책임과 형식은
+[`compressed-tiff-preflight.md`](compressed-tiff-preflight.md)에 있습니다.
 
 ## decoder 고정과 읽기 전용 처리
 
@@ -67,6 +93,7 @@ profile bytes는 변환하지 않고 `DecodedImage`에 보존합니다. 개별 I
 ## 메모리와 실패 계약
 
 - decoded pixel 기본 상한: 512 MiB
+- LZW compressed input 검사 기본 상한: 512 MiB
 - ICC 기본 상한: 16 MiB
 - color context 기본 상한: 4개
 - `width × height × channel × 2`를 checked 64-bit로 계산하고 format 변환, ICC 추출,
@@ -101,11 +128,16 @@ CLI와 코퍼스 검증에 사용하는 application chunk일 뿐, codec CPU 비�
 
 - 합성 Classic/BigTIFF, little/big endian, strip/tile와 손상 변형
 - 수동 구성한 정상 RGB16 LZW와 정확한 sample 값
+- 9→10→11→12-bit early-change 경계를 모두 지나는 300행 LZW와 exact sample 값
+- entry 4094 뒤 12-bit Clear·9-bit reset과 유효한 `code == next` forward case의 exact sample 값
 - 5행 LZW에서 2행 묶음과 whole-frame decode의 exact sample 일치, 마지막 1행 remainder
 - 첫 행 뒤 취소 시 단일 terminal `cancelled`, completed row 1, sample payload 0
 - streaming sink의 exact sample 일치, 단일 terminal 완료, sink 거부 시 `row_sink_failed`
 - 저장소 631×403 TIFF의 37행 묶음 11회와 whole-frame/streaming exact sample·ICC 일치
 - 압축 segment 끝이 잘린 LZW를 preflight에서 거부하고 sample을 만들지 않는 경로
+- Clear/EOI 누락, 잘못된 forward code와 trailing data를 독립 preflight에서 거부하는 경로
+- 8-byte LZW 작업량 한도와 이미 요청된 취소를 WIC 전에 거부하는 경로
+- 정상·손상 Deflate를 모두 WIC 전에 격리하는 경로
 - 8192×8192 RGB16을 주장하는 작은 LZW 입력을 64 MiB 한도로 거부하는 사전 할당 경로
 - 저장소의 16-bit big-endian RGB TIFF
 - 사용자 5088×3401 TIFF 15개
@@ -116,18 +148,21 @@ CLI와 코퍼스 검증에 사용하는 application chunk일 뿐, codec CPU 비�
 64행 streaming 경로도 15/15 성공했으며 whole-frame 기준 경로와 최종 working float pixel이 모두 exact
 일치했습니다. streaming 결과가 full decoded sample vector를 보유하지 않음도 확인했습니다. 관찰된 최대
 application-owned WIC copy buffer는 2,605,056 bytes, 한 파일의 최대 `CopyPixels` 횟수는 54회였습니다.
-원본 크기·수정 시각·속성·SHA-256은 모두 유지됐습니다.
+초기 코퍼스 검증에서는 원본 크기·수정 시각·속성·SHA-256이 모두 유지됐습니다. 압축 사전 검사
+재검증은 SHA-256을 끈 채 크기·수정 시각·속성 변화 0건을 다시 확인했습니다.
 
 ## 남은 위험
 
-- LZW code stream 자체의 의미 검증과 손상 Deflate corpus 부족
-- WIC 내부 압축 해제의 CPU 시간·취소 한도 미구현
+- Deflate 독립 검증기가 없어 정상 Deflate도 현재 격리됨
+- WIC 내부 압축 해제의 CPU 시간·deadline과 호출 중 선점 취소 한도 미구현
 - multi-IFD 정책 미완료
 - 소유형 API의 4 GiB 초과 decoded buffer와 BigTIFF full decode 미지원
 - tile streaming과 downstream 전체 working buffer 제거 미구현
 - WIC servicing version에 따른 결과 재현성 관리
 - independent decoder readback 비교 미실시
 - network filesystem과 unusual `IStream` 구현의 seek/stat semantics 미검증
+- LZW 의미 검사는 현재 WIC RGB16 allowlist의 안전 경계이며 모든 TIFF photometric/subsampling을
+  지원하는 범용 LZW decoder가 아님
 
 ## 공식 API 근거
 

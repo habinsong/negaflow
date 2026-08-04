@@ -162,6 +162,7 @@ int run_tiff_probe(const int argument_count, const wchar_t* const arguments[]) {
               << ",\"planar_configuration\":" << info.planar_configuration
               << ",\"orientation\":" << info.orientation
               << ",\"segment_count\":" << info.segment_count
+              << ",\"compressed_segment_bytes\":" << info.compressed_segment_bytes
               << ",\"icc_profile_bytes\":" << info.icc_profile_bytes
               << ",\"packed_raster_bytes\":" << info.packed_raster_bytes
               << ",\"working_rgba32f_bytes\":" << info.working_rgba32f_bytes << "}\n";
@@ -214,6 +215,15 @@ int run_wic_tiff_decode(const int argument_count, const wchar_t* const arguments
               << "\",\"format_conversion_used\":"
               << (result.info.format_conversion_used ? "true" : "false")
               << ",\"decoded_pixel_bytes\":" << result.info.decoded_pixel_bytes
+              << ",\"compressed_segment_bytes\":"
+              << result.info.compressed_segment_bytes
+              << ",\"lzw_code_streams_validated\":"
+              << (result.info.lzw_code_streams_validated ? "true" : "false")
+              << ",\"compressed_bytes_validated\":"
+              << result.info.compressed_bytes_validated
+              << ",\"lzw_code_count\":" << result.info.lzw_code_count
+              << ",\"lzw_decoded_bytes_validated\":"
+              << result.info.lzw_decoded_bytes_validated
               << ",\"icc_profile_bytes\":" << result.image.icc_profile.size()
               << ",\"icc_status\":\""
               << negaflow::color::icc_profile_status_name(result.icc_status) << '\"';

@@ -86,6 +86,15 @@ int run_prepare_scanner_tiff(
               << prepared.decode.info.peak_copy_pixel_bytes
               << ",\"decode_copy_operations\":"
               << prepared.decode.info.copy_operation_count
+              << ",\"compressed_segment_bytes\":"
+              << prepared.decode.info.compressed_segment_bytes
+              << ",\"lzw_code_streams_validated\":"
+              << (prepared.decode.info.lzw_code_streams_validated ? "true" : "false")
+              << ",\"compressed_bytes_validated\":"
+              << prepared.decode.info.compressed_bytes_validated
+              << ",\"lzw_code_count\":" << prepared.decode.info.lzw_code_count
+              << ",\"lzw_decoded_bytes_validated\":"
+              << prepared.decode.info.lzw_decoded_bytes_validated
               << ",\"peak_conversion_temporary_bytes\":"
               << prepared.info.peak_conversion_temporary_pixel_bytes
               << ",\"pixel_fingerprint_algorithm\":\""

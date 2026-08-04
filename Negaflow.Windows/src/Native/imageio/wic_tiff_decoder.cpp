@@ -122,7 +122,7 @@ void discard_samples(WicTiffDecodeResult& result) noexcept {
         info.orientation != 1U || (info.samples_per_pixel != 3U && info.samples_per_pixel != 4U) ||
         !all_u16_values_equal(info.bits_per_sample, info.bits_per_sample_count, 16U) ||
         !all_u16_values_equal(info.sample_format, info.sample_format_count, 1U) ||
-        (info.compression != 1U && info.compression != 5U && info.compression != 8U)) {
+        (info.compression != 1U && info.compression != 5U)) {
         return false;
     }
     if (info.samples_per_pixel == 3U) {
@@ -295,6 +295,54 @@ WicTiffDecodeResult decode_tiff_with_wic_impl(
             result.status = WicTiffDecodeStatus::unsupported_layout;
             return result;
         }
+        const std::uint64_t channels = probe.info.samples_per_pixel;
+        const std::uint64_t bytes_per_pixel = channels * sizeof(std::uint16_t);
+        if (probe.info.width > std::numeric_limits<std::uint64_t>::max() / bytes_per_pixel) {
+            result.status = WicTiffDecodeStatus::memory_limit_exceeded;
+            return result;
+        }
+        const std::uint64_t expected_stride_bytes = probe.info.width * bytes_per_pixel;
+        if (probe.info.height != 0U &&
+            expected_stride_bytes >
+                std::numeric_limits<std::uint64_t>::max() / probe.info.height) {
+            result.status = WicTiffDecodeStatus::memory_limit_exceeded;
+            return result;
+        }
+        const std::uint64_t expected_pixel_bytes =
+            expected_stride_bytes * probe.info.height;
+        result.info.decoded_pixel_bytes = expected_pixel_bytes;
+        result.info.compressed_segment_bytes = probe.info.compressed_segment_bytes;
+        if (expected_stride_bytes > std::numeric_limits<UINT>::max() ||
+            expected_pixel_bytes > limits.max_decoded_pixel_bytes ||
+            expected_pixel_bytes / sizeof(std::uint16_t) >
+                static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max())) {
+            result.status = WicTiffDecodeStatus::memory_limit_exceeded;
+            return result;
+        }
+
+        if (probe.info.compression == 5U) {
+            negaflow::core::TiffProbeControl semantic_control{};
+            semantic_control.validate_lzw_code_streams = true;
+            semantic_control.stop_token = control.stop_token;
+            const negaflow::core::TiffProbeResult semantic_probe =
+                negaflow::core::probe_tiff(reader, limits.probe, semantic_control);
+            result.preflight_status = semantic_probe.status;
+            result.info.compressed_bytes_validated =
+                semantic_probe.info.compressed_bytes_validated;
+            result.info.lzw_code_count = semantic_probe.info.lzw_code_count;
+            result.info.lzw_decoded_bytes_validated =
+                semantic_probe.info.lzw_decoded_bytes_validated;
+            result.info.lzw_code_streams_validated =
+                semantic_probe.info.lzw_code_streams_validated;
+            if (semantic_probe.status == negaflow::core::TiffProbeStatus::cancelled) {
+                result.status = WicTiffDecodeStatus::cancelled;
+                return result;
+            }
+            if (semantic_probe.status != negaflow::core::TiffProbeStatus::ok) {
+                result.status = WicTiffDecodeStatus::preflight_failed;
+                return result;
+            }
+        }
         if (control.stop_token.stop_requested()) {
             result.status = WicTiffDecodeStatus::cancelled;
             return result;
@@ -382,23 +430,8 @@ WicTiffDecodeResult decode_tiff_with_wic_impl(
                                       : associated_alpha ? AlphaMode::associated
                                                          : AlphaMode::unassociated;
 
-        const std::uint64_t channels = channel_count(result.image.layout);
-        const std::uint64_t stride_bytes =
-            static_cast<std::uint64_t>(width) * channels * sizeof(std::uint16_t);
-        if (stride_bytes > std::numeric_limits<UINT>::max() ||
-            (height != 0U &&
-             stride_bytes > std::numeric_limits<std::uint64_t>::max() / height)) {
-            result.status = WicTiffDecodeStatus::memory_limit_exceeded;
-            return result;
-        }
-        const std::uint64_t pixel_bytes = stride_bytes * height;
-        result.info.decoded_pixel_bytes = pixel_bytes;
-        if (pixel_bytes > limits.max_decoded_pixel_bytes ||
-            pixel_bytes / sizeof(std::uint16_t) >
-                static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max())) {
-            result.status = WicTiffDecodeStatus::memory_limit_exceeded;
-            return result;
-        }
+        const std::uint64_t stride_bytes = expected_stride_bytes;
+        const std::uint64_t pixel_bytes = expected_pixel_bytes;
         result.image.stride_bytes = static_cast<std::uint32_t>(stride_bytes);
 
         ComPtr<IWICBitmapSource> pixel_source{};

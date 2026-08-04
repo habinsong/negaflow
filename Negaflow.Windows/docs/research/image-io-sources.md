@@ -4,7 +4,7 @@
 
 ## 구현에 사용한 1차 자료
 
-- [TIFF Revision 6.0](https://www.adobe.io/content/dam/udp/en/open/standards/tiff/TIFF6.pdf)
+- [TIFF Revision 6.0](https://www.itu.int/itudoc/itu-t/com16/tiff-fx/docs/tiff6.pdf)
 - [BigTIFF format overview](https://bigtiff.org/)
 - [libtiff 4.7.2 documentation](https://libtiff.gitlab.io/libtiff/libtiff.html)
 - [`TIFFOpenOptions`](https://libtiff.gitlab.io/libtiff/functions/TIFFOpenOptions.html)
@@ -34,6 +34,8 @@
 - BigTIFF IFD count/offset은 64-bit이고 entry는 20바이트입니다.
 - WIC는 확장 가능한 codec 등록 구조이므로 실제 decoder CLSID allowlist가 필요합니다.
 - WIC TIFF native decoder는 48bpp RGB와 64bpp RGBA/PRGBA를 지원합니다.
+- TIFF 6.0 LZW는 strip마다 ClearCode로 시작해 EOI로 끝나고, code를 high-to-low bit 순서로 저장하며,
+  decoder는 string #510/#1022/#2046을 저장한 뒤 10/11/12-bit로 조기에 전환해야 합니다.
 - `IWICColorTransform`의 목적 format은 16-bit RGB/RGBA 계열까지이고 float format은 목록에 없습니다.
 - Windows ICM은 memory buffer ICC와 시스템 표준 sRGB profile을 profile handle로 열 수 있습니다.
 - `TranslateBitmapBits`는 `BM_16b_RGB` 입력·출력을 지원합니다.
@@ -45,8 +47,8 @@
 
 ## 저작권과 코드 provenance
 
-현재 TIFF probe, WIC adapter, ICC validator와 ICM adapter는 Apache-2.0 저장소 코드입니다. Adobe
-TIFF, BigTIFF와 ICC 문서의 binary field 구조를
+현재 TIFF probe, 길이 전용 LZW 의미 검사기, WIC adapter, ICC validator와 ICM adapter는 Apache-2.0
+저장소 코드입니다. TIFF, BigTIFF와 ICC 문서의 binary field 구조를
 바탕으로 독립 구현했으며, libtiff나 다른 프로젝트의 parser source를 복사하거나 번역하지 않았습니다.
 외부 사진 byte를 새 fixture로 포함하지 않고 합성 TIFF는 test 코드가 실행 시 생성합니다.
 
@@ -60,14 +62,15 @@ Microsoft OS·toolchain 구성 요소이며 별도 제3자 payload로 재배포�
 ## 실제 OS API 평가 결과
 
 - Microsoft 기본 WIC TIFF decoder는 사용자 TIFF 15개를 native 16-bit로 decode했습니다.
-- LZW 6개도 별도 libtiff/zlib 없이 성공했습니다.
+- LZW 6개는 독립 code-stream 의미 검사를 통과한 뒤 별도 libtiff/zlib 없이 WIC로 decode됐습니다.
+- 구조상 유효한 정상·손상 Deflate 합성 입력은 독립 검증기가 생기기 전까지 모두 WIC 전에 격리합니다.
 - WIC format conversion은 0건이었고 ICC bytes 길이와 구조를 확인했습니다.
 - WIC 고수준 color transform은 사용자 ICC v4에 unsupported pixel format을 반환했습니다.
 - Windows ICM `BEST_MODE` 16-bit 경로는 같은 profile을 처리했습니다.
 - `WCS_ALWAYS` float 경로는 동일 sRGB 중립 입력 보존이 충분하지 않아 제외했습니다.
 
-따라서 현재 scanner input decode와 첫 ICC working 변환에는 libtiff, zlib, LittleCMS가 필요하다는
-증거가 없습니다. 출력 encoder와 ColorSync parity는 별도 gate입니다.
+따라서 현재 none/LZW scanner input decode와 첫 ICC working 변환에는 libtiff, zlib, LittleCMS가
+필요하다는 증거가 없습니다. Deflate 지원 복원, 출력 encoder와 ColorSync parity는 별도 gate입니다.
 
 ## 향후 libtiff/zlib/LittleCMS gate
 
@@ -84,8 +87,13 @@ Microsoft OS·toolchain 구성 요소이며 별도 제3자 payload로 재배포�
 
 ## 특허 screen
 
-자체 코드는 LZW/Deflate 알고리즘을 구현하지 않고 Windows 기본 WIC decoder를 호출합니다. 이전
-기반 조사에서 LZW 관련 오래된 특허는 만료된 것으로 확인했지만, 최종 배포 전에는 적용 지역과 실제
-linked implementation을 기준으로 법무/라이선스 검토를 다시 수행합니다. ICC specification도 제3자
-IP 가능성을 고지하므로 제품 배포 전 검토를 유지합니다. 이 문서는 법률 의견이나 freedom-to-operate
-보증이 아닙니다.
+자체 코드는 TIFF LZW의 pixel decompressor를 만들지 않고 code reference와 복원 길이만 독립 검증한 뒤
+Windows 기본 WIC decoder를 호출합니다. Deflate decoder는 구현하지 않았습니다. 공개 특허 검색에서
+원 LZW 특허의 lifetime 만료 표시는 확인했지만 관할권별 법적 결론으로 간주하지 않습니다. TIFF 파일
+재생성·복구, modified LZW bit 제거와 fragment recovery에 관한 후속 문헌도 claim 범위를 제한적으로
+대조했으며 이번 fail-closed 검사기는 파일을 고치거나 재생성·복구하지 않습니다. 세부 링크와 한계는
+[`compressed-tiff-preflight-sources.md`](compressed-tiff-preflight-sources.md)에 기록합니다.
+
+최종 배포 전에는 적용 지역과 실제 linked implementation을 기준으로 법무·라이선스 검토를 다시
+수행합니다. ICC specification도 제3자 IP 가능성을 고지하므로 제품 배포 전 검토를 유지합니다. 이 문서는
+법률 의견이나 freedom-to-operate 보증이 아닙니다.

@@ -25,7 +25,7 @@ decode·입력 색상·검증된 PNG16/TIFF16 출력 경계, M4 단일 이미지
 - checked float32 pixel view와 scalar exposure/color-matrix/basic-tone/parametric-curve
 - `shoulder-print-response-v4` color/B&W negative inversion reference
 - 원본 불변 Classic/BigTIFF 구조 검사와 `--probe-tiff` CLI
-- Microsoft 기본 WIC의 RGB/RGBA 16-bit TIFF decode
+- Microsoft 기본 WIC의 RGB/RGBA 16-bit TIFF none/LZW decode, 독립 LZW 의미 사전 검사와 Deflate 격리
 - full decoded source를 만들지 않는 WIC row sink와 cooperative cancellation·row progress
 - bounded ICC 검사와 재사용 Windows ICM row transform 기반 scanner→linear-sRGB float 변환
 - 사용자 scanner TIFF 15개 read-only streaming 변환과 whole-frame 최종 float exact parity
@@ -108,6 +108,8 @@ TIFF를 디코드하지 않고 header와 첫 IFD, tag/strip 범위를 읽기 전
 ```
 
 Microsoft 기본 WIC로 허용된 TIFF를 16-bit sample까지 decode해 구조화된 통계를 확인할 수 있습니다.
+LZW는 WIC 호출 전에 압축 구간 전체, code 수와 기대 복원 byte 수를 독립 검사하며 Deflate는 별도
+검증기가 생기기 전까지 거부합니다.
 
 ```powershell
 .\out\build\native\x64-debug\Debug\negaflow-cli.exe --decode-tiff-wic C:\path\scan.tiff
@@ -204,7 +206,7 @@ third_party/          실제 payload 기준 공급망 manifest
 ## 다음 순서
 
 1. M4 tone의 실제 macOS runtime golden·pixel diff와 cross-platform 허용오차 manifest 보강
-2. LZW code stream 의미 검증과 malformed Deflate/fuzz corpus 보강
+2. 독립 Deflate 검증 또는 dependency gate와 WIC 압축 해제 CPU budget·deadline 보강
 3. macOS ColorSync golden과 Windows ICM 수치 비교
 4. 필요한 경우에만 libtiff/LittleCMS dependency gate 재평가
 5. 최종 working buffer와 출력의 downstream row/tile 처리·process budget

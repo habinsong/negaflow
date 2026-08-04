@@ -1,5 +1,7 @@
 #include "negaflow/core/tiff_probe.h"
 
+#include "tiff_lzw_validator.h"
+
 #include <Windows.h>
 
 #include <algorithm>
@@ -642,8 +644,173 @@ struct CapturedEntries final {
             segment_end > file.size()) {
             return TiffProbeStatus::tag_data_out_of_bounds;
         }
+        if (!checked_add(
+                info.compressed_segment_bytes,
+                byte_count,
+                info.compressed_segment_bytes)) {
+            return TiffProbeStatus::invalid_layout;
+        }
     }
     info.segment_count = offsets.count;
+    return TiffProbeStatus::ok;
+}
+
+[[nodiscard]] bool compute_segment_row_bytes(
+    const TiffProbeInfo& info,
+    const std::uint64_t width,
+    const std::uint16_t plane,
+    std::uint64_t& row_bytes) noexcept {
+    std::uint64_t bits_per_pixel = 0U;
+    if (info.planar_configuration == 1U) {
+        if (info.bits_per_sample_count == 1U) {
+            if (!checked_multiply(
+                    info.bits_per_sample[0],
+                    info.samples_per_pixel,
+                    bits_per_pixel)) {
+                return false;
+            }
+        } else {
+            for (std::uint8_t index = 0U; index < info.bits_per_sample_count; ++index) {
+                if (!checked_add(
+                        bits_per_pixel,
+                        info.bits_per_sample[index],
+                        bits_per_pixel)) {
+                    return false;
+                }
+            }
+        }
+    } else {
+        if (plane >= info.samples_per_pixel) {
+            return false;
+        }
+        bits_per_pixel = info.bits_per_sample_count == 1U
+                             ? info.bits_per_sample[0]
+                             : info.bits_per_sample[plane];
+    }
+
+    std::uint64_t row_bits = 0U;
+    std::uint64_t rounded_row_bits = 0U;
+    if (!checked_multiply(width, bits_per_pixel, row_bits) ||
+        !checked_add(row_bits, 7U, rounded_row_bits)) {
+        return false;
+    }
+    row_bytes = rounded_row_bits / 8U;
+    return true;
+}
+
+[[nodiscard]] TiffProbeStatus validate_lzw_segments(
+    const TiffRandomAccessReader& file,
+    const TiffByteOrder byte_order,
+    const TiffProbeLimits& limits,
+    const TiffProbeControl& control,
+    const CapturedEntries& captured,
+    TiffProbeInfo& info) noexcept {
+    if (info.compression != 5U || !control.validate_lzw_code_streams) {
+        return TiffProbeStatus::ok;
+    }
+    if (control.stop_token.stop_requested()) {
+        return TiffProbeStatus::cancelled;
+    }
+    if (info.compressed_segment_bytes > limits.max_lzw_compressed_bytes) {
+        return TiffProbeStatus::compressed_data_limit_exceeded;
+    }
+
+    const DirectoryEntry& offsets = info.organization == TiffOrganization::stripped
+                                        ? captured.strip_offsets
+                                        : captured.tile_offsets;
+    const DirectoryEntry& byte_counts = info.organization == TiffOrganization::stripped
+                                            ? captured.strip_byte_counts
+                                            : captured.tile_byte_counts;
+    const std::uint64_t plane_count =
+        info.planar_configuration == 2U ? info.samples_per_pixel : 1U;
+    if (plane_count == 0U || offsets.count % plane_count != 0U) {
+        return TiffProbeStatus::invalid_layout;
+    }
+    const std::uint64_t segments_per_plane = offsets.count / plane_count;
+
+    for (std::uint64_t index = 0U; index < offsets.count; ++index) {
+        if (control.stop_token.stop_requested()) {
+            return TiffProbeStatus::cancelled;
+        }
+
+        std::uint64_t offset = 0U;
+        std::uint64_t compressed_bytes = 0U;
+        TiffProbeStatus status =
+            read_unsigned_element(file, byte_order, offsets, index, offset);
+        if (status != TiffProbeStatus::ok) {
+            return status;
+        }
+        status = read_unsigned_element(
+            file,
+            byte_order,
+            byte_counts,
+            index,
+            compressed_bytes);
+        if (status != TiffProbeStatus::ok) {
+            return status;
+        }
+
+        const std::uint16_t plane = info.planar_configuration == 2U
+                                        ? static_cast<std::uint16_t>(
+                                              index / segments_per_plane)
+                                        : 0U;
+        std::uint64_t segment_width = info.width;
+        std::uint64_t segment_rows = 0U;
+        if (info.organization == TiffOrganization::stripped) {
+            const std::uint64_t rows_per_strip = captured.has_rows_per_strip
+                                                     ? captured.rows_per_strip
+                                                     : info.height;
+            const std::uint64_t strip_index = index % segments_per_plane;
+            std::uint64_t first_row = 0U;
+            if (!checked_multiply(strip_index, rows_per_strip, first_row) ||
+                first_row >= info.height) {
+                return TiffProbeStatus::invalid_layout;
+            }
+            segment_rows = std::min(rows_per_strip, info.height - first_row);
+        } else {
+            segment_width = captured.tile_width;
+            segment_rows = captured.tile_length;
+        }
+
+        std::uint64_t row_bytes = 0U;
+        std::uint64_t expected_decoded_bytes = 0U;
+        if (!compute_segment_row_bytes(info, segment_width, plane, row_bytes) ||
+            !checked_multiply(row_bytes, segment_rows, expected_decoded_bytes)) {
+            return TiffProbeStatus::invalid_dimensions;
+        }
+
+        const detail::TiffLzwValidationResult validation =
+            detail::validate_tiff_lzw_segment(
+                file,
+                offset,
+                compressed_bytes,
+                expected_decoded_bytes,
+                control.stop_token);
+        if (validation.status == detail::TiffLzwValidationStatus::cancelled) {
+            return TiffProbeStatus::cancelled;
+        }
+        if (validation.status == detail::TiffLzwValidationStatus::io_error) {
+            return TiffProbeStatus::io_error;
+        }
+        if (validation.status != detail::TiffLzwValidationStatus::ok) {
+            return TiffProbeStatus::invalid_compressed_data;
+        }
+        if (!checked_add(
+                info.compressed_bytes_validated,
+                validation.compressed_bytes_read,
+                info.compressed_bytes_validated) ||
+            !checked_add(
+                info.lzw_code_count,
+                validation.code_count,
+                info.lzw_code_count) ||
+            !checked_add(
+                info.lzw_decoded_bytes_validated,
+                validation.decoded_bytes,
+                info.lzw_decoded_bytes_validated)) {
+            return TiffProbeStatus::invalid_dimensions;
+        }
+    }
+    info.lzw_code_streams_validated = true;
     return TiffProbeStatus::ok;
 }
 
@@ -651,6 +818,7 @@ struct CapturedEntries final {
     const TiffRandomAccessReader& file,
     const TiffByteOrder byte_order,
     const TiffProbeLimits& limits,
+    const TiffProbeControl& control,
     const CapturedEntries& captured,
     TiffProbeInfo& info) noexcept {
     if (!captured.has_width || !captured.has_height || info.width == 0U || info.height == 0U) {
@@ -780,38 +948,17 @@ struct CapturedEntries final {
     }
 
     if (info.planar_configuration == 1U) {
-        std::uint64_t bits_per_pixel = 0;
-        if (info.bits_per_sample_count == 1U) {
-            if (!checked_multiply(
-                    info.bits_per_sample[0], info.samples_per_pixel, bits_per_pixel)) {
-                return TiffProbeStatus::invalid_dimensions;
-            }
-        } else {
-            for (std::uint8_t index = 0; index < info.bits_per_sample_count; ++index) {
-                if (!checked_add(bits_per_pixel, info.bits_per_sample[index], bits_per_pixel)) {
-                    return TiffProbeStatus::invalid_dimensions;
-                }
-            }
-        }
-
-        std::uint64_t row_bits = 0;
-        std::uint64_t rounded_row_bits = 0;
-        if (!checked_multiply(info.width, bits_per_pixel, row_bits) ||
-            !checked_add(row_bits, 7U, rounded_row_bits) ||
-            !checked_multiply(rounded_row_bits / 8U, info.height, info.packed_raster_bytes)) {
+        std::uint64_t row_bytes = 0U;
+        if (!compute_segment_row_bytes(info, info.width, 0U, row_bytes) ||
+            !checked_multiply(row_bytes, info.height, info.packed_raster_bytes)) {
             return TiffProbeStatus::invalid_dimensions;
         }
     } else {
         for (std::uint16_t channel = 0; channel < info.samples_per_pixel; ++channel) {
-            const std::uint16_t bits = info.bits_per_sample_count == 1U
-                                           ? info.bits_per_sample[0]
-                                           : info.bits_per_sample[channel];
-            std::uint64_t row_bits = 0;
-            std::uint64_t rounded_row_bits = 0;
+            std::uint64_t row_bytes = 0U;
             std::uint64_t plane_bytes = 0;
-            if (!checked_multiply(info.width, bits, row_bits) ||
-                !checked_add(row_bits, 7U, rounded_row_bits) ||
-                !checked_multiply(rounded_row_bits / 8U, info.height, plane_bytes) ||
+            if (!compute_segment_row_bytes(info, info.width, channel, row_bytes) ||
+                !checked_multiply(row_bytes, info.height, plane_bytes) ||
                 !checked_add(info.packed_raster_bytes, plane_bytes, info.packed_raster_bytes)) {
                 return TiffProbeStatus::invalid_dimensions;
             }
@@ -826,14 +973,15 @@ struct CapturedEntries final {
     if (info.working_rgba32f_bytes > limits.max_working_rgba32f_bytes) {
         return TiffProbeStatus::working_memory_limit_exceeded;
     }
-    return TiffProbeStatus::ok;
+    return validate_lzw_segments(file, byte_order, limits, control, captured, info);
 }
 
 }  // namespace
 
 TiffProbeResult probe_tiff(
     const TiffRandomAccessReader& file,
-    const TiffProbeLimits& limits) noexcept {
+    const TiffProbeLimits& limits,
+    const TiffProbeControl& control) noexcept {
     TiffProbeResult result{};
     try {
         result.info.file_bytes = file.size();
@@ -984,6 +1132,7 @@ TiffProbeResult probe_tiff(
             file,
             result.info.byte_order,
             limits,
+            control,
             captured,
             result.info);
         return result;
@@ -995,7 +1144,8 @@ TiffProbeResult probe_tiff(
 
 TiffProbeResult probe_tiff_file(
     const std::filesystem::path& path,
-    const TiffProbeLimits& limits) noexcept {
+    const TiffProbeLimits& limits,
+    const TiffProbeControl& control) noexcept {
     TiffProbeResult result{};
     try {
         ReadOnlyFile file{};
@@ -1003,7 +1153,7 @@ TiffProbeResult probe_tiff_file(
             result.status = TiffProbeStatus::io_error;
             return result;
         }
-        return probe_tiff(file, limits);
+        return probe_tiff(file, limits, control);
     } catch (...) {
         result.status = TiffProbeStatus::io_error;
         return result;
@@ -1044,10 +1194,16 @@ const char* tiff_probe_status_name(const TiffProbeStatus status) noexcept {
             return "invalid_tiff_layout";
         case TiffProbeStatus::segment_limit_exceeded:
             return "segment_limit_exceeded";
+        case TiffProbeStatus::compressed_data_limit_exceeded:
+            return "compressed_data_limit_exceeded";
+        case TiffProbeStatus::invalid_compressed_data:
+            return "invalid_compressed_data";
         case TiffProbeStatus::working_memory_limit_exceeded:
             return "working_memory_limit_exceeded";
         case TiffProbeStatus::multiple_directories_unsupported:
             return "multiple_directories_unsupported";
+        case TiffProbeStatus::cancelled:
+            return "cancelled";
     }
     return "unknown_tiff_probe_status";
 }

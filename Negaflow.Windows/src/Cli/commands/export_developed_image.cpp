@@ -149,6 +149,18 @@ void print_pipeline_report_suffix(const PipelineReportContext& context) {
               << ",\"completed_rows\":" << context.prepared.decode.info.completed_rows
               << ",\"decoded_pixel_bytes\":"
               << context.prepared.decode.info.decoded_pixel_bytes
+              << ",\"compressed_segment_bytes\":"
+              << context.prepared.decode.info.compressed_segment_bytes
+              << ",\"lzw_code_streams_validated\":"
+              << (context.prepared.decode.info.lzw_code_streams_validated
+                      ? "true"
+                      : "false")
+              << ",\"compressed_bytes_validated\":"
+              << context.prepared.decode.info.compressed_bytes_validated
+              << ",\"lzw_code_count\":"
+              << context.prepared.decode.info.lzw_code_count
+              << ",\"lzw_decoded_bytes_validated\":"
+              << context.prepared.decode.info.lzw_decoded_bytes_validated
               << ",\"peak_copy_pixel_bytes\":"
               << context.prepared.decode.info.peak_copy_pixel_bytes
               << ",\"copy_operation_count\":"

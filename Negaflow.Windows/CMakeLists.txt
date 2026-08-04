@@ -69,6 +69,7 @@ add_library(negaflow_core STATIC
     src/Native/core/negative_inversion.cpp
     src/Native/core/pixel.cpp
     src/Native/core/pointwise.cpp
+    src/Native/core/tiff_lzw_validator.cpp
     src/Native/core/tiff_probe.cpp
 )
 target_include_directories(negaflow_core

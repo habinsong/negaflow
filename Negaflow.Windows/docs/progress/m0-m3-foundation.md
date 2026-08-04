@@ -102,6 +102,11 @@
 - RGB/RGBA 16-bit none/LZW full pixel decode와 ICC bytes 추출
 - 정상 합성 LZW exact sample decode와 잘린 LZW segment의 preflight 거부
 - decoded pixel 크기의 checked 계산과 buffer 할당 전 상한 적용
+- strip/tile compressed byte 합계와 512 MiB LZW 입력 작업량 상한
+- TIFF 6.0의 Clear/EOI, 유효 code reference, 9→10→11→12-bit early-change, 4094 사전 한계,
+  strip별 기대 복원 byte 수와 trailing data를 확인하는 독립 LZW 의미 검사
+- LZW 의미 검사 중 `stop_token` 취소와 code/압축/복원 byte 진단값
+- 독립 무결성 검증기가 없는 Deflate tag 8의 WIC 진입 전 fail-closed 격리
 - 선택적 WIC 행 묶음, 단조 row progress, 묶음 사이 cooperative cancellation과 부분 sample 폐기
 - `WicTiffRowSink` streaming API와 full decoded sample vector 없는 소비 경로
 - ICC header/tag table bounded validation
@@ -131,6 +136,9 @@
 - oversized ICC 주장, working-memory 초과, 다중 IFD
 - 저장소의 실제 16-bit big-endian TIFF 4개
 - 수동 구성한 정상 RGB16 LZW와 384 MiB 확장을 주장하는 작은 손상 fixture
+- 9→10→11→12-bit 경계를 모두 지나는 정상 LZW와 Clear/EOI 누락, 잘못된 forward code, trailing
+  data, 압축 입력 상한, 사전 취소 합성 fixture
+- 정상·손상 Deflate 합성 fixture가 모두 WIC 전에 같은 격리 경계로 거부됨
 - 사용자 scanner의 5088×3401 RGB/RGBA 16-bit TIFF 15개, 약 1.68GB
 - 사용자 코퍼스 WIC decode 15/15, working 변환 15/15, 원본 불변 15/15
 - 사용자 코퍼스 whole-frame/64행 streaming 최종 float exact 일치 15/15
@@ -143,7 +151,7 @@
 ### 남은 것
 
 - 다중 IFD 사용자 정책과 bounded chain traversal
-- LZW code stream 의미 검증, 손상 Deflate와 압축 해제 CPU deadline
+- 독립 Deflate 검증 또는 최소 dependency gate, WIC 압축 해제 CPU budget·deadline
 - ColorSync golden과 Windows ICM 수치 비교
 - 필요성이 입증될 때만 libtiff/LittleCMS dependency 결정
 - tile decode, 최종 working/output downstream streaming과 process memory budget
