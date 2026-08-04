@@ -34,6 +34,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 32
       - name: Toolchain
         run: |
           xcodebuild -version
@@ -41,6 +43,30 @@ jobs:
           echo "DEVELOPER_DIR=$(xcode-select -p)" >> "$GITHUB_ENV"
       - name: Build and test under strict concurrency
         run: bash scripts/ci/build-swift.sh
+      - name: Emit Windows Film Emulation golden
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          NEGAFLOW_WINDOWS_FILM_GOLDEN_OUTPUT: ${{ github.workspace }}/Negaflow.Windows/out/macos-golden/film-emulation-core-image-v1.json
+        run: |
+          BASELINE_COMMIT="$(plutil -extract source.mac_commit raw Negaflow.Windows/baseline/bootstrap-manifest.json)"
+          git diff --exit-code "$BASELINE_COMMIT" -- \
+            Sources/Chromabase/Adjustments/FilmEmulation.swift \
+            Sources/Chromabase/Adjustments/FilmEmulationProfile.swift \
+            Sources/Chromabase/Adjustments/FilmEmulationProfile+Slide.swift \
+            Sources/Chromabase/Adjustments/FilmEmulationProfile+Negative.swift
+          swift test \
+            -Xswiftc -warn-concurrency \
+            -Xswiftc -strict-concurrency=complete \
+            -Xswiftc -warnings-as-errors \
+            --filter WindowsFilmEmulationGoldenTests/testEmitGoldenWhenRequested
+      - name: Upload Windows Film Emulation golden
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v7
+        with:
+          name: negaflow-windows-film-golden-${{ github.sha }}
+          path: Negaflow.Windows/out/macos-golden/film-emulation-core-image-v1.json
+          if-no-files-found: error
+          retention-days: 14
 
   gui:
     name: GUI end-to-end test build

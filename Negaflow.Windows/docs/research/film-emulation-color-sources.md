@@ -28,12 +28,28 @@ Float32 계산으로 만들었습니다.
 - [CIContext](https://developer.apple.com/documentation/coreimage/cicontext): Core Image context가 input,
   working과 output color matching을 관리한다는 점을 확인했습니다. Windows reference는 이 숨은 경계를
   추측하지 않고 제품 source가 지정한 sRGB cube domain을 명시적으로 왕복합니다.
+- [CIContext useSoftwareRenderer](https://developer.apple.com/documentation/coreimage/cicontextoption/usesoftwarerenderer):
+  software renderer 요청 option과 미지원 플랫폼에서는 효과가 없을 수 있다는 제한을 확인했습니다.
+  baseline은 실제 backend라고 단정하지 않고 default/software-requested 두 결과를 함께 기록합니다.
 - [CIUnsharpMask](https://developer.apple.com/documentation/coreimage/ciunsharpmask): radius와 intensity
   parameter가 있다는 사실만 확인됩니다. Windows와 같은 numeric kernel·경계 처리는 문서로 확정할 수
   없어 이번 색상 component에서 제외했습니다.
 
 Apple 문서나 sample code를 복사하지 않았습니다. 실제 Core Image 보간과 fractional-alpha 동작은
 macOS golden으로 별도 검증해야 합니다.
+
+## baseline workflow 근거
+
+- [GitHub 수동 workflow 실행](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow?tool=cli):
+  `workflow_dispatch` workflow를 선택한 branch에서 수동 실행할 수 있음을 확인했습니다.
+- [GitHub workflow artifacts](https://docs.github.com/en/actions/concepts/workflows-and-actions/workflow-artifacts):
+  실행 결과 파일을 workflow artifact로 보존·다운로드하는 공식 경계를 확인했습니다.
+- [actions/upload-artifact](https://github.com/actions/upload-artifact): 현재 저장소가 이미 고정한 v7의
+  `path`, `if-no-files-found`, `retention-days` 계약을 사용합니다.
+
+수동 실행 전 bootstrap의 macOS commit과 Film Emulation 제품 source 네 파일의 diff가 0인지 확인합니다.
+artifact는 자동 정답이 아니며 source·runner·OS와 default/software-requested 차이를 검토한 뒤에만
+canonical fixture로 채택합니다.
 
 ## 제조사 자료와 상표
 

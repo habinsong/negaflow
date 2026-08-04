@@ -29,6 +29,7 @@
 - [3구간 Color Grading scalar](implementation/color-grading-scalar.md)
 - [R/G/B Primary Calibration scalar](implementation/primary-calibration-scalar.md)
 - [Film Emulation RGB33 색상 cube](implementation/film-emulation-color-cube.md)
+- [macOS Film Emulation Core Image golden 생성기](implementation/macos-film-emulation-golden.md)
 - [파이프라인 CPU 시간과 빠른 픽셀 진단](implementation/pipeline-diagnostics.md)
 - [WinUI 셸 기반](implementation/winui-shell-foundation.md)
 
