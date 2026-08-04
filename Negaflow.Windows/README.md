@@ -32,8 +32,9 @@ decode·입력 색상·검증된 PNG16/TIFF16 출력 경계, M4 단일 이미지
 - TIFF decode→scanner color→수동 Dmin 네거티브 반전 수직 경로
 - macOS 수식 순서의 노출·기본 톤·4-band 파라메트릭 커브, 64표본 포인트 커브, 8-band Color Mixer,
   3-zone Color Grading, R/G/B Primary Calibration scalar와 bounded 동적 측정
-- Primary Calibration 다음 필름 스캔 분기의 11종 profile·5% intensity·RGB33 Film Emulation 색상
-  standalone component
+- Primary Calibration 다음 필름 스캔 분기의 11종 profile·5% intensity·RGB33 Film Emulation 색상과
+  unquantized profile strength·11행 scratch의 acutance standalone component
+- canonical macOS Core Image golden, 두 run 12,912개 수치 exact 반복성과 색상/acutance regression envelope
 - working float→sRGB16→Microsoft WIC PNG encode→pixel·ICC readback→기존 파일 비덮어쓰기 게시
 - working float→sRGB16→무압축 Classic TIFF encode→최소 IFD·pixel·ICC readback→비덮어쓰기 게시
 - content를 읽지 않는 source file 상태 전후 관찰과 PNG16/TIFF16 공통 단계별 wall/process-CPU report
@@ -172,9 +173,9 @@ Primary Calibration 경계까지 연결되어 있지만 현재 CLI와 WinUI는 �
 노출하지 않습니다. 기본 빈 커브와 0인 mixer·grading·calibration 값은 무연산이며 report에는 각
 알고리즘 버전과 적용 여부만 들어갑니다.
 
-Film Emulation 색상 component는 macOS와 같은 11종 profile의 절차형 RGB33 cube를 만들고 적용하는
-standalone native 계약까지 구현했습니다. 아직 tone pipeline, CLI, ABI나 WinUI에 연결하지 않았고,
-`CIUnsharpMask` 기반 acutance와 디지털/필름 source routing도 포함하지 않습니다.
+Film Emulation은 macOS와 같은 11종 profile의 절차형 RGB33 cube와 뒤따르는 bounded acutance를 각각
+standalone native 계약으로 구현했습니다. canonical macOS Core Image golden과 비교했지만 아직 두 단계를
+tone pipeline, CLI, ABI나 WinUI에 연결하지 않았고 디지털/필름 source routing도 포함하지 않습니다.
 
 이미지 SHA-256은 기본 작업에서 계산하지 않습니다. 사용자가 명시적으로 필요할 때만 다음 opt-in
 command를 사용합니다.
@@ -217,8 +218,8 @@ third_party/          실제 payload 기준 공급망 manifest
 
 ## 다음 순서
 
-1. tone·포인트 커브·Color Mixer·Color Grading·Primary Calibration과 Film Emulation 색상 cube의 실제 macOS runtime golden·pixel diff 보강
-2. `CIUnsharpMask` impulse/edge golden을 확보한 뒤 acutance와 디지털/필름 source routing 연결
+1. film-scan source의 RGB33 색상→acutance 순서를 native recipe·CLI report에 연결하고 digital `DigitalFilmLook` route와 분리
+2. cube 경계·fractional alpha golden, cube/scratch cache 수명과 취소 계약 보강
 3. 다음 Develop 후처리 단계를 macOS 처리 순서대로 조사·이식
 4. 독립 Deflate 검증 또는 dependency gate와 WIC 압축 해제 CPU budget·deadline 보강
 5. macOS ColorSync golden과 Windows ICM 수치 비교

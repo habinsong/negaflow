@@ -58,10 +58,32 @@ fixture로 채택하기 전에는 다음을 검토합니다.
 
 검토되지 않은 workflow artifact는 Windows expected data가 아닙니다.
 
+## canonical 실행 결과
+
+2026-08-04 수동 run
+[30919921220](https://github.com/habinsong/negaflow/actions/runs/30919921220)에서 strict-concurrency build,
+emitter와 artifact upload가 통과했습니다. runner commit은
+`6d9994f00f8ce3ad8c05c3ac3ae9ae33e78f0c22`, macOS 제품 기준선은
+`2fa1d6297378673b58b8bec72025e968ccc3125c`입니다.
+
+- fixture: `film-emulation-core-image-v1`, schema 1
+- OS: macOS 26.5.2, build 25F84
+- artifact ID: `8897230219`
+- artifact digest: `sha256:f0ab00dee3bba2a356d448089750fd18115153df83253b40fac2d913b9b10ee4`
+- 다운로드한 JSON SHA-256: `dc9259532eef53b7dd9cc6bbf57dc67e47bae1a19ecc355df6fcce0a65d41a80`
+
+앞선 run과 runner commit metadata를 제외한 12,912개 numeric value는 모두 exact 일치했습니다.
+`default`와 `software_requested`도 color-only, full-stage와 모든 probe에서 exact 일치했습니다. 이는 두
+요청 mode의 결과가 같다는 뜻이며 실제 backend 종류를 보증하지 않습니다.
+
+canonical artifact에서 opaque 색상 36개 RGB 값과 acutance impulse/step을 Windows fixture로 증류했습니다.
+원본 JSON은 CI artifact provenance로 유지하고, test에는 필요한 합성 수치만 넣었습니다. 상세 비교는
+`verification/2026-08-04-film-emulation-core-image-golden.md`에 있습니다.
+
 ## 남은 제한
 
-- 현재 Windows 호스트에는 Core Image와 Swift toolchain이 없어 로컬 compile/run을 할 수 없습니다.
-- macOS hosted run이 끝나기 전에는 emitter의 실제 컴파일과 JSON schema를 통과했다고 주장하지 않습니다.
+- 현재 Windows 호스트에는 Core Image가 없어 같은 emitter를 로컬에서 재실행할 수 없습니다. hosted
+  macOS 실행의 commit·OS·artifact digest를 함께 고정합니다.
 - opaque contract만 먼저 닫습니다. fractional alpha는 scanner production route의 blocker가 아니며 별도
   fixture로 남깁니다.
 - golden을 확보해도 Apple의 비공개 구현을 복제하는 것이 아니라 관측된 제품 동작에 허용오차를 맞춥니다.

@@ -1,4 +1,5 @@
 #include "negaflow/imaging/film_emulation_color.h"
+#include "film_emulation_core_image_golden_fixture.h"
 #include "film_emulation_color_fixture.h"
 
 #include <algorithm>
@@ -135,6 +136,22 @@ void test_fixed_fixture_and_in_place_parity() {
             negaflow::fixtures::film_emulation_color_expected[index],
             "the fixed fixture matches the independent Float32 calculation");
     }
+    float maximum_core_image_error = 0.0F;
+    for (std::size_t index = 0U; index < output.size(); ++index) {
+        const auto expected =
+            negaflow::fixtures::film_emulation_core_image_color_expected[index];
+        maximum_core_image_error = std::max(
+            maximum_core_image_error,
+            std::max(
+                std::abs(output[index].red - expected.red),
+                std::max(
+                    std::abs(output[index].green - expected.green),
+                    std::abs(output[index].blue - expected.blue))));
+    }
+    expect(
+        maximum_core_image_error <=
+            negaflow::fixtures::film_emulation_core_image_color_absolute_tolerance,
+        "the platform-neutral cube stays within the measured Core Image envelope");
 
     auto in_place = negaflow::fixtures::film_emulation_color_input;
     expect(

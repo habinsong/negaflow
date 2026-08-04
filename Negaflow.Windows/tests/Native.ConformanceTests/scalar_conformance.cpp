@@ -2,12 +2,14 @@
 #include "negaflow/core/negative_inversion.h"
 #include "negaflow/imaging/color_grading.h"
 #include "negaflow/imaging/color_mixer.h"
+#include "negaflow/imaging/film_emulation_acutance.h"
 #include "negaflow/imaging/film_emulation_color.h"
 #include "negaflow/imaging/point_curve.h"
 #include "negaflow/imaging/primary_calibration.h"
 #include "negaflow/imaging/working_tone_adjuster.h"
 #include "color_grading_fixture.h"
 #include "color_mixer_fixture.h"
+#include "film_emulation_core_image_golden_fixture.h"
 #include "film_emulation_color_fixture.h"
 #include "point_curve_fixture.h"
 #include "primary_calibration_fixture.h"
@@ -332,13 +334,67 @@ int main() {
             negaflow::fixtures::film_emulation_color_relative_tolerance);
     }
 
+    constexpr std::size_t acutance_golden_case_index = 4U;
+    const auto& acutance_golden =
+        negaflow::fixtures::film_emulation_acutance_golden_cases
+            [acutance_golden_case_index];
+    constexpr std::uint32_t acutance_width = 33U;
+    constexpr std::uint32_t acutance_height = 9U;
+    constexpr std::uint32_t acutance_center_x = acutance_width / 2U;
+    constexpr std::uint32_t acutance_center_y = acutance_height / 2U;
+    std::vector<negaflow::core::Rgba32F> acutance_input(
+        static_cast<std::size_t>(acutance_width) * acutance_height,
+        {0.25F, 0.25F, 0.25F, 1.0F});
+    acutance_input[(static_cast<std::size_t>(acutance_center_y) *
+                     acutance_width) +
+                    acutance_center_x] = {0.75F, 0.75F, 0.75F, 1.0F};
+    std::vector<negaflow::core::Rgba32F> acutance_output(
+        acutance_input.size());
+    std::vector<negaflow::imaging::FilmEmulationAcutanceScratchPixel>
+        acutance_scratch(
+            negaflow::imaging::film_emulation_acutance_scratch_pixel_count(
+                acutance_width));
+    PixelErrorMetrics acutance_metrics{};
+    if (negaflow::imaging::apply_film_emulation_acutance(
+            {acutance_input.data(), acutance_input.size(), acutance_width,
+             acutance_height, acutance_width},
+            {acutance_output.data(), acutance_output.size(), acutance_width,
+             acutance_height, acutance_width},
+            {acutance_golden.emulation, 1.0},
+            {acutance_scratch.data(), acutance_scratch.size()}) !=
+        negaflow::core::KernelStatus::ok) {
+        ++acutance_metrics.failure_count;
+    } else {
+        std::vector<negaflow::core::Rgba32F> actual_samples;
+        actual_samples.reserve(acutance_golden.expected_center_samples.size());
+        for (std::size_t sample = 0U;
+             sample < acutance_golden.expected_center_samples.size();
+             ++sample) {
+            const std::uint32_t column =
+                negaflow::fixtures::film_emulation_acutance_sample_x_begin +
+                static_cast<std::uint32_t>(sample);
+            actual_samples.push_back(
+                acutance_output[
+                    (static_cast<std::size_t>(acutance_center_y) *
+                     acutance_width) +
+                    column]);
+        }
+        acutance_metrics = compare_pixels(
+            actual_samples,
+            acutance_golden.expected_center_samples,
+            negaflow::fixtures::
+                film_emulation_core_image_acutance_absolute_tolerance,
+            0.0F);
+    }
+
     const negaflow::core::BuildInfo build_info = negaflow::core::query_build_info();
     const std::size_t failure_count =
         negative_failure_count + tone_metrics.failure_count +
         point_curve_metrics.failure_count + color_mixer_metrics.failure_count +
         color_grading_metrics.failure_count +
         primary_calibration_metrics.failure_count +
-        film_emulation_color_metrics.failure_count;
+        film_emulation_color_metrics.failure_count +
+        acutance_metrics.failure_count;
     const bool passed = failure_count == 0U;
     std::cout << "{\"schema_version\":1,\"status\":\""
               << (passed ? "ok" : "failed") << "\",\"fixture_id\":\""
@@ -444,6 +500,27 @@ int main() {
               << ",\"film_emulation_color_max_absolute_error\":"
               << film_emulation_color_metrics.maximum_absolute_error
               << ",\"film_emulation_color_max_relative_error\":"
-              << film_emulation_color_metrics.maximum_relative_error << "}\n";
+              << film_emulation_color_metrics.maximum_relative_error
+              << ",\"film_emulation_acutance_fixture_id\":\""
+              << negaflow::fixtures::film_emulation_core_image_fixture_id
+              << "\",\"film_emulation_acutance_algorithm_version\":\""
+              << negaflow::imaging::film_emulation_acutance_algorithm_version
+              << "\",\"film_emulation_acutance_amount\":"
+              << negaflow::imaging::film_emulation_acutance_amount(
+                     {acutance_golden.emulation, 1.0})
+              << ",\"film_emulation_acutance_scratch_bytes\":"
+              << acutance_scratch.size() *
+                     sizeof(
+                         negaflow::imaging::FilmEmulationAcutanceScratchPixel)
+              << ",\"film_emulation_acutance_value_count\":"
+              << acutance_golden.expected_center_samples.size() * 4U
+              << ",\"film_emulation_acutance_finite_output_count\":"
+              << acutance_metrics.finite_output_count
+              << ",\"film_emulation_acutance_failure_count\":"
+              << acutance_metrics.failure_count
+              << ",\"film_emulation_acutance_max_absolute_error\":"
+              << acutance_metrics.maximum_absolute_error
+              << ",\"film_emulation_acutance_max_relative_error\":"
+              << acutance_metrics.maximum_relative_error << "}\n";
     return passed ? 0 : 1;
 }

@@ -49,10 +49,11 @@ recipe cache가 같은 node 계약을 사용할 수 있습니다. profile 상수
 
 ## 검증 한계
 
-현재 삼선형 보간과 fractional-alpha 보존은 Windows reference 계약입니다. Apple 문서는 cube 순서와
-색 공간 계약은 설명하지만 Core Image runtime의 모든 보간·경계 세부를 보장하지 않습니다. 실제 macOS
-render golden을 확보하기 전에는 pixel-equivalent라고 주장하지 않습니다. acutance와 source routing이
-없으므로 전체 `FilmEmulationStage`도 완료된 상태가 아닙니다.
+Apple 문서는 cube 순서와 색 공간 계약은 설명하지만 Core Image runtime의 모든 보간·경계 세부를
+보장하지 않습니다. 이후 확보한 macOS opaque 4×3 golden에서 최대 절대 오차 `0.0018888685`의 platform
+envelope를 고정했지만 fractional alpha와 전체 cube 경계는 아직 포괄하지 않습니다. acutance는 별도
+ADR-0018의 standalone component로 구현했으며 source routing과 두 단계 orchestration이 없으므로 전체
+`FilmEmulationStage`도 완료된 상태가 아닙니다.
 
 ## 공식 근거와 권리
 

@@ -70,6 +70,7 @@
 - macOS post-pipeline 세 번째 단계의 고정 shadows/midtones/highlights Color Grading scalar
 - macOS post-pipeline 네 번째 단계의 고정 R/G/B Primary Calibration scalar
 - film-scan source 분기의 11종 profile·5% intensity·고정 RGB33 Film Emulation 색상 standalone scalar
+- 같은 분기의 unquantized profile acutance와 11행 caller-owned separable Gaussian scratch
 - fixed fallback과 bounded `portable_area_v1` percentile 측정, 제자리 tone orchestration
 - versioned 합성 fixture와 JSON conformance report
 - AVX/OSXSAVE/AVX2/FMA 및 ARM64 NEON capability 식별
@@ -86,11 +87,13 @@
 - 4×3 Color Grading fixture의 48개 RGBA 값, 세 구간·identity·pivot·처리 순서 통과
 - 4×3 Primary Calibration fixture의 48개 RGBA 값, 여섯 control·회색 gate·처리 순서 통과
 - 4×3 Film Emulation 색상 fixture의 48개 RGBA 값과 11종 profile node signature, 431,244바이트 cube 계약 통과
+- macOS Core Image 두 run의 12,912개 numeric value exact 반복, 색상 최대 절대 오차 `0.0018888685`
+- Ektar/Provia/Velvia impulse·step 6개 acutance signature 최대 절대 오차 `0.00015372`, conformance 36개 값
 - ARM64에서는 같은 source가 컴파일되지만 수치 실행은 아직 미검증
 
 ### 남은 것
 
-- Film Emulation의 실제 Core Image golden, acutance와 digital/film source routing
+- Film Emulation 색상→acutance orchestration과 digital/film source routing, cube 경계·fractional alpha 확대
 - blur, local contrast, histogram, morphology, defect, crop/resize와 digital-film 전체
 - forced scalar/base/AVX2 dispatch와 실제 NEON 실행
 - ROI/halo/cancellation 계약

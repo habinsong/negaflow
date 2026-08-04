@@ -106,6 +106,8 @@ target_link_libraries(
 add_library(negaflow_imaging STATIC
     src/Native/imaging/color_grading.cpp
     src/Native/imaging/color_mixer.cpp
+    src/Native/imaging/film_emulation_acutance.cpp
+    src/Native/imaging/film_emulation_acutance_profiles.cpp
     src/Native/imaging/film_emulation_color.cpp
     src/Native/imaging/film_emulation_profiles.cpp
     src/Native/imaging/icm_icc_converter.cpp
@@ -377,6 +379,22 @@ if(BUILD_TESTING)
     add_test(
         NAME native.film_emulation_color
         COMMAND negaflow_film_emulation_color_tests
+    )
+
+    add_executable(negaflow_film_emulation_acutance_tests
+        tests/Native.UnitTests/film_emulation_acutance_tests.cpp
+    )
+    target_include_directories(
+        negaflow_film_emulation_acutance_tests
+        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/v1"
+    )
+    target_link_libraries(
+        negaflow_film_emulation_acutance_tests
+        PRIVATE negaflow_imaging negaflow_project_options
+    )
+    add_test(
+        NAME native.film_emulation_acutance
+        COMMAND negaflow_film_emulation_acutance_tests
     )
 
     add_executable(negaflow_process_cpu_time_tests

@@ -62,6 +62,11 @@ fixture 기대값은 macOS profile 수식과 Float32 table 저장을 별도 Java
 signature가 허용오차 안에 들어왔습니다. 사용자 TIFF, 경로, 이름과 image hash는 fixture나 문서에 넣지
 않았습니다.
 
+이후 canonical macOS Core Image run `30919921220`을 확보해 같은 opaque 4×3 입력의 RGB 36개를 추가
+비교했습니다. 최대 절대 오차는 `0.0018888685`, RMSE는 `0.0005653865`였고 regression test의 platform
+envelope는 `0.0021`입니다. emitter provenance, 두 run 반복성과 acutance 결과는
+`2026-08-04-film-emulation-core-image-golden.md`에 기록합니다.
+
 cube는 caller-owned 고정 431,244바이트 외에 build/apply 내부 heap이나 full-frame allocation이 없습니다.
 apply 전 안전 검사는 cube payload 전체를 한 번 읽습니다. 이 검증은 correctness와 bounded memory를
 확인한 것이며 megapixel 처리량 보증은 아닙니다.
@@ -72,9 +77,9 @@ apply 전 안전 검사는 cube payload 전체를 한 번 읽습니다. 이 검�
 
 ## 해석 제한
 
-- 합성 fixture는 실제 macOS `CIColorCubeWithColorSpace` render golden이 아닙니다.
-- Core Image의 실제 보간, cube 경계와 fractional-alpha 동작이 현재 삼선형 reference와 같은지
-  macOS에서 확인해야 합니다.
-- acutance는 포함하지 않았고 production working pipeline·CLI·WinUI에도 연결하지 않았습니다.
+- 합성 독립 fixture와 실제 macOS opaque 4×3 golden을 모두 사용하지만 전체 cube 경계와
+  fractional-alpha를 포괄하지 않습니다.
+- acutance는 별도 standalone component로 검증했지만 색상과 함께 production working
+  pipeline·CLI·WinUI에 연결하지 않았습니다.
 - ARM64는 이 x64 PC에서 실행하지 않았으므로 runtime 통과가 아닙니다.
 - scalar correctness 검증이며 cube build/apply의 SIMD, DirectCompute, WARP 성능 결과가 아닙니다.

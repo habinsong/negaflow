@@ -15,8 +15,9 @@ Primary Calibration 결과의 extended-linear sRGB
 ```
 
 이 component는 아직 production working pipeline에 연결하지 않았습니다. macOS의
-`FilmEmulationStage`가 색상 cube 뒤에 적용하는 acutance와, 디지털 입력의 별도 `DigitalFilmLook`도
-포함하지 않습니다.
+`FilmEmulationStage`가 색상 cube 뒤에 적용하는 acutance는 별도 bounded standalone component로
+구현했지만 두 단계를 아직 orchestration하지 않았습니다. 디지털 입력의 별도 `DigitalFilmLook`도 이
+component에 포함하지 않습니다.
 
 ## 파일 책임
 
@@ -87,18 +88,22 @@ cube validation은 apply마다 431,244바이트를 순회합니다. 현재는 �
 
 현재 CLI report, C ABI와 WinUI에는 Film Emulation profile/intensity가 없습니다. 기존
 `WorkingToneAdjuster`의 실행 순서는 Primary Calibration에서 끝나며 이 cube를 자동 호출하지 않습니다.
-다음 연결은 다음 증거가 갖춰진 뒤 진행합니다.
+canonical macOS run에서 opaque `CIColorCubeWithColorSpace`와 `CIUnsharpMask` 수치 기준을 확보했습니다.
+색상 36개 RGB 값의 최대 절대 오차는 `0.0018888685`, RMSE는 `0.0005653865`였고 test envelope는
+`0.0021`로 고정했습니다. 다음 production 연결은 아래 경계를 먼저 닫습니다.
 
-1. 실제 macOS `CIColorCubeWithColorSpace`의 경계·보간·fractional-alpha golden
-2. `CIUnsharpMask` acutance의 impulse/edge golden과 Windows 대응 수치
-3. digital source의 `DigitalFilmLook`과 film-scan source의 Film Emulation을 나누는 route
-4. recipe serialization, cache 수명, 취소와 CPU/GPU dispatch 계약
+1. digital source의 `DigitalFilmLook`과 film-scan source의 Film Emulation을 나누는 route
+2. RGB33 cube 뒤 standalone acutance를 호출하는 명시적 stage 순서
+3. recipe serialization, cube/scratch cache 수명, 취소와 CPU/GPU dispatch 계약
+4. cube 경계와 fractional-alpha golden 확대
 
 ## 남은 제한
 
-- 합성 JavaScript Float32 기준은 실제 macOS Core Image render가 아닙니다.
-- 삼선형 보간이 Core Image의 모든 내부 경계 동작과 같다는 실기 증거가 없습니다.
+- opaque 4×3 fixture는 실제 macOS Core Image render와 비교했지만 모든 cube 경계 동작을 포괄하지
+  않습니다.
 - fractional alpha는 보존하지만 scanner 수직 경로는 opaque만 허용하므로 실제 제품 경로 검증이
   남아 있습니다.
+- acutance가 standalone으로 존재해도 색상과 source route를 묶은 전체 `FilmEmulationStage`는 아직
+  아닙니다.
 - scalar `pow`와 cube build 비용에 대한 megapixel benchmark, SIMD/GPU 최적화가 없습니다.
 - ARM64는 교차 빌드만 했고 실제 ARM64 Windows에서 실행하지 않았습니다.

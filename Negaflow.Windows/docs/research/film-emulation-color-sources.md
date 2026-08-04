@@ -33,10 +33,12 @@ Float32 계산으로 만들었습니다.
   baseline은 실제 backend라고 단정하지 않고 default/software-requested 두 결과를 함께 기록합니다.
 - [CIUnsharpMask](https://developer.apple.com/documentation/coreimage/ciunsharpmask): radius와 intensity
   parameter가 있다는 사실만 확인됩니다. Windows와 같은 numeric kernel·경계 처리는 문서로 확정할 수
-  없어 이번 색상 component에서 제외했습니다.
+  없어 색상 component와 분리하고 macOS impulse/step golden으로 별도 bounded reference를 만들었습니다.
+  세부 근거와 특허 screen은 `film-emulation-acutance-sources.md`에 있습니다.
 
-Apple 문서나 sample code를 복사하지 않았습니다. 실제 Core Image 보간과 fractional-alpha 동작은
-macOS golden으로 별도 검증해야 합니다.
+Apple 문서나 sample code를 복사하지 않았습니다. 실제 Core Image opaque 4×3 golden은 확보했으며 현재
+Windows 색상 reference의 최대 절대 오차는 `0.0018888685`입니다. fractional-alpha와 더 넓은 cube 경계는
+별도 검증해야 합니다.
 
 ## baseline workflow 근거
 
