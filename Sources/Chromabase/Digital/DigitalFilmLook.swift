@@ -3,22 +3,14 @@ import CoreGraphics
 
 // MARK: - DigitalFilmLook (디지털 소스 전용 필름 룩)
 //
-// 필름 스캔에서는 좌측 Film 탭이 색 LUT 하나로 충분하다. 스캔본에는 이미 노출 관용도,
-// 밀도 응답, 산란, 그레인이 픽셀 안에 들어 있고 룩은 그 위에 색만 얹으면 되기 때문이다.
+// 좌측 Film 탭의 입력은 RAW 센서값이나 필름 노출이 아니라, 사용자의 색·톤 보정까지 끝난
+// positive 이미지다. 이 값을 다시 장면 노출로 추정한 뒤 네거티브/슬라이드 현상에 통과시키면
+// 같은 톤을 두 번 현상하게 된다. 실제 사진에서 네거티브 룩의 암부가 0.15 부근까지 뜨고
+// p1...p99 범위가 약 20% 줄어든 원인이 그 중복 변환이었다.
 //
-// 디지털 사진에는 그중 어느 것도 없다. 그래서 이 경로는 색을 바꾸는 대신 **필름이 하는 일을
-// 순서대로 다시 한다**:
-//
-//   1. 카메라가 씌운 디스플레이 렌더를 풀어 필름이 받을 노출을 되돌린다
-//   2. 선형 광 상태에서 산란·헐레이션을 얹는다(밀도가 생기기 전이어야 한다)
-//   3. 가상 현상 — 특성곡선으로 밀도를 만들고, DIR 커플러의 층간 억제를 걸고,
-//      네거티브면 RA-4 인화까지, 반전이면 투과율로 읽는다
-//   4. 스톡 고유의 색 시그니처를 얹는다(대비는 3에서 이미 만들어졌다)
-//   5. 밀도에 따라 그레인을 흔들고, MTF 만큼 엣지를 세운다
-//
-// 측정으로 확인한 문제를 정면으로 다룬다: 카메라 렌더 입력에 색 LUT 만 얹으면 명부 계조가
-// 붕괴하고(스텝 간격 0.0031, 플랫 입력의 1/14) 채도만 남는다. 1 단계가 헤드룸을 되돌리고
-// 3 단계가 필름의 2단 곡선으로 그 헤드룸을 소비한다.
+// 따라서 디지털 전용 경로는 positive 도메인용 필름 LUT로 톤·색을 한 번만 변환하고,
+// 디지털 원본에 없는 헐레이션과 그레인만 별도로 보탠다. LUT는 스톡별 특성곡선과 색 응답을
+// 함께 담고 있으며 강도 블렌드도 자체적으로 처리한다.
 //
 // **필름 스캔은 이 경로를 지나지 않는다.**
 public enum DigitalFilmLook {
@@ -37,18 +29,18 @@ public enum DigitalFilmLook {
         guard strength > 1e-3 else { return image }
 
         let extent = image.extent
-        var img = DigitalSceneReconstruct.apply(to: image)
+        var img = image
 
-        // 산란/헐레이션은 밀도가 생기기 전 선형 광 상태에서만 물리적으로 옳다.
+        // 헐레이션은 필름 응답 전의 광 번짐이므로 LUT보다 먼저 적용한다.
         img = DigitalHalation.apply(
             to: img,
             physics: physics,
             strength: resolve(override: halationOverride, default: strength)
         )
 
-        img = DigitalFilmDevelop.apply(to: img, physics: physics)
-        img = DigitalFilmColor.apply(to: img, emulation: emulation)
-        img = DigitalFilmColorPresetStage.apply(to: img, emulation: emulation)
+        img = FilmEmulationStage.apply(to: img, emulation: emulation, intensity: strength)
+        // LUT가 이미 스톡 색을 포함하므로 보조 프리셋은 절반만 더해 중립축 과염색을 막는다.
+        img = DigitalFilmColorPresetStage.apply(to: img, emulation: emulation, intensity: strength * 0.5)
 
         // 그레인은 필름 물성이라 필름을 고르면 따라온다.
         img = DigitalFilmGrain.apply(
@@ -56,9 +48,8 @@ public enum DigitalFilmLook {
             physics: physics,
             strength: resolve(override: grainOverride, default: strength)
         )
-        img = acutance(img, emulation: emulation, strength: strength, extent: extent)
 
-        return blend(original: image, rendered: img.cropped(to: extent), amount: strength, extent: extent)
+        return img.cropped(to: extent)
     }
 
     /// Texture 슬라이더와 필름 물성의 관계. 슬라이더가 0 이면 "안 만졌다"는 뜻이라 유제가
@@ -68,30 +59,6 @@ public enum DigitalFilmLook {
         override > 1e-3 ? min(max(override, 0), 1) : fallback
     }
 
-    /// MTF(선예도). 기존 필름 프로파일의 데이터시트 유도 계수를 그대로 쓴다.
-    private static func acutance(
-        _ image: CIImage, emulation: FilmEmulation, strength: Double, extent: CGRect
-    ) -> CIImage {
-        let acutance = FilmEmulationProfile.of(emulation).acutance
-        guard acutance.intensity > 1e-3 else { return image }
-        return image.applyingFilter("CIUnsharpMask", parameters: [
-            "inputRadius": acutance.radius,
-            "inputIntensity": acutance.intensity * strength,
-        ]).cropped(to: extent)
-    }
-
-    /// 강도 블렌드. 물리 체인은 부분 적용이라는 개념이 없으므로, 완성된 결과와 원본 사이를
-    /// 섞어 사용자가 정도를 고를 수 있게 한다.
-    private static func blend(
-        original: CIImage, rendered: CIImage, amount: Double, extent: CGRect
-    ) -> CIImage {
-        guard amount < 0.999 else { return rendered }
-        return CIFilter(name: "CIMix", parameters: [
-            kCIInputImageKey: rendered,
-            kCIInputBackgroundImageKey: original,
-            kCIInputAmountKey: amount,
-        ])?.outputImage?.cropped(to: extent) ?? rendered
-    }
 }
 
 // MARK: - 스톡 색 시그니처
