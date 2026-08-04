@@ -3,10 +3,12 @@
 #include "negaflow/imaging/color_grading.h"
 #include "negaflow/imaging/color_mixer.h"
 #include "negaflow/imaging/point_curve.h"
+#include "negaflow/imaging/primary_calibration.h"
 #include "negaflow/imaging/working_tone_adjuster.h"
 #include "color_grading_fixture.h"
 #include "color_mixer_fixture.h"
 #include "point_curve_fixture.h"
+#include "primary_calibration_fixture.h"
 #include "scalar_foundation_fixture.h"
 #include "tone_mapping_fixture.h"
 
@@ -158,7 +160,8 @@ int main() {
     PixelErrorMetrics tone_metrics{};
     if (adjusted.status != negaflow::imaging::WorkingToneAdjustStatus::ok ||
         adjusted.info.color_mixer_applied ||
-        adjusted.info.color_grading_applied) {
+        adjusted.info.color_grading_applied ||
+        adjusted.info.primary_calibration_applied) {
         ++tone_metrics.failure_count;
     } else {
         tone_metrics = compare_pixels(
@@ -188,7 +191,8 @@ int main() {
             negaflow::imaging::WorkingToneAdjustStatus::ok ||
         !point_curve_adjusted.info.point_curve_applied ||
         point_curve_adjusted.info.color_mixer_applied ||
-        point_curve_adjusted.info.color_grading_applied) {
+        point_curve_adjusted.info.color_grading_applied ||
+        point_curve_adjusted.info.primary_calibration_applied) {
         ++point_curve_metrics.failure_count;
     } else {
         point_curve_metrics = compare_pixels(
@@ -218,7 +222,8 @@ int main() {
             negaflow::imaging::WorkingToneAdjustStatus::ok ||
         !color_mixer_adjusted.info.color_mixer_applied ||
         color_mixer_adjusted.info.point_curve_applied ||
-        color_mixer_adjusted.info.color_grading_applied) {
+        color_mixer_adjusted.info.color_grading_applied ||
+        color_mixer_adjusted.info.primary_calibration_applied) {
         ++color_mixer_metrics.failure_count;
     } else {
         color_mixer_metrics = compare_pixels(
@@ -248,7 +253,8 @@ int main() {
             negaflow::imaging::WorkingToneAdjustStatus::ok ||
         !color_grading_adjusted.info.color_grading_applied ||
         color_grading_adjusted.info.point_curve_applied ||
-        color_grading_adjusted.info.color_mixer_applied) {
+        color_grading_adjusted.info.color_mixer_applied ||
+        color_grading_adjusted.info.primary_calibration_applied) {
         ++color_grading_metrics.failure_count;
     } else {
         color_grading_metrics = compare_pixels(
@@ -258,11 +264,44 @@ int main() {
             negaflow::fixtures::color_grading_relative_tolerance);
     }
 
+    negaflow::imaging::WorkingImage primary_calibration_image{};
+    primary_calibration_image.width = 4U;
+    primary_calibration_image.height = 3U;
+    primary_calibration_image.stride_pixels = 4U;
+    primary_calibration_image.pixels.assign(
+        negaflow::fixtures::primary_calibration_input.begin(),
+        negaflow::fixtures::primary_calibration_input.end());
+    negaflow::imaging::WorkingToneAdjustParameters
+        primary_calibration_parameters{};
+    primary_calibration_parameters.primary_calibration =
+        negaflow::fixtures::primary_calibration_parameters;
+    const auto primary_calibration_adjusted =
+        negaflow::imaging::apply_working_tone_adjustments(
+            std::move(primary_calibration_image),
+            primary_calibration_parameters);
+
+    PixelErrorMetrics primary_calibration_metrics{};
+    if (primary_calibration_adjusted.status !=
+            negaflow::imaging::WorkingToneAdjustStatus::ok ||
+        !primary_calibration_adjusted.info.primary_calibration_applied ||
+        primary_calibration_adjusted.info.point_curve_applied ||
+        primary_calibration_adjusted.info.color_mixer_applied ||
+        primary_calibration_adjusted.info.color_grading_applied) {
+        ++primary_calibration_metrics.failure_count;
+    } else {
+        primary_calibration_metrics = compare_pixels(
+            primary_calibration_adjusted.image.pixels,
+            negaflow::fixtures::primary_calibration_expected,
+            negaflow::fixtures::primary_calibration_absolute_tolerance,
+            negaflow::fixtures::primary_calibration_relative_tolerance);
+    }
+
     const negaflow::core::BuildInfo build_info = negaflow::core::query_build_info();
     const std::size_t failure_count =
         negative_failure_count + tone_metrics.failure_count +
         point_curve_metrics.failure_count + color_mixer_metrics.failure_count +
-        color_grading_metrics.failure_count;
+        color_grading_metrics.failure_count +
+        primary_calibration_metrics.failure_count;
     const bool passed = failure_count == 0U;
     std::cout << "{\"schema_version\":1,\"status\":\""
               << (passed ? "ok" : "failed") << "\",\"fixture_id\":\""
@@ -333,6 +372,20 @@ int main() {
               << ",\"color_grading_max_absolute_error\":"
               << color_grading_metrics.maximum_absolute_error
               << ",\"color_grading_max_relative_error\":"
-              << color_grading_metrics.maximum_relative_error << "}\n";
+              << color_grading_metrics.maximum_relative_error
+              << ",\"primary_calibration_fixture_id\":\""
+              << negaflow::fixtures::primary_calibration_fixture_id
+              << "\",\"primary_calibration_algorithm_version\":\""
+              << negaflow::imaging::primary_calibration_algorithm_version
+              << "\",\"primary_calibration_value_count\":"
+              << negaflow::fixtures::primary_calibration_expected.size() * 4U
+              << ",\"primary_calibration_finite_output_count\":"
+              << primary_calibration_metrics.finite_output_count
+              << ",\"primary_calibration_failure_count\":"
+              << primary_calibration_metrics.failure_count
+              << ",\"primary_calibration_max_absolute_error\":"
+              << primary_calibration_metrics.maximum_absolute_error
+              << ",\"primary_calibration_max_relative_error\":"
+              << primary_calibration_metrics.maximum_relative_error << "}\n";
     return passed ? 0 : 1;
 }

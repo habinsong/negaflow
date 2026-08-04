@@ -60,7 +60,8 @@ bool valid_working_tone_adjust_parameters(
            finite_in_range(parameters.curve.shadows, maximum_tone_control) &&
            valid_point_curves(parameters.point_curves) &&
            valid_color_mixer_parameters(parameters.color_mixer) &&
-           valid_color_grading_parameters(parameters.color_grading);
+           valid_color_grading_parameters(parameters.color_grading) &&
+           valid_primary_calibration_parameters(parameters.primary_calibration);
 }
 
 WorkingToneAdjustResult apply_working_tone_adjustments(
@@ -91,9 +92,11 @@ WorkingToneAdjustResult apply_working_tone_adjustments(
         has_color_mixer_change(parameters.color_mixer);
     const bool color_grading_changes =
         has_color_grading_change(parameters.color_grading);
+    const bool primary_calibration_changes =
+        has_primary_calibration_change(parameters.primary_calibration);
     if (!exposure_changes && !basic_changes && !curve_changes &&
         !point_curve_changes && !color_mixer_changes &&
-        !color_grading_changes) {
+        !color_grading_changes && !primary_calibration_changes) {
         result.info.measurement.status = ToneCurveMeasurementStatus::ok;
         result.info.measurement.kernel_status = negaflow::core::KernelStatus::ok;
         result.info.kernel_status = negaflow::core::KernelStatus::ok;
@@ -190,6 +193,19 @@ WorkingToneAdjustResult apply_working_tone_adjustments(
             return result;
         }
         result.info.color_grading_applied = true;
+    }
+
+    if (primary_calibration_changes) {
+        result.info.kernel_status = apply_primary_calibration(
+            const_view(result.image),
+            mutable_view(result.image),
+            parameters.primary_calibration);
+        if (result.info.kernel_status != negaflow::core::KernelStatus::ok) {
+            result.status = WorkingToneAdjustStatus::kernel_failed;
+            discard_pixels(result.image);
+            return result;
+        }
+        result.info.primary_calibration_applied = true;
     }
 
     result.info.kernel_status = negaflow::core::KernelStatus::ok;

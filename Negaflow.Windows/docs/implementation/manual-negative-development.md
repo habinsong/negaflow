@@ -70,7 +70,7 @@ working 크기, streaming temporary peak와 scanner→working/develop/tone 단�
 - 제자리 변환의 alpha 보존
 - non-finite Dmin과 잘못된 image layout에서 결과 pixel 미공개
 - 저장소 TIFF의 decode→color→develop CLI 성공과 JSON schema 검사
-- 현재 x64 Debug/Release CTest 각각 29/29 통과
+- 현재 x64 Debug/Release CTest 각각 30/30 통과
 - ARM64 Debug/Release 전체 target cross-build
 
 ARM64 수치는 실제 ARM64 Windows 장치에서 아직 실행하지 않았습니다.

@@ -170,7 +170,8 @@ int run_develop_negative_tiff(
         adjusted.info.parametric_curve_applied ||
         adjusted.info.point_curve_applied ||
         adjusted.info.color_mixer_applied ||
-        adjusted.info.color_grading_applied;
+        adjusted.info.color_grading_applied ||
+        adjusted.info.primary_calibration_applied;
     WorkingImageStatistics adjusted_statistics = developed_statistics;
     std::uint32_t statistics_full_frame_scan_count = 2U;
     if (tone_pixels_changed) {
@@ -218,6 +219,10 @@ int run_develop_negative_tiff(
               << negaflow::imaging::color_grading_algorithm_version
               << "\",\"color_grading_applied\":"
               << (adjusted.info.color_grading_applied ? "true" : "false")
+              << ",\"calibration_algorithm_version\":\""
+              << negaflow::imaging::primary_calibration_algorithm_version
+              << "\",\"calibration_applied\":"
+              << (adjusted.info.primary_calibration_applied ? "true" : "false")
               << ",\"tone_arguments_explicit\":"
               << (argument_count == 13 ? "true" : "false")
               << ",\"pixel_fingerprint_algorithm\":\""

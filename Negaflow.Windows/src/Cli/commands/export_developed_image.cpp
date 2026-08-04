@@ -228,6 +228,12 @@ void print_pipeline_report_suffix(const PipelineReportContext& context) {
               << negaflow::imaging::color_grading_algorithm_version
               << "\",\"color_grading_applied\":"
               << (context.adjusted.info.color_grading_applied ? "true" : "false")
+              << ",\"calibration_algorithm_version\":\""
+              << negaflow::imaging::primary_calibration_algorithm_version
+              << "\",\"calibration_applied\":"
+              << (context.adjusted.info.primary_calibration_applied
+                      ? "true"
+                      : "false")
               << ",\"curve_sampling_mode\":\""
               << negaflow::imaging::tone_curve_sampling_mode_name(
                      measurement.sampling_mode)
