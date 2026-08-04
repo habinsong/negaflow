@@ -81,6 +81,7 @@
 - [ADR-0014: Color Grading은 고정 3구간 extended-linear scalar로 시작](decisions/0014-bounded-color-grading-scalar-contract.md)
 - [ADR-0015: Calibration은 고정 R/G/B Primary scalar로 시작](decisions/0015-bounded-primary-calibration-scalar-contract.md)
 - [ADR-0016: Film Emulation 색상 단계는 고정 RGB33 cube로 격리](decisions/0016-bounded-film-emulation-color-cube.md)
+- [ADR-0017: provenance gate는 Windows 1차 C++와 제3자 payload를 구분](decisions/0017-first-party-windows-native-provenance-boundary.md)
 
 ## 사실 우선순위
 

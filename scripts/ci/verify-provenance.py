@@ -10,6 +10,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / "Config/bundled-resource-provenance-v1.json"
+WINDOWS_NATIVE_SOURCE_ROOTS = (
+    Path("Negaflow.Windows/src"),
+    Path("Negaflow.Windows/tests"),
+)
+WINDOWS_THIRD_PARTY_MANIFEST_ROOT = Path("Negaflow.Windows/third_party/manifest")
 
 
 def fail(message: str) -> None:
@@ -99,9 +104,19 @@ def verify_tree_policy(files: list[Path]) -> tuple[int, int]:
 
     for path in files:
         relative = path.relative_to(ROOT)
-        if path.suffix.lower() in compiled_source_suffixes:
+        is_windows_native_source = any(
+            relative.is_relative_to(root) for root in WINDOWS_NATIVE_SOURCE_ROOTS
+        )
+        if path.suffix.lower() in compiled_source_suffixes and not is_windows_native_source:
             fail(f"foreign/native source is not allowed in the Apache repository: {relative}")
-        if any(part.lower() in vendor_names for part in relative.parts):
+        is_windows_component_manifest = (
+            relative.parent == WINDOWS_THIRD_PARTY_MANIFEST_ROOT
+            and relative.suffix.lower() == ".json"
+        )
+        if (
+            any(part.lower() in vendor_names for part in relative.parts)
+            and not is_windows_component_manifest
+        ):
             fail(f"vendored directory is not allowed: {relative}")
         if path.suffix.lower() in binary_suffixes:
             fail(f"bundled executable/archive is not allowed: {relative}")
@@ -136,7 +151,14 @@ def verify_implementation_boundary() -> None:
         "scripts/tests/test_ci_gate.py",
     }
     candidates = []
-    for root_name in ("Sources", "Tests", "scripts"):
+    for root_name in (
+        "Sources",
+        "Tests",
+        "scripts",
+        "Negaflow.Windows/src",
+        "Negaflow.Windows/tests",
+        "Negaflow.Windows/scripts",
+    ):
         candidates.extend((ROOT / root_name).rglob("*"))
     for path in candidates:
         if not path.is_file():
@@ -203,7 +225,9 @@ def verify_reachable_history() -> int:
         result = subprocess.run(
             [
                 "git", "grep", "-I", "-i", "-n", "-E", pattern,
-                *commits[offset:offset + 64], "--", "Sources", "Tests",
+                *commits[offset:offset + 64], "--",
+                "Sources", "Tests",
+                "Negaflow.Windows/src", "Negaflow.Windows/tests",
             ],
             cwd=ROOT,
             stdout=subprocess.PIPE,
