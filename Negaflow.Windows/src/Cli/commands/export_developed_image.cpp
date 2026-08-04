@@ -216,6 +216,10 @@ void print_pipeline_report_suffix(const PipelineReportContext& context) {
               << (context.adjusted.info.basic_tone_applied ? "true" : "false")
               << ",\"parametric_curve_applied\":"
               << (context.adjusted.info.parametric_curve_applied ? "true" : "false")
+              << ",\"point_curve_algorithm_version\":\""
+              << negaflow::imaging::point_curve_algorithm_version
+              << "\",\"point_curve_applied\":"
+              << (context.adjusted.info.point_curve_applied ? "true" : "false")
               << ",\"curve_sampling_mode\":\""
               << negaflow::imaging::tone_curve_sampling_mode_name(
                      measurement.sampling_mode)

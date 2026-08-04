@@ -22,7 +22,7 @@ decode·입력 색상·검증된 PNG16/TIFF16 출력 경계, M4 단일 이미지
 - C++20 네이티브 코어와 좁은 C ABI DLL
 - .NET 10 source-generated `LibraryImport`와 절대 경로 ABI bootstrap
 - build ID, architecture, CPU capability를 구조화해 출력하는 CLI
-- checked float32 pixel view와 scalar exposure/color-matrix/basic-tone/parametric-curve
+- checked float32 pixel view와 scalar exposure/color-matrix/basic-tone/parametric/DR·R·G·B point curve
 - `shoulder-print-response-v4` color/B&W negative inversion reference
 - 원본 불변 Classic/BigTIFF 구조 검사와 `--probe-tiff` CLI
 - Microsoft 기본 WIC의 RGB/RGBA 16-bit TIFF none/LZW decode, 독립 LZW 의미 사전 검사와 Deflate 격리
@@ -30,7 +30,8 @@ decode·입력 색상·검증된 PNG16/TIFF16 출력 경계, M4 단일 이미지
 - bounded ICC 검사와 재사용 Windows ICM row transform 기반 scanner→linear-sRGB float 변환
 - 사용자 scanner TIFF 15개 read-only streaming 변환과 whole-frame 최종 float exact parity
 - TIFF decode→scanner color→수동 Dmin 네거티브 반전 수직 경로
-- macOS 수식 순서의 노출·기본 톤·4-band 파라메트릭 커브 scalar와 bounded 동적 측정
+- macOS 수식 순서의 노출·기본 톤·4-band 파라메트릭 커브와 첫 post-pipeline 64표본 포인트 커브
+  scalar, bounded 동적 측정
 - working float→sRGB16→Microsoft WIC PNG encode→pixel·ICC readback→기존 파일 비덮어쓰기 게시
 - working float→sRGB16→무압축 Classic TIFF encode→최소 IFD·pixel·ICC readback→비덮어쓰기 게시
 - content를 읽지 않는 source file 상태 전후 관찰과 PNG16/TIFF16 공통 단계별 wall/process-CPU report
@@ -164,6 +165,10 @@ user+kernel 합계라 병렬 실행 시 wall보다 클 수 있고, API 실패 �
 target·percentile 계약을 macOS와 맞추고 비공개 Core Image 축소 filter 대신 명시적
 `portable_area_v1`을 사용했다는 사실을 report합니다.
 
+native tone recipe에는 DR/R/G/B 포인트 커브 경계가 연결되어 있지만 현재 CLI와 WinUI는 포인트 목록
+입력·저장을 아직 노출하지 않습니다. 기본 빈 커브는 무연산이며 report에는 알고리즘 버전과 적용 여부만
+들어갑니다.
+
 이미지 SHA-256은 기본 작업에서 계산하지 않습니다. 사용자가 명시적으로 필요할 때만 다음 opt-in
 command를 사용합니다.
 
@@ -205,12 +210,13 @@ third_party/          실제 payload 기준 공급망 manifest
 
 ## 다음 순서
 
-1. M4 tone의 실제 macOS runtime golden·pixel diff와 cross-platform 허용오차 manifest 보강
-2. 독립 Deflate 검증 또는 dependency gate와 WIC 압축 해제 CPU budget·deadline 보강
-3. macOS ColorSync golden과 Windows ICM 수치 비교
-4. 필요한 경우에만 libtiff/LittleCMS dependency gate 재평가
-5. 최종 working buffer와 출력의 downstream row/tile 처리·process budget
-6. 실제 ARM64 장치에서 같은 native/scalar/TIFF/hash/PNG test 실행
-7. WinUI 셸의 축소 폭·DPI·High Contrast·keyboard matrix와 실제 catalog 연결
+1. M4 tone·포인트 커브의 실제 macOS runtime golden·pixel diff와 허용오차 manifest 보강
+2. Color Mixer·Color Grading·Calibration scalar를 macOS 처리 순서대로 이식
+3. 독립 Deflate 검증 또는 dependency gate와 WIC 압축 해제 CPU budget·deadline 보강
+4. macOS ColorSync golden과 Windows ICM 수치 비교
+5. 필요한 경우에만 libtiff/LittleCMS dependency gate 재평가
+6. 최종 working buffer와 출력의 downstream row/tile 처리·process budget
+7. 실제 ARM64 장치에서 같은 native/scalar/TIFF/hash/PNG test 실행
+8. WinUI 셸의 축소 폭·DPI·High Contrast·keyboard matrix와 실제 catalog 연결
 
 현재 WinUI는 실행 가능한 화면 기반일 뿐 실제 제품 기능 완료를 의미하지 않습니다.

@@ -57,7 +57,8 @@ bool valid_working_tone_adjust_parameters(
            finite_in_range(parameters.curve.highlights, maximum_tone_control) &&
            finite_in_range(parameters.curve.lights, maximum_tone_control) &&
            finite_in_range(parameters.curve.darks, maximum_tone_control) &&
-           finite_in_range(parameters.curve.shadows, maximum_tone_control);
+           finite_in_range(parameters.curve.shadows, maximum_tone_control) &&
+           valid_point_curves(parameters.point_curves);
 }
 
 WorkingToneAdjustResult apply_working_tone_adjustments(
@@ -83,7 +84,9 @@ WorkingToneAdjustResult apply_working_tone_adjustments(
         std::abs(parameters.exposure_stops) > tone_change_threshold;
     const bool basic_changes = has_basic_tone_change(parameters.basic);
     const bool curve_changes = has_parametric_tone_curve_change(parameters.curve);
-    if (!exposure_changes && !basic_changes && !curve_changes) {
+    const bool point_curve_changes = has_point_curve_change(parameters.point_curves);
+    if (!exposure_changes && !basic_changes && !curve_changes &&
+        !point_curve_changes) {
         result.info.measurement.status = ToneCurveMeasurementStatus::ok;
         result.info.measurement.kernel_status = negaflow::core::KernelStatus::ok;
         result.info.kernel_status = negaflow::core::KernelStatus::ok;
@@ -141,6 +144,19 @@ WorkingToneAdjustResult apply_working_tone_adjustments(
     } else {
         result.info.measurement.status = ToneCurveMeasurementStatus::ok;
         result.info.measurement.kernel_status = negaflow::core::KernelStatus::ok;
+    }
+
+    if (point_curve_changes) {
+        result.info.kernel_status = apply_point_curves(
+            const_view(result.image),
+            mutable_view(result.image),
+            parameters.point_curves);
+        if (result.info.kernel_status != negaflow::core::KernelStatus::ok) {
+            result.status = WorkingToneAdjustStatus::kernel_failed;
+            discard_pixels(result.image);
+            return result;
+        }
+        result.info.point_curve_applied = true;
     }
 
     result.info.kernel_status = negaflow::core::KernelStatus::ok;

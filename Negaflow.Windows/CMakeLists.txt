@@ -107,6 +107,7 @@ add_library(negaflow_imaging STATIC
     src/Native/imaging/icm_icc_converter.cpp
     src/Native/imaging/linear_scanner_converter.cpp
     src/Native/imaging/manual_negative_developer.cpp
+    src/Native/imaging/point_curve.cpp
     src/Native/imaging/scanner_tiff_to_working.cpp
     src/Native/imaging/scanner_to_working.cpp
     src/Native/imaging/tone_curve_measurement.cpp
@@ -301,6 +302,19 @@ if(BUILD_TESTING)
         PRIVATE negaflow_imaging negaflow_project_options
     )
     add_test(NAME native.tone_pipeline COMMAND negaflow_tone_pipeline_tests)
+
+    add_executable(negaflow_point_curve_tests
+        tests/Native.UnitTests/point_curve_tests.cpp
+    )
+    target_include_directories(
+        negaflow_point_curve_tests
+        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/v1"
+    )
+    target_link_libraries(
+        negaflow_point_curve_tests
+        PRIVATE negaflow_imaging negaflow_project_options
+    )
+    add_test(NAME native.point_curve COMMAND negaflow_point_curve_tests)
 
     add_executable(negaflow_process_cpu_time_tests
         tests/Native.UnitTests/process_cpu_time_tests.cpp

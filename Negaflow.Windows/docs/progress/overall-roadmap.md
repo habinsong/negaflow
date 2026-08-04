@@ -19,11 +19,11 @@
 |---|---:|---|---|
 | M0 제품 기준선 | 35% | exact commit, bootstrap manifest, delta, 일부 asset hash | 전체 surface/stage manifest, 권리 결정, 실제 macOS 기준 artifact |
 | M1 저장소·빌드·CI | 68% | 별도 build root, x64/ARM64 native·managed·WinUI graph, dual-RID lock, C ABI, CLI, VS 18.8.2와 Windows App SDK C# component, 고정 SDK/vcpkg, static CRT | shader/packaging, CI, 실제 ARM64 run |
-| M2 적합성·CPU scalar | 22% | pixel contract, exposure/matrix, 네거티브 반전, 기본 톤·4-band curve, fixed Float32 fixture와 bounded percentile 측정 | 전체 kernel inventory, forced dispatch, point curve·공간·통계·결함·변환, 실제 macOS golden |
+| M2 적합성·CPU scalar | 24% | pixel contract, exposure/matrix, 네거티브 반전, 기본 톤·4-band curve, 고정 64표본 DR/R/G/B point curve, fixed Float32 fixture와 bounded percentile 측정 | 전체 kernel inventory, forced dispatch, 공간·통계·결함·변환, 실제 macOS golden |
 | M3 이미지 I/O·색·영속성 | 54% | 동일 read-only stream의 bounded TIFF probe+WIC 16-bit decode, TIFF 6 조기 비트폭 LZW 의미 검사와 Deflate 격리, sink 기반 row streaming, ICC row transform→linear working, whole/stream exact parity 15개, 이미지 SHA 기본-off/opt-in CNG, 검증된 PNG16/TIFF16 단일 파일 게시 | 독립 Deflate 검증, ColorSync parity, tile/fuzz, SQLite, catalog transaction·복구 |
-| M4 CLI end-to-end | 44% | 한 장 decode→color→수동 Dmin develop→노출·기본 톤·동적 4-band curve→sRGB16 TIFF/PNG 검증 게시, source 관찰, 단계별 byte·memory·wall/process-CPU report, 진단 전용 stage 통계·versioned fingerprint, SHA 기본-off | 실제 macOS runtime pixel diff·cross-platform 허용오차 manifest |
+| M4 CLI end-to-end | 44% | 한 장 decode→color→수동 Dmin develop→노출·기본 톤·동적 4-band curve→sRGB16 TIFF/PNG 검증 게시, point curve 버전·적용 여부 report 경계, source 관찰, 단계별 byte·memory·wall/process-CPU report, 진단 전용 stage 통계·versioned fingerprint, SHA 기본-off | point recipe 입력·저장, 실제 macOS runtime pixel diff·cross-platform 허용오차 manifest |
 | M5 GPU/WARP | 0% | 문서만 존재 | D3D11/Direct2D/WARP FP32 vertical slice |
-| M6 전체 Develop graph | 0% | 문서만 존재 | 전체 stage와 측정 |
+| M6 전체 Develop graph | 2% | 첫 post-pipeline DR/R/G/B point curve scalar와 tone 순서 통합 | color mixer·grading·calibration·local·defect·film 등 전체 stage와 측정 |
 | M7 대형 이미지 | 6% | WIC row sink, chunk ICC transform, 단조 progress/cancel, full decoded source 제거와 exact parity | 최종 working streaming, tile, byte reservation, cache, TDR |
 | M8 ABI·WinUI shell/canvas | 18% | C ABI와 C# `LibraryImport` bootstrap, 최대화 localized 셸, caption inset, 표시 설정 저장 | handles/events, GPU canvas, lifetime, activation 전체 경로 |
 | M9~M14 제품 surface | 2% | Library/Develop/Print/Settings 계층과 empty/disabled 상태 골격 | 실제 catalog, Develop, Defects, Export, Print와 Settings 기능 |
@@ -32,8 +32,8 @@
 | M17 배포·컴플라이언스 | 0% | 설치 선언 초안만 존재 | MSIX/installer, signing, update, SBOM |
 | M18 Beta/RC/Stable | 0% | 없음 | release gate 전체 |
 
-계산은 M0 35, M1 68, M2 22, M3 54, M4 44, M7 6, M8 18, M9~M14 각각 2, 나머지 0을 19개
-milestone의 100점 만점에 대입한 약 13.6%입니다. 표시는 보수적으로 정수 13%를 유지하며, 숫자는 구현
+계산은 M0 35, M1 68, M2 24, M3 54, M4 44, M6 2, M7 6, M8 18, M9~M14 각각 2, 나머지 0을 19개
+milestone의 100점 만점에 대입한 약 13.8%입니다. 표시는 보수적으로 정수 13%를 유지하며, 숫자는 구현
 증거가 추가될 때만 올립니다.
 
 ## 현재 완료된 작은 루프
@@ -69,18 +69,22 @@ milestone의 100점 만점에 대입한 약 13.6%입니다. 표시는 보수적�
     tone의 active RGBA32F 통계와 versioned 비암호 fingerprint를 검증했습니다.
 20. TIFF 6.0 조기 비트폭 규칙을 따르는 길이 전용 LZW 의미 검사기를 추가해 WIC 전에 손상 code stream과
     압축 입력 작업량을 차단하고, 독립 검증기가 없는 Deflate는 fail-closed로 격리했습니다.
+21. macOS post-pipeline의 첫 DR/R/G/B 포인트 커브를 고정 64표본·무할당 scalar로 연결하고, 제어점
+    경계·처리 순서·합성 fixture를 x64에서 실행하고 ARM64로 교차 빌드했습니다.
 
 ## 다음 완료 조건
 
 가까운 순서대로 다음을 닫습니다.
 
-1. M4 tone의 실제 macOS runtime golden·pixel diff와 cross-platform 허용오차 manifest를 보강합니다.
-2. 독립 Deflate 검증기를 구현하거나 dependency gate를 열 근거를 확보하고, WIC 압축 해제 CPU budget과
+1. M4 tone과 point curve의 실제 macOS runtime golden·pixel diff와 cross-platform 허용오차 manifest를
+   보강합니다.
+2. Color Mixer·Color Grading·Calibration scalar 경계를 macOS 순서대로 조사·이식합니다.
+3. 독립 Deflate 검증기를 구현하거나 dependency gate를 열 근거를 확보하고, WIC 압축 해제 CPU budget과
    deadline을 검증합니다.
-3. 같은 ICC patch에 대한 macOS ColorSync golden과 Windows ICM 수치를 비교합니다.
-4. 차이가 허용 범위를 넘을 때만 LittleCMS를 dependency gate에 올립니다.
-5. 최종 working buffer와 출력을 downstream row/tile 소비자로 넘기고 전체 process budget을 적용합니다.
-6. WinUI 셸의 축소 폭·DPI·High Contrast·keyboard matrix를 검증하고 실제 catalog 연결을 시작합니다.
+4. 같은 ICC patch에 대한 macOS ColorSync golden과 Windows ICM 수치를 비교합니다.
+5. 차이가 허용 범위를 넘을 때만 LittleCMS를 dependency gate에 올립니다.
+6. 최종 working buffer와 출력을 downstream row/tile 소비자로 넘기고 전체 process budget을 적용합니다.
+7. WinUI 셸의 축소 폭·DPI·High Contrast·keyboard matrix를 검증하고 실제 catalog 연결을 시작합니다.
 
 ## 진행률을 올리지 않는 항목
 

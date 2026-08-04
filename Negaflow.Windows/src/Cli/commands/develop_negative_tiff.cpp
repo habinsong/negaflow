@@ -167,7 +167,8 @@ int run_develop_negative_tiff(
     }
     const bool tone_pixels_changed = adjusted.info.exposure_applied ||
         adjusted.info.basic_tone_applied ||
-        adjusted.info.parametric_curve_applied;
+        adjusted.info.parametric_curve_applied ||
+        adjusted.info.point_curve_applied;
     WorkingImageStatistics adjusted_statistics = developed_statistics;
     std::uint32_t statistics_full_frame_scan_count = 2U;
     if (tone_pixels_changed) {
@@ -203,7 +204,11 @@ int run_develop_negative_tiff(
               << prepared.info.peak_conversion_temporary_pixel_bytes
               << ",\"tone_algorithm_version\":\""
               << negaflow::imaging::tone_mapping_algorithm_version
-              << "\",\"tone_arguments_explicit\":"
+              << "\",\"point_curve_algorithm_version\":\""
+              << negaflow::imaging::point_curve_algorithm_version
+              << "\",\"point_curve_applied\":"
+              << (adjusted.info.point_curve_applied ? "true" : "false")
+              << ",\"tone_arguments_explicit\":"
               << (argument_count == 13 ? "true" : "false")
               << ",\"pixel_fingerprint_algorithm\":\""
               << working_pixel_fingerprint_algorithm_version
