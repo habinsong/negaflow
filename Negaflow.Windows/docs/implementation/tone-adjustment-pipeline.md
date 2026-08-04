@@ -76,9 +76,10 @@ negaflow-cli --export-developed-tiff16 <source> <destination> <dmin-r> <dmin-g> 
 ```
 
 PNG16도 같은 인수와 orchestration을 사용합니다. 일부 선택 인수만 주는 형식은 recipe 오해를 막기 위해
-거부합니다. JSON의 `stages.tone_adjust`에는 입력값, 적용 여부, sampling mode, target, sample 수,
-band, peak temporary bytes와 wall microseconds가 들어갑니다. 경로·file identity 값·SHA 값은 넣지
-않습니다. 커브가 적용되지 않으면 sampling mode는 `none`, `curve_bands`는 `null`입니다.
+거부합니다. JSON의 `stages.tone_adjust`에는 입력값, 적용 여부, sampling mode, target, sample 수, band,
+peak temporary bytes와 wall/process-CPU microseconds가 들어갑니다. 경로·file identity 값·SHA 값은
+넣지 않습니다. 커브가 적용되지 않으면 sampling mode는 `none`, `curve_bands`는 `null`입니다. 기본
+export는 추가 pixel fingerprint scan을 하지 않고 별도 개발 진단에서만 단계 통계를 계산합니다.
 
 ## 성능과 메모리
 
@@ -93,5 +94,4 @@ Release 한 번 측정에서는 35,636 luma, 285,088 temporary bytes, tone stage
 
 - dynamic raster는 Core Image 내부 필터와 bit-exact하지 않을 수 있습니다.
 - scalar `pow` 중심 구현이며 SIMD/GPU 최적화 전입니다.
-- stage wall time만 있으며 CPU time과 canonical digest는 아직 없습니다.
-- 실제 macOS runtime tone golden과 사진 corpus 비교는 아직 없습니다.
+- 실제 macOS runtime tone golden, 사진 corpus 비교와 cross-platform 허용오차 manifest는 아직 없습니다.

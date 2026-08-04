@@ -1,5 +1,7 @@
 #include "export_developed_image.h"
 
+#include "process_cpu_time.h"
+
 #include "negaflow/core/negative_inversion.h"
 #include "negaflow/imageio/image_file_observation.h"
 #include "negaflow/imaging/manual_negative_developer.h"
@@ -18,6 +20,7 @@
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <optional>
 #include <string_view>
 #include <system_error>
 #include <utility>
@@ -29,6 +32,11 @@ using Clock = std::chrono::steady_clock;
 
 constexpr std::uint32_t rows_per_copy = 64U;
 
+struct StageTiming final {
+    std::uint64_t wall_microseconds{0};
+    std::optional<std::uint64_t> cpu_microseconds{};
+};
+
 struct PipelineReportContext final {
     const negaflow::imaging::ManualNegativeDevelopParameters& negative_parameters;
     const negaflow::imaging::WorkingToneAdjustParameters& tone_parameters;
@@ -36,11 +44,11 @@ struct PipelineReportContext final {
     const negaflow::imaging::ManualNegativeDevelopResult& developed;
     const negaflow::imaging::WorkingToneAdjustResult& adjusted;
     std::uint64_t source_file_bytes{0};
-    std::uint64_t decode_and_color_wall_microseconds{0};
-    std::uint64_t develop_wall_microseconds{0};
-    std::uint64_t tone_adjust_wall_microseconds{0};
-    std::uint64_t output_wall_microseconds{0};
-    std::uint64_t total_wall_microseconds{0};
+    StageTiming decode_and_color{};
+    StageTiming develop{};
+    StageTiming tone_adjust{};
+    StageTiming output{};
+    StageTiming total{};
 };
 
 [[nodiscard]] bool parse_finite_float(const std::wstring_view text, float& value) noexcept {
@@ -64,6 +72,17 @@ struct PipelineReportContext final {
     const Clock::time_point finished) noexcept {
     return static_cast<std::uint64_t>(
         std::chrono::duration_cast<std::chrono::microseconds>(finished - started).count());
+}
+
+[[nodiscard]] StageTiming make_stage_timing(
+    const Clock::time_point wall_started,
+    const Clock::time_point wall_finished,
+    const ProcessCpuTimeSnapshot& cpu_started,
+    const ProcessCpuTimeSnapshot& cpu_finished) noexcept {
+    return {
+        elapsed_microseconds(wall_started, wall_finished),
+        elapsed_process_cpu_microseconds(cpu_started, cpu_finished),
+    };
 }
 
 int print_error(
@@ -98,6 +117,14 @@ int print_observation_error(
         negaflow::imageio::image_file_observation_status_name(observation.status));
 }
 
+void print_cpu_microseconds(const std::optional<std::uint64_t> value) {
+    if (value.has_value()) {
+        std::cout << *value;
+    } else {
+        std::cout << "null";
+    }
+}
+
 void print_pipeline_report_suffix(const PipelineReportContext& context) {
     const auto working_pixel_bytes =
         context.adjusted.image.pixels.size() * sizeof(negaflow::core::Rgba32F);
@@ -106,6 +133,8 @@ void print_pipeline_report_suffix(const PipelineReportContext& context) {
               << ",\"source_observation_mode\":\"file_id_size_last_write\","
                  "\"source_unchanged_during_decode\":true,"
                  "\"source_sha256_mode\":\"off\",\"artifact_sha256_mode\":\"off\","
+                 "\"cpu_time_source\":\"get_process_times\","
+                 "\"cpu_time_scope\":\"process_user_plus_kernel_all_threads\","
                  "\"stages\":{\"decode_and_color_convert\":{"
                  "\"mode\":\"row_streaming\",\"rows_per_copy\":"
               << rows_per_copy << ",\"source_pixel_format\":\""
@@ -134,7 +163,10 @@ void print_pipeline_report_suffix(const PipelineReportContext& context) {
               << ",\"peak_conversion_temporary_bytes\":"
               << context.prepared.info.peak_conversion_temporary_pixel_bytes
               << ",\"wall_microseconds\":"
-              << context.decode_and_color_wall_microseconds
+              << context.decode_and_color.wall_microseconds
+              << ",\"cpu_microseconds\":";
+    print_cpu_microseconds(context.decode_and_color.cpu_microseconds);
+    std::cout
               << "},\"develop\":{\"manual_dmin\":["
               << std::setprecision(std::numeric_limits<float>::max_digits10)
               << context.developed.info.applied_dmin[0] << ','
@@ -145,7 +177,10 @@ void print_pipeline_report_suffix(const PipelineReportContext& context) {
               << context.developed.info.dmax_normalized[1] << ','
               << context.developed.info.dmax_normalized[2]
               << "],\"additional_full_frame_bytes\":0,\"wall_microseconds\":"
-              << context.develop_wall_microseconds
+              << context.develop.wall_microseconds
+              << ",\"cpu_microseconds\":";
+    print_cpu_microseconds(context.develop.cpu_microseconds);
+    std::cout
               << "},\"tone_adjust\":{\"algorithm_version\":\""
               << negaflow::imaging::tone_mapping_algorithm_version
               << "\",\"formula_reference\":\"macos_chromabase\","
@@ -196,12 +231,20 @@ void print_pipeline_report_suffix(const PipelineReportContext& context) {
                  "\"peak_measurement_temporary_bytes\":"
               << measurement.peak_temporary_bytes
               << ",\"wall_microseconds\":"
-              << context.tone_adjust_wall_microseconds
+              << context.tone_adjust.wall_microseconds
+              << ",\"cpu_microseconds\":";
+    print_cpu_microseconds(context.tone_adjust.cpu_microseconds);
+    std::cout
               << "},\"output_convert_encode_verify_publish\":{"
                  "\"wall_microseconds\":"
-              << context.output_wall_microseconds
-              << "}},\"total_wall_microseconds\":"
-              << context.total_wall_microseconds << "}\n";
+              << context.output.wall_microseconds
+              << ",\"cpu_microseconds\":";
+    print_cpu_microseconds(context.output.cpu_microseconds);
+    std::cout << "}},\"total_wall_microseconds\":"
+              << context.total.wall_microseconds
+              << ",\"total_cpu_microseconds\":";
+    print_cpu_microseconds(context.total.cpu_microseconds);
+    std::cout << "}\n";
 }
 
 int print_png_success(
@@ -314,6 +357,8 @@ int run_export_developed_image(
 
     const std::filesystem::path source{arguments[2]};
     const std::filesystem::path destination{arguments[3]};
+    const ProcessCpuTimeSnapshot total_cpu_started =
+        query_current_process_cpu_time();
     const Clock::time_point total_started = Clock::now();
     const negaflow::imageio::ImageFileObservationResult before =
         negaflow::imageio::observe_image_file(source);
@@ -323,6 +368,8 @@ int run_export_developed_image(
 
     negaflow::imageio::WicTiffDecodeControl decode_control{};
     decode_control.rows_per_copy = rows_per_copy;
+    const ProcessCpuTimeSnapshot decode_cpu_started =
+        query_current_process_cpu_time();
     const Clock::time_point decode_started = Clock::now();
     auto prepared = negaflow::imaging::decode_scanner_tiff_to_working_rows(
         source,
@@ -330,6 +377,8 @@ int run_export_developed_image(
         {},
         decode_control);
     const Clock::time_point decode_finished = Clock::now();
+    const ProcessCpuTimeSnapshot decode_cpu_finished =
+        query_current_process_cpu_time();
     if (prepared.decode.status != negaflow::imageio::WicTiffDecodeStatus::ok) {
         if (prepared.decode.status ==
                 negaflow::imageio::WicTiffDecodeStatus::row_sink_failed &&
@@ -359,11 +408,15 @@ int run_export_developed_image(
         return print_error("source_changed_during_decode");
     }
 
+    const ProcessCpuTimeSnapshot develop_cpu_started =
+        query_current_process_cpu_time();
     const Clock::time_point develop_started = Clock::now();
     auto developed = negaflow::imaging::develop_manual_negative(
         std::move(prepared.working.image),
         negative_parameters);
     const Clock::time_point develop_finished = Clock::now();
+    const ProcessCpuTimeSnapshot develop_cpu_finished =
+        query_current_process_cpu_time();
     if (developed.status != negaflow::imaging::ManualNegativeDevelopStatus::ok) {
         if (developed.status == negaflow::imaging::ManualNegativeDevelopStatus::kernel_failed) {
             return print_error(negaflow::core::kernel_status_name(developed.info.kernel_status));
@@ -372,11 +425,15 @@ int run_export_developed_image(
             negaflow::imaging::manual_negative_develop_status_name(developed.status));
     }
 
+    const ProcessCpuTimeSnapshot tone_adjust_cpu_started =
+        query_current_process_cpu_time();
     const Clock::time_point tone_adjust_started = Clock::now();
     auto adjusted = negaflow::imaging::apply_working_tone_adjustments(
         std::move(developed.image),
         tone_parameters);
     const Clock::time_point tone_adjust_finished = Clock::now();
+    const ProcessCpuTimeSnapshot tone_adjust_cpu_finished =
+        query_current_process_cpu_time();
     if (adjusted.status != negaflow::imaging::WorkingToneAdjustStatus::ok) {
         if (adjusted.status ==
             negaflow::imaging::WorkingToneAdjustStatus::kernel_failed) {
@@ -396,11 +453,15 @@ int run_export_developed_image(
             negaflow::imaging::working_tone_adjust_status_name(adjusted.status));
     }
 
+    const ProcessCpuTimeSnapshot output_cpu_started =
+        query_current_process_cpu_time();
     const Clock::time_point output_started = Clock::now();
     if (format == DevelopedExportFormat::png16) {
         const negaflow::output::WicPngExportResult exported =
             negaflow::output::export_working_to_srgb16_png(adjusted.image, destination);
         const Clock::time_point output_finished = Clock::now();
+        const ProcessCpuTimeSnapshot output_cpu_finished =
+            query_current_process_cpu_time();
         if (exported.status != negaflow::output::WicPngExportStatus::ok) {
             if (exported.status ==
                 negaflow::output::WicPngExportStatus::working_conversion_failed) {
@@ -422,11 +483,31 @@ int run_export_developed_image(
             developed,
             adjusted,
             before.observation.file_bytes,
-            elapsed_microseconds(decode_started, decode_finished),
-            elapsed_microseconds(develop_started, develop_finished),
-            elapsed_microseconds(tone_adjust_started, tone_adjust_finished),
-            elapsed_microseconds(output_started, output_finished),
-            elapsed_microseconds(total_started, output_finished),
+            make_stage_timing(
+                decode_started,
+                decode_finished,
+                decode_cpu_started,
+                decode_cpu_finished),
+            make_stage_timing(
+                develop_started,
+                develop_finished,
+                develop_cpu_started,
+                develop_cpu_finished),
+            make_stage_timing(
+                tone_adjust_started,
+                tone_adjust_finished,
+                tone_adjust_cpu_started,
+                tone_adjust_cpu_finished),
+            make_stage_timing(
+                output_started,
+                output_finished,
+                output_cpu_started,
+                output_cpu_finished),
+            make_stage_timing(
+                total_started,
+                output_finished,
+                total_cpu_started,
+                output_cpu_finished),
         };
         return print_png_success(exported, context);
     }
@@ -434,6 +515,8 @@ int run_export_developed_image(
     const negaflow::output::WicTiffExportResult exported =
         negaflow::output::export_working_to_srgb16_tiff(adjusted.image, destination);
     const Clock::time_point output_finished = Clock::now();
+    const ProcessCpuTimeSnapshot output_cpu_finished =
+        query_current_process_cpu_time();
     if (exported.status != negaflow::output::WicTiffExportStatus::ok) {
         if (exported.status ==
             negaflow::output::WicTiffExportStatus::working_conversion_failed) {
@@ -455,11 +538,31 @@ int run_export_developed_image(
         developed,
         adjusted,
         before.observation.file_bytes,
-        elapsed_microseconds(decode_started, decode_finished),
-        elapsed_microseconds(develop_started, develop_finished),
-        elapsed_microseconds(tone_adjust_started, tone_adjust_finished),
-        elapsed_microseconds(output_started, output_finished),
-        elapsed_microseconds(total_started, output_finished),
+        make_stage_timing(
+            decode_started,
+            decode_finished,
+            decode_cpu_started,
+            decode_cpu_finished),
+        make_stage_timing(
+            develop_started,
+            develop_finished,
+            develop_cpu_started,
+            develop_cpu_finished),
+        make_stage_timing(
+            tone_adjust_started,
+            tone_adjust_finished,
+            tone_adjust_cpu_started,
+            tone_adjust_cpu_finished),
+        make_stage_timing(
+            output_started,
+            output_finished,
+            output_cpu_started,
+            output_cpu_finished),
+        make_stage_timing(
+            total_started,
+            output_finished,
+            total_cpu_started,
+            output_cpu_finished),
     };
     return print_tiff_success(exported, context);
 }

@@ -31,7 +31,7 @@ void print_help() {
                  "  negaflow-cli --probe-tiff <path>\n"
                  "  negaflow-cli --decode-tiff-wic <path>\n"
                  "  negaflow-cli --prepare-scanner-tiff <path>\n"
-                 "  negaflow-cli --develop-negative-tiff <path> <dmin-r> <dmin-g> <dmin-b> <color|bw>\n"
+                 "  negaflow-cli --develop-negative-tiff <path> <dmin-r> <dmin-g> <dmin-b> <color|bw> [<exposure> <contrast> <curve-highlights> <curve-lights> <curve-darks> <curve-shadows>]\n"
                  "  negaflow-cli --export-developed-png16 <source> <destination> <dmin-r> <dmin-g> <dmin-b> <color|bw> [<exposure> <contrast> <curve-highlights> <curve-lights> <curve-darks> <curve-shadows>]\n"
                  "  negaflow-cli --export-developed-tiff16 <source> <destination> <dmin-r> <dmin-g> <dmin-b> <color|bw> [<exposure> <contrast> <curve-highlights> <curve-lights> <curve-darks> <curve-shadows>]\n"
                  "  negaflow-cli --sha256-image <path>\n"
@@ -241,7 +241,11 @@ int run_wic_tiff_decode(const int argument_count, const wchar_t* const arguments
         }
         std::cout << maximum[channel];
     }
-    std::cout << "],\"pixel_fingerprint_fnv1a64\":\"" << std::hex << std::setw(16)
+    std::cout << "],\"pixel_fingerprint_algorithm\":"
+                 "\"fnv1a64-u16-bits-le-v1\","
+                 "\"pixel_fingerprint_cryptographic\":false,"
+                 "\"pixel_fingerprint_fnv1a64\":\""
+              << std::hex << std::setw(16)
               << std::setfill('0') << fingerprint << std::dec << "\"}\n";
     return 0;
 }

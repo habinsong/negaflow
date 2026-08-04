@@ -47,11 +47,12 @@ runtime golden이 생기면 같은 입력의 percentile과 최종 pixel diff를 
 
 ## 현재 범위 밖
 
-- macOS runtime에서 생성한 tone golden과 실제 사진 pixel diff
-- CPU time, canonical stage digest와 recipe serialization
+- macOS runtime tone golden, 실제 사진 pixel diff, cross-platform 허용오차 manifest와 recipe serialization
 - AVX2/NEON, DirectCompute/WARP와 tile 처리
 - point curve, local contrast, clarity, channel/color grading 등 M6 전체 graph
 - UI slider와 실제 catalog 상태 연결
+
+stage process CPU와 진단 전용 versioned fingerprint는 후속 ADR-0010에서 구현했습니다.
 
 ## 공식 근거와 권리
 

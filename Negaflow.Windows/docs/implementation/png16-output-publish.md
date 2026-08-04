@@ -93,8 +93,9 @@ readback buffer가 한 행도 담지 못하면 한도를 넘겨 강제 할당하
 목적지는 존재하지 않아야 합니다. command는 기존 row-streamed TIFF decode와 scanner color 변환, 수동
 Dmin 현상을 거쳐 PNG16을 만듭니다. 성공 JSON에는 형식·치수·byte 수·ICC 크기·clipping 수·검증 상태와
 게시 방식을 넣고 경로는 넣지 않습니다. source는 decode 전후 file ID·크기·최종 수정 시각만 관찰하고
-단계별 byte·memory·wall time을 보고합니다. `source_sha256_mode`와 `artifact_sha256_mode`는 모두 `off`이며
-이 command는 SHA-256 함수를 호출하지 않습니다.
+단계별 byte·memory·wall/process-CPU time을 보고합니다. CPU는 프로세스 모든 스레드의 user+kernel
+합계이고 얻지 못하면 `null`입니다. `source_sha256_mode`와 `artifact_sha256_mode`는 모두 `off`이며 이
+command는 SHA-256 함수나 진단용 full-frame fingerprint scan을 호출하지 않습니다.
 
 ## 남은 위험
 

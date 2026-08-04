@@ -5,6 +5,7 @@
 #include "negaflow/core/negative_inversion.h"
 #include "negaflow/imaging/manual_negative_developer.h"
 #include "negaflow/imaging/scanner_tiff_to_working.h"
+#include "negaflow/imaging/working_tone_adjuster.h"
 
 #include <array>
 #include <charconv>
@@ -51,12 +52,23 @@ int print_error(
     return 2;
 }
 
+void print_working_statistics(const WorkingImageStatistics& statistics) {
+    std::cout << "{\"channel_min\":[" << std::setprecision(9)
+              << statistics.minimum[0] << ',' << statistics.minimum[1] << ','
+              << statistics.minimum[2] << ',' << statistics.minimum[3]
+              << "],\"channel_max\":[" << statistics.maximum[0] << ','
+              << statistics.maximum[1] << ',' << statistics.maximum[2] << ','
+              << statistics.maximum[3] << "],\"pixel_fingerprint_fnv1a64\":\""
+              << std::hex << std::setw(16) << std::setfill('0')
+              << statistics.fingerprint_fnv1a64 << std::dec << "\"}";
+}
+
 }  // namespace
 
 int run_develop_negative_tiff(
     const int argument_count,
     const wchar_t* const arguments[]) {
-    if (argument_count != 7) {
+    if (argument_count != 7 && argument_count != 13) {
         return print_error("invalid_argument_count");
     }
 
@@ -73,6 +85,20 @@ int run_develop_negative_tiff(
         parameters.film_type = negaflow::imaging::NegativeFilmType::black_and_white;
     } else {
         return print_error("unknown_film_type");
+    }
+
+    negaflow::imaging::WorkingToneAdjustParameters tone_parameters{};
+    if (argument_count == 13) {
+        if (!parse_finite_float(arguments[7], tone_parameters.exposure_stops) ||
+            !parse_finite_float(arguments[8], tone_parameters.basic.contrast) ||
+            !parse_finite_float(arguments[9], tone_parameters.curve.highlights) ||
+            !parse_finite_float(arguments[10], tone_parameters.curve.lights) ||
+            !parse_finite_float(arguments[11], tone_parameters.curve.darks) ||
+            !parse_finite_float(arguments[12], tone_parameters.curve.shadows) ||
+            !negaflow::imaging::valid_working_tone_adjust_parameters(
+                tone_parameters)) {
+            return print_error("invalid_tone_adjustment_parameter");
+        }
     }
 
     constexpr std::uint32_t rows_per_copy = 64U;
@@ -101,6 +127,12 @@ int run_develop_negative_tiff(
             prepared.working.info.native_error_code);
     }
 
+    const WorkingImageStatistics prepared_statistics =
+        compute_working_image_statistics(prepared.working.image);
+    if (!prepared_statistics.valid) {
+        return print_error("invalid_working_image_layout");
+    }
+
     auto developed = negaflow::imaging::develop_manual_negative(
         std::move(prepared.working.image),
         parameters);
@@ -112,8 +144,40 @@ int run_develop_negative_tiff(
             negaflow::imaging::manual_negative_develop_status_name(developed.status));
     }
 
-    const WorkingImageStatistics statistics =
+    const WorkingImageStatistics developed_statistics =
         compute_working_image_statistics(developed.image);
+    if (!developed_statistics.valid) {
+        return print_error("invalid_working_image_layout");
+    }
+    auto adjusted = negaflow::imaging::apply_working_tone_adjustments(
+        std::move(developed.image),
+        tone_parameters);
+    if (adjusted.status != negaflow::imaging::WorkingToneAdjustStatus::ok) {
+        if (adjusted.status ==
+            negaflow::imaging::WorkingToneAdjustStatus::kernel_failed) {
+            return print_error(
+                negaflow::core::kernel_status_name(adjusted.info.kernel_status));
+        }
+        if (adjusted.status ==
+            negaflow::imaging::WorkingToneAdjustStatus::measurement_failed) {
+            return print_error("tone_curve_measurement_failed");
+        }
+        return print_error(
+            negaflow::imaging::working_tone_adjust_status_name(adjusted.status));
+    }
+    const bool tone_pixels_changed = adjusted.info.exposure_applied ||
+        adjusted.info.basic_tone_applied ||
+        adjusted.info.parametric_curve_applied;
+    WorkingImageStatistics adjusted_statistics = developed_statistics;
+    std::uint32_t statistics_full_frame_scan_count = 2U;
+    if (tone_pixels_changed) {
+        adjusted_statistics = compute_working_image_statistics(adjusted.image);
+        statistics_full_frame_scan_count = 3U;
+    }
+    if (!adjusted_statistics.valid) {
+        return print_error("invalid_working_image_layout");
+    }
+
     std::cout << "{\"schema_version\":1,\"status\":\"ok\","
                  "\"operation\":\"develop_negative_tiff\","
                  "\"working_space\":\"extended_linear_srgb_rgba_f32\","
@@ -126,9 +190,9 @@ int run_develop_negative_tiff(
               << "],\"dmax_normalized\":[" << developed.info.dmax_normalized[0] << ','
               << developed.info.dmax_normalized[1] << ','
               << developed.info.dmax_normalized[2] << "],\"width\":"
-              << developed.image.width << ",\"height\":" << developed.image.height
+              << adjusted.image.width << ",\"height\":" << adjusted.image.height
               << ",\"working_pixel_bytes\":"
-              << developed.image.pixels.size() * sizeof(negaflow::core::Rgba32F)
+              << adjusted.image.pixels.size() * sizeof(negaflow::core::Rgba32F)
               << ",\"develop_additional_full_frame_bytes\":0,\"source_sha256_mode\":\"off\","
                  "\"scanner_transform\":\""
               << negaflow::imaging::scanner_working_transform_name(prepared.working.info.transform)
@@ -137,13 +201,34 @@ int run_develop_negative_tiff(
               << prepared.decode.info.peak_copy_pixel_bytes
               << ",\"peak_conversion_temporary_bytes\":"
               << prepared.info.peak_conversion_temporary_pixel_bytes
-              << ",\"channel_min\":[" << std::setprecision(9) << statistics.minimum[0]
-              << ',' << statistics.minimum[1] << ',' << statistics.minimum[2] << ','
-              << statistics.minimum[3] << "],\"channel_max\":["
-              << statistics.maximum[0] << ',' << statistics.maximum[1] << ','
-              << statistics.maximum[2] << ',' << statistics.maximum[3]
-              << "],\"pixel_fingerprint_fnv1a64\":\"" << std::hex << std::setw(16)
-              << std::setfill('0') << statistics.fingerprint_fnv1a64 << std::dec << "\"}\n";
+              << ",\"tone_algorithm_version\":\""
+              << negaflow::imaging::tone_mapping_algorithm_version
+              << "\",\"tone_arguments_explicit\":"
+              << (argument_count == 13 ? "true" : "false")
+              << ",\"pixel_fingerprint_algorithm\":\""
+              << working_pixel_fingerprint_algorithm_version
+              << "\",\"pixel_fingerprint_cryptographic\":false,"
+                 "\"statistics_full_frame_scan_count\":"
+              << statistics_full_frame_scan_count
+              << ",\"statistics_additional_full_frame_bytes\":0,"
+                 "\"stage_statistics\":{\"scanner_to_working\":";
+    print_working_statistics(prepared_statistics);
+    std::cout << ",\"develop\":";
+    print_working_statistics(developed_statistics);
+    std::cout << ",\"tone_adjust\":";
+    print_working_statistics(adjusted_statistics);
+    std::cout << "},\"channel_min\":[" << std::setprecision(9)
+              << adjusted_statistics.minimum[0] << ','
+              << adjusted_statistics.minimum[1] << ','
+              << adjusted_statistics.minimum[2] << ','
+              << adjusted_statistics.minimum[3] << "],\"channel_max\":["
+              << adjusted_statistics.maximum[0] << ','
+              << adjusted_statistics.maximum[1] << ','
+              << adjusted_statistics.maximum[2] << ','
+              << adjusted_statistics.maximum[3]
+              << "],\"pixel_fingerprint_fnv1a64\":\"" << std::hex
+              << std::setw(16) << std::setfill('0')
+              << adjusted_statistics.fingerprint_fnv1a64 << std::dec << "\"}\n";
     return 0;
 }
 

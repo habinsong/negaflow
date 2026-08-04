@@ -106,11 +106,12 @@ directory fsync, 전원 장애, network filesystem과 catalog transaction을 보
 - decode+color: WIC pixel format, 변환 여부, frame/row/copy 수, decoded/peak byte, scanner transform
 - develop: 적용 Dmin, normalized Dmax, 추가 full-frame byte 0
 - output: artifact/pixel/ICC byte, clipping, strip/IFD/compression, 검증·게시 상태
-- 결합된 decode+color, develop, output과 전체 wall microseconds
+- 결합된 decode+color, develop, tone, output과 전체 wall/process-CPU microseconds
 
 streaming decode와 color 변환, output 변환·encode·검증·게시가 각각 한 API 호출 안에서 결합되어 있으므로
-존재하지 않는 세부 시간을 추정해 나누지 않습니다. CPU time과 stage digest는 아직 보고하지 않습니다.
-경로, file ID와 시각 값은 JSON에 넣지 않습니다.
+존재하지 않는 세부 시간을 추정해 나누지 않습니다. CPU는 `GetProcessTimes`의 모든 스레드 user+kernel
+합계이고 실패하면 `null`입니다. 기본 export는 stage fingerprint를 위해 pixel을 다시 훑지 않으며, 해당
+통계는 별도 `--develop-negative-tiff` 진단에만 있습니다. 경로, file ID와 시각 값은 JSON에 넣지 않습니다.
 
 ## 기본 한도
 
@@ -131,4 +132,4 @@ readback buffer가 한 행도 담지 못하면 더 크게 할당하지 않고 �
 - WIC servicing에 새 정상 구조 tag가 추가되면 fail-closed allowlist가 출력을 거부할 수 있음
 - source 관찰은 cryptographic content 동일성 증거가 아님
 - DPI/metadata policy variant, compression variant와 cancellation/progress 미구현
-- stage CPU time, macOS TIFF golden·pixel diff와 실제 ARM64 실행 미검증
+- macOS TIFF golden·pixel diff와 실제 ARM64 실행 미검증

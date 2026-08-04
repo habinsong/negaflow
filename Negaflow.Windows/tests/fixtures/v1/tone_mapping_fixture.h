@@ -4,8 +4,13 @@
 #include "negaflow/imaging/working_tone_adjuster.h"
 
 #include <array>
+#include <string_view>
 
 namespace negaflow::fixtures {
+
+inline constexpr std::string_view tone_mapping_fixture_id = "tone-mapping-scalar-v1";
+inline constexpr float tone_mapping_absolute_tolerance = 4.0e-6F;
+inline constexpr float tone_mapping_relative_tolerance = 4.0e-6F;
 
 // Repository-owned synthetic fixture transcribed independently from the macOS Float32 formulas.
 // Its 3x2 dimensions intentionally select the macOS fixed parametric-band fallback.

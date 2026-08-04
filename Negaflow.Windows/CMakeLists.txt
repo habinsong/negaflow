@@ -157,6 +157,7 @@ add_executable(negaflow_cli
     src/Cli/commands/export_developed_tiff.cpp
     src/Cli/commands/hash_image.cpp
     src/Cli/commands/prepare_scanner_tiff.cpp
+    src/Cli/commands/process_cpu_time.cpp
     src/Cli/commands/working_image_report.cpp
 )
 target_link_libraries(
@@ -300,6 +301,34 @@ if(BUILD_TESTING)
     )
     add_test(NAME native.tone_pipeline COMMAND negaflow_tone_pipeline_tests)
 
+    add_executable(negaflow_process_cpu_time_tests
+        tests/Native.UnitTests/process_cpu_time_tests.cpp
+        src/Cli/commands/process_cpu_time.cpp
+    )
+    target_include_directories(
+        negaflow_process_cpu_time_tests
+        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/Cli/commands"
+    )
+    target_link_libraries(
+        negaflow_process_cpu_time_tests
+        PRIVATE negaflow_project_options
+    )
+    add_test(NAME native.process_cpu_time COMMAND negaflow_process_cpu_time_tests)
+
+    add_executable(negaflow_working_image_report_tests
+        tests/Native.UnitTests/working_image_report_tests.cpp
+        src/Cli/commands/working_image_report.cpp
+    )
+    target_include_directories(
+        negaflow_working_image_report_tests
+        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/Cli/commands"
+    )
+    target_link_libraries(
+        negaflow_working_image_report_tests
+        PRIVATE negaflow_imaging negaflow_project_options
+    )
+    add_test(NAME native.working_image_report COMMAND negaflow_working_image_report_tests)
+
     add_executable(negaflow_scanner_to_working_tests
         tests/Native.UnitTests/scanner_to_working_tests.cpp
         tests/fixtures/tiff/synthetic_wic_tiff.cpp
@@ -352,7 +381,7 @@ if(BUILD_TESTING)
     )
     target_link_libraries(
         negaflow_conformance
-        PRIVATE negaflow_core negaflow_project_options
+        PRIVATE negaflow_imaging negaflow_project_options
     )
     set_target_properties(negaflow_conformance PROPERTIES OUTPUT_NAME "negaflow-conformance")
     add_test(NAME native.scalar_conformance COMMAND negaflow_conformance)
@@ -432,7 +461,18 @@ if(BUILD_TESTING)
         set_tests_properties(
             cli.develop_negative_tiff
             PROPERTIES PASS_REGULAR_EXPRESSION
-                "\"algorithm_version\":\"shoulder-print-response-v4\""
+                "\"algorithm_version\":\"shoulder-print-response-v4\".*\"statistics_full_frame_scan_count\":2"
+        )
+        add_test(
+            NAME cli.develop_negative_tiff_tone
+            COMMAND negaflow_cli --develop-negative-tiff
+                "${NEGAFLOW_SOURCE_TIFF_FIXTURE}" 0.72 0.32 0.15 color
+                0.75 0.35 0.30 -0.25 0.20 0.40
+        )
+        set_tests_properties(
+            cli.develop_negative_tiff_tone
+            PROPERTIES PASS_REGULAR_EXPRESSION
+                "\"pixel_fingerprint_algorithm\":\"fnv1a64-rgba32f-bits-le-v1\".*\"statistics_full_frame_scan_count\":3"
         )
     else()
         add_test(NAME native.wic_tiff_decode COMMAND negaflow_wic_tiff_decoder_tests)

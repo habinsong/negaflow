@@ -65,6 +65,9 @@ int run_prepare_scanner_tiff(
 
     const WorkingImageStatistics statistics =
         compute_working_image_statistics(working.image);
+    if (!statistics.valid) {
+        return print_error("invalid_working_image_layout");
+    }
 
     std::cout << "{\"schema_version\":1,\"status\":\"ok\","
                  "\"operation\":\"prepare_scanner_tiff\",\"working_space\":"
@@ -85,7 +88,11 @@ int run_prepare_scanner_tiff(
               << prepared.decode.info.copy_operation_count
               << ",\"peak_conversion_temporary_bytes\":"
               << prepared.info.peak_conversion_temporary_pixel_bytes
-              << ",\"channel_min\":[" << std::setprecision(9) << statistics.minimum[0] << ','
+              << ",\"pixel_fingerprint_algorithm\":\""
+              << working_pixel_fingerprint_algorithm_version
+              << "\",\"pixel_fingerprint_cryptographic\":false,"
+                 "\"channel_min\":["
+              << std::setprecision(9) << statistics.minimum[0] << ','
               << statistics.minimum[1] << ',' << statistics.minimum[2] << ','
               << statistics.minimum[3] << "],\"channel_max\":["
               << statistics.maximum[0] << ',' << statistics.maximum[1] << ','

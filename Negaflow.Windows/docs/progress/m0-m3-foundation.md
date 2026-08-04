@@ -116,7 +116,8 @@
 - Classic TIFF 단일 IFD 최소 metadata tag allowlist와 descriptive/private tag fail-closed 거부
 - 같은 디렉터리 `CREATE_NEW` staging, flush, 기존 목적지 비덮어쓰기 단일 파일 게시
 - content를 읽지 않는 source file ID·크기·최종 수정 시각 전후 관찰
-- PNG16/TIFF16 공통 decode·color·develop orchestration과 단계별 byte·memory·wall-time report
+- PNG16/TIFF16 공통 decode·color·develop·tone orchestration과 단계별 byte·memory·wall/process-CPU report
+- 진단 전용 scanner→working/develop/tone active RGBA32F min/max·versioned 비암호 fingerprint
 - `--decode-tiff-wic`, `--prepare-scanner-tiff`, `--sha256-image`, `--export-developed-png16`,
   `--export-developed-tiff16` CLI
 
@@ -146,5 +147,5 @@
 - ColorSync golden과 Windows ICM 수치 비교
 - 필요성이 입증될 때만 libtiff/LittleCMS dependency 결정
 - tile decode, 최종 working/output downstream streaming과 process memory budget
-- M4 tone의 실제 macOS runtime pixel diff, CPU time·stage digest와 catalog transaction·복구
+- M4 tone의 실제 macOS runtime pixel diff·cross-platform 허용오차 manifest와 catalog transaction·복구
 - fuzzing/ASan corpus와 실제 대형 scanner TIFF

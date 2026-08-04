@@ -43,7 +43,7 @@ shoulder-print-response-v4와 기존 Windows scalar reference가 소유합니다
 - negative_inversion: 채널별 수학과 pixel validation
 - scanner_tiff_to_working: TIFF row decode와 scanner→working 변환
 - develop_negative_tiff: 개발 진단용 CLI 연결과 JSON
-- working_image_report: CLI가 공유하는 min/max/fingerprint 계산
+- working_image_report: CLI가 공유하는 active pixel min/max/versioned 비암호 fingerprint 계산
 
 WorkingImage 소유권을 현상 단계에 넘겨 같은 pixel buffer를 제자리 변환합니다. 따라서 현상 단계가
 추가로 소유하는 full-frame pixel buffer는 0바이트입니다. 실패하면 부분 결과를 공개하지 않고 pixel
@@ -58,8 +58,10 @@ off로 명시합니다. 보안 공급망, installer와 profile 무결성 hash �
 
     .\out\build\native\x64-debug\Debug\negaflow-cli.exe --develop-negative-tiff C:\path\scan.tiff 0.72 0.32 0.15 color
 
-마지막 인자는 color 또는 bw입니다. 결과에는 사용자 경로나 pixel을 넣지 않고 적용된 Dmin,
-고정 밀도 범위, working 크기, streaming temporary peak와 결과 fingerprint만 기록합니다.
+마지막 인자는 color 또는 bw입니다. export와 같은 exposure, contrast, curve 네 값을 포함한 tone 인수 여섯
+개를 모두 덧붙일 수도 있습니다. 결과에는 사용자 경로나 pixel을 넣지 않고 적용된 Dmin, 고정 밀도 범위,
+working 크기, streaming temporary peak와 scanner→working/develop/tone 단계별 min/max·fingerprint를
+기록합니다. fingerprint는 `fnv1a64-rgba32f-bits-le-v1` 비암호 진단값이며 SHA-256이 아닙니다.
 
 ## 검증
 
@@ -68,7 +70,7 @@ off로 명시합니다. 보안 공급망, installer와 profile 무결성 hash �
 - 제자리 변환의 alpha 보존
 - non-finite Dmin과 잘못된 image layout에서 결과 pixel 미공개
 - 저장소 TIFF의 decode→color→develop CLI 성공과 JSON schema 검사
-- 현재 x64 Debug/Release CTest 각각 23/23 통과
+- 현재 x64 Debug/Release CTest 각각 26/26 통과
 - ARM64 Debug/Release 전체 target cross-build
 
 ARM64 수치는 실제 ARM64 Windows 장치에서 아직 실행하지 않았습니다.

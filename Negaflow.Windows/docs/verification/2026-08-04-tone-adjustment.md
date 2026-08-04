@@ -32,8 +32,8 @@ CLI 실제 연결은 권리 확인된 저장소 TIFF fixture와 ignored `out/ver
 
 | 검사 | 결과 |
 |---|---|
-| x64 native Debug | CTest 23/23 통과 |
-| x64 native Release | CTest 23/23 통과 |
+| x64 native Debug | 후속 진단 체크포인트 포함 CTest 26/26 통과 |
+| x64 native Release | 후속 진단 체크포인트 포함 CTest 26/26 통과 |
 | x64 managed ABI Debug/Release | 각각 13 assertion 통과 |
 | ARM64 native Debug/Release | tone test를 포함한 전체 target 교차 빌드 통과, 실행 미검증 |
 | PE·ABI | x64 `8664`, ARM64 `AA64`, DLL export 두 개 유지 |
@@ -86,4 +86,5 @@ file identity 값은 기록하지 않습니다.
 - ARM64는 compile/PE 증거만 있고 실제 Windows ARM64에서 tone·WIC를 실행하지 않았습니다.
 - 시간 값은 현재 PC의 단일 실행이며 benchmark나 성능 보증이 아닙니다.
 - scalar 구현은 SIMD/GPU 최적화 전입니다.
-- stage CPU time과 canonical digest는 아직 없습니다.
+- 후속 ADR-0010에서 stage process CPU와 진단 전용 versioned fingerprint를 추가했습니다. 실제 macOS
+  runtime 비교는 여전히 없습니다.

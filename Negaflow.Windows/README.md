@@ -33,7 +33,8 @@ decode·입력 색상·검증된 PNG16/TIFF16 출력 경계, M4 단일 이미지
 - macOS 수식 순서의 노출·기본 톤·4-band 파라메트릭 커브 scalar와 bounded 동적 측정
 - working float→sRGB16→Microsoft WIC PNG encode→pixel·ICC readback→기존 파일 비덮어쓰기 게시
 - working float→sRGB16→무압축 Classic TIFF encode→최소 IFD·pixel·ICC readback→비덮어쓰기 게시
-- content를 읽지 않는 source file 상태 전후 관찰과 PNG16/TIFF16 공통 단계별 CLI report
+- content를 읽지 않는 source file 상태 전후 관찰과 PNG16/TIFF16 공통 단계별 wall/process-CPU report
+- 진단 명령에만 분리한 scanner/develop/tone RGBA32F min/max와 versioned 비암호 fingerprint
 - 일반 이미지 SHA-256 기본 `끔`, 명시적 opt-in Windows CNG 순차 경로
 - Swift 기준 치수와 6개 언어를 쓰는 WinUI 3 Library/Develop/Print/Settings 셸
 - 현재 모니터 작업영역 최대화와 Windows 오른쪽 caption button runtime inset
@@ -122,9 +123,14 @@ scanner 입력 정책을 적용해 working linear-sRGB float buffer까지 검증
 
 working 변환 뒤 명시한 채널별 film-base 투과율로 color 또는 B&W 네거티브를 수동 반전할 수 있습니다.
 이 진단 경로는 장면 통계를 이용한 자동 보정을 하지 않고, 파일을 출력하지 않으며 이미지 SHA-256도
-계산하지 않습니다.
+계산하지 않습니다. scanner→working, develop, tone 단계의 min/max와 빠른 비암호 fingerprint를
+보고하므로 기본 export에 추가 pixel scan을 넣지 않고 회귀를 비교할 수 있습니다.
 
     .\out\build\native\x64-debug\Debug\negaflow-cli.exe --develop-negative-tiff C:\path\scan.tiff 0.72 0.32 0.15 color
+
+노출·대비·파라메트릭 커브 진단도 export와 같은 여섯 값을 모두 덧붙이는 형식으로 실행합니다.
+
+    .\out\build\native\x64-debug\Debug\negaflow-cli.exe --develop-negative-tiff C:\path\scan.tiff 0.72 0.32 0.15 color 0.5 0.25 0.1 -0.1 0.2 -0.2
 
 같은 수직 경로를 16-bit opaque sRGB PNG로 내보낼 수 있습니다. 목적지는 절대 경로이고 기존 파일이
 없어야 합니다. 게시 전에 PNG 구조, 전체 RGB16 pixel과 ICC bytes를 다시 읽어 확인하며 source와
@@ -150,9 +156,11 @@ Model, Software, DateTime, Artist, Copyright, XMP, EXIF, GPS와 알 수 없는 t
 ```
 
 두 export command는 source를 읽기 전후에 file identity·크기·최종 수정 시각만 비교하고, SHA-256은
-계산하지 않습니다. 결과에는 decode+color, develop, tone, output의 byte·memory·wall-time과 검증 상태가
-들어가며 경로와 file identity 값은 들어가지 않습니다. 동적 커브는 target·percentile 계약을 macOS와
-맞추고 비공개 Core Image 축소 filter 대신 명시적 `portable_area_v1`을 사용했다는 사실을 report합니다.
+계산하지 않습니다. 결과에는 decode+color, develop, tone, output의 byte·memory·wall/process-CPU time과
+검증 상태가 들어가며 경로와 file identity 값은 들어가지 않습니다. process CPU는 모든 스레드의
+user+kernel 합계라 병렬 실행 시 wall보다 클 수 있고, API 실패 시 해당 값은 `null`입니다. 동적 커브는
+target·percentile 계약을 macOS와 맞추고 비공개 Core Image 축소 filter 대신 명시적
+`portable_area_v1`을 사용했다는 사실을 report합니다.
 
 이미지 SHA-256은 기본 작업에서 계산하지 않습니다. 사용자가 명시적으로 필요할 때만 다음 opt-in
 command를 사용합니다.
@@ -195,7 +203,7 @@ third_party/          실제 payload 기준 공급망 manifest
 
 ## 다음 순서
 
-1. M4 tone의 실제 macOS runtime golden·pixel diff와 CPU time·canonical stage digest 보강
+1. M4 tone의 실제 macOS runtime golden·pixel diff와 cross-platform 허용오차 manifest 보강
 2. LZW code stream 의미 검증과 malformed Deflate/fuzz corpus 보강
 3. macOS ColorSync golden과 Windows ICM 수치 비교
 4. 필요한 경우에만 libtiff/LittleCMS dependency gate 재평가

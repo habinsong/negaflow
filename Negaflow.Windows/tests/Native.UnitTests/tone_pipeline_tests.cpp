@@ -26,8 +26,10 @@ void expect(const bool condition, const char* const message) {
 [[nodiscard]] bool nearly_equal(
     const float actual,
     const float expected,
-    const float absolute_tolerance = 4.0e-6F,
-    const float relative_tolerance = 4.0e-6F) noexcept {
+    const float absolute_tolerance =
+        negaflow::fixtures::tone_mapping_absolute_tolerance,
+    const float relative_tolerance =
+        negaflow::fixtures::tone_mapping_relative_tolerance) noexcept {
     const float difference = std::abs(actual - expected);
     const float scale = std::max(std::abs(actual), std::abs(expected));
     return difference <= absolute_tolerance + (relative_tolerance * scale);
