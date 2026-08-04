@@ -1,0 +1,38 @@
+{
+  "manifest_schema": 1,
+  "manifest_status": "bootstrap",
+  "baseline_id": "negaflow-windows-2026-08-04-m0",
+  "captured_on": "2026-08-04",
+  "source": {
+    "repository_identity": "negaflow",
+    "mac_commit": "2fa1d6297378673b58b8bec72025e968ccc3125c",
+    "design_reference_commit": "9be909c43edd7e04ba98cdc9d6a0c688739e343e",
+    "working_tree_policy": "clean-commit",
+    "working_tree_clean_at_capture": true
+  },
+  "expected_generated_counts": {
+    "workflow_shortcut_groups": 7,
+    "workflow_shortcut_actions": 66,
+    "localized_text_keys": 256,
+    "localized_phrase_keys": 597,
+    "supported_translation_locales": 6,
+    "stitchable_color_kernels": 31
+  },
+  "windows": {
+    "implementation_state": "m0-m3-tiff-probe-foundation",
+    "production_features": false,
+    "architectures": [
+      "x64",
+      "arm64"
+    ],
+    "native_language": "C++20",
+    "shell_language": "C#",
+    "shell_framework": "WinUI 3"
+  },
+  "limitations": [
+    "This bootstrap manifest is not the complete generated and curated baseline set.",
+    "The scalar pixel foundation is not an end-to-end image pipeline.",
+    "The TIFF preflight reads container structure only; no pixel codec or color-management parity is claimed.",
+    "No Windows UI, scanner, packaging, GPU, codec, color-management, or ARM64 runtime parity is claimed."
+  ]
+}

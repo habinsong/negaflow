@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "payload_state": "foundation-source-only",
+  "components": [
+    {
+      "name": "Negaflow Windows",
+      "version": "0.1.0",
+      "license": "Apache-2.0",
+      "source": "repository-root",
+      "runtime_payload": true
+    }
+  ],
+  "development_tools": [
+    {
+      "name": "vcpkg",
+      "tool_version": "2025-09-03-4580816534ed8fd9634ac83d46471440edd82dfe",
+      "registry_baseline": "146c83e9ff6e645136bc35ea910f6b0961e26465",
+      "license": "MIT",
+      "redistributed": false,
+      "source": "https://github.com/microsoft/vcpkg"
+    }
+  ],
+  "system_apis_not_redistributed": [
+    "Windows SDK",
+    "Win32",
+    "Processor feature APIs",
+    "Windows Imaging Component",
+    "Windows Color System / ICM",
+    "COM",
+    "Shell Lightweight Utility APIs"
+  ],
+  "third_party_runtime_dependencies": []
+}

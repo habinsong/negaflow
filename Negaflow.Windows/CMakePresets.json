@@ -1,0 +1,103 @@
+{
+  "version": 8,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 30,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Visual Studio 18 2026",
+      "cacheVariables": {
+        "BUILD_TESTING": "ON",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "OFF"
+      }
+    },
+    {
+      "name": "x64-debug",
+      "inherits": "base",
+      "displayName": "x64 Debug",
+      "binaryDir": "${sourceDir}/out/build/native/x64-debug",
+      "architecture": "x64"
+    },
+    {
+      "name": "x64-release",
+      "inherits": "base",
+      "displayName": "x64 Release",
+      "binaryDir": "${sourceDir}/out/build/native/x64-release",
+      "architecture": "x64"
+    },
+    {
+      "name": "arm64-debug",
+      "inherits": "base",
+      "displayName": "ARM64 Debug",
+      "binaryDir": "${sourceDir}/out/build/native/arm64-debug",
+      "architecture": "ARM64"
+    },
+    {
+      "name": "arm64-release",
+      "inherits": "base",
+      "displayName": "ARM64 Release",
+      "binaryDir": "${sourceDir}/out/build/native/arm64-release",
+      "architecture": "ARM64"
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "x64-debug",
+      "configurePreset": "x64-debug",
+      "configuration": "Debug"
+    },
+    {
+      "name": "x64-release",
+      "configurePreset": "x64-release",
+      "configuration": "Release"
+    },
+    {
+      "name": "arm64-debug",
+      "configurePreset": "arm64-debug",
+      "configuration": "Debug"
+    },
+    {
+      "name": "arm64-release",
+      "configurePreset": "arm64-release",
+      "configuration": "Release"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "x64-debug",
+      "configurePreset": "x64-debug",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "x64-release",
+      "configurePreset": "x64-release",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "arm64-debug",
+      "configurePreset": "arm64-debug",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "arm64-release",
+      "configurePreset": "arm64-release",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}

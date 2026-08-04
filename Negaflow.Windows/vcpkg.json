@@ -1,0 +1,7 @@
+{
+  "name": "negaflow-windows",
+  "version-string": "0.1.0",
+  "description": "Pinned third-party dependency manifest for Negaflow Windows",
+  "builtin-baseline": "146c83e9ff6e645136bc35ea910f6b0961e26465",
+  "dependencies": []
+}

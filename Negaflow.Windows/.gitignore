@@ -1,0 +1,8 @@
+/out/
+/.vs/
+/.idea/
+*.user
+*.suo
+*.VC.db
+*.VC.opendb
+/baseline/local-corpus/*.json

@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "deltas": [
+    {
+      "delta_id": "DELTA-2026-08-04-001",
+      "from_commit": "9be909c43edd7e04ba98cdc9d6a0c688739e343e",
+      "to_commit": "2fa1d6297378673b58b8bec72025e968ccc3125c",
+      "classification": "correctness_fix",
+      "summary": "Preserve the digital film look tonal range.",
+      "decision": "included_in_windows_baseline",
+      "affected_area": "digital-source virtual development",
+      "source_files": [
+        "Sources/Chromabase/Digital/DigitalFilmColorPresetStage.swift",
+        "Sources/Chromabase/Digital/DigitalFilmLook.swift",
+        "Sources/Chromabase/Engine/ChromabaseEngine+PostPipeline.swift",
+        "Tests/ChromabaseTests/DigitalFilmLookTests.swift"
+      ]
+    }
+  ]
+}
