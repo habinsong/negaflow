@@ -1,6 +1,7 @@
 #pragma once
 
 #include "negaflow/core/pixel.h"
+#include "negaflow/imaging/color_mixer.h"
 #include "negaflow/imaging/point_curve.h"
 #include "negaflow/imaging/scanner_to_working.h"
 #include "negaflow/imaging/tone_curve_measurement.h"
@@ -22,6 +23,7 @@ struct WorkingToneAdjustParameters final {
     BasicToneParameters basic{};
     ParametricToneCurveParameters curve{};
     PointCurves point_curves{};
+    ColorMixerParameters color_mixer{};
 };
 
 struct WorkingToneAdjustInfo final {
@@ -29,6 +31,7 @@ struct WorkingToneAdjustInfo final {
     bool basic_tone_applied{false};
     bool parametric_curve_applied{false};
     bool point_curve_applied{false};
+    bool color_mixer_applied{false};
     negaflow::core::KernelStatus kernel_status{
         negaflow::core::KernelStatus::invalid_argument};
     ToneCurveMeasurementResult measurement{};
@@ -44,7 +47,7 @@ struct WorkingToneAdjustResult final {
     const WorkingToneAdjustParameters& parameters) noexcept;
 
 // Applies the macOS order in place: exposure, basic tone, measurement, parametric curve,
-// then the first post-pipeline stage (DR/R/G/B point curves).
+// then the first post-pipeline stages (DR/R/G/B point curves and the HSL mixer).
 // User-facing bounds are enforced here: exposure [-5, 5], all tone controls [-1, 1].
 [[nodiscard]] WorkingToneAdjustResult apply_working_tone_adjustments(
     WorkingImage image,

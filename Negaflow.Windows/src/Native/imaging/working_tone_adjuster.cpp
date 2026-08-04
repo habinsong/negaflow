@@ -58,7 +58,8 @@ bool valid_working_tone_adjust_parameters(
            finite_in_range(parameters.curve.lights, maximum_tone_control) &&
            finite_in_range(parameters.curve.darks, maximum_tone_control) &&
            finite_in_range(parameters.curve.shadows, maximum_tone_control) &&
-           valid_point_curves(parameters.point_curves);
+           valid_point_curves(parameters.point_curves) &&
+           valid_color_mixer_parameters(parameters.color_mixer);
 }
 
 WorkingToneAdjustResult apply_working_tone_adjustments(
@@ -85,8 +86,10 @@ WorkingToneAdjustResult apply_working_tone_adjustments(
     const bool basic_changes = has_basic_tone_change(parameters.basic);
     const bool curve_changes = has_parametric_tone_curve_change(parameters.curve);
     const bool point_curve_changes = has_point_curve_change(parameters.point_curves);
+    const bool color_mixer_changes =
+        has_color_mixer_change(parameters.color_mixer);
     if (!exposure_changes && !basic_changes && !curve_changes &&
-        !point_curve_changes) {
+        !point_curve_changes && !color_mixer_changes) {
         result.info.measurement.status = ToneCurveMeasurementStatus::ok;
         result.info.measurement.kernel_status = negaflow::core::KernelStatus::ok;
         result.info.kernel_status = negaflow::core::KernelStatus::ok;
@@ -157,6 +160,19 @@ WorkingToneAdjustResult apply_working_tone_adjustments(
             return result;
         }
         result.info.point_curve_applied = true;
+    }
+
+    if (color_mixer_changes) {
+        result.info.kernel_status = apply_color_mixer(
+            const_view(result.image),
+            mutable_view(result.image),
+            parameters.color_mixer);
+        if (result.info.kernel_status != negaflow::core::KernelStatus::ok) {
+            result.status = WorkingToneAdjustStatus::kernel_failed;
+            discard_pixels(result.image);
+            return result;
+        }
+        result.info.color_mixer_applied = true;
     }
 
     result.info.kernel_status = negaflow::core::KernelStatus::ok;

@@ -66,6 +66,7 @@
 - 채널별 수동 Dmin과 고정 response를 선택해 owned WorkingImage를 제자리 반전하는 작은 orchestration
 - macOS 순서의 노출, sRGB-luma 기본 톤과 4-band 파라메트릭 커브 scalar
 - macOS post-pipeline 첫 단계의 고정 64표본 DR/R/G/B 포인트 커브 scalar
+- macOS post-pipeline 두 번째 단계의 고정 8대역 HSL Color Mixer scalar
 - fixed fallback과 bounded `portable_area_v1` percentile 측정, 제자리 tone orchestration
 - versioned 합성 fixture와 JSON conformance report
 - AVX/OSXSAVE/AVX2/FMA 및 ARM64 NEON capability 식별
@@ -78,11 +79,12 @@
 - x64 Debug/Release test 통과
 - 3×2 tone Float32 fixture, 검정 anchor, alpha/stride와 64×64 percentile 계약 통과
 - 3×2 point curve fixture의 LUT 표본과 24개 RGBA 값, 64/65개 제어점 경계 통과
+- 4×3 Color Mixer fixture의 48개 RGBA 값, 24개 control 범위·회색 gate·대역 순서 통과
 - ARM64에서는 같은 source가 컴파일되지만 수치 실행은 아직 미검증
 
 ### 남은 것
 
-- blur, local contrast, color mixer/grading/calibration, histogram, morphology, defect, crop/resize,
+- blur, local contrast, color grading/calibration, histogram, morphology, defect, crop/resize,
   digital-film 전체
 - forced scalar/base/AVX2 dispatch와 실제 NEON 실행
 - ROI/halo/cancellation 계약

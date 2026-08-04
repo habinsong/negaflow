@@ -124,7 +124,7 @@ downstream tile/row consumer와 명시적 process budget은 여전히 필요합�
 - temporary-byte 한도 실패와 취소 시 working pixel 미공개
 - 사용자 TIFF 15개 전체 streaming 변환: 15/15 성공
 - 사용자 TIFF 15개 whole-frame/streaming 최종 float pixel exact 일치
-- 현재 x64 Debug/Release CTest 27/27 통과
+- 현재 x64 Debug/Release CTest 28/28 통과
 - ARM64 Debug/Release cross-build
 
 ## 아직 입증하지 않은 것

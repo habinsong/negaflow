@@ -1,4 +1,4 @@
-# 노출·대비·파라메트릭·포인트 커브 구현
+# 노출·대비·파라메트릭·포인트 커브·Color Mixer 구현
 
 ## 처리 경계
 
@@ -12,6 +12,7 @@ extended-linear-sRGB WorkingImage
   → curve measurement: fixed fallback 또는 portable area percentile
   → parametric curve: four luma bands
   → point curve: DR/R/G/B 64-sample LUT
+  → Color Mixer: HSL 8-band hue/saturation/luminance
   → verified sRGB16 PNG/TIFF output
 ```
 
@@ -23,11 +24,14 @@ fixture는 fractional alpha도 보존하는지 별도로 확인합니다.
 - `tone_mapping.h/.cpp`: 외부 할당이 없는 기본 톤·파라메트릭 커브 pointwise 수식
 - `tone_curve_measurement.h/.cpp`: bounded downsample luma, percentile과 band 계산
 - `point_curve.h/.cpp`: 고정 용량 제어점, 64표본 LUT 생성·합성과 픽셀 lookup
+- `color_mixer.h/.cpp`: 고정 8대역 HSL control, 회색 gate와 pointwise 수학
 - `working_tone_adjuster.h/.cpp`: 제품 입력 범위, 단계 순서, 실패 시 pixel 폐기
 - `tone_mapping_fixture.h`: 저장소 소유 3×2 합성 입력·recipe·Float32 기대값
 - `point_curve_fixture.h`: 저장소 소유 3×2 포인트 커브 입력·LUT 표본·Float32 기대값
+- `color_mixer_fixture.h`: 저장소 소유 4×3 RGB 입력·24개 control·Float32 기대값
 - `tone_pipeline_tests.cpp`: 수치, 검정 앵커, stride, 측정 한도와 실패 계약
 - `point_curve_tests.cpp`: 제어점 경계, 합성 수치, identity와 tone 뒤 처리 순서
+- `color_mixer_tests.cpp`: 8대역 수치, 회색 보호, point curve 뒤 순서와 실패 계약
 - `export_developed_image.cpp`: 선택 인수 parsing, stage 시간·메모리·band JSON
 
 픽셀 kernel이 파일 I/O, TIFF container, CLI parsing이나 측정 vector를 소유하지 않습니다.
@@ -73,6 +77,14 @@ extended-linear RGB를 sRGB encoded `[0, 1]` domain에서 lookup하고 다시 li
 cube domain 밖을 제한하지만 전체 identity는 단계를 건너뛰어 extended RGB를 bit-exact로 보존합니다.
 세부 계약은 `point-curve-scalar.md`에 있습니다.
 
+### Color Mixer
+
+포인트 커브 뒤에는 red/orange/yellow/green/aqua/blue/purple/magenta의 hue, saturation, luminance를
+가중 평균하는 macOS `colorMixerHSL`을 적용합니다. 활성 단계는 extended-linear working RGB를 먼저
+`[0, 1]`로 제한하고 HSL로 왕복합니다. saturation 0.04~0.18 smoothstep gate가 무채색을 보호하며,
+identity는 단계를 건너뛰어 extended RGB를 bit-exact로 보존합니다. 세부 계약은
+`color-mixer-scalar.md`에 있습니다.
+
 ## CLI
 
 기존 명령은 그대로 유효합니다.
@@ -93,9 +105,9 @@ peak temporary bytes와 wall/process-CPU microseconds가 들어갑니다. 경로
 넣지 않습니다. 커브가 적용되지 않으면 sampling mode는 `none`, `curve_bands`는 `null`입니다. 기본
 export는 추가 pixel fingerprint scan을 하지 않고 별도 개발 진단에서만 단계 통계를 계산합니다.
 
-현재 CLI와 WinUI는 포인트 목록 입력을 아직 노출하지 않습니다. 기본 빈 커브는 무연산이며 JSON에는
-`point_curve_algorithm_version`과 `point_curve_applied`가 들어갑니다. native unit/conformance 경로는
-활성 포인트를 직접 전달해 실제 처리 순서를 검증합니다.
+현재 CLI와 WinUI는 포인트 목록과 Color Mixer 24개 control 입력을 아직 노출하지 않습니다. 기본 빈
+커브와 0 control은 무연산이며 JSON에는 각 알고리즘 버전과 적용 여부가 들어갑니다. native
+unit/conformance 경로는 활성 recipe를 직접 전달해 실제 처리 순서를 검증합니다.
 
 ## 성능과 메모리
 
@@ -109,9 +121,13 @@ Release 한 번 측정에서는 35,636 luma, 285,088 temporary bytes, tone stage
 포인트 커브는 고정 배열로 LUT를 만들고 기존 image에 제자리 적용하므로 heap allocation과 추가
 full-frame buffer가 없습니다. 별도 성능 benchmark는 아직 만들지 않았습니다.
 
+Color Mixer도 고정 8회 loop와 stack scalar만 사용하며 추가 allocation이나 full-frame buffer가 없습니다.
+identity이면 working orchestration이 kernel 호출을 생략합니다.
+
 ## 남은 제한
 
 - dynamic raster는 Core Image 내부 필터와 bit-exact하지 않을 수 있습니다.
 - scalar `pow` 중심 구현이며 SIMD/GPU 최적화 전입니다.
 - 실제 macOS runtime tone golden, 사진 corpus 비교와 cross-platform 허용오차 manifest는 아직 없습니다.
 - 실제 Core Image point curve golden, recipe serialization과 UI 편집 상태 연결은 아직 없습니다.
+- 실제 Metal Color Mixer golden과 24개 control의 recipe/UI 연결은 아직 없습니다.

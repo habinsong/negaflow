@@ -220,6 +220,10 @@ void print_pipeline_report_suffix(const PipelineReportContext& context) {
               << negaflow::imaging::point_curve_algorithm_version
               << "\",\"point_curve_applied\":"
               << (context.adjusted.info.point_curve_applied ? "true" : "false")
+              << ",\"color_mixer_algorithm_version\":\""
+              << negaflow::imaging::color_mixer_algorithm_version
+              << "\",\"color_mixer_applied\":"
+              << (context.adjusted.info.color_mixer_applied ? "true" : "false")
               << ",\"curve_sampling_mode\":\""
               << negaflow::imaging::tone_curve_sampling_mode_name(
                      measurement.sampling_mode)
