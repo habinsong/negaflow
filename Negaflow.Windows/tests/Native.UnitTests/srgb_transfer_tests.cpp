@@ -45,6 +45,26 @@ int main() {
     expect(
         negaflow::color::srgb_encoded_to_linear(1.25F) > 1.0F,
         "extended positive values are not clamped");
+    expect_near(negaflow::color::linear_to_srgb_encoded(0.0F), 0.0F, 0.0F, "encode zero");
+    expect_near(
+        negaflow::color::linear_to_srgb_encoded(0.0031308F),
+        0.040449936F,
+        1.0e-8F,
+        "encode sRGB breakpoint");
+    expect_near(
+        negaflow::color::linear_to_srgb_encoded(0.21404114F),
+        0.5F,
+        1.0e-7F,
+        "encode sRGB midpoint");
+    expect_near(negaflow::color::linear_to_srgb_encoded(1.0F), 1.0F, 1.0e-7F, "encode one");
+    expect_near(
+        negaflow::color::linear_to_srgb_encoded(-0.21404114F),
+        -0.5F,
+        1.0e-7F,
+        "encode extended negative values are sign preserving");
+    expect(
+        negaflow::color::linear_to_srgb_encoded(1.25F) > 1.0F,
+        "encode extended positive values are not clamped");
 
     if (failures != 0) {
         std::cerr << failures << " sRGB transfer test(s) failed\n";

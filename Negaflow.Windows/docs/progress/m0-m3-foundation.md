@@ -34,7 +34,7 @@
 - `.slnx`, 공통 managed build 정책과 architecture별 output
 - source-generated `LibraryImport` 기반 `Negaflow.Interop`
 - 절대 경로 native load, ABI version/layout 검증과 stable bootstrap failure
-- 외부 package가 없는 project별 NuGet lock
+- 외부 package가 없는 Interop/Core project lock과 dual-RID WinUI component package lock
 
 ### 검증된 것
 
@@ -52,7 +52,6 @@
 
 - 실제 ARM64 Windows 실행 lane
 - hosted CI와 clean-machine restore evidence
-- C# WinUI 프로젝트 graph와 Windows App SDK package lock
 - shader compiler, WARP config, packaging, artifact SBOM
 
 ## M2 — scalar reference
@@ -108,7 +107,10 @@
 - 재사용 ICM transform과 chunk temporary만 사용하는 scanner→working row 경로
 - non-opaque alpha 명시 거부와 16-bit intermediate provenance
 - 이미지 content SHA-256 기본 `off`와 명시적 CNG opt-in·cancel/progress
-- `--decode-tiff-wic`, `--prepare-scanner-tiff`, `--sha256-image` CLI
+- extended-linear working→opaque sRGB16 최종 경계 변환과 clipping 계수
+- Microsoft 기본 WIC PNG encoder/decoder 고정, 등록 sRGB ICC 삽입과 exact pixel/profile readback
+- 같은 디렉터리 `CREATE_NEW` staging, flush, 기존 목적지 비덮어쓰기 단일 파일 게시
+- `--decode-tiff-wic`, `--prepare-scanner-tiff`, `--sha256-image`, `--export-developed-png16` CLI
 
 ### 검증한 입력
 
@@ -124,6 +126,8 @@
 - 사용자 코퍼스 WIC decode 15/15, working 변환 15/15, 원본 불변 15/15
 - 사용자 코퍼스 whole-frame/64행 streaming 최종 float exact 일치 15/15
 - 이미지 SHA 기본-off 무 I/O와 opt-in 15/15, 원본 관측값 불변
+- 합성 working image의 PNG16 구조·전체 pixel·ICC exact readback과 publish 경합 보존
+- 권리 확인된 저장소 TIFF fixture의 decode→color→develop→PNG16 게시
 
 ### 남은 것
 
@@ -131,6 +135,6 @@
 - LZW code stream 의미 검증, 손상 Deflate와 압축 해제 CPU deadline
 - ColorSync golden과 Windows ICM 수치 비교
 - 필요성이 입증될 때만 libtiff/LittleCMS dependency 결정
-- tile decode, 최종 working/downstream streaming과 process memory budget
-- 출력 staging, readback, atomic publish
+- tile decode, 최종 working/output downstream streaming과 process memory budget
+- M4 요구 형식인 TIFF16 출력, metadata allowlist와 catalog transaction·복구
 - fuzzing/ASan corpus와 실제 대형 scanner TIFF

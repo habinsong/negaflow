@@ -5,8 +5,8 @@
 
 ## 현재 숫자
 
-- 전체 M0~M18 제품 로드맵: **약 11%**
-- 현재 집중 구간 M0~M3: **약 41%**
+- 전체 M0~M18 제품 로드맵: **약 12%**
+- 현재 집중 구간 M0~M3: **약 42%**
 - 제한형 TIFF 사전 검사 세부 작업: **약 90%**
 
 이 수치는 일정이나 개발 시간의 5%가 아닙니다. 각 milestone의 정의된 산출물과 종료 조건을
@@ -20,8 +20,8 @@
 | M0 제품 기준선 | 35% | exact commit, bootstrap manifest, delta, 일부 asset hash | 전체 surface/stage manifest, 권리 결정, 실제 macOS 기준 artifact |
 | M1 저장소·빌드·CI | 68% | 별도 build root, x64/ARM64 native·managed·WinUI graph, dual-RID lock, C ABI, CLI, VS 18.8.2와 Windows App SDK C# component, 고정 SDK/vcpkg, static CRT | shader/packaging, CI, 실제 ARM64 run |
 | M2 적합성·CPU scalar | 15% | pixel contract, exposure/matrix, 네거티브 반전, versioned 합성 fixture | 전체 kernel inventory, forced dispatch, 곡선·공간·통계·결함·변환 |
-| M3 이미지 I/O·색·영속성 | 44% | 동일 read-only stream의 bounded TIFF probe+WIC 16-bit decode, sink 기반 row streaming, ICC row transform→linear working, whole/stream exact parity 15개, 이미지 SHA 기본-off/opt-in CNG 경로 | ColorSync parity, tile/fuzz, output, SQLite, 복구 |
-| M4 CLI end-to-end | 5% | 한 장 decode→color→수동 Dmin develop 수직 경로, 현상 추가 full-frame allocation 0, SHA 기본-off | output color→encode→readback→atomic publish |
+| M3 이미지 I/O·색·영속성 | 50% | 동일 read-only stream의 bounded TIFF probe+WIC 16-bit decode, sink 기반 row streaming, ICC row transform→linear working, whole/stream exact parity 15개, 이미지 SHA 기본-off/opt-in CNG, 검증된 PNG16 단일 파일 게시 | ColorSync parity, tile/fuzz, SQLite, catalog transaction·복구 |
+| M4 CLI end-to-end | 18% | 한 장 decode→color→수동 Dmin develop→sRGB16 PNG encode→전체 readback→publish, SHA 기본-off | 요구 형식인 TIFF16, exposure/contrast/curve 조합, metadata allowlist, stage digest·diff report |
 | M5 GPU/WARP | 0% | 문서만 존재 | D3D11/Direct2D/WARP FP32 vertical slice |
 | M6 전체 Develop graph | 0% | 문서만 존재 | 전체 stage와 측정 |
 | M7 대형 이미지 | 6% | WIC row sink, chunk ICC transform, 단조 progress/cancel, full decoded source 제거와 exact parity | 최종 working streaming, tile, byte reservation, cache, TDR |
@@ -32,8 +32,8 @@
 | M17 배포·컴플라이언스 | 0% | 설치 선언 초안만 존재 | MSIX/installer, signing, update, SBOM |
 | M18 Beta/RC/Stable | 0% | 없음 | release gate 전체 |
 
-계산은 M0 35, M1 68, M2 15, M3 44, M4 5, M7 6, M8 18, M9~M14 각각 2, 나머지 0을 19개
-milestone의 100점 만점에 대입한 약 10.7%입니다. 숫자는 구현 증거가 추가될 때만 올립니다.
+계산은 M0 35, M1 68, M2 15, M3 50, M4 18, M7 6, M8 18, M9~M14 각각 2, 나머지 0을 19개
+milestone의 100점 만점에 대입한 약 11.7%입니다. 숫자는 구현 증거가 추가될 때만 올립니다.
 
 ## 현재 완료된 작은 루프
 
@@ -58,16 +58,18 @@ milestone의 100점 만점에 대입한 약 10.7%입니다. 숫자는 구현 증
     추가 full-frame pixel allocation 0을 검증했습니다.
 15. Swift 기준 치수와 6개 언어를 사용하는 WinUI 셸을 x64 전체 작업영역에서 실행하고, 오른쪽 Windows
     caption inset, Settings와 일반 이미지 SHA-256 기본 `끔` 상태를 확인했습니다.
+16. 현상된 working float를 16-bit sRGB PNG로 encode하고 구조·전체 pixel·ICC를 readback한 뒤 기존
+    파일을 덮어쓰지 않고 같은 디렉터리에서 게시하는 CPU 수직 경로를 검증했습니다.
 
 ## 다음 완료 조건
 
 가까운 순서대로 다음을 닫습니다.
 
-1. 현재 CLI vertical slice에 output color transform→encode→readback→atomic publish를 연결합니다.
+1. M4 원계약의 16-bit TIFF, metadata allowlist, 최소 exposure/contrast/curve와 stage report를 보강합니다.
 2. LZW code stream 의미 검증, 손상 Deflate와 압축 해제 CPU deadline을 검증합니다.
 3. 같은 ICC patch에 대한 macOS ColorSync golden과 Windows ICM 수치를 비교합니다.
 4. 차이가 허용 범위를 넘을 때만 LittleCMS를 dependency gate에 올립니다.
-5. 최종 working buffer를 downstream row/tile 소비자로 넘기고 전체 process budget을 적용합니다.
+5. 최종 working buffer와 출력을 downstream row/tile 소비자로 넘기고 전체 process budget을 적용합니다.
 6. WinUI 셸의 축소 폭·DPI·High Contrast·keyboard matrix를 검증하고 실제 catalog 연결을 시작합니다.
 
 ## 진행률을 올리지 않는 항목

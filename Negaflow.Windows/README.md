@@ -2,8 +2,8 @@
 
 macOS용 Negaflow의 제품 계약을 Windows 네이티브 기술로 독립 구현하는 작업 공간입니다.
 현재 단계는 M0 기준선, M1 native/managed 빌드·Interop 기반, 첫 M2 scalar 수치 계약, M3 TIFF
-decode·입력 색상 수직 경로와 첫 M8 WinUI 셸 기반입니다. 제품 전체 이미지 처리나 실제 제품 기능이
-완성된 상태는 아닙니다.
+decode·입력 색상·검증된 PNG16 출력 경계, 첫 M4 CLI와 M8 WinUI 셸 기반입니다. 제품 전체 이미지
+처리나 실제 제품 기능이 완성된 상태는 아닙니다.
 
 ## 고정 기준
 
@@ -30,6 +30,7 @@ decode·입력 색상 수직 경로와 첫 M8 WinUI 셸 기반입니다. 제품 
 - bounded ICC 검사와 재사용 Windows ICM row transform 기반 scanner→linear-sRGB float 변환
 - 사용자 scanner TIFF 15개 read-only streaming 변환과 whole-frame 최종 float exact parity
 - TIFF decode→scanner color→수동 Dmin 네거티브 반전 수직 경로
+- working float→sRGB16→Microsoft WIC PNG encode→pixel·ICC readback→기존 파일 비덮어쓰기 게시
 - 일반 이미지 SHA-256 기본 `끔`, 명시적 opt-in Windows CNG 순차 경로
 - Swift 기준 치수와 6개 언어를 쓰는 WinUI 3 Library/Develop/Print/Settings 셸
 - 현재 모니터 작업영역 최대화와 Windows 오른쪽 caption button runtime inset
@@ -122,6 +123,14 @@ working 변환 뒤 명시한 채널별 film-base 투과율로 color 또는 B&W �
 
     .\out\build\native\x64-debug\Debug\negaflow-cli.exe --develop-negative-tiff C:\path\scan.tiff 0.72 0.32 0.15 color
 
+같은 수직 경로를 16-bit opaque sRGB PNG로 내보낼 수 있습니다. 목적지는 절대 경로이고 기존 파일이
+없어야 합니다. 게시 전에 PNG 구조, 전체 RGB16 pixel과 ICC bytes를 다시 읽어 확인하며 source와
+artifact SHA-256은 계산하지 않습니다.
+
+```powershell
+.\out\build\native\x64-debug\Debug\negaflow-cli.exe --export-developed-png16 C:\path\scan.tiff C:\path\result.png 0.72 0.32 0.15 color
+```
+
 이미지 SHA-256은 기본 작업에서 계산하지 않습니다. 사용자가 명시적으로 필요할 때만 다음 opt-in
 command를 사용합니다.
 
@@ -148,6 +157,7 @@ src/Native/core/      Windows 네이티브 공통 기반
 src/Native/color/     ICC 구조와 순수 색상 수학
 src/Native/imageio/   WIC decode와 소유형 sample
 src/Native/imaging/   scanner source→working 정책과 ICM adapter
+src/Native/output/    sRGB16 변환, WIC PNG readback과 단일 파일 게시
 src/Native/abi/       유일한 공개 C ABI
 src/Interop/          C# ABI binding, 안전한 DLL probing과 version validation
 src/Shell.Core/       UI 비종속 표시 상태, 기본값과 적응형 배치 계산
@@ -162,12 +172,12 @@ third_party/          실제 payload 기준 공급망 manifest
 
 ## 다음 순서
 
-1. 현재 수직 경로에 output encode→readback→atomic publish 연결
+1. M4 계약의 16-bit TIFF 출력, metadata allowlist와 stage report 보강
 2. LZW code stream 의미 검증과 malformed Deflate/fuzz corpus 보강
 3. macOS ColorSync golden과 Windows ICM 수치 비교
 4. 필요한 경우에만 libtiff/LittleCMS dependency gate 재평가
-5. 최종 working buffer의 downstream row/tile 처리와 process budget
-6. 실제 ARM64 장치에서 같은 native/scalar/TIFF/hash test 실행
+5. 최종 working buffer와 출력의 downstream row/tile 처리·process budget
+6. 실제 ARM64 장치에서 같은 native/scalar/TIFF/hash/PNG test 실행
 7. WinUI 셸의 축소 폭·DPI·High Contrast·keyboard matrix와 실제 catalog 연결
 
 현재 WinUI는 실행 가능한 화면 기반일 뿐 실제 제품 기능 완료를 의미하지 않습니다.

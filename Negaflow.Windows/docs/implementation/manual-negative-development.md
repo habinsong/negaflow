@@ -68,7 +68,7 @@ off로 명시합니다. 보안 공급망, installer와 profile 무결성 hash �
 - 제자리 변환의 alpha 보존
 - non-finite Dmin과 잘못된 image layout에서 결과 pixel 미공개
 - 저장소 TIFF의 decode→color→develop CLI 성공과 JSON schema 검사
-- x64 Debug/Release CTest 각각 18/18 통과
+- 현재 x64 Debug/Release CTest 각각 20/20 통과
 - ARM64 Debug/Release 전체 target cross-build
 
 ARM64 수치는 실제 ARM64 Windows 장치에서 아직 실행하지 않았습니다.
