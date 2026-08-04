@@ -14,10 +14,10 @@ Primary Calibration 결과의 extended-linear sRGB
   → alpha 보존
 ```
 
-이 component는 아직 production working pipeline에 연결하지 않았습니다. macOS의
-`FilmEmulationStage`가 색상 cube 뒤에 적용하는 acutance는 별도 bounded standalone component로
-구현했지만 두 단계를 아직 orchestration하지 않았습니다. 디지털 입력의 별도 `DigitalFilmLook`도 이
-component에 포함하지 않습니다.
+이 component의 수학은 독립적으로 유지합니다. 별도 `WorkingFilmLook` native route가 macOS
+`FilmEmulationStage`와 같이 이 색상 cube 뒤 bounded acutance를 호출하지만, 기존 tone/export CLI
+수직 경로는 아직 route를 호출하지 않습니다. 디지털 입력의 별도 `DigitalFilmLook`도 이 component에
+포함하지 않습니다.
 
 ## 파일 책임
 
@@ -88,13 +88,15 @@ cube validation은 apply마다 431,244바이트를 순회합니다. 현재는 �
 
 현재 CLI report, C ABI와 WinUI에는 Film Emulation profile/intensity가 없습니다. 기존
 `WorkingToneAdjuster`의 실행 순서는 Primary Calibration에서 끝나며 이 cube를 자동 호출하지 않습니다.
+`chromabase-working-film-look-v1` native route는 명시적 source 종류를 받아 film scan에서만 색상 뒤
+acutance를 실행하고 미완성 digital graph는 fail-closed로 거부합니다.
 canonical macOS run에서 opaque `CIColorCubeWithColorSpace`와 `CIUnsharpMask` 수치 기준을 확보했습니다.
 색상 36개 RGB 값의 최대 절대 오차는 `0.0018888685`, RMSE는 `0.0005653865`였고 test envelope는
-`0.0021`로 고정했습니다. 다음 production 연결은 아래 경계를 먼저 닫습니다.
+`0.0021`로 고정했습니다. 다음 제품 연결은 아래 경계를 먼저 닫습니다.
 
-1. digital source의 `DigitalFilmLook`과 film-scan source의 Film Emulation을 나누는 route
-2. RGB33 cube 뒤 standalone acutance를 호출하는 명시적 stage 순서
-3. recipe serialization, cube/scratch cache 수명, 취소와 CPU/GPU dispatch 계약
+1. source 종류와 profile/intensity의 recipe serialization 및 CLI report
+2. catalog/import source metadata와 WinUI 연결
+3. cube/scratch cache 수명, 취소와 CPU/GPU dispatch 계약
 4. cube 경계와 fractional-alpha golden 확대
 
 ## 남은 제한

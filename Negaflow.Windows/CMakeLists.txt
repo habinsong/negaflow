@@ -119,6 +119,7 @@ add_library(negaflow_imaging STATIC
     src/Native/imaging/scanner_to_working.cpp
     src/Native/imaging/tone_curve_measurement.cpp
     src/Native/imaging/tone_mapping.cpp
+    src/Native/imaging/working_film_look.cpp
     src/Native/imaging/working_tone_adjuster.cpp
 )
 target_include_directories(negaflow_imaging
@@ -395,6 +396,22 @@ if(BUILD_TESTING)
     add_test(
         NAME native.film_emulation_acutance
         COMMAND negaflow_film_emulation_acutance_tests
+    )
+
+    add_executable(negaflow_working_film_look_tests
+        tests/Native.UnitTests/working_film_look_tests.cpp
+    )
+    target_include_directories(
+        negaflow_working_film_look_tests
+        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/v1"
+    )
+    target_link_libraries(
+        negaflow_working_film_look_tests
+        PRIVATE negaflow_imaging negaflow_project_options
+    )
+    add_test(
+        NAME native.working_film_look
+        COMMAND negaflow_working_film_look_tests
     )
 
     add_executable(negaflow_process_cpu_time_tests

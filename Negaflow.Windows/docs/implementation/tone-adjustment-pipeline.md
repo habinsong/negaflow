@@ -22,9 +22,9 @@ alpha는 모든 단계에서 그대로 보존합니다. scanner 입력 수직 �
 fixture는 fractional alpha도 보존하는지 별도로 확인합니다.
 
 Primary Calibration 다음 film-scan 분기의 Film Emulation RGB33 색상과 bounded acutance component는
-canonical macOS golden에 맞춘 standalone으로 구현했지만 이 실행 흐름에는 아직 연결하지 않았습니다.
-두 단계의 orchestration과 digital/film source routing을 닫기 전까지 verified output 경로는 위 순서에서
-끝납니다.
+canonical macOS golden에 맞춰 구현했고 별도 `WorkingFilmLook` native route가 두 단계를 순서대로
+묶습니다. 다만 이 tone/export CLI 실행 흐름에는 아직 route를 연결하지 않았으므로 verified output
+경로는 위 순서에서 끝납니다.
 
 ## 파일 책임
 
@@ -171,5 +171,5 @@ buffer가 없습니다. identity이면 working orchestration이 kernel 호출을
 - 실제 Metal Color Mixer golden과 24개 control의 recipe/UI 연결은 아직 없습니다.
 - 실제 Core Image Color Grading golden과 세 color wheel recipe/UI 연결은 아직 없습니다.
 - 실제 macOS Primary Calibration golden과 여섯 control의 recipe/UI 연결은 아직 없습니다.
-- Film Emulation 색상 cube와 bounded acutance는 각각 standalone 검증 상태이며 두 단계의
-  orchestration·source routing·recipe/UI 연결은 아직 없습니다.
+- Film Emulation 색상→acutance와 명시적 source routing은 별도 native contract로 검증했지만
+  tone/export CLI recipe와 UI 연결은 아직 없습니다.

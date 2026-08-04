@@ -65,3 +65,6 @@ ADR-0018의 standalone component로 구현했으며 source routing과 두 단계
 필름 이름과 제조사 자료, 가까운 공개 특허 claims의 제한적 비교는
 `research/film-emulation-color-sources.md`에 기록합니다. 법률 자문이나 freedom-to-operate 보증은
 아닙니다.
+
+후속 상태: ADR-0018에서 bounded acutance를 추가했고 ADR-0019에서 명시적 source route와
+film-scan 색상→acutance native orchestration을 추가했습니다. CLI·recipe·WinUI 연결은 아직 없습니다.

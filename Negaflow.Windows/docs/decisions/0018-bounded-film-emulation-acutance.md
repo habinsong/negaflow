@@ -57,3 +57,6 @@ cube와 spatial kernel이 분리되어 향후 source routing, SIMD와 DirectComp
 
 실행 증거와 권리 검토는 각각 `verification/2026-08-04-film-emulation-core-image-golden.md`와
 `research/film-emulation-acutance-sources.md`에 기록합니다.
+
+후속 상태: ADR-0019에서 명시적 source route와 film-scan 색상→acutance native orchestration을
+추가했습니다. CLI·recipe·WinUI와 완전한 digital graph는 아직 없습니다.

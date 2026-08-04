@@ -94,11 +94,16 @@ scratchBytes  = width × 11 × 12
   `KernelStatus`로 반환합니다.
 - 내부 heap, 파일 I/O, 이미지 SHA-256, 전역 mutable cache와 제3자 runtime dependency는 없습니다.
 
-## production 연결 전 남은 것
+## native route와 남은 제품 연결
 
-1. RGB33 cube 뒤 acutance 순서를 하나의 film-scan recipe로 orchestration
-2. digital source의 `DigitalFilmLook`과 film-scan source의 `FilmEmulationStage` route 분리
-3. caller-owned cube/scratch cache 수명, cancellation과 progress 계약
-4. CLI report와 recipe serialization을 먼저 연결한 뒤 좁은 C ABI와 WinUI 노출
-5. megapixel scalar benchmark 후 필요성이 확인될 때 SIMD/DirectCompute/WARP 구현
-6. 실제 ARM64 Windows와 더 넓은 border·fractional-alpha golden
+`chromabase-working-film-look-v1` native route는 RGB33 cube 뒤 이 acutance를 호출하며, 명시적
+film/digital source를 분리합니다. 활성 digital 요청은 전체 `DigitalFilmLook`이 준비될 때까지
+`unsupported_route`로 실패합니다.
+
+남은 것은 다음과 같습니다.
+
+1. CLI report와 recipe serialization, catalog/import source metadata 연결
+2. caller-owned cube/scratch cache 수명 관리자, cancellation과 progress 계약
+3. 좁은 C ABI와 WinUI 노출
+4. megapixel scalar benchmark 후 필요성이 확인될 때 SIMD/DirectCompute/WARP 구현
+5. 실제 ARM64 Windows와 더 넓은 border·fractional-alpha golden
