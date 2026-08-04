@@ -19,11 +19,11 @@
 |---|---:|---|---|
 | M0 제품 기준선 | 35% | exact commit, bootstrap manifest, delta, 일부 asset hash | 전체 surface/stage manifest, 권리 결정, 실제 macOS 기준 artifact |
 | M1 저장소·빌드·CI | 68% | 별도 build root, x64/ARM64 native·managed·WinUI graph, dual-RID lock, C ABI, CLI, VS 18.8.2와 Windows App SDK C# component, 고정 SDK/vcpkg, static CRT | shader/packaging, CI, 실제 ARM64 run |
-| M2 적합성·CPU scalar | 30% | pixel contract, exposure/matrix, 네거티브 반전, 기본 톤·4-band curve, 고정 64표본 DR/R/G/B point curve, 8-band HSL Color Mixer, 3구간 Color Grading, R/G/B Primary Calibration, fixed Float32 fixture와 bounded percentile 측정 | 전체 kernel inventory, forced dispatch, 공간·통계·결함·변환, 실제 macOS golden |
+| M2 적합성·CPU scalar | 32% | pixel contract, exposure/matrix, 네거티브 반전, 기본 톤·4-band curve, 고정 64표본 DR/R/G/B point curve, 8-band HSL Color Mixer, 3구간 Color Grading, R/G/B Primary Calibration, standalone 11종 RGB33 Film Emulation 색상, fixed Float32 fixture와 bounded percentile 측정 | 전체 kernel inventory, forced dispatch, 공간·통계·결함·변환, 실제 macOS golden |
 | M3 이미지 I/O·색·영속성 | 54% | 동일 read-only stream의 bounded TIFF probe+WIC 16-bit decode, TIFF 6 조기 비트폭 LZW 의미 검사와 Deflate 격리, sink 기반 row streaming, ICC row transform→linear working, whole/stream exact parity 15개, 이미지 SHA 기본-off/opt-in CNG, 검증된 PNG16/TIFF16 단일 파일 게시 | 독립 Deflate 검증, ColorSync parity, tile/fuzz, SQLite, catalog transaction·복구 |
 | M4 CLI end-to-end | 44% | 한 장 decode→color→수동 Dmin develop→노출·기본 톤·동적 4-band curve→sRGB16 TIFF/PNG 검증 게시, point curve·Color Mixer·Color Grading·Primary Calibration 버전/적용 report 경계, source 관찰, 단계별 byte·memory·wall/process-CPU report, 진단 전용 stage 통계·versioned fingerprint, SHA 기본-off | 고급 color recipe 입력·저장, 실제 macOS runtime pixel diff·cross-platform 허용오차 manifest |
 | M5 GPU/WARP | 0% | 문서만 존재 | D3D11/Direct2D/WARP FP32 vertical slice |
-| M6 전체 Develop graph | 8% | post-pipeline DR/R/G/B point curve→8-band HSL Color Mixer→3구간 Color Grading→R/G/B Primary Calibration scalar 순서 통합 | local·defect·film 등 전체 stage와 측정 |
+| M6 전체 Develop graph | 8% | post-pipeline DR/R/G/B point curve→8-band HSL Color Mixer→3구간 Color Grading→R/G/B Primary Calibration scalar 순서 통합, 다음 film-scan 분기의 11종 RGB33 색상 subcomponent는 standalone 검증 | Film Emulation acutance·source routing, digital film, local·defect 등 전체 stage와 측정 |
 | M7 대형 이미지 | 6% | WIC row sink, chunk ICC transform, 단조 progress/cancel, full decoded source 제거와 exact parity | 최종 working streaming, tile, byte reservation, cache, TDR |
 | M8 ABI·WinUI shell/canvas | 18% | C ABI와 C# `LibraryImport` bootstrap, 최대화 localized 셸, caption inset, 표시 설정 저장 | handles/events, GPU canvas, lifetime, activation 전체 경로 |
 | M9~M14 제품 surface | 2% | Library/Develop/Print/Settings 계층과 empty/disabled 상태 골격 | 실제 catalog, Develop, Defects, Export, Print와 Settings 기능 |
@@ -32,8 +32,8 @@
 | M17 배포·컴플라이언스 | 0% | 설치 선언 초안만 존재 | MSIX/installer, signing, update, SBOM |
 | M18 Beta/RC/Stable | 0% | 없음 | release gate 전체 |
 
-계산은 M0 35, M1 68, M2 30, M3 54, M4 44, M6 8, M7 6, M8 18, M9~M14 각각 2, 나머지 0을 19개
-milestone의 100점 만점에 대입한 약 14.5%입니다. 표시는 정수 14%이며, 숫자는 구현
+계산은 M0 35, M1 68, M2 32, M3 54, M4 44, M6 8, M7 6, M8 18, M9~M14 각각 2, 나머지 0을 19개
+milestone의 100점 만점에 대입한 약 14.6%입니다. 표시는 정수 14%이며, 숫자는 구현
 증거가 추가될 때만 올립니다.
 
 ## 현재 완료된 작은 루프
@@ -77,20 +77,25 @@ milestone의 100점 만점에 대입한 약 14.5%입니다. 표시는 정수 14%
     identity·세 구간·48개 합성 값을 x64에서 실행하고 ARM64로 교차 빌드했습니다.
 24. Color Grading 뒤 R/G/B Primary Calibration을 고정 세 대역·무할당 scalar로 연결하고, identity·회색
     gate·48개 합성 값을 x64에서 실행하고 ARM64로 교차 빌드했습니다.
+25. 다음 film-scan source 분기의 11종 profile을 5% intensity·caller-owned RGB33 색상 cube로 격리하고,
+    11개 node signature와 48개 합성 값을 x64에서 실행하고 ARM64로 교차 빌드했습니다. acutance와 실제
+    source routing은 아직 연결하지 않았습니다.
 
 ## 다음 완료 조건
 
 가까운 순서대로 다음을 닫습니다.
 
-1. M4 tone, point curve, Color Mixer, Color Grading과 Primary Calibration의 실제 macOS runtime golden·pixel diff와 cross-platform
-   허용오차 manifest를 보강합니다.
-2. 다음 Develop 후처리 단계를 macOS 실행 순서대로 조사·이식합니다.
-3. 독립 Deflate 검증기를 구현하거나 dependency gate를 열 근거를 확보하고, WIC 압축 해제 CPU budget과
+1. M4 tone, point curve, Color Mixer, Color Grading, Primary Calibration과 Film Emulation 색상 cube의 실제
+   macOS runtime golden·pixel diff를 확보합니다. cube 보간·경계와 fractional alpha를 따로 확인합니다.
+2. `CIUnsharpMask`의 impulse/edge golden으로 acutance 수치를 고정한 뒤 digital/film source routing을
+   연결합니다.
+3. 다음 Develop 후처리 단계를 macOS 실행 순서대로 조사·이식합니다.
+4. 독립 Deflate 검증기를 구현하거나 dependency gate를 열 근거를 확보하고, WIC 압축 해제 CPU budget과
    deadline을 검증합니다.
-4. 같은 ICC patch에 대한 macOS ColorSync golden과 Windows ICM 수치를 비교합니다.
-5. 차이가 허용 범위를 넘을 때만 LittleCMS를 dependency gate에 올립니다.
-6. 최종 working buffer와 출력을 downstream row/tile 소비자로 넘기고 전체 process budget을 적용합니다.
-7. WinUI 셸의 축소 폭·DPI·High Contrast·keyboard matrix를 검증하고 실제 catalog 연결을 시작합니다.
+5. 같은 ICC patch에 대한 macOS ColorSync golden과 Windows ICM 수치를 비교합니다.
+6. 차이가 허용 범위를 넘을 때만 LittleCMS를 dependency gate에 올립니다.
+7. 최종 working buffer와 출력을 downstream row/tile 소비자로 넘기고 전체 process budget을 적용합니다.
+8. WinUI 셸의 축소 폭·DPI·High Contrast·keyboard matrix를 검증하고 실제 catalog 연결을 시작합니다.
 
 ## 진행률을 올리지 않는 항목
 

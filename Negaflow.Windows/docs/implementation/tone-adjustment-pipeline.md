@@ -21,6 +21,10 @@ extended-linear-sRGB WorkingImage
 alpha는 모든 단계에서 그대로 보존합니다. scanner 입력 수직 경로는 opaque alpha만 허용하지만 kernel
 fixture는 fractional alpha도 보존하는지 별도로 확인합니다.
 
+Primary Calibration 다음 film-scan 분기의 Film Emulation RGB33 색상 component는 standalone으로
+구현했지만 이 실행 흐름에는 아직 연결하지 않았습니다. 실제 macOS cube golden, acutance와 source
+routing을 닫기 전까지 verified output 경로는 위 순서에서 끝납니다.
+
 ## 파일 책임
 
 - `tone_mapping.h/.cpp`: 외부 할당이 없는 기본 톤·파라메트릭 커브 pointwise 수식
@@ -166,3 +170,4 @@ buffer가 없습니다. identity이면 working orchestration이 kernel 호출을
 - 실제 Metal Color Mixer golden과 24개 control의 recipe/UI 연결은 아직 없습니다.
 - 실제 Core Image Color Grading golden과 세 color wheel recipe/UI 연결은 아직 없습니다.
 - 실제 macOS Primary Calibration golden과 여섯 control의 recipe/UI 연결은 아직 없습니다.
+- Film Emulation 색상 cube는 standalone 검증 상태이며 acutance·source routing·recipe/UI 연결은 아직 없습니다.

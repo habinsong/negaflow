@@ -2,11 +2,13 @@
 #include "negaflow/core/negative_inversion.h"
 #include "negaflow/imaging/color_grading.h"
 #include "negaflow/imaging/color_mixer.h"
+#include "negaflow/imaging/film_emulation_color.h"
 #include "negaflow/imaging/point_curve.h"
 #include "negaflow/imaging/primary_calibration.h"
 #include "negaflow/imaging/working_tone_adjuster.h"
 #include "color_grading_fixture.h"
 #include "color_mixer_fixture.h"
+#include "film_emulation_color_fixture.h"
 #include "point_curve_fixture.h"
 #include "primary_calibration_fixture.h"
 #include "scalar_foundation_fixture.h"
@@ -18,6 +20,8 @@
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <memory>
+#include <new>
 #include <utility>
 #include <vector>
 
@@ -296,12 +300,45 @@ int main() {
             negaflow::fixtures::primary_calibration_relative_tolerance);
     }
 
+    PixelErrorMetrics film_emulation_color_metrics{};
+    auto film_emulation_cube =
+        std::unique_ptr<negaflow::imaging::FilmEmulationColorCube>{
+            new (std::nothrow) negaflow::imaging::FilmEmulationColorCube};
+    std::vector<negaflow::core::Rgba32F> film_emulation_color_output(
+        negaflow::fixtures::film_emulation_color_input.size());
+    if (film_emulation_cube == nullptr ||
+        negaflow::imaging::build_film_emulation_color_cube(
+            negaflow::fixtures::film_emulation_color_parameters,
+            *film_emulation_cube) != negaflow::core::KernelStatus::ok ||
+        negaflow::imaging::apply_film_emulation_color_cube(
+            {negaflow::fixtures::film_emulation_color_input.data(),
+             negaflow::fixtures::film_emulation_color_input.size(),
+             4U,
+             3U,
+             4U},
+            {film_emulation_color_output.data(),
+             film_emulation_color_output.size(),
+             4U,
+             3U,
+             4U},
+            negaflow::fixtures::film_emulation_color_parameters,
+            film_emulation_cube.get()) != negaflow::core::KernelStatus::ok) {
+        ++film_emulation_color_metrics.failure_count;
+    } else {
+        film_emulation_color_metrics = compare_pixels(
+            film_emulation_color_output,
+            negaflow::fixtures::film_emulation_color_expected,
+            negaflow::fixtures::film_emulation_color_absolute_tolerance,
+            negaflow::fixtures::film_emulation_color_relative_tolerance);
+    }
+
     const negaflow::core::BuildInfo build_info = negaflow::core::query_build_info();
     const std::size_t failure_count =
         negative_failure_count + tone_metrics.failure_count +
         point_curve_metrics.failure_count + color_mixer_metrics.failure_count +
         color_grading_metrics.failure_count +
-        primary_calibration_metrics.failure_count;
+        primary_calibration_metrics.failure_count +
+        film_emulation_color_metrics.failure_count;
     const bool passed = failure_count == 0U;
     std::cout << "{\"schema_version\":1,\"status\":\""
               << (passed ? "ok" : "failed") << "\",\"fixture_id\":\""
@@ -386,6 +423,27 @@ int main() {
               << ",\"primary_calibration_max_absolute_error\":"
               << primary_calibration_metrics.maximum_absolute_error
               << ",\"primary_calibration_max_relative_error\":"
-              << primary_calibration_metrics.maximum_relative_error << "}\n";
+              << primary_calibration_metrics.maximum_relative_error
+              << ",\"film_emulation_color_fixture_id\":\""
+              << negaflow::fixtures::film_emulation_color_fixture_id
+              << "\",\"film_emulation_color_algorithm_version\":\""
+              << negaflow::imaging::film_emulation_color_algorithm_version
+              << "\",\"film_emulation_color_cube_dimension\":"
+              << negaflow::imaging::film_emulation_cube_dimension
+              << ",\"film_emulation_color_cube_bytes\":"
+              << negaflow::imaging::film_emulation_color_cube_bytes
+              << ",\"film_emulation_color_intensity_step\":"
+              << negaflow::imaging::film_emulation_intensity_step(
+                     negaflow::fixtures::film_emulation_color_parameters)
+              << ",\"film_emulation_color_value_count\":"
+              << negaflow::fixtures::film_emulation_color_expected.size() * 4U
+              << ",\"film_emulation_color_finite_output_count\":"
+              << film_emulation_color_metrics.finite_output_count
+              << ",\"film_emulation_color_failure_count\":"
+              << film_emulation_color_metrics.failure_count
+              << ",\"film_emulation_color_max_absolute_error\":"
+              << film_emulation_color_metrics.maximum_absolute_error
+              << ",\"film_emulation_color_max_relative_error\":"
+              << film_emulation_color_metrics.maximum_relative_error << "}\n";
     return passed ? 0 : 1;
 }

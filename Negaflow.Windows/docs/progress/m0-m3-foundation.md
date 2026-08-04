@@ -69,6 +69,7 @@
 - macOS post-pipeline 두 번째 단계의 고정 8대역 HSL Color Mixer scalar
 - macOS post-pipeline 세 번째 단계의 고정 shadows/midtones/highlights Color Grading scalar
 - macOS post-pipeline 네 번째 단계의 고정 R/G/B Primary Calibration scalar
+- film-scan source 분기의 11종 profile·5% intensity·고정 RGB33 Film Emulation 색상 standalone scalar
 - fixed fallback과 bounded `portable_area_v1` percentile 측정, 제자리 tone orchestration
 - versioned 합성 fixture와 JSON conformance report
 - AVX/OSXSAVE/AVX2/FMA 및 ARM64 NEON capability 식별
@@ -84,12 +85,13 @@
 - 4×3 Color Mixer fixture의 48개 RGBA 값, 24개 control 범위·회색 gate·대역 순서 통과
 - 4×3 Color Grading fixture의 48개 RGBA 값, 세 구간·identity·pivot·처리 순서 통과
 - 4×3 Primary Calibration fixture의 48개 RGBA 값, 여섯 control·회색 gate·처리 순서 통과
+- 4×3 Film Emulation 색상 fixture의 48개 RGBA 값과 11종 profile node signature, 431,244바이트 cube 계약 통과
 - ARM64에서는 같은 source가 컴파일되지만 수치 실행은 아직 미검증
 
 ### 남은 것
 
-- blur, local contrast, histogram, morphology, defect, crop/resize,
-  digital-film 전체
+- Film Emulation의 실제 Core Image golden, acutance와 digital/film source routing
+- blur, local contrast, histogram, morphology, defect, crop/resize와 digital-film 전체
 - forced scalar/base/AVX2 dispatch와 실제 NEON 실행
 - ROI/halo/cancellation 계약
 - macOS baseline generator와 더 넓은 golden corpus
