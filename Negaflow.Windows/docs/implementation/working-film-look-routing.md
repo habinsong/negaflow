@@ -26,6 +26,10 @@ macOS의 디지털 경로는 halation, 별도 digital color, grain을 포함합�
 - `working_film_look.h`: source/route/status, parameter, caller workspace와 결과 계약
 - `working_film_look.cpp`: 명시적 route 선택, 색상→acutance 순서와 fail-closed orchestration
 - `working_film_look_tests.cpp`: route, 순서, cube 재사용, 경계 강도와 실패 계약
+- `film_look_command_support.h/.cpp`: CLI 이름·강도 parsing과 caller-owned cube/scratch 준비
+- `develop_negative_tiff.cpp`: 단계별 픽셀 진단에서 Film Look 결과를 최종 상태로 보고
+- `export_developed_image.cpp`: Primary Calibration 뒤 Film Look, 출력 변환 전 실행과 단계 보고
+- `verify_developed_tiff_film_look.cmake`: 실제 TIFF identity/활성 산출물과 단계 순서 회귀 검증
 
 색상 cube와 spatial kernel 수학은 기존 `film_emulation_color.*`와
 `film_emulation_acutance.*`에 남깁니다. router는 source 정책과 실행 순서만 책임지며 TIFF, catalog,
@@ -74,11 +78,36 @@ acutance amount와 필요한 scratch pixel 수를 기록합니다. 구체적인 
 `WorkingFilmLookStatus::kernel_failed`일 때 `kernel_status`로 판단하며, 그 밖의 최종 상태는
 `WorkingFilmLookStatus`를 사용합니다.
 
+CLI의 `stages.film_look`은 위 값에 algorithm version, 명시적 인수 여부, source/profile/intensity,
+workspace byte와 wall/process-CPU 시간을 더합니다. 일반 export는 이 보고를 위해 pixel을 다시 훑지
+않습니다.
+
+## CLI와 실제 출력 연결
+
+진단, PNG16과 TIFF16 명령은 기존 인수 뒤에 Film Look 세 값을 모두 받거나 모두 생략합니다.
+
+```powershell
+negaflow-cli --develop-negative-tiff <source> <dmin-r> <dmin-g> <dmin-b> <color|bw> [<tone-6-values>] [<film_scan> <film-emulation> <film-look-intensity>]
+negaflow-cli --export-developed-tiff16 <source> <destination> <dmin-r> <dmin-g> <dmin-b> <color|bw> [<tone-6-values>] [<film_scan> <film-emulation> <film-look-intensity>]
+```
+
+PNG16도 TIFF16과 같은 인수와 orchestration을 사용합니다. Film Look 인수를 생략하면
+`film_scan + none + 0.5` identity로 기존 명령 결과를 보존합니다. 명령의 실제 순서는 다음과 같습니다.
+
+```text
+decode/scanner color → manual negative develop → tone/Primary Calibration
+  → explicit Working Film Look → sRGB16 convert/encode/verify/publish
+```
+
+이 명령들은 네거티브 현상을 반드시 수행하므로 명시적 `rendered_digital`은 source 파일을 열기 전에
+`negative_develop_requires_film_scan_source`로 거부합니다. 디지털 입력을 film-scan 부분 그래프로
+조용히 처리하거나 profile 이름으로 source를 추정하지 않습니다.
+
 ## 아직 연결하지 않은 것
 
-- CLI recipe와 단계 report
 - C ABI와 관리 코드/WinUI
 - catalog/import source metadata persistence
+- catalog recipe 저장·재로드
 - cancellation/progress와 workspace cache 수명 관리자
 - digital halation·color·grain 전체 그래프
 - SIMD/DirectCompute/WARP 및 대형 이미지 benchmark

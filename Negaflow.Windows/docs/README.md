@@ -51,6 +51,7 @@
 - [2026-08-04 Film Emulation RGB33 색상 cube 검증](verification/2026-08-04-film-emulation-color.md)
 - [2026-08-04 Film Emulation Core Image golden·acutance 검증](verification/2026-08-04-film-emulation-core-image-golden.md)
 - [2026-08-04 Film Look source routing 검증](verification/2026-08-04-film-look-routing.md)
+- [2026-08-04 Film Look CLI·실제 출력 검증](verification/2026-08-04-film-look-cli.md)
 - [2026-08-04 파이프라인 CPU 시간·단계 진단 검증](verification/2026-08-04-pipeline-diagnostics.md)
 - [2026-08-04 압축 TIFF 사전 검사 검증](verification/2026-08-04-compressed-tiff-preflight.md)
 - [이미지 I/O 조사와 권리 검토](research/image-io-sources.md)

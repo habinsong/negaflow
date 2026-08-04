@@ -39,6 +39,26 @@
 - [C++ Core Guidelines R.5](https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rr-scoped)는 scoped
   object를 우선하라는 지침입니다. router는 전역 cache를 만들지 않고 호출자가 수명을 관리하게 합니다.
 
+## CLI·통합 검증 공식 근거
+
+- [Microsoft: Using `wmain`](https://learn.microsoft.com/en-us/cpp/c-language/using-wmain?view=msvc-170)은
+  Unicode 모델에서 `wmain(int, wchar_t**)`로 wide-character argument를 받는 계약을 설명합니다. 기존
+  CLI 진입점을 유지하고 source/profile 이름을 `std::wstring_view`로 해석합니다.
+- [Microsoft: `<charconv>` functions](https://learn.microsoft.com/en-us/cpp/standard-library/charconv-functions?view=msvc-170)은
+  `from_chars`가 locale 비의존·무할당·비예외 방식이며 반환 pointer와 error code로 부분 parsing을
+  판정한다고 설명합니다. intensity는 고정 stack ASCII buffer에서 변환하고 입력 전체 소비와 finite를
+  모두 확인합니다.
+- [CMake: `add_test`](https://cmake.org/cmake/help/latest/command/add_test.html)와
+  [CMake: `execute_process`](https://cmake.org/cmake/help/latest/command/execute_process.html)는 build target
+  위치를 넘긴 실제 command test와 configure script 내부 process 결과 수집 계약을 제공합니다. 통합
+  검증은 저장소 TIFF를 identity/활성 Film Look으로 각각 게시하고, 보고 단계 순서와 서로 다른 artifact,
+  I/O 전 digital-source 거부를 확인한 뒤 test output만 삭제합니다.
+
+`windows_docs/15-digital-film/virtual-development.md`의 source signal/process 구분과 잘못된
+negative+digital 조합의 visible invalid 계약에 따라, 현재 네거티브 현상 CLI는 `rendered_digital`을
+profile 없음으로 조용히 고치지 않습니다. 파일을 열기 전에
+`negative_develop_requires_film_scan_source`로 실패합니다.
+
 ## 제한형 공개 특허 검색
 
 - [US7034862B1](https://patents.google.com/patent/US7034862B1/en)은 전자적으로 촬영한 scene exposure를

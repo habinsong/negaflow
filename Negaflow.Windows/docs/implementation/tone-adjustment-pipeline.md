@@ -15,6 +15,7 @@ extended-linear-sRGB WorkingImage
   → Color Mixer: HSL 8-band hue/saturation/luminance
   → Color Grading: shadows/midtones/highlights color wheel
   → Primary Calibration: R/G/B primary hue/saturation
+  → explicit film-scan Film Look: RGB33 color → bounded acutance
   → verified sRGB16 PNG/TIFF output
 ```
 
@@ -23,8 +24,8 @@ fixture는 fractional alpha도 보존하는지 별도로 확인합니다.
 
 Primary Calibration 다음 film-scan 분기의 Film Emulation RGB33 색상과 bounded acutance component는
 canonical macOS golden에 맞춰 구현했고 별도 `WorkingFilmLook` native route가 두 단계를 순서대로
-묶습니다. 다만 이 tone/export CLI 실행 흐름에는 아직 route를 연결하지 않았으므로 verified output
-경로는 위 순서에서 끝납니다.
+묶습니다. 진단과 PNG16/TIFF16 export CLI는 source 종류·profile·intensity를 명시적으로 받아 이 route를
+호출하며, 미완성 digital graph를 film-scan 부분집합으로 대체하지 않습니다.
 
 ## 파일 책임
 
@@ -35,6 +36,7 @@ canonical macOS golden에 맞춰 구현했고 별도 `WorkingFilmLook` native ro
 - `color_grading.h/.cpp`: 고정 3구간 color wheel, luma weight와 pointwise 수학
 - `primary_calibration.h/.cpp`: 고정 R/G/B 대역, 여섯 control과 HSL pointwise 수학
 - `working_tone_adjuster.h/.cpp`: 제품 입력 범위, 단계 순서, 실패 시 pixel 폐기
+- `film_look_command_support.h/.cpp`: 명시적 source/profile/intensity parsing과 bounded workspace 소유
 - `tone_mapping_fixture.h`: 저장소 소유 3×2 합성 입력·recipe·Float32 기대값
 - `point_curve_fixture.h`: 저장소 소유 3×2 포인트 커브 입력·LUT 표본·Float32 기대값
 - `color_mixer_fixture.h`: 저장소 소유 4×3 RGB 입력·24개 control·Float32 기대값
@@ -128,10 +130,18 @@ negaflow-cli --export-developed-tiff16 <source> <destination> <dmin-r> <dmin-g> 
 negaflow-cli --export-developed-tiff16 <source> <destination> <dmin-r> <dmin-g> <dmin-b> <color|bw> <exposure> <contrast> <curve-highlights> <curve-lights> <curve-darks> <curve-shadows>
 ```
 
+Film Look은 마지막 세 값을 모두 추가하며, 톤 여섯 값의 유무와 독립적으로 사용할 수 있습니다.
+
+```powershell
+negaflow-cli --export-developed-tiff16 <source> <destination> <dmin-r> <dmin-g> <dmin-b> <color|bw> [<tone-6-values>] film_scan <film-emulation> <film-look-intensity>
+```
+
 PNG16도 같은 인수와 orchestration을 사용합니다. 일부 선택 인수만 주는 형식은 recipe 오해를 막기 위해
-거부합니다. JSON의 `stages.tone_adjust`에는 입력값, 적용 여부, sampling mode, target, sample 수, band,
-peak temporary bytes와 wall/process-CPU microseconds가 들어갑니다. 경로·file identity 값·SHA 값은
-넣지 않습니다. 커브가 적용되지 않으면 sampling mode는 `none`, `curve_bands`는 `null`입니다. 기본
+거부합니다. `rendered_digital`은 네거티브 현상 명령과 양립하지 않으므로 파일 I/O 전에 거부합니다.
+JSON의 `stages.tone_adjust`에는 입력값, 적용 여부, sampling mode, target, sample 수, band, peak temporary
+bytes와 wall/process-CPU microseconds가 들어갑니다. 이어지는 `stages.film_look`에는 source, profile,
+intensity, route, color/acutance 적용 여부와 bounded workspace가 들어갑니다. 경로·file identity 값·SHA
+값은 넣지 않습니다. 커브가 적용되지 않으면 sampling mode는 `none`, `curve_bands`는 `null`입니다. 기본
 export는 추가 pixel fingerprint scan을 하지 않고 별도 개발 진단에서만 단계 통계를 계산합니다.
 
 현재 CLI와 WinUI는 포인트 목록, Color Mixer 24개 control, Color Grading과 Primary Calibration recipe
@@ -171,5 +181,5 @@ buffer가 없습니다. identity이면 working orchestration이 kernel 호출을
 - 실제 Metal Color Mixer golden과 24개 control의 recipe/UI 연결은 아직 없습니다.
 - 실제 Core Image Color Grading golden과 세 color wheel recipe/UI 연결은 아직 없습니다.
 - 실제 macOS Primary Calibration golden과 여섯 control의 recipe/UI 연결은 아직 없습니다.
-- Film Emulation 색상→acutance와 명시적 source routing은 별도 native contract로 검증했지만
-  tone/export CLI recipe와 UI 연결은 아직 없습니다.
+- Film Emulation 색상→acutance와 명시적 source routing은 진단·PNG16·TIFF16 CLI까지 연결했지만,
+  catalog recipe persistence, C ABI와 UI 연결은 아직 없습니다.

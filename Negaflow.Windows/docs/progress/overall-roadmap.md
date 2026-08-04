@@ -5,7 +5,7 @@
 
 ## 현재 숫자
 
-- 전체 M0~M18 제품 로드맵: **약 14%**
+- 전체 M0~M18 제품 로드맵: **약 15%**
 - 기반 구간 M0~M3: **약 45%**
 - 제한형 TIFF 사전 검사 세부 작업: **약 94%**
 
@@ -21,9 +21,9 @@
 | M1 저장소·빌드·CI | 68% | 별도 build root, x64/ARM64 native·managed·WinUI graph, dual-RID lock, C ABI, CLI, VS 18.8.2와 Windows App SDK C# component, 고정 SDK/vcpkg, static CRT | shader/packaging, CI, 실제 ARM64 run |
 | M2 적합성·CPU scalar | 35% | pixel contract, exposure/matrix, 네거티브 반전, 기본 톤·4-band curve, 고정 64표본 DR/R/G/B point curve, 8-band HSL Color Mixer, 3구간 Color Grading, R/G/B Primary Calibration, 11종 RGB33 Film Emulation 색상→11행 acutance route, macOS golden과 bounded percentile 측정 | 전체 kernel inventory, forced dispatch, 나머지 공간·통계·결함·변환 golden |
 | M3 이미지 I/O·색·영속성 | 54% | 동일 read-only stream의 bounded TIFF probe+WIC 16-bit decode, TIFF 6 조기 비트폭 LZW 의미 검사와 Deflate 격리, sink 기반 row streaming, ICC row transform→linear working, whole/stream exact parity 15개, 이미지 SHA 기본-off/opt-in CNG, 검증된 PNG16/TIFF16 단일 파일 게시 | 독립 Deflate 검증, ColorSync parity, tile/fuzz, SQLite, catalog transaction·복구 |
-| M4 CLI end-to-end | 45% | 한 장 decode→color→수동 Dmin develop→노출·기본 톤·동적 4-band curve→sRGB16 TIFF/PNG 검증 게시, point curve·Color Mixer·Color Grading·Primary Calibration report 경계, Film Look native source route, macOS golden·cross-platform envelope, source 관찰, 단계별 report, SHA 기본-off | 고급 color recipe 입력·저장, Film Look route의 CLI 연결, 나머지 runtime pixel diff manifest |
+| M4 CLI end-to-end | 49% | 한 장 decode→color→수동 Dmin develop→tone·Primary Calibration→명시적 film-scan Film Look→sRGB16 TIFF/PNG 검증 게시, 실제 identity/활성 TIFF 차이, macOS golden·cross-platform envelope, source 관찰, 단계별 report, SHA 기본-off | 고급 color recipe 입력·저장, catalog source persistence, 나머지 runtime pixel diff manifest |
 | M5 GPU/WARP | 0% | 문서만 존재 | D3D11/Direct2D/WARP FP32 vertical slice |
-| M6 전체 Develop graph | 11% | post-pipeline DR/R/G/B point curve→8-band HSL Color Mixer→3구간 Color Grading→R/G/B Primary Calibration scalar 순서 통합, 명시적 source route와 film-scan 11종 RGB33 색상→bounded acutance 순서 검증 | CLI/recipe source 연결, digital film 전체 그래프, local·defect 등 전체 stage와 측정 |
+| M6 전체 Develop graph | 13% | post-pipeline DR/R/G/B point curve→8-band HSL Color Mixer→3구간 Color Grading→R/G/B Primary Calibration→명시적 film-scan 11종 RGB33 색상→bounded acutance 순서를 CLI 출력까지 통합 | recipe source 저장·재로드, digital film 전체 그래프, local·defect 등 전체 stage와 측정 |
 | M7 대형 이미지 | 6% | WIC row sink, chunk ICC transform, 단조 progress/cancel, full decoded source 제거와 exact parity | 최종 working streaming, tile, byte reservation, cache, TDR |
 | M8 ABI·WinUI shell/canvas | 18% | C ABI와 C# `LibraryImport` bootstrap, 최대화 localized 셸, caption inset, 표시 설정 저장 | handles/events, GPU canvas, lifetime, activation 전체 경로 |
 | M9~M14 제품 surface | 2% | Library/Develop/Print/Settings 계층과 empty/disabled 상태 골격 | 실제 catalog, Develop, Defects, Export, Print와 Settings 기능 |
@@ -32,8 +32,8 @@
 | M17 배포·컴플라이언스 | 0% | 설치 선언 초안만 존재 | MSIX/installer, signing, update, SBOM |
 | M18 Beta/RC/Stable | 0% | 없음 | release gate 전체 |
 
-계산은 M0 35, M1 68, M2 35, M3 54, M4 45, M6 11, M7 6, M8 18, M9~M14 각각 2, 나머지 0을 19개
-milestone의 100점 만점에 대입한 약 14.9%입니다. 표시는 보수적으로 정수 14%이며, 숫자는 구현
+계산은 M0 35, M1 68, M2 35, M3 54, M4 49, M6 13, M7 6, M8 18, M9~M14 각각 2, 나머지 0을 19개
+milestone의 100점 만점에 대입한 약 15.3%입니다. 표시는 보수적으로 정수 15%이며, 숫자는 구현
 증거가 추가될 때만 올립니다.
 
 ## 현재 완료된 작은 루프
@@ -86,12 +86,16 @@ milestone의 100점 만점에 대입한 약 14.9%입니다. 표시는 보수적�
 27. source 종류를 추정하지 않는 native Film Look route를 만들고 film scan의 RGB33 색상→acutance 순서를
     수동 호출과 bit-exact로 비교했습니다. cube 재사용, 낮은 강도, identity, 부족한 workspace 조기 거부와
     미완성 digital graph의 fail-closed를 검증해 x64 Debug/Release 33/33과 ARM64 전체 교차 빌드를 통과했습니다.
+28. 명시적 source/profile/intensity CLI parsing과 bounded workspace 소유를 분리하고, 진단·PNG16·TIFF16에서
+    Primary Calibration 뒤 Film Look을 실행했습니다. 같은 tone의 identity/활성 TIFF가 달라지는지, report 단계
+    순서, I/O 전 digital-source 거부와 SHA 기본-off를 검증해 x64 Debug/Release 37/37과 ARM64 전체 교차
+    빌드를 통과했습니다.
 
 ## 다음 완료 조건
 
 가까운 순서대로 다음을 닫습니다.
 
-1. 명시적 Film Look source route를 CLI recipe·report와 catalog/import metadata에 연결하고, 저장·재로드해도
+1. 명시적 Film Look source를 catalog/import metadata와 recipe persistence에 연결하고, 저장·재로드해도
    source 종류와 stage 순서가 바뀌지 않는지 검증합니다.
 2. cube 경계·fractional alpha golden을 확대하고 caller-owned cube/scratch cache·취소 계약을 고정합니다.
 3. 다음 Develop 후처리 단계를 macOS 실행 순서대로 조사·이식합니다.

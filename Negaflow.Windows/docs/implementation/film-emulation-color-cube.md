@@ -15,9 +15,9 @@ Primary Calibration 결과의 extended-linear sRGB
 ```
 
 이 component의 수학은 독립적으로 유지합니다. 별도 `WorkingFilmLook` native route가 macOS
-`FilmEmulationStage`와 같이 이 색상 cube 뒤 bounded acutance를 호출하지만, 기존 tone/export CLI
-수직 경로는 아직 route를 호출하지 않습니다. 디지털 입력의 별도 `DigitalFilmLook`도 이 component에
-포함하지 않습니다.
+`FilmEmulationStage`와 같이 이 색상 cube 뒤 bounded acutance를 호출하고, 진단과 PNG16/TIFF16 export
+CLI가 Primary Calibration 다음에 이 route를 실행합니다. 디지털 입력의 별도 `DigitalFilmLook`은 이
+component에 포함하지 않습니다.
 
 ## 파일 책임
 
@@ -86,16 +86,17 @@ cube validation은 apply마다 431,244바이트를 순회합니다. 현재는 �
 
 ## CLI·UI·파이프라인 경계
 
-현재 CLI report, C ABI와 WinUI에는 Film Emulation profile/intensity가 없습니다. 기존
-`WorkingToneAdjuster`의 실행 순서는 Primary Calibration에서 끝나며 이 cube를 자동 호출하지 않습니다.
+현재 진단과 PNG16/TIFF16 CLI는 명시적 `film_scan`, 11종 profile 이름과 intensity를 받고, report에
+route·quantized color step·cube build/reuse·적용 여부를 기록합니다. `WorkingToneAdjuster` 자체는
+Primary Calibration에서 끝나고 상위 CLI orchestration이 다음 `WorkingFilmLook`을 호출합니다.
 `chromabase-working-film-look-v1` native route는 명시적 source 종류를 받아 film scan에서만 색상 뒤
 acutance를 실행하고 미완성 digital graph는 fail-closed로 거부합니다.
 canonical macOS run에서 opaque `CIColorCubeWithColorSpace`와 `CIUnsharpMask` 수치 기준을 확보했습니다.
 색상 36개 RGB 값의 최대 절대 오차는 `0.0018888685`, RMSE는 `0.0005653865`였고 test envelope는
 `0.0021`로 고정했습니다. 다음 제품 연결은 아래 경계를 먼저 닫습니다.
 
-1. source 종류와 profile/intensity의 recipe serialization 및 CLI report
-2. catalog/import source metadata와 WinUI 연결
+1. source 종류와 profile/intensity의 catalog recipe 저장·재로드
+2. catalog/import source metadata와 C ABI·WinUI 연결
 3. cube/scratch cache 수명, 취소와 CPU/GPU dispatch 계약
 4. cube 경계와 fractional-alpha golden 확대
 
@@ -105,7 +106,7 @@ canonical macOS run에서 opaque `CIColorCubeWithColorSpace`와 `CIUnsharpMask` 
   않습니다.
 - fractional alpha는 보존하지만 scanner 수직 경로는 opaque만 허용하므로 실제 제품 경로 검증이
   남아 있습니다.
-- acutance가 standalone으로 존재해도 색상과 source route를 묶은 전체 `FilmEmulationStage`는 아직
-  아닙니다.
+- CLI 수직 경로는 film-scan `FilmEmulationStage` 순서를 실행하지만 catalog/WinUI 제품 경로는 아직
+  연결되지 않았습니다.
 - scalar `pow`와 cube build 비용에 대한 megapixel benchmark, SIMD/GPU 최적화가 없습니다.
 - ARM64는 교차 빌드만 했고 실제 ARM64 Windows에서 실행하지 않았습니다.

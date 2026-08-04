@@ -1,5 +1,6 @@
 #include "develop_negative_tiff.h"
 
+#include "film_look_command_support.h"
 #include "working_image_report.h"
 
 #include "negaflow/core/negative_inversion.h"
@@ -15,6 +16,7 @@
 #include <filesystem>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <string_view>
 #include <system_error>
 #include <utility>
@@ -68,7 +70,12 @@ void print_working_statistics(const WorkingImageStatistics& statistics) {
 int run_develop_negative_tiff(
     const int argument_count,
     const wchar_t* const arguments[]) {
-    if (argument_count != 7 && argument_count != 13) {
+    const bool tone_arguments_explicit =
+        argument_count == 13 || argument_count == 16;
+    const bool film_look_arguments_explicit =
+        argument_count == 10 || argument_count == 16;
+    if (argument_count != 7 && argument_count != 10 &&
+        argument_count != 13 && argument_count != 16) {
         return print_error("invalid_argument_count");
     }
 
@@ -88,7 +95,7 @@ int run_develop_negative_tiff(
     }
 
     negaflow::imaging::WorkingToneAdjustParameters tone_parameters{};
-    if (argument_count == 13) {
+    if (tone_arguments_explicit) {
         if (!parse_finite_float(arguments[7], tone_parameters.exposure_stops) ||
             !parse_finite_float(arguments[8], tone_parameters.basic.contrast) ||
             !parse_finite_float(arguments[9], tone_parameters.curve.highlights) ||
@@ -99,6 +106,24 @@ int run_develop_negative_tiff(
                 tone_parameters)) {
             return print_error("invalid_tone_adjustment_parameter");
         }
+    }
+
+    FilmLookCommandRecipe film_look_recipe{};
+    if (film_look_arguments_explicit) {
+        const std::size_t first_argument =
+            tone_arguments_explicit ? 13U : 7U;
+        const FilmLookRecipeParseStatus parse_status = parse_film_look_recipe(
+            arguments[first_argument],
+            arguments[first_argument + 1U],
+            arguments[first_argument + 2U],
+            film_look_recipe);
+        if (parse_status != FilmLookRecipeParseStatus::ok) {
+            return print_error(film_look_recipe_parse_status_name(parse_status));
+        }
+    }
+    if (film_look_recipe.parameters.source_kind !=
+        negaflow::imaging::DevelopSourceKind::film_scan) {
+        return print_error("negative_develop_requires_film_scan_source");
     }
 
     constexpr std::uint32_t rows_per_copy = 64U;
@@ -125,6 +150,17 @@ int run_develop_negative_tiff(
         return print_error(
             negaflow::imaging::scanner_to_working_status_name(prepared.working.status),
             prepared.working.info.native_error_code);
+    }
+
+    FilmLookCommandWorkspace film_look_workspace{};
+    const FilmLookWorkspacePrepareStatus workspace_status =
+        prepare_film_look_workspace(
+            film_look_recipe.parameters,
+            prepared.working.image.width,
+            film_look_workspace);
+    if (workspace_status != FilmLookWorkspacePrepareStatus::ok) {
+        return print_error(
+            film_look_workspace_prepare_status_name(workspace_status));
     }
 
     const WorkingImageStatistics prepared_statistics =
@@ -182,6 +218,33 @@ int run_develop_negative_tiff(
         return print_error("invalid_working_image_layout");
     }
 
+    auto film_look = negaflow::imaging::apply_working_film_look(
+        std::move(adjusted.image),
+        film_look_recipe.parameters,
+        film_look_workspace_view(film_look_workspace));
+    if (film_look.status != negaflow::imaging::WorkingFilmLookStatus::ok) {
+        if (film_look.status ==
+            negaflow::imaging::WorkingFilmLookStatus::kernel_failed) {
+            return print_error(
+                negaflow::core::kernel_status_name(
+                    film_look.info.kernel_status));
+        }
+        return print_error(
+            negaflow::imaging::working_film_look_status_name(
+                film_look.status));
+    }
+    const bool film_look_pixels_changed = film_look.info.color_applied ||
+        film_look.info.acutance_applied;
+    WorkingImageStatistics film_look_statistics = adjusted_statistics;
+    if (film_look_pixels_changed) {
+        film_look_statistics =
+            compute_working_image_statistics(film_look.image);
+        ++statistics_full_frame_scan_count;
+    }
+    if (!film_look_statistics.valid) {
+        return print_error("invalid_working_image_layout");
+    }
+
     std::cout << "{\"schema_version\":1,\"status\":\"ok\","
                  "\"operation\":\"develop_negative_tiff\","
                  "\"working_space\":\"extended_linear_srgb_rgba_f32\","
@@ -194,9 +257,11 @@ int run_develop_negative_tiff(
               << "],\"dmax_normalized\":[" << developed.info.dmax_normalized[0] << ','
               << developed.info.dmax_normalized[1] << ','
               << developed.info.dmax_normalized[2] << "],\"width\":"
-              << adjusted.image.width << ",\"height\":" << adjusted.image.height
+              << film_look.image.width << ",\"height\":"
+              << film_look.image.height
               << ",\"working_pixel_bytes\":"
-              << adjusted.image.pixels.size() * sizeof(negaflow::core::Rgba32F)
+              << film_look.image.pixels.size() *
+                     sizeof(negaflow::core::Rgba32F)
               << ",\"develop_additional_full_frame_bytes\":0,\"source_sha256_mode\":\"off\","
                  "\"scanner_transform\":\""
               << negaflow::imaging::scanner_working_transform_name(prepared.working.info.transform)
@@ -223,8 +288,41 @@ int run_develop_negative_tiff(
               << negaflow::imaging::primary_calibration_algorithm_version
               << "\",\"calibration_applied\":"
               << (adjusted.info.primary_calibration_applied ? "true" : "false")
+              << ",\"film_look_algorithm_version\":\""
+              << negaflow::imaging::working_film_look_algorithm_version
+              << "\",\"film_look_arguments_explicit\":"
+              << (film_look_recipe.arguments_explicit ? "true" : "false")
+              << ",\"source_kind\":\""
+              << negaflow::imaging::develop_source_kind_name(
+                     film_look_recipe.parameters.source_kind)
+              << "\",\"film_emulation\":\""
+              << film_emulation_recipe_name(
+                     film_look_recipe.parameters.emulation)
+              << "\",\"film_emulation_intensity\":"
+              << std::setprecision(std::numeric_limits<double>::max_digits10)
+              << film_look_recipe.parameters.intensity
+              << ",\"film_look_route\":\""
+              << negaflow::imaging::film_look_route_name(film_look.info.route)
+              << "\",\"film_color_algorithm_version\":\""
+              << negaflow::imaging::film_emulation_color_algorithm_version
+              << "\",\"film_acutance_algorithm_version\":\""
+              << negaflow::imaging::film_emulation_acutance_algorithm_version
+              << "\",\"film_color_intensity_step\":"
+              << film_look.info.color_intensity_step
+              << ",\"film_acutance_amount\":"
+              << film_look.info.acutance_amount
+              << ",\"film_color_cube_built\":"
+              << (film_look.info.color_cube_built ? "true" : "false")
+              << ",\"film_color_cube_reused\":"
+              << (film_look.info.color_cube_reused ? "true" : "false")
+              << ",\"film_color_applied\":"
+              << (film_look.info.color_applied ? "true" : "false")
+              << ",\"film_acutance_applied\":"
+              << (film_look.info.acutance_applied ? "true" : "false")
+              << ",\"film_look_workspace_bytes\":"
+              << film_look_workspace_bytes(film_look_workspace)
               << ",\"tone_arguments_explicit\":"
-              << (argument_count == 13 ? "true" : "false")
+              << (tone_arguments_explicit ? "true" : "false")
               << ",\"pixel_fingerprint_algorithm\":\""
               << working_pixel_fingerprint_algorithm_version
               << "\",\"pixel_fingerprint_cryptographic\":false,"
@@ -237,18 +335,21 @@ int run_develop_negative_tiff(
     print_working_statistics(developed_statistics);
     std::cout << ",\"tone_adjust\":";
     print_working_statistics(adjusted_statistics);
+    std::cout << ",\"film_look\":";
+    print_working_statistics(film_look_statistics);
     std::cout << "},\"channel_min\":[" << std::setprecision(9)
-              << adjusted_statistics.minimum[0] << ','
-              << adjusted_statistics.minimum[1] << ','
-              << adjusted_statistics.minimum[2] << ','
-              << adjusted_statistics.minimum[3] << "],\"channel_max\":["
-              << adjusted_statistics.maximum[0] << ','
-              << adjusted_statistics.maximum[1] << ','
-              << adjusted_statistics.maximum[2] << ','
-              << adjusted_statistics.maximum[3]
+              << film_look_statistics.minimum[0] << ','
+              << film_look_statistics.minimum[1] << ','
+              << film_look_statistics.minimum[2] << ','
+              << film_look_statistics.minimum[3] << "],\"channel_max\":["
+              << film_look_statistics.maximum[0] << ','
+              << film_look_statistics.maximum[1] << ','
+              << film_look_statistics.maximum[2] << ','
+              << film_look_statistics.maximum[3]
               << "],\"pixel_fingerprint_fnv1a64\":\"" << std::hex
               << std::setw(16) << std::setfill('0')
-              << adjusted_statistics.fingerprint_fnv1a64 << std::dec << "\"}\n";
+              << film_look_statistics.fingerprint_fnv1a64 << std::dec
+              << "\"}\n";
     return 0;
 }
 

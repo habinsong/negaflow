@@ -165,6 +165,7 @@ add_executable(negaflow_cli
     src/Cli/commands/export_developed_image.cpp
     src/Cli/commands/export_developed_png.cpp
     src/Cli/commands/export_developed_tiff.cpp
+    src/Cli/commands/film_look_command_support.cpp
     src/Cli/commands/hash_image.cpp
     src/Cli/commands/prepare_scanner_tiff.cpp
     src/Cli/commands/process_cpu_time.cpp
@@ -414,6 +415,23 @@ if(BUILD_TESTING)
         COMMAND negaflow_working_film_look_tests
     )
 
+    add_executable(negaflow_film_look_command_support_tests
+        tests/Native.UnitTests/film_look_command_support_tests.cpp
+        src/Cli/commands/film_look_command_support.cpp
+    )
+    target_include_directories(
+        negaflow_film_look_command_support_tests
+        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/Cli/commands"
+    )
+    target_link_libraries(
+        negaflow_film_look_command_support_tests
+        PRIVATE negaflow_imaging negaflow_project_options
+    )
+    add_test(
+        NAME cli.film_look_command_support
+        COMMAND negaflow_film_look_command_support_tests
+    )
+
     add_executable(negaflow_process_cpu_time_tests
         tests/Native.UnitTests/process_cpu_time_tests.cpp
         src/Cli/commands/process_cpu_time.cpp
@@ -586,6 +604,37 @@ if(BUILD_TESTING)
             cli.develop_negative_tiff_tone
             PROPERTIES PASS_REGULAR_EXPRESSION
                 "\"pixel_fingerprint_algorithm\":\"fnv1a64-rgba32f-bits-le-v1\".*\"statistics_full_frame_scan_count\":3"
+        )
+        add_test(
+            NAME cli.develop_negative_tiff_film_look
+            COMMAND negaflow_cli --develop-negative-tiff
+                "${NEGAFLOW_SOURCE_TIFF_FIXTURE}" 0.72 0.32 0.15 color
+                film_scan velvia_50 0.73
+        )
+        set_tests_properties(
+            cli.develop_negative_tiff_film_look
+            PROPERTIES PASS_REGULAR_EXPRESSION
+                "\"film_look_arguments_explicit\":true.*\"film_look_route\":\"film_scan_emulation\".*\"film_color_applied\":true.*\"film_acutance_applied\":true.*\"statistics_full_frame_scan_count\":3"
+        )
+        add_test(
+            NAME cli.develop_negative_tiff_tone_film_look
+            COMMAND negaflow_cli --develop-negative-tiff
+                "${NEGAFLOW_SOURCE_TIFF_FIXTURE}" 0.72 0.32 0.15 color
+                0.75 0.35 0.30 -0.25 0.20 0.40
+                film_scan velvia_50 0.73
+        )
+        set_tests_properties(
+            cli.develop_negative_tiff_tone_film_look
+            PROPERTIES PASS_REGULAR_EXPRESSION
+                "\"film_look_arguments_explicit\":true.*\"film_look_route\":\"film_scan_emulation\".*\"film_color_applied\":true.*\"film_acutance_applied\":true.*\"tone_arguments_explicit\":true.*\"statistics_full_frame_scan_count\":4"
+        )
+        add_test(
+            NAME cli.export_developed_tiff_film_look
+            COMMAND ${CMAKE_COMMAND}
+                "-DCLI=$<TARGET_FILE:negaflow_cli>"
+                "-DSOURCE=${NEGAFLOW_SOURCE_TIFF_FIXTURE}"
+                "-DOUTPUT_DIR=${CMAKE_CURRENT_BINARY_DIR}/verification/$<CONFIG>"
+                -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/CMake/verify_developed_tiff_film_look.cmake"
         )
     else()
         add_test(NAME native.wic_tiff_decode COMMAND negaflow_wic_tiff_decoder_tests)

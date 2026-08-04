@@ -5,7 +5,7 @@
 이 단계는 현상된 `WorkingImage`를 opaque 16-bit sRGB PNG 한 개로 안전하게 게시합니다.
 
 ```text
-extended-linear-sRGB RGBA32F WorkingImage
+Film Look까지 끝난 extended-linear-sRGB RGBA32F WorkingImage
   → finite·opaque·크기 검사
   → 최종 경계 clamp + sRGB OETF + packed RGB16
   → 같은 디렉터리의 CREATE_NEW staging에 Microsoft WIC PNG encode
@@ -25,7 +25,7 @@ UI, catalog, recipe와 source 파일 수명은 이 모듈이 소유하지 않습
 - `png_structure_reader.h/.cpp`: bounded streamed PNG container 검사
 - `wic_srgb16_support.h/.cpp`: PNG/TIFF가 공유하는 exact RGB16 frame I/O와 등록 sRGB profile
 - `wic_png_export.h/.cpp`: PNG encode, 구조·readback과 게시 orchestration
-- `export_developed_image.h/.cpp`: PNG/TIFF가 공유하는 decode·color·develop·단계 보고
+- `export_developed_image.h/.cpp`: PNG/TIFF가 공유하는 decode·color·develop·tone·Film Look·단계 보고
 - `export_developed_png.h/.cpp`: PNG 형식을 고르는 얇은 CLI adapter
 
 ## 출력 변환
@@ -91,11 +91,14 @@ readback buffer가 한 행도 담지 못하면 한도를 넘겨 강제 할당하
 ```
 
 목적지는 존재하지 않아야 합니다. command는 기존 row-streamed TIFF decode와 scanner color 변환, 수동
-Dmin 현상을 거쳐 PNG16을 만듭니다. 성공 JSON에는 형식·치수·byte 수·ICC 크기·clipping 수·검증 상태와
-게시 방식을 넣고 경로는 넣지 않습니다. source는 decode 전후 file ID·크기·최종 수정 시각만 관찰하고
-단계별 byte·memory·wall/process-CPU time을 보고합니다. CPU는 프로세스 모든 스레드의 user+kernel
-합계이고 얻지 못하면 `null`입니다. `source_sha256_mode`와 `artifact_sha256_mode`는 모두 `off`이며 이
-command는 SHA-256 함수나 진단용 full-frame fingerprint scan을 호출하지 않습니다.
+Dmin 현상과 tone을 거쳐 PNG16을 만듭니다. 선택한 Film Look은 마지막에
+`film_scan <film-emulation> <film-look-intensity>` 세 값을 모두 추가하며 Primary Calibration 뒤, 출력
+변환 전에 실행됩니다. 성공 JSON에는 형식·치수·byte 수·ICC 크기·clipping 수·검증 상태와 게시 방식,
+Film Look route·workspace·시간을 넣고 경로는 넣지 않습니다. source는 decode 전후 file ID·크기·최종
+수정 시각만 관찰하고 단계별 byte·memory·wall/process-CPU time을 보고합니다. CPU는 프로세스 모든
+스레드의 user+kernel 합계이고 얻지 못하면 `null`입니다. `source_sha256_mode`와
+`artifact_sha256_mode`는 모두 `off`이며 이 command는 SHA-256 함수나 진단용 full-frame fingerprint
+scan을 호출하지 않습니다.
 
 ## 남은 위험
 

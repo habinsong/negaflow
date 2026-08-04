@@ -12,6 +12,8 @@ source TIFF
   → scanner ICC/linear-raw → extended-linear-sRGB WorkingImage
   → source 상태 재관찰; 변경 시 출력 전 중단
   → manual Dmin negative develop
+  → tone adjustment → Primary Calibration
+  → explicit film-scan Film Look: RGB33 color → bounded acutance
   → 최종 경계 clamp + sRGB OETF + packed RGB16
   → 같은 디렉터리 CREATE_NEW staging에 Microsoft WIC TIFF encode
   → flush
@@ -29,7 +31,7 @@ source 파일은 읽기 전용이며 metadata를 출력으로 복사하지 않�
 - `wic_srgb16_support.h/.cpp`: PNG/TIFF가 공유하는 COM·WIC factory, 등록 sRGB, exact RGB16 frame I/O
 - `tiff_ifd_allowlist.h/.cpp`: bounded Classic TIFF 첫 IFD 최소 tag 검사
 - `wic_tiff_export.h/.cpp`: TIFF encode, 구조·metadata·pixel·ICC 검증과 publish orchestration
-- `export_developed_image.h/.cpp`: decode·color·develop·단계 보고를 공유하는 CLI orchestration
+- `export_developed_image.h/.cpp`: decode·color·develop·tone·Film Look·단계 보고를 공유하는 CLI orchestration
 - `export_developed_png.cpp`, `export_developed_tiff.cpp`: 형식만 고르는 얇은 command adapter
 
 PNG와 TIFF의 container 검사·상태 enum·encoder adapter는 분리하고, exact sRGB16 frame I/O와 filesystem
@@ -99,14 +101,17 @@ directory fsync, 전원 장애, network filesystem과 catalog transaction을 보
 .\out\build\native\x64-debug\Debug\negaflow-cli.exe --export-developed-tiff16 <source> <absolute-destination> 0.72 0.32 0.15 color
 ```
 
-목적지는 존재하지 않아야 합니다. 성공 JSON은 기존 상위 필드와 함께 다음을 기록합니다.
+기존 명령은 identity Film Look으로 그대로 동작합니다. 선택한 profile을 적용할 때는 마지막에
+`film_scan <film-emulation> <film-look-intensity>` 세 값을 모두 추가합니다. 목적지는 존재하지 않아야
+합니다. 성공 JSON은 기존 상위 필드와 함께 다음을 기록합니다.
 
 - source byte 수와 `source_unchanged_during_decode`
 - source/artifact SHA mode `off`
 - decode+color: WIC pixel format, 변환 여부, frame/row/copy 수, decoded/peak byte, scanner transform
 - develop: 적용 Dmin, normalized Dmax, 추가 full-frame byte 0
+- Film Look: 명시적 source/profile/intensity, route, color/acutance 적용, bounded workspace byte
 - output: artifact/pixel/ICC byte, clipping, strip/IFD/compression, 검증·게시 상태
-- 결합된 decode+color, develop, tone, output과 전체 wall/process-CPU microseconds
+- 결합된 decode+color, develop, tone, Film Look, output과 전체 wall/process-CPU microseconds
 
 streaming decode와 color 변환, output 변환·encode·검증·게시가 각각 한 API 호출 안에서 결합되어 있으므로
 존재하지 않는 세부 시간을 추정해 나누지 않습니다. CPU는 `GetProcessTimes`의 모든 스레드 user+kernel

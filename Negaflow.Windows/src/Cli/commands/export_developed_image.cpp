@@ -1,5 +1,6 @@
 #include "export_developed_image.h"
 
+#include "film_look_command_support.h"
 #include "process_cpu_time.h"
 
 #include "negaflow/core/negative_inversion.h"
@@ -43,10 +44,14 @@ struct PipelineReportContext final {
     const negaflow::imaging::StreamedScannerToWorkingResult& prepared;
     const negaflow::imaging::ManualNegativeDevelopResult& developed;
     const negaflow::imaging::WorkingToneAdjustResult& adjusted;
+    const FilmLookCommandRecipe& film_look_recipe;
+    const negaflow::imaging::WorkingFilmLookResult& film_look;
     std::uint64_t source_file_bytes{0};
+    std::size_t film_look_workspace_bytes{0U};
     StageTiming decode_and_color{};
     StageTiming develop{};
     StageTiming tone_adjust{};
+    StageTiming film_look_timing{};
     StageTiming output{};
     StageTiming total{};
 };
@@ -127,7 +132,7 @@ void print_cpu_microseconds(const std::optional<std::uint64_t> value) {
 
 void print_pipeline_report_suffix(const PipelineReportContext& context) {
     const auto working_pixel_bytes =
-        context.adjusted.image.pixels.size() * sizeof(negaflow::core::Rgba32F);
+        context.film_look.image.pixels.size() * sizeof(negaflow::core::Rgba32F);
     const auto& measurement = context.adjusted.info.measurement.info;
     std::cout << ",\"source_file_bytes\":" << context.source_file_bytes
               << ",\"source_observation_mode\":\"file_id_size_last_write\","
@@ -265,6 +270,47 @@ void print_pipeline_report_suffix(const PipelineReportContext& context) {
               << ",\"cpu_microseconds\":";
     print_cpu_microseconds(context.tone_adjust.cpu_microseconds);
     std::cout
+              << "},\"film_look\":{\"algorithm_version\":\""
+              << negaflow::imaging::working_film_look_algorithm_version
+              << "\",\"arguments_explicit\":"
+              << (context.film_look_recipe.arguments_explicit ? "true" : "false")
+              << ",\"source_kind\":\""
+              << negaflow::imaging::develop_source_kind_name(
+                     context.film_look_recipe.parameters.source_kind)
+              << "\",\"film_emulation\":\""
+              << film_emulation_recipe_name(
+                     context.film_look_recipe.parameters.emulation)
+              << "\",\"intensity\":"
+              << std::setprecision(std::numeric_limits<double>::max_digits10)
+              << context.film_look_recipe.parameters.intensity
+              << ",\"route\":\""
+              << negaflow::imaging::film_look_route_name(
+                     context.film_look.info.route)
+              << "\",\"color_algorithm_version\":\""
+              << negaflow::imaging::film_emulation_color_algorithm_version
+              << "\",\"acutance_algorithm_version\":\""
+              << negaflow::imaging::film_emulation_acutance_algorithm_version
+              << "\",\"color_intensity_step\":"
+              << context.film_look.info.color_intensity_step
+              << ",\"acutance_amount\":"
+              << context.film_look.info.acutance_amount
+              << ",\"color_cube_built\":"
+              << (context.film_look.info.color_cube_built ? "true" : "false")
+              << ",\"color_cube_reused\":"
+              << (context.film_look.info.color_cube_reused ? "true" : "false")
+              << ",\"color_applied\":"
+              << (context.film_look.info.color_applied ? "true" : "false")
+              << ",\"acutance_applied\":"
+              << (context.film_look.info.acutance_applied ? "true" : "false")
+              << ",\"required_acutance_scratch_pixels\":"
+              << context.film_look.info.required_acutance_scratch_pixels
+              << ",\"peak_workspace_bytes\":"
+              << context.film_look_workspace_bytes
+              << ",\"additional_full_frame_bytes\":0,\"wall_microseconds\":"
+              << context.film_look_timing.wall_microseconds
+              << ",\"cpu_microseconds\":";
+    print_cpu_microseconds(context.film_look_timing.cpu_microseconds);
+    std::cout
               << "},\"output_convert_encode_verify_publish\":{"
                  "\"wall_microseconds\":"
               << context.output.wall_microseconds
@@ -345,7 +391,12 @@ int run_export_developed_image(
     const int argument_count,
     const wchar_t* const arguments[],
     const DevelopedExportFormat format) {
-    if (argument_count != 8 && argument_count != 14) {
+    const bool tone_arguments_explicit =
+        argument_count == 14 || argument_count == 17;
+    const bool film_look_arguments_explicit =
+        argument_count == 11 || argument_count == 17;
+    if (argument_count != 8 && argument_count != 11 &&
+        argument_count != 14 && argument_count != 17) {
         return print_error("invalid_argument_count");
     }
     if (format != DevelopedExportFormat::png16 &&
@@ -372,7 +423,7 @@ int run_export_developed_image(
     }
 
     negaflow::imaging::WorkingToneAdjustParameters tone_parameters{};
-    if (argument_count == 14) {
+    if (tone_arguments_explicit) {
         if (!parse_finite_float(arguments[8], tone_parameters.exposure_stops) ||
             !parse_finite_float(arguments[9], tone_parameters.basic.contrast) ||
             !parse_finite_float(arguments[10], tone_parameters.curve.highlights) ||
@@ -383,6 +434,24 @@ int run_export_developed_image(
                 tone_parameters)) {
             return print_error("invalid_tone_adjustment_parameter");
         }
+    }
+
+    FilmLookCommandRecipe film_look_recipe{};
+    if (film_look_arguments_explicit) {
+        const std::size_t first_argument =
+            tone_arguments_explicit ? 14U : 8U;
+        const FilmLookRecipeParseStatus parse_status = parse_film_look_recipe(
+            arguments[first_argument],
+            arguments[first_argument + 1U],
+            arguments[first_argument + 2U],
+            film_look_recipe);
+        if (parse_status != FilmLookRecipeParseStatus::ok) {
+            return print_error(film_look_recipe_parse_status_name(parse_status));
+        }
+    }
+    if (film_look_recipe.parameters.source_kind !=
+        negaflow::imaging::DevelopSourceKind::film_scan) {
+        return print_error("negative_develop_requires_film_scan_source");
     }
 
     const std::filesystem::path source{arguments[2]};
@@ -438,6 +507,19 @@ int run_export_developed_image(
         return print_error("source_changed_during_decode");
     }
 
+    FilmLookCommandWorkspace film_look_workspace{};
+    const FilmLookWorkspacePrepareStatus workspace_status =
+        prepare_film_look_workspace(
+            film_look_recipe.parameters,
+            prepared.working.image.width,
+            film_look_workspace);
+    if (workspace_status != FilmLookWorkspacePrepareStatus::ok) {
+        return print_error(
+            film_look_workspace_prepare_status_name(workspace_status));
+    }
+    const std::size_t prepared_film_look_workspace_bytes =
+        film_look_workspace_bytes(film_look_workspace);
+
     const ProcessCpuTimeSnapshot develop_cpu_started =
         query_current_process_cpu_time();
     const Clock::time_point develop_started = Clock::now();
@@ -483,12 +565,34 @@ int run_export_developed_image(
             negaflow::imaging::working_tone_adjust_status_name(adjusted.status));
     }
 
+    const ProcessCpuTimeSnapshot film_look_cpu_started =
+        query_current_process_cpu_time();
+    const Clock::time_point film_look_started = Clock::now();
+    auto film_look = negaflow::imaging::apply_working_film_look(
+        std::move(adjusted.image),
+        film_look_recipe.parameters,
+        film_look_workspace_view(film_look_workspace));
+    const Clock::time_point film_look_finished = Clock::now();
+    const ProcessCpuTimeSnapshot film_look_cpu_finished =
+        query_current_process_cpu_time();
+    if (film_look.status != negaflow::imaging::WorkingFilmLookStatus::ok) {
+        if (film_look.status ==
+            negaflow::imaging::WorkingFilmLookStatus::kernel_failed) {
+            return print_error(
+                negaflow::core::kernel_status_name(
+                    film_look.info.kernel_status));
+        }
+        return print_error(
+            negaflow::imaging::working_film_look_status_name(
+                film_look.status));
+    }
+
     const ProcessCpuTimeSnapshot output_cpu_started =
         query_current_process_cpu_time();
     const Clock::time_point output_started = Clock::now();
     if (format == DevelopedExportFormat::png16) {
         const negaflow::output::WicPngExportResult exported =
-            negaflow::output::export_working_to_srgb16_png(adjusted.image, destination);
+            negaflow::output::export_working_to_srgb16_png(film_look.image, destination);
         const Clock::time_point output_finished = Clock::now();
         const ProcessCpuTimeSnapshot output_cpu_finished =
             query_current_process_cpu_time();
@@ -512,7 +616,10 @@ int run_export_developed_image(
             prepared,
             developed,
             adjusted,
+            film_look_recipe,
+            film_look,
             before.observation.file_bytes,
+            prepared_film_look_workspace_bytes,
             make_stage_timing(
                 decode_started,
                 decode_finished,
@@ -529,6 +636,11 @@ int run_export_developed_image(
                 tone_adjust_cpu_started,
                 tone_adjust_cpu_finished),
             make_stage_timing(
+                film_look_started,
+                film_look_finished,
+                film_look_cpu_started,
+                film_look_cpu_finished),
+            make_stage_timing(
                 output_started,
                 output_finished,
                 output_cpu_started,
@@ -543,7 +655,7 @@ int run_export_developed_image(
     }
 
     const negaflow::output::WicTiffExportResult exported =
-        negaflow::output::export_working_to_srgb16_tiff(adjusted.image, destination);
+        negaflow::output::export_working_to_srgb16_tiff(film_look.image, destination);
     const Clock::time_point output_finished = Clock::now();
     const ProcessCpuTimeSnapshot output_cpu_finished =
         query_current_process_cpu_time();
@@ -567,7 +679,10 @@ int run_export_developed_image(
         prepared,
         developed,
         adjusted,
+        film_look_recipe,
+        film_look,
         before.observation.file_bytes,
+        prepared_film_look_workspace_bytes,
         make_stage_timing(
             decode_started,
             decode_finished,
@@ -583,6 +698,11 @@ int run_export_developed_image(
             tone_adjust_finished,
             tone_adjust_cpu_started,
             tone_adjust_cpu_finished),
+        make_stage_timing(
+            film_look_started,
+            film_look_finished,
+            film_look_cpu_started,
+            film_look_cpu_finished),
         make_stage_timing(
             output_started,
             output_finished,

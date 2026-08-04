@@ -91,12 +91,12 @@
 - macOS Core Image 두 run의 12,912개 numeric value exact 반복, 색상 최대 절대 오차 `0.0018888685`
 - Ektar/Provia/Velvia impulse·step 6개 acutance signature 최대 절대 오차 `0.00015372`, conformance 36개 값
 - film-scan route가 수동 색상→acutance 결과와 bit-exact이며 cube 재사용·낮은 강도·identity·오류 폐기 통과
-- x64 Debug/Release CTest 각각 33/33, ARM64 Debug/Release 전체 target 교차 빌드 통과
+- x64 Debug/Release CTest 각각 37/37, ARM64 Debug/Release 전체 target 교차 빌드 통과
 - ARM64에서는 같은 source가 컴파일되지만 수치 실행은 아직 미검증
 
 ### 남은 것
 
-- Film Look CLI recipe/report와 catalog source metadata 연결, cube 경계·fractional alpha 확대
+- Film Look catalog recipe/source metadata 연결, cube 경계·fractional alpha 확대
 - blur, local contrast, histogram, morphology, defect, crop/resize와 digital-film 전체 그래프
 - forced scalar/base/AVX2 dispatch와 실제 NEON 실행
 - ROI/halo/cancellation 계약

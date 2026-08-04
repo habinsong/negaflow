@@ -3,8 +3,8 @@
 ## 현재 범위
 
 `chromabase-film-emulation-acutance-v1`은 film-scan source의 RGB33 색상 단계 뒤에 오는 spatial
-acutance를 Windows CPU reference로 구현합니다. 아직 실제 `WorkingToneAdjuster`, export, CLI, ABI나
-WinUI가 이 component를 호출하지 않습니다.
+acutance를 Windows CPU reference로 구현합니다. `WorkingToneAdjuster` 다음의 명시적 Film Look route와
+진단·PNG16·TIFF16 CLI가 이 component를 호출하며, C ABI와 WinUI는 아직 연결하지 않았습니다.
 
 ```text
 RGB33 Film Emulation 색상 결과의 extended-linear sRGB
@@ -102,7 +102,7 @@ film/digital source를 분리합니다. 활성 digital 요청은 전체 `Digital
 
 남은 것은 다음과 같습니다.
 
-1. CLI report와 recipe serialization, catalog/import source metadata 연결
+1. catalog recipe serialization과 import source metadata 연결
 2. caller-owned cube/scratch cache 수명 관리자, cancellation과 progress 계약
 3. 좁은 C ABI와 WinUI 노출
 4. megapixel scalar benchmark 후 필요성이 확인될 때 SIMD/DirectCompute/WARP 구현

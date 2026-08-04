@@ -50,3 +50,6 @@ Release PE header에서 새 unit test와 CLI는 x64 `8664`, ARM64 `AA64`였습�
 현재 CLI, C ABI, recipe persistence와 WinUI는 이 route를 호출하지 않습니다. 따라서 이 검증은 native
 source 계약과 film-scan stage 순서 통과이며, 제품 Develop graph나 `DigitalFilmLook` 완료를 뜻하지
 않습니다. 일반 이미지 content SHA-256은 계산하지 않았고 기본 `끔` 정책을 바꾸지 않았습니다.
+
+이 절은 `0c7e8a1` native checkpoint 당시의 범위입니다. 후속 CLI·실제 출력 연결은
+[Film Look CLI·실제 출력 검증](2026-08-04-film-look-cli.md)에 별도로 기록합니다.
