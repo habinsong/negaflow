@@ -23,8 +23,10 @@ UI, catalog, recipe와 source 파일 수명은 이 모듈이 소유하지 않습
 - `working_to_srgb16.h/.cpp`: working float에서 packed RGB16으로 가는 순수 출력 변환
 - `atomic_output_file.h/.cpp`: handle-backed `IStream`, staging flush와 단일 파일 게시
 - `png_structure_reader.h/.cpp`: bounded streamed PNG container 검사
-- `wic_png_export.h/.cpp`: WIC encode, ICC 삽입, readback과 게시 orchestration
-- `export_developed_png.h/.cpp`: TIFF 입력부터 출력까지 연결하는 CLI command
+- `wic_srgb16_support.h/.cpp`: PNG/TIFF가 공유하는 exact RGB16 frame I/O와 등록 sRGB profile
+- `wic_png_export.h/.cpp`: PNG encode, 구조·readback과 게시 orchestration
+- `export_developed_image.h/.cpp`: PNG/TIFF가 공유하는 decode·color·develop·단계 보고
+- `export_developed_png.h/.cpp`: PNG 형식을 고르는 얇은 CLI adapter
 
 ## 출력 변환
 
@@ -90,7 +92,8 @@ readback buffer가 한 행도 담지 못하면 한도를 넘겨 강제 할당하
 
 목적지는 존재하지 않아야 합니다. command는 기존 row-streamed TIFF decode와 scanner color 변환, 수동
 Dmin 현상을 거쳐 PNG16을 만듭니다. 성공 JSON에는 형식·치수·byte 수·ICC 크기·clipping 수·검증 상태와
-게시 방식을 넣고 경로는 넣지 않습니다. `source_sha256_mode`와 `artifact_sha256_mode`는 모두 `off`이며
+게시 방식을 넣고 경로는 넣지 않습니다. source는 decode 전후 file ID·크기·최종 수정 시각만 관찰하고
+단계별 byte·memory·wall time을 보고합니다. `source_sha256_mode`와 `artifact_sha256_mode`는 모두 `off`이며
 이 command는 SHA-256 함수를 호출하지 않습니다.
 
 ## 남은 위험
@@ -98,7 +101,7 @@ Dmin 현상을 거쳐 PNG16을 만듭니다. 성공 JSON에는 형식·치수·b
 - packed RGB16과 최종 working float가 모두 전체 프레임 메모리에 존재
 - Windows에 등록된 sRGB profile의 machine별 차이
 - 독립 decoder와 CRC 비교 부재
-- TIFF16·metadata allowlist·DPI·resize·sharpen 미구현
+- TIFF16은 별도 phase-1 경계로 구현됐지만 DPI·metadata policy variant·resize·sharpen은 미구현
 - encode/readback progress와 cooperative cancellation 미구현
 - COM apartment가 이미 STA이면 현재 동기 API는 명시적으로 거부하므로 제품 연결은 MTA worker가 필요
 - 실제 ARM64 Windows에서의 encode/readback 실행 미검증

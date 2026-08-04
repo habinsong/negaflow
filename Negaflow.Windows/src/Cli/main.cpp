@@ -4,6 +4,7 @@
 #include "negaflow/imageio/wic_tiff_decoder.h"
 #include "commands/develop_negative_tiff.h"
 #include "commands/export_developed_png.h"
+#include "commands/export_developed_tiff.h"
 #include "commands/hash_image.h"
 #include "commands/prepare_scanner_tiff.h"
 
@@ -32,6 +33,7 @@ void print_help() {
                  "  negaflow-cli --prepare-scanner-tiff <path>\n"
                  "  negaflow-cli --develop-negative-tiff <path> <dmin-r> <dmin-g> <dmin-b> <color|bw>\n"
                  "  negaflow-cli --export-developed-png16 <source> <destination> <dmin-r> <dmin-g> <dmin-b> <color|bw>\n"
+                 "  negaflow-cli --export-developed-tiff16 <source> <destination> <dmin-r> <dmin-g> <dmin-b> <color|bw>\n"
                  "  negaflow-cli --sha256-image <path>\n"
                  "  negaflow-cli --help\n";
 }
@@ -274,6 +276,9 @@ int wmain(const int argument_count, const wchar_t* const arguments[]) {
     }
     if (command == L"--export-developed-png16") {
         return negaflow::cli::run_export_developed_png(argument_count, arguments);
+    }
+    if (command == L"--export-developed-tiff16") {
+        return negaflow::cli::run_export_developed_tiff(argument_count, arguments);
     }
     if (command == L"--sha256-image") {
         return negaflow::cli::run_hash_image(argument_count, arguments);

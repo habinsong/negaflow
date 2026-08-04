@@ -1,8 +1,10 @@
-#include "negaflow/output/wic_png_export.h"
+#include "negaflow/output/wic_tiff_export.h"
 
 #include "atomic_output_file.h"
-#include "png_structure_reader.h"
+#include "tiff_ifd_allowlist.h"
 #include "wic_srgb16_support.h"
+
+#include "negaflow/core/tiff_probe.h"
 
 #include <Windows.h>
 #include <Shlwapi.h>
@@ -19,7 +21,7 @@ namespace {
 
 using Microsoft::WRL::ComPtr;
 
-[[nodiscard]] WicPngExportStatus encode_png(
+[[nodiscard]] WicTiffExportStatus encode_tiff(
     IWICImagingFactory* const factory,
     IStream* const stream,
     const Srgb16Image& image,
@@ -27,12 +29,12 @@ using Microsoft::WRL::ComPtr;
     std::uint32_t& native_error_code) noexcept {
     ComPtr<IWICBitmapEncoder> encoder{};
     HRESULT status = factory->CreateEncoder(
-        GUID_ContainerFormatPng,
+        GUID_ContainerFormatTiff,
         &GUID_VendorMicrosoft,
         &encoder);
     if (FAILED(status)) {
         native_error_code = static_cast<std::uint32_t>(status);
-        return WicPngExportStatus::encoder_initialization_failed;
+        return WicTiffExportStatus::encoder_initialization_failed;
     }
     ComPtr<IWICBitmapEncoderInfo> encoder_info{};
     CLSID encoder_class{};
@@ -42,10 +44,10 @@ using Microsoft::WRL::ComPtr;
     }
     if (FAILED(status)) {
         native_error_code = static_cast<std::uint32_t>(status);
-        return WicPngExportStatus::encoder_initialization_failed;
+        return WicTiffExportStatus::encoder_initialization_failed;
     }
-    if (IsEqualGUID(encoder_class, CLSID_WICPngEncoder) == FALSE) {
-        return WicPngExportStatus::unexpected_encoder;
+    if (IsEqualGUID(encoder_class, CLSID_WICTiffEncoder) == FALSE) {
+        return WicTiffExportStatus::unexpected_encoder;
     }
 
     status = encoder->Initialize(stream, WICBitmapEncoderNoCache);
@@ -54,12 +56,27 @@ using Microsoft::WRL::ComPtr;
     if (SUCCEEDED(status)) {
         status = encoder->CreateNewFrame(&frame, &options);
     }
-    if (SUCCEEDED(status)) {
-        status = frame->Initialize(options.Get());
-    }
     if (FAILED(status)) {
         native_error_code = static_cast<std::uint32_t>(status);
-        return WicPngExportStatus::encoder_initialization_failed;
+        return WicTiffExportStatus::encoder_initialization_failed;
+    }
+
+    PROPBAG2 compression_option{};
+    compression_option.dwType = PROPBAG2_TYPE_DATA;
+    compression_option.vt = VT_UI1;
+    compression_option.pstrName = const_cast<wchar_t*>(L"TiffCompressionMethod");
+    VARIANT compression_value{};
+    compression_value.vt = VT_UI1;
+    compression_value.bVal = static_cast<BYTE>(WICTiffCompressionNone);
+    status = options->Write(1U, &compression_option, &compression_value);
+    if (FAILED(status)) {
+        native_error_code = static_cast<std::uint32_t>(status);
+        return WicTiffExportStatus::compression_configuration_failed;
+    }
+    status = frame->Initialize(options.Get());
+    if (FAILED(status)) {
+        native_error_code = static_cast<std::uint32_t>(status);
+        return WicTiffExportStatus::encoder_initialization_failed;
     }
 
     const detail::WicSrgb16FrameStatus configure_status =
@@ -69,16 +86,16 @@ using Microsoft::WRL::ComPtr;
             color_context,
             native_error_code);
     if (configure_status == detail::WicSrgb16FrameStatus::pixel_format_coerced) {
-        return WicPngExportStatus::pixel_format_coerced;
+        return WicTiffExportStatus::pixel_format_coerced;
     }
     if (configure_status != detail::WicSrgb16FrameStatus::ok) {
-        return WicPngExportStatus::encoder_initialization_failed;
+        return WicTiffExportStatus::encoder_initialization_failed;
     }
     if (detail::write_srgb16_pixels(
             frame.Get(),
             image,
             native_error_code) != detail::WicSrgb16FrameStatus::ok) {
-        return WicPngExportStatus::encode_failed;
+        return WicTiffExportStatus::encode_failed;
     }
     status = frame->Commit();
     if (SUCCEEDED(status)) {
@@ -86,17 +103,17 @@ using Microsoft::WRL::ComPtr;
     }
     if (FAILED(status)) {
         native_error_code = static_cast<std::uint32_t>(status);
-        return WicPngExportStatus::encode_failed;
+        return WicTiffExportStatus::encode_failed;
     }
-    return WicPngExportStatus::ok;
+    return WicTiffExportStatus::ok;
 }
 
-[[nodiscard]] WicPngExportStatus verify_png_readback(
+[[nodiscard]] WicTiffExportStatus verify_tiff_readback(
     IWICImagingFactory* const factory,
     const std::filesystem::path& path,
     const Srgb16Image& expected,
     const std::vector<std::uint8_t>& expected_profile,
-    const WicPngExportLimits& limits,
+    const WicTiffExportLimits& limits,
     std::uint32_t& native_error_code) {
     ComPtr<IStream> stream{};
     HRESULT status = SHCreateStreamOnFileEx(
@@ -108,7 +125,7 @@ using Microsoft::WRL::ComPtr;
         &stream);
     if (FAILED(status)) {
         native_error_code = static_cast<std::uint32_t>(status);
-        return WicPngExportStatus::decoder_initialization_failed;
+        return WicTiffExportStatus::decoder_initialization_failed;
     }
     ComPtr<IWICBitmapDecoder> decoder{};
     status = factory->CreateDecoderFromStream(
@@ -118,7 +135,7 @@ using Microsoft::WRL::ComPtr;
         &decoder);
     if (FAILED(status)) {
         native_error_code = static_cast<std::uint32_t>(status);
-        return WicPngExportStatus::decoder_initialization_failed;
+        return WicTiffExportStatus::decoder_initialization_failed;
     }
     ComPtr<IWICBitmapDecoderInfo> decoder_info{};
     CLSID decoder_class{};
@@ -128,23 +145,23 @@ using Microsoft::WRL::ComPtr;
     }
     if (FAILED(status)) {
         native_error_code = static_cast<std::uint32_t>(status);
-        return WicPngExportStatus::decoder_initialization_failed;
+        return WicTiffExportStatus::decoder_initialization_failed;
     }
-    if (IsEqualGUID(decoder_class, CLSID_WICPngDecoder) == FALSE) {
-        return WicPngExportStatus::unexpected_decoder;
+    if (IsEqualGUID(decoder_class, CLSID_WICTiffDecoder) == FALSE) {
+        return WicTiffExportStatus::unexpected_decoder;
     }
 
     UINT frame_count = 0U;
     status = decoder->GetFrameCount(&frame_count);
     if (FAILED(status) || frame_count != 1U) {
         native_error_code = static_cast<std::uint32_t>(status);
-        return WicPngExportStatus::readback_failed;
+        return WicTiffExportStatus::readback_failed;
     }
     ComPtr<IWICBitmapFrameDecode> frame{};
     status = decoder->GetFrame(0U, &frame);
     if (FAILED(status)) {
         native_error_code = static_cast<std::uint32_t>(status);
-        return WicPngExportStatus::readback_failed;
+        return WicTiffExportStatus::readback_failed;
     }
     switch (detail::verify_srgb16_frame(
         factory,
@@ -154,59 +171,88 @@ using Microsoft::WRL::ComPtr;
         limits.readback_buffer_bytes,
         native_error_code)) {
         case detail::WicSrgb16FrameStatus::ok:
-            return WicPngExportStatus::ok;
+            return WicTiffExportStatus::ok;
         case detail::WicSrgb16FrameStatus::pixel_verification_failed:
-            return WicPngExportStatus::pixel_verification_failed;
+            return WicTiffExportStatus::pixel_verification_failed;
         case detail::WicSrgb16FrameStatus::profile_verification_failed:
-            return WicPngExportStatus::profile_verification_failed;
+            return WicTiffExportStatus::profile_verification_failed;
         case detail::WicSrgb16FrameStatus::configuration_failed:
         case detail::WicSrgb16FrameStatus::pixel_format_coerced:
         case detail::WicSrgb16FrameStatus::write_failed:
         case detail::WicSrgb16FrameStatus::readback_failed:
-            return WicPngExportStatus::readback_failed;
+            return WicTiffExportStatus::readback_failed;
     }
-    return WicPngExportStatus::readback_failed;
+    return WicTiffExportStatus::readback_failed;
 }
 
-[[nodiscard]] WicPngExportStatus map_atomic_status(
+[[nodiscard]] WicTiffExportStatus map_atomic_status(
     const detail::AtomicOutputStatus status) noexcept {
     switch (status) {
         case detail::AtomicOutputStatus::ok:
-            return WicPngExportStatus::ok;
+            return WicTiffExportStatus::ok;
         case detail::AtomicOutputStatus::destination_exists:
-            return WicPngExportStatus::destination_exists;
+            return WicTiffExportStatus::destination_exists;
         case detail::AtomicOutputStatus::flush_failed:
-            return WicPngExportStatus::flush_failed;
+            return WicTiffExportStatus::flush_failed;
         case detail::AtomicOutputStatus::published_file_invalid:
-            return WicPngExportStatus::published_file_invalid;
+            return WicTiffExportStatus::published_file_invalid;
         case detail::AtomicOutputStatus::publish_failed:
-            return WicPngExportStatus::publish_failed;
+            return WicTiffExportStatus::publish_failed;
         case detail::AtomicOutputStatus::allocation_failed:
-            return WicPngExportStatus::allocation_failed;
+            return WicTiffExportStatus::allocation_failed;
         case detail::AtomicOutputStatus::invalid_path:
         case detail::AtomicOutputStatus::destination_query_failed:
         case detail::AtomicOutputStatus::parent_unavailable:
         case detail::AtomicOutputStatus::staging_create_failed:
-            return WicPngExportStatus::staging_create_failed;
+            return WicTiffExportStatus::staging_create_failed;
     }
-    return WicPngExportStatus::staging_create_failed;
+    return WicTiffExportStatus::staging_create_failed;
 }
 
 void discard_staging(
     detail::AtomicOutputFile* const output,
-    WicPngExportResult& result) noexcept {
+    WicTiffExportResult& result) noexcept {
     if (output != nullptr) {
         output->discard(result.cleanup_error_code);
     }
 }
 
+[[nodiscard]] bool validate_tiff_structure(
+    const negaflow::core::TiffProbeResult& probe,
+    const Srgb16Image& expected,
+    const std::uint32_t expected_profile_bytes) noexcept {
+    if (probe.status != negaflow::core::TiffProbeStatus::ok ||
+        probe.info.variant != negaflow::core::TiffVariant::classic ||
+        probe.info.organization != negaflow::core::TiffOrganization::stripped ||
+        probe.info.width != expected.width || probe.info.height != expected.height ||
+        probe.info.samples_per_pixel != 3U || probe.info.compression != 1U ||
+        probe.info.photometric_interpretation != 2U ||
+        probe.info.planar_configuration != 1U || probe.info.orientation != 1U ||
+        probe.info.bits_per_sample_count != 3U ||
+        probe.info.bits_per_sample[0] != 16U ||
+        probe.info.bits_per_sample[1] != 16U ||
+        probe.info.bits_per_sample[2] != 16U ||
+        probe.info.extra_samples_count != 0U ||
+        probe.info.icc_profile_bytes != expected_profile_bytes ||
+        probe.info.packed_raster_bytes != expected.samples.size() * sizeof(std::uint16_t)) {
+        return false;
+    }
+    if (probe.info.sample_format_count == 1U) {
+        return probe.info.sample_format[0] == 1U;
+    }
+    return probe.info.sample_format_count == 3U &&
+           probe.info.sample_format[0] == 1U &&
+           probe.info.sample_format[1] == 1U &&
+           probe.info.sample_format[2] == 1U;
+}
+
 }  // namespace
 
-WicPngExportResult export_working_to_srgb16_png(
+WicTiffExportResult export_working_to_srgb16_tiff(
     const negaflow::imaging::WorkingImage& working,
     const std::filesystem::path& destination,
-    const WicPngExportLimits& limits) noexcept {
-    WicPngExportResult result{};
+    const WicTiffExportLimits& limits) noexcept {
+    WicTiffExportResult result{};
     try {
         WorkingToSrgb16Result converted =
             convert_working_to_srgb16(working, limits.conversion);
@@ -226,18 +272,18 @@ WicPngExportResult export_working_to_srgb16_png(
 
         const detail::ComApartment apartment{};
         if (apartment.status() == RPC_E_CHANGED_MODE) {
-            result.status = WicPngExportStatus::com_apartment_mismatch;
+            result.status = WicTiffExportStatus::com_apartment_mismatch;
             result.native_error_code = static_cast<std::uint32_t>(apartment.status());
             return result;
         }
         if (FAILED(apartment.status())) {
-            result.status = WicPngExportStatus::wic_unavailable;
+            result.status = WicTiffExportStatus::wic_unavailable;
             result.native_error_code = static_cast<std::uint32_t>(apartment.status());
             return result;
         }
         ComPtr<IWICImagingFactory2> factory{};
         if (!detail::create_wic_factory(factory, result.native_error_code)) {
-            result.status = WicPngExportStatus::wic_unavailable;
+            result.status = WicTiffExportStatus::wic_unavailable;
             return result;
         }
 
@@ -252,10 +298,10 @@ WicPngExportResult export_working_to_srgb16_png(
             case detail::StandardSrgbStatus::ok:
                 break;
             case detail::StandardSrgbStatus::unavailable:
-                result.status = WicPngExportStatus::destination_profile_unavailable;
+                result.status = WicTiffExportStatus::destination_profile_unavailable;
                 return result;
             case detail::StandardSrgbStatus::invalid:
-                result.status = WicPngExportStatus::destination_profile_invalid;
+                result.status = WicTiffExportStatus::destination_profile_invalid;
                 return result;
         }
         result.info.color_profile_bytes = static_cast<std::uint32_t>(profile_bytes.size());
@@ -270,13 +316,13 @@ WicPngExportResult export_working_to_srgb16_png(
             return result;
         }
 
-        result.status = encode_png(
+        result.status = encode_tiff(
             factory.Get(),
             output->stream(),
             converted.image,
             color_context.Get(),
             result.native_error_code);
-        if (result.status != WicPngExportStatus::ok) {
+        if (result.status != WicTiffExportStatus::ok) {
             discard_staging(output.get(), result);
             return result;
         }
@@ -288,32 +334,50 @@ WicPngExportResult export_working_to_srgb16_png(
             return result;
         }
 
-        detail::PngStructureInfo structure{};
-        const detail::PngStructureStatus structure_status = detail::inspect_png_structure(
-            output->staging_path(),
-            limits.max_artifact_bytes,
-            structure,
-            result.native_error_code);
-        result.info.artifact_bytes = structure.file_bytes;
-        result.info.image_data_chunks = structure.image_data_chunks;
-        if (structure_status != detail::PngStructureStatus::ok ||
-            structure.width != converted.image.width ||
-            structure.height != converted.image.height || structure.bit_depth != 16U ||
-            structure.color_type != 2U) {
-            result.status = WicPngExportStatus::structure_verification_failed;
+        negaflow::core::TiffProbeLimits probe_limits{};
+        probe_limits.max_file_bytes = limits.max_artifact_bytes;
+        probe_limits.max_ifd_entries = limits.max_ifd_entries;
+        probe_limits.max_icc_profile_bytes = limits.max_color_profile_bytes;
+        const negaflow::core::TiffProbeResult probe =
+            negaflow::core::probe_tiff_file(output->staging_path(), probe_limits);
+        result.info.artifact_bytes = probe.info.file_bytes;
+        result.info.strip_count = probe.info.segment_count;
+        result.info.compression = probe.info.compression;
+        if (!validate_tiff_structure(
+                probe,
+                converted.image,
+                result.info.color_profile_bytes)) {
+            result.status = WicTiffExportStatus::structure_verification_failed;
             discard_staging(output.get(), result);
             return result;
         }
         result.info.structure_verified = true;
 
-        result.status = verify_png_readback(
+        detail::TiffIfdAllowlistInfo metadata_info{};
+        const detail::TiffIfdAllowlistStatus metadata_status =
+            detail::inspect_minimal_rgb_tiff_ifd(
+                output->staging_path(),
+                limits.max_artifact_bytes,
+                limits.max_ifd_entries,
+                metadata_info,
+                result.native_error_code);
+        result.info.ifd_entry_count = metadata_info.tag_count;
+        result.info.unexpected_metadata_tag = metadata_info.unexpected_tag;
+        if (metadata_status != detail::TiffIfdAllowlistStatus::ok) {
+            result.status = WicTiffExportStatus::metadata_verification_failed;
+            discard_staging(output.get(), result);
+            return result;
+        }
+        result.info.metadata_verified = true;
+
+        result.status = verify_tiff_readback(
             factory.Get(),
             output->staging_path(),
             converted.image,
             profile_bytes,
             limits,
             result.native_error_code);
-        if (result.status != WicPngExportStatus::ok) {
+        if (result.status != WicTiffExportStatus::ok) {
             discard_staging(output.get(), result);
             return result;
         }
@@ -332,59 +396,63 @@ WicPngExportResult export_working_to_srgb16_png(
         }
         return result;
     } catch (const std::bad_alloc&) {
-        result.status = WicPngExportStatus::allocation_failed;
+        result.status = WicTiffExportStatus::allocation_failed;
         return result;
     } catch (...) {
-        result.status = WicPngExportStatus::encode_failed;
+        result.status = WicTiffExportStatus::encode_failed;
         return result;
     }
 }
 
-const char* wic_png_export_status_name(const WicPngExportStatus status) noexcept {
+const char* wic_tiff_export_status_name(const WicTiffExportStatus status) noexcept {
     switch (status) {
-        case WicPngExportStatus::ok:
+        case WicTiffExportStatus::ok:
             return "ok";
-        case WicPngExportStatus::working_conversion_failed:
+        case WicTiffExportStatus::working_conversion_failed:
             return "working_conversion_failed";
-        case WicPngExportStatus::allocation_failed:
+        case WicTiffExportStatus::allocation_failed:
             return "allocation_failed";
-        case WicPngExportStatus::com_apartment_mismatch:
+        case WicTiffExportStatus::com_apartment_mismatch:
             return "com_apartment_mismatch";
-        case WicPngExportStatus::wic_unavailable:
+        case WicTiffExportStatus::wic_unavailable:
             return "wic_unavailable";
-        case WicPngExportStatus::destination_profile_unavailable:
+        case WicTiffExportStatus::destination_profile_unavailable:
             return "destination_profile_unavailable";
-        case WicPngExportStatus::destination_profile_invalid:
+        case WicTiffExportStatus::destination_profile_invalid:
             return "destination_profile_invalid";
-        case WicPngExportStatus::destination_exists:
+        case WicTiffExportStatus::destination_exists:
             return "destination_exists";
-        case WicPngExportStatus::staging_create_failed:
+        case WicTiffExportStatus::staging_create_failed:
             return "staging_create_failed";
-        case WicPngExportStatus::encoder_initialization_failed:
+        case WicTiffExportStatus::encoder_initialization_failed:
             return "encoder_initialization_failed";
-        case WicPngExportStatus::unexpected_encoder:
+        case WicTiffExportStatus::unexpected_encoder:
             return "unexpected_encoder";
-        case WicPngExportStatus::pixel_format_coerced:
+        case WicTiffExportStatus::compression_configuration_failed:
+            return "compression_configuration_failed";
+        case WicTiffExportStatus::pixel_format_coerced:
             return "pixel_format_coerced";
-        case WicPngExportStatus::encode_failed:
+        case WicTiffExportStatus::encode_failed:
             return "encode_failed";
-        case WicPngExportStatus::flush_failed:
+        case WicTiffExportStatus::flush_failed:
             return "flush_failed";
-        case WicPngExportStatus::structure_verification_failed:
+        case WicTiffExportStatus::structure_verification_failed:
             return "structure_verification_failed";
-        case WicPngExportStatus::decoder_initialization_failed:
+        case WicTiffExportStatus::metadata_verification_failed:
+            return "metadata_verification_failed";
+        case WicTiffExportStatus::decoder_initialization_failed:
             return "decoder_initialization_failed";
-        case WicPngExportStatus::unexpected_decoder:
+        case WicTiffExportStatus::unexpected_decoder:
             return "unexpected_decoder";
-        case WicPngExportStatus::readback_failed:
+        case WicTiffExportStatus::readback_failed:
             return "readback_failed";
-        case WicPngExportStatus::pixel_verification_failed:
+        case WicTiffExportStatus::pixel_verification_failed:
             return "pixel_verification_failed";
-        case WicPngExportStatus::profile_verification_failed:
+        case WicTiffExportStatus::profile_verification_failed:
             return "profile_verification_failed";
-        case WicPngExportStatus::publish_failed:
+        case WicTiffExportStatus::publish_failed:
             return "publish_failed";
-        case WicPngExportStatus::published_file_invalid:
+        case WicTiffExportStatus::published_file_invalid:
             return "published_file_invalid";
     }
     return "unknown";

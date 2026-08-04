@@ -21,6 +21,7 @@
 - [선택형 이미지 SHA-256 구현](implementation/image-content-hash.md)
 - [수동 네거티브 현상 수직 경로](implementation/manual-negative-development.md)
 - [PNG16 출력·검증·게시](implementation/png16-output-publish.md)
+- [TIFF16 출력·최소 메타데이터 검증·게시](implementation/tiff16-output-publish.md)
 - [WinUI 셸 기반](implementation/winui-shell-foundation.md)
 
 ### 환경과 검증
@@ -30,8 +31,10 @@
 - [2026-08-04 사용자 TIFF 코퍼스 검증](verification/2026-08-04-local-tiff-corpus.md)
 - [2026-08-04 WinUI 셸 검증](verification/2026-08-04-winui-shell.md)
 - [2026-08-04 PNG16 출력 검증](verification/2026-08-04-png16-output.md)
+- [2026-08-04 TIFF16 출력·단계 보고 검증](verification/2026-08-04-tiff16-output.md)
 - [이미지 I/O 조사와 권리 검토](research/image-io-sources.md)
 - [출력 encode·게시 근거와 권리 검토](research/output-encode-sources.md)
+- [TIFF16 출력·메타데이터 공식 근거와 권리 검토](research/tiff16-output-sources.md)
 - [네거티브 반전 근거와 권리 조사](research/negative-inversion-sources.md)
 - [Swift UI 패리티 기준선](research/swift-ui-parity-baseline.md)
 
@@ -44,6 +47,7 @@
 - [ADR-0005: 이미지 content SHA-256은 기본 끔](decisions/0005-image-content-sha256-off-by-default.md)
 - [ADR-0006: SANE은 별도 GPL 스캐너 플러그인으로 유지](decisions/0006-scanner-plugin-boundary.md)
 - [ADR-0007: 첫 출력은 검증된 16-bit sRGB PNG로 게시](decisions/0007-verified-png16-output-boundary.md)
+- [ADR-0008: TIFF16 출력은 최소 메타데이터를 검증한 뒤 게시](decisions/0008-verified-tiff16-minimal-metadata-boundary.md)
 
 ## 사실 우선순위
 

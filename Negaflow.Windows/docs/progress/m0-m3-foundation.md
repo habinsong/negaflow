@@ -109,8 +109,13 @@
 - 이미지 content SHA-256 기본 `off`와 명시적 CNG opt-in·cancel/progress
 - extended-linear working→opaque sRGB16 최종 경계 변환과 clipping 계수
 - Microsoft 기본 WIC PNG encoder/decoder 고정, 등록 sRGB ICC 삽입과 exact pixel/profile readback
+- Microsoft 기본 WIC TIFF encoder/decoder 고정, 무압축 RGB16과 exact pixel/profile readback
+- Classic TIFF 단일 IFD 최소 metadata tag allowlist와 descriptive/private tag fail-closed 거부
 - 같은 디렉터리 `CREATE_NEW` staging, flush, 기존 목적지 비덮어쓰기 단일 파일 게시
-- `--decode-tiff-wic`, `--prepare-scanner-tiff`, `--sha256-image`, `--export-developed-png16` CLI
+- content를 읽지 않는 source file ID·크기·최종 수정 시각 전후 관찰
+- PNG16/TIFF16 공통 decode·color·develop orchestration과 단계별 byte·memory·wall-time report
+- `--decode-tiff-wic`, `--prepare-scanner-tiff`, `--sha256-image`, `--export-developed-png16`,
+  `--export-developed-tiff16` CLI
 
 ### 검증한 입력
 
@@ -128,6 +133,8 @@
 - 이미지 SHA 기본-off 무 I/O와 opt-in 15/15, 원본 관측값 불변
 - 합성 working image의 PNG16 구조·전체 pixel·ICC exact readback과 publish 경합 보존
 - 권리 확인된 저장소 TIFF fixture의 decode→color→develop→PNG16 게시
+- 합성 working image의 무압축 TIFF16 구조·최소 IFD·전체 pixel·ICC exact readback과 목적지 보존
+- 권리 확인된 저장소 TIFF fixture의 decode→color→develop→TIFF16 게시와 source 상태 불변 관찰
 
 ### 남은 것
 
@@ -136,5 +143,5 @@
 - ColorSync golden과 Windows ICM 수치 비교
 - 필요성이 입증될 때만 libtiff/LittleCMS dependency 결정
 - tile decode, 최종 working/output downstream streaming과 process memory budget
-- M4 요구 형식인 TIFF16 출력, metadata allowlist와 catalog transaction·복구
+- M4 exposure/contrast/curve, CPU time·stage digest·macOS pixel diff와 catalog transaction·복구
 - fuzzing/ASan corpus와 실제 대형 scanner TIFF

@@ -2,7 +2,7 @@
 
 macOS용 Negaflow의 제품 계약을 Windows 네이티브 기술로 독립 구현하는 작업 공간입니다.
 현재 단계는 M0 기준선, M1 native/managed 빌드·Interop 기반, 첫 M2 scalar 수치 계약, M3 TIFF
-decode·입력 색상·검증된 PNG16 출력 경계, 첫 M4 CLI와 M8 WinUI 셸 기반입니다. 제품 전체 이미지
+decode·입력 색상·검증된 PNG16/TIFF16 출력 경계, 첫 M4 CLI와 M8 WinUI 셸 기반입니다. 제품 전체 이미지
 처리나 실제 제품 기능이 완성된 상태는 아닙니다.
 
 ## 고정 기준
@@ -31,6 +31,8 @@ decode·입력 색상·검증된 PNG16 출력 경계, 첫 M4 CLI와 M8 WinUI 셸
 - 사용자 scanner TIFF 15개 read-only streaming 변환과 whole-frame 최종 float exact parity
 - TIFF decode→scanner color→수동 Dmin 네거티브 반전 수직 경로
 - working float→sRGB16→Microsoft WIC PNG encode→pixel·ICC readback→기존 파일 비덮어쓰기 게시
+- working float→sRGB16→무압축 Classic TIFF encode→최소 IFD·pixel·ICC readback→비덮어쓰기 게시
+- content를 읽지 않는 source file 상태 전후 관찰과 PNG16/TIFF16 공통 단계별 CLI report
 - 일반 이미지 SHA-256 기본 `끔`, 명시적 opt-in Windows CNG 순차 경로
 - Swift 기준 치수와 6개 언어를 쓰는 WinUI 3 Library/Develop/Print/Settings 셸
 - 현재 모니터 작업영역 최대화와 Windows 오른쪽 caption button runtime inset
@@ -131,6 +133,18 @@ artifact SHA-256은 계산하지 않습니다.
 .\out\build\native\x64-debug\Debug\negaflow-cli.exe --export-developed-png16 C:\path\scan.tiff C:\path\result.png 0.72 0.32 0.15 color
 ```
 
+macOS 기본 export와 같은 무압축 16-bit opaque sRGB TIFF로도 내보낼 수 있습니다. 게시 전 단일 IFD,
+구조 tag allowlist, 전체 RGB16 pixel과 ICC bytes를 확인합니다. source metadata는 복사하지 않으며 Make,
+Model, Software, DateTime, Artist, Copyright, XMP, EXIF, GPS와 알 수 없는 tag는 허용하지 않습니다.
+
+```powershell
+.\out\build\native\x64-debug\Debug\negaflow-cli.exe --export-developed-tiff16 C:\path\scan.tiff C:\path\result.tiff 0.72 0.32 0.15 color
+```
+
+두 export command는 source를 읽기 전후에 file ID·크기·최종 수정 시각만 비교하고, SHA-256은 계산하지
+않습니다. 결과에는 decode+color, develop, output의 byte·memory·wall-time과 검증 상태가 들어가며 경로와
+file identity 값은 들어가지 않습니다.
+
 이미지 SHA-256은 기본 작업에서 계산하지 않습니다. 사용자가 명시적으로 필요할 때만 다음 opt-in
 command를 사용합니다.
 
@@ -157,7 +171,7 @@ src/Native/core/      Windows 네이티브 공통 기반
 src/Native/color/     ICC 구조와 순수 색상 수학
 src/Native/imageio/   WIC decode와 소유형 sample
 src/Native/imaging/   scanner source→working 정책과 ICM adapter
-src/Native/output/    sRGB16 변환, WIC PNG readback과 단일 파일 게시
+src/Native/output/    sRGB16 변환, WIC PNG/TIFF readback과 단일 파일 게시
 src/Native/abi/       유일한 공개 C ABI
 src/Interop/          C# ABI binding, 안전한 DLL probing과 version validation
 src/Shell.Core/       UI 비종속 표시 상태, 기본값과 적응형 배치 계산
@@ -172,7 +186,7 @@ third_party/          실제 payload 기준 공급망 manifest
 
 ## 다음 순서
 
-1. M4 계약의 16-bit TIFF 출력, metadata allowlist와 stage report 보강
+1. M4의 최소 exposure/contrast/curve와 CPU time·canonical stage digest·macOS pixel diff 보강
 2. LZW code stream 의미 검증과 malformed Deflate/fuzz corpus 보강
 3. macOS ColorSync golden과 Windows ICM 수치 비교
 4. 필요한 경우에만 libtiff/LittleCMS dependency gate 재평가

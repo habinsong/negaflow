@@ -90,6 +90,7 @@ target_link_libraries(negaflow_color PRIVATE negaflow_project_options)
 add_library(negaflow_imageio STATIC
     src/Native/imageio/decoded_image.cpp
     src/Native/imageio/image_content_hash.cpp
+    src/Native/imageio/image_file_observation.cpp
     src/Native/imageio/wic_tiff_decoder.cpp
 )
 target_include_directories(negaflow_imageio
@@ -120,7 +121,10 @@ target_link_libraries(
 add_library(negaflow_output STATIC
     src/Native/output/atomic_output_file.cpp
     src/Native/output/png_structure_reader.cpp
+    src/Native/output/tiff_ifd_allowlist.cpp
     src/Native/output/wic_png_export.cpp
+    src/Native/output/wic_srgb16_support.cpp
+    src/Native/output/wic_tiff_export.cpp
     src/Native/output/working_to_srgb16.cpp
 )
 target_include_directories(negaflow_output
@@ -145,7 +149,9 @@ set_target_properties(negaflow_native PROPERTIES OUTPUT_NAME "Negaflow.Native")
 add_executable(negaflow_cli
     src/Cli/main.cpp
     src/Cli/commands/develop_negative_tiff.cpp
+    src/Cli/commands/export_developed_image.cpp
     src/Cli/commands/export_developed_png.cpp
+    src/Cli/commands/export_developed_tiff.cpp
     src/Cli/commands/hash_image.cpp
     src/Cli/commands/prepare_scanner_tiff.cpp
     src/Cli/commands/working_image_report.cpp
@@ -204,6 +210,18 @@ if(BUILD_TESTING)
     )
     add_test(NAME native.image_content_hash COMMAND negaflow_image_content_hash_tests)
 
+    add_executable(negaflow_image_file_observation_tests
+        tests/Native.UnitTests/image_file_observation_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_image_file_observation_tests
+        PRIVATE negaflow_imageio negaflow_project_options
+    )
+    add_test(
+        NAME native.image_file_observation
+        COMMAND negaflow_image_file_observation_tests
+    )
+
     add_executable(negaflow_icc_profile_tests
         tests/Native.UnitTests/icc_profile_tests.cpp
     )
@@ -243,6 +261,19 @@ if(BUILD_TESTING)
         PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/output"
     )
     add_test(NAME native.wic_png_export COMMAND negaflow_wic_png_export_tests)
+
+    add_executable(negaflow_wic_tiff_export_tests
+        tests/Native.UnitTests/wic_tiff_export_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_wic_tiff_export_tests
+        PRIVATE negaflow_output negaflow_project_options
+    )
+    target_include_directories(
+        negaflow_wic_tiff_export_tests
+        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/output"
+    )
+    add_test(NAME native.wic_tiff_export COMMAND negaflow_wic_tiff_export_tests)
 
     add_executable(negaflow_manual_negative_developer_tests
         tests/Native.UnitTests/manual_negative_developer_tests.cpp
