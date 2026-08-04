@@ -35,6 +35,7 @@
 - source-generated `LibraryImport` 기반 `Negaflow.Interop`
 - 절대 경로 native load, ABI version/layout 검증과 stable bootstrap failure
 - 외부 package가 없는 Interop/Core project lock과 dual-RID WinUI component package lock
+- UI·native와 분리된 `Negaflow.Catalog.Core`, console unit runner와 x64 managed test 진입점
 
 ### 검증된 것
 
@@ -47,6 +48,7 @@
 - x64 Debug/Release 관리 ABI 계약 13개 assertion 통과
 - x64/ARM64 관리 assembly PE가 각각 `8664`/`AA64`
 - Visual Studio Community instance에서 현재 ID의 Windows App SDK C# component 감지
+- x64 Debug/Release catalog 163개와 shell 45개 assertion 통과, ARM64 Debug/Release 전체 managed solution 교차 빌드
 
 ### 남은 것
 
@@ -138,6 +140,11 @@
 - Classic TIFF 단일 IFD 최소 metadata tag allowlist와 descriptive/private tag fail-closed 거부
 - 같은 디렉터리 `CREATE_NEW` staging, flush, 기존 목적지 비덮어쓰기 단일 파일 게시
 - content를 읽지 않는 source file ID·크기·최종 수정 시각 전후 관찰
+- catalog frame의 `scanner`/`imported` transport와 film/digital source signal을 분리한 route projection
+- legacy optional digital marker, missing Film Emulation intensity `1.0`과 새 기본 `0.5` 호환
+- source signal/film type/marker 불일치 fail-closed와 unknown frame/params field 보존 writer
+- 12개 Film Emulation 이름과 여섯 DevelopmentProcess의 명시적 JSON mapping
+- 재귀적 ordinal key 정렬의 deterministic catalog JSON writer
 - PNG16/TIFF16 공통 decode·color·develop·tone orchestration과 단계별 byte·memory·wall/process-CPU report
 - 진단 전용 scanner→working/develop/tone active RGBA32F min/max·versioned 비암호 fingerprint
 - `--decode-tiff-wic`, `--prepare-scanner-tiff`, `--sha256-image`, `--export-developed-png16`,
@@ -164,6 +171,8 @@
 - 권리 확인된 저장소 TIFF fixture의 decode→color→develop→PNG16 게시
 - 합성 working image의 무압축 TIFF16 구조·최소 IFD·전체 pixel·ICC exact readback과 목적지 보존
 - 권리 확인된 저장소 TIFF fixture의 decode→color→develop→TIFF16 게시와 source 상태 불변 관찰
+- catalog route fixture valid 5개/invalid 17개, x64 Debug/Release 각각 163 assertion
+- 같은 fixture를 현재 Swift `DevelopParameters` decoder/default와 대조하는 macOS hosted test 추가
 
 ### 남은 것
 
@@ -172,5 +181,6 @@
 - ColorSync golden과 Windows ICM 수치 비교
 - 필요성이 입증될 때만 libtiff/LittleCMS dependency 결정
 - tile decode, 최종 working/output downstream streaming과 process memory budget
+- route projection의 실제 import writer·SQLite payload·C ABI render snapshot 연결
 - M4 tone의 실제 macOS runtime pixel diff·cross-platform 허용오차 manifest와 catalog transaction·복구
 - fuzzing/ASan corpus와 실제 대형 scanner TIFF

@@ -4,6 +4,10 @@
     <Platform Name="ARM64" />
   </Configurations>
   <Folder Name="/src/">
+    <Project Path="src/Catalog.Core/Negaflow.Catalog.Core.csproj">
+      <Platform Solution="*|x64" Project="AnyCPU" />
+      <Platform Solution="*|ARM64" Project="AnyCPU" />
+    </Project>
     <Project Path="src/Interop/Negaflow.Interop.csproj">
       <Platform Solution="*|x64" Project="x64" />
       <Platform Solution="*|ARM64" Project="ARM64" />
@@ -18,6 +22,10 @@
     </Project>
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Catalog.UnitTests/Negaflow.Catalog.UnitTests.csproj">
+      <Platform Solution="*|x64" Project="AnyCPU" />
+      <Platform Solution="*|ARM64" Project="AnyCPU" />
+    </Project>
     <Project Path="tests/Interop.ContractTests/Negaflow.Interop.ContractTests.csproj">
       <Platform Solution="*|x64" Project="x64" />
       <Platform Solution="*|ARM64" Project="ARM64" />

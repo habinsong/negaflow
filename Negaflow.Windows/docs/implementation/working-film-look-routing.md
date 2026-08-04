@@ -103,11 +103,18 @@ decode/scanner color → manual negative develop → tone/Primary Calibration
 `negative_develop_requires_film_scan_source`로 거부합니다. 디지털 입력을 film-scan 부분 그래프로
 조용히 처리하거나 profile 이름으로 source를 추정하지 않습니다.
 
+## catalog projection 연결 상태
+
+`Negaflow.Catalog.Core`가 persisted frame의 `sourceKind`, explicit `sourceSignalKind`, legacy
+`isDigitalSource`, film type/profile/intensity를 `DevelopRouteSnapshot`으로 읽고 씁니다. 따라서 source를
+파일 확장자나 import transport로 추측하지 않는 저장 경계와 legacy 강도 호환은 마련됐습니다. 아직 이
+snapshot을 C ABI parameter로 변환하거나 실제 SQLite/import writer에서 호출하지는 않습니다.
+
 ## 아직 연결하지 않은 것
 
 - C ABI와 관리 코드/WinUI
-- catalog/import source metadata persistence
-- catalog recipe 저장·재로드
+- 실제 SQLite/import writer와 앱 restart 저장·재로드
+- catalog snapshot→C ABI parameter mapping
 - cancellation/progress와 workspace cache 수명 관리자
 - digital halation·color·grain 전체 그래프
 - SIMD/DirectCompute/WARP 및 대형 이미지 benchmark

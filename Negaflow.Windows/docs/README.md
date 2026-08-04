@@ -32,6 +32,7 @@
 - [macOS Film Emulation Core Image golden 생성기](implementation/macos-film-emulation-golden.md)
 - [Film Emulation acutance](implementation/film-emulation-acutance.md)
 - [Working Film Look source routing](implementation/working-film-look-routing.md)
+- [Catalog Develop route projection](implementation/catalog-develop-route.md)
 - [파이프라인 CPU 시간과 빠른 픽셀 진단](implementation/pipeline-diagnostics.md)
 - [WinUI 셸 기반](implementation/winui-shell-foundation.md)
 
@@ -52,6 +53,7 @@
 - [2026-08-04 Film Emulation Core Image golden·acutance 검증](verification/2026-08-04-film-emulation-core-image-golden.md)
 - [2026-08-04 Film Look source routing 검증](verification/2026-08-04-film-look-routing.md)
 - [2026-08-04 Film Look CLI·실제 출력 검증](verification/2026-08-04-film-look-cli.md)
+- [2026-08-04 Catalog Develop route 검증](verification/2026-08-04-catalog-develop-route.md)
 - [2026-08-04 파이프라인 CPU 시간·단계 진단 검증](verification/2026-08-04-pipeline-diagnostics.md)
 - [2026-08-04 압축 TIFF 사전 검사 검증](verification/2026-08-04-compressed-tiff-preflight.md)
 - [이미지 I/O 조사와 권리 검토](research/image-io-sources.md)
@@ -67,6 +69,7 @@
 - [Film Emulation 색상 cube 공식 근거와 권리 조사](research/film-emulation-color-sources.md)
 - [Film Emulation acutance 공식 근거와 권리 조사](research/film-emulation-acutance-sources.md)
 - [Film Look source routing 공식 근거와 권리 조사](research/film-look-routing-sources.md)
+- [Catalog Develop route 공식 근거와 권리 조사](research/catalog-develop-route-sources.md)
 - [파이프라인 진단 공식 근거와 권리 검토](research/pipeline-diagnostics-sources.md)
 - [Swift UI 패리티 기준선](research/swift-ui-parity-baseline.md)
 
@@ -91,6 +94,7 @@
 - [ADR-0017: provenance gate는 Windows 1차 C++와 제3자 payload를 구분](decisions/0017-first-party-windows-native-provenance-boundary.md)
 - [ADR-0018: Film Emulation acutance는 11행 bounded spatial kernel로 격리](decisions/0018-bounded-film-emulation-acutance.md)
 - [ADR-0019: Film Look은 명시적 source 종류로 완전한 경로를 선택](decisions/0019-explicit-film-look-source-routing.md)
+- [ADR-0020: catalog의 전송 출처와 현상 신호를 분리하고 legacy recipe를 명시적으로 투영](decisions/0020-explicit-catalog-develop-route.md)
 
 ## 사실 우선순위
 

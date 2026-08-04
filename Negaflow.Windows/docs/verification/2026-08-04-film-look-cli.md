@@ -79,7 +79,8 @@ x64 Debug CLI로 동일 fixture를 활성 Velvia 50 recipe에 넣어 PNG16과 TI
 
 ## 남은 위험
 
-- catalog/import source metadata와 recipe 저장·재로드는 아직 없습니다.
+- source metadata와 legacy recipe를 읽고 쓰는 catalog projection은 생겼지만 실제 SQLite/import
+  writer와 restart 저장·재로드는 아직 없습니다.
 - C ABI와 WinUI는 source/profile/intensity를 아직 노출하지 않습니다.
 - 활성 rendered-digital 전체 graph는 아직 `unsupported_route`입니다.
 - 실제 대형 사용자 TIFF의 Film Look 성능·메모리 benchmark와 실제 ARM64 Windows 실행이 남았습니다.

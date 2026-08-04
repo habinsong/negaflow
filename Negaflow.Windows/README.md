@@ -40,6 +40,8 @@ decode·입력 색상·검증된 PNG16/TIFF16 출력 경계, M4 단일 이미지
 - content를 읽지 않는 source file 상태 전후 관찰과 PNG16/TIFF16 공통 단계별 wall/process-CPU report
 - 진단 명령에만 분리한 scanner/develop/tone RGBA32F min/max와 versioned 비암호 fingerprint
 - 일반 이미지 SHA-256 기본 `끔`, 명시적 opt-in Windows CNG 순차 경로
+- `scanner`/`imported` transport와 film/digital 신호를 분리하고 legacy marker·강도를 보존하는 catalog
+  Develop route projection
 - Swift 기준 치수와 6개 언어를 쓰는 WinUI 3 Library/Develop/Print/Settings 셸
 - 현재 모니터 작업영역 최대화와 Windows 오른쪽 caption button runtime inset
 - Settings의 일반 이미지 SHA-256 기본 `끔` 표시·저장 기반
@@ -75,6 +77,7 @@ Visual Studio에 포함된 vcpkg 도구를 사용하며, 제3자 port 버전은 
 ./scripts/build.ps1 -Preset x64-debug
 ./scripts/test.ps1 -Preset x64-debug
 ./scripts/test-interop.ps1 -Preset x64-debug
+./scripts/test-managed.ps1 -Preset x64-debug
 ```
 
 managed solution build가 끝나면 x64 Debug 셸은 다음 위치에서 실행할 수 있습니다.
@@ -88,6 +91,7 @@ Release 빌드:
 ```powershell
 ./scripts/test.ps1 -Preset x64-release
 ./scripts/test-interop.ps1 -Preset x64-release
+./scripts/test-managed.ps1 -Preset x64-release
 ./scripts/build-managed.ps1 -Preset arm64-debug
 ./scripts/build-managed.ps1 -Preset arm64-release
 ```
@@ -173,9 +177,11 @@ Primary Calibration 경계까지 연결되어 있지만 현재 CLI와 WinUI는 �
 노출하지 않습니다. 기본 빈 커브와 0인 mixer·grading·calibration 값은 무연산이며 report에는 각
 알고리즘 버전과 적용 여부만 들어갑니다.
 
-Film Emulation은 macOS와 같은 11종 profile의 절차형 RGB33 cube와 뒤따르는 bounded acutance를 각각
-standalone native 계약으로 구현했습니다. canonical macOS Core Image golden과 비교했지만 아직 두 단계를
-tone pipeline, CLI, ABI나 WinUI에 연결하지 않았고 디지털/필름 source routing도 포함하지 않습니다.
+Film Emulation은 macOS와 같은 11종 profile의 절차형 RGB33 cube와 뒤따르는 bounded acutance를
+Primary Calibration 다음의 명시적 film-scan route로 연결했습니다. 진단·PNG16·TIFF16 CLI가 같은 순서를
+사용하고 실제 TIFF artifact 변화까지 확인합니다. persisted source/profile/intensity를 읽고 쓰는 catalog
+projection도 있지만 실제 SQLite, C ABI와 WinUI에는 아직 연결하지 않았습니다. rendered-digital 전체
+그래프는 부분 필름 효과로 대체하지 않고 `unsupported_route`로 실패합니다.
 
 이미지 SHA-256은 기본 작업에서 계산하지 않습니다. 사용자가 명시적으로 필요할 때만 다음 opt-in
 command를 사용합니다.
@@ -205,11 +211,13 @@ src/Native/imageio/   WIC decode와 소유형 sample
 src/Native/imaging/   scanner source→working 정책과 ICM adapter
 src/Native/output/    sRGB16 변환, WIC PNG/TIFF readback과 단일 파일 게시
 src/Native/abi/       유일한 공개 C ABI
+src/Catalog.Core/     catalog source/recipe route와 deterministic JSON 경계
 src/Interop/          C# ABI binding, 안전한 DLL probing과 version validation
 src/Shell.Core/       UI 비종속 표시 상태, 기본값과 적응형 배치 계산
 src/Shell/            WinUI 3 main/Settings 창, localization과 화면 셸
 src/Cli/              WinUI 없는 첫 소비자와 분리된 command
 tests/Native.UnitTests/
+tests/Catalog.UnitTests/
 tests/Interop.ContractTests/
 tests/Shell.UnitTests/
 scripts/              로컬과 CI가 함께 사용할 build/test 진입점
@@ -218,7 +226,7 @@ third_party/          실제 payload 기준 공급망 manifest
 
 ## 다음 순서
 
-1. film-scan source의 RGB33 색상→acutance 순서를 native recipe·CLI report에 연결하고 digital `DigitalFilmLook` route와 분리
+1. catalog route projection을 import frame writer, SQLite payload와 C ABI render snapshot에 연결
 2. cube 경계·fractional alpha golden, cube/scratch cache 수명과 취소 계약 보강
 3. 다음 Develop 후처리 단계를 macOS 처리 순서대로 조사·이식
 4. 독립 Deflate 검증 또는 dependency gate와 WIC 압축 해제 CPU budget·deadline 보강

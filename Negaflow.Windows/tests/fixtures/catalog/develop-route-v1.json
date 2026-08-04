@@ -1,0 +1,320 @@
+{
+  "schemaVersion": 1,
+  "validCases": [
+    {
+      "id": "legacy-imported-positive-film",
+      "frame": {
+        "futureFrameValue": "preserve-me",
+        "sourceKind": "imported",
+        "filmType": "colorPositive",
+        "params": {
+          "filmType": "colorPositive",
+          "filmEmulation": "velvia50",
+          "unknownAdjustment": {
+            "value": 7
+          }
+        }
+      },
+      "expected": {
+        "sourceTransport": "imported",
+        "sourceSignalKind": "filmPositiveScan",
+        "developmentProcess": "e6",
+        "filmLookSource": "filmScan",
+        "filmEmulation": "velvia50",
+        "filmEmulationIntensity": 1.0,
+        "usedLegacySourceSignal": true,
+        "usedLegacyIntensityDefault": true,
+        "decodedDigitalMarker": "absent"
+      }
+    },
+    {
+      "id": "legacy-imported-negative-explicit-false",
+      "frame": {
+        "sourceKind": "imported",
+        "filmType": "bwNegative",
+        "params": {
+          "filmType": "bwNegative",
+          "isDigitalSource": false,
+          "filmEmulation": "none",
+          "filmEmulationIntensity": 0.75
+        }
+      },
+      "expected": {
+        "sourceTransport": "imported",
+        "sourceSignalKind": "filmNegativeScan",
+        "developmentProcess": "d76",
+        "filmLookSource": "filmScan",
+        "filmEmulation": "none",
+        "filmEmulationIntensity": 0.75,
+        "usedLegacySourceSignal": true,
+        "usedLegacyIntensityDefault": false,
+        "decodedDigitalMarker": "false"
+      }
+    },
+    {
+      "id": "explicit-scanner-color-negative",
+      "frame": {
+        "sourceKind": "scanner",
+        "sourceSignalKind": "filmNegativeScan",
+        "filmType": "colorNegative",
+        "params": {
+          "filmType": "colorNegative",
+          "filmEmulation": "portra160",
+          "filmEmulationIntensity": 0.5
+        }
+      },
+      "expected": {
+        "sourceTransport": "scanner",
+        "sourceSignalKind": "filmNegativeScan",
+        "developmentProcess": "c41",
+        "filmLookSource": "filmScan",
+        "filmEmulation": "portra160",
+        "filmEmulationIntensity": 0.5,
+        "usedLegacySourceSignal": false,
+        "usedLegacyIntensityDefault": false,
+        "decodedDigitalMarker": "absent"
+      }
+    },
+    {
+      "id": "explicit-imported-rendered-digital-color",
+      "frame": {
+        "sourceKind": "imported",
+        "sourceSignalKind": "renderedDigital",
+        "filmType": "colorPositive",
+        "params": {
+          "filmType": "colorPositive",
+          "isDigitalSource": true,
+          "filmEmulation": "portra400",
+          "filmEmulationIntensity": 0.5
+        }
+      },
+      "expected": {
+        "sourceTransport": "imported",
+        "sourceSignalKind": "renderedDigital",
+        "developmentProcess": "digitalColor",
+        "filmLookSource": "renderedDigital",
+        "filmEmulation": "portra400",
+        "filmEmulationIntensity": 0.5,
+        "usedLegacySourceSignal": false,
+        "usedLegacyIntensityDefault": false,
+        "decodedDigitalMarker": "true"
+      }
+    },
+    {
+      "id": "explicit-imported-rendered-digital-bw",
+      "frame": {
+        "sourceKind": "imported",
+        "sourceSignalKind": "renderedDigital",
+        "filmType": "bwPositive",
+        "params": {
+          "filmType": "bwPositive",
+          "isDigitalSource": true,
+          "filmEmulation": "ektachromeE100",
+          "filmEmulationIntensity": 0.25
+        }
+      },
+      "expected": {
+        "sourceTransport": "imported",
+        "sourceSignalKind": "renderedDigital",
+        "developmentProcess": "digitalBW",
+        "filmLookSource": "renderedDigital",
+        "filmEmulation": "ektachromeE100",
+        "filmEmulationIntensity": 0.25,
+        "usedLegacySourceSignal": false,
+        "usedLegacyIntensityDefault": false,
+        "decodedDigitalMarker": "true"
+      }
+    }
+  ],
+  "invalidCases": [
+    {
+      "id": "negative-digital-marker",
+      "frame": {
+        "sourceKind": "imported",
+        "filmType": "colorNegative",
+        "params": {
+          "filmType": "colorNegative",
+          "isDigitalSource": true
+        }
+      },
+      "expectedError": "sourceSignalFilmTypeMismatch"
+    },
+    {
+      "id": "explicit-digital-without-legacy-marker",
+      "frame": {
+        "sourceKind": "imported",
+        "sourceSignalKind": "renderedDigital",
+        "filmType": "colorPositive",
+        "params": {
+          "filmType": "colorPositive"
+        }
+      },
+      "expectedError": "sourceSignalMarkerMismatch"
+    },
+    {
+      "id": "explicit-film-with-digital-marker",
+      "frame": {
+        "sourceKind": "imported",
+        "sourceSignalKind": "filmPositiveScan",
+        "filmType": "colorPositive",
+        "params": {
+          "filmType": "colorPositive",
+          "isDigitalSource": true
+        }
+      },
+      "expectedError": "sourceSignalMarkerMismatch"
+    },
+    {
+      "id": "frame-parameter-film-type-mismatch",
+      "frame": {
+        "sourceKind": "scanner",
+        "filmType": "colorPositive",
+        "params": {
+          "filmType": "colorNegative"
+        }
+      },
+      "expectedError": "mismatchedFilmType"
+    },
+    {
+      "id": "unknown-film-emulation",
+      "frame": {
+        "sourceKind": "scanner",
+        "filmType": "colorNegative",
+        "params": {
+          "filmType": "colorNegative",
+          "filmEmulation": "notAProfile"
+        }
+      },
+      "expectedError": "invalidFilmEmulation"
+    },
+    {
+      "id": "out-of-range-intensity",
+      "frame": {
+        "sourceKind": "scanner",
+        "filmType": "colorNegative",
+        "params": {
+          "filmType": "colorNegative",
+          "filmEmulationIntensity": 1.01
+        }
+      },
+      "expectedError": "invalidFilmEmulationIntensity"
+    },
+    {
+      "id": "unknown-source-signal",
+      "frame": {
+        "sourceKind": "scanner",
+        "sourceSignalKind": "guessedFromExtension",
+        "filmType": "colorNegative",
+        "params": {
+          "filmType": "colorNegative"
+        }
+      },
+      "expectedError": "invalidSourceSignal"
+    },
+    {
+      "id": "unsupported-scene-linear",
+      "frame": {
+        "sourceKind": "imported",
+        "sourceSignalKind": "sceneLinearDigital",
+        "filmType": "colorPositive",
+        "params": {
+          "filmType": "colorPositive"
+        }
+      },
+      "expectedError": "unsupportedSourceSignal"
+    },
+    {
+      "id": "missing-parameters",
+      "frame": {
+        "sourceKind": "scanner",
+        "filmType": "colorNegative"
+      },
+      "expectedError": "missingParameters"
+    },
+    {
+      "id": "missing-source-transport",
+      "frame": {
+        "filmType": "colorNegative",
+        "params": {
+          "filmType": "colorNegative"
+        }
+      },
+      "expectedError": "missingSourceTransport"
+    },
+    {
+      "id": "invalid-source-transport",
+      "frame": {
+        "sourceKind": "derivedFromExtension",
+        "filmType": "colorNegative",
+        "params": {
+          "filmType": "colorNegative"
+        }
+      },
+      "expectedError": "invalidSourceTransport"
+    },
+    {
+      "id": "missing-top-level-film-type",
+      "frame": {
+        "sourceKind": "scanner",
+        "params": {
+          "filmType": "colorNegative"
+        }
+      },
+      "expectedError": "missingFilmType"
+    },
+    {
+      "id": "parameters-not-object",
+      "frame": {
+        "sourceKind": "scanner",
+        "filmType": "colorNegative",
+        "params": []
+      },
+      "expectedError": "parametersNotObject"
+    },
+    {
+      "id": "invalid-digital-marker-type",
+      "frame": {
+        "sourceKind": "imported",
+        "filmType": "colorPositive",
+        "params": {
+          "filmType": "colorPositive",
+          "isDigitalSource": "true"
+        }
+      },
+      "expectedError": "invalidDigitalSourceMarker"
+    },
+    {
+      "id": "invalid-intensity-type",
+      "frame": {
+        "sourceKind": "scanner",
+        "filmType": "colorNegative",
+        "params": {
+          "filmType": "colorNegative",
+          "filmEmulationIntensity": "0.5"
+        }
+      },
+      "expectedError": "invalidFilmEmulationIntensity"
+    },
+    {
+      "id": "explicit-unknown-source-signal",
+      "frame": {
+        "sourceKind": "imported",
+        "sourceSignalKind": "unknown",
+        "filmType": "colorPositive",
+        "params": {
+          "filmType": "colorPositive"
+        }
+      },
+      "expectedError": "unsupportedSourceSignal"
+    },
+    {
+      "id": "missing-parameter-film-type-uses-legacy-default",
+      "frame": {
+        "sourceKind": "scanner",
+        "filmType": "colorPositive",
+        "params": {}
+      },
+      "expectedError": "mismatchedFilmType"
+    }
+  ]
+}
