@@ -54,7 +54,7 @@ X/Y resolution 관련 구조 tag가 존재하더라도 source DPI를 전달하�
 - BigTIFF와 2 GiB 초과 artifact
 - output encode/readback cancellation과 progress
 - stage CPU time, canonical stage digest와 macOS pixel diff
-- exposure·contrast·curve를 포함한 최종 M4 수치 조합
+- exposure·contrast·curve는 후속 ADR-0009 경계에서 구현됨
 - 실제 ARM64 Windows에서의 WIC TIFF 실행
 
 ## 결과

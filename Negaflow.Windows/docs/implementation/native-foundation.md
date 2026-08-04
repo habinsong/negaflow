@@ -27,6 +27,9 @@ src/Native/imaging
   scanner_to_working       source policy dispatcher
   linear_scanner_converter untagged scanner raw path
   icm_icc_converter        Windows ICM adapter
+  tone_mapping             basic tone와 parametric curve scalar
+  tone_curve_measurement   bounded percentile band 측정
+  working_tone_adjuster    입력 범위와 tone 단계 순서
 
 src/Native/abi
   negaflow_abi      versioned C ABI DLL

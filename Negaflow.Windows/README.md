@@ -1,9 +1,9 @@
 # Negaflow Windows
 
 macOS용 Negaflow의 제품 계약을 Windows 네이티브 기술로 독립 구현하는 작업 공간입니다.
-현재 단계는 M0 기준선, M1 native/managed 빌드·Interop 기반, 첫 M2 scalar 수치 계약, M3 TIFF
-decode·입력 색상·검증된 PNG16/TIFF16 출력 경계, 첫 M4 CLI와 M8 WinUI 셸 기반입니다. 제품 전체 이미지
-처리나 실제 제품 기능이 완성된 상태는 아닙니다.
+현재 단계는 M0 기준선, M1 native/managed 빌드·Interop 기반, M2 scalar 네거티브·톤 수치 계약, M3 TIFF
+decode·입력 색상·검증된 PNG16/TIFF16 출력 경계, M4 단일 이미지 CLI와 M8 WinUI 셸 기반입니다. 제품 전체
+이미지 처리나 실제 제품 기능이 완성된 상태는 아닙니다.
 
 ## 고정 기준
 
@@ -22,7 +22,7 @@ decode·입력 색상·검증된 PNG16/TIFF16 출력 경계, 첫 M4 CLI와 M8 Wi
 - C++20 네이티브 코어와 좁은 C ABI DLL
 - .NET 10 source-generated `LibraryImport`와 절대 경로 ABI bootstrap
 - build ID, architecture, CPU capability를 구조화해 출력하는 CLI
-- checked float32 pixel view와 scalar exposure/color-matrix
+- checked float32 pixel view와 scalar exposure/color-matrix/basic-tone/parametric-curve
 - `shoulder-print-response-v4` color/B&W negative inversion reference
 - 원본 불변 Classic/BigTIFF 구조 검사와 `--probe-tiff` CLI
 - Microsoft 기본 WIC의 RGB/RGBA 16-bit TIFF decode
@@ -30,6 +30,7 @@ decode·입력 색상·검증된 PNG16/TIFF16 출력 경계, 첫 M4 CLI와 M8 Wi
 - bounded ICC 검사와 재사용 Windows ICM row transform 기반 scanner→linear-sRGB float 변환
 - 사용자 scanner TIFF 15개 read-only streaming 변환과 whole-frame 최종 float exact parity
 - TIFF decode→scanner color→수동 Dmin 네거티브 반전 수직 경로
+- macOS 수식 순서의 노출·기본 톤·4-band 파라메트릭 커브 scalar와 bounded 동적 측정
 - working float→sRGB16→Microsoft WIC PNG encode→pixel·ICC readback→기존 파일 비덮어쓰기 게시
 - working float→sRGB16→무압축 Classic TIFF encode→최소 IFD·pixel·ICC readback→비덮어쓰기 게시
 - content를 읽지 않는 source file 상태 전후 관찰과 PNG16/TIFF16 공통 단계별 CLI report
@@ -141,9 +142,17 @@ Model, Software, DateTime, Artist, Copyright, XMP, EXIF, GPS와 알 수 없는 t
 .\out\build\native\x64-debug\Debug\negaflow-cli.exe --export-developed-tiff16 C:\path\scan.tiff C:\path\result.tiff 0.72 0.32 0.15 color
 ```
 
-두 export command는 source를 읽기 전후에 file ID·크기·최종 수정 시각만 비교하고, SHA-256은 계산하지
-않습니다. 결과에는 decode+color, develop, output의 byte·memory·wall-time과 검증 상태가 들어가며 경로와
-file identity 값은 들어가지 않습니다.
+노출·대비·파라메트릭 커브 네 구간을 적용하려면 여섯 값을 모두 덧붙입니다. 범위는 노출 `[-5, 5]`,
+나머지는 `[-1, 1]`입니다.
+
+```powershell
+.\out\build\native\x64-debug\Debug\negaflow-cli.exe --export-developed-tiff16 C:\path\scan.tiff C:\path\result.tiff 0.72 0.32 0.15 color 0.5 0.25 0.1 -0.1 0.2 -0.2
+```
+
+두 export command는 source를 읽기 전후에 file identity·크기·최종 수정 시각만 비교하고, SHA-256은
+계산하지 않습니다. 결과에는 decode+color, develop, tone, output의 byte·memory·wall-time과 검증 상태가
+들어가며 경로와 file identity 값은 들어가지 않습니다. 동적 커브는 target·percentile 계약을 macOS와
+맞추고 비공개 Core Image 축소 filter 대신 명시적 `portable_area_v1`을 사용했다는 사실을 report합니다.
 
 이미지 SHA-256은 기본 작업에서 계산하지 않습니다. 사용자가 명시적으로 필요할 때만 다음 opt-in
 command를 사용합니다.
@@ -186,7 +195,7 @@ third_party/          실제 payload 기준 공급망 manifest
 
 ## 다음 순서
 
-1. M4의 최소 exposure/contrast/curve와 CPU time·canonical stage digest·macOS pixel diff 보강
+1. M4 tone의 실제 macOS runtime golden·pixel diff와 CPU time·canonical stage digest 보강
 2. LZW code stream 의미 검증과 malformed Deflate/fuzz corpus 보강
 3. macOS ColorSync golden과 Windows ICM 수치 비교
 4. 필요한 경우에만 libtiff/LittleCMS dependency gate 재평가

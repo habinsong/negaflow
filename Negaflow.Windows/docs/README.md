@@ -22,6 +22,7 @@
 - [수동 네거티브 현상 수직 경로](implementation/manual-negative-development.md)
 - [PNG16 출력·검증·게시](implementation/png16-output-publish.md)
 - [TIFF16 출력·최소 메타데이터 검증·게시](implementation/tiff16-output-publish.md)
+- [노출·대비·파라메트릭 커브](implementation/tone-adjustment-pipeline.md)
 - [WinUI 셸 기반](implementation/winui-shell-foundation.md)
 
 ### 환경과 검증
@@ -32,10 +33,12 @@
 - [2026-08-04 WinUI 셸 검증](verification/2026-08-04-winui-shell.md)
 - [2026-08-04 PNG16 출력 검증](verification/2026-08-04-png16-output.md)
 - [2026-08-04 TIFF16 출력·단계 보고 검증](verification/2026-08-04-tiff16-output.md)
+- [2026-08-04 노출·대비·커브 수직 경로 검증](verification/2026-08-04-tone-adjustment.md)
 - [이미지 I/O 조사와 권리 검토](research/image-io-sources.md)
 - [출력 encode·게시 근거와 권리 검토](research/output-encode-sources.md)
 - [TIFF16 출력·메타데이터 공식 근거와 권리 검토](research/tiff16-output-sources.md)
 - [네거티브 반전 근거와 권리 조사](research/negative-inversion-sources.md)
+- [톤 조정 공식 근거와 권리 조사](research/tone-adjustment-sources.md)
 - [Swift UI 패리티 기준선](research/swift-ui-parity-baseline.md)
 
 ### 결정 기록
@@ -48,6 +51,7 @@
 - [ADR-0006: SANE은 별도 GPL 스캐너 플러그인으로 유지](decisions/0006-scanner-plugin-boundary.md)
 - [ADR-0007: 첫 출력은 검증된 16-bit sRGB PNG로 게시](decisions/0007-verified-png16-output-boundary.md)
 - [ADR-0008: TIFF16 출력은 최소 메타데이터를 검증한 뒤 게시](decisions/0008-verified-tiff16-minimal-metadata-boundary.md)
+- [ADR-0009: 첫 톤 조정은 macOS 수식과 순서를 보존하고 동적 측정 차이를 명시](decisions/0009-tone-adjustment-scalar-contract.md)
 
 ## 사실 우선순위
 

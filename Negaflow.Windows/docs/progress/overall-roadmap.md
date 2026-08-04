@@ -5,8 +5,8 @@
 
 ## 현재 숫자
 
-- 전체 M0~M18 제품 로드맵: **약 12%**
-- 기반 구간 M0~M3: **약 43%**
+- 전체 M0~M18 제품 로드맵: **약 13%**
+- 기반 구간 M0~M3: **약 44%**
 - 제한형 TIFF 사전 검사 세부 작업: **약 90%**
 
 이 수치는 일정이나 개발 시간의 5%가 아닙니다. 각 milestone의 정의된 산출물과 종료 조건을
@@ -19,9 +19,9 @@
 |---|---:|---|---|
 | M0 제품 기준선 | 35% | exact commit, bootstrap manifest, delta, 일부 asset hash | 전체 surface/stage manifest, 권리 결정, 실제 macOS 기준 artifact |
 | M1 저장소·빌드·CI | 68% | 별도 build root, x64/ARM64 native·managed·WinUI graph, dual-RID lock, C ABI, CLI, VS 18.8.2와 Windows App SDK C# component, 고정 SDK/vcpkg, static CRT | shader/packaging, CI, 실제 ARM64 run |
-| M2 적합성·CPU scalar | 15% | pixel contract, exposure/matrix, 네거티브 반전, versioned 합성 fixture | 전체 kernel inventory, forced dispatch, 곡선·공간·통계·결함·변환 |
+| M2 적합성·CPU scalar | 22% | pixel contract, exposure/matrix, 네거티브 반전, 기본 톤·4-band curve, fixed Float32 fixture와 bounded percentile 측정 | 전체 kernel inventory, forced dispatch, point curve·공간·통계·결함·변환, 실제 macOS golden |
 | M3 이미지 I/O·색·영속성 | 52% | 동일 read-only stream의 bounded TIFF probe+WIC 16-bit decode, sink 기반 row streaming, ICC row transform→linear working, whole/stream exact parity 15개, 이미지 SHA 기본-off/opt-in CNG, 검증된 PNG16/TIFF16 단일 파일 게시 | ColorSync parity, tile/fuzz, SQLite, catalog transaction·복구 |
-| M4 CLI end-to-end | 28% | 한 장 decode→color→수동 Dmin develop→sRGB16 TIFF encode→구조·최소 metadata·전체 pixel·ICC readback→publish, source 상태 전후 관찰, 단계별 byte·memory·wall-time report, SHA 기본-off | exposure/contrast/curve 조합, CPU time·canonical stage digest·macOS pixel diff report |
+| M4 CLI end-to-end | 40% | 한 장 decode→color→수동 Dmin develop→노출·기본 톤·동적 4-band curve→sRGB16 TIFF/PNG 검증 게시, source 관찰, 단계별 byte·memory·wall-time report, SHA 기본-off | CPU time·canonical stage digest·실제 macOS runtime pixel diff report |
 | M5 GPU/WARP | 0% | 문서만 존재 | D3D11/Direct2D/WARP FP32 vertical slice |
 | M6 전체 Develop graph | 0% | 문서만 존재 | 전체 stage와 측정 |
 | M7 대형 이미지 | 6% | WIC row sink, chunk ICC transform, 단조 progress/cancel, full decoded source 제거와 exact parity | 최종 working streaming, tile, byte reservation, cache, TDR |
@@ -32,8 +32,8 @@
 | M17 배포·컴플라이언스 | 0% | 설치 선언 초안만 존재 | MSIX/installer, signing, update, SBOM |
 | M18 Beta/RC/Stable | 0% | 없음 | release gate 전체 |
 
-계산은 M0 35, M1 68, M2 15, M3 52, M4 28, M7 6, M8 18, M9~M14 각각 2, 나머지 0을 19개
-milestone의 100점 만점에 대입한 약 12.3%입니다. 숫자는 구현 증거가 추가될 때만 올립니다.
+계산은 M0 35, M1 68, M2 22, M3 52, M4 40, M7 6, M8 18, M9~M14 각각 2, 나머지 0을 19개
+milestone의 100점 만점에 대입한 약 13.3%입니다. 숫자는 구현 증거가 추가될 때만 올립니다.
 
 ## 현재 완료된 작은 루프
 
@@ -62,13 +62,15 @@ milestone의 100점 만점에 대입한 약 12.3%입니다. 숫자는 구현 증
     파일을 덮어쓰지 않고 같은 디렉터리에서 게시하는 CPU 수직 경로를 검증했습니다.
 17. 같은 출력 변환·게시 경계를 재사용해 무압축 RGB16 TIFF를 만들고 단일 IFD 최소 metadata,
     전체 pixel·ICC, source 상태 전후와 단계별 CLI report를 검증했습니다.
+18. macOS Float32 수식의 노출·기본 톤·4-band curve를 제자리 scalar로 연결하고 fixed fixture, bounded
+    동적 percentile 측정과 TIFF16/PNG16 실제 게시를 검증했습니다.
 
 ## 다음 완료 조건
 
 가까운 순서대로 다음을 닫습니다.
 
-1. M4 원계약의 최소 exposure/contrast/curve를 연결하고 CPU time·canonical stage digest·macOS pixel diff를
-   report에 보강합니다.
+1. M4 tone의 실제 macOS runtime golden·pixel diff와 CPU time·canonical stage digest를 report에
+   보강합니다.
 2. LZW code stream 의미 검증, 손상 Deflate와 압축 해제 CPU deadline을 검증합니다.
 3. 같은 ICC patch에 대한 macOS ColorSync golden과 Windows ICM 수치를 비교합니다.
 4. 차이가 허용 범위를 넘을 때만 LittleCMS를 dependency gate에 올립니다.

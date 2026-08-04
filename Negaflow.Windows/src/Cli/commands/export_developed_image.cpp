@@ -4,6 +4,7 @@
 #include "negaflow/imageio/image_file_observation.h"
 #include "negaflow/imaging/manual_negative_developer.h"
 #include "negaflow/imaging/scanner_tiff_to_working.h"
+#include "negaflow/imaging/working_tone_adjuster.h"
 #include "negaflow/output/wic_png_export.h"
 #include "negaflow/output/wic_tiff_export.h"
 
@@ -29,12 +30,15 @@ using Clock = std::chrono::steady_clock;
 constexpr std::uint32_t rows_per_copy = 64U;
 
 struct PipelineReportContext final {
-    const negaflow::imaging::ManualNegativeDevelopParameters& parameters;
+    const negaflow::imaging::ManualNegativeDevelopParameters& negative_parameters;
+    const negaflow::imaging::WorkingToneAdjustParameters& tone_parameters;
     const negaflow::imaging::StreamedScannerToWorkingResult& prepared;
     const negaflow::imaging::ManualNegativeDevelopResult& developed;
+    const negaflow::imaging::WorkingToneAdjustResult& adjusted;
     std::uint64_t source_file_bytes{0};
     std::uint64_t decode_and_color_wall_microseconds{0};
     std::uint64_t develop_wall_microseconds{0};
+    std::uint64_t tone_adjust_wall_microseconds{0};
     std::uint64_t output_wall_microseconds{0};
     std::uint64_t total_wall_microseconds{0};
 };
@@ -96,7 +100,8 @@ int print_observation_error(
 
 void print_pipeline_report_suffix(const PipelineReportContext& context) {
     const auto working_pixel_bytes =
-        context.developed.image.pixels.size() * sizeof(negaflow::core::Rgba32F);
+        context.adjusted.image.pixels.size() * sizeof(negaflow::core::Rgba32F);
+    const auto& measurement = context.adjusted.info.measurement.info;
     std::cout << ",\"source_file_bytes\":" << context.source_file_bytes
               << ",\"source_observation_mode\":\"file_id_size_last_write\","
                  "\"source_unchanged_during_decode\":true,"
@@ -141,6 +146,57 @@ void print_pipeline_report_suffix(const PipelineReportContext& context) {
               << context.developed.info.dmax_normalized[2]
               << "],\"additional_full_frame_bytes\":0,\"wall_microseconds\":"
               << context.develop_wall_microseconds
+              << "},\"tone_adjust\":{\"algorithm_version\":\""
+              << negaflow::imaging::tone_mapping_algorithm_version
+              << "\",\"formula_reference\":\"macos_chromabase\","
+                 "\"exposure_stops\":"
+              << context.tone_parameters.exposure_stops
+              << ",\"basic\":{\"contrast\":"
+              << context.tone_parameters.basic.contrast
+              << ",\"density\":" << context.tone_parameters.basic.density
+              << ",\"highlights\":" << context.tone_parameters.basic.highlights
+              << ",\"shadows\":" << context.tone_parameters.basic.shadows
+              << ",\"whites\":" << context.tone_parameters.basic.whites
+              << ",\"blacks\":" << context.tone_parameters.basic.blacks
+              << "},\"curve\":{\"highlights\":"
+              << context.tone_parameters.curve.highlights
+              << ",\"lights\":" << context.tone_parameters.curve.lights
+              << ",\"darks\":" << context.tone_parameters.curve.darks
+              << ",\"shadows\":" << context.tone_parameters.curve.shadows
+              << "},\"exposure_applied\":"
+              << (context.adjusted.info.exposure_applied ? "true" : "false")
+              << ",\"basic_tone_applied\":"
+              << (context.adjusted.info.basic_tone_applied ? "true" : "false")
+              << ",\"parametric_curve_applied\":"
+              << (context.adjusted.info.parametric_curve_applied ? "true" : "false")
+              << ",\"curve_sampling_mode\":\""
+              << negaflow::imaging::tone_curve_sampling_mode_name(
+                     measurement.sampling_mode)
+              << "\",\"curve_sampling_target_width\":"
+              << measurement.target_width
+              << ",\"curve_sampling_target_height\":"
+              << measurement.target_height
+              << ",\"curve_sampled_luma_count\":"
+              << measurement.sampled_luma_count;
+    if (context.adjusted.info.parametric_curve_applied) {
+        std::cout << ",\"curve_bands\":{\"shadow_low\":"
+                  << measurement.bands.shadow_low
+                  << ",\"shadow_high\":" << measurement.bands.shadow_high
+                  << ",\"dark_low\":" << measurement.bands.dark_low
+                  << ",\"dark_high\":" << measurement.bands.dark_high
+                  << ",\"light_low\":" << measurement.bands.light_low
+                  << ",\"light_high\":" << measurement.bands.light_high
+                  << ",\"highlight_low\":" << measurement.bands.highlight_low
+                  << ",\"highlight_high\":" << measurement.bands.highlight_high
+                  << '}';
+    } else {
+        std::cout << ",\"curve_bands\":null";
+    }
+    std::cout << ",\"additional_full_frame_bytes\":0,"
+                 "\"peak_measurement_temporary_bytes\":"
+              << measurement.peak_temporary_bytes
+              << ",\"wall_microseconds\":"
+              << context.tone_adjust_wall_microseconds
               << "},\"output_convert_encode_verify_publish\":{"
                  "\"wall_microseconds\":"
               << context.output_wall_microseconds
@@ -160,7 +216,8 @@ int print_png_success(
                  "\"algorithm_version\":\""
               << negaflow::core::negative_inversion_algorithm_version
               << "\",\"film_type\":\""
-              << negaflow::imaging::negative_film_type_name(context.parameters.film_type)
+              << negaflow::imaging::negative_film_type_name(
+                     context.negative_parameters.film_type)
               << "\",\"width\":" << exported.info.width
               << ",\"height\":" << exported.info.height
               << ",\"encoded_pixel_bytes\":" << exported.info.encoded_pixel_bytes
@@ -187,7 +244,8 @@ int print_tiff_success(
                  "\"algorithm_version\":\""
               << negaflow::core::negative_inversion_algorithm_version
               << "\",\"film_type\":\""
-              << negaflow::imaging::negative_film_type_name(context.parameters.film_type)
+              << negaflow::imaging::negative_film_type_name(
+                     context.negative_parameters.film_type)
               << "\",\"width\":" << exported.info.width
               << ",\"height\":" << exported.info.height
               << ",\"encoded_pixel_bytes\":" << exported.info.encoded_pixel_bytes
@@ -214,7 +272,7 @@ int run_export_developed_image(
     const int argument_count,
     const wchar_t* const arguments[],
     const DevelopedExportFormat format) {
-    if (argument_count != 8) {
+    if (argument_count != 8 && argument_count != 14) {
         return print_error("invalid_argument_count");
     }
     if (format != DevelopedExportFormat::png16 &&
@@ -222,19 +280,36 @@ int run_export_developed_image(
         return print_error("unknown_export_format");
     }
 
-    negaflow::imaging::ManualNegativeDevelopParameters parameters{};
-    for (std::size_t channel = 0U; channel < parameters.dmin.size(); ++channel) {
-        if (!parse_finite_float(arguments[channel + 4U], parameters.dmin[channel])) {
+    negaflow::imaging::ManualNegativeDevelopParameters negative_parameters{};
+    for (std::size_t channel = 0U; channel < negative_parameters.dmin.size(); ++channel) {
+        if (!parse_finite_float(
+                arguments[channel + 4U],
+                negative_parameters.dmin[channel])) {
             return print_error("invalid_dmin");
         }
     }
     const std::wstring_view film_type{arguments[7]};
     if (film_type == L"color") {
-        parameters.film_type = negaflow::imaging::NegativeFilmType::color;
+        negative_parameters.film_type = negaflow::imaging::NegativeFilmType::color;
     } else if (film_type == L"bw") {
-        parameters.film_type = negaflow::imaging::NegativeFilmType::black_and_white;
+        negative_parameters.film_type =
+            negaflow::imaging::NegativeFilmType::black_and_white;
     } else {
         return print_error("unknown_film_type");
+    }
+
+    negaflow::imaging::WorkingToneAdjustParameters tone_parameters{};
+    if (argument_count == 14) {
+        if (!parse_finite_float(arguments[8], tone_parameters.exposure_stops) ||
+            !parse_finite_float(arguments[9], tone_parameters.basic.contrast) ||
+            !parse_finite_float(arguments[10], tone_parameters.curve.highlights) ||
+            !parse_finite_float(arguments[11], tone_parameters.curve.lights) ||
+            !parse_finite_float(arguments[12], tone_parameters.curve.darks) ||
+            !parse_finite_float(arguments[13], tone_parameters.curve.shadows) ||
+            !negaflow::imaging::valid_working_tone_adjust_parameters(
+                tone_parameters)) {
+            return print_error("invalid_tone_adjustment_parameter");
+        }
     }
 
     const std::filesystem::path source{arguments[2]};
@@ -287,7 +362,7 @@ int run_export_developed_image(
     const Clock::time_point develop_started = Clock::now();
     auto developed = negaflow::imaging::develop_manual_negative(
         std::move(prepared.working.image),
-        parameters);
+        negative_parameters);
     const Clock::time_point develop_finished = Clock::now();
     if (developed.status != negaflow::imaging::ManualNegativeDevelopStatus::ok) {
         if (developed.status == negaflow::imaging::ManualNegativeDevelopStatus::kernel_failed) {
@@ -297,10 +372,34 @@ int run_export_developed_image(
             negaflow::imaging::manual_negative_develop_status_name(developed.status));
     }
 
+    const Clock::time_point tone_adjust_started = Clock::now();
+    auto adjusted = negaflow::imaging::apply_working_tone_adjustments(
+        std::move(developed.image),
+        tone_parameters);
+    const Clock::time_point tone_adjust_finished = Clock::now();
+    if (adjusted.status != negaflow::imaging::WorkingToneAdjustStatus::ok) {
+        if (adjusted.status ==
+            negaflow::imaging::WorkingToneAdjustStatus::kernel_failed) {
+            return print_error(
+                negaflow::core::kernel_status_name(adjusted.info.kernel_status));
+        }
+        if (adjusted.status ==
+            negaflow::imaging::WorkingToneAdjustStatus::measurement_failed) {
+            return print_error(
+                "tone_curve_measurement_failed",
+                0U,
+                0U,
+                negaflow::imaging::tone_curve_measurement_status_name(
+                    adjusted.info.measurement.status));
+        }
+        return print_error(
+            negaflow::imaging::working_tone_adjust_status_name(adjusted.status));
+    }
+
     const Clock::time_point output_started = Clock::now();
     if (format == DevelopedExportFormat::png16) {
         const negaflow::output::WicPngExportResult exported =
-            negaflow::output::export_working_to_srgb16_png(developed.image, destination);
+            negaflow::output::export_working_to_srgb16_png(adjusted.image, destination);
         const Clock::time_point output_finished = Clock::now();
         if (exported.status != negaflow::output::WicPngExportStatus::ok) {
             if (exported.status ==
@@ -317,12 +416,15 @@ int run_export_developed_image(
                 exported.cleanup_error_code);
         }
         const PipelineReportContext context{
-            parameters,
+            negative_parameters,
+            tone_parameters,
             prepared,
             developed,
+            adjusted,
             before.observation.file_bytes,
             elapsed_microseconds(decode_started, decode_finished),
             elapsed_microseconds(develop_started, develop_finished),
+            elapsed_microseconds(tone_adjust_started, tone_adjust_finished),
             elapsed_microseconds(output_started, output_finished),
             elapsed_microseconds(total_started, output_finished),
         };
@@ -330,7 +432,7 @@ int run_export_developed_image(
     }
 
     const negaflow::output::WicTiffExportResult exported =
-        negaflow::output::export_working_to_srgb16_tiff(developed.image, destination);
+        negaflow::output::export_working_to_srgb16_tiff(adjusted.image, destination);
     const Clock::time_point output_finished = Clock::now();
     if (exported.status != negaflow::output::WicTiffExportStatus::ok) {
         if (exported.status ==
@@ -347,12 +449,15 @@ int run_export_developed_image(
             exported.cleanup_error_code);
     }
     const PipelineReportContext context{
-        parameters,
+        negative_parameters,
+        tone_parameters,
         prepared,
         developed,
+        adjusted,
         before.observation.file_bytes,
         elapsed_microseconds(decode_started, decode_finished),
         elapsed_microseconds(develop_started, develop_finished),
+        elapsed_microseconds(tone_adjust_started, tone_adjust_finished),
         elapsed_microseconds(output_started, output_finished),
         elapsed_microseconds(total_started, output_finished),
     };

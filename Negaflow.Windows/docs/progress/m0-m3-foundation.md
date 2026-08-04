@@ -64,6 +64,8 @@
 - RGB 3×4 color matrix
 - color/B&W `shoulder-print-response-v4` 네거티브 반전
 - 채널별 수동 Dmin과 고정 response를 선택해 owned WorkingImage를 제자리 반전하는 작은 orchestration
+- macOS 순서의 노출, sRGB-luma 기본 톤과 4-band 파라메트릭 커브 scalar
+- fixed fallback과 bounded `portable_area_v1` percentile 측정, 제자리 tone orchestration
 - versioned 합성 fixture와 JSON conformance report
 - AVX/OSXSAVE/AVX2/FMA 및 ARM64 NEON capability 식별
 
@@ -73,11 +75,12 @@
 - 최대 절대 오차 약 `5.19e-8`
 - 최대 상대 오차 약 `2.88e-7`
 - x64 Debug/Release test 통과
+- 3×2 tone Float32 fixture, 검정 anchor, alpha/stride와 64×64 percentile 계약 통과
 - ARM64에서는 같은 source가 컴파일되지만 수치 실행은 아직 미검증
 
 ### 남은 것
 
-- curve, blur, local contrast, histogram, morphology, defect, crop/resize, digital-film 전체
+- point curve, blur, local contrast, histogram, morphology, defect, crop/resize, digital-film 전체
 - forced scalar/base/AVX2 dispatch와 실제 NEON 실행
 - ROI/halo/cancellation 계약
 - macOS baseline generator와 더 넓은 golden corpus
@@ -143,5 +146,5 @@
 - ColorSync golden과 Windows ICM 수치 비교
 - 필요성이 입증될 때만 libtiff/LittleCMS dependency 결정
 - tile decode, 최종 working/output downstream streaming과 process memory budget
-- M4 exposure/contrast/curve, CPU time·stage digest·macOS pixel diff와 catalog transaction·복구
+- M4 tone의 실제 macOS runtime pixel diff, CPU time·stage digest와 catalog transaction·복구
 - fuzzing/ASan corpus와 실제 대형 scanner TIFF

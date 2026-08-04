@@ -108,6 +108,9 @@ add_library(negaflow_imaging STATIC
     src/Native/imaging/manual_negative_developer.cpp
     src/Native/imaging/scanner_tiff_to_working.cpp
     src/Native/imaging/scanner_to_working.cpp
+    src/Native/imaging/tone_curve_measurement.cpp
+    src/Native/imaging/tone_mapping.cpp
+    src/Native/imaging/working_tone_adjuster.cpp
 )
 target_include_directories(negaflow_imaging
     PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/imaging/include"
@@ -283,6 +286,19 @@ if(BUILD_TESTING)
         PRIVATE negaflow_imaging negaflow_project_options
     )
     add_test(NAME native.manual_negative_developer COMMAND negaflow_manual_negative_developer_tests)
+
+    add_executable(negaflow_tone_pipeline_tests
+        tests/Native.UnitTests/tone_pipeline_tests.cpp
+    )
+    target_include_directories(
+        negaflow_tone_pipeline_tests
+        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/v1"
+    )
+    target_link_libraries(
+        negaflow_tone_pipeline_tests
+        PRIVATE negaflow_imaging negaflow_project_options
+    )
+    add_test(NAME native.tone_pipeline COMMAND negaflow_tone_pipeline_tests)
 
     add_executable(negaflow_scanner_to_working_tests
         tests/Native.UnitTests/scanner_to_working_tests.cpp
