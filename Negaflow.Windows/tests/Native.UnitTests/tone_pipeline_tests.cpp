@@ -104,6 +104,7 @@ void test_thresholds_noop_and_user_bounds() {
     expect(!unchanged.info.parametric_curve_applied, "curve threshold is a no-op");
     expect(!unchanged.info.point_curve_applied, "empty point curves are a no-op");
     expect(!unchanged.info.color_mixer_applied, "empty color mixer is a no-op");
+    expect(!unchanged.info.color_grading_applied, "empty color grading is a no-op");
     expect_pixel_near(unchanged.image.pixels[0], source.pixels[0], "threshold no-op is bit exact");
 
     negaflow::imaging::WorkingToneAdjustParameters exposure{};

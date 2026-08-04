@@ -1,8 +1,10 @@
 #include "negaflow/core/build_info.h"
 #include "negaflow/core/negative_inversion.h"
+#include "negaflow/imaging/color_grading.h"
 #include "negaflow/imaging/color_mixer.h"
 #include "negaflow/imaging/point_curve.h"
 #include "negaflow/imaging/working_tone_adjuster.h"
+#include "color_grading_fixture.h"
 #include "color_mixer_fixture.h"
 #include "point_curve_fixture.h"
 #include "scalar_foundation_fixture.h"
@@ -155,7 +157,8 @@ int main() {
 
     PixelErrorMetrics tone_metrics{};
     if (adjusted.status != negaflow::imaging::WorkingToneAdjustStatus::ok ||
-        adjusted.info.color_mixer_applied) {
+        adjusted.info.color_mixer_applied ||
+        adjusted.info.color_grading_applied) {
         ++tone_metrics.failure_count;
     } else {
         tone_metrics = compare_pixels(
@@ -184,7 +187,8 @@ int main() {
     if (point_curve_adjusted.status !=
             negaflow::imaging::WorkingToneAdjustStatus::ok ||
         !point_curve_adjusted.info.point_curve_applied ||
-        point_curve_adjusted.info.color_mixer_applied) {
+        point_curve_adjusted.info.color_mixer_applied ||
+        point_curve_adjusted.info.color_grading_applied) {
         ++point_curve_metrics.failure_count;
     } else {
         point_curve_metrics = compare_pixels(
@@ -213,7 +217,8 @@ int main() {
     if (color_mixer_adjusted.status !=
             negaflow::imaging::WorkingToneAdjustStatus::ok ||
         !color_mixer_adjusted.info.color_mixer_applied ||
-        color_mixer_adjusted.info.point_curve_applied) {
+        color_mixer_adjusted.info.point_curve_applied ||
+        color_mixer_adjusted.info.color_grading_applied) {
         ++color_mixer_metrics.failure_count;
     } else {
         color_mixer_metrics = compare_pixels(
@@ -223,10 +228,41 @@ int main() {
             negaflow::fixtures::color_mixer_relative_tolerance);
     }
 
+    negaflow::imaging::WorkingImage color_grading_image{};
+    color_grading_image.width = 4U;
+    color_grading_image.height = 3U;
+    color_grading_image.stride_pixels = 4U;
+    color_grading_image.pixels.assign(
+        negaflow::fixtures::color_grading_input.begin(),
+        negaflow::fixtures::color_grading_input.end());
+    negaflow::imaging::WorkingToneAdjustParameters color_grading_parameters{};
+    color_grading_parameters.color_grading =
+        negaflow::fixtures::color_grading_parameters;
+    const auto color_grading_adjusted =
+        negaflow::imaging::apply_working_tone_adjustments(
+            std::move(color_grading_image),
+            color_grading_parameters);
+
+    PixelErrorMetrics color_grading_metrics{};
+    if (color_grading_adjusted.status !=
+            negaflow::imaging::WorkingToneAdjustStatus::ok ||
+        !color_grading_adjusted.info.color_grading_applied ||
+        color_grading_adjusted.info.point_curve_applied ||
+        color_grading_adjusted.info.color_mixer_applied) {
+        ++color_grading_metrics.failure_count;
+    } else {
+        color_grading_metrics = compare_pixels(
+            color_grading_adjusted.image.pixels,
+            negaflow::fixtures::color_grading_expected,
+            negaflow::fixtures::color_grading_absolute_tolerance,
+            negaflow::fixtures::color_grading_relative_tolerance);
+    }
+
     const negaflow::core::BuildInfo build_info = negaflow::core::query_build_info();
     const std::size_t failure_count =
         negative_failure_count + tone_metrics.failure_count +
-        point_curve_metrics.failure_count + color_mixer_metrics.failure_count;
+        point_curve_metrics.failure_count + color_mixer_metrics.failure_count +
+        color_grading_metrics.failure_count;
     const bool passed = failure_count == 0U;
     std::cout << "{\"schema_version\":1,\"status\":\""
               << (passed ? "ok" : "failed") << "\",\"fixture_id\":\""
@@ -283,6 +319,20 @@ int main() {
               << ",\"color_mixer_max_absolute_error\":"
               << color_mixer_metrics.maximum_absolute_error
               << ",\"color_mixer_max_relative_error\":"
-              << color_mixer_metrics.maximum_relative_error << "}\n";
+              << color_mixer_metrics.maximum_relative_error
+              << ",\"color_grading_fixture_id\":\""
+              << negaflow::fixtures::color_grading_fixture_id
+              << "\",\"color_grading_algorithm_version\":\""
+              << negaflow::imaging::color_grading_algorithm_version
+              << "\",\"color_grading_value_count\":"
+              << negaflow::fixtures::color_grading_expected.size() * 4U
+              << ",\"color_grading_finite_output_count\":"
+              << color_grading_metrics.finite_output_count
+              << ",\"color_grading_failure_count\":"
+              << color_grading_metrics.failure_count
+              << ",\"color_grading_max_absolute_error\":"
+              << color_grading_metrics.maximum_absolute_error
+              << ",\"color_grading_max_relative_error\":"
+              << color_grading_metrics.maximum_relative_error << "}\n";
     return passed ? 0 : 1;
 }

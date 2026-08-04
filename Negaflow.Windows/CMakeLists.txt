@@ -104,6 +104,7 @@ target_link_libraries(
 )
 
 add_library(negaflow_imaging STATIC
+    src/Native/imaging/color_grading.cpp
     src/Native/imaging/color_mixer.cpp
     src/Native/imaging/icm_icc_converter.cpp
     src/Native/imaging/linear_scanner_converter.cpp
@@ -329,6 +330,19 @@ if(BUILD_TESTING)
         PRIVATE negaflow_imaging negaflow_project_options
     )
     add_test(NAME native.color_mixer COMMAND negaflow_color_mixer_tests)
+
+    add_executable(negaflow_color_grading_tests
+        tests/Native.UnitTests/color_grading_tests.cpp
+    )
+    target_include_directories(
+        negaflow_color_grading_tests
+        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/v1"
+    )
+    target_link_libraries(
+        negaflow_color_grading_tests
+        PRIVATE negaflow_imaging negaflow_project_options
+    )
+    add_test(NAME native.color_grading COMMAND negaflow_color_grading_tests)
 
     add_executable(negaflow_process_cpu_time_tests
         tests/Native.UnitTests/process_cpu_time_tests.cpp
