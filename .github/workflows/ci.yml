@@ -67,6 +67,44 @@ jobs:
           path: Negaflow.Windows/out/macos-golden/film-emulation-core-image-v1.json
           if-no-files-found: error
           retention-days: 14
+      - name: Emit ColorSync ICM parity reference
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          NEGAFLOW_COLORSYNC_PARITY_OUTPUT: ${{ github.workspace }}/Negaflow.Windows/out/macos-golden/colorsync-icm-parity-v1.json
+          NEGAFLOW_SOURCE_COMMIT: ${{ github.sha }}
+        run: |
+          swift test \
+            -Xswiftc -warn-concurrency \
+            -Xswiftc -strict-concurrency=complete \
+            -Xswiftc -warnings-as-errors \
+            --filter ColorSyncIcmParityGoldenTests/testEmitParityGoldenWhenRequested
+          # The checked-in reference must match what this runner produces. A drift here
+          # means ColorSync changed behaviour and the Windows comparison is now unanchored.
+          python3 - <<'PY'
+          import json, sys
+          committed = json.load(open("Negaflow.Windows/baseline/colorsync-icm-parity-v1.json"))
+          emitted = json.load(open("Negaflow.Windows/out/macos-golden/colorsync-icm-parity-v1.json"))
+          if committed["profile"]["sha256"] != emitted["profile"]["sha256"]:
+              sys.exit("synthesised profile bytes drifted from the committed reference")
+          if [p["name"] for p in committed["patches"]] != [p["name"] for p in emitted["patches"]]:
+              sys.exit("patch set changed without refreshing the committed reference")
+          worst = max(
+              abs(a - b)
+              for x, y in zip(committed["patches"], emitted["patches"])
+              for a, b in zip(x["out"], y["out"])
+          )
+          print(f"colorsync parity drift={worst:.3e}")
+          if worst > 1e-6:
+              sys.exit(f"ColorSync output drifted from the committed reference by {worst:.3e}")
+          PY
+      - name: Upload ColorSync ICM parity reference
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v7
+        with:
+          name: negaflow-colorsync-parity-${{ github.sha }}
+          path: Negaflow.Windows/out/macos-golden/colorsync-icm-parity-v1.json
+          if-no-files-found: error
+          retention-days: 14
 
   gui:
     name: GUI end-to-end test build

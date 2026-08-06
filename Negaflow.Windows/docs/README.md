@@ -73,6 +73,8 @@
 - [Catalog Develop route 공식 근거와 권리 조사](research/catalog-develop-route-sources.md)
 - [파이프라인 진단 공식 근거와 권리 검토](research/pipeline-diagnostics-sources.md)
 - [Swift UI 패리티 기준선](research/swift-ui-parity-baseline.md)
+- [ColorSync ↔ Windows ICM 색변환 일치 조사](research/colorsync-icm-parity-2026-08-06.md)
+- [colorsync-icm-parity-v1 프로파일 합성 규칙](research/colorsync-icm-parity-profile.md)
 
 ### 결정 기록
 
@@ -98,6 +100,7 @@
 - [ADR-0020: catalog의 전송 출처와 현상 신호를 분리하고 legacy recipe를 명시적으로 투영](decisions/0020-explicit-catalog-develop-route.md)
 - [ADR-0021: macOS golden은 관측 기록이며 Core Image 재현물이 아니다](decisions/0021-core-image-observation-boundary.md)
 - [ADR-0022: 쓰지 않는 WebView2 페이로드를 배포물에서 제외](decisions/0022-webview2-payload-boundary.md)
+- [ADR-0023: CMS 일치 여부는 합성 프로파일 기준값으로 판정](decisions/0023-colorsync-icm-parity-probe.md)
 
 ### 배포 고지
 
