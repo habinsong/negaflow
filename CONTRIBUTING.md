@@ -36,6 +36,22 @@ bash scripts/run-app.sh build
 See [Product Architecture](docs/architecture/PRODUCT_ARCHITECTURE.md) before changing module
 boundaries or persistent data.
 
+### Line endings
+
+Every text file is stored and checked out with LF endings, pinned by `.gitattributes`. This holds
+regardless of your `core.autocrlf` setting, so the resource hashes in
+`scripts/ci/verify-provenance.py` stay reproducible on any platform. Windows-only PowerShell
+scripts are the one exception and keep CRLF working copies.
+
+If your clone predates `.gitattributes`, run this once after pulling:
+
+```bash
+git add --renormalize .
+```
+
+That refreshes Git's cached file stats. No tracked content changes. Skipping it can make
+`git status` list a large number of files as modified even though `git diff` is empty.
+
 ## Making a change
 
 1. Keep the change limited to one problem.
