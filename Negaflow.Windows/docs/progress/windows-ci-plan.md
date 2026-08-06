@@ -1,7 +1,24 @@
 # Windows CI 계획 — 빠른 게이트 설계
 
 기준일: 2026-08-06
-상태: 계획. 아직 구현하지 않았습니다.
+상태: **구현 완료.** `.github/workflows/windows.yml` 과 `Negaflow.Windows/scripts/ci-gate.ps1`.
+
+이 문서는 원래 계획이었고, 구현하면서 전제 하나가 틀린 것이 드러나 갱신했습니다. 아래
+"툴체인" 절을 참조하십시오.
+
+## 로컬 게이트와 GitHub 게이트
+
+저장소는 두 입구를 분리해 유지합니다. 같은 검사를 서로 다른 경로로 돌리므로 어느 한쪽만 고치면
+갈라집니다. 짝을 맞춰 두십시오.
+
+| 대상 | 로컬 입구 | GitHub |
+|---|---|---|
+| macOS | `scripts/ci-gate.sh` | `.github/workflows/ci.yml` |
+| Windows | `Negaflow.Windows/scripts/ci-gate.ps1` | `.github/workflows/windows.yml` |
+
+provenance·라이선스 게이트는 macOS 잡에만 있습니다. 그 스크립트가 `Negaflow.Windows/src` 와
+`tests` 까지 검사하므로 Windows 에서 중복 실행하지 않습니다. Windows 에서 직접 돌리려면 저장소
+루트에서 `py scripts/ci/verify-provenance.py` 입니다.
 
 ## 문제
 
@@ -34,31 +51,36 @@ provenance·라이선스 게이트는 macOS `static` 잡이 `Negaflow.Windows/sr
 때문입니다. 시간은 러너 부팅, 체크아웃, SDK 설치, NuGet 복원에서 나갑니다. 계획의 초점은 컴파일
 최적화가 아니라 **그 오버헤드를 줄이고 잡을 병렬로 두는 것**입니다.
 
-## 툴체인 제약 (선결 과제)
+## 툴체인 — 계획 단계의 전제가 틀렸습니다
 
-`CMakePresets.json`이 generator를 `"Visual Studio 18 2026"`으로 고정합니다. GitHub 호스팅
-`windows-2025` 이미지에는 VS 2026이 없습니다. **이 프리셋 그대로는 CI에서 configure가 실패합니다.**
+원래 계획은 "`CMakePresets.json`이 generator를 `"Visual Studio 18 2026"`으로 고정하는데 호스팅
+러너에는 VS 2026이 없으니 CI 전용 Ninja 프리셋이 필요하다"였습니다. **이 전제는 사실이 아닙니다.**
 
-`CMakeLists.txt`에는 MSVC 버전 고정이 없습니다. 요구사항은 C++20과 정적 CRT
-(`CMAKE_MSVC_RUNTIME_LIBRARY`)뿐이므로 generator만 분리하면 됩니다.
+구현하면서 확인한 사실입니다.
 
-해결: CI 전용 configure 프리셋을 Ninja로 추가합니다.
+- `windows-latest`와 `windows-2025` 라벨은 **Windows Server 2025 + Visual Studio 2026** 이미지를
+  가리킵니다. 2026-05-07 GA이고 2026-06-08~06-15에 걸쳐 롤아웃됐습니다. VS 2022가 필요하면
+  `windows-2022`를 명시해야 합니다.
+- 그 이미지의 CMake는 Visual Studio 자동 감지 시 `"Visual Studio 18 2026"` generator 문자열을
+  씁니다. 저장소 프리셋이 그대로 동작합니다.
+- **.NET SDK 10.0.302가 사전 설치돼 있습니다.** `global.json`이 고정한 바로 그 버전입니다.
 
-```json
-{
-  "name": "ci-x64-release",
-  "generator": "Ninja",
-  "binaryDir": "${sourceDir}/out/build/native/ci-x64-release",
-  "cacheVariables": { "BUILD_TESTING": "ON", "CMAKE_BUILD_TYPE": "Release" }
-}
-```
+따라서 Ninja 프리셋도, `ilammy/msvc-dev-cmd`도, `actions/setup-dotnet`도 넣지 않았습니다. 새로
+추가한 action 의존성은 0개이며 기존에 쓰던 `actions/checkout@v7`만 사용합니다. **CI가 로컬과 같은
+generator, 같은 프리셋, 같은 SDK로 빌드하므로 "CI 초록 = 로컬 초록"이 성립합니다.**
 
-Ninja는 VS에 번들로 들어 있고 GitHub 러너 이미지에도 있습니다. MSVC 환경은
-`ilammy/msvc-dev-cmd`(또는 `vcvarsall.bat` 직접 호출)로 잡습니다. VS generator보다 빠르고 러너의
-VS 버전에 덜 묶입니다.
+남은 위험은 러너 이미지가 바뀌는 경우입니다. 두 잡 모두 첫 단계에서 `cmake --version`과
+`dotnet --list-sdks`를 찍어 이미지가 움직였을 때 로그만으로 원인을 알 수 있게 했습니다. SDK가
+사라지면 `global.json`이 분명한 오류로 실패합니다.
 
-부수 효과로 CI가 로컬과 **다른 툴셋**으로 컴파일하게 됩니다. 이식성 검증에는 오히려 이득이지만,
-"CI 초록 = 로컬 초록"이 아니라는 점은 인지해야 합니다. 로컬 VS 2026 프리셋은 그대로 둡니다.
+### 캐시를 넣지 않은 이유
+
+`packages.lock.json`이 있어 NuGet 캐시 키를 정확히 만들 수 있지만 v1에는 넣지 않았습니다. 복원이
+30초대인데 캐시 저장·복원 오버헤드와 실패 지점이 함께 늘어납니다. **첫 실행들의 실제 시간을 본 뒤**
+복원이 병목으로 확인되면 그때 추가합니다. 측정 전에 최적화하지 않는다는 원칙을 여기에도 적용합니다.
+
+Windows 러너는 OS 디스크 IO가 느리고 `D:` 임시 디스크가 빠릅니다. `NUGET_PACKAGES`를 `D:`로 옮기는
+것도 같은 이유로 측정 뒤에 판단합니다.
 
 ## 잡 구성
 
@@ -124,14 +146,37 @@ ARM64 교차 빌드만 하고 테스트는 실행하지 않습니다(호스트�
 7. 기존 `concurrency: cancel-in-progress`를 그대로 상속합니다.
 8. `fetch-depth: 1`을 씁니다. Windows 잡은 히스토리가 필요 없습니다.
 
-## 도입 순서
+## 구현된 것
 
-1. `ci-x64-release` Ninja 프리셋을 추가하고 **로컬에서 먼저** configure·build·ctest 37개가 통과하는지
-   확인합니다. 이게 안 되면 CI에서도 안 됩니다.
-2. 잡 B(관리 코드)를 먼저 넣습니다. 가장 빠르고 실패 모드가 단순합니다.
-3. 잡 A(네이티브)를 넣습니다.
-4. 두 잡이 `main`에서 안정적으로 초록이 된 뒤 잡 C를 nightly로 붙입니다.
-5. 그 시점에 `docs/STATUS.md`의 M1 CI 항목과 `progress/overall-roadmap.md`의 M1 추정치를 갱신합니다.
+`.github/workflows/windows.yml`에 잡 3개를 넣었습니다.
+
+| 잡 | 트리거 | 내용 |
+|---|---|---|
+| `native` | PR·main push·수동 | `cmake --preset x64-release` → build → `ctest` |
+| `managed` | PR·main push·수동 | `dotnet restore --locked-mode` → build → 테스트 exe 2개 |
+| `arm64-cross` | main push·수동만 | 네이티브·관리 ARM64 교차 빌드, 실행 없음 |
+
+`paths` 필터로 `Negaflow.Windows/**`와 이 워크플로 자신만 감시합니다. `Sources/`만 건드리는 PR에서는
+돌지 않습니다. macOS `ci.yml`은 건드리지 않았습니다.
+
+로컬 짝은 `Negaflow.Windows/scripts/ci-gate.ps1`이고 같은 단계를 순차로 돌립니다.
+
+```powershell
+.\Negaflow.Windows\scripts\ci-gate.ps1 -Preset x64-release
+```
+
+### 구현 시점 로컬 확인
+
+- `ci-gate.ps1` 통과: 네이티브 **39/39**, 관리 빌드 오류 0, Catalog 205 + Shell 45 assertion
+- `dotnet restore --locked-mode`가 x64와 ARM64 모두 성공
+
+### 남은 튜닝
+
+1. 첫 실행들의 실제 시간을 보고 NuGet 캐시가 필요한지 판단합니다.
+2. `main`에서 안정적으로 초록이 유지되면 `docs/STATUS.md`의 CI 항목과
+   `progress/overall-roadmap.md`의 M1 추정치를 올립니다.
+3. 러너 이미지가 Windows SDK 10.0.26100 관련 문제를 보고한 적이 있으므로, 네이티브 잡이 실패하면
+   `Toolchain` 단계의 CMake SDK 선택 로그를 먼저 확인합니다.
 
 ## 이 계획이 다루지 않는 것
 

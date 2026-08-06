@@ -100,6 +100,7 @@
 - [ADR-0020: catalog의 전송 출처와 현상 신호를 분리하고 legacy recipe를 명시적으로 투영](decisions/0020-explicit-catalog-develop-route.md)
 - [ADR-0021: macOS golden은 관측 기록이며 Core Image 재현물이 아니다](decisions/0021-core-image-observation-boundary.md)
 - [ADR-0022: 쓰지 않는 WebView2 페이로드를 배포물에서 제외](decisions/0022-webview2-payload-boundary.md)
+- [ADR-0024: ColorSync의 섀도우 toe를 지금은 재현하지 않는다](decisions/0024-colorsync-toe-not-replicated.md)
 - [ADR-0023: CMS 일치 여부는 합성 프로파일 기준값으로 판정](decisions/0023-colorsync-icm-parity-probe.md)
 
 ### 배포 고지

@@ -31,7 +31,8 @@
 | 네이티브 엔진 제3자 runtime dependency | 0개 | 빈 vcpkg dependency, WIC/ICM/Win32만 사용 |
 | WinUI package graph | 고정·감사 | Runtime/WinUI 1.8 component 직접 참조, transitive 명세, 취약 package 0, AI/ML/Widgets 제외, 미사용 WebView2 payload 1.6MB를 x64/ARM64 clean build 출력에서 제외 |
 | 제3자 고지 | 기록 완료 | `THIRD-PARTY-NOTICES.md`에 App SDK 조건과 미배포 WebView2 경계 기록, `components.json` 배포 게이트 갱신 |
-| Windows 빌드 CI | 미구현 | 현재 CI 잡 4개가 전부 macOS. Windows 트리는 로컬 검증만. 계획은 `progress/windows-ci-plan.md` |
+| Windows 빌드 CI | 구현 완료 | `.github/workflows/windows.yml`의 native·managed·arm64-cross 잡과 로컬 짝 `scripts/ci-gate.ps1`. 러너의 VS 2026과 .NET 10.0.302를 그대로 써서 로컬과 같은 프리셋으로 빌드 |
+| ColorSync↔ICM 색상 동등성 | 측정 완료·판정 보류 | 34패치 중 21개 비율 1.000, 깊은 섀도우에서 최대 20.37배. 원인은 ColorSync의 1/16 toe. 현상 후 8비트 코드 2~6, 채널 스프레드 최대 5. ADR-0024로 재현하지 않기로 결정 |
 | GPU/WARP | 미구현 | M5 이후 |
 | installer/signing | 미구현 | .NET 10과 Windows App Runtime 1.8 prerequisite 연결, SBOM/signing은 M17 범위 |
 

@@ -1,0 +1,55 @@
+[CmdletBinding()]
+param(
+    [ValidateSet('x64-debug', 'x64-release')]
+    [string]$Preset = 'x64-release',
+
+    # ARM64 는 교차 빌드만 가능하고 x64 호스트에서 실행할 수 없다. GitHub 쪽에서도 main push
+    # 에서만 도는 잡이라 로컬에서는 기본으로 끈다.
+    [switch]$IncludeArm64Cross
+)
+
+# 로컬에서 Windows CI 와 같은 검사를 한 번에 돌리는 입구다.
+# GitHub(.github/workflows/windows.yml)는 같은 단계를 나란한 잡으로 돌리므로 내용은 같고
+# 순서만 다르다. macOS 쪽 짝은 저장소 루트의 scripts/ci-gate.sh 이며 서로 겹치지 않는다.
+#
+# 여기서 돌지 않는 것: provenance/라이선스 게이트는 macOS 잡이 Negaflow.Windows 경로까지
+# 검사하므로 중복 실행하지 않는다. 직접 돌리려면 저장소 루트에서
+#   py scripts/ci/verify-provenance.py
+
+$ErrorActionPreference = 'Stop'
+$projectRoot = Split-Path -Parent $PSScriptRoot
+$configuration = if ($Preset.EndsWith('release')) { 'Release' } else { 'Debug' }
+$managedPreset = $Preset
+
+Push-Location $projectRoot
+try {
+    Write-Host "[windows-ci-gate] native: $Preset" -ForegroundColor Cyan
+    & (Join-Path $PSScriptRoot 'test.ps1') -Preset $Preset
+    if ($LASTEXITCODE -ne 0) {
+        throw "Native gate failed for preset '$Preset'."
+    }
+
+    Write-Host "[windows-ci-gate] managed: $managedPreset" -ForegroundColor Cyan
+    & (Join-Path $PSScriptRoot 'test-managed.ps1') -Preset $managedPreset
+    if ($LASTEXITCODE -ne 0) {
+        throw "Managed gate failed for preset '$managedPreset'."
+    }
+
+    if ($IncludeArm64Cross) {
+        Write-Host "[windows-ci-gate] arm64 cross build only" -ForegroundColor Cyan
+        & (Join-Path $PSScriptRoot 'build.ps1') -Preset 'arm64-release'
+        if ($LASTEXITCODE -ne 0) {
+            throw 'ARM64 native cross build failed.'
+        }
+        & dotnet build Negaflow.Windows.slnx -c Release -p:Platform=ARM64 --nologo
+        if ($LASTEXITCODE -ne 0) {
+            throw 'ARM64 managed cross build failed.'
+        }
+        Write-Host '[windows-ci-gate] ARM64 built but not executed; not a runtime result.' -ForegroundColor Yellow
+    }
+}
+finally {
+    Pop-Location
+}
+
+Write-Host '[windows-ci-gate] complete' -ForegroundColor Green
