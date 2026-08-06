@@ -485,6 +485,24 @@ if(BUILD_TESTING)
         add_test(NAME native.scanner_to_working COMMAND negaflow_scanner_to_working_tests)
     endif()
 
+    add_executable(negaflow_colorsync_icm_parity_tests
+        tests/Native.UnitTests/colorsync_icm_parity_tests.cpp
+    )
+    target_include_directories(
+        negaflow_colorsync_icm_parity_tests
+        PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/v1"
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/imaging"
+    )
+    target_link_libraries(
+        negaflow_colorsync_icm_parity_tests
+        PRIVATE negaflow_imaging negaflow_color negaflow_core negaflow_project_options bcrypt
+    )
+    add_test(
+        NAME native.colorsync_icm_parity
+        COMMAND negaflow_colorsync_icm_parity_tests
+    )
+
     add_executable(negaflow_scanner_stream_parity
         tests/Native.IntegrationTests/scanner_stream_parity.cpp
     )
