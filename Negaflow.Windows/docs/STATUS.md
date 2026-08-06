@@ -29,9 +29,24 @@
 | M4 단계 진단 | 확장 수직 경로 통과 | 기본 export stage wall/process-CPU, 진단 전용 scanner/develop/tone/Film Look min/max·versioned 비암호 fingerprint, Film Look route·cube/scratch·시간 보고, tone 24·point curve 24·Color Mixer 48·Color Grading 48·Primary Calibration 48·Film Emulation 색상 48/acutance 36-value conformance |
 | 이미지 SHA-256 | opt-in 기반 통과 | 기본 `off`는 파일 I/O 0, 명시적 CNG SHA-256 known-answer/multi-chunk/cancel, 사용자 TIFF opt-in 15/15 |
 | 네이티브 엔진 제3자 runtime dependency | 0개 | 빈 vcpkg dependency, WIC/ICM/Win32만 사용 |
-| WinUI package graph | 고정·감사 | Runtime/WinUI 1.8 component 직접 참조, WebView2 등 transitive 명세, 취약 package 0, AI/ML/Widgets 제외 |
+| WinUI package graph | 고정·감사 | Runtime/WinUI 1.8 component 직접 참조, transitive 명세, 취약 package 0, AI/ML/Widgets 제외, 미사용 WebView2 payload 1.6MB를 x64/ARM64 clean build 출력에서 제외 |
+| 제3자 고지 | 기록 완료 | `THIRD-PARTY-NOTICES.md`에 App SDK 조건과 미배포 WebView2 경계 기록, `components.json` 배포 게이트 갱신 |
+| Windows 빌드 CI | 미구현 | 현재 CI 잡 4개가 전부 macOS. Windows 트리는 로컬 검증만. 계획은 `progress/windows-ci-plan.md` |
 | GPU/WARP | 미구현 | M5 이후 |
-| installer/signing | 미구현 | .NET 10과 Windows App Runtime 1.8 prerequisite 연결, notice/SBOM/signing은 M17 범위 |
+| installer/signing | 미구현 | .NET 10과 Windows App Runtime 1.8 prerequisite 연결, SBOM/signing은 M17 범위 |
+
+## 2026-08-06 변경
+
+권리·운영 점검에서 나온 변경입니다. 이 날짜에 x64 Release clean 네이티브 빌드와 `ctest` 37/37,
+관리 solution clean 빌드(경고 0·오류 0)와 관리 테스트를 다시 실행해 확인했습니다.
+
+- 저장소 루트에 `.gitattributes`(`* text=auto eol=lf`)를 추가했습니다. 그 전에는 Windows 체크아웃이
+  CRLF 작업 사본을 만들어 `verify-provenance.py`의 리소스 SHA-256이 어긋났고, Windows에서 게이트를
+  전혀 돌릴 수 없었습니다. 이제 로컬에서 통과합니다. blob은 원래부터 LF였으므로 저장소 내용은
+  바뀌지 않았습니다.
+- 미사용 WebView2 payload를 셸 출력에서 제외했습니다(ADR-0022).
+- 제3자 고지를 `THIRD-PARTY-NOTICES.md`로 기록했습니다.
+- macOS golden의 관측 경계를 ADR-0021로 고정했습니다.
 
 build ID는 빌드 당시 미커밋 작업이 있으면 `-dirty`로 표시합니다. ARM64 test executable은 빌드됐지만 x64
 호스트에서 실행하지 않았으므로 ARM64 runtime 통과로 표시하지 않습니다.

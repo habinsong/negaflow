@@ -9,6 +9,7 @@
 
 - [전체 로드맵과 진행률](progress/overall-roadmap.md)
 - [M0~M3 기반 단계 상세](progress/m0-m3-foundation.md)
+- [Windows CI 계획 — 빠른 게이트 설계](progress/windows-ci-plan.md)
 - [현재 한눈에 보기](STATUS.md)
 
 ### 구현 설명
@@ -95,6 +96,13 @@
 - [ADR-0018: Film Emulation acutance는 11행 bounded spatial kernel로 격리](decisions/0018-bounded-film-emulation-acutance.md)
 - [ADR-0019: Film Look은 명시적 source 종류로 완전한 경로를 선택](decisions/0019-explicit-film-look-source-routing.md)
 - [ADR-0020: catalog의 전송 출처와 현상 신호를 분리하고 legacy recipe를 명시적으로 투영](decisions/0020-explicit-catalog-develop-route.md)
+- [ADR-0021: macOS golden은 관측 기록이며 Core Image 재현물이 아니다](decisions/0021-core-image-observation-boundary.md)
+- [ADR-0022: 쓰지 않는 WebView2 페이로드를 배포물에서 제외](decisions/0022-webview2-payload-boundary.md)
+
+### 배포 고지
+
+- [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md) — 배포물에 포함되는 제3자 구성요소와 고지 의무
+- [third_party/manifest/components.json](../third_party/manifest/components.json) — 고정된 의존성과 배포 게이트
 
 ## 사실 우선순위
 
