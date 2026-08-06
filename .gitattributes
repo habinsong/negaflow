@@ -1,0 +1,28 @@
+# 저장소 안의 모든 텍스트는 LF로 저장하고 작업 트리에도 LF로 체크아웃한다.
+# Windows 체크아웃이 CRLF 작업 사본을 만들면 scripts/ci/verify-provenance.py의
+# 리소스 SHA-256이 어긋나 provenance 게이트를 로컬에서 돌릴 수 없었다.
+# core.autocrlf 설정과 무관하게 결과가 같아야 하므로 eol을 명시한다.
+* text=auto eol=lf
+
+# Windows 전용 셸 스크립트만 작업 트리에서 CRLF로 둔다. 저장되는 blob은 여전히 LF다.
+*.ps1 text eol=crlf
+
+# 바이너리 페이로드는 어떤 경우에도 줄바꿈 변환 대상이 되면 안 된다.
+*.png   binary
+*.webp  binary
+*.tiff  binary
+*.tif   binary
+*.jpg   binary
+*.jpeg  binary
+*.icns  binary
+*.ico   binary
+*.pdf   binary
+*.zip   binary
+*.gz    binary
+*.sqlite binary
+*.ttf   binary
+*.otf   binary
+*.dll   binary
+*.exe   binary
+*.pdb   binary
+*.lib   binary
