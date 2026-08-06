@@ -503,6 +503,22 @@ if(BUILD_TESTING)
         COMMAND negaflow_colorsync_icm_parity_tests
     )
 
+    add_executable(negaflow_colorsync_icm_develop_impact_tests
+        tests/Native.UnitTests/colorsync_icm_develop_impact_tests.cpp
+    )
+    target_include_directories(
+        negaflow_colorsync_icm_develop_impact_tests
+        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/v1"
+    )
+    target_link_libraries(
+        negaflow_colorsync_icm_develop_impact_tests
+        PRIVATE negaflow_imaging negaflow_color negaflow_project_options
+    )
+    add_test(
+        NAME native.colorsync_icm_develop_impact
+        COMMAND negaflow_colorsync_icm_develop_impact_tests
+    )
+
     add_executable(negaflow_scanner_stream_parity
         tests/Native.IntegrationTests/scanner_stream_parity.cpp
     )
