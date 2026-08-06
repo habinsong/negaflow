@@ -103,8 +103,10 @@
       "relationship": "transitive",
       "license": "BSD-3-Clause",
       "license_source": "https://www.nuget.org/packages/Microsoft.Web.WebView2/1.0.3179.45/License",
-      "current_payload": "WebView2Loader.dll and projections; the current shell does not use web content",
-      "notice_requirement": "Reproduce LICENSE.txt with any binary distribution."
+      "current_payload": "none",
+      "redistributed": false,
+      "exclusion": "The RemoveUnusedWebView2Payload target in src/Shell/Negaflow.Shell.csproj drops Microsoft.Web.WebView2.Core.dll, Microsoft.Web.WebView2.Core.Projection.dll and WebView2Loader.dll from the copied output on x64 and ARM64. The shell renders no web content. See docs/decisions/0022-webview2-payload-boundary.md.",
+      "notice_requirement": "Not currently applicable because no WebView2 binary is shipped. If the payload is reintroduced, reproduce LICENSE.txt and NOTICE.txt with the binary distribution."
     },
     {
       "name": "runtimepack.Microsoft.Windows.SDK.NET.Ref",
@@ -116,10 +118,16 @@
   ],
   "distribution_gate": {
     "status": "not-release-ready",
+    "completed_actions": [
+      "Dropped the unused Microsoft.Web.WebView2 payload from the shell output, which removes its BSD-3-Clause reproduction obligation and its transitive NOTICE.txt chain (2026-08-06).",
+      "Recorded the remaining third-party notices in Negaflow.Windows/THIRD-PARTY-NOTICES.md (2026-08-06)."
+    ],
     "required_actions": [
       "Chain or document installation of the .NET 10 runtime and Windows App Runtime 1.8.",
-      "Include the Microsoft Windows App SDK terms and the Microsoft.Web.WebView2 LICENSE.txt in release notices.",
-      "Generate and review the final installer SBOM from the exact release payload."
+      "Copy the Microsoft Windows App SDK license.txt from the pinned restored package into the installer payload, rather than a hand-copied excerpt.",
+      "Produce the release payload from a clean build so that no stale WebView2 binary from an incremental build is shipped.",
+      "Confirm that no Windows App SDK telemetry feature is enabled before release.",
+      "Generate and review the final installer SBOM from the exact release payload, then re-review THIRD-PARTY-NOTICES.md against it."
     ]
   }
 }

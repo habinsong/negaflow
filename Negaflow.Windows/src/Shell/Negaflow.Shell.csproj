@@ -43,6 +43,18 @@
     <NativeLibrarySource>$(MSBuildThisFileDirectory)..\..\out\build\native\$(NativePreset)\$(Configuration)\Negaflow.Native.dll</NativeLibrarySource>
   </PropertyGroup>
 
+  <!-- 셸은 웹 콘텐츠를 렌더링하지 않는데도 WinUI package graph가 WebView2 페이로드
+       약 1.6MB를 binplace한다. 배포물에서 빼면 BSD-3-Clause 재배포 의무와 WebView2가
+       끌고 오는 하위 third-party notice 사슬이 함께 사라진다. ADR-0022 참조.
+       WebView2 XAML 컨트롤을 쓰기 시작하면 이 target을 지워야 한다. -->
+  <Target Name="RemoveUnusedWebView2Payload" AfterTargets="ResolveReferences">
+    <ItemGroup>
+      <ReferenceCopyLocalPaths
+        Remove="@(ReferenceCopyLocalPaths)"
+        Condition="$([System.String]::Copy('%(Filename)').StartsWith('Microsoft.Web.WebView2')) Or '%(Filename)' == 'WebView2Loader'" />
+    </ItemGroup>
+  </Target>
+
   <Target Name="CopyNativeEngine" AfterTargets="Build" Condition="Exists('$(NativeLibrarySource)')">
     <Copy SourceFiles="$(NativeLibrarySource)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
   </Target>

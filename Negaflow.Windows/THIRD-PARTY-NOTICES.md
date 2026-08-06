@@ -1,0 +1,130 @@
+# Third-Party Notices — negaflow for Windows
+
+negaflow itself is licensed under the Apache License 2.0. See the repository
+[LICENSE](../LICENSE) and [NOTICE](../NOTICE).
+
+This file records the third-party components that are, or may be, redistributed
+with a negaflow Windows binary distribution, together with the notices those
+components require. It is generated from the pinned dependency set declared in
+[`third_party/manifest/components.json`](third_party/manifest/components.json)
+and must be reviewed against the exact release payload before any distribution.
+
+The native imaging engine (`Negaflow.Native.dll`, `negaflow-cli.exe`) links no
+third-party code. Its only imports are Windows system libraries
+(`kernel32`, `bcrypt`, `mscms`, `ole32`, `shlwapi`), so it contributes no
+obligations to this file.
+
+---
+
+## 1. Microsoft Windows App SDK (WinUI 3)
+
+- Packages: `Microsoft.WindowsAppSDK.Runtime` 1.8.260710003,
+  `Microsoft.WindowsAppSDK.WinUI` 1.8.260709004, and their pinned transitive
+  packages `Microsoft.WindowsAppSDK.Base` 1.8.251216001,
+  `Microsoft.WindowsAppSDK.Foundation` 1.8.260709000,
+  `Microsoft.WindowsAppSDK.InteractiveExperiences` 1.8.260708001.
+- License: **MICROSOFT SOFTWARE LICENSE TERMS — MICROSOFT WINDOWS APP SDK**
+  (proprietary; not an open-source license).
+- Redistribution basis: Section 3(a)(i) of those terms states that files
+  binplaced with the application by the Windows App SDK NuGet package are
+  permitted to be redistributed, for both framework-dependent and self-contained
+  deployment.
+- Obligation: the full license terms must accompany the distribution. The
+  canonical text ships inside each package as `license.txt`; the packaging step
+  copies it from the restored package directory for the exact pinned version
+  rather than from a hand-copied excerpt, so that the shipped text always matches
+  the shipped binaries.
+- Reference: <https://www.nuget.org/packages/Microsoft.WindowsAppSDK.WinUI/1.8.260709004/License>
+
+Note that these terms also carry data-collection provisions (Section 2). The
+current shell does not enable Windows App SDK telemetry features, but this must
+be re-checked before release.
+
+## 2. Microsoft Edge WebView2 — NOT redistributed
+
+- Package: `Microsoft.Web.WebView2` 1.0.3179.45 (transitive, via WinUI).
+- License: **BSD 3-Clause**.
+- **Status: excluded from the distribution.** The shell contains no reference to
+  WebView2 and renders no web content. The WinUI package graph used to binplace
+  `Microsoft.Web.WebView2.Core.dll`,
+  `Microsoft.Web.WebView2.Core.Projection.dll`, and `WebView2Loader.dll`
+  (~1.6 MB) into the output; the `RemoveUnusedWebView2Payload` target in
+  `src/Shell/Negaflow.Shell.csproj` now removes them from the copied output on
+  both x64 and ARM64. See
+  [ADR-0022](docs/decisions/0022-webview2-payload-boundary.md).
+- Because no WebView2 binary is shipped, **no WebView2 notice obligation
+  currently applies.**
+
+Note that the exclusion target prevents copying but does not delete files left by
+an earlier build. Release payloads must therefore be produced from a clean build.
+
+The text below is retained so the obligation can be met immediately if the
+WebView2 payload is ever reintroduced. It is reproduced verbatim from
+`LICENSE.txt` in the pinned package, and **is not currently an active notice**:
+
+```
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+   * Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+   * Redistributions in binary form must reproduce the above
+copyright notice, this list of conditions and the following disclaimer
+in the documentation and/or other materials provided with the
+distribution.
+   * The name of Microsoft Corporation, or the names of its contributors
+may not be used to endorse or promote products derived from this
+software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+```
+
+WebView2 additionally ships a `NOTICE.txt` listing components Microsoft
+incorporated into it, including an offer to provide corresponding source for
+components under copyleft terms. Dropping the payload also drops that chain. If
+the payload is ever reintroduced, that `NOTICE.txt` must be reproduced alongside
+this file, unmodified, from the pinned package directory — it is Microsoft's own
+attribution document and must not drift from the version actually shipped.
+
+## 3. Windows platform APIs
+
+The following are used through the operating system and are **not** redistributed:
+Windows SDK, Win32, Windows Imaging Component, Windows Color System / ICM, COM,
+and Shell Lightweight Utility APIs.
+
+## 4. Build-only tooling
+
+`vcpkg` (MIT), `Microsoft.Windows.SDK.BuildTools`, and
+`Microsoft.Windows.SDK.BuildTools.MSIX` are development tools. They are pinned
+for reproducibility and are not part of any distributed payload, so they impose
+no redistribution obligation.
+
+---
+
+## Deployment prerequisites
+
+The current shell is framework-dependent and requires the .NET 10 runtime and the
+Windows App Runtime 1.8 on the target machine. Installing or chaining those
+runtimes is governed by their own Microsoft terms, which the installer must
+surface to the user.
+
+## Review status
+
+This file closes the notice obligation for the dependency set pinned as of
+2026-08-06. It does **not** by itself make the product release-ready: an SBOM
+generated from the final installer payload, and a re-review of this file against
+that payload, remain required. See `distribution_gate` in
+[`third_party/manifest/components.json`](third_party/manifest/components.json).
