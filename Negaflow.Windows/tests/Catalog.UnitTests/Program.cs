@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Microsoft.Data.Sqlite;
 
 namespace Negaflow.Catalog.UnitTests;
 
@@ -23,6 +24,7 @@ internal static class Program
         VerifyCanonicalJson();
         VerifyStorageRootResolution();
         VerifyCatalogProcessLock();
+        VerifySqliteCatalogStore();
 
         var report = new
         {
@@ -371,6 +373,198 @@ internal static class Program
             }
         }
     }
+
+    private static void VerifySqliteCatalogStore()
+    {
+        string testParent = Path.Combine(AppContext.BaseDirectory, "catalog-store-tests");
+        string isolatedBase = Path.Combine(
+            testParent,
+            $"{Environment.ProcessId}-{Guid.NewGuid():N}");
+        StorageRootSet roots = StorageRootResolver.ResolveForTests(isolatedBase).Roots!;
+
+        try
+        {
+            VerifyStoreLifecycle(roots);
+            VerifyStoreRefusals(roots);
+        }
+        finally
+        {
+            if (Directory.Exists(isolatedBase) &&
+                StoragePathPolicy.IsLexicallyContained(testParent, isolatedBase))
+            {
+                Directory.Delete(isolatedBase, recursive: true);
+            }
+        }
+    }
+
+    private static void VerifyStoreLifecycle(StorageRootSet roots)
+    {
+        string catalogPath = roots.CatalogPath;
+
+        // 없는 파일을 빈 라이브러리로 읽지 않습니다.
+        CatalogReadResult absent = SqliteCatalogStore.Read(catalogPath);
+        Check(!absent.IsSuccess, "store_absent_not_success");
+        Check(absent.Error == CatalogStoreError.NotFound, "store_absent_not_found");
+        Check(absent.Snapshot is null, "store_absent_no_partial_snapshot");
+
+        CatalogSnapshot first = Snapshot(
+            "roll-a",
+            Row("frame-1", "one"),
+            Row("frame-2", "two"),
+            Row("frame-3", "three"));
+        Check(SqliteCatalogStore.Write(first, catalogPath).IsSuccess, "store_first_write");
+        Check(File.Exists(catalogPath), "store_first_write_creates_file");
+
+        CatalogReadResult reopened = SqliteCatalogStore.Read(catalogPath);
+        Check(reopened.IsSuccess, "store_reopen_success");
+        Check(FrameOrder(reopened) == "frame-1,frame-2,frame-3", "store_reopen_preserves_order");
+        Check(FrameLabels(reopened) == "one,two,three", "store_reopen_preserves_payload");
+        Check(reopened.Snapshot?.ActiveRollId == "roll-a", "store_reopen_preserves_active_roll");
+        Check(reopened.Snapshot?.Rows(CatalogEntityTable.Rolls).Count == 0,
+            "store_reopen_untouched_table_empty");
+
+        // 자리 바꾸기입니다. position 이 UNIQUE 이므로 재배치 중 제약을 어기면 여기서 걸립니다.
+        CatalogSnapshot reordered = Snapshot(
+            "roll-a",
+            Row("frame-3", "three"),
+            Row("frame-1", "one-edited"),
+            Row("frame-2", "two"));
+        Check(SqliteCatalogStore.Write(reordered, catalogPath).IsSuccess, "store_reorder_write");
+        CatalogReadResult afterReorder = SqliteCatalogStore.Read(catalogPath);
+        Check(FrameOrder(afterReorder) == "frame-3,frame-1,frame-2", "store_reorder_order");
+        Check(FrameLabels(afterReorder) == "three,one-edited,two", "store_reorder_payload");
+
+        // 되돌리기도 같은 경로를 반대 방향으로 지납니다.
+        Check(SqliteCatalogStore.Write(first, catalogPath).IsSuccess, "store_reorder_back_write");
+        Check(FrameOrder(SqliteCatalogStore.Read(catalogPath)) == "frame-1,frame-2,frame-3",
+            "store_reorder_back_order");
+
+        CatalogSnapshot removed = Snapshot("roll-a", Row("frame-2", "two"));
+        Check(SqliteCatalogStore.Write(removed, catalogPath).IsSuccess, "store_remove_write");
+        CatalogReadResult afterRemove = SqliteCatalogStore.Read(catalogPath);
+        Check(FrameOrder(afterRemove) == "frame-2", "store_remove_drops_rows");
+
+        CatalogSnapshot cleared = Snapshot(activeRollId: null);
+        Check(SqliteCatalogStore.Write(cleared, catalogPath).IsSuccess, "store_clear_write");
+        CatalogReadResult afterClear = SqliteCatalogStore.Read(catalogPath);
+        Check(afterClear.IsSuccess, "store_clear_reopen_success");
+        Check(afterClear.Snapshot?.Rows(CatalogEntityTable.Frames).Count == 0,
+            "store_clear_empties_table");
+        Check(afterClear.Snapshot?.ActiveRollId is null, "store_clear_active_roll_null");
+
+        Check(SqliteCatalogStore.IsValidRecoverySource(catalogPath),
+            "store_valid_recovery_source");
+
+        // Pooling 을 켜 두면 여기서 파일이 잠겨 backup 교체가 막힙니다.
+        File.Delete(catalogPath);
+        Check(!File.Exists(catalogPath), "store_no_lingering_file_handle");
+    }
+
+    private static void VerifyStoreRefusals(StorageRootSet roots)
+    {
+        string catalogPath = Path.Combine(roots.LibraryRoot, "refusals.sqlite");
+
+        CatalogSnapshot duplicated = Snapshot(
+            null,
+            Row("frame-1", "one"),
+            Row("frame-1", "again"));
+        CatalogWriteResult duplicateWrite = SqliteCatalogStore.Write(duplicated, catalogPath);
+        Check(duplicateWrite.Error == CatalogStoreError.InvalidSnapshot,
+            "store_rejects_duplicate_ids");
+        Check(!File.Exists(catalogPath), "store_rejects_duplicate_ids_without_creating_file");
+
+        CatalogSnapshot emptyId = Snapshot(null, Row(string.Empty, "one"));
+        Check(SqliteCatalogStore.Write(emptyId, catalogPath).Error ==
+            CatalogStoreError.InvalidSnapshot, "store_rejects_empty_id");
+
+        Check(SqliteCatalogStore.Write(Snapshot(null, Row("frame-1", "one")), catalogPath)
+            .IsSuccess, "store_refusal_fixture_write");
+
+        // 물리 schema 가 미래 버전이면 읽지 않습니다.
+        SetStorageVersion(catalogPath, 99);
+        CatalogReadResult futureStorage = SqliteCatalogStore.Read(catalogPath);
+        Check(futureStorage.Error == CatalogStoreError.UnsupportedStorageVersion,
+            "store_rejects_future_storage_version");
+        Check(futureStorage.ObservedVersion == 99, "store_reports_observed_storage_version");
+        Check(!SqliteCatalogStore.IsValidRecoverySource(catalogPath),
+            "store_future_storage_is_not_recovery_source");
+        Check(SqliteCatalogStore.Write(Snapshot(null), catalogPath).Error ==
+            CatalogStoreError.UnsupportedStorageVersion,
+            "store_refuses_write_over_future_storage_version");
+        SetStorageVersion(catalogPath, 1);
+
+        // macOS 파일은 논리 version 6 입니다. 조용히 읽지 않고 그 값을 보고합니다.
+        SetCatalogVersion(catalogPath, 6);
+        CatalogReadResult foreign = SqliteCatalogStore.Read(catalogPath);
+        Check(foreign.Error == CatalogStoreError.UnsupportedCatalogVersion,
+            "store_rejects_foreign_catalog_version");
+        Check(foreign.ObservedVersion == 6, "store_reports_observed_catalog_version");
+        Check(!SqliteCatalogStore.IsValidRecoverySource(catalogPath),
+            "store_foreign_catalog_is_not_recovery_source");
+        SetCatalogVersion(catalogPath, CatalogSnapshot.CurrentCatalogVersion);
+        Check(SqliteCatalogStore.Read(catalogPath).IsSuccess, "store_restored_fixture_reads");
+
+        string garbagePath = Path.Combine(roots.LibraryRoot, "garbage.sqlite");
+        File.WriteAllBytes(garbagePath, "this is not a database"u8.ToArray());
+        CatalogReadResult garbage = SqliteCatalogStore.Read(garbagePath);
+        Check(garbage.Error == CatalogStoreError.CorruptDatabase, "store_rejects_garbage_file");
+        Check(garbage.Snapshot is null, "store_garbage_no_partial_snapshot");
+        Check(!SqliteCatalogStore.IsValidRecoverySource(garbagePath),
+            "store_garbage_is_not_recovery_source");
+        Check(SqliteCatalogStore.Write(Snapshot(null), garbagePath).Error !=
+            CatalogStoreError.None, "store_refuses_write_over_garbage_file");
+
+        Check(SqliteCatalogStore.Read("library.sqlite").Error == CatalogStoreError.InvalidPath,
+            "store_rejects_relative_path");
+        Check(SqliteCatalogStore.Write(Snapshot(null), "library.sqlite").Error ==
+            CatalogStoreError.InvalidPath, "store_write_rejects_relative_path");
+    }
+
+    private static void SetStorageVersion(string catalogPath, int version) =>
+        ExecuteFixtureSql(catalogPath, $"PRAGMA user_version={version}");
+
+    private static void SetCatalogVersion(string catalogPath, int version) =>
+        ExecuteFixtureSql(
+            catalogPath,
+            $"UPDATE catalog_metadata SET catalog_version={version} WHERE singleton=1");
+
+    private static void ExecuteFixtureSql(string catalogPath, string sql)
+    {
+        SqliteConnectionStringBuilder builder = new()
+        {
+            DataSource = catalogPath,
+            Mode = SqliteOpenMode.ReadWrite,
+            Pooling = false,
+        };
+        using SqliteConnection connection = new(builder.ConnectionString);
+        connection.Open();
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = sql;
+        command.ExecuteNonQuery();
+    }
+
+    private static CatalogEntityRow Row(string id, string label) =>
+        new(id, new JsonObject { ["label"] = label });
+
+    private static CatalogSnapshot Snapshot(
+        string? activeRollId,
+        params CatalogEntityRow[] frames) =>
+        new(activeRollId, new Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>>
+        {
+            [CatalogEntityTable.Frames] = frames,
+        });
+
+    private static string FrameOrder(CatalogReadResult result) =>
+        result.Snapshot is null
+            ? "<none>"
+            : string.Join(',', result.Snapshot.Rows(CatalogEntityTable.Frames)
+                .Select(row => row.Id));
+
+    private static string FrameLabels(CatalogReadResult result) =>
+        result.Snapshot is null
+            ? "<none>"
+            : string.Join(',', result.Snapshot.Rows(CatalogEntityTable.Frames)
+                .Select(row => row.Payload["label"]!.GetValue<string>()));
 
     private static DevelopRouteReadResult ReadNode(JsonObject frameRecord)
     {
