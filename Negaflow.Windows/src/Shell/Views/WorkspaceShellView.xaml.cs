@@ -50,7 +50,11 @@ public sealed partial class WorkspaceShellView : UserControl
         {
             try
             {
-                DevelopWorkspace.ShowLibrary(libraryHost, ToneLimits.Read(), id);
+                DevelopWorkspace.ShowLibrary(
+                    libraryHost,
+                    ToneLimits.Read(),
+                    NegativeLimits.Read(),
+                    id);
             }
             catch (NativeBootstrapException)
             {

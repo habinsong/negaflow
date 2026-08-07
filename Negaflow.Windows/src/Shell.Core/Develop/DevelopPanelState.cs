@@ -13,12 +13,58 @@ public sealed class DevelopPanelState
     private readonly LibraryHostService host;
     private readonly ToneLimits limits;
 
-    public DevelopPanelState(LibraryHostService host, ToneLimits limits)
+    private readonly NegativeLimits negativeLimits;
+
+    public DevelopPanelState(
+        LibraryHostService host,
+        ToneLimits limits,
+        NegativeLimits negativeLimits)
     {
         ArgumentNullException.ThrowIfNull(host);
         ArgumentNullException.ThrowIfNull(limits);
+        ArgumentNullException.ThrowIfNull(negativeLimits);
         this.host = host;
         this.limits = limits;
+        this.negativeLimits = negativeLimits;
+    }
+
+    public double MinimumManualDmin => negativeLimits.MinimumManualDmin;
+
+    public double MaximumManualDmin => negativeLimits.MaximumManualDmin;
+
+    /// <summary>
+    /// 아직 base 를 고르지 않은 frame 의 슬라이더 시작 위치입니다. **이 값이 catalog 에 저장되지는
+    /// 않습니다.** 사용자가 슬라이더를 움직여야 저장되며, 그전까지 frame 은 현상 불가 상태로
+    /// 남습니다. 화면에 뭔가 보여 주는 것과 사용자가 고른 것을 구별합니다.
+    /// </summary>
+    public double SuggestedManualDmin =>
+        negativeLimits.ClampChannel((MinimumManualDmin + MaximumManualDmin) / 4.0);
+
+    public ManualBaseRgb? ManualBase => SelectedFrame?.ManualBase;
+
+    /// <summary>
+    /// 수동 필름 base 를 설정합니다. 범위는 엔진이 알려 준 것이며, 엔진은 벗어난 값을 거부하지
+    /// 않고 조용히 clamp 하므로 여기서 먼저 묶어 저장된 값과 쓰인 값이 같게 합니다.
+    /// </summary>
+    public LibraryFrameError SetManualBase(double red, double green, double blue)
+    {
+        if (SelectedFrame is not { } frame)
+        {
+            return LibraryFrameError.MissingId;
+        }
+
+        ManualBaseRgb clamped = new(
+            negativeLimits.ClampChannel(red),
+            negativeLimits.ClampChannel(green),
+            negativeLimits.ClampChannel(blue));
+        LibraryFrameError error = host.Edit(
+            frame.Id,
+            new LibraryFrameEdit(frame.Tone, clamped));
+        if (error == LibraryFrameError.None)
+        {
+            Select(frame.Id);
+        }
+        return error;
     }
 
     public LibraryFrameSnapshot? SelectedFrame { get; private set; }

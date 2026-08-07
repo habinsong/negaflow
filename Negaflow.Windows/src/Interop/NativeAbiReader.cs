@@ -7,8 +7,9 @@ internal static unsafe class NativeAbiReader
     internal const ushort SupportedMajor = 0;
 
     // Raised with each export the managed side calls: 2 for nf_develop_export_v1,
+    // 4 for nf_get_negative_limits_v1.
     // 3 for nf_get_tone_limits_v1. An engine below this is refused at load, not at the call.
-    internal const ushort MinimumMinor = 3;
+    internal const ushort MinimumMinor = 4;
 
     private const uint StatusOk = 0;
 

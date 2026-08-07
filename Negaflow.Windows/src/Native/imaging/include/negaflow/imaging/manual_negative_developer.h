@@ -19,6 +19,12 @@ enum class ManualNegativeDevelopStatus : std::uint8_t {
     kernel_failed,
 };
 
+// The range the developer clamps a manual film base into. Declared here rather than kept
+// inside the .cpp so the C ABI can report it: a UI that duplicates the numbers offers the
+// user a value the engine will quietly move, which is worse than refusing it.
+inline constexpr float minimum_manual_dmin = 1.0e-3F;
+inline constexpr float maximum_manual_dmin = 1.0F;
+
 struct ManualNegativeDevelopParameters final {
     std::array<float, 3> dmin;
     NegativeFilmType film_type{NegativeFilmType::color};

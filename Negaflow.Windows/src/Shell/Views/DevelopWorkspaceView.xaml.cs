@@ -47,17 +47,24 @@ public sealed partial class DevelopWorkspaceView : UserControl
     public void ShowLibrary(
         LibraryHostService host,
         ToneLimits limits,
+        NegativeLimits negativeLimits,
         Microsoft.UI.WindowId windowId)
     {
         ArgumentNullException.ThrowIfNull(host);
         ArgumentNullException.ThrowIfNull(limits);
+        ArgumentNullException.ThrowIfNull(negativeLimits);
         importWindowId = windowId;
 
         libraryHost = host;
         toneLimits = limits;
-        panel = new DevelopPanelState(host, limits);
+        panel = new DevelopPanelState(host, limits, negativeLimits);
         ExposureSlider.Minimum = -panel.MaximumExposureStops;
         ExposureSlider.Maximum = panel.MaximumExposureStops;
+        foreach (Slider slider in new[] { BaseRedSlider, BaseGreenSlider, BaseBlueSlider })
+        {
+            slider.Minimum = panel.MinimumManualDmin;
+            slider.Maximum = panel.MaximumManualDmin;
+        }
         // Import 버튼은 라이브러리가 비어 있을 때도 보여야 합니다. 안 그러면 첫 사진을 넣을
         // 방법이 없습니다.
         DevelopCard.Visibility = Visibility.Visible;
@@ -144,8 +151,18 @@ public sealed partial class DevelopWorkspaceView : UserControl
         SelectedFrameText.Text = item.Detail;
         isSynchronizingExposure = true;
         ExposureSlider.Value = panel.Exposure;
+        // base 를 아직 고르지 않았으면 시작 위치만 보여 줍니다. 이 값은 저장되지 않으며,
+        // 사용자가 슬라이더를 움직여야 frame 이 현상 가능해집니다.
+        ManualBaseRgb shown = panel.ManualBase ?? new ManualBaseRgb(
+            panel.SuggestedManualDmin,
+            panel.SuggestedManualDmin,
+            panel.SuggestedManualDmin);
+        BaseRedSlider.Value = shown.Red;
+        BaseGreenSlider.Value = shown.Green;
+        BaseBlueSlider.Value = shown.Blue;
         isSynchronizingExposure = false;
         UpdateExposureText();
+        UpdateManualBaseText();
         ExportButton.IsEnabled = panel.CanExport;
         ExportStatusText.Text = item.CanDevelop
             ? string.Empty
@@ -154,6 +171,40 @@ public sealed partial class DevelopWorkspaceView : UserControl
                 null,
                 DevelopRequestRefusal.MissingManualBase,
                 null));
+    }
+
+    private void OnManualBaseChanged(object sender, RangeBaseValueChangedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (panel is null || isSynchronizingExposure)
+        {
+            return;
+        }
+
+        panel.SetManualBase(
+            BaseRedSlider.Value,
+            BaseGreenSlider.Value,
+            BaseBlueSlider.Value);
+        UpdateManualBaseText();
+        // base 가 생기면 그 자리에서 현상할 수 있게 됩니다.
+        ExportButton.IsEnabled = panel.CanExport;
+        if (panel.SelectedFrame is { CanDevelop: true })
+        {
+            ExportStatusText.Text = string.Empty;
+        }
+    }
+
+    private void UpdateManualBaseText()
+    {
+        if (panel?.ManualBase is { } manualBase)
+        {
+            ManualBaseValueText.Text = string.Create(
+                CultureInfo.CurrentCulture,
+                $"{manualBase.Red:F3} / {manualBase.Green:F3} / {manualBase.Blue:F3}");
+            return;
+        }
+        ManualBaseValueText.Text = "not set";
     }
 
     private void OnExposureChanged(object sender, RangeBaseValueChangedEventArgs args)

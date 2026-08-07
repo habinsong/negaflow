@@ -124,6 +124,14 @@ typedef struct nf_tone_limits_v1 {
     double maximum_film_emulation_intensity;
 } nf_tone_limits_v1;
 
+/* The range a manual film base is clamped into. A UI that guesses these offers a value
+   the engine silently moves, which is harder to notice than a refusal. */
+typedef struct nf_negative_limits_v1 {
+    uint32_t struct_size;
+    float minimum_manual_dmin;
+    float maximum_manual_dmin;
+} nf_negative_limits_v1;
+
 NF_API uint32_t NF_CALL nf_get_abi_version(void);
 NF_API nf_status_t NF_CALL nf_get_build_info_v1(nf_build_info_v1* output);
 
@@ -135,6 +143,7 @@ NF_API nf_status_t NF_CALL nf_develop_export_v1(
     nf_develop_export_result_v1* result);
 
 NF_API nf_status_t NF_CALL nf_get_tone_limits_v1(nf_tone_limits_v1* output);
+NF_API nf_status_t NF_CALL nf_get_negative_limits_v1(nf_negative_limits_v1* output);
 
 #ifdef __cplusplus
 }

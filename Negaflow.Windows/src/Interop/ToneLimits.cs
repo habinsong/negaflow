@@ -62,6 +62,14 @@ public sealed record ToneLimits(
             ? Math.Clamp(value, -MaximumExposureStops, MaximumExposureStops)
             : 0.0;
 
+    public double ClampFilmEmulationIntensity(double value) =>
+        double.IsFinite(value)
+            ? Math.Clamp(
+                value,
+                MinimumFilmEmulationIntensity,
+                MaximumFilmEmulationIntensity)
+            : MinimumFilmEmulationIntensity;
+
     public double ClampToneControl(double value) =>
         double.IsFinite(value)
             ? Math.Clamp(value, -MaximumToneControl, MaximumToneControl)

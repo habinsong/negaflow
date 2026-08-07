@@ -41,7 +41,7 @@ ManualNegativeDevelopResult develop_manual_negative(
             return result;
         }
         result.info.applied_dmin[channel] =
-            std::clamp(parameters.dmin[channel], 1.0e-3F, 1.0F);
+            std::clamp(parameters.dmin[channel], minimum_manual_dmin, maximum_manual_dmin);
         result.info.dmax_normalized[channel] = response.normal_range;
     }
 

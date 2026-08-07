@@ -666,6 +666,7 @@ internal static class Program
             testParent,
             $"{Environment.ProcessId}-{Guid.NewGuid():N}");
         StorageRootSet roots = StorageRootResolver.ResolveForTests(isolatedBase).Roots!;
+        NegativeLimits negativeLimits = new(MinimumManualDmin: 0.001f, MaximumManualDmin: 1.0f);
         ToneLimits limits = new(
             MaximumExposureStops: 5.0f,
             MaximumToneControl: 1.0f,
@@ -692,7 +693,7 @@ internal static class Program
             using LibraryHostService host = new(dispatcher, exporter);
             host.Open(roots);
 
-            DevelopPanelState panel = new(host, limits);
+            DevelopPanelState panel = new(host, limits, negativeLimits);
             Check(panel.SelectedFrame is null, "panel_starts_with_no_selection");
             Check(!panel.CanExport, "panel_cannot_export_without_selection");
             Check(!panel.Select("missing"), "panel_select_unknown_id");
@@ -711,6 +712,33 @@ internal static class Program
             Check(panel.Exposure == 5.0, "panel_clamps_high_exposure");
             Check(panel.SetExposure(-99.0) == LibraryFrameError.None, "panel_set_low_exposure");
             Check(panel.Exposure == -5.0, "panel_clamps_low_exposure");
+
+            // 아직 base 를 고르지 않은 frame 에도 슬라이더 시작 위치는 있어야 하지만, 그것이
+            // catalog 에 저장되면 사용자가 고르지 않은 값으로 현상됩니다.
+            Check(
+                panel.SuggestedManualDmin >= panel.MinimumManualDmin &&
+                    panel.SuggestedManualDmin <= panel.MaximumManualDmin,
+                "panel_suggested_base_in_range");
+
+            Check(
+                panel.SetManualBase(0.3, 0.31, 0.32) == LibraryFrameError.None,
+                "panel_set_manual_base");
+            Check(
+                panel.ManualBase == new ManualBaseRgb(0.3, 0.31, 0.32),
+                "panel_manual_base_visible_immediately");
+
+            // 엔진은 범위를 벗어난 값을 거부하지 않고 조용히 clamp 합니다. 여기서 먼저 묶지
+            // 않으면 저장된 값과 실제로 쓰인 값이 달라집니다.
+            Check(
+                panel.SetManualBase(9.0, -9.0, 0.5) == LibraryFrameError.None,
+                "panel_set_out_of_range_base");
+            Check(
+                panel.ManualBase?.Red == panel.MaximumManualDmin,
+                "panel_clamps_high_base");
+            Check(
+                panel.ManualBase?.Green == panel.MinimumManualDmin,
+                "panel_clamps_low_base");
+            Check(panel.ManualBase?.Blue == 0.5, "panel_leaves_valid_channel");
 
             Check(panel.Save() == CatalogStoreError.None, "panel_save");
 

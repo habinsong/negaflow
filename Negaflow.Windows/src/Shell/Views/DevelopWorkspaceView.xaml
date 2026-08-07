@@ -186,6 +186,37 @@
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" FontSize="12" Text="Film base (Dmin)" />
+                                    <TextBlock
+                                        x:Name="ManualBaseValueText"
+                                        Grid.Column="1"
+                                        FontSize="12"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                </Grid>
+                                <!-- Minimum/Maximum 은 엔진이 알려 준 값으로 코드에서 설정한다. -->
+                                <Slider
+                                    x:Name="BaseRedSlider"
+                                    AutomationProperties.AutomationId="negaflow.develop.base.red"
+                                    StepFrequency="0.005"
+                                    ValueChanged="OnManualBaseChanged" />
+                                <Slider
+                                    x:Name="BaseGreenSlider"
+                                    AutomationProperties.AutomationId="negaflow.develop.base.green"
+                                    StepFrequency="0.005"
+                                    ValueChanged="OnManualBaseChanged" />
+                                <Slider
+                                    x:Name="BaseBlueSlider"
+                                    AutomationProperties.AutomationId="negaflow.develop.base.blue"
+                                    StepFrequency="0.005"
+                                    ValueChanged="OnManualBaseChanged" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="2">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0" FontSize="12" Text="Exposure" />
                                     <TextBlock
                                         x:Name="ExposureValueText"
