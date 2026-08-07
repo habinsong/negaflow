@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <iostream>
 #include <string>
+#include <vector>
 
 namespace {
 
@@ -213,6 +214,78 @@ void test_full_develop(const std::filesystem::path& source) {
     std::filesystem::remove(destination, ignored);
 }
 
+void test_preview(const std::filesystem::path& source) {
+    const std::wstring source_text = source.wstring();
+    nf_develop_export_request_v1 request = make_request(source_text.c_str(), nullptr);
+    request.film_emulation = 5U;  // portra_400
+
+    constexpr std::uint32_t box = 128U;
+    std::vector<std::uint8_t> pixels(
+        static_cast<std::size_t>(box) * static_cast<std::size_t>(box) * 4U,
+        0U);
+    nf_develop_export_result_v1 result = make_result();
+
+    expect(
+        nf_develop_preview_v1(
+            &request,
+            box,
+            box,
+            pixels.data(),
+            static_cast<std::uint32_t>(pixels.size()),
+            &result) == NF_STATUS_OK,
+        "the preview call is well formed");
+    if (result.succeeded == 0U) {
+        std::cerr << "FAIL: preview failed at stage " << result.failed_stage << " with "
+                  << result.failure_name << '\n';
+        ++failures;
+        return;
+    }
+
+    // A preview writes no file, so a null destination must be accepted where the publish
+    // path refuses it.
+    expect(result.image_width > 0U && result.image_height > 0U, "preview reports a size");
+    expect(result.image_width <= box && result.image_height <= box, "preview fits the box");
+    expect(
+        result.output_file_bytes ==
+            static_cast<std::uint64_t>(result.image_width) * result.image_height * 4U,
+        "preview reports the bytes it wrote");
+
+    bool opaque = true;
+    bool any_colour = false;
+    const std::size_t written =
+        static_cast<std::size_t>(result.image_width) * result.image_height * 4U;
+    for (std::size_t index = 0U; index < written; index += 4U) {
+        opaque = opaque && pixels[index + 3U] == 0xFFU;
+        any_colour = any_colour ||
+            pixels[index] != 0U || pixels[index + 1U] != 0U || pixels[index + 2U] != 0U;
+    }
+    expect(opaque, "every preview pixel is opaque");
+    // Without this the test would pass on a buffer the callee never touched.
+    expect(any_colour, "the preview buffer was actually written");
+
+    // Nothing past the written region may be touched.
+    bool tail_untouched = true;
+    for (std::size_t index = written; index < pixels.size(); ++index) {
+        tail_untouched = tail_untouched && pixels[index] == 0U;
+    }
+    expect(tail_untouched, "the preview stays inside the region it reported");
+
+    nf_develop_export_result_v1 tiny = make_result();
+    expect(
+        nf_develop_preview_v1(&request, box, box, pixels.data(), 16U, &tiny) == NF_STATUS_OK,
+        "the undersized-buffer call is well formed");
+    expect(tiny.succeeded == 0U, "an undersized preview buffer is refused");
+    expect(
+        tiny.failed_stage == NF_DEVELOP_STAGE_OUTPUT,
+        "the undersized buffer is refused at the output stage");
+
+    nf_develop_export_result_v1 null_pixels = make_result();
+    expect(
+        nf_develop_preview_v1(&request, box, box, nullptr, 0U, &null_pixels) ==
+            NF_STATUS_INVALID_ARGUMENT,
+        "a null preview buffer is rejected");
+}
+
 }  // namespace
 
 int main(const int argument_count, const char* const arguments[]) {
@@ -224,6 +297,7 @@ int main(const int argument_count, const char* const arguments[]) {
         const std::filesystem::path source{arguments[1]};
         if (std::filesystem::exists(source)) {
             test_full_develop(source);
+            test_preview(source);
         } else {
             std::cerr << "FAIL: the supplied source fixture does not exist\n";
             ++failures;

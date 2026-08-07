@@ -143,6 +143,18 @@ NF_API nf_status_t NF_CALL nf_develop_export_v1(
     nf_develop_export_result_v1* result);
 
 NF_API nf_status_t NF_CALL nf_get_tone_limits_v1(nf_tone_limits_v1* output);
+
+/* Same pipeline as nf_develop_export_v1 but stops before publishing and fills `pixels`
+   with a BGRA8 display bitmap, tightly packed, opaque alpha, at most the requested size
+   with aspect preserved. `destination_path` is ignored. The written size comes back as
+   result->image_width and result->image_height. Blocking; safe on a worker thread. */
+NF_API nf_status_t NF_CALL nf_develop_preview_v1(
+    const nf_develop_export_request_v1* request,
+    uint32_t maximum_width,
+    uint32_t maximum_height,
+    uint8_t* pixels,
+    uint32_t pixel_capacity_bytes,
+    nf_develop_export_result_v1* result);
 NF_API nf_status_t NF_CALL nf_get_negative_limits_v1(nf_negative_limits_v1* output);
 
 #ifdef __cplusplus

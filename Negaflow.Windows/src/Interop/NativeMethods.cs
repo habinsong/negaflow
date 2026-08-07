@@ -16,6 +16,16 @@ internal static partial class NativeMethods
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial uint nf_get_build_info_v1(ref NativeBuildInfoV1 output);
 
+    [LibraryImport(LibraryName, EntryPoint = "nf_develop_preview_v1")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static unsafe partial uint nf_develop_preview_v1(
+        NativeDevelopExportRequestV1* request,
+        uint maximumWidth,
+        uint maximumHeight,
+        byte* pixels,
+        uint pixelCapacityBytes,
+        NativeDevelopExportResultV1* result);
+
     [LibraryImport(LibraryName, EntryPoint = "nf_get_negative_limits_v1")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial uint nf_get_negative_limits_v1(ref NativeNegativeLimitsV1 output);
