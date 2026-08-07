@@ -1,12 +1,12 @@
 # 전체 로드맵과 진행률
 
-기준일: 2026-08-04
+기준일: 2026-08-07
 기준 로드맵: `windows_docs/99-plan/migration-roadmap.md`의 M0~M18
 
 ## 현재 숫자
 
-- 전체 M0~M18 제품 로드맵: **약 15%**
-- 기반 구간 M0~M3: **약 46%**
+- 전체 M0~M18 제품 로드맵: **약 20%**
+- 기반 구간 M0~M3: **약 52%**
 - 제한형 TIFF 사전 검사 세부 작업: **약 94%**
 
 이 수치는 일정이나 개발 시간의 5%가 아닙니다. 각 milestone의 정의된 산출물과 종료 조건을
@@ -20,21 +20,39 @@
 | M0 제품 기준선 | 35% | exact commit, bootstrap manifest, delta, 일부 asset hash, canonical Film Emulation Core Image artifact | 전체 surface/stage manifest, 권리 결정, 나머지 macOS 기준 artifact |
 | M1 저장소·빌드·CI | 68% | 별도 build root, x64/ARM64 native·managed·WinUI graph, dual-RID lock, C ABI, CLI, VS 18.8.2와 Windows App SDK C# component, 고정 SDK/vcpkg, static CRT | shader/packaging, CI, 실제 ARM64 run |
 | M2 적합성·CPU scalar | 35% | pixel contract, exposure/matrix, 네거티브 반전, 기본 톤·4-band curve, 고정 64표본 DR/R/G/B point curve, 8-band HSL Color Mixer, 3구간 Color Grading, R/G/B Primary Calibration, 11종 RGB33 Film Emulation 색상→11행 acutance route, macOS golden과 bounded percentile 측정 | 전체 kernel inventory, forced dispatch, 나머지 공간·통계·결함·변환 golden |
-| M3 이미지 I/O·색·영속성 | 56% | 동일 read-only stream의 bounded TIFF probe+WIC 16-bit decode, TIFF 6 조기 비트폭 LZW 의미 검사와 Deflate 격리, sink 기반 row streaming, ICC row transform→linear working, whole/stream exact parity 15개, 이미지 SHA 기본-off/opt-in CNG, 검증된 PNG16/TIFF16 게시, transport/signal과 legacy 강도를 보존하는 catalog route projection | 독립 Deflate 검증, ColorSync parity, tile/fuzz, SQLite, catalog transaction·복구 |
-| M4 CLI end-to-end | 50% | 한 장 decode→color→수동 Dmin develop→tone·Primary Calibration→명시적 film-scan Film Look→sRGB16 TIFF/PNG 검증 게시, 실제 identity/활성 TIFF 차이, macOS golden·cross-platform envelope, source 관찰, 단계별 report, SHA 기본-off, source/profile/intensity catalog projection | 고급 color recipe 전체 입력·실제 DB 저장, projection→C ABI 연결, 나머지 runtime pixel diff manifest |
+| M3 이미지 I/O·색·영속성 | 70% | 동일 read-only stream의 bounded TIFF probe+WIC 16-bit decode, TIFF 6 조기 비트폭 LZW 의미 검사와 Deflate 격리, sink 기반 row streaming, ICC row transform→linear working, whole/stream exact parity 15개, 이미지 SHA 기본-off/opt-in CNG, 검증된 PNG16/TIFF16 게시, transport/signal과 legacy 강도를 보존하는 catalog route projection , SQLite 영속성·단일 작성자 세션·5만 frame 성능 | 독립 Deflate 검증, tile/fuzz, backup 세대·pending restore·defect sidecar |
+| M4 CLI end-to-end | 72% | 한 장 decode→color→수동 Dmin develop→tone·Primary Calibration→명시적 film-scan Film Look→sRGB16 TIFF/PNG 검증 게시, 실제 identity/활성 TIFF 차이, macOS golden·cross-platform envelope, source 관찰, 단계별 report, SHA 기본-off, source/profile/intensity catalog projection , 실제 DB 저장과 projection→C ABI 연결 | 고급 color recipe 전체 입력, 나머지 runtime pixel diff manifest |
 | M5 GPU/WARP | 0% | 문서만 존재 | D3D11/Direct2D/WARP FP32 vertical slice |
-| M6 전체 Develop graph | 14% | post-pipeline DR/R/G/B point curve→8-band HSL Color Mixer→3구간 Color Grading→R/G/B Primary Calibration→명시적 film-scan 11종 RGB33 색상→bounded acutance 순서를 CLI 출력까지 통합, source/profile/intensity recipe projection | 실제 DB 저장·재로드와 render snapshot 연결, digital film 전체 그래프, local·defect 등 전체 stage와 측정 |
+| M6 전체 Develop graph | 18% | post-pipeline DR/R/G/B point curve→8-band HSL Color Mixer→3구간 Color Grading→R/G/B Primary Calibration→명시적 film-scan 11종 RGB33 색상→bounded acutance 순서를 CLI 출력까지 통합, source/profile/intensity recipe projection | 실제 DB 저장·재로드와 render snapshot 연결, digital film 전체 그래프, local·defect 등 전체 stage와 측정 |
 | M7 대형 이미지 | 6% | WIC row sink, chunk ICC transform, 단조 progress/cancel, full decoded source 제거와 exact parity | 최종 working streaming, tile, byte reservation, cache, TDR |
-| M8 ABI·WinUI shell/canvas | 18% | C ABI와 C# `LibraryImport` bootstrap, 최대화 localized 셸, caption inset, 표시 설정 저장 | handles/events, GPU canvas, lifetime, activation 전체 경로 |
-| M9~M14 제품 surface | 2% | Library/Develop/Print/Settings 계층과 empty/disabled 상태 골격 | 실제 catalog, Develop, Defects, Export, Print와 Settings 기능 |
+| M8 ABI·WinUI shell/canvas | 45% | C ABI가 develop/export/preview/limits를 운반, 셸 시작 시 catalog open, 시험되는 스레딩 정책, 최대화 localized 셸 | GPU canvas, handles/events, lifetime·activation 전체 경로 |
+| M9~M14 제품 surface | 8% | Library 목록, 파일 picker import, Develop의 필름 base·노출, Export가 실제 동작 | 미리보기 렌더, base picker, 취소·진행률, Defects, Print, Settings 기능 |
 | M15 scanner host | 0% | 문서만 존재 | protocol host와 격리 |
 | M16 qualification | 0% | 문서만 존재 | 실제 CPU/GPU/ARM64/display matrix |
 | M17 배포·컴플라이언스 | 0% | 설치 선언 초안만 존재 | MSIX/installer, signing, update, SBOM |
 | M18 Beta/RC/Stable | 0% | 없음 | release gate 전체 |
 
-계산은 M0 35, M1 68, M2 35, M3 56, M4 50, M6 14, M7 6, M8 18, M9~M14 각각 2, 나머지 0을 19개
-milestone의 100점 만점에 대입한 약 15.5%입니다. 표시는 보수적으로 정수 15%이며, 숫자는 구현
+계산은 M0 35, M1 68, M2 35, M3 70, M4 72, M6 18, M7 6, M8 45, M9~M14 각각 8, 나머지 0을 19개
+milestone의 100점 만점에 대입한 약 20.9%입니다. 표시는 보수적으로 정수 20%이며, 숫자는 구현
 증거가 추가될 때만 올립니다.
+
+2026-08-07 에 올라간 것과 그 근거:
+
+- **M3 56 → 70.** SQLite 영속성, 단일 작성자 세션, 5만 frame 성능 측정.
+  `verification/2026-08-07-sqlite-catalog-store.md`. 남은 것은 backup 세대·pending restore·
+  defect sidecar·독립 Deflate 검증·tile/fuzz 입니다.
+- **M4 50 → 72.** projection 이 실제 DB 에 저장되고 C ABI 로 연결됐습니다. 남은 것은 고급
+  color recipe 전체 입력과 runtime pixel diff manifest 입니다.
+- **M6 14 → 18.** 실제 DB 저장·재로드가 붙었습니다. digital film 전체 그래프와 나머지 stage 는
+  그대로 남아 있습니다.
+- **M8 18 → 45.** C ABI 가 develop/export/preview/limits 를 실어 나르고, 셸이 시작할 때
+  카탈로그를 열며, 스레딩 정책이 시험됩니다. GPU canvas 와 전체 lifetime/activation 은 미착수.
+- **M9~M14 2 → 8.** Library 목록, import, Develop 의 필름 base·노출, Export 가 실제로 돕니다.
+  `verification/2026-08-07-vertical-slice.md`. 나머지 제품 표면은 그대로입니다.
+
+M5(GPU), M15(scanner host), M16(qualification), M17(배포·서명), M18(release gate)은 **여전히
+0%** 입니다. 남은 80% 의 대부분이 여기와 M9~M14 에 있고, 이쪽이 검증이 어렵고 되돌리기 비싼
+구간입니다.
 
 ## 현재 완료된 작은 루프
 
