@@ -5,6 +5,11 @@
     <RootNamespace>Negaflow.Shell</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <!-- 결과 문구 시험은 엔진 없이 outcome 을 만들어야 합니다. 제품 API 에는 coordinator 만
+         만들 수 있는 형태로 남기고 여기서만 엽니다. -->
+    <InternalsVisibleTo Include="Negaflow.Shell.UnitTests" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Catalog.Core\Negaflow.Catalog.Core.csproj" />
     <ProjectReference Include="..\Interop\Negaflow.Interop.csproj" />
   </ItemGroup>

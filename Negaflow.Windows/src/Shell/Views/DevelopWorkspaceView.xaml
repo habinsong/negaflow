@@ -137,10 +137,71 @@
             <Border Grid.Row="1" Background="{ThemeResource NegaflowDividerBrush}" />
             <ScrollViewer Grid.Row="2">
                 <StackPanel Padding="8,14,20,14" Spacing="12">
-                    <Border MinHeight="180" Padding="18" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="9">
+                    <Border
+                        x:Name="NoFrameCard"
+                        MinHeight="180"
+                        Padding="18"
+                        Background="{ThemeResource NegaflowCardBrush}"
+                        CornerRadius="9">
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
                             <FontIcon FontSize="28" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE9E9;" />
                             <TextBlock x:Name="NoFrameInspectorText" HorizontalAlignment="Center" FontSize="14" FontWeight="SemiBold" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border
+                        x:Name="DevelopCard"
+                        Padding="16"
+                        Background="{ThemeResource NegaflowCardBrush}"
+                        CornerRadius="9"
+                        Visibility="Collapsed">
+                        <StackPanel Spacing="10">
+                            <TextBlock
+                                x:Name="SelectedFrameText"
+                                FontSize="13"
+                                FontWeight="SemiBold"
+                                TextTrimming="CharacterEllipsis" />
+                            <ComboBox
+                                x:Name="FrameSelector"
+                                HorizontalAlignment="Stretch"
+                                AutomationProperties.AutomationId="negaflow.develop.frame"
+                                DisplayMemberPath="DisplayName"
+                                SelectionChanged="OnFrameSelectionChanged" />
+
+                            <StackPanel Spacing="2">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" FontSize="12" Text="Exposure" />
+                                    <TextBlock
+                                        x:Name="ExposureValueText"
+                                        Grid.Column="1"
+                                        FontSize="12"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                </Grid>
+                                <!-- Minimum/Maximum 은 엔진이 알려 준 값으로 코드에서 설정한다. -->
+                                <Slider
+                                    x:Name="ExposureSlider"
+                                    AutomationProperties.AutomationId="negaflow.develop.exposure"
+                                    StepFrequency="0.05"
+                                    ThumbToolTipValueConverter="{x:Null}"
+                                    ValueChanged="OnExposureChanged" />
+                            </StackPanel>
+
+                            <Button
+                                x:Name="ExportButton"
+                                HorizontalAlignment="Stretch"
+                                AutomationProperties.AutomationId="negaflow.develop.export"
+                                Click="OnExportClicked"
+                                Content="Export PNG"
+                                Style="{StaticResource AccentButtonStyle}" />
+                            <TextBlock
+                                x:Name="ExportStatusText"
+                                FontSize="11"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
                 </StackPanel>

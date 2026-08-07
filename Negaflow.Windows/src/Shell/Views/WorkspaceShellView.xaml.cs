@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Negaflow.Interop;
 
 namespace Negaflow.Shell.Views;
 
@@ -42,6 +43,18 @@ public sealed partial class WorkspaceShellView : UserControl
             LibraryWorkspace.ShowLibrary(libraryHost);
         }
         DevelopWorkspace.Initialize(state, nativeEngineStatus);
+        // 한계값은 엔진이 알려 줍니다. 엔진을 못 읽으면 슬라이더 범위를 지어내는 대신
+        // Develop 패널을 붙이지 않습니다.
+        if (libraryHost is not null && nativeEngineStatus.IsAvailable)
+        {
+            try
+            {
+                DevelopWorkspace.ShowLibrary(libraryHost, ToneLimits.Read());
+            }
+            catch (NativeBootstrapException)
+            {
+            }
+        }
         PrintWorkspace.Initialize(state, nativeEngineStatus);
         Toolbar.SettingsRequested += OnToolbarSettingsRequested;
         state.Changed += OnStateChanged;

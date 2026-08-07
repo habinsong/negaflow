@@ -20,6 +20,7 @@ internal static class Program
         VerifyDevelopExportCoordinator();
         VerifyLibraryDocument();
         VerifyLibraryHost();
+        VerifyDevelopPanelState();
 
         var report = new
         {
@@ -637,6 +638,145 @@ internal static class Program
                 Directory.Delete(isolatedBase, recursive: true);
             }
         }
+    }
+
+    private static DevelopExportResult FailedResult(
+        DevelopExportStage stage,
+        string failureName) => new(
+        succeeded: false,
+        stage,
+        failureName,
+        nativeErrorCode: 0,
+        cleanupErrorCode: 0,
+        imageWidth: 0,
+        imageHeight: 0,
+        FilmLookRoute.Invalid,
+        filmLookColorApplied: false,
+        filmLookAcutanceApplied: false,
+        sourceFileBytes: 0,
+        outputFileBytes: 0,
+        filmLookWorkspaceBytes: 0,
+        wallMicroseconds: 0);
+
+    private static void VerifyDevelopPanelState()
+    {
+        string testParent = Path.Combine(AppContext.BaseDirectory, "develop-panel-tests");
+        string isolatedBase = Path.Combine(
+            testParent,
+            $"{Environment.ProcessId}-{Guid.NewGuid():N}");
+        StorageRootSet roots = StorageRootResolver.ResolveForTests(isolatedBase).Roots!;
+        ToneLimits limits = new(
+            MaximumExposureStops: 5.0f,
+            MaximumToneControl: 1.0f,
+            MinimumFilmEmulationIntensity: 0.0,
+            MaximumFilmEmulationIntensity: 1.0);
+
+        try
+        {
+            using (CatalogSession seed = CatalogSession.Open(roots).Session!)
+            {
+                seed.Write(new CatalogSnapshot(
+                    null,
+                    new Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>>
+                    {
+                        [CatalogEntityTable.Frames] =
+                        [
+                            new("frame-1", FrameRecord("frame-1", "IMG_0001.tif", 0.0)),
+                        ],
+                    }));
+            }
+
+            FakeDispatcher dispatcher = new(accepts: true);
+            FakeExporter exporter = new(_ => OkResult());
+            using LibraryHostService host = new(dispatcher, exporter);
+            host.Open(roots);
+
+            DevelopPanelState panel = new(host, limits);
+            Check(panel.SelectedFrame is null, "panel_starts_with_no_selection");
+            Check(!panel.CanExport, "panel_cannot_export_without_selection");
+            Check(!panel.Select("missing"), "panel_select_unknown_id");
+
+            Check(panel.Select("frame-1"), "panel_select");
+            Check(panel.CanExport, "panel_can_export_after_select");
+            Check(panel.MaximumExposureStops == 5.0, "panel_exposure_range_from_engine");
+
+            Check(
+                panel.SetExposure(1.25) == LibraryFrameError.None,
+                "panel_set_exposure");
+            Check(panel.Exposure == 1.25, "panel_exposure_visible_immediately");
+
+            // 범위를 넘는 값은 엔진이 거부할 값이므로 여기서 묶습니다.
+            Check(panel.SetExposure(99.0) == LibraryFrameError.None, "panel_set_high_exposure");
+            Check(panel.Exposure == 5.0, "panel_clamps_high_exposure");
+            Check(panel.SetExposure(-99.0) == LibraryFrameError.None, "panel_set_low_exposure");
+            Check(panel.Exposure == -5.0, "panel_clamps_low_exposure");
+
+            Check(panel.Save() == CatalogStoreError.None, "panel_save");
+
+            DevelopExportOutcome? outcome = null;
+            Check(
+                panel.ExportAsync(
+                    @"C:\exports\IMG_0001.png",
+                    DevelopExportFormat.Png16,
+                    completed => outcome = completed).GetAwaiter().GetResult(),
+                "panel_export_delivers");
+            Check(
+                outcome?.Kind == DevelopExportOutcomeKind.Completed,
+                "panel_export_completed");
+        }
+        finally
+        {
+            if (Directory.Exists(isolatedBase) &&
+                StoragePathPolicy.IsLexicallyContained(testParent, isolatedBase))
+            {
+                Directory.Delete(isolatedBase, recursive: true);
+            }
+        }
+
+        VerifyDevelopOutcomeText();
+    }
+
+    private static void VerifyDevelopOutcomeText()
+    {
+        Check(
+            DevelopPanelState.Describe(
+                new DevelopExportOutcome(DevelopExportOutcomeKind.Completed, OkResult(), DevelopRequestRefusal.None, null)).Contains("100×50"),
+            "describe_success_has_dimensions");
+
+        // "Export failed" 만 보여 주면 사용자는 스캔을 다시 하는 것 말고 할 게 없습니다.
+        string decodeFailure = DevelopPanelState.Describe(
+            DevelopExportOutcome.Completed(
+                FailedResult(DevelopExportStage.Decode, "unsupported_compression")));
+        Check(decodeFailure.Contains("decoding"), "describe_failure_names_stage");
+        Check(
+            decodeFailure.Contains("unsupported_compression"),
+            "describe_failure_keeps_engine_reason");
+
+        string missingFile = DevelopPanelState.Describe(
+            DevelopExportOutcome.Completed(
+                FailedResult(DevelopExportStage.ObserveSourceBefore, "file_not_found")));
+        Check(
+            missingFile.Contains("reading the source file"),
+            "describe_missing_file_stage");
+
+        Check(
+            DevelopPanelState.Describe(
+                DevelopExportOutcome.Refused(DevelopRequestRefusal.MissingManualBase))
+                .Contains("Dmin"),
+            "describe_missing_base_says_what_to_do");
+        Check(
+            DevelopPanelState.Describe(
+                DevelopExportOutcome.Refused(DevelopRequestRefusal.UnsupportedDigitalSource))
+                .Contains("rendered digital"),
+            "describe_digital_source");
+        Check(
+            DevelopPanelState.Describe(DevelopExportOutcome.Faulted("engine gone"))
+                .Contains("engine gone"),
+            "describe_fault_keeps_message");
+        Check(
+            DevelopPanelState.Describe(DevelopExportOutcome.Busy())
+                .Contains("already running"),
+            "describe_busy");
     }
 
     private static void Check(bool condition, string name)

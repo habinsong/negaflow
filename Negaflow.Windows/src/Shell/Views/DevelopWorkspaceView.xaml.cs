@@ -1,7 +1,10 @@
+using System.Globalization;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
+using Negaflow.Catalog;
+using Negaflow.Interop;
 using Negaflow.Shell.Localization;
 using Negaflow.Shell.Views.Layout;
 
@@ -11,6 +14,9 @@ public sealed partial class DevelopWorkspaceView : UserControl
 {
     private readonly ThreePaneResizeController resizeController = new();
     private WorkspacePresentationState? workspaceState;
+    private DevelopPanelState? panel;
+    private IReadOnlyList<LibraryFrameListItem> frameItems = [];
+    private bool isSynchronizingExposure;
 
     public DevelopWorkspaceView()
     {
@@ -30,6 +36,116 @@ public sealed partial class DevelopWorkspaceView : UserControl
         StatusBar.Initialize(nativeEngineStatus);
         UpdateState(state.Current);
         Unloaded += OnUnloaded;
+    }
+
+    /// <summary>
+    /// 라이브러리를 붙입니다. **UI 스레드에서만** 부르십시오. 현상 자체는 워커에서 돌지만
+    /// 여기서 만지는 것은 전부 컨트롤입니다.
+    /// </summary>
+    public void ShowLibrary(LibraryHostService host, ToneLimits limits)
+    {
+        ArgumentNullException.ThrowIfNull(host);
+        ArgumentNullException.ThrowIfNull(limits);
+
+        panel = new DevelopPanelState(host, limits);
+        IReadOnlyList<LibraryFrameListItem> items = LibraryFrameListItems.From(host.Frames);
+        frameItems = items;
+
+        bool hasFrames = items.Count > 0;
+        DevelopCard.Visibility = hasFrames ? Visibility.Visible : Visibility.Collapsed;
+        NoFrameCard.Visibility = hasFrames ? Visibility.Collapsed : Visibility.Visible;
+        if (!hasFrames)
+        {
+            return;
+        }
+
+        ExposureSlider.Minimum = -panel.MaximumExposureStops;
+        ExposureSlider.Maximum = panel.MaximumExposureStops;
+        FrameSelector.ItemsSource = items;
+        FrameSelector.SelectedIndex = 0;
+    }
+
+    private void OnFrameSelectionChanged(object sender, SelectionChangedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (panel is null || FrameSelector.SelectedItem is not LibraryFrameListItem item)
+        {
+            return;
+        }
+
+        panel.Select(item.Id);
+        SelectedFrameText.Text = item.Detail;
+        isSynchronizingExposure = true;
+        ExposureSlider.Value = panel.Exposure;
+        isSynchronizingExposure = false;
+        UpdateExposureText();
+        ExportButton.IsEnabled = panel.CanExport;
+        ExportStatusText.Text = item.CanDevelop
+            ? string.Empty
+            : DevelopPanelState.Describe(new DevelopExportOutcome(
+                DevelopExportOutcomeKind.Refused,
+                null,
+                DevelopRequestRefusal.MissingManualBase,
+                null));
+    }
+
+    private void OnExposureChanged(object sender, RangeBaseValueChangedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        // 선택을 바꾸며 슬라이더를 맞출 때는 catalog 를 건드리지 않습니다.
+        if (panel is null || isSynchronizingExposure)
+        {
+            return;
+        }
+        panel.SetExposure(ExposureSlider.Value);
+        UpdateExposureText();
+    }
+
+    private void UpdateExposureText()
+    {
+        if (panel is not null)
+        {
+            ExposureValueText.Text = panel.Exposure.ToString(
+                "+0.00;-0.00; 0.00",
+                CultureInfo.CurrentCulture);
+        }
+    }
+
+    private async void OnExportClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (panel?.SelectedFrame is not { } frame)
+        {
+            return;
+        }
+
+        // 편집은 메모리에만 있었으므로, 현상하기 전에 저장해 파일과 catalog 가 어긋나지 않게 합니다.
+        CatalogStoreError saved = panel.Save();
+        if (saved != CatalogStoreError.None)
+        {
+            ExportStatusText.Text = $"Could not save the catalog: {saved}";
+            return;
+        }
+
+        string destination = Path.Combine(
+            Path.GetDirectoryName(frame.SourcePath) ?? Path.GetTempPath(),
+            $"{Path.GetFileNameWithoutExtension(frame.SourcePath)}-negaflow.png");
+
+        ExportButton.IsEnabled = false;
+        ExportStatusText.Text = "Developing…";
+        bool delivered = await panel.ExportAsync(
+            destination,
+            DevelopExportFormat.Png16,
+            outcome => ExportStatusText.Text = DevelopPanelState.Describe(outcome));
+        if (!delivered)
+        {
+            // 큐가 닫혔다는 뜻이므로 창이 사라지는 중입니다. 컨트롤을 더 건드리지 않습니다.
+            return;
+        }
+        ExportButton.IsEnabled = panel.CanExport;
     }
 
     private void OnRootSizeChanged(object sender, SizeChangedEventArgs args)
