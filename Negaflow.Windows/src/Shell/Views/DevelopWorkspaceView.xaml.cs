@@ -148,7 +148,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         }
 
         panel.Select(item.Id);
-        SelectedFrameText.Text = item.Detail;
+        UpdateSelectedFrameText();
         isSynchronizingExposure = true;
         ExposureSlider.Value = panel.Exposure;
         // base 를 아직 고르지 않았으면 시작 위치만 보여 줍니다. 이 값은 저장되지 않으며,
@@ -187,11 +187,21 @@ public sealed partial class DevelopWorkspaceView : UserControl
             BaseGreenSlider.Value,
             BaseBlueSlider.Value);
         UpdateManualBaseText();
-        // base 가 생기면 그 자리에서 현상할 수 있게 됩니다.
+        // base 가 생기면 그 자리에서 현상할 수 있게 됩니다. 헤더도 함께 고쳐야 합니다 —
+        // 그러지 않으면 base 를 0.250 으로 설정한 화면이 여전히 "Dmin not set" 이라고 말합니다.
+        UpdateSelectedFrameText();
         ExportButton.IsEnabled = panel.CanExport;
         if (panel.SelectedFrame is { CanDevelop: true })
         {
             ExportStatusText.Text = string.Empty;
+        }
+    }
+
+    private void UpdateSelectedFrameText()
+    {
+        if (panel?.SelectedFrame is { } frame)
+        {
+            SelectedFrameText.Text = new LibraryFrameListItem(frame).Detail;
         }
     }
 

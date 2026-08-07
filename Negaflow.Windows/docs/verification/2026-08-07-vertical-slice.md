@@ -43,6 +43,28 @@ Frame-negaflow.png  1,285,445 바이트
 `negaflow.library.frames` 는 트리에 없었습니다. Library 워크스페이스가 접혀 있어서이며
 (`selectedWorkspace: 1` = Develop) 버그가 아닙니다.
 
+## 두 번째 실행: import 부터 끝까지
+
+개발용 도구 없이 앱 안에서만 한 바퀴 돌렸습니다. 전부 UI Automation 으로 실제 컨트롤을
+조작했습니다.
+
+1. `negaflow.develop.import` invoke → 파일 선택기가 열립니다. Windows App SDK 1.8 의
+   `WindowId` picker 이며 미패키지 구성에서 그대로 동작합니다.
+2. 경로를 넣고 확인 → `Imported 1 frame. Set the film base (Dmin) before developing.`
+   frame 은 목록에 나타나되 `Dmin not set` 이고 Export 는 꺼져 있습니다.
+3. base 슬라이더 3개를 0.25 로 설정. 슬라이더 범위는
+   `0.00100000004749745 .. 1` 이었습니다 — 엔진의 `minimum_manual_dmin`/`maximum_manual_dmin`
+   그대로이며, 관리 쪽이 숫자를 베끼지 않았다는 증거입니다.
+4. 그 자리에서 Export 가 켜집니다. invoke → `Exported 631×403 in 101 ms`, 1,278,059바이트.
+
+### 이때 나온 화면 모순
+
+base 를 0.250 으로 설정했는데 패널 헤더는 여전히 `Dmin not set` 이었습니다. 선택할 때 한 번
+써 놓고 갱신하지 않았기 때문입니다. 같은 화면이 자기와 모순되는 상태였습니다.
+
+고친 뒤 다시 돌려 확인했습니다. 이제 base 를 설정하면 헤더가 원본 경로로 바뀌고
+`0.250 / 0.250 / 0.250` 과 나란히 보입니다.
+
 ## 정리
 
 - 심었던 frame 을 제거했습니다. 사용자 카탈로그는 다시 frame 0개입니다.
@@ -63,8 +85,9 @@ Frame-negaflow.png  1,285,445 바이트
 
 ## 아직 아닌 것
 
-- **import 이 없습니다.** frame 을 넣으려면 아직 도구가 필요합니다. 세로 슬라이스의 다음
-  자연스러운 한 걸음입니다.
+- ~~import 이 없습니다.~~ **생겼습니다.** 위 "두 번째 실행" 을 보십시오.
+- **필름 base 를 눈으로 고를 수 없습니다.** 슬라이더로 숫자를 넣을 뿐이며, macOS 처럼 스캔의
+  base 영역을 찍어서 뽑는 picker 가 없습니다. 미리보기가 생겨야 할 수 있는 일입니다.
 - 미리보기가 없습니다. 중앙은 여전히 "이미지를 가져오세요" 입니다. Export 는 파일을 쓰지만
   화면에 그리지는 않습니다.
 - 취소와 진행률이 없습니다. 631×403 에서 142 ms 라 지금은 드러나지 않지만, 실제 스캔 해상도로
