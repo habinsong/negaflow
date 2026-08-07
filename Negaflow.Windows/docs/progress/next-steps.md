@@ -119,6 +119,35 @@ Look→검증 게시 전체를 한 번의 호출로 돌리고, 관리 쪽 `Nativ
 **목표는 기능이 아닙니다.** 이미지 한 장이 Library 에 보이고, Develop 에서 슬라이더 하나가 먹고,
 Export 가 파일을 쓰면 충분합니다. 못생겨도 됩니다.
 
+### UI 는 창작하지 않습니다 — macOS 를 그대로 이식합니다
+
+**현재 Develop 패널의 XAML 은 배관을 돌려 보려고 임시로 만든 것이며 버릴 것입니다.** Import 버튼,
+필름 base 슬라이더 3개, 노출 슬라이더, Export 버튼, 상태 문구는 전부 macOS 에 대응물이 있거나
+아예 다른 형태입니다.
+
+이식 대상은 `Sources/negaflowApp/Features/Develop/Inspector/` 이며 순서는
+`DevelopAdjustmentSections.swift` 가 정의합니다.
+
+1. `basicToneSection`
+2. `toneCurveSection` — `ToneCurveEditor.swift`
+3. `colorSection`
+4. `colorMixerSection` — `ColorMixerSection.swift`
+5. `colorGradingSection` — `ColorGradingSection.swift`
+6. `bwToningSection` — 흑백일 때만
+7. `calibrationSection`
+8. `detailSection`
+
+필름 base 는 `BaseControlSection.swift` 가 소유합니다. 제가 만든 raw 슬라이더 3개가 아닙니다.
+`FilmEmulationSection.swift`, `DevelopQuickActionsSection.swift`, `InteractiveHistogramView.swift`,
+`InspectorSlider.swift`/`ResettableSlider.swift`/`EditableSliderValueText.swift` 같은 공통 컨트롤도
+그쪽 구조를 따릅니다.
+
+치수는 `baseline/swift-ui-metrics.json` 처럼 macOS 소스에서 가져옵니다. **판단으로 정하지
+마십시오.** macOS 에 대응물이 없는 것이 필요하면 지어내지 말고 물어보십시오.
+
+**배관은 이식 대상이 아닙니다.** C ABI, coordinator, 스레딩, 카탈로그는 Windows 쪽 설계입니다.
+바뀌는 것은 표면뿐입니다.
+
 ### 왜 이것이 파이프라인 확장보다 먼저인가
 
 지금까지 28단계를 CLI 로만 검증했습니다. CLI 검증은 앱에서 가장 위험한 것들을 **전부 우회합니다** —
