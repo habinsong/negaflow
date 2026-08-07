@@ -5,6 +5,11 @@
     <RootNamespace>Negaflow.Catalog</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <!-- 테스트는 CatalogSession 을 우회해 store 를 직접 두드려야 합니다. 거부 경로(미래 schema
+         version, 손상 파일, 상대 경로)는 lock 을 잡은 정상 세션에서는 만들 수 없습니다. -->
+    <InternalsVisibleTo Include="Negaflow.Catalog.UnitTests" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Microsoft.Data.Sqlite.Core" />
     <PackageReference Include="SQLitePCLRaw.config.e_sqlite3" />
     <PackageReference Include="SourceGear.sqlite3" />

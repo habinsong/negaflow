@@ -8,7 +8,13 @@ namespace Negaflow.Catalog;
 /// primary catalog 의 유일한 SQLite 입구입니다. macOS <c>LibraryCatalogSQLiteStore</c> 의 table 배치와
 /// PRAGMA 규율을 그대로 옮기되, 번호 공간과 실패 분류는 Windows 것입니다. ADR-0025 를 보십시오.
 /// </summary>
-public static class SqliteCatalogStore
+/// <remarks>
+/// 이 형식은 의도적으로 <c>internal</c> 입니다. 프로세스 lock 없이 카탈로그를 여는 경로가 존재하면
+/// 단일 작성자 계약이 호출자의 규율에만 의존하게 됩니다. 외부에서 쓸 수 있는 입구는
+/// <see cref="CatalogSession"/> 하나이고, 그것은 lock 을 잡지 않으면 만들어지지 않습니다.
+/// <see cref="CatalogRecovery"/> 만 예외이며, 그쪽은 읽기조차 하지 않는 값싼 확인입니다.
+/// </remarks>
+internal static class SqliteCatalogStore
 {
     /// <summary>물리 schema version. <c>PRAGMA user_version</c> 에 기록합니다.</summary>
     public const int StorageSchemaVersion = 1;
@@ -207,11 +213,7 @@ public static class SqliteCatalogStore
         }
     }
 
-    /// <summary>
-    /// 손상된 primary 가 유효한 backup 을 덮지 않게 하는 값싼 확인입니다. 전체 payload 를 읽지
-    /// 않고 integrity 와 두 version 축만 봅니다.
-    /// </summary>
-    public static bool IsValidRecoverySource(string catalogPath)
+    internal static bool IsValidRecoverySource(string catalogPath)
     {
         if (string.IsNullOrWhiteSpace(catalogPath) ||
             !Path.IsPathFullyQualified(catalogPath) ||

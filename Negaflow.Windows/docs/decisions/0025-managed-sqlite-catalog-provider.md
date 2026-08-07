@@ -120,7 +120,24 @@ sync하므로 내구성이 조금 더 높지만, 이는 macOS 기준선에서 �
 남은 핸들이 곧 실패입니다. 따라서 connection string에 `Pooling=False`를 명시합니다.
 `store_no_lingering_file_handle`이 이 계약을 지킵니다.
 
-### 8. 없는 파일과 손상된 파일을 구별한다
+### 8. 카탈로그를 여는 유일한 공개 입구는 `CatalogSession` 이다
+
+`SqliteCatalogStore` 는 `internal` 입니다. lock 을 잡지 않고 카탈로그를 여는 공개 경로가 하나라도
+있으면 단일 작성자 계약이 구조가 아니라 호출자의 규율에 의존하게 됩니다. `CatalogSession.Open` 이
+프로세스 lock 을 먼저 잡고, 실패하면 세션 자체가 만들어지지 않습니다.
+
+`CatalogSession.ReadOrCreate` 는 **`NotFound` 를 빈 라이브러리로 바꾸는 유일한 자리**입니다. 그
+변환이 여러 곳에 흩어지면 손상된 카탈로그가 어딘가에서 빈 라이브러리로 조용히 대체될 수 있습니다.
+손상, 알 수 없는 물리 schema, 외부 논리 version 은 `ReadOrCreate` 에서도 그대로 실패입니다.
+
+`CatalogRecovery.IsValidCatalogSource` 만 lock 없이 쓸 수 있습니다. 파일을 열지도 payload 를 읽지도
+않고 `integrity_check` 와 두 version 축만 보는 확인이며, 손상된 primary 가 유효한 backup 을 덮지
+않게 하는 데 필요합니다.
+
+세션은 SQLite 연결을 계속 붙들지 않습니다. 연산마다 열고 닫으므로 backup 세대 교체와 pending
+restore 가 파일을 치환할 수 있습니다. lock 파일만 세션 수명 동안 유지됩니다.
+
+### 9. 없는 파일과 손상된 파일을 구별한다
 
 `NotFound`, `CorruptDatabase`, `UnsupportedStorageVersion`, `UnsupportedCatalogVersion`,
 `MalformedContent`를 각각 다른 값으로 돌려줍니다. 어느 것도 빈 라이브러리로 해석하지 않으며 부분
@@ -141,9 +158,13 @@ snapshot을 반환하지 않습니다. 읽기는 `PRAGMA integrity_check`를 먼
 - 트랜잭션 하나짜리 store입니다. **backup 세대, pending restore, legacy migration, defect sidecar는
   아직 없습니다.** `StorageRootSet`이 경로만 잡아 둔 상태입니다.
 - readback 검증은 `integrity_check`까지입니다. 전체 payload 재디코드 비교는 아직 하지 않습니다.
-- 5만 frame 성능과 fault-injection 검증표는 실행하지 않았습니다. 현재 계약은 정확성만 보장합니다.
-- `CatalogProcessLock`과 store가 아직 하나의 open 경로로 묶여 있지 않습니다. 호출자가 lock을 잡고
-  store를 부르는 것을 강제하지 않습니다.
+- 5만 frame 성능은 측정했으나(`verification/2026-08-07-sqlite-catalog-store.md`) **fault-injection
+  검증표는 실행하지 않았습니다.** 쓰기 도중 강제 종료와 전원 장애 시나리오가 남아 있습니다.
+- 재저장 비용이 바뀐 양이 아니라 catalog 전체 크기에 비례합니다. 5만 frame 목표에서 1초 미만이라
+  지금은 최적화하지 않으며, 되돌아볼 조건은 `progress/next-steps.md`의 결정 12번에 있습니다.
+- lock은 **이 프로세스의 파일 핸들**입니다. 프로세스가 죽으면 핸들이 풀리므로 남은 lock 파일은
+  소유권을 뜻하지 않습니다. 크래시 뒤 "누가 잡고 있는가"를 사용자에게 설명하려면 lock 파일에
+  소유자 정보를 기록하는 별도 작업이 필요합니다.
 - catalog는 C ABI나 WinUI 셸에 아직 연결돼 있지 않습니다.
 - `SourceGear.sqlite3`는 모든 플랫폼의 native를 담아 26MB이며, 그중 Windows 두 RID만 출력에
   복사됩니다. restore 비용일 뿐 payload 비용은 아닙니다.

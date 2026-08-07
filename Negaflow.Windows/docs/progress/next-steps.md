@@ -14,7 +14,7 @@
 톤·포인트 커브·Color Mixer·Color Grading·Primary Calibration → 명시적 film-scan Film Look →
 검증된 PNG16/TIFF16 게시까지 한 장이 끝까지 갑니다.
 
-- 네이티브 테스트 39개, 관리 assertion 291개, 전부 통과
+- 네이티브 테스트 39개, 관리 assertion 310개, 전부 통과
 - Windows CI 가 PR 마다 돌고 벽시계 약 2분 30초
 - 네이티브 엔진의 제3자 runtime dependency 0개 (Windows 기본 DLL 5개만)
 - **카탈로그가 SQLite 로 디스크에 남습니다.** frame 5만 개 기준 쓰기 527ms, 읽기 255ms
@@ -55,6 +55,7 @@
   값으로 거부. 어느 것도 빈 라이브러리가 아니고 부분 snapshot 도 없음
 - `Pooling=False`. 켜 두면 backup 교체와 pending restore 가 남은 핸들에 막힙니다
 - 재정렬 시 position relocation. 이것이 없으면 frame 3개 재정렬만으로 쓰기가 실패합니다
+- `CatalogSession` — 유일한 공개 입구. store 는 `internal` 이라 lock 을 우회할 수 없습니다
 
 **계획과 달랐던 것 두 가지.** 첫째, 편의 package `Microsoft.Data.Sqlite` 를 쓸 수 없었습니다.
 native SQLite 하한이 CVE-2025-6965 대상이라 restore 가 NU1903 으로 실패합니다.
@@ -66,14 +67,18 @@ native SQLite 하한이 CVE-2025-6965 대상이라 restore 가 NU1903 으로 실
 `windows_docs/14-persistence/catalog-and-storage.md` 가 소유하는 것 중 아직 없는 것입니다.
 **순서를 지키십시오.** 아래는 뒤가 앞을 필요로 합니다.
 
-1. **`CatalogProcessLock` 과 store 를 하나의 open 경로로 묶기.** 지금은 호출자가 lock 을 잡고
-   store 를 부르는 것이 강제되지 않습니다. 두 번째 프로세스가 lock 없이 쓸 수 있습니다.
-   가장 싸고 가장 위험을 많이 줄이는 한 걸음입니다.
+1. ~~`CatalogProcessLock` 과 store 를 하나의 open 경로로 묶기.~~ **완료.** `CatalogSession` 이
+   유일한 공개 입구이고 store 는 `internal` 입니다. lock 을 못 잡으면 세션이 만들어지지 않습니다.
 2. **backup 세대와 commit verifier.** 직전 primary 를 보존한 뒤 write/readback/rollback.
-   `IsValidRecoverySource` 가 이미 있으니 손상 primary 가 유효 backup 을 덮는 것은 막을 수 있습니다.
+   `CatalogRecovery.IsValidCatalogSource` 가 이미 있으니 손상 primary 가 유효 backup 을 덮는 것은
+   막을 수 있습니다.
 3. **pending restore.** 다음 safe startup 에서만 적용합니다.
 4. **defect sidecar.** revision-aware writer, temp → flush → atomic replace. catalog 가 defect
    edit 을 선언했는데 sidecar 가 없으면 library open 을 차단합니다.
+
+**셸을 붙일 때 쓸 것:** `CatalogSession.Open(roots)` → `ReadOrCreate()` → `Write(snapshot)` →
+`Dispose()`. `ReadOrCreate` 가 없는 카탈로그를 만드는 유일한 자리이며, 손상이나 알 수 없는
+version 은 거기서도 실패합니다. **어디서도 `NotFound` 를 빈 라이브러리로 바꾸지 마십시오.**
 
 legacy JSON → SQLite migration 은 **하지 않습니다.** Windows 에는 옮겨올 legacy 파일이 없습니다.
 macOS catalog 를 여는 것은 결정 4에서 이미 배제했습니다.

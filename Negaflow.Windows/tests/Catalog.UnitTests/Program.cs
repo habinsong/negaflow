@@ -386,6 +386,7 @@ internal static class Program
         {
             VerifyStoreLifecycle(roots);
             VerifyStoreRefusals(roots);
+            VerifyCatalogSession(roots);
         }
         finally
         {
@@ -452,7 +453,7 @@ internal static class Program
             "store_clear_empties_table");
         Check(afterClear.Snapshot?.ActiveRollId is null, "store_clear_active_roll_null");
 
-        Check(SqliteCatalogStore.IsValidRecoverySource(catalogPath),
+        Check(CatalogRecovery.IsValidCatalogSource(catalogPath),
             "store_valid_recovery_source");
 
         // Pooling 을 켜 두면 여기서 파일이 잠겨 backup 교체가 막힙니다.
@@ -486,7 +487,7 @@ internal static class Program
         Check(futureStorage.Error == CatalogStoreError.UnsupportedStorageVersion,
             "store_rejects_future_storage_version");
         Check(futureStorage.ObservedVersion == 99, "store_reports_observed_storage_version");
-        Check(!SqliteCatalogStore.IsValidRecoverySource(catalogPath),
+        Check(!CatalogRecovery.IsValidCatalogSource(catalogPath),
             "store_future_storage_is_not_recovery_source");
         Check(SqliteCatalogStore.Write(Snapshot(null), catalogPath).Error ==
             CatalogStoreError.UnsupportedStorageVersion,
@@ -499,7 +500,7 @@ internal static class Program
         Check(foreign.Error == CatalogStoreError.UnsupportedCatalogVersion,
             "store_rejects_foreign_catalog_version");
         Check(foreign.ObservedVersion == 6, "store_reports_observed_catalog_version");
-        Check(!SqliteCatalogStore.IsValidRecoverySource(catalogPath),
+        Check(!CatalogRecovery.IsValidCatalogSource(catalogPath),
             "store_foreign_catalog_is_not_recovery_source");
         SetCatalogVersion(catalogPath, CatalogSnapshot.CurrentCatalogVersion);
         Check(SqliteCatalogStore.Read(catalogPath).IsSuccess, "store_restored_fixture_reads");
@@ -509,7 +510,7 @@ internal static class Program
         CatalogReadResult garbage = SqliteCatalogStore.Read(garbagePath);
         Check(garbage.Error == CatalogStoreError.CorruptDatabase, "store_rejects_garbage_file");
         Check(garbage.Snapshot is null, "store_garbage_no_partial_snapshot");
-        Check(!SqliteCatalogStore.IsValidRecoverySource(garbagePath),
+        Check(!CatalogRecovery.IsValidCatalogSource(garbagePath),
             "store_garbage_is_not_recovery_source");
         Check(SqliteCatalogStore.Write(Snapshot(null), garbagePath).Error !=
             CatalogStoreError.None, "store_refuses_write_over_garbage_file");
@@ -518,6 +519,82 @@ internal static class Program
             "store_rejects_relative_path");
         Check(SqliteCatalogStore.Write(Snapshot(null), "library.sqlite").Error ==
             CatalogStoreError.InvalidPath, "store_write_rejects_relative_path");
+    }
+
+    private static void VerifyCatalogSession(StorageRootSet roots)
+    {
+        string sessionBase = Path.Combine(
+            Path.GetDirectoryName(roots.LocalApplicationDataRoot)!,
+            $"session-{Guid.NewGuid():N}");
+        StorageRootSet sessionRoots = StorageRootResolver.ResolveForTests(sessionBase).Roots!;
+        CatalogSession? session = null;
+
+        try
+        {
+            CatalogSessionOpenResult opened = CatalogSession.Open(sessionRoots);
+            session = opened.Session;
+            Check(opened.IsSuccess, "session_open");
+            Check(session?.IsOpen == true, "session_open_is_open");
+            Check(File.Exists(sessionRoots.CatalogLockPath), "session_holds_lock");
+            Check(!File.Exists(sessionRoots.CatalogPath), "session_open_does_not_create_catalog");
+
+            // 두 번째 작성자는 lock 에서 막힙니다. 세션 없이는 store 에 닿을 방법이 없습니다.
+            CatalogSessionOpenResult second = CatalogSession.Open(sessionRoots);
+            Check(!second.IsSuccess, "session_second_rejected");
+            Check(second.Error == CatalogSessionError.Busy, "session_second_busy");
+            Check(second.Session is null, "session_busy_no_partial_session");
+
+            Check(session!.Read().Error == CatalogStoreError.NotFound,
+                "session_read_absent_is_not_found");
+
+            CatalogReadResult created = session.ReadOrCreate();
+            Check(created.IsSuccess, "session_read_or_create_success");
+            Check(created.Snapshot?.Rows(CatalogEntityTable.Frames).Count == 0,
+                "session_read_or_create_is_empty");
+            Check(File.Exists(sessionRoots.CatalogPath), "session_read_or_create_creates_file");
+
+            Check(session.Write(Snapshot("roll-s", Row("frame-1", "one"))).IsSuccess,
+                "session_write");
+            Check(FrameOrder(session.Read()) == "frame-1", "session_write_round_trip");
+
+            // 이미 있는 카탈로그에서는 ReadOrCreate 가 덮지 않습니다.
+            CatalogReadResult reopened = session.ReadOrCreate();
+            Check(FrameOrder(reopened) == "frame-1", "session_read_or_create_preserves_existing");
+
+            // 손상은 ReadOrCreate 에서도 빈 라이브러리가 되지 않습니다.
+            session.Dispose();
+            File.WriteAllBytes(sessionRoots.CatalogPath, "not a database"u8.ToArray());
+            CatalogSessionOpenResult reopenedSession = CatalogSession.Open(sessionRoots);
+            session = reopenedSession.Session;
+            Check(reopenedSession.IsSuccess, "session_reopen_after_dispose");
+            Check(session!.ReadOrCreate().Error == CatalogStoreError.CorruptDatabase,
+                "session_read_or_create_refuses_corrupt");
+
+            session.Dispose();
+            Check(session.IsOpen == false, "session_dispose_releases_lock");
+            bool threw = false;
+            try
+            {
+                session.Read();
+            }
+            catch (ObjectDisposedException)
+            {
+                threw = true;
+            }
+            Check(threw, "session_read_after_dispose_throws");
+
+            CatalogSessionOpenResult third = CatalogSession.Open(sessionRoots);
+            Check(third.IsSuccess, "session_reacquire_after_dispose");
+            third.Session?.Dispose();
+        }
+        finally
+        {
+            session?.Dispose();
+            if (Directory.Exists(sessionBase))
+            {
+                Directory.Delete(sessionBase, recursive: true);
+            }
+        }
     }
 
     private static void SetStorageVersion(string catalogPath, int version) =>

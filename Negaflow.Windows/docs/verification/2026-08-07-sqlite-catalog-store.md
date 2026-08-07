@@ -12,6 +12,7 @@
 - 미래 물리 schema version, 외부(macOS) 논리 version, 손상 파일, 상대 경로 거부
 - 중복 id와 빈 id를 부분 쓰기 없이 거부하는지
 - connection pooling이 파일 핸들을 남기지 않는지
+- 프로세스 lock 없이 카탈로그를 여는 공개 경로가 남아 있지 않은지
 - 취약한 native SQLite가 배포 대상에 들어오지 않는지
 - Windows가 아닌 RID의 native payload가 출력에서 제외되는지
 
@@ -65,16 +66,35 @@ frame 3개를 `(1,2,3)`에서 `(3,1,2)`로 바꾸는 것만으로 쓰기가 실�
 같은 구조가 macOS `LibraryCatalogSQLiteStore.swift`에도 보이지만 **macOS는 완성된 것으로 두므로
 이번에 건드리지 않았습니다.** 그쪽에서 이 경로가 실제로 도달 가능한지는 별도로 확인할 일입니다.
 
+## 단일 작성자 강제
+
+`SqliteCatalogStore`를 `internal`로 내렸습니다. 공개 입구는 `CatalogSession` 하나이며,
+`CatalogSession.Open`이 `CatalogProcessLock`을 먼저 잡습니다. 잡지 못하면 세션 객체 자체가
+만들어지지 않으므로 **lock 없이 카탈로그를 여는 방법이 남아 있지 않습니다.** 이것은 호출자가
+규율을 지키는지의 문제가 아니라 타입 접근성의 문제입니다.
+
+lock 없이 쓸 수 있는 것은 `CatalogRecovery.IsValidCatalogSource` 하나입니다. 파일을 열지도 payload를
+읽지도 않고 `integrity_check`와 두 version 축만 봅니다. 손상된 primary가 유효한 backup을 덮지 않게
+하려면 이 확인이 lock 밖에서 필요합니다.
+
+`NotFound`를 빈 라이브러리로 바꾸는 자리는 `CatalogSession.ReadOrCreate` **한 곳뿐**입니다. 그
+변환이 흩어지면 손상된 카탈로그가 어딘가에서 조용히 빈 라이브러리로 대체될 수 있습니다.
+`session_read_or_create_refuses_corrupt`가 손상 파일에서 `ReadOrCreate`가 여전히 실패하는 것을
+확인합니다.
+
+테스트는 `InternalsVisibleTo`로 store에 직접 닿습니다. 미래 schema version, 손상 파일, 상대 경로
+같은 거부 경로는 정상 세션에서는 만들 수 없기 때문입니다.
+
 ## 실행 결과
 
 | 대상 | 결과 |
 |---|---|
 | x64 Release 네이티브 build + CTest | 39/39 통과 |
 | x64 Release 관리 solution build | 통과, 경고 0·오류 0 |
-| x64 Release catalog unit | 246 assertion 통과 (이전 205, 신규 41) |
+| x64 Release catalog unit | 265 assertion 통과 (이전 205, store 41, session 19) |
 | x64 Release shell unit | 45 assertion 통과 |
 | ARM64 Release 관리 solution cross-build | 통과, 경고 0·오류 0 |
-| 저장소 provenance·라이선스 게이트 | 통과, files=1619 |
+| 저장소 provenance·라이선스 게이트 | 통과, files=1623 |
 | `ci-gate.ps1 -Preset x64-release` 증분 벽시계 | 28.2초 |
 
 ARM64 test executable은 빌드됐지만 x64 호스트에서 실행하지 않았으므로 ARM64 runtime 통과로
@@ -112,6 +132,10 @@ store의 비용이 **바뀐 양이 아니라 catalog 전체 크기에 비례**�
 - backup 세대, pending restore, legacy JSON→SQLite migration, defect sidecar
 - commit 후 전체 payload 재디코드 비교 (지금은 `integrity_check`까지)
 - fault injection: 쓰기 도중 강제 종료와 전원 장애 시나리오
-- `CatalogProcessLock`과 store를 하나의 open 경로로 묶는 것
+- 별도 프로세스를 실제로 띄워서 lock 경합을 확인하는 것. 지금 테스트는 같은 프로세스에서 두
+  번째 세션이 거부되는 것까지만 봅니다. 파일 공유 모드가 `FileShare.None`이므로 프로세스 경계도
+  같은 결과여야 하지만 그것은 아직 추론입니다.
+- 크래시 뒤 남은 lock 파일의 소유자를 사용자에게 설명하는 것. 지금은 stale 파일이 소유권을 뜻하지
+  않는다는 사실만 있고, 누가 잡고 있었는지는 기록하지 않습니다.
 - C ABI와 WinUI 셸 연결
 - WAL 도입 검토. macOS 기준선인 `DELETE` + `FULL`을 유지합니다.
