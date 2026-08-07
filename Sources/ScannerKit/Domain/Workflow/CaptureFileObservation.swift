@@ -8,6 +8,12 @@ import Chromabase
 
 /// 캡처 완료 시점의 파일시스템 개체를 재시작 뒤에도 동일하게 식별하기 위한 안정된 관찰값.
 /// URL만 저장하지 않고 device/inode/size/mtime/ctime을 함께 고정한다.
+///
+/// 세대 동일성 판정에는 ctime을 쓰지 않는다(`identifiesSameFile(as:)`). ctime은 내용과 무관한
+/// 확장 속성 부여만으로도 바뀐다 — 관측된 사례에서는 스캔 원본을 쓴 6~8초 뒤 시스템이
+/// `com.apple.macl`/`com.apple.provenance`를 붙이면서 갱신됐고, 그래서 배치 스캔의 발행이
+/// 전부 막혔다. 내용이 바뀌면 mtime이 함께 바뀌므로 판정은 device/inode/size/mtime으로 한다.
+/// ctime은 기록으로만 남긴다.
 public struct CaptureFileObservation: Codable, Sendable, Equatable, Hashable {
     public static let currentSchemaVersion = 1
 
@@ -56,8 +62,8 @@ public struct CaptureFileObservation: Codable, Sendable, Equatable, Hashable {
         }
         let pathStat = try captureStat(forPath: url)
         let after = try captureStat(for: descriptor)
-        guard before == after,
-              after == pathStat,
+        guard before.identifiesSameFile(as: after),
+              after.identifiesSameFile(as: pathStat),
               pathStat.isRegularFile else {
             throw ScanWorkflowValidationError.invariantViolation(
                 "캡처 파일 관찰 중 원본 파일 또는 경로가 변경되었습니다"
@@ -69,11 +75,21 @@ public struct CaptureFileObservation: Codable, Sendable, Equatable, Hashable {
     /// 현재 경로가 캡처 완료 시점과 같은 파일시스템 개체/세대인지 확인한다.
     public func verifyCurrentFile() throws {
         let current = try Self.capture(for: originalURL)
-        guard current == self else {
+        guard current.identifiesSameFile(as: self) else {
             throw ScanWorkflowValidationError.invariantViolation(
                 "캡처 완료 뒤 원본 파일 또는 경로가 변경되었습니다"
             )
         }
+    }
+
+    /// 같은 경로가 같은 파일 개체·세대를 가리키는지. ctime은 제외한다.
+    public func identifiesSameFile(as other: CaptureFileObservation) -> Bool {
+        originalURL.standardizedFileURL == other.originalURL.standardizedFileURL
+            && device == other.device
+            && inode == other.inode
+            && byteCount == other.byteCount
+            && modifiedSeconds == other.modifiedSeconds
+            && modifiedNanoseconds == other.modifiedNanoseconds
     }
 
     public func validate() throws {
@@ -160,6 +176,16 @@ struct CaptureStatSnapshot: Equatable {
     }
 
     var isRegularFile: Bool { (mode & S_IFMT) == S_IFREG }
+
+    /// `CaptureFileObservation.identifiesSameFile(as:)`와 같은 기준(ctime 제외)이다.
+    func identifiesSameFile(as other: CaptureStatSnapshot) -> Bool {
+        device == other.device
+            && inode == other.inode
+            && mode == other.mode
+            && size == other.size
+            && modifiedSeconds == other.modifiedSeconds
+            && modifiedNanoseconds == other.modifiedNanoseconds
+    }
 
     func observation(for url: URL) throws -> CaptureFileObservation {
         try CaptureFileObservation(

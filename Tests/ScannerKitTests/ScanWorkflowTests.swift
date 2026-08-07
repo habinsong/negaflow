@@ -428,6 +428,40 @@ final class ScanWorkflowTests: XCTestCase {
         XCTAssertThrowsError(try finalizing.succeeded(with: manifest, at: date(3)))
     }
 
+    /// 시스템이 스캔 원본에 확장 속성을 붙이면 ctime만 갱신된다. 내용도 경로도 그대로이므로
+    /// fixity 계산과 발행을 막으면 안 된다.
+    func testCaptureFixityAcceptsExtendedAttributeOnlyChangeAfterCapture() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let rawURL = directory.appendingPathComponent("xattr-touched.tiff")
+        try Data([1, 2, 3, 4]).write(to: rawURL)
+        let finalizing = try makeFinalizingJob(
+            id: firstJobID,
+            ordinal: 1,
+            rawURL: rawURL
+        )
+        let receipt = try XCTUnwrap(finalizing.pendingCapture)
+
+        let changedBefore = try changedTime(of: rawURL)
+        try setProvenanceExtendedAttribute(on: rawURL)
+        XCTAssertNotEqual(
+            changedBefore,
+            try changedTime(of: rawURL),
+            "확장 속성을 붙였는데 ctime이 그대로면 이 테스트는 회귀를 잡지 못한다"
+        )
+
+        let manifest = try CaptureManifest.build(
+            sessionID: sessionID,
+            jobID: firstJobID,
+            attempt: 1,
+            kind: .full,
+            requestedOptions: finalizing.requestedOptions,
+            pendingCapture: receipt,
+            chunkSize: 1
+        )
+        XCTAssertNoThrow(try finalizing.succeeded(with: manifest, at: date(3)))
+    }
+
     func testEveryJobRequiresDedicatedTemporaryOutputURL() throws {
         var options = ScanOptions.strongDefault(scannerID: makeDevice().id)
         options.requestID = firstJobID
@@ -1410,6 +1444,22 @@ final class ScanWorkflowTests: XCTestCase {
             .appendingPathComponent("negaflow-scan-workflow-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         return directory
+    }
+
+    /// 내용을 건드리지 않고 ctime만 바꾸는 유일한 방법이라 확장 속성을 쓴다.
+    private func setProvenanceExtendedAttribute(on url: URL) throws {
+        var value: UInt8 = 1
+        let status = setxattr(url.path, "com.apple.provenance", &value, 1, 0, 0)
+        try XCTSkipIf(status != 0, "이 파일시스템은 확장 속성을 지원하지 않는다")
+    }
+
+    private func changedTime(of url: URL) throws -> Int64 {
+        var info = stat()
+        guard stat(url.path, &info) == 0 else {
+            throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno))
+        }
+        return Int64(info.st_ctimespec.tv_sec) * 1_000_000_000
+            + Int64(info.st_ctimespec.tv_nsec)
     }
 
     private func mutatedJSON(

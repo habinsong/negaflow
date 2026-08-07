@@ -60,7 +60,7 @@ extension AppModel {
                             pendingCapture: pendingCapture
                         )
                     }.value
-                    if !publishFinalizedScan(
+                    if case .failure = publishFinalizedScan(
                         manifest,
                         sessionID: sessionID,
                         jobID: job.id

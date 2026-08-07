@@ -60,11 +60,17 @@ extension AppModel {
         )
     }
 
+    /// 실패 이유를 그대로 돌려준다. 캡처 원본 검증 실패를 카탈로그 저장 실패로 뭉개면
+    /// 사용자가 볼 수 있는 단서가 사라진다.
     func publishFinalizedScan(
         _ manifest: CaptureManifest,
         sessionID: UUID,
         jobID: UUID
-    ) -> Bool {
+    ) -> Result<Void, ScannerError> {
+        let persistenceFailure = ScannerError(
+            .ioFailure,
+            text(AppLocalizedPhrase.scanWorkflowPersistenceFailed)
+        )
         guard let sessionIndex = scanSessions.firstIndex(where: { $0.id == sessionID }),
               let job = scanSessions[sessionIndex].jobs.first(where: {
                   $0.id == jobID && $0.state == .finalizing
@@ -81,7 +87,7 @@ extension AppModel {
                               .deletingLastPathComponent()
                               .standardizedFileURL
               }) else {
-            return false
+            return .failure(persistenceFailure)
         }
 
         let succeededJob: ScanJob
@@ -93,7 +99,7 @@ extension AppModel {
             )
             succeededSession = try scanSessions[sessionIndex].replacing(succeededJob)
         } catch {
-            return false
+            return .failure(scannerError(from: error))
         }
 
         let developFilmType = assignment.developFilmType ?? job.requestedOptions.filmType
@@ -138,7 +144,7 @@ extension AppModel {
         frame.establishLibraryWorkflowBaselineIfNeeded()
 
         guard let rollGeneration = rollsPublishing(frame, assignment: assignment) else {
-            return false
+            return .failure(persistenceFailure)
         }
         var sessions = scanSessions
         sessions[sessionIndex] = succeededSession
@@ -150,7 +156,7 @@ extension AppModel {
             sessions: sessions,
             assignments: scanRollAssignments
         ) else {
-            return false
+            return .failure(persistenceFailure)
         }
 
         seedInitialThumbnail(for: frame, from: manifest.rgbFile.originalURL)
@@ -163,7 +169,7 @@ extension AppModel {
             frame.defectGuidedSensitivity = sensitivity
             runRegionDetect(frame, displayROI: roi)
         }
-        return true
+        return .success(())
     }
 
     private func rollsPublishing(

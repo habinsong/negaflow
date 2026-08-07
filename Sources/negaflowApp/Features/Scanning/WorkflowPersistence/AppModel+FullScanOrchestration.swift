@@ -252,17 +252,25 @@ extension AppModel {
                     }
                     continue
                 }
-                if publishFinalizedScan(manifest, sessionID: sessionID, jobID: work.jobID) {
+                switch publishFinalizedScan(manifest, sessionID: sessionID, jobID: work.jobID) {
+                case .success:
                     publishedFrameCount += 1
-                } else {
-                    let persistenceError = ScannerError(
-                        .ioFailure,
-                        text(AppLocalizedPhrase.scanWorkflowPersistenceFailed)
-                    )
+                case .failure(let publishError):
                     canPublishNextManifest = false
-                    stopReason = persistenceError
+                    stopReason = publishError
+                    // 발행에 실패한 작업도 실패로 닫는다. 그러지 않으면 이 컷만 finalizing으로
+                    // 남아 뒤따라 실패한 컷들과 상태가 어긋난다.
+                    if !failFinalization(
+                        sessionID: sessionID,
+                        jobID: work.jobID,
+                        error: publishError
+                    ) {
+                        unrecordedOrdinals.append(
+                            scanOrdinal(sessionID: sessionID, jobID: work.jobID)
+                        )
+                    }
                     setScanWorkflowError(
-                        persistenceError,
+                        publishError,
                         frameNumber: scanOrdinal(sessionID: sessionID, jobID: work.jobID)
                     )
                 }

@@ -81,7 +81,7 @@ public struct CaptureFileIdentity: Codable, Sendable, Equatable {
 
         let before = try captureStat(for: descriptor)
         guard before.isRegularFile,
-              try before.observation(for: url) == expectedObservation else {
+              try before.observation(for: url).identifiesSameFile(as: expectedObservation) else {
             throw ScanWorkflowValidationError.invariantViolation(
                 "fixity 계산을 시작하기 전에 캡처 원본 파일이 변경되었습니다"
             )
@@ -101,9 +101,9 @@ public struct CaptureFileIdentity: Codable, Sendable, Equatable {
 
         let after = try captureStat(for: descriptor)
         let pathAfter = try captureStat(forPath: url)
-        guard before == after,
-              after == pathAfter,
-              try after.observation(for: url) == expectedObservation,
+        guard before.identifiesSameFile(as: after),
+              after.identifiesSameFile(as: pathAfter),
+              try after.observation(for: url).identifiesSameFile(as: expectedObservation),
               streamedByteCount == after.size else {
             throw ScanWorkflowValidationError.invariantViolation(
                 "fixity 계산 중 캡처 원본 파일이 변경되었습니다"
