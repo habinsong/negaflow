@@ -21,6 +21,7 @@ internal static class Program
         VerifyLibraryDocument();
         VerifyLibraryHost();
         VerifyDevelopPanelState();
+        VerifyFrameImport();
 
         var report = new
         {
@@ -777,6 +778,112 @@ internal static class Program
             DevelopPanelState.Describe(DevelopExportOutcome.Busy())
                 .Contains("already running"),
             "describe_busy");
+    }
+
+    private static void VerifyFrameImport()
+    {
+        int counter = 0;
+        string NextId() => $"import-{++counter}";
+        bool Exists(string path) => !path.Contains("missing", StringComparison.Ordinal);
+
+        FrameImportPlan plan = FrameImport.Plan(
+            [@"C:\scans\a.tif", @"C:\scans\b.tif"],
+            [],
+            DevelopmentProcess.C41,
+            Exists,
+            NextId);
+
+        Check(plan.Rows.Count == 2, "import_plans_both_files");
+        Check(plan.Rejected.Count == 0, "import_rejects_nothing");
+        Check(plan.Rows[0].Id == "import-1", "import_assigns_id");
+        Check(
+            plan.Rows[0].Payload["rawScanPath"]!.GetValue<string>() == @"C:\scans\a.tif",
+            "import_records_source_path");
+        Check(
+            plan.Rows[0].Payload["sourceKind"]!.GetValue<string>() == "imported",
+            "import_records_transport");
+        Check(
+            plan.Rows[0].Payload["customDisplayName"]!.GetValue<string>() == "a.tif",
+            "import_records_display_name");
+        Check(plan.Rows[0].Payload["scanIndex"]!.GetValue<int>() == 0, "import_first_scan_index");
+        Check(plan.Rows[1].Payload["scanIndex"]!.GetValue<int>() == 1, "import_second_scan_index");
+        // route 는 DevelopRouteWriter 가 씁니다. 여기서 직접 쓰면 legacy marker 규칙이 갈라집니다.
+        Check(
+            plan.Rows[0].Payload["filmType"]!.GetValue<string>() == "colorNegative",
+            "import_route_film_type");
+        Check(
+            plan.Rows[0].Payload["sourceSignalKind"]!.GetValue<string>() == "filmNegativeScan",
+            "import_route_signal");
+
+        // 가져온 frame 은 읽히되 아직 현상할 수 없습니다. Dmin 이 없기 때문이며, 기본값을
+        // 지어내지 않는다는 결정이 여기까지 이어집니다.
+        LibraryFrameReadResult read = ReadImported(plan.Rows[0].Payload);
+        Check(read.IsSuccess, "import_record_is_readable");
+        Check(read.Frame?.CanDevelop == false, "import_record_needs_dmin");
+
+        LibraryFrameSnapshot existing = read.Frame!;
+        FrameImportPlan again = FrameImport.Plan(
+            [@"C:\scans\a.tif", @"C:\scans\c.tif"],
+            [existing],
+            DevelopmentProcess.C41,
+            Exists,
+            NextId);
+        Check(again.Rows.Count == 1, "import_skips_existing_file");
+        Check(
+            again.Rejected[0].Refusal == FrameImportRefusal.AlreadyInLibrary,
+            "import_reports_duplicate");
+        Check(
+            again.Rows[0].Payload["scanIndex"]!.GetValue<int>() == 1,
+            "import_continues_scan_index");
+
+        // 같은 호출 안에서 같은 파일을 두 번 고른 경우도 한 건입니다.
+        FrameImportPlan twice = FrameImport.Plan(
+            [@"C:\scans\d.tif", @"C:\scans\d.tif"],
+            [],
+            DevelopmentProcess.C41,
+            Exists,
+            NextId);
+        Check(twice.Rows.Count == 1, "import_deduplicates_within_one_call");
+
+        FrameImportPlan bad = FrameImport.Plan(
+            [@"scans\relative.tif", @"C:\scans\missing.tif"],
+            [],
+            DevelopmentProcess.C41,
+            Exists,
+            NextId);
+        Check(bad.Rows.Count == 0, "import_rejects_bad_paths");
+        Check(
+            bad.Rejected[0].Refusal == FrameImportRefusal.InvalidPath,
+            "import_rejects_relative_path");
+        Check(
+            bad.Rejected[1].Refusal == FrameImportRefusal.FileNotFound,
+            "import_rejects_missing_file");
+
+        Check(
+            FrameImport.Plan([], [], DevelopmentProcess.C41, Exists, NextId)
+                .Rejected[0].Refusal == FrameImportRefusal.NoFiles,
+            "import_empty_selection");
+
+        // 고른 것 중 일부만 들어왔는데 아무 말이 없으면 나머지가 어디 갔는지 알 수 없습니다.
+        Check(
+            FrameImport.Describe(plan).Contains("Imported 2 frames"),
+            "import_describe_count");
+        Check(
+            FrameImport.Describe(plan).Contains("Dmin"),
+            "import_describe_says_next_step");
+        Check(
+            FrameImport.Describe(again).Contains("skipped"),
+            "import_describe_mentions_skipped");
+        Check(
+            FrameImport.Describe(bad).Contains("Nothing imported"),
+            "import_describe_nothing");
+    }
+
+    private static LibraryFrameReadResult ReadImported(JsonObject record)
+    {
+        using JsonDocument document = JsonDocument.Parse(
+            CatalogJson.SerializeCanonical(record));
+        return LibraryFrameReader.Read(document.RootElement);
     }
 
     private static void Check(bool condition, string name)

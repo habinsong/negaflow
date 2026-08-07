@@ -83,6 +83,30 @@ public sealed class LibraryHostService : IDisposable
             ? LibraryFrameError.MissingId
             : document.Edit(frameId, edit);
 
+    /// <summary>
+    /// 고른 파일을 라이브러리에 넣고 바로 저장합니다. 넣기만 하고 저장하지 않으면 앱이 죽었을 때
+    /// 사용자가 방금 가져온 것이 사라집니다.
+    /// </summary>
+    public FrameImportPlan Import(
+        IReadOnlyList<string> filePaths,
+        DevelopmentProcess process)
+    {
+        ArgumentNullException.ThrowIfNull(filePaths);
+        if (document is null)
+        {
+            return new FrameImportPlan([], [new FrameImportRejection(
+                string.Empty,
+                FrameImportRefusal.NoFiles)]);
+        }
+
+        FrameImportPlan plan = FrameImport.Plan(filePaths, document.Frames, process);
+        if (plan.Rows.Count > 0 && document.Append(plan.Rows) > 0)
+        {
+            document.Save();
+        }
+        return plan;
+    }
+
     public CatalogStoreError Save() =>
         document is null ? CatalogStoreError.NotFound : document.Save();
 

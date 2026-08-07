@@ -24,7 +24,8 @@ public sealed partial class WorkspaceShellView : UserControl
     public void Initialize(
         WorkspacePresentationState state,
         NativeEngineStatusService nativeEngineStatusService,
-        LibraryHostService? libraryHost = null)
+        LibraryHostService? libraryHost = null,
+        Microsoft.UI.WindowId? windowId = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(nativeEngineStatusService);
@@ -45,11 +46,11 @@ public sealed partial class WorkspaceShellView : UserControl
         DevelopWorkspace.Initialize(state, nativeEngineStatus);
         // 한계값은 엔진이 알려 줍니다. 엔진을 못 읽으면 슬라이더 범위를 지어내는 대신
         // Develop 패널을 붙이지 않습니다.
-        if (libraryHost is not null && nativeEngineStatus.IsAvailable)
+        if (libraryHost is not null && windowId is { } id && nativeEngineStatus.IsAvailable)
         {
             try
             {
-                DevelopWorkspace.ShowLibrary(libraryHost, ToneLimits.Read());
+                DevelopWorkspace.ShowLibrary(libraryHost, ToneLimits.Read(), id);
             }
             catch (NativeBootstrapException)
             {

@@ -140,6 +140,31 @@ public sealed class LibraryDocument : IDisposable
         return LibraryFrameError.None;
     }
 
+    /// <summary>
+    /// 계획된 frame 을 뒤에 덧붙입니다. 메모리 안에서만 바뀌며 <see cref="Save"/> 로 디스크에
+    /// 갑니다.
+    /// </summary>
+    public int Append(IReadOnlyList<CatalogEntityRow> rows)
+    {
+        ArgumentNullException.ThrowIfNull(rows);
+        int added = 0;
+        foreach (CatalogEntityRow row in rows)
+        {
+            if (rowIds.Contains(row.Id))
+            {
+                continue;
+            }
+            rowIds.Add(row.Id);
+            payloads.Add(row.Payload);
+            ++added;
+        }
+        if (added > 0)
+        {
+            Project();
+        }
+        return added;
+    }
+
     public CatalogStoreError Save()
     {
         List<CatalogEntityRow> rows = new(payloads.Count);

@@ -19,7 +19,11 @@ public sealed partial class MainWindow : Window
         this.workspaceState = workspaceState;
         InitializeComponent();
 
-        ShellView.Initialize(workspaceState, nativeEngineStatusService, libraryHost);
+        ShellView.Initialize(
+            workspaceState,
+            nativeEngineStatusService,
+            libraryHost,
+            AppWindow.Id);
         ShellView.SettingsRequested += OnSettingsRequested;
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(ShellView.TitleBarElement);

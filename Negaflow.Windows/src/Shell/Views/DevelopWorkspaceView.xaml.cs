@@ -15,7 +15,9 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private readonly ThreePaneResizeController resizeController = new();
     private WorkspacePresentationState? workspaceState;
     private DevelopPanelState? panel;
-    private IReadOnlyList<LibraryFrameListItem> frameItems = [];
+    private LibraryHostService? libraryHost;
+    private ToneLimits? toneLimits;
+    private Microsoft.UI.WindowId? importWindowId;
     private bool isSynchronizingExposure;
 
     public DevelopWorkspaceView()
@@ -42,27 +44,91 @@ public sealed partial class DevelopWorkspaceView : UserControl
     /// 라이브러리를 붙입니다. **UI 스레드에서만** 부르십시오. 현상 자체는 워커에서 돌지만
     /// 여기서 만지는 것은 전부 컨트롤입니다.
     /// </summary>
-    public void ShowLibrary(LibraryHostService host, ToneLimits limits)
+    public void ShowLibrary(
+        LibraryHostService host,
+        ToneLimits limits,
+        Microsoft.UI.WindowId windowId)
     {
         ArgumentNullException.ThrowIfNull(host);
         ArgumentNullException.ThrowIfNull(limits);
+        importWindowId = windowId;
 
+        libraryHost = host;
+        toneLimits = limits;
         panel = new DevelopPanelState(host, limits);
-        IReadOnlyList<LibraryFrameListItem> items = LibraryFrameListItems.From(host.Frames);
-        frameItems = items;
+        ExposureSlider.Minimum = -panel.MaximumExposureStops;
+        ExposureSlider.Maximum = panel.MaximumExposureStops;
+        // Import 버튼은 라이브러리가 비어 있을 때도 보여야 합니다. 안 그러면 첫 사진을 넣을
+        // 방법이 없습니다.
+        DevelopCard.Visibility = Visibility.Visible;
+        RefreshFrames();
+    }
 
-        bool hasFrames = items.Count > 0;
-        DevelopCard.Visibility = hasFrames ? Visibility.Visible : Visibility.Collapsed;
-        NoFrameCard.Visibility = hasFrames ? Visibility.Collapsed : Visibility.Visible;
-        if (!hasFrames)
+    private void RefreshFrames()
+    {
+        if (libraryHost is null)
         {
             return;
         }
 
-        ExposureSlider.Minimum = -panel.MaximumExposureStops;
-        ExposureSlider.Maximum = panel.MaximumExposureStops;
+        IReadOnlyList<LibraryFrameListItem> items =
+            LibraryFrameListItems.From(libraryHost.Frames);
+        bool hasFrames = items.Count > 0;
+        FramePanel.Visibility = hasFrames ? Visibility.Visible : Visibility.Collapsed;
+        NoFrameCard.Visibility = hasFrames ? Visibility.Collapsed : Visibility.Visible;
+        if (!hasFrames)
+        {
+            FrameSelector.ItemsSource = null;
+            return;
+        }
+
         FrameSelector.ItemsSource = items;
         FrameSelector.SelectedIndex = 0;
+    }
+
+    private async void OnImportClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (libraryHost is null || importWindowId is null)
+        {
+            return;
+        }
+
+        // Windows App SDK 1.8 의 picker 는 WindowId 를 받으므로 InitializeWithWindow 가
+        // 필요 없습니다. 미패키지 구성에서도 그대로 동작합니다.
+        Microsoft.Windows.Storage.Pickers.FileOpenPicker picker = new(importWindowId.Value)
+        {
+            CommitButtonText = "Import",
+        };
+        picker.FileTypeFilter.Add(".tif");
+        picker.FileTypeFilter.Add(".tiff");
+
+        ImportButton.IsEnabled = false;
+        try
+        {
+            IReadOnlyList<Microsoft.Windows.Storage.Pickers.PickFileResult> picked =
+                await picker.PickMultipleFilesAsync();
+            List<string> paths = [];
+            foreach (Microsoft.Windows.Storage.Pickers.PickFileResult file in picked)
+            {
+                paths.Add(file.Path);
+            }
+
+            FrameImportPlan plan = libraryHost.Import(paths, DevelopmentProcess.C41);
+            ImportStatusText.Text = FrameImport.Describe(plan);
+            RefreshFrames();
+        }
+        catch (Exception error)
+        {
+            // async void 는 예외를 삼킵니다. 잡지 않으면 버튼을 눌러도 아무 일도 일어나지 않고
+            // 이유도 알 수 없습니다.
+            ImportStatusText.Text = $"Import failed: {error.GetType().Name}: {error.Message}";
+        }
+        finally
+        {
+            ImportButton.IsEnabled = true;
+        }
     }
 
     private void OnFrameSelectionChanged(object sender, SelectionChangedEventArgs args)

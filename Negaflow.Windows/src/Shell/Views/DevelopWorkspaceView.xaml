@@ -156,6 +156,18 @@
                         CornerRadius="9"
                         Visibility="Collapsed">
                         <StackPanel Spacing="10">
+                            <Button
+                                x:Name="ImportButton"
+                                HorizontalAlignment="Stretch"
+                                AutomationProperties.AutomationId="negaflow.develop.import"
+                                Click="OnImportClicked"
+                                Content="Import images…" />
+                            <TextBlock
+                                x:Name="ImportStatusText"
+                                FontSize="11"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                TextWrapping="Wrap" />
+                            <StackPanel x:Name="FramePanel" Spacing="10" Visibility="Collapsed">
                             <TextBlock
                                 x:Name="SelectedFrameText"
                                 FontSize="13"
@@ -202,6 +214,7 @@
                                 FontSize="11"
                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                 TextWrapping="Wrap" />
+                            </StackPanel>
                         </StackPanel>
                     </Border>
                 </StackPanel>
