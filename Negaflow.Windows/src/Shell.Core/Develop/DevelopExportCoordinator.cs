@@ -7,6 +7,12 @@ namespace Negaflow.Shell;
 public interface IDevelopExporter
 {
     DevelopExportResult Run(DevelopExportRequest request);
+
+    DevelopExportResult Preview(
+        DevelopExportRequest request,
+        uint maximumWidth,
+        uint maximumHeight,
+        byte[] pixels);
 }
 
 /// <summary>제품 구현. 블로킹이며 워커 스레드에서만 불러야 합니다.</summary>
@@ -14,6 +20,13 @@ public sealed class NativeDevelopExporterAdapter : IDevelopExporter
 {
     public DevelopExportResult Run(DevelopExportRequest request) =>
         NativeDevelopExporter.Run(request);
+
+    public DevelopExportResult Preview(
+        DevelopExportRequest request,
+        uint maximumWidth,
+        uint maximumHeight,
+        byte[] pixels) =>
+        NativeDevelopExporter.Preview(request, maximumWidth, maximumHeight, pixels);
 }
 
 public enum DevelopExportOutcomeKind

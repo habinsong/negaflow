@@ -90,7 +90,7 @@
                 Grid.Row="0"
                 AutomationProperties.AutomationId="negaflow.canvas"
                 Background="{ThemeResource NegaflowCanvasBrush}">
-                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
+                <StackPanel x:Name="EmptyCanvasPanel" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
                     <FontIcon FontSize="42" Foreground="#FF8A8A8A" Glyph="&#xE91B;" />
                     <TextBlock x:Uid="emptyCanvasTitle" HorizontalAlignment="Center" FontSize="18" FontWeight="SemiBold" Foreground="#FFE2E2E2" />
                     <TextBlock
@@ -101,6 +101,13 @@
                         Foreground="#FFA8A8A8"
                         TextWrapping="Wrap" />
                 </StackPanel>
+
+                <Image
+                    x:Name="PreviewImage"
+                    Margin="24"
+                    AutomationProperties.AutomationId="negaflow.canvas.preview"
+                    Stretch="Uniform"
+                    Visibility="Collapsed" />
             </Grid>
 
             <views:FilmstripView x:Name="Filmstrip" Grid.Row="1" />

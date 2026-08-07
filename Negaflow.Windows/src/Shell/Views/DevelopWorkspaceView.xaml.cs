@@ -1,8 +1,11 @@
 using System.Globalization;
+using System.IO;
+using System.Runtime.InteropServices.WindowsRuntime;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI.Xaml.Media.Imaging;
 using Negaflow.Catalog;
 using Negaflow.Interop;
 using Negaflow.Shell.Localization;
@@ -18,6 +21,8 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private LibraryHostService? libraryHost;
     private ToneLimits? toneLimits;
     private Microsoft.UI.WindowId? importWindowId;
+    private PreviewCoordinator? previewCoordinator;
+    private WriteableBitmap? previewBitmap;
     private bool isSynchronizingExposure;
 
     public DevelopWorkspaceView()
@@ -68,6 +73,17 @@ public sealed partial class DevelopWorkspaceView : UserControl
         // Import 버튼은 라이브러리가 비어 있을 때도 보여야 합니다. 안 그러면 첫 사진을 넣을
         // 방법이 없습니다.
         DevelopCard.Visibility = Visibility.Visible;
+        // 미리보기는 캔버스에 맞는 크기면 충분합니다. 전체 해상도로 그리면 슬라이더를 끄는
+        // 동안 엔진이 밀립니다.
+        // 이 메서드는 UI 스레드에서만 불리므로 여기서 dispatcher 를 잡을 수 있습니다.
+        if (DispatcherQueueUiDispatcher.CaptureForCurrentThread() is { } uiDispatcher)
+        {
+            previewCoordinator = new PreviewCoordinator(
+                new NativeDevelopExporterAdapter(),
+                uiDispatcher,
+                1600,
+                1200);
+        }
         RefreshFrames();
     }
 
@@ -171,6 +187,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
                 null,
                 DevelopRequestRefusal.MissingManualBase,
                 null));
+        RequestPreview();
     }
 
     private void OnManualBaseChanged(object sender, RangeBaseValueChangedEventArgs args)
@@ -195,6 +212,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         {
             ExportStatusText.Text = string.Empty;
         }
+        RequestPreview();
     }
 
     private void UpdateSelectedFrameText()
@@ -203,6 +221,53 @@ public sealed partial class DevelopWorkspaceView : UserControl
         {
             SelectedFrameText.Text = new LibraryFrameListItem(frame).Detail;
         }
+    }
+
+    /// <summary>
+    /// 현재 선택을 미리보기로 그립니다. 겹쳐 들어온 요청은 coordinator 가 합치되 마지막 것은
+    /// 반드시 그리므로, 슬라이더를 끌어도 최종 상태가 화면에 남습니다.
+    /// </summary>
+    private void RequestPreview()
+    {
+        if (previewCoordinator is null || panel?.SelectedFrame is not { } frame)
+        {
+            return;
+        }
+        _ = previewCoordinator.RequestAsync(frame, ShowPreview);
+    }
+
+    private void ShowPreview(PreviewOutcome outcome)
+    {
+        if (outcome.Kind != DevelopExportOutcomeKind.Completed ||
+            outcome.Pixels is not { } pixels ||
+            outcome.Width == 0U ||
+            outcome.Height == 0U)
+        {
+            PreviewImage.Visibility = Visibility.Collapsed;
+            EmptyCanvasPanel.Visibility = Visibility.Visible;
+            return;
+        }
+
+        int width = (int)outcome.Width;
+        int height = (int)outcome.Height;
+        // 크기가 바뀔 때만 새로 만듭니다. 슬라이더를 끄는 동안 매 프레임 할당하지 않기 위해서입니다.
+        if (previewBitmap is null ||
+            previewBitmap.PixelWidth != width ||
+            previewBitmap.PixelHeight != height)
+        {
+            previewBitmap = new WriteableBitmap(width, height);
+            PreviewImage.Source = previewBitmap;
+        }
+
+        int written = width * height * 4;
+        using (Stream buffer = previewBitmap.PixelBuffer.AsStream())
+        {
+            buffer.Write(pixels, 0, written);
+        }
+        previewBitmap.Invalidate();
+
+        PreviewImage.Visibility = Visibility.Visible;
+        EmptyCanvasPanel.Visibility = Visibility.Collapsed;
     }
 
     private void UpdateManualBaseText()
@@ -228,6 +293,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         }
         panel.SetExposure(ExposureSlider.Value);
         UpdateExposureText();
+        RequestPreview();
     }
 
     private void UpdateExposureText()

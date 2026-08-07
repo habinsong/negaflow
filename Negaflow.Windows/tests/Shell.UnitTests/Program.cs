@@ -22,6 +22,7 @@ internal static class Program
         VerifyLibraryHost();
         VerifyDevelopPanelState();
         VerifyFrameImport();
+        VerifyPreviewCoordinator();
 
         var report = new
         {
@@ -292,6 +293,23 @@ internal static class Program
             LastThreadId = Environment.CurrentManagedThreadId;
             gate?.Wait();
             return behaviour(request);
+        }
+
+        public DevelopExportResult Preview(
+            DevelopExportRequest request,
+            uint maximumWidth,
+            uint maximumHeight,
+            byte[] pixels)
+        {
+            _ = maximumWidth;
+            _ = maximumHeight;
+            // 진짜 엔진은 여기를 채웁니다. 흉내에서도 채워야 "픽셀이 돌아왔다" 는 확인이
+            // 실제로 무언가를 보는 확인이 됩니다.
+            if (pixels.Length > 0)
+            {
+                pixels[0] = 0xFF;
+            }
+            return Run(request);
         }
     }
 
@@ -912,6 +930,66 @@ internal static class Program
         using JsonDocument document = JsonDocument.Parse(
             CatalogJson.SerializeCanonical(record));
         return LibraryFrameReader.Read(document.RootElement);
+    }
+
+    private static void VerifyPreviewCoordinator()
+    {
+        FakeDispatcher dispatcher = new(accepts: true);
+        using ManualResetEventSlim gate = new(initialState: false);
+        FakeExporter exporter = new(_ => OkResult(), gate);
+        PreviewCoordinator coordinator = new(exporter, dispatcher, 64, 64);
+
+        LibraryFrameSnapshot first = Frame(new ManualBaseRgb(0.2, 0.2, 0.2));
+        List<uint> delivered = [];
+
+        Task started = coordinator.RequestAsync(first, outcome => delivered.Add(outcome.Width));
+        while (Volatile.Read(ref exporter.CallCount) == 0)
+        {
+            Thread.Yield();
+        }
+        Check(coordinator.IsRendering, "preview_reports_rendering");
+
+        // 슬라이더 한 번에 요청이 여러 번 옵니다. 중간 것은 이미 지나간 상태이므로 버리되,
+        // **마지막 것은 반드시 그려져야** 사용자가 방금 한 조작이 화면에 남습니다.
+        coordinator.RequestAsync(first, outcome => delivered.Add(outcome.Width));
+        coordinator.RequestAsync(first, outcome => delivered.Add(outcome.Width));
+        coordinator.RequestAsync(first, outcome => delivered.Add(outcome.Width));
+
+        gate.Set();
+        started.GetAwaiter().GetResult();
+
+        Check(exporter.CallCount == 2, "preview_coalesces_to_one_pending");
+        Check(delivered.Count == 2, "preview_delivers_first_and_last");
+        Check(!coordinator.IsRendering, "preview_clears_rendering_flag");
+
+        // 요청이 겹치지 않으면 그냥 매번 그립니다.
+        FakeDispatcher quiet = new(accepts: true);
+        FakeExporter sequential = new(_ => OkResult());
+        PreviewCoordinator simple = new(sequential, quiet, 64, 64);
+        PreviewOutcome? outcomeOne = null;
+        simple.RequestAsync(first, outcome => outcomeOne = outcome).GetAwaiter().GetResult();
+        Check(outcomeOne?.Kind == DevelopExportOutcomeKind.Completed, "preview_completed");
+        Check(outcomeOne?.Width == 100, "preview_reports_width");
+        Check(outcomeOne?.Pixels is not null, "preview_hands_back_pixels");
+
+        // 현상할 수 없는 frame 은 엔진을 부르지 않고 이유를 돌려줍니다.
+        FakeExporter neverCalled = new(_ => OkResult());
+        PreviewCoordinator refusing = new(neverCalled, quiet, 64, 64);
+        PreviewOutcome? refusal = null;
+        refusing.RequestAsync(Frame(null), outcome => refusal = outcome)
+            .GetAwaiter().GetResult();
+        Check(refusal?.Kind == DevelopExportOutcomeKind.Refused, "preview_refused");
+        Check(
+            refusal?.Refusal == DevelopRequestRefusal.MissingManualBase,
+            "preview_refusal_reason");
+        Check(neverCalled.CallCount == 0, "preview_refusal_skips_engine");
+
+        FakeExporter throwing = new(_ => throw new InvalidOperationException("engine gone"));
+        PreviewCoordinator faulting = new(throwing, quiet, 64, 64);
+        PreviewOutcome? fault = null;
+        faulting.RequestAsync(first, outcome => fault = outcome).GetAwaiter().GetResult();
+        Check(fault?.Kind == DevelopExportOutcomeKind.Faulted, "preview_faulted");
+        Check(!faulting.IsRendering, "preview_clears_flag_after_fault");
     }
 
     private static void Check(bool condition, string name)
