@@ -59,6 +59,7 @@
 - [2026-08-04 파이프라인 CPU 시간·단계 진단 검증](verification/2026-08-04-pipeline-diagnostics.md)
 - [2026-08-04 압축 TIFF 사전 검사 검증](verification/2026-08-04-compressed-tiff-preflight.md)
 - [2026-08-07 SQLite catalog store 검증](verification/2026-08-07-sqlite-catalog-store.md)
+- [2026-08-07 세로 슬라이스 검증](verification/2026-08-07-vertical-slice.md)
 - [SQLite catalog store 공식 근거와 권리 조사](research/sqlite-catalog-store-sources.md)
 - [이미지 I/O 조사와 권리 검토](research/image-io-sources.md)
 - [압축 TIFF 사전 검사 공식 근거와 권리 검토](research/compressed-tiff-preflight-sources.md)
