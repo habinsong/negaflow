@@ -99,7 +99,7 @@ lock 없이 쓸 수 있는 것은 `CatalogRecovery.IsValidCatalogSource` 하나�
 
 | 대상 | 결과 |
 |---|---|
-| x64 Release 네이티브 build + CTest | 39/39 통과 |
+| x64 Release 네이티브 build + CTest | 40/40 통과 |
 | x64 Release 관리 solution build | 통과, 경고 0·오류 0 |
 | x64 Release catalog unit | 267 assertion 통과 (이전 205, store 41, session 21) |
 | x64 Release shell unit | 45 assertion 통과 |
@@ -144,5 +144,5 @@ store의 비용이 **바뀐 양이 아니라 catalog 전체 크기에 비례**�
 - fault injection: 쓰기 도중 강제 종료와 전원 장애 시나리오
 - 크래시 뒤 남은 lock 파일의 소유자를 사용자에게 설명하는 것. 지금은 stale 파일이 소유권을 뜻하지
   않는다는 사실만 있고, 누가 잡고 있었는지는 기록하지 않습니다.
-- C ABI와 WinUI 셸 연결
+- WinUI 셸 연결. C ABI 쪽은 `nf_develop_export_v1` 로 열렸으나 카탈로그는 아직 셸에 붙지 않았습니다.
 - WAL 도입 검토. macOS 기준선인 `DELETE` + `FULL`을 유지합니다.

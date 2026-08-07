@@ -14,7 +14,7 @@
 톤·포인트 커브·Color Mixer·Color Grading·Primary Calibration → 명시적 film-scan Film Look →
 검증된 PNG16/TIFF16 게시까지 한 장이 끝까지 갑니다.
 
-- 네이티브 테스트 39개, 관리 assertion 312개, 전부 통과
+- 네이티브 테스트 40개, 관리 assertion 340개, 전부 통과
 - Windows CI 가 PR 마다 돌고 벽시계 약 2분 30초
 - 네이티브 엔진의 제3자 runtime dependency 0개 (Windows 기본 DLL 5개만)
 - **카탈로그가 SQLite 로 디스크에 남습니다.** frame 5만 개 기준 쓰기 527ms, 읽기 255ms
@@ -93,6 +93,28 @@ macOS catalog 를 여는 것은 결정 4에서 이미 배제했습니다.
 **카탈로그가 저장되기 시작했으므로 이제 이것이 최우선입니다.** `카탈로그 → C ABI → WinUI 셸` 을
 연결합니다. 위 1번의 2~4단계보다 먼저 해도 됩니다. 오히려 셸이 붙어야 backup 과 sidecar 의 실제
 호출 패턴이 드러납니다.
+
+### 진행 상황
+
+**C ABI 쪽 절반은 끝났습니다.** `nf_develop_export_v1` (ABI 0.2) 이 decode→develop→tone→Film
+Look→검증 게시 전체를 한 번의 호출로 돌리고, 관리 쪽 `NativeDevelopExporter.Run` 이 그것을
+감쌉니다. 실패는 **거부한 단계 + 그 단계 자신의 상태 이름**으로 돌아오므로, 없는 파일
+(`observe_source_before`) 과 잘못된 요청 (`request_validation`) 이 구별됩니다.
+
+남은 것은 **셸 쪽 절반**입니다. 다음 순서로 하십시오.
+
+1. `CatalogSession` 으로 카탈로그를 열고 frame 목록을 Library 에 띄웁니다. 아직 import 가 없으니
+   경로를 직접 넣는 임시 진입점이어도 됩니다.
+2. Develop 에서 슬라이더 하나(노출이 가장 싸다)를 `DevelopExportRequest` 에 연결합니다.
+3. Export 버튼이 `NativeDevelopExporter.Run` 을 호출하고 결과 파일을 씁니다.
+
+**스레딩을 여기서 틀리면 안 됩니다.** `NativeDevelopExporter.Run` 은 현상 전체 동안 블로킹하며,
+일부러 async 래퍼를 두지 않았습니다. UI 스레드에서 부르면 앱이 굳습니다. 백그라운드로 보내기
+**전에** `DispatcherQueue` 를 캡처하고, 결과는 `TryEnqueue` 로 되돌리십시오. 아래 함정 절을
+그대로 따르면 됩니다.
+
+취소와 진행률은 아직 ABI 에 없습니다. 세로 슬라이스에는 필요하지 않지만, 큰 프레임에서 사용자가
+기다리게 되는 순간 바로 필요해집니다.
 
 **목표는 기능이 아닙니다.** 이미지 한 장이 Library 에 보이고, Develop 에서 슬라이더 하나가 먹고,
 Export 가 파일을 쓰면 충분합니다. 못생겨도 됩니다.

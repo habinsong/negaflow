@@ -11,7 +11,8 @@
 | x64 native tests | 통과 | Debug/Release CTest 각각 37/37 통과 |
 | ARM64 cross build | 통과 | Debug/Release 전체 target build, CLI/DLL PE `AA64` |
 | ARM64 native run | 미검증 | 실제 ARM64 Windows runner 필요 |
-| .NET 10/C ABI Interop | 기반 통과 | `LibraryImport`, 절대 경로 resolver, ABI/layout 검증. x64 Debug/Release 13개 assertion, ARM64 교차 빌드 |
+| .NET 10/C ABI Interop | 파이프라인 노출 | `LibraryImport`, 절대 경로 resolver, ABI/layout 검증에 더해 `nf_develop_export_v1` 로 decode→develop→tone→Film Look→검증 게시 전체를 관리 코드에서 호출. ABI 0.2, struct 크기·offset 을 네이티브 `static_assert` 와 관리 assertion 양쪽에서 고정. x64 28개 assertion, ARM64 교차 빌드 |
+| 네이티브 파이프라인 라이브러리 | 분리 완료 | `negaflow_pipeline` 이 `develop_and_export` 와 Film Look workspace 를 소유. CLI 는 workspace 를 이 라이브러리에서 링크. CLI 자체 순서 코드의 수렴은 미완 |
 | WinUI shell | 첫 기반 통과 | component package 1.8 locked graph, x64 실제 최대화 실행, ARM64 교차 빌드, 6개 언어, 오른쪽 caption inset, Settings와 SHA 기본 `끔` |
 | static runtime 배포 기반 | 통과 | Release CLI 직접 dependency가 Windows 기본 DLL 5개뿐이며 VC++ Redistributable DLL 없음 |
 | float32 pixel contract | 부분 구현 | checked layout/stride/capacity, extended RGB, straight alpha, NaN/Inf 거부 |
@@ -75,6 +76,13 @@ build ID는 빌드 당시 미커밋 작업이 있으면 `-dirty`로 표시합니
 - 비Windows RID의 native payload 28종을 빌드 출력에서 제외했습니다. 53,571,344 → 3,788,288 바이트.
 - **제품 payload에 제3자 native 바이너리가 처음 들어왔습니다.** 네이티브 엔진의 제3자 0개는
   그대로지만 두 문장은 이제 다른 뜻이므로 고지 문서에서 구분했습니다.
+- `nf_develop_export_v1` 로 파이프라인 전체를 C ABI 에 노출했습니다. 그 전까지 셸이 프레임 한 장을
+  현상하려면 CLI 프로세스를 띄우는 수밖에 없었습니다. 순서 코드를 복사하지 않기 위해 CLI 안에
+  있던 것을 `negaflow_pipeline` 정적 라이브러리로 꺼냈습니다.
+- ABI 를 0.2 로 올리고 관리 loader 의 최소 minor 도 올렸습니다. 낡은 엔진은 첫 export 호출이 아니라
+  load 시점에 거부됩니다.
+- `dumpbin /dependents` 로 확인: imaging·output 을 링크한 뒤에도 `Negaflow.Native.dll` 의 직접
+  import 는 `KERNEL32`, `SHLWAPI`, `ole32`, `mscms` 뿐입니다. 네이티브 엔진의 제3자 0개는 유지됩니다.
 
 전체 M0~M18 로드맵 진행률은 산출물 기준 약 16%, 현재 M0~M3 기반 구간은 약 50%로 추정합니다.
 `M14 영속성`이 SQLite 왕복까지 올라왔으나 backup 세대·pending restore·legacy migration·defect
