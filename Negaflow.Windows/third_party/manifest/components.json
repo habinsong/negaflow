@@ -109,6 +109,50 @@
       "notice_requirement": "Not currently applicable because no WebView2 binary is shipped. If the payload is reintroduced, reproduce LICENSE.txt and NOTICE.txt with the binary distribution."
     },
     {
+      "name": "Microsoft.Data.Sqlite.Core",
+      "version": "10.0.10",
+      "relationship": "direct",
+      "license": "MIT",
+      "license_source": "https://www.nuget.org/packages/Microsoft.Data.Sqlite.Core/10.0.10/License",
+      "current_payload": "Microsoft.Data.Sqlite.dll",
+      "selection_note": "The convenience Microsoft.Data.Sqlite package is deliberately not used. It floors the native SQLite at SQLitePCLRaw.lib.e_sqlite3 2.1.11, which is affected by CVE-2025-6965 (GHSA-2m69-gcr7-jv3q, CVSS 7.2) with no patched 2.x release, and restore fails NU1903 under this repository's TreatWarningsAsErrors setting. See docs/decisions/0025-managed-sqlite-catalog-provider.md."
+    },
+    {
+      "name": "SQLitePCLRaw.config.e_sqlite3",
+      "version": "3.0.5",
+      "relationship": "direct",
+      "license": "Apache-2.0",
+      "license_source": "https://www.nuget.org/packages/SQLitePCLRaw.config.e_sqlite3/3.0.5/License",
+      "current_payload": "SQLitePCLRaw.batteries_v2.dll"
+    },
+    {
+      "name": "SQLitePCLRaw.provider.e_sqlite3",
+      "version": "3.0.5",
+      "relationship": "transitive",
+      "license": "Apache-2.0",
+      "license_source": "https://www.nuget.org/packages/SQLitePCLRaw.provider.e_sqlite3/3.0.5/License",
+      "current_payload": "SQLitePCLRaw.provider.e_sqlite3.dll"
+    },
+    {
+      "name": "SQLitePCLRaw.core",
+      "version": "3.0.5",
+      "relationship": "transitive",
+      "license": "Apache-2.0",
+      "license_source": "https://www.nuget.org/packages/SQLitePCLRaw.core/3.0.5/License",
+      "current_payload": "SQLitePCLRaw.core.dll"
+    },
+    {
+      "name": "SourceGear.sqlite3",
+      "version": "3.53.4",
+      "relationship": "direct",
+      "license": "Apache-2.0",
+      "license_source": "https://www.nuget.org/packages/SourceGear.sqlite3/3.53.4/License",
+      "upstream_license": "SQLite itself is public domain; the Apache-2.0 terms cover SourceGear's packaging of the build.",
+      "current_payload": "runtimes/win-x64/native/e_sqlite3.dll and runtimes/win-arm64/native/e_sqlite3.dll",
+      "payload_note": "First third-party native binary in the distribution. The native imaging engine still links nothing third-party, but the product payload is no longer third-party free.",
+      "exclusion": "The package carries native binaries for around 30 runtime identifiers. The RestrictRuntimeTargetsToWindows target in Directory.Build.targets keeps only win-x64 and win-arm64 in the build output, dropping roughly 48 MB of Android, iOS, Linux and WebAssembly binaries that this product cannot execute. Measured on 2026-08-07: 53,571,344 bytes across 30 runtime identifiers before, 3,788,288 bytes across 2 after."
+    },
+    {
       "name": "runtimepack.Microsoft.Windows.SDK.NET.Ref",
       "version": "10.0.26100.57",
       "relationship": "implicit-platform-runtime-pack",
@@ -120,11 +164,14 @@
     "status": "not-release-ready",
     "completed_actions": [
       "Dropped the unused Microsoft.Web.WebView2 payload from the shell output, which removes its BSD-3-Clause reproduction obligation and its transitive NOTICE.txt chain (2026-08-06).",
-      "Recorded the remaining third-party notices in Negaflow.Windows/THIRD-PARTY-NOTICES.md (2026-08-06)."
+      "Recorded the remaining third-party notices in Negaflow.Windows/THIRD-PARTY-NOTICES.md (2026-08-06).",
+      "Selected the SQLite catalog stack so that no known-vulnerable native SQLite is redistributed, and restricted the copied runtime identifiers to win-x64 and win-arm64 (2026-08-07)."
     ],
     "required_actions": [
       "Chain or document installation of the .NET 10 runtime and Windows App Runtime 1.8.",
       "Copy the Microsoft Windows App SDK license.txt from the pinned restored package into the installer payload, rather than a hand-copied excerpt.",
+      "Copy the MIT licence text for Microsoft.Data.Sqlite.Core, and the Apache-2.0 licence text plus any NOTICE file for the four SQLitePCLRaw and SourceGear packages, from the pinned restored package directories into the installer payload.",
+      "Re-check SourceGear.sqlite3 against the current SQLite advisories at release time; it is the only pinned package that carries a native SQLite build.",
       "Produce the release payload from a clean build so that no stale WebView2 binary from an incremental build is shipped.",
       "Confirm that no Windows App SDK telemetry feature is enabled before release.",
       "Generate and review the final installer SBOM from the exact release payload, then re-review THIRD-PARTY-NOTICES.md against it."

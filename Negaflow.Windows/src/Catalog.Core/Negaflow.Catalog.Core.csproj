@@ -4,4 +4,9 @@
     <AssemblyName>Negaflow.Catalog.Core</AssemblyName>
     <RootNamespace>Negaflow.Catalog</RootNamespace>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" />
+    <PackageReference Include="SQLitePCLRaw.config.e_sqlite3" />
+    <PackageReference Include="SourceGear.sqlite3" />
+  </ItemGroup>
 </Project>

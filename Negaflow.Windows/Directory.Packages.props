@@ -3,6 +3,14 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
+    <!-- The bundled Microsoft.Data.Sqlite package pins the native SQLite floor at
+         SQLitePCLRaw.lib.e_sqlite3 2.1.11, which carries CVE-2025-6965 and has no patched
+         2.x release. Referencing .Core with the config + native packages separately is the
+         SQLitePCLRaw 3.0 documented shape and lets the native SQLite version move on its
+         own. See docs/decisions/0025-managed-sqlite-catalog-provider.md. -->
+    <PackageVersion Include="Microsoft.Data.Sqlite.Core" Version="10.0.10" />
+    <PackageVersion Include="SQLitePCLRaw.config.e_sqlite3" Version="3.0.5" />
+    <PackageVersion Include="SourceGear.sqlite3" Version="3.53.4" />
     <PackageVersion Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.7705" />
     <PackageVersion Include="Microsoft.WindowsAppSDK.Runtime" Version="1.8.260710003" />
     <PackageVersion Include="Microsoft.WindowsAppSDK.WinUI" Version="1.8.260709004" />

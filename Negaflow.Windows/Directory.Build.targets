@@ -1,0 +1,29 @@
+<Project>
+
+  <!--
+    이 제품은 Windows x64/ARM64 전용입니다. 그런데 RID 를 고정하지 않은 관리 프로젝트는 NuGet 이
+    가진 모든 RID 의 native 자산을 출력으로 복사합니다. SourceGear.sqlite3 하나만으로 android,
+    ios, linux, browser-wasm 을 포함해 30개 RID, 약 53MB 가 복사되고 그중 Windows 는 5MB 입니다.
+
+    ADR-0022 의 WebView2 payload 제외와 같은 이유입니다. 쓰이지 않는 제3자 바이너리를 출력에 두면
+    릴리스 payload 와 SBOM 이 실제로 실행되는 것과 어긋나고, 고지 의무의 범위도 흐려집니다.
+
+    복사 자체를 막으므로 clean build 에서만 완전합니다. 이전 빌드가 남긴 파일은 지우지 않습니다.
+  -->
+  <Target Name="RestrictRuntimeTargetsToWindows"
+          AfterTargets="ResolveReferences"
+          Condition="'$(RestrictRuntimeTargetsToWindows)' != 'false'">
+    <ItemGroup>
+      <_NonWindowsRuntimeTarget
+          Include="@(ReferenceCopyLocalPaths)"
+          Condition="'%(ReferenceCopyLocalPaths.DestinationSubDirectory)' != '' AND
+                     $([System.String]::Copy('%(ReferenceCopyLocalPaths.DestinationSubDirectory)').Replace('/','\').StartsWith('runtimes\')) AND
+                     !$([System.String]::Copy('%(ReferenceCopyLocalPaths.DestinationSubDirectory)').Replace('/','\').StartsWith('runtimes\win-x64\')) AND
+                     !$([System.String]::Copy('%(ReferenceCopyLocalPaths.DestinationSubDirectory)').Replace('/','\').StartsWith('runtimes\win-arm64\'))" />
+      <ReferenceCopyLocalPaths Remove="@(_NonWindowsRuntimeTarget)" />
+    </ItemGroup>
+    <Message Importance="normal"
+             Text="[negaflow] dropped @(_NonWindowsRuntimeTarget->Count()) non-Windows runtime asset(s) from $(MSBuildProjectName)" />
+  </Target>
+
+</Project>

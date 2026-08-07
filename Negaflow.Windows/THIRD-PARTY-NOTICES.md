@@ -14,6 +14,11 @@ third-party code. Its only imports are Windows system libraries
 (`kernel32`, `bcrypt`, `mscms`, `ole32`, `shlwapi`), so it contributes no
 obligations to this file.
 
+That zero-dependency statement is about the native engine, not about the
+distribution as a whole. As of 2026-08-07 the managed catalog layer ships a
+third-party **native** binary of its own — `e_sqlite3.dll` — under section 3
+below. See [ADR-0025](docs/decisions/0025-managed-sqlite-catalog-provider.md).
+
 ---
 
 ## 1. Microsoft Windows App SDK (WinUI 3)
@@ -99,13 +104,55 @@ the payload is ever reintroduced, that `NOTICE.txt` must be reproduced alongside
 this file, unmodified, from the pinned package directory — it is Microsoft's own
 attribution document and must not drift from the version actually shipped.
 
-## 3. Windows platform APIs
+## 3. SQLite catalog stack
+
+The catalog store (`Negaflow.Catalog.Core`) uses SQLite through the managed
+provider. The packages are referenced separately rather than through the
+convenience `Microsoft.Data.Sqlite` package, so that the native SQLite version
+can be raised on its own; see
+[ADR-0025](docs/decisions/0025-managed-sqlite-catalog-provider.md) for why that
+matters here.
+
+| Package | Version | License | Shipped payload |
+|---|---|---|---|
+| `Microsoft.Data.Sqlite.Core` | 10.0.10 | MIT | `Microsoft.Data.Sqlite.dll` |
+| `SQLitePCLRaw.config.e_sqlite3` | 3.0.5 | Apache-2.0 | `SQLitePCLRaw.batteries_v2.dll` |
+| `SQLitePCLRaw.provider.e_sqlite3` | 3.0.5 | Apache-2.0 | `SQLitePCLRaw.provider.e_sqlite3.dll` |
+| `SQLitePCLRaw.core` | 3.0.5 | Apache-2.0 | `SQLitePCLRaw.core.dll` |
+| `SourceGear.sqlite3` | 3.53.4 | Apache-2.0 | `runtimes\win-x64\native\e_sqlite3.dll`, `runtimes\win-arm64\native\e_sqlite3.dll` |
+
+- **MIT** (`Microsoft.Data.Sqlite.Core`): the licence text and copyright notice
+  must accompany the distribution. Copy it from `LICENSE.txt` in the restored
+  package directory for the exact pinned version.
+- **Apache-2.0** (the four SQLitePCLRaw and SourceGear packages): section 4(a)
+  requires a copy of the licence with the distribution, and section 4(d)
+  requires that any `NOTICE` file carried by those packages be reproduced.
+  Take both from the restored package directories for the pinned versions
+  rather than from a hand-copied excerpt.
+- **SQLite itself is in the public domain** and imposes no obligation. The
+  Apache-2.0 terms above come from SourceGear's packaging of the build, not
+  from SQLite.
+
+`SourceGear.sqlite3` carries native binaries for around 30 runtime identifiers.
+The `RestrictRuntimeTargetsToWindows` target in `Directory.Build.targets` keeps
+only `win-x64` and `win-arm64` in the build output, which drops roughly 48 MB of
+Android, iOS, Linux and WebAssembly binaries that this product cannot execute.
+Those excluded binaries are not distributed and carry no notice obligation here.
+As with the WebView2 exclusion, the target prevents copying but does not delete
+files left by an earlier build, so release payloads must come from a clean build.
+
+**Not used, and deliberately so:** `SQLitePCLRaw.bundle_winsqlite3`, which would
+bind the product to `winsqlite3.dll`. Microsoft treats that DLL as a Windows
+component for Windows and Microsoft apps and updates it only through Windows
+Update, so it is not a supported base for a third-party product database.
+
+## 4. Windows platform APIs
 
 The following are used through the operating system and are **not** redistributed:
 Windows SDK, Win32, Windows Imaging Component, Windows Color System / ICM, COM,
 and Shell Lightweight Utility APIs.
 
-## 4. Build-only tooling
+## 5. Build-only tooling
 
 `vcpkg` (MIT), `Microsoft.Windows.SDK.BuildTools`, and
 `Microsoft.Windows.SDK.BuildTools.MSIX` are development tools. They are pinned
