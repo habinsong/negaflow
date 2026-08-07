@@ -5,7 +5,10 @@ internal static unsafe class NativeAbiReader
     internal const int BuildInfoV1Size = 44;
     internal const int SourceCommitSha1Offset = 24;
     internal const ushort SupportedMajor = 0;
-    internal const ushort MinimumMinor = 1;
+
+    // Raised to 2 with nf_develop_export_v1. The managed side calls that export, so
+    // an engine below this minor must be refused at load rather than at the call.
+    internal const ushort MinimumMinor = 2;
 
     private const uint StatusOk = 0;
 

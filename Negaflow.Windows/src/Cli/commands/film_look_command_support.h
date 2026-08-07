@@ -1,12 +1,10 @@
 #pragma once
 
 #include "negaflow/imaging/working_film_look.h"
+#include "negaflow/pipeline/film_look_workspace.h"
 
-#include <cstddef>
 #include <cstdint>
-#include <memory>
 #include <string_view>
-#include <vector>
 
 namespace negaflow::cli {
 
@@ -34,31 +32,15 @@ struct FilmLookCommandRecipe final {
 [[nodiscard]] const char* film_emulation_recipe_name(
     negaflow::imaging::FilmEmulation emulation) noexcept;
 
-enum class FilmLookWorkspacePrepareStatus : std::uint8_t {
-    ok = 0,
-    invalid_parameters,
-    size_overflow,
-    allocation_failed,
-};
+// The Film Look workspace moved to negaflow_pipeline so the C ABI can run the same
+// pipeline. These aliases keep the command call sites reading the same way.
+using FilmLookWorkspacePrepareStatus =
+    negaflow::pipeline::FilmLookWorkspacePrepareStatus;
+using FilmLookCommandWorkspace = negaflow::pipeline::FilmLookWorkspaceStorage;
 
-struct FilmLookCommandWorkspace final {
-    std::unique_ptr<negaflow::imaging::FilmEmulationColorCube> color_cube{};
-    std::vector<negaflow::imaging::FilmEmulationAcutanceScratchPixel>
-        acutance_scratch{};
-};
-
-[[nodiscard]] FilmLookWorkspacePrepareStatus prepare_film_look_workspace(
-    const negaflow::imaging::WorkingFilmLookParameters& parameters,
-    std::uint32_t image_width,
-    FilmLookCommandWorkspace& storage) noexcept;
-
-[[nodiscard]] negaflow::imaging::WorkingFilmLookWorkspace
-film_look_workspace_view(FilmLookCommandWorkspace& storage) noexcept;
-
-[[nodiscard]] std::size_t film_look_workspace_bytes(
-    const FilmLookCommandWorkspace& storage) noexcept;
-
-[[nodiscard]] const char* film_look_workspace_prepare_status_name(
-    FilmLookWorkspacePrepareStatus status) noexcept;
+using negaflow::pipeline::film_look_workspace_bytes;
+using negaflow::pipeline::film_look_workspace_prepare_status_name;
+using negaflow::pipeline::film_look_workspace_view;
+using negaflow::pipeline::prepare_film_look_workspace;
 
 }  // namespace negaflow::cli

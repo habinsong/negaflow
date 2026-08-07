@@ -27,6 +27,7 @@ internal static unsafe class ContractTestRunner
             Check(
                 NativeEngineBootstrap.LoadAndQuery(args[0]) == buildInfo,
                 "same_path_reload_is_idempotent");
+            VerifyDevelopExportContract();
         }
         catch (Exception exception)
         {
@@ -53,6 +54,80 @@ internal static unsafe class ContractTestRunner
             Marshal.OffsetOf<NativeBuildInfoV1>(nameof(NativeBuildInfoV1.SourceCommitSha1)).ToInt32() ==
                 NativeAbiReader.SourceCommitSha1Offset,
             "source_commit_offset");
+
+        // The native side static_asserts the same three numbers. Both halves have to
+        // be checked, because a layout drift binds cleanly and then reads garbage.
+        Check(
+            sizeof(NativeDevelopExportRequestV1) == NativeDevelopExporter.RequestV1Size,
+            "develop_export_request_size");
+        Check(
+            sizeof(NativeDevelopExportResultV1) == NativeDevelopExporter.ResultV1Size,
+            "develop_export_result_size");
+        Check(
+            Marshal.OffsetOf<NativeDevelopExportRequestV1>(
+                nameof(NativeDevelopExportRequestV1.FilmEmulationIntensity)).ToInt32() == 80,
+            "develop_export_intensity_offset");
+        Check(
+            Marshal.OffsetOf<NativeDevelopExportResultV1>(
+                nameof(NativeDevelopExportResultV1.FailureName)).ToInt32() == 12,
+            "develop_export_failure_name_offset");
+        Check(
+            Marshal.OffsetOf<NativeDevelopExportResultV1>(
+                nameof(NativeDevelopExportResultV1.SourceFileBytes)).ToInt32() == 104,
+            "develop_export_source_bytes_offset");
+    }
+
+    private static void VerifyDevelopExportContract()
+    {
+        string temporaryRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"negaflow-develop-export-{Guid.NewGuid():N}");
+        string absentSource = Path.Combine(temporaryRoot, "absent.tif");
+        string destination = Path.Combine(temporaryRoot, "out.png");
+
+        // A missing source must be reported as an observation failure, not as a
+        // malformed request, so the shell can tell a user error from a bug.
+        DevelopExportResult missing = NativeDevelopExporter.Run(new DevelopExportRequest
+        {
+            SourcePath = absentSource,
+            DestinationPath = destination,
+        });
+        Check(!missing.Succeeded, "develop_export_missing_source_fails");
+        Check(
+            missing.FailedStage == DevelopExportStage.ObserveSourceBefore,
+            "develop_export_missing_source_stage");
+        Check(missing.FailureName.Length > 0, "develop_export_failure_name_present");
+        Check(missing.FailureName != "ok", "develop_export_failure_name_not_ok");
+        Check(!File.Exists(destination), "develop_export_failure_writes_nothing");
+
+        // The rendered-digital graph is not implemented and must refuse rather than
+        // develop a negative through it anyway.
+        DevelopExportResult digital = NativeDevelopExporter.Run(new DevelopExportRequest
+        {
+            SourcePath = absentSource,
+            DestinationPath = destination,
+            FilmLookSourceKind = DevelopSourceKind.RenderedDigital,
+        });
+        Check(!digital.Succeeded, "develop_export_digital_source_fails");
+        Check(
+            digital.FailedStage == DevelopExportStage.RequestValidation,
+            "develop_export_digital_source_stage");
+        Check(
+            digital.FailureName == "negative_develop_requires_film_scan_source",
+            "develop_export_digital_source_name");
+
+        CheckThrows<ArgumentException>(
+            () => NativeDevelopExporter.Run(new DevelopExportRequest
+            {
+                SourcePath = absentSource,
+                DestinationPath = destination,
+                FilmEmulation = (FilmEmulationProfile)99,
+            }),
+            "develop_export_undefined_enum_rejected");
+
+        CheckThrows<ArgumentNullException>(
+            () => NativeDevelopExporter.Run(null!),
+            "develop_export_null_request_rejected");
     }
 
     private static void VerifyPathPolicy()
@@ -84,8 +159,12 @@ internal static unsafe class ContractTestRunner
 
     private static void VerifyBuildInfo(NativeBuildInfo buildInfo)
     {
+        // Compatibility, not an exact pin. A minor ahead of the minimum is a valid
+        // engine; pinning the exact number turned every added export into a test edit.
+        // The exact version still reaches the report below.
         Check(
-            buildInfo.AbiVersion == new NativeAbiVersion(0, 1),
+            buildInfo.AbiVersion.Major == NativeAbiReader.SupportedMajor &&
+                buildInfo.AbiVersion.Minor >= NativeAbiReader.MinimumMinor,
             "abi_version");
         Check(buildInfo.Compiler == NativeCompiler.Msvc, "compiler");
         Check(buildInfo.CompilerVersion != 0, "compiler_version");

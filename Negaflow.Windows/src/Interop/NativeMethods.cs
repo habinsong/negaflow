@@ -15,4 +15,10 @@ internal static partial class NativeMethods
     [LibraryImport(LibraryName, EntryPoint = "nf_get_build_info_v1")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial uint nf_get_build_info_v1(ref NativeBuildInfoV1 output);
+
+    [LibraryImport(LibraryName, EntryPoint = "nf_develop_export_v1")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static unsafe partial uint nf_develop_export_v1(
+        NativeDevelopExportRequestV1* request,
+        NativeDevelopExportResultV1* result);
 }

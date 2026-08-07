@@ -149,6 +149,27 @@ target_link_libraries(
     PRIVATE negaflow_project_options mscms windowscodecs shlwapi ole32
 )
 
+# The develop-and-export sequence used to live inside the CLI, which meant the C ABI
+# could not run the pipeline without a second copy of it. It is a library now so the
+# CLI and the shell drive exactly the same code.
+add_library(negaflow_pipeline STATIC
+    src/Native/pipeline/develop_export.cpp
+    src/Native/pipeline/film_look_workspace.cpp
+)
+target_include_directories(negaflow_pipeline
+    PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/pipeline/include"
+)
+target_link_libraries(
+    negaflow_pipeline
+    PUBLIC
+        negaflow_imageio
+        negaflow_imaging
+        negaflow_output
+    PRIVATE
+        negaflow_core
+        negaflow_project_options
+)
+
 add_library(negaflow_native SHARED
     src/Native/abi/negaflow_abi.cpp
 )
@@ -156,7 +177,17 @@ target_compile_definitions(negaflow_native PRIVATE NEGAFLOW_NATIVE_EXPORTS)
 target_include_directories(negaflow_native
     PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/abi/include"
 )
-target_link_libraries(negaflow_native PRIVATE negaflow_core negaflow_project_options)
+target_link_libraries(
+    negaflow_native
+    PRIVATE
+        negaflow_core
+        negaflow_color
+        negaflow_imageio
+        negaflow_imaging
+        negaflow_output
+        negaflow_pipeline
+        negaflow_project_options
+)
 set_target_properties(negaflow_native PROPERTIES OUTPUT_NAME "Negaflow.Native")
 
 add_executable(negaflow_cli
@@ -179,6 +210,7 @@ target_link_libraries(
         negaflow_imageio
         negaflow_imaging
         negaflow_output
+        negaflow_pipeline
         negaflow_project_options
 )
 set_target_properties(negaflow_cli PROPERTIES OUTPUT_NAME "negaflow-cli")
@@ -193,6 +225,14 @@ if(BUILD_TESTING)
     )
 
     add_test(NAME native.build_info COMMAND negaflow_native_tests)
+
+    add_executable(negaflow_develop_export_abi_tests
+        tests/Native.UnitTests/develop_export_abi_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_develop_export_abi_tests
+        PRIVATE negaflow_native negaflow_project_options
+    )
 
     add_executable(negaflow_scalar_tests
         tests/Native.UnitTests/scalar_kernel_tests.cpp
@@ -425,7 +465,7 @@ if(BUILD_TESTING)
     )
     target_link_libraries(
         negaflow_film_look_command_support_tests
-        PRIVATE negaflow_imaging negaflow_project_options
+        PRIVATE negaflow_imaging negaflow_pipeline negaflow_project_options
     )
     add_test(
         NAME cli.film_look_command_support
@@ -663,6 +703,10 @@ if(BUILD_TESTING)
                 "\"film_look_arguments_explicit\":true.*\"film_look_route\":\"film_scan_emulation\".*\"film_color_applied\":true.*\"film_acutance_applied\":true.*\"tone_arguments_explicit\":true.*\"statistics_full_frame_scan_count\":4"
         )
         add_test(
+            NAME native.develop_export_abi
+            COMMAND negaflow_develop_export_abi_tests "${NEGAFLOW_SOURCE_TIFF_FIXTURE}"
+        )
+        add_test(
             NAME cli.export_developed_tiff_film_look
             COMMAND ${CMAKE_COMMAND}
                 "-DCLI=$<TARGET_FILE:negaflow_cli>"
@@ -672,5 +716,11 @@ if(BUILD_TESTING)
         )
     else()
         add_test(NAME native.wic_tiff_decode COMMAND negaflow_wic_tiff_decoder_tests)
+        # Without the local fixture the ABI still gets its argument and refusal
+        # contract checked; only the full develop is skipped.
+        add_test(
+            NAME native.develop_export_abi
+            COMMAND negaflow_develop_export_abi_tests
+        )
     endif()
 endif()
