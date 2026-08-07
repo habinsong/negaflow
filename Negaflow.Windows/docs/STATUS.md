@@ -11,7 +11,7 @@
 | x64 native tests | 통과 | Debug/Release CTest 각각 37/37 통과 |
 | ARM64 cross build | 통과 | Debug/Release 전체 target build, CLI/DLL PE `AA64` |
 | ARM64 native run | 미검증 | 실제 ARM64 Windows runner 필요 |
-| .NET 10/C ABI Interop | 파이프라인 노출 | `LibraryImport`, 절대 경로 resolver, ABI/layout 검증에 더해 `nf_develop_export_v1` 로 decode→develop→tone→Film Look→검증 게시 전체를 관리 코드에서 호출. ABI 0.2, struct 크기·offset 을 네이티브 `static_assert` 와 관리 assertion 양쪽에서 고정. x64 28개 assertion, ARM64 교차 빌드 |
+| .NET 10/C ABI Interop | 파이프라인 노출 | `LibraryImport`, 절대 경로 resolver, ABI/layout 검증에 더해 `nf_develop_export_v1` 로 decode→develop→tone→Film Look→검증 게시 전체를 관리 코드에서 호출. ABI 0.4(develop-export·tone limits·negative limits), struct 크기·offset 을 네이티브 `static_assert` 와 관리 assertion 양쪽에서 고정. x64 44개 assertion, ARM64 교차 빌드 |
 | 네이티브 파이프라인 라이브러리 | 분리 완료 | `negaflow_pipeline` 이 `develop_and_export` 와 Film Look workspace 를 소유. CLI 는 workspace 를 이 라이브러리에서 링크. CLI 자체 순서 코드의 수렴은 미완 |
 | WinUI shell | 첫 기반 통과 | component package 1.8 locked graph, x64 실제 최대화 실행, ARM64 교차 빌드, 6개 언어, 오른쪽 caption inset, Settings와 SHA 기본 `끔` |
 | static runtime 배포 기반 | 통과 | Release CLI 직접 dependency가 Windows 기본 DLL 5개뿐이며 VC++ Redistributable DLL 없음 |
@@ -20,7 +20,7 @@
 | Film Look source routing | CLI 출력 수직 경로 통과 | 명시적 `film_scan`/`rendered_digital`, film 색상→acutance exact 순서, caller cube/scratch, 실패 시 pixel 폐기; 진단·PNG16·TIFF16에서 Primary Calibration 뒤 실행, 실제 TIFF artifact 변화 검증; 미완성 digital graph는 `unsupported_route`; catalog projection은 구현, C ABI·WinUI는 미연결 |
 | Catalog Develop route | 첫 관리 경계 통과 | `scanner`/`imported` transport와 film/digital signal 분리, legacy marker·강도 1.0 호환, 새 강도 0.5, unknown field 보존, invalid 조합 fail-closed; x64 Debug/Release 각각 163 assertion, ARM64 Debug/Release 교차 빌드. SQLite 는 아래 항목으로 구현됐고 C ABI 연결은 미구현 |
 | 세로 슬라이스 (catalog→C ABI→WinUI) | 앱 안에서 한 바퀴 완결 | Import→필름 base 슬라이더→노출→Export 를 UI Automation 으로 실제 조작해 `Exported 631×403 in 101 ms` 확인. base 슬라이더 범위가 엔진의 0.001..1.0 을 그대로 받음. 시작 시 `library.sqlite` 생성·lock 획득. 미리보기·base picker·취소·진행률은 미구현 |
-| catalog SQLite 영속성 | 첫 왕복 통과 | `catalog_metadata` + entity table 9개, 물리 `user_version=1`과 논리 `catalog_version=1` 분리, 재정렬 시 position relocation, pooling 끔, missing/corrupt/미래 version/외부 version/malformed 5종 구분, commit 후 `integrity_check`; x64 Release 267 assertion, ARM64 교차 빌드. backup 세대·pending restore·defect sidecar·C ABI 연결은 미구현 |
+| catalog SQLite 영속성 | 첫 왕복 통과 | `catalog_metadata` + entity table 9개, 물리 `user_version=1`과 논리 `catalog_version=1` 분리, 재정렬 시 position relocation, pooling 끔, missing/corrupt/미래 version/외부 version/malformed 5종 구분, commit 후 `integrity_check`; x64 Release 303 assertion, ARM64 교차 빌드. backup 세대·pending restore·defect sidecar·C ABI 연결은 미구현 |
 | catalog 단일 작성자 강제 | 구조로 강제·프로세스 경계 관측 | `SqliteCatalogStore`는 `internal`. 공개 입구는 `CatalogSession` 하나이며 프로세스 lock 을 못 잡으면 세션이 만들어지지 않음. `NotFound`→빈 라이브러리 변환은 `ReadOrCreate` 한 자리뿐이고 손상·미지원 version 은 거기서도 실패. lock 없이 되는 것은 `CatalogRecovery.IsValidCatalogSource` 확인뿐 |
 | catalog 성능 (5만 frame) | 목표 규모 측정 완료 | 최초 쓰기 527ms, 전체 읽기 255ms, 무변경 재저장 343ms, 1건 편집 337ms, 전체 뒤집기 582ms, 파일 10.1MB. 비용이 변경량이 아니라 catalog 크기에 비례함을 기록 |
 | 관리 계층 SQLite 의존성 | 고정·취약점 0 | `Microsoft.Data.Sqlite.Core` 10.0.10(MIT) + `SQLitePCLRaw.config.e_sqlite3` 3.0.5 + `SourceGear.sqlite3` 3.53.4(Apache-2.0). 편의 package 는 CVE-2025-6965 native 하한 때문에 배제(ADR-0025) |
@@ -62,8 +62,8 @@ build ID는 빌드 당시 미커밋 작업이 있으면 `-dirty`로 표시합니
 ## 2026-08-07 변경
 
 카탈로그가 처음으로 디스크에 남습니다. 근거는 `verification/2026-08-07-sqlite-catalog-store.md`,
-결정은 ADR-0025입니다. 이 날짜에 `ci-gate.ps1 -Preset x64-release` 전체(네이티브 39/39, 관리
-267+45 assertion, 경고 0)와 ARM64 관리 교차 빌드, `verify-provenance.py`를 다시 실행했습니다.
+결정은 ADR-0025입니다. 이 날짜에 `ci-gate.ps1 -Preset x64-release` 전체(네이티브 40/40, 관리
+303+188 assertion과 interop 44, 경고 0)와 ARM64 관리 교차 빌드, `verify-provenance.py`를 다시 실행했습니다.
 
 - `SqliteCatalogStore`를 추가했습니다. macOS의 table 배치를 그대로 옮기되 물리 schema version과
   논리 catalog version을 분리하고, 없는 파일·손상 파일·미래 물리 version·외부 논리 version·
