@@ -22,7 +22,8 @@ public sealed partial class WorkspaceShellView : UserControl
 
     public void Initialize(
         WorkspacePresentationState state,
-        NativeEngineStatusService nativeEngineStatusService)
+        NativeEngineStatusService nativeEngineStatusService,
+        LibraryHostService? libraryHost = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(nativeEngineStatusService);
@@ -36,6 +37,10 @@ public sealed partial class WorkspaceShellView : UserControl
         NativeEngineStatus nativeEngineStatus = nativeEngineStatusService.Probe();
         Toolbar.Initialize(state);
         LibraryWorkspace.Initialize(state);
+        if (libraryHost is not null)
+        {
+            LibraryWorkspace.ShowLibrary(libraryHost);
+        }
         DevelopWorkspace.Initialize(state, nativeEngineStatus);
         PrintWorkspace.Initialize(state, nativeEngineStatus);
         Toolbar.SettingsRequested += OnToolbarSettingsRequested;

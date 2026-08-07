@@ -19,6 +19,7 @@ internal static class Program
         VerifyDevelopRequestFactory();
         VerifyDevelopExportCoordinator();
         VerifyLibraryDocument();
+        VerifyLibraryHost();
 
         var report = new
         {
@@ -550,6 +551,92 @@ internal static class Program
         Check(
             reopened.Issues.Count == 1,
             "library_document_unreadable_record_survives_save");
+    }
+
+    private static void VerifyLibraryHost()
+    {
+        string testParent = Path.Combine(AppContext.BaseDirectory, "library-host-tests");
+        string isolatedBase = Path.Combine(
+            testParent,
+            $"{Environment.ProcessId}-{Guid.NewGuid():N}");
+        StorageRootSet roots = StorageRootResolver.ResolveForTests(isolatedBase).Roots!;
+        FakeDispatcher dispatcher = new(accepts: true);
+        FakeExporter exporter = new(_ => OkResult());
+
+        try
+        {
+            using (CatalogSession seed = CatalogSession.Open(roots).Session!)
+            {
+                Check(
+                    seed.Write(new CatalogSnapshot(
+                        null,
+                        new Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>>
+                        {
+                            [CatalogEntityTable.Frames] =
+                            [
+                                new("frame-1", FrameRecord("frame-1", "IMG_0001.tif", 0.0)),
+                            ],
+                        })).IsSuccess,
+                    "library_host_seed");
+            }
+
+            using LibraryHostService host = new(dispatcher, exporter);
+            Check(host.State == LibraryHostState.NotOpened, "library_host_starts_unopened");
+            Check(host.Frames.Count == 0, "library_host_no_frames_before_open");
+
+            Check(host.Open(roots) == LibraryHostState.Open, "library_host_open");
+            Check(host.Frames.Count == 1, "library_host_loads_frames");
+
+            IReadOnlyList<LibraryFrameListItem> items =
+                LibraryFrameListItems.From(host.Frames);
+            Check(items[0].DisplayName == "IMG_0001.tif", "library_item_display_name");
+            Check(items[0].CanDevelop, "library_item_can_develop");
+            Check(items[0].Detail == @"C:\scans\IMG_0001.tif", "library_item_detail_is_path");
+            Check(
+                LibraryFrameListItems.IssueSummary(host.Issues) is null,
+                "library_item_no_issue_summary");
+
+            // 현상할 수 없는 frame 은 목록에서 그 이유가 보입니다. Export 가 조용히 아무것도
+            // 하지 않는 것보다 낫습니다.
+            LibraryFrameListItem noBase = new(Frame(null));
+            Check(!noBase.CanDevelop, "library_item_cannot_develop");
+            Check(noBase.Detail == "Dmin not set", "library_item_shows_reason");
+
+            Check(
+                LibraryFrameListItems.IssueSummary(
+                    [new LibraryFrameIssue(2, "frame-3", LibraryFrameError.MissingSourcePath,
+                        DevelopRouteError.None)])?.Contains("still in the catalog") == true,
+                "library_item_issue_summary_says_data_is_kept");
+
+            Check(
+                host.Edit("frame-1", new LibraryFrameEdit(
+                    new ToneAdjustment(0.75, 0, 0, 0, 0, 0),
+                    new ManualBaseRgb(0.21, 0.22, 0.23))) == LibraryFrameError.None,
+                "library_host_edit");
+            Check(host.Save() == CatalogStoreError.None, "library_host_save");
+
+            DevelopExportOutcome? outcome = null;
+            Check(
+                host.ExportAsync(
+                    host.Frames[0],
+                    @"C:\exports\IMG_0001.png",
+                    DevelopExportFormat.Png16,
+                    completed => outcome = completed).GetAwaiter().GetResult(),
+                "library_host_export_delivers");
+            Check(
+                outcome?.Kind == DevelopExportOutcomeKind.Completed,
+                "library_host_export_completed");
+            Check(exporter.CallCount == 1, "library_host_export_called_engine");
+            Check(!host.IsExporting, "library_host_export_flag_clears");
+        }
+        finally
+        {
+            if (Directory.Exists(isolatedBase) &&
+                StoragePathPolicy.IsLexicallyContained(testParent, isolatedBase))
+            {
+                Directory.Delete(isolatedBase, recursive: true);
+            }
+        }
     }
 
     private static void Check(bool condition, string name)

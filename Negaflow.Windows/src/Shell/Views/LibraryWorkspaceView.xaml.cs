@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
@@ -25,6 +26,27 @@ public sealed partial class LibraryWorkspaceView : UserControl
         state.Changed += OnStateChanged;
         SynchronizeWidth(state.Current.LibraryControlsWidth);
         Unloaded += OnUnloaded;
+    }
+
+    /// <summary>
+    /// 라이브러리 내용을 보여 줍니다. **UI 스레드에서만** 부르십시오. WinUI 는 STA 이고
+    /// 컨트롤은 그것을 만든 스레드가 소유합니다.
+    /// </summary>
+    public void ShowLibrary(LibraryHostService host)
+    {
+        ArgumentNullException.ThrowIfNull(host);
+
+        IReadOnlyList<LibraryFrameListItem> items = LibraryFrameListItems.From(host.Frames);
+        FrameListView.ItemsSource = items;
+        LibraryCountText.Text = items.Count.ToString(CultureInfo.CurrentCulture);
+
+        bool hasFrames = items.Count > 0;
+        LibraryContentPanel.Visibility = hasFrames ? Visibility.Visible : Visibility.Collapsed;
+        EmptyLibraryPanel.Visibility = hasFrames ? Visibility.Collapsed : Visibility.Visible;
+
+        string? issueSummary = LibraryFrameListItems.IssueSummary(host.Issues);
+        LibraryIssueBar.Message = issueSummary ?? string.Empty;
+        LibraryIssueBar.IsOpen = issueSummary is not null;
     }
 
     private void OnRootSizeChanged(object sender, SizeChangedEventArgs args)

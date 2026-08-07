@@ -121,11 +121,48 @@
             <Border Grid.Row="1" Background="{ThemeResource NegaflowDividerBrush}" />
 
             <Grid Grid.Row="2">
-                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="9">
+                <StackPanel x:Name="EmptyLibraryPanel" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="9">
                     <FontIcon FontSize="34" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE8FD;" />
                     <TextBlock x:Uid="noImages" HorizontalAlignment="Center" FontSize="18" FontWeight="SemiBold" />
                     <Button x:Name="EmptyImportImagesButton" HorizontalAlignment="Center" IsEnabled="False" />
                 </StackPanel>
+
+                <Grid x:Name="LibraryContentPanel" Visibility="Collapsed">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <!-- 읽지 못한 frame 을 조용히 감추면 사용자에게는 사진이 사라진 것으로 보인다. -->
+                    <InfoBar
+                        x:Name="LibraryIssueBar"
+                        Grid.Row="0"
+                        Margin="16,10,16,0"
+                        IsClosable="False"
+                        IsOpen="False"
+                        Severity="Warning" />
+
+                    <ListView
+                        x:Name="FrameListView"
+                        Grid.Row="1"
+                        Padding="8,6"
+                        AutomationProperties.AutomationId="negaflow.library.frames"
+                        IsItemClickEnabled="False"
+                        SelectionMode="Single">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Padding="4,6" Spacing="2">
+                                    <TextBlock FontSize="13" FontWeight="SemiBold" Text="{Binding DisplayName}" />
+                                    <TextBlock
+                                        FontSize="11"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        Text="{Binding Detail}"
+                                        TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </Grid>
 
                 <StackPanel
                     Margin="0,0,0,14"

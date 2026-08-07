@@ -12,13 +12,14 @@ public sealed partial class MainWindow : Window
     public MainWindow(
         PresentationSettingsStore settingsStore,
         WorkspacePresentationState workspaceState,
-        NativeEngineStatusService nativeEngineStatusService)
+        NativeEngineStatusService nativeEngineStatusService,
+        LibraryHostService? libraryHost = null)
     {
         this.settingsStore = settingsStore;
         this.workspaceState = workspaceState;
         InitializeComponent();
 
-        ShellView.Initialize(workspaceState, nativeEngineStatusService);
+        ShellView.Initialize(workspaceState, nativeEngineStatusService, libraryHost);
         ShellView.SettingsRequested += OnSettingsRequested;
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(ShellView.TitleBarElement);
