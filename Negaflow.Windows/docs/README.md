@@ -58,6 +58,8 @@
 - [2026-08-04 Catalog Develop route 검증](verification/2026-08-04-catalog-develop-route.md)
 - [2026-08-04 파이프라인 CPU 시간·단계 진단 검증](verification/2026-08-04-pipeline-diagnostics.md)
 - [2026-08-04 압축 TIFF 사전 검사 검증](verification/2026-08-04-compressed-tiff-preflight.md)
+- [2026-08-07 SQLite catalog store 검증](verification/2026-08-07-sqlite-catalog-store.md)
+- [SQLite catalog store 공식 근거와 권리 조사](research/sqlite-catalog-store-sources.md)
 - [이미지 I/O 조사와 권리 검토](research/image-io-sources.md)
 - [압축 TIFF 사전 검사 공식 근거와 권리 검토](research/compressed-tiff-preflight-sources.md)
 - [출력 encode·게시 근거와 권리 검토](research/output-encode-sources.md)
@@ -104,6 +106,7 @@
 - [ADR-0022: 쓰지 않는 WebView2 페이로드를 배포물에서 제외](decisions/0022-webview2-payload-boundary.md)
 - [ADR-0023: CMS 일치 여부는 합성 프로파일 기준값으로 판정](decisions/0023-colorsync-icm-parity-probe.md)
 - [ADR-0024: ColorSync의 섀도우 toe를 지금은 재현하지 않는다](decisions/0024-colorsync-toe-not-replicated.md)
+- [ADR-0025: catalog SQLite는 관리 계층에서 열고 native SQLite 버전을 따로 고정](decisions/0025-managed-sqlite-catalog-provider.md)
 
 ### 배포 고지
 

@@ -1,6 +1,6 @@
 # 구현·검증 상태
 
-기준일: 2026-08-04
+기준일: 2026-08-07
 
 | 항목 | 상태 | 증거 |
 |---|---|---|
@@ -17,7 +17,11 @@
 | float32 pixel contract | 부분 구현 | checked layout/stride/capacity, extended RGB, straight alpha, NaN/Inf 거부 |
 | scalar pointwise·spatial | 부분 구현 | exposure, RGB 3×4 matrix, 기본 톤·4-band curve, 고정 64표본 DR/R/G/B point curve, 8-band HSL Color Mixer, 3구간 Color Grading, R/G/B Primary Calibration, 11종 RGB33 Film Emulation 색상→11행 acutance film-scan route x64 test·ARM64 build |
 | Film Look source routing | CLI 출력 수직 경로 통과 | 명시적 `film_scan`/`rendered_digital`, film 색상→acutance exact 순서, caller cube/scratch, 실패 시 pixel 폐기; 진단·PNG16·TIFF16에서 Primary Calibration 뒤 실행, 실제 TIFF artifact 변화 검증; 미완성 digital graph는 `unsupported_route`; catalog projection은 구현, C ABI·WinUI는 미연결 |
-| Catalog Develop route | 첫 관리 경계 통과 | `scanner`/`imported` transport와 film/digital signal 분리, legacy marker·강도 1.0 호환, 새 강도 0.5, unknown field 보존, invalid 조합 fail-closed; x64 Debug/Release 각각 163 assertion, ARM64 Debug/Release 교차 빌드; SQLite·실제 restart·C ABI는 미구현 |
+| Catalog Develop route | 첫 관리 경계 통과 | `scanner`/`imported` transport와 film/digital signal 분리, legacy marker·강도 1.0 호환, 새 강도 0.5, unknown field 보존, invalid 조합 fail-closed; x64 Debug/Release 각각 163 assertion, ARM64 Debug/Release 교차 빌드. SQLite 는 아래 항목으로 구현됐고 C ABI 연결은 미구현 |
+| catalog SQLite 영속성 | 첫 왕복 통과 | `catalog_metadata` + entity table 9개, 물리 `user_version=1`과 논리 `catalog_version=1` 분리, 재정렬 시 position relocation, pooling 끔, missing/corrupt/미래 version/외부 version/malformed 5종 구분, commit 후 `integrity_check`; x64 Release 246 assertion, ARM64 교차 빌드. backup 세대·pending restore·legacy migration·defect sidecar·C ABI 연결은 미구현 |
+| catalog 성능 (5만 frame) | 목표 규모 측정 완료 | 최초 쓰기 527ms, 전체 읽기 255ms, 무변경 재저장 343ms, 1건 편집 337ms, 전체 뒤집기 582ms, 파일 10.1MB. 비용이 변경량이 아니라 catalog 크기에 비례함을 기록 |
+| 관리 계층 SQLite 의존성 | 고정·취약점 0 | `Microsoft.Data.Sqlite.Core` 10.0.10(MIT) + `SQLitePCLRaw.config.e_sqlite3` 3.0.5 + `SourceGear.sqlite3` 3.53.4(Apache-2.0). 편의 package 는 CVE-2025-6965 native 하한 때문에 배제(ADR-0025) |
+| 배포 payload 제3자 native | 최초 도입·범위 축소 | `e_sqlite3.dll` 2종. 네이티브 엔진의 제3자 0개는 유지되나 제품 payload 는 더 이상 0개가 아님. 비Windows RID 28종 제외로 53,571,344→3,788,288 바이트 |
 | scalar negative inversion | 부분 구현 | color/B&W `shoulder-print-response-v4`, 고정 float bits와 합성 anchor test |
 | 수동 negative develop | 첫 수직 경로 통과 | 채널별 Dmin, color/B&W 고정 response, working buffer 제자리 변환과 scalar exact 일치 |
 | TIFF bounded probe | 부분 구현 | Classic/BigTIFF, endian 양쪽, strip/tile bounds, compressed-byte 합계, 선택형 LZW code-stream 의미 검사·작업량 상한·취소, Unicode read-only CLI, 손상 합성 corpus |
@@ -30,7 +34,7 @@
 | 이미지 SHA-256 | opt-in 기반 통과 | 기본 `off`는 파일 I/O 0, 명시적 CNG SHA-256 known-answer/multi-chunk/cancel, 사용자 TIFF opt-in 15/15 |
 | 네이티브 엔진 제3자 runtime dependency | 0개 | 빈 vcpkg dependency, WIC/ICM/Win32만 사용 |
 | WinUI package graph | 고정·감사 | Runtime/WinUI 1.8 component 직접 참조, transitive 명세, 취약 package 0, AI/ML/Widgets 제외, 미사용 WebView2 payload 1.6MB를 x64/ARM64 clean build 출력에서 제외 |
-| 제3자 고지 | 기록 완료 | `THIRD-PARTY-NOTICES.md`에 App SDK 조건과 미배포 WebView2 경계 기록, `components.json` 배포 게이트 갱신 |
+| 제3자 고지 | 기록 완료 | `THIRD-PARTY-NOTICES.md`에 App SDK 조건, 미배포 WebView2 경계, SQLite 스택의 MIT 1건·Apache-2.0 4건 기록. `components.json` 배포 게이트 갱신 |
 | Windows 빌드 CI | 구현 완료 | `.github/workflows/windows.yml`의 native·managed·arm64-cross 잡과 로컬 짝 `scripts/ci-gate.ps1`. 러너의 VS 2026과 .NET 10.0.302를 그대로 써서 로컬과 같은 프리셋으로 빌드 |
 | ColorSync↔ICM 색상 동등성 | 측정 완료·판정 보류 | 34패치 중 21개 비율 1.000, 깊은 섀도우에서 최대 20.37배. 원인은 ColorSync의 1/16 toe. 현상 후 8비트 코드 2~6, 채널 스프레드 최대 5. ADR-0024로 재현하지 않기로 결정 |
 | GPU/WARP | 미구현 | M5 이후 |
@@ -52,6 +56,25 @@
 build ID는 빌드 당시 미커밋 작업이 있으면 `-dirty`로 표시합니다. ARM64 test executable은 빌드됐지만 x64
 호스트에서 실행하지 않았으므로 ARM64 runtime 통과로 표시하지 않습니다.
 
-전체 M0~M18 로드맵 진행률은 산출물 기준 약 15%, 현재 M0~M3 기반 구간은 약 46%로 추정합니다.
-색상 수직 경로가 실제 코퍼스를 처리했다는 사실과 ColorSync 수치 동등성은 구분합니다. 산정 방식과
-단계별 공백은 `progress/overall-roadmap.md`에 있습니다.
+## 2026-08-07 변경
+
+카탈로그가 처음으로 디스크에 남습니다. 근거는 `verification/2026-08-07-sqlite-catalog-store.md`,
+결정은 ADR-0025입니다. 이 날짜에 `ci-gate.ps1 -Preset x64-release` 전체(네이티브 39/39, 관리
+246+45 assertion, 경고 0)와 ARM64 관리 교차 빌드, `verify-provenance.py`를 다시 실행했습니다.
+
+- `SqliteCatalogStore`를 추가했습니다. macOS의 table 배치를 그대로 옮기되 물리 schema version과
+  논리 catalog version을 분리하고, 없는 파일·손상 파일·미래 물리 version·외부 논리 version·
+  malformed payload를 각각 다른 값으로 거부합니다. 어느 것도 빈 라이브러리가 아닙니다.
+- 재정렬에서 `position` UNIQUE 제약을 어기는 경로를 찾아 relocation 단계를 넣었습니다. 단계를
+  빼면 frame 3개를 재정렬하는 것만으로 쓰기가 실패하는 것을 확인했습니다.
+- 편의 package `Microsoft.Data.Sqlite`를 배제했습니다. native SQLite 하한이 CVE-2025-6965 대상이라
+  restore 자체가 NU1903으로 실패합니다. 추측이 아니라 restore 출력에서 걸린 것입니다.
+- 비Windows RID의 native payload 28종을 빌드 출력에서 제외했습니다. 53,571,344 → 3,788,288 바이트.
+- **제품 payload에 제3자 native 바이너리가 처음 들어왔습니다.** 네이티브 엔진의 제3자 0개는
+  그대로지만 두 문장은 이제 다른 뜻이므로 고지 문서에서 구분했습니다.
+
+전체 M0~M18 로드맵 진행률은 산출물 기준 약 16%, 현재 M0~M3 기반 구간은 약 50%로 추정합니다.
+`M14 영속성`이 SQLite 왕복까지 올라왔으나 backup 세대·pending restore·legacy migration·defect
+sidecar가 남아 있으므로 완료로 세지 않습니다. 색상 수직 경로가 실제 코퍼스를 처리했다는 사실과
+ColorSync 수치 동등성은 계속 구분합니다. 산정 방식과 단계별 공백은 `progress/overall-roadmap.md`에
+있습니다.

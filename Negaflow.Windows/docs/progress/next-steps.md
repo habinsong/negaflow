@@ -1,25 +1,29 @@
 # 다음에 어디서부터 이어서 할 것인가
 
-기준일: 2026-08-07
+기준일: 2026-08-07 (SQLite 영속성 착수 후 갱신)
 
 이 문서는 작업을 한동안 놓았다가 돌아왔을 때 가장 먼저 읽는 곳입니다. 이미 결정된 것을 다시
 논쟁하지 않고, 다음 한 걸음을 바로 시작하기 위한 기록입니다.
 
 ## 지금 상태
 
-전체 M0~M18 로드맵의 약 15%, 기반 구간 M0~M3 는 약 46% 입니다. 산정 근거는
+전체 M0~M18 로드맵의 약 16%, 기반 구간 M0~M3 는 약 50% 입니다. 산정 근거는
 `overall-roadmap.md`, 항목별 증거는 `../STATUS.md` 에 있습니다.
 
 동작하는 것은 **CLI 수직 경로 하나**입니다. TIFF 디코드 → 스캐너 색상 → 수동 Dmin 현상 →
 톤·포인트 커브·Color Mixer·Color Grading·Primary Calibration → 명시적 film-scan Film Look →
 검증된 PNG16/TIFF16 게시까지 한 장이 끝까지 갑니다.
 
-- 네이티브 테스트 39개, 관리 assertion 250개, 전부 통과
+- 네이티브 테스트 39개, 관리 assertion 291개, 전부 통과
 - Windows CI 가 PR 마다 돌고 벽시계 약 2분 30초
 - 네이티브 엔진의 제3자 runtime dependency 0개 (Windows 기본 DLL 5개만)
+- **카탈로그가 SQLite 로 디스크에 남습니다.** frame 5만 개 기준 쓰기 527ms, 읽기 255ms
 
-**아직 앱은 존재하지 않습니다.** WinUI 셸은 6개 언어 골격뿐이고 엔진과 연결돼 있지 않습니다.
-SQLite 영속성이 없어 아무것도 저장되지 않습니다. GPU 경로는 착수 전입니다.
+**아직 앱은 존재하지 않습니다.** WinUI 셸은 6개 언어 골격뿐이고 엔진과도 카탈로그와도 연결돼
+있지 않습니다. GPU 경로는 착수 전입니다.
+
+**한 가지 사실이 바뀌었습니다.** 제품 payload 에 제3자 native 바이너리(`e_sqlite3.dll`)가
+처음 들어왔습니다. 네이티브 엔진의 0개는 그대로지만 두 문장은 이제 다른 뜻입니다. ADR-0025.
 
 ## 닫힌 결정 — 다시 열지 마십시오
 
@@ -30,6 +34,7 @@ SQLite 영속성이 없어 아무것도 저장되지 않습니다. GPU 경로는
 | ADR-0021 | macOS golden 은 test-only 관측. 관측 float 총량 512 상한 |
 | ADR-0022 | 미사용 WebView2 페이로드 미배포 |
 | ADR-0024 | ColorSync 의 섀도우 toe 를 재현하지 않음 |
+| ADR-0025 | catalog SQLite 는 관리 계층에서 열고 native SQLite 를 따로 고정. "의존성 0개" 는 네이티브 엔진에만 적용 |
 
 **LittleCMS 검토는 폐기됐습니다.** 색 차이의 원인이 Windows CMS 선택이 아니라 ColorSync 가 ICC
 사양에서 벗어나 있다는 사실이므로, Windows 에서 CMS 를 교체해도 macOS 와 같아지지 않습니다.
@@ -37,45 +42,52 @@ SQLite 영속성이 없어 아무것도 저장되지 않습니다. GPU 경로는
 
 ---
 
-## 1. SQLite 영속성 — 여기서 시작하십시오
+## 1. SQLite 영속성 — 첫 왕복은 끝났습니다
 
-`src/Catalog.Core/Storage/` 에 경로 해석과 프로세스 락까지 올라가 있습니다. SQLite 자체가 없습니다.
+**종료 조건("앱을 껐다 켜도 카탈로그가 남고 source 종류와 stage 순서가 바뀌지 않는다")을
+충족했습니다.** ADR-0025, `verification/2026-08-07-sqlite-catalog-store.md`.
 
-### 첫 행동: ADR-0025 를 먼저 쓰십시오
+들어간 것:
 
-코드보다 결정이 먼저 막고 있습니다. **어떤 SQLite 를 쓸 것인가.**
+- `SqliteCatalogStore` — `catalog_metadata` + entity table 9개, 물리 `user_version` 과 논리
+  `catalog_version` 분리, 단일 `BEGIN IMMEDIATE` transaction, commit 후 `integrity_check`
+- missing / corrupt / 미래 물리 version / 외부 논리 version / malformed payload 를 각각 다른
+  값으로 거부. 어느 것도 빈 라이브러리가 아니고 부분 snapshot 도 없음
+- `Pooling=False`. 켜 두면 backup 교체와 pending restore 가 남은 핸들에 막힙니다
+- 재정렬 시 position relocation. 이것이 없으면 frame 3개 재정렬만으로 쓰기가 실패합니다
 
-macOS 는 OS 가 libsqlite3 를 공개 API 로 제공하지만 **Windows 에는 앱이 쓸 수 있는 시스템 SQLite 가
-없습니다.** `winsqlite3.dll` 이 있긴 하나 Microsoft 가 서드파티 앱 사용을 공식 지원하지 않습니다.
+**계획과 달랐던 것 두 가지.** 첫째, 편의 package `Microsoft.Data.Sqlite` 를 쓸 수 없었습니다.
+native SQLite 하한이 CVE-2025-6965 대상이라 restore 가 NU1903 으로 실패합니다.
+`Microsoft.Data.Sqlite.Core` + `SQLitePCLRaw.config.e_sqlite3` + `SourceGear.sqlite3` 로 나눠
+참조합니다. 둘째, 고지는 "MIT 한 절" 이 아니라 MIT 1건 + Apache-2.0 4건입니다.
 
-**결론은 `Microsoft.Data.Sqlite` 입니다.** 근거:
+### 다음 행동: 나머지 수명주기
 
-- 카탈로그가 관리 코드(`Catalog.Core`, C#)에 살고 `Storage/` 도 C# 입니다. 네이티브에 SQLite 를
-  넣으면 C# 이 자체 C ABI 를 한 겹 더 타야 하며 얻는 것이 없습니다.
-- **"제3자 runtime dependency 0개" 는 네이티브 엔진에 대한 기준입니다.** 셸은 이미 WinUI 와
-  Windows App SDK 위에서 돕니다. 관리 계층에 MIT 패키지를 더해도 네이티브 엔진의 0개는 유지됩니다.
-- SQLite CVE 대응 책임을 Microsoft 가 집니다. 1인 프로젝트에서 이 값어치가 큽니다.
-- ADR-0017 의 vendoring 금지를 건드릴 필요가 없습니다. 그 게이트는 이 저장소의 자산입니다.
+`windows_docs/14-persistence/catalog-and-storage.md` 가 소유하는 것 중 아직 없는 것입니다.
+**순서를 지키십시오.** 아래는 뒤가 앞을 필요로 합니다.
 
-`winsqlite3.dll` 은 배제합니다. 미지원 API 위에 제품 데이터베이스를 얹을 이유가 없습니다.
+1. **`CatalogProcessLock` 과 store 를 하나의 open 경로로 묶기.** 지금은 호출자가 lock 을 잡고
+   store 를 부르는 것이 강제되지 않습니다. 두 번째 프로세스가 lock 없이 쓸 수 있습니다.
+   가장 싸고 가장 위험을 많이 줄이는 한 걸음입니다.
+2. **backup 세대와 commit verifier.** 직전 primary 를 보존한 뒤 write/readback/rollback.
+   `IsValidRecoverySource` 가 이미 있으니 손상 primary 가 유효 backup 을 덮는 것은 막을 수 있습니다.
+3. **pending restore.** 다음 safe startup 에서만 적용합니다.
+4. **defect sidecar.** revision-aware writer, temp → flush → atomic replace. catalog 가 defect
+   edit 을 선언했는데 sidecar 가 없으면 library open 을 차단합니다.
 
-ADR 에 **"의존성 0개 원칙은 네이티브 엔진에 적용되며 관리 계층에는 적용되지 않는다"** 를 명시하십시오.
-지금 애매하게 두면 이후 모든 패키지 추가에서 같은 논쟁이 반복됩니다.
+legacy JSON → SQLite migration 은 **하지 않습니다.** Windows 에는 옮겨올 legacy 파일이 없습니다.
+macOS catalog 를 여는 것은 결정 4에서 이미 배제했습니다.
 
-`THIRD-PARTY-NOTICES.md` 에 MIT 한 절을 추가하고 `components.json` 의
-`third_party_runtime_dependencies` 에도 등록하십시오.
-
-### 그다음
-
-스키마, 마이그레이션, 트랜잭션과 복구를 `Storage/` 위에 올립니다.
-
-**종료 조건: 앱을 껐다 켜도 카탈로그가 남고, source 종류와 stage 순서가 바뀌지 않는다.**
+**종료 조건: 쓰기 도중 프로세스를 죽여도 다음 실행에서 카탈로그가 열리고, 무엇이 손실됐는지
+말할 수 있다.**
 
 ---
 
 ## 2. 세로 슬라이스 — 실질적으로 가장 중요합니다
 
-카탈로그가 저장되기 시작하면 곧바로 `카탈로그 → C ABI → WinUI 셸` 을 연결합니다.
+**카탈로그가 저장되기 시작했으므로 이제 이것이 최우선입니다.** `카탈로그 → C ABI → WinUI 셸` 을
+연결합니다. 위 1번의 2~4단계보다 먼저 해도 됩니다. 오히려 셸이 붙어야 backup 과 sidecar 의 실제
+호출 패턴이 드러납니다.
 
 **목표는 기능이 아닙니다.** 이미지 한 장이 Library 에 보이고, Develop 에서 슬라이더 하나가 먹고,
 Export 가 파일을 쓰면 충분합니다. 못생겨도 됩니다.
@@ -159,26 +171,31 @@ ADR-0024 의 재검토 조건이 실제로 발생하면 그때 합니다. 그 �
 "뒤집는 조건" 이 실제로 발생했을 때만 다시 엽니다. 실행 시점에 결정 기록(ADR)으로 옮겨 적으면
 됩니다.
 
-### 1. SQLite 라이브러리 → `Microsoft.Data.Sqlite` (MIT)
+### 1. SQLite 라이브러리 → 실행됨. ADR-0025 로 옮겨 적었습니다
 
-Windows 에는 앱이 쓸 수 있는 시스템 SQLite 가 없습니다. `winsqlite3.dll` 은 존재하지만 Microsoft 가
-서드파티 사용을 지원하지 않으므로 **배제합니다.** 미지원 API 위에 제품 데이터베이스를 얹을 이유가
-없습니다.
+`Microsoft.Data.Sqlite.Core` 10.0.10 (MIT) + `SQLitePCLRaw.config.e_sqlite3` 3.0.5 +
+`SourceGear.sqlite3` 3.53.4 (Apache-2.0) 입니다.
 
-SQLite amalgamation 을 네이티브에 직접 넣는 방법도 배제합니다. 카탈로그가 C# 에 사는데 네이티브에
-DB 를 두면 자체 C ABI 를 한 겹 더 타야 하고, ADR-0017 의 vendoring 금지도 건드려야 합니다. 그
-게이트는 이 저장소의 자산이므로 열지 않습니다.
+**여기 적혀 있던 "`Microsoft.Data.Sqlite`" 는 실행해 보니 쓸 수 없었습니다.** 그 편의 package 는
+native SQLite 하한을 `SQLitePCLRaw.lib.e_sqlite3` 2.1.11 로 끌어오는데, 이것이 CVE-2025-6965
+(CVSS 7.2) 대상이고 2.x 에 수정 릴리스가 없습니다. restore 가 NU1903 으로 실패합니다.
+SQLitePCLRaw 3.0 이 권하는 대로 native 를 분리해 참조하면 취약 package 가 사라지고, 다음 SQLite
+권고에는 `SourceGear.sqlite3` 한 줄만 올리면 됩니다.
+
+`winsqlite3.dll` 배제와 네이티브 vendoring 배제는 원래 판단대로입니다.
 
 **뒤집는 조건:** 카탈로그를 네이티브로 옮기기로 결정하는 경우.
 
-### 2. ORM → 쓰지 않습니다. `Microsoft.Data.Sqlite` 를 직접 씁니다
+### 2. ORM → 쓰지 않습니다. ADO.NET 을 직접 씁니다
 
 EF Core 도 Dapper 도 넣지 않습니다. 카탈로그 스키마는 우리가 소유하고 규모가 작으며, 이 저장소는
 모든 경계를 명시적 계약으로 손으로 쓰는 방식으로 일관돼 있습니다. EF Core 는 패키지 다발과
 마이그레이션 기구, 시작 비용을 함께 들여옵니다. 데스크톱 단일 사용자 카탈로그에 그 값을 치를
 이유가 없습니다.
 
-SQL 은 손으로 씁니다. 스키마 버전은 `PRAGMA user_version` 으로 관리합니다.
+SQL 은 손으로 씁니다. 스키마 버전은 `PRAGMA user_version` 으로 관리합니다. **실행 결과 이 판단은
+유지됩니다.** store 전체가 파일 하나이고, table 이름은 enum 에서만 나오며, 호출자 문자열이 SQL 로
+흘러가지 않습니다.
 
 **뒤집는 조건:** 스키마가 20개 테이블을 넘고 관계 매핑 유지 비용이 실제로 문제가 되는 경우.
 
@@ -190,8 +207,12 @@ SQL 은 손으로 씁니다. 스키마 버전은 `PRAGMA user_version` 으로 �
 **관리 계층에는 적용되지 않습니다.** 셸은 이미 WinUI 와 Windows App SDK 위에서 돕니다. 관리 코드에
 MIT 패키지를 더해도 네이티브 엔진의 0개는 그대로입니다.
 
-이 문장을 SQLite ADR 에 반드시 명시하십시오. 애매하게 두면 이후 모든 패키지 추가에서 같은 논쟁이
-반복됩니다.
+ADR-0025 에 명시했습니다.
+
+**다만 실행하면서 한 가지가 드러났습니다.** 이 결정으로 배포 payload 에 제3자 **native** 바이너리
+(`e_sqlite3.dll`) 가 처음 들어옵니다. "네이티브 엔진의 제3자 0개" 와 "제품 payload 의 제3자 0개"
+는 이제 다른 문장이며, 두 번째는 더 이상 참이 아닙니다. `THIRD-PARTY-NOTICES.md` 가 이를 구분해
+적고 있으니 SBOM 을 만들 때 흐리지 마십시오.
 
 ### 4. 카탈로그 스키마를 macOS 와 공유하는가 → 공유하지 않습니다
 
@@ -290,10 +311,25 @@ M15 에 착수할 때는 **플러그인 구현이 아니라 실제 장치 검증
 
 **뒤집는 조건:** 없습니다. 이 구조는 라이선스 격리 때문에라도 유지해야 합니다.
 
+### 12. SQLite 재저장 비용 → 지금은 최적화하지 않습니다
+
+무변경 재저장이 frame 5만 개에서 343ms 입니다. 이 store 의 비용은 **바뀐 양이 아니라 catalog 전체
+크기에 비례**합니다. row 하나를 고쳐도 5만 건의 upsert 가 돌고 `integrity_check` 가 파일 전체를
+훑습니다. `WHERE` 가드는 디스크 페이지 쓰기만 막고 statement 실행은 막지 못합니다.
+
+**지금은 최적화하지 않습니다.** 목표 규모에서 1초 미만이고, 조기 최적화는 아직 없는 호출 패턴을
+가정하게 만듭니다.
+
+**뒤집는 조건:** 목표 규모가 5만을 크게 넘거나, 편집 한 번의 저장 지연이 UI 에서 감지되는 경우.
+그때 손댈 곳은 두 군데입니다. (1) 호출자가 dirty 집합을 넘겨 바뀐 row 만 upsert 하는 것,
+(2) `integrity_check` 를 매 쓰기가 아니라 열기와 backup 생성에서만 돌리는 것. 측정값은
+`verification/2026-08-07-sqlite-catalog-store.md` 에 있습니다.
+
 ### 결정하지 않은 채 남기는 것
 
-없습니다. 위 11개로 M4~M17 의 주요 갈림길은 전부 정해졌습니다. 새 갈림길이 나타나면 그때 이
-문서에 같은 형식으로 추가하십시오 — **결정, 이유, 뒤집는 조건.**
+없습니다. 위 12개로 M4~M17 의 주요 갈림길은 전부 정해졌습니다. 새 갈림길이 나타나면 그때 이
+문서에 같은 형식으로 추가하십시오 — **결정, 이유, 뒤집는 조건.** 12번이 실행 중에 그렇게 추가된
+첫 항목입니다.
 
 ## 재개하는 방법
 
