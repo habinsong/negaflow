@@ -18,8 +18,8 @@
 | scalar pointwise·spatial | 부분 구현 | exposure, RGB 3×4 matrix, 기본 톤·4-band curve, 고정 64표본 DR/R/G/B point curve, 8-band HSL Color Mixer, 3구간 Color Grading, R/G/B Primary Calibration, 11종 RGB33 Film Emulation 색상→11행 acutance film-scan route x64 test·ARM64 build |
 | Film Look source routing | CLI 출력 수직 경로 통과 | 명시적 `film_scan`/`rendered_digital`, film 색상→acutance exact 순서, caller cube/scratch, 실패 시 pixel 폐기; 진단·PNG16·TIFF16에서 Primary Calibration 뒤 실행, 실제 TIFF artifact 변화 검증; 미완성 digital graph는 `unsupported_route`; catalog projection은 구현, C ABI·WinUI는 미연결 |
 | Catalog Develop route | 첫 관리 경계 통과 | `scanner`/`imported` transport와 film/digital signal 분리, legacy marker·강도 1.0 호환, 새 강도 0.5, unknown field 보존, invalid 조합 fail-closed; x64 Debug/Release 각각 163 assertion, ARM64 Debug/Release 교차 빌드. SQLite 는 아래 항목으로 구현됐고 C ABI 연결은 미구현 |
-| catalog SQLite 영속성 | 첫 왕복 통과 | `catalog_metadata` + entity table 9개, 물리 `user_version=1`과 논리 `catalog_version=1` 분리, 재정렬 시 position relocation, pooling 끔, missing/corrupt/미래 version/외부 version/malformed 5종 구분, commit 후 `integrity_check`; x64 Release 265 assertion, ARM64 교차 빌드. backup 세대·pending restore·defect sidecar·C ABI 연결은 미구현 |
-| catalog 단일 작성자 강제 | 구조로 강제 | `SqliteCatalogStore`는 `internal`. 공개 입구는 `CatalogSession` 하나이며 프로세스 lock 을 못 잡으면 세션이 만들어지지 않음. `NotFound`→빈 라이브러리 변환은 `ReadOrCreate` 한 자리뿐이고 손상·미지원 version 은 거기서도 실패. lock 없이 되는 것은 `CatalogRecovery.IsValidCatalogSource` 확인뿐 |
+| catalog SQLite 영속성 | 첫 왕복 통과 | `catalog_metadata` + entity table 9개, 물리 `user_version=1`과 논리 `catalog_version=1` 분리, 재정렬 시 position relocation, pooling 끔, missing/corrupt/미래 version/외부 version/malformed 5종 구분, commit 후 `integrity_check`; x64 Release 267 assertion, ARM64 교차 빌드. backup 세대·pending restore·defect sidecar·C ABI 연결은 미구현 |
+| catalog 단일 작성자 강제 | 구조로 강제·프로세스 경계 관측 | `SqliteCatalogStore`는 `internal`. 공개 입구는 `CatalogSession` 하나이며 프로세스 lock 을 못 잡으면 세션이 만들어지지 않음. `NotFound`→빈 라이브러리 변환은 `ReadOrCreate` 한 자리뿐이고 손상·미지원 version 은 거기서도 실패. lock 없이 되는 것은 `CatalogRecovery.IsValidCatalogSource` 확인뿐 |
 | catalog 성능 (5만 frame) | 목표 규모 측정 완료 | 최초 쓰기 527ms, 전체 읽기 255ms, 무변경 재저장 343ms, 1건 편집 337ms, 전체 뒤집기 582ms, 파일 10.1MB. 비용이 변경량이 아니라 catalog 크기에 비례함을 기록 |
 | 관리 계층 SQLite 의존성 | 고정·취약점 0 | `Microsoft.Data.Sqlite.Core` 10.0.10(MIT) + `SQLitePCLRaw.config.e_sqlite3` 3.0.5 + `SourceGear.sqlite3` 3.53.4(Apache-2.0). 편의 package 는 CVE-2025-6965 native 하한 때문에 배제(ADR-0025) |
 | 배포 payload 제3자 native | 최초 도입·범위 축소 | `e_sqlite3.dll` 2종. 네이티브 엔진의 제3자 0개는 유지되나 제품 payload 는 더 이상 0개가 아님. 비Windows RID 28종 제외로 53,571,344→3,788,288 바이트 |
@@ -61,7 +61,7 @@ build ID는 빌드 당시 미커밋 작업이 있으면 `-dirty`로 표시합니
 
 카탈로그가 처음으로 디스크에 남습니다. 근거는 `verification/2026-08-07-sqlite-catalog-store.md`,
 결정은 ADR-0025입니다. 이 날짜에 `ci-gate.ps1 -Preset x64-release` 전체(네이티브 39/39, 관리
-246+45 assertion, 경고 0)와 ARM64 관리 교차 빌드, `verify-provenance.py`를 다시 실행했습니다.
+267+45 assertion, 경고 0)와 ARM64 관리 교차 빌드, `verify-provenance.py`를 다시 실행했습니다.
 
 - `SqliteCatalogStore`를 추가했습니다. macOS의 table 배치를 그대로 옮기되 물리 schema version과
   논리 catalog version을 분리하고, 없는 파일·손상 파일·미래 물리 version·외부 논리 version·

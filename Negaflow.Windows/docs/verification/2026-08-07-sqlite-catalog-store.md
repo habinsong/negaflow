@@ -85,13 +85,23 @@ lock 없이 쓸 수 있는 것은 `CatalogRecovery.IsValidCatalogSource` 하나�
 테스트는 `InternalsVisibleTo`로 store에 직접 닿습니다. 미래 schema version, 손상 파일, 상대 경로
 같은 거부 경로는 정상 세션에서는 만들 수 없기 때문입니다.
 
+**프로세스 경계도 관측했습니다.** 같은 프로세스 안에서 두 번째 세션이 거부되는 것만 보면
+`FileShare.None`이 실제로 무엇을 막는지는 추론으로 남습니다. 테스트 실행 파일이 `--lock-contender`
+인자로 자기 자신을 별도 프로세스로 띄워 확인합니다.
+
+- lock 을 잡고 있는 동안 다른 프로세스 → `Busy` (`session_other_process_busy`)
+- lock 을 놓은 뒤 다른 프로세스 → `acquired` (`session_other_process_acquires_when_free`)
+
+두 번째 확인이 있어야 첫 번째가 의미를 가집니다. 경로 오류나 프로세스 기동 실패를 `Busy`로 잘못
+읽는 경우를 배제하기 때문입니다.
+
 ## 실행 결과
 
 | 대상 | 결과 |
 |---|---|
 | x64 Release 네이티브 build + CTest | 39/39 통과 |
 | x64 Release 관리 solution build | 통과, 경고 0·오류 0 |
-| x64 Release catalog unit | 265 assertion 통과 (이전 205, store 41, session 19) |
+| x64 Release catalog unit | 267 assertion 통과 (이전 205, store 41, session 21) |
 | x64 Release shell unit | 45 assertion 통과 |
 | ARM64 Release 관리 solution cross-build | 통과, 경고 0·오류 0 |
 | 저장소 provenance·라이선스 게이트 | 통과, files=1623 |
@@ -132,9 +142,6 @@ store의 비용이 **바뀐 양이 아니라 catalog 전체 크기에 비례**�
 - backup 세대, pending restore, legacy JSON→SQLite migration, defect sidecar
 - commit 후 전체 payload 재디코드 비교 (지금은 `integrity_check`까지)
 - fault injection: 쓰기 도중 강제 종료와 전원 장애 시나리오
-- 별도 프로세스를 실제로 띄워서 lock 경합을 확인하는 것. 지금 테스트는 같은 프로세스에서 두
-  번째 세션이 거부되는 것까지만 봅니다. 파일 공유 모드가 `FileShare.None`이므로 프로세스 경계도
-  같은 결과여야 하지만 그것은 아직 추론입니다.
 - 크래시 뒤 남은 lock 파일의 소유자를 사용자에게 설명하는 것. 지금은 stale 파일이 소유권을 뜻하지
   않는다는 사실만 있고, 누가 잡고 있었는지는 기록하지 않습니다.
 - C ABI와 WinUI 셸 연결

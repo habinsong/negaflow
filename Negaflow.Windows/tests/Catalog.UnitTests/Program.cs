@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -10,8 +11,20 @@ internal static class Program
     private static readonly List<string> Failures = [];
     private static int assertionCount;
 
-    private static int Main()
+    /// <summary>
+    /// 이 인자로 실행되면 테스트가 아니라 lock 경쟁자로 동작합니다. 자기 자신을 다시 띄워
+    /// **다른 프로세스**에서 세션을 열어 보게 하는 용도이며, 그래야 단일 작성자 계약이 프로세스
+    /// 경계에서도 성립한다는 것이 추론이 아니라 관측이 됩니다.
+    /// </summary>
+    private const string LockContenderArgument = "--lock-contender";
+
+    private static int Main(string[] args)
     {
+        if (args.Length == 2 && args[0] == LockContenderArgument)
+        {
+            return RunLockContender(args[1]);
+        }
+
         string fixturePath = Path.Combine(AppContext.BaseDirectory, "develop-route-v1.json");
         using JsonDocument fixture = JsonDocument.Parse(File.ReadAllBytes(fixturePath));
 
@@ -521,6 +534,66 @@ internal static class Program
             CatalogStoreError.InvalidPath, "store_write_rejects_relative_path");
     }
 
+    private static int RunLockContender(string isolatedBase)
+    {
+        StorageRootResolutionResult resolution =
+            StorageRootResolver.ResolveForTests(isolatedBase);
+        if (resolution.Roots is not { } contenderRoots)
+        {
+            Console.WriteLine("resolve-failed");
+            return 2;
+        }
+
+        CatalogSessionOpenResult opened = CatalogSession.Open(contenderRoots);
+        if (opened.Session is { } session)
+        {
+            session.Dispose();
+            Console.WriteLine("acquired");
+            return 0;
+        }
+        Console.WriteLine(opened.Error.ToString());
+        return 1;
+    }
+
+    /// <summary>
+    /// 같은 실행 파일을 별도 프로세스로 띄워 lock 을 잡아 보게 합니다. 결과 문자열을 돌려줍니다.
+    /// </summary>
+    private static string RunContenderProcess(string isolatedBase)
+    {
+        string executablePath = Environment.ProcessPath ?? string.Empty;
+        ProcessStartInfo startInfo = new()
+        {
+            RedirectStandardOutput = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        };
+
+        // apphost 로 빌드되면 exe 를 바로 띄우고, dotnet 호스트로 실행 중이면 dll 을 넘깁니다.
+        string assemblyPath = Path.Combine(
+            AppContext.BaseDirectory,
+            "Negaflow.Catalog.UnitTests.dll");
+        if (Path.GetFileNameWithoutExtension(executablePath) == "dotnet")
+        {
+            startInfo.FileName = executablePath;
+            startInfo.ArgumentList.Add(assemblyPath);
+        }
+        else
+        {
+            startInfo.FileName = executablePath;
+        }
+        startInfo.ArgumentList.Add(LockContenderArgument);
+        startInfo.ArgumentList.Add(isolatedBase);
+
+        using Process? contender = Process.Start(startInfo);
+        if (contender is null)
+        {
+            return "start-failed";
+        }
+        string output = contender.StandardOutput.ReadToEnd().Trim();
+        contender.WaitForExit(30_000);
+        return output;
+    }
+
     private static void VerifyCatalogSession(StorageRootSet roots)
     {
         string sessionBase = Path.Combine(
@@ -543,6 +616,10 @@ internal static class Program
             Check(!second.IsSuccess, "session_second_rejected");
             Check(second.Error == CatalogSessionError.Busy, "session_second_busy");
             Check(second.Session is null, "session_busy_no_partial_session");
+
+            // 프로세스 경계에서도 같아야 합니다. 같은 프로세스 안의 거부만 보면 FileShare.None 이
+            // 실제로 무엇을 막는지는 추론으로 남습니다.
+            Check(RunContenderProcess(sessionBase) == "Busy", "session_other_process_busy");
 
             Check(session!.Read().Error == CatalogStoreError.NotFound,
                 "session_read_absent_is_not_found");
@@ -586,6 +663,11 @@ internal static class Program
             CatalogSessionOpenResult third = CatalogSession.Open(sessionRoots);
             Check(third.IsSuccess, "session_reacquire_after_dispose");
             third.Session?.Dispose();
+
+            // lock 이 풀린 뒤에는 다른 프로세스가 잡을 수 있어야 합니다. 위의 Busy 가 경로 오류나
+            // 프로세스 기동 실패를 잘못 읽은 것이 아님을 이것이 확인합니다.
+            Check(RunContenderProcess(sessionBase) == "acquired",
+                "session_other_process_acquires_when_free");
         }
         finally
         {

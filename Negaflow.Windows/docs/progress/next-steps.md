@@ -14,7 +14,7 @@
 톤·포인트 커브·Color Mixer·Color Grading·Primary Calibration → 명시적 film-scan Film Look →
 검증된 PNG16/TIFF16 게시까지 한 장이 끝까지 갑니다.
 
-- 네이티브 테스트 39개, 관리 assertion 310개, 전부 통과
+- 네이티브 테스트 39개, 관리 assertion 312개, 전부 통과
 - Windows CI 가 PR 마다 돌고 벽시계 약 2분 30초
 - 네이티브 엔진의 제3자 runtime dependency 0개 (Windows 기본 DLL 5개만)
 - **카탈로그가 SQLite 로 디스크에 남습니다.** frame 5만 개 기준 쓰기 527ms, 읽기 255ms
