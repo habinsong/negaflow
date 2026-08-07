@@ -12,9 +12,11 @@
       <Platform Solution="*|x64" Project="x64" />
       <Platform Solution="*|ARM64" Project="ARM64" />
     </Project>
+    <!-- Shell.Core 는 catalog 와 네이티브 엔진을 함께 아는 계층이므로 Interop 과 같은
+         아키텍처에 묶입니다. AnyCPU 로 두면 x64 Interop 을 참조할 때 MSB3270 이 납니다. -->
     <Project Path="src/Shell.Core/Negaflow.Shell.Core.csproj">
-      <Platform Solution="*|x64" Project="AnyCPU" />
-      <Platform Solution="*|ARM64" Project="AnyCPU" />
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|ARM64" Project="ARM64" />
     </Project>
     <Project Path="src/Shell/Negaflow.Shell.csproj">
       <Platform Solution="*|x64" Project="x64" />
@@ -31,8 +33,8 @@
       <Platform Solution="*|ARM64" Project="ARM64" />
     </Project>
     <Project Path="tests/Shell.UnitTests/Negaflow.Shell.UnitTests.csproj">
-      <Platform Solution="*|x64" Project="AnyCPU" />
-      <Platform Solution="*|ARM64" Project="AnyCPU" />
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|ARM64" Project="ARM64" />
     </Project>
   </Folder>
 </Solution>

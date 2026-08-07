@@ -1,4 +1,6 @@
 using System.Text.Json;
+using Negaflow.Catalog;
+using Negaflow.Interop;
 
 namespace Negaflow.Shell.UnitTests;
 
@@ -13,6 +15,7 @@ internal static class Program
         VerifyPreferencesNormalization();
         VerifyAdaptiveLayout();
         VerifySwiftMetricsBaseline();
+        VerifyDevelopRequestFactory();
 
         var report = new
         {
@@ -126,6 +129,114 @@ internal static class Program
 
     private static double Read(JsonElement root, string group, string name) =>
         root.GetProperty(group).GetProperty(name).GetDouble();
+
+    private static LibraryFrameSnapshot Frame(
+        ManualBaseRgb? manualBase,
+        SourceSignalKind signal = SourceSignalKind.FilmNegativeScan,
+        FilmType filmType = FilmType.ColorNegative,
+        FilmEmulation emulation = FilmEmulation.Portra400) =>
+        new(
+            "frame-1",
+            @"C:\scans\IMG_0001.tif",
+            "Roll 01 / 1",
+            new DevelopRouteSnapshot(
+                FrameSourceTransport.Scanner,
+                signal,
+                signal == SourceSignalKind.RenderedDigital
+                    ? DevelopmentProcess.DigitalColor
+                    : DevelopmentProcess.C41,
+                filmType,
+                emulation,
+                0.75,
+                UsedLegacySourceSignal: false,
+                UsedLegacyIntensityDefault: false),
+            manualBase,
+            new ToneAdjustment(1.5, -0.25, 0.1, 0.2, 0.3, 0.4));
+
+    private static void VerifyDevelopRequestFactory()
+    {
+        const string destination = @"C:\exports\IMG_0001.png";
+
+        DevelopRequestResult result = DevelopRequestFactory.Create(
+            Frame(new ManualBaseRgb(0.21, 0.22, 0.23)),
+            destination);
+        Check(result.IsSuccess, "develop_request_success");
+        if (result.Request is not { } request)
+        {
+            return;
+        }
+
+        Check(request.SourcePath == @"C:\scans\IMG_0001.tif", "develop_request_source");
+        Check(request.DestinationPath == destination, "develop_request_destination");
+        Check(request.Format == DevelopExportFormat.Png16, "develop_request_default_format");
+        Check(request.FilmType == NegativeFilmType.Color, "develop_request_film_type");
+        Check(request.DminRed == 0.21f, "develop_request_dmin_red");
+        Check(request.DminGreen == 0.22f, "develop_request_dmin_green");
+        Check(request.DminBlue == 0.23f, "develop_request_dmin_blue");
+        Check(request.ExposureStops == 1.5f, "develop_request_exposure");
+        Check(request.Contrast == -0.25f, "develop_request_contrast");
+        Check(request.Highlights == 0.1f, "develop_request_highlights");
+        Check(request.Shadows == 0.4f, "develop_request_shadows");
+        Check(
+            request.FilmEmulation == FilmEmulationProfile.Portra400,
+            "develop_request_emulation");
+        Check(
+            request.FilmEmulationIntensity == 0.75,
+            "develop_request_emulation_intensity");
+        Check(
+            request.FilmLookSourceKind == DevelopSourceKind.FilmScan,
+            "develop_request_source_kind");
+
+        Check(
+            DevelopRequestFactory.Create(
+                Frame(new ManualBaseRgb(0.2, 0.2, 0.2), filmType: FilmType.BlackAndWhiteNegative),
+                destination).Request?.FilmType == NegativeFilmType.BlackAndWhite,
+            "develop_request_bw_film_type");
+
+        Check(
+            DevelopRequestFactory.Create(
+                Frame(new ManualBaseRgb(0.2, 0.2, 0.2), emulation: FilmEmulation.None),
+                destination).Request?.FilmEmulation == FilmEmulationProfile.None,
+            "develop_request_no_emulation");
+
+        // 수동 Dmin 이 없으면 요청을 만들지 않습니다. 기본값을 지어내면 사용자가 고르지 않은
+        // Dmin 으로 현상됩니다.
+        DevelopRequestResult noBase = DevelopRequestFactory.Create(Frame(null), destination);
+        Check(!noBase.IsSuccess, "develop_request_missing_base_refused");
+        Check(
+            noBase.Refusal == DevelopRequestRefusal.MissingManualBase,
+            "develop_request_missing_base_reason");
+        Check(noBase.Request is null, "develop_request_no_partial_request");
+
+        // rendered-digital 은 네이티브도 거부하지만, 버튼을 누르기 전에 알 수 있어야 합니다.
+        DevelopRequestResult digital = DevelopRequestFactory.Create(
+            Frame(
+                new ManualBaseRgb(0.2, 0.2, 0.2),
+                SourceSignalKind.RenderedDigital,
+                FilmType.ColorPositive),
+            destination);
+        Check(
+            digital.Refusal == DevelopRequestRefusal.UnsupportedDigitalSource,
+            "develop_request_digital_refused");
+
+        Check(
+            DevelopRequestFactory.Create(
+                Frame(new ManualBaseRgb(0.2, 0.2, 0.2)),
+                "IMG_0001.png").Refusal == DevelopRequestRefusal.InvalidDestination,
+            "develop_request_relative_destination_refused");
+        Check(
+            DevelopRequestFactory.Create(
+                Frame(new ManualBaseRgb(0.2, 0.2, 0.2)),
+                "  ").Refusal == DevelopRequestRefusal.InvalidDestination,
+            "develop_request_blank_destination_refused");
+        Check(
+            DevelopRequestFactory.Create(
+                Frame(new ManualBaseRgb(0.2, 0.2, 0.2)),
+                destination,
+                (DevelopExportFormat)99).Refusal ==
+                DevelopRequestRefusal.UnknownOutputFormat,
+            "develop_request_unknown_format_refused");
+    }
 
     private static void Check(bool condition, string name)
     {

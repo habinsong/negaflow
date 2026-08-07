@@ -4,4 +4,8 @@
     <AssemblyName>Negaflow.Shell.Core</AssemblyName>
     <RootNamespace>Negaflow.Shell</RootNamespace>
   </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Catalog.Core\Negaflow.Catalog.Core.csproj" />
+    <ProjectReference Include="..\Interop\Negaflow.Interop.csproj" />
+  </ItemGroup>
 </Project>
