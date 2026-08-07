@@ -38,6 +38,7 @@ internal static class Program
         VerifyStorageRootResolution();
         VerifyCatalogProcessLock();
         VerifySqliteCatalogStore();
+        VerifyLibraryFrameProjection();
 
         var report = new
         {
@@ -532,6 +533,193 @@ internal static class Program
             "store_rejects_relative_path");
         Check(SqliteCatalogStore.Write(Snapshot(null), "library.sqlite").Error ==
             CatalogStoreError.InvalidPath, "store_write_rejects_relative_path");
+    }
+
+    private static JsonObject FrameRecord()
+    {
+        return new JsonObject
+        {
+            ["id"] = "frame-1",
+            ["rawScanPath"] = @"C:\scans\roll-01\IMG_0001.tif",
+            ["customDisplayName"] = "Roll 01 / 1",
+            ["sourceKind"] = "scanner",
+            ["filmType"] = "colorNegative",
+            ["futureFrameValue"] = "preserve-me",
+            ["params"] = new JsonObject
+            {
+                ["filmType"] = "colorNegative",
+                ["manualBaseRGB"] = new JsonArray(0.21, 0.22, 0.23),
+                ["exposure"] = 0.5,
+                ["curveShadows"] = -0.25,
+                ["unknownAdjustment"] = new JsonObject { ["value"] = 7 },
+            },
+        };
+    }
+
+    private static LibraryFrameReadResult ReadFrame(JsonObject frameRecord)
+    {
+        using JsonDocument document = JsonDocument.Parse(
+            CatalogJson.SerializeCanonical(frameRecord));
+        return LibraryFrameReader.Read(document.RootElement);
+    }
+
+    private static void VerifyLibraryFrameProjection()
+    {
+        LibraryFrameReadResult read = ReadFrame(FrameRecord());
+        Check(read.IsSuccess, "library_frame_read_success");
+        if (read.Frame is not { } frame)
+        {
+            return;
+        }
+
+        Check(frame.Id == "frame-1", "library_frame_id");
+        Check(frame.SourcePath == @"C:\scans\roll-01\IMG_0001.tif", "library_frame_source_path");
+        Check(frame.EffectiveDisplayName == "Roll 01 / 1", "library_frame_display_name");
+        Check(frame.Route.FilmType == FilmType.ColorNegative, "library_frame_route_film_type");
+        Check(frame.CanDevelop, "library_frame_can_develop");
+        Check(frame.ManualBase == new ManualBaseRgb(0.21, 0.22, 0.23), "library_frame_manual_base");
+        Check(frame.Tone.Exposure == 0.5, "library_frame_exposure");
+        Check(frame.Tone.CurveShadows == -0.25, "library_frame_curve_shadows");
+        // 없는 톤 키는 macOS 와 같이 0 입니다.
+        Check(frame.Tone.Contrast == 0.0, "library_frame_missing_tone_is_zero");
+
+        // 수동 base 가 없으면 현상할 수 없다는 사실이 그대로 드러나야 합니다. 0.25 같은 기본값을
+        // 지어내면 사용자가 고르지 않은 Dmin 으로 현상됩니다.
+        JsonObject withoutBase = FrameRecord();
+        withoutBase["params"]!.AsObject().Remove("manualBaseRGB");
+        LibraryFrameReadResult noBase = ReadFrame(withoutBase);
+        Check(noBase.IsSuccess, "library_frame_missing_base_still_reads");
+        Check(noBase.Frame?.ManualBase is null, "library_frame_missing_base_is_absent");
+        Check(noBase.Frame?.CanDevelop == false, "library_frame_missing_base_cannot_develop");
+
+        JsonObject withoutName = FrameRecord();
+        withoutName.Remove("customDisplayName");
+        Check(
+            ReadFrame(withoutName).Frame?.EffectiveDisplayName == "IMG_0001.tif",
+            "library_frame_falls_back_to_file_name");
+
+        VerifyLibraryFrameRefusals();
+        VerifyLibraryFrameWriting();
+    }
+
+    private static void VerifyLibraryFrameRefusals()
+    {
+        JsonObject missingId = FrameRecord();
+        missingId.Remove("id");
+        Check(
+            ReadFrame(missingId).Error == LibraryFrameError.MissingId,
+            "library_frame_rejects_missing_id");
+
+        JsonObject blankId = FrameRecord();
+        blankId["id"] = "   ";
+        Check(
+            ReadFrame(blankId).Error == LibraryFrameError.InvalidId,
+            "library_frame_rejects_blank_id");
+
+        JsonObject missingPath = FrameRecord();
+        missingPath.Remove("rawScanPath");
+        Check(
+            ReadFrame(missingPath).Error == LibraryFrameError.MissingSourcePath,
+            "library_frame_rejects_missing_source_path");
+
+        // 상대 경로는 무엇을 기준으로 푸는지가 catalog 에 없습니다.
+        JsonObject relativePath = FrameRecord();
+        relativePath["rawScanPath"] = @"scans\IMG_0001.tif";
+        Check(
+            ReadFrame(relativePath).Error == LibraryFrameError.InvalidSourcePath,
+            "library_frame_rejects_relative_source_path");
+
+        JsonObject shortBase = FrameRecord();
+        shortBase["params"]!["manualBaseRGB"] = new JsonArray(0.2, 0.2);
+        Check(
+            ReadFrame(shortBase).Error == LibraryFrameError.InvalidManualBase,
+            "library_frame_rejects_two_channel_base");
+
+        JsonObject textBase = FrameRecord();
+        textBase["params"]!["manualBaseRGB"] = new JsonArray(0.2, "0.2", 0.2);
+        Check(
+            ReadFrame(textBase).Error == LibraryFrameError.InvalidManualBase,
+            "library_frame_rejects_non_numeric_base");
+
+        // 있는데 수가 아니면 조용히 0 으로 만들지 않습니다.
+        JsonObject textTone = FrameRecord();
+        textTone["params"]!["exposure"] = "0.5";
+        Check(
+            ReadFrame(textTone).Error == LibraryFrameError.InvalidToneValue,
+            "library_frame_rejects_non_numeric_tone");
+
+        JsonObject missingParameters = FrameRecord();
+        missingParameters.Remove("params");
+        Check(
+            ReadFrame(missingParameters).Error == LibraryFrameError.MissingParameters,
+            "library_frame_rejects_missing_parameters");
+
+        // route 거부는 그대로 전달되고 어느 쪽이 문제인지 구별됩니다.
+        JsonObject brokenRoute = FrameRecord();
+        brokenRoute["params"]!["filmType"] = "colorPositive";
+        LibraryFrameReadResult routeFailure = ReadFrame(brokenRoute);
+        Check(
+            routeFailure.Error == LibraryFrameError.InvalidDevelopRoute,
+            "library_frame_reports_route_failure");
+        Check(
+            routeFailure.RouteError == DevelopRouteError.MismatchedFilmType,
+            "library_frame_preserves_route_error");
+        Check(routeFailure.Frame is null, "library_frame_no_partial_snapshot");
+    }
+
+    private static void VerifyLibraryFrameWriting()
+    {
+        JsonObject original = FrameRecord();
+        LibraryFrameEdit edit = new(
+            new ToneAdjustment(1.25, -0.5, 0.1, 0.2, 0.3, 0.4),
+            new ManualBaseRgb(0.31, 0.32, 0.33));
+
+        LibraryFrameWriteResult write = LibraryFrameWriter.Apply(original, edit);
+        Check(write.IsSuccess, "library_frame_write_success");
+        if (write.FrameRecord is not { } updated)
+        {
+            return;
+        }
+
+        Check(
+            original["params"]!["exposure"]!.GetValue<double>() == 0.5,
+            "library_frame_write_leaves_input_alone");
+        Check(
+            updated["futureFrameValue"]!.GetValue<string>() == "preserve-me",
+            "library_frame_write_preserves_unknown_frame_field");
+        Check(
+            updated["params"]!["unknownAdjustment"]!["value"]!.GetValue<int>() == 7,
+            "library_frame_write_preserves_unknown_parameter_field");
+
+        LibraryFrameReadResult reread = ReadFrame(updated);
+        Check(reread.IsSuccess, "library_frame_write_round_trip");
+        Check(reread.Frame?.Tone == edit.Tone, "library_frame_write_tone_round_trip");
+        Check(reread.Frame?.ManualBase == edit.ManualBase, "library_frame_write_base_round_trip");
+
+        // base 를 지우는 것은 auto 추정으로 되돌린다는 뜻이므로 키를 없앱니다.
+        LibraryFrameWriteResult cleared = LibraryFrameWriter.Apply(
+            original,
+            new LibraryFrameEdit(ToneAdjustment.Neutral, null));
+        Check(cleared.IsSuccess, "library_frame_clear_base_write");
+        Check(
+            cleared.FrameRecord?["params"]!.AsObject().ContainsKey("manualBaseRGB") == false,
+            "library_frame_clear_base_removes_key");
+
+        Check(
+            LibraryFrameWriter.Apply(
+                original,
+                new LibraryFrameEdit(
+                    new ToneAdjustment(double.NaN, 0, 0, 0, 0, 0),
+                    null)).Error == LibraryFrameError.InvalidToneValue,
+            "library_frame_write_rejects_nan_tone");
+        Check(
+            LibraryFrameWriter.Apply(
+                original,
+                new LibraryFrameEdit(
+                    ToneAdjustment.Neutral,
+                    new ManualBaseRgb(0.2, double.PositiveInfinity, 0.2)))
+                .Error == LibraryFrameError.InvalidManualBase,
+            "library_frame_write_rejects_infinite_base");
     }
 
     private static int RunLockContender(string isolatedBase)
