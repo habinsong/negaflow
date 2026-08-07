@@ -1,6 +1,7 @@
 #include "negaflow_abi.h"
 
 #include "negaflow/core/build_info.h"
+#include "negaflow/imaging/working_tone_adjuster.h"
 #include "negaflow/pipeline/develop_export.h"
 
 #include <chrono>
@@ -261,5 +262,22 @@ nf_status_t NF_CALL nf_develop_export_v1(
     result->wall_microseconds = static_cast<std::uint64_t>(
         std::chrono::duration_cast<std::chrono::microseconds>(finished - started)
             .count());
+    return NF_STATUS_OK;
+}
+
+nf_status_t NF_CALL nf_get_tone_limits_v1(nf_tone_limits_v1* const output) {
+    if (output == nullptr) {
+        return NF_STATUS_INVALID_ARGUMENT;
+    }
+    if (output->struct_size < static_cast<std::uint32_t>(sizeof(*output))) {
+        return NF_STATUS_STRUCT_TOO_SMALL;
+    }
+
+    const std::uint32_t declared_size = output->struct_size;
+    output->maximum_exposure_stops = negaflow::imaging::maximum_exposure_stops;
+    output->maximum_tone_control = negaflow::imaging::maximum_tone_control;
+    output->minimum_film_emulation_intensity = 0.0;
+    output->maximum_film_emulation_intensity = 1.0;
+    output->struct_size = declared_size;
     return NF_STATUS_OK;
 }

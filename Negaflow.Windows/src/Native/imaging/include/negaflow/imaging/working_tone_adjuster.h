@@ -13,6 +13,12 @@
 
 namespace negaflow::imaging {
 
+// The bounds the validator enforces. They are declared here rather than kept inside the
+// .cpp so the C ABI can report them: a UI that duplicates the numbers drifts silently the
+// day one of them changes, and offers the user a value the engine will refuse.
+inline constexpr float maximum_exposure_stops = 5.0F;
+inline constexpr float maximum_tone_control = 1.0F;
+
 enum class WorkingToneAdjustStatus : std::uint8_t {
     ok = 0,
     invalid_parameter,

@@ -28,6 +28,7 @@ internal static unsafe class ContractTestRunner
                 NativeEngineBootstrap.LoadAndQuery(args[0]) == buildInfo,
                 "same_path_reload_is_idempotent");
             VerifyDevelopExportContract();
+            VerifyToneLimits();
         }
         catch (Exception exception)
         {
@@ -75,6 +76,64 @@ internal static unsafe class ContractTestRunner
             Marshal.OffsetOf<NativeDevelopExportResultV1>(
                 nameof(NativeDevelopExportResultV1.SourceFileBytes)).ToInt32() == 104,
             "develop_export_source_bytes_offset");
+    }
+
+    private static void VerifyToneLimits()
+    {
+        ToneLimits limits = ToneLimits.Read();
+
+        // 값 자체를 여기에 다시 적으면 이 테스트가 바로 그 중복이 됩니다. 대신 이 값들이
+        // 컨트롤을 실제로 묶을 수 있는 모양인지, 그리고 엔진이 거부하는 값을 clamp 가
+        // 통과시키지 않는지를 봅니다.
+        Check(limits.MaximumExposureStops > 0, "tone_limits_exposure_positive");
+        Check(limits.MaximumToneControl > 0, "tone_limits_control_positive");
+        Check(
+            limits.MinimumFilmEmulationIntensity < limits.MaximumFilmEmulationIntensity,
+            "tone_limits_intensity_range");
+
+        Check(
+            limits.ClampExposure(limits.MaximumExposureStops * 10) ==
+                limits.MaximumExposureStops,
+            "tone_limits_clamps_high_exposure");
+        Check(
+            limits.ClampExposure(-limits.MaximumExposureStops * 10) ==
+                -limits.MaximumExposureStops,
+            "tone_limits_clamps_low_exposure");
+        Check(limits.ClampExposure(double.NaN) == 0.0, "tone_limits_clamps_nan");
+        Check(
+            limits.ClampToneControl(limits.MaximumToneControl * 10) ==
+                limits.MaximumToneControl,
+            "tone_limits_clamps_control");
+
+        // clamp 를 지난 값은 엔진이 받아야 합니다. 받지 않으면 두 쪽이 어긋난 것입니다.
+        string absentSource = Path.Combine(
+            Path.GetTempPath(),
+            $"negaflow-tone-limit-{Guid.NewGuid():N}.tif");
+        DevelopExportResult atLimit = NativeDevelopExporter.Run(new DevelopExportRequest
+        {
+            SourcePath = absentSource,
+            DestinationPath = Path.Combine(Path.GetTempPath(), "negaflow-tone-limit.png"),
+            ExposureStops = (float)limits.ClampExposure(double.MaxValue),
+            Contrast = (float)limits.ClampToneControl(double.MaxValue),
+            Highlights = (float)limits.ClampToneControl(double.MinValue),
+        });
+        Check(
+            atLimit.FailedStage == DevelopExportStage.ObserveSourceBefore,
+            "tone_limits_clamped_values_pass_validation");
+
+        // 반대로 범위를 넘으면 엔진이 거부해야 합니다. 그래야 위 확인이 의미를 가집니다.
+        DevelopExportResult overLimit = NativeDevelopExporter.Run(new DevelopExportRequest
+        {
+            SourcePath = absentSource,
+            DestinationPath = Path.Combine(Path.GetTempPath(), "negaflow-tone-limit.png"),
+            ExposureStops = limits.MaximumExposureStops * 2,
+        });
+        Check(
+            overLimit.FailedStage == DevelopExportStage.RequestValidation,
+            "tone_limits_over_limit_is_rejected");
+        Check(
+            overLimit.FailureName == "invalid_tone_adjustment_parameter",
+            "tone_limits_over_limit_reason");
     }
 
     private static void VerifyDevelopExportContract()

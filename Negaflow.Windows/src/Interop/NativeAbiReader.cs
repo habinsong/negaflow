@@ -6,9 +6,9 @@ internal static unsafe class NativeAbiReader
     internal const int SourceCommitSha1Offset = 24;
     internal const ushort SupportedMajor = 0;
 
-    // Raised to 2 with nf_develop_export_v1. The managed side calls that export, so
-    // an engine below this minor must be refused at load rather than at the call.
-    internal const ushort MinimumMinor = 2;
+    // Raised with each export the managed side calls: 2 for nf_develop_export_v1,
+    // 3 for nf_get_tone_limits_v1. An engine below this is refused at load, not at the call.
+    internal const ushort MinimumMinor = 3;
 
     private const uint StatusOk = 0;
 

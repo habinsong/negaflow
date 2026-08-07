@@ -9,8 +9,6 @@
 namespace negaflow::imaging {
 namespace {
 
-constexpr float maximum_exposure_stops = 5.0F;
-constexpr float maximum_tone_control = 1.0F;
 
 void discard_pixels(WorkingImage& image) noexcept {
     std::vector<negaflow::core::Rgba32F>{}.swap(image.pixels);
