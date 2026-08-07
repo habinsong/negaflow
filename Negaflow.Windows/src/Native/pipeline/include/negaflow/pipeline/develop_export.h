@@ -71,6 +71,21 @@ struct DevelopExportOutcome final {
 [[nodiscard]] DevelopExportOutcome develop_and_export(
     const DevelopExportRequest& request) noexcept;
 
+// Runs the same pipeline but stops before publishing and writes a display bitmap into the
+// caller's buffer instead: BGRA8, tightly packed, opaque alpha, at most the requested size
+// with aspect preserved. `request.destination_path` is ignored.
+//
+// The downscale is a box average of the gamma-encoded sRGB samples. That is not the
+// numerically correct way to resample — averaging should happen in linear light — and it
+// is deliberate: this is a display bitmap, not a published artifact, and point sampling a
+// film scan aliases badly enough to mislead. Nothing here feeds a golden or a contract.
+[[nodiscard]] DevelopExportOutcome develop_preview(
+    const DevelopExportRequest& request,
+    std::uint32_t maximum_width,
+    std::uint32_t maximum_height,
+    std::uint8_t* pixels,
+    std::size_t pixel_capacity_bytes) noexcept;
+
 [[nodiscard]] const char* develop_export_stage_name(
     DevelopExportStage stage) noexcept;
 

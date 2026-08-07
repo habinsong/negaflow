@@ -50,9 +50,129 @@ const char* develop_export_stage_name(const DevelopExportStage stage) noexcept {
     return "unknown_stage";
 }
 
-DevelopExportOutcome develop_and_export(
-    const DevelopExportRequest& request) noexcept {
-    if (request.source.empty() || request.destination.empty()) {
+namespace {
+
+// Where a run ends. Publishing writes a verified 16-bit file; a preview stops before that
+// and fills the caller's display buffer. Everything before the last stage is identical, so
+// the two cannot drift into producing different pixels.
+struct PreviewTarget final {
+    std::uint32_t maximum_width{0};
+    std::uint32_t maximum_height{0};
+    std::uint8_t* pixels{nullptr};
+    std::size_t capacity_bytes{0};
+};
+
+[[nodiscard]] std::uint32_t preview_extent(
+    const std::uint32_t source,
+    const std::uint32_t maximum) noexcept {
+    return source <= maximum ? source : maximum;
+}
+
+[[nodiscard]] DevelopExportOutcome write_preview(
+    const negaflow::imaging::WorkingImage& image,
+    const PreviewTarget& target,
+    DevelopExportOutcome outcome) noexcept {
+    if (target.pixels == nullptr || target.maximum_width == 0U ||
+        target.maximum_height == 0U) {
+        return fail(DevelopExportStage::output, "invalid_preview_target");
+    }
+
+    const negaflow::output::WorkingToSrgb16Result converted =
+        negaflow::output::convert_working_to_srgb16(image);
+    if (converted.status != negaflow::output::WorkingToSrgb16Status::ok) {
+        return fail(
+            DevelopExportStage::output,
+            negaflow::output::working_to_srgb16_status_name(converted.status));
+    }
+
+    const std::uint32_t source_width = converted.image.width;
+    const std::uint32_t source_height = converted.image.height;
+    if (source_width == 0U || source_height == 0U) {
+        return fail(DevelopExportStage::output, "empty_preview_source");
+    }
+
+    // Fit inside the box without changing the aspect ratio. Integer arithmetic on the
+    // larger side first so a very wide frame does not round its short side to zero.
+    std::uint32_t width = preview_extent(source_width, target.maximum_width);
+    std::uint32_t height = static_cast<std::uint32_t>(
+        (static_cast<std::uint64_t>(source_height) * width) / source_width);
+    if (height == 0U) {
+        height = 1U;
+    }
+    if (height > target.maximum_height) {
+        height = target.maximum_height;
+        width = static_cast<std::uint32_t>(
+            (static_cast<std::uint64_t>(source_width) * height) / source_height);
+        if (width == 0U) {
+            width = 1U;
+        }
+    }
+
+    const std::uint64_t required =
+        static_cast<std::uint64_t>(width) * static_cast<std::uint64_t>(height) * 4ULL;
+    if (required > target.capacity_bytes) {
+        return fail(DevelopExportStage::output, "preview_buffer_too_small");
+    }
+
+    const std::uint32_t samples_per_row = converted.image.stride_bytes / 2U;
+    for (std::uint32_t y = 0U; y < height; ++y) {
+        const std::uint32_t source_y0 =
+            static_cast<std::uint32_t>((static_cast<std::uint64_t>(y) * source_height) / height);
+        std::uint32_t source_y1 = static_cast<std::uint32_t>(
+            (static_cast<std::uint64_t>(y + 1U) * source_height) / height);
+        if (source_y1 <= source_y0) {
+            source_y1 = source_y0 + 1U;
+        }
+
+        for (std::uint32_t x = 0U; x < width; ++x) {
+            const std::uint32_t source_x0 =
+                static_cast<std::uint32_t>((static_cast<std::uint64_t>(x) * source_width) / width);
+            std::uint32_t source_x1 = static_cast<std::uint32_t>(
+                (static_cast<std::uint64_t>(x + 1U) * source_width) / width);
+            if (source_x1 <= source_x0) {
+                source_x1 = source_x0 + 1U;
+            }
+
+            std::uint64_t red = 0U;
+            std::uint64_t green = 0U;
+            std::uint64_t blue = 0U;
+            std::uint64_t count = 0U;
+            for (std::uint32_t sy = source_y0; sy < source_y1; ++sy) {
+                const std::uint16_t* const row =
+                    converted.image.samples.data() +
+                    (static_cast<std::size_t>(sy) * samples_per_row);
+                for (std::uint32_t sx = source_x0; sx < source_x1; ++sx) {
+                    const std::uint16_t* const pixel = row + (static_cast<std::size_t>(sx) * 3U);
+                    red += pixel[0];
+                    green += pixel[1];
+                    blue += pixel[2];
+                    ++count;
+                }
+            }
+
+            std::uint8_t* const destination =
+                target.pixels + ((static_cast<std::size_t>(y) * width + x) * 4U);
+            // BGRA8 with opaque alpha, which is what a XAML Image accepts. The samples are
+            // 16-bit sRGB, so the shift is a plain narrowing, not a transfer function.
+            destination[0] = static_cast<std::uint8_t>((blue / count) >> 8U);
+            destination[1] = static_cast<std::uint8_t>((green / count) >> 8U);
+            destination[2] = static_cast<std::uint8_t>((red / count) >> 8U);
+            destination[3] = 0xFFU;
+        }
+    }
+
+    outcome.image_width = width;
+    outcome.image_height = height;
+    outcome.output_file_bytes = required;
+    outcome.succeeded = true;
+    outcome.failure_name = "ok";
+    return outcome;
+}
+
+[[nodiscard]] DevelopExportOutcome run_develop(
+    const DevelopExportRequest& request,
+    const PreviewTarget* const preview) noexcept {
+    if (request.source.empty() || (preview == nullptr && request.destination.empty())) {
         return fail(DevelopExportStage::request_validation, "missing_path");
     }
     if (request.format != DevelopExportFormat::png16 &&
@@ -209,6 +329,10 @@ DevelopExportOutcome develop_and_export(
     outcome.film_look_color_applied = film_look.info.color_applied;
     outcome.film_look_acutance_applied = film_look.info.acutance_applied;
 
+    if (preview != nullptr) {
+        return write_preview(film_look.image, *preview, outcome);
+    }
+
     if (request.format == DevelopExportFormat::png16) {
         const negaflow::output::WicPngExportResult exported =
             negaflow::output::export_working_to_srgb16_png(
@@ -260,6 +384,28 @@ DevelopExportOutcome develop_and_export(
     outcome.succeeded = true;
     outcome.failure_name = "ok";
     return outcome;
+}
+
+}  // namespace
+
+DevelopExportOutcome develop_and_export(
+    const DevelopExportRequest& request) noexcept {
+    return run_develop(request, nullptr);
+}
+
+DevelopExportOutcome develop_preview(
+    const DevelopExportRequest& request,
+    const std::uint32_t maximum_width,
+    const std::uint32_t maximum_height,
+    std::uint8_t* const pixels,
+    const std::size_t pixel_capacity_bytes) noexcept {
+    const PreviewTarget target{
+        maximum_width,
+        maximum_height,
+        pixels,
+        pixel_capacity_bytes,
+    };
+    return run_develop(request, &target);
 }
 
 }  // namespace negaflow::pipeline
