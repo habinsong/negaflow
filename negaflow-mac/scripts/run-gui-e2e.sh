@@ -2,8 +2,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PROJECT_DIR="${NEGAFLOW_E2E_PROJECT_DIR:-$ROOT/build/NegaflowE2EProject}"
-DERIVED_DATA="${NEGAFLOW_E2E_DERIVED_DATA:-$ROOT/build/DerivedData.ui-tests}"
+PROJECT_DIR="${NEGAFLOW_E2E_PROJECT_DIR:-$(cd "$ROOT/.." && pwd)/build/NegaflowE2EProject}"
+DERIVED_DATA="${NEGAFLOW_E2E_DERIVED_DATA:-$(cd "$ROOT/.." && pwd)/build/DerivedData.ui-tests}"
 
 if ! command -v xcodegen >/dev/null 2>&1; then
   echo "[gui-e2e] ERROR: xcodegen 2.42.0+ is required." >&2

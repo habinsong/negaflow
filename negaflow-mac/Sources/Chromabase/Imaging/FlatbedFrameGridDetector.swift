@@ -119,14 +119,18 @@ public enum FlatbedFrameGridDetector {
               preview.physicalSize.width > 0,
               preview.physicalSize.height > 0 else { return [] }
 
-        let mask = transmissiveMask(preview)
-        guard let slots = slotRanges(mask: mask, preview: preview, format: frameFormat) else {
-            return []
-        }
+        guard let found = slotRanges(preview: preview, format: frameFormat) else { return [] }
+        let slots = found.slots
+        let levels = found.levels
 
         var detections: [FlatbedFrameDetection] = []
         for (row, slot) in slots.enumerated() {
-            let bands = filmBands(mask: mask, preview: preview, slot: slot, format: frameFormat)
+            let bands = filmBands(
+                preview: preview,
+                slot: slot,
+                format: frameFormat,
+                levels: levels
+            )
             var column = 0
             for band in bands {
                 for rect in frames(
@@ -149,30 +153,47 @@ public enum FlatbedFrameGridDetector {
         return detections
     }
 
-    // MARK: - 1. 투과 마스크
+    // MARK: - 1. 밝기 수준
 
-    /// 홀더 마스크는 빛을 거의 통과시키지 않고 필름은 통과시킨다. 두 무리 사이의 골을 찾아
-    /// 경계를 정한다. 고정 임계값을 쓰면 필름 종류(오렌지 베이스 vs 투명한 슬라이드 베이스)에
-    /// 따라 무너지므로 히스토그램에서 뽑는다.
-    static func transmissiveMask(_ preview: Preview) -> [Bool] {
-        let threshold = opaqueThreshold(preview.luminance)
-        return preview.luminance.map { $0 > threshold }
+    /// 홀더와 필름의 밝기 수준. 두 값 사이의 상대 위치로 판정하므로 필름 종류나
+    /// 노출이 달라도 같은 기준이 선다.
+    ///
+    struct TransmissionLevels: Equatable, Sendable {
+        let holder: Double
+        let film: Double
+
+        /// 필름과 홀더를 가르는 값. 필름 쪽으로 1/4 지점에 둔다 — 밀도가 높은 컷은 필름
+        /// 수준에서 홀더 쪽으로 크게 밀리므로, 한가운데에 두면 그런 컷이 통째로 넘어간다.
+        var filmFloor: Double { holder + (film - holder) * 0.25 }
+
     }
 
-    /// 가장 어두운 무리(홀더)와 나머지를 가르는 값. Otsu 와 같은 판별분석이다.
-    static func opaqueThreshold(_ luminance: [Double]) -> Double {
-        var histogram = [Int](repeating: 0, count: 256)
-        for value in luminance {
-            let bin = Int((value * 255).rounded())
-            histogram[min(255, max(0, bin))] += 1
+    /// 1차원 프로파일을 두 무리로 가르는 값(판별분석). **픽셀 히스토그램에 쓰면 안 된다.**
+    ///
+    /// 실측(GT-X900, 정품 3슬롯 홀더, 컬러 네거티브)에서 프리뷰 픽셀의 중앙값은 0.000 이었다.
+    /// 홀더가 화면의 절반을 넘고, 밀도가 높은 컷도 8-bit 에서 0 으로 잘려 나가기 때문이다.
+    /// 그 히스토그램에 판별분석을 걸면 경계가 홀더와 필름 사이가 아니라 **필름 분포 한가운데**
+    /// (0.12~0.50)에 서고, 필름 대부분이 불투명으로 판정된다. 실제로 100dpi 프리뷰에서 투과로
+    /// 남은 픽셀이 0.76% 뿐이어서 슬롯을 하나도 찾지 못했다.
+    ///
+    /// 열 평균 프로파일에는 두 무리가 그대로 남는다 — 홀더 리브 열은 0.002, 필름 열은 0.12 로
+    /// 25/100/150dpi 어디서나 같았다. 그래서 판별분석은 **프로파일에만** 쓴다.
+    static func splitThreshold(of profile: [Double]) -> Double? {
+        guard let low = profile.min(), let high = profile.max(), high - low > 1e-6 else {
+            return nil
         }
-        let total = luminance.count
-        guard total > 0 else { return 0 }
+        let binCount = 128
+        var histogram = [Int](repeating: 0, count: binCount)
+        for value in profile {
+            let bin = Int((value - low) / (high - low) * Double(binCount - 1))
+            histogram[min(binCount - 1, max(0, bin))] += 1
+        }
+        let total = profile.count
         let sum = histogram.enumerated().reduce(0.0) { $0 + Double($1.offset * $1.element) }
         var backgroundSum = 0.0
         var backgroundCount = 0
-        var best = (variance: -1.0, threshold: 0)
-        for bin in 0..<256 {
+        var best = (variance: -1.0, bin: 0)
+        for bin in 0..<binCount {
             backgroundCount += histogram[bin]
             if backgroundCount == 0 { continue }
             let foregroundCount = total - backgroundCount
@@ -184,39 +205,71 @@ public enum FlatbedFrameGridDetector {
             let variance = Double(backgroundCount) * Double(foregroundCount) * delta * delta
             if variance > best.variance { best = (variance, bin) }
         }
-        // 고른 bin 까지가 어두운 무리다. bin 경계값을 그대로 쓰면 그 bin 에 속한 값이
-        // 비교에서 간발로 살아남아 마스크가 통째로 참이 된다.
-        return (Double(best.threshold) + 0.5) / 255
+        // 고른 bin 까지가 어두운 무리다. bin 경계를 그대로 쓰면 그 bin 에 속한 값이 비교에서
+        // 간발로 살아남는다.
+        return low + (Double(best.bin) + 0.5) / Double(binCount) * (high - low)
     }
 
     // MARK: - 2~3. 슬롯
 
-    /// 슬롯은 홀더가 필름을 보여주려고 뚫어 둔 세로 창이다. 열마다 투과 비율을 세면 창이 봉우리,
+    /// 슬롯은 홀더가 필름을 보여주려고 뚫어 둔 세로 창이다. 열마다 밝기를 평균하면 창이 봉우리,
     /// 홀더 리브가 골로 나온다.
     static func slotRanges(
-        mask: [Bool],
         preview: Preview,
         format: FilmFrameFormat
-    ) -> [Range<Int>]? {
-        var columnCoverage = [Double](repeating: 0, count: preview.width)
+    ) -> (slots: [Range<Int>], levels: TransmissionLevels)? {
+        var columnMean = [Double](repeating: 0, count: preview.width)
         for y in 0..<preview.height {
             let rowStart = y * preview.width
-            for x in 0..<preview.width where mask[rowStart + x] {
-                columnCoverage[x] += 1
-            }
+            for x in 0..<preview.width { columnMean[x] += preview.luminance[rowStart + x] }
         }
-        for x in 0..<preview.width { columnCoverage[x] /= Double(preview.height) }
+        for x in 0..<preview.width { columnMean[x] /= Double(preview.height) }
 
-        let candidates = runs(of: columnCoverage, above: 0.25)
+        // 열 안에서 밝기가 얼마나 흔들리는지. 필름에는 그림이 들어 있어 흔들리고, 홀더나
+        // 빈 바탕은 균일하다. **어느 쪽이 필름인지는 밝기가 아니라 이 값이 정한다.**
+        var columnDeviation = [Double](repeating: 0, count: preview.width)
+        for x in 0..<preview.width {
+            var sumSquares = 0.0
+            for y in 0..<preview.height {
+                let delta = preview.luminance[y * preview.width + x] - columnMean[x]
+                sumSquares += delta * delta
+            }
+            columnDeviation[x] = (sumSquares / Double(preview.height)).squareRoot()
+        }
+
+        guard let threshold = splitThreshold(of: columnMean) else { return nil }
+        let candidates = runs(of: columnMean) { $0 > threshold }
         // 슬롯이 보여주는 것은 필름 폭이 아니라 이미지 영역이다. 스캔 영역 밖으로 잘린 슬롯은
         // 폭이 규격에 못 미치므로 여기서 떨어진다. 홀더 종류는 보지 않는다.
         let expected = expectedSlotWidthMM(format)
         let pixelsPerMM = preview.pixelsPerMillimeterX
-        let accepted = candidates.filter { range in
+        let sized = candidates.filter { range in
             let widthMM = Double(range.count) / pixelsPerMM
             return widthMM >= expected * 0.75 && widthMM <= expected * 1.6
         }
-        return accepted.isEmpty ? nil : accepted
+
+        // **슬롯 안에는 그림이 있어야 한다.** 폭만 보면 규격에 맞는 균일한 띠가 그대로
+        // 통과한다 — 필름을 흰 바탕 위에 둔 프리뷰에서는 바탕의 좌우 여백이 규격 폭과
+        // 우연히 맞아떨어져 슬롯으로 뽑히고, 그 안에서 없는 격자를 만들어 낸다. 필름 열은
+        // 열 안에서 밝기가 흔들리고(실측 0.09) 빈 바탕은 균일하므로(0.00) 그것으로 가른다.
+        let deviationLevel = columnDeviation.reduce(0, +) / Double(max(1, columnDeviation.count))
+        let accepted = sized.filter { range in
+            let deviation = range.reduce(0) { $0 + columnDeviation[$1] } / Double(range.count)
+            return deviation > deviationLevel * 0.25
+        }
+        guard !accepted.isEmpty else { return nil }
+
+        // 두 무리의 밝기 수준은 이 단계에서 그대로 얻는다. 행 판정에 다시 판별분석을 걸면
+        // 안 된다 — 슬롯 안은 거의 전부 필름이라 낮은 무리가 없어서, 경계가 필름 분포
+        // 한가운데에 서고 구획이 하나도 남지 않는다(실측에서 임계 0.28~0.50).
+        let holderSamples = columnMean.filter { $0 <= threshold }
+        let filmSamples = accepted.flatMap { $0.map { columnMean[$0] } }
+        guard !holderSamples.isEmpty, !filmSamples.isEmpty else { return nil }
+        let levels = TransmissionLevels(
+            holder: holderSamples.reduce(0, +) / Double(holderSamples.count),
+            film: filmSamples.reduce(0, +) / Double(filmSamples.count)
+        )
+        return (accepted, levels)
     }
 
     /// 스트립을 세로로 놓고 스캔하면 슬롯 폭에는 프레임의 짧은 변이 보인다.
@@ -229,25 +282,25 @@ public enum FlatbedFrameGridDetector {
     /// 슬롯 안에서 필름이 실제로 놓인 세로 구간. 한 슬롯이 위아래로 나뉜 홀더도 있으므로
     /// 개수를 가정하지 않고 끊어진 구간을 그대로 돌려준다.
     static func filmBands(
-        mask: [Bool],
         preview: Preview,
         slot: Range<Int>,
-        format: FilmFrameFormat
+        format: FilmFrameFormat,
+        levels: TransmissionLevels
     ) -> [Range<Int>] {
-        var rowCoverage = [Double](repeating: 0, count: preview.height)
+        var rowMean = [Double](repeating: 0, count: preview.height)
         for y in 0..<preview.height {
             let rowStart = y * preview.width
-            var lit = 0
-            for x in slot where mask[rowStart + x] { lit += 1 }
-            rowCoverage[y] = Double(lit) / Double(slot.count)
+            var sum = 0.0
+            for x in slot { sum += preview.luminance[rowStart + x] }
+            rowMean[y] = sum / Double(slot.count)
         }
-        // 과노광된 컷은 홀더만큼 어두워서 투과 마스크에서 빠진다. 그대로 두면 한 스트립이
+        // 과노광된 컷은 홀더만큼 어두워서 필름 바닥선 아래로 내려간다. 그대로 두면 한 스트립이
         // 여러 조각으로 끊어져 격자가 조각마다 따로 서고 컷이 통째로 누락된다. 컷 하나보다
         // 짧은 틈은 필름이 이어진 것으로 보고 메운다.
         let frameLengthMM = max(format.stripWidthMM, format.stripHeightMM)
         // 메워야 할 최악의 틈은 컷 하나가 통째로 불투명한 경우다. 그보다 조금 넉넉히 잡는다.
         let bridgeRows = Int(frameLengthMM * 1.2 * preview.pixelsPerMillimeterY)
-        let merged = bridging(runs(of: rowCoverage, above: 0.4), maximumGap: bridgeRows)
+        let merged = bridging(runs(of: rowMean) { $0 > levels.filmFloor }, maximumGap: bridgeRows)
 
         // 한 컷도 못 담는 구간은 잡음이다.
         let minimumMM = min(format.stripWidthMM, format.stripHeightMM) * 0.8
@@ -392,17 +445,20 @@ public enum FlatbedFrameGridDetector {
 
     // MARK: - 보조
 
-    static func runs(of coverage: [Double], above threshold: Double) -> [Range<Int>] {
+    static func runs(
+        of profile: [Double],
+        matching isIncluded: (Double) -> Bool
+    ) -> [Range<Int>] {
         var result: [Range<Int>] = []
         var start: Int?
-        for (index, value) in coverage.enumerated() {
-            if value > threshold, start == nil { start = index }
-            if value <= threshold, let begin = start {
+        for (index, value) in profile.enumerated() {
+            if isIncluded(value), start == nil { start = index }
+            if !isIncluded(value), let begin = start {
                 result.append(begin..<index)
                 start = nil
             }
         }
-        if let begin = start { result.append(begin..<coverage.count) }
+        if let begin = start { result.append(begin..<profile.count) }
         return result
     }
 

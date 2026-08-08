@@ -320,6 +320,8 @@ enum AppLocalizedPhrase: CaseIterable {
     case autoToneHelp
     case autoWhiteBalanceHelp
     case copy
+    case closePanel
+    case copyAll
     case paste
     case copyDevelopSettingsHelp
     case pasteDevelopSettingsHelp

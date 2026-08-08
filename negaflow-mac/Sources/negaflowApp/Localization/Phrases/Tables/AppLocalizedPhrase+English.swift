@@ -372,6 +372,8 @@ extension AppLocalization {
             .autoToneHelp: "Auto Tone Command-U — use the histogram to adjust exposure, contrast, highlights, shadows, whites, blacks, and vibrance.",
             .autoWhiteBalanceHelp: "Auto White Balance Shift-Command-U — neutralize Warmth and Tint using gray-world.",
             .copy: "Copy",
+            .closePanel: "Close",
+            .copyAll: "Copy all",
             .paste: "Paste",
             .copyDevelopSettingsHelp: "Copy current frame develop settings.",
             .pasteDevelopSettingsHelp: "Paste copied develop settings.",

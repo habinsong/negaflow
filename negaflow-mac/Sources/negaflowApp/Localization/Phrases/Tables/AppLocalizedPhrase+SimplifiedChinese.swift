@@ -372,6 +372,8 @@ extension AppLocalization {
         .autoToneHelp: "自动色调 Command-U — 依据直方图调整曝光度、对比度、高光、阴影、白色色阶、黑色色阶和鲜艳度。",
         .autoWhiteBalanceHelp: "自动白平衡 Shift-Command-U — 使用灰度世界算法中和色温与色调。",
         .copy: "拷贝",
+        .closePanel: "关闭",
+        .copyAll: "全部拷贝",
         .paste: "粘贴",
         .copyDevelopSettingsHelp: "拷贝当前照片的显影设置。",
         .pasteDevelopSettingsHelp: "粘贴已拷贝的显影设置。",

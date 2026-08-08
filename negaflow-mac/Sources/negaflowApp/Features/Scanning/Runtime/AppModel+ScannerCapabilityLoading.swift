@@ -91,7 +91,10 @@ extension AppModel {
             .filter { $0.dpi > 0 }
             .sorted()
         if !resolutions.contains(resolutionChoice) {
-            resolutionChoice = Self.preferredScanResolution(in: resolutions) ?? resolutionChoice
+            resolutionChoice = Self.preferredScanResolution(
+                in: resolutions,
+                isFlatbed: capabilities.supportsPositionedScanArea == true
+            ) ?? resolutionChoice
         }
         if !capabilities.supportedBitDepths.contains(bitDepthChoice) {
             bitDepthChoice = capabilities.supportedBitDepths.contains(.sixteen)
@@ -115,11 +118,25 @@ extension AppModel {
     /// 분석하므로 그 여유분은 검출이 아니라 사람이 눈으로 영역을 잡을 때 쓰인다.
     static let targetFlatbedPreviewDPI = 300
 
-    /// 목록에 3600dpi가 없을 때 쓸 필름 스캔 기본 해상도. 오름차순 목록의 첫 값을 쓰면
+    /// 평판 필름 스캔 기본 해상도의 목표값.
+    ///
+    /// 평판은 목록에 6400dpi 이상까지 올라오지만 필름에서 실제로 분해되는 해상도는 그보다
+    /// 훨씬 낮다. GT-X900 실측에서 렌즈를 홀더용으로 바꾼 것만으로 선명도가 1.76배 달라졌고,
+    /// 그 위쪽 값들은 파일만 커진다. 2400dpi 는 35mm 한 컷이 3400×2270픽셀이라 인화에 충분한
+    /// 크기이면서, 스캔 시간과 용량이 실용 범위에 남는 지점이다.
+    static let targetFlatbedScanDPI = 2400
+
+    /// 목록에 목표값이 없을 때 쓸 필름 스캔 기본 해상도. 오름차순 목록의 첫 값을 쓰면
     /// 50dpi부터 노출하는 기기(epson2 평판: 50|60|…|12800dpi)에서 기본값이 최저 해상도로
     /// 떨어진다.
-    static func preferredScanResolution(in resolutions: [Resolution]) -> Resolution? {
-        nearestSupportedResolution(to: targetScanDPI, in: resolutions)
+    static func preferredScanResolution(
+        in resolutions: [Resolution],
+        isFlatbed: Bool = false
+    ) -> Resolution? {
+        nearestSupportedResolution(
+            to: isFlatbed ? targetFlatbedScanDPI : targetScanDPI,
+            in: resolutions
+        )
     }
 
     /// 평판 프리뷰에 쓸 해상도. 장치가 실제로 지원하는 값 중에서만 고른다.

@@ -382,9 +382,21 @@ struct ScannerControlsSection: View {
     }
 
     // MARK: - capability 기반 옵션
+
+    /// 본 스캔에 내보일 최소 해상도. 평판은 50dpi부터 목록에 올리는데, 그 아래쪽은 프리뷰가
+    /// 쓰는 작업용 값이고 본 스캔으로 고를 이유가 없다. 목록에 남겨 두면 서른 개가 넘는 항목이
+    /// 메뉴를 채워 실제로 쓰는 값이 묻힌다.
+    private static let minimumSelectableScanDPI = 600
+
     var resolutions: [Resolution] {
-        (model.capabilities?.supportedResolutions ?? [])
+        let supported = (model.capabilities?.supportedResolutions ?? [])
             .filter { $0.dpi > 0 }
+        let usable = supported.filter { $0.dpi >= Self.minimumSelectableScanDPI }
+        // 걸러낸 목록에 지금 고른 값이 없으면 메뉴가 빈칸으로 보인다.
+        guard !usable.isEmpty else { return supported }
+        return usable.contains(model.resolutionChoice)
+            ? usable
+            : (usable + [model.resolutionChoice]).sorted()
     }
 
     /// 채널당 비트와 픽셀 합산 비트를 함께 표기한다.

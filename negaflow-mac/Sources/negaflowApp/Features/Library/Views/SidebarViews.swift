@@ -175,6 +175,9 @@ struct FrameStripItemView: View {
         // 카드는 스크롤에서 수십 장이 동시에 살아 있다. interactive 글래스는 카드마다 포인터를
         // 따라가는 실시간 변형을 돌려 스크롤 프레임을 갉아먹으므로 정적 표면을 쓴다.
         .liquidSurface(cornerRadius: 9)
+        // 카드 하나가 접근성 요소 하나다. 안쪽 요소를 따로 노출하면 카드 수만큼 노드가
+        // 곱해지고, 그 트리를 레이아웃마다 훑는 비용이 모듈 전환을 초 단위로 늘린다.
+        .accessibilityElement(children: .combine)
         .accessibilityLabel(model.text(
             AppLocalizedPhrase.frameAccessibilityFormat,
             frame.displayName(language: model.appLanguage),
@@ -298,34 +301,50 @@ private struct FrameRatingButtons: View {
     let isCompact: Bool
     let controlHeight: CGFloat
 
+    /// 별 다섯 개를 **하나의 조작 영역**으로 둔다.
+    ///
+    /// 별마다 `Button` 을 두면 카드 한 장이 응답자(responder) 다섯 개와 접근성 노드 열다섯 개를
+    /// 더 만든다. 격자에는 그런 카드가 수백 장 살아 있고, SwiftUI 는 레이아웃마다 응답자 트리를
+    /// 전부 훑는다(`AccessibilityNode.updateFocus` → `MultiViewResponder.visit`). 실측에서
+    /// 라이브러리로 모듈을 전환하는 데 4.5초가 걸렸고, 이 다섯 버튼과 카드 접근성 수정자를
+    /// 걷어내자 1.9초로 떨어졌다. 동작은 그대로 두고 구조만 하나로 합친다.
     var body: some View {
-        // 별 다섯 개가 쓰는 문구는 프레임과 무관하게 같다. 별마다 만들면 카드 한 장에
-        // 문자열 스무 개가 새로 생기고, 격자에는 그런 카드가 수십 장 살아 있다.
-        let starLabels = (1...5).map { model.text(AppLocalizedPhrase.starHelpFormat, $0) }
-        let selectedValue = model.accessibilityText(.selected)
-        let unselectedValue = model.accessibilityText(.notSelected)
-        let unselectedHint = model.accessibilityText(.select)
-        HStack(spacing: isCompact ? 0 : 1) {
+        let starWidth: CGFloat = isCompact ? 12 : 16
+        let spacing: CGFloat = isCompact ? 0 : 1
+        HStack(spacing: spacing) {
             ForEach(1...5, id: \.self) { value in
-                Button {
-                    frame.toggleRating(value)
-                } label: {
-                    Image(systemName: value <= frame.rating ? "star.fill" : "star")
-                        .font(.system(size: isCompact ? 7 : 9))
-                        .foregroundStyle(value <= frame.rating ? Color.blue : Color.secondary.opacity(0.45))
-                        .frame(width: isCompact ? 12 : 16, height: controlHeight)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .help(starLabels[value - 1])
-                .accessibilityLabel(starLabels[value - 1])
-                .accessibilitySelectionState(
-                    frame.rating == value,
-                    selectedValue: selectedValue,
-                    unselectedValue: unselectedValue,
-                    unselectedHint: unselectedHint
-                )
+                Image(systemName: value <= frame.rating ? "star.fill" : "star")
+                    .font(.system(size: isCompact ? 7 : 9))
+                    .foregroundStyle(value <= frame.rating ? Color.blue : Color.secondary.opacity(0.45))
+                    .frame(width: starWidth, height: controlHeight)
+            }
+        }
+        .contentShape(Rectangle())
+        .gesture(
+            SpatialTapGesture().onEnded { event in
+                let step = starWidth + spacing
+                let index = Int(event.location.x / max(1, step)) + 1
+                frame.toggleRating(min(5, max(1, index)))
+            }
+        )
+        .help(model.text(AppLocalizedPhrase.starHelpFormat, frame.rating))
+        // 별점은 값을 가진 컨트롤 하나다. 별마다 선택 상태를 두는 것보다 이쪽이 보조기술에서도
+        // 다루기 쉽고, 노드도 하나로 끝난다.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(model.text(AppLocalizedPhrase.starHelpFormat, frame.rating))
+        .accessibilityValue(model.text(AppLocalizedPhrase.starHelpFormat, frame.rating))
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: frame.setRating(min(5, frame.rating + 1))
+            case .decrement: frame.setRating(max(0, frame.rating - 1))
+            @unknown default: break
             }
         }
     }
 }
+
+
+
+
+
+

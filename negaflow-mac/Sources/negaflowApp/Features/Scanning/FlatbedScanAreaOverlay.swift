@@ -121,6 +121,11 @@ struct FlatbedScanAreaOverlay: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .focusable()
+        // 이 뷰는 프리뷰 영역을 가득 채운다. 포커스 링을 그대로 두면 프레임을 하나 집는
+        // 순간 화면 테두리를 따라 파란 사각형이 그려져, 스캔 영역의 경계처럼 보인다.
+        // 포커스는 방향키 미세이동과 ⌘C/⌘V 에 필요하므로 표시만 끈다. 어느 프레임이
+        // 선택됐는지는 프레임 자신의 강조색 테두리가 이미 알려 준다.
+        .focusEffectDisabled()
         .focused($isFocused)
         .onKeyPress(.leftArrow, phases: [.down, .repeat]) { nudge(dx: -1, dy: 0, press: $0) }
         .onKeyPress(.rightArrow, phases: [.down, .repeat]) { nudge(dx: 1, dy: 0, press: $0) }

@@ -372,6 +372,8 @@ extension AppLocalization {
         .autoToneHelp: "自動トーン Command-U — ヒストグラムに基づいて露光量、コントラスト、ハイライト、シャドウ、白レベル、黒レベル、自然な彩度を補正します。",
         .autoWhiteBalanceHelp: "自動ホワイトバランス Shift-Command-U — グレーワールド法で色温度と色かぶりを中和します。",
         .copy: "コピー",
+        .closePanel: "閉じる",
+        .copyAll: "すべてコピー",
         .paste: "ペースト",
         .copyDevelopSettingsHelp: "現在のコマの現像設定をコピーします。",
         .pasteDevelopSettingsHelp: "コピーした現像設定をペーストします。",

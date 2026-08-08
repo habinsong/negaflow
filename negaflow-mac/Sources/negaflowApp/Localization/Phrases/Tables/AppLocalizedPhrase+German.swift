@@ -372,6 +372,8 @@ extension AppLocalization {
         .autoToneHelp: "Automatische Tonwerte Befehl-U — passt Belichtung, Kontrast, Lichter, Tiefen, Weiß, Schwarz und Dynamik anhand des Histogramms an.",
         .autoWhiteBalanceHelp: "Automatischer Weißabgleich Umschalt-Befehl-U — neutralisiert Temperatur und Tonung nach der Grauwelt-Methode.",
         .copy: "Kopieren",
+        .closePanel: "Schließen",
+        .copyAll: "Alles kopieren",
         .paste: "Einsetzen",
         .copyDevelopSettingsHelp: "Kopiert die Entwicklungseinstellungen des aktuellen Bilds.",
         .pasteDevelopSettingsHelp: "Setzt die kopierten Entwicklungseinstellungen ein.",

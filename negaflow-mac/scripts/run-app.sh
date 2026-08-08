@@ -65,7 +65,9 @@ case "${1:-run}" in
   *) echo "usage: $0 [run|build|release|debug]"; exit 2 ;;
 esac
 
-BUILD_DIR="$ROOT/build"
+# 빌드 산출물은 저장소 루트의 build/ 에 둔다. macOS 트리를 negaflow-mac/ 으로 옮긴 뒤에도
+# 앱 번들 경로는 그대로 <repo>/build/negaflow.app 이라, 설치·실행 습관과 문서가 어긋나지 않는다.
+BUILD_DIR="${NEGAFLOW_BUILD_DIR:-$(cd "$ROOT/.." && pwd)/build}"
 APP_BUNDLE="$BUILD_DIR/negaflow.app"
 DERIVED="${NEGAFLOW_DERIVED_DATA_PATH:-$BUILD_DIR/DerivedData.$(id -un)}"
 

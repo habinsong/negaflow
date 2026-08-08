@@ -372,6 +372,8 @@ extension AppLocalization {
             .autoToneHelp: "자동 톤 Command-U — 히스토그램으로 노출, 대비, 밝은 영역, 어두운 영역, 흰색 계열, 검정 계열, 생동감을 보정합니다.",
             .autoWhiteBalanceHelp: "자동 화이트 밸런스 Shift-Command-U — 그레이 월드 방식으로 색온도와 틴트를 중립화합니다.",
             .copy: "복사",
+            .closePanel: "닫기",
+            .copyAll: "전체 복사",
             .paste: "붙여넣기",
             .copyDevelopSettingsHelp: "현재 사진 현상 설정 복사",
             .pasteDevelopSettingsHelp: "복사한 현상 설정 붙여넣기",

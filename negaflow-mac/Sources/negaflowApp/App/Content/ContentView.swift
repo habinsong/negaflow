@@ -77,9 +77,25 @@ struct ContentView: View {
             .zIndex(1)
             Divider()
                 .zIndex(1)
+            // **`.id(module)` 를 걸지 않는다.** 그 한 줄이 모듈을 바꿀 때마다 바깥 컨테이너
+            // 전체를 새로 만들게 해서, 라이브러리로 돌아올 때 카드까지 전부 다시 세웠다
+            // (실측: 전환 4.5초, 카드 250장 재생성). 안쪽 `switch` 의 가지들은 이미 서로 다른
+            // 정체성을 가지므로, 전환 효과는 가지에 직접 달아 준다.
             workspaceContent
-                .id(selectedWorkspaceModule)
-                .transition(workspaceModuleTransition)
+                // 진단은 창 안 오른쪽에 세로로 꽉 채워 얹는다. 팝오버로 띄우면 여는 단추가
+                // 도구막대 오른쪽 끝이라 창 밖으로 나가 잘렸다.
+                .overlay(alignment: .trailing) {
+                    if showDiagnostics {
+                        DiagnosticsReportView(
+                            center: model.diagnosticsCenter,
+                            onClose: { showDiagnostics = false }
+                        )
+                        .environmentObject(model)
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
+                        .zIndex(2)
+                    }
+                }
+                .animation(reduceMotion ? nil : .snappy(duration: 0.18), value: showDiagnostics)
         }
         .animation(reduceMotion ? nil : .snappy(duration: 0.14), value: selectedWorkspaceModule)
         .transaction { transaction in
@@ -250,3 +266,5 @@ struct ContentView: View {
     }
 
 }
+
+

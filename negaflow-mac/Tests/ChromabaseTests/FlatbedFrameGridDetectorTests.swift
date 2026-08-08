@@ -18,7 +18,9 @@ final class FlatbedFrameGridDetectorTests: XCTestCase {
         leadingMM: Double = 18,
         physical: CGSize = CGSize(width: 149.86, height: 246.38),
         pixelsPerMM: Double = 8,
+        holderFill: Double = 0.02,
         gapIsBright: Bool = true,
+        gapFill: Double? = nil,
         frameFill: (Int, Int) -> Double = { _, _ in 0.45 }
     ) -> FlatbedFrameGridDetector.Preview {
         // 실제 스캔에는 늘 미세한 잡음이 있다. 완전히 균일한 합성은 행 표준편차가 부동소수
@@ -29,8 +31,8 @@ final class FlatbedFrameGridDetectorTests: XCTestCase {
         }
         let width = Int(physical.width * pixelsPerMM)
         let height = Int(physical.height * pixelsPerMM)
-        var luminance = [Double](repeating: 0.02, count: width * height)  // 홀더 마스크
-        let gapValue = gapIsBright ? 0.92 : 0.03
+        var luminance = [Double](repeating: holderFill, count: width * height)  // 홀더 마스크
+        let gapValue = gapFill ?? (gapIsBright ? 0.92 : 0.03)
 
         for slot in 0..<slotCount {
             let rawX0 = Int((leadingMM + Double(slot) * slotPitchMM) * pixelsPerMM)
@@ -83,6 +85,35 @@ final class FlatbedFrameGridDetectorTests: XCTestCase {
             frameFormat: .fullFrame35mm
         )
         XCTAssertEqual(found.count, 12)
+        for size in sizesMM(found, physical: preview.physicalSize) {
+            XCTAssertEqual(size.width, 24, accuracy: 1.5)
+            XCTAssertEqual(size.height, 36, accuracy: 1.5)
+        }
+    }
+
+    /// 실제 프리뷰의 밝기 분포를 그대로 흉내낸다. **이 조건이 검출을 통째로 무너뜨렸다.**
+    ///
+    /// 실측(GT-X900, 정품 3슬롯 홀더, 컬러 네거티브, 프리뷰 25·100·150dpi): 픽셀의 중앙값이
+    /// 0.000 이었다. 홀더가 화면의 절반을 넘고, 밀도가 높은 컷은 8-bit 에서 0 으로 잘린다.
+    /// 필름 열의 평균은 0.12, 홀더 열은 0.002 였다. 픽셀 히스토그램에 판별분석을 걸면 경계가
+    /// 필름 분포 한가운데에 서서 필름이 불투명으로 판정되고, 슬롯이 하나도 남지 않는다.
+    func testFindsFramesWhenMostFilmPixelsAreClippedToBlack() {
+        // 필름 열 평균 0.12, 홀더 0.002 — 실측 수준. 컷 안의 픽셀은 대부분 0 으로 잘린다.
+        let preview = makeHolder(
+            slotCount: 3,
+            framesPerSlot: 6,
+            holderFill: 0.002,
+            gapIsBright: true,
+            gapFill: 0.30
+        ) { slot, frame in
+            // 밝은 픽셀이 드물게 섞인 어두운 컷. 행 평균은 0.1 안팎이 된다.
+            (slot + frame) % 2 == 0 ? 0.10 : 0.13
+        }
+        let found = FlatbedFrameGridDetector.detect(
+            preview: preview,
+            frameFormat: .fullFrame35mm
+        )
+        XCTAssertEqual(found.count, 18)
         for size in sizesMM(found, physical: preview.physicalSize) {
             XCTAssertEqual(size.width, 24, accuracy: 1.5)
             XCTAssertEqual(size.height, 36, accuracy: 1.5)

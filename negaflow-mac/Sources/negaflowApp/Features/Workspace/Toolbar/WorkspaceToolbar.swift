@@ -267,7 +267,7 @@ struct WorkspaceToolbar: View {
 
             Button {
                 Task { await model.runDiagnostics() }
-                showDiagnostics = true
+                showDiagnostics.toggle()
             } label: {
                 Label(model.text(.commandDiagnostics), systemImage: "waveform.path.ecg")
             }
@@ -279,10 +279,6 @@ struct WorkspaceToolbar: View {
         .buttonStyle(.plain)
         .help(model.text(.commandWorkspaceOptions))
         .accessibilityLabel(model.text(.commandWorkspaceOptions))
-        .popover(isPresented: $showDiagnostics) {
-            DiagnosticsReportView(center: model.diagnosticsCenter)
-                .environmentObject(model)
-        }
     }
 }
 

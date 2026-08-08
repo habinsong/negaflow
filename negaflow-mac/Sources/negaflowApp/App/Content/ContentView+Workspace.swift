@@ -28,6 +28,7 @@ extension ContentView {
                     onOpenDevelop: { selectWorkspaceModule(.develop) }
                 )
                 .zIndex(0)
+                .transition(workspaceModuleTransition)
             case .develop:
                 let layout = WorkspaceAdaptiveLayout(availableWidth: availableWidth)
                 HStack(spacing: 0) {
@@ -64,9 +65,11 @@ extension ContentView {
                     }
                 }
                 .zIndex(0)
+                .transition(workspaceModuleTransition)
             case .print:
                 printWorkspaceContent(availableWidth: availableWidth)
                     .zIndex(0)
+                    .transition(workspaceModuleTransition)
             }
         }
     }

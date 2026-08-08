@@ -18,8 +18,14 @@ extension LibraryWorkspaceView {
 
             Divider()
 
-            libraryBrowser(projection: projection, framesByID: framesByID)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // 격자가 열 수를 스스로 정하지 않고 받아 쓴다(gridColumns 참고). 창 폭에서 왼쪽
+            // 패널과 구분선을 뺀 값이 브라우저가 실제로 쓰는 폭이다.
+            libraryBrowser(
+                projection: projection,
+                framesByID: framesByID,
+                browserWidth: max(320, availableWidth - CGFloat(controlsWidth) - 1)
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
@@ -120,7 +126,8 @@ extension LibraryWorkspaceView {
 
     func libraryBrowser(
         projection: LibraryBrowserProjection,
-        framesByID: [UUID: ScanFrame]
+        framesByID: [UUID: ScanFrame],
+        browserWidth: CGFloat
     ) -> some View {
         VStack(spacing: 0) {
             browserHeader(projection: projection)
@@ -132,13 +139,13 @@ extension LibraryWorkspaceView {
                         orderedFrameIDs: projection.orderedFrameIDs
                     )
                 } else if viewMode.groupsByFolder, !projection.folderSections.isEmpty {
-                    libraryGrid(projection: projection, framesByID: framesByID)
+                    libraryGrid(projection: projection, framesByID: framesByID, browserWidth: browserWidth)
                 } else if model.frames.isEmpty {
                     emptyLibrary
                 } else if projection.orderedFrameIDs.isEmpty {
                     noMatchingPhotos
                 } else {
-                    libraryGrid(projection: projection, framesByID: framesByID)
+                    libraryGrid(projection: projection, framesByID: framesByID, browserWidth: browserWidth)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)

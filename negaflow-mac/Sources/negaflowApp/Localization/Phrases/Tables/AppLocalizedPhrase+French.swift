@@ -372,6 +372,8 @@ extension AppLocalization {
         .autoToneHelp: "Tonalité automatique Cmd-U — ajuste l'exposition, le contraste, les hautes lumières, les ombres, les blancs, les noirs et la vibrance d'après l'histogramme.",
         .autoWhiteBalanceHelp: "Balance des blancs automatique Maj-Cmd-U — neutralise la température et la teinte selon l'hypothèse du monde gris.",
         .copy: "Copier",
+        .closePanel: "Fermer",
+        .copyAll: "Tout copier",
         .paste: "Coller",
         .copyDevelopSettingsHelp: "Copie les paramètres de développement de l'image actuelle.",
         .pasteDevelopSettingsHelp: "Colle les paramètres de développement copiés.",

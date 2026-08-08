@@ -1,15 +1,20 @@
 import SwiftUI
 
 extension LibraryWorkspaceView {
+    /// 격자 바깥 여백. 열 수를 계산할 때 이 값을 빼야 마지막 열이 잘리지 않는다.
+    static let gridPadding: CGFloat = 18
+
     func libraryGrid(
         projection: LibraryBrowserProjection,
-        framesByID: [UUID: ScanFrame]
+        framesByID: [UUID: ScanFrame],
+        browserWidth: CGFloat
     ) -> some View {
-        ScrollView {
+        let columns = gridColumns(contentWidth: browserWidth - Self.gridPadding * 2)
+        return ScrollView {
             if viewMode.groupsByFolder {
-                folderGrid(projection: projection, framesByID: framesByID)
+                folderGrid(projection: projection, framesByID: framesByID, columns: columns)
             } else {
-                allPhotosGrid(projection: projection, framesByID: framesByID)
+                allPhotosGrid(projection: projection, framesByID: framesByID, columns: columns)
             }
         }
         .contextMenu {
@@ -25,17 +30,18 @@ extension LibraryWorkspaceView {
 
     func allPhotosGrid(
         projection: LibraryBrowserProjection,
-        framesByID: [UUID: ScanFrame]
+        framesByID: [UUID: ScanFrame],
+        columns: [GridItem]
     ) -> some View {
         let orderedFrameIDs = projection.orderedFrameIDs
         let visibleFrameIDs = model.stackProjectedFrameIDs(orderedFrameIDs)
         let frames = frames(orderedBy: visibleFrameIDs, framesByID: framesByID)
-        return LazyVGrid(columns: gridColumns, spacing: gridSpacing) {
+        return LazyVGrid(columns: columns, spacing: gridSpacing) {
             ForEach(frames) { frame in
                 frameCard(frame, orderedFrameIDs: visibleFrameIDs)
             }
         }
-        .padding(18)
+        .padding(Self.gridPadding)
         .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
@@ -48,15 +54,19 @@ extension LibraryWorkspaceView {
     /// 아니라 **격자 한 줄**이 되어, 보이는 줄만 만들어진다.
     func folderGrid(
         projection: LibraryBrowserProjection,
-        framesByID: [UUID: ScanFrame]
+        framesByID: [UUID: ScanFrame],
+        columns: [GridItem]
     ) -> some View {
-        LazyVGrid(columns: gridColumns, spacing: gridSpacing) {
-            ForEach(Array(projection.folderSections.enumerated()), id: \.element.id) { index, section in
+        LazyVGrid(columns: columns, spacing: gridSpacing) {
+            ForEach(projection.folderSections.indices, id: \.self) { index in
+                let section = projection.folderSections[index]
                 let visibleFrameIDs = model.stackProjectedFrameIDs(section.orderedFrameIDs)
-                let sectionFrames = visibleFrameIDs.compactMap { framesByID[$0] }
                 // 접힘은 `ForEach` 안의 `if` 가 아니라 **데이터 단계**에서 거른다. 게으른
                 // 컨테이너 안에 조건부 가지를 두면 컨테이너가 항목 수를 다시 세게 된다.
-                let renderedFrames = folderCollapse.isExpanded(section.id) ? sectionFrames : []
+                // 접힌 폴더는 프레임을 아예 꺼내지 않는다 — 머리띠에 필요한 건 개수뿐이다.
+                let renderedFrames = folderCollapse.isExpanded(section.id)
+                    ? visibleFrameIDs.compactMap { framesByID[$0] }
+                    : []
                 Section {
                     ForEach(renderedFrames) { frame in
                         frameCard(
@@ -69,13 +79,13 @@ extension LibraryWorkspaceView {
                     folderSectionHeader(
                         section,
                         isFirst: index == 0,
-                        frameCount: sectionFrames.count,
+                        frameCount: visibleFrameIDs.count,
                         framesByID: framesByID
                     )
                 }
             }
         }
-        .padding(18)
+        .padding(Self.gridPadding)
         .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
@@ -88,19 +98,12 @@ extension LibraryWorkspaceView {
     ) -> some View {
         let isExpanded = folderCollapse.isExpanded(section.id)
         HStack(spacing: 8) {
-            Button {
+            LibraryFolderDisclosureButton(
+                isExpanded: isExpanded,
+                label: model.text(isExpanded ? .collapseFolder : .expandFolder)
+            ) {
                 folderCollapse.toggle(section.id)
-            } label: {
-                Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 12, height: 12)
-                    .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
-            .help(model.text(isExpanded ? .collapseFolder : .expandFolder))
-            .accessibilityIdentifier("negaflow.library.folder-disclosure")
-            .accessibilityLabel(model.text(isExpanded ? .collapseFolder : .expandFolder))
 
             Image(systemName: "folder")
                 .foregroundStyle(.secondary)
