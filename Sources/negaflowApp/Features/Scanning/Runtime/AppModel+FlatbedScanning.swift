@@ -142,8 +142,23 @@ extension AppModel {
         let regionRevision = flatbedScanRegionRevision
         let sourceURL = frame.rawScanURL
         let requestedFrameFormat = scanFrameFormat
-        let detections = await Task.detached(priority: .userInitiated) {
-            (try? FlatbedFrameDetector.detect(
+        // 프리뷰가 담은 실제 영역을 알면 36×24mm 가 몇 px인지 계산할 수 있어, 프레임 규격과
+        // 이송 피치를 그대로 단서로 쓸 수 있다. 영역을 모르는 경우에만 예전 에지 기반 검출로
+        // 물러난다.
+        let previewArea = flatbedPreviewScanArea
+        let detections = await Task.detached(priority: .userInitiated) { () -> [FlatbedFrameDetection] in
+            if let previewArea, previewArea.widthMM > 0, previewArea.heightMM > 0 {
+                let grid = FlatbedFrameGridDetector.detect(
+                    url: sourceURL,
+                    physicalSize: CGSize(
+                        width: previewArea.widthMM,
+                        height: previewArea.heightMM
+                    ),
+                    frameFormat: requestedFrameFormat
+                )
+                if !grid.isEmpty { return grid }
+            }
+            return (try? FlatbedFrameDetector.detect(
                 url: sourceURL,
                 frameFormat: requestedFrameFormat
             )) ?? []
