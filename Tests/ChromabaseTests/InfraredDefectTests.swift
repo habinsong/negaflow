@@ -114,6 +114,35 @@ final class InfraredDefectTests: XCTestCase {
         XCTAssertLessThan(detection.coverage, 0.01, "정상 장면에서 마스크 커버리지는 1% 미만이어야 한다.")
     }
 
+    /// 컬러 네거티브는 염료가 IR 을 거의 다 통과시킨다(GT-X900 실측: 평균 투과 98.9%,
+    /// 표준편차 0.9%). 그러면 결함의 국소 상대 대비가 수 % 에 그쳐서, 고정 하한 0.035 를
+    /// 쓰면 실제 먼지가 통째로 문턱 아래로 묻힌다. 하한을 실측 잡음에서 끌어내야 잡힌다.
+    func testDetectsShallowDefectsOnHighTransmissionFilm() throws {
+        // IR 이 0.99 근처에 몰린 균일한 평면 — 실측 컬러 네거티브 거동.
+        var red = [Float](repeating: 0, count: width * height)
+        var ir = [Float](repeating: 0, count: width * height)
+        var noise = SeededNoise(seed: 7)
+        for y in 0..<height {
+            for x in 0..<width {
+                let i = y * width + x
+                red[i] = 0.30 + 0.35 * Float(x) / Float(width)
+                ir[i] = 0.989 + 0.003 * noise.next() * 2
+            }
+        }
+        // 투과율이 높은 만큼 결함도 얕게 찍힌다(대비 약 3%).
+        let spots = [(60, 50), (170, 90), (100, 170)]
+        for (cx, cy) in spots { stampSpot(&ir, cx: cx, cy: cy, radius: 3, depth: 0.030) }
+
+        let detection = try InfraredDefectRemoval.detect(infrared: ir, red: red,
+                                               width: width, height: height,
+                                               parameters: fastParameters).get()
+        for (cx, cy) in spots {
+            XCTAssertTrue(maskCovers(detection, x: cx, y: cy),
+                          "얕은 먼지(\(cx),\(cy))가 검출돼야 한다 — 고정 하한이면 묻힌다.")
+        }
+        XCTAssertLessThan(detection.coverage, 0.02, "균일한 배경이 결함으로 번지면 안 된다.")
+    }
+
     func testRejectsComponentsBelowMinArea() throws {
         var (red, ir) = makeScene()
         ir[100 * width + 30] = max(0, ir[100 * width + 30] - 0.4)   // 1px 노이즈

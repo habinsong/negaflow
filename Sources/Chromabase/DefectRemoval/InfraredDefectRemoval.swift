@@ -195,7 +195,14 @@ public enum InfraredDefectRemoval {
         }   // localMean 반납
         ir = []         // 이후 미사용 — 조기 반납
         if cancelled() { return .failure(.cancelled) }
-        let contrastFloor: Float = 0.035
+        // 결함 대비는 필름의 IR 투과율에 따라 크게 달라진다. 컬러 네거티브는 염료가 IR 을
+        // 거의 다 통과시켜(GT-X900 실측 평균 투과 98.9%, 표준편차 0.9%) 국소 상대 대비가
+        // 수 % 수준에 그친다. 그 필름에 고정 하한 0.035 를 쓰면 dev 의 상위 0.1% 결함조차
+        // (실측 0.027) 문턱을 못 넘어 대부분이 묻히고, 적응 임계도 하한에 가려 sensitivity
+        // 가 사실상 무효가 된다. 그래서 하한을 실측 잡음 분포에서 끌어내되, 기존 값을 상한
+        // 으로 남겨 IR 이 지저분한 필름에서는 종전 동작을 그대로 유지한다.
+        let devNoiseLevel = percentile(dev, excluded: excluded, q: 0.99)
+        let contrastFloor = min(0.035, max(0.004, devNoiseLevel * 1.5))
         let strongContrast: Float = 0.18
         // 큰 결함 자체가 주변 노이즈 추정치를 끌어올려 같은 결함의 어두운 쪽 픽셀을
         // 가리지 않도록, 노이즈 입력은 최소 검출 대비에서 자른다.
