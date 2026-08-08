@@ -1,17 +1,17 @@
 name: Windows CI
 
-# macOS 쪽 ci.yml 과 분리한 이유는 경로 필터다. Sources/ 만 건드리는 PR 에서 Windows 잡을
+# macOS 쪽 ci.yml 과 분리한 이유는 경로 필터다. negaflow-mac/Sources/ 만 건드리는 PR 에서 Windows 잡을
 # 돌릴 이유가 없고, 워크플로가 나뉘어 있으면 트리거와 예산을 따로 조정할 수 있다.
-# 같은 검사를 로컬에서 한 번에 돌리는 입구는 Negaflow.Windows/scripts/ci-gate.ps1 이다.
+# 같은 검사를 로컬에서 한 번에 돌리는 입구는 negaflow-windows/scripts/ci-gate.ps1 이다.
 on:
   pull_request:
     paths:
-      - 'Negaflow.Windows/**'
+      - 'negaflow-windows/**'
       - '.github/workflows/windows.yml'
   push:
     branches: [main]
     paths:
-      - 'Negaflow.Windows/**'
+      - 'negaflow-windows/**'
       - '.github/workflows/windows.yml'
   workflow_dispatch:
 
@@ -31,7 +31,7 @@ jobs:
     timeout-minutes: 15
     defaults:
       run:
-        working-directory: Negaflow.Windows
+        working-directory: negaflow-windows
     steps:
       - uses: actions/checkout@v7
         with:
@@ -56,7 +56,7 @@ jobs:
     timeout-minutes: 15
     defaults:
       run:
-        working-directory: Negaflow.Windows
+        working-directory: negaflow-windows
     steps:
       - uses: actions/checkout@v7
         with:
@@ -85,7 +85,7 @@ jobs:
     timeout-minutes: 20
     defaults:
       run:
-        working-directory: Negaflow.Windows
+        working-directory: negaflow-windows
     steps:
       - uses: actions/checkout@v7
         with:

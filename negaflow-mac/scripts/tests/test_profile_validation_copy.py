@@ -4,7 +4,8 @@ import unittest
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[2]          # negaflow-mac
+REPO_ROOT = Path(__file__).resolve().parents[3]     # README 는 저장소 루트
 README_NAMES = (
     "README.md",
     "README_ko.md",
@@ -18,11 +19,11 @@ README_NAMES = (
 class ProfileValidationCopyTests(unittest.TestCase):
     def test_readmes_explain_current_status_and_product_doc_defines_all_terms(self) -> None:
         for name in README_NAMES:
-            body = (ROOT / name).read_text(encoding="utf-8")
+            body = (REPO_ROOT / name).read_text(encoding="utf-8")
             with self.subTest(readme=name):
                 self.assertIn("realOnly", body)
 
-        product_doc = (ROOT / "docs/product/FILM_PROFILES.md").read_text(encoding="utf-8")
+        product_doc = (REPO_ROOT / "docs/product/FILM_PROFILES.md").read_text(encoding="utf-8")
         self.assertIn("realOnly", product_doc)
         self.assertIn("pairedSmoke", product_doc)
         self.assertIn("pairedValidated", product_doc)
@@ -37,7 +38,7 @@ class ProfileValidationCopyTests(unittest.TestCase):
             "README_de.md": "Profilen, die aus echten Scan-Paaren extrahiert wurden",
         }
         for name, claim in banned_claims.items():
-            body = (ROOT / name).read_text(encoding="utf-8")
+            body = (REPO_ROOT / name).read_text(encoding="utf-8")
             with self.subTest(readme=name):
                 self.assertNotIn(claim, body)
 

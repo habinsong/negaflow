@@ -26,7 +26,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Verify static contracts
-        run: bash scripts/ci/verify-static.sh
+        run: bash negaflow-mac/scripts/ci/verify-static.sh
 
   swift:
     name: Swift build and strict-concurrency tests
@@ -42,18 +42,18 @@ jobs:
           swift --version
           echo "DEVELOPER_DIR=$(xcode-select -p)" >> "$GITHUB_ENV"
       - name: Build and test under strict concurrency
-        run: bash scripts/ci/build-swift.sh
+        run: bash negaflow-mac/scripts/ci/build-swift.sh
       - name: Emit Windows Film Emulation golden
         if: github.event_name == 'workflow_dispatch'
         env:
-          NEGAFLOW_WINDOWS_FILM_GOLDEN_OUTPUT: ${{ github.workspace }}/Negaflow.Windows/out/macos-golden/film-emulation-core-image-v1.json
+          NEGAFLOW_WINDOWS_FILM_GOLDEN_OUTPUT: ${{ github.workspace }}/negaflow-windows/out/macos-golden/film-emulation-core-image-v1.json
         run: |
-          BASELINE_COMMIT="$(plutil -extract source.mac_commit raw Negaflow.Windows/baseline/bootstrap-manifest.json)"
+          BASELINE_COMMIT="$(plutil -extract source.mac_commit raw negaflow-windows/baseline/bootstrap-manifest.json)"
           git diff --exit-code "$BASELINE_COMMIT" -- \
-            Sources/Chromabase/Adjustments/FilmEmulation.swift \
-            Sources/Chromabase/Adjustments/FilmEmulationProfile.swift \
-            Sources/Chromabase/Adjustments/FilmEmulationProfile+Slide.swift \
-            Sources/Chromabase/Adjustments/FilmEmulationProfile+Negative.swift
+            negaflow-mac/Sources/Chromabase/Adjustments/FilmEmulation.swift \
+            negaflow-mac/Sources/Chromabase/Adjustments/FilmEmulationProfile.swift \
+            negaflow-mac/Sources/Chromabase/Adjustments/FilmEmulationProfile+Slide.swift \
+            negaflow-mac/Sources/Chromabase/Adjustments/FilmEmulationProfile+Negative.swift
           swift test \
             -Xswiftc -warn-concurrency \
             -Xswiftc -strict-concurrency=complete \
@@ -64,13 +64,13 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: negaflow-windows-film-golden-${{ github.sha }}
-          path: Negaflow.Windows/out/macos-golden/film-emulation-core-image-v1.json
+          path: negaflow-windows/out/macos-golden/film-emulation-core-image-v1.json
           if-no-files-found: error
           retention-days: 14
       - name: Emit ColorSync ICM parity reference
         if: github.event_name == 'workflow_dispatch'
         env:
-          NEGAFLOW_COLORSYNC_PARITY_OUTPUT: ${{ github.workspace }}/Negaflow.Windows/out/macos-golden/colorsync-icm-parity-v1.json
+          NEGAFLOW_COLORSYNC_PARITY_OUTPUT: ${{ github.workspace }}/negaflow-windows/out/macos-golden/colorsync-icm-parity-v1.json
           NEGAFLOW_SOURCE_COMMIT: ${{ github.sha }}
         run: |
           swift test \
@@ -82,8 +82,8 @@ jobs:
           # means ColorSync changed behaviour and the Windows comparison is now unanchored.
           python3 - <<'PY'
           import json, sys
-          committed = json.load(open("Negaflow.Windows/baseline/colorsync-icm-parity-v1.json"))
-          emitted = json.load(open("Negaflow.Windows/out/macos-golden/colorsync-icm-parity-v1.json"))
+          committed = json.load(open("negaflow-windows/baseline/colorsync-icm-parity-v1.json"))
+          emitted = json.load(open("negaflow-windows/out/macos-golden/colorsync-icm-parity-v1.json"))
           if committed["profile"]["sha256"] != emitted["profile"]["sha256"]:
               sys.exit("synthesised profile bytes drifted from the committed reference")
           if [p["name"] for p in committed["patches"]] != [p["name"] for p in emitted["patches"]]:
@@ -102,7 +102,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: negaflow-colorsync-parity-${{ github.sha }}
-          path: Negaflow.Windows/out/macos-golden/colorsync-icm-parity-v1.json
+          path: negaflow-windows/out/macos-golden/colorsync-icm-parity-v1.json
           if-no-files-found: error
           retention-days: 14
 
@@ -120,7 +120,7 @@ jobs:
           HOMEBREW_NO_INSTALL_CLEANUP: '1'
         run: brew install xcodegen
       - name: Build GUI test bundle
-        run: bash scripts/ci/build-gui-tests.sh
+        run: bash negaflow-mac/scripts/ci/build-gui-tests.sh
       - name: Upload GUI test build result
         if: always()
         uses: actions/upload-artifact@v7
@@ -143,7 +143,7 @@ jobs:
       - name: Build local release artifacts
         env:
           NEGAFLOW_RELEASE_MODE: local
-        run: bash scripts/build-release.sh
+        run: bash negaflow-mac/scripts/build-release.sh
       - name: Upload release smoke artifacts
         uses: actions/upload-artifact@v7
         with:

@@ -54,7 +54,7 @@ GNU FAQ 也写到：管道或命令行通信通常看起来像独立程序，但
 
 ## 内置资源
 
-[`Config/bundled-resource-provenance-v1.json`](../../../Config/bundled-resource-provenance-v1.json)
+[`Config/bundled-resource-provenance-v1.json`](../../../negaflow-mac/Config/bundled-resource-provenance-v1.json)
 固定了进入应用和源码树的每个资源所声明的来源、许可和 SHA-256。
 
 | 分组 | 来源 | 分发内容 |
@@ -69,7 +69,7 @@ TIFF 里能看到的相机和色彩空间元数据，是拍摄与编码留下的
 
 FILM-R v2 素材只在做质量测量时下载，图像本身不会进仓库，也不会进应用。
 DOI 版本、CC BY 4.0、文件大小和哈希固定在
-[`Config/defect-corpus-film-r-v2.json`](../../../Config/defect-corpus-film-r-v2.json)。
+[`Config/defect-corpus-film-r-v2.json`](../../../negaflow-mac/Config/defect-corpus-film-r-v2.json)。
 
 ## 名称与互操作
 

@@ -8,13 +8,17 @@ import sys
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[2]
-MANIFEST = ROOT / "Config/bundled-resource-provenance-v1.json"
+# git 검사는 저장소 전체를 훑어야 하므로 기준을 저장소 루트에 둔다. macOS 트리는
+# negaflow-mac/, Windows 트리는 negaflow-windows/ 아래에 있다.
+REPO_ROOT = Path(__file__).resolve().parents[3]
+ROOT = REPO_ROOT
+MAC_ROOT = REPO_ROOT / "negaflow-mac"
+MANIFEST = MAC_ROOT / "Config/bundled-resource-provenance-v1.json"
 WINDOWS_NATIVE_SOURCE_ROOTS = (
-    Path("Negaflow.Windows/src"),
-    Path("Negaflow.Windows/tests"),
+    Path("negaflow-windows/src"),
+    Path("negaflow-windows/tests"),
 )
-WINDOWS_THIRD_PARTY_MANIFEST_ROOT = Path("Negaflow.Windows/third_party/manifest")
+WINDOWS_THIRD_PARTY_MANIFEST_ROOT = Path("negaflow-windows/third_party/manifest")
 
 
 def fail(message: str) -> None:
@@ -38,9 +42,9 @@ def repository_files() -> list[Path]:
 
 def resource_files() -> set[str]:
     roots = [
-        ROOT / "Sources/ScannerKit/Resources",
-        ROOT / "Sources/Chromabase/Presets",
-        ROOT / "Sources/Chromabase/ScannerProfiles",
+        MAC_ROOT / "Sources/ScannerKit/Resources",
+        MAC_ROOT / "Sources/Chromabase/Presets",
+        MAC_ROOT / "Sources/Chromabase/ScannerProfiles",
     ]
     paths = {
         path.relative_to(ROOT).as_posix()
@@ -50,7 +54,7 @@ def resource_files() -> set[str]:
     }
     paths.update(
         path.relative_to(ROOT).as_posix()
-        for path in (ROOT / "Sources/negaflowApp/Resources").iterdir()
+        for path in (MAC_ROOT / "Sources/negaflowApp/Resources").iterdir()
         if path.is_file() and path.suffix.lower() in {".png", ".icns"}
     )
     return paths
@@ -126,7 +130,7 @@ def verify_tree_policy(files: list[Path]) -> tuple[int, int]:
         else:
             text_count += 1
 
-    package = (ROOT / "Package.swift").read_text(encoding="utf-8")
+    package = (MAC_ROOT / "Package.swift").read_text(encoding="utf-8")
     for marker in (".package(", ".binaryTarget(", ".systemLibrary("):
         if marker in package:
             fail(f"Package.swift contains an external dependency surface: {marker}")
@@ -155,9 +159,9 @@ def verify_implementation_boundary() -> None:
         "Sources",
         "Tests",
         "scripts",
-        "Negaflow.Windows/src",
-        "Negaflow.Windows/tests",
-        "Negaflow.Windows/scripts",
+        "negaflow-windows/src",
+        "negaflow-windows/tests",
+        "negaflow-windows/scripts",
     ):
         candidates.extend((ROOT / root_name).rglob("*"))
     for path in candidates:
@@ -191,7 +195,7 @@ def verify_implementation_boundary() -> None:
 
 def verify_external_data_policy() -> None:
     corpus = json.loads(
-        (ROOT / "Config/defect-corpus-film-r-v2.json").read_text(encoding="utf-8")
+        (MAC_ROOT / "Config/defect-corpus-film-r-v2.json").read_text(encoding="utf-8")
     )
     if corpus.get("doi") != "10.6084/m9.figshare.21803304.v2":
         fail("FILM-R corpus DOI is missing or unpinned")
@@ -227,7 +231,7 @@ def verify_reachable_history() -> int:
                 "git", "grep", "-I", "-i", "-n", "-E", pattern,
                 *commits[offset:offset + 64], "--",
                 "Sources", "Tests",
-                "Negaflow.Windows/src", "Negaflow.Windows/tests",
+                "negaflow-windows/src", "negaflow-windows/tests",
             ],
             cwd=ROOT,
             stdout=subprocess.PIPE,

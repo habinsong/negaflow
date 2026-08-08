@@ -74,14 +74,14 @@ jobs:
             --keychain "$KEYCHAIN"
           rm -f "$P12" "$INSTALLER_P12" "$API_KEY"
       - name: Run release-quality gate
-        run: bash scripts/ci-gate.sh
+        run: bash negaflow-mac/scripts/ci-gate.sh
       - name: Build signed and notarized artifacts
         env:
           NEGAFLOW_RELEASE_MODE: distribution
           NEGAFLOW_CODESIGN_IDENTITY: ${{ secrets.NEGAFLOW_CODESIGN_IDENTITY }}
           NEGAFLOW_INSTALLER_SIGN_IDENTITY: ${{ secrets.NEGAFLOW_INSTALLER_SIGN_IDENTITY }}
           NEGAFLOW_NOTARY_KEYCHAIN_PROFILE: negaflow-ci
-        run: bash scripts/build-release.sh
+        run: bash negaflow-mac/scripts/build-release.sh
       - name: Verify final artifacts
         run: |
           shasum -a 256 -c build/release-artifacts/*-SHA256SUMS.txt

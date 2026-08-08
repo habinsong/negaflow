@@ -6,7 +6,8 @@ import unittest
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[2]
+# 문서·README 는 플랫폼 트리 밖 저장소 루트에 있다.
+ROOT = Path(__file__).resolve().parents[3]
 READMES = (
     "README.md",
     "README_ko.md",

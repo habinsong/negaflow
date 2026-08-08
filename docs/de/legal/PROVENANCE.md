@@ -72,7 +72,7 @@ Fremdhinweise.
 
 ## Mitgelieferte Ressourcen
 
-[`Config/bundled-resource-provenance-v1.json`](../../../Config/bundled-resource-provenance-v1.json)
+[`Config/bundled-resource-provenance-v1.json`](../../../negaflow-mac/Config/bundled-resource-provenance-v1.json)
 legt erklärte Herkunft, Lizenz und SHA-256 jeder Ressource fest, die in App und Quellbaum geht.
 
 | Gruppe | Herkunft | Was ausgeliefert wird |
@@ -90,7 +90,7 @@ Zeitpunkt der Erzeugung, und diese Quellaufnahmen werden nicht ausgeliefert.
 FILM-R-v2-Material wird nur während der Qualitätsmessung heruntergeladen.
 Die Bilder gelangen weder ins Repository noch in die App.
 DOI-Version, CC BY 4.0, Dateigrößen und Hashes stehen fest in
-[`Config/defect-corpus-film-r-v2.json`](../../../Config/defect-corpus-film-r-v2.json).
+[`Config/defect-corpus-film-r-v2.json`](../../../negaflow-mac/Config/defect-corpus-film-r-v2.json).
 
 ## Namen und Interoperabilität
 

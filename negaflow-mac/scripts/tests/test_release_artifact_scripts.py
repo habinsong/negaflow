@@ -6,7 +6,8 @@ import unittest
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[2]          # negaflow-mac
+REPO_ROOT = Path(__file__).resolve().parents[3]     # 저장소 루트
 
 
 class ReleaseArtifactScriptTests(unittest.TestCase):
@@ -74,7 +75,7 @@ class ReleaseArtifactScriptTests(unittest.TestCase):
         self.assertIn("shasum -a 256 -c", body)
 
     def test_distribution_workflow_requires_signing_notarization_and_final_verification(self) -> None:
-        body = (ROOT / ".github/workflows/distribution.yml").read_text(encoding="utf-8")
+        body = (REPO_ROOT / ".github/workflows/distribution.yml").read_text(encoding="utf-8")
 
         self.assertIn("environment: distribution", body)
         self.assertIn("NEGAFLOW_DEVELOPER_ID_P12_BASE64", body)

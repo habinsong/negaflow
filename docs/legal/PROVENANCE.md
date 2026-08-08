@@ -65,7 +65,7 @@ notices.
 
 ## Bundled resources
 
-[`Config/bundled-resource-provenance-v1.json`](../../Config/bundled-resource-provenance-v1.json)
+[`Config/bundled-resource-provenance-v1.json`](../../negaflow-mac/Config/bundled-resource-provenance-v1.json)
 pins the declared origin, license, and SHA-256 of every resource that goes into the app and the
 source tree.
 
@@ -84,7 +84,7 @@ time, and those source photographs do not ship.
 FILM-R v2 material is downloaded only during quality measurement.
 The images never enter the repository or the app.
 The DOI version, CC BY 4.0, file sizes, and hashes are pinned in
-[`Config/defect-corpus-film-r-v2.json`](../../Config/defect-corpus-film-r-v2.json).
+[`Config/defect-corpus-film-r-v2.json`](../../negaflow-mac/Config/defect-corpus-film-r-v2.json).
 
 ## Names and interoperability
 

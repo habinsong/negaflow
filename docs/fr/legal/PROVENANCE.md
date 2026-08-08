@@ -68,7 +68,7 @@ et les avis tiers.
 
 ## Ressources fournies
 
-[`Config/bundled-resource-provenance-v1.json`](../../../Config/bundled-resource-provenance-v1.json)
+[`Config/bundled-resource-provenance-v1.json`](../../../negaflow-mac/Config/bundled-resource-provenance-v1.json)
 fige l'origine déclarée, la licence et le SHA-256 de chaque ressource qui entre dans l'application
 et l'arborescence source.
 
@@ -87,7 +87,7 @@ au moment de la construction, et ces photographies sources ne sont pas livrées.
 Le matériel FILM-R v2 n'est téléchargé que pendant la mesure de qualité. Les images n'entrent ni
 dans le dépôt ni dans l'application.
 La version DOI, la licence CC BY 4.0, les tailles de fichiers et les empreintes sont figées dans
-[`Config/defect-corpus-film-r-v2.json`](../../../Config/defect-corpus-film-r-v2.json).
+[`Config/defect-corpus-film-r-v2.json`](../../../negaflow-mac/Config/defect-corpus-film-r-v2.json).
 
 ## Noms et interopérabilité
 

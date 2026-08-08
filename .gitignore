@@ -85,8 +85,8 @@ temp/
 *.7z
 
 # 샘플 이미지 / 로컬 분석 데이터
-samples/
-LUT_target/
+negaflow-mac/samples/
+negaflow-mac/LUT_target/
 
 # Python 캐시
 __pycache__/
@@ -108,7 +108,7 @@ NEGAFLOW_LIGHTROOM_EXPANSION.md
 /UI_UX_IMPLEMENTATION_REQUESTS.md
 
 # Windows 이식 조사 자료 (로컬 전용, 공개 대상 아님)
-/windows_docs/
+/negaflow-windows/docs/
 
 # 일회성 코드 감사 / 청크 생성물
 /all_swift_files.txt

@@ -7,7 +7,8 @@ import unittest
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[2]          # negaflow-mac
+REPO_ROOT = Path(__file__).resolve().parents[3]     # 저장소 루트
 
 
 def load_verifier():
@@ -22,8 +23,8 @@ def load_verifier():
 class PerformanceSuiteTests(unittest.TestCase):
     def test_suite_is_explicit_opt_in_and_not_part_of_pr_ci(self) -> None:
         suite = (ROOT / "scripts/run-performance-suite.sh").read_text(encoding="utf-8")
-        workflow = (ROOT / ".github/workflows/performance.yml").read_text(encoding="utf-8")
-        ci = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+        workflow = (REPO_ROOT / ".github/workflows/performance.yml").read_text(encoding="utf-8")
+        ci = (REPO_ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
         self.assertIn('NEGAFLOW_PERF:-0', suite)
         self.assertIn("workflow_dispatch", workflow)
         self.assertNotIn("schedule:", workflow)
@@ -38,7 +39,7 @@ class PerformanceSuiteTests(unittest.TestCase):
         self.assertIn("run-defect-removal.sh", suite)
 
     def test_storage_decision_is_tied_to_measured_scale(self) -> None:
-        decision = (ROOT / "docs/architecture/CATALOG_STORAGE.md").read_text(encoding="utf-8")
+        decision = (REPO_ROOT / "docs/architecture/CATALOG_STORAGE.md").read_text(encoding="utf-8")
         self.assertIn("109,721,335", decision)
         self.assertIn("7,446 ms", decision)
         self.assertIn("3,856 ms", decision)

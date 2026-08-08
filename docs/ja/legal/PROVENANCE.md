@@ -60,7 +60,7 @@ GNUのFAQも、パイプやコマンドラインでのやり取りは普通は�
 
 ## 同梱リソース
 
-[`Config/bundled-resource-provenance-v1.json`](../../../Config/bundled-resource-provenance-v1.json)
+[`Config/bundled-resource-provenance-v1.json`](../../../negaflow-mac/Config/bundled-resource-provenance-v1.json)
 は、アプリとソースツリーに入るリソースの宣言された出どころ、ライセンス、SHA-256を固定します。
 
 | まとまり | 出どころ | 配るもの |
@@ -77,7 +77,7 @@ TIFFに見えるカメラや色空間のメタデータは、撮影とエンコ�
 FILM-R v2の資料は品質計測のときだけダウンロードします。
 画像そのものはリポジトリにもアプリにも入りません。
 DOIバージョン、CC BY 4.0、ファイルサイズとハッシュは
-[`Config/defect-corpus-film-r-v2.json`](../../../Config/defect-corpus-film-r-v2.json)に固定しま
+[`Config/defect-corpus-film-r-v2.json`](../../../negaflow-mac/Config/defect-corpus-film-r-v2.json)に固定しま
 す。
 
 ## 名称と相互運用

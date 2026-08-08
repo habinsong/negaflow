@@ -5,7 +5,8 @@ import unittest
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[2]          # negaflow-mac
+REPO_ROOT = Path(__file__).resolve().parents[3]     # 저장소 루트
 
 
 class CIGateTests(unittest.TestCase):
@@ -47,7 +48,7 @@ class CIGateTests(unittest.TestCase):
         self.assertIn("\"negadoctor\"", verifier)
 
     def test_workflow_is_read_only_and_release_smoke_is_gated(self) -> None:
-        workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+        workflow = (REPO_ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
         self.assertIn("contents: read", workflow)
         self.assertIn("runs-on: macos-26", workflow)
         # 서명 identity가 없는 호스트에서는 Runner를 실행하지 않고 번들 컴파일을 검증한다.
@@ -59,14 +60,14 @@ class CIGateTests(unittest.TestCase):
 
     def test_workflow_runs_every_gate_script_in_its_own_job(self) -> None:
         """세 검사를 나란한 잡으로 쪼갠 뒤에도 어느 하나가 조용히 빠지지 않게 고정한다."""
-        workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+        workflow = (REPO_ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
         for script in ("verify-static.sh", "build-swift.sh", "build-gui-tests.sh"):
             self.assertIn(f"scripts/ci/{script}", workflow)
         # 태그는 main에서 이미 초록인 커밋에 붙는 이름표라 같은 검증을 두 번 돌리지 않는다.
         self.assertNotIn("tags:", workflow)
 
     def test_grainmend_workflow_uses_the_pinned_quality_sensitivity(self) -> None:
-        workflow = (ROOT / ".github/workflows/defect-corpus.yml").read_text(encoding="utf-8")
+        workflow = (REPO_ROOT / ".github/workflows/defect-corpus.yml").read_text(encoding="utf-8")
         config = json.loads(
             (ROOT / "Config/defect-removal-film-r-v2-baseline.json").read_text(encoding="utf-8")
         )

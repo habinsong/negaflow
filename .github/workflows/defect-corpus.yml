@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Fetch pinned FILM-R v2 corpus
-        run: python3 scripts/defect-corpus/fetch-film-r.py --all
+        run: python3 negaflow-mac/scripts/defect-corpus/fetch-film-r.py --all
       - name: Build and evaluate GrainMend RGB automatic
         env:
           DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer
@@ -22,8 +22,8 @@ jobs:
             --reference-dir build/defect-corpus/film-r-v2 \
             --out build/defect-corpus/film-r-v2-report \
             --sensitivity 0.7 --metrics-only --crops 0
-          python3 scripts/defect-corpus/evaluate-quality.py \
-            --config Config/defect-removal-film-r-v2-baseline.json \
+          python3 negaflow-mac/scripts/defect-corpus/evaluate-quality.py \
+            --config negaflow-mac/Config/defect-removal-film-r-v2-baseline.json \
             --report build/defect-corpus/film-r-v2-report/report.json \
             --output build/defect-corpus/film-r-v2-report/quality-gate.json
       - name: Upload quality evidence

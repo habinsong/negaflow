@@ -34,7 +34,7 @@ jobs:
         env:
           NEGAFLOW_PERF: '1'
           NEGAFLOW_PERF_MODE: ${{ inputs.mode }}
-        run: bash scripts/run-performance-suite.sh
+        run: bash negaflow-mac/scripts/run-performance-suite.sh
       - name: Upload reports
         if: always()
         uses: actions/upload-artifact@v7

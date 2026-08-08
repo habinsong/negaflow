@@ -60,7 +60,7 @@ GNU FAQ도 파이프나 명령행 통신은 보통 별도 프로그램의 형태
 
 ## 번들 리소스
 
-[`Config/bundled-resource-provenance-v1.json`](../../../Config/bundled-resource-provenance-v1.json)
+[`Config/bundled-resource-provenance-v1.json`](../../../negaflow-mac/Config/bundled-resource-provenance-v1.json)
 은 앱과 소스 트리에 들어가는 리소스의 선언된 출처, 라이선스, SHA-256을 고정합니다.
 
 | 묶음 | 출처 | 배포 내용 |
@@ -76,7 +76,7 @@ TIFF에 보이는 카메라와 색공간 메타데이터는 촬영·인코딩 �
 
 FILM-R v2 자료는 품질 측정 때만 내려받습니다. 이미지 자체는 저장소나 앱에 넣지 않습니다.
 DOI 버전, CC BY 4.0, 파일 크기와 해시는
-[`Config/defect-corpus-film-r-v2.json`](../../../Config/defect-corpus-film-r-v2.json)에
+[`Config/defect-corpus-film-r-v2.json`](../../../negaflow-mac/Config/defect-corpus-film-r-v2.json)에
 고정합니다.
 
 ## 이름과 상호운용 정보

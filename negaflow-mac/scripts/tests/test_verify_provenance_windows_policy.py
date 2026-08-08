@@ -46,8 +46,8 @@ class WindowsProvenancePolicyTests(unittest.TestCase):
 
     def test_first_party_windows_native_roots_are_allowed(self) -> None:
         files = [
-            self.make_file("Negaflow.Windows/src/Native/imaging/reference.cpp"),
-            self.make_file("Negaflow.Windows/tests/Native.UnitTests/reference_tests.cpp"),
+            self.make_file("negaflow-windows/src/Native/imaging/reference.cpp"),
+            self.make_file("negaflow-windows/tests/Native.UnitTests/reference_tests.cpp"),
         ]
         self.assertEqual(VERIFIER.verify_tree_policy(files), (2, 0))
 
@@ -56,21 +56,21 @@ class WindowsProvenancePolicyTests(unittest.TestCase):
 
     def test_vendor_directory_inside_windows_source_is_rejected(self) -> None:
         self.expect_policy_failure(
-            self.make_file("Negaflow.Windows/src/vendor/reference.cpp")
+            self.make_file("negaflow-windows/src/vendor/reference.cpp")
         )
 
     def test_only_top_level_json_component_manifest_is_allowed(self) -> None:
         manifest = self.make_file(
-            "Negaflow.Windows/third_party/manifest/components.json",
+            "negaflow-windows/third_party/manifest/components.json",
             b"{}\n",
         )
         self.assertEqual(VERIFIER.verify_tree_policy([manifest]), (1, 0))
         self.expect_policy_failure(
-            self.make_file("Negaflow.Windows/third_party/payload.json", b"{}\n")
+            self.make_file("negaflow-windows/third_party/payload.json", b"{}\n")
         )
         self.expect_policy_failure(
             self.make_file(
-                "Negaflow.Windows/third_party/manifest/nested/payload.json",
+                "negaflow-windows/third_party/manifest/nested/payload.json",
                 b"{}\n",
             )
         )
