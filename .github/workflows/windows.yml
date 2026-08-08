@@ -71,10 +71,16 @@ jobs:
       - name: Build
         run: dotnet build Negaflow.Windows.slnx -c Release -p:Platform=x64 --no-restore --nologo
       # 테스트는 assertion 수를 담은 JSON 한 줄을 내고 실패 시 0 이 아닌 코드로 끝난다.
+      #
+      # 출력 경로를 손으로 쓰지 않는다. Directory.Build.props 가 BaseOutputPath 를
+      # 프로젝트별로 두는데, 그 아래 경로는 프로젝트의 Platform 에 따라 갈린다 —
+      # AnyCPU 는 `<Configuration>/`, x64 는 `x64/<Configuration>/` 이다. 손으로 쓴
+      # 경로는 Shell 쪽에서 실제로 어긋나 있었다. `dotnet run` 이 같은 규칙으로
+      # 풀어 주고, scripts/test-managed.ps1 과도 방식이 같아진다.
       - name: Catalog unit tests
-        run: ./out/build/managed/Negaflow.Catalog.UnitTests/Release/net10.0/Negaflow.Catalog.UnitTests.exe
+        run: dotnet run --project tests/Catalog.UnitTests/Negaflow.Catalog.UnitTests.csproj -c Release -p:Platform=AnyCPU --no-build --no-restore
       - name: Shell unit tests
-        run: ./out/build/managed/Negaflow.Shell.UnitTests/Release/net10.0/Negaflow.Shell.UnitTests.exe
+        run: dotnet run --project tests/Shell.UnitTests/Negaflow.Shell.UnitTests.csproj -c Release -p:Platform=x64 --no-build --no-restore
 
   # ARM64 는 교차 빌드만 확인한다. x64 호스트에서 실행할 수 없으므로 통과를 runtime 검증으로
   # 읽으면 안 된다. 매 PR 마다 돌릴 가치가 낮아 main push 와 수동 실행에서만 돈다.

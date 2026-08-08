@@ -41,19 +41,25 @@ def repository_files() -> list[Path]:
 
 
 def resource_files() -> set[str]:
+    """번들 리소스 목록. 경로는 **macOS 트리 기준**이다.
+
+    매니페스트가 `negaflow-mac/Config/` 에 있으므로 그 안의 경로도 같은 기준으로
+    읽는다. 저장소 루트 기준으로 바꾸면 트리를 옮길 때마다 매니페스트 전체가
+    같이 흔들린다.
+    """
     roots = [
         MAC_ROOT / "Sources/ScannerKit/Resources",
         MAC_ROOT / "Sources/Chromabase/Presets",
         MAC_ROOT / "Sources/Chromabase/ScannerProfiles",
     ]
     paths = {
-        path.relative_to(ROOT).as_posix()
+        path.relative_to(MAC_ROOT).as_posix()
         for directory in roots
         for path in directory.iterdir()
         if path.is_file()
     }
     paths.update(
-        path.relative_to(ROOT).as_posix()
+        path.relative_to(MAC_ROOT).as_posix()
         for path in (MAC_ROOT / "Sources/negaflowApp/Resources").iterdir()
         if path.is_file() and path.suffix.lower() in {".png", ".icns"}
     )
@@ -90,7 +96,7 @@ def verify_resource_manifest() -> int:
         fail(f"provenance records reference missing resources: {', '.join(stale)}")
 
     for relative, expected in sorted(declared.items()):
-        digest = hashlib.sha256((ROOT / relative).read_bytes()).hexdigest()
+        digest = hashlib.sha256((MAC_ROOT / relative).read_bytes()).hexdigest()
         if digest != expected:
             fail(f"resource hash changed without provenance review: {relative}")
     return len(declared)
@@ -181,7 +187,7 @@ def verify_implementation_boundary() -> None:
             fail(f"unexpected third-party source header found in {relative}")
 
     release_scripts = "\n".join(
-        (ROOT / relative).read_text(encoding="utf-8").lower()
+        (MAC_ROOT / relative).read_text(encoding="utf-8").lower()
         for relative in (
             "scripts/package-app.sh",
             "scripts/build-release.sh",
