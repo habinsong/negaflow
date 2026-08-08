@@ -179,6 +179,16 @@ Organizing:
 - Grid, compare, survey
 - Reviewing duplicate candidates
 
+In the folder view each folder shows a band — disclosure triangle, folder, name, count, develop
+process, target, apply — and the band collapses the thumbnails under it. Collapsed folders are
+remembered across launches, separately from the file list in the sidebar.
+
+The folder view is **one** grid, with each folder as a section and its band as the section header.
+It must stay that way. Giving every folder its own grid and stacking those grids defeats laziness:
+the stack has to size each folder as a whole, so a folder builds all of its cards the moment it
+comes into view. With one grid the unit of laziness is a row, which is what keeps scrolling smooth
+in a library of several hundred photos.
+
 Several virtual copies can share one original.
 Before an original is deleted, its references are checked first.
 Removing something from the library only changes catalog references.

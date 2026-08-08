@@ -183,6 +183,18 @@ Pour organiser :
 - Grille, comparaison, sélection
 - Examen des doublons candidats
 
+Dans la vue par dossier, chaque dossier porte un bandeau — triangle, dossier, nom, nombre,
+procédé de développement, cible, appliquer. Le triangle replie les vignettes en dessous. Les
+dossiers repliés le restent au lancement suivant, indépendamment du repli de la liste de fichiers
+de la barre latérale.
+
+La vue par dossier est **une seule** grille : chaque dossier est une section et son bandeau en est
+l'en-tête. Il faut conserver cette structure. Donner une grille à chaque dossier puis les empiler
+supprime la paresse — la pile doit connaître la hauteur entière d'un dossier, donc celui-ci
+construit toutes ses cartes dès qu'il entre dans le champ. Avec une seule grille, l'unité de
+paresse est une rangée, et c'est ce qui garde le défilement fluide sur plusieurs centaines de
+photos.
+
 Plusieurs copies virtuelles peuvent partager un même original.
 Avant de supprimer un original, ses références sont vérifiées d'abord.
 Retirer de la bibliothèque ne change que des références du catalogue.

@@ -461,6 +461,8 @@ extension AppLocalization {
         .autoDefect: "Auto",
         .autoDefectHelp: "Auto — gesamtes Bild automatisch prüfen und Defekte entfernen",
         .frameCountFormat: "%d Bilder",
+        .collapseFolder: "Ordner einklappen",
+        .expandFolder: "Ordner ausklappen",
         .frameDisplayFormat: "Bild %d",
         .frameCopyDisplayFormat: "Bild %d Kopie %d",
         .frameCompactCopyDisplayFormat: "Bild %d K%d",

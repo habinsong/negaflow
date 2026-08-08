@@ -184,6 +184,16 @@ Zum Ordnen:
 - Raster, Vergleich, Auswahl
 - Doppelte Kandidaten durchsehen
 
+In der Ordneransicht trägt jeder Ordner ein Band — Dreieck, Ordner, Name, Anzahl,
+Entwicklungsprozess, Ziel, Anwenden. Das Dreieck klappt die Miniaturen darunter ein. Eingeklappte
+Ordner bleiben es beim nächsten Start, getrennt vom Einklappen der Dateiliste in der Seitenleiste.
+
+Die Ordneransicht ist **ein** Raster: jeder Ordner eine Sektion, sein Band deren Kopf. Diese
+Struktur muss so bleiben. Jedem Ordner ein eigenes Raster zu geben und diese zu stapeln hebt die
+Faulheit auf — der Stapel muss die Höhe eines Ordners als Ganzes kennen, also baut ein Ordner alle
+seine Karten, sobald er ins Bild kommt. Mit einem Raster ist die Einheit der Faulheit eine Zeile,
+und genau das hält das Scrollen bei mehreren hundert Fotos flüssig.
+
 Mehrere virtuelle Kopien können ein Original teilen.
 Bevor ein Original gelöscht wird, werden zuerst seine Verweise geprüft.
 Aus der Bibliothek entfernen ändert nur Verweise im Katalog. Der Papierkorb ist eine eigene Aktion.

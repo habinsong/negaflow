@@ -461,6 +461,8 @@ extension AppLocalization {
         .autoDefect: "自動",
         .autoDefectHelp: "自動 — フレーム全体を自動検出してゴミ・キズを除去",
         .frameCountFormat: "%dコマ",
+        .collapseFolder: "フォルダを閉じる",
+        .expandFolder: "フォルダを開く",
         .frameDisplayFormat: "コマ %d",
         .frameCopyDisplayFormat: "コマ %d コピー %d",
         .frameCompactCopyDisplayFormat: "コマ %d C%d",

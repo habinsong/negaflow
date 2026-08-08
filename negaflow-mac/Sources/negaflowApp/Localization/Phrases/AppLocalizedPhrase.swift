@@ -409,6 +409,8 @@ enum AppLocalizedPhrase: CaseIterable {
     case autoDefect
     case autoDefectHelp
     case frameCountFormat
+    case collapseFolder
+    case expandFolder
     case frameDisplayFormat
     case frameCopyDisplayFormat
     case frameCompactCopyDisplayFormat

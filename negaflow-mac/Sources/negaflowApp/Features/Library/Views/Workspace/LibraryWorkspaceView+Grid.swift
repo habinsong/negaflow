@@ -39,81 +39,118 @@ extension LibraryWorkspaceView {
         .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
+    /// 폴더별 보기. **격자를 하나만 둔다.**
+    ///
+    /// 폴더마다 `LazyVGrid` 를 따로 두고 그것을 `LazyVStack` 으로 감싸면 게으름이 사라진다.
+    /// 바깥 스택은 자기 항목(= 폴더 한 덩어리)의 높이를 알아야 자리를 잡으므로 그 안의 격자를
+    /// 통째로 펼친다. 폴더 하나에 100장이 들어 있으면 그 폴더가 화면에 걸치는 순간 카드 100장이
+    /// 전부 만들어진다. 격자를 하나로 합치고 폴더를 `Section` 으로 두면 게으름의 단위가 폴더가
+    /// 아니라 **격자 한 줄**이 되어, 보이는 줄만 만들어진다.
     func folderGrid(
         projection: LibraryBrowserProjection,
         framesByID: [UUID: ScanFrame]
     ) -> some View {
-        LazyVStack(alignment: .leading, spacing: 22) {
-            ForEach(projection.folderSections, id: \.id) { section in
-                let folderFrames = section.orderedFrameIDs.compactMap { framesByID[$0] }
+        LazyVGrid(columns: gridColumns, spacing: gridSpacing) {
+            ForEach(Array(projection.folderSections.enumerated()), id: \.element.id) { index, section in
                 let visibleFrameIDs = model.stackProjectedFrameIDs(section.orderedFrameIDs)
-                let sectionFrames = frames(
-                    orderedBy: visibleFrameIDs,
-                    framesByID: framesByID
-                )
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "folder")
-                            .foregroundStyle(.secondary)
-                        Text(section.title)
-                            .font(.headline.weight(.semibold))
-                            .lineLimit(1)
-                        Text(model.text(AppLocalizedPhrase.frameCountFormat, sectionFrames.count))
-                            .font(.caption.monospacedDigit())
-                            .foregroundStyle(.secondary)
-                        LibraryFolderDevelopmentControls(
-                            frames: folderFrames,
-                            fallbackProcess: DevelopmentProcess(
-                                filmType: model.filmType,
-                                isDigitalSource: model.isDigitalSource
-                            ),
-                            fallbackTarget: model.developTarget
+                let sectionFrames = visibleFrameIDs.compactMap { framesByID[$0] }
+                // 접힘은 `ForEach` 안의 `if` 가 아니라 **데이터 단계**에서 거른다. 게으른
+                // 컨테이너 안에 조건부 가지를 두면 컨테이너가 항목 수를 다시 세게 된다.
+                let renderedFrames = folderCollapse.isExpanded(section.id) ? sectionFrames : []
+                Section {
+                    ForEach(renderedFrames) { frame in
+                        frameCard(
+                            frame,
+                            orderedFrameIDs: visibleFrameIDs,
+                            folderID: section.id
                         )
-                        Spacer(minLength: 0)
                     }
-                    .padding(6)
-                    .contentShape(Rectangle())
-                    .librarySourceDropDestination(
-                        destinationFolder: URL(fileURLWithPath: section.id, isDirectory: true)
+                } header: {
+                    folderSectionHeader(
+                        section,
+                        isFirst: index == 0,
+                        frameCount: sectionFrames.count,
+                        framesByID: framesByID
                     )
-                    .contextMenu {
-                        let folderURL = URL(fileURLWithPath: section.id, isDirectory: true)
-                        Button(model.text(AppLocalizedPhrase.newFolder)) {
-                            model.presentCreateLibraryFolder(
-                                in: folderURL.deletingLastPathComponent()
-                            )
-                        }
-                        Button(model.text(AppLocalizedPhrase.showInFinder)) {
-                            model.revealLibraryFolderInFinder(folderURL)
-                        }
-                        Button(model.text(AppLocalizedPhrase.renameFolder)) {
-                            organizerNameRequest = LibraryOrganizerNameRequest(
-                                action: .renameFolder(
-                                    url: folderURL
-                                ),
-                                title: .renameFolder,
-                                fieldLabel: .filmName,
-                                initialName: section.title
-                            )
-                        }
-                    }
-
-                    if !sectionFrames.isEmpty {
-                        LazyVGrid(columns: gridColumns, spacing: gridSpacing) {
-                            ForEach(sectionFrames) { frame in
-                                frameCard(
-                                    frame,
-                                    orderedFrameIDs: visibleFrameIDs,
-                                    folderID: section.id
-                                )
-                            }
-                        }
-                    }
                 }
             }
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .topLeading)
+    }
+
+    @ViewBuilder
+    func folderSectionHeader(
+        _ section: LibraryBrowserFolderSection,
+        isFirst: Bool,
+        frameCount: Int,
+        framesByID: [UUID: ScanFrame]
+    ) -> some View {
+        let isExpanded = folderCollapse.isExpanded(section.id)
+        HStack(spacing: 8) {
+            Button {
+                folderCollapse.toggle(section.id)
+            } label: {
+                Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 12, height: 12)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help(model.text(isExpanded ? .collapseFolder : .expandFolder))
+            .accessibilityIdentifier("negaflow.library.folder-disclosure")
+            .accessibilityLabel(model.text(isExpanded ? .collapseFolder : .expandFolder))
+
+            Image(systemName: "folder")
+                .foregroundStyle(.secondary)
+            Text(section.title)
+                .font(.headline.weight(.semibold))
+                .lineLimit(1)
+            Text(model.text(AppLocalizedPhrase.frameCountFormat, frameCount))
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(.secondary)
+            LibraryFolderDevelopmentControls(
+                frames: section.orderedFrameIDs.compactMap { framesByID[$0] },
+                fallbackProcess: DevelopmentProcess(
+                    filmType: model.filmType,
+                    isDigitalSource: model.isDigitalSource
+                ),
+                fallbackTarget: model.developTarget
+            )
+            Spacer(minLength: 0)
+        }
+        .padding(6)
+        // 머리띠는 격자의 한 줄을 통째로 차지한다. 폴더 사이 간격도 여기서 준다 — 격자에는
+        // 줄 간격 하나뿐이라, 첫 폴더가 아닐 때만 위쪽에 여백을 더한다.
+        .padding(.top, isFirst ? 0 : 16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+        .onTapGesture(count: 2) { folderCollapse.toggle(section.id) }
+        .librarySourceDropDestination(
+            destinationFolder: URL(fileURLWithPath: section.id, isDirectory: true)
+        )
+        .contextMenu {
+            let folderURL = URL(fileURLWithPath: section.id, isDirectory: true)
+            Button(model.text(AppLocalizedPhrase.newFolder)) {
+                model.presentCreateLibraryFolder(
+                    in: folderURL.deletingLastPathComponent()
+                )
+            }
+            Button(model.text(AppLocalizedPhrase.showInFinder)) {
+                model.revealLibraryFolderInFinder(folderURL)
+            }
+            Button(model.text(AppLocalizedPhrase.renameFolder)) {
+                organizerNameRequest = LibraryOrganizerNameRequest(
+                    action: .renameFolder(
+                        url: folderURL
+                    ),
+                    title: .renameFolder,
+                    fieldLabel: .filmName,
+                    initialName: section.title
+                )
+            }
+        }
     }
 
     func frameCard(

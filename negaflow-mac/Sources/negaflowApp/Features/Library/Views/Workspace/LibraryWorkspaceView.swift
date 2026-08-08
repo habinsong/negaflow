@@ -35,6 +35,9 @@ struct LibraryWorkspaceView: View {
     @State var pendingSourceDeletion: SourceDeletionPlan?
     @State var organizerNameRequest: LibraryOrganizerNameRequest?
     @State var controlsTab = LibraryControlsTab.importing
+    @StateObject var folderCollapse = LibraryFolderExpansionStore(
+        defaultsKey: LibraryFolderExpansionStore.gridDefaultsKey
+    )
     let onOpenDevelop: () -> Void
 
     var body: some View {

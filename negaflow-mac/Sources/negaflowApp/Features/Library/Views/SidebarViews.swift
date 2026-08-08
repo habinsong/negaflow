@@ -299,6 +299,12 @@ private struct FrameRatingButtons: View {
     let controlHeight: CGFloat
 
     var body: some View {
+        // 별 다섯 개가 쓰는 문구는 프레임과 무관하게 같다. 별마다 만들면 카드 한 장에
+        // 문자열 스무 개가 새로 생기고, 격자에는 그런 카드가 수십 장 살아 있다.
+        let starLabels = (1...5).map { model.text(AppLocalizedPhrase.starHelpFormat, $0) }
+        let selectedValue = model.accessibilityText(.selected)
+        let unselectedValue = model.accessibilityText(.notSelected)
+        let unselectedHint = model.accessibilityText(.select)
         HStack(spacing: isCompact ? 0 : 1) {
             ForEach(1...5, id: \.self) { value in
                 Button {
@@ -311,13 +317,13 @@ private struct FrameRatingButtons: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .help(model.text(AppLocalizedPhrase.starHelpFormat, value))
-                .accessibilityLabel(model.text(AppLocalizedPhrase.starHelpFormat, value))
+                .help(starLabels[value - 1])
+                .accessibilityLabel(starLabels[value - 1])
                 .accessibilitySelectionState(
                     frame.rating == value,
-                    selectedValue: model.accessibilityText(.selected),
-                    unselectedValue: model.accessibilityText(.notSelected),
-                    unselectedHint: model.accessibilityText(.select)
+                    selectedValue: selectedValue,
+                    unselectedValue: unselectedValue,
+                    unselectedHint: unselectedHint
                 )
             }
         }

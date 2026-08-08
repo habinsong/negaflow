@@ -461,6 +461,8 @@ extension AppLocalization {
             .autoDefect: "Auto",
             .autoDefectHelp: "Auto — detect the full frame automatically, then remove defects",
             .frameCountFormat: "%d frames",
+            .collapseFolder: "Collapse folder",
+            .expandFolder: "Expand folder",
             .frameDisplayFormat: "Frame %d",
             .frameCopyDisplayFormat: "Frame %d Copy %d",
             .frameCompactCopyDisplayFormat: "Frame %d C%d",

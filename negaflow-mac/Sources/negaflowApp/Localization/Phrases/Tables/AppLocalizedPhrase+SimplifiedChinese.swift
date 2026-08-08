@@ -461,6 +461,8 @@ extension AppLocalization {
         .autoDefect: "自动",
         .autoDefectHelp: "自动 — 自动检测整幅画面并移除瑕疵",
         .frameCountFormat: "%d 张",
+        .collapseFolder: "折叠文件夹",
+        .expandFolder: "展开文件夹",
         .frameDisplayFormat: "照片 %d",
         .frameCopyDisplayFormat: "照片 %d 副本 %d",
         .frameCompactCopyDisplayFormat: "照片 %d 副本%d",

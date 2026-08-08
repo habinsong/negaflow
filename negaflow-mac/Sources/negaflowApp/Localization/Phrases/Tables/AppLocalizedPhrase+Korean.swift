@@ -461,6 +461,8 @@ extension AppLocalization {
             .autoDefect: "자동",
             .autoDefectHelp: "자동 — 전체 프레임을 자동 검출 후 결함 제거",
             .frameCountFormat: "%d장",
+            .collapseFolder: "폴더 접기",
+            .expandFolder: "폴더 펼치기",
             .frameDisplayFormat: "사진 %d",
             .frameCopyDisplayFormat: "사진 %d 사본 %d",
             .frameCompactCopyDisplayFormat: "사진 %d 사본%d",
