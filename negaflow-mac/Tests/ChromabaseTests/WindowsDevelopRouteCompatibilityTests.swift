@@ -8,7 +8,8 @@ final class WindowsDevelopRouteCompatibilityTests: XCTestCase {
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-            .appendingPathComponent("Negaflow.Windows")
+            .deletingLastPathComponent()   // negaflow-mac 밖 저장소 루트
+            .appendingPathComponent("negaflow-windows")
             .appendingPathComponent("tests")
             .appendingPathComponent("fixtures")
             .appendingPathComponent("catalog")

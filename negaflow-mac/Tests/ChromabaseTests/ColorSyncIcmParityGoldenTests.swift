@@ -62,7 +62,7 @@ final class ColorSyncIcmParityGoldenTests: XCTestCase {
             renderingIntent: "unspecified-core-image-default",
             blackPointCompensation: false,
             profile: ProfileRecord(
-                synthesisRule: "Negaflow.Windows/docs/research/colorsync-icm-parity-profile.md",
+                synthesisRule: "negaflow-windows/docs/research/colorsync-icm-parity-profile.md",
                 sha256: Self.hexDigest(profileData),
                 byteCount: profileData.count
             ),

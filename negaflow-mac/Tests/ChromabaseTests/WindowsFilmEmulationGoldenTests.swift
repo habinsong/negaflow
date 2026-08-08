@@ -315,10 +315,14 @@ final class WindowsFilmEmulationGoldenTests: XCTestCase {
     }
 
     private func baselineCommit() throws -> String {
-        let manifestURL = URL(
-            fileURLWithPath: FileManager.default.currentDirectoryPath,
-            isDirectory: true
-        ).appendingPathComponent("Negaflow.Windows/baseline/bootstrap-manifest.json")
+        // 작업 디렉터리는 호출 방식(`--package-path` 등)에 따라 달라진다. Windows 트리는
+        // 패키지 밖 저장소 루트에 있으므로 이 파일 위치를 기준으로 찾는다.
+        let manifestURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()   // ChromabaseTests
+            .deletingLastPathComponent()   // Tests
+            .deletingLastPathComponent()   // negaflow-mac
+            .deletingLastPathComponent()   // 저장소 루트
+            .appendingPathComponent("negaflow-windows/baseline/bootstrap-manifest.json")
         let object = try JSONSerialization.jsonObject(with: Data(contentsOf: manifestURL))
         guard let root = object as? [String: Any],
               let source = root["source"] as? [String: Any],

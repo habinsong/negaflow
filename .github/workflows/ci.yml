@@ -55,6 +55,7 @@ jobs:
             negaflow-mac/Sources/Chromabase/Adjustments/FilmEmulationProfile+Slide.swift \
             negaflow-mac/Sources/Chromabase/Adjustments/FilmEmulationProfile+Negative.swift
           swift test \
+            --package-path negaflow-mac \
             -Xswiftc -warn-concurrency \
             -Xswiftc -strict-concurrency=complete \
             -Xswiftc -warnings-as-errors \
@@ -74,6 +75,7 @@ jobs:
           NEGAFLOW_SOURCE_COMMIT: ${{ github.sha }}
         run: |
           swift test \
+            --package-path negaflow-mac \
             -Xswiftc -warn-concurrency \
             -Xswiftc -strict-concurrency=complete \
             -Xswiftc -warnings-as-errors \

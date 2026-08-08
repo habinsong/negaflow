@@ -3,7 +3,7 @@ import Foundation
 // Builds the ICC v2 matrix/TRC RGB input profile used by the ColorSync/ICM parity
 // fixture. The bytes are synthesised here so the repository never carries a vendor
 // scanner profile. Every constant below is normative: the Windows side rebuilds the
-// same byte sequence from Negaflow.Windows/docs/research/colorsync-icm-parity-profile.md.
+// same byte sequence from negaflow-windows/docs/research/colorsync-icm-parity-profile.md.
 enum SyntheticScannerICCProfile {
     static let descriptionText = "Negaflow Synthetic Scanner RGB v1"
     static let copyrightText = "Negaflow synthetic parity fixture. No rights asserted."
