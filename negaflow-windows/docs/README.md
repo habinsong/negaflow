@@ -11,6 +11,7 @@
 - [M0~M3 기반 단계 상세](progress/m0-m3-foundation.md)
 - [다음에 어디서부터 이어서 할 것인가](progress/next-steps.md)
 - [Windows CI — 빠른 게이트 설계와 구현](progress/windows-ci-plan.md)
+- [macOS 패리티 백로그 — 이미 고친 것과 아직 없는 것](progress/macos-parity-backlog.md)
 - [현재 한눈에 보기](STATUS.md)
 
 ### 구현 설명
