@@ -75,9 +75,10 @@ native SQLite 하한이 CVE-2025-6965 대상이라 restore 가 NU1903 으로 실
    source로 사용하고, `library.backup.sqlite`를 별도로 갱신합니다. 새 연결 full canonical readback,
    write/readback 실패 원복, rollback 실패 뒤 mutation 차단까지 연결했습니다. process-kill/disk-full/
    power-loss fault gate는 남아 있습니다.
-3. **immutable logical backup 세대. 다음.** staging → manifest/hash 전체 검증 → atomic 승격 → 성공 뒤
-   retention 순서입니다. raw `library.backup.sqlite`와 혼동하지 않습니다.
-4. **pending restore.** 다음 safe startup 에서만 적용합니다.
+3. **immutable logical backup 세대. catalog-only 완료.** canonical `library.json`, v3 manifest/hash,
+   monotonic sequence, staging·final 재검증, valid 세대 기본 3개 retention을 구현했습니다. future·damaged
+   세대는 prune하지 않으며, sidecar가 아직 없으므로 defect edit 선언은 fail-closed입니다.
+4. **pending restore. 다음.** 다음 safe startup 에서만 적용합니다.
 5. **defect sidecar.** revision-aware writer, temp → flush → atomic replace. catalog 가 defect
    edit 을 선언했는데 sidecar 가 없으면 library open 을 차단합니다.
 
@@ -200,9 +201,9 @@ Film mode picker, ABI 0.10 preview/export 연결은 구현되었습니다. Histo
 첫 rendered/UIA 체크포인트도 완료했습니다. 다만 고유 Edit/Defects/Info/Reset tab content와 나머지
 adjustment sections, compact/high contrast/ARM64 runtime은 아직 별도 작업입니다.
 
-최신 사용자 우선순위에 따라 추가 UI 확장은 보류합니다. **다음 한 걸음은 위 수명주기 순서 3의
-immutable logical backup 세대**입니다. 이를 닫기 전에 pending restore나 defect sidecar로 건너뛰지
-않습니다.
+최신 사용자 우선순위에 따라 추가 UI 확장은 보류합니다. **다음 한 걸음은 위 수명주기 순서 4의
+pending restore**입니다. 현재 catalog-only generation만 적용하고 defect edit generation은 sidecar가
+구현되기 전까지 계속 차단합니다.
 
 ---
 

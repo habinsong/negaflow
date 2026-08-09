@@ -401,6 +401,7 @@ internal static class Program
             VerifyStoreLifecycle(roots);
             VerifyStoreRefusals(roots);
             VerifyVerifiedCommit(roots);
+            VerifyBackupGeneration(roots);
             VerifyCatalogSession(roots);
         }
         finally
@@ -694,6 +695,104 @@ internal static class Program
             "commit_future_primary_preserved");
         Check(File.ReadAllBytes(guardedRoots.CatalogBackupPath).SequenceEqual(guardedBackup),
             "commit_future_primary_does_not_overwrite_backup");
+    }
+
+    private static void VerifyBackupGeneration(StorageRootSet parentRoots)
+    {
+        string backupBase = Path.Combine(
+            parentRoots.LocalApplicationDataRoot,
+            "backup-generation");
+        StorageRootSet roots = StorageRootResolver.ResolveForTests(backupBase).Roots!;
+        CatalogSessionOpenResult opened = CatalogSession.Open(roots);
+        using CatalogSession? session = opened.Session;
+        Check(opened.IsSuccess, "backup_session_open");
+        if (session is null)
+        {
+            return;
+        }
+
+        DateTimeOffset now = new(2026, 8, 9, 12, 0, 0, TimeSpan.Zero);
+        Check(session.ReadOrCreate().IsSuccess, "backup_initial_create");
+        Check(session.Write(Snapshot("backup-a", Row("frame-1", "one"))).IsSuccess,
+            "backup_first_catalog_write");
+
+        CatalogBackupCreateResult first = session.CreateBackupForTesting(now);
+        Check(first.IsSuccess && first.Sequence == 1, "backup_first_generation_created");
+        Check(first.GenerationPath is not null && Directory.Exists(first.GenerationPath),
+            "backup_first_generation_visible");
+        Check(first.GenerationPath is not null &&
+              CatalogBackupStore.ValidateGeneration(first.GenerationPath).IsValid,
+            "backup_first_generation_validates");
+
+        CatalogBackupCreateResult rejected = session.CreateBackupForTesting(
+            now.AddMinutes(1),
+            beforeValidation: staging => File.AppendAllText(
+                Path.Combine(staging, "library.json"),
+                " "));
+        Check(rejected.Error == CatalogBackupError.ValidationFailed,
+            "backup_invalid_staging_not_published");
+        Check(!Directory.EnumerateDirectories(
+                roots.BackupRoot,
+                "staging-*",
+                SearchOption.TopDirectoryOnly).Any(),
+            "backup_failed_staging_cleaned");
+
+        JsonObject defectPayload = new()
+        {
+            ["label"] = "defect",
+            ["hasDefectEdits"] = true,
+        };
+        Check(session.Write(Snapshot(
+                "backup-defect",
+                new CatalogEntityRow("frame-defect", defectPayload))).IsSuccess,
+            "backup_defect_catalog_write");
+        Check(session.CreateBackupForTesting(now.AddMinutes(2)).Error ==
+              CatalogBackupError.DefectSidecarUnavailable,
+            "backup_defect_without_sidecar_blocked");
+
+        Check(session.Write(Snapshot("backup-b", Row("frame-2", "two"))).IsSuccess,
+            "backup_second_catalog_write");
+        CatalogBackupCreateResult second = session.CreateBackupForTesting(now.AddMinutes(3));
+        Check(second.IsSuccess && second.Sequence == 2, "backup_second_sequence");
+        Check(session.Write(Snapshot("backup-c", Row("frame-3", "three"))).IsSuccess,
+            "backup_third_catalog_write");
+        CatalogBackupCreateResult third = session.CreateBackupForTesting(now.AddMinutes(4));
+        Check(third.IsSuccess && third.Sequence == 3, "backup_third_sequence");
+
+        string future = Path.Combine(roots.BackupRoot, "backup-future-version");
+        Directory.CreateDirectory(future);
+        File.WriteAllBytes(
+            Path.Combine(future, "manifest.json"),
+            CatalogJson.SerializeCanonical(new JsonObject
+            {
+                ["version"] = 99,
+                ["sequence"] = JsonValue.Create((ulong)99),
+            }));
+
+        Check(session.Write(Snapshot("backup-d", Row("frame-4", "four"))).IsSuccess,
+            "backup_fourth_catalog_write");
+        CatalogBackupCreateResult fourth = session.CreateBackupForTesting(now.AddMinutes(5));
+        Check(fourth.IsSuccess && fourth.Sequence == 100,
+            "backup_future_manifest_keeps_sequence_monotonic");
+        Check(Directory.Exists(future), "backup_future_generation_not_pruned");
+        Check(first.GenerationPath is not null && !Directory.Exists(first.GenerationPath),
+            "backup_retention_prunes_oldest_valid_generation");
+
+        string[] valid = Directory.EnumerateDirectories(
+                roots.BackupRoot,
+                "backup-*",
+                SearchOption.TopDirectoryOnly)
+            .Where(path => CatalogBackupStore.ValidateGeneration(path).IsValid)
+            .ToArray();
+        Check(valid.Length == CatalogBackupStore.DefaultRetentionCount,
+            "backup_retention_keeps_three_valid_generations");
+
+        if (fourth.GenerationPath is not null)
+        {
+            File.AppendAllText(Path.Combine(fourth.GenerationPath, "library.json"), " ");
+            Check(!CatalogBackupStore.ValidateGeneration(fourth.GenerationPath).IsValid,
+                "backup_hash_damage_is_rejected");
+        }
     }
 
     private static JsonObject FrameRecord()

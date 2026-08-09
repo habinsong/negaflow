@@ -88,6 +88,49 @@ public sealed class CatalogSession : IDisposable
         }
     }
 
+    public CatalogBackupCreateResult CreateBackup(
+        int retentionCount = CatalogBackupStore.DefaultRetentionCount)
+    {
+        lock (writeGate)
+        {
+            RequireOpen();
+            if (mutationBlocked ||
+                CatalogCommitVerifier.HasUnresolvedRollbackArtifact(roots))
+            {
+                mutationBlocked = true;
+                return CatalogBackupCreateResult.Failure(
+                    CatalogBackupError.RecoveryRequired);
+            }
+            return CatalogBackupStore.Create(
+                roots,
+                DateTimeOffset.UtcNow,
+                retentionCount);
+        }
+    }
+
+    internal CatalogBackupCreateResult CreateBackupForTesting(
+        DateTimeOffset createdAt,
+        int retentionCount = CatalogBackupStore.DefaultRetentionCount,
+        Action<string>? beforeValidation = null)
+    {
+        lock (writeGate)
+        {
+            RequireOpen();
+            if (mutationBlocked ||
+                CatalogCommitVerifier.HasUnresolvedRollbackArtifact(roots))
+            {
+                mutationBlocked = true;
+                return CatalogBackupCreateResult.Failure(
+                    CatalogBackupError.RecoveryRequired);
+            }
+            return CatalogBackupStore.Create(
+                roots,
+                createdAt,
+                retentionCount,
+                beforeValidation);
+        }
+    }
+
     internal CatalogWriteResult WriteForTesting(
         CatalogSnapshot snapshot,
         Func<CatalogSnapshot, string, CatalogWriteResult>? writer = null,

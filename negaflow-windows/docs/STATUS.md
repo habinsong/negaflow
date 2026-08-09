@@ -20,7 +20,8 @@
 | Film Look source routing | CLI·첫 WinUI 수직 경로 통과 | 명시적 `film_scan`/`rendered_digital`, film 색상→acutance exact 순서, caller cube/scratch, 실패 시 pixel 폐기; 진단·PNG16·TIFF16에서 Primary Calibration 뒤 실행, 실제 TIFF artifact 변화 검증; 미완성 digital graph는 `unsupported_route`; film-scan catalog projection은 C ABI와 첫 WinUI 관통 경로에 연결됐고 정식 UI control surface는 미구현 |
 | Catalog Develop route | SQLite→C ABI→WinUI 첫 연결 통과 | `scanner`/`imported` transport와 film/digital signal 분리, legacy marker·강도 1.0 호환, 새 강도 0.5, unknown field 보존, invalid 조합 fail-closed; SQLite snapshot의 frame을 `DevelopExportRequest`로 투영해 ABI 0.6 게시·미리보기에서 사용. Auto는 v2 resolver, Manual은 v2 Dmin, Preset은 명시 거부. 전체 macOS Develop control surface와 rendered-digital graph는 미구현 |
 | 세로 슬라이스 (catalog→C ABI→WinUI) | 앱 안에서 한 바퀴 완결·미리보기 연결 | Import→필름 base 슬라이더→노출→Export 를 UI Automation 으로 실제 조작해 `Exported 631×403 in 101 ms` 확인. base 슬라이더 범위가 엔진의 0.001..1.0 을 그대로 받음. 시작 시 `library.sqlite` 생성·lock 획득. ABI 0.6 미리보기를 `WriteableBitmap` 캔버스에 표시하고 겹친 요청은 마지막 상태를 보존. macOS와 동일한 정식 Develop UI, base picker, 취소·진행률은 미구현 |
-| catalog SQLite 영속성 | 검증 커밋·직전 원본 보존 통과 | `BEGIN IMMEDIATE` 뒤 새 연결 full canonical readback, 커밋 전용 UUID rollback snapshot, `library.backup.sqlite` 직전 primary 보존, 실패 원복, rollback 실패 뒤 mutation 차단. x64 Debug Catalog 376 assertion. immutable backup 세대·pending restore·defect sidecar·C ABI 연결과 process-kill/power-loss 검증은 미구현 |
+| catalog SQLite 영속성 | 검증 커밋·직전 원본 보존 통과 | `BEGIN IMMEDIATE` 뒤 새 연결 full canonical readback, 커밋 전용 UUID rollback snapshot, `library.backup.sqlite` 직전 primary 보존, 실패 원복, rollback 실패 뒤 mutation 차단. x64 Debug Catalog 396 assertion. pending restore·defect sidecar·C ABI 연결과 process-kill/power-loss 검증은 미구현 |
+| catalog logical backup generation | catalog-only v3 통과 | canonical `library.json`, v3 manifest, byte count·SHA-256, monotonic sequence, staging 전체 검증 뒤 write-through rename, valid 세대만 기본 3개 retention. future/damaged 세대는 prune하지 않음. defect edit 선언 시 sidecar 구현 전까지 fail-closed |
 | catalog 단일 작성자 강제 | 구조로 강제·프로세스 경계 관측 | `SqliteCatalogStore`는 `internal`. 공개 입구는 `CatalogSession` 하나이며 프로세스 lock 을 못 잡으면 세션이 만들어지지 않음. `NotFound`→빈 라이브러리 변환은 `ReadOrCreate` 한 자리뿐이고 손상·미지원 version 은 거기서도 실패. lock 없이 되는 것은 `CatalogRecovery.IsValidCatalogSource` 확인뿐 |
 | catalog 성능 (5만 frame) | 목표 규모 측정 완료 | 최초 쓰기 527ms, 전체 읽기 255ms, 무변경 재저장 343ms, 1건 편집 337ms, 전체 뒤집기 582ms, 파일 10.1MB. 비용이 변경량이 아니라 catalog 크기에 비례함을 기록 |
 | 관리 계층 SQLite 의존성 | 고정·취약점 0 | `Microsoft.Data.Sqlite.Core` 10.0.10(MIT) + `SQLitePCLRaw.config.e_sqlite3` 3.0.5 + `SourceGear.sqlite3` 3.53.4(Apache-2.0). 편의 package 는 CVE-2025-6965 native 하한 때문에 배제(ADR-0025) |
@@ -313,3 +314,16 @@ x64 Debug managed build는 경고 0·오류 0이고 Catalog 376, Shell 300 asser
 immutable logical backup generation, pending restore, process-kill/disk-full/power-loss harness는 아직
 완료하지 않았습니다.
 상세 범위는 `verification/2026-08-09-catalog-verified-commit.md`에 기록합니다.
+
+## 2026-08-09 Catalog logical backup generation
+
+`CatalogSession.CreateBackup`이 live SQLite를 full read한 뒤 물리 schema와 분리된 canonical
+`library.json`, empty `defects/`, v3 `manifest.json`을 새 staging에 기록합니다. manifest는 monotonic
+sequence, UTC 생성 시각, frame 수, 논리 catalog version, authoritative file byte count와 SHA-256을
+포함합니다. staging과 승격된 final generation을 모두 다시 검증한 뒤에만 성공을 반환하고, 그 뒤에만
+검증된 세대의 기본 3개 retention을 적용합니다. future·damaged generation은 삭제하지 않습니다.
+
+현재 defect sidecar writer가 없으므로 `hasDefectEdits=true` frame이 하나라도 있으면 generation 생성을
+`DefectSidecarUnavailable`로 차단합니다. x64 Debug managed build는 경고 0·오류 0이고 Catalog 396,
+Shell 300 assertions를 통과했습니다. 상세는
+`verification/2026-08-09-catalog-backup-generations.md`에 기록합니다.
