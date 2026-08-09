@@ -150,6 +150,10 @@ public extension DigitalFilmPhysics {
         case .ektachromeE100: return ektachromeE100
         case .provia100F:     return provia100F
         case .velvia50:       return velvia50
+        case .velvia100:       return velvia100
+        case .e100VS:          return e100VS
+        case .astia100F:       return astia100F
+        case .kodachrome64:    return kodachrome64
         case .portra160:      return portra160
         case .portra400:      return portra400
         case .portra800:      return portra800
@@ -158,6 +162,23 @@ public extension DigitalFilmPhysics {
         case .colorPlus200:   return colorPlus200
         case .fujicolorC200:  return fujicolorC200
         case .pro400H:        return pro400H
+        case .gold200:         return gold200
+        case .proImage100:     return proImage100
+        case .superia400:      return superia400
+        case .superiaPremium400: return superiaPremium400
+        case .superia200:      return superia200
+        case .reala100:        return reala100
+        case .industrial100:   return industrial100
+        case .lomoCn800:       return lomoCn800
+        case .vision3_500T:    return vision3_500T
+        case .vision3_250D:    return vision3_250D
+        case .vision3_50D:     return vision3_50D
+        case .vision3_200T:    return vision3_200T
+        // 흑백 케이스: nil 반환
+        case .triX400, .hp5Plus, .fp4Plus, .delta100, .delta400, .delta3200,
+             .tmax100, .tmax400, .tmaxP3200, .kentmere400, .orthoPlus,
+             .sfx200, .rolleiIR, .scala200X, .rolleiSuperpan:
+            return nil
         }
     }
 
@@ -345,6 +366,264 @@ public extension DigitalFilmPhysics {
     )
 
     /// PRO 400H — RMS 4(네거티브 측정 조건). 4번째 감광층, 중립 그레이·연조.
+
+
+    /// Velvia 100 — ISO 100, high saturation slide. RVP100 datasheet (AF3-131E).
+    static let velvia100 = DigitalFilmPhysics(
+        gamma: SIMD3(1.752, 1.820, 1.892),
+        latitudeStops: 4.4,
+        toeSoftness: 0.26,
+        shoulderSoftness: 0.22,
+        layerSpeed: SIMD3(-0.025, 0.0, 0.034),
+        layerDmax: SIMD3(1.05, 1.00, 0.97),
+        interImage: SIMD3(0.078, 0.095, 0.065),
+        scatterStrength: SIMD3(0.017, 0.012, 0.009),
+        halationStrength: SIMD3(0.027, 0.010, 0.004),
+        halationRadiusRatio: 0.0033,
+        grain: GrainScale(amplitude: 0.026, chromaRatio: 0.31, size: 1.15, provenance: .datasheet),
+        isReversal: true
+    )
+
+    /// E100VS — ISO 100, most vivid slide. E-163 datasheet.
+    static let e100VS = DigitalFilmPhysics(
+        gamma: SIMD3(1.772, 1.830, 1.912),
+        latitudeStops: 4.2,
+        toeSoftness: 0.28,
+        shoulderSoftness: 0.22,
+        layerSpeed: SIMD3(-0.026, 0.0, 0.038),
+        layerDmax: SIMD3(1.05, 1.00, 0.96),
+        interImage: SIMD3(0.082, 0.098, 0.068),
+        scatterStrength: SIMD3(0.017, 0.011, 0.009),
+        halationStrength: SIMD3(0.029, 0.010, 0.004),
+        halationRadiusRatio: 0.0035,
+        grain: GrainScale(amplitude: 0.036, chromaRatio: 0.33, size: 1.18, provenance: .datasheet),
+        isReversal: true
+    )
+
+    /// Astia 100F — ISO 100, soft skin tones, low contrast slide. AF3-129E.
+    static let astia100F = DigitalFilmPhysics(
+        gamma: SIMD3(1.504, 1.552, 1.616),
+        latitudeStops: 5.8,
+        toeSoftness: 0.38,
+        shoulderSoftness: 0.34,
+        layerSpeed: SIMD3(-0.032, 0.0, 0.040),
+        layerDmax: SIMD3(1.04, 1.00, 0.96),
+        interImage: SIMD3(0.045, 0.055, 0.038),
+        scatterStrength: SIMD3(0.020, 0.014, 0.010),
+        halationStrength: SIMD3(0.030, 0.011, 0.004),
+        halationRadiusRatio: 0.0040,
+        grain: GrainScale(amplitude: 0.023, chromaRatio: 0.33, size: 1.10, provenance: .datasheet),
+        isReversal: true
+    )
+
+    /// Kodachrome 64 — ISO 64, K-14 비발색 유제. 잔류 색 마스크가 없어 깊은 그림자는 중립이다.
+    static let kodachrome64 = DigitalFilmPhysics(
+        gamma: SIMD3(1.682, 1.740, 1.812),
+        latitudeStops: 5.0,
+        toeSoftness: 0.30,
+        shoulderSoftness: 0.26,
+        layerSpeed: SIMD3(-0.028, 0.0, 0.036),
+        layerDmax: SIMD3(1.06, 1.00, 0.94),
+        interImage: SIMD3(0.062, 0.072, 0.050),
+        scatterStrength: SIMD3(0.019, 0.013, 0.010),
+        halationStrength: SIMD3(0.028, 0.010, 0.004),
+        halationRadiusRatio: 0.0042,
+        grain: GrainScale(amplitude: 0.033, chromaRatio: 0.30, size: 1.08, provenance: .datasheet),
+        isReversal: true
+    )
+
+    /// Gold 200 — ISO 200, consumer negative. E-7022 (2016).
+    static let gold200 = DigitalFilmPhysics(
+        gamma: SIMD3(0.558, 0.586, 0.624),
+        latitudeStops: 8.4,
+        toeSoftness: 0.56,
+        shoulderSoftness: 0.60,
+        layerSpeed: SIMD3(-0.050, 0.0, 0.068),
+        layerDmax: SIMD3(1.10, 1.00, 0.92),
+        interImage: SIMD3(0.095, 0.140, 0.065),
+        scatterStrength: SIMD3(0.034, 0.024, 0.017),
+        halationStrength: SIMD3(0.053, 0.020, 0.007),
+        halationRadiusRatio: 0.0048,
+        grain: GrainScale(amplitude: 0.030, chromaRatio: 0.48, size: 1.45, provenance: .inferred),
+        isReversal: false
+    )
+
+    /// Pro Image 100 — ISO 100, warm professional negative. E4006.
+    static let proImage100 = DigitalFilmPhysics(
+        gamma: SIMD3(0.538, 0.562, 0.596),
+        latitudeStops: 8.8,
+        toeSoftness: 0.60,
+        shoulderSoftness: 0.64,
+        layerSpeed: SIMD3(-0.046, 0.0, 0.062),
+        layerDmax: SIMD3(1.09, 1.00, 0.93),
+        interImage: SIMD3(0.085, 0.130, 0.058),
+        scatterStrength: SIMD3(0.031, 0.022, 0.016),
+        halationStrength: SIMD3(0.047, 0.018, 0.006),
+        halationRadiusRatio: 0.0044,
+        grain: GrainScale(amplitude: 0.017, chromaRatio: 0.40, size: 1.20, provenance: .inferred),
+        isReversal: false
+    )
+
+    /// Superia 400 — ISO 400, Fuji 4th color layer. AF3-176E.
+    static let superia400 = DigitalFilmPhysics(
+        gamma: SIMD3(0.560, 0.582, 0.618),
+        latitudeStops: 8.4,
+        toeSoftness: 0.58,
+        shoulderSoftness: 0.62,
+        layerSpeed: SIMD3(-0.044, 0.0, 0.058),
+        layerDmax: SIMD3(1.08, 1.00, 0.94),
+        interImage: SIMD3(0.092, 0.138, 0.068),
+        scatterStrength: SIMD3(0.032, 0.023, 0.016),
+        halationStrength: SIMD3(0.050, 0.019, 0.007),
+        halationRadiusRatio: 0.0046,
+        grain: GrainScale(amplitude: 0.028, chromaRatio: 0.44, size: 1.40, provenance: .inferred),
+        isReversal: false
+    )
+
+    /// Superia Premium 400 — 일본 시장 피부색과 넓은 노출 관용도를 겨냥한 3감광층 유제.
+    static let superiaPremium400 = DigitalFilmPhysics(
+        gamma: SIMD3(0.548, 0.570, 0.602),
+        latitudeStops: 8.8,
+        toeSoftness: 0.62,
+        shoulderSoftness: 0.66,
+        layerSpeed: SIMD3(-0.042, 0.0, 0.054),
+        layerDmax: SIMD3(1.07, 1.00, 0.95),
+        interImage: SIMD3(0.088, 0.132, 0.064),
+        scatterStrength: SIMD3(0.031, 0.022, 0.016),
+        halationStrength: SIMD3(0.048, 0.018, 0.007),
+        halationRadiusRatio: 0.0044,
+        grain: GrainScale(amplitude: 0.025, chromaRatio: 0.42, size: 1.35, provenance: .inferred),
+        isReversal: false
+    )
+
+    /// Superia 200 — ISO 200.
+    static let superia200 = DigitalFilmPhysics(
+        gamma: SIMD3(0.546, 0.570, 0.606),
+        latitudeStops: 8.6,
+        toeSoftness: 0.60,
+        shoulderSoftness: 0.64,
+        layerSpeed: SIMD3(-0.044, 0.0, 0.056),
+        layerDmax: SIMD3(1.08, 1.00, 0.94),
+        interImage: SIMD3(0.090, 0.135, 0.066),
+        scatterStrength: SIMD3(0.030, 0.022, 0.015),
+        halationStrength: SIMD3(0.049, 0.018, 0.007),
+        halationRadiusRatio: 0.0044,
+        grain: GrainScale(amplitude: 0.020, chromaRatio: 0.40, size: 1.25, provenance: .inferred),
+        isReversal: false
+    )
+
+    /// Reala 100 — ISO 100, 4번째 시안 감광층으로 혼합광의 녹색 캐스트를 보정한다.
+    static let reala100 = DigitalFilmPhysics(
+        gamma: SIMD3(0.504, 0.522, 0.548),
+        latitudeStops: 9.4,
+        toeSoftness: 0.66,
+        shoulderSoftness: 0.70,
+        layerSpeed: SIMD3(-0.038, 0.0, 0.050),
+        layerDmax: SIMD3(1.07, 1.00, 0.95),
+        interImage: SIMD3(0.075, 0.115, 0.058),
+        scatterStrength: SIMD3(0.030, 0.021, 0.015),
+        halationStrength: SIMD3(0.045, 0.017, 0.006),
+        halationRadiusRatio: 0.0043,
+        grain: GrainScale(amplitude: 0.015, chromaRatio: 0.38, size: 1.15, provenance: .inferred),
+        isReversal: false
+    )
+
+    /// Industrial 100 — ISO 100, Japan business film.
+    static let industrial100 = DigitalFilmPhysics(
+        gamma: SIMD3(0.536, 0.558, 0.592),
+        latitudeStops: 8.6,
+        toeSoftness: 0.58,
+        shoulderSoftness: 0.62,
+        layerSpeed: SIMD3(-0.044, 0.0, 0.056),
+        layerDmax: SIMD3(1.08, 1.00, 0.94),
+        interImage: SIMD3(0.085, 0.130, 0.060),
+        scatterStrength: SIMD3(0.030, 0.021, 0.015),
+        halationStrength: SIMD3(0.046, 0.018, 0.006),
+        halationRadiusRatio: 0.0043,
+        grain: GrainScale(amplitude: 0.018, chromaRatio: 0.40, size: 1.20, provenance: .inferred),
+        isReversal: false
+    )
+
+    /// Lomo CN 800 — 제조사 데이터시트가 없어 공개 설명과 비교 촬영에서 유추한 ISO 800 유제.
+    static let lomoCn800 = DigitalFilmPhysics(
+        gamma: SIMD3(0.576, 0.604, 0.646),
+        latitudeStops: 7.8,
+        toeSoftness: 0.52,
+        shoulderSoftness: 0.56,
+        layerSpeed: SIMD3(-0.056, 0.0, 0.078),
+        layerDmax: SIMD3(1.11, 1.00, 0.91),
+        interImage: SIMD3(0.105, 0.155, 0.075),
+        scatterStrength: SIMD3(0.036, 0.025, 0.018),
+        halationStrength: SIMD3(0.055, 0.021, 0.008),
+        halationRadiusRatio: 0.0050,
+        grain: GrainScale(amplitude: 0.036, chromaRatio: 0.52, size: 1.55, provenance: .inferred),
+        isReversal: false
+    )
+
+    /// Vision3 500T — ECN-2, H-1-5219. remjet/AHU 안티할레이션으로 붉은 글로우가 억제된다.
+    static let vision3_500T = DigitalFilmPhysics(
+        gamma: SIMD3(0.482, 0.504, 0.534),
+        latitudeStops: 10.5,
+        toeSoftness: 0.72,
+        shoulderSoftness: 0.76,
+        layerSpeed: SIMD3(-0.040, 0.0, 0.052),
+        layerDmax: SIMD3(1.05, 1.00, 0.96),
+        interImage: SIMD3(0.065, 0.105, 0.050),
+        scatterStrength: SIMD3(0.032, 0.023, 0.016),
+        halationStrength: SIMD3(0.034, 0.013, 0.005),
+        halationRadiusRatio: 0.0050,
+        grain: GrainScale(amplitude: 0.022, chromaRatio: 0.36, size: 1.30, provenance: .inferred),
+        isReversal: false
+    )
+
+    /// Vision3 250D — ECN-2, H-1-5207. 계열 중 대비가 가장 높다.
+    static let vision3_250D = DigitalFilmPhysics(
+        gamma: SIMD3(0.516, 0.538, 0.566),
+        latitudeStops: 10.0,
+        toeSoftness: 0.70,
+        shoulderSoftness: 0.74,
+        layerSpeed: SIMD3(-0.038, 0.0, 0.048),
+        layerDmax: SIMD3(1.06, 1.00, 0.96),
+        interImage: SIMD3(0.070, 0.110, 0.055),
+        scatterStrength: SIMD3(0.030, 0.021, 0.015),
+        halationStrength: SIMD3(0.031, 0.012, 0.004),
+        halationRadiusRatio: 0.0046,
+        grain: GrainScale(amplitude: 0.018, chromaRatio: 0.34, size: 1.20, provenance: .inferred),
+        isReversal: false
+    )
+
+    /// Vision3 50D — ECN-2, H-1-5203. 계열 최미립·최고 채도이며 대비가 아니라 색이 서명이다.
+    static let vision3_50D = DigitalFilmPhysics(
+        gamma: SIMD3(0.494, 0.516, 0.544),
+        latitudeStops: 9.6,
+        toeSoftness: 0.66,
+        shoulderSoftness: 0.70,
+        layerSpeed: SIMD3(-0.036, 0.0, 0.046),
+        layerDmax: SIMD3(1.06, 1.00, 0.97),
+        interImage: SIMD3(0.075, 0.115, 0.060),
+        scatterStrength: SIMD3(0.028, 0.020, 0.014),
+        halationStrength: SIMD3(0.030, 0.011, 0.004),
+        halationRadiusRatio: 0.0042,
+        grain: GrainScale(amplitude: 0.013, chromaRatio: 0.32, size: 1.10, provenance: .inferred),
+        isReversal: false
+    )
+
+    /// Vision3 200T — ECN-2, H-1-5213. 50D와 비슷한 대비의 100-speed급 이미지 구조.
+    static let vision3_200T = DigitalFilmPhysics(
+        gamma: SIMD3(0.495, 0.517, 0.545),
+        latitudeStops: 10.2,
+        toeSoftness: 0.70,
+        shoulderSoftness: 0.74,
+        layerSpeed: SIMD3(-0.038, 0.0, 0.050),
+        layerDmax: SIMD3(1.05, 1.00, 0.96),
+        interImage: SIMD3(0.068, 0.108, 0.052),
+        scatterStrength: SIMD3(0.030, 0.022, 0.015),
+        halationStrength: SIMD3(0.032, 0.012, 0.004),
+        halationRadiusRatio: 0.0048,
+        grain: GrainScale(amplitude: 0.016, chromaRatio: 0.33, size: 1.15, provenance: .inferred),
+        isReversal: false
+    )
+
     static let pro400H = DigitalFilmPhysics(
         gamma: SIMD3(0.494, 0.510, 0.534),
         latitudeStops: 10.0,

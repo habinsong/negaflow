@@ -810,5 +810,49 @@ enum ChromabaseMetalKernels {
         n = mix(float3(nl), n, p.y);
         return float4(0.18 * pow(float3(10.0), -(dens + n * amp)), src.a);
     }
+
+    // 흑백 유제 응답. 두 도메인을 나눠 쓴다.
+    //   • 분광 합성(RGB→그레이)은 **선형 광 도메인**에서 한다. 유제가 받는 것은 빛의 양이지
+    //     감마 인코딩된 값이 아니다. 감마 도메인에서 합치면 오소/적외처럼 가중치가 극단적인
+    //     유제에서 밝기가 눈에 띄게 어긋난다.
+    //   • 특성곡선은 **sRGB 감마 도메인**에서 적용한다. 대비·토우·숄더는 지각 균등 축에서
+    //     정의해야 밝기대별 효과가 고르게 실린다(엔진의 다른 톤 스테이지와 같은 규약).
+    // 1 을 넘는 확장값은 곡선 밖으로 빼 두었다가 되돌려 준다 — 작업 이미지의 관용도를
+    // 여기서 잘라 내면 표시/내보내기 경계가 할 일을 미리 망친다.
+    // w  = (weightR, weightG, weightB, intensity)
+    // c0 = (contrast, toe, shoulder, deepen)
+    // c1 = (black, white, _, _)
+    [[stitchable]] float4 digitalBWFilm(coreimage::sample_t src,
+                                        float4 w, float4 c0, float4 c1) {
+        float y = dot(max(src.rgb, float3(0.0)), w.xyz);
+        float t = clamp(y, 0.0, 1.0);
+        float over = y - t;
+
+        float g = digitalLinearToSRGB(float3(t)).x;
+
+        // 1) 대비 — 표준 현상 기준선에서의 편차. 음수면 곡선을 반대로 눕혀 대비를 낮춘다.
+        float s = g * g * g * (g * (g * 6.0 - 15.0) + 10.0);
+        float r = clamp(g + (s - g) * c0.x, 0.0, 1.0);
+
+        // 2) 토우 — 긴 토우는 암부를 들어 올리고, 곧은 토우는 암부를 더 떨군다.
+        float low = 1.0 - r;
+        r = clamp(r + c0.y * low * low * low, 0.0, 1.0);
+
+        // 3) 숄더 — 넓은 관용도는 명부를 눕혀 담고, 좁은 관용도는 명부를 빨리 붙인다.
+        r = clamp(r + c0.z * r * r * r, 0.0, 1.0);
+
+        // 4) 반전은 인화지가 뒤를 받치지 않아 검정이 바닥까지 간다. 중간톤은 건드리지 않는다.
+        float d = 1.0 - r;
+        r = clamp(r * (1.0 - c0.w * d * d * d), 0.0, 1.0);
+
+        // 5) 매체의 흑·백 한계. 인화지는 순흑에 붙지 않고, 반전은 붙는다.
+        r = clamp(c1.x + r * (c1.y - c1.x), 0.0, 1.0);
+
+        // 강도는 지각 도메인에서 섞는다. 0 이면 유제 특성이 사라지고 중립 그레이만 남는다.
+        r = mix(g, r, w.w);
+
+        float outv = digitalSRGBToLinear(float3(r)).x + over;
+        return float4(float3(outv), src.a);
+    }
     """
 }

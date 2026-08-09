@@ -12,22 +12,47 @@ import CoreGraphics
 // 디지털 원본에 없는 헐레이션과 그레인만 별도로 보탠다. LUT는 스톡별 특성곡선과 색 응답을
 // 함께 담고 있으며 강도 블렌드도 자체적으로 처리한다.
 //
-// **필름 스캔은 이 경로를 지나지 않는다.**
+// **필름 스캔은 이 경로를 지나지 않는다.** 필름 룩은 디지털 소스 전용이다 — 스캔본에는
+// 이미 유제를 통과한 신호가 들어 있어서, 그 위에 또 유제 응답을 얹으면 두 번 현상이 된다.
 public enum DigitalFilmLook {
+
+    /// 이 조합에서 룩이 실제로 적용되는가. 흑백 프로세스에는 흑백 유제만, 컬러 프로세스에는
+    /// 컬러 유제만 걸린다. 프로세스를 바꿔도 선택은 보존되므로(사용자가 되돌리면 살아 돌아온다)
+    /// 목록에 없는 필름이 파라미터에 남아 있을 수 있고, 그때 엉뚱한 룩이 걸리면 안 된다.
+    public static func appliesLook(emulation: FilmEmulation, monochrome: Bool) -> Bool {
+        guard let kind = emulation.kind else { return false }
+        switch kind {
+        case .bwNegative, .bwReversal: return monochrome
+        case .slide, .negative, .motionPicture: return !monochrome
+        }
+    }
 
     public static func apply(
         to image: CIImage,
         emulation: FilmEmulation,
         intensity: Double,
         grainOverride: Double,
-        halationOverride: Double
+        halationOverride: Double,
+        monochrome: Bool
     ) -> CIImage {
-        guard emulation != .none, let physics = DigitalFilmPhysics.of(emulation) else {
-            return image
-        }
+        guard appliesLook(emulation: emulation, monochrome: monochrome) else { return image }
         let strength = min(max(intensity, 0), 1)
         guard strength > 1e-3 else { return image }
 
+        // 흑백 유제는 축이 달라 자료형도 경로도 따로 간다.
+        if emulation.kind == .bwNegative || emulation.kind == .bwReversal {
+            return DigitalBWFilmLook.apply(
+                to: image,
+                emulation: emulation,
+                intensity: strength,
+                grainOverride: grainOverride,
+                halationOverride: halationOverride
+            )
+        }
+
+        guard let physics = DigitalFilmPhysics.of(emulation) else {
+            return image
+        }
         let extent = image.extent
         var img = image
 

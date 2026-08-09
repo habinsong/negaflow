@@ -36,6 +36,10 @@ struct FilmEmulationProfile {
         case .ektachromeE100: return ektachromeE100
         case .provia100F:     return provia100F
         case .velvia50:       return velvia50
+        case .velvia100:       return velvia100
+        case .e100VS:          return e100VS
+        case .astia100F:       return astia100F
+        case .kodachrome64:    return kodachrome64
         case .portra160:      return portra160
         case .portra400:      return portra400
         case .portra800:      return portra800
@@ -44,6 +48,23 @@ struct FilmEmulationProfile {
         case .colorPlus200:   return colorPlus200
         case .fujicolorC200:  return fujicolorC200
         case .pro400H:        return pro400H
+        case .gold200:         return gold200
+        case .proImage100:     return proImage100
+        case .superia400:      return superia400
+        case .superiaPremium400: return superiaPremium400
+        case .superia200:      return superia200
+        case .reala100:        return reala100
+        case .industrial100:   return industrial100
+        case .lomoCn800:       return lomoCn800
+        case .vision3_500T:    return vision3_500T
+        case .vision3_250D:    return vision3_250D
+        case .vision3_50D:     return vision3_50D
+        case .vision3_200T:    return vision3_200T
+        // 흑백 케이스: identity 반환 (BWFilmProfile이 따로 처리)
+        case .triX400, .hp5Plus, .fp4Plus, .delta100, .delta400, .delta3200,
+             .tmax100, .tmax400, .tmaxP3200, .kentmere400, .orthoPlus,
+             .sfx200, .rolleiIR, .scala200X, .rolleiSuperpan:
+            return identity
         }
     }
 

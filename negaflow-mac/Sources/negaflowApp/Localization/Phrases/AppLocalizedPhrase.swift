@@ -544,6 +544,9 @@ enum AppLocalizedPhrase: CaseIterable {
     case filmTypeSlide
     case filmTypeBWNegative
     case filmTypeBWPositive
+    case filmGroupCinema
+    case filmGroupBWSlide
+    case filmLookDigitalOnly
     case targetFilmSummaryFormat
     case frameAccessibilityFormat
     case dynamicRangeChannel

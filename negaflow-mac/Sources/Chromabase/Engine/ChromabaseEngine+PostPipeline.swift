@@ -23,20 +23,19 @@ extension ChromabaseEngine {
         //   디지털 사진은 positive 도메인용 LUT로 톤·색을 한 번만 변환하고, 디지털 원본에 없는
         //   헐레이션·그레인만 별도로 보탠다. 이미 현상된 positive를 장면 노출로 되돌려 다시
         //   네거티브/슬라이드 현상하면 암부가 뜨고 톤 범위가 중앙으로 압축된다.
-        //   **필름 스캔은 기존 경로 그대로다.**
+        //
+        //   **필름 룩은 디지털 소스(Digital Color / Digital B&W) 전용이다.** 실제 필름을 스캔한
+        //   경로(C-41 / ECN-2 / E-6 / D-76 / B&W Reversal)에는 걸리지 않는다 — 스캔본에는 이미
+        //   그 유제를 통과한 신호가 들어 있어 유제 응답을 두 번 먹이는 셈이 되기 때문이다.
+        //   흑백 프로세스에는 흑백 유제만, 컬러 프로세스에는 컬러 유제만 적용된다.
         if params.isDigitalSource == true {
             img = DigitalFilmLook.apply(
                 to: img,
                 emulation: params.filmEmulation,
                 intensity: params.filmEmulationIntensity,
                 grainOverride: params.grain,
-                halationOverride: params.halation
-            )
-        } else {
-            img = FilmEmulationStage.apply(
-                to: img,
-                emulation: params.filmEmulation,
-                intensity: params.filmEmulationIntensity
+                halationOverride: params.halation,
+                monochrome: isMonochrome(params)
             )
         }
 
@@ -73,9 +72,12 @@ extension ChromabaseEngine {
 
         // 10. B&W 필름은 모든 컬러 그레이딩/그레인 이후 최종적으로 중립 그레이스케일로 변환한다.
         //     (그레인/텍스처가 채널별로 색 얼룩을 더하므로 반드시 마지막 단계에서 적용.)
+        //     흑백 필름 룩이 이미 분광 가중치로 그레이를 합성했더라도 이 단계는 그대로 둔다 —
+        //     이미 중립인 신호에 Rec.709 를 곱하면 항등이고, 뒤따르는 스테이지가 남긴 색 얼룩을
+        //     청소하는 원래 역할은 유지되기 때문이다.
         //     측정된 장비별 흑백 틴트가 생기면 중립화 뒤, 사용자 토닝 앞에 얹는다.
         //     현재 번들에는 해당 paired evidence가 없으므로 이 단계는 no-op이다.
-        if params.filmType == .bwNegative || params.filmType == .bwPositive {
+        if isMonochrome(params) {
             img = img.applyingFilter("CIColorMatrix", parameters: [
                 "inputRVector": CIVector(x: 0.2126, y: 0.7152, z: 0.0722, w: 0),
                 "inputGVector": CIVector(x: 0.2126, y: 0.7152, z: 0.0722, w: 0),
@@ -96,10 +98,19 @@ extension ChromabaseEngine {
         )
     }
 
-    /// 디지털 소스 + 필름 선택일 때만 그레인/헐레이션 축을 비운 사본을 돌려준다.
-    /// 그 조합에서는 두 효과를 DigitalFilmLook 이 유제 물성으로 이미 적용했다.
+    private func isMonochrome(_ params: DevelopParameters) -> Bool {
+        params.filmType == .bwNegative || params.filmType == .bwPositive
+    }
+
+    /// 필름 룩이 실제로 걸린 경우에만 그레인/헐레이션 축을 비운 사본을 돌려준다.
+    /// 그 조합에서는 두 효과를 필름 룩이 유제 물성으로 이미 적용했다. 룩이 걸리지 않았는데도
+    /// 축을 비우면 사용자가 올려 둔 슬라이더가 조용히 무시된다.
     private func textureParameters(from params: DevelopParameters) -> DevelopParameters {
-        guard params.isDigitalSource == true, params.filmEmulation != .none else { return params }
+        guard params.isDigitalSource == true,
+              DigitalFilmLook.appliesLook(emulation: params.filmEmulation,
+                                          monochrome: isMonochrome(params)) else {
+            return params
+        }
         var stripped = params
         stripped.grain = 0
         stripped.halation = 0

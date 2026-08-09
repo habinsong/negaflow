@@ -25,6 +25,24 @@ public enum DigitalHalation {
         physics: DigitalFilmPhysics,
         strength: Double
     ) -> CIImage {
+        apply(
+            to: image,
+            scatter: physics.scatterStrength,
+            halation: physics.halationStrength,
+            radiusRatio: physics.halationRadiusRatio,
+            strength: strength
+        )
+    }
+
+    /// 흑백 유제도 같은 광학을 겪는다 — 다른 것은 되돌아온 빛이 층으로 갈리지 않아
+    /// 채널 강도가 같다는 점뿐이다. 그래서 계수만 받는 진입점을 따로 연다.
+    public static func apply(
+        to image: CIImage,
+        scatter: SIMD3<Double>,
+        halation: SIMD3<Double>,
+        radiusRatio: Double,
+        strength: Double
+    ) -> CIImage {
         let amount = min(max(strength, 0), 1)
         guard amount > 1e-3,
               let kernel = ChromabaseMetalKernels.colorKernel(named: "digitalHalation") else {
@@ -34,7 +52,7 @@ public enum DigitalHalation {
         let reference = min(extent.width, extent.height)
         guard reference > 8 else { return image }
 
-        let farRadius = max(1.0, Double(reference) * physics.halationRadiusRatio)
+        let farRadius = max(1.0, Double(reference) * radiusRatio)
         let nearRadius = max(0.6, farRadius * 0.28)          // 에멀전 내부 산란은 훨씬 좁다
         let wideRadius = farRadius * 1.414                    // 2차 바운스 √2
 
@@ -42,11 +60,10 @@ public enum DigitalHalation {
         let far = blur(image, radius: farRadius, extent: extent)
         let wide = blur(image, radius: wideRadius, extent: extent)
 
-        let scatter = physics.scatterStrength * amount
-        let halation = physics.halationStrength * amount
         return kernel.apply(
             extent: extent,
-            arguments: [image, near, far, wide, vector(scatter), vector(halation)]
+            arguments: [image, near, far, wide,
+                        vector(scatter * amount), vector(halation * amount)]
         )?.cropped(to: extent) ?? image
     }
 

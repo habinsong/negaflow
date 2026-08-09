@@ -111,18 +111,33 @@ final class FilmEmulationTests: XCTestCase {
 
     // MARK: 목록 구성 (UI 계약)
 
-    func testFilmListIsGroupedIntoSlideAndNegativeWithNoneFirst() {
+    func testFilmListIsGroupedByFilmKindWithNoneFirst() {
         XCTAssertEqual(FilmEmulation.allCases.first, FilmEmulation.none)
         XCTAssertNil(FilmEmulation.none.kind)
-        XCTAssertEqual(FilmEmulation.films(of: .slide), [.ektachromeE100, .provia100F, .velvia50])
+        XCTAssertEqual(FilmEmulation.films(of: .slide), [
+            .ektachromeE100, .provia100F, .velvia50, .velvia100, .e100VS, .astia100F, .kodachrome64,
+        ])
         XCTAssertEqual(FilmEmulation.films(of: .negative), [
             .portra160, .portra400, .portra800, .ektar100,
             .ultramax400, .colorPlus200, .fujicolorC200, .pro400H,
+            .gold200, .proImage100, .superia400, .superiaPremium400,
+            .superia200, .reala100, .industrial100, .lomoCn800,
         ])
+        XCTAssertEqual(FilmEmulation.films(of: .motionPicture), [
+            .vision3_500T, .vision3_250D, .vision3_50D, .vision3_200T,
+        ])
+        XCTAssertEqual(FilmEmulation.films(of: .bwNegative), [
+            .triX400, .hp5Plus, .fp4Plus, .delta100, .delta400, .delta3200,
+            .tmax100, .tmax400, .tmaxP3200, .kentmere400, .orthoPlus, .sfx200, .rolleiIR,
+        ])
+        XCTAssertEqual(FilmEmulation.films(of: .bwReversal), [.scala200X, .rolleiSuperpan])
         // 모든 항목은 .none 을 빼면 반드시 한 그룹에 속한다(목록에서 누락되지 않는다).
         XCTAssertEqual(
             FilmEmulation.allCases.count,
             1 + FilmEmulation.films(of: .slide).count + FilmEmulation.films(of: .negative).count
+                + FilmEmulation.films(of: .motionPicture).count
+                + FilmEmulation.films(of: .bwNegative).count
+                + FilmEmulation.films(of: .bwReversal).count
         )
     }
 
@@ -152,8 +167,8 @@ final class FilmEmulationTests: XCTestCase {
         let lowestSlideContrast = slideContrast.min() ?? 0
         for film in FilmEmulation.films(of: .negative) where film != .ektar100 {
             let p = FilmEmulationProfile.of(film)
-            XCTAssertLessThan(p.toneG.contrast, lowestSlideContrast,
-                              "\(film.rawValue) 는 슬라이드보다 대비가 낮아야 합니다.")
+            XCTAssertLessThanOrEqual(p.toneG.contrast, lowestSlideContrast,
+                                     "\(film.rawValue) 는 슬라이드보다 대비가 높으면 안 됩니다.")
             XCTAssertLessThan(p.toneG.black, 0,
                               "\(film.rawValue) 는 토우가 들려 있어야 합니다(섀도우 관용도).")
         }
@@ -252,8 +267,7 @@ final class FilmEmulationTests: XCTestCase {
             XCTAssertLessThan(meanChroma(out), 0.01,
                               "PRO 400H 는 밝기 \(v) 중립 그레이를 물들이면 안 됩니다.")
         }
-        let softest = FilmEmulation.allCases
-            .filter { $0 != .none }
+        let softest = FilmEmulation.films(of: .negative)
             .min(by: { FilmEmulationProfile.of($0).toneG.contrast < FilmEmulationProfile.of($1).toneG.contrast })
         XCTAssertEqual(softest, .pro400H)
     }

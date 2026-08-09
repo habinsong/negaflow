@@ -24,29 +24,46 @@ public enum DigitalFilmGrain {
         physics: DigitalFilmPhysics,
         strength: Double
     ) -> CIImage {
+        apply(
+            to: image,
+            amplitude: physics.grain.amplitude,
+            chromaRatio: physics.grain.chromaRatio,
+            size: physics.grain.size,
+            strength: strength
+        )
+    }
+
+    /// 은염 흑백 그레인도 같은 밀도 의존을 따른다. 다른 것은 층이 하나뿐이라 채널이 함께
+    /// 흔들린다는 점(chromaRatio = 0)이므로, 계수만 받는 진입점을 따로 연다.
+    public static func apply(
+        to image: CIImage,
+        amplitude: Double,
+        chromaRatio: Double,
+        size: Double,
+        strength: Double
+    ) -> CIImage {
         let amount = min(max(strength, 0), 1)
         guard amount > 1e-3,
               let kernel = ChromabaseMetalKernels.colorKernel(named: "digitalFilmGrainDensity"),
-              let noise = noiseField(physics: physics, extent: image.extent) else {
+              let noise = noiseField(size: size, extent: image.extent) else {
             return image
         }
         let extent = image.extent
-        let grain = physics.grain
         return kernel.apply(
             extent: extent,
             arguments: [
                 image, noise,
-                CIVector(x: CGFloat(grain.amplitude * amount),
-                         y: CGFloat(grain.chromaRatio), z: 0, w: 0),
+                CIVector(x: CGFloat(amplitude * amount),
+                         y: CGFloat(chromaRatio), z: 0, w: 0),
             ]
         )?.cropped(to: extent) ?? image
     }
 
     /// 입자 크기를 반영한 난수장. CIRandomGenerator 는 픽셀 단위 백색 잡음이라 그대로 쓰면
     /// 스캔 해상도에 따라 입자가 달라진다. 크기만큼 축소했다 되키워 입자를 만든다.
-    private static func noiseField(physics: DigitalFilmPhysics, extent: CGRect) -> CIImage? {
+    private static func noiseField(size rawSize: Double, extent: CGRect) -> CIImage? {
         guard let base = CIFilter(name: "CIRandomGenerator")?.outputImage else { return nil }
-        let size = max(1.0, physics.grain.size)
+        let size = max(1.0, rawSize)
         guard size > 1.01 else { return base.cropped(to: extent) }
         return base
             .transformed(by: CGAffineTransform(scaleX: size, y: size))

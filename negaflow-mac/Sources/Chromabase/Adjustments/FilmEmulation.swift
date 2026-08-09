@@ -45,6 +45,10 @@ public enum FilmEmulation: String, Codable, Sendable, CaseIterable, Identifiable
     case ektachromeE100
     case provia100F
     case velvia50
+    case velvia100
+    case e100VS
+    case astia100F
+    case kodachrome64
     // 네거티브(C-41)
     case portra160
     case portra400
@@ -54,10 +58,43 @@ public enum FilmEmulation: String, Codable, Sendable, CaseIterable, Identifiable
     case colorPlus200
     case fujicolorC200
     case pro400H
+    case gold200
+    case proImage100
+    case superia400
+    case superiaPremium400
+    case superia200
+    case reala100
+    case industrial100
+    case lomoCn800
+    // 컬러 영화용 (ECN-2)
+    case vision3_500T
+    case vision3_250D
+    case vision3_50D
+    case vision3_200T
+    // 흑백 네거티브
+    case triX400
+    case hp5Plus
+    case fp4Plus
+    case delta100
+    case delta400
+    case delta3200
+    case tmax100
+    case tmax400
+    case tmaxP3200
+    case kentmere400
+    case orthoPlus
+    case sfx200
+    case rolleiIR
+    // 흑백 슬라이드
+    case scala200X
+    case rolleiSuperpan
 
     public enum Kind: Sendable {
         case slide
         case negative
+        case bwNegative
+        case bwReversal
+        case motionPicture
     }
 
     public var id: String { rawValue }
@@ -67,11 +104,21 @@ public enum FilmEmulation: String, Codable, Sendable, CaseIterable, Identifiable
         switch self {
         case .none:
             return nil
-        case .ektachromeE100, .provia100F, .velvia50:
+        case .ektachromeE100, .provia100F, .velvia50, .velvia100, .e100VS, .astia100F, .kodachrome64:
             return .slide
         case .portra160, .portra400, .portra800, .ektar100,
-             .ultramax400, .colorPlus200, .fujicolorC200, .pro400H:
+             .ultramax400, .colorPlus200, .fujicolorC200, .pro400H,
+             .gold200, .proImage100, .superia400, .superiaPremium400,
+             .superia200, .reala100, .industrial100, .lomoCn800:
             return .negative
+        case .vision3_500T, .vision3_250D, .vision3_50D, .vision3_200T:
+            return .motionPicture
+        case .triX400, .hp5Plus, .fp4Plus, .delta100, .delta400, .delta3200,
+             .tmax100, .tmax400, .tmaxP3200, .kentmere400, .orthoPlus,
+             .sfx200, .rolleiIR:
+            return .bwNegative
+        case .scala200X, .rolleiSuperpan:
+            return .bwReversal
         }
     }
 
@@ -86,6 +133,10 @@ public enum FilmEmulation: String, Codable, Sendable, CaseIterable, Identifiable
         case .ektachromeE100: return "Kodak Ektachrome E100"
         case .provia100F:     return "Fujichrome Provia 100F"
         case .velvia50:       return "Fujichrome Velvia 50"
+        case .velvia100:       return "Fujichrome Velvia 100"
+        case .e100VS:          return "Kodak Ektachrome E100VS"
+        case .astia100F:       return "Fujichrome Astia 100F"
+        case .kodachrome64:    return "Kodachrome 64"
         case .portra160:      return "Kodak Portra 160"
         case .portra400:      return "Kodak Portra 400"
         case .portra800:      return "Kodak Portra 800"
@@ -94,6 +145,33 @@ public enum FilmEmulation: String, Codable, Sendable, CaseIterable, Identifiable
         case .colorPlus200:   return "Kodak ColorPlus 200"
         case .fujicolorC200:  return "Fujicolor C200"
         case .pro400H:        return "Fujicolor Pro 400H"
+        case .gold200:          return "Kodak Gold 200"
+        case .proImage100:      return "Kodak Pro Image 100"
+        case .superia400:       return "Fujicolor Superia 400"
+        case .superiaPremium400: return "Fujicolor Superia Premium 400"
+        case .superia200:       return "Fujicolor Superia 200"
+        case .reala100:         return "Fujicolor Reala 100"
+        case .industrial100:    return "Fujicolor Industrial 100"
+        case .lomoCn800:        return "Lomography CN 800"
+        case .vision3_500T:     return "Kodak Vision3 500T"
+        case .vision3_250D:     return "Kodak Vision3 250D"
+        case .vision3_50D:      return "Kodak Vision3 50D"
+        case .vision3_200T:     return "Kodak Vision3 200T"
+        case .triX400:        return "Kodak Tri-X 400"
+        case .hp5Plus:        return "Ilford HP5 Plus 400"
+        case .fp4Plus:        return "Ilford FP4 Plus 125"
+        case .delta100:       return "Ilford Delta 100"
+        case .delta400:       return "Ilford Delta 400"
+        case .delta3200:      return "Ilford Delta 3200"
+        case .tmax100:        return "Kodak T-Max 100"
+        case .tmax400:        return "Kodak T-Max 400"
+        case .tmaxP3200:      return "Kodak T-Max P3200"
+        case .kentmere400:    return "Kentmere Pan 400"
+        case .orthoPlus:      return "Ilford Ortho Plus 80"
+        case .sfx200:         return "Ilford SFX 200"
+        case .rolleiIR:       return "Rollei Infrared 400"
+        case .scala200X:      return "Agfa Scala 200X"
+        case .rolleiSuperpan: return "Rollei Superpan 200"
         }
     }
 }

@@ -175,6 +175,213 @@ extension FilmEmulationProfile {
     ///   - 톤: 목록에서 가장 낮은 대비 + 넓게 들린 토우.
     ///   - 매트릭스: 거의 중립(대각 ~1.005) — "neutral grays" 를 문자 그대로 지킨다.
     ///   - 크로스오버: 하이라이트 쿨-그린(민트), 섀도우는 중립.
+
+    /// KODAK Gold 200 (E-7022).
+    /// "outstanding combination of color saturation, fine grain, and high sharpness".
+    /// "wide exposure latitude—from two stops underexposure to three stops overexposure".
+    ///   - 톤: 중간 대비. 소비자용이라 Portra 보다 대비가 있고 토우가 덜 들림.
+    ///   - 매트릭스: 중상 채도(대각 ~1.07). 따뜻하고 금빛이 도는 전형적 Kodak 소비자용.
+    ///   - 크로스오버: 웜 하이라이트 + 살짝 웜 섀도우.
+    static let gold200 = FilmEmulationProfile(
+        toneR: ToneCurveParams(contrast: 0.12, black: -0.008, white: 0.992, lift: 0, pivot: 0.5),
+        toneG: ToneCurveParams(contrast: 0.12, black: -0.008, white: 0.992, lift: 0, pivot: 0.5),
+        toneB: ToneCurveParams(contrast: 0.12, black: -0.007, white: 0.992, lift: 0, pivot: 0.5),
+        mR: SIMD3( 1.070, -0.042, -0.028),
+        mG: SIMD3(-0.032,  1.065, -0.033),
+        mB: SIMD3(-0.026, -0.044,  1.070),
+        shadowTint: SIMD3(0.005, 0.001, 0.001),
+        highlightTint: SIMD3(0.012, 0.005, -0.009),
+        iie: 0.07,
+        iieHue: [0.03, 0.06, 0.02, 0.00, 0.00, 0.00],
+        acutance: (1.0, 0.06)
+    )
+
+    /// KODAK Pro Image 100 (E4006).
+    /// 전문가용 Kodak 컬러 네거티브. 따뜻한 톤, 정확한 스킨 재현.
+    ///   - 톤: 중간 대비, Portra 160 보다 약간 높음.
+    ///   - 매트릭스: 중간 채도, Portra 보다 따뜻한 방향.
+    static let proImage100 = FilmEmulationProfile(
+        toneR: ToneCurveParams(contrast: 0.10, black: -0.016, white: 0.994, lift: 0, pivot: 0.5),
+        toneG: ToneCurveParams(contrast: 0.10, black: -0.016, white: 0.994, lift: 0, pivot: 0.5),
+        toneB: ToneCurveParams(contrast: 0.10, black: -0.014, white: 0.994, lift: 0, pivot: 0.5),
+        mR: SIMD3( 1.040, -0.024, -0.016),
+        mG: SIMD3(-0.018,  1.038, -0.020),
+        mB: SIMD3(-0.014, -0.028,  1.042),
+        shadowTint: SIMD3(0.003, 0.001, 0.002),
+        highlightTint: SIMD3(0.010, 0.004, -0.007),
+        iie: 0.05,
+        iieHue: [0.01, 0.03, 0.01, 0.00, 0.00, 0.00],
+        acutance: (1.0, 0.07)
+    )
+
+    /// FUJICOLOR Superia X-TRA 400.
+    /// 4번째 감광층(시안) 포함. Fuji 시그니처: 쿨-그린 섀도우, 마젠타 하이라이트.
+    ///   - 톤: 중간 대비, 넓은 관용도.
+    ///   - 매트릭스: 중상 채도, Fuji 특유의 그린 확장.
+    ///   - 크로스오버: 쿨-그린 섀도우 + 마젠타 하이라이트.
+    static let superia400 = FilmEmulationProfile(
+        toneR: ToneCurveParams(contrast: 0.14, black: -0.010, white: 0.993, lift: 0, pivot: 0.5),
+        toneG: ToneCurveParams(contrast: 0.14, black: -0.010, white: 0.993, lift: 0, pivot: 0.5),
+        toneB: ToneCurveParams(contrast: 0.15, black: -0.009, white: 0.993, lift: 0, pivot: 0.5),
+        mR: SIMD3( 1.075, -0.044, -0.031),
+        mG: SIMD3(-0.033,  1.090, -0.057),
+        mB: SIMD3(-0.030, -0.054,  1.084),
+        shadowTint: SIMD3(-0.005, 0.004, 0.005),
+        highlightTint: SIMD3(0.006, -0.003, 0.007),
+        iie: 0.08,
+        iieHue: [0.02, 0.00, 0.12, 0.05, 0.07, 0.05],
+        acutance: (1.0, 0.05)
+    )
+
+    /// FUJICOLOR Superia Premium 400 (일본 내수).
+    /// Superia 400 보다 더 정제된 그레인, 중립적 색.
+    static let superiaPremium400 = FilmEmulationProfile(
+        toneR: ToneCurveParams(contrast: 0.12, black: -0.014, white: 0.994, lift: 0, pivot: 0.5),
+        toneG: ToneCurveParams(contrast: 0.12, black: -0.014, white: 0.994, lift: 0, pivot: 0.5),
+        toneB: ToneCurveParams(contrast: 0.13, black: -0.013, white: 0.994, lift: 0, pivot: 0.5),
+        mR: SIMD3( 1.060, -0.034, -0.026),
+        mG: SIMD3(-0.026,  1.072, -0.046),
+        mB: SIMD3(-0.024, -0.046,  1.070),
+        shadowTint: SIMD3(-0.003, 0.002, 0.003),
+        highlightTint: SIMD3(0.004, -0.002, 0.005),
+        iie: 0.06,
+        iieHue: [0.01, 0.00, 0.08, 0.04, 0.05, 0.03],
+        acutance: (1.0, 0.06)
+    )
+
+    /// FUJICOLOR Superia 200.
+    /// Superia 400 의 저감도판. C200 의 상위 호환.
+    static let superia200 = FilmEmulationProfile(
+        toneR: ToneCurveParams(contrast: 0.11, black: -0.014, white: 0.994, lift: 0, pivot: 0.5),
+        toneG: ToneCurveParams(contrast: 0.11, black: -0.014, white: 0.994, lift: 0, pivot: 0.5),
+        toneB: ToneCurveParams(contrast: 0.12, black: -0.013, white: 0.994, lift: 0, pivot: 0.5),
+        mR: SIMD3( 1.058, -0.032, -0.026),
+        mG: SIMD3(-0.024,  1.072, -0.048),
+        mB: SIMD3(-0.022, -0.046,  1.068),
+        shadowTint: SIMD3(-0.003, 0.002, 0.003),
+        highlightTint: SIMD3(0.005, -0.002, 0.005),
+        iie: 0.06,
+        iieHue: [0.01, 0.00, 0.09, 0.04, 0.05, 0.03],
+        acutance: (1.0, 0.08)
+    )
+
+    /// FUJICOLOR Reala 100 (단종, 4번째 감광층).
+    /// "가장 정확한 색 재현" 이라는 평판. 4번째 시안 감광층 덕분에 형광등 아래서도 중립.
+    ///   - 톤: 낮은 대비.
+    ///   - 매트릭스: 매우 중립(대각 ~1.005). Pro 400H 와 유사하지만 더 선명.
+    static let reala100 = FilmEmulationProfile(
+        toneR: ToneCurveParams(contrast: 0.07, black: -0.020, white: 0.994, lift: 0, pivot: 0.5),
+        toneG: ToneCurveParams(contrast: 0.07, black: -0.020, white: 0.994, lift: 0, pivot: 0.5),
+        toneB: ToneCurveParams(contrast: 0.07, black: -0.020, white: 0.994, lift: 0, pivot: 0.5),
+        mR: SIMD3( 1.008, -0.004, -0.004),
+        mG: SIMD3(-0.003,  1.008, -0.005),
+        mB: SIMD3(-0.003, -0.006,  1.009),
+        shadowTint: .zero,
+        highlightTint: SIMD3(-0.002, 0.001, 0.001),
+        iie: 0.03,
+        iieHue: [0.00, 0.00, 0.03, 0.03, 0.02, 0.00],
+        acutance: (1.0, 0.10)
+    )
+
+    /// FUJICOLOR Industrial 100 (일본 내수 비즈니스용).
+    /// Reala 계열의 보급형. 중립적이면서 약간 쿨한 Fuji 시그니처.
+    static let industrial100 = FilmEmulationProfile(
+        toneR: ToneCurveParams(contrast: 0.09, black: -0.012, white: 0.993, lift: 0, pivot: 0.5),
+        toneG: ToneCurveParams(contrast: 0.09, black: -0.012, white: 0.993, lift: 0, pivot: 0.5),
+        toneB: ToneCurveParams(contrast: 0.10, black: -0.011, white: 0.993, lift: 0, pivot: 0.5),
+        mR: SIMD3( 1.045, -0.026, -0.019),
+        mG: SIMD3(-0.020,  1.050, -0.030),
+        mB: SIMD3(-0.018, -0.032,  1.050),
+        shadowTint: SIMD3(-0.003, 0.002, 0.003),
+        highlightTint: SIMD3(0.003, -0.001, 0.003),
+        iie: 0.04,
+        iieHue: [0.00, 0.00, 0.05, 0.03, 0.04, 0.02],
+        acutance: (1.0, 0.09)
+    )
+
+    /// Lomography Color Negative 800.
+    /// 고감도, 강한 채도, 거친 그레인. 저조도/액션용.
+    static let lomoCn800 = FilmEmulationProfile(
+        toneR: ToneCurveParams(contrast: 0.16, black: -0.006, white: 0.99, lift: 0, pivot: 0.5),
+        toneG: ToneCurveParams(contrast: 0.16, black: -0.006, white: 0.99, lift: 0, pivot: 0.5),
+        toneB: ToneCurveParams(contrast: 0.17, black: -0.005, white: 0.99, lift: 0, pivot: 0.5),
+        mR: SIMD3( 1.100, -0.060, -0.040),
+        mG: SIMD3(-0.045,  1.090, -0.045),
+        mB: SIMD3(-0.036, -0.060,  1.096),
+        shadowTint: SIMD3(0.004, 0.001, 0.003),
+        highlightTint: SIMD3(0.010, 0.005, -0.010),
+        iie: 0.10,
+        iieHue: [0.04, 0.06, 0.03, 0.00, 0.02, 0.02],
+        acutance: (1.0, 0.03)
+    )
+
+    /// KODAK Vision3 500T (5219, ECN-2).
+    /// 현행 영화용 컬러 네거티브의 표준. 텅스텐 밸런스, 넓은 관용도, DLT + Sub-Micron.
+    ///   - 톤: 매우 낮은 대비(인화 전제 저감마 마스터), 넓은 관용도.
+    ///   - 매트릭스: 중립 기반, 텅스텐 밸런스의 쿨 시그니처.
+    ///   - 크로스오버: 암부 블루-시안.
+    static let vision3_500T = FilmEmulationProfile(
+        toneR: ToneCurveParams(contrast: 0.04, black: -0.030, white: 0.99, lift: 0, pivot: 0.5),
+        toneG: ToneCurveParams(contrast: 0.04, black: -0.030, white: 0.99, lift: 0, pivot: 0.5),
+        toneB: ToneCurveParams(contrast: 0.05, black: -0.028, white: 0.99, lift: 0, pivot: 0.5),
+        mR: SIMD3( 1.015, -0.009, -0.006),
+        mG: SIMD3(-0.007,  1.015, -0.008),
+        mB: SIMD3(-0.005, -0.010,  1.015),
+        shadowTint: SIMD3(-0.008, 0.000, 0.014),
+        highlightTint: SIMD3(0.003, 0.001, -0.002),
+        iie: 0.02,
+        iieHue: [0.00, 0.00, 0.02, 0.02, 0.04, 0.00],
+        acutance: (1.0, 0.04)
+    )
+
+    /// KODAK Vision3 250D (5207, ECN-2).
+    /// 데이라이트 밸런스, VISION3 기술 적용. 500T 의 주간 촬영 대응판.
+    static let vision3_250D = FilmEmulationProfile(
+        toneR: ToneCurveParams(contrast: 0.05, black: -0.028, white: 0.99, lift: 0, pivot: 0.5),
+        toneG: ToneCurveParams(contrast: 0.05, black: -0.028, white: 0.99, lift: 0, pivot: 0.5),
+        toneB: ToneCurveParams(contrast: 0.05, black: -0.026, white: 0.99, lift: 0, pivot: 0.5),
+        mR: SIMD3( 1.020, -0.012, -0.008),
+        mG: SIMD3(-0.009,  1.018, -0.009),
+        mB: SIMD3(-0.006, -0.012,  1.018),
+        shadowTint: SIMD3(-0.004, 0.000, 0.008),
+        highlightTint: SIMD3(0.005, 0.002, -0.003),
+        iie: 0.03,
+        iieHue: [0.00, 0.01, 0.03, 0.02, 0.03, 0.00],
+        acutance: (1.0, 0.06)
+    )
+
+    /// KODAK Vision3 50D (5203, ECN-2).
+    /// "world's finest grain film". 최저감도, 최고 해상도 영화용 필름.
+    static let vision3_50D = FilmEmulationProfile(
+        toneR: ToneCurveParams(contrast: 0.06, black: -0.020, white: 0.99, lift: 0, pivot: 0.5),
+        toneG: ToneCurveParams(contrast: 0.06, black: -0.020, white: 0.99, lift: 0, pivot: 0.5),
+        toneB: ToneCurveParams(contrast: 0.07, black: -0.018, white: 0.99, lift: 0, pivot: 0.5),
+        mR: SIMD3( 1.025, -0.013, -0.012),
+        mG: SIMD3(-0.010,  1.022, -0.012),
+        mB: SIMD3(-0.008, -0.014,  1.022),
+        shadowTint: SIMD3(-0.003, 0.000, 0.006),
+        highlightTint: SIMD3(0.004, 0.001, -0.002),
+        iie: 0.04,
+        iieHue: [0.00, 0.01, 0.04, 0.03, 0.04, 0.00],
+        acutance: (1.0, 0.12)
+    )
+
+    /// KODAK Vision3 200T (5213, ECN-2).
+    /// "200 speed with 100 speed image structure". 200T지만 그레인은 100T급.
+    static let vision3_200T = FilmEmulationProfile(
+        toneR: ToneCurveParams(contrast: 0.05, black: -0.026, white: 0.99, lift: 0, pivot: 0.5),
+        toneG: ToneCurveParams(contrast: 0.05, black: -0.026, white: 0.99, lift: 0, pivot: 0.5),
+        toneB: ToneCurveParams(contrast: 0.06, black: -0.024, white: 0.99, lift: 0, pivot: 0.5),
+        mR: SIMD3( 1.018, -0.010, -0.008),
+        mG: SIMD3(-0.008,  1.018, -0.010),
+        mB: SIMD3(-0.006, -0.012,  1.018),
+        shadowTint: SIMD3(-0.006, 0.000, 0.010),
+        highlightTint: SIMD3(0.003, 0.001, -0.002),
+        iie: 0.03,
+        iieHue: [0.00, 0.00, 0.02, 0.02, 0.03, 0.00],
+        acutance: (1.0, 0.06)
+    )
+
     static let pro400H = FilmEmulationProfile(
         toneR: ToneCurveParams(contrast: 0.05, black: -0.026, white: 0.99, lift: 0, pivot: 0.5),
         toneG: ToneCurveParams(contrast: 0.05, black: -0.026, white: 0.99, lift: 0, pivot: 0.5),

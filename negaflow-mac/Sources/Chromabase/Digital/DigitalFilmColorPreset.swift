@@ -99,6 +99,10 @@ public extension DigitalFilmColorPreset {
         case .ektachromeE100: return ektachromeE100
         case .provia100F:     return provia100F
         case .velvia50:       return velvia50
+        case .velvia100:       return velvia100
+        case .e100VS:          return e100VS
+        case .astia100F:       return astia100F
+        case .kodachrome64:    return kodachrome64
         case .portra160:      return portra160
         case .portra400:      return portra400
         case .portra800:      return portra800
@@ -107,6 +111,23 @@ public extension DigitalFilmColorPreset {
         case .colorPlus200:   return colorPlus200
         case .fujicolorC200:  return fujicolorC200
         case .pro400H:        return pro400H
+        case .gold200:         return gold200
+        case .proImage100:     return proImage100
+        case .superia400:      return superia400
+        case .superiaPremium400: return superiaPremium400
+        case .superia200:      return superia200
+        case .reala100:        return reala100
+        case .industrial100:   return industrial100
+        case .lomoCn800:       return lomoCn800
+        case .vision3_500T:    return vision3_500T
+        case .vision3_250D:    return vision3_250D
+        case .vision3_50D:     return vision3_50D
+        case .vision3_200T:    return vision3_200T
+        // 흑백 케이스: nil 반환 (DigitalBWFilmLook이 따로 처리)
+        case .triX400, .hp5Plus, .fp4Plus, .delta100, .delta400, .delta3200,
+             .tmax100, .tmax400, .tmaxP3200, .kentmere400, .orthoPlus,
+             .sfx200, .rolleiIR, .scala200X, .rolleiSuperpan:
+            return nil
         }
     }
 
@@ -266,6 +287,220 @@ public extension DigitalFilmColorPreset {
 
     /// PRO 400H — 네 번째 시안 감광층이 만드는 "민트빛" 초록이 서명이다. 코닥이 노랑기 도는
     /// 초록을 내는 것과 정반대로, 초록에 파랑이 섞인다. 전반적으로 부드럽고 서늘하다.
+
+    /// Velvia 100 — Velvia 50의 절제판. 더 자연스러운 채도.
+    static let velvia100: DigitalFilmColorPreset = {
+        var b = PresetBuilder()
+        b.midtones(hue: 30, sat: 0.025)
+        b.highlights(hue: 35, sat: 0.028)
+        b.shadows(hue: 240, sat: 0.030)
+        b.band(.green, hue: -0.02, sat: 0.07)
+        b.band(.blue, sat: 0.07)
+        b.band(.purple, sat: 0.06)
+        b.primaries(greenSat: 0.03, blueSat: 0.04)
+        return b.preset
+    }()
+
+    /// E100VS — "most vivid, saturated colors", Kodak slide extreme.
+    static let e100VS: DigitalFilmColorPreset = {
+        var b = PresetBuilder()
+        b.shadows(hue: 190, sat: 0.060)
+        b.midtones(hue: 30, sat: 0.035)
+        b.highlights(hue: 40, sat: 0.045)
+        b.band(.red, sat: 0.08)
+        b.band(.blue, sat: 0.09)
+        b.band(.green, sat: 0.05)
+        b.band(.magenta, sat: 0.07)
+        b.primaries(redSat: 0.05, greenSat: 0.03, blueSat: 0.05)
+        return b.preset
+    }()
+
+    /// Astia 100F — soft skin tones, low contrast slide.
+    static let astia100F: DigitalFilmColorPreset = {
+        var b = PresetBuilder()
+        b.midtones(hue: 40, sat: 0.020)
+        b.highlights(hue: 45, sat: 0.025)
+        b.band(.orange, sat: 0.04, lum: 0.03)
+        b.band(.red, sat: -0.03)
+        b.band(.green, sat: -0.02)
+        return b.preset
+    }()
+
+    /// Kodachrome 64 — K-14의 따뜻한 적색, 절제된 청색, 색이 없는 깊은 그림자.
+    static let kodachrome64: DigitalFilmColorPreset = {
+        var b = PresetBuilder()
+        b.shadows(hue: 0, sat: 0.004)
+        b.midtones(hue: 15, sat: 0.030)
+        b.highlights(hue: 20, sat: 0.040)
+        b.band(.red, hue: -0.04, sat: 0.12)
+        b.band(.blue, sat: -0.05)
+        b.band(.aqua, sat: -0.03)
+        b.band(.yellow, sat: 0.06)
+        b.primaries(redHue: -0.04, redSat: 0.08, blueSat: -0.04)
+        return b.preset
+    }()
+
+    // MARK: 네거티브(C-41) — 추가
+
+    /// Gold 200 — warm, vibrant, consumer classic.
+    static let gold200: DigitalFilmColorPreset = {
+        var b = PresetBuilder()
+        b.shadows(hue: 30, sat: 0.020)
+        b.midtones(hue: 42, sat: 0.050)
+        b.highlights(hue: 25, sat: 0.075)
+        b.band(.red, sat: 0.10)
+        b.band(.orange, sat: 0.09, lum: 0.03)
+        b.band(.yellow, sat: 0.08)
+        b.band(.green, hue: 0.05, sat: -0.04)
+        b.primaries(redSat: 0.06, blueSat: -0.04)
+        return b.preset
+    }()
+
+    /// Pro Image 100 — warm, accurate skin tones.
+    static let proImage100: DigitalFilmColorPreset = {
+        var b = PresetBuilder()
+        b.midtones(hue: 42, sat: 0.030)
+        b.highlights(hue: 48, sat: 0.040)
+        b.band(.orange, sat: 0.06, lum: 0.03)
+        b.band(.red, sat: 0.02)
+        b.band(.green, hue: 0.03, sat: -0.02)
+        b.primaries(redHue: 0.02)
+        return b.preset
+    }()
+
+    /// Superia 400 — Fuji 4th layer, cool shadows, magenta highlights.
+    static let superia400: DigitalFilmColorPreset = {
+        var b = PresetBuilder()
+        b.shadows(hue: 150, sat: 0.075)
+        b.midtones(hue: 195, sat: 0.035)
+        b.highlights(hue: 200, sat: 0.040)
+        b.band(.green, hue: -0.04, sat: 0.11)
+        b.band(.aqua, sat: 0.08)
+        b.band(.blue, sat: 0.10)
+        b.band(.red, sat: -0.08)
+        b.band(.orange, sat: -0.05)
+        b.primaries(redSat: -0.04, greenSat: 0.06, blueSat: 0.05)
+        return b.preset
+    }()
+
+    /// Superia Premium 400 — 4번째 감광층이 아닌, 넓은 관용도와 일본 시장 피부색이 특징이다.
+    static let superiaPremium400: DigitalFilmColorPreset = {
+        var b = PresetBuilder()
+        b.shadows(hue: 205, sat: 0.025)
+        b.midtones(hue: 40, sat: 0.035)
+        b.highlights(hue: 35, sat: 0.035)
+        b.band(.orange, sat: 0.08, lum: 0.02)
+        b.band(.red, sat: 0.025)
+        b.band(.green, sat: -0.01)
+        b.primaries(redSat: 0.01)
+        return b.preset
+    }()
+
+    /// Superia 200 — lower speed Superia.
+    static let superia200: DigitalFilmColorPreset = {
+        var b = PresetBuilder()
+        b.shadows(hue: 148, sat: 0.065)
+        b.midtones(hue: 192, sat: 0.030)
+        b.highlights(hue: 198, sat: 0.035)
+        b.band(.green, hue: -0.03, sat: 0.09)
+        b.band(.aqua, sat: 0.06)
+        b.band(.blue, sat: 0.08)
+        b.band(.red, sat: -0.06)
+        b.primaries(redSat: -0.03, greenSat: 0.05, blueSat: 0.04)
+        return b.preset
+    }()
+
+    /// Reala 100 — 4번째 시안 감광층이 형광등·혼합광의 녹색 캐스트를 누른다.
+    static let reala100: DigitalFilmColorPreset = {
+        var b = PresetBuilder()
+        b.shadows(hue: 330, sat: 0.012)
+        b.midtones(hue: 330, sat: 0.010)
+        b.highlights(hue: 330, sat: 0.014, lum: 0.01)
+        b.band(.green, sat: -0.05)
+        b.band(.aqua, sat: -0.02)
+        b.band(.magenta, sat: 0.03)
+        b.primaries(greenSat: -0.03)
+        return b.preset
+    }()
+
+    /// Industrial 100 — Japanese business film, cool-neutral.
+    static let industrial100: DigitalFilmColorPreset = {
+        var b = PresetBuilder()
+        b.shadows(hue: 200, sat: 0.045)
+        b.midtones(hue: 190, sat: 0.020)
+        b.highlights(hue: 195, sat: 0.030)
+        b.band(.green, hue: -0.05, sat: 0.06)
+        b.band(.blue, sat: 0.05)
+        b.band(.red, sat: -0.04)
+        b.primaries(greenSat: 0.03, blueSat: 0.03)
+        return b.preset
+    }()
+
+    /// Lomo CN 800 — 제조사 데이터시트가 없어 공개 설명과 비교 촬영에서 유추한 색 방향.
+    static let lomoCn800: DigitalFilmColorPreset = {
+        var b = PresetBuilder()
+        b.shadows(hue: 210, sat: 0.055)
+        b.midtones(hue: 30, sat: 0.040)
+        b.highlights(hue: 25, sat: 0.065)
+        b.band(.red, sat: 0.08)
+        b.band(.orange, sat: 0.06)
+        b.band(.blue, sat: 0.06)
+        b.band(.green, sat: -0.03)
+        b.primaries(redSat: 0.05, blueSat: 0.03)
+        return b.preset
+    }()
+
+    // MARK: 영화용 (ECN-2)
+
+    /// Vision3 500T — tungsten balanced, wide latitude cinematic.
+    static let vision3_500T: DigitalFilmColorPreset = {
+        var b = PresetBuilder()
+        b.shadows(hue: 200, sat: 0.065, lum: -0.01)
+        b.midtones(hue: 195, sat: 0.020)
+        b.highlights(hue: 190, sat: 0.035, lum: 0.02)
+        b.band(.blue, sat: 0.08)
+        b.band(.aqua, sat: 0.06)
+        b.band(.orange, sat: -0.04)
+        b.primaries(blueSat: 0.04)
+        return b.preset
+    }()
+
+    /// Vision3 250D — daylight balanced cinematic.
+    static let vision3_250D: DigitalFilmColorPreset = {
+        var b = PresetBuilder()
+        b.shadows(hue: 205, sat: 0.045)
+        b.midtones(hue: 35, sat: 0.020)
+        b.highlights(hue: 40, sat: 0.030)
+        b.band(.blue, sat: 0.05)
+        b.band(.aqua, sat: 0.04)
+        b.primaries(blueSat: 0.02)
+        return b.preset
+    }()
+
+    /// Vision3 50D — finest grain, daylight.
+    static let vision3_50D: DigitalFilmColorPreset = {
+        var b = PresetBuilder()
+        b.shadows(hue: 208, sat: 0.040)
+        b.midtones(hue: 38, sat: 0.020)
+        b.highlights(hue: 42, sat: 0.030)
+        b.band(.blue, sat: 0.04)
+        b.band(.green, sat: 0.03)
+        b.primaries(greenSat: 0.02, blueSat: 0.02)
+        return b.preset
+    }()
+
+    /// Vision3 200T — "200 speed with 100 speed structure".
+    static let vision3_200T: DigitalFilmColorPreset = {
+        var b = PresetBuilder()
+        b.shadows(hue: 198, sat: 0.055)
+        b.midtones(hue: 190, sat: 0.018)
+        b.highlights(hue: 188, sat: 0.032)
+        b.band(.blue, sat: 0.06)
+        b.band(.aqua, sat: 0.05)
+        b.primaries(blueSat: 0.03)
+        return b.preset
+    }()
+
     static let pro400H: DigitalFilmColorPreset = {
         var b = PresetBuilder()
         b.shadows(hue: 200, sat: 0.055)

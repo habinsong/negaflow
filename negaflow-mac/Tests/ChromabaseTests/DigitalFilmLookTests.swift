@@ -134,19 +134,60 @@ final class DigitalFilmLookTests: XCTestCase {
                           "Ektar 100(PGI<25)이 Portra 800 보다 굵게 나왔습니다.")
     }
 
+    /// 추가 슬라이드의 공개 RMS(같은 D=1.0 / 48µm / 12× 조건)는 같은 축에서 비교할 수 있다.
+    func testAdditionalSlideGrainFollowsDocumentedRMSOrdering() {
+        let astia = DigitalFilmPhysics.astia100F.grain
+        let velvia100 = DigitalFilmPhysics.velvia100.grain
+        let kodachrome = DigitalFilmPhysics.kodachrome64.grain
+        let e100VS = DigitalFilmPhysics.e100VS.grain
+
+        XCTAssertLessThan(astia.amplitude, velvia100.amplitude)
+        XCTAssertLessThan(velvia100.amplitude, kodachrome.amplitude)
+        XCTAssertLessThan(kodachrome.amplitude, e100VS.amplitude)
+        XCTAssertEqual(astia.provenance, .datasheet)
+        XCTAssertEqual(velvia100.provenance, .datasheet)
+        XCTAssertEqual(kodachrome.provenance, .datasheet)
+        XCTAssertEqual(e100VS.provenance, .datasheet)
+    }
+
+    /// Vision3의 remjet/AHU는 CineStill처럼 강한 붉은 헐레이션을 만들지 않는다.
+    func testVision3UsesRestrainedHalationAndDocumentedContrastOrdering() {
+        let vision = [
+            DigitalFilmPhysics.vision3_500T,
+            .vision3_250D,
+            .vision3_50D,
+            .vision3_200T,
+        ]
+        for physics in vision {
+            XCTAssertLessThanOrEqual(physics.halationStrength.x, 0.034)
+            XCTAssertLessThanOrEqual(physics.halationStrength.y, 0.013)
+            XCTAssertLessThanOrEqual(physics.halationStrength.z, 0.005)
+        }
+
+        func mean(_ gamma: SIMD3<Double>) -> Double { (gamma.x + gamma.y + gamma.z) / 3 }
+        let contrast500T = mean(DigitalFilmPhysics.vision3_500T.gamma)
+        let contrast250D = mean(DigitalFilmPhysics.vision3_250D.gamma)
+        let contrast50D = mean(DigitalFilmPhysics.vision3_50D.gamma)
+        let contrast200T = mean(DigitalFilmPhysics.vision3_200T.gamma)
+        XCTAssertGreaterThan(contrast250D, contrast200T)
+        XCTAssertGreaterThan(contrast200T, contrast500T)
+        XCTAssertGreaterThan(contrast50D, contrast500T)
+        XCTAssertLessThan(abs(contrast200T - contrast50D), 0.004)
+    }
+
     // MARK: 강도
 
     func testIntensityZeroIsIdentity() {
         let patch = solidRGB(0.40, 0.25, 0.15)
         let out = DigitalFilmLook.apply(to: patch, emulation: .velvia50, intensity: 0,
-                                        grainOverride: 0, halationOverride: 0)
+                                        grainOverride: 0, halationOverride: 0, monochrome: false)
         assertClose(render(out), render(patch), accuracy: 1e-4, "강도 0 이 항등이 아닙니다.")
     }
 
     func testNoneIsIdentity() {
         let patch = solidRGB(0.40, 0.25, 0.15)
         let out = DigitalFilmLook.apply(to: patch, emulation: .none, intensity: 1,
-                                        grainOverride: 0, halationOverride: 0)
+                                        grainOverride: 0, halationOverride: 0, monochrome: false)
         assertClose(render(out), render(patch), accuracy: 1e-4, "필름 없음이 항등이 아닙니다.")
     }
 
@@ -350,7 +391,15 @@ final class DigitalFilmLookTests: XCTestCase {
             cameraRendered(solidRGB(0.16, 0.38, 0.14)),   // 잎
             cameraRendered(solid(0.40)),                   // 중간 회색
         ]
-        let films = FilmEmulation.allCases.filter { $0 != .none }
+        let films = FilmEmulation.allCases.filter { film in
+            guard let kind = film.kind else { return false }
+            switch kind {
+            case .slide, .negative, .motionPicture:
+                return true
+            case .bwNegative, .bwReversal:
+                return false
+            }
+        }
         for i in 0..<films.count {
             for j in (i + 1)..<films.count {
                 let delta = patches.map { patch -> Double in
@@ -401,7 +450,7 @@ final class DigitalFilmLookTests: XCTestCase {
 
     private func look(_ image: CIImage, _ film: FilmEmulation) -> (r: Double, g: Double, b: Double) {
         render(DigitalFilmLook.apply(to: image, emulation: film, intensity: 1,
-                                     grainOverride: 0, halationOverride: 0))
+                                     grainOverride: 0, halationOverride: 0, monochrome: false))
     }
 
     // MARK: 필름의 밝기대별 색 갈림(크로스오버)
