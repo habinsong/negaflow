@@ -217,6 +217,25 @@ Highlights/Shadows와는 다른 recipe field입니다. Shell state는 엔진 ton
 positive/digital frame의 mutation을 거부합니다. x64 Debug 관리형 build warning/error 0, Catalog 317,
 Shell 255 assertions을 통과했습니다. 아래 Point Curve v5 slice가 `ToneCurveEditor`를 연결했습니다.
 
+## 2026-08-09 Color Mixer recipe v6 vertical slice
+
+`params.colorMixer`의 Hue/Saturation/Luminance 8밴드 recipe를 Catalog read/write, Shell request
+factory, ABI 0.12 `nf_develop_export_request_v6`/`nf_develop_preview_v6`, native CPU pipeline,
+WinUI `ColorMixerEditor`까지 연결했습니다. v6는 v5 prefix 뒤에 3×8 float를 append하므로 이전 ABI
+entry point와 layout은 유지합니다. Inspector에는 macOS와 같은 HSL/All 선택과 Red~Magenta 8개 밴드,
+-1…1 slider, reset 및 keyboard nudge를 제공합니다. preview와 export는 같은 recipe를 공유합니다.
+
+x64 Debug native CTest 30/30, Catalog 336 assertions, Shell 275 assertions, interop ABI 0.12 61
+assertions을 통과했습니다. v6 ABI test는 malformed mixer를 fail-closed로 거부하고 실제 fixture의
+Color Mixer 조정이 preview pixel을 바꾸는 것을 확인합니다. rendered WinUI/UIA, compact/high contrast,
+실제 ARM64 runtime, macOS golden pixel 비교는 미검증입니다. 상세는
+`implementation/color-mixer-v6.md`에 기록합니다.
+
+x64 Release CI gate는 native CTest 30/30, Catalog 336 assertions, Shell 275 assertions과 managed
+build 경고·오류 0을 통과했습니다. native/managed ARM64 교차 빌드도 경고·오류 없이 완료했지만 실제
+ARM64 실행은 하지 않았습니다. provenance gate는 files=1783, text=1740, binary=43,
+declared_resources=29, reachable_commits=139을 확인했습니다.
+
 ## 2026-08-09 Point Curve recipe v5 vertical slice
 
 `params.pointCurves`의 RGB/Red/Green/Blue recipe를 Catalog read/write, Shell request factory,

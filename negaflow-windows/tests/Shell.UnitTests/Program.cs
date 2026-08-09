@@ -228,6 +228,19 @@ internal static class Program
                 curveRequest.Request?.PointCurves.Red[0] == new DevelopPointCurvePoint(0.25, 0.3),
             "develop_request_carries_point_curves");
 
+        ColorMixerRecipe colorMixer = new(
+            [0.25, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, -0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.75, 0.0, 0.0, 0.0, 0.0, 0.0]);
+        DevelopRequestResult mixerRequest = DevelopRequestFactory.Create(
+            Frame(new ManualBaseRgb(0.21, 0.22, 0.23)) with { ColorMixer = colorMixer },
+            destination);
+        Check(
+            mixerRequest.IsSuccess && mixerRequest.Request?.ColorMixer.Hue[0] == 0.25f &&
+                mixerRequest.Request.ColorMixer.Saturation[1] == -0.5f &&
+                mixerRequest.Request.ColorMixer.Luminance[2] == 0.75f,
+            "develop_request_carries_color_mixer");
+
         Check(
             DevelopRequestFactory.Create(
                 Frame(new ManualBaseRgb(0.2, 0.2, 0.2), filmType: FilmType.BlackAndWhiteNegative),
@@ -871,6 +884,18 @@ internal static class Program
                     [new PointCurvePoint(0.5, 0.4), new PointCurvePoint(0.5, 0.6)],
                     [], [], [])) == LibraryFrameError.InvalidPointCurves,
                 "panel_rejects_invalid_point_curves");
+            ColorMixerRecipe editedColorMixer = new(
+                [0.2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                new double[ColorMixerRecipe.BandCount],
+                new double[ColorMixerRecipe.BandCount]);
+            Check(panel.SetColorMixer(editedColorMixer) == LibraryFrameError.None &&
+                panel.ColorMixer.Hue[0] == 0.2,
+                "panel_sets_color_mixer");
+            Check(panel.SetColorMixer(new ColorMixerRecipe(
+                    new double[ColorMixerRecipe.BandCount],
+                    [0.0, 0.0],
+                    new double[ColorMixerRecipe.BandCount])) == LibraryFrameError.InvalidColorMixer,
+                "panel_rejects_invalid_color_mixer");
 
             // 아직 base 를 고르지 않은 frame 에도 슬라이더 시작 위치는 있어야 하지만, 그것이
             // catalog 에 저장되면 사용자가 고르지 않은 값으로 현상됩니다.
@@ -968,6 +993,8 @@ internal static class Program
                 "panel_rejects_curve_for_positive_frame");
             Check(panel.SetPointCurves(PointCurveRecipe.Identity) == LibraryFrameError.InvalidDevelopRoute,
                 "panel_rejects_point_curve_for_positive_frame");
+            Check(panel.SetColorMixer(ColorMixerRecipe.Identity) == LibraryFrameError.InvalidDevelopRoute,
+                "panel_rejects_color_mixer_for_positive_frame");
             Check(panel.Select("frame-2"), "panel_reselects_developable_frame");
 
             Check(panel.Save() == CatalogStoreError.None, "panel_save");

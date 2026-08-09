@@ -237,6 +237,41 @@ typedef struct nf_develop_export_request_v5 {
     nf_point_curve_v1 point_curve_blue;
 } nf_develop_export_request_v5;
 
+/* v6 preserves the v5 prefix and appends the eight HSL Color Mixer bands. */
+typedef struct nf_develop_export_request_v6 {
+    uint32_t struct_size;
+    const wchar_t* source_path;
+    const wchar_t* destination_path;
+    uint32_t output_format;
+    uint32_t film_type;
+    uint32_t base_estimation_mode;
+    float dmin[3];
+    float exposure_stops;
+    float contrast;
+    float highlights;
+    float lights;
+    float darks;
+    float shadows;
+    uint32_t film_look_source_kind;
+    uint32_t film_emulation;
+    double film_emulation_intensity;
+    uint32_t rows_per_copy;
+    float density;
+    float highlight;
+    float shadow;
+    float whites;
+    float blacks;
+    const wchar_t* film_stock_dmin_id;
+    const wchar_t* light_source_profile_id;
+    nf_point_curve_v1 point_curve_rgb;
+    nf_point_curve_v1 point_curve_red;
+    nf_point_curve_v1 point_curve_green;
+    nf_point_curve_v1 point_curve_blue;
+    float color_mixer_hue[8];
+    float color_mixer_saturation[8];
+    float color_mixer_luminance[8];
+} nf_develop_export_request_v6;
+
 typedef struct nf_develop_export_result_v1 {
     uint32_t struct_size;
     uint32_t succeeded;
@@ -318,6 +353,9 @@ NF_API nf_status_t NF_CALL nf_develop_export_v4(
 NF_API nf_status_t NF_CALL nf_develop_export_v5(
     const nf_develop_export_request_v5* request,
     nf_develop_export_result_v2* result);
+NF_API nf_status_t NF_CALL nf_develop_export_v6(
+    const nf_develop_export_request_v6* request,
+    nf_develop_export_result_v2* result);
 
 NF_API nf_status_t NF_CALL nf_get_tone_limits_v1(nf_tone_limits_v1* output);
 
@@ -355,6 +393,13 @@ NF_API nf_status_t NF_CALL nf_develop_preview_v4(
     nf_develop_export_result_v2* result);
 NF_API nf_status_t NF_CALL nf_develop_preview_v5(
     const nf_develop_export_request_v5* request,
+    uint32_t maximum_width,
+    uint32_t maximum_height,
+    uint8_t* pixels,
+    uint32_t pixel_capacity_bytes,
+    nf_develop_export_result_v2* result);
+NF_API nf_status_t NF_CALL nf_develop_preview_v6(
+    const nf_develop_export_request_v6* request,
     uint32_t maximum_width,
     uint32_t maximum_height,
     uint8_t* pixels,

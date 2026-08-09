@@ -7,7 +7,8 @@ public sealed record LibraryFrameEdit(
     ToneAdjustment Tone,
     ManualBaseRgb? ManualBase,
     BaseRecipe? Base = null,
-    PointCurveRecipe? PointCurves = null);
+    PointCurveRecipe? PointCurves = null,
+    ColorMixerRecipe? ColorMixer = null);
 
 /// <summary>
 /// 톤, 수동 base, 그리고 지정된 경우 base recipe를 갱신합니다. 입력 record 는 바꾸지 않고 깊은 복사본을 돌려주며, 이 writer 가
@@ -39,6 +40,10 @@ public static class LibraryFrameWriter
         if (edit.PointCurves is { } pointCurves && !IsValidPointCurves(pointCurves))
         {
             return LibraryFrameWriteResult.Failure(LibraryFrameError.InvalidPointCurves);
+        }
+        if (edit.ColorMixer is { } colorMixer && !IsValidColorMixer(colorMixer))
+        {
+            return LibraryFrameWriteResult.Failure(LibraryFrameError.InvalidColorMixer);
         }
 
         JsonObject updated = frameRecord.DeepClone().AsObject();
@@ -105,6 +110,10 @@ public static class LibraryFrameWriter
         if (edit.PointCurves is { } pointCurvesToWrite)
         {
             parameters[LibraryFrameReader.PointCurvesName] = WritePointCurves(pointCurvesToWrite);
+        }
+        if (edit.ColorMixer is { } colorMixerToWrite)
+        {
+            parameters[LibraryFrameReader.ColorMixerName] = WriteColorMixer(colorMixerToWrite);
         }
 
         return LibraryFrameWriteResult.Success(updated);
@@ -199,6 +208,32 @@ public static class LibraryFrameWriter
                 [LibraryFrameReader.PointCurveXName] = point.X,
                 [LibraryFrameReader.PointCurveYName] = point.Y,
             });
+        }
+        return result;
+    }
+
+    private static bool IsValidColorMixer(ColorMixerRecipe colorMixer) =>
+        IsValidColorMixerChannel(colorMixer.Hue) &&
+        IsValidColorMixerChannel(colorMixer.Saturation) &&
+        IsValidColorMixerChannel(colorMixer.Luminance);
+
+    private static bool IsValidColorMixerChannel(IReadOnlyList<double> values) =>
+        values.Count == ColorMixerRecipe.BandCount &&
+        values.All(value => double.IsFinite(value) && value is >= -1.0 and <= 1.0);
+
+    private static JsonObject WriteColorMixer(ColorMixerRecipe colorMixer) => new()
+    {
+        [LibraryFrameReader.ColorMixerHueName] = WriteColorMixerChannel(colorMixer.Hue),
+        [LibraryFrameReader.ColorMixerSaturationName] = WriteColorMixerChannel(colorMixer.Saturation),
+        [LibraryFrameReader.ColorMixerLuminanceName] = WriteColorMixerChannel(colorMixer.Luminance),
+    };
+
+    private static JsonArray WriteColorMixerChannel(IReadOnlyList<double> values)
+    {
+        JsonArray result = [];
+        foreach (double value in values)
+        {
+            result.Add(value);
         }
         return result;
     }

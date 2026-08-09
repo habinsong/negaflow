@@ -99,6 +99,18 @@ public sealed class DevelopPointCurves
     public IReadOnlyList<DevelopPointCurvePoint> Blue { get; init; } = [];
 }
 
+/// <summary>macOS와 같은 HSL 8밴드 Color Mixer recipe입니다.</summary>
+public sealed class DevelopColorMixer
+{
+    public IReadOnlyList<float> Hue { get; init; } = new float[BandCount];
+
+    public IReadOnlyList<float> Saturation { get; init; } = new float[BandCount];
+
+    public IReadOnlyList<float> Luminance { get; init; } = new float[BandCount];
+
+    public const int BandCount = 8;
+}
+
 public sealed class DevelopExportRequest
 {
     public required string SourcePath { get; init; }
@@ -145,6 +157,8 @@ public sealed class DevelopExportRequest
     public float Shadows { get; init; }
 
     public DevelopPointCurves PointCurves { get; init; } = new();
+
+    public DevelopColorMixer ColorMixer { get; init; } = new();
 
     public DevelopSourceKind FilmLookSourceKind { get; init; } = DevelopSourceKind.FilmScan;
 

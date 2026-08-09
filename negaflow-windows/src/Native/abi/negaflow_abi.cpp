@@ -33,6 +33,8 @@ static_assert(sizeof(nf_point_curve_v1) == 1032U);
 static_assert(offsetof(nf_point_curve_v1, points) == 8U);
 static_assert(sizeof(nf_develop_export_request_v5) == 4256U);
 static_assert(offsetof(nf_develop_export_request_v5, point_curve_rgb) == 128U);
+static_assert(sizeof(nf_develop_export_request_v6) == 4352U);
+static_assert(offsetof(nf_develop_export_request_v6, color_mixer_hue) == 4256U);
 static_assert(sizeof(nf_develop_export_result_v1) == 136U);
 static_assert(offsetof(nf_develop_export_result_v1, failure_name) == 12U);
 static_assert(offsetof(nf_develop_export_result_v1, source_file_bytes) == 104U);
@@ -433,6 +435,30 @@ template <typename Request>
     return true;
 }
 
+[[nodiscard]] bool map_request_v6(
+    const nf_develop_export_request_v6& request,
+    const bool require_destination,
+    negaflow::pipeline::DevelopExportRequest& pipeline_request,
+    nf_develop_export_result_v2& result) noexcept {
+    nf_develop_export_request_v5 prefix{};
+    std::memcpy(&prefix, &request, sizeof(prefix));
+    if (!map_request_v5(prefix, require_destination, pipeline_request, result)) {
+        return false;
+    }
+    for (std::size_t index = 0U; index < 8U; ++index) {
+        pipeline_request.tone.color_mixer.hue[index] = request.color_mixer_hue[index];
+        pipeline_request.tone.color_mixer.saturation[index] = request.color_mixer_saturation[index];
+        pipeline_request.tone.color_mixer.luminance[index] = request.color_mixer_luminance[index];
+    }
+    if (!negaflow::imaging::valid_color_mixer_parameters(pipeline_request.tone.color_mixer)) {
+        result.succeeded = 0U;
+        result.failed_stage = NF_DEVELOP_STAGE_REQUEST_VALIDATION;
+        copy_failure_name("invalid_color_mixer", result.failure_name);
+        return false;
+    }
+    return true;
+}
+
 [[nodiscard]] std::uint64_t elapsed_microseconds(
     const std::chrono::steady_clock::time_point started,
     const std::chrono::steady_clock::time_point finished) noexcept {
@@ -629,6 +655,28 @@ void write_outcome_v2(
     return true;
 }
 
+[[nodiscard]] bool prepare_result_v6(
+    const nf_develop_export_request_v6* const request,
+    nf_develop_export_result_v2* const result,
+    nf_status_t& status) noexcept {
+    if (request == nullptr || result == nullptr) {
+        status = NF_STATUS_INVALID_ARGUMENT;
+        return false;
+    }
+    if (request->struct_size < static_cast<std::uint32_t>(sizeof(*request)) ||
+        result->struct_size < static_cast<std::uint32_t>(sizeof(*result))) {
+        status = NF_STATUS_STRUCT_TOO_SMALL;
+        return false;
+    }
+    const std::uint32_t declared_size = result->struct_size;
+    std::memset(result, 0, sizeof(*result));
+    result->struct_size = declared_size;
+    result->failed_stage = NF_DEVELOP_STAGE_NONE;
+    copy_failure_name("ok", result->failure_name);
+    status = NF_STATUS_OK;
+    return true;
+}
+
 }  // namespace
 
 uint32_t NF_CALL nf_get_abi_version(void) {
@@ -754,6 +802,25 @@ nf_status_t NF_CALL nf_develop_export_v5(
         return NF_STATUS_OK;
     }
 
+    const auto started = std::chrono::steady_clock::now();
+    const negaflow::pipeline::DevelopExportOutcome outcome =
+        negaflow::pipeline::develop_and_export(pipeline_request);
+    const auto finished = std::chrono::steady_clock::now();
+    write_outcome_v2(outcome, elapsed_microseconds(started, finished), *result);
+    return NF_STATUS_OK;
+}
+
+nf_status_t NF_CALL nf_develop_export_v6(
+    const nf_develop_export_request_v6* const request,
+    nf_develop_export_result_v2* const result) {
+    nf_status_t status = NF_STATUS_OK;
+    if (!prepare_result_v6(request, result, status)) {
+        return status;
+    }
+    negaflow::pipeline::DevelopExportRequest pipeline_request{};
+    if (!map_request_v6(*request, true, pipeline_request, *result)) {
+        return NF_STATUS_OK;
+    }
     const auto started = std::chrono::steady_clock::now();
     const negaflow::pipeline::DevelopExportOutcome outcome =
         negaflow::pipeline::develop_and_export(pipeline_request);
@@ -914,6 +981,37 @@ nf_status_t NF_CALL nf_develop_preview_v5(
         return NF_STATUS_OK;
     }
 
+    const auto started = std::chrono::steady_clock::now();
+    const negaflow::pipeline::DevelopExportOutcome outcome =
+        negaflow::pipeline::develop_preview(
+            pipeline_request,
+            maximum_width,
+            maximum_height,
+            pixels,
+            static_cast<std::size_t>(pixel_capacity_bytes));
+    const auto finished = std::chrono::steady_clock::now();
+    write_outcome_v2(outcome, elapsed_microseconds(started, finished), *result);
+    return NF_STATUS_OK;
+}
+
+nf_status_t NF_CALL nf_develop_preview_v6(
+    const nf_develop_export_request_v6* const request,
+    const uint32_t maximum_width,
+    const uint32_t maximum_height,
+    uint8_t* const pixels,
+    const uint32_t pixel_capacity_bytes,
+    nf_develop_export_result_v2* const result) {
+    nf_status_t status = NF_STATUS_OK;
+    if (!prepare_result_v6(request, result, status)) {
+        return status;
+    }
+    if (pixels == nullptr) {
+        return NF_STATUS_INVALID_ARGUMENT;
+    }
+    negaflow::pipeline::DevelopExportRequest pipeline_request{};
+    if (!map_request_v6(*request, false, pipeline_request, *result)) {
+        return NF_STATUS_OK;
+    }
     const auto started = std::chrono::steady_clock::now();
     const negaflow::pipeline::DevelopExportOutcome outcome =
         negaflow::pipeline::develop_preview(

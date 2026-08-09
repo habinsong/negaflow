@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Negaflow.Shell.Views.Controls.ColorMixerEditor"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel Spacing="8">
+        <Grid ColumnSpacing="4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <RadioButton x:Name="HueButton" Grid.Column="0" Content="Hue" GroupName="ColorMixerProperty" Checked="OnPropertyChecked" />
+            <RadioButton x:Name="SaturationButton" Grid.Column="1" Content="Saturation" GroupName="ColorMixerProperty" Checked="OnPropertyChecked" />
+            <RadioButton x:Name="LuminanceButton" Grid.Column="2" Content="Luminance" GroupName="ColorMixerProperty" Checked="OnPropertyChecked" />
+            <RadioButton x:Name="AllButton" Grid.Column="3" Content="All" GroupName="ColorMixerProperty" Checked="OnPropertyChecked" />
+        </Grid>
+        <StackPanel x:Name="BandsPanel" Spacing="8" />
+    </StackPanel>
+</UserControl>

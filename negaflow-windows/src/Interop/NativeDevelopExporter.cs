@@ -18,6 +18,7 @@ public static unsafe class NativeDevelopExporter
     internal const int RequestV4Size = 128;
     internal const int PointCurveV1Size = 1032;
     internal const int RequestV5Size = 4256;
+    internal const int RequestV6Size = 4352;
     internal const int ResultV2Size = 152;
 
     private const uint StatusOk = 0;
@@ -27,7 +28,7 @@ public static unsafe class NativeDevelopExporter
     private static void ValidateLayoutAndEnums(DevelopExportRequest request)
     {
         if (sizeof(NativePointCurveV1) != PointCurveV1Size ||
-            sizeof(NativeDevelopExportRequestV5) != RequestV5Size ||
+            sizeof(NativeDevelopExportRequestV6) != RequestV6Size ||
             sizeof(NativeDevelopExportResultV2) != ResultV2Size)
         {
             throw new NativeBootstrapException(
@@ -45,6 +46,7 @@ public static unsafe class NativeDevelopExporter
                 nameof(request));
         }
         ValidatePointCurves(request.PointCurves);
+        ValidateColorMixer(request.ColorMixer);
     }
 
     private static void ValidatePointCurves(DevelopPointCurves pointCurves)
@@ -97,16 +99,48 @@ public static unsafe class NativeDevelopExporter
         }
     }
 
-    private static NativeDevelopExportRequestV5 BuildRequest(
+    private static void ValidateColorMixer(DevelopColorMixer colorMixer)
+    {
+        ArgumentNullException.ThrowIfNull(colorMixer);
+        ValidateColorMixerChannel(colorMixer.Hue, nameof(colorMixer.Hue));
+        ValidateColorMixerChannel(colorMixer.Saturation, nameof(colorMixer.Saturation));
+        ValidateColorMixerChannel(colorMixer.Luminance, nameof(colorMixer.Luminance));
+    }
+
+    private static void ValidateColorMixerChannel(IReadOnlyList<float> values, string parameterName)
+    {
+        ArgumentNullException.ThrowIfNull(values);
+        if (values.Count != DevelopColorMixer.BandCount ||
+            values.Any(value => !float.IsFinite(value) || value is < -1.0F or > 1.0F))
+        {
+            throw new ArgumentException("A Color Mixer channel must contain eight finite values from -1 to 1.", parameterName);
+        }
+    }
+
+    private static void CopyColorMixer(IReadOnlyList<float> source, ref NativeDevelopExportRequestV6 destination, int channel)
+    {
+        fixed (float* hue = destination.ColorMixerHue)
+        fixed (float* saturation = destination.ColorMixerSaturation)
+        fixed (float* luminance = destination.ColorMixerLuminance)
+        {
+            float* target = channel switch { 0 => hue, 1 => saturation, _ => luminance };
+            for (int index = 0; index < DevelopColorMixer.BandCount; index++)
+            {
+                target[index] = source[index];
+            }
+        }
+    }
+
+    private static NativeDevelopExportRequestV6 BuildRequest(
         DevelopExportRequest request,
         char* sourcePath,
         char* destinationPath,
         char* filmStockDminId,
         char* lightSourceProfileId)
     {
-        NativeDevelopExportRequestV5 native = new()
+        NativeDevelopExportRequestV6 native = new()
         {
-            StructSize = (uint)sizeof(NativeDevelopExportRequestV5),
+            StructSize = (uint)sizeof(NativeDevelopExportRequestV6),
             SourcePath = sourcePath,
             DestinationPath = destinationPath,
             OutputFormat = (uint)request.Format,
@@ -137,6 +171,9 @@ public static unsafe class NativeDevelopExporter
         CopyPointCurve(request.PointCurves.Red, ref native.PointCurveRed);
         CopyPointCurve(request.PointCurves.Green, ref native.PointCurveGreen);
         CopyPointCurve(request.PointCurves.Blue, ref native.PointCurveBlue);
+        CopyColorMixer(request.ColorMixer.Hue, ref native, 0);
+        CopyColorMixer(request.ColorMixer.Saturation, ref native, 1);
+        CopyColorMixer(request.ColorMixer.Luminance, ref native, 2);
         return native;
     }
 
@@ -156,13 +193,13 @@ public static unsafe class NativeDevelopExporter
         fixed (char* filmStockDminId = request.FilmStockDminId)
         fixed (char* lightSourceProfileId = request.LightSourceProfileId)
         {
-            NativeDevelopExportRequestV5 native = BuildRequest(
+            NativeDevelopExportRequestV6 native = BuildRequest(
                 request,
                 sourcePath,
                 destinationPath,
                 filmStockDminId,
                 lightSourceProfileId);
-            status = NativeMethods.nf_develop_export_v5(&native, &raw);
+            status = NativeMethods.nf_develop_export_v6(&native, &raw);
         }
 
         return Translate(status, raw);
@@ -200,13 +237,13 @@ public static unsafe class NativeDevelopExporter
         fixed (char* lightSourceProfileId = request.LightSourceProfileId)
         fixed (byte* pixelBuffer = pixels)
         {
-            NativeDevelopExportRequestV5 native = BuildRequest(
+            NativeDevelopExportRequestV6 native = BuildRequest(
                 request,
                 sourcePath,
                 destinationPath,
                 filmStockDminId,
                 lightSourceProfileId);
-            status = NativeMethods.nf_develop_preview_v5(
+            status = NativeMethods.nf_develop_preview_v6(
                 &native,
                 maximumWidth,
                 maximumHeight,
@@ -229,10 +266,10 @@ public static unsafe class NativeDevelopExporter
                 status switch
                 {
                     StatusInvalidArgument =>
-                    "nf_develop_export_v5 rejected the call as malformed.",
+                    "nf_develop_export_v6 rejected the call as malformed.",
                     StatusStructTooSmall =>
-                    "nf_develop_export_v5 rejected the struct sizes.",
-                    _ => $"nf_develop_export_v5 failed with status {status}.",
+                    "nf_develop_export_v6 rejected the struct sizes.",
+                    _ => $"nf_develop_export_v6 failed with status {status}.",
                 });
         }
 

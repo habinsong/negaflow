@@ -360,6 +360,18 @@
                                     CurvesChanged="OnPointCurvesChanged" />
                             </StackPanel>
 
+                            <StackPanel x:Name="ColorMixerControls" Spacing="10">
+                                <TextBlock
+                                    FontSize="12"
+                                    FontWeight="SemiBold"
+                                    Text="Color Mixer" />
+                                <controls:ColorMixerEditor
+                                    x:Name="ColorMixerEditor"
+                                    AutomationProperties.AutomationId="negaflow.develop.color-mixer"
+                                    AutomationProperties.Name="Color Mixer"
+                                    MixerChanged="OnColorMixerChanged" />
+                            </StackPanel>
+
                             <Button
                                 x:Name="ExportButton"
                                 HorizontalAlignment="Stretch"

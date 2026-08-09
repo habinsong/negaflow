@@ -75,6 +75,9 @@ public sealed record LibraryFrameSnapshot(
     /// </summary>
     public PointCurveRecipe PointCurves { get; init; } = PointCurveRecipe.Identity;
 
+    /// <summary>macOS Color Mixer의 HSL 8밴드 recipe입니다.</summary>
+    public ColorMixerRecipe ColorMixer { get; init; } = ColorMixerRecipe.Identity;
+
     /// <summary>
     /// Auto는 native resolver가 입력에서 base를 결정하므로 수동 Dmin 없이 현상할 수 있습니다.
     /// Manual만 저장된 수동 base를 요구하고, 아직 resolver가 없는 Preset은 명시적으로 막습니다.

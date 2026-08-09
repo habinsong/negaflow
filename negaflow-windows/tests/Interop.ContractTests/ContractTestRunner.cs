@@ -81,6 +81,9 @@ internal static unsafe class ContractTestRunner
             sizeof(NativeDevelopExportRequestV5) == NativeDevelopExporter.RequestV5Size,
             "develop_export_v5_request_size");
         Check(
+            sizeof(NativeDevelopExportRequestV6) == NativeDevelopExporter.RequestV6Size,
+            "develop_export_v6_request_size");
+        Check(
             sizeof(NativeDevelopExportResultV2) == NativeDevelopExporter.ResultV2Size,
             "develop_export_v2_result_size");
         Check(
@@ -111,6 +114,10 @@ internal static unsafe class ContractTestRunner
             Marshal.OffsetOf<NativeDevelopExportRequestV5>(
                 nameof(NativeDevelopExportRequestV5.PointCurveRgb)).ToInt32() == 128,
             "develop_export_v5_point_curve_offset");
+        Check(
+            Marshal.OffsetOf<NativeDevelopExportRequestV6>(
+                nameof(NativeDevelopExportRequestV6.ColorMixerHue)).ToInt32() == 4256,
+            "develop_export_v6_color_mixer_offset");
         Check(
             Marshal.OffsetOf<NativeDevelopExportResultV2>(
                 nameof(NativeDevelopExportResultV2.AppliedDminRed)).ToInt32() == 136,
@@ -295,6 +302,18 @@ internal static unsafe class ContractTestRunner
                 },
             }),
             "develop_export_duplicate_point_curve_rejected");
+
+        CheckThrows<ArgumentException>(
+            () => NativeDevelopExporter.Run(new DevelopExportRequest
+            {
+                SourcePath = absentSource,
+                DestinationPath = destination,
+                ColorMixer = new DevelopColorMixer
+                {
+                    Hue = [0.0f, 0.0f],
+                },
+            }),
+            "develop_export_short_color_mixer_rejected");
 
         CheckThrows<ArgumentNullException>(
             () => NativeDevelopExporter.Run(null!),

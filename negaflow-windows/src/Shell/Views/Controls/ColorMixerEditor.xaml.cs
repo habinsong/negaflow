@@ -1,0 +1,162 @@
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Negaflow.Catalog;
+
+namespace Negaflow.Shell.Views.Controls;
+
+/// <summary>macOS Color Mixer의 HSL/All 전환과 여덟 색상 밴드를 표시합니다.</summary>
+public sealed partial class ColorMixerEditor : UserControl
+{
+    private static readonly (string Name, string Color)[] Bands =
+    [
+        ("Red", "#FFE63333"), ("Orange", "#FFED8C2E"), ("Yellow", "#FFE0D133"),
+        ("Green", "#FF40B85C"), ("Aqua", "#FF33C2C7"), ("Blue", "#FF3D6EE6"),
+        ("Purple", "#FF8C4DDB"), ("Magenta", "#FFE047A8"),
+    ];
+
+    private ColorMixerProperty property = ColorMixerProperty.Hue;
+    private bool isSynchronizing;
+
+    public ColorMixerEditor()
+    {
+        InitializeComponent();
+        HueButton.IsChecked = true;
+        RebuildBands();
+    }
+
+    public static readonly DependencyProperty MixerProperty = DependencyProperty.Register(
+        nameof(Mixer),
+        typeof(ColorMixerRecipe),
+        typeof(ColorMixerEditor),
+        new PropertyMetadata(ColorMixerRecipe.Identity, OnMixerChanged));
+
+    public ColorMixerRecipe Mixer
+    {
+        get => (ColorMixerRecipe)GetValue(MixerProperty);
+        set => SetValue(MixerProperty, value);
+    }
+
+    public event EventHandler<ColorMixerChangedEventArgs>? MixerChanged;
+
+    private static void OnMixerChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args)
+    {
+        _ = args;
+        ((ColorMixerEditor)sender).RebuildBands();
+    }
+
+    private void OnPropertyChecked(object sender, RoutedEventArgs args)
+    {
+        _ = args;
+        if (isSynchronizing)
+        {
+            return;
+        }
+        property = ReferenceEquals(sender, HueButton) ? ColorMixerProperty.Hue :
+            ReferenceEquals(sender, SaturationButton) ? ColorMixerProperty.Saturation :
+            ReferenceEquals(sender, LuminanceButton) ? ColorMixerProperty.Luminance :
+            ColorMixerProperty.All;
+        RebuildBands();
+    }
+
+    private void RebuildBands()
+    {
+        if (BandsPanel is null)
+        {
+            return;
+        }
+        isSynchronizing = true;
+        BandsPanel.Children.Clear();
+        for (int index = 0; index < ColorMixerRecipe.BandCount; index++)
+        {
+            StackPanel row = new() { Spacing = 3 };
+            StackPanel heading = new() { Orientation = Orientation.Horizontal, Spacing = 6 };
+            heading.Children.Add(new Border
+            {
+                Width = 12,
+                Height = 12,
+                CornerRadius = new CornerRadius(6),
+                Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(
+                    Windows.UI.Color.FromArgb(
+                        255,
+                        Convert.ToByte(Bands[index].Color[1..3], 16),
+                        Convert.ToByte(Bands[index].Color[3..5], 16),
+                        Convert.ToByte(Bands[index].Color[5..7], 16))),
+            });
+            heading.Children.Add(new TextBlock { Text = Bands[index].Name, FontSize = 12 });
+            row.Children.Add(heading);
+
+            if (property == ColorMixerProperty.All)
+            {
+                AddSlider(row, index, ColorMixerProperty.Hue, "H");
+                AddSlider(row, index, ColorMixerProperty.Saturation, "S");
+                AddSlider(row, index, ColorMixerProperty.Luminance, "L");
+            }
+            else
+            {
+                AddSlider(row, index, property, Bands[index].Name);
+            }
+            BandsPanel.Children.Add(row);
+        }
+        isSynchronizing = false;
+    }
+
+    private void AddSlider(StackPanel row, int index, ColorMixerProperty channel, string label)
+    {
+        InspectorSlider slider = new()
+        {
+            Label = label,
+            Minimum = -1,
+            Maximum = 1,
+            ResetValue = 0,
+            Value = GetValue(channel, index),
+            SliderAutomationId = $"negaflow.develop.color-mixer.{ChannelName(channel)}.{ChannelNameForBand(index)}",
+        };
+        slider.ValueChanged += (_, args) => OnSliderChanged(index, channel, args.Value);
+        row.Children.Add(slider);
+    }
+
+    private void OnSliderChanged(int index, ColorMixerProperty channel, double value)
+    {
+        if (isSynchronizing)
+        {
+            return;
+        }
+        double[] hue = Mixer.Hue.ToArray();
+        double[] saturation = Mixer.Saturation.ToArray();
+        double[] luminance = Mixer.Luminance.ToArray();
+        switch (channel)
+        {
+            case ColorMixerProperty.Hue: hue[index] = value; break;
+            case ColorMixerProperty.Saturation: saturation[index] = value; break;
+            case ColorMixerProperty.Luminance: luminance[index] = value; break;
+            default: return;
+        }
+        Mixer = new ColorMixerRecipe(hue, saturation, luminance);
+        MixerChanged?.Invoke(this, new ColorMixerChangedEventArgs(Mixer));
+    }
+
+    private double GetValue(ColorMixerProperty channel, int index) => channel switch
+    {
+        ColorMixerProperty.Hue => Mixer.Hue[index],
+        ColorMixerProperty.Saturation => Mixer.Saturation[index],
+        ColorMixerProperty.Luminance => Mixer.Luminance[index],
+        _ => 0,
+    };
+
+    private static string ChannelName(ColorMixerProperty channel) => channel switch
+    {
+        ColorMixerProperty.Hue => "hue",
+        ColorMixerProperty.Saturation => "saturation",
+        ColorMixerProperty.Luminance => "luminance",
+        _ => "all",
+    };
+
+    private static string ChannelNameForBand(int index) => Bands[index].Name.ToLowerInvariant();
+
+    private enum ColorMixerProperty { Hue, Saturation, Luminance, All }
+}
+
+public sealed class ColorMixerChangedEventArgs(ColorMixerRecipe mixer) : EventArgs
+{
+    public ColorMixerRecipe Mixer { get; } = mixer;
+}

@@ -205,6 +205,8 @@ public sealed class DevelopPanelState
 
     public PointCurveRecipe PointCurves => SelectedFrame?.PointCurves ?? PointCurveRecipe.Identity;
 
+    public ColorMixerRecipe ColorMixer => SelectedFrame?.ColorMixer ?? ColorMixerRecipe.Identity;
+
     public bool CanExport => SelectedFrame is { CanDevelop: true } && !host.IsExporting;
 
     public bool Select(string frameId)
@@ -280,6 +282,29 @@ public sealed class DevelopPanelState
         LibraryFrameError error = host.Edit(
             frame.Id,
             new LibraryFrameEdit(frame.Tone, frame.ManualBase, PointCurves: pointCurves));
+        if (error == LibraryFrameError.None)
+        {
+            Select(frame.Id);
+        }
+        return error;
+    }
+
+    /// <summary>Color Mixer는 Tone과 별도 recipe로 저장되어 preview/export에 같은 값을 전달합니다.</summary>
+    public LibraryFrameError SetColorMixer(ColorMixerRecipe colorMixer)
+    {
+        ArgumentNullException.ThrowIfNull(colorMixer);
+        if (SelectedFrame is not { } frame)
+        {
+            return LibraryFrameError.MissingId;
+        }
+        if (!CanEditTone)
+        {
+            return LibraryFrameError.InvalidDevelopRoute;
+        }
+
+        LibraryFrameError error = host.Edit(
+            frame.Id,
+            new LibraryFrameEdit(frame.Tone, frame.ManualBase, ColorMixer: colorMixer));
         if (error == LibraryFrameError.None)
         {
             Select(frame.Id);

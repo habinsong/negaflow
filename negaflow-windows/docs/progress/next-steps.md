@@ -194,7 +194,7 @@ resolver 결과를 사용합니다. v1 수동 ABI는 유지합니다. 이 resolv
 `FilmBaseEstimator` sampled-grid fallback과 chromogenic B&W 재시도, bundled film-stock/light-source resolver,
 Film mode picker, ABI 0.10 preview/export 연결은 구현되었습니다. 다음 한 걸음은 scanner-profile grade와
 제조사별 Film picker presentation, canvas base picker/reset입니다. Basic Tone과 Parametric Tone Curve의 네 slider는
-Inspector에 Point Curve `ToneCurveEditor`까지 연결되었습니다. rendered/UIA 검증은 아직 별도 작업입니다. 취소·진행률과
+Inspector에 Point Curve `ToneCurveEditor`와 Color Mixer HSL 8밴드까지 연결되었습니다. rendered/UIA 검증은 아직 별도 작업입니다. 취소·진행률과
 대형 이미지 스케줄링은 그 다음 필수 경로입니다.
 
 ---

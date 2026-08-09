@@ -37,6 +37,10 @@ public static class LibraryFrameReader
     internal const string PointCurveBlueName = "blue";
     internal const string PointCurveXName = "x";
     internal const string PointCurveYName = "y";
+    internal const string ColorMixerName = "colorMixer";
+    internal const string ColorMixerHueName = "hue";
+    internal const string ColorMixerSaturationName = "saturation";
+    internal const string ColorMixerLuminanceName = "luminance";
 
     public static LibraryFrameReadResult Read(JsonElement frameRecord)
     {
@@ -103,6 +107,10 @@ public static class LibraryFrameReader
         {
             return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidPointCurves);
         }
+        if (!TryReadColorMixer(parameters, out ColorMixerRecipe colorMixer))
+        {
+            return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidColorMixer);
+        }
 
         DevelopRouteReadResult route = DevelopRouteReader.Read(frameRecord);
         if (route.Route is not { } snapshot)
@@ -120,6 +128,7 @@ public static class LibraryFrameReader
         {
             Base = baseRecipe,
             PointCurves = pointCurves,
+            ColorMixer = colorMixer,
         });
     }
 
@@ -313,6 +322,56 @@ public static class LibraryFrameReader
             }
         }
         points = parsed;
+        return true;
+    }
+
+    private static bool TryReadColorMixer(JsonElement parameters, out ColorMixerRecipe colorMixer)
+    {
+        colorMixer = ColorMixerRecipe.Identity;
+        if (!parameters.TryGetProperty(ColorMixerName, out JsonElement element) ||
+            element.ValueKind == JsonValueKind.Null)
+        {
+            return true;
+        }
+        if (element.ValueKind != JsonValueKind.Object ||
+            !TryReadColorMixerChannel(element, ColorMixerHueName, out IReadOnlyList<double> hue) ||
+            !TryReadColorMixerChannel(element, ColorMixerSaturationName, out IReadOnlyList<double> saturation) ||
+            !TryReadColorMixerChannel(element, ColorMixerLuminanceName, out IReadOnlyList<double> luminance))
+        {
+            return false;
+        }
+        colorMixer = new ColorMixerRecipe(hue, saturation, luminance);
+        return true;
+    }
+
+    private static bool TryReadColorMixerChannel(
+        JsonElement colorMixer,
+        string channelName,
+        out IReadOnlyList<double> values)
+    {
+        values = new double[ColorMixerRecipe.BandCount];
+        if (!colorMixer.TryGetProperty(channelName, out JsonElement element) ||
+            element.ValueKind == JsonValueKind.Null)
+        {
+            return true;
+        }
+        if (element.ValueKind != JsonValueKind.Array ||
+            element.GetArrayLength() > ColorMixerRecipe.BandCount)
+        {
+            return false;
+        }
+        double[] parsed = new double[ColorMixerRecipe.BandCount];
+        int index = 0;
+        foreach (JsonElement value in element.EnumerateArray())
+        {
+            if (value.ValueKind != JsonValueKind.Number || !value.TryGetDouble(out double parsedValue) ||
+                !double.IsFinite(parsedValue) || parsedValue is < -1.0 or > 1.0)
+            {
+                return false;
+            }
+            parsed[index++] = parsedValue;
+        }
+        values = parsed;
         return true;
     }
 

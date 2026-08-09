@@ -135,6 +135,12 @@ public static class DevelopRequestFactory
                 Blue = frame.PointCurves.Blue.Select(point =>
                     new DevelopPointCurvePoint(point.X, point.Y)).ToArray(),
             },
+            ColorMixer = new DevelopColorMixer
+            {
+                Hue = frame.ColorMixer.Hue.Select(value => (float)value).ToArray(),
+                Saturation = frame.ColorMixer.Saturation.Select(value => (float)value).ToArray(),
+                Luminance = frame.ColorMixer.Luminance.Select(value => (float)value).ToArray(),
+            },
             FilmLookSourceKind = DevelopSourceKind.FilmScan,
             FilmEmulation = MapFilmEmulation(frame.Route.FilmEmulation),
             FilmEmulationIntensity = frame.Route.FilmEmulationIntensity,

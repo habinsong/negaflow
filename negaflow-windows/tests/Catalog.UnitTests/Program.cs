@@ -571,6 +571,12 @@ internal static class Program
                     ["green"] = new JsonArray(),
                     ["blue"] = new JsonArray(),
                 },
+                ["colorMixer"] = new JsonObject
+                {
+                    ["hue"] = new JsonArray(0.1, -0.2),
+                    ["saturation"] = new JsonArray(0.3),
+                    ["luminance"] = new JsonArray(-0.4),
+                },
                 ["unknownAdjustment"] = new JsonObject { ["value"] = 7 },
             },
         };
@@ -612,6 +618,10 @@ internal static class Program
         Check(frame.PointCurves.Red.Count == 2 && frame.PointCurves.Green.Count == 0 &&
                 frame.PointCurves.Blue.Count == 0,
             "library_frame_point_curve_channel_shapes");
+        Check(frame.ColorMixer.Hue[0] == 0.1 && frame.ColorMixer.Hue[1] == -0.2 &&
+                frame.ColorMixer.Hue[2] == 0.0 && frame.ColorMixer.Saturation[0] == 0.3 &&
+                frame.ColorMixer.Luminance[0] == -0.4,
+            "library_frame_color_mixer_normalizes_mac_shape");
         // 없는 톤 키는 macOS 와 같이 0 입니다.
         Check(frame.Tone.Contrast == 0.0, "library_frame_missing_tone_is_zero");
 
@@ -808,6 +818,8 @@ internal static class Program
             "library_frame_write_preserves_base_recipe_when_not_edited");
         Check(reread.Frame?.PointCurves.Rgb.Count == 3,
             "library_frame_write_preserves_point_curves_when_not_edited");
+        Check(reread.Frame?.ColorMixer.Hue[0] == 0.1 && reread.Frame.ColorMixer.Hue[2] == 0.0,
+            "library_frame_write_preserves_color_mixer_when_not_edited");
 
         BaseRecipe manualRecipe = new(
             BaseEstimationMode.Manual,
@@ -843,6 +855,23 @@ internal static class Program
                 pointCurveReread.Frame?.PointCurves.Rgb[1] == new PointCurvePoint(0.5, 0.60) &&
                 pointCurveReread.Frame?.PointCurves.Green[0] == new PointCurvePoint(0.25, 0.20),
             "library_frame_point_curve_write_round_trip");
+
+        ColorMixerRecipe colorMixerEdit = new(
+            [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
+            [-0.1, -0.2, -0.3, -0.4, -0.5, -0.6, -0.7, -0.8],
+            new double[ColorMixerRecipe.BandCount]);
+        LibraryFrameWriteResult colorMixerWrite = LibraryFrameWriter.Apply(
+            original,
+            new LibraryFrameEdit(edit.Tone, edit.ManualBase, ColorMixer: colorMixerEdit));
+        Check(colorMixerWrite.IsSuccess &&
+                colorMixerWrite.FrameRecord?["params"]!["colorMixer"]!["hue"]!.AsArray().Count ==
+                    ColorMixerRecipe.BandCount,
+            "library_frame_color_mixer_write_canonicalizes_eight_bands");
+        LibraryFrameReadResult colorMixerReread = ReadFrame(colorMixerWrite.FrameRecord!);
+        Check(colorMixerReread.IsSuccess &&
+                colorMixerReread.Frame?.ColorMixer.Hue[7] == 0.8 &&
+                colorMixerReread.Frame.ColorMixer.Saturation[7] == -0.8,
+            "library_frame_color_mixer_write_round_trip");
 
         // base 를 지우는 것은 auto 추정으로 되돌린다는 뜻이므로 키를 없앱니다.
         LibraryFrameWriteResult cleared = LibraryFrameWriter.Apply(
@@ -906,6 +935,18 @@ internal static class Program
                         [], [], [])))
                 .Error == LibraryFrameError.InvalidPointCurves,
             "library_frame_write_rejects_point_curve_nonfinite_coordinate");
+        Check(
+            LibraryFrameWriter.Apply(
+                original,
+                new LibraryFrameEdit(
+                    ToneAdjustment.Neutral,
+                    null,
+                    ColorMixer: new ColorMixerRecipe(
+                        [0.0, 0.0],
+                        new double[ColorMixerRecipe.BandCount],
+                        new double[ColorMixerRecipe.BandCount])))
+                .Error == LibraryFrameError.InvalidColorMixer,
+            "library_frame_write_rejects_short_color_mixer");
     }
 
     private static int RunLockContender(string isolatedBase)
