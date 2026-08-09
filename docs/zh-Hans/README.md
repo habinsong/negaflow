@@ -56,6 +56,17 @@ flowchart LR
 | [实机检查表](validation/REAL_QA_CHECKLIST.md) | 检查真实 Mac、显示器、扫描仪和胶片时 |
 | [GrainMend 实际扫描比较](validation/GRAINMEND_CORPUS.md) | 重新测量 FILM-R v2 的 44 对样本时 |
 
+## 胶片模拟研究
+
+| 文档 | 什么时候看 |
+|---|---|
+| [컬러 네거티브 스틸 필름 조사](research/film-simulation/01-color-negative-still.md) | 需要 C-41 研究笔记时 |
+| [컬러 리버설 필름 조사](research/film-simulation/02-color-slide.md) | 需要 E-6 和 K-14 研究笔记时 |
+| [컬러 영화용 필름 조사](research/film-simulation/03-color-motion-picture.md) | 需要 ECN-2 研究笔记时 |
+| [Digital B&W 분기 설계](research/film-simulation/08-digital-bw-branch-plan.md) | 需要黑白设计交接时 |
+| [다음 세션 시작 프롬프트](research/film-simulation/09-handoff-prompt.md) | 继续胶片模拟工作时 |
+| [필름 시뮬레이션 확장 인수인계](research/film-simulation/09-handoff.md) | 需要当前实现交接时 |
+
 ## 来源与分发
 
 | 文档 | 什么时候用 |

@@ -1,5 +1,7 @@
 # 03. 컬러 영화용 필름 (Color Motion Picture Film)
 
+[Docs home](../../README.md)
+
 > 조사 상태: **부분 완료 (예산 제약으로 중단)**
 > 최종 갱신: 2026-08-09
 > 1차 출처 확보 방식: Kodak 공식 기술자료 PDF(H-1-xxxx / TI-xxxx) 직접 다운로드 후 텍스트 추출.

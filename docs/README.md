@@ -56,6 +56,17 @@ flowchart LR
 | [Real-device QA checklist](validation/REAL_QA_CHECKLIST.md) | You check a real Mac, display, scanner, and film |
 | [GrainMend real scan comparison](validation/GRAINMEND_CORPUS.md) | You measure the 44 FILM-R v2 pairs again |
 
+## Film simulation research
+
+| Document | Use it when |
+|---|---|
+| [Color negative still film research](research/film-simulation/01-color-negative-still.md) | You need the C-41 research notes |
+| [Color slide film research](research/film-simulation/02-color-slide.md) | You need the E-6 and K-14 research notes |
+| [Color motion picture film research](research/film-simulation/03-color-motion-picture.md) | You need the ECN-2 research notes |
+| [Digital B&W branch plan](research/film-simulation/08-digital-bw-branch-plan.md) | You need the black-and-white design handoff |
+| [Next-session prompt](research/film-simulation/09-handoff-prompt.md) | You are continuing the film-simulation work |
+| [Film simulation handoff](research/film-simulation/09-handoff.md) | You need the current implementation handoff |
+
 ## Provenance and distribution
 
 | Document | Use it when |

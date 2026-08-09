@@ -56,6 +56,17 @@ flowchart LR
 | [実機点検リスト](validation/REAL_QA_CHECKLIST.md) | 実機のMac、画面、スキャナー、フィルムを確認するとき |
 | [GrainMend実スキャン比較](validation/GRAINMEND_CORPUS.md) | FILM-R v2の44ペアを測り直すとき |
 
+## フィルムシミュレーション調査
+
+| ドキュメント | 読むとき |
+|---|---|
+| [컬러 네거티브 스틸 필름 조사](research/film-simulation/01-color-negative-still.md) | C-41の調査メモを確認するとき |
+| [컬러 리버설 필름 조사](research/film-simulation/02-color-slide.md) | E-6とK-14の調査メモを確認するとき |
+| [컬러 영화용 필름 조사](research/film-simulation/03-color-motion-picture.md) | ECN-2の調査メモを確認するとき |
+| [Digital B&W 분기 설계](research/film-simulation/08-digital-bw-branch-plan.md) | 白黒の設計引き継ぎを確認するとき |
+| [다음 세션 시작 프롬프트](research/film-simulation/09-handoff-prompt.md) | フィルムシミュレーションを続けるとき |
+| [필름 시뮬레이션 확장 인수인계](research/film-simulation/09-handoff.md) | 現在の実装引き継ぎを確認するとき |
+
 ## 出所と配布
 
 | ドキュメント | 使うとき |

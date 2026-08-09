@@ -56,6 +56,17 @@ flowchart LR
 | [출시 전 실기기 점검표](validation/REAL_QA_CHECKLIST.md) | 실제 Mac, 화면, 스캐너, 필름을 확인할 때 |
 | [GrainMend 실제 스캔 비교](validation/GRAINMEND_CORPUS.md) | FILM-R v2 44쌍을 다시 측정할 때 |
 
+## 필름 시뮬레이션 조사
+
+| 문서 | 쓰는 때 |
+|---|---|
+| [컬러 네거티브 스틸 필름 조사](research/film-simulation/01-color-negative-still.md) | C-41 조사 메모를 확인할 때 |
+| [컬러 리버설 필름 조사](research/film-simulation/02-color-slide.md) | E-6와 K-14 조사 메모를 확인할 때 |
+| [컬러 영화용 필름 조사](research/film-simulation/03-color-motion-picture.md) | ECN-2 조사 메모를 확인할 때 |
+| [Digital B&W 분기 설계](research/film-simulation/08-digital-bw-branch-plan.md) | 흑백 설계 인수인계를 확인할 때 |
+| [다음 세션 시작 프롬프트](research/film-simulation/09-handoff-prompt.md) | 필름 시뮬레이션 작업을 이어갈 때 |
+| [필름 시뮬레이션 확장 인수인계](research/film-simulation/09-handoff.md) | 현재 구현 인수인계를 확인할 때 |
+
 ## 출처와 배포
 
 | 문서 | 쓰는 때 |

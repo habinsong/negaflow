@@ -1,5 +1,7 @@
 # 02 — 컬러 리버설(슬라이드) 필름 조사: E-6 / K-14
 
+[Docs home](../../README.md)
+
 조사일: 2026-08-09
 제외(이미 구현됨): Kodak Ektachrome E100, Fujichrome Provia 100F, Fujichrome Velvia 50
 

@@ -99,7 +99,11 @@ class DocumentationStateTests(unittest.TestCase):
                 with self.subTest(language=language or "en", document=relative):
                     text = document.read_text(encoding="utf-8")
                     self.assertIn(f"({relative})", index)
-                    self.assertIn(DOCS_HOME_LINKS[language], text)
+                    home_link = DOCS_HOME_LINKS[language].replace(
+                        "../README.md",
+                        "../" * len(document.relative_to(base).parent.parts) + "README.md",
+                    )
+                    self.assertIn(home_link, text)
 
     def test_every_language_carries_the_same_documents(self) -> None:
         english = {

@@ -1,5 +1,7 @@
 # Digital B&W 분기 설계
 
+[Docs home](../../README.md)
+
 > 상태: 설계안(코드 미변경). 웹 조사 문서 01~07과 짝을 이루는 구현 준비 문서입니다.
 > 근거는 전부 현재 저장소 코드를 직접 읽고 확인한 사실입니다.
 
@@ -133,13 +135,13 @@ public struct BWFilmProfile: Sendable {
 
 ```
 DigitalFilmLook.apply(...)
-  ├─ emulation.kind == .slide / .negative      → 기존 컬러 경로 (변경 없음)
-  └─ emulation.kind == .bwNegative / .bwReversal
-       ├─ BWHalation   (휘도 번짐만, 색 없음. 투명 베이스 유제만 유효)
-       ├─ BWSpectralGray  RGB → 그레이 (필름별 가중치)   ★ 여기서 컬러가 사라짐
-       ├─ BWFilmLUT       1D 톤커브 (contrast index / toe / shoulder / Dmax)
-       ├─ BWAcutance      MTF 근사
-       └─ BWGrain         은염 그레인 (chroma 성분 없음)
+  - emulation.kind == .slide / .negative      → 기존 컬러 경로 (변경 없음)
+  - emulation.kind == .bwNegative / .bwReversal
+       - BWHalation   (휘도 번짐만, 색 없음. 투명 베이스 유제만 유효)
+       - BWSpectralGray  RGB → 그레이 (필름별 가중치)   ★ 여기서 컬러가 사라짐
+       - BWFilmLUT       1D 톤커브 (contrast index / toe / shoulder / Dmax)
+       - BWAcutance      MTF 근사
+       - BWGrain         은염 그레인 (chroma 성분 없음)
 ```
 
 `FilmEmulationStage`(필름 스캔 경로)도 같은 분기가 필요합니다.

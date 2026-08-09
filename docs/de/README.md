@@ -56,6 +56,17 @@ flowchart LR
 | [Checkliste für echte Geräte](validation/REAL_QA_CHECKLIST.md) | Sie prüfen echten Mac, Display, Scanner und Film |
 | [GrainMend-Vergleich an echten Scans](validation/GRAINMEND_CORPUS.md) | Sie messen die 44 FILM-R-v2-Paare erneut |
 
+## Forschung zur Filmsimulation
+
+| Dokument | Wann lesen |
+|---|---|
+| [컬러 네거티브 스틸 필름 조사](research/film-simulation/01-color-negative-still.md) | Für die C-41-Forschungsnotizen |
+| [컬러 리버설 필름 조사](research/film-simulation/02-color-slide.md) | Für die E-6- und K-14-Forschungsnotizen |
+| [컬러 영화용 필름 조사](research/film-simulation/03-color-motion-picture.md) | Für die ECN-2-Forschungsnotizen |
+| [Digital B&W 분기 설계](research/film-simulation/08-digital-bw-branch-plan.md) | Für die Übergabe des Schwarzweiß-Designs |
+| [다음 세션 시작 프롬프트](research/film-simulation/09-handoff-prompt.md) | Wenn Sie die Filmsimulation fortsetzen |
+| [필름 시뮬레이션 확장 인수인계](research/film-simulation/09-handoff.md) | Für den aktuellen Implementierungsstand |
+
 ## Herkunft und Auslieferung
 
 | Dokument | Wann verwenden |
