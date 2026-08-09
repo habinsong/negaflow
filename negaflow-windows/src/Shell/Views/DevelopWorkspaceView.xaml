@@ -276,7 +276,7 @@
                             </StackPanel>
 
                             <!-- Minimum/Maximum 은 엔진이 알려 준 값으로 코드에서 설정한다. -->
-                            <StackPanel x:Name="BasicToneControls" Spacing="10">
+                            <StackPanel x:Name="BasicToneControls" Spacing="10" TabFocusNavigation="Cycle">
                                 <TextBlock
                                     FontSize="12"
                                     FontWeight="SemiBold"

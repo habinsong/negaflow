@@ -244,7 +244,9 @@ Exposure와 모든 `InspectorSlider` composite는 이제 Tab 순서에서 value 
 논리 focus 대상으로 둡니다. slider가 focus된 상태에서 Enter로 숫자 편집을 시작하며 기존 click/edit,
 Enter/focus-loss commit, Escape cancel, invalid draft의 red/beep/focus 복귀는 유지합니다. slider 주위
 8 DIP hit outset에서 double-click reset을 받고, Narrator HelpText에 reset과 edit keyboard 동작을
-명시합니다. x64 Debug managed build 경고·오류 0, Catalog 338 및 Shell 276 assertions을 통과했습니다.
+명시합니다. Basic Tone 그룹은 `TabFocusNavigation=Cycle`로 Exposure→Contrast→Highlights→Shadows→
+Whites→Blacks→Density 순서의 Tab/Shift+Tab 순환을 유지합니다. x64 Debug managed build 경고·오류 0,
+Catalog 338 및 Shell 276 assertions을 통과했습니다.
 rendered/UIA, compact/high contrast, 실제 ARM64 runtime 증거는 여전히 없습니다.
 
 `params.colorMixer`의 Hue/Saturation/Luminance 8밴드 recipe를 Catalog read/write, Shell request
