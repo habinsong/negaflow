@@ -88,6 +88,30 @@ public sealed partial class ColorGradingEditor : UserControl
                 WheelCanvas.Children.Add(wedge);
             }
         }
+        RadialGradientBrush centerWhite = new()
+        {
+            Center = new Point(0.5, 0.5),
+            GradientOrigin = new Point(0.5, 0.5),
+            RadiusX = 0.5,
+            RadiusY = 0.5,
+        };
+        centerWhite.GradientStops.Add(new GradientStop
+        {
+            Color = Windows.UI.Color.FromArgb(255, 255, 255, 255),
+            Offset = 0.0,
+        });
+        centerWhite.GradientStops.Add(new GradientStop
+        {
+            Color = Windows.UI.Color.FromArgb(0, 255, 255, 255),
+            Offset = 1.0,
+        });
+        WheelCanvas.Children.Add(new Ellipse
+        {
+            Width = WheelSize,
+            Height = WheelSize,
+            Fill = centerWhite,
+            IsHitTestVisible = false,
+        });
         WheelCanvas.Children.Add(new Ellipse
         {
             Width = WheelSize - 1,
