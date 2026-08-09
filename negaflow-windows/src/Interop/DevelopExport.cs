@@ -111,6 +111,25 @@ public sealed class DevelopColorMixer
     public const int BandCount = 8;
 }
 
+public readonly record struct DevelopColorGradeRegion(
+    float Hue,
+    float Saturation,
+    float Luminance);
+
+/// <summary>macOS Color Grading의 세 tonal range와 공통 조정 값입니다.</summary>
+public sealed class DevelopColorGrading
+{
+    public DevelopColorGradeRegion Shadows { get; init; }
+
+    public DevelopColorGradeRegion Midtones { get; init; }
+
+    public DevelopColorGradeRegion Highlights { get; init; }
+
+    public float Blending { get; init; } = 0.5F;
+
+    public float Balance { get; init; }
+}
+
 public sealed class DevelopExportRequest
 {
     public required string SourcePath { get; init; }
@@ -159,6 +178,8 @@ public sealed class DevelopExportRequest
     public DevelopPointCurves PointCurves { get; init; } = new();
 
     public DevelopColorMixer ColorMixer { get; init; } = new();
+
+    public DevelopColorGrading ColorGrading { get; init; } = new();
 
     public DevelopSourceKind FilmLookSourceKind { get; init; } = DevelopSourceKind.FilmScan;
 

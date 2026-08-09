@@ -41,6 +41,15 @@ public static class LibraryFrameReader
     internal const string ColorMixerHueName = "hue";
     internal const string ColorMixerSaturationName = "saturation";
     internal const string ColorMixerLuminanceName = "luminance";
+    internal const string ColorGradingName = "colorGrading";
+    internal const string ColorGradingShadowsName = "shadows";
+    internal const string ColorGradingMidtonesName = "midtones";
+    internal const string ColorGradingHighlightsName = "highlights";
+    internal const string ColorGradingHueName = "hue";
+    internal const string ColorGradingSaturationName = "saturation";
+    internal const string ColorGradingLuminanceName = "luminance";
+    internal const string ColorGradingBlendingName = "blending";
+    internal const string ColorGradingBalanceName = "balance";
 
     public static LibraryFrameReadResult Read(JsonElement frameRecord)
     {
@@ -111,6 +120,10 @@ public static class LibraryFrameReader
         {
             return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidColorMixer);
         }
+        if (!TryReadColorGrading(parameters, out ColorGradingRecipe colorGrading))
+        {
+            return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidColorGrading);
+        }
 
         DevelopRouteReadResult route = DevelopRouteReader.Read(frameRecord);
         if (route.Route is not { } snapshot)
@@ -129,6 +142,7 @@ public static class LibraryFrameReader
             Base = baseRecipe,
             PointCurves = pointCurves,
             ColorMixer = colorMixer,
+            ColorGrading = colorGrading,
         });
     }
 
@@ -372,6 +386,48 @@ public static class LibraryFrameReader
             parsed[index++] = parsedValue;
         }
         values = parsed;
+        return true;
+    }
+
+    private static bool TryReadColorGrading(JsonElement parameters, out ColorGradingRecipe colorGrading)
+    {
+        colorGrading = ColorGradingRecipe.Identity;
+        if (!parameters.TryGetProperty(ColorGradingName, out JsonElement element) ||
+            element.ValueKind == JsonValueKind.Null)
+        {
+            return true;
+        }
+        if (element.ValueKind != JsonValueKind.Object ||
+            !TryReadColorGradeRegion(element, ColorGradingShadowsName, out ColorGradeRegionRecipe shadows) ||
+            !TryReadColorGradeRegion(element, ColorGradingMidtonesName, out ColorGradeRegionRecipe midtones) ||
+            !TryReadColorGradeRegion(element, ColorGradingHighlightsName, out ColorGradeRegionRecipe highlights) ||
+            !TryReadFiniteDouble(element, ColorGradingBlendingName, out double blending) ||
+            !TryReadFiniteDouble(element, ColorGradingBalanceName, out double balance) ||
+            blending is < 0.0 or > 1.0 || balance is < -1.0 or > 1.0)
+        {
+            return false;
+        }
+        colorGrading = new ColorGradingRecipe(shadows, midtones, highlights, blending, balance);
+        return true;
+    }
+
+    private static bool TryReadColorGradeRegion(
+        JsonElement colorGrading,
+        string name,
+        out ColorGradeRegionRecipe region)
+    {
+        region = default;
+        if (!colorGrading.TryGetProperty(name, out JsonElement element) ||
+            element.ValueKind != JsonValueKind.Object ||
+            !TryReadFiniteDouble(element, ColorGradingHueName, out double hue) ||
+            !TryReadFiniteDouble(element, ColorGradingSaturationName, out double saturation) ||
+            !TryReadFiniteDouble(element, ColorGradingLuminanceName, out double luminance) ||
+            hue is < 0.0 or > 360.0 || saturation is < 0.0 or > 1.0 ||
+            luminance is < -1.0 or > 1.0)
+        {
+            return false;
+        }
+        region = new ColorGradeRegionRecipe(hue, saturation, luminance);
         return true;
     }
 

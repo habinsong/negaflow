@@ -219,6 +219,25 @@ Shell 255 assertions을 통과했습니다. 아래 Point Curve v5 slice가 `Tone
 
 ## 2026-08-09 Color Mixer recipe v6 vertical slice
 
+## 2026-08-09 Color Grading recipe v7 vertical slice
+
+`params.colorGrading`의 Shadows/Midtones/Highlights hue·saturation·luminance와
+blending/balance를 Catalog read/write, Shell request factory, ABI 0.13
+`nf_develop_export_request_v7`/`nf_develop_preview_v7`, native CPU pipeline,
+WinUI `ColorGradingEditor`까지 연결했습니다. v7는 v6 prefix 뒤에 11개 float를 append하므로
+이전 ABI entry point와 layout은 유지합니다. Inspector는 세 range selector, 150 DIP
+hue/saturation wheel, luminance/blending/balance slider 및 pointer capture·keyboard nudge를
+제공하며 preview와 export가 같은 recipe를 공유합니다.
+
+x64 Debug native CTest 30/30, Catalog 338 assertions, Shell 276 assertions, interop ABI 0.13
+64 assertions을 통과했습니다. rendered WinUI/UIA, compact/high contrast, 실제 ARM64 runtime,
+macOS golden pixel 비교는 미검증입니다. 상세는 `implementation/color-grading-v7.md`에 기록합니다.
+
+x64 Release CI gate는 native CTest 30/30, Catalog 338 assertions, Shell 276 assertions과 managed
+build 경고·오류 0을 통과했습니다. native/managed ARM64 교차 빌드도 경고·오류 없이 완료했지만
+실제 ARM64 실행은 하지 않았습니다. provenance gate는 files=1787, text=1744, binary=43,
+declared_resources=29, reachable_commits=140을 확인했습니다.
+
 `params.colorMixer`의 Hue/Saturation/Luminance 8밴드 recipe를 Catalog read/write, Shell request
 factory, ABI 0.12 `nf_develop_export_request_v6`/`nf_develop_preview_v6`, native CPU pipeline,
 WinUI `ColorMixerEditor`까지 연결했습니다. v6는 v5 prefix 뒤에 3×8 float를 append하므로 이전 ABI

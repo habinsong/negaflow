@@ -200,6 +200,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         CurveShadowsControl.Value = panel.CurveShadows;
         PointCurveEditor.Curves = panel.PointCurves;
         ColorMixerEditor.Mixer = panel.ColorMixer;
+        ColorGradingEditor.Grading = panel.ColorGrading;
         // Auto에는 수동 base가 없으므로 slider에는 시작 위치만 보입니다. 사용자가 값을 바꾸면
         // manual mode로 전환되며, 그 전까지 preview/export는 native Auto resolver를 사용합니다.
         ManualBaseRgb shown = panel.ManualBase ?? new ManualBaseRgb(
@@ -384,6 +385,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         }
         PointCurveEditor.IsEnabled = canEdit;
         ColorMixerEditor.IsEnabled = canEdit;
+        ColorGradingEditor.IsEnabled = canEdit;
     }
 
     private void OnBaseAutoModeChecked(object sender, RoutedEventArgs args)
@@ -571,6 +573,19 @@ public sealed partial class DevelopWorkspaceView : UserControl
             return;
         }
         if (panel.SetColorMixer(args.Mixer) == LibraryFrameError.None)
+        {
+            RequestPreview();
+        }
+    }
+
+    private void OnColorGradingChanged(object? sender, ColorGradingChangedEventArgs args)
+    {
+        _ = sender;
+        if (panel is null || isSynchronizingInspector)
+        {
+            return;
+        }
+        if (panel.SetColorGrading(args.Grading) == LibraryFrameError.None)
         {
             RequestPreview();
         }

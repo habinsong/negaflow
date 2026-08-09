@@ -372,6 +372,18 @@
                                     MixerChanged="OnColorMixerChanged" />
                             </StackPanel>
 
+                            <StackPanel x:Name="ColorGradingControls" Spacing="10">
+                                <TextBlock
+                                    FontSize="12"
+                                    FontWeight="SemiBold"
+                                    Text="Color Grading" />
+                                <controls:ColorGradingEditor
+                                    x:Name="ColorGradingEditor"
+                                    AutomationProperties.AutomationId="negaflow.develop.color-grading"
+                                    AutomationProperties.Name="Color Grading"
+                                    GradingChanged="OnColorGradingChanged" />
+                            </StackPanel>
+
                             <Button
                                 x:Name="ExportButton"
                                 HorizontalAlignment="Stretch"

@@ -141,6 +141,14 @@ public static class DevelopRequestFactory
                 Saturation = frame.ColorMixer.Saturation.Select(value => (float)value).ToArray(),
                 Luminance = frame.ColorMixer.Luminance.Select(value => (float)value).ToArray(),
             },
+            ColorGrading = new DevelopColorGrading
+            {
+                Shadows = MapColorGradeRegion(frame.ColorGrading.Shadows),
+                Midtones = MapColorGradeRegion(frame.ColorGrading.Midtones),
+                Highlights = MapColorGradeRegion(frame.ColorGrading.Highlights),
+                Blending = (float)frame.ColorGrading.Blending,
+                Balance = (float)frame.ColorGrading.Balance,
+            },
             FilmLookSourceKind = DevelopSourceKind.FilmScan,
             FilmEmulation = MapFilmEmulation(frame.Route.FilmEmulation),
             FilmEmulationIntensity = frame.Route.FilmEmulationIntensity,
@@ -155,6 +163,9 @@ public static class DevelopRequestFactory
         FilmType.BlackAndWhiteNegative => NegativeFilmType.BlackAndWhite,
         _ => throw new ArgumentOutOfRangeException(nameof(filmType)),
     };
+
+    private static DevelopColorGradeRegion MapColorGradeRegion(ColorGradeRegionRecipe region) =>
+        new((float)region.Hue, (float)region.Saturation, (float)region.Luminance);
 
     private static FilmEmulationProfile MapFilmEmulation(FilmEmulation emulation) =>
         emulation switch

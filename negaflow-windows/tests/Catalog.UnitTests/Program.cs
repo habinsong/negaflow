@@ -622,6 +622,21 @@ internal static class Program
                 frame.ColorMixer.Hue[2] == 0.0 && frame.ColorMixer.Saturation[0] == 0.3 &&
                 frame.ColorMixer.Luminance[0] == -0.4,
             "library_frame_color_mixer_normalizes_mac_shape");
+        Check(frame.ColorGrading == ColorGradingRecipe.Identity,
+            "library_frame_missing_color_grading_defaults_to_identity");
+        ColorGradingRecipe colorGrading = new(
+            new ColorGradeRegionRecipe(45.0, 0.2, -0.1),
+            new ColorGradeRegionRecipe(180.0, 0.4, 0.1),
+            new ColorGradeRegionRecipe(300.0, 0.6, 0.2),
+            0.35,
+            -0.25);
+        LibraryFrameWriteResult writtenColorGrading = LibraryFrameWriter.Apply(
+            FrameRecord(),
+            new LibraryFrameEdit(frame.Tone, frame.ManualBase, ColorGrading: colorGrading));
+        Check(
+            writtenColorGrading.IsSuccess &&
+                ReadFrame(writtenColorGrading.FrameRecord!).Frame?.ColorGrading == colorGrading,
+            "library_frame_color_grading_write_round_trip");
         // 없는 톤 키는 macOS 와 같이 0 입니다.
         Check(frame.Tone.Contrast == 0.0, "library_frame_missing_tone_is_zero");
 

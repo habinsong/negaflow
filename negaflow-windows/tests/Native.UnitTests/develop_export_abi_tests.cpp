@@ -139,6 +139,24 @@ void expect(const bool condition, const char* const message) {
     return request;
 }
 
+[[nodiscard]] nf_develop_export_request_v7 make_request_v7(
+    const wchar_t* const source,
+    const wchar_t* const destination,
+    const std::uint32_t base_mode = NF_BASE_ESTIMATION_AUTO) {
+    nf_develop_export_request_v7 request{};
+    request.struct_size = static_cast<std::uint32_t>(sizeof(request));
+    request.source_path = source;
+    request.destination_path = destination;
+    request.output_format = NF_EXPORT_FORMAT_PNG16;
+    request.film_type = NF_FILM_TYPE_COLOR;
+    request.base_estimation_mode = base_mode;
+    request.film_look_source_kind = NF_DEVELOP_SOURCE_FILM_SCAN;
+    request.film_emulation_intensity = 0.5;
+    request.rows_per_copy = 64U;
+    request.color_grading_blending = 0.5F;
+    return request;
+}
+
 void test_argument_contract() {
     nf_develop_export_request_v1 request = make_request(L"a.tif", L"b.png");
     nf_develop_export_result_v1 result = make_result();
@@ -426,6 +444,28 @@ void test_v6_contract() {
             result.succeeded == 0U &&
             result.failed_stage == NF_DEVELOP_STAGE_OBSERVE_SOURCE_BEFORE,
         "v6 Color Mixer reaches source observation");
+}
+
+void test_v7_contract() {
+    expect(sizeof(nf_develop_export_request_v7) == 4400U, "v7 request layout is fixed");
+    nf_develop_export_request_v7 request = make_request_v7(L"a.tif", L"b.png");
+    nf_develop_export_result_v2 result = make_result_v2();
+    expect(
+        nf_develop_export_v7(nullptr, &result) == NF_STATUS_INVALID_ARGUMENT,
+        "v7 null request is rejected");
+    request.color_grading_midtones_saturation = 1.01F;
+    expect(
+        nf_develop_export_v7(&request, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            std::strcmp(result.failure_name, "invalid_color_grading") == 0,
+        "v7 out-of-range Color Grading is rejected");
+    request = make_request_v7(L"a.tif", L"b.png");
+    request.color_grading_highlights_luminance = 0.25F;
+    expect(
+        nf_develop_export_v7(&request, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            result.failed_stage == NF_DEVELOP_STAGE_OBSERVE_SOURCE_BEFORE,
+        "v7 Color Grading reaches source observation");
 }
 
 void test_missing_source_is_not_a_validation_error() {
@@ -807,6 +847,7 @@ int main(const int argument_count, const char* const arguments[]) {
     test_v4_contract();
     test_v5_contract();
     test_v6_contract();
+    test_v7_contract();
     test_missing_source_is_not_a_validation_error();
     test_v2_missing_source_is_not_a_validation_error();
 

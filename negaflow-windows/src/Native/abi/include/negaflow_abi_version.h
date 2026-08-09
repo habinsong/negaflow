@@ -10,5 +10,5 @@
    refuses anything below the minor it actually calls, so an older engine fails at load
    instead of at the first missing entry point. */
 #define NF_ABI_VERSION_MAJOR 0U
-#define NF_ABI_VERSION_MINOR 12U
+#define NF_ABI_VERSION_MINOR 13U
 #define NF_ABI_VERSION ((NF_ABI_VERSION_MAJOR << 16U) | NF_ABI_VERSION_MINOR)

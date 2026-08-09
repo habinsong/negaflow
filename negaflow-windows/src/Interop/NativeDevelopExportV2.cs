@@ -174,6 +174,55 @@ internal unsafe struct NativeDevelopExportRequestV6
 }
 
 [StructLayout(LayoutKind.Sequential)]
+internal unsafe struct NativeDevelopExportRequestV7
+{
+    internal uint StructSize;
+    internal char* SourcePath;
+    internal char* DestinationPath;
+    internal uint OutputFormat;
+    internal uint FilmType;
+    internal uint BaseEstimationMode;
+    internal float DminRed;
+    internal float DminGreen;
+    internal float DminBlue;
+    internal float ExposureStops;
+    internal float Contrast;
+    internal float Highlights;
+    internal float Lights;
+    internal float Darks;
+    internal float Shadows;
+    internal uint FilmLookSourceKind;
+    internal uint FilmEmulation;
+    internal double FilmEmulationIntensity;
+    internal uint RowsPerCopy;
+    internal float Density;
+    internal float Highlight;
+    internal float Shadow;
+    internal float Whites;
+    internal float Blacks;
+    internal char* FilmStockDminId;
+    internal char* LightSourceProfileId;
+    internal NativePointCurveV1 PointCurveRgb;
+    internal NativePointCurveV1 PointCurveRed;
+    internal NativePointCurveV1 PointCurveGreen;
+    internal NativePointCurveV1 PointCurveBlue;
+    internal fixed float ColorMixerHue[DevelopColorMixer.BandCount];
+    internal fixed float ColorMixerSaturation[DevelopColorMixer.BandCount];
+    internal fixed float ColorMixerLuminance[DevelopColorMixer.BandCount];
+    internal float ColorGradingShadowsHue;
+    internal float ColorGradingShadowsSaturation;
+    internal float ColorGradingShadowsLuminance;
+    internal float ColorGradingMidtonesHue;
+    internal float ColorGradingMidtonesSaturation;
+    internal float ColorGradingMidtonesLuminance;
+    internal float ColorGradingHighlightsHue;
+    internal float ColorGradingHighlightsSaturation;
+    internal float ColorGradingHighlightsLuminance;
+    internal float ColorGradingBlending;
+    internal float ColorGradingBalance;
+}
+
+[StructLayout(LayoutKind.Sequential)]
 internal unsafe struct NativeDevelopExportResultV2
 {
     internal const int FailureNameCapacity = 64;

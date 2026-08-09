@@ -10,9 +10,10 @@ internal static unsafe class NativeAbiReader
     // 4 for nf_get_negative_limits_v1, 5 for nf_develop_preview_v1.
     // 3 for nf_get_tone_limits_v1, 6 for the base-mode v2 preview/export calls,
     // 9 for Basic Tone v3 preview/export, 10 for Film base v4 preview/export,
-    // 11 for Point Curve v5 preview/export, and 12 for Color Mixer v6 preview/export.
+    // 11 for Point Curve v5 preview/export, 12 for Color Mixer v6 preview/export,
+    // and 13 for Color Grading v7 preview/export.
     // An engine below this is refused at load, not at the call.
-    internal const ushort MinimumMinor = 12;
+    internal const ushort MinimumMinor = 13;
 
     private const uint StatusOk = 0;
 

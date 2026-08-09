@@ -76,6 +76,16 @@ internal static partial class NativeMethods
         uint pixelCapacityBytes,
         NativeDevelopExportResultV2* result);
 
+    [LibraryImport(LibraryName, EntryPoint = "nf_develop_preview_v7")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static unsafe partial uint nf_develop_preview_v7(
+        NativeDevelopExportRequestV7* request,
+        uint maximumWidth,
+        uint maximumHeight,
+        byte* pixels,
+        uint pixelCapacityBytes,
+        NativeDevelopExportResultV2* result);
+
     [LibraryImport(LibraryName, EntryPoint = "nf_get_negative_limits_v1")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial uint nf_get_negative_limits_v1(ref NativeNegativeLimitsV1 output);
@@ -118,5 +128,11 @@ internal static partial class NativeMethods
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static unsafe partial uint nf_develop_export_v6(
         NativeDevelopExportRequestV6* request,
+        NativeDevelopExportResultV2* result);
+
+    [LibraryImport(LibraryName, EntryPoint = "nf_develop_export_v7")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static unsafe partial uint nf_develop_export_v7(
+        NativeDevelopExportRequestV7* request,
         NativeDevelopExportResultV2* result);
 }

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Negaflow.Shell.Views.Controls.ColorGradingEditor"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Negaflow.Shell.Views.Controls">
+    <StackPanel Spacing="8">
+        <Grid ColumnSpacing="4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <RadioButton x:Name="ShadowsButton" Grid.Column="0" Content="Shadows" GroupName="ColorGradingRange" Checked="OnRangeChecked" />
+            <RadioButton x:Name="MidtonesButton" Grid.Column="1" Content="Midtones" GroupName="ColorGradingRange" Checked="OnRangeChecked" />
+            <RadioButton x:Name="HighlightsButton" Grid.Column="2" Content="Highlights" GroupName="ColorGradingRange" Checked="OnRangeChecked" />
+        </Grid>
+        <Canvas
+            x:Name="WheelCanvas"
+            Width="150"
+            Height="150"
+            HorizontalAlignment="Center"
+            Background="Transparent"
+            IsTabStop="True"
+            AutomationProperties.AutomationId="negaflow.develop.color-grading.wheel"
+            AutomationProperties.Name="Color grading wheel"
+            AutomationProperties.HelpText="Arrow keys adjust hue and saturation. Hold Shift for larger changes."
+            PointerPressed="OnWheelPointerPressed"
+            PointerMoved="OnWheelPointerMoved"
+            PointerReleased="OnWheelPointerReleased"
+            PointerCanceled="OnWheelPointerCanceled"
+            KeyDown="OnWheelKeyDown" />
+        <Grid ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <TextBlock x:Name="HueReadout" Grid.Column="0" FontFamily="Consolas" FontSize="11" />
+            <TextBlock x:Name="SaturationReadout" Grid.Column="1" FontFamily="Consolas" FontSize="11" TextAlignment="Right" />
+        </Grid>
+        <controls:InspectorSlider x:Name="LuminanceControl" Label="Luminance" Minimum="-1" Maximum="1" ResetValue="0" SliderAutomationId="negaflow.develop.color-grading.luminance" ValueChanged="OnLuminanceChanged" />
+        <controls:InspectorSlider x:Name="BlendingControl" Label="Blending" Minimum="0" Maximum="1" ResetValue="0" SliderAutomationId="negaflow.develop.color-grading.blending" ValueChanged="OnBlendingChanged" />
+        <controls:InspectorSlider x:Name="BalanceControl" Label="Balance" Minimum="-1" Maximum="1" ResetValue="0" SliderAutomationId="negaflow.develop.color-grading.balance" ValueChanged="OnBalanceChanged" />
+    </StackPanel>
+</UserControl>

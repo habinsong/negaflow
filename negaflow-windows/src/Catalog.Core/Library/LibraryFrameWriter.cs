@@ -8,7 +8,8 @@ public sealed record LibraryFrameEdit(
     ManualBaseRgb? ManualBase,
     BaseRecipe? Base = null,
     PointCurveRecipe? PointCurves = null,
-    ColorMixerRecipe? ColorMixer = null);
+    ColorMixerRecipe? ColorMixer = null,
+    ColorGradingRecipe? ColorGrading = null);
 
 /// <summary>
 /// 톤, 수동 base, 그리고 지정된 경우 base recipe를 갱신합니다. 입력 record 는 바꾸지 않고 깊은 복사본을 돌려주며, 이 writer 가
@@ -44,6 +45,10 @@ public static class LibraryFrameWriter
         if (edit.ColorMixer is { } colorMixer && !IsValidColorMixer(colorMixer))
         {
             return LibraryFrameWriteResult.Failure(LibraryFrameError.InvalidColorMixer);
+        }
+        if (edit.ColorGrading is { } colorGrading && !IsValidColorGrading(colorGrading))
+        {
+            return LibraryFrameWriteResult.Failure(LibraryFrameError.InvalidColorGrading);
         }
 
         JsonObject updated = frameRecord.DeepClone().AsObject();
@@ -114,6 +119,10 @@ public static class LibraryFrameWriter
         if (edit.ColorMixer is { } colorMixerToWrite)
         {
             parameters[LibraryFrameReader.ColorMixerName] = WriteColorMixer(colorMixerToWrite);
+        }
+        if (edit.ColorGrading is { } colorGradingToWrite)
+        {
+            parameters[LibraryFrameReader.ColorGradingName] = WriteColorGrading(colorGradingToWrite);
         }
 
         return LibraryFrameWriteResult.Success(updated);
@@ -237,4 +246,32 @@ public static class LibraryFrameWriter
         }
         return result;
     }
+
+    private static bool IsValidColorGrading(ColorGradingRecipe colorGrading) =>
+        IsValidColorGradeRegion(colorGrading.Shadows) &&
+        IsValidColorGradeRegion(colorGrading.Midtones) &&
+        IsValidColorGradeRegion(colorGrading.Highlights) &&
+        double.IsFinite(colorGrading.Blending) && colorGrading.Blending is >= 0.0 and <= 1.0 &&
+        double.IsFinite(colorGrading.Balance) && colorGrading.Balance is >= -1.0 and <= 1.0;
+
+    private static bool IsValidColorGradeRegion(ColorGradeRegionRecipe region) =>
+        double.IsFinite(region.Hue) && region.Hue is >= 0.0 and <= 360.0 &&
+        double.IsFinite(region.Saturation) && region.Saturation is >= 0.0 and <= 1.0 &&
+        double.IsFinite(region.Luminance) && region.Luminance is >= -1.0 and <= 1.0;
+
+    private static JsonObject WriteColorGrading(ColorGradingRecipe colorGrading) => new()
+    {
+        [LibraryFrameReader.ColorGradingShadowsName] = WriteColorGradeRegion(colorGrading.Shadows),
+        [LibraryFrameReader.ColorGradingMidtonesName] = WriteColorGradeRegion(colorGrading.Midtones),
+        [LibraryFrameReader.ColorGradingHighlightsName] = WriteColorGradeRegion(colorGrading.Highlights),
+        [LibraryFrameReader.ColorGradingBlendingName] = colorGrading.Blending,
+        [LibraryFrameReader.ColorGradingBalanceName] = colorGrading.Balance,
+    };
+
+    private static JsonObject WriteColorGradeRegion(ColorGradeRegionRecipe region) => new()
+    {
+        [LibraryFrameReader.ColorGradingHueName] = region.Hue,
+        [LibraryFrameReader.ColorGradingSaturationName] = region.Saturation,
+        [LibraryFrameReader.ColorGradingLuminanceName] = region.Luminance,
+    };
 }

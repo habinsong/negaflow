@@ -84,6 +84,9 @@ internal static unsafe class ContractTestRunner
             sizeof(NativeDevelopExportRequestV6) == NativeDevelopExporter.RequestV6Size,
             "develop_export_v6_request_size");
         Check(
+            sizeof(NativeDevelopExportRequestV7) == NativeDevelopExporter.RequestV7Size,
+            "develop_export_v7_request_size");
+        Check(
             sizeof(NativeDevelopExportResultV2) == NativeDevelopExporter.ResultV2Size,
             "develop_export_v2_result_size");
         Check(
@@ -118,6 +121,10 @@ internal static unsafe class ContractTestRunner
             Marshal.OffsetOf<NativeDevelopExportRequestV6>(
                 nameof(NativeDevelopExportRequestV6.ColorMixerHue)).ToInt32() == 4256,
             "develop_export_v6_color_mixer_offset");
+        Check(
+            Marshal.OffsetOf<NativeDevelopExportRequestV7>(
+                nameof(NativeDevelopExportRequestV7.ColorGradingShadowsHue)).ToInt32() == 4352,
+            "develop_export_v7_color_grading_offset");
         Check(
             Marshal.OffsetOf<NativeDevelopExportResultV2>(
                 nameof(NativeDevelopExportResultV2.AppliedDminRed)).ToInt32() == 136,
@@ -314,6 +321,18 @@ internal static unsafe class ContractTestRunner
                 },
             }),
             "develop_export_short_color_mixer_rejected");
+
+        CheckThrows<ArgumentException>(
+            () => NativeDevelopExporter.Run(new DevelopExportRequest
+            {
+                SourcePath = absentSource,
+                DestinationPath = destination,
+                ColorGrading = new DevelopColorGrading
+                {
+                    Midtones = new DevelopColorGradeRegion(361.0f, 0.0f, 0.0f),
+                },
+            }),
+            "develop_export_invalid_color_grading_rejected");
 
         CheckThrows<ArgumentNullException>(
             () => NativeDevelopExporter.Run(null!),

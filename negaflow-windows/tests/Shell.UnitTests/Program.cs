@@ -241,6 +241,21 @@ internal static class Program
                 mixerRequest.Request.ColorMixer.Luminance[2] == 0.75f,
             "develop_request_carries_color_mixer");
 
+        ColorGradingRecipe colorGrading = new(
+            new ColorGradeRegionRecipe(30.0, 0.25, -0.1),
+            new ColorGradeRegionRecipe(120.0, 0.50, 0.2),
+            new ColorGradeRegionRecipe(240.0, 0.75, 0.1),
+            0.4,
+            -0.2);
+        DevelopRequestResult gradingRequest = DevelopRequestFactory.Create(
+            Frame(new ManualBaseRgb(0.21, 0.22, 0.23)) with { ColorGrading = colorGrading },
+            destination);
+        Check(
+            gradingRequest.IsSuccess && gradingRequest.Request?.ColorGrading.Midtones.Hue == 120.0f &&
+                gradingRequest.Request.ColorGrading.Highlights.Saturation == 0.75f &&
+                gradingRequest.Request.ColorGrading.Balance == -0.2f,
+            "develop_request_carries_color_grading");
+
         Check(
             DevelopRequestFactory.Create(
                 Frame(new ManualBaseRgb(0.2, 0.2, 0.2), filmType: FilmType.BlackAndWhiteNegative),

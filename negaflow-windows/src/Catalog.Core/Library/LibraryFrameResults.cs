@@ -23,6 +23,7 @@ public enum LibraryFrameError
     InvalidPointCurves,
     /// <summary><c>colorMixer</c>가 유효한 HSL 8밴드 배열이 아닙니다.</summary>
     InvalidColorMixer,
+    InvalidColorGrading,
 
     /// <summary>톤 값이 수가 아니거나 유한하지 않습니다.</summary>
     InvalidToneValue,

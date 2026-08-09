@@ -19,6 +19,7 @@ public static unsafe class NativeDevelopExporter
     internal const int PointCurveV1Size = 1032;
     internal const int RequestV5Size = 4256;
     internal const int RequestV6Size = 4352;
+    internal const int RequestV7Size = 4400;
     internal const int ResultV2Size = 152;
 
     private const uint StatusOk = 0;
@@ -28,7 +29,7 @@ public static unsafe class NativeDevelopExporter
     private static void ValidateLayoutAndEnums(DevelopExportRequest request)
     {
         if (sizeof(NativePointCurveV1) != PointCurveV1Size ||
-            sizeof(NativeDevelopExportRequestV6) != RequestV6Size ||
+            sizeof(NativeDevelopExportRequestV7) != RequestV7Size ||
             sizeof(NativeDevelopExportResultV2) != ResultV2Size)
         {
             throw new NativeBootstrapException(
@@ -47,6 +48,7 @@ public static unsafe class NativeDevelopExporter
         }
         ValidatePointCurves(request.PointCurves);
         ValidateColorMixer(request.ColorMixer);
+        ValidateColorGrading(request.ColorGrading);
     }
 
     private static void ValidatePointCurves(DevelopPointCurves pointCurves)
@@ -117,7 +119,7 @@ public static unsafe class NativeDevelopExporter
         }
     }
 
-    private static void CopyColorMixer(IReadOnlyList<float> source, ref NativeDevelopExportRequestV6 destination, int channel)
+    private static void CopyColorMixer(IReadOnlyList<float> source, ref NativeDevelopExportRequestV7 destination, int channel)
     {
         fixed (float* hue = destination.ColorMixerHue)
         fixed (float* saturation = destination.ColorMixerSaturation)
@@ -131,16 +133,39 @@ public static unsafe class NativeDevelopExporter
         }
     }
 
-    private static NativeDevelopExportRequestV6 BuildRequest(
+    private static void ValidateColorGrading(DevelopColorGrading colorGrading)
+    {
+        ArgumentNullException.ThrowIfNull(colorGrading);
+        ValidateColorGradeRegion(colorGrading.Shadows, nameof(colorGrading.Shadows));
+        ValidateColorGradeRegion(colorGrading.Midtones, nameof(colorGrading.Midtones));
+        ValidateColorGradeRegion(colorGrading.Highlights, nameof(colorGrading.Highlights));
+        if (!float.IsFinite(colorGrading.Blending) || colorGrading.Blending is < 0.0F or > 1.0F ||
+            !float.IsFinite(colorGrading.Balance) || colorGrading.Balance is < -1.0F or > 1.0F)
+        {
+            throw new ArgumentException("Color Grading blending or balance is invalid.", nameof(colorGrading));
+        }
+    }
+
+    private static void ValidateColorGradeRegion(DevelopColorGradeRegion region, string parameterName)
+    {
+        if (!float.IsFinite(region.Hue) || region.Hue is < 0.0F or > 360.0F ||
+            !float.IsFinite(region.Saturation) || region.Saturation is < 0.0F or > 1.0F ||
+            !float.IsFinite(region.Luminance) || region.Luminance is < -1.0F or > 1.0F)
+        {
+            throw new ArgumentException("A Color Grading region is invalid.", parameterName);
+        }
+    }
+
+    private static NativeDevelopExportRequestV7 BuildRequest(
         DevelopExportRequest request,
         char* sourcePath,
         char* destinationPath,
         char* filmStockDminId,
         char* lightSourceProfileId)
     {
-        NativeDevelopExportRequestV6 native = new()
+        NativeDevelopExportRequestV7 native = new()
         {
-            StructSize = (uint)sizeof(NativeDevelopExportRequestV6),
+            StructSize = (uint)sizeof(NativeDevelopExportRequestV7),
             SourcePath = sourcePath,
             DestinationPath = destinationPath,
             OutputFormat = (uint)request.Format,
@@ -166,6 +191,17 @@ public static unsafe class NativeDevelopExporter
             Blacks = request.Blacks,
             FilmStockDminId = filmStockDminId,
             LightSourceProfileId = lightSourceProfileId,
+            ColorGradingShadowsHue = request.ColorGrading.Shadows.Hue,
+            ColorGradingShadowsSaturation = request.ColorGrading.Shadows.Saturation,
+            ColorGradingShadowsLuminance = request.ColorGrading.Shadows.Luminance,
+            ColorGradingMidtonesHue = request.ColorGrading.Midtones.Hue,
+            ColorGradingMidtonesSaturation = request.ColorGrading.Midtones.Saturation,
+            ColorGradingMidtonesLuminance = request.ColorGrading.Midtones.Luminance,
+            ColorGradingHighlightsHue = request.ColorGrading.Highlights.Hue,
+            ColorGradingHighlightsSaturation = request.ColorGrading.Highlights.Saturation,
+            ColorGradingHighlightsLuminance = request.ColorGrading.Highlights.Luminance,
+            ColorGradingBlending = request.ColorGrading.Blending,
+            ColorGradingBalance = request.ColorGrading.Balance,
         };
         CopyPointCurve(request.PointCurves.Rgb, ref native.PointCurveRgb);
         CopyPointCurve(request.PointCurves.Red, ref native.PointCurveRed);
@@ -193,13 +229,13 @@ public static unsafe class NativeDevelopExporter
         fixed (char* filmStockDminId = request.FilmStockDminId)
         fixed (char* lightSourceProfileId = request.LightSourceProfileId)
         {
-            NativeDevelopExportRequestV6 native = BuildRequest(
+            NativeDevelopExportRequestV7 native = BuildRequest(
                 request,
                 sourcePath,
                 destinationPath,
                 filmStockDminId,
                 lightSourceProfileId);
-            status = NativeMethods.nf_develop_export_v6(&native, &raw);
+            status = NativeMethods.nf_develop_export_v7(&native, &raw);
         }
 
         return Translate(status, raw);
@@ -237,13 +273,13 @@ public static unsafe class NativeDevelopExporter
         fixed (char* lightSourceProfileId = request.LightSourceProfileId)
         fixed (byte* pixelBuffer = pixels)
         {
-            NativeDevelopExportRequestV6 native = BuildRequest(
+            NativeDevelopExportRequestV7 native = BuildRequest(
                 request,
                 sourcePath,
                 destinationPath,
                 filmStockDminId,
                 lightSourceProfileId);
-            status = NativeMethods.nf_develop_preview_v6(
+            status = NativeMethods.nf_develop_preview_v7(
                 &native,
                 maximumWidth,
                 maximumHeight,
@@ -266,10 +302,10 @@ public static unsafe class NativeDevelopExporter
                 status switch
                 {
                     StatusInvalidArgument =>
-                    "nf_develop_export_v6 rejected the call as malformed.",
+                    "nf_develop_export_v7 rejected the call as malformed.",
                     StatusStructTooSmall =>
-                    "nf_develop_export_v6 rejected the struct sizes.",
-                    _ => $"nf_develop_export_v6 failed with status {status}.",
+                    "nf_develop_export_v7 rejected the struct sizes.",
+                    _ => $"nf_develop_export_v7 failed with status {status}.",
                 });
         }
 
