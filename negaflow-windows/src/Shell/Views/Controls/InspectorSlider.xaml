@@ -28,7 +28,7 @@
             <Button
                 x:Name="ValueButton"
                 Grid.Column="1"
-                IsTabStop="True"
+                IsTabStop="False"
                 Padding="0"
                 HorizontalContentAlignment="Right"
                 VerticalContentAlignment="Center"
@@ -58,13 +58,18 @@
                 LostFocus="OnEditorLostFocus"
                 TextChanging="OnEditorTextChanging" />
         </Grid>
-        <Slider
-            x:Name="Slider"
-            SmallChange="0.01"
-            LargeChange="0.10"
-            ThumbToolTipValueConverter="{x:Null}"
-            DoubleTapped="OnSliderDoubleTapped"
-            KeyDown="OnSliderKeyDown"
-            ValueChanged="OnSliderValueChanged" />
+        <Grid
+            Margin="-8"
+            Padding="8"
+            Background="Transparent"
+            DoubleTapped="OnSliderDoubleTapped">
+            <Slider
+                x:Name="Slider"
+                SmallChange="0.01"
+                LargeChange="0.10"
+                ThumbToolTipValueConverter="{x:Null}"
+                KeyDown="OnSliderKeyDown"
+                ValueChanged="OnSliderValueChanged" />
+        </Grid>
     </StackPanel>
 </UserControl>

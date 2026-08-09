@@ -238,6 +238,15 @@ build 경고·오류 0을 통과했습니다. native/managed ARM64 교차 빌드
 실제 ARM64 실행은 하지 않았습니다. provenance gate는 files=1787, text=1744, binary=43,
 declared_resources=29, reachable_commits=140을 확인했습니다.
 
+## 2026-08-09 InspectorSlider focus/reset follow-up
+
+Exposure와 모든 `InspectorSlider` composite는 이제 Tab 순서에서 value button을 제외하고 slider 하나만
+논리 focus 대상으로 둡니다. slider가 focus된 상태에서 Enter로 숫자 편집을 시작하며 기존 click/edit,
+Enter/focus-loss commit, Escape cancel, invalid draft의 red/beep/focus 복귀는 유지합니다. slider 주위
+8 DIP hit outset에서 double-click reset을 받고, Narrator HelpText에 reset과 edit keyboard 동작을
+명시합니다. x64 Debug managed build 경고·오류 0, Catalog 338 및 Shell 276 assertions을 통과했습니다.
+rendered/UIA, compact/high contrast, 실제 ARM64 runtime 증거는 여전히 없습니다.
+
 `params.colorMixer`의 Hue/Saturation/Luminance 8밴드 recipe를 Catalog read/write, Shell request
 factory, ABI 0.12 `nf_develop_export_request_v6`/`nf_develop_preview_v6`, native CPU pipeline,
 WinUI `ColorMixerEditor`까지 연결했습니다. v6는 v5 prefix 뒤에 3×8 float를 append하므로 이전 ABI

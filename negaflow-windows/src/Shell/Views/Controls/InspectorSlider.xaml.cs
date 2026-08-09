@@ -139,7 +139,11 @@ public sealed partial class InspectorSlider : UserControl
         }
         AutomationProperties.SetName(Slider, Label);
         AutomationProperties.SetAutomationId(Slider, SliderAutomationId);
-        AutomationProperties.SetHelpText(Slider, "Arrow keys adjust by 0.01. Shift+Arrow adjusts by 0.10.");
+        AutomationProperties.SetHelpText(
+            Slider,
+            CanReset
+                ? "Arrow keys adjust by 0.01. Shift+Arrow adjusts by 0.10. Double-click resets the value. Press Enter to edit the value."
+                : "Arrow keys adjust by 0.01. Shift+Arrow adjusts by 0.10. Press Enter to edit the value.");
         AutomationProperties.SetName(ValueButton, $"{Label} value");
         AutomationProperties.SetName(ValueEditor, $"{Label} value");
         AutomationProperties.SetAutomationId(ValueButton, $"{SliderAutomationId}.value");
@@ -164,6 +168,12 @@ public sealed partial class InspectorSlider : UserControl
     private void OnSliderKeyDown(object sender, KeyRoutedEventArgs args)
     {
         _ = sender;
+        if (args.Key == VirtualKey.Enter)
+        {
+            BeginEditing();
+            args.Handled = true;
+            return;
+        }
         bool increase = args.Key is VirtualKey.Right or VirtualKey.Up;
         bool decrease = args.Key is VirtualKey.Left or VirtualKey.Down;
         if (!increase && !decrease)
@@ -191,6 +201,11 @@ public sealed partial class InspectorSlider : UserControl
     {
         _ = sender;
         _ = args;
+        BeginEditing();
+    }
+
+    private void BeginEditing()
+    {
         ValueEditor.Text = Value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
         ValueEditor.ClearValue(ForegroundProperty);
         ClearEditorError();
