@@ -18,6 +18,8 @@ public sealed partial class WorkspaceToolbarView : UserControl
 
     public event EventHandler? SettingsRequested;
 
+    public event EventHandler? QuickExportRequested;
+
     public UIElement TitleBarElement => TitleBarRoot;
 
     public void UpdateCaptionInsets(double left, double right)
@@ -25,6 +27,8 @@ public sealed partial class WorkspaceToolbarView : UserControl
         LeftCaptionInsetColumn.Width = new GridLength(Math.Max(0, left));
         RightCaptionInsetColumn.Width = new GridLength(Math.Max(0, right));
     }
+
+    public void SetQuickExportEnabled(bool isEnabled) => QuickExportButton.IsEnabled = isEnabled;
 
     public void Initialize(WorkspacePresentationState state)
     {
@@ -40,6 +44,13 @@ public sealed partial class WorkspaceToolbarView : UserControl
         _ = sender;
         _ = args;
         workspaceState?.SelectWorkspace(WorkspaceModule.Library);
+    }
+
+    private void OnQuickExportClick(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        QuickExportRequested?.Invoke(this, EventArgs.Empty);
     }
 
     private void OnDevelopClick(object sender, RoutedEventArgs args)

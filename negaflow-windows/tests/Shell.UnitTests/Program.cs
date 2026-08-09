@@ -21,6 +21,8 @@ internal static class Program
         VerifyDevelopExportCoordinator();
         VerifyLibraryDocument();
         VerifyLibraryHost();
+        VerifyDevelopInspectorPresentationState();
+        VerifyDevelopHistogramSampler();
         VerifyDevelopPanelState();
         VerifyInspectorSliderValue();
         VerifyFrameImport();
@@ -805,6 +807,99 @@ internal static class Program
         filmLookWorkspaceBytes: 0,
         wallMicroseconds: 0);
 
+    private static void VerifyDevelopInspectorPresentationState()
+    {
+        DevelopInspectorPresentationState state = new();
+        Check(
+            DevelopInspectorPresentationState.TabOrder.SequenceEqual(
+                new[]
+                {
+                    DevelopInspectorTab.Basic,
+                    DevelopInspectorTab.Base,
+                    DevelopInspectorTab.Edit,
+                    DevelopInspectorTab.Defects,
+                    DevelopInspectorTab.Info,
+                    DevelopInspectorTab.Reset,
+                }),
+            "develop_inspector_tab_order_matches_macos");
+        Check(
+            DevelopInspectorPresentationState.SectionOrder.SequenceEqual(
+                new[]
+                {
+                    DevelopInspectorSection.Tone,
+                    DevelopInspectorSection.ToneCurve,
+                    DevelopInspectorSection.Color,
+                    DevelopInspectorSection.ColorMixer,
+                    DevelopInspectorSection.ColorGrading,
+                    DevelopInspectorSection.BlackAndWhiteToning,
+                    DevelopInspectorSection.Calibration,
+                    DevelopInspectorSection.DetailAndEffects,
+                    DevelopInspectorSection.Debug,
+                }),
+            "develop_inspector_section_order_matches_macos");
+        Check(state.SelectedTab == DevelopInspectorTab.Basic,
+            "develop_inspector_defaults_to_basic");
+        Check(state.ExpandedSection == DevelopInspectorSection.Tone,
+            "develop_inspector_defaults_to_tone");
+        Check(state.ShowsAdjustmentSections,
+            "develop_inspector_basic_shows_adjustments");
+
+        state.SelectTab(DevelopInspectorTab.Base);
+        Check(state.SelectedTab == DevelopInspectorTab.Base && state.ShowsAdjustmentSections,
+            "develop_inspector_base_shows_adjustments");
+        state.SelectTab(DevelopInspectorTab.Info);
+        Check(!state.ShowsAdjustmentSections,
+            "develop_inspector_info_hides_adjustments");
+
+        state.Expand(DevelopInspectorSection.ToneCurve);
+        Check(state.ExpandedSection == DevelopInspectorSection.ToneCurve,
+            "develop_inspector_expands_one_section");
+        state.Expand(DevelopInspectorSection.ColorMixer);
+        Check(state.ExpandedSection == DevelopInspectorSection.ColorMixer,
+            "develop_inspector_replaces_expanded_section");
+        state.Collapse(DevelopInspectorSection.ToneCurve);
+        Check(state.ExpandedSection == DevelopInspectorSection.ColorMixer,
+            "develop_inspector_ignores_other_section_collapse");
+        state.Collapse(DevelopInspectorSection.ColorMixer);
+        Check(state.ExpandedSection is null,
+            "develop_inspector_collapses_current_section");
+    }
+
+    private static void VerifyDevelopHistogramSampler()
+    {
+        byte[] pixels =
+        [
+            0, 0, 0, 255,
+            0, 0, 255, 255,
+            0, 255, 0, 255,
+            255, 0, 0, 255,
+        ];
+        DevelopHistogramBins? bins = DevelopHistogramSampler.SampleBgra8(pixels, 4, 1);
+        Check(bins is not null, "develop_histogram_samples_bgra8");
+        if (bins is null)
+        {
+            return;
+        }
+
+        Check(bins.TotalPixels == 4,
+            "develop_histogram_counts_opaque_pixels");
+        Check(bins.Red[0] == 3 && bins.Red[^1] == 1 &&
+            bins.Green[0] == 3 && bins.Green[^1] == 1 &&
+            bins.Blue[0] == 3 && bins.Blue[^1] == 1,
+            "develop_histogram_maps_bgra_channels");
+        Check(bins.Luma[0] == 1 && bins.Luma[4] == 1 &&
+            bins.Luma[13] == 1 && bins.Luma[45] == 1,
+            "develop_histogram_uses_macos_luma_weights");
+        Check(bins.ShadowRed == 3 && bins.HighlightRed == 1 &&
+            bins.ShadowGreen == 3 && bins.HighlightGreen == 1 &&
+            bins.ShadowBlue == 3 && bins.HighlightBlue == 1,
+            "develop_histogram_counts_channel_clipping");
+        Check(DevelopHistogramSampler.SampleBgra8([0, 0, 0, 255], 2, 1) is null,
+            "develop_histogram_rejects_truncated_buffer");
+        Check(DevelopHistogramSampler.SampleBgra8([], 0, 1) is null,
+            "develop_histogram_rejects_invalid_size");
+    }
+
     private static void VerifyDevelopPanelState()
     {
         string testParent = Path.Combine(AppContext.BaseDirectory, "develop-panel-tests");
@@ -911,6 +1006,37 @@ internal static class Program
                     [0.0, 0.0],
                     new double[ColorMixerRecipe.BandCount])) == LibraryFrameError.InvalidColorMixer,
                 "panel_rejects_invalid_color_mixer");
+            ColorGradingRecipe editedColorGrading = new(
+                new ColorGradeRegionRecipe(0.2, 0.3, -0.1),
+                new ColorGradeRegionRecipe(0.4, 0.5, 0.1),
+                new ColorGradeRegionRecipe(0.6, 0.7, 0.2),
+                0.25,
+                -0.2);
+            Check(panel.SetColorGrading(editedColorGrading) == LibraryFrameError.None &&
+                panel.ColorGrading == editedColorGrading,
+                "panel_sets_color_grading");
+
+            Check(panel.ResetBasicTone() == LibraryFrameError.None &&
+                panel.Exposure == 0 && panel.Contrast == 0 && panel.Highlights == 0 &&
+                panel.Shadows == 0 && panel.Whites == 0 && panel.Blacks == 0 &&
+                panel.Density == 0,
+                "panel_resets_basic_tone");
+            Check(panel.CurveHighlights == -0.25 && panel.CurveLights == 0.5 &&
+                panel.CurveDarks == -0.5 && panel.CurveShadows == 1.0,
+                "panel_basic_tone_reset_preserves_tone_curve");
+            Check(panel.ResetToneCurve() == LibraryFrameError.None &&
+                panel.CurveHighlights == 0 && panel.CurveLights == 0 &&
+                panel.CurveDarks == 0 && panel.CurveShadows == 0 &&
+                panel.PointCurves.Rgb.Count == 0,
+                "panel_resets_tone_curve_and_points");
+            Check(panel.ResetColorMixer() == LibraryFrameError.None &&
+                panel.ColorMixer.Hue.All(value => value == 0) &&
+                panel.ColorMixer.Saturation.All(value => value == 0) &&
+                panel.ColorMixer.Luminance.All(value => value == 0),
+                "panel_resets_color_mixer");
+            Check(panel.ResetColorGrading() == LibraryFrameError.None &&
+                panel.ColorGrading == ColorGradingRecipe.Identity,
+                "panel_resets_color_grading");
 
             // 아직 base 를 고르지 않은 frame 에도 슬라이더 시작 위치는 있어야 하지만, 그것이
             // catalog 에 저장되면 사용자가 고르지 않은 값으로 현상됩니다.

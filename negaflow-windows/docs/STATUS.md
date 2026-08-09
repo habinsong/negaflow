@@ -283,3 +283,20 @@ WinUI editor에는 RGB/Red/Green/Blue 채널, click/drag, non-endpoint double-cl
 x64 Debug native CTest 30/30, Catalog 331 assertions, Shell 271 assertions, ABI 0.11 interop
 58 assertions이 통과했습니다. native ABI test는 활성 curve preview의 pixel 변화와 malformed
 channel의 request-validation 거절을 확인합니다.
+
+## 2026-08-09 Develop inspector histogram·전폭 구조 체크포인트
+
+고정 macOS 기준과 사용자 제공 macOS 렌더 캡처를 대조해 오른쪽 Develop inspector를
+`Histogram → 6 tabs → tab content → common adjustments` 순서로 바꿨습니다. Histogram은 64-bin
+luma/R/G/B와 clipping, 네 tone 영역의 pointer/keyboard 조정을 제공하며 Basic Tone recipe와 같은
+preview 경로를 사용합니다. 카드·header·content·slider는 가용 폭 전체를 쓰고, disclosure를 위한
+기본 `Expander`/중첩 card를 제거해 macOS section당 하나의 visual surface만 남겼습니다.
+
+x64 Debug 관리형 빌드는 경고 0·오류 0, Catalog 338/Shell 300 assertions를 통과했습니다.
+실제 150% DPI WinUI 창에서 Histogram과 네 adjustment card가 모두 603 physical pixel 폭임을 확인했고,
+Tone Curve header는 UIA `ExpandCollapsePattern`의 `Collapsed → Expanded` 전환과 단일 section 확장을
+확인했습니다. 6개 로캘 리소스와 저장소 UI 작업 규칙도 갱신했습니다.
+
+이는 전체 Develop UI 완료가 아닙니다. Edit/Defects/Info/Reset 고유 content, 나머지 adjustment
+sections, compact/high contrast와 실제 ARM64 runtime은 미검증입니다. 추가 UI 확장은 보류하고
+`progress/next-steps.md` 순서의 catalog backup 세대·commit verifier를 다음 backend 작업으로 둡니다.

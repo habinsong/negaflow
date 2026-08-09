@@ -22,6 +22,7 @@
                 Height="24"
                 Padding="5,0"
                 AutomationProperties.AutomationId="negaflow.quick-export"
+                Click="OnQuickExportClick"
                 IsEnabled="False">
                 <StackPanel Orientation="Horizontal" Spacing="4">
                     <FontIcon FontSize="13" Glyph="&#xE945;" />

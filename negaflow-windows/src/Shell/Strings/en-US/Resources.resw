@@ -472,4 +472,92 @@ Load a scanner from Library to scan film.</value>
     <value>Input Order</value>
     <comment>AppLocalizedPhrase.sortInputOrder</comment>
   </data>
+  <data name="developHistogram.Text" xml:space="preserve">
+    <value>Histogram</value>
+    <comment>AppLocalizedPhrase.histogram</comment>
+  </data>
+  <data name="developHistogramShadow.Text" xml:space="preserve">
+    <value>Shadow</value>
+    <comment>AppLocalizedPhrase.shadowTone</comment>
+  </data>
+  <data name="developHistogramDensity.Text" xml:space="preserve">
+    <value>Density</value>
+    <comment>AppLocalizedPhrase.density</comment>
+  </data>
+  <data name="developHistogramExposure.Text" xml:space="preserve">
+    <value>Exposure</value>
+    <comment>AppLocalizedPhrase.exposure</comment>
+  </data>
+  <data name="developHistogramHighlight.Text" xml:space="preserve">
+    <value>Highlight</value>
+    <comment>AppLocalizedPhrase.highlightTone</comment>
+  </data>
+  <data name="developHistogramRgb.Text" xml:space="preserve">
+    <value>RGB</value>
+    <comment>AppLocalizedPhrase.rgb</comment>
+  </data>
+  <data name="developHistogramClippingFormat.Value" xml:space="preserve">
+    <value>Clip %@</value>
+    <comment>AppLocalizedPhrase.clippingChannelsFormat</comment>
+  </data>
+  <data name="developHistogramRedShort.Text" xml:space="preserve">
+    <value>R</value>
+    <comment>AppLocalizedPhrase.redChannelShort</comment>
+  </data>
+  <data name="developHistogramGreenShort.Text" xml:space="preserve">
+    <value>G</value>
+    <comment>AppLocalizedPhrase.greenChannelShort</comment>
+  </data>
+  <data name="developHistogramBlueShort.Text" xml:space="preserve">
+    <value>B</value>
+    <comment>AppLocalizedPhrase.blueChannelShort</comment>
+  </data>
+  <data name="developHistogramKeyboardHelp.Value" xml:space="preserve">
+    <value>Left and Right select a tone region. Up and Down adjust it. Hold Shift for a larger step.</value>
+    <comment>Develop histogram keyboard and accessibility help</comment>
+  </data>
+  <data name="developTabBasic.Value" xml:space="preserve">
+    <value>Basic</value>
+    <comment>AppLocalizedPhrase.inspectorTabBasic</comment>
+  </data>
+  <data name="developTabBase.Value" xml:space="preserve">
+    <value>Base</value>
+    <comment>AppLocalizedPhrase.baseSection</comment>
+  </data>
+  <data name="developTabEdit.Value" xml:space="preserve">
+    <value>Edit</value>
+    <comment>AppLocalizedPhrase.inspectorTabEdit</comment>
+  </data>
+  <data name="developTabDefects.Value" xml:space="preserve">
+    <value>GrainMend</value>
+    <comment>AppLocalizedPhrase.inspectorTabDefect</comment>
+  </data>
+  <data name="developTabInfo.Value" xml:space="preserve">
+    <value>Info</value>
+    <comment>SourceMetadataInspectorLocalizedText.info</comment>
+  </data>
+  <data name="developTabReset.Value" xml:space="preserve">
+    <value>Reset</value>
+    <comment>AppLocalizedPhrase.reset</comment>
+  </data>
+  <data name="developSectionBasicTone.Text" xml:space="preserve">
+    <value>Basic Tone</value>
+    <comment>AppLocalizedPhrase.basicTone</comment>
+  </data>
+  <data name="developSectionToneCurve.Text" xml:space="preserve">
+    <value>Tone Curve</value>
+    <comment>AppLocalizedPhrase.toneCurve</comment>
+  </data>
+  <data name="developSectionColorMixer.Text" xml:space="preserve">
+    <value>Color Mixer</value>
+    <comment>AppLocalizedPhrase.colorMixer</comment>
+  </data>
+  <data name="developSectionColorGrading.Text" xml:space="preserve">
+    <value>Color Grading</value>
+    <comment>AppLocalizedPhrase.colorGrading</comment>
+  </data>
+  <data name="developResetSectionFormat.Value" xml:space="preserve">
+    <value>Reset %@</value>
+    <comment>AppLocalizedPhrase.resetSectionFormat</comment>
+  </data>
 </root>

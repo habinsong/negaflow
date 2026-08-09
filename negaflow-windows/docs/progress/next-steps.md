@@ -192,10 +192,14 @@ light source, scanner profile ID는 수동 Dmin과 독립적으로 보존됩니�
 decode 후 linear working image edge를 측정해 scene-ranged inversion에 전달하며, Preview와 Export가 같은
 resolver 결과를 사용합니다. v1 수동 ABI는 유지합니다. 이 resolver는 macOS의 scene-edge fallback만 이식한
 `FilmBaseEstimator` sampled-grid fallback과 chromogenic B&W 재시도, bundled film-stock/light-source resolver,
-Film mode picker, ABI 0.10 preview/export 연결은 구현되었습니다. 다음 한 걸음은 scanner-profile grade와
-제조사별 Film picker presentation, canvas base picker/reset입니다. Basic Tone과 Parametric Tone Curve의 네 slider는
-Inspector에 Point Curve `ToneCurveEditor`, Color Mixer HSL 8밴드, Color Grading의 세 range wheel까지 연결되었습니다. rendered/UIA 검증은 아직 별도 작업입니다. 취소·진행률과
-대형 이미지 스케줄링은 그 다음 필수 경로입니다.
+Film mode picker, ABI 0.10 preview/export 연결은 구현되었습니다. Histogram과 6-tab strip,
+전폭 single-surface disclosure, Basic Tone/Parametric Tone Curve/Point Curve/Color Mixer/Color Grading의
+첫 rendered/UIA 체크포인트도 완료했습니다. 다만 고유 Edit/Defects/Info/Reset tab content와 나머지
+adjustment sections, compact/high contrast/ARM64 runtime은 아직 별도 작업입니다.
+
+최신 사용자 우선순위에 따라 추가 UI 확장은 보류합니다. **다음 한 걸음은 위 수명주기 순서 2의
+catalog backup 세대와 commit verifier**입니다. 이를 닫기 전에 pending restore나 defect sidecar로
+건너뛰지 않습니다.
 
 ---
 

@@ -472,4 +472,92 @@
     <value>読み込み順</value>
     <comment>AppLocalizedPhrase.sortInputOrder</comment>
   </data>
+  <data name="developHistogram.Text" xml:space="preserve">
+    <value>ヒストグラム</value>
+    <comment>AppLocalizedPhrase.histogram</comment>
+  </data>
+  <data name="developHistogramShadow.Text" xml:space="preserve">
+    <value>シャドウ</value>
+    <comment>AppLocalizedPhrase.shadowTone</comment>
+  </data>
+  <data name="developHistogramDensity.Text" xml:space="preserve">
+    <value>濃度</value>
+    <comment>AppLocalizedPhrase.density</comment>
+  </data>
+  <data name="developHistogramExposure.Text" xml:space="preserve">
+    <value>露光量</value>
+    <comment>AppLocalizedPhrase.exposure</comment>
+  </data>
+  <data name="developHistogramHighlight.Text" xml:space="preserve">
+    <value>ハイライト</value>
+    <comment>AppLocalizedPhrase.highlightTone</comment>
+  </data>
+  <data name="developHistogramRgb.Text" xml:space="preserve">
+    <value>RGB</value>
+    <comment>AppLocalizedPhrase.rgb</comment>
+  </data>
+  <data name="developHistogramClippingFormat.Value" xml:space="preserve">
+    <value>クリッピング %@</value>
+    <comment>AppLocalizedPhrase.clippingChannelsFormat</comment>
+  </data>
+  <data name="developHistogramRedShort.Text" xml:space="preserve">
+    <value>R</value>
+    <comment>AppLocalizedPhrase.redChannelShort</comment>
+  </data>
+  <data name="developHistogramGreenShort.Text" xml:space="preserve">
+    <value>G</value>
+    <comment>AppLocalizedPhrase.greenChannelShort</comment>
+  </data>
+  <data name="developHistogramBlueShort.Text" xml:space="preserve">
+    <value>B</value>
+    <comment>AppLocalizedPhrase.blueChannelShort</comment>
+  </data>
+  <data name="developHistogramKeyboardHelp.Value" xml:space="preserve">
+    <value>左右キーでトーン領域を選択し、上下キーで調整します。Shift キーを押すと調整幅が大きくなります。</value>
+    <comment>Develop histogram keyboard and accessibility help</comment>
+  </data>
+  <data name="developTabBasic.Value" xml:space="preserve">
+    <value>基本</value>
+    <comment>AppLocalizedPhrase.inspectorTabBasic</comment>
+  </data>
+  <data name="developTabBase.Value" xml:space="preserve">
+    <value>ベース</value>
+    <comment>AppLocalizedPhrase.baseSection</comment>
+  </data>
+  <data name="developTabEdit.Value" xml:space="preserve">
+    <value>編集</value>
+    <comment>AppLocalizedPhrase.inspectorTabEdit</comment>
+  </data>
+  <data name="developTabDefects.Value" xml:space="preserve">
+    <value>GrainMend</value>
+    <comment>AppLocalizedPhrase.inspectorTabDefect</comment>
+  </data>
+  <data name="developTabInfo.Value" xml:space="preserve">
+    <value>情報</value>
+    <comment>SourceMetadataInspectorLocalizedText.info</comment>
+  </data>
+  <data name="developTabReset.Value" xml:space="preserve">
+    <value>リセット</value>
+    <comment>AppLocalizedPhrase.reset</comment>
+  </data>
+  <data name="developSectionBasicTone.Text" xml:space="preserve">
+    <value>基本補正</value>
+    <comment>AppLocalizedPhrase.basicTone</comment>
+  </data>
+  <data name="developSectionToneCurve.Text" xml:space="preserve">
+    <value>トーンカーブ</value>
+    <comment>AppLocalizedPhrase.toneCurve</comment>
+  </data>
+  <data name="developSectionColorMixer.Text" xml:space="preserve">
+    <value>カラーミキサー</value>
+    <comment>AppLocalizedPhrase.colorMixer</comment>
+  </data>
+  <data name="developSectionColorGrading.Text" xml:space="preserve">
+    <value>カラーグレーディング</value>
+    <comment>AppLocalizedPhrase.colorGrading</comment>
+  </data>
+  <data name="developResetSectionFormat.Value" xml:space="preserve">
+    <value>%@をリセット</value>
+    <comment>AppLocalizedPhrase.resetSectionFormat</comment>
+  </data>
 </root>

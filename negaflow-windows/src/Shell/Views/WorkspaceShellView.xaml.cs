@@ -44,6 +44,8 @@ public sealed partial class WorkspaceShellView : UserControl
             LibraryWorkspace.ShowLibrary(libraryHost);
         }
         DevelopWorkspace.Initialize(state, nativeEngineStatus);
+        Toolbar.QuickExportRequested += OnToolbarQuickExportRequested;
+        DevelopWorkspace.QuickExportAvailabilityChanged += OnQuickExportAvailabilityChanged;
         // 한계값은 엔진이 알려 줍니다. 엔진을 못 읽으면 슬라이더 범위를 지어내는 대신
         // Develop 패널을 붙이지 않습니다.
         if (libraryHost is not null && windowId is { } id && nativeEngineStatus.IsAvailable)
@@ -60,6 +62,7 @@ public sealed partial class WorkspaceShellView : UserControl
             {
             }
         }
+        Toolbar.SetQuickExportEnabled(DevelopWorkspace.CanQuickExport);
         PrintWorkspace.Initialize(state, nativeEngineStatus);
         Toolbar.SettingsRequested += OnToolbarSettingsRequested;
         state.Changed += OnStateChanged;
@@ -72,6 +75,20 @@ public sealed partial class WorkspaceShellView : UserControl
         _ = sender;
         _ = args;
         SettingsRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private async void OnToolbarQuickExportRequested(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        await DevelopWorkspace.QuickExportAsync();
+    }
+
+    private void OnQuickExportAvailabilityChanged(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        Toolbar.SetQuickExportEnabled(DevelopWorkspace.CanQuickExport);
     }
 
     private void OnStateChanged(object? sender, ShellPreferences preferences)
@@ -98,6 +115,8 @@ public sealed partial class WorkspaceShellView : UserControl
         _ = sender;
         _ = args;
         Toolbar.SettingsRequested -= OnToolbarSettingsRequested;
+        Toolbar.QuickExportRequested -= OnToolbarQuickExportRequested;
+        DevelopWorkspace.QuickExportAvailabilityChanged -= OnQuickExportAvailabilityChanged;
         if (workspaceState is not null)
         {
             workspaceState.Changed -= OnStateChanged;

@@ -472,4 +472,92 @@
     <value>입력순</value>
     <comment>AppLocalizedPhrase.sortInputOrder</comment>
   </data>
+  <data name="developHistogram.Text" xml:space="preserve">
+    <value>히스토그램</value>
+    <comment>AppLocalizedPhrase.histogram</comment>
+  </data>
+  <data name="developHistogramShadow.Text" xml:space="preserve">
+    <value>어두운 영역</value>
+    <comment>AppLocalizedPhrase.shadowTone</comment>
+  </data>
+  <data name="developHistogramDensity.Text" xml:space="preserve">
+    <value>농도</value>
+    <comment>AppLocalizedPhrase.density</comment>
+  </data>
+  <data name="developHistogramExposure.Text" xml:space="preserve">
+    <value>노출</value>
+    <comment>AppLocalizedPhrase.exposure</comment>
+  </data>
+  <data name="developHistogramHighlight.Text" xml:space="preserve">
+    <value>밝은 영역</value>
+    <comment>AppLocalizedPhrase.highlightTone</comment>
+  </data>
+  <data name="developHistogramRgb.Text" xml:space="preserve">
+    <value>RGB</value>
+    <comment>AppLocalizedPhrase.rgb</comment>
+  </data>
+  <data name="developHistogramClippingFormat.Value" xml:space="preserve">
+    <value>클리핑 %@</value>
+    <comment>AppLocalizedPhrase.clippingChannelsFormat</comment>
+  </data>
+  <data name="developHistogramRedShort.Text" xml:space="preserve">
+    <value>R</value>
+    <comment>AppLocalizedPhrase.redChannelShort</comment>
+  </data>
+  <data name="developHistogramGreenShort.Text" xml:space="preserve">
+    <value>G</value>
+    <comment>AppLocalizedPhrase.greenChannelShort</comment>
+  </data>
+  <data name="developHistogramBlueShort.Text" xml:space="preserve">
+    <value>B</value>
+    <comment>AppLocalizedPhrase.blueChannelShort</comment>
+  </data>
+  <data name="developHistogramKeyboardHelp.Value" xml:space="preserve">
+    <value>왼쪽/오른쪽 화살표로 톤 영역을 선택하고 위/아래 화살표로 조절합니다. Shift를 누르면 더 크게 조절합니다.</value>
+    <comment>Develop histogram keyboard and accessibility help</comment>
+  </data>
+  <data name="developTabBasic.Value" xml:space="preserve">
+    <value>기본</value>
+    <comment>AppLocalizedPhrase.inspectorTabBasic</comment>
+  </data>
+  <data name="developTabBase.Value" xml:space="preserve">
+    <value>베이스</value>
+    <comment>AppLocalizedPhrase.baseSection</comment>
+  </data>
+  <data name="developTabEdit.Value" xml:space="preserve">
+    <value>편집</value>
+    <comment>AppLocalizedPhrase.inspectorTabEdit</comment>
+  </data>
+  <data name="developTabDefects.Value" xml:space="preserve">
+    <value>GrainMend</value>
+    <comment>AppLocalizedPhrase.inspectorTabDefect</comment>
+  </data>
+  <data name="developTabInfo.Value" xml:space="preserve">
+    <value>정보</value>
+    <comment>SourceMetadataInspectorLocalizedText.info</comment>
+  </data>
+  <data name="developTabReset.Value" xml:space="preserve">
+    <value>초기화</value>
+    <comment>AppLocalizedPhrase.reset</comment>
+  </data>
+  <data name="developSectionBasicTone.Text" xml:space="preserve">
+    <value>기본 톤</value>
+    <comment>AppLocalizedPhrase.basicTone</comment>
+  </data>
+  <data name="developSectionToneCurve.Text" xml:space="preserve">
+    <value>톤 곡선</value>
+    <comment>AppLocalizedPhrase.toneCurve</comment>
+  </data>
+  <data name="developSectionColorMixer.Text" xml:space="preserve">
+    <value>컬러 믹서</value>
+    <comment>AppLocalizedPhrase.colorMixer</comment>
+  </data>
+  <data name="developSectionColorGrading.Text" xml:space="preserve">
+    <value>컬러 그레이딩</value>
+    <comment>AppLocalizedPhrase.colorGrading</comment>
+  </data>
+  <data name="developResetSectionFormat.Value" xml:space="preserve">
+    <value>%@ 초기화</value>
+    <comment>AppLocalizedPhrase.resetSectionFormat</comment>
+  </data>
 </root>

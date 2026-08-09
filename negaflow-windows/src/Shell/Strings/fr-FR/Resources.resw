@@ -472,4 +472,92 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
     <value>Ordre d&apos;import</value>
     <comment>AppLocalizedPhrase.sortInputOrder</comment>
   </data>
+  <data name="developHistogram.Text" xml:space="preserve">
+    <value>Histogramme</value>
+    <comment>AppLocalizedPhrase.histogram</comment>
+  </data>
+  <data name="developHistogramShadow.Text" xml:space="preserve">
+    <value>Ombres</value>
+    <comment>AppLocalizedPhrase.shadowTone</comment>
+  </data>
+  <data name="developHistogramDensity.Text" xml:space="preserve">
+    <value>Densité</value>
+    <comment>AppLocalizedPhrase.density</comment>
+  </data>
+  <data name="developHistogramExposure.Text" xml:space="preserve">
+    <value>Exposition</value>
+    <comment>AppLocalizedPhrase.exposure</comment>
+  </data>
+  <data name="developHistogramHighlight.Text" xml:space="preserve">
+    <value>Hautes lumières</value>
+    <comment>AppLocalizedPhrase.highlightTone</comment>
+  </data>
+  <data name="developHistogramRgb.Text" xml:space="preserve">
+    <value>RVB</value>
+    <comment>AppLocalizedPhrase.rgb</comment>
+  </data>
+  <data name="developHistogramClippingFormat.Value" xml:space="preserve">
+    <value>Écrêtage %@</value>
+    <comment>AppLocalizedPhrase.clippingChannelsFormat</comment>
+  </data>
+  <data name="developHistogramRedShort.Text" xml:space="preserve">
+    <value>R</value>
+    <comment>AppLocalizedPhrase.redChannelShort</comment>
+  </data>
+  <data name="developHistogramGreenShort.Text" xml:space="preserve">
+    <value>V</value>
+    <comment>AppLocalizedPhrase.greenChannelShort</comment>
+  </data>
+  <data name="developHistogramBlueShort.Text" xml:space="preserve">
+    <value>B</value>
+    <comment>AppLocalizedPhrase.blueChannelShort</comment>
+  </data>
+  <data name="developHistogramKeyboardHelp.Value" xml:space="preserve">
+    <value>Gauche et Droite sélectionnent une zone tonale. Haut et Bas la règlent. Maintenez Maj pour un pas plus grand.</value>
+    <comment>Develop histogram keyboard and accessibility help</comment>
+  </data>
+  <data name="developTabBasic.Value" xml:space="preserve">
+    <value>Base</value>
+    <comment>AppLocalizedPhrase.inspectorTabBasic</comment>
+  </data>
+  <data name="developTabBase.Value" xml:space="preserve">
+    <value>Base</value>
+    <comment>AppLocalizedPhrase.baseSection</comment>
+  </data>
+  <data name="developTabEdit.Value" xml:space="preserve">
+    <value>Édition</value>
+    <comment>AppLocalizedPhrase.inspectorTabEdit</comment>
+  </data>
+  <data name="developTabDefects.Value" xml:space="preserve">
+    <value>GrainMend</value>
+    <comment>AppLocalizedPhrase.inspectorTabDefect</comment>
+  </data>
+  <data name="developTabInfo.Value" xml:space="preserve">
+    <value>Infos</value>
+    <comment>SourceMetadataInspectorLocalizedText.info</comment>
+  </data>
+  <data name="developTabReset.Value" xml:space="preserve">
+    <value>Réinitialiser</value>
+    <comment>AppLocalizedPhrase.reset</comment>
+  </data>
+  <data name="developSectionBasicTone.Text" xml:space="preserve">
+    <value>Réglages de base</value>
+    <comment>AppLocalizedPhrase.basicTone</comment>
+  </data>
+  <data name="developSectionToneCurve.Text" xml:space="preserve">
+    <value>Courbe des tonalités</value>
+    <comment>AppLocalizedPhrase.toneCurve</comment>
+  </data>
+  <data name="developSectionColorMixer.Text" xml:space="preserve">
+    <value>Mélangeur de couleurs</value>
+    <comment>AppLocalizedPhrase.colorMixer</comment>
+  </data>
+  <data name="developSectionColorGrading.Text" xml:space="preserve">
+    <value>Étalonnage des couleurs</value>
+    <comment>AppLocalizedPhrase.colorGrading</comment>
+  </data>
+  <data name="developResetSectionFormat.Value" xml:space="preserve">
+    <value>Réinitialiser %@</value>
+    <comment>AppLocalizedPhrase.resetSectionFormat</comment>
+  </data>
 </root>

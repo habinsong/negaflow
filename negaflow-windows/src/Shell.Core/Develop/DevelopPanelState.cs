@@ -265,6 +265,97 @@ public sealed class DevelopPanelState
     public LibraryFrameError SetCurveShadows(double value) =>
         SetTone(tone => tone with { CurveShadows = limits.ClampToneControl(value) });
 
+    public LibraryFrameError ResetBasicTone() =>
+        SetTone(tone => tone with
+        {
+            Exposure = 0,
+            Contrast = 0,
+            Density = 0,
+            Highlight = 0,
+            Shadow = 0,
+            Whites = 0,
+            Blacks = 0,
+        });
+
+    public LibraryFrameError ResetToneCurve()
+    {
+        if (SelectedFrame is not { } frame)
+        {
+            return LibraryFrameError.MissingId;
+        }
+        if (!CanEditTone)
+        {
+            return LibraryFrameError.InvalidDevelopRoute;
+        }
+
+        ToneAdjustment tone = frame.Tone with
+        {
+            CurveHighlights = 0,
+            CurveLights = 0,
+            CurveDarks = 0,
+            CurveShadows = 0,
+        };
+        LibraryFrameError error = host.Edit(
+            frame.Id,
+            new LibraryFrameEdit(
+                tone,
+                frame.ManualBase,
+                PointCurves: PointCurveRecipe.Identity));
+        if (error == LibraryFrameError.None)
+        {
+            Select(frame.Id);
+        }
+        return error;
+    }
+
+    public LibraryFrameError ResetColorMixer()
+    {
+        if (SelectedFrame is not { } frame)
+        {
+            return LibraryFrameError.MissingId;
+        }
+        if (!CanEditTone)
+        {
+            return LibraryFrameError.InvalidDevelopRoute;
+        }
+
+        LibraryFrameError error = host.Edit(
+            frame.Id,
+            new LibraryFrameEdit(
+                frame.Tone,
+                frame.ManualBase,
+                ColorMixer: ColorMixerRecipe.Identity));
+        if (error == LibraryFrameError.None)
+        {
+            Select(frame.Id);
+        }
+        return error;
+    }
+
+    public LibraryFrameError ResetColorGrading()
+    {
+        if (SelectedFrame is not { } frame)
+        {
+            return LibraryFrameError.MissingId;
+        }
+        if (!CanEditTone)
+        {
+            return LibraryFrameError.InvalidDevelopRoute;
+        }
+
+        LibraryFrameError error = host.Edit(
+            frame.Id,
+            new LibraryFrameEdit(
+                frame.Tone,
+                frame.ManualBase,
+                ColorGrading: ColorGradingRecipe.Identity));
+        if (error == LibraryFrameError.None)
+        {
+            Select(frame.Id);
+        }
+        return error;
+    }
+
     /// <summary>
     /// Point Curve는 Parametric Tone Curve와 별도 recipe로 저장합니다. Catalog writer가
     /// 좌표의 finite/range/중복 조건을 검증해 preview와 export가 같은 값만 받습니다.

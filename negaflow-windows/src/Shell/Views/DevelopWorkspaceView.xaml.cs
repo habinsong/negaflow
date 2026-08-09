@@ -17,6 +17,7 @@ namespace Negaflow.Shell.Views;
 public sealed partial class DevelopWorkspaceView : UserControl
 {
     private readonly ThreePaneResizeController resizeController = new();
+    private readonly DevelopInspectorPresentationState inspectorPresentation = new();
     private WorkspacePresentationState? workspaceState;
     private DevelopPanelState? panel;
     private LibraryHostService? libraryHost;
@@ -25,12 +26,20 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private PreviewCoordinator? previewCoordinator;
     private WriteableBitmap? previewBitmap;
     private bool isSynchronizingInspector;
+    private bool isSynchronizingInspectorPresentation;
+    private bool isInspectorPresentationReady;
 
     public DevelopWorkspaceView()
     {
         InitializeComponent();
+        isInspectorPresentationReady = true;
+        ApplyInspectorPresentation();
         LocalizeControls();
     }
+
+    public event EventHandler? QuickExportAvailabilityChanged;
+
+    public bool CanQuickExport => panel?.CanExport == true;
 
     public void Initialize(
         WorkspacePresentationState state,
@@ -68,6 +77,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         LightSourceSelector.ItemsSource = BundledFilmBaseOptions.LightSources;
         ExposureControl.Minimum = -panel.MaximumExposureStops;
         ExposureControl.Maximum = panel.MaximumExposureStops;
+        HistogramView.ConfigureRanges(panel.MaximumExposureStops, panel.MaximumToneControl);
         foreach (InspectorSlider slider in new[]
                  {
                      ContrastControl,
@@ -90,9 +100,6 @@ public sealed partial class DevelopWorkspaceView : UserControl
             slider.Minimum = panel.MinimumManualDmin;
             slider.Maximum = panel.MaximumManualDmin;
         }
-        // Import 버튼은 라이브러리가 비어 있을 때도 보여야 합니다. 안 그러면 첫 사진을 넣을
-        // 방법이 없습니다.
-        DevelopCard.Visibility = Visibility.Visible;
         // 미리보기는 캔버스에 맞는 크기면 충분합니다. 전체 해상도로 그리면 슬라이더를 끄는
         // 동안 엔진이 밀립니다.
         // 이 메서드는 UI 스레드에서만 불리므로 여기서 dispatcher 를 잡을 수 있습니다.
@@ -118,16 +125,135 @@ public sealed partial class DevelopWorkspaceView : UserControl
             LibraryFrameListItems.From(libraryHost.Frames);
         bool hasFrames = items.Count > 0;
         FramePanel.Visibility = hasFrames ? Visibility.Visible : Visibility.Collapsed;
+        NoFrameLeftPanel.Visibility = hasFrames ? Visibility.Collapsed : Visibility.Visible;
         NoFrameCard.Visibility = hasFrames ? Visibility.Collapsed : Visibility.Visible;
+        DevelopInspectorContent.Visibility = hasFrames ? Visibility.Visible : Visibility.Collapsed;
         if (!hasFrames)
         {
             FrameSelector.ItemsSource = null;
+            HistogramView.Clear();
             SyncToneControls();
+            NotifyQuickExportAvailabilityChanged();
             return;
         }
 
         FrameSelector.ItemsSource = items;
         FrameSelector.SelectedIndex = 0;
+    }
+
+    private void OnInspectorTabClicked(object sender, RoutedEventArgs args)
+    {
+        _ = args;
+        if (!isInspectorPresentationReady ||
+            isSynchronizingInspectorPresentation ||
+            sender is not ToggleButton { Tag: string tag } ||
+            !Enum.TryParse(tag, out DevelopInspectorTab tab))
+        {
+            return;
+        }
+
+        inspectorPresentation.SelectTab(tab);
+        ApplyInspectorPresentation();
+    }
+
+    private void OnInspectorSectionHeaderClicked(object sender, RoutedEventArgs args)
+    {
+        _ = args;
+        if (!isInspectorPresentationReady ||
+            isSynchronizingInspectorPresentation ||
+            sender is not Button { Tag: string tag } ||
+            !Enum.TryParse(tag, out DevelopInspectorSection section))
+        {
+            return;
+        }
+
+        if (inspectorPresentation.ExpandedSection == section)
+        {
+            inspectorPresentation.Collapse(section);
+        }
+        else
+        {
+            inspectorPresentation.Expand(section);
+        }
+        ApplyInspectorPresentation();
+    }
+
+    private void OnInspectorSectionExpansionRequested(
+        object? sender,
+        DisclosureExpansionRequestedEventArgs args)
+    {
+        if (!isInspectorPresentationReady ||
+            isSynchronizingInspectorPresentation ||
+            sender is not DisclosureButton { Tag: string tag } ||
+            !Enum.TryParse(tag, out DevelopInspectorSection section))
+        {
+            return;
+        }
+
+        if (args.IsExpanded)
+        {
+            inspectorPresentation.Expand(section);
+        }
+        else
+        {
+            inspectorPresentation.Collapse(section);
+        }
+        ApplyInspectorPresentation();
+    }
+
+    private void ApplyInspectorPresentation()
+    {
+        if (!isInspectorPresentationReady)
+        {
+            return;
+        }
+
+        isSynchronizingInspectorPresentation = true;
+        BasicTabButton.IsChecked = inspectorPresentation.SelectedTab == DevelopInspectorTab.Basic;
+        BaseTabButton.IsChecked = inspectorPresentation.SelectedTab == DevelopInspectorTab.Base;
+        EditTabButton.IsChecked = inspectorPresentation.SelectedTab == DevelopInspectorTab.Edit;
+        DefectsTabButton.IsChecked = inspectorPresentation.SelectedTab == DevelopInspectorTab.Defects;
+        InfoTabButton.IsChecked = inspectorPresentation.SelectedTab == DevelopInspectorTab.Info;
+        ResetTabButton.IsChecked = inspectorPresentation.SelectedTab == DevelopInspectorTab.Reset;
+        BaseControlCard.Visibility = inspectorPresentation.SelectedTab == DevelopInspectorTab.Base
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        CommonAdjustmentStack.Visibility = inspectorPresentation.ShowsAdjustmentSections
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        ApplyInspectorSectionState(
+            DevelopInspectorSection.Tone,
+            BasicToneHeaderButton,
+            BasicToneChevron,
+            BasicToneControls);
+        ApplyInspectorSectionState(
+            DevelopInspectorSection.ToneCurve,
+            ToneCurveHeaderButton,
+            ToneCurveChevron,
+            ToneCurveControls);
+        ApplyInspectorSectionState(
+            DevelopInspectorSection.ColorMixer,
+            ColorMixerHeaderButton,
+            ColorMixerChevron,
+            ColorMixerEditor);
+        ApplyInspectorSectionState(
+            DevelopInspectorSection.ColorGrading,
+            ColorGradingHeaderButton,
+            ColorGradingChevron,
+            ColorGradingEditor);
+        isSynchronizingInspectorPresentation = false;
+    }
+
+    private void ApplyInspectorSectionState(
+        DevelopInspectorSection section,
+        DisclosureButton header,
+        FontIcon chevron,
+        FrameworkElement content)
+    {
+        bool isExpanded = inspectorPresentation.ExpandedSection == section;
+        header.IsExpanded = isExpanded;
+        chevron.Glyph = isExpanded ? "\uE70D" : "\uE76C";
+        content.Visibility = isExpanded ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private async void OnImportClicked(object sender, RoutedEventArgs args)
@@ -186,6 +312,27 @@ public sealed partial class DevelopWorkspaceView : UserControl
 
         panel.Select(item.Id);
         UpdateSelectedFrameText();
+        SynchronizeInspectorValues();
+        SyncBaseControls();
+        SyncToneControls();
+        NotifyQuickExportAvailabilityChanged();
+        ExportStatusText.Text = item.CanDevelop
+            ? string.Empty
+            : DevelopPanelState.Describe(new DevelopExportOutcome(
+                DevelopExportOutcomeKind.Refused,
+                null,
+                RefusalFor(item.Frame),
+                null));
+        RequestPreview();
+    }
+
+    private void SynchronizeInspectorValues()
+    {
+        if (panel is null)
+        {
+            return;
+        }
+
         isSynchronizingInspector = true;
         ExposureControl.Value = panel.Exposure;
         ContrastControl.Value = panel.Contrast;
@@ -201,6 +348,11 @@ public sealed partial class DevelopWorkspaceView : UserControl
         PointCurveEditor.Curves = panel.PointCurves;
         ColorMixerEditor.Mixer = panel.ColorMixer;
         ColorGradingEditor.Grading = panel.ColorGrading;
+        HistogramView.SynchronizeValues(
+            panel.Shadows,
+            panel.Density,
+            panel.Exposure,
+            panel.Highlights);
         // Auto에는 수동 base가 없으므로 slider에는 시작 위치만 보입니다. 사용자가 값을 바꾸면
         // manual mode로 전환되며, 그 전까지 preview/export는 native Auto resolver를 사용합니다.
         ManualBaseRgb shown = panel.ManualBase ?? new ManualBaseRgb(
@@ -211,17 +363,6 @@ public sealed partial class DevelopWorkspaceView : UserControl
         BaseGreenControl.Value = shown.Green;
         BaseBlueControl.Value = shown.Blue;
         isSynchronizingInspector = false;
-        SyncBaseControls();
-        SyncToneControls();
-        ExportButton.IsEnabled = panel.CanExport;
-        ExportStatusText.Text = item.CanDevelop
-            ? string.Empty
-            : DevelopPanelState.Describe(new DevelopExportOutcome(
-                DevelopExportOutcomeKind.Refused,
-                null,
-                RefusalFor(item.Frame),
-                null));
-        RequestPreview();
     }
 
     private void OnManualBaseChanged(object? sender, InspectorSliderValueChangedEventArgs args)
@@ -241,7 +382,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         // slider 변경은 Auto를 Manual로 전환합니다. 선택 행과 export 상태도 즉시 같은 snapshot으로
         // 갱신해야 preview/export의 요청 mode가 화면과 어긋나지 않습니다.
         UpdateSelectedFrameText();
-        ExportButton.IsEnabled = panel.CanExport;
+        NotifyQuickExportAvailabilityChanged();
         if (panel.SelectedFrame is { CanDevelop: true })
         {
             ExportStatusText.Text = string.Empty;
@@ -279,6 +420,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         {
             PreviewImage.Visibility = Visibility.Collapsed;
             EmptyCanvasPanel.Visibility = Visibility.Visible;
+            HistogramView.Clear();
             return;
         }
 
@@ -299,6 +441,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
             buffer.Write(pixels, 0, written);
         }
         previewBitmap.Invalidate();
+        HistogramView.UpdatePixels(pixels, width, height);
 
         PreviewImage.Visibility = Visibility.Visible;
         EmptyCanvasPanel.Visibility = Visibility.Collapsed;
@@ -386,6 +529,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         PointCurveEditor.IsEnabled = canEdit;
         ColorMixerEditor.IsEnabled = canEdit;
         ColorGradingEditor.IsEnabled = canEdit;
+        HistogramView.IsEnabled = canEdit;
     }
 
     private void OnBaseAutoModeChecked(object sender, RoutedEventArgs args)
@@ -461,7 +605,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
 
         SyncBaseControls();
         UpdateSelectedFrameText();
-        ExportButton.IsEnabled = panel.CanExport;
+        NotifyQuickExportAvailabilityChanged();
         ExportStatusText.Text = string.Empty;
         RequestPreview();
     }
@@ -483,6 +627,29 @@ public sealed partial class DevelopWorkspaceView : UserControl
             BaseEstimationMode.Manual when frame.ManualBase is null => DevelopRequestRefusal.MissingManualBase,
             _ => DevelopRequestRefusal.None,
         };
+    }
+
+    private void OnHistogramValueChanged(object? sender, DevelopHistogramValueChangedEventArgs args)
+    {
+        _ = sender;
+        if (panel is null || isSynchronizingInspector)
+        {
+            return;
+        }
+
+        LibraryFrameError error = args.Region switch
+        {
+            DevelopHistogramRegion.Shadow => panel.SetShadows(args.Value),
+            DevelopHistogramRegion.Density => panel.SetDensity(args.Value),
+            DevelopHistogramRegion.Exposure => panel.SetExposure(args.Value),
+            DevelopHistogramRegion.Highlight => panel.SetHighlights(args.Value),
+            _ => LibraryFrameError.InvalidToneValue,
+        };
+        if (error == LibraryFrameError.None)
+        {
+            SynchronizeInspectorValues();
+            RequestPreview();
+        }
     }
 
     private void OnExposureChanged(object? sender, InspectorSliderValueChangedEventArgs args)
@@ -591,10 +758,47 @@ public sealed partial class DevelopWorkspaceView : UserControl
         }
     }
 
-    private async void OnExportClicked(object sender, RoutedEventArgs args)
+    private void OnBasicToneResetClicked(object sender, RoutedEventArgs args)
     {
         _ = sender;
         _ = args;
+        ResetInspectorSection(static state => state.ResetBasicTone());
+    }
+
+    private void OnToneCurveResetClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        ResetInspectorSection(static state => state.ResetToneCurve());
+    }
+
+    private void OnColorMixerResetClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        ResetInspectorSection(static state => state.ResetColorMixer());
+    }
+
+    private void OnColorGradingResetClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        ResetInspectorSection(static state => state.ResetColorGrading());
+    }
+
+    private void ResetInspectorSection(Func<DevelopPanelState, LibraryFrameError> reset)
+    {
+        if (panel is null || reset(panel) != LibraryFrameError.None)
+        {
+            return;
+        }
+
+        SynchronizeInspectorValues();
+        RequestPreview();
+    }
+
+    public async Task QuickExportAsync()
+    {
         if (panel?.SelectedFrame is not { } frame)
         {
             return;
@@ -612,19 +816,23 @@ public sealed partial class DevelopWorkspaceView : UserControl
             Path.GetDirectoryName(frame.SourcePath) ?? Path.GetTempPath(),
             $"{Path.GetFileNameWithoutExtension(frame.SourcePath)}-negaflow.png");
 
-        ExportButton.IsEnabled = false;
         ExportStatusText.Text = "Developing…";
-        bool delivered = await panel.ExportAsync(
+        Task<bool> exportTask = panel.ExportAsync(
             destination,
             DevelopExportFormat.Png16,
             outcome => ExportStatusText.Text = DevelopPanelState.Describe(outcome));
+        NotifyQuickExportAvailabilityChanged();
+        bool delivered = await exportTask;
         if (!delivered)
         {
             // 큐가 닫혔다는 뜻이므로 창이 사라지는 중입니다. 컨트롤을 더 건드리지 않습니다.
             return;
         }
-        ExportButton.IsEnabled = panel.CanExport;
+        NotifyQuickExportAvailabilityChanged();
     }
+
+    private void NotifyQuickExportAvailabilityChanged() =>
+        QuickExportAvailabilityChanged?.Invoke(this, EventArgs.Empty);
 
     private void OnRootSizeChanged(object sender, SizeChangedEventArgs args)
     {
@@ -728,11 +936,82 @@ public sealed partial class DevelopWorkspaceView : UserControl
         NoFrameLeftText.Text = noFrame;
         NoFrameInspectorText.Text = noFrame;
         DevelopHeaderText.Text = AppResources.Get("menuDevelop", "Text");
+        HistogramView.Localize(
+            AppResources.Get("developHistogram", "Text"),
+            AppResources.Get("developHistogramShadow", "Text"),
+            AppResources.Get("developHistogramDensity", "Text"),
+            AppResources.Get("developHistogramExposure", "Text"),
+            AppResources.Get("developHistogramHighlight", "Text"),
+            AppResources.Get("developHistogramRgb", "Text"),
+            AppResources.Get("developHistogramClippingFormat", "Value"),
+            AppResources.Get("developHistogramRedShort", "Text"),
+            AppResources.Get("developHistogramGreenShort", "Text"),
+            AppResources.Get("developHistogramBlueShort", "Text"),
+            AppResources.Get("developHistogramKeyboardHelp", "Value"));
+        string basic = AppResources.Get("developTabBasic", "Value");
+        string baseTitle = AppResources.Get("developTabBase", "Value");
+        string edit = AppResources.Get("developTabEdit", "Value");
+        string defects = AppResources.Get("developTabDefects", "Value");
+        string info = AppResources.Get("developTabInfo", "Value");
+        string reset = AppResources.Get("developTabReset", "Value");
+        SetLocalizedNameAndTooltip(BasicTabButton, basic);
+        SetLocalizedNameAndTooltip(BaseTabButton, baseTitle);
+        SetLocalizedNameAndTooltip(EditTabButton, edit);
+        SetLocalizedNameAndTooltip(DefectsTabButton, defects);
+        SetLocalizedNameAndTooltip(InfoTabButton, info);
+        SetLocalizedNameAndTooltip(ResetTabButton, reset);
+        BaseSectionTitleText.Text = baseTitle;
+        AutomationProperties.SetName(BaseControlCard, baseTitle);
+        SetInspectorSectionText(
+            BasicToneSection,
+            BasicToneHeaderButton,
+            BasicToneSectionTitleText,
+            BasicToneResetButton,
+            AppResources.Get("developSectionBasicTone", "Text"));
+        SetInspectorSectionText(
+            ToneCurveSection,
+            ToneCurveHeaderButton,
+            ToneCurveSectionTitleText,
+            ToneCurveResetButton,
+            AppResources.Get("developSectionToneCurve", "Text"));
+        SetInspectorSectionText(
+            ColorMixerSection,
+            ColorMixerHeaderButton,
+            ColorMixerSectionTitleText,
+            ColorMixerResetButton,
+            AppResources.Get("developSectionColorMixer", "Text"));
+        SetInspectorSectionText(
+            ColorGradingSection,
+            ColorGradingHeaderButton,
+            ColorGradingSectionTitleText,
+            ColorGradingResetButton,
+            AppResources.Get("developSectionColorGrading", "Text"));
     }
 
-    private static void SetNameAndTooltip(Button button, string resourceKey)
+    private static void SetInspectorSectionText(
+        FrameworkElement section,
+        ButtonBase headerButton,
+        TextBlock titleText,
+        Button resetButton,
+        string title)
+    {
+        titleText.Text = title;
+        AutomationProperties.SetName(section, title);
+        SetLocalizedNameAndTooltip(headerButton, title);
+        string resetName = AppResources.Get("developResetSectionFormat", "Value")
+            .Replace("%@", title, StringComparison.Ordinal);
+        SetLocalizedNameAndTooltip(resetButton, resetName);
+    }
+
+    private static void SetNameAndTooltip(ButtonBase button, string resourceKey)
     {
         string text = AppResources.Get(resourceKey, "Value");
+        AutomationProperties.SetName(button, text);
+        ToolTipService.SetToolTip(button, text);
+    }
+
+    private static void SetLocalizedNameAndTooltip(ButtonBase button, string text)
+    {
         AutomationProperties.SetName(button, text);
         ToolTipService.SetToolTip(button, text);
     }
