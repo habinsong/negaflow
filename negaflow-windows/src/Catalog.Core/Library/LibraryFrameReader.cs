@@ -14,9 +14,18 @@ public static class LibraryFrameReader
     internal const string SourcePathName = "rawScanPath";
     internal const string DisplayNameName = "customDisplayName";
     internal const string ParametersName = "params";
+    internal const string BaseEstimationModeName = "baseEstimationMode";
     internal const string ManualBaseName = "manualBaseRGB";
+    internal const string FilmStockDminIdName = "filmStockDminID";
+    internal const string LightSourceProfileIdName = "lightSourceProfileID";
+    internal const string ScannerProfileIdName = "scannerProfileID";
     internal const string ExposureName = "exposure";
     internal const string ContrastName = "contrast";
+    internal const string DensityName = "density";
+    internal const string HighlightName = "highlight";
+    internal const string ShadowName = "shadow";
+    internal const string WhitesName = "whites";
+    internal const string BlacksName = "blacks";
     internal const string CurveHighlightsName = "curveHighlights";
     internal const string CurveLightsName = "curveLights";
     internal const string CurveDarksName = "curveDarks";
@@ -75,6 +84,10 @@ public static class LibraryFrameReader
         {
             return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidManualBase);
         }
+        if (!TryReadBaseRecipe(parameters, out BaseRecipe baseRecipe))
+        {
+            return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidBaseRecipe);
+        }
         if (!TryReadTone(parameters, out ToneAdjustment tone))
         {
             return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidToneValue);
@@ -92,7 +105,10 @@ public static class LibraryFrameReader
             displayName,
             snapshot,
             manualBase,
-            tone));
+            tone)
+        {
+            Base = baseRecipe,
+        });
     }
 
     private static bool TryReadManualBase(
@@ -127,11 +143,74 @@ public static class LibraryFrameReader
         return true;
     }
 
+    private static bool TryReadBaseRecipe(
+        JsonElement parameters,
+        out BaseRecipe baseRecipe)
+    {
+        baseRecipe = BaseRecipe.Auto;
+        BaseEstimationMode mode = BaseEstimationMode.Auto;
+        if (parameters.TryGetProperty(BaseEstimationModeName, out JsonElement modeElement) &&
+            modeElement.ValueKind != JsonValueKind.Null)
+        {
+            if (modeElement.ValueKind != JsonValueKind.String)
+            {
+                return false;
+            }
+            mode = modeElement.GetString() switch
+            {
+                "auto" => BaseEstimationMode.Auto,
+                "preset" => BaseEstimationMode.Preset,
+                "manual" => BaseEstimationMode.Manual,
+                _ => (BaseEstimationMode)(-1),
+            };
+            if (!Enum.IsDefined(mode))
+            {
+                return false;
+            }
+        }
+
+        if (!TryReadOptionalIdentifier(parameters, FilmStockDminIdName, out string? filmStockDminId) ||
+            !TryReadOptionalIdentifier(parameters, LightSourceProfileIdName, out string? lightSourceProfileId) ||
+            !TryReadOptionalIdentifier(parameters, ScannerProfileIdName, out string? scannerProfileId))
+        {
+            return false;
+        }
+
+        baseRecipe = new BaseRecipe(mode, filmStockDminId, lightSourceProfileId, scannerProfileId);
+        return true;
+    }
+
+    private static bool TryReadOptionalIdentifier(
+        JsonElement parameters,
+        string name,
+        out string? identifier)
+    {
+        identifier = null;
+        if (!parameters.TryGetProperty(name, out JsonElement element) ||
+            element.ValueKind == JsonValueKind.Null)
+        {
+            return true;
+        }
+        if (element.ValueKind != JsonValueKind.String ||
+            string.IsNullOrWhiteSpace(element.GetString()))
+        {
+            return false;
+        }
+
+        identifier = element.GetString();
+        return true;
+    }
+
     private static bool TryReadTone(JsonElement parameters, out ToneAdjustment tone)
     {
         tone = default;
         if (!TryReadFiniteDouble(parameters, ExposureName, out double exposure) ||
             !TryReadFiniteDouble(parameters, ContrastName, out double contrast) ||
+            !TryReadFiniteDouble(parameters, DensityName, out double density) ||
+            !TryReadFiniteDouble(parameters, HighlightName, out double highlight) ||
+            !TryReadFiniteDouble(parameters, ShadowName, out double shadow) ||
+            !TryReadFiniteDouble(parameters, WhitesName, out double whites) ||
+            !TryReadFiniteDouble(parameters, BlacksName, out double blacks) ||
             !TryReadFiniteDouble(parameters, CurveHighlightsName, out double highlights) ||
             !TryReadFiniteDouble(parameters, CurveLightsName, out double lights) ||
             !TryReadFiniteDouble(parameters, CurveDarksName, out double darks) ||
@@ -140,7 +219,18 @@ public static class LibraryFrameReader
             return false;
         }
 
-        tone = new ToneAdjustment(exposure, contrast, highlights, lights, darks, shadows);
+        tone = new ToneAdjustment(
+            exposure,
+            contrast,
+            highlights,
+            lights,
+            darks,
+            shadows,
+            density,
+            highlight,
+            shadow,
+            whites,
+            blacks);
         return true;
     }
 

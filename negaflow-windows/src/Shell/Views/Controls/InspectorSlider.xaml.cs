@@ -1,0 +1,302 @@
+using Microsoft.UI.Input;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI.Xaml.Input;
+using Negaflow.Shell.Develop;
+using Windows.System;
+using Windows.UI.Core;
+
+namespace Negaflow.Shell.Views.Controls;
+
+public sealed partial class InspectorSlider : UserControl
+{
+    private bool isSynchronizing;
+    private bool draftEdited;
+
+    public InspectorSlider()
+    {
+        InitializeComponent();
+        SynchronizeControls();
+    }
+
+    public static readonly DependencyProperty LabelProperty = DependencyProperty.Register(
+        nameof(Label),
+        typeof(string),
+        typeof(InspectorSlider),
+        new PropertyMetadata(string.Empty, OnPropertyChanged));
+
+    public static readonly DependencyProperty MinimumProperty = DependencyProperty.Register(
+        nameof(Minimum),
+        typeof(double),
+        typeof(InspectorSlider),
+        new PropertyMetadata(0d, OnPropertyChanged));
+
+    public static readonly DependencyProperty MaximumProperty = DependencyProperty.Register(
+        nameof(Maximum),
+        typeof(double),
+        typeof(InspectorSlider),
+        new PropertyMetadata(1d, OnPropertyChanged));
+
+    public static readonly DependencyProperty ValueProperty = DependencyProperty.Register(
+        nameof(Value),
+        typeof(double),
+        typeof(InspectorSlider),
+        new PropertyMetadata(0d, OnPropertyChanged));
+
+    public static readonly DependencyProperty ResetValueProperty = DependencyProperty.Register(
+        nameof(ResetValue),
+        typeof(double),
+        typeof(InspectorSlider),
+        new PropertyMetadata(0d));
+
+    public static readonly DependencyProperty CanResetProperty = DependencyProperty.Register(
+        nameof(CanReset),
+        typeof(bool),
+        typeof(InspectorSlider),
+        new PropertyMetadata(true));
+
+    public static readonly DependencyProperty SliderAutomationIdProperty = DependencyProperty.Register(
+        nameof(SliderAutomationId),
+        typeof(string),
+        typeof(InspectorSlider),
+        new PropertyMetadata(string.Empty, OnPropertyChanged));
+
+    public string Label
+    {
+        get => (string)GetValue(LabelProperty);
+        set => SetValue(LabelProperty, value);
+    }
+
+    public double Minimum
+    {
+        get => (double)GetValue(MinimumProperty);
+        set => SetValue(MinimumProperty, value);
+    }
+
+    public double Maximum
+    {
+        get => (double)GetValue(MaximumProperty);
+        set => SetValue(MaximumProperty, value);
+    }
+
+    public double Value
+    {
+        get => (double)GetValue(ValueProperty);
+        set => SetValue(ValueProperty, value);
+    }
+
+    public double ResetValue
+    {
+        get => (double)GetValue(ResetValueProperty);
+        set => SetValue(ResetValueProperty, value);
+    }
+
+    public bool CanReset
+    {
+        get => (bool)GetValue(CanResetProperty);
+        set => SetValue(CanResetProperty, value);
+    }
+
+    public string SliderAutomationId
+    {
+        get => (string)GetValue(SliderAutomationIdProperty);
+        set => SetValue(SliderAutomationIdProperty, value);
+    }
+
+    public event EventHandler<InspectorSliderValueChangedEventArgs>? ValueChanged;
+
+    private static void OnPropertyChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args)
+    {
+        _ = args;
+        ((InspectorSlider)sender).SynchronizeControls();
+    }
+
+    private void SynchronizeControls()
+    {
+        if (Slider is null || !double.IsFinite(Minimum) || !double.IsFinite(Maximum) || Minimum > Maximum)
+        {
+            return;
+        }
+
+        isSynchronizing = true;
+        double value = InspectorSliderValue.Clamp(Value, Minimum, Maximum);
+        if (Value != value)
+        {
+            SetValue(ValueProperty, value);
+        }
+
+        LabelText.Text = Label;
+        Slider.Minimum = Minimum;
+        Slider.Maximum = Maximum;
+        Slider.Value = value;
+        ValueText.Text = value.ToString("+0.00;-0.00;0.00", System.Globalization.CultureInfo.InvariantCulture);
+        if (ValueEditor.Visibility == Visibility.Visible)
+        {
+            ValueEditor.Text = value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+            draftEdited = false;
+        }
+        AutomationProperties.SetName(Slider, Label);
+        AutomationProperties.SetAutomationId(Slider, SliderAutomationId);
+        AutomationProperties.SetHelpText(Slider, "Arrow keys adjust by 0.01. Shift+Arrow adjusts by 0.10.");
+        AutomationProperties.SetName(ValueButton, $"{Label} value");
+        AutomationProperties.SetName(ValueEditor, $"{Label} value");
+        AutomationProperties.SetAutomationId(ValueButton, $"{SliderAutomationId}.value");
+        AutomationProperties.SetAutomationId(ValueEditor, $"{SliderAutomationId}.value");
+        AutomationProperties.SetLabeledBy(ValueButton, LabelText);
+        AutomationProperties.SetLabeledBy(ValueEditor, LabelText);
+        AutomationProperties.SetHelpText(
+            ValueEditor,
+            $"Enter a number from {Minimum:0.##} to {Maximum:0.##}.");
+        isSynchronizing = false;
+    }
+
+    private void OnSliderValueChanged(object sender, RangeBaseValueChangedEventArgs args)
+    {
+        _ = sender;
+        if (!isSynchronizing)
+        {
+            SetControlValue(args.NewValue);
+        }
+    }
+
+    private void OnSliderKeyDown(object sender, KeyRoutedEventArgs args)
+    {
+        _ = sender;
+        bool increase = args.Key is VirtualKey.Right or VirtualKey.Up;
+        bool decrease = args.Key is VirtualKey.Left or VirtualKey.Down;
+        if (!increase && !decrease)
+        {
+            return;
+        }
+
+        bool coarse = InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Shift)
+            .HasFlag(CoreVirtualKeyStates.Down);
+        SetControlValue(InspectorSliderValue.Adjust(Value, Minimum, Maximum, increase, coarse));
+        args.Handled = true;
+    }
+
+    private void OnSliderDoubleTapped(object sender, DoubleTappedRoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (CanReset)
+        {
+            SetControlValue(ResetValue);
+        }
+    }
+
+    private void OnValueButtonClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        ValueEditor.Text = Value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+        ValueEditor.ClearValue(ForegroundProperty);
+        ClearEditorError();
+        draftEdited = false;
+        ValueEditor.Visibility = Visibility.Visible;
+        ValueButton.Visibility = Visibility.Collapsed;
+        ValueEditor.Focus(FocusState.Programmatic);
+        ValueEditor.SelectAll();
+    }
+
+    private void OnEditorKeyDown(object sender, KeyRoutedEventArgs args)
+    {
+        _ = sender;
+        if (args.Key == VirtualKey.Enter)
+        {
+            CommitEditor();
+            args.Handled = true;
+            return;
+        }
+        if (args.Key == VirtualKey.Escape)
+        {
+            CancelEditor();
+            args.Handled = true;
+        }
+    }
+
+    private void OnEditorLostFocus(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (draftEdited)
+        {
+            CommitEditor();
+        }
+        else
+        {
+            CancelEditor();
+        }
+    }
+
+    private void OnEditorTextChanging(TextBox sender, TextBoxTextChangingEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        ClearEditorError();
+        if (!isSynchronizing)
+        {
+            draftEdited = true;
+        }
+    }
+
+    private void CommitEditor()
+    {
+        if (!InspectorSliderValue.TryParse(ValueEditor.Text, Minimum, Maximum, out double parsed))
+        {
+            ValueEditor.Style = (Style)Resources["InspectorSliderValueEditorErrorStyle"];
+            _ = MessageBeep(0);
+            AutomationProperties.SetHelpText(
+                ValueEditor,
+                $"Enter a number from {Minimum:0.##} to {Maximum:0.##}. The current value is invalid.");
+            ValueEditor.Focus(FocusState.Programmatic);
+            return;
+        }
+
+        SetControlValue(parsed);
+        ClearEditorError();
+        draftEdited = false;
+        ValueEditor.Visibility = Visibility.Collapsed;
+        ValueButton.Visibility = Visibility.Visible;
+    }
+
+    private void CancelEditor()
+    {
+        ClearEditorError();
+        draftEdited = false;
+        ValueEditor.Visibility = Visibility.Collapsed;
+        ValueButton.Visibility = Visibility.Visible;
+    }
+
+    private void ClearEditorError()
+    {
+        ValueEditor.Style = (Style)Resources["InspectorSliderValueEditorStyle"];
+        AutomationProperties.SetHelpText(
+            ValueEditor,
+            $"Enter a number from {Minimum:0.##} to {Maximum:0.##}.");
+    }
+
+    private void SetControlValue(double value)
+    {
+        double clamped = InspectorSliderValue.Clamp(value, Minimum, Maximum);
+        if (Value == clamped)
+        {
+            SynchronizeControls();
+            return;
+        }
+
+        SetValue(ValueProperty, clamped);
+        SynchronizeControls();
+        ValueChanged?.Invoke(this, new InspectorSliderValueChangedEventArgs(clamped));
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool MessageBeep(uint type);
+}
+
+public sealed class InspectorSliderValueChangedEventArgs(double value) : EventArgs
+{
+    public double Value { get; } = value;
+}

@@ -7,14 +7,20 @@ public enum DevelopRequestRefusal
 {
     None,
 
-    /// <summary>수동 Dmin 이 없습니다. Windows 에는 아직 auto base 추정이 없습니다.</summary>
+    /// <summary>Manual 모드에 저장된 Dmin 이 없습니다.</summary>
     MissingManualBase,
+
+    MissingFilmStock,
+
+    UnsupportedBaseEstimationMode,
 
     /// <summary>
     /// rendered-digital graph 는 미구현입니다. 네이티브도 같은 이유로 거부하지만, 여기서 먼저
     /// 막아야 사용자가 현상이 시작된 뒤가 아니라 버튼을 누르기 전에 알 수 있습니다.
     /// </summary>
     UnsupportedDigitalSource,
+
+    UnsupportedPositiveFilm,
 
     /// <summary>출력 형식이 알려진 값이 아닙니다.</summary>
     UnknownOutputFormat,
@@ -64,9 +70,35 @@ public static class DevelopRequestFactory
             return DevelopRequestResult.Failure(
                 DevelopRequestRefusal.UnsupportedDigitalSource);
         }
-        if (frame.ManualBase is not { } manualBase)
+        if (frame.Route.FilmType is not (FilmType.ColorNegative or FilmType.BlackAndWhiteNegative))
         {
-            return DevelopRequestResult.Failure(DevelopRequestRefusal.MissingManualBase);
+            return DevelopRequestResult.Failure(DevelopRequestRefusal.UnsupportedPositiveFilm);
+        }
+        DevelopBaseEstimationMode baseMode;
+        ManualBaseRgb manualBase = default;
+        string? filmStockDminId = null;
+        string? lightSourceProfileId = null;
+        switch (frame.Base.Mode)
+        {
+            case BaseEstimationMode.Auto:
+                baseMode = DevelopBaseEstimationMode.Auto;
+                break;
+            case BaseEstimationMode.Manual when frame.ManualBase is { } selectedManualBase:
+                baseMode = DevelopBaseEstimationMode.Manual;
+                manualBase = selectedManualBase;
+                break;
+            case BaseEstimationMode.Manual:
+                return DevelopRequestResult.Failure(DevelopRequestRefusal.MissingManualBase);
+            case BaseEstimationMode.Preset when !string.IsNullOrWhiteSpace(frame.Base.FilmStockDminId):
+                baseMode = DevelopBaseEstimationMode.Preset;
+                filmStockDminId = frame.Base.FilmStockDminId;
+                lightSourceProfileId = frame.Base.LightSourceProfileId;
+                break;
+            case BaseEstimationMode.Preset:
+                return DevelopRequestResult.Failure(DevelopRequestRefusal.MissingFilmStock);
+            default:
+                return DevelopRequestResult.Failure(
+                    DevelopRequestRefusal.UnsupportedBaseEstimationMode);
         }
 
         return DevelopRequestResult.Success(new DevelopExportRequest
@@ -75,11 +107,19 @@ public static class DevelopRequestFactory
             DestinationPath = destinationPath,
             Format = format,
             FilmType = MapFilmType(frame.Route.FilmType),
+            BaseEstimationMode = baseMode,
             DminRed = (float)manualBase.Red,
             DminGreen = (float)manualBase.Green,
             DminBlue = (float)manualBase.Blue,
+            FilmStockDminId = filmStockDminId,
+            LightSourceProfileId = lightSourceProfileId,
             ExposureStops = (float)frame.Tone.Exposure,
             Contrast = (float)frame.Tone.Contrast,
+            Density = (float)frame.Tone.Density,
+            Highlight = (float)frame.Tone.Highlight,
+            Shadow = (float)frame.Tone.Shadow,
+            Whites = (float)frame.Tone.Whites,
+            Blacks = (float)frame.Tone.Blacks,
             Highlights = (float)frame.Tone.CurveHighlights,
             Lights = (float)frame.Tone.CurveLights,
             Darks = (float)frame.Tone.CurveDarks,
@@ -90,13 +130,13 @@ public static class DevelopRequestFactory
         });
     }
 
-    // 네거티브 현상은 컬러와 흑백 두 갈래뿐입니다. 포지티브 필름 타입은 반전 자체가 다른 경로이며
-    // 아직 없으므로, 여기서 컬러로 뭉개지 않고 route 가 이미 걸러 준 것에만 의존합니다.
+    // 이 factory는 positive route를 명시 거부한 뒤에만 부릅니다. 포지티브를 color negative로
+    // 뭉개면 Auto가 반전된 artifact를 정상 결과처럼 publish할 수 있습니다.
     private static NegativeFilmType MapFilmType(FilmType filmType) => filmType switch
     {
-        FilmType.BlackAndWhiteNegative or FilmType.BlackAndWhitePositive =>
-            NegativeFilmType.BlackAndWhite,
-        _ => NegativeFilmType.Color,
+        FilmType.ColorNegative => NegativeFilmType.Color,
+        FilmType.BlackAndWhiteNegative => NegativeFilmType.BlackAndWhite,
+        _ => throw new ArgumentOutOfRangeException(nameof(filmType)),
     };
 
     private static FilmEmulationProfile MapFilmEmulation(FilmEmulation emulation) =>

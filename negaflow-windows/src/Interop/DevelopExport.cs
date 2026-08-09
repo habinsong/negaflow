@@ -12,6 +12,26 @@ public enum NegativeFilmType
     BlackAndWhite = 1,
 }
 
+public enum DevelopBaseEstimationMode
+{
+    Auto = 0,
+    Preset = 1,
+    Manual = 2,
+}
+
+public enum DevelopBaseSource
+{
+    Manual = 0,
+    AutoSceneEdge = 1,
+    AutoFallback = 2,
+    AutoConnectedComponent = 3,
+    AutoContinuousBorder = 4,
+    AutoDistributedMask = 5,
+    AutoStripFallback = 6,
+    PresetMeasured = 7,
+    PresetFallback = 8,
+}
+
 public enum DevelopSourceKind
 {
     FilmScan = 0,
@@ -72,15 +92,32 @@ public sealed class DevelopExportRequest
 
     public NegativeFilmType FilmType { get; init; } = NegativeFilmType.Color;
 
+    public DevelopBaseEstimationMode BaseEstimationMode { get; init; } =
+        DevelopBaseEstimationMode.Manual;
+
     public float DminRed { get; init; }
 
     public float DminGreen { get; init; }
 
     public float DminBlue { get; init; }
 
+    public string? FilmStockDminId { get; init; }
+
+    public string? LightSourceProfileId { get; init; }
+
     public float ExposureStops { get; init; }
 
     public float Contrast { get; init; }
+
+    public float Density { get; init; }
+
+    public float Highlight { get; init; }
+
+    public float Shadow { get; init; }
+
+    public float Whites { get; init; }
+
+    public float Blacks { get; init; }
 
     public float Highlights { get; init; }
 
@@ -115,7 +152,11 @@ public sealed class DevelopExportResult
         ulong sourceFileBytes,
         ulong outputFileBytes,
         ulong filmLookWorkspaceBytes,
-        ulong wallMicroseconds)
+        ulong wallMicroseconds,
+        float appliedDminRed = 0,
+        float appliedDminGreen = 0,
+        float appliedDminBlue = 0,
+        DevelopBaseSource baseSource = DevelopBaseSource.Manual)
     {
         Succeeded = succeeded;
         FailedStage = failedStage;
@@ -131,6 +172,10 @@ public sealed class DevelopExportResult
         OutputFileBytes = outputFileBytes;
         FilmLookWorkspaceBytes = filmLookWorkspaceBytes;
         WallMicroseconds = wallMicroseconds;
+        AppliedDminRed = appliedDminRed;
+        AppliedDminGreen = appliedDminGreen;
+        AppliedDminBlue = appliedDminBlue;
+        BaseSource = baseSource;
     }
 
     public bool Succeeded { get; }
@@ -164,4 +209,12 @@ public sealed class DevelopExportResult
     public ulong FilmLookWorkspaceBytes { get; }
 
     public ulong WallMicroseconds { get; }
+
+    public float AppliedDminRed { get; }
+
+    public float AppliedDminGreen { get; }
+
+    public float AppliedDminBlue { get; }
+
+    public DevelopBaseSource BaseSource { get; }
 }

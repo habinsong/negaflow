@@ -1,6 +1,6 @@
 # 다음에 어디서부터 이어서 할 것인가
 
-기준일: 2026-08-07 (SQLite 영속성 착수 후 갱신)
+기준일: 2026-08-09 (ABI 0.6 Auto base v2와 WinUI 캔버스 상태 반영)
 
 이 문서는 작업을 한동안 놓았다가 돌아왔을 때 가장 먼저 읽는 곳입니다. 이미 결정된 것을 다시
 논쟁하지 않고, 다음 한 걸음을 바로 시작하기 위한 기록입니다.
@@ -10,17 +10,19 @@
 전체 M0~M18 로드맵의 약 16%, 기반 구간 M0~M3 는 약 50% 입니다. 산정 근거는
 `overall-roadmap.md`, 항목별 증거는 `../STATUS.md` 에 있습니다.
 
-동작하는 것은 **CLI 수직 경로 하나**입니다. TIFF 디코드 → 스캐너 색상 → 수동 Dmin 현상 →
-톤·포인트 커브·Color Mixer·Color Grading·Primary Calibration → 명시적 film-scan Film Look →
-검증된 PNG16/TIFF16 게시까지 한 장이 끝까지 갑니다.
+동작하는 것은 **CLI 수직 경로와 첫 WinUI 관통 경로**입니다. TIFF 디코드 → 스캐너 색상 → 수동
+Dmin 현상 → 톤·포인트 커브·Color Mixer·Color Grading·Primary Calibration → 명시적 film-scan
+Film Look → 검증된 PNG16/TIFF16 게시까지 한 장이 끝까지 갑니다. WinUI 에서는 Import → 필름 base
+설정 → 노출 조정 → 같은 파이프라인의 미리보기 → Export 가 카탈로그와 C ABI 를 거쳐 동작합니다.
 
-- 네이티브 테스트 40개, 관리 assertion 340개, 전부 통과
+- 2026-08-09 x64 Release 재검증: native CTest 30/30, Catalog 303, Shell 200, Interop 44 assertion 통과
 - Windows CI 가 PR 마다 돌고 벽시계 약 2분 30초
 - 네이티브 엔진의 제3자 runtime dependency 0개 (Windows 기본 DLL 5개만)
 - **카탈로그가 SQLite 로 디스크에 남습니다.** frame 5만 개 기준 쓰기 527ms, 읽기 255ms
 
-**아직 앱은 존재하지 않습니다.** WinUI 셸은 6개 언어 골격뿐이고 엔진과도 카탈로그와도 연결돼
-있지 않습니다. GPU 경로는 착수 전입니다.
+**앱의 첫 관통 경로는 존재하지만 제품 UI는 아직 초기 단계입니다.** 현재 Develop 패널은 배관을
+검증하려고 만든 임시 표면이며, macOS Negaflow 의 UI/UX를 동일하게 옮긴 정식 Develop inspector,
+필름 base picker, 취소·진행률과 나머지 제품 surface가 남아 있습니다. GPU 경로는 착수 전입니다.
 
 **한 가지 사실이 바뀌었습니다.** 제품 payload 에 제3자 native 바이너리(`e_sqlite3.dll`)가
 처음 들어왔습니다. 네이티브 엔진의 0개는 그대로지만 두 문장은 이제 다른 뜻입니다. ADR-0025.
@@ -88,36 +90,36 @@ macOS catalog 를 여는 것은 결정 4에서 이미 배제했습니다.
 
 ---
 
-## 2. 세로 슬라이스 — 실질적으로 가장 중요합니다
+## 2. 세로 슬라이스 — 첫 관통 완료, 정식 UI/UX 이식이 다음입니다
 
-**카탈로그가 저장되기 시작했으므로 이제 이것이 최우선입니다.** `카탈로그 → C ABI → WinUI 셸` 을
-연결합니다. 위 1번의 2~4단계보다 먼저 해도 됩니다. 오히려 셸이 붙어야 backup 과 sidecar 의 실제
-호출 패턴이 드러납니다.
+`카탈로그 → C ABI → WinUI 셸` 첫 관통은 완료됐습니다. 이제 임시 Develop 표면을 macOS Negaflow의
+실제 UI/UX와 동일하게 이식하는 것이 최우선입니다. 배관은 유지하되 표면을 창작하지 않습니다.
 
 ### 진행 상황
 
-**C ABI 쪽 절반은 끝났습니다.** `nf_develop_export_v1` (ABI 0.2) 이 decode→develop→tone→Film
-Look→검증 게시 전체를 한 번의 호출로 돌리고, 관리 쪽 `NativeDevelopExporter.Run` 이 그것을
-감쌉니다. 실패는 **거부한 단계 + 그 단계 자신의 상태 이름**으로 돌아오므로, 없는 파일
+`nf_develop_export_v1` 과 `nf_develop_preview_v1` 을 포함한 현재 ABI 는 **0.5**입니다. 게시와
+미리보기는 같은 요청 구조와 파이프라인을 사용하며, 관리 쪽 `NativeDevelopExporter`가 감쌉니다.
+실패는 **거부한 단계 + 그 단계 자신의 상태 이름**으로 돌아오므로, 없는 파일
 (`observe_source_before`) 과 잘못된 요청 (`request_validation`) 이 구별됩니다.
 
-남은 것은 **셸 쪽 절반**입니다. 다음 순서로 하십시오.
+완료된 셸 관통 경로는 다음과 같습니다.
 
-1. `CatalogSession` 으로 카탈로그를 열고 frame 목록을 Library 에 띄웁니다. 아직 import 가 없으니
-   경로를 직접 넣는 임시 진입점이어도 됩니다.
-2. Develop 에서 슬라이더 하나(노출이 가장 싸다)를 `DevelopExportRequest` 에 연결합니다.
-3. Export 버튼이 `NativeDevelopExporter.Run` 을 호출하고 결과 파일을 씁니다.
+1. `CatalogSession` 으로 카탈로그를 열고 frame 목록을 Library/Develop 에 표시합니다.
+2. Windows App SDK file picker 로 TIFF 를 import 하고 필름 base와 노출을 저장합니다.
+3. `PreviewCoordinator` 가 겹친 요청 중 마지막 상태를 보존해 ABI 0.6 미리보기를 캔버스에 그립니다.
+4. Export 버튼이 `NativeDevelopExporter.Run` 을 호출하고 검증된 결과 파일을 씁니다.
 
 **스레딩을 여기서 틀리면 안 됩니다.** `NativeDevelopExporter.Run` 은 현상 전체 동안 블로킹하며,
 일부러 async 래퍼를 두지 않았습니다. UI 스레드에서 부르면 앱이 굳습니다. 백그라운드로 보내기
 **전에** `DispatcherQueue` 를 캡처하고, 결과는 `TryEnqueue` 로 되돌리십시오. 아래 함정 절을
 그대로 따르면 됩니다.
 
-취소와 진행률은 아직 ABI 에 없습니다. 세로 슬라이스에는 필요하지 않지만, 큰 프레임에서 사용자가
-기다리게 되는 순간 바로 필요해집니다.
+취소와 진행률은 아직 ABI 에 없습니다. 실제 스캔 해상도에서 바로 드러날 문제이므로 정식 UI 이식과
+대형 이미지 경로에서 함께 설계해야 합니다.
 
-**목표는 기능이 아닙니다.** 이미지 한 장이 Library 에 보이고, Develop 에서 슬라이더 하나가 먹고,
-Export 가 파일을 쓰면 충분합니다. 못생겨도 됩니다.
+다음 목표는 기능 수를 늘리는 것이 아니라, 이미 뚫린 경로를 macOS 제품과 동일한 UI/UX에 연결하는
+것입니다. 화면 구조·치수·간격·컨트롤 순서·상태 전이·키보드·접근성 의미를 고정 기준에서 추출하고
+WinUI 3 로 그대로 구현합니다. 운영체제가 강제하는 차이만 별도 delta 로 기록합니다.
 
 ### UI 는 창작하지 않습니다 — macOS 를 그대로 이식합니다
 
@@ -125,7 +127,7 @@ Export 가 파일을 쓰면 충분합니다. 못생겨도 됩니다.
 필름 base 슬라이더 3개, 노출 슬라이더, Export 버튼, 상태 문구는 전부 macOS 에 대응물이 있거나
 아예 다른 형태입니다.
 
-이식 대상은 `Sources/negaflowApp/Features/Develop/Inspector/` 이며 순서는
+이식 대상은 `negaflow-mac/Sources/negaflowApp/Features/Develop/Inspector/` 이며 순서는
 `DevelopAdjustmentSections.swift` 가 정의합니다.
 
 1. `basicToneSection`
@@ -157,8 +159,8 @@ UI 스레딩, 취소, 객체 수명, 사용자 조작 중 메모리 압박, C AB
 뒤늦게 깨지고, 그때는 이미 각 구성요소를 최적화해 둔 뒤라 재작업 비용이 큽니다. 얇더라도 끝까지
 한 번 뚫어 두면 구조와 패턴이 자리를 잡고 기본이 동작한다는 것이 증명됩니다.
 
-M8(ABI·셸)이 18%, M9~M14(제품 표면)가 2% 라는 것은 **앱이 아직 없다**는 뜻입니다. 남은 85% 에
-UI 와 장치 연동처럼 검증이 어렵고 되돌리기 비싼 것들이 몰려 있습니다.
+첫 앱 경로가 동작해도 M9~M14 제품 표면 대부분은 남아 있습니다. UI 와 장치 연동처럼 검증이 어렵고
+되돌리기 비싼 작업이 뒤에 몰려 있으므로, 임시 화면을 제품 완성으로 세지 않습니다.
 
 ### 미리 알아 둘 함정
 
@@ -175,13 +177,25 @@ WinUI 3 는 **STA** UI 모델입니다. 모든 UI 요소는 그것을 만든 스
 이 함정들은 CLI 에서 절대 드러나지 않습니다. 세로 슬라이스를 미루면 이것들을 M9 이후에 한꺼번에
 만나게 됩니다.
 
-**종료 조건 충족했습니다.** 실행 중인 앱에서 Export 를 눌러 현상된 PNG 가 디스크에 떨어졌습니다 —
-`Exported 631×403 in 142 ms`, 1,285,445바이트. 상태 표시줄은 `ABI 0.3 · X64` 입니다.
-근거는 `verification/2026-08-07-vertical-slice.md` 입니다.
+**첫 관통 종료 조건은 충족했습니다.** 실행 중인 앱에서 Import → base 설정 → 노출 → Export 를
+UI Automation 으로 조작해 `Exported 631×403 in 101 ms`를 확인했습니다. 이후 ABI 0.5
+`nf_develop_preview_v1`, 이어 Auto/Manual을 명시하는 ABI 0.6 v2와 WinUI 캔버스 렌더가 추가됐습니다. 관통 근거는
+`verification/2026-08-07-vertical-slice.md`, 미리보기 구현·테스트 근거는 `bb8d248`와 `98df788`입니다.
 
-**다음 한 걸음은 import 입니다.** 지금 frame 을 넣으려면 개발용 도구가 있어야 합니다. 그다음이
-미리보기(중앙은 아직 "이미지를 가져오세요")와 취소·진행률입니다. 631×403 에서 142ms 라 지금은
-드러나지 않지만 실제 스캔 해상도에서는 바로 필요합니다.
+**공통 slider/value control의 현재 연결은 Exposure와 수동 Base R/G/B입니다.** 고정 baseline의
+inspector 구조와 `baseline/swift-ui-metrics.json`을 기준으로 label·편집값·slider·keyboard nudge를
+재사용 control로 묶었습니다. Exposure만 double-click reset을 제공하며 수동 Base는 reset하지 않습니다.
+구현과 x64 증거는 `implementation/develop-inspector-slider.md`에 기록했습니다.
+
+**Base recipe의 Catalog persistence 경계와 첫 Auto v2 경로가 완료했습니다.** `baseEstimationMode`, film stock,
+light source, scanner profile ID는 수동 Dmin과 독립적으로 보존됩니다. Auto는 ABI 0.6의 별도 request로
+decode 후 linear working image edge를 측정해 scene-ranged inversion에 전달하며, Preview와 Export가 같은
+resolver 결과를 사용합니다. v1 수동 ABI는 유지합니다. 이 resolver는 macOS의 scene-edge fallback만 이식한
+`FilmBaseEstimator` sampled-grid fallback과 chromogenic B&W 재시도, bundled film-stock/light-source resolver,
+Film mode picker, ABI 0.10 preview/export 연결은 구현되었습니다. 다음 한 걸음은 scanner-profile grade와
+제조사별 Film picker presentation, canvas base picker/reset입니다. Basic Tone과 Parametric Tone Curve의 네 slider는
+Inspector에 연결되었지만 `ToneCurveEditor` 캔버스와 rendered/UIA 검증은 아직 별도 작업입니다. 취소·진행률과
+대형 이미지 스케줄링은 그 다음 필수 경로입니다.
 
 ---
 
@@ -358,7 +372,7 @@ TWAIN 과 WIA 는 검토할 필요가 없습니다. 참고로 WIA 는 600dpi 상
 Apache-2.0 입니다. 그래서 별도 저장소, 별도 프로세스, JSON 경계입니다. `verify-provenance.py` 가
 본체에 SANE 구현 마커(`sanei_`, `libsane`, `sane-backends`)가 들어오는 것과 릴리스 스크립트가
 플러그인을 번들하는 것을 **자동으로 막습니다.** 이 경계를 흐리면 본체의 라이선스가 오염됩니다.
-어떤 이유로도 SANE 코드를 `Negaflow.Windows` 안으로 들이지 마십시오.
+어떤 이유로도 SANE 코드를 `negaflow-windows` 안으로 들이지 마십시오.
 
 **Windows 쪽에서 할 일은 플러그인을 만드는 것이 아니라 그 프로토콜의 클라이언트가 되는 것입니다.**
 macOS 앱에 이미 호스트 구현이 있으므로 계약은 정해져 있습니다.
@@ -397,12 +411,12 @@ M15 에 착수할 때는 **플러그인 구현이 아니라 실제 장치 검증
 
 ```powershell
 # Windows 전체 게이트 (네이티브 + 관리)
-.\Negaflow.Windows\scripts\ci-gate.ps1 -Preset x64-release
+.\negaflow-windows\scripts\ci-gate.ps1 -Preset x64-release
 ```
 
 ```bash
 # 저장소 전체 provenance·라이선스 게이트
-py scripts/ci/verify-provenance.py
+py negaflow-mac/scripts/ci/verify-provenance.py
 ```
 
-macOS 쪽 짝은 `scripts/ci-gate.sh` 입니다. 두 입구는 분리돼 있으니 한쪽만 고치면 갈라집니다.
+macOS 쪽 짝은 `negaflow-mac/scripts/ci-gate.sh` 입니다. 두 입구는 분리돼 있으니 한쪽만 고치면 갈라집니다.

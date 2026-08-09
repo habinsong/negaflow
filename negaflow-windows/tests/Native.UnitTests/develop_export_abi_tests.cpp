@@ -43,6 +43,66 @@ void expect(const bool condition, const char* const message) {
     return result;
 }
 
+[[nodiscard]] nf_develop_export_request_v2 make_request_v2(
+    const wchar_t* const source,
+    const wchar_t* const destination,
+    const std::uint32_t base_mode = NF_BASE_ESTIMATION_AUTO) {
+    nf_develop_export_request_v2 request{};
+    request.struct_size = static_cast<std::uint32_t>(sizeof(request));
+    request.source_path = source;
+    request.destination_path = destination;
+    request.output_format = NF_EXPORT_FORMAT_PNG16;
+    request.film_type = NF_FILM_TYPE_COLOR;
+    request.base_estimation_mode = base_mode;
+    request.film_look_source_kind = NF_DEVELOP_SOURCE_FILM_SCAN;
+    request.film_emulation = 0U;
+    request.film_emulation_intensity = 0.5;
+    request.rows_per_copy = 64U;
+    return request;
+}
+
+[[nodiscard]] nf_develop_export_result_v2 make_result_v2() {
+    nf_develop_export_result_v2 result{};
+    result.struct_size = static_cast<std::uint32_t>(sizeof(result));
+    return result;
+}
+
+[[nodiscard]] nf_develop_export_request_v3 make_request_v3(
+    const wchar_t* const source,
+    const wchar_t* const destination,
+    const std::uint32_t base_mode = NF_BASE_ESTIMATION_AUTO) {
+    nf_develop_export_request_v3 request{};
+    request.struct_size = static_cast<std::uint32_t>(sizeof(request));
+    request.source_path = source;
+    request.destination_path = destination;
+    request.output_format = NF_EXPORT_FORMAT_PNG16;
+    request.film_type = NF_FILM_TYPE_COLOR;
+    request.base_estimation_mode = base_mode;
+    request.film_look_source_kind = NF_DEVELOP_SOURCE_FILM_SCAN;
+    request.film_emulation = 0U;
+    request.film_emulation_intensity = 0.5;
+    request.rows_per_copy = 64U;
+    return request;
+}
+
+[[nodiscard]] nf_develop_export_request_v4 make_request_v4(
+    const wchar_t* const source,
+    const wchar_t* const destination,
+    const std::uint32_t base_mode = NF_BASE_ESTIMATION_AUTO) {
+    nf_develop_export_request_v4 request{};
+    request.struct_size = static_cast<std::uint32_t>(sizeof(request));
+    request.source_path = source;
+    request.destination_path = destination;
+    request.output_format = NF_EXPORT_FORMAT_PNG16;
+    request.film_type = NF_FILM_TYPE_COLOR;
+    request.base_estimation_mode = base_mode;
+    request.film_look_source_kind = NF_DEVELOP_SOURCE_FILM_SCAN;
+    request.film_emulation = 0U;
+    request.film_emulation_intensity = 0.5;
+    request.rows_per_copy = 64U;
+    return request;
+}
+
 void test_argument_contract() {
     nf_develop_export_request_v1 request = make_request(L"a.tif", L"b.png");
     nf_develop_export_result_v1 result = make_result();
@@ -138,6 +198,112 @@ void test_request_validation() {
         zero_rows, "invalid_rows_per_copy", "a zero row-per-copy control is refused");
 }
 
+void test_v2_contract() {
+    expect(sizeof(nf_develop_export_request_v2) == 96U, "v2 request layout is fixed");
+    expect(sizeof(nf_develop_export_result_v2) == 152U, "v2 result layout is fixed");
+
+    nf_develop_export_request_v2 request = make_request_v2(L"a.tif", L"b.png");
+    nf_develop_export_result_v2 result = make_result_v2();
+    expect(
+        nf_develop_export_v2(nullptr, &result) == NF_STATUS_INVALID_ARGUMENT,
+        "v2 null request is rejected");
+    expect(
+        nf_develop_export_v2(&request, nullptr) == NF_STATUS_INVALID_ARGUMENT,
+        "v2 null result is rejected");
+
+    nf_develop_export_request_v2 small = request;
+    small.struct_size = 4U;
+    expect(
+        nf_develop_export_v2(&small, &result) == NF_STATUS_STRUCT_TOO_SMALL,
+        "v2 undersized request is rejected");
+
+    nf_develop_export_request_v2 unknown = request;
+    unknown.base_estimation_mode = 99U;
+    expect(
+        nf_develop_export_v2(&unknown, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            std::strcmp(result.failure_name, "unknown_base_estimation_mode") == 0,
+        "v2 unknown base mode is refused");
+
+    nf_develop_export_request_v2 preset = request;
+    preset.base_estimation_mode = NF_BASE_ESTIMATION_PRESET;
+    expect(
+        nf_develop_export_v2(&preset, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            std::strcmp(result.failure_name, "unsupported_base_estimation_mode") == 0,
+        "v2 preset is not silently treated as auto");
+}
+
+void test_v3_contract() {
+    expect(sizeof(nf_develop_export_request_v3) == 112U, "v3 request layout is fixed");
+
+    nf_develop_export_request_v3 request = make_request_v3(L"a.tif", L"b.png");
+    nf_develop_export_result_v2 result = make_result_v2();
+    expect(
+        nf_develop_export_v3(nullptr, &result) == NF_STATUS_INVALID_ARGUMENT,
+        "v3 null request is rejected");
+    expect(
+        nf_develop_export_v3(&request, nullptr) == NF_STATUS_INVALID_ARGUMENT,
+        "v3 null result is rejected");
+
+    nf_develop_export_request_v3 small = request;
+    small.struct_size = 4U;
+    expect(
+        nf_develop_export_v3(&small, &result) == NF_STATUS_STRUCT_TOO_SMALL,
+        "v3 undersized request is rejected");
+
+    request.density = 1.0F;
+    request.highlight = -1.0F;
+    request.shadow = 1.0F;
+    request.whites = -1.0F;
+    request.blacks = 1.0F;
+    expect(
+        nf_develop_export_v3(&request, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            result.failed_stage == NF_DEVELOP_STAGE_OBSERVE_SOURCE_BEFORE,
+        "v3 Basic Tone values reach source observation");
+}
+
+void test_v4_contract() {
+    expect(sizeof(nf_develop_export_request_v4) == 128U, "v4 request layout is fixed");
+    nf_develop_export_request_v4 request = make_request_v4(
+        L"a.tif", L"b.png", NF_BASE_ESTIMATION_PRESET);
+    nf_develop_export_result_v2 result = make_result_v2();
+    expect(
+        nf_develop_export_v4(nullptr, &result) == NF_STATUS_INVALID_ARGUMENT,
+        "v4 null request is rejected");
+    expect(
+        nf_develop_export_v4(&request, nullptr) == NF_STATUS_INVALID_ARGUMENT,
+        "v4 null result is rejected");
+
+    nf_develop_export_request_v4 small = request;
+    small.struct_size = 4U;
+    expect(
+        nf_develop_export_v4(&small, &result) == NF_STATUS_STRUCT_TOO_SMALL,
+        "v4 undersized request is rejected");
+
+    expect(
+        nf_develop_export_v4(&request, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            std::strcmp(result.failure_name, "missing_film_stock") == 0,
+        "v4 Film mode requires a stock identifier");
+
+    request.film_stock_dmin_id = L"not-a-stock";
+    expect(
+        nf_develop_export_v4(&request, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            std::strcmp(result.failure_name, "unknown_film_stock_or_light") == 0,
+        "v4 unknown stock fails closed");
+
+    request.film_stock_dmin_id = L"kodak-portra-400";
+    request.light_source_profile_id = L"warm-led";
+    expect(
+        nf_develop_export_v4(&request, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            result.failed_stage == NF_DEVELOP_STAGE_OBSERVE_SOURCE_BEFORE,
+        "v4 known Film identifiers reach source observation");
+}
+
 void test_missing_source_is_not_a_validation_error() {
     const std::filesystem::path absent =
         std::filesystem::temp_directory_path() / L"negaflow-abi-absent-source.tif";
@@ -162,6 +328,30 @@ void test_missing_source_is_not_a_validation_error() {
     expect(
         std::strcmp(result.failure_name, "ok") != 0,
         "a failure carries a name other than ok");
+}
+
+void test_v2_missing_source_is_not_a_validation_error() {
+    const std::filesystem::path absent =
+        std::filesystem::temp_directory_path() / L"negaflow-abi-v2-absent-source.tif";
+    std::error_code ignored{};
+    std::filesystem::remove(absent, ignored);
+    const std::wstring source_text = absent.wstring();
+    nf_develop_export_request_v2 request = make_request_v2(source_text.c_str(), nullptr);
+    nf_develop_export_result_v2 result = make_result_v2();
+    std::vector<std::uint8_t> pixels(64U * 64U * 4U, 0U);
+
+    expect(
+        nf_develop_preview_v2(
+            &request,
+            64U,
+            64U,
+            pixels.data(),
+            static_cast<std::uint32_t>(pixels.size()),
+            &result) == NF_STATUS_OK,
+        "v2 preview missing source is well formed");
+    expect(
+        result.succeeded == 0U && result.failed_stage == NF_DEVELOP_STAGE_OBSERVE_SOURCE_BEFORE,
+        "v2 auto reaches source observation without manual dmin");
 }
 
 void test_full_develop(const std::filesystem::path& source) {
@@ -211,6 +401,38 @@ void test_full_develop(const std::filesystem::path& source) {
         second.failed_stage == NF_DEVELOP_STAGE_OUTPUT,
         "the refusal comes from the output stage");
 
+    std::filesystem::remove(destination, ignored);
+}
+
+void test_v2_auto_develop(const std::filesystem::path& source) {
+    const std::filesystem::path destination =
+        std::filesystem::temp_directory_path() / L"negaflow-abi-v2-auto-develop.png";
+    std::error_code ignored{};
+    std::filesystem::remove(destination, ignored);
+    const std::wstring source_text = source.wstring();
+    const std::wstring destination_text = destination.wstring();
+    nf_develop_export_request_v2 request = make_request_v2(
+        source_text.c_str(),
+        destination_text.c_str());
+    nf_develop_export_result_v2 result = make_result_v2();
+
+    expect(
+        nf_develop_export_v2(&request, &result) == NF_STATUS_OK,
+        "v2 auto develop call is well formed");
+    expect(result.succeeded == 1U, "v2 auto develop succeeds");
+    expect(
+        result.base_source == NF_DEVELOP_BASE_SOURCE_AUTO_CONNECTED_COMPONENT ||
+        result.base_source == NF_DEVELOP_BASE_SOURCE_AUTO_SCENE_EDGE ||
+        result.base_source == NF_DEVELOP_BASE_SOURCE_AUTO_CONTINUOUS_BORDER ||
+        result.base_source == NF_DEVELOP_BASE_SOURCE_AUTO_DISTRIBUTED_MASK ||
+        result.base_source == NF_DEVELOP_BASE_SOURCE_AUTO_STRIP_FALLBACK ||
+            result.base_source == NF_DEVELOP_BASE_SOURCE_AUTO_FALLBACK,
+        "v2 auto develop reports resolver provenance");
+    expect(
+        result.applied_dmin[0] > 0.0F && result.applied_dmin[1] > 0.0F &&
+            result.applied_dmin[2] > 0.0F,
+        "v2 auto develop reports applied dmin");
+    expect(std::filesystem::exists(destination), "v2 auto develop publishes an artifact");
     std::filesystem::remove(destination, ignored);
 }
 
@@ -286,18 +508,125 @@ void test_preview(const std::filesystem::path& source) {
         "a null preview buffer is rejected");
 }
 
+void test_v2_auto_preview(const std::filesystem::path& source) {
+    const std::wstring source_text = source.wstring();
+    nf_develop_export_request_v2 request = make_request_v2(source_text.c_str(), nullptr);
+    constexpr std::uint32_t box = 128U;
+    std::vector<std::uint8_t> pixels(
+        static_cast<std::size_t>(box) * static_cast<std::size_t>(box) * 4U,
+        0U);
+    nf_develop_export_result_v2 result = make_result_v2();
+
+    expect(
+        nf_develop_preview_v2(
+            &request,
+            box,
+            box,
+            pixels.data(),
+            static_cast<std::uint32_t>(pixels.size()),
+            &result) == NF_STATUS_OK,
+        "v2 auto preview call is well formed");
+    expect(result.succeeded == 1U, "v2 auto preview succeeds");
+    expect(
+        result.base_source == NF_DEVELOP_BASE_SOURCE_AUTO_CONNECTED_COMPONENT ||
+        result.base_source == NF_DEVELOP_BASE_SOURCE_AUTO_SCENE_EDGE ||
+        result.base_source == NF_DEVELOP_BASE_SOURCE_AUTO_CONTINUOUS_BORDER ||
+        result.base_source == NF_DEVELOP_BASE_SOURCE_AUTO_DISTRIBUTED_MASK ||
+        result.base_source == NF_DEVELOP_BASE_SOURCE_AUTO_STRIP_FALLBACK ||
+            result.base_source == NF_DEVELOP_BASE_SOURCE_AUTO_FALLBACK,
+        "v2 auto preview reports resolver provenance");
+}
+
+void test_v3_basic_tone_preview(const std::filesystem::path& source) {
+    const std::wstring source_text = source.wstring();
+    nf_develop_export_request_v3 neutral = make_request_v3(source_text.c_str(), nullptr);
+    nf_develop_export_request_v3 adjusted = neutral;
+    adjusted.density = 0.75F;
+    adjusted.highlight = -0.50F;
+    adjusted.shadow = 0.50F;
+    constexpr std::uint32_t box = 128U;
+    std::vector<std::uint8_t> neutral_pixels(
+        static_cast<std::size_t>(box) * static_cast<std::size_t>(box) * 4U,
+        0U);
+    std::vector<std::uint8_t> adjusted_pixels(neutral_pixels.size(), 0U);
+    nf_develop_export_result_v2 neutral_result = make_result_v2();
+    nf_develop_export_result_v2 adjusted_result = make_result_v2();
+
+    expect(
+        nf_develop_preview_v3(
+            &neutral,
+            box,
+            box,
+            neutral_pixels.data(),
+            static_cast<std::uint32_t>(neutral_pixels.size()),
+            &neutral_result) == NF_STATUS_OK && neutral_result.succeeded == 1U,
+        "v3 neutral preview succeeds");
+    expect(
+        nf_develop_preview_v3(
+            &adjusted,
+            box,
+            box,
+            adjusted_pixels.data(),
+            static_cast<std::uint32_t>(adjusted_pixels.size()),
+            &adjusted_result) == NF_STATUS_OK && adjusted_result.succeeded == 1U,
+        "v3 Basic Tone preview succeeds");
+    expect(
+        neutral_result.image_width == adjusted_result.image_width &&
+            neutral_result.image_height == adjusted_result.image_height &&
+            neutral_pixels != adjusted_pixels,
+        "v3 Basic Tone changes preview pixels");
+}
+
+void test_v4_film_preview(const std::filesystem::path& source) {
+    const std::wstring source_text = source.wstring();
+    nf_develop_export_request_v4 request = make_request_v4(
+        source_text.c_str(), nullptr, NF_BASE_ESTIMATION_PRESET);
+    request.film_stock_dmin_id = L"kodak-portra-400";
+    request.light_source_profile_id = L"warm-led";
+    constexpr std::uint32_t box = 128U;
+    std::vector<std::uint8_t> pixels(
+        static_cast<std::size_t>(box) * static_cast<std::size_t>(box) * 4U,
+        0U);
+    nf_develop_export_result_v2 result = make_result_v2();
+    expect(
+        nf_develop_preview_v4(
+            &request,
+            box,
+            box,
+            pixels.data(),
+            static_cast<std::uint32_t>(pixels.size()),
+            &result) == NF_STATUS_OK && result.succeeded == 1U,
+        "v4 Film preview succeeds");
+    expect(
+        result.base_source == NF_DEVELOP_BASE_SOURCE_PRESET_MEASURED ||
+            result.base_source == NF_DEVELOP_BASE_SOURCE_PRESET_FALLBACK,
+        "v4 Film preview reports measured-or-fallback provenance");
+    expect(
+        result.applied_dmin[0] > 0.0F && result.applied_dmin[1] > 0.0F &&
+            result.applied_dmin[2] > 0.0F,
+        "v4 Film preview reports applied base");
+}
+
 }  // namespace
 
 int main(const int argument_count, const char* const arguments[]) {
     test_argument_contract();
     test_request_validation();
+    test_v2_contract();
+    test_v3_contract();
+    test_v4_contract();
     test_missing_source_is_not_a_validation_error();
+    test_v2_missing_source_is_not_a_validation_error();
 
     if (argument_count >= 2) {
         const std::filesystem::path source{arguments[1]};
         if (std::filesystem::exists(source)) {
             test_full_develop(source);
             test_preview(source);
+            test_v2_auto_develop(source);
+            test_v2_auto_preview(source);
+            test_v3_basic_tone_preview(source);
+            test_v4_film_preview(source);
         } else {
             std::cerr << "FAIL: the supplied source fixture does not exist\n";
             ++failures;

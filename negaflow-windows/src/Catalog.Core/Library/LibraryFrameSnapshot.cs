@@ -2,10 +2,35 @@ namespace Negaflow.Catalog;
 
 /// <summary>
 /// 수동 base picker 결과입니다. macOS 의 <c>params.manualBaseRGB</c> 와 같은 자리이며 세 채널
-/// 배열로 저장됩니다. 값이 없으면 macOS 는 auto base 추정으로 갑니다. **Windows 에는 아직 auto
-/// 추정이 없으므로** 없는 것을 0 이나 임의값으로 채우지 않고 없는 채로 돌려줍니다.
+/// 배열로 저장됩니다. 값이 없으면 Auto 모드에서 native scene-edge base 추정으로 갑니다. 이 값은
+/// Auto 추정의 입력으로 대신 쓰지 않습니다.
 /// </summary>
 public readonly record struct ManualBaseRgb(double Red, double Green, double Blue);
+
+/// <summary>
+/// Base estimation recipe metadata. The catalog preserves these fields before the Windows
+/// engine implements Auto and Film resolution, so UI must not expose those modes as active
+/// develop paths yet.
+/// </summary>
+public enum BaseEstimationMode
+{
+    Auto,
+    Preset,
+    Manual,
+}
+
+public sealed record BaseRecipe(
+    BaseEstimationMode Mode,
+    string? FilmStockDminId,
+    string? LightSourceProfileId,
+    string? ScannerProfileId)
+{
+    public static BaseRecipe Auto { get; } = new(
+        BaseEstimationMode.Auto,
+        null,
+        null,
+        null);
+}
 
 /// <summary>
 /// 톤 조정값입니다. 이름은 macOS <c>DevelopParameters</c> 의 key 와 같습니다. 키가 없으면 macOS 와
@@ -17,7 +42,12 @@ public readonly record struct ToneAdjustment(
     double CurveHighlights,
     double CurveLights,
     double CurveDarks,
-    double CurveShadows)
+    double CurveShadows,
+    double Density = 0.0,
+    double Highlight = 0.0,
+    double Shadow = 0.0,
+    double Whites = 0.0,
+    double Blacks = 0.0)
 {
     public static ToneAdjustment Neutral => default;
 }
@@ -35,10 +65,24 @@ public sealed record LibraryFrameSnapshot(
     ToneAdjustment Tone)
 {
     /// <summary>
-    /// 수동 Dmin 이 없으면 현상할 수 없습니다. auto base 추정이 생기기 전까지는 이것이 사실이므로
-    /// 기본값을 지어내지 않고 그대로 드러냅니다.
+    /// macOS-compatible base mode and preset identifiers. This is persisted independently
+    /// from <see cref="ManualBase"/> because changing modes does not erase a manual sample.
     /// </summary>
-    public bool CanDevelop => ManualBase is not null;
+    public BaseRecipe Base { get; init; } = BaseRecipe.Auto;
+
+    /// <summary>
+    /// Auto는 native resolver가 입력에서 base를 결정하므로 수동 Dmin 없이 현상할 수 있습니다.
+    /// Manual만 저장된 수동 base를 요구하고, 아직 resolver가 없는 Preset은 명시적으로 막습니다.
+    /// </summary>
+    public bool CanDevelop =>
+        (Route.FilmType is FilmType.ColorNegative or FilmType.BlackAndWhiteNegative) &&
+        (Base.Mode switch
+        {
+            BaseEstimationMode.Auto => true,
+            BaseEstimationMode.Preset => !string.IsNullOrWhiteSpace(Base.FilmStockDminId),
+            BaseEstimationMode.Manual => ManualBase is not null,
+            _ => false,
+        });
 
     public string EffectiveDisplayName =>
         string.IsNullOrWhiteSpace(DisplayName)

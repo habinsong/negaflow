@@ -13,6 +13,10 @@ public static unsafe class NativeDevelopExporter
 {
     internal const int RequestV1Size = 96;
     internal const int ResultV1Size = 136;
+    internal const int RequestV2Size = 96;
+    internal const int RequestV3Size = 112;
+    internal const int RequestV4Size = 128;
+    internal const int ResultV2Size = 152;
 
     private const uint StatusOk = 0;
     private const uint StatusInvalidArgument = 1;
@@ -20,8 +24,8 @@ public static unsafe class NativeDevelopExporter
 
     private static void ValidateLayoutAndEnums(DevelopExportRequest request)
     {
-        if (sizeof(NativeDevelopExportRequestV1) != RequestV1Size ||
-            sizeof(NativeDevelopExportResultV1) != ResultV1Size)
+        if (sizeof(NativeDevelopExportRequestV4) != RequestV4Size ||
+            sizeof(NativeDevelopExportResultV2) != ResultV2Size)
         {
             throw new NativeBootstrapException(
                 NativeBootstrapFailure.ContractViolation,
@@ -29,6 +33,7 @@ public static unsafe class NativeDevelopExporter
         }
         if (!Enum.IsDefined(request.Format) ||
             !Enum.IsDefined(request.FilmType) ||
+            !Enum.IsDefined(request.BaseEstimationMode) ||
             !Enum.IsDefined(request.FilmLookSourceKind) ||
             !Enum.IsDefined(request.FilmEmulation))
         {
@@ -38,16 +43,19 @@ public static unsafe class NativeDevelopExporter
         }
     }
 
-    private static NativeDevelopExportRequestV1 BuildRequest(
+    private static NativeDevelopExportRequestV4 BuildRequest(
         DevelopExportRequest request,
         char* sourcePath,
-        char* destinationPath) => new()
+        char* destinationPath,
+        char* filmStockDminId,
+        char* lightSourceProfileId) => new()
         {
-            StructSize = (uint)sizeof(NativeDevelopExportRequestV1),
+            StructSize = (uint)sizeof(NativeDevelopExportRequestV4),
             SourcePath = sourcePath,
             DestinationPath = destinationPath,
             OutputFormat = (uint)request.Format,
             FilmType = (uint)request.FilmType,
+            BaseEstimationMode = (uint)request.BaseEstimationMode,
             DminRed = request.DminRed,
             DminGreen = request.DminGreen,
             DminBlue = request.DminBlue,
@@ -61,6 +69,13 @@ public static unsafe class NativeDevelopExporter
             FilmEmulation = (uint)request.FilmEmulation,
             FilmEmulationIntensity = request.FilmEmulationIntensity,
             RowsPerCopy = request.RowsPerCopy,
+            Density = request.Density,
+            Highlight = request.Highlight,
+            Shadow = request.Shadow,
+            Whites = request.Whites,
+            Blacks = request.Blacks,
+            FilmStockDminId = filmStockDminId,
+            LightSourceProfileId = lightSourceProfileId,
         };
 
     public static DevelopExportResult Run(DevelopExportRequest request)
@@ -68,20 +83,24 @@ public static unsafe class NativeDevelopExporter
         ArgumentNullException.ThrowIfNull(request);
         ValidateLayoutAndEnums(request);
 
-        NativeDevelopExportResultV1 raw = default;
-        raw.StructSize = (uint)sizeof(NativeDevelopExportResultV1);
+        NativeDevelopExportResultV2 raw = default;
+        raw.StructSize = (uint)sizeof(NativeDevelopExportResultV2);
         uint status;
 
         // The native side copies both paths before returning, so pinning them for the
         // duration of the call is enough; no unmanaged allocation is needed.
         fixed (char* sourcePath = request.SourcePath)
         fixed (char* destinationPath = request.DestinationPath)
+        fixed (char* filmStockDminId = request.FilmStockDminId)
+        fixed (char* lightSourceProfileId = request.LightSourceProfileId)
         {
-            NativeDevelopExportRequestV1 native = BuildRequest(
+            NativeDevelopExportRequestV4 native = BuildRequest(
                 request,
                 sourcePath,
-                destinationPath);
-            status = NativeMethods.nf_develop_export_v1(&native, &raw);
+                destinationPath,
+                filmStockDminId,
+                lightSourceProfileId);
+            status = NativeMethods.nf_develop_export_v4(&native, &raw);
         }
 
         return Translate(status, raw);
@@ -109,19 +128,23 @@ public static unsafe class NativeDevelopExporter
         }
         ValidateLayoutAndEnums(request);
 
-        NativeDevelopExportResultV1 raw = default;
-        raw.StructSize = (uint)sizeof(NativeDevelopExportResultV1);
+        NativeDevelopExportResultV2 raw = default;
+        raw.StructSize = (uint)sizeof(NativeDevelopExportResultV2);
         uint status;
 
         fixed (char* sourcePath = request.SourcePath)
         fixed (char* destinationPath = request.DestinationPath)
+        fixed (char* filmStockDminId = request.FilmStockDminId)
+        fixed (char* lightSourceProfileId = request.LightSourceProfileId)
         fixed (byte* pixelBuffer = pixels)
         {
-            NativeDevelopExportRequestV1 native = BuildRequest(
+            NativeDevelopExportRequestV4 native = BuildRequest(
                 request,
                 sourcePath,
-                destinationPath);
-            status = NativeMethods.nf_develop_preview_v1(
+                destinationPath,
+                filmStockDminId,
+                lightSourceProfileId);
+            status = NativeMethods.nf_develop_preview_v4(
                 &native,
                 maximumWidth,
                 maximumHeight,
@@ -135,7 +158,7 @@ public static unsafe class NativeDevelopExporter
 
     private static DevelopExportResult Translate(
         uint status,
-        NativeDevelopExportResultV1 raw)
+        NativeDevelopExportResultV2 raw)
     {
         if (status != StatusOk)
         {
@@ -144,16 +167,17 @@ public static unsafe class NativeDevelopExporter
                 status switch
                 {
                     StatusInvalidArgument =>
-                        "nf_develop_export_v1 rejected the call as malformed.",
+                    "nf_develop_export_v4 rejected the call as malformed.",
                     StatusStructTooSmall =>
-                        "nf_develop_export_v1 rejected the struct sizes.",
-                    _ => $"nf_develop_export_v1 failed with status {status}.",
+                    "nf_develop_export_v4 rejected the struct sizes.",
+                    _ => $"nf_develop_export_v4 failed with status {status}.",
                 });
         }
 
         DevelopExportStage stage = (DevelopExportStage)raw.FailedStage;
         FilmLookRoute route = (FilmLookRoute)raw.FilmLookRoute;
-        if (!Enum.IsDefined(stage) || !Enum.IsDefined(route))
+        DevelopBaseSource baseSource = (DevelopBaseSource)raw.BaseSource;
+        if (!Enum.IsDefined(stage) || !Enum.IsDefined(route) || !Enum.IsDefined(baseSource))
         {
             throw new NativeBootstrapException(
                 NativeBootstrapFailure.ContractViolation,
@@ -174,6 +198,10 @@ public static unsafe class NativeDevelopExporter
             raw.SourceFileBytes,
             raw.OutputFileBytes,
             raw.FilmLookWorkspaceBytes,
-            raw.WallMicroseconds);
+            raw.WallMicroseconds,
+            raw.AppliedDminRed,
+            raw.AppliedDminGreen,
+            raw.AppliedDminBlue,
+            baseSource);
     }
 }

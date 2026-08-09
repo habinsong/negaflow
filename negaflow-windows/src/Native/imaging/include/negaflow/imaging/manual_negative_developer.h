@@ -28,6 +28,10 @@ inline constexpr float maximum_manual_dmin = 1.0F;
 struct ManualNegativeDevelopParameters final {
     std::array<float, 3> dmin;
     NegativeFilmType film_type{NegativeFilmType::color};
+    // Film base mode keeps the scene-derived overall density scale while anchoring
+    // the channel ratio to the selected stock's Dmax curve.
+    bool use_preset_response{false};
+    std::array<float, 3> preset_dmax_normalized{};
 };
 
 struct ManualNegativeDevelopInfo final {
@@ -43,9 +47,10 @@ struct ManualNegativeDevelopResult final {
     WorkingImage image{};
 };
 
-// Deterministic generic manual path matching the macOS baseline:
+// Deterministic manual path aligned with the macOS scene-range calculation:
 // - Dmin is clamped to [1e-3, 1] per channel;
-// - dmaxNormalized is the selected fixed print response normal range;
+// - a sufficiently large source uses its robust scene density range; tiny or malformed
+//   sources retain the selected fixed print response normal range;
 // - the owned WorkingImage is transformed in place, avoiding a second full-frame buffer.
 [[nodiscard]] ManualNegativeDevelopResult develop_manual_negative(
     WorkingImage image,

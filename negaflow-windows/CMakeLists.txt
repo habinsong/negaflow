@@ -104,6 +104,8 @@ target_link_libraries(
 )
 
 add_library(negaflow_imaging STATIC
+    src/Native/imaging/auto_negative_base_resolver.cpp
+    src/Native/imaging/film_stock_base_resolver.cpp
     src/Native/imaging/color_grading.cpp
     src/Native/imaging/color_mixer.cpp
     src/Native/imaging/film_emulation_acutance.cpp

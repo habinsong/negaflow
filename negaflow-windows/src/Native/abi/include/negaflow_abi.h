@@ -54,6 +54,20 @@ typedef struct nf_build_info_v1 {
 #define NF_FILM_TYPE_COLOR 0U
 #define NF_FILM_TYPE_BLACK_AND_WHITE 1U
 
+#define NF_BASE_ESTIMATION_AUTO 0U
+#define NF_BASE_ESTIMATION_PRESET 1U
+#define NF_BASE_ESTIMATION_MANUAL 2U
+
+#define NF_DEVELOP_BASE_SOURCE_MANUAL 0U
+#define NF_DEVELOP_BASE_SOURCE_AUTO_SCENE_EDGE 1U
+#define NF_DEVELOP_BASE_SOURCE_AUTO_FALLBACK 2U
+#define NF_DEVELOP_BASE_SOURCE_AUTO_CONNECTED_COMPONENT 3U
+#define NF_DEVELOP_BASE_SOURCE_AUTO_CONTINUOUS_BORDER 4U
+#define NF_DEVELOP_BASE_SOURCE_AUTO_DISTRIBUTED_MASK 5U
+#define NF_DEVELOP_BASE_SOURCE_AUTO_STRIP_FALLBACK 6U
+#define NF_DEVELOP_BASE_SOURCE_PRESET_MEASURED 7U
+#define NF_DEVELOP_BASE_SOURCE_PRESET_FALLBACK 8U
+
 #define NF_DEVELOP_SOURCE_FILM_SCAN 0U
 #define NF_DEVELOP_SOURCE_RENDERED_DIGITAL 1U
 
@@ -94,6 +108,86 @@ typedef struct nf_develop_export_request_v1 {
     uint32_t rows_per_copy;
 } nf_develop_export_request_v1;
 
+/* v1 stays frozen. v2 makes the base decision explicit so an Auto recipe never
+   masquerades as a manual Dmin request. */
+typedef struct nf_develop_export_request_v2 {
+    uint32_t struct_size;
+    const wchar_t* source_path;
+    const wchar_t* destination_path;
+    uint32_t output_format;
+    uint32_t film_type;
+    uint32_t base_estimation_mode;
+    float dmin[3];
+    float exposure_stops;
+    float contrast;
+    float highlights;
+    float lights;
+    float darks;
+    float shadows;
+    uint32_t film_look_source_kind;
+    uint32_t film_emulation;
+    double film_emulation_intensity;
+    uint32_t rows_per_copy;
+} nf_develop_export_request_v2;
+
+/* v3 keeps the v2 prefix frozen and appends the five Basic Tone controls.  The
+   existing highlights/lights/darks/shadows fields remain the parametric Tone Curve;
+   Basic Tone has distinct semantic fields and must not reinterpret that prefix. */
+typedef struct nf_develop_export_request_v3 {
+    uint32_t struct_size;
+    const wchar_t* source_path;
+    const wchar_t* destination_path;
+    uint32_t output_format;
+    uint32_t film_type;
+    uint32_t base_estimation_mode;
+    float dmin[3];
+    float exposure_stops;
+    float contrast;
+    float highlights;
+    float lights;
+    float darks;
+    float shadows;
+    uint32_t film_look_source_kind;
+    uint32_t film_emulation;
+    double film_emulation_intensity;
+    uint32_t rows_per_copy;
+    float density;
+    float highlight;
+    float shadow;
+    float whites;
+    float blacks;
+} nf_develop_export_request_v3;
+
+/* v4 preserves the v3 prefix and supplies the two Film-mode identifiers. They are
+   UTF-16, must remain valid for the duration of the call, and are copied/resolved by
+   the native side before it returns. A null light-source identifier means no trim. */
+typedef struct nf_develop_export_request_v4 {
+    uint32_t struct_size;
+    const wchar_t* source_path;
+    const wchar_t* destination_path;
+    uint32_t output_format;
+    uint32_t film_type;
+    uint32_t base_estimation_mode;
+    float dmin[3];
+    float exposure_stops;
+    float contrast;
+    float highlights;
+    float lights;
+    float darks;
+    float shadows;
+    uint32_t film_look_source_kind;
+    uint32_t film_emulation;
+    double film_emulation_intensity;
+    uint32_t rows_per_copy;
+    float density;
+    float highlight;
+    float shadow;
+    float whites;
+    float blacks;
+    const wchar_t* film_stock_dmin_id;
+    const wchar_t* light_source_profile_id;
+} nf_develop_export_request_v4;
+
 typedef struct nf_develop_export_result_v1 {
     uint32_t struct_size;
     uint32_t succeeded;
@@ -113,6 +207,26 @@ typedef struct nf_develop_export_result_v1 {
     uint64_t film_look_workspace_bytes;
     uint64_t wall_microseconds;
 } nf_develop_export_result_v1;
+
+typedef struct nf_develop_export_result_v2 {
+    uint32_t struct_size;
+    uint32_t succeeded;
+    uint32_t failed_stage;
+    char failure_name[NF_FAILURE_NAME_CAPACITY];
+    uint32_t native_error_code;
+    uint32_t cleanup_error_code;
+    uint32_t image_width;
+    uint32_t image_height;
+    uint32_t film_look_route;
+    uint32_t film_look_color_applied;
+    uint32_t film_look_acutance_applied;
+    uint64_t source_file_bytes;
+    uint64_t output_file_bytes;
+    uint64_t film_look_workspace_bytes;
+    uint64_t wall_microseconds;
+    float applied_dmin[3];
+    uint32_t base_source;
+} nf_develop_export_result_v2;
 
 /* The bounds the engine's own validator enforces. Exported so a UI does not have to
    duplicate them and cannot drift into offering values the engine will refuse. */
@@ -142,6 +256,17 @@ NF_API nf_status_t NF_CALL nf_develop_export_v1(
     const nf_develop_export_request_v1* request,
     nf_develop_export_result_v1* result);
 
+NF_API nf_status_t NF_CALL nf_develop_export_v2(
+    const nf_develop_export_request_v2* request,
+    nf_develop_export_result_v2* result);
+
+NF_API nf_status_t NF_CALL nf_develop_export_v3(
+    const nf_develop_export_request_v3* request,
+    nf_develop_export_result_v2* result);
+NF_API nf_status_t NF_CALL nf_develop_export_v4(
+    const nf_develop_export_request_v4* request,
+    nf_develop_export_result_v2* result);
+
 NF_API nf_status_t NF_CALL nf_get_tone_limits_v1(nf_tone_limits_v1* output);
 
 /* Same pipeline as nf_develop_export_v1 but stops before publishing and fills `pixels`
@@ -155,6 +280,27 @@ NF_API nf_status_t NF_CALL nf_develop_preview_v1(
     uint8_t* pixels,
     uint32_t pixel_capacity_bytes,
     nf_develop_export_result_v1* result);
+NF_API nf_status_t NF_CALL nf_develop_preview_v2(
+    const nf_develop_export_request_v2* request,
+    uint32_t maximum_width,
+    uint32_t maximum_height,
+    uint8_t* pixels,
+    uint32_t pixel_capacity_bytes,
+    nf_develop_export_result_v2* result);
+NF_API nf_status_t NF_CALL nf_develop_preview_v3(
+    const nf_develop_export_request_v3* request,
+    uint32_t maximum_width,
+    uint32_t maximum_height,
+    uint8_t* pixels,
+    uint32_t pixel_capacity_bytes,
+    nf_develop_export_result_v2* result);
+NF_API nf_status_t NF_CALL nf_develop_preview_v4(
+    const nf_develop_export_request_v4* request,
+    uint32_t maximum_width,
+    uint32_t maximum_height,
+    uint8_t* pixels,
+    uint32_t pixel_capacity_bytes,
+    nf_develop_export_result_v2* result);
 NF_API nf_status_t NF_CALL nf_get_negative_limits_v1(nf_negative_limits_v1* output);
 
 #ifdef __cplusplus

@@ -3,6 +3,7 @@
     x:Class="Negaflow.Shell.Views.DevelopWorkspaceView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Negaflow.Shell.Views.Controls"
     xmlns:primitives="using:Microsoft.UI.Xaml.Controls.Primitives"
     xmlns:views="using:Negaflow.Shell.Views">
     <Grid x:Name="Root" Background="{ThemeResource NegaflowWindowBrush}" SizeChanged="OnRootSizeChanged">
@@ -187,57 +188,172 @@
                                 DisplayMemberPath="DisplayName"
                                 SelectionChanged="OnFrameSelectionChanged" />
 
-                            <StackPanel Spacing="2">
+                            <StackPanel Spacing="10">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" FontSize="12" Text="Film base (Dmin)" />
+                                    <TextBlock Grid.Column="0" FontSize="12" Text="Film base" />
                                     <TextBlock
                                         x:Name="ManualBaseValueText"
                                         Grid.Column="1"
                                         FontSize="12"
                                         Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                 </Grid>
-                                <!-- Minimum/Maximum 은 엔진이 알려 준 값으로 코드에서 설정한다. -->
-                                <Slider
-                                    x:Name="BaseRedSlider"
-                                    AutomationProperties.AutomationId="negaflow.develop.base.red"
-                                    StepFrequency="0.005"
-                                    ValueChanged="OnManualBaseChanged" />
-                                <Slider
-                                    x:Name="BaseGreenSlider"
-                                    AutomationProperties.AutomationId="negaflow.develop.base.green"
-                                    StepFrequency="0.005"
-                                    ValueChanged="OnManualBaseChanged" />
-                                <Slider
-                                    x:Name="BaseBlueSlider"
-                                    AutomationProperties.AutomationId="negaflow.develop.base.blue"
-                                    StepFrequency="0.005"
-                                    ValueChanged="OnManualBaseChanged" />
-                            </StackPanel>
-
-                            <StackPanel Spacing="2">
-                                <Grid>
+                                <Grid
+                                    x:Name="BaseModeControl"
+                                    AutomationProperties.AutomationId="negaflow.develop.base"
+                                    AutomationProperties.Name="Film base mode"
+                                    ColumnSpacing="4">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" FontSize="12" Text="Exposure" />
-                                    <TextBlock
-                                        x:Name="ExposureValueText"
+                                    <RadioButton
+                                        x:Name="BaseAutoModeButton"
+                                        Grid.Column="0"
+                                        AutomationProperties.AutomationId="negaflow.develop.base.mode.auto"
+                                        AutomationProperties.Name="Base mode: Auto"
+                                        Content="Auto"
+                                        GroupName="BaseEstimationMode"
+                                        Checked="OnBaseAutoModeChecked" />
+                                    <RadioButton
+                                        x:Name="BaseFilmModeButton"
                                         Grid.Column="1"
-                                        FontSize="12"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        AutomationProperties.AutomationId="negaflow.develop.base.mode.film"
+                                        AutomationProperties.Name="Base mode: Film"
+                                        Content="Film"
+                                        GroupName="BaseEstimationMode"
+                                        Checked="OnBaseFilmModeChecked" />
+                                    <RadioButton
+                                        x:Name="BaseManualModeButton"
+                                        Grid.Column="2"
+                                        AutomationProperties.AutomationId="negaflow.develop.base.mode.manual"
+                                        AutomationProperties.Name="Base mode: Manual"
+                                        Content="Manual"
+                                        GroupName="BaseEstimationMode"
+                                        Checked="OnBaseManualModeChecked" />
                                 </Grid>
+                                <StackPanel x:Name="FilmBaseControls" Spacing="8">
+                                    <TextBlock FontSize="12" Text="Film stock" />
+                                    <ComboBox
+                                        x:Name="FilmStockSelector"
+                                        AutomationProperties.AutomationId="negaflow.develop.base.film-stock"
+                                        AutomationProperties.Name="Film stock"
+                                        DisplayMemberPath="DisplayName"
+                                        SelectionChanged="OnFilmStockSelectionChanged" />
+                                    <TextBlock FontSize="12" Text="Light source" />
+                                    <ComboBox
+                                        x:Name="LightSourceSelector"
+                                        AutomationProperties.AutomationId="negaflow.develop.base.light-source"
+                                        AutomationProperties.Name="Light source"
+                                        DisplayMemberPath="DisplayName"
+                                        SelectionChanged="OnLightSourceSelectionChanged" />
+                                </StackPanel>
                                 <!-- Minimum/Maximum 은 엔진이 알려 준 값으로 코드에서 설정한다. -->
-                                <Slider
-                                    x:Name="ExposureSlider"
-                                    AutomationProperties.AutomationId="negaflow.develop.exposure"
-                                    StepFrequency="0.05"
-                                    ThumbToolTipValueConverter="{x:Null}"
+                                <StackPanel x:Name="ManualBaseControls" Spacing="10">
+                                    <controls:InspectorSlider
+                                        x:Name="BaseRedControl"
+                                        CanReset="False"
+                                        Label="Base Red"
+                                        SliderAutomationId="negaflow.develop.base.red"
+                                        ValueChanged="OnManualBaseChanged" />
+                                    <controls:InspectorSlider
+                                        x:Name="BaseGreenControl"
+                                        CanReset="False"
+                                        Label="Base Green"
+                                        SliderAutomationId="negaflow.develop.base.green"
+                                        ValueChanged="OnManualBaseChanged" />
+                                    <controls:InspectorSlider
+                                        x:Name="BaseBlueControl"
+                                        CanReset="False"
+                                        Label="Base Blue"
+                                        SliderAutomationId="negaflow.develop.base.blue"
+                                        ValueChanged="OnManualBaseChanged" />
+                                </StackPanel>
+                            </StackPanel>
+
+                            <!-- Minimum/Maximum 은 엔진이 알려 준 값으로 코드에서 설정한다. -->
+                            <StackPanel x:Name="BasicToneControls" Spacing="10">
+                                <TextBlock
+                                    FontSize="12"
+                                    FontWeight="SemiBold"
+                                    Text="Basic tone" />
+                                <controls:InspectorSlider
+                                    x:Name="ExposureControl"
+                                    Label="Exposure"
+                                    ResetValue="0"
+                                    SliderAutomationId="negaflow.develop.exposure"
                                     ValueChanged="OnExposureChanged" />
+                                <controls:InspectorSlider
+                                    x:Name="ContrastControl"
+                                    Label="Contrast"
+                                    ResetValue="0"
+                                    SliderAutomationId="negaflow.develop.contrast"
+                                    ValueChanged="OnBasicToneChanged" />
+                                <controls:InspectorSlider
+                                    x:Name="HighlightsControl"
+                                    Label="Highlights"
+                                    ResetValue="0"
+                                    SliderAutomationId="negaflow.develop.highlights"
+                                    ValueChanged="OnBasicToneChanged" />
+                                <controls:InspectorSlider
+                                    x:Name="ShadowsControl"
+                                    Label="Shadows"
+                                    ResetValue="0"
+                                    SliderAutomationId="negaflow.develop.shadows"
+                                    ValueChanged="OnBasicToneChanged" />
+                                <controls:InspectorSlider
+                                    x:Name="WhitesControl"
+                                    Label="Whites"
+                                    ResetValue="0"
+                                    SliderAutomationId="negaflow.develop.whites"
+                                    ValueChanged="OnBasicToneChanged" />
+                                <controls:InspectorSlider
+                                    x:Name="BlacksControl"
+                                    Label="Blacks"
+                                    ResetValue="0"
+                                    SliderAutomationId="negaflow.develop.blacks"
+                                    ValueChanged="OnBasicToneChanged" />
+                                <controls:InspectorSlider
+                                    x:Name="DensityControl"
+                                    Label="Density"
+                                    ResetValue="0"
+                                    SliderAutomationId="negaflow.develop.density"
+                                    ValueChanged="OnBasicToneChanged" />
+                            </StackPanel>
+
+                            <StackPanel x:Name="ToneCurveControls" Spacing="10">
+                                <TextBlock
+                                    FontSize="12"
+                                    FontWeight="SemiBold"
+                                    Text="Tone curve" />
+                                <controls:InspectorSlider
+                                    x:Name="CurveHighlightsControl"
+                                    Label="Highlights"
+                                    ResetValue="0"
+                                    SliderAutomationId="negaflow.develop.curve.highlights"
+                                    ValueChanged="OnToneCurveChanged" />
+                                <controls:InspectorSlider
+                                    x:Name="CurveLightsControl"
+                                    Label="Lights"
+                                    ResetValue="0"
+                                    SliderAutomationId="negaflow.develop.curve.lights"
+                                    ValueChanged="OnToneCurveChanged" />
+                                <controls:InspectorSlider
+                                    x:Name="CurveDarksControl"
+                                    Label="Darks"
+                                    ResetValue="0"
+                                    SliderAutomationId="negaflow.develop.curve.darks"
+                                    ValueChanged="OnToneCurveChanged" />
+                                <controls:InspectorSlider
+                                    x:Name="CurveShadowsControl"
+                                    Label="Shadows"
+                                    ResetValue="0"
+                                    SliderAutomationId="negaflow.develop.curve.shadows"
+                                    ValueChanged="OnToneCurveChanged" />
                             </StackPanel>
 
                             <Button

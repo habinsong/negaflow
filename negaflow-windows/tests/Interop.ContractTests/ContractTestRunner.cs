@@ -66,6 +66,18 @@ internal static unsafe class ContractTestRunner
             sizeof(NativeDevelopExportResultV1) == NativeDevelopExporter.ResultV1Size,
             "develop_export_result_size");
         Check(
+            sizeof(NativeDevelopExportRequestV2) == NativeDevelopExporter.RequestV2Size,
+            "develop_export_v2_request_size");
+        Check(
+            sizeof(NativeDevelopExportRequestV3) == NativeDevelopExporter.RequestV3Size,
+            "develop_export_v3_request_size");
+        Check(
+            sizeof(NativeDevelopExportRequestV4) == NativeDevelopExporter.RequestV4Size,
+            "develop_export_v4_request_size");
+        Check(
+            sizeof(NativeDevelopExportResultV2) == NativeDevelopExporter.ResultV2Size,
+            "develop_export_v2_result_size");
+        Check(
             Marshal.OffsetOf<NativeDevelopExportRequestV1>(
                 nameof(NativeDevelopExportRequestV1.FilmEmulationIntensity)).ToInt32() == 80,
             "develop_export_intensity_offset");
@@ -77,6 +89,22 @@ internal static unsafe class ContractTestRunner
             Marshal.OffsetOf<NativeDevelopExportResultV1>(
                 nameof(NativeDevelopExportResultV1.SourceFileBytes)).ToInt32() == 104,
             "develop_export_source_bytes_offset");
+        Check(
+            Marshal.OffsetOf<NativeDevelopExportRequestV2>(
+                nameof(NativeDevelopExportRequestV2.BaseEstimationMode)).ToInt32() == 32,
+            "develop_export_v2_base_mode_offset");
+        Check(
+            Marshal.OffsetOf<NativeDevelopExportRequestV3>(
+                nameof(NativeDevelopExportRequestV3.Density)).ToInt32() == 92,
+            "develop_export_v3_basic_tone_offset");
+        Check(
+            Marshal.OffsetOf<NativeDevelopExportRequestV4>(
+                nameof(NativeDevelopExportRequestV4.FilmStockDminId)).ToInt32() == 112,
+            "develop_export_v4_film_stock_offset");
+        Check(
+            Marshal.OffsetOf<NativeDevelopExportResultV2>(
+                nameof(NativeDevelopExportResultV2.AppliedDminRed)).ToInt32() == 136,
+            "develop_export_v2_applied_dmin_offset");
     }
 
     private static void VerifyToneLimits()
@@ -116,6 +144,11 @@ internal static unsafe class ContractTestRunner
             DestinationPath = Path.Combine(Path.GetTempPath(), "negaflow-tone-limit.png"),
             ExposureStops = (float)limits.ClampExposure(double.MaxValue),
             Contrast = (float)limits.ClampToneControl(double.MaxValue),
+            Density = (float)limits.ClampToneControl(double.MinValue),
+            Highlight = (float)limits.ClampToneControl(double.MaxValue),
+            Shadow = (float)limits.ClampToneControl(double.MinValue),
+            Whites = (float)limits.ClampToneControl(double.MaxValue),
+            Blacks = (float)limits.ClampToneControl(double.MinValue),
             Highlights = (float)limits.ClampToneControl(double.MinValue),
         });
         Check(
@@ -193,6 +226,16 @@ internal static unsafe class ContractTestRunner
         Check(missing.FailureName != "ok", "develop_export_failure_name_not_ok");
         Check(!File.Exists(destination), "develop_export_failure_writes_nothing");
 
+        DevelopExportResult autoMissing = NativeDevelopExporter.Run(new DevelopExportRequest
+        {
+            SourcePath = absentSource,
+            DestinationPath = destination,
+            BaseEstimationMode = DevelopBaseEstimationMode.Auto,
+        });
+        Check(
+            autoMissing.FailedStage == DevelopExportStage.ObserveSourceBefore,
+            "develop_export_auto_reaches_source_observation");
+
         // The rendered-digital graph is not implemented and must refuse rather than
         // develop a negative through it anyway.
         DevelopExportResult digital = NativeDevelopExporter.Run(new DevelopExportRequest
@@ -217,6 +260,15 @@ internal static unsafe class ContractTestRunner
                 FilmEmulation = (FilmEmulationProfile)99,
             }),
             "develop_export_undefined_enum_rejected");
+
+        CheckThrows<ArgumentException>(
+            () => NativeDevelopExporter.Run(new DevelopExportRequest
+            {
+                SourcePath = absentSource,
+                DestinationPath = destination,
+                BaseEstimationMode = (DevelopBaseEstimationMode)99,
+            }),
+            "develop_export_undefined_base_mode_rejected");
 
         CheckThrows<ArgumentNullException>(
             () => NativeDevelopExporter.Run(null!),

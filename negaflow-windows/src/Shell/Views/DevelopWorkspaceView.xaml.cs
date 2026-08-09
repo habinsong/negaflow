@@ -9,6 +9,7 @@ using Microsoft.UI.Xaml.Media.Imaging;
 using Negaflow.Catalog;
 using Negaflow.Interop;
 using Negaflow.Shell.Localization;
+using Negaflow.Shell.Views.Controls;
 using Negaflow.Shell.Views.Layout;
 
 namespace Negaflow.Shell.Views;
@@ -23,7 +24,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private Microsoft.UI.WindowId? importWindowId;
     private PreviewCoordinator? previewCoordinator;
     private WriteableBitmap? previewBitmap;
-    private bool isSynchronizingExposure;
+    private bool isSynchronizingInspector;
 
     public DevelopWorkspaceView()
     {
@@ -63,9 +64,28 @@ public sealed partial class DevelopWorkspaceView : UserControl
         libraryHost = host;
         toneLimits = limits;
         panel = new DevelopPanelState(host, limits, negativeLimits);
-        ExposureSlider.Minimum = -panel.MaximumExposureStops;
-        ExposureSlider.Maximum = panel.MaximumExposureStops;
-        foreach (Slider slider in new[] { BaseRedSlider, BaseGreenSlider, BaseBlueSlider })
+        FilmStockSelector.ItemsSource = BundledFilmBaseOptions.FilmStocks;
+        LightSourceSelector.ItemsSource = BundledFilmBaseOptions.LightSources;
+        ExposureControl.Minimum = -panel.MaximumExposureStops;
+        ExposureControl.Maximum = panel.MaximumExposureStops;
+        foreach (InspectorSlider slider in new[]
+                 {
+                     ContrastControl,
+                     HighlightsControl,
+                     ShadowsControl,
+                     WhitesControl,
+                     BlacksControl,
+                     DensityControl,
+                     CurveHighlightsControl,
+                     CurveLightsControl,
+                     CurveDarksControl,
+                     CurveShadowsControl,
+                 })
+        {
+            slider.Minimum = -panel.MaximumToneControl;
+            slider.Maximum = panel.MaximumToneControl;
+        }
+        foreach (InspectorSlider slider in new[] { BaseRedControl, BaseGreenControl, BaseBlueControl })
         {
             slider.Minimum = panel.MinimumManualDmin;
             slider.Maximum = panel.MaximumManualDmin;
@@ -102,6 +122,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         if (!hasFrames)
         {
             FrameSelector.ItemsSource = null;
+            SyncToneControls();
             return;
         }
 
@@ -165,47 +186,57 @@ public sealed partial class DevelopWorkspaceView : UserControl
 
         panel.Select(item.Id);
         UpdateSelectedFrameText();
-        isSynchronizingExposure = true;
-        ExposureSlider.Value = panel.Exposure;
-        // base 를 아직 고르지 않았으면 시작 위치만 보여 줍니다. 이 값은 저장되지 않으며,
-        // 사용자가 슬라이더를 움직여야 frame 이 현상 가능해집니다.
+        isSynchronizingInspector = true;
+        ExposureControl.Value = panel.Exposure;
+        ContrastControl.Value = panel.Contrast;
+        HighlightsControl.Value = panel.Highlights;
+        ShadowsControl.Value = panel.Shadows;
+        WhitesControl.Value = panel.Whites;
+        BlacksControl.Value = panel.Blacks;
+        DensityControl.Value = panel.Density;
+        CurveHighlightsControl.Value = panel.CurveHighlights;
+        CurveLightsControl.Value = panel.CurveLights;
+        CurveDarksControl.Value = panel.CurveDarks;
+        CurveShadowsControl.Value = panel.CurveShadows;
+        // Auto에는 수동 base가 없으므로 slider에는 시작 위치만 보입니다. 사용자가 값을 바꾸면
+        // manual mode로 전환되며, 그 전까지 preview/export는 native Auto resolver를 사용합니다.
         ManualBaseRgb shown = panel.ManualBase ?? new ManualBaseRgb(
             panel.SuggestedManualDmin,
             panel.SuggestedManualDmin,
             panel.SuggestedManualDmin);
-        BaseRedSlider.Value = shown.Red;
-        BaseGreenSlider.Value = shown.Green;
-        BaseBlueSlider.Value = shown.Blue;
-        isSynchronizingExposure = false;
-        UpdateExposureText();
-        UpdateManualBaseText();
+        BaseRedControl.Value = shown.Red;
+        BaseGreenControl.Value = shown.Green;
+        BaseBlueControl.Value = shown.Blue;
+        isSynchronizingInspector = false;
+        SyncBaseControls();
+        SyncToneControls();
         ExportButton.IsEnabled = panel.CanExport;
         ExportStatusText.Text = item.CanDevelop
             ? string.Empty
             : DevelopPanelState.Describe(new DevelopExportOutcome(
                 DevelopExportOutcomeKind.Refused,
                 null,
-                DevelopRequestRefusal.MissingManualBase,
+                RefusalFor(item.Frame),
                 null));
         RequestPreview();
     }
 
-    private void OnManualBaseChanged(object sender, RangeBaseValueChangedEventArgs args)
+    private void OnManualBaseChanged(object? sender, InspectorSliderValueChangedEventArgs args)
     {
         _ = sender;
         _ = args;
-        if (panel is null || isSynchronizingExposure)
+        if (panel is null || isSynchronizingInspector)
         {
             return;
         }
 
         panel.SetManualBase(
-            BaseRedSlider.Value,
-            BaseGreenSlider.Value,
-            BaseBlueSlider.Value);
-        UpdateManualBaseText();
-        // base 가 생기면 그 자리에서 현상할 수 있게 됩니다. 헤더도 함께 고쳐야 합니다 —
-        // 그러지 않으면 base 를 0.250 으로 설정한 화면이 여전히 "Dmin not set" 이라고 말합니다.
+            BaseRedControl.Value,
+            BaseGreenControl.Value,
+            BaseBlueControl.Value);
+        SyncBaseControls();
+        // slider 변경은 Auto를 Manual로 전환합니다. 선택 행과 export 상태도 즉시 같은 snapshot으로
+        // 갱신해야 preview/export의 요청 mode가 화면과 어긋나지 않습니다.
         UpdateSelectedFrameText();
         ExportButton.IsEnabled = panel.CanExport;
         if (panel.SelectedFrame is { CanDevelop: true })
@@ -272,6 +303,22 @@ public sealed partial class DevelopWorkspaceView : UserControl
 
     private void UpdateManualBaseText()
     {
+        if (panel?.SelectedFrame?.Base.Mode == BaseEstimationMode.Auto)
+        {
+            ManualBaseValueText.Text = "Auto";
+            return;
+        }
+        if (panel?.SelectedFrame?.Base.Mode == BaseEstimationMode.Preset)
+        {
+            FilmStockOption? filmStock = BundledFilmBaseOptions.FilmStocks.FirstOrDefault(
+                option => option.Id == panel.SelectedFrame.Base.FilmStockDminId);
+            ManualBaseValueText.Text = filmStock?.Id is not null
+                ? filmStock.DisplayName
+                : panel.SelectedFrame.Base.FilmStockDminId is null
+                    ? "Select film stock"
+                    : "Film preset unavailable";
+            return;
+        }
         if (panel?.ManualBase is { } manualBase)
         {
             ManualBaseValueText.Text = string.Create(
@@ -282,27 +329,220 @@ public sealed partial class DevelopWorkspaceView : UserControl
         ManualBaseValueText.Text = "not set";
     }
 
-    private void OnExposureChanged(object sender, RangeBaseValueChangedEventArgs args)
+    private void SyncBaseControls()
+    {
+        if (panel is null)
+        {
+            return;
+        }
+
+        bool canEdit = panel.CanEditBase;
+        BaseAutoModeButton.IsEnabled = canEdit;
+        BaseFilmModeButton.IsEnabled = canEdit;
+        BaseManualModeButton.IsEnabled = canEdit;
+        isSynchronizingInspector = true;
+        BaseAutoModeButton.IsChecked = panel.BaseMode == BaseEstimationMode.Auto;
+        BaseFilmModeButton.IsChecked = panel.BaseMode == BaseEstimationMode.Preset;
+        BaseManualModeButton.IsChecked = panel.BaseMode == BaseEstimationMode.Manual;
+        FilmStockSelector.SelectedItem = BundledFilmBaseOptions.FilmStocks.FirstOrDefault(
+            option => option.Id == panel.SelectedFrame?.Base.FilmStockDminId);
+        LightSourceSelector.SelectedItem = BundledFilmBaseOptions.LightSources.FirstOrDefault(
+            option => option.Id == panel.SelectedFrame?.Base.LightSourceProfileId);
+        isSynchronizingInspector = false;
+        FilmBaseControls.Visibility = canEdit && panel.BaseMode == BaseEstimationMode.Preset
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        FilmStockSelector.IsEnabled = canEdit && panel.BaseMode == BaseEstimationMode.Preset;
+        LightSourceSelector.IsEnabled = canEdit && panel.BaseMode == BaseEstimationMode.Preset;
+        ManualBaseControls.Visibility = canEdit && panel.BaseMode == BaseEstimationMode.Manual
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        UpdateManualBaseText();
+    }
+
+    private void SyncToneControls()
+    {
+        bool canEdit = panel?.CanEditTone == true;
+        foreach (InspectorSlider slider in new[]
+                 {
+                     ExposureControl,
+                     ContrastControl,
+                     HighlightsControl,
+                     ShadowsControl,
+                     WhitesControl,
+                     BlacksControl,
+                     DensityControl,
+                     CurveHighlightsControl,
+                     CurveLightsControl,
+                     CurveDarksControl,
+                     CurveShadowsControl,
+                 })
+        {
+            slider.IsEnabled = canEdit;
+        }
+    }
+
+    private void OnBaseAutoModeChecked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        SetBaseMode(BaseEstimationMode.Auto);
+    }
+
+    private void OnBaseManualModeChecked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        SetBaseMode(BaseEstimationMode.Manual);
+    }
+
+    private void OnBaseFilmModeChecked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        SetBaseMode(BaseEstimationMode.Preset);
+    }
+
+    private void OnFilmStockSelectionChanged(object sender, SelectionChangedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (panel is null || isSynchronizingInspector ||
+            panel.SetFilmStock((FilmStockSelector.SelectedItem as FilmStockOption)?.Id) != LibraryFrameError.None)
+        {
+            return;
+        }
+        UpdateAfterBaseRecipeChanged();
+    }
+
+    private void OnLightSourceSelectionChanged(object sender, SelectionChangedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (panel is null || isSynchronizingInspector ||
+            panel.SetLightSourceProfile((LightSourceSelector.SelectedItem as LightSourceOption)?.Id) != LibraryFrameError.None)
+        {
+            return;
+        }
+        UpdateAfterBaseRecipeChanged();
+    }
+
+    private void SetBaseMode(BaseEstimationMode mode)
+    {
+        if (panel is null || isSynchronizingInspector || panel.SetBaseMode(mode) != LibraryFrameError.None)
+        {
+            return;
+        }
+
+        isSynchronizingInspector = true;
+        ManualBaseRgb shown = panel.ManualBase ?? new ManualBaseRgb(
+            panel.SuggestedManualDmin,
+            panel.SuggestedManualDmin,
+            panel.SuggestedManualDmin);
+        BaseRedControl.Value = shown.Red;
+        BaseGreenControl.Value = shown.Green;
+        BaseBlueControl.Value = shown.Blue;
+        isSynchronizingInspector = false;
+        UpdateAfterBaseRecipeChanged();
+    }
+
+    private void UpdateAfterBaseRecipeChanged()
+    {
+        if (panel is null)
+        {
+            return;
+        }
+
+        SyncBaseControls();
+        UpdateSelectedFrameText();
+        ExportButton.IsEnabled = panel.CanExport;
+        ExportStatusText.Text = string.Empty;
+        RequestPreview();
+    }
+
+    private static DevelopRequestRefusal RefusalFor(LibraryFrameSnapshot frame)
+    {
+        if (frame.Route.FilmLookSource != FilmLookSource.FilmScan)
+        {
+            return DevelopRequestRefusal.UnsupportedDigitalSource;
+        }
+        if (frame.Route.FilmType is not (FilmType.ColorNegative or FilmType.BlackAndWhiteNegative))
+        {
+            return DevelopRequestRefusal.UnsupportedPositiveFilm;
+        }
+        return frame.Base.Mode switch
+        {
+            BaseEstimationMode.Preset when string.IsNullOrWhiteSpace(frame.Base.FilmStockDminId) =>
+                DevelopRequestRefusal.MissingFilmStock,
+            BaseEstimationMode.Manual when frame.ManualBase is null => DevelopRequestRefusal.MissingManualBase,
+            _ => DevelopRequestRefusal.None,
+        };
+    }
+
+    private void OnExposureChanged(object? sender, InspectorSliderValueChangedEventArgs args)
     {
         _ = sender;
         _ = args;
         // 선택을 바꾸며 슬라이더를 맞출 때는 catalog 를 건드리지 않습니다.
-        if (panel is null || isSynchronizingExposure)
+        if (panel is null || isSynchronizingInspector)
         {
             return;
         }
-        panel.SetExposure(ExposureSlider.Value);
-        UpdateExposureText();
+        panel.SetExposure(args.Value);
         RequestPreview();
     }
 
-    private void UpdateExposureText()
+    private void OnBasicToneChanged(object? sender, InspectorSliderValueChangedEventArgs args)
     {
-        if (panel is not null)
+        if (panel is null || isSynchronizingInspector)
         {
-            ExposureValueText.Text = panel.Exposure.ToString(
-                "+0.00;-0.00; 0.00",
-                CultureInfo.CurrentCulture);
+            return;
+        }
+
+        LibraryFrameError error = sender switch
+        {
+            InspectorSlider control when ReferenceEquals(control, ContrastControl) =>
+                panel.SetContrast(args.Value),
+            InspectorSlider control when ReferenceEquals(control, HighlightsControl) =>
+                panel.SetHighlights(args.Value),
+            InspectorSlider control when ReferenceEquals(control, ShadowsControl) =>
+                panel.SetShadows(args.Value),
+            InspectorSlider control when ReferenceEquals(control, WhitesControl) =>
+                panel.SetWhites(args.Value),
+            InspectorSlider control when ReferenceEquals(control, BlacksControl) =>
+                panel.SetBlacks(args.Value),
+            InspectorSlider control when ReferenceEquals(control, DensityControl) =>
+                panel.SetDensity(args.Value),
+            _ => LibraryFrameError.InvalidToneValue,
+        };
+        if (error == LibraryFrameError.None)
+        {
+            RequestPreview();
+        }
+    }
+
+    private void OnToneCurveChanged(object? sender, InspectorSliderValueChangedEventArgs args)
+    {
+        if (panel is null || isSynchronizingInspector)
+        {
+            return;
+        }
+
+        LibraryFrameError error = sender switch
+        {
+            InspectorSlider control when ReferenceEquals(control, CurveHighlightsControl) =>
+                panel.SetCurveHighlights(args.Value),
+            InspectorSlider control when ReferenceEquals(control, CurveLightsControl) =>
+                panel.SetCurveLights(args.Value),
+            InspectorSlider control when ReferenceEquals(control, CurveDarksControl) =>
+                panel.SetCurveDarks(args.Value),
+            InspectorSlider control when ReferenceEquals(control, CurveShadowsControl) =>
+                panel.SetCurveShadows(args.Value),
+            _ => LibraryFrameError.InvalidToneValue,
+        };
+        if (error == LibraryFrameError.None)
+        {
+            RequestPreview();
         }
     }
 

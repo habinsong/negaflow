@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Negaflow.Catalog;
 using Negaflow.Interop;
+using Negaflow.Shell.Develop;
 
 namespace Negaflow.Shell.UnitTests;
 
@@ -21,6 +22,7 @@ internal static class Program
         VerifyLibraryDocument();
         VerifyLibraryHost();
         VerifyDevelopPanelState();
+        VerifyInspectorSliderValue();
         VerifyFrameImport();
         VerifyPreviewCoordinator();
 
@@ -141,7 +143,8 @@ internal static class Program
         ManualBaseRgb? manualBase,
         SourceSignalKind signal = SourceSignalKind.FilmNegativeScan,
         FilmType filmType = FilmType.ColorNegative,
-        FilmEmulation emulation = FilmEmulation.Portra400) =>
+        FilmEmulation emulation = FilmEmulation.Portra400,
+        BaseRecipe? baseRecipe = null) =>
         new(
             "frame-1",
             @"C:\scans\IMG_0001.tif",
@@ -158,7 +161,12 @@ internal static class Program
                 UsedLegacySourceSignal: false,
                 UsedLegacyIntensityDefault: false),
             manualBase,
-            new ToneAdjustment(1.5, -0.25, 0.1, 0.2, 0.3, 0.4));
+            new ToneAdjustment(1.5, -0.25, 0.1, 0.2, 0.3, 0.4, 0.5, -0.6, 0.7, -0.8, 0.9))
+        {
+            Base = baseRecipe ?? (manualBase is null
+                ? BaseRecipe.Auto
+                : new BaseRecipe(BaseEstimationMode.Manual, null, null, null)),
+        };
 
     private static void VerifyDevelopRequestFactory()
     {
@@ -182,7 +190,14 @@ internal static class Program
         Check(request.DminBlue == 0.23f, "develop_request_dmin_blue");
         Check(request.ExposureStops == 1.5f, "develop_request_exposure");
         Check(request.Contrast == -0.25f, "develop_request_contrast");
+        Check(request.Density == 0.5f, "develop_request_density");
+        Check(request.Highlight == -0.6f, "develop_request_highlight");
+        Check(request.Shadow == 0.7f, "develop_request_shadow");
+        Check(request.Whites == -0.8f, "develop_request_whites");
+        Check(request.Blacks == 0.9f, "develop_request_blacks");
         Check(request.Highlights == 0.1f, "develop_request_highlights");
+        Check(request.Lights == 0.2f, "develop_request_lights");
+        Check(request.Darks == 0.3f, "develop_request_darks");
         Check(request.Shadows == 0.4f, "develop_request_shadows");
         Check(
             request.FilmEmulation == FilmEmulationProfile.Portra400,
@@ -193,6 +208,9 @@ internal static class Program
         Check(
             request.FilmLookSourceKind == DevelopSourceKind.FilmScan,
             "develop_request_source_kind");
+        Check(
+            request.BaseEstimationMode == DevelopBaseEstimationMode.Manual,
+            "develop_request_manual_base_mode");
 
         Check(
             DevelopRequestFactory.Create(
@@ -206,14 +224,53 @@ internal static class Program
                 destination).Request?.FilmEmulation == FilmEmulationProfile.None,
             "develop_request_no_emulation");
 
-        // 수동 Dmin 이 없으면 요청을 만들지 않습니다. 기본값을 지어내면 사용자가 고르지 않은
-        // Dmin 으로 현상됩니다.
-        DevelopRequestResult noBase = DevelopRequestFactory.Create(Frame(null), destination);
+        DevelopRequestResult auto = DevelopRequestFactory.Create(Frame(null), destination);
+        Check(auto.IsSuccess, "develop_request_auto_without_manual_base_succeeds");
+        Check(
+            auto.Request?.BaseEstimationMode == DevelopBaseEstimationMode.Auto,
+            "develop_request_auto_mode");
+
+        // Auto에는 이전 manual value가 남아 있을 수 있지만 resolver가 그것을 재사용하면 안 됩니다.
+        DevelopRequestResult autoWithStaleManual = DevelopRequestFactory.Create(
+            Frame(
+                new ManualBaseRgb(0.2, 0.2, 0.2),
+                baseRecipe: BaseRecipe.Auto),
+            destination);
+        Check(
+            autoWithStaleManual.Request?.BaseEstimationMode == DevelopBaseEstimationMode.Auto &&
+                autoWithStaleManual.Request?.DminRed == 0.0F,
+            "develop_request_auto_ignores_stale_manual_base");
+
+        DevelopRequestResult noBase = DevelopRequestFactory.Create(
+            Frame(
+                null,
+                baseRecipe: new BaseRecipe(BaseEstimationMode.Manual, null, null, null)),
+            destination);
         Check(!noBase.IsSuccess, "develop_request_missing_base_refused");
         Check(
             noBase.Refusal == DevelopRequestRefusal.MissingManualBase,
             "develop_request_missing_base_reason");
         Check(noBase.Request is null, "develop_request_no_partial_request");
+
+        DevelopRequestResult preset = DevelopRequestFactory.Create(
+            Frame(
+                new ManualBaseRgb(0.2, 0.2, 0.2),
+                baseRecipe: new BaseRecipe(
+                    BaseEstimationMode.Preset, "kodak-portra-400", "warm-led", null)),
+            destination);
+        Check(
+            preset.IsSuccess &&
+                preset.Request?.BaseEstimationMode == DevelopBaseEstimationMode.Preset &&
+                preset.Request?.FilmStockDminId == "kodak-portra-400" &&
+                preset.Request?.LightSourceProfileId == "warm-led",
+            "develop_request_preset_carries_film_identifiers");
+        Check(
+            DevelopRequestFactory.Create(
+                Frame(
+                    new ManualBaseRgb(0.2, 0.2, 0.2),
+                    baseRecipe: new BaseRecipe(BaseEstimationMode.Preset, null, null, null)),
+                destination).Refusal == DevelopRequestRefusal.MissingFilmStock,
+            "develop_request_preset_requires_film_stock");
 
         // rendered-digital 은 네이티브도 거부하지만, 버튼을 누르기 전에 알 수 있어야 합니다.
         DevelopRequestResult digital = DevelopRequestFactory.Create(
@@ -225,6 +282,12 @@ internal static class Program
         Check(
             digital.Refusal == DevelopRequestRefusal.UnsupportedDigitalSource,
             "develop_request_digital_refused");
+
+        Check(
+            DevelopRequestFactory.Create(
+                Frame(null, SourceSignalKind.FilmPositiveScan, FilmType.ColorPositive),
+                destination).Refusal == DevelopRequestRefusal.UnsupportedPositiveFilm,
+            "develop_request_positive_film_refused");
 
         Check(
             DevelopRequestFactory.Create(
@@ -360,7 +423,9 @@ internal static class Program
         DevelopExportCoordinator refusing = new(neverCalled, dispatcher);
         DevelopExportOutcome? refusal = null;
         Check(
-            refusing.StartAsync(Frame(null), destination, DevelopExportFormat.Png16,
+            refusing.StartAsync(Frame(
+                null,
+                baseRecipe: new BaseRecipe(BaseEstimationMode.Manual, null, null, null)), destination, DevelopExportFormat.Png16,
                 outcome => refusal = outcome).GetAwaiter().GetResult(),
             "coordinator_delivers_refusal");
         Check(refusal?.Kind == DevelopExportOutcomeKind.Refused, "coordinator_refused_kind");
@@ -618,9 +683,28 @@ internal static class Program
 
             // 현상할 수 없는 frame 은 목록에서 그 이유가 보입니다. Export 가 조용히 아무것도
             // 하지 않는 것보다 낫습니다.
-            LibraryFrameListItem noBase = new(Frame(null));
+            LibraryFrameListItem noBase = new(Frame(
+                null,
+                baseRecipe: new BaseRecipe(BaseEstimationMode.Manual, null, null, null)));
             Check(!noBase.CanDevelop, "library_item_cannot_develop");
             Check(noBase.Detail == "Dmin not set", "library_item_shows_reason");
+
+            LibraryFrameListItem preset = new(Frame(
+                new ManualBaseRgb(0.2, 0.2, 0.2),
+                baseRecipe: new BaseRecipe(BaseEstimationMode.Preset, "kodak-portra-400", null, null)));
+            Check(preset.CanDevelop, "library_item_preset_can_develop");
+            Check(
+                preset.Detail == @"C:\scans\IMG_0001.tif",
+                "library_item_shows_preset_source");
+
+            LibraryFrameListItem positive = new(Frame(
+                null,
+                SourceSignalKind.FilmPositiveScan,
+                FilmType.ColorPositive));
+            Check(!positive.CanDevelop, "library_item_positive_cannot_develop");
+            Check(
+                positive.Detail.Contains("Positive", StringComparison.OrdinalIgnoreCase),
+                "library_item_shows_positive_reason");
 
             Check(
                 LibraryFrameListItems.IssueSummary(
@@ -695,6 +779,12 @@ internal static class Program
         {
             using (CatalogSession seed = CatalogSession.Open(roots).Session!)
             {
+                JsonObject autoWithoutManualBase = FrameRecord("frame-2", "IMG_0002.tif", 0.0);
+                autoWithoutManualBase["params"]!.AsObject().Remove("manualBaseRGB");
+                JsonObject positiveFrame = FrameRecord("frame-3", "IMG_0003.tif", 0.0);
+                positiveFrame["sourceSignalKind"] = "filmPositiveScan";
+                positiveFrame["filmType"] = "colorPositive";
+                positiveFrame["params"]!.AsObject()["filmType"] = "colorPositive";
                 seed.Write(new CatalogSnapshot(
                     null,
                     new Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>>
@@ -702,6 +792,8 @@ internal static class Program
                         [CatalogEntityTable.Frames] =
                         [
                             new("frame-1", FrameRecord("frame-1", "IMG_0001.tif", 0.0)),
+                            new("frame-2", autoWithoutManualBase),
+                            new("frame-3", positiveFrame),
                         ],
                     }));
             }
@@ -731,6 +823,28 @@ internal static class Program
             Check(panel.SetExposure(-99.0) == LibraryFrameError.None, "panel_set_low_exposure");
             Check(panel.Exposure == -5.0, "panel_clamps_low_exposure");
 
+            Check(panel.MaximumToneControl == 1.0, "panel_basic_tone_range_from_engine");
+            Check(panel.SetContrast(-0.25) == LibraryFrameError.None && panel.Contrast == -0.25,
+                "panel_set_contrast");
+            Check(panel.SetHighlights(0.5) == LibraryFrameError.None && panel.Highlights == 0.5,
+                "panel_set_highlights");
+            Check(panel.SetShadows(-0.5) == LibraryFrameError.None && panel.Shadows == -0.5,
+                "panel_set_shadows");
+            Check(panel.SetWhites(0.75) == LibraryFrameError.None && panel.Whites == 0.75,
+                "panel_set_whites");
+            Check(panel.SetBlacks(-0.75) == LibraryFrameError.None && panel.Blacks == -0.75,
+                "panel_set_blacks");
+            Check(panel.SetDensity(99.0) == LibraryFrameError.None && panel.Density == 1.0,
+                "panel_clamps_density");
+            Check(panel.SetCurveHighlights(-0.25) == LibraryFrameError.None &&
+                panel.CurveHighlights == -0.25, "panel_set_curve_highlights");
+            Check(panel.SetCurveLights(0.5) == LibraryFrameError.None &&
+                panel.CurveLights == 0.5, "panel_set_curve_lights");
+            Check(panel.SetCurveDarks(-0.5) == LibraryFrameError.None &&
+                panel.CurveDarks == -0.5, "panel_set_curve_darks");
+            Check(panel.SetCurveShadows(99.0) == LibraryFrameError.None &&
+                panel.CurveShadows == 1.0, "panel_clamps_curve_shadows");
+
             // 아직 base 를 고르지 않은 frame 에도 슬라이더 시작 위치는 있어야 하지만, 그것이
             // catalog 에 저장되면 사용자가 고르지 않은 값으로 현상됩니다.
             Check(
@@ -739,11 +853,54 @@ internal static class Program
                 "panel_suggested_base_in_range");
 
             Check(
+                panel.SetBaseMode(BaseEstimationMode.Auto) == LibraryFrameError.None,
+                "panel_selects_auto_base_mode");
+            Check(
+                panel.SelectedFrame?.Base.Mode == BaseEstimationMode.Auto &&
+                    panel.ManualBase == new ManualBaseRgb(0.21, 0.22, 0.23),
+                "panel_auto_preserves_existing_manual_base");
+            Check(
+                panel.SetBaseMode(BaseEstimationMode.Manual) == LibraryFrameError.None,
+                "panel_selects_manual_base_mode");
+            Check(
+                panel.ManualBase == new ManualBaseRgb(0.21, 0.22, 0.23),
+                "panel_manual_mode_restores_existing_base");
+
+            Check(panel.SetBaseMode(BaseEstimationMode.Preset) == LibraryFrameError.None,
+                "panel_selects_film_base_mode");
+            Check(panel.SelectedFrame?.Base.Mode == BaseEstimationMode.Preset,
+                "panel_film_base_mode_is_visible_immediately");
+            Check(panel.SetFilmStock("kodak-portra-400") == LibraryFrameError.None,
+                "panel_sets_known_film_stock");
+            Check(panel.SelectedFrame?.Base.FilmStockDminId == "kodak-portra-400" &&
+                panel.SelectedFrame.Base.Mode == BaseEstimationMode.Preset,
+                "panel_film_stock_selects_preset_mode");
+            Check(panel.SetLightSourceProfile("warm-led") == LibraryFrameError.None,
+                "panel_sets_known_light_source");
+            Check(panel.SelectedFrame?.Base.LightSourceProfileId == "warm-led",
+                "panel_light_source_visible_immediately");
+            Check(panel.SetFilmStock(null) == LibraryFrameError.None &&
+                panel.SelectedFrame?.Base.Mode == BaseEstimationMode.Auto,
+                "panel_film_stock_none_returns_to_auto");
+            Check(panel.SelectedFrame?.Base.LightSourceProfileId == "warm-led" &&
+                panel.ManualBase == new ManualBaseRgb(0.21, 0.22, 0.23),
+                "panel_auto_preserves_light_and_manual_base");
+            Check(panel.SetLightSourceProfile("neutral") == LibraryFrameError.InvalidBaseRecipe,
+                "panel_rejects_light_source_outside_film_mode");
+            Check(panel.SetFilmStock("unknown-stock") == LibraryFrameError.InvalidBaseRecipe,
+                "panel_rejects_unknown_film_stock");
+            Check(panel.SetLightSourceProfile("unknown-light") == LibraryFrameError.InvalidBaseRecipe,
+                "panel_rejects_unknown_light_source");
+
+            Check(
                 panel.SetManualBase(0.3, 0.31, 0.32) == LibraryFrameError.None,
                 "panel_set_manual_base");
             Check(
                 panel.ManualBase == new ManualBaseRgb(0.3, 0.31, 0.32),
                 "panel_manual_base_visible_immediately");
+            Check(
+                panel.SelectedFrame?.Base.Mode == BaseEstimationMode.Manual,
+                "panel_manual_base_selects_manual_mode");
 
             // 엔진은 범위를 벗어난 값을 거부하지 않고 조용히 clamp 합니다. 여기서 먼저 묶지
             // 않으면 저장된 값과 실제로 쓰인 값이 달라집니다.
@@ -757,6 +914,32 @@ internal static class Program
                 panel.ManualBase?.Green == panel.MinimumManualDmin,
                 "panel_clamps_low_base");
             Check(panel.ManualBase?.Blue == 0.5, "panel_leaves_valid_channel");
+            Check(panel.SetBaseMode(BaseEstimationMode.Auto) == LibraryFrameError.None,
+                "panel_returns_to_auto_base_mode");
+            Check(panel.ManualBase == new ManualBaseRgb(panel.MaximumManualDmin, panel.MinimumManualDmin, 0.5),
+                "panel_auto_preserves_manual_base");
+            Check(panel.SetBaseMode(BaseEstimationMode.Manual) == LibraryFrameError.None,
+                "panel_restores_manual_base_mode");
+            Check(panel.ManualBase == new ManualBaseRgb(panel.MaximumManualDmin, panel.MinimumManualDmin, 0.5),
+                "panel_manual_mode_restores_preserved_base");
+
+            Check(panel.Select("frame-2"), "panel_selects_auto_frame_without_manual_base");
+            Check(panel.ManualBase is null && panel.BaseMode == BaseEstimationMode.Auto,
+                "panel_auto_frame_starts_without_manual_base");
+            Check(panel.SetBaseMode(BaseEstimationMode.Manual) == LibraryFrameError.None,
+                "panel_initializes_manual_mode_without_saved_base");
+            Check(panel.ManualBase == new ManualBaseRgb(0.9, 0.65, 0.45),
+                "panel_manual_mode_uses_mac_fallback_base");
+
+            Check(panel.Select("frame-3"), "panel_selects_positive_frame");
+            Check(!panel.CanEditBase, "panel_positive_frame_cannot_edit_base");
+            Check(panel.SetManualBase(0.3, 0.3, 0.3) == LibraryFrameError.InvalidDevelopRoute,
+                "panel_rejects_manual_base_for_positive_frame");
+            Check(panel.SetContrast(0.3) == LibraryFrameError.InvalidDevelopRoute,
+                "panel_rejects_tone_for_positive_frame");
+            Check(panel.SetCurveHighlights(0.3) == LibraryFrameError.InvalidDevelopRoute,
+                "panel_rejects_curve_for_positive_frame");
+            Check(panel.Select("frame-2"), "panel_reselects_developable_frame");
 
             Check(panel.Save() == CatalogStoreError.None, "panel_save");
 
@@ -781,6 +964,34 @@ internal static class Program
         }
 
         VerifyDevelopOutcomeText();
+    }
+
+    private static void VerifyInspectorSliderValue()
+    {
+        Check(
+            InspectorSliderValue.Adjust(0, -5, 5, increase: true, coarse: false) == 0.01,
+            "inspector_slider_fine_increment");
+        Check(
+            InspectorSliderValue.Adjust(0, -5, 5, increase: false, coarse: true) == -0.10,
+            "inspector_slider_coarse_decrement");
+        Check(
+            InspectorSliderValue.Adjust(4.99, -5, 5, increase: true, coarse: true) == 5,
+            "inspector_slider_clamps_upper_bound");
+        Check(
+            InspectorSliderValue.TryParse("-1.25", -5, 5, out double parsed) && parsed == -1.25,
+            "inspector_slider_parses_valid_decimal");
+        Check(
+            InspectorSliderValue.TryParse(" 1.25 ", -5, 5, out double trimmed) && trimmed == 1.25,
+            "inspector_slider_trims_decimal_input");
+        Check(
+            !InspectorSliderValue.TryParse("NaN", -5, 5, out _),
+            "inspector_slider_rejects_non_finite");
+        Check(
+            !InspectorSliderValue.TryParse("5.01", -5, 5, out _),
+            "inspector_slider_rejects_out_of_range");
+        Check(
+            !InspectorSliderValue.TryParse("1e2", -5, 5, out _),
+            "inspector_slider_rejects_non_decimal_notation");
     }
 
     private static void VerifyDevelopOutcomeText()
@@ -861,11 +1072,10 @@ internal static class Program
             plan.Rows[0].Payload["sourceSignalKind"]!.GetValue<string>() == "filmNegativeScan",
             "import_route_signal");
 
-        // 가져온 frame 은 읽히되 아직 현상할 수 없습니다. Dmin 이 없기 때문이며, 기본값을
-        // 지어내지 않는다는 결정이 여기까지 이어집니다.
+        // 가져온 frame 은 Auto recipe로 읽히며 resolver가 실제 입력에서 base를 결정합니다.
         LibraryFrameReadResult read = ReadImported(plan.Rows[0].Payload);
         Check(read.IsSuccess, "import_record_is_readable");
-        Check(read.Frame?.CanDevelop == false, "import_record_needs_dmin");
+        Check(read.Frame?.CanDevelop == true, "import_record_uses_auto_base");
 
         LibraryFrameSnapshot existing = read.Frame!;
         FrameImportPlan again = FrameImport.Plan(
@@ -976,7 +1186,9 @@ internal static class Program
         FakeExporter neverCalled = new(_ => OkResult());
         PreviewCoordinator refusing = new(neverCalled, quiet, 64, 64);
         PreviewOutcome? refusal = null;
-        refusing.RequestAsync(Frame(null), outcome => refusal = outcome)
+        refusing.RequestAsync(Frame(
+                null,
+                baseRecipe: new BaseRecipe(BaseEstimationMode.Manual, null, null, null)), outcome => refusal = outcome)
             .GetAwaiter().GetResult();
         Check(refusal?.Kind == DevelopExportOutcomeKind.Refused, "preview_refused");
         Check(

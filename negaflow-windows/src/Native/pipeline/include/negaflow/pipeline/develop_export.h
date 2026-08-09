@@ -1,6 +1,8 @@
 #pragma once
 
 #include "negaflow/imageio/image_file_observation.h"
+#include "negaflow/imaging/auto_negative_base_resolver.h"
+#include "negaflow/imaging/film_stock_base_resolver.h"
 #include "negaflow/imaging/manual_negative_developer.h"
 #include "negaflow/imaging/scanner_tiff_to_working.h"
 #include "negaflow/imaging/working_film_look.h"
@@ -8,9 +10,11 @@
 #include "negaflow/output/wic_png_export.h"
 #include "negaflow/output/wic_tiff_export.h"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <optional>
 
 namespace negaflow::pipeline {
 
@@ -19,10 +23,30 @@ enum class DevelopExportFormat : std::uint8_t {
     tiff16,
 };
 
+enum class NegativeBaseEstimationMode : std::uint8_t {
+    auto_estimate = 0,
+    preset,
+    manual,
+};
+
+enum class DevelopBaseSource : std::uint8_t {
+    manual = 0,
+    auto_scene_edge,
+    auto_fallback,
+    auto_connected_component,
+    auto_continuous_border,
+    auto_distributed_mask,
+    auto_strip_fallback,
+    preset_measured,
+    preset_fallback,
+};
+
 struct DevelopExportRequest final {
     std::filesystem::path source{};
     std::filesystem::path destination{};
     DevelopExportFormat format{DevelopExportFormat::png16};
+    NegativeBaseEstimationMode base_estimation_mode{NegativeBaseEstimationMode::manual};
+    std::optional<negaflow::imaging::FilmStockBasePreset> film_stock_preset{};
     negaflow::imaging::ManualNegativeDevelopParameters negative{};
     negaflow::imaging::WorkingToneAdjustParameters tone{};
     negaflow::imaging::WorkingFilmLookParameters film_look{};
@@ -62,6 +86,8 @@ struct DevelopExportOutcome final {
     bool film_look_color_applied{false};
     bool film_look_acutance_applied{false};
     std::uint64_t output_file_bytes{0U};
+    std::array<float, 3> applied_dmin{};
+    DevelopBaseSource base_source{DevelopBaseSource::manual};
 };
 
 // Runs decode, manual negative develop, tone, Film Look and the verified 16-bit

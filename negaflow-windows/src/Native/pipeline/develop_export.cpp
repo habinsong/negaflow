@@ -182,6 +182,15 @@ struct PreviewTarget final {
     if (request.rows_per_copy == 0U) {
         return fail(DevelopExportStage::request_validation, "invalid_rows_per_copy");
     }
+    if (request.base_estimation_mode != NegativeBaseEstimationMode::manual &&
+        request.base_estimation_mode != NegativeBaseEstimationMode::auto_estimate &&
+        request.base_estimation_mode != NegativeBaseEstimationMode::preset) {
+        return fail(DevelopExportStage::request_validation, "unsupported_base_estimation_mode");
+    }
+    if (request.base_estimation_mode == NegativeBaseEstimationMode::preset &&
+        !request.film_stock_preset) {
+        return fail(DevelopExportStage::request_validation, "unknown_film_stock");
+    }
     if (!negaflow::imaging::valid_working_tone_adjust_parameters(request.tone)) {
         return fail(
             DevelopExportStage::request_validation,
@@ -267,9 +276,62 @@ struct PreviewTarget final {
     }
     const std::size_t workspace_bytes = film_look_workspace_bytes(workspace);
 
+    negaflow::imaging::ManualNegativeDevelopParameters negative = request.negative;
+    DevelopBaseSource base_source = DevelopBaseSource::manual;
+    if (request.base_estimation_mode == NegativeBaseEstimationMode::auto_estimate ||
+        request.base_estimation_mode == NegativeBaseEstimationMode::preset) {
+        const negaflow::imaging::AutoNegativeBaseResult resolved =
+            negaflow::imaging::resolve_auto_negative_base(
+                prepared.working.image,
+                negative.film_type);
+        if (resolved.status != negaflow::imaging::AutoNegativeBaseStatus::ok) {
+            return fail(
+                DevelopExportStage::develop,
+                negaflow::imaging::auto_negative_base_status_name(resolved.status));
+        }
+        if (request.base_estimation_mode == NegativeBaseEstimationMode::preset) {
+            negative.use_preset_response = true;
+            negative.preset_dmax_normalized = request.film_stock_preset->dmax_normalized;
+            if (resolved.source == negaflow::imaging::AutoNegativeBaseSource::connected_component) {
+                negative.dmin = resolved.dmin;
+                base_source = DevelopBaseSource::preset_measured;
+            } else {
+                negative.dmin = request.film_stock_preset->dmin;
+                base_source = DevelopBaseSource::preset_fallback;
+            }
+            for (std::size_t channel = 0U; channel < negative.dmin.size(); ++channel) {
+                negative.dmin[channel] *= request.film_stock_preset->light_gain[channel];
+            }
+        } else {
+            negative.dmin = resolved.dmin;
+        }
+        if (request.base_estimation_mode == NegativeBaseEstimationMode::auto_estimate) {
+            switch (resolved.source) {
+            case negaflow::imaging::AutoNegativeBaseSource::connected_component:
+                base_source = DevelopBaseSource::auto_connected_component;
+                break;
+            case negaflow::imaging::AutoNegativeBaseSource::continuous_border:
+                base_source = DevelopBaseSource::auto_continuous_border;
+                break;
+            case negaflow::imaging::AutoNegativeBaseSource::distributed_mask:
+                base_source = DevelopBaseSource::auto_distributed_mask;
+                break;
+            case negaflow::imaging::AutoNegativeBaseSource::strip_fallback:
+                base_source = DevelopBaseSource::auto_strip_fallback;
+                break;
+            case negaflow::imaging::AutoNegativeBaseSource::scene_edge:
+                base_source = DevelopBaseSource::auto_scene_edge;
+                break;
+            case negaflow::imaging::AutoNegativeBaseSource::fallback:
+                base_source = DevelopBaseSource::auto_fallback;
+                break;
+            }
+        }
+    }
+
     auto developed = negaflow::imaging::develop_manual_negative(
         std::move(prepared.working.image),
-        request.negative);
+        negative);
     if (developed.status != negaflow::imaging::ManualNegativeDevelopStatus::ok) {
         if (developed.status ==
             negaflow::imaging::ManualNegativeDevelopStatus::kernel_failed) {
@@ -328,6 +390,8 @@ struct PreviewTarget final {
     outcome.film_look_route = film_look.info.route;
     outcome.film_look_color_applied = film_look.info.color_applied;
     outcome.film_look_acutance_applied = film_look.info.acutance_applied;
+    outcome.applied_dmin = developed.info.applied_dmin;
+    outcome.base_source = base_source;
 
     if (preview != nullptr) {
         return write_preview(film_look.image, *preview, outcome);

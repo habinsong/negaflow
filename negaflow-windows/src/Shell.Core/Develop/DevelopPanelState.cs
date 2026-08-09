@@ -33,14 +33,115 @@ public sealed class DevelopPanelState
     public double MaximumManualDmin => negativeLimits.MaximumManualDmin;
 
     /// <summary>
-    /// 아직 base 를 고르지 않은 frame 의 슬라이더 시작 위치입니다. **이 값이 catalog 에 저장되지는
-    /// 않습니다.** 사용자가 슬라이더를 움직여야 저장되며, 그전까지 frame 은 현상 불가 상태로
-    /// 남습니다. 화면에 뭔가 보여 주는 것과 사용자가 고른 것을 구별합니다.
+    /// 아직 수동 base 를 고르지 않은 frame 의 슬라이더 시작 위치입니다. **이 값이 catalog 에 저장되지는
+    /// 않습니다.** Auto 모드의 preview/export는 이 값이 아니라 native resolver를 사용합니다.
     /// </summary>
     public double SuggestedManualDmin =>
         negativeLimits.ClampChannel((MinimumManualDmin + MaximumManualDmin) / 4.0);
 
     public ManualBaseRgb? ManualBase => SelectedFrame?.ManualBase;
+
+    public BaseEstimationMode BaseMode => SelectedFrame?.Base.Mode ?? BaseEstimationMode.Auto;
+
+    public bool CanEditBase => SelectedFrame?.Route.FilmType is FilmType.ColorNegative or FilmType.BlackAndWhiteNegative;
+
+    public bool CanEditTone => SelectedFrame?.Route.FilmType is FilmType.ColorNegative or FilmType.BlackAndWhiteNegative;
+
+    public LibraryFrameError SetBaseMode(BaseEstimationMode mode)
+    {
+        if (SelectedFrame is not { } frame)
+        {
+            return LibraryFrameError.MissingId;
+        }
+        if (mode is not (BaseEstimationMode.Auto or BaseEstimationMode.Preset or BaseEstimationMode.Manual))
+        {
+            return LibraryFrameError.InvalidBaseRecipe;
+        }
+        if (!CanEditBase)
+        {
+            return LibraryFrameError.InvalidDevelopRoute;
+        }
+
+        ManualBaseRgb? manualBase = frame.ManualBase;
+        if (mode == BaseEstimationMode.Manual && manualBase is null)
+        {
+            manualBase = new ManualBaseRgb(
+                negativeLimits.ClampChannel(0.90),
+                negativeLimits.ClampChannel(0.65),
+                negativeLimits.ClampChannel(0.45));
+        }
+
+        LibraryFrameError error = host.Edit(
+            frame.Id,
+            new LibraryFrameEdit(frame.Tone, manualBase, frame.Base with { Mode = mode }));
+        if (error == LibraryFrameError.None)
+        {
+            Select(frame.Id);
+        }
+        return error;
+    }
+
+    public LibraryFrameError SetFilmStock(string? filmStockDminId)
+    {
+        if (SelectedFrame is not { } frame)
+        {
+            return LibraryFrameError.MissingId;
+        }
+        if (!CanEditBase)
+        {
+            return LibraryFrameError.InvalidDevelopRoute;
+        }
+        if (!BundledFilmBaseOptions.IsKnownFilmStock(filmStockDminId))
+        {
+            return LibraryFrameError.InvalidBaseRecipe;
+        }
+
+        BaseRecipe updated = frame.Base with
+        {
+            Mode = filmStockDminId is null ? BaseEstimationMode.Auto : BaseEstimationMode.Preset,
+            FilmStockDminId = filmStockDminId,
+        };
+        LibraryFrameError error = host.Edit(
+            frame.Id,
+            new LibraryFrameEdit(frame.Tone, frame.ManualBase, updated));
+        if (error == LibraryFrameError.None)
+        {
+            Select(frame.Id);
+        }
+        return error;
+    }
+
+    public LibraryFrameError SetLightSourceProfile(string? lightSourceProfileId)
+    {
+        if (SelectedFrame is not { } frame)
+        {
+            return LibraryFrameError.MissingId;
+        }
+        if (!CanEditBase)
+        {
+            return LibraryFrameError.InvalidDevelopRoute;
+        }
+        if (frame.Base.Mode != BaseEstimationMode.Preset)
+        {
+            return LibraryFrameError.InvalidBaseRecipe;
+        }
+        if (!BundledFilmBaseOptions.IsKnownLightSource(lightSourceProfileId))
+        {
+            return LibraryFrameError.InvalidBaseRecipe;
+        }
+
+        LibraryFrameError error = host.Edit(
+            frame.Id,
+            new LibraryFrameEdit(
+                frame.Tone,
+                frame.ManualBase,
+                frame.Base with { LightSourceProfileId = lightSourceProfileId }));
+        if (error == LibraryFrameError.None)
+        {
+            Select(frame.Id);
+        }
+        return error;
+    }
 
     /// <summary>
     /// 수동 필름 base 를 설정합니다. 범위는 엔진이 알려 준 것이며, 엔진은 벗어난 값을 거부하지
@@ -52,6 +153,10 @@ public sealed class DevelopPanelState
         {
             return LibraryFrameError.MissingId;
         }
+        if (!CanEditBase)
+        {
+            return LibraryFrameError.InvalidDevelopRoute;
+        }
 
         ManualBaseRgb clamped = new(
             negativeLimits.ClampChannel(red),
@@ -59,7 +164,10 @@ public sealed class DevelopPanelState
             negativeLimits.ClampChannel(blue));
         LibraryFrameError error = host.Edit(
             frame.Id,
-            new LibraryFrameEdit(frame.Tone, clamped));
+            new LibraryFrameEdit(
+                frame.Tone,
+                clamped,
+                frame.Base with { Mode = BaseEstimationMode.Manual }));
         if (error == LibraryFrameError.None)
         {
             Select(frame.Id);
@@ -71,7 +179,29 @@ public sealed class DevelopPanelState
 
     public double MaximumExposureStops => limits.MaximumExposureStops;
 
+    public double MaximumToneControl => limits.MaximumToneControl;
+
     public double Exposure => SelectedFrame?.Tone.Exposure ?? 0.0;
+
+    public double Contrast => SelectedFrame?.Tone.Contrast ?? 0.0;
+
+    public double Highlights => SelectedFrame?.Tone.Highlight ?? 0.0;
+
+    public double Shadows => SelectedFrame?.Tone.Shadow ?? 0.0;
+
+    public double Whites => SelectedFrame?.Tone.Whites ?? 0.0;
+
+    public double Blacks => SelectedFrame?.Tone.Blacks ?? 0.0;
+
+    public double Density => SelectedFrame?.Tone.Density ?? 0.0;
+
+    public double CurveHighlights => SelectedFrame?.Tone.CurveHighlights ?? 0.0;
+
+    public double CurveLights => SelectedFrame?.Tone.CurveLights ?? 0.0;
+
+    public double CurveDarks => SelectedFrame?.Tone.CurveDarks ?? 0.0;
+
+    public double CurveShadows => SelectedFrame?.Tone.CurveShadows ?? 0.0;
 
     public bool CanExport => SelectedFrame is { CanDevelop: true } && !host.IsExporting;
 
@@ -96,12 +226,52 @@ public sealed class DevelopPanelState
     /// </summary>
     public LibraryFrameError SetExposure(double stops)
     {
+        return SetTone(tone => tone with { Exposure = limits.ClampExposure(stops) });
+    }
+
+    public LibraryFrameError SetContrast(double value) =>
+        SetTone(tone => tone with { Contrast = limits.ClampToneControl(value) });
+
+    public LibraryFrameError SetHighlights(double value) =>
+        SetTone(tone => tone with { Highlight = limits.ClampToneControl(value) });
+
+    public LibraryFrameError SetShadows(double value) =>
+        SetTone(tone => tone with { Shadow = limits.ClampToneControl(value) });
+
+    public LibraryFrameError SetWhites(double value) =>
+        SetTone(tone => tone with { Whites = limits.ClampToneControl(value) });
+
+    public LibraryFrameError SetBlacks(double value) =>
+        SetTone(tone => tone with { Blacks = limits.ClampToneControl(value) });
+
+    public LibraryFrameError SetDensity(double value) =>
+        SetTone(tone => tone with { Density = limits.ClampToneControl(value) });
+
+    public LibraryFrameError SetCurveHighlights(double value) =>
+        SetTone(tone => tone with { CurveHighlights = limits.ClampToneControl(value) });
+
+    public LibraryFrameError SetCurveLights(double value) =>
+        SetTone(tone => tone with { CurveLights = limits.ClampToneControl(value) });
+
+    public LibraryFrameError SetCurveDarks(double value) =>
+        SetTone(tone => tone with { CurveDarks = limits.ClampToneControl(value) });
+
+    public LibraryFrameError SetCurveShadows(double value) =>
+        SetTone(tone => tone with { CurveShadows = limits.ClampToneControl(value) });
+
+    private LibraryFrameError SetTone(Func<ToneAdjustment, ToneAdjustment> update)
+    {
+        ArgumentNullException.ThrowIfNull(update);
         if (SelectedFrame is not { } frame)
         {
             return LibraryFrameError.MissingId;
         }
+        if (!CanEditTone)
+        {
+            return LibraryFrameError.InvalidDevelopRoute;
+        }
 
-        ToneAdjustment tone = frame.Tone with { Exposure = limits.ClampExposure(stops) };
+        ToneAdjustment tone = update(frame.Tone);
         LibraryFrameError error = host.Edit(
             frame.Id,
             new LibraryFrameEdit(tone, frame.ManualBase));
@@ -157,8 +327,14 @@ public sealed class DevelopPanelState
                 {
                     DevelopRequestRefusal.MissingManualBase =>
                         "Set the film base (Dmin) before developing this frame.",
+                    DevelopRequestRefusal.MissingFilmStock =>
+                        "Select a film stock before developing this frame.",
+                    DevelopRequestRefusal.UnsupportedBaseEstimationMode =>
+                        "This film-base mode is not supported by the Windows engine yet.",
                     DevelopRequestRefusal.UnsupportedDigitalSource =>
                         "This frame is a rendered digital source, which cannot be developed yet.",
+                    DevelopRequestRefusal.UnsupportedPositiveFilm =>
+                        "Positive film development is not supported by the Windows engine yet.",
                     DevelopRequestRefusal.InvalidDestination =>
                         "Choose a full path to export to.",
                     DevelopRequestRefusal.UnknownOutputFormat =>

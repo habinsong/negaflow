@@ -19,9 +19,20 @@ static_assert(offsetof(nf_build_info_v1, source_commit_sha1) == 24U);
 // actually decides are pinned here.
 static_assert(sizeof(nf_develop_export_request_v1) == 96U);
 static_assert(offsetof(nf_develop_export_request_v1, film_emulation_intensity) == 80U);
+static_assert(sizeof(nf_develop_export_request_v2) == 96U);
+static_assert(offsetof(nf_develop_export_request_v2, base_estimation_mode) == 32U);
+static_assert(offsetof(nf_develop_export_request_v2, film_emulation_intensity) == 80U);
+static_assert(sizeof(nf_develop_export_request_v3) == 112U);
+static_assert(offsetof(nf_develop_export_request_v3, base_estimation_mode) == 32U);
+static_assert(offsetof(nf_develop_export_request_v3, density) == 92U);
+static_assert(sizeof(nf_develop_export_request_v4) == 128U);
+static_assert(offsetof(nf_develop_export_request_v4, density) == 92U);
+static_assert(offsetof(nf_develop_export_request_v4, film_stock_dmin_id) == 112U);
 static_assert(sizeof(nf_develop_export_result_v1) == 136U);
 static_assert(offsetof(nf_develop_export_result_v1, failure_name) == 12U);
 static_assert(offsetof(nf_develop_export_result_v1, source_file_bytes) == 104U);
+static_assert(sizeof(nf_develop_export_result_v2) == 152U);
+static_assert(offsetof(nf_develop_export_result_v2, applied_dmin) == 136U);
 
 namespace {
 
@@ -109,6 +120,24 @@ void copy_failure_name(
             return true;
         case NF_DEVELOP_SOURCE_RENDERED_DIGITAL:
             source_kind = negaflow::imaging::DevelopSourceKind::rendered_digital;
+            return true;
+        default:
+            return false;
+    }
+}
+
+[[nodiscard]] bool map_base_estimation_mode(
+    const std::uint32_t value,
+    negaflow::pipeline::NegativeBaseEstimationMode& mode) noexcept {
+    switch (value) {
+        case NF_BASE_ESTIMATION_AUTO:
+            mode = negaflow::pipeline::NegativeBaseEstimationMode::auto_estimate;
+            return true;
+        case NF_BASE_ESTIMATION_PRESET:
+            mode = negaflow::pipeline::NegativeBaseEstimationMode::preset;
+            return true;
+        case NF_BASE_ESTIMATION_MANUAL:
+            mode = negaflow::pipeline::NegativeBaseEstimationMode::manual;
             return true;
         default:
             return false;
@@ -206,6 +235,163 @@ void write_rejected_request(
     return true;
 }
 
+template <typename Request>
+[[nodiscard]] bool map_base_request(
+    const Request& request,
+    const bool require_destination,
+    negaflow::pipeline::DevelopExportRequest& pipeline_request,
+    nf_develop_export_result_v2& result) noexcept {
+    if (request.source_path == nullptr ||
+        (require_destination && request.destination_path == nullptr)) {
+        result.succeeded = 0U;
+        result.failed_stage = NF_DEVELOP_STAGE_REQUEST_VALIDATION;
+        copy_failure_name("missing_path", result.failure_name);
+        return false;
+    }
+    if (!map_export_format(request.output_format, pipeline_request.format)) {
+        result.succeeded = 0U;
+        result.failed_stage = NF_DEVELOP_STAGE_REQUEST_VALIDATION;
+        copy_failure_name("unknown_export_format", result.failure_name);
+        return false;
+    }
+    if (!map_film_type(request.film_type, pipeline_request.negative.film_type)) {
+        result.succeeded = 0U;
+        result.failed_stage = NF_DEVELOP_STAGE_REQUEST_VALIDATION;
+        copy_failure_name("unknown_film_type", result.failure_name);
+        return false;
+    }
+    if (!map_base_estimation_mode(
+            request.base_estimation_mode,
+            pipeline_request.base_estimation_mode)) {
+        result.succeeded = 0U;
+        result.failed_stage = NF_DEVELOP_STAGE_REQUEST_VALIDATION;
+        copy_failure_name("unknown_base_estimation_mode", result.failure_name);
+        return false;
+    }
+    if (!map_source_kind(
+            request.film_look_source_kind,
+            pipeline_request.film_look.source_kind)) {
+        result.succeeded = 0U;
+        result.failed_stage = NF_DEVELOP_STAGE_REQUEST_VALIDATION;
+        copy_failure_name("unknown_film_look_source_kind", result.failure_name);
+        return false;
+    }
+    if (!map_film_emulation(
+            request.film_emulation,
+            pipeline_request.film_look.emulation)) {
+        result.succeeded = 0U;
+        result.failed_stage = NF_DEVELOP_STAGE_REQUEST_VALIDATION;
+        copy_failure_name("unknown_film_emulation", result.failure_name);
+        return false;
+    }
+    try {
+        pipeline_request.source = std::filesystem::path{request.source_path};
+        if (request.destination_path != nullptr) {
+            pipeline_request.destination = std::filesystem::path{request.destination_path};
+        }
+    } catch (...) {
+        result.succeeded = 0U;
+        result.failed_stage = NF_DEVELOP_STAGE_REQUEST_VALIDATION;
+        copy_failure_name("invalid_path", result.failure_name);
+        return false;
+    }
+
+    for (std::size_t channel = 0U; channel < 3U; ++channel) {
+        pipeline_request.negative.dmin[channel] = request.dmin[channel];
+    }
+    pipeline_request.tone.exposure_stops = request.exposure_stops;
+    pipeline_request.tone.basic.contrast = request.contrast;
+    pipeline_request.tone.curve.highlights = request.highlights;
+    pipeline_request.tone.curve.lights = request.lights;
+    pipeline_request.tone.curve.darks = request.darks;
+    pipeline_request.tone.curve.shadows = request.shadows;
+    pipeline_request.film_look.intensity = request.film_emulation_intensity;
+    pipeline_request.rows_per_copy = request.rows_per_copy;
+    return true;
+}
+
+[[nodiscard]] bool map_request_v2(
+    const nf_develop_export_request_v2& request,
+    const bool require_destination,
+    negaflow::pipeline::DevelopExportRequest& pipeline_request,
+    nf_develop_export_result_v2& result) noexcept {
+    if (!map_base_request(request, require_destination, pipeline_request, result)) {
+        return false;
+    }
+    if (pipeline_request.base_estimation_mode ==
+        negaflow::pipeline::NegativeBaseEstimationMode::preset) {
+        result.succeeded = 0U;
+        result.failed_stage = NF_DEVELOP_STAGE_REQUEST_VALIDATION;
+        copy_failure_name("unsupported_base_estimation_mode", result.failure_name);
+        return false;
+    }
+    return true;
+}
+
+[[nodiscard]] bool map_request_v3(
+    const nf_develop_export_request_v3& request,
+    const bool require_destination,
+    negaflow::pipeline::DevelopExportRequest& pipeline_request,
+    nf_develop_export_result_v2& result) noexcept {
+    if (!map_base_request(request, require_destination, pipeline_request, result)) {
+        return false;
+    }
+    if (pipeline_request.base_estimation_mode ==
+        negaflow::pipeline::NegativeBaseEstimationMode::preset) {
+        result.succeeded = 0U;
+        result.failed_stage = NF_DEVELOP_STAGE_REQUEST_VALIDATION;
+        copy_failure_name("unsupported_base_estimation_mode", result.failure_name);
+        return false;
+    }
+    pipeline_request.tone.basic.density = request.density;
+    pipeline_request.tone.basic.highlights = request.highlight;
+    pipeline_request.tone.basic.shadows = request.shadow;
+    pipeline_request.tone.basic.whites = request.whites;
+    pipeline_request.tone.basic.blacks = request.blacks;
+    return true;
+}
+
+[[nodiscard]] bool map_request_v4(
+    const nf_develop_export_request_v4& request,
+    const bool require_destination,
+    negaflow::pipeline::DevelopExportRequest& pipeline_request,
+    nf_develop_export_result_v2& result) noexcept {
+    if (!map_base_request(request, require_destination, pipeline_request, result)) {
+        return false;
+    }
+    pipeline_request.tone.basic.density = request.density;
+    pipeline_request.tone.basic.highlights = request.highlight;
+    pipeline_request.tone.basic.shadows = request.shadow;
+    pipeline_request.tone.basic.whites = request.whites;
+    pipeline_request.tone.basic.blacks = request.blacks;
+    if (pipeline_request.base_estimation_mode !=
+        negaflow::pipeline::NegativeBaseEstimationMode::preset) {
+        return true;
+    }
+    if (request.film_stock_dmin_id == nullptr) {
+        result.succeeded = 0U;
+        result.failed_stage = NF_DEVELOP_STAGE_REQUEST_VALIDATION;
+        copy_failure_name("missing_film_stock", result.failure_name);
+        return false;
+    }
+    const std::wstring_view stock_id{request.film_stock_dmin_id};
+    const std::wstring_view light_id = request.light_source_profile_id == nullptr
+        ? std::wstring_view{}
+        : std::wstring_view{request.light_source_profile_id};
+    pipeline_request.film_stock_preset =
+        negaflow::imaging::resolve_film_stock_base_preset(
+            stock_id,
+            light_id,
+            pipeline_request.negative.film_type);
+    if (!pipeline_request.film_stock_preset) {
+        result.succeeded = 0U;
+        result.failed_stage = NF_DEVELOP_STAGE_REQUEST_VALIDATION;
+        copy_failure_name("unknown_film_stock_or_light", result.failure_name);
+        return false;
+    }
+    return true;
+}
+
 [[nodiscard]] std::uint64_t elapsed_microseconds(
     const std::chrono::steady_clock::time_point started,
     const std::chrono::steady_clock::time_point finished) noexcept {
@@ -234,9 +420,131 @@ void write_outcome(
     result.wall_microseconds = wall_microseconds;
 }
 
+void write_outcome_v2(
+    const negaflow::pipeline::DevelopExportOutcome& outcome,
+    const std::uint64_t wall_microseconds,
+    nf_develop_export_result_v2& result) noexcept {
+    result.succeeded = outcome.succeeded ? 1U : 0U;
+    result.failed_stage = static_cast<std::uint32_t>(outcome.failed_stage);
+    copy_failure_name(outcome.failure_name, result.failure_name);
+    result.native_error_code = outcome.native_error_code;
+    result.cleanup_error_code = outcome.cleanup_error_code;
+    result.image_width = outcome.image_width;
+    result.image_height = outcome.image_height;
+    result.film_look_route = static_cast<std::uint32_t>(outcome.film_look_route);
+    result.film_look_color_applied = outcome.film_look_color_applied ? 1U : 0U;
+    result.film_look_acutance_applied = outcome.film_look_acutance_applied ? 1U : 0U;
+    result.source_file_bytes = outcome.source_file_bytes;
+    result.output_file_bytes = outcome.output_file_bytes;
+    result.film_look_workspace_bytes =
+        static_cast<std::uint64_t>(outcome.film_look_workspace_bytes);
+    result.wall_microseconds = wall_microseconds;
+    for (std::size_t channel = 0U; channel < 3U; ++channel) {
+        result.applied_dmin[channel] = outcome.applied_dmin[channel];
+    }
+    switch (outcome.base_source) {
+        case negaflow::pipeline::DevelopBaseSource::manual:
+            result.base_source = NF_DEVELOP_BASE_SOURCE_MANUAL;
+            break;
+        case negaflow::pipeline::DevelopBaseSource::auto_scene_edge:
+            result.base_source = NF_DEVELOP_BASE_SOURCE_AUTO_SCENE_EDGE;
+            break;
+        case negaflow::pipeline::DevelopBaseSource::auto_fallback:
+            result.base_source = NF_DEVELOP_BASE_SOURCE_AUTO_FALLBACK;
+            break;
+        case negaflow::pipeline::DevelopBaseSource::auto_connected_component:
+            result.base_source = NF_DEVELOP_BASE_SOURCE_AUTO_CONNECTED_COMPONENT;
+            break;
+        case negaflow::pipeline::DevelopBaseSource::auto_continuous_border:
+            result.base_source = NF_DEVELOP_BASE_SOURCE_AUTO_CONTINUOUS_BORDER;
+            break;
+        case negaflow::pipeline::DevelopBaseSource::auto_distributed_mask:
+            result.base_source = NF_DEVELOP_BASE_SOURCE_AUTO_DISTRIBUTED_MASK;
+            break;
+        case negaflow::pipeline::DevelopBaseSource::auto_strip_fallback:
+            result.base_source = NF_DEVELOP_BASE_SOURCE_AUTO_STRIP_FALLBACK;
+            break;
+        case negaflow::pipeline::DevelopBaseSource::preset_measured:
+            result.base_source = NF_DEVELOP_BASE_SOURCE_PRESET_MEASURED;
+            break;
+        case negaflow::pipeline::DevelopBaseSource::preset_fallback:
+            result.base_source = NF_DEVELOP_BASE_SOURCE_PRESET_FALLBACK;
+            break;
+    }
+}
+
 [[nodiscard]] bool prepare_result(
     const nf_develop_export_request_v1* const request,
     nf_develop_export_result_v1* const result,
+    nf_status_t& status) noexcept {
+    if (request == nullptr || result == nullptr) {
+        status = NF_STATUS_INVALID_ARGUMENT;
+        return false;
+    }
+    if (request->struct_size < static_cast<std::uint32_t>(sizeof(*request)) ||
+        result->struct_size < static_cast<std::uint32_t>(sizeof(*result))) {
+        status = NF_STATUS_STRUCT_TOO_SMALL;
+        return false;
+    }
+
+    const std::uint32_t declared_size = result->struct_size;
+    std::memset(result, 0, sizeof(*result));
+    result->struct_size = declared_size;
+    result->failed_stage = NF_DEVELOP_STAGE_NONE;
+    copy_failure_name("ok", result->failure_name);
+    status = NF_STATUS_OK;
+    return true;
+}
+
+[[nodiscard]] bool prepare_result_v2(
+    const nf_develop_export_request_v2* const request,
+    nf_develop_export_result_v2* const result,
+    nf_status_t& status) noexcept {
+    if (request == nullptr || result == nullptr) {
+        status = NF_STATUS_INVALID_ARGUMENT;
+        return false;
+    }
+    if (request->struct_size < static_cast<std::uint32_t>(sizeof(*request)) ||
+        result->struct_size < static_cast<std::uint32_t>(sizeof(*result))) {
+        status = NF_STATUS_STRUCT_TOO_SMALL;
+        return false;
+    }
+
+    const std::uint32_t declared_size = result->struct_size;
+    std::memset(result, 0, sizeof(*result));
+    result->struct_size = declared_size;
+    result->failed_stage = NF_DEVELOP_STAGE_NONE;
+    copy_failure_name("ok", result->failure_name);
+    status = NF_STATUS_OK;
+    return true;
+}
+
+[[nodiscard]] bool prepare_result_v3(
+    const nf_develop_export_request_v3* const request,
+    nf_develop_export_result_v2* const result,
+    nf_status_t& status) noexcept {
+    if (request == nullptr || result == nullptr) {
+        status = NF_STATUS_INVALID_ARGUMENT;
+        return false;
+    }
+    if (request->struct_size < static_cast<std::uint32_t>(sizeof(*request)) ||
+        result->struct_size < static_cast<std::uint32_t>(sizeof(*result))) {
+        status = NF_STATUS_STRUCT_TOO_SMALL;
+        return false;
+    }
+
+    const std::uint32_t declared_size = result->struct_size;
+    std::memset(result, 0, sizeof(*result));
+    result->struct_size = declared_size;
+    result->failed_stage = NF_DEVELOP_STAGE_NONE;
+    copy_failure_name("ok", result->failure_name);
+    status = NF_STATUS_OK;
+    return true;
+}
+
+[[nodiscard]] bool prepare_result_v4(
+    const nf_develop_export_request_v4* const request,
+    nf_develop_export_result_v2* const result,
     nf_status_t& status) noexcept {
     if (request == nullptr || result == nullptr) {
         status = NF_STATUS_INVALID_ARGUMENT;
@@ -306,6 +614,69 @@ nf_status_t NF_CALL nf_develop_export_v1(
     return NF_STATUS_OK;
 }
 
+nf_status_t NF_CALL nf_develop_export_v2(
+    const nf_develop_export_request_v2* const request,
+    nf_develop_export_result_v2* const result) {
+    nf_status_t status = NF_STATUS_OK;
+    if (!prepare_result_v2(request, result, status)) {
+        return status;
+    }
+
+    negaflow::pipeline::DevelopExportRequest pipeline_request{};
+    if (!map_request_v2(*request, true, pipeline_request, *result)) {
+        return NF_STATUS_OK;
+    }
+
+    const auto started = std::chrono::steady_clock::now();
+    const negaflow::pipeline::DevelopExportOutcome outcome =
+        negaflow::pipeline::develop_and_export(pipeline_request);
+    const auto finished = std::chrono::steady_clock::now();
+    write_outcome_v2(outcome, elapsed_microseconds(started, finished), *result);
+    return NF_STATUS_OK;
+}
+
+nf_status_t NF_CALL nf_develop_export_v3(
+    const nf_develop_export_request_v3* const request,
+    nf_develop_export_result_v2* const result) {
+    nf_status_t status = NF_STATUS_OK;
+    if (!prepare_result_v3(request, result, status)) {
+        return status;
+    }
+
+    negaflow::pipeline::DevelopExportRequest pipeline_request{};
+    if (!map_request_v3(*request, true, pipeline_request, *result)) {
+        return NF_STATUS_OK;
+    }
+
+    const auto started = std::chrono::steady_clock::now();
+    const negaflow::pipeline::DevelopExportOutcome outcome =
+        negaflow::pipeline::develop_and_export(pipeline_request);
+    const auto finished = std::chrono::steady_clock::now();
+    write_outcome_v2(outcome, elapsed_microseconds(started, finished), *result);
+    return NF_STATUS_OK;
+}
+
+nf_status_t NF_CALL nf_develop_export_v4(
+    const nf_develop_export_request_v4* const request,
+    nf_develop_export_result_v2* const result) {
+    nf_status_t status = NF_STATUS_OK;
+    if (!prepare_result_v4(request, result, status)) {
+        return status;
+    }
+
+    negaflow::pipeline::DevelopExportRequest pipeline_request{};
+    if (!map_request_v4(*request, true, pipeline_request, *result)) {
+        return NF_STATUS_OK;
+    }
+
+    const auto started = std::chrono::steady_clock::now();
+    const negaflow::pipeline::DevelopExportOutcome outcome =
+        negaflow::pipeline::develop_and_export(pipeline_request);
+    const auto finished = std::chrono::steady_clock::now();
+    write_outcome_v2(outcome, elapsed_microseconds(started, finished), *result);
+    return NF_STATUS_OK;
+}
+
 nf_status_t NF_CALL nf_develop_preview_v1(
     const nf_develop_export_request_v1* const request,
     const uint32_t maximum_width,
@@ -338,6 +709,106 @@ nf_status_t NF_CALL nf_develop_preview_v1(
     write_outcome(outcome, elapsed_microseconds(started, finished), *result);
     return NF_STATUS_OK;
 }
+
+nf_status_t NF_CALL nf_develop_preview_v2(
+    const nf_develop_export_request_v2* const request,
+    const uint32_t maximum_width,
+    const uint32_t maximum_height,
+    uint8_t* const pixels,
+    const uint32_t pixel_capacity_bytes,
+    nf_develop_export_result_v2* const result) {
+    nf_status_t status = NF_STATUS_OK;
+    if (!prepare_result_v2(request, result, status)) {
+        return status;
+    }
+    if (pixels == nullptr) {
+        return NF_STATUS_INVALID_ARGUMENT;
+    }
+
+    negaflow::pipeline::DevelopExportRequest pipeline_request{};
+    if (!map_request_v2(*request, false, pipeline_request, *result)) {
+        return NF_STATUS_OK;
+    }
+
+    const auto started = std::chrono::steady_clock::now();
+    const negaflow::pipeline::DevelopExportOutcome outcome =
+        negaflow::pipeline::develop_preview(
+            pipeline_request,
+            maximum_width,
+            maximum_height,
+            pixels,
+            static_cast<std::size_t>(pixel_capacity_bytes));
+    const auto finished = std::chrono::steady_clock::now();
+    write_outcome_v2(outcome, elapsed_microseconds(started, finished), *result);
+    return NF_STATUS_OK;
+}
+
+nf_status_t NF_CALL nf_develop_preview_v3(
+    const nf_develop_export_request_v3* const request,
+    const uint32_t maximum_width,
+    const uint32_t maximum_height,
+    uint8_t* const pixels,
+    const uint32_t pixel_capacity_bytes,
+    nf_develop_export_result_v2* const result) {
+    nf_status_t status = NF_STATUS_OK;
+    if (!prepare_result_v3(request, result, status)) {
+        return status;
+    }
+    if (pixels == nullptr) {
+        return NF_STATUS_INVALID_ARGUMENT;
+    }
+
+    negaflow::pipeline::DevelopExportRequest pipeline_request{};
+    if (!map_request_v3(*request, false, pipeline_request, *result)) {
+        return NF_STATUS_OK;
+    }
+
+    const auto started = std::chrono::steady_clock::now();
+    const negaflow::pipeline::DevelopExportOutcome outcome =
+        negaflow::pipeline::develop_preview(
+            pipeline_request,
+            maximum_width,
+            maximum_height,
+            pixels,
+            static_cast<std::size_t>(pixel_capacity_bytes));
+    const auto finished = std::chrono::steady_clock::now();
+    write_outcome_v2(outcome, elapsed_microseconds(started, finished), *result);
+    return NF_STATUS_OK;
+}
+
+nf_status_t NF_CALL nf_develop_preview_v4(
+    const nf_develop_export_request_v4* const request,
+    const uint32_t maximum_width,
+    const uint32_t maximum_height,
+    uint8_t* const pixels,
+    const uint32_t pixel_capacity_bytes,
+    nf_develop_export_result_v2* const result) {
+    nf_status_t status = NF_STATUS_OK;
+    if (!prepare_result_v4(request, result, status)) {
+        return status;
+    }
+    if (pixels == nullptr) {
+        return NF_STATUS_INVALID_ARGUMENT;
+    }
+
+    negaflow::pipeline::DevelopExportRequest pipeline_request{};
+    if (!map_request_v4(*request, false, pipeline_request, *result)) {
+        return NF_STATUS_OK;
+    }
+
+    const auto started = std::chrono::steady_clock::now();
+    const negaflow::pipeline::DevelopExportOutcome outcome =
+        negaflow::pipeline::develop_preview(
+            pipeline_request,
+            maximum_width,
+            maximum_height,
+            pixels,
+            static_cast<std::size_t>(pixel_capacity_bytes));
+    const auto finished = std::chrono::steady_clock::now();
+    write_outcome_v2(outcome, elapsed_microseconds(started, finished), *result);
+    return NF_STATUS_OK;
+}
+
 nf_status_t NF_CALL nf_get_tone_limits_v1(nf_tone_limits_v1* const output) {
     if (output == nullptr) {
         return NF_STATUS_INVALID_ARGUMENT;

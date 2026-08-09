@@ -17,6 +17,8 @@ public enum LibraryFrameError
     /// <summary><c>manualBaseRGB</c> 가 유한한 세 채널 배열이 아닙니다.</summary>
     InvalidManualBase,
 
+    InvalidBaseRecipe,
+
     /// <summary>톤 값이 수가 아니거나 유한하지 않습니다.</summary>
     InvalidToneValue,
 

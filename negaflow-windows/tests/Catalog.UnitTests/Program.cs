@@ -548,7 +548,11 @@ internal static class Program
             ["params"] = new JsonObject
             {
                 ["filmType"] = "colorNegative",
+                ["baseEstimationMode"] = "preset",
                 ["manualBaseRGB"] = new JsonArray(0.21, 0.22, 0.23),
+                ["filmStockDminID"] = "kodak-portra-400",
+                ["lightSourceProfileID"] = "v850-led",
+                ["scannerProfileID"] = "noritsu__color-nega__kodak-portra-400",
                 ["exposure"] = 0.5,
                 ["curveShadows"] = -0.25,
                 ["unknownAdjustment"] = new JsonObject { ["value"] = 7 },
@@ -576,21 +580,35 @@ internal static class Program
         Check(frame.SourcePath == @"C:\scans\roll-01\IMG_0001.tif", "library_frame_source_path");
         Check(frame.EffectiveDisplayName == "Roll 01 / 1", "library_frame_display_name");
         Check(frame.Route.FilmType == FilmType.ColorNegative, "library_frame_route_film_type");
-        Check(frame.CanDevelop, "library_frame_can_develop");
+        Check(frame.CanDevelop, "library_frame_preset_with_stock_can_develop");
         Check(frame.ManualBase == new ManualBaseRgb(0.21, 0.22, 0.23), "library_frame_manual_base");
+        Check(frame.Base.Mode == BaseEstimationMode.Preset, "library_frame_base_mode");
+        Check(frame.Base.FilmStockDminId == "kodak-portra-400", "library_frame_film_stock_id");
+        Check(frame.Base.LightSourceProfileId == "v850-led", "library_frame_light_source_id");
+        Check(frame.Base.ScannerProfileId == "noritsu__color-nega__kodak-portra-400", "library_frame_scanner_profile_id");
         Check(frame.Tone.Exposure == 0.5, "library_frame_exposure");
         Check(frame.Tone.CurveShadows == -0.25, "library_frame_curve_shadows");
         // 없는 톤 키는 macOS 와 같이 0 입니다.
         Check(frame.Tone.Contrast == 0.0, "library_frame_missing_tone_is_zero");
 
-        // 수동 base 가 없으면 현상할 수 없다는 사실이 그대로 드러나야 합니다. 0.25 같은 기본값을
-        // 지어내면 사용자가 고르지 않은 Dmin 으로 현상됩니다.
+        // Preset resolver가 아직 없으면 manual base가 있어도 Auto로 바꾸어 추정하지 않습니다.
         JsonObject withoutBase = FrameRecord();
         withoutBase["params"]!.AsObject().Remove("manualBaseRGB");
         LibraryFrameReadResult noBase = ReadFrame(withoutBase);
         Check(noBase.IsSuccess, "library_frame_missing_base_still_reads");
         Check(noBase.Frame?.ManualBase is null, "library_frame_missing_base_is_absent");
-        Check(noBase.Frame?.CanDevelop == false, "library_frame_missing_base_cannot_develop");
+        Check(noBase.Frame?.CanDevelop == true, "library_frame_preset_does_not_require_manual_base");
+
+        JsonObject defaultBase = FrameRecord();
+        JsonObject defaultBaseParams = defaultBase["params"]!.AsObject();
+        defaultBaseParams.Remove("baseEstimationMode");
+        defaultBaseParams.Remove("filmStockDminID");
+        defaultBaseParams.Remove("lightSourceProfileID");
+        defaultBaseParams.Remove("scannerProfileID");
+        Check(ReadFrame(defaultBase).Frame?.Base == BaseRecipe.Auto,
+            "library_frame_missing_base_recipe_defaults_to_auto");
+        Check(ReadFrame(defaultBase).Frame?.CanDevelop == true,
+            "library_frame_default_auto_can_develop");
 
         JsonObject withoutName = FrameRecord();
         withoutName.Remove("customDisplayName");
@@ -641,6 +659,18 @@ internal static class Program
             ReadFrame(textBase).Error == LibraryFrameError.InvalidManualBase,
             "library_frame_rejects_non_numeric_base");
 
+        JsonObject invalidBaseMode = FrameRecord();
+        invalidBaseMode["params"]!["baseEstimationMode"] = "guessed";
+        Check(
+            ReadFrame(invalidBaseMode).Error == LibraryFrameError.InvalidBaseRecipe,
+            "library_frame_rejects_unknown_base_mode");
+
+        JsonObject invalidBaseIdentifier = FrameRecord();
+        invalidBaseIdentifier["params"]!["filmStockDminID"] = " ";
+        Check(
+            ReadFrame(invalidBaseIdentifier).Error == LibraryFrameError.InvalidBaseRecipe,
+            "library_frame_rejects_blank_base_identifier");
+
         // 있는데 수가 아니면 조용히 0 으로 만들지 않습니다.
         JsonObject textTone = FrameRecord();
         textTone["params"]!["exposure"] = "0.5";
@@ -671,7 +701,18 @@ internal static class Program
     {
         JsonObject original = FrameRecord();
         LibraryFrameEdit edit = new(
-            new ToneAdjustment(1.25, -0.5, 0.1, 0.2, 0.3, 0.4),
+            new ToneAdjustment(
+                1.25,
+                -0.5,
+                0.1,
+                0.2,
+                0.3,
+                0.4,
+                0.5,
+                -0.6,
+                0.7,
+                -0.8,
+                0.9),
             new ManualBaseRgb(0.31, 0.32, 0.33));
 
         LibraryFrameWriteResult write = LibraryFrameWriter.Apply(original, edit);
@@ -694,7 +735,32 @@ internal static class Program
         LibraryFrameReadResult reread = ReadFrame(updated);
         Check(reread.IsSuccess, "library_frame_write_round_trip");
         Check(reread.Frame?.Tone == edit.Tone, "library_frame_write_tone_round_trip");
+        Check(
+            updated["params"]!["density"]!.GetValue<double>() == 0.5 &&
+                updated["params"]!["highlight"]!.GetValue<double>() == -0.6 &&
+                updated["params"]!["shadow"]!.GetValue<double>() == 0.7 &&
+                updated["params"]!["whites"]!.GetValue<double>() == -0.8 &&
+                updated["params"]!["blacks"]!.GetValue<double>() == 0.9,
+            "library_frame_write_basic_tone_names");
         Check(reread.Frame?.ManualBase == edit.ManualBase, "library_frame_write_base_round_trip");
+        Check(reread.Frame?.Base == new BaseRecipe(
+                BaseEstimationMode.Preset,
+                "kodak-portra-400",
+                "v850-led",
+                "noritsu__color-nega__kodak-portra-400"),
+            "library_frame_write_preserves_base_recipe_when_not_edited");
+
+        BaseRecipe manualRecipe = new(
+            BaseEstimationMode.Manual,
+            "kodak-portra-400",
+            null,
+            null);
+        LibraryFrameWriteResult baseWrite = LibraryFrameWriter.Apply(
+            original,
+            new LibraryFrameEdit(edit.Tone, edit.ManualBase, manualRecipe));
+        Check(baseWrite.IsSuccess, "library_frame_base_recipe_write_success");
+        Check(ReadFrame(baseWrite.FrameRecord!).Frame?.Base == manualRecipe,
+            "library_frame_base_recipe_write_round_trip");
 
         // base 를 지우는 것은 auto 추정으로 되돌린다는 뜻이므로 키를 없앱니다.
         LibraryFrameWriteResult cleared = LibraryFrameWriter.Apply(
@@ -716,10 +782,26 @@ internal static class Program
             LibraryFrameWriter.Apply(
                 original,
                 new LibraryFrameEdit(
+                    ToneAdjustment.Neutral with { Density = double.PositiveInfinity },
+                    null)).Error == LibraryFrameError.InvalidToneValue,
+            "library_frame_write_rejects_non_finite_basic_tone");
+        Check(
+            LibraryFrameWriter.Apply(
+                original,
+                new LibraryFrameEdit(
                     ToneAdjustment.Neutral,
                     new ManualBaseRgb(0.2, double.PositiveInfinity, 0.2)))
                 .Error == LibraryFrameError.InvalidManualBase,
             "library_frame_write_rejects_infinite_base");
+        Check(
+            LibraryFrameWriter.Apply(
+                original,
+                new LibraryFrameEdit(
+                    ToneAdjustment.Neutral,
+                    null,
+                    new BaseRecipe((BaseEstimationMode)99, null, null, null)))
+                .Error == LibraryFrameError.InvalidBaseRecipe,
+            "library_frame_write_rejects_unknown_base_mode");
     }
 
     private static int RunLockContender(string isolatedBase)
