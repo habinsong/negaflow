@@ -39,7 +39,9 @@ public readonly record struct CatalogSessionOpenResult(
 public sealed class CatalogSession : IDisposable
 {
     private readonly StorageRootSet roots;
+    private readonly object writeGate = new();
     private CatalogProcessLock? processLock;
+    private bool mutationBlocked;
 
     private CatalogSession(StorageRootSet roots, CatalogProcessLock processLock)
     {
@@ -65,14 +67,48 @@ public sealed class CatalogSession : IDisposable
 
     public CatalogReadResult Read()
     {
-        RequireOpen();
-        return SqliteCatalogStore.Read(roots.CatalogPath);
+        lock (writeGate)
+        {
+            RequireOpen();
+            return SqliteCatalogStore.Read(roots.CatalogPath);
+        }
     }
 
     public CatalogWriteResult Write(CatalogSnapshot snapshot)
     {
-        RequireOpen();
-        return SqliteCatalogStore.Write(snapshot, roots.CatalogPath);
+        ArgumentNullException.ThrowIfNull(snapshot);
+        lock (writeGate)
+        {
+            RequireOpen();
+            if (mutationBlocked)
+            {
+                return CatalogWriteResult.Failure(CatalogStoreError.RollbackFailed);
+            }
+            return ObserveCommitResult(CatalogCommitVerifier.Commit(snapshot, roots));
+        }
+    }
+
+    internal CatalogWriteResult WriteForTesting(
+        CatalogSnapshot snapshot,
+        Func<CatalogSnapshot, string, CatalogWriteResult>? writer = null,
+        Func<string, CatalogReadResult>? readback = null,
+        Func<CatalogPrimarySnapshot, StorageRootSet, bool>? restore = null)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        lock (writeGate)
+        {
+            RequireOpen();
+            if (mutationBlocked)
+            {
+                return CatalogWriteResult.Failure(CatalogStoreError.RollbackFailed);
+            }
+            return ObserveCommitResult(CatalogCommitVerifier.CommitForTesting(
+                snapshot,
+                roots,
+                writer,
+                readback,
+                restore));
+        }
     }
 
     /// <summary>
@@ -82,25 +118,53 @@ public sealed class CatalogSession : IDisposable
     /// </summary>
     public CatalogReadResult ReadOrCreate()
     {
-        RequireOpen();
-
-        CatalogReadResult read = SqliteCatalogStore.Read(roots.CatalogPath);
-        if (read.Error != CatalogStoreError.NotFound)
+        lock (writeGate)
         {
-            return read;
-        }
+            RequireOpen();
+            if (CatalogCommitVerifier.HasUnresolvedRollbackArtifact(roots))
+            {
+                mutationBlocked = true;
+                return CatalogReadResult.Failure(CatalogStoreError.RollbackFailed);
+            }
 
-        CatalogWriteResult created = SqliteCatalogStore.Write(
-            CatalogSnapshot.Empty,
-            roots.CatalogPath);
-        return created.IsSuccess
-            ? SqliteCatalogStore.Read(roots.CatalogPath)
-            : CatalogReadResult.Failure(created.Error);
+            CatalogReadResult read = SqliteCatalogStore.Read(roots.CatalogPath);
+            if (read.Error != CatalogStoreError.NotFound)
+            {
+                return read;
+            }
+            if (mutationBlocked)
+            {
+                return CatalogReadResult.Failure(CatalogStoreError.RollbackFailed);
+            }
+            if (CatalogCommitVerifier.HasBlockingArtifactWhenPrimaryMissing(roots))
+            {
+                return CatalogReadResult.Failure(
+                    CatalogStoreError.MissingAuthoritativeData);
+            }
+
+            CatalogWriteResult created = ObserveCommitResult(
+                CatalogCommitVerifier.Commit(CatalogSnapshot.Empty, roots));
+            return created.IsSuccess
+                ? SqliteCatalogStore.Read(roots.CatalogPath)
+                : CatalogReadResult.Failure(created.Error);
+        }
     }
 
     public void Dispose()
     {
-        Interlocked.Exchange(ref processLock, null)?.Dispose();
+        lock (writeGate)
+        {
+            Interlocked.Exchange(ref processLock, null)?.Dispose();
+        }
+    }
+
+    private CatalogWriteResult ObserveCommitResult(CatalogWriteResult result)
+    {
+        if (result.Error == CatalogStoreError.RollbackFailed)
+        {
+            mutationBlocked = true;
+        }
+        return result;
     }
 
     private void RequireOpen()

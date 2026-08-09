@@ -25,6 +25,15 @@ public enum CatalogStoreError
     /// <summary>쓰려는 snapshot 이 id/payload 계약을 어겼습니다. 부분 쓰기는 하지 않습니다.</summary>
     InvalidSnapshot,
 
+    /// <summary>commit 뒤 다시 연 catalog 가 요청한 canonical snapshot 과 일치하지 않습니다.</summary>
+    ReadbackFailed,
+
+    /// <summary>write/readback 실패 뒤 직전 primary 또는 직전 부재 상태를 복구하지 못했습니다.</summary>
+    RollbackFailed,
+
+    /// <summary>primary 는 없지만 보존된 catalog artifact가 있어 빈 library를 만들 수 없습니다.</summary>
+    MissingAuthoritativeData,
+
     /// <summary>다른 프로세스가 파일을 잡고 있거나 SQLite 가 lock 을 얻지 못했습니다.</summary>
     Busy,
 

@@ -71,11 +71,14 @@ native SQLite 하한이 CVE-2025-6965 대상이라 restore 가 NU1903 으로 실
 
 1. ~~`CatalogProcessLock` 과 store 를 하나의 open 경로로 묶기.~~ **완료.** `CatalogSession` 이
    유일한 공개 입구이고 store 는 `internal` 입니다. lock 을 못 잡으면 세션이 만들어지지 않습니다.
-2. **backup 세대와 commit verifier.** 직전 primary 를 보존한 뒤 write/readback/rollback.
-   `CatalogRecovery.IsValidCatalogSource` 가 이미 있으니 손상 primary 가 유효 backup 을 덮는 것은
-   막을 수 있습니다.
-3. **pending restore.** 다음 safe startup 에서만 적용합니다.
-4. **defect sidecar.** revision-aware writer, temp → flush → atomic replace. catalog 가 defect
+2. **commit verifier와 raw 직전 primary 보존. 동기 구현 완료.** 커밋 전용 UUID snapshot을 고정 rollback
+   source로 사용하고, `library.backup.sqlite`를 별도로 갱신합니다. 새 연결 full canonical readback,
+   write/readback 실패 원복, rollback 실패 뒤 mutation 차단까지 연결했습니다. process-kill/disk-full/
+   power-loss fault gate는 남아 있습니다.
+3. **immutable logical backup 세대. 다음.** staging → manifest/hash 전체 검증 → atomic 승격 → 성공 뒤
+   retention 순서입니다. raw `library.backup.sqlite`와 혼동하지 않습니다.
+4. **pending restore.** 다음 safe startup 에서만 적용합니다.
+5. **defect sidecar.** revision-aware writer, temp → flush → atomic replace. catalog 가 defect
    edit 을 선언했는데 sidecar 가 없으면 library open 을 차단합니다.
 
 **셸을 붙일 때 쓸 것:** `CatalogSession.Open(roots)` → `ReadOrCreate()` → `Write(snapshot)` →
@@ -197,9 +200,9 @@ Film mode picker, ABI 0.10 preview/export 연결은 구현되었습니다. Histo
 첫 rendered/UIA 체크포인트도 완료했습니다. 다만 고유 Edit/Defects/Info/Reset tab content와 나머지
 adjustment sections, compact/high contrast/ARM64 runtime은 아직 별도 작업입니다.
 
-최신 사용자 우선순위에 따라 추가 UI 확장은 보류합니다. **다음 한 걸음은 위 수명주기 순서 2의
-catalog backup 세대와 commit verifier**입니다. 이를 닫기 전에 pending restore나 defect sidecar로
-건너뛰지 않습니다.
+최신 사용자 우선순위에 따라 추가 UI 확장은 보류합니다. **다음 한 걸음은 위 수명주기 순서 3의
+immutable logical backup 세대**입니다. 이를 닫기 전에 pending restore나 defect sidecar로 건너뛰지
+않습니다.
 
 ---
 

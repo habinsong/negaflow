@@ -400,6 +400,7 @@ internal static class Program
         {
             VerifyStoreLifecycle(roots);
             VerifyStoreRefusals(roots);
+            VerifyVerifiedCommit(roots);
             VerifyCatalogSession(roots);
         }
         finally
@@ -533,6 +534,166 @@ internal static class Program
             "store_rejects_relative_path");
         Check(SqliteCatalogStore.Write(Snapshot(null), "library.sqlite").Error ==
             CatalogStoreError.InvalidPath, "store_write_rejects_relative_path");
+    }
+
+    private static void VerifyVerifiedCommit(StorageRootSet parentRoots)
+    {
+        string commitBase = Path.Combine(parentRoots.LocalApplicationDataRoot, "verified-commit");
+        StorageRootSet roots = StorageRootResolver.ResolveForTests(commitBase).Roots!;
+        CatalogSessionOpenResult opened = CatalogSession.Open(roots);
+        using CatalogSession? session = opened.Session;
+        Check(opened.IsSuccess, "commit_session_open");
+        if (session is null)
+        {
+            return;
+        }
+
+        Check(session.ReadOrCreate().IsSuccess, "commit_initial_create");
+        Check(!File.Exists(roots.CatalogBackupPath), "commit_initial_create_has_no_backup");
+
+        CatalogSnapshot baseline = Snapshot("roll-a", Row("frame-1", "baseline"));
+        CatalogSnapshot changed = Snapshot("roll-b", Row("frame-2", "changed"));
+        CatalogSnapshot next = Snapshot("roll-c", Row("frame-3", "next"));
+        Check(session.Write(baseline).IsSuccess, "commit_baseline_write");
+        byte[] baselinePrimary = File.ReadAllBytes(roots.CatalogPath);
+        Check(session.Write(changed).IsSuccess, "commit_changed_write");
+        Check(File.Exists(roots.CatalogBackupPath), "commit_previous_primary_backup_exists");
+        if (!File.Exists(roots.CatalogBackupPath))
+        {
+            return;
+        }
+        Check(File.ReadAllBytes(roots.CatalogBackupPath).SequenceEqual(baselinePrimary),
+            "commit_previous_primary_backup_exact_bytes");
+        Check(FrameLabels(SqliteCatalogStore.Read(roots.CatalogBackupPath)) == "baseline",
+            "commit_previous_primary_backup_payload");
+
+        byte[] backupBeforeNoOp = File.ReadAllBytes(roots.CatalogBackupPath);
+        Check(session.Write(changed).IsSuccess, "commit_noop_success");
+        Check(File.ReadAllBytes(roots.CatalogBackupPath).SequenceEqual(backupBeforeNoOp),
+            "commit_noop_preserves_older_backup");
+
+        byte[] changedPrimary = File.ReadAllBytes(roots.CatalogPath);
+        CatalogWriteResult mismatch = CatalogCommitVerifier.CommitForTesting(
+            next,
+            roots,
+            readback: _ => CatalogReadResult.Success(
+                Snapshot("roll-wrong", Row("frame-wrong", "wrong"))));
+        Check(mismatch.Error == CatalogStoreError.ReadbackFailed,
+            "commit_readback_mismatch_error");
+        Check(File.ReadAllBytes(roots.CatalogPath).SequenceEqual(changedPrimary),
+            "commit_readback_mismatch_restores_exact_primary");
+        Check(FrameLabels(session.Read()) == "changed",
+            "commit_readback_mismatch_restores_payload");
+
+        CatalogWriteResult writerFailure = CatalogCommitVerifier.CommitForTesting(
+            next,
+            roots,
+            writer: (_, path) =>
+            {
+                CatalogWriteResult substituted = SqliteCatalogStore.Write(
+                    Snapshot("roll-external", Row("frame-external", "external")),
+                    roots.CatalogBackupPath);
+                if (!substituted.IsSuccess)
+                {
+                    return substituted;
+                }
+                File.WriteAllBytes(path, "partial write"u8.ToArray());
+                throw new IOException("injected writer failure");
+            });
+        Check(writerFailure.Error == CatalogStoreError.IoFailure,
+            "commit_writer_failure_error");
+        Check(File.ReadAllBytes(roots.CatalogPath).SequenceEqual(changedPrimary),
+            "commit_writer_failure_restores_exact_primary");
+        Check(FrameLabels(session.Read()) == "changed",
+            "commit_writer_failure_restores_payload");
+
+        CatalogWriteResult rollbackFailure = session.WriteForTesting(
+            next,
+            readback: _ => CatalogReadResult.Failure(CatalogStoreError.CorruptDatabase),
+            restore: (_, _) => false);
+        Check(rollbackFailure.Error == CatalogStoreError.RollbackFailed,
+            "commit_rollback_failure_is_distinct");
+        Check(FrameLabels(session.Read()) == "next",
+            "commit_rollback_failure_does_not_claim_old_primary");
+        byte[] unverifiedPrimary = File.ReadAllBytes(roots.CatalogPath);
+        byte[] knownGoodBackup = File.ReadAllBytes(roots.CatalogBackupPath);
+        Check(session.Write(baseline).Error == CatalogStoreError.RollbackFailed,
+            "commit_rollback_failure_blocks_followup_write");
+        Check(session.ReadOrCreate().Error == CatalogStoreError.RollbackFailed,
+            "commit_rollback_failure_blocks_normal_open");
+        Check(File.ReadAllBytes(roots.CatalogPath).SequenceEqual(unverifiedPrimary) &&
+              File.ReadAllBytes(roots.CatalogBackupPath).SequenceEqual(knownGoodBackup),
+            "commit_blocked_followup_preserves_primary_and_backup");
+
+        string absenceBase = Path.Combine(
+            parentRoots.LocalApplicationDataRoot,
+            "verified-commit-absence");
+        StorageRootSet absenceRoots = StorageRootResolver.ResolveForTests(absenceBase).Roots!;
+        string journalPath = $"{absenceRoots.CatalogPath}-journal";
+        CatalogWriteResult absenceMismatch = CatalogCommitVerifier.CommitForTesting(
+            baseline,
+            absenceRoots,
+            writer: (_, path) =>
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                File.WriteAllBytes(path, "partial database"u8.ToArray());
+                File.WriteAllBytes(journalPath, "hot journal"u8.ToArray());
+                return CatalogWriteResult.Failure(CatalogStoreError.IoFailure);
+            });
+        Check(absenceMismatch.Error == CatalogStoreError.IoFailure,
+            "commit_absence_writer_error");
+        Check(!File.Exists(absenceRoots.CatalogPath),
+            "commit_absence_writer_restores_absence");
+        Check(!File.Exists(journalPath),
+            "commit_absence_writer_removes_journal");
+        Check(!File.Exists(absenceRoots.CatalogBackupPath),
+            "commit_absence_readback_does_not_create_backup");
+
+        string guardedBase = Path.Combine(
+            parentRoots.LocalApplicationDataRoot,
+            "verified-commit-guarded");
+        StorageRootSet guardedRoots = StorageRootResolver.ResolveForTests(guardedBase).Roots!;
+        CatalogSessionOpenResult guardedOpen = CatalogSession.Open(guardedRoots);
+        using CatalogSession? guarded = guardedOpen.Session;
+        Check(guardedOpen.IsSuccess, "commit_guarded_session_open");
+        if (guarded is null)
+        {
+            return;
+        }
+        Check(guarded.ReadOrCreate().IsSuccess, "commit_guarded_create");
+        Check(guarded.Write(baseline).IsSuccess, "commit_guarded_baseline");
+        Check(guarded.Write(changed).IsSuccess, "commit_guarded_changed");
+        byte[] guardedBackup = File.ReadAllBytes(guardedRoots.CatalogBackupPath);
+
+        File.Delete(guardedRoots.CatalogPath);
+        Check(guarded.ReadOrCreate().Error == CatalogStoreError.MissingAuthoritativeData,
+            "commit_missing_primary_with_backup_blocks_empty_create");
+        Check(!File.Exists(guardedRoots.CatalogPath),
+            "commit_missing_primary_with_backup_preserves_absence");
+        Check(File.ReadAllBytes(guardedRoots.CatalogBackupPath).SequenceEqual(guardedBackup),
+            "commit_missing_primary_preserves_backup");
+
+        File.Copy(guardedRoots.CatalogBackupPath, guardedRoots.CatalogPath);
+        byte[] corruptPrimary = "not a database"u8.ToArray();
+        File.WriteAllBytes(guardedRoots.CatalogPath, corruptPrimary);
+        CatalogWriteResult corruptWrite = guarded.Write(next);
+        Check(corruptWrite.Error == CatalogStoreError.CorruptDatabase,
+            "commit_corrupt_primary_refuses_write");
+        Check(File.ReadAllBytes(guardedRoots.CatalogPath).SequenceEqual(corruptPrimary),
+            "commit_corrupt_primary_preserved");
+        Check(File.ReadAllBytes(guardedRoots.CatalogBackupPath).SequenceEqual(guardedBackup),
+            "commit_corrupt_primary_does_not_overwrite_backup");
+
+        File.Copy(guardedRoots.CatalogBackupPath, guardedRoots.CatalogPath, overwrite: true);
+        SetStorageVersion(guardedRoots.CatalogPath, 99);
+        byte[] futurePrimary = File.ReadAllBytes(guardedRoots.CatalogPath);
+        CatalogWriteResult futureWrite = guarded.Write(next);
+        Check(futureWrite.Error == CatalogStoreError.UnsupportedStorageVersion,
+            "commit_future_primary_refuses_write");
+        Check(File.ReadAllBytes(guardedRoots.CatalogPath).SequenceEqual(futurePrimary),
+            "commit_future_primary_preserved");
+        Check(File.ReadAllBytes(guardedRoots.CatalogBackupPath).SequenceEqual(guardedBackup),
+            "commit_future_primary_does_not_overwrite_backup");
     }
 
     private static JsonObject FrameRecord()

@@ -141,8 +141,10 @@ restore 가 파일을 치환할 수 있습니다. lock 파일만 세션 수명 �
 
 `NotFound`, `CorruptDatabase`, `UnsupportedStorageVersion`, `UnsupportedCatalogVersion`,
 `MalformedContent`를 각각 다른 값으로 돌려줍니다. 어느 것도 빈 라이브러리로 해석하지 않으며 부분
-snapshot을 반환하지 않습니다. 읽기는 `PRAGMA integrity_check`를 먼저 통과해야 하고, 쓰기는 commit
-뒤 다시 `integrity_check`로 readback한 뒤에만 성공을 보고합니다.
+snapshot을 반환하지 않습니다. 읽기는 `PRAGMA integrity_check`를 먼저 통과해야 합니다. 쓰기는 같은
+연결의 `integrity_check` 뒤에도 성공을 확정하지 않고, `CatalogSession`의 commit verifier가 새 연결로
+9개 table 전체를 다시 읽어 metadata·row 순서·ID·canonical payload가 요청 snapshot과 같을 때만
+성공을 보고합니다.
 
 ## 결과
 
@@ -155,9 +157,8 @@ snapshot을 반환하지 않습니다. 읽기는 `PRAGMA integrity_check`를 먼
 
 ## 남은 한계
 
-- 트랜잭션 하나짜리 store입니다. **backup 세대, pending restore, legacy migration, defect sidecar는
-  아직 없습니다.** `StorageRootSet`이 경로만 잡아 둔 상태입니다.
-- readback 검증은 `integrity_check`까지입니다. 전체 payload 재디코드 비교는 아직 하지 않습니다.
+- raw 직전 primary 보존과 verified commit은 구현됐습니다. **immutable logical backup 세대, pending
+  restore, legacy migration, defect sidecar는 아직 없습니다.**
 - 5만 frame 성능은 측정했으나(`verification/2026-08-07-sqlite-catalog-store.md`) **fault-injection
   검증표는 실행하지 않았습니다.** 쓰기 도중 강제 종료와 전원 장애 시나리오가 남아 있습니다.
 - 재저장 비용이 바뀐 양이 아니라 catalog 전체 크기에 비례합니다. 5만 frame 목표에서 1초 미만이라

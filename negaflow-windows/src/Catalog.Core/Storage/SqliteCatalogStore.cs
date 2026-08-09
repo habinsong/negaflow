@@ -28,6 +28,8 @@ internal static class SqliteCatalogStore
     private const int SqliteBusy = 5;
     private const int SqliteLocked = 6;
     private const int SqliteReadOnly = 8;
+    private const int SqliteIoError = 10;
+    private const int SqliteFull = 13;
     private const int SqliteCantOpen = 14;
 
     public static CatalogReadResult Read(string catalogPath)
@@ -533,7 +535,7 @@ internal static class SqliteCatalogStore
         {
             SqliteBusy or SqliteLocked => CatalogStoreError.Busy,
             SqliteReadOnly => CatalogStoreError.AccessDenied,
-            SqliteCantOpen => CatalogStoreError.IoFailure,
+            SqliteIoError or SqliteFull or SqliteCantOpen => CatalogStoreError.IoFailure,
             _ => CatalogStoreError.CorruptDatabase,
         };
 }
