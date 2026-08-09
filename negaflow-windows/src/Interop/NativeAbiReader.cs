@@ -9,9 +9,10 @@ internal static unsafe class NativeAbiReader
     // Raised with each export the managed side calls: 2 for nf_develop_export_v1,
     // 4 for nf_get_negative_limits_v1, 5 for nf_develop_preview_v1.
     // 3 for nf_get_tone_limits_v1, 6 for the base-mode v2 preview/export calls,
-    // 9 for Basic Tone v3 preview/export, and 10 for Film base v4 preview/export.
+    // 9 for Basic Tone v3 preview/export, 10 for Film base v4 preview/export,
+    // and 11 for Point Curve v5 preview/export.
     // An engine below this is refused at load, not at the call.
-    internal const ushort MinimumMinor = 10;
+    internal const ushort MinimumMinor = 11;
 
     private const uint StatusOk = 0;
 

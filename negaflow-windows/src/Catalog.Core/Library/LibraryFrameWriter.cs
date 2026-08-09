@@ -6,7 +6,8 @@ namespace Negaflow.Catalog;
 public sealed record LibraryFrameEdit(
     ToneAdjustment Tone,
     ManualBaseRgb? ManualBase,
-    BaseRecipe? Base = null);
+    BaseRecipe? Base = null,
+    PointCurveRecipe? PointCurves = null);
 
 /// <summary>
 /// 톤, 수동 base, 그리고 지정된 경우 base recipe를 갱신합니다. 입력 record 는 바꾸지 않고 깊은 복사본을 돌려주며, 이 writer 가
@@ -34,6 +35,10 @@ public static class LibraryFrameWriter
         if (edit.Base is { } baseRecipe && !IsValidBaseRecipe(baseRecipe))
         {
             return LibraryFrameWriteResult.Failure(LibraryFrameError.InvalidBaseRecipe);
+        }
+        if (edit.PointCurves is { } pointCurves && !IsValidPointCurves(pointCurves))
+        {
+            return LibraryFrameWriteResult.Failure(LibraryFrameError.InvalidPointCurves);
         }
 
         JsonObject updated = frameRecord.DeepClone().AsObject();
@@ -97,6 +102,10 @@ public static class LibraryFrameWriter
                 LibraryFrameReader.ScannerProfileIdName,
                 baseRecipeToWrite.ScannerProfileId);
         }
+        if (edit.PointCurves is { } pointCurvesToWrite)
+        {
+            parameters[LibraryFrameReader.PointCurvesName] = WritePointCurves(pointCurvesToWrite);
+        }
 
         return LibraryFrameWriteResult.Success(updated);
     }
@@ -145,4 +154,52 @@ public static class LibraryFrameWriter
         double.IsFinite(tone.CurveLights) &&
         double.IsFinite(tone.CurveDarks) &&
         double.IsFinite(tone.CurveShadows);
+
+    private static bool IsValidPointCurves(PointCurveRecipe pointCurves) =>
+        IsValidPointCurveChannel(pointCurves.Rgb) &&
+        IsValidPointCurveChannel(pointCurves.Red) &&
+        IsValidPointCurveChannel(pointCurves.Green) &&
+        IsValidPointCurveChannel(pointCurves.Blue);
+
+    private static bool IsValidPointCurveChannel(IReadOnlyList<PointCurvePoint> points)
+    {
+        if (points.Count > PointCurveRecipe.MaximumPointsPerChannel)
+        {
+            return false;
+        }
+        double? previousX = null;
+        foreach (PointCurvePoint point in points.OrderBy(point => point.X))
+        {
+            if (!double.IsFinite(point.X) || !double.IsFinite(point.Y) ||
+                point.X is < 0.0 or > 1.0 || point.Y is < 0.0 or > 1.0 ||
+                previousX is { } x && point.X - x < 1.0e-9)
+            {
+                return false;
+            }
+            previousX = point.X;
+        }
+        return true;
+    }
+
+    private static JsonObject WritePointCurves(PointCurveRecipe pointCurves) => new()
+    {
+        [LibraryFrameReader.PointCurveRgbName] = WritePointCurveChannel(pointCurves.Rgb),
+        [LibraryFrameReader.PointCurveRedName] = WritePointCurveChannel(pointCurves.Red),
+        [LibraryFrameReader.PointCurveGreenName] = WritePointCurveChannel(pointCurves.Green),
+        [LibraryFrameReader.PointCurveBlueName] = WritePointCurveChannel(pointCurves.Blue),
+    };
+
+    private static JsonArray WritePointCurveChannel(IReadOnlyList<PointCurvePoint> points)
+    {
+        JsonArray result = [];
+        foreach (PointCurvePoint point in points.OrderBy(point => point.X))
+        {
+            result.Add(new JsonObject
+            {
+                [LibraryFrameReader.PointCurveXName] = point.X,
+                [LibraryFrameReader.PointCurveYName] = point.Y,
+            });
+        }
+        return result;
+    }
 }

@@ -30,6 +30,13 @@ public static class LibraryFrameReader
     internal const string CurveLightsName = "curveLights";
     internal const string CurveDarksName = "curveDarks";
     internal const string CurveShadowsName = "curveShadows";
+    internal const string PointCurvesName = "pointCurves";
+    internal const string PointCurveRgbName = "rgb";
+    internal const string PointCurveRedName = "red";
+    internal const string PointCurveGreenName = "green";
+    internal const string PointCurveBlueName = "blue";
+    internal const string PointCurveXName = "x";
+    internal const string PointCurveYName = "y";
 
     public static LibraryFrameReadResult Read(JsonElement frameRecord)
     {
@@ -92,6 +99,10 @@ public static class LibraryFrameReader
         {
             return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidToneValue);
         }
+        if (!TryReadPointCurves(parameters, out PointCurveRecipe pointCurves))
+        {
+            return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidPointCurves);
+        }
 
         DevelopRouteReadResult route = DevelopRouteReader.Read(frameRecord);
         if (route.Route is not { } snapshot)
@@ -108,6 +119,7 @@ public static class LibraryFrameReader
             tone)
         {
             Base = baseRecipe,
+            PointCurves = pointCurves,
         });
     }
 
@@ -231,6 +243,76 @@ public static class LibraryFrameReader
             shadow,
             whites,
             blacks);
+        return true;
+    }
+
+    private static bool TryReadPointCurves(
+        JsonElement parameters,
+        out PointCurveRecipe pointCurves)
+    {
+        pointCurves = PointCurveRecipe.Identity;
+        if (!parameters.TryGetProperty(PointCurvesName, out JsonElement element) ||
+            element.ValueKind == JsonValueKind.Null)
+        {
+            return true;
+        }
+        if (element.ValueKind != JsonValueKind.Object ||
+            !TryReadPointCurveChannel(element, PointCurveRgbName, out IReadOnlyList<PointCurvePoint> rgb) ||
+            !TryReadPointCurveChannel(element, PointCurveRedName, out IReadOnlyList<PointCurvePoint> red) ||
+            !TryReadPointCurveChannel(element, PointCurveGreenName, out IReadOnlyList<PointCurvePoint> green) ||
+            !TryReadPointCurveChannel(element, PointCurveBlueName, out IReadOnlyList<PointCurvePoint> blue))
+        {
+            return false;
+        }
+
+        pointCurves = new PointCurveRecipe(rgb, red, green, blue);
+        return true;
+    }
+
+    private static bool TryReadPointCurveChannel(
+        JsonElement pointCurves,
+        string channelName,
+        out IReadOnlyList<PointCurvePoint> points)
+    {
+        points = [];
+        if (!pointCurves.TryGetProperty(channelName, out JsonElement element) ||
+            element.ValueKind == JsonValueKind.Null)
+        {
+            return true;
+        }
+        if (element.ValueKind != JsonValueKind.Array ||
+            element.GetArrayLength() > PointCurveRecipe.MaximumPointsPerChannel)
+        {
+            return false;
+        }
+
+        List<PointCurvePoint> parsed = new(element.GetArrayLength());
+        foreach (JsonElement point in element.EnumerateArray())
+        {
+            if (point.ValueKind != JsonValueKind.Object ||
+                !point.TryGetProperty(PointCurveXName, out JsonElement xElement) ||
+                !point.TryGetProperty(PointCurveYName, out JsonElement yElement) ||
+                xElement.ValueKind != JsonValueKind.Number ||
+                yElement.ValueKind != JsonValueKind.Number ||
+                !xElement.TryGetDouble(out double x) ||
+                !yElement.TryGetDouble(out double y) ||
+                !double.IsFinite(x) || !double.IsFinite(y) ||
+                x is < 0.0 or > 1.0 || y is < 0.0 or > 1.0)
+            {
+                return false;
+            }
+            parsed.Add(new PointCurvePoint(x, y));
+        }
+
+        parsed.Sort(static (left, right) => left.X.CompareTo(right.X));
+        for (int index = 1; index < parsed.Count; index++)
+        {
+            if (parsed[index].X - parsed[index - 1].X < 1.0e-9)
+            {
+                return false;
+            }
+        }
+        points = parsed;
         return true;
     }
 

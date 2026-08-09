@@ -555,6 +555,22 @@ internal static class Program
                 ["scannerProfileID"] = "noritsu__color-nega__kodak-portra-400",
                 ["exposure"] = 0.5,
                 ["curveShadows"] = -0.25,
+                ["pointCurves"] = new JsonObject
+                {
+                    ["rgb"] = new JsonArray
+                    {
+                        new JsonObject { ["x"] = 1.0, ["y"] = 1.0 },
+                        new JsonObject { ["x"] = 0.0, ["y"] = 0.0 },
+                        new JsonObject { ["x"] = 0.45, ["y"] = 0.52 },
+                    },
+                    ["red"] = new JsonArray
+                    {
+                        new JsonObject { ["x"] = 0.0, ["y"] = 0.03 },
+                        new JsonObject { ["x"] = 1.0, ["y"] = 0.97 },
+                    },
+                    ["green"] = new JsonArray(),
+                    ["blue"] = new JsonArray(),
+                },
                 ["unknownAdjustment"] = new JsonObject { ["value"] = 7 },
             },
         };
@@ -588,6 +604,14 @@ internal static class Program
         Check(frame.Base.ScannerProfileId == "noritsu__color-nega__kodak-portra-400", "library_frame_scanner_profile_id");
         Check(frame.Tone.Exposure == 0.5, "library_frame_exposure");
         Check(frame.Tone.CurveShadows == -0.25, "library_frame_curve_shadows");
+        Check(frame.PointCurves.Rgb.Count == 3, "library_frame_point_curve_rgb_count");
+        Check(frame.PointCurves.Rgb[0] == new PointCurvePoint(0.0, 0.0),
+            "library_frame_point_curve_sorts_rgb");
+        Check(frame.PointCurves.Rgb[1] == new PointCurvePoint(0.45, 0.52),
+            "library_frame_point_curve_rgb_middle");
+        Check(frame.PointCurves.Red.Count == 2 && frame.PointCurves.Green.Count == 0 &&
+                frame.PointCurves.Blue.Count == 0,
+            "library_frame_point_curve_channel_shapes");
         // 없는 톤 키는 macOS 와 같이 0 입니다.
         Check(frame.Tone.Contrast == 0.0, "library_frame_missing_tone_is_zero");
 
@@ -609,6 +633,14 @@ internal static class Program
             "library_frame_missing_base_recipe_defaults_to_auto");
         Check(ReadFrame(defaultBase).Frame?.CanDevelop == true,
             "library_frame_default_auto_can_develop");
+
+        JsonObject withoutPointCurves = FrameRecord();
+        withoutPointCurves["params"]!.AsObject().Remove("pointCurves");
+        PointCurveRecipe? defaultPointCurves = ReadFrame(withoutPointCurves).Frame?.PointCurves;
+        Check(defaultPointCurves is not null &&
+                defaultPointCurves.Rgb.Count == 0 && defaultPointCurves.Red.Count == 0 &&
+                defaultPointCurves.Green.Count == 0 && defaultPointCurves.Blue.Count == 0,
+            "library_frame_missing_point_curves_defaults_to_identity");
 
         JsonObject withoutName = FrameRecord();
         withoutName.Remove("customDisplayName");
@@ -670,6 +702,31 @@ internal static class Program
         Check(
             ReadFrame(invalidBaseIdentifier).Error == LibraryFrameError.InvalidBaseRecipe,
             "library_frame_rejects_blank_base_identifier");
+
+        JsonObject invalidPointCurveShape = FrameRecord();
+        invalidPointCurveShape["params"]!["pointCurves"]!["rgb"] = new JsonObject();
+        Check(
+            ReadFrame(invalidPointCurveShape).Error == LibraryFrameError.InvalidPointCurves,
+            "library_frame_rejects_point_curve_non_array");
+
+        JsonObject invalidPointCurveCoordinate = FrameRecord();
+        invalidPointCurveCoordinate["params"]!["pointCurves"]!["red"] = new JsonArray
+        {
+            new JsonObject { ["x"] = 0.25, ["y"] = "0.25" },
+        };
+        Check(
+            ReadFrame(invalidPointCurveCoordinate).Error == LibraryFrameError.InvalidPointCurves,
+            "library_frame_rejects_point_curve_non_numeric_coordinate");
+
+        JsonObject duplicatePointCurveCoordinate = FrameRecord();
+        duplicatePointCurveCoordinate["params"]!["pointCurves"]!["blue"] = new JsonArray
+        {
+            new JsonObject { ["x"] = 0.5, ["y"] = 0.4 },
+            new JsonObject { ["x"] = 0.5, ["y"] = 0.6 },
+        };
+        Check(
+            ReadFrame(duplicatePointCurveCoordinate).Error == LibraryFrameError.InvalidPointCurves,
+            "library_frame_rejects_point_curve_duplicate_x");
 
         // 있는데 수가 아니면 조용히 0 으로 만들지 않습니다.
         JsonObject textTone = FrameRecord();
@@ -749,6 +806,8 @@ internal static class Program
                 "v850-led",
                 "noritsu__color-nega__kodak-portra-400"),
             "library_frame_write_preserves_base_recipe_when_not_edited");
+        Check(reread.Frame?.PointCurves.Rgb.Count == 3,
+            "library_frame_write_preserves_point_curves_when_not_edited");
 
         BaseRecipe manualRecipe = new(
             BaseEstimationMode.Manual,
@@ -761,6 +820,29 @@ internal static class Program
         Check(baseWrite.IsSuccess, "library_frame_base_recipe_write_success");
         Check(ReadFrame(baseWrite.FrameRecord!).Frame?.Base == manualRecipe,
             "library_frame_base_recipe_write_round_trip");
+
+        PointCurveRecipe pointCurveEdit = new(
+            [
+                new PointCurvePoint(1.0, 0.95),
+                new PointCurvePoint(0.0, 0.05),
+                new PointCurvePoint(0.5, 0.60),
+            ],
+            [],
+            [new PointCurvePoint(0.25, 0.20)],
+            []);
+        LibraryFrameWriteResult pointCurveWrite = LibraryFrameWriter.Apply(
+            original,
+            new LibraryFrameEdit(edit.Tone, edit.ManualBase, PointCurves: pointCurveEdit));
+        Check(pointCurveWrite.IsSuccess, "library_frame_point_curve_write_success");
+        Check(
+            pointCurveWrite.FrameRecord?["params"]!["pointCurves"]!["rgb"]![0]!["x"]!
+                .GetValue<double>() == 0.0,
+            "library_frame_point_curve_write_canonicalizes_order");
+        LibraryFrameReadResult pointCurveReread = ReadFrame(pointCurveWrite.FrameRecord!);
+        Check(pointCurveReread.IsSuccess &&
+                pointCurveReread.Frame?.PointCurves.Rgb[1] == new PointCurvePoint(0.5, 0.60) &&
+                pointCurveReread.Frame?.PointCurves.Green[0] == new PointCurvePoint(0.25, 0.20),
+            "library_frame_point_curve_write_round_trip");
 
         // base 를 지우는 것은 auto 추정으로 되돌린다는 뜻이므로 키를 없앱니다.
         LibraryFrameWriteResult cleared = LibraryFrameWriter.Apply(
@@ -802,6 +884,28 @@ internal static class Program
                     new BaseRecipe((BaseEstimationMode)99, null, null, null)))
                 .Error == LibraryFrameError.InvalidBaseRecipe,
             "library_frame_write_rejects_unknown_base_mode");
+        Check(
+            LibraryFrameWriter.Apply(
+                original,
+                new LibraryFrameEdit(
+                    ToneAdjustment.Neutral,
+                    null,
+                    PointCurves: new PointCurveRecipe(
+                        [new PointCurvePoint(0.5, 0.5), new PointCurvePoint(0.5, 0.6)],
+                        [], [], [])))
+                .Error == LibraryFrameError.InvalidPointCurves,
+            "library_frame_write_rejects_point_curve_duplicate_x");
+        Check(
+            LibraryFrameWriter.Apply(
+                original,
+                new LibraryFrameEdit(
+                    ToneAdjustment.Neutral,
+                    null,
+                    PointCurves: new PointCurveRecipe(
+                        [new PointCurvePoint(double.NaN, 0.5)],
+                        [], [], [])))
+                .Error == LibraryFrameError.InvalidPointCurves,
+            "library_frame_write_rejects_point_curve_nonfinite_coordinate");
     }
 
     private static int RunLockContender(string isolatedBase)

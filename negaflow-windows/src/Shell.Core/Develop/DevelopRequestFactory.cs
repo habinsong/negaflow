@@ -124,6 +124,17 @@ public static class DevelopRequestFactory
             Lights = (float)frame.Tone.CurveLights,
             Darks = (float)frame.Tone.CurveDarks,
             Shadows = (float)frame.Tone.CurveShadows,
+            PointCurves = new DevelopPointCurves
+            {
+                Rgb = frame.PointCurves.Rgb.Select(point =>
+                    new DevelopPointCurvePoint(point.X, point.Y)).ToArray(),
+                Red = frame.PointCurves.Red.Select(point =>
+                    new DevelopPointCurvePoint(point.X, point.Y)).ToArray(),
+                Green = frame.PointCurves.Green.Select(point =>
+                    new DevelopPointCurvePoint(point.X, point.Y)).ToArray(),
+                Blue = frame.PointCurves.Blue.Select(point =>
+                    new DevelopPointCurvePoint(point.X, point.Y)).ToArray(),
+            },
             FilmLookSourceKind = DevelopSourceKind.FilmScan,
             FilmEmulation = MapFilmEmulation(frame.Route.FilmEmulation),
             FilmEmulationIntensity = frame.Route.FilmEmulationIntensity,

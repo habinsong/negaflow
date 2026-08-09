@@ -103,6 +103,24 @@ void expect(const bool condition, const char* const message) {
     return request;
 }
 
+[[nodiscard]] nf_develop_export_request_v5 make_request_v5(
+    const wchar_t* const source,
+    const wchar_t* const destination,
+    const std::uint32_t base_mode = NF_BASE_ESTIMATION_AUTO) {
+    nf_develop_export_request_v5 request{};
+    request.struct_size = static_cast<std::uint32_t>(sizeof(request));
+    request.source_path = source;
+    request.destination_path = destination;
+    request.output_format = NF_EXPORT_FORMAT_PNG16;
+    request.film_type = NF_FILM_TYPE_COLOR;
+    request.base_estimation_mode = base_mode;
+    request.film_look_source_kind = NF_DEVELOP_SOURCE_FILM_SCAN;
+    request.film_emulation = 0U;
+    request.film_emulation_intensity = 0.5;
+    request.rows_per_copy = 64U;
+    return request;
+}
+
 void test_argument_contract() {
     nf_develop_export_request_v1 request = make_request(L"a.tif", L"b.png");
     nf_develop_export_result_v1 result = make_result();
@@ -302,6 +320,61 @@ void test_v4_contract() {
             result.succeeded == 0U &&
             result.failed_stage == NF_DEVELOP_STAGE_OBSERVE_SOURCE_BEFORE,
         "v4 known Film identifiers reach source observation");
+}
+
+void test_v5_contract() {
+    expect(sizeof(nf_point_curve_v1) == 1032U, "v5 point curve layout is fixed");
+    expect(sizeof(nf_develop_export_request_v5) == 4256U, "v5 request layout is fixed");
+    nf_develop_export_request_v5 request = make_request_v5(L"a.tif", L"b.png");
+    nf_develop_export_result_v2 result = make_result_v2();
+    expect(
+        nf_develop_export_v5(nullptr, &result) == NF_STATUS_INVALID_ARGUMENT,
+        "v5 null request is rejected");
+    expect(
+        nf_develop_export_v5(&request, nullptr) == NF_STATUS_INVALID_ARGUMENT,
+        "v5 null result is rejected");
+
+    nf_develop_export_request_v5 small = request;
+    small.struct_size = 4U;
+    expect(
+        nf_develop_export_v5(&small, &result) == NF_STATUS_STRUCT_TOO_SMALL,
+        "v5 undersized request is rejected");
+
+    request.point_curve_rgb.reserved = 1U;
+    expect(
+        nf_develop_export_v5(&request, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            std::strcmp(result.failure_name, "invalid_point_curves") == 0,
+        "v5 reserved Point Curve bytes are rejected");
+
+    request = make_request_v5(L"a.tif", L"b.png");
+    request.point_curve_rgb.point_count = NF_POINT_CURVE_MAX_POINTS + 1U;
+    expect(
+        nf_develop_export_v5(&request, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            std::strcmp(result.failure_name, "invalid_point_curves") == 0,
+        "v5 oversized Point Curve is rejected");
+
+    request = make_request_v5(L"a.tif", L"b.png");
+    request.point_curve_rgb.point_count = 2U;
+    request.point_curve_rgb.points[0U] = {0.5, 0.4};
+    request.point_curve_rgb.points[1U] = {0.5, 0.6};
+    expect(
+        nf_develop_export_v5(&request, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            std::strcmp(result.failure_name, "invalid_point_curves") == 0,
+        "v5 duplicate Point Curve coordinate is rejected");
+
+    request = make_request_v5(L"a.tif", L"b.png");
+    request.point_curve_rgb.point_count = 3U;
+    request.point_curve_rgb.points[0U] = {0.0, 0.0};
+    request.point_curve_rgb.points[1U] = {0.5, 0.6};
+    request.point_curve_rgb.points[2U] = {1.0, 1.0};
+    expect(
+        nf_develop_export_v5(&request, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            result.failed_stage == NF_DEVELOP_STAGE_OBSERVE_SOURCE_BEFORE,
+        "v5 Point Curves reach source observation");
 }
 
 void test_missing_source_is_not_a_validation_error() {
@@ -607,6 +680,41 @@ void test_v4_film_preview(const std::filesystem::path& source) {
         "v4 Film preview reports applied base");
 }
 
+void test_v5_point_curve_preview(const std::filesystem::path& source) {
+    const std::wstring source_text = source.wstring();
+    nf_develop_export_request_v5 neutral = make_request_v5(source_text.c_str(), nullptr);
+    nf_develop_export_request_v5 adjusted = neutral;
+    adjusted.point_curve_rgb.point_count = 3U;
+    adjusted.point_curve_rgb.points[0U] = {0.0, 0.0};
+    adjusted.point_curve_rgb.points[1U] = {0.5, 0.65};
+    adjusted.point_curve_rgb.points[2U] = {1.0, 1.0};
+    constexpr std::uint32_t box = 128U;
+    std::vector<std::uint8_t> neutral_pixels(
+        static_cast<std::size_t>(box) * static_cast<std::size_t>(box) * 4U,
+        0U);
+    std::vector<std::uint8_t> adjusted_pixels(neutral_pixels.size(), 0U);
+    nf_develop_export_result_v2 neutral_result = make_result_v2();
+    nf_develop_export_result_v2 adjusted_result = make_result_v2();
+
+    expect(
+        nf_develop_preview_v5(
+            &neutral, box, box, neutral_pixels.data(),
+            static_cast<std::uint32_t>(neutral_pixels.size()), &neutral_result) == NF_STATUS_OK &&
+            neutral_result.succeeded == 1U,
+        "v5 neutral preview succeeds");
+    expect(
+        nf_develop_preview_v5(
+            &adjusted, box, box, adjusted_pixels.data(),
+            static_cast<std::uint32_t>(adjusted_pixels.size()), &adjusted_result) == NF_STATUS_OK &&
+            adjusted_result.succeeded == 1U,
+        "v5 Point Curve preview succeeds");
+    expect(
+        neutral_result.image_width == adjusted_result.image_width &&
+            neutral_result.image_height == adjusted_result.image_height &&
+            neutral_pixels != adjusted_pixels,
+        "v5 Point Curve changes preview pixels");
+}
+
 }  // namespace
 
 int main(const int argument_count, const char* const arguments[]) {
@@ -615,6 +723,7 @@ int main(const int argument_count, const char* const arguments[]) {
     test_v2_contract();
     test_v3_contract();
     test_v4_contract();
+    test_v5_contract();
     test_missing_source_is_not_a_validation_error();
     test_v2_missing_source_is_not_a_validation_error();
 
@@ -627,6 +736,7 @@ int main(const int argument_count, const char* const arguments[]) {
             test_v2_auto_preview(source);
             test_v3_basic_tone_preview(source);
             test_v4_film_preview(source);
+            test_v5_point_curve_preview(source);
         } else {
             std::cerr << "FAIL: the supplied source fixture does not exist\n";
             ++failures;

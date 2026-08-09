@@ -86,6 +86,7 @@ typedef struct nf_build_info_v1 {
 #define NF_DEVELOP_STAGE_OUTPUT 9U
 
 #define NF_FAILURE_NAME_CAPACITY 64U
+#define NF_POINT_CURVE_MAX_POINTS 64U
 
 /* Paths are UTF-16 and must stay valid for the duration of the call. The struct
    carries no ownership: the callee copies everything it needs before returning. */
@@ -188,6 +189,54 @@ typedef struct nf_develop_export_request_v4 {
     const wchar_t* light_source_profile_id;
 } nf_develop_export_request_v4;
 
+/* Point curves are carried inline so a request has one lifetime boundary. Empty
+   channels mean identity. `reserved` must be zero and makes a future extension
+   explicit instead of silently reinterpreting caller bytes. */
+typedef struct nf_point_curve_point_v1 {
+    double x;
+    double y;
+} nf_point_curve_point_v1;
+
+typedef struct nf_point_curve_v1 {
+    uint32_t point_count;
+    uint32_t reserved;
+    nf_point_curve_point_v1 points[NF_POINT_CURVE_MAX_POINTS];
+} nf_point_curve_v1;
+
+/* v5 preserves the v4 prefix and appends the four macOS point-curve channels.
+   The ABI owns no point memory outside the request, so preview and export receive
+   the same immutable recipe. */
+typedef struct nf_develop_export_request_v5 {
+    uint32_t struct_size;
+    const wchar_t* source_path;
+    const wchar_t* destination_path;
+    uint32_t output_format;
+    uint32_t film_type;
+    uint32_t base_estimation_mode;
+    float dmin[3];
+    float exposure_stops;
+    float contrast;
+    float highlights;
+    float lights;
+    float darks;
+    float shadows;
+    uint32_t film_look_source_kind;
+    uint32_t film_emulation;
+    double film_emulation_intensity;
+    uint32_t rows_per_copy;
+    float density;
+    float highlight;
+    float shadow;
+    float whites;
+    float blacks;
+    const wchar_t* film_stock_dmin_id;
+    const wchar_t* light_source_profile_id;
+    nf_point_curve_v1 point_curve_rgb;
+    nf_point_curve_v1 point_curve_red;
+    nf_point_curve_v1 point_curve_green;
+    nf_point_curve_v1 point_curve_blue;
+} nf_develop_export_request_v5;
+
 typedef struct nf_develop_export_result_v1 {
     uint32_t struct_size;
     uint32_t succeeded;
@@ -266,6 +315,9 @@ NF_API nf_status_t NF_CALL nf_develop_export_v3(
 NF_API nf_status_t NF_CALL nf_develop_export_v4(
     const nf_develop_export_request_v4* request,
     nf_develop_export_result_v2* result);
+NF_API nf_status_t NF_CALL nf_develop_export_v5(
+    const nf_develop_export_request_v5* request,
+    nf_develop_export_result_v2* result);
 
 NF_API nf_status_t NF_CALL nf_get_tone_limits_v1(nf_tone_limits_v1* output);
 
@@ -296,6 +348,13 @@ NF_API nf_status_t NF_CALL nf_develop_preview_v3(
     nf_develop_export_result_v2* result);
 NF_API nf_status_t NF_CALL nf_develop_preview_v4(
     const nf_develop_export_request_v4* request,
+    uint32_t maximum_width,
+    uint32_t maximum_height,
+    uint8_t* pixels,
+    uint32_t pixel_capacity_bytes,
+    nf_develop_export_result_v2* result);
+NF_API nf_status_t NF_CALL nf_develop_preview_v5(
+    const nf_develop_export_request_v5* request,
     uint32_t maximum_width,
     uint32_t maximum_height,
     uint8_t* pixels,

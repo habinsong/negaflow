@@ -75,6 +75,12 @@ internal static unsafe class ContractTestRunner
             sizeof(NativeDevelopExportRequestV4) == NativeDevelopExporter.RequestV4Size,
             "develop_export_v4_request_size");
         Check(
+            sizeof(NativePointCurveV1) == NativeDevelopExporter.PointCurveV1Size,
+            "point_curve_v1_size");
+        Check(
+            sizeof(NativeDevelopExportRequestV5) == NativeDevelopExporter.RequestV5Size,
+            "develop_export_v5_request_size");
+        Check(
             sizeof(NativeDevelopExportResultV2) == NativeDevelopExporter.ResultV2Size,
             "develop_export_v2_result_size");
         Check(
@@ -101,6 +107,10 @@ internal static unsafe class ContractTestRunner
             Marshal.OffsetOf<NativeDevelopExportRequestV4>(
                 nameof(NativeDevelopExportRequestV4.FilmStockDminId)).ToInt32() == 112,
             "develop_export_v4_film_stock_offset");
+        Check(
+            Marshal.OffsetOf<NativeDevelopExportRequestV5>(
+                nameof(NativeDevelopExportRequestV5.PointCurveRgb)).ToInt32() == 128,
+            "develop_export_v5_point_curve_offset");
         Check(
             Marshal.OffsetOf<NativeDevelopExportResultV2>(
                 nameof(NativeDevelopExportResultV2.AppliedDminRed)).ToInt32() == 136,
@@ -269,6 +279,22 @@ internal static unsafe class ContractTestRunner
                 BaseEstimationMode = (DevelopBaseEstimationMode)99,
             }),
             "develop_export_undefined_base_mode_rejected");
+
+        CheckThrows<ArgumentException>(
+            () => NativeDevelopExporter.Run(new DevelopExportRequest
+            {
+                SourcePath = absentSource,
+                DestinationPath = destination,
+                PointCurves = new DevelopPointCurves
+                {
+                    Rgb =
+                    [
+                        new DevelopPointCurvePoint(0.5, 0.5),
+                        new DevelopPointCurvePoint(0.5, 0.6),
+                    ],
+                },
+            }),
+            "develop_export_duplicate_point_curve_rejected");
 
         CheckThrows<ArgumentNullException>(
             () => NativeDevelopExporter.Run(null!),

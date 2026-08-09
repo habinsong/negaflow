@@ -354,6 +354,10 @@
                                     ResetValue="0"
                                     SliderAutomationId="negaflow.develop.curve.shadows"
                                     ValueChanged="OnToneCurveChanged" />
+                                <Border Height="2" Background="{ThemeResource NegaflowDividerBrush}" />
+                                <controls:ToneCurveEditor
+                                    x:Name="PointCurveEditor"
+                                    CurvesChanged="OnPointCurvesChanged" />
                             </StackPanel>
 
                             <Button

@@ -144,7 +144,8 @@ internal static class Program
         SourceSignalKind signal = SourceSignalKind.FilmNegativeScan,
         FilmType filmType = FilmType.ColorNegative,
         FilmEmulation emulation = FilmEmulation.Portra400,
-        BaseRecipe? baseRecipe = null) =>
+        BaseRecipe? baseRecipe = null,
+        PointCurveRecipe? pointCurves = null) =>
         new(
             "frame-1",
             @"C:\scans\IMG_0001.tif",
@@ -166,6 +167,7 @@ internal static class Program
             Base = baseRecipe ?? (manualBase is null
                 ? BaseRecipe.Auto
                 : new BaseRecipe(BaseEstimationMode.Manual, null, null, null)),
+            PointCurves = pointCurves ?? PointCurveRecipe.Identity,
         };
 
     private static void VerifyDevelopRequestFactory()
@@ -211,6 +213,20 @@ internal static class Program
         Check(
             request.BaseEstimationMode == DevelopBaseEstimationMode.Manual,
             "develop_request_manual_base_mode");
+
+        PointCurveRecipe pointCurves = new(
+            [new PointCurvePoint(0.0, 0.0), new PointCurvePoint(0.5, 0.6), new PointCurvePoint(1.0, 1.0)],
+            [new PointCurvePoint(0.25, 0.3)],
+            [],
+            []);
+        DevelopRequestResult curveRequest = DevelopRequestFactory.Create(
+            Frame(new ManualBaseRgb(0.21, 0.22, 0.23), pointCurves: pointCurves),
+            destination);
+        Check(
+            curveRequest.IsSuccess &&
+                curveRequest.Request?.PointCurves.Rgb[1] == new DevelopPointCurvePoint(0.5, 0.6) &&
+                curveRequest.Request?.PointCurves.Red[0] == new DevelopPointCurvePoint(0.25, 0.3),
+            "develop_request_carries_point_curves");
 
         Check(
             DevelopRequestFactory.Create(
@@ -844,6 +860,17 @@ internal static class Program
                 panel.CurveDarks == -0.5, "panel_set_curve_darks");
             Check(panel.SetCurveShadows(99.0) == LibraryFrameError.None &&
                 panel.CurveShadows == 1.0, "panel_clamps_curve_shadows");
+            PointCurveRecipe editedPointCurves = new(
+                [new PointCurvePoint(0.0, 0.0), new PointCurvePoint(0.5, 0.6), new PointCurvePoint(1.0, 1.0)],
+                [], [], []);
+            Check(panel.SetPointCurves(editedPointCurves) == LibraryFrameError.None &&
+                panel.PointCurves.Rgb[1] == new PointCurvePoint(0.5, 0.6),
+                "panel_sets_point_curves");
+            Check(
+                panel.SetPointCurves(new PointCurveRecipe(
+                    [new PointCurvePoint(0.5, 0.4), new PointCurvePoint(0.5, 0.6)],
+                    [], [], [])) == LibraryFrameError.InvalidPointCurves,
+                "panel_rejects_invalid_point_curves");
 
             // 아직 base 를 고르지 않은 frame 에도 슬라이더 시작 위치는 있어야 하지만, 그것이
             // catalog 에 저장되면 사용자가 고르지 않은 값으로 현상됩니다.
@@ -939,6 +966,8 @@ internal static class Program
                 "panel_rejects_tone_for_positive_frame");
             Check(panel.SetCurveHighlights(0.3) == LibraryFrameError.InvalidDevelopRoute,
                 "panel_rejects_curve_for_positive_frame");
+            Check(panel.SetPointCurves(PointCurveRecipe.Identity) == LibraryFrameError.InvalidDevelopRoute,
+                "panel_rejects_point_curve_for_positive_frame");
             Check(panel.Select("frame-2"), "panel_reselects_developable_frame");
 
             Check(panel.Save() == CatalogStoreError.None, "panel_save");

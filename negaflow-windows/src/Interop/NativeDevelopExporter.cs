@@ -16,6 +16,8 @@ public static unsafe class NativeDevelopExporter
     internal const int RequestV2Size = 96;
     internal const int RequestV3Size = 112;
     internal const int RequestV4Size = 128;
+    internal const int PointCurveV1Size = 1032;
+    internal const int RequestV5Size = 4256;
     internal const int ResultV2Size = 152;
 
     private const uint StatusOk = 0;
@@ -24,7 +26,8 @@ public static unsafe class NativeDevelopExporter
 
     private static void ValidateLayoutAndEnums(DevelopExportRequest request)
     {
-        if (sizeof(NativeDevelopExportRequestV4) != RequestV4Size ||
+        if (sizeof(NativePointCurveV1) != PointCurveV1Size ||
+            sizeof(NativeDevelopExportRequestV5) != RequestV5Size ||
             sizeof(NativeDevelopExportResultV2) != ResultV2Size)
         {
             throw new NativeBootstrapException(
@@ -41,16 +44,69 @@ public static unsafe class NativeDevelopExporter
                 "The develop request carries a value outside its enumeration.",
                 nameof(request));
         }
+        ValidatePointCurves(request.PointCurves);
     }
 
-    private static NativeDevelopExportRequestV4 BuildRequest(
+    private static void ValidatePointCurves(DevelopPointCurves pointCurves)
+    {
+        ArgumentNullException.ThrowIfNull(pointCurves);
+        ValidatePointCurve(pointCurves.Rgb, nameof(pointCurves.Rgb));
+        ValidatePointCurve(pointCurves.Red, nameof(pointCurves.Red));
+        ValidatePointCurve(pointCurves.Green, nameof(pointCurves.Green));
+        ValidatePointCurve(pointCurves.Blue, nameof(pointCurves.Blue));
+    }
+
+    private static void ValidatePointCurve(
+        IReadOnlyList<DevelopPointCurvePoint> points,
+        string parameterName)
+    {
+        ArgumentNullException.ThrowIfNull(points);
+        if (points.Count > NativePointCurveV1.MaximumPoints)
+        {
+            throw new ArgumentException("A Point Curve channel has too many points.", parameterName);
+        }
+
+        double? previousX = null;
+        foreach (DevelopPointCurvePoint point in points.OrderBy(point => point.X))
+        {
+            if (!double.IsFinite(point.X) || !double.IsFinite(point.Y) ||
+                point.X is < 0.0 or > 1.0 || point.Y is < 0.0 or > 1.0 ||
+                previousX is { } x && point.X - x < 1.0e-9)
+            {
+                throw new ArgumentException("A Point Curve coordinate is invalid.", parameterName);
+            }
+            previousX = point.X;
+        }
+    }
+
+    private static void CopyPointCurve(
+        IReadOnlyList<DevelopPointCurvePoint> source,
+        ref NativePointCurveV1 destination)
+    {
+        destination.PointCount = checked((uint)source.Count);
+        destination.Reserved = 0;
+        fixed (double* coordinates = destination.Coordinates)
+        {
+            int index = 0;
+            foreach (DevelopPointCurvePoint point in source.OrderBy(point => point.X))
+            {
+                coordinates[index * 2] = point.X;
+                coordinates[(index * 2) + 1] = point.Y;
+                index++;
+            }
+        }
+    }
+
+    private static NativeDevelopExportRequestV5 BuildRequest(
         DevelopExportRequest request,
         char* sourcePath,
         char* destinationPath,
         char* filmStockDminId,
-        char* lightSourceProfileId) => new()
+        char* lightSourceProfileId)
+    {
+        NativeDevelopExportRequestV5 native = new()
         {
-            StructSize = (uint)sizeof(NativeDevelopExportRequestV4),
+            StructSize = (uint)sizeof(NativeDevelopExportRequestV5),
             SourcePath = sourcePath,
             DestinationPath = destinationPath,
             OutputFormat = (uint)request.Format,
@@ -77,6 +133,12 @@ public static unsafe class NativeDevelopExporter
             FilmStockDminId = filmStockDminId,
             LightSourceProfileId = lightSourceProfileId,
         };
+        CopyPointCurve(request.PointCurves.Rgb, ref native.PointCurveRgb);
+        CopyPointCurve(request.PointCurves.Red, ref native.PointCurveRed);
+        CopyPointCurve(request.PointCurves.Green, ref native.PointCurveGreen);
+        CopyPointCurve(request.PointCurves.Blue, ref native.PointCurveBlue);
+        return native;
+    }
 
     public static DevelopExportResult Run(DevelopExportRequest request)
     {
@@ -94,13 +156,13 @@ public static unsafe class NativeDevelopExporter
         fixed (char* filmStockDminId = request.FilmStockDminId)
         fixed (char* lightSourceProfileId = request.LightSourceProfileId)
         {
-            NativeDevelopExportRequestV4 native = BuildRequest(
+            NativeDevelopExportRequestV5 native = BuildRequest(
                 request,
                 sourcePath,
                 destinationPath,
                 filmStockDminId,
                 lightSourceProfileId);
-            status = NativeMethods.nf_develop_export_v4(&native, &raw);
+            status = NativeMethods.nf_develop_export_v5(&native, &raw);
         }
 
         return Translate(status, raw);
@@ -138,13 +200,13 @@ public static unsafe class NativeDevelopExporter
         fixed (char* lightSourceProfileId = request.LightSourceProfileId)
         fixed (byte* pixelBuffer = pixels)
         {
-            NativeDevelopExportRequestV4 native = BuildRequest(
+            NativeDevelopExportRequestV5 native = BuildRequest(
                 request,
                 sourcePath,
                 destinationPath,
                 filmStockDminId,
                 lightSourceProfileId);
-            status = NativeMethods.nf_develop_preview_v4(
+            status = NativeMethods.nf_develop_preview_v5(
                 &native,
                 maximumWidth,
                 maximumHeight,
@@ -167,10 +229,10 @@ public static unsafe class NativeDevelopExporter
                 status switch
                 {
                     StatusInvalidArgument =>
-                    "nf_develop_export_v4 rejected the call as malformed.",
+                    "nf_develop_export_v5 rejected the call as malformed.",
                     StatusStructTooSmall =>
-                    "nf_develop_export_v4 rejected the struct sizes.",
-                    _ => $"nf_develop_export_v4 failed with status {status}.",
+                    "nf_develop_export_v5 rejected the struct sizes.",
+                    _ => $"nf_develop_export_v5 failed with status {status}.",
                 });
         }
 

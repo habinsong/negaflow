@@ -82,6 +82,23 @@ public enum FilmLookRoute
     DigitalFilmLook = 3,
 }
 
+/// <summary>한 Point Curve 채널의 정규화된 입출력 좌표입니다.</summary>
+public readonly record struct DevelopPointCurvePoint(double X, double Y);
+
+/// <summary>
+/// macOS와 같은 RGB/Red/Green/Blue Point Curve recipe입니다. 빈 채널은 identity를 뜻합니다.
+/// </summary>
+public sealed class DevelopPointCurves
+{
+    public IReadOnlyList<DevelopPointCurvePoint> Rgb { get; init; } = [];
+
+    public IReadOnlyList<DevelopPointCurvePoint> Red { get; init; } = [];
+
+    public IReadOnlyList<DevelopPointCurvePoint> Green { get; init; } = [];
+
+    public IReadOnlyList<DevelopPointCurvePoint> Blue { get; init; } = [];
+}
+
 public sealed class DevelopExportRequest
 {
     public required string SourcePath { get; init; }
@@ -126,6 +143,8 @@ public sealed class DevelopExportRequest
     public float Darks { get; init; }
 
     public float Shadows { get; init; }
+
+    public DevelopPointCurves PointCurves { get; init; } = new();
 
     public DevelopSourceKind FilmLookSourceKind { get; init; } = DevelopSourceKind.FilmScan;
 

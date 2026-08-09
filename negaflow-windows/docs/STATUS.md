@@ -215,5 +215,22 @@ text=1730, binary=43, declared_resources=29, reachable_commits=137을 확인했�
 `negaflow.develop.curve.highlights`, `.lights`, `.darks`, `.shadows`이며, Basic Tone의 동명
 Highlights/Shadows와는 다른 recipe field입니다. Shell state는 엔진 tone-control 범위로 clamp하고
 positive/digital frame의 mutation을 거부합니다. x64 Debug 관리형 build warning/error 0, Catalog 317,
-Shell 255 assertions을 통과했습니다. `ToneCurveEditor` 캔버스와 rendered/UIA/focus/keyboard/
-high-contrast/compact/ARM64 runtime 증거는 아직 없습니다.
+Shell 255 assertions을 통과했습니다. 아래 Point Curve v5 slice가 `ToneCurveEditor`를 연결했습니다.
+
+## 2026-08-09 Point Curve recipe v5 vertical slice
+
+`params.pointCurves`의 RGB/Red/Green/Blue recipe를 Catalog read/write, Shell request factory,
+ABI 0.11 v5 preview/export, native `WorkingToneAdjustParameters.point_curves`, WinUI
+`ToneCurveEditor`까지 연결했습니다. 빈 channel은 identity이며 finite 0...1, 64-point 상한,
+정렬 뒤 1e-9 간격을 Catalog·Interop·native에서 fail-closed로 검증합니다. v5는 v4 prefix 뒤에
+고정 channel 데이터를 append하므로 v1~v4 ABI layout과 export를 보존합니다.
+
+WinUI editor에는 RGB/Red/Green/Blue 채널, click/drag, non-endpoint double-click delete,
+1%/Shift 5% key nudge, input/output percent edit, add/delete/reset과 고정 AutomationId를 넣었습니다.
+이는 x64 Debug 빌드만 확인됐습니다. `node_repl` Sky UI automation 세션이 이 환경에서
+`node_repl exec context not found`로 시작하지 않아 rendered/UIA runtime, compact/high-contrast,
+실 ARM64 runtime은 미검증입니다.
+
+x64 Debug native CTest 30/30, Catalog 331 assertions, Shell 271 assertions, ABI 0.11 interop
+58 assertions이 통과했습니다. native ABI test는 활성 curve preview의 pixel 변화와 malformed
+channel의 request-validation 거절을 확인합니다.

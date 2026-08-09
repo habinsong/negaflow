@@ -203,6 +203,8 @@ public sealed class DevelopPanelState
 
     public double CurveShadows => SelectedFrame?.Tone.CurveShadows ?? 0.0;
 
+    public PointCurveRecipe PointCurves => SelectedFrame?.PointCurves ?? PointCurveRecipe.Identity;
+
     public bool CanExport => SelectedFrame is { CanDevelop: true } && !host.IsExporting;
 
     public bool Select(string frameId)
@@ -258,6 +260,32 @@ public sealed class DevelopPanelState
 
     public LibraryFrameError SetCurveShadows(double value) =>
         SetTone(tone => tone with { CurveShadows = limits.ClampToneControl(value) });
+
+    /// <summary>
+    /// Point Curve는 Parametric Tone Curve와 별도 recipe로 저장합니다. Catalog writer가
+    /// 좌표의 finite/range/중복 조건을 검증해 preview와 export가 같은 값만 받습니다.
+    /// </summary>
+    public LibraryFrameError SetPointCurves(PointCurveRecipe pointCurves)
+    {
+        ArgumentNullException.ThrowIfNull(pointCurves);
+        if (SelectedFrame is not { } frame)
+        {
+            return LibraryFrameError.MissingId;
+        }
+        if (!CanEditTone)
+        {
+            return LibraryFrameError.InvalidDevelopRoute;
+        }
+
+        LibraryFrameError error = host.Edit(
+            frame.Id,
+            new LibraryFrameEdit(frame.Tone, frame.ManualBase, PointCurves: pointCurves));
+        if (error == LibraryFrameError.None)
+        {
+            Select(frame.Id);
+        }
+        return error;
+    }
 
     private LibraryFrameError SetTone(Func<ToneAdjustment, ToneAdjustment> update)
     {

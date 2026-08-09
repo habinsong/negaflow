@@ -71,6 +71,11 @@ public sealed record LibraryFrameSnapshot(
     public BaseRecipe Base { get; init; } = BaseRecipe.Auto;
 
     /// <summary>
+    /// Point Curve는 Basic/Parametric Tone 값과 분리된 macOS recipe입니다. 빈 채널은 identity입니다.
+    /// </summary>
+    public PointCurveRecipe PointCurves { get; init; } = PointCurveRecipe.Identity;
+
+    /// <summary>
     /// Auto는 native resolver가 입력에서 base를 결정하므로 수동 Dmin 없이 현상할 수 있습니다.
     /// Manual만 저장된 수동 base를 요구하고, 아직 resolver가 없는 Preset은 명시적으로 막습니다.
     /// </summary>

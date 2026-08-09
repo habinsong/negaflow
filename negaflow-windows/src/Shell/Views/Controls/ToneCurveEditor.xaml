@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Negaflow.Shell.Views.Controls.ToneCurveEditor"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel Spacing="6">
+        <Grid ColumnSpacing="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Button x:Name="RgbChannelButton" Grid.Column="0" Content="RGB" Click="OnRgbChannelClicked" />
+            <Button x:Name="RedChannelButton" Grid.Column="1" Content="Red" Click="OnRedChannelClicked" />
+            <Button x:Name="GreenChannelButton" Grid.Column="2" Content="Green" Click="OnGreenChannelClicked" />
+            <Button x:Name="BlueChannelButton" Grid.Column="3" Content="Blue" Click="OnBlueChannelClicked" />
+        </Grid>
+        <Border Height="188" BorderBrush="{ThemeResource NegaflowDividerBrush}" BorderThickness="1" CornerRadius="6">
+            <Canvas
+                x:Name="CurveCanvas"
+                Background="Transparent"
+                IsTabStop="True"
+                PointerMoved="OnCanvasPointerMoved"
+                PointerPressed="OnCanvasPointerPressed"
+                PointerReleased="OnCanvasPointerReleased"
+                DoubleTapped="OnCanvasDoubleTapped"
+                KeyDown="OnCanvasKeyDown"
+                SizeChanged="OnCanvasSizeChanged" />
+        </Border>
+        <Grid x:Name="PointFields" ColumnSpacing="6">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" Spacing="2">
+                <TextBlock FontSize="11" Text="Input" />
+                <TextBox x:Name="InputEditor" AutomationProperties.Name="Point Curve input percentage" KeyDown="OnPointEditorKeyDown" LostFocus="OnPointEditorLostFocus" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Spacing="2">
+                <TextBlock FontSize="11" Text="Output" />
+                <TextBox x:Name="OutputEditor" AutomationProperties.Name="Point Curve output percentage" KeyDown="OnPointEditorKeyDown" LostFocus="OnPointEditorLostFocus" />
+            </StackPanel>
+        </Grid>
+        <Grid ColumnSpacing="6">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Button x:Name="AddPointButton" Grid.Column="0" Content="Add point" Click="OnAddPointClicked" />
+            <Button x:Name="DeletePointButton" Grid.Column="1" Content="Delete point" Click="OnDeletePointClicked" />
+            <Button x:Name="ResetChannelButton" Grid.Column="2" Content="Reset channel" Click="OnResetChannelClicked" />
+        </Grid>
+    </StackPanel>
+</UserControl>

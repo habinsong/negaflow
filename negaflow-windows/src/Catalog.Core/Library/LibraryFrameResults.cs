@@ -19,6 +19,9 @@ public enum LibraryFrameError
 
     InvalidBaseRecipe,
 
+    /// <summary><c>pointCurves</c>가 유효한 0...1 점 배열이 아닙니다.</summary>
+    InvalidPointCurves,
+
     /// <summary>톤 값이 수가 아니거나 유한하지 않습니다.</summary>
     InvalidToneValue,
 

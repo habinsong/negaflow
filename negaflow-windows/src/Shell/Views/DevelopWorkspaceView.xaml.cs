@@ -198,6 +198,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         CurveLightsControl.Value = panel.CurveLights;
         CurveDarksControl.Value = panel.CurveDarks;
         CurveShadowsControl.Value = panel.CurveShadows;
+        PointCurveEditor.Curves = panel.PointCurves;
         // Auto에는 수동 base가 없으므로 slider에는 시작 위치만 보입니다. 사용자가 값을 바꾸면
         // manual mode로 전환되며, 그 전까지 preview/export는 native Auto resolver를 사용합니다.
         ManualBaseRgb shown = panel.ManualBase ?? new ManualBaseRgb(
@@ -380,6 +381,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         {
             slider.IsEnabled = canEdit;
         }
+        PointCurveEditor.IsEnabled = canEdit;
     }
 
     private void OnBaseAutoModeChecked(object sender, RoutedEventArgs args)
@@ -541,6 +543,19 @@ public sealed partial class DevelopWorkspaceView : UserControl
             _ => LibraryFrameError.InvalidToneValue,
         };
         if (error == LibraryFrameError.None)
+        {
+            RequestPreview();
+        }
+    }
+
+    private void OnPointCurvesChanged(object? sender, ToneCurveChangedEventArgs args)
+    {
+        _ = sender;
+        if (panel is null || isSynchronizingInspector)
+        {
+            return;
+        }
+        if (panel.SetPointCurves(args.Curves) == LibraryFrameError.None)
         {
             RequestPreview();
         }
