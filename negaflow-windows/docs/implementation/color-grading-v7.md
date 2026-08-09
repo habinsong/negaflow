@@ -12,7 +12,7 @@ versioned C ABI, native CPU pipeline, WinUI Inspector까지 하나의 요청으�
   않았습니다. native request validation은 잘못된 값에 `invalid_color_grading`을
   반환합니다.
 - `ColorGradingEditor`는 Shadows/Midtones/Highlights selector, 150 DIP hue/saturation
-  wheel, luminance/blending/balance slider를 제공합니다. 포인터 캡처와 화살표의
+  wheel(12개 saturation ring과 white→transparent radial center overlay), luminance/blending/balance slider를 제공합니다. 포인터 캡처와 화살표의
   0.01 saturation·1° hue nudge, Shift의 10배 nudge를 지원하고, 변경은 Catalog를
   거쳐 같은 preview/export recipe에 반영합니다.
 
