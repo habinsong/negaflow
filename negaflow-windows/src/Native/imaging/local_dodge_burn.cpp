@@ -1,5 +1,7 @@
 #include "negaflow/imaging/local_dodge_burn.h"
 
+#include "negaflow/core/parallel_rows.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -82,7 +84,16 @@ void discard_pixels(WorkingImage& image) noexcept {
     std::vector<float> horizontal(source.size());
     std::vector<float> result(source.size());
     const float inverse = 1.0F / static_cast<float>(radius * 2 + 1);
-    for (std::uint32_t y = 0U; y < height; ++y) {
+    // Each sweep carries a running sum along its own line and touches no other, so the
+    // horizontal pass splits by row and the vertical one by column. Same arithmetic in
+    // the same order within a line, so the totals are identical.
+    const std::uint64_t work_units =
+        static_cast<std::uint64_t>(width) * static_cast<std::uint64_t>(height);
+    negaflow::core::for_each_row_block(
+        height,
+        work_units,
+        [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+      for (std::uint32_t y = first_row; y < first_row + row_count; ++y) {
         float sum = 0.0F;
         for (int offset = -radius; offset <= radius; ++offset) {
             const auto sample_x = static_cast<std::uint32_t>(std::clamp(
@@ -104,8 +115,13 @@ void discard_pixels(WorkingImage& image) noexcept {
             sum += source[index_of(add_x, y, width)] -
                    source[index_of(remove_x, y, width)];
         }
-    }
-    for (std::uint32_t x = 0U; x < width; ++x) {
+      }
+        });
+    negaflow::core::for_each_row_block(
+        width,
+        work_units,
+        [&](const std::uint32_t first_column, const std::uint32_t column_count) noexcept {
+      for (std::uint32_t x = first_column; x < first_column + column_count; ++x) {
         float sum = 0.0F;
         for (int offset = -radius; offset <= radius; ++offset) {
             const auto sample_y = static_cast<std::uint32_t>(std::clamp(
@@ -127,7 +143,8 @@ void discard_pixels(WorkingImage& image) noexcept {
             sum += horizontal[index_of(x, add_y, width)] -
                    horizontal[index_of(x, remove_y, width)];
         }
-    }
+      }
+        });
     return result;
 }
 
@@ -490,7 +507,12 @@ void apply_adjustment(
         ? amount
         : -amount;
     const float exposure = std::exp2(stops);
-    for (std::uint32_t y = 0U; y < image.height; ++y) {
+    negaflow::core::for_each_row_block(
+        image.height,
+        static_cast<std::uint64_t>(image.width) *
+            static_cast<std::uint64_t>(image.height),
+        [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+      for (std::uint32_t y = first_row; y < first_row + row_count; ++y) {
         auto* const row = image.pixels.data() +
             static_cast<std::size_t>(y) * image.stride_pixels;
         for (std::uint32_t x = 0U; x < image.width; ++x) {
@@ -503,7 +525,8 @@ void apply_adjustment(
             row[x].green *= scale;
             row[x].blue *= scale;
         }
-    }
+      }
+        });
 }
 
 [[nodiscard]] bool finite_point(const LocalDodgeBurnPoint point) noexcept {

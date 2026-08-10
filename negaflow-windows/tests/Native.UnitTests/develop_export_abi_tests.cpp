@@ -1648,6 +1648,16 @@ void test_v12_local_dodge_burn_preview(const std::filesystem::path& source) {
             &result) == NF_STATUS_OK && result.succeeded == 1U &&
             pixels != baseline_pixels,
         "v12 brush Local Dodge/Burn changes the shared preview pipeline");
+    // The box blurs carry a running sum along each line and the application is per pixel,
+    // so splitting by row and by column must not move a result. Reported so a build with
+    // the engine forced inline can be compared against this value.
+    std::uint64_t fingerprint = 1469598103934665603ULL;
+    for (const std::uint8_t value : pixels) {
+        fingerprint = (fingerprint ^ value) * 1099511628211ULL;
+    }
+    std::cout << "{\"note\":\"dodge_burn_preview_pixels\",\"fnv1a64\":\"" << std::hex
+              << fingerprint << std::dec << "\",\"wall_microseconds\":"
+              << result.wall_microseconds << "}" << std::endl;
 }
 
 void test_v13_color_model_preview(const std::filesystem::path& source) {
