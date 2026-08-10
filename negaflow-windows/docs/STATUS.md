@@ -71,6 +71,7 @@ Grading·Primary Calibration·ColorModel·sRGB16 변환·픽셀 검증에 적용
 | x64 CMake configure/build/run | 통과 | Debug/Release clean configure·build·CLI 실행 |
 | x64 native tests | 통과 | 2026-08-10 Debug/Release CTest 57/57 통과. 실촬영 fixture 경로가 한 세그먼트 짧아 11개 테스트가 조용히 합성 전용 분기로 떨어져 있던 것을 고쳐 46 → 57 |
 | 현상 속도 (16 논리 코어) | 측정 완료·비트 동일 | 3278×4944 에서 develop `1,887 → 246 ms`, tone `2,057 → 285 ms`. 5088×3401 미리보기에서 FilmScanDenoise `15,004.7 → 2,949.7 ms`(5.09배), Texture `3,904.7 → 774.2 ms`(5.04배), identity `2,997 → 552 ms`(5.43배), Local Dodge/Burn 조정당 `585 → 221 ms`(2.65배). 출력 PNG16 SHA-256 과 denoise/texture/dodge-burn 미리보기 fingerprint `b539956ad3c46820`/`a63cd4c01b4c1e10`/`7c8a60ab475f270d` 가 엔진 전역 인라인 강제 빌드와 동일 |
+| 필름 베이스 자동 추정 | **macOS 대조 완료·실측 확인** | `FilmBaseEstimator.swift` 659줄을 함수·상수 단위로 재대조해 전부 일치 확인(후보 판정, 응집 모드·강등, 비필름 제외·팽창, 연결 성분, 가장자리/분산 표본, 보더 폴백, 선택 순서). 사용자 실제 OpticFilm 컬러 네거티브 5장이 **모두 1차 경로(connected component)** 로 측정되고 Dmin 이 `R>G>B` 오렌지 마스크와 일치. 폴백 상수로 떨어진 프레임 없음 |
 | 자동 보정 | 네이티브 계산 구현 | macOS `AutoAdjust` 는 실제로 불리는 사용자 기능인데 Windows 에 없었음. 히스토그램 percentile 을 톤 슬라이더 전달함수로 역산하는 Auto Tone 과 근중립·Minkowski p=6 기반 부분 보정 Auto WB 를 이식. 노출은 밝히는 방향만, 하이라이트/섀도는 복구 전용. **실촬영 검사는 중립 현상본이 부실해 모든 값이 클램프까지 감 — 품질 증거 아님.** ABI·셸 연결 미구현 |
 | macOS 커널 수식 대조 | 9개 단계 일치 | Basic Tone·Parametric Curve·Negative Inversion·Color Mixer·Color Grading·Primary Calibration·B&W Toning·Texture·Film Grain 이 상수까지 일치. Film Grain 은 잡음원만 상이. 부동소수점 결과 동일성은 별개이며 여전히 macOS 호스트 필요 |
 | 표시 경계 | 미리보기 정렬 | macOS `toneSafeUnitRGB` 와 같은 hue-safe soft clip 과 ±0.5/255 dither 를 8비트 미리보기 직전에 적용. 게시 경로는 불변(16비트는 macOS 도 dither 없음)이며 실촬영 export SHA-256 동일. 전체 해상도 16비트 중간 이미지 제거. 흑백 중립성 회귀는 표시 dither 를 반영해 채널 최대 차이 1 코드 허용 |
@@ -110,9 +111,10 @@ Grading·Primary Calibration·ColorModel·sRGB16 변환·픽셀 검증에 적용
 | WinUI package graph | 고정·감사 | Runtime/WinUI 1.8 component 직접 참조, transitive 명세, 취약 package 0, AI/ML/Widgets 제외, 미사용 WebView2 payload 1.6MB를 x64/ARM64 clean build 출력에서 제외 |
 | 제3자 고지 | 기록 완료 | `THIRD-PARTY-NOTICES.md`에 App SDK 조건, 미배포 WebView2 경계, SQLite 스택의 MIT 1건·Apache-2.0 4건 기록. `components.json` 배포 게이트 갱신 |
 | Windows 빌드 CI | 구현 완료 | `.github/workflows/windows.yml`의 native·managed·arm64-cross 잡과 로컬 짝 `scripts/ci-gate.ps1`. 러너의 VS 2026과 .NET 10.0.302를 그대로 써서 로컬과 같은 프리셋으로 빌드 |
-| ColorSync↔ICM 색상 동등성 | 측정 완료·판정 보류 | 34패치 중 21개 비율 1.000, 깊은 섀도우에서 최대 20.37배. 원인은 ColorSync의 1/16 toe. 현상 후 8비트 코드 2~6, 채널 스프레드 최대 5. ADR-0024로 재현하지 않기로 결정 |
+| ColorSync↔ICM 색상 동등성 | **사용자 확인·종결** | 34패치 중 21개 비율 1.000, 깊은 섀도우에서 최대 20.37배(원인은 ColorSync의 1/16 toe). 현상 후 차이는 **암부에서 8비트 코드 2~7** 이며, 2026-08-10 사용자가 직접 확인해 **실질적으로 의미 없음**으로 종결했습니다. ADR-0024 유지 |
 | GPU/WARP | 미구현 | M5 이후 |
-| installer/signing | 미구현 | .NET 10과 Windows App Runtime 1.8 prerequisite 연결, SBOM/signing은 M17 범위 |
+| installer | 미구현 | .NET 10과 Windows App Runtime 1.8 prerequisite 연결. **코드 서명은 철회(ADR-0027)** — 서명 없이 배포하므로 MSIX 가 아니라 WiX/Inno Setup 이며 SmartScreen 경고를 감수합니다 |
+| ARM64 실기 | 사용자 담당 | 이 저장소는 교차 빌드까지만 검증합니다(ADR-0027) |
 
 ## 2026-08-09 Chroma post-pipeline backend
 

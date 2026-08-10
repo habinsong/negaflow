@@ -75,6 +75,16 @@ byte-exact임을 고정했습니다. 대형 실제 촬영 TIFF batch의 process 
 구현했고(`../implementation/auto-adjust.md`) **ABI·셸 연결과 제대로 된 실촬영 검증이 다음
 작업**입니다. `SoftProof` 도 같은 방식으로 찾은 미구현 기능입니다.
 
+**2g. 필름 베이스 추정은 이미 macOS 와 같습니다 — 재확인했습니다.** 사용자 요청으로
+`FilmBaseEstimator.swift` 를 함수·상수 단위로 다시 대조했고 빠진 것이 없었습니다. 실제 필름
+5장이 전부 1차 경로(연결 성분)로 측정됩니다.
+`../verification/2026-08-10-film-base-parity.md`.
+
+**2f. macOS 와의 색 차이는 종결됐습니다.** 2026-08-10 사용자가 직접 확인한 결과 차이는
+**암부에서 8비트 256 단계 기준 2~7** 이며 실질적으로 의미가 없습니다. ADR-0024(ColorSync 의
+toe 를 재현하지 않음)를 유지하고, **"macOS pixel golden 이 없어 수치 동등성을 모른다"는 표현은
+더 이상 쓰지 않습니다.** 남은 수치 위험은 아래 blur 반경 하나입니다.
+
 **2d. 커널 수식 대조는 macOS 호스트 없이도 할 수 있습니다.** Core Image 가 실행하는 Metal
 커널 소스가 `negaflow-mac/.../ChromabaseMetalKernels.swift` 에 상수까지 들어 있습니다. 9개 단계를
 대조해 전부 일치를 확인했고 차이는 표시 경계 하나였습니다 —
@@ -199,6 +209,7 @@ defect sidecar는 닫았습니다. catalog fault harness 중 process-kill/disk-f
 | ADR-0022 | 미사용 WebView2 페이로드 미배포 |
 | ADR-0024 | ColorSync 의 섀도우 toe 를 재현하지 않음 |
 | ADR-0025 | catalog SQLite 는 관리 계층에서 열고 native SQLite 를 따로 고정. "의존성 0개" 는 네이티브 엔진에만 적용 |
+| ADR-0027 | 코드 서명 철회. 설치 파일은 서명 없이 배포하므로 MSIX 대신 WiX/Inno. ARM64 실기 검증은 사용자 담당 |
 
 **LittleCMS 검토는 폐기됐습니다.** 색 차이의 원인이 Windows CMS 선택이 아니라 ColorSync 가 ICC
 사양에서 벗어나 있다는 사실이므로, Windows 에서 CMS 를 교체해도 macOS 와 같아지지 않습니다.
@@ -544,7 +555,15 @@ MSIX 가 WinUI 3 의 권장 경로입니다. 설치 경험이 하나로 끝나�
 
 8번의 결과입니다. 별도 업데이터를 만들지 않습니다.
 
-### 10. 코드 서명 → Azure Trusted Signing 우선
+### 10. 코드 서명 → **철회됨. ADR-0027 을 보십시오**
+
+**이 항목은 무효입니다.** 비용을 들이지 않기로 했으므로 서명하지 않습니다. 설치 파일은 계속
+만들되 서명 없이 배포하며, 그래서 MSIX 대신 WiX/Inno Setup 으로 갑니다(8·9번 항목도 함께
+다시 열렸습니다). SmartScreen 경고는 그 결정의 대가로 받아들입니다.
+
+아래 원문은 기록으로만 남깁니다.
+
+### 10-old. (무효) 코드 서명 → Azure Trusted Signing 우선
 
 2026년 기준 Basic 등급 월 $9.99, 서명 5,000건까지입니다. Microsoft 자체 CA 라 **SmartScreen 평판이
 즉시 붙습니다.** 전통적 인증서는 평판을 쌓는 동안 사용자에게 경고가 뜨는데, 1인 프로젝트에는 이

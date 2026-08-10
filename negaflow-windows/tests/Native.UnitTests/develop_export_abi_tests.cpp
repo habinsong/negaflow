@@ -1264,6 +1264,13 @@ void test_v2_auto_preview(const std::filesystem::path& source) {
         result.base_source == NF_DEVELOP_BASE_SOURCE_AUTO_STRIP_FALLBACK ||
             result.base_source == NF_DEVELOP_BASE_SOURCE_AUTO_FALLBACK,
         "v2 auto preview reports resolver provenance");
+    // The measured base and which sampler found it are the whole point of the estimator,
+    // so they are reported rather than only range-checked. A frame that falls back to the
+    // fixed constant is the estimator failing, not succeeding.
+    std::cout << "{\"note\":\"auto_film_base\",\"source\":" << result.base_source
+              << ",\"dmin\":[" << result.applied_dmin[0] << ","
+              << result.applied_dmin[1] << "," << result.applied_dmin[2] << "]}"
+              << std::endl;
 }
 
 void test_v3_basic_tone_preview(const std::filesystem::path& source) {
@@ -2195,9 +2202,14 @@ void test_v22_cancel_during_run(const std::filesystem::path& source) {
 }
 
 void test_auto_adjust_on_a_real_scan(const std::filesystem::path& source) {
+    // Auto adjust reads a *neutral develop*, meaning the tone sliders at zero but the
+    // frame otherwise properly rendered. Feeding it a default manual Dmin produces a
+    // rendering that is not a photograph, and auto then correctly pushes every slider to
+    // its clamp — which proves nothing about the algorithm. Auto base gives it a real
+    // starting image.
     const std::wstring source_text = source.wstring();
     nf_develop_export_request_v21 request = make_request_v21(
-        source_text.c_str(), nullptr, NF_BASE_ESTIMATION_MANUAL);
+        source_text.c_str(), nullptr, NF_BASE_ESTIMATION_AUTO);
     constexpr std::uint32_t box = 512U;
     std::vector<std::uint8_t> pixels(
         static_cast<std::size_t>(box) * box * 4U, 0U);
