@@ -596,6 +596,27 @@ internal unsafe struct NativeDevelopExportResultV3
 /// <remarks>
 /// 콜백이 경계를 넘지 않으므로 재진입이 없고, 호출 동안 이 struct 만 고정돼 있으면 됩니다.
 /// </remarks>
+/// <summary>
+/// 자동 보정이 제안하는 값들입니다. **더하는 것이 아니라 대입**합니다 — 두 번 눌러도 한 번
+/// 누른 것과 같은 결과가 나옵니다.
+/// </summary>
+[StructLayout(LayoutKind.Sequential)]
+internal struct NativeAutoAdjustResultV1
+{
+    internal uint StructSize;
+    internal uint Reserved;
+    internal double Exposure;
+    internal double Contrast;
+    internal double Highlights;
+    internal double Shadows;
+    internal double Whites;
+    internal double Blacks;
+    internal double Density;
+    internal double Vibrance;
+    internal double Warmth;
+    internal double Tint;
+}
+
 [StructLayout(LayoutKind.Sequential)]
 internal struct NativeDevelopRunStateV1
 {

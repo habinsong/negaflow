@@ -18,9 +18,10 @@ internal static unsafe class NativeAbiReader
       // 22 for scanner profile ID v16, 23 for film polarity v17, 24 for
       // ordered pre-develop Defects region edits v18, 25 for source identity
       // v19, 26 for ordered Clone Stamp v20, 27 for Brush v21, and 28 for the
-      // caller-owned run state v22 that carries cancellation and progress.
+      // caller-owned run state v22 that carries cancellation and progress, and 29
+      // for automatic tone and white balance.
     // An engine below this is refused at load, not at the call.
-    internal const ushort MinimumMinor = 28;
+    internal const ushort MinimumMinor = 29;
 
     private const uint StatusOk = 0;
 

@@ -29,6 +29,7 @@ internal static unsafe class ContractTestRunner
                 "same_path_reload_is_idempotent");
             VerifyDevelopExportContract();
             VerifyRunStateContract();
+            VerifyAutoAdjustContract();
             VerifyToneLimits();
             VerifyNegativeLimits();
         }
@@ -363,6 +364,50 @@ internal static unsafe class ContractTestRunner
         disposed.Cancel();
         disposed.Dispose();
         Check(true, "disposed_run_tolerates_cancel_and_second_dispose");
+    }
+
+    // Auto adjust is the one call that hands a whole bitmap across the boundary, so the
+    // checks here are about the boundary itself: that a real buffer produces values the
+    // engine would accept, and that a malformed one is refused rather than read past.
+    private static void VerifyAutoAdjustContract()
+    {
+        const uint width = 64;
+        const uint height = 48;
+        byte[] pixels = new byte[width * height * 4];
+        for (int index = 0; index < pixels.Length; index += 4)
+        {
+            int pixel = index / 4;
+            pixels[index] = (byte)(pixel % 200);           // blue
+            pixels[index + 1] = (byte)((pixel / 3) % 200); // green
+            pixels[index + 2] = (byte)((pixel / 7) % 200); // red
+            pixels[index + 3] = 0xFF;
+        }
+
+        AutoAdjustSettings settings = NativeAutoAdjust.Compute(pixels, width, height);
+        Check(
+            settings.Exposure >= -3.0 && settings.Exposure <= 3.0,
+            "auto_adjust_exposure_inside_engine_range");
+        Check(settings.Highlights <= 0.0, "auto_adjust_highlights_recover_only");
+        Check(settings.Shadows >= 0.0, "auto_adjust_shadows_lift_only");
+        Check(settings.Vibrance >= 0.0, "auto_adjust_vibrance_increases_only");
+        Check(
+            settings.Warmth >= -0.6 && settings.Warmth <= 0.6 &&
+                settings.Tint >= -0.6 && settings.Tint <= 0.6,
+            "auto_adjust_white_balance_inside_clamp");
+
+        // Assigning twice must not drift, because the shell assigns rather than accumulates.
+        AutoAdjustSettings again = NativeAutoAdjust.Compute(pixels, width, height);
+        Check(
+            again.Exposure == settings.Exposure && again.Contrast == settings.Contrast &&
+                again.Warmth == settings.Warmth && again.Tint == settings.Tint,
+            "auto_adjust_is_deterministic_across_calls");
+
+        CheckThrows<ArgumentException>(
+            () => NativeAutoAdjust.Compute(new byte[16], width, height),
+            "auto_adjust_refuses_a_buffer_smaller_than_its_dimensions");
+        CheckThrows<ArgumentOutOfRangeException>(
+            () => NativeAutoAdjust.Compute(pixels, 0, height),
+            "auto_adjust_refuses_zero_width");
     }
 
     private static void VerifyToneLimits()

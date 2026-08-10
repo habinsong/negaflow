@@ -3,6 +3,7 @@
 #include "negaflow/core/build_info.h"
 #include "negaflow/imaging/manual_negative_developer.h"
 #include "negaflow/imaging/working_tone_adjuster.h"
+#include "negaflow/imaging/auto_adjust.h"
 #include "negaflow/pipeline/develop_export.h"
 
 #include <algorithm>
@@ -115,6 +116,10 @@ static_assert(offsetof(nf_develop_export_result_v3, applied_dmin) == 136U);
 static_assert(offsetof(nf_develop_export_result_v3, base_source) == 148U);
 static_assert(offsetof(nf_develop_export_result_v3, cancelled) == 152U);
 static_assert(sizeof(nf_develop_run_state_v1) == 16U);
+static_assert(sizeof(nf_auto_adjust_result_v1) == 88U);
+static_assert(offsetof(nf_auto_adjust_result_v1, exposure) == 8U);
+static_assert(offsetof(nf_auto_adjust_result_v1, warmth) == 72U);
+static_assert(offsetof(nf_auto_adjust_result_v1, tint) == 80U);
 static_assert(offsetof(nf_develop_run_state_v1, cancel_requested) == 4U);
 static_assert(offsetof(nf_develop_run_state_v1, stage) == 8U);
 static_assert(offsetof(nf_develop_run_state_v1, progress_permille) == 12U);
@@ -3504,6 +3509,49 @@ nf_status_t NF_CALL nf_develop_preview_v22(
             control);
     const auto finished = std::chrono::steady_clock::now();
     write_outcome_v3(outcome, elapsed_microseconds(started, finished), *result);
+    return NF_STATUS_OK;
+}
+
+nf_status_t NF_CALL nf_auto_adjust_v1(
+    const uint8_t* const pixels,
+    const uint32_t width,
+    const uint32_t height,
+    const uint32_t stride_bytes,
+    nf_auto_adjust_result_v1* const result) {
+    if (pixels == nullptr || result == nullptr) {
+        return NF_STATUS_INVALID_ARGUMENT;
+    }
+    if (result->struct_size < static_cast<std::uint32_t>(sizeof(*result))) {
+        return NF_STATUS_STRUCT_TOO_SMALL;
+    }
+
+    negaflow::imaging::AutoAdjustStats stats{};
+    if (!negaflow::imaging::compute_auto_adjust_stats(
+            pixels,
+            width,
+            height,
+            static_cast<std::size_t>(stride_bytes),
+            stats)) {
+        return NF_STATUS_INVALID_ARGUMENT;
+    }
+
+    const negaflow::imaging::AutoToneResult tone = negaflow::imaging::auto_tone(stats);
+    const negaflow::imaging::AutoWhiteBalanceResult balance =
+        negaflow::imaging::auto_white_balance(stats);
+
+    const std::uint32_t declared_size = result->struct_size;
+    std::memset(result, 0, sizeof(*result));
+    result->struct_size = declared_size;
+    result->exposure = tone.exposure;
+    result->contrast = tone.contrast;
+    result->highlights = tone.highlights;
+    result->shadows = tone.shadows;
+    result->whites = tone.whites;
+    result->blacks = tone.blacks;
+    result->density = tone.density;
+    result->vibrance = tone.vibrance;
+    result->warmth = balance.warmth;
+    result->tint = balance.tint;
     return NF_STATUS_OK;
 }
 

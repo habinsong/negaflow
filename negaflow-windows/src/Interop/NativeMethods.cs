@@ -246,6 +246,15 @@ internal static partial class NativeMethods
         NativeDevelopRunStateV1* runState,
         NativeDevelopExportResultV3* result);
 
+    [LibraryImport(LibraryName, EntryPoint = "nf_auto_adjust_v1")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static unsafe partial uint nf_auto_adjust_v1(
+        byte* pixels,
+        uint width,
+        uint height,
+        uint strideBytes,
+        NativeAutoAdjustResultV1* result);
+
     [LibraryImport(LibraryName, EntryPoint = "nf_get_negative_limits_v1")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial uint nf_get_negative_limits_v1(ref NativeNegativeLimitsV1 output);

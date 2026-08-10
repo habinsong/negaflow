@@ -19,7 +19,8 @@ Calibration → source별 Film Look → 검증된 PNG16/TIFF16 게시까지 한 
 Texture → B&W 중립화·토닝 → ImageTransform이 native 공통 preview/export 경로에 연결됐습니다.
 scene correction은 ABI v14, DevelopTarget과 EXPIRED RescueGrade는 v15, ScannerProfileGrade는 v16,
 film polarity는 v17, 현상 전 영역 Defects는 v18, source-bound Defects는 v19, 순서 보존 Clone Stamp는
-v20, 순서 보존 Brush는 v21, 취소·진행률 run state는 v22까지 노출됐고 현재 ABI는 0.28입니다.
+v20, 순서 보존 Brush는 v21, 취소·진행률 run state는 v22, 자동 보정은 `nf_auto_adjust_v1`까지
+노출됐고 현재 ABI는 0.29입니다.
 
 rendered digital의 Film Look은 color/motion 27종과 B&W 15종, 전체 42종이 연결됐습니다. color/motion은 halation →
 FilmEmulation → 0.5배 stock color preset → density grain, B&W는 halation → spectral emulsion →
@@ -72,8 +73,8 @@ byte-exact임을 고정했습니다. 대형 실제 촬영 TIFF batch의 process 
 
 **2e. 도달 가능성 확인이 진짜 기능 공백을 찾습니다.** macOS 소스에 있는 것 중 실제로
 불리는 것만 골라 보니 `AutoAdjust`(자동 보정)가 Windows 에 통째로 없었습니다. 네이티브 계산은
-구현했고(`../implementation/auto-adjust.md`) **ABI·셸 연결과 제대로 된 실촬영 검증이 다음
-작업**입니다. `SoftProof` 도 같은 방식으로 찾은 미구현 기능입니다.
+구현했고 **ABI(0.29)와 셸 조정자까지 연결했습니다**(`../implementation/auto-adjust.md`).
+남은 것은 WinUI 버튼 연결(UI 단계)과, 잘 현상된 중립 프레임에서의 품질 확인입니다. `SoftProof` 도 같은 방식으로 찾은 미구현 기능입니다.
 
 **2g. 필름 베이스 추정은 이미 macOS 와 같습니다 — 재확인했습니다.** 사용자 요청으로
 `FilmBaseEstimator.swift` 를 함수·상수 단위로 다시 대조했고 빠진 것이 없었습니다. 실제 필름

@@ -27,6 +27,7 @@ internal static class Program
         VerifyInspectorSliderValue();
         VerifyFrameImport();
         VerifyPreviewCoordinator();
+        VerifyAutoAdjustCoordinator();
 
         var report = new
         {
@@ -1709,6 +1710,70 @@ internal static class Program
         using JsonDocument document = JsonDocument.Parse(
             CatalogJson.SerializeCanonical(record));
         return LibraryFrameReader.Read(document.RootElement);
+    }
+
+    // The part that has to be right is *what gets measured*: a neutral develop. Measuring
+    // the frame as it stands would fold the existing correction into the answer and make
+    // every press drift further.
+    private static void VerifyAutoAdjustCoordinator()
+    {
+        LibraryFrameSnapshot corrected = Frame(new ManualBaseRgb(0.2, 0.2, 0.2)) with
+        {
+            Tone = new ToneAdjustment(1.5, 0.4, 0, 0, 0, 0, 0.2, -0.3, 0.25, 0.1, -0.1),
+            ColorModel = new ColorModelRecipe(0.5, -0.2, 0, 0.3, 0, 0, 0, 0),
+        };
+
+        LibraryFrameSnapshot neutral = AutoAdjustCoordinator.Neutralise(corrected);
+        Check(
+            neutral.Tone == ToneAdjustment.Neutral,
+            "auto_adjust_measures_a_tone_neutral_frame");
+        Check(
+            neutral.ColorModel.Warmth == 0.0 && neutral.ColorModel.Tint == 0.0,
+            "auto_adjust_measures_a_white_balance_neutral_frame");
+        Check(
+            neutral.ColorModel.Vibrance == corrected.ColorModel.Vibrance &&
+                neutral.Base == corrected.Base,
+            "auto_adjust_leaves_the_rest_of_the_recipe_alone");
+
+        // Assigned, not accumulated: applying the same settings twice lands in the same place.
+        AutoAdjustSettings settings = new(
+            exposure: 0.5,
+            contrast: 0.2,
+            highlights: -0.3,
+            shadows: 0.4,
+            whites: 0.1,
+            blacks: -0.05,
+            density: 0.15,
+            vibrance: 0.25,
+            warmth: -0.2,
+            tint: 0.1);
+        LibraryFrameSnapshot once = AutoAdjustCoordinator.Apply(corrected, settings);
+        LibraryFrameSnapshot twice = AutoAdjustCoordinator.Apply(once, settings);
+        Check(
+            once.Tone == twice.Tone && once.ColorModel == twice.ColorModel,
+            "auto_adjust_assigns_rather_than_accumulates");
+        Check(
+            once.Tone.Exposure == 0.5 && once.Tone.Contrast == 0.2 &&
+                once.Tone.Highlight == -0.3 && once.Tone.Shadow == 0.4 &&
+                once.ColorModel.Warmth == -0.2 && once.ColorModel.Vibrance == 0.25,
+            "auto_adjust_writes_every_value_it_computed");
+        Check(
+            once.Base == corrected.Base && once.PointCurves == corrected.PointCurves,
+            "auto_adjust_does_not_touch_the_film_base_or_other_recipes");
+
+        // A frame that cannot be developed must be refused through the dispatcher, not
+        // thrown, so the caller handles one shape of answer.
+        FakeDispatcher quiet = new(accepts: true);
+        FakeExporter neverCalled = new(_ => OkResult());
+        AutoAdjustCoordinator refusing = new(neverCalled, quiet);
+        AutoAdjustOutcome? refusal = null;
+        refusing.RunAsync(
+            Frame(null, baseRecipe: new BaseRecipe(BaseEstimationMode.Manual, null, null, null)),
+            outcome => refusal = outcome).GetAwaiter().GetResult();
+        Check(
+            refusal?.Kind == DevelopExportOutcomeKind.Refused,
+            "auto_adjust_refuses_an_undevelopable_frame");
+        Check(neverCalled.CallCount == 0, "auto_adjust_refusal_skips_the_engine");
     }
 
     private static void VerifyPreviewCoordinator()

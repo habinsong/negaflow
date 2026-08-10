@@ -48,6 +48,7 @@ public static unsafe class NativeDevelopExporter
     internal const int ResultV2Size = 152;
     internal const int ResultV3Size = 160;
     internal const int RunStateV1Size = 16;
+    internal const int AutoAdjustResultV1Size = 88;
 
     private const int MaximumLocalAdjustments = 64;
     private const int MaximumLocalStrokes = 8192;
@@ -99,7 +100,8 @@ public static unsafe class NativeDevelopExporter
             sizeof(NativeDevelopExportRequestV21) != RequestV21Size ||
             sizeof(NativeDevelopExportResultV2) != ResultV2Size ||
             sizeof(NativeDevelopExportResultV3) != ResultV3Size ||
-            sizeof(NativeDevelopRunStateV1) != RunStateV1Size)
+            sizeof(NativeDevelopRunStateV1) != RunStateV1Size ||
+            sizeof(NativeAutoAdjustResultV1) != AutoAdjustResultV1Size)
         {
             throw new NativeBootstrapException(
                 NativeBootstrapFailure.ContractViolation,
