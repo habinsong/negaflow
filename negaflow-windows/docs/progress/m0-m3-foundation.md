@@ -100,7 +100,8 @@
 
 - Film Look catalog recipe/source metadata 연결, cube 경계·fractional alpha 확대
 - blur, local contrast, histogram, morphology, defect, crop/resize와 digital-film 전체 그래프
-- forced scalar/base/AVX2 dispatch와 실제 NEON 실행
+- 현재는 모든 kernel이 architecture baseline scalar로 직접 실행됨. 상위 ISA variant가 생길 때만
+  dispatch table을 추가하며, 실제 ARM64 NEON 실행은 미검증
 - ROI/halo/cancellation 계약
 - macOS baseline generator와 더 넓은 golden corpus
 
@@ -125,7 +126,7 @@
 - TIFF 6.0의 Clear/EOI, 유효 code reference, 9→10→11→12-bit early-change, 4094 사전 한계,
   strip별 기대 복원 byte 수와 trailing data를 확인하는 독립 LZW 의미 검사
 - LZW 의미 검사 중 `stop_token` 취소와 code/압축/복원 byte 진단값
-- 독립 무결성 검증기가 없는 Deflate tag 8의 WIC 진입 전 fail-closed 격리
+- zlib/Deflate stored/fixed/dynamic block, 32 KiB back-reference, 복원 길이와 Adler-32 독립 검사
 - 선택적 WIC 행 묶음, 단조 row progress, 묶음 사이 cooperative cancellation과 부분 sample 폐기
 - `WicTiffRowSink` streaming API와 full decoded sample vector 없는 소비 경로
 - ICC header/tag table bounded validation
@@ -162,7 +163,7 @@
 - 수동 구성한 정상 RGB16 LZW와 384 MiB 확장을 주장하는 작은 손상 fixture
 - 9→10→11→12-bit 경계를 모두 지나는 정상 LZW와 Clear/EOI 누락, 잘못된 forward code, trailing
   data, 압축 입력 상한, 사전 취소 합성 fixture
-- 정상·손상 Deflate 합성 fixture가 모두 WIC 전에 같은 격리 경계로 거부됨
+- 정상 stored/fixed/dynamic Deflate exact decode와 손상 길이·Adler-32의 WIC 전 거부
 - 사용자 scanner의 5088×3401 RGB/RGBA 16-bit TIFF 15개, 약 1.68GB
 - 사용자 코퍼스 WIC decode 15/15, working 변환 15/15, 원본 불변 15/15
 - 사용자 코퍼스 whole-frame/64행 streaming 최종 float exact 일치 15/15
@@ -177,10 +178,36 @@
 ### 남은 것
 
 - 다중 IFD 사용자 정책과 bounded chain traversal
-- 독립 Deflate 검증 또는 최소 dependency gate, WIC 압축 해제 CPU budget·deadline
+- WIC 압축 해제 CPU budget·deadline
 - ColorSync golden과 Windows ICM 수치 비교
 - 필요성이 입증될 때만 libtiff/LittleCMS dependency 결정
 - tile decode, 최종 working/output downstream streaming과 process memory budget
 - route projection의 실제 import writer·SQLite payload·C ABI render snapshot 연결
 - M4 tone의 실제 macOS runtime pixel diff·cross-platform 허용오차 manifest와 catalog transaction·복구
 - fuzzing/ASan corpus와 실제 대형 scanner TIFF
+
+## 2026-08-10 M3 영속성 증분
+
+### 추가로 만든 것
+
+- SQLite verified commit과 커밋 직전 UUID rollback snapshot
+- frame 5만 개 catalog 성능 측정과 단일 작성자 process lock
+- revision-aware Defects v2 sidecar의 atomic replace/readback, stale completion과 same-revision conflict 차단
+- `hasDefectEdits` 선언과 sidecar의 frame/revision/fingerprint를 library open에서 fail-closed 교차 검증
+- catalog와 모든 authoritative Defects sidecar를 함께 해시하는 logical backup v3
+- 다음 시작에서 catalog와 defects 디렉터리를 같은 generation으로 교체하는 pending restore
+- 재시작한 region/infrared recipe의 Shell→ABI v18 공통 preview/export request 투영
+- 비어 있지 않은 region recipe의 source byte count·SHA-256을 ABI v19로 운반하고 렌더 직전 CNG
+  재검증, 불일치·교체 race의 preview/export 무게시
+
+### 추가 검증
+
+- x64 Debug/Release Catalog 583·Shell 314, Interop 107 assertions와 native 표적 CTest 2/2 통과
+- ARM64 Release 관리 전체 graph 교차 빌드 통과
+- missing/corrupt/future sidecar, revision 충돌, backup hash 손상, selected/safety generation restore 경계 통과
+
+### 여전히 남은 것
+
+- WIC 압축 해제 CPU budget·deadline과 tile/fuzz
+- process-kill/disk-full/power-loss 중 directory swap·catalog commit의 자동 복구
+- 실제 ARM64 runtime과 macOS 동일 입력 Defects pixel golden

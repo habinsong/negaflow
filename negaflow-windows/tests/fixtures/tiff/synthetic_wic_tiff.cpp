@@ -83,7 +83,8 @@ void append_entry(
     const std::uint32_t width,
     const std::uint32_t height,
     const std::uint16_t compression,
-    const std::vector<std::uint8_t>& compressed) {
+    const std::vector<std::uint8_t>& compressed,
+    const std::uint16_t bits_per_channel = 16U) {
     constexpr std::uint16_t entry_count = 12U;
 
     std::vector<std::uint8_t> bytes{};
@@ -111,7 +112,7 @@ void append_entry(
     append_entry(bytes, 339U, 3U, 3U, sample_format_offset);
     append_u32(bytes, 0U);
     for (std::uint32_t index = 0U; index < 3U; ++index) {
-        append_u16(bytes, 16U);
+        append_u16(bytes, bits_per_channel);
     }
     for (std::uint32_t index = 0U; index < 3U; ++index) {
         append_u16(bytes, 1U);
@@ -317,8 +318,98 @@ std::vector<std::uint8_t> make_deflate_rgb16_tiff() {
     return make_tiff(1U, 1U, 8U, make_stored_zlib_stream(false));
 }
 
+std::vector<std::uint8_t> make_fixed_deflate_rgb16_tiff() {
+    constexpr std::array<std::uint8_t, 14> compressed{
+        0x78U, 0x01U, 0x33U, 0x11U, 0xaaU, 0x08U, 0xdbU,
+        0x33U, 0x0bU, 0x00U, 0x06U, 0x8cU, 0x02U, 0x6bU,
+    };
+    return make_tiff(
+        1U,
+        1U,
+        8U,
+        std::vector<std::uint8_t>(compressed.begin(), compressed.end()));
+}
+
+std::vector<std::uint8_t> make_dynamic_deflate_rgb16_tiff() {
+    // 32×32 copies of the same RGB16 pixel, encoded as a dynamic-Huffman zlib stream.
+    constexpr std::array<std::uint8_t, 42> compressed{
+        0x78U, 0x9cU, 0xedU, 0xc4U, 0xc1U, 0x10U, 0x00U,
+        0x00U, 0x08U, 0x00U, 0x30U, 0x87U, 0x58U, 0x62U,
+        0x89U, 0x25U, 0x96U, 0x58U, 0x82U, 0xcbU, 0xa3U,
+        0xdbU, 0x1eU, 0xcbU, 0xe8U, 0xdaU, 0x49U, 0xdbU,
+        0xb6U, 0x6dU, 0xdbU, 0xb6U, 0x6dU, 0xdbU, 0xb6U,
+        0xfdU, 0xe8U, 0x03U, 0x02U, 0x5cU, 0xa8U, 0x88U,
+    };
+    return make_tiff(
+        32U,
+        32U,
+        8U,
+        std::vector<std::uint8_t>(compressed.begin(), compressed.end()));
+}
+
 std::vector<std::uint8_t> make_malformed_deflate_rgb16_tiff() {
     return make_tiff(1U, 1U, 8U, make_stored_zlib_stream(true));
+}
+
+std::vector<std::uint8_t> make_bad_checksum_deflate_rgb16_tiff() {
+    std::vector<std::uint8_t> compressed = make_stored_zlib_stream(false);
+    compressed.back() ^= 0x01U;
+    return make_tiff(1U, 1U, 8U, compressed);
+}
+
+std::vector<std::uint8_t> make_uncompressed_rgb16_defect_tiff(
+    const std::uint32_t width,
+    const std::uint32_t height) {
+    if (width < 16U || height < 16U) {
+        return {};
+    }
+    std::vector<std::uint8_t> pixels{};
+    pixels.reserve(
+        static_cast<std::size_t>(width) * static_cast<std::size_t>(height) * 6U);
+    const std::uint32_t scratch_x = width / 2U;
+    for (std::uint32_t y = 0U; y < height; ++y) {
+        for (std::uint32_t x = 0U; x < width; ++x) {
+            const bool scratch =
+                (x == scratch_x || x + 1U == scratch_x) &&
+                y >= (height * 5U) / 8U && y < (height * 7U) / 8U;
+            const std::uint16_t red = scratch
+                ? 0xffffU
+                : static_cast<std::uint16_t>(
+                      9'000U + (x * 24'000U) / (width - 1U));
+            const std::uint16_t green = scratch
+                ? 0xffffU
+                : static_cast<std::uint16_t>(
+                      12'000U + (y * 20'000U) / (height - 1U));
+            const std::uint16_t blue = scratch
+                ? 0xffffU
+                : static_cast<std::uint16_t>(
+                      10'000U + ((x + y) * 16'000U) /
+                          (width + height - 2U));
+            append_u16(pixels, red);
+            append_u16(pixels, green);
+            append_u16(pixels, blue);
+        }
+    }
+    return make_tiff(width, height, 1U, pixels);
+}
+
+std::vector<std::uint8_t> make_uncompressed_rgb8_tiff(
+    const std::uint32_t width,
+    const std::uint32_t height) {
+    if (width == 0U || height == 0U) {
+        return {};
+    }
+    std::vector<std::uint8_t> pixels{};
+    pixels.reserve(
+        static_cast<std::size_t>(width) * static_cast<std::size_t>(height) * 3U);
+    for (std::uint32_t y = 0U; y < height; ++y) {
+        for (std::uint32_t x = 0U; x < width; ++x) {
+            pixels.push_back(static_cast<std::uint8_t>((x * 251U) % 256U));
+            pixels.push_back(static_cast<std::uint8_t>((y * 149U) % 256U));
+            pixels.push_back(static_cast<std::uint8_t>(((x + y) * 97U) % 256U));
+        }
+    }
+    return make_tiff(width, height, 1U, pixels, 8U);
 }
 
 }  // namespace negaflow::test_fixtures

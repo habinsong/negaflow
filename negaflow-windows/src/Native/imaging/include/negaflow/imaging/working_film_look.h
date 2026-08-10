@@ -1,6 +1,10 @@
 #pragma once
 
 #include "negaflow/core/pixel.h"
+#include "negaflow/imaging/digital_bw_film_look.h"
+#include "negaflow/imaging/digital_film_color_preset.h"
+#include "negaflow/imaging/digital_film_grain.h"
+#include "negaflow/imaging/digital_halation.h"
 #include "negaflow/imaging/film_emulation_acutance.h"
 #include "negaflow/imaging/film_emulation_color.h"
 #include "negaflow/imaging/scanner_to_working.h"
@@ -11,7 +15,7 @@
 namespace negaflow::imaging {
 
 inline constexpr char working_film_look_algorithm_version[] =
-    "chromabase-working-film-look-v1";
+    "chromabase-working-film-look-v4";
 
 enum class DevelopSourceKind : std::uint8_t {
     film_scan = 0,
@@ -30,12 +34,19 @@ enum class WorkingFilmLookStatus : std::uint8_t {
     invalid_parameter,
     unsupported_route,
     kernel_failed,
+    digital_halation_failed,
+    digital_color_preset_failed,
+    digital_grain_failed,
+    digital_bw_film_look_failed,
 };
 
 struct WorkingFilmLookParameters final {
     DevelopSourceKind source_kind{DevelopSourceKind::film_scan};
     FilmEmulation emulation{FilmEmulation::none};
     double intensity{0.5};
+    double grain_override{0.0};
+    double halation_override{0.0};
+    bool monochrome{false};
 };
 
 // The caller retains both reusable resources. The color cube is built only
@@ -52,6 +63,10 @@ struct WorkingFilmLookInfo final {
     bool color_cube_reused{false};
     bool color_applied{false};
     bool acutance_applied{false};
+    bool digital_halation_applied{false};
+    bool digital_color_preset_applied{false};
+    bool digital_grain_applied{false};
+    bool bw_emulsion_applied{false};
     std::uint32_t color_intensity_step{0U};
     double acutance_amount{0.0};
     std::size_t required_acutance_scratch_pixels{0U};
@@ -69,15 +84,17 @@ struct WorkingFilmLookResult final {
     const WorkingFilmLookParameters& parameters) noexcept;
 
 // The route is explicit and never inferred from a path, decoder, film type, or
-// pixel statistics. Active rendered-digital input resolves to the future
-// complete DigitalFilmLook route rather than reusing the film-scan subset.
+// pixel statistics. Current macOS behavior keeps every film scan at identity to
+// avoid applying emulsion response twice; rendered digital alone resolves to
+// the complete DigitalFilmLook route.
 [[nodiscard]] bool try_resolve_film_look_route(
     const WorkingFilmLookParameters& parameters,
     FilmLookRoute& route) noexcept;
 
-// Applies only a complete route. Film scans run color then acutance in place.
-// Active rendered-digital requests fail closed until their complete graph is
-// implemented. Any failure discards pixels so a partial look cannot publish.
+// Applies only a complete route. Film scans preserve pixels. Rendered digital
+// uses the fixed macOS color or B&W DigitalFilmLook order. A profile whose kind
+// does not match the process is identity. Any failure discards pixels so a
+// partial look cannot publish.
 // kernel_status is meaningful when status is kernel_failed.
 [[nodiscard]] WorkingFilmLookResult apply_working_film_look(
     WorkingImage image,

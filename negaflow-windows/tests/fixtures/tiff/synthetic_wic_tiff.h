@@ -45,6 +45,22 @@ inline constexpr std::array<std::uint16_t, 3> lzw_rgb16_expected_samples{
 
 [[nodiscard]] std::vector<std::uint8_t> make_deflate_rgb16_tiff();
 
+[[nodiscard]] std::vector<std::uint8_t> make_fixed_deflate_rgb16_tiff();
+
+[[nodiscard]] std::vector<std::uint8_t> make_dynamic_deflate_rgb16_tiff();
+
 [[nodiscard]] std::vector<std::uint8_t> make_malformed_deflate_rgb16_tiff();
+
+[[nodiscard]] std::vector<std::uint8_t> make_bad_checksum_deflate_rgb16_tiff();
+
+[[nodiscard]] std::vector<std::uint8_t> make_uncompressed_rgb16_defect_tiff(
+    std::uint32_t width,
+    std::uint32_t height);
+
+// 8 bits per channel. WIC widens these to the 16-bit working format by bit replication,
+// so every decoded sample is the source byte times 257 and nothing is invented.
+[[nodiscard]] std::vector<std::uint8_t> make_uncompressed_rgb8_tiff(
+    std::uint32_t width,
+    std::uint32_t height);
 
 }  // namespace negaflow::test_fixtures

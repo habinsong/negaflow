@@ -128,6 +128,99 @@ internal static class DevelopRouteJsonNames
             case "pro400H":
                 filmEmulation = FilmEmulation.Pro400H;
                 return true;
+            case "triX400":
+                filmEmulation = FilmEmulation.TriX400;
+                return true;
+            case "hp5Plus":
+                filmEmulation = FilmEmulation.Hp5Plus;
+                return true;
+            case "fp4Plus":
+                filmEmulation = FilmEmulation.Fp4Plus;
+                return true;
+            case "delta100":
+                filmEmulation = FilmEmulation.Delta100;
+                return true;
+            case "delta400":
+                filmEmulation = FilmEmulation.Delta400;
+                return true;
+            case "delta3200":
+                filmEmulation = FilmEmulation.Delta3200;
+                return true;
+            case "tmax100":
+                filmEmulation = FilmEmulation.TMax100;
+                return true;
+            case "tmax400":
+                filmEmulation = FilmEmulation.TMax400;
+                return true;
+            case "tmaxP3200":
+                filmEmulation = FilmEmulation.TMaxP3200;
+                return true;
+            case "kentmere400":
+                filmEmulation = FilmEmulation.Kentmere400;
+                return true;
+            case "orthoPlus":
+                filmEmulation = FilmEmulation.OrthoPlus;
+                return true;
+            case "sfx200":
+                filmEmulation = FilmEmulation.Sfx200;
+                return true;
+            case "rolleiIR":
+                filmEmulation = FilmEmulation.RolleiIR;
+                return true;
+            case "scala200X":
+                filmEmulation = FilmEmulation.Scala200X;
+                return true;
+            case "rolleiSuperpan":
+                filmEmulation = FilmEmulation.RolleiSuperpan;
+                return true;
+            case "velvia100":
+                filmEmulation = FilmEmulation.Velvia100;
+                return true;
+            case "e100VS":
+                filmEmulation = FilmEmulation.E100VS;
+                return true;
+            case "astia100F":
+                filmEmulation = FilmEmulation.Astia100F;
+                return true;
+            case "kodachrome64":
+                filmEmulation = FilmEmulation.Kodachrome64;
+                return true;
+            case "gold200":
+                filmEmulation = FilmEmulation.Gold200;
+                return true;
+            case "proImage100":
+                filmEmulation = FilmEmulation.ProImage100;
+                return true;
+            case "superia400":
+                filmEmulation = FilmEmulation.Superia400;
+                return true;
+            case "superiaPremium400":
+                filmEmulation = FilmEmulation.SuperiaPremium400;
+                return true;
+            case "superia200":
+                filmEmulation = FilmEmulation.Superia200;
+                return true;
+            case "reala100":
+                filmEmulation = FilmEmulation.Reala100;
+                return true;
+            case "industrial100":
+                filmEmulation = FilmEmulation.Industrial100;
+                return true;
+            case "lomoCn800":
+                filmEmulation = FilmEmulation.LomoCn800;
+                return true;
+            case "vision3_500T":
+                filmEmulation = FilmEmulation.Vision3_500T;
+                return true;
+            case "vision3_250D":
+                filmEmulation = FilmEmulation.Vision3_250D;
+                return true;
+            case "vision3_50D":
+                filmEmulation = FilmEmulation.Vision3_50D;
+                return true;
+            case "vision3_200T":
+                filmEmulation = FilmEmulation.Vision3_200T;
+                return true;
             default:
                 filmEmulation = default;
                 return false;
@@ -148,6 +241,37 @@ internal static class DevelopRouteJsonNames
         FilmEmulation.ColorPlus200 => "colorPlus200",
         FilmEmulation.FujicolorC200 => "fujicolorC200",
         FilmEmulation.Pro400H => "pro400H",
+        FilmEmulation.TriX400 => "triX400",
+        FilmEmulation.Hp5Plus => "hp5Plus",
+        FilmEmulation.Fp4Plus => "fp4Plus",
+        FilmEmulation.Delta100 => "delta100",
+        FilmEmulation.Delta400 => "delta400",
+        FilmEmulation.Delta3200 => "delta3200",
+        FilmEmulation.TMax100 => "tmax100",
+        FilmEmulation.TMax400 => "tmax400",
+        FilmEmulation.TMaxP3200 => "tmaxP3200",
+        FilmEmulation.Kentmere400 => "kentmere400",
+        FilmEmulation.OrthoPlus => "orthoPlus",
+        FilmEmulation.Sfx200 => "sfx200",
+        FilmEmulation.RolleiIR => "rolleiIR",
+        FilmEmulation.Scala200X => "scala200X",
+        FilmEmulation.RolleiSuperpan => "rolleiSuperpan",
+        FilmEmulation.Velvia100 => "velvia100",
+        FilmEmulation.E100VS => "e100VS",
+        FilmEmulation.Astia100F => "astia100F",
+        FilmEmulation.Kodachrome64 => "kodachrome64",
+        FilmEmulation.Gold200 => "gold200",
+        FilmEmulation.ProImage100 => "proImage100",
+        FilmEmulation.Superia400 => "superia400",
+        FilmEmulation.SuperiaPremium400 => "superiaPremium400",
+        FilmEmulation.Superia200 => "superia200",
+        FilmEmulation.Reala100 => "reala100",
+        FilmEmulation.Industrial100 => "industrial100",
+        FilmEmulation.LomoCn800 => "lomoCn800",
+        FilmEmulation.Vision3_500T => "vision3_500T",
+        FilmEmulation.Vision3_250D => "vision3_250D",
+        FilmEmulation.Vision3_50D => "vision3_50D",
+        FilmEmulation.Vision3_200T => "vision3_200T",
         _ => throw new ArgumentOutOfRangeException(nameof(value)),
     };
 }

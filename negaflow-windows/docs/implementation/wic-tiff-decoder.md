@@ -9,7 +9,7 @@ ICC 해석 정책, scanner role과 working float 변환은 `src/Native/imaging`�
 read-only IStream 1회 open
   → 같은 stream의 bounded TIFF 구조 preflight
   → decoded-byte 상한 선검사
-  → LZW이면 같은 stream의 독립 code-stream 의미 preflight
+  → LZW/Deflate이면 같은 stream의 독립 의미 preflight
   → Microsoft 기본 WIC TIFF decoder 확인
   → 48bpp RGB 또는 64bpp RGBA/PRGBA sample
   → embedded ICC bytes 추출·구조 검증
@@ -35,15 +35,13 @@ WIC COM object, stream과 decoder handle은 함수 밖으로 나가지 않습니
 - contiguous planar (`1`)
 - unsigned integer 16-bit sample
 - RGB 3-channel 또는 RGB+alpha 4-channel
-- compression none (`1`) 또는 LZW (`5`)
+- compression none (`1`), LZW (`5`) 또는 Deflate (`8`)
 - 4-channel이면 ExtraSamples가 associated (`1`) 또는 unassociated (`2`)
 
 조건 밖 입력은 WIC에 맡겨 추측하지 않고 명시적으로 거부합니다.
 
-Deflate (`8`)는 WIC가 형식상 지원하더라도 현재 allowlist에서 격리합니다. 구조상 범위가 맞지만 stored
-block 길이가 segment와 모순되는 합성 입력을 로컬 Microsoft WIC가 성공으로 처리한 관찰이 있었고,
-Microsoft 문서는 compressed stream 무결성의 엄격한 검증을 계약하지 않습니다. 독립 검증기나 검토된
-최소 dependency가 생기기 전에는 정상 Deflate도 같은 `unsupported_layout` 경계에서 거부합니다.
+Deflate (`8`)는 자체 bounded validator가 zlib/Deflate 구조, 복원 길이와 Adler-32를 통과시킨 경우에만
+allowlist에 들어갑니다. WIC 단독 성공은 무결성 증거로 사용하지 않습니다.
 
 ## LZW 의미 사전 검사
 
@@ -63,6 +61,10 @@ LZW 입력은 구조 검사와 decoded-byte 한도를 먼저 통과한 뒤 WIC �
 `lzw_decoded_bytes_validated`, `lzw_code_streams_validated`로 남습니다. 일반 `--probe-tiff`는 빠른 구조
 검사만 수행하고, 실제 WIC LZW decode 경로에서 의미 검사가 필수입니다. 자세한 책임과 형식은
 [`compressed-tiff-preflight.md`](compressed-tiff-preflight.md)에 있습니다.
+
+Deflate도 같은 cheap-limit 순서를 사용하며 stored/fixed/dynamic block, 최대 32 KiB back-reference,
+예상 복원 byte 수와 Adler-32를 검사합니다. 결과는 `deflate_streams_validated`와
+`deflate_decoded_bytes_validated`에 기록합니다.
 
 ## decoder 고정과 읽기 전용 처리
 
@@ -94,6 +96,7 @@ profile bytes는 변환하지 않고 `DecodedImage`에 보존합니다. 개별 I
 
 - decoded pixel 기본 상한: 512 MiB
 - LZW compressed input 검사 기본 상한: 512 MiB
+- Deflate compressed input 검사 기본 상한: 512 MiB
 - ICC 기본 상한: 16 MiB
 - color context 기본 상한: 4개
 - `width × height × channel × 2`를 checked 64-bit로 계산하고 format 변환, ICC 추출,
@@ -137,7 +140,7 @@ CLI와 코퍼스 검증에 사용하는 application chunk일 뿐, codec CPU 비�
 - 압축 segment 끝이 잘린 LZW를 preflight에서 거부하고 sample을 만들지 않는 경로
 - Clear/EOI 누락, 잘못된 forward code와 trailing data를 독립 preflight에서 거부하는 경로
 - 8-byte LZW 작업량 한도와 이미 요청된 취소를 WIC 전에 거부하는 경로
-- 정상·손상 Deflate를 모두 WIC 전에 격리하는 경로
+- stored/fixed/dynamic Deflate exact decode와 손상 길이·checksum의 WIC 전 거부
 - 8192×8192 RGB16을 주장하는 작은 LZW 입력을 64 MiB 한도로 거부하는 사전 할당 경로
 - 저장소의 16-bit big-endian RGB TIFF
 - 사용자 5088×3401 TIFF 15개
@@ -153,7 +156,6 @@ application-owned WIC copy buffer는 2,605,056 bytes, 한 파일의 최대 `Copy
 
 ## 남은 위험
 
-- Deflate 독립 검증기가 없어 정상 Deflate도 현재 격리됨
 - WIC 내부 압축 해제의 CPU 시간·deadline과 호출 중 선점 취소 한도 미구현
 - multi-IFD 정책 미완료
 - 소유형 API의 4 GiB 초과 decoded buffer와 BigTIFF full decode 미지원

@@ -1,6 +1,6 @@
 # Film Look source routing 공식 근거와 권리 조사
 
-기준일: 2026-08-04
+기준일: 2026-08-09
 
 ## 저장소 기준 구현
 
@@ -9,6 +9,11 @@
 
 - `Sources/Chromabase/Engine/ChromabaseEngine+PostPipeline.swift`
 - `Sources/Chromabase/Digital/DigitalFilmLook.swift`
+- `Sources/Chromabase/Digital/DigitalHalation.swift`
+- `Sources/Chromabase/Digital/DigitalFilmPhysics.swift`
+- `Sources/Chromabase/Digital/DigitalFilmColorPresetStage.swift`
+- `Sources/Chromabase/Digital/DigitalFilmColorPreset.swift`
+- `Sources/Chromabase/Digital/DigitalFilmGrain.swift`
 - `Sources/Chromabase/Models/DevelopParameters.swift`
 - `windows_docs/01-render-engine/pipeline-shape.md`
 - `windows_docs/15-digital-film/virtual-development.md`
@@ -21,8 +26,11 @@
 3. 디지털 입력은 halation→Film Emulation color→digital color→grain의 별도 완전한 그래프입니다.
 4. source 종류는 명시적 상태이며 decoder나 profile에서 추정하지 않습니다.
 
-이번 C++은 1~4의 route와 순서만 옮겼습니다. 디지털 효과 수학, Apple kernel, 사진, LUT, ICC profile이나
-제3자 코드를 복사하지 않았습니다.
+Windows 구현은 고정 baseline의 1~4 route와 순서, 11종 stock 물성, halation 합성, stock color preset
+계수와 density grain 반응을 native C++로 옮겼습니다. Apple framework code, 사진, LUT, ICC profile이나
+제3자 코드를 포함하지 않았습니다. `windows_docs/15-digital-film/virtual-development.md`의 더 큰
+virtual-development 설계는 고정 baseline의 현재 활성 그래프와 다르므로 이번 제품 계약으로 사용하지
+않았습니다.
 
 ## 공식 기술 근거
 
@@ -54,10 +62,9 @@
   검증은 저장소 TIFF를 identity/활성 Film Look으로 각각 게시하고, 보고 단계 순서와 서로 다른 artifact,
   I/O 전 digital-source 거부를 확인한 뒤 test output만 삭제합니다.
 
-`windows_docs/15-digital-film/virtual-development.md`의 source signal/process 구분과 잘못된
-negative+digital 조합의 visible invalid 계약에 따라, 현재 네거티브 현상 CLI는 `rendered_digital`을
-profile 없음으로 조용히 고치지 않습니다. 파일을 열기 전에
-`negative_develop_requires_film_scan_source`로 실패합니다.
+source signal/process 구분에 따라 `film_scan`만 Dmin/base와 네거티브 반전을 수행하고,
+`rendered_digital`은 decoded positive working image에서 시작합니다. 어느 쪽도 profile 없음으로 조용히
+고치거나 파일명·decoder에서 source 종류를 추정하지 않습니다.
 
 ## 제한형 공개 특허 검색
 
@@ -75,7 +82,8 @@ Google Patents의 상태·예상 만료 표시는 법률 결론이 아닙니다.
 
 ## 라이선스·저작권 결론
 
-- route 순서와 profile 의미는 동일 Apache-2.0 저장소의 제품 source를 기준으로 독립 C++로 작성했습니다.
+- route 순서, profile 의미와 디지털 material 수학은 동일 Apache-2.0 저장소의 고정 제품 source를 기준으로
+  native C++로 이식했습니다.
 - Apple 문서는 공개 API 의미 확인에만 사용했고 sample code를 복사하지 않았습니다.
 - 특허 문서는 회피 경계 확인에만 사용했고 code, 표, figure나 청구항 수식을 구현 자산으로 복사하지
   않았습니다.

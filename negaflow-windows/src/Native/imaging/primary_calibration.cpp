@@ -1,5 +1,7 @@
 #include "negaflow/imaging/primary_calibration.h"
 
+#include "negaflow/core/pointwise.h"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -124,11 +126,6 @@ struct PreparedControls final {
     };
 }
 
-[[nodiscard]] bool finite_rgb(const Rgb color) noexcept {
-    return std::isfinite(color.red) && std::isfinite(color.green) &&
-           std::isfinite(color.blue);
-}
-
 [[nodiscard]] negaflow::core::KernelStatus validate_parameters(
     const PrimaryCalibrationParameters& parameters) noexcept {
     for (const float value : {
@@ -236,43 +233,25 @@ negaflow::core::KernelStatus apply_primary_calibration(
     }
 
     if (!has_primary_calibration_change(parameters)) {
-        for (std::uint32_t row = 0U; row < input.height; ++row) {
-            const std::size_t input_offset =
-                static_cast<std::size_t>(row) * input.stride_pixels;
-            const std::size_t output_offset =
-                static_cast<std::size_t>(row) * output.stride_pixels;
-            std::copy_n(
-                input.pixels + input_offset,
-                input.width,
-                output.pixels + output_offset);
-        }
+        negaflow::core::copy_validated_rows(input, output);
         return negaflow::core::KernelStatus::ok;
     }
 
     const PreparedControls controls = prepare_controls(parameters);
-    for (std::uint32_t row = 0U; row < input.height; ++row) {
-        const std::size_t input_offset =
-            static_cast<std::size_t>(row) * input.stride_pixels;
-        const std::size_t output_offset =
-            static_cast<std::size_t>(row) * output.stride_pixels;
-        for (std::uint32_t column = 0U; column < input.width; ++column) {
-            const negaflow::core::Rgba32F source =
-                input.pixels[input_offset + column];
+    return negaflow::core::transform_validated_pointwise(
+        input,
+        output,
+        [&controls](const negaflow::core::Rgba32F source) noexcept {
             const Rgb result = apply_primary_calibration_pixel(
                 {source.red, source.green, source.blue},
                 controls);
-            if (!finite_rgb(result)) {
-                return negaflow::core::KernelStatus::non_finite_output;
-            }
-            output.pixels[output_offset + column] = {
+            return negaflow::core::Rgba32F{
                 result.red,
                 result.green,
                 result.blue,
                 source.alpha,
             };
-        }
-    }
-    return negaflow::core::KernelStatus::ok;
+        });
 }
 
 }  // namespace negaflow::imaging

@@ -1,21 +1,59 @@
 # 다음에 어디서부터 이어서 할 것인가
 
-기준일: 2026-08-09 (ABI 0.6 Auto base v2와 WinUI 캔버스 상태 반영)
+기준일: 2026-08-10 (4상태 film type과 macOS Film Look correctness fix 반영)
 
 이 문서는 작업을 한동안 놓았다가 돌아왔을 때 가장 먼저 읽는 곳입니다. 이미 결정된 것을 다시
 논쟁하지 않고, 다음 한 걸음을 바로 시작하기 위한 기록입니다.
 
 ## 지금 상태
 
-전체 M0~M18 로드맵의 약 16%, 기반 구간 M0~M3 는 약 50% 입니다. 산정 근거는
+전체 M0~M18 로드맵의 약 31%, 기반 구간 M0~M3 는 약 66% 입니다. 산정 근거는
 `overall-roadmap.md`, 항목별 증거는 `../STATUS.md` 에 있습니다.
 
 동작하는 것은 **CLI 수직 경로와 첫 WinUI 관통 경로**입니다. TIFF 디코드 → 스캐너 색상 → 수동
-Dmin 현상 → 톤·포인트 커브·Color Mixer·Color Grading·Primary Calibration → 명시적 film-scan
-Film Look → 검증된 PNG16/TIFF16 게시까지 한 장이 끝까지 갑니다. WinUI 에서는 Import → 필름 base
+Dmin 음화 현상 또는 film/rendered-digital positive 입력 → 톤·포인트 커브·Color Mixer·Color Grading·Primary
+Calibration → source별 Film Look → 검증된 PNG16/TIFF16 게시까지 한 장이 끝까지 갑니다. WinUI 에서는 Import → 필름 base
 설정 → 노출 조정 → 같은 파이프라인의 미리보기 → Export 가 카탈로그와 C ABI 를 거쳐 동작합니다.
 
+반전 직후 opt-in Auto Levels → Neutral Balance → ColorModel과 고정 macOS post-pipeline의 GrainMend → FilmScanDenoise → Local Dodge/Burn →
+Texture → B&W 중립화·토닝 → ImageTransform이 native 공통 preview/export 경로에 연결됐습니다.
+scene correction은 ABI v14, DevelopTarget과 EXPIRED RescueGrade는 v15, ScannerProfileGrade는 v16,
+film polarity는 v17, 현상 전 영역 Defects는 v18, source-bound Defects는 v19, 순서 보존 Clone Stamp는
+v20, 순서 보존 Brush는 v21, 취소·진행률 run state는 v22까지 노출됐고 현재 ABI는 0.28입니다.
+
+rendered digital의 Film Look은 color/motion 27종과 B&W 15종, 전체 42종이 연결됐습니다. color/motion은 halation →
+FilmEmulation → 0.5배 stock color preset → density grain, B&W는 halation → spectral emulsion →
+acutance → single-channel density grain 순서입니다. macOS 최신 correctness fix에 따라 실제 film scan은
+profile이 선택돼도 Film Look identity이며, process/profile kind가 다를 때도 identity입니다. 공통
+Texture의 grain/halation은 룩이 실행된 경우에만 중복 적용하지 않습니다.
+stock color preset의 원본 RGB scratch는 약 12 MiB 목표 행 타일로 제한됐고 종전 untiled graph와
+byte-exact임을 고정했습니다. 대형 실제 촬영 TIFF batch의 process working set과 시간 측정은 남아 있습니다.
+
 - 2026-08-09 x64 Release 재검증: native CTest 30/30, Catalog 303, Shell 200, Interop 44 assertion 통과
+- 2026-08-10 x64 Debug 핵심 체크포인트: native CTest 42/42, Catalog 447, Shell 304, Interop 95 assertion 통과
+- 2026-08-10 Digital B&W 체크포인트: x64 Debug/Release native CTest 43/43, Catalog 492,
+  Shell 305, Interop 95 assertion 통과; ARM64 Debug/Release 관련 target 교차 빌드 통과
+- 2026-08-10 Film Emulation 42종 체크포인트: x64 Debug/Release native CTest 43/43,
+  Catalog 540, Shell 306, Debug Interop 95 assertion 통과; ARM64 Release 전체 graph 교차 빌드 통과
+- 2026-08-10 영역 Defects v18 체크포인트: x64 Debug/Release native CTest 44/44,
+  Debug/Release Interop 103 assertion 통과; ARM64 Release component repair·ABI·DLL과 관리 전체 graph
+  교차 빌드 통과
+- 2026-08-10 Defects sidecar v2 체크포인트: x64 Debug/Release Catalog 583, Shell 313 assertions 통과;
+  ARM64 Release 관리 전체 graph 교차 빌드 통과
+- 2026-08-10 Defects source identity v19 체크포인트: x64 Debug/Release native 표적 2/2,
+  Interop 107, Catalog 583, Shell 314 assertions 통과; ARM64 Release native·managed 관련 target 교차 빌드 통과
+- 2026-08-10 Clone Stamp v20 체크포인트: x64 Debug/Release native CTest 45/45,
+  Debug/Release Interop 118, Catalog 583, Shell 315 assertions 통과; ARM64 Release 전체 native·managed graph
+  교차 빌드 통과(실기 실행 아님)
+- 2026-08-10 실촬영 네거티브 체크포인트: 실촬영 fixture 경로 수정으로 x64 Debug/Release native
+  CTest **57/57**(종전 46), Interop 139(ABI 0.28), Catalog 583, Shell 316 assertions 통과;
+  OpticFilm 8100 5088×3401 두 프레임(무압축 little-endian, LZW big-endian+ICC+alpha)이 게시까지
+  통과하고 원본 SHA-256 불변; 실행 중 취소가 decode 단계에서 60.3 ms 반환; ARM64 Release 전체
+  교차 빌드 통과(실기 실행 아님)
+- 2026-08-10 Brush v21 체크포인트: x64 Debug/Release native CTest 46/46,
+  Debug/Release Interop 127, Catalog 583, Shell 316 assertions 통과; 합성 RGB16 TIFF preview·PNG16 export
+  실제 변화와 원본 byte-exact 보존 확인; ARM64 Release 전체 native·managed graph 교차 빌드 통과
+  (실기 실행 아님)
 - Windows CI 가 PR 마다 돌고 벽시계 약 2분 30초
 - 네이티브 엔진의 제3자 runtime dependency 0개 (Windows 기본 DLL 5개만)
 - **카탈로그가 SQLite 로 디스크에 남습니다.** frame 5만 개 기준 쓰기 527ms, 읽기 255ms
@@ -23,6 +61,119 @@ Film Look → 검증된 PNG16/TIFF16 게시까지 한 장이 끝까지 갑니다
 **앱의 첫 관통 경로는 존재하지만 제품 UI는 아직 초기 단계입니다.** 현재 Develop 패널은 배관을
 검증하려고 만든 임시 표면이며, macOS Negaflow 의 UI/UX를 동일하게 옮긴 정식 Develop inspector,
 필름 base picker, 취소·진행률과 나머지 제품 surface가 남아 있습니다. GPU 경로는 착수 전입니다.
+
+## 2026-08-10 이후 새로 알게 된 것 — 먼저 읽으십시오
+
+**1. 실촬영 fixture 를 쓰는 테스트가 오래 죽어 있었습니다.** `CMakeLists.txt` 의
+`NEGAFLOW_SOURCE_TIFF_FIXTURE` 경로가 한 세그먼트 짧아 `if(EXISTS)` 가 항상 거짓이었고, 실촬영
+검사가 전부 조용히 합성 전용 분기로 떨어졌습니다. 고친 뒤 등록 테스트가 **46 → 57**로 늘었고,
+되살아난 것 중 3건이 낡은 기대를 갖고 있어 함께 고쳤습니다. **앞으로 "실촬영으로 검증했다"고
+쓰기 전에 그 테스트가 실제로 fixture 인자를 받았는지 확인하십시오.**
+
+**2c. macOS 소스 대조는 실제로 차이를 찾아냅니다.** Texture 는 순서·상수가 전부 일치했지만,
+같은 방식으로 표시 경로를 대조하다 **미리보기에 soft clip 과 dither 가 통째로 빠져 있는 것**을
+찾았습니다. 게시 경로는 오히려 맞았습니다(16비트는 macOS 도 dither 를 걸지 않음). 앞으로도
+"어느 경로에 걸리는가"를 함께 보십시오 — 조건까지 봐야 진짜 차이가 보입니다.
+
+**2b. 공간 필터는 타일 core 가 겹치지 않는다는 사실이 열쇠였습니다.** FilmScanDenoise 와
+Texture 의 blur 는 둘 다 타일마다 apron 을 읽되 자기 core 에만 씁니다. 그래서 타일 행을
+나누는 것만으로 각각 `5.09배`·`5.04배`가 나왔고 픽셀은 그대로였습니다. 다음에 공간 필터를
+볼 때도 **먼저 "무엇이 독립 단위인가"를 확인**하십시오 — 대개 이미 거기 있습니다.
+
+**2a. 두 번째로 잰 곳도 짐작과 달랐습니다.** pointwise 를 정리한 뒤 미리보기 단계 비용을 다시
+재 보니 Texture `+844 ms`, GrainMend `+1,474 ms` 옆에서 **FilmScanDenoise 가 `+11,711 ms`** 였습니다.
+짐작으로 Texture 부터 손댔으면 헛수고였습니다. **매번 재고 나서 고치십시오.**
+
+**2. 현상 시간은 짐작과 다른 곳에 있었습니다.** 3278×4944 기준 decode 는 전체의 3.4% 뿐이고
+`develop`(반전)과 `tone` 이 각각 1.9초·2.1초였습니다. 둘 다 완전한 pointwise 커널인데 한
+스레드에서 돌고 있었습니다. 행 블록 병렬 실행으로 각각 7배 이상 줄였고 **출력 바이트는 동일**
+합니다. 다음에 속도를 볼 때도 **먼저 재고 나서 고치십시오** — 상세는
+`../implementation/parallel-row-execution.md`.
+
+**3. export 시간의 약 86%는 이제 `output` 입니다.** WIC PNG deflate 와 게시 후 전체 픽셀
+readback 검증이며 둘 다 WIC 내부의 단일 스레드 zlib 입니다. 인코더를 바꾸면 산출물 바이트가
+달라지고 ADR-0004 에 어긋나므로 손대지 않았습니다. **미리보기 경로에는 이 비용이 없으므로
+대화형 응답성과는 무관합니다.**
+
+**4. Photoshop 계열 다중 IFD TIFF 를 엽니다.** `NewSubfileType` 으로 축소 미리보기와 투명도
+마스크를 동반 페이지로 구분하고, 전체 이미지가 정확히 하나일 때만 진행합니다. 다중 페이지
+문서는 계속 거부합니다. 디코더는 **프레임 번호를 디렉터리 번호로 가정하지 않습니다** — WIC 는
+축소 페이지를 프레임으로 노출하지 않으므로 probe 치수와 일치하는 프레임을 고릅니다.
+**8비트 TIFF 입력도 엽니다.** WIC 가 바이트 복제(`v * 257`)로 16비트 대상 형식에 넓히므로
+working 변환 뒤 `v / 255` 와 정확히 같고, 실제 파일과 합성 회귀 양쪽에서 확인했습니다.
+남은 입력 형식 공백은 **SubIFD(태그 330) 미리보기**입니다.
+
+## 현재 최우선: Chroma Engine과 GrainMend 품질 동등성
+
+사용자가 체감하는 현상 품질을 카탈로그 주변 내구성보다 먼저 닫습니다. 다음 구현 순서는 아래와 같습니다.
+
+1. ~~GrainMend 자동 검출을 채널별 top-hat(4/8/12), 원거리 texture/SNR, 8방향 scratch 적분,
+   isolation/grain-field/PCA component gate로 분리 이식하고, 1800px 초과 linear Lanczos 축소와
+   연속 affine mask blend를 연결합니다.~~ **구조 구현 완료.** v9은 반복 grid와 이어지는 scene line,
+   1400px core·80px effective halo의 원본 해상도 자동 검출과 종류별 전역 component stitch를 포함합니다.
+   thin scratch labeled evidence, hysteresis, sensitivity별 shape gate와 1600px core 경계 scratch
+   회귀로 stitch seam도 고정했습니다. x64 Debug 전체 native 43/43과
+   x64 Release GrainMend·ABI 회귀를 통과했습니다.
+   ARM64 Release 관련 target도 교차 빌드했습니다. FILM-R v2 44쌍 x64 Release 결과는
+   평균 `+0.332190 dB`, 중앙 `+0.216207 dB`로 올라 절대 quality floor 8개 조건을 모두 만족했고,
+   config의 역사적 `+0.465934 dB` 관측값보다 평균이 낮습니다. 그러나 그 관측값은 2026-07-25의
+   이전 자동 중지 정책 결과이고 고정 기준이 포함하는 다음 날 결과 유지·경고 변경 뒤 재측정되지
+   않았으므로 현재 macOS parity oracle로 쓰지 않습니다. **다음 GrainMend 품질 작업은 고정 소스를
+   macOS host에서 같은 44쌍에 다시 실행해 per-image mask·pixel report를 고정하는 것**입니다.
+2. component별 구조/질감 복원 native 코어를 구조 채움과 texture transfer의 독립 파일로 구현했습니다.
+   원본-only 8방향 얇은 보간, structure support 선택, thick component onion-peel, 넓은 guided mask
+   refinement와 exemplar residual 전사가 x64 Debug/Release 전체 native `44/44`, ARM64 Release 교차
+   빌드를 통과했습니다. 이 고급 복원은 macOS의 영역 Defects 편집 경로 계약이며 전역 자동
+   PostPipeline의 `CIMedianFilter` 폴백을 대체하지 않습니다. ROI y-up/top-first mask와 strength·preferred
+   angle을 ABI v18과 관리 Interop에 싣고, decode 뒤 음화 현상 전의 공통 preview/export 경로에
+   순서대로 재적용하는 경계까지 연결했습니다. 합성 RGB16 TIFF에서 preview·PNG16 export의 실제 변화,
+   원본 byte-exact 보존과 out-of-frame fail-closed를 고정했습니다. revision-aware catalog sidecar와
+   재시작 재적용, backup/pending restore 동일 세대 교체도 연결했습니다. ABI v19는 비어 있지 않은 recipe의
+   source byte count·SHA-256을 렌더 직전에 CNG로 재검증하고 불일치 시 preview/export를 모두 중단합니다.
+   Clone Stamp는 normalized y-down 좌표, 정수 source offset, RGBA16 full-strength patch, layer strength,
+   stroke 및 region/clone 교차 순서를 ABI v20과 공통 preview/export에 연결했습니다. Brush도 normalized
+   y-down 좌표, 짧은 raw 변 대비 두께, chunk/halo, sRGB texture displacement·tone matching, feather와
+   item strength를 ABI v21로 연결해 region/infrared/clone/brush 순서를 보존합니다. 합성 RGB16 TIFF에서
+   Clone Stamp와 Brush 모두 preview·PNG16 export의 실제 변화와 원본 byte-exact 보존을 고정했습니다.
+   **다음 영역 Defects 작업은 같은 입력의 macOS Clone Stamp/Brush pixel golden과 실제 촬영 TIFF 검증**입니다.
+   morphology opening/closing만 process 전체 background worker 하나로 겹쳐 3장 smoke를
+   `5.3~6.9초 → 3.6~4.6초`로 줄였고 전체 44장 결과는 byte-exact입니다. 실제 촬영 TIFF와 수백 장
+   batch에서 scheduler 전체 처리량·메모리를 검증하는 일은 남아 있습니다.
+   전체 자동 mask에 영역 component repair를 직접 대입하는 실험은 dust 0px/2px 모두 선택한 3장에서
+   큰 PSNR 회귀를 만들어 제거했습니다. user-reviewed 영역 Defects와 전역 자동 median 경로를 섞지
+   않으며, 동일 입력 macOS pixel golden 전에는 복원 코어를 대체하지 않습니다.
+3. 컬러 네거티브 비프리셋 경로의 muted-scene vibrance 장면 측정·gate·Windows 저채도 우선
+   pixel 수학을 preview/export 공통 경로에 추가했습니다. preset/B&W/고채도/tiny identity와
+   x64 Debug/Release, ARM64 교차 빌드를 고정했습니다. Auto FilmBase도 가로축 단일 scale의
+   pixel-center bilinear 격자 하나를 모든 측정 경로가 공유하도록 정렬했습니다. **남은 일은 같은 입력의
+   macOS Core Image sampled-grid와 `CIVibrance` 관측 fixture로 허용오차를 확정하는 것**입니다. preset의 confident measured Dmin
+   선택도 수정됐고, Auto base 연결 성분은 macOS와 같은 luma MAD 이상치 제거 뒤 채널 중앙값을
+   사용합니다. grid 추정이 모두 실패하면 sparse scene-edge 후보의 채널 p90을 측정한 뒤에만 상수
+   Dmin으로 떨어집니다. 실제 5088×3401 TIFF의 Film request는 `preset_measured`로 검증·게시까지 통과했습니다.
+   반전 직전 scene-range proxy와 Auto FilmBase sampled-grid를 macOS 소스의 uniform pixel-center bilinear
+   affine 계약으로 맞췄습니다. 연결 성분 첫 하위 모드·상위 R−B 중앙값, Double edge/coverage와 마지막
+   scene-edge affine fallback도 정렬했습니다. FilmBase의 luma·percentile·median·MAD·threshold·채널 통계는
+   macOS처럼 Float RGB를 Double로 승격해 계산하고 최종 공개 Dmin에서만 Float로 내립니다. **다음 수치
+   작업은 같은 입력의 macOS Core Image sampled-grid와 `CIVibrance` pixel golden으로 실제 허용오차를
+   고정하는 것**입니다. 최종 촬영 TIFF pixel golden은 아직 없습니다.
+4. rendered digital B&W 15종과 color/motion 27종은 registry→catalog/ABI→preview/export 공통 그래프까지
+   완료했습니다. **다음 Film Emulation 작업은 새 color/motion 16종의 macOS Core Image pixel golden과
+   실제 촬영 TIFF 비교**입니다. B&W acutance sigma·grain 통계 허용오차도 같은 hosted macOS
+   체크포인트에서 고정합니다.
+5. full-resolution tile 검출 workspace 재사용은 완료했고, 다음은 대형 TIFF·수백 장 batch 처리량을
+   측정해 per-frame full-buffer 할당과 장기 메모리 급증을 제거합니다. 첫 수명 단축으로 3장 smoke의 결과를
+   byte-exact 유지하면서 peak working set을 `383.86 → 363.86 MiB`로 줄였고, scratch 각도 작업자
+   상한을 4개에서 2개로 낮춰 같은 결과에서 `343.82 MiB`까지 더 줄였습니다. 세 장 시간은 직전보다
+   `2.2~4.9%` 늘었으므로 이 단계는 속도 향상으로 세지 않습니다. 이어 작업자별 workspace를 네 각도
+   묶음에서 재사용해 사진당 full-map vector storage 할당을 `16회 → 4회`로 줄였습니다. 두 번의 3장
+   smoke는 byte-exact였고 worker-2 기준보다 `2.7~3.9%` 짧았지만, peak는 `348.80 MiB`로 이전
+   단일 측정보다 `4.98 MiB` 높아 메모리 절감으로 주장하지 않습니다. 이어 타일별 검출 5개 float map,
+   후보 3개 map과 evidence map의 capacity도 사진 단위로 재사용했습니다. 두 실행 모두 같은 SHA-256을
+   유지했고 합산 시간은 직전보다 `1.2%` 짧았으며 peak는 `344.40/344.41 MiB`로 `4.40 MiB` 낮았습니다.
+   다음은 같은 품질 fixture를 유지한 채 대형 TIFF와 수백 장 batch 처리량·장기 peak를 측정하는 것입니다.
+
+defect sidecar는 닫았습니다. catalog fault harness 중 process-kill/disk-full/power-loss의 디렉터리 교체
+중단 복구는 위 현상 품질 체크포인트 뒤에 남기며, 현재는 unresolved swap artifact를 fail-closed합니다.
 
 **한 가지 사실이 바뀌었습니다.** 제품 payload 에 제3자 native 바이너리(`e_sqlite3.dll`)가
 처음 들어왔습니다. 네이티브 엔진의 0개는 그대로지만 두 문장은 이제 다른 뜻입니다. ADR-0025.
@@ -75,12 +226,15 @@ native SQLite 하한이 CVE-2025-6965 대상이라 restore 가 NU1903 으로 실
    source로 사용하고, `library.backup.sqlite`를 별도로 갱신합니다. 새 연결 full canonical readback,
    write/readback 실패 원복, rollback 실패 뒤 mutation 차단까지 연결했습니다. process-kill/disk-full/
    power-loss fault gate는 남아 있습니다.
-3. **immutable logical backup 세대. catalog-only 완료.** canonical `library.json`, v3 manifest/hash,
-   monotonic sequence, staging·final 재검증, valid 세대 기본 3개 retention을 구현했습니다. future·damaged
-   세대는 prune하지 않으며, sidecar가 아직 없으므로 defect edit 선언은 fail-closed입니다.
-4. **pending restore. 다음.** 다음 safe startup 에서만 적용합니다.
-5. **defect sidecar.** revision-aware writer, temp → flush → atomic replace. catalog 가 defect
-   edit 을 선언했는데 sidecar 가 없으면 library open 을 차단합니다.
+3. **immutable logical backup 세대. authoritative v3 완료.** canonical `library.json`과 선언된 모든
+   Defects sidecar, v3 manifest/hash, monotonic sequence, staging·final 재검증, valid 세대 기본 3개
+   retention을 구현했습니다. future·damaged 세대는 prune하지 않습니다.
+4. **pending restore. 완료.** 선택 세대를 private copy로 고정하고, 다음 `CatalogSession.Open`에서만
+   현재 catalog safety generation을 만든 뒤 catalog와 Defects sidecar를 같은 세대로 적용합니다. future
+   version은 차단하며 applied marker로 cleanup 실패를 재시작에서 안전하게 재시도합니다.
+5. **defect sidecar. 완료.** revision-aware writer, temp → flush → atomic replace/readback, stale completion
+   차단과 same-revision conflict를 구현했습니다. catalog가 defect edit을 선언했는데 sidecar가 없거나
+   손상됐으면 library open을 차단합니다.
 
 **셸을 붙일 때 쓸 것:** `CatalogSession.Open(roots)` → `ReadOrCreate()` → `Write(snapshot)` →
 `Dispose()`. `ReadOrCreate` 가 없는 카탈로그를 만드는 유일한 자리이며, 손상이나 알 수 없는
@@ -101,7 +255,7 @@ macOS catalog 를 여는 것은 결정 4에서 이미 배제했습니다.
 
 ### 진행 상황
 
-`nf_develop_export_v1` 과 `nf_develop_preview_v1` 을 포함한 현재 ABI 는 **0.5**입니다. 게시와
+`nf_develop_export_v22` 와 `nf_develop_preview_v22` 를 포함한 현재 ABI 는 **0.28**입니다. 게시와
 미리보기는 같은 요청 구조와 파이프라인을 사용하며, 관리 쪽 `NativeDevelopExporter`가 감쌉니다.
 실패는 **거부한 단계 + 그 단계 자신의 상태 이름**으로 돌아오므로, 없는 파일
 (`observe_source_before`) 과 잘못된 요청 (`request_validation`) 이 구별됩니다.
@@ -110,7 +264,8 @@ macOS catalog 를 여는 것은 결정 4에서 이미 배제했습니다.
 
 1. `CatalogSession` 으로 카탈로그를 열고 frame 목록을 Library/Develop 에 표시합니다.
 2. Windows App SDK file picker 로 TIFF 를 import 하고 필름 base와 노출을 저장합니다.
-3. `PreviewCoordinator` 가 겹친 요청 중 마지막 상태를 보존해 ABI 0.6 미리보기를 캔버스에 그립니다.
+3. `PreviewCoordinator` 가 겹친 요청 중 마지막 상태를 보존해 ABI 0.28 미리보기를 캔버스에 그립니다.
+   (겹친 요청을 기다리지 않고 `DevelopRun` 으로 즉시 취소하도록 바꾸는 것은 아직 남아 있습니다.)
 4. Export 버튼이 `NativeDevelopExporter.Run` 을 호출하고 검증된 결과 파일을 씁니다.
 
 **스레딩을 여기서 틀리면 안 됩니다.** `NativeDevelopExporter.Run` 은 현상 전체 동안 블로킹하며,
@@ -118,8 +273,18 @@ macOS catalog 를 여는 것은 결정 4에서 이미 배제했습니다.
 **전에** `DispatcherQueue` 를 캡처하고, 결과는 `TryEnqueue` 로 되돌리십시오. 아래 함정 절을
 그대로 따르면 됩니다.
 
-취소와 진행률은 아직 ABI 에 없습니다. 실제 스캔 해상도에서 바로 드러날 문제이므로 정식 UI 이식과
-대형 이미지 경로에서 함께 설계해야 합니다.
+**취소와 진행률은 ABI v22/0.28 로 들어왔습니다.** caller 소유 정수 3개(`cancel_requested`,
+`stage`, `progress_permille`)를 공유하고 콜백은 경계를 넘지 않습니다. 실촬영 5088×3401 에서
+실행 중 취소가 `decode` 단계에서 `60.3 ms` 만에 반환했고(미취소 export 는 `3,323 ms`) 파일을
+게시하지 않았습니다. 관리 쪽 입구는 `DevelopRun` 이며 `CancellationToken` 을 받습니다.
+
+**셸의 `PreviewCoordinator` 가 이미 사용합니다.** 겹친 요청이 들어오면 돌고 있던 렌더를 즉시
+취소하고, 취소된 결과는 픽셀이 없으므로 배달하지 않습니다. GrainMend 안에도 확인 지점을 넣어
+같은 프레임에서 미리보기 `2,014.7 ms → 835.0 ms`(GrainMend 를 약 1,290 ms 다 돌지 않고 약
+113 ms 에 중단)를 확인했습니다.
+FilmScanDenoise 도 타일 행마다 확인하며, 같은 변경에서 미리보기가 `15,004.7 → 2,949.7 ms`
+(5.09배)로 줄고 픽셀 fingerprint 는 그대로였습니다.
+**남은 일은 WinUI 의 취소 버튼·진행 막대 연결**과, Local Dodge/Burn 내부 확인 지점입니다.
 
 다음 목표는 기능 수를 늘리는 것이 아니라, 이미 뚫린 경로를 macOS 제품과 동일한 UI/UX에 연결하는
 것입니다. 화면 구조·치수·간격·컨트롤 순서·상태 전이·키보드·접근성 의미를 고정 기준에서 추출하고
@@ -201,9 +366,28 @@ Film mode picker, ABI 0.10 preview/export 연결은 구현되었습니다. Histo
 첫 rendered/UIA 체크포인트도 완료했습니다. 다만 고유 Edit/Defects/Info/Reset tab content와 나머지
 adjustment sections, compact/high contrast/ARM64 runtime은 아직 별도 작업입니다.
 
-최신 사용자 우선순위에 따라 추가 UI 확장은 보류합니다. **다음 한 걸음은 위 수명주기 순서 4의
-pending restore**입니다. 현재 catalog-only generation만 적용하고 defect edit generation은 sidecar가
-구현되기 전까지 계속 차단합니다.
+### 사용자 우선순위와 구현 원칙
+
+직접 보이는 UI/UX와 사진·현상·보정 결과, Chroma Engine, GrainMend는 고정 macOS 기준을 따릅니다.
+그 밖의 내부 구조·라이브러리·함수는 1:1 이식을 목표로 삼지 않고, 단순하고 유지 가능한 Windows 네이티브
+구현을 우선합니다. UI 잔여 작업보다 현상 백엔드를 먼저 진행하며, 결과 차이를 잡지 못하는 중복 검증은
+추가하지 않습니다.
+
+Local Dodge/Burn은 ABI v12, ColorModel은 v13, Auto Levels/Neutral Balance는 v14, DevelopTarget과
+EXPIRED RescueGrade는 v15까지 catalog → Shell → native preview/export 연결을 완료했습니다.
+macOS manifest v2의 15개 scanner profile에서 현상에 필요한 bounded 수치와 profile hash만
+Windows 네이티브 immutable registry로 고정했고, `scannerProfileID`를 ABI v16으로 전달해
+ScannerProfileGrade를 preview/export에 연결했습니다. 현재 macOS bundle에서 scanner monochrome tint는 근거 데이터가 없어 의도적으로 no-op이므로
+Windows에 임의 효과를 만들지 않습니다. M3의 독립 Deflate preflight validator와 pending restore
+safe-start는 완료했습니다. 현재 CPU kernel은 전부 baseline scalar이고 상위 ISA variant가 없으므로
+동작 없는 dispatcher는 만들지 않습니다. NORITSU/SP-3000/F135/HR의 문서 기반 tone·Lab color·texture와
+NORITSU/SP-3000의 Ektar 100·Portra 160 matched-pair 상대 signature를 공용 preview/export에 연결했습니다.
+pair가 없는 profile과 F135/HR에는 근거 없는 상대 효과를 만들지 않습니다. color/B&W와 polarity를
+분리한 ABI v17로 color negative, B&W negative, color positive, B&W positive 4상태를
+catalog→Shell→native preview/export까지 연결했습니다.
+최신 macOS의 Film Emulation 42종 profile-kind 계약은 Windows registry와 실제 pipeline까지 연결했습니다.
+**다음 한 걸음은 새 color/motion 16종의 macOS hosted pixel golden을 만들고 Windows 결과와 비교하는
+것**입니다. 수치 golden은 실제 화면 결과 차이를 잡는 대표 profile·장면에 집중합니다.
 
 ---
 
@@ -227,8 +411,6 @@ Windows 는 scalar 로 맞췄으며 앞으로 D3D11/WARP 가 들어옵니다. �
 
 ## 4. 그 외 (순서 무관)
 
-- 독립 Deflate 검증기를 구현하거나 dependency gate 를 열 근거를 확보합니다. 현재 Deflate 는
-  fail-closed 로 격리돼 있습니다.
 - 스캐너 호스트(M15): 플러그인은 이미 있으므로 **프로토콜 v2 클라이언트 구현 + 실제 장치 검증**
   입니다. 자세한 내용은 아래 결정 11번을 보십시오.
 - 최종 working buffer 와 출력을 downstream row/tile 소비자로 넘기고 전체 process budget 을

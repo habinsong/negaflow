@@ -18,7 +18,8 @@ Film base의 `Auto`/`Film`/`Manual` recipe를 Catalog, Shell, ABI 0.10, native C
 - `scripts/test-interop.ps1 -Preset x64-debug` — ABI 0.10, x64, interop 54개 단언 통과.
 - x64 Release에서도 native CTest 30/30, Catalog 317개, Shell 267개, ABI 0.10 interop 54개 단언을 통과했습니다. native와 managed ARM64 교차 빌드는 경고·오류 없이 완료했고, provenance gate도 통과했습니다. ARM64 runtime은 실행하지 않았습니다.
 - 사용자가 제공한 `OpticFilm8100_frame_1.tiff`(5088×3401, 16-bit RGB)는 CLI 수동 Dmin 전체 경로와 PNG16 export를 통과했습니다. 결과 PNG는 100,377,638바이트, `structure_verified`, `pixels_verified`, `profile_verified`, `source_unchanged_during_decode`가 모두 true이며 SHA-256은 `eab2e899b9e9a913be5a141afca9835040f36d3d28dd8e3bb86dcf044b54708b`입니다.
+- 같은 실제 TIFF를 x64 Release ABI v4의 `kodak-portra-400` + `warm-led` Film request로 다시 실행했습니다. `preset_measured` Dmin `(0.2446564, 0.1377584, 0.06714519)`을 사용해 5088×3401 PNG16 101,864,918바이트를 5.33초에 검증·게시했고 원본 길이·수정시각·속성은 불변이었습니다.
 
 ## 한계
 
-이것은 full macOS Film base parity가 아닙니다. stock Dmin/Dmax와 light gain은 macOS baseline의 documented curve reading을 이식한 값이며 외부 계측 검증은 아닙니다. Windows의 measured-first 판단은 현재 connected component일 때만 적용하므로 macOS의 confident-only estimator와 동치라고 주장할 수 없습니다. Scanner profile grade, 제조사별 picker 그룹, canvas base picker/reset, rendered screenshot/UIA/keyboard/high-contrast/compact/ARM64 runtime 증거는 남아 있습니다. 실제 TIFF export도 Film preset request가 아니라 CLI 수동 Dmin 경로입니다.
+이것은 full macOS Film base parity가 아닙니다. stock Dmin/Dmax와 light gain은 macOS baseline의 documented curve reading을 이식한 값이며 외부 계측 검증은 아닙니다. Windows의 measured-first 판단은 connected component, continuous border, distributed mask만 confident source로 채택합니다. Scanner profile grade, 제조사별 picker 그룹, canvas base picker/reset, rendered screenshot/UIA/keyboard/high-contrast/compact/ARM64 runtime 증거는 남아 있습니다. 실제 TIFF Film request는 통과했지만 같은 입력의 macOS pixel golden은 없습니다.

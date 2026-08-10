@@ -23,25 +23,34 @@ public readonly record struct LibraryDocumentOpenResult(
     LibraryDocument? Document,
     LibraryDocumentError Error,
     CatalogSessionError SessionError,
-    CatalogStoreError StoreError)
+    CatalogStoreError StoreError,
+    DefectSidecarError DefectSidecarError)
 {
     public bool IsSuccess => Error == LibraryDocumentError.None && Document is not null;
 
     internal static LibraryDocumentOpenResult Success(LibraryDocument document) =>
         new(document, LibraryDocumentError.None, CatalogSessionError.None,
-            CatalogStoreError.None);
+            CatalogStoreError.None, DefectSidecarError.None);
 
-    internal static LibraryDocumentOpenResult SessionFailure(CatalogSessionError error) =>
+    internal static LibraryDocumentOpenResult SessionFailure(
+        CatalogSessionError error,
+        DefectSidecarError defectSidecarError) =>
         new(
             null,
             error == CatalogSessionError.Busy
                 ? LibraryDocumentError.SessionBusy
                 : LibraryDocumentError.SessionUnavailable,
             error,
-            CatalogStoreError.None);
+            CatalogStoreError.None,
+            defectSidecarError);
 
     internal static LibraryDocumentOpenResult StoreFailure(CatalogStoreError error) =>
-        new(null, LibraryDocumentError.CatalogUnreadable, CatalogSessionError.None, error);
+        new(
+            null,
+            LibraryDocumentError.CatalogUnreadable,
+            CatalogSessionError.None,
+            error,
+            DefectSidecarError.None);
 }
 
 /// <summary>
@@ -60,6 +69,8 @@ public sealed class LibraryDocument : IDisposable
     private readonly List<LibraryFrameSnapshot> frames = [];
     private readonly List<LibraryFrameIssue> issues = [];
     private readonly Dictionary<string, int> indexById = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, DefectRecipeSnapshot> defectRecipes =
+        new(StringComparer.Ordinal);
     private string? activeRollId;
 
     private LibraryDocument(
@@ -92,7 +103,9 @@ public sealed class LibraryDocument : IDisposable
         CatalogSessionOpenResult opened = CatalogSession.Open(roots);
         if (opened.Session is not { } session)
         {
-            return LibraryDocumentOpenResult.SessionFailure(opened.Error);
+            return LibraryDocumentOpenResult.SessionFailure(
+                opened.Error,
+                opened.DefectSidecarError);
         }
 
         CatalogReadResult read = session.ReadOrCreate();
@@ -197,6 +210,29 @@ public sealed class LibraryDocument : IDisposable
             LibraryFrameReadResult read = LibraryFrameReader.Read(document.RootElement);
             if (read.Frame is { } frame)
             {
+                if (DeclaresDefectEdits(payloads[index]))
+                {
+                    if (!defectRecipes.TryGetValue(rowIds[index], out var recipe))
+                    {
+                        if (!Guid.TryParseExact(rowIds[index], "D", out Guid frameId) ||
+                            session.ReadDefectRecipe(frameId).Snapshot is not { } loadedRecipe)
+                        {
+                            issues.Add(new LibraryFrameIssue(
+                                index,
+                                rowIds[index],
+                                LibraryFrameError.InvalidDefectRecipe,
+                                DevelopRouteError.None));
+                            continue;
+                        }
+                        recipe = loadedRecipe;
+                        defectRecipes[rowIds[index]] = recipe;
+                    }
+                    frame = frame with { DefectRecipe = recipe };
+                }
+                else
+                {
+                    defectRecipes.Remove(rowIds[index]);
+                }
                 frames.Add(frame);
                 indexById[frame.Id] = index;
                 continue;
@@ -208,4 +244,10 @@ public sealed class LibraryDocument : IDisposable
                 read.RouteError));
         }
     }
+
+    private static bool DeclaresDefectEdits(JsonObject payload) =>
+        payload.TryGetPropertyValue("hasDefectEdits", out JsonNode? node) &&
+        node is JsonValue value &&
+        value.TryGetValue(out bool hasEdits) &&
+        hasEdits;
 }

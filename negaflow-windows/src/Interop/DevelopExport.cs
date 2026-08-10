@@ -12,6 +12,12 @@ public enum NegativeFilmType
     BlackAndWhite = 1,
 }
 
+public enum FilmPolarity
+{
+    Negative = 0,
+    Positive = 1,
+}
+
 public enum DevelopBaseEstimationMode
 {
     Auto = 0,
@@ -38,6 +44,61 @@ public enum DevelopSourceKind
     RenderedDigital = 1,
 }
 
+public enum DevelopTargetMode
+{
+    Main = 0,
+    Print = 1,
+    Noritsu = 2,
+    Sp3000 = 3,
+    F135 = 4,
+    Hr = 5,
+    Rescue = 6,
+}
+
+/// <summary>The four macOS FilmScanDenoise film-response profiles.</summary>
+public enum FilmScanDenoiseFilmProfile
+{
+    ColorNegative = 0,
+    ColorPositive = 1,
+    BlackAndWhiteNegative = 2,
+    BlackAndWhitePositive = 3,
+}
+
+public enum BwToningMode
+{
+    None = 0,
+    Selenium = 1,
+    Sepia = 2,
+}
+
+public enum DevelopImageRotation
+{
+    Degrees0 = 0,
+    Degrees90 = 1,
+    Degrees180 = 2,
+    Degrees270 = 3,
+}
+
+public readonly record struct DevelopCropRect(
+    double X,
+    double Y,
+    double Width,
+    double Height);
+
+public sealed class DevelopImageTransform
+{
+    public DevelopImageRotation Rotation { get; init; }
+
+    public bool FlipHorizontal { get; init; }
+
+    public bool FlipVertical { get; init; }
+
+    /// <summary>macOS와 동일한 y-up 정규화 좌표입니다. null이면 전체 프레임입니다.</summary>
+    public DevelopCropRect? Crop { get; init; }
+
+    public double StraightenAngle { get; init; }
+}
+
 /// <summary>
 /// Values match the native <c>FilmEmulation</c> enum and the names persisted by
 /// <c>Negaflow.Catalog.Core</c>. The native side maps each value explicitly rather
@@ -57,6 +118,37 @@ public enum FilmEmulationProfile
     ColorPlus200 = 9,
     FujicolorC200 = 10,
     Pro400H = 11,
+    TriX400 = 12,
+    Hp5Plus = 13,
+    Fp4Plus = 14,
+    Delta100 = 15,
+    Delta400 = 16,
+    Delta3200 = 17,
+    TMax100 = 18,
+    TMax400 = 19,
+    TMaxP3200 = 20,
+    Kentmere400 = 21,
+    OrthoPlus = 22,
+    Sfx200 = 23,
+    RolleiIR = 24,
+    Scala200X = 25,
+    RolleiSuperpan = 26,
+    Velvia100 = 27,
+    E100VS = 28,
+    Astia100F = 29,
+    Kodachrome64 = 30,
+    Gold200 = 31,
+    ProImage100 = 32,
+    Superia400 = 33,
+    SuperiaPremium400 = 34,
+    Superia200 = 35,
+    Reala100 = 36,
+    Industrial100 = 37,
+    LomoCn800 = 38,
+    Vision3_500T = 39,
+    Vision3_250D = 40,
+    Vision3_50D = 41,
+    Vision3_200T = 42,
 }
 
 /// <summary>Which stage refused. Mirrors <c>NF_DEVELOP_STAGE_*</c>.</summary>
@@ -72,6 +164,18 @@ public enum DevelopExportStage
     ToneAdjust = 7,
     FilmLook = 8,
     Output = 9,
+    GrainMend = 10,
+    FilmScanDenoise = 11,
+    LocalDodgeBurn = 12,
+    Texture = 13,
+    BlackAndWhite = 14,
+    ImageTransform = 15,
+    ColorModel = 16,
+    SceneCorrection = 17,
+    TargetGrade = 18,
+    DefectComponentRepair = 19,
+    DefectCloneStamp = 20,
+    DefectBrush = 21,
 }
 
 public enum FilmLookRoute
@@ -130,6 +234,143 @@ public sealed class DevelopColorGrading
     public float Balance { get; init; }
 }
 
+public enum DevelopLocalDodgeBurnMode
+{
+    Dodge = 0,
+    Burn = 1,
+}
+
+public enum DevelopLocalDodgeBurnMaskKind
+{
+    Brush = 0,
+    Radial = 1,
+    Linear = 2,
+    Polygon = 3,
+}
+
+public readonly record struct DevelopLocalDodgeBurnPoint(double X, double Y);
+
+public sealed class DevelopLocalDodgeBurnStroke
+{
+    public IReadOnlyList<DevelopLocalDodgeBurnPoint> Points { get; init; } = [];
+
+    public double Thickness { get; init; } = 0.04;
+
+    public double Feather { get; init; } = 0.02;
+}
+
+public sealed class DevelopLocalDodgeBurnMask
+{
+    public DevelopLocalDodgeBurnMaskKind Kind { get; init; }
+
+    public IReadOnlyList<DevelopLocalDodgeBurnStroke> Strokes { get; init; } = [];
+
+    public DevelopLocalDodgeBurnPoint Center { get; init; } = new(0.5, 0.5);
+
+    public double Radius { get; init; } = 0.25;
+
+    public double Feather { get; init; } = 0.25;
+
+    public DevelopLocalDodgeBurnPoint Start { get; init; } = new(0.5, 0.0);
+
+    public DevelopLocalDodgeBurnPoint End { get; init; } = new(0.5, 1.0);
+
+    public IReadOnlyList<DevelopLocalDodgeBurnPoint> Points { get; init; } = [];
+}
+
+public sealed class DevelopLocalDodgeBurnAdjustment
+{
+    public DevelopLocalDodgeBurnMode Mode { get; init; }
+
+    public double Amount { get; init; }
+
+    public bool IsEnabled { get; init; } = true;
+
+    public DevelopLocalDodgeBurnMask Mask { get; init; } = new();
+}
+
+/// <summary>
+/// 현상 전 linear raw에 순서대로 적용되는 macOS 영역 Defects 레이어입니다.
+/// ROI는 raw 픽셀의 y-up 좌표이고, 마스크의 첫 행은 ROI의 위쪽입니다.
+/// </summary>
+public sealed class DevelopDefectRegionEdit
+{
+    public bool IsEnabled { get; init; } = true;
+
+    public uint RoiX { get; init; }
+
+    public uint RoiY { get; init; }
+
+    public uint Width { get; init; }
+
+    public uint Height { get; init; }
+
+    public uint MaskStrideBytes { get; init; }
+
+    public ReadOnlyMemory<byte> Mask { get; init; }
+
+    public double Strength { get; init; } = 1.0;
+
+    public double? PreferredAngleDegrees { get; init; }
+}
+
+public enum DevelopDefectEditKind
+{
+    Region,
+    Clone,
+    Brush,
+}
+
+public readonly record struct DevelopDefectRecipeEditRef(
+    DevelopDefectEditKind Kind,
+    uint Index);
+
+public readonly record struct DevelopDefectClonePoint(double X, double Y);
+
+public sealed class DevelopDefectCloneStroke
+{
+    public IReadOnlyList<DevelopDefectClonePoint> Points { get; init; } = [];
+
+    public double OffsetX { get; init; }
+
+    public double OffsetY { get; init; }
+
+    public double DiameterPixels { get; init; }
+
+    public double Hardness { get; init; }
+}
+
+public sealed class DevelopDefectCloneEdit
+{
+    public bool IsEnabled { get; init; } = true;
+
+    public double Strength { get; init; } = 1.0;
+
+    public IReadOnlyList<DevelopDefectCloneStroke> Strokes { get; init; } = [];
+}
+
+public readonly record struct DevelopDefectBrushPoint(double X, double Y);
+
+public sealed class DevelopDefectBrushStroke
+{
+    public IReadOnlyList<DevelopDefectBrushPoint> Points { get; init; } = [];
+
+    /// <summary>Raw 이미지 짧은 변에 대한 브러시 굵기 비율입니다.</summary>
+    public double Thickness { get; init; }
+}
+
+public sealed class DevelopDefectBrushEdit
+{
+    public bool IsEnabled { get; init; } = true;
+
+    public double Strength { get; init; } = 1.0;
+
+    public IReadOnlyList<DevelopDefectBrushStroke> Strokes { get; init; } = [];
+}
+
+/// <summary>Defects recipe가 결합된 원본 파일의 경로 독립 byte identity입니다.</summary>
+public sealed record DevelopDefectSourceIdentity(ulong ByteCount, string Sha256);
+
 public sealed class DevelopExportRequest
 {
     public required string SourcePath { get; init; }
@@ -139,6 +380,8 @@ public sealed class DevelopExportRequest
     public DevelopExportFormat Format { get; init; } = DevelopExportFormat.Png16;
 
     public NegativeFilmType FilmType { get; init; } = NegativeFilmType.Color;
+
+    public FilmPolarity FilmPolarity { get; init; } = FilmPolarity.Negative;
 
     public DevelopBaseEstimationMode BaseEstimationMode { get; init; } =
         DevelopBaseEstimationMode.Manual;
@@ -152,6 +395,8 @@ public sealed class DevelopExportRequest
     public string? FilmStockDminId { get; init; }
 
     public string? LightSourceProfileId { get; init; }
+
+    public string? ScannerProfileId { get; init; }
 
     public float ExposureStops { get; init; }
 
@@ -175,6 +420,28 @@ public sealed class DevelopExportRequest
 
     public float Shadows { get; init; }
 
+    public float Warmth { get; init; }
+
+    public float Tint { get; init; }
+
+    public float ColorDepth { get; init; }
+
+    public float Vibrance { get; init; }
+
+    public float Saturation { get; init; }
+
+    public float RedPrimary { get; init; }
+
+    public float GreenPrimary { get; init; }
+
+    public float BluePrimary { get; init; }
+
+    public bool AutoLevels { get; init; }
+
+    public bool AutoNeutralBalance { get; init; }
+
+    public DevelopTargetMode DevelopTarget { get; init; }
+
     public DevelopPointCurves PointCurves { get; init; } = new();
 
     public DevelopColorMixer ColorMixer { get; init; } = new();
@@ -186,6 +453,59 @@ public sealed class DevelopExportRequest
     public FilmEmulationProfile FilmEmulation { get; init; } = FilmEmulationProfile.None;
 
     public double FilmEmulationIntensity { get; init; } = 0.5;
+
+    /// <summary>RGB-only GrainMend automatic repair strength from zero through one.</summary>
+    public double DefectRemovalStrength { get; init; }
+
+    public IReadOnlyList<DevelopDefectRegionEdit> DefectRegions { get; init; } = [];
+
+    public IReadOnlyList<DevelopDefectCloneEdit> DefectClones { get; init; } = [];
+
+    public IReadOnlyList<DevelopDefectBrushEdit> DefectBrushes { get; init; } = [];
+
+    public IReadOnlyList<DevelopDefectRecipeEditRef> DefectEditOrder { get; init; } = [];
+
+    public DevelopDefectSourceIdentity? DefectSourceIdentity { get; init; }
+
+    /// <summary>FilmScanDenoise master strength from zero through one.</summary>
+    public float NoiseReductionStrength { get; init; }
+
+    public float NoiseReductionLuma { get; init; } = 0.5F;
+
+    public float NoiseReductionChroma { get; init; } = 0.5F;
+
+    public float NoiseReductionDarkTone { get; init; } = 0.5F;
+
+    public float NoiseReductionDetail { get; init; } = 0.5F;
+
+    public float NoiseReductionGrainProtect { get; init; }
+
+    public FilmScanDenoiseFilmProfile NoiseReductionFilmProfile { get; init; } =
+        FilmScanDenoiseFilmProfile.ColorNegative;
+
+    public IReadOnlyList<DevelopLocalDodgeBurnAdjustment> LocalDodgeBurn { get; init; } = [];
+
+    public float Grain { get; init; }
+
+    public float Sharpness { get; init; }
+
+    public float Halation { get; init; }
+
+    public float Clarity { get; init; }
+
+    public float Vignette { get; init; }
+
+    public BwToningMode BwToningMode { get; init; }
+
+    /// <summary>null이면 macOS와 같이 선택된 모드의 기본 hue를 사용합니다.</summary>
+    public double? BwToningShadowHue { get; init; }
+
+    /// <summary>null이면 macOS와 같이 선택된 모드의 기본 hue를 사용합니다.</summary>
+    public double? BwToningHighlightHue { get; init; }
+
+    public double BwToningStrength { get; init; }
+
+    public DevelopImageTransform ImageTransform { get; init; } = new();
 
     public uint RowsPerCopy { get; init; } = 64;
 }
@@ -210,8 +530,10 @@ public sealed class DevelopExportResult
         float appliedDminRed = 0,
         float appliedDminGreen = 0,
         float appliedDminBlue = 0,
-        DevelopBaseSource baseSource = DevelopBaseSource.Manual)
+        DevelopBaseSource baseSource = DevelopBaseSource.Manual,
+        bool cancelled = false)
     {
+        Cancelled = cancelled;
         Succeeded = succeeded;
         FailedStage = failedStage;
         FailureName = failureName;
@@ -233,6 +555,12 @@ public sealed class DevelopExportResult
     }
 
     public bool Succeeded { get; }
+
+    /// <summary>
+    /// 호출자가 <see cref="DevelopRun.Cancel"/> 로 멈춘 실행입니다. 실패와 구분해야 하며,
+    /// 취소된 실행은 파일도 미리보기 픽셀도 남기지 않습니다.
+    /// </summary>
+    public bool Cancelled { get; }
 
     public DevelopExportStage FailedStage { get; }
 

@@ -265,6 +265,56 @@ void test_profile_properties() {
         "Velvia boosts green-patch chroma more than E100 and preserves alpha");
 }
 
+void test_expanded_color_and_motion_profiles() {
+    using negaflow::imaging::FilmEmulation;
+    constexpr std::array<FilmEmulation, 16> profiles{{
+        FilmEmulation::velvia_100, FilmEmulation::e100_vs,
+        FilmEmulation::astia_100f, FilmEmulation::kodachrome_64,
+        FilmEmulation::gold_200, FilmEmulation::pro_image_100,
+        FilmEmulation::superia_400, FilmEmulation::superia_premium_400,
+        FilmEmulation::superia_200, FilmEmulation::reala_100,
+        FilmEmulation::industrial_100, FilmEmulation::lomo_cn_800,
+        FilmEmulation::vision3_500t, FilmEmulation::vision3_250d,
+        FilmEmulation::vision3_50d, FilmEmulation::vision3_200t,
+    }};
+    auto cube = allocate_cube();
+    expect(cube != nullptr, "the expanded-profile cube allocates");
+    if (cube == nullptr) {
+        return;
+    }
+    std::array<negaflow::imaging::FilmEmulationCubeEntry, profiles.size()>
+        signatures{};
+    bool complete = true;
+    for (std::size_t index = 0U; index < profiles.size(); ++index) {
+        const negaflow::imaging::FilmEmulationColorParameters parameters{
+            profiles[index], 1.0};
+        complete = complete &&
+            negaflow::imaging::build_film_emulation_color_cube(
+                parameters, *cube) == negaflow::core::KernelStatus::ok &&
+            cube->ready && cube->emulation == profiles[index];
+        signatures[index] = cube->entries[signature_index()];
+        complete = complete && std::isfinite(signatures[index].red) &&
+                   std::isfinite(signatures[index].green) &&
+                   std::isfinite(signatures[index].blue);
+    }
+    bool distinct = true;
+    for (std::size_t left = 0U; left < signatures.size(); ++left) {
+        for (std::size_t right = left + 1U; right < signatures.size(); ++right) {
+            const float difference =
+                std::abs(signatures[left].red - signatures[right].red) +
+                std::abs(signatures[left].green - signatures[right].green) +
+                std::abs(signatures[left].blue - signatures[right].blue);
+            distinct = distinct && difference > 1.0e-5F;
+        }
+    }
+    expect(complete, "all 16 expanded profiles build finite color cubes");
+    expect(distinct, "all 16 expanded profiles retain distinct color responses");
+    expect(
+        !negaflow::imaging::valid_film_emulation_color_parameters(
+            {FilmEmulation::tri_x_400, 1.0}),
+        "a black-and-white profile cannot enter the color cube stage");
+}
+
 void test_parameter_cube_and_view_failures() {
     auto cube = allocate_cube();
     expect(cube != nullptr, "failure-test cube allocates");
@@ -350,6 +400,7 @@ int main() {
     test_fixed_fixture_and_in_place_parity();
     test_identity_quantization_and_clamping();
     test_profile_properties();
+    test_expanded_color_and_motion_profiles();
     test_parameter_cube_and_view_failures();
 
     std::cout << "{\"status\":\"" << (failures == 0 ? "ok" : "error")

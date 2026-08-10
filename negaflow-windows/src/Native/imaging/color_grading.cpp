@@ -1,5 +1,7 @@
 #include "negaflow/imaging/color_grading.h"
 
+#include "negaflow/core/pointwise.h"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -166,11 +168,6 @@ struct PreparedRegion final {
     };
 }
 
-[[nodiscard]] bool finite_rgb(const Rgb color) noexcept {
-    return std::isfinite(color.red) && std::isfinite(color.green) &&
-           std::isfinite(color.blue);
-}
-
 [[nodiscard]] negaflow::core::KernelStatus validate_parameters(
     const ColorGradingParameters& parameters) noexcept {
     for (const auto* const region : {
@@ -240,16 +237,7 @@ negaflow::core::KernelStatus apply_color_grading(
     }
 
     if (!has_color_grading_change(parameters)) {
-        for (std::uint32_t row = 0U; row < input.height; ++row) {
-            const std::size_t input_offset =
-                static_cast<std::size_t>(row) * input.stride_pixels;
-            const std::size_t output_offset =
-                static_cast<std::size_t>(row) * output.stride_pixels;
-            std::copy_n(
-                input.pixels + input_offset,
-                input.width,
-                output.pixels + output_offset);
-        }
+        negaflow::core::copy_validated_rows(input, output);
         return negaflow::core::KernelStatus::ok;
     }
 
@@ -263,14 +251,11 @@ negaflow::core::KernelStatus apply_color_grading(
     const float width =
         (0.10F * (1.0F - parameters.blending)) +
         (0.50F * parameters.blending);
-    for (std::uint32_t row = 0U; row < input.height; ++row) {
-        const std::size_t input_offset =
-            static_cast<std::size_t>(row) * input.stride_pixels;
-        const std::size_t output_offset =
-            static_cast<std::size_t>(row) * output.stride_pixels;
-        for (std::uint32_t column = 0U; column < input.width; ++column) {
-            const negaflow::core::Rgba32F source =
-                input.pixels[input_offset + column];
+    return negaflow::core::transform_validated_pointwise(
+        input,
+        output,
+        [shadows, midtones, highlights, pivot, width](
+            const negaflow::core::Rgba32F source) noexcept {
             const Rgb result = apply_color_grading_pixel(
                 {source.red, source.green, source.blue},
                 shadows,
@@ -278,18 +263,13 @@ negaflow::core::KernelStatus apply_color_grading(
                 highlights,
                 pivot,
                 width);
-            if (!finite_rgb(result)) {
-                return negaflow::core::KernelStatus::non_finite_output;
-            }
-            output.pixels[output_offset + column] = {
+            return negaflow::core::Rgba32F{
                 result.red,
                 result.green,
                 result.blue,
                 source.alpha,
             };
-        }
-    }
-    return negaflow::core::KernelStatus::ok;
+        });
 }
 
 }  // namespace negaflow::imaging

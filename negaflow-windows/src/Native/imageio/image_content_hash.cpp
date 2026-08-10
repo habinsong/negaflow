@@ -62,6 +62,20 @@ private:
            static_cast<std::uint64_t>(info.nFileSizeLow);
 }
 
+[[nodiscard]] ImageFileObservation file_observation(
+    const BY_HANDLE_FILE_INFORMATION& info) noexcept {
+    ImageFileObservation result{};
+    result.volume_serial_number = info.dwVolumeSerialNumber;
+    result.file_index =
+        (static_cast<std::uint64_t>(info.nFileIndexHigh) << 32U) |
+        static_cast<std::uint64_t>(info.nFileIndexLow);
+    result.file_bytes = file_size_bytes(info);
+    result.last_write_ticks =
+        (static_cast<std::uint64_t>(info.ftLastWriteTime.dwHighDateTime) << 32U) |
+        static_cast<std::uint64_t>(info.ftLastWriteTime.dwLowDateTime);
+    return result;
+}
+
 [[nodiscard]] bool same_file_state(
     const BY_HANDLE_FILE_INFORMATION& before,
     const BY_HANDLE_FILE_INFORMATION& after) noexcept {
@@ -217,6 +231,7 @@ ImageContentHashResult hash_image_content(
         return result;
     }
 
+    result.observation = file_observation(after);
     result.status = ImageContentHashStatus::ok;
     return result;
 }

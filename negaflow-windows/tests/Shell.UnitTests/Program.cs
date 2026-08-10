@@ -258,6 +258,227 @@ internal static class Program
                 gradingRequest.Request.ColorGrading.Balance == -0.2f,
             "develop_request_carries_color_grading");
 
+        LocalDodgeBurnAdjustment localAdjustment = new(
+            Guid.Parse("00000000-0000-0000-0000-000000000201"),
+            LocalDodgeBurnMode.Burn,
+            0.65,
+            false,
+            LocalDodgeBurnMask.Polygon(
+                [new(-0.1, 0.2), new(0.8, 0.1), new(0.5, 1.1)],
+                0.15));
+        DevelopRequestResult localRequest = DevelopRequestFactory.Create(
+            Frame(new ManualBaseRgb(0.21, 0.22, 0.23)) with
+            {
+                LocalDodgeBurn = [localAdjustment],
+            },
+            destination);
+        Check(
+            localRequest.IsSuccess && localRequest.Request?.LocalDodgeBurn.Count == 1 &&
+                localRequest.Request.LocalDodgeBurn[0].Mode == DevelopLocalDodgeBurnMode.Burn &&
+                !localRequest.Request.LocalDodgeBurn[0].IsEnabled &&
+                localRequest.Request.LocalDodgeBurn[0].Mask.Kind == DevelopLocalDodgeBurnMaskKind.Polygon &&
+                localRequest.Request.LocalDodgeBurn[0].Mask.Points[2] ==
+                    new DevelopLocalDodgeBurnPoint(0.5, 1.1),
+            "develop_request_carries_local_dodge_burn");
+
+        ColorModelRecipe colorModel = new(
+            0.25, -0.2, 0.3, 0.4, -0.1, 0.1, -0.15, 0.2);
+        DevelopRequestResult colorModelRequest = DevelopRequestFactory.Create(
+            Frame(new ManualBaseRgb(0.21, 0.22, 0.23)) with
+            {
+                ColorModel = colorModel,
+                AutoLevels = true,
+                AutoNeutralBalance = true,
+                DevelopTarget = DevelopTarget.Rescue,
+            },
+            destination);
+        Check(
+            colorModelRequest.IsSuccess && colorModelRequest.Request?.Warmth == 0.25F &&
+                colorModelRequest.Request.Tint == -0.2F &&
+                colorModelRequest.Request.Vibrance == 0.4F &&
+                colorModelRequest.Request.GreenPrimary == -0.15F &&
+                colorModelRequest.Request.AutoLevels &&
+                colorModelRequest.Request.AutoNeutralBalance &&
+                colorModelRequest.Request.DevelopTarget == DevelopTargetMode.Rescue,
+            "develop_request_carries_color_model_scene_correction_and_target");
+
+        Guid defectFrameId = Guid.Parse("92e43a49-e80a-4d33-af27-1d5b1fe947e3");
+        byte[] defectMask = Enumerable.Range(0, 16)
+            .Select(value => (byte)value)
+            .ToArray();
+        DefectEditItem regionEdit = new(
+            Guid.Parse("ff9a1c0e-03b1-427f-a19a-c13679147037"),
+            DefectEditKind.Region,
+            Enabled: true,
+            Strength: 0.6,
+            new DefectEditLabel(DefectEditLabelKind.Guided, 1),
+            new DefectEditSummary(
+                DefectEditSummaryKind.ClassBreakdown,
+                new DefectClassBreakdown(
+                    [new DefectClassCount(DefectClassification.Dust, 1)],
+                    0.9)),
+            new DefectSize(100, 80),
+            [])
+        {
+            RegionMask = new DefectMask(false, defectMask),
+            RegionRoi = new DefectRect(12, 34, 2, 2),
+            RegionWidth = 2,
+            RegionHeight = 2,
+        };
+        DefectRecipeSnapshot defectRecipe = DefectRecipeSnapshot.Create(
+            defectFrameId,
+            recipeRevision: 3,
+            new DefectSourceIdentity(123, new string('d', 64)),
+            [regionEdit]);
+        DevelopRequestResult defectRequest = DevelopRequestFactory.Create(
+            Frame(new ManualBaseRgb(0.21, 0.22, 0.23)) with
+            {
+                DefectRecipe = defectRecipe,
+            },
+            destination);
+        Check(defectRequest.IsSuccess &&
+              defectRequest.Request?.DefectRegions.Count == 1 &&
+              defectRequest.Request.DefectRegions[0].RoiX == 12 &&
+              defectRequest.Request.DefectRegions[0].RoiY == 34 &&
+              defectRequest.Request.DefectRegions[0].MaskStrideBytes == 8 &&
+              defectRequest.Request.DefectRegions[0].Strength == 0.6 &&
+              defectRequest.Request.DefectRegions[0].Mask.Span.SequenceEqual(defectMask) &&
+              defectRequest.Request.DefectEditOrder.SequenceEqual(
+              [
+                  new DevelopDefectRecipeEditRef(DevelopDefectEditKind.Region, 0),
+              ]) &&
+              defectRequest.Request.DefectSourceIdentity ==
+                  new DevelopDefectSourceIdentity(123, new string('d', 64)),
+            "develop_request_projects_persisted_region_defect");
+
+        DefectEditItem cloneEdit = new(
+            Guid.Parse("4a72f873-a8b3-44fc-a427-e57e85d7bb01"),
+            DefectEditKind.Clone,
+            Enabled: true,
+            Strength: 0.7,
+            new DefectEditLabel(DefectEditLabelKind.Clone, 12),
+            new DefectEditSummary(DefectEditSummaryKind.Clone),
+            new DefectSize(100, 80),
+            [])
+        {
+            CloneStrokes =
+            [
+                new DefectCloneStroke(
+                    [new DefectPoint(0.4, 0.5), new DefectPoint(0.45, 0.55)],
+                    -0.1,
+                    0.2,
+                    12,
+                    0.8),
+            ],
+        };
+        DefectEditItem secondRegionEdit = regionEdit with
+        {
+            Id = Guid.Parse("60db3ee5-c25e-4182-840b-8a7196190d61"),
+            RegionRoi = new DefectRect(20, 30, 2, 2),
+        };
+        DefectRecipeSnapshot orderedDefectRecipe = DefectRecipeSnapshot.Create(
+            defectFrameId,
+            recipeRevision: 4,
+            new DefectSourceIdentity(123, new string('d', 64)),
+            [regionEdit, cloneEdit, secondRegionEdit]);
+        DevelopRequestResult orderedDefectRequest = DevelopRequestFactory.Create(
+            Frame(new ManualBaseRgb(0.21, 0.22, 0.23)) with
+            {
+                DefectRecipe = orderedDefectRecipe,
+            },
+            destination);
+        Check(
+            orderedDefectRequest.IsSuccess &&
+            orderedDefectRequest.Request?.DefectRegions.Count == 2 &&
+            orderedDefectRequest.Request.DefectClones.Count == 1 &&
+            orderedDefectRequest.Request.DefectClones[0].Strength == 0.7 &&
+            orderedDefectRequest.Request.DefectClones[0].Strokes[0].OffsetX == -0.1 &&
+            orderedDefectRequest.Request.DefectEditOrder.SequenceEqual(
+            [
+                new DevelopDefectRecipeEditRef(DevelopDefectEditKind.Region, 0),
+                new DevelopDefectRecipeEditRef(DevelopDefectEditKind.Clone, 0),
+                new DevelopDefectRecipeEditRef(DevelopDefectEditKind.Region, 1),
+            ]),
+            "develop_request_preserves_interleaved_region_clone_order");
+
+        DefectRecipeSnapshot unboundRegionRecipe = DefectRecipeSnapshot.Create(
+            defectFrameId,
+            recipeRevision: 4,
+            sourceIdentity: null,
+            [regionEdit]);
+        Check(DevelopRequestFactory.Create(
+                Frame(new ManualBaseRgb(0.21, 0.22, 0.23)) with
+                {
+                    DefectRecipe = unboundRegionRecipe,
+                },
+                destination).Refusal == DevelopRequestRefusal.InvalidDefectRecipe,
+            "develop_request_rejects_unbound_region_defect_recipe");
+
+        DefectEditItem brushEdit = new(
+            Guid.Parse("43309589-b878-48d5-969e-52d00683a2f4"),
+            DefectEditKind.Brush,
+            Enabled: true,
+            Strength: 1,
+            new DefectEditLabel(DefectEditLabelKind.Brush, 1),
+            new DefectEditSummary(DefectEditSummaryKind.Brush),
+            new DefectSize(100, 80),
+            [])
+        {
+            Strokes =
+            [
+                new DefectStroke([new DefectPoint(0.2, 0.3)], 0.01),
+            ],
+        };
+        DefectRecipeSnapshot brushDefectRecipe = DefectRecipeSnapshot.Create(
+            defectFrameId,
+            recipeRevision: 5,
+            new DefectSourceIdentity(123, new string('d', 64)),
+            [regionEdit, brushEdit]);
+        DevelopRequestResult brushDefectRequest = DevelopRequestFactory.Create(
+            Frame(new ManualBaseRgb(0.21, 0.22, 0.23)) with
+            {
+                DefectRecipe = brushDefectRecipe,
+            },
+            destination);
+        Check(
+            brushDefectRequest.IsSuccess &&
+            brushDefectRequest.Request?.DefectBrushes.Count == 1 &&
+            brushDefectRequest.Request.DefectBrushes[0].Strength == 1 &&
+            brushDefectRequest.Request.DefectBrushes[0].Strokes[0].Thickness == 0.01 &&
+            brushDefectRequest.Request.DefectBrushes[0].Strokes[0].Points.SequenceEqual(
+            [
+                new DevelopDefectBrushPoint(0.2, 0.3),
+            ]) &&
+            brushDefectRequest.Request.DefectEditOrder.SequenceEqual(
+            [
+                new DevelopDefectRecipeEditRef(DevelopDefectEditKind.Region, 0),
+                new DevelopDefectRecipeEditRef(DevelopDefectEditKind.Brush, 0),
+            ]) &&
+            brushDefectRequest.Request.DefectSourceIdentity ==
+                new DevelopDefectSourceIdentity(123, new string('d', 64)),
+            "develop_request_projects_brush_and_preserves_order");
+
+        DefectEditItem invalidBrushEdit = brushEdit with
+        {
+            Strokes =
+            [
+                new DefectStroke([new DefectPoint(2, 0.3)], 0.01),
+            ],
+        };
+        DefectRecipeSnapshot invalidBrushRecipe = DefectRecipeSnapshot.Create(
+            defectFrameId,
+            recipeRevision: 6,
+            new DefectSourceIdentity(123, new string('d', 64)),
+            [invalidBrushEdit]);
+        Check(
+            DevelopRequestFactory.Create(
+                Frame(new ManualBaseRgb(0.21, 0.22, 0.23)) with
+                {
+                    DefectRecipe = invalidBrushRecipe,
+                },
+                destination).Refusal == DevelopRequestRefusal.InvalidDefectRecipe,
+            "develop_request_rejects_out_of_range_brush_geometry");
+
         Check(
             DevelopRequestFactory.Create(
                 Frame(new ManualBaseRgb(0.2, 0.2, 0.2), filmType: FilmType.BlackAndWhiteNegative),
@@ -269,6 +490,25 @@ internal static class Program
                 Frame(new ManualBaseRgb(0.2, 0.2, 0.2), emulation: FilmEmulation.None),
                 destination).Request?.FilmEmulation == FilmEmulationProfile.None,
             "develop_request_no_emulation");
+
+        Check(
+            DevelopRequestFactory.Create(
+                Frame(
+                    new ManualBaseRgb(0.2, 0.2, 0.2),
+                    filmType: FilmType.BlackAndWhiteNegative,
+                    emulation: FilmEmulation.TriX400),
+                destination).Request?.FilmEmulation == FilmEmulationProfile.TriX400,
+            "develop_request_bw_emulation");
+
+        Check(
+            DevelopRequestFactory.Create(
+                Frame(
+                    null,
+                    signal: SourceSignalKind.RenderedDigital,
+                    filmType: FilmType.ColorPositive,
+                    emulation: FilmEmulation.Vision3_500T),
+                destination).Request?.FilmEmulation == FilmEmulationProfile.Vision3_500T,
+            "develop_request_motion_picture_emulation");
 
         DevelopRequestResult auto = DevelopRequestFactory.Create(Frame(null), destination);
         Check(auto.IsSuccess, "develop_request_auto_without_manual_base_succeeds");
@@ -302,14 +542,19 @@ internal static class Program
             Frame(
                 new ManualBaseRgb(0.2, 0.2, 0.2),
                 baseRecipe: new BaseRecipe(
-                    BaseEstimationMode.Preset, "kodak-portra-400", "warm-led", null)),
+                    BaseEstimationMode.Preset,
+                    "kodak-portra-400",
+                    "warm-led",
+                    "noritsu__color-nega__kodak-portra-400")),
             destination);
         Check(
             preset.IsSuccess &&
                 preset.Request?.BaseEstimationMode == DevelopBaseEstimationMode.Preset &&
                 preset.Request?.FilmStockDminId == "kodak-portra-400" &&
-                preset.Request?.LightSourceProfileId == "warm-led",
-            "develop_request_preset_carries_film_identifiers");
+                preset.Request?.LightSourceProfileId == "warm-led" &&
+                preset.Request?.ScannerProfileId ==
+                    "noritsu__color-nega__kodak-portra-400",
+            "develop_request_carries_film_and_scanner_profile_identifiers");
         Check(
             DevelopRequestFactory.Create(
                 Frame(
@@ -318,7 +563,6 @@ internal static class Program
                 destination).Refusal == DevelopRequestRefusal.MissingFilmStock,
             "develop_request_preset_requires_film_stock");
 
-        // rendered-digital 은 네이티브도 거부하지만, 버튼을 누르기 전에 알 수 있어야 합니다.
         DevelopRequestResult digital = DevelopRequestFactory.Create(
             Frame(
                 new ManualBaseRgb(0.2, 0.2, 0.2),
@@ -326,14 +570,23 @@ internal static class Program
                 FilmType.ColorPositive),
             destination);
         Check(
-            digital.Refusal == DevelopRequestRefusal.UnsupportedDigitalSource,
-            "develop_request_digital_refused");
+            digital.IsSuccess &&
+                digital.Request?.FilmLookSourceKind == DevelopSourceKind.RenderedDigital &&
+                digital.Request?.FilmType == NegativeFilmType.Color &&
+                digital.Request?.FilmPolarity == FilmPolarity.Positive &&
+                digital.Request?.BaseEstimationMode == DevelopBaseEstimationMode.Manual &&
+                digital.Request?.DminRed == 0.0F,
+            "develop_request_digital_bypasses_negative_base");
 
+        DevelopRequestResult positiveFilm = DevelopRequestFactory.Create(
+            Frame(null, SourceSignalKind.FilmPositiveScan, FilmType.ColorPositive),
+            destination);
         Check(
-            DevelopRequestFactory.Create(
-                Frame(null, SourceSignalKind.FilmPositiveScan, FilmType.ColorPositive),
-                destination).Refusal == DevelopRequestRefusal.UnsupportedPositiveFilm,
-            "develop_request_positive_film_refused");
+            positiveFilm.IsSuccess &&
+                positiveFilm.Request?.FilmLookSourceKind == DevelopSourceKind.FilmScan &&
+                positiveFilm.Request?.FilmPolarity == FilmPolarity.Positive &&
+                positiveFilm.Request?.BaseEstimationMode == DevelopBaseEstimationMode.Manual,
+            "develop_request_positive_film_bypasses_negative_base");
 
         Check(
             DevelopRequestFactory.Create(
@@ -395,6 +648,7 @@ internal static class Program
 
         public int CallCount;
         public int LastThreadId;
+        public int CancelledCount;
 
         public DevelopExportResult Run(DevelopExportRequest request)
         {
@@ -408,19 +662,60 @@ internal static class Program
             DevelopExportRequest request,
             uint maximumWidth,
             uint maximumHeight,
-            byte[] pixels)
+            byte[] pixels,
+            DevelopRun? run = null)
         {
             _ = maximumWidth;
             _ = maximumHeight;
+            Interlocked.Increment(ref CallCount);
+            LastThreadId = Environment.CurrentManagedThreadId;
+
+            // 엔진과 같은 모양으로 흉내 냅니다. 블로킹하되 기다리는 동안 취소 래치를 보고,
+            // 취소되면 픽셀을 만들지 않고 돌아옵니다.
+            if (gate is not null)
+            {
+                while (!gate.IsSet)
+                {
+                    if (run is { IsCancelRequested: true })
+                    {
+                        Interlocked.Increment(ref CancelledCount);
+                        return CancelledResult();
+                    }
+                    Thread.Yield();
+                }
+            }
+            if (run is { IsCancelRequested: true })
+            {
+                Interlocked.Increment(ref CancelledCount);
+                return CancelledResult();
+            }
+
             // 진짜 엔진은 여기를 채웁니다. 흉내에서도 채워야 "픽셀이 돌아왔다" 는 확인이
             // 실제로 무언가를 보는 확인이 됩니다.
             if (pixels.Length > 0)
             {
                 pixels[0] = 0xFF;
             }
-            return Run(request);
+            return behaviour(request);
         }
     }
+
+    private static DevelopExportResult CancelledResult() => new(
+        succeeded: false,
+        DevelopExportStage.Decode,
+        "cancelled",
+        nativeErrorCode: 0,
+        cleanupErrorCode: 0,
+        imageWidth: 0,
+        imageHeight: 0,
+        FilmLookRoute.Identity,
+        filmLookColorApplied: false,
+        filmLookAcutanceApplied: false,
+        sourceFileBytes: 0,
+        outputFileBytes: 0,
+        filmLookWorkspaceBytes: 0,
+        wallMicroseconds: 1,
+        cancelled: true);
 
     private static DevelopExportResult OkResult() => new(
         succeeded: true,
@@ -597,6 +892,7 @@ internal static class Program
 
             SeedFrames(roots);
             VerifyLibraryDocumentRoundTrip(roots);
+            VerifyLibraryDocumentDefectProjection(isolatedBase);
         }
         finally
         {
@@ -606,6 +902,73 @@ internal static class Program
                 Directory.Delete(isolatedBase, recursive: true);
             }
         }
+    }
+
+    private static void VerifyLibraryDocumentDefectProjection(string parent)
+    {
+        StorageRootSet roots = StorageRootResolver.ResolveForTests(
+            Path.Combine(parent, "defect-projection")).Roots!;
+        Guid frameId = Guid.Parse("b7c2eea1-50cb-4b71-a97f-0b74df37cdfd");
+        byte[] mask = Enumerable.Repeat((byte)255, 16).ToArray();
+        DefectEditItem region = new(
+            Guid.Parse("a8a0ca90-e261-44fa-bcdf-902c9c6415c2"),
+            DefectEditKind.Region,
+            Enabled: true,
+            Strength: 0.7,
+            new DefectEditLabel(DefectEditLabelKind.Guided, 1),
+            new DefectEditSummary(
+                DefectEditSummaryKind.ClassBreakdown,
+                new DefectClassBreakdown(
+                    [new DefectClassCount(DefectClassification.Dust, 1)],
+                    0.8)),
+            new DefectSize(100, 80),
+            [])
+        {
+            RegionMask = new DefectMask(false, mask),
+            RegionRoi = new DefectRect(5, 7, 2, 2),
+            RegionWidth = 2,
+            RegionHeight = 2,
+        };
+        DefectRecipeSnapshot recipe = DefectRecipeSnapshot.Create(
+            frameId,
+            recipeRevision: 8,
+            new DefectSourceIdentity(456, new string('e', 64)),
+            [region]);
+
+        using (CatalogSession session = CatalogSession.Open(roots).Session!)
+        {
+            Check(session.ReadOrCreate().IsSuccess,
+                "library_document_defect_initial_create");
+            Check(session.WriteDefectRecipe(recipe).IsSuccess,
+                "library_document_defect_sidecar_write");
+            JsonObject payload = FrameRecord(
+                frameId.ToString("D"),
+                "DEFECT_0001.tif",
+                0);
+            payload["hasDefectEdits"] = true;
+            Check(session.Write(new CatalogSnapshot(
+                null,
+                new Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>>
+                {
+                    [CatalogEntityTable.Frames] =
+                    [new CatalogEntityRow(frameId.ToString("D"), payload)],
+                })).IsSuccess,
+                "library_document_defect_catalog_write");
+        }
+
+        using LibraryDocument document = LibraryDocument.Open(roots).Document!;
+        Check(document.Frames.Count == 1 &&
+              document.Frames[0].DefectRecipe?.RecipeRevision == 8,
+            "library_document_restart_loads_defect_sidecar");
+        DevelopRequestResult request = DevelopRequestFactory.Create(
+            document.Frames[0],
+            Path.Combine(parent, "defect-output.png"));
+        Check(request.IsSuccess &&
+              request.Request?.DefectRegions.Count == 1 &&
+              request.Request.DefectRegions[0].RoiX == 5 &&
+              request.Request.DefectRegions[0].RoiY == 7 &&
+              request.Request.DefectRegions[0].Mask.Span.SequenceEqual(mask),
+            "library_document_restart_reapplies_defect_recipe_to_pipeline");
     }
 
     private static void SeedFrames(StorageRootSet roots)
@@ -751,6 +1114,15 @@ internal static class Program
             Check(
                 positive.Detail.Contains("Positive", StringComparison.OrdinalIgnoreCase),
                 "library_item_shows_positive_reason");
+
+            LibraryFrameListItem digital = new(Frame(
+                null,
+                SourceSignalKind.RenderedDigital,
+                FilmType.ColorPositive));
+            Check(digital.CanDevelop, "library_item_rendered_digital_can_develop");
+            Check(
+                digital.Detail == @"C:\scans\IMG_0001.tif",
+                "library_item_rendered_digital_shows_source");
 
             Check(
                 LibraryFrameListItems.IssueSummary(
@@ -1128,14 +1500,14 @@ internal static class Program
             Check(!panel.CanEditBase, "panel_positive_frame_cannot_edit_base");
             Check(panel.SetManualBase(0.3, 0.3, 0.3) == LibraryFrameError.InvalidDevelopRoute,
                 "panel_rejects_manual_base_for_positive_frame");
-            Check(panel.SetContrast(0.3) == LibraryFrameError.InvalidDevelopRoute,
-                "panel_rejects_tone_for_positive_frame");
-            Check(panel.SetCurveHighlights(0.3) == LibraryFrameError.InvalidDevelopRoute,
-                "panel_rejects_curve_for_positive_frame");
-            Check(panel.SetPointCurves(PointCurveRecipe.Identity) == LibraryFrameError.InvalidDevelopRoute,
-                "panel_rejects_point_curve_for_positive_frame");
-            Check(panel.SetColorMixer(ColorMixerRecipe.Identity) == LibraryFrameError.InvalidDevelopRoute,
-                "panel_rejects_color_mixer_for_positive_frame");
+            Check(panel.SetContrast(0.3) == LibraryFrameError.None,
+                "panel_edits_tone_for_positive_frame");
+            Check(panel.SetCurveHighlights(0.3) == LibraryFrameError.None,
+                "panel_edits_curve_for_positive_frame");
+            Check(panel.SetPointCurves(PointCurveRecipe.Identity) == LibraryFrameError.None,
+                "panel_edits_point_curve_for_positive_frame");
+            Check(panel.SetColorMixer(ColorMixerRecipe.Identity) == LibraryFrameError.None,
+                "panel_edits_color_mixer_for_positive_frame");
             Check(panel.Select("frame-2"), "panel_reselects_developable_frame");
 
             Check(panel.Save() == CatalogStoreError.None, "panel_save");
@@ -1366,7 +1738,11 @@ internal static class Program
         started.GetAwaiter().GetResult();
 
         Check(exporter.CallCount == 2, "preview_coalesces_to_one_pending");
-        Check(delivered.Count == 2, "preview_delivers_first_and_last");
+        // 겹친 요청은 돌고 있던 렌더를 취소합니다. 그 결과는 이미 지나간 상태이고 픽셀도
+        // 없으므로 화면에 배달하지 않습니다. 사용자에게 중요한 계약 — **마지막 요청은 반드시
+        // 그려진다** — 은 그대로입니다.
+        Check(exporter.CancelledCount == 1, "preview_cancels_the_superseded_render");
+        Check(delivered.Count == 1, "preview_delivers_only_the_last_request");
         Check(!coordinator.IsRendering, "preview_clears_rendering_flag");
 
         // 요청이 겹치지 않으면 그냥 매번 그립니다.

@@ -8,11 +8,15 @@ public interface IDevelopExporter
 {
     DevelopExportResult Run(DevelopExportRequest request);
 
+    /// <param name="run">
+    /// 실행 중 취소하고 진행도를 읽는 손잡이입니다. null 이면 끝까지 블로킹합니다.
+    /// </param>
     DevelopExportResult Preview(
         DevelopExportRequest request,
         uint maximumWidth,
         uint maximumHeight,
-        byte[] pixels);
+        byte[] pixels,
+        DevelopRun? run = null);
 }
 
 /// <summary>제품 구현. 블로킹이며 워커 스레드에서만 불러야 합니다.</summary>
@@ -25,8 +29,9 @@ public sealed class NativeDevelopExporterAdapter : IDevelopExporter
         DevelopExportRequest request,
         uint maximumWidth,
         uint maximumHeight,
-        byte[] pixels) =>
-        NativeDevelopExporter.Preview(request, maximumWidth, maximumHeight, pixels);
+        byte[] pixels,
+        DevelopRun? run = null) =>
+        NativeDevelopExporter.Preview(request, maximumWidth, maximumHeight, pixels, run);
 }
 
 public enum DevelopExportOutcomeKind
@@ -42,6 +47,11 @@ public enum DevelopExportOutcomeKind
 
     /// <summary>이미 현상이 돌고 있어 시작하지 않았습니다.</summary>
     Busy,
+
+    /// <summary>
+    /// 더 새로운 요청이 이 실행을 취소했습니다. 실패가 아니며 픽셀도 파일도 남기지 않습니다.
+    /// </summary>
+    Cancelled,
 }
 
 public sealed record DevelopExportOutcome(

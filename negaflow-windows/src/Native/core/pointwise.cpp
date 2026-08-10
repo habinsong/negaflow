@@ -4,43 +4,6 @@
 #include <cmath>
 
 namespace negaflow::core {
-namespace {
-
-[[nodiscard]] bool finite_rgb(const Rgba32F pixel) noexcept {
-    return std::isfinite(pixel.red) && std::isfinite(pixel.green) &&
-           std::isfinite(pixel.blue);
-}
-
-template <typename Transform>
-[[nodiscard]] KernelStatus apply_pointwise(
-    const ConstImageView input,
-    const ImageView output,
-    Transform transform) noexcept {
-    const KernelStatus compatibility_status = validate_compatible_views(input, output);
-    if (compatibility_status != KernelStatus::ok) {
-        return compatibility_status;
-    }
-    const KernelStatus input_status = validate_finite_pixels(input);
-    if (input_status != KernelStatus::ok) {
-        return input_status;
-    }
-
-    for (std::uint32_t row = 0U; row < input.height; ++row) {
-        const std::size_t input_offset = static_cast<std::size_t>(row) * input.stride_pixels;
-        const std::size_t output_offset = static_cast<std::size_t>(row) * output.stride_pixels;
-        for (std::uint32_t column = 0U; column < input.width; ++column) {
-            const Rgba32F source = input.pixels[input_offset + column];
-            const Rgba32F result = transform(source);
-            if (!finite_rgb(result)) {
-                return KernelStatus::non_finite_output;
-            }
-            output.pixels[output_offset + column] = result;
-        }
-    }
-    return KernelStatus::ok;
-}
-
-}  // namespace
 
 KernelStatus apply_exposure(
     const ConstImageView input,

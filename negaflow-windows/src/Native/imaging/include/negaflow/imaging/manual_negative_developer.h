@@ -1,6 +1,7 @@
 #pragma once
 
 #include "negaflow/core/pixel.h"
+#include "negaflow/imaging/muted_scene_vibrance.h"
 #include "negaflow/imaging/scanner_to_working.h"
 
 #include <array>
@@ -37,6 +38,7 @@ struct ManualNegativeDevelopParameters final {
 struct ManualNegativeDevelopInfo final {
     std::array<float, 3> applied_dmin{};
     std::array<float, 3> dmax_normalized{};
+    MutedSceneVibranceInfo muted_scene_vibrance{};
     negaflow::core::KernelStatus kernel_status{
         negaflow::core::KernelStatus::invalid_argument};
 };
@@ -51,6 +53,7 @@ struct ManualNegativeDevelopResult final {
 // - Dmin is clamped to [1e-3, 1] per channel;
 // - a sufficiently large source uses its robust scene density range; tiny or malformed
 //   sources retain the selected fixed print response normal range;
+// - non-preset color output receives the macOS muted-scene vibrance gate;
 // - the owned WorkingImage is transformed in place, avoiding a second full-frame buffer.
 [[nodiscard]] ManualNegativeDevelopResult develop_manual_negative(
     WorkingImage image,

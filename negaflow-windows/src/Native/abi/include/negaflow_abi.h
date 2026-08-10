@@ -54,6 +54,9 @@ typedef struct nf_build_info_v1 {
 #define NF_FILM_TYPE_COLOR 0U
 #define NF_FILM_TYPE_BLACK_AND_WHITE 1U
 
+#define NF_FILM_POLARITY_NEGATIVE 0U
+#define NF_FILM_POLARITY_POSITIVE 1U
+
 #define NF_BASE_ESTIMATION_AUTO 0U
 #define NF_BASE_ESTIMATION_PRESET 1U
 #define NF_BASE_ESTIMATION_MANUAL 2U
@@ -71,6 +74,11 @@ typedef struct nf_build_info_v1 {
 #define NF_DEVELOP_SOURCE_FILM_SCAN 0U
 #define NF_DEVELOP_SOURCE_RENDERED_DIGITAL 1U
 
+#define NF_FILM_LOOK_ROUTE_INVALID 0U
+#define NF_FILM_LOOK_ROUTE_IDENTITY 1U
+#define NF_FILM_LOOK_ROUTE_FILM_SCAN_EMULATION 2U
+#define NF_FILM_LOOK_ROUTE_DIGITAL_FILM_LOOK 3U
+
 /* Stage identifiers mirror negaflow::pipeline::DevelopExportStage. A failure
    reports the stage together with that stage's own status name, so the caller
    never has to collapse two different refusals into one code. */
@@ -84,6 +92,31 @@ typedef struct nf_build_info_v1 {
 #define NF_DEVELOP_STAGE_TONE_ADJUST 7U
 #define NF_DEVELOP_STAGE_FILM_LOOK 8U
 #define NF_DEVELOP_STAGE_OUTPUT 9U
+#define NF_DEVELOP_STAGE_GRAIN_MEND 10U
+#define NF_DEVELOP_STAGE_FILM_SCAN_DENOISE 11U
+#define NF_DEVELOP_STAGE_LOCAL_DODGE_BURN 12U
+#define NF_DEVELOP_STAGE_TEXTURE 13U
+#define NF_DEVELOP_STAGE_BLACK_AND_WHITE 14U
+#define NF_DEVELOP_STAGE_IMAGE_TRANSFORM 15U
+#define NF_DEVELOP_STAGE_COLOR_MODEL 16U
+#define NF_DEVELOP_STAGE_SCENE_CORRECTION 17U
+#define NF_DEVELOP_STAGE_TARGET_GRADE 18U
+#define NF_DEVELOP_STAGE_DEFECT_COMPONENT_REPAIR 19U
+#define NF_DEVELOP_STAGE_DEFECT_CLONE_STAMP 20U
+#define NF_DEVELOP_STAGE_DEFECT_BRUSH 21U
+
+#define NF_DEVELOP_TARGET_MAIN 0U
+#define NF_DEVELOP_TARGET_PRINT 1U
+#define NF_DEVELOP_TARGET_NORITSU 2U
+#define NF_DEVELOP_TARGET_SP3000 3U
+#define NF_DEVELOP_TARGET_F135 4U
+#define NF_DEVELOP_TARGET_HR 5U
+#define NF_DEVELOP_TARGET_RESCUE 6U
+
+#define NF_FILM_SCAN_DENOISE_COLOR_NEGATIVE 0U
+#define NF_FILM_SCAN_DENOISE_COLOR_POSITIVE 1U
+#define NF_FILM_SCAN_DENOISE_BLACK_AND_WHITE_NEGATIVE 2U
+#define NF_FILM_SCAN_DENOISE_BLACK_AND_WHITE_POSITIVE 3U
 
 #define NF_FAILURE_NAME_CAPACITY 64U
 #define NF_POINT_CURVE_MAX_POINTS 64U
@@ -320,6 +353,344 @@ typedef struct nf_develop_export_request_v7 {
     float color_grading_balance;
 } nf_develop_export_request_v7;
 
+/* v8 preserves the v7 prefix and appends macOS DevelopParameters.defectRemoval.
+   Zero is identity; finite values from zero through one are accepted. */
+typedef struct nf_develop_export_request_v8 {
+    uint32_t struct_size;
+    const wchar_t* source_path;
+    const wchar_t* destination_path;
+    uint32_t output_format;
+    uint32_t film_type;
+    uint32_t base_estimation_mode;
+    float dmin[3];
+    float exposure_stops;
+    float contrast;
+    float highlights;
+    float lights;
+    float darks;
+    float shadows;
+    uint32_t film_look_source_kind;
+    uint32_t film_emulation;
+    double film_emulation_intensity;
+    uint32_t rows_per_copy;
+    float density;
+    float highlight;
+    float shadow;
+    float whites;
+    float blacks;
+    const wchar_t* film_stock_dmin_id;
+    const wchar_t* light_source_profile_id;
+    nf_point_curve_v1 point_curve_rgb;
+    nf_point_curve_v1 point_curve_red;
+    nf_point_curve_v1 point_curve_green;
+    nf_point_curve_v1 point_curve_blue;
+    float color_mixer_hue[8];
+    float color_mixer_saturation[8];
+    float color_mixer_luminance[8];
+    float color_grading_shadows_hue;
+    float color_grading_shadows_saturation;
+    float color_grading_shadows_luminance;
+    float color_grading_midtones_hue;
+    float color_grading_midtones_saturation;
+    float color_grading_midtones_luminance;
+    float color_grading_highlights_hue;
+    float color_grading_highlights_saturation;
+    float color_grading_highlights_luminance;
+    float color_grading_blending;
+    float color_grading_balance;
+    double defect_removal_strength;
+} nf_develop_export_request_v8;
+
+/* v9 preserves the complete v8 byte prefix and appends the macOS
+   FilmScanDenoise master, five axes, and explicit four-way film profile.
+   All controls are finite normalized floats. */
+typedef struct nf_develop_export_request_v9 {
+    nf_develop_export_request_v8 v8;
+    float noise_reduction_strength;
+    float noise_reduction_luma;
+    float noise_reduction_chroma;
+    float noise_reduction_dark_tone;
+    float noise_reduction_detail;
+    float noise_reduction_grain_protect;
+    uint32_t noise_reduction_film_profile;
+} nf_develop_export_request_v9;
+
+/* v10 preserves the v9 prefix and appends the macOS Texture controls. Grain,
+   sharpness and halation are 0...1; clarity and vignette are -1...1. */
+typedef struct nf_develop_export_request_v10 {
+    nf_develop_export_request_v9 v9;
+    float texture_grain;
+    float texture_sharpness;
+    float texture_halation;
+    float texture_clarity;
+    float texture_vignette;
+} nf_develop_export_request_v10;
+
+/* v11 preserves the v10 prefix and appends the fixed macOS B&W toning and
+   final ImageTransform recipe. Crop coordinates are normalized y-up. */
+typedef struct nf_develop_export_request_v11 {
+    nf_develop_export_request_v10 v10;
+    uint32_t bw_toning_mode;
+    double bw_toning_shadow_hue;
+    double bw_toning_highlight_hue;
+    double bw_toning_strength;
+    uint32_t image_rotation;
+    uint32_t flip_horizontal;
+    uint32_t flip_vertical;
+    uint32_t has_crop;
+    double crop_x;
+    double crop_y;
+    double crop_width;
+    double crop_height;
+    double straighten_angle;
+} nf_develop_export_request_v11;
+
+/* Local Dodge/Burn uses a flat, caller-owned payload because masks contain
+   variable-length stroke and point arrays. All pointers remain valid only for
+   the synchronous call; the engine copies the recipe before processing. */
+#define NF_LOCAL_DODGE_BURN_MAX_ADJUSTMENTS 64U
+#define NF_LOCAL_DODGE_BURN_MAX_STROKES 8192U
+#define NF_LOCAL_DODGE_BURN_MAX_POINTS 4096U
+
+#define NF_LOCAL_DODGE_BURN_MODE_DODGE 0U
+#define NF_LOCAL_DODGE_BURN_MODE_BURN 1U
+
+#define NF_LOCAL_DODGE_BURN_MASK_BRUSH 0U
+#define NF_LOCAL_DODGE_BURN_MASK_RADIAL 1U
+#define NF_LOCAL_DODGE_BURN_MASK_LINEAR 2U
+#define NF_LOCAL_DODGE_BURN_MASK_POLYGON 3U
+
+typedef struct nf_local_dodge_burn_point_v1 {
+    float x;
+    float y;
+} nf_local_dodge_burn_point_v1;
+
+typedef struct nf_local_dodge_burn_stroke_v1 {
+    uint32_t point_offset;
+    uint32_t point_count;
+    float thickness;
+    float feather;
+} nf_local_dodge_burn_stroke_v1;
+
+typedef struct nf_local_dodge_burn_adjustment_v1 {
+    uint32_t mode;
+    uint32_t enabled;
+    uint32_t mask_kind;
+    uint32_t stroke_offset;
+    uint32_t stroke_count;
+    uint32_t point_offset;
+    uint32_t point_count;
+    float amount;
+    float center_x;
+    float center_y;
+    float radius;
+    float feather;
+    float start_x;
+    float start_y;
+    float end_x;
+    float end_y;
+} nf_local_dodge_burn_adjustment_v1;
+
+/* v12 preserves the v11 prefix and appends the variable Local Dodge/Burn
+   recipe. Reserved fields must be zero. */
+typedef struct nf_develop_export_request_v12 {
+    nf_develop_export_request_v11 v11;
+    const nf_local_dodge_burn_adjustment_v1* local_adjustments;
+    uint32_t local_adjustment_count;
+    uint32_t local_adjustment_reserved;
+    const nf_local_dodge_burn_stroke_v1* local_strokes;
+    uint32_t local_stroke_count;
+    uint32_t local_stroke_reserved;
+    const nf_local_dodge_burn_point_v1* local_points;
+    uint32_t local_point_count;
+    uint32_t local_point_reserved;
+} nf_develop_export_request_v12;
+
+/* v13 preserves the complete v12 prefix and appends the fixed macOS
+   ColorModel controls in their stored -1...1 slider domain. */
+typedef struct nf_develop_export_request_v13 {
+    nf_develop_export_request_v12 v12;
+    float warmth;
+    float tint;
+    float color_depth;
+    float vibrance;
+    float saturation;
+    float red_primary;
+    float green_primary;
+    float blue_primary;
+} nf_develop_export_request_v13;
+
+/* v14 preserves the complete v13 prefix and appends the two opt-in macOS
+   scene-adaptive correction flags. Values must be zero or one. */
+typedef struct nf_develop_export_request_v14 {
+    nf_develop_export_request_v13 v13;
+    uint32_t auto_levels;
+    uint32_t auto_neutral_balance;
+} nf_develop_export_request_v14;
+
+/* v15 preserves the complete v14 prefix and appends the macOS DevelopTarget.
+   reserved must be zero. */
+typedef struct nf_develop_export_request_v15 {
+    nf_develop_export_request_v14 v14;
+    uint32_t develop_target;
+    uint32_t reserved;
+} nf_develop_export_request_v15;
+
+/* v16 preserves the complete v15 prefix and appends the optional immutable
+   scanner profile identifier. UTF-16 storage remains caller-owned for the
+   synchronous call. A null pointer means no scanner profile grade. */
+typedef struct nf_develop_export_request_v16 {
+    nf_develop_export_request_v15 v15;
+    const wchar_t* scanner_profile_id;
+} nf_develop_export_request_v16;
+
+/* v17 preserves the complete v16 prefix and appends film polarity separately
+   from the Color/B&W axis. reserved must be zero. */
+typedef struct nf_develop_export_request_v17 {
+    nf_develop_export_request_v16 v16;
+    uint32_t film_polarity;
+    uint32_t reserved;
+} nf_develop_export_request_v17;
+
+/* The mask bytes for each edit are ROI-local, one byte per pixel, first row at
+   the top. ROI y is bottom-origin in raw-image pixels, matching the fixed macOS
+   recipe. The edit list is applied in order before negative development. */
+#define NF_DEFECT_REGION_MAX_EDITS 4096U
+#define NF_DEFECT_REGION_MAX_MASK_BYTES (512U * 1024U * 1024U)
+
+typedef struct nf_defect_region_edit_v1 {
+    uint32_t enabled;
+    uint32_t roi_x;
+    uint32_t roi_y;
+    uint32_t width;
+    uint32_t height;
+    uint32_t mask_stride_bytes;
+    uint32_t mask_offset;
+    uint32_t mask_byte_count;
+    double strength;
+    uint32_t has_preferred_angle;
+    uint32_t reserved;
+    double preferred_angle_degrees;
+} nf_defect_region_edit_v1;
+
+/* v18 preserves the complete v17 prefix. Descriptor and flat mask storage stay
+   caller-owned for the synchronous preview/export call. Reserved fields are zero. */
+typedef struct nf_develop_export_request_v18 {
+    nf_develop_export_request_v17 v17;
+    const nf_defect_region_edit_v1* defect_region_edits;
+    uint32_t defect_region_edit_count;
+    uint32_t defect_region_reserved;
+    const uint8_t* defect_mask_bytes;
+    uint32_t defect_mask_byte_count;
+    uint32_t defect_mask_reserved;
+} nf_develop_export_request_v18;
+
+/* v19 binds a non-empty defect-region recipe to the exact source bytes. The
+   digest points to exactly 32 caller-owned bytes for the synchronous call. A
+   request without region edits must leave all appended fields zero/null. */
+typedef struct nf_develop_export_request_v19 {
+    nf_develop_export_request_v18 v18;
+    uint64_t defect_source_file_bytes;
+    const uint8_t* defect_source_sha256;
+    uint32_t has_defect_source_identity;
+    uint32_t reserved;
+} nf_develop_export_request_v19;
+
+#define NF_DEFECT_CLONE_MAX_EDITS 4096U
+#define NF_DEFECT_CLONE_MAX_STROKES 100000U
+#define NF_DEFECT_CLONE_MAX_POINTS 5000000U
+#define NF_DEFECT_RECIPE_MAX_ORDERED_EDITS 8192U
+
+#define NF_DEFECT_RECIPE_EDIT_REGION 0U
+#define NF_DEFECT_RECIPE_EDIT_CLONE 1U
+#define NF_DEFECT_RECIPE_EDIT_BRUSH 2U
+
+typedef struct nf_defect_clone_point_v1 {
+    double x;
+    double y;
+} nf_defect_clone_point_v1;
+
+typedef struct nf_defect_clone_stroke_v1 {
+    uint32_t point_offset;
+    uint32_t point_count;
+    double offset_x;
+    double offset_y;
+    double diameter_pixels;
+    double hardness;
+} nf_defect_clone_stroke_v1;
+
+typedef struct nf_defect_clone_edit_v1 {
+    uint32_t enabled;
+    uint32_t stroke_offset;
+    uint32_t stroke_count;
+    uint32_t reserved;
+    double strength;
+} nf_defect_clone_edit_v1;
+
+typedef struct nf_defect_recipe_edit_ref_v1 {
+    uint32_t kind;
+    uint32_t index;
+} nf_defect_recipe_edit_ref_v1;
+
+/* v20 preserves the complete v19 prefix and appends Clone Stamp layers plus
+   one order list covering every region and clone descriptor exactly once.
+   Points are normalized raw-image coordinates with a top-left origin. */
+typedef struct nf_develop_export_request_v20 {
+    nf_develop_export_request_v19 v19;
+    const nf_defect_clone_edit_v1* defect_clone_edits;
+    uint32_t defect_clone_edit_count;
+    uint32_t defect_clone_edit_reserved;
+    const nf_defect_clone_stroke_v1* defect_clone_strokes;
+    uint32_t defect_clone_stroke_count;
+    uint32_t defect_clone_stroke_reserved;
+    const nf_defect_clone_point_v1* defect_clone_points;
+    uint32_t defect_clone_point_count;
+    uint32_t defect_clone_point_reserved;
+    const nf_defect_recipe_edit_ref_v1* defect_edit_order;
+    uint32_t defect_edit_order_count;
+    uint32_t defect_edit_order_reserved;
+} nf_develop_export_request_v20;
+
+#define NF_DEFECT_BRUSH_MAX_EDITS 4096U
+#define NF_DEFECT_BRUSH_MAX_STROKES 100000U
+#define NF_DEFECT_BRUSH_MAX_POINTS 5000000U
+
+typedef struct nf_defect_brush_point_v1 {
+    double x;
+    double y;
+} nf_defect_brush_point_v1;
+
+typedef struct nf_defect_brush_stroke_v1 {
+    uint32_t point_offset;
+    uint32_t point_count;
+    double thickness;
+} nf_defect_brush_stroke_v1;
+
+typedef struct nf_defect_brush_edit_v1 {
+    uint32_t enabled;
+    uint32_t stroke_offset;
+    uint32_t stroke_count;
+    uint32_t reserved;
+    double strength;
+} nf_defect_brush_edit_v1;
+
+/* v21 preserves the complete v20 prefix and appends raw-image Brush layers.
+   Points use normalized top-left coordinates and thickness is a fraction of
+   the raw image's shorter dimension. The v20 order list covers region, clone,
+   and brush descriptors exactly once. */
+typedef struct nf_develop_export_request_v21 {
+    nf_develop_export_request_v20 v20;
+    const nf_defect_brush_edit_v1* defect_brush_edits;
+    uint32_t defect_brush_edit_count;
+    uint32_t defect_brush_edit_reserved;
+    const nf_defect_brush_stroke_v1* defect_brush_strokes;
+    uint32_t defect_brush_stroke_count;
+    uint32_t defect_brush_stroke_reserved;
+    const nf_defect_brush_point_v1* defect_brush_points;
+    uint32_t defect_brush_point_count;
+    uint32_t defect_brush_point_reserved;
+} nf_develop_export_request_v21;
+
 typedef struct nf_develop_export_result_v1 {
     uint32_t struct_size;
     uint32_t succeeded;
@@ -359,6 +730,54 @@ typedef struct nf_develop_export_result_v2 {
     float applied_dmin[3];
     uint32_t base_source;
 } nf_develop_export_result_v2;
+
+/* v3 keeps every v2 field at the same offset and appends the cancellation answer.
+   `cancelled` is 1 when the caller's run state ended the call; `failed_stage` then names
+   the stage that was interrupted and `failure_name` is "cancelled". A cancelled call
+   publishes nothing — no destination file, no preview pixels. */
+typedef struct nf_develop_export_result_v3 {
+    uint32_t struct_size;
+    uint32_t succeeded;
+    uint32_t failed_stage;
+    char failure_name[NF_FAILURE_NAME_CAPACITY];
+    uint32_t native_error_code;
+    uint32_t cleanup_error_code;
+    uint32_t image_width;
+    uint32_t image_height;
+    uint32_t film_look_route;
+    uint32_t film_look_color_applied;
+    uint32_t film_look_acutance_applied;
+    uint64_t source_file_bytes;
+    uint64_t output_file_bytes;
+    uint64_t film_look_workspace_bytes;
+    uint64_t wall_microseconds;
+    float applied_dmin[3];
+    uint32_t base_source;
+    uint32_t cancelled;
+    uint32_t reserved;
+} nf_develop_export_result_v3;
+
+#define NF_DEVELOP_PROGRESS_COMPLETE 1000U
+
+/* Shared, caller-owned run state for one develop call.
+   The caller writes `cancel_requested` (any non-zero value) at any time from any thread;
+   the engine only reads it. The engine writes `stage` and `progress_permille` as the run
+   advances, and the caller polls them on its own timer. Nothing crosses the boundary as a
+   callback, so there is no reentrancy to reason about and nothing to keep alive but this
+   struct — which must stay pinned and alive for the whole call.
+
+   Cancellation is cooperative and checked between stages, inside the TIFF decode per row
+   chunk, and inside the optional source hash. It is deliberately not checked once the
+   output stage has begun, so a cancel never leaves a partly written file behind.
+
+   The progress figure is an estimate weighted by which stages this request will actually
+   run. It never moves backwards and reaches NF_DEVELOP_PROGRESS_COMPLETE only on success. */
+typedef struct nf_develop_run_state_v1 {
+    uint32_t struct_size;
+    uint32_t cancel_requested;
+    uint32_t stage;
+    uint32_t progress_permille;
+} nf_develop_run_state_v1;
 
 /* The bounds the engine's own validator enforces. Exported so a UI does not have to
    duplicate them and cannot drift into offering values the engine will refuse. */
@@ -406,6 +825,48 @@ NF_API nf_status_t NF_CALL nf_develop_export_v6(
     nf_develop_export_result_v2* result);
 NF_API nf_status_t NF_CALL nf_develop_export_v7(
     const nf_develop_export_request_v7* request,
+    nf_develop_export_result_v2* result);
+NF_API nf_status_t NF_CALL nf_develop_export_v8(
+    const nf_develop_export_request_v8* request,
+    nf_develop_export_result_v2* result);
+NF_API nf_status_t NF_CALL nf_develop_export_v9(
+    const nf_develop_export_request_v9* request,
+    nf_develop_export_result_v2* result);
+NF_API nf_status_t NF_CALL nf_develop_export_v10(
+    const nf_develop_export_request_v10* request,
+    nf_develop_export_result_v2* result);
+NF_API nf_status_t NF_CALL nf_develop_export_v11(
+    const nf_develop_export_request_v11* request,
+    nf_develop_export_result_v2* result);
+NF_API nf_status_t NF_CALL nf_develop_export_v12(
+    const nf_develop_export_request_v12* request,
+    nf_develop_export_result_v2* result);
+NF_API nf_status_t NF_CALL nf_develop_export_v13(
+    const nf_develop_export_request_v13* request,
+    nf_develop_export_result_v2* result);
+NF_API nf_status_t NF_CALL nf_develop_export_v14(
+    const nf_develop_export_request_v14* request,
+    nf_develop_export_result_v2* result);
+NF_API nf_status_t NF_CALL nf_develop_export_v15(
+    const nf_develop_export_request_v15* request,
+    nf_develop_export_result_v2* result);
+NF_API nf_status_t NF_CALL nf_develop_export_v16(
+    const nf_develop_export_request_v16* request,
+    nf_develop_export_result_v2* result);
+NF_API nf_status_t NF_CALL nf_develop_export_v17(
+    const nf_develop_export_request_v17* request,
+    nf_develop_export_result_v2* result);
+NF_API nf_status_t NF_CALL nf_develop_export_v18(
+    const nf_develop_export_request_v18* request,
+    nf_develop_export_result_v2* result);
+NF_API nf_status_t NF_CALL nf_develop_export_v19(
+    const nf_develop_export_request_v19* request,
+    nf_develop_export_result_v2* result);
+NF_API nf_status_t NF_CALL nf_develop_export_v20(
+    const nf_develop_export_request_v20* request,
+    nf_develop_export_result_v2* result);
+NF_API nf_status_t NF_CALL nf_develop_export_v21(
+    const nf_develop_export_request_v21* request,
     nf_develop_export_result_v2* result);
 
 NF_API nf_status_t NF_CALL nf_get_tone_limits_v1(nf_tone_limits_v1* output);
@@ -463,6 +924,122 @@ NF_API nf_status_t NF_CALL nf_develop_preview_v7(
     uint8_t* pixels,
     uint32_t pixel_capacity_bytes,
     nf_develop_export_result_v2* result);
+NF_API nf_status_t NF_CALL nf_develop_preview_v8(
+    const nf_develop_export_request_v8* request,
+    uint32_t maximum_width,
+    uint32_t maximum_height,
+    uint8_t* pixels,
+    uint32_t pixel_capacity_bytes,
+    nf_develop_export_result_v2* result);
+NF_API nf_status_t NF_CALL nf_develop_preview_v9(
+    const nf_develop_export_request_v9* request,
+    uint32_t maximum_width,
+    uint32_t maximum_height,
+    uint8_t* pixels,
+    uint32_t pixel_capacity_bytes,
+    nf_develop_export_result_v2* result);
+NF_API nf_status_t NF_CALL nf_develop_preview_v10(
+    const nf_develop_export_request_v10* request,
+    uint32_t maximum_width,
+    uint32_t maximum_height,
+    uint8_t* pixels,
+    uint32_t pixel_capacity_bytes,
+    nf_develop_export_result_v2* result);
+NF_API nf_status_t NF_CALL nf_develop_preview_v11(
+    const nf_develop_export_request_v11* request,
+    uint32_t maximum_width,
+    uint32_t maximum_height,
+    uint8_t* pixels,
+    uint32_t pixel_capacity_bytes,
+    nf_develop_export_result_v2* result);
+NF_API nf_status_t NF_CALL nf_develop_preview_v12(
+    const nf_develop_export_request_v12* request,
+    uint32_t maximum_width,
+    uint32_t maximum_height,
+    uint8_t* pixels,
+    uint32_t pixel_capacity_bytes,
+    nf_develop_export_result_v2* result);
+NF_API nf_status_t NF_CALL nf_develop_preview_v13(
+    const nf_develop_export_request_v13* request,
+    uint32_t maximum_width,
+    uint32_t maximum_height,
+    uint8_t* pixels,
+    uint32_t pixel_capacity_bytes,
+    nf_develop_export_result_v2* result);
+NF_API nf_status_t NF_CALL nf_develop_preview_v14(
+    const nf_develop_export_request_v14* request,
+    uint32_t maximum_width,
+    uint32_t maximum_height,
+    uint8_t* pixels,
+    uint32_t pixel_capacity_bytes,
+    nf_develop_export_result_v2* result);
+NF_API nf_status_t NF_CALL nf_develop_preview_v15(
+    const nf_develop_export_request_v15* request,
+    uint32_t maximum_width,
+    uint32_t maximum_height,
+    uint8_t* pixels,
+    uint32_t pixel_capacity_bytes,
+    nf_develop_export_result_v2* result);
+NF_API nf_status_t NF_CALL nf_develop_preview_v16(
+    const nf_develop_export_request_v16* request,
+    uint32_t maximum_width,
+    uint32_t maximum_height,
+    uint8_t* pixels,
+    uint32_t pixel_capacity_bytes,
+    nf_develop_export_result_v2* result);
+NF_API nf_status_t NF_CALL nf_develop_preview_v17(
+    const nf_develop_export_request_v17* request,
+    uint32_t maximum_width,
+    uint32_t maximum_height,
+    uint8_t* pixels,
+    uint32_t pixel_capacity_bytes,
+    nf_develop_export_result_v2* result);
+NF_API nf_status_t NF_CALL nf_develop_preview_v18(
+    const nf_develop_export_request_v18* request,
+    uint32_t maximum_width,
+    uint32_t maximum_height,
+    uint8_t* pixels,
+    uint32_t pixel_capacity_bytes,
+    nf_develop_export_result_v2* result);
+NF_API nf_status_t NF_CALL nf_develop_preview_v19(
+    const nf_develop_export_request_v19* request,
+    uint32_t maximum_width,
+    uint32_t maximum_height,
+    uint8_t* pixels,
+    uint32_t pixel_capacity_bytes,
+    nf_develop_export_result_v2* result);
+NF_API nf_status_t NF_CALL nf_develop_preview_v20(
+    const nf_develop_export_request_v20* request,
+    uint32_t maximum_width,
+    uint32_t maximum_height,
+    uint8_t* pixels,
+    uint32_t pixel_capacity_bytes,
+    nf_develop_export_result_v2* result);
+NF_API nf_status_t NF_CALL nf_develop_preview_v21(
+    const nf_develop_export_request_v21* request,
+    uint32_t maximum_width,
+    uint32_t maximum_height,
+    uint8_t* pixels,
+    uint32_t pixel_capacity_bytes,
+    nf_develop_export_result_v2* result);
+
+/* v22 runs the same recipe as v21 — the develop request did not change, so it keeps the
+   v21 struct rather than minting an identical copy. What changed is that the caller can
+   now steer the call: `run_state` may be null for the old blocking behaviour, or point at
+   a pinned nf_develop_run_state_v1 to cancel the run and watch it advance. The result is
+   v3 so cancellation is a field rather than a string comparison. */
+NF_API nf_status_t NF_CALL nf_develop_export_v22(
+    const nf_develop_export_request_v21* request,
+    nf_develop_run_state_v1* run_state,
+    nf_develop_export_result_v3* result);
+NF_API nf_status_t NF_CALL nf_develop_preview_v22(
+    const nf_develop_export_request_v21* request,
+    uint32_t maximum_width,
+    uint32_t maximum_height,
+    uint8_t* pixels,
+    uint32_t pixel_capacity_bytes,
+    nf_develop_run_state_v1* run_state,
+    nf_develop_export_result_v3* result);
 NF_API nf_status_t NF_CALL nf_get_negative_limits_v1(nf_negative_limits_v1* output);
 
 #ifdef __cplusplus

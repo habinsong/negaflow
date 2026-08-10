@@ -1,4 +1,4 @@
-# 압축 TIFF LZW 의미 사전 검사와 Deflate 격리
+# 압축 TIFF LZW·Deflate 의미 사전 검사
 
 ## 책임 경계
 
@@ -12,14 +12,15 @@ read-only IStream
   → width × height × channels × 2 decoded-byte 한도
   → compression 1: WIC 진입
   → compression 5: segment별 LZW 의미·복원 길이 검사 → WIC 진입
-  → compression 8: unsupported_layout로 격리
+  → compression 8: zlib/Deflate 의미·복원 길이·Adler-32 검사 → WIC 진입
 ```
 
 ## 파일 구성
 
 - `src/Native/core/tiff_probe.cpp`: segment 합계, geometry와 기대 복원 byte 계산, 상태 집계
 - `src/Native/core/tiff_lzw_validator.h/.cpp`: 한 segment의 bit/code 상태 기계
-- `src/Native/imageio/wic_tiff_decoder.cpp`: cheap limit 순서, LZW 검사 필수화와 Deflate allowlist 제외
+- `src/Native/core/tiff_deflate_validator.h/.cpp`: bounded zlib/Deflate 상태 기계
+- `src/Native/imageio/wic_tiff_decoder.cpp`: cheap limit 순서와 압축 의미 검사 필수화
 - `tests/fixtures/tiff/synthetic_wic_tiff.cpp`: 외부 binary 없이 실행 시 합성하는 정상·손상 stream
 - `tests/Native.UnitTests/wic_tiff_decoder_tests.cpp`: WIC 진입 전 실패와 정상 exact pixel 계약
 
@@ -93,12 +94,15 @@ cancellation을 제공하지만, 이후 동기식 WIC `CopyPixels` 호출 안쪽
 없습니다. 따라서 현재 경계는 compressed byte 작업량과 decoded memory를 제한할 뿐 hard CPU deadline을
 보증하지 않습니다.
 
-## Deflate 격리
+## Deflate 의미 검사
 
-Compression tag 8은 구조 probe를 통과할 수 있지만 WIC pixel allowlist에는 없습니다. 정상 fixture와
-stored-block 길이가 모순되는 손상 fixture 모두 WIC decoder 생성 전에 `unsupported_layout`로 끝나며
-sample을 공개하지 않습니다. 독립 Deflate validator 없이 정상 입력만 구분할 수 없기 때문에 의도적으로
-같은 경계를 사용합니다.
+Compression tag 8은 각 segment를 zlib stream 하나로 검사합니다. CMF/FLG와 FCHECK, preset dictionary
+부재, 선언 window를 확인한 뒤 stored/fixed/dynamic block을 해석합니다. canonical Huffman table이
+oversubscribed되지 않았는지, length/distance가 이미 복원된 32 KiB window 안인지, 복원 byte 수가 segment
+geometry와 정확히 같은지 확인합니다. 끝의 Adler-32와 segment byte 끝도 일치해야 합니다.
+
+복원 byte는 checksum과 back-reference에 필요한 32 KiB ring에만 유지하고 pixel 결과로 공개하지 않습니다.
+전체 Deflate compressed segment 기본 상한은 512 MiB이며, 검사를 통과한 stream만 WIC allowlist에 들어갑니다.
 
 ## 검증 범위
 
@@ -109,7 +113,8 @@ sample을 공개하지 않습니다. 독립 Deflate validator 없이 정상 입�
 - Clear/EOI 누락, 복원 길이 부족·초과, 잘못된 forward code, trailing byte와 잘린 segment 거부
 - compressed-input 8-byte 제한과 이미 요청된 취소
 - 거대한 decoded 크기 주장을 의미 scan 전에 memory limit으로 거부
-- 정상·손상 Deflate의 동일 격리
+- stored/fixed/dynamic Deflate의 정상 decode와 exact pixel
+- stored block 길이 모순·Adler-32 불일치·compressed-input 한도 거부
 - 사용자 LZW 6개와 저장소 TIFF를 포함한 전체/streaming parity
 
 세부 실행 증거는

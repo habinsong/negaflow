@@ -41,7 +41,9 @@ internal static class CatalogBackupStore
         {
             return CatalogBackupCreateResult.Failure(CatalogBackupError.InvalidCatalog);
         }
-        if (defectFrameIds.Count != 0)
+        DefectCatalogHealthResult defectHealth =
+            DefectSidecarStore.ValidateCatalogDeclarations(roots, snapshot);
+        if (defectHealth.Entries is not { } defectEntries)
         {
             return CatalogBackupCreateResult.Failure(
                 CatalogBackupError.DefectSidecarUnavailable);
@@ -83,6 +85,25 @@ internal static class CatalogBackupStore
             CatalogBackupFileRecord catalogRecord = CreateFileRecord(
                 CatalogFileName,
                 catalogPath);
+            List<CatalogBackupFileRecord> fileRecords = [catalogRecord];
+            foreach (DefectSidecarCatalogEntry entry in defectEntries)
+            {
+                string fileName = DefectSidecarStore.FileName(entry.FrameId);
+                string destination = Path.Combine(defectsPath, fileName);
+                CopyDurable(entry.Path, destination);
+                DefectSidecarReadResult copied = DefectSidecarStore.ReadFile(
+                    destination,
+                    entry.FrameId);
+                if (copied.Snapshot is not { } copiedSnapshot ||
+                    !DefectSidecarCodec.AreSameSnapshot(entry.Snapshot, copiedSnapshot))
+                {
+                    return CatalogBackupCreateResult.Failure(
+                        CatalogBackupError.DefectSidecarUnavailable);
+                }
+                fileRecords.Add(CreateFileRecord(
+                    DefectSidecarStore.BackupRelativePath(entry.FrameId),
+                    destination));
+            }
             CatalogBackupManifest manifest = new(
                 CatalogBackupManifest.CurrentVersion,
                 sequence,
@@ -90,7 +111,9 @@ internal static class CatalogBackupStore
                 snapshot.Rows(CatalogEntityTable.Frames).Count,
                 defectFrameIds,
                 snapshot.CatalogVersion,
-                [catalogRecord]);
+                fileRecords.OrderBy(
+                    value => value.RelativePath,
+                    StringComparer.Ordinal).ToArray());
             WriteDurable(
                 Path.Combine(stagingPath, ManifestFileName),
                 SerializeManifest(manifest));
@@ -166,8 +189,7 @@ internal static class CatalogBackupStore
             if (!IsRegularFile(manifestPath) ||
                 !IsRegularFile(catalogPath) ||
                 !Directory.Exists(defectsPath) ||
-                StoragePathPolicy.IsExistingReparsePoint(defectsPath) ||
-                Directory.EnumerateFileSystemEntries(defectsPath).Any())
+                StoragePathPolicy.IsExistingReparsePoint(defectsPath))
             {
                 return default;
             }
@@ -189,10 +211,7 @@ internal static class CatalogBackupStore
             byte[] manifestData = File.ReadAllBytes(manifestPath);
             if (!TryDeserializeManifest(manifestData, out CatalogBackupManifest manifest) ||
                 manifest.Version != CatalogBackupManifest.CurrentVersion ||
-                !manifestData.AsSpan().SequenceEqual(SerializeManifest(manifest)) ||
-                manifest.Files.Count != 1 ||
-                manifest.Files[0].RelativePath != CatalogFileName ||
-                manifest.DefectFrameIds.Count != 0)
+                !manifestData.AsSpan().SequenceEqual(SerializeManifest(manifest)))
             {
                 return default;
             }
@@ -203,15 +222,59 @@ internal static class CatalogBackupStore
                 snapshot.CatalogVersion != manifest.CatalogVersion ||
                 snapshot.Rows(CatalogEntityTable.Frames).Count != manifest.FrameCount ||
                 !TryGetDefectFrameIds(snapshot, out IReadOnlyList<string> defectFrameIds) ||
-                defectFrameIds.Count != 0)
+                !defectFrameIds.SequenceEqual(
+                    manifest.DefectFrameIds,
+                    StringComparer.Ordinal))
             {
                 return default;
             }
 
-            CatalogBackupFileRecord actualRecord = CreateFileRecord(
-                CatalogFileName,
-                catalogPath);
-            if (actualRecord != manifest.Files[0])
+            Dictionary<string, CatalogBackupFileRecord> actualFiles =
+                new(StringComparer.Ordinal)
+                {
+                    [CatalogFileName] = CreateFileRecord(CatalogFileName, catalogPath),
+                };
+            HashSet<string> expectedDefectNames = new(StringComparer.OrdinalIgnoreCase);
+            foreach (string catalogFrameId in defectFrameIds)
+            {
+                if (!Guid.TryParseExact(catalogFrameId, "D", out Guid frameId) ||
+                    frameId == Guid.Empty)
+                {
+                    return default;
+                }
+                string fileName = DefectSidecarStore.FileName(frameId);
+                if (!expectedDefectNames.Add(fileName))
+                {
+                    return default;
+                }
+                string path = Path.Combine(defectsPath, fileName);
+                DefectSidecarReadResult sidecar = DefectSidecarStore.ReadFile(
+                    path,
+                    frameId);
+                if (!sidecar.IsSuccess)
+                {
+                    return default;
+                }
+                string relativePath = DefectSidecarStore.BackupRelativePath(frameId);
+                actualFiles[relativePath] = CreateFileRecord(relativePath, path);
+            }
+
+            string[] actualDefectEntries = Directory.EnumerateFileSystemEntries(
+                defectsPath,
+                "*",
+                SearchOption.TopDirectoryOnly).ToArray();
+            if (actualDefectEntries.Length != expectedDefectNames.Count ||
+                actualDefectEntries.Any(path =>
+                    !IsRegularFile(path) ||
+                    !expectedDefectNames.Contains(Path.GetFileName(path))))
+            {
+                return default;
+            }
+
+            CatalogBackupFileRecord[] expectedRecords = actualFiles.Values
+                .OrderBy(value => value.RelativePath, StringComparer.Ordinal)
+                .ToArray();
+            if (!manifest.Files.SequenceEqual(expectedRecords))
             {
                 return default;
             }
@@ -229,11 +292,16 @@ internal static class CatalogBackupStore
         Path.IsPathFullyQualified(roots.LibraryRoot) &&
         Path.IsPathFullyQualified(roots.CatalogPath) &&
         Path.IsPathFullyQualified(roots.BackupRoot) &&
+        Path.IsPathFullyQualified(roots.DefectRecipeRoot) &&
         StoragePathPolicy.IsLexicallyContained(roots.LibraryRoot, roots.CatalogPath) &&
         StoragePathPolicy.IsLexicallyContained(roots.LibraryRoot, roots.BackupRoot) &&
+        StoragePathPolicy.IsLexicallyContained(
+            roots.LibraryRoot,
+            roots.DefectRecipeRoot) &&
         !StoragePathPolicy.IsExistingReparsePoint(roots.LibraryRoot) &&
         !StoragePathPolicy.IsExistingReparsePoint(roots.CatalogPath) &&
-        !StoragePathPolicy.IsExistingReparsePoint(roots.BackupRoot);
+        !StoragePathPolicy.IsExistingReparsePoint(roots.BackupRoot) &&
+        !StoragePathPolicy.IsExistingReparsePoint(roots.DefectRecipeRoot);
 
     private static bool TryNextSequence(string backupRoot, out ulong sequence)
     {
@@ -321,9 +389,10 @@ internal static class CatalogBackupStore
     {
         try
         {
+            CatalogBackupValidationResult validation = ValidateGeneration(path);
             if (!IsDirectChild(backupRoot, path) ||
                 !Path.GetFileName(path).StartsWith("backup-", StringComparison.Ordinal) ||
-                !ValidateGeneration(path).IsValid ||
+                validation.Manifest is not { } manifest ||
                 StoragePathPolicy.IsExistingReparsePoint(path))
             {
                 return false;
@@ -332,6 +401,16 @@ internal static class CatalogBackupStore
             string manifestPath = Path.Combine(path, ManifestFileName);
             string catalogPath = Path.Combine(path, CatalogFileName);
             string defectsPath = Path.Combine(path, DefectsDirectoryName);
+            foreach (CatalogBackupFileRecord file in manifest.Files.Where(value =>
+                value.RelativePath.StartsWith("defects/", StringComparison.Ordinal)))
+            {
+                string fileName = file.RelativePath["defects/".Length..];
+                if (!string.Equals(fileName, Path.GetFileName(fileName), StringComparison.Ordinal) ||
+                    !TryDeleteRegularFile(Path.Combine(defectsPath, fileName)))
+                {
+                    return false;
+                }
+            }
             File.Delete(manifestPath);
             File.Delete(catalogPath);
             Directory.Delete(defectsPath, recursive: false);
@@ -359,10 +438,23 @@ internal static class CatalogBackupStore
                 TryDeleteRegularFile(Path.Combine(path, CatalogFileName));
                 string defectsPath = Path.Combine(path, DefectsDirectoryName);
                 if (Directory.Exists(defectsPath) &&
-                    !StoragePathPolicy.IsExistingReparsePoint(defectsPath) &&
-                    !Directory.EnumerateFileSystemEntries(defectsPath).Any())
+                    !StoragePathPolicy.IsExistingReparsePoint(defectsPath))
                 {
-                    Directory.Delete(defectsPath, recursive: false);
+                    foreach (string candidate in Directory.EnumerateFiles(
+                        defectsPath,
+                        "*.json",
+                        SearchOption.TopDirectoryOnly))
+                    {
+                        string fileStem = Path.GetFileNameWithoutExtension(candidate);
+                        if (Guid.TryParseExact(fileStem, "D", out _))
+                        {
+                            TryDeleteRegularFile(candidate);
+                        }
+                    }
+                    if (!Directory.EnumerateFileSystemEntries(defectsPath).Any())
+                    {
+                        Directory.Delete(defectsPath, recursive: false);
+                    }
                 }
                 if (!Directory.EnumerateFileSystemEntries(path).Any())
                 {
@@ -376,12 +468,13 @@ internal static class CatalogBackupStore
         }
     }
 
-    private static void TryDeleteRegularFile(string path)
+    private static bool TryDeleteRegularFile(string path)
     {
         if (IsRegularFile(path))
         {
             File.Delete(path);
         }
+        return !File.Exists(path) && !Directory.Exists(path);
     }
 
     private static bool IsDirectChild(string parent, string child)
@@ -718,6 +811,30 @@ internal static class CatalogBackupStore
             return false;
         }
         return (File.GetAttributes(path) & FileAttributes.Directory) == 0;
+    }
+
+    private static void CopyDurable(string sourcePath, string destinationPath)
+    {
+        if (!IsRegularFile(sourcePath))
+        {
+            throw new IOException("Backup source is not a regular file.");
+        }
+        using FileStream source = new(
+            sourcePath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read,
+            bufferSize: 1024 * 1024,
+            FileOptions.SequentialScan);
+        using FileStream destination = new(
+            destinationPath,
+            FileMode.CreateNew,
+            FileAccess.Write,
+            FileShare.None,
+            bufferSize: 1024 * 1024,
+            FileOptions.WriteThrough);
+        source.CopyTo(destination);
+        destination.Flush(flushToDisk: true);
     }
 
     private static void WriteDurable(string path, byte[] data)

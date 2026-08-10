@@ -50,6 +50,39 @@ public static class LibraryFrameReader
     internal const string ColorGradingLuminanceName = "luminance";
     internal const string ColorGradingBlendingName = "blending";
     internal const string ColorGradingBalanceName = "balance";
+    internal const string PrimaryCalibrationName = "calibration";
+    internal const string PrimaryCalibrationRedHueName = "redHue";
+    internal const string PrimaryCalibrationRedSaturationName = "redSat";
+    internal const string PrimaryCalibrationGreenHueName = "greenHue";
+    internal const string PrimaryCalibrationGreenSaturationName = "greenSat";
+    internal const string PrimaryCalibrationBlueHueName = "blueHue";
+    internal const string PrimaryCalibrationBlueSaturationName = "blueSat";
+    internal const string LocalDodgeBurnName = "localDodgeBurn";
+    internal const string LocalDodgeBurnIdName = "id";
+    internal const string LocalDodgeBurnModeName = "mode";
+    internal const string LocalDodgeBurnAmountName = "amount";
+    internal const string LocalDodgeBurnEnabledName = "isEnabled";
+    internal const string LocalDodgeBurnMaskName = "mask";
+    internal const string LocalDodgeBurnKindName = "kind";
+    internal const string LocalDodgeBurnStrokesName = "strokes";
+    internal const string LocalDodgeBurnPointsName = "points";
+    internal const string LocalDodgeBurnThicknessName = "thickness";
+    internal const string LocalDodgeBurnFeatherName = "feather";
+    internal const string LocalDodgeBurnCenterName = "center";
+    internal const string LocalDodgeBurnRadiusName = "radius";
+    internal const string LocalDodgeBurnStartName = "start";
+    internal const string LocalDodgeBurnEndName = "end";
+    internal const string WarmthName = "warmth";
+    internal const string TintName = "tint";
+    internal const string ColorDepthName = "colorDepth";
+    internal const string VibranceName = "vibrance";
+    internal const string SaturationName = "saturation";
+    internal const string RedPrimaryName = "redPrimary";
+    internal const string GreenPrimaryName = "greenPrimary";
+    internal const string BluePrimaryName = "bluePrimary";
+    internal const string AutoLevelsName = "autoLevels";
+    internal const string AutoNeutralBalanceName = "autoNeutralBalance";
+    internal const string DevelopTargetName = "developTarget";
 
     public static LibraryFrameReadResult Read(JsonElement frameRecord)
     {
@@ -124,6 +157,31 @@ public static class LibraryFrameReader
         {
             return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidColorGrading);
         }
+        if (!TryReadPrimaryCalibration(parameters, out PrimaryCalibrationRecipe primaryCalibration))
+        {
+            return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidPrimaryCalibration);
+        }
+        if (!TryReadLocalDodgeBurn(parameters, out IReadOnlyList<LocalDodgeBurnAdjustment> localDodgeBurn))
+        {
+            return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidLocalDodgeBurn);
+        }
+        if (!TryReadColorModel(parameters, out ColorModelRecipe colorModel))
+        {
+            return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidColorModel);
+        }
+        if (!TryReadOptionalBoolean(parameters, AutoLevelsName, false, out bool autoLevels) ||
+            !TryReadOptionalBoolean(
+                parameters,
+                AutoNeutralBalanceName,
+                false,
+                out bool autoNeutralBalance))
+        {
+            return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidSceneCorrection);
+        }
+        if (!TryReadDevelopTarget(parameters, out DevelopTarget developTarget))
+        {
+            return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidDevelopTarget);
+        }
 
         DevelopRouteReadResult route = DevelopRouteReader.Read(frameRecord);
         if (route.Route is not { } snapshot)
@@ -143,6 +201,12 @@ public static class LibraryFrameReader
             PointCurves = pointCurves,
             ColorMixer = colorMixer,
             ColorGrading = colorGrading,
+            PrimaryCalibration = primaryCalibration,
+            LocalDodgeBurn = localDodgeBurn,
+            ColorModel = colorModel,
+            AutoLevels = autoLevels,
+            AutoNeutralBalance = autoNeutralBalance,
+            DevelopTarget = developTarget,
         });
     }
 
@@ -431,7 +495,319 @@ public static class LibraryFrameReader
         return true;
     }
 
+    private static bool TryReadPrimaryCalibration(
+        JsonElement parameters,
+        out PrimaryCalibrationRecipe calibration)
+    {
+        calibration = PrimaryCalibrationRecipe.Identity;
+        if (!parameters.TryGetProperty(PrimaryCalibrationName, out JsonElement element) ||
+            element.ValueKind == JsonValueKind.Null)
+        {
+            return true;
+        }
+        if (element.ValueKind != JsonValueKind.Object ||
+            !TryReadFiniteDouble(element, PrimaryCalibrationRedHueName, out double redHue) ||
+            !TryReadFiniteDouble(element, PrimaryCalibrationRedSaturationName, out double redSaturation) ||
+            !TryReadFiniteDouble(element, PrimaryCalibrationGreenHueName, out double greenHue) ||
+            !TryReadFiniteDouble(element, PrimaryCalibrationGreenSaturationName, out double greenSaturation) ||
+            !TryReadFiniteDouble(element, PrimaryCalibrationBlueHueName, out double blueHue) ||
+            !TryReadFiniteDouble(element, PrimaryCalibrationBlueSaturationName, out double blueSaturation) ||
+            new[] { redHue, redSaturation, greenHue, greenSaturation, blueHue, blueSaturation }
+                .Any(value => value is < -1.0 or > 1.0))
+        {
+            return false;
+        }
+        calibration = new PrimaryCalibrationRecipe(
+            redHue, redSaturation, greenHue, greenSaturation, blueHue, blueSaturation);
+        return true;
+    }
+
     // 키가 없으면 macOS 와 같이 0 입니다. 있는데 수가 아니면 조용히 0 으로 만들지 않고 거부합니다.
+    private static bool TryReadLocalDodgeBurn(
+        JsonElement parameters,
+        out IReadOnlyList<LocalDodgeBurnAdjustment> adjustments)
+    {
+        adjustments = [];
+        if (!parameters.TryGetProperty(LocalDodgeBurnName, out JsonElement element) ||
+            element.ValueKind == JsonValueKind.Null)
+        {
+            return true;
+        }
+        if (element.ValueKind != JsonValueKind.Array ||
+            element.GetArrayLength() > LocalDodgeBurnRecipe.MaximumAdjustments)
+        {
+            return false;
+        }
+
+        List<LocalDodgeBurnAdjustment> parsed = new(element.GetArrayLength());
+        foreach (JsonElement adjustment in element.EnumerateArray())
+        {
+            if (!TryReadLocalDodgeBurnAdjustment(adjustment, out LocalDodgeBurnAdjustment? value))
+            {
+                return false;
+            }
+            parsed.Add(value!);
+        }
+        if (!LocalDodgeBurnRecipe.IsValid(parsed))
+        {
+            return false;
+        }
+        adjustments = parsed;
+        return true;
+    }
+
+    private static bool TryReadLocalDodgeBurnAdjustment(
+        JsonElement element,
+        out LocalDodgeBurnAdjustment? adjustment)
+    {
+        adjustment = null;
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        Guid id = Guid.NewGuid();
+        if (element.TryGetProperty(LocalDodgeBurnIdName, out JsonElement idElement) &&
+            idElement.ValueKind != JsonValueKind.Null &&
+            (idElement.ValueKind != JsonValueKind.String ||
+             !Guid.TryParse(idElement.GetString(), out id)))
+        {
+            return false;
+        }
+
+        LocalDodgeBurnMode mode = LocalDodgeBurnMode.Dodge;
+        if (element.TryGetProperty(LocalDodgeBurnModeName, out JsonElement modeElement) &&
+            modeElement.ValueKind != JsonValueKind.Null)
+        {
+            if (modeElement.ValueKind != JsonValueKind.String)
+            {
+                return false;
+            }
+            mode = modeElement.GetString() switch
+            {
+                "dodge" => LocalDodgeBurnMode.Dodge,
+                "burn" => LocalDodgeBurnMode.Burn,
+                _ => (LocalDodgeBurnMode)(-1),
+            };
+        }
+
+        if (!TryReadOptionalFiniteDouble(element, LocalDodgeBurnAmountName, 0.0, out double amount) ||
+            !TryReadOptionalBoolean(element, LocalDodgeBurnEnabledName, true, out bool isEnabled) ||
+            !element.TryGetProperty(LocalDodgeBurnMaskName, out JsonElement maskElement) ||
+            !TryReadLocalDodgeBurnMask(maskElement, out LocalDodgeBurnMask? mask))
+        {
+            return false;
+        }
+        adjustment = new LocalDodgeBurnAdjustment(id, mode, amount, isEnabled, mask!);
+        return true;
+    }
+
+    private static bool TryReadLocalDodgeBurnMask(
+        JsonElement element,
+        out LocalDodgeBurnMask? mask)
+    {
+        mask = null;
+        if (element.ValueKind != JsonValueKind.Object ||
+            !element.TryGetProperty(LocalDodgeBurnKindName, out JsonElement kindElement) ||
+            kindElement.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+        LocalDodgeBurnMaskKind kind = kindElement.GetString() switch
+        {
+            "brush" => LocalDodgeBurnMaskKind.Brush,
+            "radial" => LocalDodgeBurnMaskKind.Radial,
+            "linear" => LocalDodgeBurnMaskKind.Linear,
+            "polygon" => LocalDodgeBurnMaskKind.Polygon,
+            _ => (LocalDodgeBurnMaskKind)(-1),
+        };
+        if (!TryReadLocalDodgeBurnStrokes(element, out IReadOnlyList<LocalDodgeBurnStroke> strokes) ||
+            !TryReadOptionalPoint(element, LocalDodgeBurnCenterName, new(0.5, 0.5), out LocalDodgeBurnPoint center) ||
+            !TryReadOptionalFiniteDouble(element, LocalDodgeBurnRadiusName, 0.25, out double radius) ||
+            !TryReadOptionalFiniteDouble(element, LocalDodgeBurnFeatherName, 0.25, out double feather) ||
+            !TryReadOptionalPoint(element, LocalDodgeBurnStartName, new(0.5, 0.0), out LocalDodgeBurnPoint start) ||
+            !TryReadOptionalPoint(element, LocalDodgeBurnEndName, new(0.5, 1.0), out LocalDodgeBurnPoint end) ||
+            !TryReadLocalDodgeBurnPoints(element, LocalDodgeBurnPointsName, out IReadOnlyList<LocalDodgeBurnPoint> points))
+        {
+            return false;
+        }
+        mask = new LocalDodgeBurnMask(kind, strokes, center, radius, feather, start, end, points);
+        return true;
+    }
+
+    private static bool TryReadLocalDodgeBurnStrokes(
+        JsonElement mask,
+        out IReadOnlyList<LocalDodgeBurnStroke> strokes)
+    {
+        strokes = [];
+        if (!mask.TryGetProperty(LocalDodgeBurnStrokesName, out JsonElement element) ||
+            element.ValueKind == JsonValueKind.Null)
+        {
+            return true;
+        }
+        if (element.ValueKind != JsonValueKind.Array ||
+            element.GetArrayLength() > LocalDodgeBurnRecipe.MaximumStrokesPerMask)
+        {
+            return false;
+        }
+        List<LocalDodgeBurnStroke> parsed = new(element.GetArrayLength());
+        foreach (JsonElement stroke in element.EnumerateArray())
+        {
+            if (stroke.ValueKind != JsonValueKind.Object ||
+                !TryReadLocalDodgeBurnPoints(stroke, LocalDodgeBurnPointsName, out IReadOnlyList<LocalDodgeBurnPoint> points) ||
+                !TryReadOptionalFiniteDouble(stroke, LocalDodgeBurnThicknessName, 0.04, out double thickness) ||
+                !TryReadOptionalFiniteDouble(stroke, LocalDodgeBurnFeatherName, 0.02, out double feather))
+            {
+                return false;
+            }
+            parsed.Add(new LocalDodgeBurnStroke(points, thickness, feather));
+        }
+        strokes = parsed;
+        return true;
+    }
+
+    private static bool TryReadLocalDodgeBurnPoints(
+        JsonElement owner,
+        string name,
+        out IReadOnlyList<LocalDodgeBurnPoint> points)
+    {
+        points = [];
+        if (!owner.TryGetProperty(name, out JsonElement element) || element.ValueKind == JsonValueKind.Null)
+        {
+            return true;
+        }
+        if (element.ValueKind != JsonValueKind.Array ||
+            element.GetArrayLength() > LocalDodgeBurnRecipe.MaximumPoints)
+        {
+            return false;
+        }
+        List<LocalDodgeBurnPoint> parsed = new(element.GetArrayLength());
+        foreach (JsonElement point in element.EnumerateArray())
+        {
+            if (!TryReadLocalDodgeBurnPoint(point, out LocalDodgeBurnPoint value))
+            {
+                return false;
+            }
+            parsed.Add(value);
+        }
+        points = parsed;
+        return true;
+    }
+
+    private static bool TryReadOptionalPoint(
+        JsonElement owner,
+        string name,
+        LocalDodgeBurnPoint defaultValue,
+        out LocalDodgeBurnPoint point)
+    {
+        point = defaultValue;
+        return !owner.TryGetProperty(name, out JsonElement element) || element.ValueKind == JsonValueKind.Null
+            ? true
+            : TryReadLocalDodgeBurnPoint(element, out point);
+    }
+
+    private static bool TryReadLocalDodgeBurnPoint(
+        JsonElement element,
+        out LocalDodgeBurnPoint point)
+    {
+        point = default;
+        if (element.ValueKind != JsonValueKind.Object ||
+            !element.TryGetProperty(PointCurveXName, out JsonElement xElement) ||
+            !element.TryGetProperty(PointCurveYName, out JsonElement yElement) ||
+            xElement.ValueKind != JsonValueKind.Number || yElement.ValueKind != JsonValueKind.Number ||
+            !xElement.TryGetDouble(out double x) || !yElement.TryGetDouble(out double y) ||
+            !double.IsFinite(x) || !double.IsFinite(y))
+        {
+            return false;
+        }
+        point = new LocalDodgeBurnPoint(x, y);
+        return true;
+    }
+
+    private static bool TryReadOptionalFiniteDouble(
+        JsonElement owner,
+        string name,
+        double defaultValue,
+        out double value)
+    {
+        value = defaultValue;
+        if (!owner.TryGetProperty(name, out JsonElement element) || element.ValueKind == JsonValueKind.Null)
+        {
+            return true;
+        }
+        return element.ValueKind == JsonValueKind.Number &&
+               element.TryGetDouble(out value) && double.IsFinite(value);
+    }
+
+    private static bool TryReadOptionalBoolean(
+        JsonElement owner,
+        string name,
+        bool defaultValue,
+        out bool value)
+    {
+        value = defaultValue;
+        if (!owner.TryGetProperty(name, out JsonElement element) || element.ValueKind == JsonValueKind.Null)
+        {
+            return true;
+        }
+        if (element.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+        {
+            return false;
+        }
+        value = element.GetBoolean();
+        return true;
+    }
+
+    private static bool TryReadDevelopTarget(
+        JsonElement parameters,
+        out DevelopTarget developTarget)
+    {
+        developTarget = DevelopTarget.Main;
+        if (!parameters.TryGetProperty(DevelopTargetName, out JsonElement element) ||
+            element.ValueKind == JsonValueKind.Null)
+        {
+            return true;
+        }
+        if (element.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+        developTarget = element.GetString() switch
+        {
+            "main" => DevelopTarget.Main,
+            "print" => DevelopTarget.Print,
+            "noritsu" => DevelopTarget.Noritsu,
+            "sp-3000" => DevelopTarget.Sp3000,
+            "f135" => DevelopTarget.F135,
+            "hr" => DevelopTarget.Hr,
+            "rescue" => DevelopTarget.Rescue,
+            _ => (DevelopTarget)(-1),
+        };
+        return Enum.IsDefined(developTarget);
+    }
+
+    private static bool TryReadColorModel(
+        JsonElement parameters,
+        out ColorModelRecipe colorModel)
+    {
+        if (!TryReadFiniteDouble(parameters, WarmthName, out double warmth) ||
+            !TryReadFiniteDouble(parameters, TintName, out double tint) ||
+            !TryReadFiniteDouble(parameters, ColorDepthName, out double colorDepth) ||
+            !TryReadFiniteDouble(parameters, VibranceName, out double vibrance) ||
+            !TryReadFiniteDouble(parameters, SaturationName, out double saturation) ||
+            !TryReadFiniteDouble(parameters, RedPrimaryName, out double redPrimary) ||
+            !TryReadFiniteDouble(parameters, GreenPrimaryName, out double greenPrimary) ||
+            !TryReadFiniteDouble(parameters, BluePrimaryName, out double bluePrimary))
+        {
+            colorModel = ColorModelRecipe.Identity;
+            return false;
+        }
+        colorModel = new ColorModelRecipe(
+            warmth, tint, colorDepth, vibrance, saturation,
+            redPrimary, greenPrimary, bluePrimary);
+        return colorModel.IsValid();
+    }
+
     private static bool TryReadFiniteDouble(
         JsonElement parameters,
         string name,

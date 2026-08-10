@@ -1,5 +1,6 @@
 #include "negaflow/imaging/manual_negative_developer.h"
 
+#include "bilinear_rgb_sampler.h"
 #include "negaflow/core/negative_inversion.h"
 
 #include <algorithm>
@@ -44,9 +45,10 @@ void discard_pixels(WorkingImage& image) noexcept {
         return std::nullopt;
     }
 
-    // This mirrors the macOS sampleStats geometry: a 64...320-wide linear sample and
-    // a 6% frame inset. The bounded sample count keeps a panoramic source from turning a
-    // statistic into a second full-frame allocation.
+    // This mirrors the macOS sampleStats geometry and affine sampling: a 64...320-wide
+    // uniform-scale linear proxy, pixel-centre bilinear sampling, and a 6% frame inset.
+    // The bounded sample count keeps a panoramic source from turning a statistic into a
+    // second full-frame allocation.
     constexpr std::uint32_t maximum_sample_width = 320U;
     constexpr std::uint32_t minimum_sample_width = 64U;
     // A normal 2:3 portrait frame produces the macOS 320 x 480 sample grid. Keep that
@@ -66,13 +68,16 @@ void discard_pixels(WorkingImage& image) noexcept {
         sample_width = std::max<std::uint64_t>(
             1U,
             static_cast<std::uint64_t>(sample_width * scale));
-        sample_height = std::max<std::uint64_t>(
-            1U,
-            static_cast<std::uint64_t>(sample_height * scale));
+        const double uniform_scale =
+            static_cast<double>(sample_width) / static_cast<double>(image.width);
+        sample_height = std::max<std::uint64_t>(1U, static_cast<std::uint64_t>(
+            static_cast<double>(image.height) * uniform_scale));
     }
 
     const std::uint32_t bounded_width = static_cast<std::uint32_t>(sample_width);
     const std::uint32_t bounded_height = static_cast<std::uint32_t>(sample_height);
+    const double uniform_scale =
+        static_cast<double>(bounded_width) / static_cast<double>(image.width);
 
     const std::uint32_t inset_x = std::max(1U, static_cast<std::uint32_t>(bounded_width * 0.06));
     const std::uint32_t inset_y = std::max(1U, static_cast<std::uint32_t>(bounded_height * 0.06));
@@ -84,16 +89,27 @@ void discard_pixels(WorkingImage& image) noexcept {
         std::vector<negaflow::core::Rgba32F> pixels;
         pixels.reserve(static_cast<std::size_t>(bounded_width - (inset_x * 2U)) *
                        (bounded_height - (inset_y * 2U)));
+        const negaflow::core::ConstImageView source{
+            image.pixels.data(),
+            image.pixels.size(),
+            image.width,
+            image.height,
+            image.stride_pixels,
+        };
         for (std::uint32_t y = inset_y; y < bounded_height - inset_y; ++y) {
-            const std::uint32_t source_y = std::min(
-                image.height - 1U,
-                static_cast<std::uint32_t>((static_cast<std::uint64_t>(y) * image.height) / bounded_height));
-            const std::size_t row_offset = static_cast<std::size_t>(source_y) * image.stride_pixels;
+            const double source_y =
+                (static_cast<double>(y) + 0.5) / uniform_scale - 0.5;
             for (std::uint32_t x = inset_x; x < bounded_width - inset_x; ++x) {
-                const std::uint32_t source_x = std::min(
-                    image.width - 1U,
-                    static_cast<std::uint32_t>((static_cast<std::uint64_t>(x) * image.width) / bounded_width));
-                const negaflow::core::Rgba32F pixel = image.pixels[row_offset + source_x];
+                const double source_x =
+                    (static_cast<double>(x) + 0.5) / uniform_scale - 0.5;
+                const detail::BilinearRgb sampled =
+                    detail::sample_bilinear_rgb_transparent(source, source_x, source_y);
+                const negaflow::core::Rgba32F pixel{
+                    static_cast<float>(sampled.red),
+                    static_cast<float>(sampled.green),
+                    static_cast<float>(sampled.blue),
+                    1.0F,
+                };
                 if (!std::isfinite(pixel.red) || !std::isfinite(pixel.green) ||
                     !std::isfinite(pixel.blue)) {
                     return std::nullopt;
@@ -260,6 +276,19 @@ ManualNegativeDevelopResult develop_manual_negative(
         result.status = ManualNegativeDevelopStatus::kernel_failed;
         discard_pixels(result.image);
         return result;
+    }
+
+    if (!parameters.use_preset_response) {
+        auto vibrance = apply_muted_scene_vibrance(
+            output,
+            parameters.film_type == NegativeFilmType::black_and_white);
+        result.info.muted_scene_vibrance = vibrance.info;
+        if (vibrance.status != negaflow::core::KernelStatus::ok) {
+            result.info.kernel_status = vibrance.status;
+            result.status = ManualNegativeDevelopStatus::kernel_failed;
+            discard_pixels(result.image);
+            return result;
+        }
     }
 
     result.status = ManualNegativeDevelopStatus::ok;

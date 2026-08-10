@@ -112,10 +112,12 @@ struct WicTiffDecodeInfo final {
     std::uint64_t compressed_bytes_validated{0};
     std::uint64_t lzw_code_count{0};
     std::uint64_t lzw_decoded_bytes_validated{0};
+    std::uint64_t deflate_decoded_bytes_validated{0};
     std::uint64_t peak_copy_pixel_bytes{0};
     std::uint32_t copy_operation_count{0};
     std::uint32_t completed_rows{0};
     bool lzw_code_streams_validated{false};
+    bool deflate_streams_validated{false};
     negaflow::color::IccProfileInfo icc{};
 };
 

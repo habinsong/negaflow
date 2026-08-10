@@ -11,9 +11,16 @@ internal static unsafe class NativeAbiReader
     // 3 for nf_get_tone_limits_v1, 6 for the base-mode v2 preview/export calls,
     // 9 for Basic Tone v3 preview/export, 10 for Film base v4 preview/export,
     // 11 for Point Curve v5 preview/export, 12 for Color Mixer v6 preview/export,
-    // and 13 for Color Grading v7 preview/export.
+    // 13 for Color Grading v7 preview/export, 14 for GrainMend v8, 15 for
+    // FilmScanDenoise v9, 16 for Texture v10, 17 for B&W toning plus
+    // ImageTransform v11, 18 for variable Local Dodge/Burn v12, 19 for
+    // ColorModel v13, 20 for scene correction v14, 21 for DevelopTarget v15,
+      // 22 for scanner profile ID v16, 23 for film polarity v17, 24 for
+      // ordered pre-develop Defects region edits v18, 25 for source identity
+      // v19, 26 for ordered Clone Stamp v20, 27 for Brush v21, and 28 for the
+      // caller-owned run state v22 that carries cancellation and progress.
     // An engine below this is refused at load, not at the call.
-    internal const ushort MinimumMinor = 13;
+    internal const ushort MinimumMinor = 28;
 
     private const uint StatusOk = 0;
 

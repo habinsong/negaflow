@@ -69,9 +69,9 @@ foreach(required_report_fragment IN ITEMS
     "\"artifact_sha256_mode\":\"off\""
     "\"exposure_applied\":true"
     "\"arguments_explicit\":true"
-    "\"route\":\"film_scan_emulation\""
-    "\"color_applied\":true"
-    "\"acutance_applied\":true"
+    "\"route\":\"identity\""
+    "\"color_applied\":false"
+    "\"acutance_applied\":false"
 )
     string(FIND "${active_report}" "${required_report_fragment}" fragment_position)
     if(fragment_position EQUAL -1)
@@ -107,8 +107,8 @@ execute_process(
         "${tone_output}" "${active_output}"
     RESULT_VARIABLE comparison_result
 )
-if(comparison_result EQUAL 0)
-    fail_verification("Film Look did not change the tone-matched TIFF artifact")
+if(NOT comparison_result EQUAL 0)
+    fail_verification("A film-scan Film Look changed the tone-matched TIFF artifact")
 endif()
 
 execute_process(

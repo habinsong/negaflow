@@ -22,7 +22,7 @@ struct EmulationCase final {
     const char* report_name;
 };
 
-constexpr std::array<EmulationCase, 12> emulation_cases{{
+constexpr std::array<EmulationCase, 43> emulation_cases{{
     {L"none", negaflow::imaging::FilmEmulation::none, "none"},
     {L"ektachrome_e100", negaflow::imaging::FilmEmulation::ektachrome_e100,
      "ektachrome_e100"},
@@ -40,6 +40,57 @@ constexpr std::array<EmulationCase, 12> emulation_cases{{
     {L"fujicolor_c200", negaflow::imaging::FilmEmulation::fujicolor_c200,
      "fujicolor_c200"},
     {L"pro_400h", negaflow::imaging::FilmEmulation::pro_400h, "pro_400h"},
+    {L"tri_x_400", negaflow::imaging::FilmEmulation::tri_x_400, "tri_x_400"},
+    {L"hp5_plus", negaflow::imaging::FilmEmulation::hp5_plus, "hp5_plus"},
+    {L"fp4_plus", negaflow::imaging::FilmEmulation::fp4_plus, "fp4_plus"},
+    {L"delta_100", negaflow::imaging::FilmEmulation::delta_100, "delta_100"},
+    {L"delta_400", negaflow::imaging::FilmEmulation::delta_400, "delta_400"},
+    {L"delta_3200", negaflow::imaging::FilmEmulation::delta_3200, "delta_3200"},
+    {L"tmax_100", negaflow::imaging::FilmEmulation::tmax_100, "tmax_100"},
+    {L"tmax_400", negaflow::imaging::FilmEmulation::tmax_400, "tmax_400"},
+    {L"tmax_p3200", negaflow::imaging::FilmEmulation::tmax_p3200,
+     "tmax_p3200"},
+    {L"kentmere_400", negaflow::imaging::FilmEmulation::kentmere_400,
+     "kentmere_400"},
+    {L"ortho_plus", negaflow::imaging::FilmEmulation::ortho_plus,
+     "ortho_plus"},
+    {L"sfx_200", negaflow::imaging::FilmEmulation::sfx_200, "sfx_200"},
+    {L"rollei_ir", negaflow::imaging::FilmEmulation::rollei_ir, "rollei_ir"},
+    {L"scala_200x", negaflow::imaging::FilmEmulation::scala_200x,
+     "scala_200x"},
+    {L"rollei_superpan", negaflow::imaging::FilmEmulation::rollei_superpan,
+     "rollei_superpan"},
+    {L"velvia_100", negaflow::imaging::FilmEmulation::velvia_100,
+     "velvia_100"},
+    {L"e100_vs", negaflow::imaging::FilmEmulation::e100_vs, "e100_vs"},
+    {L"astia_100f", negaflow::imaging::FilmEmulation::astia_100f,
+     "astia_100f"},
+    {L"kodachrome_64", negaflow::imaging::FilmEmulation::kodachrome_64,
+     "kodachrome_64"},
+    {L"gold_200", negaflow::imaging::FilmEmulation::gold_200, "gold_200"},
+    {L"pro_image_100", negaflow::imaging::FilmEmulation::pro_image_100,
+     "pro_image_100"},
+    {L"superia_400", negaflow::imaging::FilmEmulation::superia_400,
+     "superia_400"},
+    {L"superia_premium_400",
+     negaflow::imaging::FilmEmulation::superia_premium_400,
+     "superia_premium_400"},
+    {L"superia_200", negaflow::imaging::FilmEmulation::superia_200,
+     "superia_200"},
+    {L"reala_100", negaflow::imaging::FilmEmulation::reala_100,
+     "reala_100"},
+    {L"industrial_100", negaflow::imaging::FilmEmulation::industrial_100,
+     "industrial_100"},
+    {L"lomo_cn_800", negaflow::imaging::FilmEmulation::lomo_cn_800,
+     "lomo_cn_800"},
+    {L"vision3_500t", negaflow::imaging::FilmEmulation::vision3_500t,
+     "vision3_500t"},
+    {L"vision3_250d", negaflow::imaging::FilmEmulation::vision3_250d,
+     "vision3_250d"},
+    {L"vision3_50d", negaflow::imaging::FilmEmulation::vision3_50d,
+     "vision3_50d"},
+    {L"vision3_200t", negaflow::imaging::FilmEmulation::vision3_200t,
+     "vision3_200t"},
 }};
 
 void test_recipe_parsing() {
@@ -107,7 +158,7 @@ void test_workspace_preparation() {
         "an identity recipe allocates no workspace");
 
     const negaflow::imaging::WorkingFilmLookParameters active{
-        negaflow::imaging::DevelopSourceKind::film_scan,
+        negaflow::imaging::DevelopSourceKind::rendered_digital,
         negaflow::imaging::FilmEmulation::velvia_50,
         0.73,
     };
@@ -116,7 +167,7 @@ void test_workspace_preparation() {
                 negaflow::cli::FilmLookWorkspacePrepareStatus::ok &&
             storage.color_cube != nullptr &&
             storage.acutance_scratch.size() == 44U,
-        "an active film recipe allocates one cube and eleven scratch rows");
+        "an active digital recipe allocates one cube and eleven scratch rows");
     const auto view = negaflow::cli::film_look_workspace_view(storage);
     expect(
         view.color_cube == storage.color_cube.get() &&
@@ -132,7 +183,7 @@ void test_workspace_preparation() {
 
     expect(
         negaflow::cli::prepare_film_look_workspace(
-            {negaflow::imaging::DevelopSourceKind::film_scan,
+            {negaflow::imaging::DevelopSourceKind::rendered_digital,
              negaflow::imaging::FilmEmulation::velvia_50,
              0.024},
             4U,
@@ -140,6 +191,30 @@ void test_workspace_preparation() {
             storage.color_cube == nullptr &&
             storage.acutance_scratch.size() == 44U,
         "a spatial-only low strength avoids color cube allocation");
+
+    expect(
+        negaflow::cli::prepare_film_look_workspace(
+            {negaflow::imaging::DevelopSourceKind::rendered_digital,
+             negaflow::imaging::FilmEmulation::tri_x_400,
+             0.8,
+             0.0,
+             0.0,
+             true},
+            4U,
+            storage) == negaflow::cli::FilmLookWorkspacePrepareStatus::ok &&
+            storage.color_cube == nullptr &&
+            storage.acutance_scratch.size() == 44U,
+        "a matched B&W recipe allocates acutance scratch without a color cube");
+
+    expect(
+        negaflow::cli::prepare_film_look_workspace(
+            {negaflow::imaging::DevelopSourceKind::rendered_digital,
+             negaflow::imaging::FilmEmulation::tri_x_400,
+             0.8},
+            4U,
+            storage) == negaflow::cli::FilmLookWorkspacePrepareStatus::ok &&
+            storage.color_cube == nullptr && storage.acutance_scratch.empty(),
+        "a B&W profile selected in a color process allocates no workspace");
 }
 
 }  // namespace

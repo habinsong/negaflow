@@ -14,6 +14,13 @@ FilmLookWorkspacePrepareStatus prepare_film_look_workspace(
     if (!negaflow::imaging::valid_working_film_look_parameters(parameters)) {
         return FilmLookWorkspacePrepareStatus::invalid_parameters;
     }
+    negaflow::imaging::FilmLookRoute route{};
+    if (!negaflow::imaging::try_resolve_film_look_route(parameters, route)) {
+        return FilmLookWorkspacePrepareStatus::invalid_parameters;
+    }
+    if (route == negaflow::imaging::FilmLookRoute::identity) {
+        return FilmLookWorkspacePrepareStatus::ok;
+    }
     if (negaflow::imaging::has_film_emulation_color_change(
             {parameters.emulation, parameters.intensity})) {
         storage.color_cube =

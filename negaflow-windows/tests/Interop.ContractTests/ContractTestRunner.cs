@@ -28,6 +28,7 @@ internal static unsafe class ContractTestRunner
                 NativeEngineBootstrap.LoadAndQuery(args[0]) == buildInfo,
                 "same_path_reload_is_idempotent");
             VerifyDevelopExportContract();
+            VerifyRunStateContract();
             VerifyToneLimits();
             VerifyNegativeLimits();
         }
@@ -51,6 +52,7 @@ internal static unsafe class ContractTestRunner
 
     private static void VerifyManagedLayout()
     {
+        Check((int)DevelopExportStage.DefectBrush == 21, "defect_brush_stage_value");
         Check(sizeof(NativeBuildInfoV1) == NativeAbiReader.BuildInfoV1Size, "build_info_size");
         Check(
             Marshal.OffsetOf<NativeBuildInfoV1>(nameof(NativeBuildInfoV1.SourceCommitSha1)).ToInt32() ==
@@ -86,6 +88,86 @@ internal static unsafe class ContractTestRunner
         Check(
             sizeof(NativeDevelopExportRequestV7) == NativeDevelopExporter.RequestV7Size,
             "develop_export_v7_request_size");
+        Check(
+            sizeof(NativeDevelopExportRequestV8) == NativeDevelopExporter.RequestV8Size,
+            "develop_export_v8_request_size");
+        Check(
+            sizeof(NativeDevelopExportRequestV9) == NativeDevelopExporter.RequestV9Size,
+            "develop_export_v9_request_size");
+          Check(
+              sizeof(NativeDevelopExportRequestV10) == NativeDevelopExporter.RequestV10Size,
+              "develop_export_v10_request_size");
+          Check(
+              sizeof(NativeDevelopExportRequestV11) == NativeDevelopExporter.RequestV11Size,
+              "develop_export_v11_request_size");
+        Check(
+            sizeof(NativeLocalDodgeBurnPointV1) ==
+                NativeDevelopExporter.LocalDodgeBurnPointV1Size,
+            "local_dodge_burn_point_v1_size");
+        Check(
+            sizeof(NativeLocalDodgeBurnStrokeV1) ==
+                NativeDevelopExporter.LocalDodgeBurnStrokeV1Size,
+            "local_dodge_burn_stroke_v1_size");
+        Check(
+            sizeof(NativeLocalDodgeBurnAdjustmentV1) ==
+                NativeDevelopExporter.LocalDodgeBurnAdjustmentV1Size,
+            "local_dodge_burn_adjustment_v1_size");
+        Check(
+            sizeof(NativeDevelopExportRequestV12) == NativeDevelopExporter.RequestV12Size,
+            "develop_export_v12_request_size");
+        Check(
+            sizeof(NativeDevelopExportRequestV13) == NativeDevelopExporter.RequestV13Size,
+            "develop_export_v13_request_size");
+        Check(
+            sizeof(NativeDevelopExportRequestV14) == NativeDevelopExporter.RequestV14Size,
+            "develop_export_v14_request_size");
+        Check(
+            sizeof(NativeDevelopExportRequestV15) == NativeDevelopExporter.RequestV15Size,
+            "develop_export_v15_request_size");
+        Check(
+            sizeof(NativeDevelopExportRequestV16) == NativeDevelopExporter.RequestV16Size,
+            "develop_export_v16_request_size");
+        Check(
+            sizeof(NativeDevelopExportRequestV17) == NativeDevelopExporter.RequestV17Size,
+            "develop_export_v17_request_size");
+        Check(
+            sizeof(NativeDefectRegionEditV1) ==
+                NativeDevelopExporter.DefectRegionEditV1Size,
+            "defect_region_edit_v1_size");
+        Check(
+            sizeof(NativeDevelopExportRequestV18) == NativeDevelopExporter.RequestV18Size,
+            "develop_export_v18_request_size");
+        Check(
+            sizeof(NativeDevelopExportRequestV19) == NativeDevelopExporter.RequestV19Size,
+            "develop_export_v19_request_size");
+        Check(
+            sizeof(NativeDefectClonePointV1) == NativeDevelopExporter.DefectClonePointV1Size,
+            "defect_clone_point_v1_size");
+        Check(
+            sizeof(NativeDefectCloneStrokeV1) == NativeDevelopExporter.DefectCloneStrokeV1Size,
+            "defect_clone_stroke_v1_size");
+        Check(
+            sizeof(NativeDefectCloneEditV1) == NativeDevelopExporter.DefectCloneEditV1Size,
+            "defect_clone_edit_v1_size");
+        Check(
+            sizeof(NativeDefectRecipeEditRefV1) ==
+                NativeDevelopExporter.DefectRecipeEditRefV1Size,
+            "defect_recipe_edit_ref_v1_size");
+        Check(
+            sizeof(NativeDevelopExportRequestV20) == NativeDevelopExporter.RequestV20Size,
+            "develop_export_v20_request_size");
+        Check(
+            sizeof(NativeDefectBrushPointV1) == NativeDevelopExporter.DefectBrushPointV1Size,
+            "defect_brush_point_v1_size");
+        Check(
+            sizeof(NativeDefectBrushStrokeV1) == NativeDevelopExporter.DefectBrushStrokeV1Size,
+            "defect_brush_stroke_v1_size");
+        Check(
+            sizeof(NativeDefectBrushEditV1) == NativeDevelopExporter.DefectBrushEditV1Size,
+            "defect_brush_edit_v1_size");
+        Check(
+            sizeof(NativeDevelopExportRequestV21) == NativeDevelopExporter.RequestV21Size,
+            "develop_export_v21_request_size");
         Check(
             sizeof(NativeDevelopExportResultV2) == NativeDevelopExporter.ResultV2Size,
             "develop_export_v2_result_size");
@@ -126,9 +208,161 @@ internal static unsafe class ContractTestRunner
                 nameof(NativeDevelopExportRequestV7.ColorGradingShadowsHue)).ToInt32() == 4352,
             "develop_export_v7_color_grading_offset");
         Check(
+            Marshal.OffsetOf<NativeDevelopExportRequestV8>(
+                nameof(NativeDevelopExportRequestV8.DefectRemovalStrength)).ToInt32() == 4400,
+            "develop_export_v8_grain_mend_offset");
+        Check(
+            Marshal.OffsetOf<NativeDevelopExportRequestV9>(
+                nameof(NativeDevelopExportRequestV9.NoiseReductionStrength)).ToInt32() == 4408,
+            "develop_export_v9_noise_reduction_offset");
+        Check(
+            Marshal.OffsetOf<NativeDevelopExportRequestV9>(
+                nameof(NativeDevelopExportRequestV9.NoiseReductionFilmProfile)).ToInt32() == 4432,
+            "develop_export_v9_noise_reduction_profile_offset");
+        Check(
+            Marshal.OffsetOf<NativeDevelopExportRequestV10>(
+                nameof(NativeDevelopExportRequestV10.TextureGrain)).ToInt32() == 4440,
+            "develop_export_v10_texture_offset");
+          Check(
+              Marshal.OffsetOf<NativeDevelopExportRequestV10>(
+                  nameof(NativeDevelopExportRequestV10.TextureVignette)).ToInt32() == 4456,
+              "develop_export_v10_vignette_offset");
+          Check(
+              Marshal.OffsetOf<NativeDevelopExportRequestV11>(
+                  nameof(NativeDevelopExportRequestV11.BwToningMode)).ToInt32() == 4464,
+              "develop_export_v11_bw_toning_offset");
+          Check(
+              Marshal.OffsetOf<NativeDevelopExportRequestV11>(
+                  nameof(NativeDevelopExportRequestV11.StraightenAngle)).ToInt32() == 4544,
+              "develop_export_v11_straighten_offset");
+        Check(
+            Marshal.OffsetOf<NativeDevelopExportRequestV12>(
+                nameof(NativeDevelopExportRequestV12.LocalAdjustments)).ToInt32() == 4552,
+            "develop_export_v12_adjustment_pointer_offset");
+        Check(
+            Marshal.OffsetOf<NativeDevelopExportRequestV12>(
+                nameof(NativeDevelopExportRequestV12.LocalPoints)).ToInt32() == 4584,
+            "develop_export_v12_point_pointer_offset");
+        Check(
+            Marshal.OffsetOf<NativeDevelopExportRequestV13>(
+                nameof(NativeDevelopExportRequestV13.Warmth)).ToInt32() == 4600,
+            "develop_export_v13_warmth_offset");
+        Check(
+            Marshal.OffsetOf<NativeDevelopExportRequestV13>(
+                nameof(NativeDevelopExportRequestV13.BluePrimary)).ToInt32() == 4628,
+            "develop_export_v13_blue_primary_offset");
+        Check(
+            Marshal.OffsetOf<NativeDefectRegionEditV1>(
+                nameof(NativeDefectRegionEditV1.Strength)).ToInt32() == 32,
+            "defect_region_edit_strength_offset");
+        Check(
+            Marshal.OffsetOf<NativeDefectRegionEditV1>(
+                nameof(NativeDefectRegionEditV1.PreferredAngleDegrees)).ToInt32() == 48,
+            "defect_region_edit_angle_offset");
+        Check(
+            Marshal.OffsetOf<NativeDevelopExportRequestV18>(
+                nameof(NativeDevelopExportRequestV18.DefectRegionEdits)).ToInt32() == 4664,
+            "develop_export_v18_defect_edits_offset");
+        Check(
+            Marshal.OffsetOf<NativeDevelopExportRequestV18>(
+                nameof(NativeDevelopExportRequestV18.DefectMaskBytes)).ToInt32() == 4680,
+            "develop_export_v18_defect_mask_offset");
+        Check(
+            Marshal.OffsetOf<NativeDevelopExportRequestV19>(
+                nameof(NativeDevelopExportRequestV19.DefectSourceFileBytes)).ToInt32() == 4696,
+            "develop_export_v19_defect_source_size_offset");
+        Check(
+            Marshal.OffsetOf<NativeDevelopExportRequestV19>(
+                nameof(NativeDevelopExportRequestV19.DefectSourceSha256)).ToInt32() == 4704,
+            "develop_export_v19_defect_source_sha_offset");
+        Check(
+            Marshal.OffsetOf<NativeDevelopExportRequestV20>(
+                nameof(NativeDevelopExportRequestV20.DefectCloneEdits)).ToInt32() == 4720,
+            "develop_export_v20_clone_edit_offset");
+        Check(
+            Marshal.OffsetOf<NativeDevelopExportRequestV20>(
+                nameof(NativeDevelopExportRequestV20.DefectCloneStrokes)).ToInt32() == 4736,
+            "develop_export_v20_clone_stroke_offset");
+        Check(
+            Marshal.OffsetOf<NativeDevelopExportRequestV20>(
+                nameof(NativeDevelopExportRequestV20.DefectClonePoints)).ToInt32() == 4752,
+            "develop_export_v20_clone_point_offset");
+        Check(
+            Marshal.OffsetOf<NativeDevelopExportRequestV20>(
+                nameof(NativeDevelopExportRequestV20.DefectEditOrder)).ToInt32() == 4768,
+            "develop_export_v20_edit_order_offset");
+        Check(
+            Marshal.OffsetOf<NativeDevelopExportRequestV21>(
+                nameof(NativeDevelopExportRequestV21.DefectBrushEdits)).ToInt32() == 4784,
+            "develop_export_v21_brush_edit_offset");
+        Check(
+            Marshal.OffsetOf<NativeDevelopExportRequestV21>(
+                nameof(NativeDevelopExportRequestV21.DefectBrushStrokes)).ToInt32() == 4800,
+            "develop_export_v21_brush_stroke_offset");
+        Check(
+            Marshal.OffsetOf<NativeDevelopExportRequestV21>(
+                nameof(NativeDevelopExportRequestV21.DefectBrushPoints)).ToInt32() == 4816,
+            "develop_export_v21_brush_point_offset");
+        Check(
             Marshal.OffsetOf<NativeDevelopExportResultV2>(
                 nameof(NativeDevelopExportResultV2.AppliedDminRed)).ToInt32() == 136,
             "develop_export_v2_applied_dmin_offset");
+    }
+
+    // The run state is the only place where managed memory outlives the marshalling of a
+    // call, so it gets its own checks: a latch set before the call has to stop the run,
+    // and the handle has to keep answering after it is disposed instead of tearing.
+    private static void VerifyRunStateContract()
+    {
+        string temporaryRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"negaflow-run-state-{Guid.NewGuid():N}");
+        string absentSource = Path.Combine(temporaryRoot, "absent.tif");
+        string destination = Path.Combine(temporaryRoot, "out.png");
+
+        using (var cancellation = new CancellationTokenSource())
+        {
+            cancellation.Cancel();
+            using var cancelled = new DevelopRun(cancellation.Token);
+            Check(cancelled.IsCancelRequested, "run_state_token_latches_before_the_call");
+
+            DevelopExportResult result = NativeDevelopExporter.Run(
+                new DevelopExportRequest
+                {
+                    SourcePath = absentSource,
+                    DestinationPath = destination,
+                },
+                cancelled);
+            Check(!result.Succeeded, "cancelled_run_does_not_succeed");
+            Check(result.Cancelled, "cancelled_run_is_reported_as_cancelled");
+            Check(result.FailureName == "cancelled", "cancelled_run_failure_name");
+            Check(!File.Exists(destination), "cancelled_run_writes_nothing");
+        }
+
+        // An untouched handle must not change the answer a plain call would have given.
+        using (var untouched = new DevelopRun())
+        {
+            DevelopExportResult result = NativeDevelopExporter.Run(
+                new DevelopExportRequest
+                {
+                    SourcePath = absentSource,
+                    DestinationPath = destination,
+                },
+                untouched);
+            Check(!result.Cancelled, "untouched_run_state_does_not_cancel");
+            Check(
+                result.FailedStage == DevelopExportStage.ObserveSourceBefore,
+                "untouched_run_state_keeps_the_ordinary_failure");
+        }
+
+        var disposed = new DevelopRun();
+        disposed.Dispose();
+        Check(disposed.ProgressPermille == 0, "disposed_run_reads_zero_progress");
+        Check(disposed.Stage == DevelopExportStage.None, "disposed_run_reads_no_stage");
+        Check(!disposed.IsCancelRequested, "disposed_run_reads_no_cancellation");
+        disposed.Cancel();
+        disposed.Dispose();
+        Check(true, "disposed_run_tolerates_cancel_and_second_dispose");
     }
 
     private static void VerifyToneLimits()
@@ -260,21 +494,257 @@ internal static unsafe class ContractTestRunner
             autoMissing.FailedStage == DevelopExportStage.ObserveSourceBefore,
             "develop_export_auto_reaches_source_observation");
 
-        // The rendered-digital graph is not implemented and must refuse rather than
-        // develop a negative through it anyway.
         DevelopExportResult digital = NativeDevelopExporter.Run(new DevelopExportRequest
         {
             SourcePath = absentSource,
             DestinationPath = destination,
             FilmLookSourceKind = DevelopSourceKind.RenderedDigital,
+            FilmEmulation = FilmEmulationProfile.Vision3_500T,
         });
         Check(!digital.Succeeded, "develop_export_digital_source_fails");
         Check(
-            digital.FailedStage == DevelopExportStage.RequestValidation,
-            "develop_export_digital_source_stage");
+            digital.FailedStage == DevelopExportStage.ObserveSourceBefore,
+            "develop_export_vision3_digital_source_stage");
         Check(
-            digital.FailureName == "negative_develop_requires_film_scan_source",
+            digital.FailureName != "ok",
             "develop_export_digital_source_name");
+
+        DevelopExportResult local = NativeDevelopExporter.Run(new DevelopExportRequest
+        {
+            SourcePath = absentSource,
+            DestinationPath = destination,
+            LocalDodgeBurn =
+            [
+                new DevelopLocalDodgeBurnAdjustment
+                {
+                    Mode = DevelopLocalDodgeBurnMode.Dodge,
+                    Amount = 0.6,
+                    Mask = new DevelopLocalDodgeBurnMask
+                    {
+                        Kind = DevelopLocalDodgeBurnMaskKind.Brush,
+                        Strokes =
+                        [
+                            new DevelopLocalDodgeBurnStroke
+                            {
+                                Points =
+                                [
+                                    new DevelopLocalDodgeBurnPoint(0.4, 0.5),
+                                    new DevelopLocalDodgeBurnPoint(0.6, 0.5),
+                                ],
+                            },
+                        ],
+                    },
+                },
+            ],
+        });
+        Check(
+            local.FailedStage == DevelopExportStage.ObserveSourceBefore,
+            "develop_export_local_mask_reaches_source_observation");
+
+        DevelopExportResult defects = NativeDevelopExporter.Run(new DevelopExportRequest
+        {
+            SourcePath = absentSource,
+            DestinationPath = destination,
+            DefectRegions =
+            [
+                new DevelopDefectRegionEdit
+                {
+                    RoiX = 12,
+                    RoiY = 20,
+                    Width = 8,
+                    Height = 8,
+                    Mask = new byte[64],
+                    Strength = 0.75,
+                    PreferredAngleDegrees = 90.0,
+                },
+            ],
+            DefectSourceIdentity = new DevelopDefectSourceIdentity(
+                1,
+                new string('0', 64)),
+        });
+        Check(
+            defects.FailedStage == DevelopExportStage.ObserveSourceBefore,
+            "develop_export_defect_region_reaches_source_observation");
+
+        DevelopExportResult clone = NativeDevelopExporter.Run(new DevelopExportRequest
+        {
+            SourcePath = absentSource,
+            DestinationPath = destination,
+            DefectClones =
+            [
+                new DevelopDefectCloneEdit
+                {
+                    Strength = 0.75,
+                    Strokes =
+                    [
+                        new DevelopDefectCloneStroke
+                        {
+                            Points = [new DevelopDefectClonePoint(0.5, 0.5)],
+                            OffsetX = 0.1,
+                            DiameterPixels = 9.0,
+                            Hardness = 0.8,
+                        },
+                    ],
+                },
+            ],
+            DefectEditOrder =
+            [
+                new DevelopDefectRecipeEditRef(DevelopDefectEditKind.Clone, 0),
+            ],
+            DefectSourceIdentity = new DevelopDefectSourceIdentity(
+                1,
+                new string('0', 64)),
+        });
+        Check(
+            clone.FailedStage == DevelopExportStage.ObserveSourceBefore,
+            "develop_export_clone_reaches_source_observation");
+
+        DevelopExportResult brush = NativeDevelopExporter.Run(new DevelopExportRequest
+        {
+            SourcePath = absentSource,
+            DestinationPath = destination,
+            DefectBrushes =
+            [
+                new DevelopDefectBrushEdit
+                {
+                    Strength = 0.75,
+                    Strokes =
+                    [
+                        new DevelopDefectBrushStroke
+                        {
+                            Points =
+                            [
+                                new DevelopDefectBrushPoint(0.4, 0.5),
+                                new DevelopDefectBrushPoint(0.6, 0.5),
+                            ],
+                            Thickness = 0.02,
+                        },
+                    ],
+                },
+            ],
+            DefectEditOrder =
+            [
+                new DevelopDefectRecipeEditRef(DevelopDefectEditKind.Brush, 0),
+            ],
+            DefectSourceIdentity = new DevelopDefectSourceIdentity(
+                1,
+                new string('0', 64)),
+        });
+        Check(
+            brush.FailedStage == DevelopExportStage.ObserveSourceBefore,
+            "develop_export_brush_reaches_source_observation");
+
+        CheckThrows<ArgumentException>(
+            () => NativeDevelopExporter.Run(new DevelopExportRequest
+            {
+                SourcePath = absentSource,
+                DestinationPath = destination,
+                DefectClones = [new DevelopDefectCloneEdit()],
+                DefectSourceIdentity = new DevelopDefectSourceIdentity(
+                    1,
+                    new string('0', 64)),
+            }),
+            "develop_export_clone_requires_order");
+
+        CheckThrows<ArgumentException>(
+            () => NativeDevelopExporter.Run(new DevelopExportRequest
+            {
+                SourcePath = absentSource,
+                DestinationPath = destination,
+                DefectBrushes =
+                [
+                    new DevelopDefectBrushEdit
+                    {
+                        Strokes =
+                        [
+                            new DevelopDefectBrushStroke
+                            {
+                                Points = [new DevelopDefectBrushPoint(2.0, 0.5)],
+                                Thickness = 0.02,
+                            },
+                        ],
+                    },
+                ],
+                DefectEditOrder =
+                [
+                    new DevelopDefectRecipeEditRef(DevelopDefectEditKind.Brush, 0),
+                ],
+                DefectSourceIdentity = new DevelopDefectSourceIdentity(
+                    1,
+                    new string('0', 64)),
+            }),
+            "develop_export_invalid_brush_geometry_rejected");
+
+        CheckThrows<ArgumentException>(
+            () => NativeDevelopExporter.Run(new DevelopExportRequest
+            {
+                SourcePath = absentSource,
+                DestinationPath = destination,
+                DefectRegions =
+                [
+                    new DevelopDefectRegionEdit
+                    {
+                        Width = 8,
+                        Height = 8,
+                        Mask = new byte[64],
+                    },
+                ],
+            }),
+            "develop_export_defect_region_requires_source_identity");
+
+        DevelopExportResult colorModel = NativeDevelopExporter.Run(new DevelopExportRequest
+        {
+            SourcePath = absentSource,
+            DestinationPath = destination,
+            Warmth = 0.25F,
+            Tint = -0.2F,
+            ColorDepth = 0.3F,
+            Vibrance = 0.4F,
+            Saturation = -0.1F,
+            RedPrimary = 0.1F,
+            GreenPrimary = -0.1F,
+            BluePrimary = 0.2F,
+        });
+        Check(
+            colorModel.FailedStage == DevelopExportStage.ObserveSourceBefore,
+            "develop_export_color_model_reaches_source_observation");
+
+        CheckThrows<ArgumentException>(
+            () => NativeDevelopExporter.Run(new DevelopExportRequest
+            {
+                SourcePath = absentSource,
+                DestinationPath = destination,
+                LocalDodgeBurn =
+                [
+                    new DevelopLocalDodgeBurnAdjustment
+                    {
+                        Amount = 0.5,
+                        Mask = new DevelopLocalDodgeBurnMask
+                        {
+                            Kind = DevelopLocalDodgeBurnMaskKind.Polygon,
+                            Points = [new DevelopLocalDodgeBurnPoint(double.NaN, 0.5)],
+                        },
+                    },
+                ],
+            }),
+            "develop_export_invalid_local_mask_rejected");
+
+        CheckThrows<ArgumentException>(
+            () => NativeDevelopExporter.Run(new DevelopExportRequest
+            {
+                SourcePath = absentSource,
+                DestinationPath = destination,
+                DefectRegions =
+                [
+                    new DevelopDefectRegionEdit
+                    {
+                        Width = 8,
+                        Height = 8,
+                        Mask = new byte[63],
+                    },
+                ],
+            }),
+            "develop_export_short_defect_mask_rejected");
 
         CheckThrows<ArgumentException>(
             () => NativeDevelopExporter.Run(new DevelopExportRequest
@@ -293,6 +763,15 @@ internal static unsafe class ContractTestRunner
                 BaseEstimationMode = (DevelopBaseEstimationMode)99,
             }),
             "develop_export_undefined_base_mode_rejected");
+
+        CheckThrows<ArgumentException>(
+            () => NativeDevelopExporter.Run(new DevelopExportRequest
+            {
+                SourcePath = absentSource,
+                DestinationPath = destination,
+                FilmPolarity = (FilmPolarity)99,
+            }),
+            "develop_export_undefined_film_polarity_rejected");
 
         CheckThrows<ArgumentException>(
             () => NativeDevelopExporter.Run(new DevelopExportRequest
@@ -333,6 +812,33 @@ internal static unsafe class ContractTestRunner
                 },
             }),
             "develop_export_invalid_color_grading_rejected");
+
+        CheckThrows<ArgumentException>(
+            () => NativeDevelopExporter.Run(new DevelopExportRequest
+            {
+                SourcePath = absentSource,
+                DestinationPath = destination,
+                DefectRemovalStrength = double.NaN,
+            }),
+            "develop_export_invalid_grain_mend_strength_rejected");
+
+        CheckThrows<ArgumentException>(
+            () => NativeDevelopExporter.Run(new DevelopExportRequest
+            {
+                SourcePath = absentSource,
+                DestinationPath = destination,
+                NoiseReductionDetail = float.NaN,
+            }),
+            "develop_export_invalid_noise_reduction_control_rejected");
+
+        CheckThrows<ArgumentException>(
+            () => NativeDevelopExporter.Run(new DevelopExportRequest
+            {
+                SourcePath = absentSource,
+                DestinationPath = destination,
+                Vignette = 1.01F,
+            }),
+            "develop_export_invalid_texture_control_rejected");
 
         CheckThrows<ArgumentNullException>(
             () => NativeDevelopExporter.Run(null!),

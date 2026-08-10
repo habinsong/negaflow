@@ -10,11 +10,11 @@ param(
 
 # 로컬에서 Windows CI 와 같은 검사를 한 번에 돌리는 입구다.
 # GitHub(.github/workflows/windows.yml)는 같은 단계를 나란한 잡으로 돌리므로 내용은 같고
-# 순서만 다르다. macOS 쪽 짝은 저장소 루트의 scripts/ci-gate.sh 이며 서로 겹치지 않는다.
+# 순서만 다르다. macOS 쪽 짝은 저장소 루트의 negaflow-mac/scripts/ci-gate.sh 이며 서로 겹치지 않는다.
 #
-# 여기서 돌지 않는 것: provenance/라이선스 게이트는 macOS 잡이 Negaflow.Windows 경로까지
+# 여기서 돌지 않는 것: provenance/라이선스 게이트는 macOS 잡이 negaflow-windows 경로까지
 # 검사하므로 중복 실행하지 않는다. 직접 돌리려면 저장소 루트에서
-#   py scripts/ci/verify-provenance.py
+#   py negaflow-mac/scripts/ci/verify-provenance.py
 
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot

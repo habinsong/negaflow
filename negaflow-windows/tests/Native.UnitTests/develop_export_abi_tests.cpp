@@ -1,11 +1,24 @@
 #include "negaflow_abi.h"
+#include "synthetic_wic_tiff.h"
 
+#include <Windows.h>
+#include <bcrypt.h>
+
+#include <algorithm>
+#include <array>
+#include <atomic>
 #include <cstdint>
 #include <cstring>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
+#include <iterator>
+#include <limits>
 #include <string>
+#include <thread>
 #include <vector>
+
+#pragma comment(lib, "bcrypt.lib")
 
 namespace {
 
@@ -16,6 +29,23 @@ void expect(const bool condition, const char* const message) {
         std::cerr << "FAIL: " << message << '\n';
         ++failures;
     }
+}
+
+[[nodiscard]] bool sha256(
+    const std::vector<std::uint8_t>& bytes,
+    std::array<std::uint8_t, 32U>& digest) noexcept {
+    if (bytes.size() >
+        static_cast<std::size_t>(std::numeric_limits<ULONG>::max())) {
+        return false;
+    }
+    return BCryptHash(
+               BCRYPT_SHA256_ALG_HANDLE,
+               nullptr,
+               0U,
+               const_cast<PUCHAR>(bytes.data()),
+               static_cast<ULONG>(bytes.size()),
+               digest.data(),
+               static_cast<ULONG>(digest.size())) >= 0;
 }
 
 [[nodiscard]] nf_develop_export_request_v1 make_request(
@@ -65,6 +95,18 @@ void expect(const bool condition, const char* const message) {
     nf_develop_export_result_v2 result{};
     result.struct_size = static_cast<std::uint32_t>(sizeof(result));
     return result;
+}
+
+[[nodiscard]] nf_develop_export_result_v3 make_result_v3() {
+    nf_develop_export_result_v3 result{};
+    result.struct_size = static_cast<std::uint32_t>(sizeof(result));
+    return result;
+}
+
+[[nodiscard]] nf_develop_run_state_v1 make_run_state() {
+    nf_develop_run_state_v1 state{};
+    state.struct_size = static_cast<std::uint32_t>(sizeof(state));
+    return state;
 }
 
 [[nodiscard]] nf_develop_export_request_v3 make_request_v3(
@@ -157,6 +199,185 @@ void expect(const bool condition, const char* const message) {
     return request;
 }
 
+[[nodiscard]] nf_develop_export_request_v8 make_request_v8(
+    const wchar_t* const source,
+    const wchar_t* const destination,
+    const std::uint32_t base_mode = NF_BASE_ESTIMATION_AUTO) {
+    nf_develop_export_request_v8 request{};
+    const nf_develop_export_request_v7 prefix =
+        make_request_v7(source, destination, base_mode);
+    std::memcpy(&request, &prefix, sizeof(prefix));
+    request.struct_size = static_cast<std::uint32_t>(sizeof(request));
+    return request;
+}
+
+[[nodiscard]] nf_develop_export_request_v9 make_request_v9(
+    const wchar_t* const source,
+    const wchar_t* const destination,
+    const std::uint32_t base_mode = NF_BASE_ESTIMATION_AUTO) {
+    nf_develop_export_request_v9 request{};
+    request.v8 = make_request_v8(source, destination, base_mode);
+    request.v8.struct_size = static_cast<std::uint32_t>(sizeof(request));
+    request.noise_reduction_luma = 0.5F;
+    request.noise_reduction_chroma = 0.5F;
+    request.noise_reduction_dark_tone = 0.5F;
+    request.noise_reduction_detail = 0.5F;
+    request.noise_reduction_film_profile =
+        NF_FILM_SCAN_DENOISE_COLOR_NEGATIVE;
+    return request;
+}
+
+[[nodiscard]] nf_develop_export_request_v10 make_request_v10(
+    const wchar_t* const source,
+    const wchar_t* const destination,
+    const std::uint32_t base_mode = NF_BASE_ESTIMATION_AUTO) {
+    nf_develop_export_request_v10 request{};
+    request.v9 = make_request_v9(source, destination, base_mode);
+    request.v9.v8.struct_size = static_cast<std::uint32_t>(sizeof(request));
+    return request;
+}
+
+[[nodiscard]] nf_develop_export_request_v11 make_request_v11(
+    const wchar_t* const source,
+    const wchar_t* const destination,
+    const std::uint32_t base_mode = NF_BASE_ESTIMATION_AUTO) {
+    nf_develop_export_request_v11 request{};
+    request.v10 = make_request_v10(source, destination, base_mode);
+    request.v10.v9.v8.struct_size = static_cast<std::uint32_t>(sizeof(request));
+    request.crop_width = 1.0;
+    request.crop_height = 1.0;
+    return request;
+}
+
+[[nodiscard]] nf_develop_export_request_v12 make_request_v12(
+    const wchar_t* const source,
+    const wchar_t* const destination,
+    const std::uint32_t base_mode = NF_BASE_ESTIMATION_AUTO) {
+    nf_develop_export_request_v12 request{};
+    request.v11 = make_request_v11(source, destination, base_mode);
+    request.v11.v10.v9.v8.struct_size =
+        static_cast<std::uint32_t>(sizeof(request));
+    return request;
+}
+
+[[nodiscard]] nf_develop_export_request_v13 make_request_v13(
+    const wchar_t* const source,
+    const wchar_t* const destination,
+    const std::uint32_t base_mode = NF_BASE_ESTIMATION_AUTO) {
+    nf_develop_export_request_v13 request{};
+    request.v12 = make_request_v12(source, destination, base_mode);
+    request.v12.v11.v10.v9.v8.struct_size =
+        static_cast<std::uint32_t>(sizeof(request));
+    return request;
+}
+
+[[nodiscard]] nf_develop_export_request_v14 make_request_v14(
+    const wchar_t* const source,
+    const wchar_t* const destination,
+    const std::uint32_t base_mode = NF_BASE_ESTIMATION_AUTO) {
+    nf_develop_export_request_v14 request{};
+    request.v13 = make_request_v13(source, destination, base_mode);
+    request.v13.v12.v11.v10.v9.v8.struct_size =
+        static_cast<std::uint32_t>(sizeof(request));
+    return request;
+}
+
+[[nodiscard]] nf_develop_export_request_v15 make_request_v15(
+    const wchar_t* const source,
+    const wchar_t* const destination,
+    const std::uint32_t base_mode = NF_BASE_ESTIMATION_AUTO) {
+    nf_develop_export_request_v15 request{};
+    request.v14 = make_request_v14(source, destination, base_mode);
+    request.v14.v13.v12.v11.v10.v9.v8.struct_size =
+        static_cast<std::uint32_t>(sizeof(request));
+    return request;
+}
+
+[[nodiscard]] nf_develop_export_request_v16 make_request_v16(
+    const wchar_t* const source,
+    const wchar_t* const destination,
+    const std::uint32_t base_mode = NF_BASE_ESTIMATION_AUTO) {
+    nf_develop_export_request_v16 request{};
+    request.v15 = make_request_v15(source, destination, base_mode);
+    request.v15.v14.v13.v12.v11.v10.v9.v8.struct_size =
+        static_cast<std::uint32_t>(sizeof(request));
+    return request;
+}
+
+[[nodiscard]] nf_develop_export_request_v17 make_request_v17(
+    const wchar_t* const source,
+    const wchar_t* const destination,
+    const std::uint32_t base_mode = NF_BASE_ESTIMATION_AUTO) {
+    nf_develop_export_request_v17 request{};
+    request.v16 = make_request_v16(source, destination, base_mode);
+    request.v16.v15.v14.v13.v12.v11.v10.v9.v8.struct_size =
+        static_cast<std::uint32_t>(sizeof(request));
+    request.film_polarity = NF_FILM_POLARITY_NEGATIVE;
+    return request;
+}
+
+[[nodiscard]] nf_develop_export_request_v18 make_request_v18(
+    const wchar_t* const source,
+    const wchar_t* const destination,
+    const std::uint32_t base_mode = NF_BASE_ESTIMATION_AUTO) {
+    nf_develop_export_request_v18 request{};
+    request.v17 = make_request_v17(source, destination, base_mode);
+    request.v17.v16.v15.v14.v13.v12.v11.v10.v9.v8.struct_size =
+        static_cast<std::uint32_t>(sizeof(request));
+    return request;
+}
+
+[[nodiscard]] nf_develop_export_request_v19 make_request_v19(
+    const wchar_t* const source,
+    const wchar_t* const destination,
+    const std::uint32_t base_mode = NF_BASE_ESTIMATION_AUTO) {
+    nf_develop_export_request_v19 request{};
+    request.v18 = make_request_v18(source, destination, base_mode);
+    request.v18.v17.v16.v15.v14.v13.v12.v11.v10.v9.v8.struct_size =
+        static_cast<std::uint32_t>(sizeof(request));
+    return request;
+}
+
+[[nodiscard]] nf_develop_export_request_v20 make_request_v20(
+    const wchar_t* const source,
+    const wchar_t* const destination,
+    const std::uint32_t base_mode = NF_BASE_ESTIMATION_AUTO) {
+    nf_develop_export_request_v20 request{};
+    request.v19 = make_request_v19(source, destination, base_mode);
+    request.v19.v18.v17.v16.v15.v14.v13.v12.v11.v10.v9.v8.struct_size =
+        static_cast<std::uint32_t>(sizeof(request));
+    return request;
+}
+
+[[nodiscard]] nf_develop_export_request_v21 make_request_v21(
+    const wchar_t* const source,
+    const wchar_t* const destination,
+    const std::uint32_t base_mode = NF_BASE_ESTIMATION_AUTO) {
+    nf_develop_export_request_v21 request{};
+    request.v20 = make_request_v20(source, destination, base_mode);
+    request.v20.v19.v18.v17.v16.v15.v14.v13.v12.v11.v10.v9.v8.struct_size =
+        static_cast<std::uint32_t>(sizeof(request));
+    return request;
+}
+
+[[nodiscard]] bool write_file(
+    const std::filesystem::path& path,
+    const std::vector<std::uint8_t>& bytes) {
+    std::ofstream output(path, std::ios::binary | std::ios::trunc);
+    output.write(
+        reinterpret_cast<const char*>(bytes.data()),
+        static_cast<std::streamsize>(bytes.size()));
+    return output.good();
+}
+
+[[nodiscard]] std::vector<std::uint8_t> read_file(
+    const std::filesystem::path& path) {
+    std::ifstream input(path, std::ios::binary);
+    return std::vector<std::uint8_t>(
+        std::istreambuf_iterator<char>(input),
+        std::istreambuf_iterator<char>());
+}
+
 void test_argument_contract() {
     nf_develop_export_request_v1 request = make_request(L"a.tif", L"b.png");
     nf_develop_export_result_v1 result = make_result();
@@ -237,14 +458,30 @@ void test_request_validation() {
         "unknown_film_emulation",
         "an unknown film emulation is refused");
 
-    // The rendered-digital graph is not implemented. It must refuse rather than
-    // develop a negative anyway.
     nf_develop_export_request_v1 digital = make_request(L"a.tif", L"b.png");
     digital.film_look_source_kind = NF_DEVELOP_SOURCE_RENDERED_DIGITAL;
-    expect_rejected(
-        digital,
-        "negative_develop_requires_film_scan_source",
-        "a rendered-digital source is refused for a negative develop");
+    nf_develop_export_result_v1 digital_result = make_result();
+    expect(
+        nf_develop_export_v1(&digital, &digital_result) == NF_STATUS_OK &&
+            digital_result.succeeded == 0U &&
+            digital_result.failed_stage ==
+                NF_DEVELOP_STAGE_OBSERVE_SOURCE_BEFORE,
+        "a rendered-digital request reaches source observation");
+
+    nf_develop_export_request_v1 black_and_white =
+        make_request(L"a.tif", L"b.png");
+    black_and_white.film_type = NF_FILM_TYPE_BLACK_AND_WHITE;
+    black_and_white.film_look_source_kind =
+        NF_DEVELOP_SOURCE_RENDERED_DIGITAL;
+    black_and_white.film_emulation = 12U;  // tri_x_400
+    nf_develop_export_result_v1 black_and_white_result = make_result();
+    expect(
+        nf_develop_export_v1(&black_and_white, &black_and_white_result) ==
+                NF_STATUS_OK &&
+            black_and_white_result.succeeded == 0U &&
+            black_and_white_result.failed_stage ==
+                NF_DEVELOP_STAGE_OBSERVE_SOURCE_BEFORE,
+        "a B&W film profile crosses the ABI and reaches source observation");
 
     nf_develop_export_request_v1 zero_rows = make_request(L"a.tif", L"b.png");
     zero_rows.rows_per_copy = 0U;
@@ -468,6 +705,327 @@ void test_v7_contract() {
         "v7 Color Grading reaches source observation");
 }
 
+void test_v8_contract() {
+    expect(sizeof(nf_develop_export_request_v8) == 4408U,
+           "v8 request layout is fixed");
+    nf_develop_export_request_v8 request = make_request_v8(L"a.tif", L"b.png");
+    nf_develop_export_result_v2 result = make_result_v2();
+    request.defect_removal_strength = 1.01;
+    expect(
+        nf_develop_export_v8(&request, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            std::strcmp(result.failure_name, "invalid_grain_mend_parameters") == 0,
+        "v8 out-of-range GrainMend strength is rejected");
+    request = make_request_v8(L"a.tif", L"b.png");
+    request.defect_removal_strength = 0.75;
+    expect(
+        nf_develop_export_v8(&request, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            result.failed_stage == NF_DEVELOP_STAGE_OBSERVE_SOURCE_BEFORE,
+        "v8 GrainMend strength reaches source observation");
+}
+
+void test_v9_contract() {
+    expect(sizeof(nf_develop_export_request_v9) == 4440U,
+           "v9 request layout is fixed");
+    nf_develop_export_request_v9 request = make_request_v9(L"a.tif", L"b.png");
+    nf_develop_export_result_v2 result = make_result_v2();
+    request.noise_reduction_strength = 1.01F;
+    expect(
+        nf_develop_export_v9(&request, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            std::strcmp(
+                result.failure_name,
+                "invalid_film_scan_denoise_parameters") == 0,
+        "v9 out-of-range FilmScanDenoise strength is rejected");
+    request = make_request_v9(L"a.tif", L"b.png");
+    request.noise_reduction_strength = 0.75F;
+    request.noise_reduction_film_profile =
+        NF_FILM_SCAN_DENOISE_COLOR_POSITIVE;
+    expect(
+        nf_develop_export_v9(&request, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            result.failed_stage == NF_DEVELOP_STAGE_OBSERVE_SOURCE_BEFORE,
+        "v9 FilmScanDenoise controls reach source observation");
+}
+
+void test_v10_contract() {
+    expect(sizeof(nf_develop_export_request_v10) == 4464U,
+           "v10 request layout is fixed");
+    nf_develop_export_request_v10 request =
+        make_request_v10(L"a.tif", L"b.png");
+    nf_develop_export_result_v2 result = make_result_v2();
+    request.texture_clarity = 1.01F;
+    expect(
+        nf_develop_export_v10(&request, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            std::strcmp(result.failure_name, "invalid_texture_parameters") == 0,
+        "v10 out-of-range Texture control is rejected");
+    request = make_request_v10(L"a.tif", L"b.png");
+    request.texture_sharpness = 0.75F;
+    expect(
+        nf_develop_export_v10(&request, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            result.failed_stage == NF_DEVELOP_STAGE_OBSERVE_SOURCE_BEFORE,
+        "v10 Texture controls reach source observation");
+}
+
+void test_v11_contract() {
+    expect(sizeof(nf_develop_export_request_v11) == 4552U,
+           "v11 request layout is fixed");
+    nf_develop_export_request_v11 request =
+        make_request_v11(L"a.tif", L"b.png");
+    nf_develop_export_result_v2 result = make_result_v2();
+    request.image_rotation = 4U;
+    expect(
+        nf_develop_export_v11(&request, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            std::strcmp(result.failure_name,
+                        "invalid_post_pipeline_parameters") == 0,
+        "v11 invalid ImageTransform is rejected");
+    request = make_request_v11(L"a.tif", L"b.png");
+    request.bw_toning_mode = 1U;
+    request.bw_toning_shadow_hue = 285.0;
+    request.bw_toning_highlight_hue = 34.0;
+    request.bw_toning_strength = 0.5;
+    expect(
+        nf_develop_export_v11(&request, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            result.failed_stage == NF_DEVELOP_STAGE_OBSERVE_SOURCE_BEFORE,
+        "v11 B&W toning and transform controls reach source observation");
+}
+
+void test_v12_contract() {
+    expect(sizeof(nf_develop_export_request_v12) == 4600U,
+           "v12 request layout is fixed");
+    nf_local_dodge_burn_stroke_v1 stroke{};
+    stroke.point_offset = 1U;
+    stroke.point_count = 1U;
+    stroke.thickness = 0.04F;
+    stroke.feather = 0.02F;
+    nf_local_dodge_burn_adjustment_v1 adjustment{};
+    adjustment.mode = NF_LOCAL_DODGE_BURN_MODE_DODGE;
+    adjustment.enabled = 1U;
+    adjustment.mask_kind = NF_LOCAL_DODGE_BURN_MASK_BRUSH;
+    adjustment.stroke_count = 1U;
+    adjustment.amount = 0.5F;
+    adjustment.center_x = 0.5F;
+    adjustment.center_y = 0.5F;
+    adjustment.radius = 0.25F;
+    adjustment.feather = 0.25F;
+    adjustment.start_x = 0.5F;
+    adjustment.end_x = 0.5F;
+    adjustment.end_y = 1.0F;
+    nf_local_dodge_burn_point_v1 point{0.5F, 0.5F};
+    nf_develop_export_request_v12 request =
+        make_request_v12(L"a.tif", L"b.png");
+    request.local_adjustments = &adjustment;
+    request.local_adjustment_count = 1U;
+    request.local_strokes = &stroke;
+    request.local_stroke_count = 1U;
+    request.local_points = &point;
+    request.local_point_count = 1U;
+    nf_develop_export_result_v2 result = make_result_v2();
+    expect(
+        nf_develop_export_v12(&request, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            result.failed_stage == NF_DEVELOP_STAGE_REQUEST_VALIDATION &&
+            std::strcmp(
+                result.failure_name,
+                "invalid_local_dodge_burn_payload") == 0,
+        "v12 rejects a stroke point range outside the flat payload");
+}
+
+void test_v18_contract() {
+    nf_develop_export_request_v18 request =
+        make_request_v18(L"a.tif", L"b.png");
+    nf_develop_export_result_v2 result = make_result_v2();
+
+    request.defect_region_reserved = 1U;
+    expect(
+        nf_develop_export_v18(&request, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            result.failed_stage == NF_DEVELOP_STAGE_REQUEST_VALIDATION &&
+            std::strcmp(result.failure_name, "invalid_defect_region_payload") == 0,
+        "v18 rejects a nonzero defect payload reserved field");
+
+    request = make_request_v18(L"a.tif", L"b.png");
+    nf_defect_region_edit_v1 edit{};
+    edit.enabled = 1U;
+    edit.width = 8U;
+    edit.height = 8U;
+    edit.mask_stride_bytes = 8U;
+    edit.mask_byte_count = 64U;
+    edit.strength = 1.0;
+    std::vector<std::uint8_t> truncated_mask(32U, 0xffU);
+    request.defect_region_edits = &edit;
+    request.defect_region_edit_count = 1U;
+    request.defect_mask_bytes = truncated_mask.data();
+    request.defect_mask_byte_count =
+        static_cast<std::uint32_t>(truncated_mask.size());
+    result = make_result_v2();
+    expect(
+        nf_develop_export_v18(&request, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            result.failed_stage == NF_DEVELOP_STAGE_REQUEST_VALIDATION &&
+            std::strcmp(result.failure_name, "invalid_defect_region_payload") == 0,
+        "v18 rejects a defect mask range outside the flat payload");
+}
+
+void test_v19_contract() {
+    nf_develop_export_request_v19 request =
+        make_request_v19(L"a.tif", L"b.png");
+    nf_develop_export_result_v2 result = make_result_v2();
+    request.reserved = 1U;
+    expect(
+        nf_develop_export_v19(&request, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            result.failed_stage == NF_DEVELOP_STAGE_REQUEST_VALIDATION &&
+            std::strcmp(
+                result.failure_name,
+                "invalid_defect_source_identity") == 0,
+        "v19 rejects a nonzero source-identity reserved field");
+
+    request = make_request_v19(L"a.tif", L"b.png");
+    nf_defect_region_edit_v1 edit{};
+    edit.enabled = 1U;
+    edit.width = 8U;
+    edit.height = 8U;
+    edit.mask_stride_bytes = 8U;
+    edit.mask_byte_count = 64U;
+    edit.strength = 1.0;
+    std::vector<std::uint8_t> mask(64U, 0xffU);
+    request.v18.defect_region_edits = &edit;
+    request.v18.defect_region_edit_count = 1U;
+    request.v18.defect_mask_bytes = mask.data();
+    request.v18.defect_mask_byte_count = static_cast<std::uint32_t>(mask.size());
+    result = make_result_v2();
+    expect(
+        nf_develop_export_v19(&request, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            result.failed_stage == NF_DEVELOP_STAGE_REQUEST_VALIDATION &&
+            std::strcmp(
+                result.failure_name,
+                "invalid_defect_source_identity") == 0,
+        "v19 rejects an unbound defect recipe before source I/O");
+}
+
+void test_v20_contract() {
+    expect(sizeof(nf_defect_clone_point_v1) == 16U,
+           "v20 clone point layout is fixed");
+    expect(sizeof(nf_defect_clone_stroke_v1) == 40U,
+           "v20 clone stroke layout is fixed");
+    expect(sizeof(nf_defect_clone_edit_v1) == 24U,
+           "v20 clone edit layout is fixed");
+    expect(sizeof(nf_develop_export_request_v20) == 4784U,
+           "v20 request layout is fixed");
+
+    nf_defect_clone_point_v1 point{0.5, 0.5};
+    nf_defect_clone_stroke_v1 stroke{};
+    stroke.point_count = 1U;
+    stroke.offset_x = 0.1;
+    stroke.diameter_pixels = 9.0;
+    stroke.hardness = 1.0;
+    nf_defect_clone_edit_v1 edit{};
+    edit.enabled = 1U;
+    edit.stroke_count = 1U;
+    edit.strength = 1.0;
+    nf_defect_recipe_edit_ref_v1 order{
+        NF_DEFECT_RECIPE_EDIT_CLONE, 0U};
+    std::array<std::uint8_t, 32U> digest{};
+
+    nf_develop_export_request_v20 request =
+        make_request_v20(L"a.tif", L"b.png");
+    request.v19.defect_source_file_bytes = 1U;
+    request.v19.defect_source_sha256 = digest.data();
+    request.v19.has_defect_source_identity = 1U;
+    request.defect_clone_edits = &edit;
+    request.defect_clone_edit_count = 1U;
+    request.defect_clone_strokes = &stroke;
+    request.defect_clone_stroke_count = 1U;
+    request.defect_clone_points = &point;
+    request.defect_clone_point_count = 1U;
+    request.defect_edit_order = &order;
+    request.defect_edit_order_count = 1U;
+    nf_develop_export_result_v2 result = make_result_v2();
+    expect(
+        nf_develop_export_v20(&request, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            result.failed_stage == NF_DEVELOP_STAGE_OBSERVE_SOURCE_BEFORE,
+        "v20 complete clone payload reaches source observation");
+
+    request.defect_edit_order_count = 0U;
+    result = make_result_v2();
+    expect(
+        nf_develop_export_v20(&request, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            result.failed_stage == NF_DEVELOP_STAGE_REQUEST_VALIDATION &&
+            std::strcmp(result.failure_name, "invalid_defect_clone_payload") == 0,
+        "v20 rejects a clone descriptor omitted from recipe order");
+}
+
+void test_v21_contract() {
+    expect(sizeof(nf_defect_brush_point_v1) == 16U,
+           "v21 brush point layout is fixed");
+    expect(sizeof(nf_defect_brush_stroke_v1) == 16U,
+           "v21 brush stroke layout is fixed");
+    expect(sizeof(nf_defect_brush_edit_v1) == 24U,
+           "v21 brush edit layout is fixed");
+    expect(sizeof(nf_develop_export_request_v21) == 4832U,
+           "v21 request layout is fixed");
+
+    nf_defect_brush_point_v1 point{0.5, 0.5};
+    nf_defect_brush_stroke_v1 stroke{};
+    stroke.point_count = 1U;
+    stroke.thickness = 0.02;
+    nf_defect_brush_edit_v1 edit{};
+    edit.enabled = 1U;
+    edit.stroke_count = 1U;
+    edit.strength = 1.0;
+    nf_defect_recipe_edit_ref_v1 order{
+        NF_DEFECT_RECIPE_EDIT_BRUSH, 0U};
+    std::array<std::uint8_t, 32U> digest{};
+
+    nf_develop_export_request_v21 request =
+        make_request_v21(L"a.tif", L"b.png");
+    request.v20.v19.defect_source_file_bytes = 1U;
+    request.v20.v19.defect_source_sha256 = digest.data();
+    request.v20.v19.has_defect_source_identity = 1U;
+    request.v20.defect_edit_order = &order;
+    request.v20.defect_edit_order_count = 1U;
+    request.defect_brush_edits = &edit;
+    request.defect_brush_edit_count = 1U;
+    request.defect_brush_strokes = &stroke;
+    request.defect_brush_stroke_count = 1U;
+    request.defect_brush_points = &point;
+    request.defect_brush_point_count = 1U;
+    nf_develop_export_result_v2 result = make_result_v2();
+    expect(
+        nf_develop_export_v21(&request, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            result.failed_stage == NF_DEVELOP_STAGE_OBSERVE_SOURCE_BEFORE,
+        "v21 complete brush payload reaches source observation");
+
+    request.v20.defect_edit_order_count = 0U;
+    result = make_result_v2();
+    expect(
+        nf_develop_export_v21(&request, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            result.failed_stage == NF_DEVELOP_STAGE_REQUEST_VALIDATION &&
+            std::strcmp(result.failure_name, "invalid_defect_clone_payload") == 0,
+        "v21 rejects a brush descriptor omitted from recipe order");
+
+    request.v20.defect_edit_order_count = 1U;
+    point.x = 2.0;
+    result = make_result_v2();
+    expect(
+        nf_develop_export_v21(&request, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            result.failed_stage == NF_DEVELOP_STAGE_REQUEST_VALIDATION &&
+            std::strcmp(result.failure_name, "invalid_defect_brush_payload") == 0,
+        "v21 rejects out-of-range normalized brush geometry");
+}
+
 void test_missing_source_is_not_a_validation_error() {
     const std::filesystem::path absent =
         std::filesystem::temp_directory_path() / L"negaflow-abi-absent-source.tif";
@@ -546,7 +1104,13 @@ void test_full_develop(const std::filesystem::path& source) {
     expect(result.image_width > 0U && result.image_height > 0U, "dimensions are reported");
     expect(result.source_file_bytes > 0U, "the source size is reported");
     expect(result.output_file_bytes > 0U, "the published artifact size is reported");
-    expect(result.film_look_color_applied == 1U, "the Film Look colour stage ran");
+    // A real film scan already carries the emulsion response, so applying a stock on top
+    // of it would feed the same emulsion twice. Selecting one is preserved and ignored.
+    // This assertion used to demand the opposite and never ran, because the fixture path
+    // it depends on did not resolve.
+    expect(
+        result.film_look_color_applied == 0U,
+        "a film scan does not run the Film Look colour stage");
     expect(
         std::filesystem::exists(destination),
         "the published file exists on disk");
@@ -837,6 +1401,1146 @@ void test_v6_color_mixer_preview(const std::filesystem::path& source) {
         "v6 Color Mixer changes preview pixels");
 }
 
+void test_v8_grain_mend_preview(const std::filesystem::path& source) {
+    const std::wstring source_text = source.wstring();
+    nf_develop_export_request_v8 request =
+        make_request_v8(source_text.c_str(), nullptr);
+    request.defect_removal_strength = 0.75;
+    constexpr std::uint32_t box = 128U;
+    std::vector<std::uint8_t> pixels(
+        static_cast<std::size_t>(box) * static_cast<std::size_t>(box) * 4U,
+        0U);
+    nf_develop_export_result_v2 result = make_result_v2();
+    expect(
+        nf_develop_preview_v8(
+            &request,
+            box,
+            box,
+            pixels.data(),
+            static_cast<std::uint32_t>(pixels.size()),
+            &result) == NF_STATUS_OK &&
+            result.succeeded == 1U,
+        "v8 nonzero GrainMend preview succeeds through the shared pipeline");
+}
+
+// Neutrality of a monochrome develop is a property of the working image. The 8-bit
+// preview adds under one code value of dither per channel — as the macOS display path
+// does — so the check is "no visible tint", not "identical bytes". A real tint from the
+// B&W graph would be far larger than one step.
+[[nodiscard]] bool preview_is_neutral(
+    const std::vector<std::uint8_t>& pixels) noexcept {
+    for (std::size_t offset = 0U; offset + 3U < pixels.size(); offset += 4U) {
+        const int blue = pixels[offset];
+        const int green = pixels[offset + 1U];
+        const int red = pixels[offset + 2U];
+        const int highest = std::max(red, std::max(green, blue));
+        const int lowest = std::min(red, std::min(green, blue));
+        if (highest - lowest > 1) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void test_v9_film_scan_denoise_preview(const std::filesystem::path& source) {
+    const std::wstring source_text = source.wstring();
+    nf_develop_export_request_v9 request =
+        make_request_v9(source_text.c_str(), nullptr);
+    request.noise_reduction_strength = 0.7F;
+    constexpr std::uint32_t box = 128U;
+    std::vector<std::uint8_t> pixels(
+        static_cast<std::size_t>(box) * static_cast<std::size_t>(box) * 4U,
+        0U);
+    nf_develop_export_result_v2 result = make_result_v2();
+    expect(
+        nf_develop_preview_v9(
+            &request,
+            box,
+            box,
+            pixels.data(),
+            static_cast<std::uint32_t>(pixels.size()),
+            &result) == NF_STATUS_OK &&
+            result.succeeded == 1U,
+        "v9 nonzero FilmScanDenoise preview succeeds through the shared pipeline");
+    // FilmScanDenoise runs its tile rows concurrently. The tiles write disjoint cores, so
+    // the split must not move a pixel; this fingerprint is what makes that checkable on a
+    // real scan rather than argued from the code. Forcing the whole engine inline
+    // reproduces exactly this value.
+    std::uint64_t fingerprint = 1469598103934665603ULL;
+    for (const std::uint8_t value : pixels) {
+        fingerprint = (fingerprint ^ value) * 1099511628211ULL;
+    }
+    std::cout << "{\"note\":\"denoise_preview_pixels\",\"fnv1a64\":\"" << std::hex
+              << fingerprint << std::dec << "\"}" << std::endl;
+}
+
+void test_v10_texture_preview(const std::filesystem::path& source) {
+    const std::wstring source_text = source.wstring();
+    nf_develop_export_request_v10 request =
+        make_request_v10(source_text.c_str(), nullptr);
+    request.texture_sharpness = 0.6F;
+    request.texture_vignette = 0.3F;
+    constexpr std::uint32_t box = 128U;
+    std::vector<std::uint8_t> pixels(
+        static_cast<std::size_t>(box) * static_cast<std::size_t>(box) * 4U,
+        0U);
+    nf_develop_export_result_v2 result = make_result_v2();
+    expect(
+        nf_develop_preview_v10(
+            &request,
+            box,
+            box,
+            pixels.data(),
+            static_cast<std::uint32_t>(pixels.size()),
+            &result) == NF_STATUS_OK &&
+            result.succeeded == 1U,
+        "v10 Texture preview succeeds through the shared pipeline");
+    // Texture's blur runs its tile rows concurrently on the same disjoint-core contract as
+    // FilmScanDenoise, and its grain hashes the absolute coordinate rather than running a
+    // sequence. Both claims are only worth anything if the pixels come out the same, so
+    // the fingerprint is reported for comparison against a forced-inline build.
+    std::uint64_t fingerprint = 1469598103934665603ULL;
+    for (const std::uint8_t value : pixels) {
+        fingerprint = (fingerprint ^ value) * 1099511628211ULL;
+    }
+    std::cout << "{\"note\":\"texture_preview_pixels\",\"fnv1a64\":\"" << std::hex
+              << fingerprint << std::dec << "\",\"wall_microseconds\":"
+              << result.wall_microseconds << "}" << std::endl;
+}
+
+void test_v11_bw_transform_preview(const std::filesystem::path& source) {
+    const std::wstring source_text = source.wstring();
+    nf_develop_export_request_v11 request =
+        make_request_v11(source_text.c_str(), nullptr);
+    request.v10.v9.v8.film_type = NF_FILM_TYPE_BLACK_AND_WHITE;
+    request.bw_toning_mode = 2U;
+    request.bw_toning_shadow_hue = 32.0;
+    request.bw_toning_highlight_hue = 48.0;
+    request.bw_toning_strength = 0.8;
+    request.image_rotation = 1U;
+    request.has_crop = 1U;
+    request.crop_x = 0.1;
+    request.crop_y = 0.1;
+    request.crop_width = 0.8;
+    request.crop_height = 0.8;
+    request.straighten_angle = 3.0;
+    constexpr std::uint32_t box = 128U;
+    std::vector<std::uint8_t> pixels(
+        static_cast<std::size_t>(box) * static_cast<std::size_t>(box) * 4U,
+        0U);
+    nf_develop_export_result_v2 result = make_result_v2();
+    expect(
+        nf_develop_preview_v11(
+            &request,
+            box,
+            box,
+            pixels.data(),
+            static_cast<std::uint32_t>(pixels.size()),
+            &result) == NF_STATUS_OK && result.succeeded == 1U &&
+            result.image_width > 0U && result.image_height > 0U,
+        "v11 B&W toning and ImageTransform preview succeeds through the shared pipeline");
+}
+
+void test_v11_rendered_digital_preview(const std::filesystem::path& source) {
+    const std::wstring source_text = source.wstring();
+    nf_develop_export_request_v11 request =
+        make_request_v11(source_text.c_str(), nullptr);
+    request.v10.v9.v8.film_look_source_kind =
+        NF_DEVELOP_SOURCE_RENDERED_DIGITAL;
+    request.v10.v9.v8.film_emulation = 39U;  // Vision3 500T
+    request.v10.v9.v8.film_emulation_intensity = 0.7;
+    request.v10.texture_grain = 0.45F;
+    request.v10.texture_halation = 0.55F;
+    constexpr std::uint32_t box = 128U;
+    std::vector<std::uint8_t> pixels(
+        static_cast<std::size_t>(box) * static_cast<std::size_t>(box) * 4U,
+        0U);
+    nf_develop_export_result_v2 result = make_result_v2();
+    expect(
+        nf_develop_preview_v11(
+            &request,
+            box,
+            box,
+            pixels.data(),
+            static_cast<std::uint32_t>(pixels.size()),
+            &result) == NF_STATUS_OK && result.succeeded == 1U &&
+            result.film_look_route == NF_FILM_LOOK_ROUTE_DIGITAL_FILM_LOOK,
+        "v11 Vision3 rendered-digital preview completes the dedicated Film Look graph");
+
+    nf_develop_export_request_v11 black_and_white = request;
+    black_and_white.v10.v9.v8.film_type = NF_FILM_TYPE_BLACK_AND_WHITE;
+    black_and_white.v10.v9.v8.film_emulation = 12U;  // Tri-X 400
+    std::vector<std::uint8_t> black_and_white_pixels(pixels.size(), 0U);
+    nf_develop_export_result_v2 black_and_white_result = make_result_v2();
+    expect(
+        nf_develop_preview_v11(
+            &black_and_white,
+            box,
+            box,
+            black_and_white_pixels.data(),
+            static_cast<std::uint32_t>(black_and_white_pixels.size()),
+            &black_and_white_result) == NF_STATUS_OK &&
+            black_and_white_result.succeeded == 1U &&
+            black_and_white_result.film_look_route ==
+                NF_FILM_LOOK_ROUTE_DIGITAL_FILM_LOOK,
+        "v11 rendered-digital B&W preview completes the dedicated Film Look graph");
+    expect(
+        preview_is_neutral(black_and_white_pixels),
+        "the rendered-digital B&W Film Look exports neutral RGB");
+}
+
+void test_v12_local_dodge_burn_preview(const std::filesystem::path& source) {
+    const std::wstring source_text = source.wstring();
+    nf_develop_export_request_v12 baseline =
+        make_request_v12(source_text.c_str(), nullptr);
+    constexpr std::uint32_t box = 128U;
+    std::vector<std::uint8_t> baseline_pixels(
+        static_cast<std::size_t>(box) * static_cast<std::size_t>(box) * 4U,
+        0U);
+    nf_develop_export_result_v2 baseline_result = make_result_v2();
+    expect(
+        nf_develop_preview_v12(
+            &baseline,
+            box,
+            box,
+            baseline_pixels.data(),
+            static_cast<std::uint32_t>(baseline_pixels.size()),
+            &baseline_result) == NF_STATUS_OK && baseline_result.succeeded == 1U,
+        "v12 identity preview succeeds");
+
+    nf_local_dodge_burn_point_v1 points[]{
+        {0.38F, 0.50F},
+        {0.62F, 0.50F},
+    };
+    nf_local_dodge_burn_stroke_v1 stroke{};
+    stroke.point_count = 2U;
+    stroke.thickness = 0.12F;
+    stroke.feather = 0.02F;
+    nf_local_dodge_burn_adjustment_v1 adjustment{};
+    adjustment.mode = NF_LOCAL_DODGE_BURN_MODE_DODGE;
+    adjustment.enabled = 1U;
+    adjustment.mask_kind = NF_LOCAL_DODGE_BURN_MASK_BRUSH;
+    adjustment.stroke_count = 1U;
+    adjustment.amount = 0.8F;
+    adjustment.center_x = 0.5F;
+    adjustment.center_y = 0.5F;
+    adjustment.radius = 0.25F;
+    adjustment.feather = 0.25F;
+    adjustment.start_x = 0.5F;
+    adjustment.end_x = 0.5F;
+    adjustment.end_y = 1.0F;
+    nf_develop_export_request_v12 request = baseline;
+    request.local_adjustments = &adjustment;
+    request.local_adjustment_count = 1U;
+    request.local_strokes = &stroke;
+    request.local_stroke_count = 1U;
+    request.local_points = points;
+    request.local_point_count = 2U;
+    std::vector<std::uint8_t> pixels(baseline_pixels.size(), 0U);
+    nf_develop_export_result_v2 result = make_result_v2();
+    expect(
+        nf_develop_preview_v12(
+            &request,
+            box,
+            box,
+            pixels.data(),
+            static_cast<std::uint32_t>(pixels.size()),
+            &result) == NF_STATUS_OK && result.succeeded == 1U &&
+            pixels != baseline_pixels,
+        "v12 brush Local Dodge/Burn changes the shared preview pipeline");
+}
+
+void test_v13_color_model_preview(const std::filesystem::path& source) {
+    const std::wstring source_text = source.wstring();
+    nf_develop_export_request_v13 baseline =
+        make_request_v13(source_text.c_str(), nullptr);
+    constexpr std::uint32_t box = 128U;
+    std::vector<std::uint8_t> baseline_pixels(
+        static_cast<std::size_t>(box) * static_cast<std::size_t>(box) * 4U,
+        0U);
+    nf_develop_export_result_v2 baseline_result = make_result_v2();
+    expect(
+        nf_develop_preview_v13(
+            &baseline,
+            box,
+            box,
+            baseline_pixels.data(),
+            static_cast<std::uint32_t>(baseline_pixels.size()),
+            &baseline_result) == NF_STATUS_OK && baseline_result.succeeded == 1U,
+        "v13 identity preview succeeds");
+
+    nf_develop_export_request_v13 request = baseline;
+    request.warmth = 0.7F;
+    request.tint = -0.35F;
+    request.color_depth = 0.4F;
+    request.vibrance = 0.3F;
+    request.saturation = 0.2F;
+    request.red_primary = 0.1F;
+    request.green_primary = -0.1F;
+    request.blue_primary = 0.15F;
+    std::vector<std::uint8_t> pixels(baseline_pixels.size(), 0U);
+    nf_develop_export_result_v2 result = make_result_v2();
+    expect(
+        nf_develop_preview_v13(
+            &request,
+            box,
+            box,
+            pixels.data(),
+            static_cast<std::uint32_t>(pixels.size()),
+            &result) == NF_STATUS_OK && result.succeeded == 1U &&
+            pixels != baseline_pixels,
+        "v13 ColorModel changes the shared preview pipeline");
+}
+
+void test_v14_scene_correction_preview(const std::filesystem::path& source) {
+    const std::wstring source_text = source.wstring();
+    nf_develop_export_request_v14 baseline =
+        make_request_v14(source_text.c_str(), nullptr);
+    constexpr std::uint32_t box = 128U;
+    std::vector<std::uint8_t> baseline_pixels(
+        static_cast<std::size_t>(box) * static_cast<std::size_t>(box) * 4U,
+        0U);
+    nf_develop_export_result_v2 baseline_result = make_result_v2();
+    expect(
+        nf_develop_preview_v14(
+            &baseline,
+            box,
+            box,
+            baseline_pixels.data(),
+            static_cast<std::uint32_t>(baseline_pixels.size()),
+            &baseline_result) == NF_STATUS_OK && baseline_result.succeeded == 1U,
+        "v14 identity preview succeeds");
+
+    nf_develop_export_request_v14 request = baseline;
+    request.auto_levels = 1U;
+    request.auto_neutral_balance = 1U;
+    std::vector<std::uint8_t> pixels(baseline_pixels.size(), 0U);
+    nf_develop_export_result_v2 result = make_result_v2();
+    expect(
+        nf_develop_preview_v14(
+            &request,
+            box,
+            box,
+            pixels.data(),
+            static_cast<std::uint32_t>(pixels.size()),
+            &result) == NF_STATUS_OK && result.succeeded == 1U &&
+            pixels != baseline_pixels,
+        "v14 scene correction changes the shared preview pipeline");
+}
+
+void test_v15_develop_target_preview(const std::filesystem::path& source) {
+    const std::wstring source_text = source.wstring();
+    nf_develop_export_request_v15 baseline =
+        make_request_v15(source_text.c_str(), nullptr);
+    constexpr std::uint32_t box = 128U;
+    std::vector<std::uint8_t> baseline_pixels(
+        static_cast<std::size_t>(box) * static_cast<std::size_t>(box) * 4U,
+        0U);
+    nf_develop_export_result_v2 baseline_result = make_result_v2();
+    expect(
+        nf_develop_preview_v15(
+            &baseline,
+            box,
+            box,
+            baseline_pixels.data(),
+            static_cast<std::uint32_t>(baseline_pixels.size()),
+            &baseline_result) == NF_STATUS_OK && baseline_result.succeeded == 1U,
+        "v15 MAIN target reaches the shared preview pipeline");
+
+    std::vector<std::vector<std::uint8_t>> target_outputs;
+    for (const std::uint32_t target : {
+             NF_DEVELOP_TARGET_NORITSU,
+             NF_DEVELOP_TARGET_SP3000,
+             NF_DEVELOP_TARGET_F135,
+             NF_DEVELOP_TARGET_HR}) {
+        nf_develop_export_request_v15 request = baseline;
+        request.develop_target = target;
+        std::vector<std::uint8_t> pixels(baseline_pixels.size(), 0U);
+        nf_develop_export_result_v2 result = make_result_v2();
+        expect(
+            nf_develop_preview_v15(
+                &request,
+                box,
+                box,
+                pixels.data(),
+                static_cast<std::uint32_t>(pixels.size()),
+                &result) == NF_STATUS_OK && result.succeeded == 1U &&
+                pixels != baseline_pixels,
+            "v15 scanner target changes the shared preview pixels");
+        target_outputs.push_back(std::move(pixels));
+    }
+    expect(target_outputs[0] != target_outputs[1] &&
+               target_outputs[1] != target_outputs[2] &&
+               target_outputs[2] != target_outputs[3],
+           "v15 scanner targets remain distinct in shared preview");
+
+    nf_develop_export_request_v15 rescue = baseline;
+    rescue.develop_target = NF_DEVELOP_TARGET_RESCUE;
+    std::vector<std::uint8_t> rescue_pixels(baseline_pixels.size(), 0U);
+    nf_develop_export_result_v2 rescue_result = make_result_v2();
+    expect(
+        nf_develop_preview_v15(
+            &rescue,
+            box,
+            box,
+            rescue_pixels.data(),
+            static_cast<std::uint32_t>(rescue_pixels.size()),
+            &rescue_result) == NF_STATUS_OK && rescue_result.succeeded == 1U,
+        "v15 Rescue target reaches the shared preview pipeline");
+}
+
+void test_v16_scanner_profile_preview(const std::filesystem::path& source) {
+    const std::wstring source_text = source.wstring();
+    constexpr std::uint32_t box = 128U;
+    std::vector<std::uint8_t> baseline_pixels(
+        static_cast<std::size_t>(box) * static_cast<std::size_t>(box) * 4U,
+        0U);
+    std::vector<std::uint8_t> profile_pixels(baseline_pixels.size(), 0U);
+
+    nf_develop_export_request_v16 baseline =
+        make_request_v16(source_text.c_str(), nullptr);
+    nf_develop_export_result_v2 baseline_result = make_result_v2();
+    expect(
+        nf_develop_preview_v16(
+            &baseline,
+            box,
+            box,
+            baseline_pixels.data(),
+            static_cast<std::uint32_t>(baseline_pixels.size()),
+            &baseline_result) == NF_STATUS_OK && baseline_result.succeeded == 1U,
+        "v16 baseline preview succeeds");
+
+    nf_develop_export_request_v16 profiled = baseline;
+    profiled.scanner_profile_id =
+        L"noritsu__color-nega__kodak-ultramax-400";
+    nf_develop_export_result_v2 profile_result = make_result_v2();
+    expect(
+        nf_develop_preview_v16(
+            &profiled,
+            box,
+            box,
+            profile_pixels.data(),
+            static_cast<std::uint32_t>(profile_pixels.size()),
+            &profile_result) == NF_STATUS_OK && profile_result.succeeded == 1U &&
+            profile_pixels != baseline_pixels,
+        "v16 scanner profile changes the shared preview pixels");
+
+    nf_develop_export_request_v16 common_target = baseline;
+    common_target.v15.develop_target = NF_DEVELOP_TARGET_NORITSU;
+    std::vector<std::uint8_t> common_target_pixels(baseline_pixels.size(), 0U);
+    nf_develop_export_result_v2 common_target_result = make_result_v2();
+    expect(
+        nf_develop_preview_v16(
+            &common_target,
+            box,
+            box,
+            common_target_pixels.data(),
+            static_cast<std::uint32_t>(common_target_pixels.size()),
+            &common_target_result) == NF_STATUS_OK &&
+            common_target_result.succeeded == 1U,
+        "v16 NORITSU common relative target preview succeeds");
+
+    nf_develop_export_request_v16 matched_target = common_target;
+    matched_target.scanner_profile_id =
+        L"noritsu__color-nega__kodak-ektar-100";
+    std::vector<std::uint8_t> matched_target_pixels(baseline_pixels.size(), 0U);
+    nf_develop_export_result_v2 matched_target_result = make_result_v2();
+    expect(
+        nf_develop_preview_v16(
+            &matched_target,
+            box,
+            box,
+            matched_target_pixels.data(),
+            static_cast<std::uint32_t>(matched_target_pixels.size()),
+            &matched_target_result) == NF_STATUS_OK &&
+            matched_target_result.succeeded == 1U &&
+            matched_target_pixels != common_target_pixels,
+        "v16 matched profile selects a distinct scanner target signature");
+}
+
+void test_v17_positive_film_preview(const std::filesystem::path& source) {
+    const std::wstring source_text = source.wstring();
+    constexpr std::uint32_t box = 128U;
+    std::vector<std::uint8_t> negative_pixels(
+        static_cast<std::size_t>(box) * static_cast<std::size_t>(box) * 4U,
+        0U);
+    std::vector<std::uint8_t> positive_pixels(negative_pixels.size(), 0U);
+
+    nf_develop_export_request_v17 negative =
+        make_request_v17(source_text.c_str(), nullptr);
+    nf_develop_export_result_v2 negative_result = make_result_v2();
+    expect(
+        nf_develop_preview_v17(
+            &negative,
+            box,
+            box,
+            negative_pixels.data(),
+            static_cast<std::uint32_t>(negative_pixels.size()),
+            &negative_result) == NF_STATUS_OK && negative_result.succeeded == 1U,
+        "v17 negative film preview succeeds");
+
+    nf_develop_export_request_v17 positive = negative;
+    positive.film_polarity = NF_FILM_POLARITY_POSITIVE;
+    nf_develop_export_result_v2 positive_result = make_result_v2();
+    expect(
+        nf_develop_preview_v17(
+            &positive,
+            box,
+            box,
+            positive_pixels.data(),
+            static_cast<std::uint32_t>(positive_pixels.size()),
+            &positive_result) == NF_STATUS_OK && positive_result.succeeded == 1U &&
+            positive_pixels != negative_pixels,
+        "v17 positive film bypasses negative inversion");
+
+    nf_develop_export_request_v17 monochrome = positive;
+    monochrome.v16.v15.v14.v13.v12.v11.v10.v9.v8.film_type =
+        NF_FILM_TYPE_BLACK_AND_WHITE;
+    std::vector<std::uint8_t> monochrome_pixels(negative_pixels.size(), 0U);
+    nf_develop_export_result_v2 monochrome_result = make_result_v2();
+    expect(
+        nf_develop_preview_v17(
+            &monochrome,
+            box,
+            box,
+            monochrome_pixels.data(),
+            static_cast<std::uint32_t>(monochrome_pixels.size()),
+            &monochrome_result) == NF_STATUS_OK &&
+            monochrome_result.succeeded == 1U,
+        "v17 black-and-white positive film preview succeeds");
+    expect(
+        preview_is_neutral(monochrome_pixels),
+        "v17 black-and-white positive output is neutral");
+}
+
+// The point of v22 is that a long call can be stopped and watched. Both facilities are
+// checked against a real decode/develop/publish run, not a stub, because the interesting
+// failure is a stage that ignores the latch or a progress figure that lies about success.
+void test_v22_run_state() {
+    constexpr std::uint32_t width = 64U;
+    constexpr std::uint32_t height = 64U;
+    const std::filesystem::path temporary = std::filesystem::temp_directory_path();
+    const std::filesystem::path source =
+        temporary / L"negaflow-abi-v22-run-state-source.tif";
+    const std::filesystem::path cancelled_output =
+        temporary / L"negaflow-abi-v22-cancelled.png";
+    const std::filesystem::path completed_output =
+        temporary / L"negaflow-abi-v22-completed.png";
+    std::error_code ignored{};
+    std::filesystem::remove(source, ignored);
+    std::filesystem::remove(cancelled_output, ignored);
+    std::filesystem::remove(completed_output, ignored);
+
+    const std::vector<std::uint8_t> source_bytes =
+        negaflow::test_fixtures::make_uncompressed_rgb16_defect_tiff(width, height);
+    expect(
+        !source_bytes.empty() && write_file(source, source_bytes),
+        "v22 synthetic TIFF is written");
+    if (!std::filesystem::exists(source)) {
+        return;
+    }
+
+    const std::wstring source_text = source.wstring();
+    const std::wstring cancelled_text = cancelled_output.wstring();
+    const std::wstring completed_text = completed_output.wstring();
+
+    // A run state already latched before the call must stop at the first poll and leave
+    // no artifact. This is the shape a superseded preview request takes.
+    nf_develop_export_request_v21 cancelled_request = make_request_v21(
+        source_text.c_str(),
+        cancelled_text.c_str(),
+        NF_BASE_ESTIMATION_MANUAL);
+    cancelled_request.v20.v19.v18.v17.film_polarity = NF_FILM_POLARITY_POSITIVE;
+    nf_develop_run_state_v1 cancelled_state = make_run_state();
+    cancelled_state.cancel_requested = 1U;
+    nf_develop_export_result_v3 cancelled_result = make_result_v3();
+    expect(
+        nf_develop_export_v22(
+            &cancelled_request,
+            &cancelled_state,
+            &cancelled_result) == NF_STATUS_OK &&
+            cancelled_result.succeeded == 0U &&
+            cancelled_result.cancelled == 1U &&
+            std::strcmp(cancelled_result.failure_name, "cancelled") == 0,
+        "v22 reports a cancelled run rather than a failure");
+    expect(
+        !std::filesystem::exists(cancelled_output),
+        "a cancelled export publishes no destination file");
+
+    // The same latch must stop a preview without writing display pixels.
+    std::vector<std::uint8_t> cancelled_pixels(
+        static_cast<std::size_t>(width) * height * 4U,
+        0xABU);
+    nf_develop_run_state_v1 cancelled_preview_state = make_run_state();
+    cancelled_preview_state.cancel_requested = 1U;
+    nf_develop_export_result_v3 cancelled_preview_result = make_result_v3();
+    expect(
+        nf_develop_preview_v22(
+            &cancelled_request,
+            width,
+            height,
+            cancelled_pixels.data(),
+            static_cast<std::uint32_t>(cancelled_pixels.size()),
+            &cancelled_preview_state,
+            &cancelled_preview_result) == NF_STATUS_OK &&
+            cancelled_preview_result.succeeded == 0U &&
+            cancelled_preview_result.cancelled == 1U,
+        "v22 preview honours the cancel latch");
+    bool preview_untouched = true;
+    for (const std::uint8_t value : cancelled_pixels) {
+        preview_untouched = preview_untouched && value == 0xABU;
+    }
+    expect(preview_untouched, "a cancelled preview leaves the caller buffer alone");
+
+    // An untouched run state reaches completion and reports it, and the progress figure
+    // is only allowed to say "complete" when the run actually succeeded.
+    nf_develop_export_request_v21 completed_request = make_request_v21(
+        source_text.c_str(),
+        completed_text.c_str(),
+        NF_BASE_ESTIMATION_MANUAL);
+    completed_request.v20.v19.v18.v17.film_polarity = NF_FILM_POLARITY_POSITIVE;
+    nf_develop_run_state_v1 completed_state = make_run_state();
+    nf_develop_export_result_v3 completed_result = make_result_v3();
+    expect(
+        nf_develop_export_v22(
+            &completed_request,
+            &completed_state,
+            &completed_result) == NF_STATUS_OK &&
+            completed_result.succeeded == 1U &&
+            completed_result.cancelled == 0U,
+        "v22 completes a run whose state was never latched");
+    expect(
+        completed_state.progress_permille == NF_DEVELOP_PROGRESS_COMPLETE,
+        "a successful run leaves progress at complete");
+    expect(
+        completed_state.stage == NF_DEVELOP_STAGE_OUTPUT,
+        "the last stage a successful run reports is the publish");
+    expect(
+        std::filesystem::exists(completed_output),
+        "an uncancelled export publishes its destination file");
+
+    // A null run state keeps the pre-v22 behaviour: the call simply runs to the end.
+    std::filesystem::remove(completed_output, ignored);
+    nf_develop_export_result_v3 stateless_result = make_result_v3();
+    expect(
+        nf_develop_export_v22(
+            &completed_request,
+            nullptr,
+            &stateless_result) == NF_STATUS_OK &&
+            stateless_result.succeeded == 1U &&
+            stateless_result.cancelled == 0U,
+        "v22 accepts a null run state and behaves as before");
+
+    // A run state the caller under-declared is refused outright: writing four words into
+    // three would corrupt whatever follows it.
+    nf_develop_run_state_v1 short_state = make_run_state();
+    short_state.struct_size = 4U;
+    nf_develop_export_result_v3 short_result = make_result_v3();
+    expect(
+        nf_develop_export_v22(&completed_request, &short_state, &short_result) ==
+            NF_STATUS_STRUCT_TOO_SMALL,
+        "an undersized run state is refused");
+
+    std::filesystem::remove(source, ignored);
+    std::filesystem::remove(cancelled_output, ignored);
+    std::filesystem::remove(completed_output, ignored);
+}
+
+// The synthetic checks prove the latch is honoured before the first stage. This one runs
+// against a real scan and latches from another thread once the engine reports it has
+// started, which is the only way to show the mid-run poll points actually fire.
+void test_v22_cancel_during_run(const std::filesystem::path& source) {
+    const std::filesystem::path destination =
+        std::filesystem::temp_directory_path() / L"negaflow-abi-v22-mid-run.png";
+    std::error_code ignored{};
+    std::filesystem::remove(destination, ignored);
+
+    const std::wstring source_text = source.wstring();
+    const std::wstring destination_text = destination.wstring();
+    nf_develop_export_request_v21 request = make_request_v21(
+        source_text.c_str(),
+        destination_text.c_str(),
+        NF_BASE_ESTIMATION_MANUAL);
+    nf_develop_run_state_v1 state = make_run_state();
+    nf_develop_export_result_v3 result = make_result_v3();
+
+    std::atomic<bool> finished{false};
+    std::atomic<bool> observed_start{false};
+    std::thread watcher{[&state, &finished, &observed_start]() noexcept {
+        while (!finished.load(std::memory_order_relaxed)) {
+            const std::uint32_t stage =
+                std::atomic_ref<std::uint32_t>(state.stage).load(std::memory_order_relaxed);
+            if (stage != NF_DEVELOP_STAGE_NONE) {
+                observed_start.store(true, std::memory_order_relaxed);
+                std::atomic_ref<std::uint32_t>(state.cancel_requested)
+                    .store(1U, std::memory_order_relaxed);
+                return;
+            }
+            std::this_thread::yield();
+        }
+    }};
+
+    const nf_status_t status = nf_develop_export_v22(&request, &state, &result);
+    finished.store(true, std::memory_order_relaxed);
+    watcher.join();
+
+    expect(status == NF_STATUS_OK, "v22 mid-run export returns a well formed call");
+    if (!observed_start.load(std::memory_order_relaxed)) {
+        // The run beat the watcher to the finish. Nothing was cancelled, so the only
+        // thing to check is that it behaved like an ordinary successful export.
+        expect(
+            result.succeeded == 1U && result.cancelled == 0U,
+            "an uncancelled real export succeeds");
+        std::filesystem::remove(destination, ignored);
+        return;
+    }
+
+    // Reported so the run log shows which branch was taken rather than leaving the
+    // reader to guess whether the interesting one ever executed.
+    std::cout << "{\"note\":\"v22_cancelled_mid_run\",\"stage\":"
+              << result.failed_stage << ",\"wall_microseconds\":"
+              << result.wall_microseconds << "}\n";
+    expect(
+        result.cancelled == 1U && result.succeeded == 0U,
+        "a latch set while the run is in flight stops it");
+    expect(
+        result.failed_stage != NF_DEVELOP_STAGE_NONE,
+        "a cancelled run names the stage it was interrupted in");
+    expect(
+        !std::filesystem::exists(destination),
+        "a run cancelled mid-flight publishes no file");
+    std::filesystem::remove(destination, ignored);
+
+    // GrainMend is the one stage long enough that stopping only at its boundary would
+    // still leave the user waiting seconds. This latches once the run reports it has
+    // reached that stage, which exercises the checks inside detection rather than the
+    // boundary check in front of it.
+    nf_develop_export_request_v21 defect_request = make_request_v21(
+        source_text.c_str(),
+        destination_text.c_str(),
+        NF_BASE_ESTIMATION_MANUAL);
+    defect_request.v20.v19.v18.v17.v16.v15.v14.v13.v12.v11.v10.v9.v8
+        .defect_removal_strength = 1.0;
+    // The interactive case is a preview, not a publish, so the comparison is measured on
+    // previews: the same GrainMend-enabled render, once left alone and once cancelled.
+    std::vector<std::uint8_t> defect_pixels(
+        static_cast<std::size_t>(512U) * 512U * 4U,
+        0U);
+    nf_develop_run_state_v1 baseline_state = make_run_state();
+    nf_develop_export_result_v3 baseline_result = make_result_v3();
+    expect(
+        nf_develop_preview_v22(
+            &defect_request,
+            512U,
+            512U,
+            defect_pixels.data(),
+            static_cast<std::uint32_t>(defect_pixels.size()),
+            &baseline_state,
+            &baseline_result) == NF_STATUS_OK &&
+            baseline_result.succeeded == 1U,
+        "a GrainMend preview completes when nothing cancels it");
+    std::cout << "{\"note\":\"v22_grain_mend_preview_baseline\",\"wall_microseconds\":"
+              << baseline_result.wall_microseconds << "}\n";
+
+    nf_develop_run_state_v1 defect_state = make_run_state();
+    nf_develop_export_result_v3 defect_result = make_result_v3();
+
+    std::atomic<bool> defect_finished{false};
+    std::atomic<bool> reached_grain_mend{false};
+    std::thread defect_watcher{[&defect_state, &defect_finished, &reached_grain_mend]() noexcept {
+        while (!defect_finished.load(std::memory_order_relaxed)) {
+            const std::uint32_t stage =
+                std::atomic_ref<std::uint32_t>(defect_state.stage)
+                    .load(std::memory_order_relaxed);
+            if (stage == NF_DEVELOP_STAGE_GRAIN_MEND) {
+                reached_grain_mend.store(true, std::memory_order_relaxed);
+                std::atomic_ref<std::uint32_t>(defect_state.cancel_requested)
+                    .store(1U, std::memory_order_relaxed);
+                return;
+            }
+            std::this_thread::yield();
+        }
+    }};
+
+    const nf_status_t defect_status =
+        nf_develop_export_v22(&defect_request, &defect_state, &defect_result);
+    defect_finished.store(true, std::memory_order_relaxed);
+    defect_watcher.join();
+    expect(defect_status == NF_STATUS_OK, "the GrainMend run is a well formed call");
+
+    if (reached_grain_mend.load(std::memory_order_relaxed)) {
+        std::cout << "{\"note\":\"v22_cancelled_inside_grain_mend\",\"stage\":"
+                  << defect_result.failed_stage << ",\"wall_microseconds\":"
+                  << defect_result.wall_microseconds << "}\n";
+        expect(
+            defect_result.cancelled == 1U &&
+                defect_result.failed_stage == NF_DEVELOP_STAGE_GRAIN_MEND,
+            "a cancel arriving during GrainMend stops inside that stage");
+        expect(
+            !std::filesystem::exists(destination),
+            "a GrainMend cancellation publishes no file");
+    }
+    std::filesystem::remove(destination, ignored);
+}
+
+void test_v18_defect_region_preview_and_export() {
+    constexpr std::uint32_t width = 64U;
+    constexpr std::uint32_t height = 64U;
+    const std::filesystem::path temporary = std::filesystem::temp_directory_path();
+    const std::filesystem::path source =
+        temporary / L"negaflow-abi-v18-defect-source.tif";
+    const std::filesystem::path identity_output =
+        temporary / L"negaflow-abi-v18-defect-identity.png";
+    const std::filesystem::path repaired_output =
+        temporary / L"negaflow-abi-v18-defect-repaired.png";
+    const std::filesystem::path mismatched_output =
+        temporary / L"negaflow-abi-v19-defect-mismatch.png";
+    const std::filesystem::path cloned_output =
+        temporary / L"negaflow-abi-v20-clone.png";
+    const std::filesystem::path brushed_output =
+        temporary / L"negaflow-abi-v21-brush.png";
+    std::error_code ignored{};
+    std::filesystem::remove(source, ignored);
+    std::filesystem::remove(identity_output, ignored);
+    std::filesystem::remove(repaired_output, ignored);
+    std::filesystem::remove(mismatched_output, ignored);
+    std::filesystem::remove(cloned_output, ignored);
+    std::filesystem::remove(brushed_output, ignored);
+
+    const std::vector<std::uint8_t> source_bytes =
+        negaflow::test_fixtures::make_uncompressed_rgb16_defect_tiff(
+            width,
+            height);
+    expect(
+        !source_bytes.empty() && write_file(source, source_bytes),
+        "v18 synthetic defect TIFF is written");
+    if (!std::filesystem::exists(source)) {
+        return;
+    }
+    std::array<std::uint8_t, 32U> source_identity{};
+    expect(
+        sha256(source_bytes, source_identity),
+        "v19 source identity is calculated for the synthetic TIFF");
+
+    const std::wstring source_text = source.wstring();
+    nf_develop_export_request_v18 identity =
+        make_request_v18(source_text.c_str(), nullptr, NF_BASE_ESTIMATION_MANUAL);
+    identity.v17.film_polarity = NF_FILM_POLARITY_POSITIVE;
+    std::vector<std::uint8_t> identity_pixels(
+        static_cast<std::size_t>(width) * height * 4U,
+        0U);
+    nf_develop_export_result_v2 identity_result = make_result_v2();
+    expect(
+        nf_develop_preview_v18(
+            &identity,
+            width,
+            height,
+            identity_pixels.data(),
+            static_cast<std::uint32_t>(identity_pixels.size()),
+            &identity_result) == NF_STATUS_OK &&
+            identity_result.succeeded == 1U &&
+            identity_result.image_width == width &&
+            identity_result.image_height == height,
+        "v18 identity preview succeeds at source resolution");
+
+    constexpr std::uint32_t roi_x = 24U;
+    constexpr std::uint32_t roi_top = 36U;
+    constexpr std::uint32_t roi_width = 16U;
+    constexpr std::uint32_t roi_height = 24U;
+    constexpr std::uint32_t roi_y_up = height - roi_top - roi_height;
+    std::vector<std::uint8_t> mask(
+        static_cast<std::size_t>(roi_width) * roi_height,
+        0U);
+    for (std::uint32_t source_y = (height * 5U) / 8U;
+         source_y < (height * 7U) / 8U;
+         ++source_y) {
+        const std::uint32_t local_y = source_y - roi_top;
+        mask[static_cast<std::size_t>(local_y) * roi_width + 8U] = 0xffU;
+        mask[static_cast<std::size_t>(local_y) * roi_width + 7U] = 0xffU;
+    }
+    nf_defect_region_edit_v1 edit{};
+    edit.enabled = 1U;
+    edit.roi_x = roi_x;
+    edit.roi_y = roi_y_up;
+    edit.width = roi_width;
+    edit.height = roi_height;
+    edit.mask_stride_bytes = roi_width;
+    edit.mask_byte_count = static_cast<std::uint32_t>(mask.size());
+    edit.strength = 1.0;
+    edit.has_preferred_angle = 1U;
+    edit.preferred_angle_degrees = 90.0;
+
+    nf_develop_export_request_v18 repaired = identity;
+    repaired.defect_region_edits = &edit;
+    repaired.defect_region_edit_count = 1U;
+    repaired.defect_mask_bytes = mask.data();
+    repaired.defect_mask_byte_count = static_cast<std::uint32_t>(mask.size());
+    std::vector<std::uint8_t> repaired_pixels(identity_pixels.size(), 0U);
+    nf_develop_export_result_v2 repaired_result = make_result_v2();
+    const bool repaired_preview_ok =
+        nf_develop_preview_v18(
+            &repaired,
+            width,
+            height,
+            repaired_pixels.data(),
+            static_cast<std::uint32_t>(repaired_pixels.size()),
+            &repaired_result) == NF_STATUS_OK &&
+        repaired_result.succeeded == 1U;
+    expect(
+        repaired_preview_ok && repaired_pixels != identity_pixels,
+        "v18 ordered region repair changes the shared preview pipeline");
+
+    nf_develop_export_request_v19 bound = make_request_v19(
+        source_text.c_str(),
+        nullptr,
+        NF_BASE_ESTIMATION_MANUAL);
+    bound.v18 = repaired;
+    bound.v18.v17.v16.v15.v14.v13.v12.v11.v10.v9.v8.struct_size =
+        static_cast<std::uint32_t>(sizeof(bound));
+    bound.defect_source_file_bytes = source_bytes.size();
+    bound.defect_source_sha256 = source_identity.data();
+    bound.has_defect_source_identity = 1U;
+    std::vector<std::uint8_t> bound_pixels(identity_pixels.size(), 0U);
+    nf_develop_export_result_v2 bound_result = make_result_v2();
+    expect(
+        nf_develop_preview_v19(
+            &bound,
+            width,
+            height,
+            bound_pixels.data(),
+            static_cast<std::uint32_t>(bound_pixels.size()),
+            &bound_result) == NF_STATUS_OK &&
+            bound_result.succeeded == 1U &&
+            bound_pixels == repaired_pixels,
+        "v19 matching source identity preserves the shared defect preview pixels");
+
+    nf_defect_clone_point_v1 clone_point{0.75, 0.25};
+    nf_defect_clone_stroke_v1 clone_stroke{};
+    clone_stroke.point_count = 1U;
+    clone_stroke.offset_x = -0.5;
+    clone_stroke.diameter_pixels = 10.0;
+    clone_stroke.hardness = 1.0;
+    nf_defect_clone_edit_v1 clone_edit{};
+    clone_edit.enabled = 1U;
+    clone_edit.stroke_count = 1U;
+    clone_edit.strength = 1.0;
+    nf_defect_recipe_edit_ref_v1 clone_order{
+        NF_DEFECT_RECIPE_EDIT_CLONE, 0U};
+    nf_develop_export_request_v20 cloned = make_request_v20(
+        source_text.c_str(), nullptr, NF_BASE_ESTIMATION_MANUAL);
+    cloned.v19.v18.v17.film_polarity = NF_FILM_POLARITY_POSITIVE;
+    cloned.v19.defect_source_file_bytes = source_bytes.size();
+    cloned.v19.defect_source_sha256 = source_identity.data();
+    cloned.v19.has_defect_source_identity = 1U;
+    cloned.defect_clone_edits = &clone_edit;
+    cloned.defect_clone_edit_count = 1U;
+    cloned.defect_clone_strokes = &clone_stroke;
+    cloned.defect_clone_stroke_count = 1U;
+    cloned.defect_clone_points = &clone_point;
+    cloned.defect_clone_point_count = 1U;
+    cloned.defect_edit_order = &clone_order;
+    cloned.defect_edit_order_count = 1U;
+    std::vector<std::uint8_t> cloned_pixels(identity_pixels.size(), 0U);
+    nf_develop_export_result_v2 cloned_result = make_result_v2();
+    const bool cloned_preview_ok =
+        nf_develop_preview_v20(
+            &cloned,
+            width,
+            height,
+            cloned_pixels.data(),
+            static_cast<std::uint32_t>(cloned_pixels.size()),
+            &cloned_result) == NF_STATUS_OK &&
+        cloned_result.succeeded == 1U;
+    expect(
+        cloned_preview_ok && cloned_pixels != identity_pixels,
+        "v20 Clone Stamp changes the shared preview pipeline");
+
+    std::array<nf_defect_brush_point_v1, 2U> brush_points{{
+        {0.5, 0.625},
+        {0.5, 0.875},
+    }};
+    nf_defect_brush_stroke_v1 brush_stroke{};
+    brush_stroke.point_count = static_cast<std::uint32_t>(brush_points.size());
+    brush_stroke.thickness = 0.04;
+    nf_defect_brush_edit_v1 brush_edit{};
+    brush_edit.enabled = 1U;
+    brush_edit.stroke_count = 1U;
+    brush_edit.strength = 1.0;
+    nf_defect_recipe_edit_ref_v1 brush_order{
+        NF_DEFECT_RECIPE_EDIT_BRUSH, 0U};
+    nf_develop_export_request_v21 brushed = make_request_v21(
+        source_text.c_str(), nullptr, NF_BASE_ESTIMATION_MANUAL);
+    brushed.v20.v19.v18.v17.film_polarity = NF_FILM_POLARITY_POSITIVE;
+    brushed.v20.v19.defect_source_file_bytes = source_bytes.size();
+    brushed.v20.v19.defect_source_sha256 = source_identity.data();
+    brushed.v20.v19.has_defect_source_identity = 1U;
+    brushed.v20.defect_edit_order = &brush_order;
+    brushed.v20.defect_edit_order_count = 1U;
+    brushed.defect_brush_edits = &brush_edit;
+    brushed.defect_brush_edit_count = 1U;
+    brushed.defect_brush_strokes = &brush_stroke;
+    brushed.defect_brush_stroke_count = 1U;
+    brushed.defect_brush_points = brush_points.data();
+    brushed.defect_brush_point_count =
+        static_cast<std::uint32_t>(brush_points.size());
+    std::vector<std::uint8_t> brushed_pixels(identity_pixels.size(), 0U);
+    nf_develop_export_result_v2 brushed_result = make_result_v2();
+    const bool brushed_preview_ok =
+        nf_develop_preview_v21(
+            &brushed,
+            width,
+            height,
+            brushed_pixels.data(),
+            static_cast<std::uint32_t>(brushed_pixels.size()),
+            &brushed_result) == NF_STATUS_OK &&
+        brushed_result.succeeded == 1U;
+    expect(
+        brushed_preview_ok && brushed_pixels != identity_pixels,
+        "v21 Brush changes the shared preview pipeline");
+
+    std::array<std::uint8_t, 32U> wrong_digest = source_identity;
+    wrong_digest[0] ^= 0xffU;
+    nf_develop_export_request_v19 mismatched = bound;
+    mismatched.defect_source_sha256 = wrong_digest.data();
+    std::vector<std::uint8_t> mismatched_pixels(identity_pixels.size(), 0U);
+    nf_develop_export_result_v2 mismatched_result = make_result_v2();
+    expect(
+        nf_develop_preview_v19(
+            &mismatched,
+            width,
+            height,
+            mismatched_pixels.data(),
+            static_cast<std::uint32_t>(mismatched_pixels.size()),
+            &mismatched_result) == NF_STATUS_OK &&
+            mismatched_result.succeeded == 0U &&
+            mismatched_result.failed_stage ==
+                NF_DEVELOP_STAGE_OBSERVE_SOURCE_BEFORE &&
+            std::strcmp(
+                mismatched_result.failure_name,
+                "defect_source_identity_mismatch") == 0,
+        "v19 mismatched source identity fails before decode and repair");
+    if (repaired_preview_ok) {
+        bool changed_inside = false;
+        bool unchanged_outside = true;
+        for (std::uint32_t y = 0U; y < height; ++y) {
+            for (std::uint32_t x = 0U; x < width; ++x) {
+                const std::size_t offset =
+                    (static_cast<std::size_t>(y) * width + x) * 4U;
+                const bool changed = std::memcmp(
+                    identity_pixels.data() + offset,
+                    repaired_pixels.data() + offset,
+                    4U) != 0;
+                const bool inside = x >= roi_x && x < roi_x + roi_width &&
+                    y >= roi_top && y < roi_top + roi_height;
+                changed_inside = changed_inside || (inside && changed);
+                unchanged_outside = unchanged_outside && (inside || !changed);
+            }
+        }
+        expect(
+            changed_inside && unchanged_outside,
+            "v18 converts bottom-origin ROI y and confines repair to that raw region");
+    }
+
+    nf_defect_region_edit_v1 outside = edit;
+    outside.roi_x = width - roi_width + 1U;
+    nf_develop_export_request_v18 invalid = repaired;
+    invalid.defect_region_edits = &outside;
+    std::vector<std::uint8_t> invalid_pixels(identity_pixels.size(), 0U);
+    nf_develop_export_result_v2 invalid_result = make_result_v2();
+    expect(
+        nf_develop_preview_v18(
+            &invalid,
+            width,
+            height,
+            invalid_pixels.data(),
+            static_cast<std::uint32_t>(invalid_pixels.size()),
+            &invalid_result) == NF_STATUS_OK &&
+            invalid_result.succeeded == 0U &&
+            invalid_result.failed_stage ==
+                NF_DEVELOP_STAGE_DEFECT_COMPONENT_REPAIR &&
+            std::strcmp(invalid_result.failure_name, "invalid_argument") == 0,
+        "v18 out-of-frame ROI fails closed at the component repair stage");
+
+    const std::wstring identity_output_text = identity_output.wstring();
+    nf_develop_export_request_v18 identity_export = make_request_v18(
+        source_text.c_str(),
+        identity_output_text.c_str(),
+        NF_BASE_ESTIMATION_MANUAL);
+    identity_export.v17.film_polarity = NF_FILM_POLARITY_POSITIVE;
+    nf_develop_export_result_v2 identity_export_result = make_result_v2();
+    const bool identity_export_ok =
+        nf_develop_export_v18(&identity_export, &identity_export_result) ==
+            NF_STATUS_OK &&
+        identity_export_result.succeeded == 1U;
+
+    const std::wstring cloned_output_text = cloned_output.wstring();
+    cloned.v19.v18.v17.v16.v15.v14.v13.v12.v11.v10.v9.v8.destination_path =
+        cloned_output_text.c_str();
+    nf_develop_export_result_v2 cloned_export_result = make_result_v2();
+    const bool cloned_export_ok =
+        nf_develop_export_v20(&cloned, &cloned_export_result) == NF_STATUS_OK &&
+        cloned_export_result.succeeded == 1U;
+    expect(
+        identity_export_ok && cloned_export_ok &&
+            read_file(identity_output) != read_file(cloned_output),
+        "v20 Clone Stamp changes the shared export pipeline");
+
+    const std::wstring brushed_output_text = brushed_output.wstring();
+    brushed.v20.v19.v18.v17.v16.v15.v14.v13.v12.v11.v10.v9.v8.destination_path =
+        brushed_output_text.c_str();
+    nf_develop_export_result_v2 brushed_export_result = make_result_v2();
+    const bool brushed_export_ok =
+        nf_develop_export_v21(&brushed, &brushed_export_result) == NF_STATUS_OK &&
+        brushed_export_result.succeeded == 1U;
+    expect(
+        identity_export_ok && brushed_export_ok &&
+            read_file(identity_output) != read_file(brushed_output),
+        "v21 Brush changes the shared export pipeline");
+
+    const std::wstring repaired_output_text = repaired_output.wstring();
+    nf_develop_export_request_v19 repaired_export = bound;
+    repaired_export.v18.v17.v16.v15.v14.v13.v12.v11.v10.v9.v8.destination_path =
+        repaired_output_text.c_str();
+    nf_develop_export_result_v2 repaired_export_result = make_result_v2();
+    const bool repaired_export_ok =
+        nf_develop_export_v19(&repaired_export, &repaired_export_result) ==
+            NF_STATUS_OK &&
+        repaired_export_result.succeeded == 1U;
+    expect(
+        identity_export_ok && repaired_export_ok,
+        "v18 identity and repaired exports both publish");
+    if (identity_export_ok && repaired_export_ok) {
+        const std::vector<std::uint8_t> identity_file = read_file(identity_output);
+        const std::vector<std::uint8_t> repaired_file = read_file(repaired_output);
+        expect(
+            !identity_file.empty() && !repaired_file.empty() &&
+                identity_file != repaired_file,
+            "v19 source-bound region repair changes the shared export pipeline");
+    }
+
+    const std::wstring mismatched_output_text = mismatched_output.wstring();
+    mismatched.v18.v17.v16.v15.v14.v13.v12.v11.v10.v9.v8.destination_path =
+        mismatched_output_text.c_str();
+    mismatched_result = make_result_v2();
+    expect(
+        nf_develop_export_v19(&mismatched, &mismatched_result) == NF_STATUS_OK &&
+            mismatched_result.succeeded == 0U &&
+            mismatched_result.failed_stage ==
+                NF_DEVELOP_STAGE_OBSERVE_SOURCE_BEFORE &&
+            !std::filesystem::exists(mismatched_output),
+        "v19 source mismatch publishes no output artifact");
+    expect(
+        read_file(source) == source_bytes,
+        "ordered defect preview and export leave the source TIFF byte-exact");
+
+    std::filesystem::remove(source, ignored);
+    std::filesystem::remove(identity_output, ignored);
+    std::filesystem::remove(repaired_output, ignored);
+    std::filesystem::remove(mismatched_output, ignored);
+    std::filesystem::remove(cloned_output, ignored);
+    std::filesystem::remove(brushed_output, ignored);
+}
+
 }  // namespace
 
 int main(const int argument_count, const char* const arguments[]) {
@@ -848,8 +2552,19 @@ int main(const int argument_count, const char* const arguments[]) {
     test_v5_contract();
     test_v6_contract();
     test_v7_contract();
+    test_v8_contract();
+    test_v9_contract();
+    test_v10_contract();
+    test_v11_contract();
+    test_v12_contract();
+    test_v18_contract();
+    test_v19_contract();
+    test_v20_contract();
+    test_v21_contract();
     test_missing_source_is_not_a_validation_error();
     test_v2_missing_source_is_not_a_validation_error();
+    test_v18_defect_region_preview_and_export();
+    test_v22_run_state();
 
     if (argument_count >= 2) {
         const std::filesystem::path source{arguments[1]};
@@ -862,6 +2577,18 @@ int main(const int argument_count, const char* const arguments[]) {
             test_v4_film_preview(source);
             test_v5_point_curve_preview(source);
             test_v6_color_mixer_preview(source);
+            test_v8_grain_mend_preview(source);
+            test_v9_film_scan_denoise_preview(source);
+            test_v10_texture_preview(source);
+            test_v11_bw_transform_preview(source);
+            test_v11_rendered_digital_preview(source);
+            test_v12_local_dodge_burn_preview(source);
+            test_v13_color_model_preview(source);
+            test_v14_scene_correction_preview(source);
+            test_v15_develop_target_preview(source);
+            test_v16_scanner_profile_preview(source);
+            test_v17_positive_film_preview(source);
+            test_v22_cancel_during_run(source);
         } else {
             std::cerr << "FAIL: the supplied source fixture does not exist\n";
             ++failures;

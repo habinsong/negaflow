@@ -192,6 +192,80 @@ void append_big_entry(
     return bytes;
 }
 
+// One page of a multi-directory file. Photoshop and most scanner software write the full
+// image and append a reduced-resolution preview, so the probe has to choose rather than
+// take the first directory it meets.
+struct DirectoryPage final {
+    std::uint32_t width;
+    std::uint32_t height;
+    std::uint32_t new_subfile_type;
+};
+
+// Builds a chained multi-directory classic TIFF. Every page carries its own bits,
+// sample-format and pixel data immediately after its directory, so page sizes differ and
+// the offsets are accumulated rather than assumed.
+[[nodiscard]] std::vector<std::uint8_t> make_classic_multi_directory_tiff(
+    const TiffByteOrder order,
+    const std::vector<DirectoryPage>& pages) {
+    constexpr std::uint16_t entry_count = 13U;
+    constexpr std::uint32_t directory_bytes =
+        2U + (static_cast<std::uint32_t>(entry_count) * 12U) + 4U;
+    constexpr std::uint32_t header_bytes = 8U;
+
+    std::vector<std::uint32_t> page_offsets{};
+    std::uint32_t cursor = header_bytes;
+    for (const DirectoryPage& page : pages) {
+        page_offsets.push_back(cursor);
+        cursor += directory_bytes + 6U + 6U + (page.width * page.height * 6U);
+    }
+
+    std::vector<std::uint8_t> bytes{};
+    bytes.push_back(order == TiffByteOrder::little_endian ? 'I' : 'M');
+    bytes.push_back(order == TiffByteOrder::little_endian ? 'I' : 'M');
+    append_u16(bytes, 42U, order);
+    append_u32(bytes, page_offsets.front(), order);
+
+    for (std::size_t index = 0; index < pages.size(); ++index) {
+        const DirectoryPage& page = pages[index];
+        const std::uint32_t base = page_offsets[index];
+        const std::uint32_t bits_offset = base + directory_bytes;
+        const std::uint32_t sample_format_offset = bits_offset + 6U;
+        const std::uint32_t pixel_offset = sample_format_offset + 6U;
+        const std::uint32_t pixel_bytes = page.width * page.height * 6U;
+        const std::uint32_t next =
+            index + 1U < pages.size() ? page_offsets[index + 1U] : 0U;
+
+        append_u16(bytes, entry_count, order);
+        append_classic_entry(
+            bytes, order, 254U, 4U, 1U, inline_u32(page.new_subfile_type, order));
+        append_classic_entry(bytes, order, 256U, 4U, 1U, inline_u32(page.width, order));
+        append_classic_entry(bytes, order, 257U, 4U, 1U, inline_u32(page.height, order));
+        append_classic_entry(bytes, order, 258U, 3U, 3U, inline_u32(bits_offset, order));
+        append_classic_entry(bytes, order, 259U, 3U, 1U, inline_short(1U, order));
+        append_classic_entry(bytes, order, 262U, 3U, 1U, inline_short(2U, order));
+        append_classic_entry(bytes, order, 273U, 4U, 1U, inline_u32(pixel_offset, order));
+        append_classic_entry(bytes, order, 274U, 3U, 1U, inline_short(1U, order));
+        append_classic_entry(bytes, order, 277U, 3U, 1U, inline_short(3U, order));
+        append_classic_entry(bytes, order, 278U, 4U, 1U, inline_u32(page.height, order));
+        append_classic_entry(bytes, order, 279U, 4U, 1U, inline_u32(pixel_bytes, order));
+        append_classic_entry(bytes, order, 284U, 3U, 1U, inline_short(1U, order));
+        append_classic_entry(
+            bytes, order, 339U, 3U, 3U, inline_u32(sample_format_offset, order));
+        append_u32(bytes, next, order);
+
+        append_u16(bytes, 16U, order);
+        append_u16(bytes, 16U, order);
+        append_u16(bytes, 16U, order);
+        append_u16(bytes, 1U, order);
+        append_u16(bytes, 1U, order);
+        append_u16(bytes, 1U, order);
+        for (std::uint32_t value = 0U; value < pixel_bytes; ++value) {
+            bytes.push_back(static_cast<std::uint8_t>(value & 0xFFU));
+        }
+    }
+    return bytes;
+}
+
 [[nodiscard]] std::vector<std::uint8_t> make_classic_tiled_tiff(
     const TiffByteOrder order) {
     constexpr std::uint32_t ifd_offset = 8U;
@@ -647,6 +721,88 @@ void test_malformed_and_limits(const std::filesystem::path& root) {
         memory_limits);
 }
 
+void test_multi_directory_selection(const std::filesystem::path& root) {
+    // The ordinary scanner file: full image first, reduced-resolution preview appended.
+    const auto trailing_preview = make_classic_multi_directory_tiff(
+        TiffByteOrder::little_endian,
+        {{4U, 2U, 0U}, {2U, 1U, 1U}});
+    const std::filesystem::path trailing_path = root / L"preview-after.tiff";
+    write_fixture(trailing_path, trailing_preview);
+    const auto trailing = negaflow::core::probe_tiff_file(trailing_path);
+    expect(trailing.status == TiffProbeStatus::ok, "a trailing preview page is accepted");
+    expect(
+        trailing.info.width == 4U && trailing.info.height == 2U,
+        "the full image, not the preview, is the one described");
+    expect(trailing.info.directory_count == 2U, "both directories are counted");
+    expect(
+        trailing.info.primary_directory_index == 0U,
+        "the leading full image is selected");
+
+    // The case a frame-zero assumption gets wrong: preview first, full image second.
+    const auto leading_preview = make_classic_multi_directory_tiff(
+        TiffByteOrder::little_endian,
+        {{2U, 1U, 1U}, {4U, 2U, 0U}});
+    const std::filesystem::path leading_path = root / L"preview-before.tiff";
+    write_fixture(leading_path, leading_preview);
+    const auto leading = negaflow::core::probe_tiff_file(leading_path);
+    expect(leading.status == TiffProbeStatus::ok, "a leading preview page is accepted");
+    expect(
+        leading.info.width == 4U && leading.info.height == 2U,
+        "the full image is found behind a preview page");
+    expect(
+        leading.info.primary_directory_index == 1U,
+        "selection follows the subfile type, not the directory order");
+
+    // A transparency mask is a companion page too, and must not be mistaken for a
+    // second image.
+    const auto masked = make_classic_multi_directory_tiff(
+        TiffByteOrder::little_endian,
+        {{4U, 2U, 0U}, {4U, 2U, 4U}});
+    const std::filesystem::path masked_path = root / L"with-mask.tiff";
+    write_fixture(masked_path, masked);
+    const auto mask_result = negaflow::core::probe_tiff_file(masked_path);
+    expect(
+        mask_result.status == TiffProbeStatus::ok &&
+            mask_result.info.primary_directory_index == 0U,
+        "a transparency mask page is not treated as a second image");
+
+    // Two full images is a multi-page document. Which one is "the photograph" is not
+    // ours to guess, so it stays refused.
+    const auto two_primaries = make_classic_multi_directory_tiff(
+        TiffByteOrder::little_endian,
+        {{4U, 2U, 0U}, {4U, 2U, 0U}});
+    const std::filesystem::path two_path = root / L"two-pages.tiff";
+    write_fixture(two_path, two_primaries);
+    expect(
+        negaflow::core::probe_tiff_file(two_path).status ==
+            TiffProbeStatus::multiple_directories_unsupported,
+        "a genuine multi-page document is still refused");
+
+    // Every page a companion means no image at all.
+    const auto no_primary = make_classic_multi_directory_tiff(
+        TiffByteOrder::little_endian,
+        {{4U, 2U, 1U}, {2U, 1U, 1U}});
+    const std::filesystem::path none_path = root / L"previews-only.tiff";
+    write_fixture(none_path, no_primary);
+    expect(
+        negaflow::core::probe_tiff_file(none_path).status ==
+            TiffProbeStatus::multiple_directories_unsupported,
+        "a file of preview pages only is refused");
+
+    // The chain bound also stops a directory list that never terminates.
+    negaflow::core::TiffProbeLimits short_chain{};
+    short_chain.max_directories = 2U;
+    const auto long_chain = make_classic_multi_directory_tiff(
+        TiffByteOrder::little_endian,
+        {{4U, 2U, 0U}, {2U, 1U, 1U}, {2U, 1U, 1U}});
+    const std::filesystem::path chain_path = root / L"long-chain.tiff";
+    write_fixture(chain_path, long_chain);
+    expect(
+        negaflow::core::probe_tiff_file(chain_path, short_chain).status ==
+            TiffProbeStatus::directory_limit_exceeded,
+        "the directory chain is bounded");
+}
+
 }  // namespace
 
 int main() {
@@ -656,6 +812,7 @@ int main() {
     test_valid_big_endian_variants(temporary.path());
     test_valid_tiled(temporary.path());
     test_extra_samples(temporary.path());
+    test_multi_directory_selection(temporary.path());
     test_malformed_and_limits(temporary.path());
 
     if (failures != 0) {

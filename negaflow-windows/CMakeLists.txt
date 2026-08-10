@@ -67,8 +67,10 @@ negaflow_enable_strict_warnings(negaflow_project_options)
 add_library(negaflow_core STATIC
     src/Native/core/build_info.cpp
     src/Native/core/negative_inversion.cpp
+    src/Native/core/parallel_rows.cpp
     src/Native/core/pixel.cpp
     src/Native/core/pointwise.cpp
+    src/Native/core/tiff_deflate_validator.cpp
     src/Native/core/tiff_lzw_validator.cpp
     src/Native/core/tiff_probe.cpp
 )
@@ -110,10 +112,40 @@ add_library(negaflow_imaging STATIC
     src/Native/imaging/color_mixer.cpp
     src/Native/imaging/film_emulation_acutance.cpp
     src/Native/imaging/film_emulation_acutance_profiles.cpp
-    src/Native/imaging/film_emulation_color.cpp
-    src/Native/imaging/film_emulation_profiles.cpp
-    src/Native/imaging/icm_icc_converter.cpp
+      src/Native/imaging/film_emulation_color.cpp
+      src/Native/imaging/film_emulation_profiles.cpp
+      src/Native/imaging/film_emulation_registry.cpp
+      src/Native/imaging/film_scan_denoise.cpp
+      src/Native/imaging/bw_toning.cpp
+      src/Native/imaging/color_model.cpp
+      src/Native/imaging/digital_bw_emulsion_response.cpp
+      src/Native/imaging/digital_bw_film_look.cpp
+      src/Native/imaging/digital_bw_film_profile.cpp
+      src/Native/imaging/digital_film_color_preset.cpp
+      src/Native/imaging/digital_film_grain.cpp
+      src/Native/imaging/digital_film_physics.cpp
+      src/Native/imaging/digital_halation.cpp
+      src/Native/imaging/defect_component_repair.cpp
+      src/Native/imaging/defect_component_mask.cpp
+      src/Native/imaging/defect_component_structure.cpp
+      src/Native/imaging/defect_component_texture.cpp
+      src/Native/imaging/defect_clone_stamp.cpp
+      src/Native/imaging/defect_heal_brush.cpp
+      src/Native/imaging/grain_mend.cpp
+      src/Native/imaging/grain_mend_components.cpp
+      src/Native/imaging/grain_mend_detector.cpp
+      src/Native/imaging/grain_mend_morphology.cpp
+      src/Native/imaging/grain_mend_resample.cpp
+      src/Native/imaging/grain_mend_tiled.cpp
+      src/Native/imaging/icm_icc_converter.cpp
+      src/Native/imaging/image_transform.cpp
     src/Native/imaging/linear_scanner_converter.cpp
+      src/Native/imaging/local_dodge_burn.cpp
+      src/Native/imaging/muted_scene_vibrance.cpp
+      src/Native/imaging/scene_correction.cpp
+      src/Native/imaging/rescue_grade.cpp
+      src/Native/imaging/scanner_profile_grade.cpp
+      src/Native/imaging/scanner_target_grade.cpp
     src/Native/imaging/manual_negative_developer.cpp
     src/Native/imaging/point_curve.cpp
     src/Native/imaging/primary_calibration.cpp
@@ -121,6 +153,7 @@ add_library(negaflow_imaging STATIC
     src/Native/imaging/scanner_to_working.cpp
     src/Native/imaging/tone_curve_measurement.cpp
     src/Native/imaging/tone_mapping.cpp
+    src/Native/imaging/texture_stage.cpp
     src/Native/imaging/working_film_look.cpp
     src/Native/imaging/working_tone_adjuster.cpp
 )
@@ -155,6 +188,8 @@ target_link_libraries(
 # could not run the pipeline without a second copy of it. It is a library now so the
 # CLI and the shell drive exactly the same code.
 add_library(negaflow_pipeline STATIC
+    src/Native/pipeline/defect_recipe_stage.cpp
+    src/Native/pipeline/defect_region_stage.cpp
     src/Native/pipeline/develop_export.cpp
     src/Native/pipeline/film_look_workspace.cpp
 )
@@ -230,6 +265,11 @@ if(BUILD_TESTING)
 
     add_executable(negaflow_develop_export_abi_tests
         tests/Native.UnitTests/develop_export_abi_tests.cpp
+        tests/fixtures/tiff/synthetic_wic_tiff.cpp
+    )
+    target_include_directories(
+        negaflow_develop_export_abi_tests
+        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/tiff"
     )
     target_link_libraries(
         negaflow_develop_export_abi_tests
@@ -457,6 +497,196 @@ if(BUILD_TESTING)
         COMMAND negaflow_working_film_look_tests
     )
 
+    add_executable(negaflow_grain_mend_tests
+        tests/Native.UnitTests/grain_mend_tests.cpp
+    )
+    target_include_directories(
+        negaflow_grain_mend_tests
+        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/imaging"
+    )
+    target_link_libraries(
+        negaflow_grain_mend_tests
+        PRIVATE negaflow_imaging negaflow_project_options
+    )
+    add_test(NAME native.grain_mend COMMAND negaflow_grain_mend_tests)
+
+    add_executable(negaflow_defect_component_repair_tests
+        tests/Native.UnitTests/defect_component_repair_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_defect_component_repair_tests
+        PRIVATE negaflow_imaging negaflow_project_options
+    )
+    add_test(
+        NAME native.defect_component_repair
+        COMMAND negaflow_defect_component_repair_tests
+    )
+
+    add_executable(negaflow_defect_clone_stamp_tests
+        tests/Native.UnitTests/defect_clone_stamp_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_defect_clone_stamp_tests
+        PRIVATE negaflow_imaging negaflow_project_options
+    )
+    add_test(
+        NAME native.defect_clone_stamp
+        COMMAND negaflow_defect_clone_stamp_tests
+    )
+
+    add_executable(negaflow_defect_heal_brush_tests
+        tests/Native.UnitTests/defect_heal_brush_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_defect_heal_brush_tests
+        PRIVATE negaflow_imaging negaflow_project_options
+    )
+    add_test(
+        NAME native.defect_heal_brush
+        COMMAND negaflow_defect_heal_brush_tests
+    )
+
+    # The pinned FILM-R corpus is downloaded on demand and is not shipped. This
+    # executable is intentionally not a default CTest because its 44 pairs are
+    # about 438 MB and belong at image-quality checkpoints only.
+    add_executable(negaflow_grain_mend_corpus_tests
+        tests/Native.UnitTests/grain_mend_corpus_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_grain_mend_corpus_tests
+        PRIVATE
+            negaflow_imaging
+            negaflow_project_options
+            windowscodecs
+            ole32
+    )
+
+    add_executable(negaflow_film_scan_denoise_tests
+        tests/Native.UnitTests/film_scan_denoise_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_film_scan_denoise_tests
+        PRIVATE negaflow_imaging negaflow_project_options
+    )
+    add_test(
+        NAME native.film_scan_denoise
+        COMMAND negaflow_film_scan_denoise_tests
+    )
+
+    add_executable(negaflow_local_dodge_burn_tests
+        tests/Native.UnitTests/local_dodge_burn_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_local_dodge_burn_tests
+        PRIVATE negaflow_imaging negaflow_project_options
+    )
+    add_test(
+        NAME native.local_dodge_burn
+        COMMAND negaflow_local_dodge_burn_tests
+    )
+
+    add_executable(negaflow_color_model_tests
+        tests/Native.UnitTests/color_model_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_color_model_tests
+        PRIVATE negaflow_imaging negaflow_project_options
+    )
+    add_test(NAME native.color_model COMMAND negaflow_color_model_tests)
+
+    add_executable(negaflow_scene_correction_tests
+        tests/Native.UnitTests/scene_correction_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_scene_correction_tests
+        PRIVATE negaflow_imaging negaflow_project_options
+    )
+    add_test(NAME native.scene_correction COMMAND negaflow_scene_correction_tests)
+
+    add_executable(negaflow_rescue_grade_tests
+        tests/Native.UnitTests/rescue_grade_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_rescue_grade_tests
+        PRIVATE negaflow_imaging negaflow_project_options
+    )
+    add_test(NAME native.rescue_grade COMMAND negaflow_rescue_grade_tests)
+
+    add_executable(negaflow_scanner_profile_grade_tests
+        tests/Native.UnitTests/scanner_profile_grade_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_scanner_profile_grade_tests
+        PRIVATE negaflow_imaging negaflow_project_options
+    )
+    add_test(
+        NAME native.scanner_profile_grade
+        COMMAND negaflow_scanner_profile_grade_tests
+    )
+
+    add_executable(negaflow_scanner_target_grade_tests
+        tests/Native.UnitTests/scanner_target_grade_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_scanner_target_grade_tests
+        PRIVATE negaflow_imaging negaflow_project_options
+    )
+    add_test(
+        NAME native.scanner_target_grade
+        COMMAND negaflow_scanner_target_grade_tests
+    )
+
+    add_executable(negaflow_texture_stage_tests
+        tests/Native.UnitTests/texture_stage_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_texture_stage_tests
+        PRIVATE negaflow_imaging negaflow_project_options
+    )
+    add_test(NAME native.texture_stage COMMAND negaflow_texture_stage_tests)
+
+    add_executable(negaflow_bw_toning_tests
+        tests/Native.UnitTests/bw_toning_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_bw_toning_tests
+        PRIVATE negaflow_imaging negaflow_project_options
+    )
+    add_test(NAME native.bw_toning COMMAND negaflow_bw_toning_tests)
+
+    add_executable(negaflow_image_transform_tests
+        tests/Native.UnitTests/image_transform_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_image_transform_tests
+        PRIVATE negaflow_imaging negaflow_project_options
+    )
+    add_test(NAME native.image_transform COMMAND negaflow_image_transform_tests)
+
+    add_executable(negaflow_digital_film_material_tests
+        tests/Native.UnitTests/digital_film_material_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_digital_film_material_tests
+        PRIVATE negaflow_imaging negaflow_project_options
+    )
+    add_test(
+        NAME native.digital_film_material
+        COMMAND negaflow_digital_film_material_tests
+    )
+
+    add_executable(negaflow_digital_bw_film_look_tests
+        tests/Native.UnitTests/digital_bw_film_look_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_digital_bw_film_look_tests
+        PRIVATE negaflow_imaging negaflow_project_options
+    )
+    add_test(
+        NAME native.digital_bw_film_look
+        COMMAND negaflow_digital_bw_film_look_tests
+    )
+
     add_executable(negaflow_film_look_command_support_tests
         tests/Native.UnitTests/film_look_command_support_tests.cpp
         src/Cli/commands/film_look_command_support.cpp
@@ -473,6 +703,24 @@ if(BUILD_TESTING)
         NAME cli.film_look_command_support
         COMMAND negaflow_film_look_command_support_tests
     )
+
+    add_executable(negaflow_display_gamut_map_tests
+        tests/Native.UnitTests/display_gamut_map_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_display_gamut_map_tests
+        PRIVATE negaflow_imaging negaflow_project_options
+    )
+    add_test(NAME native.display_gamut_map COMMAND negaflow_display_gamut_map_tests)
+
+    add_executable(negaflow_parallel_rows_tests
+        tests/Native.UnitTests/parallel_rows_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_parallel_rows_tests
+        PRIVATE negaflow_core negaflow_project_options
+    )
+    add_test(NAME native.parallel_rows COMMAND negaflow_parallel_rows_tests)
 
     add_executable(negaflow_process_cpu_time_tests
         tests/Native.UnitTests/process_cpu_time_tests.cpp
@@ -514,9 +762,12 @@ if(BUILD_TESTING)
         negaflow_scanner_to_working_tests
         PRIVATE negaflow_imaging negaflow_project_options
     )
+    # The reference macOS checkout owns this scan; it is read, never written. The path
+    # used to be one segment short, which silently degraded every real-TIFF test to its
+    # synthetic-only branch — the checks looked like they were running and were not.
     set(
         NEGAFLOW_SOURCE_TIFF_FIXTURE
-        "${CMAKE_CURRENT_SOURCE_DIR}/../Sources/ScannerKit/Resources/Frame.tiff"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../negaflow-mac/Sources/ScannerKit/Resources/Frame.tiff"
     )
     if(EXISTS "${NEGAFLOW_SOURCE_TIFF_FIXTURE}")
         add_test(
@@ -690,7 +941,9 @@ if(BUILD_TESTING)
         set_tests_properties(
             cli.develop_negative_tiff_film_look
             PROPERTIES PASS_REGULAR_EXPRESSION
-                "\"film_look_arguments_explicit\":true.*\"film_look_route\":\"film_scan_emulation\".*\"film_color_applied\":true.*\"film_acutance_applied\":true.*\"statistics_full_frame_scan_count\":3"
+                # A film scan runs the Film Look as identity, so it adds no
+                # statistics pass: scanner-to-working and develop only.
+                "\"film_look_arguments_explicit\":true.*\"film_look_route\":\"identity\".*\"film_color_applied\":false.*\"film_acutance_applied\":false.*\"statistics_full_frame_scan_count\":2"
         )
         add_test(
             NAME cli.develop_negative_tiff_tone_film_look
@@ -702,7 +955,8 @@ if(BUILD_TESTING)
         set_tests_properties(
             cli.develop_negative_tiff_tone_film_look
             PROPERTIES PASS_REGULAR_EXPRESSION
-                "\"film_look_arguments_explicit\":true.*\"film_look_route\":\"film_scan_emulation\".*\"film_color_applied\":true.*\"film_acutance_applied\":true.*\"tone_arguments_explicit\":true.*\"statistics_full_frame_scan_count\":4"
+                # Tone adds the one extra pass; the identity Film Look adds none.
+                "\"film_look_arguments_explicit\":true.*\"film_look_route\":\"identity\".*\"film_color_applied\":false.*\"film_acutance_applied\":false.*\"tone_arguments_explicit\":true.*\"statistics_full_frame_scan_count\":3"
         )
         add_test(
             NAME native.develop_export_abi

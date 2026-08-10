@@ -46,6 +46,8 @@ public sealed class LibraryHostService : IDisposable
 
     public CatalogStoreError StoreError { get; private set; }
 
+    public DefectSidecarError DefectSidecarError { get; private set; }
+
     public IReadOnlyList<LibraryFrameSnapshot> Frames =>
         document?.Frames ?? [];
 
@@ -65,6 +67,7 @@ public sealed class LibraryHostService : IDisposable
         LibraryDocumentOpenResult opened = LibraryDocument.Open(roots);
         SessionError = opened.SessionError;
         StoreError = opened.StoreError;
+        DefectSidecarError = opened.DefectSidecarError;
         if (opened.Document is { } loaded)
         {
             document = loaded;

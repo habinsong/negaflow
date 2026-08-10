@@ -158,22 +158,8 @@ using detail::FilmToneCurve;
 }
 
 [[nodiscard]] bool valid_emulation(const FilmEmulation emulation) noexcept {
-    switch (emulation) {
-        case FilmEmulation::none:
-        case FilmEmulation::ektachrome_e100:
-        case FilmEmulation::provia_100f:
-        case FilmEmulation::velvia_50:
-        case FilmEmulation::portra_160:
-        case FilmEmulation::portra_400:
-        case FilmEmulation::portra_800:
-        case FilmEmulation::ektar_100:
-        case FilmEmulation::ultramax_400:
-        case FilmEmulation::colorplus_200:
-        case FilmEmulation::fujicolor_c200:
-        case FilmEmulation::pro_400h:
-            return true;
-    }
-    return false;
+    return emulation == FilmEmulation::none ||
+           detail::film_emulation_color_profile(emulation) != nullptr;
 }
 
 [[nodiscard]] negaflow::core::KernelStatus validate_parameters(

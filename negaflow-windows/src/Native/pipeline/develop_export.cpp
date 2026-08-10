@@ -1,8 +1,15 @@
 #include "negaflow/pipeline/develop_export.h"
 
+#include "negaflow/color/srgb_transfer.h"
+#include "negaflow/core/parallel_rows.h"
 #include "negaflow/core/pixel.h"
+#include "negaflow/core/pointwise.h"
+#include "negaflow/imaging/display_gamut_map.h"
 #include "negaflow/pipeline/film_look_workspace.h"
 
+#include <algorithm>
+#include <atomic>
+#include <stop_token>
 #include <utility>
 
 namespace negaflow::pipeline {
@@ -46,11 +53,191 @@ const char* develop_export_stage_name(const DevelopExportStage stage) noexcept {
             return "film_look";
         case DevelopExportStage::output:
             return "output";
+        case DevelopExportStage::grain_mend:
+            return "grain_mend";
+        case DevelopExportStage::film_scan_denoise:
+            return "film_scan_denoise";
+        case DevelopExportStage::local_dodge_burn:
+            return "local_dodge_burn";
+        case DevelopExportStage::texture:
+            return "texture";
+        case DevelopExportStage::black_and_white:
+            return "black_and_white";
+        case DevelopExportStage::image_transform:
+            return "image_transform";
+        case DevelopExportStage::color_model:
+            return "color_model";
+        case DevelopExportStage::scene_correction:
+            return "scene_correction";
+        case DevelopExportStage::target_grade:
+            return "target_grade";
+        case DevelopExportStage::defect_component_repair:
+            return "defect_component_repair";
+        case DevelopExportStage::defect_clone_stamp:
+            return "defect_clone_stamp";
+        case DevelopExportStage::defect_brush:
+            return "defect_brush";
     }
     return "unknown_stage";
 }
 
 namespace {
+
+// Relative cost of each stage, used only to move the progress figure at a roughly even
+// rate. The numbers come from a 3278x4944 16-bit scan measured on x64 Release, expressed
+// in units of about a millisecond; a stage that will not run this time contributes almost
+// nothing. They steer a progress bar and nothing else — no result depends on them.
+struct StageCost final {
+    std::uint32_t idle;
+    std::uint32_t active;
+};
+
+constexpr StageCost decode_cost{170U, 170U};
+constexpr StageCost defect_cost{1U, 60U};
+constexpr StageCost auto_base_cost{1U, 30U};
+constexpr StageCost invert_cost{1U, 250U};
+constexpr StageCost scene_correction_cost{2U, 40U};
+constexpr StageCost target_grade_cost{1U, 60U};
+constexpr StageCost color_model_cost{5U, 60U};
+constexpr StageCost tone_cost{5U, 290U};
+constexpr StageCost film_look_cost{5U, 300U};
+constexpr StageCost grain_mend_cost{2U, 900U};
+constexpr StageCost denoise_cost{2U, 200U};
+constexpr StageCost dodge_burn_cost{1U, 80U};
+constexpr StageCost texture_cost{2U, 120U};
+constexpr StageCost black_and_white_cost{1U, 20U};
+constexpr StageCost transform_cost{1U, 40U};
+constexpr StageCost preview_output_cost{60U, 60U};
+constexpr StageCost export_output_cost{2600U, 2600U};
+
+[[nodiscard]] constexpr std::uint32_t cost_of(
+    const StageCost cost,
+    const bool active) noexcept {
+    return active ? cost.active : cost.idle;
+}
+
+// Owns the two things a long blocking call has to offer a UI: a way to stop it and a way
+// to see where it is. Both are polled through caller-owned words, so nothing here calls
+// back into managed code and nothing has to stay alive beyond the call.
+class RunTracker final {
+public:
+    RunTracker(const DevelopRunControl& control, const std::uint32_t total_cost) noexcept
+        : control_{control},
+          total_cost_{total_cost == 0U ? 1U : total_cost} {}
+
+    [[nodiscard]] bool cancelled() const noexcept {
+        if (control_.cancel_flag == nullptr) {
+            return false;
+        }
+        return std::atomic_ref<std::uint32_t>(*control_.cancel_flag)
+                   .load(std::memory_order_relaxed) != 0U;
+    }
+
+    // Announces the stage about to run and how much of the remaining budget it owns.
+    void begin(const DevelopExportStage stage, const std::uint32_t cost) noexcept {
+        stage_cost_ = cost;
+        if (control_.progress_stage != nullptr) {
+            std::atomic_ref<std::uint32_t>(*control_.progress_stage)
+                .store(static_cast<std::uint32_t>(stage), std::memory_order_relaxed);
+        }
+        publish(completed_cost_);
+    }
+
+    // Sub-stage movement for the few stages long enough that a single jump would look
+    // like a hang. `fraction` is clamped, so a bad estimate cannot make progress go back.
+    void within(const double fraction) noexcept {
+        const double bounded = std::clamp(fraction, 0.0, 1.0);
+        publish(
+            completed_cost_ +
+            static_cast<std::uint64_t>(bounded * static_cast<double>(stage_cost_)));
+    }
+
+    void finish() noexcept {
+        completed_cost_ += stage_cost_;
+        stage_cost_ = 0U;
+        publish(completed_cost_);
+    }
+
+    void complete() noexcept {
+        if (control_.progress_permille != nullptr) {
+            std::atomic_ref<std::uint32_t>(*control_.progress_permille)
+                .store(develop_progress_complete, std::memory_order_relaxed);
+        }
+    }
+
+private:
+    void publish(const std::uint64_t reached) noexcept {
+        if (control_.progress_permille == nullptr) {
+            return;
+        }
+        const std::uint64_t permille = std::min<std::uint64_t>(
+            (reached * develop_progress_complete) / total_cost_,
+            develop_progress_complete);
+        std::atomic_ref<std::uint32_t>(*control_.progress_permille)
+            .store(static_cast<std::uint32_t>(permille), std::memory_order_relaxed);
+    }
+
+    DevelopRunControl control_{};
+    std::uint32_t total_cost_{1U};
+    std::uint64_t completed_cost_{0U};
+    std::uint32_t stage_cost_{0U};
+};
+
+[[nodiscard]] DevelopExportOutcome cancelled_outcome(
+    const DevelopExportStage stage) noexcept {
+    DevelopExportOutcome outcome = fail(stage, "cancelled");
+    outcome.cancelled = true;
+    return outcome;
+}
+
+// Turns the caller's cancel latch into the stop token the decoder and the content hash
+// already understand, and forwards row progress into the tracker. Both facilities exist
+// on those calls already; this only wires them to the run-level control.
+class DecodeProgressBridge final
+    : public negaflow::imageio::WicTiffDecodeProgressObserver {
+public:
+    DecodeProgressBridge(
+        RunTracker& tracker,
+        std::stop_source& source) noexcept
+        : tracker_{tracker}, source_{source} {}
+
+    void report(const negaflow::imageio::WicTiffDecodeProgress progress) noexcept override {
+        if (progress.total_rows != 0U) {
+            tracker_.within(
+                static_cast<double>(progress.completed_rows) /
+                static_cast<double>(progress.total_rows));
+        }
+        if (tracker_.cancelled()) {
+            source_.request_stop();
+        }
+    }
+
+private:
+    RunTracker& tracker_;
+    std::stop_source& source_;
+};
+
+class HashProgressBridge final
+    : public negaflow::imageio::ImageContentHashProgressObserver {
+public:
+    HashProgressBridge(RunTracker& tracker, std::stop_source& source) noexcept
+        : tracker_{tracker}, source_{source} {}
+
+    void report(const negaflow::imageio::ImageContentHashProgress progress) noexcept override {
+        if (progress.total_bytes != 0U) {
+            tracker_.within(
+                static_cast<double>(progress.completed_bytes) /
+                static_cast<double>(progress.total_bytes));
+        }
+        if (tracker_.cancelled()) {
+            source_.request_stop();
+        }
+    }
+
+private:
+    RunTracker& tracker_;
+    std::stop_source& source_;
+};
 
 // Where a run ends. Publishing writes a verified 16-bit file; a preview stops before that
 // and fills the caller's display buffer. Everything before the last stage is identical, so
@@ -77,17 +264,9 @@ struct PreviewTarget final {
         return fail(DevelopExportStage::output, "invalid_preview_target");
     }
 
-    const negaflow::output::WorkingToSrgb16Result converted =
-        negaflow::output::convert_working_to_srgb16(image);
-    if (converted.status != negaflow::output::WorkingToSrgb16Status::ok) {
-        return fail(
-            DevelopExportStage::output,
-            negaflow::output::working_to_srgb16_status_name(converted.status));
-    }
-
-    const std::uint32_t source_width = converted.image.width;
-    const std::uint32_t source_height = converted.image.height;
-    if (source_width == 0U || source_height == 0U) {
+    const std::uint32_t source_width = image.width;
+    const std::uint32_t source_height = image.height;
+    if (source_width == 0U || source_height == 0U || image.stride_pixels < source_width) {
         return fail(DevelopExportStage::output, "empty_preview_source");
     }
 
@@ -114,8 +293,15 @@ struct PreviewTarget final {
         return fail(DevelopExportStage::output, "preview_buffer_too_small");
     }
 
-    const std::uint32_t samples_per_row = converted.image.stride_bytes / 2U;
-    for (std::uint32_t y = 0U; y < height; ++y) {
+    // Converted straight from the working image rather than through a full-resolution
+    // 16-bit copy. On a 17 MP scan that copy was about 104 MB allocated only to be
+    // averaged away, and dropping it also removes a whole pass over the frame.
+    std::atomic<std::uint64_t> first_failure{negaflow::core::no_row_failure};
+    negaflow::core::for_each_row_block(
+        height,
+        static_cast<std::uint64_t>(source_width) * source_height,
+        [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+      for (std::uint32_t y = first_row; y < first_row + row_count; ++y) {
         const std::uint32_t source_y0 =
             static_cast<std::uint32_t>((static_cast<std::uint64_t>(y) * source_height) / height);
         std::uint32_t source_y1 = static_cast<std::uint32_t>(
@@ -133,32 +319,65 @@ struct PreviewTarget final {
                 source_x1 = source_x0 + 1U;
             }
 
-            std::uint64_t red = 0U;
-            std::uint64_t green = 0U;
-            std::uint64_t blue = 0U;
-            std::uint64_t count = 0U;
+            float red = 0.0F;
+            float green = 0.0F;
+            float blue = 0.0F;
+            std::uint32_t count = 0U;
+            bool finite = true;
             for (std::uint32_t sy = source_y0; sy < source_y1; ++sy) {
-                const std::uint16_t* const row =
-                    converted.image.samples.data() +
-                    (static_cast<std::size_t>(sy) * samples_per_row);
+                const negaflow::core::Rgba32F* const row =
+                    image.pixels.data() +
+                    (static_cast<std::size_t>(sy) * image.stride_pixels);
                 for (std::uint32_t sx = source_x0; sx < source_x1; ++sx) {
-                    const std::uint16_t* const pixel = row + (static_cast<std::size_t>(sx) * 3U);
-                    red += pixel[0];
-                    green += pixel[1];
-                    blue += pixel[2];
+                    const negaflow::core::Rgba32F source = row[sx];
+                    if (!negaflow::core::finite_rgb(source)) {
+                        finite = false;
+                        break;
+                    }
+                    // Hue-preserving fold instead of a per-channel clamp, then the sRGB
+                    // encode the 8-bit step quantises in.
+                    const negaflow::core::Rgba32F folded =
+                        negaflow::imaging::tone_safe_unit_rgb(source);
+                    red += negaflow::color::linear_to_srgb_encoded(folded.red);
+                    green += negaflow::color::linear_to_srgb_encoded(folded.green);
+                    blue += negaflow::color::linear_to_srgb_encoded(folded.blue);
                     ++count;
                 }
+                if (!finite) {
+                    break;
+                }
             }
+            if (!finite || count == 0U) {
+                negaflow::core::record_row_failure_value(first_failure, y, 1U);
+                return;
+            }
+
+            const float inverse_count = 1.0F / static_cast<float>(count);
+            // Under one 8-bit step of noise, added in the space the quantisation happens
+            // in. Without it a smooth sky bands here even though the working image is
+            // perfectly smooth.
+            const auto quantise = [&](const float sum,
+                                      const std::uint32_t channel) noexcept {
+                const float encoded = (sum * inverse_count) +
+                    negaflow::imaging::display_dither_offset(x, y, channel);
+                return static_cast<std::uint8_t>(
+                    std::clamp(encoded, 0.0F, 1.0F) * 255.0F + 0.5F);
+            };
 
             std::uint8_t* const destination =
                 target.pixels + ((static_cast<std::size_t>(y) * width + x) * 4U);
-            // BGRA8 with opaque alpha, which is what a XAML Image accepts. The samples are
-            // 16-bit sRGB, so the shift is a plain narrowing, not a transfer function.
-            destination[0] = static_cast<std::uint8_t>((blue / count) >> 8U);
-            destination[1] = static_cast<std::uint8_t>((green / count) >> 8U);
-            destination[2] = static_cast<std::uint8_t>((red / count) >> 8U);
+            // BGRA8 with opaque alpha, which is what a XAML Image accepts.
+            destination[0] = quantise(blue, 2U);
+            destination[1] = quantise(green, 1U);
+            destination[2] = quantise(red, 0U);
             destination[3] = 0xFFU;
         }
+      }
+        });
+
+    if (negaflow::core::has_row_failure(
+            first_failure.load(std::memory_order_relaxed))) {
+        return fail(DevelopExportStage::output, "non_finite_preview_pixel");
     }
 
     outcome.image_width = width;
@@ -169,15 +388,70 @@ struct PreviewTarget final {
     return outcome;
 }
 
+// Adds up what this particular request will actually run. A frame with GrainMend off and
+// no tone change spends nearly all its time in decode and publish, and the progress
+// figure has to reflect that rather than a fixed stage list.
+[[nodiscard]] std::uint32_t plan_total_cost(
+    const DevelopExportRequest& request,
+    const bool preview) noexcept {
+    const bool negative_source = request.film_polarity == FilmPolarity::negative;
+    const bool monochrome =
+        request.negative.film_type ==
+        negaflow::imaging::NegativeFilmType::black_and_white;
+    const bool graded =
+        request.develop_target != DevelopTarget::main ||
+        !request.scanner_profile_id.empty();
+
+    std::uint32_t total = 0U;
+    total += cost_of(decode_cost, true);
+    total += cost_of(defect_cost, !request.defect_recipe.order.empty());
+    total += cost_of(
+        auto_base_cost,
+        negative_source &&
+            request.base_estimation_mode != NegativeBaseEstimationMode::manual);
+    total += cost_of(invert_cost, negative_source);
+    total += cost_of(scene_correction_cost, true);
+    total += cost_of(target_grade_cost, graded);
+    total += cost_of(color_model_cost, true);
+    total += cost_of(tone_cost, true);
+    total += cost_of(
+        film_look_cost,
+        request.film_look.source_kind !=
+            negaflow::imaging::DevelopSourceKind::film_scan);
+    total += cost_of(
+        grain_mend_cost,
+        request.grain_mend.strength > negaflow::imaging::grain_mend_identity_threshold);
+    total += cost_of(denoise_cost, request.film_scan_denoise.strength > 0.0);
+    total += cost_of(
+        dodge_burn_cost, !request.local_dodge_burn.adjustments.empty());
+    total += cost_of(texture_cost, true);
+    total += cost_of(black_and_white_cost, monochrome);
+    total += cost_of(transform_cost, true);
+    total += cost_of(preview ? preview_output_cost : export_output_cost, true);
+    return total;
+}
+
 [[nodiscard]] DevelopExportOutcome run_develop(
     const DevelopExportRequest& request,
-    const PreviewTarget* const preview) noexcept {
+    const PreviewTarget* const preview,
+    const DevelopRunControl& control) noexcept {
     if (request.source.empty() || (preview == nullptr && request.destination.empty())) {
         return fail(DevelopExportStage::request_validation, "missing_path");
     }
     if (request.format != DevelopExportFormat::png16 &&
         request.format != DevelopExportFormat::tiff16) {
         return fail(DevelopExportStage::request_validation, "unknown_export_format");
+    }
+    if (request.film_polarity != FilmPolarity::negative &&
+        request.film_polarity != FilmPolarity::positive) {
+        return fail(DevelopExportStage::request_validation, "unknown_film_polarity");
+    }
+    if (request.film_polarity == FilmPolarity::negative &&
+        request.film_look.source_kind !=
+            negaflow::imaging::DevelopSourceKind::film_scan) {
+        return fail(
+            DevelopExportStage::request_validation,
+            "negative_requires_film_scan_source");
     }
     if (request.rows_per_copy == 0U) {
         return fail(DevelopExportStage::request_validation, "invalid_rows_per_copy");
@@ -196,17 +470,51 @@ struct PreviewTarget final {
             DevelopExportStage::request_validation,
             "invalid_tone_adjustment_parameter");
     }
+    if (!negaflow::imaging::valid_color_model_parameters(request.color_model)) {
+        return fail(
+            DevelopExportStage::request_validation,
+            "invalid_color_model_parameter");
+    }
     if (!negaflow::imaging::valid_working_film_look_parameters(request.film_look)) {
         return fail(
             DevelopExportStage::request_validation, "invalid_film_look_parameters");
     }
-    // The rendered-digital graph is not implemented, and a negative develop is not a
-    // meaningful thing to ask of it. Refuse rather than silently developing anyway.
-    if (request.film_look.source_kind !=
-        negaflow::imaging::DevelopSourceKind::film_scan) {
+    if (!negaflow::imaging::valid_grain_mend_parameters(request.grain_mend)) {
+        return fail(
+            DevelopExportStage::request_validation, "invalid_grain_mend_parameters");
+    }
+    if (!negaflow::imaging::valid_film_scan_denoise_parameters(
+            request.film_scan_denoise)) {
         return fail(
             DevelopExportStage::request_validation,
-            "negative_develop_requires_film_scan_source");
+            "invalid_film_scan_denoise_parameters");
+    }
+    if (!negaflow::imaging::valid_local_dodge_burn_parameters(
+            request.local_dodge_burn)) {
+        return fail(
+            DevelopExportStage::request_validation,
+            "invalid_local_dodge_burn_parameters");
+    }
+    if (!negaflow::imaging::valid_texture_stage_parameters(request.texture)) {
+        return fail(
+            DevelopExportStage::request_validation,
+            "invalid_texture_parameters");
+    }
+    if (!negaflow::imaging::valid_bw_toning_parameters(request.bw_toning)) {
+        return fail(
+            DevelopExportStage::request_validation,
+            "invalid_bw_toning_parameters");
+    }
+    if (!negaflow::imaging::valid_image_transform_parameters(
+            request.image_transform)) {
+        return fail(
+            DevelopExportStage::request_validation,
+            "invalid_image_transform_parameters");
+    }
+    RunTracker tracker{control, plan_total_cost(request, preview != nullptr)};
+    std::stop_source stop{};
+    if (tracker.cancelled()) {
+        return cancelled_outcome(DevelopExportStage::request_validation);
     }
 
     const negaflow::imageio::ImageFileObservationResult before =
@@ -217,14 +525,55 @@ struct PreviewTarget final {
             negaflow::imageio::image_file_observation_status_name(before.status),
             before.native_error_code);
     }
+    if (request.expected_defect_source_identity) {
+        tracker.begin(DevelopExportStage::observe_source_before, 0U);
+        HashProgressBridge hash_progress{tracker, stop};
+        negaflow::imageio::ImageContentHashControl hash_control{};
+        hash_control.mode = negaflow::imageio::ImageContentHashMode::sha256;
+        hash_control.stop_token = stop.get_token();
+        hash_control.progress_observer = &hash_progress;
+        const negaflow::imageio::ImageContentHashResult hashed =
+            negaflow::imageio::hash_image_content(request.source, hash_control);
+        if (hashed.status == negaflow::imageio::ImageContentHashStatus::cancelled) {
+            return cancelled_outcome(DevelopExportStage::observe_source_before);
+        }
+        if (hashed.status != negaflow::imageio::ImageContentHashStatus::ok) {
+            return fail(
+                DevelopExportStage::observe_source_before,
+                negaflow::imageio::image_content_hash_status_name(hashed.status),
+                hashed.native_error_code);
+        }
+        if (!negaflow::imageio::same_image_file_observation(
+                before.observation,
+                hashed.observation)) {
+            return fail(
+                DevelopExportStage::observe_source_before,
+                "source_changed_before_decode");
+        }
+        const ExpectedSourceIdentity& expected =
+            *request.expected_defect_source_identity;
+        if (hashed.file_bytes != expected.file_bytes ||
+            hashed.sha256 != expected.sha256) {
+            return fail(
+                DevelopExportStage::observe_source_before,
+                "defect_source_identity_mismatch");
+        }
+    }
 
+    tracker.begin(DevelopExportStage::decode, cost_of(decode_cost, true));
+    DecodeProgressBridge decode_progress{tracker, stop};
     negaflow::imageio::WicTiffDecodeControl decode_control{};
     decode_control.rows_per_copy = request.rows_per_copy;
+    decode_control.stop_token = stop.get_token();
+    decode_control.progress_observer = &decode_progress;
     auto prepared = negaflow::imaging::decode_scanner_tiff_to_working_rows(
         request.source,
         {},
         {},
         decode_control);
+    if (prepared.decode.status == negaflow::imageio::WicTiffDecodeStatus::cancelled) {
+        return cancelled_outcome(DevelopExportStage::decode);
+    }
     if (prepared.decode.status != negaflow::imageio::WicTiffDecodeStatus::ok) {
         if (prepared.decode.status ==
                 negaflow::imageio::WicTiffDecodeStatus::row_sink_failed &&
@@ -263,12 +612,47 @@ struct PreviewTarget final {
             DevelopExportStage::observe_source_after, "source_changed_during_decode");
     }
 
+    tracker.finish();
+    if (tracker.cancelled()) {
+        return cancelled_outcome(DevelopExportStage::decode);
+    }
+
+    tracker.begin(
+        DevelopExportStage::defect_component_repair,
+        cost_of(defect_cost, !request.defect_recipe.order.empty()));
+    DefectRecipeStageResult defect_recipe = apply_defect_recipe(
+        std::move(prepared.working.image),
+        request.defect_recipe);
+    if (defect_recipe.status != DefectRecipeStageStatus::ok) {
+        const DevelopExportStage stage = [&]() {
+            if (defect_recipe.status == DefectRecipeStageStatus::clone_failed) {
+                return DevelopExportStage::defect_clone_stamp;
+            }
+            if (defect_recipe.status == DefectRecipeStageStatus::brush_failed) {
+                return DevelopExportStage::defect_brush;
+            }
+            return DevelopExportStage::defect_component_repair;
+        }();
+        return fail(
+            stage,
+            defect_recipe_stage_status_name(defect_recipe));
+    }
+    prepared.working.image = std::move(defect_recipe.image);
+    tracker.finish();
+    if (tracker.cancelled()) {
+        return cancelled_outcome(DevelopExportStage::defect_component_repair);
+    }
+
     const std::uint32_t decoded_width = prepared.working.image.width;
-    const std::uint32_t decoded_height = prepared.working.image.height;
+    negaflow::imaging::WorkingFilmLookParameters film_look_parameters =
+        request.film_look;
+    film_look_parameters.monochrome =
+        request.negative.film_type ==
+        negaflow::imaging::NegativeFilmType::black_and_white;
 
     FilmLookWorkspaceStorage workspace{};
     const FilmLookWorkspacePrepareStatus workspace_status =
-        prepare_film_look_workspace(request.film_look, decoded_width, workspace);
+        prepare_film_look_workspace(film_look_parameters, decoded_width, workspace);
     if (workspace_status != FilmLookWorkspacePrepareStatus::ok) {
         return fail(
             DevelopExportStage::film_look_workspace,
@@ -278,8 +662,20 @@ struct PreviewTarget final {
 
     negaflow::imaging::ManualNegativeDevelopParameters negative = request.negative;
     DevelopBaseSource base_source = DevelopBaseSource::manual;
-    if (request.base_estimation_mode == NegativeBaseEstimationMode::auto_estimate ||
-        request.base_estimation_mode == NegativeBaseEstimationMode::preset) {
+    negaflow::imaging::ManualNegativeDevelopInfo developed_info{};
+    negaflow::imaging::WorkingImage developed_image{};
+    const bool positive = request.film_polarity == FilmPolarity::positive;
+    const bool negative_source = !positive;
+    tracker.begin(
+        DevelopExportStage::develop,
+        cost_of(
+            auto_base_cost,
+            negative_source &&
+                request.base_estimation_mode != NegativeBaseEstimationMode::manual) +
+            cost_of(invert_cost, negative_source));
+    if (negative_source &&
+        (request.base_estimation_mode == NegativeBaseEstimationMode::auto_estimate ||
+         request.base_estimation_mode == NegativeBaseEstimationMode::preset)) {
         const negaflow::imaging::AutoNegativeBaseResult resolved =
             negaflow::imaging::resolve_auto_negative_base(
                 prepared.working.image,
@@ -292,7 +688,8 @@ struct PreviewTarget final {
         if (request.base_estimation_mode == NegativeBaseEstimationMode::preset) {
             negative.use_preset_response = true;
             negative.preset_dmax_normalized = request.film_stock_preset->dmax_normalized;
-            if (resolved.source == negaflow::imaging::AutoNegativeBaseSource::connected_component) {
+            if (negaflow::imaging::confident_auto_negative_base_source(
+                    resolved.source)) {
                 negative.dmin = resolved.dmin;
                 base_source = DevelopBaseSource::preset_measured;
             } else {
@@ -329,23 +726,188 @@ struct PreviewTarget final {
         }
     }
 
-    auto developed = negaflow::imaging::develop_manual_negative(
-        std::move(prepared.working.image),
-        negative);
-    if (developed.status != negaflow::imaging::ManualNegativeDevelopStatus::ok) {
-        if (developed.status ==
-            negaflow::imaging::ManualNegativeDevelopStatus::kernel_failed) {
+    if (negative_source) {
+        auto developed = negaflow::imaging::develop_manual_negative(
+            std::move(prepared.working.image),
+            negative);
+        if (developed.status != negaflow::imaging::ManualNegativeDevelopStatus::ok) {
+            if (developed.status ==
+                negaflow::imaging::ManualNegativeDevelopStatus::kernel_failed) {
+                return fail(
+                    DevelopExportStage::develop,
+                    negaflow::core::kernel_status_name(
+                        developed.info.kernel_status));
+            }
             return fail(
                 DevelopExportStage::develop,
-                negaflow::core::kernel_status_name(developed.info.kernel_status));
+                negaflow::imaging::manual_negative_develop_status_name(
+                    developed.status));
         }
-        return fail(
-            DevelopExportStage::develop,
-            negaflow::imaging::manual_negative_develop_status_name(developed.status));
+        developed_info = developed.info;
+        developed_image = std::move(developed.image);
+    } else {
+        // Positive film scans and rendered-digital input are already positive
+        // working images. Negative base and inversion do not participate.
+        developed_image = std::move(prepared.working.image);
     }
 
+    tracker.finish();
+    if (tracker.cancelled()) {
+        return cancelled_outcome(DevelopExportStage::develop);
+    }
+
+    tracker.begin(
+        DevelopExportStage::scene_correction, cost_of(scene_correction_cost, true));
+    negaflow::imaging::SceneCorrectionParameters scene_correction =
+        request.scene_correction;
+    scene_correction.negative_source = negative_source;
+    negaflow::imaging::SceneCorrectionInfo scene_correction_info{};
+    const negaflow::core::KernelStatus scene_correction_status =
+        negaflow::imaging::apply_scene_correction(
+            {
+                developed_image.pixels.data(),
+                developed_image.pixels.size(),
+                developed_image.width,
+                developed_image.height,
+                developed_image.stride_pixels,
+            },
+            scene_correction,
+            scene_correction_info);
+    if (scene_correction_status != negaflow::core::KernelStatus::ok) {
+        return fail(
+            DevelopExportStage::scene_correction,
+            negaflow::core::kernel_status_name(scene_correction_status));
+    }
+
+    tracker.finish();
+    if (tracker.cancelled()) {
+        return cancelled_outcome(DevelopExportStage::scene_correction);
+    }
+
+    tracker.begin(
+        DevelopExportStage::target_grade,
+        cost_of(
+            target_grade_cost,
+            request.develop_target != DevelopTarget::main ||
+                !request.scanner_profile_id.empty()));
+    if (request.develop_target == DevelopTarget::noritsu ||
+        request.develop_target == DevelopTarget::sp3000 ||
+        request.develop_target == DevelopTarget::f135 ||
+        request.develop_target == DevelopTarget::hr) {
+        negaflow::imaging::ScannerTargetStyle target_style =
+            negaflow::imaging::ScannerTargetStyle::noritsu;
+        switch (request.develop_target) {
+            case DevelopTarget::sp3000:
+                target_style = negaflow::imaging::ScannerTargetStyle::sp3000;
+                break;
+            case DevelopTarget::f135:
+                target_style = negaflow::imaging::ScannerTargetStyle::f135;
+                break;
+            case DevelopTarget::hr:
+                target_style = negaflow::imaging::ScannerTargetStyle::hr;
+                break;
+            default:
+                break;
+        }
+        negaflow::imaging::ScannerTargetGradeInfo target_info{};
+        const negaflow::core::KernelStatus target_status =
+            negaflow::imaging::apply_scanner_target_grade(
+                {
+                    developed_image.pixels.data(),
+                    developed_image.pixels.size(),
+                    developed_image.width,
+                    developed_image.height,
+                    developed_image.stride_pixels,
+                },
+                target_style,
+                negative.film_type == negaflow::imaging::NegativeFilmType::black_and_white,
+                positive,
+                request.scanner_profile_id,
+                target_info);
+        if (target_status != negaflow::core::KernelStatus::ok) {
+            return fail(
+                DevelopExportStage::target_grade,
+                negaflow::core::kernel_status_name(target_status));
+        }
+    }
+    if (request.develop_target == DevelopTarget::rescue) {
+        negaflow::imaging::RescueGradeInfo rescue_info{};
+        const negaflow::core::KernelStatus rescue_status =
+            negaflow::imaging::apply_rescue_grade(
+                {
+                    developed_image.pixels.data(),
+                    developed_image.pixels.size(),
+                    developed_image.width,
+                    developed_image.height,
+                    developed_image.stride_pixels,
+                },
+                negative.film_type == negaflow::imaging::NegativeFilmType::color,
+                rescue_info);
+        if (rescue_status != negaflow::core::KernelStatus::ok) {
+            return fail(
+                DevelopExportStage::target_grade,
+                negaflow::core::kernel_status_name(rescue_status));
+        }
+    }
+    if ((request.develop_target == DevelopTarget::main ||
+         request.develop_target == DevelopTarget::print) &&
+        !request.scanner_profile_id.empty()) {
+        negaflow::imaging::ScannerProfileGradeInfo profile_info{};
+        const negaflow::core::KernelStatus profile_status =
+            negaflow::imaging::apply_scanner_profile_grade(
+                {
+                    developed_image.pixels.data(),
+                    developed_image.pixels.size(),
+                    developed_image.width,
+                    developed_image.height,
+                    developed_image.stride_pixels,
+                },
+                request.scanner_profile_id,
+                profile_info);
+        if (profile_status != negaflow::core::KernelStatus::ok) {
+            return fail(
+                DevelopExportStage::target_grade,
+                negaflow::core::kernel_status_name(profile_status));
+        }
+    }
+
+    tracker.finish();
+    if (tracker.cancelled()) {
+        return cancelled_outcome(DevelopExportStage::target_grade);
+    }
+
+    tracker.begin(DevelopExportStage::color_model, cost_of(color_model_cost, true));
+    const negaflow::core::KernelStatus color_model_status =
+        negaflow::imaging::apply_color_model(
+            {
+                developed_image.pixels.data(),
+                developed_image.pixels.size(),
+                developed_image.width,
+                developed_image.height,
+                developed_image.stride_pixels,
+            },
+            {
+                developed_image.pixels.data(),
+                developed_image.pixels.size(),
+                developed_image.width,
+                developed_image.height,
+                developed_image.stride_pixels,
+            },
+            request.color_model);
+    if (color_model_status != negaflow::core::KernelStatus::ok) {
+        return fail(
+            DevelopExportStage::color_model,
+            negaflow::core::kernel_status_name(color_model_status));
+    }
+
+    tracker.finish();
+    if (tracker.cancelled()) {
+        return cancelled_outcome(DevelopExportStage::color_model);
+    }
+
+    tracker.begin(DevelopExportStage::tone_adjust, cost_of(tone_cost, true));
     auto adjusted = negaflow::imaging::apply_working_tone_adjustments(
-        std::move(developed.image),
+        std::move(developed_image),
         request.tone);
     if (adjusted.status != negaflow::imaging::WorkingToneAdjustStatus::ok) {
         if (adjusted.status ==
@@ -366,9 +928,20 @@ struct PreviewTarget final {
             negaflow::imaging::working_tone_adjust_status_name(adjusted.status));
     }
 
+    tracker.finish();
+    if (tracker.cancelled()) {
+        return cancelled_outcome(DevelopExportStage::tone_adjust);
+    }
+
+    tracker.begin(
+        DevelopExportStage::film_look,
+        cost_of(
+            film_look_cost,
+            request.film_look.source_kind !=
+                negaflow::imaging::DevelopSourceKind::film_scan));
     auto film_look = negaflow::imaging::apply_working_film_look(
         std::move(adjusted.image),
-        request.film_look,
+        film_look_parameters,
         film_look_workspace_view(workspace));
     if (film_look.status != negaflow::imaging::WorkingFilmLookStatus::ok) {
         if (film_look.status ==
@@ -382,25 +955,222 @@ struct PreviewTarget final {
             negaflow::imaging::working_film_look_status_name(film_look.status));
     }
 
+    tracker.finish();
+    if (tracker.cancelled()) {
+        return cancelled_outcome(DevelopExportStage::film_look);
+    }
+
+    tracker.begin(
+        DevelopExportStage::grain_mend,
+        cost_of(
+            grain_mend_cost,
+            request.grain_mend.strength >
+                negaflow::imaging::grain_mend_identity_threshold));
+    // The one stage long enough that a stage-boundary check is not good enough. It gets
+    // the caller's latch directly and stops between its own internal passes.
+    auto grain_mend = negaflow::imaging::apply_grain_mend(
+        std::move(film_look.image),
+        request.grain_mend,
+        negaflow::core::CancelFlag{control.cancel_flag});
+    if (grain_mend.status == negaflow::imaging::GrainMendStatus::cancelled) {
+        return cancelled_outcome(DevelopExportStage::grain_mend);
+    }
+    if (grain_mend.status != negaflow::imaging::GrainMendStatus::ok) {
+        if (grain_mend.status ==
+            negaflow::imaging::GrainMendStatus::kernel_failed) {
+            return fail(
+                DevelopExportStage::grain_mend,
+                negaflow::core::kernel_status_name(
+                    grain_mend.info.kernel_status));
+        }
+        return fail(
+            DevelopExportStage::grain_mend,
+            negaflow::imaging::grain_mend_status_name(grain_mend.status));
+    }
+
+    tracker.finish();
+    if (tracker.cancelled()) {
+        return cancelled_outcome(DevelopExportStage::grain_mend);
+    }
+
+    tracker.begin(
+        DevelopExportStage::film_scan_denoise,
+        cost_of(denoise_cost, request.film_scan_denoise.strength > 0.0F));
+    auto film_scan_denoise = negaflow::imaging::apply_film_scan_denoise(
+        std::move(grain_mend.image),
+        request.film_scan_denoise,
+        negaflow::core::CancelFlag{control.cancel_flag});
+    if (film_scan_denoise.status ==
+        negaflow::imaging::FilmScanDenoiseStatus::cancelled) {
+        return cancelled_outcome(DevelopExportStage::film_scan_denoise);
+    }
+    if (film_scan_denoise.status !=
+        negaflow::imaging::FilmScanDenoiseStatus::ok) {
+        if (film_scan_denoise.status ==
+            negaflow::imaging::FilmScanDenoiseStatus::kernel_failed) {
+            return fail(
+                DevelopExportStage::film_scan_denoise,
+                negaflow::core::kernel_status_name(
+                    film_scan_denoise.info.kernel_status));
+        }
+        return fail(
+            DevelopExportStage::film_scan_denoise,
+            negaflow::imaging::film_scan_denoise_status_name(
+                film_scan_denoise.status));
+    }
+
+    tracker.finish();
+    if (tracker.cancelled()) {
+        return cancelled_outcome(DevelopExportStage::film_scan_denoise);
+    }
+
+    tracker.begin(
+        DevelopExportStage::local_dodge_burn,
+        cost_of(dodge_burn_cost, !request.local_dodge_burn.adjustments.empty()));
+    auto local_dodge_burn = negaflow::imaging::apply_local_dodge_burn(
+        std::move(film_scan_denoise.image),
+        request.local_dodge_burn);
+    if (local_dodge_burn.status !=
+        negaflow::imaging::LocalDodgeBurnStatus::ok) {
+        if (local_dodge_burn.status ==
+            negaflow::imaging::LocalDodgeBurnStatus::kernel_failed) {
+            return fail(
+                DevelopExportStage::local_dodge_burn,
+                negaflow::core::kernel_status_name(
+                    local_dodge_burn.info.kernel_status));
+        }
+        return fail(
+            DevelopExportStage::local_dodge_burn,
+            negaflow::imaging::local_dodge_burn_status_name(
+                local_dodge_burn.status));
+    }
+
+    tracker.finish();
+    if (tracker.cancelled()) {
+        return cancelled_outcome(DevelopExportStage::local_dodge_burn);
+    }
+
+    tracker.begin(DevelopExportStage::texture, cost_of(texture_cost, true));
+    negaflow::imaging::TextureStageParameters texture_parameters =
+        request.texture;
+    if (film_look.info.route ==
+        negaflow::imaging::FilmLookRoute::digital_film_look) {
+        texture_parameters.grain = 0.0F;
+        texture_parameters.halation = 0.0F;
+    }
+    auto texture = negaflow::imaging::apply_texture_stage(
+        std::move(local_dodge_burn.image),
+        texture_parameters);
+    if (texture.status != negaflow::imaging::TextureStageStatus::ok) {
+        if (texture.status ==
+            negaflow::imaging::TextureStageStatus::kernel_failed) {
+            return fail(
+                DevelopExportStage::texture,
+                negaflow::core::kernel_status_name(texture.info.kernel_status));
+        }
+        return fail(
+            DevelopExportStage::texture,
+            negaflow::imaging::texture_stage_status_name(texture.status));
+    }
+
+    tracker.finish();
+    if (tracker.cancelled()) {
+        return cancelled_outcome(DevelopExportStage::texture);
+    }
+
+    tracker.begin(
+        DevelopExportStage::black_and_white,
+        cost_of(
+            black_and_white_cost,
+            negative.film_type ==
+                negaflow::imaging::NegativeFilmType::black_and_white));
+    auto black_and_white = negaflow::imaging::apply_bw_toning(
+        std::move(texture.image),
+        negative.film_type,
+        request.bw_toning);
+    if (black_and_white.status != negaflow::imaging::BwToningStatus::ok) {
+        return fail(
+            DevelopExportStage::black_and_white,
+            negaflow::imaging::bw_toning_status_name(black_and_white.status));
+    }
+
+    tracker.finish();
+    if (tracker.cancelled()) {
+        return cancelled_outcome(DevelopExportStage::black_and_white);
+    }
+
+    tracker.begin(DevelopExportStage::image_transform, cost_of(transform_cost, true));
+    auto image_transform = negaflow::imaging::apply_image_transform(
+        std::move(black_and_white.image),
+        request.image_transform);
+    if (image_transform.status != negaflow::imaging::ImageTransformStatus::ok) {
+        return fail(
+            DevelopExportStage::image_transform,
+            negaflow::imaging::image_transform_status_name(
+                image_transform.status));
+    }
+
+    tracker.finish();
+    if (tracker.cancelled()) {
+        return cancelled_outcome(DevelopExportStage::image_transform);
+    }
+
+    // The last poll before anything is published. From here the run either produces the
+    // whole artifact or fails, so a cancel arriving now is not honoured rather than
+    // leaving a half-written file behind.
+    tracker.begin(
+        DevelopExportStage::output,
+        cost_of(preview != nullptr ? preview_output_cost : export_output_cost, true));
     DevelopExportOutcome outcome{};
-    outcome.image_width = decoded_width;
-    outcome.image_height = decoded_height;
+    outcome.image_width = image_transform.image.width;
+    outcome.image_height = image_transform.image.height;
     outcome.source_file_bytes = before.observation.file_bytes;
     outcome.film_look_workspace_bytes = workspace_bytes;
     outcome.film_look_route = film_look.info.route;
     outcome.film_look_color_applied = film_look.info.color_applied;
     outcome.film_look_acutance_applied = film_look.info.acutance_applied;
-    outcome.applied_dmin = developed.info.applied_dmin;
+    outcome.defect_region_applied = defect_recipe.info.region_applied;
+    outcome.defect_region_edits_applied =
+        defect_recipe.info.region_applied_edit_count;
+    outcome.defect_region_repaired_pixels =
+        defect_recipe.info.region_repaired_pixels;
+    outcome.defect_clone_applied = defect_recipe.info.clone_applied;
+    outcome.defect_clone_edits_applied =
+        defect_recipe.info.clone_applied_edit_count;
+    outcome.defect_clone_patched_pixels =
+        defect_recipe.info.clone_patched_pixels;
+    outcome.defect_clone_peak_patch_bytes =
+        defect_recipe.info.clone_peak_patch_bytes;
+    outcome.grain_mend_applied = grain_mend.info.applied;
+    outcome.grain_mend_candidate_pixels = grain_mend.info.candidate_pixels;
+    outcome.grain_mend_repaired_pixels = grain_mend.info.repaired_pixels;
+    outcome.film_scan_denoise_applied = film_scan_denoise.info.applied;
+    outcome.film_scan_denoise_tiles =
+        film_scan_denoise.info.tiles_processed;
+    outcome.local_dodge_burn_adjustments_applied =
+        local_dodge_burn.info.adjustments_applied;
+    outcome.texture_applied = texture.info.applied;
+    outcome.black_and_white_neutralized =
+        black_and_white.info.neutralized;
+    outcome.bw_toning_applied = black_and_white.info.toned;
+    outcome.image_transform_applied = image_transform.info.applied;
+    outcome.applied_dmin = developed_info.applied_dmin;
     outcome.base_source = base_source;
 
     if (preview != nullptr) {
-        return write_preview(film_look.image, *preview, outcome);
+        DevelopExportOutcome preview_outcome =
+            write_preview(image_transform.image, *preview, outcome);
+        if (preview_outcome.succeeded) {
+            tracker.finish();
+            tracker.complete();
+        }
+        return preview_outcome;
     }
 
     if (request.format == DevelopExportFormat::png16) {
         const negaflow::output::WicPngExportResult exported =
             negaflow::output::export_working_to_srgb16_png(
-                film_look.image,
+                image_transform.image,
                 request.destination);
         if (exported.status != negaflow::output::WicPngExportStatus::ok) {
             if (exported.status ==
@@ -421,12 +1191,14 @@ struct PreviewTarget final {
         outcome.output_file_bytes = exported.info.artifact_bytes;
         outcome.succeeded = true;
         outcome.failure_name = "ok";
+        tracker.finish();
+        tracker.complete();
         return outcome;
     }
 
     const negaflow::output::WicTiffExportResult exported =
         negaflow::output::export_working_to_srgb16_tiff(
-            film_look.image,
+            image_transform.image,
             request.destination);
     if (exported.status != negaflow::output::WicTiffExportStatus::ok) {
         if (exported.status ==
@@ -447,14 +1219,17 @@ struct PreviewTarget final {
     outcome.output_file_bytes = exported.info.artifact_bytes;
     outcome.succeeded = true;
     outcome.failure_name = "ok";
+    tracker.finish();
+    tracker.complete();
     return outcome;
 }
 
 }  // namespace
 
 DevelopExportOutcome develop_and_export(
-    const DevelopExportRequest& request) noexcept {
-    return run_develop(request, nullptr);
+    const DevelopExportRequest& request,
+    const DevelopRunControl& control) noexcept {
+    return run_develop(request, nullptr, control);
 }
 
 DevelopExportOutcome develop_preview(
@@ -462,14 +1237,15 @@ DevelopExportOutcome develop_preview(
     const std::uint32_t maximum_width,
     const std::uint32_t maximum_height,
     std::uint8_t* const pixels,
-    const std::size_t pixel_capacity_bytes) noexcept {
+    const std::size_t pixel_capacity_bytes,
+    const DevelopRunControl& control) noexcept {
     const PreviewTarget target{
         maximum_width,
         maximum_height,
         pixels,
         pixel_capacity_bytes,
     };
-    return run_develop(request, &target);
+    return run_develop(request, &target, control);
 }
 
 }  // namespace negaflow::pipeline

@@ -1,6 +1,7 @@
 #include "negaflow/imaging/point_curve.h"
 
 #include "negaflow/color/srgb_transfer.h"
+#include "negaflow/core/pointwise.h"
 
 #include <algorithm>
 #include <array>
@@ -228,11 +229,6 @@ struct NormalizedCurve final {
     return negaflow::color::srgb_encoded_to_linear(mapped);
 }
 
-[[nodiscard]] bool finite_rgb(const negaflow::core::Rgba32F pixel) noexcept {
-    return std::isfinite(pixel.red) && std::isfinite(pixel.green) &&
-           std::isfinite(pixel.blue);
-}
-
 }  // namespace
 
 bool has_point_curve_change(const PointCurves& curves) noexcept {
@@ -279,16 +275,7 @@ negaflow::core::KernelStatus apply_point_curves(
     }
 
     if (!has_point_curve_change(curves)) {
-        for (std::uint32_t row = 0U; row < input.height; ++row) {
-            const std::size_t input_offset =
-                static_cast<std::size_t>(row) * input.stride_pixels;
-            const std::size_t output_offset =
-                static_cast<std::size_t>(row) * output.stride_pixels;
-            std::copy_n(
-                input.pixels + input_offset,
-                input.width,
-                output.pixels + output_offset);
-        }
+        negaflow::core::copy_validated_rows(input, output);
         return negaflow::core::KernelStatus::ok;
     }
 
@@ -299,27 +286,17 @@ negaflow::core::KernelStatus apply_point_curves(
         return lut_status;
     }
 
-    for (std::uint32_t row = 0U; row < input.height; ++row) {
-        const std::size_t input_offset =
-            static_cast<std::size_t>(row) * input.stride_pixels;
-        const std::size_t output_offset =
-            static_cast<std::size_t>(row) * output.stride_pixels;
-        for (std::uint32_t column = 0U; column < input.width; ++column) {
-            const negaflow::core::Rgba32F source =
-                input.pixels[input_offset + column];
-            const negaflow::core::Rgba32F result{
+    return negaflow::core::transform_validated_pointwise(
+        input,
+        output,
+        [&luts](const negaflow::core::Rgba32F source) noexcept {
+            return negaflow::core::Rgba32F{
                 apply_lut_component(source.red, luts.red),
                 apply_lut_component(source.green, luts.green),
                 apply_lut_component(source.blue, luts.blue),
                 source.alpha,
             };
-            if (!finite_rgb(result)) {
-                return negaflow::core::KernelStatus::non_finite_output;
-            }
-            output.pixels[output_offset + column] = result;
-        }
-    }
-    return negaflow::core::KernelStatus::ok;
+        });
 }
 
 }  // namespace negaflow::imaging

@@ -19,6 +19,17 @@ public enum BaseEstimationMode
     Manual,
 }
 
+public enum DevelopTarget
+{
+    Main,
+    Print,
+    Noritsu,
+    Sp3000,
+    F135,
+    Hr,
+    Rescue,
+}
+
 public sealed record BaseRecipe(
     BaseEstimationMode Mode,
     string? FilmStockDminId,
@@ -81,19 +92,38 @@ public sealed record LibraryFrameSnapshot(
     /// <summary>macOS Color Grading의 세 tonal range recipe입니다.</summary>
     public ColorGradingRecipe ColorGrading { get; init; } = ColorGradingRecipe.Identity;
 
+    public PrimaryCalibrationRecipe PrimaryCalibration { get; init; } = PrimaryCalibrationRecipe.Identity;
+
+    public IReadOnlyList<LocalDodgeBurnAdjustment> LocalDodgeBurn { get; init; } = [];
+
+    public ColorModelRecipe ColorModel { get; init; } = ColorModelRecipe.Identity;
+
+    public bool AutoLevels { get; init; }
+
+    public bool AutoNeutralBalance { get; init; }
+
+    public DevelopTarget DevelopTarget { get; init; } = DevelopTarget.Main;
+
+    /// <summary>
+    /// hasDefectEdits frame에서 app-owned sidecar를 검증해 읽은 ordered recipe입니다.
+    /// catalog payload 안에 mask를 중복 저장하지 않습니다.
+    /// </summary>
+    public DefectRecipeSnapshot? DefectRecipe { get; init; }
+
     /// <summary>
     /// Auto는 native resolver가 입력에서 base를 결정하므로 수동 Dmin 없이 현상할 수 있습니다.
     /// Manual만 저장된 수동 base를 요구하고, 아직 resolver가 없는 Preset은 명시적으로 막습니다.
     /// </summary>
-    public bool CanDevelop =>
-        (Route.FilmType is FilmType.ColorNegative or FilmType.BlackAndWhiteNegative) &&
-        (Base.Mode switch
-        {
-            BaseEstimationMode.Auto => true,
-            BaseEstimationMode.Preset => !string.IsNullOrWhiteSpace(Base.FilmStockDminId),
-            BaseEstimationMode.Manual => ManualBase is not null,
-            _ => false,
-        });
+    public bool CanDevelop => Route.IsDigitalSource
+        ? Route.FilmType is FilmType.ColorPositive or FilmType.BlackAndWhitePositive
+        : (Route.FilmType is FilmType.ColorNegative or FilmType.BlackAndWhiteNegative) &&
+          (Base.Mode switch
+          {
+              BaseEstimationMode.Auto => true,
+              BaseEstimationMode.Preset => !string.IsNullOrWhiteSpace(Base.FilmStockDminId),
+              BaseEstimationMode.Manual => ManualBase is not null,
+              _ => false,
+          });
 
     public string EffectiveDisplayName =>
         string.IsNullOrWhiteSpace(DisplayName)

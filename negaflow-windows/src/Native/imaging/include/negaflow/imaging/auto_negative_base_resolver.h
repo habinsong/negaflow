@@ -20,6 +20,13 @@ enum class AutoNegativeBaseSource : std::uint8_t {
     strip_fallback,
 };
 
+[[nodiscard]] inline constexpr bool confident_auto_negative_base_source(
+    const AutoNegativeBaseSource source) noexcept {
+    return source == AutoNegativeBaseSource::connected_component ||
+           source == AutoNegativeBaseSource::continuous_border ||
+           source == AutoNegativeBaseSource::distributed_mask;
+}
+
 struct AutoNegativeBaseResult final {
     AutoNegativeBaseStatus status{AutoNegativeBaseStatus::invalid_image};
     AutoNegativeBaseSource source{AutoNegativeBaseSource::fallback};

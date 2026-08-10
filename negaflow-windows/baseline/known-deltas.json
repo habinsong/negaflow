@@ -15,6 +15,31 @@
         "Sources/Chromabase/Engine/ChromabaseEngine+PostPipeline.swift",
         "Tests/ChromabaseTests/DigitalFilmLookTests.swift"
       ]
+    },
+    {
+      "delta_id": "DELTA-2026-08-10-001",
+      "from_commit": "2fa1d6297378673b58b8bec72025e968ccc3125c",
+      "to_commit": "6b51695e747aa5d98531b8abee3c110a2531c0c7",
+      "classification": "correctness_fix",
+      "summary": "Expand the fixed Film Emulation registry to 42 profiles and keep Film Look digital-source only and profile-kind gated.",
+      "decision": "included_in_windows_baseline",
+      "affected_area": "post-pipeline Film Look routing",
+      "source_files": [
+        "Sources/Chromabase/Engine/ChromabaseEngine+PostPipeline.swift",
+        "Sources/Chromabase/Adjustments/FilmEmulation.swift",
+        "Sources/Chromabase/Adjustments/FilmEmulationProfile.swift",
+        "Sources/Chromabase/Adjustments/FilmEmulationProfile+Slide.swift",
+        "Sources/Chromabase/Adjustments/FilmEmulationProfile+Negative.swift",
+        "Sources/Chromabase/Digital/BWFilmProfile.swift",
+        "Sources/Chromabase/Digital/BWFilmProfile+Negative.swift",
+        "Sources/Chromabase/Digital/BWFilmProfile+Reversal.swift",
+        "Sources/Chromabase/Digital/DigitalFilmColorPreset.swift",
+        "Sources/Chromabase/Digital/DigitalFilmPhysics.swift",
+        "Sources/Chromabase/Digital/DigitalFilmLook.swift",
+        "Tests/ChromabaseTests/DigitalFilmLookTests.swift",
+        "Tests/ChromabaseTests/FilmEmulationTests.swift",
+        "Tests/ChromabaseTests/DigitalBWFilmLookTests.swift"
+      ]
     }
   ]
 }

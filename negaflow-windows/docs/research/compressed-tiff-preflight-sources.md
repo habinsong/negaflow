@@ -15,9 +15,11 @@
 - [`IWICBitmapSource::CopyPixels`](https://learn.microsoft.com/en-us/windows/win32/api/wincodec/nf-wincodec-iwicbitmapsource-copypixels)는
   동기식 ROI·stride·caller buffer 계약입니다. 호출 내부의 hard deadline이나 취소 callback 계약은
   없으므로 현재 cooperative cancellation 한계를 문서에 남깁니다.
-- [RFC 1951](https://www.rfc-editor.org/rfc/rfc1951)는 Deflate compressed data 형식과 구현 관련 특허
-  고지를 제공합니다. 이번 체크포인트는 Deflate decoder를 구현하지 않고 tag 8을 격리하므로 RFC의
-  reference implementation이나 외부 source를 사용하지 않습니다.
+- [RFC 1950](https://www.rfc-editor.org/rfc/rfc1950)은 zlib CMF/FLG, window 크기, preset dictionary,
+  Adler-32와 checksum 검증 의무를 정의합니다.
+- [RFC 1951](https://www.rfc-editor.org/rfc/rfc1951)는 Deflate stored/fixed/dynamic block, canonical
+  Huffman code와 32 KiB LZ77 window를 정의합니다. 구현은 두 형식의 규칙만 독립적으로 적용했으며 RFC
+  sample code나 외부 decoder source를 사용하지 않았습니다.
 
 ## 로컬 WIC 관찰의 해석
 
@@ -25,7 +27,8 @@
 payload만 남긴 손상 변형을 test 코드로 합성했습니다. 현재 로컬 Microsoft WIC는 두 입력 모두에서 작은
 원래 sample을 반환했습니다. 이 결과로 WIC 전체가 항상 검증을 생략한다고 단정하지 않습니다. 공식 API
 계약에 strict integrity 보장이 없고 실제 관찰이 fail-open 가능성을 보였다는 이유로, 독립 검증 전
-Deflate를 정상·손상 모두 격리하는 engineering 결정을 내렸습니다.
+Deflate를 정상·손상 모두 격리했습니다. 2026-08-09에는 독립 validator를 추가해 검사를 통과한 정상
+입력만 WIC에 전달하도록 이 임시 결정을 대체했습니다.
 
 ## 저작권과 구현 provenance
 
@@ -33,8 +36,9 @@ TIFF 6.0 문서에는 문서 복사 조건이 별도로 적혀 있습니다. 저
 sample binary를 복사하지 않았고 형식 규칙을 읽어 새 C++ 상태 기계를 독립 구현했습니다. libtiff, zlib,
 GIF decoder나 다른 프로젝트의 LZW source를 복사·번역하지 않았습니다.
 
-검사기는 compressed string이나 pixel을 복원하지 않고 사전 entry의 길이만 계산합니다. 합성 TIFF와
-Deflate stream도 test 코드가 실행 시 직접 구성하며 외부 사진·ICC·binary corpus를 저장소에 추가하지
+LZW 검사기는 문자열을 보유하지 않고 사전 entry 길이만 계산합니다. Deflate 검사기는 checksum과
+back-reference 검증에 필요한 32 KiB sliding window만 보유합니다. 합성 TIFF와 Deflate stream도 test
+코드가 직접 구성하며 외부 사진·ICC·binary corpus를 저장소에 추가하지
 않습니다. 사용자 TIFF는 명시된 개발 검증 범위에서 원본 위치를 read-only로 읽고 이름·경로·hash를
 tracked 문서에 남기지 않았습니다.
 
@@ -59,5 +63,5 @@ tracked 문서에 남기지 않았습니다.
 - 실제 pixel decompression은 Windows 운영체제의 Microsoft 기본 WIC가 담당합니다.
 - Apache-2.0 core와 별도 GPL SANE plugin 경계에는 변화가 없습니다.
 - 일반 이미지 SHA-256 기본 `끔`과 공급망 artifact hash 필수 정책도 유지합니다.
-- Deflate 지원 필요성이 확인되면 자체 validator와 zlib/libtiff 최소 feature를 license, SBOM, 보안 update,
-  x64/ARM64 payload까지 포함해 다시 비교합니다.
+- 자체 Deflate validator를 사용하므로 zlib/libtiff runtime dependency와 관련 notice/SBOM 항목은
+  추가되지 않았습니다.

@@ -219,11 +219,15 @@ int run_wic_tiff_decode(const int argument_count, const wchar_t* const arguments
               << result.info.compressed_segment_bytes
               << ",\"lzw_code_streams_validated\":"
               << (result.info.lzw_code_streams_validated ? "true" : "false")
+              << ",\"deflate_streams_validated\":"
+              << (result.info.deflate_streams_validated ? "true" : "false")
               << ",\"compressed_bytes_validated\":"
               << result.info.compressed_bytes_validated
               << ",\"lzw_code_count\":" << result.info.lzw_code_count
               << ",\"lzw_decoded_bytes_validated\":"
               << result.info.lzw_decoded_bytes_validated
+              << ",\"deflate_decoded_bytes_validated\":"
+              << result.info.deflate_decoded_bytes_validated
               << ",\"icc_profile_bytes\":" << result.image.icc_profile.size()
               << ",\"icc_status\":\""
               << negaflow::color::icc_profile_status_name(result.icc_status) << '\"';

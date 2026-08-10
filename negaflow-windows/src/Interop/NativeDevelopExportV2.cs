@@ -222,6 +222,294 @@ internal unsafe struct NativeDevelopExportRequestV7
     internal float ColorGradingBalance;
 }
 
+/// <summary>
+/// v8 keeps the complete frozen v7 byte prefix and appends the GrainMend master
+/// strength. The nested declaration is layout-equivalent to the flat C prefix.
+/// </summary>
+[StructLayout(LayoutKind.Sequential)]
+internal unsafe struct NativeDevelopExportRequestV8
+{
+    internal NativeDevelopExportRequestV7 V7;
+    internal double DefectRemovalStrength;
+}
+
+/// <summary>
+/// v9 keeps the complete frozen v8 byte prefix and appends FilmScanDenoise.
+/// </summary>
+[StructLayout(LayoutKind.Sequential)]
+internal unsafe struct NativeDevelopExportRequestV9
+{
+    internal NativeDevelopExportRequestV8 V8;
+    internal float NoiseReductionStrength;
+    internal float NoiseReductionLuma;
+    internal float NoiseReductionChroma;
+    internal float NoiseReductionDarkTone;
+    internal float NoiseReductionDetail;
+    internal float NoiseReductionGrainProtect;
+    internal uint NoiseReductionFilmProfile;
+}
+
+/// <summary>v10 appends the five macOS Texture controls.</summary>
+[StructLayout(LayoutKind.Sequential)]
+internal unsafe struct NativeDevelopExportRequestV10
+{
+    internal NativeDevelopExportRequestV9 V9;
+    internal float TextureGrain;
+    internal float TextureSharpness;
+    internal float TextureHalation;
+    internal float TextureClarity;
+    internal float TextureVignette;
+}
+
+/// <summary>v11 appends B&amp;W toning and the final fixed-order image transform.</summary>
+[StructLayout(LayoutKind.Sequential)]
+internal unsafe struct NativeDevelopExportRequestV11
+{
+    internal NativeDevelopExportRequestV10 V10;
+    internal uint BwToningMode;
+    internal double BwToningShadowHue;
+    internal double BwToningHighlightHue;
+    internal double BwToningStrength;
+    internal uint ImageRotation;
+    internal uint FlipHorizontal;
+    internal uint FlipVertical;
+    internal uint HasCrop;
+    internal double CropX;
+    internal double CropY;
+    internal double CropWidth;
+    internal double CropHeight;
+    internal double StraightenAngle;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct NativeLocalDodgeBurnPointV1
+{
+    internal float X;
+    internal float Y;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct NativeLocalDodgeBurnStrokeV1
+{
+    internal uint PointOffset;
+    internal uint PointCount;
+    internal float Thickness;
+    internal float Feather;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct NativeLocalDodgeBurnAdjustmentV1
+{
+    internal uint Mode;
+    internal uint Enabled;
+    internal uint MaskKind;
+    internal uint StrokeOffset;
+    internal uint StrokeCount;
+    internal uint PointOffset;
+    internal uint PointCount;
+    internal float Amount;
+    internal float CenterX;
+    internal float CenterY;
+    internal float Radius;
+    internal float Feather;
+    internal float StartX;
+    internal float StartY;
+    internal float EndX;
+    internal float EndY;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal unsafe struct NativeDevelopExportRequestV12
+{
+    internal NativeDevelopExportRequestV11 V11;
+    internal NativeLocalDodgeBurnAdjustmentV1* LocalAdjustments;
+    internal uint LocalAdjustmentCount;
+    internal uint LocalAdjustmentReserved;
+    internal NativeLocalDodgeBurnStrokeV1* LocalStrokes;
+    internal uint LocalStrokeCount;
+    internal uint LocalStrokeReserved;
+    internal NativeLocalDodgeBurnPointV1* LocalPoints;
+    internal uint LocalPointCount;
+    internal uint LocalPointReserved;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal unsafe struct NativeDevelopExportRequestV13
+{
+    internal NativeDevelopExportRequestV12 V12;
+    internal float Warmth;
+    internal float Tint;
+    internal float ColorDepth;
+    internal float Vibrance;
+    internal float Saturation;
+    internal float RedPrimary;
+    internal float GreenPrimary;
+    internal float BluePrimary;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal unsafe struct NativeDevelopExportRequestV14
+{
+    internal NativeDevelopExportRequestV13 V13;
+    internal uint AutoLevels;
+    internal uint AutoNeutralBalance;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal unsafe struct NativeDevelopExportRequestV15
+{
+    internal NativeDevelopExportRequestV14 V14;
+    internal uint DevelopTarget;
+    internal uint Reserved;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal unsafe struct NativeDevelopExportRequestV16
+{
+    internal NativeDevelopExportRequestV15 V15;
+    internal char* ScannerProfileId;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal unsafe struct NativeDevelopExportRequestV17
+{
+    internal NativeDevelopExportRequestV16 V16;
+    internal uint FilmPolarity;
+    internal uint Reserved;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct NativeDefectRegionEditV1
+{
+    internal uint Enabled;
+    internal uint RoiX;
+    internal uint RoiY;
+    internal uint Width;
+    internal uint Height;
+    internal uint MaskStrideBytes;
+    internal uint MaskOffset;
+    internal uint MaskByteCount;
+    internal double Strength;
+    internal uint HasPreferredAngle;
+    internal uint Reserved;
+    internal double PreferredAngleDegrees;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal unsafe struct NativeDevelopExportRequestV18
+{
+    internal NativeDevelopExportRequestV17 V17;
+    internal NativeDefectRegionEditV1* DefectRegionEdits;
+    internal uint DefectRegionEditCount;
+    internal uint DefectRegionReserved;
+    internal byte* DefectMaskBytes;
+    internal uint DefectMaskByteCount;
+    internal uint DefectMaskReserved;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal unsafe struct NativeDevelopExportRequestV19
+{
+    internal NativeDevelopExportRequestV18 V18;
+    internal ulong DefectSourceFileBytes;
+    internal byte* DefectSourceSha256;
+    internal uint HasDefectSourceIdentity;
+    internal uint Reserved;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct NativeDefectClonePointV1
+{
+    internal double X;
+    internal double Y;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct NativeDefectCloneStrokeV1
+{
+    internal uint PointOffset;
+    internal uint PointCount;
+    internal double OffsetX;
+    internal double OffsetY;
+    internal double DiameterPixels;
+    internal double Hardness;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct NativeDefectCloneEditV1
+{
+    internal uint Enabled;
+    internal uint StrokeOffset;
+    internal uint StrokeCount;
+    internal uint Reserved;
+    internal double Strength;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct NativeDefectRecipeEditRefV1
+{
+    internal uint Kind;
+    internal uint Index;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal unsafe struct NativeDevelopExportRequestV20
+{
+    internal NativeDevelopExportRequestV19 V19;
+    internal NativeDefectCloneEditV1* DefectCloneEdits;
+    internal uint DefectCloneEditCount;
+    internal uint DefectCloneEditReserved;
+    internal NativeDefectCloneStrokeV1* DefectCloneStrokes;
+    internal uint DefectCloneStrokeCount;
+    internal uint DefectCloneStrokeReserved;
+    internal NativeDefectClonePointV1* DefectClonePoints;
+    internal uint DefectClonePointCount;
+    internal uint DefectClonePointReserved;
+    internal NativeDefectRecipeEditRefV1* DefectEditOrder;
+    internal uint DefectEditOrderCount;
+    internal uint DefectEditOrderReserved;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct NativeDefectBrushPointV1
+{
+    internal double X;
+    internal double Y;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct NativeDefectBrushStrokeV1
+{
+    internal uint PointOffset;
+    internal uint PointCount;
+    internal double Thickness;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct NativeDefectBrushEditV1
+{
+    internal uint Enabled;
+    internal uint StrokeOffset;
+    internal uint StrokeCount;
+    internal uint Reserved;
+    internal double Strength;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal unsafe struct NativeDevelopExportRequestV21
+{
+    internal NativeDevelopExportRequestV20 V20;
+    internal NativeDefectBrushEditV1* DefectBrushEdits;
+    internal uint DefectBrushEditCount;
+    internal uint DefectBrushEditReserved;
+    internal NativeDefectBrushStrokeV1* DefectBrushStrokes;
+    internal uint DefectBrushStrokeCount;
+    internal uint DefectBrushStrokeReserved;
+    internal NativeDefectBrushPointV1* DefectBrushPoints;
+    internal uint DefectBrushPointCount;
+    internal uint DefectBrushPointReserved;
+}
+
 [StructLayout(LayoutKind.Sequential)]
 internal unsafe struct NativeDevelopExportResultV2
 {
@@ -257,4 +545,62 @@ internal unsafe struct NativeDevelopExportResultV2
                 terminator < 0 ? bytes : bytes[..terminator]);
         }
     }
+}
+
+/// <summary>
+/// v2 의 모든 필드를 같은 offset 으로 유지하고 취소 여부만 덧붙인 결과입니다.
+/// </summary>
+[StructLayout(LayoutKind.Sequential)]
+internal unsafe struct NativeDevelopExportResultV3
+{
+    internal const int FailureNameCapacity = 64;
+
+    internal uint StructSize;
+    internal uint Succeeded;
+    internal uint FailedStage;
+    internal fixed byte FailureName[FailureNameCapacity];
+    internal uint NativeErrorCode;
+    internal uint CleanupErrorCode;
+    internal uint ImageWidth;
+    internal uint ImageHeight;
+    internal uint FilmLookRoute;
+    internal uint FilmLookColorApplied;
+    internal uint FilmLookAcutanceApplied;
+    internal ulong SourceFileBytes;
+    internal ulong OutputFileBytes;
+    internal ulong FilmLookWorkspaceBytes;
+    internal ulong WallMicroseconds;
+    internal float AppliedDminRed;
+    internal float AppliedDminGreen;
+    internal float AppliedDminBlue;
+    internal uint BaseSource;
+    internal uint Cancelled;
+    internal uint Reserved;
+
+    internal string GetFailureName()
+    {
+        fixed (byte* name = FailureName)
+        {
+            ReadOnlySpan<byte> bytes = new(name, FailureNameCapacity);
+            int terminator = bytes.IndexOf((byte)0);
+            return System.Text.Encoding.ASCII.GetString(
+                terminator < 0 ? bytes : bytes[..terminator]);
+        }
+    }
+}
+
+/// <summary>
+/// 한 번의 현상 호출을 취소하고 진행 상황을 보는 caller 소유 상태입니다.
+/// 호출자는 <see cref="CancelRequested"/> 만 쓰고, 엔진은 나머지 두 값만 씁니다.
+/// </summary>
+/// <remarks>
+/// 콜백이 경계를 넘지 않으므로 재진입이 없고, 호출 동안 이 struct 만 고정돼 있으면 됩니다.
+/// </remarks>
+[StructLayout(LayoutKind.Sequential)]
+internal struct NativeDevelopRunStateV1
+{
+    internal uint StructSize;
+    internal uint CancelRequested;
+    internal uint Stage;
+    internal uint ProgressPermille;
 }

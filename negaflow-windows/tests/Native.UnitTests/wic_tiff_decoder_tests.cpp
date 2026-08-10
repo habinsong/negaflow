@@ -223,6 +223,50 @@ void test_valid_lzw(const std::filesystem::path& root) {
         "valid LZW code stream is fully accounted before WIC decode");
 }
 
+// An 8-bit scan has to open, and it has to widen exactly. WIC replicates the byte
+// (v * 257), which is the same number as v / 255 once the working conversion divides by
+// 65535 — so the file loses no accuracy on the way in. Any other widening rule (a left
+// shift, say) would darken every sample by up to one part in 256 and would show up here.
+void test_eight_bit_widens_by_bit_replication(const std::filesystem::path& root) {
+    constexpr std::uint32_t width = 7U;
+    constexpr std::uint32_t height = 5U;
+    const std::filesystem::path path = root / L"uncompressed-rgb8.tiff";
+    const std::vector<std::uint8_t> bytes =
+        negaflow::test_fixtures::make_uncompressed_rgb8_tiff(width, height);
+    write_fixture(path, bytes);
+
+    const auto result = negaflow::imageio::decode_tiff_with_wic(path);
+    expect(
+        result.status == negaflow::imageio::WicTiffDecodeStatus::ok,
+        "an 8-bit RGB TIFF decodes");
+    expect(
+        result.image.layout == negaflow::imageio::DecodedPixelLayout::rgb16 &&
+            result.info.format_conversion_used,
+        "8-bit input is widened to the 16-bit working layout");
+    expect(
+        result.image.width == width && result.image.height == height,
+        "8-bit dimensions match");
+
+    bool replicated = result.image.samples.size() ==
+                      static_cast<std::size_t>(width) * height * 3U;
+    for (std::uint32_t y = 0U; replicated && y < height; ++y) {
+        for (std::uint32_t x = 0U; replicated && x < width; ++x) {
+            const std::size_t index =
+                ((static_cast<std::size_t>(y) * width) + x) * 3U;
+            const std::uint16_t expected_red =
+                static_cast<std::uint16_t>(((x * 251U) % 256U) * 257U);
+            const std::uint16_t expected_green =
+                static_cast<std::uint16_t>(((y * 149U) % 256U) * 257U);
+            const std::uint16_t expected_blue =
+                static_cast<std::uint16_t>((((x + y) * 97U) % 256U) * 257U);
+            replicated = result.image.samples[index] == expected_red &&
+                         result.image.samples[index + 1U] == expected_green &&
+                         result.image.samples[index + 2U] == expected_blue;
+        }
+    }
+    expect(replicated, "every 8-bit sample widens to exactly v * 257");
+}
+
 void test_lzw_code_width_transition(const std::filesystem::path& root) {
     constexpr std::uint32_t row_count = 300U;
     const std::filesystem::path path = root / L"code-width-transition-lzw-rgb16.tiff";
@@ -483,15 +527,66 @@ void test_semantically_invalid_lzw(const std::filesystem::path& root) {
         "LZW semantic preflight observes cancellation");
 }
 
-void test_deflate_quarantine(const std::filesystem::path& root) {
+void test_deflate_preflight(const std::filesystem::path& root) {
     const std::filesystem::path valid_path = root / L"valid-deflate-rgb16.tiff";
     write_fixture(valid_path, negaflow::test_fixtures::make_deflate_rgb16_tiff());
     const auto valid = negaflow::imageio::decode_tiff_with_wic(valid_path);
     expect(
         valid.preflight_status == negaflow::core::TiffProbeStatus::ok &&
-            valid.status == negaflow::imageio::WicTiffDecodeStatus::unsupported_layout &&
-            valid.image.samples.empty(),
-        "Deflate is quarantined before WIC until independent validation exists");
+            valid.status == negaflow::imageio::WicTiffDecodeStatus::ok &&
+            valid.info.deflate_streams_validated &&
+            valid.info.compressed_bytes_validated == 17U &&
+            valid.info.deflate_decoded_bytes_validated == 6U &&
+            valid.image.samples.size() ==
+                negaflow::test_fixtures::lzw_rgb16_expected_samples.size() &&
+            std::equal(
+                valid.image.samples.begin(),
+                valid.image.samples.end(),
+                negaflow::test_fixtures::lzw_rgb16_expected_samples.begin()),
+        "stored Deflate passes independent validation before exact WIC decode");
+
+    negaflow::imageio::WicTiffDecodeLimits bounded_limits{};
+    bounded_limits.probe.max_deflate_compressed_bytes = 16U;
+    const auto bounded =
+        negaflow::imageio::decode_tiff_with_wic(valid_path, bounded_limits);
+    expect(
+        bounded.preflight_status ==
+                negaflow::core::TiffProbeStatus::compressed_data_limit_exceeded &&
+            bounded.status == negaflow::imageio::WicTiffDecodeStatus::preflight_failed,
+        "Deflate compressed-input budget fails closed before WIC decode");
+
+    const std::filesystem::path fixed_path = root / L"fixed-deflate-rgb16.tiff";
+    write_fixture(
+        fixed_path,
+        negaflow::test_fixtures::make_fixed_deflate_rgb16_tiff());
+    const auto fixed = negaflow::imageio::decode_tiff_with_wic(fixed_path);
+    expect(
+        fixed.status == negaflow::imageio::WicTiffDecodeStatus::ok &&
+            fixed.info.deflate_streams_validated &&
+            fixed.info.deflate_decoded_bytes_validated == 6U &&
+            fixed.image.samples == valid.image.samples,
+        "fixed-Huffman Deflate passes validation and matches stored pixels");
+
+    const std::filesystem::path dynamic_path = root / L"dynamic-deflate-rgb16.tiff";
+    write_fixture(
+        dynamic_path,
+        negaflow::test_fixtures::make_dynamic_deflate_rgb16_tiff());
+    const auto dynamic = negaflow::imageio::decode_tiff_with_wic(dynamic_path);
+    expect(
+        dynamic.status == negaflow::imageio::WicTiffDecodeStatus::ok &&
+            dynamic.info.deflate_streams_validated &&
+            dynamic.info.compressed_bytes_validated == 42U &&
+            dynamic.info.deflate_decoded_bytes_validated == 6'144U &&
+            dynamic.image.samples.size() == 32U * 32U * 3U &&
+            std::equal(
+                negaflow::test_fixtures::lzw_rgb16_expected_samples.begin(),
+                negaflow::test_fixtures::lzw_rgb16_expected_samples.end(),
+                dynamic.image.samples.begin()) &&
+            std::equal(
+                negaflow::test_fixtures::lzw_rgb16_expected_samples.begin(),
+                negaflow::test_fixtures::lzw_rgb16_expected_samples.end(),
+                dynamic.image.samples.end() - 3),
+        "dynamic-Huffman Deflate validates bounded back-references and exact edge pixels");
 
     const std::filesystem::path malformed_path = root / L"malformed-deflate-rgb16.tiff";
     write_fixture(
@@ -499,12 +594,23 @@ void test_deflate_quarantine(const std::filesystem::path& root) {
         negaflow::test_fixtures::make_malformed_deflate_rgb16_tiff());
     const auto malformed = negaflow::imageio::decode_tiff_with_wic(malformed_path);
     expect(
-        malformed.preflight_status == negaflow::core::TiffProbeStatus::ok,
-        "malformed Deflate retains structurally valid TIFF bounds");
-    expect(
-        malformed.status == negaflow::imageio::WicTiffDecodeStatus::unsupported_layout &&
+        malformed.preflight_status ==
+                negaflow::core::TiffProbeStatus::invalid_compressed_data &&
+            malformed.status == negaflow::imageio::WicTiffDecodeStatus::preflight_failed &&
             malformed.image.samples.empty(),
-        "malformed Deflate is quarantined without publishing samples");
+        "malformed stored block fails before WIC and publishes no samples");
+
+    const std::filesystem::path checksum_path = root / L"checksum-deflate-rgb16.tiff";
+    write_fixture(
+        checksum_path,
+        negaflow::test_fixtures::make_bad_checksum_deflate_rgb16_tiff());
+    const auto checksum = negaflow::imageio::decode_tiff_with_wic(checksum_path);
+    expect(
+        checksum.preflight_status ==
+                negaflow::core::TiffProbeStatus::invalid_compressed_data &&
+            checksum.status == negaflow::imageio::WicTiffDecodeStatus::preflight_failed &&
+            checksum.image.samples.empty(),
+        "Deflate Adler-32 mismatch fails before WIC and publishes no samples");
 }
 
 void test_decoded_byte_limit(const std::filesystem::path& root) {
@@ -587,12 +693,13 @@ int main(const int argument_count, const char* const arguments[]) {
 
     TempDirectory temporary{};
     test_valid_lzw(temporary.path());
+    test_eight_bit_widens_by_bit_replication(temporary.path());
     test_lzw_code_width_transition(temporary.path());
     test_lzw_dictionary_limit_and_forward_reference(temporary.path());
     test_row_copy_progress_and_cancellation(temporary.path());
     test_malformed_lzw(temporary.path());
     test_semantically_invalid_lzw(temporary.path());
-    test_deflate_quarantine(temporary.path());
+    test_deflate_preflight(temporary.path());
     test_decoded_byte_limit(temporary.path());
     if (argument_count == 2) {
         test_repository_fixture(std::filesystem::path{arguments[1]});

@@ -116,13 +116,21 @@ void discard_samples(WicTiffDecodeResult& result) noexcept {
 }
 
 [[nodiscard]] bool is_supported_layout(const negaflow::core::TiffProbeInfo& info) noexcept {
+    // 8 and 16 bits per channel, and nothing in between. WIC widens 8-bit samples to the
+    // 16-bit target by bit replication (v * 257), which is exactly v / 255 once the
+    // working conversion divides by 65535 — so the shallower file loses no accuracy on
+    // the way in, only the latitude it never had. Everything downstream stays 16-bit.
+    const bool eight_bit =
+        all_u16_values_equal(info.bits_per_sample, info.bits_per_sample_count, 8U);
+    const bool sixteen_bit =
+        all_u16_values_equal(info.bits_per_sample, info.bits_per_sample_count, 16U);
     if (info.width > std::numeric_limits<UINT>::max() ||
         info.height > std::numeric_limits<UINT>::max() ||
         info.photometric_interpretation != 2U || info.planar_configuration != 1U ||
         info.orientation != 1U || (info.samples_per_pixel != 3U && info.samples_per_pixel != 4U) ||
-        !all_u16_values_equal(info.bits_per_sample, info.bits_per_sample_count, 16U) ||
+        (!eight_bit && !sixteen_bit) ||
         !all_u16_values_equal(info.sample_format, info.sample_format_count, 1U) ||
-        (info.compression != 1U && info.compression != 5U)) {
+        (info.compression != 1U && info.compression != 5U && info.compression != 8U)) {
         return false;
     }
     if (info.samples_per_pixel == 3U) {
@@ -320,9 +328,10 @@ WicTiffDecodeResult decode_tiff_with_wic_impl(
             return result;
         }
 
-        if (probe.info.compression == 5U) {
+        if (probe.info.compression == 5U || probe.info.compression == 8U) {
             negaflow::core::TiffProbeControl semantic_control{};
-            semantic_control.validate_lzw_code_streams = true;
+            semantic_control.validate_lzw_code_streams = probe.info.compression == 5U;
+            semantic_control.validate_deflate_streams = probe.info.compression == 8U;
             semantic_control.stop_token = control.stop_token;
             const negaflow::core::TiffProbeResult semantic_probe =
                 negaflow::core::probe_tiff(reader, limits.probe, semantic_control);
@@ -332,8 +341,12 @@ WicTiffDecodeResult decode_tiff_with_wic_impl(
             result.info.lzw_code_count = semantic_probe.info.lzw_code_count;
             result.info.lzw_decoded_bytes_validated =
                 semantic_probe.info.lzw_decoded_bytes_validated;
+            result.info.deflate_decoded_bytes_validated =
+                semantic_probe.info.deflate_decoded_bytes_validated;
             result.info.lzw_code_streams_validated =
                 semantic_probe.info.lzw_code_streams_validated;
+            result.info.deflate_streams_validated =
+                semantic_probe.info.deflate_streams_validated;
             if (semantic_probe.status == negaflow::core::TiffProbeStatus::cancelled) {
                 result.status = WicTiffDecodeStatus::cancelled;
                 return result;
@@ -393,23 +406,52 @@ WicTiffDecodeResult decode_tiff_with_wic_impl(
             return result;
         }
 
+        // The probe decided which directory is the full-resolution image; this picks the
+        // WIC frame that matches it. Frame index is deliberately not assumed to equal
+        // directory index: WIC does not surface a reduced-resolution page as a frame at
+        // all, so a two-directory Photoshop scan arrives here as a single frame. Matching
+        // on the probe's dimensions holds either way, and requiring exactly one match
+        // keeps an ambiguous file from silently decoding the wrong page.
         status = decoder->GetFrameCount(&result.info.frame_count);
-        if (FAILED(status) || result.info.frame_count != 1U) {
+        if (FAILED(status) || result.info.frame_count == 0U ||
+            result.info.frame_count > limits.probe.max_directories) {
             result.status = WicTiffDecodeStatus::frame_count_unsupported;
             return result;
         }
 
         ComPtr<IWICBitmapFrameDecode> frame{};
+        GUID source_format{};
         UINT width = 0U;
         UINT height = 0U;
-        GUID source_format{};
-        if (FAILED(decoder->GetFrame(0U, &frame)) || FAILED(frame->GetSize(&width, &height)) ||
-            FAILED(frame->GetPixelFormat(&source_format))) {
-            result.status = WicTiffDecodeStatus::pixel_decode_failed;
+        UINT matches = 0U;
+        for (UINT index = 0U; index < result.info.frame_count; ++index) {
+            ComPtr<IWICBitmapFrameDecode> candidate{};
+            UINT candidate_width = 0U;
+            UINT candidate_height = 0U;
+            if (FAILED(decoder->GetFrame(index, &candidate)) ||
+                FAILED(candidate->GetSize(&candidate_width, &candidate_height))) {
+                result.status = WicTiffDecodeStatus::pixel_decode_failed;
+                return result;
+            }
+            if (candidate_width != probe.info.width ||
+                candidate_height != probe.info.height) {
+                continue;
+            }
+            ++matches;
+            if (matches > 1U) {
+                result.status = WicTiffDecodeStatus::frame_count_unsupported;
+                return result;
+            }
+            frame = candidate;
+            width = candidate_width;
+            height = candidate_height;
+        }
+        if (matches != 1U || !frame) {
+            result.status = WicTiffDecodeStatus::dimension_mismatch;
             return result;
         }
-        if (width != probe.info.width || height != probe.info.height) {
-            result.status = WicTiffDecodeStatus::dimension_mismatch;
+        if (FAILED(frame->GetPixelFormat(&source_format))) {
+            result.status = WicTiffDecodeStatus::pixel_decode_failed;
             return result;
         }
         result.info.source_pixel_format = classify_pixel_format(source_format);

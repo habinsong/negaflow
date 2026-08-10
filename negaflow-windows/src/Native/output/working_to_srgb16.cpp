@@ -1,8 +1,10 @@
 #include "negaflow/output/working_to_srgb16.h"
 
 #include "negaflow/color/srgb_transfer.h"
+#include "negaflow/core/parallel_rows.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <cstddef>
 #include <limits>
@@ -80,42 +82,77 @@ WorkingToSrgb16Result convert_working_to_srgb16(
         return result;
     }
 
+    // Rows are independent, so the encode splits across cores. The clipped-component
+    // total is summed per block and the reported failure is the one on the smallest row,
+    // which keeps both figures identical to the single-threaded pass.
+    std::atomic<std::uint64_t> first_failure{negaflow::core::no_row_failure};
+    std::atomic<std::uint64_t> clipped_components{0U};
     try {
         result.image.samples.resize(static_cast<std::size_t>(packed_sample_count));
-        for (std::uint32_t row = 0U; row < working.height; ++row) {
-            const std::size_t source_row =
-                static_cast<std::size_t>(row) * working.stride_pixels;
-            const std::size_t destination_row =
-                static_cast<std::size_t>(row) * working.width * 3U;
-            for (std::uint32_t column = 0U; column < working.width; ++column) {
-                const negaflow::core::Rgba32F& pixel = working.pixels[source_row + column];
-                if (!std::isfinite(pixel.red) || !std::isfinite(pixel.green) ||
-                    !std::isfinite(pixel.blue) || !std::isfinite(pixel.alpha)) {
-                    std::vector<std::uint16_t>{}.swap(result.image.samples);
-                    result.status = WorkingToSrgb16Status::non_finite_pixel;
-                    return result;
-                }
-                if (pixel.alpha != 1.0F) {
-                    std::vector<std::uint16_t>{}.swap(result.image.samples);
-                    result.status = WorkingToSrgb16Status::non_opaque_alpha;
-                    return result;
-                }
+        const std::uint64_t work_units =
+            static_cast<std::uint64_t>(working.width) *
+            static_cast<std::uint64_t>(working.height);
+        negaflow::core::for_each_row_block(
+            working.height,
+            work_units,
+            [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+                std::uint64_t block_clipped = 0U;
+                for (std::uint32_t row = first_row; row < first_row + row_count; ++row) {
+                    const std::size_t source_row =
+                        static_cast<std::size_t>(row) * working.stride_pixels;
+                    const std::size_t destination_row =
+                        static_cast<std::size_t>(row) * working.width * 3U;
+                    for (std::uint32_t column = 0U; column < working.width; ++column) {
+                        const negaflow::core::Rgba32F& pixel =
+                            working.pixels[source_row + column];
+                        if (!std::isfinite(pixel.red) || !std::isfinite(pixel.green) ||
+                            !std::isfinite(pixel.blue) || !std::isfinite(pixel.alpha)) {
+                            negaflow::core::record_row_failure(
+                                first_failure,
+                                row,
+                                WorkingToSrgb16Status::non_finite_pixel);
+                            clipped_components.fetch_add(
+                                block_clipped, std::memory_order_relaxed);
+                            return;
+                        }
+                        if (pixel.alpha != 1.0F) {
+                            negaflow::core::record_row_failure(
+                                first_failure,
+                                row,
+                                WorkingToSrgb16Status::non_opaque_alpha);
+                            clipped_components.fetch_add(
+                                block_clipped, std::memory_order_relaxed);
+                            return;
+                        }
 
-                const std::size_t destination =
-                    destination_row + static_cast<std::size_t>(column) * 3U;
-                result.image.samples[destination] =
-                    quantize_component(pixel.red, result.info.clipped_color_components);
-                result.image.samples[destination + 1U] =
-                    quantize_component(pixel.green, result.info.clipped_color_components);
-                result.image.samples[destination + 2U] =
-                    quantize_component(pixel.blue, result.info.clipped_color_components);
-            }
-        }
+                        const std::size_t destination =
+                            destination_row + static_cast<std::size_t>(column) * 3U;
+                        result.image.samples[destination] =
+                            quantize_component(pixel.red, block_clipped);
+                        result.image.samples[destination + 1U] =
+                            quantize_component(pixel.green, block_clipped);
+                        result.image.samples[destination + 2U] =
+                            quantize_component(pixel.blue, block_clipped);
+                    }
+                }
+                clipped_components.fetch_add(block_clipped, std::memory_order_relaxed);
+            });
     } catch (const std::bad_alloc&) {
         std::vector<std::uint16_t>{}.swap(result.image.samples);
         result.status = WorkingToSrgb16Status::allocation_failed;
         return result;
     }
+
+    const std::uint64_t packed = first_failure.load(std::memory_order_relaxed);
+    if (negaflow::core::has_row_failure(packed)) {
+        std::vector<std::uint16_t>{}.swap(result.image.samples);
+        result.info.clipped_color_components = 0U;
+        result.status = static_cast<WorkingToSrgb16Status>(
+            negaflow::core::row_failure_status_value(packed));
+        return result;
+    }
+    result.info.clipped_color_components =
+        clipped_components.load(std::memory_order_relaxed);
 
     result.image.width = working.width;
     result.image.height = working.height;

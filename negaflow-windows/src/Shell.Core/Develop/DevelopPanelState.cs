@@ -45,7 +45,7 @@ public sealed class DevelopPanelState
 
     public bool CanEditBase => SelectedFrame?.Route.FilmType is FilmType.ColorNegative or FilmType.BlackAndWhiteNegative;
 
-    public bool CanEditTone => SelectedFrame?.Route.FilmType is FilmType.ColorNegative or FilmType.BlackAndWhiteNegative;
+    public bool CanEditTone => SelectedFrame is not null;
 
     public LibraryFrameError SetBaseMode(BaseEstimationMode mode)
     {

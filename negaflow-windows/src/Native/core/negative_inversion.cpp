@@ -1,7 +1,10 @@
 #include "negaflow/core/negative_inversion.h"
 
+#include "negaflow/core/parallel_rows.h"
+
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cmath>
 
 namespace negaflow::core {
@@ -81,37 +84,56 @@ KernelStatus apply_negative_inversion(
         return input_status;
     }
 
-    for (std::uint32_t row = 0U; row < input.height; ++row) {
-        const std::size_t input_offset = static_cast<std::size_t>(row) * input.stride_pixels;
-        const std::size_t output_offset = static_cast<std::size_t>(row) * output.stride_pixels;
-        for (std::uint32_t column = 0U; column < input.width; ++column) {
-            const Rgba32F source = input.pixels[input_offset + column];
-            const Rgba32F result{
-                invert_channel(
-                    source.red,
-                    parameters.dmin[0],
-                    parameters.dmax_normalized[0],
-                    response),
-                invert_channel(
-                    source.green,
-                    parameters.dmin[1],
-                    parameters.dmax_normalized[1],
-                    response),
-                invert_channel(
-                    source.blue,
-                    parameters.dmin[2],
-                    parameters.dmax_normalized[2],
-                    response),
-                source.alpha,
-            };
-            if (!std::isfinite(result.red) || !std::isfinite(result.green) ||
-                !std::isfinite(result.blue)) {
-                return KernelStatus::non_finite_output;
+    // Every output pixel depends only on the input pixel at the same coordinate, so the
+    // rows split across cores without changing a single result bit. On a 16 MP scan this
+    // is the most expensive stage in the whole develop, almost entirely transcendentals.
+    std::atomic<std::uint64_t> first_failure{no_row_failure};
+    const std::uint64_t work_units =
+        static_cast<std::uint64_t>(input.width) * static_cast<std::uint64_t>(input.height);
+    for_each_row_block(
+        input.height,
+        work_units,
+        [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+            for (std::uint32_t row = first_row; row < first_row + row_count; ++row) {
+                const std::size_t input_offset =
+                    static_cast<std::size_t>(row) * input.stride_pixels;
+                const std::size_t output_offset =
+                    static_cast<std::size_t>(row) * output.stride_pixels;
+                for (std::uint32_t column = 0U; column < input.width; ++column) {
+                    const Rgba32F source = input.pixels[input_offset + column];
+                    const Rgba32F result{
+                        invert_channel(
+                            source.red,
+                            parameters.dmin[0],
+                            parameters.dmax_normalized[0],
+                            response),
+                        invert_channel(
+                            source.green,
+                            parameters.dmin[1],
+                            parameters.dmax_normalized[1],
+                            response),
+                        invert_channel(
+                            source.blue,
+                            parameters.dmin[2],
+                            parameters.dmax_normalized[2],
+                            response),
+                        source.alpha,
+                    };
+                    if (!std::isfinite(result.red) || !std::isfinite(result.green) ||
+                        !std::isfinite(result.blue)) {
+                        record_row_failure(
+                            first_failure, row, KernelStatus::non_finite_output);
+                        return;
+                    }
+                    output.pixels[output_offset + column] = result;
+                }
             }
-            output.pixels[output_offset + column] = result;
-        }
-    }
-    return KernelStatus::ok;
+        });
+
+    const std::uint64_t packed = first_failure.load(std::memory_order_relaxed);
+    return has_row_failure(packed)
+               ? static_cast<KernelStatus>(row_failure_status_value(packed))
+               : KernelStatus::ok;
 }
 
 }  // namespace negaflow::core

@@ -7,6 +7,12 @@
 
 ```text
 extended-linear-sRGB WorkingImage
+  → scene-ranged color negative: muted-scene vibrance
+  → opt-in Auto Levels → negative-only Neutral Balance
+  → NORITSU/SP-3000/F135/HR target: documented ScannerTargetGrade
+  → EXPIRED target: evidence-gated RescueGrade
+  → MAIN/PRINT + profile ID: immutable ScannerProfileGrade
+  → ColorModel: warmth → tint → colorDepth → vibrance → saturation → RGB primary
   → exposure: RGB × 2^stops
   → basic tone: tone-safe unit gamut, sRGB-luma contrast/masks
   → curve measurement: fixed fallback 또는 portable area percentile
@@ -15,21 +21,39 @@ extended-linear-sRGB WorkingImage
   → Color Mixer: HSL 8-band hue/saturation/luminance
   → Color Grading: shadows/midtones/highlights color wheel
   → Primary Calibration: R/G/B primary hue/saturation
-  → explicit film-scan Film Look: RGB33 color → bounded acutance
+  → explicit Film Look:
+      film scan: identity (중복 유제 응답 방지)
+      rendered digital color: halation → RGB33 color/acutance → stock preset → grain
+      rendered digital B&W: halation → spectral emulsion → acutance → single-channel grain
+      profile/process kind 불일치: identity
+  → GrainMend → FilmScanDenoise → Local Dodge/Burn → Texture
+  → B&W neutral/toning → ImageTransform
   → verified sRGB16 PNG/TIFF output
 ```
 
 alpha는 모든 단계에서 그대로 보존합니다. scanner 입력 수직 경로는 opaque alpha만 허용하지만 kernel
 fixture는 fractional alpha도 보존하는지 별도로 확인합니다.
 
-Primary Calibration 다음 film-scan 분기의 Film Emulation RGB33 색상과 bounded acutance component는
-canonical macOS golden에 맞춰 구현했고 별도 `WorkingFilmLook` native route가 두 단계를 순서대로
-묶습니다. 진단과 PNG16/TIFF16 export CLI는 source 종류·profile·intensity를 명시적으로 받아 이 route를
-호출하며, 미완성 digital graph를 film-scan 부분집합으로 대체하지 않습니다.
+Primary Calibration 다음 `WorkingFilmLook`은 source와 process/profile kind를 명시적으로 나눕니다.
+macOS correctness fix에 따라 film scan은 유제 응답 중복을 막는 identity입니다. rendered digital color는
+halation→Film Emulation→0.5배 stock color preset→density grain, B&W는
+halation→spectral emulsion→acutance→single-channel density grain을 실행합니다. kind가 다르면 identity이며,
+룩이 실제로 실행된 경우에만 공통 Texture의 grain/halation을 비웁니다.
+
+ScannerTargetGrade는 네 타깃의 documented character를 먼저 적용하고, NORITSU/SP-3000에는 검증된
+Ektar 100·Portra 160 matched roll-label pair의 상대 signature를 한 번 더 합성합니다. 명시 profile이
+paired film이면 필름별 signature, profile이 없으면 두 pair의 방향이 일치하는 공통 성분만 사용합니다.
+pair가 없거나 target과 scanner가 다르면 상대 레이어는 no-op이며 F135/HR에는 적용하지 않습니다.
 
 ## 파일 책임
 
 - `tone_mapping.h/.cpp`: 외부 할당이 없는 기본 톤·파라메트릭 커브 pointwise 수식
+- `muted_scene_vibrance.h/.cpp`: 160px 이하 장면 채도 측정과 비프리셋 컬러 네거티브 gate
+- `color_model.h/.cpp`: 반전 직후 색 모델 8축의 고정 순서 CPU scalar 수식
+- `scene_correction.h/.cpp`: 256px percentile Auto Levels와 192px median Neutral Balance
+- `rescue_grade.h/.cpp`: 192px Lab 표본의 증거 gate와 중립축 색 캐스트 보정
+- `scanner_profile_grade.h/.cpp`: 15종 immutable profile registry와 tone·color·unsharp grade
+- `scanner_target_grade.h/.cpp`: 4종 target의 scene-anchored tone·Lab color·NORITSU texture
 - `tone_curve_measurement.h/.cpp`: bounded downsample luma, percentile과 band 계산
 - `point_curve.h/.cpp`: 고정 용량 제어점, 64표본 LUT 생성·합성과 픽셀 lookup
 - `color_mixer.h/.cpp`: 고정 8대역 HSL control, 회색 gate와 pointwise 수학
@@ -52,6 +76,22 @@ canonical macOS golden에 맞춰 구현했고 별도 `WorkingFilmLook` native ro
 픽셀 kernel이 파일 I/O, TIFF container, CLI parsing이나 측정 vector를 소유하지 않습니다.
 
 ## 수치 계약
+
+### ColorModel
+
+macOS와 같은 순서와 계수로 warmth(R `±0.18`, G `+0.03`), tint(G `+0.24`, R/B `−0.12`),
+colorDepth(채도 `0.35`), saturation(`0.6`), RGB primary(`0.32`)를 적용합니다. 모든 축은 `[-1,1]`이며
+extended RGB와 alpha를 보존합니다. `CIVibrance`는 Windows 네이티브 CPU에서 저채도 픽셀에 더 큰 채도
+배율을 주는 방식으로 구현했으며, 이 축만 macOS numeric golden 보정이 남았습니다.
+
+### Muted-scene vibrance
+
+scene-ranged 비프리셋 컬러 네거티브만 반전 직후 linear proxy의 HSV 평균 채도를 측정합니다.
+proxy 폭은 `max(32, min(160, width))`, 높이는 같은 scale의 내림값이며, 평균은
+`S=(max(R,G,B)-min(R,G,B))/max(R,G,B)`입니다. 적용량은
+`clamp((0.24-meanSaturation)*3, 0, 0.5)`이고 `0.01` 이하는 exact identity입니다. B&W와 preset은
+이 단계를 호출하지 않습니다. pixel 수학은 ColorModel의 독립 Windows vibrance 구현을 공유하며,
+Core Image affine sampling과 `CIVibrance` 수치는 macOS 관측 fixture 비교가 남았습니다.
 
 ### 노출
 
@@ -137,7 +177,8 @@ negaflow-cli --export-developed-tiff16 <source> <destination> <dmin-r> <dmin-g> 
 ```
 
 PNG16도 같은 인수와 orchestration을 사용합니다. 일부 선택 인수만 주는 형식은 recipe 오해를 막기 위해
-거부합니다. `rendered_digital`은 네거티브 현상 명령과 양립하지 않으므로 파일 I/O 전에 거부합니다.
+거부합니다. `film_scan`은 Dmin/base와 네거티브 반전을 사용하고, `rendered_digital`은 decoded positive
+working image에서 시작합니다.
 JSON의 `stages.tone_adjust`에는 입력값, 적용 여부, sampling mode, target, sample 수, band, peak temporary
 bytes와 wall/process-CPU microseconds가 들어갑니다. 이어지는 `stages.film_look`에는 source, profile,
 intensity, route, color/acutance 적용 여부와 bounded workspace가 들어갑니다. 경로·file identity 값·SHA
@@ -181,5 +222,5 @@ buffer가 없습니다. identity이면 working orchestration이 kernel 호출을
 - 실제 Metal Color Mixer golden과 24개 control의 recipe/UI 연결은 아직 없습니다.
 - 실제 Core Image Color Grading golden과 세 color wheel recipe/UI 연결은 아직 없습니다.
 - 실제 macOS Primary Calibration golden과 여섯 control의 recipe/UI 연결은 아직 없습니다.
-- Film Emulation 색상→acutance와 명시적 source routing은 진단·PNG16·TIFF16 CLI까지 연결했지만,
-  catalog recipe persistence, C ABI와 UI 연결은 아직 없습니다.
+- source별 Film Look 26종, 가변 Local Dodge/Burn, ColorModel은 catalog→C ABI→preview/export까지
+  연결했지만 나머지 Film Emulation 16종, macOS numeric golden과 정식 UI control surface는 아직 없습니다.

@@ -212,6 +212,50 @@ internal static class CatalogCommitVerifier
             File.Exists(path) || Directory.Exists(path)) ||
         HasUnresolvedRollbackArtifact(roots);
 
+    /// <summary>
+    /// restore 직전 primary가 없었던 경우에만 사용합니다. 방금 적용한 exact snapshot인지 다시
+    /// 확인한 뒤 primary를 제거해 catalog+sidecar rollback을 같은 상태로 맞춥니다.
+    /// </summary>
+    internal static bool RemovePrimaryIfMatches(
+        CatalogSnapshot expected,
+        StorageRootSet roots)
+    {
+        try
+        {
+            CatalogReadResult current = SqliteCatalogStore.Read(roots.CatalogPath);
+            if (current.Snapshot is not { } snapshot ||
+                !SnapshotsMatch(expected, snapshot))
+            {
+                return false;
+            }
+            foreach (string companion in CatalogCompanionPaths(roots))
+            {
+                if (Directory.Exists(companion) ||
+                    StoragePathPolicy.IsExistingReparsePoint(companion))
+                {
+                    return false;
+                }
+                if (File.Exists(companion))
+                {
+                    File.Delete(companion);
+                }
+            }
+            if (Directory.Exists(roots.CatalogPath) ||
+                StoragePathPolicy.IsExistingReparsePoint(roots.CatalogPath))
+            {
+                return false;
+            }
+            File.Delete(roots.CatalogPath);
+            return SqliteCatalogStore.Read(roots.CatalogPath).Error ==
+                CatalogStoreError.NotFound;
+        }
+        catch (Exception error) when (error is
+            IOException or UnauthorizedAccessException or NotSupportedException)
+        {
+            return false;
+        }
+    }
+
     private static CatalogStoreError CreatePrimarySnapshot(
         StorageRootSet roots,
         CatalogSnapshot expectedPrevious,

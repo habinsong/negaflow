@@ -72,6 +72,68 @@ namespace {
         emulation = FilmEmulation::fujicolor_c200;
     } else if (text == L"pro_400h") {
         emulation = FilmEmulation::pro_400h;
+    } else if (text == L"tri_x_400") {
+        emulation = FilmEmulation::tri_x_400;
+    } else if (text == L"hp5_plus") {
+        emulation = FilmEmulation::hp5_plus;
+    } else if (text == L"fp4_plus") {
+        emulation = FilmEmulation::fp4_plus;
+    } else if (text == L"delta_100") {
+        emulation = FilmEmulation::delta_100;
+    } else if (text == L"delta_400") {
+        emulation = FilmEmulation::delta_400;
+    } else if (text == L"delta_3200") {
+        emulation = FilmEmulation::delta_3200;
+    } else if (text == L"tmax_100") {
+        emulation = FilmEmulation::tmax_100;
+    } else if (text == L"tmax_400") {
+        emulation = FilmEmulation::tmax_400;
+    } else if (text == L"tmax_p3200") {
+        emulation = FilmEmulation::tmax_p3200;
+    } else if (text == L"kentmere_400") {
+        emulation = FilmEmulation::kentmere_400;
+    } else if (text == L"ortho_plus") {
+        emulation = FilmEmulation::ortho_plus;
+    } else if (text == L"sfx_200") {
+        emulation = FilmEmulation::sfx_200;
+    } else if (text == L"rollei_ir") {
+        emulation = FilmEmulation::rollei_ir;
+    } else if (text == L"scala_200x") {
+        emulation = FilmEmulation::scala_200x;
+    } else if (text == L"rollei_superpan") {
+        emulation = FilmEmulation::rollei_superpan;
+    } else if (text == L"velvia_100") {
+        emulation = FilmEmulation::velvia_100;
+    } else if (text == L"e100_vs") {
+        emulation = FilmEmulation::e100_vs;
+    } else if (text == L"astia_100f") {
+        emulation = FilmEmulation::astia_100f;
+    } else if (text == L"kodachrome_64") {
+        emulation = FilmEmulation::kodachrome_64;
+    } else if (text == L"gold_200") {
+        emulation = FilmEmulation::gold_200;
+    } else if (text == L"pro_image_100") {
+        emulation = FilmEmulation::pro_image_100;
+    } else if (text == L"superia_400") {
+        emulation = FilmEmulation::superia_400;
+    } else if (text == L"superia_premium_400") {
+        emulation = FilmEmulation::superia_premium_400;
+    } else if (text == L"superia_200") {
+        emulation = FilmEmulation::superia_200;
+    } else if (text == L"reala_100") {
+        emulation = FilmEmulation::reala_100;
+    } else if (text == L"industrial_100") {
+        emulation = FilmEmulation::industrial_100;
+    } else if (text == L"lomo_cn_800") {
+        emulation = FilmEmulation::lomo_cn_800;
+    } else if (text == L"vision3_500t") {
+        emulation = FilmEmulation::vision3_500t;
+    } else if (text == L"vision3_250d") {
+        emulation = FilmEmulation::vision3_250d;
+    } else if (text == L"vision3_50d") {
+        emulation = FilmEmulation::vision3_50d;
+    } else if (text == L"vision3_200t") {
+        emulation = FilmEmulation::vision3_200t;
     } else {
         return false;
     }
@@ -148,6 +210,68 @@ const char* film_emulation_recipe_name(
             return "fujicolor_c200";
         case FilmEmulation::pro_400h:
             return "pro_400h";
+        case FilmEmulation::tri_x_400:
+            return "tri_x_400";
+        case FilmEmulation::hp5_plus:
+            return "hp5_plus";
+        case FilmEmulation::fp4_plus:
+            return "fp4_plus";
+        case FilmEmulation::delta_100:
+            return "delta_100";
+        case FilmEmulation::delta_400:
+            return "delta_400";
+        case FilmEmulation::delta_3200:
+            return "delta_3200";
+        case FilmEmulation::tmax_100:
+            return "tmax_100";
+        case FilmEmulation::tmax_400:
+            return "tmax_400";
+        case FilmEmulation::tmax_p3200:
+            return "tmax_p3200";
+        case FilmEmulation::kentmere_400:
+            return "kentmere_400";
+        case FilmEmulation::ortho_plus:
+            return "ortho_plus";
+        case FilmEmulation::sfx_200:
+            return "sfx_200";
+        case FilmEmulation::rollei_ir:
+            return "rollei_ir";
+        case FilmEmulation::scala_200x:
+            return "scala_200x";
+        case FilmEmulation::rollei_superpan:
+            return "rollei_superpan";
+        case FilmEmulation::velvia_100:
+            return "velvia_100";
+        case FilmEmulation::e100_vs:
+            return "e100_vs";
+        case FilmEmulation::astia_100f:
+            return "astia_100f";
+        case FilmEmulation::kodachrome_64:
+            return "kodachrome_64";
+        case FilmEmulation::gold_200:
+            return "gold_200";
+        case FilmEmulation::pro_image_100:
+            return "pro_image_100";
+        case FilmEmulation::superia_400:
+            return "superia_400";
+        case FilmEmulation::superia_premium_400:
+            return "superia_premium_400";
+        case FilmEmulation::superia_200:
+            return "superia_200";
+        case FilmEmulation::reala_100:
+            return "reala_100";
+        case FilmEmulation::industrial_100:
+            return "industrial_100";
+        case FilmEmulation::lomo_cn_800:
+            return "lomo_cn_800";
+        case FilmEmulation::vision3_500t:
+            return "vision3_500t";
+        case FilmEmulation::vision3_250d:
+            return "vision3_250d";
+        case FilmEmulation::vision3_50d:
+            return "vision3_50d";
+        case FilmEmulation::vision3_200t:
+            return "vision3_200t";
     }
     return "unknown";
 }

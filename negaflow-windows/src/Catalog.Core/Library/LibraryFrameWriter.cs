@@ -9,7 +9,13 @@ public sealed record LibraryFrameEdit(
     BaseRecipe? Base = null,
     PointCurveRecipe? PointCurves = null,
     ColorMixerRecipe? ColorMixer = null,
-    ColorGradingRecipe? ColorGrading = null);
+    ColorGradingRecipe? ColorGrading = null,
+    PrimaryCalibrationRecipe? PrimaryCalibration = null,
+    IReadOnlyList<LocalDodgeBurnAdjustment>? LocalDodgeBurn = null,
+    ColorModelRecipe? ColorModel = null,
+    bool? AutoLevels = null,
+    bool? AutoNeutralBalance = null,
+    DevelopTarget? DevelopTarget = null);
 
 /// <summary>
 /// 톤, 수동 base, 그리고 지정된 경우 base recipe를 갱신합니다. 입력 record 는 바꾸지 않고 깊은 복사본을 돌려주며, 이 writer 가
@@ -49,6 +55,18 @@ public static class LibraryFrameWriter
         if (edit.ColorGrading is { } colorGrading && !IsValidColorGrading(colorGrading))
         {
             return LibraryFrameWriteResult.Failure(LibraryFrameError.InvalidColorGrading);
+        }
+        if (edit.PrimaryCalibration is { } primaryCalibration && !IsValidPrimaryCalibration(primaryCalibration))
+        {
+            return LibraryFrameWriteResult.Failure(LibraryFrameError.InvalidPrimaryCalibration);
+        }
+        if (edit.LocalDodgeBurn is { } localDodgeBurn && !LocalDodgeBurnRecipe.IsValid(localDodgeBurn))
+        {
+            return LibraryFrameWriteResult.Failure(LibraryFrameError.InvalidLocalDodgeBurn);
+        }
+        if (edit.ColorModel is { } colorModel && !colorModel.IsValid())
+        {
+            return LibraryFrameWriteResult.Failure(LibraryFrameError.InvalidColorModel);
         }
 
         JsonObject updated = frameRecord.DeepClone().AsObject();
@@ -123,6 +141,51 @@ public static class LibraryFrameWriter
         if (edit.ColorGrading is { } colorGradingToWrite)
         {
             parameters[LibraryFrameReader.ColorGradingName] = WriteColorGrading(colorGradingToWrite);
+        }
+        if (edit.PrimaryCalibration is { } primaryCalibrationToWrite)
+        {
+            parameters[LibraryFrameReader.PrimaryCalibrationName] = WritePrimaryCalibration(primaryCalibrationToWrite);
+        }
+        if (edit.LocalDodgeBurn is { } localDodgeBurnToWrite)
+        {
+            parameters[LibraryFrameReader.LocalDodgeBurnName] = WriteLocalDodgeBurn(localDodgeBurnToWrite);
+        }
+        if (edit.ColorModel is { } colorModelToWrite)
+        {
+            parameters[LibraryFrameReader.WarmthName] = colorModelToWrite.Warmth;
+            parameters[LibraryFrameReader.TintName] = colorModelToWrite.Tint;
+            parameters[LibraryFrameReader.ColorDepthName] = colorModelToWrite.ColorDepth;
+            parameters[LibraryFrameReader.VibranceName] = colorModelToWrite.Vibrance;
+            parameters[LibraryFrameReader.SaturationName] = colorModelToWrite.Saturation;
+            parameters[LibraryFrameReader.RedPrimaryName] = colorModelToWrite.RedPrimary;
+            parameters[LibraryFrameReader.GreenPrimaryName] = colorModelToWrite.GreenPrimary;
+            parameters[LibraryFrameReader.BluePrimaryName] = colorModelToWrite.BluePrimary;
+        }
+        if (edit.AutoLevels is { } autoLevels)
+        {
+            parameters[LibraryFrameReader.AutoLevelsName] = autoLevels;
+        }
+        if (edit.AutoNeutralBalance is { } autoNeutralBalance)
+        {
+            parameters[LibraryFrameReader.AutoNeutralBalanceName] = autoNeutralBalance;
+        }
+        if (edit.DevelopTarget is { } developTarget)
+        {
+            if (!Enum.IsDefined(developTarget))
+            {
+                return LibraryFrameWriteResult.Failure(LibraryFrameError.InvalidDevelopTarget);
+            }
+            parameters[LibraryFrameReader.DevelopTargetName] = developTarget switch
+            {
+                DevelopTarget.Main => "main",
+                DevelopTarget.Print => "print",
+                DevelopTarget.Noritsu => "noritsu",
+                DevelopTarget.Sp3000 => "sp-3000",
+                DevelopTarget.F135 => "f135",
+                DevelopTarget.Hr => "hr",
+                DevelopTarget.Rescue => "rescue",
+                _ => throw new ArgumentOutOfRangeException(nameof(developTarget)),
+            };
         }
 
         return LibraryFrameWriteResult.Success(updated);
@@ -273,5 +336,95 @@ public static class LibraryFrameWriter
         [LibraryFrameReader.ColorGradingHueName] = region.Hue,
         [LibraryFrameReader.ColorGradingSaturationName] = region.Saturation,
         [LibraryFrameReader.ColorGradingLuminanceName] = region.Luminance,
+    };
+
+    private static bool IsValidPrimaryCalibration(PrimaryCalibrationRecipe calibration) =>
+        new[]
+        {
+            calibration.RedHue, calibration.RedSaturation,
+            calibration.GreenHue, calibration.GreenSaturation,
+            calibration.BlueHue, calibration.BlueSaturation,
+        }.All(value => double.IsFinite(value) && value is >= -1.0 and <= 1.0);
+
+    private static JsonObject WritePrimaryCalibration(PrimaryCalibrationRecipe calibration) => new()
+    {
+        [LibraryFrameReader.PrimaryCalibrationRedHueName] = calibration.RedHue,
+        [LibraryFrameReader.PrimaryCalibrationRedSaturationName] = calibration.RedSaturation,
+        [LibraryFrameReader.PrimaryCalibrationGreenHueName] = calibration.GreenHue,
+        [LibraryFrameReader.PrimaryCalibrationGreenSaturationName] = calibration.GreenSaturation,
+        [LibraryFrameReader.PrimaryCalibrationBlueHueName] = calibration.BlueHue,
+        [LibraryFrameReader.PrimaryCalibrationBlueSaturationName] = calibration.BlueSaturation,
+    };
+
+    private static JsonArray WriteLocalDodgeBurn(
+        IReadOnlyList<LocalDodgeBurnAdjustment> adjustments)
+    {
+        JsonArray result = [];
+        foreach (LocalDodgeBurnAdjustment adjustment in adjustments)
+        {
+            result.Add(new JsonObject
+            {
+                [LibraryFrameReader.LocalDodgeBurnIdName] = adjustment.Id.ToString(),
+                [LibraryFrameReader.LocalDodgeBurnModeName] = adjustment.Mode == LocalDodgeBurnMode.Dodge
+                    ? "dodge"
+                    : "burn",
+                [LibraryFrameReader.LocalDodgeBurnAmountName] = adjustment.Amount,
+                [LibraryFrameReader.LocalDodgeBurnEnabledName] = adjustment.IsEnabled,
+                [LibraryFrameReader.LocalDodgeBurnMaskName] = WriteLocalDodgeBurnMask(adjustment.Mask),
+            });
+        }
+        return result;
+    }
+
+    private static JsonObject WriteLocalDodgeBurnMask(LocalDodgeBurnMask mask) => new()
+    {
+        [LibraryFrameReader.LocalDodgeBurnKindName] = mask.Kind switch
+        {
+            LocalDodgeBurnMaskKind.Brush => "brush",
+            LocalDodgeBurnMaskKind.Radial => "radial",
+            LocalDodgeBurnMaskKind.Linear => "linear",
+            LocalDodgeBurnMaskKind.Polygon => "polygon",
+            _ => throw new ArgumentOutOfRangeException(nameof(mask)),
+        },
+        [LibraryFrameReader.LocalDodgeBurnStrokesName] = WriteLocalDodgeBurnStrokes(mask.Strokes),
+        [LibraryFrameReader.LocalDodgeBurnCenterName] = WriteLocalDodgeBurnPoint(mask.Center),
+        [LibraryFrameReader.LocalDodgeBurnRadiusName] = mask.Radius,
+        [LibraryFrameReader.LocalDodgeBurnFeatherName] = mask.Feather,
+        [LibraryFrameReader.LocalDodgeBurnStartName] = WriteLocalDodgeBurnPoint(mask.Start),
+        [LibraryFrameReader.LocalDodgeBurnEndName] = WriteLocalDodgeBurnPoint(mask.End),
+        [LibraryFrameReader.LocalDodgeBurnPointsName] = WriteLocalDodgeBurnPoints(mask.Points),
+    };
+
+    private static JsonArray WriteLocalDodgeBurnStrokes(
+        IReadOnlyList<LocalDodgeBurnStroke> strokes)
+    {
+        JsonArray result = [];
+        foreach (LocalDodgeBurnStroke stroke in strokes)
+        {
+            result.Add(new JsonObject
+            {
+                [LibraryFrameReader.LocalDodgeBurnPointsName] = WriteLocalDodgeBurnPoints(stroke.Points),
+                [LibraryFrameReader.LocalDodgeBurnThicknessName] = stroke.Thickness,
+                [LibraryFrameReader.LocalDodgeBurnFeatherName] = stroke.Feather,
+            });
+        }
+        return result;
+    }
+
+    private static JsonArray WriteLocalDodgeBurnPoints(
+        IReadOnlyList<LocalDodgeBurnPoint> points)
+    {
+        JsonArray result = [];
+        foreach (LocalDodgeBurnPoint point in points)
+        {
+            result.Add(WriteLocalDodgeBurnPoint(point));
+        }
+        return result;
+    }
+
+    private static JsonObject WriteLocalDodgeBurnPoint(LocalDodgeBurnPoint point) => new()
+    {
+        [LibraryFrameReader.PointCurveXName] = point.X,
+        [LibraryFrameReader.PointCurveYName] = point.Y,
     };
 }

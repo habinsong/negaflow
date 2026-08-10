@@ -22,6 +22,10 @@ SHA-256은 byte-identical 중복 확인, 장기 보관 검증이나 외부 전�
 5. 플러그인/실행 파일 신뢰, 업데이트, installer, bundled resource, ICC/profile identity와 release artifact
    검증은 이 이미지 설정의 적용 대상이 아닙니다. 보안·공급망 hash는 계속 필수입니다.
 6. hash를 켰을 때도 UI thread에서 계산하지 않으며 progress와 cancellation을 제공합니다.
+7. 비어 있지 않은 Defects recipe가 이미 저장된 source SHA-256에 결합된 경우는 일반 현상 hash
+   설정과 다릅니다. 다른 원본에 오래된 복원 mask를 적용하지 않으려면 hash 자체가 렌더 정확성의
+   일부이므로, 해당 preview/export 요청만 worker thread에서 렌더 직전에 SHA-256을 검증합니다.
+   Defects가 없는 요청에는 이 예외를 적용하지 않습니다.
 
 이 결정은 `windows_docs/08-ui/surfaces/export.md`의 일반 이미지 source/output full-hash 제안을 Windows 제품
 기본값에 한해 대체합니다. hash가 꺼졌을 때 render manifest의 이미지 digest는 optional/absent로 기록하고,
@@ -41,7 +45,8 @@ SHA-256은 byte-identical 중복 확인, 장기 보관 검증이나 외부 전�
 - 경로나 파일명 없는 구조화된 실패 결과
 
 `negaflow-cli --sha256-image <path>`는 개발과 명시적 opt-in 검증용입니다. 다른 TIFF command는 이
-함수를 호출하지 않습니다.
+함수를 호출하지 않습니다. 단, ABI v19의 source-bound Defects 요청은 sidecar의 byte identity를
+검증하기 위해 같은 CNG 경로를 명시적으로 켭니다.
 
 ## UI/UX 계약
 

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -39,6 +40,7 @@ internal static class Program
         VerifyCatalogProcessLock();
         VerifySqliteCatalogStore();
         VerifyLibraryFrameProjection();
+        VerifyLocalDodgeBurnPersistence();
 
         var report = new
         {
@@ -401,7 +403,10 @@ internal static class Program
             VerifyStoreLifecycle(roots);
             VerifyStoreRefusals(roots);
             VerifyVerifiedCommit(roots);
+            VerifyDefectSidecarStore(roots);
             VerifyBackupGeneration(roots);
+            VerifyPendingRestore(roots);
+            VerifyDefectCatalogHealthAndRestore(roots);
             VerifyCatalogSession(roots);
         }
         finally
@@ -413,6 +418,400 @@ internal static class Program
             }
         }
     }
+
+    private static void VerifyDefectSidecarStore(StorageRootSet parentRoots)
+    {
+        string sidecarBase = Path.Combine(
+            parentRoots.LocalApplicationDataRoot,
+            "defect-sidecar");
+        StorageRootSet roots = StorageRootResolver.ResolveForTests(sidecarBase).Roots!;
+        Guid frameId = Guid.Parse("8ac67219-88d5-46b0-af56-42b4600615f3");
+        IReadOnlyList<DefectEditItem> items = DefectRecipeItems();
+
+        DefectRecipeSnapshot revisionOne = DefectRecipeSnapshot.Create(
+            frameId,
+            recipeRevision: 1,
+            sourceIdentity: null,
+            items);
+        DefectSidecarWriteResult first = DefectSidecarStore.Write(roots, revisionOne);
+        Check(first.IsSuccess && first.Kind == DefectSidecarWriteKind.Written,
+            "defect_sidecar_first_write");
+
+        DefectSidecarReadResult read = DefectSidecarStore.Read(roots, frameId);
+        Check(read.IsSuccess && read.Snapshot?.RecipeRevision == 1,
+            "defect_sidecar_read_revision");
+        Check(read.Snapshot?.Items.Select(item => item.Kind).SequenceEqual(
+            new[]
+            {
+                DefectEditKind.Brush,
+                DefectEditKind.Region,
+                DefectEditKind.Infrared,
+                DefectEditKind.Clone,
+            }) == true,
+            "defect_sidecar_preserves_ordered_kinds");
+        Check(read.Snapshot is { } decodedRecipe &&
+              DefectMaskCodec.TryDecodeRgba8(
+                  decodedRecipe.Items[1].RegionMask!,
+                  2,
+                  2,
+                  out byte[] decodedRegionMask) &&
+              decodedRegionMask.SequenceEqual(
+                  Enumerable.Range(0, 16).Select(value => (byte)value)),
+            "defect_sidecar_preserves_region_mask");
+        Check(DefectSidecarStore.Write(roots, revisionOne).Kind ==
+              DefectSidecarWriteKind.AlreadyCurrent,
+            "defect_sidecar_same_snapshot_idempotent");
+
+        DefectSourceIdentity sourceIdentity = new(
+            1_234,
+            new string('a', 64));
+        DefectRecipeSnapshot bound = DefectRecipeSnapshot.Create(
+            frameId,
+            recipeRevision: 1,
+            sourceIdentity,
+            items);
+        Check(DefectSidecarStore.Write(roots, bound).Kind ==
+              DefectSidecarWriteKind.Written,
+            "defect_sidecar_same_revision_binds_source_identity");
+        Check(DefectSidecarStore.Read(roots, frameId).Snapshot?.SourceIdentity ==
+              sourceIdentity,
+            "defect_sidecar_source_identity_readback");
+
+        DefectEditItem changedRegion = items[1] with { Strength = 0.25 };
+        DefectRecipeSnapshot conflicting = DefectRecipeSnapshot.Create(
+            frameId,
+            recipeRevision: 1,
+            sourceIdentity,
+            [items[0], changedRegion, items[2], items[3]]);
+        Check(DefectSidecarStore.Write(roots, conflicting).Error ==
+              DefectSidecarError.ConflictingSameRevision,
+            "defect_sidecar_same_revision_conflict");
+
+        DefectRecipeSnapshot revisionTwo = DefectRecipeSnapshot.Create(
+            frameId,
+            recipeRevision: 2,
+            sourceIdentity,
+            [items[0], changedRegion, items[2], items[3]]);
+        Check(DefectSidecarStore.Write(roots, revisionTwo).Kind ==
+              DefectSidecarWriteKind.Written,
+            "defect_sidecar_newer_revision_writes");
+        DefectSidecarWriteResult stale = DefectSidecarStore.Write(roots, bound);
+        Check(stale.Kind == DefectSidecarWriteKind.SkippedNewer &&
+              stale.ExistingRevision == 2,
+            "defect_sidecar_stale_completion_skipped");
+
+        Check(DefectSidecarStore.Remove(roots, frameId, minimumRevision: 3).IsSuccess,
+            "defect_sidecar_revision_aware_remove");
+        Check(DefectSidecarStore.Write(roots, revisionTwo).Kind ==
+              DefectSidecarWriteKind.SkippedNewer,
+            "defect_sidecar_removed_revision_floor_blocks_late_write");
+        Check(DefectSidecarStore.Read(roots, frameId).Error ==
+              DefectSidecarError.NotFound,
+            "defect_sidecar_remove_leaves_missing");
+
+        DefectRecipeSnapshot revisionFour = DefectRecipeSnapshot.Create(
+            frameId,
+            recipeRevision: 4,
+            sourceIdentity,
+            items);
+        Check(DefectSidecarStore.Write(roots, revisionFour).IsSuccess,
+            "defect_sidecar_write_after_floor");
+        string sidecarPath = DefectSidecarStore.PathFor(roots, frameId);
+        JsonObject future = JsonNode.Parse(File.ReadAllBytes(sidecarPath))!.AsObject();
+        future["version"] = 99;
+        File.WriteAllBytes(sidecarPath, CatalogJson.SerializeCanonical(future));
+        DefectSidecarReadResult unsupported = DefectSidecarStore.Read(roots, frameId);
+        Check(unsupported.Error == DefectSidecarError.UnsupportedVersion &&
+              unsupported.ObservedVersion == 99,
+            "defect_sidecar_future_version_rejected");
+        Check(DefectSidecarStore.Write(roots, revisionFour).Error ==
+              DefectSidecarError.UnsupportedVersion,
+            "defect_sidecar_future_version_not_overwritten");
+
+        Guid invalidFrameId = Guid.Parse("2a35899b-f983-47d4-8047-57e99c5e2504");
+        DefectEditItem invalidCompressed = items[2] with
+        {
+            Clusters =
+            [
+                items[2].Clusters![0] with
+                {
+                    Mask = new DefectMask(true, [1, 2, 3]),
+                },
+            ],
+        };
+        DefectRecipeSnapshot invalidZlib = DefectRecipeSnapshot.Create(
+            invalidFrameId,
+            recipeRevision: 1,
+            sourceIdentity,
+            [invalidCompressed]);
+        Check(DefectSidecarStore.Write(roots, invalidZlib).Error ==
+              DefectSidecarError.InvalidSnapshot,
+            "defect_sidecar_invalid_zlib_rejected_before_publish");
+    }
+
+    private static IReadOnlyList<DefectEditItem> DefectRecipeItems()
+    {
+        DefectEditItem brush = new(
+            Guid.Parse("1394d226-caff-4448-8669-b4dd09cf9946"),
+            DefectEditKind.Brush,
+            Enabled: true,
+            Strength: 0.8,
+            new DefectEditLabel(DefectEditLabelKind.Brush, 1),
+            new DefectEditSummary(DefectEditSummaryKind.Brush),
+            new DefectSize(4_000, 3_000),
+            [])
+        {
+            Strokes =
+            [
+                new DefectStroke(
+                    [new DefectPoint(0.1, 0.2), new DefectPoint(0.2, 0.3)],
+                    0.01),
+            ],
+        };
+
+        DefectEditItem region = new(
+            Guid.Parse("83566683-7599-439b-8ba3-599548916110"),
+            DefectEditKind.Region,
+            Enabled: true,
+            Strength: 1.0,
+            new DefectEditLabel(DefectEditLabelKind.Guided, 1),
+            new DefectEditSummary(
+                DefectEditSummaryKind.ClassBreakdown,
+                new DefectClassBreakdown(
+                    [new DefectClassCount(DefectClassification.Dust, 1)],
+                    0.9)),
+            new DefectSize(4_000, 3_000),
+            [
+                new DefectPreviewComponent(
+                    DefectClassification.Dust,
+                    0.9,
+                    [new DefectPoint(0.25, 0.75)]),
+            ])
+        {
+            RegionMask = new DefectMask(
+                false,
+                Enumerable.Range(0, 16).Select(value => (byte)value).ToArray()),
+            RegionRoi = new DefectRect(12, 34, 2, 2),
+            RegionWidth = 2,
+            RegionHeight = 2,
+        };
+
+        byte[] infraredMask = Enumerable.Repeat((byte)255, 16).ToArray();
+        DefectEditItem infrared = new(
+            Guid.Parse("33dedb29-b303-4551-b48a-081a2b454fe3"),
+            DefectEditKind.Infrared,
+            Enabled: true,
+            Strength: 0.75,
+            new DefectEditLabel(DefectEditLabelKind.Infrared, 1),
+            new DefectEditSummary(
+                DefectEditSummaryKind.ClassBreakdown,
+                new DefectClassBreakdown(
+                    [new DefectClassCount(DefectClassification.Pinhole, 1)],
+                    0.95)),
+            new DefectSize(4_000, 3_000),
+            [])
+        {
+            Clusters =
+            [
+                new DefectCluster(
+                    new DefectRect(50, 60, 2, 2),
+                    new DefectMask(true, CompressZlib(infraredMask)),
+                    2,
+                    2),
+            ],
+        };
+
+        DefectEditItem clone = new(
+            Guid.Parse("392b167c-78ce-4d0f-a90f-b6fbb976ebfe"),
+            DefectEditKind.Clone,
+            Enabled: false,
+            Strength: 0.5,
+            new DefectEditLabel(DefectEditLabelKind.Clone, 24),
+            new DefectEditSummary(DefectEditSummaryKind.Clone),
+            new DefectSize(4_000, 3_000),
+            [])
+        {
+            CloneStrokes =
+            [
+                new DefectCloneStroke(
+                    [new DefectPoint(0.4, 0.5), new DefectPoint(0.45, 0.55)],
+                    0.05,
+                    -0.02,
+                    24,
+                    0.6),
+            ],
+        };
+
+        return [brush, region, infrared, clone];
+    }
+
+    private static byte[] CompressZlib(byte[] data)
+    {
+        using MemoryStream output = new();
+        using (ZLibStream zlib = new(output, CompressionLevel.SmallestSize, leaveOpen: true))
+        {
+            zlib.Write(data);
+        }
+        return output.ToArray();
+    }
+
+    private static void VerifyDefectCatalogHealthAndRestore(
+        StorageRootSet parentRoots)
+    {
+        string healthBase = Path.Combine(
+            parentRoots.LocalApplicationDataRoot,
+            "defect-catalog-health");
+        StorageRootSet healthRoots = StorageRootResolver.ResolveForTests(
+            healthBase).Roots!;
+        Guid healthFrameId = Guid.Parse("e4d63c51-532e-4d52-a41c-2212246a45e0");
+        DefectSourceIdentity sourceIdentity = new(900, new string('c', 64));
+        DefectRecipeSnapshot healthRecipe = DefectRecipeSnapshot.Create(
+            healthFrameId,
+            recipeRevision: 1,
+            sourceIdentity,
+            DefectRecipeItems());
+        CatalogSnapshot healthCatalog = Snapshot(
+            "health",
+            DefectCatalogRow(healthFrameId, "health"));
+
+        CatalogSessionOpenResult healthInitial = CatalogSession.Open(healthRoots);
+        using (CatalogSession? initial = healthInitial.Session)
+        {
+            Check(healthInitial.IsSuccess, "defect_health_initial_open");
+            if (initial is not null)
+            {
+                Check(initial.ReadOrCreate().IsSuccess,
+                    "defect_health_initial_create");
+                Check(initial.WriteDefectRecipe(healthRecipe).IsSuccess,
+                    "defect_health_sidecar_first");
+                Check(initial.Write(healthCatalog).IsSuccess,
+                    "defect_health_catalog_after_sidecar");
+                Check(initial.RemoveDefectRecipe(healthFrameId, 2).Error ==
+                      DefectSidecarError.InvalidSnapshot,
+                    "defect_health_remove_while_declared_blocked");
+            }
+        }
+
+        CatalogSessionOpenResult healthyReopen = CatalogSession.Open(healthRoots);
+        using (CatalogSession? healthy = healthyReopen.Session)
+        {
+            Check(healthyReopen.IsSuccess,
+                "defect_health_restart_with_sidecar_opens");
+            Check(healthy?.ReadDefectRecipe(healthFrameId).Snapshot?.RecipeRevision == 1,
+                "defect_health_restart_reads_recipe");
+        }
+
+        string healthSidecarPath = DefectSidecarStore.PathFor(
+            healthRoots,
+            healthFrameId);
+        byte[] healthyBytes = File.ReadAllBytes(healthSidecarPath);
+        File.Delete(healthSidecarPath);
+        CatalogSessionOpenResult missingOpen = CatalogSession.Open(healthRoots);
+        missingOpen.Session?.Dispose();
+        Check(missingOpen.Error == CatalogSessionError.MissingAuthoritativeData &&
+              missingOpen.DefectSidecarError == DefectSidecarError.NotFound,
+            "defect_health_missing_sidecar_blocks_library_open");
+
+        File.WriteAllBytes(healthSidecarPath, healthyBytes);
+        JsonObject damaged = JsonNode.Parse(healthyBytes)!.AsObject();
+        damaged["recipeSHA256"] = new string('0', 64);
+        File.WriteAllBytes(
+            healthSidecarPath,
+            CatalogJson.SerializeCanonical(damaged));
+        CatalogSessionOpenResult damagedOpen = CatalogSession.Open(healthRoots);
+        damagedOpen.Session?.Dispose();
+        Check(damagedOpen.Error == CatalogSessionError.MissingAuthoritativeData &&
+              damagedOpen.DefectSidecarError == DefectSidecarError.InvalidContent,
+            "defect_health_damaged_sidecar_blocks_library_open");
+        File.WriteAllBytes(healthSidecarPath, healthyBytes);
+
+        string restoreBase = Path.Combine(
+            parentRoots.LocalApplicationDataRoot,
+            "defect-pending-restore");
+        StorageRootSet restoreRoots = StorageRootResolver.ResolveForTests(
+            restoreBase).Roots!;
+        Guid selectedFrameId = Guid.Parse("9c7c5995-615b-4356-89de-e9440c36726c");
+        Guid currentFrameId = Guid.Parse("d8f62712-9e03-46f6-b251-f66f0cd9a080");
+        DateTimeOffset now = new(2026, 8, 10, 3, 0, 0, TimeSpan.Zero);
+        string generationId = string.Empty;
+
+        CatalogSessionOpenResult restoreInitial = CatalogSession.Open(restoreRoots);
+        using (CatalogSession? restore = restoreInitial.Session)
+        {
+            Check(restoreInitial.IsSuccess, "defect_restore_initial_open");
+            if (restore is not null)
+            {
+                Check(restore.ReadOrCreate().IsSuccess,
+                    "defect_restore_initial_create");
+                DefectRecipeSnapshot selectedRecipe = DefectRecipeSnapshot.Create(
+                    selectedFrameId,
+                    recipeRevision: 4,
+                    sourceIdentity,
+                    DefectRecipeItems());
+                Check(restore.WriteDefectRecipe(selectedRecipe).IsSuccess &&
+                      restore.Write(Snapshot(
+                          "selected-defect",
+                          DefectCatalogRow(selectedFrameId, "selected"))).IsSuccess,
+                    "defect_restore_selected_generation_written");
+                CatalogBackupCreateResult selectedBackup =
+                    restore.CreateBackupForTesting(now);
+                Check(selectedBackup.IsSuccess && selectedBackup.GenerationPath is not null,
+                    "defect_restore_selected_generation_backed_up");
+                generationId = selectedBackup.GenerationPath is null
+                    ? string.Empty
+                    : Path.GetFileName(selectedBackup.GenerationPath);
+
+                DefectRecipeSnapshot currentRecipe = DefectRecipeSnapshot.Create(
+                    currentFrameId,
+                    recipeRevision: 7,
+                    sourceIdentity,
+                    [DefectRecipeItems()[1]]);
+                Check(restore.WriteDefectRecipe(currentRecipe).IsSuccess &&
+                      restore.Write(Snapshot(
+                          "current-defect",
+                          DefectCatalogRow(currentFrameId, "current"))).IsSuccess,
+                    "defect_restore_current_generation_written");
+                Check(restore.ScheduleRestoreForTesting(
+                        generationId,
+                        now.AddMinutes(1)).IsSuccess,
+                    "defect_restore_schedule_with_sidecars");
+            }
+        }
+
+        CatalogSessionOpenResult restoredOpen = CatalogSession.Open(restoreRoots);
+        using (CatalogSession? restored = restoredOpen.Session)
+        {
+            Check(restoredOpen.IsSuccess &&
+                  restored?.PendingRestoreApplication.Kind ==
+                      CatalogPendingRestoreApplicationKind.Applied,
+                "defect_restore_restart_applies_generation");
+            Check(restored is not null &&
+                  FrameOrder(restored.Read()) == selectedFrameId.ToString("D"),
+                "defect_restore_catalog_and_sidecar_generation_match");
+            Check(restored?.ReadDefectRecipe(selectedFrameId).Snapshot?.RecipeRevision == 4,
+                "defect_restore_selected_recipe_restored");
+            Check(restored?.ReadDefectRecipe(currentFrameId).Error ==
+                  DefectSidecarError.NotFound,
+                "defect_restore_replaces_previous_sidecar_set");
+            Check(Directory.EnumerateDirectories(
+                    restoreRoots.BackupRoot,
+                    "backup-*",
+                    SearchOption.TopDirectoryOnly)
+                .Select(CatalogBackupStore.ValidateGeneration)
+                .Any(value =>
+                    value.Snapshot?.ActiveRollId == "current-defect" &&
+                    value.Manifest?.DefectFrameIds.SequenceEqual(
+                        [currentFrameId.ToString("D")]) == true),
+                "defect_restore_safety_generation_preserves_previous_sidecar");
+        }
+    }
+
+    private static CatalogEntityRow DefectCatalogRow(Guid frameId, string label) =>
+        new(frameId.ToString("D"), new JsonObject
+        {
+            ["label"] = label,
+            ["hasDefectEdits"] = true,
+        });
 
     private static void VerifyStoreLifecycle(StorageRootSet roots)
     {
@@ -737,27 +1136,73 @@ internal static class Program
                 SearchOption.TopDirectoryOnly).Any(),
             "backup_failed_staging_cleaned");
 
+        Guid defectFrameId = Guid.Parse("5de22616-5b54-4739-949e-1c2bfd6cf3ef");
         JsonObject defectPayload = new()
         {
             ["label"] = "defect",
             ["hasDefectEdits"] = true,
         };
-        Check(session.Write(Snapshot(
+        CatalogSnapshot defectCatalog = Snapshot(
                 "backup-defect",
-                new CatalogEntityRow("frame-defect", defectPayload))).IsSuccess,
-            "backup_defect_catalog_write");
+                new CatalogEntityRow(defectFrameId.ToString("D"), defectPayload));
+        Check(session.Write(defectCatalog).Error ==
+              CatalogStoreError.MissingAuthoritativeData,
+            "backup_defect_catalog_write_requires_sidecar_first");
+
+        DefectSourceIdentity sourceIdentity = new(321, new string('b', 64));
+        DefectRecipeSnapshot defectRecipe = DefectRecipeSnapshot.Create(
+            defectFrameId,
+            recipeRevision: 1,
+            sourceIdentity,
+            DefectRecipeItems());
+        Check(session.WriteDefectRecipe(defectRecipe).IsSuccess,
+            "backup_defect_sidecar_write");
+        Check(session.Write(defectCatalog).IsSuccess,
+            "backup_defect_catalog_write_after_sidecar");
+        File.Delete(DefectSidecarStore.PathFor(roots, defectFrameId));
         Check(session.CreateBackupForTesting(now.AddMinutes(2)).Error ==
               CatalogBackupError.DefectSidecarUnavailable,
             "backup_defect_without_sidecar_blocked");
 
+        DefectRecipeSnapshot recoveredRecipe = DefectRecipeSnapshot.Create(
+            defectFrameId,
+            recipeRevision: 2,
+            sourceIdentity,
+            DefectRecipeItems());
+        Check(session.WriteDefectRecipe(recoveredRecipe).IsSuccess,
+            "backup_defect_sidecar_recovered");
+        CatalogBackupCreateResult withDefect =
+            session.CreateBackupForTesting(now.AddMinutes(2));
+        Check(withDefect.IsSuccess && withDefect.Sequence == 2,
+            "backup_defect_generation_created");
+        Check(withDefect.GenerationPath is not null &&
+              File.Exists(Path.Combine(
+                  withDefect.GenerationPath,
+                  "defects",
+                  DefectSidecarStore.FileName(defectFrameId))) &&
+              CatalogBackupStore.ValidateGeneration(withDefect.GenerationPath).IsValid,
+            "backup_defect_sidecar_copied_and_validated");
+        if (withDefect.GenerationPath is not null)
+        {
+            File.AppendAllText(
+                Path.Combine(
+                    withDefect.GenerationPath,
+                    "defects",
+                    DefectSidecarStore.FileName(defectFrameId)),
+                " ");
+            Check(!CatalogBackupStore.ValidateGeneration(
+                    withDefect.GenerationPath).IsValid,
+                "backup_defect_sidecar_hash_damage_rejected");
+        }
+
         Check(session.Write(Snapshot("backup-b", Row("frame-2", "two"))).IsSuccess,
             "backup_second_catalog_write");
         CatalogBackupCreateResult second = session.CreateBackupForTesting(now.AddMinutes(3));
-        Check(second.IsSuccess && second.Sequence == 2, "backup_second_sequence");
+        Check(second.IsSuccess && second.Sequence == 3, "backup_second_sequence");
         Check(session.Write(Snapshot("backup-c", Row("frame-3", "three"))).IsSuccess,
             "backup_third_catalog_write");
         CatalogBackupCreateResult third = session.CreateBackupForTesting(now.AddMinutes(4));
-        Check(third.IsSuccess && third.Sequence == 3, "backup_third_sequence");
+        Check(third.IsSuccess && third.Sequence == 4, "backup_third_sequence");
 
         string future = Path.Combine(roots.BackupRoot, "backup-future-version");
         Directory.CreateDirectory(future);
@@ -792,6 +1237,287 @@ internal static class Program
             File.AppendAllText(Path.Combine(fourth.GenerationPath, "library.json"), " ");
             Check(!CatalogBackupStore.ValidateGeneration(fourth.GenerationPath).IsValid,
                 "backup_hash_damage_is_rejected");
+        }
+    }
+
+    private static void VerifyPendingRestore(StorageRootSet parentRoots)
+    {
+        DateTimeOffset now = new(2026, 8, 9, 14, 0, 0, TimeSpan.Zero);
+
+        string pinningBase = Path.Combine(
+            parentRoots.LocalApplicationDataRoot,
+            "pending-restore-pinning");
+        StorageRootSet pinningRoots = StorageRootResolver.ResolveForTests(
+            pinningBase).Roots!;
+        CatalogSessionOpenResult pinningOpen = CatalogSession.Open(pinningRoots);
+        using (CatalogSession? pinning = pinningOpen.Session)
+        {
+            Check(pinningOpen.IsSuccess, "pending_pinning_session_open");
+            if (pinning is not null)
+            {
+                Check(pinning.ReadOrCreate().IsSuccess,
+                    "pending_pinning_initial_create");
+                Check(pinning.Write(Snapshot(
+                        "restore-selected",
+                        Row("frame-selected", "selected"))).IsSuccess,
+                    "pending_pinning_selected_write");
+                CatalogBackupCreateResult selected =
+                    pinning.CreateBackupForTesting(now);
+                Check(selected.IsSuccess && selected.GenerationPath is not null,
+                    "pending_pinning_source_created");
+                Check(pinning.Write(Snapshot(
+                        "restore-live",
+                        Row("frame-live", "live"))).IsSuccess,
+                    "pending_pinning_live_write");
+
+                string generationId = selected.GenerationPath is null
+                    ? string.Empty
+                    : Path.GetFileName(selected.GenerationPath);
+                CatalogPendingRestoreScheduleResult scheduled =
+                    pinning.ScheduleRestoreForTesting(
+                        generationId,
+                        now.AddMinutes(1));
+                Check(scheduled.IsSuccess,
+                    "pending_pinning_schedule_success");
+                Check(FrameLabels(pinning.Read()) == "live",
+                    "pending_pinning_does_not_replace_live_session");
+
+                if (selected.GenerationPath is not null &&
+                    Directory.Exists(selected.GenerationPath))
+                {
+                    Directory.Delete(selected.GenerationPath, recursive: true);
+                }
+                bool markerRead = CatalogPendingRestoreFiles.TryReadMarker(
+                    pinningRoots,
+                    out CatalogPendingRestoreMarker pinnedMarker);
+                Check(markerRead, "pending_pinning_marker_readback");
+                string pinnedPath = markerRead
+                    ? Path.Combine(
+                        pinningRoots.PendingRestoreRoot,
+                        pinnedMarker.DirectoryName)
+                    : string.Empty;
+                Check(markerRead &&
+                      CatalogBackupStore.ValidateGeneration(pinnedPath).IsValid,
+                    "pending_pinning_survives_source_removal");
+
+                Check(pinning.CancelScheduledRestore().IsSuccess,
+                    "pending_pinning_cancel_success");
+                Check(!File.Exists(CatalogPendingRestoreFiles.MarkerPath(
+                        pinningRoots)),
+                    "pending_pinning_cancel_removes_marker");
+                Check(string.IsNullOrEmpty(pinnedPath) || !Directory.Exists(pinnedPath),
+                    "pending_pinning_cancel_removes_copy");
+            }
+        }
+
+        string applyBase = Path.Combine(
+            parentRoots.LocalApplicationDataRoot,
+            "pending-restore-apply");
+        StorageRootSet applyRoots = StorageRootResolver.ResolveForTests(applyBase).Roots!;
+        CatalogSessionOpenResult applyInitialOpen = CatalogSession.Open(applyRoots);
+        using (CatalogSession? initial = applyInitialOpen.Session)
+        {
+            Check(applyInitialOpen.IsSuccess, "pending_apply_initial_session_open");
+            if (initial is not null)
+            {
+                Check(initial.ReadOrCreate().IsSuccess,
+                    "pending_apply_initial_create");
+                Check(initial.Write(Snapshot(
+                        "restore-selected",
+                        Row("frame-selected", "selected"))).IsSuccess,
+                    "pending_apply_selected_write");
+                CatalogBackupCreateResult selected =
+                    initial.CreateBackupForTesting(now);
+                Check(initial.Write(Snapshot(
+                        "restore-current",
+                        Row("frame-current", "current"))).IsSuccess,
+                    "pending_apply_current_write");
+                string generationId = selected.GenerationPath is null
+                    ? string.Empty
+                    : Path.GetFileName(selected.GenerationPath);
+                Check(initial.ScheduleRestoreForTesting(
+                        generationId,
+                        now.AddMinutes(1)).IsSuccess,
+                    "pending_apply_schedule_success");
+                Check(FrameLabels(initial.Read()) == "current",
+                    "pending_apply_current_visible_until_restart");
+            }
+        }
+
+        CatalogSessionOpenResult appliedOpen = CatalogSession.Open(applyRoots);
+        using (CatalogSession? applied = appliedOpen.Session)
+        {
+            Check(appliedOpen.IsSuccess, "pending_apply_restart_open");
+            if (applied is not null)
+            {
+                Check(applied.PendingRestoreApplication.Kind ==
+                      CatalogPendingRestoreApplicationKind.Applied &&
+                      applied.PendingRestoreApplication.DidApplyRestore,
+                    "pending_apply_reports_application");
+                Check(FrameLabels(applied.Read()) == "selected",
+                    "pending_apply_selected_generation_visible");
+                Check(!File.Exists(CatalogPendingRestoreFiles.MarkerPath(applyRoots)),
+                    "pending_apply_marker_cleaned");
+                Check(!Directory.Exists(applyRoots.PendingRestoreRoot) ||
+                      !Directory.EnumerateDirectories(
+                          applyRoots.PendingRestoreRoot,
+                          "restore-*",
+                          SearchOption.TopDirectoryOnly).Any(),
+                    "pending_apply_copy_cleaned");
+                Check(Directory.EnumerateDirectories(
+                        applyRoots.BackupRoot,
+                        "backup-*",
+                        SearchOption.TopDirectoryOnly)
+                    .Select(CatalogBackupStore.ValidateGeneration)
+                    .Any(validation =>
+                        validation.Snapshot?.ActiveRollId == "restore-current"),
+                    "pending_apply_preserves_current_as_safety_generation");
+            }
+        }
+
+        string futureBase = Path.Combine(
+            parentRoots.LocalApplicationDataRoot,
+            "pending-restore-future");
+        StorageRootSet futureRoots = StorageRootResolver.ResolveForTests(futureBase).Roots!;
+        CatalogSessionOpenResult futureInitialOpen = CatalogSession.Open(futureRoots);
+        using (CatalogSession? initial = futureInitialOpen.Session)
+        {
+            Check(futureInitialOpen.IsSuccess, "pending_future_initial_open");
+            if (initial is not null)
+            {
+                Check(initial.ReadOrCreate().IsSuccess,
+                    "pending_future_initial_create");
+                Check(initial.Write(Snapshot(
+                        "future-selected",
+                        Row("frame-selected", "selected"))).IsSuccess,
+                    "pending_future_selected_write");
+                CatalogBackupCreateResult selected =
+                    initial.CreateBackupForTesting(now);
+                Check(initial.Write(Snapshot(
+                        "future-current",
+                        Row("frame-current", "current"))).IsSuccess,
+                    "pending_future_current_write");
+                string generationId = selected.GenerationPath is null
+                    ? string.Empty
+                    : Path.GetFileName(selected.GenerationPath);
+                Check(initial.ScheduleRestoreForTesting(
+                        generationId,
+                        now.AddMinutes(1)).IsSuccess,
+                    "pending_future_schedule_success");
+            }
+        }
+        SetStorageVersion(futureRoots.CatalogPath, 99);
+        byte[] futureBytes = File.ReadAllBytes(futureRoots.CatalogPath);
+        CatalogSessionOpenResult blockedFuture = CatalogSession.Open(futureRoots);
+        blockedFuture.Session?.Dispose();
+        Check(blockedFuture.Error == CatalogSessionError.PendingRestoreFailed &&
+              blockedFuture.PendingRestoreError ==
+                  CatalogPendingRestoreError.UnsupportedCurrentCatalog &&
+              blockedFuture.ObservedVersion == 99,
+            "pending_future_blocks_downgrade");
+        Check(File.ReadAllBytes(futureRoots.CatalogPath).SequenceEqual(futureBytes),
+            "pending_future_preserves_primary_bytes");
+        bool futureMarkerRead = CatalogPendingRestoreFiles.TryReadMarker(
+            futureRoots,
+            out CatalogPendingRestoreMarker futureMarker);
+        Check(futureMarkerRead &&
+              Directory.Exists(Path.Combine(
+                  futureRoots.PendingRestoreRoot,
+                  futureMarker.DirectoryName)),
+            "pending_future_preserves_marker_and_copy");
+
+        string cleanupBase = Path.Combine(
+            parentRoots.LocalApplicationDataRoot,
+            "pending-restore-cleanup");
+        StorageRootSet cleanupRoots = StorageRootResolver.ResolveForTests(
+            cleanupBase).Roots!;
+        CatalogSessionOpenResult cleanupInitialOpen = CatalogSession.Open(cleanupRoots);
+        using (CatalogSession? initial = cleanupInitialOpen.Session)
+        {
+            Check(cleanupInitialOpen.IsSuccess, "pending_cleanup_initial_open");
+            if (initial is not null)
+            {
+                Check(initial.ReadOrCreate().IsSuccess,
+                    "pending_cleanup_initial_create");
+                Check(initial.Write(Snapshot(
+                        "cleanup-selected",
+                        Row("frame-selected", "selected"))).IsSuccess,
+                    "pending_cleanup_selected_write");
+                CatalogBackupCreateResult selected =
+                    initial.CreateBackupForTesting(now);
+                Check(initial.Write(Snapshot(
+                        "cleanup-current",
+                        Row("frame-current", "current"))).IsSuccess,
+                    "pending_cleanup_current_write");
+                string generationId = selected.GenerationPath is null
+                    ? string.Empty
+                    : Path.GetFileName(selected.GenerationPath);
+                Check(initial.ScheduleRestoreForTesting(
+                        generationId,
+                        now.AddMinutes(1)).IsSuccess,
+                    "pending_cleanup_schedule_success");
+            }
+        }
+
+        CatalogPendingRestoreCleanup markerFailure = new(
+            RemoveDirectory: path =>
+            {
+                if (!CatalogPendingRestoreFiles.TryDeleteGenerationCopy(
+                        path,
+                        cleanupRoots.PendingRestoreRoot,
+                        "restore-",
+                        requireValidGeneration: true))
+                {
+                    throw new IOException("injected cleanup setup failure");
+                }
+            },
+            RemoveMarker: _ => throw new IOException(
+                "injected marker delete failure"));
+        CatalogSessionOpenResult cleanupPendingOpen = CatalogSession.OpenForTesting(
+            cleanupRoots,
+            markerFailure);
+        int validGenerationCount;
+        using (CatalogSession? cleanupPending = cleanupPendingOpen.Session)
+        {
+            Check(cleanupPendingOpen.IsSuccess,
+                "pending_cleanup_failure_still_opens_session");
+            Check(cleanupPending?.PendingRestoreApplication.Kind ==
+                      CatalogPendingRestoreApplicationKind.CleanupPending &&
+                  cleanupPending.PendingRestoreApplication.DidApplyRestore,
+                "pending_cleanup_failure_reports_applied_cleanup_pending");
+            Check(cleanupPending is not null &&
+                  FrameLabels(cleanupPending.Read()) == "selected",
+                "pending_cleanup_failure_keeps_applied_catalog");
+            Check(CatalogPendingRestoreFiles.TryReadMarker(
+                    cleanupRoots,
+                    out CatalogPendingRestoreMarker appliedMarker) &&
+                  appliedMarker.Phase == CatalogPendingRestorePhase.Applied,
+                "pending_cleanup_failure_persists_applied_fence");
+            validGenerationCount = Directory.EnumerateDirectories(
+                    cleanupRoots.BackupRoot,
+                    "backup-*",
+                    SearchOption.TopDirectoryOnly)
+                .Count(path => CatalogBackupStore.ValidateGeneration(path).IsValid);
+        }
+
+        CatalogSessionOpenResult cleanupRetryOpen = CatalogSession.Open(cleanupRoots);
+        using (CatalogSession? cleanupRetry = cleanupRetryOpen.Session)
+        {
+            Check(cleanupRetryOpen.IsSuccess,
+                "pending_cleanup_retry_session_open");
+            Check(cleanupRetry?.PendingRestoreApplication.Kind ==
+                      CatalogPendingRestoreApplicationKind.CleanupOnly &&
+                  !cleanupRetry.PendingRestoreApplication.DidApplyRestore,
+                "pending_cleanup_retry_is_cleanup_only");
+            Check(!File.Exists(CatalogPendingRestoreFiles.MarkerPath(cleanupRoots)),
+                "pending_cleanup_retry_removes_marker");
+            Check(Directory.EnumerateDirectories(
+                    cleanupRoots.BackupRoot,
+                    "backup-*",
+                    SearchOption.TopDirectoryOnly)
+                .Count(path => CatalogBackupStore.ValidateGeneration(path).IsValid) ==
+                validGenerationCount,
+                "pending_cleanup_retry_does_not_create_safety_generation");
         }
     }
 
@@ -884,6 +1610,12 @@ internal static class Program
             "library_frame_color_mixer_normalizes_mac_shape");
         Check(frame.ColorGrading == ColorGradingRecipe.Identity,
             "library_frame_missing_color_grading_defaults_to_identity");
+        Check(frame.ColorModel == ColorModelRecipe.Identity,
+            "library_frame_missing_color_model_defaults_to_identity");
+        Check(!frame.AutoLevels && !frame.AutoNeutralBalance,
+            "library_frame_missing_scene_correction_defaults_off");
+        Check(frame.DevelopTarget == DevelopTarget.Main,
+            "library_frame_missing_develop_target_defaults_main");
         ColorGradingRecipe colorGrading = new(
             new ColorGradeRegionRecipe(45.0, 0.2, -0.1),
             new ColorGradeRegionRecipe(180.0, 0.4, 0.1),
@@ -897,6 +1629,24 @@ internal static class Program
             writtenColorGrading.IsSuccess &&
                 ReadFrame(writtenColorGrading.FrameRecord!).Frame?.ColorGrading == colorGrading,
             "library_frame_color_grading_write_round_trip");
+        ColorModelRecipe colorModel = new(
+            0.25, -0.2, 0.3, 0.4, -0.1, 0.1, -0.15, 0.2);
+        LibraryFrameWriteResult writtenColorModel = LibraryFrameWriter.Apply(
+            FrameRecord(),
+            new LibraryFrameEdit(
+                frame.Tone,
+                frame.ManualBase,
+                ColorModel: colorModel,
+                AutoLevels: true,
+                AutoNeutralBalance: true,
+                DevelopTarget: DevelopTarget.Rescue));
+        Check(
+            writtenColorModel.IsSuccess &&
+                ReadFrame(writtenColorModel.FrameRecord!).Frame is { } correctedFrame &&
+                correctedFrame.ColorModel == colorModel &&
+                correctedFrame.AutoLevels && correctedFrame.AutoNeutralBalance &&
+                correctedFrame.DevelopTarget == DevelopTarget.Rescue,
+            "library_frame_color_model_scene_correction_and_target_write_round_trip");
         // 없는 톤 키는 macOS 와 같이 0 입니다.
         Check(frame.Tone.Contrast == 0.0, "library_frame_missing_tone_is_zero");
 
@@ -935,6 +1685,62 @@ internal static class Program
 
         VerifyLibraryFrameRefusals();
         VerifyLibraryFrameWriting();
+    }
+
+    private static void VerifyLocalDodgeBurnPersistence()
+    {
+        Guid brushId = Guid.Parse("00000000-0000-0000-0000-000000000101");
+        Guid polygonId = Guid.Parse("00000000-0000-0000-0000-000000000102");
+        LocalDodgeBurnAdjustment[] recipe =
+        [
+            new(
+                brushId,
+                LocalDodgeBurnMode.Dodge,
+                0.45,
+                true,
+                LocalDodgeBurnMask.Brush(
+                [
+                    new LocalDodgeBurnStroke(
+                        [new(-0.1, 0.25), new(0.65, 1.1)],
+                        0.06,
+                        0.03),
+                ])),
+            new(
+                polygonId,
+                LocalDodgeBurnMode.Burn,
+                0.7,
+                false,
+                LocalDodgeBurnMask.Polygon(
+                    [new(0.1, 0.1), new(0.9, 0.2), new(0.5, 0.85)],
+                    0.2)),
+        ];
+
+        LibraryFrameWriteResult written = LibraryFrameWriter.Apply(
+            FrameRecord(),
+            new LibraryFrameEdit(
+                ToneAdjustment.Neutral,
+                null,
+                LocalDodgeBurn: recipe));
+        LibraryFrameReadResult reread = written.FrameRecord is { } record
+            ? ReadFrame(record)
+            : default;
+        Check(
+            written.IsSuccess && reread.IsSuccess && reread.Frame?.LocalDodgeBurn.Count == 2 &&
+            reread.Frame.LocalDodgeBurn[0].Id == brushId &&
+            reread.Frame.LocalDodgeBurn[0].Mask.Strokes[0].Points[0] == new LocalDodgeBurnPoint(-0.1, 0.25) &&
+            reread.Frame.LocalDodgeBurn[1].Id == polygonId &&
+            !reread.Frame.LocalDodgeBurn[1].IsEnabled &&
+            reread.Frame.LocalDodgeBurn[1].Mask.Points.Count == 3,
+            "library_frame_local_dodge_burn_round_trip");
+
+        JsonObject malformed = FrameRecord();
+        malformed["params"]!["localDodgeBurn"] = new JsonArray
+        {
+            new JsonObject { ["mode"] = "dodge", ["amount"] = 0.5 },
+        };
+        Check(
+            ReadFrame(malformed).Error == LibraryFrameError.InvalidLocalDodgeBurn,
+            "library_frame_rejects_local_dodge_burn_without_mask");
     }
 
     private static void VerifyLibraryFrameRefusals()
@@ -1471,6 +2277,37 @@ internal static class Program
         FilmEmulation.ColorPlus200 => "colorPlus200",
         FilmEmulation.FujicolorC200 => "fujicolorC200",
         FilmEmulation.Pro400H => "pro400H",
+        FilmEmulation.TriX400 => "triX400",
+        FilmEmulation.Hp5Plus => "hp5Plus",
+        FilmEmulation.Fp4Plus => "fp4Plus",
+        FilmEmulation.Delta100 => "delta100",
+        FilmEmulation.Delta400 => "delta400",
+        FilmEmulation.Delta3200 => "delta3200",
+        FilmEmulation.TMax100 => "tmax100",
+        FilmEmulation.TMax400 => "tmax400",
+        FilmEmulation.TMaxP3200 => "tmaxP3200",
+        FilmEmulation.Kentmere400 => "kentmere400",
+        FilmEmulation.OrthoPlus => "orthoPlus",
+        FilmEmulation.Sfx200 => "sfx200",
+        FilmEmulation.RolleiIR => "rolleiIR",
+        FilmEmulation.Scala200X => "scala200X",
+        FilmEmulation.RolleiSuperpan => "rolleiSuperpan",
+        FilmEmulation.Velvia100 => "velvia100",
+        FilmEmulation.E100VS => "e100VS",
+        FilmEmulation.Astia100F => "astia100F",
+        FilmEmulation.Kodachrome64 => "kodachrome64",
+        FilmEmulation.Gold200 => "gold200",
+        FilmEmulation.ProImage100 => "proImage100",
+        FilmEmulation.Superia400 => "superia400",
+        FilmEmulation.SuperiaPremium400 => "superiaPremium400",
+        FilmEmulation.Superia200 => "superia200",
+        FilmEmulation.Reala100 => "reala100",
+        FilmEmulation.Industrial100 => "industrial100",
+        FilmEmulation.LomoCn800 => "lomoCn800",
+        FilmEmulation.Vision3_500T => "vision3_500T",
+        FilmEmulation.Vision3_250D => "vision3_250D",
+        FilmEmulation.Vision3_50D => "vision3_50D",
+        FilmEmulation.Vision3_200T => "vision3_200T",
         _ => "invalid",
     };
 

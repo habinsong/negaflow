@@ -63,7 +63,8 @@ Microsoft OS·toolchain 구성 요소이며 별도 제3자 payload로 재배포�
 
 - Microsoft 기본 WIC TIFF decoder는 사용자 TIFF 15개를 native 16-bit로 decode했습니다.
 - LZW 6개는 독립 code-stream 의미 검사를 통과한 뒤 별도 libtiff/zlib 없이 WIC로 decode됐습니다.
-- 구조상 유효한 정상·손상 Deflate 합성 입력은 독립 검증기가 생기기 전까지 모두 WIC 전에 격리합니다.
+- 구조상 유효한 Deflate는 독립 zlib/Deflate 의미 검사와 Adler-32를 통과한 경우에만 WIC에 전달하며,
+  손상 합성 입력은 WIC 전에 거부합니다.
 - WIC format conversion은 0건이었고 ICC bytes 길이와 구조를 확인했습니다.
 - WIC 고수준 color transform은 사용자 ICC v4에 unsupported pixel format을 반환했습니다.
 - Windows ICM `BEST_MODE` 16-bit 경로는 같은 profile을 처리했습니다.

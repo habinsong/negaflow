@@ -1,5 +1,7 @@
 #pragma once
 
+#include "negaflow/imageio/image_file_observation.h"
+
 #include <array>
 #include <cstdint>
 #include <filesystem>
@@ -58,6 +60,9 @@ struct ImageContentHashResult final {
     std::uint64_t file_bytes{0};
     std::uint64_t bytes_hashed{0};
     std::uint32_t native_error_code{0};
+    // Exact filesystem state of the handle after a successful hash. A caller can
+    // bind the digest to a later path-based decode without a TOCTOU gap.
+    ImageFileObservation observation{};
 };
 
 [[nodiscard]] ImageContentHashResult hash_image_content(

@@ -64,9 +64,8 @@ void test_explicit_route_resolution() {
              negaflow::imaging::FilmEmulation::velvia_50,
              0.73},
             route) &&
-            route ==
-                negaflow::imaging::FilmLookRoute::film_scan_emulation,
-        "an active film scan resolves to the bounded film stage");
+            route == negaflow::imaging::FilmLookRoute::identity,
+        "an active film scan bypasses a second emulsion response");
     expect(
         negaflow::imaging::try_resolve_film_look_route(
             {negaflow::imaging::DevelopSourceKind::rendered_digital,
@@ -75,6 +74,17 @@ void test_explicit_route_resolution() {
             route) &&
             route == negaflow::imaging::FilmLookRoute::digital_film_look,
         "an active digital source resolves to its distinct complete graph");
+    expect(
+        negaflow::imaging::try_resolve_film_look_route(
+            {negaflow::imaging::DevelopSourceKind::rendered_digital,
+             negaflow::imaging::FilmEmulation::velvia_50,
+             0.73,
+             0.0,
+             0.0,
+             true},
+            route) &&
+            route == negaflow::imaging::FilmLookRoute::identity,
+        "a color stock is not applied to a monochrome digital process");
     expect(
         negaflow::imaging::try_resolve_film_look_route(
             {negaflow::imaging::DevelopSourceKind::film_scan,
@@ -101,96 +111,24 @@ void test_explicit_route_resolution() {
 }
 
 void test_film_scan_order_and_workspace_reuse() {
-    auto cube = allocate_cube();
-    expect(cube != nullptr, "the caller-owned route cube allocates");
-    if (cube == nullptr) {
-        return;
-    }
-    std::vector<negaflow::imaging::FilmEmulationAcutanceScratchPixel> scratch(
-        negaflow::imaging::film_emulation_acutance_scratch_pixel_count(4U));
     const negaflow::imaging::WorkingFilmLookParameters parameters{
         negaflow::imaging::DevelopSourceKind::film_scan,
         negaflow::imaging::FilmEmulation::velvia_50,
         0.73,
     };
-
-    auto manual = make_working_image();
-    expect(
-        negaflow::imaging::build_film_emulation_color_cube(
-            {parameters.emulation, parameters.intensity},
-            *cube) == negaflow::core::KernelStatus::ok &&
-            negaflow::imaging::apply_film_emulation_color_cube(
-                {manual.pixels.data(), manual.pixels.size(), 4U, 3U, 4U},
-                {manual.pixels.data(), manual.pixels.size(), 4U, 3U, 4U},
-                {parameters.emulation, parameters.intensity},
-                cube.get()) == negaflow::core::KernelStatus::ok &&
-            negaflow::imaging::apply_film_emulation_acutance(
-                {manual.pixels.data(), manual.pixels.size(), 4U, 3U, 4U},
-                {manual.pixels.data(), manual.pixels.size(), 4U, 3U, 4U},
-                {parameters.emulation, parameters.intensity},
-                {scratch.data(), scratch.size()}) ==
-                negaflow::core::KernelStatus::ok,
-        "the manual color then acutance sequence succeeds");
-
-    cube->ready = false;
+    const auto source = make_working_image();
     auto routed = negaflow::imaging::apply_working_film_look(
-        make_working_image(),
-        parameters,
-        {cube.get(), {scratch.data(), scratch.size()}});
+        source,
+        parameters);
     expect(
         routed.status == negaflow::imaging::WorkingFilmLookStatus::ok &&
-            routed.info.route ==
-                negaflow::imaging::FilmLookRoute::film_scan_emulation &&
-            routed.info.color_cube_built &&
-            !routed.info.color_cube_reused && routed.info.color_applied &&
-            routed.info.acutance_applied &&
-            routed.info.color_intensity_step == 15U &&
-            std::abs(routed.info.acutance_amount - 0.1606) < 1.0e-12 &&
-            routed.info.required_acutance_scratch_pixels == 44U,
-        "the film route reports its exact ordered work and bounded workspace");
-    expect(
-        std::ranges::equal(routed.image.pixels, manual.pixels, same_pixel),
-        "the routed result is bit-exact with manual color then acutance");
-
-    auto reused = negaflow::imaging::apply_working_film_look(
-        make_working_image(),
-        parameters,
-        {cube.get(), {scratch.data(), scratch.size()}});
-    expect(
-        reused.status == negaflow::imaging::WorkingFilmLookStatus::ok &&
-            !reused.info.color_cube_built && reused.info.color_cube_reused &&
-            std::ranges::equal(reused.image.pixels, manual.pixels, same_pixel),
-        "a matching caller cube is reused without changing pixels");
+            routed.info.route == negaflow::imaging::FilmLookRoute::identity &&
+            !routed.info.color_applied && !routed.info.acutance_applied &&
+            std::ranges::equal(routed.image.pixels, source.pixels, same_pixel),
+        "a film scan preserves pixels and needs no film-look workspace");
 }
 
-void test_spatial_only_low_strength_and_identity() {
-    std::vector<negaflow::imaging::FilmEmulationAcutanceScratchPixel> scratch(
-        negaflow::imaging::film_emulation_acutance_scratch_pixel_count(4U));
-    const negaflow::imaging::WorkingFilmLookParameters low{
-        negaflow::imaging::DevelopSourceKind::film_scan,
-        negaflow::imaging::FilmEmulation::velvia_50,
-        0.024,
-    };
-    auto manual = make_working_image();
-    expect(
-        negaflow::imaging::apply_film_emulation_acutance(
-            {manual.pixels.data(), manual.pixels.size(), 4U, 3U, 4U},
-            {manual.pixels.data(), manual.pixels.size(), 4U, 3U, 4U},
-            {low.emulation, low.intensity},
-            {scratch.data(), scratch.size()}) ==
-            negaflow::core::KernelStatus::ok,
-        "the low-strength manual acutance applies");
-    const auto routed = negaflow::imaging::apply_working_film_look(
-        make_working_image(),
-        low,
-        {nullptr, {scratch.data(), scratch.size()}});
-    expect(
-        routed.status == negaflow::imaging::WorkingFilmLookStatus::ok &&
-            !routed.info.color_applied && routed.info.acutance_applied &&
-            routed.info.color_intensity_step == 0U &&
-            std::ranges::equal(routed.image.pixels, manual.pixels, same_pixel),
-        "unquantized spatial strength remains active below the first color step");
-
+void test_identity() {
     const auto source = make_working_image();
     const auto identity = negaflow::imaging::apply_working_film_look(
         source,
@@ -219,70 +157,31 @@ void test_fail_closed_routes_and_workspace_errors() {
             invalid_parameters.image.pixels.empty(),
         "invalid route parameters fail closed without published pixels");
 
+    auto digital_cube = allocate_cube();
+    expect(digital_cube != nullptr, "the digital-route cube allocates");
+    if (digital_cube == nullptr) {
+        return;
+    }
+    std::vector<negaflow::imaging::FilmEmulationAcutanceScratchPixel>
+        digital_scratch(
+            negaflow::imaging::film_emulation_acutance_scratch_pixel_count(4U));
     const auto digital = negaflow::imaging::apply_working_film_look(
         make_working_image(),
         {negaflow::imaging::DevelopSourceKind::rendered_digital,
-         negaflow::imaging::FilmEmulation::velvia_50,
-         0.73});
+         negaflow::imaging::FilmEmulation::vision3_500t,
+         0.73},
+        {digital_cube.get(),
+         {digital_scratch.data(), digital_scratch.size()}});
     expect(
-        digital.status ==
-                negaflow::imaging::WorkingFilmLookStatus::unsupported_route &&
+        digital.status == negaflow::imaging::WorkingFilmLookStatus::ok &&
             digital.info.route ==
                 negaflow::imaging::FilmLookRoute::digital_film_look &&
-            digital.info.kernel_status ==
-                negaflow::core::KernelStatus::ok &&
-            digital.image.pixels.empty(),
-        "an incomplete digital graph is a visible failure with no pixels");
-
-    const negaflow::imaging::WorkingFilmLookParameters film{
-        negaflow::imaging::DevelopSourceKind::film_scan,
-        negaflow::imaging::FilmEmulation::velvia_50,
-        0.73,
-    };
-    const auto missing_cube = negaflow::imaging::apply_working_film_look(
-        make_working_image(),
-        film);
-    expect(
-        missing_cube.status ==
-                negaflow::imaging::WorkingFilmLookStatus::kernel_failed &&
-            missing_cube.info.kernel_status ==
-                negaflow::core::KernelStatus::invalid_argument &&
-            missing_cube.image.pixels.empty(),
-        "an active color route fails closed without a caller cube");
-
-    auto invalid_layout_source = make_working_image();
-    invalid_layout_source.width = 0U;
-    const auto invalid_layout =
-        negaflow::imaging::apply_working_film_look(
-            std::move(invalid_layout_source),
-            film);
-    expect(
-        invalid_layout.status ==
-                negaflow::imaging::WorkingFilmLookStatus::kernel_failed &&
-            invalid_layout.info.kernel_status ==
-                negaflow::core::KernelStatus::invalid_dimensions &&
-            invalid_layout.image.pixels.empty(),
-        "an invalid image layout is reported before missing workspace");
-
-    auto cube = allocate_cube();
-    expect(cube != nullptr, "the failure-test cube allocates");
-    if (cube == nullptr) {
-        return;
-    }
-    std::vector<negaflow::imaging::FilmEmulationAcutanceScratchPixel> small(43U);
-    const auto small_scratch = negaflow::imaging::apply_working_film_look(
-        make_working_image(),
-        film,
-        {cube.get(), {small.data(), small.size()}});
-    expect(
-        small_scratch.status ==
-                negaflow::imaging::WorkingFilmLookStatus::kernel_failed &&
-            !small_scratch.info.color_cube_built &&
-            !small_scratch.info.color_applied &&
-            small_scratch.info.kernel_status ==
-                negaflow::core::KernelStatus::buffer_too_small &&
-            small_scratch.image.pixels.empty(),
-        "a small spatial workspace fails before building or applying color");
+            digital.info.color_applied && digital.info.acutance_applied &&
+            !digital.info.digital_halation_applied &&
+            digital.info.digital_color_preset_applied &&
+            digital.info.digital_grain_applied &&
+            !digital.image.pixels.empty(),
+        "the complete digital graph runs in fixed order on a tiny frame");
 
     auto invalid_source = make_working_image();
     invalid_source.pixels[0].red = std::numeric_limits<float>::infinity();
@@ -305,7 +204,7 @@ void test_fail_closed_routes_and_workspace_errors() {
 int main() {
     test_explicit_route_resolution();
     test_film_scan_order_and_workspace_reuse();
-    test_spatial_only_low_strength_and_identity();
+    test_identity();
     test_fail_closed_routes_and_workspace_errors();
 
     std::cout << "{\"status\":\"" << (failures == 0 ? "ok" : "error")

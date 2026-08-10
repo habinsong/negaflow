@@ -1,5 +1,8 @@
 #include "negaflow/core/pixel.h"
 
+#include "negaflow/core/parallel_rows.h"
+
+#include <atomic>
 #include <cmath>
 #include <limits>
 
@@ -62,21 +65,40 @@ KernelStatus validate_finite_pixels(const ConstImageView view) noexcept {
         return layout_status;
     }
 
-    for (std::uint32_t row = 0U; row < view.height; ++row) {
-        const Rgba32F* const row_pixels =
-            view.pixels + (static_cast<std::size_t>(row) * view.stride_pixels);
-        for (std::uint32_t column = 0U; column < view.width; ++column) {
-            const Rgba32F pixel = row_pixels[column];
-            if (!std::isfinite(pixel.red) || !std::isfinite(pixel.green) ||
-                !std::isfinite(pixel.blue) || !std::isfinite(pixel.alpha)) {
-                return KernelStatus::non_finite_input;
+    // Row blocks are scanned concurrently, so the reported status is chosen by smallest
+    // failing row rather than by which thread noticed first. That keeps the answer the
+    // same as the single-threaded scan, which returns the first failure in raster order.
+    std::atomic<std::uint64_t> first_failure{no_row_failure};
+    const std::uint64_t work_units =
+        static_cast<std::uint64_t>(view.width) * static_cast<std::uint64_t>(view.height);
+    for_each_row_block(
+        view.height,
+        work_units,
+        [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+            for (std::uint32_t row = first_row; row < first_row + row_count; ++row) {
+                const Rgba32F* const row_pixels =
+                    view.pixels + (static_cast<std::size_t>(row) * view.stride_pixels);
+                for (std::uint32_t column = 0U; column < view.width; ++column) {
+                    const Rgba32F pixel = row_pixels[column];
+                    if (!std::isfinite(pixel.red) || !std::isfinite(pixel.green) ||
+                        !std::isfinite(pixel.blue) || !std::isfinite(pixel.alpha)) {
+                        record_row_failure(
+                            first_failure, row, KernelStatus::non_finite_input);
+                        return;
+                    }
+                    if (pixel.alpha < 0.0F || pixel.alpha > 1.0F) {
+                        record_row_failure(
+                            first_failure, row, KernelStatus::alpha_out_of_range);
+                        return;
+                    }
+                }
             }
-            if (pixel.alpha < 0.0F || pixel.alpha > 1.0F) {
-                return KernelStatus::alpha_out_of_range;
-            }
-        }
-    }
-    return KernelStatus::ok;
+        });
+
+    const std::uint64_t packed = first_failure.load(std::memory_order_relaxed);
+    return has_row_failure(packed)
+               ? static_cast<KernelStatus>(row_failure_status_value(packed))
+               : KernelStatus::ok;
 }
 
 KernelStatus validate_compatible_views(

@@ -28,7 +28,10 @@ enum class TiffProbeStatus : std::uint8_t {
     compressed_data_limit_exceeded,
     invalid_compressed_data,
     working_memory_limit_exceeded,
+    // No single full-resolution image: either every directory is marked as a
+    // reduced-resolution or mask page, or several claim to be the full image.
     multiple_directories_unsupported,
+    directory_limit_exceeded,
     cancelled,
 };
 
@@ -50,15 +53,20 @@ enum class TiffOrganization : std::uint8_t {
 struct TiffProbeLimits final {
     std::uint64_t max_file_bytes{0x7fff'ffff'ffff'ffffULL};
     std::uint64_t max_ifd_entries{4'096ULL};
+    // A scan carries the full image plus at most a handful of preview or mask pages.
+    // The bound also stops a directory chain that loops back on itself.
+    std::uint64_t max_directories{16ULL};
     std::uint64_t max_segments{1'048'576ULL};
     std::uint64_t max_single_tag_bytes{64ULL * 1024ULL * 1024ULL};
     std::uint64_t max_icc_profile_bytes{16ULL * 1024ULL * 1024ULL};
     std::uint64_t max_lzw_compressed_bytes{512ULL * 1024ULL * 1024ULL};
+    std::uint64_t max_deflate_compressed_bytes{512ULL * 1024ULL * 1024ULL};
     std::uint64_t max_working_rgba32f_bytes{32ULL * 1024ULL * 1024ULL * 1024ULL};
 };
 
 struct TiffProbeControl final {
     bool validate_lzw_code_streams{false};
+    bool validate_deflate_streams{false};
     std::stop_token stop_token{};
 };
 
@@ -68,6 +76,13 @@ struct TiffProbeInfo final {
     TiffOrganization organization{TiffOrganization::stripped};
     std::uint64_t file_bytes{0};
     std::uint64_t first_ifd_offset{0};
+    // Photoshop and most scanner software write the full image first and append a
+    // reduced-resolution preview page. Everything below the directory fields describes
+    // the primary image only; the preview pages are located, classified and then left
+    // alone. `primary_directory_index` is also the WIC frame index for that image.
+    std::uint64_t directory_count{1};
+    std::uint64_t primary_directory_index{0};
+    std::uint64_t primary_ifd_offset{0};
     std::uint64_t ifd_entry_count{0};
     std::uint64_t width{0};
     std::uint64_t height{0};
@@ -76,6 +91,7 @@ struct TiffProbeInfo final {
     std::uint64_t compressed_bytes_validated{0};
     std::uint64_t lzw_code_count{0};
     std::uint64_t lzw_decoded_bytes_validated{0};
+    std::uint64_t deflate_decoded_bytes_validated{0};
     std::uint64_t icc_profile_bytes{0};
     std::uint64_t packed_raster_bytes{0};
     std::uint64_t working_rgba32f_bytes{0};
@@ -91,6 +107,7 @@ struct TiffProbeInfo final {
     std::uint8_t sample_format_count{1};
     std::uint8_t extra_samples_count{0};
     bool lzw_code_streams_validated{false};
+    bool deflate_streams_validated{false};
 };
 
 struct TiffProbeResult final {
