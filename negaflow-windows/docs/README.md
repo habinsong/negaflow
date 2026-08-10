@@ -79,6 +79,7 @@
 - [2026-08-10 GrainMend FILM-R v2 품질·성능 검증](verification/2026-08-10-grain-mend-film-r-v2.md)
 - [2026-08-10 실제 촬영 컬러 네거티브 체크포인트](verification/2026-08-10-real-negative-checkpoint.md)
 - [2026-08-10 실제 촬영 네거티브 15장 batch 체크포인트](verification/2026-08-10-real-negative-batch.md)
+- [2026-08-10 macOS 커널 수식 대조](verification/2026-08-10-macos-kernel-audit.md)
 - [SQLite catalog store 공식 근거와 권리 조사](research/sqlite-catalog-store-sources.md)
 - [이미지 I/O 조사와 권리 검토](research/image-io-sources.md)
 - [압축 TIFF 사전 검사 공식 근거와 권리 검토](research/compressed-tiff-preflight-sources.md)

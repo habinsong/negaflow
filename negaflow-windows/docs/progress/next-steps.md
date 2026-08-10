@@ -70,6 +70,12 @@ byte-exact임을 고정했습니다. 대형 실제 촬영 TIFF batch의 process 
 되살아난 것 중 3건이 낡은 기대를 갖고 있어 함께 고쳤습니다. **앞으로 "실촬영으로 검증했다"고
 쓰기 전에 그 테스트가 실제로 fixture 인자를 받았는지 확인하십시오.**
 
+**2d. 커널 수식 대조는 macOS 호스트 없이도 할 수 있습니다.** Core Image 가 실행하는 Metal
+커널 소스가 `negaflow-mac/.../ChromabaseMetalKernels.swift` 에 상수까지 들어 있습니다. 9개 단계를
+대조해 전부 일치를 확인했고 차이는 표시 경계 하나였습니다 —
+`../verification/2026-08-10-macos-kernel-audit.md`. **남은 수치 위험은 Apple 내장 필터
+(`CIVibrance`·`CIUnsharpMask`·`CIGaussianBlur`)와 부동소수점 마지막 자리**로 좁혀졌습니다.
+
 **2c. macOS 소스 대조는 실제로 차이를 찾아냅니다.** Texture 는 순서·상수가 전부 일치했지만,
 같은 방식으로 표시 경로를 대조하다 **미리보기에 soft clip 과 dither 가 통째로 빠져 있는 것**을
 찾았습니다. 게시 경로는 오히려 맞았습니다(16비트는 macOS 도 dither 를 걸지 않음). 앞으로도

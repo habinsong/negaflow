@@ -2,6 +2,22 @@
 
 기준일: 2026-08-10
 
+## 2026-08-10 macOS 커널 수식 대조
+
+macOS pixel golden 은 macOS 호스트가 필요하지만, **Core Image 가 실행하는 Metal 커널 소스가
+저장소 안에 있습니다.** 상수까지 1:1 로 대조했습니다.
+
+Basic Tone, Parametric Tone Curve, Negative Inversion, Color Mixer, Color Grading, Primary
+Calibration, B&W Toning, Texture 전체, Film Grain 이 **수식과 상수 모두 일치**합니다.
+Film Grain 은 잡음원만 다릅니다(macOS `CIRandomGenerator` vs Windows 좌표 해시, 분포 동일).
+
+차이는 하나 나왔고 표시 경계였습니다. 게시 경로는 오히려 Windows 가 맞았습니다 — macOS 도
+8비트 출력에만 dither 를 겁니다. "macOS 에 있으니 옮긴다"로 갔으면 게시 결과를 잘못 바꿨을
+것입니다. 상세는 `verification/2026-08-10-macos-kernel-audit.md`.
+
+이 대조는 **부동소수점 결과의 동일성을 증명하지 않습니다.** 같은 수식이어도 Core Image GPU 와
+Windows CPU 는 마지막 자리에서 다를 수 있고, 그건 여전히 macOS 호스트가 필요합니다.
+
 ## 2026-08-10 표시 경계 — soft clip과 dithering
 
 macOS 소스 대조에서 미리보기 경로의 실제 차이를 찾았습니다. macOS는 8비트로 내리기 전에
@@ -55,6 +71,7 @@ Grading·Primary Calibration·ColorModel·sRGB16 변환·픽셀 검증에 적용
 | x64 CMake configure/build/run | 통과 | Debug/Release clean configure·build·CLI 실행 |
 | x64 native tests | 통과 | 2026-08-10 Debug/Release CTest 57/57 통과. 실촬영 fixture 경로가 한 세그먼트 짧아 11개 테스트가 조용히 합성 전용 분기로 떨어져 있던 것을 고쳐 46 → 57 |
 | 현상 속도 (16 논리 코어) | 측정 완료·비트 동일 | 3278×4944 에서 develop `1,887 → 246 ms`, tone `2,057 → 285 ms`. 5088×3401 미리보기에서 FilmScanDenoise `15,004.7 → 2,949.7 ms`(5.09배), Texture `3,904.7 → 774.2 ms`(5.04배), identity `2,997 → 552 ms`(5.43배). 출력 PNG16 SHA-256 과 denoise/texture 미리보기 fingerprint `3430ad44f47e1afd`/`1128b870586242f7` 가 엔진 전역 인라인 강제 빌드와 동일 |
+| macOS 커널 수식 대조 | 9개 단계 일치 | Basic Tone·Parametric Curve·Negative Inversion·Color Mixer·Color Grading·Primary Calibration·B&W Toning·Texture·Film Grain 이 상수까지 일치. Film Grain 은 잡음원만 상이. 부동소수점 결과 동일성은 별개이며 여전히 macOS 호스트 필요 |
 | 표시 경계 | 미리보기 정렬 | macOS `toneSafeUnitRGB` 와 같은 hue-safe soft clip 과 ±0.5/255 dither 를 8비트 미리보기 직전에 적용. 게시 경로는 불변(16비트는 macOS 도 dither 없음)이며 실촬영 export SHA-256 동일. 전체 해상도 16비트 중간 이미지 제거. 흑백 중립성 회귀는 표시 dither 를 반영해 채널 최대 차이 1 코드 허용 |
 | 취소·진행률 | ABI v22/0.28 통과·셸 연결 | caller 소유 run state 정수 3개, 단계 경계·디코드 행 덩어리·source 해시·GrainMend 내부(morphology 9패스·scratch 각도 묶음·타일)에서 협조적 취소, 게시 시작 뒤에는 의도적 미확인. 실촬영 5088×3401 에서 `decode` 취소가 `60.9 ms` 반환(미취소 export `3,323 ms`), GrainMend 켠 미리보기가 `2,014.7 → 835.0 ms`. 셸 `PreviewCoordinator` 가 겹친 요청에서 진행 중 렌더를 취소하고 취소 결과는 배달하지 않음 |
 | ARM64 cross build | 통과 | Debug/Release 전체 target build, CLI/DLL PE `AA64` |

@@ -2,6 +2,7 @@
 
 #include "negaflow/color/srgb_transfer.h"
 #include "negaflow/core/pointwise.h"
+#include "negaflow/imaging/display_gamut_map.h"
 
 #include <algorithm>
 #include <array>
@@ -33,34 +34,6 @@ constexpr std::array<float, 3> luma_coefficients{0.2126F, 0.7152F, 0.0722F};
            (pixel.blue * luma_coefficients[2]);
 }
 
-[[nodiscard]] negaflow::core::Rgba32F tone_safe_unit_rgb(
-    const negaflow::core::Rgba32F source) noexcept {
-    const float luminance = clamp_unit(luma(source));
-    const std::array<float, 3> chroma{
-        source.red - luminance,
-        source.green - luminance,
-        source.blue - luminance,
-    };
-    std::array<float, 3> scale_limits{};
-    for (std::size_t channel = 0U; channel < chroma.size(); ++channel) {
-        if (chroma[channel] > 1.0e-5F) {
-            scale_limits[channel] = (1.0F - luminance) / chroma[channel];
-        } else if (chroma[channel] < -1.0e-5F) {
-            scale_limits[channel] = -luminance / chroma[channel];
-        } else {
-            scale_limits[channel] = 1.0F;
-        }
-    }
-    const float chroma_scale = clamp_unit(std::min(
-        1.0F,
-        std::min(scale_limits[0], std::min(scale_limits[1], scale_limits[2]))));
-    return {
-        clamp_unit(luminance + (chroma_scale * chroma[0])),
-        clamp_unit(luminance + (chroma_scale * chroma[1])),
-        clamp_unit(luminance + (chroma_scale * chroma[2])),
-        source.alpha,
-    };
-}
 
 using negaflow::core::apply_pointwise;
 
@@ -113,7 +86,8 @@ negaflow::core::KernelStatus apply_basic_tone(
 
     return apply_pointwise(input, output, [&parameters](
         const negaflow::core::Rgba32F source) noexcept {
-        const negaflow::core::Rgba32F safe = tone_safe_unit_rgb(source);
+        const negaflow::core::Rgba32F safe =
+            negaflow::imaging::tone_safe_unit_rgb(source);
         const float source_luma = luma(safe);
         const float encoded_luma = negaflow::color::linear_to_srgb_encoded(
             clamp_unit(source_luma));
@@ -177,7 +151,8 @@ negaflow::core::KernelStatus apply_parametric_tone_curve(
 
     return apply_pointwise(input, output, [&parameters, &bands](
         const negaflow::core::Rgba32F source) noexcept {
-        const negaflow::core::Rgba32F safe = tone_safe_unit_rgb(source);
+        const negaflow::core::Rgba32F safe =
+            negaflow::imaging::tone_safe_unit_rgb(source);
         const float source_luma = luma(safe);
         const float shadow_mask =
             (1.0F - smoothstep(bands.shadow_low, bands.shadow_high, source_luma)) *
