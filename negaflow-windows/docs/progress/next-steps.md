@@ -70,6 +70,11 @@ byte-exact임을 고정했습니다. 대형 실제 촬영 TIFF batch의 process 
 되살아난 것 중 3건이 낡은 기대를 갖고 있어 함께 고쳤습니다. **앞으로 "실촬영으로 검증했다"고
 쓰기 전에 그 테스트가 실제로 fixture 인자를 받았는지 확인하십시오.**
 
+**2e. 도달 가능성 확인이 진짜 기능 공백을 찾습니다.** macOS 소스에 있는 것 중 실제로
+불리는 것만 골라 보니 `AutoAdjust`(자동 보정)가 Windows 에 통째로 없었습니다. 네이티브 계산은
+구현했고(`../implementation/auto-adjust.md`) **ABI·셸 연결과 제대로 된 실촬영 검증이 다음
+작업**입니다. `SoftProof` 도 같은 방식으로 찾은 미구현 기능입니다.
+
 **2d. 커널 수식 대조는 macOS 호스트 없이도 할 수 있습니다.** Core Image 가 실행하는 Metal
 커널 소스가 `negaflow-mac/.../ChromabaseMetalKernels.swift` 에 상수까지 들어 있습니다. 9개 단계를
 대조해 전부 일치를 확인했고 차이는 표시 경계 하나였습니다 —

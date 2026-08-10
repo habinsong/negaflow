@@ -19,6 +19,7 @@
 - [네이티브 기반](implementation/native-foundation.md)
 - [행 블록 병렬 실행](implementation/parallel-row-execution.md)
 - [표시 경계 — hue-safe soft clip과 dithering](implementation/display-boundary.md)
+- [자동 보정 (Auto Tone / Auto WB)](implementation/auto-adjust.md)
 - [취소와 진행률 — ABI v22](implementation/develop-run-state-v22.md)
 - [관리 코드 Interop 기반](implementation/managed-interop-foundation.md)
 - [제한형 TIFF 사전 검사](implementation/tiff-probe.md)

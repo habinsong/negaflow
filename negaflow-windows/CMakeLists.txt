@@ -106,6 +106,7 @@ target_link_libraries(
 )
 
 add_library(negaflow_imaging STATIC
+    src/Native/imaging/auto_adjust.cpp
     src/Native/imaging/auto_negative_base_resolver.cpp
     src/Native/imaging/film_stock_base_resolver.cpp
     src/Native/imaging/color_grading.cpp
@@ -273,7 +274,7 @@ if(BUILD_TESTING)
     )
     target_link_libraries(
         negaflow_develop_export_abi_tests
-        PRIVATE negaflow_native negaflow_project_options
+        PRIVATE negaflow_native negaflow_imaging negaflow_project_options
     )
 
     add_executable(negaflow_scalar_tests
@@ -703,6 +704,15 @@ if(BUILD_TESTING)
         NAME cli.film_look_command_support
         COMMAND negaflow_film_look_command_support_tests
     )
+
+    add_executable(negaflow_auto_adjust_tests
+        tests/Native.UnitTests/auto_adjust_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_auto_adjust_tests
+        PRIVATE negaflow_imaging negaflow_project_options
+    )
+    add_test(NAME native.auto_adjust COMMAND negaflow_auto_adjust_tests)
 
     add_executable(negaflow_display_gamut_map_tests
         tests/Native.UnitTests/display_gamut_map_tests.cpp
