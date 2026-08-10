@@ -1,5 +1,6 @@
 #pragma once
 
+#include "negaflow/color/soft_proof.h"
 #include "negaflow/imageio/image_content_hash.h"
 #include "negaflow/imageio/image_file_observation.h"
 #include "negaflow/pipeline/defect_recipe_stage.h"
@@ -119,6 +120,20 @@ struct DevelopRunControl final {
 
 inline constexpr std::uint32_t develop_progress_complete = 1000U;
 
+// Soft proof is a viewing simulation, so it rides alongside the preview call rather than
+// inside DevelopExportRequest. Keeping it out of the recipe is what guarantees a published
+// artefact can never carry it: there is no field for export to read.
+//
+// `paper` is what negaflow::color::soft_proof_paper already resolved from the destination
+// profile. The ICC is parsed once, when the profile is chosen, instead of once per frame.
+struct DevelopPreviewProof final {
+    bool enabled{false};
+    // macOS applies the paper and ink affine only in the paperAndBlackInk simulation;
+    // the profile-only mode changes which space the frame is shown in, not its pixels.
+    bool simulate_paper_and_black_ink{false};
+    negaflow::color::SoftProofPaper paper{};
+};
+
 // Which stage refused. The caller reports the stage together with the stage's own
 // status name, so a failure never collapses into a single opaque code.
 enum class DevelopExportStage : std::uint8_t {
@@ -212,7 +227,8 @@ struct DevelopExportOutcome final {
     std::uint32_t maximum_height,
     std::uint8_t* pixels,
     std::size_t pixel_capacity_bytes,
-    const DevelopRunControl& control = {}) noexcept;
+    const DevelopRunControl& control = {},
+    const DevelopPreviewProof& proof = {}) noexcept;
 
 [[nodiscard]] const char* develop_export_stage_name(
     DevelopExportStage stage) noexcept;

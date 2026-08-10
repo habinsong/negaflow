@@ -798,6 +798,37 @@ typedef struct nf_auto_adjust_result_v1 {
     double tint;
 } nf_auto_adjust_result_v1;
 
+/* What a destination profile turned out to be, and the paper and ink it describes.
+
+   Reading a profile means walking its tag table, so it happens once when the profile is
+   chosen rather than once per frame: the caller keeps these ten numbers and hands them to
+   every preview. `is_rgb_output_profile` is the same gate the choice itself must pass — a
+   CMYK press profile or a scanner-only profile cannot be rendered into and is refused
+   here, before it can reach the pixel path. */
+typedef struct nf_soft_proof_media_v1 {
+    uint32_t struct_size;
+    uint32_t is_rgb_output_profile;
+    uint32_t has_white;
+    uint32_t has_black;
+    float paper_white_rgb[3];
+    float black_ink_rgb[3];
+} nf_soft_proof_media_v1;
+
+/* Soft proof rides alongside the preview instead of inside the develop request, because
+   it is a viewing simulation and not part of the recipe. Keeping it out of the request is
+   what makes it impossible for a published file to carry it: export has no field to read.
+
+   `simulate_paper_and_black_ink` is the only mode that changes pixel values. Profile-only
+   proofing changes which space the frame is shown in, which is the caller's business. */
+typedef struct nf_soft_proof_v1 {
+    uint32_t struct_size;
+    uint32_t enabled;
+    uint32_t simulate_paper_and_black_ink;
+    uint32_t reserved;
+    float paper_white_rgb[3];
+    float black_ink_rgb[3];
+} nf_soft_proof_v1;
+
 /* The bounds the engine's own validator enforces. Exported so a UI does not have to
    duplicate them and cannot drift into offering values the engine will refuse. */
 typedef struct nf_tone_limits_v1 {
@@ -1075,6 +1106,28 @@ NF_API nf_status_t NF_CALL nf_auto_adjust_v1(
     uint32_t height,
     uint32_t stride_bytes,
     nf_auto_adjust_result_v1* result);
+/* v23 is v22 plus a soft proof the caller may pass as null for an unproofed preview.
+   There is no matching export entry point and there will not be one: soft proof is a
+   viewing simulation, and a published artefact that carried it would be wrong.
+
+   The develop request is still v21 — the recipe did not change, so no copy was minted. */
+NF_API nf_status_t NF_CALL nf_develop_preview_v23(
+    const nf_develop_export_request_v21* request,
+    const nf_soft_proof_v1* soft_proof,
+    uint32_t maximum_width,
+    uint32_t maximum_height,
+    uint8_t* pixels,
+    uint32_t pixel_capacity_bytes,
+    nf_develop_run_state_v1* run_state,
+    nf_develop_export_result_v3* result);
+
+/* Reads `wtpt` and `bkpt` out of an ICC profile and reports whether it can serve as a
+   proof destination at all. The bytes are read during the call and never retained. */
+NF_API nf_status_t NF_CALL nf_read_soft_proof_media_v1(
+    const uint8_t* icc_bytes,
+    uint32_t icc_byte_count,
+    nf_soft_proof_media_v1* result);
+
 NF_API nf_status_t NF_CALL nf_get_negative_limits_v1(nf_negative_limits_v1* output);
 
 #ifdef __cplusplus

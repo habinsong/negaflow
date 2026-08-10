@@ -112,6 +112,9 @@ public sealed class AutoAdjustCoordinator
 
         try
         {
+            // No soft proof. Automatic adjustment measures the develop, not a simulation of
+            // what some printer would make of it; proofing the input would bake the paper's
+            // dimness and cast into the tone and white balance it proposes.
             DevelopExportResult render = await Task.Run(() => exporter.Preview(
                 request,
                 sampleExtent,

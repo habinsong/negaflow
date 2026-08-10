@@ -83,6 +83,7 @@ target_link_libraries(negaflow_core PRIVATE negaflow_project_options)
 
 add_library(negaflow_color STATIC
     src/Native/color/icc_profile.cpp
+    src/Native/color/soft_proof.cpp
     src/Native/color/srgb_transfer.cpp
 )
 target_include_directories(negaflow_color
@@ -200,6 +201,7 @@ target_include_directories(negaflow_pipeline
 target_link_libraries(
     negaflow_pipeline
     PUBLIC
+        negaflow_color
         negaflow_imageio
         negaflow_imaging
         negaflow_output
@@ -274,7 +276,7 @@ if(BUILD_TESTING)
     )
     target_link_libraries(
         negaflow_develop_export_abi_tests
-        PRIVATE negaflow_native negaflow_imaging negaflow_project_options
+        PRIVATE negaflow_native negaflow_color negaflow_imaging negaflow_project_options
     )
 
     add_executable(negaflow_scalar_tests
@@ -328,6 +330,15 @@ if(BUILD_TESTING)
         PRIVATE negaflow_color negaflow_project_options
     )
     add_test(NAME native.icc_profile COMMAND negaflow_icc_profile_tests)
+
+    add_executable(negaflow_soft_proof_tests
+        tests/Native.UnitTests/soft_proof_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_soft_proof_tests
+        PRIVATE negaflow_color negaflow_project_options
+    )
+    add_test(NAME native.soft_proof COMMAND negaflow_soft_proof_tests)
 
     add_executable(negaflow_srgb_transfer_tests
         tests/Native.UnitTests/srgb_transfer_tests.cpp

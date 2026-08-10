@@ -19,8 +19,10 @@ Calibration → source별 Film Look → 검증된 PNG16/TIFF16 게시까지 한 
 Texture → B&W 중립화·토닝 → ImageTransform이 native 공통 preview/export 경로에 연결됐습니다.
 scene correction은 ABI v14, DevelopTarget과 EXPIRED RescueGrade는 v15, ScannerProfileGrade는 v16,
 film polarity는 v17, 현상 전 영역 Defects는 v18, source-bound Defects는 v19, 순서 보존 Clone Stamp는
-v20, 순서 보존 Brush는 v21, 취소·진행률 run state는 v22, 자동 보정은 `nf_auto_adjust_v1`까지
-노출됐고 현재 ABI는 0.29입니다.
+v20, 순서 보존 Brush는 v21, 취소·진행률 run state는 v22, 자동 보정은 `nf_auto_adjust_v1`,
+소프트 프루프는 `nf_develop_preview_v23`과 `nf_read_soft_proof_media_v1`까지 노출됐고 현재 ABI는
+0.30입니다. 소프트 프루프에 **대응하는 내보내기 진입점은 없으며 만들지 않습니다** — 보기용
+시뮬레이션이 인화물에 실릴 경로 자체를 두지 않는 것이 그 계약을 지키는 방법입니다.
 
 rendered digital의 Film Look은 color/motion 27종과 B&W 15종, 전체 42종이 연결됐습니다. color/motion은 halation →
 FilmEmulation → 0.5배 stock color preset → density grain, B&W는 halation → spectral emulsion →
@@ -74,7 +76,19 @@ byte-exact임을 고정했습니다. 대형 실제 촬영 TIFF batch의 process 
 **2e. 도달 가능성 확인이 진짜 기능 공백을 찾습니다.** macOS 소스에 있는 것 중 실제로
 불리는 것만 골라 보니 `AutoAdjust`(자동 보정)가 Windows 에 통째로 없었습니다. 네이티브 계산은
 구현했고 **ABI(0.29)와 셸 조정자까지 연결했습니다**(`../implementation/auto-adjust.md`).
-남은 것은 WinUI 버튼 연결(UI 단계)과, 잘 현상된 중립 프레임에서의 품질 확인입니다. `SoftProof` 도 같은 방식으로 찾은 미구현 기능입니다.
+남은 것은 WinUI 버튼 연결(UI 단계)과, 잘 현상된 중립 프레임에서의 품질 확인입니다.
+
+**2f. 같은 방식으로 찾은 `SoftProof` 는 용지·잉크 시뮬레이션까지 구현했습니다**
+(`../implementation/soft-proof.md`). 여기서 배운 것이 하나 더 있습니다. **macOS 계산을 그대로
+옮기는 것만으로는 부족할 때가 있고, 그 차이는 계산이 아니라 입력이 어디서 오는지에서
+생깁니다.** macOS 는 프로파일을 CGColorSpace 가 재직렬화한 형태로 받으므로 `wtpt` 가 항상 D50
+입니다. Windows 는 파일을 그대로 읽고, ICC v2 프로파일은 보정되지 않은 D65 를 담아도 됩니다 —
+실제로 이 기계의 시스템 sRGB 와 Adobe RGB 가 그렇습니다. 곧이곧대로 옮겼다면 sRGB 를 프루프
+목적지로 고르는 순간 화면이 파래졌을 것이고, 그것은 macOS 에서는 절대 나오지 않는 결과입니다.
+
+앞으로 macOS 로직을 옮길 때 **그 로직에 들어가는 값이 어떤 경로로 만들어졌는지**까지 확인하십시오.
+
+남은 것은 목적지 색공간 변환과 `DestinationGamutWarning`(mscms `CheckBitmapBits`)입니다.
 
 **2g. 필름 베이스 추정은 이미 macOS 와 같습니다 — 재확인했습니다.** 사용자 요청으로
 `FilmBaseEstimator.swift` 를 함수·상수 단위로 다시 대조했고 빠진 것이 없었습니다. 실제 필름

@@ -30,6 +30,7 @@ internal static unsafe class ContractTestRunner
             VerifyDevelopExportContract();
             VerifyRunStateContract();
             VerifyAutoAdjustContract();
+            VerifySoftProofContract();
             VerifyToneLimits();
             VerifyNegativeLimits();
         }
@@ -408,6 +409,62 @@ internal static unsafe class ContractTestRunner
         CheckThrows<ArgumentOutOfRangeException>(
             () => NativeAutoAdjust.Compute(pixels, 0, height),
             "auto_adjust_refuses_zero_width");
+    }
+
+    // Soft proof crosses the boundary as raw profile bytes going one way and ten numbers
+    // coming back, so the checks are about that translation - not about the ICC parser,
+    // which native.soft_proof covers against the profiles installed on the machine.
+    private static void VerifySoftProofContract()
+    {
+        // A display profile has to come back as an identity proof. If it did not, choosing
+        // sRGB as the proof destination would visibly tint the frame.
+        const string installed =
+            @"C:\Windows\System32\spool\drivers\color\sRGB Color Space Profile.icm";
+        if (File.Exists(installed))
+        {
+            byte[] profile = File.ReadAllBytes(installed);
+            SoftProofMedia media = NativeSoftProof.ReadMedia(profile);
+            Check(media.IsRgbOutputProfile, "soft_proof_accepts_an_rgb_display_profile");
+            Check(media.HasWhite, "soft_proof_reads_the_white_point");
+            Check(
+                Math.Abs(media.PaperWhite.Red - 1.0) < 0.002 &&
+                    Math.Abs(media.PaperWhite.Green - 1.0) < 0.002 &&
+                    Math.Abs(media.PaperWhite.Blue - 1.0) < 0.002,
+                "soft_proof_display_profile_is_an_identity_paper");
+        }
+
+        // Anything that is not a renderable RGB profile has to be refused here, at the
+        // point of choosing, rather than silently producing nothing at render time.
+        SoftProofMedia empty = NativeSoftProof.ReadMedia(ReadOnlySpan<byte>.Empty);
+        Check(
+            !empty.IsRgbOutputProfile && !empty.HasWhite && !empty.HasBlack,
+            "soft_proof_refuses_an_absent_profile");
+        Check(
+            empty.PaperWhite == SoftProofRgb.White && empty.BlackInk == SoftProofRgb.Black,
+            "soft_proof_falls_back_to_a_neutral_paper");
+
+        SoftProofMedia malformed = NativeSoftProof.ReadMedia(new byte[64]);
+        Check(
+            !malformed.IsRgbOutputProfile,
+            "soft_proof_refuses_a_malformed_profile");
+
+        SoftProofSettings settings = SoftProofSettings.From(
+            new SoftProofMedia(
+                true,
+                true,
+                true,
+                new SoftProofRgb(0.9, 0.9, 0.95),
+                new SoftProofRgb(0.04, 0.04, 0.05)),
+            SoftProofSimulation.PaperAndBlackInk);
+        Check(
+            settings.IsEnabled &&
+                settings.Simulation == SoftProofSimulation.PaperAndBlackInk &&
+                settings.PaperWhite.Blue == 0.95 && settings.BlackInk.Blue == 0.05,
+            "soft_proof_settings_carry_the_resolved_media");
+        Check(
+            !SoftProofSettings.Disabled.IsEnabled &&
+                SoftProofSettings.Disabled.PaperWhite == SoftProofRgb.White,
+            "soft_proof_disabled_is_a_neutral_identity");
     }
 
     private static void VerifyToneLimits()

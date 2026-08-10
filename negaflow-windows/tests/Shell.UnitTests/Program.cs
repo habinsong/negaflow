@@ -650,6 +650,9 @@ internal static class Program
         public int CallCount;
         public int LastThreadId;
         public int CancelledCount;
+        // What the last preview was asked to proof with. Null both when proofing is off
+        // and when the caller never passed one, which the tests distinguish by call.
+        public SoftProofSettings? LastSoftProof;
 
         public DevelopExportResult Run(DevelopExportRequest request)
         {
@@ -664,12 +667,14 @@ internal static class Program
             uint maximumWidth,
             uint maximumHeight,
             byte[] pixels,
-            DevelopRun? run = null)
+            DevelopRun? run = null,
+            SoftProofSettings? softProof = null)
         {
             _ = maximumWidth;
             _ = maximumHeight;
             Interlocked.Increment(ref CallCount);
             LastThreadId = Environment.CurrentManagedThreadId;
+            LastSoftProof = softProof;
 
             // 엔진과 같은 모양으로 흉내 냅니다. 블로킹하되 기다리는 동안 취소 래치를 보고,
             // 취소되면 픽셀을 만들지 않고 돌아옵니다.
@@ -1840,6 +1845,48 @@ internal static class Program
         faulting.RequestAsync(first, outcome => fault = outcome).GetAwaiter().GetResult();
         Check(fault?.Kind == DevelopExportOutcomeKind.Faulted, "preview_faulted");
         Check(!faulting.IsRendering, "preview_clears_flag_after_fault");
+
+        VerifyPreviewSoftProof(first, quiet);
+    }
+
+    // Soft proof is a view setting, so it belongs to the coordinator rather than to a
+    // request. What has to hold is that the engine sees the state that was set when the
+    // render began, and that "off" means the engine is told nothing at all.
+    private static void VerifyPreviewSoftProof(
+        LibraryFrameSnapshot frame,
+        FakeDispatcher dispatcher)
+    {
+        FakeExporter exporter = new(_ => OkResult());
+        PreviewCoordinator coordinator = new(exporter, dispatcher, 64, 64);
+
+        coordinator.RequestAsync(frame, _ => { }).GetAwaiter().GetResult();
+        Check(exporter.LastSoftProof is null, "preview_without_proof_passes_none");
+
+        SoftProofSettings paper = new(
+            true,
+            SoftProofSimulation.PaperAndBlackInk,
+            new SoftProofRgb(0.877, 0.877, 0.906),
+            new SoftProofRgb(0.05, 0.05, 0.05));
+        coordinator.SoftProof = paper;
+        coordinator.RequestAsync(frame, _ => { }).GetAwaiter().GetResult();
+        Check(
+            ReferenceEquals(exporter.LastSoftProof, paper),
+            "preview_carries_the_configured_proof");
+
+        // Switching proofing off has to reach the engine as "no proof", not as the last
+        // proof left in place, or the paper stays on screen after the user turned it off.
+        coordinator.SoftProof = null;
+        coordinator.RequestAsync(frame, _ => { }).GetAwaiter().GetResult();
+        Check(exporter.LastSoftProof is null, "preview_clears_the_proof_when_switched_off");
+
+        // Automatic adjustment measures the develop, not a paper simulation, so it must
+        // never carry one even while the screen is proofed.
+        FakeExporter autoExporter = new(_ => OkResult());
+        AutoAdjustCoordinator auto = new(autoExporter, dispatcher);
+        auto.RunAsync(frame, _ => { }).GetAwaiter().GetResult();
+        Check(
+            autoExporter.LastSoftProof is null,
+            "auto_adjust_measures_an_unproofed_render");
     }
 
     private static void Check(bool condition, string name)

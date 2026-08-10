@@ -11,12 +11,17 @@ public interface IDevelopExporter
     /// <param name="run">
     /// 실행 중 취소하고 진행도를 읽는 손잡이입니다. null 이면 끝까지 블로킹합니다.
     /// </param>
+    /// <param name="softProof">
+    /// 보기용 시뮬레이션입니다. null 이면 프루프 없는 미리보기입니다. <see cref="Run"/> 에는
+    /// 대응하는 인자가 없습니다 — 인화물은 시뮬레이션을 담지 않습니다.
+    /// </param>
     DevelopExportResult Preview(
         DevelopExportRequest request,
         uint maximumWidth,
         uint maximumHeight,
         byte[] pixels,
-        DevelopRun? run = null);
+        DevelopRun? run = null,
+        SoftProofSettings? softProof = null);
 }
 
 /// <summary>제품 구현. 블로킹이며 워커 스레드에서만 불러야 합니다.</summary>
@@ -30,8 +35,15 @@ public sealed class NativeDevelopExporterAdapter : IDevelopExporter
         uint maximumWidth,
         uint maximumHeight,
         byte[] pixels,
-        DevelopRun? run = null) =>
-        NativeDevelopExporter.Preview(request, maximumWidth, maximumHeight, pixels, run);
+        DevelopRun? run = null,
+        SoftProofSettings? softProof = null) =>
+        NativeDevelopExporter.Preview(
+            request,
+            maximumWidth,
+            maximumHeight,
+            pixels,
+            run,
+            softProof);
 }
 
 public enum DevelopExportOutcomeKind

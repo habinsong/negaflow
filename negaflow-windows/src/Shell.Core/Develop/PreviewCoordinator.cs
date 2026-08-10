@@ -55,6 +55,9 @@ public sealed class PreviewCoordinator
     // The handle for the render currently inside the engine. Held under the same lock as
     // `pending` so a request that queues itself also cancels what it just superseded.
     private DevelopRun? activeRun;
+    // Set from the UI thread, read on a worker, so it goes under the same lock as
+    // everything else here rather than acquiring its own rule.
+    private SoftProofSettings? softProof;
 
     public PreviewCoordinator(
         IDevelopExporter exporter,
@@ -85,6 +88,32 @@ public sealed class PreviewCoordinator
             lock (gate)
             {
                 return isRunning;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 화면에 거는 보기용 프루프입니다. null 이면 프루프 없이 그립니다.
+    /// </summary>
+    /// <remarks>
+    /// **다음 렌더부터** 적용됩니다. 바꾼 뒤 <see cref="RequestAsync"/> 를 불러야 화면이
+    /// 따라오고, 그 호출이 돌고 있던 렌더를 취소하므로 낡은 프루프 상태의 그림이 뒤늦게
+    /// 배달되는 일은 없습니다.
+    /// </remarks>
+    public SoftProofSettings? SoftProof
+    {
+        get
+        {
+            lock (gate)
+            {
+                return softProof;
+            }
+        }
+        set
+        {
+            lock (gate)
+            {
+                softProof = value;
             }
         }
     }
@@ -191,6 +220,10 @@ public sealed class PreviewCoordinator
             return PreviewOutcome.Refused(built.Refusal);
         }
 
+        // Read once, here, so the whole render uses one proof state even if the property
+        // changes while it is inside the engine. That render is superseded anyway.
+        SoftProofSettings? proof = SoftProof;
+
         try
         {
             DevelopExportResult result = await Task.Run(() => exporter.Preview(
@@ -198,7 +231,8 @@ public sealed class PreviewCoordinator
                 maximumWidth,
                 maximumHeight,
                 pixels,
-                run)).ConfigureAwait(false);
+                run,
+                proof)).ConfigureAwait(false);
             if (result.Cancelled)
             {
                 return PreviewOutcome.Cancelled();

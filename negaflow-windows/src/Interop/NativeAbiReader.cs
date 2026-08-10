@@ -19,9 +19,10 @@ internal static unsafe class NativeAbiReader
       // ordered pre-develop Defects region edits v18, 25 for source identity
       // v19, 26 for ordered Clone Stamp v20, 27 for Brush v21, and 28 for the
       // caller-owned run state v22 that carries cancellation and progress, and 29
-      // for automatic tone and white balance.
+      // for automatic tone and white balance, and 30 for soft proof on the
+      // preview.
     // An engine below this is refused at load, not at the call.
-    internal const ushort MinimumMinor = 29;
+    internal const ushort MinimumMinor = 30;
 
     private const uint StatusOk = 0;
 

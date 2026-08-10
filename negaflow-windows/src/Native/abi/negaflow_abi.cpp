@@ -1,5 +1,6 @@
 ﻿#include "negaflow_abi.h"
 
+#include "negaflow/color/soft_proof.h"
 #include "negaflow/core/build_info.h"
 #include "negaflow/imaging/manual_negative_developer.h"
 #include "negaflow/imaging/working_tone_adjuster.h"
@@ -13,6 +14,7 @@
 #include <cstdint>
 #include <cstring>
 #include <new>
+#include <span>
 #include <string_view>
 #include <vector>
 
@@ -116,6 +118,12 @@ static_assert(offsetof(nf_develop_export_result_v3, applied_dmin) == 136U);
 static_assert(offsetof(nf_develop_export_result_v3, base_source) == 148U);
 static_assert(offsetof(nf_develop_export_result_v3, cancelled) == 152U);
 static_assert(sizeof(nf_develop_run_state_v1) == 16U);
+static_assert(sizeof(nf_soft_proof_media_v1) == 40U);
+static_assert(offsetof(nf_soft_proof_media_v1, paper_white_rgb) == 16U);
+static_assert(offsetof(nf_soft_proof_media_v1, black_ink_rgb) == 28U);
+static_assert(sizeof(nf_soft_proof_v1) == 40U);
+static_assert(offsetof(nf_soft_proof_v1, paper_white_rgb) == 16U);
+static_assert(offsetof(nf_soft_proof_v1, black_ink_rgb) == 28U);
 static_assert(sizeof(nf_auto_adjust_result_v1) == 88U);
 static_assert(offsetof(nf_auto_adjust_result_v1, exposure) == 8U);
 static_assert(offsetof(nf_auto_adjust_result_v1, warmth) == 72U);
@@ -3509,6 +3517,97 @@ nf_status_t NF_CALL nf_develop_preview_v22(
             control);
     const auto finished = std::chrono::steady_clock::now();
     write_outcome_v3(outcome, elapsed_microseconds(started, finished), *result);
+    return NF_STATUS_OK;
+}
+
+nf_status_t NF_CALL nf_develop_preview_v23(
+    const nf_develop_export_request_v21* const request,
+    const nf_soft_proof_v1* const soft_proof,
+    const uint32_t maximum_width,
+    const uint32_t maximum_height,
+    uint8_t* const pixels,
+    const uint32_t pixel_capacity_bytes,
+    nf_develop_run_state_v1* const run_state,
+    nf_develop_export_result_v3* const result) {
+    nf_status_t status = NF_STATUS_OK;
+    if (!prepare_result_v3(request, result, status)) {
+        return status;
+    }
+    if (pixels == nullptr) {
+        return NF_STATUS_INVALID_ARGUMENT;
+    }
+    negaflow::pipeline::DevelopPreviewProof proof{};
+    if (soft_proof != nullptr) {
+        if (soft_proof->struct_size < static_cast<std::uint32_t>(sizeof(*soft_proof))) {
+            return NF_STATUS_STRUCT_TOO_SMALL;
+        }
+        proof.enabled = soft_proof->enabled != 0U;
+        proof.simulate_paper_and_black_ink =
+            soft_proof->simulate_paper_and_black_ink != 0U;
+        for (std::size_t channel = 0U; channel < 3U; ++channel) {
+            proof.paper.white[channel] =
+                static_cast<double>(soft_proof->paper_white_rgb[channel]);
+            proof.paper.black[channel] =
+                static_cast<double>(soft_proof->black_ink_rgb[channel]);
+        }
+    }
+    negaflow::pipeline::DevelopRunControl control{};
+    if (!prepare_run_state(run_state, control, status)) {
+        return status;
+    }
+    negaflow::pipeline::DevelopExportRequest pipeline_request{};
+    nf_develop_export_result_v2 mapping_result{};
+    mapping_result.struct_size = static_cast<std::uint32_t>(sizeof(mapping_result));
+    copy_failure_name("ok", mapping_result.failure_name);
+    if (!map_request_v21(*request, false, pipeline_request, mapping_result)) {
+        write_request_rejection_v3(mapping_result, *result);
+        return NF_STATUS_OK;
+    }
+    const auto started = std::chrono::steady_clock::now();
+    const negaflow::pipeline::DevelopExportOutcome outcome =
+        negaflow::pipeline::develop_preview(
+            pipeline_request,
+            maximum_width,
+            maximum_height,
+            pixels,
+            static_cast<std::size_t>(pixel_capacity_bytes),
+            control,
+            proof);
+    const auto finished = std::chrono::steady_clock::now();
+    write_outcome_v3(outcome, elapsed_microseconds(started, finished), *result);
+    return NF_STATUS_OK;
+}
+
+nf_status_t NF_CALL nf_read_soft_proof_media_v1(
+    const uint8_t* const icc_bytes,
+    const uint32_t icc_byte_count,
+    nf_soft_proof_media_v1* const result) {
+    if (result == nullptr || (icc_bytes == nullptr && icc_byte_count != 0U)) {
+        return NF_STATUS_INVALID_ARGUMENT;
+    }
+    if (result->struct_size < static_cast<std::uint32_t>(sizeof(*result))) {
+        return NF_STATUS_STRUCT_TOO_SMALL;
+    }
+
+    const std::span<const std::uint8_t> bytes{
+        icc_bytes,
+        static_cast<std::size_t>(icc_byte_count)};
+    const negaflow::color::SoftProofMedia media =
+        negaflow::color::read_soft_proof_media(bytes);
+    const negaflow::color::SoftProofPaper paper =
+        negaflow::color::soft_proof_paper(media);
+
+    const std::uint32_t declared_size = result->struct_size;
+    std::memset(result, 0, sizeof(*result));
+    result->struct_size = declared_size;
+    result->is_rgb_output_profile =
+        negaflow::color::is_rgb_output_profile(bytes) ? 1U : 0U;
+    result->has_white = media.has_white ? 1U : 0U;
+    result->has_black = media.has_black ? 1U : 0U;
+    for (std::size_t channel = 0U; channel < 3U; ++channel) {
+        result->paper_white_rgb[channel] = static_cast<float>(paper.white[channel]);
+        result->black_ink_rgb[channel] = static_cast<float>(paper.black[channel]);
+    }
     return NF_STATUS_OK;
 }
 

@@ -247,6 +247,7 @@ struct PreviewTarget final {
     std::uint32_t maximum_height{0};
     std::uint8_t* pixels{nullptr};
     std::size_t capacity_bytes{0};
+    negaflow::color::SoftProofTransfer proof{};
 };
 
 [[nodiscard]] std::uint32_t preview_extent(
@@ -293,6 +294,13 @@ struct PreviewTarget final {
         return fail(DevelopExportStage::output, "preview_buffer_too_small");
     }
 
+    // Soft proof is an affine in linear light and the sRGB encode below is not, so it has
+    // to run per source pixel before the encode - averaging encoded samples and proofing
+    // afterwards would not be the same picture. When proofing is off the factors are
+    // exactly 1 and 0, so the arithmetic is an identity rather than a second code path
+    // that could drift from this one.
+    const negaflow::color::SoftProofTransfer proof = target.proof;
+
     // Converted straight from the working image rather than through a full-resolution
     // 16-bit copy. On a 17 MP scan that copy was about 104 MB allocated only to be
     // averaged away, and dropping it also removes a whole pass over the frame.
@@ -334,13 +342,16 @@ struct PreviewTarget final {
                         finite = false;
                         break;
                     }
-                    // Hue-preserving fold instead of a per-channel clamp, then the sRGB
-                    // encode the 8-bit step quantises in.
+                    // Hue-preserving fold instead of a per-channel clamp, then the paper
+                    // and ink range, then the sRGB encode the 8-bit step quantises in.
                     const negaflow::core::Rgba32F folded =
                         negaflow::imaging::tone_safe_unit_rgb(source);
-                    red += negaflow::color::linear_to_srgb_encoded(folded.red);
-                    green += negaflow::color::linear_to_srgb_encoded(folded.green);
-                    blue += negaflow::color::linear_to_srgb_encoded(folded.blue);
+                    red += negaflow::color::linear_to_srgb_encoded(
+                        (folded.red * proof.scale[0]) + proof.bias[0]);
+                    green += negaflow::color::linear_to_srgb_encoded(
+                        (folded.green * proof.scale[1]) + proof.bias[1]);
+                    blue += negaflow::color::linear_to_srgb_encoded(
+                        (folded.blue * proof.scale[2]) + proof.bias[2]);
                     ++count;
                 }
                 if (!finite) {
@@ -1238,12 +1249,18 @@ DevelopExportOutcome develop_preview(
     const std::uint32_t maximum_height,
     std::uint8_t* const pixels,
     const std::size_t pixel_capacity_bytes,
-    const DevelopRunControl& control) noexcept {
+    const DevelopRunControl& control,
+    const DevelopPreviewProof& proof) noexcept {
+    // Profile-only proofing changes which space the frame is shown in, not its values, so
+    // only the paper and ink simulation resolves to an affine here.
     const PreviewTarget target{
         maximum_width,
         maximum_height,
         pixels,
         pixel_capacity_bytes,
+        proof.enabled && proof.simulate_paper_and_black_ink
+            ? negaflow::color::soft_proof_transfer(proof.paper)
+            : negaflow::color::SoftProofTransfer{},
     };
     return run_develop(request, &target, control);
 }

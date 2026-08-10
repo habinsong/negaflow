@@ -49,6 +49,8 @@ public static unsafe class NativeDevelopExporter
     internal const int ResultV3Size = 160;
     internal const int RunStateV1Size = 16;
     internal const int AutoAdjustResultV1Size = 88;
+    internal const int SoftProofMediaV1Size = 40;
+    internal const int SoftProofV1Size = 40;
 
     private const int MaximumLocalAdjustments = 64;
     private const int MaximumLocalStrokes = 8192;
@@ -101,7 +103,9 @@ public static unsafe class NativeDevelopExporter
             sizeof(NativeDevelopExportResultV2) != ResultV2Size ||
             sizeof(NativeDevelopExportResultV3) != ResultV3Size ||
             sizeof(NativeDevelopRunStateV1) != RunStateV1Size ||
-            sizeof(NativeAutoAdjustResultV1) != AutoAdjustResultV1Size)
+            sizeof(NativeAutoAdjustResultV1) != AutoAdjustResultV1Size ||
+            sizeof(NativeSoftProofMediaV1) != SoftProofMediaV1Size ||
+            sizeof(NativeSoftProofV1) != SoftProofV1Size)
         {
             throw new NativeBootstrapException(
                 NativeBootstrapFailure.ContractViolation,
@@ -1487,12 +1491,18 @@ public static unsafe class NativeDevelopExporter
     /// <remarks>
     /// <see cref="Run"/> 과 마찬가지로 블로킹입니다. UI 스레드에서 부르지 마십시오.
     /// </remarks>
+    /// <param name="softProof">
+    /// 보기용 시뮬레이션입니다. null 이면 프루프 없는 미리보기이고, 그 결과는 프루프 인자를
+    /// 도입하기 전과 바이트 단위로 같습니다. <see cref="Run"/> 에는 대응하는 인자가 없습니다 —
+    /// 인화물은 시뮬레이션을 담지 않습니다.
+    /// </param>
     public static DevelopExportResult Preview(
         DevelopExportRequest request,
         uint maximumWidth,
         uint maximumHeight,
         Span<byte> pixels,
-        DevelopRun? run = null)
+        DevelopRun? run = null,
+        SoftProofSettings? softProof = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentOutOfRangeException.ThrowIfZero(maximumWidth);
@@ -1519,6 +1529,22 @@ public static unsafe class NativeDevelopExporter
 
         // A null run state is the pre-v22 behaviour: the call simply runs to the end.
         NativeDevelopRunStateV1* runState = run is null ? null : run.StatePointer;
+
+        NativeSoftProofV1 nativeProof = default;
+        if (softProof is not null)
+        {
+            nativeProof.StructSize = (uint)sizeof(NativeSoftProofV1);
+            nativeProof.Enabled = softProof.IsEnabled ? 1U : 0U;
+            nativeProof.SimulatePaperAndBlackInk =
+                softProof.Simulation == SoftProofSimulation.PaperAndBlackInk ? 1U : 0U;
+            nativeProof.PaperWhiteRgb[0] = (float)softProof.PaperWhite.Red;
+            nativeProof.PaperWhiteRgb[1] = (float)softProof.PaperWhite.Green;
+            nativeProof.PaperWhiteRgb[2] = (float)softProof.PaperWhite.Blue;
+            nativeProof.BlackInkRgb[0] = (float)softProof.BlackInk.Red;
+            nativeProof.BlackInkRgb[1] = (float)softProof.BlackInk.Green;
+            nativeProof.BlackInkRgb[2] = (float)softProof.BlackInk.Blue;
+        }
+        NativeSoftProofV1* proofPointer = softProof is null ? null : &nativeProof;
 
         fixed (char* sourcePath = request.SourcePath)
         fixed (char* destinationPath = request.DestinationPath)
@@ -1574,8 +1600,9 @@ public static unsafe class NativeDevelopExporter
                 checked((uint)brushes.Strokes.Length),
                 defectBrushPoints,
                 checked((uint)brushes.Points.Length));
-            status = NativeMethods.nf_develop_preview_v22(
+            status = NativeMethods.nf_develop_preview_v23(
                 &native,
+                proofPointer,
                 maximumWidth,
                 maximumHeight,
                 pixelBuffer,
@@ -1584,7 +1611,7 @@ public static unsafe class NativeDevelopExporter
                 &raw);
         }
 
-        return Translate(status, raw, "nf_develop_preview_v22");
+        return Translate(status, raw, "nf_develop_preview_v23");
     }
 
     private static DevelopExportResult Translate(

@@ -246,6 +246,27 @@ internal static partial class NativeMethods
         NativeDevelopRunStateV1* runState,
         NativeDevelopExportResultV3* result);
 
+    // v23 is v22 plus a soft proof the caller may pass as null. There is no matching
+    // export entry point: a published file must never carry a viewing simulation.
+    [LibraryImport(LibraryName, EntryPoint = "nf_develop_preview_v23")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static unsafe partial uint nf_develop_preview_v23(
+        NativeDevelopExportRequestV21* request,
+        NativeSoftProofV1* softProof,
+        uint maximumWidth,
+        uint maximumHeight,
+        byte* pixels,
+        uint pixelCapacityBytes,
+        NativeDevelopRunStateV1* runState,
+        NativeDevelopExportResultV3* result);
+
+    [LibraryImport(LibraryName, EntryPoint = "nf_read_soft_proof_media_v1")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static unsafe partial uint nf_read_soft_proof_media_v1(
+        byte* iccBytes,
+        uint iccByteCount,
+        NativeSoftProofMediaV1* result);
+
     [LibraryImport(LibraryName, EntryPoint = "nf_auto_adjust_v1")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static unsafe partial uint nf_auto_adjust_v1(
