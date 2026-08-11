@@ -334,11 +334,19 @@ final class ScannerWorkflowSafetyTests: XCTestCase {
             let expectedRows = includesPerforation ? 3 : 1
             let expectedCount = includesPerforation ? 18 : 6
             XCTAssertEqual(model.flatbedScanRegions.count, expectedCount)
-            let rows = Dictionary(grouping: model.flatbedScanRegions) {
-                Int(($0.unitRect.midY * 10_000).rounded())
+            // 슬롯마다 격자를 따로 맞추므로 같은 줄이라도 y 가 픽셀 단위로 똑같지는 않다.
+            // 줄 간격(화면 높이의 30% 남짓)에 견주면 무시할 차이라 가까운 것끼리 묶는다.
+            var rows: [[FlatbedScanRegion]] = []
+            for region in model.flatbedScanRegions.sorted(by: { $0.unitRect.midY < $1.unitRect.midY }) {
+                if let last = rows.last?.last,
+                   abs(region.unitRect.midY - last.unitRect.midY) < 0.05 {
+                    rows[rows.count - 1].append(region)
+                } else {
+                    rows.append([region])
+                }
             }
             XCTAssertEqual(rows.count, expectedRows)
-            XCTAssertTrue(rows.values.allSatisfy { $0.count == 6 })
+            XCTAssertTrue(rows.allSatisfy { $0.count == 6 })
             XCTAssertTrue(model.flatbedScanRegions.allSatisfy {
                 $0.unitRect.minX >= 0
                     && $0.unitRect.minY >= 0

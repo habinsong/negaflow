@@ -166,11 +166,15 @@ extension MockScannerBackend {
         context.interpolationQuality = .high
         let width = Double(content.width) * scale
         let height = Double(content.height) * scale
+        // 필름을 판 한가운데에 정확히 두지 않는다. 정중앙이면 y 를 뒤집어도 같은 자리에
+        // 떨어져, 좌표계를 잘못 매핑해도 결과가 맞는 것처럼 보인다. 실제로도 홀더는 판
+        // 위쪽에 치우쳐 놓인다.
+        let verticalOffset = Double(canvasHeight) * 0.06
         context.draw(
             content,
             in: CGRect(
                 x: (Double(canvasWidth) - width) / 2,
-                y: (Double(canvasHeight) - height) / 2,
+                y: (Double(canvasHeight) - height) / 2 + verticalOffset,
                 width: width,
                 height: height
             )
@@ -196,8 +200,14 @@ extension MockScannerBackend {
             max(64, Int((Double(apertureHeight) * $0.aspect(for: frameFormat)).rounded()))
         }
         let rowPadding = 18
-        let rowGap = rows > 1 ? 72 : 0
-        let contentWidth = frameWidths.reduce(0, +)
+        // 스트립 사이 마스크는 컷 하나보다 넓다. 좁게 그리면 검출기가 위아래 스트립을 한
+        // 줄로 이어 붙여(끊긴 필름을 잇는 규칙에 걸린다) 컷을 통째로 잃는다.
+        let rowGap = rows > 1 ? apertureHeight * 3 / 2 : 0
+        // 컷 사이는 홀더가 막는다. 실제 홀더는 창과 창 사이가 불투명한 마스크이고, 검출기는
+        // 그 경계로 슬롯을 가른다. 여기를 몇 픽셀만 띄우면 시뮬레이터가 실제 장치와 다른
+        // 그림(칸이 붙어 있는 콘택트 시트)을 보여 준다.
+        let slotGutter = 24
+        let contentWidth = frameWidths.reduce(0, +) + slotGutter * max(0, frameCount - 1)
         let width = max(256, contentWidth + 48)
         let height = rows * (apertureHeight + rowPadding * 2) + (rows - 1) * rowGap
         var pixels = [UInt8](repeating: 246, count: width * height * 4)
@@ -209,7 +219,7 @@ extension MockScannerBackend {
         var slotStart = (width - contentWidth) / 2
         for frameWidth in frameWidths {
             slotRanges.append(slotStart..<(slotStart + frameWidth))
-            slotStart += frameWidth
+            slotStart += frameWidth + slotGutter
         }
 
         for row in 0..<rows {
@@ -228,7 +238,10 @@ extension MockScannerBackend {
                             pixels[offset + 2] = 246
                         } else {
                             let horizontalTone = localX * 60 / max(range.count - 1, 1)
-                            let verticalTone = y * 70 / max(height - 1, 1)
+                            // 컷 안에서 위아래가 달라야 한다. 캔버스 전체 y 로 기울이면 컷
+                            // 하나만 떼어 봤을 때 위아래가 거의 같아서, 뒤집힌 매핑도 맞는
+                            // 것처럼 보인다.
+                            let verticalTone = (y - apertureTop) * 70 / max(apertureHeight - 1, 1)
                             pixels[offset] = UInt8(
                                 min(235, 24 + texture / 4 + horizontalTone + column * 12)
                             )
