@@ -458,9 +458,55 @@ internal static class Program
               decodedRegionMask.SequenceEqual(
                   Enumerable.Range(0, 16).Select(value => (byte)value)),
             "defect_sidecar_preserves_region_mask");
+        Check(read.Snapshot is { } decodedInfraredRecipe &&
+              DefectMaskCodec.TryDecodeR16LittleEndian(
+                  decodedInfraredRecipe.Items[2].Clusters![0].AttenuationR16!,
+                  2,
+                  2,
+                  out byte[] decodedAttenuation) &&
+              decodedAttenuation.SequenceEqual(
+                  new byte[] { 0x00, 0x00, 0x01, 0x00, 0x34, 0x12, 0xff, 0xff }),
+            "defect_sidecar_preserves_infrared_attenuation_r16");
         Check(DefectSidecarStore.Write(roots, revisionOne).Kind ==
               DefectSidecarWriteKind.AlreadyCurrent,
             "defect_sidecar_same_snapshot_idempotent");
+
+        string firstSidecarPath = DefectSidecarStore.PathFor(roots, frameId);
+        byte[] firstSidecarBytes = File.ReadAllBytes(firstSidecarPath);
+        JsonObject corruptedAttenuation = JsonNode.Parse(firstSidecarBytes)!.AsObject();
+        JsonObject infraredCluster = corruptedAttenuation["items"]![2]!["clusters"]![0]!
+            .AsObject();
+        infraredCluster["attenuationR16"]!["data"] = Convert.ToBase64String([1, 2, 3]);
+        File.WriteAllBytes(
+            firstSidecarPath,
+            CatalogJson.SerializeCanonical(corruptedAttenuation));
+        Check(DefectSidecarStore.Read(roots, frameId).Error ==
+              DefectSidecarError.InvalidContent,
+            "defect_sidecar_corrupt_infrared_attenuation_rejected");
+        File.WriteAllBytes(firstSidecarPath, firstSidecarBytes);
+
+        Guid legacyFrameId = Guid.Parse("316fb66a-b882-4130-82dd-854976a6e6ac");
+        DefectEditItem legacyInfrared = items[2] with
+        {
+            Clusters =
+            [
+                items[2].Clusters![0] with { AttenuationR16 = null },
+            ],
+        };
+        DefectRecipeSnapshot legacySnapshot = DefectRecipeSnapshot.Create(
+            legacyFrameId,
+            recipeRevision: 1,
+            sourceIdentity: null,
+            [legacyInfrared]);
+        JsonObject legacyJson = JsonNode.Parse(
+            DefectSidecarCodec.Serialize(legacySnapshot))!.AsObject();
+        legacyJson["items"]![0]!["clusters"]![0]!.AsObject()
+            .Remove("attenuationR16");
+        Check(DefectSidecarCodec.Decode(
+                  CatalogJson.SerializeCanonical(legacyJson),
+                  legacyFrameId,
+                  validateCompressedMasks: true).IsSuccess,
+            "defect_sidecar_legacy_mask_only_cluster_reads");
 
         DefectSourceIdentity sourceIdentity = new(
             1_234,
@@ -476,6 +522,27 @@ internal static class Program
         Check(DefectSidecarStore.Read(roots, frameId).Snapshot?.SourceIdentity ==
               sourceIdentity,
             "defect_sidecar_source_identity_readback");
+
+        DefectEditItem changedAttenuation = items[2] with
+        {
+            Clusters =
+            [
+                items[2].Clusters![0] with
+                {
+                    AttenuationR16 = new DefectMask(
+                        false,
+                        new byte[] { 0x00, 0x00, 0x01, 0x00, 0x35, 0x12, 0xff, 0xff }),
+                },
+            ],
+        };
+        DefectRecipeSnapshot attenuationConflict = DefectRecipeSnapshot.Create(
+            frameId,
+            recipeRevision: 1,
+            sourceIdentity,
+            [items[0], items[1], changedAttenuation, items[3]]);
+        Check(DefectSidecarStore.Write(roots, attenuationConflict).Error ==
+              DefectSidecarError.ConflictingSameRevision,
+            "defect_sidecar_same_revision_attenuation_conflict");
 
         DefectEditItem changedRegion = items[1] with { Strength = 0.25 };
         DefectRecipeSnapshot conflicting = DefectRecipeSnapshot.Create(
@@ -617,7 +684,16 @@ internal static class Program
                     new DefectRect(50, 60, 2, 2),
                     new DefectMask(true, CompressZlib(infraredMask)),
                     2,
-                    2),
+                    2,
+                    new DefectMask(
+                        false,
+                        new byte[]
+                        {
+                            0x00, 0x00,
+                            0x01, 0x00,
+                            0x34, 0x12,
+                            0xff, 0xff,
+                        })),
             ],
         };
 

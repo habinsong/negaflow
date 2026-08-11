@@ -314,11 +314,41 @@ public sealed class DevelopDefectRegionEdit
     public double? PreferredAngleDegrees { get; init; }
 }
 
+public sealed class DevelopDefectInfraredCluster
+{
+    public uint RoiX { get; init; }
+
+    public uint RoiY { get; init; }
+
+    public uint Width { get; init; }
+
+    public uint Height { get; init; }
+
+    public uint CoreMaskStrideBytes { get; init; }
+
+    public ReadOnlyMemory<byte> CoreMask { get; init; }
+
+    public uint AttenuationStrideBytes { get; init; }
+
+    public ReadOnlyMemory<byte>? AttenuationR16 { get; init; }
+
+}
+
+public sealed class DevelopDefectInfraredEdit
+{
+    public bool IsEnabled { get; init; } = true;
+
+    public double Strength { get; init; } = 1.0;
+
+    public IReadOnlyList<DevelopDefectInfraredCluster> Clusters { get; init; } = [];
+}
+
 public enum DevelopDefectEditKind
 {
     Region,
     Clone,
     Brush,
+    Infrared,
 }
 
 public readonly record struct DevelopDefectRecipeEditRef(
@@ -458,6 +488,8 @@ public sealed class DevelopExportRequest
     public double DefectRemovalStrength { get; init; }
 
     public IReadOnlyList<DevelopDefectRegionEdit> DefectRegions { get; init; } = [];
+
+    public IReadOnlyList<DevelopDefectInfraredEdit> DefectInfrared { get; init; } = [];
 
     public IReadOnlyList<DevelopDefectCloneEdit> DefectClones { get; init; } = [];
 

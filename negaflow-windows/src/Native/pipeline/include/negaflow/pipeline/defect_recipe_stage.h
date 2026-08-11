@@ -2,6 +2,7 @@
 
 #include "negaflow/imaging/defect_clone_stamp.h"
 #include "negaflow/imaging/defect_heal_brush.h"
+#include "negaflow/pipeline/defect_infrared_stage.h"
 #include "negaflow/pipeline/defect_region_stage.h"
 
 #include <cstddef>
@@ -14,6 +15,7 @@ enum class DefectRecipeEditKind : std::uint8_t {
     region = 0,
     clone,
     brush,
+    infrared,
 };
 
 struct DefectRecipeEditRef final {
@@ -41,7 +43,8 @@ struct DefectRecipeParameters final {
     std::vector<negaflow::imaging::DefectBrushPoint> brush_points_storage{};
     std::vector<negaflow::imaging::DefectBrushStroke> brush_strokes_storage{};
     std::vector<DefectBrushEdit> brushes{};
-    // Covers every region/clone/brush descriptor exactly once. This preserves
+    std::vector<DefectInfraredItem> infrared{};
+    // Covers every region/infrared/clone/brush descriptor exactly once. This preserves
     // the sidecar layer order when unlike edit kinds are interleaved.
     std::vector<DefectRecipeEditRef> order{};
 };
@@ -52,6 +55,7 @@ enum class DefectRecipeStageStatus : std::uint8_t {
     region_failed,
     clone_failed,
     brush_failed,
+    infrared_failed,
     allocation_failed,
 };
 
@@ -72,6 +76,7 @@ struct DefectRecipeStageInfo final {
         negaflow::imaging::DefectCloneStatus::ok};
     negaflow::imaging::DefectHealBrushStatus brush_status{
         negaflow::imaging::DefectHealBrushStatus::ok};
+    DefectInfraredStageStatus infrared_status{DefectInfraredStageStatus::ok};
 };
 
 struct DefectRecipeStageResult final {

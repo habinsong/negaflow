@@ -40,6 +40,59 @@
         "Tests/ChromabaseTests/FilmEmulationTests.swift",
         "Tests/ChromabaseTests/DigitalBWFilmLookTests.swift"
       ]
+    },
+    {
+      "delta_id": "DELTA-2026-08-11-001",
+      "from_commit": "ef46850946738ba0fa0d21c322486e665e1aed73",
+      "to_commit": "c5430dc92e8a0615990bbc92d36d674e7168d3ed",
+      "classification": "correctness_fix",
+      "summary": "Measure infrared defect evidence at the candidate's true scale, weight aggregation by area, and confirm each visible defect locally so large dust remains removable.",
+      "decision": "included_in_windows_baseline",
+      "affected_area": "GrainMend infrared candidate detection and visible confirmation",
+      "source_files": [
+        "Sources/Chromabase/DefectRemoval/InfraredDefectRemoval+Alignment.swift",
+        "Sources/Chromabase/DefectRemoval/InfraredDefectRemoval+Baseline.swift",
+        "Sources/Chromabase/DefectRemoval/InfraredDefectRemoval+Clusters.swift",
+        "Sources/Chromabase/DefectRemoval/InfraredDefectRemoval+Confirmation.swift",
+        "Sources/Chromabase/DefectRemoval/InfraredDefectRemoval+DefectAlignment.swift",
+        "Sources/Chromabase/DefectRemoval/InfraredDefectRemoval+Spectral.swift",
+        "Sources/Chromabase/DefectRemoval/InfraredDefectRemoval.swift",
+        "Tests/ChromabaseTests/InfraredDefectAnchorTests.swift",
+        "Tests/ChromabaseTests/InfraredDefectTests.swift"
+      ]
+    },
+    {
+      "delta_id": "DELTA-2026-08-11-002",
+      "from_commit": "c5430dc92e8a0615990bbc92d36d674e7168d3ed",
+      "to_commit": "cec0db3d9444a22fda6f2f39165141b7f7151497",
+      "classification": "product_contract",
+      "summary": "Persist the infrared attenuation layer as a non-destructive defect edit, replay it before core repair, and never bake it into the original scan.",
+      "decision": "included_in_windows_baseline",
+      "affected_area": "infrared defect persistence, lifecycle, preview, and export",
+      "source_files": [
+        "Sources/negaflowApp/Domain/ScanFrame/ScanFrame.swift",
+        "Sources/negaflowApp/Features/Defects/AppModel+InfraredDefectRemoval.swift",
+        "Sources/negaflowApp/Features/Defects/AppModel+InfraredDefectRemovalApplication.swift",
+        "Sources/negaflowApp/Features/Defects/DefectEditItemRecord+Conversion.swift",
+        "Sources/negaflowApp/Features/Defects/Persistence/Models/DefectEditRecords.swift",
+        "Sources/negaflowApp/Features/Defects/Workflow/InfraredCorrectionPatch.swift",
+        "Sources/negaflowApp/Features/Develop/Pipeline/Renderer/DevelopFrameRenderer+Core.swift",
+        "Tests/negaflowAppTests/InfraredCleanSessionTests.swift",
+        "Tests/negaflowAppTests/InfraredLayerLifecycleTests.swift"
+      ]
+    },
+    {
+      "delta_id": "DELTA-2026-08-11-003",
+      "from_commit": "e49c07c033ba47908ecad1a9d8f16eecc45c01a0",
+      "to_commit": "f658615f4649dcb5ee1dab2cfbbe941c19f95394",
+      "classification": "correctness_fix",
+      "summary": "Scale the inverse-Mills winner's-curse correction by detection significance so marginal infrared detections receive stronger bias correction.",
+      "decision": "included_in_windows_baseline",
+      "affected_area": "GrainMend infrared attenuation estimation",
+      "source_files": [
+        "Sources/Chromabase/DefectRemoval/InfraredDefectRemoval+Confirmation.swift",
+        "Tests/ChromabaseTests/InfraredDefectAnchorTests.swift"
+      ]
     }
   ]
 }

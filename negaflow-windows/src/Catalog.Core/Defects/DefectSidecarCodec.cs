@@ -357,6 +357,9 @@ internal static class DefectSidecarCodec
             {
                 ["roi"] = EncodeRect(cluster.Roi),
                 ["mask"] = EncodeMask(cluster.Mask),
+                ["attenuationR16"] = cluster.AttenuationR16 is { } attenuation
+                    ? EncodeMask(attenuation)
+                    : null,
                 ["width"] = cluster.Width,
                 ["height"] = cluster.Height,
             });
@@ -747,15 +750,25 @@ internal static class DefectSidecarCodec
         foreach (JsonNode? clusterNode in nodes)
         {
             if (clusterNode is not JsonObject cluster ||
-                !HasExactProperties(cluster, "roi", "mask", "width", "height") ||
+                !(HasExactProperties(cluster, "roi", "mask", "width", "height") ||
+                  HasExactProperties(
+                      cluster,
+                      "roi",
+                      "mask",
+                      "attenuationR16",
+                      "width",
+                      "height")) ||
                 !TryReadRect(cluster["roi"], out DefectRect roi) ||
                 !TryReadMask(cluster["mask"], out DefectMask mask) ||
+                !TryReadNullableMask(
+                    cluster["attenuationR16"],
+                    out DefectMask? attenuation) ||
                 !TryInt32(cluster["width"], out int width) ||
                 !TryInt32(cluster["height"], out int height))
             {
                 return false;
             }
-            values.Add(new DefectCluster(roi, mask, width, height));
+            values.Add(new DefectCluster(roi, mask, width, height, attenuation));
         }
         clusters = values.ToArray();
         return true;

@@ -67,7 +67,8 @@ public sealed record DefectCluster(
     DefectRect Roi,
     DefectMask Mask,
     int Width,
-    int Height);
+    int Height,
+    DefectMask? AttenuationR16 = null);
 
 /// <summary>
 /// 표시 문자열 자체가 아니라 현재 앱 언어로 문자열을 만들 수 있는 값만 보존합니다.

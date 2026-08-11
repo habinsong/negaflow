@@ -511,6 +511,47 @@ internal unsafe struct NativeDevelopExportRequestV21
 }
 
 [StructLayout(LayoutKind.Sequential)]
+internal struct NativeDefectInfraredEditV1
+{
+    internal uint RegionEditIndex;
+    internal uint HasAttenuation;
+    internal uint AttenuationStrideBytes;
+    internal uint AttenuationOffset;
+    internal uint AttenuationByteCount;
+    internal uint Reserved;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal unsafe struct NativeDevelopExportRequestV24
+{
+    internal NativeDevelopExportRequestV21 V21;
+    internal NativeDefectInfraredEditV1* DefectInfraredEdits;
+    internal uint DefectInfraredEditCount;
+    internal uint DefectInfraredEditReserved;
+    internal byte* DefectInfraredAttenuationBytes;
+    internal uint DefectInfraredAttenuationByteCount;
+    internal uint DefectInfraredAttenuationReserved;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct NativeDefectInfraredItemV1
+{
+    internal uint ClusterOffset;
+    internal uint ClusterCount;
+    internal uint Reserved0;
+    internal uint Reserved1;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal unsafe struct NativeDevelopExportRequestV25
+{
+    internal NativeDevelopExportRequestV24 V24;
+    internal NativeDefectInfraredItemV1* DefectInfraredItems;
+    internal uint DefectInfraredItemCount;
+    internal uint DefectInfraredItemReserved;
+}
+
+[StructLayout(LayoutKind.Sequential)]
 internal unsafe struct NativeDevelopExportResultV2
 {
     internal const int FailureNameCapacity = 64;

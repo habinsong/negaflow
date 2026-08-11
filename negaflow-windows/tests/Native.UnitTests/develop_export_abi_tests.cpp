@@ -5,6 +5,12 @@
 
 #include <Windows.h>
 #include <bcrypt.h>
+#include <wincodec.h>
+#include <wrl/client.h>
+
+#ifdef small
+#undef small
+#endif
 
 #include <algorithm>
 #include <array>
@@ -21,6 +27,7 @@
 #include <vector>
 
 #pragma comment(lib, "bcrypt.lib")
+#pragma comment(lib, "windowscodecs.lib")
 
 namespace {
 
@@ -371,6 +378,17 @@ void expect(const bool condition, const char* const message) {
     return request;
 }
 
+[[nodiscard]] nf_develop_export_request_v24 make_request_v24(
+    const wchar_t* const source,
+    const wchar_t* const destination,
+    const std::uint32_t base_mode = NF_BASE_ESTIMATION_AUTO) {
+    nf_develop_export_request_v24 request{};
+    request.v21 = make_request_v21(source, destination, base_mode);
+    request.v21.v20.v19.v18.v17.v16.v15.v14.v13.v12.v11.v10.v9.v8.struct_size =
+        static_cast<std::uint32_t>(sizeof(request));
+    return request;
+}
+
 [[nodiscard]] bool write_file(
     const std::filesystem::path& path,
     const std::vector<std::uint8_t>& bytes) {
@@ -387,6 +405,78 @@ void expect(const bool condition, const char* const message) {
     return std::vector<std::uint8_t>(
         std::istreambuf_iterator<char>(input),
         std::istreambuf_iterator<char>());
+}
+
+[[nodiscard]] std::vector<std::uint8_t> decode_png_bgra8(
+    const std::filesystem::path& path,
+    const std::uint32_t expected_width,
+    const std::uint32_t expected_height) {
+    const HRESULT initialized = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+    if (FAILED(initialized) && initialized != RPC_E_CHANGED_MODE) {
+        return {};
+    }
+    const bool uninitialize = SUCCEEDED(initialized);
+    Microsoft::WRL::ComPtr<IWICImagingFactory> factory{};
+    Microsoft::WRL::ComPtr<IWICBitmapDecoder> decoder{};
+    Microsoft::WRL::ComPtr<IWICBitmapFrameDecode> frame{};
+    Microsoft::WRL::ComPtr<IWICFormatConverter> converter{};
+    HRESULT status = CoCreateInstance(
+        CLSID_WICImagingFactory2,
+        nullptr,
+        CLSCTX_INPROC_SERVER,
+        IID_PPV_ARGS(&factory));
+    if (SUCCEEDED(status)) {
+        status = factory->CreateDecoderFromFilename(
+            path.c_str(),
+            nullptr,
+            GENERIC_READ,
+            WICDecodeMetadataCacheOnLoad,
+            &decoder);
+    }
+    if (SUCCEEDED(status)) {
+        status = decoder->GetFrame(0U, &frame);
+    }
+    UINT width = 0U;
+    UINT height = 0U;
+    if (SUCCEEDED(status)) {
+        status = frame->GetSize(&width, &height);
+    }
+    if (SUCCEEDED(status) &&
+        (width != expected_width || height != expected_height)) {
+        status = E_FAIL;
+    }
+    if (SUCCEEDED(status)) {
+        status = factory->CreateFormatConverter(&converter);
+    }
+    if (SUCCEEDED(status)) {
+        status = converter->Initialize(
+            frame.Get(),
+            GUID_WICPixelFormat32bppBGRA,
+            WICBitmapDitherTypeNone,
+            nullptr,
+            0.0,
+            WICBitmapPaletteTypeCustom);
+    }
+    std::vector<std::uint8_t> pixels{};
+    if (SUCCEEDED(status)) {
+        pixels.resize(static_cast<std::size_t>(width) * height * 4U);
+        status = converter->CopyPixels(
+            nullptr,
+            width * 4U,
+            static_cast<UINT>(pixels.size()),
+            pixels.data());
+    }
+    if (FAILED(status)) {
+        pixels.clear();
+    }
+    converter.Reset();
+    frame.Reset();
+    decoder.Reset();
+    factory.Reset();
+    if (uninitialize) {
+        CoUninitialize();
+    }
+    return pixels;
 }
 
 void test_argument_contract() {
@@ -1035,6 +1125,67 @@ void test_v21_contract() {
             result.failed_stage == NF_DEVELOP_STAGE_REQUEST_VALIDATION &&
             std::strcmp(result.failure_name, "invalid_defect_brush_payload") == 0,
         "v21 rejects out-of-range normalized brush geometry");
+}
+
+void test_v24_contract() {
+    expect(sizeof(nf_defect_infrared_edit_v1) == 24U,
+           "v24 infrared descriptor layout is fixed");
+    expect(sizeof(nf_develop_export_request_v24) == 4864U,
+           "v24 request layout is fixed");
+    expect(offsetof(nf_develop_export_request_v24, defect_infrared_edits) == 4832U,
+           "v24 infrared descriptor offset is fixed");
+    expect(offsetof(nf_develop_export_request_v24,
+                    defect_infrared_attenuation_bytes) == 4848U,
+           "v24 attenuation payload offset is fixed");
+
+    std::array<std::uint8_t, 64U> core{};
+    std::array<std::uint8_t, 128U> attenuation{};
+    std::array<std::uint8_t, 32U> digest{};
+    nf_defect_region_edit_v1 region{};
+    region.enabled = 1U;
+    region.width = 8U;
+    region.height = 8U;
+    region.mask_stride_bytes = 8U;
+    region.mask_byte_count = static_cast<std::uint32_t>(core.size());
+    region.strength = 1.0;
+    nf_defect_recipe_edit_ref_v1 order{NF_DEFECT_RECIPE_EDIT_REGION, 0U};
+    nf_defect_infrared_edit_v1 infrared{};
+    infrared.has_attenuation = 1U;
+    infrared.attenuation_stride_bytes = 16U;
+    infrared.attenuation_byte_count =
+        static_cast<std::uint32_t>(attenuation.size());
+
+    nf_develop_export_request_v24 request = make_request_v24(L"a.tif", L"b.png");
+    request.v21.v20.v19.defect_source_file_bytes = 1U;
+    request.v21.v20.v19.defect_source_sha256 = digest.data();
+    request.v21.v20.v19.has_defect_source_identity = 1U;
+    request.v21.v20.v19.v18.defect_region_edits = &region;
+    request.v21.v20.v19.v18.defect_region_edit_count = 1U;
+    request.v21.v20.v19.v18.defect_mask_bytes = core.data();
+    request.v21.v20.v19.v18.defect_mask_byte_count =
+        static_cast<std::uint32_t>(core.size());
+    request.v21.v20.defect_edit_order = &order;
+    request.v21.v20.defect_edit_order_count = 1U;
+    request.defect_infrared_edits = &infrared;
+    request.defect_infrared_edit_count = 1U;
+    request.defect_infrared_attenuation_bytes = attenuation.data();
+    request.defect_infrared_attenuation_byte_count =
+        static_cast<std::uint32_t>(attenuation.size());
+    nf_develop_export_result_v3 result = make_result_v3();
+    expect(
+        nf_develop_export_v24(&request, nullptr, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            result.failed_stage == NF_DEVELOP_STAGE_OBSERVE_SOURCE_BEFORE,
+        "v24 complete infrared payload reaches source observation");
+
+    infrared.attenuation_byte_count--;
+    result = make_result_v3();
+    expect(
+        nf_develop_export_v24(&request, nullptr, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            result.failed_stage == NF_DEVELOP_STAGE_REQUEST_VALIDATION &&
+            std::strcmp(result.failure_name, "invalid_defect_infrared_payload") == 0,
+        "v24 rejects an infrared attenuation size mismatch");
 }
 
 void test_missing_source_is_not_a_validation_error() {
@@ -2293,6 +2444,8 @@ void test_v18_defect_region_preview_and_export() {
         temporary / L"negaflow-abi-v20-clone.png";
     const std::filesystem::path brushed_output =
         temporary / L"negaflow-abi-v21-brush.png";
+    const std::filesystem::path infrared_output =
+        temporary / L"negaflow-abi-v24-infrared.png";
     std::error_code ignored{};
     std::filesystem::remove(source, ignored);
     std::filesystem::remove(identity_output, ignored);
@@ -2300,6 +2453,7 @@ void test_v18_defect_region_preview_and_export() {
     std::filesystem::remove(mismatched_output, ignored);
     std::filesystem::remove(cloned_output, ignored);
     std::filesystem::remove(brushed_output, ignored);
+    std::filesystem::remove(infrared_output, ignored);
 
     const std::vector<std::uint8_t> source_bytes =
         negaflow::test_fixtures::make_uncompressed_rgb16_defect_tiff(
@@ -2492,6 +2646,90 @@ void test_v18_defect_region_preview_and_export() {
         brushed_preview_ok && brushed_pixels != identity_pixels,
         "v21 Brush changes the shared preview pipeline");
 
+    std::vector<std::uint8_t> infrared_core(mask.size(), 0U);
+    std::vector<std::uint8_t> infrared_attenuation(mask.size() * 2U, 0U);
+    for (std::size_t offset = 0U;
+         offset < infrared_attenuation.size();
+         offset += 2U) {
+        infrared_attenuation[offset] = 0x00U;
+        infrared_attenuation[offset + 1U] = 0x40U;
+    }
+    nf_defect_region_edit_v1 infrared_region{};
+    infrared_region.enabled = 1U;
+    infrared_region.roi_x = roi_x;
+    infrared_region.roi_y = roi_y_up;
+    infrared_region.width = roi_width;
+    infrared_region.height = roi_height;
+    infrared_region.mask_stride_bytes = roi_width;
+    infrared_region.mask_byte_count =
+        static_cast<std::uint32_t>(infrared_core.size());
+    infrared_region.strength = 1.0;
+    nf_defect_recipe_edit_ref_v1 infrared_order{
+        NF_DEFECT_RECIPE_EDIT_REGION, 0U};
+    nf_defect_infrared_edit_v1 infrared_edit{};
+    infrared_edit.has_attenuation = 1U;
+    infrared_edit.attenuation_stride_bytes = roi_width * 2U;
+    infrared_edit.attenuation_byte_count =
+        static_cast<std::uint32_t>(infrared_attenuation.size());
+    const std::wstring infrared_output_text = infrared_output.wstring();
+    nf_develop_export_request_v24 infrared = make_request_v24(
+        source_text.c_str(),
+        infrared_output_text.c_str(),
+        NF_BASE_ESTIMATION_MANUAL);
+    infrared.v21.v20.v19.v18.v17.film_polarity = NF_FILM_POLARITY_POSITIVE;
+    infrared.v21.v20.v19.defect_source_file_bytes = source_bytes.size();
+    infrared.v21.v20.v19.defect_source_sha256 = source_identity.data();
+    infrared.v21.v20.v19.has_defect_source_identity = 1U;
+    infrared.v21.v20.v19.v18.defect_region_edits = &infrared_region;
+    infrared.v21.v20.v19.v18.defect_region_edit_count = 1U;
+    infrared.v21.v20.v19.v18.defect_mask_bytes = infrared_core.data();
+    infrared.v21.v20.v19.v18.defect_mask_byte_count =
+        static_cast<std::uint32_t>(infrared_core.size());
+    infrared.v21.v20.defect_edit_order = &infrared_order;
+    infrared.v21.v20.defect_edit_order_count = 1U;
+    infrared.defect_infrared_edits = &infrared_edit;
+    infrared.defect_infrared_edit_count = 1U;
+    infrared.defect_infrared_attenuation_bytes = infrared_attenuation.data();
+    infrared.defect_infrared_attenuation_byte_count =
+        static_cast<std::uint32_t>(infrared_attenuation.size());
+    std::vector<std::uint8_t> infrared_pixels(identity_pixels.size(), 0U);
+    nf_develop_export_result_v3 infrared_preview_result = make_result_v3();
+    const bool infrared_preview_ok =
+        nf_develop_preview_v24(
+            &infrared,
+            nullptr,
+            width,
+            height,
+            infrared_pixels.data(),
+            static_cast<std::uint32_t>(infrared_pixels.size()),
+            nullptr,
+            &infrared_preview_result) == NF_STATUS_OK &&
+        infrared_preview_result.succeeded == 1U;
+    bool infrared_changed_inside = false;
+    bool infrared_unchanged_outside = true;
+    if (infrared_preview_ok) {
+        for (std::uint32_t y = 0U; y < height; ++y) {
+            for (std::uint32_t x = 0U; x < width; ++x) {
+                const std::size_t offset =
+                    (static_cast<std::size_t>(y) * width + x) * 4U;
+                const bool changed = std::memcmp(
+                    identity_pixels.data() + offset,
+                    infrared_pixels.data() + offset,
+                    4U) != 0;
+                const bool inside = x >= roi_x && x < roi_x + roi_width &&
+                    y >= roi_top && y < roi_top + roi_height;
+                infrared_changed_inside =
+                    infrared_changed_inside || (inside && changed);
+                infrared_unchanged_outside =
+                    infrared_unchanged_outside && (inside || !changed);
+            }
+        }
+    }
+    expect(
+        infrared_preview_ok && infrared_changed_inside &&
+            infrared_unchanged_outside,
+        "v24 attenuation-only infrared replay changes only its ROI with a zero core");
+
     std::array<std::uint8_t, 32U> wrong_digest = source_identity;
     wrong_digest[0] ^= 0xffU;
     nf_develop_export_request_v19 mismatched = bound;
@@ -2591,6 +2829,31 @@ void test_v18_defect_region_preview_and_export() {
             read_file(identity_output) != read_file(brushed_output),
         "v21 Brush changes the shared export pipeline");
 
+    nf_develop_export_result_v3 infrared_export_result = make_result_v3();
+    const bool infrared_export_ok =
+        nf_develop_export_v24(
+            &infrared, nullptr, &infrared_export_result) == NF_STATUS_OK &&
+        infrared_export_result.succeeded == 1U;
+    const std::vector<std::uint8_t> infrared_export_pixels =
+        infrared_export_ok
+            ? decode_png_bgra8(infrared_output, width, height)
+            : std::vector<std::uint8_t>{};
+    unsigned maximum_infrared_difference = 0U;
+    if (infrared_export_pixels.size() == infrared_pixels.size()) {
+        for (std::size_t index = 0U; index < infrared_pixels.size(); ++index) {
+            maximum_infrared_difference = std::max(
+                maximum_infrared_difference,
+                static_cast<unsigned>(std::abs(
+                    static_cast<int>(infrared_export_pixels[index]) -
+                    static_cast<int>(infrared_pixels[index]))));
+        }
+    }
+    expect(
+        infrared_preview_ok && infrared_export_ok &&
+            infrared_export_pixels.size() == infrared_pixels.size() &&
+            maximum_infrared_difference <= 1U,
+        "v24 infrared preview and PNG16 export agree at 8-bit codec quantization");
+
     const std::wstring repaired_output_text = repaired_output.wstring();
     nf_develop_export_request_v19 repaired_export = bound;
     repaired_export.v18.v17.v16.v15.v14.v13.v12.v11.v10.v9.v8.destination_path =
@@ -2626,6 +2889,12 @@ void test_v18_defect_region_preview_and_export() {
     expect(
         read_file(source) == source_bytes,
         "ordered defect preview and export leave the source TIFF byte-exact");
+    std::array<std::uint8_t, 32U> source_identity_after{};
+    const std::vector<std::uint8_t> source_bytes_after = read_file(source);
+    expect(
+        sha256(source_bytes_after, source_identity_after) &&
+            source_identity_after == source_identity,
+        "v24 infrared preview and export preserve the source SHA-256");
 
     std::filesystem::remove(source, ignored);
     std::filesystem::remove(identity_output, ignored);
@@ -2633,6 +2902,7 @@ void test_v18_defect_region_preview_and_export() {
     std::filesystem::remove(mismatched_output, ignored);
     std::filesystem::remove(cloned_output, ignored);
     std::filesystem::remove(brushed_output, ignored);
+    std::filesystem::remove(infrared_output, ignored);
 }
 
 }  // namespace
@@ -2970,6 +3240,7 @@ int main(const int argument_count, const char* const arguments[]) {
     test_v19_contract();
     test_v20_contract();
     test_v21_contract();
+    test_v24_contract();
     test_missing_source_is_not_a_validation_error();
     test_v2_missing_source_is_not_a_validation_error();
     test_v18_defect_region_preview_and_export();

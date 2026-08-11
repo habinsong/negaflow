@@ -171,6 +171,13 @@ internal static unsafe class ContractTestRunner
             sizeof(NativeDevelopExportRequestV21) == NativeDevelopExporter.RequestV21Size,
             "develop_export_v21_request_size");
         Check(
+            sizeof(NativeDefectInfraredEditV1) ==
+                NativeDevelopExporter.DefectInfraredEditV1Size,
+            "defect_infrared_edit_v1_size");
+        Check(
+            sizeof(NativeDevelopExportRequestV24) == NativeDevelopExporter.RequestV24Size,
+            "develop_export_v24_request_size");
+        Check(
             sizeof(NativeDevelopExportResultV2) == NativeDevelopExporter.ResultV2Size,
             "develop_export_v2_result_size");
         Check(
@@ -305,6 +312,15 @@ internal static unsafe class ContractTestRunner
             Marshal.OffsetOf<NativeDevelopExportRequestV21>(
                 nameof(NativeDevelopExportRequestV21.DefectBrushPoints)).ToInt32() == 4816,
             "develop_export_v21_brush_point_offset");
+        Check(
+            Marshal.OffsetOf<NativeDevelopExportRequestV24>(
+                nameof(NativeDevelopExportRequestV24.DefectInfraredEdits)).ToInt32() == 4832,
+            "develop_export_v24_infrared_edit_offset");
+        Check(
+            Marshal.OffsetOf<NativeDevelopExportRequestV24>(
+                nameof(NativeDevelopExportRequestV24.DefectInfraredAttenuationBytes)).ToInt32() ==
+                4848,
+            "develop_export_v24_attenuation_offset");
         Check(
             Marshal.OffsetOf<NativeDevelopExportResultV2>(
                 nameof(NativeDevelopExportResultV2.AppliedDminRed)).ToInt32() == 136,
@@ -668,6 +684,42 @@ internal static unsafe class ContractTestRunner
             defects.FailedStage == DevelopExportStage.ObserveSourceBefore,
             "develop_export_defect_region_reaches_source_observation");
 
+        DevelopExportRequest infraredRequest = new()
+        {
+            SourcePath = absentSource,
+            DestinationPath = destination,
+            DefectInfrared =
+            [
+                new DevelopDefectInfraredEdit
+                {
+                    RoiX = 12,
+                    RoiY = 20,
+                    Width = 8,
+                    Height = 8,
+                    CoreMask = new byte[64],
+                    AttenuationR16 = new byte[128],
+                    Strength = 0.75,
+                },
+            ],
+            DefectEditOrder =
+            [
+                new DevelopDefectRecipeEditRef(DevelopDefectEditKind.Infrared, 0),
+            ],
+            DefectSourceIdentity = new DevelopDefectSourceIdentity(
+                1,
+                new string('0', 64)),
+        };
+        DevelopExportResult infrared = NativeDevelopExporter.Run(infraredRequest);
+        Check(
+            infrared.FailedStage == DevelopExportStage.ObserveSourceBefore,
+            "develop_export_infrared_reaches_source_observation");
+        Span<byte> infraredPreviewPixels = stackalloc byte[4];
+        DevelopExportResult infraredPreview = NativeDevelopExporter.Preview(
+            infraredRequest, 1, 1, infraredPreviewPixels);
+        Check(
+            infraredPreview.FailedStage == DevelopExportStage.ObserveSourceBefore,
+            "develop_preview_infrared_reaches_source_observation");
+
         DevelopExportResult clone = NativeDevelopExporter.Run(new DevelopExportRequest
         {
             SourcePath = absentSource,
@@ -847,6 +899,57 @@ internal static unsafe class ContractTestRunner
                 ],
             }),
             "develop_export_short_defect_mask_rejected");
+
+        CheckThrows<ArgumentException>(
+            () => NativeDevelopExporter.Run(new DevelopExportRequest
+            {
+                SourcePath = absentSource,
+                DestinationPath = destination,
+                DefectInfrared =
+                [
+                    new DevelopDefectInfraredEdit
+                    {
+                        Width = 8,
+                        Height = 8,
+                        CoreMask = new byte[64],
+                        AttenuationR16 = new byte[127],
+                    },
+                ],
+                DefectEditOrder =
+                [
+                    new DevelopDefectRecipeEditRef(DevelopDefectEditKind.Infrared, 0),
+                ],
+                DefectSourceIdentity = new DevelopDefectSourceIdentity(
+                    1,
+                    new string('0', 64)),
+            }),
+            "develop_export_short_infrared_attenuation_rejected");
+
+        CheckThrows<ArgumentException>(
+            () => NativeDevelopExporter.Run(new DevelopExportRequest
+            {
+                SourcePath = absentSource,
+                DestinationPath = destination,
+                DefectInfrared =
+                [
+                    new DevelopDefectInfraredEdit
+                    {
+                        Width = 8,
+                        Height = 8,
+                        CoreMask = new byte[64],
+                        AttenuationStrideBytes = 15,
+                        AttenuationR16 = new byte[128],
+                    },
+                ],
+                DefectEditOrder =
+                [
+                    new DevelopDefectRecipeEditRef(DevelopDefectEditKind.Infrared, 0),
+                ],
+                DefectSourceIdentity = new DevelopDefectSourceIdentity(
+                    1,
+                    new string('0', 64)),
+            }),
+            "develop_export_short_infrared_stride_rejected");
 
         CheckThrows<ArgumentException>(
             () => NativeDevelopExporter.Run(new DevelopExportRequest

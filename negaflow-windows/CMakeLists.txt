@@ -190,6 +190,7 @@ target_link_libraries(
 # could not run the pipeline without a second copy of it. It is a library now so the
 # CLI and the shell drive exactly the same code.
 add_library(negaflow_pipeline STATIC
+    src/Native/pipeline/defect_infrared_stage.cpp
     src/Native/pipeline/defect_recipe_stage.cpp
     src/Native/pipeline/defect_region_stage.cpp
     src/Native/pipeline/develop_export.cpp
@@ -532,6 +533,18 @@ if(BUILD_TESTING)
     add_test(
         NAME native.defect_component_repair
         COMMAND negaflow_defect_component_repair_tests
+    )
+
+    add_executable(negaflow_defect_infrared_stage_tests
+        tests/Native.UnitTests/defect_infrared_stage_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_defect_infrared_stage_tests
+        PRIVATE negaflow_pipeline negaflow_project_options
+    )
+    add_test(
+        NAME native.defect_infrared_stage
+        COMMAND negaflow_defect_infrared_stage_tests
     )
 
     add_executable(negaflow_defect_clone_stamp_tests

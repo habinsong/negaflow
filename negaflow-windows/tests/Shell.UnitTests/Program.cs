@@ -352,6 +352,35 @@ internal static class Program
                   new DevelopDefectSourceIdentity(123, new string('d', 64)),
             "develop_request_projects_persisted_region_defect");
 
+        byte[] infraredCoreRgba = new byte[4 * 4 * 4];
+        infraredCoreRgba[5 * 4] = 255;
+        infraredCoreRgba[6 * 4] = 128;
+        byte[] infraredAttenuation = new byte[4 * 4 * 2];
+        infraredAttenuation[2 * 5] = 0x00;
+        infraredAttenuation[2 * 5 + 1] = 0x80;
+        DefectEditItem infraredEdit = new(
+            Guid.Parse("f56375c4-43f8-48ba-8daf-f2ae95d06d97"),
+            DefectEditKind.Infrared,
+            Enabled: true,
+            Strength: 0.8,
+            new DefectEditLabel(DefectEditLabelKind.Infrared, 1),
+            new DefectEditSummary(
+                DefectEditSummaryKind.ClassBreakdown,
+                new DefectClassBreakdown([], 0.9)),
+            new DefectSize(100, 80),
+            [])
+        {
+            Clusters =
+            [
+                new DefectCluster(
+                    new DefectRect(24, 30, 4, 4),
+                    new DefectMask(false, infraredCoreRgba),
+                    4,
+                    4,
+                    new DefectMask(false, infraredAttenuation)),
+            ],
+        };
+
         DefectEditItem cloneEdit = new(
             Guid.Parse("4a72f873-a8b3-44fc-a427-e57e85d7bb01"),
             DefectEditKind.Clone,
@@ -381,7 +410,7 @@ internal static class Program
             defectFrameId,
             recipeRevision: 4,
             new DefectSourceIdentity(123, new string('d', 64)),
-            [regionEdit, cloneEdit, secondRegionEdit]);
+            [regionEdit, infraredEdit, cloneEdit, secondRegionEdit]);
         DevelopRequestResult orderedDefectRequest = DevelopRequestFactory.Create(
             Frame(new ManualBaseRgb(0.21, 0.22, 0.23)) with
             {
@@ -391,16 +420,84 @@ internal static class Program
         Check(
             orderedDefectRequest.IsSuccess &&
             orderedDefectRequest.Request?.DefectRegions.Count == 2 &&
+            orderedDefectRequest.Request.DefectInfrared.Count == 1 &&
+            orderedDefectRequest.Request.DefectInfrared[0].RoiX == 24 &&
+            orderedDefectRequest.Request.DefectInfrared[0].CoreMaskStrideBytes == 4 &&
+            orderedDefectRequest.Request.DefectInfrared[0].CoreMask.Span[5] == 255 &&
+            orderedDefectRequest.Request.DefectInfrared[0].CoreMask.Span[6] == 128 &&
+            orderedDefectRequest.Request.DefectInfrared[0].AttenuationStrideBytes == 8 &&
+            orderedDefectRequest.Request.DefectInfrared[0].AttenuationR16?.Span[
+                2 * 5 + 1] == 0x80 &&
             orderedDefectRequest.Request.DefectClones.Count == 1 &&
             orderedDefectRequest.Request.DefectClones[0].Strength == 0.7 &&
             orderedDefectRequest.Request.DefectClones[0].Strokes[0].OffsetX == -0.1 &&
             orderedDefectRequest.Request.DefectEditOrder.SequenceEqual(
             [
                 new DevelopDefectRecipeEditRef(DevelopDefectEditKind.Region, 0),
+                new DevelopDefectRecipeEditRef(DevelopDefectEditKind.Infrared, 0),
                 new DevelopDefectRecipeEditRef(DevelopDefectEditKind.Clone, 0),
                 new DevelopDefectRecipeEditRef(DevelopDefectEditKind.Region, 1),
             ]),
-            "develop_request_preserves_interleaved_region_clone_order");
+            "develop_request_preserves_interleaved_region_infrared_clone_order");
+
+        DefectEditItem legacyInfraredEdit = infraredEdit with
+        {
+            Clusters =
+            [
+                infraredEdit.Clusters![0] with { AttenuationR16 = null },
+            ],
+        };
+        DefectRecipeSnapshot legacyInfraredRecipe = DefectRecipeSnapshot.Create(
+            defectFrameId,
+            recipeRevision: 5,
+            new DefectSourceIdentity(123, new string('d', 64)),
+            [legacyInfraredEdit]);
+        Check(legacyInfraredRecipe.Items[0].Clusters![0].AttenuationR16 is null,
+            "defect_recipe_keeps_legacy_attenuation_absent");
+        DevelopRequestResult legacyInfraredRequest = DevelopRequestFactory.Create(
+            Frame(new ManualBaseRgb(0.21, 0.22, 0.23)) with
+            {
+                DefectRecipe = legacyInfraredRecipe,
+            },
+            destination);
+        Check(legacyInfraredRequest.IsSuccess,
+            "develop_request_accepts_legacy_mask_only_infrared");
+        Check(legacyInfraredRequest.Request?.DefectInfrared.Count == 1,
+            "develop_request_keeps_legacy_infrared_separate");
+        Check(legacyInfraredRequest.Request is { } legacyNativeRequest &&
+              legacyNativeRequest.DefectInfrared[0].AttenuationR16 is null,
+            "develop_request_preserves_missing_legacy_attenuation");
+        Check(legacyInfraredRequest.Request?.DefectInfrared[0]
+                  .AttenuationStrideBytes == 0,
+            "develop_request_zeros_missing_legacy_attenuation_stride");
+        Check(legacyInfraredRequest.Request?.DefectEditOrder.SequenceEqual(
+              [
+                  new DevelopDefectRecipeEditRef(DevelopDefectEditKind.Infrared, 0),
+              ]) == true,
+            "develop_request_orders_legacy_infrared_separately");
+
+        DefectEditItem corruptInfraredEdit = infraredEdit with
+        {
+            Clusters =
+            [
+                infraredEdit.Clusters![0] with
+                {
+                    AttenuationR16 = new DefectMask(true, [1, 2, 3]),
+                },
+            ],
+        };
+        DefectRecipeSnapshot corruptInfraredRecipe = DefectRecipeSnapshot.Create(
+            defectFrameId,
+            recipeRevision: 6,
+            new DefectSourceIdentity(123, new string('d', 64)),
+            [corruptInfraredEdit]);
+        Check(DevelopRequestFactory.Create(
+                Frame(new ManualBaseRgb(0.21, 0.22, 0.23)) with
+                {
+                    DefectRecipe = corruptInfraredRecipe,
+                },
+                destination).Refusal == DevelopRequestRefusal.InvalidDefectRecipe,
+            "develop_request_rejects_corrupt_infrared_attenuation");
 
         DefectRecipeSnapshot unboundRegionRecipe = DefectRecipeSnapshot.Create(
             defectFrameId,

@@ -115,6 +115,7 @@ public static class DevelopRequestFactory
         if (!DefectRecipeProjector.TryProject(
                 frame.DefectRecipe,
                 out IReadOnlyList<DevelopDefectRegionEdit> defectRegions,
+                out IReadOnlyList<DevelopDefectInfraredEdit> defectInfrared,
                 out IReadOnlyList<DevelopDefectCloneEdit> defectClones,
                 out IReadOnlyList<DevelopDefectBrushEdit> defectBrushes,
                 out IReadOnlyList<DevelopDefectRecipeEditRef> defectEditOrder,
@@ -212,6 +213,7 @@ public static class DevelopRequestFactory
             FilmEmulation = MapFilmEmulation(frame.Route.FilmEmulation),
             FilmEmulationIntensity = frame.Route.FilmEmulationIntensity,
             DefectRegions = defectRegions,
+            DefectInfrared = defectInfrared,
             DefectClones = defectClones,
             DefectBrushes = defectBrushes,
             DefectEditOrder = defectEditOrder,

@@ -691,6 +691,50 @@ typedef struct nf_develop_export_request_v21 {
     uint32_t defect_brush_point_reserved;
 } nf_develop_export_request_v21;
 
+#define NF_DEFECT_INFRARED_MAX_EDITS 4096U
+#define NF_DEFECT_INFRARED_MAX_ATTENUATION_BYTES (512U * 1024U * 1024U)
+
+/* An infrared descriptor turns one v21 region descriptor into a distinct IR
+   edit. The referenced region supplies ROI, top-first one-byte core mask, and
+   strength. attenuation is optional ROI-local top-first little-endian R16. */
+typedef struct nf_defect_infrared_edit_v1 {
+    uint32_t region_edit_index;
+    uint32_t has_attenuation;
+    uint32_t attenuation_stride_bytes;
+    uint32_t attenuation_offset;
+    uint32_t attenuation_byte_count;
+    uint32_t reserved;
+} nf_defect_infrared_edit_v1;
+
+/* v24 preserves the complete v21 prefix and appends IR descriptors plus their
+   caller-owned flat attenuation storage. v22/v23 changed call controls only,
+   so v24 is the next request-bearing entry point. */
+typedef struct nf_develop_export_request_v24 {
+    nf_develop_export_request_v21 v21;
+    const nf_defect_infrared_edit_v1* defect_infrared_edits;
+    uint32_t defect_infrared_edit_count;
+    uint32_t defect_infrared_edit_reserved;
+    const uint8_t* defect_infrared_attenuation_bytes;
+    uint32_t defect_infrared_attenuation_byte_count;
+    uint32_t defect_infrared_attenuation_reserved;
+} nf_develop_export_request_v24;
+
+/* Groups a contiguous v24 infrared-cluster range into one ordered edit item.
+   Every cluster is computed from the same item-level input image. */
+typedef struct nf_defect_infrared_item_v1 {
+    uint32_t cluster_offset;
+    uint32_t cluster_count;
+    uint32_t reserved_0;
+    uint32_t reserved_1;
+} nf_defect_infrared_item_v1;
+
+typedef struct nf_develop_export_request_v25 {
+    nf_develop_export_request_v24 v24;
+    const nf_defect_infrared_item_v1* defect_infrared_items;
+    uint32_t defect_infrared_item_count;
+    uint32_t defect_infrared_item_reserved;
+} nf_develop_export_request_v25;
+
 typedef struct nf_develop_export_result_v1 {
     uint32_t struct_size;
     uint32_t succeeded;
@@ -1113,6 +1157,37 @@ NF_API nf_status_t NF_CALL nf_auto_adjust_v1(
    The develop request is still v21 — the recipe did not change, so no copy was minted. */
 NF_API nf_status_t NF_CALL nf_develop_preview_v23(
     const nf_develop_export_request_v21* request,
+    const nf_soft_proof_v1* soft_proof,
+    uint32_t maximum_width,
+    uint32_t maximum_height,
+    uint8_t* pixels,
+    uint32_t pixel_capacity_bytes,
+    nf_develop_run_state_v1* run_state,
+    nf_develop_export_result_v3* result);
+
+/* v24 replays optional IR attenuation before the referenced core repair. Both
+   calls use the same request mapping and pre-develop native stage. */
+NF_API nf_status_t NF_CALL nf_develop_export_v24(
+    const nf_develop_export_request_v24* request,
+    nf_develop_run_state_v1* run_state,
+    nf_develop_export_result_v3* result);
+NF_API nf_status_t NF_CALL nf_develop_preview_v24(
+    const nf_develop_export_request_v24* request,
+    const nf_soft_proof_v1* soft_proof,
+    uint32_t maximum_width,
+    uint32_t maximum_height,
+    uint8_t* pixels,
+    uint32_t pixel_capacity_bytes,
+    nf_develop_run_state_v1* run_state,
+    nf_develop_export_result_v3* result);
+
+/* v25 preserves IR edit-item boundaries while retaining the v24 cluster ABI. */
+NF_API nf_status_t NF_CALL nf_develop_export_v25(
+    const nf_develop_export_request_v25* request,
+    nf_develop_run_state_v1* run_state,
+    nf_develop_export_result_v3* result);
+NF_API nf_status_t NF_CALL nf_develop_preview_v25(
+    const nf_develop_export_request_v25* request,
     const nf_soft_proof_v1* soft_proof,
     uint32_t maximum_width,
     uint32_t maximum_height,

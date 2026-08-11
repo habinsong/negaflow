@@ -245,7 +245,10 @@ internal static class DefectSidecarStore
                 return DefectSidecarReadResult.Failure(
                     DefectSidecarError.InvalidContent);
             }
-            return DefectSidecarCodec.Decode(data, expectedFrameId);
+            return DefectSidecarCodec.Decode(
+                data,
+                expectedFrameId,
+                validateCompressedMasks: true);
         }
         catch (UnauthorizedAccessException)
         {

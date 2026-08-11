@@ -1,6 +1,45 @@
 # 구현·검증 상태
 
-기준일: 2026-08-10
+기준일: 2026-08-11
+
+## 2026-08-11 일시 정지 체크포인트 — GrainMend IR ABI v25 WIP
+
+ABI v24의 flat cluster replay는 겹치는 IR cluster에서 같은 attenuation을 반복 적용해 macOS보다
+과보정되는 P1 결함이 독립 검토에서 발견됐습니다. v24의 통과 결과는 이 결함 발견 전 결과이므로
+완료 증거로 채택하지 않습니다.
+
+현재 작업 트리는 IR item 경계를 보존하는 append-only ABI 0.32/v25로 전환 중입니다. 목표 계약은
+모든 cluster patch를 같은 item-level base에서 계산하고, `bbox(attenuation > 0 ∪ core > 8)`만 원래
+cluster 순서와 item strength로 합성하는 것입니다. 전체 ROI 동시 snapshot은 대형 스캔 메모리 위험 때문에
+폐기하고 cluster별 ROI scratch→bounded bbox patch→2단계 합성으로 수렴 중입니다. fingerprint는 macOS
+canonical v2를 유지하고 attenuation 결합을 명시적 v3로 분리하는 migration 중입니다.
+
+일시 정지 직전 `scripts/test.ps1 -Preset x64-debug`은 native 61/61을 통과했습니다. 이어 실행한
+`scripts/test-managed.ps1 -Preset x64-debug`은 새 `DevelopDefectInfraredEdit` item/cluster 모델로 기존
+Interop·Shell 테스트가 아직 이관되지 않아 23개 C# 컴파일 오류로 실패했습니다. 현재 commit은 빌드 완료
+상태가 아닌 재개용 WIP이며 Release/ARM64/provenance를 다시 검증하지 않았습니다.
+
+재개 시 첫 작업은 기존 평면 IR 테스트를 item/cluster 모델로 이관하고, correction bbox 일부 중첩과 더 넓은
+padding ROI를 가진 두 cluster 회귀, flat cluster 4,096·native order 8,192 선검증, v25 ABI layout을 고정한 뒤
+x64 Debug→Release+ARM64 cross gate를 다시 실행하는 것입니다.
+
+## 2026-08-11 IR attenuation replay — ABI v24 사전 체크포인트(미채택)
+
+최신 macOS의 비파괴 IR layer 계약을 post-baseline delta로 채택했습니다. Windows Defects sidecar v2는
+기존 core mask와 별도로 optional compressed R16 attenuation을 보존하고, fingerprint·logical backup·
+pending restore도 같은 authoritative bytes를 사용합니다. 필드가 없는 기존 sidecar는 mask-only
+component repair로 계속 재생하며 손상 압축과 크기 불일치는 실패 폐쇄형으로 거부합니다.
+
+Shell은 IR을 Region으로 접지 않고 ordered edit로 투영합니다. native pre-develop stage는
+`RGB / max(1 - attenuation, 0.5)`를 먼저 적용한 뒤 core mask가 있으면 그 결과를 문맥으로 component
+repair하고 item strength를 한 번만 혼합합니다. preview/export는 ABI 0.31의 같은 v24 request와 native
+stage를 사용합니다. x64 Debug/Release native 61/61, Interop 163, Catalog 587, Shell 336 assertions가
+통과했고 ARM64 Release 전체 graph의 순수 AA64 교차 빌드도 통과했습니다. ARM64 runtime 결과는 아닙니다.
+
+이 체크포인트는 저장된 attenuation의 재생 경계입니다. 최신 macOS의 true-scale 후보 검출, local
+alignment·visible confirmation, null/MAD, significance-dependent inverse-Mills bias, attenuation/core 분리,
+scanner companion 입력·coordinator·WinUI와 동일 입력 macOS-hosted mask/R16/pixel golden은 남아 있습니다.
+상세는 `verification/2026-08-11-ir-attenuation-replay-v24.md`입니다.
 
 ## 2026-08-10 macOS 커널 수식 대조
 
@@ -69,8 +108,8 @@ Grading·Primary Calibration·ColorModel·sRGB16 변환·픽셀 검증에 적용
 | canonical source asset hash | bootstrap 완료 | `baseline/source-assets.sha256` |
 | 개발 도구 | 검증 | Visual Studio Community 2026 18.8.2, MSVC 14.51 x64/ARM64, SDK 26100, .NET SDK 10.0.302/runtime 10.0.10, C# Windows App SDK component |
 | x64 CMake configure/build/run | 통과 | Debug/Release clean configure·build·CLI 실행 |
-| x64 native tests | 통과 | 2026-08-10 Debug/Release CTest **60/60** 통과. 실촬영 fixture 경로가 한 세그먼트 짧아 11개 테스트가 조용히 합성 전용 분기로 떨어져 있던 것을 고쳐 46 → 57, 이후 자동 보정·소프트 프루프로 60 |
-| 관리 시험 수 (현재) | 통과 | Interop **155** assertions(ABI **0.30**), Catalog **583**, Shell **329**, 경고 0. x64 Release 전체 게이트와 ARM64 교차 빌드 포함 |
+| x64 native tests | 통과 | 2026-08-11 Debug/Release CTest **61/61** 통과. IR attenuation stage와 실제 ABI preview/export 회귀 포함 |
+| 관리 시험 수 (현재) | WIP·컴파일 실패 | v24에서는 Interop 163(ABI 0.31), Catalog 587, Shell 336이 통과했으나 중첩 cluster P1 발견 뒤 v25 item 모델로 전환 중. 현재 x64 Debug managed test build는 기존 테스트 미이관으로 C# 오류 23개 |
 | 현상 속도 (16 논리 코어) | 측정 완료·비트 동일 | 3278×4944 에서 develop `1,887 → 246 ms`, tone `2,057 → 285 ms`. 5088×3401 미리보기에서 FilmScanDenoise `15,004.7 → 2,949.7 ms`(5.09배), Texture `3,904.7 → 774.2 ms`(5.04배), identity `2,997 → 552 ms`(5.43배), Local Dodge/Burn 조정당 `585 → 221 ms`(2.65배). 출력 PNG16 SHA-256 과 denoise/texture/dodge-burn 미리보기 fingerprint `b539956ad3c46820`/`a63cd4c01b4c1e10`/`7c8a60ab475f270d` 가 엔진 전역 인라인 강제 빌드와 동일 |
 | 필름 베이스 자동 추정 | **macOS 대조 완료·실측 확인** | `FilmBaseEstimator.swift` 659줄을 함수·상수 단위로 재대조해 전부 일치 확인(후보 판정, 응집 모드·강등, 비필름 제외·팽창, 연결 성분, 가장자리/분산 표본, 보더 폴백, 선택 순서). 사용자 실제 OpticFilm 컬러 네거티브 **15장 전부가 1차 경로(connected component)** 로 측정되고 Dmin 이 `R>G>B` 오렌지 마스크와 일치. 가장자리·분산·스트립·고정 상수 폴백은 한 번도 사용되지 않음 |
 | 자동 보정 | 네이티브·ABI·셸 연결 완료 | ABI `nf_auto_adjust_v1`(0.29)은 미리보기 BGRA8 을 그대로 받는 분석 호출이라 새 요청 struct 가 없습니다. `AutoAdjustCoordinator` 가 톤·warmth/tint 를 0 으로 되돌린 사본을 렌더해 재고 결과를 **대입**합니다(누적 아님). WinUI 버튼은 UI 단계 |
@@ -82,16 +121,16 @@ Grading·Primary Calibration·ColorModel·sRGB16 변환·픽셀 검증에 적용
 | 취소·진행률 | ABI v22/0.28 통과·셸 연결 | caller 소유 run state 정수 3개, 단계 경계·디코드 행 덩어리·source 해시·GrainMend 내부(morphology 9패스·scratch 각도 묶음·타일)에서 협조적 취소, 게시 시작 뒤에는 의도적 미확인. 실촬영 5088×3401 에서 `decode` 취소가 `60.9 ms` 반환(미취소 export `3,323 ms`), GrainMend 켠 미리보기가 `2,014.7 → 835.0 ms`. 셸 `PreviewCoordinator` 가 겹친 요청에서 진행 중 렌더를 취소하고 취소 결과는 배달하지 않음 |
 | ARM64 cross build | 통과 | Debug/Release 전체 target build, CLI/DLL PE `AA64` |
 | ARM64 native run | 미검증 | 실제 ARM64 Windows runner 필요 |
-| .NET 10/C ABI Interop | 게시·미리보기 파이프라인 노출 | v12 가변 Local Dodge/Burn, v13 ColorModel, v14 Auto Levels/Neutral Balance, v15 DevelopTarget, v16 scanner profile ID, v17 film polarity, v18 현상 전 영역 Defects, v19 source-bound Defects, v20 ordered Clone Stamp, v21 ordered Brush, v22 취소·진행률 run state까지 append-only ABI 0.28. struct 크기·offset을 네이티브 `static_assert`와 관리 assertion 양쪽에서 고정. x64 Debug/Release interop 139 assertions |
+| .NET 10/C ABI Interop | ABI v25 WIP | v24 flat IR replay의 중첩 결함 때문에 item range를 보존하는 append-only ABI 0.32/v25로 전환 중. native 61/61은 통과했지만 관리 테스트 이관과 v25 layout/범위 회귀가 미완료라 현재 완료로 보지 않음 |
 | 네이티브 파이프라인 라이브러리 | 분리 완료 | `negaflow_pipeline` 이 `develop_and_export` 와 Film Look workspace 를 소유. CLI 는 workspace 를 이 라이브러리에서 링크. CLI 자체 순서 코드의 수렴은 미완 |
 | WinUI shell | 첫 관통 경로 통과 | component package 1.8 locked graph, x64 실제 최대화 실행, ARM64 교차 빌드, 6개 언어, 오른쪽 caption inset, Settings와 SHA 기본 `끔`; 2026-08-10 Shell 316 assertion 통과 |
 | static runtime 배포 기반 | 통과 | Release CLI 직접 dependency가 Windows 기본 DLL 5개뿐이며 VC++ Redistributable DLL 없음 |
 | float32 pixel contract | 부분 구현 | checked layout/stride/capacity, extended RGB, straight alpha, NaN/Inf 거부 |
-| scalar pointwise·spatial | 부분 구현 | 4상태 film type, 현상 전 ordered region/infrared/Clone Stamp/Brush Defects, 반전 직후 opt-in Auto Levels/Neutral Balance, documented character와 matched-pair 상대 signature를 갖춘 4종 ScannerTargetGrade, evidence-gated EXPIRED RescueGrade, 15종 ScannerProfileGrade와 ColorModel, tone/color, Film Emulation·DigitalFilmLook, GrainMend, FilmScanDenoise, 4종 Local Dodge/Burn mask, Texture, B&W 중립화·토닝, ImageTransform을 macOS 순서로 연결. x64 Debug/Release 통과; ARM64 runtime·macOS numeric golden은 미검증 |
+| scalar pointwise·spatial | 부분 구현 | 4상태 film type, 현상 전 ordered region/IR attenuation→optional core repair/Clone Stamp/Brush Defects, 반전 직후 opt-in Auto Levels/Neutral Balance, documented character와 matched-pair 상대 signature를 갖춘 4종 ScannerTargetGrade, evidence-gated EXPIRED RescueGrade, 15종 ScannerProfileGrade와 ColorModel, tone/color, Film Emulation·DigitalFilmLook, GrainMend, FilmScanDenoise, 4종 Local Dodge/Burn mask, Texture, B&W 중립화·토닝, ImageTransform을 macOS 순서로 연결. x64 Debug/Release 통과; ARM64 runtime·macOS numeric golden은 미검증 |
 | Film Look source routing | film·digital 공통 수직 경로 통과 | macOS correctness fix에 따라 film scan은 profile 선택과 무관하게 identity. rendered digital은 color/motion 27종 또는 B&W 15종의 kind가 process와 맞을 때만 각 고정 그래프를 실행하며, 불일치는 identity. 실제 룩이 실행될 때만 Texture grain/halation 중복을 막음. 새 16종의 macOS pixel golden과 정식 UI control surface는 미구현 |
 | Catalog Develop route | SQLite→C ABI→WinUI 첫 연결 통과 | color/B&W와 negative/positive를 독립 축으로 투영해 4상태 film type을 보존. positive film/digital은 base·반전을 건너뛰고 tone/target/post pipeline을 공유. legacy marker·강도 1.0 호환, 새 강도 0.5, unknown field 보존, invalid 조합 fail-closed. 전체 macOS Develop control surface는 미구현 |
 | 세로 슬라이스 (catalog→C ABI→WinUI) | 앱 안에서 한 바퀴 완결·미리보기 연결 | Import→필름 base 슬라이더→노출→Export 를 UI Automation 으로 실제 조작해 `Exported 631×403 in 101 ms` 확인. base 슬라이더 범위가 엔진의 0.001..1.0 을 그대로 받음. 시작 시 `library.sqlite` 생성·lock 획득. ABI 0.6 미리보기를 `WriteableBitmap` 캔버스에 표시하고 겹친 요청은 마지막 상태를 보존. macOS와 동일한 정식 Develop UI, base picker, 취소·진행률은 미구현 |
-| catalog SQLite 영속성 | 검증 커밋·Defects sidecar·backup·pending restore 통과 | 새 연결 full canonical readback, 커밋 전용 UUID rollback snapshot, revision-aware Defects v2 sidecar, 논리 backup 세대, restart-only pending restore, 현재 catalog safety generation, future version 차단과 applied cleanup fence. x64 Debug/Release Catalog 583 assertions. process-kill/disk-full/power-loss 검증은 미구현 |
+| catalog SQLite 영속성 | 검증 커밋·Defects sidecar·backup·pending restore 통과 | 새 연결 full canonical readback, 커밋 전용 UUID rollback snapshot, revision-aware Defects v2 sidecar와 optional compressed R16 attenuation, 논리 backup 세대, restart-only pending restore, 현재 catalog safety generation, future version 차단과 applied cleanup fence. x64 Debug/Release Catalog 587 assertions. process-kill/disk-full/power-loss 검증은 미구현 |
 | catalog logical backup generation | authoritative v3 통과 | canonical `library.json`과 모든 선언된 Defects sidecar, v3 manifest, byte count·SHA-256, monotonic sequence, staging 전체 검증 뒤 write-through rename, valid 세대만 기본 3개 retention. future/damaged 세대는 prune하지 않으며 restore도 catalog와 sidecar를 같은 세대로 교체 |
 | catalog 단일 작성자 강제 | 구조로 강제·프로세스 경계 관측 | `SqliteCatalogStore`는 `internal`. 공개 입구는 `CatalogSession` 하나이며 프로세스 lock 을 못 잡으면 세션이 만들어지지 않음. `NotFound`→빈 라이브러리 변환은 `ReadOrCreate` 한 자리뿐이고 손상·미지원 version 은 거기서도 실패. lock 없이 되는 것은 `CatalogRecovery.IsValidCatalogSource` 확인뿐 |
 | catalog 성능 (5만 frame) | 목표 규모 측정 완료 | 최초 쓰기 527ms, 전체 읽기 255ms, 무변경 재저장 343ms, 1건 편집 337ms, 전체 뒤집기 582ms, 파일 10.1MB. 비용이 변경량이 아니라 catalog 크기에 비례함을 기록 |
@@ -108,7 +147,7 @@ Grading·Primary Calibration·ColorModel·sRGB16 변환·픽셀 검증에 적용
 | scanner→working color | 수직 경로 통과 | untagged linear raw 9개와 embedded ICC→ICM→sRGB16→linear float 6개, 64행 streaming 15/15, whole-frame 최종 float exact 일치 15/15 |
 | PNG16 output | phase 0 수직 경로 통과 | working→sRGB16, Microsoft WIC encode, 등록 sRGB ICC, 구조·전체 pixel·profile readback, 기존 파일 비덮어쓰기와 같은-directory 게시 |
 | TIFF16 output | phase 1 수직 경로 통과 | 무압축 RGB16 Classic TIFF, 단일 IFD, 최소 metadata allowlist, 전체 pixel·ICC readback, 원본 상태 관찰, 단계별 CLI report와 비덮어쓰기 게시 |
-| M4 최소 tone | 확장 수직 경로·첫 앱 연결 통과 | ordered region/infrared/Clone Stamp/Brush Defects→Auto Levels/Neutral Balance→ScannerTargetGrade/RescueGrade/ScannerProfileGrade→ColorModel→tone/color→source별 Film Look→GrainMend→FilmScanDenoise→Local Dodge/Burn→Texture→B&W→ImageTransform을 같은 preview/export 파이프라인에서 실행. 4상태 film type은 catalog→Shell→ABI v17까지, Defects는 revision-aware sidecar→Shell→ABI v21까지 source identity를 재검증해 재시작 재적용. 정식 제품 UI는 별도 작업 |
+| M4 최소 tone | 확장 수직 경로 통과·IR WIP | region/Clone Stamp/Brush Defects→Auto Levels/Neutral Balance→ScannerTargetGrade/RescueGrade/ScannerProfileGrade→ColorModel→tone/color→source별 Film Look→GrainMend→FilmScanDenoise→Local Dodge/Burn→Texture→B&W→ImageTransform은 공통 preview/export에서 실행. IR attenuation은 v24 중첩 결함 때문에 item-boundary ABI v25로 전환 중이며 아직 관리 전체 경로 통과 상태가 아님. 정식 제품 UI는 별도 작업 |
 | M4 단계 진단 | 확장 수직 경로 통과 | 기본 export stage wall/process-CPU, 진단 전용 scanner/develop/tone/Film Look min/max·versioned 비암호 fingerprint, Film Look route·cube/scratch·시간 보고, tone 24·point curve 24·Color Mixer 48·Color Grading 48·Primary Calibration 48·Film Emulation 색상 48/acutance 36-value conformance |
 | 이미지 SHA-256 | opt-in·source-bound 기반 통과 | 기본 `off`는 파일 I/O 0, 명시적 CNG SHA-256 known-answer/multi-chunk/cancel, 사용자 TIFF opt-in 15/15. 비어 있지 않은 Defects recipe만 렌더 정확성 경계에서 저장된 identity를 재검증 |
 | 네이티브 엔진 제3자 runtime dependency | 0개 | 빈 vcpkg dependency, WIC/ICM/Win32만 사용 |

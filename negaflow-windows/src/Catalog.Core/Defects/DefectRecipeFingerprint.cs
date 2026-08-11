@@ -5,24 +5,38 @@ namespace Negaflow.Catalog;
 
 internal static class DefectRecipeFingerprint
 {
-    public const int CurrentVersion = 2;
+    public const int LegacyVersion = 2;
+    public const int CurrentVersion = 3;
 
-    public static string Compute(IReadOnlyList<DefectEditItem> items)
+    public static string Compute(IReadOnlyList<DefectEditItem> items) =>
+        Compute(items, CurrentVersion);
+
+    public static string Compute(
+        IReadOnlyList<DefectEditItem> items,
+        int version)
     {
+        if (version is not LegacyVersion and not CurrentVersion)
+        {
+            throw new ArgumentOutOfRangeException(nameof(version));
+        }
         JsonArray encodedItems = [];
         foreach (DefectEditItem item in items)
         {
-            encodedItems.Add(EncodeItem(item));
+            encodedItems.Add(EncodeItem(
+                item,
+                includeAttenuation: version >= CurrentVersion));
         }
         byte[] canonical = CatalogJson.SerializeCanonical(new JsonObject
         {
-            ["version"] = CurrentVersion,
+            ["version"] = version,
             ["items"] = encodedItems,
         });
         return Convert.ToHexStringLower(SHA256.HashData(canonical));
     }
 
-    private static JsonObject EncodeItem(DefectEditItem item)
+    private static JsonObject EncodeItem(
+        DefectEditItem item,
+        bool includeAttenuation)
     {
         JsonArray? strokes = null;
         JsonObject? region = null;
@@ -58,14 +72,23 @@ internal static class DefectRecipeFingerprint
                 clusters = [];
                 foreach (DefectCluster cluster in item.Clusters ?? [])
                 {
-                    clusters.Add(new JsonObject
+                    JsonObject encoded = new()
                     {
                         ["roi"] = EncodeRect(cluster.Roi),
                         ["maskByteCount"] = cluster.Mask.Data.LongLength,
                         ["maskZlib"] = cluster.Mask.IsZlib,
                         ["width"] = cluster.Width,
                         ["height"] = cluster.Height,
-                    });
+                    };
+                    if (includeAttenuation &&
+                        cluster.AttenuationR16 is { } attenuation)
+                    {
+                        encoded["attenuationByteCount"] = attenuation.Data.LongLength;
+                        encoded["attenuationZlib"] = attenuation.IsZlib;
+                        encoded["attenuationSHA256"] = Convert.ToHexStringLower(
+                            SHA256.HashData(attenuation.Data));
+                    }
+                    clusters.Add(encoded);
                 }
                 break;
             case DefectEditKind.Clone:

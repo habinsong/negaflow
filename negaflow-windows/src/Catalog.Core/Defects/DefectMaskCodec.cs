@@ -12,6 +12,21 @@ public static class DefectMaskCodec
         DefectMask mask,
         int width,
         int height,
+        out byte[] data) =>
+        TryDecode(mask, width, height, bytesPerPixel: 4, out data);
+
+    public static bool TryDecodeR16LittleEndian(
+        DefectMask mask,
+        int width,
+        int height,
+        out byte[] data) =>
+        TryDecode(mask, width, height, bytesPerPixel: 2, out data);
+
+    private static bool TryDecode(
+        DefectMask mask,
+        int width,
+        int height,
+        int bytesPerPixel,
         out byte[] data)
     {
         ArgumentNullException.ThrowIfNull(mask);
@@ -20,7 +35,7 @@ public static class DefectMaskCodec
         try
         {
             long pixels = checked((long)width * height);
-            expectedBytes = checked(pixels * 4);
+            expectedBytes = checked(pixels * bytesPerPixel);
             if (width <= 0 || height <= 0 ||
                 pixels > DefectRecipeValidator.MaximumMaskPixels ||
                 expectedBytes > int.MaxValue)

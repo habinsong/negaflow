@@ -66,7 +66,8 @@ internal static class DefectRecipeValidator
         snapshot = null!;
         if (expectedFrameId == Guid.Empty ||
             frameId != expectedFrameId ||
-            fingerprintVersion != DefectRecipeFingerprint.CurrentVersion ||
+            fingerprintVersion is not DefectRecipeFingerprint.LegacyVersion and
+                not DefectRecipeFingerprint.CurrentVersion ||
             recipeRevision == 0 ||
             !IsLowercaseSha256(recipeSha256) ||
             !IsValidSourceIdentity(sourceIdentity) ||
@@ -75,19 +76,29 @@ internal static class DefectRecipeValidator
             return false;
         }
 
-        string computed = DefectRecipeFingerprint.Compute(normalized);
+        string computed = DefectRecipeFingerprint.Compute(
+            normalized,
+            fingerprintVersion);
         if (!string.Equals(computed, recipeSha256, StringComparison.Ordinal))
         {
             return false;
         }
 
-        snapshot = new DefectRecipeSnapshot(
-            frameId,
-            fingerprintVersion,
-            recipeRevision,
-            recipeSha256,
-            sourceIdentity,
-            normalized);
+        snapshot = fingerprintVersion == DefectRecipeFingerprint.CurrentVersion
+            ? new DefectRecipeSnapshot(
+                frameId,
+                fingerprintVersion,
+                recipeRevision,
+                recipeSha256,
+                sourceIdentity,
+                normalized)
+            : new DefectRecipeSnapshot(
+                frameId,
+                DefectRecipeFingerprint.CurrentVersion,
+                recipeRevision,
+                DefectRecipeFingerprint.Compute(normalized),
+                sourceIdentity,
+                normalized);
         return true;
     }
 
@@ -242,7 +253,13 @@ internal static class DefectRecipeValidator
                 ? Compress(mask)
                 : null;
             IReadOnlyList<DefectCluster>? clusters = item.Clusters?.Select(cluster =>
-                cluster with { Mask = Compress(cluster.Mask) }).ToArray();
+                cluster with
+                {
+                    Mask = Compress(cluster.Mask),
+                    AttenuationR16 = cluster.AttenuationR16 is { } attenuation
+                        ? Compress(attenuation)
+                        : null,
+                }).ToArray();
             copies[index] = item with
             {
                 RegionMask = regionMask,
@@ -482,11 +499,23 @@ internal static class DefectRecipeValidator
                     cluster.Height,
                     validateCompressedMasks,
                     ref decodedByteCount,
-                    out DefectMask mask))
+                    out DefectMask mask) ||
+                !TryCopyAttenuation(
+                    cluster.AttenuationR16,
+                    cluster.Width,
+                    cluster.Height,
+                    validateCompressedMasks,
+                    ref decodedByteCount,
+                    out DefectMask? attenuation))
             {
                 return false;
             }
-            values.Add(new DefectCluster(roi, mask, cluster.Width, cluster.Height));
+            values.Add(new DefectCluster(
+                roi,
+                mask,
+                cluster.Width,
+                cluster.Height,
+                attenuation));
         }
         copy = values.ToArray();
         return true;
@@ -542,6 +571,51 @@ internal static class DefectRecipeValidator
         int height,
         bool validateCompressedMask,
         ref long decodedByteCount,
+        out DefectMask copy) =>
+        TryCopyPixelPayload(
+            mask,
+            width,
+            height,
+            bytesPerPixel: 4,
+            validateCompressedMask,
+            ref decodedByteCount,
+            out copy);
+
+    private static bool TryCopyAttenuation(
+        DefectMask? attenuation,
+        int width,
+        int height,
+        bool validateCompressedPayload,
+        ref long decodedByteCount,
+        out DefectMask? copy)
+    {
+        copy = null;
+        if (attenuation is null)
+        {
+            return true;
+        }
+        if (!TryCopyPixelPayload(
+                attenuation,
+                width,
+                height,
+                bytesPerPixel: 2,
+                validateCompressedPayload,
+                ref decodedByteCount,
+                out DefectMask value))
+        {
+            return false;
+        }
+        copy = value;
+        return true;
+    }
+
+    private static bool TryCopyPixelPayload(
+        DefectMask? mask,
+        int width,
+        int height,
+        int bytesPerPixel,
+        bool validateCompressedMask,
+        ref long decodedByteCount,
         out DefectMask copy)
     {
         copy = null!;
@@ -555,7 +629,7 @@ internal static class DefectRecipeValidator
         try
         {
             pixels = checked((long)width * height);
-            expectedBytes = checked(pixels * 4);
+            expectedBytes = checked(pixels * bytesPerPixel);
             decodedByteCount = checked(decodedByteCount + expectedBytes);
         }
         catch (OverflowException)

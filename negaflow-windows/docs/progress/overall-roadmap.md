@@ -1,6 +1,6 @@
 # 전체 로드맵과 진행률
 
-기준일: 2026-08-10
+기준일: 2026-08-11
 기준 로드맵: `windows_docs/99-plan/migration-roadmap.md`의 M0~M18
 
 ## 현재 숫자
@@ -20,12 +20,12 @@
 | M0 제품 기준선 | 35% | exact commit, bootstrap manifest, delta, 일부 asset hash, canonical Film Emulation Core Image artifact | 전체 surface/stage manifest, 권리 결정, 나머지 macOS 기준 artifact |
 | M1 저장소·빌드·CI | 68% | 별도 build root, x64/ARM64 native·managed·WinUI graph, dual-RID lock, C ABI, CLI, VS 18.8.2와 Windows App SDK C# component, 고정 SDK/vcpkg, static CRT | shader/packaging, CI, 실제 ARM64 run |
 | M2 적합성·CPU scalar | 72% | 4상태 film type, scene-ranged negative와 muted-scene vibrance, Auto Levels/Neutral Balance, documented+matched-pair ScannerTargetGrade 4종, EXPIRED RescueGrade, 15종 ScannerProfileGrade, color/motion 27종+B&W 15종 DigitalFilmLook, GrainMend, FilmScanDenoise, Local Dodge/Burn, ColorModel, Texture, B&W 토닝, ImageTransform을 포함한 현재 kernel은 모두 architecture baseline scalar로 직접 실행 | 새 Film Emulation의 macOS numeric golden, 실제 ARM64 실행, 계측으로 상위 ISA variant가 필요해질 때의 dispatch |
-| M3 이미지 I/O·색·영속성 | 88% | bounded TIFF none/LZW/Deflate decode와 독립 압축 검사, row streaming, ICC→linear working, 이미지 SHA·검증 게시, catalog route, SQLite verified commit, revision-aware Defects sidecar와 렌더 직전 source identity 재검증, 모든 authoritative 파일의 논리 backup·restart-only pending restore | WIC CPU deadline, tile/fuzz, process-kill/disk-full/power-loss harness |
+| M3 이미지 I/O·색·영속성 | 88% | bounded TIFF none/LZW/Deflate decode와 독립 압축 검사, row streaming, ICC→linear working, 이미지 SHA·검증 게시, catalog route, SQLite verified commit, optional R16 attenuation을 포함한 revision-aware Defects sidecar와 렌더 직전 source identity 재검증, 모든 authoritative 파일의 논리 backup·restart-only pending restore | WIC CPU deadline, tile/fuzz, process-kill/disk-full/power-loss harness |
 | M4 CLI end-to-end | 97% | 4상태 film type과 비프리셋 color negative muted-scene vibrance를 포함해 Auto Levels/Neutral Balance→ScannerTargetGrade/RescueGrade/ScannerProfileGrade→ColorModel→tone/color→source별 Film Look→GrainMend→FilmScanDenoise→가변 Local Dodge/Burn→Texture→B&W→ImageTransform을 공통 preview/export 순서로 연결하고 ABI v17 검증 | 나머지 runtime pixel diff manifest와 대형 입력 evidence |
 | M5 GPU/WARP | 0% | 문서만 존재 | D3D11/Direct2D/WARP FP32 vertical slice |
-| M6 전체 Develop graph | 94% | revision-aware sidecar에서 재시작 재적용되는 현상 전 ordered region/infrared/Clone Stamp/Brush Defects, 4상태 film type, scene-ranged 반전 직후 muted-scene vibrance와 opt-in Auto Levels/Neutral Balance, documented+matched ScannerTargetGrade 4종, RescueGrade, 15종 ScannerProfileGrade와 ColorModel, 42종 source별 Film Look 뒤 GrainMend→FilmScanDenoise→Local Dodge/Burn→Texture→B&W→ImageTransform까지 native CPU graph 구현 | Defects Brush·Clone Stamp macOS golden, 새 Film Emulation·`CIVibrance`·나머지 현상 축의 macOS golden, 대형 이미지/GPU/ARM64 runtime |
+| M6 전체 Develop graph | 94% | revision-aware sidecar에서 재시작 재적용되는 현상 전 ordered region/IR attenuation→optional core repair/Clone Stamp/Brush Defects, 4상태 film type, scene-ranged 반전 직후 muted-scene vibrance와 opt-in Auto Levels/Neutral Balance, documented+matched ScannerTargetGrade 4종, RescueGrade, 15종 ScannerProfileGrade와 ColorModel, 42종 source별 Film Look 뒤 GrainMend→FilmScanDenoise→Local Dodge/Burn→Texture→B&W→ImageTransform까지 native CPU graph 구현 | 최신 paired-plane IR 자동 검출·scanner lifecycle·macOS mask/R16/pixel golden, Defects Brush·Clone Stamp macOS golden, 새 Film Emulation·`CIVibrance`·나머지 현상 축의 macOS golden, 대형 이미지/GPU/ARM64 runtime |
 | M7 대형 이미지 | 6% | WIC row sink, chunk ICC transform, 단조 progress/cancel, full decoded source 제거와 exact parity | 최종 working streaming, tile, byte reservation, cache, TDR |
-| M8 ABI·WinUI shell/canvas | 79% | v12 가변 Local Dodge/Burn, v13 ColorModel, v14 scene correction, v15 DevelopTarget, v16 scanner profile ID, v17 film polarity, v18 ordered 영역 Defects, v19 source identity, v20 ordered Clone Stamp, v21 ordered Brush와 42종 Film Emulation enum을 포함한 append-only ABI 0.27, sidecar recipe의 region/infrared/clone/brush request 투영, managed layout/validation 127 assertions | WinUI Defects 편집, GPU canvas, handles/events, lifetime·activation 전체 경로 |
+| M8 ABI·WinUI shell/canvas | 79% | v12 가변 Local Dodge/Burn, v13 ColorModel, v14 scene correction, v15 DevelopTarget, v16 scanner profile ID, v17 film polarity, v18 ordered 영역 Defects, v19 source identity, v20 ordered Clone Stamp, v21 ordered Brush, v22 run state, v23 preview-only soft proof까지 검증. IR은 flat v24 결함 뒤 item-boundary v25/ABI 0.32 WIP | v25 managed test 이관·range/layout 검증, WinUI Defects 편집과 IR lifecycle, GPU canvas, handles/events, lifetime·activation 전체 경로 |
 | M9~M14 제품 surface | 8% | Library 목록, 파일 picker import, Develop의 필름 base·노출, Export가 실제 동작 | 미리보기 렌더, base picker, 취소·진행률, Defects, Print, Settings 기능 |
 | M15 scanner host | 0% | 문서만 존재 | protocol host와 격리 |
 | M16 qualification | 0% | 문서만 존재 | 실제 CPU/GPU/ARM64/display matrix |
@@ -198,15 +198,23 @@ M5(GPU), M15(scanner host), M16(qualification), M17(배포·서명), M18(release
     보존했습니다. 합성 TIFF preview/export 변화와 원본 byte-exact 보존, x64 Debug/Release native 46/46,
     Interop 127, Catalog 583, Shell 316 assertions 및 ARM64 Release 전체 교차 빌드로 고정했습니다.
 
+**일시 정지 WIP:** post-baseline IR layer의 optional compressed R16 저장과 v24 replay까지 구현했으나,
+겹치는 cluster가 attenuation을 반복 적용하는 P1 때문에 v24를 미채택 처리했습니다. 같은 item base에서 bounded
+bbox patch를 계산하는 ABI v25/0.32로 전환 중이며 x64 Debug native 61/61만 통과했습니다. managed test build는
+기존 평면 IR 테스트 미이관으로 C# 오류 23개라 진행률에 추가하지 않습니다.
+
 ## 다음 완료 조건
 
 가까운 순서대로 다음을 닫습니다.
 
-1. DigitalFilmLook과 `CIVibrance`를 포함한 화면 영향 단계의 macOS numeric golden·통계 허용오차를 고정합니다.
-2. WIC 압축 해제 CPU budget과
+1. 최신 GrainMend IR의 true-scale 후보 검출, local confirmation·alignment, null/MAD와
+   significance-dependent inverse-Mills bias, attenuation/core 분리, scanner 영속 lifecycle을 연결하고
+   같은 입력 macOS-hosted mask·R16 attenuation·pixel golden을 고정합니다.
+2. DigitalFilmLook과 `CIVibrance`를 포함한 화면 영향 단계의 macOS numeric golden·통계 허용오차를 고정합니다.
+3. WIC 압축 해제 CPU budget과
    deadline을 검증합니다.
-3. Defects Brush·Clone Stamp의 같은 입력 macOS pixel golden과 실제 촬영 TIFF를 연결합니다.
-4. 최종 working buffer와 출력을 downstream row/tile 소비자로 넘기고 전체 process budget을 적용합니다.
+4. Defects Brush·Clone Stamp의 같은 입력 macOS pixel golden과 실제 촬영 TIFF를 연결합니다.
+5. 최종 working buffer와 출력을 downstream row/tile 소비자로 넘기고 전체 process budget을 적용합니다.
 
 ## 진행률을 올리지 않는 항목
 

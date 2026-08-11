@@ -20,13 +20,14 @@ void discard_pixels(WorkingImage& image) noexcept {
     const DefectRecipeParameters& parameters) {
     if (parameters.order.size() !=
         parameters.regions.edits.size() + parameters.clones.size() +
-            parameters.brushes.size()) {
+            parameters.brushes.size() + parameters.infrared.size()) {
         return false;
     }
     std::vector<std::uint8_t> regions(
         parameters.regions.edits.size(), 0U);
     std::vector<std::uint8_t> clones(parameters.clones.size(), 0U);
     std::vector<std::uint8_t> brushes(parameters.brushes.size(), 0U);
+    std::vector<std::uint8_t> infrared(parameters.infrared.size(), 0U);
     for (const DefectRecipeEditRef reference : parameters.order) {
         switch (reference.kind) {
             case DefectRecipeEditKind::region:
@@ -49,6 +50,13 @@ void discard_pixels(WorkingImage& image) noexcept {
                     return false;
                 }
                 brushes[reference.index] = 1U;
+                break;
+            case DefectRecipeEditKind::infrared:
+                if (reference.index >= infrared.size() ||
+                    infrared[reference.index] != 0U) {
+                    return false;
+                }
+                infrared[reference.index] = 1U;
                 break;
             default:
                 return false;
@@ -119,6 +127,21 @@ DefectRecipeStageResult apply_defect_recipe(
                 continue;
             }
 
+            if (reference.kind == DefectRecipeEditKind::infrared) {
+                const DefectInfraredItem& item =
+                    parameters.infrared[reference.index];
+                auto applied = apply_defect_infrared_item(
+                    std::move(result.image), item);
+                result.info.infrared_status = applied.status;
+                if (applied.status != DefectInfraredStageStatus::ok) {
+                    result.status = DefectRecipeStageStatus::infrared_failed;
+                    discard_pixels(applied.image);
+                    return result;
+                }
+                result.image = std::move(applied.image);
+                continue;
+            }
+
             const DefectBrushEdit& edit =
                 parameters.brushes[reference.index];
             if (!edit.enabled || edit.parameters.strength <= 1.0e-3) {
@@ -172,6 +195,11 @@ const char* defect_recipe_stage_status_name(
         case DefectRecipeStageStatus::brush_failed:
             return negaflow::imaging::defect_heal_brush_status_name(
                 result.info.brush_status);
+        case DefectRecipeStageStatus::infrared_failed: {
+            DefectInfraredStageResult infrared{};
+            infrared.status = result.info.infrared_status;
+            return defect_infrared_stage_status_name(infrared);
+        }
         case DefectRecipeStageStatus::allocation_failed:
             return "allocation_failed";
     }

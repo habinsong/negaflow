@@ -45,6 +45,10 @@ public static unsafe class NativeDevelopExporter
     internal const int DefectBrushStrokeV1Size = 16;
     internal const int DefectBrushEditV1Size = 24;
     internal const int RequestV21Size = 4832;
+    internal const int DefectInfraredEditV1Size = 24;
+    internal const int RequestV24Size = 4864;
+    internal const int DefectInfraredItemV1Size = 16;
+    internal const int RequestV25Size = 4880;
     internal const int ResultV2Size = 152;
     internal const int ResultV3Size = 160;
     internal const int RunStateV1Size = 16;
@@ -64,6 +68,8 @@ public static unsafe class NativeDevelopExporter
     private const int MaximumDefectBrushEdits = 4096;
     private const int MaximumDefectBrushStrokes = 100_000;
     private const int MaximumDefectBrushPoints = 5_000_000;
+    private const int MaximumDefectInfraredEdits = 4096;
+    private const int MaximumDefectInfraredAttenuationBytes = 512 * 1024 * 1024;
     private const int MaximumDefectOrderedEdits = 8192;
 
     private const uint StatusOk = 0;
@@ -100,6 +106,10 @@ public static unsafe class NativeDevelopExporter
             sizeof(NativeDefectBrushStrokeV1) != DefectBrushStrokeV1Size ||
             sizeof(NativeDefectBrushEditV1) != DefectBrushEditV1Size ||
             sizeof(NativeDevelopExportRequestV21) != RequestV21Size ||
+            sizeof(NativeDefectInfraredEditV1) != DefectInfraredEditV1Size ||
+            sizeof(NativeDevelopExportRequestV24) != RequestV24Size ||
+            sizeof(NativeDefectInfraredItemV1) != DefectInfraredItemV1Size ||
+            sizeof(NativeDevelopExportRequestV25) != RequestV25Size ||
             sizeof(NativeDevelopExportResultV2) != ResultV2Size ||
             sizeof(NativeDevelopExportResultV3) != ResultV3Size ||
             sizeof(NativeDevelopRunStateV1) != RunStateV1Size ||
@@ -131,11 +141,15 @@ public static unsafe class NativeDevelopExporter
         ValidateColorGrading(request.ColorGrading);
         ValidateLocalDodgeBurn(request.LocalDodgeBurn);
         ValidateDefectRegions(request.DefectRegions);
+        ValidateDefectInfrared(request.DefectInfrared);
+        ValidateCombinedDefectRegionPayload(
+            request.DefectRegions, request.DefectInfrared);
         ValidateDefectClones(request.DefectClones);
         ValidateDefectBrushes(request.DefectBrushes);
         ValidateDefectEditOrder(request);
         ValidateDefectSourceIdentity(
-            request.DefectRegions.Count + request.DefectClones.Count +
+            request.DefectRegions.Count + request.DefectInfrared.Count +
+                request.DefectClones.Count +
                 request.DefectBrushes.Count,
             request.DefectSourceIdentity);
         if (!SignedNormalized(request.Warmth) ||
@@ -457,6 +471,123 @@ public static unsafe class NativeDevelopExporter
         }
     }
 
+    private static void ValidateDefectInfrared(
+        IReadOnlyList<DevelopDefectInfraredEdit> edits)
+    {
+        ArgumentNullException.ThrowIfNull(edits);
+        if (edits.Count > MaximumDefectInfraredEdits)
+        {
+            throw new ArgumentException(
+                "The defect recipe contains too many infrared edits.",
+                nameof(edits));
+        }
+        int totalClusters = 0;
+        long totalAttenuationBytes = 0;
+        foreach (DevelopDefectInfraredEdit edit in edits)
+        {
+            ArgumentNullException.ThrowIfNull(edit);
+            ArgumentNullException.ThrowIfNull(edit.Clusters);
+            if (edit.Clusters.Count == 0 ||
+                !double.IsFinite(edit.Strength) || edit.Strength is < 0.0 or > 1.0)
+            {
+                throw new ArgumentException(
+                    "An infrared edit has no clusters or an invalid strength.",
+                    nameof(edits));
+            }
+            totalClusters = checked(totalClusters + edit.Clusters.Count);
+            if (totalClusters > MaximumDefectInfraredEdits)
+            {
+                throw new ArgumentException(
+                    "The defect recipe contains too many infrared clusters.",
+                    nameof(edits));
+            }
+            foreach (DevelopDefectInfraredCluster cluster in edit.Clusters)
+            {
+                ArgumentNullException.ThrowIfNull(cluster);
+                uint coreStride = cluster.CoreMaskStrideBytes == 0U
+                    ? cluster.Width
+                    : cluster.CoreMaskStrideBytes;
+                ulong requiredCore = cluster.Height == 0U
+                    ? 0U
+                    : ((ulong)cluster.Height - 1U) * coreStride + cluster.Width;
+                if (cluster.Width == 0U || cluster.Height == 0U ||
+                    coreStride < cluster.Width ||
+                    requiredCore != (ulong)cluster.CoreMask.Length)
+                {
+                    throw new ArgumentException(
+                        "An infrared cluster has an invalid core mask.",
+                        nameof(edits));
+                }
+
+                if (cluster.AttenuationR16 is not { } attenuation)
+                {
+                    if (cluster.AttenuationStrideBytes != 0U)
+                    {
+                        throw new ArgumentException(
+                            "An infrared cluster without attenuation has a non-zero stride.",
+                            nameof(edits));
+                    }
+                    continue;
+                }
+
+                ulong rowBytes = (ulong)cluster.Width * sizeof(ushort);
+                uint attenuationStride = cluster.AttenuationStrideBytes == 0U
+                    ? checked((uint)rowBytes)
+                    : cluster.AttenuationStrideBytes;
+                ulong requiredAttenuation = ((ulong)cluster.Height - 1U) *
+                    attenuationStride + rowBytes;
+                if (attenuationStride < rowBytes ||
+                    requiredAttenuation != (ulong)attenuation.Length)
+                {
+                    throw new ArgumentException(
+                        "An infrared cluster has an invalid attenuation layout.",
+                        nameof(edits));
+                }
+                totalAttenuationBytes = checked(
+                    totalAttenuationBytes + attenuation.Length);
+                if (totalAttenuationBytes > MaximumDefectInfraredAttenuationBytes)
+                {
+                    throw new ArgumentException(
+                        "The infrared recipe exceeds the bounded attenuation capacity.",
+                        nameof(edits));
+                }
+            }
+        }
+    }
+
+    private static void ValidateCombinedDefectRegionPayload(
+        IReadOnlyList<DevelopDefectRegionEdit> regions,
+        IReadOnlyList<DevelopDefectInfraredEdit> infrared)
+    {
+        int infraredClusterCount = 0;
+        foreach (DevelopDefectInfraredEdit item in infrared)
+        {
+            infraredClusterCount = checked(infraredClusterCount + item.Clusters.Count);
+        }
+        if (regions.Count > MaximumDefectRegionEdits - infraredClusterCount)
+        {
+            throw new ArgumentException(
+                "The combined region and infrared recipe exceeds native capacity.");
+        }
+        long totalMaskBytes = 0;
+        foreach (DevelopDefectRegionEdit edit in regions)
+        {
+            totalMaskBytes += edit.Mask.Length;
+        }
+        foreach (DevelopDefectInfraredEdit item in infrared)
+        {
+            foreach (DevelopDefectInfraredCluster cluster in item.Clusters)
+            {
+                totalMaskBytes += cluster.CoreMask.Length;
+            }
+        }
+        if (totalMaskBytes > MaximumDefectMaskBytes)
+        {
+            throw new ArgumentException(
+                "The combined region and infrared masks exceed native capacity.");
+        }
+    }
+
     private static void ValidateDefectClones(
         IReadOnlyList<DevelopDefectCloneEdit> edits)
     {
@@ -571,15 +702,25 @@ public static unsafe class NativeDevelopExporter
     private static void ValidateDefectEditOrder(DevelopExportRequest request)
     {
         ArgumentNullException.ThrowIfNull(request.DefectEditOrder);
+        int infraredClusterCount = 0;
+        foreach (DevelopDefectInfraredEdit item in request.DefectInfrared)
+        {
+            infraredClusterCount = checked(
+                infraredClusterCount + item.Clusters.Count);
+        }
         int expectedCount = checked(
-            request.DefectRegions.Count + request.DefectClones.Count +
-            request.DefectBrushes.Count);
+            request.DefectRegions.Count + request.DefectInfrared.Count +
+            request.DefectClones.Count + request.DefectBrushes.Count);
+        int nativeExpectedCount = checked(
+            request.DefectRegions.Count + infraredClusterCount +
+            request.DefectClones.Count + request.DefectBrushes.Count);
         if (request.DefectEditOrder.Count == 0 && request.DefectClones.Count == 0 &&
-            request.DefectBrushes.Count == 0)
+            request.DefectBrushes.Count == 0 && request.DefectInfrared.Count == 0)
         {
             return;
         }
         if (expectedCount > MaximumDefectOrderedEdits ||
+            nativeExpectedCount > MaximumDefectOrderedEdits ||
             request.DefectEditOrder.Count != expectedCount)
         {
             throw new ArgumentException(
@@ -587,6 +728,7 @@ public static unsafe class NativeDevelopExporter
                 nameof(request));
         }
         bool[] regions = new bool[request.DefectRegions.Count];
+        bool[] infrared = new bool[request.DefectInfrared.Count];
         bool[] clones = new bool[request.DefectClones.Count];
         bool[] brushes = new bool[request.DefectBrushes.Count];
         foreach (DevelopDefectRecipeEditRef reference in request.DefectEditOrder)
@@ -599,6 +741,8 @@ public static unsafe class NativeDevelopExporter
                     !clones[reference.Index] => clones[reference.Index] = true,
                 DevelopDefectEditKind.Brush when reference.Index < brushes.Length &&
                     !brushes[reference.Index] => brushes[reference.Index] = true,
+                DevelopDefectEditKind.Infrared when reference.Index < infrared.Length &&
+                    !infrared[reference.Index] => infrared[reference.Index] = true,
                 _ => false,
             };
             if (!valid)
@@ -717,18 +861,32 @@ public static unsafe class NativeDevelopExporter
 
     private sealed record NativeDefectRegionPayload(
         NativeDefectRegionEditV1[] Edits,
-        byte[] MaskBytes);
+        byte[] MaskBytes,
+        NativeDefectInfraredEditV1[] InfraredEdits,
+        byte[] InfraredAttenuationBytes,
+        NativeDefectInfraredItemV1[] InfraredItems);
 
     private static NativeDefectRegionPayload BuildDefectRegionPayload(
-        IReadOnlyList<DevelopDefectRegionEdit> source)
+        IReadOnlyList<DevelopDefectRegionEdit> source,
+        IReadOnlyList<DevelopDefectInfraredEdit> infrared)
     {
         int totalBytes = 0;
         foreach (DevelopDefectRegionEdit edit in source)
         {
             totalBytes = checked(totalBytes + edit.Mask.Length);
         }
+        int infraredClusterCount = 0;
+        foreach (DevelopDefectInfraredEdit item in infrared)
+        {
+            infraredClusterCount = checked(infraredClusterCount + item.Clusters.Count);
+            foreach (DevelopDefectInfraredCluster cluster in item.Clusters)
+            {
+                totalBytes = checked(totalBytes + cluster.CoreMask.Length);
+            }
+        }
         byte[] masks = new byte[totalBytes];
-        NativeDefectRegionEditV1[] edits = new NativeDefectRegionEditV1[source.Count];
+        NativeDefectRegionEditV1[] edits =
+            new NativeDefectRegionEditV1[source.Count + infraredClusterCount];
         int offset = 0;
         for (int index = 0; index < source.Count; ++index)
         {
@@ -753,7 +911,83 @@ public static unsafe class NativeDevelopExporter
             };
             offset = checked(offset + edit.Mask.Length);
         }
-        return new NativeDefectRegionPayload(edits, masks);
+
+        int attenuationByteCount = 0;
+        foreach (DevelopDefectInfraredEdit item in infrared)
+        {
+            foreach (DevelopDefectInfraredCluster cluster in item.Clusters)
+            {
+                if (cluster.AttenuationR16 is { } attenuation)
+                {
+                    attenuationByteCount = checked(
+                        attenuationByteCount + attenuation.Length);
+                }
+            }
+        }
+        byte[] attenuationBytes = new byte[attenuationByteCount];
+        NativeDefectInfraredEditV1[] infraredEdits =
+            new NativeDefectInfraredEditV1[infraredClusterCount];
+        NativeDefectInfraredItemV1[] infraredItems =
+            new NativeDefectInfraredItemV1[infrared.Count];
+        int attenuationOffset = 0;
+        int clusterIndex = 0;
+        for (int itemIndex = 0; itemIndex < infrared.Count; ++itemIndex)
+        {
+            DevelopDefectInfraredEdit item = infrared[itemIndex];
+            infraredItems[itemIndex] = new NativeDefectInfraredItemV1
+            {
+                ClusterOffset = checked((uint)clusterIndex),
+                ClusterCount = checked((uint)item.Clusters.Count),
+            };
+            foreach (DevelopDefectInfraredCluster cluster in item.Clusters)
+            {
+                cluster.CoreMask.Span.CopyTo(masks.AsSpan(offset));
+                int regionIndex = checked(source.Count + clusterIndex);
+                edits[regionIndex] = new NativeDefectRegionEditV1
+                {
+                    Enabled = item.IsEnabled ? 1U : 0U,
+                    RoiX = cluster.RoiX,
+                    RoiY = cluster.RoiY,
+                    Width = cluster.Width,
+                    Height = cluster.Height,
+                    MaskStrideBytes = cluster.CoreMaskStrideBytes == 0U
+                        ? cluster.Width
+                        : cluster.CoreMaskStrideBytes,
+                    MaskOffset = checked((uint)offset),
+                    MaskByteCount = checked((uint)cluster.CoreMask.Length),
+                    Strength = item.Strength,
+                };
+                offset = checked(offset + cluster.CoreMask.Length);
+
+                if (cluster.AttenuationR16 is { } attenuation)
+                {
+                    attenuation.Span.CopyTo(
+                        attenuationBytes.AsSpan(attenuationOffset));
+                    infraredEdits[clusterIndex] = new NativeDefectInfraredEditV1
+                    {
+                        RegionEditIndex = checked((uint)regionIndex),
+                        HasAttenuation = 1U,
+                        AttenuationStrideBytes = cluster.AttenuationStrideBytes == 0U
+                            ? checked(cluster.Width * sizeof(ushort))
+                            : cluster.AttenuationStrideBytes,
+                        AttenuationOffset = checked((uint)attenuationOffset),
+                        AttenuationByteCount = checked((uint)attenuation.Length),
+                    };
+                    attenuationOffset = checked(
+                        attenuationOffset + attenuation.Length);
+                }
+                else
+                {
+                    infraredEdits[clusterIndex] = new NativeDefectInfraredEditV1
+                    {
+                        RegionEditIndex = checked((uint)regionIndex),
+                    };
+                }
+                ++clusterIndex;
+            }
+        }
+        return new NativeDefectRegionPayload(
+            edits, masks, infraredEdits, attenuationBytes, infraredItems);
     }
 
     private sealed record NativeDefectClonePayload(
@@ -862,18 +1096,43 @@ public static unsafe class NativeDevelopExporter
             }
             return regions;
         }
-        NativeDefectRecipeEditRefV1[] order =
-            new NativeDefectRecipeEditRefV1[request.DefectEditOrder.Count];
-        for (int index = 0; index < order.Length; ++index)
+        int[] infraredClusterOffsets = new int[request.DefectInfrared.Count];
+        int infraredClusterCount = 0;
+        for (int index = 0; index < request.DefectInfrared.Count; ++index)
         {
-            DevelopDefectRecipeEditRef reference = request.DefectEditOrder[index];
-            order[index] = new NativeDefectRecipeEditRefV1
-            {
-                Kind = (uint)reference.Kind,
-                Index = reference.Index,
-            };
+            infraredClusterOffsets[index] = infraredClusterCount;
+            infraredClusterCount = checked(
+                infraredClusterCount + request.DefectInfrared[index].Clusters.Count);
         }
-        return order;
+        List<NativeDefectRecipeEditRefV1> order = new(
+            checked(request.DefectEditOrder.Count - request.DefectInfrared.Count +
+                infraredClusterCount));
+        foreach (DevelopDefectRecipeEditRef reference in request.DefectEditOrder)
+        {
+            if (reference.Kind != DevelopDefectEditKind.Infrared)
+            {
+                order.Add(new NativeDefectRecipeEditRefV1
+                {
+                    Kind = (uint)reference.Kind,
+                    Index = reference.Index,
+                });
+                continue;
+            }
+            int itemIndex = checked((int)reference.Index);
+            int firstCluster = infraredClusterOffsets[itemIndex];
+            for (int ordinal = 0;
+                 ordinal < request.DefectInfrared[itemIndex].Clusters.Count;
+                 ++ordinal)
+            {
+                order.Add(new NativeDefectRecipeEditRefV1
+                {
+                    Kind = (uint)DevelopDefectEditKind.Region,
+                    Index = checked((uint)(request.DefectRegions.Count +
+                        firstCluster + ordinal)),
+                });
+            }
+        }
+        return [.. order];
     }
 
     private static NativeDevelopExportRequestV7 BuildRequestV7(
@@ -1390,6 +1649,40 @@ public static unsafe class NativeDevelopExporter
         };
     }
 
+    private static NativeDevelopExportRequestV24 BuildRequestV24(
+        NativeDevelopExportRequestV21 v21,
+        NativeDefectInfraredEditV1* defectInfraredEdits,
+        uint defectInfraredEditCount,
+        byte* defectInfraredAttenuationBytes,
+        uint defectInfraredAttenuationByteCount)
+    {
+        v21.V20.V19.V18.V17.V16.V15.V14.V13.V12.V11.V10.V9.V8.V7.StructSize =
+            (uint)sizeof(NativeDevelopExportRequestV24);
+        return new NativeDevelopExportRequestV24
+        {
+            V21 = v21,
+            DefectInfraredEdits = defectInfraredEdits,
+            DefectInfraredEditCount = defectInfraredEditCount,
+            DefectInfraredAttenuationBytes = defectInfraredAttenuationBytes,
+            DefectInfraredAttenuationByteCount = defectInfraredAttenuationByteCount,
+        };
+    }
+
+    private static NativeDevelopExportRequestV25 BuildRequestV25(
+        NativeDevelopExportRequestV24 v24,
+        NativeDefectInfraredItemV1* defectInfraredItems,
+        uint defectInfraredItemCount)
+    {
+        v24.V21.V20.V19.V18.V17.V16.V15.V14.V13.V12.V11.V10.V9.V8.V7.StructSize =
+            (uint)sizeof(NativeDevelopExportRequestV25);
+        return new NativeDevelopExportRequestV25
+        {
+            V24 = v24,
+            DefectInfraredItems = defectInfraredItems,
+            DefectInfraredItemCount = defectInfraredItemCount,
+        };
+    }
+
     private static byte[] BuildDefectSourceSha256(DevelopExportRequest request) =>
         request.DefectSourceIdentity is { } identity
             ? Convert.FromHexString(identity.Sha256)
@@ -1405,7 +1698,7 @@ public static unsafe class NativeDevelopExporter
         NativeLocalDodgeBurnPayload local = BuildLocalDodgeBurnPayload(
             request.LocalDodgeBurn);
         NativeDefectRegionPayload defects = BuildDefectRegionPayload(
-            request.DefectRegions);
+            request.DefectRegions, request.DefectInfrared);
         NativeDefectClonePayload clones = BuildDefectClonePayload(
             request.DefectClones);
         NativeDefectBrushPayload brushes = BuildDefectBrushPayload(
@@ -1440,6 +1733,12 @@ public static unsafe class NativeDevelopExporter
         fixed (NativeDefectBrushEditV1* defectBrushEdits = brushes.Edits)
         fixed (NativeDefectBrushStrokeV1* defectBrushStrokes = brushes.Strokes)
         fixed (NativeDefectBrushPointV1* defectBrushPoints = brushes.Points)
+        fixed (NativeDefectInfraredEditV1* defectInfraredEdits =
+            defects.InfraredEdits)
+        fixed (byte* defectInfraredAttenuationBytes =
+            defects.InfraredAttenuationBytes)
+        fixed (NativeDefectInfraredItemV1* defectInfraredItems =
+            defects.InfraredItems)
         {
             NativeDevelopExportRequestV20 v20 = BuildRequestV20(
                 request,
@@ -1467,7 +1766,7 @@ public static unsafe class NativeDevelopExporter
                 checked((uint)clones.Points.Length),
                 nativeDefectEditOrder,
                 checked((uint)defectEditOrder.Length));
-            NativeDevelopExportRequestV21 native = BuildRequestV21(
+            NativeDevelopExportRequestV21 v21 = BuildRequestV21(
                 v20,
                 defectBrushEdits,
                 checked((uint)brushes.Edits.Length),
@@ -1475,13 +1774,23 @@ public static unsafe class NativeDevelopExporter
                 checked((uint)brushes.Strokes.Length),
                 defectBrushPoints,
                 checked((uint)brushes.Points.Length));
-            status = NativeMethods.nf_develop_export_v22(
+            NativeDevelopExportRequestV24 v24 = BuildRequestV24(
+                v21,
+                defectInfraredEdits,
+                checked((uint)defects.InfraredEdits.Length),
+                defectInfraredAttenuationBytes,
+                checked((uint)defects.InfraredAttenuationBytes.Length));
+            NativeDevelopExportRequestV25 native = BuildRequestV25(
+                v24,
+                defectInfraredItems,
+                checked((uint)defects.InfraredItems.Length));
+            status = NativeMethods.nf_develop_export_v25(
                 &native,
                 runState,
                 &raw);
         }
 
-        return Translate(status, raw, "nf_develop_export_v22");
+        return Translate(status, raw, "nf_develop_export_v25");
     }
 
     /// <summary>
@@ -1515,7 +1824,7 @@ public static unsafe class NativeDevelopExporter
         NativeLocalDodgeBurnPayload local = BuildLocalDodgeBurnPayload(
             request.LocalDodgeBurn);
         NativeDefectRegionPayload defects = BuildDefectRegionPayload(
-            request.DefectRegions);
+            request.DefectRegions, request.DefectInfrared);
         NativeDefectClonePayload clones = BuildDefectClonePayload(
             request.DefectClones);
         NativeDefectBrushPayload brushes = BuildDefectBrushPayload(
@@ -1565,6 +1874,12 @@ public static unsafe class NativeDevelopExporter
         fixed (NativeDefectBrushEditV1* defectBrushEdits = brushes.Edits)
         fixed (NativeDefectBrushStrokeV1* defectBrushStrokes = brushes.Strokes)
         fixed (NativeDefectBrushPointV1* defectBrushPoints = brushes.Points)
+        fixed (NativeDefectInfraredEditV1* defectInfraredEdits =
+            defects.InfraredEdits)
+        fixed (byte* defectInfraredAttenuationBytes =
+            defects.InfraredAttenuationBytes)
+        fixed (NativeDefectInfraredItemV1* defectInfraredItems =
+            defects.InfraredItems)
         {
             NativeDevelopExportRequestV20 v20 = BuildRequestV20(
                 request,
@@ -1592,7 +1907,7 @@ public static unsafe class NativeDevelopExporter
                 checked((uint)clones.Points.Length),
                 nativeDefectEditOrder,
                 checked((uint)defectEditOrder.Length));
-            NativeDevelopExportRequestV21 native = BuildRequestV21(
+            NativeDevelopExportRequestV21 v21 = BuildRequestV21(
                 v20,
                 defectBrushEdits,
                 checked((uint)brushes.Edits.Length),
@@ -1600,7 +1915,17 @@ public static unsafe class NativeDevelopExporter
                 checked((uint)brushes.Strokes.Length),
                 defectBrushPoints,
                 checked((uint)brushes.Points.Length));
-            status = NativeMethods.nf_develop_preview_v23(
+            NativeDevelopExportRequestV24 v24 = BuildRequestV24(
+                v21,
+                defectInfraredEdits,
+                checked((uint)defects.InfraredEdits.Length),
+                defectInfraredAttenuationBytes,
+                checked((uint)defects.InfraredAttenuationBytes.Length));
+            NativeDevelopExportRequestV25 native = BuildRequestV25(
+                v24,
+                defectInfraredItems,
+                checked((uint)defects.InfraredItems.Length));
+            status = NativeMethods.nf_develop_preview_v25(
                 &native,
                 proofPointer,
                 maximumWidth,
@@ -1611,7 +1936,7 @@ public static unsafe class NativeDevelopExporter
                 &raw);
         }
 
-        return Translate(status, raw, "nf_develop_preview_v23");
+        return Translate(status, raw, "nf_develop_preview_v25");
     }
 
     private static DevelopExportResult Translate(
