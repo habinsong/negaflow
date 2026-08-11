@@ -139,6 +139,7 @@ add_library(negaflow_imaging STATIC
       src/Native/imaging/grain_mend_morphology.cpp
       src/Native/imaging/grain_mend_resample.cpp
       src/Native/imaging/grain_mend_tiled.cpp
+      src/Native/imaging/infrared_defect_detector.cpp
       src/Native/imaging/icm_icc_converter.cpp
       src/Native/imaging/image_transform.cpp
     src/Native/imaging/linear_scanner_converter.cpp
@@ -545,6 +546,18 @@ if(BUILD_TESTING)
     add_test(
         NAME native.defect_infrared_stage
         COMMAND negaflow_defect_infrared_stage_tests
+    )
+
+    add_executable(negaflow_infrared_defect_detector_tests
+        tests/Native.UnitTests/infrared_defect_detector_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_infrared_defect_detector_tests
+        PRIVATE negaflow_imaging negaflow_project_options
+    )
+    add_test(
+        NAME native.infrared_defect_detector
+        COMMAND negaflow_infrared_defect_detector_tests
     )
 
     add_executable(negaflow_defect_clone_stamp_tests

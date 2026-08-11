@@ -153,12 +153,11 @@ working 변환 뒤 `v / 255` 와 정확히 같고, 실제 파일과 합성 회�
 
 사용자가 체감하는 현상 품질을 카탈로그 주변 내구성보다 먼저 닫습니다. 다음 구현 순서는 아래와 같습니다.
 
-**최신 GrainMend IR delta가 최우선입니다.** optional R16 attenuation sidecar와 같은 item base를 쓰는
-Shell→ABI v25→공통 preview/export replay 경계는 완료했습니다. 다음 체크포인트는 최신 macOS와 같은
-paired visible/IR 입력에서 true-scale closing radius → area-weighted candidate aggregation → defect-local alignment와 visible
-confirmation → null/MAD → significance-dependent inverse-Mills bias → attenuation/core 분리를 순서대로
-구현하는 것입니다. 색상 네거티브와 색상 슬라이드는 허용하고 silver image가 IR을 막는 흑백 네거티브·
-포지티브는 거부하는 최신 film compatibility도 같은 lifecycle에 적용합니다. scanner companion 입력과
+**최신 GrainMend IR delta가 최우선입니다.** optional R16 attenuation replay와 paired visible/IR의
+true-scale closing → area-weighted candidate → defect-local alignment/visible confirmation → null/MAD →
+significance-dependent inverse-Mills → attenuation/core native 검출 코어는 완료했습니다. 다음 체크포인트는
+이 코어를 C ABI/managed coordinator와 scanner companion plane 수집에 연결하는 것입니다. 색상 네거티브와
+색상 슬라이드는 허용하고 silver image가 IR을 막는 흑백 네거티브·포지티브는 거부합니다. scanner 입력과
 영속 lifecycle까지 연결한 뒤 같은 입력의 macOS-hosted
 mask·R16 attenuation·최종 pixel golden을 통과하기 전에는 GrainMend IR 완전 동등성을 주장하지 않습니다.
 

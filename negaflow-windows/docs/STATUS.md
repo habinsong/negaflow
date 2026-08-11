@@ -2,6 +2,18 @@
 
 기준일: 2026-08-12
 
+## 2026-08-12 GrainMend paired visible/IR detector native core
+
+최신 macOS 계약의 paired-plane 검출 코어를 Windows C++20에 추가했습니다. 결함 신호 우선 정수 정렬과
+누설 상관 fallback, 신뢰되지 않은 seed의 다중 결함 consensus, border-connected dark margin 제외,
+true-scale closing·광학 밀도, scan-derived floor/sigma, 면적 누적 후보, 8방향 연결, 결함별 가시광
+확인·median/MAD·significance-dependent inverse-Mills 보정, attenuation/core 분리와 bounded R16 cluster를
+한 경로로 실행합니다. macOS anchor 의미의 `(3,2)` 정렬·5개 이상 성분·세로/대각 스크래치, 20px
+consensus, IR-only 기각, margin halo 제외를 고정했고 x64 Debug native **62/62**가 통과했습니다.
+
+이 체크포인트는 native 배열 코어입니다. scanner companion plane 수집, C ABI/managed coordinator,
+sidecar item 생성, 실제 paired 촬영 TIFF와 macOS-hosted R16/pixel golden은 아직 연결되지 않았습니다.
+
 ## 2026-08-12 GrainMend IR item replay — ABI v25
 
 ABI v24의 flat cluster replay는 겹치는 IR cluster에서 같은 attenuation을 반복 적용해 macOS보다
