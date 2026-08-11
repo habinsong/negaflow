@@ -140,6 +140,9 @@ private struct LibraryFilterToggle: View {
         }
         .toggleStyle(.button)
         .buttonStyle(.plain)
+        // 켜짐은 배경색으로 이미 드러난다. 포커스 링까지 그리면 막대에서 첫 항목만 파란 테두리를
+        // 두른 채로 남아, 켜져 있는 필터처럼 보인다.
+        .focusEffectDisabled()
         .fixedSize()
     }
 }

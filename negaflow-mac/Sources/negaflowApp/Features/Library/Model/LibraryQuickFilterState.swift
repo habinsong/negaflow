@@ -33,7 +33,7 @@ struct LibraryQuickFilterState: Equatable {
         if !LibrarySearchText.normalize(searchText).isEmpty {
             conditions.append(.text(.init(
                 field: .anySearchable,
-                rule: .containsAll,
+                rule: .containsPhrase,
                 value: searchText
             )))
         }

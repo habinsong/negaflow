@@ -27,6 +27,10 @@ enum LibraryTextField: String, Codable, CaseIterable, Equatable, Hashable, Senda
 enum LibraryTextMatchRule: String, Codable, Equatable, Sendable {
     case containsAny
     case containsAll
+    /// 입력한 말이 **붙어 있는 그대로** 값 하나 안에 들어 있어야 한다. 낱말을 따로 떼어
+    /// 서로 다른 값에서 하나씩 찾는 `containsAll` 과 다르다 — "사진 1" 로 찾을 때 이름이
+    /// "사진 3" 이고 파일명이 `L1000003` 인 컷이 걸려 나오던 것이 그 때문이었다.
+    case containsPhrase
     case containsAllWords
     case doesNotContainAny
     case startsWith

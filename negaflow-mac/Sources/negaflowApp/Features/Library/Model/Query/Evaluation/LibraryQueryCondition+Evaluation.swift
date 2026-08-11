@@ -23,6 +23,9 @@ extension LibraryQueryCondition {
                 return normalized.isEmpty
             case .containsAny, .containsAll, .containsAllWords, .doesNotContainAny:
                 return normalized.isEmpty || !LibrarySearchText.substringTerms(normalized).isEmpty
+            case .containsPhrase:
+                return normalized.isEmpty
+                    || !LibrarySearchText.removingWhitespace(normalized).isEmpty
             case .startsWith, .endsWith, .equals:
                 return true
             }

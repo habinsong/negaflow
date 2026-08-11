@@ -115,6 +115,19 @@ struct LibraryPreparedTextPredicate {
                         || LibrarySearchText.removingWhitespace($0).contains(term)
                 }
             }
+        case .containsPhrase:
+            // 인덱스는 값마다 공백을 지우고 NUL 로 이어 붙인 것이라, 공백을 지운 말을
+            // 그대로 찾으면 된다. "사진1" 과 "사진 1" 이 함께 걸리고, 값 경계를 넘는
+            // 오탐은 NUL 이 막는다.
+            let compactPhrase = LibrarySearchText.removingWhitespace(phrase)
+            guard !compactPhrase.isEmpty else { return false }
+            if let substringIndex {
+                return substringIndex.contains(compactPhrase)
+            }
+            return normalizedValues.contains {
+                $0.contains(phrase)
+                    || LibrarySearchText.removingWhitespace($0).contains(compactPhrase)
+            }
         case .containsAll:
             if let substringIndex {
                 return substringTerms.allSatisfy { substringIndex.contains($0) }
