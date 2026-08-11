@@ -10,7 +10,7 @@ extension DevelopFrameRenderer {
         let engine = ChromabaseEngine()
         let context = renderContext()
         guard let input = resolveRenderInput(snapshot, engine: engine, context: context) else {
-            throw DevelopFrameRenderError.loadFailed
+            throw loadError(for: snapshot)
         }
         return try renderRawPreview(
             from: displayProxy(input.image, maxDimension: snapshot.proxyMaxDimension),
@@ -22,6 +22,16 @@ extension DevelopFrameRenderer {
     struct RenderInput {
         let image: CIImage
         let generatedPreviewRaw: DevelopFramePreviewRaw?
+    }
+
+    /// 입력을 못 구한 이유를 가른다. cleaned raw 를 기다리는 중이면 실패가 아니라 보류다 —
+    /// 사용자에게 "이미지 로드 실패"를 띄우거나 진단에 실패로 남기면 안 된다.
+    static func loadError(for snapshot: DevelopFrameSnapshot) -> DevelopFrameRenderError {
+        snapshot.requiresCleanedRaw
+            && snapshot.preloadedRaw == nil
+            && verifiedCleanedRawURL(snapshot) == nil
+            ? .cleanedRawPending
+            : .loadFailed
     }
 
     static func resolveRenderInput(

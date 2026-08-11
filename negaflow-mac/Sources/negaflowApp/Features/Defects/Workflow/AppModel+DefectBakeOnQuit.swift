@@ -6,12 +6,17 @@ import Foundation
 // 종료 시 결함 편집을 이미지에 굽는다: cleaned raw가 프레임의 원본이 되고(스캔=제자리 교체,
 // 가져오기·공유 원본=앱 소유 사본으로 리포인트), 기록(defectEdits/undo/recipe)은 폐기한다.
 // 다음 실행은 구워진 원본을 그대로 로드하므로 기록 복원·검증·재빌드가 전혀 없다.
+//
+// **GrainMend IR 은 굽지 않는다.** IR 스캔 파일이 원본 옆에 남아 있는 한 그 레이어는 언제든
+// 똑같이 다시 만들 수 있고(브러시 스트로크처럼 사람이 그린 기록이 아니다), 구워 버리면 다음
+// 실행에서 레이어가 사라져 켜기/끄기·강도 조절이 불가능해진다. 그래서 원본은 그대로 두고,
+// 다음 실행에서 그 프레임을 선택할 때 runInfraredCleanIfNeeded 가 기록을 되살린다.
 extension AppModel {
     /// 결함 편집이 있는 모든 프레임을 굽는다. 실패한 프레임이 있으면 false를 돌려
     /// 종료를 보류한다(적용된 편집 유실 방지). 성공 시 스테이징 캐시도 함께 정리한다.
     func bakeDefectEditsForTermination() async -> Bool {
         for frame in frames where !frame.isPreviewScan {
-            if frame.defectEdits.isEmpty {
+            if frame.bakeableDefectEdits.isEmpty {
                 removeCleanedRawStaging(frame)
                 continue
             }
@@ -37,21 +42,25 @@ extension AppModel {
             frame.cleanedRawPersistTask = nil
         }
         guard ownsFrame(frame) else { return true }
-        guard frame.requiresCleanedRawForActiveDefects else {
-            // 켜진 레이어가 없으면 원본이 곧 결과다 — 기록만 폐기한다.
+        let edits = frame.bakeableDefectEdits
+        guard edits.contains(where: { $0.enabled && $0.strength > 1e-3 }) else {
+            // 구울 레이어가 없으면 원본이 곧 결과다 — 기록만 폐기한다.
             clearDefectStateAfterBake(frame)
             return true
         }
 
         // 최종 픽셀 확보: 메모리 → 디스크 스테이징 → (드물게) 인라인 재계산.
+        // 커밋된 픽셀에는 IR 레이어도 섞여 있으므로, IR 이 하나라도 있으면 그 지름길을 쓸 수
+        // 없다 — 원본부터 구울 레이어만 다시 합성한다.
         let identity = frame.defectRecipeIdentity
+        let hasInfrared = edits.count != frame.defectEdits.count
         var preloaded: CGImage?
-        if let cg = frame.cleanedRawImage, identity != nil,
+        if !hasInfrared, let cg = frame.cleanedRawImage, identity != nil,
            frame.cleanedRawMemoryIdentity == identity {
             preloaded = cg
         }
         var stagedURL: URL?
-        if preloaded == nil,
+        if !hasInfrared, preloaded == nil,
            let url = frame.cleanedRawDiskURL, identity != nil,
            frame.cleanedRawDiskIdentity == identity,
            CleanedRawCacheFile.isOwnedCacheURL(url, frameID: frame.id) {
@@ -60,7 +69,15 @@ extension AppModel {
 
         let rawURL = frame.rawScanURL
         let sourceKind = frame.sourceKind
-        let edits = frame.defectEdits
+        // IR 레이어를 빼고 굽는 경우, 캐시된 패치는 IR 이 섞인 베이스 위에서 계산된 것이라
+        // 그대로 쓰면 IR 픽셀이 패치 안으로 따라 들어간다. 다시 계산한다.
+        let bakeEdits = hasInfrared
+            ? edits.map { item -> DefectEditItem in
+                var stripped = item
+                stripped.cachedPatches = nil
+                return stripped
+            }
+            : edits
         // 같은 원본을 다른 프레임(가상 복사본 등)이 공유하면 제자리 교체가 그 프레임의
         // 픽셀까지 바꾸므로, 이 프레임만 앱 소유 사본으로 리포인트한다.
         let sharesRaw = frames.contains {
@@ -81,7 +98,7 @@ extension AppModel {
                     finalCG = Self.composeCleanedRawForBake(
                         rawURL: rawURL,
                         sourceKind: sourceKind,
-                        edits: edits
+                        edits: bakeEdits
                     )
                 }
                 guard let finalCG else { return nil }
@@ -205,4 +222,9 @@ extension AppModel {
             format: .RGBA16, colorSpace: linearColorSpace
         )
     }
+}
+
+extension ScanFrame {
+    /// 종료 시 이미지에 구울 편집. GrainMend IR 은 제외한다(AppModel+DefectBakeOnQuit 머리말).
+    var bakeableDefectEdits: [DefectEditItem] { defectEdits.filter { !$0.isInfrared } }
 }

@@ -341,6 +341,12 @@ extension AppModel {
         selectedFlatbedScanRegionID = id
     }
 
+    /// 지금 조작 대상이 "프레임이 그려진 프리뷰 스캔"인가. 삭제 단축키가 사진 대신 프레임을
+    /// 지워야 하는 상황을 가른다.
+    var hasDrawnFlatbedFramesOnActionablePreview: Bool {
+        actionableFrame?.isPreviewScan == true && !flatbedScanRegions.isEmpty
+    }
+
     func deleteSelectedFlatbedScanRegion() {
         guard let selectedFlatbedScanRegionID,
               let index = flatbedScanRegions.firstIndex(where: {

@@ -109,6 +109,10 @@ extension AppModel {
                     )
                 } catch is CancellationError {
                     return
+                } catch DevelopFrameRenderError.cleanedRawPending {
+                    // 결함 제거 빌드가 아직 픽셀을 안 내놨다. 실패가 아니라 순서 문제이고,
+                    // 빌드가 커밋될 때 현상이 다시 발행된다 — 조용히 물러난다.
+                    return
                 } catch {
                     if Task.isCancelled { return }
                     trace.recordError(error)
@@ -250,6 +254,8 @@ extension AppModel {
                 // 결함 제거는 입력 raw(cleaned raw)에 이미 반영되어 있으므로 현상 결과에 그대로 포함된다.
                 return
             } catch is CancellationError {
+                return
+            } catch DevelopFrameRenderError.cleanedRawPending {
                 return
             } catch {
                 if Task.isCancelled { return }

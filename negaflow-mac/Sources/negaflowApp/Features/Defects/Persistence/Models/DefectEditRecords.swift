@@ -31,6 +31,9 @@ struct DefectPreviewComponentRecord: Codable, Equatable, Sendable {
 struct DefectClusterRecord: Codable, Equatable, Sendable {
     var roi: CGRect
     var mask: DefectCompressedData
+    /// 가시광 감쇠 창(16bit). 부분 폐색을 나눗셈으로 되돌리는 데 쓴다. 이 필드가 없는
+    /// 예전 기록은 마스크 복원 경로로 그대로 재생된다.
+    var attenuation: DefectCompressedData? = nil
     var width: Int
     var height: Int
 }

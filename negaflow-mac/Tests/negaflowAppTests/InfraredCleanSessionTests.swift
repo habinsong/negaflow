@@ -145,11 +145,22 @@ final class InfraredCleanSessionTests: XCTestCase {
     private static func successfulDetection() -> Result<InfraredDefectRemoval.Detection, InfraredDefectRemoval.Failure> {
         let width = 96
         let height = 96
-        let red = [Float](repeating: 0.55, count: width * height)
+        // 사진에 결이 있어야 "이 봉우리가 잡음보다 높은가"를 잴 표본이 생긴다 — 완전 균일한
+        // 평면은 정합 판정 자체가 성립하지 않는다.
+        var red = [Float](repeating: 0, count: width * height)
         var infrared = [Float](repeating: 0.82, count: width * height)
+        for y in 0..<height {
+            for x in 0..<width {
+                red[y * width + x] = 0.5 + 0.1 * Float((x / 8 + y / 8) % 2)
+            }
+        }
+        // 먼지는 파장에 무관하게 같은 비율로 빛을 막는다. IR 에만 찍은 결함은 물리적으로
+        // 존재할 수 없고, 파이프라인이 사진에서 확인되지 않는 후보를 기각하므로 검출되지 않는다.
+        let transmittance: Float = 0.05 / 0.82
         for y in 44...50 {
             for x in 44...50 {
-                infrared[y * width + x] = 0.05
+                infrared[y * width + x] *= transmittance
+                red[y * width + x] *= transmittance
             }
         }
         return InfraredDefectRemoval.detect(

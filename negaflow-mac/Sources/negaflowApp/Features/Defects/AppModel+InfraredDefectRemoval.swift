@@ -13,6 +13,35 @@ import CoreImage
 // IR 투과를 추정하지 않고 fail closed 한다.
 extension AppModel {
 
+    /// IR 쌍이 있는 프레임을 선택했을 때의 자동 실행. GrainMend IR 기록은 세션 메모리에만
+    /// 살고 종료 시 폐기되므로(굽지 않는다 — IR 파일에서 언제든 다시 만들 수 있다), 앱을 다시
+    /// 켜고 그 프레임을 선택하면 여기서 되살린다. 한 세션에 프레임당 한 번만 시도한다 —
+    /// 결과가 "결함 없음"이면 레이어가 안 생겨서 선택할 때마다 다시 돌게 된다.
+    /// 선택이 이 프레임에 **머무를 때만** 자동 복원을 시작한다. 화살표로 훑고 지나가는 프레임
+    /// 마다 원본(수십 MB TIFF)을 통째로 디코드해 검출을 돌리면 메모리와 CPU 가 금방 바닥난다.
+    func scheduleInfraredCleanForSelection(_ frame: ScanFrame) {
+        guard !frame.infraredAutoCleanAttempted, frame.infraredScanURL != nil else { return }
+        let frameID = frame.id
+        Task { [weak self, weak frame] in
+            try? await Task.sleep(nanoseconds: AppModel.infraredSelectionDebounceNanoseconds)
+            guard let self, let frame, self.selectedFrameID == frameID else { return }
+            self.runInfraredCleanIfNeeded(frame)
+        }
+    }
+
+    static let infraredSelectionDebounceNanoseconds: UInt64 = 400_000_000
+
+    func runInfraredCleanIfNeeded(_ frame: ScanFrame) {
+        guard !frame.infraredAutoCleanAttempted,
+              frame.infraredScanURL != nil,
+              frame.isSourceAvailable,
+              !frame.isPreviewScan,
+              !frame.defectEdits.contains(where: { $0.isInfrared }),
+              InfraredFilmCompatibility(filmType: frame.filmType).allowsAutomaticCorrection
+        else { return }
+        runInfraredClean(frame)
+    }
+
     /// 스캔 직후(또는 수동으로) IR 채널 결함 제거를 실행한다. 결과는 Defect Layer 로 쌓인다.
     func runInfraredClean(_ frame: ScanFrame) {
         guard let irURL = frame.infraredScanURL else { return }
@@ -24,6 +53,7 @@ extension AppModel {
         // 이미 IR 레이어가 있으면 중복 적용하지 않는다(삭제 후 재실행은 가능).
         guard !frame.defectEdits.contains(where: { $0.isInfrared }) else { return }
 
+        frame.infraredAutoCleanAttempted = true
         statusMessage = text(AppLocalizedPhrase.infraredCleanDetectingStatus)
         let trace = AppDiagnostics.start(.infraredDefect, category: .defects)
         let rawURL = frame.rawScanURL
@@ -63,6 +93,33 @@ extension AppModel {
             }
         }
         InfraredCleanSessionRegistry.install(task, for: session)
+    }
+
+    /// 스캔 직후 경로: IR 쌍이 있으면 **정착 현상을 한 번만** 돌린다.
+    ///
+    /// 예전에는 원본으로 정착 현상을 돌리는 동안 IR 보정이 끝나 cleaned raw 가 생기고, 그
+    /// 결과로 같은 프레임을 풀해상도로 한 번 더 현상했다. 마지막으로 스캔한 컷(=선택된 컷)은
+    /// 이 두 패스가 겹쳐 유독 느렸고, 그 사이 원본 렌더가 cleaned raw 를 기다리다 "이미지 로드
+    /// 실패"로 끝나기도 했다. 썸네일 시드만 먼저 띄우고, 정착 현상은 IR 결과가 정해진 뒤에 돈다.
+    func developAfterScan(_ frame: ScanFrame) {
+        // 스캔 직후 프레임을 선택하면서 이미 걸렸을 수 있다 — 그때는 다시 걸지 않고 결과를
+        // 기다린다. 시도 표시가 곧 "IR 경로가 정착 현상을 책임진다"는 뜻이다.
+        runInfraredCleanIfNeeded(frame)
+        guard frame.infraredAutoCleanAttempted else {
+            Task { await developFrameAfterFastPreview(frame) }
+            return
+        }
+        Task { [weak self, weak frame] in
+            guard let self, let frame else { return }
+            if let seed = frame.initialThumbnailSeedTask { await seed.value }
+            await self.seedFastPreview(frame)
+        }
+    }
+
+    /// IR 보정이 레이어를 남기지 못했을 때(결함 없음·실패·취소) 원본 그대로 정착 현상한다.
+    /// 성공 경로는 cleaned raw 빌드가 끝나면서 현상을 발행하므로 여기서 돌리지 않는다.
+    func developAfterInfraredProducedNothing(_ frame: ScanFrame) {
+        Task { await developFrameAfterFastPreview(frame) }
     }
 
     @discardableResult

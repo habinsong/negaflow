@@ -162,8 +162,7 @@ extension AppModel {
         seedInitialThumbnail(for: frame, from: manifest.rgbFile.originalURL)
         includeFrameInInteractionScopeIfNeeded(frame.id)
         selectedFrameID = frame.id
-        Task { await developFrameAfterFastPreview(frame) }
-        if frame.infraredScanURL != nil { runInfraredClean(frame) }
+        developAfterScan(frame)
         if let roi = publication.regionDefectDisplayROI,
            let sensitivity = publication.regionDefectSensitivity {
             frame.defectGuidedSensitivity = sensitivity

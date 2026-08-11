@@ -36,6 +36,7 @@ extension DefectEditItemRecord {
                 DefectClusterRecord(
                     roi: $0.roiYup,
                     mask: .raw($0.maskRGBA8),
+                    attenuation: $0.attenuationR16.map { .raw($0) },
                     width: $0.width,
                     height: $0.height
                 )
@@ -60,6 +61,7 @@ extension DefectEditItemRecord {
         copy.clusters = clusters?.map {
             var cluster = $0
             cluster.mask = cluster.mask.compressed()
+            cluster.attenuation = cluster.attenuation?.compressed()
             return cluster
         }
         return copy
@@ -72,6 +74,7 @@ extension DefectEditItemRecord {
         copy.clusters = clusters?.map {
             var cluster = $0
             cluster.mask = cluster.mask.decompressed(maximumOutputBytes: limit)
+            cluster.attenuation = cluster.attenuation?.decompressed(maximumOutputBytes: limit)
             return cluster
         }
         return copy
@@ -102,6 +105,7 @@ extension DefectEditItemRecord {
                 InfraredDefectRemoval.Cluster(
                     roiYup: $0.roi,
                     maskRGBA8: $0.mask.rawBytes,
+                    attenuationR16: $0.attenuation?.rawBytes,
                     width: $0.width,
                     height: $0.height
                 )

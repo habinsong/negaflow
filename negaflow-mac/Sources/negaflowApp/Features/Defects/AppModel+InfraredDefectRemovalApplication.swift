@@ -9,17 +9,23 @@ extension AppModel {
         switch outcome {
         case .failure(.noDefects):
             statusMessage = text(AppLocalizedPhrase.infraredCleanNoDefectsStatus)
+            developAfterInfraredProducedNothing(frame)
         case .failure(.coverageTooHigh):
             statusMessage = text(AppLocalizedPhrase.infraredCleanCoverageAbortStatus)
+            developAfterInfraredProducedNothing(frame)
         case .failure(.alignmentUnreliable):
             statusMessage = infraredText(.alignmentUnreliable)
+            developAfterInfraredProducedNothing(frame)
         case .failure(.cancelled):
+            developAfterInfraredProducedNothing(frame)
             return   // 사용자가 취소 — 상태 메시지 없음
         case .failure:
             statusMessage = text(AppLocalizedPhrase.infraredCleanFailedStatus)
+            developAfterInfraredProducedNothing(frame)
         case .success(let detection):
             guard !detection.clusters.isEmpty, !detection.components.isEmpty else {
                 statusMessage = text(AppLocalizedPhrase.infraredCleanNoDefectsStatus)
+                developAfterInfraredProducedNothing(frame)
                 return
             }
             let baseSize = CGSize(width: detection.width, height: detection.height)
@@ -40,7 +46,12 @@ extension AppModel {
                 preview: preview,
                 baseSize: baseSize
             )
-            appendDefectEdit(item, to: frame)
+            // 성공 경로의 현상은 cleaned raw 빌드가 끝나면서 발행된다. 레이어를 못 붙였으면
+            // 아무도 현상을 걸지 않으므로 여기서 원본 그대로 현상한다.
+            guard appendDefectEdit(item, to: frame) else {
+                developAfterInfraredProducedNothing(frame)
+                return
+            }
             statusMessage = text(
                 AppLocalizedPhrase.infraredCleanAppliedFormat,
                 detection.components.count

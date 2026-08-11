@@ -326,6 +326,9 @@ final class ScanFrame: ObservableObject, Identifiable {
     var defectSessionRawRevision: Int = -1
     // 세션 raw 전체 굳히기 백그라운드 태스크(첫 검출은 ROI 만 굳혀 먼저 반환).
     var defectSessionSolidifyTask: Task<Void, Never>?
+    /// IR 쌍이 있는 프레임의 자동 GrainMend IR 을 이 세션에서 이미 시도했는가.
+    /// 결과가 "결함 없음"이면 레이어가 안 생기므로, 이 표시가 없으면 선택할 때마다 다시 돈다.
+    var infraredAutoCleanAttempted = false
     var hasRegionDefectPreview: Bool { defectActive && !defectPreview.isEmpty }
 
     init(

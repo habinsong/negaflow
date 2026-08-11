@@ -14,7 +14,7 @@ extension DevelopFrameRenderer {
             let engine = ChromabaseEngine()
             let context = renderContext()
             guard let input = resolveRenderInput(snapshot, engine: engine, context: context) else {
-                throw DevelopFrameRenderError.loadFailed
+                throw loadError(for: snapshot)
             }
             try Task.checkCancellation()
             let rawInput = input.image
@@ -100,7 +100,7 @@ extension DevelopFrameRenderer {
             let engine = ChromabaseEngine()
             let context = renderContext()
             guard let input = resolveRenderInput(snapshot, engine: engine, context: context) else {
-                throw DevelopFrameRenderError.loadFailed
+                throw loadError(for: snapshot)
             }
             var effectiveParams = snapshot.preset.map {
                 DevelopParameters(preset: $0, overrides: snapshot.params)

@@ -93,16 +93,22 @@ func computeDefectPatches(_ edit: DefectEdit, base: CIImage,
         return [patch]
     case .infrared(let clusters):
         guard !clusters.isEmpty else { return [] }
-        // 클러스터별 독립 복원(서로 겹치지 않는 결함 bbox 타일) — region 과 동일한 복원 코어.
         var patches: [DefectPatch] = []
         patches.reserveCapacity(clusters.count)
         for cluster in clusters {
             if shouldCancel() { return nil }
-            guard let patch = regionPatch(img: base, mask: cluster.maskRGBA8, roi: cluster.roiYup,
-                                          width: cluster.width, height: cluster.height) else {
+            if cluster.attenuationR16 != nil {
+                // 가려진 만큼 되돌린다(나눗셈). 완전히 막힌 심만 기존 복원 코어가 메운다.
+                guard let patch = infraredPatch(img: base, cluster: cluster) else { return nil }
+                patches.append(patch)
+            } else if let patch = regionPatch(img: base, mask: cluster.maskRGBA8,
+                                              roi: cluster.roiYup,
+                                              width: cluster.width, height: cluster.height) {
+                // 예전 기록(감쇠 없음) — 마스크 복원 경로 그대로.
+                patches.append(patch)
+            } else {
                 return nil
             }
-            patches.append(patch)
         }
         return patches
     case .clone(let strokes):

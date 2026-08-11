@@ -107,6 +107,13 @@ extension AppModel {
         case .rejectPhoto:
             actionableFrame?.pickState = .rejected
         case .deletePhoto:
+            // 프레임이 그려진 프리뷰 스캔에서는 사진이 아니라 **프레임**을 지운다(휴지통 버튼과
+            // 같은 동작). 프리뷰는 프레임을 잡으려고 띄운 임시 이미지라, 여기서 사진을 지우면
+            // 방금 잡아 놓은 프레임까지 통째로 사라진다.
+            if hasDrawnFlatbedFramesOnActionablePreview {
+                deleteSelectedFlatbedScanRegion()
+                return
+            }
             if let frame = actionableFrame { deleteFrame(frame) }
         case .rateZero:
             actionableFrame?.setRating(0)

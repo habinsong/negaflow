@@ -217,6 +217,9 @@ extension AppModel {
             rebuildCleanedRaw(frame)
         }
         markDevelopedResident(frame)
+        // IR 쌍이 있으면 GrainMend IR 을 되살린다. 기록은 세션 메모리에만 살기 때문에,
+        // 앱을 다시 켠 뒤 처음 선택하는 프레임은 여기서 다시 만들어야 레이어가 보인다.
+        scheduleInfraredCleanForSelection(frame)
         if selectedFrameNeedsDevelopment(frame) || developmentWaitsForThumbnailSeed(frame) {
             let selectedID = frame.id
             // 방금 취소한 이전 선택 현상 루프가 정리(endFrame)될 때까지 기다린 뒤 시작한다.

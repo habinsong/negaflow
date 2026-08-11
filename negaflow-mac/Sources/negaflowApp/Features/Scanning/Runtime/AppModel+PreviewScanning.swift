@@ -280,10 +280,9 @@ extension AppModel {
                 // 현상을 await하지 않고 백그라운드로 띄운다 → 스캐너가 현상 동안 유휴하지 않고
                 // 다음 프레임 하드웨어 스캔을 곧바로 시작한다(배치 처리량↑). 품질/해상도는 불변.
                 // 현상 진행은 프레임 썸네일 스피너 + 하단 processing 상태로 표시된다.
-                Task { await developFrameAfterFastPreview(frame) }
                 // IR 채널이 함께 스캔됐으면 자동으로 IR 결함 제거를 돌린다(백그라운드).
                 // 결과는 Defect Layer 로 쌓여 cleaned raw 에 반영되고 재현상으로 화면에 나타난다.
-                if frame.infraredScanURL != nil { runInfraredClean(frame) }
+                developAfterScan(frame)
             } catch {
                 guard activeScanSessionID == sessionID else { return }
                 reportError(text(AppLocalizedPhrase.frameScanErrorFormat, i + 1, error.localizedDescription))

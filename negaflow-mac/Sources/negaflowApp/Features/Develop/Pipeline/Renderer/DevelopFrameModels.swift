@@ -85,4 +85,8 @@ enum DevelopFrameRenderError: Error {
     case loadFailed
     case rawPreviewFailed
     case developedFailed
+    /// 결함 제거 레이어는 붙었는데 cleaned raw 픽셀이 아직 없다 — 실패가 아니라 **아직**이다.
+    /// 원본으로 폴백하면 방금 지운 결함이 잠깐 되살아나 보이므로 이 패스는 건너뛰고,
+    /// 빌드가 커밋될 때 발행되는 현상이 화면을 채운다(AppModel+CleanedRawBuildTask).
+    case cleanedRawPending
 }
