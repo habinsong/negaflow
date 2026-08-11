@@ -552,6 +552,16 @@ internal unsafe struct NativeDevelopExportRequestV25
 }
 
 [StructLayout(LayoutKind.Sequential)]
+internal unsafe struct NativeDevelopExportRequestV26
+{
+    internal NativeDevelopExportRequestV25 V25;
+    internal float OutputSharpeningStrength;
+    internal uint OutputSharpeningMedium;
+    internal int OutputSharpeningDpi;
+    internal uint OutputSharpeningReserved;
+}
+
+[StructLayout(LayoutKind.Sequential)]
 internal unsafe struct NativeDevelopExportResultV2
 {
     internal const int FailureNameCapacity = 64;

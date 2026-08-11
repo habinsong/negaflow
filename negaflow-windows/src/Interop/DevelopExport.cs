@@ -79,6 +79,13 @@ public enum DevelopImageRotation
     Degrees270 = 3,
 }
 
+public enum OutputSharpeningMedium
+{
+    Screen = 0,
+    MattePaper = 1,
+    GlossyPaper = 2,
+}
+
 public readonly record struct DevelopCropRect(
     double X,
     double Y,
@@ -176,6 +183,7 @@ public enum DevelopExportStage
     DefectComponentRepair = 19,
     DefectCloneStamp = 20,
     DefectBrush = 21,
+    OutputSharpening = 22,
 }
 
 public enum FilmLookRoute
@@ -538,6 +546,15 @@ public sealed class DevelopExportRequest
     public double BwToningStrength { get; init; }
 
     public DevelopImageTransform ImageTransform { get; init; } = new();
+
+    /// <summary>Final output-only unsharp strength from zero through one.</summary>
+    public float OutputSharpening { get; init; }
+
+    public OutputSharpeningMedium OutputSharpeningMedium { get; init; } =
+        OutputSharpeningMedium.Screen;
+
+    /// <summary>Zero uses the selected medium's reference DPI.</summary>
+    public int OutputSharpeningDpi { get; init; }
 
     public uint RowsPerCopy { get; init; } = 64;
 }

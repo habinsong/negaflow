@@ -187,6 +187,9 @@ internal static unsafe class ContractTestRunner
             sizeof(NativeDevelopExportRequestV25) == NativeDevelopExporter.RequestV25Size,
             "develop_export_v25_request_size");
         Check(
+            sizeof(NativeDevelopExportRequestV26) == NativeDevelopExporter.RequestV26Size,
+            "develop_export_v26_request_size");
+        Check(
             sizeof(NativeDevelopExportResultV2) == NativeDevelopExporter.ResultV2Size,
             "develop_export_v2_result_size");
         Check(
@@ -334,6 +337,11 @@ internal static unsafe class ContractTestRunner
             Marshal.OffsetOf<NativeDevelopExportRequestV25>(
                 nameof(NativeDevelopExportRequestV25.DefectInfraredItems)).ToInt32() == 4864,
             "develop_export_v25_infrared_item_offset");
+        Check(
+            Marshal.OffsetOf<NativeDevelopExportRequestV26>(
+                nameof(NativeDevelopExportRequestV26.OutputSharpeningStrength)).ToInt32() ==
+                4880,
+            "develop_export_v26_output_sharpening_offset");
         Check(
             Marshal.OffsetOf<NativeDevelopExportResultV2>(
                 nameof(NativeDevelopExportResultV2.AppliedDminRed)).ToInt32() == 136,
@@ -736,6 +744,18 @@ internal static unsafe class ContractTestRunner
         Check(
             digital.FailureName != "ok",
             "develop_export_digital_source_name");
+
+        DevelopExportResult outputSharpening = NativeDevelopExporter.Run(new DevelopExportRequest
+        {
+            SourcePath = absentSource,
+            DestinationPath = destination,
+            OutputSharpening = 0.80F,
+            OutputSharpeningMedium = OutputSharpeningMedium.MattePaper,
+            OutputSharpeningDpi = 300,
+        });
+        Check(
+            outputSharpening.FailedStage == DevelopExportStage.ObserveSourceBefore,
+            "develop_export_output_sharpening_reaches_source_observation");
 
         DevelopExportResult local = NativeDevelopExporter.Run(new DevelopExportRequest
         {

@@ -49,6 +49,7 @@ public static unsafe class NativeDevelopExporter
     internal const int RequestV24Size = 4864;
     internal const int DefectInfraredItemV1Size = 16;
     internal const int RequestV25Size = 4880;
+    internal const int RequestV26Size = 4896;
     internal const int ResultV2Size = 152;
     internal const int ResultV3Size = 160;
     internal const int RunStateV1Size = 16;
@@ -110,6 +111,7 @@ public static unsafe class NativeDevelopExporter
             sizeof(NativeDevelopExportRequestV24) != RequestV24Size ||
             sizeof(NativeDefectInfraredItemV1) != DefectInfraredItemV1Size ||
             sizeof(NativeDevelopExportRequestV25) != RequestV25Size ||
+            sizeof(NativeDevelopExportRequestV26) != RequestV26Size ||
             sizeof(NativeDevelopExportResultV2) != ResultV2Size ||
             sizeof(NativeDevelopExportResultV3) != ResultV3Size ||
             sizeof(NativeDevelopRunStateV1) != RunStateV1Size ||
@@ -130,7 +132,8 @@ public static unsafe class NativeDevelopExporter
             !Enum.IsDefined(request.DevelopTarget) ||
             !Enum.IsDefined(request.NoiseReductionFilmProfile) ||
             !Enum.IsDefined(request.BwToningMode) ||
-            !Enum.IsDefined(request.ImageTransform.Rotation))
+            !Enum.IsDefined(request.ImageTransform.Rotation) ||
+            !Enum.IsDefined(request.OutputSharpeningMedium))
         {
             throw new ArgumentException(
                 "The develop request carries a value outside its enumeration.",
@@ -191,6 +194,12 @@ public static unsafe class NativeDevelopExporter
         {
             throw new ArgumentException(
                 "Texture controls are outside the supported finite range.",
+                nameof(request));
+        }
+        if (!Normalized(request.OutputSharpening) || request.OutputSharpeningDpi < 0)
+        {
+            throw new ArgumentException(
+                "Output sharpening controls are outside the supported range.",
                 nameof(request));
         }
         if (request.BwToningShadowHue is { } shadowHue &&
@@ -1683,6 +1692,21 @@ public static unsafe class NativeDevelopExporter
         };
     }
 
+    private static NativeDevelopExportRequestV26 BuildRequestV26(
+        NativeDevelopExportRequestV25 v25,
+        DevelopExportRequest request)
+    {
+        v25.V24.V21.V20.V19.V18.V17.V16.V15.V14.V13.V12.V11.V10.V9.V8.V7.StructSize =
+            (uint)sizeof(NativeDevelopExportRequestV26);
+        return new NativeDevelopExportRequestV26
+        {
+            V25 = v25,
+            OutputSharpeningStrength = request.OutputSharpening,
+            OutputSharpeningMedium = (uint)request.OutputSharpeningMedium,
+            OutputSharpeningDpi = request.OutputSharpeningDpi,
+        };
+    }
+
     private static byte[] BuildDefectSourceSha256(DevelopExportRequest request) =>
         request.DefectSourceIdentity is { } identity
             ? Convert.FromHexString(identity.Sha256)
@@ -1780,17 +1804,18 @@ public static unsafe class NativeDevelopExporter
                 checked((uint)defects.InfraredEdits.Length),
                 defectInfraredAttenuationBytes,
                 checked((uint)defects.InfraredAttenuationBytes.Length));
-            NativeDevelopExportRequestV25 native = BuildRequestV25(
+            NativeDevelopExportRequestV25 v25 = BuildRequestV25(
                 v24,
                 defectInfraredItems,
                 checked((uint)defects.InfraredItems.Length));
-            status = NativeMethods.nf_develop_export_v25(
+            NativeDevelopExportRequestV26 native = BuildRequestV26(v25, request);
+            status = NativeMethods.nf_develop_export_v26(
                 &native,
                 runState,
                 &raw);
         }
 
-        return Translate(status, raw, "nf_develop_export_v25");
+        return Translate(status, raw, "nf_develop_export_v26");
     }
 
     /// <summary>
@@ -1921,11 +1946,12 @@ public static unsafe class NativeDevelopExporter
                 checked((uint)defects.InfraredEdits.Length),
                 defectInfraredAttenuationBytes,
                 checked((uint)defects.InfraredAttenuationBytes.Length));
-            NativeDevelopExportRequestV25 native = BuildRequestV25(
+            NativeDevelopExportRequestV25 v25 = BuildRequestV25(
                 v24,
                 defectInfraredItems,
                 checked((uint)defects.InfraredItems.Length));
-            status = NativeMethods.nf_develop_preview_v25(
+            NativeDevelopExportRequestV26 native = BuildRequestV26(v25, request);
+            status = NativeMethods.nf_develop_preview_v26(
                 &native,
                 proofPointer,
                 maximumWidth,
@@ -1936,7 +1962,7 @@ public static unsafe class NativeDevelopExporter
                 &raw);
         }
 
-        return Translate(status, raw, "nf_develop_preview_v25");
+        return Translate(status, raw, "nf_develop_preview_v26");
     }
 
     private static DevelopExportResult Translate(

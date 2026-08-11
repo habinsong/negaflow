@@ -402,6 +402,18 @@ void expect(const bool condition, const char* const message) {
     return request;
 }
 
+[[nodiscard]] nf_develop_export_request_v26 make_request_v26(
+    const wchar_t* const source,
+    const wchar_t* const destination,
+    const std::uint32_t base_mode = NF_BASE_ESTIMATION_AUTO) {
+    nf_develop_export_request_v26 request;
+    std::memset(&request, 0, sizeof(request));
+    request.v25 = make_request_v25(source, destination, base_mode);
+    request.v25.v24.v21.v20.v19.v18.v17.v16.v15.v14.v13.v12.v11.v10.v9.v8
+        .struct_size = static_cast<std::uint32_t>(sizeof(request));
+    return request;
+}
+
 [[nodiscard]] bool write_file(
     const std::filesystem::path& path,
     const std::vector<std::uint8_t>& bytes) {
@@ -1342,6 +1354,35 @@ void test_v25_contract() {
             result.failed_stage == NF_DEVELOP_STAGE_REQUEST_VALIDATION &&
             std::strcmp(result.failure_name, "invalid_defect_clone_payload") == 0,
         "v25 rejects an expanded native order above 8192 before region mapping");
+}
+
+void test_v26_contract() {
+    expect(sizeof(nf_develop_export_request_v26) == 4896U,
+           "v26 request layout is fixed");
+    expect(offsetof(nf_develop_export_request_v26, output_sharpening_strength) ==
+               4880U,
+           "v26 output sharpening offset is fixed");
+
+    nf_develop_export_request_v26 request = make_request_v26(L"a.tif", L"b.png");
+    request.output_sharpening_strength = 0.80F;
+    request.output_sharpening_medium = NF_OUTPUT_SHARPENING_MATTE_PAPER;
+    request.output_sharpening_dpi = 300;
+    nf_develop_export_result_v3 result = make_result_v3();
+    expect(
+        nf_develop_export_v26(&request, nullptr, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            result.failed_stage == NF_DEVELOP_STAGE_OBSERVE_SOURCE_BEFORE,
+        "v26 output sharpening request reaches source observation");
+
+    request.output_sharpening_strength = 1.1F;
+    result = make_result_v3();
+    expect(
+        nf_develop_export_v26(&request, nullptr, &result) == NF_STATUS_OK &&
+            result.failed_stage == NF_DEVELOP_STAGE_REQUEST_VALIDATION &&
+            std::strcmp(
+                result.failure_name,
+                "invalid_output_sharpening_parameters") == 0,
+        "v26 rejects output sharpening outside its supported range");
 }
 
 void test_missing_source_is_not_a_validation_error() {
@@ -3402,6 +3443,7 @@ int main(const int argument_count, const char* const arguments[]) {
     test_v21_contract();
     test_v24_contract();
     test_v25_contract();
+    test_v26_contract();
     test_missing_source_is_not_a_validation_error();
     test_v2_missing_source_is_not_a_validation_error();
     test_v18_defect_region_preview_and_export();

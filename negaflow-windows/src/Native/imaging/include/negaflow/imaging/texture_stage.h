@@ -46,6 +46,36 @@ struct TextureStageResult final {
     WorkingImage image{};
 };
 
+// Export sharpening is deliberately separate from the creative Texture sharpness
+// control. Its radius is tied to the requested output medium and DPI, and it runs
+// after crop/rotation so the final artifact is sharpened exactly once.
+enum class OutputSharpeningMedium : std::uint8_t {
+    screen = 0,
+    matte_paper,
+    glossy_paper,
+};
+
+struct OutputSharpeningParameters final {
+    float strength{0.0F};
+    OutputSharpeningMedium medium{OutputSharpeningMedium::screen};
+    std::int32_t dpi{0};
+};
+
+struct OutputSharpeningInfo final {
+    bool applied{false};
+    float radius{0.0F};
+    float intensity{0.0F};
+    std::size_t scratch_peak_bytes{0U};
+    negaflow::core::KernelStatus kernel_status{
+        negaflow::core::KernelStatus::ok};
+};
+
+struct OutputSharpeningResult final {
+    TextureStageStatus status{TextureStageStatus::invalid_parameter};
+    OutputSharpeningInfo info{};
+    WorkingImage image{};
+};
+
 [[nodiscard]] bool valid_texture_stage_parameters(
     const TextureStageParameters& parameters) noexcept;
 
@@ -58,5 +88,12 @@ struct TextureStageResult final {
 
 [[nodiscard]] const char* texture_stage_status_name(
     TextureStageStatus status) noexcept;
+
+[[nodiscard]] bool valid_output_sharpening_parameters(
+    const OutputSharpeningParameters& parameters) noexcept;
+
+[[nodiscard]] OutputSharpeningResult apply_output_sharpening(
+    WorkingImage image,
+    const OutputSharpeningParameters& parameters) noexcept;
 
 }  // namespace negaflow::imaging

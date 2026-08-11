@@ -17,10 +17,10 @@
    cancellation and progress, 0.29 automatic tone and white balance, 0.30 soft
    proof on preview, 0.31 persisted IR attenuation replay, 0.32 IR item
    boundaries, 0.33 paired visible/IR detection, 0.34 paired TIFF ingestion, and
-   0.35 flatbed frame-grid detection.
+   0.35 flatbed frame-grid detection, and 0.36 output sharpening.
    The managed loader
    refuses anything below the minor it actually calls, so an older engine fails at load
    instead of at the first missing entry point. */
 #define NF_ABI_VERSION_MAJOR 0U
-#define NF_ABI_VERSION_MINOR 35U
+#define NF_ABI_VERSION_MINOR 36U
 #define NF_ABI_VERSION ((NF_ABI_VERSION_MAJOR << 16U) | NF_ABI_VERSION_MINOR)

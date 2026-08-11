@@ -2,6 +2,15 @@
 
 기준일: 2026-08-12
 
+## 2026-08-12 Output sharpening native core
+
+macOS `OutputSharpening`의 screen/matte/glossy 매체별 반경·강도와 DPI 제곱근 스케일을 Windows C++20
+공통 현상 경로에 추가했습니다. 창작용 Texture sharpness와 분리되어 crop/rotation 뒤 최종 preview/PNG16/TIFF16
+출력에 한 번만 적용되며, strength 0은 기존 픽셀·취소·진행 경로를 그대로 보존합니다. ABI 0.36/v26은
+strength, medium, DPI를 append-only request로 전달하고 C# Interop이 같은 v26 preview/export entry point를
+사용합니다. x64 Debug `native.texture_stage`, `native.develop_export_abi`, Interop 187 assertions를 통과했습니다.
+실제 촬영 TIFF와 macOS-hosted pixel golden 비교는 아직 수행하지 않았습니다.
+
 ## 2026-08-12 GrainMend paired visible/IR detector native core
 
 최신 macOS 계약의 paired-plane 검출 코어를 Windows C++20에 추가했습니다. 결함 신호 우선 정수 정렬과

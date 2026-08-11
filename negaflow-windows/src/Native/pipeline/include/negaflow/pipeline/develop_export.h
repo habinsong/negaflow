@@ -100,6 +100,7 @@ struct DevelopExportRequest final {
     negaflow::imaging::TextureStageParameters texture{};
     negaflow::imaging::BwToningParameters bw_toning{};
     negaflow::imaging::ImageTransformParameters image_transform{};
+    negaflow::imaging::OutputSharpeningParameters output_sharpening{};
     std::uint32_t rows_per_copy{64U};
 };
 
@@ -159,6 +160,7 @@ enum class DevelopExportStage : std::uint8_t {
     defect_component_repair,
     defect_clone_stamp,
     defect_brush,
+    output_sharpening,
 };
 
 struct DevelopExportOutcome final {
@@ -199,6 +201,7 @@ struct DevelopExportOutcome final {
     bool black_and_white_neutralized{false};
     bool bw_toning_applied{false};
     bool image_transform_applied{false};
+    bool output_sharpening_applied{false};
     std::uint64_t output_file_bytes{0U};
     std::array<float, 3> applied_dmin{};
     DevelopBaseSource base_source{DevelopBaseSource::manual};

@@ -275,12 +275,69 @@ void test_halation_and_vignette() {
         "negative vignette lifts edges while preserving the center");
 }
 
+void test_output_sharpening() {
+    const auto baseline = texture_patch();
+    const auto identity = negaflow::imaging::apply_output_sharpening(baseline, {});
+    expect(
+        identity.status == negaflow::imaging::TextureStageStatus::ok &&
+            !identity.info.applied &&
+            same_pixels(identity.image.pixels, baseline.pixels),
+        "zero output sharpening preserves the developed pixels exactly");
+
+    negaflow::imaging::OutputSharpeningParameters screen{};
+    screen.strength = 0.80F;
+    screen.medium = negaflow::imaging::OutputSharpeningMedium::screen;
+    screen.dpi = 144;
+    const auto sharpened = negaflow::imaging::apply_output_sharpening(
+        baseline,
+        screen);
+    const auto repeat = negaflow::imaging::apply_output_sharpening(
+        baseline,
+        screen);
+    expect(
+        sharpened.status == negaflow::imaging::TextureStageStatus::ok &&
+            sharpened.info.applied &&
+            std::abs(mean_edge(sharpened.image) - mean_edge(baseline)) > 0.0001F &&
+            same_pixels(sharpened.image.pixels, repeat.image.pixels),
+        "screen output sharpening is deterministic and changes final edge contrast");
+
+    auto high_dpi = screen;
+    high_dpi.dpi = 288;
+    const auto high_dpi_result = negaflow::imaging::apply_output_sharpening(
+        baseline,
+        high_dpi);
+    auto matte = screen;
+    matte.medium = negaflow::imaging::OutputSharpeningMedium::matte_paper;
+    matte.dpi = 300;
+    const auto matte_result = negaflow::imaging::apply_output_sharpening(
+        baseline,
+        matte);
+    expect(
+        high_dpi_result.info.radius > sharpened.info.radius &&
+            std::abs(high_dpi_result.info.intensity - sharpened.info.intensity) <
+                0.00001F &&
+            matte_result.info.radius > sharpened.info.radius &&
+            matte_result.info.intensity > sharpened.info.intensity,
+        "DPI and medium select the macOS-compatible output-sharpening parameters");
+
+    auto invalid = screen;
+    invalid.strength = std::numeric_limits<float>::quiet_NaN();
+    const auto rejected = negaflow::imaging::apply_output_sharpening(
+        baseline,
+        invalid);
+    expect(
+        rejected.status == negaflow::imaging::TextureStageStatus::invalid_parameter &&
+            rejected.image.pixels.empty(),
+        "invalid output sharpening controls fail closed");
+}
+
 }  // namespace
 
 int main() {
     test_identity_and_invalid_controls();
     test_grain_and_detail_controls();
     test_halation_and_vignette();
+    test_output_sharpening();
 
     std::cout << "{\"status\":\"" << (failures == 0 ? "ok" : "error")
               << "\",\"suite\":\"texture_stage\",\"failures\":"

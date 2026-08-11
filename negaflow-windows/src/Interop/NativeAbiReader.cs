@@ -24,9 +24,10 @@ internal static unsafe class NativeAbiReader
       // for preserving infrared item boundaries across those shared paths, and 33
       // for paired visible/IR detection with an owned variable-payload handle, and 34
       // for reading paired scanner TIFFs directly into that detector, and 35 for
-      // flatbed frame-grid detection with an owned result handle.
+      // flatbed frame-grid detection with an owned result handle, and 36 for
+      // output sharpening after the final image transform.
     // An engine below this is refused at load, not at the call.
-    internal const ushort MinimumMinor = 35;
+    internal const ushort MinimumMinor = 36;
 
     private const uint StatusOk = 0;
 

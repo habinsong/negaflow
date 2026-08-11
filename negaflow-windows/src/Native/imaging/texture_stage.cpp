@@ -522,4 +522,74 @@ const char* texture_stage_status_name(
     return "unknown";
 }
 
+bool valid_output_sharpening_parameters(
+    const OutputSharpeningParameters& parameters) noexcept {
+    return std::isfinite(parameters.strength) && parameters.strength >= 0.0F &&
+           parameters.strength <= 1.0F &&
+           parameters.medium <= OutputSharpeningMedium::glossy_paper &&
+           parameters.dpi >= 0;
+}
+
+OutputSharpeningResult apply_output_sharpening(
+    WorkingImage image,
+    const OutputSharpeningParameters& parameters) noexcept {
+    OutputSharpeningResult result{};
+    result.image = std::move(image);
+    if (!valid_output_sharpening_parameters(parameters)) {
+        discard_pixels(result.image);
+        return result;
+    }
+    result.info.kernel_status =
+        negaflow::core::validate_finite_pixels(const_view(result.image));
+    if (result.info.kernel_status != negaflow::core::KernelStatus::ok) {
+        result.status = TextureStageStatus::kernel_failed;
+        discard_pixels(result.image);
+        return result;
+    }
+    if (parameters.strength <= texture_stage_identity_threshold) {
+        result.status = TextureStageStatus::ok;
+        return result;
+    }
+    struct MediumParameters final {
+        float radius;
+        float intensity;
+        float reference_dpi;
+    } base{};
+    switch (parameters.medium) {
+        case OutputSharpeningMedium::screen:
+            base = {0.45F, 0.22F, 144.0F};
+            break;
+        case OutputSharpeningMedium::matte_paper:
+            base = {1.00F, 0.34F, 300.0F};
+            break;
+        case OutputSharpeningMedium::glossy_paper:
+            base = {0.75F, 0.28F, 300.0F};
+            break;
+    }
+    const float effective_dpi = parameters.dpi > 0
+        ? static_cast<float>(parameters.dpi) : base.reference_dpi;
+    const float resolution_scale = std::clamp(
+        effective_dpi / base.reference_dpi, 0.5F, 2.0F);
+    result.info.radius = base.radius * std::sqrt(resolution_scale);
+    result.info.intensity = base.intensity * parameters.strength;
+    try {
+        apply_unsharp(
+            result.image,
+            result.info.radius,
+            result.info.intensity,
+            result.info.scratch_peak_bytes);
+        result.info.applied = true;
+        result.status = TextureStageStatus::ok;
+        return result;
+    } catch (const std::bad_alloc&) {
+        result.status = TextureStageStatus::allocation_failed;
+        discard_pixels(result.image);
+        return result;
+    } catch (...) {
+        result.status = TextureStageStatus::allocation_failed;
+        discard_pixels(result.image);
+        return result;
+    }
+}
+
 }  // namespace negaflow::imaging

@@ -65,6 +65,8 @@ const char* develop_export_stage_name(const DevelopExportStage stage) noexcept {
             return "black_and_white";
         case DevelopExportStage::image_transform:
             return "image_transform";
+        case DevelopExportStage::output_sharpening:
+            return "output_sharpening";
         case DevelopExportStage::color_model:
             return "color_model";
         case DevelopExportStage::scene_correction:
@@ -107,6 +109,7 @@ constexpr StageCost dodge_burn_cost{1U, 80U};
 constexpr StageCost texture_cost{2U, 120U};
 constexpr StageCost black_and_white_cost{1U, 20U};
 constexpr StageCost transform_cost{1U, 40U};
+constexpr StageCost output_sharpening_cost{1U, 80U};
 constexpr StageCost preview_output_cost{60U, 60U};
 constexpr StageCost export_output_cost{2600U, 2600U};
 
@@ -438,6 +441,10 @@ struct PreviewTarget final {
     total += cost_of(texture_cost, true);
     total += cost_of(black_and_white_cost, monochrome);
     total += cost_of(transform_cost, true);
+    total += cost_of(
+        output_sharpening_cost,
+        request.output_sharpening.strength >
+            negaflow::imaging::texture_stage_identity_threshold);
     total += cost_of(preview ? preview_output_cost : export_output_cost, true);
     return total;
 }
@@ -521,6 +528,12 @@ struct PreviewTarget final {
         return fail(
             DevelopExportStage::request_validation,
             "invalid_image_transform_parameters");
+    }
+    if (!negaflow::imaging::valid_output_sharpening_parameters(
+            request.output_sharpening)) {
+        return fail(
+            DevelopExportStage::request_validation,
+            "invalid_output_sharpening_parameters");
     }
     RunTracker tracker{control, plan_total_cost(request, preview != nullptr)};
     std::stop_source stop{};
@@ -1126,6 +1139,28 @@ struct PreviewTarget final {
         return cancelled_outcome(DevelopExportStage::image_transform);
     }
 
+    negaflow::imaging::OutputSharpeningResult output_sharpening{};
+    if (request.output_sharpening.strength >
+        negaflow::imaging::texture_stage_identity_threshold) {
+        tracker.begin(
+            DevelopExportStage::output_sharpening,
+            cost_of(output_sharpening_cost, true));
+        output_sharpening = negaflow::imaging::apply_output_sharpening(
+            std::move(image_transform.image), request.output_sharpening);
+        if (output_sharpening.status != negaflow::imaging::TextureStageStatus::ok) {
+            return fail(
+                DevelopExportStage::output_sharpening,
+                negaflow::imaging::texture_stage_status_name(output_sharpening.status));
+        }
+        tracker.finish();
+        if (tracker.cancelled()) {
+            return cancelled_outcome(DevelopExportStage::output_sharpening);
+        }
+    } else {
+        output_sharpening.status = negaflow::imaging::TextureStageStatus::ok;
+        output_sharpening.image = std::move(image_transform.image);
+    }
+
     // The last poll before anything is published. From here the run either produces the
     // whole artifact or fails, so a cancel arriving now is not honoured rather than
     // leaving a half-written file behind.
@@ -1133,8 +1168,8 @@ struct PreviewTarget final {
         DevelopExportStage::output,
         cost_of(preview != nullptr ? preview_output_cost : export_output_cost, true));
     DevelopExportOutcome outcome{};
-    outcome.image_width = image_transform.image.width;
-    outcome.image_height = image_transform.image.height;
+    outcome.image_width = output_sharpening.image.width;
+    outcome.image_height = output_sharpening.image.height;
     outcome.source_file_bytes = before.observation.file_bytes;
     outcome.film_look_workspace_bytes = workspace_bytes;
     outcome.film_look_route = film_look.info.route;
@@ -1165,12 +1200,13 @@ struct PreviewTarget final {
         black_and_white.info.neutralized;
     outcome.bw_toning_applied = black_and_white.info.toned;
     outcome.image_transform_applied = image_transform.info.applied;
+    outcome.output_sharpening_applied = output_sharpening.info.applied;
     outcome.applied_dmin = developed_info.applied_dmin;
     outcome.base_source = base_source;
 
     if (preview != nullptr) {
         DevelopExportOutcome preview_outcome =
-            write_preview(image_transform.image, *preview, outcome);
+            write_preview(output_sharpening.image, *preview, outcome);
         if (preview_outcome.succeeded) {
             tracker.finish();
             tracker.complete();
@@ -1181,7 +1217,7 @@ struct PreviewTarget final {
     if (request.format == DevelopExportFormat::png16) {
         const negaflow::output::WicPngExportResult exported =
             negaflow::output::export_working_to_srgb16_png(
-                image_transform.image,
+                output_sharpening.image,
                 request.destination);
         if (exported.status != negaflow::output::WicPngExportStatus::ok) {
             if (exported.status ==
@@ -1209,7 +1245,7 @@ struct PreviewTarget final {
 
     const negaflow::output::WicTiffExportResult exported =
         negaflow::output::export_working_to_srgb16_tiff(
-            image_transform.image,
+        output_sharpening.image,
             request.destination);
     if (exported.status != negaflow::output::WicTiffExportStatus::ok) {
         if (exported.status ==

@@ -104,6 +104,11 @@ typedef struct nf_build_info_v1 {
 #define NF_DEVELOP_STAGE_DEFECT_COMPONENT_REPAIR 19U
 #define NF_DEVELOP_STAGE_DEFECT_CLONE_STAMP 20U
 #define NF_DEVELOP_STAGE_DEFECT_BRUSH 21U
+#define NF_DEVELOP_STAGE_OUTPUT_SHARPENING 22U
+
+#define NF_OUTPUT_SHARPENING_SCREEN 0U
+#define NF_OUTPUT_SHARPENING_MATTE_PAPER 1U
+#define NF_OUTPUT_SHARPENING_GLOSSY_PAPER 2U
 
 #define NF_DEVELOP_TARGET_MAIN 0U
 #define NF_DEVELOP_TARGET_PRINT 1U
@@ -735,6 +740,16 @@ typedef struct nf_develop_export_request_v25 {
     uint32_t defect_infrared_item_reserved;
 } nf_develop_export_request_v25;
 
+/* Output sharpening is a final, output-space operation. It follows image transform
+   and is never stored in the develop recipe. dpi 0 selects the medium reference DPI. */
+typedef struct nf_develop_export_request_v26 {
+    nf_develop_export_request_v25 v25;
+    float output_sharpening_strength;
+    uint32_t output_sharpening_medium;
+    int32_t output_sharpening_dpi;
+    uint32_t output_sharpening_reserved;
+} nf_develop_export_request_v26;
+
 typedef struct nf_develop_export_result_v1 {
     uint32_t struct_size;
     uint32_t succeeded;
@@ -1364,6 +1379,20 @@ NF_API nf_status_t NF_CALL nf_develop_export_v25(
     nf_develop_export_result_v3* result);
 NF_API nf_status_t NF_CALL nf_develop_preview_v25(
     const nf_develop_export_request_v25* request,
+    const nf_soft_proof_v1* soft_proof,
+    uint32_t maximum_width,
+    uint32_t maximum_height,
+    uint8_t* pixels,
+    uint32_t pixel_capacity_bytes,
+    nf_develop_run_state_v1* run_state,
+    nf_develop_export_result_v3* result);
+
+NF_API nf_status_t NF_CALL nf_develop_export_v26(
+    const nf_develop_export_request_v26* request,
+    nf_develop_run_state_v1* run_state,
+    nf_develop_export_result_v3* result);
+NF_API nf_status_t NF_CALL nf_develop_preview_v26(
+    const nf_develop_export_request_v26* request,
     const nf_soft_proof_v1* soft_proof,
     uint32_t maximum_width,
     uint32_t maximum_height,
