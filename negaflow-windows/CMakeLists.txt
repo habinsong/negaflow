@@ -281,6 +281,18 @@ if(BUILD_TESTING)
         PRIVATE negaflow_native negaflow_color negaflow_imaging negaflow_project_options
     )
 
+    add_executable(negaflow_infrared_detector_abi_tests
+        tests/Native.UnitTests/infrared_detector_abi_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_infrared_detector_abi_tests
+        PRIVATE negaflow_native negaflow_project_options
+    )
+    add_test(
+        NAME native.infrared_detector_abi
+        COMMAND negaflow_infrared_detector_abi_tests
+    )
+
     add_executable(negaflow_scalar_tests
         tests/Native.UnitTests/scalar_kernel_tests.cpp
     )

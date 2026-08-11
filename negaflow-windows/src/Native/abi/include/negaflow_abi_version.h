@@ -15,11 +15,11 @@
    0.26 ordered Clone Stamp recipe transport v20, and 0.27 ordered Brush
    recipe transport v21, and 0.28 caller-owned run state v22 for cooperative
    cancellation and progress, 0.29 automatic tone and white balance, 0.30 soft
-   proof on preview, 0.31 persisted IR attenuation replay, and 0.32 IR item
-   boundaries.
+   proof on preview, 0.31 persisted IR attenuation replay, 0.32 IR item
+   boundaries, and 0.33 paired visible/IR detection.
    The managed loader
    refuses anything below the minor it actually calls, so an older engine fails at load
    instead of at the first missing entry point. */
 #define NF_ABI_VERSION_MAJOR 0U
-#define NF_ABI_VERSION_MINOR 32U
+#define NF_ABI_VERSION_MINOR 33U
 #define NF_ABI_VERSION ((NF_ABI_VERSION_MAJOR << 16U) | NF_ABI_VERSION_MINOR)

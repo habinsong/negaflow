@@ -5,6 +5,7 @@
 #include "negaflow/imaging/manual_negative_developer.h"
 #include "negaflow/imaging/working_tone_adjuster.h"
 #include "negaflow/imaging/auto_adjust.h"
+#include "negaflow/imaging/infrared_defect_detector.h"
 #include "negaflow/pipeline/develop_export.h"
 
 #include <algorithm>
@@ -13,10 +14,15 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <limits>
 #include <new>
 #include <span>
 #include <string_view>
 #include <vector>
+
+struct nf_infrared_detection_handle_v1 final {
+    negaflow::imaging::InfraredDetection detection{};
+};
 
 static_assert(sizeof(nf_build_info_v1) == 44U);
 static_assert(offsetof(nf_build_info_v1, source_commit_sha1) == 24U);
@@ -140,6 +146,15 @@ static_assert(sizeof(nf_auto_adjust_result_v1) == 88U);
 static_assert(offsetof(nf_auto_adjust_result_v1, exposure) == 8U);
 static_assert(offsetof(nf_auto_adjust_result_v1, warmth) == 72U);
 static_assert(offsetof(nf_auto_adjust_result_v1, tint) == 80U);
+static_assert(sizeof(nf_infrared_detector_parameters_v1) == 48U);
+static_assert(offsetof(nf_infrared_detector_parameters_v1, maximum_coverage) == 16U);
+static_assert(sizeof(nf_infrared_detection_summary_v1) == 112U);
+static_assert(offsetof(nf_infrared_detection_summary_v1, coverage) == 48U);
+static_assert(offsetof(nf_infrared_detection_summary_v1, candidate_count) == 80U);
+static_assert(sizeof(nf_infrared_cluster_v1) == 40U);
+static_assert(offsetof(nf_infrared_cluster_v1, core_mask_byte_count) == 24U);
+static_assert(sizeof(nf_infrared_component_v1) == 32U);
+static_assert(sizeof(nf_infrared_preview_point_v1) == 8U);
 static_assert(offsetof(nf_develop_run_state_v1, cancel_requested) == 4U);
 static_assert(offsetof(nf_develop_run_state_v1, stage) == 8U);
 static_assert(offsetof(nf_develop_run_state_v1, progress_permille) == 12U);
@@ -4234,6 +4249,242 @@ nf_status_t NF_CALL nf_auto_adjust_v1(
     result->warmth = balance.warmth;
     result->tint = balance.tint;
     return NF_STATUS_OK;
+}
+
+nf_status_t NF_CALL nf_detect_infrared_defects_v1(
+    const float* const infrared,
+    const uint32_t infrared_stride_bytes,
+    const float* const red,
+    const uint32_t red_stride_bytes,
+    const uint32_t width,
+    const uint32_t height,
+    const nf_infrared_detector_parameters_v1* const parameters,
+    const uint32_t* const cancel_requested,
+    nf_infrared_detection_summary_v1* const summary,
+    nf_infrared_detection_handle_v1** const handle) {
+    if (summary == nullptr || handle == nullptr) {
+        return NF_STATUS_INVALID_ARGUMENT;
+    }
+    *handle = nullptr;
+    if (summary->struct_size < static_cast<std::uint32_t>(sizeof(*summary))) {
+        return NF_STATUS_STRUCT_TOO_SMALL;
+    }
+    if (infrared == nullptr || red == nullptr || parameters == nullptr ||
+        parameters->struct_size < static_cast<std::uint32_t>(sizeof(*parameters)) ||
+        parameters->reserved != 0U || parameters->reserved2 != 0U ||
+        width == 0U || height == 0U) {
+        return NF_STATUS_INVALID_ARGUMENT;
+    }
+    const std::uint64_t row_bytes = static_cast<std::uint64_t>(width) * sizeof(float);
+    if (row_bytes > std::numeric_limits<std::uint32_t>::max() ||
+        infrared_stride_bytes < row_bytes || red_stride_bytes < row_bytes) {
+        return NF_STATUS_INVALID_ARGUMENT;
+    }
+
+    const std::uint32_t declared_size = summary->struct_size;
+    std::memset(summary, 0, sizeof(*summary));
+    summary->struct_size = declared_size;
+    try {
+        const std::size_t area = static_cast<std::size_t>(width) * height;
+        if (height != 0U && area / height != width) {
+            return NF_STATUS_INVALID_ARGUMENT;
+        }
+        std::vector<float> infrared_copy{};
+        std::vector<float> red_copy{};
+        std::span<const float> infrared_plane{};
+        std::span<const float> red_plane{};
+        if (infrared_stride_bytes == row_bytes) {
+            infrared_plane = std::span<const float>(infrared, area);
+        } else {
+            infrared_copy.resize(area);
+            const auto* bytes = reinterpret_cast<const std::uint8_t*>(infrared);
+            for (std::uint32_t y = 0U; y < height; ++y) {
+                std::memcpy(
+                    infrared_copy.data() + static_cast<std::size_t>(y) * width,
+                    bytes + static_cast<std::size_t>(y) * infrared_stride_bytes,
+                    static_cast<std::size_t>(row_bytes));
+            }
+            infrared_plane = infrared_copy;
+        }
+        if (red_stride_bytes == row_bytes) {
+            red_plane = std::span<const float>(red, area);
+        } else {
+            red_copy.resize(area);
+            const auto* bytes = reinterpret_cast<const std::uint8_t*>(red);
+            for (std::uint32_t y = 0U; y < height; ++y) {
+                std::memcpy(
+                    red_copy.data() + static_cast<std::size_t>(y) * width,
+                    bytes + static_cast<std::size_t>(y) * red_stride_bytes,
+                    static_cast<std::size_t>(row_bytes));
+            }
+            red_plane = red_copy;
+        }
+
+        negaflow::imaging::InfraredDetectorParameters native_parameters{};
+        native_parameters.sensitivity = parameters->sensitivity;
+        native_parameters.dilate_radius = parameters->dilate_radius;
+        native_parameters.minimum_area = parameters->minimum_area;
+        native_parameters.maximum_coverage = parameters->maximum_coverage;
+        native_parameters.alignment_search_radius = parameters->alignment_search_radius;
+        native_parameters.cluster_tile = parameters->cluster_tile;
+        native_parameters.cluster_padding = parameters->cluster_padding;
+        auto detection = negaflow::imaging::detect_infrared_defects(
+            infrared_plane,
+            red_plane,
+            width,
+            height,
+            native_parameters,
+            negaflow::core::CancelFlag{cancel_requested});
+
+        const auto status = [](const negaflow::imaging::InfraredDetectionStatus value) {
+            switch (value) {
+                case negaflow::imaging::InfraredDetectionStatus::ok:
+                    return NF_INFRARED_DETECTION_OK;
+                case negaflow::imaging::InfraredDetectionStatus::unreadable:
+                    return NF_INFRARED_DETECTION_UNREADABLE;
+                case negaflow::imaging::InfraredDetectionStatus::too_small:
+                    return NF_INFRARED_DETECTION_TOO_SMALL;
+                case negaflow::imaging::InfraredDetectionStatus::no_defects:
+                    return NF_INFRARED_DETECTION_NO_DEFECTS;
+                case negaflow::imaging::InfraredDetectionStatus::coverage_too_high:
+                    return NF_INFRARED_DETECTION_COVERAGE_TOO_HIGH;
+                case negaflow::imaging::InfraredDetectionStatus::cancelled:
+                    return NF_INFRARED_DETECTION_CANCELLED;
+                case negaflow::imaging::InfraredDetectionStatus::allocation_failed:
+                    return NF_INFRARED_DETECTION_ALLOCATION_FAILED;
+            }
+            return NF_INFRARED_DETECTION_UNREADABLE;
+        };
+        const auto alignment = [](const negaflow::imaging::InfraredAlignmentStatus value) {
+            switch (value) {
+                case negaflow::imaging::InfraredAlignmentStatus::not_requested:
+                    return NF_INFRARED_ALIGNMENT_NOT_REQUESTED;
+                case negaflow::imaging::InfraredAlignmentStatus::aligned:
+                    return NF_INFRARED_ALIGNMENT_ALIGNED;
+                case negaflow::imaging::InfraredAlignmentStatus::insufficient_texture:
+                    return NF_INFRARED_ALIGNMENT_INSUFFICIENT_TEXTURE;
+                case negaflow::imaging::InfraredAlignmentStatus::weak_correlation:
+                    return NF_INFRARED_ALIGNMENT_WEAK_CORRELATION;
+                case negaflow::imaging::InfraredAlignmentStatus::search_limit_reached:
+                    return NF_INFRARED_ALIGNMENT_SEARCH_LIMIT_REACHED;
+            }
+            return NF_INFRARED_ALIGNMENT_INSUFFICIENT_TEXTURE;
+        };
+        summary->status = status(detection.status);
+        summary->width = detection.detection.width;
+        summary->height = detection.detection.height;
+        summary->offset_x = detection.detection.offset_x;
+        summary->offset_y = detection.detection.offset_y;
+        summary->alignment_status = alignment(detection.detection.alignment.status);
+        summary->alignment_search_radius = detection.detection.alignment.search_radius;
+        summary->alignment_downsample_factor = detection.detection.alignment.downsample_factor;
+        summary->coverage = detection.detection.coverage;
+        summary->median_gain = detection.detection.median_gain;
+        summary->alignment_peak_correlation = detection.detection.alignment.peak_correlation;
+        summary->alignment_runner_up_correlation =
+            detection.detection.alignment.runner_up_correlation;
+        summary->candidate_count = detection.detection.candidate_count;
+        summary->confirmed_count = detection.detection.confirmed_count;
+        summary->cluster_count = detection.detection.clusters.size();
+        summary->component_count = detection.detection.components.size();
+        if (detection.status != negaflow::imaging::InfraredDetectionStatus::ok) {
+            return NF_STATUS_OK;
+        }
+        auto* const owned = new (std::nothrow) nf_infrared_detection_handle_v1{};
+        if (owned == nullptr) {
+            summary->status = NF_INFRARED_DETECTION_ALLOCATION_FAILED;
+            return NF_STATUS_OK;
+        }
+        owned->detection = std::move(detection.detection);
+        *handle = owned;
+        return NF_STATUS_OK;
+    } catch (const std::bad_alloc&) {
+        summary->status = NF_INFRARED_DETECTION_ALLOCATION_FAILED;
+        return NF_STATUS_OK;
+    }
+}
+
+nf_status_t NF_CALL nf_infrared_detection_get_cluster_v1(
+    const nf_infrared_detection_handle_v1* const handle,
+    const uint64_t index,
+    nf_infrared_cluster_v1* const cluster,
+    uint8_t* const core_mask,
+    const uint64_t core_mask_capacity_bytes,
+    uint16_t* const attenuation_r16,
+    const uint64_t attenuation_capacity_values) {
+    if (handle == nullptr || cluster == nullptr) return NF_STATUS_INVALID_ARGUMENT;
+    if (cluster->struct_size < static_cast<std::uint32_t>(sizeof(*cluster))) {
+        return NF_STATUS_STRUCT_TOO_SMALL;
+    }
+    if (index >= handle->detection.clusters.size()) return NF_STATUS_INVALID_ARGUMENT;
+    const auto& source = handle->detection.clusters[static_cast<std::size_t>(index)];
+    const std::uint32_t declared_size = cluster->struct_size;
+    std::memset(cluster, 0, sizeof(*cluster));
+    cluster->struct_size = declared_size;
+    cluster->roi_x = source.roi_x;
+    cluster->roi_y_up = source.roi_y_up;
+    cluster->width = source.width;
+    cluster->height = source.height;
+    cluster->core_mask_byte_count = source.core_mask.size();
+    cluster->attenuation_value_count = source.attenuation_r16.size();
+    if ((core_mask == nullptr) != (core_mask_capacity_bytes == 0U) ||
+        (attenuation_r16 == nullptr) != (attenuation_capacity_values == 0U)) {
+        return NF_STATUS_INVALID_ARGUMENT;
+    }
+    if (core_mask == nullptr && attenuation_r16 == nullptr) return NF_STATUS_OK;
+    if (core_mask_capacity_bytes < source.core_mask.size() ||
+        attenuation_capacity_values < source.attenuation_r16.size()) {
+        return NF_STATUS_INVALID_ARGUMENT;
+    }
+    if (core_mask != nullptr) {
+        std::memcpy(core_mask, source.core_mask.data(), source.core_mask.size());
+    }
+    if (attenuation_r16 != nullptr) {
+        std::memcpy(
+            attenuation_r16,
+            source.attenuation_r16.data(),
+            source.attenuation_r16.size() * sizeof(std::uint16_t));
+    }
+    return NF_STATUS_OK;
+}
+
+nf_status_t NF_CALL nf_infrared_detection_get_component_v1(
+    const nf_infrared_detection_handle_v1* const handle,
+    const uint64_t index,
+    nf_infrared_component_v1* const component,
+    nf_infrared_preview_point_v1* const preview_points,
+    const uint64_t preview_point_capacity) {
+    if (handle == nullptr || component == nullptr) return NF_STATUS_INVALID_ARGUMENT;
+    if (component->struct_size < static_cast<std::uint32_t>(sizeof(*component))) {
+        return NF_STATUS_STRUCT_TOO_SMALL;
+    }
+    if (index >= handle->detection.components.size()) return NF_STATUS_INVALID_ARGUMENT;
+    const auto& source = handle->detection.components[static_cast<std::size_t>(index)];
+    const std::uint32_t declared_size = component->struct_size;
+    std::memset(component, 0, sizeof(*component));
+    component->struct_size = declared_size;
+    component->classification = static_cast<std::uint32_t>(source.classification);
+    component->confidence = source.confidence;
+    component->area = source.area;
+    component->preview_point_count = source.preview_points.size();
+    if ((preview_points == nullptr) != (preview_point_capacity == 0U)) {
+        return NF_STATUS_INVALID_ARGUMENT;
+    }
+    if (preview_points == nullptr) return NF_STATUS_OK;
+    if (preview_point_capacity < source.preview_points.size()) {
+        return NF_STATUS_INVALID_ARGUMENT;
+    }
+    for (std::size_t ordinal = 0U; ordinal < source.preview_points.size(); ++ordinal) {
+        preview_points[ordinal] = nf_infrared_preview_point_v1{
+            source.preview_points[ordinal].x,
+            source.preview_points[ordinal].y};
+    }
+    return NF_STATUS_OK;
+}
+
+void NF_CALL nf_infrared_detection_destroy_v1(
+    nf_infrared_detection_handle_v1* const handle) {
+    delete handle;
 }
 
 nf_status_t NF_CALL nf_get_tone_limits_v1(nf_tone_limits_v1* const output) {

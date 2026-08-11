@@ -11,8 +11,11 @@ true-scale closing·광학 밀도, scan-derived floor/sigma, 면적 누적 후�
 한 경로로 실행합니다. macOS anchor 의미의 `(3,2)` 정렬·5개 이상 성분·세로/대각 스크래치, 20px
 consensus, IR-only 기각, margin halo 제외를 고정했고 x64 Debug native **62/62**가 통과했습니다.
 
-이 체크포인트는 native 배열 코어입니다. scanner companion plane 수집, C ABI/managed coordinator,
-sidecar item 생성, 실제 paired 촬영 TIFF와 macOS-hosted R16/pixel golden은 아직 연결되지 않았습니다.
+ABI 0.33의 단일 실행 opaque handle로 이 코어를 C#에 연결했습니다. native가 소유한 cluster·component
+payload는 크기 조회 뒤 한 번 복사하고 명시적으로 해제합니다. 관리 coordinator는 색상 네거티브·포지티브만
+허용하며 검출 결과를 macOS와 같은 IR item으로 변환해 sidecar를 먼저 기록한 뒤 catalog를 commit합니다.
+재시작 복원과 preview/export 공통 request 투영까지 x64 Debug에서 통과했습니다. scanner companion plane
+수집, 실제 paired 촬영 TIFF와 macOS-hosted R16/pixel golden은 아직 연결되지 않았습니다.
 
 ## 2026-08-12 GrainMend IR item replay — ABI v25
 

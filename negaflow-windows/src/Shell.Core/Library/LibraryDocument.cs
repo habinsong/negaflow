@@ -53,6 +53,18 @@ public readonly record struct LibraryDocumentOpenResult(
             DefectSidecarError.None);
 }
 
+public readonly record struct LibraryDefectRecipeWriteResult(
+    DefectRecipeSnapshot? Recipe,
+    LibraryFrameError FrameError,
+    DefectSidecarError SidecarError,
+    CatalogStoreError CatalogError)
+{
+    public bool IsSuccess => Recipe is not null &&
+        FrameError == LibraryFrameError.None &&
+        SidecarError == DefectSidecarError.None &&
+        CatalogError == CatalogStoreError.None;
+}
+
 /// <summary>
 /// 열려 있는 라이브러리 하나입니다. catalog 세션을 소유하므로 <see cref="Dispose"/> 할 때까지
 /// 다른 프로세스는 이 카탈로그의 작성자가 될 수 없습니다.
@@ -193,6 +205,59 @@ public sealed class LibraryDocument : IDisposable
                 [CatalogEntityTable.Frames] = rows,
             });
         return session.Write(snapshot).Error;
+    }
+
+    public LibraryDefectRecipeWriteResult WriteDefectRecipe(
+        string frameId,
+        DefectRecipeSnapshot recipe)
+    {
+        ArgumentNullException.ThrowIfNull(frameId);
+        ArgumentNullException.ThrowIfNull(recipe);
+        if (!indexById.TryGetValue(frameId, out int index) ||
+            !Guid.TryParseExact(frameId, "D", out Guid parsedFrameId) ||
+            parsedFrameId != recipe.FrameId)
+        {
+            return new(null, LibraryFrameError.MissingId,
+                DefectSidecarError.None, CatalogStoreError.None);
+        }
+
+        DefectSidecarWriteResult sidecar = session.WriteDefectRecipe(recipe);
+        if (!sidecar.IsSuccess)
+        {
+            return new(null, LibraryFrameError.None, sidecar.Error, CatalogStoreError.None);
+        }
+        DefectSidecarReadResult read = session.ReadDefectRecipe(parsedFrameId);
+        if (read.Snapshot is not { } stored)
+        {
+            return new(null, LibraryFrameError.None, read.Error, CatalogStoreError.None);
+        }
+
+        JsonObject previousPayload = payloads[index];
+        DefectRecipeSnapshot? previousRecipe = defectRecipes.GetValueOrDefault(frameId);
+        JsonObject updatedPayload = (JsonObject)previousPayload.DeepClone();
+        updatedPayload["hasDefectEdits"] = true;
+        payloads[index] = updatedPayload;
+        defectRecipes[frameId] = stored;
+        CatalogStoreError catalogError = Save();
+        if (catalogError != CatalogStoreError.None)
+        {
+            payloads[index] = previousPayload;
+            if (previousRecipe is null)
+            {
+                defectRecipes.Remove(frameId);
+            }
+            else
+            {
+                defectRecipes[frameId] = previousRecipe;
+            }
+            Project();
+            return new(null, LibraryFrameError.None,
+                DefectSidecarError.None, catalogError);
+        }
+
+        Project();
+        return new(stored, LibraryFrameError.None,
+            DefectSidecarError.None, CatalogStoreError.None);
     }
 
     public void Dispose() => session.Dispose();

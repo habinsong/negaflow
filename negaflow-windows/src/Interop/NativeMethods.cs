@@ -314,6 +314,44 @@ internal static partial class NativeMethods
         uint strideBytes,
         NativeAutoAdjustResultV1* result);
 
+    [LibraryImport(LibraryName, EntryPoint = "nf_detect_infrared_defects_v1")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static unsafe partial uint nf_detect_infrared_defects_v1(
+        float* infrared,
+        uint infraredStrideBytes,
+        float* red,
+        uint redStrideBytes,
+        uint width,
+        uint height,
+        NativeInfraredDetectorParametersV1* parameters,
+        uint* cancelRequested,
+        NativeInfraredDetectionSummaryV1* summary,
+        nint* handle);
+
+    [LibraryImport(LibraryName, EntryPoint = "nf_infrared_detection_get_cluster_v1")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static unsafe partial uint nf_infrared_detection_get_cluster_v1(
+        nint handle,
+        ulong index,
+        NativeInfraredClusterV1* cluster,
+        byte* coreMask,
+        ulong coreMaskCapacityBytes,
+        ushort* attenuationR16,
+        ulong attenuationCapacityValues);
+
+    [LibraryImport(LibraryName, EntryPoint = "nf_infrared_detection_get_component_v1")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static unsafe partial uint nf_infrared_detection_get_component_v1(
+        nint handle,
+        ulong index,
+        NativeInfraredComponentV1* component,
+        NativeInfraredPreviewPointV1* previewPoints,
+        ulong previewPointCapacity);
+
+    [LibraryImport(LibraryName, EntryPoint = "nf_infrared_detection_destroy_v1")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static partial void nf_infrared_detection_destroy_v1(nint handle);
+
     [LibraryImport(LibraryName, EntryPoint = "nf_get_negative_limits_v1")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial uint nf_get_negative_limits_v1(ref NativeNegativeLimitsV1 output);
