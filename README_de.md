@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://habinsong.github.io/negaflow-site/de/"><img src="https://img.shields.io/badge/website-negaflow-1F6FEB" alt="Website"></a>
-  <a href="docs/de/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.6%20release-EF8B26" alt="Veröffentlichungsstatus"></a>
+  <a href="docs/de/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.7%20release-EF8B26" alt="Veröffentlichungsstatus"></a>
   <a href="#voraussetzungen"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 oder neuer"></a>
   <a href="negaflow-mac/Package.swift"><img src="https://img.shields.io/badge/Swift-5.9+-F05138?logo=swift&logoColor=white" alt="Swift 5.9 oder neuer"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache-2.0-Lizenz"></a>
@@ -70,8 +70,8 @@ Für die meisten Macs ist das Universal-PKG vorgesehen.
 
 | Download | Unterstützte Macs |
 |---|---|
-| `negaflow-1.0.6-1-macOS-universal.pkg` | Apple Silicon und Intel |
-| `negaflow-1.0.6-1-macOS-arm64.pkg` | Nur Apple Silicon |
+| `negaflow-1.0.7-1-macOS-universal.pkg` | Apple Silicon und Intel |
+| `negaflow-1.0.7-1-macOS-arm64.pkg` | Nur Apple Silicon |
 
 1. Laden Sie das passende PKG herunter.
 2. Öffnen Sie es und folgen Sie Installer.

@@ -38,7 +38,7 @@ Notez chaque résultat comme `PASS`, `FAIL`, `BLOCKED` ou `N/A`.
 |  | Le premier lancement ne crée que les données décrites dans la documentation. |  |
 |  | Sans plugin scanner, aucun appareil ni aucune capacité factice ne s'active. |  |
 |  | Informations, version, build, licence et aide sont justes. |  |
-|  | À propos affiche la phrase localisée du bicentenaire de Niépce en gras entre « negaflow » et la version `1.0.6`. |  |
+|  | À propos affiche la phrase localisée du bicentenaire de Niépce en gras entre « negaflow » et la version `1.0.7`. |  |
 
 ## 2. Import, développement, export
 

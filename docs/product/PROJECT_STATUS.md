@@ -10,7 +10,7 @@ and decisions.
 
 | Item | Current value |
 |---|---|
-| Version | `1.0.6` |
+| Version | `1.0.7` |
 | Build | `1` |
 | OS | macOS 14 or later |
 | Workflow | import or scan → develop → export |
@@ -18,7 +18,7 @@ and decisions.
 | Originals | Original files and third-party sidecars are not modified |
 
 > [!WARNING]
-> The `1.0.6` label and a successful build do not mean real scanner compatibility, final image
+> The `1.0.7` label and a successful build do not mean real scanner compatibility, final image
 > quality, external signing, or notarization have been confirmed. Real hardware and release
 > approval are recorded separately in the checklist below.
 

@@ -75,8 +75,11 @@ BASE_NAME="negaflow-$VERSION-$BUILD-macOS-$ARCHITECTURE_LABEL"
 ZIP_NAME="$BASE_NAME.zip"
 DMG_NAME="$BASE_NAME.dmg"
 PKG_NAME="$BASE_NAME.pkg"
-DSYM_NAME="$BASE_NAME.dSYM.zip"
-CHECKSUM_NAME="$BASE_NAME-SHA256SUMS.txt"
+# 릴리스 페이지는 파일 이름 순으로 늘어놓는다. 설치본(.dmg/.pkg)이 맨 위에 오도록
+# 나머지는 그 뒤로 정렬되는 이름을 쓴다 — 예전 이름은 "-SHA256SUMS.txt" 라서 하이픈이
+# 점보다 앞서 체크섬 파일이 목록 맨 위에 올라왔다.
+DSYM_NAME="$BASE_NAME.symbols-dSYM.zip"
+CHECKSUM_NAME="$BASE_NAME.sha256.txt"
 
 mkdir -p "$OUTPUT_DIR"
 for name in "$ZIP_NAME" "$DMG_NAME" "$PKG_NAME" "$DSYM_NAME" "$CHECKSUM_NAME"; do

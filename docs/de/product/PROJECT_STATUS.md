@@ -10,7 +10,7 @@ Spezifikationen und Entscheidungen.
 
 | Punkt | Aktueller Wert |
 |---|---|
-| Version | `1.0.6` |
+| Version | `1.0.7` |
 | Build | `1` |
 | Betriebssystem | macOS 14 oder neuer |
 | Ablauf | Import oder Scan → Entwicklung → Export |
@@ -18,7 +18,7 @@ Spezifikationen und Entscheidungen.
 | Originale | Originaldateien und fremde Sidecar-Dateien bleiben unverändert |
 
 > [!WARNING]
-> Die Angabe `1.0.6` und ein erfolgreicher Build heißen nicht, dass Scannerkompatibilität,
+> Die Angabe `1.0.7` und ein erfolgreicher Build heißen nicht, dass Scannerkompatibilität,
 > endgültige Bildqualität, externe Signatur oder Notarisierung bestätigt sind. Echte Hardware und
 > die Freigabe zur Auslieferung stehen getrennt in der Checkliste weiter unten.
 

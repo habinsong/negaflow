@@ -141,8 +141,8 @@ publish_variant() {
     final_zip="$OUTPUT_DIR/$base_name.zip"
     final_dmg="$OUTPUT_DIR/$base_name.dmg"
     final_pkg="$OUTPUT_DIR/$base_name.pkg"
-    final_dsym="$OUTPUT_DIR/$base_name.dSYM.zip"
-    final_checksums="$OUTPUT_DIR/$base_name-SHA256SUMS.txt"
+    final_dsym="$OUTPUT_DIR/$base_name.symbols-dSYM.zip"
+    final_checksums="$OUTPUT_DIR/$base_name.sha256.txt"
 
     bash "$ROOT/scripts/notarize-app.sh" "$final_dmg" "$saved_app"
     bash "$ROOT/scripts/notarize-app.sh" "$final_pkg" "$saved_app"

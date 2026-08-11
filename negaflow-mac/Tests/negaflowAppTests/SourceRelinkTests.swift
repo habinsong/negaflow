@@ -619,6 +619,15 @@ final class SourceRelinkTests: XCTestCase {
         model.libraryFolders = [LibraryFolder(url: directory)]
         try Self.writePNG(to: newURL)
 
+        // 프레임 목록을 받으면 모델이 가용성 프로브를 한 번 돌린다. 그게 끝나기 전에 기준값을
+        // 재면, 폴더 동기화와 상관없는 그 프로브가 revision 을 올려 놓고는 동기화가 올린 것처럼
+        // 보인다(부하가 큰 CI 에서 실제로 그렇게 실패했다).
+        for _ in 0..<8 {
+            guard let refresh = model.sourceAvailabilityRefreshTask else { break }
+            await refresh.value
+            await Task.yield()
+        }
+
         let statusBefore = model.statusMessage
         let availabilityRevisionBefore = model.sourceAvailabilityRevision
 
