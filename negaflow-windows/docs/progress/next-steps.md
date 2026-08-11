@@ -162,7 +162,7 @@ image가 IR을 막는 흑백 네거티브·포지티브는 거부합니다. scan
 companion IR 경로를 frame/catalog에 보존하고, durable RGB frame 뒤에 `RunFiles`를 호출합니다. 그 뒤 같은 입력의
 macOS-hosted mask·R16 attenuation·최종 pixel golden을 통과하기 전에는 GrainMend IR 완전 동등성을 주장하지 않습니다.
 
-평판 스캐너의 최신 frame-grid 검출은 native C++20 기반까지 올라왔습니다. scanner host가 preview의
+평판 스캐너의 최신 frame-grid 검출은 ABI 0.35/C# owned-handle 경계까지 올라왔습니다. scanner host가 preview의
 실제 mm 영역과 정규화 luminance를 넘기는 C ABI, 그리고 같은 preview의 macOS golden 비교가 다음 연결 작업입니다.
 
 1. ~~GrainMend 자동 검출을 채널별 top-hat(4/8/12), 원거리 texture/SNR, 8방향 scratch 적분,

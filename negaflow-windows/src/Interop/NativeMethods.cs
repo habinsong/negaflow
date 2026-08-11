@@ -362,6 +362,31 @@ internal static partial class NativeMethods
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial void nf_infrared_detection_destroy_v1(nint handle);
 
+    [LibraryImport(LibraryName, EntryPoint = "nf_detect_flatbed_frame_grid_v1")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static unsafe partial uint nf_detect_flatbed_frame_grid_v1(
+        float* luminance,
+        uint strideBytes,
+        uint width,
+        uint height,
+        double physicalWidthMm,
+        double physicalHeightMm,
+        uint format,
+        uint* cancelRequested,
+        NativeFlatbedFrameGridSummaryV1* summary,
+        nint* handle);
+
+    [LibraryImport(LibraryName, EntryPoint = "nf_flatbed_frame_grid_get_detection_v1")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static unsafe partial uint nf_flatbed_frame_grid_get_detection_v1(
+        nint handle,
+        ulong index,
+        NativeFlatbedFrameDetectionV1* detection);
+
+    [LibraryImport(LibraryName, EntryPoint = "nf_flatbed_frame_grid_destroy_v1")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static partial void nf_flatbed_frame_grid_destroy_v1(nint handle);
+
     [LibraryImport(LibraryName, EntryPoint = "nf_get_negative_limits_v1")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial uint nf_get_negative_limits_v1(ref NativeNegativeLimitsV1 output);

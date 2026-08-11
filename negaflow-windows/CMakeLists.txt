@@ -299,6 +299,18 @@ if(BUILD_TESTING)
         COMMAND negaflow_infrared_detector_abi_tests
     )
 
+    add_executable(negaflow_flatbed_frame_grid_abi_tests
+        tests/Native.UnitTests/flatbed_frame_grid_abi_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_flatbed_frame_grid_abi_tests
+        PRIVATE negaflow_native negaflow_project_options
+    )
+    add_test(
+        NAME native.flatbed_frame_grid_abi
+        COMMAND negaflow_flatbed_frame_grid_abi_tests
+    )
+
     add_executable(negaflow_scalar_tests
         tests/Native.UnitTests/scalar_kernel_tests.cpp
     )
