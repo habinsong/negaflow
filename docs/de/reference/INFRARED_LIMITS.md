@@ -22,18 +22,25 @@ Belege:
 
 ## Wo es automatisch greift
 
-`FilmType` unterscheidet nur Farbe und Schwarzweiß, Negativ und Positiv.
-Nichts darin trennt chromogenes Schwarzweiß von silberbasiertem oder ein normales Dia von
-Kodachrome.
+Entscheidend ist nicht, ob der Film negativ oder positiv ist, sondern **was das Bild bildet**.
+Farbfilm bleicht sein Silber bei der Entwicklung heraus und behält nur Farbstoff, und Farbstoff ist
+für Infrarot durchlässig. Schwarzweißfilm ist ein Silberbild und blockt Infrarot ab; die Korrektur
+würde die Aufnahme selbst als einen einzigen großen Defekt lesen und löschen.
 
 | Filmtyp | Automatisches IR | Grund |
 |---|---|---|
-| Farbnegativ | Bedingt | Das Plugin muss IR melden und die Ausrichtungsprüfung bestehen |
-| Farbpositiv | Aus | Ob es Kodachrome ist, lässt sich nicht feststellen |
-| Schwarzweiß-Negativ und -Positiv | Aus | Chromogen und silberbasiert sind nicht auseinanderzuhalten |
+| Farbnegativ | Bedingt | Farbstoffbild. Das Plugin muss IR melden und die Ausrichtungsprüfung bestehen |
+| Farbpositiv | Bedingt | Farbstoffbild. Dieselben Bedingungen wie beim Farbnegativ |
+| Schwarzweiß-Negativ und -Positiv | Aus | Das Silberbild blockt Infrarot ab |
 
-Das heißt nicht, dass IR bei chromogenem Schwarzweiß oder einem normalen Farbdia nie ginge.
-Die vorhandenen Daten bestätigen das Filmmaterial nicht, also wird nichts geraten.
+`FilmType` trennt chromogenes Schwarzweiß nicht von silberbasiertem und Kodachrome nicht von einem
+normalen Dia. Zwei Fälle bleiben deshalb beim Anwender.
+
+- Chromogenes Schwarzweiß wird als Schwarzweiß gescannt; IR bleibt also aus, obwohl der Film es
+  zuließe. Aus dem Filmtyp allein wird nichts geraten.
+- Kodachrome ist ein Farbdia, IR wird also angeboten. Seine Farbstoffe schwächen Infrarot anders als
+  E-6, ein Defekt kann dadurch unter- oder überkorrigiert werden. Schalten Sie die Ebene ab, wenn das
+  Ergebnis falsch aussieht.
 
 ## Ausrichtungsprüfung
 

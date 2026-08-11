@@ -33,6 +33,8 @@ Spezifikationen und Entscheidungen.
 - Rollennotizen füllen nur die leeren Felder eines Bildes, und Rollencode, Film und Kamera stehen als Dateinamen-Token bereit
 - Ausgelagerte iCloud-Originale werden vor einem Export bereitgestellt, mit Exportprüfung in den Stufen Standard und Streng
 - Bildauswahl in der Flachbett-Vorschau, festgehalten am Seitenverhältnis des gewählten Filmformats
+- Automatische Flachbett-Bilderkennung, die Film am Korn und am Bild statt an der Helligkeit erkennt, leere Fenster und halbierte Fenster ablehnt und den Abstand zwischen den Bildern misst statt ihn zu raten
+- Infrarot-Reinigung für jeden Film mit Farbstoffbild, Farbnegativ wie Farbdia, und nicht für Schwarzweiß mit Silberbild
 - Eine niederfrequente Beobachtungsgrenze, die die Export-Schaltfläche mit Entwicklungs- und Nachbearbeitungsstand aktualisiert
 - Finden und Freigeben von Scanner-Plugins, Fähigkeitsprüfung, Protokoll v1/v2, Abbruch, Zeitgrenzen, Ausgabeobergrenzen
 - Prüfung von Eigentümer und Rechten des Plugins sowie der temporären Ausgabe
@@ -91,6 +93,7 @@ Genaue Spezifikationen:
 
 - [Scanner-Plugin-Struktur](../architecture/SCANNER_PLUGINS.md)
 - [Scanner-CLI-JSON](../reference/CLI_JSON.md)
+- [Bilderkennung am Flachbettscanner](../reference/FRAME_DETECTION.md)
 
 ## Build und Auslieferung
 

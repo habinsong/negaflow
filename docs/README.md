@@ -47,6 +47,7 @@ flowchart LR
 | [Scanner profile quality gate](reference/PROFILE_QUALITY_GATE.md) | Release rules for REAL/TARGET pair material |
 | [Scanner noise profiles](reference/SCANNER_NOISE_PROFILES.md) | Repeat-scan measurement and when it applies automatically |
 | [Film GrainMend IR should avoid](reference/INFRARED_LIMITS.md) | Black and white, Kodachrome, RGB/IR alignment limits |
+| [Flatbed frame detection](reference/FRAME_DETECTION.md) | How film is told from an empty holder, and how cut boundaries are measured |
 | [IT8 color validation](reference/IT8_COLOR_VALIDATION.md) | Patch measurement, evidence grades, synthetic regression |
 
 ## Validation

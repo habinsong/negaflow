@@ -33,6 +33,8 @@ and decisions.
 - Roll notes filling only the empty fields of a frame, with roll code, film and camera as file-name tokens
 - Evicted iCloud originals materialized before an export, and standard or strict export verification
 - Frame selection on a flatbed preview locked to the aspect of the selected film format
+- Automatic flatbed frame detection that finds film by grain and picture rather than brightness, refuses empty windows and half-cut slots, and measures the spacing between cuts instead of guessing it
+- Infrared cleaning offered for every dye-image film, colour negative and colour slide alike, and withheld from silver-image black and white
 - A low-frequency observation boundary that refreshes the export button as develop and reprocess state changes
 - Scanner plugin discovery and approval, capability checks, protocol v1/v2, cancellation, time limits, output caps
 - Plugin owner and permission checks, and validation of temporary output
@@ -90,6 +92,7 @@ Detailed specs:
 
 - [Scanner plugin architecture](../architecture/SCANNER_PLUGINS.md)
 - [Scanner CLI JSON](../reference/CLI_JSON.md)
+- [Flatbed frame detection](../reference/FRAME_DETECTION.md)
 
 ## Build and release
 

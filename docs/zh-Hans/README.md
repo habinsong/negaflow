@@ -47,6 +47,7 @@ flowchart LR
 | [扫描仪配置文件质量判定](reference/PROFILE_QUALITY_GATE.md) | REAL/TARGET 配对素材的发布判定 |
 | [扫描仪噪声配置文件](reference/SCANNER_NOISE_PROFILES.md) | 重复扫描测量与自动应用的条件 |
 | [GrainMend IR 要避开的胶片](reference/INFRARED_LIMITS.md) | 黑白、Kodachrome、RGB/IR 对齐的限制 |
+| [平板自动画幅检测](reference/FRAME_DETECTION.md) | 如何把胶片与空片夹区分开，如何测量画幅边界 |
 | [IT8 色彩检验](reference/IT8_COLOR_VALIDATION.md) | 色块测量、证据等级、合成回归 |
 
 ## 验证

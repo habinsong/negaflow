@@ -22,19 +22,25 @@ Justification :
 
 ## Où il s'applique automatiquement
 
-`FilmType` distingue seulement couleur et noir et blanc, négatif et positif.
-Rien n'y sépare un noir et blanc chromogène d'un argentique, ni une diapositive courante d'un
-Kodachrome.
+Ce qui décide ici n'est pas que le film soit négatif ou positif, mais **ce qui forme l'image**.
+Le film couleur blanchit son argent au traitement et ne garde que des colorants, transparents à
+l'infrarouge. Le film noir et blanc est une image argentique qui bloque l'infrarouge : la correction
+lirait la photographie elle-même comme un immense défaut et l'effacerait.
 
 | Type de film | IR automatique | Pourquoi |
 |---|---|---|
-| Négatif couleur | Sous conditions | Le plugin doit signaler l'IR et passer le contrôle d'alignement |
-| Positif couleur | Non | Impossible de savoir s'il s'agit de Kodachrome |
-| Négatif et positif noir et blanc | Non | Chromogène et argentique sont indiscernables |
+| Négatif couleur | Sous conditions | Image de colorants. Le plugin doit signaler l'IR et passer le contrôle d'alignement |
+| Positif couleur | Sous conditions | Image de colorants. Mêmes conditions que le négatif couleur |
+| Négatif et positif noir et blanc | Non | L'image argentique bloque l'infrarouge |
 
-Cela ne veut pas dire que l'IR est impossible sur un noir et blanc chromogène ou une diapositive
-couleur courante.
-Les données actuelles ne confirment pas la matière du film, alors rien n'est deviné.
+`FilmType` ne sépare pas un noir et blanc chromogène d'un argentique et ne distingue pas un
+Kodachrome d'une diapositive courante : deux cas restent donc à l'appréciation de l'utilisateur.
+
+- Un noir et blanc chromogène est numérisé comme du noir et blanc ; l'IR reste donc désactivé même
+  si le film le permettrait. Rien n'est deviné à partir du seul type de film.
+- Kodachrome est une diapositive couleur, l'IR est donc proposé. Ses colorants atténuent l'infrarouge
+  autrement que l'E-6, ce qui peut sous- ou sur-corriger un défaut. Désactivez le calque si le
+  résultat semble faux.
 
 ## Contrôle d'alignement
 

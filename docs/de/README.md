@@ -47,6 +47,7 @@ flowchart LR
 | [Qualitätsprüfung der Scannerprofile](reference/PROFILE_QUALITY_GATE.md) | Freigaberegeln für REAL/TARGET-Paarmaterial |
 | [Scanner-Rauschprofile](reference/SCANNER_NOISE_PROFILES.md) | Messung über Wiederholungsscans und automatische Anwendung |
 | [Filme, die GrainMend IR meidet](reference/INFRARED_LIMITS.md) | Schwarzweiß, Kodachrome, Grenzen der RGB/IR-Ausrichtung |
+| [Bilderkennung am Flachbettscanner](reference/FRAME_DETECTION.md) | Wie Film von einem leeren Halter unterschieden und wo die Bildgrenzen gemessen werden |
 | [IT8-Farbprüfung](reference/IT8_COLOR_VALIDATION.md) | Patchmessung, Nachweisstufen, synthetische Regression |
 
 ## Prüfung

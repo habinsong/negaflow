@@ -47,6 +47,7 @@ flowchart LR
 | [Contrôle qualité des profils scanner](reference/PROFILE_QUALITY_GATE.md) | Règles de publication du matériel REAL/TARGET |
 | [Profils de bruit des scanners](reference/SCANNER_NOISE_PROFILES.md) | Mesure par scans répétés et conditions d'application automatique |
 | [Films que GrainMend IR doit éviter](reference/INFRARED_LIMITS.md) | Noir et blanc, Kodachrome, limites d'alignement RVB/IR |
+| [Détection des vues sur scanner à plat](reference/FRAME_DETECTION.md) | Comment le film est distingué d'un porte-films vide et comment les limites de vue sont mesurées |
 | [Validation colorimétrique IT8](reference/IT8_COLOR_VALIDATION.md) | Mesure des patchs, niveaux de preuve, régression synthétique |
 
 ## Validation

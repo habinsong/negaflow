@@ -32,6 +32,8 @@ produit et son usage ; les documents de docs portent les spécifications et les 
 - Notes du rouleau ne remplissant que les champs vides d'une vue, avec code de rouleau, film et appareil comme jetons de nom de fichier
 - Originaux iCloud évincés rapatriés avant un export, et vérification d'export standard ou stricte
 - Sélection de vue sur un aperçu à plat verrouillée sur le rapport du format de film choisi
+- Détection automatique des vues à plat qui reconnaît le film à son grain et à son image plutôt qu'à sa luminosité, écarte les fenêtres vides et les fenêtres coupées en deux, et mesure l'écart entre les vues au lieu de le deviner
+- Nettoyage infrarouge proposé pour tout film à image de colorants, négatif couleur comme diapositive couleur, et refusé au noir et blanc à image argentique
 - Une frontière d'observation à faible fréquence qui rafraîchit le bouton d'export selon l'état de développement et de retraitement
 - Découverte et approbation des plugins scanner, contrôle des capacités, protocole v1/v2, annulation, limites de temps, plafonds de sortie
 - Contrôle du propriétaire et des droits du plugin, et validation de la sortie temporaire
@@ -91,6 +93,7 @@ Spécifications détaillées :
 
 - [Architecture des plugins scanner](../architecture/SCANNER_PLUGINS.md)
 - [JSON de la CLI scanner](../reference/CLI_JSON.md)
+- [Détection des vues sur scanner à plat](../reference/FRAME_DETECTION.md)
 
 ## Build et publication
 

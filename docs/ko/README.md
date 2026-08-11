@@ -47,6 +47,7 @@ flowchart LR
 | [스캐너 프로파일 품질 검사](reference/PROFILE_QUALITY_GATE.md) | REAL/TARGET 쌍 자료의 출시 판정 규칙 |
 | [스캐너 노이즈 프로파일](reference/SCANNER_NOISE_PROFILES.md) | 반복 스캔 측정과 자동 적용 조건 |
 | [GrainMend IR이 피해야 할 필름](reference/INFRARED_LIMITS.md) | 흑백, Kodachrome, RGB/IR 정렬 한계 |
+| [평판 프레임 자동 검출](reference/FRAME_DETECTION.md) | 필름과 빈 홀더를 어떻게 가르고 컷 경계를 어떻게 재는지 |
 | [IT8 색 검사](reference/IT8_COLOR_VALIDATION.md) | 패치 측정, 증거 등급, 합성 회귀 |
 
 ## 검증

@@ -47,6 +47,7 @@ flowchart LR
 | [スキャナープロファイル品質判定](reference/PROFILE_QUALITY_GATE.md) | REAL/TARGETペア資料の出荷判定 |
 | [スキャナーノイズプロファイル](reference/SCANNER_NOISE_PROFILES.md) | 繰り返しスキャンの計測と自動適用の条件 |
 | [GrainMend IRが避けるフィルム](reference/INFRARED_LIMITS.md) | 白黒、Kodachrome、RGB/IR整列の限界 |
+| [フラットベッドの自動フレーム検出](reference/FRAME_DETECTION.md) | フィルムと空のホルダーの見分け方、コマ境界の測り方 |
 | [IT8色検査](reference/IT8_COLOR_VALIDATION.md) | パッチ計測、証拠等級、合成回帰 |
 
 ## 検証

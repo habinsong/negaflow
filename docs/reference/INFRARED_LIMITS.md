@@ -22,18 +22,24 @@ Evidence:
 
 ## Where it applies automatically
 
-`FilmType` only tells color from black and white and negative from positive.
-There is nothing in it to separate dye-based black and white from silver, or a normal slide from
-Kodachrome.
+What decides this is what forms the image, not whether the film is negative or positive.
+Colour film bleaches its silver away during processing and keeps only dye, and dye is transparent to
+infrared. Black and white film is a silver image and blocks infrared, so the correction would read
+the photograph itself as one large defect and erase it.
 
 | Film type | Automatic IR | Why |
 |---|---|---|
-| Color negative | Conditional | The plugin has to report IR and pass the alignment check |
-| Color positive | Off | There is no way to know whether it is Kodachrome |
-| Black and white negative and positive | Off | Dye-based and silver cannot be told apart |
+| Color negative | Conditional | Dye image. The plugin has to report IR and pass the alignment check |
+| Color positive | Conditional | Dye image. Same conditions as colour negative |
+| Black and white negative and positive | Off | Silver image blocks infrared |
 
-This does not mean IR can never work on dye-based black and white or a normal color slide.
-The current data cannot confirm the film material, so nothing is guessed.
+`FilmType` cannot separate dye-based black and white from silver, and it cannot tell Kodachrome from
+a normal slide, so two cases are left to the user.
+
+- Dye-based black and white is scanned as black and white, so IR stays off even though the film
+  would allow it. Nothing is guessed from the film type alone.
+- Kodachrome is a colour slide, so IR is offered. Its dyes attenuate infrared differently from E-6,
+  which can leave a defect under- or over-corrected. Turn the layer off if the result looks wrong.
 
 ## Alignment check
 
