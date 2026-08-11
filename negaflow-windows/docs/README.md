@@ -84,6 +84,7 @@
 - [2026-08-10 macOS 커널 수식 대조](verification/2026-08-10-macos-kernel-audit.md)
 - [2026-08-10 필름 베이스 자동 추정 대조와 실측](verification/2026-08-10-film-base-parity.md)
 - [2026-08-10 소프트 프루프 검증](verification/2026-08-10-soft-proof.md)
+- [2026-08-12 GrainMend IR item replay ABI v25 검증](verification/2026-08-12-ir-item-replay-v25.md)
 - [SQLite catalog store 공식 근거와 권리 조사](research/sqlite-catalog-store-sources.md)
 - [이미지 I/O 조사와 권리 검토](research/image-io-sources.md)
 - [압축 TIFF 사전 검사 공식 근거와 권리 검토](research/compressed-tiff-preflight-sources.md)

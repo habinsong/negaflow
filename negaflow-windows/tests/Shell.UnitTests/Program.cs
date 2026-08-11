@@ -421,12 +421,18 @@ internal static class Program
             orderedDefectRequest.IsSuccess &&
             orderedDefectRequest.Request?.DefectRegions.Count == 2 &&
             orderedDefectRequest.Request.DefectInfrared.Count == 1 &&
-            orderedDefectRequest.Request.DefectInfrared[0].RoiX == 24 &&
-            orderedDefectRequest.Request.DefectInfrared[0].CoreMaskStrideBytes == 4 &&
-            orderedDefectRequest.Request.DefectInfrared[0].CoreMask.Span[5] == 255 &&
-            orderedDefectRequest.Request.DefectInfrared[0].CoreMask.Span[6] == 128 &&
-            orderedDefectRequest.Request.DefectInfrared[0].AttenuationStrideBytes == 8 &&
-            orderedDefectRequest.Request.DefectInfrared[0].AttenuationR16?.Span[
+            orderedDefectRequest.Request.DefectInfrared[0].Clusters.Count == 1 &&
+            orderedDefectRequest.Request.DefectInfrared[0].Clusters[0].RoiX == 24 &&
+            orderedDefectRequest.Request.DefectInfrared[0].Clusters[0]
+                .CoreMaskStrideBytes == 4 &&
+            orderedDefectRequest.Request.DefectInfrared[0].Clusters[0]
+                .CoreMask.Span[5] == 255 &&
+            orderedDefectRequest.Request.DefectInfrared[0].Clusters[0]
+                .CoreMask.Span[6] == 128 &&
+            orderedDefectRequest.Request.DefectInfrared[0].Clusters[0]
+                .AttenuationStrideBytes == 8 &&
+            orderedDefectRequest.Request.DefectInfrared[0].Clusters[0]
+                .AttenuationR16?.Span[
                 2 * 5 + 1] == 0x80 &&
             orderedDefectRequest.Request.DefectClones.Count == 1 &&
             orderedDefectRequest.Request.DefectClones[0].Strength == 0.7 &&
@@ -465,9 +471,10 @@ internal static class Program
         Check(legacyInfraredRequest.Request?.DefectInfrared.Count == 1,
             "develop_request_keeps_legacy_infrared_separate");
         Check(legacyInfraredRequest.Request is { } legacyNativeRequest &&
-              legacyNativeRequest.DefectInfrared[0].AttenuationR16 is null,
+              legacyNativeRequest.DefectInfrared[0].Clusters[0]
+                  .AttenuationR16 is null,
             "develop_request_preserves_missing_legacy_attenuation");
-        Check(legacyInfraredRequest.Request?.DefectInfrared[0]
+        Check(legacyInfraredRequest.Request?.DefectInfrared[0].Clusters[0]
                   .AttenuationStrideBytes == 0,
             "develop_request_zeros_missing_legacy_attenuation_stride");
         Check(legacyInfraredRequest.Request?.DefectEditOrder.SequenceEqual(

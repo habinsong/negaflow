@@ -14,6 +14,7 @@ namespace {
 using negaflow::core::Rgba32F;
 using negaflow::imaging::WorkingImage;
 using negaflow::pipeline::DefectInfraredEdit;
+using negaflow::pipeline::DefectInfraredItem;
 using negaflow::pipeline::DefectInfraredStageStatus;
 
 int failures = 0;
@@ -200,6 +201,72 @@ void test_legacy_mask_only_matches_component_repair() {
            "legacy_matches_component_repair_fallback");
 }
 
+void test_item_clusters_share_base_and_publish_only_correction_bounds() {
+    WorkingImage image = make_image(8U, 5U);
+    const WorkingImage original = image;
+    std::vector<std::uint8_t> first_core(15U, 0U);
+    std::vector<std::uint8_t> first_attenuation(30U, 0U);
+    write_r16(first_attenuation, 6U, 32768U);
+    write_r16(first_attenuation, 8U, 32768U);
+    write_r16(first_attenuation, 9U, 32768U);
+    DefectInfraredEdit first{};
+    first.roi_x = 1U;
+    first.roi_y = 1U;
+    first.width = 5U;
+    first.height = 3U;
+    first.core_mask = first_core;
+    first.core_mask_stride_bytes = 5U;
+    first.attenuation_r16 = first_attenuation;
+    first.attenuation_stride_bytes = 10U;
+
+    std::vector<std::uint8_t> second_core(21U, 0U);
+    std::vector<std::uint8_t> second_attenuation(42U, 0U);
+    write_r16(second_attenuation, 11U, 32768U);
+    write_r16(second_attenuation, 13U, 32768U);
+    DefectInfraredEdit second{};
+    second.roi_x = 0U;
+    second.roi_y = 1U;
+    second.width = 7U;
+    second.height = 3U;
+    second.core_mask = second_core;
+    second.core_mask_stride_bytes = 7U;
+    second.attenuation_r16 = second_attenuation;
+    second.attenuation_stride_bytes = 14U;
+
+    DefectInfraredItem item{};
+    item.clusters = {first, second};
+    const auto result = negaflow::pipeline::apply_defect_infrared_item(
+        std::move(image), item);
+    const double transmittance =
+        std::max(1.0 - 32768.0 / 65535.0, 0.5);
+    const std::size_t first_only = 2U * 8U + 2U;
+    const std::size_t overlap = 2U * 8U + 4U;
+    const std::size_t second_only = 2U * 8U + 6U;
+    const std::size_t later_rectangle_hole = 2U * 8U + 5U;
+    expect(result.status == DefectInfraredStageStatus::ok,
+           "item_overlap_status_ok");
+    expect(result.info.attenuated_pixels == 5U,
+           "item_overlap_counts_cluster_evidence");
+    expect(near(
+               result.image.pixels[first_only].red,
+               static_cast<float>(
+                   original.pixels[first_only].red / transmittance)),
+           "wider_second_roi_padding_does_not_overwrite_first_patch");
+    expect(near(
+               result.image.pixels[overlap].red,
+               static_cast<float>(
+                   original.pixels[overlap].red / transmittance)),
+           "overlapping_cluster_attenuation_uses_item_base_once");
+    expect(near(
+               result.image.pixels[second_only].red,
+               static_cast<float>(
+                   original.pixels[second_only].red / transmittance)),
+           "second_cluster_correction_is_published");
+    expect(result.image.pixels[later_rectangle_hole].red ==
+               original.pixels[later_rectangle_hole].red,
+           "later_exact_rectangle_hole_overwrites_earlier_patch_with_base");
+}
+
 void test_malformed_payload_fails_closed() {
     WorkingImage image = make_image(5U, 5U);
     std::vector<std::uint8_t> core(9U, 0U);
@@ -235,6 +302,7 @@ int main() {
     test_partial_attenuation_without_core_does_not_inpaint();
     test_core_repair_reads_attenuation_corrected_context();
     test_legacy_mask_only_matches_component_repair();
+    test_item_clusters_share_base_and_publish_only_correction_bounds();
     test_malformed_payload_fails_closed();
     if (failures != 0) {
         std::cerr << failures << " infrared stage test(s) failed\n";

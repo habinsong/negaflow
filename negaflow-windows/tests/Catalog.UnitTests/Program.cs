@@ -428,6 +428,52 @@ internal static class Program
         Guid frameId = Guid.Parse("8ac67219-88d5-46b0-af56-42b4600615f3");
         IReadOnlyList<DefectEditItem> items = DefectRecipeItems();
 
+        DefectEditItem fingerprintProbe = new(
+            Guid.Parse("00000000-0000-0000-0000-000000000001"),
+            DefectEditKind.Infrared,
+            Enabled: true,
+            Strength: 1.0,
+            new DefectEditLabel(DefectEditLabelKind.Infrared, 1),
+            new DefectEditSummary(DefectEditSummaryKind.ClassBreakdown),
+            BaseSize: null,
+            Preview: [])
+        {
+            Clusters =
+            [
+                new DefectCluster(
+                    new DefectRect(0, 0, 3, 3),
+                    new DefectMask(false, new byte[36]),
+                    3,
+                    3,
+                    new DefectMask(false, new byte[18])),
+            ],
+        };
+        string canonicalV2 = DefectRecipeFingerprint.Compute(
+            [fingerprintProbe],
+            DefectRecipeFingerprint.LegacyVersion);
+        Check(canonicalV2 ==
+              "cc899b7949653a977862b0f24247b10dbcb820b7fcd38341823ede922b74b599",
+            "defect_fingerprint_preserves_canonical_v2_golden");
+        DefectEditItem changedProbe = fingerprintProbe with
+        {
+            Clusters =
+            [
+                fingerprintProbe.Clusters![0] with
+                {
+                    AttenuationR16 = new DefectMask(
+                        false,
+                        Enumerable.Repeat((byte)1, 18).ToArray()),
+                },
+            ],
+        };
+        Check(DefectRecipeFingerprint.Compute(
+                  [changedProbe],
+                  DefectRecipeFingerprint.LegacyVersion) == canonicalV2,
+            "defect_fingerprint_v2_ignores_post_baseline_attenuation");
+        Check(DefectRecipeFingerprint.Compute([changedProbe]) !=
+              DefectRecipeFingerprint.Compute([fingerprintProbe]),
+            "defect_fingerprint_v3_binds_attenuation_bytes");
+
         DefectRecipeSnapshot revisionOne = DefectRecipeSnapshot.Create(
             frameId,
             recipeRevision: 1,
@@ -449,6 +495,29 @@ internal static class Program
                 DefectEditKind.Clone,
             }) == true,
             "defect_sidecar_preserves_ordered_kinds");
+        JsonObject legacyFingerprintJson = JsonNode.Parse(
+            DefectSidecarCodec.Serialize(revisionOne))!.AsObject();
+        legacyFingerprintJson["fingerprintVersion"] =
+            DefectRecipeFingerprint.LegacyVersion;
+        legacyFingerprintJson["recipeSHA256"] = DefectRecipeFingerprint.Compute(
+            revisionOne.Items,
+            DefectRecipeFingerprint.LegacyVersion);
+        DefectSidecarReadResult migratedFingerprint = DefectSidecarCodec.Decode(
+            CatalogJson.SerializeCanonical(legacyFingerprintJson),
+            frameId,
+            validateCompressedMasks: true);
+        Check(migratedFingerprint.IsSuccess &&
+              migratedFingerprint.Snapshot?.FingerprintVersion ==
+                  DefectRecipeFingerprint.CurrentVersion &&
+              migratedFingerprint.Snapshot.RecipeSha256 == revisionOne.RecipeSha256,
+            "defect_sidecar_dual_reads_v2_and_migrates_identity_to_v3");
+        JsonObject migratedFingerprintJson = JsonNode.Parse(
+            DefectSidecarCodec.Serialize(migratedFingerprint.Snapshot!))!.AsObject();
+        Check(migratedFingerprintJson["fingerprintVersion"]!.GetValue<int>() ==
+                  DefectRecipeFingerprint.CurrentVersion &&
+              migratedFingerprintJson["recipeSHA256"]!.GetValue<string>() ==
+                  revisionOne.RecipeSha256,
+            "defect_sidecar_migrated_snapshot_serializes_as_v3");
         Check(read.Snapshot is { } decodedRecipe &&
               DefectMaskCodec.TryDecodeRgba8(
                   decodedRecipe.Items[1].RegionMask!,

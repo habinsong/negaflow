@@ -1296,13 +1296,6 @@ void fail_defect_region_request(
     const bool allow_brush,
     negaflow::pipeline::DevelopExportRequest& pipeline_request,
     nf_develop_export_result_v2& result) noexcept {
-    if (!map_request_v18(
-            request.v19.v18,
-            require_destination,
-            pipeline_request,
-            result)) {
-        return false;
-    }
     const std::uint64_t expected_order_count =
         static_cast<std::uint64_t>(request.v19.v18.defect_region_edit_count) +
         request.defect_clone_edit_count + brush_count;
@@ -1328,6 +1321,13 @@ void fail_defect_region_request(
          (request.defect_clone_stroke_count != 0U ||
           request.defect_clone_point_count != 0U))) {
         fail_defect_region_request(result, "invalid_defect_clone_payload");
+        return false;
+    }
+    if (!map_request_v18(
+            request.v19.v18,
+            require_destination,
+            pipeline_request,
+            result)) {
         return false;
     }
 
@@ -1713,13 +1713,6 @@ void fail_defect_region_request(
     const bool require_destination,
     negaflow::pipeline::DevelopExportRequest& pipeline_request,
     nf_develop_export_result_v2& result) noexcept {
-    if (!map_request_v21(
-            request.v21,
-            require_destination,
-            pipeline_request,
-            result)) {
-        return false;
-    }
     if (request.defect_infrared_edit_reserved != 0U ||
         request.defect_infrared_attenuation_reserved != 0U ||
         request.defect_infrared_edit_count > NF_DEFECT_INFRARED_MAX_EDITS ||
@@ -1732,6 +1725,13 @@ void fail_defect_region_request(
         (request.defect_infrared_edit_count == 0U &&
          request.defect_infrared_attenuation_byte_count != 0U)) {
         fail_defect_region_request(result, "invalid_defect_infrared_payload");
+        return false;
+    }
+    if (!map_request_v21(
+            request.v21,
+            require_destination,
+            pipeline_request,
+            result)) {
         return false;
     }
 
@@ -1876,13 +1876,6 @@ void fail_defect_region_request(
     const bool require_destination,
     negaflow::pipeline::DevelopExportRequest& pipeline_request,
     nf_develop_export_result_v2& result) noexcept {
-    if (!map_request_v24(
-            request.v24,
-            require_destination,
-            pipeline_request,
-            result)) {
-        return false;
-    }
     if (request.defect_infrared_item_reserved != 0U ||
         request.defect_infrared_item_count > NF_DEFECT_INFRARED_MAX_EDITS ||
         (request.defect_infrared_item_count != 0U) !=
@@ -1891,12 +1884,46 @@ void fail_defect_region_request(
             result, "invalid_defect_infrared_item_payload");
         return false;
     }
+    const std::size_t flat_cluster_count =
+        request.v24.defect_infrared_edit_count;
+    if ((flat_cluster_count == 0U) !=
+        (request.defect_infrared_item_count == 0U)) {
+        fail_defect_region_request(
+            result, "invalid_defect_infrared_item_payload");
+        return false;
+    }
+    std::size_t preflight_clusters = 0U;
+    for (std::uint32_t item_index = 0U;
+         item_index < request.defect_infrared_item_count;
+         ++item_index) {
+        const nf_defect_infrared_item_v1& source =
+            request.defect_infrared_items[item_index];
+        if (source.reserved_0 != 0U || source.reserved_1 != 0U ||
+            source.cluster_count == 0U ||
+            source.cluster_offset != preflight_clusters ||
+            source.cluster_count > flat_cluster_count - preflight_clusters) {
+            fail_defect_region_request(
+                result, "invalid_defect_infrared_item_payload");
+            return false;
+        }
+        preflight_clusters += source.cluster_count;
+    }
+    if (preflight_clusters != flat_cluster_count) {
+        fail_defect_region_request(
+            result, "invalid_defect_infrared_item_payload");
+        return false;
+    }
+    if (!map_request_v24(
+            request.v24,
+            require_destination,
+            pipeline_request,
+            result)) {
+        return false;
+    }
 
     try {
         auto& recipe = pipeline_request.defect_recipe;
-        const std::size_t flat_cluster_count = recipe.infrared.size();
-        if ((flat_cluster_count == 0U) !=
-            (request.defect_infrared_item_count == 0U)) {
+        if (recipe.infrared.size() != flat_cluster_count) {
             fail_defect_region_request(
                 result, "invalid_defect_infrared_item_payload");
             return false;

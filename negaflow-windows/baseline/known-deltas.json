@@ -93,6 +93,39 @@
         "Sources/Chromabase/DefectRemoval/InfraredDefectRemoval+Confirmation.swift",
         "Tests/ChromabaseTests/InfraredDefectAnchorTests.swift"
       ]
+    },
+    {
+      "delta_id": "DELTA-2026-08-12-001",
+      "from_commit": "b047574507e2f0c236f3b138cf9d3d7fa1faca28",
+      "to_commit": "ceb700528ec8b9ce20c16f73a0805931f7b9713a",
+      "classification": "product_contract",
+      "summary": "Detect flatbed film frames from texture evidence and measured holder spacing instead of scene brightness.",
+      "decision": "included_in_windows_baseline",
+      "affected_area": "flatbed frame grid detection",
+      "source_files": [
+        "Sources/Chromabase/Imaging/FlatbedFrameGridDetector.swift",
+        "Sources/Chromabase/Imaging/FlatbedFrameGridDetector+Grid.swift",
+        "Sources/Chromabase/Imaging/FlatbedFrameGridDetector+Profiles.swift",
+        "Sources/Chromabase/Imaging/FlatbedFrameGridDetector+Slots.swift",
+        "Sources/negaflowApp/Infrastructure/Scanner/Mock/MockScannerBackend+SimulatorSamples.swift",
+        "Tests/ChromabaseTests/FlatbedFrameGridDetectorTests.swift",
+        "Tests/negaflowAppTests/ScannerWorkflowSafetyTests.swift"
+      ]
+    },
+    {
+      "delta_id": "DELTA-2026-08-12-002",
+      "from_commit": "ceb700528ec8b9ce20c16f73a0805931f7b9713a",
+      "to_commit": "ce6874e1d912f8b1fdb62c08ab19904e9e0edd03",
+      "classification": "product_contract",
+      "summary": "Allow infrared cleaning for dye-based color film at either polarity while rejecting silver-image black-and-white film.",
+      "decision": "included_in_windows_baseline",
+      "affected_area": "infrared film compatibility and defect workflow",
+      "source_files": [
+        "Sources/negaflowApp/Features/Defects/AppModel+InfraredDefectRemoval.swift",
+        "Sources/negaflowApp/Features/Defects/InfraredFilmCompatibility.swift",
+        "Sources/negaflowApp/Localization/AppLocalization+Infrared.swift",
+        "Tests/negaflowAppTests/InfraredCleanSessionTests.swift"
+      ]
     }
   ]
 }

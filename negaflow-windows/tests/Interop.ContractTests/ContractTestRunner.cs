@@ -178,6 +178,13 @@ internal static unsafe class ContractTestRunner
             sizeof(NativeDevelopExportRequestV24) == NativeDevelopExporter.RequestV24Size,
             "develop_export_v24_request_size");
         Check(
+            sizeof(NativeDefectInfraredItemV1) ==
+                NativeDevelopExporter.DefectInfraredItemV1Size,
+            "defect_infrared_item_v1_size");
+        Check(
+            sizeof(NativeDevelopExportRequestV25) == NativeDevelopExporter.RequestV25Size,
+            "develop_export_v25_request_size");
+        Check(
             sizeof(NativeDevelopExportResultV2) == NativeDevelopExporter.ResultV2Size,
             "develop_export_v2_result_size");
         Check(
@@ -321,6 +328,10 @@ internal static unsafe class ContractTestRunner
                 nameof(NativeDevelopExportRequestV24.DefectInfraredAttenuationBytes)).ToInt32() ==
                 4848,
             "develop_export_v24_attenuation_offset");
+        Check(
+            Marshal.OffsetOf<NativeDevelopExportRequestV25>(
+                nameof(NativeDevelopExportRequestV25.DefectInfraredItems)).ToInt32() == 4864,
+            "develop_export_v25_infrared_item_offset");
         Check(
             Marshal.OffsetOf<NativeDevelopExportResultV2>(
                 nameof(NativeDevelopExportResultV2.AppliedDminRed)).ToInt32() == 136,
@@ -692,13 +703,19 @@ internal static unsafe class ContractTestRunner
             [
                 new DevelopDefectInfraredEdit
                 {
-                    RoiX = 12,
-                    RoiY = 20,
-                    Width = 8,
-                    Height = 8,
-                    CoreMask = new byte[64],
-                    AttenuationR16 = new byte[128],
                     Strength = 0.75,
+                    Clusters =
+                    [
+                        new DevelopDefectInfraredCluster
+                        {
+                            RoiX = 12,
+                            RoiY = 20,
+                            Width = 8,
+                            Height = 8,
+                            CoreMask = new byte[64],
+                            AttenuationR16 = new byte[128],
+                        },
+                    ],
                 },
             ],
             DefectEditOrder =
@@ -719,6 +736,91 @@ internal static unsafe class ContractTestRunner
         Check(
             infraredPreview.FailedStage == DevelopExportStage.ObserveSourceBefore,
             "develop_preview_infrared_reaches_source_observation");
+
+        DevelopDefectInfraredCluster maximumCluster = new()
+        {
+            Width = 3,
+            Height = 3,
+            CoreMask = new byte[9],
+        };
+        DevelopDefectInfraredCluster[] maximumClusters = Enumerable.Repeat(
+            maximumCluster,
+            4_096).ToArray();
+        DevelopDefectCloneEdit maximumClone = new() { IsEnabled = false };
+        DevelopDefectCloneEdit[] maximumClones = Enumerable.Repeat(
+            maximumClone,
+            4_096).ToArray();
+        DevelopDefectRecipeEditRef[] maximumOrder =
+        [
+            new DevelopDefectRecipeEditRef(DevelopDefectEditKind.Infrared, 0),
+            .. Enumerable.Range(0, 4_096).Select(index =>
+                new DevelopDefectRecipeEditRef(
+                    DevelopDefectEditKind.Clone,
+                    checked((uint)index))),
+        ];
+        DevelopExportRequest maximumInfraredRequest = new()
+        {
+            SourcePath = absentSource,
+            DestinationPath = destination,
+            DefectInfrared =
+            [
+                new DevelopDefectInfraredEdit { Clusters = maximumClusters },
+            ],
+            DefectClones = maximumClones,
+            DefectEditOrder = maximumOrder,
+            DefectSourceIdentity = new DevelopDefectSourceIdentity(
+                1,
+                new string('0', 64)),
+        };
+        Check(
+            NativeDevelopExporter.Run(maximumInfraredRequest).FailedStage ==
+                DevelopExportStage.ObserveSourceBefore,
+            "develop_export_accepts_4096_flat_regions_and_8192_expanded_order");
+        CheckThrows<ArgumentException>(
+            () => NativeDevelopExporter.Run(new DevelopExportRequest
+            {
+                SourcePath = absentSource,
+                DestinationPath = destination,
+                DefectInfrared =
+                [
+                    new DevelopDefectInfraredEdit
+                    {
+                        Clusters = [.. maximumClusters, maximumCluster],
+                    },
+                ],
+                DefectClones = [],
+                DefectEditOrder =
+                [
+                    new DevelopDefectRecipeEditRef(
+                        DevelopDefectEditKind.Infrared,
+                        0),
+                ],
+                DefectSourceIdentity = new DevelopDefectSourceIdentity(
+                    1,
+                    new string('0', 64)),
+            }),
+            "develop_export_rejects_4097_flat_regions_before_marshalling");
+        CheckThrows<ArgumentException>(
+            () => NativeDevelopExporter.Run(new DevelopExportRequest
+            {
+                SourcePath = absentSource,
+                DestinationPath = destination,
+                DefectInfrared =
+                [
+                    new DevelopDefectInfraredEdit { Clusters = maximumClusters },
+                ],
+                DefectClones = maximumClones,
+                DefectBrushes = [new DevelopDefectBrushEdit { IsEnabled = false }],
+                DefectEditOrder =
+                [
+                    .. maximumOrder,
+                    new DevelopDefectRecipeEditRef(DevelopDefectEditKind.Brush, 0),
+                ],
+                DefectSourceIdentity = new DevelopDefectSourceIdentity(
+                    1,
+                    new string('0', 64)),
+            }),
+            "develop_export_rejects_8193_expanded_order_before_marshalling");
 
         DevelopExportResult clone = NativeDevelopExporter.Run(new DevelopExportRequest
         {
@@ -909,10 +1011,16 @@ internal static unsafe class ContractTestRunner
                 [
                     new DevelopDefectInfraredEdit
                     {
-                        Width = 8,
-                        Height = 8,
-                        CoreMask = new byte[64],
-                        AttenuationR16 = new byte[127],
+                        Clusters =
+                        [
+                            new DevelopDefectInfraredCluster
+                            {
+                                Width = 8,
+                                Height = 8,
+                                CoreMask = new byte[64],
+                                AttenuationR16 = new byte[127],
+                            },
+                        ],
                     },
                 ],
                 DefectEditOrder =
@@ -934,11 +1042,17 @@ internal static unsafe class ContractTestRunner
                 [
                     new DevelopDefectInfraredEdit
                     {
-                        Width = 8,
-                        Height = 8,
-                        CoreMask = new byte[64],
-                        AttenuationStrideBytes = 15,
-                        AttenuationR16 = new byte[128],
+                        Clusters =
+                        [
+                            new DevelopDefectInfraredCluster
+                            {
+                                Width = 8,
+                                Height = 8,
+                                CoreMask = new byte[64],
+                                AttenuationStrideBytes = 15,
+                                AttenuationR16 = new byte[128],
+                            },
+                        ],
                     },
                 ],
                 DefectEditOrder =

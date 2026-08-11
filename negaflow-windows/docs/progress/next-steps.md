@@ -1,6 +1,6 @@
 # 다음에 어디서부터 이어서 할 것인가
 
-기준일: 2026-08-11 (GrainMend IR ABI v25 WIP 일시 정지)
+기준일: 2026-08-12 (GrainMend IR ABI v25 item replay 완료)
 
 이 문서는 작업을 한동안 놓았다가 돌아왔을 때 가장 먼저 읽는 곳입니다. 이미 결정된 것을 다시
 논쟁하지 않고, 다음 한 걸음을 바로 시작하기 위한 기록입니다.
@@ -22,7 +22,7 @@ film polarity는 v17, 현상 전 영역 Defects는 v18, source-bound Defects는 
 v20, 순서 보존 Brush는 v21, 취소·진행률 run state는 v22, 자동 보정은 `nf_auto_adjust_v1`,
 소프트 프루프는 `nf_develop_preview_v23`과 `nf_read_soft_proof_media_v1`까지 검증됐습니다. ordered IR
 attenuation replay는 flat v24의 중첩 cluster 결함을 폐기하고 item range를 보존하는
-`nf_develop_preview_v25`/`nf_develop_export_v25`, ABI 0.32로 전환 중입니다. v25 export에도
+`nf_develop_preview_v25`/`nf_develop_export_v25`, ABI 0.32로 완료했습니다. v25 export에도
 soft-proof 입력은 없습니다. 소프트 프루프에 **대응하는 내보내기 의미는 만들지 않습니다** — 보기용
 시뮬레이션이 인화물에 실릴 경로 자체를 두지 않는 것이 그 계약을 지키는 방법입니다.
 
@@ -63,9 +63,10 @@ byte-exact임을 고정했습니다. 대형 실제 촬영 TIFF batch의 process 
   Debug/Release Interop 163(ABI 0.31), Catalog 587, Shell 336 assertions 통과; 합성 TIFF의 공통
   preview/export 수학과 원본 bytes·SHA-256 불변 확인; ARM64 Release 전체 native·managed graph와
   IR stage test의 순수 AA64 교차 빌드 통과(실기 실행 아님)
-- 위 v24 결과 뒤 독립 검토에서 겹치는 cluster attenuation 반복 적용 P1이 발견되어 체크포인트를
-  미채택 처리했습니다. 일시 정지 시점 v25 WIP는 x64 Debug native 61/61을 통과했지만 managed test build가
-  기존 평면 IR 테스트 미이관으로 C# 컴파일 오류 23개를 내므로 완료 상태가 아닙니다.
+- 2026-08-12 IR item replay v25 체크포인트: 같은 item base에서 exact bbox 사각 patch를 계산·순서 합성하고
+  v25 range/order/capacity를 선검증. x64 Debug/Release native CTest 61/61, x64 Release Catalog 592,
+  Shell 336, Interop 169(ABI 0.32) assertions 통과; ARM64 Release native·managed 전체 graph 교차 빌드
+  통과(실기 실행 아님). 합성 TIFF preview/export 수학 일치와 원본 bytes·SHA-256 불변 확인.
 - Windows CI 가 PR 마다 돌고 벽시계 약 2분 30초
 - 네이티브 엔진의 제3자 runtime dependency 0개 (Windows 기본 DLL 5개만)
 - **카탈로그가 SQLite 로 디스크에 남습니다.** frame 5만 개 기준 쓰기 527ms, 읽기 255ms
@@ -152,12 +153,13 @@ working 변환 뒤 `v / 255` 와 정확히 같고, 실제 파일과 합성 회�
 
 사용자가 체감하는 현상 품질을 카탈로그 주변 내구성보다 먼저 닫습니다. 다음 구현 순서는 아래와 같습니다.
 
-**최신 GrainMend IR delta가 최우선입니다.** optional R16 attenuation의 sidecar 저장은 구현됐지만,
-겹치는 cluster를 같은 item base에서 계산하는 Shell→ABI v25→공통 preview/export 경계는 WIP입니다.
-다음 체크포인트는 먼저 이 item grouping과 관리 테스트를 닫고, 이어 최신 macOS와 같은 paired visible/IR
-입력에서 true-scale closing radius → area-weighted candidate aggregation → defect-local alignment와 visible
+**최신 GrainMend IR delta가 최우선입니다.** optional R16 attenuation sidecar와 같은 item base를 쓰는
+Shell→ABI v25→공통 preview/export replay 경계는 완료했습니다. 다음 체크포인트는 최신 macOS와 같은
+paired visible/IR 입력에서 true-scale closing radius → area-weighted candidate aggregation → defect-local alignment와 visible
 confirmation → null/MAD → significance-dependent inverse-Mills bias → attenuation/core 분리를 순서대로
-구현하는 것입니다. scanner companion 입력과 영속 lifecycle까지 연결한 뒤 같은 입력의 macOS-hosted
+구현하는 것입니다. 색상 네거티브와 색상 슬라이드는 허용하고 silver image가 IR을 막는 흑백 네거티브·
+포지티브는 거부하는 최신 film compatibility도 같은 lifecycle에 적용합니다. scanner companion 입력과
+영속 lifecycle까지 연결한 뒤 같은 입력의 macOS-hosted
 mask·R16 attenuation·최종 pixel golden을 통과하기 전에는 GrainMend IR 완전 동등성을 주장하지 않습니다.
 
 1. ~~GrainMend 자동 검출을 채널별 top-hat(4/8/12), 원거리 texture/SNR, 8방향 scratch 적분,

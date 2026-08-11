@@ -389,6 +389,19 @@ void expect(const bool condition, const char* const message) {
     return request;
 }
 
+[[nodiscard]] nf_develop_export_request_v25 make_request_v25(
+    const wchar_t* const source,
+    const wchar_t* const destination,
+    const std::uint32_t base_mode = NF_BASE_ESTIMATION_AUTO) {
+    nf_develop_export_request_v25 request;
+    std::memset(&request, 0, sizeof(request));
+    request.v24 = make_request_v24(source, destination, base_mode);
+    auto& v18 = request.v24.v21.v20.v19.v18;
+    v18.v17.v16.v15.v14.v13.v12.v11.v10.v9.v8
+        .struct_size = static_cast<std::uint32_t>(sizeof(request));
+    return request;
+}
+
 [[nodiscard]] bool write_file(
     const std::filesystem::path& path,
     const std::vector<std::uint8_t>& bytes) {
@@ -1186,6 +1199,149 @@ void test_v24_contract() {
             result.failed_stage == NF_DEVELOP_STAGE_REQUEST_VALIDATION &&
             std::strcmp(result.failure_name, "invalid_defect_infrared_payload") == 0,
         "v24 rejects an infrared attenuation size mismatch");
+}
+
+void test_v25_contract() {
+    expect(sizeof(nf_defect_infrared_item_v1) == 16U,
+           "v25 infrared item layout is fixed");
+    expect(sizeof(nf_develop_export_request_v25) == 4880U,
+           "v25 request layout is fixed");
+    expect(offsetof(nf_develop_export_request_v25, defect_infrared_items) ==
+               4864U,
+           "v25 infrared item offset is fixed");
+
+    std::array<std::uint8_t, 128U> core{};
+    std::array<std::uint8_t, 256U> attenuation{};
+    std::array<std::uint8_t, 32U> digest{};
+    std::array<nf_defect_region_edit_v1, 2U> regions{};
+    std::array<nf_defect_infrared_edit_v1, 2U> infrared{};
+    std::array<nf_defect_recipe_edit_ref_v1, 2U> order{};
+    for (std::uint32_t index = 0U; index < 2U; ++index) {
+        regions[index].enabled = 1U;
+        regions[index].width = 8U;
+        regions[index].height = 8U;
+        regions[index].mask_stride_bytes = 8U;
+        regions[index].mask_offset = index * 64U;
+        regions[index].mask_byte_count = 64U;
+        regions[index].strength = 0.75;
+        infrared[index].region_edit_index = index;
+        infrared[index].has_attenuation = 1U;
+        infrared[index].attenuation_stride_bytes = 16U;
+        infrared[index].attenuation_offset = index * 128U;
+        infrared[index].attenuation_byte_count = 128U;
+        order[index] = {NF_DEFECT_RECIPE_EDIT_REGION, index};
+    }
+    nf_defect_infrared_item_v1 item{0U, 2U, 0U, 0U};
+    nf_develop_export_request_v25 request = make_request_v25(L"a.tif", L"b.png");
+    request.v24.v21.v20.v19.defect_source_file_bytes = 1U;
+    request.v24.v21.v20.v19.defect_source_sha256 = digest.data();
+    request.v24.v21.v20.v19.has_defect_source_identity = 1U;
+    request.v24.v21.v20.v19.v18.defect_region_edits = regions.data();
+    request.v24.v21.v20.v19.v18.defect_region_edit_count = 2U;
+    request.v24.v21.v20.v19.v18.defect_mask_bytes = core.data();
+    request.v24.v21.v20.v19.v18.defect_mask_byte_count =
+        static_cast<std::uint32_t>(core.size());
+    request.v24.v21.v20.defect_edit_order = order.data();
+    request.v24.v21.v20.defect_edit_order_count = 2U;
+    request.v24.defect_infrared_edits = infrared.data();
+    request.v24.defect_infrared_edit_count = 2U;
+    request.v24.defect_infrared_attenuation_bytes = attenuation.data();
+    request.v24.defect_infrared_attenuation_byte_count =
+        static_cast<std::uint32_t>(attenuation.size());
+    request.defect_infrared_items = &item;
+    request.defect_infrared_item_count = 1U;
+
+    nf_develop_export_result_v3 result = make_result_v3();
+    expect(
+        nf_develop_export_v25(&request, nullptr, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            result.failed_stage == NF_DEVELOP_STAGE_OBSERVE_SOURCE_BEFORE,
+        "v25 contiguous item range reaches source observation");
+
+    std::array<nf_defect_infrared_item_v1, 2U> singleton_items{
+        nf_defect_infrared_item_v1{0U, 1U, 0U, 0U},
+        nf_defect_infrared_item_v1{1U, 1U, 0U, 0U},
+    };
+    request.defect_infrared_items = singleton_items.data();
+    request.defect_infrared_item_count = 2U;
+    result = make_result_v3();
+    expect(
+        nf_develop_export_v25(&request, nullptr, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            result.failed_stage == NF_DEVELOP_STAGE_OBSERVE_SOURCE_BEFORE,
+        "v25 order references each singleton item exactly once");
+    singleton_items[1U].cluster_offset = 0U;
+    result = make_result_v3();
+    expect(
+        nf_develop_export_v25(&request, nullptr, &result) == NF_STATUS_OK &&
+            result.failed_stage == NF_DEVELOP_STAGE_REQUEST_VALIDATION &&
+            std::strcmp(
+                result.failure_name,
+                "invalid_defect_infrared_item_payload") == 0,
+        "v25 rejects overlapping item ranges before flat mapping");
+    request.defect_infrared_items = &item;
+    request.defect_infrared_item_count = 1U;
+
+    item.cluster_offset = 1U;
+    result = make_result_v3();
+    expect(
+        nf_develop_export_v25(&request, nullptr, &result) == NF_STATUS_OK &&
+            result.failed_stage == NF_DEVELOP_STAGE_REQUEST_VALIDATION &&
+            std::strcmp(
+                result.failure_name,
+                "invalid_defect_infrared_item_payload") == 0,
+        "v25 rejects an item range gap before mapping flat clusters");
+
+    item.cluster_offset = 0U;
+    item.cluster_count = 1U;
+    result = make_result_v3();
+    expect(
+        nf_develop_export_v25(&request, nullptr, &result) == NF_STATUS_OK &&
+            result.failed_stage == NF_DEVELOP_STAGE_REQUEST_VALIDATION &&
+            std::strcmp(
+                result.failure_name,
+                "invalid_defect_infrared_item_payload") == 0,
+        "v25 rejects an item range that does not consume every cluster");
+
+    item.cluster_count = 2U;
+    std::swap(order[0U], order[1U]);
+    result = make_result_v3();
+    expect(
+        nf_develop_export_v25(&request, nullptr, &result) == NF_STATUS_OK &&
+            result.failed_stage == NF_DEVELOP_STAGE_REQUEST_VALIDATION &&
+            std::strcmp(
+                result.failure_name,
+                "invalid_defect_infrared_item_payload") == 0,
+        "v25 requires each item reference once in cluster order");
+    std::swap(order[0U], order[1U]);
+
+    item.cluster_count = NF_DEFECT_INFRARED_MAX_EDITS + 1U;
+    request.v24.defect_infrared_edit_count = item.cluster_count;
+    result = make_result_v3();
+    expect(
+        nf_develop_export_v25(&request, nullptr, &result) == NF_STATUS_OK &&
+            result.failed_stage == NF_DEVELOP_STAGE_REQUEST_VALIDATION &&
+            std::strcmp(result.failure_name, "invalid_defect_infrared_payload") == 0,
+        "v25 rejects excess flat infrared clusters before region mapping");
+
+    item.cluster_count = 2U;
+    request.v24.defect_infrared_edit_count = 2U;
+    nf_defect_clone_edit_v1 clone{};
+    nf_defect_brush_edit_v1 brush{};
+    request.v24.v21.v20.v19.v18.defect_region_edit_count =
+        NF_DEFECT_REGION_MAX_EDITS;
+    request.v24.v21.v20.defect_clone_edits = &clone;
+    request.v24.v21.v20.defect_clone_edit_count = NF_DEFECT_CLONE_MAX_EDITS;
+    request.v24.v21.defect_brush_edits = &brush;
+    request.v24.v21.defect_brush_edit_count = 1U;
+    request.v24.v21.v20.defect_edit_order_count =
+        NF_DEFECT_RECIPE_MAX_ORDERED_EDITS + 1U;
+    result = make_result_v3();
+    expect(
+        nf_develop_export_v25(&request, nullptr, &result) == NF_STATUS_OK &&
+            result.failed_stage == NF_DEVELOP_STAGE_REQUEST_VALIDATION &&
+            std::strcmp(result.failure_name, "invalid_defect_clone_payload") == 0,
+        "v25 rejects an expanded native order above 8192 before region mapping");
 }
 
 void test_missing_source_is_not_a_validation_error() {
@@ -2671,31 +2827,35 @@ void test_v18_defect_region_preview_and_export() {
     infrared_edit.attenuation_stride_bytes = roi_width * 2U;
     infrared_edit.attenuation_byte_count =
         static_cast<std::uint32_t>(infrared_attenuation.size());
+    nf_defect_infrared_item_v1 infrared_item{0U, 1U, 0U, 0U};
     const std::wstring infrared_output_text = infrared_output.wstring();
-    nf_develop_export_request_v24 infrared = make_request_v24(
+    nf_develop_export_request_v25 infrared = make_request_v25(
         source_text.c_str(),
         infrared_output_text.c_str(),
         NF_BASE_ESTIMATION_MANUAL);
-    infrared.v21.v20.v19.v18.v17.film_polarity = NF_FILM_POLARITY_POSITIVE;
-    infrared.v21.v20.v19.defect_source_file_bytes = source_bytes.size();
-    infrared.v21.v20.v19.defect_source_sha256 = source_identity.data();
-    infrared.v21.v20.v19.has_defect_source_identity = 1U;
-    infrared.v21.v20.v19.v18.defect_region_edits = &infrared_region;
-    infrared.v21.v20.v19.v18.defect_region_edit_count = 1U;
-    infrared.v21.v20.v19.v18.defect_mask_bytes = infrared_core.data();
-    infrared.v21.v20.v19.v18.defect_mask_byte_count =
+    infrared.v24.v21.v20.v19.v18.v17.film_polarity =
+        NF_FILM_POLARITY_POSITIVE;
+    infrared.v24.v21.v20.v19.defect_source_file_bytes = source_bytes.size();
+    infrared.v24.v21.v20.v19.defect_source_sha256 = source_identity.data();
+    infrared.v24.v21.v20.v19.has_defect_source_identity = 1U;
+    infrared.v24.v21.v20.v19.v18.defect_region_edits = &infrared_region;
+    infrared.v24.v21.v20.v19.v18.defect_region_edit_count = 1U;
+    infrared.v24.v21.v20.v19.v18.defect_mask_bytes = infrared_core.data();
+    infrared.v24.v21.v20.v19.v18.defect_mask_byte_count =
         static_cast<std::uint32_t>(infrared_core.size());
-    infrared.v21.v20.defect_edit_order = &infrared_order;
-    infrared.v21.v20.defect_edit_order_count = 1U;
-    infrared.defect_infrared_edits = &infrared_edit;
-    infrared.defect_infrared_edit_count = 1U;
-    infrared.defect_infrared_attenuation_bytes = infrared_attenuation.data();
-    infrared.defect_infrared_attenuation_byte_count =
+    infrared.v24.v21.v20.defect_edit_order = &infrared_order;
+    infrared.v24.v21.v20.defect_edit_order_count = 1U;
+    infrared.v24.defect_infrared_edits = &infrared_edit;
+    infrared.v24.defect_infrared_edit_count = 1U;
+    infrared.v24.defect_infrared_attenuation_bytes = infrared_attenuation.data();
+    infrared.v24.defect_infrared_attenuation_byte_count =
         static_cast<std::uint32_t>(infrared_attenuation.size());
+    infrared.defect_infrared_items = &infrared_item;
+    infrared.defect_infrared_item_count = 1U;
     std::vector<std::uint8_t> infrared_pixels(identity_pixels.size(), 0U);
     nf_develop_export_result_v3 infrared_preview_result = make_result_v3();
     const bool infrared_preview_ok =
-        nf_develop_preview_v24(
+        nf_develop_preview_v25(
             &infrared,
             nullptr,
             width,
@@ -2728,7 +2888,7 @@ void test_v18_defect_region_preview_and_export() {
     expect(
         infrared_preview_ok && infrared_changed_inside &&
             infrared_unchanged_outside,
-        "v24 attenuation-only infrared replay changes only its ROI with a zero core");
+        "v25 attenuation-only infrared replay changes only its ROI with a zero core");
 
     std::array<std::uint8_t, 32U> wrong_digest = source_identity;
     wrong_digest[0] ^= 0xffU;
@@ -2831,7 +2991,7 @@ void test_v18_defect_region_preview_and_export() {
 
     nf_develop_export_result_v3 infrared_export_result = make_result_v3();
     const bool infrared_export_ok =
-        nf_develop_export_v24(
+        nf_develop_export_v25(
             &infrared, nullptr, &infrared_export_result) == NF_STATUS_OK &&
         infrared_export_result.succeeded == 1U;
     const std::vector<std::uint8_t> infrared_export_pixels =
@@ -2852,7 +3012,7 @@ void test_v18_defect_region_preview_and_export() {
         infrared_preview_ok && infrared_export_ok &&
             infrared_export_pixels.size() == infrared_pixels.size() &&
             maximum_infrared_difference <= 1U,
-        "v24 infrared preview and PNG16 export agree at 8-bit codec quantization");
+        "v25 infrared preview and PNG16 export agree at 8-bit codec quantization");
 
     const std::wstring repaired_output_text = repaired_output.wstring();
     nf_develop_export_request_v19 repaired_export = bound;
@@ -2894,7 +3054,7 @@ void test_v18_defect_region_preview_and_export() {
     expect(
         sha256(source_bytes_after, source_identity_after) &&
             source_identity_after == source_identity,
-        "v24 infrared preview and export preserve the source SHA-256");
+        "v25 infrared preview and export preserve the source SHA-256");
 
     std::filesystem::remove(source, ignored);
     std::filesystem::remove(identity_output, ignored);
@@ -3241,6 +3401,7 @@ int main(const int argument_count, const char* const arguments[]) {
     test_v20_contract();
     test_v21_contract();
     test_v24_contract();
+    test_v25_contract();
     test_missing_source_is_not_a_validation_error();
     test_v2_missing_source_is_not_a_validation_error();
     test_v18_defect_region_preview_and_export();

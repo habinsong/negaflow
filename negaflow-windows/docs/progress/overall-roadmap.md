@@ -1,6 +1,6 @@
 # 전체 로드맵과 진행률
 
-기준일: 2026-08-11
+기준일: 2026-08-12
 기준 로드맵: `windows_docs/99-plan/migration-roadmap.md`의 M0~M18
 
 ## 현재 숫자
@@ -25,14 +25,14 @@
 | M5 GPU/WARP | 0% | 문서만 존재 | D3D11/Direct2D/WARP FP32 vertical slice |
 | M6 전체 Develop graph | 94% | revision-aware sidecar에서 재시작 재적용되는 현상 전 ordered region/IR attenuation→optional core repair/Clone Stamp/Brush Defects, 4상태 film type, scene-ranged 반전 직후 muted-scene vibrance와 opt-in Auto Levels/Neutral Balance, documented+matched ScannerTargetGrade 4종, RescueGrade, 15종 ScannerProfileGrade와 ColorModel, 42종 source별 Film Look 뒤 GrainMend→FilmScanDenoise→Local Dodge/Burn→Texture→B&W→ImageTransform까지 native CPU graph 구현 | 최신 paired-plane IR 자동 검출·scanner lifecycle·macOS mask/R16/pixel golden, Defects Brush·Clone Stamp macOS golden, 새 Film Emulation·`CIVibrance`·나머지 현상 축의 macOS golden, 대형 이미지/GPU/ARM64 runtime |
 | M7 대형 이미지 | 6% | WIC row sink, chunk ICC transform, 단조 progress/cancel, full decoded source 제거와 exact parity | 최종 working streaming, tile, byte reservation, cache, TDR |
-| M8 ABI·WinUI shell/canvas | 79% | v12 가변 Local Dodge/Burn, v13 ColorModel, v14 scene correction, v15 DevelopTarget, v16 scanner profile ID, v17 film polarity, v18 ordered 영역 Defects, v19 source identity, v20 ordered Clone Stamp, v21 ordered Brush, v22 run state, v23 preview-only soft proof까지 검증. IR은 flat v24 결함 뒤 item-boundary v25/ABI 0.32 WIP | v25 managed test 이관·range/layout 검증, WinUI Defects 편집과 IR lifecycle, GPU canvas, handles/events, lifetime·activation 전체 경로 |
+| M8 ABI·WinUI shell/canvas | 80% | v12 가변 Local Dodge/Burn, v13 ColorModel, v14 scene correction, v15 DevelopTarget, v16 scanner profile ID, v17 film polarity, v18 ordered 영역 Defects, v19 source identity, v20 ordered Clone Stamp, v21 ordered Brush, v22 run state, v23 preview-only soft proof, IR item-boundary v25/ABI 0.32까지 검증 | WinUI Defects 편집과 paired-plane IR lifecycle, GPU canvas, handles/events, lifetime·activation 전체 경로 |
 | M9~M14 제품 surface | 8% | Library 목록, 파일 picker import, Develop의 필름 base·노출, Export가 실제 동작 | 미리보기 렌더, base picker, 취소·진행률, Defects, Print, Settings 기능 |
 | M15 scanner host | 0% | 문서만 존재 | protocol host와 격리 |
 | M16 qualification | 0% | 문서만 존재 | 실제 CPU/GPU/ARM64/display matrix |
 | M17 배포·컴플라이언스 | 0% | 설치 선언 초안만 존재 | MSIX/installer, signing, update, SBOM |
 | M18 Beta/RC/Stable | 0% | 없음 | release gate 전체 |
 
-계산은 M0 35, M1 68, M2 72, M3 88, M4 97, M6 94, M7 6, M8 79, M9~M14 각각 8, 나머지 0을 19개
+계산은 M0 35, M1 68, M2 72, M3 88, M4 97, M6 94, M7 6, M8 80, M9~M14 각각 8, 나머지 0을 19개
 milestone의 100점 만점에 대입한 약 30.9%입니다. 표시는 정수 31%이며, 숫자는 구현
 증거가 추가될 때만 올립니다.
 
@@ -198,10 +198,11 @@ M5(GPU), M15(scanner host), M16(qualification), M17(배포·서명), M18(release
     보존했습니다. 합성 TIFF preview/export 변화와 원본 byte-exact 보존, x64 Debug/Release native 46/46,
     Interop 127, Catalog 583, Shell 316 assertions 및 ARM64 Release 전체 교차 빌드로 고정했습니다.
 
-**일시 정지 WIP:** post-baseline IR layer의 optional compressed R16 저장과 v24 replay까지 구현했으나,
-겹치는 cluster가 attenuation을 반복 적용하는 P1 때문에 v24를 미채택 처리했습니다. 같은 item base에서 bounded
-bbox patch를 계산하는 ABI v25/0.32로 전환 중이며 x64 Debug native 61/61만 통과했습니다. managed test build는
-기존 평면 IR 테스트 미이관으로 C# 오류 23개라 진행률에 추가하지 않습니다.
+42. post-baseline IR layer의 optional compressed R16 저장을 유지하면서 flat v24 replay의 중첩 cluster
+    과보정을 폐기하고, 같은 item base에서 exact bbox 사각 patch를 계산·순서 합성하는 ABI v25/0.32로
+    교체했습니다. v2 fingerprint canonical은 유지하고 attenuation을 결합한 v3 migration을 분리했습니다.
+    x64 Debug/Release native 61/61, Catalog 592, Shell 336, Interop 169 assertions와 ARM64 Release 전체
+    교차 빌드를 통과했습니다. ARM64 실기 실행과 macOS-hosted IR pixel golden은 남아 있습니다.
 
 ## 다음 완료 조건
 
