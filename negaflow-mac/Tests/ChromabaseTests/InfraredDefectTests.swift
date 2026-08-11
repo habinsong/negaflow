@@ -47,35 +47,61 @@ final class InfraredDefectTests: XCTestCase {
         return (red, ir)
     }
 
-    private func stampSpot(_ plane: inout [Float], cx: Int, cy: Int, radius: Int, depth: Float) {
+    /// 먼지·스크래치는 파장에 관계없이 같은 비율로 빛을 막는다. 그래서 픽스처도 IR 과 가시광에
+    /// **같은 투과율**을 곱한다. 예전 픽스처는 IR 에만 결함을 찍었는데, 그런 결함은 물리적으로
+    /// 존재할 수 없고(가시광을 통과시키는 먼지), 새 파이프라인은 사진에서 확인되지 않는 후보를
+    /// 기각하므로 그 픽스처로는 아무것도 검증되지 않는다.
+    private func occlude(_ ir: inout [Float], _ visible: inout [Float],
+                         at index: Int, depth: Float) {
+        let before = ir[index]
+        let after = max(0, before - depth)
+        ir[index] = after
+        visible[index] *= before > 1e-4 ? after / before : 0
+    }
+
+    private func stampSpot(_ ir: inout [Float], _ visible: inout [Float],
+                           cx: Int, cy: Int, radius: Int, depth: Float) {
         for y in max(0, cy - radius)...min(height - 1, cy + radius) {
             for x in max(0, cx - radius)...min(width - 1, cx + radius) {
                 let dx = x - cx, dy = y - cy
                 if dx * dx + dy * dy <= radius * radius {
-                    plane[y * width + x] = max(0, plane[y * width + x] - depth)
+                    occlude(&ir, &visible, at: y * width + x, depth: depth)
                 }
             }
         }
     }
 
-    private func stampVerticalScratch(_ plane: inout [Float], x: Int, y0: Int, y1: Int, depth: Float) {
+    private func stampVerticalScratch(_ ir: inout [Float], _ visible: inout [Float],
+                                      x: Int, y0: Int, y1: Int, depth: Float) {
         for y in y0...y1 {
             for xx in x...(x + 1) {
-                plane[y * width + xx] = max(0, plane[y * width + xx] - depth)
+                occlude(&ir, &visible, at: y * width + xx, depth: depth)
             }
         }
     }
 
-    /// 클러스터 마스크가 raw(y-down) 픽셀 (x, y)를 흰색으로 덮는가.
-    private func maskCovers(_ detection: InfraredDefectRemoval.Detection, x: Int, y: Int) -> Bool {
+    /// raw(y-down) 픽셀 (x, y)에 적용될 가시광 감쇠. 새 경로의 산출물은 이진 마스크가 아니라
+    /// 감쇠 창이다 — 대부분의 결함은 부분 폐색이라 나눗셈으로 되돌리고, 코어 마스크에는
+    /// 되돌릴 수 없는 완전 폐색만 들어간다.
+    private func attenuation(_ detection: InfraredDefectRemoval.Detection,
+                             x: Int, y: Int) -> Float {
         for cluster in detection.clusters {
+            guard let data = cluster.attenuationR16 else { continue }
             let x0 = Int(cluster.roiYup.minX)
             let y0 = detection.height - Int(cluster.roiYup.maxY)   // y-up rect → y-down top
             let lx = x - x0, ly = y - y0
             guard lx >= 0, lx < cluster.width, ly >= 0, ly < cluster.height else { continue }
-            if cluster.maskRGBA8[(ly * cluster.width + lx) * 4] == 255 { return true }
+            let value = data.withUnsafeBytes { raw in
+                raw.bindMemory(to: UInt16.self)[ly * cluster.width + lx]
+            }
+            if value > 0 { return Float(value) / 65535 }
         }
-        return false
+        return 0
+    }
+
+    /// 그 픽셀이 실제로 보정되는가(감쇠 2% 이상 — 그 아래는 잡음과 구분되지 않는다).
+    private func corrects(_ detection: InfraredDefectRemoval.Detection, x: Int, y: Int) -> Bool {
+        attenuation(detection, x: x, y: y) >= 0.02
     }
 
     private var fastParameters: InfraredDefectRemoval.Parameters {
@@ -87,8 +113,8 @@ final class InfraredDefectTests: XCTestCase {
     func testDetectsSpotsAndScratchButNotImageEdgesOrVignette() throws {
         var (red, ir) = makeScene(leak: 0.05, vignette: 0.12)
         let spots = [(40, 40), (200, 60), (70, 160), (150, 190)]
-        for (cx, cy) in spots { stampSpot(&ir, cx: cx, cy: cy, radius: 3, depth: 0.35) }
-        stampVerticalScratch(&ir, x: 96, y0: 30, y1: 190, depth: 0.3)
+        for (cx, cy) in spots { stampSpot(&ir, &red, cx: cx, cy: cy, radius: 3, depth: 0.35) }
+        stampVerticalScratch(&ir, &red, x: 96, y0: 30, y1: 190, depth: 0.3)
 
         let detection = try InfraredDefectRemoval.detect(infrared: ir, red: red,
                                                width: width, height: height,
@@ -96,9 +122,9 @@ final class InfraredDefectTests: XCTestCase {
 
         XCTAssertGreaterThanOrEqual(detection.components.count, 5, "먼지 4 + 스크래치 1 이상 검출돼야 한다.")
         for (cx, cy) in spots {
-            XCTAssertTrue(maskCovers(detection, x: cx, y: cy), "먼지(\(cx),\(cy))가 마스크에 덮여야 한다.")
+            XCTAssertTrue(corrects(detection, x: cx, y: cy), "먼지(\(cx),\(cy))가 마스크에 덮여야 한다.")
         }
-        XCTAssertTrue(maskCovers(detection, x: 96, y: 110), "스크래치가 마스크에 덮여야 한다.")
+        XCTAssertTrue(corrects(detection, x: 96, y: 110), "스크래치가 마스크에 덮여야 한다.")
         XCTAssertTrue(detection.components.contains { $0.classification == .scratchVertical },
                       "세로로 긴 결함은 scratchVertical 로 분류돼야 한다.")
         // 이미지 스텝 에지(x=128)는 red 상관 누설 — 스펙트럴 클린으로 걸러져야 한다.
@@ -107,7 +133,7 @@ final class InfraredDefectTests: XCTestCase {
             for x in 126...130 {
                 let nearDefect = spots.contains { abs($0.0 - x) < 10 && abs($0.1 - y) < 10 }
                 guard !nearDefect else { continue }
-                XCTAssertFalse(maskCovers(detection, x: x, y: y),
+                XCTAssertFalse(corrects(detection, x: x, y: y),
                                "이미지 에지(x=\(x),y=\(y))가 결함으로 오검출되면 안 된다.")
             }
         }
@@ -131,13 +157,13 @@ final class InfraredDefectTests: XCTestCase {
         }
         // 투과율이 높은 만큼 결함도 얕게 찍힌다(대비 약 3%).
         let spots = [(60, 50), (170, 90), (100, 170)]
-        for (cx, cy) in spots { stampSpot(&ir, cx: cx, cy: cy, radius: 3, depth: 0.030) }
+        for (cx, cy) in spots { stampSpot(&ir, &red, cx: cx, cy: cy, radius: 3, depth: 0.030) }
 
         let detection = try InfraredDefectRemoval.detect(infrared: ir, red: red,
                                                width: width, height: height,
                                                parameters: fastParameters).get()
         for (cx, cy) in spots {
-            XCTAssertTrue(maskCovers(detection, x: cx, y: cy),
+            XCTAssertTrue(corrects(detection, x: cx, y: cy),
                           "얕은 먼지(\(cx),\(cy))가 검출돼야 한다 — 고정 하한이면 묻힌다.")
         }
         XCTAssertLessThan(detection.coverage, 0.02, "균일한 배경이 결함으로 번지면 안 된다.")
@@ -146,7 +172,7 @@ final class InfraredDefectTests: XCTestCase {
     func testRejectsComponentsBelowMinArea() throws {
         var (red, ir) = makeScene()
         ir[100 * width + 30] = max(0, ir[100 * width + 30] - 0.4)   // 1px 노이즈
-        stampSpot(&ir, cx: 180, cy: 100, radius: 3, depth: 0.35)     // 진짜 먼지
+        stampSpot(&ir, &red, cx: 180, cy: 100, radius: 3, depth: 0.35)     // 진짜 먼지
 
         var params = fastParameters
         params.minArea = 3
@@ -154,8 +180,8 @@ final class InfraredDefectTests: XCTestCase {
                                                width: width, height: height,
                                                parameters: params).get()
         XCTAssertEqual(detection.components.count, 1, "minArea 미만 1px 성분은 버려야 한다.")
-        XCTAssertTrue(maskCovers(detection, x: 180, y: 100))
-        XCTAssertFalse(maskCovers(detection, x: 30, y: 100))
+        XCTAssertTrue(corrects(detection, x: 180, y: 100))
+        XCTAssertFalse(corrects(detection, x: 30, y: 100))
     }
 
     func testExcludesBorderConnectedDarkMargins() throws {
@@ -167,15 +193,15 @@ final class InfraredDefectTests: XCTestCase {
                 red[y * width + x] = 0.02
             }
         }
-        stampSpot(&ir, cx: 150, cy: 100, radius: 3, depth: 0.35)
+        stampSpot(&ir, &red, cx: 150, cy: 100, radius: 3, depth: 0.35)
 
         let detection = try InfraredDefectRemoval.detect(infrared: ir, red: red,
                                                width: width, height: height,
                                                parameters: fastParameters).get()
-        XCTAssertTrue(maskCovers(detection, x: 150, y: 100))
+        XCTAssertTrue(corrects(detection, x: 150, y: 100))
         for y in stride(from: 4, to: height - 4, by: 12) {
             for x in 0..<30 {
-                XCTAssertFalse(maskCovers(detection, x: x, y: y),
+                XCTAssertFalse(corrects(detection, x: x, y: y),
                                "홀더 마진(x=\(x))이 결함으로 잡히면 안 된다.")
             }
         }
@@ -183,11 +209,16 @@ final class InfraredDefectTests: XCTestCase {
 
     func testAbortsWhenMaskCoverageExplodes() {
         var (red, ir) = makeScene()
-        // 내부(테두리 비연결)에 광범위 어두운 패치 — 흑백/정렬 실패급 상황.
-        for y in 40..<180 {
-            for x in 40..<216 where (x / 3 + y / 3) % 2 == 0 {
-                ir[y * width + x] = max(0, ir[y * width + x] - 0.4)
+        // 확인 가능한 작은 결함이 프레임을 뒤덮은 상황(정렬 실패·이물 범벅). 넓은 한 덩어리는
+        // 국소 기준선에 통째로 흡수돼 애초에 후보가 되지 않으므로, 폭주는 이렇게 만들어야 한다.
+        var cy = 30
+        while cy < height - 30 {
+            var cx = 30
+            while cx < width - 30 {
+                stampSpot(&ir, &red, cx: cx, cy: cy, radius: 3, depth: 0.4)
+                cx += 9
             }
+            cy += 9
         }
         let outcome = InfraredDefectRemoval.detect(infrared: ir, red: red,
                                          width: width, height: height,
@@ -220,7 +251,7 @@ final class InfraredDefectTests: XCTestCase {
                 infrared[index] = 0.78 + 0.055 * logRed + 0.022 * logRed * logRed
             }
         }
-        stampSpot(&infrared, cx: 176, cy: 96, radius: 3, depth: 0.30)
+        stampSpot(&infrared, &red, cx: 176, cy: 96, radius: 3, depth: 0.30)
 
         let detection = try InfraredDefectRemoval.detect(
             infrared: infrared,
@@ -230,26 +261,29 @@ final class InfraredDefectTests: XCTestCase {
             parameters: fastParameters
         ).get()
 
-        XCTAssertTrue(maskCovers(detection, x: 176, y: 96))
+        XCTAssertTrue(corrects(detection, x: 176, y: 96))
         XCTAssertLessThan(detection.coverage, 0.002)
         for x in stride(from: 16, to: width - 16, by: 16) where abs(x - 176) > 12 {
-            XCTAssertFalse(maskCovers(detection, x: x, y: 96))
+            XCTAssertFalse(corrects(detection, x: x, y: 96))
         }
     }
 
     func testRelativeContrastDetectsDustAcrossIlluminationLevels() throws {
         var red = [Float](repeating: 0, count: width * height)
         var infrared = [Float](repeating: 0, count: width * height)
+        // 실제 스캔에는 반드시 잡음이 있다. 잡음이 정확히 0 인 평면에서는 문턱을 세울 잡음
+        // 자체가 없어(결함 헤일로가 상위 분위를 차지한다) 추정기가 의미를 잃는다.
+        var noise = SeededNoise(seed: 11)
         for y in 0..<height {
             for x in 0..<width {
                 let brightness = 0.20 + 0.70 * Float(x) / Float(width - 1)
                 let index = y * width + x
-                red[index] = brightness
-                infrared[index] = brightness
+                red[index] = brightness + 0.004 * noise.next() * 2
+                infrared[index] = brightness + 0.004 * noise.next() * 2
             }
         }
-        stampSpot(&infrared, cx: 48, cy: 112, radius: 3, depth: 0.09)
-        stampSpot(&infrared, cx: 208, cy: 112, radius: 3, depth: 0.27)
+        stampSpot(&infrared, &red, cx: 48, cy: 112, radius: 3, depth: 0.09)
+        stampSpot(&infrared, &red, cx: 208, cy: 112, radius: 3, depth: 0.27)
 
         let detection = try InfraredDefectRemoval.detect(
             infrared: infrared,
@@ -259,9 +293,14 @@ final class InfraredDefectTests: XCTestCase {
             parameters: fastParameters
         ).get()
 
-        XCTAssertTrue(maskCovers(detection, x: 48, y: 112))
-        XCTAssertTrue(maskCovers(detection, x: 208, y: 112))
-        XCTAssertLessThan(detection.coverage, 0.004)
+        XCTAssertTrue(corrects(detection, x: 48, y: 112))
+        XCTAssertTrue(corrects(detection, x: 208, y: 112))
+        // coverage 는 이제 이진 마스크 면적이 아니라 **실제로 보정되는 면적**(자락 포함)이다.
+        XCTAssertLessThan(detection.coverage, 0.05)
+        for x in stride(from: 8, to: width - 8, by: 16) where abs(x - 48) > 20 && abs(x - 208) > 20 {
+            XCTAssertFalse(corrects(detection, x: x, y: 112),
+                           "결함에서 먼 밝기 구간(x=\(x))을 보정하면 안 된다.")
+        }
     }
 
     func testInvalidParametersAreClampedAndDoNotCrashClusterRendering() throws {
@@ -290,7 +329,7 @@ final class InfraredDefectTests: XCTestCase {
         parameters.clusterTile = 0
         parameters.clusterPadding = -12
         var (red, infrared) = makeScene()
-        stampSpot(&infrared, cx: 80, cy: 80, radius: 3, depth: 0.4)
+        stampSpot(&infrared, &red, cx: 80, cy: 80, radius: 3, depth: 0.4)
         let detection = try InfraredDefectRemoval.detect(
             infrared: infrared,
             red: red,
@@ -299,14 +338,14 @@ final class InfraredDefectTests: XCTestCase {
             parameters: parameters
         ).get()
 
-        XCTAssertTrue(maskCovers(detection, x: 80, y: 80))
+        XCTAssertTrue(corrects(detection, x: 80, y: 80))
     }
 
     // MARK: 정렬
 
     func testRecoversIntegerOffsetAndPlacesMaskInRawCoordinates() throws {
         var (red, irAligned) = makeScene(leak: 0.08)
-        stampSpot(&irAligned, cx: 120, cy: 90, radius: 3, depth: 0.35)
+        stampSpot(&irAligned, &red, cx: 120, cy: 90, radius: 3, depth: 0.35)
         // IR 패스가 (3, 2)만큼 어긋난 상황: irShifted(x, y) = irAligned(x-3, y-2).
         var dummy = [Bool](repeating: false, count: width * height)
         let irShifted = InfraredDefectRemoval.shiftPlane(irAligned, width: width, height: height,
@@ -321,11 +360,14 @@ final class InfraredDefectTests: XCTestCase {
         XCTAssertEqual(detection.offsetY, 2, "IR→raw y 오프셋을 복원해야 한다.")
         XCTAssertEqual(detection.alignment.status, .aligned)
         XCTAssertNotNil(detection.alignment.peakCorrelation)
-        XCTAssertTrue(maskCovers(detection, x: 120, y: 90),
+        XCTAssertTrue(corrects(detection, x: 120, y: 90),
                       "마스크는 raw 좌표(오프셋 보정 후)에 놓여야 한다.")
     }
 
-    func testRejectsAlignmentWhenInfraredHasNoRegistrationTexture() {
+    /// 전역 정합은 조언이지 관문이 아니다. 단서가 없으면 이동 없이 진행하되, 결함마다
+    /// 사진에서 확인되지 않으므로 **아무것도 보정하지 않는다**. 예전처럼 검출을 통째로
+    /// 포기하면 정합이 조금 어긋난 실기 스캔에서 멀쩡한 결함까지 못 지운다.
+    func testUnalignableInfraredCorrectsNothing() {
         let red = [Float](repeating: 0.5, count: width * height)
         let infrared = [Float](repeating: 0.8, count: width * height)
         let outcome = InfraredDefectRemoval.detect(
@@ -335,65 +377,194 @@ final class InfraredDefectTests: XCTestCase {
             height: height,
             parameters: InfraredDefectRemoval.Parameters(alignmentSearchRadius: 6)
         )
-
-        guard case .failure(.alignmentUnreliable(let diagnostics)) = outcome else {
-            return XCTFail("정렬 단서가 없으면 IR 마스크를 적용하면 안 됩니다: \(outcome)")
+        switch outcome {
+        case .failure(.noDefects), .failure(.alignmentUnreliable):
+            break
+        case .success(let detection):
+            for y in stride(from: 8, to: height - 8, by: 16) {
+                for x in stride(from: 8, to: width - 8, by: 16) {
+                    XCTAssertFalse(corrects(detection, x: x, y: y),
+                                   "정합 단서가 없는 입력에서 보정하면 안 된다.")
+                }
+            }
+        case .failure(let other):
+            XCTFail("예상치 못한 실패: \(other)")
         }
-        XCTAssertEqual(diagnostics.status, .insufficientTexture)
     }
 
-    func testRejectsAlignmentAtSearchBoundary() {
-        let (red, alignedInfrared) = makeScene(leak: 0.08)
+    /// 큰 오프셋이 남아 있어도, 결함마다 사진에서 다시 맞추므로 결함 위에 보정이 놓인다.
+    func testLargeResidualOffsetIsStillPlacedOnTheDefect() throws {
+        var (red, aligned) = makeScene(leak: 0.08)
+        stampSpot(&aligned, &red, cx: 150, cy: 110, radius: 3, depth: 0.35)
         var excluded = [Bool](repeating: false, count: width * height)
-        let shiftedInfrared = InfraredDefectRemoval.shiftPlane(
-            alignedInfrared,
-            width: width,
-            height: height,
-            dx: -6,
-            dy: 0,
-            outOfBounds: &excluded
+        let shifted = InfraredDefectRemoval.shiftPlane(
+            aligned, width: width, height: height, dx: -6, dy: 0, outOfBounds: &excluded
         )
-        let outcome = InfraredDefectRemoval.detect(
-            infrared: shiftedInfrared,
-            red: red,
-            width: width,
-            height: height,
-            parameters: InfraredDefectRemoval.Parameters(alignmentSearchRadius: 6)
-        )
-
-        guard case .failure(.alignmentUnreliable(let diagnostics)) = outcome else {
-            return XCTFail("최적점이 탐색 경계면이면 더 큰 오프셋 가능성을 숨기면 안 됩니다: \(outcome)")
-        }
-        XCTAssertEqual(diagnostics.status, .searchLimitReached)
-        XCTAssertEqual(abs(diagnostics.offsetX), 6)
+        let detection = try InfraredDefectRemoval.detect(
+            infrared: shifted, red: red, width: width, height: height,
+            parameters: InfraredDefectRemoval.Parameters(alignmentSearchRadius: 12)
+        ).get()
+        XCTAssertTrue(corrects(detection, x: 150, y: 110),
+                      "보정은 IR 좌표가 아니라 사진 속 결함 위에 놓여야 한다.")
     }
 
     // MARK: 클러스터 마스크 형식
 
-    func testClusterMaskDilatesAndMapsROIYUp() throws {
+    func testCorrectionWindowCoversDefectSkirtAndMapsROIYUp() throws {
         var (red, ir) = makeScene()
-        stampSpot(&ir, cx: 60, cy: 50, radius: 2, depth: 0.4)
+        stampSpot(&ir, &red, cx: 60, cy: 50, radius: 2, depth: 0.4)
         var params = fastParameters
         params.dilateRadius = 2
         let detection = try InfraredDefectRemoval.detect(infrared: ir, red: red,
                                                width: width, height: height,
                                                parameters: params).get()
-        // 팽창: 스팟 가장자리 밖 1~2px 도 마스크에 포함된다.
-        XCTAssertTrue(maskCovers(detection, x: 60 + 3, y: 50), "dilate=2 면 스팟 rim 바깥도 덮어야 한다.")
-        // 멀리 떨어진 픽셀은 덮지 않는다.
-        XCTAssertFalse(maskCovers(detection, x: 60 + 12, y: 50))
+        // 보정은 심에서 가장 세고 바깥으로 갈수록 옅어진다 — 이진 마스크가 아니다.
+        let center = attenuation(detection, x: 60, y: 50)
+        let rim = attenuation(detection, x: 60 + 3, y: 50)
+        XCTAssertGreaterThan(center, 0.05, "결함 중심은 실질적으로 보정돼야 한다.")
+        XCTAssertLessThan(rim, center, "감쇠는 중심에서 멀어질수록 줄어야 한다.")
+        XCTAssertEqual(attenuation(detection, x: 60 + 14, y: 50), 0,
+                       "결함에서 먼 픽셀은 손대지 않아야 한다.")
         for cluster in detection.clusters {
             XCTAssertEqual(cluster.maskRGBA8.count, cluster.width * cluster.height * 4)
+            XCTAssertEqual(cluster.attenuationR16?.count, cluster.width * cluster.height * 2)
             XCTAssertGreaterThanOrEqual(Int(cluster.roiYup.minY), 0)
             XCTAssertLessThanOrEqual(Int(cluster.roiYup.maxY), detection.height)
         }
+    }
+
+    /// 새 계약의 핵심: IR 에만 있고 사진에는 없는 어두움은 **결함이 아니다**.
+    ///
+    /// 먼지는 파장에 관계없이 빛을 막으므로 IR 에서만 어두운 결함은 물리적으로 존재할 수 없다.
+    /// 실제로 그렇게 보이는 원인은 장면 고스트(시안 염료의 근적외 흡수)와 IR 패스의 정합/초점
+    /// 어긋남이고, 실측에서 한 컷은 가장 진한 IR 결함 20개 중 사진에 대응물이 있는 것이
+    /// 1개뿐이었다. 그런 후보를 지우면 멀쩡한 필름을 밝게 망친다.
+    func testRejectsInfraredOnlyDarkeningThatHasNoCounterpartInThePhotograph() {
+        var (red, ir) = makeScene()
+        let ghosts = [(70, 60), (150, 120), (200, 170)]
+        for (cx, cy) in ghosts {
+            for y in (cy - 3)...(cy + 3) {
+                for x in (cx - 3)...(cx + 3)
+                where (x - cx) * (x - cx) + (y - cy) * (y - cy) <= 9 {
+                    ir[y * width + x] = max(0, ir[y * width + x] - 0.35)   // red 는 건드리지 않는다
+                }
+            }
+        }
+        var params = fastParameters
+        params.alignmentSearchRadius = 6
+        let outcome = InfraredDefectRemoval.detect(infrared: ir, red: red,
+                                                   width: width, height: height,
+                                                   parameters: params)
+        if case .success(let detection) = outcome {
+            for (cx, cy) in ghosts {
+                XCTAssertFalse(corrects(detection, x: cx, y: cy),
+                               "사진에 없는 IR 어두움(\(cx),\(cy))을 보정하면 안 된다.")
+            }
+        }
+    }
+
+    // MARK: 뚱뚱한 먼지 — 구조요소보다 큰 결함, 그리고 옅고 넓은 결함
+
+    /// 넓은 프레임에 구조요소만 한 먼지를 찍고 **중심**이 실제로 되돌려지는지 본다.
+    ///
+    /// 기준선(closing)이 결함보다 좁으면 결함 한가운데가 자기 자신을 기준선으로 삼아 밀도가
+    /// 줄고, 중심만 덜 지워져 "뚱뚱하고 흐릿한 자국"이 남는다. 실측(GT-X900 2400dpi)에서
+    /// 좁은쪽 반지름 12px 이상 먼지의 밀도가 진짜의 43~65% 로 축소됐고 18px 이상은 보정량이
+    /// 0 이었다. 그래서 구조요소는 관측이 아니라 해상도에서 정한다 — 이 픽스처가 그 회귀 가드다.
+    func testDustWiderThanASmallStructuringElementIsRestoredAtItsCentre() throws {
+        let side = 1200
+        var red = [Float](repeating: 0, count: side * side)
+        var ir = [Float](repeating: 0, count: side * side)
+        var noise = SeededNoise(seed: 11)
+        for y in 0..<side {
+            for x in 0..<side {
+                let i = y * side + x
+                red[i] = 0.45 + 0.12 * Float((x / 40 + y / 40) % 2) + 0.01 * noise.next()
+                ir[i] = 0.82 + 0.004 * noise.next()
+            }
+        }
+        // 속이 고르게 막힌 반지름 10 의 먼지(가장자리 3px 만 옅어진다). 구조요소가 이보다
+        // 좁으면 창이 통째로 먼지 안에 들어가 기준선이 먼지 자신이 되고 밀도가 0 이 된다.
+        let cx = 600, cy = 600
+        for y in (cy - 13)...(cy + 13) {
+            for x in (cx - 13)...(cx + 13) {
+                let dx = Float(x - cx), dy = Float(y - cy)
+                let distance = (dx * dx + dy * dy).squareRoot()
+                guard distance <= 13 else { continue }
+                let transmittance = distance <= 10 ? 0.4 : 0.4 + 0.6 * (distance - 10) / 3
+                let i = y * side + x
+                ir[i] *= transmittance
+                red[i] *= transmittance
+            }
+        }
+        let detection = try InfraredDefectRemoval.detect(
+            infrared: ir, red: red, width: side, height: side,
+            parameters: InfraredDefectRemoval.Parameters(alignmentSearchRadius: 0)
+        ).get()
+        // 투과율 0.4 → 진짜 감쇠 0.6. 절반도 못 되돌리면 자국이 그대로 보인다.
+        let core = attenuation(detection, x: cx, y: cy)
+        XCTAssertGreaterThan(core, 0.45,
+                             "먼지 한가운데가 되돌려져야 한다(실제 감쇠 0.60, 잰 값 \(core)).")
+        XCTAssertLessThan(core, 0.80, "실제보다 더 지우면 없던 밝은 얼룩이 생긴다.")
+    }
+
+    /// 픽셀 하나로는 문턱을 못 넘지만 면적으로는 압도적으로 유의한 결함.
+    ///
+    /// 문턱은 픽셀 하나의 유의성이라, 옅은 먼지는 한 픽셀도 문턱을 못 넘어 **보정량이 정확히
+    /// 0** 이 된다(실측: 컷마다 그런 먼지가 있었다). 같은 유의수준을 면적에 맞게 적용하면
+    /// (Σ(밀도−바닥) ≥ mσ√면적) 잡힌다. 깨끗한 필름이 같이 번지지 않는지도 함께 본다.
+    func testFaintDustBelowThePerPixelThresholdIsFoundByItsArea() throws {
+        var (red, ir) = makeScene(leak: 0.05, noiseSigma: 0.004)
+        let cx = 150, cy = 110, radius = 3
+        stampSpot(&ir, &red, cx: cx, cy: cy, radius: radius, depth: 0.82 * 0.025)
+
+        let detection = try InfraredDefectRemoval.detect(infrared: ir, red: red,
+                                                         width: width, height: height,
+                                                         parameters: fastParameters).get()
+        XCTAssertTrue(corrects(detection, x: cx, y: cy),
+                      "옅어도 면적이 있으면 합친 증거가 압도적이다 — 보정돼야 한다.")
+        XCTAssertLessThan(detection.coverage, 0.01,
+                          "면적 가중을 넣었다고 깨끗한 필름까지 결함이 되면 안 된다.")
+    }
+
+    /// 부분 폐색은 도려내는 게 아니라 가려진 만큼 되돌린다.
+    func testPartialOcclusionIsRestoredByDivisionRatherThanMasking() throws {
+        var (red, ir) = makeScene()
+        // 가시광의 약 30% 를 가리는 먼지: 빛이 대부분 남아 있으므로 나눗셈으로 되돌린다.
+        let cx = 128, cy = 112, radius = 3
+        var expected = [Float](repeating: 0, count: width * height)
+        for i in 0..<(width * height) { expected[i] = red[i] }
+        stampSpot(&ir, &red, cx: cx, cy: cy, radius: radius, depth: 0.25)
+
+        let detection = try InfraredDefectRemoval.detect(infrared: ir, red: red,
+                                               width: width, height: height,
+                                               parameters: fastParameters).get()
+        let index = cy * width + cx
+        let occluded = red[index]
+        XCTAssertLessThan(occluded, expected[index] * 0.85, "픽스처가 실제로 가려야 한다.")
+
+        let a = attenuation(detection, x: cx, y: cy)
+        XCTAssertGreaterThan(a, 0.1, "부분 폐색은 감쇠 창에 실려야 한다.")
+        let restored = occluded / max(1 - a, 0.5)
+        XCTAssertEqual(Double(restored), Double(expected[index]),
+                       accuracy: Double(expected[index]) * 0.25,
+                       "나눗셈 보정이 결함 이전 값 근처로 되돌려야 한다.")
+        // 코어 마스크는 되돌릴 수 없는 완전 폐색 전용 — 부분 폐색은 들어가지 않는다.
+        var corePixels = 0
+        for cluster in detection.clusters {
+            cluster.maskRGBA8.withUnsafeBytes { raw in
+                let bytes = raw.bindMemory(to: UInt8.self)
+                for i in stride(from: 0, to: bytes.count, by: 4) where bytes[i] > 8 { corePixels += 1 }
+            }
+        }
+        XCTAssertEqual(corePixels, 0, "부분 폐색은 나눗셈으로 되돌려야 하고 도려내면 안 된다.")
     }
 
     // MARK: 복원 통합(클러스터 마스크 → SoftwareDefectRemoval.repair)
 
     func testClusterMaskDrivesRepairThatRemovesSpotAndPreservesRest() throws {
         var (red, ir) = makeScene()
-        stampSpot(&ir, cx: 128, cy: 112, radius: 3, depth: 0.4)
+        stampSpot(&ir, &red, cx: 128, cy: 112, radius: 3, depth: 0.4)
         var params = fastParameters
         params.dilateRadius = 2
         let detection = try InfraredDefectRemoval.detect(infrared: ir, red: red,

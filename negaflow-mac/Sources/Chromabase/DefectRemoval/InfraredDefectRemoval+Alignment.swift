@@ -33,6 +33,26 @@ extension InfraredDefectRemoval {
         guard searchRadius > 0 else {
             return diagnostics(status: .notRequested, searchRadius: searchRadius)
         }
+        // 1순위: 결함 신호로 맞춘다. 결함은 뾰족해서 픽셀 단위로 판별되지만, 아래의 누설
+        // 상관은 부드러워 몇 px 안에서 평평하다(실측 최고점 0.47665 / 차점 0.47649).
+        // 결함이 있는 실제 스캔은 여기서 끝나고, 결함이 없는 입력만 누설 경로로 내려간다.
+        if let defect = estimateDefectAlignment(
+            infrared: infrared,
+            red: red,
+            width: width,
+            height: height,
+            searchRadius: searchRadius
+        ) {
+            return diagnostics(
+                status: defect.atSearchLimit ? .searchLimitReached : .aligned,
+                offsetX: defect.offsetX,
+                offsetY: defect.offsetY,
+                peak: defect.peak,
+                runnerUp: defect.runnerUp,
+                searchRadius: searchRadius,
+                downsampleFactor: 1
+            )
+        }
         let factor = max(1, min(width, height) / 384)
         let (irDown, downWidth, downHeight) = blockMean(
             infrared, width: width, height: height, factor: factor

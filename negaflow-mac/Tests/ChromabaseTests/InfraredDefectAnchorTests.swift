@@ -70,12 +70,20 @@ final class InfraredDefectAnchorTests: XCTestCase {
                 red[y * width + x] = 0.02
             }
         }
+        // 결함은 파장에 관계없이 같은 비율로 빛을 막는다 — IR 과 가시광에 같은 투과율을 곱한다.
+        // (IR 에만 찍은 결함은 물리적으로 존재할 수 없고, 새 파이프라인은 그런 후보를 기각한다.)
+        func occlude(_ index: Int, _ depth: Float) {
+            let before = aligned[index]
+            let after = max(0, before - depth)
+            aligned[index] = after
+            red[index] *= before > 1e-4 ? after / before : 0
+        }
         func spot(_ cx: Int, _ cy: Int, _ radius: Int, _ depth: Float) {
             for y in max(0, cy - radius)...min(height - 1, cy + radius) {
                 for x in max(0, cx - radius)...min(width - 1, cx + radius) {
                     let dx = x - cx, dy = y - cy
                     if dx * dx + dy * dy <= radius * radius {
-                        aligned[y * width + x] = max(0, aligned[y * width + x] - depth)
+                        occlude(y * width + x, depth)
                     }
                 }
             }
@@ -86,14 +94,10 @@ final class InfraredDefectAnchorTests: XCTestCase {
         spot(140, 240, 3, 0.35)
         spot(255, 280, 2, 0.45)
         for y in 40...260 {          // 세로 스크래치 x=176..177
-            for x in 176...177 {
-                aligned[y * width + x] = max(0, aligned[y * width + x] - 0.3)
-            }
+            for x in 176...177 { occlude(y * width + x, 0.3) }
         }
         for x in 220...340 {         // 가로 스크래치 y=160..161
-            for y in 160...161 {
-                aligned[y * width + x] = max(0, aligned[y * width + x] - 0.3)
-            }
+            for y in 160...161 { occlude(y * width + x, 0.3) }
         }
         // IR 패스가 (3, 2) 어긋난 상황을 시뮬레이션.
         var scratch = [Bool](repeating: false, count: width * height)
@@ -130,6 +134,7 @@ final class InfraredDefectAnchorTests: XCTestCase {
             fnv.combine(cluster.width)
             fnv.combine(cluster.height)
             fnv.combine(cluster.maskRGBA8)
+            fnv.combine(cluster.attenuationR16 ?? Data())
         }
         return fnv.hash
     }
@@ -143,12 +148,13 @@ final class InfraredDefectAnchorTests: XCTestCase {
         let detection = try InfraredDefectRemoval.detect(infrared: ir, red: red,
                                                width: width, height: height,
                                                parameters: parameters).get()
-        // 참값은 (3, 2)지만 이 픽스처(비네팅+홀더 고주파)는 fine NCC가 (2, 3)에 수렴한다.
-        // 정확한 오프셋 복원 자체는 InfraredDefectTests.testRecoversIntegerOffset… 이 검증하고,
-        // 여기서는 결정적 결과를 그대로 고정한다(트립와이어 목적).
-        XCTAssertEqual(detection.offsetX, 2)
-        XCTAssertEqual(detection.offsetY, 3)
-        XCTAssertGreaterThanOrEqual(detection.components.count, 7)
+        // 결함 신호 기반 씨앗 정합은 참값 (3, 2)를 맞춘다(누설 NCC 는 (2,3)에 수렴했었다).
+        XCTAssertEqual(detection.offsetX, 3)
+        XCTAssertEqual(detection.offsetY, 2)
+        // 스팟 5 + 스크래치 2 중, 사진에서 확인되는 것만 보정 대상이 된다.
+        XCTAssertGreaterThanOrEqual(detection.components.count, 5)
+        XCTAssertTrue(detection.components.contains { $0.classification == .scratchVertical },
+                      "곧은 스크래치는 능선형 탐색면이라 기각되기 쉽다 — 반드시 살아 있어야 한다.")
 
         let value = digest(of: detection)
         // 기록 절차: 아래 상수와 불일치가 의도된 알고리즘 변경 때문이라면
@@ -160,6 +166,9 @@ final class InfraredDefectAnchorTests: XCTestCase {
                        "InfraredDefectRemoval 검출 산술이 변했습니다. 의도된 변경이 아니면 회귀입니다.")
     }
 
-    /// 2026-07-25 Apple Silicon에서 비모수 누설 보정과 절사 노이즈 추정 전환 뒤 기록.
-    private static let recordedDigest: UInt64 = 0x8675_51DE_B872_0B71
+    /// 2026-08-11 Apple Silicon에서 재기록 — 기준선 구조요소를 해상도에서 직접 정하고(관측 성장
+    /// 폐지), 후보 문턱에 면적 가중 유의성을 도입하고, 귀무를 결함과 겹치지 않는 이동에서만
+    /// 재고, 되돌릴 양을 3σ 선이 아니라 필름 자신의 바닥에서 재도록 바꾼 뒤.
+    /// 넷 다 "결함이 덜 지워진다"의 원인이었다.
+    private static let recordedDigest: UInt64 = 0xD81E_742B_B0A3_46BD
 }
