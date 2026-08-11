@@ -22,6 +22,15 @@ artifact 쌍만 `sourceKind: scanner`와 optional `infraredScanPath`로 catalog�
 TIFF와 macOS-hosted R16/pixel golden은 아직 연결되지 않았습니다. 이 경계는 x64 Debug
 `test-managed.ps1`에서 Catalog 595, Shell 353 assertions로 확인했습니다.
 
+## 2026-08-12 Flatbed film frame grid native core
+
+최신 macOS `FlatbedFrameGridDetector`의 제품 계약을 Windows C++20 코어로 옮겼습니다. 이 검출기는
+밝기·극성으로 빈 holder 창을 고르지 않고, 세로 질감으로 실제 필름 슬롯을 찾은 뒤 물리 mm 기반
+aperture, 여백 폭·pitch 범위, gap의 content 대비와 local boundary fit으로 frame grid를 만듭니다.
+밝은 빈 창, 어두운 slide/masked gap, half-frame의 24×18mm 축, 취소를 x64 Debug
+및 Release `native.flatbed_frame_grid`에서 확인했고 ARM64 Release target도 교차 빌드했습니다.
+scanner host·C ABI·실물 preview/macOS golden 연결은 아직 없습니다.
+
 ## 2026-08-12 GrainMend IR item replay — ABI v25
 
 ABI v24의 flat cluster replay는 겹치는 IR cluster에서 같은 attenuation을 반복 적용해 macOS보다

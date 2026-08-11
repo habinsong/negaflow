@@ -139,6 +139,7 @@ add_library(negaflow_imaging STATIC
       src/Native/imaging/grain_mend_morphology.cpp
       src/Native/imaging/grain_mend_resample.cpp
       src/Native/imaging/grain_mend_tiled.cpp
+      src/Native/imaging/flatbed_frame_grid_detector.cpp
       src/Native/imaging/infrared_defect_detector.cpp
       src/Native/imaging/icm_icc_converter.cpp
       src/Native/imaging/image_transform.cpp
@@ -540,6 +541,18 @@ if(BUILD_TESTING)
         PRIVATE negaflow_imaging negaflow_project_options
     )
     add_test(NAME native.grain_mend COMMAND negaflow_grain_mend_tests)
+
+    add_executable(negaflow_flatbed_frame_grid_tests
+        tests/Native.UnitTests/flatbed_frame_grid_detector_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_flatbed_frame_grid_tests
+        PRIVATE negaflow_imaging negaflow_project_options
+    )
+    add_test(
+        NAME native.flatbed_frame_grid
+        COMMAND negaflow_flatbed_frame_grid_tests
+    )
 
     add_executable(negaflow_defect_component_repair_tests
         tests/Native.UnitTests/defect_component_repair_tests.cpp
