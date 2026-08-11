@@ -291,5 +291,5 @@ Für die Qualität von Scannerprofilen gelten
 - `Sources/Chromabase/Imaging/`
 - `Sources/Chromabase/Export/`
 
-Die aktuelle Produktversion ist `1.0.5`.
+Die aktuelle Produktversion ist `1.0.6`.
 Bearbeitungsverlauf und Profilschemata werden auch künftig erst nach einem Prüfverfahren geändert.

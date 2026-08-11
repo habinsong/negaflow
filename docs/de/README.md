@@ -14,7 +14,7 @@ flowchart LR
 ```
 
 > [!NOTE]
-> Die aktuelle Version ist `1.0.5`. Was gebaut und was tatsächlich geprüft wurde,
+> Die aktuelle Version ist `1.0.6`. Was gebaut und was tatsächlich geprüft wurde,
 > steht im [Projektstand](product/PROJECT_STATUS.md).
 
 ## Produkt
@@ -55,6 +55,7 @@ flowchart LR
 |---|---|
 | [Checkliste für echte Geräte](validation/REAL_QA_CHECKLIST.md) | Sie prüfen echten Mac, Display, Scanner und Film |
 | [GrainMend-Vergleich an echten Scans](validation/GRAINMEND_CORPUS.md) | Sie messen die 44 FILM-R-v2-Paare erneut |
+| [GrainMend-IR-Messung an echten Scans](validation/GRAINMEND_IR.md) | Sie messen, wie viel GrainMend IR entfernt |
 
 ## Forschung zur Filmsimulation
 

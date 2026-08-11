@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://habinsong.github.io/negaflow-site/ko/"><img src="https://img.shields.io/badge/website-negaflow-1F6FEB" alt="웹사이트"></a>
-  <a href="docs/ko/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.5%20release-EF8B26" alt="출시 상태"></a>
+  <a href="docs/ko/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.6%20release-EF8B26" alt="출시 상태"></a>
   <a href="#요구-사항"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 이상"></a>
   <a href="negaflow-mac/Package.swift"><img src="https://img.shields.io/badge/Swift-5.9+-F05138?logo=swift&logoColor=white" alt="Swift 5.9 이상"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0 라이선스"></a>
@@ -74,8 +74,8 @@
 
 | 설치 파일 | 지원하는 Mac |
 |---|---|
-| `negaflow-1.0.5-1-macOS-universal.pkg` | Apple Silicon, Intel |
-| `negaflow-1.0.5-1-macOS-arm64.pkg` | Apple Silicon 전용 |
+| `negaflow-1.0.6-1-macOS-universal.pkg` | Apple Silicon, Intel |
+| `negaflow-1.0.6-1-macOS-arm64.pkg` | Apple Silicon 전용 |
 
 1. 사용하는 Mac에 맞는 PKG를 내려받습니다.
 2. PKG를 열고 설치 프로그램의 안내에 따라 진행합니다.
@@ -96,7 +96,7 @@ PKG는 `negaflow.app`을 `/Applications`에 바로 설치합니다.<br>
 - 필름 베이스 측정과 컬러·흑백 필름 반전
 - 노출, 대비, 커브, HSL, 컬러 그레이딩, 흑백 토닝
 - 선명도, 노이즈 제거, 그레인, 비네팅, 할레이션
-- 먼지와 스크래치를 복원하는 GrainMend
+- 먼지와 스크래치를 복원하는 GrainMend, 스캐너 적외선 패스를 쓰는 GrainMend IR 포함, 스캐너 적외선 패스를 쓰는 GrainMend IR 포함
 - 롤, 폴더, 컬렉션, 별점, 스택과 가상 사본
 - 확대, 자르기, 회전, 비교 보기, 히스토그램과 잘림 표시
 - 카메라, 렌즈, 필름, 노출 기록을 내보낸 파일의 EXIF에 기록
@@ -112,7 +112,6 @@ PKG는 `negaflow.app`을 `/Applications`에 바로 설치합니다.<br>
   7가지 인화 레이아웃
 - 39장 6 × 7 콘택트 시트는 합성된 한 파일로, 한 장씩 보는 레이아웃은 제한된 39파일
   배치로 처리하며 막대와 퍼센트를 표시하는 페이지 기준 인화 내보내기·빠른 내보내기
-- 앱 이름과 버전 사이에 니엡스 200주년 문구를 표시하는 다국어 관하여 창
 
 
 

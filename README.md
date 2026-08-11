@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://habinsong.github.io/negaflow-site/"><img src="https://img.shields.io/badge/website-negaflow-1F6FEB" alt="website"></a>
-  <a href="docs/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.5%20release-EF8B26" alt="Release status"></a>
+  <a href="docs/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.6%20release-EF8B26" alt="Release status"></a>
   <a href="#requirements"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 or later"></a>
   <a href="negaflow-mac/Package.swift"><img src="https://img.shields.io/badge/Swift-5.9+-F05138?logo=swift&logoColor=white" alt="Swift 5.9 or later"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0 license"></a>
@@ -69,8 +69,8 @@ For most Macs, use the Universal PKG.
 
 | Download | Mac |
 |---|---|
-| `negaflow-1.0.5-1-macOS-universal.pkg` | Apple Silicon and Intel |
-| `negaflow-1.0.5-1-macOS-arm64.pkg` | Apple Silicon only |
+| `negaflow-1.0.6-1-macOS-universal.pkg` | Apple Silicon and Intel |
+| `negaflow-1.0.6-1-macOS-arm64.pkg` | Apple Silicon only |
 
 1. Download the PKG for the Mac.
 2. Open it and follow the onscreen instructions.
@@ -91,7 +91,7 @@ file's SHA-256 checksum matches the checksum published with the release.
 - Film-base measurement and color or black-and-white film inversion
 - Exposure, contrast, curves, HSL, color grading, and black-and-white toning
 - Sharpening, noise reduction, grain, vignette, and halation
-- GrainMend dust and scratch repair
+- GrainMend dust and scratch repair, including GrainMend IR driven by a scanner infrared pass, including GrainMend IR driven by a scanner infrared pass
 - Rolls, folders, collections, ratings, stacks, and virtual copies
 - Zoom, crop, rotation, comparison views, histogram, and clipping display
 - Camera, lens, film, and exposure notes written into the EXIF of the exported file
@@ -107,8 +107,6 @@ file's SHA-256 checksum matches the checksum published with the release.
   glass plate, and gelatin silver
 - Page-aware Print Export and Quick Export: a 39-photo 6 × 7 contact sheet is one composed output,
   while individual-image layouts are a bounded 39-file batch, with linear progress and percentage
-- A localized About window that places the Niépce bicentennial message between the app name and
-  version
 
 > Completed checks are recorded in [Project Status](docs/product/PROJECT_STATUS.md). <br>
 

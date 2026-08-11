@@ -14,7 +14,7 @@ flowchart LR
 ```
 
 > [!NOTE]
-> 현재 버전은 `1.0.5`입니다. 구현 여부와 실제로 확인한 범위는
+> 현재 버전은 `1.0.6`입니다. 구현 여부와 실제로 확인한 범위는
 > [지금 어디까지 됐나](product/PROJECT_STATUS.md)를 기준으로 봅니다.
 
 ## 제품
@@ -55,6 +55,7 @@ flowchart LR
 |---|---|
 | [출시 전 실기기 점검표](validation/REAL_QA_CHECKLIST.md) | 실제 Mac, 화면, 스캐너, 필름을 확인할 때 |
 | [GrainMend 실제 스캔 비교](validation/GRAINMEND_CORPUS.md) | FILM-R v2 44쌍을 다시 측정할 때 |
+| [GrainMend IR 실제 스캔 측정](validation/GRAINMEND_IR.md) | GrainMend IR이 얼마나 지우는지 측정할 때 |
 
 ## 필름 시뮬레이션 조사
 

@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://habinsong.github.io/negaflow-site/de/"><img src="https://img.shields.io/badge/website-negaflow-1F6FEB" alt="Website"></a>
-  <a href="docs/de/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.5%20release-EF8B26" alt="Veröffentlichungsstatus"></a>
+  <a href="docs/de/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.6%20release-EF8B26" alt="Veröffentlichungsstatus"></a>
   <a href="#voraussetzungen"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 oder neuer"></a>
   <a href="negaflow-mac/Package.swift"><img src="https://img.shields.io/badge/Swift-5.9+-F05138?logo=swift&logoColor=white" alt="Swift 5.9 oder neuer"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache-2.0-Lizenz"></a>
@@ -70,8 +70,8 @@ Für die meisten Macs ist das Universal-PKG vorgesehen.
 
 | Download | Unterstützte Macs |
 |---|---|
-| `negaflow-1.0.5-1-macOS-universal.pkg` | Apple Silicon und Intel |
-| `negaflow-1.0.5-1-macOS-arm64.pkg` | Nur Apple Silicon |
+| `negaflow-1.0.6-1-macOS-universal.pkg` | Apple Silicon und Intel |
+| `negaflow-1.0.6-1-macOS-arm64.pkg` | Nur Apple Silicon |
 
 1. Laden Sie das passende PKG herunter.
 2. Öffnen Sie es und folgen Sie Installer.
@@ -93,7 +93,7 @@ bei der Version veröffentlichten übereinstimmt.
 - Messung der Filmbasis und Invertierung von Farb- oder Schwarzweißfilm
 - Belichtung, Kontrast, Kurven, HSL, Farbkorrektur und Schwarzweiß-Tonung
 - Schärfung, Rauschminderung, Korn, Vignette und Halation
-- Staub- und Kratzerreparatur mit GrainMend
+- Staub- und Kratzerreparatur mit GrainMend, samt GrainMend IR über einen Infrarotdurchgang des Scanners
 - Filme, Ordner, Sammlungen, Bewertungen, Stapel und virtuelle Kopien
 - Zoom, Zuschnitt, Drehung, Vergleichsansichten, Histogramm und Beschnittwarnung
 - Kamera, Objektiv, Film und Belichtung als Notiz, geschrieben in die EXIF der Exportdatei
@@ -109,7 +109,6 @@ bei der Version veröffentlichten übereinstimmt.
   Glasplatte und Silbergelatine
 - Seitenbezogener Abzugs- und Schnellexport: Ein 6 × 7-Kontaktbogen mit 39 Fotos wird zu einer
   zusammengesetzten Datei, Einzelbildlayouts zu 39 Dateien, mit linearem Fortschritt und Prozent
-- Mehrsprachiges Infofenster mit dem Niépce-Zweihundertjahrtext zwischen App-Name und Version
 
 > Abgeschlossene Prüfungen stehen im [Projektstatus](docs/de/product/PROJECT_STATUS.md). <br>
 

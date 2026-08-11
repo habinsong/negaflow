@@ -14,7 +14,7 @@ flowchart LR
 ```
 
 > [!NOTE]
-> 当前版本是 `1.0.5`。做了什么、实际验证到哪一步，都记在
+> 当前版本是 `1.0.6`。做了什么、实际验证到哪一步，都记在
 > [项目状态](product/PROJECT_STATUS.md)里。
 
 ## 产品
@@ -55,6 +55,7 @@ flowchart LR
 |---|---|
 | [实机检查表](validation/REAL_QA_CHECKLIST.md) | 检查真实 Mac、显示器、扫描仪和胶片时 |
 | [GrainMend 实际扫描比较](validation/GRAINMEND_CORPUS.md) | 重新测量 FILM-R v2 的 44 对样本时 |
+| [GrainMend IR 实际扫描测量](validation/GRAINMEND_IR.md) | 测量 GrainMend IR 能去掉多少时 |
 
 ## 胶片模拟研究
 

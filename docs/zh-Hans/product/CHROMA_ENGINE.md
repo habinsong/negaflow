@@ -254,4 +254,4 @@ PNG 和 TIFF 是无损的，从不做子采样。决定画质的只有位深度�
 - `Sources/Chromabase/Imaging/`
 - `Sources/Chromabase/Export/`
 
-当前产品版本是 `1.0.5`。编辑记录和配置文件的 schema，在后续版本中同样要走过验证流程才会改动。
+当前产品版本是 `1.0.6`。编辑记录和配置文件的 schema，在后续版本中同样要走过验证流程才会改动。

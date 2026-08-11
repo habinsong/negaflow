@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://habinsong.github.io/negaflow-site/ja/"><img src="https://img.shields.io/badge/website-negaflow-1F6FEB" alt="ウェブサイト"></a>
-  <a href="docs/ja/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.5%20release-EF8B26" alt="リリース状況"></a>
+  <a href="docs/ja/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.6%20release-EF8B26" alt="リリース状況"></a>
   <a href="#動作環境"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 以降"></a>
   <a href="negaflow-mac/Package.swift"><img src="https://img.shields.io/badge/Swift-5.9+-F05138?logo=swift&logoColor=white" alt="Swift 5.9 以降"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0 ライセンス"></a>
@@ -67,8 +67,8 @@ negaflow は、スキャンしたフィルムやデジタルカメラで複写�
 
 | ダウンロード | 対応するMac |
 |---|---|
-| `negaflow-1.0.5-1-macOS-universal.pkg` | Apple Silicon、Intel |
-| `negaflow-1.0.5-1-macOS-arm64.pkg` | Apple Siliconのみ |
+| `negaflow-1.0.6-1-macOS-universal.pkg` | Apple Silicon、Intel |
+| `negaflow-1.0.6-1-macOS-arm64.pkg` | Apple Siliconのみ |
 
 1. Macに合うPKGをダウンロードします。
 2. PKGを開き、インストーラの案内に従います。
@@ -89,7 +89,7 @@ SHA-256チェックサムがリリースに掲載されたものと一致する�
 - フィルムベースの測定と、カラー・白黒フィルムの反転
 - 露出、コントラスト、カーブ、HSL、カラーグレーディング、白黒トーニング
 - シャープネス、ノイズ除去、グレイン、ビネット、ハレーション
-- ゴミやキズを修復する GrainMend
+- ゴミやキズを修復する GrainMend、スキャナーの赤外パスを使う GrainMend IR を含む
 - ロール、フォルダー、コレクション、評価、スタック、仮想コピー
 - 拡大、切り抜き、回転、比較表示、ヒストグラム、クリッピング表示
 - カメラ、レンズ、フィルム、露出の記録を書き出したファイルの EXIF に記録
@@ -105,7 +105,6 @@ SHA-256チェックサムがリリースに掲載されたものと一致する�
   ガラス乾板、ゼラチンシルバーの7種類のプリントレイアウト
 - 39枚の6 × 7コンタクトシートは合成済みの1ファイル、個別画像レイアウトは制限付き
   39ファイルのバッチとして扱い、バーとパーセントを示すプリント書き出しとクイック書き出し
-- アプリ名とバージョンの間にニエプス200周年の文を表示する多言語の「negaflowについて」
 
 > 確認を終えた範囲は[プロジェクト状況](docs/ja/product/PROJECT_STATUS.md)に記録しています。 <br>
 

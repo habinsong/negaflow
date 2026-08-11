@@ -323,6 +323,6 @@ and [IT8 color validation](../reference/IT8_COLOR_VALIDATION.md).
 - `Sources/Chromabase/Imaging/`
 - `Sources/Chromabase/Export/`
 
-The current product version is `1.0.5`.
+The current product version is `1.0.6`.
 The edit history and profile schemas will keep going through a validation process before they change
 in later versions.

@@ -14,7 +14,7 @@ flowchart LR
 ```
 
 > [!NOTE]
-> 現在のバージョンは`1.0.5`です。作ったものと実際に確認した範囲は
+> 現在のバージョンは`1.0.6`です。作ったものと実際に確認した範囲は
 > [プロジェクトの状態](product/PROJECT_STATUS.md)に書いています。
 
 ## 製品
@@ -55,6 +55,7 @@ flowchart LR
 |---|---|
 | [実機点検リスト](validation/REAL_QA_CHECKLIST.md) | 実機のMac、画面、スキャナー、フィルムを確認するとき |
 | [GrainMend実スキャン比較](validation/GRAINMEND_CORPUS.md) | FILM-R v2の44ペアを測り直すとき |
+| [GrainMend IR実スキャン測定](validation/GRAINMEND_IR.md) | GrainMend IRがどれだけ消すか測るとき |
 
 ## フィルムシミュレーション調査
 

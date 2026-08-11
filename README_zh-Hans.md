@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://habinsong.github.io/negaflow-site/zh/"><img src="https://img.shields.io/badge/website-negaflow-1F6FEB" alt="网站"></a>
-  <a href="docs/zh-Hans/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.5%20release-EF8B26" alt="发布状态"></a>
+  <a href="docs/zh-Hans/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.6%20release-EF8B26" alt="发布状态"></a>
   <a href="#系统要求"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 或更高版本"></a>
   <a href="negaflow-mac/Package.swift"><img src="https://img.shields.io/badge/Swift-5.9+-F05138?logo=swift&logoColor=white" alt="Swift 5.9 或更高版本"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0 许可证"></a>
@@ -67,8 +67,8 @@ negaflow 是一款 macOS 应用，用于导入、反相和显影扫描胶片或�
 
 | 下载文件 | 支持的 Mac |
 |---|---|
-| `negaflow-1.0.5-1-macOS-universal.pkg` | Apple Silicon 和 Intel |
-| `negaflow-1.0.5-1-macOS-arm64.pkg` | 仅 Apple Silicon |
+| `negaflow-1.0.6-1-macOS-universal.pkg` | Apple Silicon 和 Intel |
+| `negaflow-1.0.6-1-macOS-arm64.pkg` | 仅 Apple Silicon |
 
 1. 下载适合当前 Mac 的 PKG。
 2. 打开 PKG，并按安装器提示操作。
@@ -89,7 +89,7 @@ PKG 会把 `negaflow.app` 直接安装到 `/Applications`。<br>
 - 测量片基并反相彩色或黑白胶片
 - 曝光、对比度、曲线、HSL、色彩分级和黑白调色
 - 锐化、降噪、颗粒、暗角和光晕
-- 使用 GrainMend 修复灰尘和划痕
+- 使用 GrainMend 修复灰尘和划痕，包含由扫描仪红外通道驱动的 GrainMend IR
 - 胶卷、文件夹、收藏、星级、堆叠和虚拟副本
 - 缩放、裁剪、旋转、对比视图、直方图和剪切提示
 - 将相机、镜头、胶片与曝光记录写入导出文件的 EXIF
@@ -103,7 +103,6 @@ PKG 会把 `negaflow.app` 直接安装到 `/Applications`。<br>
 - 七种印相布局：单张图像、接触印相表、照片套版、自定义套版、蓝晒、玻璃干版和明胶银盐
 - 按成品页计数的印相导出与快速导出：39 张照片的 6 × 7 接触印相表输出为一个合成文件，
   单张式布局则作为受限并发的 39 文件批处理，并显示线性进度与百分比
-- 在应用名称与版本之间显示尼埃普斯二百周年纪念句的多语言“关于 negaflow”窗口
 
 > 已完成的检查记录在[项目状态](docs/zh-Hans/product/PROJECT_STATUS.md)中。 <br>
 
