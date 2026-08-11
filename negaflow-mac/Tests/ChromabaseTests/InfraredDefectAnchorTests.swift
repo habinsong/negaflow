@@ -168,7 +168,8 @@ final class InfraredDefectAnchorTests: XCTestCase {
 
     /// 2026-08-11 Apple Silicon에서 재기록 — 기준선 구조요소를 해상도에서 직접 정하고(관측 성장
     /// 폐지), 후보 문턱에 면적 가중 유의성을 도입하고, 귀무를 결함과 겹치지 않는 이동에서만
-    /// 재고, 되돌릴 양을 3σ 선이 아니라 필름 자신의 바닥에서 재도록 바꾼 뒤.
-    /// 넷 다 "결함이 덜 지워진다"의 원인이었다.
-    private static let recordedDigest: UInt64 = 0xD81E_742B_B0A3_46BD
+    /// 재고, 되돌릴 양을 3σ 선이 아니라 필름 자신의 바닥에서 재고, 승자의 저주 편향을 고정
+    /// 1σ 가 아니라 관측 유의성의 역-밀스 비로 재도록 바꾼 뒤.
+    /// 다섯 다 "결함이 덜 지워진다"의 원인이었다.
+    private static let recordedDigest: UInt64 = 0xB89C_8D50_B4F1_CC0C
 }

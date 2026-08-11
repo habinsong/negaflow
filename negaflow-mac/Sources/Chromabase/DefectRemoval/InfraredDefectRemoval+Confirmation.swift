@@ -122,10 +122,9 @@ extension InfraredDefectRemoval {
             ? Float((best.score - mean) / deviation)
             : Float.greatestFiniteMagnitude
         guard significance >= minimumSignificance else { return nil }
-        // 봉우리는 탐색면의 **최대값**이라 잡음이 우연히 보태진 만큼 위로 뜬다(승자의 저주).
-        // 그 편향은 잡음 1σ 규모이므로 함께 뺀다 — 덜 지운 자국은 옅게 남을 뿐이지만
-        // 과보정은 없던 밝은 얼룩을 만든다.
-        let signal = best.score - mean - deviation
+        // 봉우리는 탐색면의 최대값이고 문턱을 넘은 것만 보고 있으니, 관측된 크기는 참값보다
+        // 위로 떠 있다(승자의 저주). 그 편향을 뺀 만큼만 되돌린다.
+        let signal = best.score - Double(selectionBias(significance: significance)) * deviation - mean
         guard signal > 0 else { return nil }
 
         let gain = Float(signal / weightSquareSum)
@@ -136,6 +135,26 @@ extension InfraredDefectRemoval {
             gain: gain,
             significance: significance
         )
+    }
+
+    /// 문턱을 넘은 관측만 보고 있을 때 그 크기가 위로 뜨는 정도(σ 단위).
+    ///
+    /// 절단 정규분포의 역-밀스 비 φ(t−z)/Φ̄(t−z) 다. 문턱 바로 위(z=4)에서 0.80σ, z=6 에서
+    /// 0.06σ, z=8 위에서는 사실상 0 — 애매한 검출은 지금처럼 보수적으로 깎고, 확실한 결함은
+    /// 잰 대로 되돌린다.
+    ///
+    /// 예전에는 z 와 무관하게 1σ 를 뺐다. 그건 딱 한 SNR 에서만 맞는 값이고, 확인된 결함의
+    /// z 중앙값이 6~8 이라(실측, 40~50% 는 8σ 이상) 신호의 12~22% 를 매번 깎고 있었다.
+    /// 잔량이 결함 깊이와 무관하게 0.012~0.027 로 일정했던 것이 그 서명이다. 고치니 중심
+    /// 제거율이 82~85% → 90~96% 로 올라갔고, 배율 k 는 1.12~1.84 로 물리 범위에 남았다
+    /// (편향을 통째로 빼면 90~98% 를 얻는 대신 k 가 1.5~2.8 로 벗어난다 — 그건 추정량을
+    /// 반대쪽으로 망가뜨리는 것이라 택하지 않았다).
+    static func selectionBias(significance: Float) -> Float {
+        let x = Double(Float(minimumSignificance) - significance)
+        let density = exp(-0.5 * x * x) / (2 * Double.pi).squareRoot()
+        let tail = 0.5 * erfc(x / 2.0.squareRoot())
+        guard tail > 1e-12 else { return 0 }
+        return Float(density / tail)
     }
 
     /// 귀무 분포를 잴 최소 표본 수. 중앙값·MAD 가 사진의 결 하나에 끌려가지 않을 만큼.
