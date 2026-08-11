@@ -1672,6 +1672,7 @@ internal static class Program
         {
             ["id"] = "frame-1",
             ["rawScanPath"] = @"C:\scans\roll-01\IMG_0001.tif",
+            ["infraredScanPath"] = @"C:\scans\roll-01\IMG_0001.ir.tif",
             ["customDisplayName"] = "Roll 01 / 1",
             ["sourceKind"] = "scanner",
             ["filmType"] = "colorNegative",
@@ -1731,6 +1732,8 @@ internal static class Program
 
         Check(frame.Id == "frame-1", "library_frame_id");
         Check(frame.SourcePath == @"C:\scans\roll-01\IMG_0001.tif", "library_frame_source_path");
+        Check(frame.InfraredPath == @"C:\scans\roll-01\IMG_0001.ir.tif",
+            "library_frame_infrared_source_path");
         Check(frame.EffectiveDisplayName == "Roll 01 / 1", "library_frame_display_name");
         Check(frame.Route.FilmType == FilmType.ColorNegative, "library_frame_route_film_type");
         Check(frame.CanDevelop, "library_frame_preset_with_stock_can_develop");
@@ -1914,6 +1917,18 @@ internal static class Program
         Check(
             ReadFrame(relativePath).Error == LibraryFrameError.InvalidSourcePath,
             "library_frame_rejects_relative_source_path");
+
+        JsonObject relativeInfraredPath = FrameRecord();
+        relativeInfraredPath["infraredScanPath"] = @"scans\IMG_0001.ir.tif";
+        Check(
+            ReadFrame(relativeInfraredPath).Error == LibraryFrameError.InvalidInfraredPath,
+            "library_frame_rejects_relative_infrared_path");
+
+        JsonObject sameInfraredPath = FrameRecord();
+        sameInfraredPath["infraredScanPath"] = sameInfraredPath["rawScanPath"]!.GetValue<string>();
+        Check(
+            ReadFrame(sameInfraredPath).Error == LibraryFrameError.InvalidInfraredPath,
+            "library_frame_rejects_ir_path_equal_to_rgb_path");
 
         JsonObject shortBase = FrameRecord();
         shortBase["params"]!["manualBaseRGB"] = new JsonArray(0.2, 0.2);

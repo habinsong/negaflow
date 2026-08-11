@@ -1296,6 +1296,23 @@ internal static class Program
             Check(host.Open(roots) == LibraryHostState.Open, "library_host_open");
             Check(host.Frames.Count == 1, "library_host_loads_frames");
 
+            // Scanner host는 artifact transaction을 끝낸 RGB/IR 쌍만 여기로 넘긴다. catalog
+            // publication이 먼저 성공하고, IR decode 실패는 frame 자체를 되돌리거나 지우지 않는다.
+            string scannedRgb = Path.Combine(isolatedBase, "published-rgb.tif");
+            string scannedInfrared = Path.Combine(isolatedBase, "published-ir.tif");
+            File.WriteAllBytes(scannedRgb, [1, 2, 3, 4]);
+            File.WriteAllBytes(scannedInfrared, [5, 6, 7, 8]);
+            ScannerFramePublishResult published = host.PublishScannerFrame(
+                new ScannerFrameImport(scannedRgb, scannedInfrared, DevelopmentProcess.C41));
+            Check(published.Plan.Rows.Count == 1 && published.Frame is not null,
+                "scanner_publish_adds_frame_before_ir_detection");
+            Check(
+                published.Frame?.InfraredPath == scannedInfrared &&
+                published.Infrared?.Status == InfraredDefectApplyStatus.DetectionFailed,
+                "scanner_publish_keeps_pair_when_ir_decode_fails");
+            Check(host.Frames.Any(frame => frame.Id == published.Frame?.Id),
+                "scanner_publish_projects_durable_frame");
+
             IReadOnlyList<LibraryFrameListItem> items =
                 LibraryFrameListItems.From(host.Frames);
             Check(items[0].DisplayName == "IMG_0001.tif", "library_item_display_name");
@@ -1917,6 +1934,41 @@ internal static class Program
         Check(
             FrameImport.Describe(bad).Contains("Nothing imported"),
             "import_describe_nothing");
+
+        ScannerFrameImport scanner = new(
+            @"C:\scans\scan-01.tif",
+            @"C:\scans\scan-01.ir.tif",
+            DevelopmentProcess.C41);
+        FrameImportPlan scannerPlan = FrameImport.PlanScanner(
+            scanner,
+            [],
+            Exists,
+            NextId);
+        Check(scannerPlan.Rows.Count == 1 && scannerPlan.Rejected.Count == 0,
+            "scanner_publish_plans_paired_artifacts");
+        Check(
+            scannerPlan.Rows[0].Payload["sourceKind"]!.GetValue<string>() == "scanner" &&
+            scannerPlan.Rows[0].Payload["infraredScanPath"]!.GetValue<string>() ==
+                @"C:\scans\scan-01.ir.tif",
+            "scanner_publish_records_infrared_companion");
+        Check(
+            ReadImported(scannerPlan.Rows[0].Payload).Frame?.InfraredPath ==
+                @"C:\scans\scan-01.ir.tif",
+            "scanner_publish_companion_survives_catalog_projection");
+        Check(
+            FrameImport.PlanScanner(
+                scanner with { InfraredPath = @"C:\scans\scan-01.tif" },
+                [],
+                Exists,
+                NextId).Rejected[0].Refusal == FrameImportRefusal.InfraredMatchesVisible,
+            "scanner_publish_rejects_same_rgb_ir_artifact");
+        Check(
+            FrameImport.PlanScanner(
+                scanner with { InfraredPath = @"C:\scans\missing.ir.tif" },
+                [],
+                Exists,
+                NextId).Rejected[0].Refusal == FrameImportRefusal.InfraredFileNotFound,
+            "scanner_publish_rejects_missing_ir_artifact");
     }
 
     private static LibraryFrameReadResult ReadImported(JsonObject record)

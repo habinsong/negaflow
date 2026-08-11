@@ -190,6 +190,30 @@ public sealed class LibraryDocument : IDisposable
         return added;
     }
 
+    /// <summary>
+    /// 새 frame 공개는 catalog write가 실패해도 메모리에만 남은 유령 frame을 만들면 안 됩니다.
+    /// append는 끝에만 일어나므로 실패 시 이번 호출이 덧붙인 꼬리만 정확히 되돌릴 수 있습니다.
+    /// </summary>
+    public CatalogStoreError AppendAndSave(IReadOnlyList<CatalogEntityRow> rows, out int added)
+    {
+        ArgumentNullException.ThrowIfNull(rows);
+        int originalCount = payloads.Count;
+        added = Append(rows);
+        if (added == 0)
+        {
+            return CatalogStoreError.None;
+        }
+        CatalogStoreError error = Save();
+        if (error == CatalogStoreError.None)
+        {
+            return error;
+        }
+        rowIds.RemoveRange(originalCount, rowIds.Count - originalCount);
+        payloads.RemoveRange(originalCount, payloads.Count - originalCount);
+        Project();
+        return error;
+    }
+
     public CatalogStoreError Save()
     {
         List<CatalogEntityRow> rows = new(payloads.Count);

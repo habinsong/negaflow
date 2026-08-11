@@ -68,7 +68,8 @@ public static class InfraredDefectRecipeCoordinator
                 infrared, red, width, height, parameters, run);
         }
         catch (Exception error) when (error is
-            ArgumentException or OverflowException or NativeBootstrapException)
+            ArgumentException or OverflowException or NativeBootstrapException or
+            DllNotFoundException or EntryPointNotFoundException or BadImageFormatException)
         {
             return Result(InfraredDefectApplyStatus.DetectionFailed);
         }
@@ -110,7 +111,8 @@ public static class InfraredDefectRecipeCoordinator
                 visiblePath, infraredPath, parameters, run);
         }
         catch (Exception error) when (error is
-            ArgumentException or OverflowException or NativeBootstrapException)
+            ArgumentException or OverflowException or NativeBootstrapException or
+            DllNotFoundException or EntryPointNotFoundException or BadImageFormatException)
         {
             return Result(InfraredDefectApplyStatus.DetectionFailed);
         }

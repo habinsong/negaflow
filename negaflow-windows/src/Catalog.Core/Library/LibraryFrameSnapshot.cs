@@ -76,6 +76,12 @@ public sealed record LibraryFrameSnapshot(
     ToneAdjustment Tone)
 {
     /// <summary>
+    /// 스캐너가 RGB 본 스캔과 함께 생성한 IR TIFF입니다. 선택적 필드라 기존 import/legacy
+    /// frame은 null로 유지됩니다. 원본과 마찬가지로 현상 결과를 여기에 쓰지 않습니다.
+    /// </summary>
+    public string? InfraredPath { get; init; }
+
+    /// <summary>
     /// macOS-compatible base mode and preset identifiers. This is persisted independently
     /// from <see cref="ManualBase"/> because changing modes does not erase a manual sample.
     /// </summary>

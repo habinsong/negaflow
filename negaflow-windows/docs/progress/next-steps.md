@@ -158,9 +158,9 @@ true-scale closing → area-weighted candidate → defect-local alignment/visibl
 significance-dependent inverse-Mills → attenuation/core native 검출 코어와 ABI 0.33, managed coordinator,
 sidecar 영속 lifecycle, preview/export 공통 request 투영은 완료했습니다. ABI 0.34는 RGB16 visible과
 Gray16/RGB16 IR TIFF 쌍을 직접 row decode합니다. 색상 네거티브와 색상 슬라이드는 허용하고 silver
-image가 IR을 막는 흑백 네거티브·포지티브는 거부합니다. 다음 체크포인트는 scanner publication이
-companion IR 경로를 frame/catalog에 보존하고 `RunFiles`를 호출하게 하는 것입니다. 그 뒤 같은 입력의 macOS-hosted
-mask·R16 attenuation·최종 pixel golden을 통과하기 전에는 GrainMend IR 완전 동등성을 주장하지 않습니다.
+image가 IR을 막는 흑백 네거티브·포지티브는 거부합니다. scanner publication은 committed artifact 쌍의
+companion IR 경로를 frame/catalog에 보존하고, durable RGB frame 뒤에 `RunFiles`를 호출합니다. 그 뒤 같은 입력의
+macOS-hosted mask·R16 attenuation·최종 pixel golden을 통과하기 전에는 GrainMend IR 완전 동등성을 주장하지 않습니다.
 
 1. ~~GrainMend 자동 검출을 채널별 top-hat(4/8/12), 원거리 texture/SNR, 8방향 scratch 적분,
    isolation/grain-field/PCA component gate로 분리 이식하고, 1800px 초과 linear Lanczos 축소와
@@ -443,8 +443,8 @@ pair가 없는 profile과 F135/HR에는 근거 없는 상대 효과를 만들지
 분리한 ABI v17로 color negative, B&W negative, color positive, B&W positive 4상태를
 catalog→Shell→native preview/export까지 연결했습니다.
 최신 macOS의 Film Emulation 42종 profile-kind 계약은 Windows registry와 실제 pipeline까지 연결했습니다.
-Film Emulation의 다음 hosted golden도 남아 있지만, **현재 다음 한 걸음은 scanner companion 경로를
-frame lifecycle에 보존해 ABI 0.34 `RunFiles`를 호출하는 것**입니다. 수치 golden은 실제 화면 결과 차이를 잡는
+Film Emulation의 다음 hosted golden도 남아 있지만, **현재 다음 한 걸음은 같은 paired TIFF를 macOS host에서
+검출해 mask·R16 attenuation·최종 pixel golden을 고정하는 것**입니다. 수치 golden은 실제 화면 결과 차이를 잡는
 대표 profile·장면에 집중합니다.
 
 ---

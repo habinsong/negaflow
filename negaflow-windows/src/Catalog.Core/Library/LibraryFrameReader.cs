@@ -12,6 +12,7 @@ public static class LibraryFrameReader
 {
     internal const string IdName = "id";
     internal const string SourcePathName = "rawScanPath";
+    public const string InfraredPathName = "infraredScanPath";
     internal const string DisplayNameName = "customDisplayName";
     internal const string ParametersName = "params";
     internal const string BaseEstimationModeName = "baseEstimationMode";
@@ -115,6 +116,10 @@ public static class LibraryFrameReader
             // 현상할 수 있으므로 거부합니다.
             return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidSourcePath);
         }
+        if (!TryReadInfraredPath(frameRecord, sourcePath, out string? infraredPath))
+        {
+            return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidInfraredPath);
+        }
 
         string? displayName = null;
         if (frameRecord.TryGetProperty(DisplayNameName, out JsonElement displayElement) &&
@@ -197,6 +202,7 @@ public static class LibraryFrameReader
             manualBase,
             tone)
         {
+            InfraredPath = infraredPath,
             Base = baseRecipe,
             PointCurves = pointCurves,
             ColorMixer = colorMixer,
@@ -208,6 +214,43 @@ public static class LibraryFrameReader
             AutoNeutralBalance = autoNeutralBalance,
             DevelopTarget = developTarget,
         });
+    }
+
+    private static bool TryReadInfraredPath(
+        JsonElement frameRecord,
+        string sourcePath,
+        out string? infraredPath)
+    {
+        infraredPath = null;
+        if (!frameRecord.TryGetProperty(InfraredPathName, out JsonElement element) ||
+            element.ValueKind == JsonValueKind.Null)
+        {
+            return true;
+        }
+        if (element.ValueKind != JsonValueKind.String ||
+            element.GetString() is not { Length: > 0 } path ||
+            string.IsNullOrWhiteSpace(path) ||
+            !Path.IsPathFullyQualified(path))
+        {
+            return false;
+        }
+        try
+        {
+            if (string.Equals(
+                    Path.TrimEndingDirectorySeparator(Path.GetFullPath(path)),
+                    Path.TrimEndingDirectorySeparator(Path.GetFullPath(sourcePath)),
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
+        catch (Exception error) when (error is ArgumentException or NotSupportedException or
+            PathTooLongException)
+        {
+            return false;
+        }
+        infraredPath = path;
+        return true;
     }
 
     private static bool TryReadManualBase(

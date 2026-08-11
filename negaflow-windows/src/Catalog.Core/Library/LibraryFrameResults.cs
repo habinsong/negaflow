@@ -9,6 +9,7 @@ public enum LibraryFrameError
     InvalidId,
     MissingSourcePath,
     InvalidSourcePath,
+    InvalidInfraredPath,
     InvalidDisplayName,
 
     /// <summary><c>params</c> 가 없거나 object 가 아닙니다.</summary>

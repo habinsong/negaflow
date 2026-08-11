@@ -16,8 +16,11 @@ payload는 크기 조회 뒤 한 번 복사하고 명시적으로 해제합니�
 허용하며 검출 결과를 macOS와 같은 IR item으로 변환해 sidecar를 먼저 기록한 뒤 catalog를 commit합니다.
 재시작 복원과 preview/export 공통 request 투영까지 x64 Debug에서 통과했습니다. ABI 0.34는 WIC가
 RGB16 visible TIFF와 Gray16/RGB16 IR companion TIFF를 bounded row decode해 detector에 직접 공급하며,
-합성 paired TIFF 검출과 decode 전 취소를 통과했습니다. scanner publication이 IR 경로를 frame lifecycle에
-보존하는 단계, 실제 paired 촬영 TIFF와 macOS-hosted R16/pixel golden은 아직 연결되지 않았습니다.
+합성 paired TIFF 검출과 decode 전 취소를 통과했습니다. scanner publication 경계는 committed RGB/IR
+artifact 쌍만 `sourceKind: scanner`와 optional `infraredScanPath`로 catalog에 먼저 저장한 뒤 ABI 0.34
+`RunFiles`를 호출합니다. IR DLL/입력 실패는 RGB frame publication을 되돌리지 않습니다. 실제 paired 촬영
+TIFF와 macOS-hosted R16/pixel golden은 아직 연결되지 않았습니다. 이 경계는 x64 Debug
+`test-managed.ps1`에서 Catalog 595, Shell 353 assertions로 확인했습니다.
 
 ## 2026-08-12 GrainMend IR item replay — ABI v25
 

@@ -9,11 +9,23 @@ public enum FrameImportRefusal
     NoFiles,
     InvalidPath,
     FileNotFound,
+    InfraredFileNotFound,
+    InvalidInfraredPath,
+    InfraredMatchesVisible,
     AlreadyInLibrary,
     RouteRejected,
 }
 
 public sealed record FrameImportRejection(string Path, FrameImportRefusal Refusal);
+
+/// <summary>
+/// scanner host가 RGB artifact를 안전하게 publish한 뒤 library에 넘기는 한 프레임입니다.
+/// IR은 scanner 결과에만 붙으며, 일반 import와 섞어 추측하지 않습니다.
+/// </summary>
+public sealed record ScannerFrameImport(
+    string VisiblePath,
+    string? InfraredPath,
+    DevelopmentProcess Process);
 
 public sealed record FrameImportPlan(
     IReadOnlyList<CatalogEntityRow> Rows,
@@ -109,6 +121,84 @@ public static class FrameImport
     }
 
     /// <summary>
+    /// 이미 host artifact transaction을 통과한 scanner RGB/IR 쌍을 catalog record로 만듭니다.
+    /// 두 경로가 같은 파일이거나 한 쪽이 없으면 RGB만 넣어 반쪽 IR 상태를 만들지 않습니다.
+    /// </summary>
+    public static FrameImportPlan PlanScanner(
+        ScannerFrameImport scan,
+        IReadOnlyList<LibraryFrameSnapshot> existingFrames,
+        Func<string, bool>? fileExists = null,
+        Func<string>? newId = null)
+    {
+        ArgumentNullException.ThrowIfNull(scan);
+        ArgumentNullException.ThrowIfNull(existingFrames);
+        Func<string, bool> exists = fileExists ?? File.Exists;
+        Func<string> nextId = newId ?? (() => Guid.NewGuid().ToString("D"));
+
+        if (!IsFullPath(scan.VisiblePath))
+        {
+            return Rejected(scan.VisiblePath, FrameImportRefusal.InvalidPath);
+        }
+        if (!exists(scan.VisiblePath))
+        {
+            return Rejected(scan.VisiblePath, FrameImportRefusal.FileNotFound);
+        }
+        if (scan.InfraredPath is { } infraredPath)
+        {
+            if (!IsFullPath(infraredPath))
+            {
+                return Rejected(infraredPath, FrameImportRefusal.InvalidInfraredPath);
+            }
+            if (!exists(infraredPath))
+            {
+                return Rejected(infraredPath, FrameImportRefusal.InfraredFileNotFound);
+            }
+            if (string.Equals(NormalizePath(scan.VisiblePath), NormalizePath(infraredPath),
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return Rejected(infraredPath, FrameImportRefusal.InfraredMatchesVisible);
+            }
+        }
+
+        HashSet<string> taken = new(StringComparer.OrdinalIgnoreCase);
+        int nextScanIndex = 0;
+        foreach (LibraryFrameSnapshot frame in existingFrames)
+        {
+            taken.Add(NormalizePath(frame.SourcePath));
+            if (frame.InfraredPath is { } existingInfrared)
+            {
+                taken.Add(NormalizePath(existingInfrared));
+            }
+            ++nextScanIndex;
+        }
+        if (!taken.Add(NormalizePath(scan.VisiblePath)) ||
+            scan.InfraredPath is { } candidateInfrared && !taken.Add(NormalizePath(candidateInfrared)))
+        {
+            return Rejected(scan.VisiblePath, FrameImportRefusal.AlreadyInLibrary);
+        }
+
+        JsonObject record = new()
+        {
+            ["id"] = nextId(),
+            ["rawScanPath"] = scan.VisiblePath,
+            ["customDisplayName"] = Path.GetFileName(scan.VisiblePath),
+            ["scanIndex"] = nextScanIndex,
+            ["sourceKind"] = "scanner",
+            ["params"] = new JsonObject(),
+        };
+        if (scan.InfraredPath is { } validInfrared)
+        {
+            record[LibraryFrameReader.InfraredPathName] = validInfrared;
+        }
+        DevelopRouteWriteResult written = DevelopRouteWriter.Apply(
+            record,
+            DevelopRouteSelection.FromProcess(scan.Process));
+        return written.FrameRecord is { } routed
+            ? new FrameImportPlan([new CatalogEntityRow(routed["id"]!.GetValue<string>(), routed)], [])
+            : Rejected(scan.VisiblePath, FrameImportRefusal.RouteRejected);
+    }
+
+    /// <summary>
     /// 결과를 한 줄로 만듭니다. 거부된 것이 있으면 몇 건이고 왜인지 말합니다 — 고른 파일 다섯 개
     /// 중 셋만 들어왔는데 아무 말이 없으면 사용자는 나머지가 어디 갔는지 알 수 없습니다.
     /// </summary>
@@ -132,6 +222,9 @@ public static class FrameImport
         {
             FrameImportRefusal.AlreadyInLibrary => "already in the library",
             FrameImportRefusal.FileNotFound => "not found",
+            FrameImportRefusal.InfraredFileNotFound => "infrared companion not found",
+            FrameImportRefusal.InvalidInfraredPath => "infrared companion path is invalid",
+            FrameImportRefusal.InfraredMatchesVisible => "infrared companion is the RGB source",
             FrameImportRefusal.InvalidPath => "not a full path",
             FrameImportRefusal.RouteRejected => "rejected by the develop route",
             _ => "skipped",
@@ -156,4 +249,10 @@ public static class FrameImport
             return path;
         }
     }
+
+    private static bool IsFullPath(string? path) =>
+        !string.IsNullOrWhiteSpace(path) && Path.IsPathFullyQualified(path);
+
+    private static FrameImportPlan Rejected(string path, FrameImportRefusal refusal) =>
+        new([], [new FrameImportRejection(path, refusal)]);
 }
