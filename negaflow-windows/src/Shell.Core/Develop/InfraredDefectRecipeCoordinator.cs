@@ -72,6 +72,58 @@ public static class InfraredDefectRecipeCoordinator
         {
             return Result(InfraredDefectApplyStatus.DetectionFailed);
         }
+        return ApplyDetection(document, frame, frameId, sourceIdentity, detection);
+    }
+
+    public static InfraredDefectApplyResult RunFiles(
+        LibraryDocument document,
+        LibraryFrameSnapshot frame,
+        DefectSourceIdentity sourceIdentity,
+        string visiblePath,
+        string infraredPath,
+        InfraredDetectorParameters? parameters = null,
+        DevelopRun? run = null)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentNullException.ThrowIfNull(frame);
+        if (frame.Route.FilmType is not (FilmType.ColorNegative or FilmType.ColorPositive))
+        {
+            return Result(InfraredDefectApplyStatus.UnsupportedFilm);
+        }
+        if (!Guid.TryParseExact(frame.Id, "D", out Guid frameId) || frameId == Guid.Empty)
+        {
+            return Result(InfraredDefectApplyStatus.InvalidFrame);
+        }
+        if (frame.DefectRecipe?.Items.Any(item => item.Kind == DefectEditKind.Infrared) == true)
+        {
+            return Result(InfraredDefectApplyStatus.AlreadyApplied);
+        }
+        if (frame.DefectRecipe?.SourceIdentity is { } currentIdentity &&
+            currentIdentity != sourceIdentity)
+        {
+            return Result(InfraredDefectApplyStatus.SourceMismatch);
+        }
+        InfraredDetectionResult detection;
+        try
+        {
+            detection = NativeInfraredDefectDetector.DetectFiles(
+                visiblePath, infraredPath, parameters, run);
+        }
+        catch (Exception error) when (error is
+            ArgumentException or OverflowException or NativeBootstrapException)
+        {
+            return Result(InfraredDefectApplyStatus.DetectionFailed);
+        }
+        return ApplyDetection(document, frame, frameId, sourceIdentity, detection);
+    }
+
+    private static InfraredDefectApplyResult ApplyDetection(
+        LibraryDocument document,
+        LibraryFrameSnapshot frame,
+        Guid frameId,
+        DefectSourceIdentity sourceIdentity,
+        InfraredDetectionResult detection)
+    {
 
         InfraredDefectApplyStatus detectionStatus = detection.Status switch
         {

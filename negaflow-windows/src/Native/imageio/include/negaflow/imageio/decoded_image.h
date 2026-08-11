@@ -8,6 +8,7 @@ namespace negaflow::imageio {
 enum class DecodedPixelLayout : std::uint8_t {
     rgb16 = 0,
     rgba16,
+    gray16,
 };
 
 enum class AlphaMode : std::uint8_t {

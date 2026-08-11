@@ -22,9 +22,10 @@ internal static unsafe class NativeAbiReader
       // for automatic tone and white balance, 30 for preview soft proof, and 31
       // for replaying persisted infrared attenuation in preview and export, and 32
       // for preserving infrared item boundaries across those shared paths, and 33
-      // for paired visible/IR detection with an owned variable-payload handle.
+      // for paired visible/IR detection with an owned variable-payload handle, and 34
+      // for reading paired scanner TIFFs directly into that detector.
     // An engine below this is refused at load, not at the call.
-    internal const ushort MinimumMinor = 33;
+    internal const ushort MinimumMinor = 34;
 
     private const uint StatusOk = 0;
 

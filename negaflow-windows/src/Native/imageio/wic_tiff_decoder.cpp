@@ -124,14 +124,22 @@ void discard_samples(WicTiffDecodeResult& result) noexcept {
         all_u16_values_equal(info.bits_per_sample, info.bits_per_sample_count, 8U);
     const bool sixteen_bit =
         all_u16_values_equal(info.bits_per_sample, info.bits_per_sample_count, 16U);
+    const bool grayscale =
+        (info.photometric_interpretation == 0U || info.photometric_interpretation == 1U) &&
+        info.samples_per_pixel == 1U && info.extra_samples_count == 0U;
+    const bool rgb = info.photometric_interpretation == 2U &&
+        (info.samples_per_pixel == 3U || info.samples_per_pixel == 4U);
     if (info.width > std::numeric_limits<UINT>::max() ||
         info.height > std::numeric_limits<UINT>::max() ||
-        info.photometric_interpretation != 2U || info.planar_configuration != 1U ||
-        info.orientation != 1U || (info.samples_per_pixel != 3U && info.samples_per_pixel != 4U) ||
+        (!grayscale && !rgb) || info.planar_configuration != 1U ||
+        info.orientation != 1U ||
         (!eight_bit && !sixteen_bit) ||
         !all_u16_values_equal(info.sample_format, info.sample_format_count, 1U) ||
         (info.compression != 1U && info.compression != 5U && info.compression != 8U)) {
         return false;
+    }
+    if (grayscale) {
+        return true;
     }
     if (info.samples_per_pixel == 3U) {
         return info.extra_samples_count == 0U;
@@ -155,6 +163,9 @@ void discard_samples(WicTiffDecodeResult& result) noexcept {
     }
     if (IsEqualGUID(format, GUID_WICPixelFormat64bppPBGRA) != 0) {
         return WicPixelFormat::pbgra16;
+    }
+    if (IsEqualGUID(format, GUID_WICPixelFormat16bppGray) != 0) {
+        return WicPixelFormat::gray16;
     }
     return WicPixelFormat::unknown;
 }
@@ -456,17 +467,20 @@ WicTiffDecodeResult decode_tiff_with_wic_impl(
         }
         result.info.source_pixel_format = classify_pixel_format(source_format);
 
+        const bool grayscale = probe.info.samples_per_pixel == 1U;
         const bool has_alpha = probe.info.samples_per_pixel == 4U;
         const bool associated_alpha = has_alpha && probe.info.extra_samples[0] == 1U;
-        const GUID& target_format = !has_alpha
-                                        ? GUID_WICPixelFormat48bppRGB
+        const GUID& target_format = grayscale
+                                        ? GUID_WICPixelFormat16bppGray
+                                    : !has_alpha ? GUID_WICPixelFormat48bppRGB
                                         : associated_alpha ? GUID_WICPixelFormat64bppPRGBA
                                                            : GUID_WICPixelFormat64bppRGBA;
         result.info.output_pixel_format = classify_pixel_format(target_format);
         result.image.width = width;
         result.image.height = height;
-        result.image.layout = has_alpha ? DecodedPixelLayout::rgba16
-                                        : DecodedPixelLayout::rgb16;
+        result.image.layout = grayscale ? DecodedPixelLayout::gray16
+                              : has_alpha ? DecodedPixelLayout::rgba16
+                                          : DecodedPixelLayout::rgb16;
         result.image.alpha_mode = !has_alpha
                                       ? AlphaMode::opaque
                                       : associated_alpha ? AlphaMode::associated
@@ -742,6 +756,8 @@ const char* wic_pixel_format_name(const WicPixelFormat format) noexcept {
             return "64bpp_bgra";
         case WicPixelFormat::pbgra16:
             return "64bpp_pbgra";
+        case WicPixelFormat::gray16:
+            return "16bpp_gray";
     }
     return "unknown";
 }

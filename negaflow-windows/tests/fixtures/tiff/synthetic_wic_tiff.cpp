@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstdint>
+#include <limits>
 #include <vector>
 
 namespace negaflow::test_fixtures {
@@ -410,6 +411,90 @@ std::vector<std::uint8_t> make_uncompressed_rgb8_tiff(
         }
     }
     return make_tiff(width, height, 1U, pixels, 8U);
+}
+
+std::vector<std::uint8_t> make_uncompressed_gray16_tiff(
+    const std::uint32_t width,
+    const std::uint32_t height) {
+    if (width == 0U || height == 0U) {
+        return {};
+    }
+    constexpr std::uint16_t entry_count = 11U;
+    constexpr std::uint32_t gray_pixel_offset =
+        8U + 2U + entry_count * 12U + 4U;
+    const std::uint64_t pixel_bytes =
+        static_cast<std::uint64_t>(width) * height * sizeof(std::uint16_t);
+    if (pixel_bytes > std::numeric_limits<std::uint32_t>::max()) {
+        return {};
+    }
+    std::vector<std::uint8_t> bytes{};
+    bytes.push_back('I');
+    bytes.push_back('I');
+    append_u16(bytes, 42U);
+    append_u32(bytes, 8U);
+    append_u16(bytes, entry_count);
+    append_entry(bytes, 256U, 4U, 1U, width);
+    append_entry(bytes, 257U, 4U, 1U, height);
+    append_entry(bytes, 258U, 3U, 1U, 16U);
+    append_entry(bytes, 259U, 3U, 1U, 1U);
+    append_entry(bytes, 262U, 3U, 1U, 1U);
+    append_entry(bytes, 273U, 4U, 1U, gray_pixel_offset);
+    append_entry(bytes, 274U, 3U, 1U, 1U);
+    append_entry(bytes, 277U, 3U, 1U, 1U);
+    append_entry(bytes, 278U, 4U, 1U, height);
+    append_entry(bytes, 279U, 4U, 1U, static_cast<std::uint32_t>(pixel_bytes));
+    append_entry(bytes, 339U, 3U, 1U, 1U);
+    append_u32(bytes, 0U);
+    for (std::uint32_t y = 0U; y < height; ++y) {
+        for (std::uint32_t x = 0U; x < width; ++x) {
+            append_u16(bytes, static_cast<std::uint16_t>(
+                8'000U + ((x * 251U + y * 149U) % 48'000U)));
+        }
+    }
+    return bytes;
+}
+
+std::vector<std::uint8_t> make_infrared_detector_visible_tiff(
+    const std::uint32_t width,
+    const std::uint32_t height) {
+    if (width < 32U || height < 32U) return {};
+    std::vector<std::uint8_t> pixels{};
+    pixels.reserve(static_cast<std::size_t>(width) * height * 6U);
+    const std::int32_t center_x = static_cast<std::int32_t>(width / 2U);
+    const std::int32_t center_y = static_cast<std::int32_t>(height / 2U);
+    for (std::uint32_t y = 0U; y < height; ++y) {
+        for (std::uint32_t x = 0U; x < width; ++x) {
+            const std::int32_t dx = static_cast<std::int32_t>(x) - center_x;
+            const std::int32_t dy = static_cast<std::int32_t>(y) - center_y;
+            const bool defect = dx * dx + dy * dy <= 16;
+            append_u16(pixels, defect ? 27'525U : 45'874U);
+            append_u16(pixels, 43'253U);
+            append_u16(pixels, 40'632U);
+        }
+    }
+    return make_tiff(width, height, 1U, pixels);
+}
+
+std::vector<std::uint8_t> make_infrared_detector_gray_tiff(
+    const std::uint32_t width,
+    const std::uint32_t height) {
+    std::vector<std::uint8_t> bytes = make_uncompressed_gray16_tiff(width, height);
+    if (bytes.empty()) return bytes;
+    constexpr std::uint32_t gray_pixel_offset = 146U;
+    const std::int32_t center_x = static_cast<std::int32_t>(width / 2U);
+    const std::int32_t center_y = static_cast<std::int32_t>(height / 2U);
+    for (std::uint32_t y = 0U; y < height; ++y) {
+        for (std::uint32_t x = 0U; x < width; ++x) {
+            const std::int32_t dx = static_cast<std::int32_t>(x) - center_x;
+            const std::int32_t dy = static_cast<std::int32_t>(y) - center_y;
+            const std::uint16_t value = dx * dx + dy * dy <= 16 ? 31'457U : 52'428U;
+            const std::size_t offset = gray_pixel_offset +
+                (static_cast<std::size_t>(y) * width + x) * 2U;
+            bytes[offset] = static_cast<std::uint8_t>(value & 0xffU);
+            bytes[offset + 1U] = static_cast<std::uint8_t>(value >> 8U);
+        }
+    }
+    return bytes;
 }
 
 }  // namespace negaflow::test_fixtures

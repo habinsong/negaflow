@@ -1,7 +1,12 @@
 #include "negaflow_abi.h"
+#include "synthetic_wic_tiff.h"
+
+#include <Windows.h>
 
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <vector>
 
@@ -41,7 +46,7 @@ void test_layout_and_owned_payload_lifecycle() {
     static_assert(sizeof(nf_infrared_cluster_v1) == 40U);
     static_assert(sizeof(nf_infrared_component_v1) == 32U);
     static_assert(sizeof(nf_infrared_preview_point_v1) == 8U);
-    expect(nf_get_abi_version() == 33U, "abi_minor_33");
+    expect(nf_get_abi_version() == 34U, "abi_minor_34");
 
     constexpr std::uint32_t width = 128U;
     constexpr std::uint32_t height = 96U;
@@ -113,6 +118,62 @@ void test_layout_and_owned_payload_lifecycle() {
     nf_infrared_detection_destroy_v1(handle);
 }
 
+void write_file(
+    const std::filesystem::path& path,
+    const std::vector<std::uint8_t>& bytes) {
+    std::ofstream output(path, std::ios::binary | std::ios::trunc);
+    output.write(reinterpret_cast<const char*>(bytes.data()),
+                 static_cast<std::streamsize>(bytes.size()));
+    output.close();
+    expect(output.good(), "paired_tiff_fixture_write");
+}
+
+void test_paired_tiff_ingestion() {
+    const std::filesystem::path root = std::filesystem::temp_directory_path() /
+        (L"negaflow-ir-abi-" + std::to_wstring(GetCurrentProcessId()));
+    std::error_code error{};
+    std::filesystem::remove_all(root, error);
+    error.clear();
+    std::filesystem::create_directories(root, error);
+    expect(!error, "paired_tiff_temp_create");
+    const std::filesystem::path visible = root / L"visible.tiff";
+    const std::filesystem::path infrared = root / L"infrared.tiff";
+    write_file(visible, negaflow::test_fixtures::make_infrared_detector_visible_tiff(128U, 96U));
+    write_file(infrared, negaflow::test_fixtures::make_infrared_detector_gray_tiff(128U, 96U));
+
+    nf_infrared_detector_parameters_v1 parameters{};
+    parameters.struct_size = sizeof(parameters);
+    parameters.sensitivity = 0.5;
+    parameters.maximum_coverage = 0.05;
+    parameters.dilate_radius = 1;
+    parameters.minimum_area = 2;
+    parameters.alignment_search_radius = 0;
+    parameters.cluster_tile = 768;
+    parameters.cluster_padding = 40;
+    nf_infrared_detection_summary_v1 summary{};
+    summary.struct_size = sizeof(summary);
+    nf_infrared_detection_handle_v1* handle = nullptr;
+    expect(nf_detect_infrared_defects_from_tiff_v1(
+               visible.c_str(), infrared.c_str(), &parameters, nullptr,
+               &summary, &handle) == NF_STATUS_OK,
+           "paired_tiff_call_ok");
+    expect(summary.status == NF_INFRARED_DETECTION_OK &&
+               summary.width == 128U && summary.height == 96U && handle != nullptr,
+           "paired_tiff_detects_gray16_companion");
+    nf_infrared_detection_destroy_v1(handle);
+
+    std::uint32_t cancel = 1U;
+    summary = {};
+    summary.struct_size = sizeof(summary);
+    handle = nullptr;
+    expect(nf_detect_infrared_defects_from_tiff_v1(
+               visible.c_str(), infrared.c_str(), &parameters, &cancel,
+               &summary, &handle) == NF_STATUS_OK &&
+               summary.status == NF_INFRARED_DETECTION_CANCELLED && handle == nullptr,
+           "paired_tiff_cancel_before_decode");
+    std::filesystem::remove_all(root, error);
+}
+
 void test_non_success_has_no_handle() {
     constexpr std::uint32_t width = 64U;
     constexpr std::uint32_t height = 64U;
@@ -151,6 +212,7 @@ void test_non_success_has_no_handle() {
 int main() {
     test_layout_and_owned_payload_lifecycle();
     test_non_success_has_no_handle();
+    test_paired_tiff_ingestion();
     if (failures != 0) {
         std::cerr << failures << " infrared detector ABI checks failed\n";
         return 1;

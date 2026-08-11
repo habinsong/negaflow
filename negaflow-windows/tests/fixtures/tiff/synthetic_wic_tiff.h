@@ -63,4 +63,16 @@ inline constexpr std::array<std::uint16_t, 3> lzw_rgb16_expected_samples{
     std::uint32_t width,
     std::uint32_t height);
 
+[[nodiscard]] std::vector<std::uint8_t> make_uncompressed_gray16_tiff(
+    std::uint32_t width,
+    std::uint32_t height);
+
+[[nodiscard]] std::vector<std::uint8_t> make_infrared_detector_visible_tiff(
+    std::uint32_t width,
+    std::uint32_t height);
+
+[[nodiscard]] std::vector<std::uint8_t> make_infrared_detector_gray_tiff(
+    std::uint32_t width,
+    std::uint32_t height);
+
 }  // namespace negaflow::test_fixtures

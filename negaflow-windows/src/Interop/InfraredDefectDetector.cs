@@ -171,18 +171,7 @@ public static unsafe class NativeInfraredDefectDetector
             throw new ArgumentException("The paired planes do not match their stated dimensions.");
         }
 
-        parameters ??= new InfraredDetectorParameters();
-        NativeInfraredDetectorParametersV1 nativeParameters = new()
-        {
-            StructSize = (uint)sizeof(NativeInfraredDetectorParametersV1),
-            Sensitivity = parameters.Sensitivity,
-            MaximumCoverage = parameters.MaximumCoverage,
-            DilateRadius = parameters.DilateRadius,
-            MinimumArea = parameters.MinimumArea,
-            AlignmentSearchRadius = parameters.AlignmentSearchRadius,
-            ClusterTile = parameters.ClusterTile,
-            ClusterPadding = parameters.ClusterPadding,
-        };
+        NativeInfraredDetectorParametersV1 nativeParameters = CreateParameters(parameters);
         NativeInfraredDetectionSummaryV1 summary = default;
         summary.StructSize = (uint)sizeof(NativeInfraredDetectionSummaryV1);
         nint handle = 0;
@@ -208,7 +197,63 @@ public static unsafe class NativeInfraredDefectDetector
         {
             throw NativeFailure("nf_detect_infrared_defects_v1", status);
         }
+        return Consume(summary, handle);
+    }
 
+    public static InfraredDetectionResult DetectFiles(
+        string visiblePath,
+        string infraredPath,
+        InfraredDetectorParameters? parameters = null,
+        DevelopRun? run = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(visiblePath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(infraredPath);
+        NativeInfraredDetectorParametersV1 nativeParameters = CreateParameters(parameters);
+        NativeInfraredDetectionSummaryV1 summary = default;
+        summary.StructSize = (uint)sizeof(NativeInfraredDetectionSummaryV1);
+        nint handle = 0;
+        uint status;
+        fixed (char* visible = visiblePath)
+        fixed (char* infrared = infraredPath)
+        {
+            NativeDevelopRunStateV1* state = run is null ? null : run.StatePointer;
+            uint* cancel = state is null ? null : &state->CancelRequested;
+            status = NativeMethods.nf_detect_infrared_defects_from_tiff_v1(
+                visible,
+                infrared,
+                &nativeParameters,
+                cancel,
+                &summary,
+                &handle);
+        }
+        if (status != StatusOk)
+        {
+            throw NativeFailure("nf_detect_infrared_defects_from_tiff_v1", status);
+        }
+        return Consume(summary, handle);
+    }
+
+    private static NativeInfraredDetectorParametersV1 CreateParameters(
+        InfraredDetectorParameters? parameters)
+    {
+        parameters ??= new InfraredDetectorParameters();
+        return new NativeInfraredDetectorParametersV1
+        {
+            StructSize = (uint)sizeof(NativeInfraredDetectorParametersV1),
+            Sensitivity = parameters.Sensitivity,
+            MaximumCoverage = parameters.MaximumCoverage,
+            DilateRadius = parameters.DilateRadius,
+            MinimumArea = parameters.MinimumArea,
+            AlignmentSearchRadius = parameters.AlignmentSearchRadius,
+            ClusterTile = parameters.ClusterTile,
+            ClusterPadding = parameters.ClusterPadding,
+        };
+    }
+
+    private static InfraredDetectionResult Consume(
+        NativeInfraredDetectionSummaryV1 summary,
+        nint handle)
+    {
         try
         {
             InfraredDetectionStatus resultStatus = (InfraredDetectionStatus)summary.Status;

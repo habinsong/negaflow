@@ -486,6 +486,17 @@ internal static unsafe class ContractTestRunner
             infrared, red, width, height, run: cancelled);
         Check(cancelledResult.Status == InfraredDetectionStatus.Cancelled,
               "infrared_cancelled_without_payload");
+
+        string missingVisible = Path.Combine(AppContext.BaseDirectory, "missing-visible.tiff");
+        string missingInfrared = Path.Combine(AppContext.BaseDirectory, "missing-infrared.tiff");
+        InfraredDetectionResult unreadableFiles = NativeInfraredDefectDetector.DetectFiles(
+            missingVisible, missingInfrared);
+        Check(unreadableFiles.Status == InfraredDetectionStatus.Unreadable,
+              "infrared_tiff_entry_point_reports_unreadable_pair");
+        InfraredDetectionResult cancelledFiles = NativeInfraredDefectDetector.DetectFiles(
+            missingVisible, missingInfrared, run: cancelled);
+        Check(cancelledFiles.Status == InfraredDetectionStatus.Cancelled,
+              "infrared_tiff_entry_point_cancels_before_decode");
     }
 
     // Soft proof crosses the boundary as raw profile bytes going one way and ten numbers

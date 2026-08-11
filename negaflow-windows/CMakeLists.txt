@@ -283,6 +283,11 @@ if(BUILD_TESTING)
 
     add_executable(negaflow_infrared_detector_abi_tests
         tests/Native.UnitTests/infrared_detector_abi_tests.cpp
+        tests/fixtures/tiff/synthetic_wic_tiff.cpp
+    )
+    target_include_directories(
+        negaflow_infrared_detector_abi_tests
+        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/tiff"
     )
     target_link_libraries(
         negaflow_infrared_detector_abi_tests

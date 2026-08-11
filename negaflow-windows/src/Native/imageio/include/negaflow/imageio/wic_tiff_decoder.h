@@ -18,6 +18,7 @@ enum class WicPixelFormat : std::uint8_t {
     prgba16,
     bgra16,
     pbgra16,
+    gray16,
 };
 
 enum class WicTiffDecodeStatus : std::uint8_t {

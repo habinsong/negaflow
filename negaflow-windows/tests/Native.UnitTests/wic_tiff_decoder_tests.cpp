@@ -223,6 +223,19 @@ void test_valid_lzw(const std::filesystem::path& root) {
         "valid LZW code stream is fully accounted before WIC decode");
 }
 
+void test_gray16_companion(const std::filesystem::path& root) {
+    const std::filesystem::path path = root / L"infrared-gray16.tiff";
+    write_fixture(path, negaflow::test_fixtures::make_uncompressed_gray16_tiff(9U, 7U));
+    const auto result = negaflow::imageio::decode_tiff_with_wic(path);
+    expect(
+        result.status == negaflow::imageio::WicTiffDecodeStatus::ok &&
+            result.image.width == 9U && result.image.height == 7U &&
+            result.image.layout == negaflow::imageio::DecodedPixelLayout::gray16 &&
+            result.image.stride_bytes == 18U && result.image.samples.size() == 63U &&
+            result.info.output_pixel_format == negaflow::imageio::WicPixelFormat::gray16,
+        "Gray16 infrared companion TIFF decodes without RGB expansion");
+}
+
 // An 8-bit scan has to open, and it has to widen exactly. WIC replicates the byte
 // (v * 257), which is the same number as v / 255 once the working conversion divides by
 // 65535 — so the file loses no accuracy on the way in. Any other widening rule (a left
@@ -693,6 +706,7 @@ int main(const int argument_count, const char* const arguments[]) {
 
     TempDirectory temporary{};
     test_valid_lzw(temporary.path());
+    test_gray16_companion(temporary.path());
     test_eight_bit_widens_by_bit_replication(temporary.path());
     test_lzw_code_width_transition(temporary.path());
     test_lzw_dictionary_limit_and_forward_reference(temporary.path());
