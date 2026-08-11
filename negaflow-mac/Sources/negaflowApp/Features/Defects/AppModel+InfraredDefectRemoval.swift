@@ -9,8 +9,8 @@ import CoreImage
 // 통합 빌드(appendDefectEdit)가 cleaned raw 를 갱신하고 재현상한다. 사용자는 결함이
 // 제거된 사진을 보게 되고, 레이어 켜기/끄기·강도·삭제·⌘Z 로 언제든 되돌릴 수 있다.
 //
-// 필름 공정이 명확한 컬러 네거티브만 자동 적용한다. B&W와 종류가 확인되지 않은 슬라이드는
-// IR 투과를 추정하지 않고 fail closed 한다.
+// 화상이 색소인 컬러 필름(네거티브·슬라이드)에만 자동 적용한다. 흑백은 화상이 은입자라
+// 적외선을 막으므로 fail closed 한다([InfraredFilmCompatibility]).
 extension AppModel {
 
     /// IR 쌍이 있는 프레임을 선택했을 때의 자동 실행. GrainMend IR 기록은 세션 메모리에만

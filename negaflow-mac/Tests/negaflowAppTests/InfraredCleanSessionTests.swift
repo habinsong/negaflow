@@ -3,11 +3,13 @@ import Chromabase
 @testable import negaflowApp
 
 final class InfraredCleanSessionTests: XCTestCase {
-    func testAutomaticFilmCompatibilityFailsClosedWithoutMaterialMetadata() {
+    /// 판정 기준은 은의 유무다. 컬러는 색소로 화상을 만들어 적외선이 통과하고(네거티브·슬라이드
+    /// 모두), 흑백은 은입자라 적외선을 막는다.
+    func testInfraredIsAllowedForDyeFilmAndBlockedForSilverFilm() {
         XCTAssertTrue(
             InfraredFilmCompatibility(filmType: .colorNegative).allowsAutomaticCorrection
         )
-        XCTAssertFalse(
+        XCTAssertTrue(
             InfraredFilmCompatibility(filmType: .colorPositive).allowsAutomaticCorrection
         )
         XCTAssertFalse(
@@ -18,10 +20,10 @@ final class InfraredCleanSessionTests: XCTestCase {
         )
     }
 
-    func testUnverifiedPositiveFilmDoesNotStartInfraredCorrection() async {
+    func testSilverImageFilmDoesNotStartInfraredCorrection() async {
         await MainActor.run {
             let model = AppModel()
-            let frame = Self.makeFrame(filmType: .colorPositive)
+            let frame = Self.makeFrame(filmType: .bwNegative)
             model.frames = [frame]
 
             model.runInfraredClean(frame)
