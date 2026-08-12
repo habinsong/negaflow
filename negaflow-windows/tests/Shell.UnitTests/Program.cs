@@ -29,6 +29,7 @@ internal static class Program
         VerifyCropSession();
         VerifyThumbnailScaler();
         VerifyLibrarySorter();
+        VerifyLibraryQuickFilters();
         VerifyDevelopHistogramSampler();
         VerifyDevelopPanelState();
         VerifyInspectorSliderValue();
@@ -250,6 +251,48 @@ internal static class Program
         Check(
             ReferenceEquals(LibrarySorter.Sort(source, LibrarySortKey.InputOrder, ascending: false), source),
             "library_sort_input_order_never_reorders");
+    }
+
+    /// <summary>
+    /// 빠른 필터는 전부 AND 이지만 채택/제외 두 깃발만 예외로 서로 OR 입니다. 그 규칙이
+    /// macOS 와 같은지가 여기서 확인할 유일한 것입니다.
+    /// </summary>
+    private static void VerifyLibraryQuickFilters()
+    {
+        LibraryFrameListItem Item(string id, int rating, FramePickState pick) =>
+            new(Frame(new ManualBaseRgb(0.2, 0.2, 0.2)) with
+            {
+                Id = id,
+                Rating = rating,
+                PickState = pick,
+            });
+
+        LibraryFrameListItem[] source =
+        [
+            Item("picked", 4, FramePickState.Picked),
+            Item("rejected", 2, FramePickState.Rejected),
+            Item("plain", 5, FramePickState.Unflagged),
+        ];
+
+        Check(
+            ReferenceEquals(LibraryQuickFilterState.None.Apply(source), source),
+            "library_quick_filters_inactive_passes_everything");
+
+        IReadOnlyList<LibraryFrameListItem> flags = new LibraryQuickFilterState
+        {
+            Picked = true,
+            Rejected = true,
+        }.Apply(source);
+        Check(
+            flags.Count == 2 && flags[0].Id == "picked" && flags[1].Id == "rejected",
+            "library_quick_filters_flags_are_or");
+
+        IReadOnlyList<LibraryFrameListItem> combined = new LibraryQuickFilterState
+        {
+            Picked = true,
+            MinimumRating = 5,
+        }.Apply(source);
+        Check(combined.Count == 0, "library_quick_filters_axes_are_and");
     }
 
     private static void VerifyCropSession()

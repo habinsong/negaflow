@@ -25,6 +25,8 @@ public sealed partial class LibraryWorkspaceView : UserControl
     private FilmType selectedFilmType = FilmType.ColorNegative;
     private LibrarySortKey sortKey = LibrarySortKey.InputOrder;
     private bool sortAscending = true;
+    private LibraryQuickFilterState quickFilters = LibraryQuickFilterState.None;
+    private bool isSynchronizingFilters;
 
     public LibraryWorkspaceView()
     {
@@ -223,11 +225,13 @@ public sealed partial class LibraryWorkspaceView : UserControl
     private void ShowFilteredItems()
     {
         IReadOnlyList<LibraryFrameListItem> items = LibrarySorter.Sort(
-            LibraryFrameListItems.Filter(allItems, LibrarySearchBox?.Text ?? string.Empty),
+            quickFilters.Apply(
+                LibraryFrameListItems.Filter(allItems, LibrarySearchBox?.Text ?? string.Empty)),
             sortKey,
             sortAscending);
         UpdateSortControls();
         UpdateCardSizeControls();
+        UpdateFilterControls();
         if (libraryHost is null)
         {
             FrameListView.ItemsSource = items;
@@ -253,6 +257,81 @@ public sealed partial class LibraryWorkspaceView : UserControl
         }
         LibraryCountText.Text = projection.MatchedCount.ToString(CultureInfo.CurrentCulture);
         UpdateViewModeControls();
+    }
+
+    private void OnFiltersToggled(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        FilterBar.Visibility = FiltersButton.IsChecked == true
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
+
+    private void OnQuickFilterToggled(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (isSynchronizingFilters)
+        {
+            return;
+        }
+        quickFilters = quickFilters with
+        {
+            Picked = PickedFilterToggle.IsChecked == true,
+            Rejected = RejectedFilterToggle.IsChecked == true,
+            Offline = OfflineFilterToggle.IsChecked == true,
+            Infrared = InfraredFilterToggle.IsChecked == true,
+            DefectRecipe = DefectRecipeFilterToggle.IsChecked == true,
+        };
+        ShowFilteredItems();
+    }
+
+    private void OnRatingFilterClicked(object sender, RoutedEventArgs args)
+    {
+        _ = args;
+        if (sender is not MenuFlyoutItem { Tag: string value } ||
+            !int.TryParse(value, CultureInfo.InvariantCulture, out int minimum))
+        {
+            return;
+        }
+        quickFilters = quickFilters with { MinimumRating = minimum == 0 ? null : minimum };
+        ShowFilteredItems();
+    }
+
+    private void OnClearFiltersClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        quickFilters = LibraryQuickFilterState.None;
+        LibrarySearchBox.Text = string.Empty;
+        ShowFilteredItems();
+    }
+
+    private void UpdateFilterControls()
+    {
+        isSynchronizingFilters = true;
+        try
+        {
+            PickedFilterToggle.IsChecked = quickFilters.Picked;
+            RejectedFilterToggle.IsChecked = quickFilters.Rejected;
+            OfflineFilterToggle.IsChecked = quickFilters.Offline;
+            InfraredFilterToggle.IsChecked = quickFilters.Infrared;
+            DefectRecipeFilterToggle.IsChecked = quickFilters.DefectRecipe;
+        }
+        finally
+        {
+            isSynchronizingFilters = false;
+        }
+        RatingFilterButton.Content = quickFilters.MinimumRating is { } minimum
+            ? AppResources.FormatIntegers("filterMinimumRating", "Text", minimum)
+            : AppResources.Get("rating", "Value");
+        // 필터가 걸려 있으면 헤더 버튼이 강조됩니다 — 접힌 상태에서도 걸린 줄 알 수 있어야 합니다.
+        FiltersIcon.Foreground = quickFilters.IsActive
+            ? (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"]
+            : (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
+        // 오프라인 보기에서는 이미 오프라인만 남으므로 macOS 와 같이 토글을 잠급니다.
+        OfflineFilterToggle.IsEnabled = viewMode != LibraryBrowserViewMode.Offline;
     }
 
     private void OnSortKeyClicked(object sender, RoutedEventArgs args)
@@ -647,6 +726,21 @@ public sealed partial class LibraryWorkspaceView : UserControl
         SetMenuItemText(ColorPositiveFilmTypeItem, AppResources.Get("filmTypeColorPositive", "Text"));
         SetMenuItemText(BlackAndWhiteNegativeFilmTypeItem, AppResources.Get("filmTypeBlackAndWhiteNegative", "Text"));
         SetMenuItemText(BlackAndWhitePositiveFilmTypeItem, AppResources.Get("filmTypeBlackAndWhitePositive", "Text"));
+        FiltersText.Text = AppResources.Get("libraryFilters", "Content");
+        AutomationProperties.SetName(FiltersButton, FiltersText.Text);
+        SetToggleText(PickedFilterToggle, AppResources.Get("picked", "Text"));
+        SetToggleText(RejectedFilterToggle, AppResources.Get("rejected", "Text"));
+        SetToggleText(OfflineFilterToggle, AppResources.Get("libraryOffline", "Text"));
+        SetToggleText(InfraredFilterToggle, AppResources.Get("filterInfrared", "Text"));
+        SetToggleText(DefectRecipeFilterToggle, AppResources.Get("filterDefectRecipe", "Text"));
+        SetButtonText(ClearFiltersButton, AppResources.Get("clearFilters", "Text"));
+        SetMenuItemText(RatingFilterAnyItem, AppResources.Get("filterAll", "Text"));
+        for (int rating = 1; rating <= 5; ++rating)
+        {
+            SetMenuItemText(
+                RatingFilterItem(rating),
+                AppResources.FormatIntegers("filterMinimumRating", "Text", rating));
+        }
         SetMenuItemText(SortInputOrderItem, AppResources.Get("sortInputOrder", "Text"));
         SetMenuItemText(SortTimeItem, AppResources.Get("sortTime", "Text"));
         SetMenuItemText(SortNameItem, AppResources.Get("sortName", "Text"));
@@ -689,6 +783,21 @@ public sealed partial class LibraryWorkspaceView : UserControl
         button.Content = text;
         AutomationProperties.SetName(button, text);
         ToolTipService.SetToolTip(button, text);
+    }
+
+    private MenuFlyoutItem RatingFilterItem(int rating) => rating switch
+    {
+        1 => RatingFilterOneItem,
+        2 => RatingFilterTwoItem,
+        3 => RatingFilterThreeItem,
+        4 => RatingFilterFourItem,
+        _ => RatingFilterFiveItem,
+    };
+
+    private static void SetToggleText(ToggleButton toggle, string text)
+    {
+        toggle.Content = text;
+        AutomationProperties.SetName(toggle, text);
     }
 
     private static void SetMenuItemText(MenuFlyoutItem item, string text)

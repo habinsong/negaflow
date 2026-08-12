@@ -99,6 +99,7 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="44" />
                 <RowDefinition Height="1" />
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
@@ -112,7 +113,20 @@
                     <TextBlock x:Name="LibraryCountText" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Horizontal" Spacing="8">
-                    <Button x:Uid="libraryFilters" Height="28" Padding="6,0" Background="Transparent" BorderThickness="0" IsEnabled="False" />
+                    <ToggleButton
+                        x:Name="FiltersButton"
+                        Height="28"
+                        Padding="6,0"
+                        AutomationProperties.AutomationId="negaflow.library.filters"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Checked="OnFiltersToggled"
+                        Unchecked="OnFiltersToggled">
+                        <StackPanel Orientation="Horizontal" Spacing="5">
+                            <FontIcon x:Name="FiltersIcon" FontSize="12" Glyph="&#xE71C;" />
+                            <TextBlock x:Name="FiltersText" FontSize="11" FontWeight="Medium" />
+                        </StackPanel>
+                    </ToggleButton>
                     <DropDownButton
                         x:Name="SortButton"
                         Height="22"
@@ -176,7 +190,46 @@
 
             <Border Grid.Row="1" Background="{ThemeResource NegaflowDividerBrush}" />
 
-            <Grid Grid.Row="2">
+            <!-- 필터를 켰을 때만 나오는 줄입니다. macOS 는 팝오버지만 여기서는 헤더 바로 아래에
+                 붙여 두 화면 모두에서 같은 순서·같은 항목으로 보이게 합니다. -->
+            <ScrollViewer
+                x:Name="FilterBar"
+                Grid.Row="2"
+                Padding="16,6"
+                HorizontalScrollBarVisibility="Auto"
+                HorizontalScrollMode="Enabled"
+                VerticalScrollBarVisibility="Disabled"
+                VerticalScrollMode="Disabled"
+                Visibility="Collapsed">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                    <DropDownButton
+                        x:Name="RatingFilterButton"
+                        Height="26"
+                        Padding="8,0"
+                        AutomationProperties.AutomationId="negaflow.library.filter.rating"
+                        CornerRadius="13"
+                        FontSize="11">
+                        <DropDownButton.Flyout>
+                            <MenuFlyout>
+                                <MenuFlyoutItem x:Name="RatingFilterAnyItem" Tag="0" Click="OnRatingFilterClicked" />
+                                <MenuFlyoutItem x:Name="RatingFilterOneItem" Tag="1" Click="OnRatingFilterClicked" />
+                                <MenuFlyoutItem x:Name="RatingFilterTwoItem" Tag="2" Click="OnRatingFilterClicked" />
+                                <MenuFlyoutItem x:Name="RatingFilterThreeItem" Tag="3" Click="OnRatingFilterClicked" />
+                                <MenuFlyoutItem x:Name="RatingFilterFourItem" Tag="4" Click="OnRatingFilterClicked" />
+                                <MenuFlyoutItem x:Name="RatingFilterFiveItem" Tag="5" Click="OnRatingFilterClicked" />
+                            </MenuFlyout>
+                        </DropDownButton.Flyout>
+                    </DropDownButton>
+                    <ToggleButton x:Name="PickedFilterToggle" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.picked" CornerRadius="13" Checked="OnQuickFilterToggled" FontSize="11" Unchecked="OnQuickFilterToggled" />
+                    <ToggleButton x:Name="RejectedFilterToggle" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.rejected" CornerRadius="13" Checked="OnQuickFilterToggled" FontSize="11" Unchecked="OnQuickFilterToggled" />
+                    <ToggleButton x:Name="OfflineFilterToggle" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.offline" CornerRadius="13" Checked="OnQuickFilterToggled" FontSize="11" Unchecked="OnQuickFilterToggled" />
+                    <ToggleButton x:Name="InfraredFilterToggle" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.infrared" CornerRadius="13" Checked="OnQuickFilterToggled" FontSize="11" Unchecked="OnQuickFilterToggled" />
+                    <ToggleButton x:Name="DefectRecipeFilterToggle" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.defect-recipe" CornerRadius="13" Checked="OnQuickFilterToggled" FontSize="11" Unchecked="OnQuickFilterToggled" />
+                    <Button x:Name="ClearFiltersButton" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.clear" Background="Transparent" BorderThickness="0" Click="OnClearFiltersClicked" FontSize="11" />
+                </StackPanel>
+            </ScrollViewer>
+
+            <Grid Grid.Row="3">
                 <StackPanel x:Name="EmptyLibraryPanel" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="9">
                     <FontIcon FontSize="34" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE8FD;" />
                     <TextBlock x:Uid="noImages" HorizontalAlignment="Center" FontSize="18" FontWeight="SemiBold" />

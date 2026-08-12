@@ -656,4 +656,11 @@
   <data name="sortAscending.Text" xml:space="preserve"><value>昇順</value><comment>AppLocalizedPhrase.ascending</comment></data>
   <data name="sortDescending.Text" xml:space="preserve"><value>降順</value><comment>AppLocalizedPhrase.descending</comment></data>
   <data name="frameCardSizeHelp.Value" xml:space="preserve"><value>サムネイルのサイズ</value><comment>AppLocalizedPhrase.frameCardSizeHelp</comment></data>
+  <data name="picked.Text" xml:space="preserve"><value>採用</value><comment>AppLocalizedPhrase.picked</comment></data>
+  <data name="rejected.Text" xml:space="preserve"><value>除外</value><comment>AppLocalizedPhrase.rejected</comment></data>
+  <data name="filterInfrared.Text" xml:space="preserve"><value>赤外線</value><comment>AppLocalizedPhrase.filterInfrared</comment></data>
+  <data name="filterDefectRecipe.Text" xml:space="preserve"><value>修復レシピ</value><comment>AppLocalizedPhrase.filterDefectRecipe</comment></data>
+  <data name="filterMinimumRating.Text" xml:space="preserve"><value>%dつ星以上</value><comment>AppLocalizedPhrase.filterMinimumRatingFormat</comment></data>
+  <data name="clearFilters.Text" xml:space="preserve"><value>フィルターを消去</value><comment>AppLocalizedPhrase.clearFilters</comment></data>
+  <data name="filterAll.Text" xml:space="preserve"><value>すべて</value><comment>AppLocalizedPhrase.all</comment></data>
 </root>

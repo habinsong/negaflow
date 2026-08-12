@@ -656,4 +656,11 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="sortAscending.Text" xml:space="preserve"><value>Aufsteigend</value><comment>AppLocalizedPhrase.ascending</comment></data>
   <data name="sortDescending.Text" xml:space="preserve"><value>Absteigend</value><comment>AppLocalizedPhrase.descending</comment></data>
   <data name="frameCardSizeHelp.Value" xml:space="preserve"><value>Größe der Miniaturen</value><comment>AppLocalizedPhrase.frameCardSizeHelp</comment></data>
+  <data name="picked.Text" xml:space="preserve"><value>Markieren</value><comment>AppLocalizedPhrase.picked</comment></data>
+  <data name="rejected.Text" xml:space="preserve"><value>Ablehnen</value><comment>AppLocalizedPhrase.rejected</comment></data>
+  <data name="filterInfrared.Text" xml:space="preserve"><value>Infrarot</value><comment>AppLocalizedPhrase.filterInfrared</comment></data>
+  <data name="filterDefectRecipe.Text" xml:space="preserve"><value>Korrekturrezept</value><comment>AppLocalizedPhrase.filterDefectRecipe</comment></data>
+  <data name="filterMinimumRating.Text" xml:space="preserve"><value>Ab %d Sternen</value><comment>AppLocalizedPhrase.filterMinimumRatingFormat</comment></data>
+  <data name="clearFilters.Text" xml:space="preserve"><value>Filter löschen</value><comment>AppLocalizedPhrase.clearFilters</comment></data>
+  <data name="filterAll.Text" xml:space="preserve"><value>Alle</value><comment>AppLocalizedPhrase.all</comment></data>
 </root>

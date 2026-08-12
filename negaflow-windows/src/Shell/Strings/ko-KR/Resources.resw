@@ -656,4 +656,11 @@
   <data name="sortAscending.Text" xml:space="preserve"><value>오름차순</value><comment>AppLocalizedPhrase.ascending</comment></data>
   <data name="sortDescending.Text" xml:space="preserve"><value>내림차순</value><comment>AppLocalizedPhrase.descending</comment></data>
   <data name="frameCardSizeHelp.Value" xml:space="preserve"><value>사진 카드 크기</value><comment>AppLocalizedPhrase.frameCardSizeHelp</comment></data>
+  <data name="picked.Text" xml:space="preserve"><value>선택</value><comment>AppLocalizedPhrase.picked</comment></data>
+  <data name="rejected.Text" xml:space="preserve"><value>제외</value><comment>AppLocalizedPhrase.rejected</comment></data>
+  <data name="filterInfrared.Text" xml:space="preserve"><value>적외선</value><comment>AppLocalizedPhrase.filterInfrared</comment></data>
+  <data name="filterDefectRecipe.Text" xml:space="preserve"><value>보정 레시피</value><comment>AppLocalizedPhrase.filterDefectRecipe</comment></data>
+  <data name="filterMinimumRating.Text" xml:space="preserve"><value>별점 %d 이상</value><comment>AppLocalizedPhrase.filterMinimumRatingFormat</comment></data>
+  <data name="clearFilters.Text" xml:space="preserve"><value>필터 지우기</value><comment>AppLocalizedPhrase.clearFilters</comment></data>
+  <data name="filterAll.Text" xml:space="preserve"><value>모두</value><comment>AppLocalizedPhrase.all</comment></data>
 </root>
