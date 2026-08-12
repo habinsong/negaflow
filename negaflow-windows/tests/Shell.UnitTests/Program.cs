@@ -969,6 +969,18 @@ internal static class Program
             Check(mismatch.Status == ScannerArtifactCommitStatus.InfraredMismatch &&
                   File.Exists(badVisible) && File.Exists(badInfrared),
                 "scanner_artifact_refuses_mismatched_companion_without_publish");
+
+            string grayStaging = Path.Combine(root, ".gray-staging");
+            Directory.CreateDirectory(grayStaging);
+            string grayVisible = Path.Combine(grayStaging, "visible.tiff");
+            File.WriteAllText(grayVisible, "gray staging bytes");
+            ScannerArtifactCommitResult gray = ScannerArtifactTransaction.Commit(
+                new ScannerStagedArtifacts(grayStaging, grayVisible, null),
+                Path.Combine(root, "gray.tiff"),
+                _ => new LibrarySourceMetadata(8, 640, 480, 1, 16, 1, 1),
+                new ScannerArtifactRequirements(640, 480, 16, "gray"));
+            Check(gray.IsSuccess && File.Exists(Path.Combine(root, "gray.tiff")),
+                "scanner_artifact_commits_applied_gray_tiff");
         }
         finally
         {

@@ -42,6 +42,11 @@ metadata-mismatched RGB/IR files, publishes IR before RGB with rollback, and nev
 destination. Protocol-v2 progress/result/error streams are checked for request ID, strict
 sequence, finite progress range, and exactly one terminal event.
 
+The v2 result's reported dimensions, bit depth, and applied color mode now also constrain the
+staged TIFF before publication, so a gray/line-art scan is no longer rejected by an RGB-only
+artifact gate and an adapter cannot publish a differently configured TIFF under an accepted
+result event.
+
 x64 Debug/Release managed checks passed Catalog 605 and Shell 413 assertions with no build
 warnings or errors. x64 Release native CTest passed 65/65. The complete ARM64 Release graph
 cross-built, but was not executed on ARM64 hardware. `ScanAndPublishAsync` passes only the

@@ -300,14 +300,19 @@ public static class ScannerPluginClient
             {
                 return new(ScannerPluginScanStatus.PluginError, process, stream.Status, null);
             }
-            if (!TryValidateScanResult(terminal.Payload, scanWire, out string? infraredPath))
+            if (!TryValidateScanResult(
+                    terminal.Payload,
+                    scanWire,
+                    out string? infraredPath,
+                    out ScannerArtifactRequirements? artifactRequirements))
             {
                 return new(ScannerPluginScanStatus.ResultMismatch, process, stream.Status, null);
             }
 
             ScannerArtifactCommitResult committed = ScannerArtifactTransaction.Commit(
                 new ScannerStagedArtifacts(stagingDirectory!, scanWire.OutputPath, infraredPath),
-                request.DestinationVisiblePath);
+                request.DestinationVisiblePath,
+                requirements: artifactRequirements);
             return new(
                 committed.IsSuccess ? ScannerPluginScanStatus.Completed : ScannerPluginScanStatus.ArtifactCommitFailed,
                 process,
@@ -449,19 +454,30 @@ public static class ScannerPluginClient
     private static bool TryValidateScanResult(
         JsonElement payload,
         ScanWire wire,
-        out string? infraredPath)
+        out string? infraredPath,
+        out ScannerArtifactRequirements? artifactRequirements)
     {
         infraredPath = null;
+        artifactRequirements = null;
         try
         {
             ScanResultResponse? result = payload.Deserialize<ScanResultResponse>(Json);
             if (result is null || !string.Equals(result.Path, wire.OutputPath, StringComparison.OrdinalIgnoreCase) ||
-                result.Width is <= 0 || result.Height is <= 0 ||
                 result.ResolutionDpi != wire.ResolutionDpi || result.BitDepth != wire.BitDepth ||
                 result.HasInfrared != wire.Infrared || !AppliedOptionsMatch(result.AppliedOptions, wire))
             {
                 return false;
             }
+            if (result.Width is not int width || width <= 0 ||
+                result.Height is not int height || height <= 0)
+            {
+                return false;
+            }
+            artifactRequirements = new ScannerArtifactRequirements(
+                width,
+                height,
+                wire.BitDepth,
+                wire.ColorMode);
             if (!wire.Infrared)
             {
                 return result.IrPath is null;

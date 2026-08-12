@@ -21,6 +21,12 @@ public sealed record ScannerStagedArtifacts(
     string VisiblePath,
     string? InfraredPath);
 
+public sealed record ScannerArtifactRequirements(
+    int PixelWidth,
+    int PixelHeight,
+    int BitDepth,
+    string ColorMode);
+
 public sealed record ScannerCommittedArtifacts(
     string VisiblePath,
     string? InfraredPath,
@@ -43,9 +49,14 @@ public static class ScannerArtifactTransaction
     public static ScannerArtifactCommitResult Commit(
         ScannerStagedArtifacts staged,
         string destinationVisiblePath,
-        Func<string, LibrarySourceMetadata?>? metadataReader = null)
+        Func<string, LibrarySourceMetadata?>? metadataReader = null,
+        ScannerArtifactRequirements? requirements = null)
     {
         ArgumentNullException.ThrowIfNull(staged);
+        if (!AreValidRequirements(requirements))
+        {
+            return new(ScannerArtifactCommitStatus.InvalidArgument, null);
+        }
         Func<string, LibrarySourceMetadata?> readMetadata = metadataReader ?? ReadTiffMetadata;
         if (!TryNormalizeDirectory(staged.StagingDirectory, out string stagingDirectory) ||
             !TryNormalizeFile(staged.VisiblePath, out string stagedVisible) ||
@@ -91,9 +102,7 @@ public static class ScannerArtifactTransaction
         {
             return new(ScannerArtifactCommitStatus.ArtifactInvalid, null);
         }
-        if (visibleMetadata.Value.SamplesPerPixel != 3 ||
-            visibleMetadata.Value.BitsPerSample is not (8 or 16) ||
-            visibleMetadata.Value.SampleFormat != 1)
+        if (!MatchesVisibleRequirements(visibleMetadata.Value, requirements))
         {
             return new(ScannerArtifactCommitStatus.ArtifactInvalid, null);
         }
@@ -252,6 +261,31 @@ public static class ScannerArtifactTransaction
                 metadata.SampleFormat,
                 metadata.Orientation)
             : null;
+
+    private static bool AreValidRequirements(ScannerArtifactRequirements? requirements) =>
+        requirements is null ||
+        requirements.PixelWidth > 0 && requirements.PixelHeight > 0 &&
+        requirements.BitDepth is 8 or 16 &&
+        requirements.ColorMode is "color" or "gray" or "lineart" or "infrared";
+
+    private static bool MatchesVisibleRequirements(
+        LibrarySourceMetadata metadata,
+        ScannerArtifactRequirements? requirements)
+    {
+        if (metadata.SampleFormat != 1)
+        {
+            return false;
+        }
+        if (requirements is null)
+        {
+            return metadata.SamplesPerPixel == 3 && metadata.BitsPerSample is 8 or 16;
+        }
+        int expectedSamples = requirements.ColorMode == "color" ? 3 : 1;
+        return metadata.PixelWidth == requirements.PixelWidth &&
+            metadata.PixelHeight == requirements.PixelHeight &&
+            metadata.SamplesPerPixel == expectedSamples &&
+            metadata.BitsPerSample == requirements.BitDepth;
+    }
 
     private static ScannerArtifactCommitResult RollBackInfrared(
         bool infraredMoved,
