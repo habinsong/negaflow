@@ -5,12 +5,17 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media.Imaging;
+using Microsoft.UI.Input;
 using Negaflow.Catalog;
 using Negaflow.Interop;
+using Negaflow.Shell.Develop;
 using Negaflow.Shell.Localization;
 using Negaflow.Shell.Views.Controls;
 using Negaflow.Shell.Views.Layout;
+using Windows.System;
+using Windows.UI.Core;
 
 namespace Negaflow.Shell.Views;
 
@@ -29,6 +34,26 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private bool isSynchronizingInspector;
     private bool isSynchronizingInspectorPresentation;
     private bool isInspectorPresentationReady;
+    private CropSession? cropSession;
+    private CropDragMode cropDragMode;
+    private CropDisplayPoint cropDragStart;
+    private CropDisplayRect cropDragStartRect;
+    private bool cropAwaitingPreview;
+
+    private enum CropDragMode
+    {
+        None,
+        Create,
+        Move,
+        TopLeft,
+        Top,
+        TopRight,
+        Right,
+        BottomRight,
+        Bottom,
+        BottomLeft,
+        Left,
+    }
 
     public DevelopWorkspaceView()
     {
@@ -180,6 +205,11 @@ public sealed partial class DevelopWorkspaceView : UserControl
             !Enum.TryParse(tag, out DevelopInspectorTab tab))
         {
             return;
+        }
+
+        if (tab != DevelopInspectorTab.Edit)
+        {
+            CancelCrop();
         }
 
         inspectorPresentation.SelectTab(tab);
@@ -355,6 +385,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
             return;
         }
 
+        CancelCrop();
         panel.Select(item.Id);
         UpdateSelectedFrameText();
         SynchronizeInspectorValues();
@@ -515,7 +546,345 @@ public sealed partial class DevelopWorkspaceView : UserControl
 
         PreviewImage.Visibility = Visibility.Visible;
         EmptyCanvasPanel.Visibility = Visibility.Collapsed;
+        if (cropAwaitingPreview)
+        {
+            cropAwaitingPreview = false;
+        }
+        RenderCropOverlay();
     }
+
+    private void OnCropClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (cropSession is not null)
+        {
+            CancelCrop();
+            return;
+        }
+        if (panel is null || panel.SelectedFrame is null || PreviewImage.Visibility != Visibility.Visible)
+        {
+            return;
+        }
+
+        CropSession next = CropSession.Start(panel.ImageTransform.Crop);
+        // macOS와 같이 crop을 먼저 해제해 전체 프레임에서 새 선택을 만들게 합니다. 드래그 중
+        // catalog를 쓰지 않고 Apply/Cancel에서 한 번만 저장합니다.
+        if (panel.SetCrop(null) != LibraryFrameError.None)
+        {
+            return;
+        }
+        cropSession = next;
+        cropAwaitingPreview = true;
+        CanvasHost.Focus(FocusState.Programmatic);
+        RequestPreview();
+    }
+
+    private void OnCropApplyClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (cropSession is null || panel is null)
+        {
+            return;
+        }
+        if (panel.SetCrop(cropSession.Apply()) != LibraryFrameError.None)
+        {
+            return;
+        }
+        EndCropSession();
+        RequestPreview();
+    }
+
+    private void OnCropFullClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (cropSession is null)
+        {
+            return;
+        }
+        cropSession.Full();
+        RenderCropOverlay();
+    }
+
+    private void OnCropCancelClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        CancelCrop();
+    }
+
+    private void CancelCrop()
+    {
+        if (cropSession is null)
+        {
+            return;
+        }
+        ImageCropRect? restore = cropSession.Cancel();
+        if (panel?.SetCrop(restore) != LibraryFrameError.None)
+        {
+            return;
+        }
+        EndCropSession();
+        RequestPreview();
+    }
+
+    private void EndCropSession()
+    {
+        cropSession = null;
+        cropDragMode = CropDragMode.None;
+        cropAwaitingPreview = false;
+        CropOverlay.Visibility = Visibility.Collapsed;
+    }
+
+    private void OnCanvasSizeChanged(object sender, SizeChangedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        RenderCropOverlay();
+    }
+
+    private void OnCanvasPointerPressed(object sender, PointerRoutedEventArgs args)
+    {
+        _ = sender;
+        if (cropSession is null || cropAwaitingPreview || !TryCanvasUnitPoint(args, out CropDisplayPoint point))
+        {
+            return;
+        }
+
+        cropDragStart = point;
+        cropDragStartRect = cropSession.Selection;
+        cropDragMode = HitCropHandle(point, cropDragStartRect) ??
+            (Contains(cropDragStartRect, point) && !cropDragStartRect.IsFull
+                ? CropDragMode.Move
+                : CropDragMode.Create);
+        CanvasHost.CapturePointer(args.Pointer);
+        args.Handled = true;
+    }
+
+    private void OnCanvasPointerMoved(object sender, PointerRoutedEventArgs args)
+    {
+        _ = sender;
+        if (cropSession is null || cropDragMode == CropDragMode.None ||
+            !TryCanvasUnitPoint(args, out CropDisplayPoint point))
+        {
+            return;
+        }
+
+        switch (cropDragMode)
+        {
+            case CropDragMode.Create:
+                cropSession.Select(cropDragStart, point);
+                break;
+            case CropDragMode.Move:
+                cropSession.SetSelection(cropDragStartRect.Move(
+                    point.X - cropDragStart.X,
+                    point.Y - cropDragStart.Y));
+                break;
+            default:
+                cropSession.SetSelection(cropDragStartRect.Resize(ToCropHandle(cropDragMode), point));
+                break;
+        }
+        RenderCropOverlay();
+        args.Handled = true;
+    }
+
+    private void OnCanvasPointerReleased(object sender, PointerRoutedEventArgs args)
+    {
+        _ = sender;
+        EndCropDrag(args);
+    }
+
+    private void OnCanvasPointerCancelled(object sender, PointerRoutedEventArgs args)
+    {
+        _ = sender;
+        EndCropDrag(args);
+    }
+
+    private void OnCanvasPointerCaptureLost(object sender, PointerRoutedEventArgs args)
+    {
+        _ = sender;
+        EndCropDrag(args);
+    }
+
+    private void EndCropDrag(PointerRoutedEventArgs args)
+    {
+        if (cropDragMode == CropDragMode.None)
+        {
+            return;
+        }
+        CanvasHost.ReleasePointerCapture(args.Pointer);
+        cropDragMode = CropDragMode.None;
+        args.Handled = true;
+    }
+
+    private void OnCanvasKeyDown(object sender, KeyRoutedEventArgs args)
+    {
+        _ = sender;
+        if (cropSession is null)
+        {
+            return;
+        }
+        if (args.Key == VirtualKey.Escape)
+        {
+            CancelCrop();
+            args.Handled = true;
+            return;
+        }
+
+        double step = InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Shift)
+            .HasFlag(CoreVirtualKeyStates.Down) ? 0.02 : 0.005;
+        switch (args.Key)
+        {
+            case VirtualKey.Left:
+                cropSession.Move(-step, 0.0);
+                break;
+            case VirtualKey.Right:
+                cropSession.Move(step, 0.0);
+                break;
+            case VirtualKey.Up:
+                cropSession.Move(0.0, -step);
+                break;
+            case VirtualKey.Down:
+                cropSession.Move(0.0, step);
+                break;
+            default:
+                return;
+        }
+        RenderCropOverlay();
+        args.Handled = true;
+    }
+
+    private bool TryCanvasUnitPoint(PointerRoutedEventArgs args, out CropDisplayPoint point)
+    {
+        Windows.Foundation.Point position = args.GetCurrentPoint(CanvasHost).Position;
+        if (!TryGetPreviewFrame(out double left, out double top, out double width, out double height) ||
+            position.X < left || position.X > left + width || position.Y < top || position.Y > top + height)
+        {
+            point = default;
+            return false;
+        }
+        point = new CropDisplayPoint((position.X - left) / width, (position.Y - top) / height).Clamp();
+        return true;
+    }
+
+    private bool TryGetPreviewFrame(out double left, out double top, out double width, out double height)
+    {
+        left = top = width = height = 0.0;
+        if (previewBitmap is null || CanvasHost.ActualWidth <= 0.0 || CanvasHost.ActualHeight <= 0.0)
+        {
+            return false;
+        }
+        double availableWidth = Math.Max(1.0, CanvasHost.ActualWidth - 48.0);
+        double availableHeight = Math.Max(1.0, CanvasHost.ActualHeight - 48.0);
+        double scale = Math.Min(availableWidth / previewBitmap.PixelWidth, availableHeight / previewBitmap.PixelHeight);
+        width = previewBitmap.PixelWidth * scale;
+        height = previewBitmap.PixelHeight * scale;
+        left = (CanvasHost.ActualWidth - width) / 2.0;
+        top = (CanvasHost.ActualHeight - height) / 2.0;
+        return width > 0.0 && height > 0.0;
+    }
+
+    private void RenderCropOverlay()
+    {
+        if (cropSession is null || cropAwaitingPreview ||
+            !TryGetPreviewFrame(out double left, out double top, out double width, out double height))
+        {
+            CropOverlay.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        CropDisplayRect selection = cropSession.Selection;
+        double cropLeft = left + selection.X * width;
+        double cropTop = top + selection.Y * height;
+        double cropWidth = selection.Width * width;
+        double cropHeight = selection.Height * height;
+        CropOverlay.Visibility = Visibility.Visible;
+        Place(CropDimTop, left, top, width, Math.Max(0.0, cropTop - top));
+        Place(CropDimBottom, left, cropTop + cropHeight, width, Math.Max(0.0, top + height - (cropTop + cropHeight)));
+        Place(CropDimLeft, left, cropTop, Math.Max(0.0, cropLeft - left), cropHeight);
+        Place(CropDimRight, cropLeft + cropWidth, cropTop, Math.Max(0.0, left + width - (cropLeft + cropWidth)), cropHeight);
+        Place(CropSelection, cropLeft, cropTop, cropWidth, cropHeight);
+        CropThirdVerticalFirst.X1 = CropThirdVerticalFirst.X2 = cropLeft + cropWidth / 3.0;
+        CropThirdVerticalFirst.Y1 = cropTop;
+        CropThirdVerticalFirst.Y2 = cropTop + cropHeight;
+        CropThirdVerticalSecond.X1 = CropThirdVerticalSecond.X2 = cropLeft + cropWidth * 2.0 / 3.0;
+        CropThirdVerticalSecond.Y1 = cropTop;
+        CropThirdVerticalSecond.Y2 = cropTop + cropHeight;
+        CropThirdHorizontalFirst.X1 = cropLeft;
+        CropThirdHorizontalFirst.X2 = cropLeft + cropWidth;
+        CropThirdHorizontalFirst.Y1 = CropThirdHorizontalFirst.Y2 = cropTop + cropHeight / 3.0;
+        CropThirdHorizontalSecond.X1 = cropLeft;
+        CropThirdHorizontalSecond.X2 = cropLeft + cropWidth;
+        CropThirdHorizontalSecond.Y1 = CropThirdHorizontalSecond.Y2 = cropTop + cropHeight * 2.0 / 3.0;
+        PlaceHandle(CropHandleTopLeft, cropLeft, cropTop, false, false);
+        PlaceHandle(CropHandleTop, cropLeft + cropWidth / 2.0, cropTop, true, false);
+        PlaceHandle(CropHandleTopRight, cropLeft + cropWidth, cropTop, false, false);
+        PlaceHandle(CropHandleRight, cropLeft + cropWidth, cropTop + cropHeight / 2.0, false, true);
+        PlaceHandle(CropHandleBottomRight, cropLeft + cropWidth, cropTop + cropHeight, false, false);
+        PlaceHandle(CropHandleBottom, cropLeft + cropWidth / 2.0, cropTop + cropHeight, true, false);
+        PlaceHandle(CropHandleBottomLeft, cropLeft, cropTop + cropHeight, false, false);
+        PlaceHandle(CropHandleLeft, cropLeft, cropTop + cropHeight / 2.0, false, true);
+        // macOS는 막대 중심을 (crop 하단 + 30)에 두고 이미지 프레임 안쪽 86/28pt로 가둡니다.
+        double barHalfHeight = CropActionBar.ActualHeight > 0 ? CropActionBar.ActualHeight / 2.0 : 21.0;
+        Canvas.SetLeft(CropActionBar, Math.Clamp(cropLeft + cropWidth / 2.0, left + 86.0, Math.Max(left + 86.0, left + width - 86.0)) - 86.0);
+        Canvas.SetTop(CropActionBar, Math.Clamp(cropTop + cropHeight + 30.0, top + 28.0, Math.Max(top + 28.0, top + height - 28.0)) - barHalfHeight);
+    }
+
+    private static void Place(FrameworkElement element, double left, double top, double width, double height)
+    {
+        element.Width = width;
+        element.Height = height;
+        Canvas.SetLeft(element, left);
+        Canvas.SetTop(element, top);
+    }
+
+    private static void PlaceHandle(FrameworkElement element, double centerX, double centerY, bool horizontal, bool vertical)
+    {
+        double width = horizontal ? 24.0 : 14.0;
+        double height = vertical ? 24.0 : 14.0;
+        Place(element, centerX - width / 2.0, centerY - height / 2.0, width, height);
+    }
+
+    private static bool Contains(CropDisplayRect rect, CropDisplayPoint point) =>
+        point.X >= rect.X && point.X <= rect.Right && point.Y >= rect.Y && point.Y <= rect.Bottom;
+
+    private static CropDragMode? HitCropHandle(CropDisplayPoint point, CropDisplayRect rect)
+    {
+        const double radius = 0.025;
+        foreach ((CropDragMode mode, double x, double y) candidate in new[]
+                 {
+                     (CropDragMode.TopLeft, rect.X, rect.Y),
+                     (CropDragMode.Top, rect.X + rect.Width / 2.0, rect.Y),
+                     (CropDragMode.TopRight, rect.Right, rect.Y),
+                     (CropDragMode.Right, rect.Right, rect.Y + rect.Height / 2.0),
+                     (CropDragMode.BottomRight, rect.Right, rect.Bottom),
+                     (CropDragMode.Bottom, rect.X + rect.Width / 2.0, rect.Bottom),
+                     (CropDragMode.BottomLeft, rect.X, rect.Bottom),
+                     (CropDragMode.Left, rect.X, rect.Y + rect.Height / 2.0),
+                 })
+        {
+            if (Math.Abs(point.X - candidate.x) <= radius && Math.Abs(point.Y - candidate.y) <= radius)
+            {
+                return candidate.mode;
+            }
+        }
+        return null;
+    }
+
+    private static CropHandle ToCropHandle(CropDragMode mode) => mode switch
+    {
+        CropDragMode.TopLeft => CropHandle.TopLeft,
+        CropDragMode.Top => CropHandle.Top,
+        CropDragMode.TopRight => CropHandle.TopRight,
+        CropDragMode.Right => CropHandle.Right,
+        CropDragMode.BottomRight => CropHandle.BottomRight,
+        CropDragMode.Bottom => CropHandle.Bottom,
+        CropDragMode.BottomLeft => CropHandle.BottomLeft,
+        CropDragMode.Left => CropHandle.Left,
+        _ => throw new ArgumentOutOfRangeException(nameof(mode)),
+    };
 
     private void UpdateManualBaseText()
     {
@@ -1271,6 +1640,11 @@ public sealed partial class DevelopWorkspaceView : UserControl
         SetLocalizedNameAndTooltip(RotateRightButton, AppResources.Get("developRotateRight", "Text"));
         SetLocalizedNameAndTooltip(FlipHorizontalButton, AppResources.Get("developFlipHorizontal", "Text"));
         SetLocalizedNameAndTooltip(FlipVerticalButton, AppResources.Get("developFlipVertical", "Text"));
+        SetLocalizedNameAndTooltip(CropButton, AppResources.Get("developCrop", "Text"));
+        SetButtonText(CropApplyButton, AppResources.Get("developCropApply", "Text"));
+        SetButtonText(CropFullButton, AppResources.Get("developCropFull", "Text"));
+        SetButtonText(CropCancelButton, AppResources.Get("developCropCancel", "Text"));
+        AutomationProperties.SetName(CropSelection, AppResources.Get("developCropArea", "Text"));
         StraightenAngleControl.Label = AppResources.Get("developAngle", "Text");
         SetInspectorSectionText(
             BasicToneSection,
@@ -1371,6 +1745,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
     {
         _ = sender;
         _ = args;
+        CancelCrop();
         if (workspaceState is not null)
         {
             workspaceState.Changed -= OnStateChanged;

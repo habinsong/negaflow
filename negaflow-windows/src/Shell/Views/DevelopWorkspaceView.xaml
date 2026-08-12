@@ -121,9 +121,18 @@
             </Grid.RowDefinitions>
 
             <Grid
+                x:Name="CanvasHost"
                 Grid.Row="0"
                 AutomationProperties.AutomationId="negaflow.canvas"
-                Background="{ThemeResource NegaflowCanvasBrush}">
+                Background="{ThemeResource NegaflowCanvasBrush}"
+                IsTabStop="True"
+                KeyDown="OnCanvasKeyDown"
+                PointerCanceled="OnCanvasPointerCancelled"
+                PointerCaptureLost="OnCanvasPointerCaptureLost"
+                PointerMoved="OnCanvasPointerMoved"
+                PointerPressed="OnCanvasPointerPressed"
+                PointerReleased="OnCanvasPointerReleased"
+                SizeChanged="OnCanvasSizeChanged">
                 <StackPanel x:Name="EmptyCanvasPanel" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
                     <FontIcon FontSize="42" Foreground="#FF8A8A8A" Glyph="&#xE91B;" />
                     <TextBlock x:Uid="emptyCanvasTitle" HorizontalAlignment="Center" FontSize="18" FontWeight="SemiBold" Foreground="#FFE2E2E2" />
@@ -142,6 +151,46 @@
                     AutomationProperties.AutomationId="negaflow.canvas.preview"
                     Stretch="Uniform"
                     Visibility="Collapsed" />
+
+                <Canvas x:Name="CropOverlay" Visibility="Collapsed">
+                    <Rectangle x:Name="CropDimTop" Fill="#73000000" />
+                    <Rectangle x:Name="CropDimBottom" Fill="#73000000" />
+                    <Rectangle x:Name="CropDimLeft" Fill="#73000000" />
+                    <Rectangle x:Name="CropDimRight" Fill="#73000000" />
+                    <Rectangle
+                        x:Name="CropSelection"
+                        AutomationProperties.AutomationId="negaflow.canvas.crop.selection"
+                        Fill="Transparent"
+                        RadiusX="2"
+                        RadiusY="2"
+                        Stroke="White"
+                        StrokeThickness="1.5" />
+                    <Line x:Name="CropThirdVerticalFirst" Stroke="#57FFFFFF" StrokeThickness="0.5" />
+                    <Line x:Name="CropThirdVerticalSecond" Stroke="#57FFFFFF" StrokeThickness="0.5" />
+                    <Line x:Name="CropThirdHorizontalFirst" Stroke="#57FFFFFF" StrokeThickness="0.5" />
+                    <Line x:Name="CropThirdHorizontalSecond" Stroke="#57FFFFFF" StrokeThickness="0.5" />
+                    <Rectangle x:Name="CropHandleTopLeft" Fill="White" RadiusX="2" RadiusY="2" Stroke="#66000000" StrokeThickness="1" />
+                    <Rectangle x:Name="CropHandleTop" Fill="White" RadiusX="2" RadiusY="2" Stroke="#66000000" StrokeThickness="1" />
+                    <Rectangle x:Name="CropHandleTopRight" Fill="White" RadiusX="2" RadiusY="2" Stroke="#66000000" StrokeThickness="1" />
+                    <Rectangle x:Name="CropHandleRight" Fill="White" RadiusX="2" RadiusY="2" Stroke="#66000000" StrokeThickness="1" />
+                    <Rectangle x:Name="CropHandleBottomRight" Fill="White" RadiusX="2" RadiusY="2" Stroke="#66000000" StrokeThickness="1" />
+                    <Rectangle x:Name="CropHandleBottom" Fill="White" RadiusX="2" RadiusY="2" Stroke="#66000000" StrokeThickness="1" />
+                    <Rectangle x:Name="CropHandleBottomLeft" Fill="White" RadiusX="2" RadiusY="2" Stroke="#66000000" StrokeThickness="1" />
+                    <Rectangle x:Name="CropHandleLeft" Fill="White" RadiusX="2" RadiusY="2" Stroke="#66000000" StrokeThickness="1" />
+                    <Border
+                        x:Name="CropActionBar"
+                        Background="{ThemeResource NegaflowPanelBrush}"
+                        BorderBrush="{ThemeResource NegaflowDividerBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="6">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Button x:Name="CropApplyButton" Click="OnCropApplyClicked" Style="{StaticResource AccentButtonStyle}" />
+                            <Button x:Name="CropFullButton" Click="OnCropFullClicked" />
+                            <Button x:Name="CropCancelButton" Click="OnCropCancelClicked" />
+                        </StackPanel>
+                    </Border>
+                </Canvas>
             </Grid>
 
             <views:FilmstripView x:Name="Filmstrip" Grid.Row="1" />
@@ -413,11 +462,13 @@
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
-                                    <Button x:Name="RotateLeftButton" Grid.Column="0" AutomationProperties.AutomationId="negaflow.develop.geometry.rotate-left" Click="OnRotateLeftClicked"><FontIcon Glyph="&#xE7AD;" /></Button>
-                                    <Button x:Name="RotateRightButton" Grid.Column="1" AutomationProperties.AutomationId="negaflow.develop.geometry.rotate-right" Click="OnRotateRightClicked"><FontIcon Glyph="&#xE7AE;" /></Button>
-                                    <Button x:Name="FlipHorizontalButton" Grid.Column="2" AutomationProperties.AutomationId="negaflow.develop.geometry.flip-horizontal" Click="OnFlipHorizontalClicked"><FontIcon Glyph="&#xE7B7;" /></Button>
-                                    <Button x:Name="FlipVerticalButton" Grid.Column="3" AutomationProperties.AutomationId="negaflow.develop.geometry.flip-vertical" Click="OnFlipVerticalClicked"><FontIcon Glyph="&#xE7B8;" /></Button>
+                                    <Button x:Name="CropButton" Grid.Column="0" AutomationProperties.AutomationId="negaflow.develop.geometry.crop" Click="OnCropClicked"><FontIcon Glyph="&#xE7A8;" /></Button>
+                                    <Button x:Name="RotateLeftButton" Grid.Column="1" AutomationProperties.AutomationId="negaflow.develop.geometry.rotate-left" Click="OnRotateLeftClicked"><FontIcon Glyph="&#xE7AD;" /></Button>
+                                    <Button x:Name="RotateRightButton" Grid.Column="2" AutomationProperties.AutomationId="negaflow.develop.geometry.rotate-right" Click="OnRotateRightClicked"><FontIcon Glyph="&#xE7AE;" /></Button>
+                                    <Button x:Name="FlipHorizontalButton" Grid.Column="3" AutomationProperties.AutomationId="negaflow.develop.geometry.flip-horizontal" Click="OnFlipHorizontalClicked"><FontIcon Glyph="&#xE7B7;" /></Button>
+                                    <Button x:Name="FlipVerticalButton" Grid.Column="4" AutomationProperties.AutomationId="negaflow.develop.geometry.flip-vertical" Click="OnFlipVerticalClicked"><FontIcon Glyph="&#xE7B8;" /></Button>
                                 </Grid>
                                 <controls:InspectorSlider x:Name="StraightenAngleControl" HorizontalAlignment="Stretch" ResetValue="0" SliderAutomationId="negaflow.develop.geometry.straighten-angle" ValueChanged="OnStraightenAngleChanged" />
                             </StackPanel>

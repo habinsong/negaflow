@@ -25,6 +25,7 @@ internal static class Program
         VerifyLibraryAvailability();
         VerifyLibraryBrowserProjection();
         VerifyDevelopInspectorPresentationState();
+        VerifyCropSession();
         VerifyDevelopHistogramSampler();
         VerifyDevelopPanelState();
         VerifyInspectorSliderValue();
@@ -181,6 +182,34 @@ internal static class Program
                 : new BaseRecipe(BaseEstimationMode.Manual, null, null, null)),
             PointCurves = pointCurves ?? PointCurveRecipe.Identity,
         };
+
+    private static void VerifyCropSession()
+    {
+        var session = CropSession.Start(new ImageCropRect(0.2, 0.15, 0.6, 0.7));
+        Check(NearRect(session.Selection, 0.2, 0.15, 0.6, 0.7),
+            "crop_session_y_up_to_display");
+        Check(session.Cancel() == new ImageCropRect(0.2, 0.15, 0.6, 0.7),
+            "crop_session_cancel_restores_initial_crop");
+
+        session.Select(new CropDisplayPoint(0.8, 0.75), new CropDisplayPoint(0.2, 0.25));
+        Check(NearRect(session.Selection, 0.2, 0.25, 0.6, 0.5),
+            "crop_session_selection_is_y_down_and_normalized");
+        Check(session.Apply() is { } applied &&
+            Near(applied.X, 0.2) && Near(applied.Y, 0.25) &&
+            Near(applied.Width, 0.6) && Near(applied.Height, 0.5),
+            "crop_session_apply_converts_to_engine_y_up");
+
+        session.Resize(CropHandle.Left, new CropDisplayPoint(0.98, 0.5));
+        Check(session.Selection.Width >= CropSession.MinimumSize && session.Selection.X <= 1.0 - session.Selection.Width,
+            "crop_session_resize_clamps_minimum_and_bounds");
+        session.Move(-10.0, 10.0);
+        Check(session.Selection.X == 0.0 && session.Selection.Bottom == 1.0,
+            "crop_session_move_clamps_bounds");
+
+        session.Full();
+        Check(session.Apply() is null && session.Cancel() is null,
+            "crop_session_full_clears_crop_and_cancel_baseline");
+    }
 
     private static void VerifyDevelopRequestFactory()
     {
@@ -2803,6 +2832,11 @@ internal static class Program
             autoExporter.LastSoftProof is null,
             "auto_adjust_measures_an_unproofed_render");
     }
+
+    private static bool Near(double actual, double expected) => Math.Abs(actual - expected) <= 1e-9;
+
+    private static bool NearRect(CropDisplayRect actual, double x, double y, double width, double height) =>
+        Near(actual.X, x) && Near(actual.Y, y) && Near(actual.Width, width) && Near(actual.Height, height);
 
     private static void Check(bool condition, string name)
     {

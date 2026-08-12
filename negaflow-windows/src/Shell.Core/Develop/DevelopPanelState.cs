@@ -585,6 +585,13 @@ public sealed class DevelopPanelState
     public LibraryFrameError SetStraightenAngle(double angle) =>
         SetImageTransform(ImageTransform with { StraightenAngle = Math.Clamp(angle, -45.0, 45.0) });
 
+    /// <summary>
+    /// Canvas crop session의 단일 commit 지점입니다. null은 전체 프레임을 뜻하며, drag 중에는
+    /// 이 메서드를 호출하지 않아 preview/export와 catalog가 중간 선택 상태를 보지 않습니다.
+    /// </summary>
+    public LibraryFrameError SetCrop(ImageCropRect? crop) =>
+        SetImageTransform(ImageTransform with { Crop = crop });
+
     private LibraryFrameError SetImageTransform(ImageTransformRecipe imageTransform)
     {
         ArgumentNullException.ThrowIfNull(imageTransform);
