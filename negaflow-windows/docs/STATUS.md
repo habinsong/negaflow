@@ -24,9 +24,9 @@ warnings or errors. x64 Release native CTest passed 65/65. The complete ARM64 Re
 cross-built, but was not executed on ARM64 hardware. `ScanAndPublishAsync` passes only the
 verified committed TIFF/IR pair to the existing single-writer `LibraryHostService` boundary,
 which persists the frame before optional IR recipe bootstrap. If catalog publication fails, the
-committed source pair is intentionally left intact and returned to the caller; a durable startup
-recovery receipt, approval persistence, WIA/TWAIN adapters, and real-device evidence are not
-implemented.
+committed source pair is intentionally left intact and returned to the caller. The durable
+startup receipt is described below; approval persistence, WIA/TWAIN adapters, and real-device
+evidence are not implemented.
 
 ## 2026-08-12 Develop primary-calibration ABI
 
@@ -36,6 +36,15 @@ from the catalog through ABI 0.38/v27 and the shared preview/export path. The si
 native boundaries. x64 Debug interop contract passed 191 assertions at ABI 0.38; native
 `primary_calibration` and `develop_export_abi` passed 2/2. Real TIFF and macOS pixel golden
 comparisons remain unverified.
+
+## 2026-08-12 Scanner publication recovery
+
+After a scanner TIFF/IR pair has been atomically committed, Library writes a tiny write-through
+receipt under its app-owned journal before appending the frame. A successful catalog append
+removes that receipt; a process stop or catalog failure leaves it intact. On the next Library open,
+the single writer replays each valid receipt and removes it only after the matching frame is
+durable. x64 Debug managed checks passed Catalog 605 and Shell 416 assertions. Real scanner
+devices and permission/power-loss injection remain unverified.
 
 ## 2026-08-12 Develop Calibration and Detail/Effects inspector surface
 

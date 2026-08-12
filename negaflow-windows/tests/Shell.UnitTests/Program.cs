@@ -34,6 +34,7 @@ internal static class Program
         VerifyAutoAdjustCoordinator();
         VerifyScannerPluginDiscovery();
         VerifyScannerArtifactTransaction();
+        VerifyScannerPublicationRecovery();
 
         var report = new
         {
@@ -978,6 +979,37 @@ internal static class Program
         }
     }
 
+    private static void VerifyScannerPublicationRecovery()
+    {
+        string root = Path.Combine(Path.GetTempPath(), $"negaflow-scanner-recovery-{Guid.NewGuid():N}");
+        try
+        {
+            StorageRootSet roots = StorageRootResolver.ResolveForTests(root).Roots!;
+            Directory.CreateDirectory(root);
+            string visible = Path.Combine(root, "recovered-scan.tiff");
+            File.WriteAllBytes(visible, [1, 2, 3, 4]);
+            ScannerFrameImport scan = new(visible, null, DevelopmentProcess.C41);
+            Check(ScannerPublicationReceiptStore.TrySchedule(roots, scan, out _),
+                "scanner_publication_writes_receipt_before_restart");
+
+            using LibraryHostService host = new(
+                new FakeDispatcher(accepts: true),
+                new FakeExporter(_ => OkResult()),
+                TestSourceMetadata);
+            Check(host.Open(roots) == LibraryHostState.Open &&
+                  host.Frames.Any(frame => frame.SourcePath == visible) &&
+                  ScannerPublicationReceiptStore.ReadPending(roots).Count == 0,
+                "scanner_publication_replays_pending_receipt_after_restart");
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
     private static void VerifyInfraredDefectRecipeCoordinator()
     {
         Guid frameId = Guid.Parse("4fa76528-8ea7-49ef-af2a-cb1d24786216");
@@ -1674,6 +1706,8 @@ internal static class Program
                 "scanner_publish_keeps_pair_when_ir_decode_fails");
             Check(host.Frames.Any(frame => frame.Id == published.Frame?.Id),
                 "scanner_publish_projects_durable_frame");
+            Check(ScannerPublicationReceiptStore.ReadPending(roots).Count == 0,
+                "scanner_publish_completes_recovery_receipt_after_catalog_commit");
 
             IReadOnlyList<LibraryFrameListItem> items =
                 LibraryFrameListItems.From(host.Frames);

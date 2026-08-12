@@ -22,6 +22,7 @@ public enum ScannerFramePublishStatus
     InfraredApplied,
     InfraredSkipped,
     InfraredSourceUnreadable,
+    ReceiptWriteFailed,
     CatalogWriteFailed,
 }
 
@@ -52,6 +53,7 @@ public sealed class LibraryHostService : IDisposable
         new Dictionary<string, bool>();
     private int availabilityRefreshVersion;
     private LibraryDocument? document;
+    private StorageRootSet? storageRoots;
 
     public LibraryHostService(IUiDispatcher dispatcher)
         : this(dispatcher, new NativeDevelopExporterAdapter(), ReadSourceMetadata)
@@ -109,7 +111,9 @@ public sealed class LibraryHostService : IDisposable
         if (opened.Document is { } loaded)
         {
             document = loaded;
+            storageRoots = roots;
             State = LibraryHostState.Open;
+            RecoverScannerPublications();
             return State;
         }
 
@@ -225,6 +229,15 @@ public sealed class LibraryHostService : IDisposable
         InfraredDetectorParameters? parameters = null,
         DevelopRun? run = null)
     {
+        return PublishScannerFrame(scan, parameters, run, null);
+    }
+
+    private ScannerFramePublishResult PublishScannerFrame(
+        ScannerFrameImport scan,
+        InfraredDetectorParameters? parameters,
+        DevelopRun? run,
+        string? existingReceipt)
+    {
         ArgumentNullException.ThrowIfNull(scan);
         if (document is null)
         {
@@ -238,9 +251,25 @@ public sealed class LibraryHostService : IDisposable
                 CatalogStoreError.NotFound);
         }
 
+        string? receiptPath = existingReceipt;
+        if (receiptPath is null && storageRoots is not null &&
+            !ScannerPublicationReceiptStore.TrySchedule(storageRoots, scan, out receiptPath))
+        {
+            return new(
+                ScannerFramePublishStatus.ReceiptWriteFailed,
+                new FrameImportPlan([], [new FrameImportRejection(scan.VisiblePath, FrameImportRefusal.NoFiles)]),
+                null,
+                null,
+                CatalogStoreError.None);
+        }
+
         FrameImportPlan plan = FrameImport.PlanScanner(scan, document.Frames);
         if (plan.Rows.Count != 1)
         {
+            if (existingReceipt is not null && HasPublishedFrame(scan))
+            {
+                ScannerPublicationReceiptStore.Complete(existingReceipt);
+            }
             return new(ScannerFramePublishStatus.CatalogWriteFailed, plan, null, null,
                 CatalogStoreError.None);
         }
@@ -248,6 +277,10 @@ public sealed class LibraryHostService : IDisposable
         if (save != CatalogStoreError.None || added != 1)
         {
             return new(ScannerFramePublishStatus.CatalogWriteFailed, plan, null, null, save);
+        }
+        if (receiptPath is not null)
+        {
+            ScannerPublicationReceiptStore.Complete(receiptPath);
         }
         LibraryFrameSnapshot? frame = document.Frames.FirstOrDefault(
             candidate => candidate.Id == plan.Rows[0].Id);
@@ -284,6 +317,28 @@ public sealed class LibraryHostService : IDisposable
             infrared,
             CatalogStoreError.None);
     }
+
+    private void RecoverScannerPublications()
+    {
+        if (storageRoots is null || document is null)
+        {
+            return;
+        }
+
+        foreach ((string path, ScannerPublicationReceipt receipt) in
+                 ScannerPublicationReceiptStore.ReadPending(storageRoots))
+        {
+            _ = PublishScannerFrame(
+                new ScannerFrameImport(receipt.VisiblePath, receipt.InfraredPath, receipt.Process),
+                null,
+                null,
+                path);
+        }
+    }
+
+    private bool HasPublishedFrame(ScannerFrameImport scan) => document?.Frames.Any(
+        frame => string.Equals(frame.SourcePath, scan.VisiblePath, StringComparison.OrdinalIgnoreCase) &&
+                 string.Equals(frame.InfraredPath, scan.InfraredPath, StringComparison.OrdinalIgnoreCase)) == true;
 
     public CatalogStoreError Save() =>
         document is null ? CatalogStoreError.NotFound : document.Save();
