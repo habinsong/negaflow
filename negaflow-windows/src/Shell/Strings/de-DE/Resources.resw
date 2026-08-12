@@ -670,4 +670,6 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="cropAspectUnlocked.Value" xml:space="preserve"><value>Seitenverhältnis entsperrt</value><comment>AppLocalizedPhrase.cropAspectUnlocked</comment></data>
   <data name="libraryFolderFrameCount.Text" xml:space="preserve"><value>%d Bilder</value><comment>AppLocalizedPhrase.frameCountFormat</comment></data>
   <data name="libraryCollectionsEmpty.Text" xml:space="preserve"><value>Noch keine Sammlungen.</value></data>
+  <data name="developAutoColor.Content" xml:space="preserve"><value>Auto-Farbe</value><comment>AppLocalizedPhrase.autoColor</comment></data>
+  <data name="developAutoLevels.Content" xml:space="preserve"><value>Auto-Tonwertkorrektur</value><comment>AppLocalizedPhrase.autoLevels</comment></data>
 </root>

@@ -670,4 +670,6 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="cropAspectUnlocked.Value" xml:space="preserve"><value>Proportions du recadrage déverrouillées</value><comment>AppLocalizedPhrase.cropAspectUnlocked</comment></data>
   <data name="libraryFolderFrameCount.Text" xml:space="preserve"><value>%d images</value><comment>AppLocalizedPhrase.frameCountFormat</comment></data>
   <data name="libraryCollectionsEmpty.Text" xml:space="preserve"><value>Aucune collection pour l'instant.</value></data>
+  <data name="developAutoColor.Content" xml:space="preserve"><value>Couleur auto</value><comment>AppLocalizedPhrase.autoColor</comment></data>
+  <data name="developAutoLevels.Content" xml:space="preserve"><value>Niveaux auto</value><comment>AppLocalizedPhrase.autoLevels</comment></data>
 </root>

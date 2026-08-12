@@ -2250,6 +2250,21 @@ internal static class Program
             Check(panel.SetExposure(-99.0) == LibraryFrameError.None, "panel_set_low_exposure");
             Check(panel.Exposure == -5.0, "panel_clamps_low_exposure");
 
+            // 자동 보정 두 축은 음화에서만 열립니다. 양화에서도 켜지면 macOS 가 내지 않는
+            // 단계가 걸려 결과가 갈립니다.
+            Check(panel.ShowsAutoCorrections, "panel_negative_shows_auto_corrections");
+            Check(
+                panel.SetAutoLevels(true) == LibraryFrameError.None && panel.AutoLevels,
+                "panel_set_auto_levels");
+            Check(
+                panel.SetAutoNeutralBalance(true) == LibraryFrameError.None &&
+                panel.AutoNeutralBalance && panel.AutoLevels,
+                "panel_auto_corrections_are_independent");
+            Check(
+                panel.SetAutoLevels(false) == LibraryFrameError.None &&
+                !panel.AutoLevels && panel.AutoNeutralBalance,
+                "panel_clear_auto_levels_keeps_auto_colour");
+
             Check(panel.MaximumToneControl == 1.0, "panel_basic_tone_range_from_engine");
             Check(panel.SetContrast(-0.25) == LibraryFrameError.None && panel.Contrast == -0.25,
                 "panel_set_contrast");
@@ -2452,6 +2467,11 @@ internal static class Program
 
             Check(panel.Select("frame-3"), "panel_selects_positive_frame");
             Check(!panel.CanEditBase, "panel_positive_frame_cannot_edit_base");
+            Check(
+                !panel.ShowsAutoCorrections &&
+                panel.SetAutoLevels(true) == LibraryFrameError.InvalidDevelopRoute &&
+                panel.SetAutoNeutralBalance(true) == LibraryFrameError.InvalidDevelopRoute,
+                "panel_rejects_auto_corrections_for_positive_frame");
             Check(panel.SetManualBase(0.3, 0.3, 0.3) == LibraryFrameError.InvalidDevelopRoute,
                 "panel_rejects_manual_base_for_positive_frame");
             Check(panel.SetContrast(0.3) == LibraryFrameError.None,

@@ -670,4 +670,6 @@
   <data name="cropAspectUnlocked.Value" xml:space="preserve"><value>裁剪长宽比已解锁</value><comment>AppLocalizedPhrase.cropAspectUnlocked</comment></data>
   <data name="libraryFolderFrameCount.Text" xml:space="preserve"><value>%d 张</value><comment>AppLocalizedPhrase.frameCountFormat</comment></data>
   <data name="libraryCollectionsEmpty.Text" xml:space="preserve"><value>还没有收藏集。</value></data>
+  <data name="developAutoColor.Content" xml:space="preserve"><value>自动颜色</value><comment>AppLocalizedPhrase.autoColor</comment></data>
+  <data name="developAutoLevels.Content" xml:space="preserve"><value>自动色阶</value><comment>AppLocalizedPhrase.autoLevels</comment></data>
 </root>

@@ -670,4 +670,6 @@
   <data name="cropAspectUnlocked.Value" xml:space="preserve"><value>크롭 비율 해제</value><comment>AppLocalizedPhrase.cropAspectUnlocked</comment></data>
   <data name="libraryFolderFrameCount.Text" xml:space="preserve"><value>%d장</value><comment>AppLocalizedPhrase.frameCountFormat</comment></data>
   <data name="libraryCollectionsEmpty.Text" xml:space="preserve"><value>아직 컬렉션이 없습니다.</value></data>
+  <data name="developAutoColor.Content" xml:space="preserve"><value>자동 색상</value><comment>AppLocalizedPhrase.autoColor</comment></data>
+  <data name="developAutoLevels.Content" xml:space="preserve"><value>자동 레벨</value><comment>AppLocalizedPhrase.autoLevels</comment></data>
 </root>

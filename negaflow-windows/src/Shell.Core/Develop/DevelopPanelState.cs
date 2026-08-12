@@ -583,6 +583,50 @@ public sealed class DevelopPanelState
     public LibraryFrameError FlipVertically() =>
         SetImageTransform(ImageTransform with { FlipVertical = !ImageTransform.FlipVertical });
 
+    /// <summary>
+    /// 반전 직후에 걸리는 opt-in Auto Levels 입니다. macOS 는 음화 route 에서만 이 토글을
+    /// 내놓으므로, 양화에서 켜지지 않도록 여기서 막습니다.
+    /// </summary>
+    public LibraryFrameError SetAutoLevels(bool enabled) =>
+        SetAutoCorrection(enabled, neutralBalance: null);
+
+    /// <summary>Auto Neutral Balance 입니다. macOS 의 "자동 색상" 토글과 같은 자리입니다.</summary>
+    public LibraryFrameError SetAutoNeutralBalance(bool enabled) =>
+        SetAutoCorrection(autoLevels: null, neutralBalance: enabled);
+
+    /// <summary>macOS 와 같이 음화 route 에서만 자동 보정 토글을 보여 줍니다.</summary>
+    public bool ShowsAutoCorrections =>
+        SelectedFrame?.Route.FilmType is FilmType.ColorNegative or FilmType.BlackAndWhiteNegative;
+
+    public bool AutoLevels => SelectedFrame?.AutoLevels ?? false;
+
+    public bool AutoNeutralBalance => SelectedFrame?.AutoNeutralBalance ?? false;
+
+    private LibraryFrameError SetAutoCorrection(bool? autoLevels, bool? neutralBalance)
+    {
+        if (SelectedFrame is not { } frame)
+        {
+            return LibraryFrameError.MissingId;
+        }
+        if (!ShowsAutoCorrections)
+        {
+            return LibraryFrameError.InvalidDevelopRoute;
+        }
+
+        LibraryFrameError error = host.Edit(
+            frame.Id,
+            new LibraryFrameEdit(
+                frame.Tone,
+                frame.ManualBase,
+                AutoLevels: autoLevels ?? frame.AutoLevels,
+                AutoNeutralBalance: neutralBalance ?? frame.AutoNeutralBalance));
+        if (error == LibraryFrameError.None)
+        {
+            Select(frame.Id);
+        }
+        return error;
+    }
+
     public LibraryFrameError SetStraightenAngle(double angle) =>
         SetImageTransform(ImageTransform with { StraightenAngle = Math.Clamp(angle, -45.0, 45.0) });
 

@@ -524,6 +524,14 @@ public sealed partial class DevelopWorkspaceView : UserControl
         VignetteControl.Value = texture.Vignette;
         StraightenAngleControl.Value = panel.ImageTransform.StraightenAngle;
         CropAngleDialControl.Angle = panel.ImageTransform.StraightenAngle;
+        // macOS 는 음화에서만 두 토글을 냅니다. 양화에서는 자리째 사라집니다.
+        Visibility autoCorrections = panel.ShowsAutoCorrections
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        AutoColorToggle.Visibility = autoCorrections;
+        AutoLevelsToggle.Visibility = autoCorrections;
+        AutoColorToggle.IsChecked = panel.AutoNeutralBalance;
+        AutoLevelsToggle.IsChecked = panel.AutoLevels;
         UpdateCropAspectControls();
         HistogramView.SynchronizeValues(
             panel.Shadows,
@@ -1089,6 +1097,29 @@ public sealed partial class DevelopWorkspaceView : UserControl
                              autoAdjustCoordinator is not null;
         AutoToneButton.IsEnabled = canAutoAdjust;
         AutoWhiteBalanceButton.IsEnabled = canAutoAdjust;
+    }
+
+    private void OnAutoColorToggled(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (isSynchronizingInspector)
+        {
+            return;
+        }
+        UpdateImageTransform(state =>
+            state.SetAutoNeutralBalance(AutoColorToggle.IsChecked == true));
+    }
+
+    private void OnAutoLevelsToggled(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (isSynchronizingInspector)
+        {
+            return;
+        }
+        UpdateImageTransform(state => state.SetAutoLevels(AutoLevelsToggle.IsChecked == true));
     }
 
     private async void OnAutoToneClicked(object sender, RoutedEventArgs args)
@@ -1778,6 +1809,8 @@ public sealed partial class DevelopWorkspaceView : UserControl
         NoFrameLeftText.Text = noFrame;
         NoFrameInspectorText.Text = noFrame;
         DevelopHeaderText.Text = AppResources.Get("menuDevelop", "Text");
+        SetToggleText(AutoColorToggle, AppResources.Get("developAutoColor", "Content"));
+        SetToggleText(AutoLevelsToggle, AppResources.Get("developAutoLevels", "Content"));
         SetButtonText(AutoToneButton, AppResources.Get("developAutoTone", "Content"));
         SetButtonText(
             AutoWhiteBalanceButton,
@@ -1919,6 +1952,12 @@ public sealed partial class DevelopWorkspaceView : UserControl
     {
         button.Content = text;
         SetLocalizedNameAndTooltip(button, text);
+    }
+
+    private static void SetToggleText(ToggleButton toggle, string text)
+    {
+        toggle.Content = text;
+        SetLocalizedNameAndTooltip(toggle, text);
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs args)
