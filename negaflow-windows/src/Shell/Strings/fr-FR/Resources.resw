@@ -184,6 +184,14 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
     <value>Impossible de reconnecter la photo originale.</value>
     <comment>AppLocalizedText.libraryRelinkFailed</comment>
   </data>
+  <data name="libraryLocateFolder.Content" xml:space="preserve">
+    <value>Localiser le dossier</value>
+    <comment>AppLocalizedText.libraryLocateFolder</comment>
+  </data>
+  <data name="libraryFolderRelinkFailed.Text" xml:space="preserve">
+    <value>Impossible de reconnecter le dossier source.</value>
+    <comment>AppLocalizedText.libraryFolderRelinkFailed</comment>
+  </data>
   <data name="importImages.Content" xml:space="preserve">
     <value>Importer des images</value>
     <comment>AppLocalizedText.importImages</comment>

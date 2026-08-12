@@ -184,6 +184,14 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
     <value>Das Originalfoto konnte nicht erneut verbunden werden.</value>
     <comment>AppLocalizedText.libraryRelinkFailed</comment>
   </data>
+  <data name="libraryLocateFolder.Content" xml:space="preserve">
+    <value>Ordner suchen</value>
+    <comment>AppLocalizedText.libraryLocateFolder</comment>
+  </data>
+  <data name="libraryFolderRelinkFailed.Text" xml:space="preserve">
+    <value>Der Quellordner konnte nicht erneut verbunden werden.</value>
+    <comment>AppLocalizedText.libraryFolderRelinkFailed</comment>
+  </data>
   <data name="importImages.Content" xml:space="preserve">
     <value>Bilder importieren</value>
     <comment>AppLocalizedText.importImages</comment>

@@ -184,6 +184,14 @@ Load a scanner from Library to scan film.</value>
     <value>Could not reconnect the original photo.</value>
     <comment>AppLocalizedText.libraryRelinkFailed</comment>
   </data>
+  <data name="libraryLocateFolder.Content" xml:space="preserve">
+    <value>Locate Folder</value>
+    <comment>AppLocalizedText.libraryLocateFolder</comment>
+  </data>
+  <data name="libraryFolderRelinkFailed.Text" xml:space="preserve">
+    <value>Could not reconnect the source folder.</value>
+    <comment>AppLocalizedText.libraryFolderRelinkFailed</comment>
+  </data>
   <data name="importImages.Content" xml:space="preserve">
     <value>Import Photos</value>
     <comment>AppLocalizedText.importImages</comment>

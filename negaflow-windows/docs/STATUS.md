@@ -36,6 +36,16 @@ x64 Debug managed build passed Catalog 595 and Shell 375 assertions. The running
 inspected with a TIFF fixture: the folder section and all four view controls rendered. Real
 multi-folder import, relink, and a large offline catalog remain unverified.
 
+## 2026-08-12 Registered-folder relink
+
+Folder relink now updates both every rebased frame source and the matching registered folder in
+the same catalog write. The folder path changes only when the plan is complete and every requested
+source mapping passes the existing source-identity preflight; a failed catalog write restores both
+the frame payloads and folder rows in memory. The Library folder header exposes the native folder
+picker for registered sources. x64 Debug managed build passed Catalog 595 and Shell 377 assertions,
+including a moved registered folder with a TIFF source. The picker interaction and a simulated disk
+write failure remain unverified.
+
 ## 2026-08-12 Positive film develop route
 
 네이티브 엔진과 request factory가 이미 지원하던 Color/B&W positive film scan이 catalog `CanDevelop`

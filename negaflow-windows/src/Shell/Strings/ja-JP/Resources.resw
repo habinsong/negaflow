@@ -184,6 +184,14 @@
     <value>元の写真を再接続できませんでした。</value>
     <comment>AppLocalizedText.libraryRelinkFailed</comment>
   </data>
+  <data name="libraryLocateFolder.Content" xml:space="preserve">
+    <value>フォルダーを見つける</value>
+    <comment>AppLocalizedText.libraryLocateFolder</comment>
+  </data>
+  <data name="libraryFolderRelinkFailed.Text" xml:space="preserve">
+    <value>元のフォルダーを再接続できませんでした。</value>
+    <comment>AppLocalizedText.libraryFolderRelinkFailed</comment>
+  </data>
   <data name="importImages.Content" xml:space="preserve">
     <value>画像を読み込む</value>
     <comment>AppLocalizedText.importImages</comment>

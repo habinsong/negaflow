@@ -184,6 +184,14 @@
     <value>원본 사진을 다시 연결할 수 없습니다.</value>
     <comment>AppLocalizedText.libraryRelinkFailed</comment>
   </data>
+  <data name="libraryLocateFolder.Content" xml:space="preserve">
+    <value>폴더 찾기</value>
+    <comment>AppLocalizedText.libraryLocateFolder</comment>
+  </data>
+  <data name="libraryFolderRelinkFailed.Text" xml:space="preserve">
+    <value>원본 폴더를 다시 연결할 수 없습니다.</value>
+    <comment>AppLocalizedText.libraryFolderRelinkFailed</comment>
+  </data>
   <data name="importImages.Content" xml:space="preserve">
     <value>이미지 가져오기</value>
     <comment>AppLocalizedText.importImages</comment>

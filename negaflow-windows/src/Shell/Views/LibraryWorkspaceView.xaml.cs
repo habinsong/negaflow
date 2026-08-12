@@ -279,6 +279,46 @@ public sealed partial class LibraryWorkspaceView : UserControl
         }
     }
 
+    private async void OnLocateFolderClicked(object sender, RoutedEventArgs args)
+    {
+        _ = args;
+        if (libraryHost is null || importWindowId is null ||
+            sender is not Button { Tag: LibraryBrowserFolderSection { IsRegistered: true } section })
+        {
+            return;
+        }
+
+        Microsoft.Windows.Storage.Pickers.FolderPicker picker = new(importWindowId.Value)
+        {
+            CommitButtonText = AppResources.Get("libraryLocateFolder", "Content"),
+        };
+        try
+        {
+            Microsoft.Windows.Storage.Pickers.PickFolderResult? picked =
+                await picker.PickSingleFolderAsync();
+            if (picked is null)
+            {
+                return;
+            }
+
+            SourceRelinkPlan plan = SourceRelinkPlanner.FolderPlan(
+                section.Id,
+                picked.Path,
+                libraryHost.Frames);
+            if (!libraryHost.Relink(plan).IsSuccess)
+            {
+                ImportStatusText.Text = AppResources.Get("libraryFolderRelinkFailed", "Text");
+                return;
+            }
+            ShowLibrary(libraryHost, importWindowId.Value);
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or
+            NotSupportedException or ArgumentException or PathTooLongException)
+        {
+            ImportStatusText.Text = AppResources.Get("libraryFolderRelinkFailed", "Text");
+        }
+    }
+
     private void OnRootSizeChanged(object sender, SizeChangedEventArgs args)
     {
         _ = sender;

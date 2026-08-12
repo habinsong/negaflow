@@ -327,12 +327,10 @@ public sealed class LibraryDocument : IDisposable
                 continue;
             }
         }
-        if (mappings.Count == 0)
-        {
-            return new(0, 0, plan.Mappings.Count, CatalogStoreError.None);
-        }
-
         List<JsonObject> previousPayloads = payloads.Select(payload => payload).ToList();
+        IReadOnlyList<CatalogEntityRow> previousFolderRows = CloneRows(
+            retainedRows[CatalogEntityTable.Folders]);
+        int requestedSourceCount = mappings.Count;
         int updatedFrames = 0;
         int updatedSources = 0;
         int rejectedSources = 0;
@@ -399,11 +397,15 @@ public sealed class LibraryDocument : IDisposable
             ++updatedFrames;
         }
         rejectedSources += plan.Mappings.Count - updatedSources - rejectedSources;
-        if (updatedFrames == 0)
+        bool updatedFolder = RebaseRegisteredFolder(
+            plan,
+            allMappingsApplied: updatedSources == requestedSourceCount);
+        if (updatedFrames == 0 && !updatedFolder)
         {
             return new(0, 0, Math.Max(0, rejectedSources), CatalogStoreError.None);
         }
 
+        ProjectFolders();
         Project();
         CatalogStoreError saved = Save();
         if (saved == CatalogStoreError.None)
@@ -412,6 +414,8 @@ public sealed class LibraryDocument : IDisposable
         }
         payloads.Clear();
         payloads.AddRange(previousPayloads);
+        retainedRows[CatalogEntityTable.Folders] = previousFolderRows;
+        ProjectFolders();
         Project();
         return new(0, 0, Math.Max(0, rejectedSources), saved);
     }
@@ -542,6 +546,45 @@ public sealed class LibraryDocument : IDisposable
         }
         return rows;
     }
+
+    private bool RebaseRegisteredFolder(
+        SourceRelinkPlan plan,
+        bool allMappingsApplied)
+    {
+        if (!plan.IsComplete || !allMappingsApplied ||
+            !LibraryFolderRecord.TryNormalizePath(plan.OldFolderPath, out string oldRoot) ||
+            !LibraryFolderRecord.TryNormalizePath(plan.NewFolderPath, out string newRoot))
+        {
+            return false;
+        }
+
+        List<CatalogEntityRow> updatedRows = [];
+        bool changed = false;
+        foreach (CatalogEntityRow row in retainedRows[CatalogEntityTable.Folders])
+        {
+            if (LibraryFolderRecord.TryRead(row, out LibraryFolderSnapshot folder) &&
+                string.Equals(folder.SourcePath, oldRoot, StringComparison.OrdinalIgnoreCase))
+            {
+                updatedRows.Add(LibraryFolderRecord.Write(folder with { SourcePath = newRoot }));
+                changed = true;
+            }
+            else
+            {
+                updatedRows.Add(new CatalogEntityRow(row.Id, (JsonObject)row.Payload.DeepClone()));
+            }
+        }
+
+        if (changed)
+        {
+            retainedRows[CatalogEntityTable.Folders] = updatedRows;
+        }
+        return changed;
+    }
+
+    private static IReadOnlyList<CatalogEntityRow> CloneRows(
+        IReadOnlyList<CatalogEntityRow> rows) => rows
+        .Select(row => new CatalogEntityRow(row.Id, (JsonObject)row.Payload.DeepClone()))
+        .ToArray();
 
     private CatalogSnapshot CreateSnapshot(
         IReadOnlyList<CatalogEntityRow> frameRows,
