@@ -124,6 +124,12 @@ final class DiskStorageStore: ObservableObject {
         didSet { defaults.set(recentCreatedScanFolderPath, forKey: Keys.recentCreatedScanFolder) }
     }
     private var cleanedRawHistoryPaths: [String]
+    /// UserDefaults 에서 되읽는 동안의 대입은 "사용자가 폴더를 직접 골랐다"는 뜻이 아니다.
+    /// `@Published` 는 프로퍼티 래퍼라 일반 저장 프로퍼티와 달리 **init 안의 대입에서도 didSet 이
+    /// 돈다**. 이 표시가 없으면 예전에 지정해 둔 경로가 남아 있다는 이유만으로 실행할 때마다
+    /// activateCustomMode 가 저장 위치를 "커스텀"으로 바꾸고 그대로 저장해, 사용자가 고른
+    /// iCloud/데스크탑/특정 폴더가 매번 지워졌다.
+    private var isRestoringStoredPaths = true
 
     init(defaults: UserDefaults = .standard, fileManager: FileManager = .default) {
         self.defaults = defaults
@@ -146,6 +152,7 @@ final class DiskStorageStore: ObservableObject {
         for directory in cleanedRawKnownDirectories {
             CleanedRawCacheFile.registerDirectory(directory)
         }
+        isRestoringStoredPaths = false
     }
 
     /// 기본 루트: iCloud Drive/negaflow → (iCloud Drive 없음) ~/Documents/negaflow.
@@ -290,8 +297,11 @@ final class DiskStorageStore: ObservableObject {
         CleanedRawCacheFile.registerDirectory(cleanedRawURL)
     }
 
+    /// 사용자가 폴더를 직접 지정하면 저장 위치는 "커스텀"이 된다. 되읽기 중에는 적용하지 않는다
+    /// (isRestoringStoredPaths).
     private func activateCustomMode(for path: String?) {
-        guard let path, !path.isEmpty, locationMode != .custom else { return }
+        guard !isRestoringStoredPaths,
+              let path, !path.isEmpty, locationMode != .custom else { return }
         locationMode = .custom
     }
 
