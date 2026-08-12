@@ -92,18 +92,21 @@ byte-exact임을 고정했습니다. 대형 실제 촬영 TIFF batch의 process 
 지금 순서는 인화보다 라이브러리·현상 먼저입니다.
 
 끝난 것: 라이브러리 카드 격자와 썸네일 파이프라인(디스크 캐시 포함), 별점 catalog 왕복,
-필름스트립 프레임 선택, Develop crop canvas session. 상세는 `../STATUS.md` 2026-08-13 항목.
+필름스트립 프레임 선택, Develop crop canvas session, 라이브러리 헤더의 정렬·카드 크기·필터 줄,
+카드에서 현상으로 넘어가기, Develop 편집 탭의 종횡비와 잠금. 상세는 `../STATUS.md` 2026-08-13.
 
-**다음 한 걸음은 라이브러리 카드에서 현상으로 넘어가는 것입니다** — 카드를 두 번 누르면 그
-frame 이 선택된 채로 Develop 로 전환돼야 합니다. 지금은 두 화면이 각자 목록을 들고 있습니다.
+**다음 한 걸음**은 라이브러리 좌측 소스 목록입니다 — 지금은 가져오기·파일·컬렉션 아이콘만
+있고 폴더 트리와 컬렉션 내용이 없습니다. macOS `LibrarySourceSection`/`LibraryFolderTreeView`
+가 기준입니다.
 
 그 다음 순서:
 
-1. 라이브러리 헤더 — macOS 의 필터 메뉴, 정렬(이름/입력순/별점), 카드 크기 −/%/+.
-   `LibraryCardMetrics.Scale` 이 이미 그 자리를 비워 두고 있습니다.
-2. Develop 편집 탭의 나머지 — 회전 다이얼과 종횡비(잠금 포함). crop session 은
-   `lockedAspectRatio` 를 아직 받지 않습니다.
-3. 라이브러리 좌측 소스 목록(폴더/컬렉션/최근) — 지금은 아이콘만 있고 내용이 없습니다.
+1. crop 진입 시 나오는 각도 다이얼(macOS `CropAngleDial`). 각도 슬라이더는 이미 있고,
+   다이얼은 crop 모드에서만 보입니다.
+2. 아직 만들지 못한 세 필터 — 현재 롤, 미검증 프로파일, 메타데이터 미상. 각각
+   storage group/scan session, 스캐너 프로파일 검증 상태, source metadata snapshot 을
+   `LibraryFrameReader` 가 읽어야 합니다. 데이터 없이 토글만 만들지 않았습니다.
+3. Develop 좌측 탭(파일·필름·출력·프리셋·버전). 지금은 파일 목록 하나뿐입니다.
 
 썸네일에서 아직 확인하지 않은 것: 수백 장 라이브러리에서의 스크롤과 렌더 큐 실측입니다.
 지금 검증은 2장짜리 카탈로그에서 이뤄졌습니다.
