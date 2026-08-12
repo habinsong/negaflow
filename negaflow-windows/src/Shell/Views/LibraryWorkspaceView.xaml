@@ -28,20 +28,26 @@
                     x:Name="ImportRailButton"
                     AutomationProperties.AutomationId="negaflow.library.controls.importing"
                     Background="{ThemeResource NegaflowSelectionBrush}"
-                    Style="{StaticResource NegaflowSidebarButtonStyle}">
-                    <FontIcon FontSize="15" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" Glyph="&#xE896;" />
+                    Click="OnSourceRailClicked"
+                    Style="{StaticResource NegaflowSidebarButtonStyle}"
+                    Tag="Importing">
+                    <FontIcon x:Name="ImportRailIcon" FontSize="15" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" Glyph="&#xE896;" />
                 </Button>
                 <Button
                     x:Name="FilesRailButton"
                     AutomationProperties.AutomationId="negaflow.library.controls.files"
-                    Style="{StaticResource NegaflowSidebarButtonStyle}">
-                    <FontIcon FontSize="15" Glyph="&#xE8B7;" />
+                    Click="OnSourceRailClicked"
+                    Style="{StaticResource NegaflowSidebarButtonStyle}"
+                    Tag="Files">
+                    <FontIcon x:Name="FilesRailIcon" FontSize="15" Glyph="&#xE8B7;" />
                 </Button>
                 <Button
                     x:Name="CollectionsRailButton"
                     AutomationProperties.AutomationId="negaflow.library.controls.collections"
-                    Style="{StaticResource NegaflowSidebarButtonStyle}">
-                    <FontIcon FontSize="15" Glyph="&#xE8FD;" />
+                    Click="OnSourceRailClicked"
+                    Style="{StaticResource NegaflowSidebarButtonStyle}"
+                    Tag="Collections">
+                    <FontIcon x:Name="CollectionsRailIcon" FontSize="15" Glyph="&#xE8FD;" />
                 </Button>
             </StackPanel>
 
@@ -60,14 +66,14 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <FontIcon Grid.Column="0" Margin="0,0,7,0" VerticalAlignment="Center" FontSize="14" Glyph="&#xE896;" />
+                    <FontIcon x:Name="SourceHeaderIcon" Grid.Column="0" Margin="0,0,7,0" VerticalAlignment="Center" FontSize="14" Glyph="&#xE896;" />
                     <TextBlock x:Name="ImportHeaderText" Grid.Column="1" VerticalAlignment="Center" FontSize="14" FontWeight="SemiBold" />
-                    <TextBlock Grid.Column="2" VerticalAlignment="Center" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="0" />
+                    <TextBlock x:Name="SourceHeaderCountText" Grid.Column="2" VerticalAlignment="Center" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="0" />
                 </Grid>
 
                 <Border Grid.Row="1" Background="{ThemeResource NegaflowDividerBrush}" />
 
-                <ScrollViewer Grid.Row="2">
+                <ScrollViewer x:Name="ImportSourcePanel" Grid.Row="2">
                     <StackPanel Padding="12,14" Spacing="12">
                         <TextBlock x:Name="ImportSectionText" FontSize="13" FontWeight="SemiBold" />
                         <Border Padding="12" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="8">
@@ -80,6 +86,66 @@
                         </Border>
                     </StackPanel>
                 </ScrollViewer>
+
+                <!-- 파일 소스: 폴더를 펼쳐 그 안의 frame 이름까지 보이는 macOS 트리입니다. -->
+                <TreeView
+                    x:Name="FilesSourceTree"
+                    Grid.Row="2"
+                    Padding="4,6"
+                    AutomationProperties.AutomationId="negaflow.library.sources.files"
+                    CanDragItems="False"
+                    CanReorderItems="False"
+                    ItemInvoked="OnSourceTreeItemInvoked"
+                    SelectionMode="Single"
+                    Visibility="Collapsed">
+                    <TreeView.ItemTemplate>
+                        <DataTemplate x:DataType="TreeViewNode">
+                            <TreeViewItem
+                                AutomationProperties.Name="{Binding Content.Title, Mode=OneWay}"
+                                IsExpanded="{Binding IsExpanded, Mode=TwoWay}"
+                                ItemsSource="{Binding Children}">
+                                <Grid ColumnSpacing="6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon
+                                        FontSize="12"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        Glyph="{Binding Content.Glyph, Mode=OneWay}" />
+                                    <TextBlock
+                                        Grid.Column="1"
+                                        FontSize="12"
+                                        Text="{Binding Content.Title, Mode=OneWay}"
+                                        TextTrimming="CharacterEllipsis" />
+                                    <TextBlock
+                                        Grid.Column="2"
+                                        FontSize="11"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        Text="{Binding Content.Detail, Mode=OneWay}" />
+                                </Grid>
+                            </TreeViewItem>
+                        </DataTemplate>
+                    </TreeView.ItemTemplate>
+                </TreeView>
+
+                <StackPanel
+                    x:Name="CollectionsSourcePanel"
+                    Grid.Row="2"
+                    Padding="16,24"
+                    HorizontalAlignment="Center"
+                    Spacing="8"
+                    Visibility="Collapsed">
+                    <FontIcon FontSize="22" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE8FD;" />
+                    <TextBlock
+                        x:Name="CollectionsEmptyText"
+                        HorizontalAlignment="Center"
+                        FontSize="12"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        TextAlignment="Center"
+                        TextWrapping="Wrap" />
+                </StackPanel>
             </Grid>
         </Grid>
 

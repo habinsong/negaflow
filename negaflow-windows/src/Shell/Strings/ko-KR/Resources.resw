@@ -668,4 +668,6 @@
   <data name="cropAspectCustom.Text" xml:space="preserve"><value>사용자 정의</value><comment>AppLocalizedPhrase.custom</comment></data>
   <data name="cropAspectLocked.Value" xml:space="preserve"><value>크롭 비율 잠김</value><comment>AppLocalizedPhrase.cropAspectLocked</comment></data>
   <data name="cropAspectUnlocked.Value" xml:space="preserve"><value>크롭 비율 해제</value><comment>AppLocalizedPhrase.cropAspectUnlocked</comment></data>
+  <data name="libraryFolderFrameCount.Text" xml:space="preserve"><value>%d장</value><comment>AppLocalizedPhrase.frameCountFormat</comment></data>
+  <data name="libraryCollectionsEmpty.Text" xml:space="preserve"><value>아직 컬렉션이 없습니다.</value></data>
 </root>

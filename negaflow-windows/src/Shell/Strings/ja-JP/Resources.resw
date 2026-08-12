@@ -668,4 +668,6 @@
   <data name="cropAspectCustom.Text" xml:space="preserve"><value>カスタム</value><comment>AppLocalizedPhrase.custom</comment></data>
   <data name="cropAspectLocked.Value" xml:space="preserve"><value>縦横比をロックしました</value><comment>AppLocalizedPhrase.cropAspectLocked</comment></data>
   <data name="cropAspectUnlocked.Value" xml:space="preserve"><value>縦横比のロックを解除しました</value><comment>AppLocalizedPhrase.cropAspectUnlocked</comment></data>
+  <data name="libraryFolderFrameCount.Text" xml:space="preserve"><value>%dコマ</value><comment>AppLocalizedPhrase.frameCountFormat</comment></data>
+  <data name="libraryCollectionsEmpty.Text" xml:space="preserve"><value>コレクションはまだありません。</value></data>
 </root>

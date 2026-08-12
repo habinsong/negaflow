@@ -668,4 +668,6 @@
   <data name="cropAspectCustom.Text" xml:space="preserve"><value>自定</value><comment>AppLocalizedPhrase.custom</comment></data>
   <data name="cropAspectLocked.Value" xml:space="preserve"><value>裁剪长宽比已锁定</value><comment>AppLocalizedPhrase.cropAspectLocked</comment></data>
   <data name="cropAspectUnlocked.Value" xml:space="preserve"><value>裁剪长宽比已解锁</value><comment>AppLocalizedPhrase.cropAspectUnlocked</comment></data>
+  <data name="libraryFolderFrameCount.Text" xml:space="preserve"><value>%d 张</value><comment>AppLocalizedPhrase.frameCountFormat</comment></data>
+  <data name="libraryCollectionsEmpty.Text" xml:space="preserve"><value>还没有收藏集。</value></data>
 </root>

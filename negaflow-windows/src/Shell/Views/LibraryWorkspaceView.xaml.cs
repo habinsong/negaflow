@@ -26,6 +26,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
     private LibrarySortKey sortKey = LibrarySortKey.InputOrder;
     private bool sortAscending = true;
     private LibraryQuickFilterState quickFilters = LibraryQuickFilterState.None;
+    private LibrarySourceKind sourceKind = LibrarySourceKind.Importing;
     private bool isSynchronizingFilters;
 
     public LibraryWorkspaceView()
@@ -257,6 +258,133 @@ public sealed partial class LibraryWorkspaceView : UserControl
         }
         LibraryCountText.Text = projection.MatchedCount.ToString(CultureInfo.CurrentCulture);
         UpdateViewModeControls();
+        if (sourceKind == LibrarySourceKind.Files)
+        {
+            RebuildFilesSourceTree();
+        }
+    }
+
+    private void OnSourceRailClicked(object sender, RoutedEventArgs args)
+    {
+        _ = args;
+        if (sender is not Button { Tag: string value } ||
+            !Enum.TryParse(value, out LibrarySourceKind kind))
+        {
+            return;
+        }
+        sourceKind = kind;
+        UpdateSourcePanel();
+    }
+
+    /// <summary>
+    /// 왼쪽 소스를 바꿉니다. 가져오기·파일·컬렉션이 같은 자리를 나눠 쓰므로 셋 중 하나만
+    /// 보입니다 — macOS 도 이 자리를 겹쳐 씁니다.
+    /// </summary>
+    private void UpdateSourcePanel()
+    {
+        ImportSourcePanel.Visibility = sourceKind == LibrarySourceKind.Importing
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        FilesSourceTree.Visibility = sourceKind == LibrarySourceKind.Files
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        CollectionsSourcePanel.Visibility = sourceKind == LibrarySourceKind.Collections
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        (string headerKey, string glyph) = sourceKind switch
+        {
+            LibrarySourceKind.Files => ("libraryFiles", ""),
+            LibrarySourceKind.Collections => ("libraryCollections", ""),
+            _ => ("importSection", ""),
+        };
+        ImportHeaderText.Text = AppResources.Get(headerKey, headerKey == "importSection" ? "Text" : "Value");
+        SourceHeaderIcon.Glyph = glyph;
+        foreach ((Button button, FontIcon icon, LibrarySourceKind kind) in SourceRailButtons())
+        {
+            bool selected = kind == sourceKind;
+            button.Background = selected
+                ? (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["NegaflowSelectionBrush"]
+                : new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent);
+            icon.Foreground = selected
+                ? (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"]
+                : (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorPrimaryBrush"];
+            AutomationProperties.SetItemStatus(
+                button,
+                AppResources.Get(selected ? "selected" : "notSelected", "Value"));
+        }
+        if (sourceKind == LibrarySourceKind.Files)
+        {
+            RebuildFilesSourceTree();
+        }
+    }
+
+    private IEnumerable<(Button Button, FontIcon Icon, LibrarySourceKind Kind)> SourceRailButtons()
+    {
+        yield return (ImportRailButton, ImportRailIcon, LibrarySourceKind.Importing);
+        yield return (FilesRailButton, FilesRailIcon, LibrarySourceKind.Files);
+        yield return (CollectionsRailButton, CollectionsRailIcon, LibrarySourceKind.Collections);
+    }
+
+    /// <summary>
+    /// 폴더와 그 안의 frame 을 트리로 다시 만듭니다. 격자와 같은 투영을 쓰므로 필터·검색이
+    /// 걸리면 트리도 함께 줄어듭니다.
+    /// </summary>
+    private void RebuildFilesSourceTree()
+    {
+        FilesSourceTree.RootNodes.Clear();
+        if (libraryHost is null)
+        {
+            return;
+        }
+        LibraryBrowserProjection projection = LibraryBrowserProjector.Create(
+            quickFilters.Apply(
+                LibraryFrameListItems.Filter(allItems, LibrarySearchBox?.Text ?? string.Empty)),
+            libraryHost.Folders,
+            libraryHost.FolderAvailabilityById,
+            LibraryBrowserViewMode.Folders);
+        foreach (LibraryBrowserFolderSection section in projection.FolderSections)
+        {
+            var folder = new TreeViewNode
+            {
+                Content = LibrarySourceNode.Folder(
+                    section.Title,
+                    AppResources.FormatIntegers("libraryFolderFrameCount", "Text", section.Count)),
+            };
+            foreach (LibraryFrameListItem item in section.Items)
+            {
+                folder.Children.Add(new TreeViewNode
+                {
+                    Content = LibrarySourceNode.Frame(item.DisplayName, item.Id),
+                });
+            }
+            FilesSourceTree.RootNodes.Add(folder);
+        }
+        SourceHeaderCountText.Text = AppResources.FormatIntegers(
+            "libraryFolderFrameCount",
+            "Text",
+            projection.MatchedCount);
+    }
+
+    /// <summary>트리에서 frame 을 누르면 격자의 선택도 따라갑니다.</summary>
+    private void OnSourceTreeItemInvoked(TreeView sender, TreeViewItemInvokedEventArgs args)
+    {
+        _ = sender;
+        if (args.InvokedItem is not TreeViewNode { Content: LibrarySourceNode node } ||
+            node.FrameId is not { } frameId)
+        {
+            return;
+        }
+        foreach (object candidate in FrameListView.Items)
+        {
+            if (candidate is LibraryFrameListItem item &&
+                string.Equals(item.Id, frameId, StringComparison.Ordinal))
+            {
+                FrameListView.SelectedItem = item;
+                FrameListView.ScrollIntoView(item);
+                return;
+            }
+        }
     }
 
     private void OnFiltersToggled(object sender, RoutedEventArgs args)
@@ -714,6 +842,8 @@ public sealed partial class LibraryWorkspaceView : UserControl
         string import = AppResources.Get("importSection", "Text");
         ImportHeaderText.Text = import;
         ImportSectionText.Text = import;
+        CollectionsEmptyText.Text = AppResources.Get("libraryCollectionsEmpty", "Text");
+        UpdateSourcePanel();
         string importImages = AppResources.Get("importImages", "Content");
         SetButtonText(ImportImagesButton, importImages);
         SetButtonText(EmptyImportImagesButton, importImages);
