@@ -147,13 +147,23 @@ extension AppModel {
         // 물러난다.
         let previewArea = flatbedPreviewScanArea
         let detections = await Task.detached(priority: .userInitiated) { () -> [FlatbedFrameDetection] in
+            // 크기 후보는 프리뷰 파일이 스스로 밝히는 값(픽셀 ÷ 해상도)이 먼저다. 스캐너가
+            // 보고한 스캔 영역은 값이 비거나 기준이 달라 mm↔px 환산을 어긋나게 할 수 있고,
+            // 그러면 36×24mm 가 몇 px 인지가 틀려 아무것도 못 찾는다(실기: 35mm 3슬롯 프리뷰가
+            // 파일 해상도 기준으로는 17컷, 다른 크기로는 0컷).
+            var physicalSizes: [CGSize] = []
+            if let fileSize = FlatbedFrameGridDetector.physicalSizeMM(url: sourceURL) {
+                physicalSizes.append(fileSize)
+            }
             if let previewArea, previewArea.widthMM > 0, previewArea.heightMM > 0 {
+                physicalSizes.append(
+                    CGSize(width: previewArea.widthMM, height: previewArea.heightMM)
+                )
+            }
+            for size in physicalSizes {
                 let grid = FlatbedFrameGridDetector.detect(
                     url: sourceURL,
-                    physicalSize: CGSize(
-                        width: previewArea.widthMM,
-                        height: previewArea.heightMM
-                    ),
+                    physicalSize: size,
                     frameFormat: requestedFrameFormat
                 )
                 if !grid.isEmpty { return grid }
@@ -164,18 +174,19 @@ extension AppModel {
             )) ?? []
         }.value
 
+        // 경계에 걸친 컷은 프리뷰 안으로 잘라 쓰고, 망가진 것만 걸러낸다.
+        let usable = detections.compactMap(Self.usableFlatbedFrameDetection)
         guard requiredSessionID == nil || activeScanSessionID == requiredSessionID,
               scanFrameFormat == requestedFrameFormat,
               flatbedPreviewFrameID == frameID,
               flatbedPreviewFrame?.id == frameID,
               flatbedScanRegions.isEmpty,
               flatbedScanRegionRevision == regionRevision,
-              !detections.isEmpty,
-              detections.allSatisfy(Self.isValidFlatbedFrameDetection),
-              Set(detections.map { "\($0.row):\($0.column)" }).count == detections.count
+              !usable.isEmpty,
+              Set(usable.map { "\($0.row):\($0.column)" }).count == usable.count
         else { return }
 
-        let regions = detections
+        let regions = usable
             .sorted {
                 ($0.row, $0.column) < ($1.row, $1.column)
             }
@@ -358,25 +369,40 @@ extension AppModel {
             : flatbedScanRegions.last?.id
     }
 
-    private nonisolated static func isValidFlatbedFrameDetection(
+    /// 검출 하나가 프리뷰 밖으로 조금 삐져나왔다고 나머지까지 버리면 안 된다.
+    ///
+    /// 필름을 홀더에 어디까지 밀어 넣었느냐에 따라 슬롯의 마지막 컷이 스캔 영역 경계에
+    /// 걸치는 것은 정상이다. 예전에는 이 검사를 `allSatisfy` 로 걸어, 마지막 컷이 0.9mm
+    /// 넘친 것 하나 때문에 **제대로 찾은 18컷이 통째로 폐기**됐다(실측: 자동 검출이 아무
+    /// 프레임도 못 내놓는 증상의 원인). 걸친 컷은 프리뷰 안으로 잘라 넣고, 값 자체가
+    /// 망가졌거나 절반도 안 남는 것만 버린다.
+    nonisolated static func usableFlatbedFrameDetection(
         _ detection: FlatbedFrameDetection
-    ) -> Bool {
+    ) -> FlatbedFrameDetection? {
         let rect = detection.normalizedRect
-        return rect.minX.isFinite
-            && rect.minY.isFinite
-            && rect.width.isFinite
-            && rect.height.isFinite
-            && rect.minX >= 0
-            && rect.minY >= 0
-            && rect.maxX <= 1
-            && rect.maxY <= 1
-            && rect.width > 0
-            && rect.height > 0
-            && detection.straightenAngle.isFinite
-            && abs(detection.straightenAngle) <= 45
-            && detection.confidence.isFinite
-            && (0...1).contains(detection.confidence)
-            && detection.row >= 0
-            && detection.column >= 0
+        guard rect.minX.isFinite, rect.minY.isFinite,
+              rect.width.isFinite, rect.height.isFinite,
+              rect.width > 0, rect.height > 0,
+              detection.straightenAngle.isFinite,
+              abs(detection.straightenAngle) <= 45,
+              detection.confidence.isFinite,
+              (0...1).contains(detection.confidence),
+              detection.row >= 0,
+              detection.column >= 0 else { return nil }
+        // 안에 온전히 들어오면 그대로 쓴다 — intersection 은 같은 사각형에도 부동소수 오차를
+        // 남기므로(0.161 → 0.16099999999999998) 필요할 때만 자른다.
+        let unit = CGRect(x: 0, y: 0, width: 1, height: 1)
+        guard !unit.contains(rect) else { return detection }
+        let clamped = rect.intersection(unit)
+        guard !clamped.isNull, !clamped.isEmpty,
+              clamped.width >= rect.width * 0.5,
+              clamped.height >= rect.height * 0.5 else { return nil }
+        return FlatbedFrameDetection(
+            normalizedRect: clamped,
+            straightenAngle: detection.straightenAngle,
+            confidence: detection.confidence,
+            row: detection.row,
+            column: detection.column
+        )
     }
 }
