@@ -197,18 +197,6 @@ strength, medium, DPI를 append-only request로 전달하고 C# Interop이 같�
 사용합니다. x64 Debug `native.texture_stage`, `native.develop_export_abi`, Interop 187 assertions를 통과했습니다.
 실제 촬영 TIFF와 macOS-hosted pixel golden 비교는 아직 수행하지 않았습니다.
 
-## 2026-08-12 GrainMend 자동 복원 구조 보정 정렬
-
-Windows GrainMend의 자동 마스크 검출 뒤 RGB 복원을 독립 3×3 median에서
-`defect_component_repair` 구조 보정 경로로 교체했습니다. 이 경로는 macOS의
-`SoftwareDefectRemoval` 복원 계약과 같은 sRGB-encoded 작업 영역, 연결 성분,
-구조 방향, mask blend 및 source alpha 보존을 사용합니다. 자동 검출의 민감도,
-마스크, 타일 경계 및 preview/export 공통 적용 순서는 변경하지 않았습니다.
-
-x64 Debug 및 Release `native.grain_mend`가 통과했고, ARM64 Release test target은
-교차 빌드했습니다. ARM64 실제 실행과 macOS-hosted 실촬영 TIFF pixel golden 비교는
-아직 검증하지 않았습니다.
-
 ## 2026-08-12 GrainMend paired visible/IR detector native core
 
 최신 macOS 계약의 paired-plane 검출 코어를 Windows C++20에 추가했습니다. 결함 신호 우선 정수 정렬과
