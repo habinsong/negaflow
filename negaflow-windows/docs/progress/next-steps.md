@@ -98,8 +98,13 @@ byte-exact임을 고정했습니다. 대형 실제 촬영 TIFF batch의 process 
 
 아직 남은 하드코딩 영어 문자열은 **설정과 인화 화면**입니다(약 20곳). 현상 경로는 끝났습니다.
 
-**다음 한 걸음**은 Develop 좌측 탭입니다 — macOS 는 파일·필름·출력·프리셋·버전 다섯 탭인데
-Windows 는 파일 목록 하나뿐입니다. `develop_left_*.png` 다섯 장이 기준입니다.
+**다음 한 걸음**은 Develop 좌측 탭의 나머지입니다. 라이브러리와 출력 둘은 붙었고, macOS 의
+필름·프리셋·버전 세 탭이 남았습니다(`develop_left_film_tab.png`, `develop_left_presets_tab.png`,
+`develop_left_versions_tab.png`). 필름 탭은 route 에 따라 안내문만 내는 조건부 패널이고,
+프리셋과 버전은 catalog 에 아직 행이 없습니다.
+
+출력 패널에서 아직 만들지 않은 것: macOS 의 파일/품질/소스 하위 탭, 내보내기 설정 프리셋,
+그리고 빠른 내보내기 섹션(DPI·긴 변 픽셀·JPEG 품질). 지금은 파일 탭에 해당하는 것만 있습니다.
 
 그 다음 순서:
 

@@ -49,11 +49,18 @@ id 는 더 이상 표시 이름에서 파생되지 않으므로 언어를 바꿔
 셸에 setter 가 없어 아무도 켤 수 없었습니다. macOS 처럼 음화 route 에서만 토글을 내고,
 양화에서 켜려 하면 기록하지 않고 거부합니다.
 
+현상 왼쪽에 출력 소스가 붙었습니다. 지금까지 내보내기는 원본 옆에 `<원본>-negaflow.png` 하나만
+쓸 수 있었는데, 이제 형식(TIFF/PNG)·폴더·파일명 패턴을 정하고 실제 파일명을 미리 보고 내보냅니다.
+목적지 규칙은 `ExportDestination` 에 있어 창 없이 시험됩니다 — 폴더가 비면 원본 옆, 패턴이 비면
+원본 이름, 패턴 속 경로 문자는 치환합니다. 토큰은 `{name}` 하나만 냅니다(나머지는 projection 이
+읽지 않는 값이 필요합니다).
+
 **검증:** x64 Debug 로 실제 앱을 띄워 라이브러리 격자·소스 트리·현상 화면·필름스트립·crop
 모드를 UI Automation 으로 직접 조작해 확인했고, 실촬영 스캔(`negaflow-mac/.../Frame.tiff`,
 1.5MB 컬러 네거티브)을 가져와 360px 썸네일이 올바른 색으로 현상돼 디스크 캐시에 남는 것까지
-확인했습니다. x64 Release native CTest 65/65 통과, x64·ARM64 Release managed 그래프가 경고
-없이 빌드됐습니다. managed Shell 438 / Catalog 608 / Interop 191 assertion 통과.
+확인했습니다. 출력 패널에서 실촬영 프레임을 실제로 내보내 631×403 48bpp TIFF 가 나왔고 원본
+바이트 수는 그대로였습니다. x64 Release native CTest 65/65 통과, x64·ARM64 Release managed
+그래프가 경고 없이 빌드됐습니다. managed Shell 449 / Catalog 608 / Interop 191 assertion 통과.
 
 **아직 하지 않은 것:** ARM64 실제 실행(cross-build 는 실행 결과가 아닙니다), 대량(수백 장)
 라이브러리에서의 격자 스크롤·썸네일 렌더 큐 실측, 그리고 macOS 와의 썸네일 픽셀 비교.
