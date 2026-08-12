@@ -88,6 +88,7 @@ public sealed class LibraryDocument : IDisposable
     private readonly CatalogSession session;
     private readonly List<JsonObject> payloads;
     private readonly List<string> rowIds;
+    private readonly Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>> retainedRows;
     private readonly List<LibraryFrameSnapshot> frames = [];
     private readonly List<LibraryFrameIssue> issues = [];
     private readonly Dictionary<string, int> indexById = new(StringComparer.Ordinal);
@@ -99,11 +100,13 @@ public sealed class LibraryDocument : IDisposable
         CatalogSession session,
         List<string> rowIds,
         List<JsonObject> payloads,
+        Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>> retainedRows,
         string? activeRollId)
     {
         this.session = session;
         this.rowIds = rowIds;
         this.payloads = payloads;
+        this.retainedRows = retainedRows;
         this.activeRollId = activeRollId;
         Project();
     }
@@ -146,8 +149,21 @@ public sealed class LibraryDocument : IDisposable
             payloads.Add(row.Payload);
         }
 
+        Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>> retainedRows = [];
+        foreach (CatalogEntityTable table in CatalogEntityTables.All)
+        {
+            if (table == CatalogEntityTable.Frames)
+            {
+                continue;
+            }
+
+            retainedRows[table] = snapshot.Rows(table)
+                .Select(row => new CatalogEntityRow(row.Id, (JsonObject)row.Payload.DeepClone()))
+                .ToArray();
+        }
+
         return LibraryDocumentOpenResult.Success(
-            new LibraryDocument(session, rowIds, payloads, snapshot.ActiveRollId));
+            new LibraryDocument(session, rowIds, payloads, retainedRows, snapshot.ActiveRollId));
     }
 
     /// <summary>
@@ -232,12 +248,11 @@ public sealed class LibraryDocument : IDisposable
             rows.Add(new CatalogEntityRow(rowIds[index], payloads[index]));
         }
 
-        CatalogSnapshot snapshot = new(
-            activeRollId,
-            new Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>>
-            {
-                [CatalogEntityTable.Frames] = rows,
-            });
+        Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>> tables = new(retainedRows)
+        {
+            [CatalogEntityTable.Frames] = rows,
+        };
+        CatalogSnapshot snapshot = new(activeRollId, tables);
         return session.Write(snapshot).Error;
     }
 

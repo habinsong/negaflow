@@ -1109,6 +1109,7 @@ internal static class Program
 
             SeedFrames(roots);
             VerifyLibraryDocumentRoundTrip(roots);
+            VerifyLibraryDocumentPreservesNonFrameRows(roots);
             VerifyLibraryDocumentDefectProjection(isolatedBase);
         }
         finally
@@ -1262,6 +1263,47 @@ internal static class Program
         Check(
             reopened.Issues.Count == 1,
             "library_document_unreadable_record_survives_save");
+    }
+
+    private static void VerifyLibraryDocumentPreservesNonFrameRows(StorageRootSet roots)
+    {
+        Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>> tables = [];
+        foreach (CatalogEntityTable table in CatalogEntityTables.All)
+        {
+            tables[table] = table == CatalogEntityTable.Frames
+                ? [new CatalogEntityRow("frame-1", FrameRecord("frame-1", "IMG_0001.tif", 0.0))]
+                : [new CatalogEntityRow(
+                    $"{CatalogEntityTables.SqlName(table)}-1",
+                    new JsonObject { ["marker"] = CatalogEntityTables.SqlName(table) })];
+        }
+
+        using (CatalogSession seed = CatalogSession.Open(roots).Session!)
+        {
+            Check(seed.Write(new CatalogSnapshot("active-roll", tables)).IsSuccess,
+                "library_document_non_frame_seed");
+        }
+
+        using (LibraryDocument document = LibraryDocument.Open(roots).Document!)
+        {
+            Check(document.Edit(
+                    "frame-1",
+                    new LibraryFrameEdit(
+                        new ToneAdjustment(0.75, 0, 0, 0, 0, 0),
+                        new ManualBaseRgb(0.21, 0.22, 0.23))) == LibraryFrameError.None &&
+                  document.Save() == CatalogStoreError.None,
+                "library_document_non_frame_preserving_save");
+        }
+
+        using CatalogSession reader = CatalogSession.Open(roots).Session!;
+        CatalogReadResult read = reader.ReadOrCreate();
+        Check(
+            read.Snapshot is { } snapshot && snapshot.ActiveRollId == "active-roll" &&
+            CatalogEntityTables.All
+                .Where(table => table != CatalogEntityTable.Frames)
+                .All(table => snapshot.Rows(table).Count == 1 &&
+                    snapshot.Rows(table)[0].Payload["marker"]?.GetValue<string>() ==
+                    CatalogEntityTables.SqlName(table)),
+            "library_document_save_preserves_every_non_frame_table");
     }
 
     private static void VerifyLibraryHost()

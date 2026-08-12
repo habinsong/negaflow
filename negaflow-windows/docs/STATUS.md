@@ -2,6 +2,12 @@
 
 기준일: 2026-08-12
 
+## 2026-08-12 LibraryDocument catalog-table preservation
+
+`LibraryDocument.Save()` now retains every non-frame catalog table and the active roll while
+editing, importing, relinking, or writing a defect sidecar updates frames. x64 Debug managed
+build passed Catalog 595 and Shell 365 assertions.
+
 ## 2026-08-12 Positive film develop route
 
 네이티브 엔진과 request factory가 이미 지원하던 Color/B&W positive film scan이 catalog `CanDevelop`
