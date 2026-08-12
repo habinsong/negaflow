@@ -30,15 +30,24 @@ macOS `CropOverlay` 와 같습니다(0.45 dim, 1.5pt 흰 테두리·반경 2, 0.
 현재 롤·미검증 프로파일·메타데이터 미상 세 가지는 catalog projection 이 아직 읽지 않는 필드가
 필요해 만들지 않았습니다. 카드를 두 번 누르면 그 frame 을 들고 현상으로 넘어갑니다.
 
-Develop 편집 탭에 종횡비 줄이 붙었습니다. 17종 목록·순서가 macOS 와 같고, 고정 비율은 회전을
-반영해 가운데 정렬 최대 crop 을 만듭니다(`applyCropAspect` 와 같은 계산). 잠금이 켜져 있으면
-crop 드래그가 그 비율을 지킵니다.
+Develop 편집 탭에 종횡비 줄과 각도 다이얼이 붙었습니다. 종횡비는 17종 목록·순서가 macOS 와
+같고, 고정 비율은 회전을 반영해 가운데 정렬 최대 crop 을 만듭니다(`applyCropAspect` 와 같은
+계산). 잠금이 켜져 있으면 crop 드래그가 그 비율을 지킵니다. 다이얼은 macOS 처럼 crop 세션이
+열려 있을 때만 나오고 치수도 같습니다(지름 108·반지름 42, 15도 눈금, 두 번 눌러 0도).
 
-**검증:** x64 Debug 로 실제 앱을 띄워 라이브러리 격자와 현상 화면, 필름스트립을 확인했고,
-실촬영 스캔(`negaflow-mac/.../Frame.tiff`, 1.5MB 컬러 네거티브)을 가져와 360px 썸네일이 올바른
-색으로 현상돼 디스크 캐시에 남는 것까지 확인했습니다. managed Shell 428 / Catalog 608 assertion
-통과. **아직 하지 않은 것:** x64 Release 와 ARM64 cross-build, native CTest 전체, 대량(수백 장)
-라이브러리에서의 격자 스크롤·썸네일 큐 실측.
+라이브러리 왼쪽 세로 막대가 살아났습니다. 가져오기·파일·컬렉션이 같은 자리를 나눠 쓰고,
+파일은 등록 폴더와 그 안의 frame 을 펼치는 macOS 트리입니다. 격자와 같은 투영을 쓰므로 검색과
+빠른 필터가 트리도 함께 좁힙니다. 컬렉션은 catalog 에 아직 행이 없어 빈 상태만 보입니다.
+
+**검증:** x64 Debug 로 실제 앱을 띄워 라이브러리 격자·소스 트리·현상 화면·필름스트립·crop
+모드를 UI Automation 으로 직접 조작해 확인했고, 실촬영 스캔(`negaflow-mac/.../Frame.tiff`,
+1.5MB 컬러 네거티브)을 가져와 360px 썸네일이 올바른 색으로 현상돼 디스크 캐시에 남는 것까지
+확인했습니다. x64 Release native CTest 65/65 통과, x64·ARM64 Release managed 그래프가 경고
+없이 빌드됐습니다. managed Shell 438 / Catalog 608 / Interop 191 assertion 통과.
+
+**아직 하지 않은 것:** ARM64 실제 실행(cross-build 는 실행 결과가 아닙니다), 대량(수백 장)
+라이브러리에서의 격자 스크롤·썸네일 렌더 큐 실측, 그리고 macOS 와의 썸네일 픽셀 비교.
+지금 UI 검증은 2장짜리 카탈로그에서 이뤄졌습니다.
 
 ## 2026-08-12 JPEG/PNG standard-image import and develop
 

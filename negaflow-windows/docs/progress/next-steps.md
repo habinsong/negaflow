@@ -95,18 +95,20 @@ byte-exact임을 고정했습니다. 대형 실제 촬영 TIFF batch의 process 
 필름스트립 프레임 선택, Develop crop canvas session, 라이브러리 헤더의 정렬·카드 크기·필터 줄,
 카드에서 현상으로 넘어가기, Develop 편집 탭의 종횡비와 잠금. 상세는 `../STATUS.md` 2026-08-13.
 
-**다음 한 걸음**은 라이브러리 좌측 소스 목록입니다 — 지금은 가져오기·파일·컬렉션 아이콘만
-있고 폴더 트리와 컬렉션 내용이 없습니다. macOS `LibrarySourceSection`/`LibraryFolderTreeView`
-가 기준입니다.
+**다음 한 걸음**은 Develop 좌측 탭입니다 — macOS 는 파일·필름·출력·프리셋·버전 다섯 탭인데
+Windows 는 파일 목록 하나뿐입니다. `develop_left_*.png` 다섯 장이 기준입니다.
 
 그 다음 순서:
 
-1. crop 진입 시 나오는 각도 다이얼(macOS `CropAngleDial`). 각도 슬라이더는 이미 있고,
-   다이얼은 crop 모드에서만 보입니다.
-2. 아직 만들지 못한 세 필터 — 현재 롤, 미검증 프로파일, 메타데이터 미상. 각각
+1. 아직 만들지 못한 세 필터 — 현재 롤, 미검증 프로파일, 메타데이터 미상. 각각
    storage group/scan session, 스캐너 프로파일 검증 상태, source metadata snapshot 을
    `LibraryFrameReader` 가 읽어야 합니다. 데이터 없이 토글만 만들지 않았습니다.
-3. Develop 좌측 탭(파일·필름·출력·프리셋·버전). 지금은 파일 목록 하나뿐입니다.
+2. 폴더 그룹 머리줄의 현상 컨트롤 — macOS 는 폴더마다 process/target picker 와 "적용" 이
+   붙습니다(`LibraryFolderDevelopmentControls`).
+3. 라이브러리 카드의 나머지 겹침 — pick 깃발, 현상 중 진행률, 스택 배지.
+
+**주의:** `negaflow-windows/docs` 가 `.gitignore` 규칙에 걸려 있습니다. 이미 추적 중인 문서는
+계속 커밋되지만 **새 문서 파일은 `git add -f` 없이는 들어가지 않습니다.**
 
 썸네일에서 아직 확인하지 않은 것: 수백 장 라이브러리에서의 스크롤과 렌더 큐 실측입니다.
 지금 검증은 2장짜리 카탈로그에서 이뤄졌습니다.
