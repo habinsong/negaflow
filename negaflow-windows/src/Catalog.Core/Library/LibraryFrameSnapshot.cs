@@ -120,16 +120,23 @@ public sealed record LibraryFrameSnapshot(
     /// Auto는 native resolver가 입력에서 base를 결정하므로 수동 Dmin 없이 현상할 수 있습니다.
     /// Manual만 저장된 수동 base를 요구하고, 아직 resolver가 없는 Preset은 명시적으로 막습니다.
     /// </summary>
-    public bool CanDevelop => Route.IsDigitalSource
-        ? Route.FilmType is FilmType.ColorPositive or FilmType.BlackAndWhitePositive
-        : (Route.FilmType is FilmType.ColorNegative or FilmType.BlackAndWhiteNegative) &&
-          (Base.Mode switch
-          {
-              BaseEstimationMode.Auto => true,
-              BaseEstimationMode.Preset => !string.IsNullOrWhiteSpace(Base.FilmStockDminId),
-              BaseEstimationMode.Manual => ManualBase is not null,
-              _ => false,
-          });
+    public bool CanDevelop => Route.SourceSignalKind switch
+    {
+        SourceSignalKind.RenderedDigital =>
+            Route.FilmType is FilmType.ColorPositive or FilmType.BlackAndWhitePositive,
+        SourceSignalKind.FilmPositiveScan =>
+            Route.FilmType is FilmType.ColorPositive or FilmType.BlackAndWhitePositive,
+        SourceSignalKind.FilmNegativeScan =>
+            (Route.FilmType is FilmType.ColorNegative or FilmType.BlackAndWhiteNegative) &&
+            Base.Mode switch
+            {
+                BaseEstimationMode.Auto => true,
+                BaseEstimationMode.Preset => !string.IsNullOrWhiteSpace(Base.FilmStockDminId),
+                BaseEstimationMode.Manual => ManualBase is not null,
+                _ => false,
+            },
+        _ => false,
+    };
 
     public string EffectiveDisplayName =>
         string.IsNullOrWhiteSpace(DisplayName)

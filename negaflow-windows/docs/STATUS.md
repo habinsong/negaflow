@@ -2,6 +2,13 @@
 
 기준일: 2026-08-12
 
+## 2026-08-12 Positive film develop route
+
+네이티브 엔진과 request factory가 이미 지원하던 Color/B&W positive film scan이 catalog `CanDevelop`
+게이트에서 잘못 막히던 문제를 수정했습니다. 이제 positive scan은 Dmin/base와 inversion을 건너뛰고 같은
+preview/export 경로로 들어가며, 컬러 슬라이드의 GrainMend IR 자동 보정도 기존 색소 이미지 판정과 함께
+실제로 도달할 수 있습니다. x64 Debug Catalog 595, Shell 353 assertions를 통과했습니다.
+
 ## 2026-08-12 Output sharpening native core
 
 macOS `OutputSharpening`의 screen/matte/glossy 매체별 반경·강도와 DPI 제곱근 스케일을 Windows C++20

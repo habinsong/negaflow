@@ -1342,10 +1342,10 @@ internal static class Program
                 null,
                 SourceSignalKind.FilmPositiveScan,
                 FilmType.ColorPositive));
-            Check(!positive.CanDevelop, "library_item_positive_cannot_develop");
+            Check(positive.CanDevelop, "library_item_positive_can_develop");
             Check(
-                positive.Detail.Contains("Positive", StringComparison.OrdinalIgnoreCase),
-                "library_item_shows_positive_reason");
+                positive.Detail == @"C:\scans\IMG_0001.tif",
+                "library_item_positive_shows_source");
 
             LibraryFrameListItem digital = new(Frame(
                 null,

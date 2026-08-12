@@ -26,8 +26,6 @@ public sealed class LibraryFrameListItem
     /// </summary>
     public string Detail => Frame.CanDevelop
         ? Frame.SourcePath
-        : Frame.Route.FilmType is FilmType.ColorPositive or FilmType.BlackAndWhitePositive
-            ? "Positive film development is not supported"
         : Frame.Base.Mode == BaseEstimationMode.Preset &&
             string.IsNullOrWhiteSpace(Frame.Base.FilmStockDminId)
             ? "Film base stock is not set"

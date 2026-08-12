@@ -162,6 +162,9 @@ image가 IR을 막는 흑백 네거티브·포지티브는 거부합니다. scan
 companion IR 경로를 frame/catalog에 보존하고, durable RGB frame 뒤에 `RunFiles`를 호출합니다. 그 뒤 같은 입력의
 macOS-hosted mask·R16 attenuation·최종 pixel golden을 통과하기 전에는 GrainMend IR 완전 동등성을 주장하지 않습니다.
 
+Color/B&W positive film scan은 catalog `CanDevelop` 게이트까지 열어 Dmin/base를 건너뛰는 공통 preview/export와
+컬러 슬라이드 GrainMend IR 경로에 도달합니다. 실제 슬라이드 TIFF에서의 macOS pixel golden은 아직 남아 있습니다.
+
 최종 출력 선명화는 ABI 0.36/C# 공통 preview/export 경계까지 연결했습니다. 실제 촬영 TIFF의 macOS pixel golden과
 매체별 DPI 비교가 남아 있으며, 이 비교 전에는 최종 출력 선명화의 완전 동등성을 주장하지 않습니다.
 
