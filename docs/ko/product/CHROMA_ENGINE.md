@@ -305,5 +305,5 @@ PNG와 TIFF는 무손실이며 서브샘플링을 하지 않습니다. 화질을
 - `Sources/Chromabase/Imaging/`
 - `Sources/Chromabase/Export/`
 
-현재 제품 버전은 `1.0.7`입니다.
+현재 제품 버전은 `1.0.8`입니다.
 편집 기록과 프로파일 스키마는 이후 버전에서도 검증 절차를 거쳐 바꿉니다.
