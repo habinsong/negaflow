@@ -1298,6 +1298,30 @@ internal static class Program
             Check(host.Open(roots) == LibraryHostState.Open, "library_host_open");
             Check(host.Frames.Count == 1, "library_host_loads_frames");
 
+            string oldRelinkPath = Path.Combine(isolatedBase, "missing", "relink-source.tif");
+            string newRelinkPath = Path.Combine(isolatedBase, "recovered", "relink-source.tif");
+            Directory.CreateDirectory(Path.GetDirectoryName(oldRelinkPath)!);
+            Directory.CreateDirectory(Path.GetDirectoryName(newRelinkPath)!);
+            File.WriteAllBytes(oldRelinkPath, [4, 5, 6]);
+            Check(host.Import([oldRelinkPath], DevelopmentProcess.C41).Rows.Count == 1,
+                "library_relink_imports_source");
+            File.Move(oldRelinkPath, newRelinkPath);
+            SourceRelinkPlan? directRelink = SourceRelinkPlanner.FilePlan(
+                oldRelinkPath,
+                newRelinkPath);
+            Check(directRelink is not null, "library_relink_builds_direct_plan");
+            LibrarySourceRelinkResult relink = host.Relink(directRelink!);
+            Check(relink.IsSuccess && relink.UpdatedFrameCount == 1 &&
+                host.Frames.Any(frame => frame.SourcePath == newRelinkPath),
+                "library_relink_updates_catalog_source_atomically");
+            SourceRelinkPlan folderRelink = SourceRelinkPlanner.FolderPlan(
+                Path.Combine(isolatedBase, "missing"),
+                Path.Combine(isolatedBase, "recovered"),
+                [Frame(new ManualBaseRgb(0.2, 0.2, 0.2), sourcePath: oldRelinkPath)],
+                path => path == newRelinkPath);
+            Check(folderRelink.Mappings.Any(mapping => mapping.NewSourcePath == newRelinkPath),
+                "library_relink_preserves_relative_folder_path");
+
             // Scanner host는 artifact transaction을 끝낸 RGB/IR 쌍만 여기로 넘긴다. catalog
             // publication이 먼저 성공하고, IR decode 실패는 frame 자체를 되돌리거나 지우지 않는다.
             string scannedRgb = Path.Combine(isolatedBase, "published-rgb.tif");

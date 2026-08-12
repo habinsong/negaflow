@@ -23,6 +23,16 @@ Library의 두 Import Photos 버튼을 실제 Windows file picker와 기존 cata
 파일 접근 실패는 모든 지원 언어 리소스의 오류 문구로 표시합니다. x64 Debug managed build와 Catalog 595,
 Shell 355 assertions를 통과했습니다.
 
+## 2026-08-12 Library source relink core
+
+macOS `SourceRelinkPlan` 계약을 Windows catalog 경계에 추가했습니다. 단일 파일 또는 이전 폴더 기준의 상대 경로
+계획으로 원본을 다시 연결하며, folder 재연결은 존재하는 IR 동반 TIFF도 같은 상대 위치에서만 함께 옮깁니다.
+catalog 저장이 실패하면 메모리 projection도 이전 상태로 복구합니다. GrainMend source-bound sidecar가 있는 frame은
+새 원본의 byte count와 SHA-256이 기록된 identity와 같을 때만 연결하므로 다른 사진으로 defect recipe가 넘어가지
+않습니다. x64 Debug Catalog 595, Shell 359 assertions를 통과했습니다. offline frame에만 표시하는 Library의
+원본 찾기 버튼은 Windows picker를 통해 이 경로를 호출하며, UI는 6개 언어 리소스를 사용합니다. 직접 클릭 UI
+자동화는 아직 수행하지 않았습니다.
+
 ## 2026-08-12 Output sharpening native core
 
 macOS `OutputSharpening`의 screen/matte/glossy 매체별 반경·강도와 DPI 제곱근 스케일을 Windows C++20

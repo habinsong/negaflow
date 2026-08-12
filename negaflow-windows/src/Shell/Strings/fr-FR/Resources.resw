@@ -164,6 +164,14 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
     <value>Impossible d’importer les photos sélectionnées.</value>
     <comment>AppLocalizedText.libraryImportFailed</comment>
   </data>
+  <data name="libraryLocateOriginal.Content" xml:space="preserve">
+    <value>Localiser l’original</value>
+    <comment>AppLocalizedPhrase.locateOriginal</comment>
+  </data>
+  <data name="libraryRelinkFailed.Text" xml:space="preserve">
+    <value>Impossible de reconnecter la photo originale.</value>
+    <comment>AppLocalizedText.libraryRelinkFailed</comment>
+  </data>
   <data name="importImages.Content" xml:space="preserve">
     <value>Importer des images</value>
     <comment>AppLocalizedText.importImages</comment>

@@ -3,6 +3,7 @@
     x:Class="Negaflow.Shell.Views.LibraryWorkspaceView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Negaflow.Shell.Views.Controls"
     xmlns:primitives="using:Microsoft.UI.Xaml.Controls.Primitives">
     <Grid x:Name="Root" Background="{ThemeResource NegaflowWindowBrush}" SizeChanged="OnRootSizeChanged">
         <Grid.ColumnDefinitions>
@@ -159,6 +160,15 @@
                                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                         Text="{Binding Detail}"
                                         TextTrimming="CharacterEllipsis" />
+                                    <Button
+                                        x:Uid="libraryLocateOriginal"
+                                        Tag="{Binding}"
+                                        HorizontalAlignment="Left"
+                                        Padding="0"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Click="OnLocateOriginalClicked"
+                                        Visibility="{Binding IsSourceOffline, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                 </StackPanel>
                             </DataTemplate>
                         </ListView.ItemTemplate>

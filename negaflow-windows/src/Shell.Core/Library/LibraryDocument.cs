@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Security.Cryptography;
 using Negaflow.Catalog;
 
 namespace Negaflow.Shell;
@@ -63,6 +64,15 @@ public readonly record struct LibraryDefectRecipeWriteResult(
         FrameError == LibraryFrameError.None &&
         SidecarError == DefectSidecarError.None &&
         CatalogError == CatalogStoreError.None;
+}
+
+public readonly record struct LibrarySourceRelinkResult(
+    int UpdatedFrameCount,
+    int UpdatedSourceCount,
+    int RejectedSourceCount,
+    CatalogStoreError CatalogError)
+{
+    public bool IsSuccess => CatalogError == CatalogStoreError.None;
 }
 
 /// <summary>
@@ -231,6 +241,113 @@ public sealed class LibraryDocument : IDisposable
         return session.Write(snapshot).Error;
     }
 
+    /// <summary>
+    /// 원본 위치만 바꾸는 원자적 catalog 갱신입니다. source-bound defect sidecar가 있는 경우
+    /// 새 파일의 SHA-256까지 같아야 하므로, 다른 사진을 같은 경로에 연결하지 않습니다.
+    /// </summary>
+    public LibrarySourceRelinkResult Relink(SourceRelinkPlan plan)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        Dictionary<string, string> mappings = new(StringComparer.OrdinalIgnoreCase);
+        foreach (SourceRelinkMapping mapping in plan.Mappings)
+        {
+            if (!TryNormalizePath(mapping.OldSourcePath, out string oldPath) ||
+                !TryNormalizePath(mapping.NewSourcePath, out string newPath) ||
+                !File.Exists(newPath) ||
+                !mappings.TryAdd(oldPath, newPath))
+            {
+                continue;
+            }
+        }
+        if (mappings.Count == 0)
+        {
+            return new(0, 0, plan.Mappings.Count, CatalogStoreError.None);
+        }
+
+        List<JsonObject> previousPayloads = payloads.Select(payload => payload).ToList();
+        int updatedFrames = 0;
+        int updatedSources = 0;
+        int rejectedSources = 0;
+        HashSet<string> processed = new(StringComparer.OrdinalIgnoreCase);
+        foreach (LibraryFrameSnapshot frame in frames)
+        {
+            if (!TryNormalizePath(frame.SourcePath, out string oldPath) ||
+                !mappings.TryGetValue(oldPath, out string? newPath) ||
+                newPath is null || !CanReadFile(newPath))
+            {
+                continue;
+            }
+            if (processed.Add(oldPath))
+            {
+                DefectSourceIdentity? actual = null;
+                foreach (LibraryFrameSnapshot familyFrame in frames)
+                {
+                    if (!TryNormalizePath(familyFrame.SourcePath, out string familyPath) ||
+                        !string.Equals(familyPath, oldPath, StringComparison.OrdinalIgnoreCase) ||
+                        familyFrame.DefectRecipe?.SourceIdentity is not { } identity)
+                    {
+                        continue;
+                    }
+                    if (actual is null &&
+                        (!TryReadSourceIdentity(newPath, out DefectSourceIdentity measured) ||
+                         measured != identity))
+                    {
+                        mappings.Remove(oldPath);
+                        ++rejectedSources;
+                        break;
+                    }
+                    actual ??= identity;
+                    if (actual != identity)
+                    {
+                        mappings.Remove(oldPath);
+                        ++rejectedSources;
+                        break;
+                    }
+                }
+                if (!mappings.ContainsKey(oldPath))
+                {
+                    continue;
+                }
+                ++updatedSources;
+            }
+            if (!mappings.ContainsKey(oldPath) || !indexById.TryGetValue(frame.Id, out int index))
+            {
+                continue;
+            }
+
+            string? infrared = SourceRelinkPlanner.RelocateCompanion(frame.InfraredPath, plan);
+            if (infrared is not null && PathsEqual(newPath, infrared))
+            {
+                ++rejectedSources;
+                continue;
+            }
+            JsonObject updated = (JsonObject)payloads[index].DeepClone();
+            updated[LibraryFrameReader.SourcePathName] = newPath;
+            if (infrared is not null)
+            {
+                updated[LibraryFrameReader.InfraredPathName] = infrared;
+            }
+            payloads[index] = updated;
+            ++updatedFrames;
+        }
+        rejectedSources += plan.Mappings.Count - updatedSources - rejectedSources;
+        if (updatedFrames == 0)
+        {
+            return new(0, 0, Math.Max(0, rejectedSources), CatalogStoreError.None);
+        }
+
+        Project();
+        CatalogStoreError saved = Save();
+        if (saved == CatalogStoreError.None)
+        {
+            return new(updatedFrames, updatedSources, Math.Max(0, rejectedSources), saved);
+        }
+        payloads.Clear();
+        payloads.AddRange(previousPayloads);
+        Project();
+        return new(0, 0, Math.Max(0, rejectedSources), saved);
+    }
+
     public LibraryDefectRecipeWriteResult WriteDefectRecipe(
         string frameId,
         DefectRecipeSnapshot recipe)
@@ -339,4 +456,66 @@ public sealed class LibraryDocument : IDisposable
         node is JsonValue value &&
         value.TryGetValue(out bool hasEdits) &&
         hasEdits;
+
+    private static bool TryReadSourceIdentity(string path, out DefectSourceIdentity identity)
+    {
+        identity = default;
+        try
+        {
+            using FileStream stream = new(path, FileMode.Open, FileAccess.Read, FileShare.Read,
+                bufferSize: 128 * 1024, FileOptions.SequentialScan);
+            if (stream.Length <= 0)
+            {
+                return false;
+            }
+            identity = new DefectSourceIdentity(
+                checked((ulong)stream.Length),
+                Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant());
+            return true;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or
+            NotSupportedException or ArgumentException or PathTooLongException or OverflowException)
+        {
+            return false;
+        }
+    }
+
+    private static bool CanReadFile(string path)
+    {
+        try
+        {
+            using FileStream stream = new(path, FileMode.Open, FileAccess.Read, FileShare.Read,
+                bufferSize: 1, FileOptions.SequentialScan);
+            return stream.Length > 0;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or
+            NotSupportedException or ArgumentException or PathTooLongException)
+        {
+            return false;
+        }
+    }
+
+    private static bool TryNormalizePath(string path, out string normalized)
+    {
+        normalized = string.Empty;
+        if (string.IsNullOrWhiteSpace(path) || !Path.IsPathFullyQualified(path))
+        {
+            return false;
+        }
+        try
+        {
+            normalized = Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
+            return true;
+        }
+        catch (Exception error) when (error is ArgumentException or NotSupportedException or
+            PathTooLongException)
+        {
+            return false;
+        }
+    }
+
+    private static bool PathsEqual(string left, string right) =>
+        TryNormalizePath(left, out string normalizedLeft) &&
+        TryNormalizePath(right, out string normalizedRight) &&
+        string.Equals(normalizedLeft, normalizedRight, StringComparison.OrdinalIgnoreCase);
 }

@@ -164,6 +164,14 @@
     <value>无法导入所选照片。</value>
     <comment>AppLocalizedText.libraryImportFailed</comment>
   </data>
+  <data name="libraryLocateOriginal.Content" xml:space="preserve">
+    <value>定位原始照片</value>
+    <comment>AppLocalizedPhrase.locateOriginal</comment>
+  </data>
+  <data name="libraryRelinkFailed.Text" xml:space="preserve">
+    <value>无法重新连接原始照片。</value>
+    <comment>AppLocalizedText.libraryRelinkFailed</comment>
+  </data>
   <data name="importImages.Content" xml:space="preserve">
     <value>导入图像</value>
     <comment>AppLocalizedText.importImages</comment>

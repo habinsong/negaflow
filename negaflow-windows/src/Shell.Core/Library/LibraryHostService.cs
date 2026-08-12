@@ -200,6 +200,11 @@ public sealed class LibraryHostService : IDisposable
     public CatalogStoreError Save() =>
         document is null ? CatalogStoreError.NotFound : document.Save();
 
+    public LibrarySourceRelinkResult Relink(SourceRelinkPlan plan) =>
+        document is null
+            ? new(0, 0, plan?.Mappings.Count ?? 0, CatalogStoreError.NotFound)
+            : document.Relink(plan);
+
     /// <summary>
     /// 현상해서 파일로 씁니다. 네이티브 호출은 워커 스레드에서 돌고 결과는 dispatcher 를 거쳐
     /// 돌아옵니다. 자세한 계약은 <see cref="DevelopExportCoordinator"/> 를 보십시오.

@@ -164,6 +164,14 @@
     <value>선택한 사진을 가져올 수 없습니다.</value>
     <comment>AppLocalizedText.libraryImportFailed</comment>
   </data>
+  <data name="libraryLocateOriginal.Content" xml:space="preserve">
+    <value>원본 찾기</value>
+    <comment>AppLocalizedPhrase.locateOriginal</comment>
+  </data>
+  <data name="libraryRelinkFailed.Text" xml:space="preserve">
+    <value>원본 사진을 다시 연결할 수 없습니다.</value>
+    <comment>AppLocalizedText.libraryRelinkFailed</comment>
+  </data>
   <data name="importImages.Content" xml:space="preserve">
     <value>이미지 가져오기</value>
     <comment>AppLocalizedText.importImages</comment>

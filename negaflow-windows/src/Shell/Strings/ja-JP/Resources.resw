@@ -164,6 +164,14 @@
     <value>選択した写真を読み込めませんでした。</value>
     <comment>AppLocalizedText.libraryImportFailed</comment>
   </data>
+  <data name="libraryLocateOriginal.Content" xml:space="preserve">
+    <value>元の写真を探す</value>
+    <comment>AppLocalizedPhrase.locateOriginal</comment>
+  </data>
+  <data name="libraryRelinkFailed.Text" xml:space="preserve">
+    <value>元の写真を再接続できませんでした。</value>
+    <comment>AppLocalizedText.libraryRelinkFailed</comment>
+  </data>
   <data name="importImages.Content" xml:space="preserve">
     <value>画像を読み込む</value>
     <comment>AppLocalizedText.importImages</comment>

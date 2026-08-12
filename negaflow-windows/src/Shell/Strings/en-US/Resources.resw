@@ -164,6 +164,14 @@ Load a scanner from Library to scan film.</value>
     <value>Could not import the selected photos.</value>
     <comment>AppLocalizedText.libraryImportFailed</comment>
   </data>
+  <data name="libraryLocateOriginal.Content" xml:space="preserve">
+    <value>Locate Original</value>
+    <comment>AppLocalizedPhrase.locateOriginal</comment>
+  </data>
+  <data name="libraryRelinkFailed.Text" xml:space="preserve">
+    <value>Could not reconnect the original photo.</value>
+    <comment>AppLocalizedText.libraryRelinkFailed</comment>
+  </data>
   <data name="importImages.Content" xml:space="preserve">
     <value>Import Photos</value>
     <comment>AppLocalizedText.importImages</comment>

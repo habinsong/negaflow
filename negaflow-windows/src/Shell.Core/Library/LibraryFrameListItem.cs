@@ -34,6 +34,8 @@ public sealed class LibraryFrameListItem
             : "Dmin not set";
 
     public bool CanDevelop => Frame.CanDevelop;
+
+    public bool IsSourceOffline => !File.Exists(Frame.SourcePath);
 }
 
 public static class LibraryFrameListItems

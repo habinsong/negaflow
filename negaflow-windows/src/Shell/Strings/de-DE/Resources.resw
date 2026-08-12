@@ -164,6 +164,14 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
     <value>Die ausgewählten Fotos konnten nicht importiert werden.</value>
     <comment>AppLocalizedText.libraryImportFailed</comment>
   </data>
+  <data name="libraryLocateOriginal.Content" xml:space="preserve">
+    <value>Original suchen</value>
+    <comment>AppLocalizedPhrase.locateOriginal</comment>
+  </data>
+  <data name="libraryRelinkFailed.Text" xml:space="preserve">
+    <value>Das Originalfoto konnte nicht erneut verbunden werden.</value>
+    <comment>AppLocalizedText.libraryRelinkFailed</comment>
+  </data>
   <data name="importImages.Content" xml:space="preserve">
     <value>Bilder importieren</value>
     <comment>AppLocalizedText.importImages</comment>

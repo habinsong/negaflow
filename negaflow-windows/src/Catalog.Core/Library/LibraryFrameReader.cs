@@ -11,7 +11,7 @@ namespace Negaflow.Catalog;
 public static class LibraryFrameReader
 {
     internal const string IdName = "id";
-    internal const string SourcePathName = "rawScanPath";
+    public const string SourcePathName = "rawScanPath";
     public const string InfraredPathName = "infraredScanPath";
     internal const string DisplayNameName = "customDisplayName";
     internal const string ParametersName = "params";
