@@ -416,7 +416,10 @@ public sealed class LibraryHostService : IDisposable
 
     private static LibrarySourceMetadata? ReadSourceMetadata(string path)
     {
-        return NativeTiffSourceProbe.TryRead(path, out TiffSourceMetadata metadata)
+        bool read = IsStandardImagePath(path)
+            ? NativeStandardImageSourceProbe.TryRead(path, out TiffSourceMetadata metadata)
+            : NativeTiffSourceProbe.TryRead(path, out metadata);
+        return read
             ? new LibrarySourceMetadata(
                 metadata.FileBytes,
                 metadata.PixelWidth,
@@ -426,5 +429,13 @@ public sealed class LibraryHostService : IDisposable
                 metadata.SampleFormat,
                 metadata.Orientation)
             : null;
+    }
+
+    private static bool IsStandardImagePath(string path)
+    {
+        string extension = Path.GetExtension(path);
+        return string.Equals(extension, ".jpg", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(extension, ".jpeg", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(extension, ".png", StringComparison.OrdinalIgnoreCase);
     }
 }

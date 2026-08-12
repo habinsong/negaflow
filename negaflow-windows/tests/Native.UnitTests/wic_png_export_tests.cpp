@@ -1,17 +1,24 @@
 #include "negaflow/output/wic_png_export.h"
+#include "negaflow/imageio/wic_standard_image_decoder.h"
+#include "negaflow/imaging/scanner_to_working.h"
 #include "atomic_output_file.h"
 
 #include <Windows.h>
+#include <wincodec.h>
+#include <wrl/client.h>
 
+#include <array>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <iterator>
 #include <string>
+#include <vector>
 
 namespace {
 
 int failures = 0;
+using Microsoft::WRL::ComPtr;
 
 void expect(const bool condition, const char* const message) {
     if (!condition) {
@@ -121,6 +128,73 @@ void test_round_trip_and_publish(const std::filesystem::path& root) {
         !error && final_size == result.info.artifact_bytes && final_size > 0U,
         "published artifact size is verified");
     expect(!has_staging_file(root), "successful publish leaves no staging file");
+
+    const auto decoded = negaflow::imageio::decode_standard_image_with_wic(destination);
+    expect(
+        decoded.status == negaflow::imageio::WicStandardImageDecodeStatus::ok &&
+            decoded.image.width == 3U && decoded.image.height == 2U &&
+            decoded.image.layout == negaflow::imageio::DecodedPixelLayout::rgba16 &&
+            !decoded.image.icc_profile.empty(),
+        "published PNG decodes as standard image input with its profile");
+    const auto working = negaflow::imaging::convert_scanner_to_working(decoded.image);
+    expect(
+        working.status == negaflow::imaging::ScannerToWorkingStatus::ok &&
+            working.info.transform ==
+                negaflow::imaging::ScannerWorkingTransform::embedded_icc_windows_icm_srgb16 &&
+            working.image.pixels.size() == 6U,
+        "standard PNG reaches the linear working image");
+}
+
+void test_jpeg_standard_image_decode(const std::filesystem::path& root) {
+    const HRESULT apartment = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+    expect(SUCCEEDED(apartment), "COM apartment initializes for JPEG input test");
+    const std::filesystem::path destination = root / L"standard-input.jpg";
+    const std::array<std::uint8_t, 6U> pixels{{
+        24U, 72U, 220U,
+        220U, 72U, 24U,
+    }};
+    HRESULT status = E_FAIL;
+    ComPtr<IWICImagingFactory> factory{};
+    ComPtr<IWICStream> stream{};
+    ComPtr<IWICBitmapEncoder> encoder{};
+    ComPtr<IWICBitmapFrameEncode> frame{};
+    if (SUCCEEDED(apartment)) {
+        status = CoCreateInstance(
+            CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&factory));
+    }
+    if (SUCCEEDED(status)) status = factory->CreateStream(&stream);
+    if (SUCCEEDED(status)) status = stream->InitializeFromFilename(destination.c_str(), GENERIC_WRITE);
+    if (SUCCEEDED(status)) status = factory->CreateEncoder(GUID_ContainerFormatJpeg, nullptr, &encoder);
+    if (SUCCEEDED(status)) status = encoder->Initialize(stream.Get(), WICBitmapEncoderNoCache);
+    if (SUCCEEDED(status)) status = encoder->CreateNewFrame(&frame, nullptr);
+    if (SUCCEEDED(status)) status = frame->Initialize(nullptr);
+    if (SUCCEEDED(status)) status = frame->SetSize(2U, 1U);
+    WICPixelFormatGUID format = GUID_WICPixelFormat24bppBGR;
+    if (SUCCEEDED(status)) status = frame->SetPixelFormat(&format);
+    if (SUCCEEDED(status) && IsEqualGUID(format, GUID_WICPixelFormat24bppBGR) == FALSE) {
+        status = E_FAIL;
+    }
+    if (SUCCEEDED(status)) {
+        status = frame->WritePixels(1U, 6U, static_cast<UINT>(pixels.size()),
+            const_cast<std::uint8_t*>(pixels.data()));
+    }
+    if (SUCCEEDED(status)) status = frame->Commit();
+    if (SUCCEEDED(status)) status = encoder->Commit();
+    expect(SUCCEEDED(status), "a small WIC JPEG fixture is encoded");
+    factory.Reset();
+    stream.Reset();
+    encoder.Reset();
+    frame.Reset();
+    if (apartment == S_OK || apartment == S_FALSE) CoUninitialize();
+    if (FAILED(status)) return;
+
+    const auto decoded = negaflow::imageio::decode_standard_image_with_wic(destination);
+    expect(
+        decoded.status == negaflow::imageio::WicStandardImageDecodeStatus::ok &&
+            decoded.image.width == 2U && decoded.image.height == 1U &&
+            decoded.image.layout == negaflow::imageio::DecodedPixelLayout::rgba16 &&
+            decoded.image.icc_profile.empty(),
+        "an untagged JPEG decodes as a standard sRGB image input");
 }
 
 void test_existing_destination_is_preserved(const std::filesystem::path& root) {
@@ -264,6 +338,7 @@ void test_publish_race_preserves_winner(const std::filesystem::path& root) {
 int main() {
     const TempDirectory temporary{};
     test_round_trip_and_publish(temporary.path());
+    test_jpeg_standard_image_decode(temporary.path());
     test_existing_destination_is_preserved(temporary.path());
     test_preflight_failures_leave_no_file(temporary.path());
     test_failed_verification_discards_staging(temporary.path());

@@ -141,6 +141,29 @@ void test_linear_scanner_path() {
     }
 }
 
+void test_untagged_srgb_path() {
+    negaflow::imageio::DecodedImage decoded{};
+    decoded.width = 1U;
+    decoded.height = 1U;
+    decoded.stride_bytes = 6U;
+    decoded.layout = negaflow::imageio::DecodedPixelLayout::rgb16;
+    decoded.alpha_mode = negaflow::imageio::AlphaMode::opaque;
+    decoded.untagged_rgb_transfer =
+        negaflow::imageio::UntaggedRgbTransfer::srgb_encoded;
+    decoded.samples = {32'768U, 32'768U, 32'768U};
+
+    const auto result = negaflow::imaging::convert_scanner_to_working(decoded);
+    expect(
+        result.status == negaflow::imaging::ScannerToWorkingStatus::ok &&
+            result.info.transform ==
+                negaflow::imaging::ScannerWorkingTransform::untagged_srgb_to_linear,
+        "untagged standard image input uses the sRGB transfer");
+    expect(
+        result.image.pixels.size() == 1U && result.image.pixels[0].red > 0.21F &&
+            result.image.pixels[0].red < 0.22F,
+        "untagged standard image is not interpreted as linear scanner data");
+}
+
 void test_streamed_linear_scanner_path(const std::filesystem::path& root) {
     const std::filesystem::path path = root / L"linear-stream-lzw-rgb16.tiff";
     write_fixture(path, negaflow::test_fixtures::make_lzw_rgb16_rows_tiff(5U));
@@ -320,6 +343,7 @@ void test_embedded_icc_path(const std::filesystem::path& path) {
 int main(const int argument_count, const char* const arguments[]) {
     TempDirectory temporary{};
     test_linear_scanner_path();
+    test_untagged_srgb_path();
     test_streamed_linear_scanner_path(temporary.path());
     test_rejections();
     if (argument_count == 2) {

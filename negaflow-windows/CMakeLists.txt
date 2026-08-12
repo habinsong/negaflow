@@ -95,6 +95,7 @@ add_library(negaflow_imageio STATIC
     src/Native/imageio/decoded_image.cpp
     src/Native/imageio/image_content_hash.cpp
     src/Native/imageio/image_file_observation.cpp
+    src/Native/imageio/wic_standard_image_decoder.cpp
     src/Native/imageio/wic_tiff_decoder.cpp
 )
 target_include_directories(negaflow_imageio
@@ -395,7 +396,7 @@ if(BUILD_TESTING)
     )
     target_link_libraries(
         negaflow_wic_png_export_tests
-        PRIVATE negaflow_output negaflow_project_options
+        PRIVATE negaflow_output negaflow_imaging negaflow_project_options
     )
     target_include_directories(
         negaflow_wic_png_export_tests

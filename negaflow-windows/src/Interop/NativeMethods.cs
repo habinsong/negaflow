@@ -431,6 +431,12 @@ internal static partial class NativeMethods
         char* sourcePath,
         NativeTiffSourceInfoV1* result);
 
+    [LibraryImport(LibraryName, EntryPoint = "nf_probe_standard_image_source_v1")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static unsafe partial uint nf_probe_standard_image_source_v1(
+        char* sourcePath,
+        NativeStandardImageSourceInfoV1* result);
+
     [LibraryImport(LibraryName, EntryPoint = "nf_get_negative_limits_v1")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial uint nf_get_negative_limits_v1(ref NativeNegativeLimitsV1 output);

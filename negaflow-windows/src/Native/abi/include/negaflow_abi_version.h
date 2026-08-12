@@ -18,10 +18,11 @@
    proof on preview, 0.31 persisted IR attenuation replay, 0.32 IR item
    boundaries, 0.33 paired visible/IR detection, 0.34 paired TIFF ingestion, and
    0.35 flatbed frame-grid detection, 0.36 output sharpening, and 0.37 TIFF
-   source metadata probing, and 0.38 creative primary-calibration v27 preview/export.
+   source metadata probing, 0.38 creative primary-calibration v27 preview/export, and
+   0.39 JPEG/PNG source metadata probing.
    The managed loader
    refuses anything below the minor it actually calls, so an older engine fails at load
    instead of at the first missing entry point. */
 #define NF_ABI_VERSION_MAJOR 0U
-#define NF_ABI_VERSION_MINOR 38U
+#define NF_ABI_VERSION_MINOR 39U
 #define NF_ABI_VERSION ((NF_ABI_VERSION_MAJOR << 16U) | NF_ABI_VERSION_MINOR)

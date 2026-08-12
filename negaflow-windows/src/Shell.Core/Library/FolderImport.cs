@@ -114,6 +114,9 @@ public static class FolderImport
 
         string extension = Path.GetExtension(path);
         return string.Equals(extension, ".tif", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(extension, ".tiff", StringComparison.OrdinalIgnoreCase);
+            string.Equals(extension, ".tiff", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(extension, ".jpg", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(extension, ".jpeg", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(extension, ".png", StringComparison.OrdinalIgnoreCase);
     }
 }

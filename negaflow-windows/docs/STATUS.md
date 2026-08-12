@@ -2,6 +2,23 @@
 
 기준일: 2026-08-12
 
+## 2026-08-12 JPEG/PNG standard-image import and develop
+
+Library import, folder import, relink, and the Develop import picker now accept JPEG, PNG,
+and the existing TIFF scanner sources. TIFF remains on its strict read-only preflight and
+scanner-linear colour route. JPEG/PNG use a separate bounded WIC decoder: embedded ICC profiles
+go through Windows ICM, while untagged values are explicitly decoded from sRGB into the same
+linear working image consumed by preview and export. Non-opaque images are refused before a
+catalog path can change. ABI 0.39 adds a bounded JPEG/PNG source probe for import and relink;
+it exposes only normalized dimensions/layout/file traits, never pixel memory.
+
+x64 Release native CTest passed 65/65 and managed Catalog 605/Shell 416 assertions with no
+build warnings or errors. The focused Debug checks covered a WIC-generated JPEG, profiled PNG,
+standard-image source probe, actual common preview/export, and byte-exact source preservation.
+The full ARM64 Release native graph and managed Interop graph cross-built successfully, but were
+not run on ARM64 hardware. JPEG EXIF orientation is not applied yet; RAW/DNG/HEIC support and
+real-photo/macOS pixel comparisons remain pending.
+
 ## 2026-08-12 Scanner plugin host foundation
 
 Windows scanner adapters now have the first executable host boundary instead of only a design

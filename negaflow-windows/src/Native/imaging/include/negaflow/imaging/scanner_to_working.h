@@ -12,6 +12,7 @@ namespace negaflow::imaging {
 enum class ScannerWorkingTransform : std::uint8_t {
     none = 0,
     linear_scanner_raw,
+    untagged_srgb_to_linear,
     embedded_icc_windows_icm_srgb16,
 };
 
@@ -65,7 +66,8 @@ struct ScannerToWorkingResult final {
 
 // Scanner input policy:
 // - an embedded RGB ICC profile is honored through Windows ICM color management;
-// - an untagged 16-bit TIFF is explicitly interpreted as linear-sRGB scanner raw.
+// - untagged scanner TIFF is explicitly interpreted as linear-sRGB scanner raw;
+// - untagged standard desktop images are decoded as sRGB.
 [[nodiscard]] ScannerToWorkingResult convert_scanner_to_working(
     const negaflow::imageio::DecodedImage& decoded,
     const ScannerToWorkingLimits& limits = {}) noexcept;

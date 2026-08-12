@@ -316,6 +316,9 @@ public sealed partial class DevelopWorkspaceView : UserControl
         };
         picker.FileTypeFilter.Add(".tif");
         picker.FileTypeFilter.Add(".tiff");
+        picker.FileTypeFilter.Add(".jpg");
+        picker.FileTypeFilter.Add(".jpeg");
+        picker.FileTypeFilter.Add(".png");
 
         ImportButton.IsEnabled = false;
         try

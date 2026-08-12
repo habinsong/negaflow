@@ -122,6 +122,38 @@ constexpr std::uint32_t color_space_profile_signature = 0x73706163U;
     return ScannerToWorkingStatus::ok;
 }
 
+[[nodiscard]] ScannerToWorkingStatus decode_untagged_srgb_to_working(
+    const negaflow::imageio::DecodedImage& decoded,
+    WorkingImage& output) {
+    constexpr float u16_scale = 1.0F / 65'535.0F;
+    const std::size_t channels = negaflow::imageio::channel_count(decoded.layout);
+    const std::size_t source_stride = decoded.stride_bytes / sizeof(std::uint16_t);
+    output.width = decoded.width;
+    output.height = decoded.height;
+    output.stride_pixels = decoded.width;
+    output.pixels.resize(
+        static_cast<std::size_t>(decoded.width) * static_cast<std::size_t>(decoded.height));
+    for (std::uint32_t row = 0U; row < decoded.height; ++row) {
+        const std::uint16_t* const source =
+            decoded.samples.data() + static_cast<std::size_t>(row) * source_stride;
+        negaflow::core::Rgba32F* const destination =
+            output.pixels.data() + static_cast<std::size_t>(row) * output.stride_pixels;
+        for (std::uint32_t column = 0U; column < decoded.width; ++column) {
+            const std::size_t offset = static_cast<std::size_t>(column) * channels;
+            destination[column] = {
+                negaflow::color::srgb_encoded_to_linear(
+                    static_cast<float>(source[offset]) * u16_scale),
+                negaflow::color::srgb_encoded_to_linear(
+                    static_cast<float>(source[offset + 1U]) * u16_scale),
+                negaflow::color::srgb_encoded_to_linear(
+                    static_cast<float>(source[offset + 2U]) * u16_scale),
+                1.0F,
+            };
+        }
+    }
+    return ScannerToWorkingStatus::ok;
+}
+
 }  // namespace
 
 ScannerToWorkingStatus detail::validate_scanner_icc_profile(
@@ -157,9 +189,15 @@ ScannerToWorkingResult convert_scanner_to_working(
         }
 
         if (decoded.icc_profile.empty()) {
-            result.status = detail::convert_linear_scanner_raw(decoded, result.image);
+            result.status = decoded.untagged_rgb_transfer ==
+                    negaflow::imageio::UntaggedRgbTransfer::srgb_encoded
+                ? decode_untagged_srgb_to_working(decoded, result.image)
+                : detail::convert_linear_scanner_raw(decoded, result.image);
             if (result.status == ScannerToWorkingStatus::ok) {
-                result.info.transform = ScannerWorkingTransform::linear_scanner_raw;
+                result.info.transform = decoded.untagged_rgb_transfer ==
+                        negaflow::imageio::UntaggedRgbTransfer::srgb_encoded
+                    ? ScannerWorkingTransform::untagged_srgb_to_linear
+                    : ScannerWorkingTransform::linear_scanner_raw;
             }
             return result;
         }
@@ -245,6 +283,8 @@ const char* scanner_working_transform_name(const ScannerWorkingTransform transfo
             return "none";
         case ScannerWorkingTransform::linear_scanner_raw:
             return "linear_scanner_raw_to_linear_srgb_f32";
+        case ScannerWorkingTransform::untagged_srgb_to_linear:
+            return "untagged_srgb_to_linear_srgb_f32";
         case ScannerWorkingTransform::embedded_icc_windows_icm_srgb16:
             return "embedded_icc_via_windows_icm_srgb16_to_linear_srgb_f32";
     }

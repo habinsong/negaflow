@@ -26,9 +26,10 @@ internal static unsafe class NativeAbiReader
       // for reading paired scanner TIFFs directly into that detector, and 35 for
       // flatbed frame-grid detection with an owned result handle, and 36 for
       // output sharpening after the final image transform, 37 for TIFF source metadata
-      // preflight at import and relink, and 38 for creative primary calibration.
+      // preflight at import and relink, 38 for creative primary calibration, and 39 for
+      // JPEG/PNG source preflight at import and relink.
     // An engine below this is refused at load, not at the call.
-    internal const ushort MinimumMinor = 38;
+    internal const ushort MinimumMinor = 39;
 
     private const uint StatusOk = 0;
 

@@ -156,6 +156,9 @@ public sealed partial class LibraryWorkspaceView : UserControl
         };
         picker.FileTypeFilter.Add(".tif");
         picker.FileTypeFilter.Add(".tiff");
+        picker.FileTypeFilter.Add(".jpg");
+        picker.FileTypeFilter.Add(".jpeg");
+        picker.FileTypeFilter.Add(".png");
 
         ImportImagesButton.IsEnabled = false;
         EmptyImportImagesButton.IsEnabled = false;
@@ -256,6 +259,9 @@ public sealed partial class LibraryWorkspaceView : UserControl
         };
         picker.FileTypeFilter.Add(".tif");
         picker.FileTypeFilter.Add(".tiff");
+        picker.FileTypeFilter.Add(".jpg");
+        picker.FileTypeFilter.Add(".jpeg");
+        picker.FileTypeFilter.Add(".png");
 
         try
         {

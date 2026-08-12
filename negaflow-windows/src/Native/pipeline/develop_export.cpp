@@ -5,15 +5,23 @@
 #include "negaflow/core/pixel.h"
 #include "negaflow/core/pointwise.h"
 #include "negaflow/imaging/display_gamut_map.h"
+#include "negaflow/imageio/wic_standard_image_decoder.h"
 #include "negaflow/pipeline/film_look_workspace.h"
 
 #include <algorithm>
 #include <atomic>
+#include <cwchar>
 #include <stop_token>
 #include <utility>
 
 namespace negaflow::pipeline {
 namespace {
+
+[[nodiscard]] bool is_tiff_source(const std::filesystem::path& path) noexcept {
+    const std::wstring extension = path.extension().wstring();
+    return _wcsicmp(extension.c_str(), L".tif") == 0 ||
+           _wcsicmp(extension.c_str(), L".tiff") == 0;
+}
 
 [[nodiscard]] DevelopExportOutcome fail(
     const DevelopExportStage stage,
@@ -590,35 +598,62 @@ struct PreviewTarget final {
     decode_control.rows_per_copy = request.rows_per_copy;
     decode_control.stop_token = stop.get_token();
     decode_control.progress_observer = &decode_progress;
-    auto prepared = negaflow::imaging::decode_scanner_tiff_to_working_rows(
-        request.source,
-        {},
-        {},
-        decode_control);
-    if (prepared.decode.status == negaflow::imageio::WicTiffDecodeStatus::cancelled) {
-        return cancelled_outcome(DevelopExportStage::decode);
-    }
-    if (prepared.decode.status != negaflow::imageio::WicTiffDecodeStatus::ok) {
-        if (prepared.decode.status ==
-                negaflow::imageio::WicTiffDecodeStatus::row_sink_failed &&
-            prepared.working.status !=
-                negaflow::imaging::ScannerToWorkingStatus::invalid_argument) {
+    negaflow::imaging::WorkingImage decoded_image{};
+    if (is_tiff_source(request.source)) {
+        auto prepared = negaflow::imaging::decode_scanner_tiff_to_working_rows(
+            request.source,
+            {},
+            {},
+            decode_control);
+        if (prepared.decode.status == negaflow::imageio::WicTiffDecodeStatus::cancelled) {
+            return cancelled_outcome(DevelopExportStage::decode);
+        }
+        if (prepared.decode.status != negaflow::imageio::WicTiffDecodeStatus::ok) {
+            if (prepared.decode.status ==
+                    negaflow::imageio::WicTiffDecodeStatus::row_sink_failed &&
+                prepared.working.status !=
+                    negaflow::imaging::ScannerToWorkingStatus::invalid_argument) {
+                return fail(
+                    DevelopExportStage::decode,
+                    negaflow::imaging::scanner_to_working_status_name(
+                        prepared.working.status),
+                    prepared.working.info.native_error_code);
+            }
+            return fail(
+                DevelopExportStage::decode,
+                negaflow::imageio::wic_tiff_decode_status_name(prepared.decode.status));
+        }
+        if (prepared.working.status != negaflow::imaging::ScannerToWorkingStatus::ok) {
             return fail(
                 DevelopExportStage::decode,
                 negaflow::imaging::scanner_to_working_status_name(
                     prepared.working.status),
                 prepared.working.info.native_error_code);
         }
-        return fail(
-            DevelopExportStage::decode,
-            negaflow::imageio::wic_tiff_decode_status_name(prepared.decode.status));
-    }
-    if (prepared.working.status != negaflow::imaging::ScannerToWorkingStatus::ok) {
-        return fail(
-            DevelopExportStage::decode,
-            negaflow::imaging::scanner_to_working_status_name(
-                prepared.working.status),
-            prepared.working.info.native_error_code);
+        decoded_image = std::move(prepared.working.image);
+    } else {
+        const negaflow::imageio::WicStandardImageDecodeResult decoded =
+            negaflow::imageio::decode_standard_image_with_wic(
+                request.source,
+                {},
+                stop.get_token());
+        if (decoded.status == negaflow::imageio::WicStandardImageDecodeStatus::cancelled) {
+            return cancelled_outcome(DevelopExportStage::decode);
+        }
+        if (decoded.status != negaflow::imageio::WicStandardImageDecodeStatus::ok) {
+            return fail(
+                DevelopExportStage::decode,
+                negaflow::imageio::wic_standard_image_decode_status_name(decoded.status));
+        }
+        negaflow::imaging::ScannerToWorkingResult working =
+            negaflow::imaging::convert_scanner_to_working(decoded.image);
+        if (working.status != negaflow::imaging::ScannerToWorkingStatus::ok) {
+            return fail(
+                DevelopExportStage::decode,
+                negaflow::imaging::scanner_to_working_status_name(working.status),
+                working.info.native_error_code);
+        }
+        decoded_image = std::move(working.image);
     }
 
     const negaflow::imageio::ImageFileObservationResult after =
@@ -645,7 +680,7 @@ struct PreviewTarget final {
         DevelopExportStage::defect_component_repair,
         cost_of(defect_cost, !request.defect_recipe.order.empty()));
     DefectRecipeStageResult defect_recipe = apply_defect_recipe(
-        std::move(prepared.working.image),
+        std::move(decoded_image),
         request.defect_recipe);
     if (defect_recipe.status != DefectRecipeStageStatus::ok) {
         const DevelopExportStage stage = [&]() {
@@ -661,13 +696,13 @@ struct PreviewTarget final {
             stage,
             defect_recipe_stage_status_name(defect_recipe));
     }
-    prepared.working.image = std::move(defect_recipe.image);
+    decoded_image = std::move(defect_recipe.image);
     tracker.finish();
     if (tracker.cancelled()) {
         return cancelled_outcome(DevelopExportStage::defect_component_repair);
     }
 
-    const std::uint32_t decoded_width = prepared.working.image.width;
+    const std::uint32_t decoded_width = decoded_image.width;
     negaflow::imaging::WorkingFilmLookParameters film_look_parameters =
         request.film_look;
     film_look_parameters.monochrome =
@@ -702,7 +737,7 @@ struct PreviewTarget final {
          request.base_estimation_mode == NegativeBaseEstimationMode::preset)) {
         const negaflow::imaging::AutoNegativeBaseResult resolved =
             negaflow::imaging::resolve_auto_negative_base(
-                prepared.working.image,
+                decoded_image,
                 negative.film_type);
         if (resolved.status != negaflow::imaging::AutoNegativeBaseStatus::ok) {
             return fail(
@@ -752,7 +787,7 @@ struct PreviewTarget final {
 
     if (negative_source) {
         auto developed = negaflow::imaging::develop_manual_negative(
-            std::move(prepared.working.image),
+            std::move(decoded_image),
             negative);
         if (developed.status != negaflow::imaging::ManualNegativeDevelopStatus::ok) {
             if (developed.status ==
@@ -772,7 +807,7 @@ struct PreviewTarget final {
     } else {
         // Positive film scans and rendered-digital input are already positive
         // working images. Negative base and inversion do not participate.
-        developed_image = std::move(prepared.working.image);
+        developed_image = std::move(decoded_image);
     }
 
     tracker.finish();

@@ -4,5 +4,6 @@
     <AssemblyName>Negaflow.Interop</AssemblyName>
     <RootNamespace>Negaflow.Interop</RootNamespace>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DefaultItemExcludes>$(DefaultItemExcludes);out/**</DefaultItemExcludes>
   </PropertyGroup>
 </Project>
