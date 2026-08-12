@@ -295,7 +295,69 @@ final class FlatbedFrameGridDetectorTests: XCTestCase {
         }
     }
 
+    /// 한 컷의 매끈한 암부가 여백처럼 보여도 그 오차가 회귀선을 끌어 다른 컷까지 함께
+    /// 움직이면 안 된다. 실제 바다·하늘 프레임에서 한 경계 오차가 스트립 전체로 번졌다.
+    func testOneMisleadingFrameDoesNotShiftTheWholeStrip() {
+        let holder = makeHolder(
+            slotCount: 1,
+            framesPerSlot: 6,
+            gapFill: 0.28
+        ) { slot, frame, xMM, yMM in
+            if frame == 4, yMM < 7 {
+                return 0.045
+            }
+            return self.picture(slot: slot, frame: frame, xMM: xMM, yMM: yMM)
+        }
+        let found = FlatbedFrameGridDetector.detect(
+            preview: holder.preview,
+            frameFormat: .fullFrame35mm
+        )
+        XCTAssertEqual(found.count, 6)
+        let actual = topsMM(found)[0] ?? []
+        XCTAssertEqual(actual.count, holder.expectedTopsMM[0].count)
+        for (index, pair) in zip(actual, holder.expectedTopsMM[0]).enumerated() {
+            XCTAssertEqual(pair.0, pair.1, accuracy: 0.25, "컷 \(index) 위치")
+        }
+    }
+
     // MARK: - 규격
+
+    /// 검출기에 컷 수를 넘기지 않고, 실제 물리 길이에 들어간 만큼을 모든 지원 규격에서 찾는다.
+    /// 6×17처럼 이 평판 길이에 한 컷만 들어가는 경우는 주기 격자가 없으므로 기존 외곽선 검출
+    /// fallback이 담당하며, 앱 통합 포맷 행렬에서 별도로 검증한다.
+    func testFindsEverySupportedMultiFrameFormatWithoutAFrameCount() {
+        for (caseIndex, format) in FilmFrameFormat.allCases.enumerated() {
+            let gapMM = format.is35mm ? 2.0 : 4.0
+            let marginMM = 8.0
+            let availableMM = physical.height - marginMM * 2
+            let frameCount = Int(
+                ((availableMM + gapMM) / (format.stripWidthMM + gapMM)).rounded(.down)
+            )
+            guard frameCount >= 2 else { continue }
+
+            let holder = makeHolder(
+                slotCount: 1,
+                framesPerSlot: frameCount,
+                frameLengthMM: format.stripWidthMM,
+                frameWidthMM: format.stripHeightMM,
+                gapMM: gapMM,
+                slotPitchMM: format.stripHeightMM + 12,
+                leadingMM: marginMM,
+                stripTopMM: marginMM,
+                gapFill: caseIndex.isMultiple(of: 2) ? 0.92 : 0.02
+            )
+            let found = FlatbedFrameGridDetector.detect(
+                preview: holder.preview,
+                frameFormat: format
+            )
+            XCTAssertEqual(found.count, frameCount, format.displayName)
+            let actual = topsMM(found)[0] ?? []
+            XCTAssertEqual(actual.count, holder.expectedTopsMM[0].count, format.displayName)
+            for (position, expected) in zip(actual, holder.expectedTopsMM[0]) {
+                XCTAssertEqual(position, expected, accuracy: 2.5, format.displayName)
+            }
+        }
+    }
 
     func testFindsMediumFormatFrames() {
         let holder = makeHolder(

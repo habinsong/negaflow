@@ -67,7 +67,8 @@ extension FlatbedFrameGridDetector {
         ///
         /// 평탄한 여백만 보면 네거티브의 맑은 암부가 여백과 구별되지 않는다(실측에서 그 때문에
         /// 격자가 컷 한가운데에 섰다). 여백은 **양쪽에 단차가 있는** 평탄면이므로, 두 에지의
-        /// 기하평균을 함께 본다 — 한쪽이 미노광 컷이라 약해도 완전히 죽지는 않는다.
+        /// 기하평균을 함께 본다. 평탄함과 경계 쌍도 곱해야 한다 — 가중합이면 경계가 전혀 없는
+        /// 넓고 매끈한 하늘이 평탄함 하나만으로 실제 여백을 이긴다.
         func score(center: Double, half: Double) -> Double? {
             let lower = Int((center - half).rounded())
             let upper = Int((center + half).rounded())
@@ -75,7 +76,8 @@ extension FlatbedFrameGridDetector {
             let flat = (prefix[upper] - prefix[lower]) / Double(upper - lower)
             let leading = edge[max(0, min(count - 1, lower))]
             let trailing = edge[max(0, min(count - 1, upper - 1))]
-            return 0.5 * flat + 0.5 * (leading * trailing).squareRoot()
+            let edgePair = (leading * trailing).squareRoot()
+            return (max(flat, 0) * max(edgePair, 0)).squareRoot()
         }
     }
 
@@ -225,7 +227,14 @@ extension FlatbedFrameGridDetector {
                 // 2차 근거: 여백다움(평탄한 극값 + 양쪽 단차). 기하평균이라 경계 하나라도
                 // 빗나가면 크게 깎인다 — 우연히 두어 개만 맞은 격자가 이기지 못한다.
                 let plateau = Foundation.exp(plateauLog / Double(boundaries))
-                let score = (separation * 0.75 + plateau * 0.25) * coverage
+                // 두 근거를 **곱한다.** 가중합이면 한쪽이 크게 이겨 다른 쪽의 반대를 덮을 수
+                // 있고, 실제로 그렇게 반 컷 밀린 격자가 당선됐다(실측: 컷 가운데가 매끈한
+                // 바다·하늘 필름에서 매끈한 컷 중앙이 여백 행세를 해 대비가 오히려 높게
+                // 나왔다 — 대비 0.68/여백 0.31 인 가짜가 대비 0.62/여백 0.44 인 진짜를 이겼다).
+                // 곱은 "그림이 컷 안에 있다"와 "여기가 물리적 여백이다"가 **함께** 맞아야
+                // 점수가 나오므로, 어느 한쪽만 좋은 격자는 이기지 못한다. 필름 종류·홀더·
+                // 규격이 달라도 두 근거는 그대로 성립한다.
+                let score = (max(separation, 0) * max(plateau, 0)).squareRoot() * coverage
                 if best == nil || score > best!.score {
                     best = (score, pitch, phase, separation)
                 }
@@ -242,10 +251,9 @@ extension FlatbedFrameGridDetector {
         guard let fit = best, contrast >= gridEvidenceFloor else { return nil }
         let half = gapHalfWidth(pitch: fit.pitch, geometry: geometry)
 
-        // 경계마다 국소 보정한 **뒤 다시 등간격으로 맞춘다.** 보정값을 그대로 쓰면 컷마다
-        // ±1mm 씩 따로 움직여 같은 스트립의 피치가 37.5~38.7mm 로 흔들렸다(같은 필름을 두 번
-        // 스캔하면 결과가 달라지는 원인). 필름의 컷은 등간격이므로, 보정된 자리들에 직선을
-        // 맞춰 전체 수축과 위상만 흡수하고 개별 흔들림은 버린다.
+        // 경계마다 국소 보정한 뒤 스트립 전체의 기준선을 구한다. 최소제곱선부터 구하면 잘못
+        // 보정된 경계 하나가 기준선을 당겨 정상 프레임까지 같은 방향으로 움직인다. 먼저
+        // Theil-Sen 중앙값 선으로 이상치의 영향을 막고, 그 선 가까이에 있는 경계만 다시 맞춘다.
         let searchRadius = max(1.0, half * 0.9)
         var samples: [(index: Double, position: Double)] = []
         var index = 0
@@ -258,8 +266,9 @@ extension FlatbedFrameGridDetector {
             ))
             index += 1
         }
-        guard samples.count >= 2, let line = fitLine(samples) else { return nil }
-        // 한 경계가 크게 튀면(미노광 컷, 마스크 자국) 직선을 끌어당긴다. 한 번 걷어내고 다시 맞춘다.
+        guard samples.count >= 2, let line = robustLine(samples) else { return nil }
+        // 정상적인 국소 이송 오차는 해당 경계에만 반영한다. 기준선에서 크게 튄 경계는
+        // 미노광 컷이나 마스크 자국일 수 있으므로 버리고, 전체 스트립으로 오차를 전파하지 않는다.
         let tolerance = max(half * 0.6, 1)
         let kept = samples.filter { abs($0.position - (line.intercept + line.slope * $0.index)) <= tolerance }
         let refit = kept.count >= max(2, samples.count / 2) ? (fitLine(kept) ?? line) : line
@@ -267,8 +276,14 @@ extension FlatbedFrameGridDetector {
 
         // 첫 컷과 끝 컷의 바깥쪽 여백은 구획 밖에 있어 잴 수 없다. 가상 경계를 양끝에 세워
         // 두고, 그 컷을 실제로 내보낼지는 구획과 얼마나 겹치는지가 정한다.
-        let boundaries = (-1...(samples.count)).map {
-            refit.intercept + spacing * Double($0)
+        let measured = Dictionary(uniqueKeysWithValues: kept.compactMap { sample -> (Int, Double)? in
+            guard sample.position >= 0, sample.position <= length else { return nil }
+            let expected = refit.intercept + spacing * sample.index
+            guard abs(sample.position - expected) <= tolerance else { return nil }
+            return (Int(sample.index), sample.position)
+        })
+        let boundaries = (-1...(samples.count)).map { index in
+            measured[index] ?? (refit.intercept + spacing * Double(index))
         }
 
         return StripGrid(
@@ -297,6 +312,26 @@ extension FlatbedFrameGridDetector {
         guard denominator > 1e-9 else { return nil }
         let slope = numerator / denominator
         return (meanPosition - slope * meanIndex, slope)
+    }
+
+    /// 한두 경계가 잘못 보정돼도 기울기와 위상이 함께 끌려가지 않는 강건 직선.
+    private static func robustLine(
+        _ samples: [(index: Double, position: Double)]
+    ) -> (intercept: Double, slope: Double)? {
+        guard samples.count >= 2 else { return nil }
+        var slopes: [Double] = []
+        slopes.reserveCapacity(samples.count * (samples.count - 1) / 2)
+        for left in samples.indices {
+            for right in samples.indices where right > left {
+                let delta = samples[right].index - samples[left].index
+                guard abs(delta) > 1e-9 else { continue }
+                slopes.append((samples[right].position - samples[left].position) / delta)
+            }
+        }
+        guard !slopes.isEmpty else { return nil }
+        let slope = median(slopes)
+        let intercept = median(samples.map { $0.position - slope * $0.index })
+        return (intercept, slope)
     }
 
     private static func gapHalfWidth(pitch: Double, geometry: FrameGeometry) -> Double {
