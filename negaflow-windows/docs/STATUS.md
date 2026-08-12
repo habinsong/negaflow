@@ -16,6 +16,13 @@ macOS `e49c07c`와 같이 Library 검색창이 입력 문구를 한 값 안에�
 않습니다. 검색은 catalog를 다시 쓰거나 원본에 접근하지 않고, 현재 표시한 frame 목록만 즉시 좁힙니다. x64
 Debug managed build와 Catalog 595, Shell 355 assertions를 통과했습니다.
 
+## 2026-08-12 Library import activation
+
+Library의 두 Import Photos 버튼을 실제 Windows file picker와 기존 catalog import 경로에 연결했습니다. TIFF를
+여러 장 선택하면 catalog에 원자적으로 기록하고 현재 목록을 즉시 갱신합니다. 취소는 변경하지 않으며 picker나
+파일 접근 실패는 모든 지원 언어 리소스의 오류 문구로 표시합니다. x64 Debug managed build와 Catalog 595,
+Shell 355 assertions를 통과했습니다.
+
 ## 2026-08-12 Output sharpening native core
 
 macOS `OutputSharpening`의 screen/matte/glossy 매체별 반경·강도와 DPI 제곱근 스케일을 Windows C++20

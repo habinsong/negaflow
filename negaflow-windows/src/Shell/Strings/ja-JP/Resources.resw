@@ -160,6 +160,10 @@
     <value>複数のファイルを選ぶか、画像をウィンドウへドラッグしてください。</value>
     <comment>AppLocalizedText.importHint</comment>
   </data>
+  <data name="libraryImportFailed.Text" xml:space="preserve">
+    <value>選択した写真を読み込めませんでした。</value>
+    <comment>AppLocalizedText.libraryImportFailed</comment>
+  </data>
   <data name="importImages.Content" xml:space="preserve">
     <value>画像を読み込む</value>
     <comment>AppLocalizedText.importImages</comment>

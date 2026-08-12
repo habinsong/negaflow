@@ -160,6 +160,10 @@ Load a scanner from Library to scan film.</value>
     <value>Choose multiple files or drag images into the window.</value>
     <comment>AppLocalizedText.importHint</comment>
   </data>
+  <data name="libraryImportFailed.Text" xml:space="preserve">
+    <value>Could not import the selected photos.</value>
+    <comment>AppLocalizedText.libraryImportFailed</comment>
+  </data>
   <data name="importImages.Content" xml:space="preserve">
     <value>Import Photos</value>
     <comment>AppLocalizedText.importImages</comment>

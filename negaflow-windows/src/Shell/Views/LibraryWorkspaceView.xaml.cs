@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
+using Negaflow.Catalog;
 using Negaflow.Shell.Localization;
 
 namespace Negaflow.Shell.Views;
@@ -10,6 +11,8 @@ namespace Negaflow.Shell.Views;
 public sealed partial class LibraryWorkspaceView : UserControl
 {
     private WorkspacePresentationState? workspaceState;
+    private LibraryHostService? libraryHost;
+    private Microsoft.UI.WindowId? importWindowId;
     private bool isResizing;
     private double liveWidth = ShellLayoutMetrics.LibraryControlsDefaultWidth;
     private IReadOnlyList<LibraryFrameListItem> allItems = [];
@@ -33,10 +36,12 @@ public sealed partial class LibraryWorkspaceView : UserControl
     /// 라이브러리 내용을 보여 줍니다. **UI 스레드에서만** 부르십시오. WinUI 는 STA 이고
     /// 컨트롤은 그것을 만든 스레드가 소유합니다.
     /// </summary>
-    public void ShowLibrary(LibraryHostService host)
+    public void ShowLibrary(LibraryHostService host, Microsoft.UI.WindowId windowId)
     {
         ArgumentNullException.ThrowIfNull(host);
 
+        libraryHost = host;
+        importWindowId = windowId;
         allItems = LibraryFrameListItems.From(host.Frames);
         ShowFilteredItems();
 
@@ -62,6 +67,49 @@ public sealed partial class LibraryWorkspaceView : UserControl
             LibraryFrameListItems.Filter(allItems, LibrarySearchBox?.Text ?? string.Empty);
         FrameListView.ItemsSource = items;
         LibraryCountText.Text = items.Count.ToString(CultureInfo.CurrentCulture);
+    }
+
+    private async void OnImportClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (libraryHost is null || importWindowId is null)
+        {
+            return;
+        }
+
+        Microsoft.Windows.Storage.Pickers.FileOpenPicker picker = new(importWindowId.Value)
+        {
+            CommitButtonText = AppResources.Get("importSection", "Value"),
+        };
+        picker.FileTypeFilter.Add(".tif");
+        picker.FileTypeFilter.Add(".tiff");
+
+        ImportImagesButton.IsEnabled = false;
+        EmptyImportImagesButton.IsEnabled = false;
+        ImportStatusText.Text = string.Empty;
+        try
+        {
+            IReadOnlyList<Microsoft.Windows.Storage.Pickers.PickFileResult> picked =
+                await picker.PickMultipleFilesAsync();
+            List<string> paths = [];
+            foreach (Microsoft.Windows.Storage.Pickers.PickFileResult file in picked)
+            {
+                paths.Add(file.Path);
+            }
+            _ = libraryHost.Import(paths, DevelopmentProcess.C41);
+            ShowLibrary(libraryHost, importWindowId.Value);
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or
+            NotSupportedException or ArgumentException or PathTooLongException)
+        {
+            ImportStatusText.Text = AppResources.Get("libraryImportFailed", "Text");
+        }
+        finally
+        {
+            ImportImagesButton.IsEnabled = true;
+            EmptyImportImagesButton.IsEnabled = true;
+        }
     }
 
     private void OnRootSizeChanged(object sender, SizeChangedEventArgs args)

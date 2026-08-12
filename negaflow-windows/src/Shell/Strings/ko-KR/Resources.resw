@@ -160,6 +160,10 @@
     <value>여러 파일을 선택하거나 이미지를 창으로 드래그하세요.</value>
     <comment>AppLocalizedText.importHint</comment>
   </data>
+  <data name="libraryImportFailed.Text" xml:space="preserve">
+    <value>선택한 사진을 가져올 수 없습니다.</value>
+    <comment>AppLocalizedText.libraryImportFailed</comment>
+  </data>
   <data name="importImages.Content" xml:space="preserve">
     <value>이미지 가져오기</value>
     <comment>AppLocalizedText.importImages</comment>

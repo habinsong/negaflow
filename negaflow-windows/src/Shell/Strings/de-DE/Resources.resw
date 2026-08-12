@@ -160,6 +160,10 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
     <value>Wählen Sie mehrere Dateien oder ziehen Sie Bilder in das Fenster.</value>
     <comment>AppLocalizedText.importHint</comment>
   </data>
+  <data name="libraryImportFailed.Text" xml:space="preserve">
+    <value>Die ausgewählten Fotos konnten nicht importiert werden.</value>
+    <comment>AppLocalizedText.libraryImportFailed</comment>
+  </data>
   <data name="importImages.Content" xml:space="preserve">
     <value>Bilder importieren</value>
     <comment>AppLocalizedText.importImages</comment>

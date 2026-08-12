@@ -41,7 +41,10 @@ public sealed partial class WorkspaceShellView : UserControl
         LibraryWorkspace.Initialize(state);
         if (libraryHost is not null)
         {
-            LibraryWorkspace.ShowLibrary(libraryHost);
+            if (windowId is { } libraryWindowId)
+            {
+                LibraryWorkspace.ShowLibrary(libraryHost, libraryWindowId);
+            }
         }
         DevelopWorkspace.Initialize(state, nativeEngineStatus);
         Toolbar.QuickExportRequested += OnToolbarQuickExportRequested;

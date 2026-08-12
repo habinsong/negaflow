@@ -160,6 +160,10 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
     <value>Choisissez plusieurs fichiers ou glissez des images dans la fenêtre.</value>
     <comment>AppLocalizedText.importHint</comment>
   </data>
+  <data name="libraryImportFailed.Text" xml:space="preserve">
+    <value>Impossible d’importer les photos sélectionnées.</value>
+    <comment>AppLocalizedText.libraryImportFailed</comment>
+  </data>
   <data name="importImages.Content" xml:space="preserve">
     <value>Importer des images</value>
     <comment>AppLocalizedText.importImages</comment>

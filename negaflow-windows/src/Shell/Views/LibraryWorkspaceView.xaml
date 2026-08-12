@@ -68,7 +68,8 @@
                         <Border Padding="12" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="8">
                             <StackPanel Spacing="9">
                                 <TextBlock x:Uid="importHint" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
-                                <Button x:Name="ImportImagesButton" IsEnabled="False" />
+                                <Button x:Name="ImportImagesButton" Click="OnImportClicked" />
+                                <TextBlock x:Name="ImportStatusText" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -124,7 +125,7 @@
                 <StackPanel x:Name="EmptyLibraryPanel" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="9">
                     <FontIcon FontSize="34" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE8FD;" />
                     <TextBlock x:Uid="noImages" HorizontalAlignment="Center" FontSize="18" FontWeight="SemiBold" />
-                    <Button x:Name="EmptyImportImagesButton" HorizontalAlignment="Center" IsEnabled="False" />
+                    <Button x:Name="EmptyImportImagesButton" HorizontalAlignment="Center" Click="OnImportClicked" />
                 </StackPanel>
 
                 <Grid x:Name="LibraryContentPanel" Visibility="Collapsed">

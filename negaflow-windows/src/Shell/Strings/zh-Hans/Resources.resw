@@ -160,6 +160,10 @@
     <value>选择多个文件，或将图像拖入窗口。</value>
     <comment>AppLocalizedText.importHint</comment>
   </data>
+  <data name="libraryImportFailed.Text" xml:space="preserve">
+    <value>无法导入所选照片。</value>
+    <comment>AppLocalizedText.libraryImportFailed</comment>
+  </data>
   <data name="importImages.Content" xml:space="preserve">
     <value>导入图像</value>
     <comment>AppLocalizedText.importImages</comment>
