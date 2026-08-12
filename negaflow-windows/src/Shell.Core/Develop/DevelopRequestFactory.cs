@@ -213,6 +213,18 @@ public static class DevelopRequestFactory
             FilmEmulation = MapFilmEmulation(frame.Route.FilmEmulation),
             FilmEmulationIntensity = frame.Route.FilmEmulationIntensity,
             ImageTransform = MapImageTransform(frame.ImageTransform),
+            Grain = (float)frame.Texture.Grain,
+            Sharpness = (float)frame.Texture.Sharpness,
+            Halation = (float)frame.Texture.Halation,
+            Clarity = (float)frame.Texture.Clarity,
+            Vignette = (float)frame.Texture.Vignette,
+            NoiseReductionStrength = (float)frame.NoiseReduction.Strength,
+            NoiseReductionLuma = (float)frame.NoiseReduction.Luma,
+            NoiseReductionChroma = (float)frame.NoiseReduction.Chroma,
+            NoiseReductionDarkTone = (float)frame.NoiseReduction.DarkTone,
+            NoiseReductionDetail = (float)frame.NoiseReduction.Detail,
+            NoiseReductionGrainProtect = (float)frame.NoiseReduction.GrainProtect,
+            NoiseReductionFilmProfile = MapNoiseReductionFilmProfile(frame.Route.FilmType),
             DefectRegions = defectRegions,
             DefectInfrared = defectInfrared,
             DefectClones = defectClones,
@@ -248,6 +260,16 @@ public static class DevelopRequestFactory
             : null,
         StraightenAngle = transform.StraightenAngle,
     };
+
+    private static FilmScanDenoiseFilmProfile MapNoiseReductionFilmProfile(FilmType filmType) =>
+        filmType switch
+        {
+            FilmType.ColorNegative => FilmScanDenoiseFilmProfile.ColorNegative,
+            FilmType.ColorPositive => FilmScanDenoiseFilmProfile.ColorPositive,
+            FilmType.BlackAndWhiteNegative => FilmScanDenoiseFilmProfile.BlackAndWhiteNegative,
+            FilmType.BlackAndWhitePositive => FilmScanDenoiseFilmProfile.BlackAndWhitePositive,
+            _ => throw new ArgumentOutOfRangeException(nameof(filmType)),
+        };
 
     private static DevelopColorGradeRegion MapColorGradeRegion(ColorGradeRegionRecipe region) =>
         new((float)region.Hue, (float)region.Saturation, (float)region.Luminance);

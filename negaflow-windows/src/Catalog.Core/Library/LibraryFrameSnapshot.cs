@@ -55,6 +55,49 @@ public sealed record ImageTransformRecipe(
 }
 
 /// <summary>
+/// macOS의 Texture controls입니다. grain, sharpness, halation은 0...1이고 clarity와
+/// vignette는 부호 있는 조절값입니다.
+/// </summary>
+public sealed record TextureRecipe(
+    double Grain,
+    double Sharpness,
+    double Halation,
+    double Clarity,
+    double Vignette)
+{
+    public static TextureRecipe Identity { get; } = new(0.0, 0.0, 0.0, 0.0, 0.0);
+
+    public bool IsValid =>
+        IsNormalized(Grain) && IsNormalized(Sharpness) && IsNormalized(Halation) &&
+        IsSignedNormalized(Clarity) && IsSignedNormalized(Vignette);
+
+    private static bool IsNormalized(double value) =>
+        double.IsFinite(value) && value is >= 0.0 and <= 1.0;
+
+    private static bool IsSignedNormalized(double value) =>
+        double.IsFinite(value) && value is >= -1.0 and <= 1.0;
+}
+
+/// <summary>macOS FilmScanDenoise master와 다섯 축을 보존하는 recipe입니다.</summary>
+public sealed record NoiseReductionRecipe(
+    double Strength,
+    double Luma,
+    double Chroma,
+    double DarkTone,
+    double Detail,
+    double GrainProtect)
+{
+    public static NoiseReductionRecipe Identity { get; } = new(0.0, 0.5, 0.5, 0.5, 0.5, 0.0);
+
+    public bool IsValid =>
+        IsNormalized(Strength) && IsNormalized(Luma) && IsNormalized(Chroma) &&
+        IsNormalized(DarkTone) && IsNormalized(Detail) && IsNormalized(GrainProtect);
+
+    private static bool IsNormalized(double value) =>
+        double.IsFinite(value) && value is >= 0.0 and <= 1.0;
+}
+
+/// <summary>
 /// Immutable source traits recorded when a TIFF enters the catalog.  They make a relink
 /// refuse a different scan before its path can replace the original recipe input.
 /// </summary>
@@ -193,6 +236,10 @@ public sealed record LibraryFrameSnapshot(
 
     /// <summary>회전, 반전, 수평 및 crop은 preview와 export가 같은 recipe로 사용합니다.</summary>
     public ImageTransformRecipe ImageTransform { get; init; } = ImageTransformRecipe.Identity;
+
+    public TextureRecipe Texture { get; init; } = TextureRecipe.Identity;
+
+    public NoiseReductionRecipe NoiseReduction { get; init; } = NoiseReductionRecipe.Identity;
 
     /// <summary>
     /// hasDefectEdits frame에서 app-owned sidecar를 검증해 읽은 ordered recipe입니다.

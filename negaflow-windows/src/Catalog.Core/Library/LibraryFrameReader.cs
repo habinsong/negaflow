@@ -99,6 +99,17 @@ public static class LibraryFrameReader
     internal const string ImageTransformCropRectName = "cropRect";
     internal const string ImageTransformStraightenAngleName = "straightenAngle";
     internal const string ImageTransformCropAspectName = "cropAspect";
+    internal const string GrainName = "grain";
+    internal const string SharpnessName = "sharpness";
+    internal const string HalationName = "halation";
+    internal const string ClarityName = "clarity";
+    internal const string VignetteName = "vignette";
+    internal const string NoiseReductionName = "noiseReduction";
+    internal const string NoiseReductionLumaName = "noiseReductionLuma";
+    internal const string NoiseReductionChromaName = "noiseReductionChroma";
+    internal const string NoiseReductionDarkToneName = "noiseReductionDarkTone";
+    internal const string NoiseReductionDetailName = "noiseReductionDetail";
+    internal const string NoiseReductionGrainProtectName = "noiseReductionGrainProtect";
 
     public static LibraryFrameReadResult Read(JsonElement frameRecord)
     {
@@ -197,6 +208,14 @@ public static class LibraryFrameReader
         {
             return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidImageTransform);
         }
+        if (!TryReadTexture(parameters, out TextureRecipe texture))
+        {
+            return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidTexture);
+        }
+        if (!TryReadNoiseReduction(parameters, out NoiseReductionRecipe noiseReduction))
+        {
+            return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidNoiseReduction);
+        }
         if (!TryReadOptionalBoolean(parameters, AutoLevelsName, false, out bool autoLevels) ||
             !TryReadOptionalBoolean(
                 parameters,
@@ -238,7 +257,47 @@ public static class LibraryFrameReader
             AutoNeutralBalance = autoNeutralBalance,
             DevelopTarget = developTarget,
             ImageTransform = imageTransform,
+            Texture = texture,
+            NoiseReduction = noiseReduction,
         });
+    }
+
+    private static bool TryReadTexture(JsonElement parameters, out TextureRecipe texture)
+    {
+        texture = TextureRecipe.Identity;
+        if (!TryReadOptionalFiniteDouble(parameters, GrainName, 0.0, out double grain) ||
+            !TryReadOptionalFiniteDouble(parameters, SharpnessName, 0.0, out double sharpness) ||
+            !TryReadOptionalFiniteDouble(parameters, HalationName, 0.0, out double halation) ||
+            !TryReadOptionalFiniteDouble(parameters, ClarityName, 0.0, out double clarity) ||
+            !TryReadOptionalFiniteDouble(parameters, VignetteName, 0.0, out double vignette))
+        {
+            return false;
+        }
+        texture = new TextureRecipe(grain, sharpness, halation, clarity, vignette);
+        return texture.IsValid;
+    }
+
+    private static bool TryReadNoiseReduction(
+        JsonElement parameters,
+        out NoiseReductionRecipe noiseReduction)
+    {
+        noiseReduction = NoiseReductionRecipe.Identity;
+        if (!TryReadOptionalFiniteDouble(parameters, NoiseReductionName, 0.0, out double strength) ||
+            !TryReadOptionalFiniteDouble(parameters, NoiseReductionLumaName, 0.5, out double luma) ||
+            !TryReadOptionalFiniteDouble(parameters, NoiseReductionChromaName, 0.5, out double chroma) ||
+            !TryReadOptionalFiniteDouble(parameters, NoiseReductionDarkToneName, 0.5, out double darkTone) ||
+            !TryReadOptionalFiniteDouble(parameters, NoiseReductionDetailName, 0.5, out double detail) ||
+            !TryReadOptionalFiniteDouble(
+                parameters,
+                NoiseReductionGrainProtectName,
+                0.0,
+                out double grainProtect))
+        {
+            return false;
+        }
+        noiseReduction = new NoiseReductionRecipe(
+            strength, luma, chroma, darkTone, detail, grainProtect);
+        return noiseReduction.IsValid;
     }
 
     private static bool TryReadImageTransform(

@@ -30,6 +30,8 @@ public enum LibraryFrameError
     InvalidLocalDodgeBurn,
     InvalidColorModel,
     InvalidImageTransform,
+    InvalidTexture,
+    InvalidNoiseReduction,
     InvalidSceneCorrection,
     InvalidDevelopTarget,
     InvalidDefectRecipe,

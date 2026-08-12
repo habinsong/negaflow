@@ -245,6 +245,44 @@ internal static class Program
                 transformRequest.Request.ImageTransform.StraightenAngle == -1.25,
             "develop_request_carries_image_transform");
 
+        TextureRecipe texture = new(0.4, 0.5, 0.3, -0.2, 0.25);
+        NoiseReductionRecipe noiseReduction = new(0.6, 0.7, 0.4, 0.5, 0.8, 0.3);
+        DevelopRequestResult postProcessingRequest = DevelopRequestFactory.Create(
+            Frame(new ManualBaseRgb(0.21, 0.22, 0.23)) with
+            {
+                Texture = texture,
+                NoiseReduction = noiseReduction,
+            },
+            destination);
+        Check(
+            postProcessingRequest.IsSuccess &&
+                postProcessingRequest.Request?.Grain == 0.4f &&
+                postProcessingRequest.Request.Sharpness == 0.5f &&
+                postProcessingRequest.Request.Halation == 0.3f &&
+                postProcessingRequest.Request.Clarity == -0.2f &&
+                postProcessingRequest.Request.Vignette == 0.25f &&
+                postProcessingRequest.Request.NoiseReductionStrength == 0.6f &&
+                postProcessingRequest.Request.NoiseReductionLuma == 0.7f &&
+                postProcessingRequest.Request.NoiseReductionChroma == 0.4f &&
+                postProcessingRequest.Request.NoiseReductionDarkTone == 0.5f &&
+                postProcessingRequest.Request.NoiseReductionDetail == 0.8f &&
+                postProcessingRequest.Request.NoiseReductionGrainProtect == 0.3f &&
+                postProcessingRequest.Request.NoiseReductionFilmProfile ==
+                    FilmScanDenoiseFilmProfile.ColorNegative,
+            "develop_request_carries_texture_and_noise_reduction");
+        Check(
+            DevelopRequestFactory.Create(
+                Frame(
+                    null,
+                    signal: SourceSignalKind.FilmPositiveScan,
+                    filmType: FilmType.BlackAndWhitePositive) with
+                {
+                    NoiseReduction = noiseReduction,
+                },
+                destination).Request?.NoiseReductionFilmProfile ==
+                    FilmScanDenoiseFilmProfile.BlackAndWhitePositive,
+            "develop_request_derives_noise_profile_from_film_type");
+
         PointCurveRecipe pointCurves = new(
             [new PointCurvePoint(0.0, 0.0), new PointCurvePoint(0.5, 0.6), new PointCurvePoint(1.0, 1.0)],
             [new PointCurvePoint(0.25, 0.3)],

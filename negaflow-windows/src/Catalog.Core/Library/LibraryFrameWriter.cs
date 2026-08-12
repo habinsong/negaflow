@@ -16,7 +16,9 @@ public sealed record LibraryFrameEdit(
     bool? AutoLevels = null,
     bool? AutoNeutralBalance = null,
     DevelopTarget? DevelopTarget = null,
-    ImageTransformRecipe? ImageTransform = null);
+    ImageTransformRecipe? ImageTransform = null,
+    TextureRecipe? Texture = null,
+    NoiseReductionRecipe? NoiseReduction = null);
 
 /// <summary>
 /// 톤, 수동 base, 그리고 지정된 경우 base recipe를 갱신합니다. 입력 record 는 바꾸지 않고 깊은 복사본을 돌려주며, 이 writer 가
@@ -72,6 +74,14 @@ public static class LibraryFrameWriter
         if (edit.ImageTransform is { } imageTransform && !imageTransform.IsValid)
         {
             return LibraryFrameWriteResult.Failure(LibraryFrameError.InvalidImageTransform);
+        }
+        if (edit.Texture is { } texture && !texture.IsValid)
+        {
+            return LibraryFrameWriteResult.Failure(LibraryFrameError.InvalidTexture);
+        }
+        if (edit.NoiseReduction is { } noiseReduction && !noiseReduction.IsValid)
+        {
+            return LibraryFrameWriteResult.Failure(LibraryFrameError.InvalidNoiseReduction);
         }
 
         JsonObject updated = frameRecord.DeepClone().AsObject();
@@ -195,6 +205,24 @@ public static class LibraryFrameWriter
         if (edit.ImageTransform is { } imageTransformToWrite)
         {
             parameters[LibraryFrameReader.ImageTransformName] = WriteImageTransform(imageTransformToWrite);
+        }
+        if (edit.Texture is { } textureToWrite)
+        {
+            parameters[LibraryFrameReader.GrainName] = textureToWrite.Grain;
+            parameters[LibraryFrameReader.SharpnessName] = textureToWrite.Sharpness;
+            parameters[LibraryFrameReader.HalationName] = textureToWrite.Halation;
+            parameters[LibraryFrameReader.ClarityName] = textureToWrite.Clarity;
+            parameters[LibraryFrameReader.VignetteName] = textureToWrite.Vignette;
+        }
+        if (edit.NoiseReduction is { } noiseReductionToWrite)
+        {
+            parameters[LibraryFrameReader.NoiseReductionName] = noiseReductionToWrite.Strength;
+            parameters[LibraryFrameReader.NoiseReductionLumaName] = noiseReductionToWrite.Luma;
+            parameters[LibraryFrameReader.NoiseReductionChromaName] = noiseReductionToWrite.Chroma;
+            parameters[LibraryFrameReader.NoiseReductionDarkToneName] = noiseReductionToWrite.DarkTone;
+            parameters[LibraryFrameReader.NoiseReductionDetailName] = noiseReductionToWrite.Detail;
+            parameters[LibraryFrameReader.NoiseReductionGrainProtectName] =
+                noiseReductionToWrite.GrainProtect;
         }
 
         return LibraryFrameWriteResult.Success(updated);

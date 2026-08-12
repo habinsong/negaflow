@@ -2,6 +2,16 @@
 
 기준일: 2026-08-12
 
+## 2026-08-12 Develop post-processing recipe persistence
+
+The catalog and Shell now preserve and project macOS `grain`, `sharpness`, `halation`,
+`clarity`, `vignette`, and all six `noiseReduction*` controls into the existing common native
+FilmScanDenoise and Texture stages. The denoise profile is derived from the selected color/B&W
+and positive/negative film type instead of incorrectly defaulting to color negative. x64 Debug
+managed checks passed Catalog 605 and Shell 383 assertions; native `film_scan_denoise` and
+`texture_stage` passed 2/2. Transformed real TIFF and macOS pixel golden comparisons remain
+unverified.
+
 ## 2026-08-12 Develop image-transform recipe persistence
 
 The catalog now reads and writes the macOS `params.imageTransform` recipe (rotation, horizontal

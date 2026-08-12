@@ -1728,6 +1728,17 @@ internal static class Program
                     ["straightenAngle"] = 1.5,
                     ["cropAspect"] = 1.5,
                 },
+                ["grain"] = 0.35,
+                ["sharpness"] = 0.45,
+                ["halation"] = 0.20,
+                ["clarity"] = -0.15,
+                ["vignette"] = 0.25,
+                ["noiseReduction"] = 0.60,
+                ["noiseReductionLuma"] = 0.70,
+                ["noiseReductionChroma"] = 0.40,
+                ["noiseReductionDarkTone"] = 0.55,
+                ["noiseReductionDetail"] = 0.65,
+                ["noiseReductionGrainProtect"] = 0.30,
                 ["unknownAdjustment"] = new JsonObject { ["value"] = 7 },
             },
         };
@@ -1794,6 +1805,10 @@ internal static class Program
                 1.5,
                 1.5),
             "library_frame_image_transform_projection");
+        Check(frame.Texture == new TextureRecipe(0.35, 0.45, 0.20, -0.15, 0.25),
+            "library_frame_texture_projection");
+        Check(frame.NoiseReduction == new NoiseReductionRecipe(0.60, 0.70, 0.40, 0.55, 0.65, 0.30),
+            "library_frame_noise_reduction_projection");
         ColorGradingRecipe colorGrading = new(
             new ColorGradeRegionRecipe(45.0, 0.2, -0.1),
             new ColorGradeRegionRecipe(180.0, 0.4, 0.1),
@@ -1997,6 +2012,12 @@ internal static class Program
             ReadFrame(invalidImageTransform).Error == LibraryFrameError.InvalidImageTransform,
             "library_frame_rejects_out_of_bounds_crop");
 
+        JsonObject invalidNoiseReduction = FrameRecord();
+        invalidNoiseReduction["params"]!["noiseReductionDetail"] = 1.1;
+        Check(
+            ReadFrame(invalidNoiseReduction).Error == LibraryFrameError.InvalidNoiseReduction,
+            "library_frame_rejects_out_of_range_noise_reduction");
+
         JsonObject invalidPointCurveShape = FrameRecord();
         invalidPointCurveShape["params"]!["pointCurves"]!["rgb"] = new JsonObject();
         Check(
@@ -2108,6 +2129,21 @@ internal static class Program
             imageTransformWrite.IsSuccess &&
                 ReadFrame(imageTransformWrite.FrameRecord!).Frame?.ImageTransform == imageTransform,
             "library_frame_image_transform_write_round_trip");
+        TextureRecipe texture = new(0.25, 0.55, 0.15, 0.30, -0.20);
+        NoiseReductionRecipe noiseReduction = new(0.65, 0.75, 0.45, 0.60, 0.80, 0.35);
+        LibraryFrameWriteResult postProcessingWrite = LibraryFrameWriter.Apply(
+            original,
+            new LibraryFrameEdit(
+                edit.Tone,
+                edit.ManualBase,
+                Texture: texture,
+                NoiseReduction: noiseReduction));
+        Check(
+            postProcessingWrite.IsSuccess &&
+                ReadFrame(postProcessingWrite.FrameRecord!).Frame is { } postProcessingFrame &&
+                postProcessingFrame.Texture == texture &&
+                postProcessingFrame.NoiseReduction == noiseReduction,
+            "library_frame_post_processing_write_round_trip");
         Check(reread.Frame?.Base == new BaseRecipe(
                 BaseEstimationMode.Preset,
                 "kodak-portra-400",
