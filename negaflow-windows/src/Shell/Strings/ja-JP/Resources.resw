@@ -646,4 +646,6 @@
   <data name="developCropFull.Text" xml:space="preserve"><value>全体</value></data>
   <data name="developCropCancel.Text" xml:space="preserve"><value>キャンセル</value></data>
   <data name="developCropArea.Text" xml:space="preserve"><value>トリミング範囲</value></data>
+  <data name="rating.Value" xml:space="preserve"><value>評価</value></data>
+  <data name="ratingAccessibility.Value" xml:space="preserve"><value>評価 %d</value></data>
 </root>

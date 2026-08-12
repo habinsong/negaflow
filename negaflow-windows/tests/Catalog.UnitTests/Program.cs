@@ -1926,6 +1926,27 @@ internal static class Program
             reread.Frame.LocalDodgeBurn[1].Mask.Points.Count == 3,
             "library_frame_local_dodge_burn_round_trip");
 
+        LibraryFrameWriteResult ratingWrite = LibraryFrameWriter.Apply(
+            FrameRecord(),
+            new LibraryFrameEdit(ToneAdjustment.Neutral, null, Rating: 4));
+        LibraryFrameReadResult ratingRead = ratingWrite.FrameRecord is { } ratingRecord
+            ? ReadFrame(ratingRecord)
+            : default;
+        Check(
+            ratingWrite.IsSuccess && ratingRead.IsSuccess && ratingRead.Frame?.Rating == 4,
+            "library_frame_rating_round_trip");
+        Check(
+            ReadFrame(FrameRecord()).Frame?.Rating == 0,
+            "library_frame_rating_defaults_to_zero");
+        JsonObject outOfRange = FrameRecord();
+        outOfRange["rating"] = 7;
+        Check(
+            ReadFrame(outOfRange).Error == LibraryFrameError.InvalidRating &&
+            !LibraryFrameWriter.Apply(
+                FrameRecord(),
+                new LibraryFrameEdit(ToneAdjustment.Neutral, null, Rating: -1)).IsSuccess,
+            "library_frame_rating_rejects_out_of_range");
+
         JsonObject malformed = FrameRecord();
         malformed["params"]!["localDodgeBurn"] = new JsonArray
         {

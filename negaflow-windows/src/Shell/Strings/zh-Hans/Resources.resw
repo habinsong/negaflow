@@ -646,4 +646,6 @@
   <data name="developCropFull.Text" xml:space="preserve"><value>全部</value></data>
   <data name="developCropCancel.Text" xml:space="preserve"><value>取消</value></data>
   <data name="developCropArea.Text" xml:space="preserve"><value>裁剪区域</value></data>
+  <data name="rating.Value" xml:space="preserve"><value>星级</value></data>
+  <data name="ratingAccessibility.Value" xml:space="preserve"><value>星级 %d</value></data>
 </root>

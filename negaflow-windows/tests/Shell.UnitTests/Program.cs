@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using Negaflow.Catalog;
 using Negaflow.Interop;
 using Negaflow.Shell.Develop;
+using Negaflow.Shell.Library;
 
 namespace Negaflow.Shell.UnitTests;
 
@@ -26,6 +27,7 @@ internal static class Program
         VerifyLibraryBrowserProjection();
         VerifyDevelopInspectorPresentationState();
         VerifyCropSession();
+        VerifyThumbnailScaler();
         VerifyDevelopHistogramSampler();
         VerifyDevelopPanelState();
         VerifyInspectorSliderValue();
@@ -182,6 +184,33 @@ internal static class Program
                 : new BaseRecipe(BaseEstimationMode.Manual, null, null, null)),
             PointCurves = pointCurves ?? PointCurveRecipe.Identity,
         };
+
+    /// <summary>
+    /// 카드 썸네일은 이 축소가 유일한 화질 결정 지점입니다. 상한을 넘지 않는지와 상자 평균이
+    /// 맞는지만 봅니다 — 나머지는 인코더가 합니다.
+    /// </summary>
+    private static void VerifyThumbnailScaler()
+    {
+        // 두 배 축소에서 첫 화소는 (0, 10, 20, 30) 의 평균이라 15 가 되어야 합니다.
+        byte[] source = new byte[4 * 2 * 4];
+        for (int index = 0; index < 4; ++index)
+        {
+            source[index] = 0;
+            source[4 + index] = 10;
+            source[(4 * 4) + index] = 20;
+            source[(5 * 4) + index] = 30;
+        }
+        byte[] reduced = ThumbnailScaler.Reduce(source, 4, 2, 2, out int width, out int height);
+        Check(width == 2 && height == 1 && reduced.Length == 8, "thumbnail_scaler_reduces_to_bound");
+        Check(reduced[0] == 15 && reduced[3] == 15, "thumbnail_scaler_box_averages");
+
+        byte[] untouched = ThumbnailScaler.Reduce(source, 4, 2, 360, out int keptWidth, out int keptHeight);
+        Check(keptWidth == 4 && keptHeight == 2 && untouched[4] == 10, "thumbnail_scaler_keeps_small_images");
+
+        byte[] wide = new byte[1000 * 10 * 4];
+        _ = ThumbnailScaler.Reduce(wide, 1000, 10, 360, out int boundWidth, out int boundHeight);
+        Check(Math.Max(boundWidth, boundHeight) <= 360, "thumbnail_scaler_never_exceeds_maximum");
+    }
 
     private static void VerifyCropSession()
     {

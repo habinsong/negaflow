@@ -18,7 +18,8 @@ public sealed record LibraryFrameEdit(
     DevelopTarget? DevelopTarget = null,
     ImageTransformRecipe? ImageTransform = null,
     TextureRecipe? Texture = null,
-    NoiseReductionRecipe? NoiseReduction = null);
+    NoiseReductionRecipe? NoiseReduction = null,
+    int? Rating = null);
 
 /// <summary>
 /// 톤, 수동 base, 그리고 지정된 경우 base recipe를 갱신합니다. 입력 record 는 바꾸지 않고 깊은 복사본을 돌려주며, 이 writer 가
@@ -83,8 +84,17 @@ public static class LibraryFrameWriter
         {
             return LibraryFrameWriteResult.Failure(LibraryFrameError.InvalidNoiseReduction);
         }
+        if (edit.Rating is { } rating && rating is < 0 or > 5)
+        {
+            return LibraryFrameWriteResult.Failure(LibraryFrameError.InvalidRating);
+        }
 
         JsonObject updated = frameRecord.DeepClone().AsObject();
+        if (edit.Rating is { } writtenRating)
+        {
+            // 별점은 recipe 가 아니라 frame 자체의 성질이므로 macOS 와 같이 최상위에 둡니다.
+            updated[LibraryFrameReader.RatingName] = writtenRating;
+        }
         JsonObject parameters;
         if (!updated.TryGetPropertyValue(
                 LibraryFrameReader.ParametersName,

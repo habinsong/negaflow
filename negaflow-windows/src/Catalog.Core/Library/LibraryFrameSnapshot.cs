@@ -237,6 +237,9 @@ public sealed record LibraryFrameSnapshot(
     /// <summary>회전, 반전, 수평 및 crop은 preview와 export가 같은 recipe로 사용합니다.</summary>
     public ImageTransformRecipe ImageTransform { get; init; } = ImageTransformRecipe.Identity;
 
+    /// <summary>macOS 와 같은 0...5 별점입니다. 현상에 쓰이지 않고 라이브러리 표시·정렬·필터에만 씁니다.</summary>
+    public int Rating { get; init; }
+
     public TextureRecipe Texture { get; init; } = TextureRecipe.Identity;
 
     public NoiseReductionRecipe NoiseReduction { get; init; } = NoiseReductionRecipe.Identity;

@@ -7,6 +7,7 @@
     xmlns:primitives="using:Microsoft.UI.Xaml.Controls.Primitives">
     <UserControl.Resources>
         <CollectionViewSource x:Name="FolderGroupedItems" IsSourceGrouped="True" />
+        <controls:FilmTypeNameConverter x:Key="FilmTypeNameConverter" />
     </UserControl.Resources>
     <Grid x:Name="Root" Background="{ThemeResource NegaflowWindowBrush}" SizeChanged="OnRootSizeChanged">
         <Grid.ColumnDefinitions>
@@ -148,14 +149,15 @@
                         IsOpen="False"
                         Severity="Warning" />
 
-                    <ListView
+                    <GridView
                         x:Name="FrameListView"
                         Grid.Row="1"
                         Padding="8,6"
                         AutomationProperties.AutomationId="negaflow.library.frames"
+                        ContainerContentChanging="OnFrameContainerChanging"
                         IsItemClickEnabled="False"
                         SelectionMode="Single">
-                        <ListView.GroupStyle>
+                        <GridView.GroupStyle>
                             <GroupStyle>
                                 <GroupStyle.HeaderTemplate>
                                     <DataTemplate>
@@ -186,29 +188,73 @@
                                     </DataTemplate>
                                 </GroupStyle.HeaderTemplate>
                             </GroupStyle>
-                        </ListView.GroupStyle>
-                        <ListView.ItemTemplate>
+                        </GridView.GroupStyle>
+                        <!--
+                            카드 한 장의 구조는 macOS FrameStripItemView 와 같습니다 — 썸네일,
+                            3pt 간격, 이름, 필름 종류, 그리고 맨 아래 별점입니다. 카드 크기는
+                            컨테이너에서 정하므로 여기서는 비율만 잡습니다.
+                        -->
+                        <GridView.ItemTemplate>
                             <DataTemplate>
-                                <StackPanel Padding="4,6" Spacing="2">
-                                    <TextBlock FontSize="13" FontWeight="SemiBold" Text="{Binding DisplayName}" />
+                                <Grid Padding="8" RowSpacing="0">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="*" />
+                                        <RowDefinition Height="3" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="14" />
+                                    </Grid.RowDefinitions>
+
+                                    <Grid Grid.Row="0">
+                                        <Border Background="{ThemeResource NegaflowThumbnailWellBrush}" CornerRadius="6" />
+                                        <Border
+                                            CornerRadius="6"
+                                            Visibility="{Binding HasThumbnail, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <Image Source="{Binding Thumbnail}" Stretch="Uniform" />
+                                        </Border>
+                                        <FontIcon
+                                            FontSize="13"
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                            Glyph="&#xE91B;"
+                                            Visibility="{Binding IsThumbnailPending, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                        <Button
+                                            x:Uid="libraryLocateOriginal"
+                                            Margin="5"
+                                            Padding="6,2"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Bottom"
+                                            Background="#B8000000"
+                                            BorderThickness="0"
+                                            CornerRadius="9"
+                                            FontSize="10"
+                                            Click="OnLocateOriginalClicked"
+                                            Tag="{Binding}"
+                                            Visibility="{Binding IsSourceOffline, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                    </Grid>
+
                                     <TextBlock
+                                        Grid.Row="2"
+                                        FontSize="12"
+                                        FontWeight="SemiBold"
+                                        Text="{Binding DisplayName}"
+                                        TextTrimming="CharacterEllipsis" />
+                                    <TextBlock
+                                        Grid.Row="3"
+                                        Margin="0,2,0,0"
                                         FontSize="11"
                                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                        Text="{Binding Detail}"
+                                        Text="{Binding FilmType, Converter={StaticResource FilmTypeNameConverter}}"
                                         TextTrimming="CharacterEllipsis" />
-                                    <Button
-                                        x:Uid="libraryLocateOriginal"
-                                        Tag="{Binding}"
+                                    <controls:FrameRatingStars
+                                        Grid.Row="4"
                                         HorizontalAlignment="Left"
-                                        Padding="0"
-                                        Background="Transparent"
-                                        BorderThickness="0"
-                                        Click="OnLocateOriginalClicked"
-                                        Visibility="{Binding IsSourceOffline, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                </StackPanel>
+                                        Rating="{Binding Rating}"
+                                        RatingCommitted="OnRatingCommitted"
+                                        Tag="{Binding}" />
+                                </Grid>
                             </DataTemplate>
-                        </ListView.ItemTemplate>
-                    </ListView>
+                        </GridView.ItemTemplate>
+                    </GridView>
                 </Grid>
 
                 <StackPanel

@@ -22,6 +22,7 @@ public static class LibraryFrameReader
     public const string SourceOrientationName = "orientation";
     public const string InfraredPathName = "infraredScanPath";
     internal const string DisplayNameName = "customDisplayName";
+    internal const string RatingName = "rating";
     internal const string ParametersName = "params";
     internal const string BaseEstimationModeName = "baseEstimationMode";
     internal const string ManualBaseName = "manualBaseRGB";
@@ -162,6 +163,11 @@ public static class LibraryFrameReader
             displayName = displayElement.GetString();
         }
 
+        if (!TryReadRating(frameRecord, out int rating))
+        {
+            return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidRating);
+        }
+
         if (!frameRecord.TryGetProperty(ParametersName, out JsonElement parameters) ||
             parameters.ValueKind != JsonValueKind.Object)
         {
@@ -259,7 +265,30 @@ public static class LibraryFrameReader
             ImageTransform = imageTransform,
             Texture = texture,
             NoiseReduction = noiseReduction,
+            Rating = rating,
         });
+    }
+
+    /// <summary>
+    /// macOS 와 같은 0...5 별점입니다. frame record 최상위에 있고, 키가 없는 legacy row 는 0 입니다.
+    /// 범위를 벗어난 값은 조용히 자르지 않고 거부합니다 — 카탈로그가 손상됐다는 뜻입니다.
+    /// </summary>
+    private static bool TryReadRating(JsonElement frameRecord, out int rating)
+    {
+        rating = 0;
+        if (!frameRecord.TryGetProperty(RatingName, out JsonElement element) ||
+            element.ValueKind == JsonValueKind.Null)
+        {
+            return true;
+        }
+        if (element.ValueKind != JsonValueKind.Number ||
+            !element.TryGetInt32(out int value) ||
+            value is < 0 or > 5)
+        {
+            return false;
+        }
+        rating = value;
+        return true;
     }
 
     private static bool TryReadTexture(JsonElement parameters, out TextureRecipe texture)

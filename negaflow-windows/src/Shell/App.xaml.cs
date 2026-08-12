@@ -1,5 +1,7 @@
 using Microsoft.UI.Xaml;
 using Negaflow.Catalog;
+using Negaflow.Shell.Library;
+using Negaflow.Shell.Services;
 
 namespace Negaflow.Shell;
 
@@ -7,6 +9,7 @@ public partial class App : Application
 {
     private Window? mainWindow;
     private LibraryHostService? libraryHost;
+    private ThumbnailService? thumbnails;
 
     public App()
     {
@@ -22,7 +25,8 @@ public partial class App : Application
             settingsStore,
             workspaceState,
             new NativeEngineStatusService(),
-            OpenLibrary());
+            OpenLibrary(),
+            thumbnails);
         mainWindow.Closed += OnMainWindowClosed;
         mainWindow.Activate();
     }
@@ -47,6 +51,11 @@ public partial class App : Application
 
         libraryHost = new LibraryHostService(dispatcher);
         libraryHost.Open(resolved);
+        thumbnails = new ThumbnailService(
+            new NativeDevelopExporterAdapter(),
+            new WicThumbnailCodec(),
+            dispatcher,
+            resolved.ThumbnailRoot);
         return libraryHost;
     }
 
@@ -57,5 +66,12 @@ public partial class App : Application
         // 세션을 놓아야 다음 실행이 카탈로그의 작성자가 될 수 있습니다.
         libraryHost?.Dispose();
         libraryHost = null;
+        // 대기 중인 썸네일 쓰기를 끝까지 흘려보냅니다. 캐시라 잃어도 되지만, 방금 만든 것을
+        // 버리면 다음 실행이 같은 현상을 다시 합니다.
+        if (thumbnails is { } service)
+        {
+            thumbnails = null;
+            _ = service.DisposeAsync().AsTask();
+        }
     }
 }

@@ -47,6 +47,7 @@ public static class StorageRootResolver
             localApplicationDataRoot,
             ProductFolderName);
         string libraryRoot = Path.Combine(productDataRoot, "Library");
+        string cacheRoot = Path.Combine(productDataRoot, "Cache");
 
         return StorageRootResolutionResult.Success(new StorageRootSet(
             localApplicationDataRoot,
@@ -59,7 +60,8 @@ public static class StorageRootResolver
             Path.Combine(libraryRoot, "Backups"),
             Path.Combine(libraryRoot, "PendingRestore"),
             Path.Combine(libraryRoot, "Migration"),
-            Path.Combine(productDataRoot, "Cache"),
+            cacheRoot,
+            Path.Combine(cacheRoot, "Thumbnails"),
             Path.Combine(productDataRoot, "Journals"),
             Path.Combine(productDataRoot, "Plugins"),
             Path.Combine(productDataRoot, "Logs"),

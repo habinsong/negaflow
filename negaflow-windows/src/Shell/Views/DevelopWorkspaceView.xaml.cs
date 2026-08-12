@@ -34,6 +34,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private bool isSynchronizingInspector;
     private bool isSynchronizingInspectorPresentation;
     private bool isInspectorPresentationReady;
+    private Negaflow.Shell.Library.ThumbnailService? thumbnails;
     private CropSession? cropSession;
     private CropDragMode cropDragMode;
     private CropDisplayPoint cropDragStart;
@@ -79,6 +80,15 @@ public sealed partial class DevelopWorkspaceView : UserControl
         StatusBar.Initialize(nativeEngineStatus);
         UpdateState(state.Current);
         Unloaded += OnUnloaded;
+    }
+
+    /// <summary>
+    /// 정착한 미리보기를 라이브러리 썸네일로 넘겨줄 서비스입니다.
+    /// </summary>
+    public void AttachThumbnails(Negaflow.Shell.Library.ThumbnailService service)
+    {
+        ArgumentNullException.ThrowIfNull(service);
+        thumbnails = service;
     }
 
     /// <summary>
@@ -543,6 +553,12 @@ public sealed partial class DevelopWorkspaceView : UserControl
         }
         previewBitmap.Invalidate();
         HistogramView.UpdatePixels(pixels, width, height);
+        // 방금 현상한 그림이 곧 라이브러리 카드의 썸네일입니다. 같은 픽셀을 두 번 만들지
+        // 않으려고 여기서 넘깁니다.
+        if (panel?.SelectedFrame is { } settled)
+        {
+            thumbnails?.Publish(settled.Id, pixels, width, height);
+        }
 
         PreviewImage.Visibility = Visibility.Visible;
         EmptyCanvasPanel.Visibility = Visibility.Collapsed;

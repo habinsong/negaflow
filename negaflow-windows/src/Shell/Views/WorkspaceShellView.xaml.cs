@@ -25,7 +25,8 @@ public sealed partial class WorkspaceShellView : UserControl
         WorkspacePresentationState state,
         NativeEngineStatusService nativeEngineStatusService,
         LibraryHostService? libraryHost = null,
-        Microsoft.UI.WindowId? windowId = null)
+        Microsoft.UI.WindowId? windowId = null,
+        Negaflow.Shell.Library.ThumbnailService? thumbnails = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(nativeEngineStatusService);
@@ -39,6 +40,12 @@ public sealed partial class WorkspaceShellView : UserControl
         NativeEngineStatus nativeEngineStatus = nativeEngineStatusService.Probe();
         Toolbar.Initialize(state);
         LibraryWorkspace.Initialize(state);
+        if (thumbnails is not null)
+        {
+            // 카드가 만들어지기 전에 붙여야 첫 화면부터 썸네일이 채워집니다.
+            LibraryWorkspace.AttachThumbnails(thumbnails);
+            DevelopWorkspace.AttachThumbnails(thumbnails);
+        }
         if (libraryHost is not null)
         {
             if (windowId is { } libraryWindowId)

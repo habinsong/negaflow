@@ -646,4 +646,6 @@
   <data name="developCropFull.Text" xml:space="preserve"><value>전체</value></data>
   <data name="developCropCancel.Text" xml:space="preserve"><value>취소</value></data>
   <data name="developCropArea.Text" xml:space="preserve"><value>자르기 영역</value></data>
+  <data name="rating.Value" xml:space="preserve"><value>별점</value></data>
+  <data name="ratingAccessibility.Value" xml:space="preserve"><value>별점 %d</value></data>
 </root>

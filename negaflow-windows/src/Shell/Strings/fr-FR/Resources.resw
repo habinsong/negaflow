@@ -646,4 +646,6 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="developCropFull.Text" xml:space="preserve"><value>Tout</value></data>
   <data name="developCropCancel.Text" xml:space="preserve"><value>Annuler</value></data>
   <data name="developCropArea.Text" xml:space="preserve"><value>Zone de recadrage</value></data>
+  <data name="rating.Value" xml:space="preserve"><value>Note</value></data>
+  <data name="ratingAccessibility.Value" xml:space="preserve"><value>Note %d</value></data>
 </root>

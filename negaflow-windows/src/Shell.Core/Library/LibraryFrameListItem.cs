@@ -1,4 +1,5 @@
 using Negaflow.Catalog;
+using System.ComponentModel;
 using System.Globalization;
 using System.Text;
 
@@ -8,7 +9,7 @@ namespace Negaflow.Shell;
 /// 목록 한 줄에 보이는 것입니다. 표시용 문자열을 XAML 이 아니라 여기서 만들어야 시험할 수
 /// 있습니다.
 /// </summary>
-public sealed class LibraryFrameListItem
+public sealed class LibraryFrameListItem : INotifyPropertyChanged
 {
     public LibraryFrameListItem(
         LibraryFrameSnapshot frame,
@@ -41,6 +42,49 @@ public sealed class LibraryFrameListItem
     public LibrarySourceAvailability Availability { get; }
 
     public bool IsSourceOffline => Availability == LibrarySourceAvailability.Offline;
+
+    /// <summary>카드 부제입니다. macOS 는 현상된 카드에만 필름 종류를 답니다.</summary>
+    public FilmType FilmType => Frame.Route.FilmType;
+
+    /// <summary>macOS 와 같은 0...5 별점입니다.</summary>
+    public int Rating => Frame.Rating;
+
+    /// <summary>
+    /// 카드 썸네일입니다. Shell.Core 는 XAML 을 참조하지 않으므로 형식을 열어 두고, 셸이
+    /// <c>ImageSource</c> 를 넣습니다. 도착이 비동기라 여기만 알림을 냅니다 — 그리드가 카드
+    /// 전체를 다시 만들지 않고 그림만 바꿔 끼웁니다.
+    /// </summary>
+    public object? Thumbnail
+    {
+        get => thumbnail;
+        set
+        {
+            if (ReferenceEquals(thumbnail, value))
+            {
+                return;
+            }
+            thumbnail = value;
+            PropertyChanged?.Invoke(this, ThumbnailChangedArgs);
+            PropertyChanged?.Invoke(this, HasThumbnailChangedArgs);
+            PropertyChanged?.Invoke(this, ThumbnailPendingChangedArgs);
+        }
+    }
+
+    public bool HasThumbnail => thumbnail is not null;
+
+    /// <summary>썸네일이 아직 없어 자리표시자를 보여야 하는 상태입니다.</summary>
+    public bool IsThumbnailPending => thumbnail is null;
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    private object? thumbnail;
+
+    private static readonly PropertyChangedEventArgs ThumbnailChangedArgs = new(nameof(Thumbnail));
+
+    private static readonly PropertyChangedEventArgs HasThumbnailChangedArgs = new(nameof(HasThumbnail));
+
+    private static readonly PropertyChangedEventArgs ThumbnailPendingChangedArgs =
+        new(nameof(IsThumbnailPending));
 }
 
 public static class LibraryFrameListItems

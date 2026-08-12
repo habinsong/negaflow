@@ -3,8 +3,11 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI.Xaml.Media.Imaging;
 using Negaflow.Catalog;
+using Negaflow.Shell.Library;
 using Negaflow.Shell.Localization;
+using Negaflow.Shell.Views.Controls;
 
 namespace Negaflow.Shell.Views;
 
@@ -12,6 +15,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
 {
     private WorkspacePresentationState? workspaceState;
     private LibraryHostService? libraryHost;
+    private ThumbnailService? thumbnails;
     private Microsoft.UI.WindowId? importWindowId;
     private bool isResizing;
     private double liveWidth = ShellLayoutMetrics.LibraryControlsDefaultWidth;
@@ -38,6 +42,21 @@ public sealed partial class LibraryWorkspaceView : UserControl
     /// 라이브러리 내용을 보여 줍니다. **UI 스레드에서만** 부르십시오. WinUI 는 STA 이고
     /// 컨트롤은 그것을 만든 스레드가 소유합니다.
     /// </summary>
+    /// <summary>
+    /// 카드 썸네일을 만들어 주는 서비스입니다. 앱 시작 때 한 번 연결하고, 준비되는 대로 카드가
+    /// 그림만 바꿔 낍니다.
+    /// </summary>
+    public void AttachThumbnails(ThumbnailService service)
+    {
+        ArgumentNullException.ThrowIfNull(service);
+        if (thumbnails is not null)
+        {
+            thumbnails.ThumbnailReady -= OnThumbnailReady;
+        }
+        thumbnails = service;
+        thumbnails.ThumbnailReady += OnThumbnailReady;
+    }
+
     public void ShowLibrary(LibraryHostService host, Microsoft.UI.WindowId windowId)
     {
         ArgumentNullException.ThrowIfNull(host);
@@ -45,6 +64,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
         libraryHost = host;
         importWindowId = windowId;
         allItems = LibraryFrameListItems.From(host.Frames, host.SourceAvailabilityByFrameId);
+        SeedThumbnails();
         ShowFilteredItems();
 
         bool hasFrames = allItems.Count > 0;
@@ -62,8 +82,113 @@ public sealed partial class LibraryWorkspaceView : UserControl
                 return;
             }
             allItems = LibraryFrameListItems.From(host.Frames, host.SourceAvailabilityByFrameId);
+        SeedThumbnails();
             ShowFilteredItems();
         });
+    }
+
+    /// <summary>
+    /// 카드 크기는 macOS 와 같은 규칙입니다 — 폭 190·배율, 썸네일은 (폭 − 안쪽 여백) / 1.5,
+    /// 그 아래 이름·필름 종류·별점이 고정 높이로 붙습니다.
+    /// </summary>
+    private void OnFrameContainerChanging(ListViewBase sender, ContainerContentChangingEventArgs args)
+    {
+        _ = sender;
+        if (args.ItemContainer is not GridViewItem container)
+        {
+            return;
+        }
+        container.Width = LibraryCardMetrics.Width;
+        container.Height = LibraryCardMetrics.Height;
+        container.Margin = new Thickness(LibraryCardMetrics.Spacing / 2.0);
+        container.Padding = new Thickness(0.0);
+        container.CornerRadius = new CornerRadius(9.0);
+
+        if (args.Item is LibraryFrameListItem item)
+        {
+            thumbnails?.Request(item.Frame);
+        }
+    }
+
+    /// <summary>
+    /// 목록을 다시 만들 때마다 이미 있는 썸네일을 새 항목에 옮겨 답니다. 그러지 않으면 별점을
+    /// 하나 바꿀 때마다 그리드 전체가 회색으로 돌아갔다가 다시 채워집니다.
+    /// </summary>
+    private void SeedThumbnails()
+    {
+        if (thumbnails is null)
+        {
+            return;
+        }
+        foreach (LibraryFrameListItem item in allItems)
+        {
+            if (thumbnails.TryGet(item.Id) is { } jpeg)
+            {
+                item.Thumbnail = DecodeThumbnail(jpeg);
+            }
+        }
+    }
+
+    private void OnThumbnailReady(string frameId)
+    {
+        if (thumbnails?.TryGet(frameId) is not { } jpeg)
+        {
+            return;
+        }
+        foreach (LibraryFrameListItem item in allItems)
+        {
+            if (!string.Equals(item.Id, frameId, StringComparison.Ordinal))
+            {
+                continue;
+            }
+            item.Thumbnail = DecodeThumbnail(jpeg);
+            return;
+        }
+    }
+
+    /// <summary>
+    /// JPEG 바이트를 그대로 <c>BitmapImage</c> 에 흘려 넣습니다. 디코드는 WinUI 가 필요할 때
+    /// 하므로, 화면 밖 카드까지 미리 펼쳐 두지 않습니다.
+    /// </summary>
+    private static BitmapImage? DecodeThumbnail(byte[] jpeg)
+    {
+        try
+        {
+            var stream = new Windows.Storage.Streams.InMemoryRandomAccessStream();
+            using (var writer = new Windows.Storage.Streams.DataWriter(stream.GetOutputStreamAt(0UL)))
+            {
+                writer.WriteBytes(jpeg);
+                _ = writer.StoreAsync().AsTask().GetAwaiter().GetResult();
+            }
+            var bitmap = new BitmapImage();
+            stream.Seek(0UL);
+            bitmap.SetSource(stream);
+            return bitmap;
+        }
+        catch (Exception error) when (error is not OperationCanceledException)
+        {
+            return null;
+        }
+    }
+
+    private void OnRatingCommitted(object? sender, int rating)
+    {
+        if (libraryHost is null ||
+            sender is not FrameRatingStars { Tag: LibraryFrameListItem item })
+        {
+            return;
+        }
+        LibraryFrameSnapshot frame = item.Frame;
+        LibraryFrameError error = libraryHost.Edit(
+            frame.Id,
+            new LibraryFrameEdit(frame.Tone, frame.ManualBase, Rating: rating));
+        if (error != LibraryFrameError.None || libraryHost.Save() != CatalogStoreError.None)
+        {
+            // 저장에 실패했으면 화면도 되돌립니다 — 다음 실행에서 사라질 값을 남기지 않습니다.
+            ((FrameRatingStars)sender).Rating = frame.Rating;
+            return;
+        }
+        ShowLibrary(libraryHost, importWindowId ?? default);
     }
 
     private void OnLibrarySearchTextChanged(object sender, TextChangedEventArgs args)

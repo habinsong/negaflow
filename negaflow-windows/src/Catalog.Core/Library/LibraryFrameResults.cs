@@ -35,6 +35,7 @@ public enum LibraryFrameError
     InvalidSceneCorrection,
     InvalidDevelopTarget,
     InvalidDefectRecipe,
+    InvalidRating,
 
     /// <summary>톤 값이 수가 아니거나 유한하지 않습니다.</summary>
     InvalidToneValue,

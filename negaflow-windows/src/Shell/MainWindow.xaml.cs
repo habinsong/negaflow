@@ -13,7 +13,8 @@ public sealed partial class MainWindow : Window
         PresentationSettingsStore settingsStore,
         WorkspacePresentationState workspaceState,
         NativeEngineStatusService nativeEngineStatusService,
-        LibraryHostService? libraryHost = null)
+        LibraryHostService? libraryHost = null,
+        Negaflow.Shell.Library.ThumbnailService? thumbnails = null)
     {
         this.settingsStore = settingsStore;
         this.workspaceState = workspaceState;
@@ -23,7 +24,8 @@ public sealed partial class MainWindow : Window
             workspaceState,
             nativeEngineStatusService,
             libraryHost,
-            AppWindow.Id);
+            AppWindow.Id,
+            thumbnails);
         ShellView.SettingsRequested += OnSettingsRequested;
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(ShellView.TitleBarElement);

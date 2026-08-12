@@ -19,6 +19,10 @@
                     <SolidColorBrush x:Key="NegaflowCanvasBrush" Color="#FF121212" />
                     <SolidColorBrush x:Key="NegaflowSubtleFillBrush" Color="#10000000" />
                     <SolidColorBrush x:Key="NegaflowSelectionBrush" Color="#296B8BFF" />
+                    <SolidColorBrush x:Key="NegaflowThumbnailWellBrush" Color="#38808080" />
+                    <SolidColorBrush x:Key="NegaflowCardBorderBrush" Color="#2E000000" />
+                    <SolidColorBrush x:Key="NegaflowRatingFilledBrush" Color="#FF007AFF" />
+                    <SolidColorBrush x:Key="NegaflowRatingEmptyBrush" Color="#73000000" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Dark">
                     <SolidColorBrush x:Key="NegaflowWindowBrush" Color="#FF1D1D1D" />
@@ -29,6 +33,10 @@
                     <SolidColorBrush x:Key="NegaflowCanvasBrush" Color="#FF121212" />
                     <SolidColorBrush x:Key="NegaflowSubtleFillBrush" Color="#16FFFFFF" />
                     <SolidColorBrush x:Key="NegaflowSelectionBrush" Color="#386B8BFF" />
+                    <SolidColorBrush x:Key="NegaflowThumbnailWellBrush" Color="#38808080" />
+                    <SolidColorBrush x:Key="NegaflowCardBorderBrush" Color="#2EFFFFFF" />
+                    <SolidColorBrush x:Key="NegaflowRatingFilledBrush" Color="#FF0A84FF" />
+                    <SolidColorBrush x:Key="NegaflowRatingEmptyBrush" Color="#73FFFFFF" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="HighContrast">
                     <SolidColorBrush x:Key="NegaflowWindowBrush" Color="{ThemeResource SystemColorWindowColor}" />
@@ -39,6 +47,10 @@
                     <SolidColorBrush x:Key="NegaflowCanvasBrush" Color="{ThemeResource SystemColorWindowColor}" />
                     <SolidColorBrush x:Key="NegaflowSubtleFillBrush" Color="{ThemeResource SystemColorHighlightColor}" />
                     <SolidColorBrush x:Key="NegaflowSelectionBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+                    <SolidColorBrush x:Key="NegaflowThumbnailWellBrush" Color="{ThemeResource SystemColorWindowColor}" />
+                    <SolidColorBrush x:Key="NegaflowCardBorderBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+                    <SolidColorBrush x:Key="NegaflowRatingFilledBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+                    <SolidColorBrush x:Key="NegaflowRatingEmptyBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
 
