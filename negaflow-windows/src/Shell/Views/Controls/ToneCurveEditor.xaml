@@ -11,10 +11,10 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
-            <Button x:Name="RgbChannelButton" Grid.Column="0" Content="RGB" Click="OnRgbChannelClicked" />
-            <Button x:Name="RedChannelButton" Grid.Column="1" Content="Red" Click="OnRedChannelClicked" />
-            <Button x:Name="GreenChannelButton" Grid.Column="2" Content="Green" Click="OnGreenChannelClicked" />
-            <Button x:Name="BlueChannelButton" Grid.Column="3" Content="Blue" Click="OnBlueChannelClicked" />
+            <Button x:Name="RgbChannelButton" Grid.Column="0" Click="OnRgbChannelClicked" />
+            <Button x:Name="RedChannelButton" Grid.Column="1" Click="OnRedChannelClicked" />
+            <Button x:Name="GreenChannelButton" Grid.Column="2" Click="OnGreenChannelClicked" />
+            <Button x:Name="BlueChannelButton" Grid.Column="3" Click="OnBlueChannelClicked" />
         </Grid>
         <Border Height="188" BorderBrush="{ThemeResource NegaflowDividerBrush}" BorderThickness="1" CornerRadius="6">
             <Canvas
@@ -34,11 +34,11 @@
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <StackPanel Grid.Column="0" Spacing="2">
-                <TextBlock FontSize="11" Text="Input" />
+                <TextBlock x:Name="CurveInputLabel" FontSize="11" />
                 <TextBox x:Name="InputEditor" AutomationProperties.Name="Point Curve input percentage" KeyDown="OnPointEditorKeyDown" LostFocus="OnPointEditorLostFocus" />
             </StackPanel>
             <StackPanel Grid.Column="1" Spacing="2">
-                <TextBlock FontSize="11" Text="Output" />
+                <TextBlock x:Name="CurveOutputLabel" FontSize="11" />
                 <TextBox x:Name="OutputEditor" AutomationProperties.Name="Point Curve output percentage" KeyDown="OnPointEditorKeyDown" LostFocus="OnPointEditorLostFocus" />
             </StackPanel>
         </Grid>
@@ -48,9 +48,9 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
-            <Button x:Name="AddPointButton" Grid.Column="0" Content="Add point" Click="OnAddPointClicked" />
-            <Button x:Name="DeletePointButton" Grid.Column="1" Content="Delete point" Click="OnDeletePointClicked" />
-            <Button x:Name="ResetChannelButton" Grid.Column="2" Content="Reset channel" Click="OnResetChannelClicked" />
+            <Button x:Name="AddPointButton" Grid.Column="0" Click="OnAddPointClicked" />
+            <Button x:Name="DeletePointButton" Grid.Column="1" Click="OnDeletePointClicked" />
+            <Button x:Name="ResetChannelButton" Grid.Column="2" Click="OnResetChannelClicked" />
         </Grid>
     </StackPanel>
 </UserControl>

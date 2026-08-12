@@ -1810,6 +1810,13 @@ public sealed partial class DevelopWorkspaceView : UserControl
         NoFrameInspectorText.Text = noFrame;
         DevelopHeaderText.Text = AppResources.Get("menuDevelop", "Text");
         SetButtonText(ImportButton, AppResources.Get("importImages", "Content"));
+        SetRadioText(BaseAutoModeButton, AppResources.Get("developBaseModeAuto", "Content"));
+        SetRadioText(BaseFilmModeButton, AppResources.Get("developBaseModeFilm", "Content"));
+        SetRadioText(BaseManualModeButton, AppResources.Get("developBaseModeManual", "Content"));
+        FilmStockLabel.Text = AppResources.Get("developFilmStock", "Text");
+        AutomationProperties.SetName(FilmStockSelector, FilmStockLabel.Text);
+        LightSourceLabel.Text = AppResources.Get("developLightSource", "Text");
+        AutomationProperties.SetName(LightSourceSelector, LightSourceLabel.Text);
         SetToggleText(AutoColorToggle, AppResources.Get("developAutoColor", "Content"));
         SetToggleText(AutoLevelsToggle, AppResources.Get("developAutoLevels", "Content"));
         SetButtonText(AutoToneButton, AppResources.Get("developAutoTone", "Content"));
@@ -1975,6 +1982,12 @@ public sealed partial class DevelopWorkspaceView : UserControl
     {
         toggle.Content = text;
         SetLocalizedNameAndTooltip(toggle, text);
+    }
+
+    private static void SetRadioText(RadioButton radio, string text)
+    {
+        radio.Content = text;
+        AutomationProperties.SetName(radio, text);
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs args)

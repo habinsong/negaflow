@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
+using Negaflow.Shell.Localization;
 using Negaflow.Catalog;
 using Windows.Foundation;
 using Windows.System;
@@ -61,10 +62,20 @@ public sealed partial class ToneCurveEditor : UserControl
     private void SetAutomationProperties()
     {
         AutomationProperties.SetAutomationId(CurveCanvas, "negaflow.develop.point-curve.canvas");
-        AutomationProperties.SetName(CurveCanvas, "Point Curve canvas");
+        AutomationProperties.SetName(CurveCanvas, AppResources.Get("developPointCurveCanvas", "Value"));
         AutomationProperties.SetHelpText(
             CurveCanvas,
-            "Click to add a point. Drag to move it. Double-click a non-endpoint to delete it. Arrow keys move the selected point by 1 percent; Shift plus Arrow moves by 5 percent.");
+            AppResources.Get("developPointCurveCanvasHelp", "Value"));
+        // 채널과 축 이름은 리소스에서 옵니다. RGB 는 어느 언어에서도 RGB 입니다.
+        SetChannelText(RedChannelButton, AppResources.Get("developRed", "Text"));
+        SetChannelText(GreenChannelButton, AppResources.Get("developGreen", "Text"));
+        SetChannelText(BlueChannelButton, AppResources.Get("developBlue", "Text"));
+        SetChannelText(RgbChannelButton, "RGB");
+        SetChannelText(AddPointButton, AppResources.Get("developAddPoint", "Content"));
+        SetChannelText(DeletePointButton, AppResources.Get("developDeletePoint", "Content"));
+        SetChannelText(ResetChannelButton, AppResources.Get("developResetChannel", "Content"));
+        CurveInputLabel.Text = AppResources.Get("developCurveInput", "Text");
+        CurveOutputLabel.Text = AppResources.Get("developCurveOutput", "Text");
         AutomationProperties.SetAutomationId(RgbChannelButton, "negaflow.develop.point-curve.rgb");
         AutomationProperties.SetAutomationId(RedChannelButton, "negaflow.develop.point-curve.red");
         AutomationProperties.SetAutomationId(GreenChannelButton, "negaflow.develop.point-curve.green");
@@ -72,6 +83,12 @@ public sealed partial class ToneCurveEditor : UserControl
         AutomationProperties.SetAutomationId(AddPointButton, "negaflow.develop.point-curve.add");
         AutomationProperties.SetAutomationId(DeletePointButton, "negaflow.develop.point-curve.delete");
         AutomationProperties.SetAutomationId(ResetChannelButton, "negaflow.develop.point-curve.reset");
+    }
+
+    private static void SetChannelText(Button button, string text)
+    {
+        button.Content = text;
+        AutomationProperties.SetName(button, text);
     }
 
     private void Render()

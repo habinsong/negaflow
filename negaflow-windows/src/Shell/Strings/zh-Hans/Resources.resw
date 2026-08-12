@@ -684,4 +684,33 @@
   <data name="developBaseRed.Text" xml:space="preserve"><value>片基 R</value><comment>AppLocalizedPhrase.baseRed</comment></data>
   <data name="developBaseGreen.Text" xml:space="preserve"><value>片基 G</value><comment>AppLocalizedPhrase.baseGreen</comment></data>
   <data name="developBaseBlue.Text" xml:space="preserve"><value>片基 B</value><comment>AppLocalizedPhrase.baseBlue</comment></data>
+  <data name="developBaseModeAuto.Content" xml:space="preserve"><value>自动</value><comment>AppLocalizedPhrase.baseModeAuto</comment></data>
+  <data name="developBaseModeFilm.Content" xml:space="preserve"><value>胶片</value><comment>AppLocalizedPhrase.baseModeFilm</comment></data>
+  <data name="developBaseModeManual.Content" xml:space="preserve"><value>手动</value><comment>AppLocalizedPhrase.baseModeManual</comment></data>
+  <data name="developFilmStock.Text" xml:space="preserve"><value>胶片型号</value><comment>AppLocalizedPhrase.filmStock</comment></data>
+  <data name="developLightSource.Text" xml:space="preserve"><value>光源</value><comment>AppLocalizedPhrase.lightSource</comment></data>
+  <data name="developMidtones.Text" xml:space="preserve"><value>中间调</value><comment>AppLocalizedPhrase.midtones</comment></data>
+  <data name="developLuminance.Text" xml:space="preserve"><value>明亮度</value><comment>AppLocalizedPhrase.luminance</comment></data>
+  <data name="developBlending.Text" xml:space="preserve"><value>混合</value><comment>AppLocalizedPhrase.blending</comment></data>
+  <data name="developBalance.Text" xml:space="preserve"><value>平衡</value><comment>AppLocalizedPhrase.balance</comment></data>
+  <data name="developHue.Text" xml:space="preserve"><value>色相</value><comment>AppLocalizedPhrase.hue</comment></data>
+  <data name="developSaturation.Text" xml:space="preserve"><value>饱和度</value><comment>AppLocalizedPhrase.saturation</comment></data>
+  <data name="developColorGradingWheel.Value" xml:space="preserve"><value>调色轮</value></data>
+  <data name="developColorGradingWheelHelp.Value" xml:space="preserve"><value>方向键调整色相和饱和度。按住 Shift 可加大幅度。</value></data>
+  <data name="developAll.Text" xml:space="preserve"><value>全部</value><comment>AppLocalizedPhrase.all</comment></data>
+  <data name="developRed.Text" xml:space="preserve"><value>红色</value><comment>AppLocalizedPhrase.red</comment></data>
+  <data name="developGreen.Text" xml:space="preserve"><value>绿色</value><comment>AppLocalizedPhrase.green</comment></data>
+  <data name="developBlue.Text" xml:space="preserve"><value>蓝色</value><comment>AppLocalizedPhrase.blue</comment></data>
+  <data name="developCurveInput.Text" xml:space="preserve"><value>输入</value></data>
+  <data name="developCurveOutput.Text" xml:space="preserve"><value>输出</value></data>
+  <data name="developAddPoint.Content" xml:space="preserve"><value>添加点</value></data>
+  <data name="developDeletePoint.Content" xml:space="preserve"><value>删除点</value></data>
+  <data name="developResetChannel.Content" xml:space="preserve"><value>重置通道</value></data>
+  <data name="developBandOrange.Text" xml:space="preserve"><value>橙色</value><comment>AppLocalizedPhrase.orange</comment></data>
+  <data name="developBandYellow.Text" xml:space="preserve"><value>黄色</value><comment>AppLocalizedPhrase.yellow</comment></data>
+  <data name="developBandAqua.Text" xml:space="preserve"><value>浅绿色</value><comment>AppLocalizedPhrase.aqua</comment></data>
+  <data name="developBandPurple.Text" xml:space="preserve"><value>紫色</value><comment>AppLocalizedPhrase.purple</comment></data>
+  <data name="developBandMagenta.Text" xml:space="preserve"><value>洋红色</value><comment>AppLocalizedPhrase.magenta</comment></data>
+  <data name="developPointCurveCanvas.Value" xml:space="preserve"><value>曲线画布</value></data>
+  <data name="developPointCurveCanvasHelp.Value" xml:space="preserve"><value>点按添加控制点，拖动可移动。双击非端点可删除。方向键移动 1%，按住 Shift 移动 5%。</value></data>
 </root>

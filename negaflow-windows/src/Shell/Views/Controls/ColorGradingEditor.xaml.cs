@@ -4,7 +4,9 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
+using Microsoft.UI.Xaml.Automation;
 using Negaflow.Catalog;
+using Negaflow.Shell.Localization;
 using Windows.Foundation;
 
 namespace Negaflow.Shell.Views.Controls;
@@ -22,8 +24,32 @@ public sealed partial class ColorGradingEditor : UserControl
     public ColorGradingEditor()
     {
         InitializeComponent();
+        LocalizeControls();
         MidtonesButton.IsChecked = true;
         RenderEditor();
+    }
+
+    /// <summary>이름은 macOS 와 같은 문자열이며 XAML 에 박아 두지 않습니다.</summary>
+    private void LocalizeControls()
+    {
+        SetRangeText(ShadowsButton, AppResources.Get("developShadows", "Text"));
+        SetRangeText(MidtonesButton, AppResources.Get("developMidtones", "Text"));
+        SetRangeText(HighlightsButton, AppResources.Get("developHighlights", "Text"));
+        LuminanceControl.Label = AppResources.Get("developLuminance", "Text");
+        BlendingControl.Label = AppResources.Get("developBlending", "Text");
+        BalanceControl.Label = AppResources.Get("developBalance", "Text");
+        AutomationProperties.SetName(
+            WheelCanvas,
+            AppResources.Get("developColorGradingWheel", "Value"));
+        AutomationProperties.SetHelpText(
+            WheelCanvas,
+            AppResources.Get("developColorGradingWheelHelp", "Value"));
+    }
+
+    private static void SetRangeText(RadioButton radio, string text)
+    {
+        radio.Content = text;
+        AutomationProperties.SetName(radio, text);
     }
 
     public static readonly DependencyProperty GradingProperty = DependencyProperty.Register(
@@ -132,8 +158,8 @@ public sealed partial class ColorGradingEditor : UserControl
         Canvas.SetLeft(marker, handle.X - 8);
         Canvas.SetTop(marker, handle.Y - 8);
         WheelCanvas.Children.Add(marker);
-        HueReadout.Text = $"Hue {region.Hue:F0}°";
-        SaturationReadout.Text = $"Sat {region.Saturation:P0}";
+        HueReadout.Text = $"{AppResources.Get("developHue", "Text")} {region.Hue:F0}°";
+        SaturationReadout.Text = $"{AppResources.Get("developSaturation", "Text")} {region.Saturation:P0}";
         LuminanceControl.Value = region.Luminance;
         BlendingControl.Value = Grading.Blending;
         BalanceControl.Value = Grading.Balance;

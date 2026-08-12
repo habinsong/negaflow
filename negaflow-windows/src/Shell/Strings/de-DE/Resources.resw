@@ -684,4 +684,33 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developBaseRed.Text" xml:space="preserve"><value>Basis R</value><comment>AppLocalizedPhrase.baseRed</comment></data>
   <data name="developBaseGreen.Text" xml:space="preserve"><value>Basis G</value><comment>AppLocalizedPhrase.baseGreen</comment></data>
   <data name="developBaseBlue.Text" xml:space="preserve"><value>Basis B</value><comment>AppLocalizedPhrase.baseBlue</comment></data>
+  <data name="developBaseModeAuto.Content" xml:space="preserve"><value>Automatisch</value><comment>AppLocalizedPhrase.baseModeAuto</comment></data>
+  <data name="developBaseModeFilm.Content" xml:space="preserve"><value>Film</value><comment>AppLocalizedPhrase.baseModeFilm</comment></data>
+  <data name="developBaseModeManual.Content" xml:space="preserve"><value>Manuell</value><comment>AppLocalizedPhrase.baseModeManual</comment></data>
+  <data name="developFilmStock.Text" xml:space="preserve"><value>Filmmaterial</value><comment>AppLocalizedPhrase.filmStock</comment></data>
+  <data name="developLightSource.Text" xml:space="preserve"><value>Lichtquelle</value><comment>AppLocalizedPhrase.lightSource</comment></data>
+  <data name="developMidtones.Text" xml:space="preserve"><value>Mitteltöne</value><comment>AppLocalizedPhrase.midtones</comment></data>
+  <data name="developLuminance.Text" xml:space="preserve"><value>Luminanz</value><comment>AppLocalizedPhrase.luminance</comment></data>
+  <data name="developBlending.Text" xml:space="preserve"><value>Mischung</value><comment>AppLocalizedPhrase.blending</comment></data>
+  <data name="developBalance.Text" xml:space="preserve"><value>Balance</value><comment>AppLocalizedPhrase.balance</comment></data>
+  <data name="developHue.Text" xml:space="preserve"><value>Farbton</value><comment>AppLocalizedPhrase.hue</comment></data>
+  <data name="developSaturation.Text" xml:space="preserve"><value>Sättigung</value><comment>AppLocalizedPhrase.saturation</comment></data>
+  <data name="developColorGradingWheel.Value" xml:space="preserve"><value>Farbkorrekturrad</value></data>
+  <data name="developColorGradingWheelHelp.Value" xml:space="preserve"><value>Pfeiltasten ändern Farbton und Sättigung. Umschalt für größere Schritte.</value></data>
+  <data name="developAll.Text" xml:space="preserve"><value>Alle</value><comment>AppLocalizedPhrase.all</comment></data>
+  <data name="developRed.Text" xml:space="preserve"><value>Rot</value><comment>AppLocalizedPhrase.red</comment></data>
+  <data name="developGreen.Text" xml:space="preserve"><value>Grün</value><comment>AppLocalizedPhrase.green</comment></data>
+  <data name="developBlue.Text" xml:space="preserve"><value>Blau</value><comment>AppLocalizedPhrase.blue</comment></data>
+  <data name="developCurveInput.Text" xml:space="preserve"><value>Eingang</value></data>
+  <data name="developCurveOutput.Text" xml:space="preserve"><value>Ausgang</value></data>
+  <data name="developAddPoint.Content" xml:space="preserve"><value>Punkt hinzufügen</value></data>
+  <data name="developDeletePoint.Content" xml:space="preserve"><value>Punkt löschen</value></data>
+  <data name="developResetChannel.Content" xml:space="preserve"><value>Kanal zurücksetzen</value></data>
+  <data name="developBandOrange.Text" xml:space="preserve"><value>Orange</value><comment>AppLocalizedPhrase.orange</comment></data>
+  <data name="developBandYellow.Text" xml:space="preserve"><value>Gelb</value><comment>AppLocalizedPhrase.yellow</comment></data>
+  <data name="developBandAqua.Text" xml:space="preserve"><value>Aquamarin</value><comment>AppLocalizedPhrase.aqua</comment></data>
+  <data name="developBandPurple.Text" xml:space="preserve"><value>Lila</value><comment>AppLocalizedPhrase.purple</comment></data>
+  <data name="developBandMagenta.Text" xml:space="preserve"><value>Magenta</value><comment>AppLocalizedPhrase.magenta</comment></data>
+  <data name="developPointCurveCanvas.Value" xml:space="preserve"><value>Gradationskurven-Fläche</value></data>
+  <data name="developPointCurveCanvasHelp.Value" xml:space="preserve"><value>Klicken fügt einen Punkt hinzu, Ziehen verschiebt ihn. Doppelklick auf einen Punkt außer den Endpunkten löscht ihn. Pfeiltasten verschieben um 1 Prozent, mit Umschalt um 5 Prozent.</value></data>
 </root>

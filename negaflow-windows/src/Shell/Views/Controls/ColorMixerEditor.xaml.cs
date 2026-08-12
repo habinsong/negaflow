@@ -1,17 +1,27 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Negaflow.Catalog;
+using Negaflow.Shell.Localization;
 
 namespace Negaflow.Shell.Views.Controls;
 
 /// <summary>macOS Color Mixer의 HSL/All 전환과 여덟 색상 밴드를 표시합니다.</summary>
 public sealed partial class ColorMixerEditor : UserControl
 {
-    private static readonly (string Name, string Color)[] Bands =
+    /// <summary>
+    /// macOS 와 같은 여덟 밴드입니다. <c>Id</c> 는 automation id 에 쓰는 안정된 이름이고
+    /// 화면에 나가는 이름은 리소스에서 옵니다.
+    /// </summary>
+    private static readonly (string Id, string ResourceKey, string Color)[] Bands =
     [
-        ("Red", "#FFE63333"), ("Orange", "#FFED8C2E"), ("Yellow", "#FFE0D133"),
-        ("Green", "#FF40B85C"), ("Aqua", "#FF33C2C7"), ("Blue", "#FF3D6EE6"),
-        ("Purple", "#FF8C4DDB"), ("Magenta", "#FFE047A8"),
+        ("red", "developRed", "#FFE63333"),
+        ("orange", "developBandOrange", "#FFED8C2E"),
+        ("yellow", "developBandYellow", "#FFE0D133"),
+        ("green", "developGreen", "#FF40B85C"),
+        ("aqua", "developBandAqua", "#FF33C2C7"),
+        ("blue", "developBlue", "#FF3D6EE6"),
+        ("purple", "developBandPurple", "#FF8C4DDB"),
+        ("magenta", "developBandMagenta", "#FFE047A8"),
     ];
 
     private ColorMixerProperty property = ColorMixerProperty.Hue;
@@ -20,8 +30,24 @@ public sealed partial class ColorMixerEditor : UserControl
     public ColorMixerEditor()
     {
         InitializeComponent();
+        LocalizeControls();
         HueButton.IsChecked = true;
         RebuildBands();
+    }
+
+    /// <summary>이름은 macOS 와 같은 문자열이며 XAML 에 박아 두지 않습니다.</summary>
+    private void LocalizeControls()
+    {
+        SetPropertyText(HueButton, AppResources.Get("developHue", "Text"));
+        SetPropertyText(SaturationButton, AppResources.Get("developSaturation", "Text"));
+        SetPropertyText(LuminanceButton, AppResources.Get("developLuminance", "Text"));
+        SetPropertyText(AllButton, AppResources.Get("developAll", "Text"));
+    }
+
+    private static void SetPropertyText(RadioButton radio, string text)
+    {
+        radio.Content = text;
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(radio, text);
     }
 
     public static readonly DependencyProperty MixerProperty = DependencyProperty.Register(
@@ -82,7 +108,7 @@ public sealed partial class ColorMixerEditor : UserControl
                         Convert.ToByte(Bands[index].Color[3..5], 16),
                         Convert.ToByte(Bands[index].Color[5..7], 16))),
             });
-            heading.Children.Add(new TextBlock { Text = Bands[index].Name, FontSize = 12 });
+            heading.Children.Add(new TextBlock { Text = BandName(index), FontSize = 12 });
             row.Children.Add(heading);
 
             if (property == ColorMixerProperty.All)
@@ -93,7 +119,7 @@ public sealed partial class ColorMixerEditor : UserControl
             }
             else
             {
-                AddSlider(row, index, property, Bands[index].Name);
+                AddSlider(row, index, property, BandName(index));
             }
             BandsPanel.Children.Add(row);
         }
@@ -151,7 +177,9 @@ public sealed partial class ColorMixerEditor : UserControl
         _ => "all",
     };
 
-    private static string ChannelNameForBand(int index) => Bands[index].Name.ToLowerInvariant();
+    private static string BandName(int index) => AppResources.Get(Bands[index].ResourceKey, "Text");
+
+    private static string ChannelNameForBand(int index) => Bands[index].Id;
 
     private enum ColorMixerProperty { Hue, Saturation, Luminance, All }
 }

@@ -11,10 +11,10 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
-            <RadioButton x:Name="HueButton" Grid.Column="0" Content="Hue" GroupName="ColorMixerProperty" Checked="OnPropertyChecked" />
-            <RadioButton x:Name="SaturationButton" Grid.Column="1" Content="Saturation" GroupName="ColorMixerProperty" Checked="OnPropertyChecked" />
-            <RadioButton x:Name="LuminanceButton" Grid.Column="2" Content="Luminance" GroupName="ColorMixerProperty" Checked="OnPropertyChecked" />
-            <RadioButton x:Name="AllButton" Grid.Column="3" Content="All" GroupName="ColorMixerProperty" Checked="OnPropertyChecked" />
+            <RadioButton x:Name="HueButton" Grid.Column="0" GroupName="ColorMixerProperty" Checked="OnPropertyChecked" />
+            <RadioButton x:Name="SaturationButton" Grid.Column="1" GroupName="ColorMixerProperty" Checked="OnPropertyChecked" />
+            <RadioButton x:Name="LuminanceButton" Grid.Column="2" GroupName="ColorMixerProperty" Checked="OnPropertyChecked" />
+            <RadioButton x:Name="AllButton" Grid.Column="3" GroupName="ColorMixerProperty" Checked="OnPropertyChecked" />
         </Grid>
         <StackPanel x:Name="BandsPanel" Spacing="8" />
     </StackPanel>

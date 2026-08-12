@@ -378,40 +378,32 @@
                                         x:Name="BaseAutoModeButton"
                                         Grid.Column="0"
                                         AutomationProperties.AutomationId="negaflow.develop.base.mode.auto"
-                                        AutomationProperties.Name="Base mode: Auto"
-                                        Content="Auto"
                                         GroupName="BaseEstimationMode"
                                         Checked="OnBaseAutoModeChecked" />
                                     <RadioButton
                                         x:Name="BaseFilmModeButton"
                                         Grid.Column="1"
                                         AutomationProperties.AutomationId="negaflow.develop.base.mode.film"
-                                        AutomationProperties.Name="Base mode: Film"
-                                        Content="Film"
                                         GroupName="BaseEstimationMode"
                                         Checked="OnBaseFilmModeChecked" />
                                     <RadioButton
                                         x:Name="BaseManualModeButton"
                                         Grid.Column="2"
                                         AutomationProperties.AutomationId="negaflow.develop.base.mode.manual"
-                                        AutomationProperties.Name="Base mode: Manual"
-                                        Content="Manual"
                                         GroupName="BaseEstimationMode"
                                         Checked="OnBaseManualModeChecked" />
                                 </Grid>
                                 <StackPanel x:Name="FilmBaseControls" Spacing="8">
-                                    <TextBlock FontSize="12" Text="Film stock" />
+                                    <TextBlock x:Name="FilmStockLabel" FontSize="12" />
                                     <ComboBox
                                         x:Name="FilmStockSelector"
                                         AutomationProperties.AutomationId="negaflow.develop.base.film-stock"
-                                        AutomationProperties.Name="Film stock"
                                         DisplayMemberPath="DisplayName"
                                         SelectionChanged="OnFilmStockSelectionChanged" />
-                                    <TextBlock FontSize="12" Text="Light source" />
+                                    <TextBlock x:Name="LightSourceLabel" FontSize="12" />
                                     <ComboBox
                                         x:Name="LightSourceSelector"
                                         AutomationProperties.AutomationId="negaflow.develop.base.light-source"
-                                        AutomationProperties.Name="Light source"
                                         DisplayMemberPath="DisplayName"
                                         SelectionChanged="OnLightSourceSelectionChanged" />
                                 </StackPanel>

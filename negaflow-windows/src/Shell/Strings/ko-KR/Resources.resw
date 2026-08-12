@@ -684,4 +684,33 @@
   <data name="developBaseRed.Text" xml:space="preserve"><value>베이스 R</value><comment>AppLocalizedPhrase.baseRed</comment></data>
   <data name="developBaseGreen.Text" xml:space="preserve"><value>베이스 G</value><comment>AppLocalizedPhrase.baseGreen</comment></data>
   <data name="developBaseBlue.Text" xml:space="preserve"><value>베이스 B</value><comment>AppLocalizedPhrase.baseBlue</comment></data>
+  <data name="developBaseModeAuto.Content" xml:space="preserve"><value>자동</value><comment>AppLocalizedPhrase.baseModeAuto</comment></data>
+  <data name="developBaseModeFilm.Content" xml:space="preserve"><value>필름</value><comment>AppLocalizedPhrase.baseModeFilm</comment></data>
+  <data name="developBaseModeManual.Content" xml:space="preserve"><value>수동</value><comment>AppLocalizedPhrase.baseModeManual</comment></data>
+  <data name="developFilmStock.Text" xml:space="preserve"><value>필름스톡</value><comment>AppLocalizedPhrase.filmStock</comment></data>
+  <data name="developLightSource.Text" xml:space="preserve"><value>광원</value><comment>AppLocalizedPhrase.lightSource</comment></data>
+  <data name="developMidtones.Text" xml:space="preserve"><value>중간톤</value><comment>AppLocalizedPhrase.midtones</comment></data>
+  <data name="developLuminance.Text" xml:space="preserve"><value>광도</value><comment>AppLocalizedPhrase.luminance</comment></data>
+  <data name="developBlending.Text" xml:space="preserve"><value>혼합</value><comment>AppLocalizedPhrase.blending</comment></data>
+  <data name="developBalance.Text" xml:space="preserve"><value>균형</value><comment>AppLocalizedPhrase.balance</comment></data>
+  <data name="developHue.Text" xml:space="preserve"><value>색조</value><comment>AppLocalizedPhrase.hue</comment></data>
+  <data name="developSaturation.Text" xml:space="preserve"><value>채도</value><comment>AppLocalizedPhrase.saturation</comment></data>
+  <data name="developColorGradingWheel.Value" xml:space="preserve"><value>컬러 그레이딩 휠</value></data>
+  <data name="developColorGradingWheelHelp.Value" xml:space="preserve"><value>화살표 키로 색조와 채도를 조정합니다. Shift 를 누르면 더 크게 움직입니다.</value></data>
+  <data name="developAll.Text" xml:space="preserve"><value>모두</value><comment>AppLocalizedPhrase.all</comment></data>
+  <data name="developRed.Text" xml:space="preserve"><value>빨강</value><comment>AppLocalizedPhrase.red</comment></data>
+  <data name="developGreen.Text" xml:space="preserve"><value>초록</value><comment>AppLocalizedPhrase.green</comment></data>
+  <data name="developBlue.Text" xml:space="preserve"><value>파랑</value><comment>AppLocalizedPhrase.blue</comment></data>
+  <data name="developCurveInput.Text" xml:space="preserve"><value>입력</value></data>
+  <data name="developCurveOutput.Text" xml:space="preserve"><value>출력</value></data>
+  <data name="developAddPoint.Content" xml:space="preserve"><value>점 추가</value></data>
+  <data name="developDeletePoint.Content" xml:space="preserve"><value>점 삭제</value></data>
+  <data name="developResetChannel.Content" xml:space="preserve"><value>채널 초기화</value></data>
+  <data name="developBandOrange.Text" xml:space="preserve"><value>주황</value><comment>AppLocalizedPhrase.orange</comment></data>
+  <data name="developBandYellow.Text" xml:space="preserve"><value>노랑</value><comment>AppLocalizedPhrase.yellow</comment></data>
+  <data name="developBandAqua.Text" xml:space="preserve"><value>바다색</value><comment>AppLocalizedPhrase.aqua</comment></data>
+  <data name="developBandPurple.Text" xml:space="preserve"><value>자주</value><comment>AppLocalizedPhrase.purple</comment></data>
+  <data name="developBandMagenta.Text" xml:space="preserve"><value>자홍</value><comment>AppLocalizedPhrase.magenta</comment></data>
+  <data name="developPointCurveCanvas.Value" xml:space="preserve"><value>포인트 커브 캔버스</value></data>
+  <data name="developPointCurveCanvasHelp.Value" xml:space="preserve"><value>눌러서 점을 추가하고 끌어서 옮깁니다. 끝점이 아닌 점을 두 번 누르면 지웁니다. 화살표 키는 1퍼센트, Shift 와 함께 누르면 5퍼센트씩 움직입니다.</value></data>
 </root>

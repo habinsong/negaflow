@@ -684,4 +684,33 @@
   <data name="developBaseRed.Text" xml:space="preserve"><value>ベース R</value><comment>AppLocalizedPhrase.baseRed</comment></data>
   <data name="developBaseGreen.Text" xml:space="preserve"><value>ベース G</value><comment>AppLocalizedPhrase.baseGreen</comment></data>
   <data name="developBaseBlue.Text" xml:space="preserve"><value>ベース B</value><comment>AppLocalizedPhrase.baseBlue</comment></data>
+  <data name="developBaseModeAuto.Content" xml:space="preserve"><value>自動</value><comment>AppLocalizedPhrase.baseModeAuto</comment></data>
+  <data name="developBaseModeFilm.Content" xml:space="preserve"><value>フィルム</value><comment>AppLocalizedPhrase.baseModeFilm</comment></data>
+  <data name="developBaseModeManual.Content" xml:space="preserve"><value>手動</value><comment>AppLocalizedPhrase.baseModeManual</comment></data>
+  <data name="developFilmStock.Text" xml:space="preserve"><value>フィルム銘柄</value><comment>AppLocalizedPhrase.filmStock</comment></data>
+  <data name="developLightSource.Text" xml:space="preserve"><value>光源</value><comment>AppLocalizedPhrase.lightSource</comment></data>
+  <data name="developMidtones.Text" xml:space="preserve"><value>中間調</value><comment>AppLocalizedPhrase.midtones</comment></data>
+  <data name="developLuminance.Text" xml:space="preserve"><value>輝度</value><comment>AppLocalizedPhrase.luminance</comment></data>
+  <data name="developBlending.Text" xml:space="preserve"><value>ブレンド</value><comment>AppLocalizedPhrase.blending</comment></data>
+  <data name="developBalance.Text" xml:space="preserve"><value>バランス</value><comment>AppLocalizedPhrase.balance</comment></data>
+  <data name="developHue.Text" xml:space="preserve"><value>色相</value><comment>AppLocalizedPhrase.hue</comment></data>
+  <data name="developSaturation.Text" xml:space="preserve"><value>彩度</value><comment>AppLocalizedPhrase.saturation</comment></data>
+  <data name="developColorGradingWheel.Value" xml:space="preserve"><value>カラーグレーディングホイール</value></data>
+  <data name="developColorGradingWheelHelp.Value" xml:space="preserve"><value>矢印キーで色相と彩度を調整します。Shift を押すと大きく動きます。</value></data>
+  <data name="developAll.Text" xml:space="preserve"><value>すべて</value><comment>AppLocalizedPhrase.all</comment></data>
+  <data name="developRed.Text" xml:space="preserve"><value>レッド</value><comment>AppLocalizedPhrase.red</comment></data>
+  <data name="developGreen.Text" xml:space="preserve"><value>グリーン</value><comment>AppLocalizedPhrase.green</comment></data>
+  <data name="developBlue.Text" xml:space="preserve"><value>ブルー</value><comment>AppLocalizedPhrase.blue</comment></data>
+  <data name="developCurveInput.Text" xml:space="preserve"><value>入力</value></data>
+  <data name="developCurveOutput.Text" xml:space="preserve"><value>出力</value></data>
+  <data name="developAddPoint.Content" xml:space="preserve"><value>ポイントを追加</value></data>
+  <data name="developDeletePoint.Content" xml:space="preserve"><value>ポイントを削除</value></data>
+  <data name="developResetChannel.Content" xml:space="preserve"><value>チャンネルをリセット</value></data>
+  <data name="developBandOrange.Text" xml:space="preserve"><value>オレンジ</value><comment>AppLocalizedPhrase.orange</comment></data>
+  <data name="developBandYellow.Text" xml:space="preserve"><value>イエロー</value><comment>AppLocalizedPhrase.yellow</comment></data>
+  <data name="developBandAqua.Text" xml:space="preserve"><value>アクア</value><comment>AppLocalizedPhrase.aqua</comment></data>
+  <data name="developBandPurple.Text" xml:space="preserve"><value>パープル</value><comment>AppLocalizedPhrase.purple</comment></data>
+  <data name="developBandMagenta.Text" xml:space="preserve"><value>マゼンタ</value><comment>AppLocalizedPhrase.magenta</comment></data>
+  <data name="developPointCurveCanvas.Value" xml:space="preserve"><value>ポイントカーブキャンバス</value></data>
+  <data name="developPointCurveCanvasHelp.Value" xml:space="preserve"><value>クリックでポイントを追加し、ドラッグで移動します。端点以外をダブルクリックすると削除します。矢印キーは 1 パーセント、Shift と併用で 5 パーセント動きます。</value></data>
 </root>
