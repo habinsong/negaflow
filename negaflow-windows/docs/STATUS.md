@@ -9,18 +9,21 @@ document. Discovery accepts only bounded non-reparse plugin directories with a s
 protocol-v1/v2 scanner manifest; it records SHA-256 identities for both manifest and executable
 and rechecks the approved identity immediately before launch. The process boundary passes
 structured arguments, bounds stdout/stderr and NDJSON line sizes, applies operation-specific
-timeouts, and kills the child process tree on cancellation or timeout. The first reachable
-operations are `detect` and `capabilities`: an approved adapter returns a bounded, unique device
+timeouts, and kills the child process tree on cancellation or timeout. The reachable operations
+are `detect`, `capabilities`, and `scan`: an approved adapter returns a bounded, unique device
 list and then the device's exact resolution, mode, bit-depth, optional-IR, and output capability
-set. Protocol-v2 progress/result/error streams are already checked for request ID, strict
+set. A scan now emits the macOS v2 wire names, request ID, capability token, and host-owned
+sibling staging path; its one terminal event must echo every applied option before the TIFF/IR
+pair can be accepted. The artifact transaction rejects reparse paths, non-TIFF or
+metadata-mismatched RGB/IR files, publishes IR before RGB with rollback, and never overwrites a
+destination. Protocol-v2 progress/result/error streams are checked for request ID, strict
 sequence, finite progress range, and exactly one terminal event.
 
-x64 Debug/Release managed checks passed Catalog 605 and Shell 409 assertions with no build
-warnings or errors. The x64 Release gate passed native CTest 65/65 plus the preceding managed
-checks;
-the complete ARM64 Release graph cross-built, but was not executed on ARM64 hardware. Approval
-persistence, capability negotiation, staging-TIFF artifact validation, scan publication,
-WIA/TWAIN adapters, and real-device evidence are not implemented.
+x64 Debug/Release managed checks passed Catalog 605 and Shell 413 assertions with no build
+warnings or errors. x64 Release native CTest passed 65/65. The complete ARM64 Release graph
+cross-built, but was not executed on ARM64 hardware. Approval persistence, the final
+`ScannerCommittedArtifacts` to `LibraryHostService` publication
+call, WIA/TWAIN adapters, and real-device evidence are not implemented.
 
 ## 2026-08-12 Develop primary-calibration ABI
 

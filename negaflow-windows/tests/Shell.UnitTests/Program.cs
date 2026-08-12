@@ -33,6 +33,7 @@ internal static class Program
         VerifyPreviewCoordinator();
         VerifyAutoAdjustCoordinator();
         VerifyScannerPluginDiscovery();
+        VerifyScannerArtifactTransaction();
 
         var report = new
         {
@@ -810,7 +811,7 @@ internal static class Program
             string executable = Path.Combine(accepted, "adapter.cmd");
             File.WriteAllText(
                 executable,
-                "@echo off\r\nif \"%1\"==\"detect\" echo {\"devices\":[{\"id\":\"dev0\",\"displayName\":\"Fixture\",\"vendor\":\"Negaflow\",\"model\":\"Unit\"}]}\r\nif \"%1\"==\"capabilities\" echo {\"resolutionsDPI\":[0,3600],\"modes\":[\"color\"],\"bitDepths\":[8,16],\"supportsPreview\":true,\"outputFormats\":[\"tiff\"],\"capabilityToken\":\"opaque\"}\r\n");
+                "@echo off\r\nif \"%1\"==\"detect\" echo {\"devices\":[{\"id\":\"dev0\",\"displayName\":\"Fixture\",\"vendor\":\"Negaflow\",\"model\":\"Unit\"}]}\r\nif \"%1\"==\"capabilities\" echo {\"resolutionsDPI\":[0,3600],\"modes\":[\"color\"],\"bitDepths\":[8,16],\"supportsPreview\":true,\"supportsScanArea\":true,\"outputFormats\":[\"tiff\"],\"capabilityToken\":\"opaque\"}\r\n");
 
             string rejected = Path.Combine(root, "rejected");
             Directory.CreateDirectory(rejected);
@@ -895,6 +896,78 @@ internal static class Program
                     "{\"resolutionsDPI\":[3600,3600],\"modes\":[\"color\"],\"bitDepths\":[16],\"outputFormats\":[\"tiff\"]}",
                     out _),
                 "scanner_plugin_rejects_duplicate_capability_values");
+
+            string scanDestination = Path.Combine(root, "scan.tiff");
+            ScannerPluginScanRequest scanRequest = new(
+                detect.Devices[0],
+                capabilityResult.Capabilities!,
+                DevelopmentProcess.C41,
+                3600,
+                16,
+                "color",
+                Preview: false,
+                Infrared: false,
+                MultiExposure: false,
+                new ScannerPluginScanArea(0, 0, 36, 24),
+                OutputRawTiff: true,
+                scanDestination);
+            Check(ScannerPluginClient.TryBuildScanWire(scanRequest, out ScannerPluginClient.ScanWire? wire,
+                    out string? staging) && wire is not null && staging is not null &&
+                  wire.ProtocolVersion == ScannerPluginProtocol.StreamProtocolVersion &&
+                  wire.FilmType == "colorNegative" && wire.OutputPath.StartsWith(staging, StringComparison.Ordinal) &&
+                  JsonSerializer.Serialize(wire).Contains("\"outputRawTIFF\":true", StringComparison.Ordinal) &&
+                  JsonSerializer.Serialize(wire).Contains("\"originXMM\":0", StringComparison.Ordinal),
+                "scanner_plugin_builds_v2_staged_scan_request_with_mac_wire_names");
+            Check(!ScannerPluginClient.TryBuildScanWire(
+                    scanRequest with { Infrared = true }, out _, out _),
+                "scanner_plugin_refuses_unsupported_infrared_request_before_launch");
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    private static void VerifyScannerArtifactTransaction()
+    {
+        string root = Path.Combine(Path.GetTempPath(), $"negaflow-scanner-artifacts-{Guid.NewGuid():N}");
+        try
+        {
+            Directory.CreateDirectory(root);
+            string staging = Path.Combine(root, ".scan-staging");
+            Directory.CreateDirectory(staging);
+            string visible = Path.Combine(staging, "visible.tiff");
+            string infrared = Path.Combine(staging, "infrared.tiff");
+            string destination = Path.Combine(root, "scan.tiff");
+            File.WriteAllText(visible, "RGB staging bytes");
+            File.WriteAllText(infrared, "IR staging bytes");
+            LibrarySourceMetadata visibleMetadata = new(16, 640, 480, 3, 16, 1, 1);
+            LibrarySourceMetadata infraredMetadata = new(12, 640, 480, 1, 16, 1, 1);
+            ScannerArtifactCommitResult committed = ScannerArtifactTransaction.Commit(
+                new ScannerStagedArtifacts(staging, visible, infrared),
+                destination,
+                path => path == visible ? visibleMetadata : path == infrared ? infraredMetadata : null);
+            Check(committed.IsSuccess && File.Exists(destination) &&
+                  File.Exists(destination + ".ir.tiff") && !File.Exists(visible) && !File.Exists(infrared),
+                "scanner_artifact_commits_verified_pair_before_publication");
+
+            string badStaging = Path.Combine(root, ".bad-staging");
+            Directory.CreateDirectory(badStaging);
+            string badVisible = Path.Combine(badStaging, "visible.tiff");
+            string badInfrared = Path.Combine(badStaging, "infrared.tiff");
+            File.WriteAllText(badVisible, "RGB staging bytes");
+            File.WriteAllText(badInfrared, "IR staging bytes");
+            ScannerArtifactCommitResult mismatch = ScannerArtifactTransaction.Commit(
+                new ScannerStagedArtifacts(badStaging, badVisible, badInfrared),
+                Path.Combine(root, "bad.tiff"),
+                path => path == badVisible ? visibleMetadata :
+                    path == badInfrared ? infraredMetadata with { PixelWidth = 639 } : null);
+            Check(mismatch.Status == ScannerArtifactCommitStatus.InfraredMismatch &&
+                  File.Exists(badVisible) && File.Exists(badInfrared),
+                "scanner_artifact_refuses_mismatched_companion_without_publish");
         }
         finally
         {
