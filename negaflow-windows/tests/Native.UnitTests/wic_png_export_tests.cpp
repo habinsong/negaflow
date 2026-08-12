@@ -8,6 +8,7 @@
 #include <wrl/client.h>
 
 #include <array>
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -98,6 +99,45 @@ negaflow::imaging::WorkingImage make_image() {
     };
 }
 
+[[nodiscard]] bool inject_jpeg_exif_orientation(
+    const std::filesystem::path& path,
+    const std::uint16_t orientation) {
+    if (orientation < 1U || orientation > 8U) {
+        return false;
+    }
+    std::ifstream input(path, std::ios::binary);
+    std::vector<std::uint8_t> jpeg{
+        std::istreambuf_iterator<char>{input},
+        std::istreambuf_iterator<char>{},
+    };
+    if (!input.good() && !input.eof()) {
+        return false;
+    }
+    if (jpeg.size() < 2U || jpeg[0] != 0xFFU || jpeg[1] != 0xD8U) {
+        return false;
+    }
+    const std::array<std::uint8_t, 36U> app1{{
+        0xFFU, 0xE1U, 0x00U, 0x22U,
+        'E', 'x', 'i', 'f', 0U, 0U,
+        'I', 'I', 0x2AU, 0U, 0x08U, 0U, 0U, 0U,
+        0x01U, 0U,
+        0x12U, 0x01U, 0x03U, 0U, 0x01U, 0U, 0U, 0U,
+        static_cast<std::uint8_t>(orientation),
+        static_cast<std::uint8_t>(orientation >> 8U), 0U, 0U,
+        0U, 0U, 0U, 0U,
+    }};
+    std::vector<std::uint8_t> output{};
+    output.reserve(jpeg.size() + app1.size());
+    output.insert(output.end(), jpeg.begin(), jpeg.begin() + 2);
+    output.insert(output.end(), app1.begin(), app1.end());
+    output.insert(output.end(), jpeg.begin() + 2, jpeg.end());
+    std::ofstream destination(path, std::ios::binary | std::ios::trunc);
+    destination.write(
+        reinterpret_cast<const char*>(output.data()),
+        static_cast<std::streamsize>(output.size()));
+    return destination.good();
+}
+
 void test_round_trip_and_publish(const std::filesystem::path& root) {
     const std::filesystem::path destination = root / L"round-trip.png";
     const auto result = negaflow::output::export_working_to_srgb16_png(
@@ -149,9 +189,10 @@ void test_jpeg_standard_image_decode(const std::filesystem::path& root) {
     const HRESULT apartment = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
     expect(SUCCEEDED(apartment), "COM apartment initializes for JPEG input test");
     const std::filesystem::path destination = root / L"standard-input.jpg";
-    const std::array<std::uint8_t, 6U> pixels{{
-        24U, 72U, 220U,
-        220U, 72U, 24U,
+    const std::array<std::uint8_t, 18U> pixels{{
+        24U, 72U, 220U, 220U, 72U, 24U,
+        40U, 120U, 190U, 190U, 120U, 40U,
+        80U, 160U, 150U, 150U, 160U, 80U,
     }};
     HRESULT status = E_FAIL;
     ComPtr<IWICImagingFactory> factory{};
@@ -168,14 +209,14 @@ void test_jpeg_standard_image_decode(const std::filesystem::path& root) {
     if (SUCCEEDED(status)) status = encoder->Initialize(stream.Get(), WICBitmapEncoderNoCache);
     if (SUCCEEDED(status)) status = encoder->CreateNewFrame(&frame, nullptr);
     if (SUCCEEDED(status)) status = frame->Initialize(nullptr);
-    if (SUCCEEDED(status)) status = frame->SetSize(2U, 1U);
+    if (SUCCEEDED(status)) status = frame->SetSize(2U, 3U);
     WICPixelFormatGUID format = GUID_WICPixelFormat24bppBGR;
     if (SUCCEEDED(status)) status = frame->SetPixelFormat(&format);
     if (SUCCEEDED(status) && IsEqualGUID(format, GUID_WICPixelFormat24bppBGR) == FALSE) {
         status = E_FAIL;
     }
     if (SUCCEEDED(status)) {
-        status = frame->WritePixels(1U, 6U, static_cast<UINT>(pixels.size()),
+        status = frame->WritePixels(3U, 6U, static_cast<UINT>(pixels.size()),
             const_cast<std::uint8_t*>(pixels.data()));
     }
     if (SUCCEEDED(status)) status = frame->Commit();
@@ -187,14 +228,17 @@ void test_jpeg_standard_image_decode(const std::filesystem::path& root) {
     frame.Reset();
     if (apartment == S_OK || apartment == S_FALSE) CoUninitialize();
     if (FAILED(status)) return;
+    expect(inject_jpeg_exif_orientation(destination, 6U),
+        "EXIF orientation metadata is injected into the JPEG fixture");
 
     const auto decoded = negaflow::imageio::decode_standard_image_with_wic(destination);
     expect(
         decoded.status == negaflow::imageio::WicStandardImageDecodeStatus::ok &&
-            decoded.image.width == 2U && decoded.image.height == 1U &&
+            decoded.image.width == 3U && decoded.image.height == 2U &&
             decoded.image.layout == negaflow::imageio::DecodedPixelLayout::rgba16 &&
-            decoded.image.icc_profile.empty(),
-        "an untagged JPEG decodes as a standard sRGB image input");
+            decoded.image.icc_profile.empty() && decoded.info.exif_orientation == 6U &&
+            decoded.info.orientation_applied,
+        "an EXIF-oriented JPEG decodes as clockwise-oriented standard sRGB image input");
 }
 
 void test_existing_destination_is_preserved(const std::filesystem::path& root) {

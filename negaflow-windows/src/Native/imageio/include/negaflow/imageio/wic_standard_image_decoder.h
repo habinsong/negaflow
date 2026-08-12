@@ -36,6 +36,8 @@ struct WicStandardImageDecodeInfo final {
     std::uint32_t frame_count{0U};
     std::uint64_t decoded_pixel_bytes{0U};
     bool format_conversion_used{false};
+    std::uint16_t exif_orientation{1U};
+    bool orientation_applied{false};
     negaflow::color::IccProfileInfo icc{};
 };
 

@@ -16,8 +16,10 @@ x64 Release native CTest passed 65/65 and managed Catalog 605/Shell 416 assertio
 build warnings or errors. The focused Debug checks covered a WIC-generated JPEG, profiled PNG,
 standard-image source probe, actual common preview/export, and byte-exact source preservation.
 The full ARM64 Release native graph and managed Interop graph cross-built successfully, but were
-not run on ARM64 hardware. JPEG EXIF orientation is not applied yet; RAW/DNG/HEIC support and
-real-photo/macOS pixel comparisons remain pending.
+not run on ARM64 hardware. JPEG EXIF orientation is read from the documented WIC metadata path
+and applied before the common scanner-to-working conversion; a real APP1 orientation-6 fixture
+now verifies the 2x3-to-3x2 route in x64 Debug/Release and ARM64 cross-build. RAW/DNG/HEIC
+support and real-photo/macOS pixel comparisons remain pending.
 
 ## 2026-08-12 Scanner plugin host foundation
 

@@ -42,6 +42,87 @@ void discard_samples(WicStandardImageDecodeResult& result) noexcept {
            IsEqualGUID(format, GUID_ContainerFormatPng) != 0;
 }
 
+[[nodiscard]] std::uint16_t exif_orientation(
+    IWICBitmapFrameDecode* const frame) noexcept {
+    ComPtr<IWICMetadataQueryReader> reader{};
+    if (FAILED(frame->GetMetadataQueryReader(&reader))) {
+        return 1U;
+    }
+    PROPVARIANT value{};
+    PropVariantInit(&value);
+    const HRESULT status = reader->GetMetadataByName(
+        L"/app1/ifd/{ushort=274}", &value);
+    std::uint32_t orientation = 1U;
+    if (SUCCEEDED(status)) {
+        switch (value.vt) {
+            case VT_UI2: orientation = value.uiVal; break;
+            case VT_UI4: orientation = value.ulVal; break;
+            case VT_I2: orientation = static_cast<std::uint16_t>(value.iVal); break;
+            case VT_I4: orientation = static_cast<std::uint32_t>(value.lVal); break;
+            default: break;
+        }
+    }
+    PropVariantClear(&value);
+    return orientation >= 1U && orientation <= 8U
+        ? static_cast<std::uint16_t>(orientation)
+        : 1U;
+}
+
+[[nodiscard]] WicStandardImageDecodeStatus apply_exif_orientation(
+    IWICImagingFactory* const factory,
+    IWICBitmapSource* const source,
+    const std::uint16_t orientation,
+    ComPtr<IWICBitmapSource>& oriented) noexcept {
+    oriented = source;
+    const auto rotate = [&](const WICBitmapTransformOptions transform) noexcept {
+        if (transform == WICBitmapTransformRotate0) {
+            return true;
+        }
+        ComPtr<IWICBitmapFlipRotator> rotator{};
+        return SUCCEEDED(factory->CreateBitmapFlipRotator(&rotator)) &&
+            SUCCEEDED(rotator->Initialize(oriented.Get(), transform)) &&
+            SUCCEEDED(rotator.As(&oriented));
+    };
+    const auto flip = [&](const WICBitmapTransformOptions transform) noexcept {
+        ComPtr<IWICBitmapFlipRotator> rotator{};
+        return SUCCEEDED(factory->CreateBitmapFlipRotator(&rotator)) &&
+            SUCCEEDED(rotator->Initialize(oriented.Get(), transform)) &&
+            SUCCEEDED(rotator.As(&oriented));
+    };
+    switch (orientation) {
+        case 1U: return WicStandardImageDecodeStatus::ok;
+        case 2U:
+            return flip(WICBitmapTransformFlipHorizontal)
+                ? WicStandardImageDecodeStatus::ok
+                : WicStandardImageDecodeStatus::pixel_decode_failed;
+        case 3U:
+            return rotate(WICBitmapTransformRotate180)
+                ? WicStandardImageDecodeStatus::ok
+                : WicStandardImageDecodeStatus::pixel_decode_failed;
+        case 4U:
+            return flip(WICBitmapTransformFlipVertical)
+                ? WicStandardImageDecodeStatus::ok
+                : WicStandardImageDecodeStatus::pixel_decode_failed;
+        case 5U:
+            return rotate(WICBitmapTransformRotate90) && flip(WICBitmapTransformFlipHorizontal)
+                ? WicStandardImageDecodeStatus::ok
+                : WicStandardImageDecodeStatus::pixel_decode_failed;
+        case 6U:
+            return rotate(WICBitmapTransformRotate90)
+                ? WicStandardImageDecodeStatus::ok
+                : WicStandardImageDecodeStatus::pixel_decode_failed;
+        case 7U:
+            return rotate(WICBitmapTransformRotate90) && flip(WICBitmapTransformFlipVertical)
+                ? WicStandardImageDecodeStatus::ok
+                : WicStandardImageDecodeStatus::pixel_decode_failed;
+        case 8U:
+            return rotate(WICBitmapTransformRotate270)
+                ? WicStandardImageDecodeStatus::ok
+                : WicStandardImageDecodeStatus::pixel_decode_failed;
+        default: return WicStandardImageDecodeStatus::ok;
+    }
+}
+
 [[nodiscard]] WicStandardImageDecodeStatus extract_icc_profile(
     IWICImagingFactory* const factory,
     IWICBitmapFrameDecode* const frame,
@@ -195,6 +276,7 @@ WicStandardImageDecodeResult decode_standard_image_with_wic(
             result.status = WicStandardImageDecodeStatus::cancelled;
             return result;
         }
+        result.info.exif_orientation = exif_orientation(frame.Get());
         GUID source_format{};
         if (FAILED(frame->GetPixelFormat(&source_format))) {
             result.status = WicStandardImageDecodeStatus::pixel_decode_failed;
@@ -225,17 +307,37 @@ WicStandardImageDecodeResult decode_standard_image_with_wic(
             }
             result.info.format_conversion_used = true;
         }
+        ComPtr<IWICBitmapSource> oriented{};
+        const WicStandardImageDecodeStatus orientation_status = apply_exif_orientation(
+            factory.Get(), source.Get(), result.info.exif_orientation, oriented);
+        if (orientation_status != WicStandardImageDecodeStatus::ok) {
+            result.status = orientation_status;
+            return result;
+        }
+        if (FAILED(oriented->GetSize(&width, &height)) || width == 0U || height == 0U) {
+            result.status = WicStandardImageDecodeStatus::pixel_decode_failed;
+            return result;
+        }
+        const std::uint64_t oriented_stride = static_cast<std::uint64_t>(width) * 8ULL;
+        const std::uint64_t oriented_bytes = oriented_stride * height;
+        if (oriented_stride > std::numeric_limits<UINT>::max() ||
+            oriented_bytes > limits.max_decoded_pixel_bytes ||
+            oriented_bytes > std::numeric_limits<UINT>::max() ||
+            oriented_bytes / sizeof(std::uint16_t) > std::numeric_limits<std::size_t>::max()) {
+            result.status = WicStandardImageDecodeStatus::memory_limit_exceeded;
+            return result;
+        }
         result.image.width = width;
         result.image.height = height;
-        result.image.stride_bytes = static_cast<std::uint32_t>(stride);
+        result.image.stride_bytes = static_cast<std::uint32_t>(oriented_stride);
         result.image.layout = DecodedPixelLayout::rgba16;
         result.image.alpha_mode = AlphaMode::unassociated;
         result.image.untagged_rgb_transfer = UntaggedRgbTransfer::srgb_encoded;
-        result.image.samples.resize(static_cast<std::size_t>(bytes / sizeof(std::uint16_t)));
-        if (FAILED(source->CopyPixels(
+        result.image.samples.resize(static_cast<std::size_t>(oriented_bytes / sizeof(std::uint16_t)));
+        if (FAILED(oriented->CopyPixels(
                 nullptr,
-                static_cast<UINT>(stride),
-                static_cast<UINT>(bytes),
+                static_cast<UINT>(oriented_stride),
+                static_cast<UINT>(oriented_bytes),
                 reinterpret_cast<BYTE*>(result.image.samples.data())))) {
             discard_samples(result);
             result.status = WicStandardImageDecodeStatus::pixel_decode_failed;
@@ -246,7 +348,8 @@ WicStandardImageDecodeResult decode_standard_image_with_wic(
             result.status = WicStandardImageDecodeStatus::cancelled;
             return result;
         }
-        result.info.decoded_pixel_bytes = bytes;
+        result.info.decoded_pixel_bytes = oriented_bytes;
+        result.info.orientation_applied = result.info.exif_orientation != 1U;
         result.status = WicStandardImageDecodeStatus::ok;
         return result;
     } catch (const std::bad_alloc&) {
