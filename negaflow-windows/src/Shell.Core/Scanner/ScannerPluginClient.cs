@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Negaflow.Catalog;
+using Negaflow.Interop;
 
 namespace Negaflow.Shell;
 
@@ -89,6 +90,21 @@ public sealed record ScannerPluginScanResult(
 {
     public bool IsSuccess => Status == ScannerPluginScanStatus.Completed &&
         ArtifactCommit is { IsSuccess: true };
+}
+
+public enum ScannerPluginLibraryScanStatus
+{
+    Published,
+    ScanFailed,
+    CatalogPublicationFailed,
+}
+
+public sealed record ScannerPluginLibraryScanResult(
+    ScannerPluginLibraryScanStatus Status,
+    ScannerPluginScanResult Scan,
+    ScannerFramePublishResult? Publication)
+{
+    public bool IsSuccess => Status == ScannerPluginLibraryScanStatus.Published;
 }
 
 // The first product-facing scanner operation. It intentionally has no WIA/TWAIN knowledge:
@@ -314,6 +330,44 @@ public static class ScannerPluginClient
             {
             }
         }
+    }
+
+    // The scanner adapter never writes the catalog. Its only authority is a staged TIFF pair;
+    // once that pair is verified and committed, the existing single-writer Library boundary owns
+    // the durable frame record and optional IR recipe bootstrap.
+    public static async Task<ScannerPluginLibraryScanResult> ScanAndPublishAsync(
+        InstalledScannerPlugin plugin,
+        ScannerPluginTrustIdentity approvedIdentity,
+        ScannerPluginScanRequest request,
+        LibraryHostService library,
+        InfraredDetectorParameters? infraredParameters = null,
+        DevelopRun? run = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(library);
+        ScannerPluginScanResult scan = await ScanAsync(
+            plugin,
+            approvedIdentity,
+            request,
+            cancellationToken);
+        if (scan.ArtifactCommit?.Artifacts is not { } artifacts)
+        {
+            return new(ScannerPluginLibraryScanStatus.ScanFailed, scan, null);
+        }
+
+        ScannerFramePublishResult published = library.PublishScannerFrame(
+            new ScannerFrameImport(
+                artifacts.VisiblePath,
+                artifacts.InfraredPath,
+                request.Process),
+            infraredParameters,
+            run);
+        return new(
+            published.Status == ScannerFramePublishStatus.CatalogWriteFailed
+                ? ScannerPluginLibraryScanStatus.CatalogPublicationFailed
+                : ScannerPluginLibraryScanStatus.Published,
+            scan,
+            published);
     }
 
     public static bool TryBuildScanWire(

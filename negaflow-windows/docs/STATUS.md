@@ -21,9 +21,12 @@ sequence, finite progress range, and exactly one terminal event.
 
 x64 Debug/Release managed checks passed Catalog 605 and Shell 413 assertions with no build
 warnings or errors. x64 Release native CTest passed 65/65. The complete ARM64 Release graph
-cross-built, but was not executed on ARM64 hardware. Approval persistence, the final
-`ScannerCommittedArtifacts` to `LibraryHostService` publication
-call, WIA/TWAIN adapters, and real-device evidence are not implemented.
+cross-built, but was not executed on ARM64 hardware. `ScanAndPublishAsync` passes only the
+verified committed TIFF/IR pair to the existing single-writer `LibraryHostService` boundary,
+which persists the frame before optional IR recipe bootstrap. If catalog publication fails, the
+committed source pair is intentionally left intact and returned to the caller; a durable startup
+recovery receipt, approval persistence, WIA/TWAIN adapters, and real-device evidence are not
+implemented.
 
 ## 2026-08-12 Develop primary-calibration ABI
 
