@@ -88,8 +88,9 @@ byte-exact임을 고정했습니다. 대형 실제 촬영 TIFF batch의 process 
 
 ## 2026-08-12 현재 재개 지점
 
-현재 최우선은 scanner plugin host의 남은 거래 경계입니다. 다음 작업은 approved plugin의
-`capabilities` 요청과 protocol v2 applied-options 검증, 이어서 app-owned staging TIFF/IR artifact의
+현재 최우선은 scanner plugin host의 남은 거래 경계입니다. approved plugin의 `capabilities` 요청은
+device ID·vendor·model 입력, bounded resolution/mode/bit-depth/IR 결과와 opaque capability token까지
+연결됐습니다. 다음 작업은 protocol v2 applied-options 검증, 이어서 app-owned staging TIFF/IR artifact의
 containment·regular-file·TIFF preflight·atomic publish를 Library frame transaction에 연결하는 것입니다.
 WIA/TWAIN 드라이버 adapter와 scanner WinUI는 이 host 계약 위에서만 추가합니다. Print 확장과 추가 Develop
 surface보다 앞섭니다.

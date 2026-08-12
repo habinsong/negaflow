@@ -27,7 +27,7 @@
 | M7 대형 이미지 | 6% | WIC row sink, chunk ICC transform, 단조 progress/cancel, full decoded source 제거와 exact parity | 최종 working streaming, tile, byte reservation, cache, TDR |
 | M8 ABI·WinUI shell/canvas | 80% | v12 가변 Local Dodge/Burn, v13 ColorModel, v14 scene correction, v15 DevelopTarget, v16 scanner profile ID, v17 film polarity, v18 ordered 영역 Defects, v19 source identity, v20 ordered Clone Stamp, v21 ordered Brush, v22 run state, v23 preview-only soft proof, IR item-boundary v25/ABI 0.32까지 검증 | WinUI Defects 편집과 paired-plane IR lifecycle, GPU canvas, handles/events, lifetime·activation 전체 경로 |
 | M9~M14 제품 surface | 8% | Library 목록, 파일 picker import, Develop의 필름 base·노출, Export가 실제 동작 | 미리보기 렌더, base picker, 취소·진행률, Defects, Print, Settings 기능 |
-| M15 scanner host | 5% | bounded plugin discovery·identity 재검증·process host·v2 NDJSON·detect | approval persistence, capability/scan transaction, WIA/TWAIN adapter, real device |
+| M15 scanner host | 6% | bounded plugin discovery·identity 재검증·process host·v2 NDJSON·detect/capabilities | approval persistence, scan transaction, WIA/TWAIN adapter, real device |
 | M16 qualification | 0% | 문서만 존재 | 실제 CPU/GPU/ARM64/display matrix |
 | M17 배포·컴플라이언스 | 0% | 설치 선언 초안만 존재 | MSIX/installer, signing, update, SBOM |
 | M18 Beta/RC/Stable | 0% | 없음 | release gate 전체 |

@@ -10,12 +10,14 @@ protocol-v1/v2 scanner manifest; it records SHA-256 identities for both manifest
 and rechecks the approved identity immediately before launch. The process boundary passes
 structured arguments, bounds stdout/stderr and NDJSON line sizes, applies operation-specific
 timeouts, and kills the child process tree on cancellation or timeout. The first reachable
-operation is `detect`: an approved adapter returns a bounded, unique device list through the
-host. Protocol-v2 progress/result/error streams are already checked for request ID, strict
+operations are `detect` and `capabilities`: an approved adapter returns a bounded, unique device
+list and then the device's exact resolution, mode, bit-depth, optional-IR, and output capability
+set. Protocol-v2 progress/result/error streams are already checked for request ID, strict
 sequence, finite progress range, and exactly one terminal event.
 
-x64 Debug managed checks passed Catalog 605 and Shell 406 assertions with no build warnings or
-errors. The x64 Release gate passed native CTest 65/65 plus Catalog 605 and Shell 406 assertions;
+x64 Debug/Release managed checks passed Catalog 605 and Shell 409 assertions with no build
+warnings or errors. The x64 Release gate passed native CTest 65/65 plus the preceding managed
+checks;
 the complete ARM64 Release graph cross-built, but was not executed on ARM64 hardware. Approval
 persistence, capability negotiation, staging-TIFF artifact validation, scan publication,
 WIA/TWAIN adapters, and real-device evidence are not implemented.

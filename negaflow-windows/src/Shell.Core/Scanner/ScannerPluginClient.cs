@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Negaflow.Shell;
 
@@ -20,6 +21,27 @@ public sealed record ScannerPluginDetectResult(
     bool IsMalformedResponse)
 {
     public bool IsSuccess => Process.IsSuccess && !IsMalformedResponse;
+}
+
+public sealed record ScannerPluginCapabilities(
+    IReadOnlyList<int> ResolutionsDpi,
+    IReadOnlyList<string> Modes,
+    IReadOnlyList<int> BitDepths,
+    bool SupportsPreview,
+    bool SupportsTransparency,
+    bool SupportsInfrared,
+    bool SupportsMultiExposure,
+    bool SupportsScanArea,
+    bool SupportsPositionedScanArea,
+    IReadOnlyList<string> OutputFormats,
+    string? CapabilityToken);
+
+public sealed record ScannerPluginCapabilitiesResult(
+    ScannerPluginProcessResult Process,
+    ScannerPluginCapabilities? Capabilities,
+    bool IsMalformedResponse)
+{
+    public bool IsSuccess => Process.IsSuccess && !IsMalformedResponse && Capabilities is not null;
 }
 
 // The first product-facing scanner operation. It intentionally has no WIA/TWAIN knowledge:
@@ -102,12 +124,85 @@ public static class ScannerPluginClient
         }
     }
 
+    public static async Task<ScannerPluginCapabilitiesResult> GetCapabilitiesAsync(
+        InstalledScannerPlugin plugin,
+        ScannerPluginTrustIdentity approvedIdentity,
+        ScannerPluginDevice device,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(device);
+        string request = JsonSerializer.Serialize(
+            new CapabilityRequest(device.Id, device.Vendor, device.Model),
+            Json);
+        ScannerPluginProcessResult process = await ScannerPluginProcessHost.RunAsync(
+            plugin,
+            approvedIdentity,
+            "capabilities",
+            [device.Id],
+            request,
+            cancellationToken: cancellationToken);
+        if (!process.IsSuccess ||
+            !TryParseCapabilities(string.Join('\n', process.StandardOutputLines), out ScannerPluginCapabilities? capabilities))
+        {
+            return new(process, null, process.IsSuccess);
+        }
+        return new(process, capabilities, false);
+    }
+
+    public static bool TryParseCapabilities(string response, out ScannerPluginCapabilities? capabilities)
+    {
+        capabilities = null;
+        try
+        {
+            CapabilitiesResponse? decoded = JsonSerializer.Deserialize<CapabilitiesResponse>(response, Json);
+            if (decoded is null || !AreSupportedResolutions(decoded.ResolutionsDpi) ||
+                !AreDistinctValues(decoded.Modes, IsSupportedMode) ||
+                !AreDistinctValues(decoded.BitDepths, value => value is 8 or 16) ||
+                !AreDistinctValues(decoded.OutputFormats, IsSafeText) ||
+                !IsOptionalText(decoded.CapabilityToken))
+            {
+                return false;
+            }
+
+            capabilities = new ScannerPluginCapabilities(
+                decoded.ResolutionsDpi!,
+                decoded.Modes!,
+                decoded.BitDepths!,
+                decoded.SupportsPreview ?? false,
+                decoded.SupportsTransparency ?? false,
+                decoded.SupportsInfrared ?? false,
+                decoded.SupportsMultiExposure ?? false,
+                decoded.SupportsScanArea ?? false,
+                decoded.SupportsPositionedScanArea ?? false,
+                decoded.OutputFormats!,
+                string.IsNullOrWhiteSpace(decoded.CapabilityToken) ? null : decoded.CapabilityToken);
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
     private static bool IsRequiredText(string? value) =>
         !string.IsNullOrWhiteSpace(value) && IsOptionalText(value);
 
     private static bool IsOptionalText(string? value) =>
-        value is null || (value.Length <= MaximumTextLength &&
-                          value.All(character => !char.IsControl(character)));
+        value is null || IsSafeText(value);
+
+    private static bool IsSafeText(string value) =>
+        value.Length <= MaximumTextLength && value.All(character => !char.IsControl(character));
+
+    private static bool AreSupportedResolutions(List<int>? values) =>
+        values is { Count: > 0 and <= 64 } && values.All(value => value is >= 0 and <= 19_200) &&
+        values.Distinct().Count() == values.Count;
+
+    private static bool AreDistinctValues<T>(List<T>? values, Func<T, bool> isValid) where T : notnull =>
+        values is { Count: > 0 and <= 64 } && values.All(isValid) &&
+        values.Distinct().Count() == values.Count;
+
+    private static bool IsSupportedMode(string value) =>
+        value is "color" or "gray" or "lineart" or "infrared";
 
     private sealed record DetectResponse(List<DeviceResponse>? Devices);
 
@@ -122,4 +217,22 @@ public static class ScannerPluginClient
         string? SerialNumber,
         string? VerifiedStatus,
         string? DriverVersion);
+
+    private sealed record CapabilityRequest(
+        [property: JsonPropertyName("deviceID")] string DeviceId,
+        string Vendor,
+        string Model);
+
+    private sealed record CapabilitiesResponse(
+        [property: JsonPropertyName("resolutionsDPI")] List<int>? ResolutionsDpi,
+        List<string>? Modes,
+        List<int>? BitDepths,
+        bool? SupportsPreview,
+        bool? SupportsTransparency,
+        bool? SupportsInfrared,
+        bool? SupportsMultiExposure,
+        bool? SupportsScanArea,
+        bool? SupportsPositionedScanArea,
+        List<string>? OutputFormats,
+        string? CapabilityToken);
 }

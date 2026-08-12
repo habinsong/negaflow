@@ -810,7 +810,7 @@ internal static class Program
             string executable = Path.Combine(accepted, "adapter.cmd");
             File.WriteAllText(
                 executable,
-                "@echo off\r\nif \"%1\"==\"detect\" echo {\"devices\":[{\"id\":\"dev0\",\"displayName\":\"Fixture\",\"vendor\":\"Negaflow\",\"model\":\"Unit\"}]}\r\n");
+                "@echo off\r\nif \"%1\"==\"detect\" echo {\"devices\":[{\"id\":\"dev0\",\"displayName\":\"Fixture\",\"vendor\":\"Negaflow\",\"model\":\"Unit\"}]}\r\nif \"%1\"==\"capabilities\" echo {\"resolutionsDPI\":[0,3600],\"modes\":[\"color\"],\"bitDepths\":[8,16],\"supportsPreview\":true,\"outputFormats\":[\"tiff\"],\"capabilityToken\":\"opaque\"}\r\n");
 
             string rejected = Path.Combine(root, "rejected");
             Directory.CreateDirectory(rejected);
@@ -835,6 +835,13 @@ internal static class Program
                 plugin.TrustIdentity).GetAwaiter().GetResult();
             Check(detect.IsSuccess && detect.Devices is [{ Id: "dev0" }],
                 "scanner_plugin_host_runs_and_parses_detect_response");
+            ScannerPluginCapabilitiesResult capabilityResult = ScannerPluginClient.GetCapabilitiesAsync(
+                plugin,
+                plugin.TrustIdentity,
+                detect.Devices[0]).GetAwaiter().GetResult();
+            Check(capabilityResult.IsSuccess &&
+                  capabilityResult.Capabilities is { ResolutionsDpi: [0, 3600], CapabilityToken: "opaque" },
+                "scanner_plugin_host_runs_and_parses_capabilities_response");
 
             File.AppendAllText(executable, " changed");
             Check(!ScannerPluginDiscovery.HasCurrentTrustIdentity(plugin, plugin.TrustIdentity),
@@ -879,6 +886,15 @@ internal static class Program
                     "{\"devices\":[{\"id\":\"dev0\",\"displayName\":\"Fixture\",\"vendor\":\"Negaflow\"}]}",
                     out _),
                 "scanner_plugin_rejects_incomplete_device_response");
+            Check(ScannerPluginClient.TryParseCapabilities(
+                    "{\"resolutionsDPI\":[0,3600],\"modes\":[\"color\",\"infrared\"],\"bitDepths\":[8,16],\"supportsPreview\":true,\"supportsInfrared\":true,\"outputFormats\":[\"tiff\"],\"capabilityToken\":\"opaque\"}",
+                    out ScannerPluginCapabilities? capabilities) &&
+                  capabilities is { SupportsInfrared: true, CapabilityToken: "opaque" },
+                "scanner_plugin_accepts_bounded_capability_response");
+            Check(!ScannerPluginClient.TryParseCapabilities(
+                    "{\"resolutionsDPI\":[3600,3600],\"modes\":[\"color\"],\"bitDepths\":[16],\"outputFormats\":[\"tiff\"]}",
+                    out _),
+                "scanner_plugin_rejects_duplicate_capability_values");
         }
         finally
         {
