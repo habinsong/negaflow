@@ -32,7 +32,14 @@ public enum FilmBasePicker {
         let cx = extent.minX + u * extent.width
         let cy = extent.minY + (1.0 - v) * extent.height   // y-down → y-up
 
-        if let snapped = snapToBase(in: image, centerX: cx, centerY: cy, neutralBase: neutralBase) {
+        // 픽 결과가 실제로 필름 베이스일 수 있는 값인지 스캔 전체를 기준으로 판정한다.
+        // 평판 프리뷰는 필름 밖(투과 광원 창 바깥의 검정 띠, 빈 베드)까지 담기 때문에,
+        // 클릭이 조금만 빗나가도 필름이 아닌 픽셀이 Dmin 으로 앉아 현상 결과가 통째로
+        // 검게 죽었다(실측: 검정 띠 클릭 → base 0.004 → 반전 전 구간 클리핑).
+        let reference = baseReference(in: image, neutralBase: neutralBase)
+
+        if let snapped = snapToBase(in: image, centerX: cx, centerY: cy, neutralBase: neutralBase),
+           isPlausibleBase(snapped, reference: reference, neutralBase: neutralBase) {
             return snapped
         }
 
@@ -49,11 +56,40 @@ public enum FilmBasePicker {
         let rgb = medianRGB(of: image.cropped(to: region), region: region)
         guard let rgb, rgb.x.isFinite, rgb.y.isFinite, rgb.z.isFinite,
               rgb.x > 0 || rgb.y > 0 || rgb.z > 0 else { return nil }
-        return SIMD3(
+        let clamped = SIMD3(
             min(max(rgb.x, 0), 1),
             min(max(rgb.y, 0), 1),
             min(max(rgb.z, 0), 1)
         )
+        guard isPlausibleBase(clamped, reference: reference, neutralBase: neutralBase) else {
+            return nil
+        }
+        return clamped
+    }
+
+    /// 이 스캔에서 베이스일 수 있는 가장 밝은 수준(후보 luma p99). 자동 추정이 쓰는 값과 같다.
+    /// 그리드를 만들 수 없는 극소 이미지에서는 nil — 그때는 절대 판정만 적용한다.
+    static func baseReference(in image: CIImage, neutralBase: Bool) -> Double? {
+        guard let grid = FilmBaseSampleGrid(image: image) else { return nil }
+        let peak = FilmBaseEstimator.candidateLumaPeak(for: grid, neutralBase: neutralBase)
+        return peak > 0 ? peak : nil
+    }
+
+    /// 픽 값이 필름 베이스로 성립하는가.
+    ///  1. 색/밝기 형태가 베이스 후보여야 한다(자동 추정과 같은 물리 판정) — 미조사 검정 띠,
+    ///     거의 흰 빈 베드, 중립 백라이트가 여기서 걸린다.
+    ///  2. 스캔 전체의 베이스 수준보다 지나치게 어두우면(0.3D 초과) 필름 위 장면이지 베이스가
+    ///     아니다 — 필름 위에는 베이스보다 밝은 것이 없다는 불변량의 역이다. 0.3D 는 광원
+    ///     불균일/비네팅으로 베이스가 어두워지는 폭보다 넉넉하다.
+    static let minimumBaseLumaRatio = 0.5
+    static func isPlausibleBase(_ rgb: SIMD3<Double>,
+                                reference: Double?,
+                                neutralBase: Bool) -> Bool {
+        guard FilmBaseEstimator.isFilmBaseCandidate(r: rgb.x, g: rgb.y, b: rgb.z,
+                                                    neutralBase: neutralBase) else { return false }
+        guard let reference else { return true }
+        let luma = (rgb.x + rgb.y + rgb.z) / 3
+        return luma >= reference * minimumBaseLumaRatio
     }
 
     /// 클릭 주변 로컬 창에서 베이스 연결 성분을 찾아 그 채널 중앙값으로 스냅한다.

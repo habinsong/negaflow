@@ -366,12 +366,16 @@ final class NegativeBaseWorkflowTests: XCTestCase {
     // MARK: FilmBasePicker
 
     /// 알려진 균일 영역을 y-down 정규좌표로 샘플하면 그 영역 평균이 나와야 한다.
+    ///
+    /// 아래 절반은 예전에 "어두운 장면"이었지만, 픽커가 장면/비필름 픽셀을 베이스로 받지
+    /// 않도록 바뀌면서(testFilmBasePickerRejectsNonBasePicks) 좌표 매핑 검증에는 쓸 수 없다.
+    /// 검증 의도(같은 이미지의 다른 영역이 각각 다른 값으로 나온다)는 밝기가 다른 두 베이스로 유지한다.
     func testFilmBasePickerSamplesRegionAtYDownUnitPoint() {
         let width = 120, height = 80
         var bytes = [UInt8](repeating: 0, count: width * height * 4)
-        // 상단 절반(표시 y-down 기준 y<0.5) = 오렌지 베이스, 하단 절반 = 어두운 장면.
+        // 상단 절반(표시 y-down 기준 y<0.5) = 밝은 오렌지 베이스, 하단 절반 = 살짝 어두운 베이스.
         let top = SIMD3<Double>(0.80, 0.52, 0.34)
-        let bottom = SIMD3<Double>(0.10, 0.08, 0.05)
+        let bottom = SIMD3<Double>(0.62, 0.40, 0.26)
         for y in 0..<height {
             let c = y < height / 2 ? top : bottom
             for x in 0..<width {
@@ -395,6 +399,55 @@ final class NegativeBaseWorkflowTests: XCTestCase {
         }
         XCTAssertEqual(sampledBottom.x, bottom.x, accuracy: 0.03)
         XCTAssertEqual(sampledBottom.z, bottom.z, accuracy: 0.03)
+    }
+
+    /// 평판 **프리뷰**는 필름 밖까지 담는다 — 투과 광원 창 바깥의 미조사 검정 띠, 빈 베드,
+    /// 그리고 프레임 안 장면. 이 픽셀들이 Dmin 으로 앉으면 반전이 전 구간 클리핑돼 현상
+    /// 결과가 통째로 검게 죽는다(실측: 검정 띠 클릭 → base 0.004 → 화면 블랙).
+    /// 픽커는 그런 값을 받지 않고 실패를 돌려 이전 베이스를 지켜야 한다.
+    func testFilmBasePickerRejectsNonBasePicks() {
+        let width = 900, height = 1200
+        var bytes = [UInt8](repeating: 0, count: width * height * 4)
+        let bed = SIMD3<Double>(0.95, 0.95, 0.95)          // 빈 베드(무필름 백라이트)
+        let unlit = SIMD3<Double>(0.004, 0.003, 0.003)     // 광원 창 바깥
+        let base = SIMD3<Double>(0.80, 0.52, 0.34)
+        let stripX = Int(Double(width) * 0.33)..<Int(Double(width) * 0.69)
+        let frameX = Int(Double(width) * 0.355)..<Int(Double(width) * 0.665)
+        let litY = Int(Double(height) * 0.15)..<Int(Double(height) * 0.85)
+        let frameY = [Int(Double(height) * 0.22)..<Int(Double(height) * 0.47),
+                      Int(Double(height) * 0.53)..<Int(Double(height) * 0.78)]
+        for y in 0..<height {
+            for x in 0..<width {
+                var c = litY.contains(y) ? bed : unlit
+                if stripX.contains(x), litY.contains(y) {
+                    c = base
+                    if frameX.contains(x), frameY.contains(where: { $0.contains(y) }) {
+                        c = base * pow(10.0, -(0.2 + 1.0 * Double((x + y) % 97) / 96.0))
+                    }
+                }
+                let i = (y * width + x) * 4
+                bytes[i] = clampByte(c.x); bytes[i + 1] = clampByte(c.y)
+                bytes[i + 2] = clampByte(c.z); bytes[i + 3] = 255
+            }
+        }
+        let image = makeLinearImage(bytes: bytes, width: width, height: height)
+
+        // 프레임 사이 베이스 띠 = 정상 픽.
+        guard let picked = FilmBasePicker.sample(in: image, atUnit: CGPoint(x: 0.5, y: 0.50)) else {
+            return XCTFail("베이스 띠는 픽 되어야 한다.")
+        }
+        XCTAssertEqual(picked.x, base.x, accuracy: 0.03)
+        XCTAssertEqual(picked.y, base.y, accuracy: 0.03)
+        XCTAssertEqual(picked.z, base.z, accuracy: 0.03)
+
+        XCTAssertNil(FilmBasePicker.sample(in: image, atUnit: CGPoint(x: 0.5, y: 0.05)),
+                     "미조사 검정 띠는 베이스가 아니다.")
+        XCTAssertNil(FilmBasePicker.sample(in: image, atUnit: CGPoint(x: 0.5, y: 0.95)),
+                     "미조사 검정 띠는 베이스가 아니다.")
+        XCTAssertNil(FilmBasePicker.sample(in: image, atUnit: CGPoint(x: 0.10, y: 0.50)),
+                     "빈 베드(무필름 백라이트)는 베이스가 아니다.")
+        XCTAssertNil(FilmBasePicker.sample(in: image, atUnit: CGPoint(x: 0.5, y: 0.35)),
+                     "프레임 안 장면은 베이스보다 어둡다 — 베이스가 아니다.")
     }
 
     // MARK: base 실측의 인코딩 도메인 불변 (2026-07-16)
