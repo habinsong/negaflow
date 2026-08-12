@@ -1719,6 +1719,15 @@ internal static class Program
                     ["saturation"] = new JsonArray(0.3),
                     ["luminance"] = new JsonArray(-0.4),
                 },
+                ["imageTransform"] = new JsonObject
+                {
+                    ["rotation"] = 1,
+                    ["flipHorizontal"] = true,
+                    ["flipVertical"] = false,
+                    ["cropRect"] = new JsonArray(0.1, 0.2, 0.7, 0.6),
+                    ["straightenAngle"] = 1.5,
+                    ["cropAspect"] = 1.5,
+                },
                 ["unknownAdjustment"] = new JsonObject { ["value"] = 7 },
             },
         };
@@ -1777,6 +1786,14 @@ internal static class Program
             "library_frame_missing_scene_correction_defaults_off");
         Check(frame.DevelopTarget == DevelopTarget.Main,
             "library_frame_missing_develop_target_defaults_main");
+        Check(frame.ImageTransform == new ImageTransformRecipe(
+                ImageRotation.Degrees90,
+                true,
+                false,
+                new ImageCropRect(0.1, 0.2, 0.7, 0.6),
+                1.5,
+                1.5),
+            "library_frame_image_transform_projection");
         ColorGradingRecipe colorGrading = new(
             new ColorGradeRegionRecipe(45.0, 0.2, -0.1),
             new ColorGradeRegionRecipe(180.0, 0.4, 0.1),
@@ -1973,6 +1990,13 @@ internal static class Program
             ReadFrame(invalidBaseIdentifier).Error == LibraryFrameError.InvalidBaseRecipe,
             "library_frame_rejects_blank_base_identifier");
 
+        JsonObject invalidImageTransform = FrameRecord();
+        invalidImageTransform["params"]!["imageTransform"]!["cropRect"] =
+            new JsonArray(0.7, 0.2, 0.4, 0.6);
+        Check(
+            ReadFrame(invalidImageTransform).Error == LibraryFrameError.InvalidImageTransform,
+            "library_frame_rejects_out_of_bounds_crop");
+
         JsonObject invalidPointCurveShape = FrameRecord();
         invalidPointCurveShape["params"]!["pointCurves"]!["rgb"] = new JsonObject();
         Check(
@@ -2070,6 +2094,20 @@ internal static class Program
                 updated["params"]!["blacks"]!.GetValue<double>() == 0.9,
             "library_frame_write_basic_tone_names");
         Check(reread.Frame?.ManualBase == edit.ManualBase, "library_frame_write_base_round_trip");
+        ImageTransformRecipe imageTransform = new(
+            ImageRotation.Degrees270,
+            true,
+            true,
+            new ImageCropRect(0.15, 0.10, 0.70, 0.75),
+            -2.25,
+            4.0 / 3.0);
+        LibraryFrameWriteResult imageTransformWrite = LibraryFrameWriter.Apply(
+            original,
+            new LibraryFrameEdit(edit.Tone, edit.ManualBase, ImageTransform: imageTransform));
+        Check(
+            imageTransformWrite.IsSuccess &&
+                ReadFrame(imageTransformWrite.FrameRecord!).Frame?.ImageTransform == imageTransform,
+            "library_frame_image_transform_write_round_trip");
         Check(reread.Frame?.Base == new BaseRecipe(
                 BaseEstimationMode.Preset,
                 "kodak-portra-400",
@@ -2207,6 +2245,18 @@ internal static class Program
                         new double[ColorMixerRecipe.BandCount])))
                 .Error == LibraryFrameError.InvalidColorMixer,
             "library_frame_write_rejects_short_color_mixer");
+        Check(
+            LibraryFrameWriter.Apply(
+                original,
+                new LibraryFrameEdit(
+                    ToneAdjustment.Neutral,
+                    null,
+                    ImageTransform: ImageTransformRecipe.Identity with
+                    {
+                        StraightenAngle = 60.0,
+                    }))
+                .Error == LibraryFrameError.InvalidImageTransform,
+            "library_frame_write_rejects_out_of_range_straighten");
     }
 
     private static int RunLockContender(string isolatedBase)

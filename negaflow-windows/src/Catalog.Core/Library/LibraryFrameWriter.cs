@@ -15,7 +15,8 @@ public sealed record LibraryFrameEdit(
     ColorModelRecipe? ColorModel = null,
     bool? AutoLevels = null,
     bool? AutoNeutralBalance = null,
-    DevelopTarget? DevelopTarget = null);
+    DevelopTarget? DevelopTarget = null,
+    ImageTransformRecipe? ImageTransform = null);
 
 /// <summary>
 /// 톤, 수동 base, 그리고 지정된 경우 base recipe를 갱신합니다. 입력 record 는 바꾸지 않고 깊은 복사본을 돌려주며, 이 writer 가
@@ -67,6 +68,10 @@ public static class LibraryFrameWriter
         if (edit.ColorModel is { } colorModel && !colorModel.IsValid())
         {
             return LibraryFrameWriteResult.Failure(LibraryFrameError.InvalidColorModel);
+        }
+        if (edit.ImageTransform is { } imageTransform && !imageTransform.IsValid)
+        {
+            return LibraryFrameWriteResult.Failure(LibraryFrameError.InvalidImageTransform);
         }
 
         JsonObject updated = frameRecord.DeepClone().AsObject();
@@ -187,6 +192,10 @@ public static class LibraryFrameWriter
                 _ => throw new ArgumentOutOfRangeException(nameof(developTarget)),
             };
         }
+        if (edit.ImageTransform is { } imageTransformToWrite)
+        {
+            parameters[LibraryFrameReader.ImageTransformName] = WriteImageTransform(imageTransformToWrite);
+        }
 
         return LibraryFrameWriteResult.Success(updated);
     }
@@ -241,6 +250,27 @@ public static class LibraryFrameWriter
         IsValidPointCurveChannel(pointCurves.Red) &&
         IsValidPointCurveChannel(pointCurves.Green) &&
         IsValidPointCurveChannel(pointCurves.Blue);
+
+    private static JsonObject WriteImageTransform(ImageTransformRecipe transform)
+    {
+        JsonObject result = new()
+        {
+            [LibraryFrameReader.ImageTransformRotationName] = (int)transform.Rotation,
+            [LibraryFrameReader.ImageTransformFlipHorizontalName] = transform.FlipHorizontal,
+            [LibraryFrameReader.ImageTransformFlipVerticalName] = transform.FlipVertical,
+            [LibraryFrameReader.ImageTransformStraightenAngleName] = transform.StraightenAngle,
+        };
+        if (transform.Crop is { } crop)
+        {
+            result[LibraryFrameReader.ImageTransformCropRectName] = new JsonArray(
+                crop.X, crop.Y, crop.Width, crop.Height);
+        }
+        if (transform.CropAspect is { } cropAspect)
+        {
+            result[LibraryFrameReader.ImageTransformCropAspectName] = cropAspect;
+        }
+        return result;
+    }
 
     private static bool IsValidPointCurveChannel(IReadOnlyList<PointCurvePoint> points)
     {

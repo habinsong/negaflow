@@ -212,6 +212,7 @@ public static class DevelopRequestFactory
                 : DevelopSourceKind.FilmScan,
             FilmEmulation = MapFilmEmulation(frame.Route.FilmEmulation),
             FilmEmulationIntensity = frame.Route.FilmEmulationIntensity,
+            ImageTransform = MapImageTransform(frame.ImageTransform),
             DefectRegions = defectRegions,
             DefectInfrared = defectInfrared,
             DefectClones = defectClones,
@@ -228,6 +229,24 @@ public static class DevelopRequestFactory
         FilmType.BlackAndWhiteNegative or FilmType.BlackAndWhitePositive =>
             NegativeFilmType.BlackAndWhite,
         _ => throw new ArgumentOutOfRangeException(nameof(filmType)),
+    };
+
+    private static DevelopImageTransform MapImageTransform(ImageTransformRecipe transform) => new()
+    {
+        Rotation = transform.Rotation switch
+        {
+            ImageRotation.Degrees0 => DevelopImageRotation.Degrees0,
+            ImageRotation.Degrees90 => DevelopImageRotation.Degrees90,
+            ImageRotation.Degrees180 => DevelopImageRotation.Degrees180,
+            ImageRotation.Degrees270 => DevelopImageRotation.Degrees270,
+            _ => throw new ArgumentOutOfRangeException(nameof(transform)),
+        },
+        FlipHorizontal = transform.FlipHorizontal,
+        FlipVertical = transform.FlipVertical,
+        Crop = transform.Crop is { } crop
+            ? new DevelopCropRect(crop.X, crop.Y, crop.Width, crop.Height)
+            : null,
+        StraightenAngle = transform.StraightenAngle,
     };
 
     private static DevelopColorGradeRegion MapColorGradeRegion(ColorGradeRegionRecipe region) =>

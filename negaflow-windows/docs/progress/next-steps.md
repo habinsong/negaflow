@@ -1,6 +1,6 @@
 # 다음에 어디서부터 이어서 할 것인가
 
-기준일: 2026-08-12 (TIFF source compatibility preflight 완료)
+기준일: 2026-08-12 (Develop image-transform recipe persistence 완료)
 
 이 문서는 작업을 한동안 놓았다가 돌아왔을 때 가장 먼저 읽는 곳입니다. 이미 결정된 것을 다시
 논쟁하지 않고, 다음 한 걸음을 바로 시작하기 위한 기록입니다.
@@ -16,7 +16,9 @@ Calibration → source별 Film Look → 검증된 PNG16/TIFF16 게시까지 한 
 설정 → 노출 조정 → 같은 파이프라인의 미리보기 → Export 가 카탈로그와 C ABI 를 거쳐 동작합니다.
 
 반전 직후 opt-in Auto Levels → Neutral Balance → ColorModel과 고정 macOS post-pipeline의 GrainMend → FilmScanDenoise → Local Dodge/Burn →
-Texture → B&W 중립화·토닝 → ImageTransform이 native 공통 preview/export 경로에 연결됐습니다.
+Texture → B&W 중립화·토닝 → ImageTransform이 native 공통 preview/export 경로에 연결됐고,
+카탈로그 `params.imageTransform`도 같은 preview/export 요청으로 전달됩니다. 다음 경계는 macOS
+변환된 TIFF golden과 정식 Develop 조작 surface입니다.
 scene correction은 ABI v14, DevelopTarget과 EXPIRED RescueGrade는 v15, ScannerProfileGrade는 v16,
 film polarity는 v17, 현상 전 영역 Defects는 v18, source-bound Defects는 v19, 순서 보존 Clone Stamp는
 v20, 순서 보존 Brush는 v21, 취소·진행률 run state는 v22, 자동 보정은 `nf_auto_adjust_v1`,

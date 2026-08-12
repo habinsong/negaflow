@@ -8,6 +8,53 @@ namespace Negaflow.Catalog;
 public readonly record struct ManualBaseRgb(double Red, double Green, double Blue);
 
 /// <summary>
+/// macOS <c>ImageTransform</c>와 같은 회전 값입니다. 저장값은 Swift recipe의 raw value와
+/// 같고, crop 좌표는 y-up 정규화 좌표를 사용합니다.
+/// </summary>
+public enum ImageRotation
+{
+    Degrees0 = 0,
+    Degrees90 = 1,
+    Degrees180 = 2,
+    Degrees270 = 3,
+}
+
+public readonly record struct ImageCropRect(double X, double Y, double Width, double Height)
+{
+    public bool IsValid =>
+        double.IsFinite(X) && double.IsFinite(Y) &&
+        double.IsFinite(Width) && double.IsFinite(Height) &&
+        X >= 0.0 && Y >= 0.0 && Width > 0.0 && Height > 0.0 &&
+        X + Width <= 1.0 && Y + Height <= 1.0;
+}
+
+/// <summary>
+/// 현상과 내보내기에 공통으로 적용되는 macOS 호환 기하 보정 recipe입니다.
+/// </summary>
+public sealed record ImageTransformRecipe(
+    ImageRotation Rotation,
+    bool FlipHorizontal,
+    bool FlipVertical,
+    ImageCropRect? Crop,
+    double StraightenAngle,
+    double? CropAspect)
+{
+    public static ImageTransformRecipe Identity { get; } = new(
+        ImageRotation.Degrees0,
+        false,
+        false,
+        null,
+        0.0,
+        null);
+
+    public bool IsValid =>
+        Enum.IsDefined(Rotation) &&
+        (Crop is null || Crop.Value.IsValid) &&
+        double.IsFinite(StraightenAngle) && StraightenAngle is >= -45.0 and <= 45.0 &&
+        (CropAspect is null || (double.IsFinite(CropAspect.Value) && CropAspect.Value > 0.0));
+}
+
+/// <summary>
 /// Immutable source traits recorded when a TIFF enters the catalog.  They make a relink
 /// refuse a different scan before its path can replace the original recipe input.
 /// </summary>
@@ -143,6 +190,9 @@ public sealed record LibraryFrameSnapshot(
     public bool AutoNeutralBalance { get; init; }
 
     public DevelopTarget DevelopTarget { get; init; } = DevelopTarget.Main;
+
+    /// <summary>회전, 반전, 수평 및 crop은 preview와 export가 같은 recipe로 사용합니다.</summary>
+    public ImageTransformRecipe ImageTransform { get; init; } = ImageTransformRecipe.Identity;
 
     /// <summary>
     /// hasDefectEdits frame에서 app-owned sidecar를 검증해 읽은 ordered recipe입니다.

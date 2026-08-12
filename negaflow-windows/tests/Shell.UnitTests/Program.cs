@@ -223,6 +223,28 @@ internal static class Program
             request.BaseEstimationMode == DevelopBaseEstimationMode.Manual,
             "develop_request_manual_base_mode");
 
+        ImageTransformRecipe imageTransform = new(
+            ImageRotation.Degrees180,
+            true,
+            false,
+            new ImageCropRect(0.2, 0.15, 0.6, 0.7),
+            -1.25,
+            3.0 / 2.0);
+        DevelopRequestResult transformRequest = DevelopRequestFactory.Create(
+            Frame(new ManualBaseRgb(0.21, 0.22, 0.23)) with
+            {
+                ImageTransform = imageTransform,
+            },
+            destination);
+        Check(
+            transformRequest.IsSuccess &&
+                transformRequest.Request?.ImageTransform.Rotation == DevelopImageRotation.Degrees180 &&
+                transformRequest.Request.ImageTransform.FlipHorizontal &&
+                !transformRequest.Request.ImageTransform.FlipVertical &&
+                transformRequest.Request.ImageTransform.Crop == new DevelopCropRect(0.2, 0.15, 0.6, 0.7) &&
+                transformRequest.Request.ImageTransform.StraightenAngle == -1.25,
+            "develop_request_carries_image_transform");
+
         PointCurveRecipe pointCurves = new(
             [new PointCurvePoint(0.0, 0.0), new PointCurvePoint(0.5, 0.6), new PointCurvePoint(1.0, 1.0)],
             [new PointCurvePoint(0.25, 0.3)],

@@ -2,6 +2,15 @@
 
 기준일: 2026-08-12
 
+## 2026-08-12 Develop image-transform recipe persistence
+
+The catalog now reads and writes the macOS `params.imageTransform` recipe (rotation, horizontal
+and vertical flip, y-up normalized crop, straighten angle, and crop aspect). The Shell request
+factory maps that persisted recipe into the existing native common preview/export transform stage,
+so neither output path silently falls back to identity. x64 Debug managed checks passed Catalog 601
+and Shell 381 assertions; native `image_transform` and `develop_export_abi` passed 2/2. Rendered
+WinUI controls and macOS-hosted pixel goldens for transformed TIFFs remain unverified.
+
 ## 2026-08-12 LibraryDocument catalog-table preservation
 
 ## 2026-08-12 TIFF source compatibility preflight

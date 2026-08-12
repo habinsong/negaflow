@@ -29,6 +29,7 @@ public enum LibraryFrameError
     InvalidPrimaryCalibration,
     InvalidLocalDodgeBurn,
     InvalidColorModel,
+    InvalidImageTransform,
     InvalidSceneCorrection,
     InvalidDevelopTarget,
     InvalidDefectRecipe,

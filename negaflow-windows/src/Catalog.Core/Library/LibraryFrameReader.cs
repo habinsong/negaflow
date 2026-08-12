@@ -92,6 +92,13 @@ public static class LibraryFrameReader
     internal const string AutoLevelsName = "autoLevels";
     internal const string AutoNeutralBalanceName = "autoNeutralBalance";
     internal const string DevelopTargetName = "developTarget";
+    internal const string ImageTransformName = "imageTransform";
+    internal const string ImageTransformRotationName = "rotation";
+    internal const string ImageTransformFlipHorizontalName = "flipHorizontal";
+    internal const string ImageTransformFlipVerticalName = "flipVertical";
+    internal const string ImageTransformCropRectName = "cropRect";
+    internal const string ImageTransformStraightenAngleName = "straightenAngle";
+    internal const string ImageTransformCropAspectName = "cropAspect";
 
     public static LibraryFrameReadResult Read(JsonElement frameRecord)
     {
@@ -186,6 +193,10 @@ public static class LibraryFrameReader
         {
             return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidColorModel);
         }
+        if (!TryReadImageTransform(parameters, out ImageTransformRecipe imageTransform))
+        {
+            return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidImageTransform);
+        }
         if (!TryReadOptionalBoolean(parameters, AutoLevelsName, false, out bool autoLevels) ||
             !TryReadOptionalBoolean(
                 parameters,
@@ -226,7 +237,122 @@ public static class LibraryFrameReader
             AutoLevels = autoLevels,
             AutoNeutralBalance = autoNeutralBalance,
             DevelopTarget = developTarget,
+            ImageTransform = imageTransform,
         });
+    }
+
+    private static bool TryReadImageTransform(
+        JsonElement parameters,
+        out ImageTransformRecipe imageTransform)
+    {
+        imageTransform = ImageTransformRecipe.Identity;
+        if (!parameters.TryGetProperty(ImageTransformName, out JsonElement element) ||
+            element.ValueKind == JsonValueKind.Null)
+        {
+            return true;
+        }
+        if (element.ValueKind != JsonValueKind.Object ||
+            !TryReadOptionalRotation(element, out ImageRotation rotation) ||
+            !TryReadOptionalBoolean(
+                element,
+                ImageTransformFlipHorizontalName,
+                false,
+                out bool flipHorizontal) ||
+            !TryReadOptionalBoolean(
+                element,
+                ImageTransformFlipVerticalName,
+                false,
+                out bool flipVertical) ||
+            !TryReadOptionalFiniteDouble(
+                element,
+                ImageTransformStraightenAngleName,
+                0.0,
+                out double straightenAngle) ||
+            !TryReadOptionalCrop(element, out ImageCropRect? crop) ||
+            !TryReadOptionalPositiveDouble(
+                element,
+                ImageTransformCropAspectName,
+                out double? cropAspect))
+        {
+            return false;
+        }
+
+        imageTransform = new ImageTransformRecipe(
+            rotation,
+            flipHorizontal,
+            flipVertical,
+            crop,
+            straightenAngle,
+            cropAspect);
+        return imageTransform.IsValid;
+    }
+
+    private static bool TryReadOptionalRotation(JsonElement owner, out ImageRotation rotation)
+    {
+        rotation = ImageRotation.Degrees0;
+        if (!owner.TryGetProperty(ImageTransformRotationName, out JsonElement element) ||
+            element.ValueKind == JsonValueKind.Null)
+        {
+            return true;
+        }
+        if (element.ValueKind != JsonValueKind.Number || !element.TryGetInt32(out int raw))
+        {
+            return false;
+        }
+        rotation = (ImageRotation)raw;
+        return Enum.IsDefined(rotation);
+    }
+
+    private static bool TryReadOptionalCrop(JsonElement owner, out ImageCropRect? crop)
+    {
+        crop = null;
+        if (!owner.TryGetProperty(ImageTransformCropRectName, out JsonElement element) ||
+            element.ValueKind == JsonValueKind.Null)
+        {
+            return true;
+        }
+        if (element.ValueKind != JsonValueKind.Array || element.GetArrayLength() != 4)
+        {
+            return false;
+        }
+        JsonElement.ArrayEnumerator values = element.EnumerateArray();
+        double[] coordinates = new double[4];
+        for (int index = 0; index < coordinates.Length; index++)
+        {
+            if (!values.MoveNext() || values.Current.ValueKind != JsonValueKind.Number ||
+                !values.Current.TryGetDouble(out coordinates[index]) ||
+                !double.IsFinite(coordinates[index]))
+            {
+                return false;
+            }
+        }
+        ImageCropRect parsed = new(
+            coordinates[0], coordinates[1], coordinates[2], coordinates[3]);
+        if (!parsed.IsValid)
+        {
+            return false;
+        }
+        crop = parsed;
+        return true;
+    }
+
+    private static bool TryReadOptionalPositiveDouble(
+        JsonElement owner,
+        string name,
+        out double? value)
+    {
+        value = null;
+        if (!owner.TryGetProperty(name, out JsonElement element) || element.ValueKind == JsonValueKind.Null)
+        {
+            return true;
+        }
+        if (element.ValueKind != JsonValueKind.Number || !element.TryGetDouble(out double parsed) ||
+            !double.IsFinite(parsed) || parsed <= 0.0)
+        {
+            return false;
+        }
+        value = parsed;
+        return true;
     }
 
     private static bool TryReadSourceMetadata(
