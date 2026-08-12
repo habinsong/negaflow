@@ -2,6 +2,24 @@
 
 기준일: 2026-08-12
 
+## 2026-08-12 Scanner plugin host foundation
+
+Windows scanner adapters now have the first executable host boundary instead of only a design
+document. Discovery accepts only bounded non-reparse plugin directories with a schema-v1,
+protocol-v1/v2 scanner manifest; it records SHA-256 identities for both manifest and executable
+and rechecks the approved identity immediately before launch. The process boundary passes
+structured arguments, bounds stdout/stderr and NDJSON line sizes, applies operation-specific
+timeouts, and kills the child process tree on cancellation or timeout. The first reachable
+operation is `detect`: an approved adapter returns a bounded, unique device list through the
+host. Protocol-v2 progress/result/error streams are already checked for request ID, strict
+sequence, finite progress range, and exactly one terminal event.
+
+x64 Debug managed checks passed Catalog 605 and Shell 406 assertions with no build warnings or
+errors. The x64 Release gate passed native CTest 65/65 plus Catalog 605 and Shell 406 assertions;
+the complete ARM64 Release graph cross-built, but was not executed on ARM64 hardware. Approval
+persistence, capability negotiation, staging-TIFF artifact validation, scan publication,
+WIA/TWAIN adapters, and real-device evidence are not implemented.
+
 ## 2026-08-12 Develop primary-calibration ABI
 
 The existing native macOS-compatible creative R/G/B primary calibration stage is now reachable

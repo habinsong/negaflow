@@ -32,6 +32,7 @@ internal static class Program
         VerifyFolderImport();
         VerifyPreviewCoordinator();
         VerifyAutoAdjustCoordinator();
+        VerifyScannerPluginDiscovery();
 
         var report = new
         {
@@ -793,6 +794,99 @@ internal static class Program
                 (DevelopExportFormat)99).Refusal ==
                 DevelopRequestRefusal.UnknownOutputFormat,
             "develop_request_unknown_format_refused");
+    }
+
+    private static void VerifyScannerPluginDiscovery()
+    {
+        string root = Path.Combine(Path.GetTempPath(), $"negaflow-plugin-tests-{Guid.NewGuid():N}");
+        try
+        {
+            Directory.CreateDirectory(root);
+            string accepted = Path.Combine(root, "accepted");
+            Directory.CreateDirectory(accepted);
+            File.WriteAllText(
+                Path.Combine(accepted, "manifest.json"),
+                "{\"schemaVersion\":1,\"protocolVersion\":2,\"id\":\"scanner-fixture\",\"name\":\"Fixture scanner\",\"executable\":\"adapter.cmd\",\"kind\":\"scanner\",\"pluginVersion\":\"1.0\"}");
+            string executable = Path.Combine(accepted, "adapter.cmd");
+            File.WriteAllText(
+                executable,
+                "@echo off\r\nif \"%1\"==\"detect\" echo {\"devices\":[{\"id\":\"dev0\",\"displayName\":\"Fixture\",\"vendor\":\"Negaflow\",\"model\":\"Unit\"}]}\r\n");
+
+            string rejected = Path.Combine(root, "rejected");
+            Directory.CreateDirectory(rejected);
+            File.WriteAllText(
+                Path.Combine(rejected, "manifest.json"),
+                "{\"schemaVersion\":1,\"protocolVersion\":2,\"id\":\"bad:id\",\"name\":\"Bad\",\"executable\":\"..\\\\adapter.exe\"}");
+            File.WriteAllText(Path.Combine(rejected, "adapter.exe"), "not launchable");
+
+            IReadOnlyList<InstalledScannerPlugin> discovered =
+                ScannerPluginDiscovery.Discover(root);
+            Check(discovered.Count == 1, "scanner_plugin_discovers_only_safe_manifest");
+            InstalledScannerPlugin plugin = discovered[0];
+            Check(plugin.Manifest.Id == "scanner-fixture" &&
+                  plugin.Manifest.ResolvedProtocolVersion == 2 &&
+                  plugin.TrustIdentity.ManifestSha256.Length == 64 &&
+                  plugin.TrustIdentity.ExecutableSha256.Length == 64,
+                "scanner_plugin_records_content_identity");
+            Check(ScannerPluginDiscovery.HasCurrentTrustIdentity(plugin, plugin.TrustIdentity),
+                "scanner_plugin_rechecks_identity_before_launch");
+            ScannerPluginDetectResult detect = ScannerPluginClient.DetectAsync(
+                plugin,
+                plugin.TrustIdentity).GetAwaiter().GetResult();
+            Check(detect.IsSuccess && detect.Devices is [{ Id: "dev0" }],
+                "scanner_plugin_host_runs_and_parses_detect_response");
+
+            File.AppendAllText(executable, " changed");
+            Check(!ScannerPluginDiscovery.HasCurrentTrustIdentity(plugin, plugin.TrustIdentity),
+                "scanner_plugin_rejects_executable_replacement");
+            ScannerPluginProcessResult refused = ScannerPluginProcessHost.RunAsync(
+                plugin,
+                plugin.TrustIdentity,
+                "detect",
+                [],
+                null).GetAwaiter().GetResult();
+            Check(refused.Status == ScannerPluginProcessStatus.Untrusted,
+                "scanner_plugin_refuses_mutated_binary_before_launch");
+
+            Guid requestId = Guid.NewGuid();
+            ScannerPluginStreamValidation validStream = ScannerPluginProtocol.ValidateV2(
+                [
+                    $"{{\"type\":\"progress\",\"protocolVersion\":2,\"requestID\":\"{requestId:D}\",\"sequence\":4,\"fraction\":0.5}}",
+                    $"{{\"type\":\"result\",\"protocolVersion\":2,\"requestID\":\"{requestId:D}\",\"sequence\":5,\"path\":\"scan.tiff\"}}",
+                ],
+                requestId);
+            Check(validStream.IsSuccess && validStream.TerminalEvent?.Type == "result",
+                "scanner_plugin_accepts_one_matched_v2_terminal_event");
+            ScannerPluginStreamValidation staleStream = ScannerPluginProtocol.ValidateV2(
+                [$"{{\"type\":\"result\",\"protocolVersion\":2,\"requestID\":\"{Guid.NewGuid():D}\",\"sequence\":1}}"],
+                requestId);
+            Check(staleStream.Status == ScannerPluginStreamStatus.RequestMismatch,
+                "scanner_plugin_rejects_stale_v2_result");
+            ScannerPluginStreamValidation duplicateTerminal = ScannerPluginProtocol.ValidateV2(
+                [
+                    $"{{\"type\":\"result\",\"protocolVersion\":2,\"requestID\":\"{requestId:D}\",\"sequence\":1}}",
+                    $"{{\"type\":\"error\",\"protocolVersion\":2,\"requestID\":\"{requestId:D}\",\"sequence\":2,\"message\":\"late\"}}",
+                ],
+                requestId);
+            Check(duplicateTerminal.Status == ScannerPluginStreamStatus.TerminalViolation,
+                "scanner_plugin_rejects_event_after_terminal");
+            Check(ScannerPluginClient.TryParseDetectedDevices(
+                    "{\"devices\":[{\"id\":\"dev0\",\"displayName\":\"Fixture\",\"vendor\":\"Negaflow\",\"model\":\"Unit\"}]}",
+                    out IReadOnlyList<ScannerPluginDevice> devices) &&
+                  devices.Count == 1 && devices[0].Id == "dev0",
+                "scanner_plugin_accepts_bounded_device_discovery_response");
+            Check(!ScannerPluginClient.TryParseDetectedDevices(
+                    "{\"devices\":[{\"id\":\"dev0\",\"displayName\":\"Fixture\",\"vendor\":\"Negaflow\"}]}",
+                    out _),
+                "scanner_plugin_rejects_incomplete_device_response");
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
     }
 
     private static void VerifyInfraredDefectRecipeCoordinator()

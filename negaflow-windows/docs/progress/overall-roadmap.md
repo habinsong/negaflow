@@ -27,7 +27,7 @@
 | M7 대형 이미지 | 6% | WIC row sink, chunk ICC transform, 단조 progress/cancel, full decoded source 제거와 exact parity | 최종 working streaming, tile, byte reservation, cache, TDR |
 | M8 ABI·WinUI shell/canvas | 80% | v12 가변 Local Dodge/Burn, v13 ColorModel, v14 scene correction, v15 DevelopTarget, v16 scanner profile ID, v17 film polarity, v18 ordered 영역 Defects, v19 source identity, v20 ordered Clone Stamp, v21 ordered Brush, v22 run state, v23 preview-only soft proof, IR item-boundary v25/ABI 0.32까지 검증 | WinUI Defects 편집과 paired-plane IR lifecycle, GPU canvas, handles/events, lifetime·activation 전체 경로 |
 | M9~M14 제품 surface | 8% | Library 목록, 파일 picker import, Develop의 필름 base·노출, Export가 실제 동작 | 미리보기 렌더, base picker, 취소·진행률, Defects, Print, Settings 기능 |
-| M15 scanner host | 0% | 문서만 존재 | protocol host와 격리 |
+| M15 scanner host | 5% | bounded plugin discovery·identity 재검증·process host·v2 NDJSON·detect | approval persistence, capability/scan transaction, WIA/TWAIN adapter, real device |
 | M16 qualification | 0% | 문서만 존재 | 실제 CPU/GPU/ARM64/display matrix |
 | M17 배포·컴플라이언스 | 0% | 설치 선언 초안만 존재 | MSIX/installer, signing, update, SBOM |
 | M18 Beta/RC/Stable | 0% | 없음 | release gate 전체 |
@@ -50,8 +50,8 @@ milestone의 100점 만점에 대입한 약 30.9%입니다. 표시는 정수 31%
 - **M9~M14 2 → 8.** Library 목록, import, Develop 의 필름 base·노출, Export 가 실제로 돕니다.
   `verification/2026-08-07-vertical-slice.md`. 나머지 제품 표면은 그대로입니다.
 
-M5(GPU), M15(scanner host), M16(qualification), M17(배포·서명), M18(release gate)은 **여전히
-0%** 입니다. 남은 80% 의 대부분이 여기와 M9~M14 에 있고, 이쪽이 검증이 어렵고 되돌리기 비싼
+M5(GPU), M16(qualification), M17(배포·서명), M18(release gate)은 **여전히
+0%** 입니다. M15는 discovery/detect 기반만 생겼습니다. 남은 80% 의 대부분이 여기와 M9~M14 에 있고, 이쪽이 검증이 어렵고 되돌리기 비싼
 구간입니다.
 
 2026-08-09 Chroma backend 반영:

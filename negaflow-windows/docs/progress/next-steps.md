@@ -1,6 +1,6 @@
 # 다음에 어디서부터 이어서 할 것인가
 
-기준일: 2026-08-12 (Develop Calibration·Detail/Effects inspector 연결 완료)
+기준일: 2026-08-12 (scanner plugin host discovery·detect 경계 연결 완료)
 
 이 문서는 작업을 한동안 놓았다가 돌아왔을 때 가장 먼저 읽는 곳입니다. 이미 결정된 것을 다시
 논쟁하지 않고, 다음 한 걸음을 바로 시작하기 위한 기록입니다.
@@ -88,11 +88,11 @@ byte-exact임을 고정했습니다. 대형 실제 촬영 TIFF batch의 process 
 
 ## 2026-08-12 현재 재개 지점
 
-현재 Library/Develop 우선순위는 영속화된 folder·availability 데이터를 소비하는 browser projection입니다.
-All, Folders, Film Type, Offline을 하나의 순서 보존 frame projection에 연결하고, 전체 목록을 다시 만들지
-않는 folder section 표시를 붙입니다. folder import는 top-level TIFF만 가져오고 빈 등록 folder를 보존하며,
-기존 atomic catalog 저장 경계는 유지합니다. 그 다음 source-folder file-system refresh/relink를 Print 확장보다
-먼저 구현합니다.
+현재 최우선은 scanner plugin host의 남은 거래 경계입니다. 다음 작업은 approved plugin의
+`capabilities` 요청과 protocol v2 applied-options 검증, 이어서 app-owned staging TIFF/IR artifact의
+containment·regular-file·TIFF preflight·atomic publish를 Library frame transaction에 연결하는 것입니다.
+WIA/TWAIN 드라이버 adapter와 scanner WinUI는 이 host 계약 위에서만 추가합니다. Print 확장과 추가 Develop
+surface보다 앞섭니다.
 
 ## 2026-08-10 이후 새로 알게 된 것 — 먼저 읽으십시오
 
