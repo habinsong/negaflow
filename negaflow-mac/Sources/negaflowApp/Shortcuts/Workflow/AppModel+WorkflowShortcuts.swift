@@ -152,8 +152,7 @@ extension AppModel {
             }
         case .resetAdjustments:
             if let frame = actionableFrame {
-                DevelopInspectorResetter.resetAllAdjustments(frame: frame, neutralPreset: nil)
-                Task { await developFrame(frame) }
+                resetAllDevelopAdjustments(frame, neutralPreset: nil)
             }
         case .copyDevelopSettings:
             if let frame = actionableFrame { copyDevelopSettings(from: frame) }
