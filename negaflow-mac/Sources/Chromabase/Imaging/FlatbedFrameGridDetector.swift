@@ -133,6 +133,28 @@ public enum FlatbedFrameGridDetector {
         format.is35mm ? 1.0...3.5 : 2.0...9.0
     }
 
+    /// 프리뷰 파일이 스스로 밝히는 실제 영역(mm) — 픽셀 수 ÷ 해상도.
+    ///
+    /// 스캐너가 보고한 스캔 영역은 값이 없거나 단위/기준이 달라 mm↔px 환산을 통째로 어긋나게
+    /// 할 수 있다. 환산이 어긋나면 36×24mm 가 몇 px 인지가 틀려 빗살 탐색이 아무것도 못 찾는다.
+    /// 이 값은 **검출기가 실제로 읽는 그 파일**에서 나오므로 보고 값과 무관하게 성립한다.
+    public static func physicalSizeMM(url: URL) -> CGSize? {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil)
+                as? [CFString: Any],
+              let width = (properties[kCGImagePropertyPixelWidth] as? NSNumber)?.doubleValue,
+              let height = (properties[kCGImagePropertyPixelHeight] as? NSNumber)?.doubleValue,
+              width > 0, height > 0 else { return nil }
+        let tiff = properties[kCGImagePropertyTIFFDictionary] as? [CFString: Any]
+        let dpiX = (properties[kCGImagePropertyDPIWidth] as? NSNumber)?.doubleValue
+            ?? (tiff?[kCGImagePropertyTIFFXResolution] as? NSNumber)?.doubleValue
+        let dpiY = (properties[kCGImagePropertyDPIHeight] as? NSNumber)?.doubleValue
+            ?? (tiff?[kCGImagePropertyTIFFYResolution] as? NSNumber)?.doubleValue
+        // 해상도 태그가 없거나 1dpi 같은 자리표시자면 크기를 알 수 없다.
+        guard let dpiX, let dpiY, dpiX > 1, dpiY > 1 else { return nil }
+        return CGSize(width: width / dpiX * 25.4, height: height / dpiY * 25.4)
+    }
+
     /// 프리뷰 파일에서 바로 검출한다. `physicalSize` 는 그 스캔이 담은 실제 영역(mm)이다.
     public static func detect(
         url: URL,
