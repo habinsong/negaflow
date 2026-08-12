@@ -1,4 +1,5 @@
 #include "negaflow/imaging/grain_mend.h"
+#include "negaflow/imaging/defect_component_repair.h"
 
 #include "grain_mend_components.h"
 #include "grain_mend_detector.h"
@@ -6,7 +7,6 @@
 #include "grain_mend_tiled.h"
 
 #include <algorithm>
-#include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -41,80 +41,16 @@ void discard_pixels(WorkingImage& image) noexcept {
     };
 }
 
-[[nodiscard]] std::size_t checked_pixel_count(
-    const std::uint32_t width,
-    const std::uint32_t height) {
-    if (width == 0U || height == 0U ||
-        static_cast<std::size_t>(width) >
-            std::numeric_limits<std::size_t>::max() /
-                static_cast<std::size_t>(height)) {
-        throw std::bad_alloc{};
-    }
-    return static_cast<std::size_t>(width) * static_cast<std::size_t>(height);
-}
-
-[[nodiscard]] negaflow::core::Rgba32F median_3x3(
-    const WorkingImage& image,
-    const std::uint32_t x,
-    const std::uint32_t y) noexcept {
-    std::array<float, 9U> red{};
-    std::array<float, 9U> green{};
-    std::array<float, 9U> blue{};
-    std::size_t sample = 0U;
-    for (int dy = -1; dy <= 1; ++dy) {
-        const std::uint32_t sample_y = dy < 0
-            ? (y == 0U ? 0U : y - 1U)
-            : (dy > 0 && y < image.height - 1U ? y + 1U : y);
-        for (int dx = -1; dx <= 1; ++dx) {
-            const std::uint32_t sample_x = dx < 0
-                ? (x == 0U ? 0U : x - 1U)
-                : (dx > 0 && x < image.width - 1U ? x + 1U : x);
-            const auto pixel = image.pixels[
-                static_cast<std::size_t>(sample_y) * image.stride_pixels + sample_x];
-            red[sample] = pixel.red;
-            green[sample] = pixel.green;
-            blue[sample] = pixel.blue;
-            ++sample;
-        }
-    }
-    constexpr std::size_t middle = 4U;
-    std::nth_element(red.begin(), red.begin() + middle, red.end());
-    std::nth_element(green.begin(), green.begin() + middle, green.end());
-    std::nth_element(blue.begin(), blue.begin() + middle, blue.end());
-    return {red[middle], green[middle], blue[middle], 1.0F};
-}
-
-void repair_full_resolution(
+[[nodiscard]] DefectComponentRepairStatus repair_full_resolution(
     WorkingImage& image,
     const DetectionImage& detection,
     const std::vector<std::uint8_t>& mask,
     const float strength,
     std::size_t& repaired_pixels) {
-    struct PendingRepair final {
-        std::size_t index{0U};
-        negaflow::core::Rgba32F median{};
-        float blend{0.0F};
-    };
-    std::vector<PendingRepair> previous_row{};
-    std::vector<PendingRepair> current_row{};
-    previous_row.reserve(image.width);
-    current_row.reserve(image.width);
-    const auto apply_row = [&](const std::vector<PendingRepair>& repairs) noexcept {
-        for (const PendingRepair& repair : repairs) {
-            const auto original = image.pixels[repair.index];
-            auto& destination = image.pixels[repair.index];
-            const float blend = strength * repair.blend;
-            const float local_inverse = 1.0F - blend;
-            destination.red = original.red * local_inverse + repair.median.red * blend;
-            destination.green =
-                original.green * local_inverse + repair.median.green * blend;
-            destination.blue =
-                original.blue * local_inverse + repair.median.blue * blend;
-            destination.alpha = original.alpha;
-        }
-    };
+    std::vector<std::uint8_t> full_mask(
+        static_cast<std::size_t>(image.width) * image.height,
+        0U);
     for (std::uint32_t y = 0U; y < image.height; ++y) {
-        current_row.clear();
         for (std::uint32_t x = 0U; x < image.width; ++x) {
             const float mask_weight = sample_transformed_mask(
                 mask,
@@ -124,18 +60,22 @@ void repair_full_resolution(
                 image.height,
                 x,
                 y);
-            if (mask_weight <= 0.0F) {
-                continue;
-            }
-            const std::size_t index =
-                static_cast<std::size_t>(y) * image.stride_pixels + x;
-            current_row.push_back({index, median_3x3(image, x, y), mask_weight});
-            ++repaired_pixels;
+            full_mask[static_cast<std::size_t>(y) * image.width + x] =
+                static_cast<std::uint8_t>(std::lround(
+                    std::clamp(mask_weight, 0.0F, 1.0F) * 255.0F));
         }
-        apply_row(previous_row);
-        previous_row.swap(current_row);
     }
-    apply_row(previous_row);
+    const std::size_t mask_stride_bytes = image.width;
+    const auto repaired = repair_defect_components(
+        std::move(image),
+        full_mask,
+        mask_stride_bytes,
+        {.has_preferred_angle = false, .preferred_angle_degrees = 0.0,
+         .strength = static_cast<double>(strength)});
+    const DefectComponentRepairStatus status = repaired.status;
+    repaired_pixels = repaired.info.repaired_pixels;
+    image = std::move(repaired.image);
+    return status;
 }
 
 }  // namespace
@@ -201,12 +141,19 @@ GrainMendResult apply_grain_mend(
                 DetectionImage geometry{};
                 geometry.width = result.image.width;
                 geometry.height = result.image.height;
-                repair_full_resolution(
+                const DefectComponentRepairStatus repair_status = repair_full_resolution(
                     result.image,
                     geometry,
                     mask,
                     static_cast<float>(parameters.strength),
                     result.info.repaired_pixels);
+                if (repair_status != DefectComponentRepairStatus::ok) {
+                    result.status = repair_status == DefectComponentRepairStatus::kernel_failed
+                        ? GrainMendStatus::kernel_failed
+                        : GrainMendStatus::allocation_failed;
+                    discard_pixels(result.image);
+                    return result;
+                }
             }
             result.info.applied = result.info.repaired_pixels != 0U;
             result.status = GrainMendStatus::ok;
@@ -233,12 +180,19 @@ GrainMendResult apply_grain_mend(
             parameters.reject_structure_lines,
             result.info.candidate_pixels);
         if (result.info.candidate_pixels != 0U) {
-            repair_full_resolution(
+            const DefectComponentRepairStatus repair_status = repair_full_resolution(
                 result.image,
                 detection,
                 mask,
                 static_cast<float>(parameters.strength),
                 result.info.repaired_pixels);
+            if (repair_status != DefectComponentRepairStatus::ok) {
+                result.status = repair_status == DefectComponentRepairStatus::kernel_failed
+                    ? GrainMendStatus::kernel_failed
+                    : GrainMendStatus::allocation_failed;
+                discard_pixels(result.image);
+                return result;
+            }
         }
         result.info.applied = result.info.repaired_pixels != 0U;
         result.status = GrainMendStatus::ok;
