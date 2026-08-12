@@ -18,6 +18,14 @@ surfaces. All six locales are present. x64 Debug managed build passed Catalog 59
 assertions. Recursive import, folder tree display, folder removal, and real-picker interaction
 automation remain unverified.
 
+## 2026-08-12 Library source availability snapshot
+
+Library file and folder availability is now probed as a deduplicated snapshot rather than by
+each list item on the UI thread. Libraries through 256 frames update immediately; larger ones
+probe in the background and discard a stale result if the open document changed. The Library
+view renders the cached offline state. x64 Debug managed build passed Catalog 595 and Shell 372
+assertions. Timed large-library device evidence is still pending.
+
 ## 2026-08-12 Positive film develop route
 
 네이티브 엔진과 request factory가 이미 지원하던 Color/B&W positive film scan이 catalog `CanDevelop`

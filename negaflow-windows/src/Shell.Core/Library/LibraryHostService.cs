@@ -42,7 +42,14 @@ public sealed record ScannerFramePublishResult(
 /// </remarks>
 public sealed class LibraryHostService : IDisposable
 {
+    private const int AsynchronousAvailabilityThreshold = 256;
     private readonly DevelopExportCoordinator coordinator;
+    private readonly IUiDispatcher dispatcher;
+    private IReadOnlyDictionary<string, LibrarySourceAvailability> availabilityByFrameId =
+        new Dictionary<string, LibrarySourceAvailability>();
+    private IReadOnlyDictionary<string, bool> availabilityByFolderId =
+        new Dictionary<string, bool>();
+    private int availabilityRefreshVersion;
     private LibraryDocument? document;
 
     public LibraryHostService(IUiDispatcher dispatcher)
@@ -54,6 +61,7 @@ public sealed class LibraryHostService : IDisposable
     {
         ArgumentNullException.ThrowIfNull(dispatcher);
         ArgumentNullException.ThrowIfNull(exporter);
+        this.dispatcher = dispatcher;
         coordinator = new DevelopExportCoordinator(exporter, dispatcher);
     }
 
@@ -73,6 +81,11 @@ public sealed class LibraryHostService : IDisposable
 
     public IReadOnlyList<LibraryFolderSnapshot> Folders =>
         document?.Folders ?? [];
+
+    public IReadOnlyDictionary<string, LibrarySourceAvailability> SourceAvailabilityByFrameId =>
+        availabilityByFrameId;
+
+    public IReadOnlyDictionary<string, bool> FolderAvailabilityById => availabilityByFolderId;
 
     public bool IsExporting => coordinator.IsRunning;
 
@@ -153,6 +166,46 @@ public sealed class LibraryHostService : IDisposable
             out int addedFolders,
             out int addedFrames);
         return new FolderImportResult(plan, addedFolders, addedFrames, save);
+    }
+
+    /// <summary>
+    /// macOS와 같은 source/folder snapshot을 만듭니다. 작은 library는 즉시 갱신하고, 256개를
+    /// 넘으면 UI thread 밖에서 검사한 뒤 아직 같은 document인 경우에만 결과를 반영합니다.
+    /// </summary>
+    public void RefreshAvailability(Action? onCompleted = null)
+    {
+        LibraryDocument? currentDocument = document;
+        if (currentDocument is null)
+        {
+            return;
+        }
+
+        IReadOnlyList<LibraryFrameSnapshot> frames = currentDocument.Frames.ToArray();
+        IReadOnlyList<LibraryFolderSnapshot> folders = currentDocument.Folders.ToArray();
+        int refreshVersion = unchecked(++availabilityRefreshVersion);
+        if (frames.Count <= AsynchronousAvailabilityThreshold)
+        {
+            ApplyAvailability(currentDocument, refreshVersion,
+                LibraryAvailability.Probe(frames, folders), onCompleted);
+            return;
+        }
+
+        _ = Task.Run(() => LibraryAvailability.Probe(frames, folders)).ContinueWith(
+            task =>
+            {
+                if (task.Status != TaskStatus.RanToCompletion)
+                {
+                    return;
+                }
+                _ = dispatcher.TryEnqueue(() => ApplyAvailability(
+                    currentDocument,
+                    refreshVersion,
+                    task.Result,
+                    onCompleted));
+            },
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
     }
 
     /// <summary>
@@ -246,9 +299,28 @@ public sealed class LibraryHostService : IDisposable
 
     public void Dispose()
     {
+        unchecked { ++availabilityRefreshVersion; }
+        availabilityByFrameId = new Dictionary<string, LibrarySourceAvailability>();
+        availabilityByFolderId = new Dictionary<string, bool>();
         document?.Dispose();
         document = null;
         State = LibraryHostState.NotOpened;
+    }
+
+    private void ApplyAvailability(
+        LibraryDocument expectedDocument,
+        int refreshVersion,
+        LibraryAvailabilitySnapshot snapshot,
+        Action? onCompleted)
+    {
+        if (!ReferenceEquals(document, expectedDocument) ||
+            availabilityRefreshVersion != refreshVersion)
+        {
+            return;
+        }
+        availabilityByFrameId = snapshot.ByFrameId;
+        availabilityByFolderId = snapshot.ByFolderId;
+        onCompleted?.Invoke();
     }
 
     private static bool TryReadSourceIdentity(string path, out DefectSourceIdentity identity)

@@ -22,6 +22,7 @@ internal static class Program
         VerifyDevelopExportCoordinator();
         VerifyLibraryDocument();
         VerifyLibraryHost();
+        VerifyLibraryAvailability();
         VerifyDevelopInspectorPresentationState();
         VerifyDevelopHistogramSampler();
         VerifyDevelopPanelState();
@@ -1484,6 +1485,37 @@ internal static class Program
                 Directory.Delete(isolatedBase, recursive: true);
             }
         }
+    }
+
+    private static void VerifyLibraryAvailability()
+    {
+        int fileProbes = 0;
+        LibraryAvailabilitySnapshot snapshot = LibraryAvailability.Probe(
+            [
+                Frame(new ManualBaseRgb(0.2, 0.2, 0.2), sourcePath: @"C:\scans\online.tif") with { Id = "online" },
+                Frame(new ManualBaseRgb(0.2, 0.2, 0.2), sourcePath: @"C:\scans\offline.tif") with { Id = "offline" },
+                Frame(new ManualBaseRgb(0.2, 0.2, 0.2), sourcePath: @"C:\scans\online.tif") with { Id = "online-copy" },
+            ],
+            [
+                new LibraryFolderSnapshot("folder-online", @"C:\scans", DateTimeOffset.UnixEpoch),
+                new LibraryFolderSnapshot("folder-offline", @"C:\missing", DateTimeOffset.UnixEpoch),
+            ],
+            path =>
+            {
+                ++fileProbes;
+                return path.EndsWith("online.tif", StringComparison.OrdinalIgnoreCase);
+            },
+            path => path == @"C:\scans");
+
+        Check(
+            fileProbes == 2 &&
+            snapshot.ByFrameId["online"] == LibrarySourceAvailability.Online &&
+            snapshot.ByFrameId["offline"] == LibrarySourceAvailability.Offline &&
+            snapshot.ByFrameId["online-copy"] == LibrarySourceAvailability.Online,
+            "library_availability_deduplicates_source_paths");
+        Check(
+            snapshot.ByFolderId["folder-online"] && !snapshot.ByFolderId["folder-offline"],
+            "library_availability_records_folder_status");
     }
 
     private static DevelopExportResult FailedResult(

@@ -10,10 +10,13 @@ namespace Negaflow.Shell;
 /// </summary>
 public sealed class LibraryFrameListItem
 {
-    public LibraryFrameListItem(LibraryFrameSnapshot frame)
+    public LibraryFrameListItem(
+        LibraryFrameSnapshot frame,
+        LibrarySourceAvailability availability = LibrarySourceAvailability.Unknown)
     {
         ArgumentNullException.ThrowIfNull(frame);
         Frame = frame;
+        Availability = availability;
     }
 
     public LibraryFrameSnapshot Frame { get; }
@@ -35,19 +38,26 @@ public sealed class LibraryFrameListItem
 
     public bool CanDevelop => Frame.CanDevelop;
 
-    public bool IsSourceOffline => !File.Exists(Frame.SourcePath);
+    public LibrarySourceAvailability Availability { get; }
+
+    public bool IsSourceOffline => Availability == LibrarySourceAvailability.Offline;
 }
 
 public static class LibraryFrameListItems
 {
     public static IReadOnlyList<LibraryFrameListItem> From(
-        IReadOnlyList<LibraryFrameSnapshot> frames)
+        IReadOnlyList<LibraryFrameSnapshot> frames,
+        IReadOnlyDictionary<string, LibrarySourceAvailability>? availabilityByFrameId = null)
     {
         ArgumentNullException.ThrowIfNull(frames);
         List<LibraryFrameListItem> items = new(frames.Count);
         foreach (LibraryFrameSnapshot frame in frames)
         {
-            items.Add(new LibraryFrameListItem(frame));
+            LibrarySourceAvailability availability = availabilityByFrameId is not null &&
+                availabilityByFrameId.TryGetValue(frame.Id, out LibrarySourceAvailability value)
+                    ? value
+                    : LibrarySourceAvailability.Unknown;
+            items.Add(new LibraryFrameListItem(frame, availability));
         }
         return items;
     }

@@ -42,7 +42,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
 
         libraryHost = host;
         importWindowId = windowId;
-        allItems = LibraryFrameListItems.From(host.Frames);
+        allItems = LibraryFrameListItems.From(host.Frames, host.SourceAvailabilityByFrameId);
         ShowFilteredItems();
 
         bool hasFrames = allItems.Count > 0;
@@ -52,6 +52,16 @@ public sealed partial class LibraryWorkspaceView : UserControl
         string? issueSummary = LibraryFrameListItems.IssueSummary(host.Issues);
         LibraryIssueBar.Message = issueSummary ?? string.Empty;
         LibraryIssueBar.IsOpen = issueSummary is not null;
+
+        host.RefreshAvailability(() =>
+        {
+            if (!ReferenceEquals(libraryHost, host))
+            {
+                return;
+            }
+            allItems = LibraryFrameListItems.From(host.Frames, host.SourceAvailabilityByFrameId);
+            ShowFilteredItems();
+        });
     }
 
     private void OnLibrarySearchTextChanged(object sender, TextChangedEventArgs args)
