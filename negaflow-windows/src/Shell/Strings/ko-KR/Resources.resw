@@ -663,4 +663,9 @@
   <data name="filterMinimumRating.Text" xml:space="preserve"><value>별점 %d 이상</value><comment>AppLocalizedPhrase.filterMinimumRatingFormat</comment></data>
   <data name="clearFilters.Text" xml:space="preserve"><value>필터 지우기</value><comment>AppLocalizedPhrase.clearFilters</comment></data>
   <data name="filterAll.Text" xml:space="preserve"><value>모두</value><comment>AppLocalizedPhrase.all</comment></data>
+  <data name="cropAspectRatio.Text" xml:space="preserve"><value>종횡비</value><comment>AppLocalizedPhrase.aspectRatio</comment></data>
+  <data name="cropAspectOriginal.Text" xml:space="preserve"><value>원본</value><comment>AppLocalizedPhrase.original</comment></data>
+  <data name="cropAspectCustom.Text" xml:space="preserve"><value>사용자 정의</value><comment>AppLocalizedPhrase.custom</comment></data>
+  <data name="cropAspectLocked.Value" xml:space="preserve"><value>크롭 비율 잠김</value><comment>AppLocalizedPhrase.cropAspectLocked</comment></data>
+  <data name="cropAspectUnlocked.Value" xml:space="preserve"><value>크롭 비율 해제</value><comment>AppLocalizedPhrase.cropAspectUnlocked</comment></data>
 </root>

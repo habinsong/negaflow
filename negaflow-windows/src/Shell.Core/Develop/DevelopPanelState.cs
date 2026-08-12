@@ -1,6 +1,7 @@
 using System.Globalization;
 using Negaflow.Catalog;
 using Negaflow.Interop;
+using Negaflow.Shell.Develop;
 
 namespace Negaflow.Shell;
 
@@ -591,6 +592,19 @@ public sealed class DevelopPanelState
     /// </summary>
     public LibraryFrameError SetCrop(ImageCropRect? crop) =>
         SetImageTransform(ImageTransform with { Crop = crop });
+
+    /// <summary>
+    /// 종횡비를 고릅니다. 원본은 비율과 crop 을 함께 지우고, 고정 비율은 그 비율로 가운데
+    /// 정렬된 최대 crop 을 만듭니다 — macOS <c>applyCropAspect</c> 와 같습니다.
+    /// </summary>
+    public LibraryFrameError SetCropAspect(CropAspectOption option) =>
+        SelectedFrame is not { } frame
+            ? LibraryFrameError.MissingId
+            : SetImageTransform(CropAspect.Apply(
+                ImageTransform,
+                option,
+                frame.SourceMetadata?.PixelWidth ?? 0U,
+                frame.SourceMetadata?.PixelHeight ?? 0U));
 
     private LibraryFrameError SetImageTransform(ImageTransformRecipe imageTransform)
     {

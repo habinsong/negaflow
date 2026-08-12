@@ -663,4 +663,9 @@
   <data name="filterMinimumRating.Text" xml:space="preserve"><value>%d 星及以上</value><comment>AppLocalizedPhrase.filterMinimumRatingFormat</comment></data>
   <data name="clearFilters.Text" xml:space="preserve"><value>清除筛选条件</value><comment>AppLocalizedPhrase.clearFilters</comment></data>
   <data name="filterAll.Text" xml:space="preserve"><value>全部</value><comment>AppLocalizedPhrase.all</comment></data>
+  <data name="cropAspectRatio.Text" xml:space="preserve"><value>长宽比</value><comment>AppLocalizedPhrase.aspectRatio</comment></data>
+  <data name="cropAspectOriginal.Text" xml:space="preserve"><value>原始</value><comment>AppLocalizedPhrase.original</comment></data>
+  <data name="cropAspectCustom.Text" xml:space="preserve"><value>自定</value><comment>AppLocalizedPhrase.custom</comment></data>
+  <data name="cropAspectLocked.Value" xml:space="preserve"><value>裁剪长宽比已锁定</value><comment>AppLocalizedPhrase.cropAspectLocked</comment></data>
+  <data name="cropAspectUnlocked.Value" xml:space="preserve"><value>裁剪长宽比已解锁</value><comment>AppLocalizedPhrase.cropAspectUnlocked</comment></data>
 </root>

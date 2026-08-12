@@ -35,6 +35,8 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private bool isSynchronizingInspectorPresentation;
     private bool isInspectorPresentationReady;
     private Negaflow.Shell.Library.ThumbnailService? thumbnails;
+    /// <summary>macOS 의 <c>crop.aspectLocked</c> 와 같이 잠긴 상태로 시작합니다.</summary>
+    private bool isCropAspectLocked = true;
     private CropSession? cropSession;
     private CropDragMode cropDragMode;
     private CropDisplayPoint cropDragStart;
@@ -521,6 +523,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         HalationControl.Value = texture.Halation;
         VignetteControl.Value = texture.Vignette;
         StraightenAngleControl.Value = panel.ImageTransform.StraightenAngle;
+        UpdateCropAspectControls();
         HistogramView.SynchronizeValues(
             panel.Shadows,
             panel.Density,
@@ -646,6 +649,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         }
 
         CropSession next = CropSession.Start(panel.ImageTransform.Crop);
+        next.LockedNormalizedAspectRatio = LockedNormalizedAspectRatio();
         // macOS와 같이 crop을 먼저 해제해 전체 프레임에서 새 선택을 만들게 합니다. 드래그 중
         // catalog를 쓰지 않고 Apply/Cancel에서 한 번만 저장합니다.
         if (panel.SetCrop(null) != LibraryFrameError.None)
@@ -1071,6 +1075,8 @@ public sealed partial class DevelopWorkspaceView : UserControl
         }
         NoiseReductionToggle.IsEnabled = canEdit;
         StraightenAngleControl.IsEnabled = canEdit;
+        CropAspectButton.IsEnabled = canEdit;
+        CropAspectLockButton.IsEnabled = canEdit;
         RotateLeftButton.IsEnabled = canEdit;
         RotateRightButton.IsEnabled = canEdit;
         FlipHorizontalButton.IsEnabled = canEdit;
@@ -1479,6 +1485,84 @@ public sealed partial class DevelopWorkspaceView : UserControl
         UpdateImageTransform(state => state.SetStraightenAngle(args.Value));
     }
 
+    /// <summary>비율 목록 한 칸입니다. 화면에 나가는 이름만 여기서 만듭니다.</summary>
+    private sealed record CropAspectChoice(CropAspectOption Option, string Text);
+
+    /// <summary>
+    /// 드래그를 가둘 정규 비율입니다. 잠금이 꺼져 있거나 비율이 없으면 null 입니다. 화소
+    /// 비율을 정규 비율로 바꾸려면 원본의 가로세로가 필요합니다 — 회전이 걸려 있으면 뒤집습니다.
+    /// </summary>
+    private double? LockedNormalizedAspectRatio()
+    {
+        if (!isCropAspectLocked ||
+            panel?.SelectedFrame is not { SourceMetadata: { } metadata } ||
+            panel.ImageTransform.CropAspect is not { } aspect ||
+            !double.IsFinite(aspect) || aspect <= 0.0 ||
+            metadata.PixelWidth == 0U || metadata.PixelHeight == 0U)
+        {
+            return null;
+        }
+        double width = metadata.PixelWidth;
+        double height = metadata.PixelHeight;
+        if (panel.ImageTransform.Rotation is ImageRotation.Degrees90 or ImageRotation.Degrees270)
+        {
+            (width, height) = (height, width);
+        }
+        return aspect * height / width;
+    }
+
+    private void OnCropAspectClicked(object sender, ItemClickEventArgs args)
+    {
+        _ = sender;
+        if (args.ClickedItem is not CropAspectChoice choice)
+        {
+            return;
+        }
+        CropAspectButton.Flyout?.Hide();
+        // 비율이 crop 을 다시 만드는 동안에는 진행 중인 crop session 을 접습니다 — 두 곳이
+        // 같은 사각형을 서로 다르게 들고 있으면 Apply 가 어느 쪽을 쓸지 알 수 없습니다.
+        CancelCrop();
+        UpdateImageTransform(state => state.SetCropAspect(choice.Option));
+    }
+
+    private void OnCropAspectLockToggled(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        isCropAspectLocked = !isCropAspectLocked;
+        // 잠금은 catalog 가 아니라 다음 crop 드래그의 동작만 바꿉니다.
+        CropAspectLockIcon.Glyph = isCropAspectLocked ? "" : "";
+        if (cropSession is not null)
+        {
+            cropSession.LockedNormalizedAspectRatio = LockedNormalizedAspectRatio();
+        }
+        UpdateCropAspectControls();
+    }
+
+    private void UpdateCropAspectControls()
+    {
+        if (panel is null)
+        {
+            return;
+        }
+        string label = CropAspect.LabelFor(panel.ImageTransform);
+        CropAspectButton.Content = CropAspectText(label);
+        AutomationProperties.SetName(CropAspectButton, CropAspectButton.Content.ToString());
+        bool locked = isCropAspectLocked;
+        string lockName = AppResources.Get(
+            locked ? "cropAspectLocked" : "cropAspectUnlocked",
+            "Value");
+        AutomationProperties.SetName(CropAspectLockButton, lockName);
+        ToolTipService.SetToolTip(CropAspectLockButton, lockName);
+    }
+
+    private static string CropAspectText(string label) => label switch
+    {
+        "original" => AppResources.Get("cropAspectOriginal", "Text"),
+        "custom" => AppResources.Get("cropAspectCustom", "Text"),
+        _ => label,
+    };
+
     private void UpdateImageTransform(Func<DevelopPanelState, LibraryFrameError> update)
     {
         if (panel is null || isSynchronizingInspector || update(panel) != LibraryFrameError.None)
@@ -1724,6 +1808,11 @@ public sealed partial class DevelopWorkspaceView : UserControl
         SetButtonText(CropCancelButton, AppResources.Get("developCropCancel", "Text"));
         AutomationProperties.SetName(CropSelection, AppResources.Get("developCropArea", "Text"));
         StraightenAngleControl.Label = AppResources.Get("developAngle", "Text");
+        CropAspectLabel.Text = AppResources.Get("cropAspectRatio", "Text");
+        CropAspectOptions.ItemsSource = CropAspect.Options
+            .Select(option => new CropAspectChoice(option, CropAspectText(option.Label)))
+            .ToList();
+        UpdateCropAspectControls();
         SetInspectorSectionText(
             BasicToneSection,
             BasicToneHeaderButton,

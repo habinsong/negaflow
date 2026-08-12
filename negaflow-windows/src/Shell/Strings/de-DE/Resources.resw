@@ -663,4 +663,9 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="filterMinimumRating.Text" xml:space="preserve"><value>Ab %d Sternen</value><comment>AppLocalizedPhrase.filterMinimumRatingFormat</comment></data>
   <data name="clearFilters.Text" xml:space="preserve"><value>Filter löschen</value><comment>AppLocalizedPhrase.clearFilters</comment></data>
   <data name="filterAll.Text" xml:space="preserve"><value>Alle</value><comment>AppLocalizedPhrase.all</comment></data>
+  <data name="cropAspectRatio.Text" xml:space="preserve"><value>Seitenverhältnis</value><comment>AppLocalizedPhrase.aspectRatio</comment></data>
+  <data name="cropAspectOriginal.Text" xml:space="preserve"><value>Original</value><comment>AppLocalizedPhrase.original</comment></data>
+  <data name="cropAspectCustom.Text" xml:space="preserve"><value>Benutzerdefiniert</value><comment>AppLocalizedPhrase.custom</comment></data>
+  <data name="cropAspectLocked.Value" xml:space="preserve"><value>Seitenverhältnis gesperrt</value><comment>AppLocalizedPhrase.cropAspectLocked</comment></data>
+  <data name="cropAspectUnlocked.Value" xml:space="preserve"><value>Seitenverhältnis entsperrt</value><comment>AppLocalizedPhrase.cropAspectUnlocked</comment></data>
 </root>

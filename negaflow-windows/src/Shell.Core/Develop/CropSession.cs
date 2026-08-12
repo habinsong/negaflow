@@ -39,15 +39,43 @@ public sealed class CropSession
         previousCrop = null;
     }
 
+    /// <summary>
+    /// 잠긴 종횡비를 <b>정규 좌표</b>로 나타낸 값입니다(정규 가로/정규 세로). 화소 비율이
+    /// 아니라 정규 비율인 이유는 선택 사각형이 이미지 크기로 정규화돼 있기 때문입니다 —
+    /// 화소 3:2 는 이미지가 4000×3000 이면 정규 비율 1.125 입니다. 변환은 호출자가 합니다.
+    /// null 이면 자유롭게 끕니다.
+    /// </summary>
+    public double? LockedNormalizedAspectRatio { get; set; }
+
     public void Select(CropDisplayPoint start, CropDisplayPoint end) =>
-        Selection = CropDisplayRect.FromPoints(start, end);
+        Selection = Constrain(CropDisplayRect.FromPoints(start, end));
 
-    public void SetSelection(CropDisplayRect selection) => Selection = CropDisplayRect.Clamp(selection);
+    public void SetSelection(CropDisplayRect selection) =>
+        Selection = Constrain(CropDisplayRect.Clamp(selection));
 
+    /// <summary>옮기기는 크기를 바꾸지 않으므로 비율을 다시 맞출 필요가 없습니다.</summary>
     public void Move(double dx, double dy) => Selection = Selection.Move(dx, dy);
 
     public void Resize(CropHandle handle, CropDisplayPoint point) =>
-        Selection = Selection.Resize(handle, point);
+        Selection = Constrain(Selection.Resize(handle, point));
+
+    /// <summary>
+    /// 잠긴 비율에 맞춰 높이를 다시 냅니다. 왼쪽 위 모서리를 붙잡아 두므로 끌던 손끝이 튀지
+    /// 않고, 화면 밖으로 나가면 마지막에 clamp 가 잡습니다.
+    /// </summary>
+    private CropDisplayRect Constrain(CropDisplayRect rect)
+    {
+        if (LockedNormalizedAspectRatio is not { } ratio || !double.IsFinite(ratio) || ratio <= 0.0)
+        {
+            return rect;
+        }
+        double height = rect.Width / ratio;
+        if (height > 1.0)
+        {
+            return CropDisplayRect.Clamp(new(rect.X, rect.Y, ratio, 1.0));
+        }
+        return CropDisplayRect.Clamp(new(rect.X, rect.Y, rect.Width, height));
+    }
 
     /// <summary>저장되는 y-up crop입니다. 거의 full인 선택은 crop 없음으로 저장합니다.</summary>
     public ImageCropRect? Apply() =>

@@ -321,6 +321,34 @@ internal static class Program
         session.Full();
         Check(session.Apply() is null && session.Cancel() is null,
             "crop_session_full_clears_crop_and_cancel_baseline");
+
+        // 잠근 비율은 끄는 동안 유지돼야 합니다. 정규 좌표 1.5 는 폭 0.6 에 높이 0.4 입니다.
+        var locked = CropSession.Start(null);
+        locked.LockedNormalizedAspectRatio = 1.5;
+        locked.Select(new CropDisplayPoint(0.1, 0.1), new CropDisplayPoint(0.7, 0.9));
+        Check(
+            Near(locked.Selection.Width, 0.6) && Near(locked.Selection.Height, 0.4),
+            "crop_session_locked_aspect_drives_height");
+        locked.Resize(CropHandle.Right, new CropDisplayPoint(0.4, 0.5));
+        Check(
+            Near(locked.Selection.Width / locked.Selection.Height, 1.5),
+            "crop_session_locked_aspect_survives_resize");
+
+        // 원본 화소 3:2 를 정중앙 최대 crop 으로 바꾸면 4000x3000 에서 세로가 2/3 로 줄어듭니다.
+        ImageTransformRecipe framed = CropAspect.Apply(
+            ImageTransformRecipe.Identity,
+            new CropAspectOption("3:2", 3.0 / 2.0),
+            4000U,
+            3000U);
+        Check(
+            framed.Crop is { } aspectCrop &&
+            Near(aspectCrop.Width, 1.0) && Near(aspectCrop.Height, 8.0 / 9.0) &&
+            Near(aspectCrop.X, 0.0) && Near(aspectCrop.Y, 1.0 / 18.0),
+            "crop_aspect_centres_the_largest_fitting_rect");
+        Check(
+            CropAspect.Apply(framed, new CropAspectOption("original", null), 4000U, 3000U)
+                is { Crop: null, CropAspect: null },
+            "crop_aspect_original_clears_crop_and_ratio");
     }
 
     private static void VerifyDevelopRequestFactory()

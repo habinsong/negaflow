@@ -663,4 +663,9 @@ Load a scanner from Library to scan film.</value>
   <data name="filterMinimumRating.Text" xml:space="preserve"><value>%d Stars &amp; Up</value><comment>AppLocalizedPhrase.filterMinimumRatingFormat</comment></data>
   <data name="clearFilters.Text" xml:space="preserve"><value>Clear Filters</value><comment>AppLocalizedPhrase.clearFilters</comment></data>
   <data name="filterAll.Text" xml:space="preserve"><value>All</value><comment>AppLocalizedPhrase.all</comment></data>
+  <data name="cropAspectRatio.Text" xml:space="preserve"><value>Aspect Ratio</value><comment>AppLocalizedPhrase.aspectRatio</comment></data>
+  <data name="cropAspectOriginal.Text" xml:space="preserve"><value>Original</value><comment>AppLocalizedPhrase.original</comment></data>
+  <data name="cropAspectCustom.Text" xml:space="preserve"><value>Custom</value><comment>AppLocalizedPhrase.custom</comment></data>
+  <data name="cropAspectLocked.Value" xml:space="preserve"><value>Crop aspect ratio locked</value><comment>AppLocalizedPhrase.cropAspectLocked</comment></data>
+  <data name="cropAspectUnlocked.Value" xml:space="preserve"><value>Crop aspect ratio unlocked</value><comment>AppLocalizedPhrase.cropAspectUnlocked</comment></data>
 </root>

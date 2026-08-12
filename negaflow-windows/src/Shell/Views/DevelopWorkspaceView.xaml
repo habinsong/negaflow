@@ -471,6 +471,60 @@
                                     <Button x:Name="FlipVerticalButton" Grid.Column="4" AutomationProperties.AutomationId="negaflow.develop.geometry.flip-vertical" Click="OnFlipVerticalClicked"><FontIcon Glyph="&#xE7B8;" /></Button>
                                 </Grid>
                                 <controls:InspectorSlider x:Name="StraightenAngleControl" HorizontalAlignment="Stretch" ResetValue="0" SliderAutomationId="negaflow.develop.geometry.straighten-angle" ValueChanged="OnStraightenAngleChanged" />
+                                <!-- macOS 처럼 이름은 왼쪽, 값과 잠금은 오른쪽 끝에 붙습니다. -->
+                                <Grid HorizontalAlignment="Stretch">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="CropAspectLabel" Grid.Column="0" VerticalAlignment="Center" FontSize="12" />
+                                    <DropDownButton
+                                        x:Name="CropAspectButton"
+                                        Grid.Column="1"
+                                        MaxWidth="112"
+                                        Height="26"
+                                        Padding="6,0"
+                                        AutomationProperties.AutomationId="negaflow.develop.geometry.crop-aspect"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        FontSize="12">
+                                        <DropDownButton.Flyout>
+                                            <Flyout>
+                                                <GridView
+                                                    x:Name="CropAspectOptions"
+                                                    IsItemClickEnabled="True"
+                                                    ItemClick="OnCropAspectClicked"
+                                                    SelectionMode="None">
+                                                    <GridView.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock
+                                                                Width="76"
+                                                                Padding="0,4"
+                                                                HorizontalTextAlignment="Center"
+                                                                FontSize="12"
+                                                                Text="{Binding Text}" />
+                                                        </DataTemplate>
+                                                    </GridView.ItemTemplate>
+                                                </GridView>
+                                            </Flyout>
+                                        </DropDownButton.Flyout>
+                                    </DropDownButton>
+                                    <!-- macOS 는 채워진 토글이 아니라 자물쇠 아이콘만 바꾸는 평범한
+                                         버튼입니다. 상태는 아이콘이 말합니다. -->
+                                    <Button
+                                        x:Name="CropAspectLockButton"
+                                        Grid.Column="2"
+                                        Width="26"
+                                        Height="24"
+                                        Padding="0"
+                                        AutomationProperties.AutomationId="negaflow.develop.geometry.crop-aspect-lock"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Click="OnCropAspectLockToggled">
+                                        <FontIcon x:Name="CropAspectLockIcon" FontSize="12" Glyph="&#xE72E;" />
+                                    </Button>
+                                </Grid>
                             </StackPanel>
                         </Border>
 

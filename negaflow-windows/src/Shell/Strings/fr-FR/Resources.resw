@@ -663,4 +663,9 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="filterMinimumRating.Text" xml:space="preserve"><value>%d étoiles et plus</value><comment>AppLocalizedPhrase.filterMinimumRatingFormat</comment></data>
   <data name="clearFilters.Text" xml:space="preserve"><value>Effacer les filtres</value><comment>AppLocalizedPhrase.clearFilters</comment></data>
   <data name="filterAll.Text" xml:space="preserve"><value>Tout</value><comment>AppLocalizedPhrase.all</comment></data>
+  <data name="cropAspectRatio.Text" xml:space="preserve"><value>Proportions</value><comment>AppLocalizedPhrase.aspectRatio</comment></data>
+  <data name="cropAspectOriginal.Text" xml:space="preserve"><value>Original</value><comment>AppLocalizedPhrase.original</comment></data>
+  <data name="cropAspectCustom.Text" xml:space="preserve"><value>Personnalisé</value><comment>AppLocalizedPhrase.custom</comment></data>
+  <data name="cropAspectLocked.Value" xml:space="preserve"><value>Proportions du recadrage verrouillées</value><comment>AppLocalizedPhrase.cropAspectLocked</comment></data>
+  <data name="cropAspectUnlocked.Value" xml:space="preserve"><value>Proportions du recadrage déverrouillées</value><comment>AppLocalizedPhrase.cropAspectUnlocked</comment></data>
 </root>
