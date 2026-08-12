@@ -30,6 +30,7 @@ internal static class Program
         VerifyThumbnailScaler();
         VerifyLibrarySorter();
         VerifyLibraryQuickFilters();
+        VerifyExportDestination();
         VerifyDevelopHistogramSampler();
         VerifyDevelopPanelState();
         VerifyInspectorSliderValue();
@@ -293,6 +294,40 @@ internal static class Program
             MinimumRating = 5,
         }.Apply(source);
         Check(combined.Count == 0, "library_quick_filters_axes_are_and");
+    }
+
+    /// <summary>
+    /// 목적지 규칙은 사용자가 고른 것이 어디에 어떤 이름으로 쓰이는지를 정합니다. 빈 패턴으로
+    /// 이름 없는 파일을 만들지 않는 것이 여기서 가장 중요합니다.
+    /// </summary>
+    private static void VerifyExportDestination()
+    {
+        const string source = @"C:\scans\Roll 01\IMG_0007.tif";
+
+        ExportDestination tiff = new(@"D:\Export", ExportDestination.NameToken, DevelopExportFormat.Tiff16);
+        Check(
+            tiff.PathFor(source) == @"D:\Export\IMG_0007.tif",
+            "export_destination_uses_chosen_folder_and_extension");
+
+        ExportDestination png = tiff with { Format = DevelopExportFormat.Png16 };
+        Check(png.FileNameFor(source) == "IMG_0007.png", "export_destination_extension_follows_format");
+
+        ExportDestination suffixed = tiff with { NamePattern = $"{ExportDestination.NameToken}-print" };
+        Check(
+            suffixed.FileNameFor(source) == "IMG_0007-print.tif",
+            "export_destination_expands_the_name_token");
+
+        // 폴더를 고르지 않았으면 원본 옆에 씁니다.
+        Check(
+            (tiff with { FolderPath = string.Empty }).PathFor(source) == @"C:\scans\Roll 01\IMG_0007.tif",
+            "export_destination_falls_back_beside_the_source");
+
+        Check(
+            (tiff with { NamePattern = "   " }).FileNameFor(source) == "IMG_0007.tif",
+            "export_destination_refuses_an_empty_name");
+        Check(
+            (tiff with { NamePattern = "a/b:c" }).FileNameFor(source) == "a_b_c.tif",
+            "export_destination_replaces_path_characters");
     }
 
     private static void VerifyCropSession()

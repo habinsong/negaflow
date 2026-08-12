@@ -713,4 +713,14 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developBandMagenta.Text" xml:space="preserve"><value>Magenta</value><comment>AppLocalizedPhrase.magenta</comment></data>
   <data name="developPointCurveCanvas.Value" xml:space="preserve"><value>Gradationskurven-Fläche</value></data>
   <data name="developPointCurveCanvasHelp.Value" xml:space="preserve"><value>Klicken fügt einen Punkt hinzu, Ziehen verschiebt ihn. Doppelklick auf einen Punkt außer den Endpunkten löscht ihn. Pfeiltasten verschieben um 1 Prozent, mit Umschalt um 5 Prozent.</value></data>
+  <data name="developSectionOutput.Text" xml:space="preserve"><value>Ausgabe</value><comment>AppLocalizedText.output</comment></data>
+  <data name="developLibrary.Text" xml:space="preserve"><value>Bibliothek</value></data>
+  <data name="developExportFormat.Text" xml:space="preserve"><value>Format</value><comment>AppLocalizedText.exportFormatLabel</comment></data>
+  <data name="developExportFolder.Text" xml:space="preserve"><value>Ordner</value><comment>AppLocalizedText.exportFolderLabel</comment></data>
+  <data name="developExportFolderChange.Content" xml:space="preserve"><value>Ändern</value><comment>AppLocalizedPhrase.rename</comment></data>
+  <data name="developExportFolderBesideSource.Text" xml:space="preserve"><value>Neben dem Original</value></data>
+  <data name="developExportNamePattern.Text" xml:space="preserve"><value>Dateinamensmuster</value><comment>ExportNamingLocalizedText.pattern</comment></data>
+  <data name="developExportRunning.Text" xml:space="preserve"><value>Entwickeln…</value></data>
+  <data name="developExportSaveFailed.Text" xml:space="preserve"><value>Der Katalog konnte nicht gespeichert werden.</value></data>
+  <data name="developExportFolderFailed.Text" xml:space="preserve"><value>Dieser Ordner kann nicht verwendet werden.</value></data>
 </root>

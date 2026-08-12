@@ -23,8 +23,14 @@
             </Grid.ColumnDefinitions>
 
             <StackPanel Grid.Column="0" Padding="22,10,22,0" Spacing="7">
-                <Button x:Name="LibraryRailButton" Background="{ThemeResource NegaflowSelectionBrush}" Style="{StaticResource NegaflowSidebarButtonStyle}">
-                    <FontIcon FontSize="15" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" Glyph="&#xE8FD;" />
+                <Button
+                    x:Name="LibraryRailButton"
+                    AutomationProperties.AutomationId="negaflow.develop.sources.library"
+                    Background="{ThemeResource NegaflowSelectionBrush}"
+                    Click="OnDevelopSourceRailClicked"
+                    Style="{StaticResource NegaflowSidebarButtonStyle}"
+                    Tag="Library">
+                    <FontIcon x:Name="LibraryRailIcon" FontSize="15" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" Glyph="&#xE8FD;" />
                 </Button>
                 <Button x:Name="FilesRailButton" Style="{StaticResource NegaflowSidebarButtonStyle}">
                     <FontIcon FontSize="15" Glyph="&#xE8B7;" />
@@ -38,8 +44,13 @@
                 <Button x:Name="FilmRailButton" Style="{StaticResource NegaflowSidebarButtonStyle}">
                     <FontIcon FontSize="15" Glyph="&#xE722;" />
                 </Button>
-                <Button x:Name="OutputRailButton" Style="{StaticResource NegaflowSidebarButtonStyle}">
-                    <FontIcon FontSize="15" Glyph="&#xE72D;" />
+                <Button
+                    x:Name="OutputRailButton"
+                    AutomationProperties.AutomationId="negaflow.develop.sources.output"
+                    Click="OnDevelopSourceRailClicked"
+                    Style="{StaticResource NegaflowSidebarButtonStyle}"
+                    Tag="Output">
+                    <FontIcon x:Name="OutputRailIcon" FontSize="15" Glyph="&#xE72D;" />
                 </Button>
             </StackPanel>
 
@@ -57,12 +68,81 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <FontIcon Grid.Column="0" Margin="0,0,7,0" VerticalAlignment="Center" FontSize="14" Glyph="&#xE8FD;" />
+                    <FontIcon x:Name="DevelopSourceIcon" Grid.Column="0" Margin="0,0,7,0" VerticalAlignment="Center" FontSize="14" Glyph="&#xE8FD;" />
                     <TextBlock x:Name="LibraryHeaderText" Grid.Column="1" VerticalAlignment="Center" FontSize="14" FontWeight="SemiBold" />
                     <TextBlock x:Name="NoFrameHeaderText" Grid.Column="2" VerticalAlignment="Center" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                 </Grid>
                 <Border Grid.Row="1" Background="{ThemeResource NegaflowDividerBrush}" />
-                <ScrollViewer Grid.Row="2">
+
+                <!-- 출력 소스: macOS 의 내보내기 설정 패널입니다. 형식·폴더·파일명 패턴을
+                     정하고 미리보기로 실제 파일명을 확인한 뒤 내보냅니다. -->
+                <ScrollViewer x:Name="OutputSourcePanel" Grid.Row="2" Visibility="Collapsed">
+                    <StackPanel Padding="12,14" Spacing="12">
+                        <TextBlock x:Name="ExportSectionText" FontSize="13" FontWeight="SemiBold" />
+                        <Border Padding="12" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="8">
+                            <StackPanel Spacing="9">
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="ExportFormatLabel" VerticalAlignment="Center" FontSize="12" />
+                                    <ComboBox
+                                        x:Name="ExportFormatSelector"
+                                        Grid.Column="1"
+                                        MinWidth="96"
+                                        AutomationProperties.AutomationId="negaflow.develop.output.format"
+                                        SelectionChanged="OnExportFormatChanged">
+                                        <ComboBoxItem Content="TIFF" Tag="Tiff16" />
+                                        <ComboBoxItem Content="PNG" Tag="Png16" />
+                                    </ComboBox>
+                                </Grid>
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="ExportFolderLabel" VerticalAlignment="Center" FontSize="12" />
+                                    <Button
+                                        x:Name="ExportFolderButton"
+                                        Grid.Column="1"
+                                        Padding="8,2"
+                                        AutomationProperties.AutomationId="negaflow.develop.output.folder"
+                                        Click="OnExportFolderClicked"
+                                        FontSize="11" />
+                                </Grid>
+                                <TextBlock
+                                    x:Name="ExportFolderPathText"
+                                    FontSize="11"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    TextTrimming="CharacterEllipsis" />
+                                <TextBlock x:Name="ExportNamePatternLabel" FontSize="12" />
+                                <TextBox
+                                    x:Name="ExportNamePatternBox"
+                                    AutomationProperties.AutomationId="negaflow.develop.output.name-pattern"
+                                    TextChanged="OnExportNamePatternChanged" />
+                                <TextBlock
+                                    x:Name="ExportPreviewText"
+                                    FontSize="11"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    TextTrimming="CharacterEllipsis" />
+                                <Button
+                                    x:Name="ExportButton"
+                                    HorizontalAlignment="Stretch"
+                                    AutomationProperties.AutomationId="negaflow.develop.output.export"
+                                    Click="OnExportClicked"
+                                    Style="{StaticResource AccentButtonStyle}" />
+                                <TextBlock
+                                    x:Name="OutputStatusText"
+                                    FontSize="11"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <ScrollViewer x:Name="LibrarySourcePanel" Grid.Row="2">
                     <StackPanel Padding="12,14" Spacing="10">
                         <Button
                             x:Name="ImportButton"

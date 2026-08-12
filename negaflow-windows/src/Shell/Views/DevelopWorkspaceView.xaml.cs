@@ -37,6 +37,10 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private Negaflow.Shell.Library.ThumbnailService? thumbnails;
     /// <summary>macOS 의 <c>crop.aspectLocked</c> 와 같이 잠긴 상태로 시작합니다.</summary>
     private bool isCropAspectLocked = true;
+    private bool isOutputSourceSelected;
+    /// <summary>폴더가 비어 있으면 원본 옆에 씁니다 — 목적지를 고르기 전에도 내보낼 수 있습니다.</summary>
+    private ExportDestination exportDestination =
+        new(string.Empty, ExportDestination.NameToken, DevelopExportFormat.Tiff16);
     private CropSession? cropSession;
     private CropDragMode cropDragMode;
     private CropDisplayPoint cropDragStart;
@@ -1519,6 +1523,140 @@ public sealed partial class DevelopWorkspaceView : UserControl
         UpdateImageTransform(state => state.SetStraightenAngle(args.Value));
     }
 
+    /// <summary>
+    /// 현상 왼쪽 소스를 바꿉니다. 지금은 라이브러리와 출력 둘이며, 나머지 macOS 탭(필름·프리셋·
+    /// 버전)은 아직 내용이 없어 막대에만 있습니다.
+    /// </summary>
+    private void OnDevelopSourceRailClicked(object sender, RoutedEventArgs args)
+    {
+        _ = args;
+        if (sender is not Button { Tag: string tag })
+        {
+            return;
+        }
+        isOutputSourceSelected = string.Equals(tag, "Output", StringComparison.Ordinal);
+        UpdateDevelopSourcePanel();
+    }
+
+    private void UpdateDevelopSourcePanel()
+    {
+        OutputSourcePanel.Visibility = isOutputSourceSelected ? Visibility.Visible : Visibility.Collapsed;
+        LibrarySourcePanel.Visibility = isOutputSourceSelected ? Visibility.Collapsed : Visibility.Visible;
+        LibraryHeaderText.Text = AppResources.Get(
+            isOutputSourceSelected ? "developSectionOutput" : "developLibrary",
+            "Text");
+        DevelopSourceIcon.Glyph = isOutputSourceSelected ? "" : "";
+        var accent = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"];
+        var normal = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorPrimaryBrush"];
+        var selection = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["NegaflowSelectionBrush"];
+        var transparent = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent);
+        LibraryRailButton.Background = isOutputSourceSelected ? transparent : selection;
+        LibraryRailIcon.Foreground = isOutputSourceSelected ? normal : accent;
+        OutputRailButton.Background = isOutputSourceSelected ? selection : transparent;
+        OutputRailIcon.Foreground = isOutputSourceSelected ? accent : normal;
+        UpdateExportPreview();
+    }
+
+    private void OnExportFormatChanged(object sender, SelectionChangedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (ExportFormatSelector.SelectedItem is not ComboBoxItem { Tag: string tag } ||
+            !Enum.TryParse(tag, out DevelopExportFormat format))
+        {
+            return;
+        }
+        exportDestination = exportDestination with { Format = format };
+        UpdateExportPreview();
+    }
+
+    private void OnExportNamePatternChanged(object sender, TextChangedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        exportDestination = exportDestination with { NamePattern = ExportNamePatternBox.Text };
+        UpdateExportPreview();
+    }
+
+    private async void OnExportFolderClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (importWindowId is not { } windowId)
+        {
+            return;
+        }
+        var picker = new Microsoft.Windows.Storage.Pickers.FolderPicker(windowId)
+        {
+            CommitButtonText = AppResources.Get("developExportFolderChange", "Content"),
+        };
+        try
+        {
+            Microsoft.Windows.Storage.Pickers.PickFolderResult? picked =
+                await picker.PickSingleFolderAsync();
+            if (picked is null)
+            {
+                return;
+            }
+            exportDestination = exportDestination with { FolderPath = picked.Path };
+            UpdateExportPreview();
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or
+            NotSupportedException or ArgumentException or PathTooLongException)
+        {
+            OutputStatusText.Text = AppResources.Get("developExportFolderFailed", "Text");
+        }
+    }
+
+    private void UpdateExportPreview()
+    {
+        if (ExportPreviewText is null)
+        {
+            return;
+        }
+        ExportFolderPathText.Text = string.IsNullOrWhiteSpace(exportDestination.FolderPath)
+            ? AppResources.Get("developExportFolderBesideSource", "Text")
+            : exportDestination.FolderPath;
+        ExportPreviewText.Text = panel?.SelectedFrame is { } frame
+            ? exportDestination.FileNameFor(frame.SourcePath)
+            : string.Empty;
+        ExportButton.IsEnabled = panel?.CanExport == true;
+    }
+
+    /// <summary>
+    /// 출력 패널의 내보내기입니다. 빠른 내보내기와 같은 경로를 쓰되 목적지와 형식을 사용자가
+    /// 정한 값으로 씁니다.
+    /// </summary>
+    private async void OnExportClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (panel?.SelectedFrame is not { } frame)
+        {
+            return;
+        }
+        // 편집은 메모리에만 있었으므로, 현상하기 전에 저장해 파일과 catalog 가 어긋나지 않게 합니다.
+        if (panel.Save() != CatalogStoreError.None)
+        {
+            OutputStatusText.Text = AppResources.Get("developExportSaveFailed", "Text");
+            return;
+        }
+
+        ExportButton.IsEnabled = false;
+        OutputStatusText.Text = AppResources.Get("developExportRunning", "Text");
+        try
+        {
+            _ = await panel.ExportAsync(
+                exportDestination.PathFor(frame.SourcePath),
+                exportDestination.Format,
+                outcome => OutputStatusText.Text = DevelopPanelState.Describe(outcome));
+        }
+        finally
+        {
+            UpdateExportPreview();
+        }
+    }
+
     private void OnCropAngleDialChanged(object? sender, double angle)
     {
         _ = sender;
@@ -1681,7 +1819,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         CatalogStoreError saved = panel.Save();
         if (saved != CatalogStoreError.None)
         {
-            ExportStatusText.Text = $"Could not save the catalog: {saved}";
+            ExportStatusText.Text = AppResources.Get("developExportSaveFailed", "Text");
             return;
         }
 
@@ -1689,7 +1827,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
             Path.GetDirectoryName(frame.SourcePath) ?? Path.GetTempPath(),
             $"{Path.GetFileNameWithoutExtension(frame.SourcePath)}-negaflow.png");
 
-        ExportStatusText.Text = "Developing…";
+        ExportStatusText.Text = AppResources.Get("developExportRunning", "Text");
         Task<bool> exportTask = panel.ExportAsync(
             destination,
             DevelopExportFormat.Png16,
@@ -1810,6 +1948,19 @@ public sealed partial class DevelopWorkspaceView : UserControl
         NoFrameInspectorText.Text = noFrame;
         DevelopHeaderText.Text = AppResources.Get("menuDevelop", "Text");
         SetButtonText(ImportButton, AppResources.Get("importImages", "Content"));
+        ExportSectionText.Text = AppResources.Get("exportSection", "Text");
+        ExportFormatLabel.Text = AppResources.Get("developExportFormat", "Text");
+        AutomationProperties.SetName(ExportFormatSelector, ExportFormatLabel.Text);
+        ExportFolderLabel.Text = AppResources.Get("developExportFolder", "Text");
+        SetButtonText(ExportFolderButton, AppResources.Get("developExportFolderChange", "Content"));
+        ExportNamePatternLabel.Text = AppResources.Get("developExportNamePattern", "Text");
+        AutomationProperties.SetName(ExportNamePatternBox, ExportNamePatternLabel.Text);
+        ExportNamePatternBox.Text = exportDestination.NamePattern;
+        SetButtonText(ExportButton, AppResources.Get("exportSection", "Text"));
+        ExportFormatSelector.SelectedIndex = 0;
+        SetLocalizedNameAndTooltip(LibraryRailButton, AppResources.Get("developLibrary", "Text"));
+        SetLocalizedNameAndTooltip(OutputRailButton, AppResources.Get("developSectionOutput", "Text"));
+        UpdateDevelopSourcePanel();
         SetRadioText(BaseAutoModeButton, AppResources.Get("developBaseModeAuto", "Content"));
         SetRadioText(BaseFilmModeButton, AppResources.Get("developBaseModeFilm", "Content"));
         SetRadioText(BaseManualModeButton, AppResources.Get("developBaseModeManual", "Content"));

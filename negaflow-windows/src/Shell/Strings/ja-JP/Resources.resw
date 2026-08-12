@@ -713,4 +713,14 @@
   <data name="developBandMagenta.Text" xml:space="preserve"><value>マゼンタ</value><comment>AppLocalizedPhrase.magenta</comment></data>
   <data name="developPointCurveCanvas.Value" xml:space="preserve"><value>ポイントカーブキャンバス</value></data>
   <data name="developPointCurveCanvasHelp.Value" xml:space="preserve"><value>クリックでポイントを追加し、ドラッグで移動します。端点以外をダブルクリックすると削除します。矢印キーは 1 パーセント、Shift と併用で 5 パーセント動きます。</value></data>
+  <data name="developSectionOutput.Text" xml:space="preserve"><value>出力</value><comment>AppLocalizedText.output</comment></data>
+  <data name="developLibrary.Text" xml:space="preserve"><value>ライブラリ</value></data>
+  <data name="developExportFormat.Text" xml:space="preserve"><value>形式</value><comment>AppLocalizedText.exportFormatLabel</comment></data>
+  <data name="developExportFolder.Text" xml:space="preserve"><value>フォルダー</value><comment>AppLocalizedText.exportFolderLabel</comment></data>
+  <data name="developExportFolderChange.Content" xml:space="preserve"><value>変更</value><comment>AppLocalizedPhrase.rename</comment></data>
+  <data name="developExportFolderBesideSource.Text" xml:space="preserve"><value>元ファイルの隣</value></data>
+  <data name="developExportNamePattern.Text" xml:space="preserve"><value>ファイル名パターン</value><comment>ExportNamingLocalizedText.pattern</comment></data>
+  <data name="developExportRunning.Text" xml:space="preserve"><value>現像中…</value></data>
+  <data name="developExportSaveFailed.Text" xml:space="preserve"><value>カタログを保存できませんでした。</value></data>
+  <data name="developExportFolderFailed.Text" xml:space="preserve"><value>そのフォルダーは使えません。</value></data>
 </root>

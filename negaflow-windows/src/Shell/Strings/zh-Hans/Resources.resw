@@ -713,4 +713,14 @@
   <data name="developBandMagenta.Text" xml:space="preserve"><value>洋红色</value><comment>AppLocalizedPhrase.magenta</comment></data>
   <data name="developPointCurveCanvas.Value" xml:space="preserve"><value>曲线画布</value></data>
   <data name="developPointCurveCanvasHelp.Value" xml:space="preserve"><value>点按添加控制点，拖动可移动。双击非端点可删除。方向键移动 1%，按住 Shift 移动 5%。</value></data>
+  <data name="developSectionOutput.Text" xml:space="preserve"><value>输出</value><comment>AppLocalizedText.output</comment></data>
+  <data name="developLibrary.Text" xml:space="preserve"><value>图库</value></data>
+  <data name="developExportFormat.Text" xml:space="preserve"><value>格式</value><comment>AppLocalizedText.exportFormatLabel</comment></data>
+  <data name="developExportFolder.Text" xml:space="preserve"><value>文件夹</value><comment>AppLocalizedText.exportFolderLabel</comment></data>
+  <data name="developExportFolderChange.Content" xml:space="preserve"><value>更改</value><comment>AppLocalizedPhrase.rename</comment></data>
+  <data name="developExportFolderBesideSource.Text" xml:space="preserve"><value>与原片同一位置</value></data>
+  <data name="developExportNamePattern.Text" xml:space="preserve"><value>文件名模式</value><comment>ExportNamingLocalizedText.pattern</comment></data>
+  <data name="developExportRunning.Text" xml:space="preserve"><value>正在冲洗…</value></data>
+  <data name="developExportSaveFailed.Text" xml:space="preserve"><value>无法保存目录。</value></data>
+  <data name="developExportFolderFailed.Text" xml:space="preserve"><value>无法使用该文件夹。</value></data>
 </root>

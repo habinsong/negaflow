@@ -713,4 +713,14 @@ Load a scanner from Library to scan film.</value>
   <data name="developBandMagenta.Text" xml:space="preserve"><value>Magenta</value><comment>AppLocalizedPhrase.magenta</comment></data>
   <data name="developPointCurveCanvas.Value" xml:space="preserve"><value>Point Curve canvas</value></data>
   <data name="developPointCurveCanvasHelp.Value" xml:space="preserve"><value>Click to add a point. Drag to move it. Double-click a non-endpoint to delete it. Arrow keys move the selected point by 1 percent; Shift plus Arrow moves by 5 percent.</value></data>
+  <data name="developSectionOutput.Text" xml:space="preserve"><value>Output</value><comment>AppLocalizedText.output</comment></data>
+  <data name="developLibrary.Text" xml:space="preserve"><value>Library</value></data>
+  <data name="developExportFormat.Text" xml:space="preserve"><value>Format</value><comment>AppLocalizedText.exportFormatLabel</comment></data>
+  <data name="developExportFolder.Text" xml:space="preserve"><value>Folder</value><comment>AppLocalizedText.exportFolderLabel</comment></data>
+  <data name="developExportFolderChange.Content" xml:space="preserve"><value>Change</value><comment>AppLocalizedPhrase.rename</comment></data>
+  <data name="developExportFolderBesideSource.Text" xml:space="preserve"><value>Beside the original</value></data>
+  <data name="developExportNamePattern.Text" xml:space="preserve"><value>Filename Pattern</value><comment>ExportNamingLocalizedText.pattern</comment></data>
+  <data name="developExportRunning.Text" xml:space="preserve"><value>Developing…</value></data>
+  <data name="developExportSaveFailed.Text" xml:space="preserve"><value>Could not save the catalog.</value></data>
+  <data name="developExportFolderFailed.Text" xml:space="preserve"><value>Could not use that folder.</value></data>
 </root>

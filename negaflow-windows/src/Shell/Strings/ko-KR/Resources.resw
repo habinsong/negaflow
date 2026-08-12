@@ -713,4 +713,14 @@
   <data name="developBandMagenta.Text" xml:space="preserve"><value>자홍</value><comment>AppLocalizedPhrase.magenta</comment></data>
   <data name="developPointCurveCanvas.Value" xml:space="preserve"><value>포인트 커브 캔버스</value></data>
   <data name="developPointCurveCanvasHelp.Value" xml:space="preserve"><value>눌러서 점을 추가하고 끌어서 옮깁니다. 끝점이 아닌 점을 두 번 누르면 지웁니다. 화살표 키는 1퍼센트, Shift 와 함께 누르면 5퍼센트씩 움직입니다.</value></data>
+  <data name="developSectionOutput.Text" xml:space="preserve"><value>출력</value><comment>AppLocalizedText.output</comment></data>
+  <data name="developLibrary.Text" xml:space="preserve"><value>라이브러리</value></data>
+  <data name="developExportFormat.Text" xml:space="preserve"><value>형식</value><comment>AppLocalizedText.exportFormatLabel</comment></data>
+  <data name="developExportFolder.Text" xml:space="preserve"><value>폴더</value><comment>AppLocalizedText.exportFolderLabel</comment></data>
+  <data name="developExportFolderChange.Content" xml:space="preserve"><value>변경</value><comment>AppLocalizedPhrase.rename</comment></data>
+  <data name="developExportFolderBesideSource.Text" xml:space="preserve"><value>원본 옆</value></data>
+  <data name="developExportNamePattern.Text" xml:space="preserve"><value>파일명 패턴</value><comment>ExportNamingLocalizedText.pattern</comment></data>
+  <data name="developExportRunning.Text" xml:space="preserve"><value>현상 중…</value></data>
+  <data name="developExportSaveFailed.Text" xml:space="preserve"><value>카탈로그를 저장하지 못했습니다.</value></data>
+  <data name="developExportFolderFailed.Text" xml:space="preserve"><value>그 폴더를 쓸 수 없습니다.</value></data>
 </root>
