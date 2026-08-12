@@ -1,6 +1,6 @@
 # 다음에 어디서부터 이어서 할 것인가
 
-기준일: 2026-08-12 (scanner plugin host discovery·detect 경계 연결 완료)
+기준일: 2026-08-13 (macOS 1.0.8 flatbed frame-grid correctness 반영)
 
 이 문서는 작업을 한동안 놓았다가 돌아왔을 때 가장 먼저 읽는 곳입니다. 이미 결정된 것을 다시
 논쟁하지 않고, 다음 한 걸음을 바로 시작하기 위한 기록입니다.

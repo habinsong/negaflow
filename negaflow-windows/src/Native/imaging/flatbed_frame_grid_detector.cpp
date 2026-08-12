@@ -113,7 +113,8 @@ struct GapEvidence final {
             lower, 0, count() - 1))];
         const double trailing = edge[static_cast<std::size_t>(std::clamp(
             upper - 1, 0, count() - 1))];
-        return 0.5 * flat + 0.5 * std::sqrt(std::max(0.0, leading * trailing));
+        const double edge_pair = std::sqrt(std::max(0.0, leading * trailing));
+        return std::sqrt(std::max(0.0, flat) * std::max(0.0, edge_pair));
     }
 };
 
@@ -598,6 +599,30 @@ struct Grid final {
     return std::pair<double, double>{mean_position - slope * mean_index, slope};
 }
 
+// A single locally-refined boundary can be pulled into a frame by an unexposed
+// image or holder mark.  Use the median pairwise slope before the least-squares
+// inlier refit so that error stays local to that boundary.
+[[nodiscard]] std::optional<std::pair<double, double>> robust_line(
+    const std::vector<std::pair<double, double>>& samples) {
+    if (samples.size() < 2U) return std::nullopt;
+    std::vector<double> slopes{};
+    slopes.reserve(samples.size() * (samples.size() - 1U) / 2U);
+    for (std::size_t left = 0U; left < samples.size(); ++left) {
+        for (std::size_t right = left + 1U; right < samples.size(); ++right) {
+            const double delta = samples[right].first - samples[left].first;
+            if (std::abs(delta) > 1.0e-9) {
+                slopes.push_back((samples[right].second - samples[left].second) / delta);
+            }
+        }
+    }
+    if (slopes.empty()) return std::nullopt;
+    const double slope = median(std::move(slopes));
+    std::vector<double> intercepts{};
+    intercepts.reserve(samples.size());
+    for (const auto& sample : samples) intercepts.push_back(sample.second - slope * sample.first);
+    return std::pair<double, double>{median(std::move(intercepts)), slope};
+}
+
 [[nodiscard]] double refined_center(
     const double center,
     const GapEvidence& evidence,
@@ -657,7 +682,8 @@ struct Grid final {
             const double gap_mean = gap_sum / gap_length;
             const double frame_mean = frame_sum / frame_length;
             const double separation = (frame_mean - gap_mean) / (frame_mean + gap_mean + 1.0e-9);
-            const double score = (separation * 0.75 + std::exp(plateau_log / static_cast<double>(boundaries)) * 0.25) * coverage;
+            const double plateau = std::exp(plateau_log / static_cast<double>(boundaries));
+            const double score = std::sqrt(std::max(0.0, separation) * std::max(0.0, plateau)) * coverage;
             if (!best || score > best->score) best = Candidate{score, pitch, phase, separation};
         }
     }
@@ -670,7 +696,7 @@ struct Grid final {
         if (center - half > length) break;
         samples.emplace_back(static_cast<double>(index), refined_center(center, evidence, radius, half));
     }
-    const auto initial = fit_line(samples);
+    const auto initial = robust_line(samples);
     if (!initial) return std::nullopt;
     const double tolerance = std::max(half * 0.6, 1.0);
     std::vector<std::pair<double, double>> kept{};
@@ -684,7 +710,16 @@ struct Grid final {
     result.confidence = std::min(1.0, 0.5 + best->separation * 0.5);
     result.boundaries.reserve(samples.size() + 2U);
     for (int index = -1; index <= static_cast<int>(samples.size()); ++index) {
-        result.boundaries.push_back(refit.first + spacing * static_cast<double>(index));
+        double position = refit.first + spacing * static_cast<double>(index);
+        for (const auto& sample : kept) {
+            if (static_cast<int>(sample.first) == index && sample.second >= 0.0 &&
+                sample.second <= length &&
+                std::abs(sample.second - position) <= tolerance) {
+                position = sample.second;
+                break;
+            }
+        }
+        result.boundaries.push_back(position);
     }
     return result;
 }

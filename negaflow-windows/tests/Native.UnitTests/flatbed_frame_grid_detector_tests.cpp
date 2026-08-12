@@ -127,6 +127,30 @@ void test_keeps_half_frame_axes_in_their_physical_order() {
     }
 }
 
+void test_does_not_propagate_one_misleading_boundary() {
+    Holder holder = make_holder(true, 0.28F, 1U, 4U);
+    constexpr std::uint32_t width = 640U;
+    constexpr std::uint32_t pixels_per_mm = 8U;
+    constexpr std::uint32_t frame_height = 36U * pixels_per_mm;
+    constexpr std::uint32_t gap = 2U * pixels_per_mm;
+    constexpr std::uint32_t frame = 2U;
+    const std::uint32_t top = 120U + frame * (frame_height + gap);
+    for (std::uint32_t y = top; y < top + 7U * pixels_per_mm; ++y) {
+        for (std::uint32_t x = 80U; x < 80U + 24U * pixels_per_mm; ++x) {
+            holder.pixels[static_cast<std::size_t>(y) * width + x] = 0.045F;
+        }
+    }
+    const auto result = negaflow::imaging::detect_flatbed_frame_grid(holder.preview);
+    expect(result.status == negaflow::imaging::FlatbedFrameGridStatus::ok &&
+               result.detections.size() == 4U,
+           "flatbed detector keeps a strip across one misleading boundary");
+    for (std::uint32_t index = 0U; index < result.detections.size(); ++index) {
+        const double expected_top_mm = static_cast<double>(120U + index * (frame_height + gap)) / pixels_per_mm;
+        expect(std::abs(result.detections[index].y * 210.0 - expected_top_mm) < 0.35,
+               "flatbed detector keeps unaffected frames on their physical grid");
+    }
+}
+
 }  // namespace
 
 int main() {
@@ -134,6 +158,7 @@ int main() {
     test_rejects_empty_bright_windows();
     test_handles_dark_gap_polarity_and_cancellation();
     test_keeps_half_frame_axes_in_their_physical_order();
+    test_does_not_propagate_one_misleading_boundary();
     std::cout << "{\"status\":\"" << (failures == 0 ? "ok" : "error")
               << "\",\"suite\":\"flatbed_frame_grid\",\"failures\":"
               << failures << "}\n";

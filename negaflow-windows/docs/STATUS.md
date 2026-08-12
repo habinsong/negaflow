@@ -253,6 +253,12 @@ aperture, 여백 폭·pitch 범위, gap의 content 대비와 local boundary fit�
 밝은 빈 창, 어두운 slide/masked gap, half-frame의 24×18mm 축, 취소를 x64 Debug
 및 Release `native.flatbed_frame_grid`에서 확인했고 ARM64 Release target도 교차 빌드했습니다.
 
+macOS 1.0.8의 grid correctness 보정도 반영했습니다. gap 평탄함과 양 끝 edge 근거, cut content와
+gap 근거를 각각 곱으로 결합해 매끈한 하늘·바다 같은 컷 중앙이 물리 여백을 이기지 못하게 했습니다.
+국소 보정 경계는 Theil-Sen 중앙 기울기로 이상치를 먼저 분리하고 inlier만 최소제곱으로 재맞추며,
+검증된 국소 경계는 그대로 보존합니다. x64 Debug `native.flatbed_frame_grid`에서 한 프레임의 오도된
+경계가 나머지 strip 위치를 이동시키지 않는 회귀를 확인했습니다.
+
 ABI 0.35는 이 검출기를 caller-owned luminance preview→owned result handle로 C#에 연결합니다. C#은
 정규화 rectangle·confidence의 유한 범위와 handle 수명을 검증한 뒤에만 scanner host에 결과를 넘깁니다.
 x64 Debug `native.flatbed_frame_grid_abi` 및 Interop 184 assertions에서 실제 DLL 왕복을 확인했습니다.
