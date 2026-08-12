@@ -75,6 +75,14 @@ byte-exact임을 고정했습니다. 대형 실제 촬영 TIFF batch의 process 
 검증하려고 만든 임시 표면이며, macOS Negaflow 의 UI/UX를 동일하게 옮긴 정식 Develop inspector,
 필름 base picker, 취소·진행률과 나머지 제품 surface가 남아 있습니다. GPU 경로는 착수 전입니다.
 
+## 2026-08-12 현재 재개 지점
+
+현재 Library/Develop 우선순위는 영속화된 folder·availability 데이터를 소비하는 browser projection입니다.
+All, Folders, Film Type, Offline을 하나의 순서 보존 frame projection에 연결하고, 전체 목록을 다시 만들지
+않는 folder section 표시를 붙입니다. folder import는 top-level TIFF만 가져오고 빈 등록 folder를 보존하며,
+기존 atomic catalog 저장 경계는 유지합니다. 그 다음 source-folder file-system refresh/relink를 Print 확장보다
+먼저 구현합니다.
+
 ## 2026-08-10 이후 새로 알게 된 것 — 먼저 읽으십시오
 
 **1. 실촬영 fixture 를 쓰는 테스트가 오래 죽어 있었습니다.** `CMakeLists.txt` 의
