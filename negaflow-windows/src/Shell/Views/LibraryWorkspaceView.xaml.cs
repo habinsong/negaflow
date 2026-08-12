@@ -154,11 +154,10 @@ public sealed partial class LibraryWorkspaceView : UserControl
         {
             CommitButtonText = AppResources.Get("importSection", "Value"),
         };
-        picker.FileTypeFilter.Add(".tif");
-        picker.FileTypeFilter.Add(".tiff");
-        picker.FileTypeFilter.Add(".jpg");
-        picker.FileTypeFilter.Add(".jpeg");
-        picker.FileTypeFilter.Add(".png");
+        foreach (string extension in ImageSourcePaths.SupportedImportExtensions)
+        {
+            picker.FileTypeFilter.Add(extension);
+        }
 
         ImportImagesButton.IsEnabled = false;
         EmptyImportImagesButton.IsEnabled = false;
@@ -257,11 +256,10 @@ public sealed partial class LibraryWorkspaceView : UserControl
         {
             CommitButtonText = AppResources.Get("libraryLocateOriginal", "Content"),
         };
-        picker.FileTypeFilter.Add(".tif");
-        picker.FileTypeFilter.Add(".tiff");
-        picker.FileTypeFilter.Add(".jpg");
-        picker.FileTypeFilter.Add(".jpeg");
-        picker.FileTypeFilter.Add(".png");
+        foreach (string extension in ImageSourcePaths.SupportedImportExtensions)
+        {
+            picker.FileTypeFilter.Add(extension);
+        }
 
         try
         {

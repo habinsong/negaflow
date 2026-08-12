@@ -18,8 +18,12 @@ standard-image source probe, actual common preview/export, and byte-exact source
 The full ARM64 Release native graph and managed Interop graph cross-built successfully, but were
 not run on ARM64 hardware. JPEG EXIF orientation is read from the documented WIC metadata path
 and applied before the common scanner-to-working conversion; a real APP1 orientation-6 fixture
-now verifies the 2x3-to-3x2 route in x64 Debug/Release and ARM64 cross-build. RAW/DNG/HEIC
-support and real-photo/macOS pixel comparisons remain pending.
+now verifies the 2x3-to-3x2 route in x64 Debug/Release and ARM64 cross-build. DNG and camera
+RAW extensions are offered by the same library, relink, and Develop path; an installed Windows
+Raw Image Extension WIC codec must accept the source with as-shot, best-quality sRGB development
+before a catalog path can change. x64 Release common Develop/ABI and managed Catalog 605/Shell
+416 checks, plus the ARM64 native and Shell cross-build, pass. A real camera RAW corpus and macOS
+pixel comparisons remain pending.
 
 ## 2026-08-12 Scanner plugin host foundation
 

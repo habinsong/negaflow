@@ -314,11 +314,10 @@ public sealed partial class DevelopWorkspaceView : UserControl
         {
             CommitButtonText = "Import",
         };
-        picker.FileTypeFilter.Add(".tif");
-        picker.FileTypeFilter.Add(".tiff");
-        picker.FileTypeFilter.Add(".jpg");
-        picker.FileTypeFilter.Add(".jpeg");
-        picker.FileTypeFilter.Add(".png");
+        foreach (string extension in ImageSourcePaths.SupportedImportExtensions)
+        {
+            picker.FileTypeFilter.Add(extension);
+        }
 
         ImportButton.IsEnabled = false;
         try

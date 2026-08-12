@@ -18,6 +18,7 @@ enum class WicStandardImageDecodeStatus : std::uint8_t {
     decoder_initialization_failed,
     unsupported_container,
     frame_count_unsupported,
+    raw_development_failed,
     unsupported_pixel_format,
     color_context_failed,
     invalid_icc_profile,
@@ -36,6 +37,7 @@ struct WicStandardImageDecodeInfo final {
     std::uint32_t frame_count{0U};
     std::uint64_t decoded_pixel_bytes{0U};
     bool format_conversion_used{false};
+    bool raw_development_used{false};
     std::uint16_t exif_orientation{1U};
     bool orientation_applied{false};
     negaflow::color::IccProfileInfo icc{};
@@ -49,8 +51,10 @@ struct WicStandardImageDecodeResult final {
     DecodedImage image{};
 };
 
-// Decodes only WIC's built-in JPEG and PNG containers. Untagged values are explicitly
-// marked as sRGB, while embedded RGB ICC profiles remain attached for Windows ICM.
+// Decodes JPEG/PNG and an installed Windows WIC RAW codec. RAW uses its as-shot,
+// best-quality sRGB development before the common scanner-to-working conversion.
+// Untagged JPEG/PNG values are explicitly marked as sRGB, while embedded RGB ICC
+// profiles remain attached for Windows ICM.
 [[nodiscard]] WicStandardImageDecodeResult decode_standard_image_with_wic(
     const std::filesystem::path& path,
     const WicStandardImageDecodeLimits& limits = {},

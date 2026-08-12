@@ -39,7 +39,26 @@ void discard_samples(WicStandardImageDecodeResult& result) noexcept {
 
 [[nodiscard]] bool supported_container(const GUID& format) noexcept {
     return IsEqualGUID(format, GUID_ContainerFormatJpeg) != 0 ||
-           IsEqualGUID(format, GUID_ContainerFormatPng) != 0;
+           IsEqualGUID(format, GUID_ContainerFormatPng) != 0 ||
+           IsEqualGUID(format, GUID_ContainerFormatRaw) != 0;
+}
+
+[[nodiscard]] WicStandardImageDecodeStatus configure_raw_development(
+    IWICImagingFactory* const factory,
+    IWICBitmapFrameDecode* const frame) noexcept {
+    ComPtr<IWICDevelopRaw> raw{};
+    if (FAILED(frame->QueryInterface(IID_PPV_ARGS(&raw))) ||
+        FAILED(raw->LoadParameterSet(WICAsShotParameterSet)) ||
+        FAILED(raw->SetRenderMode(WICRawRenderModeBestQuality))) {
+        return WicStandardImageDecodeStatus::raw_development_failed;
+    }
+    ComPtr<IWICColorContext> srgb{};
+    if (FAILED(factory->CreateColorContext(&srgb)) ||
+        FAILED(srgb->InitializeFromExifColorSpace(1U)) ||
+        FAILED(raw->SetDestinationColorContext(srgb.Get()))) {
+        return WicStandardImageDecodeStatus::raw_development_failed;
+    }
+    return WicStandardImageDecodeStatus::ok;
 }
 
 [[nodiscard]] std::uint16_t exif_orientation(
@@ -244,6 +263,7 @@ WicStandardImageDecodeResult decode_standard_image_with_wic(
             result.status = WicStandardImageDecodeStatus::unsupported_container;
             return result;
         }
+        const bool is_raw = IsEqualGUID(format, GUID_ContainerFormatRaw) != 0;
         if (FAILED(decoder->GetFrameCount(&result.info.frame_count)) ||
             result.info.frame_count != 1U) {
             result.status = WicStandardImageDecodeStatus::frame_count_unsupported;
@@ -252,8 +272,20 @@ WicStandardImageDecodeResult decode_standard_image_with_wic(
         ComPtr<IWICBitmapFrameDecode> frame{};
         UINT width = 0U;
         UINT height = 0U;
-        if (FAILED(decoder->GetFrame(0U, &frame)) ||
-            FAILED(frame->GetSize(&width, &height)) || width == 0U || height == 0U) {
+        if (FAILED(decoder->GetFrame(0U, &frame))) {
+            result.status = WicStandardImageDecodeStatus::pixel_decode_failed;
+            return result;
+        }
+        if (is_raw) {
+            const WicStandardImageDecodeStatus raw_status =
+                configure_raw_development(factory.Get(), frame.Get());
+            if (raw_status != WicStandardImageDecodeStatus::ok) {
+                result.status = raw_status;
+                return result;
+            }
+            result.info.raw_development_used = true;
+        }
+        if (FAILED(frame->GetSize(&width, &height)) || width == 0U || height == 0U) {
             result.status = WicStandardImageDecodeStatus::pixel_decode_failed;
             return result;
         }
@@ -276,7 +308,9 @@ WicStandardImageDecodeResult decode_standard_image_with_wic(
             result.status = WicStandardImageDecodeStatus::cancelled;
             return result;
         }
-        result.info.exif_orientation = exif_orientation(frame.Get());
+        // WIC RAW codecs apply their as-shot rotation through IWICDevelopRaw. Standard
+        // containers retain the EXIF transform here, matching ImageIO's separate path.
+        result.info.exif_orientation = is_raw ? 1U : exif_orientation(frame.Get());
         GUID source_format{};
         if (FAILED(frame->GetPixelFormat(&source_format))) {
             result.status = WicStandardImageDecodeStatus::pixel_decode_failed;
@@ -375,6 +409,8 @@ const char* wic_standard_image_decode_status_name(const WicStandardImageDecodeSt
         case WicStandardImageDecodeStatus::unsupported_container: return "unsupported_container";
         case WicStandardImageDecodeStatus::frame_count_unsupported:
             return "frame_count_unsupported";
+        case WicStandardImageDecodeStatus::raw_development_failed:
+            return "raw_development_failed";
         case WicStandardImageDecodeStatus::unsupported_pixel_format:
             return "unsupported_pixel_format";
         case WicStandardImageDecodeStatus::color_context_failed: return "color_context_failed";

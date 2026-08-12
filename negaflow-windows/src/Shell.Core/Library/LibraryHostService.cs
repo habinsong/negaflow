@@ -416,7 +416,7 @@ public sealed class LibraryHostService : IDisposable
 
     private static LibrarySourceMetadata? ReadSourceMetadata(string path)
     {
-        bool read = IsStandardImagePath(path)
+        bool read = ImageSourcePaths.UsesWicStandardDecoder(path)
             ? NativeStandardImageSourceProbe.TryRead(path, out TiffSourceMetadata metadata)
             : NativeTiffSourceProbe.TryRead(path, out metadata);
         return read
@@ -431,11 +431,4 @@ public sealed class LibraryHostService : IDisposable
             : null;
     }
 
-    private static bool IsStandardImagePath(string path)
-    {
-        string extension = Path.GetExtension(path);
-        return string.Equals(extension, ".jpg", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(extension, ".jpeg", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(extension, ".png", StringComparison.OrdinalIgnoreCase);
-    }
 }

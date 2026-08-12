@@ -2548,6 +2548,9 @@ internal static class Program
             File.WriteAllBytes(Path.Combine(source, "B.tiff"), [0]);
             File.WriteAllBytes(Path.Combine(source, "A.tif"), [0]);
             File.WriteAllBytes(Path.Combine(source, "C.jpg"), [0]);
+            File.WriteAllBytes(Path.Combine(source, "D.dng"), [0]);
+            File.WriteAllBytes(Path.Combine(source, "E.arw"), [0]);
+            File.WriteAllBytes(Path.Combine(source, "ignore.txt"), [0]);
 
             FakeDispatcher dispatcher = new(accepts: true);
             FakeExporter exporter = new(_ => OkResult());
@@ -2556,11 +2559,12 @@ internal static class Program
                 Check(host.Open(roots) == LibraryHostState.Open, "folder_import_host_open");
                 FolderImportResult imported = host.ImportFolders([source], DevelopmentProcess.C41);
                 Check(imported.IsSuccess && imported.AddedFolderCount == 1 &&
-                      imported.AddedFrameCount == 3 && imported.Plan.Rejected.Count == 0,
-                    "folder_import_registers_folder_standard_images_atomically");
+                      imported.AddedFrameCount == 5 && imported.Plan.Rejected.Count == 0,
+                    "folder_import_registers_folder_standard_and_raw_images_atomically");
                 Check(host.Folders.Single().SourcePath == Path.GetFullPath(source) &&
-                      string.Join(',', host.Frames.Select(frame => frame.DisplayName)) == "A.tif,B.tiff,C.jpg",
-                    "folder_import_preserves_folder_identity_and_file_order");
+                      string.Join(',', host.Frames.Select(frame => frame.DisplayName)) ==
+                          "A.tif,B.tiff,C.jpg,D.dng,E.arw",
+                    "folder_import_preserves_standard_and_raw_file_order");
 
                 FolderImportResult emptyImport = host.ImportFolders([empty], DevelopmentProcess.C41);
                 Check(emptyImport.IsSuccess && emptyImport.AddedFolderCount == 1 &&
@@ -2570,7 +2574,7 @@ internal static class Program
 
             using LibraryHostService reopened = new(new FakeDispatcher(accepts: true), new FakeExporter(_ => OkResult()));
             Check(reopened.Open(roots) == LibraryHostState.Open && reopened.Folders.Count == 2 &&
-                  reopened.Frames.Count == 3,
+                  reopened.Frames.Count == 5,
                 "folder_import_persists_folders_and_frames_together");
         }
         finally

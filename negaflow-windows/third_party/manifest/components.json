@@ -54,6 +54,10 @@
       "name": "Windows App Runtime",
       "minimum_major_minor_version": "1.8",
       "reason": "The current unpackaged shell uses framework-dependent Windows App SDK deployment."
+    },
+    {
+      "name": "Microsoft Raw Image Extension",
+      "reason": "Required only when importing DNG or camera RAW. It supplies the installed WIC RAW codec; Negaflow does not redistribute its binary."
     }
   ],
   "third_party_runtime_dependencies": [

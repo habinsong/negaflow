@@ -70,7 +70,7 @@ public static class FolderImport
             try
             {
                 candidates = Directory.EnumerateFiles(normalized, "*", SearchOption.TopDirectoryOnly)
-                    .Where(IsImportableTiff)
+                    .Where(IsImportableImage)
                     .OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)
                     .ToArray();
             }
@@ -98,7 +98,7 @@ public static class FolderImport
             rejected);
     }
 
-    private static bool IsImportableTiff(string path)
+    private static bool IsImportableImage(string path)
     {
         try
         {
@@ -112,11 +112,6 @@ public static class FolderImport
             return false;
         }
 
-        string extension = Path.GetExtension(path);
-        return string.Equals(extension, ".tif", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(extension, ".tiff", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(extension, ".jpg", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(extension, ".jpeg", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(extension, ".png", StringComparison.OrdinalIgnoreCase);
+        return ImageSourcePaths.IsSupportedImportPath(path);
     }
 }
