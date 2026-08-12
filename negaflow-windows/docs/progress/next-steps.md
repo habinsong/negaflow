@@ -115,8 +115,20 @@ byte-exact임을 고정했습니다. 대형 실제 촬영 TIFF batch의 process 
    붙습니다(`LibraryFolderDevelopmentControls`).
 3. 라이브러리 카드의 나머지 겹침 — pick 깃발, 현상 중 진행률, 스택 배지.
 
-**주의:** `negaflow-windows/docs` 가 `.gitignore` 규칙에 걸려 있습니다. 이미 추적 중인 문서는
-계속 커밋되지만 **새 문서 파일은 `git add -f` 없이는 들어가지 않습니다.**
+## 결정이 필요한 것 — docs 추적 상태가 반쪽입니다
+
+`.gitignore:111` 에 `/negaflow-windows/docs/` 가 있고 주석은 "Windows 이식 조사 자료
+(로컬 전용, 공개 대상 아님)" 입니다. 그런데 **실제로는 138개 중 103개가 이미 추적돼 공개
+저장소에 올라가 있고 35개만 로컬에 남아 있습니다.** 의도가 어느 쪽이든 지금 상태는 반쪽입니다.
+
+로컬에만 있는 35개에는 ADR 0026~0028, `implementation/auto-adjust.md`,
+`implementation/parallel-row-execution.md`, `verification/2026-08-10-macos-kernel-audit.md`
+처럼 다른 추적 문서가 참조하는 기록이 들어 있습니다. 새로 clone 하면 그 참조가 끊깁니다.
+
+**둘 중 하나를 골라야 합니다.** (a) 규칙을 지우고 35개를 마저 올린다, 또는 (b) 규칙을 지키고
+이미 올라간 103개를 내린다. 어느 쪽도 임의로 하지 않았습니다 — 공개 여부는 사용자의 결정입니다.
+
+그때까지: 문서는 디스크에서 계속 갱신하고, 새 파일을 커밋하려면 `git add -f` 가 필요합니다.
 
 썸네일에서 아직 확인하지 않은 것: 수백 장 라이브러리에서의 스크롤과 렌더 큐 실측입니다.
 지금 검증은 2장짜리 카탈로그에서 이뤄졌습니다.
