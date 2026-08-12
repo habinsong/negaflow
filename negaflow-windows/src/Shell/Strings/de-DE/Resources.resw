@@ -672,4 +672,16 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="libraryCollectionsEmpty.Text" xml:space="preserve"><value>Noch keine Sammlungen.</value></data>
   <data name="developAutoColor.Content" xml:space="preserve"><value>Auto-Farbe</value><comment>AppLocalizedPhrase.autoColor</comment></data>
   <data name="developAutoLevels.Content" xml:space="preserve"><value>Auto-Tonwertkorrektur</value><comment>AppLocalizedPhrase.autoLevels</comment></data>
+  <data name="developExposure.Text" xml:space="preserve"><value>Belichtung</value><comment>AppLocalizedPhrase.exposure</comment></data>
+  <data name="developContrast.Text" xml:space="preserve"><value>Kontrast</value><comment>AppLocalizedPhrase.contrast</comment></data>
+  <data name="developHighlights.Text" xml:space="preserve"><value>Lichter</value><comment>AppLocalizedPhrase.highlights</comment></data>
+  <data name="developShadows.Text" xml:space="preserve"><value>Tiefen</value><comment>AppLocalizedPhrase.shadows</comment></data>
+  <data name="developWhites.Text" xml:space="preserve"><value>Weiß</value><comment>AppLocalizedPhrase.whites</comment></data>
+  <data name="developBlacks.Text" xml:space="preserve"><value>Schwarz</value><comment>AppLocalizedPhrase.blacks</comment></data>
+  <data name="developDensity.Text" xml:space="preserve"><value>Dichte</value><comment>AppLocalizedPhrase.density</comment></data>
+  <data name="developLights.Text" xml:space="preserve"><value>Helle Mitteltöne</value><comment>AppLocalizedPhrase.lights</comment></data>
+  <data name="developDarks.Text" xml:space="preserve"><value>Dunkle Mitteltöne</value><comment>AppLocalizedPhrase.darks</comment></data>
+  <data name="developBaseRed.Text" xml:space="preserve"><value>Basis R</value><comment>AppLocalizedPhrase.baseRed</comment></data>
+  <data name="developBaseGreen.Text" xml:space="preserve"><value>Basis G</value><comment>AppLocalizedPhrase.baseGreen</comment></data>
+  <data name="developBaseBlue.Text" xml:space="preserve"><value>Basis B</value><comment>AppLocalizedPhrase.baseBlue</comment></data>
 </root>

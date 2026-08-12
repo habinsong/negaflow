@@ -672,4 +672,16 @@
   <data name="libraryCollectionsEmpty.Text" xml:space="preserve"><value>コレクションはまだありません。</value></data>
   <data name="developAutoColor.Content" xml:space="preserve"><value>自動カラー補正</value><comment>AppLocalizedPhrase.autoColor</comment></data>
   <data name="developAutoLevels.Content" xml:space="preserve"><value>自動レベル補正</value><comment>AppLocalizedPhrase.autoLevels</comment></data>
+  <data name="developExposure.Text" xml:space="preserve"><value>露光量</value><comment>AppLocalizedPhrase.exposure</comment></data>
+  <data name="developContrast.Text" xml:space="preserve"><value>コントラスト</value><comment>AppLocalizedPhrase.contrast</comment></data>
+  <data name="developHighlights.Text" xml:space="preserve"><value>ハイライト</value><comment>AppLocalizedPhrase.highlights</comment></data>
+  <data name="developShadows.Text" xml:space="preserve"><value>シャドウ</value><comment>AppLocalizedPhrase.shadows</comment></data>
+  <data name="developWhites.Text" xml:space="preserve"><value>白レベル</value><comment>AppLocalizedPhrase.whites</comment></data>
+  <data name="developBlacks.Text" xml:space="preserve"><value>黒レベル</value><comment>AppLocalizedPhrase.blacks</comment></data>
+  <data name="developDensity.Text" xml:space="preserve"><value>濃度</value><comment>AppLocalizedPhrase.density</comment></data>
+  <data name="developLights.Text" xml:space="preserve"><value>ライト</value><comment>AppLocalizedPhrase.lights</comment></data>
+  <data name="developDarks.Text" xml:space="preserve"><value>ダーク</value><comment>AppLocalizedPhrase.darks</comment></data>
+  <data name="developBaseRed.Text" xml:space="preserve"><value>ベース R</value><comment>AppLocalizedPhrase.baseRed</comment></data>
+  <data name="developBaseGreen.Text" xml:space="preserve"><value>ベース G</value><comment>AppLocalizedPhrase.baseGreen</comment></data>
+  <data name="developBaseBlue.Text" xml:space="preserve"><value>ベース B</value><comment>AppLocalizedPhrase.baseBlue</comment></data>
 </root>

@@ -1809,6 +1809,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         NoFrameLeftText.Text = noFrame;
         NoFrameInspectorText.Text = noFrame;
         DevelopHeaderText.Text = AppResources.Get("menuDevelop", "Text");
+        SetButtonText(ImportButton, AppResources.Get("importImages", "Content"));
         SetToggleText(AutoColorToggle, AppResources.Get("developAutoColor", "Content"));
         SetToggleText(AutoLevelsToggle, AppResources.Get("developAutoLevels", "Content"));
         SetButtonText(AutoToneButton, AppResources.Get("developAutoTone", "Content"));
@@ -1854,6 +1855,22 @@ public sealed partial class DevelopWorkspaceView : UserControl
         SetButtonText(CropCancelButton, AppResources.Get("developCropCancel", "Text"));
         AutomationProperties.SetName(CropSelection, AppResources.Get("developCropArea", "Text"));
         StraightenAngleControl.Label = AppResources.Get("developAngle", "Text");
+        // 슬라이더 이름은 macOS 와 같은 문자열이며 XAML 에 박아 두지 않습니다.
+        ExposureControl.Label = AppResources.Get("developExposure", "Text");
+        ContrastControl.Label = AppResources.Get("developContrast", "Text");
+        HighlightsControl.Label = AppResources.Get("developHighlights", "Text");
+        ShadowsControl.Label = AppResources.Get("developShadows", "Text");
+        WhitesControl.Label = AppResources.Get("developWhites", "Text");
+        BlacksControl.Label = AppResources.Get("developBlacks", "Text");
+        DensityControl.Label = AppResources.Get("developDensity", "Text");
+        // 톤 커브의 네 축은 Basic 과 같은 이름을 쓰되 가운데 둘만 따로 있습니다.
+        CurveHighlightsControl.Label = AppResources.Get("developHighlights", "Text");
+        CurveLightsControl.Label = AppResources.Get("developLights", "Text");
+        CurveDarksControl.Label = AppResources.Get("developDarks", "Text");
+        CurveShadowsControl.Label = AppResources.Get("developShadows", "Text");
+        BaseRedControl.Label = AppResources.Get("developBaseRed", "Text");
+        BaseGreenControl.Label = AppResources.Get("developBaseGreen", "Text");
+        BaseBlueControl.Label = AppResources.Get("developBaseBlue", "Text");
         CropAspectLabel.Text = AppResources.Get("cropAspectRatio", "Text");
         CropAspectOptions.ItemsSource = CropAspect.Options
             .Select(option => new CropAspectChoice(option, CropAspectText(option.Label)))

@@ -672,4 +672,16 @@
   <data name="libraryCollectionsEmpty.Text" xml:space="preserve"><value>还没有收藏集。</value></data>
   <data name="developAutoColor.Content" xml:space="preserve"><value>自动颜色</value><comment>AppLocalizedPhrase.autoColor</comment></data>
   <data name="developAutoLevels.Content" xml:space="preserve"><value>自动色阶</value><comment>AppLocalizedPhrase.autoLevels</comment></data>
+  <data name="developExposure.Text" xml:space="preserve"><value>曝光度</value><comment>AppLocalizedPhrase.exposure</comment></data>
+  <data name="developContrast.Text" xml:space="preserve"><value>对比度</value><comment>AppLocalizedPhrase.contrast</comment></data>
+  <data name="developHighlights.Text" xml:space="preserve"><value>高光</value><comment>AppLocalizedPhrase.highlights</comment></data>
+  <data name="developShadows.Text" xml:space="preserve"><value>阴影</value><comment>AppLocalizedPhrase.shadows</comment></data>
+  <data name="developWhites.Text" xml:space="preserve"><value>白色色阶</value><comment>AppLocalizedPhrase.whites</comment></data>
+  <data name="developBlacks.Text" xml:space="preserve"><value>黑色色阶</value><comment>AppLocalizedPhrase.blacks</comment></data>
+  <data name="developDensity.Text" xml:space="preserve"><value>密度</value><comment>AppLocalizedPhrase.density</comment></data>
+  <data name="developLights.Text" xml:space="preserve"><value>亮色调</value><comment>AppLocalizedPhrase.lights</comment></data>
+  <data name="developDarks.Text" xml:space="preserve"><value>暗色调</value><comment>AppLocalizedPhrase.darks</comment></data>
+  <data name="developBaseRed.Text" xml:space="preserve"><value>片基 R</value><comment>AppLocalizedPhrase.baseRed</comment></data>
+  <data name="developBaseGreen.Text" xml:space="preserve"><value>片基 G</value><comment>AppLocalizedPhrase.baseGreen</comment></data>
+  <data name="developBaseBlue.Text" xml:space="preserve"><value>片基 B</value><comment>AppLocalizedPhrase.baseBlue</comment></data>
 </root>

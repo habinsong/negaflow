@@ -69,7 +69,7 @@
                             HorizontalAlignment="Stretch"
                             AutomationProperties.AutomationId="negaflow.develop.import"
                             Click="OnImportClicked"
-                            Content="Import images…" />
+                            />
                         <TextBlock
                             x:Name="ImportStatusText"
                             FontSize="11"
@@ -420,19 +420,16 @@
                                     <controls:InspectorSlider
                                         x:Name="BaseRedControl"
                                         CanReset="False"
-                                        Label="Base Red"
                                         SliderAutomationId="negaflow.develop.base.red"
                                         ValueChanged="OnManualBaseChanged" />
                                     <controls:InspectorSlider
                                         x:Name="BaseGreenControl"
                                         CanReset="False"
-                                        Label="Base Green"
                                         SliderAutomationId="negaflow.develop.base.green"
                                         ValueChanged="OnManualBaseChanged" />
                                     <controls:InspectorSlider
                                         x:Name="BaseBlueControl"
                                         CanReset="False"
-                                        Label="Base Blue"
                                         SliderAutomationId="negaflow.develop.base.blue"
                                         ValueChanged="OnManualBaseChanged" />
                                 </StackPanel>
@@ -640,13 +637,13 @@
                                         HorizontalAlignment="Stretch"
                                         Spacing="10"
                                         TabFocusNavigation="Cycle">
-                                        <controls:InspectorSlider x:Name="ExposureControl" HorizontalAlignment="Stretch" Label="Exposure" ResetValue="0" SliderAutomationId="negaflow.develop.exposure" ValueChanged="OnExposureChanged" />
-                                        <controls:InspectorSlider x:Name="ContrastControl" HorizontalAlignment="Stretch" Label="Contrast" ResetValue="0" SliderAutomationId="negaflow.develop.contrast" ValueChanged="OnBasicToneChanged" />
-                                        <controls:InspectorSlider x:Name="HighlightsControl" HorizontalAlignment="Stretch" Label="Highlights" ResetValue="0" SliderAutomationId="negaflow.develop.highlights" ValueChanged="OnBasicToneChanged" />
-                                        <controls:InspectorSlider x:Name="ShadowsControl" HorizontalAlignment="Stretch" Label="Shadows" ResetValue="0" SliderAutomationId="negaflow.develop.shadows" ValueChanged="OnBasicToneChanged" />
-                                        <controls:InspectorSlider x:Name="WhitesControl" HorizontalAlignment="Stretch" Label="Whites" ResetValue="0" SliderAutomationId="negaflow.develop.whites" ValueChanged="OnBasicToneChanged" />
-                                        <controls:InspectorSlider x:Name="BlacksControl" HorizontalAlignment="Stretch" Label="Blacks" ResetValue="0" SliderAutomationId="negaflow.develop.blacks" ValueChanged="OnBasicToneChanged" />
-                                        <controls:InspectorSlider x:Name="DensityControl" HorizontalAlignment="Stretch" Label="Density" ResetValue="0" SliderAutomationId="negaflow.develop.density" ValueChanged="OnBasicToneChanged" />
+                                        <controls:InspectorSlider x:Name="ExposureControl" HorizontalAlignment="Stretch" ResetValue="0" SliderAutomationId="negaflow.develop.exposure" ValueChanged="OnExposureChanged" />
+                                        <controls:InspectorSlider x:Name="ContrastControl" HorizontalAlignment="Stretch" ResetValue="0" SliderAutomationId="negaflow.develop.contrast" ValueChanged="OnBasicToneChanged" />
+                                        <controls:InspectorSlider x:Name="HighlightsControl" HorizontalAlignment="Stretch" ResetValue="0" SliderAutomationId="negaflow.develop.highlights" ValueChanged="OnBasicToneChanged" />
+                                        <controls:InspectorSlider x:Name="ShadowsControl" HorizontalAlignment="Stretch" ResetValue="0" SliderAutomationId="negaflow.develop.shadows" ValueChanged="OnBasicToneChanged" />
+                                        <controls:InspectorSlider x:Name="WhitesControl" HorizontalAlignment="Stretch" ResetValue="0" SliderAutomationId="negaflow.develop.whites" ValueChanged="OnBasicToneChanged" />
+                                        <controls:InspectorSlider x:Name="BlacksControl" HorizontalAlignment="Stretch" ResetValue="0" SliderAutomationId="negaflow.develop.blacks" ValueChanged="OnBasicToneChanged" />
+                                        <controls:InspectorSlider x:Name="DensityControl" HorizontalAlignment="Stretch" ResetValue="0" SliderAutomationId="negaflow.develop.density" ValueChanged="OnBasicToneChanged" />
                                     </StackPanel>
                                 </StackPanel>
                             </Border>
@@ -693,10 +690,10 @@
                                         </Button>
                                     </Grid>
                                     <StackPanel x:Name="ToneCurveControls" HorizontalAlignment="Stretch" Spacing="10" Visibility="Collapsed">
-                                        <controls:InspectorSlider x:Name="CurveHighlightsControl" HorizontalAlignment="Stretch" Label="Highlights" ResetValue="0" SliderAutomationId="negaflow.develop.curve.highlights" ValueChanged="OnToneCurveChanged" />
-                                        <controls:InspectorSlider x:Name="CurveLightsControl" HorizontalAlignment="Stretch" Label="Lights" ResetValue="0" SliderAutomationId="negaflow.develop.curve.lights" ValueChanged="OnToneCurveChanged" />
-                                        <controls:InspectorSlider x:Name="CurveDarksControl" HorizontalAlignment="Stretch" Label="Darks" ResetValue="0" SliderAutomationId="negaflow.develop.curve.darks" ValueChanged="OnToneCurveChanged" />
-                                        <controls:InspectorSlider x:Name="CurveShadowsControl" HorizontalAlignment="Stretch" Label="Shadows" ResetValue="0" SliderAutomationId="negaflow.develop.curve.shadows" ValueChanged="OnToneCurveChanged" />
+                                        <controls:InspectorSlider x:Name="CurveHighlightsControl" HorizontalAlignment="Stretch" ResetValue="0" SliderAutomationId="negaflow.develop.curve.highlights" ValueChanged="OnToneCurveChanged" />
+                                        <controls:InspectorSlider x:Name="CurveLightsControl" HorizontalAlignment="Stretch" ResetValue="0" SliderAutomationId="negaflow.develop.curve.lights" ValueChanged="OnToneCurveChanged" />
+                                        <controls:InspectorSlider x:Name="CurveDarksControl" HorizontalAlignment="Stretch" ResetValue="0" SliderAutomationId="negaflow.develop.curve.darks" ValueChanged="OnToneCurveChanged" />
+                                        <controls:InspectorSlider x:Name="CurveShadowsControl" HorizontalAlignment="Stretch" ResetValue="0" SliderAutomationId="negaflow.develop.curve.shadows" ValueChanged="OnToneCurveChanged" />
                                         <Border Height="2" HorizontalAlignment="Stretch" Background="{ThemeResource NegaflowDividerBrush}" />
                                         <controls:ToneCurveEditor x:Name="PointCurveEditor" HorizontalAlignment="Stretch" CurvesChanged="OnPointCurvesChanged" />
                                     </StackPanel>

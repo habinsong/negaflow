@@ -672,4 +672,16 @@ Load a scanner from Library to scan film.</value>
   <data name="libraryCollectionsEmpty.Text" xml:space="preserve"><value>No collections yet.</value></data>
   <data name="developAutoColor.Content" xml:space="preserve"><value>Auto Color</value><comment>AppLocalizedPhrase.autoColor</comment></data>
   <data name="developAutoLevels.Content" xml:space="preserve"><value>Auto Levels</value><comment>AppLocalizedPhrase.autoLevels</comment></data>
+  <data name="developExposure.Text" xml:space="preserve"><value>Exposure</value><comment>AppLocalizedPhrase.exposure</comment></data>
+  <data name="developContrast.Text" xml:space="preserve"><value>Contrast</value><comment>AppLocalizedPhrase.contrast</comment></data>
+  <data name="developHighlights.Text" xml:space="preserve"><value>Highlights</value><comment>AppLocalizedPhrase.highlights</comment></data>
+  <data name="developShadows.Text" xml:space="preserve"><value>Shadows</value><comment>AppLocalizedPhrase.shadows</comment></data>
+  <data name="developWhites.Text" xml:space="preserve"><value>Whites</value><comment>AppLocalizedPhrase.whites</comment></data>
+  <data name="developBlacks.Text" xml:space="preserve"><value>Blacks</value><comment>AppLocalizedPhrase.blacks</comment></data>
+  <data name="developDensity.Text" xml:space="preserve"><value>Density</value><comment>AppLocalizedPhrase.density</comment></data>
+  <data name="developLights.Text" xml:space="preserve"><value>Lights</value><comment>AppLocalizedPhrase.lights</comment></data>
+  <data name="developDarks.Text" xml:space="preserve"><value>Darks</value><comment>AppLocalizedPhrase.darks</comment></data>
+  <data name="developBaseRed.Text" xml:space="preserve"><value>Base R</value><comment>AppLocalizedPhrase.baseRed</comment></data>
+  <data name="developBaseGreen.Text" xml:space="preserve"><value>Base G</value><comment>AppLocalizedPhrase.baseGreen</comment></data>
+  <data name="developBaseBlue.Text" xml:space="preserve"><value>Base B</value><comment>AppLocalizedPhrase.baseBlue</comment></data>
 </root>
