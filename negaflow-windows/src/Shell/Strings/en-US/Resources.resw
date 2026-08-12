@@ -635,4 +635,10 @@ Load a scanner from Library to scan film.</value>
   <data name="developTextureClarity.Text" xml:space="preserve"><value>Clarity</value></data>
   <data name="developTextureHalation.Text" xml:space="preserve"><value>Halation</value></data>
   <data name="developTextureVignette.Text" xml:space="preserve"><value>Vignette</value></data>
+  <data name="developGeometry.Text" xml:space="preserve"><value>Geometry</value></data>
+  <data name="developAngle.Text" xml:space="preserve"><value>Angle</value></data>
+  <data name="developRotateLeft.Text" xml:space="preserve"><value>Rotate Left 90 Degrees</value></data>
+  <data name="developRotateRight.Text" xml:space="preserve"><value>Rotate Right 90 Degrees</value></data>
+  <data name="developFlipHorizontal.Text" xml:space="preserve"><value>Flip Horizontal</value></data>
+  <data name="developFlipVertical.Text" xml:space="preserve"><value>Flip Vertical</value></data>
 </root>

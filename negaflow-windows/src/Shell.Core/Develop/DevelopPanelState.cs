@@ -217,6 +217,9 @@ public sealed class DevelopPanelState
     public NoiseReductionRecipe NoiseReduction =>
         SelectedFrame?.NoiseReduction ?? NoiseReductionRecipe.Identity;
 
+    public ImageTransformRecipe ImageTransform =>
+        SelectedFrame?.ImageTransform ?? ImageTransformRecipe.Identity;
+
     public bool CanExport => SelectedFrame is { CanDevelop: true } && !host.IsExporting;
 
     public LibraryFrameError ApplyAutoTone(AutoAdjustSettings settings)
@@ -551,6 +554,58 @@ public sealed class DevelopPanelState
 
     public LibraryFrameError SetNoiseReductionEnabled(bool enabled) =>
         SetNoiseReduction(NoiseReduction with { Strength = enabled ? 0.7 : 0.0 });
+
+    public LibraryFrameError Rotate(bool clockwise)
+    {
+        ImageRotation rotation = ImageTransform.Rotation;
+        ImageRotation updated = clockwise
+            ? rotation switch
+            {
+                ImageRotation.Degrees0 => ImageRotation.Degrees90,
+                ImageRotation.Degrees90 => ImageRotation.Degrees180,
+                ImageRotation.Degrees180 => ImageRotation.Degrees270,
+                _ => ImageRotation.Degrees0,
+            }
+            : rotation switch
+            {
+                ImageRotation.Degrees0 => ImageRotation.Degrees270,
+                ImageRotation.Degrees90 => ImageRotation.Degrees0,
+                ImageRotation.Degrees180 => ImageRotation.Degrees90,
+                _ => ImageRotation.Degrees180,
+            };
+        return SetImageTransform(ImageTransform with { Rotation = updated });
+    }
+
+    public LibraryFrameError FlipHorizontally() =>
+        SetImageTransform(ImageTransform with { FlipHorizontal = !ImageTransform.FlipHorizontal });
+
+    public LibraryFrameError FlipVertically() =>
+        SetImageTransform(ImageTransform with { FlipVertical = !ImageTransform.FlipVertical });
+
+    public LibraryFrameError SetStraightenAngle(double angle) =>
+        SetImageTransform(ImageTransform with { StraightenAngle = Math.Clamp(angle, -45.0, 45.0) });
+
+    private LibraryFrameError SetImageTransform(ImageTransformRecipe imageTransform)
+    {
+        ArgumentNullException.ThrowIfNull(imageTransform);
+        if (SelectedFrame is not { } frame)
+        {
+            return LibraryFrameError.MissingId;
+        }
+        if (!CanEditTone)
+        {
+            return LibraryFrameError.InvalidDevelopRoute;
+        }
+
+        LibraryFrameError error = host.Edit(
+            frame.Id,
+            new LibraryFrameEdit(frame.Tone, frame.ManualBase, ImageTransform: imageTransform));
+        if (error == LibraryFrameError.None)
+        {
+            Select(frame.Id);
+        }
+        return error;
+    }
 
     private LibraryFrameError ApplyAutoAdjusted(LibraryFrameSnapshot adjusted)
     {

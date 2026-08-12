@@ -390,6 +390,39 @@
                             </StackPanel>
                         </Border>
 
+                        <Border
+                            x:Name="GeometryControlCard"
+                            HorizontalAlignment="Stretch"
+                            Padding="14"
+                            AutomationProperties.AutomationId="negaflow.develop.geometry"
+                            Background="{ThemeResource NegaflowCardBrush}"
+                            CornerRadius="14"
+                            Visibility="Collapsed">
+                            <StackPanel HorizontalAlignment="Stretch" Spacing="12">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon Grid.Column="0" Width="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE7A8;" />
+                                    <TextBlock x:Name="GeometrySectionTitleText" Grid.Column="1" Margin="8,0,0,0" FontSize="14" FontWeight="SemiBold" />
+                                </Grid>
+                                <Grid ColumnSpacing="6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button x:Name="RotateLeftButton" Grid.Column="0" AutomationProperties.AutomationId="negaflow.develop.geometry.rotate-left" Click="OnRotateLeftClicked"><FontIcon Glyph="&#xE7AD;" /></Button>
+                                    <Button x:Name="RotateRightButton" Grid.Column="1" AutomationProperties.AutomationId="negaflow.develop.geometry.rotate-right" Click="OnRotateRightClicked"><FontIcon Glyph="&#xE7AE;" /></Button>
+                                    <Button x:Name="FlipHorizontalButton" Grid.Column="2" AutomationProperties.AutomationId="negaflow.develop.geometry.flip-horizontal" Click="OnFlipHorizontalClicked"><FontIcon Glyph="&#xE7B7;" /></Button>
+                                    <Button x:Name="FlipVerticalButton" Grid.Column="3" AutomationProperties.AutomationId="negaflow.develop.geometry.flip-vertical" Click="OnFlipVerticalClicked"><FontIcon Glyph="&#xE7B8;" /></Button>
+                                </Grid>
+                                <controls:InspectorSlider x:Name="StraightenAngleControl" HorizontalAlignment="Stretch" ResetValue="0" SliderAutomationId="negaflow.develop.geometry.straighten-angle" ValueChanged="OnStraightenAngleChanged" />
+                            </StackPanel>
+                        </Border>
+
                         <StackPanel x:Name="CommonAdjustmentStack" HorizontalAlignment="Stretch" Spacing="12">
                             <Border
                                 x:Name="QuickActionsCard"

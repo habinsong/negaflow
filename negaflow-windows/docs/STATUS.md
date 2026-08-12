@@ -27,6 +27,16 @@ x64 Release passed native CTest 65/65 and managed Catalog 605/Shell 391 assertio
 build warnings or errors. The complete ARM64 Release graph cross-built successfully, but was
 not executed on an ARM64 device.
 
+## 2026-08-12 Develop Edit Geometry inspector surface
+
+The Edit tab now exposes the persisted image-transform actions that are currently backed by the
+canvas: rotate left/right, horizontal/vertical flip, and -45...45 degree straighten. Each action
+updates the same `imageTransform` recipe used by preview and export, retains crop/aspect fields,
+and refreshes preview immediately. Crop selection remains hidden because the Windows canvas crop
+session is not implemented; no non-working control is exposed. All six locales use the macOS
+labels. x64 Debug managed checks passed Catalog 605 and Shell 395 assertions with no warnings or
+errors. Rendered Windows UI, keyboard interaction, and crop-session parity remain unverified.
+
 ## 2026-08-12 Develop post-processing recipe persistence
 
 The catalog and Shell now preserve and project macOS `grain`, `sharpness`, `halation`,

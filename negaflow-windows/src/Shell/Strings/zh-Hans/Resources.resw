@@ -635,4 +635,10 @@
   <data name="developTextureClarity.Text" xml:space="preserve"><value>清晰度</value></data>
   <data name="developTextureHalation.Text" xml:space="preserve"><value>光晕</value></data>
   <data name="developTextureVignette.Text" xml:space="preserve"><value>暗角</value></data>
+  <data name="developGeometry.Text" xml:space="preserve"><value>几何</value></data>
+  <data name="developAngle.Text" xml:space="preserve"><value>角度</value></data>
+  <data name="developRotateLeft.Text" xml:space="preserve"><value>向左旋转 90°</value></data>
+  <data name="developRotateRight.Text" xml:space="preserve"><value>向右旋转 90°</value></data>
+  <data name="developFlipHorizontal.Text" xml:space="preserve"><value>水平翻转</value></data>
+  <data name="developFlipVertical.Text" xml:space="preserve"><value>垂直翻转</value></data>
 </root>

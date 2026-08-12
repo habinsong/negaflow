@@ -125,6 +125,8 @@ public sealed partial class DevelopWorkspaceView : UserControl
             slider.Minimum = panel.MinimumManualDmin;
             slider.Maximum = panel.MaximumManualDmin;
         }
+        StraightenAngleControl.Minimum = -45;
+        StraightenAngleControl.Maximum = 45;
         // 미리보기는 캔버스에 맞는 크기면 충분합니다. 전체 해상도로 그리면 슬라이더를 끄는
         // 동안 엔진이 밀립니다.
         // 이 메서드는 UI 스레드에서만 불리므로 여기서 dispatcher 를 잡을 수 있습니다.
@@ -244,6 +246,9 @@ public sealed partial class DevelopWorkspaceView : UserControl
         InfoTabButton.IsChecked = inspectorPresentation.SelectedTab == DevelopInspectorTab.Info;
         ResetTabButton.IsChecked = inspectorPresentation.SelectedTab == DevelopInspectorTab.Reset;
         BaseControlCard.Visibility = inspectorPresentation.SelectedTab == DevelopInspectorTab.Base
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        GeometryControlCard.Visibility = inspectorPresentation.SelectedTab == DevelopInspectorTab.Edit
             ? Visibility.Visible
             : Visibility.Collapsed;
         CommonAdjustmentStack.Visibility = inspectorPresentation.ShowsAdjustmentSections
@@ -410,6 +415,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         ClarityControl.Value = texture.Clarity;
         HalationControl.Value = texture.Halation;
         VignetteControl.Value = texture.Vignette;
+        StraightenAngleControl.Value = panel.ImageTransform.StraightenAngle;
         HistogramView.SynchronizeValues(
             panel.Shadows,
             panel.Density,
@@ -615,6 +621,11 @@ public sealed partial class DevelopWorkspaceView : UserControl
             slider.IsEnabled = canEdit;
         }
         NoiseReductionToggle.IsEnabled = canEdit;
+        StraightenAngleControl.IsEnabled = canEdit;
+        RotateLeftButton.IsEnabled = canEdit;
+        RotateRightButton.IsEnabled = canEdit;
+        FlipHorizontalButton.IsEnabled = canEdit;
+        FlipVerticalButton.IsEnabled = canEdit;
         HistogramView.IsEnabled = canEdit;
         bool canAutoAdjust = panel?.SelectedFrame?.CanDevelop == true &&
                              autoAdjustCoordinator is not null;
@@ -981,6 +992,54 @@ public sealed partial class DevelopWorkspaceView : UserControl
         }
     }
 
+    private void OnRotateLeftClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        UpdateImageTransform(static state => state.Rotate(clockwise: false));
+    }
+
+    private void OnRotateRightClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        UpdateImageTransform(static state => state.Rotate(clockwise: true));
+    }
+
+    private void OnFlipHorizontalClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        UpdateImageTransform(static state => state.FlipHorizontally());
+    }
+
+    private void OnFlipVerticalClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        UpdateImageTransform(static state => state.FlipVertically());
+    }
+
+    private void OnStraightenAngleChanged(object? sender, InspectorSliderValueChangedEventArgs args)
+    {
+        _ = sender;
+        if (isSynchronizingInspector)
+        {
+            return;
+        }
+        UpdateImageTransform(state => state.SetStraightenAngle(args.Value));
+    }
+
+    private void UpdateImageTransform(Func<DevelopPanelState, LibraryFrameError> update)
+    {
+        if (panel is null || isSynchronizingInspector || update(panel) != LibraryFrameError.None)
+        {
+            return;
+        }
+        SynchronizeInspectorValues();
+        RequestPreview();
+    }
+
     private void OnBasicToneResetClicked(object sender, RoutedEventArgs args)
     {
         _ = sender;
@@ -1203,6 +1262,14 @@ public sealed partial class DevelopWorkspaceView : UserControl
         SetLocalizedNameAndTooltip(ResetTabButton, reset);
         BaseSectionTitleText.Text = baseTitle;
         AutomationProperties.SetName(BaseControlCard, baseTitle);
+        string geometry = AppResources.Get("developGeometry", "Text");
+        GeometrySectionTitleText.Text = geometry;
+        AutomationProperties.SetName(GeometryControlCard, geometry);
+        SetLocalizedNameAndTooltip(RotateLeftButton, AppResources.Get("developRotateLeft", "Text"));
+        SetLocalizedNameAndTooltip(RotateRightButton, AppResources.Get("developRotateRight", "Text"));
+        SetLocalizedNameAndTooltip(FlipHorizontalButton, AppResources.Get("developFlipHorizontal", "Text"));
+        SetLocalizedNameAndTooltip(FlipVerticalButton, AppResources.Get("developFlipVertical", "Text"));
+        StraightenAngleControl.Label = AppResources.Get("developAngle", "Text");
         SetInspectorSectionText(
             BasicToneSection,
             BasicToneHeaderButton,

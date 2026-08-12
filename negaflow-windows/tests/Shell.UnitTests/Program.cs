@@ -1952,6 +1952,19 @@ internal static class Program
                 panel.Texture == TextureRecipe.Identity &&
                 panel.NoiseReduction == NoiseReductionRecipe.Identity,
                 "panel_resets_detail_and_effects");
+            Check(panel.Rotate(clockwise: true) == LibraryFrameError.None &&
+                panel.ImageTransform.Rotation == ImageRotation.Degrees90,
+                "panel_rotates_image_transform");
+            Check(panel.Rotate(clockwise: false) == LibraryFrameError.None &&
+                panel.ImageTransform.Rotation == ImageRotation.Degrees0,
+                "panel_rotates_image_transform_backwards");
+            Check(panel.FlipHorizontally() == LibraryFrameError.None &&
+                panel.FlipVertically() == LibraryFrameError.None &&
+                panel.ImageTransform.FlipHorizontal && panel.ImageTransform.FlipVertical,
+                "panel_flips_image_transform");
+            Check(panel.SetStraightenAngle(99.0) == LibraryFrameError.None &&
+                panel.ImageTransform.StraightenAngle == 45.0,
+                "panel_clamps_straighten_angle");
 
             // 아직 base 를 고르지 않은 frame 에도 슬라이더 시작 위치는 있어야 하지만, 그것이
             // catalog 에 저장되면 사용자가 고르지 않은 값으로 현상됩니다.
