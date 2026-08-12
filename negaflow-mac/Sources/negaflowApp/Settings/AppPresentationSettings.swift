@@ -44,6 +44,26 @@ enum CanvasBackground: String, CaseIterable, Identifiable {
         }
     }
 
+    /// 캔버스 위 컨트롤(비교 토글·줌 캡슐)의 글자/아이콘 색. 앱 외형(라이트/다크/자동)이 아니라
+    /// **캔버스 배경의 반대색**으로 고정한다 — 다크 모드에서 흰 배경을 고르면 흰 글자가 흰
+    /// 바탕에 얹혀 컨트롤이 통째로 사라졌다.
+    var hudContentColor: Color {
+        switch self {
+        case .black, .gray: return Color(white: 0.97)
+        case .white: return Color(white: 0.12)
+        }
+    }
+
+    /// 컨트롤 판 색. 글래스가 아니라 배경에서 한 단 들린 **불투명 면**이라 배경이 무엇이든
+    /// 캡슐 경계가 그대로 보인다.
+    var hudSurfaceColor: Color {
+        switch self {
+        case .black: return Color(white: 0.20)
+        case .gray:  return Color(white: 0.30)
+        case .white: return Color(white: 0.86)
+        }
+    }
+
     var label: String {
         label(language: .system)
     }

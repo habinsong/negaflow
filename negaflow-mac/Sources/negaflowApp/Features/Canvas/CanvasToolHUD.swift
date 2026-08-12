@@ -32,7 +32,7 @@ struct CanvasToolHUD: View {
             CanvasToolButton(systemName: "1.magnifyingglass", help: model.text(AppLocalizedPhrase.actualSize), action: onActualSize)
         }
         .padding(3)
-        .liquidSurface(cornerRadius: 10, interactive: true)
+        .canvasControlSurface(model.canvasBackground, cornerRadius: 10)
     }
 
     private var zoomEditor: some View {
@@ -71,13 +71,15 @@ struct CanvasToolButton: View {
     @State private var isHovered = false
 
     var body: some View {
-        Button(action: action) {
+        // 캔버스 배경(검정/회색/흰색)의 반대색으로 그린다 — 앱 외형과 무관하게 읽혀야 한다.
+        let content = model.canvasBackground.hudContentColor
+        return Button(action: action) {
             Image(systemName: systemName)
                 .font(.system(size: 13, weight: .semibold))
                 .frame(width: 22, height: 22)
-                .foregroundStyle(isActive == true ? .white : Color.primary)
+                .foregroundStyle(isActive == true ? .white : content)
                 .background(
-                    isActive == true ? activeTint : Color.primary.opacity(isHovered ? 0.12 : 0),
+                    isActive == true ? activeTint : content.opacity(isHovered ? 0.16 : 0),
                     in: RoundedRectangle(cornerRadius: 7)
                 )
         }

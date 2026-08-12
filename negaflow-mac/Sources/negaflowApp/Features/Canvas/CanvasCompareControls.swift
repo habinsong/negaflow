@@ -130,6 +130,8 @@ struct CanvasCompareToggle: View {
     let activeMode: CanvasCompareMode
     let onSelectMode: (CanvasCompareMode) -> Void
 
+    private var content: Color { model.canvasBackground.hudContentColor }
+
     var body: some View {
         HStack(spacing: 2) {
             compareButton(title: model.text(AppLocalizedPhrase.raw), mode: .raw)
@@ -146,7 +148,7 @@ struct CanvasCompareToggle: View {
             )
         }
         .padding(2)
-        .liquidSurface(cornerRadius: 10, interactive: true)
+        .canvasControlSurface(model.canvasBackground, cornerRadius: 10)
     }
 
     private func compareButton(title: String, mode: CanvasCompareMode) -> some View {
@@ -158,8 +160,8 @@ struct CanvasCompareToggle: View {
                 .font(.caption.weight(active ? .semibold : .regular))
                 .padding(.horizontal, 9)
                 .frame(height: 24)
-                .foregroundStyle(active ? Color.primary : Color.secondary)
-                .background(active ? Color.primary.opacity(0.12) : Color.clear, in: RoundedRectangle(cornerRadius: 7))
+                .foregroundStyle(active ? content : content.opacity(0.65))
+                .background(active ? content.opacity(0.16) : Color.clear, in: RoundedRectangle(cornerRadius: 7))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(title)
@@ -179,8 +181,8 @@ struct CanvasCompareToggle: View {
             Image(systemName: systemName)
                 .font(.system(size: 12, weight: .semibold))
                 .frame(width: 26, height: 24)
-                .foregroundStyle(active ? Color.primary : Color.secondary)
-                .background(active ? Color.primary.opacity(0.12) : Color.clear, in: RoundedRectangle(cornerRadius: 7))
+                .foregroundStyle(active ? content : content.opacity(0.65))
+                .background(active ? content.opacity(0.16) : Color.clear, in: RoundedRectangle(cornerRadius: 7))
         }
         .buttonStyle(.plain)
         .help(help)

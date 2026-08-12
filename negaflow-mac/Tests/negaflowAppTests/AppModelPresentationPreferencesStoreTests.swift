@@ -1,4 +1,6 @@
+import AppKit
 import Combine
+import SwiftUI
 import XCTest
 @testable import negaflowApp
 
@@ -54,6 +56,33 @@ final class AppModelPresentationPreferencesStoreTests: XCTestCase {
         XCTAssertEqual(CanvasBackground.black.hudColorScheme, .dark)
         XCTAssertEqual(CanvasBackground.gray.hudColorScheme, .light)
         XCTAssertEqual(CanvasBackground.white.hudColorScheme, .light)
+    }
+
+    /// 캔버스 위 컨트롤(비교 토글·줌 캡슐)은 앱 외형이 아니라 캔버스 배경의 반대색으로 그린다.
+    /// 흰 배경 + 다크 모드에서 흰 글자가 흰 바탕에 얹혀 컨트롤이 통째로 사라진 적이 있다.
+    func testCanvasHUDColorsContrastWithEveryCanvasBackground() {
+        for background in CanvasBackground.allCases {
+            let canvas = luminance(background.color)
+            let content = luminance(background.hudContentColor)
+            let surface = luminance(background.hudSurfaceColor)
+            XCTAssertGreaterThan(
+                abs(content - canvas), 0.4,
+                "\(background.rawValue): 글자/아이콘이 배경의 반대쪽 밝기여야 한다."
+            )
+            XCTAssertGreaterThan(
+                abs(content - surface), 0.5,
+                "\(background.rawValue): 글자/아이콘이 컨트롤 판과 충분히 대비돼야 한다."
+            )
+            XCTAssertGreaterThan(
+                abs(surface - canvas), 0.1,
+                "\(background.rawValue): 컨트롤 판이 배경과 구분돼야 한다."
+            )
+        }
+    }
+
+    private func luminance(_ color: Color) -> Double {
+        let converted = NSColor(color).usingColorSpace(.sRGB)
+        return Double(converted?.brightnessComponent ?? 0)
     }
 
     func testAppModelFacadePublishesPresentationPreferenceChanges() {
