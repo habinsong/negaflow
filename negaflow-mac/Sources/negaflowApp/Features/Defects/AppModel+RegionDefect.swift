@@ -28,6 +28,9 @@ extension AppModel {
     /// 표시 정규좌표 ROI(0..1, y-down) 안의 결함을 풀해상도 raw 에서 검출해 빨강 미리보기를 만든다.
     func runRegionDetect(_ frame: ScanFrame, displayROI: CGRect) {
         let trace = AppDiagnostics.start(.regionDefect, category: .defects)
+        // 백그라운드 IR 정리와 같은 프레임에서 겹치면 서로의 revision 을 밀어 둘 다 조용히
+        // 사라진다(yieldInfraredCleanToManualTool). 사용자가 지금 시작한 도구가 이긴다.
+        yieldInfraredCleanToManualTool(frame)
         frame.defectDetectRevision += 1
         let revision = frame.defectDetectRevision
         frame.defectDetectTask?.cancel()

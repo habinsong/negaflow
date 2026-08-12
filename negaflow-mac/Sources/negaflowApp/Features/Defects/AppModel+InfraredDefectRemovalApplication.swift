@@ -17,9 +17,12 @@ extension AppModel {
             statusMessage = infraredText(.alignmentUnreliable)
             developAfterInfraredProducedNothing(frame)
         case .failure(.cancelled):
+            rearmInfraredAutoClean(frame)
             developAfterInfraredProducedNothing(frame)
             return   // 사용자가 취소 — 상태 메시지 없음
         case .failure:
+            // 읽기/정합 실패는 이 원본에 대해 확정된 결과다 — 표시를 유지해 그 사진을 볼 때마다
+            // 같은 실패를 다시 돌리지 않는다(원본이 바뀌면 relink 경로가 표시를 되돌린다).
             statusMessage = text(AppLocalizedPhrase.infraredCleanFailedStatus)
             developAfterInfraredProducedNothing(frame)
         case .success(let detection):

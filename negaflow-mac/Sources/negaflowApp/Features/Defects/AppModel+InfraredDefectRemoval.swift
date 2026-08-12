@@ -131,6 +131,27 @@ extension AppModel {
         InfraredCleanSessionRegistry.cancel(owner: self, frameID: frame.id)
     }
 
+    /// 사용자가 GrainMend 수동 도구(자동/가이드)를 시작할 때 IR 자동 정리에 길을 내준다.
+    ///
+    /// IR 검출은 실기 2400dpi 한 컷에서 26~52초가 걸리는 백그라운드 작업이다(실측). 그동안
+    /// 수동 검출이 시작되면 둘이 서로의 revision 을 밀어 **양쪽 다 조용히 사라졌다**:
+    /// 수동 검출이 defectDetectRevision 을 올려 IR 결과가 버려지고, 반대로 IR 이 레이어를
+    /// 붙이며 cleanRawRevision 을 올려 진행 중이던 수동 검출 세션이 통째로 폐기됐다.
+    /// 사용자의 명시적 조작이 이긴다 — IR 은 취소하되 **다시 시도할 수 있게** 표시를 푼다.
+    func yieldInfraredCleanToManualTool(_ frame: ScanFrame) {
+        guard InfraredCleanSessionRegistry.isRunning(owner: self, frameID: frame.id) else { return }
+        cancelInfraredClean(frame)
+        rearmInfraredAutoClean(frame)
+    }
+
+    /// 이번 실행은 못 썼지만 원인이 일시적일 때(취소·경합·읽기 실패) 다음 선택에서 다시
+    /// 만들 수 있게 시도 표시를 푼다. "결함 없음"처럼 결과가 확정된 경우는 풀지 않는다 —
+    /// 표시가 없으면 그 사진을 볼 때마다 55MP 검출이 다시 돌아간다.
+    func rearmInfraredAutoClean(_ frame: ScanFrame) {
+        guard !frame.defectEdits.contains(where: { $0.isInfrared }) else { return }
+        frame.infraredAutoCleanAttempted = false
+    }
+
     /// 비동기 검출 결과가 여전히 같은 프레임의 최신 실행인지 확인한 뒤에만 상태/레이어를 갱신한다.
     /// 프레임 삭제는 목록 소유권과 lifecycle revision으로, 재실행/취소는 session token으로 막는다.
     @discardableResult
@@ -147,6 +168,9 @@ extension AppModel {
               frames.contains(where: { $0 === frame }),
               !frame.defectEdits.contains(where: { $0.isInfrared }) else {
             InfraredCleanSessionRegistry.finish(session)
+            // 결과를 버리는 이유는 전부 일시적이다(취소·경합·프레임 교체). 표시를 풀지 않으면
+            // 이 세션에서는 IR 먼지 제거를 다시 만들 방법이 없어진다.
+            if frames.contains(where: { $0 === frame }) { rearmInfraredAutoClean(frame) }
             return false
         }
         InfraredCleanSessionRegistry.finish(session)

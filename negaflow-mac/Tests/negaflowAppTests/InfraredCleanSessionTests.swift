@@ -134,6 +134,71 @@ final class InfraredCleanSessionTests: XCTestCase {
         }
     }
 
+    /// 실기 2400dpi 한 컷의 IR 검출은 26~52초가 걸린다(실측). 그 사이 사용자가 자동/가이드
+    /// 검출을 시작하면 둘이 서로의 revision 을 밀어 **양쪽 다 조용히 사라졌다**. 지금은
+    /// 사용자가 시작한 도구가 이기고, IR 은 다시 만들 수 있는 상태로 남는다.
+    func testManualRegionDetectCancelsInfraredCleanAndLeavesItRetryable() async {
+        await MainActor.run {
+            let model = AppModel()
+            let frame = Self.makeFrame()
+            model.frames = [frame]
+            _ = model.beginInfraredCleanSession(for: frame)
+            frame.infraredAutoCleanAttempted = true
+
+            model.runRegionDetect(frame, displayROI: CGRect(x: 0, y: 0, width: 1, height: 1))
+
+            XCTAssertFalse(
+                frame.infraredAutoCleanAttempted,
+                "수동 도구에 길을 내준 IR 은 다시 시도할 수 있어야 한다."
+            )
+            model.cancelRegionDefect(frame)
+        }
+    }
+
+    /// 경합으로 결과를 버렸으면 다음 방문에서 다시 만들 수 있어야 한다. 표시가 남아 있으면
+    /// 그 세션 내내 IR 먼지 제거가 불능이 된다(앱을 다시 켜야만 복구).
+    func testDiscardedInfraredResultBecomesRetryable() async {
+        await MainActor.run {
+            let model = AppModel()
+            let frame = Self.makeFrame()
+            model.frames = [frame]
+            let lifecycleRevision = frame.defectDetectRevision
+            let session = model.beginInfraredCleanSession(for: frame)
+            frame.infraredAutoCleanAttempted = true
+            frame.defectDetectRevision += 1   // 그 사이 사용자가 수동 검출을 시작했다
+
+            XCTAssertFalse(model.completeInfraredClean(
+                Self.successfulDetection(),
+                to: frame,
+                session: session,
+                frameLifecycleRevision: lifecycleRevision,
+                taskWasCancelled: false
+            ))
+            XCTAssertFalse(frame.infraredAutoCleanAttempted)
+        }
+    }
+
+    /// "결함 없음"은 확정된 결과다 — 표시를 유지해 그 사진을 볼 때마다 55MP 검출이 다시
+    /// 돌지 않게 한다.
+    func testStableOutcomeKeepsTheAttemptMarkSoItDoesNotRerunOnEveryVisit() async {
+        await MainActor.run {
+            let model = AppModel()
+            let frame = Self.makeFrame()
+            model.frames = [frame]
+            let session = model.beginInfraredCleanSession(for: frame)
+            frame.infraredAutoCleanAttempted = true
+
+            XCTAssertTrue(model.completeInfraredClean(
+                .failure(.noDefects),
+                to: frame,
+                session: session,
+                frameLifecycleRevision: frame.defectDetectRevision,
+                taskWasCancelled: false
+            ))
+            XCTAssertTrue(frame.infraredAutoCleanAttempted)
+        }
+    }
+
     @MainActor
     private static func makeFrame(filmType: FilmType = .colorNegative) -> ScanFrame {
         ScanFrame(

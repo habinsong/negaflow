@@ -41,6 +41,14 @@ enum InfraredCleanSessionRegistry {
         currentRevisions[key(for: token)] == token.revision
     }
 
+    /// 이 프레임의 IR 정리가 진행 중인가(수십 초짜리 백그라운드 검출).
+    static func isRunning(owner: AppModel, frameID: UUID) -> Bool {
+        currentRevisions[InfraredCleanSessionKey(
+            ownerID: ObjectIdentifier(owner),
+            frameID: frameID
+        )] != nil
+    }
+
     static func finish(_ token: InfraredCleanSessionToken) {
         let key = key(for: token)
         guard currentRevisions[key] == token.revision else { return }
