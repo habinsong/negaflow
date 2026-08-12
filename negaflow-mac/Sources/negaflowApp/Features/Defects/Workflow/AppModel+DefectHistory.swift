@@ -36,15 +36,14 @@ extension AppModel {
         }
     }
 
-    /// 적용된 결함 제거를 전부 초기화한다(브러시·가이드 모두). undo 스택에 직전 상태를 남긴다.
+    /// 사용자가 적용한 결함 제거를 전부 초기화한다(브러시·가이드·복제). undo 스택에 직전 상태를 남긴다.
+    ///
+    /// **적외선 레이어는 남긴다.** IR 은 사람이 그린 기록이 아니라 스캔과 함께 측정된 결과이고,
+    /// 초기화 버튼은 "내가 한 보정을 되돌린다"는 뜻이다. 여기서 같이 지우면 세션 안에서는
+    /// 다시 만들 방법이 없어(한 세션 한 번 계약) IR 먼지 제거가 통째로 불능이 된다.
     func clearAllDefects(_ frame: ScanFrame) {
-        guard !frame.defectEdits.isEmpty else { return }
-        frame.defectEditUndoStack.append(frame.makeDefectEditUndoSnapshot())
-        frame.defectEdits = []
-        _ = refreshDefectRecipeState(frame, advanceRevision: true, persist: true)
-        frame.defectMaskPreviewID = nil
-        invalidatePreviousBase(frame)
-        rebuildCleanedRaw(frame)   // edits가 비면 cleaned raw 폐기 후 원본으로 재현상
+        let removedAny = removeDefectEdits(frame, matching: { !$0.isInfrared })
+        guard removedAny else { return }
         statusMessage = text(AppLocalizedPhrase.defectsClearedStatus)
     }
 
@@ -73,9 +72,13 @@ extension AppModel {
         })
     }
 
-    private func removeDefectEdits(_ frame: ScanFrame, matching shouldRemove: (DefectEditItem) -> Bool) {
+    @discardableResult
+    private func removeDefectEdits(
+        _ frame: ScanFrame,
+        matching shouldRemove: (DefectEditItem) -> Bool
+    ) -> Bool {
         let retained = frame.defectEdits.filter { !shouldRemove($0) }
-        guard retained.count != frame.defectEdits.count else { return }
+        guard retained.count != frame.defectEdits.count else { return false }
         frame.defectEditUndoStack.append(frame.makeDefectEditUndoSnapshot())
         frame.defectEdits = retained
         let recipeSnapshot = refreshDefectRecipeState(
@@ -89,6 +92,7 @@ extension AppModel {
         }
         invalidatePreviousBase(frame)
         rebuildCleanedRaw(frame, recipeSnapshot: recipeSnapshot)
+        return true
     }
 
     /// ⌘Z: 마지막 "결함 제거" 적용을 취소(다단계). 브러시·가이드 어느 것이든 마지막 편집을 되돌린다.

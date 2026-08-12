@@ -113,6 +113,39 @@ final class InfraredLayerLifecycleTests: XCTestCase {
                        "IR 레이어는 몇 번을 돌아와도 한 장이어야 한다.")
     }
 
+    /// "적용된 결함 제거 초기화"는 사용자가 만든 레이어만 지운다. IR 은 스캔과 함께 측정된
+    /// 결과이고 한 세션에 한 번만 만들어지므로, 같이 지우면 그 세션에서는 다시 만들 방법이
+    /// 없어 IR 먼지 제거가 통째로 불능이 된다.
+    func testClearAllDefectsKeepsTheInfraredLayer() {
+        let model = AppModel()
+        let frame = makeFrame(infrared: tempDir.appendingPathComponent("clear.tiff.ir.tiff"))
+        model.frames = [frame]
+        frame.defectEdits = [infraredEdit(), brushEdit()]
+
+        model.clearAllDefects(frame)
+
+        XCTAssertEqual(frame.defectEdits.count, 1, "브러시만 지워야 한다.")
+        XCTAssertTrue(frame.defectEdits[0].isInfrared)
+        XCTAssertTrue(frame.canUndoDefects, "초기화는 ⌘Z 로 되돌릴 수 있어야 한다.")
+
+        model.undoDefects(frame)
+        XCTAssertEqual(frame.defectEdits.count, 2, "되돌리면 지워진 레이어가 살아난다.")
+    }
+
+    /// IR 레이어뿐이면 초기화할 사용자 편집이 없다 — 아무것도 건드리지 않는다.
+    func testClearAllDefectsDoesNothingWhenOnlyInfraredRemains() {
+        let model = AppModel()
+        let frame = makeFrame(infrared: tempDir.appendingPathComponent("only-ir.tiff.ir.tiff"))
+        model.frames = [frame]
+        frame.defectEdits = [infraredEdit()]
+
+        model.clearAllDefects(frame)
+
+        XCTAssertEqual(frame.defectEdits.count, 1)
+        XCTAssertTrue(frame.defectEdits[0].isInfrared)
+        XCTAssertFalse(frame.canUndoDefects, "지운 것이 없으면 undo 도 쌓이지 않는다.")
+    }
+
     /// 결함 제거 레이어는 붙었는데 cleaned raw 픽셀이 아직 없는 순간은 실패가 아니라 보류다.
     /// 이걸 실패로 처리하면 스캔 직후 "이미지 로드 실패"가 뜬다(실측: IR 스캔 마지막 컷).
     func testMissingCleanedRawIsReportedAsPendingNotFailure() {
