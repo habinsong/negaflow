@@ -1,4 +1,6 @@
 using Negaflow.Catalog;
+using System.Globalization;
+using System.Text;
 
 namespace Negaflow.Shell;
 
@@ -49,6 +51,36 @@ public static class LibraryFrameListItems
     }
 
     /// <summary>
+    /// macOS 라이브러리의 빠른 검색과 같은 phrase 검색입니다. 입력어가 한 값 안에 이어져
+    /// 있어야 하므로, 이름과 경로가 낱말을 하나씩 나눠 갖는 frame을 잘못 포함하지 않습니다.
+    /// 공백 유무, 대소문자, 발음 구별 기호와 전각 차이는 무시합니다.
+    /// </summary>
+    public static IReadOnlyList<LibraryFrameListItem> Filter(
+        IReadOnlyList<LibraryFrameListItem> items,
+        string phrase)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        ArgumentNullException.ThrowIfNull(phrase);
+
+        string compactPhrase = RemoveWhitespace(Normalize(phrase));
+        if (compactPhrase.Length == 0)
+        {
+            return items;
+        }
+
+        List<LibraryFrameListItem> matches = [];
+        foreach (LibraryFrameListItem item in items)
+        {
+            if (MatchesPhrase(item.DisplayName, compactPhrase) ||
+                MatchesPhrase(item.Frame.SourcePath, compactPhrase))
+            {
+                matches.Add(item);
+            }
+        }
+        return matches;
+    }
+
+    /// <summary>
     /// 읽지 못한 frame 이 있을 때 보여 줄 한 줄입니다. 없으면 <c>null</c> 입니다.
     /// </summary>
     public static string? IssueSummary(IReadOnlyList<LibraryFrameIssue> issues)
@@ -61,5 +93,48 @@ public static class LibraryFrameListItems
         return issues.Count == 1
             ? $"1 frame could not be read ({issues[0].Error}). It is still in the catalog."
             : $"{issues.Count} frames could not be read. They are still in the catalog.";
+    }
+
+    private static bool MatchesPhrase(string value, string compactPhrase) =>
+        RemoveWhitespace(Normalize(value)).Contains(compactPhrase, StringComparison.Ordinal);
+
+    private static string Normalize(string value)
+    {
+        StringBuilder normalized = new(value.Length);
+        bool pendingSpace = false;
+        foreach (char character in value.Normalize(NormalizationForm.FormD))
+        {
+            UnicodeCategory category = CharUnicodeInfo.GetUnicodeCategory(character);
+            if (category is UnicodeCategory.NonSpacingMark or UnicodeCategory.SpacingCombiningMark or
+                UnicodeCategory.EnclosingMark)
+            {
+                continue;
+            }
+            if (char.IsWhiteSpace(character))
+            {
+                pendingSpace = normalized.Length > 0;
+                continue;
+            }
+            if (pendingSpace)
+            {
+                normalized.Append(' ');
+                pendingSpace = false;
+            }
+            normalized.Append(char.ToUpperInvariant(character));
+        }
+        return normalized.ToString().Normalize(NormalizationForm.FormC);
+    }
+
+    private static string RemoveWhitespace(string value)
+    {
+        StringBuilder compact = new(value.Length);
+        foreach (char character in value)
+        {
+            if (!char.IsWhiteSpace(character))
+            {
+                compact.Append(character);
+            }
+        }
+        return compact.ToString();
     }
 }

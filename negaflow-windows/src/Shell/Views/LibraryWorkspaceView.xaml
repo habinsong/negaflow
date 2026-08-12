@@ -168,8 +168,6 @@
                     Margin="0,0,0,14"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Bottom"
-                    IsHitTestVisible="False"
-                    Opacity="0.45"
                     Spacing="6">
                     <Border Width="280" Padding="2" Background="{ThemeResource NegaflowSubtleFillBrush}" CornerRadius="16">
                         <Grid>
@@ -185,7 +183,13 @@
                             <TextBlock x:Uid="libraryOffline" Grid.Column="3" Padding="6,7" TextAlignment="Center" FontSize="11" />
                         </Grid>
                     </Border>
-                    <TextBox x:Uid="librarySearchPlaceholder" Width="280" Height="28" IsReadOnly="True" />
+                    <TextBox
+                        x:Name="LibrarySearchBox"
+                        x:Uid="librarySearchPlaceholder"
+                        Width="280"
+                        Height="28"
+                        AutomationProperties.AutomationId="negaflow.library.search"
+                        TextChanged="OnLibrarySearchTextChanged" />
                 </StackPanel>
             </Grid>
         </Grid>

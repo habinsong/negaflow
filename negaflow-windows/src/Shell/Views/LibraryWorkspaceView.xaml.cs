@@ -12,6 +12,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
     private WorkspacePresentationState? workspaceState;
     private bool isResizing;
     private double liveWidth = ShellLayoutMetrics.LibraryControlsDefaultWidth;
+    private IReadOnlyList<LibraryFrameListItem> allItems = [];
 
     public LibraryWorkspaceView()
     {
@@ -36,17 +37,31 @@ public sealed partial class LibraryWorkspaceView : UserControl
     {
         ArgumentNullException.ThrowIfNull(host);
 
-        IReadOnlyList<LibraryFrameListItem> items = LibraryFrameListItems.From(host.Frames);
-        FrameListView.ItemsSource = items;
-        LibraryCountText.Text = items.Count.ToString(CultureInfo.CurrentCulture);
+        allItems = LibraryFrameListItems.From(host.Frames);
+        ShowFilteredItems();
 
-        bool hasFrames = items.Count > 0;
+        bool hasFrames = allItems.Count > 0;
         LibraryContentPanel.Visibility = hasFrames ? Visibility.Visible : Visibility.Collapsed;
         EmptyLibraryPanel.Visibility = hasFrames ? Visibility.Collapsed : Visibility.Visible;
 
         string? issueSummary = LibraryFrameListItems.IssueSummary(host.Issues);
         LibraryIssueBar.Message = issueSummary ?? string.Empty;
         LibraryIssueBar.IsOpen = issueSummary is not null;
+    }
+
+    private void OnLibrarySearchTextChanged(object sender, TextChangedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        ShowFilteredItems();
+    }
+
+    private void ShowFilteredItems()
+    {
+        IReadOnlyList<LibraryFrameListItem> items =
+            LibraryFrameListItems.Filter(allItems, LibrarySearchBox?.Text ?? string.Empty);
+        FrameListView.ItemsSource = items;
+        LibraryCountText.Text = items.Count.ToString(CultureInfo.CurrentCulture);
     }
 
     private void OnRootSizeChanged(object sender, SizeChangedEventArgs args)

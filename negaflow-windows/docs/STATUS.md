@@ -9,6 +9,13 @@
 preview/export 경로로 들어가며, 컬러 슬라이드의 GrainMend IR 자동 보정도 기존 색소 이미지 판정과 함께
 실제로 도달할 수 있습니다. x64 Debug Catalog 595, Shell 353 assertions를 통과했습니다.
 
+## 2026-08-12 Library phrase search
+
+macOS `e49c07c`와 같이 Library 검색창이 입력 문구를 한 값 안에서 연속으로 찾도록 연결했습니다. 공백 유무,
+대소문자, 발음 구별 기호 차이는 무시하지만 이름과 경로에 낱말이 나뉘어 있는 frame은 더 이상 잘못 포함하지
+않습니다. 검색은 catalog를 다시 쓰거나 원본에 접근하지 않고, 현재 표시한 frame 목록만 즉시 좁힙니다. x64
+Debug managed build와 Catalog 595, Shell 355 assertions를 통과했습니다.
+
 ## 2026-08-12 Output sharpening native core
 
 macOS `OutputSharpening`의 screen/matte/glossy 매체별 반경·강도와 DPI 제곱근 스케일을 Windows C++20

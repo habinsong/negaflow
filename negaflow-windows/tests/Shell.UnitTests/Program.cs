@@ -149,11 +149,13 @@ internal static class Program
         FilmType filmType = FilmType.ColorNegative,
         FilmEmulation emulation = FilmEmulation.Portra400,
         BaseRecipe? baseRecipe = null,
-        PointCurveRecipe? pointCurves = null) =>
+        PointCurveRecipe? pointCurves = null,
+        string? displayName = null,
+        string? sourcePath = null) =>
         new(
             "frame-1",
-            @"C:\scans\IMG_0001.tif",
-            "Roll 01 / 1",
+            sourcePath ?? @"C:\scans\IMG_0001.tif",
+            displayName ?? "Roll 01 / 1",
             new DevelopRouteSnapshot(
                 FrameSourceTransport.Scanner,
                 signal,
@@ -1318,6 +1320,30 @@ internal static class Program
             Check(items[0].DisplayName == "IMG_0001.tif", "library_item_display_name");
             Check(items[0].CanDevelop, "library_item_can_develop");
             Check(items[0].Detail == @"C:\scans\IMG_0001.tif", "library_item_detail_is_path");
+            IReadOnlyList<LibraryFrameListItem> phraseMatches = LibraryFrameListItems.Filter(
+                [
+                    new LibraryFrameListItem(Frame(
+                        new ManualBaseRgb(0.2, 0.2, 0.2),
+                        displayName: "사진 3",
+                        sourcePath: @"C:\scans\L1000003.tif")),
+                    new LibraryFrameListItem(Frame(
+                        new ManualBaseRgb(0.2, 0.2, 0.2),
+                        displayName: "사진1",
+                        sourcePath: @"C:\scans\L1000001.tif")),
+                    new LibraryFrameListItem(Frame(
+                        new ManualBaseRgb(0.2, 0.2, 0.2),
+                        displayName: "Kodak Portra 400",
+                        sourcePath: @"C:\scans\film.tif")),
+                ],
+                "사진 1");
+            Check(phraseMatches.Count == 1 && phraseMatches[0].DisplayName == "사진1",
+                "library_item_phrase_search_does_not_cross_values");
+            Check(
+                LibraryFrameListItems.Filter(phraseMatches, "portra400").Count == 0 &&
+                LibraryFrameListItems.Filter(
+                    [new LibraryFrameListItem(Frame(new ManualBaseRgb(0.2, 0.2, 0.2),
+                        displayName: "Kodak Portra 400"))], "portra400").Count == 1,
+                "library_item_phrase_search_ignores_whitespace");
             Check(
                 LibraryFrameListItems.IssueSummary(host.Issues) is null,
                 "library_item_no_issue_summary");
