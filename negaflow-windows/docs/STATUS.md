@@ -11,6 +11,22 @@ native boundaries. x64 Debug interop contract passed 191 assertions at ABI 0.38;
 `primary_calibration` and `develop_export_abi` passed 2/2. Real TIFF and macOS pixel golden
 comparisons remain unverified.
 
+## 2026-08-12 Develop Calibration and Detail/Effects inspector surface
+
+The fixed macOS Basic adjustment order is now visible in the Windows inspector: Calibration
+follows Color Grading, and Detail & Effects follows Calibration. Calibration exposes the six
+R/G/B hue and saturation controls; Detail & Effects exposes the macOS Noise Reduction toggle
+(off = 0, on = 0.7), its five axes plus Grain Protect, and Grain, Sharpness, Clarity, Halation,
+and Vignette. Each edit writes the catalog recipe and immediately requests the shared preview.
+All six shipped locales use the fixed macOS strings. A synthetic RGB16 TIFF v27 regression now
+combines IR replay, primary calibration, FilmScanDenoise, and Texture, verifies PNG16 export
+against preview within one 8-bit codec code, and keeps the TIFF SHA-256 unchanged. Rendered
+Windows UI and photographed-TIFF/macOS pixel comparisons remain unverified.
+
+x64 Release passed native CTest 65/65 and managed Catalog 605/Shell 391 assertions with no
+build warnings or errors. The complete ARM64 Release graph cross-built successfully, but was
+not executed on an ARM64 device.
+
 ## 2026-08-12 Develop post-processing recipe persistence
 
 The catalog and Shell now preserve and project macOS `grain`, `sharpness`, `halation`,

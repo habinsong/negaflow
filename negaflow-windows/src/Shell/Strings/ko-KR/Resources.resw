@@ -616,4 +616,23 @@
     <value>%@ 초기화</value>
     <comment>AppLocalizedPhrase.resetSectionFormat</comment>
   </data>
+  <data name="developSectionCalibration.Text" xml:space="preserve"><value>캘리브레이션</value></data>
+  <data name="developSectionDetailAndEffects.Text" xml:space="preserve"><value>디테일 및 효과</value></data>
+  <data name="developCalibrationRedPrimary.Text" xml:space="preserve"><value>빨강 원색</value></data>
+  <data name="developCalibrationGreenPrimary.Text" xml:space="preserve"><value>초록 원색</value></data>
+  <data name="developCalibrationBluePrimary.Text" xml:space="preserve"><value>파랑 원색</value></data>
+  <data name="developCalibrationHue.Text" xml:space="preserve"><value>색조</value></data>
+  <data name="developCalibrationSaturation.Text" xml:space="preserve"><value>채도</value></data>
+  <data name="developNoiseReduction.Text" xml:space="preserve"><value>노이즈 감소</value></data>
+  <data name="developNoiseReductionStrength.Text" xml:space="preserve"><value>NR 강도</value></data>
+  <data name="developNoiseReductionLuminance.Text" xml:space="preserve"><value>NR 명도</value></data>
+  <data name="developNoiseReductionColor.Text" xml:space="preserve"><value>NR 색상</value></data>
+  <data name="developNoiseReductionDarkTones.Text" xml:space="preserve"><value>NR 어두운 톤</value></data>
+  <data name="developNoiseReductionDetail.Text" xml:space="preserve"><value>NR 디테일</value></data>
+  <data name="developNoiseReductionGrainProtect.Text" xml:space="preserve"><value>NR 그레인 보호</value></data>
+  <data name="developTextureGrain.Text" xml:space="preserve"><value>그레인</value></data>
+  <data name="developTextureSharpness.Text" xml:space="preserve"><value>선명도</value></data>
+  <data name="developTextureClarity.Text" xml:space="preserve"><value>부분 대비</value></data>
+  <data name="developTextureHalation.Text" xml:space="preserve"><value>할레이션</value></data>
+  <data name="developTextureVignette.Text" xml:space="preserve"><value>비네트</value></data>
 </root>

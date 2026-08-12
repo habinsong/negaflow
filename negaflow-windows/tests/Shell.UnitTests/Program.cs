@@ -1905,6 +1905,24 @@ internal static class Program
             Check(panel.SetColorGrading(editedColorGrading) == LibraryFrameError.None &&
                 panel.ColorGrading == editedColorGrading,
                 "panel_sets_color_grading");
+            PrimaryCalibrationRecipe editedCalibration = new(0.2, -0.3, 0.4, -0.5, 0.6, -0.7);
+            Check(panel.SetPrimaryCalibration(editedCalibration) == LibraryFrameError.None &&
+                panel.PrimaryCalibration == editedCalibration,
+                "panel_sets_primary_calibration");
+            TextureRecipe editedTexture = new(0.2, 0.3, 0.4, -0.5, 0.6);
+            Check(panel.SetTexture(editedTexture) == LibraryFrameError.None &&
+                panel.Texture == editedTexture,
+                "panel_sets_texture");
+            NoiseReductionRecipe editedNoiseReduction = new(0.8, 0.7, 0.6, 0.5, 0.4, 0.3);
+            Check(panel.SetNoiseReduction(editedNoiseReduction) == LibraryFrameError.None &&
+                panel.NoiseReduction == editedNoiseReduction,
+                "panel_sets_noise_reduction");
+            Check(panel.SetNoiseReductionEnabled(false) == LibraryFrameError.None &&
+                panel.NoiseReduction.Strength == 0.0,
+                "panel_disables_noise_reduction");
+            Check(panel.SetNoiseReductionEnabled(true) == LibraryFrameError.None &&
+                panel.NoiseReduction.Strength == 0.7,
+                "panel_enables_noise_reduction_with_macos_default_strength");
 
             Check(panel.ResetBasicTone() == LibraryFrameError.None &&
                 panel.Exposure == 0 && panel.Contrast == 0 && panel.Highlights == 0 &&
@@ -1927,6 +1945,13 @@ internal static class Program
             Check(panel.ResetColorGrading() == LibraryFrameError.None &&
                 panel.ColorGrading == ColorGradingRecipe.Identity,
                 "panel_resets_color_grading");
+            Check(panel.ResetPrimaryCalibration() == LibraryFrameError.None &&
+                panel.PrimaryCalibration == PrimaryCalibrationRecipe.Identity,
+                "panel_resets_primary_calibration");
+            Check(panel.ResetDetailAndEffects() == LibraryFrameError.None &&
+                panel.Texture == TextureRecipe.Identity &&
+                panel.NoiseReduction == NoiseReductionRecipe.Identity,
+                "panel_resets_detail_and_effects");
 
             // 아직 base 를 고르지 않은 frame 에도 슬라이더 시작 위치는 있어야 하지만, 그것이
             // catalog 에 저장되면 사용자가 고르지 않은 값으로 현상됩니다.

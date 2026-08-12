@@ -616,4 +616,23 @@
     <value>%@をリセット</value>
     <comment>AppLocalizedPhrase.resetSectionFormat</comment>
   </data>
+  <data name="developSectionCalibration.Text" xml:space="preserve"><value>キャリブレーション</value></data>
+  <data name="developSectionDetailAndEffects.Text" xml:space="preserve"><value>ディテールと効果</value></data>
+  <data name="developCalibrationRedPrimary.Text" xml:space="preserve"><value>レッド原色</value></data>
+  <data name="developCalibrationGreenPrimary.Text" xml:space="preserve"><value>グリーン原色</value></data>
+  <data name="developCalibrationBluePrimary.Text" xml:space="preserve"><value>ブルー原色</value></data>
+  <data name="developCalibrationHue.Text" xml:space="preserve"><value>色相</value></data>
+  <data name="developCalibrationSaturation.Text" xml:space="preserve"><value>彩度</value></data>
+  <data name="developNoiseReduction.Text" xml:space="preserve"><value>ノイズ軽減</value></data>
+  <data name="developNoiseReductionStrength.Text" xml:space="preserve"><value>NR 適用量</value></data>
+  <data name="developNoiseReductionLuminance.Text" xml:space="preserve"><value>NR 輝度</value></data>
+  <data name="developNoiseReductionColor.Text" xml:space="preserve"><value>NR カラー</value></data>
+  <data name="developNoiseReductionDarkTones.Text" xml:space="preserve"><value>NR 暗部</value></data>
+  <data name="developNoiseReductionDetail.Text" xml:space="preserve"><value>NR ディテール</value></data>
+  <data name="developNoiseReductionGrainProtect.Text" xml:space="preserve"><value>NR 粒状性保護</value></data>
+  <data name="developTextureGrain.Text" xml:space="preserve"><value>粒子</value></data>
+  <data name="developTextureSharpness.Text" xml:space="preserve"><value>シャープ</value></data>
+  <data name="developTextureClarity.Text" xml:space="preserve"><value>明瞭度</value></data>
+  <data name="developTextureHalation.Text" xml:space="preserve"><value>ハレーション</value></data>
+  <data name="developTextureVignette.Text" xml:space="preserve"><value>周辺光量</value></data>
 </root>

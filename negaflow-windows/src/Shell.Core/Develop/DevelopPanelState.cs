@@ -209,6 +209,14 @@ public sealed class DevelopPanelState
 
     public ColorGradingRecipe ColorGrading => SelectedFrame?.ColorGrading ?? ColorGradingRecipe.Identity;
 
+    public PrimaryCalibrationRecipe PrimaryCalibration =>
+        SelectedFrame?.PrimaryCalibration ?? PrimaryCalibrationRecipe.Identity;
+
+    public TextureRecipe Texture => SelectedFrame?.Texture ?? TextureRecipe.Identity;
+
+    public NoiseReductionRecipe NoiseReduction =>
+        SelectedFrame?.NoiseReduction ?? NoiseReductionRecipe.Identity;
+
     public bool CanExport => SelectedFrame is { CanDevelop: true } && !host.IsExporting;
 
     public LibraryFrameError ApplyAutoTone(AutoAdjustSettings settings)
@@ -372,6 +380,34 @@ public sealed class DevelopPanelState
         return error;
     }
 
+    public LibraryFrameError ResetPrimaryCalibration() =>
+        SetPrimaryCalibration(PrimaryCalibrationRecipe.Identity);
+
+    public LibraryFrameError ResetDetailAndEffects()
+    {
+        if (SelectedFrame is not { } frame)
+        {
+            return LibraryFrameError.MissingId;
+        }
+        if (!CanEditTone)
+        {
+            return LibraryFrameError.InvalidDevelopRoute;
+        }
+
+        LibraryFrameError error = host.Edit(
+            frame.Id,
+            new LibraryFrameEdit(
+                frame.Tone,
+                frame.ManualBase,
+                Texture: TextureRecipe.Identity,
+                NoiseReduction: NoiseReductionRecipe.Identity));
+        if (error == LibraryFrameError.None)
+        {
+            Select(frame.Id);
+        }
+        return error;
+    }
+
     /// <summary>
     /// Point Curve는 Parametric Tone Curve와 별도 recipe로 저장합니다. Catalog writer가
     /// 좌표의 finite/range/중복 조건을 검증해 preview와 export가 같은 값만 받습니다.
@@ -443,6 +479,78 @@ public sealed class DevelopPanelState
         }
         return error;
     }
+
+    public LibraryFrameError SetPrimaryCalibration(PrimaryCalibrationRecipe primaryCalibration)
+    {
+        ArgumentNullException.ThrowIfNull(primaryCalibration);
+        if (SelectedFrame is not { } frame)
+        {
+            return LibraryFrameError.MissingId;
+        }
+        if (!CanEditTone)
+        {
+            return LibraryFrameError.InvalidDevelopRoute;
+        }
+
+        LibraryFrameError error = host.Edit(
+            frame.Id,
+            new LibraryFrameEdit(
+                frame.Tone,
+                frame.ManualBase,
+                PrimaryCalibration: primaryCalibration));
+        if (error == LibraryFrameError.None)
+        {
+            Select(frame.Id);
+        }
+        return error;
+    }
+
+    public LibraryFrameError SetTexture(TextureRecipe texture)
+    {
+        ArgumentNullException.ThrowIfNull(texture);
+        if (SelectedFrame is not { } frame)
+        {
+            return LibraryFrameError.MissingId;
+        }
+        if (!CanEditTone)
+        {
+            return LibraryFrameError.InvalidDevelopRoute;
+        }
+
+        LibraryFrameError error = host.Edit(
+            frame.Id,
+            new LibraryFrameEdit(frame.Tone, frame.ManualBase, Texture: texture));
+        if (error == LibraryFrameError.None)
+        {
+            Select(frame.Id);
+        }
+        return error;
+    }
+
+    public LibraryFrameError SetNoiseReduction(NoiseReductionRecipe noiseReduction)
+    {
+        ArgumentNullException.ThrowIfNull(noiseReduction);
+        if (SelectedFrame is not { } frame)
+        {
+            return LibraryFrameError.MissingId;
+        }
+        if (!CanEditTone)
+        {
+            return LibraryFrameError.InvalidDevelopRoute;
+        }
+
+        LibraryFrameError error = host.Edit(
+            frame.Id,
+            new LibraryFrameEdit(frame.Tone, frame.ManualBase, NoiseReduction: noiseReduction));
+        if (error == LibraryFrameError.None)
+        {
+            Select(frame.Id);
+        }
+        return error;
+    }
+
+    public LibraryFrameError SetNoiseReductionEnabled(bool enabled) =>
+        SetNoiseReduction(NoiseReduction with { Strength = enabled ? 0.7 : 0.0 });
 
     private LibraryFrameError ApplyAutoAdjusted(LibraryFrameSnapshot adjusted)
     {

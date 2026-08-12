@@ -616,4 +616,23 @@ Load a scanner from Library to scan film.</value>
     <value>Reset %@</value>
     <comment>AppLocalizedPhrase.resetSectionFormat</comment>
   </data>
+  <data name="developSectionCalibration.Text" xml:space="preserve"><value>Calibration</value></data>
+  <data name="developSectionDetailAndEffects.Text" xml:space="preserve"><value>Detail &amp; Effects</value></data>
+  <data name="developCalibrationRedPrimary.Text" xml:space="preserve"><value>Red Primary</value></data>
+  <data name="developCalibrationGreenPrimary.Text" xml:space="preserve"><value>Green Primary</value></data>
+  <data name="developCalibrationBluePrimary.Text" xml:space="preserve"><value>Blue Primary</value></data>
+  <data name="developCalibrationHue.Text" xml:space="preserve"><value>Hue</value></data>
+  <data name="developCalibrationSaturation.Text" xml:space="preserve"><value>Saturation</value></data>
+  <data name="developNoiseReduction.Text" xml:space="preserve"><value>Noise Reduction</value></data>
+  <data name="developNoiseReductionStrength.Text" xml:space="preserve"><value>NR Strength</value></data>
+  <data name="developNoiseReductionLuminance.Text" xml:space="preserve"><value>NR Luminance</value></data>
+  <data name="developNoiseReductionColor.Text" xml:space="preserve"><value>NR Color</value></data>
+  <data name="developNoiseReductionDarkTones.Text" xml:space="preserve"><value>NR Dark Tones</value></data>
+  <data name="developNoiseReductionDetail.Text" xml:space="preserve"><value>NR Detail</value></data>
+  <data name="developNoiseReductionGrainProtect.Text" xml:space="preserve"><value>NR Grain Protect</value></data>
+  <data name="developTextureGrain.Text" xml:space="preserve"><value>Grain</value></data>
+  <data name="developTextureSharpness.Text" xml:space="preserve"><value>Sharpness</value></data>
+  <data name="developTextureClarity.Text" xml:space="preserve"><value>Clarity</value></data>
+  <data name="developTextureHalation.Text" xml:space="preserve"><value>Halation</value></data>
+  <data name="developTextureVignette.Text" xml:space="preserve"><value>Vignette</value></data>
 </root>

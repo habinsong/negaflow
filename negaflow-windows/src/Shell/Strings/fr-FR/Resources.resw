@@ -616,4 +616,23 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
     <value>Réinitialiser %@</value>
     <comment>AppLocalizedPhrase.resetSectionFormat</comment>
   </data>
+  <data name="developSectionCalibration.Text" xml:space="preserve"><value>Calibrage</value></data>
+  <data name="developSectionDetailAndEffects.Text" xml:space="preserve"><value>Détails et effets</value></data>
+  <data name="developCalibrationRedPrimary.Text" xml:space="preserve"><value>Primaire rouge</value></data>
+  <data name="developCalibrationGreenPrimary.Text" xml:space="preserve"><value>Primaire vert</value></data>
+  <data name="developCalibrationBluePrimary.Text" xml:space="preserve"><value>Primaire bleu</value></data>
+  <data name="developCalibrationHue.Text" xml:space="preserve"><value>Teinte</value></data>
+  <data name="developCalibrationSaturation.Text" xml:space="preserve"><value>Saturation</value></data>
+  <data name="developNoiseReduction.Text" xml:space="preserve"><value>Réduction du bruit</value></data>
+  <data name="developNoiseReductionStrength.Text" xml:space="preserve"><value>Débruitage : intensité</value></data>
+  <data name="developNoiseReductionLuminance.Text" xml:space="preserve"><value>Débruitage : luminance</value></data>
+  <data name="developNoiseReductionColor.Text" xml:space="preserve"><value>Débruitage : couleur</value></data>
+  <data name="developNoiseReductionDarkTones.Text" xml:space="preserve"><value>Débruitage : tons sombres</value></data>
+  <data name="developNoiseReductionDetail.Text" xml:space="preserve"><value>Débruitage : détail</value></data>
+  <data name="developNoiseReductionGrainProtect.Text" xml:space="preserve"><value>Protection du grain</value></data>
+  <data name="developTextureGrain.Text" xml:space="preserve"><value>Grain</value></data>
+  <data name="developTextureSharpness.Text" xml:space="preserve"><value>Netteté</value></data>
+  <data name="developTextureClarity.Text" xml:space="preserve"><value>Clarté</value></data>
+  <data name="developTextureHalation.Text" xml:space="preserve"><value>Halation</value></data>
+  <data name="developTextureVignette.Text" xml:space="preserve"><value>Vignettage</value></data>
 </root>

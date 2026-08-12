@@ -616,4 +616,23 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
     <value>%@ zurücksetzen</value>
     <comment>AppLocalizedPhrase.resetSectionFormat</comment>
   </data>
+  <data name="developSectionCalibration.Text" xml:space="preserve"><value>Kalibrierung</value></data>
+  <data name="developSectionDetailAndEffects.Text" xml:space="preserve"><value>Details &amp; Effekte</value></data>
+  <data name="developCalibrationRedPrimary.Text" xml:space="preserve"><value>Primärfarbe Rot</value></data>
+  <data name="developCalibrationGreenPrimary.Text" xml:space="preserve"><value>Primärfarbe Grün</value></data>
+  <data name="developCalibrationBluePrimary.Text" xml:space="preserve"><value>Primärfarbe Blau</value></data>
+  <data name="developCalibrationHue.Text" xml:space="preserve"><value>Farbton</value></data>
+  <data name="developCalibrationSaturation.Text" xml:space="preserve"><value>Sättigung</value></data>
+  <data name="developNoiseReduction.Text" xml:space="preserve"><value>Rauschreduzierung</value></data>
+  <data name="developNoiseReductionStrength.Text" xml:space="preserve"><value>NR-Stärke</value></data>
+  <data name="developNoiseReductionLuminance.Text" xml:space="preserve"><value>NR-Luminanz</value></data>
+  <data name="developNoiseReductionColor.Text" xml:space="preserve"><value>NR-Farbe</value></data>
+  <data name="developNoiseReductionDarkTones.Text" xml:space="preserve"><value>NR-Tiefen</value></data>
+  <data name="developNoiseReductionDetail.Text" xml:space="preserve"><value>NR-Details</value></data>
+  <data name="developNoiseReductionGrainProtect.Text" xml:space="preserve"><value>NR-Kornschutz</value></data>
+  <data name="developTextureGrain.Text" xml:space="preserve"><value>Körnung</value></data>
+  <data name="developTextureSharpness.Text" xml:space="preserve"><value>Schärfe</value></data>
+  <data name="developTextureClarity.Text" xml:space="preserve"><value>Klarheit</value></data>
+  <data name="developTextureHalation.Text" xml:space="preserve"><value>Halation</value></data>
+  <data name="developTextureVignette.Text" xml:space="preserve"><value>Vignettierung</value></data>
 </root>

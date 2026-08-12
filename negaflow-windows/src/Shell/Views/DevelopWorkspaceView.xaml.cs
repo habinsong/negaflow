@@ -91,10 +91,34 @@ public sealed partial class DevelopWorkspaceView : UserControl
                      CurveLightsControl,
                      CurveDarksControl,
                      CurveShadowsControl,
+                     RedPrimaryHueControl,
+                     RedPrimarySaturationControl,
+                     GreenPrimaryHueControl,
+                     GreenPrimarySaturationControl,
+                     BluePrimaryHueControl,
+                     BluePrimarySaturationControl,
+                     ClarityControl,
+                     VignetteControl,
                  })
         {
             slider.Minimum = -panel.MaximumToneControl;
             slider.Maximum = panel.MaximumToneControl;
+        }
+        foreach (InspectorSlider slider in new[]
+                 {
+                     NoiseReductionStrengthControl,
+                     NoiseReductionLumaControl,
+                     NoiseReductionChromaControl,
+                     NoiseReductionDarkToneControl,
+                     NoiseReductionDetailControl,
+                     NoiseReductionGrainProtectControl,
+                     GrainControl,
+                     SharpnessControl,
+                     HalationControl,
+                 })
+        {
+            slider.Minimum = 0;
+            slider.Maximum = 1;
         }
         foreach (InspectorSlider slider in new[] { BaseRedControl, BaseGreenControl, BaseBlueControl })
         {
@@ -245,6 +269,16 @@ public sealed partial class DevelopWorkspaceView : UserControl
             ColorGradingHeaderButton,
             ColorGradingChevron,
             ColorGradingEditor);
+        ApplyInspectorSectionState(
+            DevelopInspectorSection.Calibration,
+            CalibrationHeaderButton,
+            CalibrationChevron,
+            CalibrationControls);
+        ApplyInspectorSectionState(
+            DevelopInspectorSection.DetailAndEffects,
+            DetailAndEffectsHeaderButton,
+            DetailAndEffectsChevron,
+            DetailAndEffectsControls);
         isSynchronizingInspectorPresentation = false;
     }
 
@@ -352,6 +386,30 @@ public sealed partial class DevelopWorkspaceView : UserControl
         PointCurveEditor.Curves = panel.PointCurves;
         ColorMixerEditor.Mixer = panel.ColorMixer;
         ColorGradingEditor.Grading = panel.ColorGrading;
+        PrimaryCalibrationRecipe calibration = panel.PrimaryCalibration;
+        RedPrimaryHueControl.Value = calibration.RedHue;
+        RedPrimarySaturationControl.Value = calibration.RedSaturation;
+        GreenPrimaryHueControl.Value = calibration.GreenHue;
+        GreenPrimarySaturationControl.Value = calibration.GreenSaturation;
+        BluePrimaryHueControl.Value = calibration.BlueHue;
+        BluePrimarySaturationControl.Value = calibration.BlueSaturation;
+        NoiseReductionRecipe noiseReduction = panel.NoiseReduction;
+        NoiseReductionToggle.IsOn = noiseReduction.Strength > 0.001;
+        NoiseReductionControls.Visibility = NoiseReductionToggle.IsOn
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        NoiseReductionStrengthControl.Value = noiseReduction.Strength;
+        NoiseReductionLumaControl.Value = noiseReduction.Luma;
+        NoiseReductionChromaControl.Value = noiseReduction.Chroma;
+        NoiseReductionDarkToneControl.Value = noiseReduction.DarkTone;
+        NoiseReductionDetailControl.Value = noiseReduction.Detail;
+        NoiseReductionGrainProtectControl.Value = noiseReduction.GrainProtect;
+        TextureRecipe texture = panel.Texture;
+        GrainControl.Value = texture.Grain;
+        SharpnessControl.Value = texture.Sharpness;
+        ClarityControl.Value = texture.Clarity;
+        HalationControl.Value = texture.Halation;
+        VignetteControl.Value = texture.Vignette;
         HistogramView.SynchronizeValues(
             panel.Shadows,
             panel.Density,
@@ -533,6 +591,30 @@ public sealed partial class DevelopWorkspaceView : UserControl
         PointCurveEditor.IsEnabled = canEdit;
         ColorMixerEditor.IsEnabled = canEdit;
         ColorGradingEditor.IsEnabled = canEdit;
+        foreach (InspectorSlider slider in new[]
+                 {
+                     RedPrimaryHueControl,
+                     RedPrimarySaturationControl,
+                     GreenPrimaryHueControl,
+                     GreenPrimarySaturationControl,
+                     BluePrimaryHueControl,
+                     BluePrimarySaturationControl,
+                     NoiseReductionStrengthControl,
+                     NoiseReductionLumaControl,
+                     NoiseReductionChromaControl,
+                     NoiseReductionDarkToneControl,
+                     NoiseReductionDetailControl,
+                     NoiseReductionGrainProtectControl,
+                     GrainControl,
+                     SharpnessControl,
+                     ClarityControl,
+                     HalationControl,
+                     VignetteControl,
+                 })
+        {
+            slider.IsEnabled = canEdit;
+        }
+        NoiseReductionToggle.IsEnabled = canEdit;
         HistogramView.IsEnabled = canEdit;
         bool canAutoAdjust = panel?.SelectedFrame?.CanDevelop == true &&
                              autoAdjustCoordinator is not null;
@@ -825,6 +907,80 @@ public sealed partial class DevelopWorkspaceView : UserControl
         }
     }
 
+    private void OnPrimaryCalibrationChanged(object? sender, InspectorSliderValueChangedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (panel is null || isSynchronizingInspector)
+        {
+            return;
+        }
+        if (panel.SetPrimaryCalibration(new PrimaryCalibrationRecipe(
+                RedPrimaryHueControl.Value,
+                RedPrimarySaturationControl.Value,
+                GreenPrimaryHueControl.Value,
+                GreenPrimarySaturationControl.Value,
+                BluePrimaryHueControl.Value,
+                BluePrimarySaturationControl.Value)) == LibraryFrameError.None)
+        {
+            RequestPreview();
+        }
+    }
+
+    private void OnNoiseReductionToggled(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (panel is null || isSynchronizingInspector)
+        {
+            return;
+        }
+        if (panel.SetNoiseReductionEnabled(NoiseReductionToggle.IsOn) == LibraryFrameError.None)
+        {
+            SynchronizeInspectorValues();
+            RequestPreview();
+        }
+    }
+
+    private void OnNoiseReductionChanged(object? sender, InspectorSliderValueChangedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (panel is null || isSynchronizingInspector)
+        {
+            return;
+        }
+        if (panel.SetNoiseReduction(new NoiseReductionRecipe(
+                NoiseReductionStrengthControl.Value,
+                NoiseReductionLumaControl.Value,
+                NoiseReductionChromaControl.Value,
+                NoiseReductionDarkToneControl.Value,
+                NoiseReductionDetailControl.Value,
+                NoiseReductionGrainProtectControl.Value)) == LibraryFrameError.None)
+        {
+            RequestPreview();
+        }
+    }
+
+    private void OnTextureChanged(object? sender, InspectorSliderValueChangedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (panel is null || isSynchronizingInspector)
+        {
+            return;
+        }
+        if (panel.SetTexture(new TextureRecipe(
+                GrainControl.Value,
+                SharpnessControl.Value,
+                HalationControl.Value,
+                ClarityControl.Value,
+                VignetteControl.Value)) == LibraryFrameError.None)
+        {
+            RequestPreview();
+        }
+    }
+
     private void OnBasicToneResetClicked(object sender, RoutedEventArgs args)
     {
         _ = sender;
@@ -851,6 +1007,20 @@ public sealed partial class DevelopWorkspaceView : UserControl
         _ = sender;
         _ = args;
         ResetInspectorSection(static state => state.ResetColorGrading());
+    }
+
+    private void OnCalibrationResetClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        ResetInspectorSection(static state => state.ResetPrimaryCalibration());
+    }
+
+    private void OnDetailAndEffectsResetClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        ResetInspectorSection(static state => state.ResetDetailAndEffects());
     }
 
     private void ResetInspectorSection(Func<DevelopPanelState, LibraryFrameError> reset)
@@ -1057,6 +1227,41 @@ public sealed partial class DevelopWorkspaceView : UserControl
             ColorGradingSectionTitleText,
             ColorGradingResetButton,
             AppResources.Get("developSectionColorGrading", "Text"));
+        SetInspectorSectionText(
+            CalibrationSection,
+            CalibrationHeaderButton,
+            CalibrationSectionTitleText,
+            CalibrationResetButton,
+            AppResources.Get("developSectionCalibration", "Text"));
+        SetInspectorSectionText(
+            DetailAndEffectsSection,
+            DetailAndEffectsHeaderButton,
+            DetailAndEffectsSectionTitleText,
+            DetailAndEffectsResetButton,
+            AppResources.Get("developSectionDetailAndEffects", "Text"));
+        RedPrimaryText.Text = AppResources.Get("developCalibrationRedPrimary", "Text");
+        GreenPrimaryText.Text = AppResources.Get("developCalibrationGreenPrimary", "Text");
+        BluePrimaryText.Text = AppResources.Get("developCalibrationBluePrimary", "Text");
+        string hue = AppResources.Get("developCalibrationHue", "Text");
+        string saturation = AppResources.Get("developCalibrationSaturation", "Text");
+        RedPrimaryHueControl.Label = hue;
+        GreenPrimaryHueControl.Label = hue;
+        BluePrimaryHueControl.Label = hue;
+        RedPrimarySaturationControl.Label = saturation;
+        GreenPrimarySaturationControl.Label = saturation;
+        BluePrimarySaturationControl.Label = saturation;
+        NoiseReductionLabelText.Text = AppResources.Get("developNoiseReduction", "Text");
+        NoiseReductionStrengthControl.Label = AppResources.Get("developNoiseReductionStrength", "Text");
+        NoiseReductionLumaControl.Label = AppResources.Get("developNoiseReductionLuminance", "Text");
+        NoiseReductionChromaControl.Label = AppResources.Get("developNoiseReductionColor", "Text");
+        NoiseReductionDarkToneControl.Label = AppResources.Get("developNoiseReductionDarkTones", "Text");
+        NoiseReductionDetailControl.Label = AppResources.Get("developNoiseReductionDetail", "Text");
+        NoiseReductionGrainProtectControl.Label = AppResources.Get("developNoiseReductionGrainProtect", "Text");
+        GrainControl.Label = AppResources.Get("developTextureGrain", "Text");
+        SharpnessControl.Label = AppResources.Get("developTextureSharpness", "Text");
+        ClarityControl.Label = AppResources.Get("developTextureClarity", "Text");
+        HalationControl.Label = AppResources.Get("developTextureHalation", "Text");
+        VignetteControl.Label = AppResources.Get("developTextureVignette", "Text");
     }
 
     private static void SetInspectorSectionText(

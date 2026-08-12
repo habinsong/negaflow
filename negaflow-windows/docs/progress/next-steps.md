@@ -1,6 +1,6 @@
 # 다음에 어디서부터 이어서 할 것인가
 
-기준일: 2026-08-12 (Develop image-transform recipe persistence 완료)
+기준일: 2026-08-12 (Develop Calibration·Detail/Effects inspector 연결 완료)
 
 이 문서는 작업을 한동안 놓았다가 돌아왔을 때 가장 먼저 읽는 곳입니다. 이미 결정된 것을 다시
 논쟁하지 않고, 다음 한 걸음을 바로 시작하기 위한 기록입니다.
@@ -24,8 +24,10 @@ macOS Texture와 FilmScanDenoise recipe도 catalog→Shell→native 공통 previ
 색/필름 상태별 denoise profile은 route에서 파생됩니다. 다음 우선순위는 이 레시피들의 실촬영 TIFF
 golden 비교와 현상 조작 surface입니다.
 
-Primary Calibration도 ABI 0.38/v27로 preview/export 공통 경로에 연결됐습니다. 다음 작업은 이미
-연결된 현상 recipe의 실제 TIFF golden 비교와 macOS 기준 Develop 조작 surface입니다.
+Primary Calibration도 ABI 0.38/v27로 preview/export 공통 경로에 연결됐고, macOS 순서의
+Calibration·Detail/Effects inspector surface가 각 catalog recipe와 shared preview에 연결됐습니다.
+다음 작업은 사용자 촬영 TIFF와 macOS output golden을 사용한 수치 비교, 이어서 Geometry와
+남은 Develop tool surface입니다.
 scene correction은 ABI v14, DevelopTarget과 EXPIRED RescueGrade는 v15, ScannerProfileGrade는 v16,
 film polarity는 v17, 현상 전 영역 Defects는 v18, source-bound Defects는 v19, 순서 보존 Clone Stamp는
 v20, 순서 보존 Brush는 v21, 취소·진행률 run state는 v22, 자동 보정은 `nf_auto_adjust_v1`,

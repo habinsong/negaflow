@@ -414,6 +414,18 @@ void expect(const bool condition, const char* const message) {
     return request;
 }
 
+[[nodiscard]] nf_develop_export_request_v27 make_request_v27(
+    const wchar_t* const source,
+    const wchar_t* const destination,
+    const std::uint32_t base_mode = NF_BASE_ESTIMATION_AUTO) {
+    nf_develop_export_request_v27 request;
+    std::memset(&request, 0, sizeof(request));
+    request.v26 = make_request_v26(source, destination, base_mode);
+    request.v26.v25.v24.v21.v20.v19.v18.v17.v16.v15.v14.v13.v12.v11.v10.v9.v8
+        .struct_size = static_cast<std::uint32_t>(sizeof(request));
+    return request;
+}
+
 [[nodiscard]] bool write_file(
     const std::filesystem::path& path,
     const std::vector<std::uint8_t>& bytes) {
@@ -1383,6 +1395,30 @@ void test_v26_contract() {
                 result.failure_name,
                 "invalid_output_sharpening_parameters") == 0,
         "v26 rejects output sharpening outside its supported range");
+}
+
+void test_v27_contract() {
+    expect(sizeof(nf_develop_export_request_v27) == 4928U,
+           "v27 request layout is fixed");
+    expect(offsetof(nf_develop_export_request_v27, primary_calibration_red_hue) == 4896U,
+           "v27 primary calibration offset is fixed");
+
+    nf_develop_export_request_v27 request = make_request_v27(L"a.tif", L"b.png");
+    request.primary_calibration_red_hue = 0.8F;
+    nf_develop_export_result_v3 result = make_result_v3();
+    expect(
+        nf_develop_export_v27(&request, nullptr, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            result.failed_stage == NF_DEVELOP_STAGE_OBSERVE_SOURCE_BEFORE,
+        "v27 primary calibration request reaches source observation");
+
+    request.primary_calibration_blue_saturation = 1.1F;
+    result = make_result_v3();
+    expect(
+        nf_develop_export_v27(&request, nullptr, &result) == NF_STATUS_OK &&
+            result.failed_stage == NF_DEVELOP_STAGE_REQUEST_VALIDATION &&
+            std::strcmp(result.failure_name, "invalid_primary_calibration_parameters") == 0,
+        "v27 rejects primary calibration outside its supported range");
 }
 
 void test_missing_source_is_not_a_validation_error() {
@@ -2643,6 +2679,8 @@ void test_v18_defect_region_preview_and_export() {
         temporary / L"negaflow-abi-v21-brush.png";
     const std::filesystem::path infrared_output =
         temporary / L"negaflow-abi-v24-infrared.png";
+    const std::filesystem::path calibrated_output =
+        temporary / L"negaflow-abi-v27-calibrated.png";
     std::error_code ignored{};
     std::filesystem::remove(source, ignored);
     std::filesystem::remove(identity_output, ignored);
@@ -2651,6 +2689,7 @@ void test_v18_defect_region_preview_and_export() {
     std::filesystem::remove(cloned_output, ignored);
     std::filesystem::remove(brushed_output, ignored);
     std::filesystem::remove(infrared_output, ignored);
+    std::filesystem::remove(calibrated_output, ignored);
 
     const std::vector<std::uint8_t> source_bytes =
         negaflow::test_fixtures::make_uncompressed_rgb16_defect_tiff(
@@ -2931,6 +2970,72 @@ void test_v18_defect_region_preview_and_export() {
             infrared_unchanged_outside,
         "v25 attenuation-only infrared replay changes only its ROI with a zero core");
 
+    const std::wstring calibrated_output_text = calibrated_output.wstring();
+    nf_develop_export_request_v27 calibrated;
+    std::memset(&calibrated, 0, sizeof(calibrated));
+    calibrated.v26.v25 = infrared;
+    calibrated.v26.v25.v24.v21.v20.v19.v18.v17.v16.v15.v14.v13.v12.v11.v10.v9.v8
+        .struct_size = static_cast<std::uint32_t>(sizeof(calibrated));
+    calibrated.v26.v25.v24.v21.v20.v19.v18.v17.v16.v15.v14.v13.v12.v11.v10.v9.v8
+        .destination_path = calibrated_output_text.c_str();
+    auto& calibrated_v10 =
+        calibrated.v26.v25.v24.v21.v20.v19.v18.v17.v16.v15.v14.v13.v12.v11.v10;
+    calibrated_v10.texture_grain = 0.35F;
+    calibrated_v10.texture_sharpness = 0.45F;
+    calibrated_v10.texture_clarity = -0.25F;
+    calibrated_v10.texture_halation = 0.30F;
+    calibrated_v10.texture_vignette = 0.20F;
+    calibrated_v10.v9.noise_reduction_strength = 0.70F;
+    calibrated_v10.v9.noise_reduction_luma = 0.65F;
+    calibrated_v10.v9.noise_reduction_chroma = 0.40F;
+    calibrated_v10.v9.noise_reduction_dark_tone = 0.55F;
+    calibrated_v10.v9.noise_reduction_detail = 0.75F;
+    calibrated_v10.v9.noise_reduction_grain_protect = 0.15F;
+    calibrated.primary_calibration_red_hue = 0.20F;
+    calibrated.primary_calibration_red_saturation = -0.15F;
+    calibrated.primary_calibration_green_hue = 0.10F;
+    calibrated.primary_calibration_green_saturation = 0.20F;
+    calibrated.primary_calibration_blue_hue = -0.30F;
+    calibrated.primary_calibration_blue_saturation = 0.25F;
+    std::vector<std::uint8_t> calibrated_pixels(identity_pixels.size(), 0U);
+    nf_develop_export_result_v3 calibrated_preview_result = make_result_v3();
+    const bool calibrated_preview_ok =
+        nf_develop_preview_v27(
+            &calibrated,
+            nullptr,
+            width,
+            height,
+            calibrated_pixels.data(),
+            static_cast<std::uint32_t>(calibrated_pixels.size()),
+            nullptr,
+            &calibrated_preview_result) == NF_STATUS_OK &&
+        calibrated_preview_result.succeeded == 1U;
+    nf_develop_export_result_v3 calibrated_export_result = make_result_v3();
+    const bool calibrated_export_ok =
+        nf_develop_export_v27(&calibrated, nullptr, &calibrated_export_result) ==
+            NF_STATUS_OK &&
+        calibrated_export_result.succeeded == 1U;
+    const std::vector<std::uint8_t> calibrated_export_pixels =
+        calibrated_export_ok
+            ? decode_png_bgra8(calibrated_output, width, height)
+            : std::vector<std::uint8_t>{};
+    unsigned maximum_calibrated_difference = 0U;
+    if (calibrated_export_pixels.size() == calibrated_pixels.size()) {
+        for (std::size_t index = 0U; index < calibrated_pixels.size(); ++index) {
+            maximum_calibrated_difference = std::max(
+                maximum_calibrated_difference,
+                static_cast<unsigned>(std::abs(
+                    static_cast<int>(calibrated_export_pixels[index]) -
+                    static_cast<int>(calibrated_pixels[index]))));
+        }
+    }
+    expect(
+        calibrated_preview_ok && calibrated_export_ok &&
+            calibrated_pixels != infrared_pixels &&
+            calibrated_export_pixels.size() == calibrated_pixels.size() &&
+            maximum_calibrated_difference <= 1U,
+        "v27 calibration, denoise and texture share the TIFF preview and export recipe");
+
     std::array<std::uint8_t, 32U> wrong_digest = source_identity;
     wrong_digest[0] ^= 0xffU;
     nf_develop_export_request_v19 mismatched = bound;
@@ -3104,6 +3209,7 @@ void test_v18_defect_region_preview_and_export() {
     std::filesystem::remove(cloned_output, ignored);
     std::filesystem::remove(brushed_output, ignored);
     std::filesystem::remove(infrared_output, ignored);
+    std::filesystem::remove(calibrated_output, ignored);
 }
 
 }  // namespace
@@ -3466,6 +3572,7 @@ int main(const int argument_count, const char* const arguments[]) {
     test_v24_contract();
     test_v25_contract();
     test_v26_contract();
+    test_v27_contract();
     test_missing_source_is_not_a_validation_error();
     test_v2_missing_source_is_not_a_validation_error();
     test_v18_defect_region_preview_and_export();
