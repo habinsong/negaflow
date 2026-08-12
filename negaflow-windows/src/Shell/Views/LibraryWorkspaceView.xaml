@@ -113,15 +113,64 @@
                 </StackPanel>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Horizontal" Spacing="8">
                     <Button x:Uid="libraryFilters" Height="28" Padding="6,0" Background="Transparent" BorderThickness="0" IsEnabled="False" />
-                    <Button Height="22" Padding="4,0" Background="Transparent" BorderThickness="0" IsEnabled="False">
+                    <DropDownButton
+                        x:Name="SortButton"
+                        Height="22"
+                        Padding="4,0"
+                        AutomationProperties.AutomationId="negaflow.library.sort"
+                        Background="Transparent"
+                        BorderThickness="0">
                         <StackPanel Orientation="Horizontal" Spacing="3">
-                            <TextBlock x:Uid="sortInputOrder" FontSize="11" />
-                            <FontIcon FontSize="9" Glyph="&#xE70E;" />
+                            <FontIcon x:Name="SortDirectionIcon" FontSize="9" Glyph="&#xE74A;" />
+                            <TextBlock x:Name="SortKeyText" FontSize="11" FontWeight="SemiBold" />
                         </StackPanel>
-                    </Button>
-                    <Button Width="26" Height="24" Padding="0" Background="Transparent" BorderThickness="0" IsEnabled="False">
-                        <FontIcon FontSize="13" Glyph="&#xE80A;" />
-                    </Button>
+                        <DropDownButton.Flyout>
+                            <MenuFlyout>
+                                <MenuFlyoutItem x:Name="SortInputOrderItem" Tag="InputOrder" Click="OnSortKeyClicked" />
+                                <MenuFlyoutItem x:Name="SortTimeItem" Tag="Time" Click="OnSortKeyClicked" />
+                                <MenuFlyoutItem x:Name="SortNameItem" Tag="Name" Click="OnSortKeyClicked" />
+                                <MenuFlyoutItem x:Name="SortFlagItem" Tag="Flag" Click="OnSortKeyClicked" />
+                                <MenuFlyoutItem x:Name="SortRatingItem" Tag="Rating" Click="OnSortKeyClicked" />
+                                <MenuFlyoutItem x:Name="SortFileSizeItem" Tag="FileSize" Click="OnSortKeyClicked" />
+                                <MenuFlyoutSeparator />
+                                <MenuFlyoutItem x:Name="SortAscendingItem" Tag="Ascending" Click="OnSortDirectionClicked" />
+                                <MenuFlyoutItem x:Name="SortDescendingItem" Tag="Descending" Click="OnSortDirectionClicked" />
+                            </MenuFlyout>
+                        </DropDownButton.Flyout>
+                    </DropDownButton>
+                    <StackPanel Orientation="Horizontal" Spacing="1">
+                        <Button
+                            x:Name="CardSizeDecreaseButton"
+                            Width="22"
+                            Height="22"
+                            Padding="0"
+                            AutomationProperties.AutomationId="negaflow.library.card-size.decrease"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Click="OnCardSizeDecreaseClicked"
+                            Content="&#x2212;" />
+                        <Button
+                            x:Name="CardSizeResetButton"
+                            Width="38"
+                            Height="22"
+                            Padding="0"
+                            AutomationProperties.AutomationId="negaflow.library.card-size"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Click="OnCardSizeResetClicked"
+                            FontSize="11"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <Button
+                            x:Name="CardSizeIncreaseButton"
+                            Width="22"
+                            Height="22"
+                            Padding="0"
+                            AutomationProperties.AutomationId="negaflow.library.card-size.increase"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Click="OnCardSizeIncreaseClicked"
+                            Content="+" />
+                    </StackPanel>
                 </StackPanel>
             </Grid>
 
@@ -155,6 +204,7 @@
                         Padding="8,6"
                         AutomationProperties.AutomationId="negaflow.library.frames"
                         ContainerContentChanging="OnFrameContainerChanging"
+                        DoubleTapped="OnFrameDoubleTapped"
                         IsItemClickEnabled="False"
                         SelectionMode="Single">
                         <GridView.GroupStyle>

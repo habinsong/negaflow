@@ -13,8 +13,9 @@ public static class LibraryCardMetrics
     public const double CardPadding = 8.0;
     public const double TitleHeight = 15.0;
 
-    public const double MinimumScale = 0.5;
-    public const double MaximumScale = 2.0;
+    public const double MinimumScale = 0.72;
+    public const double MaximumScale = 1.42;
+    public const double ScaleStep = 0.08;
 
     private static double scale = 1.0;
 

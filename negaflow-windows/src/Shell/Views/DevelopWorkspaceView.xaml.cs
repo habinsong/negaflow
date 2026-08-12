@@ -226,13 +226,23 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private void OnFilmstripFrameSelected(object? sender, LibraryFrameListItem item)
     {
         _ = sender;
+        SelectFrame(item.Id);
+    }
+
+    /// <summary>
+    /// 라이브러리에서 넘어온 frame 을 고릅니다. 목록에 없으면 아무 것도 바꾸지 않습니다 —
+    /// 방금 지워진 frame 때문에 보고 있던 사진이 바뀌지 않게 합니다.
+    /// </summary>
+    public void SelectFrame(string frameId)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(frameId);
         if (FrameSelector.ItemsSource is not IReadOnlyList<LibraryFrameListItem> current)
         {
             return;
         }
         for (int index = 0; index < current.Count; ++index)
         {
-            if (string.Equals(current[index].Id, item.Id, StringComparison.Ordinal))
+            if (string.Equals(current[index].Id, frameId, StringComparison.Ordinal))
             {
                 FrameSelector.SelectedIndex = index;
                 return;

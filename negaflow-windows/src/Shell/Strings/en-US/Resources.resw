@@ -648,4 +648,12 @@ Load a scanner from Library to scan film.</value>
   <data name="developCropArea.Text" xml:space="preserve"><value>Crop area</value></data>
   <data name="rating.Value" xml:space="preserve"><value>Rating</value></data>
   <data name="ratingAccessibility.Value" xml:space="preserve"><value>Rating %d</value></data>
+  <data name="sortTime.Text" xml:space="preserve"><value>Time</value><comment>AppLocalizedPhrase.sortTime</comment></data>
+  <data name="sortName.Text" xml:space="preserve"><value>Name</value><comment>AppLocalizedPhrase.sortName</comment></data>
+  <data name="sortFlag.Text" xml:space="preserve"><value>Flag</value><comment>AppLocalizedPhrase.sortFlag</comment></data>
+  <data name="sortRating.Text" xml:space="preserve"><value>Rating</value><comment>AppLocalizedPhrase.sortRating</comment></data>
+  <data name="sortFileSize.Text" xml:space="preserve"><value>Size</value><comment>AppLocalizedPhrase.sortSize</comment></data>
+  <data name="sortAscending.Text" xml:space="preserve"><value>Ascending</value><comment>AppLocalizedPhrase.ascending</comment></data>
+  <data name="sortDescending.Text" xml:space="preserve"><value>Descending</value><comment>AppLocalizedPhrase.descending</comment></data>
+  <data name="frameCardSizeHelp.Value" xml:space="preserve"><value>Frame card size</value><comment>AppLocalizedPhrase.frameCardSizeHelp</comment></data>
 </root>

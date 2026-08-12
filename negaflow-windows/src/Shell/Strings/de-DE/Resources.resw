@@ -648,4 +648,12 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developCropArea.Text" xml:space="preserve"><value>Zuschneidebereich</value></data>
   <data name="rating.Value" xml:space="preserve"><value>Bewertung</value></data>
   <data name="ratingAccessibility.Value" xml:space="preserve"><value>Bewertung %d</value></data>
+  <data name="sortTime.Text" xml:space="preserve"><value>Zeit</value><comment>AppLocalizedPhrase.sortTime</comment></data>
+  <data name="sortName.Text" xml:space="preserve"><value>Name</value><comment>AppLocalizedPhrase.sortName</comment></data>
+  <data name="sortFlag.Text" xml:space="preserve"><value>Markierung</value><comment>AppLocalizedPhrase.sortFlag</comment></data>
+  <data name="sortRating.Text" xml:space="preserve"><value>Bewertung</value><comment>AppLocalizedPhrase.sortRating</comment></data>
+  <data name="sortFileSize.Text" xml:space="preserve"><value>Größe</value><comment>AppLocalizedPhrase.sortSize</comment></data>
+  <data name="sortAscending.Text" xml:space="preserve"><value>Aufsteigend</value><comment>AppLocalizedPhrase.ascending</comment></data>
+  <data name="sortDescending.Text" xml:space="preserve"><value>Absteigend</value><comment>AppLocalizedPhrase.descending</comment></data>
+  <data name="frameCardSizeHelp.Value" xml:space="preserve"><value>Größe der Miniaturen</value><comment>AppLocalizedPhrase.frameCardSizeHelp</comment></data>
 </root>

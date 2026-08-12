@@ -1,6 +1,33 @@
 # 구현·검증 상태
 
-기준일: 2026-08-12
+기준일: 2026-08-13
+
+## 2026-08-13 Library thumbnails, frame cards, filmstrip, crop canvas
+
+라이브러리가 텍스트 목록이 아니라 macOS 카드 격자입니다. 카드 한 장은 현상된 썸네일, 이름,
+필름 종류, 별점이며 치수는 macOS `LibraryGridCardLayout`/`cardSize` 를 그대로 씁니다 —
+폭 190·배율, 썸네일 3:2, 제목까지 3pt, 별점 줄 14pt. 필름스트립도 같은 카드를 쓰고 현상 대상
+선택을 구동하며, 카드 크기는 macOS `FilmstripSizing` 산술로 스트립 높이에서 나옵니다.
+
+썸네일은 캔버스와 **같은 현상 파이프라인**을 macOS 와 같은 360pt 상한으로 돌려 만들고, 동시
+렌더는 macOS 와 같은 폭 3 입니다. 캔버스 미리보기가 정착하면 그 픽셀을 그대로 넘겨받아 같은
+그림을 두 번 현상하지 않습니다. 결과는 JPEG(품질 0.85, WIC)로 `Cache/Thumbnails` 에 남아
+재실행 때 다시 현상하지 않고 격자를 채웁니다. 프레임마다 마지막 쓰기만 남기는 단일 워커라
+슬라이더를 끄는 동안 같은 카드의 인코딩이 쌓이지 않습니다.
+
+별점이 catalog projection 에 들어왔습니다. macOS 와 같은 최상위 `rating` 키이며 0...5 를 벗어난
+값은 잘라내지 않고 거부합니다 — 카탈로그가 손상됐다는 뜻이기 때문입니다.
+
+Develop canvas 에 crop session 이 붙었습니다. 진입하면 macOS 처럼 저장된 crop 을 지워 전체를
+보이고, 선택은 y-down 표시 좌표로 다루다 Apply 에서만 y-up engine 사각형을 씁니다. Full 은
+복원 기준까지 지우고 Cancel 은 이전 crop 을 되돌리며 Escape 가 취소입니다. 오버레이 상수는
+macOS `CropOverlay` 와 같습니다(0.45 dim, 1.5pt 흰 테두리·반경 2, 0.34 삼분할 0.5pt, 14/24pt 손잡이).
+
+**검증:** x64 Debug 로 실제 앱을 띄워 라이브러리 격자와 현상 화면, 필름스트립을 확인했고,
+실촬영 스캔(`negaflow-mac/.../Frame.tiff`, 1.5MB 컬러 네거티브)을 가져와 360px 썸네일이 올바른
+색으로 현상돼 디스크 캐시에 남는 것까지 확인했습니다. managed Shell 428 / Catalog 608 assertion
+통과. **아직 하지 않은 것:** x64 Release 와 ARM64 cross-build, native CTest 전체, 대량(수백 장)
+라이브러리에서의 격자 스크롤·썸네일 큐 실측.
 
 ## 2026-08-12 JPEG/PNG standard-image import and develop
 

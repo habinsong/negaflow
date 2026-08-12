@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Negaflow.Catalog;
 using Negaflow.Shell.Library;
@@ -22,6 +23,8 @@ public sealed partial class LibraryWorkspaceView : UserControl
     private IReadOnlyList<LibraryFrameListItem> allItems = [];
     private LibraryBrowserViewMode viewMode = LibraryBrowserViewMode.Folders;
     private FilmType selectedFilmType = FilmType.ColorNegative;
+    private LibrarySortKey sortKey = LibrarySortKey.InputOrder;
+    private bool sortAscending = true;
 
     public LibraryWorkspaceView()
     {
@@ -171,6 +174,25 @@ public sealed partial class LibraryWorkspaceView : UserControl
         }
     }
 
+    /// <summary>
+    /// 카드를 두 번 누르면 그 frame 을 들고 현상으로 넘어갑니다. macOS 와 같은 진입 방식이며,
+    /// 두 화면이 각자 목록을 들고 있어 생기던 "어떤 사진을 보고 있었는지" 불일치를 없앱니다.
+    /// </summary>
+    private void OnFrameDoubleTapped(object sender, DoubleTappedRoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (FrameListView.SelectedItem is not LibraryFrameListItem item)
+        {
+            return;
+        }
+        FrameOpenRequested?.Invoke(this, item);
+        workspaceState?.SelectWorkspace(WorkspaceModule.Develop);
+    }
+
+    /// <summary>사용자가 라이브러리에서 현상으로 넘기려는 frame 입니다.</summary>
+    public event EventHandler<LibraryFrameListItem>? FrameOpenRequested;
+
     private void OnRatingCommitted(object? sender, int rating)
     {
         if (libraryHost is null ||
@@ -200,8 +222,12 @@ public sealed partial class LibraryWorkspaceView : UserControl
 
     private void ShowFilteredItems()
     {
-        IReadOnlyList<LibraryFrameListItem> items =
-            LibraryFrameListItems.Filter(allItems, LibrarySearchBox?.Text ?? string.Empty);
+        IReadOnlyList<LibraryFrameListItem> items = LibrarySorter.Sort(
+            LibraryFrameListItems.Filter(allItems, LibrarySearchBox?.Text ?? string.Empty),
+            sortKey,
+            sortAscending);
+        UpdateSortControls();
+        UpdateCardSizeControls();
         if (libraryHost is null)
         {
             FrameListView.ItemsSource = items;
@@ -228,6 +254,110 @@ public sealed partial class LibraryWorkspaceView : UserControl
         LibraryCountText.Text = projection.MatchedCount.ToString(CultureInfo.CurrentCulture);
         UpdateViewModeControls();
     }
+
+    private void OnSortKeyClicked(object sender, RoutedEventArgs args)
+    {
+        _ = args;
+        if (sender is not MenuFlyoutItem { Tag: string value } ||
+            !Enum.TryParse(value, out LibrarySortKey key))
+        {
+            return;
+        }
+        sortKey = key;
+        ShowFilteredItems();
+    }
+
+    private void OnSortDirectionClicked(object sender, RoutedEventArgs args)
+    {
+        _ = args;
+        if (sender is not MenuFlyoutItem { Tag: string value })
+        {
+            return;
+        }
+        sortAscending = string.Equals(value, "Ascending", StringComparison.Ordinal);
+        ShowFilteredItems();
+    }
+
+    private void OnCardSizeDecreaseClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        SetCardScale(LibraryCardMetrics.Scale - LibraryCardMetrics.ScaleStep);
+    }
+
+    private void OnCardSizeIncreaseClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        SetCardScale(LibraryCardMetrics.Scale + LibraryCardMetrics.ScaleStep);
+    }
+
+    /// <summary>퍼센트를 누르면 100% 로 돌아갑니다 — macOS 와 같습니다.</summary>
+    private void OnCardSizeResetClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        SetCardScale(1.0);
+    }
+
+    private void SetCardScale(double scale)
+    {
+        LibraryCardMetrics.Scale = scale;
+        UpdateCardSizeControls();
+        // 카드 크기는 컨테이너에서 정해지므로 항목을 다시 붙여야 새 크기로 재어집니다.
+        ShowFilteredItems();
+    }
+
+    private void UpdateCardSizeControls()
+    {
+        double scale = LibraryCardMetrics.Scale;
+        CardSizeResetButton.Content = string.Create(
+            CultureInfo.CurrentCulture,
+            $"{(int)Math.Round(scale * 100.0)}%");
+        CardSizeDecreaseButton.IsEnabled = scale > LibraryCardMetrics.MinimumScale;
+        CardSizeIncreaseButton.IsEnabled = scale < LibraryCardMetrics.MaximumScale;
+    }
+
+    private void UpdateSortControls()
+    {
+        SortKeyText.Text = SortKeyName(sortKey);
+        SortDirectionIcon.Glyph = sortAscending ? "" : "";
+        AutomationProperties.SetName(SortButton, SortKeyText.Text);
+        foreach ((MenuFlyoutItem item, LibrarySortKey key) in SortMenuItems())
+        {
+            AutomationProperties.SetItemStatus(
+                item,
+                AppResources.Get(key == sortKey ? "selected" : "notSelected", "Value"));
+        }
+        AutomationProperties.SetItemStatus(
+            SortAscendingItem,
+            AppResources.Get(sortAscending ? "selected" : "notSelected", "Value"));
+        AutomationProperties.SetItemStatus(
+            SortDescendingItem,
+            AppResources.Get(sortAscending ? "notSelected" : "selected", "Value"));
+    }
+
+    private IEnumerable<(MenuFlyoutItem Item, LibrarySortKey Key)> SortMenuItems()
+    {
+        yield return (SortInputOrderItem, LibrarySortKey.InputOrder);
+        yield return (SortTimeItem, LibrarySortKey.Time);
+        yield return (SortNameItem, LibrarySortKey.Name);
+        yield return (SortFlagItem, LibrarySortKey.Flag);
+        yield return (SortRatingItem, LibrarySortKey.Rating);
+        yield return (SortFileSizeItem, LibrarySortKey.FileSize);
+    }
+
+    private static string SortKeyName(LibrarySortKey key) => AppResources.Get(
+        key switch
+        {
+            LibrarySortKey.Time => "sortTime",
+            LibrarySortKey.Name => "sortName",
+            LibrarySortKey.Flag => "sortFlag",
+            LibrarySortKey.Rating => "sortRating",
+            LibrarySortKey.FileSize => "sortFileSize",
+            _ => "sortInputOrder",
+        },
+        "Text");
 
     private void OnAllModeClicked(object sender, RoutedEventArgs args)
     {
@@ -517,6 +647,22 @@ public sealed partial class LibraryWorkspaceView : UserControl
         SetMenuItemText(ColorPositiveFilmTypeItem, AppResources.Get("filmTypeColorPositive", "Text"));
         SetMenuItemText(BlackAndWhiteNegativeFilmTypeItem, AppResources.Get("filmTypeBlackAndWhiteNegative", "Text"));
         SetMenuItemText(BlackAndWhitePositiveFilmTypeItem, AppResources.Get("filmTypeBlackAndWhitePositive", "Text"));
+        SetMenuItemText(SortInputOrderItem, AppResources.Get("sortInputOrder", "Text"));
+        SetMenuItemText(SortTimeItem, AppResources.Get("sortTime", "Text"));
+        SetMenuItemText(SortNameItem, AppResources.Get("sortName", "Text"));
+        SetMenuItemText(SortFlagItem, AppResources.Get("sortFlag", "Text"));
+        SetMenuItemText(SortRatingItem, AppResources.Get("sortRating", "Text"));
+        SetMenuItemText(SortFileSizeItem, AppResources.Get("sortFileSize", "Text"));
+        SetMenuItemText(SortAscendingItem, AppResources.Get("sortAscending", "Text"));
+        SetMenuItemText(SortDescendingItem, AppResources.Get("sortDescending", "Text"));
+        string cardSizeHelp = AppResources.Get("frameCardSizeHelp", "Value");
+        foreach (Button button in new[] { CardSizeDecreaseButton, CardSizeResetButton, CardSizeIncreaseButton })
+        {
+            AutomationProperties.SetName(button, cardSizeHelp);
+            ToolTipService.SetToolTip(button, cardSizeHelp);
+        }
+        UpdateSortControls();
+        UpdateCardSizeControls();
         UpdateViewModeControls();
         LibraryCountText.Text = AppResources.FormatIntegers(
             "libraryResultCountFormat",

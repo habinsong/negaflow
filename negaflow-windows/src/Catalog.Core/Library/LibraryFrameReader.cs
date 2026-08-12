@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 
 namespace Negaflow.Catalog;
@@ -23,6 +24,8 @@ public static class LibraryFrameReader
     public const string InfraredPathName = "infraredScanPath";
     internal const string DisplayNameName = "customDisplayName";
     internal const string RatingName = "rating";
+    internal const string PickStateName = "pickState";
+    internal const string ScannedAtName = "scannedAt";
     internal const string ParametersName = "params";
     internal const string BaseEstimationModeName = "baseEstimationMode";
     internal const string ManualBaseName = "manualBaseRGB";
@@ -167,6 +170,14 @@ public static class LibraryFrameReader
         {
             return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidRating);
         }
+        if (!TryReadPickState(frameRecord, out FramePickState pickState))
+        {
+            return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidPickState);
+        }
+        if (!TryReadScannedAt(frameRecord, out DateTimeOffset? scannedAt))
+        {
+            return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidScannedAt);
+        }
 
         if (!frameRecord.TryGetProperty(ParametersName, out JsonElement parameters) ||
             parameters.ValueKind != JsonValueKind.Object)
@@ -266,7 +277,76 @@ public static class LibraryFrameReader
             Texture = texture,
             NoiseReduction = noiseReduction,
             Rating = rating,
+            PickState = pickState,
+            ScannedAt = scannedAt,
         });
+    }
+
+    /// <summary>
+    /// macOS <c>FramePickState</c> 의 raw value 입니다. 키가 없으면 깃발 없음입니다.
+    /// </summary>
+    private static bool TryReadPickState(JsonElement frameRecord, out FramePickState pickState)
+    {
+        pickState = FramePickState.Unflagged;
+        if (!frameRecord.TryGetProperty(PickStateName, out JsonElement element) ||
+            element.ValueKind == JsonValueKind.Null)
+        {
+            return true;
+        }
+        if (element.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+        switch (element.GetString())
+        {
+            case "unflagged":
+                return true;
+            case "picked":
+                pickState = FramePickState.Picked;
+                return true;
+            case "rejected":
+                pickState = FramePickState.Rejected;
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    /// <summary>
+    /// 스캔·가져오기 시각입니다. 시간순 정렬에만 씁니다. Swift 는 이 자리를 초 단위 실수로도
+    /// 쓰므로 두 형태를 모두 읽습니다. 없는 legacy row 는 null 로 두고 정렬에서 뒤로 보냅니다.
+    /// </summary>
+    private static bool TryReadScannedAt(JsonElement frameRecord, out DateTimeOffset? scannedAt)
+    {
+        scannedAt = null;
+        if (!frameRecord.TryGetProperty(ScannedAtName, out JsonElement element) ||
+            element.ValueKind == JsonValueKind.Null)
+        {
+            return true;
+        }
+        if (element.ValueKind == JsonValueKind.String)
+        {
+            if (!DateTimeOffset.TryParse(
+                    element.GetString(),
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.RoundtripKind,
+                    out DateTimeOffset parsed))
+            {
+                return false;
+            }
+            scannedAt = parsed;
+            return true;
+        }
+        if (element.ValueKind != JsonValueKind.Number ||
+            !element.TryGetDouble(out double seconds) ||
+            !double.IsFinite(seconds))
+        {
+            return false;
+        }
+        // Swift 의 기준 시각은 2001-01-01 UTC 입니다.
+        scannedAt = new DateTimeOffset(2001, 1, 1, 0, 0, 0, TimeSpan.Zero)
+            .AddSeconds(seconds);
+        return true;
     }
 
     /// <summary>

@@ -28,6 +28,7 @@ internal static class Program
         VerifyDevelopInspectorPresentationState();
         VerifyCropSession();
         VerifyThumbnailScaler();
+        VerifyLibrarySorter();
         VerifyDevelopHistogramSampler();
         VerifyDevelopPanelState();
         VerifyInspectorSliderValue();
@@ -210,6 +211,45 @@ internal static class Program
         byte[] wide = new byte[1000 * 10 * 4];
         _ = ThumbnailScaler.Reduce(wide, 1000, 10, 360, out int boundWidth, out int boundHeight);
         Check(Math.Max(boundWidth, boundHeight) <= 360, "thumbnail_scaler_never_exceeds_maximum");
+    }
+
+    /// <summary>
+    /// 정렬은 macOS 비교자를 그대로 옮긴 것입니다. 사람이 읽는 숫자 순서와, 값이 같을 때
+    /// 입력 순서가 지켜지는지가 실제로 눈에 띄는 두 가지입니다.
+    /// </summary>
+    private static void VerifyLibrarySorter()
+    {
+        LibraryFrameListItem Item(string id, string name, int rating) =>
+            new(Frame(new ManualBaseRgb(0.2, 0.2, 0.2), displayName: name) with
+            {
+                Id = id,
+                Rating = rating,
+            });
+
+        LibraryFrameListItem[] source =
+        [
+            Item("a", "사진 10", 1),
+            Item("b", "사진 2", 5),
+            Item("c", "사진 1", 1),
+        ];
+
+        IReadOnlyList<LibraryFrameListItem> byName = LibrarySorter.Sort(
+            source, LibrarySortKey.Name, ascending: true);
+        Check(
+            byName[0].DisplayName == "사진 1" &&
+            byName[1].DisplayName == "사진 2" &&
+            byName[2].DisplayName == "사진 10",
+            "library_sort_name_reads_numbers_as_numbers");
+
+        IReadOnlyList<LibraryFrameListItem> byRating = LibrarySorter.Sort(
+            source, LibrarySortKey.Rating, ascending: false);
+        Check(
+            byRating[0].Id == "b" && byRating[1].Id == "a" && byRating[2].Id == "c",
+            "library_sort_rating_keeps_input_order_within_ties");
+
+        Check(
+            ReferenceEquals(LibrarySorter.Sort(source, LibrarySortKey.InputOrder, ascending: false), source),
+            "library_sort_input_order_never_reorders");
     }
 
     private static void VerifyCropSession()

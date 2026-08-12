@@ -648,4 +648,12 @@
   <data name="developCropArea.Text" xml:space="preserve"><value>자르기 영역</value></data>
   <data name="rating.Value" xml:space="preserve"><value>별점</value></data>
   <data name="ratingAccessibility.Value" xml:space="preserve"><value>별점 %d</value></data>
+  <data name="sortTime.Text" xml:space="preserve"><value>시간순</value><comment>AppLocalizedPhrase.sortTime</comment></data>
+  <data name="sortName.Text" xml:space="preserve"><value>이름순</value><comment>AppLocalizedPhrase.sortName</comment></data>
+  <data name="sortFlag.Text" xml:space="preserve"><value>플래그</value><comment>AppLocalizedPhrase.sortFlag</comment></data>
+  <data name="sortRating.Text" xml:space="preserve"><value>별점</value><comment>AppLocalizedPhrase.sortRating</comment></data>
+  <data name="sortFileSize.Text" xml:space="preserve"><value>크기순</value><comment>AppLocalizedPhrase.sortSize</comment></data>
+  <data name="sortAscending.Text" xml:space="preserve"><value>오름차순</value><comment>AppLocalizedPhrase.ascending</comment></data>
+  <data name="sortDescending.Text" xml:space="preserve"><value>내림차순</value><comment>AppLocalizedPhrase.descending</comment></data>
+  <data name="frameCardSizeHelp.Value" xml:space="preserve"><value>사진 카드 크기</value><comment>AppLocalizedPhrase.frameCardSizeHelp</comment></data>
 </root>

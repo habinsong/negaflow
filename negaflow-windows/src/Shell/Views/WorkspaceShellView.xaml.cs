@@ -54,6 +54,7 @@ public sealed partial class WorkspaceShellView : UserControl
             }
         }
         DevelopWorkspace.Initialize(state, nativeEngineStatus);
+        LibraryWorkspace.FrameOpenRequested += OnLibraryFrameOpenRequested;
         Toolbar.QuickExportRequested += OnToolbarQuickExportRequested;
         DevelopWorkspace.QuickExportAvailabilityChanged += OnQuickExportAvailabilityChanged;
         // 한계값은 엔진이 알려 줍니다. 엔진을 못 읽으면 슬라이더 범위를 지어내는 대신
@@ -78,6 +79,12 @@ public sealed partial class WorkspaceShellView : UserControl
         state.Changed += OnStateChanged;
         UpdateWorkspace(state.Current.SelectedWorkspace);
         Unloaded += OnUnloaded;
+    }
+
+    private void OnLibraryFrameOpenRequested(object? sender, LibraryFrameListItem item)
+    {
+        _ = sender;
+        DevelopWorkspace.SelectFrame(item.Id);
     }
 
     private void OnToolbarSettingsRequested(object? sender, EventArgs args)

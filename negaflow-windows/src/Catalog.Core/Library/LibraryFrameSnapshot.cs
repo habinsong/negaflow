@@ -136,6 +136,14 @@ public enum BaseEstimationMode
     Manual,
 }
 
+/// <summary>macOS <c>FramePickState</c> 와 같은 채택 깃발입니다.</summary>
+public enum FramePickState
+{
+    Unflagged,
+    Picked,
+    Rejected,
+}
+
 public enum DevelopTarget
 {
     Main,
@@ -239,6 +247,12 @@ public sealed record LibraryFrameSnapshot(
 
     /// <summary>macOS 와 같은 0...5 별점입니다. 현상에 쓰이지 않고 라이브러리 표시·정렬·필터에만 씁니다.</summary>
     public int Rating { get; init; }
+
+    /// <summary>macOS 의 채택/제외 깃발입니다. 정렬과 필터에만 씁니다.</summary>
+    public FramePickState PickState { get; init; }
+
+    /// <summary>스캔·가져오기 시각입니다. 없는 legacy row 는 null 이며 시간순에서 뒤로 갑니다.</summary>
+    public DateTimeOffset? ScannedAt { get; init; }
 
     public TextureRecipe Texture { get; init; } = TextureRecipe.Identity;
 

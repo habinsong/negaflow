@@ -648,4 +648,12 @@
   <data name="developCropArea.Text" xml:space="preserve"><value>トリミング範囲</value></data>
   <data name="rating.Value" xml:space="preserve"><value>評価</value></data>
   <data name="ratingAccessibility.Value" xml:space="preserve"><value>評価 %d</value></data>
+  <data name="sortTime.Text" xml:space="preserve"><value>時刻順</value><comment>AppLocalizedPhrase.sortTime</comment></data>
+  <data name="sortName.Text" xml:space="preserve"><value>名前順</value><comment>AppLocalizedPhrase.sortName</comment></data>
+  <data name="sortFlag.Text" xml:space="preserve"><value>フラグ</value><comment>AppLocalizedPhrase.sortFlag</comment></data>
+  <data name="sortRating.Text" xml:space="preserve"><value>評価</value><comment>AppLocalizedPhrase.sortRating</comment></data>
+  <data name="sortFileSize.Text" xml:space="preserve"><value>サイズ順</value><comment>AppLocalizedPhrase.sortSize</comment></data>
+  <data name="sortAscending.Text" xml:space="preserve"><value>昇順</value><comment>AppLocalizedPhrase.ascending</comment></data>
+  <data name="sortDescending.Text" xml:space="preserve"><value>降順</value><comment>AppLocalizedPhrase.descending</comment></data>
+  <data name="frameCardSizeHelp.Value" xml:space="preserve"><value>サムネイルのサイズ</value><comment>AppLocalizedPhrase.frameCardSizeHelp</comment></data>
 </root>
