@@ -523,6 +523,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         HalationControl.Value = texture.Halation;
         VignetteControl.Value = texture.Vignette;
         StraightenAngleControl.Value = panel.ImageTransform.StraightenAngle;
+        CropAngleDialControl.Angle = panel.ImageTransform.StraightenAngle;
         UpdateCropAspectControls();
         HistogramView.SynchronizeValues(
             panel.Shadows,
@@ -657,6 +658,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
             return;
         }
         cropSession = next;
+        CropAngleDialControl.Visibility = Visibility.Visible;
         cropAwaitingPreview = true;
         CanvasHost.Focus(FocusState.Programmatic);
         RequestPreview();
@@ -718,6 +720,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         cropDragMode = CropDragMode.None;
         cropAwaitingPreview = false;
         CropOverlay.Visibility = Visibility.Collapsed;
+        CropAngleDialControl.Visibility = Visibility.Collapsed;
     }
 
     private void OnCanvasSizeChanged(object sender, SizeChangedEventArgs args)
@@ -1483,6 +1486,16 @@ public sealed partial class DevelopWorkspaceView : UserControl
             return;
         }
         UpdateImageTransform(state => state.SetStraightenAngle(args.Value));
+    }
+
+    private void OnCropAngleDialChanged(object? sender, double angle)
+    {
+        _ = sender;
+        if (isSynchronizingInspector)
+        {
+            return;
+        }
+        UpdateImageTransform(state => state.SetStraightenAngle(angle));
     }
 
     /// <summary>비율 목록 한 칸입니다. 화면에 나가는 이름만 여기서 만듭니다.</summary>

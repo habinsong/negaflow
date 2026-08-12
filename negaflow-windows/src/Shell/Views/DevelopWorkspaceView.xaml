@@ -470,6 +470,14 @@
                                     <Button x:Name="FlipHorizontalButton" Grid.Column="3" AutomationProperties.AutomationId="negaflow.develop.geometry.flip-horizontal" Click="OnFlipHorizontalClicked"><FontIcon Glyph="&#xE7B7;" /></Button>
                                     <Button x:Name="FlipVerticalButton" Grid.Column="4" AutomationProperties.AutomationId="negaflow.develop.geometry.flip-vertical" Click="OnFlipVerticalClicked"><FontIcon Glyph="&#xE7B8;" /></Button>
                                 </Grid>
+                                <!-- macOS 는 crop 모드에서만 다이얼을 내놓습니다. -->
+                                <controls:CropAngleDial
+                                    x:Name="CropAngleDialControl"
+                                    Margin="0,2,0,0"
+                                    HorizontalAlignment="Center"
+                                    AutomationProperties.AutomationId="negaflow.develop.geometry.angle-dial"
+                                    AngleCommitted="OnCropAngleDialChanged"
+                                    Visibility="Collapsed" />
                                 <controls:InspectorSlider x:Name="StraightenAngleControl" HorizontalAlignment="Stretch" ResetValue="0" SliderAutomationId="negaflow.develop.geometry.straighten-angle" ValueChanged="OnStraightenAngleChanged" />
                                 <!-- macOS 처럼 이름은 왼쪽, 값과 잠금은 오른쪽 끝에 붙습니다. -->
                                 <Grid HorizontalAlignment="Stretch">
