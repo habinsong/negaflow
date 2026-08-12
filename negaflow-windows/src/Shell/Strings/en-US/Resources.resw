@@ -188,6 +188,14 @@ Load a scanner from Library to scan film.</value>
     <value>Import Photos</value>
     <comment>AppLocalizedText.importImages</comment>
   </data>
+  <data name="importFolder.Content" xml:space="preserve">
+    <value>Import Folder</value>
+    <comment>AppLocalizedText.importFolder</comment>
+  </data>
+  <data name="libraryFolderImportResult.Text" xml:space="preserve">
+    <value>Imported %d photos from %d folders.</value>
+    <comment>AppLocalizedText.libraryFolderImportResult</comment>
+  </data>
   <data name="importImages.Text" xml:space="preserve">
     <value>Import Photos</value>
     <comment>AppLocalizedText.importImages</comment>

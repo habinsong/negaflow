@@ -188,6 +188,14 @@
     <value>画像を読み込む</value>
     <comment>AppLocalizedText.importImages</comment>
   </data>
+  <data name="importFolder.Content" xml:space="preserve">
+    <value>フォルダを読み込む</value>
+    <comment>AppLocalizedText.importFolder</comment>
+  </data>
+  <data name="libraryFolderImportResult.Text" xml:space="preserve">
+    <value>%d 枚の写真を %d 個のフォルダから読み込みました。</value>
+    <comment>AppLocalizedText.libraryFolderImportResult</comment>
+  </data>
   <data name="importImages.Text" xml:space="preserve">
     <value>画像を読み込む</value>
     <comment>AppLocalizedText.importImages</comment>

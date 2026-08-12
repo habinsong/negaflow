@@ -70,6 +70,7 @@
                             <StackPanel Spacing="9">
                                 <TextBlock x:Uid="importHint" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
                                 <Button x:Name="ImportImagesButton" Click="OnImportClicked" />
+                                <Button x:Name="ImportFoldersButton" Click="OnImportFoldersClicked" />
                                 <TextBlock x:Name="ImportStatusText" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
                             </StackPanel>
                         </Border>

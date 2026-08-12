@@ -8,6 +8,16 @@
 editing, importing, relinking, or writing a defect sidecar updates frames. x64 Debug managed
 build passed Catalog 595 and Shell 365 assertions.
 
+## 2026-08-12 Library folder import
+
+Library now records source folders independently from frames, keeps empty folders, scans only
+top-level TIFF files in stable name order, and commits the new folder rows and frame rows in one
+catalog write. The Import panel exposes the Windows App SDK 1.8 folder picker; the fixed runtime
+provides one-folder selection, while the backend accepts a batch for later drag/drop or command
+surfaces. All six locales are present. x64 Debug managed build passed Catalog 595 and Shell 370
+assertions. Recursive import, folder tree display, folder removal, and real-picker interaction
+automation remain unverified.
+
 ## 2026-08-12 Positive film develop route
 
 네이티브 엔진과 request factory가 이미 지원하던 Color/B&W positive film scan이 catalog `CanDevelop`

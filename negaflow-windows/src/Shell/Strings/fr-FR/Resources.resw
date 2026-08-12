@@ -188,6 +188,14 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
     <value>Importer des images</value>
     <comment>AppLocalizedText.importImages</comment>
   </data>
+  <data name="importFolder.Content" xml:space="preserve">
+    <value>Importer un dossier</value>
+    <comment>AppLocalizedText.importFolder</comment>
+  </data>
+  <data name="libraryFolderImportResult.Text" xml:space="preserve">
+    <value>%d photos importées depuis %d dossiers.</value>
+    <comment>AppLocalizedText.libraryFolderImportResult</comment>
+  </data>
   <data name="importImages.Text" xml:space="preserve">
     <value>Importer des images</value>
     <comment>AppLocalizedText.importImages</comment>

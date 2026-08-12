@@ -71,6 +71,9 @@ public sealed class LibraryHostService : IDisposable
     public IReadOnlyList<LibraryFrameIssue> Issues =>
         document?.Issues ?? [];
 
+    public IReadOnlyList<LibraryFolderSnapshot> Folders =>
+        document?.Folders ?? [];
+
     public bool IsExporting => coordinator.IsRunning;
 
     public LibraryHostState Open(StorageRootSet roots)
@@ -125,6 +128,31 @@ public sealed class LibraryHostService : IDisposable
             _ = document.AppendAndSave(plan.Rows, out _);
         }
         return plan;
+    }
+
+    public FolderImportResult ImportFolders(
+        IReadOnlyList<string> folderPaths,
+        DevelopmentProcess process)
+    {
+        ArgumentNullException.ThrowIfNull(folderPaths);
+        if (document is null)
+        {
+            FolderImportPlan unavailable = new(
+                [],
+                new FrameImportPlan([], [new FrameImportRejection(
+                    string.Empty,
+                    FrameImportRefusal.NoFiles)]),
+                [new FolderImportRejection(string.Empty, FolderImportRefusal.NoFolders)]);
+            return new FolderImportResult(unavailable, 0, 0, CatalogStoreError.NotFound);
+        }
+
+        FolderImportPlan plan = FolderImport.Plan(folderPaths, document.Frames, process);
+        CatalogStoreError save = document.AppendFoldersAndFramesAndSave(
+            plan.Folders,
+            plan.Frames.Rows,
+            out int addedFolders,
+            out int addedFrames);
+        return new FolderImportResult(plan, addedFolders, addedFrames, save);
     }
 
     /// <summary>

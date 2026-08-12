@@ -87,6 +87,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
 
         ImportImagesButton.IsEnabled = false;
         EmptyImportImagesButton.IsEnabled = false;
+        ImportFoldersButton.IsEnabled = false;
         ImportStatusText.Text = string.Empty;
         try
         {
@@ -109,6 +110,62 @@ public sealed partial class LibraryWorkspaceView : UserControl
         {
             ImportImagesButton.IsEnabled = true;
             EmptyImportImagesButton.IsEnabled = true;
+            ImportFoldersButton.IsEnabled = true;
+        }
+    }
+
+    private async void OnImportFoldersClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (libraryHost is null || importWindowId is null)
+        {
+            return;
+        }
+
+        Microsoft.Windows.Storage.Pickers.FolderPicker picker = new(importWindowId.Value)
+        {
+            CommitButtonText = AppResources.Get("importFolder", "Content"),
+        };
+
+        ImportImagesButton.IsEnabled = false;
+        EmptyImportImagesButton.IsEnabled = false;
+        ImportFoldersButton.IsEnabled = false;
+        ImportStatusText.Text = string.Empty;
+        try
+        {
+            Microsoft.Windows.Storage.Pickers.PickFolderResult? picked =
+                await picker.PickSingleFolderAsync();
+            if (picked is null)
+            {
+                return;
+            }
+
+            FolderImportResult imported = libraryHost.ImportFolders(
+                [picked.Path],
+                DevelopmentProcess.C41);
+            if (!imported.IsSuccess)
+            {
+                ImportStatusText.Text = AppResources.Get("libraryImportFailed", "Text");
+                return;
+            }
+            ImportStatusText.Text = AppResources.FormatIntegers(
+                "libraryFolderImportResult",
+                "Text",
+                imported.AddedFrameCount,
+                imported.AddedFolderCount);
+            ShowLibrary(libraryHost, importWindowId.Value);
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or
+            NotSupportedException or ArgumentException or PathTooLongException)
+        {
+            ImportStatusText.Text = AppResources.Get("libraryImportFailed", "Text");
+        }
+        finally
+        {
+            ImportImagesButton.IsEnabled = true;
+            EmptyImportImagesButton.IsEnabled = true;
+            ImportFoldersButton.IsEnabled = true;
         }
     }
 
@@ -210,6 +267,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
         string importImages = AppResources.Get("importImages", "Content");
         SetButtonText(ImportImagesButton, importImages);
         SetButtonText(EmptyImportImagesButton, importImages);
+        SetButtonText(ImportFoldersButton, AppResources.Get("importFolder", "Content"));
         LibraryCountText.Text = AppResources.FormatIntegers(
             "libraryResultCountFormat",
             "Value",

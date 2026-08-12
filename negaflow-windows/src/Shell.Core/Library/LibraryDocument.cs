@@ -89,6 +89,7 @@ public sealed class LibraryDocument : IDisposable
     private readonly List<JsonObject> payloads;
     private readonly List<string> rowIds;
     private readonly Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>> retainedRows;
+    private readonly List<LibraryFolderSnapshot> folders = [];
     private readonly List<LibraryFrameSnapshot> frames = [];
     private readonly List<LibraryFrameIssue> issues = [];
     private readonly Dictionary<string, int> indexById = new(StringComparer.Ordinal);
@@ -108,10 +109,13 @@ public sealed class LibraryDocument : IDisposable
         this.payloads = payloads;
         this.retainedRows = retainedRows;
         this.activeRollId = activeRollId;
+        ProjectFolders();
         Project();
     }
 
     public IReadOnlyList<LibraryFrameSnapshot> Frames => frames;
+
+    public IReadOnlyList<LibraryFolderSnapshot> Folders => folders;
 
     /// <summary>
     /// 투영에 실패한 frame 들입니다. **비어 있지 않은데 무시하면 사용자에게는 사진이 사라진
@@ -222,38 +226,87 @@ public sealed class LibraryDocument : IDisposable
     /// </summary>
     public CatalogStoreError AppendAndSave(IReadOnlyList<CatalogEntityRow> rows, out int added)
     {
-        ArgumentNullException.ThrowIfNull(rows);
-        int originalCount = payloads.Count;
-        added = Append(rows);
-        if (added == 0)
+        return AppendFoldersAndFramesAndSave([], rows, out _, out added);
+    }
+
+    /// <summary>
+    /// source folder 등록과 해당 folder의 frame append를 한 catalog transaction으로 저장합니다.
+    /// 저장이 실패하면 메모리 projection도 바꾸지 않습니다.
+    /// </summary>
+    public CatalogStoreError AppendFoldersAndFramesAndSave(
+        IReadOnlyList<LibraryFolderSnapshot> requestedFolders,
+        IReadOnlyList<CatalogEntityRow> requestedFrames,
+        out int addedFolders,
+        out int addedFrames)
+    {
+        ArgumentNullException.ThrowIfNull(requestedFolders);
+        ArgumentNullException.ThrowIfNull(requestedFrames);
+
+        List<CatalogEntityRow> candidateFrames = FrameRows();
+        HashSet<string> frameIds = new(rowIds, StringComparer.Ordinal);
+        addedFrames = 0;
+        foreach (CatalogEntityRow row in requestedFrames)
+        {
+            if (!frameIds.Add(row.Id))
+            {
+                continue;
+            }
+            candidateFrames.Add(row);
+            ++addedFrames;
+        }
+
+        List<CatalogEntityRow> candidateFolders = retainedRows[CatalogEntityTable.Folders].ToList();
+        HashSet<string> folderPaths = new(
+            folders.Select(folder => folder.SourcePath),
+            StringComparer.OrdinalIgnoreCase);
+        addedFolders = 0;
+        foreach (LibraryFolderSnapshot folder in requestedFolders)
+        {
+            if (!LibraryFolderRecord.TryNormalizePath(folder.SourcePath, out string normalized) ||
+                !folderPaths.Add(normalized))
+            {
+                continue;
+            }
+
+            candidateFolders.Add(LibraryFolderRecord.Write(folder with { SourcePath = normalized }));
+            ++addedFolders;
+        }
+
+        if (addedFrames == 0 && addedFolders == 0)
         {
             return CatalogStoreError.None;
         }
-        CatalogStoreError error = Save();
-        if (error == CatalogStoreError.None)
+
+        CatalogStoreError save = session.Write(CreateSnapshot(candidateFrames, candidateFolders)).Error;
+        if (save != CatalogStoreError.None)
         {
-            return error;
+            addedFolders = 0;
+            addedFrames = 0;
+            return save;
         }
-        rowIds.RemoveRange(originalCount, rowIds.Count - originalCount);
-        payloads.RemoveRange(originalCount, payloads.Count - originalCount);
-        Project();
-        return error;
+
+        if (addedFrames > 0)
+        {
+            rowIds.Clear();
+            payloads.Clear();
+            foreach (CatalogEntityRow row in candidateFrames)
+            {
+                rowIds.Add(row.Id);
+                payloads.Add(row.Payload);
+            }
+            Project();
+        }
+        if (addedFolders > 0)
+        {
+            retainedRows[CatalogEntityTable.Folders] = candidateFolders;
+            ProjectFolders();
+        }
+        return CatalogStoreError.None;
     }
 
     public CatalogStoreError Save()
     {
-        List<CatalogEntityRow> rows = new(payloads.Count);
-        for (int index = 0; index < payloads.Count; index++)
-        {
-            rows.Add(new CatalogEntityRow(rowIds[index], payloads[index]));
-        }
-
-        Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>> tables = new(retainedRows)
-        {
-            [CatalogEntityTable.Frames] = rows,
-        };
-        CatalogSnapshot snapshot = new(activeRollId, tables);
-        return session.Write(snapshot).Error;
+        return session.Write(CreateSnapshot(FrameRows())).Error;
     }
 
     /// <summary>
@@ -464,6 +517,45 @@ public sealed class LibraryDocument : IDisposable
                 read.Error,
                 read.RouteError));
         }
+    }
+
+    private void ProjectFolders()
+    {
+        folders.Clear();
+        HashSet<string> seenPaths = new(StringComparer.OrdinalIgnoreCase);
+        foreach (CatalogEntityRow row in retainedRows[CatalogEntityTable.Folders])
+        {
+            if (LibraryFolderRecord.TryRead(row, out LibraryFolderSnapshot folder) &&
+                seenPaths.Add(folder.SourcePath))
+            {
+                folders.Add(folder);
+            }
+        }
+    }
+
+    private List<CatalogEntityRow> FrameRows()
+    {
+        List<CatalogEntityRow> rows = new(payloads.Count);
+        for (int index = 0; index < payloads.Count; index++)
+        {
+            rows.Add(new CatalogEntityRow(rowIds[index], payloads[index]));
+        }
+        return rows;
+    }
+
+    private CatalogSnapshot CreateSnapshot(
+        IReadOnlyList<CatalogEntityRow> frameRows,
+        IReadOnlyList<CatalogEntityRow>? folderRows = null)
+    {
+        Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>> tables = new(retainedRows)
+        {
+            [CatalogEntityTable.Frames] = frameRows,
+        };
+        if (folderRows is not null)
+        {
+            tables[CatalogEntityTable.Folders] = folderRows;
+        }
+        return new CatalogSnapshot(activeRollId, tables);
     }
 
     private static bool DeclaresDefectEdits(JsonObject payload) =>

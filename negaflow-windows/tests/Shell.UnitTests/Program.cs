@@ -27,6 +27,7 @@ internal static class Program
         VerifyDevelopPanelState();
         VerifyInspectorSliderValue();
         VerifyFrameImport();
+        VerifyFolderImport();
         VerifyPreviewCoordinator();
         VerifyAutoAdjustCoordinator();
 
@@ -2061,6 +2062,56 @@ internal static class Program
                 Exists,
                 NextId).Rejected[0].Refusal == FrameImportRefusal.InfraredFileNotFound,
             "scanner_publish_rejects_missing_ir_artifact");
+    }
+
+    private static void VerifyFolderImport()
+    {
+        string testParent = Path.Combine(AppContext.BaseDirectory, "folder-import-tests");
+        string isolatedBase = Path.Combine(testParent, $"{Environment.ProcessId}-{Guid.NewGuid():N}");
+        string source = Path.Combine(isolatedBase, "source");
+        string empty = Path.Combine(isolatedBase, "empty");
+        StorageRootSet roots = StorageRootResolver.ResolveForTests(isolatedBase).Roots!;
+
+        try
+        {
+            Directory.CreateDirectory(source);
+            Directory.CreateDirectory(empty);
+            File.WriteAllBytes(Path.Combine(source, "B.tiff"), [0]);
+            File.WriteAllBytes(Path.Combine(source, "A.tif"), [0]);
+            File.WriteAllBytes(Path.Combine(source, "ignored.jpg"), [0]);
+
+            FakeDispatcher dispatcher = new(accepts: true);
+            FakeExporter exporter = new(_ => OkResult());
+            using (LibraryHostService host = new(dispatcher, exporter))
+            {
+                Check(host.Open(roots) == LibraryHostState.Open, "folder_import_host_open");
+                FolderImportResult imported = host.ImportFolders([source], DevelopmentProcess.C41);
+                Check(imported.IsSuccess && imported.AddedFolderCount == 1 &&
+                      imported.AddedFrameCount == 2 && imported.Plan.Rejected.Count == 0,
+                    "folder_import_registers_folder_and_top_level_tiffs_atomically");
+                Check(host.Folders.Single().SourcePath == Path.GetFullPath(source) &&
+                      string.Join(',', host.Frames.Select(frame => frame.DisplayName)) == "A.tif,B.tiff",
+                    "folder_import_preserves_folder_identity_and_file_order");
+
+                FolderImportResult emptyImport = host.ImportFolders([empty], DevelopmentProcess.C41);
+                Check(emptyImport.IsSuccess && emptyImport.AddedFolderCount == 1 &&
+                      emptyImport.AddedFrameCount == 0 && host.Folders.Count == 2,
+                    "folder_import_keeps_empty_folder_as_library_source");
+            }
+
+            using LibraryHostService reopened = new(new FakeDispatcher(accepts: true), new FakeExporter(_ => OkResult()));
+            Check(reopened.Open(roots) == LibraryHostState.Open && reopened.Folders.Count == 2 &&
+                  reopened.Frames.Count == 2,
+                "folder_import_persists_folders_and_frames_together");
+        }
+        finally
+        {
+            if (Directory.Exists(isolatedBase) &&
+                StoragePathPolicy.IsLexicallyContained(testParent, isolatedBase))
+            {
+                Directory.Delete(isolatedBase, recursive: true);
+            }
+        }
     }
 
     private static LibraryFrameReadResult ReadImported(JsonObject record)

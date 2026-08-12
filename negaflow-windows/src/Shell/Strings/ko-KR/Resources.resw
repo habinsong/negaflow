@@ -188,6 +188,14 @@
     <value>이미지 가져오기</value>
     <comment>AppLocalizedText.importImages</comment>
   </data>
+  <data name="importFolder.Content" xml:space="preserve">
+    <value>폴더 가져오기</value>
+    <comment>AppLocalizedText.importFolder</comment>
+  </data>
+  <data name="libraryFolderImportResult.Text" xml:space="preserve">
+    <value>%d장의 사진을 %d개 폴더에서 가져왔습니다.</value>
+    <comment>AppLocalizedText.libraryFolderImportResult</comment>
+  </data>
   <data name="importImages.Text" xml:space="preserve">
     <value>이미지 가져오기</value>
     <comment>AppLocalizedText.importImages</comment>

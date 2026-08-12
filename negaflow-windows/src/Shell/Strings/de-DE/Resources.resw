@@ -188,6 +188,14 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
     <value>Bilder importieren</value>
     <comment>AppLocalizedText.importImages</comment>
   </data>
+  <data name="importFolder.Content" xml:space="preserve">
+    <value>Ordner importieren</value>
+    <comment>AppLocalizedText.importFolder</comment>
+  </data>
+  <data name="libraryFolderImportResult.Text" xml:space="preserve">
+    <value>%d Fotos aus %d Ordnern importiert.</value>
+    <comment>AppLocalizedText.libraryFolderImportResult</comment>
+  </data>
   <data name="importImages.Text" xml:space="preserve">
     <value>Bilder importieren</value>
     <comment>AppLocalizedText.importImages</comment>
