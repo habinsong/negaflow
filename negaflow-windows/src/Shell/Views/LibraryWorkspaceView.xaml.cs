@@ -150,7 +150,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
     /// JPEG 바이트를 그대로 <c>BitmapImage</c> 에 흘려 넣습니다. 디코드는 WinUI 가 필요할 때
     /// 하므로, 화면 밖 카드까지 미리 펼쳐 두지 않습니다.
     /// </summary>
-    private static BitmapImage? DecodeThumbnail(byte[] jpeg)
+    internal static BitmapImage? DecodeThumbnail(byte[] jpeg)
     {
         try
         {

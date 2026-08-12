@@ -3,7 +3,12 @@
     x:Class="Negaflow.Shell.Views.FilmstripView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Negaflow.Shell.Views.Controls"
     xmlns:primitives="using:Microsoft.UI.Xaml.Controls.Primitives">
+    <UserControl.Resources>
+        <controls:FilmTypeNameConverter x:Key="FilmTypeNameConverter" />
+        <controls:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+    </UserControl.Resources>
     <Grid x:Name="Root" Background="{ThemeResource NegaflowBarBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="6" />
@@ -48,15 +53,91 @@
                 Padding="0"
                 Background="{ThemeResource NegaflowSubtleFillBrush}"
                 BorderThickness="0"
+                Click="OnPreviousClicked"
                 CornerRadius="8"
                 IsEnabled="False">
                 <FontIcon FontSize="13" Glyph="&#xE76B;" />
             </Button>
 
-            <StackPanel Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="5">
+            <StackPanel
+                x:Name="EmptyFilmstripPanel"
+                Grid.Column="1"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Spacing="5">
                 <FontIcon FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE7C8;" />
                 <TextBlock x:Uid="noImages" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
             </StackPanel>
+
+            <!--
+                필름스트립 카드는 라이브러리 카드와 같은 구조를 쓰되 macOS 처럼 compact 여백입니다.
+                크기는 스트립 높이에서 나오므로 컨테이너에서 정합니다.
+            -->
+            <ListView
+                x:Name="FrameStrip"
+                Grid.Column="1"
+                Padding="4,0"
+                AutomationProperties.AutomationId="negaflow.filmstrip.frames"
+                ContainerContentChanging="OnFrameContainerChanging"
+                ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                ScrollViewer.HorizontalScrollMode="Enabled"
+                ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                ScrollViewer.VerticalScrollMode="Disabled"
+                SelectionChanged="OnFrameSelectionChanged"
+                SelectionMode="Single"
+                Visibility="Collapsed">
+                <ListView.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <ItemsStackPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ListView.ItemsPanel>
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Padding="5">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="4" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="14" />
+                            </Grid.RowDefinitions>
+
+                            <Grid Grid.Row="0">
+                                <Border Background="{ThemeResource NegaflowThumbnailWellBrush}" CornerRadius="5" />
+                                <Border
+                                    CornerRadius="5"
+                                    Visibility="{Binding HasThumbnail, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <Image Source="{Binding Thumbnail}" Stretch="Uniform" />
+                                </Border>
+                                <FontIcon
+                                    FontSize="12"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    Glyph="&#xE91B;"
+                                    Visibility="{Binding IsThumbnailPending, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            </Grid>
+
+                            <TextBlock
+                                Grid.Row="2"
+                                FontSize="11"
+                                FontWeight="SemiBold"
+                                Text="{Binding DisplayName}"
+                                TextTrimming="CharacterEllipsis" />
+                            <TextBlock
+                                Grid.Row="3"
+                                Margin="0,1,0,0"
+                                FontSize="10"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Text="{Binding FilmType, Converter={StaticResource FilmTypeNameConverter}}"
+                                TextTrimming="CharacterEllipsis" />
+                            <controls:FrameRatingStars
+                                Grid.Row="4"
+                                HorizontalAlignment="Left"
+                                GlyphSize="10"
+                                Rating="{Binding Rating}" />
+                        </Grid>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
 
             <Button
                 x:Name="NextButton"
@@ -66,6 +147,7 @@
                 Padding="0"
                 Background="{ThemeResource NegaflowSubtleFillBrush}"
                 BorderThickness="0"
+                Click="OnNextClicked"
                 CornerRadius="8"
                 IsEnabled="False">
                 <FontIcon FontSize="13" Glyph="&#xE76C;" />

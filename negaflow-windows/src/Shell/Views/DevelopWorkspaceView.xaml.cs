@@ -77,6 +77,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         workspaceState = state;
         state.Changed += OnStateChanged;
         Filmstrip.Initialize(state);
+        Filmstrip.FrameSelected += OnFilmstripFrameSelected;
         StatusBar.Initialize(nativeEngineStatus);
         UpdateState(state.Current);
         Unloaded += OnUnloaded;
@@ -88,7 +89,12 @@ public sealed partial class DevelopWorkspaceView : UserControl
     public void AttachThumbnails(Negaflow.Shell.Library.ThumbnailService service)
     {
         ArgumentNullException.ThrowIfNull(service);
+        if (thumbnails is not null)
+        {
+            thumbnails.ThumbnailReady -= OnThumbnailReady;
+        }
         thumbnails = service;
+        thumbnails.ThumbnailReady += OnThumbnailReady;
     }
 
     /// <summary>
@@ -196,6 +202,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         if (!hasFrames)
         {
             FrameSelector.ItemsSource = null;
+            Filmstrip.ShowFrames([], -1);
             HistogramView.Clear();
             SyncToneControls();
             NotifyQuickExportAvailabilityChanged();
@@ -204,6 +211,50 @@ public sealed partial class DevelopWorkspaceView : UserControl
 
         FrameSelector.ItemsSource = items;
         FrameSelector.SelectedIndex = 0;
+        // 필름스트립과 왼쪽 목록은 같은 항목을 봅니다. 썸네일이 도착하면 둘 다 채워집니다.
+        Filmstrip.ShowFrames(items, 0);
+        foreach (LibraryFrameListItem item in items)
+        {
+            if (thumbnails?.TryGet(item.Id) is not null)
+            {
+                continue;
+            }
+            thumbnails?.Request(item.Frame);
+        }
+    }
+
+    private void OnFilmstripFrameSelected(object? sender, LibraryFrameListItem item)
+    {
+        _ = sender;
+        if (FrameSelector.ItemsSource is not IReadOnlyList<LibraryFrameListItem> current)
+        {
+            return;
+        }
+        for (int index = 0; index < current.Count; ++index)
+        {
+            if (string.Equals(current[index].Id, item.Id, StringComparison.Ordinal))
+            {
+                FrameSelector.SelectedIndex = index;
+                return;
+            }
+        }
+    }
+
+    private void OnThumbnailReady(string frameId)
+    {
+        if (FrameSelector.ItemsSource is not IReadOnlyList<LibraryFrameListItem> current ||
+            thumbnails?.TryGet(frameId) is not { } jpeg)
+        {
+            return;
+        }
+        foreach (LibraryFrameListItem item in current)
+        {
+            if (string.Equals(item.Id, frameId, StringComparison.Ordinal))
+            {
+                item.Thumbnail = LibraryWorkspaceView.DecodeThumbnail(jpeg);
+                return;
+            }
+        }
     }
 
     private void OnInspectorTabClicked(object sender, RoutedEventArgs args)
@@ -397,6 +448,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
 
         CancelCrop();
         panel.Select(item.Id);
+        Filmstrip.SynchronizeSelection(FrameSelector.SelectedIndex);
         UpdateSelectedFrameText();
         SynchronizeInspectorValues();
         SyncBaseControls();
