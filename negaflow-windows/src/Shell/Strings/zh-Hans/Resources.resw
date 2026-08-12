@@ -119,6 +119,18 @@
     <value>开发者模式</value>
     <comment>AppLocalizedPhrase.developerMode</comment>
   </data>
+  <data name="developAutoTone.Content" xml:space="preserve">
+    <value>自动色调</value>
+    <comment>AppLocalizedPhrase.commandAutoTone</comment>
+  </data>
+  <data name="developAutoWhiteBalance.Content" xml:space="preserve">
+    <value>自动白平衡</value>
+    <comment>AppLocalizedPhrase.commandAutoWhiteBalance</comment>
+  </data>
+  <data name="developAutoAdjustFailed.Text" xml:space="preserve">
+    <value>无法应用自动调整。</value>
+    <comment>AppLocalizedText.developAutoAdjustFailed</comment>
+  </data>
   <data name="developImportsAutomatically.Header" xml:space="preserve">
     <value>自动显影新导入的照片</value>
     <comment>AppLocalizedPhrase.developImportsAutomatically</comment>

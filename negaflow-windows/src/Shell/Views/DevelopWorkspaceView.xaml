@@ -392,6 +392,36 @@
 
                         <StackPanel x:Name="CommonAdjustmentStack" HorizontalAlignment="Stretch" Spacing="12">
                             <Border
+                                x:Name="QuickActionsCard"
+                                HorizontalAlignment="Stretch"
+                                Padding="10"
+                                AutomationProperties.AutomationId="negaflow.develop.quick-actions"
+                                Background="{ThemeResource NegaflowCardBrush}"
+                                CornerRadius="14">
+                                <StackPanel Spacing="8">
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Button
+                                            x:Name="AutoToneButton"
+                                            Grid.Column="0"
+                                            AutomationProperties.AutomationId="negaflow.develop.auto-tone"
+                                            Click="OnAutoToneClicked" />
+                                        <Button
+                                            x:Name="AutoWhiteBalanceButton"
+                                            Grid.Column="1"
+                                            AutomationProperties.AutomationId="negaflow.develop.auto-white-balance"
+                                            Click="OnAutoWhiteBalanceClicked" />
+                                    </Grid>
+                                    <TextBlock
+                                        x:Name="AutoAdjustStatusText"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+                            <Border
                                 x:Name="BasicToneSection"
                                 HorizontalAlignment="Stretch"
                                 Padding="14"

@@ -119,6 +119,18 @@
     <value>Developer Mode</value>
     <comment>AppLocalizedPhrase.developerMode</comment>
   </data>
+  <data name="developAutoTone.Content" xml:space="preserve">
+    <value>Auto Tone</value>
+    <comment>AppLocalizedPhrase.commandAutoTone</comment>
+  </data>
+  <data name="developAutoWhiteBalance.Content" xml:space="preserve">
+    <value>Auto White Balance</value>
+    <comment>AppLocalizedPhrase.commandAutoWhiteBalance</comment>
+  </data>
+  <data name="developAutoAdjustFailed.Text" xml:space="preserve">
+    <value>Automatic adjustment could not be applied.</value>
+    <comment>AppLocalizedText.developAutoAdjustFailed</comment>
+  </data>
   <data name="developImportsAutomatically.Header" xml:space="preserve">
     <value>Develop new imports automatically</value>
     <comment>AppLocalizedPhrase.developImportsAutomatically</comment>

@@ -119,6 +119,18 @@
     <value>開発者モード</value>
     <comment>AppLocalizedPhrase.developerMode</comment>
   </data>
+  <data name="developAutoTone.Content" xml:space="preserve">
+    <value>自動トーン</value>
+    <comment>AppLocalizedPhrase.commandAutoTone</comment>
+  </data>
+  <data name="developAutoWhiteBalance.Content" xml:space="preserve">
+    <value>自動ホワイトバランス</value>
+    <comment>AppLocalizedPhrase.commandAutoWhiteBalance</comment>
+  </data>
+  <data name="developAutoAdjustFailed.Text" xml:space="preserve">
+    <value>自動補正を適用できませんでした。</value>
+    <comment>AppLocalizedText.developAutoAdjustFailed</comment>
+  </data>
   <data name="developImportsAutomatically.Header" xml:space="preserve">
     <value>新しく読み込んだ写真を自動現像</value>
     <comment>AppLocalizedPhrase.developImportsAutomatically</comment>

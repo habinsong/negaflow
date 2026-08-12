@@ -24,6 +24,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private ToneLimits? toneLimits;
     private Microsoft.UI.WindowId? importWindowId;
     private PreviewCoordinator? previewCoordinator;
+    private AutoAdjustCoordinator? autoAdjustCoordinator;
     private WriteableBitmap? previewBitmap;
     private bool isSynchronizingInspector;
     private bool isSynchronizingInspectorPresentation;
@@ -110,6 +111,9 @@ public sealed partial class DevelopWorkspaceView : UserControl
                 uiDispatcher,
                 1600,
                 1200);
+            autoAdjustCoordinator = new AutoAdjustCoordinator(
+                new NativeDevelopExporterAdapter(),
+                uiDispatcher);
         }
         RefreshFrames();
     }
@@ -530,6 +534,69 @@ public sealed partial class DevelopWorkspaceView : UserControl
         ColorMixerEditor.IsEnabled = canEdit;
         ColorGradingEditor.IsEnabled = canEdit;
         HistogramView.IsEnabled = canEdit;
+        bool canAutoAdjust = panel?.SelectedFrame?.CanDevelop == true &&
+                             autoAdjustCoordinator is not null;
+        AutoToneButton.IsEnabled = canAutoAdjust;
+        AutoWhiteBalanceButton.IsEnabled = canAutoAdjust;
+    }
+
+    private async void OnAutoToneClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        await RunAutoAdjustAsync(AutoAdjustOperation.Tone);
+    }
+
+    private async void OnAutoWhiteBalanceClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        await RunAutoAdjustAsync(AutoAdjustOperation.WhiteBalance);
+    }
+
+    private async Task RunAutoAdjustAsync(AutoAdjustOperation operation)
+    {
+        if (autoAdjustCoordinator is null || panel?.SelectedFrame is not { } frame)
+        {
+            return;
+        }
+
+        AutoToneButton.IsEnabled = false;
+        AutoWhiteBalanceButton.IsEnabled = false;
+        AutoAdjustStatusText.Text = string.Empty;
+        Action<AutoAdjustOutcome> completed = outcome =>
+        {
+            if (outcome.Kind == DevelopExportOutcomeKind.Completed && outcome.Settings is not null &&
+                panel?.SelectedFrame == frame)
+            {
+                LibraryFrameError error = operation == AutoAdjustOperation.Tone
+                    ? panel.ApplyAutoTone(outcome.Settings)
+                    : panel.ApplyAutoWhiteBalance(outcome.Settings);
+                if (error == LibraryFrameError.None)
+                {
+                    SynchronizeInspectorValues();
+                    RequestPreview();
+                }
+                else
+                {
+                    AutoAdjustStatusText.Text = AppResources.Get("developAutoAdjustFailed", "Text");
+                }
+            }
+            else if (outcome.Kind != DevelopExportOutcomeKind.Completed)
+            {
+                AutoAdjustStatusText.Text = AppResources.Get("developAutoAdjustFailed", "Text");
+            }
+            SyncToneControls();
+        };
+
+        bool delivered = operation == AutoAdjustOperation.Tone
+            ? await autoAdjustCoordinator.RunToneAsync(frame, completed)
+            : await autoAdjustCoordinator.RunWhiteBalanceAsync(frame, completed);
+        if (!delivered)
+        {
+            AutoAdjustStatusText.Text = AppResources.Get("developAutoAdjustFailed", "Text");
+            SyncToneControls();
+        }
     }
 
     private void OnBaseAutoModeChecked(object sender, RoutedEventArgs args)
@@ -936,6 +1003,10 @@ public sealed partial class DevelopWorkspaceView : UserControl
         NoFrameLeftText.Text = noFrame;
         NoFrameInspectorText.Text = noFrame;
         DevelopHeaderText.Text = AppResources.Get("menuDevelop", "Text");
+        SetButtonText(AutoToneButton, AppResources.Get("developAutoTone", "Content"));
+        SetButtonText(
+            AutoWhiteBalanceButton,
+            AppResources.Get("developAutoWhiteBalance", "Content"));
         HistogramView.Localize(
             AppResources.Get("developHistogram", "Text"),
             AppResources.Get("developHistogramShadow", "Text"),
@@ -1014,6 +1085,12 @@ public sealed partial class DevelopWorkspaceView : UserControl
     {
         AutomationProperties.SetName(button, text);
         ToolTipService.SetToolTip(button, text);
+    }
+
+    private static void SetButtonText(Button button, string text)
+    {
+        button.Content = text;
+        SetLocalizedNameAndTooltip(button, text);
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs args)

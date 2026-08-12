@@ -39,7 +39,11 @@ macOS `AppModel+AutoAdjust`와 같이 Auto Tone과 Auto White Balance의 neutral
 Tone은 tone curve를 포함한 톤·vibrance·saturation만 0으로 만들어 측정하고 warmth/tint는 보존합니다. White
 Balance는 warmth/tint만 0으로 만들어 측정하고 나머지 현상 recipe를 보존합니다. 적용도 서로의 field를 덮지
 않으며, 기존 combined API는 호환을 위해 남겨 두었습니다. x64 Debug Catalog 595, Shell 362 assertions를
-통과했습니다. Develop quick-action UI는 다음 surface 작업입니다.
+통과했습니다. Develop quick-action UI까지 연결했습니다.
+
+Develop inspector에 전체 폭 Auto Tone·Auto White Balance 동작을 연결했습니다. 결과는 선택 frame이
+그대로일 때만 반영하며, 두 동작 모두 6개 언어 리소스 계약을 사용합니다. 실제 TIFF를 이용한 자동 UI
+클릭 검증은 아직 수행하지 않았습니다.
 
 ## 2026-08-12 Output sharpening native core
 

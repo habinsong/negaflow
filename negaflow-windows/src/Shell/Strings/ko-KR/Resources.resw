@@ -119,6 +119,18 @@
     <value>개발자 모드</value>
     <comment>AppLocalizedPhrase.developerMode</comment>
   </data>
+  <data name="developAutoTone.Content" xml:space="preserve">
+    <value>자동 톤</value>
+    <comment>AppLocalizedPhrase.commandAutoTone</comment>
+  </data>
+  <data name="developAutoWhiteBalance.Content" xml:space="preserve">
+    <value>자동 화이트 밸런스</value>
+    <comment>AppLocalizedPhrase.commandAutoWhiteBalance</comment>
+  </data>
+  <data name="developAutoAdjustFailed.Text" xml:space="preserve">
+    <value>자동 보정을 적용할 수 없습니다.</value>
+    <comment>AppLocalizedText.developAutoAdjustFailed</comment>
+  </data>
   <data name="developImportsAutomatically.Header" xml:space="preserve">
     <value>새로 가져온 사진 자동 현상</value>
     <comment>AppLocalizedPhrase.developImportsAutomatically</comment>
