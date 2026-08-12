@@ -32,6 +32,7 @@ internal static unsafe class ContractTestRunner
             VerifyAutoAdjustContract();
             VerifyInfraredDetectorContract();
             VerifyFlatbedFrameGridContract();
+            VerifyTiffSourceProbeContract();
             VerifySoftProofContract();
             VerifyToneLimits();
             VerifyNegativeLimits();
@@ -543,6 +544,15 @@ internal static unsafe class ContractTestRunner
         Check(cancelledResult.Status == FlatbedFrameGridStatus.Cancelled &&
                   cancelledResult.Detections.Count == 0,
               "flatbed_cancelled_without_payload");
+    }
+
+    private static void VerifyTiffSourceProbeContract()
+    {
+        Check(sizeof(NativeTiffSourceInfoV1) == 32, "tiff_source_info_size");
+        Check(
+            !NativeTiffSourceProbe.TryRead(
+                Path.Combine(Path.GetTempPath(), $"missing-{Guid.NewGuid():N}.tif"), out _),
+            "tiff_source_probe_refuses_missing_source");
     }
 
     // Soft proof crosses the boundary as raw profile bytes going one way and ten numbers

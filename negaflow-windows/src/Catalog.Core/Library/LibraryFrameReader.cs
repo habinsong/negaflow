@@ -12,6 +12,14 @@ public static class LibraryFrameReader
 {
     internal const string IdName = "id";
     public const string SourcePathName = "rawScanPath";
+    public const string SourceMetadataName = "sourceMetadata";
+    public const string SourceFileBytesName = "fileBytes";
+    public const string SourcePixelWidthName = "pixelWidth";
+    public const string SourcePixelHeightName = "pixelHeight";
+    public const string SourceSamplesPerPixelName = "samplesPerPixel";
+    public const string SourceBitsPerSampleName = "bitsPerSample";
+    public const string SourceSampleFormatName = "sampleFormat";
+    public const string SourceOrientationName = "orientation";
     public const string InfraredPathName = "infraredScanPath";
     internal const string DisplayNameName = "customDisplayName";
     internal const string ParametersName = "params";
@@ -120,6 +128,10 @@ public static class LibraryFrameReader
         {
             return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidInfraredPath);
         }
+        if (!TryReadSourceMetadata(frameRecord, out LibrarySourceMetadata? sourceMetadata))
+        {
+            return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidSourceMetadata);
+        }
 
         string? displayName = null;
         if (frameRecord.TryGetProperty(DisplayNameName, out JsonElement displayElement) &&
@@ -203,6 +215,7 @@ public static class LibraryFrameReader
             tone)
         {
             InfraredPath = infraredPath,
+            SourceMetadata = sourceMetadata,
             Base = baseRecipe,
             PointCurves = pointCurves,
             ColorMixer = colorMixer,
@@ -214,6 +227,59 @@ public static class LibraryFrameReader
             AutoNeutralBalance = autoNeutralBalance,
             DevelopTarget = developTarget,
         });
+    }
+
+    private static bool TryReadSourceMetadata(
+        JsonElement frameRecord,
+        out LibrarySourceMetadata? sourceMetadata)
+    {
+        sourceMetadata = null;
+        if (!frameRecord.TryGetProperty(SourceMetadataName, out JsonElement element) ||
+            element.ValueKind == JsonValueKind.Null)
+        {
+            return true;
+        }
+        if (element.ValueKind != JsonValueKind.Object ||
+            !TryReadRequiredUInt64(element, SourceFileBytesName, out ulong fileBytes) ||
+            !TryReadRequiredUInt32(element, SourcePixelWidthName, out uint pixelWidth) ||
+            !TryReadRequiredUInt32(element, SourcePixelHeightName, out uint pixelHeight) ||
+            !TryReadRequiredUInt16(element, SourceSamplesPerPixelName, out ushort samplesPerPixel) ||
+            !TryReadRequiredUInt16(element, SourceBitsPerSampleName, out ushort bitsPerSample) ||
+            !TryReadRequiredUInt16(element, SourceSampleFormatName, out ushort sampleFormat) ||
+            !TryReadRequiredUInt16(element, SourceOrientationName, out ushort orientation))
+        {
+            return false;
+        }
+        LibrarySourceMetadata parsed = new(
+            fileBytes, pixelWidth, pixelHeight, samplesPerPixel, bitsPerSample, sampleFormat,
+            orientation);
+        if (!parsed.IsValid)
+        {
+            return false;
+        }
+        sourceMetadata = parsed;
+        return true;
+    }
+
+    private static bool TryReadRequiredUInt64(JsonElement owner, string name, out ulong value)
+    {
+        value = 0;
+        return owner.TryGetProperty(name, out JsonElement element) &&
+               element.ValueKind == JsonValueKind.Number && element.TryGetUInt64(out value);
+    }
+
+    private static bool TryReadRequiredUInt32(JsonElement owner, string name, out uint value)
+    {
+        value = 0;
+        return owner.TryGetProperty(name, out JsonElement element) &&
+               element.ValueKind == JsonValueKind.Number && element.TryGetUInt32(out value);
+    }
+
+    private static bool TryReadRequiredUInt16(JsonElement owner, string name, out ushort value)
+    {
+        value = 0;
+        return owner.TryGetProperty(name, out JsonElement element) &&
+               element.ValueKind == JsonValueKind.Number && element.TryGetUInt16(out value);
     }
 
     private static bool TryReadInfraredPath(

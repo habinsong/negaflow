@@ -11,6 +11,7 @@ public enum LibraryFrameError
     InvalidSourcePath,
     InvalidInfraredPath,
     InvalidDisplayName,
+    InvalidSourceMetadata,
 
     /// <summary><c>params</c> 가 없거나 object 가 아닙니다.</summary>
     MissingParameters,

@@ -13,6 +13,7 @@ public enum FrameImportRefusal
     InvalidInfraredPath,
     InfraredMatchesVisible,
     AlreadyInLibrary,
+    UnsupportedImage,
     RouteRejected,
 }
 
@@ -50,7 +51,8 @@ public static class FrameImport
         IReadOnlyList<LibraryFrameSnapshot> existingFrames,
         DevelopmentProcess process,
         Func<string, bool>? fileExists = null,
-        Func<string>? newId = null)
+        Func<string>? newId = null,
+        Func<string, LibrarySourceMetadata?>? sourceMetadataReader = null)
     {
         ArgumentNullException.ThrowIfNull(filePaths);
         ArgumentNullException.ThrowIfNull(existingFrames);
@@ -83,6 +85,12 @@ public static class FrameImport
                 rejected.Add(new FrameImportRejection(path, FrameImportRefusal.FileNotFound));
                 continue;
             }
+            LibrarySourceMetadata? sourceMetadata = sourceMetadataReader?.Invoke(path);
+            if (sourceMetadataReader is not null && sourceMetadata is null)
+            {
+                rejected.Add(new FrameImportRejection(path, FrameImportRefusal.UnsupportedImage));
+                continue;
+            }
             // 같은 파일을 두 번 넣으면 편집이 둘로 갈라져 사용자가 어느 쪽을 고쳤는지 알 수
             // 없게 됩니다. 한 번 고르든 두 번 고르든 한 건입니다.
             if (!taken.Add(NormalizePath(path)))
@@ -100,6 +108,10 @@ public static class FrameImport
                 ["sourceKind"] = "imported",
                 ["params"] = new JsonObject(),
             };
+            if (sourceMetadata is { } metadata)
+            {
+                record[LibraryFrameReader.SourceMetadataName] = WriteSourceMetadata(metadata);
+            }
 
             DevelopRouteWriteResult written = DevelopRouteWriter.Apply(record, selection);
             if (written.FrameRecord is not { } routed)
@@ -226,6 +238,7 @@ public static class FrameImport
             FrameImportRefusal.InvalidInfraredPath => "infrared companion path is invalid",
             FrameImportRefusal.InfraredMatchesVisible => "infrared companion is the RGB source",
             FrameImportRefusal.InvalidPath => "not a full path",
+            FrameImportRefusal.UnsupportedImage => "not a supported TIFF image",
             FrameImportRefusal.RouteRejected => "rejected by the develop route",
             _ => "skipped",
         };
@@ -255,4 +268,15 @@ public static class FrameImport
 
     private static FrameImportPlan Rejected(string path, FrameImportRefusal refusal) =>
         new([], [new FrameImportRejection(path, refusal)]);
+
+    private static JsonObject WriteSourceMetadata(LibrarySourceMetadata metadata) => new()
+    {
+        [LibraryFrameReader.SourceFileBytesName] = metadata.FileBytes,
+        [LibraryFrameReader.SourcePixelWidthName] = metadata.PixelWidth,
+        [LibraryFrameReader.SourcePixelHeightName] = metadata.PixelHeight,
+        [LibraryFrameReader.SourceSamplesPerPixelName] = metadata.SamplesPerPixel,
+        [LibraryFrameReader.SourceBitsPerSampleName] = metadata.BitsPerSample,
+        [LibraryFrameReader.SourceSampleFormatName] = metadata.SampleFormat,
+        [LibraryFrameReader.SourceOrientationName] = metadata.Orientation,
+    };
 }

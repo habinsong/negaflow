@@ -1336,7 +1336,7 @@ internal static class Program
                     "library_host_seed");
             }
 
-            using LibraryHostService host = new(dispatcher, exporter);
+            using LibraryHostService host = new(dispatcher, exporter, TestSourceMetadata);
             Check(host.State == LibraryHostState.NotOpened, "library_host_starts_unopened");
             Check(host.Frames.Count == 0, "library_host_no_frames_before_open");
 
@@ -1350,6 +1350,17 @@ internal static class Program
             File.WriteAllBytes(oldRelinkPath, [4, 5, 6]);
             Check(host.Import([oldRelinkPath], DevelopmentProcess.C41).Rows.Count == 1,
                 "library_relink_imports_source");
+            string incompatibleRelinkPath = Path.Combine(
+                isolatedBase, "recovered", "incompatible-source.tif");
+            File.WriteAllBytes(incompatibleRelinkPath, [9, 9, 9]);
+            SourceRelinkPlan? incompatibleRelink = SourceRelinkPlanner.FilePlan(
+                oldRelinkPath,
+                incompatibleRelinkPath);
+            Check(
+                incompatibleRelink is not null &&
+                host.Relink(incompatibleRelink).UpdatedFrameCount == 0 &&
+                host.Frames.Any(frame => frame.SourcePath == oldRelinkPath),
+                "library_relink_refuses_incompatible_tiff_metadata");
             File.Move(oldRelinkPath, newRelinkPath);
             SourceRelinkPlan? directRelink = SourceRelinkPlanner.FilePlan(
                 oldRelinkPath,
@@ -2076,6 +2087,27 @@ internal static class Program
         Check(read.IsSuccess, "import_record_is_readable");
         Check(read.Frame?.CanDevelop == true, "import_record_uses_auto_base");
 
+        FrameImportPlan metadataPlan = FrameImport.Plan(
+            [@"C:\scans\metadata.tif"],
+            [],
+            DevelopmentProcess.C41,
+            Exists,
+            NextId,
+            _ => new LibrarySourceMetadata(4096, 64, 32, 3, 16, 1, 1));
+        Check(
+            ReadImported(metadataPlan.Rows[0].Payload).Frame?.SourceMetadata ==
+                new LibrarySourceMetadata(4096, 64, 32, 3, 16, 1, 1),
+            "import_persists_native_source_metadata");
+        Check(
+            FrameImport.Plan(
+                [@"C:\scans\unsupported.tif"],
+                [],
+                DevelopmentProcess.C41,
+                Exists,
+                NextId,
+                _ => null).Rejected.Single().Refusal == FrameImportRefusal.UnsupportedImage,
+            "import_rejects_unprobed_source");
+
         LibraryFrameSnapshot existing = read.Frame!;
         FrameImportPlan again = FrameImport.Plan(
             [@"C:\scans\a.tif", @"C:\scans\c.tif"],
@@ -2187,7 +2219,7 @@ internal static class Program
 
             FakeDispatcher dispatcher = new(accepts: true);
             FakeExporter exporter = new(_ => OkResult());
-            using (LibraryHostService host = new(dispatcher, exporter))
+            using (LibraryHostService host = new(dispatcher, exporter, TestSourceMetadata))
             {
                 Check(host.Open(roots) == LibraryHostState.Open, "folder_import_host_open");
                 FolderImportResult imported = host.ImportFolders([source], DevelopmentProcess.C41);
@@ -2225,6 +2257,13 @@ internal static class Program
             CatalogJson.SerializeCanonical(record));
         return LibraryFrameReader.Read(document.RootElement);
     }
+
+    private static LibrarySourceMetadata? TestSourceMetadata(string path) =>
+        File.Exists(path)
+            ? path.Contains("incompatible", StringComparison.OrdinalIgnoreCase)
+                ? new LibrarySourceMetadata(5, 3, 2, 3, 16, 1, 1)
+                : new LibrarySourceMetadata(4, 2, 2, 3, 16, 1, 1)
+            : null;
 
     // The part that has to be right is *what gets measured*: a neutral develop. Measuring
     // the frame as it stands would fold the existing correction into the answer and make

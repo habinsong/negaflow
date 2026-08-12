@@ -36,7 +36,8 @@ public static class FolderImport
         IReadOnlyList<string> folderPaths,
         IReadOnlyList<LibraryFrameSnapshot> existingFrames,
         DevelopmentProcess process,
-        DateTimeOffset? addedAt = null)
+        DateTimeOffset? addedAt = null,
+        Func<string, LibrarySourceMetadata?>? sourceMetadataReader = null)
     {
         ArgumentNullException.ThrowIfNull(folderPaths);
         ArgumentNullException.ThrowIfNull(existingFrames);
@@ -93,7 +94,7 @@ public static class FolderImport
         }
         return new FolderImportPlan(
             folders,
-            FrameImport.Plan(files, existingFrames, process),
+            FrameImport.Plan(files, existingFrames, process, sourceMetadataReader: sourceMetadataReader),
             rejected);
     }
 

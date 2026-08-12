@@ -4,6 +4,16 @@
 
 ## 2026-08-12 LibraryDocument catalog-table preservation
 
+## 2026-08-12 TIFF source compatibility preflight
+
+New Library imports persist a bounded TIFF source fingerprint (file bytes, dimensions,
+sample layout, and orientation) obtained from the native TIFF probe. A relink now refuses a
+replacement whose fingerprint differs before changing any catalog path; legacy catalog rows
+without the optional metadata remain readable. ABI 0.37 adds the narrow source-probe export.
+x64 Release passed native CTest 65/65, Catalog 597, Shell 380, and Interop 189 assertions.
+The complete ARM64 Release graph cross-built successfully but was not executed on an ARM64 device;
+a macOS cross-host catalog/relink comparison also remains pending.
+
 `LibraryDocument.Save()` now retains every non-frame catalog table and the active roll while
 editing, importing, relinking, or writing a defect sidecar updates frames. x64 Debug managed
 build passed Catalog 595 and Shell 365 assertions.

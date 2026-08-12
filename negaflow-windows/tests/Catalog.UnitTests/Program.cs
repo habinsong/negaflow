@@ -1676,6 +1676,16 @@ internal static class Program
             ["customDisplayName"] = "Roll 01 / 1",
             ["sourceKind"] = "scanner",
             ["filmType"] = "colorNegative",
+            ["sourceMetadata"] = new JsonObject
+            {
+                ["fileBytes"] = 123456UL,
+                ["pixelWidth"] = 6400U,
+                ["pixelHeight"] = 4200U,
+                ["samplesPerPixel"] = 3,
+                ["bitsPerSample"] = 16,
+                ["sampleFormat"] = 1,
+                ["orientation"] = 1,
+            },
             ["futureFrameValue"] = "preserve-me",
             ["params"] = new JsonObject
             {
@@ -1734,6 +1744,9 @@ internal static class Program
         Check(frame.SourcePath == @"C:\scans\roll-01\IMG_0001.tif", "library_frame_source_path");
         Check(frame.InfraredPath == @"C:\scans\roll-01\IMG_0001.ir.tif",
             "library_frame_infrared_source_path");
+        Check(
+            frame.SourceMetadata == new LibrarySourceMetadata(123456, 6400, 4200, 3, 16, 1, 1),
+            "library_frame_source_metadata");
         Check(frame.EffectiveDisplayName == "Roll 01 / 1", "library_frame_display_name");
         Check(frame.Route.FilmType == FilmType.ColorNegative, "library_frame_route_film_type");
         Check(frame.CanDevelop, "library_frame_preset_with_stock_can_develop");
@@ -1923,6 +1936,12 @@ internal static class Program
         Check(
             ReadFrame(relativeInfraredPath).Error == LibraryFrameError.InvalidInfraredPath,
             "library_frame_rejects_relative_infrared_path");
+
+        JsonObject malformedMetadata = FrameRecord();
+        malformedMetadata["sourceMetadata"]!.AsObject()["pixelWidth"] = 0;
+        Check(
+            ReadFrame(malformedMetadata).Error == LibraryFrameError.InvalidSourceMetadata,
+            "library_frame_rejects_invalid_source_metadata");
 
         JsonObject sameInfraredPath = FrameRecord();
         sameInfraredPath["infraredScanPath"] = sameInfraredPath["rawScanPath"]!.GetValue<string>();

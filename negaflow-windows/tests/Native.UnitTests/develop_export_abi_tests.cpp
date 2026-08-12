@@ -3313,6 +3313,28 @@ void test_read_soft_proof_media() {
     }
 }
 
+void test_tiff_source_probe(const std::filesystem::path& source) {
+    expect(
+        nf_probe_tiff_source_v1(nullptr, nullptr) == NF_STATUS_INVALID_ARGUMENT,
+        "a null TIFF source result is refused");
+
+    nf_tiff_source_info_v1 short_result{};
+    short_result.struct_size = 8U;
+    expect(
+        nf_probe_tiff_source_v1(source.c_str(), &short_result) == NF_STATUS_STRUCT_TOO_SMALL,
+        "an undersized TIFF source result is refused");
+
+    nf_tiff_source_info_v1 result{};
+    result.struct_size = static_cast<std::uint32_t>(sizeof(result));
+    expect(
+        nf_probe_tiff_source_v1(source.c_str(), &result) == NF_STATUS_OK &&
+            result.status == NF_TIFF_SOURCE_PROBE_OK && result.file_bytes > 0U &&
+            result.pixel_width > 0U && result.pixel_height > 0U &&
+            result.samples_per_pixel > 0U && result.bits_per_sample > 0U &&
+            result.sample_format > 0U && result.orientation >= 1U && result.orientation <= 8U,
+        "the TIFF source probe returns stable import metadata");
+}
+
 // The parity claim, made against a real negative and the profiles actually installed on
 // this machine: choosing any of them as the proof destination leaves the frame alone,
 // which is what macOS produces from its built-ins. If the resolver trusted a v2 `wtpt`
@@ -3476,6 +3498,7 @@ int main(const int argument_count, const char* const arguments[]) {
             test_v22_cancel_during_run(source);
             test_auto_adjust_on_a_real_scan(source);
             test_soft_proof_on_a_real_scan(source);
+            test_tiff_source_probe(source);
         } else {
             std::cerr << "FAIL: the supplied source fixture does not exist\n";
             ++failures;

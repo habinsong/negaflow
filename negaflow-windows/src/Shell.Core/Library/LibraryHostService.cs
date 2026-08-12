@@ -45,6 +45,7 @@ public sealed class LibraryHostService : IDisposable
     private const int AsynchronousAvailabilityThreshold = 256;
     private readonly DevelopExportCoordinator coordinator;
     private readonly IUiDispatcher dispatcher;
+    private readonly Func<string, LibrarySourceMetadata?> sourceMetadataReader;
     private IReadOnlyDictionary<string, LibrarySourceAvailability> availabilityByFrameId =
         new Dictionary<string, LibrarySourceAvailability>();
     private IReadOnlyDictionary<string, bool> availabilityByFolderId =
@@ -53,15 +54,19 @@ public sealed class LibraryHostService : IDisposable
     private LibraryDocument? document;
 
     public LibraryHostService(IUiDispatcher dispatcher)
-        : this(dispatcher, new NativeDevelopExporterAdapter())
+        : this(dispatcher, new NativeDevelopExporterAdapter(), ReadSourceMetadata)
     {
     }
 
-    public LibraryHostService(IUiDispatcher dispatcher, IDevelopExporter exporter)
+    public LibraryHostService(
+        IUiDispatcher dispatcher,
+        IDevelopExporter exporter,
+        Func<string, LibrarySourceMetadata?>? sourceMetadataReader = null)
     {
         ArgumentNullException.ThrowIfNull(dispatcher);
         ArgumentNullException.ThrowIfNull(exporter);
         this.dispatcher = dispatcher;
+        this.sourceMetadataReader = sourceMetadataReader ?? ReadSourceMetadata;
         coordinator = new DevelopExportCoordinator(exporter, dispatcher);
     }
 
@@ -135,7 +140,8 @@ public sealed class LibraryHostService : IDisposable
                 FrameImportRefusal.NoFiles)]);
         }
 
-        FrameImportPlan plan = FrameImport.Plan(filePaths, document.Frames, process);
+        FrameImportPlan plan = FrameImport.Plan(
+            filePaths, document.Frames, process, sourceMetadataReader: sourceMetadataReader);
         if (plan.Rows.Count > 0)
         {
             _ = document.AppendAndSave(plan.Rows, out _);
@@ -159,7 +165,8 @@ public sealed class LibraryHostService : IDisposable
             return new FolderImportResult(unavailable, 0, 0, CatalogStoreError.NotFound);
         }
 
-        FolderImportPlan plan = FolderImport.Plan(folderPaths, document.Frames, process);
+        FolderImportPlan plan = FolderImport.Plan(
+            folderPaths, document.Frames, process, sourceMetadataReader: sourceMetadataReader);
         CatalogStoreError save = document.AppendFoldersAndFramesAndSave(
             plan.Folders,
             plan.Frames.Rows,
@@ -284,7 +291,7 @@ public sealed class LibraryHostService : IDisposable
     public LibrarySourceRelinkResult Relink(SourceRelinkPlan plan) =>
         document is null
             ? new(0, 0, plan?.Mappings.Count ?? 0, CatalogStoreError.NotFound)
-            : document.Relink(plan);
+            : document.Relink(plan, sourceMetadataReader);
 
     /// <summary>
     /// 현상해서 파일로 씁니다. 네이티브 호출은 워커 스레드에서 돌고 결과는 dispatcher 를 거쳐
@@ -350,5 +357,19 @@ public sealed class LibraryHostService : IDisposable
         {
             return false;
         }
+    }
+
+    private static LibrarySourceMetadata? ReadSourceMetadata(string path)
+    {
+        return NativeTiffSourceProbe.TryRead(path, out TiffSourceMetadata metadata)
+            ? new LibrarySourceMetadata(
+                metadata.FileBytes,
+                metadata.PixelWidth,
+                metadata.PixelHeight,
+                metadata.SamplesPerPixel,
+                metadata.BitsPerSample,
+                metadata.SampleFormat,
+                metadata.Orientation)
+            : null;
     }
 }

@@ -8,6 +8,33 @@ namespace Negaflow.Catalog;
 public readonly record struct ManualBaseRgb(double Red, double Green, double Blue);
 
 /// <summary>
+/// Immutable source traits recorded when a TIFF enters the catalog.  They make a relink
+/// refuse a different scan before its path can replace the original recipe input.
+/// </summary>
+public readonly record struct LibrarySourceMetadata(
+    ulong FileBytes,
+    uint PixelWidth,
+    uint PixelHeight,
+    ushort SamplesPerPixel,
+    ushort BitsPerSample,
+    ushort SampleFormat,
+    ushort Orientation)
+{
+    public bool IsValid =>
+        FileBytes > 0 && PixelWidth > 0 && PixelHeight > 0 && SamplesPerPixel > 0 &&
+        BitsPerSample > 0 && SampleFormat > 0 && Orientation is >= 1 and <= 8;
+
+    public bool IsCompatibleWith(LibrarySourceMetadata candidate) =>
+        FileBytes == candidate.FileBytes &&
+        PixelWidth == candidate.PixelWidth &&
+        PixelHeight == candidate.PixelHeight &&
+        SamplesPerPixel == candidate.SamplesPerPixel &&
+        BitsPerSample == candidate.BitsPerSample &&
+        SampleFormat == candidate.SampleFormat &&
+        Orientation == candidate.Orientation;
+}
+
+/// <summary>
 /// Base estimation recipe metadata. The catalog preserves these fields before the Windows
 /// engine implements Auto and Film resolution, so UI must not expose those modes as active
 /// develop paths yet.
@@ -75,6 +102,13 @@ public sealed record LibraryFrameSnapshot(
     ManualBaseRgb? ManualBase,
     ToneAdjustment Tone)
 {
+    /// <summary>
+    /// Optional for catalog rows written before TIFF source preflight was introduced.
+    /// Legacy rows remain readable but do not receive compatibility protection until
+    /// their source metadata is known.
+    /// </summary>
+    public LibrarySourceMetadata? SourceMetadata { get; init; }
+
     /// <summary>
     /// 스캐너가 RGB 본 스캔과 함께 생성한 IR TIFF입니다. 선택적 필드라 기존 import/legacy
     /// frame은 null로 유지됩니다. 원본과 마찬가지로 현상 결과를 여기에 쓰지 않습니다.

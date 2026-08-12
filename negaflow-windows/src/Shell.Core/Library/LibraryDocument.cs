@@ -313,7 +313,9 @@ public sealed class LibraryDocument : IDisposable
     /// 원본 위치만 바꾸는 원자적 catalog 갱신입니다. source-bound defect sidecar가 있는 경우
     /// 새 파일의 SHA-256까지 같아야 하므로, 다른 사진을 같은 경로에 연결하지 않습니다.
     /// </summary>
-    public LibrarySourceRelinkResult Relink(SourceRelinkPlan plan)
+    public LibrarySourceRelinkResult Relink(
+        SourceRelinkPlan plan,
+        Func<string, LibrarySourceMetadata?>? sourceMetadataReader = null)
     {
         ArgumentNullException.ThrowIfNull(plan);
         Dictionary<string, string> mappings = new(StringComparer.OrdinalIgnoreCase);
@@ -345,6 +347,27 @@ public sealed class LibraryDocument : IDisposable
             }
             if (processed.Add(oldPath))
             {
+                LibrarySourceMetadata? actualMetadata = null;
+                foreach (LibraryFrameSnapshot familyFrame in frames)
+                {
+                    if (!TryNormalizePath(familyFrame.SourcePath, out string familyPath) ||
+                        !string.Equals(familyPath, oldPath, StringComparison.OrdinalIgnoreCase) ||
+                        familyFrame.SourceMetadata is not { } expectedMetadata)
+                    {
+                        continue;
+                    }
+                    actualMetadata ??= sourceMetadataReader?.Invoke(newPath);
+                    if (actualMetadata is null || !expectedMetadata.IsCompatibleWith(actualMetadata.Value))
+                    {
+                        mappings.Remove(oldPath);
+                        ++rejectedSources;
+                        break;
+                    }
+                }
+                if (!mappings.ContainsKey(oldPath))
+                {
+                    continue;
+                }
                 DefectSourceIdentity? actual = null;
                 foreach (LibraryFrameSnapshot familyFrame in frames)
                 {

@@ -406,6 +406,12 @@ internal static partial class NativeMethods
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial void nf_flatbed_frame_grid_destroy_v1(nint handle);
 
+    [LibraryImport(LibraryName, EntryPoint = "nf_probe_tiff_source_v1")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static unsafe partial uint nf_probe_tiff_source_v1(
+        char* sourcePath,
+        NativeTiffSourceInfoV1* result);
+
     [LibraryImport(LibraryName, EntryPoint = "nf_get_negative_limits_v1")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static partial uint nf_get_negative_limits_v1(ref NativeNegativeLimitsV1 output);

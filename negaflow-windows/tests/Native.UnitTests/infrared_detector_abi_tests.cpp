@@ -46,7 +46,7 @@ void test_layout_and_owned_payload_lifecycle() {
     static_assert(sizeof(nf_infrared_cluster_v1) == 40U);
     static_assert(sizeof(nf_infrared_component_v1) == 32U);
     static_assert(sizeof(nf_infrared_preview_point_v1) == 8U);
-    expect(nf_get_abi_version() == 36U, "abi_minor_36");
+    expect(nf_get_abi_version() == 37U, "abi_minor_37");
 
     constexpr std::uint32_t width = 128U;
     constexpr std::uint32_t height = 96U;

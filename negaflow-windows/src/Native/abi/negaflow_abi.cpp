@@ -2,6 +2,7 @@
 
 #include "negaflow/color/soft_proof.h"
 #include "negaflow/core/build_info.h"
+#include "negaflow/core/tiff_probe.h"
 #include "negaflow/imaging/manual_negative_developer.h"
 #include "negaflow/imaging/working_tone_adjuster.h"
 #include "negaflow/imaging/auto_adjust.h"
@@ -169,6 +170,8 @@ static_assert(sizeof(nf_infrared_preview_point_v1) == 8U);
 static_assert(sizeof(nf_flatbed_frame_grid_summary_v1) == 24U);
 static_assert(sizeof(nf_flatbed_frame_detection_v1) == 56U);
 static_assert(offsetof(nf_flatbed_frame_detection_v1, x) == 16U);
+static_assert(sizeof(nf_tiff_source_info_v1) == 32U);
+static_assert(offsetof(nf_tiff_source_info_v1, file_bytes) == 24U);
 static_assert(offsetof(nf_develop_run_state_v1, cancel_requested) == 4U);
 static_assert(offsetof(nf_develop_run_state_v1, stage) == 8U);
 static_assert(offsetof(nf_develop_run_state_v1, progress_permille) == 12U);
@@ -4902,6 +4905,50 @@ nf_status_t NF_CALL nf_flatbed_frame_grid_get_detection_v1(
 void NF_CALL nf_flatbed_frame_grid_destroy_v1(
     nf_flatbed_frame_grid_handle_v1* const handle) {
     delete handle;
+}
+
+nf_status_t NF_CALL nf_probe_tiff_source_v1(
+    const wchar_t* const source_path,
+    nf_tiff_source_info_v1* const result) {
+    if (result == nullptr) return NF_STATUS_INVALID_ARGUMENT;
+    if (result->struct_size < static_cast<std::uint32_t>(sizeof(*result))) {
+        return NF_STATUS_STRUCT_TOO_SMALL;
+    }
+    if (source_path == nullptr || source_path[0] == L'\0') return NF_STATUS_INVALID_ARGUMENT;
+
+    const std::uint32_t declared_size = result->struct_size;
+    std::memset(result, 0, sizeof(*result));
+    result->struct_size = declared_size;
+    try {
+        const negaflow::core::TiffProbeResult probe =
+            negaflow::core::probe_tiff_file(std::filesystem::path{source_path});
+        if (probe.status != negaflow::core::TiffProbeStatus::ok) {
+            result->status = NF_TIFF_SOURCE_PROBE_UNREADABLE;
+            return NF_STATUS_OK;
+        }
+        const auto& info = probe.info;
+        if (info.width == 0U || info.height == 0U ||
+            info.width > std::numeric_limits<std::uint32_t>::max() ||
+            info.height > std::numeric_limits<std::uint32_t>::max() ||
+            info.samples_per_pixel == 0U || info.bits_per_sample_count == 0U ||
+            info.sample_format_count == 0U || info.bits_per_sample[0] == 0U ||
+            info.sample_format[0] == 0U || info.orientation == 0U || info.orientation > 8U) {
+            result->status = NF_TIFF_SOURCE_PROBE_UNSUPPORTED;
+            return NF_STATUS_OK;
+        }
+        result->status = NF_TIFF_SOURCE_PROBE_OK;
+        result->pixel_width = static_cast<std::uint32_t>(info.width);
+        result->pixel_height = static_cast<std::uint32_t>(info.height);
+        result->samples_per_pixel = info.samples_per_pixel;
+        result->bits_per_sample = info.bits_per_sample[0];
+        result->sample_format = info.sample_format[0];
+        result->orientation = info.orientation;
+        result->file_bytes = info.file_bytes;
+        return NF_STATUS_OK;
+    } catch (...) {
+        result->status = NF_TIFF_SOURCE_PROBE_UNREADABLE;
+        return NF_STATUS_OK;
+    }
 }
 
 nf_status_t NF_CALL nf_get_tone_limits_v1(nf_tone_limits_v1* const output) {
