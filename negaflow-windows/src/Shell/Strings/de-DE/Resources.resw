@@ -196,6 +196,22 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
     <value>%d Fotos aus %d Ordnern importiert.</value>
     <comment>AppLocalizedText.libraryFolderImportResult</comment>
   </data>
+  <data name="filmTypeColorNegative.Text" xml:space="preserve">
+    <value>Farbnegativ</value>
+    <comment>AppLocalizedText.filmTypeColorNegative</comment>
+  </data>
+  <data name="filmTypeColorPositive.Text" xml:space="preserve">
+    <value>Farbpositiv</value>
+    <comment>AppLocalizedText.filmTypeColorPositive</comment>
+  </data>
+  <data name="filmTypeBlackAndWhiteNegative.Text" xml:space="preserve">
+    <value>S/W-Negativ</value>
+    <comment>AppLocalizedText.filmTypeBlackAndWhiteNegative</comment>
+  </data>
+  <data name="filmTypeBlackAndWhitePositive.Text" xml:space="preserve">
+    <value>S/W-Positiv</value>
+    <comment>AppLocalizedText.filmTypeBlackAndWhitePositive</comment>
+  </data>
   <data name="importImages.Text" xml:space="preserve">
     <value>Bilder importieren</value>
     <comment>AppLocalizedText.importImages</comment>

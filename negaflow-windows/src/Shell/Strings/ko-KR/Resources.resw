@@ -196,6 +196,22 @@
     <value>%d장의 사진을 %d개 폴더에서 가져왔습니다.</value>
     <comment>AppLocalizedText.libraryFolderImportResult</comment>
   </data>
+  <data name="filmTypeColorNegative.Text" xml:space="preserve">
+    <value>컬러 네거티브</value>
+    <comment>AppLocalizedText.filmTypeColorNegative</comment>
+  </data>
+  <data name="filmTypeColorPositive.Text" xml:space="preserve">
+    <value>컬러 포지티브</value>
+    <comment>AppLocalizedText.filmTypeColorPositive</comment>
+  </data>
+  <data name="filmTypeBlackAndWhiteNegative.Text" xml:space="preserve">
+    <value>흑백 네거티브</value>
+    <comment>AppLocalizedText.filmTypeBlackAndWhiteNegative</comment>
+  </data>
+  <data name="filmTypeBlackAndWhitePositive.Text" xml:space="preserve">
+    <value>흑백 포지티브</value>
+    <comment>AppLocalizedText.filmTypeBlackAndWhitePositive</comment>
+  </data>
   <data name="importImages.Text" xml:space="preserve">
     <value>이미지 가져오기</value>
     <comment>AppLocalizedText.importImages</comment>

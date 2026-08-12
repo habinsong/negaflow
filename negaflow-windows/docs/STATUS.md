@@ -26,6 +26,16 @@ probe in the background and discard a stale result if the open document changed.
 view renders the cached offline state. x64 Debug managed build passed Catalog 595 and Shell 372
 assertions. Timed large-library device evidence is still pending.
 
+## 2026-08-12 Library browser projection
+
+Library now projects its loaded frames into All, Folders, Film Type, and Offline views without
+reloading the catalog. Folder view keeps registered empty folders and exposes unregistered source
+parents as sections; film type and offline views retain the same stable frame ordering. The view
+controls have stable automation identifiers and localized labels for all six supported languages.
+x64 Debug managed build passed Catalog 595 and Shell 375 assertions. The running x64 UI was
+inspected with a TIFF fixture: the folder section and all four view controls rendered. Real
+multi-folder import, relink, and a large offline catalog remain unverified.
+
 ## 2026-08-12 Positive film develop route
 
 네이티브 엔진과 request factory가 이미 지원하던 Color/B&W positive film scan이 catalog `CanDevelop`

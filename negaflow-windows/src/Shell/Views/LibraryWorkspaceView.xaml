@@ -5,6 +5,9 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:Negaflow.Shell.Views.Controls"
     xmlns:primitives="using:Microsoft.UI.Xaml.Controls.Primitives">
+    <UserControl.Resources>
+        <CollectionViewSource x:Name="FolderGroupedItems" IsSourceGrouped="True" />
+    </UserControl.Resources>
     <Grid x:Name="Root" Background="{ThemeResource NegaflowWindowBrush}" SizeChanged="OnRootSizeChanged">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto" />
@@ -152,6 +155,26 @@
                         AutomationProperties.AutomationId="negaflow.library.frames"
                         IsItemClickEnabled="False"
                         SelectionMode="Single">
+                        <ListView.GroupStyle>
+                            <GroupStyle>
+                                <GroupStyle.HeaderTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="6,12,6,2" ColumnSpacing="8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock FontSize="12" FontWeight="SemiBold" Text="{Binding Title}" />
+                                            <TextBlock
+                                                Grid.Column="1"
+                                                FontSize="11"
+                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                Text="{Binding Count}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </GroupStyle.HeaderTemplate>
+                            </GroupStyle>
+                        </ListView.GroupStyle>
                         <ListView.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel Padding="4,6" Spacing="2">
@@ -189,10 +212,19 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock x:Uid="libraryAllShort" Grid.Column="0" Padding="6,7" TextAlignment="Center" FontSize="11" FontWeight="SemiBold" />
-                            <TextBlock x:Uid="libraryFolders" Grid.Column="1" Padding="6,7" TextAlignment="Center" FontSize="11" />
-                            <TextBlock x:Uid="libraryFilmType" Grid.Column="2" Padding="6,7" TextAlignment="Center" FontSize="11" />
-                            <TextBlock x:Uid="libraryOffline" Grid.Column="3" Padding="6,7" TextAlignment="Center" FontSize="11" />
+                            <Button x:Name="AllModeButton" Grid.Column="0" Padding="6,0" Background="Transparent" BorderThickness="0" AutomationProperties.AutomationId="negaflow.library.view.all" Click="OnAllModeClicked" />
+                            <Button x:Name="FoldersModeButton" Grid.Column="1" Padding="6,0" Background="Transparent" BorderThickness="0" AutomationProperties.AutomationId="negaflow.library.view.folders" Click="OnFoldersModeClicked" />
+                            <DropDownButton x:Name="FilmTypeModeButton" Grid.Column="2" Padding="6,0" Background="Transparent" BorderThickness="0" AutomationProperties.AutomationId="negaflow.library.view.film-type">
+                                <DropDownButton.Flyout>
+                                    <MenuFlyout>
+                                        <MenuFlyoutItem x:Name="ColorNegativeFilmTypeItem" Tag="ColorNegative" Click="OnFilmTypeClicked" />
+                                        <MenuFlyoutItem x:Name="ColorPositiveFilmTypeItem" Tag="ColorPositive" Click="OnFilmTypeClicked" />
+                                        <MenuFlyoutItem x:Name="BlackAndWhiteNegativeFilmTypeItem" Tag="BlackAndWhiteNegative" Click="OnFilmTypeClicked" />
+                                        <MenuFlyoutItem x:Name="BlackAndWhitePositiveFilmTypeItem" Tag="BlackAndWhitePositive" Click="OnFilmTypeClicked" />
+                                    </MenuFlyout>
+                                </DropDownButton.Flyout>
+                            </DropDownButton>
+                            <Button x:Name="OfflineModeButton" Grid.Column="3" Padding="6,0" Background="Transparent" BorderThickness="0" AutomationProperties.AutomationId="negaflow.library.view.offline" Click="OnOfflineModeClicked" />
                         </Grid>
                     </Border>
                     <TextBox

@@ -16,6 +16,8 @@ public sealed partial class LibraryWorkspaceView : UserControl
     private bool isResizing;
     private double liveWidth = ShellLayoutMetrics.LibraryControlsDefaultWidth;
     private IReadOnlyList<LibraryFrameListItem> allItems = [];
+    private LibraryBrowserViewMode viewMode = LibraryBrowserViewMode.Folders;
+    private FilmType selectedFilmType = FilmType.ColorNegative;
 
     public LibraryWorkspaceView()
     {
@@ -75,8 +77,68 @@ public sealed partial class LibraryWorkspaceView : UserControl
     {
         IReadOnlyList<LibraryFrameListItem> items =
             LibraryFrameListItems.Filter(allItems, LibrarySearchBox?.Text ?? string.Empty);
-        FrameListView.ItemsSource = items;
-        LibraryCountText.Text = items.Count.ToString(CultureInfo.CurrentCulture);
+        if (libraryHost is null)
+        {
+            FrameListView.ItemsSource = items;
+            LibraryCountText.Text = items.Count.ToString(CultureInfo.CurrentCulture);
+            return;
+        }
+
+        LibraryBrowserProjection projection = LibraryBrowserProjector.Create(
+            items,
+            libraryHost.Folders,
+            libraryHost.FolderAvailabilityById,
+            viewMode,
+            selectedFilmType);
+        if (viewMode is LibraryBrowserViewMode.Folders or LibraryBrowserViewMode.FilmType)
+        {
+            FolderGroupedItems.Source = projection.FolderSections;
+            FrameListView.ItemsSource = FolderGroupedItems.View;
+        }
+        else
+        {
+            FolderGroupedItems.Source = null;
+            FrameListView.ItemsSource = projection.Items;
+        }
+        LibraryCountText.Text = projection.MatchedCount.ToString(CultureInfo.CurrentCulture);
+        UpdateViewModeControls();
+    }
+
+    private void OnAllModeClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        viewMode = LibraryBrowserViewMode.All;
+        ShowFilteredItems();
+    }
+
+    private void OnFoldersModeClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        viewMode = LibraryBrowserViewMode.Folders;
+        ShowFilteredItems();
+    }
+
+    private void OnOfflineModeClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        viewMode = LibraryBrowserViewMode.Offline;
+        ShowFilteredItems();
+    }
+
+    private void OnFilmTypeClicked(object sender, RoutedEventArgs args)
+    {
+        _ = args;
+        if (sender is not MenuFlyoutItem { Tag: string value } ||
+            !Enum.TryParse(value, out FilmType filmType))
+        {
+            return;
+        }
+        selectedFilmType = filmType;
+        viewMode = LibraryBrowserViewMode.FilmType;
+        ShowFilteredItems();
     }
 
     private async void OnImportClicked(object sender, RoutedEventArgs args)
@@ -278,6 +340,15 @@ public sealed partial class LibraryWorkspaceView : UserControl
         SetButtonText(ImportImagesButton, importImages);
         SetButtonText(EmptyImportImagesButton, importImages);
         SetButtonText(ImportFoldersButton, AppResources.Get("importFolder", "Content"));
+        SetButtonText(AllModeButton, AppResources.Get("libraryAllShort", "Text"));
+        SetButtonText(FoldersModeButton, AppResources.Get("libraryFolders", "Text"));
+        SetDropDownText(FilmTypeModeButton, AppResources.Get("libraryFilmType", "Text"));
+        SetButtonText(OfflineModeButton, AppResources.Get("libraryOffline", "Text"));
+        SetMenuItemText(ColorNegativeFilmTypeItem, AppResources.Get("filmTypeColorNegative", "Text"));
+        SetMenuItemText(ColorPositiveFilmTypeItem, AppResources.Get("filmTypeColorPositive", "Text"));
+        SetMenuItemText(BlackAndWhiteNegativeFilmTypeItem, AppResources.Get("filmTypeBlackAndWhiteNegative", "Text"));
+        SetMenuItemText(BlackAndWhitePositiveFilmTypeItem, AppResources.Get("filmTypeBlackAndWhitePositive", "Text"));
+        UpdateViewModeControls();
         LibraryCountText.Text = AppResources.FormatIntegers(
             "libraryResultCountFormat",
             "Value",
@@ -296,6 +367,37 @@ public sealed partial class LibraryWorkspaceView : UserControl
     {
         button.Content = text;
         AutomationProperties.SetName(button, text);
+    }
+
+    private static void SetDropDownText(DropDownButton button, string text)
+    {
+        button.Content = text;
+        AutomationProperties.SetName(button, text);
+        ToolTipService.SetToolTip(button, text);
+    }
+
+    private static void SetMenuItemText(MenuFlyoutItem item, string text)
+    {
+        item.Text = text;
+        AutomationProperties.SetName(item, text);
+    }
+
+    private void UpdateViewModeControls()
+    {
+        SetModeAppearance(AllModeButton, viewMode == LibraryBrowserViewMode.All);
+        SetModeAppearance(FoldersModeButton, viewMode == LibraryBrowserViewMode.Folders);
+        SetModeAppearance(FilmTypeModeButton, viewMode == LibraryBrowserViewMode.FilmType);
+        SetModeAppearance(OfflineModeButton, viewMode == LibraryBrowserViewMode.Offline);
+    }
+
+    private static void SetModeAppearance(Control control, bool selected)
+    {
+        control.Background = selected
+            ? (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["NegaflowSelectionBrush"]
+            : (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["NegaflowSubtleFillBrush"];
+        AutomationProperties.SetItemStatus(
+            control,
+            AppResources.Get(selected ? "selected" : "notSelected", "Value"));
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs args)

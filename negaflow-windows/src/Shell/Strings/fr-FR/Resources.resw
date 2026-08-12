@@ -196,6 +196,22 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
     <value>%d photos importées depuis %d dossiers.</value>
     <comment>AppLocalizedText.libraryFolderImportResult</comment>
   </data>
+  <data name="filmTypeColorNegative.Text" xml:space="preserve">
+    <value>Négatif couleur</value>
+    <comment>AppLocalizedText.filmTypeColorNegative</comment>
+  </data>
+  <data name="filmTypeColorPositive.Text" xml:space="preserve">
+    <value>Positif couleur</value>
+    <comment>AppLocalizedText.filmTypeColorPositive</comment>
+  </data>
+  <data name="filmTypeBlackAndWhiteNegative.Text" xml:space="preserve">
+    <value>Négatif N&amp;B</value>
+    <comment>AppLocalizedText.filmTypeBlackAndWhiteNegative</comment>
+  </data>
+  <data name="filmTypeBlackAndWhitePositive.Text" xml:space="preserve">
+    <value>Positif N&amp;B</value>
+    <comment>AppLocalizedText.filmTypeBlackAndWhitePositive</comment>
+  </data>
   <data name="importImages.Text" xml:space="preserve">
     <value>Importer des images</value>
     <comment>AppLocalizedText.importImages</comment>

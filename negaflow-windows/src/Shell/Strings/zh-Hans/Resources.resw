@@ -196,6 +196,22 @@
     <value>已导入 %d 张照片，来自 %d 个文件夹。</value>
     <comment>AppLocalizedText.libraryFolderImportResult</comment>
   </data>
+  <data name="filmTypeColorNegative.Text" xml:space="preserve">
+    <value>彩色负片</value>
+    <comment>AppLocalizedText.filmTypeColorNegative</comment>
+  </data>
+  <data name="filmTypeColorPositive.Text" xml:space="preserve">
+    <value>彩色正片</value>
+    <comment>AppLocalizedText.filmTypeColorPositive</comment>
+  </data>
+  <data name="filmTypeBlackAndWhiteNegative.Text" xml:space="preserve">
+    <value>黑白负片</value>
+    <comment>AppLocalizedText.filmTypeBlackAndWhiteNegative</comment>
+  </data>
+  <data name="filmTypeBlackAndWhitePositive.Text" xml:space="preserve">
+    <value>黑白正片</value>
+    <comment>AppLocalizedText.filmTypeBlackAndWhitePositive</comment>
+  </data>
   <data name="importImages.Text" xml:space="preserve">
     <value>导入图像</value>
     <comment>AppLocalizedText.importImages</comment>

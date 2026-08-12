@@ -23,6 +23,7 @@ internal static class Program
         VerifyLibraryDocument();
         VerifyLibraryHost();
         VerifyLibraryAvailability();
+        VerifyLibraryBrowserProjection();
         VerifyDevelopInspectorPresentationState();
         VerifyDevelopHistogramSampler();
         VerifyDevelopPanelState();
@@ -1516,6 +1517,58 @@ internal static class Program
         Check(
             snapshot.ByFolderId["folder-online"] && !snapshot.ByFolderId["folder-offline"],
             "library_availability_records_folder_status");
+    }
+
+    private static void VerifyLibraryBrowserProjection()
+    {
+        IReadOnlyList<LibraryFrameListItem> items = LibraryFrameListItems.From(
+            [
+                Frame(new ManualBaseRgb(0.2, 0.2, 0.2), sourcePath: @"C:\library\A\one.tif") with { Id = "one" },
+                Frame(null, SourceSignalKind.FilmPositiveScan, FilmType.ColorPositive,
+                    sourcePath: @"C:\library\B\two.tif") with { Id = "two" },
+                Frame(new ManualBaseRgb(0.2, 0.2, 0.2), sourcePath: @"C:\library\A\three.tif") with { Id = "three" },
+                Frame(new ManualBaseRgb(0.2, 0.2, 0.2), sourcePath: @"C:\library\A\ignored.tif") with { Id = "one" },
+            ],
+            new Dictionary<string, LibrarySourceAvailability>
+            {
+                ["one"] = LibrarySourceAvailability.Online,
+                ["two"] = LibrarySourceAvailability.Offline,
+                ["three"] = LibrarySourceAvailability.Online,
+            });
+        IReadOnlyList<LibraryFolderSnapshot> folders =
+        [
+            new("folder-a", @"C:\library\A", DateTimeOffset.UnixEpoch),
+            new("folder-empty", @"C:\library\Empty", DateTimeOffset.UnixEpoch),
+        ];
+        Dictionary<string, bool> availability = new()
+        {
+            ["folder-a"] = true,
+            ["folder-empty"] = false,
+        };
+
+        LibraryBrowserProjection foldersProjection = LibraryBrowserProjector.Create(
+            items, folders, availability, LibraryBrowserViewMode.Folders);
+        Check(
+            foldersProjection.SourceCount == 3 && foldersProjection.MatchedCount == 3 &&
+            foldersProjection.FolderSections.Count == 3 &&
+            foldersProjection.FolderSections[0].Items.Select(item => item.Id).SequenceEqual(["one", "three"]) &&
+            foldersProjection.FolderSections[1].Items.Count == 0 &&
+            foldersProjection.FolderSections[1].IsRegistered &&
+            foldersProjection.FolderSections[2].Items.Single().Id == "two",
+            "library_browser_folders_keeps_registered_empty_and_implicit_sections");
+
+        LibraryBrowserProjection filmProjection = LibraryBrowserProjector.Create(
+            items, folders, availability, LibraryBrowserViewMode.FilmType, FilmType.ColorPositive);
+        Check(
+            filmProjection.MatchedCount == 1 && filmProjection.FolderSections.Count == 1 &&
+            filmProjection.FolderSections.Single().Items.Single().Id == "two",
+            "library_browser_film_type_filters_before_grouping");
+
+        LibraryBrowserProjection offlineProjection = LibraryBrowserProjector.Create(
+            items, folders, availability, LibraryBrowserViewMode.Offline);
+        Check(
+            offlineProjection.Items.Single().Id == "two" && offlineProjection.FolderSections.Count == 0,
+            "library_browser_offline_uses_availability_snapshot");
     }
 
     private static DevelopExportResult FailedResult(
