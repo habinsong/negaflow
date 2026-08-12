@@ -211,6 +211,22 @@ public sealed class DevelopPanelState
 
     public bool CanExport => SelectedFrame is { CanDevelop: true } && !host.IsExporting;
 
+    public LibraryFrameError ApplyAutoTone(AutoAdjustSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        return SelectedFrame is not { } frame
+            ? LibraryFrameError.MissingId
+            : ApplyAutoAdjusted(AutoAdjustCoordinator.ApplyTone(frame, settings));
+    }
+
+    public LibraryFrameError ApplyAutoWhiteBalance(AutoAdjustSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        return SelectedFrame is not { } frame
+            ? LibraryFrameError.MissingId
+            : ApplyAutoAdjusted(AutoAdjustCoordinator.ApplyWhiteBalance(frame, settings));
+    }
+
     public bool Select(string frameId)
     {
         ArgumentNullException.ThrowIfNull(frameId);
@@ -424,6 +440,21 @@ public sealed class DevelopPanelState
         if (error == LibraryFrameError.None)
         {
             Select(frame.Id);
+        }
+        return error;
+    }
+
+    private LibraryFrameError ApplyAutoAdjusted(LibraryFrameSnapshot adjusted)
+    {
+        LibraryFrameError error = host.Edit(
+            adjusted.Id,
+            new LibraryFrameEdit(
+                adjusted.Tone,
+                adjusted.ManualBase,
+                ColorModel: adjusted.ColorModel));
+        if (error == LibraryFrameError.None)
+        {
+            Select(adjusted.Id);
         }
         return error;
     }

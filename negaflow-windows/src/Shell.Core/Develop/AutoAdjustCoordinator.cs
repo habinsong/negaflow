@@ -3,6 +3,13 @@ using Negaflow.Interop;
 
 namespace Negaflow.Shell;
 
+public enum AutoAdjustOperation
+{
+    Tone,
+    WhiteBalance,
+    All,
+}
+
 public sealed record AutoAdjustOutcome(
     DevelopExportOutcomeKind Kind,
     LibraryFrameSnapshot? Frame,
@@ -65,6 +72,16 @@ public sealed class AutoAdjustCoordinator
             ColorModel = frame.ColorModel with { Warmth = 0.0, Tint = 0.0 },
         };
 
+    internal static LibraryFrameSnapshot NeutraliseTone(LibraryFrameSnapshot frame) =>
+        frame with
+        {
+            Tone = ToneAdjustment.Neutral,
+            ColorModel = frame.ColorModel with { ColorDepth = 0.0, Vibrance = 0.0, Saturation = 0.0 },
+        };
+
+    internal static LibraryFrameSnapshot NeutraliseWhiteBalance(LibraryFrameSnapshot frame) =>
+        frame with { ColorModel = frame.ColorModel with { Warmth = 0.0, Tint = 0.0 } };
+
     /// <summary>
     /// 계산한 값을 대입한 사본입니다. 나머지 recipe 는 건드리지 않습니다.
     /// </summary>
@@ -91,17 +108,72 @@ public sealed class AutoAdjustCoordinator
             },
         };
 
+    internal static LibraryFrameSnapshot ApplyTone(
+        LibraryFrameSnapshot frame,
+        AutoAdjustSettings settings) =>
+        frame with
+        {
+            Tone = frame.Tone with
+            {
+                Exposure = settings.Exposure,
+                Contrast = settings.Contrast,
+                Highlight = settings.Highlights,
+                Shadow = settings.Shadows,
+                Whites = settings.Whites,
+                Blacks = settings.Blacks,
+                Density = settings.Density,
+            },
+            ColorModel = frame.ColorModel with
+            {
+                Vibrance = settings.Vibrance,
+                Saturation = 0.0,
+            },
+        };
+
+    internal static LibraryFrameSnapshot ApplyWhiteBalance(
+        LibraryFrameSnapshot frame,
+        AutoAdjustSettings settings) =>
+        frame with
+        {
+            ColorModel = frame.ColorModel with
+            {
+                Warmth = settings.Warmth,
+                Tint = settings.Tint,
+            },
+        };
+
     /// <summary>
     /// 결과는 항상 dispatcher 를 거쳐 돌아옵니다 — 거부와 예외도 같은 길입니다.
     /// </summary>
     public async Task<bool> RunAsync(
         LibraryFrameSnapshot frame,
         Action<AutoAdjustOutcome> onCompleted)
+        => await RunAsync(frame, AutoAdjustOperation.All, onCompleted).ConfigureAwait(false);
+
+    public Task<bool> RunToneAsync(
+        LibraryFrameSnapshot frame,
+        Action<AutoAdjustOutcome> onCompleted) =>
+        RunAsync(frame, AutoAdjustOperation.Tone, onCompleted);
+
+    public Task<bool> RunWhiteBalanceAsync(
+        LibraryFrameSnapshot frame,
+        Action<AutoAdjustOutcome> onCompleted) =>
+        RunAsync(frame, AutoAdjustOperation.WhiteBalance, onCompleted);
+
+    private async Task<bool> RunAsync(
+        LibraryFrameSnapshot frame,
+        AutoAdjustOperation operation,
+        Action<AutoAdjustOutcome> onCompleted)
     {
         ArgumentNullException.ThrowIfNull(frame);
         ArgumentNullException.ThrowIfNull(onCompleted);
 
-        LibraryFrameSnapshot neutral = Neutralise(frame);
+        LibraryFrameSnapshot neutral = operation switch
+        {
+            AutoAdjustOperation.Tone => NeutraliseTone(frame),
+            AutoAdjustOperation.WhiteBalance => NeutraliseWhiteBalance(frame),
+            _ => Neutralise(frame),
+        };
         // 미리보기는 파일을 쓰지 않지만 요청 팩토리는 목적지를 요구합니다.
         string unusedDestination = Path.ChangeExtension(frame.SourcePath, ".auto.png");
         DevelopRequestResult built = DevelopRequestFactory.Create(neutral, unusedDestination);
@@ -132,10 +204,16 @@ public sealed class AutoAdjustCoordinator
                 pixels,
                 render.ImageWidth,
                 render.ImageHeight);
+            LibraryFrameSnapshot applied = operation switch
+            {
+                AutoAdjustOperation.Tone => ApplyTone(frame, settings),
+                AutoAdjustOperation.WhiteBalance => ApplyWhiteBalance(frame, settings),
+                _ => Apply(frame, settings),
+            };
             return Deliver(
                 new AutoAdjustOutcome(
                     DevelopExportOutcomeKind.Completed,
-                    Apply(frame, settings),
+                    applied,
                     settings,
                     DevelopRequestRefusal.None,
                     null),

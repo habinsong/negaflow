@@ -33,6 +33,14 @@ catalog 저장이 실패하면 메모리 projection도 이전 상태로 복구�
 원본 찾기 버튼은 Windows picker를 통해 이 경로를 호출하며, UI는 6개 언어 리소스를 사용합니다. 직접 클릭 UI
 자동화는 아직 수행하지 않았습니다.
 
+## 2026-08-12 Auto Tone and Auto White Balance separation
+
+macOS `AppModel+AutoAdjust`와 같이 Auto Tone과 Auto White Balance의 neutral render 계약을 분리했습니다.
+Tone은 tone curve를 포함한 톤·vibrance·saturation만 0으로 만들어 측정하고 warmth/tint는 보존합니다. White
+Balance는 warmth/tint만 0으로 만들어 측정하고 나머지 현상 recipe를 보존합니다. 적용도 서로의 field를 덮지
+않으며, 기존 combined API는 호환을 위해 남겨 두었습니다. x64 Debug Catalog 595, Shell 362 assertions를
+통과했습니다. Develop quick-action UI는 다음 surface 작업입니다.
+
 ## 2026-08-12 Output sharpening native core
 
 macOS `OutputSharpening`의 screen/matte/glossy 매체별 반경·강도와 DPI 제곱근 스케일을 Windows C++20

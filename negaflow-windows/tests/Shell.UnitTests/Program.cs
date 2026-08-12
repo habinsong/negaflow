@@ -2050,6 +2050,17 @@ internal static class Program
             neutral.ColorModel.Vibrance == corrected.ColorModel.Vibrance &&
                 neutral.Base == corrected.Base,
             "auto_adjust_leaves_the_rest_of_the_recipe_alone");
+        LibraryFrameSnapshot toneNeutral = AutoAdjustCoordinator.NeutraliseTone(corrected);
+        LibraryFrameSnapshot balanceNeutral = AutoAdjustCoordinator.NeutraliseWhiteBalance(corrected);
+        Check(
+            toneNeutral.Tone == ToneAdjustment.Neutral &&
+                toneNeutral.ColorModel.Warmth == corrected.ColorModel.Warmth &&
+                toneNeutral.ColorModel.Vibrance == 0.0 && toneNeutral.ColorModel.Saturation == 0.0,
+            "auto_tone_neutralises_only_tone_corrections");
+        Check(
+            balanceNeutral.Tone == corrected.Tone &&
+                balanceNeutral.ColorModel.Warmth == 0.0 && balanceNeutral.ColorModel.Tint == 0.0,
+            "auto_white_balance_neutralises_only_white_balance");
 
         // Assigned, not accumulated: applying the same settings twice lands in the same place.
         AutoAdjustSettings settings = new(
@@ -2076,6 +2087,14 @@ internal static class Program
         Check(
             once.Base == corrected.Base && once.PointCurves == corrected.PointCurves,
             "auto_adjust_does_not_touch_the_film_base_or_other_recipes");
+        LibraryFrameSnapshot toneOnly = AutoAdjustCoordinator.ApplyTone(corrected, settings);
+        LibraryFrameSnapshot balanceOnly = AutoAdjustCoordinator.ApplyWhiteBalance(corrected, settings);
+        Check(
+            toneOnly.ColorModel.Warmth == corrected.ColorModel.Warmth &&
+                toneOnly.ColorModel.Vibrance == settings.Vibrance &&
+                balanceOnly.Tone == corrected.Tone &&
+                balanceOnly.ColorModel.Warmth == settings.Warmth,
+            "auto_tone_and_white_balance_apply_disjoint_recipe_fields");
 
         // A frame that cannot be developed must be refused through the dispatcher, not
         // thrown, so the caller handles one shape of answer.
