@@ -562,6 +562,20 @@ internal unsafe struct NativeDevelopExportRequestV26
 }
 
 [StructLayout(LayoutKind.Sequential)]
+internal unsafe struct NativeDevelopExportRequestV27
+{
+    internal NativeDevelopExportRequestV26 V26;
+    internal float PrimaryCalibrationRedHue;
+    internal float PrimaryCalibrationRedSaturation;
+    internal float PrimaryCalibrationGreenHue;
+    internal float PrimaryCalibrationGreenSaturation;
+    internal float PrimaryCalibrationBlueHue;
+    internal float PrimaryCalibrationBlueSaturation;
+    internal uint PrimaryCalibrationReserved0;
+    internal uint PrimaryCalibrationReserved1;
+}
+
+[StructLayout(LayoutKind.Sequential)]
 internal unsafe struct NativeDevelopExportResultV2
 {
     internal const int FailureNameCapacity = 64;

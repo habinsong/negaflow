@@ -750,6 +750,20 @@ typedef struct nf_develop_export_request_v26 {
     uint32_t output_sharpening_reserved;
 } nf_develop_export_request_v26;
 
+/* v27 preserves v26 and appends the six macOS creative primary-calibration controls.
+   Every control is finite in the stored slider range -1...1. */
+typedef struct nf_develop_export_request_v27 {
+    nf_develop_export_request_v26 v26;
+    float primary_calibration_red_hue;
+    float primary_calibration_red_saturation;
+    float primary_calibration_green_hue;
+    float primary_calibration_green_saturation;
+    float primary_calibration_blue_hue;
+    float primary_calibration_blue_saturation;
+    uint32_t primary_calibration_reserved0;
+    uint32_t primary_calibration_reserved1;
+} nf_develop_export_request_v27;
+
 typedef struct nf_develop_export_result_v1 {
     uint32_t struct_size;
     uint32_t succeeded;
@@ -1414,6 +1428,20 @@ NF_API nf_status_t NF_CALL nf_develop_export_v26(
     nf_develop_export_result_v3* result);
 NF_API nf_status_t NF_CALL nf_develop_preview_v26(
     const nf_develop_export_request_v26* request,
+    const nf_soft_proof_v1* soft_proof,
+    uint32_t maximum_width,
+    uint32_t maximum_height,
+    uint8_t* pixels,
+    uint32_t pixel_capacity_bytes,
+    nf_develop_run_state_v1* run_state,
+    nf_develop_export_result_v3* result);
+
+NF_API nf_status_t NF_CALL nf_develop_export_v27(
+    const nf_develop_export_request_v27* request,
+    nf_develop_run_state_v1* run_state,
+    nf_develop_export_result_v3* result);
+NF_API nf_status_t NF_CALL nf_develop_preview_v27(
+    const nf_develop_export_request_v27* request,
     const nf_soft_proof_v1* soft_proof,
     uint32_t maximum_width,
     uint32_t maximum_height,

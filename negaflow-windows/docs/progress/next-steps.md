@@ -23,6 +23,9 @@ Texture → B&W 중립화·토닝 → ImageTransform이 native 공통 preview/ex
 macOS Texture와 FilmScanDenoise recipe도 catalog→Shell→native 공통 preview/export로 전달됩니다.
 색/필름 상태별 denoise profile은 route에서 파생됩니다. 다음 우선순위는 이 레시피들의 실촬영 TIFF
 golden 비교와 현상 조작 surface입니다.
+
+Primary Calibration도 ABI 0.38/v27로 preview/export 공통 경로에 연결됐습니다. 다음 작업은 이미
+연결된 현상 recipe의 실제 TIFF golden 비교와 macOS 기준 Develop 조작 surface입니다.
 scene correction은 ABI v14, DevelopTarget과 EXPIRED RescueGrade는 v15, ScannerProfileGrade는 v16,
 film polarity는 v17, 현상 전 영역 Defects는 v18, source-bound Defects는 v19, 순서 보존 Clone Stamp는
 v20, 순서 보존 Brush는 v21, 취소·진행률 run state는 v22, 자동 보정은 `nf_auto_adjust_v1`,

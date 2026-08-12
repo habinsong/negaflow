@@ -207,6 +207,15 @@ public static class DevelopRequestFactory
                 Blending = (float)frame.ColorGrading.Blending,
                 Balance = (float)frame.ColorGrading.Balance,
             },
+            PrimaryCalibration = new DevelopPrimaryCalibration
+            {
+                RedHue = (float)frame.PrimaryCalibration.RedHue,
+                RedSaturation = (float)frame.PrimaryCalibration.RedSaturation,
+                GreenHue = (float)frame.PrimaryCalibration.GreenHue,
+                GreenSaturation = (float)frame.PrimaryCalibration.GreenSaturation,
+                BlueHue = (float)frame.PrimaryCalibration.BlueHue,
+                BlueSaturation = (float)frame.PrimaryCalibration.BlueSaturation,
+            },
             FilmLookSourceKind = renderedDigital
                 ? DevelopSourceKind.RenderedDigital
                 : DevelopSourceKind.FilmScan,

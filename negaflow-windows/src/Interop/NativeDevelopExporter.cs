@@ -50,6 +50,7 @@ public static unsafe class NativeDevelopExporter
     internal const int DefectInfraredItemV1Size = 16;
     internal const int RequestV25Size = 4880;
     internal const int RequestV26Size = 4896;
+    internal const int RequestV27Size = 4928;
     internal const int ResultV2Size = 152;
     internal const int ResultV3Size = 160;
     internal const int RunStateV1Size = 16;
@@ -112,6 +113,7 @@ public static unsafe class NativeDevelopExporter
             sizeof(NativeDefectInfraredItemV1) != DefectInfraredItemV1Size ||
             sizeof(NativeDevelopExportRequestV25) != RequestV25Size ||
             sizeof(NativeDevelopExportRequestV26) != RequestV26Size ||
+            sizeof(NativeDevelopExportRequestV27) != RequestV27Size ||
             sizeof(NativeDevelopExportResultV2) != ResultV2Size ||
             sizeof(NativeDevelopExportResultV3) != ResultV3Size ||
             sizeof(NativeDevelopRunStateV1) != RunStateV1Size ||
@@ -142,6 +144,7 @@ public static unsafe class NativeDevelopExporter
         ValidatePointCurves(request.PointCurves);
         ValidateColorMixer(request.ColorMixer);
         ValidateColorGrading(request.ColorGrading);
+        ValidatePrimaryCalibration(request.PrimaryCalibration);
         ValidateLocalDodgeBurn(request.LocalDodgeBurn);
         ValidateDefectRegions(request.DefectRegions);
         ValidateDefectInfrared(request.DefectInfrared);
@@ -477,6 +480,22 @@ public static unsafe class NativeDevelopExporter
                     "The defect recipe exceeds the bounded mask capacity.",
                     nameof(edits));
             }
+        }
+    }
+
+    private static void ValidatePrimaryCalibration(DevelopPrimaryCalibration calibration)
+    {
+        ArgumentNullException.ThrowIfNull(calibration);
+        if (!SignedNormalized(calibration.RedHue) ||
+            !SignedNormalized(calibration.RedSaturation) ||
+            !SignedNormalized(calibration.GreenHue) ||
+            !SignedNormalized(calibration.GreenSaturation) ||
+            !SignedNormalized(calibration.BlueHue) ||
+            !SignedNormalized(calibration.BlueSaturation))
+        {
+            throw new ArgumentException(
+                "Primary Calibration controls are outside the supported finite range.",
+                nameof(calibration));
         }
     }
 
@@ -1707,6 +1726,24 @@ public static unsafe class NativeDevelopExporter
         };
     }
 
+    private static NativeDevelopExportRequestV27 BuildRequestV27(
+        NativeDevelopExportRequestV26 v26,
+        DevelopExportRequest request)
+    {
+        v26.V25.V24.V21.V20.V19.V18.V17.V16.V15.V14.V13.V12.V11.V10.V9.V8.V7.StructSize =
+            (uint)sizeof(NativeDevelopExportRequestV27);
+        return new NativeDevelopExportRequestV27
+        {
+            V26 = v26,
+            PrimaryCalibrationRedHue = request.PrimaryCalibration.RedHue,
+            PrimaryCalibrationRedSaturation = request.PrimaryCalibration.RedSaturation,
+            PrimaryCalibrationGreenHue = request.PrimaryCalibration.GreenHue,
+            PrimaryCalibrationGreenSaturation = request.PrimaryCalibration.GreenSaturation,
+            PrimaryCalibrationBlueHue = request.PrimaryCalibration.BlueHue,
+            PrimaryCalibrationBlueSaturation = request.PrimaryCalibration.BlueSaturation,
+        };
+    }
+
     private static byte[] BuildDefectSourceSha256(DevelopExportRequest request) =>
         request.DefectSourceIdentity is { } identity
             ? Convert.FromHexString(identity.Sha256)
@@ -1808,14 +1845,15 @@ public static unsafe class NativeDevelopExporter
                 v24,
                 defectInfraredItems,
                 checked((uint)defects.InfraredItems.Length));
-            NativeDevelopExportRequestV26 native = BuildRequestV26(v25, request);
-            status = NativeMethods.nf_develop_export_v26(
+            NativeDevelopExportRequestV26 v26 = BuildRequestV26(v25, request);
+            NativeDevelopExportRequestV27 native = BuildRequestV27(v26, request);
+            status = NativeMethods.nf_develop_export_v27(
                 &native,
                 runState,
                 &raw);
         }
 
-        return Translate(status, raw, "nf_develop_export_v26");
+        return Translate(status, raw, "nf_develop_export_v27");
     }
 
     /// <summary>
@@ -1950,8 +1988,9 @@ public static unsafe class NativeDevelopExporter
                 v24,
                 defectInfraredItems,
                 checked((uint)defects.InfraredItems.Length));
-            NativeDevelopExportRequestV26 native = BuildRequestV26(v25, request);
-            status = NativeMethods.nf_develop_preview_v26(
+            NativeDevelopExportRequestV26 v26 = BuildRequestV26(v25, request);
+            NativeDevelopExportRequestV27 native = BuildRequestV27(v26, request);
+            status = NativeMethods.nf_develop_preview_v27(
                 &native,
                 proofPointer,
                 maximumWidth,
@@ -1962,7 +2001,7 @@ public static unsafe class NativeDevelopExporter
                 &raw);
         }
 
-        return Translate(status, raw, "nf_develop_preview_v26");
+        return Translate(status, raw, "nf_develop_preview_v27");
     }
 
     private static DevelopExportResult Translate(

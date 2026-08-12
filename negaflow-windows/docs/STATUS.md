@@ -2,6 +2,15 @@
 
 기준일: 2026-08-12
 
+## 2026-08-12 Develop primary-calibration ABI
+
+The existing native macOS-compatible creative R/G/B primary calibration stage is now reachable
+from the catalog through ABI 0.38/v27 and the shared preview/export path. The six stored
+`params.calibration` values retain their -1...1 domain and are validated on both managed and
+native boundaries. x64 Debug interop contract passed 191 assertions at ABI 0.38; native
+`primary_calibration` and `develop_export_abi` passed 2/2. Real TIFF and macOS pixel golden
+comparisons remain unverified.
+
 ## 2026-08-12 Develop post-processing recipe persistence
 
 The catalog and Shell now preserve and project macOS `grain`, `sharpness`, `halation`,

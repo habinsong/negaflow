@@ -242,6 +242,16 @@ public sealed class DevelopColorGrading
     public float Balance { get; init; }
 }
 
+public sealed class DevelopPrimaryCalibration
+{
+    public float RedHue { get; init; }
+    public float RedSaturation { get; init; }
+    public float GreenHue { get; init; }
+    public float GreenSaturation { get; init; }
+    public float BlueHue { get; init; }
+    public float BlueSaturation { get; init; }
+}
+
 public enum DevelopLocalDodgeBurnMode
 {
     Dodge = 0,
@@ -485,6 +495,8 @@ public sealed class DevelopExportRequest
     public DevelopColorMixer ColorMixer { get; init; } = new();
 
     public DevelopColorGrading ColorGrading { get; init; } = new();
+
+    public DevelopPrimaryCalibration PrimaryCalibration { get; init; } = new();
 
     public DevelopSourceKind FilmLookSourceKind { get; init; } = DevelopSourceKind.FilmScan;
 

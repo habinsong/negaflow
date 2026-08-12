@@ -283,6 +283,23 @@ internal static class Program
                     FilmScanDenoiseFilmProfile.BlackAndWhitePositive,
             "develop_request_derives_noise_profile_from_film_type");
 
+        PrimaryCalibrationRecipe calibration = new(0.25, -0.15, 0.10, 0.20, -0.30, 0.35);
+        DevelopRequestResult calibrationRequest = DevelopRequestFactory.Create(
+            Frame(new ManualBaseRgb(0.21, 0.22, 0.23)) with
+            {
+                PrimaryCalibration = calibration,
+            },
+            destination);
+        Check(
+            calibrationRequest.IsSuccess &&
+                calibrationRequest.Request?.PrimaryCalibration.RedHue == 0.25f &&
+                calibrationRequest.Request.PrimaryCalibration.RedSaturation == -0.15f &&
+                calibrationRequest.Request.PrimaryCalibration.GreenHue == 0.10f &&
+                calibrationRequest.Request.PrimaryCalibration.GreenSaturation == 0.20f &&
+                calibrationRequest.Request.PrimaryCalibration.BlueHue == -0.30f &&
+                calibrationRequest.Request.PrimaryCalibration.BlueSaturation == 0.35f,
+            "develop_request_carries_primary_calibration");
+
         PointCurveRecipe pointCurves = new(
             [new PointCurvePoint(0.0, 0.0), new PointCurvePoint(0.5, 0.6), new PointCurvePoint(1.0, 1.0)],
             [new PointCurvePoint(0.25, 0.3)],
