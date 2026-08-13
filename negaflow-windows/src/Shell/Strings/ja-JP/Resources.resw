@@ -765,4 +765,12 @@
   <data name="developTint.Text" xml:space="preserve"><value>色かぶり補正</value></data>
   <data name="developVibrance.Text" xml:space="preserve"><value>自然な彩度</value></data>
   <data name="developColorDepth.Text" xml:space="preserve"><value>色の深み</value></data>
+  <data name="developSectionBwToning.Text" xml:space="preserve"><value>モノクロ調色</value></data>
+  <data name="developBwToningMode.Text" xml:space="preserve"><value>モード</value></data>
+  <data name="developBwToningOff.Content" xml:space="preserve"><value>Off</value></data>
+  <data name="developBwToningSelenium.Content" xml:space="preserve"><value>Selenium</value></data>
+  <data name="developBwToningSepia.Content" xml:space="preserve"><value>Sepia</value></data>
+  <data name="developBwToningStrength.Text" xml:space="preserve"><value>適用量</value></data>
+  <data name="developBwToningShadowHue.Text" xml:space="preserve"><value>シャドウの色相</value></data>
+  <data name="developBwToningHighlightHue.Text" xml:space="preserve"><value>ハイライトの色相</value></data>
 </root>

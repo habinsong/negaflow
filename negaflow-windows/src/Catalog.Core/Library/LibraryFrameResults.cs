@@ -24,6 +24,9 @@ public enum LibraryFrameError
     /// <summary><c>presetID</c> 가 문자열이 아니거나 비어 있습니다.</summary>
     InvalidLookPresetId,
 
+    /// <summary><c>bwToning</c> 의 모드가 알 수 없거나 값이 범위를 벗어났습니다.</summary>
+    InvalidBwToning,
+
     /// <summary><c>pointCurves</c>가 유효한 0...1 점 배열이 아닙니다.</summary>
     InvalidPointCurves,
     /// <summary><c>colorMixer</c>가 유효한 HSL 8밴드 배열이 아닙니다.</summary>

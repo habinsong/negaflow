@@ -765,4 +765,12 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="developTint.Text" xml:space="preserve"><value>Teinte</value></data>
   <data name="developVibrance.Text" xml:space="preserve"><value>Vibrance</value></data>
   <data name="developColorDepth.Text" xml:space="preserve"><value>Profondeur des couleurs</value></data>
+  <data name="developSectionBwToning.Text" xml:space="preserve"><value>Virage N&amp;B</value></data>
+  <data name="developBwToningMode.Text" xml:space="preserve"><value>Mode</value></data>
+  <data name="developBwToningOff.Content" xml:space="preserve"><value>Off</value></data>
+  <data name="developBwToningSelenium.Content" xml:space="preserve"><value>Selenium</value></data>
+  <data name="developBwToningSepia.Content" xml:space="preserve"><value>Sepia</value></data>
+  <data name="developBwToningStrength.Text" xml:space="preserve"><value>Intensité</value></data>
+  <data name="developBwToningShadowHue.Text" xml:space="preserve"><value>Teinte des ombres</value></data>
+  <data name="developBwToningHighlightHue.Text" xml:space="preserve"><value>Teinte des hautes lumières</value></data>
 </root>

@@ -29,6 +29,7 @@ public sealed record LibraryFrameEdit(
     ImageTransformRecipe? ImageTransform = null,
     TextureRecipe? Texture = null,
     NoiseReductionRecipe? NoiseReduction = null,
+    BwToningRecipe? BwToning = null,
     int? Rating = null,
     LookPresetSelection? LookPreset = null);
 
@@ -94,6 +95,10 @@ public static class LibraryFrameWriter
         if (edit.NoiseReduction is { } noiseReduction && !noiseReduction.IsValid)
         {
             return LibraryFrameWriteResult.Failure(LibraryFrameError.InvalidNoiseReduction);
+        }
+        if (edit.BwToning is { } bwToning && !bwToning.IsValid)
+        {
+            return LibraryFrameWriteResult.Failure(LibraryFrameError.InvalidBwToning);
         }
         if (edit.Rating is { } rating && rating is < 0 or > 5)
         {
@@ -263,8 +268,35 @@ public static class LibraryFrameWriter
                 noiseReductionToWrite.GrainProtect;
         }
 
+        if (edit.BwToning is { } bwToningToWrite)
+        {
+            // 끈 상태는 키를 지웁니다. macOS 도 기본값을 쓰지 않으며, 남겨 두면 흑백이 아닌
+            // frame 의 params 에 쓸모없는 색조가 남습니다.
+            if (bwToningToWrite.Mode == BwToningMode.None)
+            {
+                parameters.Remove(LibraryFrameReader.BwToningName);
+            }
+            else
+            {
+                parameters[LibraryFrameReader.BwToningName] = new JsonObject
+                {
+                    [LibraryFrameReader.BwToningModeName] = ToStorageName(bwToningToWrite.Mode),
+                    [LibraryFrameReader.BwToningShadowHueName] = bwToningToWrite.ShadowHue,
+                    [LibraryFrameReader.BwToningHighlightHueName] = bwToningToWrite.HighlightHue,
+                    [LibraryFrameReader.BwToningStrengthName] = bwToningToWrite.Strength,
+                };
+            }
+        }
+
         return LibraryFrameWriteResult.Success(updated);
     }
+
+    private static string ToStorageName(BwToningMode mode) => mode switch
+    {
+        BwToningMode.Selenium => "selenium",
+        BwToningMode.Sepia => "sepia",
+        _ => "none",
+    };
 
     private static bool IsValidBaseRecipe(BaseRecipe recipe) =>
         Enum.IsDefined(recipe.Mode) &&

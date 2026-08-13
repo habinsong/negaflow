@@ -247,6 +247,15 @@ public static class DevelopRequestFactory
             NoiseReductionDetail = (float)frame.NoiseReduction.Detail,
             NoiseReductionGrainProtect = (float)frame.NoiseReduction.GrainProtect,
             NoiseReductionFilmProfile = MapNoiseReductionFilmProfile(frame.Route.FilmType),
+            BwToningMode = frame.BwToning.Mode switch
+            {
+                Catalog.BwToningMode.Selenium => Interop.BwToningMode.Selenium,
+                Catalog.BwToningMode.Sepia => Interop.BwToningMode.Sepia,
+                _ => Interop.BwToningMode.None,
+            },
+            BwToningShadowHue = frame.BwToning.ShadowHue,
+            BwToningHighlightHue = frame.BwToning.HighlightHue,
+            BwToningStrength = frame.BwToning.ClampedStrength,
             DefectRegions = defectRegions,
             DefectInfrared = defectInfrared,
             DefectClones = defectClones,

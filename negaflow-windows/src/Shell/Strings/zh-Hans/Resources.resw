@@ -765,4 +765,12 @@
   <data name="developTint.Text" xml:space="preserve"><value>色调</value></data>
   <data name="developVibrance.Text" xml:space="preserve"><value>鲜艳度</value></data>
   <data name="developColorDepth.Text" xml:space="preserve"><value>色彩深度</value></data>
+  <data name="developSectionBwToning.Text" xml:space="preserve"><value>黑白调色</value></data>
+  <data name="developBwToningMode.Text" xml:space="preserve"><value>模式</value></data>
+  <data name="developBwToningOff.Content" xml:space="preserve"><value>Off</value></data>
+  <data name="developBwToningSelenium.Content" xml:space="preserve"><value>Selenium</value></data>
+  <data name="developBwToningSepia.Content" xml:space="preserve"><value>Sepia</value></data>
+  <data name="developBwToningStrength.Text" xml:space="preserve"><value>强度</value></data>
+  <data name="developBwToningShadowHue.Text" xml:space="preserve"><value>阴影色相</value></data>
+  <data name="developBwToningHighlightHue.Text" xml:space="preserve"><value>高光色相</value></data>
 </root>

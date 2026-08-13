@@ -57,6 +57,11 @@ public static class LibraryFrameReader
     internal const string ColorMixerSaturationName = "saturation";
     internal const string ColorMixerLuminanceName = "luminance";
     internal const string ColorGradingName = "colorGrading";
+    internal const string BwToningName = "bwToning";
+    internal const string BwToningModeName = "mode";
+    internal const string BwToningShadowHueName = "shadowHue";
+    internal const string BwToningHighlightHueName = "highlightHue";
+    internal const string BwToningStrengthName = "strength";
     internal const string ColorGradingShadowsName = "shadows";
     internal const string ColorGradingMidtonesName = "midtones";
     internal const string ColorGradingHighlightsName = "highlights";
@@ -254,6 +259,10 @@ public static class LibraryFrameReader
         {
             return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidNoiseReduction);
         }
+        if (!TryReadBwToning(parameters, out BwToningRecipe bwToning))
+        {
+            return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidBwToning);
+        }
         if (!TryReadOptionalBoolean(parameters, AutoLevelsName, false, out bool autoLevels) ||
             !TryReadOptionalBoolean(
                 parameters,
@@ -298,6 +307,7 @@ public static class LibraryFrameReader
             ImageTransform = imageTransform,
             Texture = texture,
             NoiseReduction = noiseReduction,
+            BwToning = bwToning,
             Rating = rating,
             PickState = pickState,
             ScannedAt = scannedAt,
@@ -876,6 +886,71 @@ public static class LibraryFrameReader
             parsed[index++] = parsedValue;
         }
         values = parsed;
+        return true;
+    }
+
+    /// <summary>
+    /// 색조 두 값은 키가 없으면 0 이 아니라 <b>그 모드의 기본 색조</b>입니다. macOS 와 같으며,
+    /// 0 으로 채우면 sepia 를 골랐을 뿐인데 전혀 다른 색으로 물듭니다.
+    /// </summary>
+    private static bool TryReadBwToning(JsonElement parameters, out BwToningRecipe bwToning)
+    {
+        bwToning = BwToningRecipe.None;
+        if (!parameters.TryGetProperty(BwToningName, out JsonElement element) ||
+            element.ValueKind == JsonValueKind.Null)
+        {
+            return true;
+        }
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        BwToningMode mode = BwToningMode.None;
+        if (element.TryGetProperty(BwToningModeName, out JsonElement modeElement) &&
+            modeElement.ValueKind != JsonValueKind.Null)
+        {
+            switch (modeElement.ValueKind == JsonValueKind.String ? modeElement.GetString() : null)
+            {
+                case "none":
+                    mode = BwToningMode.None;
+                    break;
+                case "selenium":
+                    mode = BwToningMode.Selenium;
+                    break;
+                case "sepia":
+                    mode = BwToningMode.Sepia;
+                    break;
+                default:
+                    return false;
+            }
+        }
+
+        if (!TryReadOptionalFiniteDouble(
+                element,
+                BwToningShadowHueName,
+                BwToningRecipe.DefaultShadowHue(mode),
+                out double shadowHue) ||
+            !TryReadOptionalFiniteDouble(
+                element,
+                BwToningHighlightHueName,
+                BwToningRecipe.DefaultHighlightHue(mode),
+                out double highlightHue) ||
+            !TryReadOptionalFiniteDouble(
+                element,
+                BwToningStrengthName,
+                0.0,
+                out double strength))
+        {
+            return false;
+        }
+
+        BwToningRecipe read = new(mode, shadowHue, highlightHue, strength);
+        if (!read.IsValid)
+        {
+            return false;
+        }
+        bwToning = read;
         return true;
     }
 

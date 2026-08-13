@@ -393,6 +393,11 @@ public sealed partial class DevelopWorkspaceView : UserControl
             ColorGradingChevron,
             ColorGradingEditor);
         ApplyInspectorSectionState(
+            DevelopInspectorSection.BlackAndWhiteToning,
+            BwToningHeaderButton,
+            BwToningChevron,
+            BwToningControls);
+        ApplyInspectorSectionState(
             DevelopInspectorSection.Calibration,
             CalibrationHeaderButton,
             CalibrationChevron,
@@ -519,6 +524,24 @@ public sealed partial class DevelopWorkspaceView : UserControl
         VibranceControl.Value = colorModel.Vibrance;
         SaturationControl.Value = colorModel.Saturation;
         ColorDepthControl.Value = colorModel.ColorDepth;
+        BwToningRecipe bwToning = panel.BwToning;
+        // macOS 는 흑백 필름에서만 이 섹션을 냅니다.
+        BwToningSection.Visibility = panel.ShowsBwToning
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        BwToningModeSelector.SelectedIndex = bwToning.Mode switch
+        {
+            Catalog.BwToningMode.Selenium => 1,
+            Catalog.BwToningMode.Sepia => 2,
+            _ => 0,
+        };
+        // 끈 상태에서는 세기와 색조가 뜻이 없어 macOS 도 자리째 감춥니다.
+        BwToningTintControls.Visibility = bwToning.Mode == Catalog.BwToningMode.None
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+        BwToningStrengthControl.Value = bwToning.ClampedStrength;
+        BwToningShadowHueControl.Value = bwToning.ShadowHue;
+        BwToningHighlightHueControl.Value = bwToning.HighlightHue;
         PrimaryCalibrationRecipe calibration = panel.PrimaryCalibration;
         RedPrimaryHueControl.Value = calibration.RedHue;
         RedPrimarySaturationControl.Value = calibration.RedSaturation;
@@ -1453,6 +1476,54 @@ public sealed partial class DevelopWorkspaceView : UserControl
         {
             RequestPreview();
         }
+    }
+
+    private void OnBwToningModeChanged(object sender, SelectionChangedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (panel is null || isSynchronizingInspector ||
+            BwToningModeSelector.SelectedItem is not ComboBoxItem { Tag: string tag } ||
+            !Enum.TryParse(tag, out Catalog.BwToningMode mode))
+        {
+            return;
+        }
+        if (panel.SetBwToningMode(mode) == LibraryFrameError.None)
+        {
+            SynchronizeInspectorValues();
+            RequestPreview();
+        }
+    }
+
+    private void OnBwToningValueChanged(object? sender, InspectorSliderValueChangedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (panel is null || isSynchronizingInspector)
+        {
+            return;
+        }
+        if (panel.SetBwToning(panel.BwToning with
+            {
+                Strength = BwToningStrengthControl.Value,
+                ShadowHue = BwToningRecipe.NormalizeHue(BwToningShadowHueControl.Value),
+                HighlightHue = BwToningRecipe.NormalizeHue(BwToningHighlightHueControl.Value),
+            }) == LibraryFrameError.None)
+        {
+            RequestPreview();
+        }
+    }
+
+    private void OnBwToningResetClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (panel is null || panel.ResetBwToning() != LibraryFrameError.None)
+        {
+            return;
+        }
+        SynchronizeInspectorValues();
+        RequestPreview();
     }
 
     private void OnPrimaryCalibrationChanged(object? sender, InspectorSliderValueChangedEventArgs args)
@@ -2581,6 +2652,20 @@ public sealed partial class DevelopWorkspaceView : UserControl
             ColorGradingSectionTitleText,
             ColorGradingResetButton,
             AppResources.Get("developSectionColorGrading", "Text"));
+        SetInspectorSectionText(
+            BwToningSection,
+            BwToningHeaderButton,
+            BwToningSectionTitleText,
+            BwToningResetButton,
+            AppResources.Get("developSectionBwToning", "Text"));
+        BwToningModeLabel.Text = AppResources.Get("developBwToningMode", "Text");
+        BwToningOffItem.Content = AppResources.Get("developBwToningOff", "Content");
+        BwToningSeleniumItem.Content = AppResources.Get("developBwToningSelenium", "Content");
+        BwToningSepiaItem.Content = AppResources.Get("developBwToningSepia", "Content");
+        BwToningStrengthControl.Label = AppResources.Get("developBwToningStrength", "Text");
+        BwToningShadowHueControl.Label = AppResources.Get("developBwToningShadowHue", "Text");
+        BwToningHighlightHueControl.Label =
+            AppResources.Get("developBwToningHighlightHue", "Text");
         SetInspectorSectionText(
             CalibrationSection,
             CalibrationHeaderButton,

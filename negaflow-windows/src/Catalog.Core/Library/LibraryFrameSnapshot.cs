@@ -268,6 +268,9 @@ public sealed record LibraryFrameSnapshot(
 
     public NoiseReductionRecipe NoiseReduction { get; init; } = NoiseReductionRecipe.Identity;
 
+    /// <summary>흑백 토닝입니다. 컬러 필름에서는 엔진이 무시하므로 값만 보존합니다.</summary>
+    public BwToningRecipe BwToning { get; init; } = BwToningRecipe.None;
+
     /// <summary>
     /// hasDefectEdits frame에서 app-owned sidecar를 검증해 읽은 ordered recipe입니다.
     /// catalog payload 안에 mask를 중복 저장하지 않습니다.

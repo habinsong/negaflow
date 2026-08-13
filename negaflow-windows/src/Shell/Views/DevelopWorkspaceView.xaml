@@ -1198,6 +1198,80 @@
                                 </StackPanel>
                             </Border>
 
+                            <!-- 흑백 토닝: macOS 는 흑백 필름에서만 이 섹션을 냅니다. 컬러에서는
+                                 자리째 사라집니다. 색조 두 값은 각도라 0...360 입니다. -->
+                            <Border
+                                x:Name="BwToningSection"
+                                HorizontalAlignment="Stretch"
+                                Padding="14"
+                                AutomationProperties.AutomationId="negaflow.develop.section.bw-toning"
+                                Background="{ThemeResource NegaflowCardBrush}"
+                                CornerRadius="14">
+                                <StackPanel HorizontalAlignment="Stretch" Spacing="12">
+                                    <Grid HorizontalAlignment="Stretch">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <controls:DisclosureButton
+                                            x:Name="BwToningHeaderButton"
+                                            Grid.Column="0"
+                                            MinHeight="26"
+                                            Padding="0"
+                                            HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch"
+                                            AutomationProperties.AutomationId="negaflow.develop.section.bw-toning.header"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Click="OnInspectorSectionHeaderClicked"
+                                            ExpansionRequested="OnInspectorSectionExpansionRequested"
+                                            Tag="BlackAndWhiteToning">
+                                            <Grid HorizontalAlignment="Stretch">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <FontIcon Grid.Column="0" Width="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE793;" />
+                                                <TextBlock x:Name="BwToningSectionTitleText" Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="14" FontWeight="SemiBold" />
+                                                <FontIcon x:Name="BwToningChevron" Grid.Column="2" Margin="8,0,0,0" FontSize="12" Glyph="&#xE76C;" />
+                                            </Grid>
+                                        </controls:DisclosureButton>
+                                        <Button x:Name="BwToningResetButton" Grid.Column="1" Width="30" Height="26" Margin="6,0,0,0" Padding="0" Click="OnBwToningResetClicked">
+                                            <FontIcon FontSize="12" Glyph="&#xE777;" />
+                                        </Button>
+                                    </Grid>
+                                    <StackPanel
+                                        x:Name="BwToningControls"
+                                        HorizontalAlignment="Stretch"
+                                        Spacing="10"
+                                        TabFocusNavigation="Cycle">
+                                        <Grid ColumnSpacing="8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock x:Name="BwToningModeLabel" VerticalAlignment="Center" FontSize="12" />
+                                            <ComboBox
+                                                x:Name="BwToningModeSelector"
+                                                Grid.Column="1"
+                                                MinWidth="128"
+                                                AutomationProperties.AutomationId="negaflow.develop.bw-toning.mode"
+                                                SelectionChanged="OnBwToningModeChanged">
+                                                <ComboBoxItem x:Name="BwToningOffItem" Tag="None" />
+                                                <ComboBoxItem x:Name="BwToningSeleniumItem" Tag="Selenium" />
+                                                <ComboBoxItem x:Name="BwToningSepiaItem" Tag="Sepia" />
+                                            </ComboBox>
+                                        </Grid>
+                                        <StackPanel x:Name="BwToningTintControls" Spacing="10">
+                                            <controls:InspectorSlider x:Name="BwToningStrengthControl" HorizontalAlignment="Stretch" Maximum="1" Minimum="0" ResetValue="0" SliderAutomationId="negaflow.develop.bw-toning.strength" ValueChanged="OnBwToningValueChanged" />
+                                            <controls:InspectorSlider x:Name="BwToningShadowHueControl" HorizontalAlignment="Stretch" Maximum="360" Minimum="0" ResetValue="0" SliderAutomationId="negaflow.develop.bw-toning.shadow-hue" ValueChanged="OnBwToningValueChanged" />
+                                            <controls:InspectorSlider x:Name="BwToningHighlightHueControl" HorizontalAlignment="Stretch" Maximum="360" Minimum="0" ResetValue="0" SliderAutomationId="negaflow.develop.bw-toning.highlight-hue" ValueChanged="OnBwToningValueChanged" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
                             <Border
                                 x:Name="CalibrationSection"
                                 HorizontalAlignment="Stretch"

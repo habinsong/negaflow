@@ -67,6 +67,7 @@ public static class DevelopSettingsTransfer
                 ImageTransform: merged.ImageTransform,
                 Texture: merged.Texture,
                 NoiseReduction: merged.NoiseReduction,
+                BwToning: merged.BwToning,
                 LookPreset: new LookPresetSelection(merged.LookPresetId)));
     }
 

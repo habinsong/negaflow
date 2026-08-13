@@ -765,4 +765,12 @@
   <data name="developTint.Text" xml:space="preserve"><value>틴트</value></data>
   <data name="developVibrance.Text" xml:space="preserve"><value>생동감</value></data>
   <data name="developColorDepth.Text" xml:space="preserve"><value>색 깊이</value></data>
+  <data name="developSectionBwToning.Text" xml:space="preserve"><value>흑백 토닝</value></data>
+  <data name="developBwToningMode.Text" xml:space="preserve"><value>모드</value></data>
+  <data name="developBwToningOff.Content" xml:space="preserve"><value>Off</value></data>
+  <data name="developBwToningSelenium.Content" xml:space="preserve"><value>Selenium</value></data>
+  <data name="developBwToningSepia.Content" xml:space="preserve"><value>Sepia</value></data>
+  <data name="developBwToningStrength.Text" xml:space="preserve"><value>강도</value></data>
+  <data name="developBwToningShadowHue.Text" xml:space="preserve"><value>어두운 영역 색조</value></data>
+  <data name="developBwToningHighlightHue.Text" xml:space="preserve"><value>밝은 영역 색조</value></data>
 </root>

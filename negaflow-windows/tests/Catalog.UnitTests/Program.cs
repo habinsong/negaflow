@@ -38,6 +38,7 @@ internal static class Program
         VerifyCanonicalJson();
         VerifyLookPresets();
         VerifyDevelopSettingsTransfer();
+        VerifyBwToning();
         VerifyStorageRootResolution();
         VerifyCatalogProcessLock();
         VerifySqliteCatalogStore();
@@ -560,6 +561,81 @@ internal static class Program
             Check(DevelopUserPresetStore.Load(presetPath + ".missing").Count == 0,
                 "user_preset_missing_file_is_empty");
         }
+    }
+
+    /// <summary>
+    /// 흑백 토닝입니다. 값이 없을 때 0 이 아니라 모드별 기본 색조를 쓰는 것이 이 recipe 의
+    /// 유일한 함정이라 거기에 집중합니다.
+    /// </summary>
+    private static void VerifyBwToning()
+    {
+        static bool Near(double actual, double expected) => Math.Abs(actual - expected) < 1e-12;
+
+        Check(BwToningRecipe.None.IsIdentity && BwToningRecipe.None.IsValid,
+            "bw_toning_none_is_identity");
+        Check(Near(BwToningRecipe.For(BwToningMode.Sepia).ShadowHue, 32.0) &&
+            Near(BwToningRecipe.For(BwToningMode.Sepia).HighlightHue, 48.0),
+            "bw_toning_sepia_default_hues");
+        Check(Near(BwToningRecipe.For(BwToningMode.Selenium).ShadowHue, 285.0) &&
+            Near(BwToningRecipe.For(BwToningMode.Selenium).HighlightHue, 34.0),
+            "bw_toning_selenium_default_hues");
+        // 모드를 켜도 세기가 0 이면 그림이 그대로입니다.
+        Check(BwToningRecipe.For(BwToningMode.Sepia).IsIdentity,
+            "bw_toning_zero_strength_is_identity");
+        Check(!BwToningRecipe.For(BwToningMode.Sepia, 0.45).IsIdentity,
+            "bw_toning_engaged_strength_is_not_identity");
+        Check(Near(BwToningRecipe.NormalizeHue(370.0), 10.0) &&
+            Near(BwToningRecipe.NormalizeHue(-10.0), 350.0) &&
+            Near(BwToningRecipe.NormalizeHue(190.0), 190.0),
+            "bw_toning_hue_wraps_like_swift");
+
+        // 모드만 적힌 payload 는 그 모드의 기본 색조로 읽혀야 합니다 — 0 으로 읽으면 전혀
+        // 다른 색이 나옵니다.
+        JsonObject modeOnly = FrameRecord();
+        modeOnly["params"]!.AsObject()["bwToning"] = new JsonObject
+        {
+            ["mode"] = "sepia",
+            ["strength"] = 0.6,
+        };
+        Check(ReadFrame(modeOnly).Frame is { } sepiaFrame &&
+            sepiaFrame.BwToning.Mode == BwToningMode.Sepia &&
+            Near(sepiaFrame.BwToning.ShadowHue, 32.0) &&
+            Near(sepiaFrame.BwToning.HighlightHue, 48.0),
+            "bw_toning_missing_hues_fall_back_per_mode");
+
+        Check(ReadFrame(FrameRecord()).Frame?.BwToning == BwToningRecipe.None,
+            "bw_toning_absent_key_is_off");
+
+        JsonObject unknownMode = FrameRecord();
+        unknownMode["params"]!.AsObject()["bwToning"] = new JsonObject { ["mode"] = "platinum" };
+        Check(ReadFrame(unknownMode).Error == LibraryFrameError.InvalidBwToning,
+            "bw_toning_rejects_unknown_mode");
+
+        JsonObject outOfRange = FrameRecord();
+        outOfRange["params"]!.AsObject()["bwToning"] = new JsonObject
+        {
+            ["mode"] = "selenium",
+            ["shadowHue"] = 400.0,
+        };
+        Check(ReadFrame(outOfRange).Error == LibraryFrameError.InvalidBwToning,
+            "bw_toning_rejects_hue_out_of_range");
+
+        BwToningRecipe written = new(BwToningMode.Selenium, 280.0, 40.0, 0.7);
+        LibraryFrameWriteResult applied = LibraryFrameWriter.Apply(
+            FrameRecord(),
+            new LibraryFrameEdit(ToneAdjustment.Neutral, null, BwToning: written));
+        Check(applied.FrameRecord is { } appliedRecord &&
+            ReadFrame(appliedRecord).Frame?.BwToning == written,
+            "bw_toning_round_trips");
+
+        // 끄면 키를 지웁니다. 컬러 frame 의 params 에 쓸모없는 색조를 남기지 않습니다.
+        Check(applied.FrameRecord is { } toClear &&
+            LibraryFrameWriter.Apply(
+                toClear,
+                new LibraryFrameEdit(
+                    ToneAdjustment.Neutral, null, BwToning: BwToningRecipe.None))
+                .FrameRecord?["params"]?.AsObject().ContainsKey("bwToning") == false,
+            "bw_toning_off_removes_the_key");
     }
 
     private static void VerifyStorageRootResolution()

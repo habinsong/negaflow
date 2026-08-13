@@ -92,6 +92,7 @@ public readonly record struct DevelopSettingsPasteScope(
                 ColorMixer = source.ColorMixer,
                 ColorGrading = source.ColorGrading,
                 PrimaryCalibration = source.PrimaryCalibration,
+                BwToning = source.BwToning,
             };
         }
 

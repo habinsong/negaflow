@@ -546,6 +546,54 @@ public sealed class DevelopPanelState
         return error;
     }
 
+    public BwToningRecipe BwToning => SelectedFrame?.BwToning ?? BwToningRecipe.None;
+
+    /// <summary>
+    /// macOS 는 흑백 필름에서만 토닝 섹션을 냅니다. 컬러에서는 자리째 사라집니다.
+    /// </summary>
+    public bool ShowsBwToning => SelectedFrame?.Route.FilmType is
+        FilmType.BlackAndWhiteNegative or FilmType.BlackAndWhitePositive;
+
+    public LibraryFrameError SetBwToning(BwToningRecipe bwToning)
+    {
+        if (SelectedFrame is not { } frame)
+        {
+            return LibraryFrameError.MissingId;
+        }
+        if (!CanEditTone)
+        {
+            return LibraryFrameError.InvalidDevelopRoute;
+        }
+
+        LibraryFrameError error = host.Edit(
+            frame.Id,
+            new LibraryFrameEdit(frame.Tone, frame.ManualBase, BwToning: bwToning));
+        if (error == LibraryFrameError.None)
+        {
+            Select(frame.Id);
+        }
+        return error;
+    }
+
+    /// <summary>
+    /// 모드를 고릅니다. 켜는 순간 macOS 처럼 최소 세기를 보장합니다 — 0 인 채로 켜면 아무 일도
+    /// 일어나지 않아 고장으로 보입니다. 색조는 그 모드의 기본값에서 시작합니다.
+    /// </summary>
+    public LibraryFrameError SetBwToningMode(Catalog.BwToningMode mode)
+    {
+        if (!Enum.IsDefined(mode))
+        {
+            return LibraryFrameError.InvalidBwToning;
+        }
+        return SetBwToning(mode == Catalog.BwToningMode.None
+            ? BwToningRecipe.None
+            : BwToningRecipe.For(
+                mode,
+                Math.Max(BwToning.ClampedStrength, BwToningRecipe.EngagedStrength)));
+    }
+
+    public LibraryFrameError ResetBwToning() => SetBwToning(BwToningRecipe.None);
+
     public LibraryFrameError SetPrimaryCalibration(PrimaryCalibrationRecipe primaryCalibration)
     {
         ArgumentNullException.ThrowIfNull(primaryCalibration);

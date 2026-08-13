@@ -765,4 +765,12 @@ Load a scanner from Library to scan film.</value>
   <data name="developTint.Text" xml:space="preserve"><value>Tint</value></data>
   <data name="developVibrance.Text" xml:space="preserve"><value>Vibrance</value></data>
   <data name="developColorDepth.Text" xml:space="preserve"><value>Color Depth</value></data>
+  <data name="developSectionBwToning.Text" xml:space="preserve"><value>B&amp;W Toning</value></data>
+  <data name="developBwToningMode.Text" xml:space="preserve"><value>Mode</value></data>
+  <data name="developBwToningOff.Content" xml:space="preserve"><value>Off</value></data>
+  <data name="developBwToningSelenium.Content" xml:space="preserve"><value>Selenium</value></data>
+  <data name="developBwToningSepia.Content" xml:space="preserve"><value>Sepia</value></data>
+  <data name="developBwToningStrength.Text" xml:space="preserve"><value>Strength</value></data>
+  <data name="developBwToningShadowHue.Text" xml:space="preserve"><value>Shadow Hue</value></data>
+  <data name="developBwToningHighlightHue.Text" xml:space="preserve"><value>Highlight Hue</value></data>
 </root>

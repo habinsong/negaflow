@@ -23,7 +23,9 @@ internal static class Program
     {
         if (args.Length >= 3 && args[0] == SeedArgument)
         {
-            return SeedCatalog(args[1], args[2..]);
+            // --bw 는 흑백 route 로 심습니다. 흑백에서만 나오는 섹션을 보려면 필요합니다.
+            bool blackAndWhite = args[2] == "--bw";
+            return SeedCatalog(args[1], args[(blackAndWhite ? 3 : 2)..], blackAndWhite);
         }
         VerifyPreferencesDefaults();
         VerifyPreferencesNormalization();
@@ -1649,7 +1651,10 @@ internal static class Program
         Check(exporter.CallCount == 1, "coordinator_dropped_still_ran_native");
     }
 
-    private static int SeedCatalog(string storageRoot, string[] sourcePaths)
+    private static int SeedCatalog(
+        string storageRoot,
+        string[] sourcePaths,
+        bool blackAndWhite = false)
     {
         StorageRootResolutionResult resolution = StorageRootResolver.ResolveForTests(storageRoot);
         if (resolution.Roots is not { } roots)
@@ -1675,6 +1680,11 @@ internal static class Program
             {
                 string id = $"seed-{index + 1:D2}";
                 JsonObject record = FrameRecord(id, "unused.tif", 0.0);
+                if (blackAndWhite)
+                {
+                    record["filmType"] = "bwNegative";
+                    record["params"]!.AsObject()["filmType"] = "bwNegative";
+                }
                 record["rawScanPath"] = Path.GetFullPath(sourcePaths[index]);
                 record["customDisplayName"] = Path.GetFileNameWithoutExtension(sourcePaths[index]);
                 rows.Add(new CatalogEntityRow(id, record));

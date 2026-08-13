@@ -765,4 +765,12 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developTint.Text" xml:space="preserve"><value>Tonung</value></data>
   <data name="developVibrance.Text" xml:space="preserve"><value>Dynamik</value></data>
   <data name="developColorDepth.Text" xml:space="preserve"><value>Farbtiefe</value></data>
+  <data name="developSectionBwToning.Text" xml:space="preserve"><value>S/W-Tonung</value></data>
+  <data name="developBwToningMode.Text" xml:space="preserve"><value>Modus</value></data>
+  <data name="developBwToningOff.Content" xml:space="preserve"><value>Off</value></data>
+  <data name="developBwToningSelenium.Content" xml:space="preserve"><value>Selenium</value></data>
+  <data name="developBwToningSepia.Content" xml:space="preserve"><value>Sepia</value></data>
+  <data name="developBwToningStrength.Text" xml:space="preserve"><value>Stärke</value></data>
+  <data name="developBwToningShadowHue.Text" xml:space="preserve"><value>Tiefen-Farbton</value></data>
+  <data name="developBwToningHighlightHue.Text" xml:space="preserve"><value>Lichter-Farbton</value></data>
 </root>
