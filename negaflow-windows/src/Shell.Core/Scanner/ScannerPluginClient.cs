@@ -113,6 +113,21 @@ public static class ScannerPluginClient
 {
     private const int MaximumDevices = 128;
     private const int MaximumTextLength = 512;
+    private static readonly string[] RequiredAppliedOptionNames =
+    [
+        "deviceID",
+        "resolutionDPI",
+        "bitDepth",
+        "colorMode",
+        "filmType",
+        "scanArea",
+        "infrared",
+        "multiExposure",
+        "hardwareExposureTime",
+        "brightnessAdjustment",
+        "contrastAdjustment",
+        "outputRawTIFF",
+    ];
     private static readonly JsonSerializerOptions Json = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -300,7 +315,7 @@ public static class ScannerPluginClient
             {
                 return new(ScannerPluginScanStatus.PluginError, process, stream.Status, null);
             }
-            if (!TryValidateScanResult(
+            if (!TryValidateV2Result(
                     terminal.Payload,
                     scanWire,
                     out string? infraredPath,
@@ -451,7 +466,9 @@ public static class ScannerPluginClient
         return true;
     }
 
-    private static bool TryValidateScanResult(
+    // Nullable values are not optional JSON keys in protocol v2. Inspect the object before
+    // deserializing because System.Text.Json otherwise treats an omitted nullable key as null.
+    internal static bool TryValidateV2Result(
         JsonElement payload,
         ScanWire wire,
         out string? infraredPath,
@@ -461,6 +478,10 @@ public static class ScannerPluginClient
         artifactRequirements = null;
         try
         {
+            if (!HasRequiredAppliedOptionNames(payload))
+            {
+                return false;
+            }
             ScanResultResponse? result = payload.Deserialize<ScanResultResponse>(Json);
             if (result is null || !string.Equals(result.Path, wire.OutputPath, StringComparison.OrdinalIgnoreCase) ||
                 result.ResolutionDpi != wire.ResolutionDpi || result.BitDepth != wire.BitDepth ||
@@ -510,6 +531,17 @@ public static class ScannerPluginClient
         applied.ContrastAdjustment == requested.ContrastAdjustment &&
         applied.OutputRawTiff == requested.OutputRawTiff &&
         ScanAreasMatch(applied.ScanArea, requested.ScanArea);
+
+    private static bool HasRequiredAppliedOptionNames(JsonElement payload)
+    {
+        if (payload.ValueKind != JsonValueKind.Object ||
+            !payload.TryGetProperty("appliedOptions", out JsonElement applied) ||
+            applied.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+        return RequiredAppliedOptionNames.All(name => applied.TryGetProperty(name, out _));
+    }
 
     private static bool ScanAreasMatch(ScannerPluginScanArea? applied, ScannerPluginScanArea? requested) =>
         applied is null && requested is null ||

@@ -335,10 +335,11 @@ py scripts/find-unreachable-api.py
 
 현재 최우선은 scanner plugin host의 남은 거래 경계입니다. approved plugin의 `capabilities` 요청은
 device ID·vendor·model 입력, bounded resolution/mode/bit-depth/IR 결과와 opaque capability token까지
-연결됐습니다. 다음 작업은 protocol v2 applied-options 검증, 이어서 app-owned staging TIFF/IR artifact의
-containment·regular-file·TIFF preflight·atomic publish를 Library frame transaction에 연결하는 것입니다.
-WIA/TWAIN 드라이버 adapter와 scanner WinUI는 이 host 계약 위에서만 추가합니다. Print 확장과 추가 Develop
-surface보다 앞섭니다.
+연결됐습니다. protocol v2 result도 12개 `appliedOptions` key의 존재와 request/result/artifact metadata의
+일치를 확인하므로 optional value의 null과 key 생략을 구분합니다. 다음 작업은 app-owned staging TIFF/IR
+artifact의 containment·regular-file·TIFF preflight·atomic publish를 Library frame transaction의 도달 가능한
+스캔 서비스에 연결하는 것입니다. WIA/TWAIN 드라이버 adapter와 scanner WinUI는 이 host 계약 위에서만
+추가합니다. Print 확장과 추가 Develop surface보다 앞섭니다.
 
 ## 2026-08-10 이후 새로 알게 된 것 — 먼저 읽으십시오
 

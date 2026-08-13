@@ -1591,6 +1591,59 @@ internal static class Program
             Check(!ScannerPluginClient.TryBuildScanWire(
                     scanRequest with { Infrared = true }, out _, out _),
                 "scanner_plugin_refuses_unsupported_infrared_request_before_launch");
+            if (wire is null)
+            {
+                return;
+            }
+
+            var appliedOptions = new Dictionary<string, object?>
+            {
+                ["deviceID"] = wire.DeviceId,
+                ["resolutionDPI"] = wire.ResolutionDpi,
+                ["bitDepth"] = wire.BitDepth,
+                ["colorMode"] = wire.ColorMode,
+                ["filmType"] = wire.FilmType,
+                ["scanArea"] = wire.ScanArea,
+                ["infrared"] = wire.Infrared,
+                ["multiExposure"] = wire.MultiExposure,
+                ["hardwareExposureTime"] = null,
+                ["brightnessAdjustment"] = null,
+                ["contrastAdjustment"] = null,
+                ["outputRawTIFF"] = wire.OutputRawTiff,
+            };
+            var resultPayload = new Dictionary<string, object?>
+            {
+                ["path"] = wire.OutputPath,
+                ["width"] = 640,
+                ["height"] = 480,
+                ["resolutionDPI"] = wire.ResolutionDpi,
+                ["bitDepth"] = wire.BitDepth,
+                ["irPath"] = null,
+                ["hasInfrared"] = wire.Infrared,
+                ["appliedOptions"] = appliedOptions,
+            };
+            using JsonDocument validAppliedResult = JsonDocument.Parse(
+                JsonSerializer.Serialize(resultPayload));
+            Check(ScannerPluginClient.TryValidateV2Result(
+                      validAppliedResult.RootElement,
+                      wire,
+                      out string? validatedInfrared,
+                      out ScannerArtifactRequirements? artifactRequirements) &&
+                  validatedInfrared is null &&
+                  artifactRequirements is { PixelWidth: 640, PixelHeight: 480, BitDepth: 16 },
+                "scanner_plugin_accepts_explicit_null_applied_option_keys");
+
+            var missingAppliedOptions = new Dictionary<string, object?>(appliedOptions);
+            missingAppliedOptions.Remove("brightnessAdjustment");
+            resultPayload["appliedOptions"] = missingAppliedOptions;
+            using JsonDocument missingAppliedResult = JsonDocument.Parse(
+                JsonSerializer.Serialize(resultPayload));
+            Check(!ScannerPluginClient.TryValidateV2Result(
+                      missingAppliedResult.RootElement,
+                      wire,
+                      out _,
+                      out _),
+                "scanner_plugin_rejects_missing_nullable_applied_option_key");
         }
         finally
         {

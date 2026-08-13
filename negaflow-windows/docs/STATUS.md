@@ -132,6 +132,20 @@ write/readback 버퍼로도 실제 WIC 왕복을 통과했고, 전체 native CTe
 JPEG8은 현재 full `Srgb16Image`와 WIC 24bpp BGR 변환 경로를 유지하며, 기본 512 MiB encoded-pixel 상한도 유지됩니다. 100 MP·batch의
 peak working set 및 ARM64 실기 측정은 아직 없습니다.
 
+## 2026-08-14 Scanner protocol v2 applied-options evidence
+
+v2 scan result의 `appliedOptions`는 null 가능 값도 key 자체를 생략할 수 없습니다. 기존 C# 역직렬화는
+nullable property의 omitted와 JSON `null`을 모두 null로 보았으므로, 어댑터가
+`hardwareExposureTime`·`brightnessAdjustment`·`contrastAdjustment` 중 하나를 빼도 요청과 같다고
+오인할 여지가 있었습니다. 이제 result JSON object를 typed decode 전에 검사해 12개 필수 key가 모두
+있을 때만 request-to-applied 및 result-to-applied 비교를 수행합니다. explicit null은 허용하지만 key
+생략은 staging TIFF를 publish하기 전에 거부합니다.
+
+x64 Debug Shell 단위 검사는 545 assertions를 통과했습니다. 같은 synthetic v2 result에서 explicit
+null 세 key와 exact requested values는 수락하고, `brightnessAdjustment` key 하나만 삭제하면 거부함을
+확인했습니다. 아직 실제 WIA/TWAIN adapter와 하드웨어에서 adapter read-back이 이 evidence를 채우는지,
+그리고 scanner service가 WinUI에서 도달 가능한지는 검증되지 않았습니다.
+
 ## 2026-08-14 GrainMend 미세 입자 추가 검출
 
 macOS `DefectSpeckDetector`와 같은 목적의 선택형 추가 패스를 C++ 검출 경로에 넣었습니다. 반지름
