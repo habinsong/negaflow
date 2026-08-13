@@ -254,6 +254,50 @@ GrainMendResult apply_grain_mend(
     }
 }
 
+GrainMendDetection detect_grain_mend(
+    const WorkingImage& image,
+    const GrainMendParameters& parameters,
+    const negaflow::core::CancelFlag cancel) noexcept {
+    GrainMendDetection detection{};
+    // 세기는 검출에 쓰이지 않지만 나머지 감도는 같은 검사를 통과해야 합니다. 세기만 0 이라고
+    // 거절하면 "아직 아무것도 안 걸린 프레임"에서 검출을 못 하게 됩니다.
+    GrainMendParameters probe = parameters;
+    probe.strength = maximum_grain_mend_strength;
+    if (!valid_grain_mend_parameters(probe) || image.width == 0U ||
+        image.height == 0U || image.pixels.empty()) {
+        return detection;
+    }
+
+    try {
+        const DetectionImage analysis = make_detection_image(image);
+        detection.width = analysis.width;
+        detection.height = analysis.height;
+        const CandidateMaps candidates = find_candidates(
+            analysis,
+            parameters.dust_sensitivity,
+            parameters.scratch_sensitivity,
+            parameters.protect_detail,
+            false,
+            cancel);
+        if (cancel.requested()) {
+            detection.status = GrainMendStatus::cancelled;
+            return detection;
+        }
+        detection.mask = build_automatic_mask(
+            analysis,
+            candidates,
+            parameters.reject_structure_lines,
+            detection.accepted_pixels);
+        detection.status = GrainMendStatus::ok;
+        return detection;
+    } catch (...) {
+        detection.mask.clear();
+        detection.accepted_pixels = 0U;
+        detection.status = GrainMendStatus::allocation_failed;
+        return detection;
+    }
+}
+
 const char* grain_mend_status_name(const GrainMendStatus status) noexcept {
     switch (status) {
         case GrainMendStatus::ok:

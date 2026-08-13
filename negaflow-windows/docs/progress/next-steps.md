@@ -193,11 +193,22 @@ py scripts/find-unreachable-api.py
    필요한 것은 **파이프라인을 grain_mend 단계까지 돌고 거기서 멈춰 마스크를 돌려주는 변형**
    입니다. 요청 구조체는 미리보기와 같은 `nf_develop_export_request_v21` 을 그대로 씁니다.
 
-   재사용할 조각은 이미 다 있습니다(`imaging/grain_mend_components.h`):
-   `find_candidates` → `build_automatic_evidence` → `build_automatic_mask`. 마지막 것이
-   내주는 것이 화소별 채택 마스크와 `accepted_pixels` 이고, 그것이 곧 catalog 의
-   `DefectEditKind.Region` 항목(`RegionMask` + `RegionRoi` + `RegionWidth/Height`)입니다.
-   저장 뒤의 수리 경로는 이미 이어져 있으므로 새로 만들 것이 없습니다.
+   **imaging 층은 만들어 두었습니다.** `imaging/grain_mend.h` 의
+   `detect_grain_mend(image, parameters, cancel)` 이 수리 없이 검출만 하고
+   `{status, width, height, accepted_pixels, mask}` 를 돌려줍니다. 안에서
+   `find_candidates` → `build_automatic_mask` 를 **자동 수리와 같은 순서로 같은 인자로**
+   부르므로 두 판정이 갈라질 수 없습니다. 그 성질을 `native.grain_mend` 에 시험으로 붙여
+   두었습니다 — 검출만 한 결과가 `apply_grain_mend` 의 `candidate_pixels`·검출 크기와
+   정확히 같고, 세기를 0 으로 두어도 검출 결과가 바뀌지 않으며, 빈 이미지는 닫히는 쪽으로
+   실패합니다.
+
+   마스크는 화소당 1바이트이고 그대로 catalog 의 `DefectEditKind.Region` 항목
+   (`RegionMask` + `RegionRoi` + `RegionWidth/Height`)이 됩니다. 저장 뒤의 수리 경로는
+   이미 이어져 있으므로 새로 만들 것이 없습니다.
+
+   **남은 것은 셋뿐입니다:** (a) `run_develop` 에 세 번째 대상(preview/export 다음)을 더해
+   grain_mend 단계에서 멈추고 `detect_grain_mend` 를 부른 뒤 마스크를 돌려주기,
+   (b) 아래 ABI 진입점, (c) C# 바인딩과 자동·가이드 버튼 연결.
 
    제안하는 모양(핸들 없이 한 번 호출):
 

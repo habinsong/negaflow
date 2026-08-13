@@ -715,6 +715,65 @@ void test_cancellation_stops_detection_and_keeps_results() {
         "the whole-frame tiled path honours the same flag");
 }
 
+// 검토 가능한 GrainMend 도구(자동·가이드)는 자동 수리와 **같은 판정**을 보여 주어야 합니다.
+// 그래서 검출만 떼어 낸 함수가 수리 경로와 같은 화소 수를 고르는지 봅니다 — 두 벌로 갈라지면
+// 사용자가 미리 본 것과 실제로 고쳐진 것이 달라집니다.
+void test_detection_only_agrees_with_the_repair_path() {
+    auto damaged = make_clean_image();
+    damaged.pixels[24U * damaged.width + 18U] = {0.95F, 0.95F, 0.95F, 1.0F};
+    for (std::uint32_t y = 14U; y < 58U; ++y) {
+        damaged.pixels[static_cast<std::size_t>(y) * damaged.width + 62U] =
+            {0.02F, 0.02F, 0.02F, 1.0F};
+    }
+
+    const negaflow::imaging::GrainMendParameters parameters{1.0};
+    const auto detected =
+        negaflow::imaging::detect_grain_mend(damaged, parameters);
+    const auto repaired =
+        negaflow::imaging::apply_grain_mend(damaged, parameters);
+
+    expect(
+        detected.status == negaflow::imaging::GrainMendStatus::ok,
+        "detection only reports ok on a valid frame");
+    expect(
+        detected.width == repaired.info.detection_width &&
+            detected.height == repaired.info.detection_height,
+        "detection only reports the same capped analysis size as the repair");
+    expect(
+        detected.accepted_pixels == repaired.info.candidate_pixels &&
+            detected.accepted_pixels != 0U,
+        "detection only accepts exactly the pixels the repair would touch");
+    expect(
+        detected.mask.size() ==
+            static_cast<std::size_t>(detected.width) * detected.height,
+        "the mask covers the analysis image one byte per pixel");
+
+    std::size_t marked = 0U;
+    for (const std::uint8_t value : detected.mask) {
+        if (value != 0U) {
+            ++marked;
+        }
+    }
+    expect(marked == detected.accepted_pixels,
+        "the reported count matches the marked pixels");
+
+    // 세기는 검출에 영향을 주지 않아야 합니다 — 아직 아무것도 걸지 않은 프레임에서도
+    // 자동 버튼이 무엇을 찾았는지 보여 줄 수 있어야 합니다.
+    negaflow::imaging::GrainMendParameters idle = parameters;
+    idle.strength = 0.0;
+    const auto at_zero = negaflow::imaging::detect_grain_mend(damaged, idle);
+    expect(
+        at_zero.status == negaflow::imaging::GrainMendStatus::ok &&
+            at_zero.accepted_pixels == detected.accepted_pixels,
+        "strength does not change what detection finds");
+
+    negaflow::imaging::WorkingImage empty{};
+    expect(
+        negaflow::imaging::detect_grain_mend(empty, parameters).status ==
+            negaflow::imaging::GrainMendStatus::invalid_parameter,
+        "detection only fails closed on an empty image");
+}
+
 }  // namespace
 
 int main() {
@@ -734,6 +793,7 @@ int main() {
     test_labeled_detection_adds_curved_thin_scratch_evidence();
     test_invalid_inputs_fail_closed();
     test_cancellation_stops_detection_and_keeps_results();
+    test_detection_only_agrees_with_the_repair_path();
 
     std::cout << "{\"status\":\"" << (failures == 0 ? "ok" : "error")
               << "\",\"suite\":\"grain_mend\",\"failures\":"

@@ -6,6 +6,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <vector>
 
 namespace negaflow::imaging {
 
@@ -70,6 +71,27 @@ struct GrainMendResult final {
 // not only at the stage boundary.
 [[nodiscard]] GrainMendResult apply_grain_mend(
     WorkingImage image,
+    const GrainMendParameters& parameters,
+    negaflow::core::CancelFlag cancel = {}) noexcept;
+
+// Runs only the detection half of the automatic path and hands back the accepted
+// dust/scratch mask instead of repairing. The reviewable GrainMend tools need the same
+// decision the automatic repair makes, so this shares its three steps rather than
+// reimplementing them: a mask from here and a mask used by apply_grain_mend cannot drift.
+//
+// The mask is one byte per pixel over the capped detection image, whose size is reported
+// in `width`/`height`; it is not the full-resolution geometry. `strength` is ignored —
+// detection does not depend on it.
+struct GrainMendDetection final {
+    GrainMendStatus status{GrainMendStatus::invalid_parameter};
+    std::uint32_t width{0U};
+    std::uint32_t height{0U};
+    std::size_t accepted_pixels{0U};
+    std::vector<std::uint8_t> mask{};
+};
+
+[[nodiscard]] GrainMendDetection detect_grain_mend(
+    const WorkingImage& image,
     const GrainMendParameters& parameters,
     negaflow::core::CancelFlag cancel = {}) noexcept;
 
