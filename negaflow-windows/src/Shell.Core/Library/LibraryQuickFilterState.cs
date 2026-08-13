@@ -5,10 +5,10 @@ namespace Negaflow.Shell;
 /// 조건은 전부 AND 로 걸립니다.
 /// </summary>
 /// <remarks>
-/// macOS 의 <c>currentRoll</c>·<c>unvalidatedProfile</c>·<c>metadataUnknown</c> 은 아직
-/// 없습니다. 각각 storage group/scan session, 스캐너 프로파일 검증 상태, source metadata
-/// snapshot 을 catalog projection 이 읽어야 하는데 셋 다 아직 투영되지 않습니다. 데이터 없이
-/// 토글만 만들면 눌러도 아무 일이 없는 컨트롤이 되므로 만들지 않았습니다.
+/// macOS 의 <c>currentRoll</c> 과 <c>unvalidatedProfile</c> 은 아직 없습니다. 각각 storage
+/// group/scan session 과 스캐너 프로파일 검증 상태를 catalog projection 이 읽어야 하는데 둘 다
+/// 아직 투영되지 않습니다. 데이터 없이 토글만 만들면 눌러도 아무 일이 없는 컨트롤이 되므로
+/// 만들지 않았습니다.
 /// </remarks>
 public sealed record LibraryQuickFilterState
 {
@@ -24,8 +24,16 @@ public sealed record LibraryQuickFilterState
 
     public bool DefectRecipe { get; init; }
 
+    /// <summary>
+    /// 원본의 크기·화소 수를 아직 기록하지 못한 frame 입니다. macOS 의
+    /// <c>metadata(field: .snapshot, presence: .unknown)</c> 과 같은 조건이며, 이 값이 없으면
+    /// relink 가 다른 사진을 같은 자리에 연결하는 것을 막지 못합니다.
+    /// </summary>
+    public bool MetadataUnknown { get; init; }
+
     public bool IsActive =>
-        MinimumRating is not null || Picked || Rejected || Offline || Infrared || DefectRecipe;
+        MinimumRating is not null || Picked || Rejected || Offline || Infrared ||
+        DefectRecipe || MetadataUnknown;
 
     public static LibraryQuickFilterState None { get; } = new();
 
@@ -68,6 +76,10 @@ public sealed record LibraryQuickFilterState
         {
             return false;
         }
-        return !DefectRecipe || item.Frame.DefectRecipe is not null;
+        if (DefectRecipe && item.Frame.DefectRecipe is null)
+        {
+            return false;
+        }
+        return !MetadataUnknown || item.Frame.SourceMetadata is null;
     }
 }

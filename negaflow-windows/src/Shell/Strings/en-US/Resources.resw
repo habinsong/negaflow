@@ -797,4 +797,5 @@ Load a scanner from Library to scan film.</value>
   <data name="developGrainMendReset.Value" xml:space="preserve"><value>Reset</value></data>
   <data name="developGrainMendDetectorMissing.Value" xml:space="preserve"><value>Automatic detection is not in this build yet</value></data>
   <data name="developPreviewFailed.Text" xml:space="preserve"><value>The preview could not be rendered</value></data>
+  <data name="libraryFilterMetadataUnknown.Content" xml:space="preserve"><value>Metadata Status Unknown</value><comment>AppLocalizedPhrase.filterMetadataUnknown</comment></data>
 </root>

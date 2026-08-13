@@ -323,6 +323,22 @@ internal static class Program
             MinimumRating = 5,
         }.Apply(source);
         Check(combined.Count == 0, "library_quick_filters_axes_are_and");
+
+        // 원본 크기·화소 수를 기록하지 못한 frame 만 남깁니다. 이 값이 없으면 relink 가 다른
+        // 사진을 같은 자리에 연결하는 것을 막지 못하므로, 사용자가 찾아낼 수 있어야 합니다.
+        LibraryFrameListItem[] metadata =
+        [
+            new(Frame(null) with
+            {
+                Id = "known",
+                SourceMetadata = new LibrarySourceMetadata(1234, 4000, 3000, 3, 16, 1, 1),
+            }),
+            new(Frame(null) with { Id = "unknown", SourceMetadata = null }),
+        ];
+        IReadOnlyList<LibraryFrameListItem> unknown =
+            new LibraryQuickFilterState { MetadataUnknown = true }.Apply(metadata);
+        Check(unknown.Count == 1 && unknown[0].Id == "unknown",
+            "library_quick_filters_metadata_unknown");
     }
 
     /// <summary>

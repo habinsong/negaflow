@@ -797,4 +797,5 @@
   <data name="developGrainMendReset.Value" xml:space="preserve"><value>リセット</value></data>
   <data name="developGrainMendDetectorMissing.Value" xml:space="preserve"><value>自動検出はこのビルドにはまだありません</value></data>
   <data name="developPreviewFailed.Text" xml:space="preserve"><value>プレビューを作成できませんでした</value></data>
+  <data name="libraryFilterMetadataUnknown.Content" xml:space="preserve"><value>メタデータ状態不明</value><comment>AppLocalizedPhrase.filterMetadataUnknown</comment></data>
 </root>

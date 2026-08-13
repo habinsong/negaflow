@@ -467,6 +467,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
             Offline = OfflineFilterToggle.IsChecked == true,
             Infrared = InfraredFilterToggle.IsChecked == true,
             DefectRecipe = DefectRecipeFilterToggle.IsChecked == true,
+            MetadataUnknown = MetadataUnknownFilterToggle.IsChecked == true,
         };
         ShowFilteredItems();
     }
@@ -502,6 +503,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
             OfflineFilterToggle.IsChecked = quickFilters.Offline;
             InfraredFilterToggle.IsChecked = quickFilters.Infrared;
             DefectRecipeFilterToggle.IsChecked = quickFilters.DefectRecipe;
+            MetadataUnknownFilterToggle.IsChecked = quickFilters.MetadataUnknown;
         }
         finally
         {
@@ -919,6 +921,9 @@ public sealed partial class LibraryWorkspaceView : UserControl
         SetToggleText(OfflineFilterToggle, AppResources.Get("libraryOffline", "Text"));
         SetToggleText(InfraredFilterToggle, AppResources.Get("filterInfrared", "Text"));
         SetToggleText(DefectRecipeFilterToggle, AppResources.Get("filterDefectRecipe", "Text"));
+        SetToggleText(
+            MetadataUnknownFilterToggle,
+            AppResources.Get("libraryFilterMetadataUnknown", "Content"));
         SetButtonText(ClearFiltersButton, AppResources.Get("clearFilters", "Text"));
         SetMenuItemText(RatingFilterAnyItem, AppResources.Get("filterAll", "Text"));
         for (int rating = 1; rating <= 5; ++rating)

@@ -226,9 +226,10 @@ BOM 이 없으면 스크립트를 ANSI(여기서는 CP949)로 읽습니다. 그�
 
 그 다음 순서:
 
-1. 아직 만들지 못한 세 필터 — 현재 롤, 미검증 프로파일, 메타데이터 미상. 각각
-   storage group/scan session, 스캐너 프로파일 검증 상태, source metadata snapshot 을
-   `LibraryFrameReader` 가 읽어야 합니다. 데이터 없이 토글만 만들지 않았습니다.
+1. 아직 만들지 못한 필터 둘 — 현재 롤, 미검증 프로파일. 각각 storage group/scan session 과
+   스캐너 프로파일 검증 상태를 `LibraryFrameReader` 가 읽어야 합니다. 데이터 없이 토글만
+   만들지 않았습니다. (메타데이터 상태 미확인은 붙였습니다 — source metadata snapshot 은
+   이미 투영돼 있었습니다.)
 2. 폴더 그룹 머리줄의 현상 컨트롤 — macOS 는 폴더마다 process/target picker 와 "적용" 이
    붙습니다(`LibraryFolderDevelopmentControls`).
 3. 라이브러리 카드의 나머지 겹침 — pick 깃발, 현상 중 진행률, 스택 배지.
