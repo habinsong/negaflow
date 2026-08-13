@@ -178,14 +178,13 @@ py scripts/find-unreachable-api.py
   출력 패널 품질 탭입니다. 그 탭이 엔진 기능 때문에 막혀 있어 같이 막혀 있습니다.
 - **적외선 결함 코디네이터** — 스캐너 게시 경로에서만 불리므로 스캐너와 함께 열립니다.
 
-즉 **다음 한 걸음은 "이미 있는 것 열기"가 아니라 새로 만드는 것**입니다. 아래 셋 중에서
-고르십시오.
+즉 다음 한 걸음은 "이미 있는 것 열기"가 아니라 새로 만드는 것입니다. 아래 GrainMend 기록은
+구현 당시의 설계 근거이며, 마지막 상태만 현재 사실로 갱신합니다.
 
-**남은 큰 덩어리 셋과 각각이 큰 이유** (다음에 고를 때 이 셈을 다시 하지 마십시오):
+**최근에 닫은 큰 덩어리와 남은 경계** (다음에 고를 때 이 셈을 다시 하지 마십시오):
 
-1. **GrainMend 자동·가이드.** 브러시와 복제 도장은 붙였습니다. 남은 둘은 검출기가 ABI 에
-   없어서 막혀 있습니다. **설계는 아래에 확정해 두었으니 그대로 만드십시오** — 조사에 다시
-   시간을 쓰지 마십시오.
+1. **GrainMend 자동·가이드(완료).** 브러시·복제 도장·자동·가이드 ROI 검출과 review→수락→sidecar
+   저장까지 닫았습니다. 아래 내용은 이 경로의 설계 근거입니다.
 
    **가장 중요한 사실: 검출기는 원본 스캔이 아니라 현상된 양화 위에서 돕니다.**
    `pipeline/develop_export.cpp` 에서 `apply_grain_mend` 는 `film_look` **뒤**에 불립니다.
@@ -208,8 +207,8 @@ py scripts/find-unreachable-api.py
 
    **(a) 파이프라인 대상과 (b) ABI 진입점은 만들었습니다.**
    `pipeline::develop_detect_grain_mend(request, mask, capacity, control)` 가 preview 와
-   같은 파이프라인을 GrainMend 단계까지 돌고 거기서 멈춥니다. ABI 는
-   `nf_develop_detect_grain_mend_v1` 이고 **v27 요청**을 받습니다(v21 접두부만 받으면 뒤에
+    같은 파이프라인을 GrainMend 단계까지 돌고 거기서 멈춥니다. 현재 ABI 는
+    ROI와 일회성 감도/구조선 설정을 받는 `nf_develop_detect_grain_mend_v3` 이고 **v27 요청**을 받습니다(v21 접두부만 받으면 뒤에
    붙은 recipe 가 조용히 빠집니다). C# 은 `NativeDevelopExporter.DetectGrainMend` 이며
    `Preview` 와 요청 조립 코드를 공유합니다 — 60여 줄짜리 조립을 두 벌로 두지 않았습니다.
 
@@ -229,8 +228,9 @@ py scripts/find-unreachable-api.py
    onCompleted)` 가 워커 스레드에서 검출하고 결과를 dispatcher 로 돌려줍니다. **저장하지
    않습니다** — macOS 는 자동을 누르는 것만으로 사진을 바꾸지 않고 받아들여야 반영하므로,
    그 상태 전환을 코드 모양으로 지켰습니다. 받아들이는 자리는
-   `DevelopPanelState.AcceptDefectRegion(edit)` 입니다. ROI 가 (0,0,1,1) 이면 자동, 부분이면
-   가이드로 이름표가 붙습니다. `IDevelopExporter.DetectGrainMend` 로 추상화해 두어 시험이
+    `DevelopPanelState.AcceptDefectRegion(edit)` 입니다. ROI 가 (0,0,1,1) 이면 자동, 부분이면
+    가이드로 이름표가 붙습니다. 감도 슬라이더는 macOS와 같이 `0.7...6.0`을 검출기 `0...1`로 바꿔
+    같은 ROI를 다시 검출하며, 자동일 때만 구조선 배제를 켭니다. `IDevelopExporter.DetectGrainMend` 로 추상화해 두어 시험이
    네이티브 없이 대역을 끼울 수 있습니다.
 
    **자동은 끝났습니다.** 버튼 → 검출 → 오버레이 → Enter 로 반영, Esc 로 취소까지 붙였고
@@ -238,47 +238,11 @@ py scripts/find-unreachable-api.py
    0개**(사진이 아직 바뀌지 않음), Enter 를 누르면 1개가 되고 초기화 단추가 켜집니다.
    macOS 의 상태 전환 그대로입니다.
 
-   **가이드만 남았습니다.** 검출·저장은 자동과 같은 경로를 쓰고 다른 것은 ROI 뿐입니다 —
-   사용자가 캔버스에서 사각형을 끄는 상호작용만 있으면 됩니다. 크롭 오버레이가 이미 같은 일을
-   하므로(`OnCanvasPointerPressed` 의 `CropDragMode.Create`) 그 방식을 그대로 쓰고, 끝난
-   사각형을 표시 좌표에서 원본 좌표로 옮겨(`DevelopDisplayGeometry`) `RunAsync` 에 넘기면
-   됩니다.
-
-   제안하는 모양(핸들 없이 한 번 호출):
-
-   ```c
-   typedef struct nf_grain_mend_detect_parameters_v1 {
-       uint32_t struct_size;
-       uint32_t reject_structure_lines;   /* 0/1 */
-       double dust_sensitivity;           /* 기본 0.5 */
-       double scratch_sensitivity;        /* 기본 0.5 */
-       double protect_detail;             /* 기본 0.75 */
-       double roi_x, roi_y, roi_width, roi_height;  /* 정규, 좌상단 원점. 자동은 0,0,1,1 */
-   } nf_grain_mend_detect_parameters_v1;
-
-   typedef struct nf_grain_mend_detection_v1 {
-       uint32_t struct_size, status;
-       uint32_t width, height;                 /* 검출 이미지 크기(긴 변 1800 상한) */
-       uint32_t roi_x, roi_y, roi_width, roi_height;  /* 그 안의 화소 ROI */
-       uint64_t accepted_pixels, mask_byte_count;
-   } nf_grain_mend_detection_v1;
-
-   NF_API nf_status_t NF_CALL nf_develop_detect_grain_mend_v1(
-       const nf_develop_export_request_v21* request,
-       const nf_grain_mend_detect_parameters_v1* parameters,
-       nf_develop_run_state_v1* run_state,
-       nf_grain_mend_detection_v1* detection,
-       uint8_t* mask, uint64_t mask_capacity_bytes);
-   ```
-
-   마스크 상한이 1800×1800(약 3.2 MB)으로 정해져 있으므로 호출부가 한 번 할당해 두면 됩니다.
-   모자라면 `mask_byte_count` 만 채우고 buffer-too-small 로 돌려주십시오 — 핸들과 destroy 를
-   두지 않아도 되고 재검출도 없습니다. `grain_mend_maximum_detection_dimension` 이 그 상한이며
-   `imaging/grain_mend.h` 에 있습니다.
-
-   자동은 ROI 를 (0,0,1,1) 로, 가이드는 사용자가 끈 사각형으로 부르는 **같은 진입점**입니다.
-   ROI 를 표시 좌표에서 원본 좌표로 되돌리는 것은 이미 만들어 둔
-   `DevelopDisplayGeometry.TryMapDisplayToRaw` 로 두 모서리를 옮기면 됩니다.
+   **가이드도 완료했습니다.** 자동은 전체 ROI, 가이드는 크롭과 같은 캔버스 사각형을
+   `DevelopDisplayGeometry`로 원본 정규 좌표에 되돌린 ROI로 같은 v2 검출 진입점을 부릅니다.
+   두 경로 모두 오버레이가 떠 있는 동안 recipe/sidecar를 바꾸지 않고, Enter 수락 뒤에만
+   `DefectEditKind.Region` sidecar를 기록하며 Esc는 아무 것도 쓰지 않습니다. 다음 GrainMend
+   작업은 기능 배관이 아니라 macOS-hosted pixel golden·실촬영 미세 검출 재현입니다.
 
 2. **GrainMend 브러시·복제 도장의 좌표 계약**(이미 구현했지만 손댈 때 알아야 합니다):
    `defect_heal_brush.h` 는 획 좌표를 **원본(raw) 이미지의 정규 좌표, 좌상단 원점**으로
@@ -293,10 +257,10 @@ py scripts/find-unreachable-api.py
    (`appMetadataOverlay` — 개정 번호와 원본 SHA-256 결속 포함)와 내보내기 때 WIC 로 EXIF/IPTC 를
    쓰는 일이 함께 필요합니다. 저장만 하고 내보내기에 싣지 않으면 반쪽입니다.
 4. **출력 패널의 품질·소스 탭과 빠른 내보내기.** `DevelopExportFormat.Jpeg8`과 ABI 0.40/v28의
-   JPEG quality·DPI metadata는 실제 native publish까지 연결됐고 기본 JPEG(quality 1.0, DPI 미지정)는
-   파일 탭에서 선택할 수 있습니다. 다음은 **긴 변 pixel downscale**, 이 필드를 실제로 편집·저장하는
-   품질 탭, TIFF 압축/8-bit, PNG 8-bit/DPI, 그리고 OutputSharpening fields를 채우는 UI입니다. 아직
-   동작하지 않는 옵션 토글부터 만들지 마십시오.
+   JPEG quality·DPI metadata, ABI 0.41/v29의 long-edge 축소는 모두 실제 native publish까지 연결됐고
+   기본 JPEG(quality 1.0, DPI 미지정)는 파일 탭에서 선택할 수 있습니다. 다음은 긴 변 값을 실제로
+   편집·저장하는 품질 탭, TIFF 압축/8-bit, PNG 8-bit/DPI, 그리고 OutputSharpening fields를 채우는 UI입니다.
+   아직 동작하지 않는 옵션 토글부터 만들지 마십시오.
 
 새 섹션을 만들기 전에, 이미 엔진에 있는데 UI 가 없는 축이 또 있는지부터 보십시오 — 이번
 세션에 그렇게 찾은 것이 넷입니다(색상 다섯 축, 흑백 토닝, 자동 GrainMend 세기, 프리셋).

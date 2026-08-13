@@ -28,9 +28,10 @@ internal static unsafe class NativeAbiReader
       // output sharpening after the final image transform, 37 for TIFF source metadata
       // preflight at import and relink, 38 for creative primary calibration, and 39 for
       // JPEG/PNG source preflight at import and relink, and 40 for JPEG output
-      // quality plus DPI metadata.
+      // quality plus DPI metadata, 41 for linear-light long-edge output scaling, and
+      // 42 for GrainMend review detector tuning.
     // An engine below this is refused at load, not at the call.
-    internal const ushort MinimumMinor = 40;
+    internal const ushort MinimumMinor = 42;
 
     private const uint StatusOk = 0;
 

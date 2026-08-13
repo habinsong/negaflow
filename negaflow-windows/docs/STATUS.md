@@ -8,11 +8,11 @@ macOS 대비 어림값입니다. 근거를 함께 적습니다 — 숫자만 옮
 
 | 영역 | 대략 | 근거와 남은 것 |
 | --- | --- | --- |
-| 현상 엔진·수학 | **86%** | 반전·base(auto/manual/preset)·톤·포인트 커브·컬러 믹서·컬러 그레이딩·캘리브레이션·색·질감·FilmScanDenoise·필름 42종·GrainMend 수리·검출(자동·가이드 ROI ABI)·흑백 토닝·소프트 프루프·기하 변형·JPEG8 출력. 남은 것: 긴 변 리사이즈, 출력 색공간/PNG·TIFF 옵션, macOS 실입력 픽셀 golden |
+| 현상 엔진·수학 | **87%** | 반전·base(auto/manual/preset)·톤·포인트 커브·컬러 믹서·컬러 그레이딩·캘리브레이션·색·질감·FilmScanDenoise·필름 42종·GrainMend 수리·검출(자동·가이드 ROI ABI)·흑백 토닝·소프트 프루프·기하 변형·JPEG8·긴 변 Lanczos3 출력. 남은 것: 출력 색공간/PNG·TIFF 옵션, macOS 실입력 픽셀 golden |
 | 카탈로그·영속성 | **90%** | 모든 recipe, 버전, 결함 sidecar, 프리셋, 붙여넣기 범위, 사용자 프리셋, 지연 저장, 백업·복구, relink, 단일 작성자 잠금. 남은 것: 앱/촬영/롤 메타데이터 |
 | 라이브러리 화면 | **77%** | 카드 격자·정렬·카드 크기·소스 막대·파일 트리·폴더 프로세스 선택기·별점·깃발·가져오기·relink·중복 후보. 필터는 macOS 9개 중 7개(메타데이터 상태 미확인 추가). 남은 것: 현재 롤·미검증 프로파일, 컬렉션 |
-| 현상 화면 | **72%** | 캔버스·히스토그램·인스펙터 6탭·보정 8섹션 전부·좌측 5탭·크롭/기하·자동 보정·프리셋/복사붙여넣기·정보 탭·GrainMend 브러시/복제 도장/자동/가이드 ROI·검출 결과 성분별 포함/제외. 남은 것: 출력 품질·소스 하위 탭, 빠른 내보내기, macOS 감도/미세 재검출, 메타데이터 카드 3종, 파일 탭 |
-| 내보내기 | **52%** | PNG16·TIFF16·JPEG8을 폴더·파일명 패턴으로. JPEG는 WIC sRGB ICC·DPI·구조 readback과 비덮어쓰기 게시까지 확인. 남은 것: 품질 탭, 긴 변 크기, PNG/TIFF DPI·8-bit·압축, 출력 선명도 UI, 배치, XMP sidecar |
+| 현상 화면 | **72%** | 캔버스·히스토그램·인스펙터 6탭·보정 8섹션 전부·좌측 5탭·크롭/기하·자동 보정·프리셋/복사붙여넣기·정보 탭·GrainMend 브러시/복제 도장/자동/가이드 ROI·검출 결과 성분별 포함/제외·감도 재검출. 남은 것: 출력 품질·소스 하위 탭, 빠른 내보내기, macOS 미세 입자 추가 검출, 메타데이터 카드 3종, 파일 탭 |
+| 내보내기 | **55%** | PNG16·TIFF16·JPEG8을 폴더·파일명 패턴으로. JPEG는 WIC sRGB ICC·DPI·구조 readback과 비덮어쓰기 게시까지 확인했고, 긴 변은 선형 Lanczos3로 축소만 합니다. 남은 것: 품질 탭에서의 긴 변 편집·저장, PNG/TIFF DPI·8-bit·압축, 출력 선명도 UI, 배치, XMP sidecar |
 | 스캐너 | **35%** | 플러그인 클라이언트·발견·프로세스 호스트·프로토콜·artifact 트랜잭션·게시 영수증이 `Shell.Core/Scanner` 에 있으나 **셸에서 아무 데서도 부르지 않습니다**(`src/Shell` 에 참조 0). 엔진에 있는데 닿지 않는 기능 목록에 추가 |
 | 설정·다국어·접근성 | **70%** | 6개 로케일 전면 적용, 설정 창, 외관, 패널 너비·필름스트립 상태 저장. 남은 것: macOS 설정 항목 대조 |
 | 인화 | **5%** | 자리만 있습니다(312줄). 사용자가 뒤로 미룬 영역입니다 |
@@ -282,6 +282,21 @@ x64 Debug `native.wic_jpeg_export`는 4:4:4 JPEG의 sRGB profile·300 DPI·원�
 확인했습니다. `native.develop_export_abi`와 ABI 수명 테스트 2개, Interop **193 assertions**(ABI 0.40), Shell
 **541 assertions**도 통과했습니다. 실제 촬영 TIFF→JPEG 및 macOS JPEG pixel/quality corpus 비교, ARM64 실행은
 아직 수행하지 않았습니다.
+
+## 2026-08-14 Long-edge output scaling
+
+ABI 0.41/v29은 `output_long_edge`를 append-only로 받습니다. 0은 원본 크기를 유지하고, 현재
+긴 변보다 작은 값만 기하 변형 뒤·출력 샤프닝 앞에서 선형 working image의 separable Lanczos3로
+축소합니다. 가로·세로 결과는 macOS `CILanczosScaleTransform`과 같이 하나의 긴 변 비율로 각각
+반올림하며 upscale은 하지 않습니다. 미리보기와 GrainMend 검출은 같은 요청 구조체를 받더라도 이
+필드를 무시하므로, 화면 오버레이 좌표와 review mask가 출력 크기 설정 때문에 바뀌지 않습니다.
+
+직접 resampler 시험은 opaque linear contract·identity·upscale 거부를 확인했고, common ABI 시험은
+실제 64×64 RGB16 TIFF를 v29 PNG 경로로 내보내 32×32 결과의 metadata·파일·WIC decode까지 확인했습니다.
+x64 Debug `native.working_image_resample`, `native.develop_export_abi` 2/2 및 Interop 195 assertions
+(ABI 0.41), Catalog 698 / Shell 541 assertions를 통과했습니다. macOS output corpus의 픽셀 golden,
+실제 촬영 TIFF export, ARM64 장치 실행은 아직 없습니다. 셸 품질 탭과 catalog persistence도 아직 없으므로
+사용자가 긴 변 값을 편집해 이 경로를 부르는 기능은 완료로 세지 않습니다.
 
 ## 2026-08-12 JPEG/PNG standard-image import and develop
 

@@ -442,6 +442,19 @@ public readonly record struct GrainMendDetectionResult(
     uint RoiWidth = 0U,
     uint RoiHeight = 0U);
 
+/// <summary>
+/// GrainMend 자동·가이드 검토에서만 쓰는 일회성 검출기 설정입니다. 수락 전 후보를 바꿀 뿐
+/// Defects sidecar나 일반 현상 레시피에는 기록되지 않습니다.
+/// </summary>
+public readonly record struct GrainMendDetectionOptions(
+    double DustSensitivity,
+    double ScratchSensitivity,
+    double ProtectDetail,
+    bool RejectStructureLines)
+{
+    public static GrainMendDetectionOptions LegacyDefault { get; } = new(0.5, 0.5, 0.75, false);
+}
+
 public sealed class DevelopExportRequest
 {
     public required string SourcePath { get; init; }
@@ -596,6 +609,12 @@ public sealed class DevelopExportRequest
 
     /// <summary>Positive values are embedded as output metadata and do not resize pixels.</summary>
     public uint OutputDpi { get; init; }
+
+    /// <summary>
+    /// Zero preserves source dimensions. Positive values cap only the published artifact's
+    /// long edge; they never upscale or change preview and GrainMend-review geometry.
+    /// </summary>
+    public uint OutputLongEdge { get; init; }
 
     public uint RowsPerCopy { get; init; } = 64;
 }

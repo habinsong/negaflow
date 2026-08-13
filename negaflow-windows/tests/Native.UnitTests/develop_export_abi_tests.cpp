@@ -439,6 +439,18 @@ void expect(const bool condition, const char* const message) {
     return request;
 }
 
+[[nodiscard]] nf_develop_export_request_v29 make_request_v29(
+    const wchar_t* const source,
+    const wchar_t* const destination,
+    const std::uint32_t base_mode = NF_BASE_ESTIMATION_AUTO) {
+    nf_develop_export_request_v29 request;
+    std::memset(&request, 0, sizeof(request));
+    request.v28 = make_request_v28(source, destination, base_mode);
+    request.v28.v27.v26.v25.v24.v21.v20.v19.v18.v17.v16.v15.v14.v13.v12.v11.v10.v9.v8
+        .struct_size = static_cast<std::uint32_t>(sizeof(request));
+    return request;
+}
+
 [[nodiscard]] bool write_file(
     const std::filesystem::path& path,
     const std::vector<std::uint8_t>& bytes) {
@@ -1461,6 +1473,30 @@ void test_v28_contract() {
         "v28 rejects JPEG quality outside its supported range");
 }
 
+void test_v29_contract() {
+    expect(sizeof(nf_develop_export_request_v29) == 4960U,
+           "v29 request layout is fixed");
+    expect(offsetof(nf_develop_export_request_v29, output_long_edge) == 4944U,
+           "v29 output long-edge offset is fixed");
+
+    nf_develop_export_request_v29 request = make_request_v29(L"a.tif", L"b.png");
+    request.output_long_edge = 2048U;
+    nf_develop_export_result_v3 result = make_result_v3();
+    expect(
+        nf_develop_export_v29(&request, nullptr, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            result.failed_stage == NF_DEVELOP_STAGE_OBSERVE_SOURCE_BEFORE,
+        "v29 long-edge request reaches source observation");
+
+    request.output_geometry_reserved0 = 1U;
+    result = make_result_v3();
+    expect(
+        nf_develop_export_v29(&request, nullptr, &result) == NF_STATUS_OK &&
+            result.failed_stage == NF_DEVELOP_STAGE_REQUEST_VALIDATION &&
+            std::strcmp(result.failure_name, "invalid_output_geometry") == 0,
+        "v29 rejects nonzero output geometry reserved fields");
+}
+
 void test_missing_source_is_not_a_validation_error() {
     const std::filesystem::path absent =
         std::filesystem::temp_directory_path() / L"negaflow-abi-absent-source.tif";
@@ -1917,6 +1953,52 @@ void test_v2_grain_mend_detection(const std::filesystem::path& source) {
             filled.roi_x == sized.roi_x && filled.roi_y == sized.roi_y &&
             filled.roi_width == sized.roi_width && filled.roi_height == sized.roi_height,
         "v2 GrainMend mask call preserves the size-query raw ROI");
+}
+
+// v3 adds only transient review tuning. It must leave the v2 ROI/result shape intact
+// while refusing unknown nonzero reserved fields at the ABI boundary.
+void test_v3_grain_mend_detection_tuning(const std::filesystem::path& source) {
+    expect(sizeof(nf_grain_mend_detect_parameters_v2) == 72U &&
+            offsetof(nf_grain_mend_detect_parameters_v2, dust_sensitivity) == 40U,
+        "v3 GrainMend detection tuning ABI layout is fixed");
+
+    const std::wstring source_text = source.wstring();
+    nf_develop_export_request_v27 request =
+        make_request_v27(source_text.c_str(), nullptr);
+    request.v26.v25.v24.v21.v20.v19.v18.v17.v16.v15.v14.v13.v12.v11.v10.v9.v8
+        .defect_removal_strength = 1.0;
+    nf_grain_mend_detect_parameters_v2 parameters{};
+    parameters.v1.struct_size = static_cast<std::uint32_t>(sizeof(parameters));
+    parameters.v1.roi_x = 0.2;
+    parameters.v1.roi_y = 0.25;
+    parameters.v1.roi_width = 0.5;
+    parameters.v1.roi_height = 0.5;
+    parameters.dust_sensitivity = 1.0;
+    parameters.scratch_sensitivity = 1.0;
+    parameters.protect_detail = 0.6;
+    parameters.reject_structure_lines = 0U;
+
+    nf_grain_mend_detection_v2 detection{};
+    detection.struct_size = static_cast<std::uint32_t>(sizeof(detection));
+    nf_develop_export_result_v3 result = make_result_v3();
+    expect(
+        nf_develop_detect_grain_mend_v3(
+            &request, &parameters, nullptr, 0U, nullptr, &detection, &result) ==
+                NF_STATUS_OK &&
+            result.succeeded == 1U && detection.width > 0U && detection.height > 0U &&
+            detection.mask_byte_count ==
+                static_cast<std::uint64_t>(detection.width) * detection.height,
+        "v3 GrainMend detection accepts explicit transient tuning");
+
+    parameters.reserved = 1U;
+    detection = {};
+    detection.struct_size = static_cast<std::uint32_t>(sizeof(detection));
+    result = make_result_v3();
+    expect(
+        nf_develop_detect_grain_mend_v3(
+            &request, &parameters, nullptr, 0U, nullptr, &detection, &result) ==
+            NF_STATUS_INVALID_ARGUMENT,
+        "v3 GrainMend detection rejects nonzero tuning reserved field");
 }
 
 // Neutrality of a monochrome develop is a property of the working image. The 8-bit
@@ -2777,6 +2859,8 @@ void test_v18_defect_region_preview_and_export() {
         temporary / L"negaflow-abi-v27-calibrated.png";
     const std::filesystem::path jpeg_output =
         temporary / L"negaflow-abi-v28-output.jpg";
+    const std::filesystem::path longedge_output =
+        temporary / L"negaflow-abi-v29-longedge.png";
     std::error_code ignored{};
     std::filesystem::remove(source, ignored);
     std::filesystem::remove(identity_output, ignored);
@@ -2787,6 +2871,7 @@ void test_v18_defect_region_preview_and_export() {
     std::filesystem::remove(infrared_output, ignored);
     std::filesystem::remove(calibrated_output, ignored);
     std::filesystem::remove(jpeg_output, ignored);
+    std::filesystem::remove(longedge_output, ignored);
 
     const std::vector<std::uint8_t> source_bytes =
         negaflow::test_fixtures::make_uncompressed_rgb16_defect_tiff(
@@ -3228,6 +3313,24 @@ void test_v18_defect_region_preview_and_export() {
             std::filesystem::exists(jpeg_output),
         "v28 JPEG export publishes the shared develop result");
 
+    const std::wstring longedge_output_text = longedge_output.wstring();
+    nf_develop_export_request_v29 longedge_export = make_request_v29(
+        source_text.c_str(), longedge_output_text.c_str(), NF_BASE_ESTIMATION_MANUAL);
+    longedge_export.v28.v27.v26.v25.v24.v21.v20.v19.v18.v17.film_polarity =
+        NF_FILM_POLARITY_POSITIVE;
+    longedge_export.output_long_edge = 32U;
+    nf_develop_export_result_v3 longedge_export_result = make_result_v3();
+    const bool longedge_export_ok =
+        nf_develop_export_v29(&longedge_export, nullptr, &longedge_export_result) ==
+            NF_STATUS_OK &&
+        longedge_export_result.succeeded == 1U;
+    expect(
+        longedge_export_ok && longedge_export_result.image_width == 32U &&
+            longedge_export_result.image_height == 32U &&
+            longedge_export_result.output_file_bytes != 0U &&
+            decode_png_bgra8(longedge_output, 32U, 32U).size() == 32U * 32U * 4U,
+        "v29 long-edge cap rescales the published PNG in the shared output path");
+
     const std::wstring cloned_output_text = cloned_output.wstring();
     cloned.v19.v18.v17.v16.v15.v14.v13.v12.v11.v10.v9.v8.destination_path =
         cloned_output_text.c_str();
@@ -3328,6 +3431,7 @@ void test_v18_defect_region_preview_and_export() {
     std::filesystem::remove(infrared_output, ignored);
     std::filesystem::remove(calibrated_output, ignored);
     std::filesystem::remove(jpeg_output, ignored);
+    std::filesystem::remove(longedge_output, ignored);
 }
 
 }  // namespace
@@ -3764,6 +3868,7 @@ int main(const int argument_count, const char* const arguments[]) {
     test_v26_contract();
     test_v27_contract();
     test_v28_contract();
+    test_v29_contract();
     test_missing_source_is_not_a_validation_error();
     test_v2_missing_source_is_not_a_validation_error();
     test_v18_defect_region_preview_and_export();
@@ -3784,6 +3889,7 @@ int main(const int argument_count, const char* const arguments[]) {
             test_v6_color_mixer_preview(source);
             test_v8_grain_mend_preview(source);
             test_v2_grain_mend_detection(source);
+            test_v3_grain_mend_detection_tuning(source);
             test_v9_film_scan_denoise_preview(source);
             test_v10_texture_preview(source);
             test_v11_bw_transform_preview(source);

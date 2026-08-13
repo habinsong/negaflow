@@ -775,6 +775,17 @@ typedef struct nf_develop_export_request_v28 {
     uint32_t output_options_reserved1;
 } nf_develop_export_request_v28;
 
+/* v29 preserves v28 and appends the optional output long-edge cap. Zero retains
+   source dimensions; a positive value only downsizes a published artifact after
+   the recipe's geometry transform and before output sharpening. */
+typedef struct nf_develop_export_request_v29 {
+    nf_develop_export_request_v28 v28;
+    uint32_t output_long_edge;
+    uint32_t output_geometry_reserved0;
+    uint32_t output_geometry_reserved1;
+    uint32_t output_geometry_reserved2;
+} nf_develop_export_request_v29;
+
 typedef struct nf_develop_export_result_v1 {
     uint32_t struct_size;
     uint32_t succeeded;
@@ -1379,6 +1390,18 @@ typedef struct nf_grain_mend_detect_parameters_v1 {
     double roi_height;
 } nf_grain_mend_detect_parameters_v1;
 
+/* v3 keeps the ROI prefix and adds the per-run detector tuning used by the
+   review controls. These values are deliberately not stored in a Defects
+   sidecar: they only decide what the transient review session proposes. */
+typedef struct nf_grain_mend_detect_parameters_v2 {
+    nf_grain_mend_detect_parameters_v1 v1;
+    double dust_sensitivity;
+    double scratch_sensitivity;
+    double protect_detail;
+    uint32_t reject_structure_lines;
+    uint32_t reserved;
+} nf_grain_mend_detect_parameters_v2;
+
 typedef struct nf_grain_mend_detection_v2 {
     uint32_t struct_size;
     uint32_t reserved;
@@ -1405,6 +1428,15 @@ NF_API nf_status_t NF_CALL nf_develop_detect_grain_mend_v1(
 NF_API nf_status_t NF_CALL nf_develop_detect_grain_mend_v2(
     const nf_develop_export_request_v27* request,
     const nf_grain_mend_detect_parameters_v1* parameters,
+    uint8_t* mask,
+    uint64_t mask_capacity_bytes,
+    nf_develop_run_state_v1* run_state,
+    nf_grain_mend_detection_v2* detection,
+    nf_develop_export_result_v3* result);
+
+NF_API nf_status_t NF_CALL nf_develop_detect_grain_mend_v3(
+    const nf_develop_export_request_v27* request,
+    const nf_grain_mend_detect_parameters_v2* parameters,
     uint8_t* mask,
     uint64_t mask_capacity_bytes,
     nf_develop_run_state_v1* run_state,
@@ -1555,6 +1587,20 @@ NF_API nf_status_t NF_CALL nf_develop_export_v28(
     nf_develop_export_result_v3* result);
 NF_API nf_status_t NF_CALL nf_develop_preview_v28(
     const nf_develop_export_request_v28* request,
+    const nf_soft_proof_v1* soft_proof,
+    uint32_t maximum_width,
+    uint32_t maximum_height,
+    uint8_t* pixels,
+    uint32_t pixel_capacity_bytes,
+    nf_develop_run_state_v1* run_state,
+    nf_develop_export_result_v3* result);
+
+NF_API nf_status_t NF_CALL nf_develop_export_v29(
+    const nf_develop_export_request_v29* request,
+    nf_develop_run_state_v1* run_state,
+    nf_develop_export_result_v3* result);
+NF_API nf_status_t NF_CALL nf_develop_preview_v29(
+    const nf_develop_export_request_v29* request,
     const nf_soft_proof_v1* soft_proof,
     uint32_t maximum_width,
     uint32_t maximum_height,

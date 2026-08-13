@@ -586,6 +586,16 @@ internal unsafe struct NativeDevelopExportRequestV28
 }
 
 [StructLayout(LayoutKind.Sequential)]
+internal unsafe struct NativeDevelopExportRequestV29
+{
+    internal NativeDevelopExportRequestV28 V28;
+    internal uint OutputLongEdge;
+    internal uint OutputGeometryReserved0;
+    internal uint OutputGeometryReserved1;
+    internal uint OutputGeometryReserved2;
+}
+
+[StructLayout(LayoutKind.Sequential)]
 internal unsafe struct NativeDevelopExportResultV2
 {
     internal const int FailureNameCapacity = 64;
@@ -716,6 +726,21 @@ internal struct NativeGrainMendDetectParametersV1
     internal double RoiY;
     internal double RoiWidth;
     internal double RoiHeight;
+}
+
+/// <summary>
+/// v3 GrainMend review input. The prefix is the ROI-aware v2 contract; the
+/// appended values only affect the transient detection proposal.
+/// </summary>
+[StructLayout(LayoutKind.Sequential)]
+internal struct NativeGrainMendDetectParametersV2
+{
+    internal NativeGrainMendDetectParametersV1 V1;
+    internal double DustSensitivity;
+    internal double ScratchSensitivity;
+    internal double ProtectDetail;
+    internal uint RejectStructureLines;
+    internal uint Reserved;
 }
 
 /// <summary>

@@ -144,6 +144,7 @@ add_library(negaflow_imaging STATIC
       src/Native/imaging/infrared_defect_detector.cpp
       src/Native/imaging/icm_icc_converter.cpp
       src/Native/imaging/image_transform.cpp
+      src/Native/imaging/working_image_resample.cpp
     src/Native/imaging/linear_scanner_converter.cpp
       src/Native/imaging/local_dodge_burn.cpp
       src/Native/imaging/muted_scene_vibrance.cpp
@@ -757,6 +758,18 @@ if(BUILD_TESTING)
         PRIVATE negaflow_imaging negaflow_project_options
     )
     add_test(NAME native.image_transform COMMAND negaflow_image_transform_tests)
+
+    add_executable(negaflow_working_image_resample_tests
+        tests/Native.UnitTests/working_image_resample_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_working_image_resample_tests
+        PRIVATE negaflow_imaging negaflow_project_options
+    )
+    add_test(
+        NAME native.working_image_resample
+        COMMAND negaflow_working_image_resample_tests
+    )
 
     add_executable(negaflow_digital_film_material_tests
         tests/Native.UnitTests/digital_film_material_tests.cpp

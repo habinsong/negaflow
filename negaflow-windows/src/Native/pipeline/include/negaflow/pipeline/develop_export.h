@@ -105,6 +105,9 @@ struct DevelopExportRequest final {
     negaflow::imaging::OutputSharpeningParameters output_sharpening{};
     float jpeg_quality{1.0F};
     std::uint32_t output_dpi{0U};
+    // Zero preserves source dimensions. Positive values cap the exported long edge;
+    // they never upscale and do not alter previews or GrainMend detection.
+    std::uint32_t output_long_edge{0U};
     std::uint32_t rows_per_copy{64U};
 };
 

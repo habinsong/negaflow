@@ -826,6 +826,29 @@
                                     </Grid>
                                 </Grid>
                                 <StackPanel
+                                    x:Name="GrainMendReviewTuning"
+                                    HorizontalAlignment="Center"
+                                    Orientation="Horizontal"
+                                    Spacing="8"
+                                    Visibility="Collapsed">
+                                    <TextBlock
+                                        x:Name="GrainMendSensitivityLabel"
+                                        VerticalAlignment="Center"
+                                        FontSize="12" />
+                                    <Slider
+                                        x:Name="GrainMendSensitivitySlider"
+                                        Width="110"
+                                        Minimum="0.7"
+                                        Maximum="6"
+                                        StepFrequency="0.1"
+                                        SmallChange="0.1"
+                                        LargeChange="0.5"
+                                        AutomationProperties.AutomationId="negaflow.develop.grainmend.sensitivity"
+                                        ValueChanged="OnGrainMendSensitivityValueChanged"
+                                        PointerReleased="OnGrainMendSensitivityPointerReleased"
+                                        KeyUp="OnGrainMendSensitivityKeyUp" />
+                                </StackPanel>
+                                <StackPanel
                                     x:Name="GrainMendReviewActions"
                                     HorizontalAlignment="Center"
                                     Orientation="Horizontal"

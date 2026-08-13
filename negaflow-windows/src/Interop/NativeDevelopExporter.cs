@@ -52,6 +52,7 @@ public static unsafe class NativeDevelopExporter
     internal const int RequestV26Size = 4896;
     internal const int RequestV27Size = 4928;
     internal const int RequestV28Size = 4944;
+    internal const int RequestV29Size = 4960;
     internal const int ResultV2Size = 152;
     internal const int ResultV3Size = 160;
     internal const int RunStateV1Size = 16;
@@ -59,6 +60,7 @@ public static unsafe class NativeDevelopExporter
     internal const int SoftProofMediaV1Size = 40;
     internal const int SoftProofV1Size = 40;
     internal const int GrainMendDetectParametersV1Size = 40;
+    internal const int GrainMendDetectParametersV2Size = 72;
     internal const int GrainMendDetectionV2Size = 56;
 
     private const int MaximumLocalAdjustments = 64;
@@ -118,6 +120,7 @@ public static unsafe class NativeDevelopExporter
             sizeof(NativeDevelopExportRequestV26) != RequestV26Size ||
             sizeof(NativeDevelopExportRequestV27) != RequestV27Size ||
             sizeof(NativeDevelopExportRequestV28) != RequestV28Size ||
+            sizeof(NativeDevelopExportRequestV29) != RequestV29Size ||
             sizeof(NativeDevelopExportResultV2) != ResultV2Size ||
             sizeof(NativeDevelopExportResultV3) != ResultV3Size ||
             sizeof(NativeDevelopRunStateV1) != RunStateV1Size ||
@@ -125,6 +128,7 @@ public static unsafe class NativeDevelopExporter
             sizeof(NativeSoftProofMediaV1) != SoftProofMediaV1Size ||
             sizeof(NativeSoftProofV1) != SoftProofV1Size ||
             sizeof(NativeGrainMendDetectParametersV1) != GrainMendDetectParametersV1Size ||
+            sizeof(NativeGrainMendDetectParametersV2) != GrainMendDetectParametersV2Size ||
             sizeof(NativeGrainMendDetectionV2) != GrainMendDetectionV2Size)
         {
             throw new NativeBootstrapException(
@@ -1765,6 +1769,19 @@ public static unsafe class NativeDevelopExporter
         };
     }
 
+    private static NativeDevelopExportRequestV29 BuildRequestV29(
+        NativeDevelopExportRequestV28 v28,
+        DevelopExportRequest request)
+    {
+        v28.V27.V26.V25.V24.V21.V20.V19.V18.V17.V16.V15.V14.V13.V12.V11.V10.V9.V8.V7.StructSize =
+            (uint)sizeof(NativeDevelopExportRequestV29);
+        return new NativeDevelopExportRequestV29
+        {
+            V28 = v28,
+            OutputLongEdge = request.OutputLongEdge,
+        };
+    }
+
     private static byte[] BuildDefectSourceSha256(DevelopExportRequest request) =>
         request.DefectSourceIdentity is { } identity
             ? Convert.FromHexString(identity.Sha256)
@@ -1868,14 +1885,15 @@ public static unsafe class NativeDevelopExporter
                 checked((uint)defects.InfraredItems.Length));
             NativeDevelopExportRequestV26 v26 = BuildRequestV26(v25, request);
             NativeDevelopExportRequestV27 v27 = BuildRequestV27(v26, request);
-            NativeDevelopExportRequestV28 native = BuildRequestV28(v27, request);
-            status = NativeMethods.nf_develop_export_v28(
+            NativeDevelopExportRequestV28 v28 = BuildRequestV28(v27, request);
+            NativeDevelopExportRequestV29 native = BuildRequestV29(v28, request);
+            status = NativeMethods.nf_develop_export_v29(
                 &native,
                 runState,
                 &raw);
         }
 
-        return Translate(status, raw, "nf_develop_export_v28");
+        return Translate(status, raw, "nf_develop_export_v29");
     }
 
     /// <summary>
@@ -1921,7 +1939,8 @@ public static unsafe class NativeDevelopExporter
         double roiY = 0.0,
         double roiWidth = 1.0,
         double roiHeight = 1.0,
-        DevelopRun? run = null)
+        DevelopRun? run = null,
+        GrainMendDetectionOptions? detectionOptions = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         NativeGrainMendDetectionV2 detection = default;
@@ -1937,7 +1956,8 @@ public static unsafe class NativeDevelopExporter
                 roiX,
                 roiY,
                 roiWidth,
-                roiHeight).Result;
+                roiHeight,
+                detectionOptions).Result;
         return new GrainMendDetectionResult(
             result,
             detection.Width,
@@ -1970,9 +1990,24 @@ public static unsafe class NativeDevelopExporter
         double roiX = 0.0,
         double roiY = 0.0,
         double roiWidth = 1.0,
-        double roiHeight = 1.0)
+        double roiHeight = 1.0,
+        GrainMendDetectionOptions? detectionOptions = null)
     {
         ValidateLayoutAndEnums(request);
+        GrainMendDetectionOptions effectiveDetectionOptions =
+            detectionOptions ?? GrainMendDetectionOptions.LegacyDefault;
+        if (detection is not null &&
+            (!double.IsFinite(effectiveDetectionOptions.DustSensitivity) ||
+             effectiveDetectionOptions.DustSensitivity is < 0.0 or > 1.0 ||
+             !double.IsFinite(effectiveDetectionOptions.ScratchSensitivity) ||
+             effectiveDetectionOptions.ScratchSensitivity is < 0.0 or > 1.0 ||
+             !double.IsFinite(effectiveDetectionOptions.ProtectDetail) ||
+             effectiveDetectionOptions.ProtectDetail is < 0.0 or > 1.0))
+        {
+            throw new ArgumentException(
+                "GrainMend detection settings must be finite values from zero through one.",
+                nameof(detectionOptions));
+        }
         NativeLocalDodgeBurnPayload local = BuildLocalDodgeBurnPayload(
             request.LocalDodgeBurn);
         NativeDefectRegionPayload defects = BuildDefectRegionPayload(
@@ -2081,16 +2116,24 @@ public static unsafe class NativeDevelopExporter
             NativeDevelopExportRequestV27 v27 = BuildRequestV27(v26, request);
             if (detection is not null)
             {
-                NativeGrainMendDetectParametersV1 detectionParameters = new()
+                NativeGrainMendDetectParametersV2 detectionParameters = new()
                 {
-                    StructSize = (uint)sizeof(NativeGrainMendDetectParametersV1),
-                    RoiX = roiX,
-                    RoiY = roiY,
-                    RoiWidth = roiWidth,
-                    RoiHeight = roiHeight,
+                    V1 = new NativeGrainMendDetectParametersV1
+                    {
+                        StructSize = (uint)sizeof(NativeGrainMendDetectParametersV2),
+                        RoiX = roiX,
+                        RoiY = roiY,
+                        RoiWidth = roiWidth,
+                        RoiHeight = roiHeight,
+                    },
+                    DustSensitivity = effectiveDetectionOptions.DustSensitivity,
+                    ScratchSensitivity = effectiveDetectionOptions.ScratchSensitivity,
+                    ProtectDetail = effectiveDetectionOptions.ProtectDetail,
+                    RejectStructureLines =
+                        effectiveDetectionOptions.RejectStructureLines ? 1U : 0U,
                 };
                 detection->StructSize = (uint)sizeof(NativeGrainMendDetectionV2);
-                status = NativeMethods.nf_develop_detect_grain_mend_v2(
+                status = NativeMethods.nf_develop_detect_grain_mend_v3(
                     &v27,
                     &detectionParameters,
                     pixels.IsEmpty ? null : pixelBuffer,
@@ -2101,8 +2144,9 @@ public static unsafe class NativeDevelopExporter
             }
             else
             {
-                NativeDevelopExportRequestV28 native = BuildRequestV28(v27, request);
-                status = NativeMethods.nf_develop_preview_v28(
+                NativeDevelopExportRequestV28 v28 = BuildRequestV28(v27, request);
+                NativeDevelopExportRequestV29 native = BuildRequestV29(v28, request);
+                status = NativeMethods.nf_develop_preview_v29(
                     &native,
                     proofPointer,
                     maximumWidth,
@@ -2118,8 +2162,8 @@ public static unsafe class NativeDevelopExporter
             status,
             raw,
             detection is not null
-                ? "nf_develop_detect_grain_mend_v2"
-                : "nf_develop_preview_v28"));
+                ? "nf_develop_detect_grain_mend_v3"
+                : "nf_develop_preview_v29"));
     }
 
     private static DevelopExportResult Translate(

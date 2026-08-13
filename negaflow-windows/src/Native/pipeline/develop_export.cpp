@@ -5,12 +5,14 @@
 #include "negaflow/core/pixel.h"
 #include "negaflow/core/pointwise.h"
 #include "negaflow/imaging/display_gamut_map.h"
+#include "negaflow/imaging/working_image_resample.h"
 #include "negaflow/imageio/wic_standard_image_decoder.h"
 #include "negaflow/pipeline/film_look_workspace.h"
 
 #include <cstring>
 #include <algorithm>
 #include <atomic>
+#include <cmath>
 #include <cwchar>
 #include <stop_token>
 #include <utility>
@@ -1232,6 +1234,33 @@ struct PreviewTarget final {
                 image_transform.status));
     }
 
+    bool output_resized = false;
+    negaflow::imaging::WorkingImage output_image = std::move(image_transform.image);
+    // macOS applies the optional long-edge cap after all geometric recipe transforms,
+    // before final output sharpening and encoding. It is an export-only operation:
+    // preview and review masks retain their source-derived geometry.
+    if (preview == nullptr && detect == nullptr && request.output_long_edge != 0U) {
+        const std::uint32_t current_long_edge = std::max(
+            output_image.width, output_image.height);
+        if (current_long_edge > request.output_long_edge) {
+            const double scale = static_cast<double>(request.output_long_edge) /
+                static_cast<double>(current_long_edge);
+            const std::uint32_t output_width = static_cast<std::uint32_t>(
+                std::max(1LL, std::llround(static_cast<double>(output_image.width) * scale)));
+            const std::uint32_t output_height = static_cast<std::uint32_t>(
+                std::max(1LL, std::llround(static_cast<double>(output_image.height) * scale)));
+            auto resampled = negaflow::imaging::resample_working_image_lanczos3(
+                output_image, output_width, output_height);
+            if (resampled.status != negaflow::imaging::WorkingImageResampleStatus::ok) {
+                return fail(
+                    DevelopExportStage::image_transform,
+                    negaflow::imaging::working_image_resample_status_name(resampled.status));
+            }
+            output_image = std::move(resampled.image);
+            output_resized = true;
+        }
+    }
+
     tracker.finish();
     if (tracker.cancelled()) {
         return cancelled_outcome(DevelopExportStage::image_transform);
@@ -1244,7 +1273,7 @@ struct PreviewTarget final {
             DevelopExportStage::output_sharpening,
             cost_of(output_sharpening_cost, true));
         output_sharpening = negaflow::imaging::apply_output_sharpening(
-            std::move(image_transform.image), request.output_sharpening);
+            std::move(output_image), request.output_sharpening);
         if (output_sharpening.status != negaflow::imaging::TextureStageStatus::ok) {
             return fail(
                 DevelopExportStage::output_sharpening,
@@ -1256,7 +1285,7 @@ struct PreviewTarget final {
         }
     } else {
         output_sharpening.status = negaflow::imaging::TextureStageStatus::ok;
-        output_sharpening.image = std::move(image_transform.image);
+        output_sharpening.image = std::move(output_image);
     }
 
     // The last poll before anything is published. From here the run either produces the
@@ -1297,7 +1326,7 @@ struct PreviewTarget final {
     outcome.black_and_white_neutralized =
         black_and_white.info.neutralized;
     outcome.bw_toning_applied = black_and_white.info.toned;
-    outcome.image_transform_applied = image_transform.info.applied;
+    outcome.image_transform_applied = image_transform.info.applied || output_resized;
     outcome.output_sharpening_applied = output_sharpening.info.applied;
     outcome.applied_dmin = developed_info.applied_dmin;
     outcome.base_source = base_source;

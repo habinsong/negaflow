@@ -784,6 +784,10 @@ internal static class Program
             seen.Edit.Label.Kind == DefectEditLabelKind.Automatic &&
             seen.Edit.Label.Value == 2,
             "grain_mend_detect_labels_a_whole_frame_run_automatic");
+        Check(exporter.LastDetectOptions is
+            { DustSensitivity: 1.0, ScratchSensitivity: 1.0, ProtectDetail: 0.6,
+                RejectStructureLines: true },
+            "grain_mend_detect_defaults_to_mac_auto_sensitivity_and_structure_rejection");
 
         // 부분 ROI 는 가이드입니다.
         seen = null;
@@ -795,6 +799,15 @@ internal static class Program
             seen?.Edit?.Label.Kind == DefectEditLabelKind.Guided &&
             exporter.LastDetectRoi == new DefectRect(0.1, 0.1, 0.5, 0.5),
             "grain_mend_detect_labels_a_partial_roi_guided");
+        GrainMendDetectionOptions minimumGuided = GrainMendSensitivity.ToDetectionOptions(0.7, false);
+        Check(
+            coordinator.RunAsync(
+                Frame(new ManualBaseRgb(0.2, 0.2, 0.2)),
+                new DefectRect(0.1, 0.1, 0.5, 0.5),
+                minimumGuided,
+                outcome => seen = outcome).GetAwaiter().GetResult() &&
+            exporter.LastDetectOptions == new GrainMendDetectionOptions(0.0, 0.1, 0.6, false),
+            "grain_mend_detect_forwards_guided_slider_tuning_without_structure_rejection");
 
         // 아무것도 못 찾으면 항목이 없고, 그것은 실패가 아닙니다.
         exporter.DetectBehaviour = mask =>
@@ -1827,6 +1840,7 @@ internal static class Program
         public int DetectCallCount;
         public int DetectThreadId;
         public DefectRect? LastDetectRoi;
+        public GrainMendDetectionOptions? LastDetectOptions;
         // 시험이 정하는 검출 결과입니다. null 이면 실패를 흉내 냅니다.
         public Func<byte[], GrainMendDetectionResult>? DetectBehaviour;
         // What the last preview was asked to proof with. Null both when proofing is off
@@ -1837,9 +1851,11 @@ internal static class Program
             DevelopExportRequest request,
             byte[] mask,
             DefectRect rawRoi,
+            GrainMendDetectionOptions options,
             DevelopRun? run = null)
         {
             LastDetectRoi = rawRoi;
+            LastDetectOptions = options;
             ++DetectCallCount;
             DetectThreadId = Environment.CurrentManagedThreadId;
             return DetectBehaviour is null

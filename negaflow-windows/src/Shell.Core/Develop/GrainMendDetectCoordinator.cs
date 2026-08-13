@@ -61,6 +61,23 @@ public sealed class GrainMendDetectCoordinator
         DefectRect roi,
         Action<GrainMendDetectOutcome> onCompleted)
     {
+        return await RunAsync(
+            frame,
+            roi,
+            GrainMendSensitivity.ToDetectionOptions(GrainMendSensitivity.Default, IsWholeFrame(roi)),
+            onCompleted).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// 현재 자동/가이드 검토 설정으로 재검출합니다. 후보가 수락되기 전에는 어떤 recipe도 쓰지
+    /// 않으므로 감도 변경은 언제나 이 호출로만 끝납니다.
+    /// </summary>
+    public async Task<bool> RunAsync(
+        LibraryFrameSnapshot frame,
+        DefectRect roi,
+        GrainMendDetectionOptions options,
+        Action<GrainMendDetectOutcome> onCompleted)
+    {
         ArgumentNullException.ThrowIfNull(frame);
         ArgumentNullException.ThrowIfNull(onCompleted);
 
@@ -75,7 +92,7 @@ public sealed class GrainMendDetectCoordinator
         try
         {
             GrainMendDetectionResult detected = await Task.Run(
-                () => exporter.DetectGrainMend(request, mask, roi)).ConfigureAwait(false);
+                () => exporter.DetectGrainMend(request, mask, roi, options)).ConfigureAwait(false);
             if (!detected.Result.Succeeded)
             {
                 return Deliver(

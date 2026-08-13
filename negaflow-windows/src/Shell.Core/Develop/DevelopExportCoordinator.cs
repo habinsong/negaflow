@@ -31,6 +31,7 @@ public interface IDevelopExporter
         DevelopExportRequest request,
         byte[] mask,
         DefectRect rawRoi,
+        GrainMendDetectionOptions options,
         DevelopRun? run = null);
 }
 
@@ -59,6 +60,7 @@ public sealed class NativeDevelopExporterAdapter : IDevelopExporter
         DevelopExportRequest request,
         byte[] mask,
         DefectRect rawRoi,
+        GrainMendDetectionOptions options,
         DevelopRun? run = null) =>
         NativeDevelopExporter.DetectGrainMend(
             request,
@@ -67,7 +69,8 @@ public sealed class NativeDevelopExporterAdapter : IDevelopExporter
             rawRoi.Y,
             rawRoi.Width,
             rawRoi.Height,
-            run);
+            run,
+            options);
 }
 
 public enum DevelopExportOutcomeKind

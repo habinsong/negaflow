@@ -141,6 +141,11 @@ static_assert(offsetof(
                   primary_calibration_red_hue) == 4896U);
 static_assert(sizeof(nf_develop_export_request_v28) == 4944U);
 static_assert(offsetof(nf_develop_export_request_v28, jpeg_quality) == 4928U);
+static_assert(sizeof(nf_develop_export_request_v29) == 4960U);
+static_assert(offsetof(nf_develop_export_request_v29, output_long_edge) == 4944U);
+static_assert(sizeof(nf_grain_mend_detect_parameters_v1) == 40U);
+static_assert(sizeof(nf_grain_mend_detect_parameters_v2) == 72U);
+static_assert(offsetof(nf_grain_mend_detect_parameters_v2, dust_sensitivity) == 40U);
 static_assert(sizeof(nf_develop_export_result_v1) == 136U);
 static_assert(offsetof(nf_develop_export_result_v1, failure_name) == 12U);
 static_assert(offsetof(nf_develop_export_result_v1, source_file_bytes) == 104U);
@@ -2362,6 +2367,24 @@ void fail_defect_region_request(
     return true;
 }
 
+[[nodiscard]] bool map_request_v29(
+    const nf_develop_export_request_v29& request,
+    const bool require_destination,
+    negaflow::pipeline::DevelopExportRequest& pipeline_request,
+    nf_develop_export_result_v2& result) noexcept {
+    if (request.output_geometry_reserved0 != 0U ||
+        request.output_geometry_reserved1 != 0U ||
+        request.output_geometry_reserved2 != 0U) {
+        fail_defect_region_request(result, "invalid_output_geometry");
+        return false;
+    }
+    if (!map_request_v28(request.v28, require_destination, pipeline_request, result)) {
+        return false;
+    }
+    pipeline_request.output_long_edge = request.output_long_edge;
+    return true;
+}
+
 [[nodiscard]] std::uint64_t elapsed_microseconds(
     const std::chrono::steady_clock::time_point started,
     const std::chrono::steady_clock::time_point finished) noexcept {
@@ -3048,6 +3071,29 @@ void write_outcome_v2(
     }
     if (request->v27.v26.v25.v24.v21.v20.v19.v18.v17.v16.v15.v14.v13.v12.v11.v10.v9
                 .v8.struct_size < static_cast<std::uint32_t>(sizeof(*request)) ||
+        result->struct_size < static_cast<std::uint32_t>(sizeof(*result))) {
+        status = NF_STATUS_STRUCT_TOO_SMALL;
+        return false;
+    }
+    const std::uint32_t declared_size = result->struct_size;
+    std::memset(result, 0, sizeof(*result));
+    result->struct_size = declared_size;
+    result->failed_stage = NF_DEVELOP_STAGE_NONE;
+    copy_failure_name("ok", result->failure_name);
+    status = NF_STATUS_OK;
+    return true;
+}
+
+[[nodiscard]] bool prepare_result_v29(
+    const nf_develop_export_request_v29* const request,
+    nf_develop_export_result_v3* const result,
+    nf_status_t& status) noexcept {
+    if (request == nullptr || result == nullptr) {
+        status = NF_STATUS_INVALID_ARGUMENT;
+        return false;
+    }
+    if (request->v28.v27.v26.v25.v24.v21.v20.v19.v18.v17.v16.v15.v14.v13.v12.v11
+                .v10.v9.v8.struct_size < static_cast<std::uint32_t>(sizeof(*request)) ||
         result->struct_size < static_cast<std::uint32_t>(sizeof(*result))) {
         status = NF_STATUS_STRUCT_TOO_SMALL;
         return false;
@@ -4420,6 +4466,91 @@ nf_status_t NF_CALL nf_develop_detect_grain_mend_v2(
     return NF_STATUS_OK;
 }
 
+nf_status_t NF_CALL nf_develop_detect_grain_mend_v3(
+    const nf_develop_export_request_v27* const request,
+    const nf_grain_mend_detect_parameters_v2* const parameters,
+    uint8_t* const mask,
+    const uint64_t mask_capacity_bytes,
+    nf_develop_run_state_v1* const run_state,
+    nf_grain_mend_detection_v2* const detection,
+    nf_develop_export_result_v3* const result) {
+    nf_status_t status = NF_STATUS_OK;
+    if (!prepare_result_v27(request, result, status)) {
+        return status;
+    }
+    if (parameters == nullptr ||
+        parameters->v1.struct_size < static_cast<std::uint32_t>(sizeof(*parameters)) ||
+        parameters->v1.reserved != 0U || parameters->reserved != 0U ||
+        !std::isfinite(parameters->dust_sensitivity) ||
+        !std::isfinite(parameters->scratch_sensitivity) ||
+        !std::isfinite(parameters->protect_detail) ||
+        parameters->dust_sensitivity < negaflow::imaging::minimum_grain_mend_sensitivity ||
+        parameters->dust_sensitivity > negaflow::imaging::maximum_grain_mend_sensitivity ||
+        parameters->scratch_sensitivity < negaflow::imaging::minimum_grain_mend_sensitivity ||
+        parameters->scratch_sensitivity > negaflow::imaging::maximum_grain_mend_sensitivity ||
+        parameters->protect_detail < negaflow::imaging::minimum_grain_mend_sensitivity ||
+        parameters->protect_detail > negaflow::imaging::maximum_grain_mend_sensitivity ||
+        detection == nullptr ||
+        detection->struct_size < static_cast<std::uint32_t>(sizeof(*detection))) {
+        return NF_STATUS_INVALID_ARGUMENT;
+    }
+    detection->width = 0U;
+    detection->height = 0U;
+    detection->accepted_pixels = 0U;
+    detection->mask_byte_count = 0U;
+    detection->source_width = 0U;
+    detection->source_height = 0U;
+    detection->roi_x = 0U;
+    detection->roi_y = 0U;
+    detection->roi_width = 0U;
+    detection->roi_height = 0U;
+    negaflow::pipeline::DevelopRunControl control{};
+    if (!prepare_run_state(run_state, control, status)) {
+        return status;
+    }
+    negaflow::pipeline::DevelopExportRequest pipeline_request{};
+    nf_develop_export_result_v2 mapping_result{};
+    mapping_result.struct_size = static_cast<std::uint32_t>(sizeof(mapping_result));
+    copy_failure_name("ok", mapping_result.failure_name);
+    if (!map_request_v27(*request, false, pipeline_request, mapping_result)) {
+        write_request_rejection_v3(mapping_result, *result);
+        return NF_STATUS_OK;
+    }
+    pipeline_request.grain_mend.dust_sensitivity = parameters->dust_sensitivity;
+    pipeline_request.grain_mend.scratch_sensitivity = parameters->scratch_sensitivity;
+    pipeline_request.grain_mend.protect_detail = parameters->protect_detail;
+    pipeline_request.grain_mend.reject_structure_lines =
+        parameters->reject_structure_lines != 0U;
+    const negaflow::imaging::GrainMendRoi roi{
+        parameters->v1.roi_x,
+        parameters->v1.roi_y,
+        parameters->v1.roi_width,
+        parameters->v1.roi_height,
+    };
+    const auto started = std::chrono::steady_clock::now();
+    const negaflow::pipeline::GrainMendDetectionOutcome detected =
+        negaflow::pipeline::develop_detect_grain_mend(
+            pipeline_request,
+            mask,
+            static_cast<std::size_t>(mask_capacity_bytes),
+            control,
+            roi);
+    const auto finished = std::chrono::steady_clock::now();
+    detection->width = detected.width;
+    detection->height = detected.height;
+    detection->accepted_pixels = detected.accepted_pixels;
+    detection->mask_byte_count = detected.mask_byte_count;
+    detection->source_width = detected.source_width;
+    detection->source_height = detected.source_height;
+    detection->roi_x = detected.roi_x;
+    detection->roi_y = detected.roi_y;
+    detection->roi_width = detected.roi_width;
+    detection->roi_height = detected.roi_height;
+    write_outcome_v3(
+        detected.outcome, elapsed_microseconds(started, finished), *result);
+    return NF_STATUS_OK;
+}
+
 nf_status_t NF_CALL nf_develop_preview_v23(
     const nf_develop_export_request_v21* const request,
     const nf_soft_proof_v1* const soft_proof,
@@ -4834,6 +4965,71 @@ nf_status_t NF_CALL nf_develop_preview_v28(
     mapping_result.struct_size = static_cast<std::uint32_t>(sizeof(mapping_result));
     copy_failure_name("ok", mapping_result.failure_name);
     if (!map_request_v28(*request, false, pipeline_request, mapping_result)) {
+        write_request_rejection_v3(mapping_result, *result);
+        return NF_STATUS_OK;
+    }
+    const auto started = std::chrono::steady_clock::now();
+    const auto outcome = negaflow::pipeline::develop_preview(
+        pipeline_request, maximum_width, maximum_height, pixels,
+        static_cast<std::size_t>(pixel_capacity_bytes), control, proof);
+    write_outcome_v3(outcome, elapsed_microseconds(started, std::chrono::steady_clock::now()), *result);
+    return NF_STATUS_OK;
+}
+
+nf_status_t NF_CALL nf_develop_export_v29(
+    const nf_develop_export_request_v29* const request,
+    nf_develop_run_state_v1* const run_state,
+    nf_develop_export_result_v3* const result) {
+    nf_status_t status = NF_STATUS_OK;
+    if (!prepare_result_v29(request, result, status)) return status;
+    negaflow::pipeline::DevelopRunControl control{};
+    if (!prepare_run_state(run_state, control, status)) return status;
+    negaflow::pipeline::DevelopExportRequest pipeline_request{};
+    nf_develop_export_result_v2 mapping_result{};
+    mapping_result.struct_size = static_cast<std::uint32_t>(sizeof(mapping_result));
+    copy_failure_name("ok", mapping_result.failure_name);
+    if (!map_request_v29(*request, true, pipeline_request, mapping_result)) {
+        write_request_rejection_v3(mapping_result, *result);
+        return NF_STATUS_OK;
+    }
+    const auto started = std::chrono::steady_clock::now();
+    const auto outcome = negaflow::pipeline::develop_and_export(pipeline_request, control);
+    write_outcome_v3(outcome, elapsed_microseconds(started, std::chrono::steady_clock::now()), *result);
+    return NF_STATUS_OK;
+}
+
+nf_status_t NF_CALL nf_develop_preview_v29(
+    const nf_develop_export_request_v29* const request,
+    const nf_soft_proof_v1* const soft_proof,
+    const uint32_t maximum_width,
+    const uint32_t maximum_height,
+    uint8_t* const pixels,
+    const uint32_t pixel_capacity_bytes,
+    nf_develop_run_state_v1* const run_state,
+    nf_develop_export_result_v3* const result) {
+    nf_status_t status = NF_STATUS_OK;
+    if (!prepare_result_v29(request, result, status)) return status;
+    if (pixels == nullptr) return NF_STATUS_INVALID_ARGUMENT;
+    negaflow::pipeline::DevelopPreviewProof proof{};
+    if (soft_proof != nullptr) {
+        if (soft_proof->struct_size < static_cast<std::uint32_t>(sizeof(*soft_proof))) {
+            return NF_STATUS_STRUCT_TOO_SMALL;
+        }
+        proof.enabled = soft_proof->enabled != 0U;
+        proof.simulate_paper_and_black_ink =
+            soft_proof->simulate_paper_and_black_ink != 0U;
+        for (std::size_t channel = 0U; channel < 3U; ++channel) {
+            proof.paper.white[channel] = static_cast<double>(soft_proof->paper_white_rgb[channel]);
+            proof.paper.black[channel] = static_cast<double>(soft_proof->black_ink_rgb[channel]);
+        }
+    }
+    negaflow::pipeline::DevelopRunControl control{};
+    if (!prepare_run_state(run_state, control, status)) return status;
+    negaflow::pipeline::DevelopExportRequest pipeline_request{};
+    nf_develop_export_result_v2 mapping_result{};
+    mapping_result.struct_size = static_cast<std::uint32_t>(sizeof(mapping_result));
+    copy_failure_name("ok", mapping_result.failure_name);
+    if (!map_request_v29(*request, false, pipeline_request, mapping_result)) {
         write_request_rejection_v3(mapping_result, *result);
         return NF_STATUS_OK;
     }

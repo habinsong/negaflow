@@ -2182,6 +2182,18 @@ public sealed partial class DevelopWorkspaceView : UserControl
     /// </summary>
     private DefectEditItem? pendingDefectEdit;
     private GrainMendReviewSession? pendingDefectReview;
+    private DefectRect? pendingDefectRawRoi;
+    private readonly Dictionary<string, GrainMendSensitivityValues> grainMendSensitivityByFrame =
+        new(StringComparer.Ordinal);
+    private bool updatingGrainMendSensitivity;
+    private bool grainMendSensitivityChanged;
+
+    private readonly record struct GrainMendSensitivityValues(double Automatic, double Guided)
+    {
+        public static GrainMendSensitivityValues Default { get; } = new(
+            GrainMendSensitivity.Default,
+            GrainMendSensitivity.Default);
+    }
 
     private async void OnGrainMendAutoClicked(object sender, RoutedEventArgs args)
     {
@@ -2218,7 +2230,15 @@ public sealed partial class DevelopWorkspaceView : UserControl
         UpdateGrainMendCard();
         try
         {
-            await grainMendDetectCoordinator.RunAsync(frame, rawRoi, ShowDetectedDefects);
+            bool automatic = IsWholeFrameGrainMendRoi(rawRoi);
+            GrainMendDetectionOptions options = GrainMendSensitivity.ToDetectionOptions(
+                GetGrainMendSensitivity(automatic),
+                automatic);
+            await grainMendDetectCoordinator.RunAsync(
+                frame,
+                rawRoi,
+                options,
+                outcome => ShowDetectedDefects(outcome, rawRoi));
         }
         finally
         {
@@ -2227,7 +2247,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         }
     }
 
-    private void ShowDetectedDefects(GrainMendDetectOutcome outcome)
+    private void ShowDetectedDefects(GrainMendDetectOutcome outcome, DefectRect rawRoi)
     {
         if (outcome.Kind is DevelopExportOutcomeKind.Refused
             or DevelopExportOutcomeKind.Faulted)
@@ -2248,6 +2268,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
             return;
         }
         pendingDefectEdit = edit;
+        pendingDefectRawRoi = rawRoi;
         ExportStatusText.Text = AppResources.FormatIntegers(
             "developGrainMendFoundFormat",
             "Value",
@@ -2326,8 +2347,81 @@ public sealed partial class DevelopWorkspaceView : UserControl
     {
         pendingDefectEdit = null;
         pendingDefectReview = null;
+        pendingDefectRawRoi = null;
+        grainMendSensitivityChanged = false;
         DefectOverlayImage.Source = null;
         DefectOverlayImage.Visibility = Visibility.Collapsed;
+    }
+
+    private static bool IsWholeFrameGrainMendRoi(DefectRect roi) =>
+        roi.X == 0.0 && roi.Y == 0.0 && roi.Width == 1.0 && roi.Height == 1.0;
+
+    private double GetGrainMendSensitivity(bool automatic)
+    {
+        if (panel?.SelectedFrame is not { } frame ||
+            !grainMendSensitivityByFrame.TryGetValue(frame.Id, out GrainMendSensitivityValues values))
+        {
+            return GrainMendSensitivity.Default;
+        }
+        return automatic ? values.Automatic : values.Guided;
+    }
+
+    private void SetGrainMendSensitivity(bool automatic, double value)
+    {
+        if (panel?.SelectedFrame is not { } frame)
+        {
+            return;
+        }
+        GrainMendSensitivityValues prior = grainMendSensitivityByFrame.TryGetValue(
+            frame.Id,
+            out GrainMendSensitivityValues values)
+            ? values
+            : GrainMendSensitivityValues.Default;
+        double clamped = GrainMendSensitivity.Clamp(value);
+        grainMendSensitivityByFrame[frame.Id] = automatic
+            ? prior with { Automatic = clamped }
+            : prior with { Guided = clamped };
+    }
+
+    private void OnGrainMendSensitivityValueChanged(
+        object sender,
+        RangeBaseValueChangedEventArgs args)
+    {
+        _ = sender;
+        if (updatingGrainMendSensitivity || pendingDefectEdit is null)
+        {
+            return;
+        }
+        SetGrainMendSensitivity(
+            pendingDefectEdit.Label.Kind == DefectEditLabelKind.Automatic,
+            args.NewValue);
+        grainMendSensitivityChanged = true;
+    }
+
+    private async void OnGrainMendSensitivityPointerReleased(
+        object sender,
+        PointerRoutedEventArgs args)
+    {
+        _ = sender;
+        args.Handled = true;
+        await RedetectGrainMendForSensitivityAsync();
+    }
+
+    private async void OnGrainMendSensitivityKeyUp(object sender, KeyRoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        await RedetectGrainMendForSensitivityAsync();
+    }
+
+    private async Task RedetectGrainMendForSensitivityAsync()
+    {
+        if (!grainMendSensitivityChanged || pendingDefectRawRoi is not { } rawRoi)
+        {
+            return;
+        }
+        grainMendSensitivityChanged = false;
+        await DetectGrainMendAsync(rawRoi);
     }
 
     /// <summary>검토 중인 검출을 받아들여 recipe 에 담습니다.</summary>
@@ -2489,6 +2583,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         GrainMendCloneButton.Content = AppResources.Get("developGrainMendClone", "Content");
         GrainMendRemoveButton.Content = AppResources.Get("developGrainMendRemove", "Content");
         GrainMendCancelButton.Content = AppResources.Get("developCropCancel", "Text");
+        GrainMendSensitivityLabel.Text = AppResources.Get("developGrainMendSensitivity", "Text");
         SetLocalizedNameAndTooltip(
             GrainMendBrushButton, AppResources.Get("developGrainMendBrushHelp", "Value"));
         SetLocalizedNameAndTooltip(
@@ -2502,6 +2597,9 @@ public sealed partial class DevelopWorkspaceView : UserControl
             GrainMendRemoveButton, AppResources.Get("developGrainMendRemove", "Content"));
         SetLocalizedNameAndTooltip(
             GrainMendCancelButton, AppResources.Get("developCropCancel", "Text"));
+        string grainMendSensitivity = AppResources.Get("developGrainMendSensitivity", "Text");
+        AutomationProperties.SetName(GrainMendSensitivitySlider, grainMendSensitivity);
+        ToolTipService.SetToolTip(GrainMendSensitivitySlider, grainMendSensitivity);
         GrainMendAutoButton.IsEnabled =
             panel?.SelectedFrame is not null && pendingDefectEdit is null && !grainMendDetecting;
         GrainMendAutoResetButton.IsEnabled =
@@ -2510,9 +2608,21 @@ public sealed partial class DevelopWorkspaceView : UserControl
             panel?.SelectedFrame is not null && pendingDefectEdit is null && !grainMendDetecting;
         GrainMendGuidedResetButton.IsEnabled =
             panel?.HasDefectEdits(DefectEditLabelKind.Guided) == true;
-        GrainMendReviewActions.Visibility = pendingDefectEdit is null
-            ? Visibility.Collapsed
-            : Visibility.Visible;
+        bool reviewingDefects = pendingDefectEdit is not null;
+        GrainMendReviewTuning.Visibility = reviewingDefects
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        GrainMendReviewActions.Visibility = reviewingDefects
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        GrainMendSensitivitySlider.IsEnabled = reviewingDefects && !grainMendDetecting;
+        if (reviewingDefects)
+        {
+            bool automatic = pendingDefectEdit!.Label.Kind == DefectEditLabelKind.Automatic;
+            updatingGrainMendSensitivity = true;
+            GrainMendSensitivitySlider.Value = GetGrainMendSensitivity(automatic);
+            updatingGrainMendSensitivity = false;
+        }
         GrainMendRemoveButton.IsEnabled =
             pendingDefectEdit is not null && (pendingDefectReview?.IncludedCount ?? 1) > 0;
         GrainMendCancelButton.IsEnabled = pendingDefectEdit is not null;

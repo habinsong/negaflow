@@ -258,6 +258,17 @@ internal static partial class NativeMethods
         NativeGrainMendDetectionV2* detection,
         NativeDevelopExportResultV3* result);
 
+    [LibraryImport(LibraryName, EntryPoint = "nf_develop_detect_grain_mend_v3")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static unsafe partial uint nf_develop_detect_grain_mend_v3(
+        NativeDevelopExportRequestV27* request,
+        NativeGrainMendDetectParametersV2* parameters,
+        byte* mask,
+        ulong maskCapacityBytes,
+        NativeDevelopRunStateV1* runState,
+        NativeGrainMendDetectionV2* detection,
+        NativeDevelopExportResultV3* result);
+
     [LibraryImport(LibraryName, EntryPoint = "nf_develop_preview_v22")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static unsafe partial uint nf_develop_preview_v22(
@@ -370,6 +381,25 @@ internal static partial class NativeMethods
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static unsafe partial uint nf_develop_preview_v28(
         NativeDevelopExportRequestV28* request,
+        NativeSoftProofV1* softProof,
+        uint maximumWidth,
+        uint maximumHeight,
+        byte* pixels,
+        uint pixelCapacityBytes,
+        NativeDevelopRunStateV1* runState,
+        NativeDevelopExportResultV3* result);
+
+    [LibraryImport(LibraryName, EntryPoint = "nf_develop_export_v29")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static unsafe partial uint nf_develop_export_v29(
+        NativeDevelopExportRequestV29* request,
+        NativeDevelopRunStateV1* runState,
+        NativeDevelopExportResultV3* result);
+
+    [LibraryImport(LibraryName, EntryPoint = "nf_develop_preview_v29")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static unsafe partial uint nf_develop_preview_v29(
+        NativeDevelopExportRequestV29* request,
         NativeSoftProofV1* softProof,
         uint maximumWidth,
         uint maximumHeight,
