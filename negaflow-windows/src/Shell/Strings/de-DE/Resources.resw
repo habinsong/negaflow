@@ -798,4 +798,8 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developGrainMendDetectorMissing.Value" xml:space="preserve"><value>Automatische Erkennung fehlt in diesem Build noch</value></data>
   <data name="developPreviewFailed.Text" xml:space="preserve"><value>Die Vorschau konnte nicht erstellt werden</value></data>
   <data name="libraryFilterMetadataUnknown.Content" xml:space="preserve"><value>Metadatenstatus unbekannt</value><comment>AppLocalizedPhrase.filterMetadataUnknown</comment></data>
+  <data name="developGrainMendDetecting.Text" xml:space="preserve"><value>Suche nach Defekten…</value></data>
+  <data name="developGrainMendFoundNothing.Text" xml:space="preserve"><value>Nichts zu reparieren gefunden</value></data>
+  <data name="developGrainMendFoundFormat.Value" xml:space="preserve"><value>%d Stellen gefunden. Eingabetaste zum Entfernen, Esc zum Abbrechen</value></data>
+  <data name="developGrainMendDetectFailed.Text" xml:space="preserve"><value>Die Erkennung ist fehlgeschlagen</value></data>
 </root>

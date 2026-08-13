@@ -499,6 +499,17 @@
                     Stretch="Uniform"
                     Visibility="Collapsed" />
 
+                <!-- 검출 결과 오버레이입니다. 미리보기와 같은 사각형을 차지하도록 같은
+                     여백과 Stretch 를 씁니다 — 어긋나면 표시가 실제 자리와 달라집니다. -->
+                <Image
+                    x:Name="DefectOverlayImage"
+                    Margin="24"
+                    AutomationProperties.AutomationId="negaflow.canvas.defect-overlay"
+                    IsHitTestVisible="False"
+                    Opacity="0.75"
+                    Stretch="Uniform"
+                    Visibility="Collapsed" />
+
                 <Canvas x:Name="CropOverlay" Visibility="Collapsed">
                     <Rectangle x:Name="CropDimTop" Fill="#73000000" />
                     <Rectangle x:Name="CropDimBottom" Fill="#73000000" />
@@ -722,6 +733,7 @@
                                             MinHeight="31"
                                             HorizontalAlignment="Stretch"
                                             AutomationProperties.AutomationId="negaflow.develop.grainmend.auto"
+                                            Click="OnGrainMendAutoClicked"
                                             FontSize="12" />
                                         <Button
                                             x:Name="GrainMendAutoResetButton"
@@ -729,7 +741,8 @@
                                             Width="26"
                                             MinHeight="31"
                                             Padding="0"
-                                            AutomationProperties.AutomationId="negaflow.develop.grainmend.auto.reset">
+                                            AutomationProperties.AutomationId="negaflow.develop.grainmend.auto.reset"
+                                            Click="OnGrainMendAutoResetClicked">
                                             <FontIcon FontSize="11" Glyph="&#xE777;" />
                                         </Button>
                                     </Grid>

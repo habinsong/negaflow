@@ -38,6 +38,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
     /// <summary>macOS 의 <c>crop.aspectLocked</c> 와 같이 잠긴 상태로 시작합니다.</summary>
     private bool isCropAspectLocked = true;
     private DevelopSourceKind developSource = DevelopSourceKind.Library;
+    private GrainMendDetectCoordinator? grainMendDetectCoordinator;
     /// <summary>폴더가 비어 있으면 원본 옆에 씁니다 — 목적지를 고르기 전에도 내보낼 수 있습니다.</summary>
     private ExportDestination exportDestination =
         new(string.Empty, ExportDestination.NameToken, DevelopExportFormat.Tiff16);
@@ -190,6 +191,9 @@ public sealed partial class DevelopWorkspaceView : UserControl
                 uiDispatcher,
                 1600,
                 1200);
+            grainMendDetectCoordinator = new GrainMendDetectCoordinator(
+                new NativeDevelopExporterAdapter(),
+                uiDispatcher);
             autoAdjustCoordinator = new AutoAdjustCoordinator(
                 new NativeDevelopExporterAdapter(),
                 uiDispatcher);
@@ -898,6 +902,25 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private void OnCanvasKeyDown(object sender, KeyRoutedEventArgs args)
     {
         _ = sender;
+        // 검토 중인 검출이 있으면 그것이 먼저입니다. 도움말이 안내하는 대로 Enter 가 받아들이고
+        // Esc 가 버립니다.
+        if (pendingDefectEdit is not null)
+        {
+            if (args.Key == VirtualKey.Enter)
+            {
+                AcceptPendingDefectEdit();
+                args.Handled = true;
+                return;
+            }
+            if (args.Key == VirtualKey.Escape)
+            {
+                ClearPendingDefectEdit();
+                ExportStatusText.Text = string.Empty;
+                UpdateGrainMendCard();
+                args.Handled = true;
+                return;
+            }
+        }
         if (cropSession is null)
         {
             return;
@@ -2000,6 +2023,123 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private DefectPoint? cloneSourceAnchor;
     private bool grainMendDragging;
 
+    /// <summary>
+    /// 검출은 됐지만 아직 받아들이지 않은 결과입니다. macOS 와 같이 Enter 를 받아야 사진이
+    /// 바뀝니다 — 여기 값이 있는 동안 사진은 그대로입니다.
+    /// </summary>
+    private DefectEditItem? pendingDefectEdit;
+
+    private async void OnGrainMendAutoClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (panel?.SelectedFrame is not { } frame || grainMendDetectCoordinator is null)
+        {
+            return;
+        }
+        SetGrainMendTool(GrainMendTool.None);
+        ClearPendingDefectEdit();
+        ExportStatusText.Text = AppResources.Get("developGrainMendDetecting", "Text");
+        GrainMendAutoButton.IsEnabled = false;
+        try
+        {
+            // 자동은 프레임 전체입니다. 가이드는 같은 자리에 사용자가 끈 사각형을 넣습니다.
+            await grainMendDetectCoordinator.RunAsync(
+                frame,
+                new DefectRect(0.0, 0.0, 1.0, 1.0),
+                ShowDetectedDefects);
+        }
+        finally
+        {
+            GrainMendAutoButton.IsEnabled = panel?.SelectedFrame is not null;
+        }
+    }
+
+    private void ShowDetectedDefects(GrainMendDetectOutcome outcome)
+    {
+        if (outcome.Kind is DevelopExportOutcomeKind.Refused
+            or DevelopExportOutcomeKind.Faulted)
+        {
+            ExportStatusText.Text = AppResources.Get("developGrainMendDetectFailed", "Text");
+            return;
+        }
+        if (outcome.Edit is not { } edit)
+        {
+            ExportStatusText.Text = AppResources.Get("developGrainMendFoundNothing", "Text");
+            return;
+        }
+
+        pendingDefectEdit = edit;
+        ExportStatusText.Text = AppResources.FormatIntegers(
+            "developGrainMendFoundFormat",
+            "Value",
+            edit.Label.Value);
+        ShowDefectOverlay(edit, outcome.Width, outcome.Height);
+        // Enter 와 Esc 를 받으려면 캔버스가 초점을 가져야 합니다.
+        _ = CanvasHost.Focus(FocusState.Programmatic);
+    }
+
+    /// <summary>
+    /// 마스크를 미리보기 위에 얹습니다. 표시된 화소만 칠하고 나머지는 완전히 투명하게 둡니다 —
+    /// 반투명한 판을 통째로 덮으면 사진이 아니라 판을 보게 됩니다.
+    /// </summary>
+    private void ShowDefectOverlay(DefectEditItem edit, uint width, uint height)
+    {
+        if (edit.RegionMask is not { } mask || width == 0U || height == 0U ||
+            !DefectMaskCodec.TryDecodeRgba8(mask, (int)width, (int)height, out byte[] rgba))
+        {
+            return;
+        }
+
+        WriteableBitmap bitmap = new((int)width, (int)height);
+        byte[] bgra = new byte[checked((int)width * (int)height * 4)];
+        for (int pixel = 0; pixel < bgra.Length; pixel += 4)
+        {
+            if (rgba[pixel] == 0)
+            {
+                continue;
+            }
+            // 붉은 표시입니다. WriteableBitmap 은 미리 곱해진 알파를 쓰므로 세 채널이 알파를
+            // 넘지 않아야 합니다.
+            bgra[pixel] = 30;
+            bgra[pixel + 1] = 30;
+            bgra[pixel + 2] = 200;
+            bgra[pixel + 3] = 200;
+        }
+        using (Stream buffer = bitmap.PixelBuffer.AsStream())
+        {
+            buffer.Write(bgra, 0, bgra.Length);
+        }
+        bitmap.Invalidate();
+        DefectOverlayImage.Source = bitmap;
+        DefectOverlayImage.Visibility = Visibility.Visible;
+    }
+
+    private void ClearPendingDefectEdit()
+    {
+        pendingDefectEdit = null;
+        DefectOverlayImage.Source = null;
+        DefectOverlayImage.Visibility = Visibility.Collapsed;
+    }
+
+    /// <summary>검토 중인 검출을 받아들여 recipe 에 담습니다.</summary>
+    private void AcceptPendingDefectEdit()
+    {
+        if (panel is null || pendingDefectEdit is not { } edit)
+        {
+            return;
+        }
+        ClearPendingDefectEdit();
+        if (panel.AcceptDefectRegion(edit) != LibraryFrameError.None)
+        {
+            ExportStatusText.Text = AppResources.Get("developGrainMendDetectFailed", "Text");
+            return;
+        }
+        ExportStatusText.Text = string.Empty;
+        UpdateGrainMendCard();
+        RequestPreview();
+    }
+
     private void OnGrainMendBrushClicked(object sender, RoutedEventArgs args)
     {
         _ = sender;
@@ -2016,6 +2156,14 @@ public sealed partial class DevelopWorkspaceView : UserControl
         SetGrainMendTool(grainMendTool == GrainMendTool.Clone
             ? GrainMendTool.None
             : GrainMendTool.Clone);
+    }
+
+    private void OnGrainMendAutoResetClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        ClearPendingDefectEdit();
+        RemoveGrainMendEdits(DefectEditKind.Region);
     }
 
     private void OnGrainMendBrushResetClicked(object sender, RoutedEventArgs args)
@@ -2080,15 +2228,19 @@ public sealed partial class DevelopWorkspaceView : UserControl
             GrainMendBrushButton, AppResources.Get("developGrainMendBrushHelp", "Value"));
         SetLocalizedNameAndTooltip(
             GrainMendCloneButton, AppResources.Get("developGrainMendCloneHelp", "Value"));
-        // 자동·가이드는 검출기가 아직 네이티브 ABI 에 없습니다. 눌러도 아무 일이 없는 단추
-        // 대신 이유를 달아 끕니다.
-        string missing = AppResources.Get("developGrainMendDetectorMissing", "Value");
-        SetLocalizedNameAndTooltip(GrainMendAutoButton, missing);
-        SetLocalizedNameAndTooltip(GrainMendGuidedButton, missing);
-        GrainMendAutoButton.IsEnabled = false;
+        SetLocalizedNameAndTooltip(
+            GrainMendAutoButton, AppResources.Get("developGrainMendAutoHelp", "Value"));
+        // 가이드는 아직 영역을 끄는 상호작용이 없습니다. 검출은 자동과 같은 것을 쓰지만 ROI 가
+        // 사용자에게서 와야 하므로, 그 자리가 생기기 전에는 이유를 달아 꺼 둡니다.
+        SetLocalizedNameAndTooltip(
+            GrainMendGuidedButton,
+            AppResources.Get("developGrainMendDetectorMissing", "Value"));
         GrainMendGuidedButton.IsEnabled = false;
-        GrainMendAutoResetButton.IsEnabled = false;
         GrainMendGuidedResetButton.IsEnabled = false;
+        GrainMendAutoButton.IsEnabled =
+            panel?.SelectedFrame is not null && pendingDefectEdit is null;
+        GrainMendAutoResetButton.IsEnabled =
+            panel?.HasDefectEdits(DefectEditKind.Region) == true;
 
         string reset = AppResources.Get("developGrainMendReset", "Value");
         SetLocalizedNameAndTooltip(GrainMendBrushResetButton, reset);
