@@ -252,13 +252,20 @@ struct GrainMendDetectionOutcome final {
     std::uint32_t height{0U};
     std::uint64_t accepted_pixels{0U};
     std::uint64_t mask_byte_count{0U};
+    std::uint32_t source_width{0U};
+    std::uint32_t source_height{0U};
+    std::uint32_t roi_x{0U};
+    std::uint32_t roi_y{0U};
+    std::uint32_t roi_width{0U};
+    std::uint32_t roi_height{0U};
 };
 
 [[nodiscard]] GrainMendDetectionOutcome develop_detect_grain_mend(
     const DevelopExportRequest& request,
     std::uint8_t* mask,
     std::size_t mask_capacity_bytes,
-    const DevelopRunControl& control = {}) noexcept;
+    const DevelopRunControl& control = {},
+    const negaflow::imaging::GrainMendRoi& roi = {}) noexcept;
 
 [[nodiscard]] const char* develop_export_stage_name(
     DevelopExportStage stage) noexcept;

@@ -259,6 +259,7 @@ struct DetectTarget final {
     std::uint8_t* mask{nullptr};
     std::size_t capacity_bytes{0};
     GrainMendDetectionOutcome* result{nullptr};
+    negaflow::imaging::GrainMendRoi roi{};
 };
 
 struct PreviewTarget final {
@@ -1041,6 +1042,7 @@ struct PreviewTarget final {
         const auto detected = negaflow::imaging::detect_grain_mend(
             film_look.image,
             request.grain_mend,
+            detect->roi,
             negaflow::core::CancelFlag{control.cancel_flag});
         if (detected.status == negaflow::imaging::GrainMendStatus::cancelled) {
             return cancelled_outcome(DevelopExportStage::grain_mend);
@@ -1055,6 +1057,12 @@ struct PreviewTarget final {
             detect->result->height = detected.height;
             detect->result->accepted_pixels = detected.accepted_pixels;
             detect->result->mask_byte_count = detected.mask.size();
+            detect->result->source_width = film_look.image.width;
+            detect->result->source_height = film_look.image.height;
+            detect->result->roi_x = detected.roi_x;
+            detect->result->roi_y = detected.roi_y;
+            detect->result->roi_width = detected.roi_width;
+            detect->result->roi_height = detected.roi_height;
         }
         // 크기만 묻는 호출(mask 가 null)도 실패가 아니라 정상 결과입니다.
         if (detect->mask != nullptr) {
@@ -1368,9 +1376,10 @@ GrainMendDetectionOutcome develop_detect_grain_mend(
     const DevelopExportRequest& request,
     std::uint8_t* const mask,
     const std::size_t mask_capacity_bytes,
-    const DevelopRunControl& control) noexcept {
+    const DevelopRunControl& control,
+    const negaflow::imaging::GrainMendRoi& roi) noexcept {
     GrainMendDetectionOutcome detection{};
-    const DetectTarget target{mask, mask_capacity_bytes, &detection};
+    const DetectTarget target{mask, mask_capacity_bytes, &detection, roi};
     detection.outcome = run_develop(request, nullptr, control, &target);
     return detection;
 }

@@ -774,6 +774,25 @@ void test_detection_only_agrees_with_the_repair_path() {
         "detection only fails closed on an empty image");
 }
 
+// 가이드는 전체에서 찾은 뒤 숨기는 방식이 아니라 선택한 raw ROI만 잘라 분석해야 합니다.
+// 이 계약은 주변 통계와 검출 이미지의 크기를 모두 바꾸므로, 반환 좌표도 함께 고정합니다.
+void test_guided_detection_crops_to_the_selected_roi() {
+    const auto source = make_clean_image();
+    const negaflow::imaging::GrainMendRoi roi{0.25, 0.25, 0.5, 0.5};
+    const auto detected = negaflow::imaging::detect_grain_mend(
+        source, {1.0}, roi);
+
+    expect(
+        detected.status == negaflow::imaging::GrainMendStatus::ok &&
+            detected.roi_x == 24U && detected.roi_y == 18U &&
+            detected.roi_width == 48U && detected.roi_height == 36U,
+        "guided detection reports the selected source rectangle");
+    expect(
+        detected.width == 48U && detected.height == 36U &&
+            detected.mask.size() == 48U * 36U,
+        "guided detection analyses only the selected rectangle");
+}
+
 }  // namespace
 
 int main() {
@@ -794,6 +813,7 @@ int main() {
     test_invalid_inputs_fail_closed();
     test_cancellation_stops_detection_and_keeps_results();
     test_detection_only_agrees_with_the_repair_path();
+    test_guided_detection_crops_to_the_selected_roi();
 
     std::cout << "{\"status\":\"" << (failures == 0 ? "ok" : "error")
               << "\",\"suite\":\"grain_mend\",\"failures\":"

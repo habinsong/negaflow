@@ -510,6 +510,15 @@
                     Stretch="Uniform"
                     Visibility="Collapsed" />
 
+                <Canvas x:Name="GuidedDefectOverlay" IsHitTestVisible="False" Visibility="Collapsed">
+                    <Rectangle
+                        x:Name="GuidedDefectSelection"
+                        AutomationProperties.AutomationId="negaflow.canvas.defect-guided.selection"
+                        Fill="#12FFD84A"
+                        Stroke="#E6FFD84A"
+                        StrokeThickness="1.5" />
+                </Canvas>
+
                 <Canvas x:Name="CropOverlay" Visibility="Collapsed">
                     <Rectangle x:Name="CropDimTop" Fill="#73000000" />
                     <Rectangle x:Name="CropDimBottom" Fill="#73000000" />
@@ -700,9 +709,8 @@
                             </Grid>
                         </Border>
 
-                        <!-- GrainMend: macOS 와 같은 도구 넷입니다. 각 도구는 켜고 끄는 알약과
-                             그 도구만 되돌리는 초기화 단추로 되어 있습니다. 자동·가이드는 검출기가
-                             아직 네이티브 ABI 에 없어 꺼져 있습니다. -->
+                        <!-- GrainMend: macOS 와 같은 네 도구입니다. 검출 결과는 아래의 명시적
+                             제거/취소와 Canvas Enter/Esc에서만 recipe로 확정하거나 버립니다. -->
                         <Border
                             x:Name="GrainMendCard"
                             HorizontalAlignment="Stretch"
@@ -756,6 +764,7 @@
                                             MinHeight="31"
                                             HorizontalAlignment="Stretch"
                                             AutomationProperties.AutomationId="negaflow.develop.grainmend.guided"
+                                            Click="OnGrainMendGuidedClicked"
                                             FontSize="12" />
                                         <Button
                                             x:Name="GrainMendGuidedResetButton"
@@ -763,7 +772,8 @@
                                             Width="26"
                                             MinHeight="31"
                                             Padding="0"
-                                            AutomationProperties.AutomationId="negaflow.develop.grainmend.guided.reset">
+                                            AutomationProperties.AutomationId="negaflow.develop.grainmend.guided.reset"
+                                            Click="OnGrainMendGuidedResetClicked">
                                             <FontIcon FontSize="11" Glyph="&#xE777;" />
                                         </Button>
                                     </Grid>
@@ -814,6 +824,23 @@
                                         </Button>
                                     </Grid>
                                 </Grid>
+                                <StackPanel
+                                    x:Name="GrainMendReviewActions"
+                                    HorizontalAlignment="Center"
+                                    Orientation="Horizontal"
+                                    Spacing="8"
+                                    Visibility="Collapsed">
+                                    <Button
+                                        x:Name="GrainMendRemoveButton"
+                                        MinHeight="30"
+                                        AutomationProperties.AutomationId="negaflow.develop.grainmend.remove"
+                                        Click="OnGrainMendRemoveClicked" />
+                                    <Button
+                                        x:Name="GrainMendCancelButton"
+                                        MinHeight="30"
+                                        AutomationProperties.AutomationId="negaflow.develop.grainmend.cancel"
+                                        Click="OnGrainMendCancelClicked" />
+                                </StackPanel>
                             </StackPanel>
                         </Border>
 

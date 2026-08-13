@@ -51,6 +51,7 @@ internal static class Program
         VerifyLookPresetReachesTheEngine();
         VerifyDisplayToRawMapping();
         VerifyGrainMendRegionEdit();
+        VerifyGrainMendReviewSession();
         VerifyGrainMendDetectCoordinator();
         VerifyInfraredDefectRecipeCoordinator();
         VerifyDevelopExportCoordinator();
@@ -603,11 +604,18 @@ internal static class Program
         mask[0] = 255;                       // 왼쪽 위
         mask[(3 * width) + 5] = 128;         // 가운데 어딘가
         mask[mask.Length - 1] = 200;         // 오른쪽 아래
-        DefectRect roi = new(0.0, 0.0, 1.0, 1.0);
-        DefectSize baseSize = new(width, height);
-
         DefectEditItem? item = GrainMendRegionEdit.From(
-            mask, width, height, roi, baseSize, automatic: true);
+            mask,
+            width,
+            height,
+            sourceWidth: 8U,
+            sourceHeight: 6U,
+            roiX: 0U,
+            roiY: 0U,
+            roiWidth: 8U,
+            roiHeight: 6U,
+            acceptedPixels: 3U,
+            automatic: true);
         Check(item is not null, "grain_mend_region_edit_built");
         if (item is null)
         {
@@ -617,7 +625,8 @@ internal static class Program
             item.Label.Kind == DefectEditLabelKind.Automatic && item.Label.Value == 3,
             "grain_mend_region_edit_labels_the_accepted_count");
         Check(item.RegionWidth == width && item.RegionHeight == height &&
-            item.RegionRoi == roi && item.BaseSize == baseSize,
+            item.RegionRoi == new DefectRect(0.0, 0.0, width, height) &&
+            item.BaseSize == new DefectSize(width, height),
             "grain_mend_region_edit_keeps_the_analysis_geometry");
 
         byte[] rgba = item.RegionMask!.Data;
@@ -631,13 +640,36 @@ internal static class Program
         Check(rgba[4] == 0 && rgba[5] == 0 && rgba[6] == 0 && rgba[7] == 0,
             "grain_mend_region_edit_leaves_unmarked_pixels_clear");
 
+        // 축소된 부분 검출 마스크는 원본 좌표계의 작은 창으로 되돌아가야 합니다. 여기서
+        // y-up 저장 좌표까지 확인해, 가이드 결과가 위아래 뒤집혀 저장되는 회귀를 막습니다.
+        byte[] guidedMask = new byte[10 * 10];
+        guidedMask[(4 * 10) + 3] = 255;
+        DefectEditItem? guided = GrainMendRegionEdit.From(
+            guidedMask,
+            width: 10,
+            height: 10,
+            sourceWidth: 1000U,
+            sourceHeight: 800U,
+            roiX: 200U,
+            roiY: 160U,
+            roiWidth: 400U,
+            roiHeight: 240U,
+            acceptedPixels: 1U,
+            automatic: false);
+        Check(guided is not null &&
+            guided.RegionRoi == new DefectRect(312.0, 512.0, 56.0, 40.0) &&
+            guided.BaseSize == new DefectSize(1000.0, 800.0),
+            "grain_mend_region_edit_projects_a_guided_roi_to_raw_y_up");
+
         // 아무것도 못 찾았으면 항목을 만들지 않습니다.
         Check(GrainMendRegionEdit.From(
-                new byte[width * height], width, height, roi, baseSize, true) is null,
+                new byte[width * height], width, height,
+                8U, 6U, 0U, 0U, 8U, 6U, 0U, true) is null,
             "grain_mend_region_edit_skips_an_empty_mask");
         // 크기가 안 맞는 마스크는 닫히는 쪽으로 거절합니다.
         Check(GrainMendRegionEdit.From(
-                new byte[7], width, height, roi, baseSize, true) is null,
+                new byte[7], width, height,
+                8U, 6U, 0U, 0U, 8U, 6U, 3U, true) is null,
             "grain_mend_region_edit_rejects_a_mismatched_mask");
 
         // 저장까지 통과해야 실제로 쓸 수 있습니다.
@@ -654,6 +686,60 @@ internal static class Program
             stored.Length == width * height * 4 &&
             stored[0] == 255 && stored[middle] == 128 && stored[4] == 0,
             "grain_mend_region_edit_survives_recipe_validation");
+    }
+
+    /// <summary>
+    /// 자동/가이드 검출 결과는 저장 전에 성분별로 제외할 수 있어야 합니다. 이 검사는
+    /// y-up recipe ROI와 top-first raw 클릭 좌표가 같은 성분을 가리키는지도 함께 고정합니다.
+    /// </summary>
+    private static void VerifyGrainMendReviewSession()
+    {
+        const int width = 6;
+        const int height = 4;
+        byte[] rgba = new byte[width * height * 4];
+        int first = ((1 * width) + 1) * 4;
+        int second = ((2 * width) + 4) * 4;
+        rgba[first] = rgba[first + 1] = rgba[first + 2] = rgba[first + 3] = 255;
+        rgba[second] = rgba[second + 1] = rgba[second + 2] = rgba[second + 3] = 192;
+        DefectEditItem item = new(
+            Guid.Parse("d28b5cbf-4d47-4860-8917-4c6a3e2c46b0"),
+            DefectEditKind.Region,
+            Enabled: true,
+            Strength: 1.0,
+            new DefectEditLabel(DefectEditLabelKind.Automatic, 2),
+            new DefectEditSummary(
+                DefectEditSummaryKind.ClassBreakdown,
+                new DefectClassBreakdown(
+                    [new DefectClassCount(DefectClassification.Dust, 2)], 1.0)),
+            new DefectSize(width, height),
+            [])
+        {
+            RegionMask = new DefectMask(false, rgba),
+            RegionRoi = new DefectRect(0.0, 0.0, width, height),
+            RegionWidth = width,
+            RegionHeight = height,
+        };
+
+        GrainMendReviewSession? review = GrainMendReviewSession.TryCreate(item);
+        Check(review is not null && review.ComponentCount == 2 && review.IncludedCount == 2,
+            "grain_mend_review_discovers_separate_components");
+        if (review is null)
+        {
+            return;
+        }
+
+        DefectPoint firstRaw = new(1.0 / (width - 1), 1.0 / (height - 1));
+        DefectPoint secondRaw = new(4.0 / (width - 1), 2.0 / (height - 1));
+        Check(review.ToggleAtRaw(firstRaw) && review.IsExcludedAtRaw(firstRaw) &&
+              review.IncludedCount == 1,
+            "grain_mend_review_excludes_clicked_component");
+        DefectEditItem? accepted = review.BuildAcceptedEdit();
+        Check(accepted is not null && accepted.Label.Value == 1 &&
+              DefectMaskCodec.TryDecodeRgba8(accepted.RegionMask!, width, height, out byte[] selected) &&
+              selected[first] == 0 && selected[second] == 192,
+            "grain_mend_review_persists_only_included_components");
+        Check(review.ToggleAtRaw(secondRaw) && review.BuildAcceptedEdit() is null,
+            "grain_mend_review_rejects_an_empty_acceptance");
     }
 
     /// <summary>
@@ -674,7 +760,8 @@ internal static class Program
             mask[0] = 255;
             mask[(int)width + 3] = 90;
             return new GrainMendDetectionResult(
-                OkResult(), width, height, 2UL, width * height);
+                OkResult(), width, height, 2UL, width * height,
+                width, height, 0U, 0U, width, height);
         };
 
         GrainMendDetectCoordinator coordinator = new(exporter, dispatcher);
@@ -702,7 +789,8 @@ internal static class Program
                 Frame(new ManualBaseRgb(0.2, 0.2, 0.2)),
                 new DefectRect(0.1, 0.1, 0.5, 0.5),
                 outcome => seen = outcome).GetAwaiter().GetResult() &&
-            seen?.Edit?.Label.Kind == DefectEditLabelKind.Guided,
+            seen?.Edit?.Label.Kind == DefectEditLabelKind.Guided &&
+            exporter.LastDetectRoi == new DefectRect(0.1, 0.1, 0.5, 0.5),
             "grain_mend_detect_labels_a_partial_roi_guided");
 
         // 아무것도 못 찾으면 항목이 없고, 그것은 실패가 아닙니다.
@@ -710,7 +798,8 @@ internal static class Program
         {
             Array.Clear(mask, 0, (int)(width * height));
             return new GrainMendDetectionResult(
-                OkResult(), width, height, 0UL, width * height);
+                OkResult(), width, height, 0UL, width * height,
+                width, height, 0U, 0U, width, height);
         };
         seen = null;
         Check(
@@ -1734,6 +1823,7 @@ internal static class Program
         public int CancelledCount;
         public int DetectCallCount;
         public int DetectThreadId;
+        public DefectRect? LastDetectRoi;
         // 시험이 정하는 검출 결과입니다. null 이면 실패를 흉내 냅니다.
         public Func<byte[], GrainMendDetectionResult>? DetectBehaviour;
         // What the last preview was asked to proof with. Null both when proofing is off
@@ -1743,8 +1833,10 @@ internal static class Program
         public GrainMendDetectionResult DetectGrainMend(
             DevelopExportRequest request,
             byte[] mask,
+            DefectRect rawRoi,
             DevelopRun? run = null)
         {
+            LastDetectRoi = rawRoi;
             ++DetectCallCount;
             DetectThreadId = Environment.CurrentManagedThreadId;
             return DetectBehaviour is null

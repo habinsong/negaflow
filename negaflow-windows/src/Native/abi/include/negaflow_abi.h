@@ -1356,12 +1356,48 @@ typedef struct nf_grain_mend_detection_v1 {
     uint64_t mask_byte_count;
 } nf_grain_mend_detection_v1;
 
+/* v2 adds the exact raw source rectangle used to make the capped mask. The
+   detector and mask are top-first; the caller converts to the recipe's y-up
+   convention only when it commits an accepted result. */
+typedef struct nf_grain_mend_detect_parameters_v1 {
+    uint32_t struct_size;
+    uint32_t reserved;
+    double roi_x;
+    double roi_y;
+    double roi_width;
+    double roi_height;
+} nf_grain_mend_detect_parameters_v1;
+
+typedef struct nf_grain_mend_detection_v2 {
+    uint32_t struct_size;
+    uint32_t reserved;
+    uint32_t width;
+    uint32_t height;
+    uint64_t accepted_pixels;
+    uint64_t mask_byte_count;
+    uint32_t source_width;
+    uint32_t source_height;
+    uint32_t roi_x;
+    uint32_t roi_y;
+    uint32_t roi_width;
+    uint32_t roi_height;
+} nf_grain_mend_detection_v2;
+
 NF_API nf_status_t NF_CALL nf_develop_detect_grain_mend_v1(
     const nf_develop_export_request_v27* request,
     uint8_t* mask,
     uint64_t mask_capacity_bytes,
     nf_develop_run_state_v1* run_state,
     nf_grain_mend_detection_v1* detection,
+    nf_develop_export_result_v3* result);
+
+NF_API nf_status_t NF_CALL nf_develop_detect_grain_mend_v2(
+    const nf_develop_export_request_v27* request,
+    const nf_grain_mend_detect_parameters_v1* parameters,
+    uint8_t* mask,
+    uint64_t mask_capacity_bytes,
+    nf_develop_run_state_v1* run_state,
+    nf_grain_mend_detection_v2* detection,
     nf_develop_export_result_v3* result);
 
 /* Detects one paired top-first linear float IR/red frame exactly once. The returned

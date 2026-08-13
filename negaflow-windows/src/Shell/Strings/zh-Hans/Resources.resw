@@ -795,6 +795,7 @@
   <data name="developGrainMendClone.Content" xml:space="preserve"><value>克隆图章</value></data>
   <data name="developGrainMendCloneHelp.Value" xml:space="preserve"><value>克隆图章 — 按住 Alt 点按设置源点，然后拖动进行复制。</value></data>
   <data name="developGrainMendReset.Value" xml:space="preserve"><value>重置</value></data>
+  <data name="developGrainMendRemove.Content" xml:space="preserve"><value>移除瑕疵</value></data>
   <data name="developGrainMendDetectorMissing.Value" xml:space="preserve"><value>此版本尚未提供自动检测</value></data>
   <data name="developPreviewFailed.Text" xml:space="preserve"><value>无法生成预览</value></data>
   <data name="libraryFilterMetadataUnknown.Content" xml:space="preserve"><value>元数据状态未知</value><comment>AppLocalizedPhrase.filterMetadataUnknown</comment></data>

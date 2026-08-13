@@ -696,6 +696,39 @@ internal struct NativeGrainMendDetectionV1
     internal ulong MaskByteCount;
 }
 
+/// <summary>ROI-aware GrainMend detection input. Coordinates are raw normalized y-down.</summary>
+[StructLayout(LayoutKind.Sequential)]
+internal struct NativeGrainMendDetectParametersV1
+{
+    internal uint StructSize;
+    internal uint Reserved;
+    internal double RoiX;
+    internal double RoiY;
+    internal double RoiWidth;
+    internal double RoiHeight;
+}
+
+/// <summary>
+/// ROI-aware GrainMend detection output. The source rectangle is raw pixels, top-first,
+/// and the returned one-byte mask is local to that rectangle after analysis downscaling.
+/// </summary>
+[StructLayout(LayoutKind.Sequential)]
+internal struct NativeGrainMendDetectionV2
+{
+    internal uint StructSize;
+    internal uint Reserved;
+    internal uint Width;
+    internal uint Height;
+    internal ulong AcceptedPixels;
+    internal ulong MaskByteCount;
+    internal uint SourceWidth;
+    internal uint SourceHeight;
+    internal uint RoiX;
+    internal uint RoiY;
+    internal uint RoiWidth;
+    internal uint RoiHeight;
+}
+
 [StructLayout(LayoutKind.Sequential)]
 internal struct NativeDevelopRunStateV1
 {

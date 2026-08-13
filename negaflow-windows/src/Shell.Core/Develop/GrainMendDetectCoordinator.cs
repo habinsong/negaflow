@@ -75,7 +75,7 @@ public sealed class GrainMendDetectCoordinator
         try
         {
             GrainMendDetectionResult detected = await Task.Run(
-                () => exporter.DetectGrainMend(request, mask)).ConfigureAwait(false);
+                () => exporter.DetectGrainMend(request, mask, roi)).ConfigureAwait(false);
             if (!detected.Result.Succeeded)
             {
                 return Deliver(
@@ -87,9 +87,14 @@ public sealed class GrainMendDetectCoordinator
                 mask.AsSpan(0, checked((int)detected.MaskByteCount)),
                 checked((int)detected.Width),
                 checked((int)detected.Height),
-                roi,
-                new DefectSize(checked((int)detected.Width), checked((int)detected.Height)),
-                automatic: roi is { X: 0.0, Y: 0.0, Width: 1.0, Height: 1.0 });
+                detected.SourceWidth,
+                detected.SourceHeight,
+                detected.RoiX,
+                detected.RoiY,
+                detected.RoiWidth,
+                detected.RoiHeight,
+                detected.AcceptedPixels,
+                automatic: IsWholeFrame(roi));
             return Deliver(
                 new GrainMendDetectOutcome(
                     DevelopExportOutcomeKind.Completed,
@@ -106,6 +111,9 @@ public sealed class GrainMendDetectCoordinator
             return Deliver(GrainMendDetectOutcome.Faulted(error.Message), onCompleted);
         }
     }
+
+    private static bool IsWholeFrame(DefectRect roi) =>
+        roi.X == 0.0 && roi.Y == 0.0 && roi.Width == 1.0 && roi.Height == 1.0;
 
     private bool Deliver(
         GrainMendDetectOutcome outcome,

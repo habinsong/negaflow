@@ -257,6 +257,7 @@ GrainMendResult apply_grain_mend(
 GrainMendDetection detect_grain_mend(
     const WorkingImage& image,
     const GrainMendParameters& parameters,
+    const GrainMendRoi roi,
     const negaflow::core::CancelFlag cancel) noexcept {
     GrainMendDetection detection{};
     // 세기는 검출에 쓰이지 않지만 나머지 감도는 같은 검사를 통과해야 합니다. 세기만 0 이라고
@@ -268,10 +269,57 @@ GrainMendDetection detect_grain_mend(
         return detection;
     }
 
+    if (!std::isfinite(roi.x) || !std::isfinite(roi.y) ||
+        !std::isfinite(roi.width) || !std::isfinite(roi.height) ||
+        roi.width <= 0.0 || roi.height <= 0.0) {
+        return detection;
+    }
+
     try {
-        const DetectionImage analysis = make_detection_image(image);
+        // 부분 ROI 는 잘라 낸 뒤 분석합니다. 전체를 재고 나중에 가리면 주변 통계가 달라져
+        // 사용자가 고른 범위 안에서 macOS 와 다른 것을 찾습니다.
+        WorkingImage cropped{};
+        const WorkingImage* analysed = &image;
+        std::uint32_t left = 0U;
+        std::uint32_t top = 0U;
+        std::uint32_t right = image.width;
+        std::uint32_t bottom = image.height;
+        if (!roi.covers_everything()) {
+            const auto width = static_cast<double>(image.width);
+            const auto height = static_cast<double>(image.height);
+            left = static_cast<std::uint32_t>(
+                std::clamp(std::floor(roi.x * width), 0.0, width - 1.0));
+            top = static_cast<std::uint32_t>(
+                std::clamp(std::floor(roi.y * height), 0.0, height - 1.0));
+            right = static_cast<std::uint32_t>(std::clamp(
+                std::ceil((roi.x + roi.width) * width),
+                static_cast<double>(left) + 1.0,
+                width));
+            bottom = static_cast<std::uint32_t>(std::clamp(
+                std::ceil((roi.y + roi.height) * height),
+                static_cast<double>(top) + 1.0,
+                height));
+            cropped.width = right - left;
+            cropped.height = bottom - top;
+            cropped.stride_pixels = cropped.width;
+            cropped.pixels.resize(
+                static_cast<std::size_t>(cropped.width) * cropped.height);
+            for (std::uint32_t row = 0U; row < cropped.height; ++row) {
+                const auto* const source = image.pixels.data() +
+                    (static_cast<std::size_t>(top + row) * image.stride_pixels) + left;
+                auto* const target = cropped.pixels.data() +
+                    (static_cast<std::size_t>(row) * cropped.width);
+                std::copy_n(source, cropped.width, target);
+            }
+            analysed = &cropped;
+        }
+        const DetectionImage analysis = make_detection_image(*analysed);
         detection.width = analysis.width;
         detection.height = analysis.height;
+        detection.roi_x = left;
+        detection.roi_y = top;
+        detection.roi_width = right - left;
+        detection.roi_height = bottom - top;
         const CandidateMaps candidates = find_candidates(
             analysis,
             parameters.dust_sensitivity,

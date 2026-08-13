@@ -670,6 +670,9 @@ public sealed class DevelopPanelState
     public bool HasDefectEdits(DefectEditKind kind) =>
         SelectedFrame?.DefectRecipe?.Items.Any(item => item.Kind == kind) == true;
 
+    public bool HasDefectEdits(DefectEditLabelKind label) =>
+        SelectedFrame?.DefectRecipe?.Items.Any(item => item.Label.Kind == label) == true;
+
     /// <summary>
     /// 한 도구가 남긴 편집만 지웁니다. 다른 도구의 편집과 자동 검출 결과는 남습니다 — macOS 의
     /// 도구별 초기화와 같습니다.
@@ -714,6 +717,45 @@ public sealed class DevelopPanelState
         return error;
     }
 
+    /// <summary>Resets just one visible GrainMend tool without discarding its siblings.</summary>
+    public LibraryFrameError RemoveDefectEdits(DefectEditLabelKind label)
+    {
+        if (SelectedFrame is not { } frame ||
+            !Guid.TryParseExact(frame.Id, "D", out Guid frameId))
+        {
+            return LibraryFrameError.MissingId;
+        }
+        if (frame.DefectRecipe is not { } recipe ||
+            recipe.Items.All(item => item.Label.Kind != label))
+        {
+            return LibraryFrameError.None;
+        }
+
+        DefectEditItem[] remaining = [.. recipe.Items.Where(item => item.Label.Kind != label)];
+        LibraryFrameError error = host.AppendDefectStroke(
+            frame.Id,
+            (identity, _) =>
+            {
+                try
+                {
+                    return DefectRecipeSnapshot.Create(
+                        frameId,
+                        checked(recipe.RecipeRevision + 1UL),
+                        identity,
+                        remaining);
+                }
+                catch (Exception failure) when (failure is ArgumentException or OverflowException)
+                {
+                    return null;
+                }
+            });
+        if (error == LibraryFrameError.None)
+        {
+            Select(frame.Id);
+        }
+        return error;
+    }
+
     private bool TryMapToRaw(DefectPoint displayPoint, out DefectPoint rawPoint)
     {
         rawPoint = default;
@@ -733,6 +775,52 @@ public sealed class DevelopPanelState
             return false;
         }
         rawPoint = new DefectPoint(rawX, rawY);
+        return true;
+    }
+
+    /// <summary>
+    /// Maps a display-space, top-first normalized rectangle to the smallest axis-aligned
+    /// raw rectangle that contains all four inverse-transformed corners. Region defect
+    /// recipes are raw-space data, so persisting the display rectangle directly would
+    /// repair the wrong pixels after rotation, crop, or straighten.
+    /// </summary>
+    public bool TryMapDisplayRectToRaw(DefectRect displayRect, out DefectRect rawRect)
+    {
+        rawRect = default;
+        if (!double.IsFinite(displayRect.X) || !double.IsFinite(displayRect.Y) ||
+            !double.IsFinite(displayRect.Width) || !double.IsFinite(displayRect.Height) ||
+            displayRect.Width <= 0.0 || displayRect.Height <= 0.0)
+        {
+            return false;
+        }
+
+        DefectPoint[] corners =
+        [
+            new(displayRect.X, displayRect.Y),
+            new(displayRect.X + displayRect.Width, displayRect.Y),
+            new(displayRect.X, displayRect.Y + displayRect.Height),
+            new(displayRect.X + displayRect.Width, displayRect.Y + displayRect.Height),
+        ];
+        double minX = 1.0;
+        double minY = 1.0;
+        double maxX = 0.0;
+        double maxY = 0.0;
+        foreach (DefectPoint corner in corners)
+        {
+            if (!TryMapToRaw(corner, out DefectPoint raw))
+            {
+                return false;
+            }
+            minX = Math.Min(minX, raw.X);
+            minY = Math.Min(minY, raw.Y);
+            maxX = Math.Max(maxX, raw.X);
+            maxY = Math.Max(maxY, raw.Y);
+        }
+        if (maxX <= minX || maxY <= minY)
+        {
+            return false;
+        }
+        rawRect = new DefectRect(minX, minY, maxX - minX, maxY - minY);
         return true;
     }
 

@@ -433,7 +433,13 @@ public readonly record struct GrainMendDetectionResult(
     uint Width,
     uint Height,
     ulong AcceptedPixels,
-    ulong MaskByteCount);
+    ulong MaskByteCount,
+    uint SourceWidth = 0U,
+    uint SourceHeight = 0U,
+    uint RoiX = 0U,
+    uint RoiY = 0U,
+    uint RoiWidth = 0U,
+    uint RoiHeight = 0U);
 
 public sealed class DevelopExportRequest
 {

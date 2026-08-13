@@ -795,6 +795,7 @@
   <data name="developGrainMendClone.Content" xml:space="preserve"><value>복제 도장</value></data>
   <data name="developGrainMendCloneHelp.Value" xml:space="preserve"><value>복제 도장 — Alt 클릭으로 소스를 지정한 뒤 드래그해 복제</value></data>
   <data name="developGrainMendReset.Value" xml:space="preserve"><value>초기화</value></data>
+  <data name="developGrainMendRemove.Content" xml:space="preserve"><value>결함 제거</value></data>
   <data name="developGrainMendDetectorMissing.Value" xml:space="preserve"><value>자동 검출은 아직 이 빌드에 없습니다</value></data>
   <data name="developPreviewFailed.Text" xml:space="preserve"><value>미리보기를 만들지 못했습니다</value></data>
   <data name="libraryFilterMetadataUnknown.Content" xml:space="preserve"><value>메타데이터 상태 미확인</value><comment>AppLocalizedPhrase.filterMetadataUnknown</comment></data>

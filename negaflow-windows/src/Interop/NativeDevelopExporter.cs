@@ -57,6 +57,8 @@ public static unsafe class NativeDevelopExporter
     internal const int AutoAdjustResultV1Size = 88;
     internal const int SoftProofMediaV1Size = 40;
     internal const int SoftProofV1Size = 40;
+    internal const int GrainMendDetectParametersV1Size = 40;
+    internal const int GrainMendDetectionV2Size = 56;
 
     private const int MaximumLocalAdjustments = 64;
     private const int MaximumLocalStrokes = 8192;
@@ -119,7 +121,9 @@ public static unsafe class NativeDevelopExporter
             sizeof(NativeDevelopRunStateV1) != RunStateV1Size ||
             sizeof(NativeAutoAdjustResultV1) != AutoAdjustResultV1Size ||
             sizeof(NativeSoftProofMediaV1) != SoftProofMediaV1Size ||
-            sizeof(NativeSoftProofV1) != SoftProofV1Size)
+            sizeof(NativeSoftProofV1) != SoftProofV1Size ||
+            sizeof(NativeGrainMendDetectParametersV1) != GrainMendDetectParametersV1Size ||
+            sizeof(NativeGrainMendDetectionV2) != GrainMendDetectionV2Size)
         {
             throw new NativeBootstrapException(
                 NativeBootstrapFailure.ContractViolation,
@@ -1895,18 +1899,39 @@ public static unsafe class NativeDevelopExporter
     public static GrainMendDetectionResult DetectGrainMend(
         DevelopExportRequest request,
         Span<byte> mask,
+        double roiX = 0.0,
+        double roiY = 0.0,
+        double roiWidth = 1.0,
+        double roiHeight = 1.0,
         DevelopRun? run = null)
     {
         ArgumentNullException.ThrowIfNull(request);
-        NativeGrainMendDetectionV1 detection = default;
+        NativeGrainMendDetectionV2 detection = default;
         DevelopExportResult result =
-            Render(request, 0U, 0U, mask, run, null, &detection).Result;
+            Render(
+                request,
+                0U,
+                0U,
+                mask,
+                run,
+                null,
+                &detection,
+                roiX,
+                roiY,
+                roiWidth,
+                roiHeight).Result;
         return new GrainMendDetectionResult(
             result,
             detection.Width,
             detection.Height,
             detection.AcceptedPixels,
-            detection.MaskByteCount);
+            detection.MaskByteCount,
+            detection.SourceWidth,
+            detection.SourceHeight,
+            detection.RoiX,
+            detection.RoiY,
+            detection.RoiWidth,
+            detection.RoiHeight);
     }
 
     private readonly ref struct RenderOutcome
@@ -1923,7 +1948,11 @@ public static unsafe class NativeDevelopExporter
         Span<byte> pixels,
         DevelopRun? run,
         SoftProofSettings? softProof,
-        NativeGrainMendDetectionV1* detection)
+        NativeGrainMendDetectionV2* detection,
+        double roiX = 0.0,
+        double roiY = 0.0,
+        double roiWidth = 1.0,
+        double roiHeight = 1.0)
     {
         ValidateLayoutAndEnums(request);
         NativeLocalDodgeBurnPayload local = BuildLocalDodgeBurnPayload(
@@ -2034,9 +2063,18 @@ public static unsafe class NativeDevelopExporter
             NativeDevelopExportRequestV27 native = BuildRequestV27(v26, request);
             if (detection is not null)
             {
-                detection->StructSize = (uint)sizeof(NativeGrainMendDetectionV1);
-                status = NativeMethods.nf_develop_detect_grain_mend_v1(
+                NativeGrainMendDetectParametersV1 detectionParameters = new()
+                {
+                    StructSize = (uint)sizeof(NativeGrainMendDetectParametersV1),
+                    RoiX = roiX,
+                    RoiY = roiY,
+                    RoiWidth = roiWidth,
+                    RoiHeight = roiHeight,
+                };
+                detection->StructSize = (uint)sizeof(NativeGrainMendDetectionV2);
+                status = NativeMethods.nf_develop_detect_grain_mend_v2(
                     &native,
+                    &detectionParameters,
                     pixels.IsEmpty ? null : pixelBuffer,
                     (ulong)pixels.Length,
                     runState,
@@ -2061,7 +2099,7 @@ public static unsafe class NativeDevelopExporter
             status,
             raw,
             detection is not null
-                ? "nf_develop_detect_grain_mend_v1"
+                ? "nf_develop_detect_grain_mend_v2"
                 : "nf_develop_preview_v27"));
     }
 

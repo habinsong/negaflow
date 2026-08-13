@@ -47,6 +47,10 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private CropDisplayPoint cropDragStart;
     private CropDisplayRect cropDragStartRect;
     private bool cropAwaitingPreview;
+    private CropDisplayPoint guidedDefectDragStart;
+    private CropDisplayPoint guidedDefectDragCurrent;
+    private bool guidedDefectDragging;
+    private bool grainMendDetecting;
 
     private enum CropDragMode
     {
@@ -808,11 +812,22 @@ public sealed partial class DevelopWorkspaceView : UserControl
         _ = sender;
         _ = args;
         RenderCropOverlay();
+        RenderGuidedDefectSelection();
     }
 
     private void OnCanvasPointerPressed(object sender, PointerRoutedEventArgs args)
     {
         _ = sender;
+        if (TryTogglePendingDefectComponent(args))
+        {
+            args.Handled = true;
+            return;
+        }
+        if (TryBeginGuidedDefectSelection(args))
+        {
+            args.Handled = true;
+            return;
+        }
         if (TryBeginGrainMendStroke(args))
         {
             args.Handled = true;
@@ -836,6 +851,11 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private void OnCanvasPointerMoved(object sender, PointerRoutedEventArgs args)
     {
         _ = sender;
+        if (TryContinueGuidedDefectSelection(args))
+        {
+            args.Handled = true;
+            return;
+        }
         if (TryContinueGrainMendStroke(args))
         {
             args.Handled = true;
@@ -868,6 +888,11 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private void OnCanvasPointerReleased(object sender, PointerRoutedEventArgs args)
     {
         _ = sender;
+        if (TryFinishGuidedDefectSelection(args))
+        {
+            args.Handled = true;
+            return;
+        }
         if (TryFinishGrainMendStroke(args))
         {
             args.Handled = true;
@@ -879,12 +904,14 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private void OnCanvasPointerCancelled(object sender, PointerRoutedEventArgs args)
     {
         _ = sender;
+        EndGuidedDefectSelection(args);
         EndCropDrag(args);
     }
 
     private void OnCanvasPointerCaptureLost(object sender, PointerRoutedEventArgs args)
     {
         _ = sender;
+        EndGuidedDefectSelection(args);
         EndCropDrag(args);
     }
 
@@ -897,6 +924,128 @@ public sealed partial class DevelopWorkspaceView : UserControl
         CanvasHost.ReleasePointerCapture(args.Pointer);
         cropDragMode = CropDragMode.None;
         args.Handled = true;
+    }
+
+    private bool TryBeginGuidedDefectSelection(PointerRoutedEventArgs args)
+    {
+        if (grainMendTool != GrainMendTool.Guided || grainMendDetecting ||
+            panel?.SelectedFrame is null ||
+            !TryCanvasUnitPoint(args, out CropDisplayPoint point))
+        {
+            return false;
+        }
+        guidedDefectDragStart = point;
+        guidedDefectDragCurrent = point;
+        guidedDefectDragging = true;
+        RenderGuidedDefectSelection();
+        CanvasHost.CapturePointer(args.Pointer);
+        return true;
+    }
+
+    /// <summary>
+    /// 보류 중인 자동/가이드 마스크의 연결 성분을 클릭하면 포함과 제외를 바꿉니다. 이 단계는
+    /// recipe를 건드리지 않으며, Enter 또는 제거 단추를 눌러야만 sidecar로 갑니다.
+    /// </summary>
+    private bool TryTogglePendingDefectComponent(PointerRoutedEventArgs args)
+    {
+        if (pendingDefectReview is null || pendingDefectEdit is null ||
+            panel?.SelectedFrame is not { SourceMetadata: { } metadata } frame ||
+            !TryCanvasUnitPoint(args, out CropDisplayPoint displayPoint) ||
+            !DevelopDisplayGeometry.TryMapDisplayToRaw(
+                frame.ImageTransform,
+                metadata.PixelWidth,
+                metadata.PixelHeight,
+                displayPoint.X,
+                displayPoint.Y,
+                out double rawX,
+                out double rawY) ||
+            !pendingDefectReview.ToggleAtRaw(new DefectPoint(rawX, rawY)))
+        {
+            return false;
+        }
+
+        ExportStatusText.Text = AppResources.FormatIntegers(
+            "developGrainMendFoundFormat",
+            "Value",
+            pendingDefectReview.IncludedCount);
+        ShowDefectOverlay(pendingDefectEdit);
+        UpdateGrainMendCard();
+        return true;
+    }
+
+    private bool TryContinueGuidedDefectSelection(PointerRoutedEventArgs args)
+    {
+        if (!guidedDefectDragging || !TryCanvasUnitPoint(args, out CropDisplayPoint point))
+        {
+            return false;
+        }
+        guidedDefectDragCurrent = point;
+        RenderGuidedDefectSelection();
+        return true;
+    }
+
+    private bool TryFinishGuidedDefectSelection(PointerRoutedEventArgs args)
+    {
+        if (!guidedDefectDragging)
+        {
+            return false;
+        }
+        if (TryCanvasUnitPoint(args, out CropDisplayPoint point))
+        {
+            guidedDefectDragCurrent = point;
+        }
+        CanvasHost.ReleasePointerCapture(args.Pointer);
+        guidedDefectDragging = false;
+        GuidedDefectOverlay.Visibility = Visibility.Collapsed;
+
+        double width = Math.Abs(guidedDefectDragCurrent.X - guidedDefectDragStart.X);
+        double height = Math.Abs(guidedDefectDragCurrent.Y - guidedDefectDragStart.Y);
+        if (width <= 0.012 || height <= 0.012 || panel is null)
+        {
+            return true;
+        }
+        DefectRect displayRoi = new(
+            Math.Min(guidedDefectDragStart.X, guidedDefectDragCurrent.X),
+            Math.Min(guidedDefectDragStart.Y, guidedDefectDragCurrent.Y),
+            width,
+            height);
+        if (panel.TryMapDisplayRectToRaw(displayRoi, out DefectRect rawRoi))
+        {
+            _ = DetectGrainMendAsync(rawRoi);
+        }
+        return true;
+    }
+
+    private void EndGuidedDefectSelection(PointerRoutedEventArgs args)
+    {
+        if (!guidedDefectDragging)
+        {
+            return;
+        }
+        CanvasHost.ReleasePointerCapture(args.Pointer);
+        guidedDefectDragging = false;
+        GuidedDefectOverlay.Visibility = Visibility.Collapsed;
+    }
+
+    private void RenderGuidedDefectSelection()
+    {
+        if (!guidedDefectDragging ||
+            !TryGetPreviewFrame(out double left, out double top, out double width, out double height))
+        {
+            GuidedDefectOverlay.Visibility = Visibility.Collapsed;
+            return;
+        }
+        double x = Math.Min(guidedDefectDragStart.X, guidedDefectDragCurrent.X);
+        double y = Math.Min(guidedDefectDragStart.Y, guidedDefectDragCurrent.Y);
+        double selectionWidth = Math.Abs(guidedDefectDragCurrent.X - guidedDefectDragStart.X);
+        double selectionHeight = Math.Abs(guidedDefectDragCurrent.Y - guidedDefectDragStart.Y);
+        Place(
+            GuidedDefectSelection,
+            left + x * width,
+            top + y * height,
+            selectionWidth * width,
+            selectionHeight * height);
+        GuidedDefectOverlay.Visibility = Visibility.Visible;
     }
 
     private void OnCanvasKeyDown(object sender, KeyRoutedEventArgs args)
@@ -914,12 +1063,15 @@ public sealed partial class DevelopWorkspaceView : UserControl
             }
             if (args.Key == VirtualKey.Escape)
             {
-                ClearPendingDefectEdit();
-                ExportStatusText.Text = string.Empty;
-                UpdateGrainMendCard();
+                CancelPendingDefectEdit();
                 args.Handled = true;
                 return;
             }
+        }
+        if (args.Key == VirtualKey.Escape && grainMendTool == GrainMendTool.Guided)
+        {
+            SetGrainMendTool(GrainMendTool.None);
+            args.Handled = true;
         }
         if (cropSession is null)
         {
@@ -2014,6 +2166,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private enum GrainMendTool
     {
         None,
+        Guided,
         Brush,
         Clone,
     }
@@ -2028,30 +2181,49 @@ public sealed partial class DevelopWorkspaceView : UserControl
     /// 바뀝니다 — 여기 값이 있는 동안 사진은 그대로입니다.
     /// </summary>
     private DefectEditItem? pendingDefectEdit;
+    private GrainMendReviewSession? pendingDefectReview;
 
     private async void OnGrainMendAutoClicked(object sender, RoutedEventArgs args)
     {
         _ = sender;
         _ = args;
-        if (panel?.SelectedFrame is not { } frame || grainMendDetectCoordinator is null)
+        SetGrainMendTool(GrainMendTool.None);
+        await DetectGrainMendAsync(new DefectRect(0.0, 0.0, 1.0, 1.0));
+    }
+
+    private void OnGrainMendGuidedClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        ClearPendingDefectEdit();
+        SetGrainMendTool(grainMendTool == GrainMendTool.Guided
+            ? GrainMendTool.None
+            : GrainMendTool.Guided);
+        if (grainMendTool == GrainMendTool.Guided)
+        {
+            _ = CanvasHost.Focus(FocusState.Programmatic);
+        }
+    }
+
+    private async Task DetectGrainMendAsync(DefectRect rawRoi)
+    {
+        if (panel?.SelectedFrame is not { } frame || grainMendDetectCoordinator is null ||
+            grainMendDetecting)
         {
             return;
         }
-        SetGrainMendTool(GrainMendTool.None);
         ClearPendingDefectEdit();
+        grainMendDetecting = true;
         ExportStatusText.Text = AppResources.Get("developGrainMendDetecting", "Text");
-        GrainMendAutoButton.IsEnabled = false;
+        UpdateGrainMendCard();
         try
         {
-            // 자동은 프레임 전체입니다. 가이드는 같은 자리에 사용자가 끈 사각형을 넣습니다.
-            await grainMendDetectCoordinator.RunAsync(
-                frame,
-                new DefectRect(0.0, 0.0, 1.0, 1.0),
-                ShowDetectedDefects);
+            await grainMendDetectCoordinator.RunAsync(frame, rawRoi, ShowDetectedDefects);
         }
         finally
         {
-            GrainMendAutoButton.IsEnabled = panel?.SelectedFrame is not null;
+            grainMendDetecting = false;
+            UpdateGrainMendCard();
         }
     }
 
@@ -2069,12 +2241,19 @@ public sealed partial class DevelopWorkspaceView : UserControl
             return;
         }
 
+        pendingDefectReview = GrainMendReviewSession.TryCreate(edit);
+        if (pendingDefectReview is null)
+        {
+            ExportStatusText.Text = AppResources.Get("developGrainMendFoundNothing", "Text");
+            return;
+        }
         pendingDefectEdit = edit;
         ExportStatusText.Text = AppResources.FormatIntegers(
             "developGrainMendFoundFormat",
             "Value",
-            edit.Label.Value);
-        ShowDefectOverlay(edit, outcome.Width, outcome.Height);
+            pendingDefectReview.IncludedCount);
+        ShowDefectOverlay(edit);
+        UpdateGrainMendCard();
         // Enter 와 Esc 를 받으려면 캔버스가 초점을 가져야 합니다.
         _ = CanvasHost.Focus(FocusState.Programmatic);
     }
@@ -2083,28 +2262,56 @@ public sealed partial class DevelopWorkspaceView : UserControl
     /// 마스크를 미리보기 위에 얹습니다. 표시된 화소만 칠하고 나머지는 완전히 투명하게 둡니다 —
     /// 반투명한 판을 통째로 덮으면 사진이 아니라 판을 보게 됩니다.
     /// </summary>
-    private void ShowDefectOverlay(DefectEditItem edit, uint width, uint height)
+    private void ShowDefectOverlay(DefectEditItem edit)
     {
-        if (edit.RegionMask is not { } mask || width == 0U || height == 0U ||
-            !DefectMaskCodec.TryDecodeRgba8(mask, (int)width, (int)height, out byte[] rgba))
+        if (panel?.SelectedFrame is not { } frame || previewBitmap is null ||
+            edit.RegionMask is not { } mask || edit.RegionRoi is not { } roi ||
+            edit.RegionWidth is not { } maskWidth || edit.RegionHeight is not { } maskHeight ||
+            edit.BaseSize is not { } sourceSize ||
+            !DefectMaskCodec.TryDecodeRgba8(mask, maskWidth, maskHeight, out byte[] rgba))
         {
             return;
         }
 
-        WriteableBitmap bitmap = new((int)width, (int)height);
-        byte[] bgra = new byte[checked((int)width * (int)height * 4)];
-        for (int pixel = 0; pixel < bgra.Length; pixel += 4)
+        int width = previewBitmap.PixelWidth;
+        int height = previewBitmap.PixelHeight;
+        WriteableBitmap bitmap = new(width, height);
+        byte[] bgra = new byte[checked(width * height * 4)];
+        double rawTop = sourceSize.Height - roi.Y - roi.Height;
+        for (int y = 0; y < height; ++y)
         {
-            if (rgba[pixel] == 0)
+            double displayY = height == 1 ? 0.0 : (double)y / (height - 1);
+            for (int x = 0; x < width; ++x)
             {
-                continue;
+                double displayX = width == 1 ? 0.0 : (double)x / (width - 1);
+                if (!DevelopDisplayGeometry.TryMapDisplayToRaw(
+                        frame.ImageTransform,
+                        checked((uint)sourceSize.Width),
+                        checked((uint)sourceSize.Height),
+                        displayX,
+                        displayY,
+                        out double rawX,
+                        out double rawY))
+                {
+                    continue;
+                }
+                double maskX = rawX * (sourceSize.Width - 1.0) - roi.X;
+                double maskY = rawY * (sourceSize.Height - 1.0) - rawTop;
+                int localX = (int)Math.Round(maskX);
+                int localY = (int)Math.Round(maskY);
+                if (localX < 0 || localX >= maskWidth || localY < 0 || localY >= maskHeight ||
+                    rgba[((localY * maskWidth) + localX) * 4] == 0)
+                {
+                    continue;
+                }
+                int pixel = ((y * width) + x) * 4;
+                bool excluded = pendingDefectReview?.IsExcludedAtRaw(
+                    new DefectPoint(rawX, rawY)) == true;
+                bgra[pixel] = excluded ? (byte)115 : (byte)30;
+                bgra[pixel + 1] = excluded ? (byte)115 : (byte)30;
+                bgra[pixel + 2] = excluded ? (byte)115 : (byte)200;
+                bgra[pixel + 3] = excluded ? (byte)100 : (byte)200;
             }
-            // 붉은 표시입니다. WriteableBitmap 은 미리 곱해진 알파를 쓰므로 세 채널이 알파를
-            // 넘지 않아야 합니다.
-            bgra[pixel] = 30;
-            bgra[pixel + 1] = 30;
-            bgra[pixel + 2] = 200;
-            bgra[pixel + 3] = 200;
         }
         using (Stream buffer = bitmap.PixelBuffer.AsStream())
         {
@@ -2118,6 +2325,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private void ClearPendingDefectEdit()
     {
         pendingDefectEdit = null;
+        pendingDefectReview = null;
         DefectOverlayImage.Source = null;
         DefectOverlayImage.Visibility = Visibility.Collapsed;
     }
@@ -2125,8 +2333,14 @@ public sealed partial class DevelopWorkspaceView : UserControl
     /// <summary>검토 중인 검출을 받아들여 recipe 에 담습니다.</summary>
     private void AcceptPendingDefectEdit()
     {
-        if (panel is null || pendingDefectEdit is not { } edit)
+        if (panel is null || pendingDefectEdit is null)
         {
+            return;
+        }
+        DefectEditItem? edit = pendingDefectReview?.BuildAcceptedEdit() ?? pendingDefectEdit;
+        if (edit is null)
+        {
+            CancelPendingDefectEdit();
             return;
         }
         ClearPendingDefectEdit();
@@ -2138,6 +2352,27 @@ public sealed partial class DevelopWorkspaceView : UserControl
         ExportStatusText.Text = string.Empty;
         UpdateGrainMendCard();
         RequestPreview();
+    }
+
+    private void CancelPendingDefectEdit()
+    {
+        ClearPendingDefectEdit();
+        ExportStatusText.Text = string.Empty;
+        UpdateGrainMendCard();
+    }
+
+    private void OnGrainMendRemoveClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        AcceptPendingDefectEdit();
+    }
+
+    private void OnGrainMendCancelClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        CancelPendingDefectEdit();
     }
 
     private void OnGrainMendBrushClicked(object sender, RoutedEventArgs args)
@@ -2163,7 +2398,15 @@ public sealed partial class DevelopWorkspaceView : UserControl
         _ = sender;
         _ = args;
         ClearPendingDefectEdit();
-        RemoveGrainMendEdits(DefectEditKind.Region);
+        RemoveGrainMendEdits(DefectEditLabelKind.Automatic);
+    }
+
+    private void OnGrainMendGuidedResetClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        ClearPendingDefectEdit();
+        RemoveGrainMendEdits(DefectEditLabelKind.Guided);
     }
 
     private void OnGrainMendBrushResetClicked(object sender, RoutedEventArgs args)
@@ -2195,6 +2438,21 @@ public sealed partial class DevelopWorkspaceView : UserControl
         RequestPreview();
     }
 
+    private void RemoveGrainMendEdits(DefectEditLabelKind label)
+    {
+        if (panel is null)
+        {
+            return;
+        }
+        SetGrainMendTool(GrainMendTool.None);
+        if (panel.RemoveDefectEdits(label) != LibraryFrameError.None)
+        {
+            return;
+        }
+        UpdateGrainMendCard();
+        RequestPreview();
+    }
+
     private void SetGrainMendTool(GrainMendTool tool)
     {
         if (grainMendTool == tool)
@@ -2205,6 +2463,11 @@ public sealed partial class DevelopWorkspaceView : UserControl
         grainMendStroke.Clear();
         cloneSourceAnchor = null;
         grainMendDragging = false;
+        if (tool != GrainMendTool.Guided)
+        {
+            guidedDefectDragging = false;
+            GuidedDefectOverlay.Visibility = Visibility.Collapsed;
+        }
         if (tool != GrainMendTool.None && cropSession is not null)
         {
             // 크롭과 결함 도구는 같은 포인터를 두고 다툽니다. macOS 도 서로를 끕니다.
@@ -2224,25 +2487,39 @@ public sealed partial class DevelopWorkspaceView : UserControl
         GrainMendGuidedButton.Content = AppResources.Get("developGrainMendGuided", "Content");
         GrainMendBrushButton.Content = AppResources.Get("developGrainMendBrush", "Content");
         GrainMendCloneButton.Content = AppResources.Get("developGrainMendClone", "Content");
+        GrainMendRemoveButton.Content = AppResources.Get("developGrainMendRemove", "Content");
+        GrainMendCancelButton.Content = AppResources.Get("developCropCancel", "Text");
         SetLocalizedNameAndTooltip(
             GrainMendBrushButton, AppResources.Get("developGrainMendBrushHelp", "Value"));
         SetLocalizedNameAndTooltip(
             GrainMendCloneButton, AppResources.Get("developGrainMendCloneHelp", "Value"));
         SetLocalizedNameAndTooltip(
             GrainMendAutoButton, AppResources.Get("developGrainMendAutoHelp", "Value"));
-        // 가이드는 아직 영역을 끄는 상호작용이 없습니다. 검출은 자동과 같은 것을 쓰지만 ROI 가
-        // 사용자에게서 와야 하므로, 그 자리가 생기기 전에는 이유를 달아 꺼 둡니다.
         SetLocalizedNameAndTooltip(
             GrainMendGuidedButton,
-            AppResources.Get("developGrainMendDetectorMissing", "Value"));
-        GrainMendGuidedButton.IsEnabled = false;
-        GrainMendGuidedResetButton.IsEnabled = false;
+            AppResources.Get("developGrainMendGuidedHelp", "Value"));
+        SetLocalizedNameAndTooltip(
+            GrainMendRemoveButton, AppResources.Get("developGrainMendRemove", "Content"));
+        SetLocalizedNameAndTooltip(
+            GrainMendCancelButton, AppResources.Get("developCropCancel", "Text"));
         GrainMendAutoButton.IsEnabled =
-            panel?.SelectedFrame is not null && pendingDefectEdit is null;
+            panel?.SelectedFrame is not null && pendingDefectEdit is null && !grainMendDetecting;
         GrainMendAutoResetButton.IsEnabled =
-            panel?.HasDefectEdits(DefectEditKind.Region) == true;
+            panel?.HasDefectEdits(DefectEditLabelKind.Automatic) == true;
+        GrainMendGuidedButton.IsEnabled =
+            panel?.SelectedFrame is not null && pendingDefectEdit is null && !grainMendDetecting;
+        GrainMendGuidedResetButton.IsEnabled =
+            panel?.HasDefectEdits(DefectEditLabelKind.Guided) == true;
+        GrainMendReviewActions.Visibility = pendingDefectEdit is null
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+        GrainMendRemoveButton.IsEnabled =
+            pendingDefectEdit is not null && (pendingDefectReview?.IncludedCount ?? 1) > 0;
+        GrainMendCancelButton.IsEnabled = pendingDefectEdit is not null;
 
         string reset = AppResources.Get("developGrainMendReset", "Value");
+        SetLocalizedNameAndTooltip(GrainMendAutoResetButton, reset);
+        SetLocalizedNameAndTooltip(GrainMendGuidedResetButton, reset);
         SetLocalizedNameAndTooltip(GrainMendBrushResetButton, reset);
         SetLocalizedNameAndTooltip(GrainMendCloneResetButton, reset);
 
@@ -2258,9 +2535,20 @@ public sealed partial class DevelopWorkspaceView : UserControl
             GrainMendBrushButton, grainMendTool == GrainMendTool.Brush ? active : inactive);
         AutomationProperties.SetItemStatus(
             GrainMendCloneButton, grainMendTool == GrainMendTool.Clone ? active : inactive);
+        AutomationProperties.SetItemStatus(
+            GrainMendGuidedButton, grainMendTool == GrainMendTool.Guided ? active : inactive);
+        AutomationProperties.SetItemStatus(
+            GrainMendAutoButton,
+            pendingDefectEdit?.Label.Kind == DefectEditLabelKind.Automatic ? active : inactive);
         var selection = (Microsoft.UI.Xaml.Media.Brush)
             Application.Current.Resources["NegaflowSelectionBrush"];
         GrainMendBrushButton.Background = grainMendTool == GrainMendTool.Brush
+            ? selection
+            : new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent);
+        GrainMendGuidedButton.Background = grainMendTool == GrainMendTool.Guided
+            ? selection
+            : new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent);
+        GrainMendAutoButton.Background = pendingDefectEdit?.Label.Kind == DefectEditLabelKind.Automatic
             ? selection
             : new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent);
         GrainMendCloneButton.Background = grainMendTool == GrainMendTool.Clone
@@ -2274,7 +2562,8 @@ public sealed partial class DevelopWorkspaceView : UserControl
     /// </summary>
     private bool TryBeginGrainMendStroke(PointerRoutedEventArgs args)
     {
-        if (grainMendTool == GrainMendTool.None || panel?.SelectedFrame is null ||
+        if (grainMendTool is GrainMendTool.None or GrainMendTool.Guided ||
+            panel?.SelectedFrame is null ||
             !TryCanvasUnitPoint(args, out CropDisplayPoint point))
         {
             return false;

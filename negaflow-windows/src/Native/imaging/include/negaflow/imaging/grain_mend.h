@@ -86,13 +86,34 @@ struct GrainMendDetection final {
     GrainMendStatus status{GrainMendStatus::invalid_parameter};
     std::uint32_t width{0U};
     std::uint32_t height{0U};
+    // The source-pixel rectangle that produced the analysis mask. Coordinates are
+    // top-first because both the working image and the returned mask are top-first.
+    std::uint32_t roi_x{0U};
+    std::uint32_t roi_y{0U};
+    std::uint32_t roi_width{0U};
+    std::uint32_t roi_height{0U};
     std::size_t accepted_pixels{0U};
     std::vector<std::uint8_t> mask{};
+};
+
+// `roi` 는 정규 좌표(좌상단 원점)이며 검출을 그 안에서만 돕니다. 가이드 도구가 쓰는 자리이고,
+// 전체(0,0,1,1)를 넣으면 자동과 같습니다. 부분 ROI 는 그 부분만 잘라 분석하므로 전체를 재고
+// 나중에 가리는 것과 다릅니다 — 검출은 주변 통계를 보기 때문입니다.
+struct GrainMendRoi final {
+    double x{0.0};
+    double y{0.0};
+    double width{1.0};
+    double height{1.0};
+
+    [[nodiscard]] bool covers_everything() const noexcept {
+        return x <= 0.0 && y <= 0.0 && width >= 1.0 && height >= 1.0;
+    }
 };
 
 [[nodiscard]] GrainMendDetection detect_grain_mend(
     const WorkingImage& image,
     const GrainMendParameters& parameters,
+    GrainMendRoi roi = {},
     negaflow::core::CancelFlag cancel = {}) noexcept;
 
 [[nodiscard]] const char* grain_mend_status_name(GrainMendStatus status) noexcept;

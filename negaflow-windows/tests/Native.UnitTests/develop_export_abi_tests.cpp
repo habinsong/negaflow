@@ -1825,6 +1825,60 @@ void test_v8_grain_mend_preview(const std::filesystem::path& source) {
         "v8 nonzero GrainMend preview succeeds through the shared pipeline");
 }
 
+// v1 검출기는 기존 자동 호출을 보존하고, v2만 가이드의 raw ROI와 원본 픽셀 사각형을
+// 추가한다. 실제 TIFF를 두 번 호출해 size-query와 마스크 호출의 ROI 계약이 같음을 확인한다.
+void test_v2_grain_mend_detection(const std::filesystem::path& source) {
+    expect(sizeof(nf_grain_mend_detect_parameters_v1) == 40U &&
+            sizeof(nf_grain_mend_detection_v2) == 56U,
+        "v2 GrainMend detection ABI layouts are fixed");
+
+    const std::wstring source_text = source.wstring();
+    nf_develop_export_request_v27 request =
+        make_request_v27(source_text.c_str(), nullptr);
+    request.v26.v25.v24.v21.v20.v19.v18.v17.v16.v15.v14.v13.v12.v11.v10.v9.v8
+        .defect_removal_strength = 1.0;
+    nf_grain_mend_detect_parameters_v1 parameters{};
+    parameters.struct_size = static_cast<std::uint32_t>(sizeof(parameters));
+    parameters.roi_x = 0.2;
+    parameters.roi_y = 0.25;
+    parameters.roi_width = 0.5;
+    parameters.roi_height = 0.5;
+
+    nf_grain_mend_detection_v2 sized{};
+    sized.struct_size = static_cast<std::uint32_t>(sizeof(sized));
+    nf_develop_export_result_v3 sized_result = make_result_v3();
+    const nf_status_t sized_status = nf_develop_detect_grain_mend_v2(
+        &request, &parameters, nullptr, 0U, nullptr, &sized, &sized_result);
+    const bool sized_ok =
+        sized_status == NF_STATUS_OK && sized_result.succeeded == 1U &&
+        sized.source_width > 2U && sized.source_height > 2U &&
+        sized.roi_width > 2U && sized.roi_height > 2U &&
+        sized.roi_width < sized.source_width && sized.roi_height < sized.source_height &&
+        sized.width > 0U && sized.height > 0U &&
+        sized.mask_byte_count == static_cast<std::uint64_t>(sized.width) * sized.height;
+    expect(sized_ok, "v2 GrainMend size query reports a bounded raw ROI");
+    if (!sized_ok) {
+        return;
+    }
+
+    std::vector<std::uint8_t> mask(sized.mask_byte_count, 0U);
+    nf_grain_mend_detection_v2 filled{};
+    filled.struct_size = static_cast<std::uint32_t>(sizeof(filled));
+    nf_develop_export_result_v3 filled_result = make_result_v3();
+    expect(
+        nf_develop_detect_grain_mend_v2(
+            &request, &parameters, mask.data(), mask.size(), nullptr, &filled, &filled_result) ==
+                NF_STATUS_OK &&
+            filled_result.succeeded == 1U &&
+            filled.width == sized.width && filled.height == sized.height &&
+            filled.mask_byte_count == sized.mask_byte_count &&
+            filled.source_width == sized.source_width &&
+            filled.source_height == sized.source_height &&
+            filled.roi_x == sized.roi_x && filled.roi_y == sized.roi_y &&
+            filled.roi_width == sized.roi_width && filled.roi_height == sized.roi_height,
+        "v2 GrainMend mask call preserves the size-query raw ROI");
+}
+
 // Neutrality of a monochrome develop is a property of the working image. The 8-bit
 // preview adds under one code value of dither per channel — as the macOS display path
 // does — so the check is "no visible tint", not "identical bytes". A real tint from the
@@ -3664,6 +3718,7 @@ int main(const int argument_count, const char* const arguments[]) {
             test_v5_point_curve_preview(source);
             test_v6_color_mixer_preview(source);
             test_v8_grain_mend_preview(source);
+            test_v2_grain_mend_detection(source);
             test_v9_film_scan_denoise_preview(source);
             test_v10_texture_preview(source);
             test_v11_bw_transform_preview(source);
