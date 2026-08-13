@@ -183,15 +183,59 @@ py scripts/find-unreachable-api.py
 
 **남은 큰 덩어리 셋과 각각이 큰 이유** (다음에 고를 때 이 셈을 다시 하지 마십시오):
 
-1. **GrainMend 도구 넷** (자동·가이드·브러시·복제 도장). 인스펙터 넷째 탭이 아직 비어 있습니다.
-   수리 수학은 네이티브에 다 있습니다(`imaging/defect_*`, `grain_mend.h`). **막고 있는 것은
-   검출기가 ABI 에 없다는 점입니다** — `grain_mend_detector.h` 는 내부 헤더이고
-   `negaflow_abi.h` 에는 `nf_detect_infrared_defects_*` 와 `nf_detect_flatbed_frame_grid_*`
-   뿐입니다. 자동·가이드는 새 ABI 진입점이 필요하고(버전 규율 포함), 브러시·복제 도장은
-   사용자 획을 그대로 싣기 때문에 **네이티브 변경 없이** 캔버스 상호작용만으로 됩니다.
-   먼저 할 것을 고른다면 브러시·복제 도장입니다.
+1. **GrainMend 자동·가이드.** 브러시와 복제 도장은 붙였습니다. 남은 둘은 검출기가 ABI 에
+   없어서 막혀 있습니다. **설계는 아래에 확정해 두었으니 그대로 만드십시오** — 조사에 다시
+   시간을 쓰지 마십시오.
 
-   **브러시를 시작하기 전에 알아야 할 좌표 계약**(찾아 두었으니 다시 파지 마십시오):
+   **가장 중요한 사실: 검출기는 원본 스캔이 아니라 현상된 양화 위에서 돕니다.**
+   `pipeline/develop_export.cpp` 에서 `apply_grain_mend` 는 `film_look` **뒤**에 불립니다.
+   그러니 "TIFF 를 받아 검출하는 독립 진입점"으로는 macOS 와 같은 결과가 나오지 않습니다.
+   필요한 것은 **파이프라인을 grain_mend 단계까지 돌고 거기서 멈춰 마스크를 돌려주는 변형**
+   입니다. 요청 구조체는 미리보기와 같은 `nf_develop_export_request_v21` 을 그대로 씁니다.
+
+   재사용할 조각은 이미 다 있습니다(`imaging/grain_mend_components.h`):
+   `find_candidates` → `build_automatic_evidence` → `build_automatic_mask`. 마지막 것이
+   내주는 것이 화소별 채택 마스크와 `accepted_pixels` 이고, 그것이 곧 catalog 의
+   `DefectEditKind.Region` 항목(`RegionMask` + `RegionRoi` + `RegionWidth/Height`)입니다.
+   저장 뒤의 수리 경로는 이미 이어져 있으므로 새로 만들 것이 없습니다.
+
+   제안하는 모양(핸들 없이 한 번 호출):
+
+   ```c
+   typedef struct nf_grain_mend_detect_parameters_v1 {
+       uint32_t struct_size;
+       uint32_t reject_structure_lines;   /* 0/1 */
+       double dust_sensitivity;           /* 기본 0.5 */
+       double scratch_sensitivity;        /* 기본 0.5 */
+       double protect_detail;             /* 기본 0.75 */
+       double roi_x, roi_y, roi_width, roi_height;  /* 정규, 좌상단 원점. 자동은 0,0,1,1 */
+   } nf_grain_mend_detect_parameters_v1;
+
+   typedef struct nf_grain_mend_detection_v1 {
+       uint32_t struct_size, status;
+       uint32_t width, height;                 /* 검출 이미지 크기(긴 변 1800 상한) */
+       uint32_t roi_x, roi_y, roi_width, roi_height;  /* 그 안의 화소 ROI */
+       uint64_t accepted_pixels, mask_byte_count;
+   } nf_grain_mend_detection_v1;
+
+   NF_API nf_status_t NF_CALL nf_develop_detect_grain_mend_v1(
+       const nf_develop_export_request_v21* request,
+       const nf_grain_mend_detect_parameters_v1* parameters,
+       nf_develop_run_state_v1* run_state,
+       nf_grain_mend_detection_v1* detection,
+       uint8_t* mask, uint64_t mask_capacity_bytes);
+   ```
+
+   마스크 상한이 1800×1800(약 3.2 MB)으로 정해져 있으므로 호출부가 한 번 할당해 두면 됩니다.
+   모자라면 `mask_byte_count` 만 채우고 buffer-too-small 로 돌려주십시오 — 핸들과 destroy 를
+   두지 않아도 되고 재검출도 없습니다. `grain_mend_maximum_detection_dimension` 이 그 상한이며
+   `imaging/grain_mend.h` 에 있습니다.
+
+   자동은 ROI 를 (0,0,1,1) 로, 가이드는 사용자가 끈 사각형으로 부르는 **같은 진입점**입니다.
+   ROI 를 표시 좌표에서 원본 좌표로 되돌리는 것은 이미 만들어 둔
+   `DevelopDisplayGeometry.TryMapDisplayToRaw` 로 두 모서리를 옮기면 됩니다.
+
+2. **GrainMend 브러시·복제 도장의 좌표 계약**(이미 구현했지만 손댈 때 알아야 합니다):
    `defect_heal_brush.h` 는 획 좌표를 **원본(raw) 이미지의 정규 좌표, 좌상단 원점**으로
    받습니다. 그런데 캔버스의 `TryCanvasUnitPoint` 가 주는 것은 **표시(display) 좌표** —
    변형이 다 적용된 뒤의 화면 이미지 기준입니다. 둘을 그냥 이으면 회전·반전·크롭·수평보정이
@@ -200,10 +244,10 @@ py scripts/find-unreachable-api.py
    입니다. 크롭 사각형은 저장될 때 y-up 이고 `WorkingImage` 행은 y-down 이라 그 자리에서
    한 번 뒤집힙니다(`crop_image` 참고). 역변환은 UI 없이 시험할 수 있는 순수 계산이므로
    `Shell.Core` 에 먼저 넣고 시험한 다음 캔버스를 붙이십시오.
-2. **앱 메타데이터 / 촬영 기록 / 롤 기록 카드.** 정보 탭의 나머지 세 카드입니다. catalog recipe
+3. **앱 메타데이터 / 촬영 기록 / 롤 기록 카드.** 정보 탭의 나머지 세 카드입니다. catalog recipe
    (`appMetadataOverlay` — 개정 번호와 원본 SHA-256 결속 포함)와 내보내기 때 WIC 로 EXIF/IPTC 를
    쓰는 일이 함께 필요합니다. 저장만 하고 내보내기에 싣지 않으면 반쪽입니다.
-3. **출력 패널의 품질·소스 탭과 빠른 내보내기.** DPI·긴 변 픽셀·JPEG 품질·TIFF 압축·비트 심도·
+4. **출력 패널의 품질·소스 탭과 빠른 내보내기.** DPI·긴 변 픽셀·JPEG 품질·TIFF 압축·비트 심도·
    출력 선명도가 들어갑니다. **엔진이 아직 못 하는 것들입니다** — `DevelopExportFormat` 는
    Tiff16/Png16 뿐이고 JPEG·리사이즈·DPI 가 없으며 `OutputSharpening*` 요청 필드는 아무도
    채우지 않습니다. UI 부터 만들면 동작하지 않는 토글이 됩니다.
