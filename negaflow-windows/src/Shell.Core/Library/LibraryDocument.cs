@@ -196,6 +196,31 @@ public sealed class LibraryDocument : IDisposable
     }
 
     /// <summary>
+    /// develop route 를 바꿉니다. 필름 룩 선택이 이 경로로 저장됩니다 — recipe 값과 달리
+    /// route 는 <see cref="DevelopRouteWriter"/> 가 소유하므로 따로 둡니다.
+    /// </summary>
+    public LibraryFrameError EditRoute(string frameId, DevelopRouteSelection selection)
+    {
+        ArgumentNullException.ThrowIfNull(frameId);
+        ArgumentNullException.ThrowIfNull(selection);
+
+        if (!indexById.TryGetValue(frameId, out int index))
+        {
+            return LibraryFrameError.MissingId;
+        }
+
+        DevelopRouteWriteResult written = DevelopRouteWriter.Apply(payloads[index], selection);
+        if (written.FrameRecord is not { } updated)
+        {
+            return LibraryFrameError.InvalidDevelopRoute;
+        }
+
+        payloads[index] = updated;
+        Project();
+        return LibraryFrameError.None;
+    }
+
+    /// <summary>
     /// 계획된 frame 을 뒤에 덧붙입니다. 메모리 안에서만 바뀌며 <see cref="Save"/> 로 디스크에
     /// 갑니다.
     /// </summary>

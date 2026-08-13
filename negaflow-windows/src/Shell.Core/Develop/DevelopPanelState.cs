@@ -594,6 +594,50 @@ public sealed class DevelopPanelState
     public LibraryFrameError SetAutoNeutralBalance(bool enabled) =>
         SetAutoCorrection(autoLevels: null, neutralBalance: enabled);
 
+    public FilmEmulation FilmEmulation => SelectedFrame?.Route.FilmEmulation ?? FilmEmulation.None;
+
+    public double FilmEmulationIntensity => SelectedFrame?.Route.FilmEmulationIntensity ?? 0.5;
+
+    /// <summary>
+    /// macOS 는 필름 룩을 digital source 에서만 적용합니다. 스캔 프레임에서는 고르는 자리
+    /// 대신 그 안내를 냅니다.
+    /// </summary>
+    public bool AppliesFilmLook => SelectedFrame?.Route.IsDigitalSource == true;
+
+    /// <summary>필름 룩을 고릅니다. <c>None</c> 이면 룩을 끕니다.</summary>
+    public LibraryFrameError SetFilmEmulation(FilmEmulation emulation) =>
+        SetFilmLook(emulation, null);
+
+    /// <summary>룩의 세기입니다. macOS 와 같이 0...1 로 자릅니다.</summary>
+    public LibraryFrameError SetFilmEmulationIntensity(double intensity) =>
+        SetFilmLook(null, Math.Clamp(intensity, 0.0, 1.0));
+
+    private LibraryFrameError SetFilmLook(FilmEmulation? emulation, double? intensity)
+    {
+        if (SelectedFrame is not { } frame)
+        {
+            return LibraryFrameError.MissingId;
+        }
+        // 스캔 프레임에 룩을 적으면 macOS 가 내지 않는 단계가 걸립니다. 기록하지 않고 막습니다.
+        if (!AppliesFilmLook)
+        {
+            return LibraryFrameError.InvalidDevelopRoute;
+        }
+
+        LibraryFrameError error = host.EditRoute(
+            frame.Id,
+            new DevelopRouteSelection(
+                frame.Route.SourceSignalKind,
+                frame.Route.FilmType,
+                emulation ?? frame.Route.FilmEmulation,
+                intensity ?? frame.Route.FilmEmulationIntensity));
+        if (error == LibraryFrameError.None)
+        {
+            Select(frame.Id);
+        }
+        return error;
+    }
+
     /// <summary>macOS 와 같이 음화 route 에서만 자동 보정 토글을 보여 줍니다.</summary>
     public bool ShowsAutoCorrections =>
         SelectedFrame?.Route.FilmType is FilmType.ColorNegative or FilmType.BlackAndWhiteNegative;

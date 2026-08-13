@@ -128,6 +128,12 @@ public sealed class LibraryHostService : IDisposable
             ? LibraryFrameError.MissingId
             : document.Edit(frameId, edit);
 
+    /// <summary>필름 룩처럼 develop route 자체를 바꾸는 편집입니다.</summary>
+    public LibraryFrameError EditRoute(string frameId, DevelopRouteSelection selection) =>
+        document is null
+            ? LibraryFrameError.MissingId
+            : document.EditRoute(frameId, selection);
+
     /// <summary>
     /// 고른 파일을 라이브러리에 넣고 바로 저장합니다. 넣기만 하고 저장하지 않으면 앱이 죽었을 때
     /// 사용자가 방금 가져온 것이 사라집니다.

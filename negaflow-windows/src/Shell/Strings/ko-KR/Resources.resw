@@ -723,4 +723,10 @@
   <data name="developExportRunning.Text" xml:space="preserve"><value>현상 중…</value></data>
   <data name="developExportSaveFailed.Text" xml:space="preserve"><value>카탈로그를 저장하지 못했습니다.</value></data>
   <data name="developExportFolderFailed.Text" xml:space="preserve"><value>그 폴더를 쓸 수 없습니다.</value></data>
+  <data name="developSectionFilm.Text" xml:space="preserve"><value>필름</value></data>
+  <data name="developFilmLookNone.Text" xml:space="preserve"><value>없음</value></data>
+  <data name="developFilmGroupMotion.Text" xml:space="preserve"><value>시네 필름</value></data>
+  <data name="developFilmGroupBWSlide.Text" xml:space="preserve"><value>흑백 슬라이드</value></data>
+  <data name="developFilmLookIntensity.Text" xml:space="preserve"><value>강도</value></data>
+  <data name="developFilmLookDigitalOnly.Text" xml:space="preserve"><value>필름 룩은 Digital Color·Digital B&amp;W 에서만 적용됩니다</value><comment>AppLocalizedPhrase.filmLookDigitalOnly</comment></data>
 </root>

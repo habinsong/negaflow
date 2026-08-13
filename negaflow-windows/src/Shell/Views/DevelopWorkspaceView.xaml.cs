@@ -37,7 +37,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private Negaflow.Shell.Library.ThumbnailService? thumbnails;
     /// <summary>macOS 의 <c>crop.aspectLocked</c> 와 같이 잠긴 상태로 시작합니다.</summary>
     private bool isCropAspectLocked = true;
-    private bool isOutputSourceSelected;
+    private DevelopSourceKind developSource = DevelopSourceKind.Library;
     /// <summary>폴더가 비어 있으면 원본 옆에 씁니다 — 목적지를 고르기 전에도 내보낼 수 있습니다.</summary>
     private ExportDestination exportDestination =
         new(string.Empty, ExportDestination.NameToken, DevelopExportFormat.Tiff16);
@@ -537,6 +537,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         AutoColorToggle.IsChecked = panel.AutoNeutralBalance;
         AutoLevelsToggle.IsChecked = panel.AutoLevels;
         UpdateCropAspectControls();
+        UpdateFilmLookControls();
         HistogramView.SynchronizeValues(
             panel.Shadows,
             panel.Density,
@@ -1530,31 +1531,151 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private void OnDevelopSourceRailClicked(object sender, RoutedEventArgs args)
     {
         _ = args;
-        if (sender is not Button { Tag: string tag })
+        if (sender is not Button { Tag: string tag } ||
+            !Enum.TryParse(tag, out DevelopSourceKind kind))
         {
             return;
         }
-        isOutputSourceSelected = string.Equals(tag, "Output", StringComparison.Ordinal);
+        developSource = kind;
         UpdateDevelopSourcePanel();
+    }
+
+    /// <summary>현상 왼쪽 소스입니다. macOS 의 다섯 탭 중 지금 내용이 있는 셋입니다.</summary>
+    private enum DevelopSourceKind
+    {
+        Library,
+        Film,
+        Output,
     }
 
     private void UpdateDevelopSourcePanel()
     {
-        OutputSourcePanel.Visibility = isOutputSourceSelected ? Visibility.Visible : Visibility.Collapsed;
-        LibrarySourcePanel.Visibility = isOutputSourceSelected ? Visibility.Collapsed : Visibility.Visible;
-        LibraryHeaderText.Text = AppResources.Get(
-            isOutputSourceSelected ? "developSectionOutput" : "developLibrary",
-            "Text");
-        DevelopSourceIcon.Glyph = isOutputSourceSelected ? "" : "";
+        LibrarySourcePanel.Visibility = Show(DevelopSourceKind.Library);
+        FilmSourcePanel.Visibility = Show(DevelopSourceKind.Film);
+        OutputSourcePanel.Visibility = Show(DevelopSourceKind.Output);
+
+        (string headerKey, string glyph) = developSource switch
+        {
+            DevelopSourceKind.Film => ("developSectionFilm", ""),
+            DevelopSourceKind.Output => ("developSectionOutput", ""),
+            _ => ("developLibrary", ""),
+        };
+        LibraryHeaderText.Text = AppResources.Get(headerKey, "Text");
+        DevelopSourceIcon.Glyph = glyph;
+
         var accent = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"];
         var normal = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorPrimaryBrush"];
         var selection = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["NegaflowSelectionBrush"];
-        var transparent = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent);
-        LibraryRailButton.Background = isOutputSourceSelected ? transparent : selection;
-        LibraryRailIcon.Foreground = isOutputSourceSelected ? normal : accent;
-        OutputRailButton.Background = isOutputSourceSelected ? selection : transparent;
-        OutputRailIcon.Foreground = isOutputSourceSelected ? accent : normal;
+        foreach ((Button button, FontIcon icon, DevelopSourceKind kind) in DevelopSourceRailButtons())
+        {
+            bool selected = kind == developSource;
+            button.Background = selected
+                ? selection
+                : new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent);
+            icon.Foreground = selected ? accent : normal;
+            AutomationProperties.SetItemStatus(
+                button,
+                AppResources.Get(selected ? "selected" : "notSelected", "Value"));
+        }
         UpdateExportPreview();
+        UpdateFilmLookControls();
+    }
+
+    private Visibility Show(DevelopSourceKind kind) =>
+        developSource == kind ? Visibility.Visible : Visibility.Collapsed;
+
+    private IEnumerable<(Button Button, FontIcon Icon, DevelopSourceKind Kind)> DevelopSourceRailButtons()
+    {
+        yield return (LibraryRailButton, LibraryRailIcon, DevelopSourceKind.Library);
+        yield return (FilmRailButton, FilmRailIcon, DevelopSourceKind.Film);
+        yield return (OutputRailButton, OutputRailIcon, DevelopSourceKind.Output);
+    }
+
+    /// <summary>필름 목록 한 줄과 한 묶음입니다. 화면에 나가는 것만 담습니다.</summary>
+    private sealed record FilmLookChoice(FilmEmulation Emulation, string Name, bool IsSelected);
+
+    private sealed record FilmLookGroup(string Title, IReadOnlyList<FilmLookChoice> Films);
+
+    private void UpdateFilmLookControls()
+    {
+        if (FilmLookGroups is null)
+        {
+            return;
+        }
+        bool applies = panel?.AppliesFilmLook == true;
+        FilmLookControls.Visibility = applies ? Visibility.Visible : Visibility.Collapsed;
+        FilmLookUnavailableText.Visibility = applies ? Visibility.Collapsed : Visibility.Visible;
+        if (!applies || panel?.SelectedFrame is not { } frame)
+        {
+            FilmLookGroups.ItemsSource = null;
+            return;
+        }
+
+        FilmEmulation current = panel.FilmEmulation;
+        List<FilmLookGroup> groups =
+        [
+            // macOS 와 같이 첫 자리는 룩을 끄는 선택입니다.
+            new(
+                AppResources.Get("developFilmLookNone", "Text"),
+                [new FilmLookChoice(
+                    FilmEmulation.None,
+                    AppResources.Get("developFilmLookNone", "Text"),
+                    current == FilmEmulation.None)]),
+        ];
+        foreach (FilmEmulationKind kind in FilmEmulationCatalog.KindsFor(frame.Route.FilmType))
+        {
+            List<FilmLookChoice> films = [];
+            foreach (FilmEmulation emulation in FilmEmulationCatalog.Films(kind))
+            {
+                films.Add(new FilmLookChoice(
+                    emulation,
+                    FilmEmulationCatalog.DisplayName(emulation),
+                    emulation == current));
+            }
+            groups.Add(new FilmLookGroup(FilmGroupTitle(kind), films));
+        }
+        FilmLookGroups.ItemsSource = groups;
+        isSynchronizingInspector = true;
+        try
+        {
+            FilmLookIntensityControl.Value = panel.FilmEmulationIntensity;
+        }
+        finally
+        {
+            isSynchronizingInspector = false;
+        }
+    }
+
+    private static string FilmGroupTitle(FilmEmulationKind kind) => AppResources.Get(
+        kind switch
+        {
+            FilmEmulationKind.Slide => "filmTypeColorPositive",
+            FilmEmulationKind.Negative => "filmTypeColorNegative",
+            FilmEmulationKind.MotionPicture => "developFilmGroupMotion",
+            FilmEmulationKind.BlackAndWhiteReversal => "developFilmGroupBWSlide",
+            _ => "filmTypeBlackAndWhiteNegative",
+        },
+        "Text");
+
+    private void OnFilmLookChecked(object sender, RoutedEventArgs args)
+    {
+        _ = args;
+        if (isSynchronizingInspector ||
+            sender is not RadioButton { Tag: FilmEmulation emulation })
+        {
+            return;
+        }
+        UpdateImageTransform(state => state.SetFilmEmulation(emulation));
+    }
+
+    private void OnFilmLookIntensityChanged(object? sender, InspectorSliderValueChangedEventArgs args)
+    {
+        _ = sender;
+        if (isSynchronizingInspector)
+        {
+            return;
+        }
+        UpdateImageTransform(state => state.SetFilmEmulationIntensity(args.Value));
     }
 
     private void OnExportFormatChanged(object sender, SelectionChangedEventArgs args)
@@ -1959,7 +2080,10 @@ public sealed partial class DevelopWorkspaceView : UserControl
         SetButtonText(ExportButton, AppResources.Get("exportSection", "Text"));
         ExportFormatSelector.SelectedIndex = 0;
         SetLocalizedNameAndTooltip(LibraryRailButton, AppResources.Get("developLibrary", "Text"));
+        SetLocalizedNameAndTooltip(FilmRailButton, AppResources.Get("developSectionFilm", "Text"));
         SetLocalizedNameAndTooltip(OutputRailButton, AppResources.Get("developSectionOutput", "Text"));
+        FilmLookUnavailableText.Text = AppResources.Get("developFilmLookDigitalOnly", "Text");
+        FilmLookIntensityControl.Label = AppResources.Get("developFilmLookIntensity", "Text");
         UpdateDevelopSourcePanel();
         SetRadioText(BaseAutoModeButton, AppResources.Get("developBaseModeAuto", "Content"));
         SetRadioText(BaseFilmModeButton, AppResources.Get("developBaseModeFilm", "Content"));

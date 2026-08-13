@@ -2247,6 +2247,12 @@ internal static class Program
                 positiveFrame["sourceSignalKind"] = "filmPositiveScan";
                 positiveFrame["filmType"] = "colorPositive";
                 positiveFrame["params"]!.AsObject()["filmType"] = "colorPositive";
+                // 필름 룩은 digital source 에서만 걸리므로 그 경로도 하나 둡니다.
+                JsonObject digitalFrame = FrameRecord("frame-4", "IMG_0004.tif", 0.0);
+                digitalFrame["sourceSignalKind"] = "renderedDigital";
+                digitalFrame["filmType"] = "colorPositive";
+                digitalFrame["params"]!.AsObject()["filmType"] = "colorPositive";
+                digitalFrame["params"]!.AsObject()["isDigitalSource"] = true;
                 seed.Write(new CatalogSnapshot(
                     null,
                     new Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>>
@@ -2256,6 +2262,7 @@ internal static class Program
                             new("frame-1", FrameRecord("frame-1", "IMG_0001.tif", 0.0)),
                             new("frame-2", autoWithoutManualBase),
                             new("frame-3", positiveFrame),
+                            new("frame-4", digitalFrame),
                         ],
                     }));
             }
@@ -2502,6 +2509,34 @@ internal static class Program
 
             Check(panel.Select("frame-3"), "panel_selects_positive_frame");
             Check(!panel.CanEditBase, "panel_positive_frame_cannot_edit_base");
+            // 필름 스캔 프레임은 macOS 가 필름 룩을 걸지 않는 자리입니다 — 기록도 하지 않습니다.
+            Check(
+                !panel.AppliesFilmLook &&
+                panel.SetFilmEmulation(FilmEmulation.Portra400) == LibraryFrameError.InvalidDevelopRoute,
+                "panel_refuses_film_look_on_a_scan_route");
+
+            // digital source 에서는 룩과 세기가 catalog 를 왕복해야 합니다. 42종을 엔진이
+            // 이미 갖고 있었는데 고를 길이 없던 자리입니다.
+            Check(panel.Select("frame-4"), "panel_selects_digital_frame");
+            Check(panel.AppliesFilmLook, "panel_digital_frame_applies_film_look");
+            Check(
+                panel.SetFilmEmulation(FilmEmulation.Portra400) == LibraryFrameError.None &&
+                panel.FilmEmulation == FilmEmulation.Portra400,
+                "panel_sets_film_emulation");
+            Check(
+                panel.SetFilmEmulationIntensity(0.25) == LibraryFrameError.None &&
+                panel.FilmEmulationIntensity == 0.25 &&
+                panel.FilmEmulation == FilmEmulation.Portra400,
+                "panel_sets_intensity_without_losing_the_film");
+            Check(
+                panel.SetFilmEmulationIntensity(9.0) == LibraryFrameError.None &&
+                panel.FilmEmulationIntensity == 1.0,
+                "panel_clamps_film_intensity");
+            Check(
+                FilmEmulationCatalog.Count == 42 &&
+                FilmEmulationCatalog.DisplayName(FilmEmulation.Portra400) == "Kodak Portra 400" &&
+                FilmEmulationCatalog.Films(FilmEmulationKind.MotionPicture).Count == 4,
+                "film_emulation_catalog_covers_every_film");
             Check(
                 !panel.ShowsAutoCorrections &&
                 panel.SetAutoLevels(true) == LibraryFrameError.InvalidDevelopRoute &&
