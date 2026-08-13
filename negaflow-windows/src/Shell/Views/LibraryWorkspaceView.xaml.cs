@@ -46,10 +46,6 @@ public sealed partial class LibraryWorkspaceView : UserControl
     }
 
     /// <summary>
-    /// 라이브러리 내용을 보여 줍니다. **UI 스레드에서만** 부르십시오. WinUI 는 STA 이고
-    /// 컨트롤은 그것을 만든 스레드가 소유합니다.
-    /// </summary>
-    /// <summary>
     /// 카드 썸네일을 만들어 주는 서비스입니다. 앱 시작 때 한 번 연결하고, 준비되는 대로 카드가
     /// 그림만 바꿔 낍니다.
     /// </summary>
@@ -64,6 +60,10 @@ public sealed partial class LibraryWorkspaceView : UserControl
         thumbnails.ThumbnailReady += OnThumbnailReady;
     }
 
+    /// <summary>
+    /// 라이브러리 내용을 보여 줍니다. **UI 스레드에서만** 부르십시오. WinUI 는 STA 이고
+    /// 컨트롤은 그것을 만든 스레드가 소유합니다.
+    /// </summary>
     public void ShowLibrary(LibraryHostService host, Microsoft.UI.WindowId windowId)
     {
         ArgumentNullException.ThrowIfNull(host);
@@ -99,6 +99,16 @@ public sealed partial class LibraryWorkspaceView : UserControl
     private void OnFrameContainerChanging(ListViewBase sender, ContainerContentChangingEventArgs args)
     {
         _ = sender;
+        // 재활용되는 카드의 비트맵은 놓아 줍니다. 놓지 않으면 스크롤한 만큼 디코드된 썸네일이
+        // 계속 쌓입니다 — 1,500장에서 1.2GB 를 쓰던 원인이 이것이었습니다.
+        if (args.InRecycleQueue)
+        {
+            if (args.Item is LibraryFrameListItem recycled)
+            {
+                recycled.Thumbnail = null;
+            }
+            return;
+        }
         if (args.ItemContainer is not GridViewItem container)
         {
             return;

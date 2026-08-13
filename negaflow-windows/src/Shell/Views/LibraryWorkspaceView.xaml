@@ -6,7 +6,12 @@
     xmlns:controls="using:Negaflow.Shell.Views.Controls"
     xmlns:primitives="using:Microsoft.UI.Xaml.Controls.Primitives">
     <UserControl.Resources>
-        <CollectionViewSource x:Name="FolderGroupedItems" IsSourceGrouped="True" />
+        <!-- ItemsPath 가 없으면 그룹 자체를 열거해 그리드가 항목을 전부 realize 합니다.
+             200장에서 200개가 모두 만들어지는 것을 계측으로 확인했습니다. -->
+        <CollectionViewSource
+            x:Name="FolderGroupedItems"
+            IsSourceGrouped="True"
+            ItemsPath="Items" />
         <controls:FilmTypeNameConverter x:Key="FilmTypeNameConverter" />
     </UserControl.Resources>
     <Grid x:Name="Root" Background="{ThemeResource NegaflowWindowBrush}" SizeChanged="OnRootSizeChanged">
