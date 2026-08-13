@@ -760,4 +760,9 @@
   <data name="developUserPresetApplyHelp.Value" xml:space="preserve"><value>選択したユーザープリセットを適用します</value></data>
   <data name="developUserPresetDeleteHelp.Value" xml:space="preserve"><value>選択したユーザープリセットを削除します</value></data>
   <data name="developUserPresetNameFormat.Value" xml:space="preserve"><value>プリセット %d</value></data>
+  <data name="developSectionColor.Text" xml:space="preserve"><value>カラー</value></data>
+  <data name="developWarmth.Text" xml:space="preserve"><value>色温度</value></data>
+  <data name="developTint.Text" xml:space="preserve"><value>色かぶり補正</value></data>
+  <data name="developVibrance.Text" xml:space="preserve"><value>自然な彩度</value></data>
+  <data name="developColorDepth.Text" xml:space="preserve"><value>色の深み</value></data>
 </root>

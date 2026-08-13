@@ -378,6 +378,11 @@ public sealed partial class DevelopWorkspaceView : UserControl
             ToneCurveChevron,
             ToneCurveControls);
         ApplyInspectorSectionState(
+            DevelopInspectorSection.Color,
+            ColorHeaderButton,
+            ColorChevron,
+            ColorControls);
+        ApplyInspectorSectionState(
             DevelopInspectorSection.ColorMixer,
             ColorMixerHeaderButton,
             ColorMixerChevron,
@@ -508,6 +513,12 @@ public sealed partial class DevelopWorkspaceView : UserControl
         PointCurveEditor.Curves = panel.PointCurves;
         ColorMixerEditor.Mixer = panel.ColorMixer;
         ColorGradingEditor.Grading = panel.ColorGrading;
+        ColorModelRecipe colorModel = panel.ColorModel;
+        WarmthControl.Value = colorModel.Warmth;
+        TintControl.Value = colorModel.Tint;
+        VibranceControl.Value = colorModel.Vibrance;
+        SaturationControl.Value = colorModel.Saturation;
+        ColorDepthControl.Value = colorModel.ColorDepth;
         PrimaryCalibrationRecipe calibration = panel.PrimaryCalibration;
         RedPrimaryHueControl.Value = calibration.RedHue;
         RedPrimarySaturationControl.Value = calibration.RedSaturation;
@@ -1420,6 +1431,30 @@ public sealed partial class DevelopWorkspaceView : UserControl
         }
     }
 
+    /// <summary>
+    /// macOS 색상 섹션의 다섯 축입니다. 원색 세 축은 이 섹션에 없으므로 지금 값을 그대로 둡니다.
+    /// </summary>
+    private void OnColorModelChanged(object? sender, InspectorSliderValueChangedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (panel is null || isSynchronizingInspector)
+        {
+            return;
+        }
+        if (panel.SetColorModel(panel.ColorModel with
+            {
+                Warmth = WarmthControl.Value,
+                Tint = TintControl.Value,
+                Vibrance = VibranceControl.Value,
+                Saturation = SaturationControl.Value,
+                ColorDepth = ColorDepthControl.Value,
+            }) == LibraryFrameError.None)
+        {
+            RequestPreview();
+        }
+    }
+
     private void OnPrimaryCalibrationChanged(object? sender, InspectorSliderValueChangedEventArgs args)
     {
         _ = sender;
@@ -2242,6 +2277,13 @@ public sealed partial class DevelopWorkspaceView : UserControl
         ResetInspectorSection(static state => state.ResetColorMixer());
     }
 
+    private void OnColorResetClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        ResetInspectorSection(static state => state.ResetColor());
+    }
+
     private void OnColorGradingResetClicked(object sender, RoutedEventArgs args)
     {
         _ = sender;
@@ -2522,6 +2564,12 @@ public sealed partial class DevelopWorkspaceView : UserControl
             ToneCurveResetButton,
             AppResources.Get("developSectionToneCurve", "Text"));
         SetInspectorSectionText(
+            ColorSection,
+            ColorHeaderButton,
+            ColorSectionTitleText,
+            ColorResetButton,
+            AppResources.Get("developSectionColor", "Text"));
+        SetInspectorSectionText(
             ColorMixerSection,
             ColorMixerHeaderButton,
             ColorMixerSectionTitleText,
@@ -2563,6 +2611,11 @@ public sealed partial class DevelopWorkspaceView : UserControl
         NoiseReductionDarkToneControl.Label = AppResources.Get("developNoiseReductionDarkTones", "Text");
         NoiseReductionDetailControl.Label = AppResources.Get("developNoiseReductionDetail", "Text");
         NoiseReductionGrainProtectControl.Label = AppResources.Get("developNoiseReductionGrainProtect", "Text");
+        WarmthControl.Label = AppResources.Get("developWarmth", "Text");
+        TintControl.Label = AppResources.Get("developTint", "Text");
+        VibranceControl.Label = AppResources.Get("developVibrance", "Text");
+        SaturationControl.Label = AppResources.Get("developSaturation", "Text");
+        ColorDepthControl.Label = AppResources.Get("developColorDepth", "Text");
         GrainControl.Label = AppResources.Get("developTextureGrain", "Text");
         SharpnessControl.Label = AppResources.Get("developTextureSharpness", "Text");
         ClarityControl.Label = AppResources.Get("developTextureClarity", "Text");

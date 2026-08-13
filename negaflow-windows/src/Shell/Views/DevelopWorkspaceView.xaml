@@ -1039,6 +1039,63 @@
                                 </StackPanel>
                             </Border>
 
+                            <!-- 색상: macOS 와 같은 다섯 축·같은 순서입니다. 같은 recipe 의 원색 세 축은
+                                 이 섹션에 없으므로 여기서 건드리지 않습니다. -->
+                            <Border
+                                x:Name="ColorSection"
+                                HorizontalAlignment="Stretch"
+                                Padding="14"
+                                AutomationProperties.AutomationId="negaflow.develop.section.color"
+                                Background="{ThemeResource NegaflowCardBrush}"
+                                CornerRadius="14">
+                                <StackPanel HorizontalAlignment="Stretch" Spacing="12">
+                                    <Grid HorizontalAlignment="Stretch">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <controls:DisclosureButton
+                                            x:Name="ColorHeaderButton"
+                                            Grid.Column="0"
+                                            MinHeight="26"
+                                            Padding="0"
+                                            HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch"
+                                            AutomationProperties.AutomationId="negaflow.develop.section.color.header"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Click="OnInspectorSectionHeaderClicked"
+                                            ExpansionRequested="OnInspectorSectionExpansionRequested"
+                                            Tag="Color">
+                                            <Grid HorizontalAlignment="Stretch">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <FontIcon Grid.Column="0" Width="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xEF3C;" />
+                                                <TextBlock x:Name="ColorSectionTitleText" Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="14" FontWeight="SemiBold" />
+                                                <FontIcon x:Name="ColorChevron" Grid.Column="2" Margin="8,0,0,0" FontSize="12" Glyph="&#xE76C;" />
+                                            </Grid>
+                                        </controls:DisclosureButton>
+                                        <Button x:Name="ColorResetButton" Grid.Column="1" Width="30" Height="26" Margin="6,0,0,0" Padding="0" Click="OnColorResetClicked">
+                                            <FontIcon FontSize="12" Glyph="&#xE777;" />
+                                        </Button>
+                                    </Grid>
+                                    <StackPanel
+                                        x:Name="ColorControls"
+                                        HorizontalAlignment="Stretch"
+                                        Spacing="10"
+                                        TabFocusNavigation="Cycle">
+                                        <controls:InspectorSlider x:Name="WarmthControl" HorizontalAlignment="Stretch" Maximum="1" Minimum="-1" ResetValue="0" SliderAutomationId="negaflow.develop.warmth" ValueChanged="OnColorModelChanged" />
+                                        <controls:InspectorSlider x:Name="TintControl" HorizontalAlignment="Stretch" Maximum="1" Minimum="-1" ResetValue="0" SliderAutomationId="negaflow.develop.tint" ValueChanged="OnColorModelChanged" />
+                                        <controls:InspectorSlider x:Name="VibranceControl" HorizontalAlignment="Stretch" Maximum="1" Minimum="-1" ResetValue="0" SliderAutomationId="negaflow.develop.vibrance" ValueChanged="OnColorModelChanged" />
+                                        <controls:InspectorSlider x:Name="SaturationControl" HorizontalAlignment="Stretch" Maximum="1" Minimum="-1" ResetValue="0" SliderAutomationId="negaflow.develop.saturation" ValueChanged="OnColorModelChanged" />
+                                        <controls:InspectorSlider x:Name="ColorDepthControl" HorizontalAlignment="Stretch" Maximum="1" Minimum="-1" ResetValue="0" SliderAutomationId="negaflow.develop.color-depth" ValueChanged="OnColorModelChanged" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
                             <Border
                                 x:Name="ColorMixerSection"
                                 HorizontalAlignment="Stretch"

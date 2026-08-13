@@ -760,4 +760,9 @@
   <data name="developUserPresetApplyHelp.Value" xml:space="preserve"><value>선택한 사용자 프리셋 적용</value></data>
   <data name="developUserPresetDeleteHelp.Value" xml:space="preserve"><value>선택한 사용자 프리셋 삭제</value></data>
   <data name="developUserPresetNameFormat.Value" xml:space="preserve"><value>프리셋 %d</value></data>
+  <data name="developSectionColor.Text" xml:space="preserve"><value>색상</value></data>
+  <data name="developWarmth.Text" xml:space="preserve"><value>색온도</value></data>
+  <data name="developTint.Text" xml:space="preserve"><value>틴트</value></data>
+  <data name="developVibrance.Text" xml:space="preserve"><value>생동감</value></data>
+  <data name="developColorDepth.Text" xml:space="preserve"><value>색 깊이</value></data>
 </root>

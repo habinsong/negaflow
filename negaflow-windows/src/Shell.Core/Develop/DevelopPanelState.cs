@@ -336,6 +336,41 @@ public sealed class DevelopPanelState
         return error;
     }
 
+    /// <summary>
+    /// 색상 섹션의 다섯 축만 0 으로 돌립니다. 같은 recipe 에 있는 원색 세 축은 이 섹션의 것이
+    /// 아니므로 건드리지 않습니다.
+    /// </summary>
+    public LibraryFrameError ResetColor()
+    {
+        if (SelectedFrame is not { } frame)
+        {
+            return LibraryFrameError.MissingId;
+        }
+        if (!CanEditTone)
+        {
+            return LibraryFrameError.InvalidDevelopRoute;
+        }
+
+        LibraryFrameError error = host.Edit(
+            frame.Id,
+            new LibraryFrameEdit(
+                frame.Tone,
+                frame.ManualBase,
+                ColorModel: frame.ColorModel with
+                {
+                    Warmth = 0.0,
+                    Tint = 0.0,
+                    Vibrance = 0.0,
+                    Saturation = 0.0,
+                    ColorDepth = 0.0,
+                }));
+        if (error == LibraryFrameError.None)
+        {
+            Select(frame.Id);
+        }
+        return error;
+    }
+
     public LibraryFrameError ResetColorMixer()
     {
         if (SelectedFrame is not { } frame)
@@ -477,6 +512,33 @@ public sealed class DevelopPanelState
         LibraryFrameError error = host.Edit(
             frame.Id,
             new LibraryFrameEdit(frame.Tone, frame.ManualBase, ColorGrading: colorGrading));
+        if (error == LibraryFrameError.None)
+        {
+            Select(frame.Id);
+        }
+        return error;
+    }
+
+    /// <summary>
+    /// macOS 색상 섹션의 다섯 축입니다. 원색 세 축은 이 섹션에 없으므로 그대로 둡니다.
+    /// </summary>
+    public ColorModelRecipe ColorModel => SelectedFrame?.ColorModel ?? ColorModelRecipe.Identity;
+
+    public LibraryFrameError SetColorModel(ColorModelRecipe colorModel)
+    {
+        ArgumentNullException.ThrowIfNull(colorModel);
+        if (SelectedFrame is not { } frame)
+        {
+            return LibraryFrameError.MissingId;
+        }
+        if (!CanEditTone)
+        {
+            return LibraryFrameError.InvalidDevelopRoute;
+        }
+
+        LibraryFrameError error = host.Edit(
+            frame.Id,
+            new LibraryFrameEdit(frame.Tone, frame.ManualBase, ColorModel: colorModel));
         if (error == LibraryFrameError.None)
         {
             Select(frame.Id);

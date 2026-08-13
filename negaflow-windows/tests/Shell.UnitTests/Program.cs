@@ -12,8 +12,19 @@ internal static class Program
     private static readonly List<string> Failures = [];
     private static int assertionCount;
 
-    private static int Main()
+    /// <summary>
+    /// 검증용 카탈로그 씨앗입니다. 실제 스캔 파일을 가리키는 frame 몇 개를 만들어 두면 셸을
+    /// <c>NEGAFLOW_STORAGE_ROOT</c> 로 띄워 사진이 있는 상태를 UI Automation 으로 볼 수 있습니다.
+    /// 가져오기 대화상자를 자동화하는 것보다 훨씬 싸고, 카탈로그 쓰기 경로는 그대로 지납니다.
+    /// </summary>
+    private const string SeedArgument = "--seed";
+
+    private static int Main(string[] args)
     {
+        if (args.Length >= 3 && args[0] == SeedArgument)
+        {
+            return SeedCatalog(args[1], args[2..]);
+        }
         VerifyPreferencesDefaults();
         VerifyPreferencesNormalization();
         VerifyAdaptiveLayout();
@@ -1635,6 +1646,52 @@ internal static class Program
         Check(closed.EnqueueCount == 1, "coordinator_attempted_enqueue_once");
         Check(!coordinator.IsRunning, "coordinator_clears_flag_when_dropped");
         Check(exporter.CallCount == 1, "coordinator_dropped_still_ran_native");
+    }
+
+    private static int SeedCatalog(string storageRoot, string[] sourcePaths)
+    {
+        StorageRootResolutionResult resolution = StorageRootResolver.ResolveForTests(storageRoot);
+        if (resolution.Roots is not { } roots)
+        {
+            Console.Error.WriteLine($"storage root refused: {resolution.Error}");
+            return 2;
+        }
+        CatalogSessionOpenResult opened = CatalogSession.Open(roots);
+        if (opened.Session is not { } session)
+        {
+            Console.Error.WriteLine($"catalog refused: {opened.Error}");
+            return 2;
+        }
+        using (session)
+        {
+            if (!session.ReadOrCreate().IsSuccess)
+            {
+                Console.Error.WriteLine("catalog create failed");
+                return 2;
+            }
+            List<CatalogEntityRow> rows = [];
+            for (int index = 0; index < sourcePaths.Length; ++index)
+            {
+                string id = $"seed-{index + 1:D2}";
+                JsonObject record = FrameRecord(id, "unused.tif", 0.0);
+                record["rawScanPath"] = Path.GetFullPath(sourcePaths[index]);
+                record["customDisplayName"] = Path.GetFileNameWithoutExtension(sourcePaths[index]);
+                rows.Add(new CatalogEntityRow(id, record));
+            }
+            CatalogWriteResult written = session.Write(new CatalogSnapshot(
+                null,
+                new Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>>
+                {
+                    [CatalogEntityTable.Frames] = rows,
+                }));
+            if (!written.IsSuccess)
+            {
+                Console.Error.WriteLine($"catalog write failed: {written.Error}");
+                return 2;
+            }
+            Console.WriteLine($"seeded {rows.Count} frames into {roots.CatalogPath}");
+        }
+        return 0;
     }
 
     private static JsonObject FrameRecord(string id, string fileName, double exposure)

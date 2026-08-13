@@ -760,4 +760,9 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developUserPresetApplyHelp.Value" xml:space="preserve"><value>Wendet die ausgewählte Benutzervorgabe an</value></data>
   <data name="developUserPresetDeleteHelp.Value" xml:space="preserve"><value>Löscht die ausgewählte Benutzervorgabe</value></data>
   <data name="developUserPresetNameFormat.Value" xml:space="preserve"><value>Vorgabe %d</value></data>
+  <data name="developSectionColor.Text" xml:space="preserve"><value>Farbe</value></data>
+  <data name="developWarmth.Text" xml:space="preserve"><value>Temperatur</value></data>
+  <data name="developTint.Text" xml:space="preserve"><value>Tonung</value></data>
+  <data name="developVibrance.Text" xml:space="preserve"><value>Dynamik</value></data>
+  <data name="developColorDepth.Text" xml:space="preserve"><value>Farbtiefe</value></data>
 </root>

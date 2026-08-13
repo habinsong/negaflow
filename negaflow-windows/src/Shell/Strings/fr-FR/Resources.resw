@@ -760,4 +760,9 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="developUserPresetApplyHelp.Value" xml:space="preserve"><value>Applique le paramètre prédéfini utilisateur sélectionné</value></data>
   <data name="developUserPresetDeleteHelp.Value" xml:space="preserve"><value>Supprime le paramètre prédéfini utilisateur sélectionné</value></data>
   <data name="developUserPresetNameFormat.Value" xml:space="preserve"><value>Paramètre prédéfini %d</value></data>
+  <data name="developSectionColor.Text" xml:space="preserve"><value>Couleur</value></data>
+  <data name="developWarmth.Text" xml:space="preserve"><value>Température</value></data>
+  <data name="developTint.Text" xml:space="preserve"><value>Teinte</value></data>
+  <data name="developVibrance.Text" xml:space="preserve"><value>Vibrance</value></data>
+  <data name="developColorDepth.Text" xml:space="preserve"><value>Profondeur des couleurs</value></data>
 </root>

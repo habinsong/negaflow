@@ -760,4 +760,9 @@ Load a scanner from Library to scan film.</value>
   <data name="developUserPresetApplyHelp.Value" xml:space="preserve"><value>Apply the selected user preset</value></data>
   <data name="developUserPresetDeleteHelp.Value" xml:space="preserve"><value>Delete the selected user preset</value></data>
   <data name="developUserPresetNameFormat.Value" xml:space="preserve"><value>Preset %d</value></data>
+  <data name="developSectionColor.Text" xml:space="preserve"><value>Color</value></data>
+  <data name="developWarmth.Text" xml:space="preserve"><value>Warmth</value></data>
+  <data name="developTint.Text" xml:space="preserve"><value>Tint</value></data>
+  <data name="developVibrance.Text" xml:space="preserve"><value>Vibrance</value></data>
+  <data name="developColorDepth.Text" xml:space="preserve"><value>Color Depth</value></data>
 </root>
