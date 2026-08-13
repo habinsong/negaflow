@@ -115,13 +115,19 @@ warm(약 858 MB)을 섞어 비교하지 마십시오.
 합니다. 프로세스가 갈리면 그 사이에 팝업이 닫혀 항목 선택이 조용히 실패합니다. 이걸 몰라서
 한 번은 멀쩡한 코드를 의심했습니다.
 
-**버전은 "결정 대기"가 아니었습니다 — 제 오판이었습니다.** macOS 레코드에 `developSnapshots`
-스키마가 이미 있어 구현 대상이었고, **백엔드는 끝냈습니다**(담기·되돌리기·지우기, catalog 왕복
-시험 포함). 남은 것은 `develop_left_versions_tab.png` 의 **UI 패널**뿐입니다.
+**버전은 끝났습니다** — 백엔드(담기·되돌리기·지우기, catalog 왕복 시험)와 UI 패널 둘 다.
+실제 앱에서 노출 0 → 1.5 → 되돌리기 → 0 까지 확인했습니다. 한동안 "카탈로그 행이 없어
+결정 대기"라고 잘못 적어 두었던 항목입니다.
 
-프리셋(`develop_left_presets_tab.png`)도 같은 의심을 해 보십시오 — macOS 레코드에 `presetID`
-가 있고 `LookPreset` 정의가 있으므로, 이것도 결정이 아니라 구현일 가능성이 높습니다.
-확인하지 않고 "행이 없다"고 적지 마십시오.
+**다음 한 걸음은 프리셋입니다.** 확인해 보니 이쪽은 진짜 작업이 남아 있습니다:
+
+- macOS 는 `Chromabase/Presets` 의 **LookPreset JSON 6개**(clear-chrome, deep-slide,
+  neutral, rich-neutral, soft-print, warm-lab)를 `PresetRegistry.loadAll()` 로 읽습니다.
+- `LookPreset` 은 catalog 행이 아니라 **파일**입니다(id = 파일명 stem). tone/color/texture
+  세 묶음과 호환 filmTypes 목록을 담습니다.
+- **Windows 에는 preset 레지스트리가 아예 없습니다.** 프로파일 정의와 로더 둘 다 필요합니다.
+
+즉 "결정 대기"가 아니라 구현 대상이며, 크기는 버전보다 큽니다.
 
 출력 패널에서 아직 만들지 않은 것: macOS 의 파일/품질/소스 하위 탭, 내보내기 설정 프리셋,
 그리고 빠른 내보내기 섹션(DPI·긴 변 픽셀·JPEG 품질). 지금은 파일 탭에 해당하는 것만 있습니다.
