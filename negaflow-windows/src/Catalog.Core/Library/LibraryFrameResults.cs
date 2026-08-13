@@ -38,6 +38,8 @@ public enum LibraryFrameError
     InvalidRating,
     InvalidPickState,
     InvalidScannedAt,
+    InvalidVersion,
+    MissingVersion,
 
     /// <summary>톤 값이 수가 아니거나 유한하지 않습니다.</summary>
     InvalidToneValue,

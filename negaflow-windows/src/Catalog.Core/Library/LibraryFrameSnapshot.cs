@@ -254,6 +254,9 @@ public sealed record LibraryFrameSnapshot(
     /// <summary>스캔·가져오기 시각입니다. 없는 legacy row 는 null 이며 시간순에서 뒤로 갑니다.</summary>
     public DateTimeOffset? ScannedAt { get; init; }
 
+    /// <summary>이 frame 에 저장된 현상 버전입니다. macOS <c>developSnapshots</c> 와 같습니다.</summary>
+    public IReadOnlyList<LibraryVersionSnapshot> Versions { get; init; } = [];
+
     public TextureRecipe Texture { get; init; } = TextureRecipe.Identity;
 
     public NoiseReductionRecipe NoiseReduction { get; init; } = NoiseReductionRecipe.Identity;

@@ -134,6 +134,14 @@ public sealed class LibraryHostService : IDisposable
             ? LibraryFrameError.MissingId
             : document.EditRoute(frameId, selection);
 
+    /// <summary>현상 버전을 담거나 되돌리거나 지웁니다.</summary>
+    public LibraryFrameError EditVersions(
+        string frameId,
+        Func<System.Text.Json.Nodes.JsonObject, LibraryFrameWriteResult> edit) =>
+        document is null
+            ? LibraryFrameError.MissingId
+            : document.EditVersions(frameId, edit);
+
     /// <summary>
     /// 고른 파일을 라이브러리에 넣고 바로 저장합니다. 넣기만 하고 저장하지 않으면 앱이 죽었을 때
     /// 사용자가 방금 가져온 것이 사라집니다.

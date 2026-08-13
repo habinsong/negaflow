@@ -2316,6 +2316,40 @@ internal static class Program
             Check(panel.SetExposure(-99.0) == LibraryFrameError.None, "panel_set_low_exposure");
             Check(panel.Exposure == -5.0, "panel_clamps_low_exposure");
 
+            // 현상 버전: 담고 → 바꾸고 → 되돌리면 recipe 가 담을 때 값으로 돌아와야 합니다.
+            // 이게 어긋나면 사용자가 되돌렸다고 믿은 상태가 실제와 다릅니다.
+            Check(panel.SetExposure(0.75) == LibraryFrameError.None && panel.Versions.Count == 0,
+                "panel_starts_with_no_versions");
+            Check(
+                panel.CaptureVersion("before") == LibraryFrameError.None &&
+                panel.Versions.Count == 1 &&
+                panel.Versions[0].Name == "before" &&
+                panel.Exposure == 0.75,
+                "panel_capture_version_keeps_current_recipe");
+
+            string capturedId = panel.Versions[0].Id;
+            Check(
+                panel.SetExposure(-2.0) == LibraryFrameError.None && panel.Exposure == -2.0,
+                "panel_edits_after_capturing");
+            Check(
+                panel.RestoreVersion(capturedId) == LibraryFrameError.None &&
+                panel.Exposure == 0.75 &&
+                panel.Versions.Count == 1,
+                "panel_restore_version_brings_the_recipe_back");
+            Check(
+                panel.RestoreVersion("missing") == LibraryFrameError.MissingVersion,
+                "panel_restore_unknown_version_is_refused");
+            Check(
+                panel.CaptureVersion("   ") == LibraryFrameError.InvalidVersion &&
+                panel.Versions.Count == 1,
+                "panel_refuses_a_blank_version_name");
+            Check(
+                panel.DeleteVersion(capturedId) == LibraryFrameError.None &&
+                panel.Versions.Count == 0 &&
+                panel.Exposure == 0.75,
+                "panel_delete_version_leaves_the_recipe_alone");
+            _ = panel.SetExposure(0.0);
+
             // 자동 보정 두 축은 음화에서만 열립니다. 양화에서도 켜지면 macOS 가 내지 않는
             // 단계가 걸려 결과가 갈립니다.
             Check(panel.ShowsAutoCorrections, "panel_negative_shows_auto_corrections");

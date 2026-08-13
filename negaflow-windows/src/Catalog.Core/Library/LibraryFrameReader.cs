@@ -170,6 +170,10 @@ public static class LibraryFrameReader
         {
             return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidRating);
         }
+        if (!LibraryVersions.TryRead(frameRecord, out IReadOnlyList<LibraryVersionSnapshot> versions))
+        {
+            return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidVersion);
+        }
         if (!TryReadPickState(frameRecord, out FramePickState pickState))
         {
             return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidPickState);
@@ -279,6 +283,7 @@ public static class LibraryFrameReader
             Rating = rating,
             PickState = pickState,
             ScannedAt = scannedAt,
+            Versions = versions,
         });
     }
 

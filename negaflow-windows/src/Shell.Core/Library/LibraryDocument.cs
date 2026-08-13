@@ -221,6 +221,33 @@ public sealed class LibraryDocument : IDisposable
     }
 
     /// <summary>
+    /// 현상 버전을 담거나, 되돌리거나, 지웁니다. 세 동작 모두 frame record 하나만 바꾸므로
+    /// 같은 자리를 씁니다.
+    /// </summary>
+    public LibraryFrameError EditVersions(
+        string frameId,
+        Func<JsonObject, LibraryFrameWriteResult> edit)
+    {
+        ArgumentNullException.ThrowIfNull(frameId);
+        ArgumentNullException.ThrowIfNull(edit);
+
+        if (!indexById.TryGetValue(frameId, out int index))
+        {
+            return LibraryFrameError.MissingId;
+        }
+
+        LibraryFrameWriteResult written = edit(payloads[index]);
+        if (written.FrameRecord is not { } updated)
+        {
+            return written.Error;
+        }
+
+        payloads[index] = updated;
+        Project();
+        return LibraryFrameError.None;
+    }
+
+    /// <summary>
     /// 계획된 frame 을 뒤에 덧붙입니다. 메모리 안에서만 바뀌며 <see cref="Save"/> 로 디스크에
     /// 갑니다.
     /// </summary>

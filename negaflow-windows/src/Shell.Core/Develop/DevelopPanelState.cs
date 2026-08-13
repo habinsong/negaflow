@@ -631,6 +631,43 @@ public sealed class DevelopPanelState
         return error;
     }
 
+    /// <summary>이 frame 에 담긴 현상 버전입니다. 최근에 담은 것이 뒤에 옵니다.</summary>
+    public IReadOnlyList<LibraryVersionSnapshot> Versions =>
+        SelectedFrame?.Versions ?? [];
+
+    /// <summary>
+    /// 지금 recipe 를 이름 붙여 담습니다. macOS 처럼 현재 상태는 그대로 두고 목록에만 더합니다 —
+    /// 담는 것이 되돌리는 것을 뜻하지는 않습니다.
+    /// </summary>
+    public LibraryFrameError CaptureVersion(string name) =>
+        EditVersions(record => LibraryVersions.Capture(
+            record,
+            Guid.NewGuid().ToString("D"),
+            name,
+            DateTimeOffset.UtcNow));
+
+    /// <summary>담아 둔 버전의 recipe 로 되돌립니다. 버전 목록은 남습니다.</summary>
+    public LibraryFrameError RestoreVersion(string versionId) =>
+        EditVersions(record => LibraryVersions.Restore(record, versionId));
+
+    public LibraryFrameError DeleteVersion(string versionId) =>
+        EditVersions(record => LibraryVersions.Delete(record, versionId));
+
+    private LibraryFrameError EditVersions(
+        Func<System.Text.Json.Nodes.JsonObject, LibraryFrameWriteResult> edit)
+    {
+        if (SelectedFrame is not { } frame)
+        {
+            return LibraryFrameError.MissingId;
+        }
+        LibraryFrameError error = host.EditVersions(frame.Id, edit);
+        if (error == LibraryFrameError.None)
+        {
+            Select(frame.Id);
+        }
+        return error;
+    }
+
     public FilmEmulation FilmEmulation => SelectedFrame?.Route.FilmEmulation ?? FilmEmulation.None;
 
     public double FilmEmulationIntensity => SelectedFrame?.Route.FilmEmulationIntensity ?? 0.5;
