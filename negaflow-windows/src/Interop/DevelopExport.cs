@@ -419,6 +419,22 @@ public sealed class DevelopDefectBrushEdit
 /// <summary>Defects recipe가 결합된 원본 파일의 경로 독립 byte identity입니다.</summary>
 public sealed record DevelopDefectSourceIdentity(ulong ByteCount, string Sha256);
 
+/// <summary>
+/// GrainMend 자동·가이드가 받아 가는 판정입니다. 마스크는 호출부 버퍼에 담기고 여기에는
+/// 그 크기와 채택 화소 수만 옵니다.
+/// </summary>
+/// <param name="Width">검출 이미지 크기입니다. 원본 해상도가 아니라 1800 상한이 걸린 값입니다.</param>
+/// <param name="MaskByteCount">
+/// 마스크에 필요한 바이트 수입니다. 버퍼가 모자라 실패했을 때도 채워지므로, 이 값으로
+/// 다시 부르면 됩니다.
+/// </param>
+public readonly record struct GrainMendDetectionResult(
+    DevelopExportResult Result,
+    uint Width,
+    uint Height,
+    ulong AcceptedPixels,
+    ulong MaskByteCount);
+
 public sealed class DevelopExportRequest
 {
     public required string SourcePath { get; init; }

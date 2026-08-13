@@ -4254,6 +4254,55 @@ nf_status_t NF_CALL nf_develop_preview_v22(
     return NF_STATUS_OK;
 }
 
+nf_status_t NF_CALL nf_develop_detect_grain_mend_v1(
+    const nf_develop_export_request_v27* const request,
+    uint8_t* const mask,
+    const uint64_t mask_capacity_bytes,
+    nf_develop_run_state_v1* const run_state,
+    nf_grain_mend_detection_v1* const detection,
+    nf_develop_export_result_v3* const result) {
+    nf_status_t status = NF_STATUS_OK;
+    if (!prepare_result_v27(request, result, status)) {
+        return status;
+    }
+    if (detection == nullptr ||
+        detection->struct_size < static_cast<std::uint32_t>(sizeof(*detection))) {
+        return NF_STATUS_INVALID_ARGUMENT;
+    }
+    detection->width = 0U;
+    detection->height = 0U;
+    detection->accepted_pixels = 0U;
+    detection->mask_byte_count = 0U;
+    negaflow::pipeline::DevelopRunControl control{};
+    if (!prepare_run_state(run_state, control, status)) {
+        return status;
+    }
+    negaflow::pipeline::DevelopExportRequest pipeline_request{};
+    nf_develop_export_result_v2 mapping_result{};
+    mapping_result.struct_size = static_cast<std::uint32_t>(sizeof(mapping_result));
+    copy_failure_name("ok", mapping_result.failure_name);
+    if (!map_request_v27(*request, false, pipeline_request, mapping_result)) {
+        write_request_rejection_v3(mapping_result, *result);
+        return NF_STATUS_OK;
+    }
+    const auto started = std::chrono::steady_clock::now();
+    const negaflow::pipeline::GrainMendDetectionOutcome detected =
+        negaflow::pipeline::develop_detect_grain_mend(
+            pipeline_request,
+            mask,
+            static_cast<std::size_t>(mask_capacity_bytes),
+            control);
+    const auto finished = std::chrono::steady_clock::now();
+    // 버퍼가 모자라 실패한 경우에도 필요한 크기는 알려 줍니다 — 그래야 한 번 더 부르면 됩니다.
+    detection->width = detected.width;
+    detection->height = detected.height;
+    detection->accepted_pixels = detected.accepted_pixels;
+    detection->mask_byte_count = detected.mask_byte_count;
+    write_outcome_v3(
+        detected.outcome, elapsed_microseconds(started, finished), *result);
+    return NF_STATUS_OK;
+}
+
 nf_status_t NF_CALL nf_develop_preview_v23(
     const nf_develop_export_request_v21* const request,
     const nf_soft_proof_v1* const soft_proof,

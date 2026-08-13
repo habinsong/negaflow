@@ -31,6 +31,10 @@ internal static class Program
         {
             return DiagnoseCatalog(args[1]);
         }
+        if (args.Length == 2 && args[0] == "--detect-check")
+        {
+            return DetectCheck(args[1]);
+        }
         if (args.Length == 2 && args[0] == "--probe-open")
         {
             return ProbeOpen(args[1]);
@@ -1935,6 +1939,85 @@ internal static class Program
         // 원본은 절대 바뀌지 않아야 합니다.
         Console.WriteLine($"source bytes after export: {new FileInfo(source).Length}");
         return preview.Succeeded && export.Succeeded && bytes > 0 ? 0 : 1;
+    }
+
+    /// <summary>
+    /// 실제 스캔에서 GrainMend 자동 검출을 돌려 봅니다. 크기만 묻는 호출과 마스크를 받는
+    /// 호출이 같은 값을 내는지, 그리고 실제로 무언가를 찾는지를 봅니다.
+    /// </summary>
+    private static int DetectCheck(string sourcePath)
+    {
+        string source = Path.GetFullPath(sourcePath);
+        LibraryFrameSnapshot frame = new(
+            Guid.NewGuid().ToString("D"),
+            source,
+            "detect-check",
+            new DevelopRouteSnapshot(
+                FrameSourceTransport.Imported,
+                SourceSignalKind.FilmNegativeScan,
+                DevelopmentProcess.C41,
+                FilmType.ColorNegative,
+                FilmEmulation.None,
+                0.5,
+                UsedLegacySourceSignal: false,
+                UsedLegacyIntensityDefault: false),
+            null,
+            ToneAdjustment.Neutral);
+        if (DevelopRequestFactory.Create(
+                frame,
+                Path.Combine(Path.GetTempPath(), "detect-check.png")).Request
+            is not { } request)
+        {
+            Console.WriteLine("request refused");
+            return 1;
+        }
+
+        System.Diagnostics.Stopwatch clock = System.Diagnostics.Stopwatch.StartNew();
+        GrainMendDetectionResult sized = NativeDevelopExporter.DetectGrainMend(
+            request,
+            Span<byte>.Empty);
+        Console.WriteLine(
+            $"size query: succeeded={sized.Result.Succeeded} {sized.Width}x{sized.Height} " +
+            $"accepted={sized.AcceptedPixels} maskBytes={sized.MaskByteCount} " +
+            $"{clock.ElapsedMilliseconds}ms stage={sized.Result.FailedStage} " +
+            $"name={sized.Result.FailureName}");
+        if (!sized.Result.Succeeded || sized.MaskByteCount == 0UL)
+        {
+            return 1;
+        }
+
+        byte[] mask = new byte[sized.MaskByteCount];
+        clock.Restart();
+        GrainMendDetectionResult filled =
+            NativeDevelopExporter.DetectGrainMend(request, mask);
+        long marked = 0;
+        foreach (byte value in mask)
+        {
+            if (value != 0)
+            {
+                ++marked;
+            }
+        }
+        Console.WriteLine(
+            $"with mask: succeeded={filled.Result.Succeeded} {filled.Width}x{filled.Height} " +
+            $"accepted={filled.AcceptedPixels} marked={marked} " +
+            $"{clock.ElapsedMilliseconds}ms");
+
+        // 모자란 버퍼는 닫히는 쪽으로 실패하고 필요한 크기를 알려 주어야 합니다.
+        GrainMendDetectionResult tooSmall = NativeDevelopExporter.DetectGrainMend(
+            request,
+            new byte[16]);
+        Console.WriteLine(
+            $"too small: succeeded={tooSmall.Result.Succeeded} " +
+            $"name={tooSmall.Result.FailureName} needs={tooSmall.MaskByteCount}");
+
+        bool agrees = filled.Width == sized.Width && filled.Height == sized.Height &&
+            filled.AcceptedPixels == sized.AcceptedPixels &&
+            marked == (long)filled.AcceptedPixels;
+        bool refuses = !tooSmall.Result.Succeeded &&
+            tooSmall.MaskByteCount == sized.MaskByteCount;
+        Console.WriteLine($"agrees={agrees} refusesSmallBuffer={refuses}");
+        return agrees && refuses ? 0 : 1;
     }
 
     private static int SeedCatalog(

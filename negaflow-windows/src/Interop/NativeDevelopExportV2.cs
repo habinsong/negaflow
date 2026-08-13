@@ -682,6 +682,20 @@ internal struct NativeAutoAdjustResultV1
     internal double Tint;
 }
 
+/// <summary>
+/// GrainMend 검출 결과입니다. 마스크는 별도 버퍼로 오고 여기에는 크기와 개수만 옵니다.
+/// </summary>
+[StructLayout(LayoutKind.Sequential)]
+internal struct NativeGrainMendDetectionV1
+{
+    internal uint StructSize;
+    internal uint Reserved;
+    internal uint Width;
+    internal uint Height;
+    internal ulong AcceptedPixels;
+    internal ulong MaskByteCount;
+}
+
 [StructLayout(LayoutKind.Sequential)]
 internal struct NativeDevelopRunStateV1
 {

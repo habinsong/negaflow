@@ -1334,6 +1334,36 @@ NF_API nf_status_t NF_CALL nf_auto_adjust_v1(
     uint32_t height,
     uint32_t stride_bytes,
     nf_auto_adjust_result_v1* result);
+/* Runs the develop pipeline to the GrainMend stage and reports what the automatic repair
+   would touch, instead of touching it. The reviewable GrainMend tools (Auto and Guided)
+   need the decision rather than the result.
+
+   Detection must come from this pipeline, not from a standalone call on the scan:
+   GrainMend runs after the film look, on the developed positive, and the same dust looks
+   nothing alike on the negative.
+
+   `mask` receives one byte per pixel of the capped analysis image, whose size the result
+   reports. Pass a null `mask` to learn `mask_byte_count` without copying; the maximum is
+   1800 * 1800, so a caller may also allocate once and never ask. Too small a buffer fails
+   with "mask_buffer_too_small" and still reports the size needed. `destination_path` in
+   the request is ignored. */
+typedef struct nf_grain_mend_detection_v1 {
+    uint32_t struct_size;
+    uint32_t reserved;
+    uint32_t width;
+    uint32_t height;
+    uint64_t accepted_pixels;
+    uint64_t mask_byte_count;
+} nf_grain_mend_detection_v1;
+
+NF_API nf_status_t NF_CALL nf_develop_detect_grain_mend_v1(
+    const nf_develop_export_request_v27* request,
+    uint8_t* mask,
+    uint64_t mask_capacity_bytes,
+    nf_develop_run_state_v1* run_state,
+    nf_grain_mend_detection_v1* detection,
+    nf_develop_export_result_v3* result);
+
 /* Detects one paired top-first linear float IR/red frame exactly once. The returned
    opaque handle owns all variable payloads until destroy; descriptor calls first
    report sizes with null payload pointers, then copy without rerunning detection. */

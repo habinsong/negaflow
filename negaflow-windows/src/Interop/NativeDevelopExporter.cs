@@ -1883,6 +1883,48 @@ public static unsafe class NativeDevelopExporter
         {
             throw new ArgumentException("The preview buffer is empty.", nameof(pixels));
         }
+        return Render(request, maximumWidth, maximumHeight, pixels, run, softProof, null)
+            .Result;
+    }
+
+    /// <summary>
+    /// 자동·가이드 GrainMend 가 쓰는 판정입니다. 같은 파이프라인을 GrainMend 단계까지 돌고
+    /// 거기서 멈춥니다 — 검출은 film look 뒤, 현상된 양화 위에서 해야 macOS 와 같은 것을
+    /// 찾습니다. <paramref name="mask"/> 를 비워 두면 필요한 크기만 알려 줍니다.
+    /// </summary>
+    public static GrainMendDetectionResult DetectGrainMend(
+        DevelopExportRequest request,
+        Span<byte> mask,
+        DevelopRun? run = null)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        NativeGrainMendDetectionV1 detection = default;
+        DevelopExportResult result =
+            Render(request, 0U, 0U, mask, run, null, &detection).Result;
+        return new GrainMendDetectionResult(
+            result,
+            detection.Width,
+            detection.Height,
+            detection.AcceptedPixels,
+            detection.MaskByteCount);
+    }
+
+    private readonly ref struct RenderOutcome
+    {
+        public RenderOutcome(DevelopExportResult result) => Result = result;
+
+        public DevelopExportResult Result { get; }
+    }
+
+    private static RenderOutcome Render(
+        DevelopExportRequest request,
+        uint maximumWidth,
+        uint maximumHeight,
+        Span<byte> pixels,
+        DevelopRun? run,
+        SoftProofSettings? softProof,
+        NativeGrainMendDetectionV1* detection)
+    {
         ValidateLayoutAndEnums(request);
         NativeLocalDodgeBurnPayload local = BuildLocalDodgeBurnPayload(
             request.LocalDodgeBurn);
@@ -1990,18 +2032,37 @@ public static unsafe class NativeDevelopExporter
                 checked((uint)defects.InfraredItems.Length));
             NativeDevelopExportRequestV26 v26 = BuildRequestV26(v25, request);
             NativeDevelopExportRequestV27 native = BuildRequestV27(v26, request);
-            status = NativeMethods.nf_develop_preview_v27(
-                &native,
-                proofPointer,
-                maximumWidth,
-                maximumHeight,
-                pixelBuffer,
-                (uint)Math.Min(pixels.Length, int.MaxValue),
-                runState,
-                &raw);
+            if (detection is not null)
+            {
+                detection->StructSize = (uint)sizeof(NativeGrainMendDetectionV1);
+                status = NativeMethods.nf_develop_detect_grain_mend_v1(
+                    &native,
+                    pixels.IsEmpty ? null : pixelBuffer,
+                    (ulong)pixels.Length,
+                    runState,
+                    detection,
+                    &raw);
+            }
+            else
+            {
+                status = NativeMethods.nf_develop_preview_v27(
+                    &native,
+                    proofPointer,
+                    maximumWidth,
+                    maximumHeight,
+                    pixelBuffer,
+                    (uint)Math.Min(pixels.Length, int.MaxValue),
+                    runState,
+                    &raw);
+            }
         }
 
-        return Translate(status, raw, "nf_develop_preview_v27");
+        return new RenderOutcome(Translate(
+            status,
+            raw,
+            detection is not null
+                ? "nf_develop_detect_grain_mend_v1"
+                : "nf_develop_preview_v27"));
     }
 
     private static DevelopExportResult Translate(

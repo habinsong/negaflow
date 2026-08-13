@@ -233,6 +233,33 @@ struct DevelopExportOutcome final {
     const DevelopRunControl& control = {},
     const DevelopPreviewProof& proof = {}) noexcept;
 
+// Runs the same pipeline as the preview but stops at the GrainMend stage and reports what
+// the automatic repair would touch, instead of touching it. The reviewable tools need the
+// decision, not the result.
+//
+// Detection has to happen here rather than in a standalone call because GrainMend runs on
+// the developed positive, after the film look — the same dust looks nothing alike on the
+// negative. Anything shown to the user must therefore come from this pipeline.
+//
+// `mask` receives one byte per pixel of the capped analysis image, whose size is reported
+// in the result. Pass a null `mask` to learn `mask_byte_count` first; the maximum is
+// grain_mend_maximum_detection_dimension squared, so a caller can also allocate once and
+// never ask. A buffer that is too small fails with "mask_buffer_too_small" and still
+// reports the size needed. `request.destination_path` is ignored.
+struct GrainMendDetectionOutcome final {
+    DevelopExportOutcome outcome{};
+    std::uint32_t width{0U};
+    std::uint32_t height{0U};
+    std::uint64_t accepted_pixels{0U};
+    std::uint64_t mask_byte_count{0U};
+};
+
+[[nodiscard]] GrainMendDetectionOutcome develop_detect_grain_mend(
+    const DevelopExportRequest& request,
+    std::uint8_t* mask,
+    std::size_t mask_capacity_bytes,
+    const DevelopRunControl& control = {}) noexcept;
+
 [[nodiscard]] const char* develop_export_stage_name(
     DevelopExportStage stage) noexcept;
 

@@ -235,6 +235,18 @@ internal static partial class NativeMethods
         NativeDevelopRunStateV1* runState,
         NativeDevelopExportResultV3* result);
 
+    // 자동·가이드 GrainMend 는 수리 결과가 아니라 판정을 받아 갑니다. 검출은 film look 뒤,
+    // 현상된 양화 위에서 돌아야 macOS 와 같은 것을 찾습니다.
+    [LibraryImport(LibraryName, EntryPoint = "nf_develop_detect_grain_mend_v1")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static unsafe partial uint nf_develop_detect_grain_mend_v1(
+        NativeDevelopExportRequestV27* request,
+        byte* mask,
+        ulong maskCapacityBytes,
+        NativeDevelopRunStateV1* runState,
+        NativeGrainMendDetectionV1* detection,
+        NativeDevelopExportResultV3* result);
+
     [LibraryImport(LibraryName, EntryPoint = "nf_develop_preview_v22")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static unsafe partial uint nf_develop_preview_v22(

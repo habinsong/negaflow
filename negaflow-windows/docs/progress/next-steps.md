@@ -206,9 +206,22 @@ py scripts/find-unreachable-api.py
    (`RegionMask` + `RegionRoi` + `RegionWidth/Height`)이 됩니다. 저장 뒤의 수리 경로는
    이미 이어져 있으므로 새로 만들 것이 없습니다.
 
-   **남은 것은 셋뿐입니다:** (a) `run_develop` 에 세 번째 대상(preview/export 다음)을 더해
-   grain_mend 단계에서 멈추고 `detect_grain_mend` 를 부른 뒤 마스크를 돌려주기,
-   (b) 아래 ABI 진입점, (c) C# 바인딩과 자동·가이드 버튼 연결.
+   **(a) 파이프라인 대상과 (b) ABI 진입점은 만들었습니다.**
+   `pipeline::develop_detect_grain_mend(request, mask, capacity, control)` 가 preview 와
+   같은 파이프라인을 GrainMend 단계까지 돌고 거기서 멈춥니다. ABI 는
+   `nf_develop_detect_grain_mend_v1` 이고 **v27 요청**을 받습니다(v21 접두부만 받으면 뒤에
+   붙은 recipe 가 조용히 빠집니다). C# 은 `NativeDevelopExporter.DetectGrainMend` 이며
+   `Preview` 와 요청 조립 코드를 공유합니다 — 60여 줄짜리 조립을 두 벌로 두지 않았습니다.
+
+   실제 스캔으로 확인했습니다(`--detect-check <tiff>`): 5088×3401 스캔에서 검출 이미지
+   1800×1203, **먼지·스크래치 9,187 화소**를 찾았고, 크기만 묻는 호출과 마스크를 받는 호출이
+   같은 값을 내며, 표시된 화소 수가 보고된 개수와 일치하고, 모자란 버퍼는
+   `mask_buffer_too_small` 로 닫히면서 필요한 크기를 알려 줍니다.
+
+   **남은 것은 (c) 하나입니다:** 자동·가이드 버튼을 눌렀을 때 이 마스크를
+   `DefectEditKind.Region` 항목으로 담고(ROI 는 자동이 전체, 가이드는 사용자가 끈 사각형),
+   macOS 처럼 오버레이로 보여 준 뒤 받아들이면 저장하는 흐름입니다. 저장 뒤 수리 경로는 이미
+   이어져 있습니다.
 
    제안하는 모양(핸들 없이 한 번 호출):
 
