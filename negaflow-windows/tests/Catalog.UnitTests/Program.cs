@@ -37,6 +37,7 @@ internal static class Program
         VerifyInvalidSelections(fixture.RootElement);
         VerifyCanonicalJson();
         VerifyLookPresets();
+        VerifyDevelopSettingsTransfer();
         VerifyStorageRootResolution();
         VerifyCatalogProcessLock();
         VerifySqliteCatalogStore();
@@ -426,6 +427,138 @@ internal static class Program
                 "compose_neutral_color_is_identity");
             Check(LookPresetComposition.Compose(neutral, userTexture) == userTexture,
                 "compose_neutral_texture_is_identity");
+        }
+    }
+
+    /// <summary>
+    /// 현상 설정 복사/붙여넣기입니다. 무엇이 옮겨가고 무엇이 남는지가 이 기능의 전부이므로
+    /// 묶음별 경계와 record 왕복만 봅니다.
+    /// </summary>
+    private static void VerifyDevelopSettingsTransfer()
+    {
+        static JsonObject PlainRecord() => new()
+        {
+            ["id"] = "frame-2",
+            ["rawScanPath"] = @"C:\scans\roll-01\IMG_0002.tif",
+            ["sourceKind"] = "scanner",
+            ["filmType"] = "bwNegative",
+            ["params"] = new JsonObject
+            {
+                ["filmType"] = "bwNegative",
+                ["exposure"] = -0.4,
+                ["grain"] = 0.05,
+                ["keepMe"] = 42,
+            },
+        };
+
+        if (ReadFrame(FrameRecord()).Frame is not { } source ||
+            ReadFrame(PlainRecord()).Frame is not { } destination)
+        {
+            Check(false, "transfer_fixtures_read");
+            return;
+        }
+
+        Check(DevelopSettingsPasteScope.Empty.IsEmpty &&
+            DevelopSettingsPasteScope.All.IsFullDevelopScope,
+            "transfer_scope_edges");
+        Check(ReferenceEquals(
+            DevelopSettingsPasteScope.Empty.Apply(source, destination), destination),
+            "transfer_empty_scope_changes_nothing");
+
+        // 톤만 옮기면 톤과 프리셋만 갑니다. 질감과 필름 종류는 대상 것이 남아야 합니다.
+        LibraryFrameSnapshot toneOnly =
+            new DevelopSettingsPasteScope(false, true, false, false, false)
+                .Apply(source, destination);
+        Check(toneOnly.Tone == source.Tone && toneOnly.PointCurves == source.PointCurves,
+            "transfer_tone_scope_moves_tone");
+        Check(toneOnly.Texture == destination.Texture &&
+            toneOnly.Route.FilmType == destination.Route.FilmType &&
+            toneOnly.ImageTransform == destination.ImageTransform,
+            "transfer_tone_scope_leaves_the_rest");
+
+        LibraryFrameSnapshot baseOnly =
+            new DevelopSettingsPasteScope(true, false, false, false, false)
+                .Apply(source, destination);
+        Check(baseOnly.Route.FilmType == source.Route.FilmType &&
+            baseOnly.Base == source.Base && baseOnly.ManualBase == source.ManualBase,
+            "transfer_base_scope_moves_route_and_base");
+        Check(baseOnly.Tone == destination.Tone, "transfer_base_scope_leaves_tone");
+
+        LibraryFrameSnapshot everything =
+            DevelopSettingsPasteScope.All.Apply(source, destination);
+        Check(everything.Id == destination.Id &&
+            everything.SourcePath == destination.SourcePath &&
+            everything.Rating == destination.Rating,
+            "transfer_never_moves_frame_identity");
+        Check(everything.Route.SourceTransport == destination.Route.SourceTransport,
+            "transfer_never_moves_source_transport");
+        Check(everything.Texture == source.Texture &&
+            everything.NoiseReduction == source.NoiseReduction &&
+            everything.ImageTransform == source.ImageTransform &&
+            everything.ColorMixer == source.ColorMixer,
+            "transfer_full_scope_moves_the_recipe");
+
+        // record 왕복. writer 가 모르는 키는 그대로 남아야 합니다.
+        JsonObject target = PlainRecord();
+        LibraryFrameWriteResult pasted = DevelopSettingsTransfer.Paste(
+            target, source, destination, DevelopSettingsPasteScope.All);
+        Check(pasted.IsSuccess, "transfer_paste_writes");
+        if (pasted.FrameRecord is { } pastedRecord)
+        {
+            Check(target["params"]?["exposure"]?.GetValue<double>() == -0.4,
+                "transfer_paste_leaves_input_untouched");
+            Check(pastedRecord["params"]?["keepMe"]?.GetValue<int>() == 42,
+                "transfer_paste_preserves_unknown_keys");
+            Check(pastedRecord["rawScanPath"]?.GetValue<string>() ==
+                @"C:\scans\roll-01\IMG_0002.tif",
+                "transfer_paste_keeps_destination_path");
+            if (ReadFrame(pastedRecord).Frame is { } reread)
+            {
+                Check(reread.Tone == source.Tone && reread.Texture == source.Texture &&
+                    reread.Route.FilmType == source.Route.FilmType &&
+                    reread.Route.FilmEmulation == source.Route.FilmEmulation,
+                    "transfer_paste_round_trips");
+            }
+            else
+            {
+                Check(false, "transfer_paste_round_trips");
+            }
+        }
+
+        // 사용자 프리셋은 같은 붙여넣기를 파일에 담아 둔 것입니다.
+        DevelopUserPreset? captured = DevelopUserPresetStore.Capture(source, "프리셋 1");
+        Check(captured is not null, "user_preset_capture");
+        if (captured is not null)
+        {
+            Check(captured.Recipe["rawScanPath"]?.GetValue<string>() !=
+                source.SourcePath,
+                "user_preset_does_not_store_the_photo_path");
+            LibraryFrameWriteResult appliedPreset = DevelopUserPresetStore.Apply(
+                PlainRecord(), captured, destination);
+            Check(appliedPreset.FrameRecord is { } appliedRecord &&
+                ReadFrame(appliedRecord).Frame is { } appliedFrame &&
+                appliedFrame.Tone == source.Tone &&
+                appliedFrame.Texture == source.Texture &&
+                appliedFrame.SourcePath == destination.SourcePath,
+                "user_preset_apply_round_trips");
+
+            string presetPath = Path.Combine(
+                AppContext.BaseDirectory,
+                "user-preset-tests",
+                $"{Environment.ProcessId}-{Guid.NewGuid():N}",
+                "user-presets.json");
+            Check(DevelopUserPresetStore.Save(presetPath, [captured]), "user_preset_save");
+            IReadOnlyList<DevelopUserPreset> loaded = DevelopUserPresetStore.Load(presetPath);
+            Check(loaded.Count == 1 && loaded[0].Id == captured.Id &&
+                loaded[0].Name == "프리셋 1",
+                "user_preset_load_round_trips");
+            Check(loaded.Count == 1 &&
+                DevelopUserPresetStore.Apply(PlainRecord(), loaded[0], destination)
+                    .FrameRecord is { } reloadedRecord &&
+                ReadFrame(reloadedRecord).Frame?.Tone == source.Tone,
+                "user_preset_survives_the_file");
+            Check(DevelopUserPresetStore.Load(presetPath + ".missing").Count == 0,
+                "user_preset_missing_file_is_empty");
         }
     }
 
