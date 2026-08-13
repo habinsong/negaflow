@@ -773,4 +773,16 @@ Load a scanner from Library to scan film.</value>
   <data name="developBwToningStrength.Text" xml:space="preserve"><value>Strength</value></data>
   <data name="developBwToningShadowHue.Text" xml:space="preserve"><value>Shadow Hue</value></data>
   <data name="developBwToningHighlightHue.Text" xml:space="preserve"><value>Highlight Hue</value></data>
+  <data name="developInfoCard.Text" xml:space="preserve"><value>Info</value></data>
+  <data name="developInfoSource.Text" xml:space="preserve"><value>Source</value></data>
+  <data name="developInfoSidecar.Text" xml:space="preserve"><value>Sidecar</value></data>
+  <data name="developInfoCamera.Text" xml:space="preserve"><value>Camera</value></data>
+  <data name="developInfoDate.Text" xml:space="preserve"><value>Date</value></data>
+  <data name="developInfoTitle.Text" xml:space="preserve"><value>Title</value></data>
+  <data name="developInfoKeywords.Text" xml:space="preserve"><value>Keywords</value></data>
+  <data name="developInfoNotAvailable.Text" xml:space="preserve"><value>—</value></data>
+  <data name="developInfoUnknown.Text" xml:space="preserve"><value>Unknown</value></data>
+  <data name="developInfoSidecarNotFound.Text" xml:space="preserve"><value>Not Found</value></data>
+  <data name="developInfoOriginScan.Text" xml:space="preserve"><value>Scan</value></data>
+  <data name="developInfoOriginImport.Text" xml:space="preserve"><value>Import</value></data>
 </root>

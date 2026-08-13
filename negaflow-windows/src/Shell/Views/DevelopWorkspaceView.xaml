@@ -689,6 +689,47 @@
                             </Grid>
                         </Border>
 
+                        <!-- 정보: macOS 의 여섯 줄 그대로입니다. 값은 원본 자체에서 오는 것만
+                             내고, 아직 읽지 못하는 항목은 macOS 의 빈 상태와 같은 "—"입니다. -->
+                        <Border
+                            x:Name="InfoCard"
+                            HorizontalAlignment="Stretch"
+                            Padding="14"
+                            AutomationProperties.AutomationId="negaflow.develop.info"
+                            Background="{ThemeResource NegaflowCardBrush}"
+                            CornerRadius="14"
+                            Visibility="Collapsed">
+                            <StackPanel HorizontalAlignment="Stretch" Spacing="10">
+                                <StackPanel Orientation="Horizontal" Spacing="7">
+                                    <FontIcon FontSize="14" Glyph="&#xE946;" VerticalAlignment="Center" />
+                                    <TextBlock x:Name="InfoCardTitleText" VerticalAlignment="Center" FontSize="14" FontWeight="SemiBold" />
+                                </StackPanel>
+                                <ItemsControl x:Name="InfoRows">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Margin="0,0,0,6" ColumnSpacing="12">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="64" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock
+                                                    Grid.Column="0"
+                                                    FontSize="12"
+                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                    Text="{Binding Label}" />
+                                                <TextBlock
+                                                    Grid.Column="1"
+                                                    FontSize="12"
+                                                    IsTextSelectionEnabled="True"
+                                                    Text="{Binding Value}"
+                                                    TextTrimming="CharacterEllipsis" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+
                         <Border
                             x:Name="BaseControlCard"
                             HorizontalAlignment="Stretch"

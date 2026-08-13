@@ -629,6 +629,17 @@ internal static class Program
             "bw_toning_round_trips");
 
         // 끄면 키를 지웁니다. 컬러 frame 의 params 에 쓸모없는 색조를 남기지 않습니다.
+        // 자동 GrainMend 세기는 macOS 앱 UI 에 없지만 CLI·프리셋·붙여넣기로 들어옵니다.
+        // 버리면 그런 frame 이 Windows 에서 다르게 현상됩니다.
+        JsonObject withRemoval = FrameRecord();
+        withRemoval["params"]!.AsObject()["defectRemoval"] = 0.6;
+        Check(ReadFrame(withRemoval).Frame?.DefectRemovalStrength == 0.6,
+            "defect_removal_strength_round_trips");
+        JsonObject badRemoval = FrameRecord();
+        badRemoval["params"]!.AsObject()["defectRemoval"] = 1.5;
+        Check(ReadFrame(badRemoval).Error == LibraryFrameError.InvalidDefectRecipe,
+            "defect_removal_strength_rejects_out_of_range");
+
         Check(applied.FrameRecord is { } toClear &&
             LibraryFrameWriter.Apply(
                 toClear,

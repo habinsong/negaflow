@@ -272,6 +272,13 @@ public sealed record LibraryFrameSnapshot(
     public BwToningRecipe BwToning { get; init; } = BwToningRecipe.None;
 
     /// <summary>
+    /// 전체 프레임 자동 GrainMend 세기입니다. macOS <c>params.defectRemoval</c> 과 같은 자리이며,
+    /// macOS 앱 UI 는 이 값을 직접 내놓지 않고 CLI·프리셋·붙여넣기로만 옵니다. 값을 버리면
+    /// 그런 경로로 들어온 frame 이 Windows 에서 다르게 현상됩니다.
+    /// </summary>
+    public double DefectRemovalStrength { get; init; }
+
+    /// <summary>
     /// hasDefectEdits frame에서 app-owned sidecar를 검증해 읽은 ordered recipe입니다.
     /// catalog payload 안에 mask를 중복 저장하지 않습니다.
     /// </summary>

@@ -773,4 +773,16 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="developBwToningStrength.Text" xml:space="preserve"><value>Intensité</value></data>
   <data name="developBwToningShadowHue.Text" xml:space="preserve"><value>Teinte des ombres</value></data>
   <data name="developBwToningHighlightHue.Text" xml:space="preserve"><value>Teinte des hautes lumières</value></data>
+  <data name="developInfoCard.Text" xml:space="preserve"><value>Infos</value></data>
+  <data name="developInfoSource.Text" xml:space="preserve"><value>Source</value></data>
+  <data name="developInfoSidecar.Text" xml:space="preserve"><value>Annexe</value></data>
+  <data name="developInfoCamera.Text" xml:space="preserve"><value>Appareil</value></data>
+  <data name="developInfoDate.Text" xml:space="preserve"><value>Date</value></data>
+  <data name="developInfoTitle.Text" xml:space="preserve"><value>Titre</value></data>
+  <data name="developInfoKeywords.Text" xml:space="preserve"><value>Mots-clés</value></data>
+  <data name="developInfoNotAvailable.Text" xml:space="preserve"><value>—</value></data>
+  <data name="developInfoUnknown.Text" xml:space="preserve"><value>Inconnu</value></data>
+  <data name="developInfoSidecarNotFound.Text" xml:space="preserve"><value>Absent</value></data>
+  <data name="developInfoOriginScan.Text" xml:space="preserve"><value>Numériser</value></data>
+  <data name="developInfoOriginImport.Text" xml:space="preserve"><value>Importer</value></data>
 </root>

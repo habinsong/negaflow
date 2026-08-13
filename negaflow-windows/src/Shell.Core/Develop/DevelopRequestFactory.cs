@@ -253,6 +253,7 @@ public static class DevelopRequestFactory
                 Catalog.BwToningMode.Sepia => Interop.BwToningMode.Sepia,
                 _ => Interop.BwToningMode.None,
             },
+            DefectRemovalStrength = frame.DefectRemovalStrength,
             BwToningShadowHue = frame.BwToning.ShadowHue,
             BwToningHighlightHue = frame.BwToning.HighlightHue,
             BwToningStrength = frame.BwToning.ClampedStrength,

@@ -773,4 +773,16 @@
   <data name="developBwToningStrength.Text" xml:space="preserve"><value>適用量</value></data>
   <data name="developBwToningShadowHue.Text" xml:space="preserve"><value>シャドウの色相</value></data>
   <data name="developBwToningHighlightHue.Text" xml:space="preserve"><value>ハイライトの色相</value></data>
+  <data name="developInfoCard.Text" xml:space="preserve"><value>情報</value></data>
+  <data name="developInfoSource.Text" xml:space="preserve"><value>ソース</value></data>
+  <data name="developInfoSidecar.Text" xml:space="preserve"><value>サイドカー</value></data>
+  <data name="developInfoCamera.Text" xml:space="preserve"><value>カメラ</value></data>
+  <data name="developInfoDate.Text" xml:space="preserve"><value>日付</value></data>
+  <data name="developInfoTitle.Text" xml:space="preserve"><value>タイトル</value></data>
+  <data name="developInfoKeywords.Text" xml:space="preserve"><value>キーワード</value></data>
+  <data name="developInfoNotAvailable.Text" xml:space="preserve"><value>—</value></data>
+  <data name="developInfoUnknown.Text" xml:space="preserve"><value>不明</value></data>
+  <data name="developInfoSidecarNotFound.Text" xml:space="preserve"><value>なし</value></data>
+  <data name="developInfoOriginScan.Text" xml:space="preserve"><value>スキャン</value></data>
+  <data name="developInfoOriginImport.Text" xml:space="preserve"><value>読み込み</value></data>
 </root>

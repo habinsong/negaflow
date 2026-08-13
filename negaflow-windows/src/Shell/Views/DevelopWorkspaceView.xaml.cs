@@ -361,6 +361,10 @@ public sealed partial class DevelopWorkspaceView : UserControl
         BaseControlCard.Visibility = inspectorPresentation.SelectedTab == DevelopInspectorTab.Base
             ? Visibility.Visible
             : Visibility.Collapsed;
+        InfoCard.Visibility = inspectorPresentation.SelectedTab == DevelopInspectorTab.Info
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        UpdateInfoCard();
         GeometryControlCard.Visibility = inspectorPresentation.SelectedTab == DevelopInspectorTab.Edit
             ? Visibility.Visible
             : Visibility.Collapsed;
@@ -1949,6 +1953,70 @@ public sealed partial class DevelopWorkspaceView : UserControl
         return groups.Count == 0
             ? AppResources.Get("developPasteScopeNone", "Text")
             : string.Join("/", groups);
+    }
+
+    /// <summary>정보 카드 한 줄입니다.</summary>
+    private sealed record InfoRow(string Label, string Value);
+
+    /// <summary>
+    /// macOS 정보 카드의 여섯 줄입니다. 원본과 Sidecar 는 지금 알 수 있는 사실이고, 카메라·날짜·
+    /// 제목·키워드는 아직 EXIF/IPTC 를 읽지 않으므로 macOS 의 빈 상태와 같은 "— · —" 입니다.
+    /// 읽지 않은 값을 추측해서 채우지 않습니다.
+    /// </summary>
+    private void UpdateInfoCard()
+    {
+        if (InfoRows is null)
+        {
+            return;
+        }
+        string cardTitle = AppResources.Get("developInfoCard", "Text");
+        InfoCardTitleText.Text = cardTitle;
+        // 이름이 없는 Border 는 접근성 트리에 나오지 않습니다 — 화면 낭독기도, 검증도 못 봅니다.
+        AutomationProperties.SetName(InfoCard, cardTitle);
+        if (panel?.SelectedFrame is not { } frame)
+        {
+            InfoRows.ItemsSource = Array.Empty<InfoRow>();
+            return;
+        }
+
+        string none = AppResources.Get("developInfoNotAvailable", "Text");
+        // 값과 출처를 가운뎃점으로 잇는 macOS 표기입니다. 둘 다 없으면 "— · —" 가 됩니다.
+        string empty = none + " · " + none;
+        string origin = AppResources.Get(
+            frame.Route.SourceTransport == FrameSourceTransport.Scanner
+                ? "developInfoOriginScan"
+                : "developInfoOriginImport",
+            "Text");
+        InfoRows.ItemsSource = new List<InfoRow>
+        {
+            new(AppResources.Get("developInfoSource", "Text"),
+                origin + " · " + Path.GetFileName(frame.SourcePath)),
+            new(AppResources.Get("developInfoSidecar", "Text"), DescribeSidecar(frame)),
+            new(AppResources.Get("developInfoCamera", "Text"), empty),
+            new(AppResources.Get("developInfoDate", "Text"), empty),
+            new(AppResources.Get("developInfoTitle", "Text"), empty),
+            new(AppResources.Get("developInfoKeywords", "Text"), empty),
+        };
+    }
+
+    /// <summary>
+    /// XMP sidecar 는 아직 읽지 않습니다. 옆에 파일이 없다는 것은 확실히 말할 수 있고, 있는
+    /// 경우에 "읽음"이라고 하면 읽지 않은 것을 읽었다고 말하는 것이라 "미확인"입니다.
+    /// </summary>
+    private static string DescribeSidecar(LibraryFrameSnapshot frame)
+    {
+        string sidecarPath = Path.ChangeExtension(frame.SourcePath, ".xmp");
+        try
+        {
+            return AppResources.Get(
+                File.Exists(sidecarPath) ? "developInfoUnknown" : "developInfoSidecarNotFound",
+                "Text");
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or
+            ArgumentException or NotSupportedException)
+        {
+            return AppResources.Get("developInfoUnknown", "Text");
+        }
     }
 
     /// <summary>버전 목록 한 줄입니다. 표시 문구를 XAML 이 짓지 않도록 여기서 만듭니다.</summary>

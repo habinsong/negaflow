@@ -30,6 +30,7 @@ public sealed record LibraryFrameEdit(
     TextureRecipe? Texture = null,
     NoiseReductionRecipe? NoiseReduction = null,
     BwToningRecipe? BwToning = null,
+    double? DefectRemovalStrength = null,
     int? Rating = null,
     LookPresetSelection? LookPreset = null);
 
@@ -99,6 +100,11 @@ public static class LibraryFrameWriter
         if (edit.BwToning is { } bwToning && !bwToning.IsValid)
         {
             return LibraryFrameWriteResult.Failure(LibraryFrameError.InvalidBwToning);
+        }
+        if (edit.DefectRemovalStrength is { } defectRemoval &&
+            (!double.IsFinite(defectRemoval) || defectRemoval is < 0.0 or > 1.0))
+        {
+            return LibraryFrameWriteResult.Failure(LibraryFrameError.InvalidDefectRecipe);
         }
         if (edit.Rating is { } rating && rating is < 0 or > 5)
         {
@@ -266,6 +272,11 @@ public static class LibraryFrameWriter
             parameters[LibraryFrameReader.NoiseReductionDetailName] = noiseReductionToWrite.Detail;
             parameters[LibraryFrameReader.NoiseReductionGrainProtectName] =
                 noiseReductionToWrite.GrainProtect;
+        }
+
+        if (edit.DefectRemovalStrength is { } defectRemovalToWrite)
+        {
+            parameters[LibraryFrameReader.DefectRemovalName] = defectRemovalToWrite;
         }
 
         if (edit.BwToning is { } bwToningToWrite)

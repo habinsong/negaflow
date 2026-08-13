@@ -773,4 +773,16 @@
   <data name="developBwToningStrength.Text" xml:space="preserve"><value>强度</value></data>
   <data name="developBwToningShadowHue.Text" xml:space="preserve"><value>阴影色相</value></data>
   <data name="developBwToningHighlightHue.Text" xml:space="preserve"><value>高光色相</value></data>
+  <data name="developInfoCard.Text" xml:space="preserve"><value>信息</value></data>
+  <data name="developInfoSource.Text" xml:space="preserve"><value>来源</value></data>
+  <data name="developInfoSidecar.Text" xml:space="preserve"><value>Sidecar</value></data>
+  <data name="developInfoCamera.Text" xml:space="preserve"><value>相机</value></data>
+  <data name="developInfoDate.Text" xml:space="preserve"><value>日期</value></data>
+  <data name="developInfoTitle.Text" xml:space="preserve"><value>标题</value></data>
+  <data name="developInfoKeywords.Text" xml:space="preserve"><value>关键词</value></data>
+  <data name="developInfoNotAvailable.Text" xml:space="preserve"><value>—</value></data>
+  <data name="developInfoUnknown.Text" xml:space="preserve"><value>未知</value></data>
+  <data name="developInfoSidecarNotFound.Text" xml:space="preserve"><value>未找到</value></data>
+  <data name="developInfoOriginScan.Text" xml:space="preserve"><value>扫描</value></data>
+  <data name="developInfoOriginImport.Text" xml:space="preserve"><value>导入</value></data>
 </root>

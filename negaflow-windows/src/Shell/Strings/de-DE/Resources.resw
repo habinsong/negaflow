@@ -773,4 +773,16 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developBwToningStrength.Text" xml:space="preserve"><value>Stärke</value></data>
   <data name="developBwToningShadowHue.Text" xml:space="preserve"><value>Tiefen-Farbton</value></data>
   <data name="developBwToningHighlightHue.Text" xml:space="preserve"><value>Lichter-Farbton</value></data>
+  <data name="developInfoCard.Text" xml:space="preserve"><value>Info</value></data>
+  <data name="developInfoSource.Text" xml:space="preserve"><value>Quelle</value></data>
+  <data name="developInfoSidecar.Text" xml:space="preserve"><value>Sidecar</value></data>
+  <data name="developInfoCamera.Text" xml:space="preserve"><value>Kamera</value></data>
+  <data name="developInfoDate.Text" xml:space="preserve"><value>Datum</value></data>
+  <data name="developInfoTitle.Text" xml:space="preserve"><value>Titel</value></data>
+  <data name="developInfoKeywords.Text" xml:space="preserve"><value>Stichwörter</value></data>
+  <data name="developInfoNotAvailable.Text" xml:space="preserve"><value>—</value></data>
+  <data name="developInfoUnknown.Text" xml:space="preserve"><value>Unbekannt</value></data>
+  <data name="developInfoSidecarNotFound.Text" xml:space="preserve"><value>Fehlt</value></data>
+  <data name="developInfoOriginScan.Text" xml:space="preserve"><value>Scannen</value></data>
+  <data name="developInfoOriginImport.Text" xml:space="preserve"><value>Importieren</value></data>
 </root>

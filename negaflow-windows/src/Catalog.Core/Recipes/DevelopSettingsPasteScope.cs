@@ -103,6 +103,7 @@ public readonly record struct DevelopSettingsPasteScope(
                 Texture = source.Texture,
                 NoiseReduction = source.NoiseReduction,
                 LocalDodgeBurn = source.LocalDodgeBurn,
+                DefectRemovalStrength = source.DefectRemovalStrength,
             };
         }
 

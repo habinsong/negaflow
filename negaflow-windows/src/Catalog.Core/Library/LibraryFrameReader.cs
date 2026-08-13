@@ -115,6 +115,7 @@ public static class LibraryFrameReader
     internal const string HalationName = "halation";
     internal const string ClarityName = "clarity";
     internal const string VignetteName = "vignette";
+    internal const string DefectRemovalName = "defectRemoval";
     internal const string NoiseReductionName = "noiseReduction";
     internal const string NoiseReductionLumaName = "noiseReductionLuma";
     internal const string NoiseReductionChromaName = "noiseReductionChroma";
@@ -259,6 +260,15 @@ public static class LibraryFrameReader
         {
             return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidNoiseReduction);
         }
+        if (!TryReadOptionalFiniteDouble(
+                parameters,
+                DefectRemovalName,
+                0.0,
+                out double defectRemoval) ||
+            defectRemoval is < 0.0 or > 1.0)
+        {
+            return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidDefectRecipe);
+        }
         if (!TryReadBwToning(parameters, out BwToningRecipe bwToning))
         {
             return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidBwToning);
@@ -308,6 +318,7 @@ public static class LibraryFrameReader
             Texture = texture,
             NoiseReduction = noiseReduction,
             BwToning = bwToning,
+            DefectRemovalStrength = defectRemoval,
             Rating = rating,
             PickState = pickState,
             ScannedAt = scannedAt,
