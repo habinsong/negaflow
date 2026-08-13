@@ -155,6 +155,14 @@ final class TransformFastPathTests: XCTestCase {
         XCTAssertEqual(Self.rgbaBytes(actual), Self.rgbaBytes(expected))
     }
 
+    func testClockwiseRotationRotatesCurrentCropInsteadOfSelectingPreviousScreenArea() async throws {
+        try await assertRotationPreservesCurrentCrop(clockwise: true)
+    }
+
+    func testCounterClockwiseRotationRotatesCurrentCropInsteadOfSelectingPreviousScreenArea() async throws {
+        try await assertRotationPreservesCurrentCrop(clockwise: false)
+    }
+
     // MARK: helpers
 
     private static func makeCGImage(
@@ -198,6 +206,45 @@ final class TransformFastPathTests: XCTestCase {
             decode: nil,
             shouldInterpolate: false,
             intent: .defaultIntent
+        )
+    }
+
+    private func assertRotationPreservesCurrentCrop(
+        clockwise: Bool,
+        line: UInt = #line
+    ) async throws {
+        let model = AppModel()
+        let source = try XCTUnwrap(Self.makePatternCGImage(width: 8, height: 6))
+        let frame = Self.makeFrame()
+        let crop = SIMD4<Double>(0.125, 1.0 / 6.0, 0.5, 0.5)
+        frame.imageTransform = ImageTransform(cropRect: crop, cropAspect: 4.0 / 3.0)
+        frame.cachedDevelopedBase = source
+        model.frames = [frame]
+
+        let cropped = ImageTransformStage.apply(
+            to: CIImage(cgImage: source),
+            transform: ImageTransform(cropRect: crop)
+        )
+        let expected = ImageTransformStage.apply(
+            to: cropped,
+            transform: ImageTransform(rotation: clockwise ? .deg90 : .deg270)
+        )
+
+        model.rotate(frame, clockwise: clockwise)
+        try await waitUntil("transform task 종료", timeout: 8) { frame.transformTask == nil }
+
+        let actual = ImageTransformStage.apply(
+            to: CIImage(cgImage: source),
+            transform: frame.imageTransform
+        )
+        let cropAspect = try XCTUnwrap(frame.imageTransform.cropAspect)
+        XCTAssertEqual(cropAspect, 3.0 / 4.0, accuracy: 1e-12, line: line)
+        XCTAssertEqual(actual.extent, expected.extent, line: line)
+        XCTAssertEqual(
+            Self.rgbaBytes(actual),
+            Self.rgbaBytes(expected),
+            clockwise ? "시계 방향 회전이 현재 크롭을 유지해야 한다" : "반시계 방향 회전이 현재 크롭을 유지해야 한다",
+            line: line
         )
     }
 

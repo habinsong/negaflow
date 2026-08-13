@@ -20,11 +20,7 @@ extension AppModel {
     }
 
     func rotate(_ frame: ScanFrame, clockwise: Bool) {
-        frame.updateTransform {
-            $0.rotation = clockwise
-                ? $0.rotation.rotatedClockwise()
-                : $0.rotation.rotatedCounterClockwise()
-        }
+        frame.updateTransform { $0.rotatePreservingCrop(clockwise: clockwise) }
         applyTransformFast(frame)
     }
 
@@ -112,6 +108,20 @@ extension AppModel {
 }
 
 private extension ImageTransform {
+    mutating func rotatePreservingCrop(clockwise: Bool) {
+        rotation = clockwise
+            ? rotation.rotatedClockwise()
+            : rotation.rotatedCounterClockwise()
+
+        if let cropAspect, cropAspect > 0 {
+            self.cropAspect = 1 / cropAspect
+        }
+        guard let cropRect else { return }
+        self.cropRect = clockwise
+            ? SIMD4(cropRect.y, 1 - cropRect.x - cropRect.z, cropRect.w, cropRect.z)
+            : SIMD4(1 - cropRect.y - cropRect.w, cropRect.x, cropRect.w, cropRect.z)
+    }
+
     mutating func toggleHorizontalFlipPreservingCrop() {
         toggleFlipPreservingCrop(displayHorizontal: true)
     }
