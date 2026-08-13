@@ -667,6 +667,13 @@ public sealed partial class DevelopWorkspaceView : UserControl
             PreviewImage.Visibility = Visibility.Collapsed;
             EmptyCanvasPanel.Visibility = Visibility.Visible;
             HistogramView.Clear();
+            // 현상이 실패한 것과 사진이 없는 것은 다릅니다. 같은 빈 화면만 내면 사용자는
+            // 사진을 넣으라는 말을 다시 읽을 뿐이고, 무엇이 잘못됐는지 알 길이 없습니다.
+            string reason = outcome.Kind == DevelopExportOutcomeKind.Completed
+                ? $"{outcome.Result?.FailedStage} {outcome.Result?.FailureName}"
+                : outcome.Refusal.ToString();
+            ExportStatusText.Text =
+                $"{AppResources.Get("developPreviewFailed", "Text")} ({reason})";
             return;
         }
 

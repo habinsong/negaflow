@@ -796,4 +796,5 @@ Load a scanner from Library to scan film.</value>
   <data name="developGrainMendCloneHelp.Value" xml:space="preserve"><value>Clone Stamp — Alt-click to set the source, then drag to paint.</value></data>
   <data name="developGrainMendReset.Value" xml:space="preserve"><value>Reset</value></data>
   <data name="developGrainMendDetectorMissing.Value" xml:space="preserve"><value>Automatic detection is not in this build yet</value></data>
+  <data name="developPreviewFailed.Text" xml:space="preserve"><value>The preview could not be rendered</value></data>
 </root>

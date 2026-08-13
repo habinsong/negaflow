@@ -796,4 +796,5 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developGrainMendCloneHelp.Value" xml:space="preserve"><value>Klonstempel — mit Alt-Klick die Quelle festlegen, dann zum Malen ziehen.</value></data>
   <data name="developGrainMendReset.Value" xml:space="preserve"><value>Zurücksetzen</value></data>
   <data name="developGrainMendDetectorMissing.Value" xml:space="preserve"><value>Automatische Erkennung fehlt in diesem Build noch</value></data>
+  <data name="developPreviewFailed.Text" xml:space="preserve"><value>Die Vorschau konnte nicht erstellt werden</value></data>
 </root>

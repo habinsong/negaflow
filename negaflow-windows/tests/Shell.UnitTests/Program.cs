@@ -31,6 +31,10 @@ internal static class Program
         {
             return DiagnoseCatalog(args[1]);
         }
+        if (args.Length == 2 && args[0] == "--probe-open")
+        {
+            return ProbeOpen(args[1]);
+        }
         VerifyPreferencesDefaults();
         VerifyPreferencesNormalization();
         VerifyAdaptiveLayout();
@@ -1778,6 +1782,51 @@ internal static class Program
                 $"path={frame.SourcePath}");
         }
         return 0;
+    }
+
+    /// <summary>
+    /// 같은 경로를 두 네이티브 진입점에 넣어 봅니다. 하나는 되고 하나는 안 되면 문제가
+    /// 어느 쪽인지가 바로 드러납니다.
+    /// </summary>
+    private static int ProbeOpen(string sourcePath)
+    {
+        string full = Path.GetFullPath(sourcePath);
+        Console.WriteLine($"path: {full}");
+        Console.WriteLine($"exists: {File.Exists(full)}");
+        Console.WriteLine($"probe: {NativeTiffSourceProbe.TryRead(full, out TiffSourceMetadata m)} " +
+            $"{m.PixelWidth}x{m.PixelHeight}");
+
+        LibraryFrameSnapshot frame = new(
+            Guid.NewGuid().ToString("D"),
+            full,
+            "probe",
+            new DevelopRouteSnapshot(
+                FrameSourceTransport.Imported,
+                SourceSignalKind.FilmNegativeScan,
+                DevelopmentProcess.C41,
+                FilmType.ColorNegative,
+                FilmEmulation.None,
+                0.5,
+                UsedLegacySourceSignal: false,
+                UsedLegacyIntensityDefault: false),
+            null,
+            ToneAdjustment.Neutral);
+        DevelopRequestResult built = DevelopRequestFactory.Create(
+            frame,
+            Path.Combine(Path.GetTempPath(), "probe-open.png"));
+        if (built.Request is not { } request)
+        {
+            Console.WriteLine($"request refused: {built.Refusal}");
+            return 1;
+        }
+        byte[] pixels = new byte[800 * 600 * 4];
+        DevelopExportResult preview = new NativeDevelopExporterAdapter()
+            .Preview(request, 800, 600, pixels);
+        Console.WriteLine(
+            $"preview: succeeded={preview.Succeeded} stage={preview.FailedStage} " +
+            $"name={preview.FailureName} native=0x{preview.NativeErrorCode:X8} " +
+            $"{preview.ImageWidth}x{preview.ImageHeight}");
+        return preview.Succeeded ? 0 : 1;
     }
 
     private static int SeedCatalog(

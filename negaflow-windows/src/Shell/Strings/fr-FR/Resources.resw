@@ -796,4 +796,5 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="developGrainMendCloneHelp.Value" xml:space="preserve"><value>Tampon de clonage — Alt-clic pour définir la source, puis faites glisser pour peindre.</value></data>
   <data name="developGrainMendReset.Value" xml:space="preserve"><value>Réinitialiser</value></data>
   <data name="developGrainMendDetectorMissing.Value" xml:space="preserve"><value>La détection automatique n'est pas encore dans cette version</value></data>
+  <data name="developPreviewFailed.Text" xml:space="preserve"><value>L'aperçu n'a pas pu être généré</value></data>
 </root>
