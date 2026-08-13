@@ -786,8 +786,8 @@ internal static class Program
             "grain_mend_detect_labels_a_whole_frame_run_automatic");
         Check(exporter.LastDetectOptions is
             { DustSensitivity: 1.0, ScratchSensitivity: 1.0, ProtectDetail: 0.6,
-                RejectStructureLines: true },
-            "grain_mend_detect_defaults_to_mac_auto_sensitivity_and_structure_rejection");
+                RejectStructureLines: true, DetectMicroSpecks: true },
+            "grain_mend_detect_defaults_to_mac_auto_sensitivity_structure_rejection_and_micro_specks");
 
         // 부분 ROI 는 가이드입니다.
         seen = null;
