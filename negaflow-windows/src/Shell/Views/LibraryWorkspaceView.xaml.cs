@@ -71,7 +71,6 @@ public sealed partial class LibraryWorkspaceView : UserControl
         libraryHost = host;
         importWindowId = windowId;
         allItems = LibraryFrameListItems.From(host.Frames, host.SourceAvailabilityByFrameId);
-        SeedThumbnails();
         ShowFilteredItems();
 
         bool hasFrames = allItems.Count > 0;
@@ -89,7 +88,6 @@ public sealed partial class LibraryWorkspaceView : UserControl
                 return;
             }
             allItems = LibraryFrameListItems.From(host.Frames, host.SourceAvailabilityByFrameId);
-        SeedThumbnails();
             ShowFilteredItems();
         });
     }
@@ -113,26 +111,30 @@ public sealed partial class LibraryWorkspaceView : UserControl
 
         if (args.Item is LibraryFrameListItem item)
         {
+            // realize 된 카드만 디코드하고, 아직 없는 것만 렌더를 요청합니다.
+            RealizeThumbnail(item);
             thumbnails?.Request(item.Frame);
         }
     }
 
     /// <summary>
-    /// 목록을 다시 만들 때마다 이미 있는 썸네일을 새 항목에 옮겨 답니다. 그러지 않으면 별점을
-    /// 하나 바꿀 때마다 그리드 전체가 회색으로 돌아갔다가 다시 채워집니다.
+    /// 카드가 화면에 realize 될 때만 썸네일을 디코드합니다.
     /// </summary>
-    private void SeedThumbnails()
+    /// <remarks>
+    /// 예전에는 목록을 다시 만들 때마다 <b>전체</b> 항목을 디코드했습니다. 별점 하나만 바꿔도
+    /// 그리드 전부가 다시 디코드됐고, 화면에 없는 카드의 비트맵까지 메모리에 남았습니다.
+    /// 200장에서 이미 눈에 띄었으므로 수천 장이면 문제가 됩니다. 지금은 컨테이너가 만들어질 때
+    /// 그 한 장만 디코드하고, 이미 디코드된 항목은 그대로 둡니다.
+    /// </remarks>
+    private void RealizeThumbnail(LibraryFrameListItem item)
     {
-        if (thumbnails is null)
+        if (thumbnails is null || item.HasThumbnail)
         {
             return;
         }
-        foreach (LibraryFrameListItem item in allItems)
+        if (thumbnails.TryGet(item.Id) is { } jpeg)
         {
-            if (thumbnails.TryGet(item.Id) is { } jpeg)
-            {
-                item.Thumbnail = DecodeThumbnail(jpeg);
-            }
+            item.Thumbnail = DecodeThumbnail(jpeg);
         }
     }
 

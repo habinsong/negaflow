@@ -32,6 +32,24 @@ public partial class App : Application
     }
 
     /// <summary>
+    /// 검증용 저장소 뿌리 지정입니다. <c>NEGAFLOW_STORAGE_ROOT</c> 가 절대 경로로 설정돼
+    /// 있으면 그 아래를 씁니다.
+    /// </summary>
+    /// <remarks>
+    /// 대량 라이브러리에서 격자와 썸네일 큐를 재려면 수백 장이 든 카탈로그가 필요한데, 그것을
+    /// 사용자의 실제 카탈로그에 넣을 수는 없습니다(지우는 경로가 없습니다). 환경 변수를 켠
+    /// 실행에서만 갈라지므로 평소 동작은 그대로입니다. 경로가 절대 경로가 아니면 무시하고
+    /// 제품 경로로 갑니다 — 상대 경로를 추측해서 엉뚱한 곳에 카탈로그를 만들지 않습니다.
+    /// </remarks>
+    private static StorageRootResolutionResult ResolveStorageRoots()
+    {
+        string? isolated = Environment.GetEnvironmentVariable("NEGAFLOW_STORAGE_ROOT");
+        return !string.IsNullOrWhiteSpace(isolated) && Path.IsPathFullyQualified(isolated)
+            ? StorageRootResolver.ResolveForTests(isolated)
+            : StorageRootResolver.ResolveProduction();
+    }
+
+    /// <summary>
     /// 카탈로그를 여는 곳입니다. 열기에 실패해도 던지지 않습니다. 셸은 상태를 보여 줄 뿐이며,
     /// **실패를 빈 라이브러리로 착각하지 않습니다.**
     /// </summary>
@@ -43,7 +61,7 @@ public partial class App : Application
             return null;
         }
 
-        StorageRootResolutionResult roots = StorageRootResolver.ResolveProduction();
+        StorageRootResolutionResult roots = ResolveStorageRoots();
         if (roots.Roots is not { } resolved)
         {
             return null;
