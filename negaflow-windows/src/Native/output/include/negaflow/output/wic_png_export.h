@@ -38,6 +38,7 @@ struct WicPngExportLimits final {
     std::uint32_t output_dpi{0U};
     std::uint64_t max_artifact_bytes{2ULL * 1024ULL * 1024ULL * 1024ULL};
     std::uint32_t max_color_profile_bytes{4U * 1024U * 1024U};
+    std::uint32_t write_buffer_bytes{16U * 1024U * 1024U};
     std::uint32_t readback_buffer_bytes{16U * 1024U * 1024U};
 };
 

@@ -22,9 +22,13 @@ using Microsoft::WRL::ComPtr;
 [[nodiscard]] WicPngExportStatus encode_png(
     IWICImagingFactory* const factory,
     IStream* const stream,
+    const negaflow::imaging::WorkingImage& working,
     const Srgb16Image& image,
     IWICColorContext* const color_context,
+    const WorkingToSrgb16Limits& conversion_limits,
     const std::uint32_t output_dpi,
+    const std::uint32_t write_buffer_bytes,
+    WorkingToSrgb16Status& conversion_status,
     std::uint32_t& native_error_code) noexcept {
     ComPtr<IWICBitmapEncoder> encoder{};
     HRESULT status = factory->CreateEncoder(
@@ -76,10 +80,22 @@ using Microsoft::WRL::ComPtr;
     if (configure_status != detail::WicSrgb16FrameStatus::ok) {
         return WicPngExportStatus::encoder_initialization_failed;
     }
-    if (detail::write_srgb16_pixels(
+    const detail::WicSrgb16FrameStatus write_status =
+        detail::write_working_srgb16_pixels(
             frame.Get(),
+            working,
             image,
-            native_error_code) != detail::WicSrgb16FrameStatus::ok) {
+            conversion_limits,
+            write_buffer_bytes,
+            conversion_status,
+            native_error_code);
+    if (write_status == detail::WicSrgb16FrameStatus::working_conversion_failed) {
+        return WicPngExportStatus::working_conversion_failed;
+    }
+    if (write_status == detail::WicSrgb16FrameStatus::allocation_failed) {
+        return WicPngExportStatus::allocation_failed;
+    }
+    if (write_status != detail::WicSrgb16FrameStatus::ok) {
         return WicPngExportStatus::encode_failed;
     }
     status = frame->Commit();
@@ -96,9 +112,11 @@ using Microsoft::WRL::ComPtr;
 [[nodiscard]] WicPngExportStatus verify_png_readback(
     IWICImagingFactory* const factory,
     const std::filesystem::path& path,
+    const negaflow::imaging::WorkingImage& working,
     const Srgb16Image& expected,
     const std::vector<std::uint8_t>& expected_profile,
     const WicPngExportLimits& limits,
+    WorkingToSrgb16Status& conversion_status,
     std::uint32_t& native_error_code) {
     ComPtr<IStream> stream{};
     HRESULT status = SHCreateStreamOnFileEx(
@@ -148,13 +166,16 @@ using Microsoft::WRL::ComPtr;
         native_error_code = static_cast<std::uint32_t>(status);
         return WicPngExportStatus::readback_failed;
     }
-    switch (detail::verify_srgb16_frame(
+    switch (detail::verify_working_srgb16_frame(
         factory,
         frame.Get(),
+        working,
         expected,
+        limits.conversion,
         expected_profile,
         limits.output_dpi,
         limits.readback_buffer_bytes,
+        conversion_status,
         native_error_code)) {
         case detail::WicSrgb16FrameStatus::ok:
             return WicPngExportStatus::ok;
@@ -162,6 +183,10 @@ using Microsoft::WRL::ComPtr;
             return WicPngExportStatus::pixel_verification_failed;
         case detail::WicSrgb16FrameStatus::profile_verification_failed:
             return WicPngExportStatus::profile_verification_failed;
+        case detail::WicSrgb16FrameStatus::working_conversion_failed:
+            return WicPngExportStatus::working_conversion_failed;
+        case detail::WicSrgb16FrameStatus::allocation_failed:
+            return WicPngExportStatus::allocation_failed;
         case detail::WicSrgb16FrameStatus::configuration_failed:
         case detail::WicSrgb16FrameStatus::pixel_format_coerced:
         case detail::WicSrgb16FrameStatus::write_failed:
@@ -212,7 +237,7 @@ WicPngExportResult export_working_to_srgb16_png(
     WicPngExportResult result{};
     try {
         WorkingToSrgb16Result converted =
-            convert_working_to_srgb16(working, limits.conversion);
+            inspect_working_to_srgb16(working, limits.conversion);
         result.conversion_status = converted.status;
         result.info.width = working.width;
         result.info.height = working.height;
@@ -277,9 +302,13 @@ WicPngExportResult export_working_to_srgb16_png(
         result.status = encode_png(
             factory.Get(),
             output->stream(),
+            working,
             converted.image,
             color_context.Get(),
+            limits.conversion,
             limits.output_dpi,
+            limits.write_buffer_bytes,
+            result.conversion_status,
             result.native_error_code);
         if (result.status != WicPngExportStatus::ok) {
             discard_staging(output.get(), result);
@@ -314,9 +343,11 @@ WicPngExportResult export_working_to_srgb16_png(
         result.status = verify_png_readback(
             factory.Get(),
             output->staging_path(),
+            working,
             converted.image,
             profile_bytes,
             limits,
+            result.conversion_status,
             result.native_error_code);
         if (result.status != WicPngExportStatus::ok) {
             discard_staging(output.get(), result);

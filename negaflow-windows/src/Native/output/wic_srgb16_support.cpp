@@ -8,6 +8,7 @@
 #include <cstddef>
 #include <cmath>
 #include <limits>
+#include <new>
 
 namespace negaflow::output::detail {
 namespace {
@@ -180,45 +181,74 @@ WicSrgb16FrameStatus configure_srgb16_frame(
     return WicSrgb16FrameStatus::ok;
 }
 
-WicSrgb16FrameStatus write_srgb16_pixels(
+WicSrgb16FrameStatus write_working_srgb16_pixels(
     IWICBitmapFrameEncode* const frame,
+    const negaflow::imaging::WorkingImage& working,
     const Srgb16Image& image,
+    const WorkingToSrgb16Limits& conversion_limits,
+    const std::uint32_t write_buffer_bytes,
+    WorkingToSrgb16Status& conversion_status,
     std::uint32_t& native_error_code) noexcept {
-    const std::uint64_t max_rows_per_write =
-        std::numeric_limits<UINT>::max() / image.stride_bytes;
-    if (max_rows_per_write == 0U) {
+    if (image.width == 0U || image.height == 0U || image.stride_bytes == 0U ||
+        write_buffer_bytes < image.stride_bytes) {
         return WicSrgb16FrameStatus::write_failed;
     }
-    std::uint32_t completed_rows = 0U;
-    while (completed_rows < image.height) {
-        const UINT row_count = static_cast<UINT>(std::min<std::uint64_t>(
-            image.height - completed_rows,
-            max_rows_per_write));
-        const UINT buffer_bytes = row_count * image.stride_bytes;
-        const std::size_t sample_offset =
-            static_cast<std::size_t>(completed_rows) * image.width * 3U;
-        const HRESULT status = frame->WritePixels(
-            row_count,
-            image.stride_bytes,
-            buffer_bytes,
-            reinterpret_cast<BYTE*>(
-                const_cast<std::uint16_t*>(image.samples.data() + sample_offset)));
-        if (FAILED(status)) {
-            native_error_code = static_cast<std::uint32_t>(status);
-            return WicSrgb16FrameStatus::write_failed;
+    const std::uint64_t rows_per_write = std::min<std::uint64_t>(
+        write_buffer_bytes / image.stride_bytes,
+        std::numeric_limits<UINT>::max() / image.stride_bytes);
+    if (rows_per_write == 0U) {
+        return WicSrgb16FrameStatus::write_failed;
+    }
+    const std::uint32_t allocated_rows = static_cast<std::uint32_t>(
+        std::min<std::uint64_t>(rows_per_write, image.height));
+    const std::uint64_t buffer_bytes_64 =
+        static_cast<std::uint64_t>(allocated_rows) * image.stride_bytes;
+    try {
+        std::vector<std::uint16_t> buffer(
+            static_cast<std::size_t>(buffer_bytes_64 / sizeof(std::uint16_t)));
+        for (std::uint32_t row = 0U; row < image.height;) {
+            const std::uint32_t row_count = static_cast<std::uint32_t>(
+                std::min<std::uint64_t>(rows_per_write, image.height - row));
+            std::uint64_t ignored_clipped_components = 0U;
+            conversion_status = convert_working_to_srgb16_rows(
+                working,
+                row,
+                row_count,
+                buffer.data(),
+                buffer.size(),
+                ignored_clipped_components,
+                conversion_limits);
+            if (conversion_status != WorkingToSrgb16Status::ok) {
+                return WicSrgb16FrameStatus::working_conversion_failed;
+            }
+            const UINT buffer_bytes = row_count * image.stride_bytes;
+            const HRESULT status = frame->WritePixels(
+                row_count,
+                image.stride_bytes,
+                buffer_bytes,
+                reinterpret_cast<BYTE*>(buffer.data()));
+            if (FAILED(status)) {
+                native_error_code = static_cast<std::uint32_t>(status);
+                return WicSrgb16FrameStatus::write_failed;
+            }
+            row += row_count;
         }
-        completed_rows += row_count;
+    } catch (const std::bad_alloc&) {
+        return WicSrgb16FrameStatus::allocation_failed;
     }
     return WicSrgb16FrameStatus::ok;
 }
 
-WicSrgb16FrameStatus verify_srgb16_frame(
+WicSrgb16FrameStatus verify_working_srgb16_frame(
     IWICImagingFactory* const factory,
     IWICBitmapFrameDecode* const frame,
+    const negaflow::imaging::WorkingImage& working,
     const Srgb16Image& expected,
+    const WorkingToSrgb16Limits& conversion_limits,
     const std::vector<std::uint8_t>& expected_profile,
     const std::uint32_t output_dpi,
     const std::uint32_t readback_buffer_bytes,
+    WorkingToSrgb16Status& conversion_status,
     std::uint32_t& native_error_code) {
     UINT width = 0U;
     UINT height = 0U;
@@ -244,7 +274,8 @@ WicSrgb16FrameStatus verify_srgb16_frame(
             return WicSrgb16FrameStatus::readback_failed;
         }
     }
-    if (readback_buffer_bytes < expected.stride_bytes) {
+    if (expected.width == 0U || expected.height == 0U || expected.stride_bytes == 0U ||
+        readback_buffer_bytes < expected.stride_bytes) {
         return WicSrgb16FrameStatus::readback_failed;
     }
     const std::uint32_t rows_per_copy =
@@ -255,7 +286,9 @@ WicSrgb16FrameStatus verify_srgb16_frame(
     if (buffer_bytes_64 > std::numeric_limits<UINT>::max()) {
         return WicSrgb16FrameStatus::readback_failed;
     }
-    std::vector<std::uint16_t> buffer(
+    std::vector<std::uint16_t> readback_buffer(
+        static_cast<std::size_t>(buffer_bytes_64 / sizeof(std::uint16_t)));
+    std::vector<std::uint16_t> expected_buffer(
         static_cast<std::size_t>(buffer_bytes_64 / sizeof(std::uint16_t)));
     for (std::uint32_t row = 0U; row < expected.height;) {
         const std::uint32_t row_count = std::min(rows_per_copy, expected.height - row);
@@ -270,19 +303,29 @@ WicSrgb16FrameStatus verify_srgb16_frame(
             &rectangle,
             expected.stride_bytes,
             buffer_bytes,
-            reinterpret_cast<BYTE*>(buffer.data()));
+            reinterpret_cast<BYTE*>(readback_buffer.data()));
         if (FAILED(status)) {
             native_error_code = static_cast<std::uint32_t>(status);
             return WicSrgb16FrameStatus::readback_failed;
         }
-        const std::size_t expected_offset =
-            static_cast<std::size_t>(row) * expected.width * 3U;
+        std::uint64_t ignored_clipped_components = 0U;
+        conversion_status = convert_working_to_srgb16_rows(
+            working,
+            row,
+            row_count,
+            expected_buffer.data(),
+            expected_buffer.size(),
+            ignored_clipped_components,
+            conversion_limits);
+        if (conversion_status != WorkingToSrgb16Status::ok) {
+            return WicSrgb16FrameStatus::working_conversion_failed;
+        }
         const std::size_t sample_count =
             static_cast<std::size_t>(row_count) * expected.width * 3U;
         if (!std::equal(
-                buffer.begin(),
-                buffer.begin() + static_cast<std::ptrdiff_t>(sample_count),
-                expected.samples.begin() + static_cast<std::ptrdiff_t>(expected_offset))) {
+                readback_buffer.begin(),
+                readback_buffer.begin() + static_cast<std::ptrdiff_t>(sample_count),
+                expected_buffer.begin())) {
             return WicSrgb16FrameStatus::pixel_verification_failed;
         }
         row += row_count;

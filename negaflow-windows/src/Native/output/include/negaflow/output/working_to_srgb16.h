@@ -2,6 +2,7 @@
 
 #include "negaflow/imaging/scanner_to_working.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <vector>
 
@@ -43,6 +44,23 @@ struct WorkingToSrgb16Result final {
 
 [[nodiscard]] WorkingToSrgb16Result convert_working_to_srgb16(
     const negaflow::imaging::WorkingImage& working,
+    const WorkingToSrgb16Limits& limits = {}) noexcept;
+
+// Validates the complete image and reports the packed output layout without
+// materializing the 16-bit samples. The returned image has an empty samples vector.
+[[nodiscard]] WorkingToSrgb16Result inspect_working_to_srgb16(
+    const negaflow::imaging::WorkingImage& working,
+    const WorkingToSrgb16Limits& limits = {}) noexcept;
+
+// Converts one contiguous range of image rows into caller-owned packed RGB samples.
+// The caller must provide space for row_count * width * 3 samples.
+[[nodiscard]] WorkingToSrgb16Status convert_working_to_srgb16_rows(
+    const negaflow::imaging::WorkingImage& working,
+    std::uint32_t first_row,
+    std::uint32_t row_count,
+    std::uint16_t* destination_samples,
+    std::size_t destination_sample_capacity,
+    std::uint64_t& clipped_color_components,
     const WorkingToSrgb16Limits& limits = {}) noexcept;
 
 [[nodiscard]] const char* working_to_srgb16_status_name(

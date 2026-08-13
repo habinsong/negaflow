@@ -12,7 +12,7 @@ macOS 대비 어림값입니다. 근거를 함께 적습니다 — 숫자만 옮
 | 카탈로그·영속성 | **90%** | 모든 recipe, 버전, 결함 sidecar, 프리셋, 붙여넣기 범위, 사용자 프리셋, 지연 저장, 백업·복구, relink, 단일 작성자 잠금. 남은 것: 앱/촬영/롤 메타데이터 |
 | 라이브러리 화면 | **77%** | 카드 격자·정렬·카드 크기·소스 막대·파일 트리·폴더 프로세스 선택기·별점·깃발·가져오기·relink·중복 후보. 필터는 macOS 9개 중 7개(메타데이터 상태 미확인 추가). 남은 것: 현재 롤·미검증 프로파일, 컬렉션 |
 | 현상 화면 | **72%** | 캔버스·히스토그램·인스펙터 6탭·보정 8섹션 전부·좌측 5탭·크롭/기하·자동 보정·프리셋/복사붙여넣기·정보 탭·GrainMend 브러시/복제 도장/자동/가이드 ROI·검출 결과 성분별 포함/제외·감도/미세 입자 재검출. 남은 것: 출력 품질·소스 하위 탭, 빠른 내보내기, 메타데이터 카드 3종, 파일 탭 |
-| 내보내기 | **55%** | PNG16·TIFF16·JPEG8을 폴더·파일명 패턴으로. 세 포맷은 WIC sRGB ICC·DPI·구조/픽셀 readback과 비덮어쓰기 게시를 거치며, TIFF는 None/LZW/Deflate backend를 고릅니다. 긴 변은 선형 Lanczos3로 축소만 합니다. 남은 것: 품질 탭에서의 긴 변·DPI·TIFF 압축 편집/저장, PNG/TIFF 8-bit·alpha, 출력 선명도 UI, 배치, XMP sidecar |
+| 내보내기 | **55%** | PNG16·TIFF16·JPEG8을 폴더·파일명 패턴으로. 세 포맷은 WIC sRGB ICC·DPI·구조/픽셀 readback과 비덮어쓰기 게시를 거치며, TIFF는 None/LZW/Deflate backend를 고릅니다. PNG/TIFF의 추가 full sRGB16 출력 버퍼는 16 MiB 행 버퍼로 대체했습니다. 긴 변은 선형 Lanczos3로 축소만 합니다. 남은 것: 품질 탭에서의 긴 변·DPI·TIFF 압축 편집/저장, PNG/TIFF 8-bit·alpha, 출력 선명도 UI, 배치, XMP sidecar |
 | 스캐너 | **35%** | 플러그인 클라이언트·발견·프로세스 호스트·프로토콜·artifact 트랜잭션·게시 영수증이 `Shell.Core/Scanner` 에 있으나 **셸에서 아무 데서도 부르지 않습니다**(`src/Shell` 에 참조 0). 엔진에 있는데 닿지 않는 기능 목록에 추가 |
 | 설정·다국어·접근성 | **70%** | 6개 로케일 전면 적용, 설정 창, 외관, 패널 너비·필름스트립 상태 저장. 남은 것: macOS 설정 항목 대조 |
 | 인화 | **5%** | 자리만 있습니다(312줄). 사용자가 뒤로 미룬 영역입니다 |
@@ -117,6 +117,20 @@ x64 Debug에서 `native.wic_png_export`, `native.wic_tiff_export`, `native.devel
 잘못된 압축 거부를 포함합니다. 관리 interop contract는 실제 DLL ABI 0.44/x64에서 198 assertions를
 통과했습니다. 품질 탭과 catalog persistence는 아직 없으므로 Shell 사용자는 이 값들을 아직 편집할 수
 없습니다.
+
+## 2026-08-14 PNG/TIFF bounded sRGB16 output
+
+PNG16/TIFF16은 더 이상 `WorkingImage` 전체를 별도 `Srgb16Image`로 물질화하지 않습니다. 먼저 범위·alpha
+검사와 clipping 수 집계를 병렬로 끝내므로 잘못된 입력은 staging 파일 생성 전 거부합니다. 이후 WIC
+encode와 publish 전 readback 검증은 각각 최대 16 MiB의 packed RGB16 행 버퍼로만 원본 working 행을
+다시 양자화합니다. 이로써 사용자 코드의 lossless 출력 경로에서 `width * height * 6` 바이트짜리
+추가 중간 버퍼를 없애되, sRGB 수식·clipping 수·ICC·48bpp·DPI·atomic publish 계약은 바꾸지 않았습니다.
+
+x64 Debug `native.working_to_srgb16`, `native.wic_png_export`, `native.wic_tiff_export`는 한 행(18 byte)
+write/readback 버퍼로도 실제 WIC 왕복을 통과했고, 전체 native CTest는 67/67 통과했습니다. 이는
+대형 이미지 타일 그래프 완료 증거가 아닙니다. `WorkingImage`와 현상 단계는 여전히 full-frame이고,
+JPEG8은 현재 full `Srgb16Image`와 WIC 24bpp BGR 변환 경로를 유지하며, 기본 512 MiB encoded-pixel 상한도 유지됩니다. 100 MP·batch의
+peak working set 및 ARM64 실기 측정은 아직 없습니다.
 
 ## 2026-08-14 GrainMend 미세 입자 추가 검출
 

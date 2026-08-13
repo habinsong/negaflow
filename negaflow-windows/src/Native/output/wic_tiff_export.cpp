@@ -45,10 +45,14 @@ using Microsoft::WRL::ComPtr;
 [[nodiscard]] WicTiffExportStatus encode_tiff(
     IWICImagingFactory* const factory,
     IStream* const stream,
+    const negaflow::imaging::WorkingImage& working,
     const Srgb16Image& image,
     IWICColorContext* const color_context,
+    const WorkingToSrgb16Limits& conversion_limits,
     const WicTiffCompression compression,
     const std::uint32_t output_dpi,
+    const std::uint32_t write_buffer_bytes,
+    WorkingToSrgb16Status& conversion_status,
     std::uint32_t& native_error_code) noexcept {
     ComPtr<IWICBitmapEncoder> encoder{};
     HRESULT status = factory->CreateEncoder(
@@ -121,10 +125,22 @@ using Microsoft::WRL::ComPtr;
     if (configure_status != detail::WicSrgb16FrameStatus::ok) {
         return WicTiffExportStatus::encoder_initialization_failed;
     }
-    if (detail::write_srgb16_pixels(
+    const detail::WicSrgb16FrameStatus write_status =
+        detail::write_working_srgb16_pixels(
             frame.Get(),
+            working,
             image,
-            native_error_code) != detail::WicSrgb16FrameStatus::ok) {
+            conversion_limits,
+            write_buffer_bytes,
+            conversion_status,
+            native_error_code);
+    if (write_status == detail::WicSrgb16FrameStatus::working_conversion_failed) {
+        return WicTiffExportStatus::working_conversion_failed;
+    }
+    if (write_status == detail::WicSrgb16FrameStatus::allocation_failed) {
+        return WicTiffExportStatus::allocation_failed;
+    }
+    if (write_status != detail::WicSrgb16FrameStatus::ok) {
         return WicTiffExportStatus::encode_failed;
     }
     status = frame->Commit();
@@ -141,9 +157,11 @@ using Microsoft::WRL::ComPtr;
 [[nodiscard]] WicTiffExportStatus verify_tiff_readback(
     IWICImagingFactory* const factory,
     const std::filesystem::path& path,
+    const negaflow::imaging::WorkingImage& working,
     const Srgb16Image& expected,
     const std::vector<std::uint8_t>& expected_profile,
     const WicTiffExportLimits& limits,
+    WorkingToSrgb16Status& conversion_status,
     std::uint32_t& native_error_code) {
     ComPtr<IStream> stream{};
     HRESULT status = SHCreateStreamOnFileEx(
@@ -193,13 +211,16 @@ using Microsoft::WRL::ComPtr;
         native_error_code = static_cast<std::uint32_t>(status);
         return WicTiffExportStatus::readback_failed;
     }
-    switch (detail::verify_srgb16_frame(
+    switch (detail::verify_working_srgb16_frame(
         factory,
         frame.Get(),
+        working,
         expected,
+        limits.conversion,
         expected_profile,
         limits.output_dpi,
         limits.readback_buffer_bytes,
+        conversion_status,
         native_error_code)) {
         case detail::WicSrgb16FrameStatus::ok:
             return WicTiffExportStatus::ok;
@@ -207,6 +228,10 @@ using Microsoft::WRL::ComPtr;
             return WicTiffExportStatus::pixel_verification_failed;
         case detail::WicSrgb16FrameStatus::profile_verification_failed:
             return WicTiffExportStatus::profile_verification_failed;
+        case detail::WicSrgb16FrameStatus::working_conversion_failed:
+            return WicTiffExportStatus::working_conversion_failed;
+        case detail::WicSrgb16FrameStatus::allocation_failed:
+            return WicTiffExportStatus::allocation_failed;
         case detail::WicSrgb16FrameStatus::configuration_failed:
         case detail::WicSrgb16FrameStatus::pixel_format_coerced:
         case detail::WicSrgb16FrameStatus::write_failed:
@@ -266,7 +291,8 @@ void discard_staging(
         probe.info.bits_per_sample[2] != 16U ||
         probe.info.extra_samples_count != 0U ||
         probe.info.icc_profile_bytes != expected_profile_bytes ||
-        probe.info.packed_raster_bytes != expected.samples.size() * sizeof(std::uint16_t)) {
+        probe.info.packed_raster_bytes !=
+            static_cast<std::uint64_t>(expected.stride_bytes) * expected.height) {
         return false;
     }
     if (probe.info.sample_format_count == 1U) {
@@ -296,7 +322,7 @@ WicTiffExportResult export_working_to_srgb16_tiff(
             return result;
         }
         WorkingToSrgb16Result converted =
-            convert_working_to_srgb16(working, limits.conversion);
+            inspect_working_to_srgb16(working, limits.conversion);
         result.conversion_status = converted.status;
         result.info.width = working.width;
         result.info.height = working.height;
@@ -361,10 +387,14 @@ WicTiffExportResult export_working_to_srgb16_tiff(
         result.status = encode_tiff(
             factory.Get(),
             output->stream(),
+            working,
             converted.image,
             color_context.Get(),
+            limits.conversion,
             limits.compression,
             limits.output_dpi,
+            limits.write_buffer_bytes,
+            result.conversion_status,
             result.native_error_code);
         if (result.status != WicTiffExportStatus::ok) {
             discard_staging(output.get(), result);
@@ -418,9 +448,11 @@ WicTiffExportResult export_working_to_srgb16_tiff(
         result.status = verify_tiff_readback(
             factory.Get(),
             output->staging_path(),
+            working,
             converted.image,
             profile_bytes,
             limits,
+            result.conversion_status,
             result.native_error_code);
         if (result.status != WicTiffExportStatus::ok) {
             discard_staging(output.get(), result);

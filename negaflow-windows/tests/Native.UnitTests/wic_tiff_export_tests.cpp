@@ -96,13 +96,17 @@ negaflow::imaging::WorkingImage make_image() {
 
 void test_round_trip_and_publish(const std::filesystem::path& root) {
     const std::filesystem::path destination = root / L"round-trip.tif";
+    negaflow::output::WicTiffExportLimits limits{};
+    limits.write_buffer_bytes = 18U;
+    limits.readback_buffer_bytes = 18U;
     const auto result = negaflow::output::export_working_to_srgb16_tiff(
         make_image(),
-        destination);
+        destination,
+        limits);
     report_failure(result);
     expect(
         result.status == negaflow::output::WicTiffExportStatus::ok,
-        "16-bit TIFF export succeeds");
+        "16-bit TIFF export succeeds with one-row write and readback buffers");
     expect(
         result.conversion_status == negaflow::output::WorkingToSrgb16Status::ok,
         "working conversion succeeds");

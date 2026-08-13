@@ -499,7 +499,11 @@ Color/B&W positive film scan은 catalog `CanDevelop` 게이트까지 열어 Dmin
    단일 측정보다 `4.98 MiB` 높아 메모리 절감으로 주장하지 않습니다. 이어 타일별 검출 5개 float map,
    후보 3개 map과 evidence map의 capacity도 사진 단위로 재사용했습니다. 두 실행 모두 같은 SHA-256을
    유지했고 합산 시간은 직전보다 `1.2%` 짧았으며 peak는 `344.40/344.41 MiB`로 `4.40 MiB` 낮았습니다.
-   다음은 같은 품질 fixture를 유지한 채 대형 TIFF와 수백 장 batch 처리량·장기 peak를 측정하는 것입니다.
+   PNG16/TIFF16 출력은 별도 full sRGB16 이미지 대신 16 MiB 행 버퍼로 encode·readback하여 이 경로의
+   추가 `width * height * 6` 바이트를 없앴습니다. 다만 입력 `WorkingImage`와 현상 그래프는 여전히
+   full-frame이고 JPEG8은 full `Srgb16Image`와 WIC 24bpp BGR 변환을 유지하며 기본 encoded-pixel 상한도 512 MiB입니다.
+   다음은 같은 품질 fixture를 유지한 채 대형 TIFF와 수백 장 batch의 peak·처리량을 측정하고, 그 증거를
+   바탕으로 전역 통계·halo·결정적 결함 병합을 보존하는 full tile graph를 설계하는 것입니다.
 
 defect sidecar는 닫았습니다. pending restore가 Defects directory 두 번째 교체 뒤, catalog commit 전에
 중단되면 다음 `CatalogSession.Open`은 검증된 새 live sidecar와 `.previous`를 보고 commit만 재개합니다.

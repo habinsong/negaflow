@@ -140,13 +140,17 @@ negaflow::imaging::WorkingImage make_image() {
 
 void test_round_trip_and_publish(const std::filesystem::path& root) {
     const std::filesystem::path destination = root / L"round-trip.png";
+    negaflow::output::WicPngExportLimits limits{};
+    limits.write_buffer_bytes = 18U;
+    limits.readback_buffer_bytes = 18U;
     const auto result = negaflow::output::export_working_to_srgb16_png(
         make_image(),
-        destination);
+        destination,
+        limits);
     report_failure(result);
     expect(
         result.status == negaflow::output::WicPngExportStatus::ok,
-        "16-bit PNG export succeeds");
+        "16-bit PNG export succeeds with one-row write and readback buffers");
     expect(
         result.conversion_status == negaflow::output::WorkingToSrgb16Status::ok,
         "working conversion succeeds");
@@ -345,6 +349,22 @@ void test_failed_verification_discards_staging(const std::filesystem::path& root
         !std::filesystem::exists(readback_destination),
         "readback budget failure is not published");
     expect(!has_staging_file(root), "readback budget failure removes staging file");
+
+    limits = {};
+    limits.write_buffer_bytes = 17U;
+    const std::filesystem::path write_destination = root / L"write-limit.png";
+    const auto write_result = negaflow::output::export_working_to_srgb16_png(
+        make_image(),
+        write_destination,
+        limits);
+    if (write_result.status != negaflow::output::WicPngExportStatus::encode_failed) {
+        report_failure(write_result);
+    }
+    expect(
+        write_result.status == negaflow::output::WicPngExportStatus::encode_failed,
+        "write budget must hold at least one complete row");
+    expect(!std::filesystem::exists(write_destination), "write budget failure is not published");
+    expect(!has_staging_file(root), "write budget failure removes staging file");
 }
 
 void test_publish_race_preserves_winner(const std::filesystem::path& root) {

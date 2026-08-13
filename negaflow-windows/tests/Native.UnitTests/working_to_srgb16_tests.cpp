@@ -1,5 +1,6 @@
 #include "negaflow/output/working_to_srgb16.h"
 
+#include <array>
 #include <cmath>
 #include <iostream>
 #include <limits>
@@ -95,11 +96,41 @@ void test_rejections() {
         "encoded pixel budget is enforced before allocation");
 }
 
+void test_inspection_and_bounded_rows() {
+    const auto inspection = negaflow::output::inspect_working_to_srgb16(make_image());
+    expect(
+        inspection.status == negaflow::output::WorkingToSrgb16Status::ok &&
+            inspection.image.width == 2U && inspection.image.height == 1U &&
+            inspection.image.stride_bytes == 12U && inspection.image.samples.empty(),
+        "inspection reports the packed layout without materializing samples");
+    expect(
+        inspection.info.encoded_pixel_bytes == 12U &&
+            inspection.info.clipped_color_components == 2U,
+        "inspection preserves conversion byte and clipping information");
+
+    std::array<std::uint16_t, 6U> samples{};
+    std::uint64_t clipped_components = 0U;
+    const auto status = negaflow::output::convert_working_to_srgb16_rows(
+        make_image(),
+        0U,
+        1U,
+        samples.data(),
+        samples.size(),
+        clipped_components);
+    expect(
+        status == negaflow::output::WorkingToSrgb16Status::ok &&
+            samples[0] == 0U && samples[1] == 2'651U && samples[2] == 32'768U &&
+            samples[3] == 65'535U && samples[4] == 0U && samples[5] == 65'535U &&
+            clipped_components == 2U,
+        "bounded row conversion matches the full-image quantization");
+}
+
 }  // namespace
 
 int main() {
     test_quantization();
     test_rejections();
+    test_inspection_and_bounded_rows();
     if (failures != 0) {
         std::cerr << failures << " working-to-sRGB16 test(s) failed\n";
         return 1;

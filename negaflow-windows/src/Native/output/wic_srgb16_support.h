@@ -49,6 +49,8 @@ enum class WicSrgb16FrameStatus : std::uint8_t {
     readback_failed,
     pixel_verification_failed,
     profile_verification_failed,
+    working_conversion_failed,
+    allocation_failed,
 };
 
 [[nodiscard]] WicSrgb16FrameStatus configure_srgb16_frame(
@@ -58,18 +60,25 @@ enum class WicSrgb16FrameStatus : std::uint8_t {
     std::uint32_t output_dpi,
     std::uint32_t& native_error_code) noexcept;
 
-[[nodiscard]] WicSrgb16FrameStatus write_srgb16_pixels(
+[[nodiscard]] WicSrgb16FrameStatus write_working_srgb16_pixels(
     IWICBitmapFrameEncode* frame,
+    const negaflow::imaging::WorkingImage& working,
     const Srgb16Image& image,
+    const WorkingToSrgb16Limits& conversion_limits,
+    std::uint32_t write_buffer_bytes,
+    WorkingToSrgb16Status& conversion_status,
     std::uint32_t& native_error_code) noexcept;
 
-[[nodiscard]] WicSrgb16FrameStatus verify_srgb16_frame(
+[[nodiscard]] WicSrgb16FrameStatus verify_working_srgb16_frame(
     IWICImagingFactory* factory,
     IWICBitmapFrameDecode* frame,
+    const negaflow::imaging::WorkingImage& working,
     const Srgb16Image& expected,
+    const WorkingToSrgb16Limits& conversion_limits,
     const std::vector<std::uint8_t>& expected_profile,
     std::uint32_t output_dpi,
     std::uint32_t readback_buffer_bytes,
+    WorkingToSrgb16Status& conversion_status,
     std::uint32_t& native_error_code);
 
 }  // namespace negaflow::output::detail
