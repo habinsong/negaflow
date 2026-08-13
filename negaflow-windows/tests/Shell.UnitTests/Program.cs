@@ -51,6 +51,7 @@ internal static class Program
         VerifyLookPresetReachesTheEngine();
         VerifyDisplayToRawMapping();
         VerifyGrainMendRegionEdit();
+        VerifyGrainMendDetectCoordinator();
         VerifyInfraredDefectRecipeCoordinator();
         VerifyDevelopExportCoordinator();
         VerifyLibraryDocument();
@@ -653,6 +654,96 @@ internal static class Program
             stored.Length == width * height * 4 &&
             stored[0] == 255 && stored[middle] == 128 && stored[4] == 0,
             "grain_mend_region_edit_survives_recipe_validation");
+    }
+
+    /// <summary>
+    /// 자동·가이드 검출 한 번입니다. 요점은 <b>저장하지 않는다</b>는 것입니다 — macOS 는 버튼을
+    /// 누르는 것만으로 사진을 바꾸지 않고, 찾은 것을 보여 준 뒤 받아들여야 반영합니다.
+    /// </summary>
+    private static void VerifyGrainMendDetectCoordinator()
+    {
+        int callerThreadId = Environment.CurrentManagedThreadId;
+        FakeDispatcher dispatcher = new(accepts: true);
+        FakeExporter exporter = new(_ => OkResult());
+        const uint width = 40U;
+        const uint height = 30U;
+        exporter.DetectBehaviour = mask =>
+        {
+            // 몇 화소만 표시해 둡니다. 나머지는 호출부가 넘긴 버퍼 그대로입니다.
+            Array.Clear(mask, 0, (int)(width * height));
+            mask[0] = 255;
+            mask[(int)width + 3] = 90;
+            return new GrainMendDetectionResult(
+                OkResult(), width, height, 2UL, width * height);
+        };
+
+        GrainMendDetectCoordinator coordinator = new(exporter, dispatcher);
+        GrainMendDetectOutcome? seen = null;
+        Check(
+            coordinator.RunAsync(
+                Frame(new ManualBaseRgb(0.2, 0.2, 0.2)),
+                new DefectRect(0.0, 0.0, 1.0, 1.0),
+                outcome => seen = outcome).GetAwaiter().GetResult(),
+            "grain_mend_detect_delivers");
+        Check(exporter.DetectCallCount == 1 && exporter.DetectThreadId != callerThreadId,
+            "grain_mend_detect_runs_off_the_calling_thread");
+        Check(seen is { Kind: DevelopExportOutcomeKind.Completed, Edit: not null } &&
+            seen.Width == width && seen.Height == height,
+            "grain_mend_detect_reports_the_analysis_size");
+        Check(seen?.Edit?.Kind == DefectEditKind.Region &&
+            seen.Edit.Label.Kind == DefectEditLabelKind.Automatic &&
+            seen.Edit.Label.Value == 2,
+            "grain_mend_detect_labels_a_whole_frame_run_automatic");
+
+        // 부분 ROI 는 가이드입니다.
+        seen = null;
+        Check(
+            coordinator.RunAsync(
+                Frame(new ManualBaseRgb(0.2, 0.2, 0.2)),
+                new DefectRect(0.1, 0.1, 0.5, 0.5),
+                outcome => seen = outcome).GetAwaiter().GetResult() &&
+            seen?.Edit?.Label.Kind == DefectEditLabelKind.Guided,
+            "grain_mend_detect_labels_a_partial_roi_guided");
+
+        // 아무것도 못 찾으면 항목이 없고, 그것은 실패가 아닙니다.
+        exporter.DetectBehaviour = mask =>
+        {
+            Array.Clear(mask, 0, (int)(width * height));
+            return new GrainMendDetectionResult(
+                OkResult(), width, height, 0UL, width * height);
+        };
+        seen = null;
+        Check(
+            coordinator.RunAsync(
+                Frame(new ManualBaseRgb(0.2, 0.2, 0.2)),
+                new DefectRect(0.0, 0.0, 1.0, 1.0),
+                outcome => seen = outcome).GetAwaiter().GetResult() &&
+            seen is { FoundNothing: true },
+            "grain_mend_detect_finding_nothing_is_not_a_failure");
+
+        // 엔진이 실패하면 그대로 전합니다 — 조용히 빈 결과로 만들지 않습니다.
+        exporter.DetectBehaviour = null;
+        seen = null;
+        Check(
+            coordinator.RunAsync(
+                Frame(new ManualBaseRgb(0.2, 0.2, 0.2)),
+                new DefectRect(0.0, 0.0, 1.0, 1.0),
+                outcome => seen = outcome).GetAwaiter().GetResult() &&
+            seen is { Kind: DevelopExportOutcomeKind.Faulted } &&
+            seen.FaultMessage == "detector_unavailable",
+            "grain_mend_detect_reports_engine_failure");
+
+        // 현상할 수 없는 frame 은 네이티브까지 가지 않습니다.
+        int before = exporter.DetectCallCount;
+        seen = null;
+        Check(
+            coordinator.RunAsync(
+                Frame(null, SourceSignalKind.SceneLinearDigital),
+                new DefectRect(0.0, 0.0, 1.0, 1.0),
+                outcome => seen = outcome).GetAwaiter().GetResult() &&
+            seen is { Kind: DevelopExportOutcomeKind.Refused } &&
+            exporter.DetectCallCount == before,
+            "grain_mend_detect_refuses_before_calling_the_engine");
     }
 
     private static void VerifyDevelopRequestFactory()
@@ -1641,9 +1732,25 @@ internal static class Program
         public int CallCount;
         public int LastThreadId;
         public int CancelledCount;
+        public int DetectCallCount;
+        public int DetectThreadId;
+        // 시험이 정하는 검출 결과입니다. null 이면 실패를 흉내 냅니다.
+        public Func<byte[], GrainMendDetectionResult>? DetectBehaviour;
         // What the last preview was asked to proof with. Null both when proofing is off
         // and when the caller never passed one, which the tests distinguish by call.
         public SoftProofSettings? LastSoftProof;
+
+        public GrainMendDetectionResult DetectGrainMend(
+            DevelopExportRequest request,
+            byte[] mask,
+            DevelopRun? run = null)
+        {
+            ++DetectCallCount;
+            DetectThreadId = Environment.CurrentManagedThreadId;
+            return DetectBehaviour is null
+                ? new GrainMendDetectionResult(FailedResult("detector_unavailable"), 0U, 0U, 0UL, 0UL)
+                : DetectBehaviour(mask);
+        }
 
         public DevelopExportResult Run(DevelopExportRequest request)
         {
@@ -1713,6 +1820,22 @@ internal static class Program
         filmLookWorkspaceBytes: 0,
         wallMicroseconds: 1,
         cancelled: true);
+
+    private static DevelopExportResult FailedResult(string failureName) => new(
+        succeeded: false,
+        DevelopExportStage.GrainMend,
+        failureName,
+        nativeErrorCode: 0,
+        cleanupErrorCode: 0,
+        imageWidth: 0,
+        imageHeight: 0,
+        FilmLookRoute.FilmScanEmulation,
+        filmLookColorApplied: false,
+        filmLookAcutanceApplied: false,
+        sourceFileBytes: 0,
+        outputFileBytes: 0,
+        filmLookWorkspaceBytes: 0,
+        wallMicroseconds: 0);
 
     private static DevelopExportResult OkResult() => new(
         succeeded: true,

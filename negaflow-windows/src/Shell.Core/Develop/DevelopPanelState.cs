@@ -630,6 +630,43 @@ public sealed class DevelopPanelState
         return error;
     }
 
+    /// <summary>
+    /// 검토를 마친 검출 결과를 recipe 에 담습니다. 자동·가이드는 이 호출 전까지 사진을
+    /// 바꾸지 않습니다 — macOS 와 같은 상태 전환입니다.
+    /// </summary>
+    public LibraryFrameError AcceptDefectRegion(DefectEditItem edit)
+    {
+        ArgumentNullException.ThrowIfNull(edit);
+        if (SelectedFrame is not { } frame ||
+            !Guid.TryParseExact(frame.Id, "D", out Guid frameId))
+        {
+            return LibraryFrameError.MissingId;
+        }
+
+        LibraryFrameError error = host.AppendDefectStroke(
+            frame.Id,
+            (identity, existing) =>
+            {
+                try
+                {
+                    return DefectRecipeSnapshot.Create(
+                        frameId,
+                        checked((existing?.RecipeRevision ?? 0UL) + 1UL),
+                        identity,
+                        existing is null ? [edit] : [.. existing.Items, edit]);
+                }
+                catch (Exception failure) when (failure is ArgumentException or OverflowException)
+                {
+                    return null;
+                }
+            });
+        if (error == LibraryFrameError.None)
+        {
+            Select(frame.Id);
+        }
+        return error;
+    }
+
     public bool HasDefectEdits(DefectEditKind kind) =>
         SelectedFrame?.DefectRecipe?.Items.Any(item => item.Kind == kind) == true;
 

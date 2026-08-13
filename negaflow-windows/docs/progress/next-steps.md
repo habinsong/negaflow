@@ -225,10 +225,18 @@ py scripts/find-unreachable-api.py
    알게 된 것 하나: **검증기가 마스크를 zlib 으로 줄여 담습니다.** 그러니 저장된 마스크를
    바이트 길이로 확인하지 말고 `DefectMaskCodec.TryDecodeRgba8` 로 되풀어 보십시오.
 
-   **남은 것은 UI 흐름 하나입니다:** 자동·가이드 버튼 → 검출(워커 스레드) → macOS 처럼
-   오버레이로 보여 주기 → Enter 또는 "결함 제거"로 받아들이면 저장. macOS 는 버튼을 누르는
-   것만으로는 사진을 바꾸지 않으므로(상태 전환이 다릅니다) 검토 단계를 빼지 마십시오.
-   저장 뒤 수리 경로는 이미 이어져 있습니다.
+   **코디네이터와 저장까지 만들었습니다.** `GrainMendDetectCoordinator.RunAsync(frame, roi,
+   onCompleted)` 가 워커 스레드에서 검출하고 결과를 dispatcher 로 돌려줍니다. **저장하지
+   않습니다** — macOS 는 자동을 누르는 것만으로 사진을 바꾸지 않고 받아들여야 반영하므로,
+   그 상태 전환을 코드 모양으로 지켰습니다. 받아들이는 자리는
+   `DevelopPanelState.AcceptDefectRegion(edit)` 입니다. ROI 가 (0,0,1,1) 이면 자동, 부분이면
+   가이드로 이름표가 붙습니다. `IDevelopExporter.DetectGrainMend` 로 추상화해 두어 시험이
+   네이티브 없이 대역을 끼울 수 있습니다.
+
+   **남은 것은 UI 하나입니다:** 자동·가이드 버튼을 코디네이터에 잇고, 찾은 마스크를 캔버스
+   위에 오버레이로 그리고, Enter 또는 "결함 제거"로 `AcceptDefectRegion` 을 부르는 것.
+   오버레이는 마스크(화소당 1바이트)를 BGRA 로 칠해 미리보기 사각형에 맞춰 얹으면 됩니다 —
+   `TryGetPreviewFrame` 이 그 사각형을 이미 알려 줍니다. 저장 뒤 수리 경로는 이어져 있습니다.
 
    제안하는 모양(핸들 없이 한 번 호출):
 
