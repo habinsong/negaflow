@@ -49,6 +49,14 @@ id 는 더 이상 표시 이름에서 파생되지 않으므로 언어를 바꿔
 셸에 setter 가 없어 아무도 켤 수 없었습니다. macOS 처럼 음화 route 에서만 토글을 내고,
 양화에서 켜려 하면 기록하지 않고 거부합니다.
 
+**현상 프로세스를 고를 수 있게 됐습니다 — 이번 세션에서 찾은 가장 큰 공백입니다.** 가져오기가
+전부 C-41 로 못박혀 있었고 셸에 바꿀 길이 없어서, macOS 여섯 프로세스 중 다섯(E-6, D-76,
+B&W Reversal, Digital Color, Digital B&W)에 **영영 닿을 수 없었습니다.** 필름 룩도 digital
+source 에서만 걸리므로 함께 막혀 있었습니다. 라이브러리 폴더 머리줄에 macOS 와 같은 자리·같은
+여섯 항목·같은 이름의 선택기를 두었고, 고르면 그 폴더에 적용하고 저장합니다.
+`DevelopPanelState.SetDevelopmentProcess` 와 macOS 유도 규칙(디지털 표시는 포지티브에만)을
+따르는 reader 를 더했습니다. 프로세스를 바꿔도 고른 필름과 세기는 유지합니다.
+
 **42종 필름 에뮬레이션을 드디어 고를 수 있습니다.** 엔진은 M2 부터 전부 갖고 있었는데 셸에
 고르는 자리가 없어 카탈로그를 손으로 고치지 않는 한 쓸 수 없었습니다. 현상 왼쪽 필름 소스가
 macOS 순서로 냅니다 — None 먼저, 그다음 그 필름 종류의 묶음(컬러는 슬라이드·음화·시네, 흑백은
@@ -70,14 +78,21 @@ route 편집 경로가 따로 필요해(recipe 는 `LibraryFrameWriter`, route �
 바이트 수는 그대로였습니다. x64 Release native CTest 65/65 통과, x64·ARM64 Release managed
 그래프가 경고 없이 빌드됐습니다. managed Shell 449 / Catalog 608 / Interop 191 assertion 통과.
 
-필름 룩은 **단위 시험으로만** 확인했습니다(42종 목록·묶음·표시 이름, catalog 왕복, 강도 clamp,
-스캔 route 거부 = Shell 456 assertion). 앱 화면에서는 스캔 프레임의 안내 문장만 확인했고 **42종
-목록이 실제로 그려지는 것은 보지 못했습니다** — 카탈로그에 digital source frame 이 없고 파일
-대화상자를 자동화로 열어 JPEG 를 넣는 데 실패했습니다. 확인한 것: `nf_probe_standard_image_source_v1`
-은 Debug/Release 양쪽에서 그 JPEG 를 받아들이므로(900×600 RGBA16 orient=1), 그때 나온
-"not a supported TIFF image" 는 JPEG 미지원이 아니라 대화상자가 다른 파일을 돌려준 결과입니다.
-**digital source frame 을 하나 넣고 필름 목록을 눈으로 확인하는 것이 다음 세션의 첫 확인
-항목입니다.**
+프로세스 전환과 필름 룩의 **핵심 경로는 단위 시험으로 증명했습니다**(Shell 462 assertion):
+C-41 스캔 → Digital Color 로 바꾸면 필름 룩이 열리고 → Ektar 100 을 고르고 → D-76 으로 바꾸면
+룩은 다시 닫히되 **고른 필름은 남습니다.** 42종 목록·묶음·표시 이름, 강도 clamp, 스캔 route
+거부도 함께 덮습니다.
+
+**화면에서 확인하지 못한 것 두 가지가 있습니다.** (1) 폴더 머리줄 선택기에 여섯 항목이 모두
+나오는 것은 UI Automation 으로 확인했지만, 거기서 골랐을 때 실제로 적용되는 것은 확인하지
+못했습니다(자동화로 연 팝업의 항목 선택이 먹지 않았습니다 — 코드 문제가 아니라 하네스 문제로
+보이나 확증하지 못했습니다). (2) 그래서 42종 목록이 화면에 그려지는 것도 아직 못 봤습니다.
+**다음 세션에서 사람이 직접 폴더 머리줄에서 Digital Color 를 고르고 필름 탭을 열어 보는 것이
+첫 확인 항목입니다.**
+
+곁가지로 확인한 것: `nf_probe_standard_image_source_v1` 은 Debug/Release 양쪽에서 JPEG 를
+받아들입니다(900×600 RGBA16 orient=1). 가져오기에서 나온 "not a supported TIFF image" 는
+JPEG 미지원이 아니라 파일 대화상자가 다른 파일을 돌려준 결과입니다.
 
 **아직 하지 않은 것:** ARM64 실제 실행(cross-build 는 실행 결과가 아닙니다), 대량(수백 장)
 라이브러리에서의 격자 스크롤·썸네일 렌더 큐 실측, 그리고 macOS 와의 썸네일 픽셀 비교.
