@@ -16,7 +16,12 @@ public sealed record ExportDestination(string FolderPath, string NamePattern, De
     public const string NameToken = "{name}";
 
     public static string ExtensionFor(DevelopExportFormat format) =>
-        format == DevelopExportFormat.Tiff16 ? ".tif" : ".png";
+        format switch
+        {
+            DevelopExportFormat.Tiff16 => ".tif",
+            DevelopExportFormat.Jpeg8 => ".jpg",
+            _ => ".png",
+        };
 
     /// <summary>패턴을 원본 이름으로 채운 파일명입니다. 확장자는 형식이 정합니다.</summary>
     public string FileNameFor(string sourcePath)

@@ -4,6 +4,7 @@ public enum DevelopExportFormat
 {
     Png16 = 0,
     Tiff16 = 1,
+    Jpeg8 = 2,
 }
 
 public enum NegativeFilmType
@@ -589,6 +590,12 @@ public sealed class DevelopExportRequest
 
     /// <summary>Zero uses the selected medium's reference DPI.</summary>
     public int OutputSharpeningDpi { get; init; }
+
+    /// <summary>JPEG encoding fidelity from zero through one. Other formats ignore it.</summary>
+    public float JpegQuality { get; init; } = 1.0F;
+
+    /// <summary>Positive values are embedded as output metadata and do not resize pixels.</summary>
+    public uint OutputDpi { get; init; }
 
     public uint RowsPerCopy { get; init; } = 64;
 }

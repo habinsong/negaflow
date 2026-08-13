@@ -175,6 +175,7 @@ add_library(negaflow_output STATIC
     src/Native/output/atomic_output_file.cpp
     src/Native/output/png_structure_reader.cpp
     src/Native/output/tiff_ifd_allowlist.cpp
+    src/Native/output/wic_jpeg_export.cpp
     src/Native/output/wic_png_export.cpp
     src/Native/output/wic_srgb16_support.cpp
     src/Native/output/wic_tiff_export.cpp
@@ -403,6 +404,19 @@ if(BUILD_TESTING)
         PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/output"
     )
     add_test(NAME native.wic_png_export COMMAND negaflow_wic_png_export_tests)
+
+    add_executable(negaflow_wic_jpeg_export_tests
+        tests/Native.UnitTests/wic_jpeg_export_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_wic_jpeg_export_tests
+        PRIVATE negaflow_output negaflow_imaging negaflow_project_options
+    )
+    target_include_directories(
+        negaflow_wic_jpeg_export_tests
+        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/output"
+    )
+    add_test(NAME native.wic_jpeg_export COMMAND negaflow_wic_jpeg_export_tests)
 
     add_executable(negaflow_wic_tiff_export_tests
         tests/Native.UnitTests/wic_tiff_export_tests.cpp

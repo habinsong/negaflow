@@ -426,6 +426,19 @@ void expect(const bool condition, const char* const message) {
     return request;
 }
 
+[[nodiscard]] nf_develop_export_request_v28 make_request_v28(
+    const wchar_t* const source,
+    const wchar_t* const destination,
+    const std::uint32_t base_mode = NF_BASE_ESTIMATION_AUTO) {
+    nf_develop_export_request_v28 request;
+    std::memset(&request, 0, sizeof(request));
+    request.v27 = make_request_v27(source, destination, base_mode);
+    request.v27.v26.v25.v24.v21.v20.v19.v18.v17.v16.v15.v14.v13.v12.v11.v10.v9.v8
+        .struct_size = static_cast<std::uint32_t>(sizeof(request));
+    request.jpeg_quality = 1.0F;
+    return request;
+}
+
 [[nodiscard]] bool write_file(
     const std::filesystem::path& path,
     const std::vector<std::uint8_t>& bytes) {
@@ -1419,6 +1432,33 @@ void test_v27_contract() {
             result.failed_stage == NF_DEVELOP_STAGE_REQUEST_VALIDATION &&
             std::strcmp(result.failure_name, "invalid_primary_calibration_parameters") == 0,
         "v27 rejects primary calibration outside its supported range");
+}
+
+void test_v28_contract() {
+    expect(sizeof(nf_develop_export_request_v28) == 4944U,
+           "v28 request layout is fixed");
+    expect(offsetof(nf_develop_export_request_v28, jpeg_quality) == 4928U,
+           "v28 JPEG quality offset is fixed");
+
+    nf_develop_export_request_v28 request = make_request_v28(L"a.tif", L"b.jpg");
+    request.v27.v26.v25.v24.v21.v20.v19.v18.v17.v16.v15.v14.v13.v12.v11.v10.v9.v8
+        .output_format = NF_EXPORT_FORMAT_JPEG8;
+    request.jpeg_quality = 0.96F;
+    request.output_dpi = 300U;
+    nf_develop_export_result_v3 result = make_result_v3();
+    expect(
+        nf_develop_export_v28(&request, nullptr, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            result.failed_stage == NF_DEVELOP_STAGE_OBSERVE_SOURCE_BEFORE,
+        "v28 JPEG output request reaches source observation");
+
+    request.jpeg_quality = 1.01F;
+    result = make_result_v3();
+    expect(
+        nf_develop_export_v28(&request, nullptr, &result) == NF_STATUS_OK &&
+            result.failed_stage == NF_DEVELOP_STAGE_REQUEST_VALIDATION &&
+            std::strcmp(result.failure_name, "invalid_output_options") == 0,
+        "v28 rejects JPEG quality outside its supported range");
 }
 
 void test_missing_source_is_not_a_validation_error() {
@@ -2735,6 +2775,8 @@ void test_v18_defect_region_preview_and_export() {
         temporary / L"negaflow-abi-v24-infrared.png";
     const std::filesystem::path calibrated_output =
         temporary / L"negaflow-abi-v27-calibrated.png";
+    const std::filesystem::path jpeg_output =
+        temporary / L"negaflow-abi-v28-output.jpg";
     std::error_code ignored{};
     std::filesystem::remove(source, ignored);
     std::filesystem::remove(identity_output, ignored);
@@ -2744,6 +2786,7 @@ void test_v18_defect_region_preview_and_export() {
     std::filesystem::remove(brushed_output, ignored);
     std::filesystem::remove(infrared_output, ignored);
     std::filesystem::remove(calibrated_output, ignored);
+    std::filesystem::remove(jpeg_output, ignored);
 
     const std::vector<std::uint8_t> source_bytes =
         negaflow::test_fixtures::make_uncompressed_rgb16_defect_tiff(
@@ -3165,6 +3208,26 @@ void test_v18_defect_region_preview_and_export() {
             NF_STATUS_OK &&
         identity_export_result.succeeded == 1U;
 
+    const std::wstring jpeg_output_text = jpeg_output.wstring();
+    nf_develop_export_request_v28 jpeg_export = make_request_v28(
+        source_text.c_str(), jpeg_output_text.c_str(), NF_BASE_ESTIMATION_MANUAL);
+    jpeg_export.v27.v26.v25.v24.v21.v20.v19.v18.v17.film_polarity =
+        NF_FILM_POLARITY_POSITIVE;
+    jpeg_export.v27.v26.v25.v24.v21.v20.v19.v18.v17.v16.v15.v14.v13.v12.v11.v10.v9.v8
+        .output_format = NF_EXPORT_FORMAT_JPEG8;
+    jpeg_export.jpeg_quality = 0.96F;
+    jpeg_export.output_dpi = 300U;
+    nf_develop_export_result_v3 jpeg_export_result = make_result_v3();
+    const bool jpeg_export_ok =
+        nf_develop_export_v28(&jpeg_export, nullptr, &jpeg_export_result) == NF_STATUS_OK &&
+        jpeg_export_result.succeeded == 1U;
+    expect(
+        jpeg_export_ok && jpeg_export_result.image_width == width &&
+            jpeg_export_result.image_height == height &&
+            jpeg_export_result.output_file_bytes != 0U &&
+            std::filesystem::exists(jpeg_output),
+        "v28 JPEG export publishes the shared develop result");
+
     const std::wstring cloned_output_text = cloned_output.wstring();
     cloned.v19.v18.v17.v16.v15.v14.v13.v12.v11.v10.v9.v8.destination_path =
         cloned_output_text.c_str();
@@ -3264,6 +3327,7 @@ void test_v18_defect_region_preview_and_export() {
     std::filesystem::remove(brushed_output, ignored);
     std::filesystem::remove(infrared_output, ignored);
     std::filesystem::remove(calibrated_output, ignored);
+    std::filesystem::remove(jpeg_output, ignored);
 }
 
 }  // namespace
@@ -3699,6 +3763,7 @@ int main(const int argument_count, const char* const arguments[]) {
     test_v25_contract();
     test_v26_contract();
     test_v27_contract();
+    test_v28_contract();
     test_missing_source_is_not_a_validation_error();
     test_v2_missing_source_is_not_a_validation_error();
     test_v18_defect_region_preview_and_export();

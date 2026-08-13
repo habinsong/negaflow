@@ -476,8 +476,13 @@ struct PreviewTarget final {
         return fail(DevelopExportStage::request_validation, "missing_path");
     }
     if (request.format != DevelopExportFormat::png16 &&
-        request.format != DevelopExportFormat::tiff16) {
+        request.format != DevelopExportFormat::tiff16 &&
+        request.format != DevelopExportFormat::jpeg8) {
         return fail(DevelopExportStage::request_validation, "unknown_export_format");
+    }
+    if (!std::isfinite(request.jpeg_quality) || request.jpeg_quality < 0.0F ||
+        request.jpeg_quality > 1.0F) {
+        return fail(DevelopExportStage::request_validation, "invalid_jpeg_quality");
     }
     if (request.film_polarity != FilmPolarity::negative &&
         request.film_polarity != FilmPolarity::positive) {
@@ -1325,6 +1330,37 @@ struct PreviewTarget final {
             return fail(
                 DevelopExportStage::output,
                 negaflow::output::wic_png_export_status_name(exported.status),
+                exported.native_error_code,
+                exported.cleanup_error_code);
+        }
+        outcome.output_file_bytes = exported.info.artifact_bytes;
+        outcome.succeeded = true;
+        outcome.failure_name = "ok";
+        tracker.finish();
+        tracker.complete();
+        return outcome;
+    }
+
+    if (request.format == DevelopExportFormat::jpeg8) {
+        const negaflow::output::WicJpegExportResult exported =
+            negaflow::output::export_working_to_srgb8_jpeg(
+                output_sharpening.image,
+                request.destination,
+                request.jpeg_quality,
+                request.output_dpi);
+        if (exported.status != negaflow::output::WicJpegExportStatus::ok) {
+            if (exported.status ==
+                negaflow::output::WicJpegExportStatus::working_conversion_failed) {
+                return fail(
+                    DevelopExportStage::output,
+                    negaflow::output::working_to_srgb16_status_name(
+                        exported.conversion_status),
+                    exported.native_error_code,
+                    exported.cleanup_error_code);
+            }
+            return fail(
+                DevelopExportStage::output,
+                negaflow::output::wic_jpeg_export_status_name(exported.status),
                 exported.native_error_code,
                 exported.cleanup_error_code);
         }

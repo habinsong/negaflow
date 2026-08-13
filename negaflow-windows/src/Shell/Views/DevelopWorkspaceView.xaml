@@ -110,6 +110,7 @@
                                         SelectionChanged="OnExportFormatChanged">
                                         <ComboBoxItem Content="TIFF" Tag="Tiff16" />
                                         <ComboBoxItem Content="PNG" Tag="Png16" />
+                                        <ComboBoxItem Content="JPEG" Tag="Jpeg8" />
                                     </ComboBox>
                                 </Grid>
                                 <Grid ColumnSpacing="8">

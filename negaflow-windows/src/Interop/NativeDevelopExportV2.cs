@@ -576,6 +576,16 @@ internal unsafe struct NativeDevelopExportRequestV27
 }
 
 [StructLayout(LayoutKind.Sequential)]
+internal unsafe struct NativeDevelopExportRequestV28
+{
+    internal NativeDevelopExportRequestV27 V27;
+    internal float JpegQuality;
+    internal uint OutputDpi;
+    internal uint OutputOptionsReserved0;
+    internal uint OutputOptionsReserved1;
+}
+
+[StructLayout(LayoutKind.Sequential)]
 internal unsafe struct NativeDevelopExportResultV2
 {
     internal const int FailureNameCapacity = 64;

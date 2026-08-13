@@ -12,7 +12,7 @@
 
 동작하는 것은 **CLI 수직 경로와 첫 WinUI 관통 경로**입니다. TIFF 디코드 → 스캐너 색상 → 수동
 Dmin 음화 현상 또는 film/rendered-digital positive 입력 → 톤·포인트 커브·Color Mixer·Color Grading·Primary
-Calibration → source별 Film Look → 검증된 PNG16/TIFF16 게시까지 한 장이 끝까지 갑니다. WinUI 에서는 Import → 필름 base
+Calibration → source별 Film Look → 검증된 PNG16/TIFF16/JPEG8 게시까지 한 장이 끝까지 갑니다. WinUI 에서는 Import → 필름 base
 설정 → 노출 조정 → 같은 파이프라인의 미리보기 → Export 가 카탈로그와 C ABI 를 거쳐 동작합니다.
 
 반전 직후 opt-in Auto Levels → Neutral Balance → ColorModel과 고정 macOS post-pipeline의 GrainMend → FilmScanDenoise → Local Dodge/Burn →
@@ -292,10 +292,11 @@ py scripts/find-unreachable-api.py
 3. **앱 메타데이터 / 촬영 기록 / 롤 기록 카드.** 정보 탭의 나머지 세 카드입니다. catalog recipe
    (`appMetadataOverlay` — 개정 번호와 원본 SHA-256 결속 포함)와 내보내기 때 WIC 로 EXIF/IPTC 를
    쓰는 일이 함께 필요합니다. 저장만 하고 내보내기에 싣지 않으면 반쪽입니다.
-4. **출력 패널의 품질·소스 탭과 빠른 내보내기.** DPI·긴 변 픽셀·JPEG 품질·TIFF 압축·비트 심도·
-   출력 선명도가 들어갑니다. **엔진이 아직 못 하는 것들입니다** — `DevelopExportFormat` 는
-   Tiff16/Png16 뿐이고 JPEG·리사이즈·DPI 가 없으며 `OutputSharpening*` 요청 필드는 아무도
-   채우지 않습니다. UI 부터 만들면 동작하지 않는 토글이 됩니다.
+4. **출력 패널의 품질·소스 탭과 빠른 내보내기.** `DevelopExportFormat.Jpeg8`과 ABI 0.40/v28의
+   JPEG quality·DPI metadata는 실제 native publish까지 연결됐고 기본 JPEG(quality 1.0, DPI 미지정)는
+   파일 탭에서 선택할 수 있습니다. 다음은 **긴 변 pixel downscale**, 이 필드를 실제로 편집·저장하는
+   품질 탭, TIFF 압축/8-bit, PNG 8-bit/DPI, 그리고 OutputSharpening fields를 채우는 UI입니다. 아직
+   동작하지 않는 옵션 토글부터 만들지 마십시오.
 
 새 섹션을 만들기 전에, 이미 엔진에 있는데 UI 가 없는 축이 또 있는지부터 보십시오 — 이번
 세션에 그렇게 찾은 것이 넷입니다(색상 다섯 축, 흑백 토닝, 자동 GrainMend 세기, 프리셋).

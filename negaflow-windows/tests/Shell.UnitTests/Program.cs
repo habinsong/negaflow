@@ -364,6 +364,9 @@ internal static class Program
         ExportDestination png = tiff with { Format = DevelopExportFormat.Png16 };
         Check(png.FileNameFor(source) == "IMG_0007.png", "export_destination_extension_follows_format");
 
+        ExportDestination jpeg = tiff with { Format = DevelopExportFormat.Jpeg8 };
+        Check(jpeg.FileNameFor(source) == "IMG_0007.jpg", "export_destination_jpeg_extension");
+
         ExportDestination suffixed = tiff with { NamePattern = $"{ExportDestination.NameToken}-print" };
         Check(
             suffixed.FileNameFor(source) == "IMG_0007-print.tif",

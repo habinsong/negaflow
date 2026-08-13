@@ -51,6 +51,7 @@ public static unsafe class NativeDevelopExporter
     internal const int RequestV25Size = 4880;
     internal const int RequestV26Size = 4896;
     internal const int RequestV27Size = 4928;
+    internal const int RequestV28Size = 4944;
     internal const int ResultV2Size = 152;
     internal const int ResultV3Size = 160;
     internal const int RunStateV1Size = 16;
@@ -116,6 +117,7 @@ public static unsafe class NativeDevelopExporter
             sizeof(NativeDevelopExportRequestV25) != RequestV25Size ||
             sizeof(NativeDevelopExportRequestV26) != RequestV26Size ||
             sizeof(NativeDevelopExportRequestV27) != RequestV27Size ||
+            sizeof(NativeDevelopExportRequestV28) != RequestV28Size ||
             sizeof(NativeDevelopExportResultV2) != ResultV2Size ||
             sizeof(NativeDevelopExportResultV3) != ResultV3Size ||
             sizeof(NativeDevelopRunStateV1) != RunStateV1Size ||
@@ -203,10 +205,11 @@ public static unsafe class NativeDevelopExporter
                 "Texture controls are outside the supported finite range.",
                 nameof(request));
         }
-        if (!Normalized(request.OutputSharpening) || request.OutputSharpeningDpi < 0)
+        if (!Normalized(request.OutputSharpening) || request.OutputSharpeningDpi < 0 ||
+            !Normalized(request.JpegQuality))
         {
             throw new ArgumentException(
-                "Output sharpening controls are outside the supported range.",
+                "Output controls are outside the supported range.",
                 nameof(request));
         }
         if (request.BwToningShadowHue is { } shadowHue &&
@@ -1748,6 +1751,20 @@ public static unsafe class NativeDevelopExporter
         };
     }
 
+    private static NativeDevelopExportRequestV28 BuildRequestV28(
+        NativeDevelopExportRequestV27 v27,
+        DevelopExportRequest request)
+    {
+        v27.V26.V25.V24.V21.V20.V19.V18.V17.V16.V15.V14.V13.V12.V11.V10.V9.V8.V7.StructSize =
+            (uint)sizeof(NativeDevelopExportRequestV28);
+        return new NativeDevelopExportRequestV28
+        {
+            V27 = v27,
+            JpegQuality = request.JpegQuality,
+            OutputDpi = request.OutputDpi,
+        };
+    }
+
     private static byte[] BuildDefectSourceSha256(DevelopExportRequest request) =>
         request.DefectSourceIdentity is { } identity
             ? Convert.FromHexString(identity.Sha256)
@@ -1850,14 +1867,15 @@ public static unsafe class NativeDevelopExporter
                 defectInfraredItems,
                 checked((uint)defects.InfraredItems.Length));
             NativeDevelopExportRequestV26 v26 = BuildRequestV26(v25, request);
-            NativeDevelopExportRequestV27 native = BuildRequestV27(v26, request);
-            status = NativeMethods.nf_develop_export_v27(
+            NativeDevelopExportRequestV27 v27 = BuildRequestV27(v26, request);
+            NativeDevelopExportRequestV28 native = BuildRequestV28(v27, request);
+            status = NativeMethods.nf_develop_export_v28(
                 &native,
                 runState,
                 &raw);
         }
 
-        return Translate(status, raw, "nf_develop_export_v27");
+        return Translate(status, raw, "nf_develop_export_v28");
     }
 
     /// <summary>
@@ -2060,7 +2078,7 @@ public static unsafe class NativeDevelopExporter
                 defectInfraredItems,
                 checked((uint)defects.InfraredItems.Length));
             NativeDevelopExportRequestV26 v26 = BuildRequestV26(v25, request);
-            NativeDevelopExportRequestV27 native = BuildRequestV27(v26, request);
+            NativeDevelopExportRequestV27 v27 = BuildRequestV27(v26, request);
             if (detection is not null)
             {
                 NativeGrainMendDetectParametersV1 detectionParameters = new()
@@ -2073,7 +2091,7 @@ public static unsafe class NativeDevelopExporter
                 };
                 detection->StructSize = (uint)sizeof(NativeGrainMendDetectionV2);
                 status = NativeMethods.nf_develop_detect_grain_mend_v2(
-                    &native,
+                    &v27,
                     &detectionParameters,
                     pixels.IsEmpty ? null : pixelBuffer,
                     (ulong)pixels.Length,
@@ -2083,7 +2101,8 @@ public static unsafe class NativeDevelopExporter
             }
             else
             {
-                status = NativeMethods.nf_develop_preview_v27(
+                NativeDevelopExportRequestV28 native = BuildRequestV28(v27, request);
+                status = NativeMethods.nf_develop_preview_v28(
                     &native,
                     proofPointer,
                     maximumWidth,
@@ -2100,7 +2119,7 @@ public static unsafe class NativeDevelopExporter
             raw,
             detection is not null
                 ? "nf_develop_detect_grain_mend_v2"
-                : "nf_develop_preview_v27"));
+                : "nf_develop_preview_v28"));
     }
 
     private static DevelopExportResult Translate(

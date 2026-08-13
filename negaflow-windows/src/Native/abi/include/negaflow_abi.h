@@ -50,6 +50,7 @@ typedef struct nf_build_info_v1 {
 
 #define NF_EXPORT_FORMAT_PNG16 0U
 #define NF_EXPORT_FORMAT_TIFF16 1U
+#define NF_EXPORT_FORMAT_JPEG8 2U
 
 #define NF_FILM_TYPE_COLOR 0U
 #define NF_FILM_TYPE_BLACK_AND_WHITE 1U
@@ -763,6 +764,16 @@ typedef struct nf_develop_export_request_v27 {
     uint32_t primary_calibration_reserved0;
     uint32_t primary_calibration_reserved1;
 } nf_develop_export_request_v27;
+
+/* v28 preserves the v27 develop recipe and appends output-only JPEG quality and
+   DPI metadata. dpi zero means no user override; it never changes pixel dimensions. */
+typedef struct nf_develop_export_request_v28 {
+    nf_develop_export_request_v27 v27;
+    float jpeg_quality;
+    uint32_t output_dpi;
+    uint32_t output_options_reserved0;
+    uint32_t output_options_reserved1;
+} nf_develop_export_request_v28;
 
 typedef struct nf_develop_export_result_v1 {
     uint32_t struct_size;
@@ -1530,6 +1541,20 @@ NF_API nf_status_t NF_CALL nf_develop_export_v27(
     nf_develop_export_result_v3* result);
 NF_API nf_status_t NF_CALL nf_develop_preview_v27(
     const nf_develop_export_request_v27* request,
+    const nf_soft_proof_v1* soft_proof,
+    uint32_t maximum_width,
+    uint32_t maximum_height,
+    uint8_t* pixels,
+    uint32_t pixel_capacity_bytes,
+    nf_develop_run_state_v1* run_state,
+    nf_develop_export_result_v3* result);
+
+NF_API nf_status_t NF_CALL nf_develop_export_v28(
+    const nf_develop_export_request_v28* request,
+    nf_develop_run_state_v1* run_state,
+    nf_develop_export_result_v3* result);
+NF_API nf_status_t NF_CALL nf_develop_preview_v28(
+    const nf_develop_export_request_v28* request,
     const nf_soft_proof_v1* soft_proof,
     uint32_t maximum_width,
     uint32_t maximum_height,

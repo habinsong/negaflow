@@ -22,6 +22,7 @@
 #include "negaflow/imaging/working_film_look.h"
 #include "negaflow/imaging/working_tone_adjuster.h"
 #include "negaflow/output/wic_png_export.h"
+#include "negaflow/output/wic_jpeg_export.h"
 #include "negaflow/output/wic_tiff_export.h"
 
 #include <array>
@@ -36,6 +37,7 @@ namespace negaflow::pipeline {
 enum class DevelopExportFormat : std::uint8_t {
     png16 = 0,
     tiff16,
+    jpeg8,
 };
 
 enum class NegativeBaseEstimationMode : std::uint8_t {
@@ -101,6 +103,8 @@ struct DevelopExportRequest final {
     negaflow::imaging::BwToningParameters bw_toning{};
     negaflow::imaging::ImageTransformParameters image_transform{};
     negaflow::imaging::OutputSharpeningParameters output_sharpening{};
+    float jpeg_quality{1.0F};
+    std::uint32_t output_dpi{0U};
     std::uint32_t rows_per_copy{64U};
 };
 

@@ -8,11 +8,11 @@ macOS 대비 어림값입니다. 근거를 함께 적습니다 — 숫자만 옮
 
 | 영역 | 대략 | 근거와 남은 것 |
 | --- | --- | --- |
-| 현상 엔진·수학 | **85%** | 반전·base(auto/manual/preset)·톤·포인트 커브·컬러 믹서·컬러 그레이딩·캘리브레이션·색·질감·FilmScanDenoise·필름 42종·GrainMend 수리·검출(자동·가이드 ROI ABI)·흑백 토닝·소프트 프루프·기하 변형. 남은 것: JPEG·DPI·리사이즈·출력 선명도, macOS 실입력 픽셀 golden |
+| 현상 엔진·수학 | **86%** | 반전·base(auto/manual/preset)·톤·포인트 커브·컬러 믹서·컬러 그레이딩·캘리브레이션·색·질감·FilmScanDenoise·필름 42종·GrainMend 수리·검출(자동·가이드 ROI ABI)·흑백 토닝·소프트 프루프·기하 변형·JPEG8 출력. 남은 것: 긴 변 리사이즈, 출력 색공간/PNG·TIFF 옵션, macOS 실입력 픽셀 golden |
 | 카탈로그·영속성 | **90%** | 모든 recipe, 버전, 결함 sidecar, 프리셋, 붙여넣기 범위, 사용자 프리셋, 지연 저장, 백업·복구, relink, 단일 작성자 잠금. 남은 것: 앱/촬영/롤 메타데이터 |
 | 라이브러리 화면 | **77%** | 카드 격자·정렬·카드 크기·소스 막대·파일 트리·폴더 프로세스 선택기·별점·깃발·가져오기·relink·중복 후보. 필터는 macOS 9개 중 7개(메타데이터 상태 미확인 추가). 남은 것: 현재 롤·미검증 프로파일, 컬렉션 |
 | 현상 화면 | **72%** | 캔버스·히스토그램·인스펙터 6탭·보정 8섹션 전부·좌측 5탭·크롭/기하·자동 보정·프리셋/복사붙여넣기·정보 탭·GrainMend 브러시/복제 도장/자동/가이드 ROI·검출 결과 성분별 포함/제외. 남은 것: 출력 품질·소스 하위 탭, 빠른 내보내기, macOS 감도/미세 재검출, 메타데이터 카드 3종, 파일 탭 |
-| 내보내기 | **45%** | PNG16·TIFF16 을 폴더·파일명 패턴으로. 실제 스캔 5088×3401 확인. 남은 것: 품질 탭 설정 전부, JPEG, DPI, 크기, 출력 선명도, 배치, XMP sidecar |
+| 내보내기 | **52%** | PNG16·TIFF16·JPEG8을 폴더·파일명 패턴으로. JPEG는 WIC sRGB ICC·DPI·구조 readback과 비덮어쓰기 게시까지 확인. 남은 것: 품질 탭, 긴 변 크기, PNG/TIFF DPI·8-bit·압축, 출력 선명도 UI, 배치, XMP sidecar |
 | 스캐너 | **35%** | 플러그인 클라이언트·발견·프로세스 호스트·프로토콜·artifact 트랜잭션·게시 영수증이 `Shell.Core/Scanner` 에 있으나 **셸에서 아무 데서도 부르지 않습니다**(`src/Shell` 에 참조 0). 엔진에 있는데 닿지 않는 기능 목록에 추가 |
 | 설정·다국어·접근성 | **70%** | 6개 로케일 전면 적용, 설정 창, 외관, 패널 너비·필름스트립 상태 저장. 남은 것: macOS 설정 항목 대조 |
 | 인화 | **5%** | 자리만 있습니다(312줄). 사용자가 뒤로 미룬 영역입니다 |
@@ -264,6 +264,24 @@ JPEG 미지원이 아니라 파일 대화상자가 다른 파일을 돌려준 �
 픽셀 비교, 그리고 **WinUI GridView 가상화 실측** — 위 200장 측정은 Shell.Core 까지이고 JPEG
 인코딩은 stub, 원본도 작은 합성 이미지였습니다. 실제 앱 그리드에 200장을 넣고 스크롤하는
 것은 파일 대화상자 자동화가 안 돼 못 했습니다.
+
+## 2026-08-14 JPEG8 output path
+
+Windows 출력이 PNG16/TIFF16에만 멈추지 않도록, WIC JPEG writer를 공통 native develop export 경로에
+붙였습니다. `jpeg8`은 linear working image를 기존 sRGB16 경계에서 한 번만 양자화하고 WIC error-diffusion
+8-bit 변환 뒤 JPEG로 씁니다. 고품질(`quality >= 0.95`)은 4:4:4, 그 아래는 4:2:0을 명시하고 SOF marker로
+실제 샘플링·3채널·치수를 재확인합니다. 출력은 기존처럼 sibling staging → flush → WIC ICC/DPI readback →
+비덮어쓰기 publish 순서라, 잘못된 quality나 검증 실패 뒤 최종 파일이 생기지 않습니다.
+
+ABI 0.40/v28은 append-only `jpeg_quality`(finite 0...1)와 `output_dpi`(0은 override 없음)를 받습니다.
+Shell request도 같은 필드를 갖고, 출력 형식 선택에 JPEG가 보이며 `.jpg` 목적지를 만듭니다. 품질/DPI 편집 UI와
+긴 변 리사이즈는 아직 없습니다. 그래서 지금 사용자가 누르는 JPEG는 macOS 기본값과 같은 quality 1.0, DPI 미지정
+출력이며, 아직 미연결 옵션을 완료했다고 세지 않습니다.
+
+x64 Debug `native.wic_jpeg_export`는 4:4:4 JPEG의 sRGB profile·300 DPI·원자 publish와 표준 입력 재진입을
+확인했습니다. `native.develop_export_abi`와 ABI 수명 테스트 2개, Interop **193 assertions**(ABI 0.40), Shell
+**541 assertions**도 통과했습니다. 실제 촬영 TIFF→JPEG 및 macOS JPEG pixel/quality corpus 비교, ARM64 실행은
+아직 수행하지 않았습니다.
 
 ## 2026-08-12 JPEG/PNG standard-image import and develop
 
