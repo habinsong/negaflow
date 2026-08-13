@@ -729,4 +729,5 @@
   <data name="developFilmGroupBWSlide.Text" xml:space="preserve"><value>黑白反转片</value></data>
   <data name="developFilmLookIntensity.Text" xml:space="preserve"><value>强度</value></data>
   <data name="developFilmLookDigitalOnly.Text" xml:space="preserve"><value>胶片风格仅适用于 Digital Color 与 Digital B&amp;W</value><comment>AppLocalizedPhrase.filmLookDigitalOnly</comment></data>
+  <data name="libraryProcessApplyFailed.Text" xml:space="preserve"><value>无法保存冲洗工艺。</value></data>
 </root>

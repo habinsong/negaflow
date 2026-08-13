@@ -729,4 +729,5 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="developFilmGroupBWSlide.Text" xml:space="preserve"><value>Diapositive N&amp;B</value></data>
   <data name="developFilmLookIntensity.Text" xml:space="preserve"><value>Intensité</value></data>
   <data name="developFilmLookDigitalOnly.Text" xml:space="preserve"><value>Les rendus film s'appliquent uniquement à Digital Color et Digital B&amp;W</value><comment>AppLocalizedPhrase.filmLookDigitalOnly</comment></data>
+  <data name="libraryProcessApplyFailed.Text" xml:space="preserve"><value>Impossible d'enregistrer le procédé de développement.</value></data>
 </root>

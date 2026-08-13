@@ -594,6 +594,43 @@ public sealed class DevelopPanelState
     public LibraryFrameError SetAutoNeutralBalance(bool enabled) =>
         SetAutoCorrection(autoLevels: null, neutralBalance: enabled);
 
+    /// <summary>
+    /// 지금 프레임의 현상 프로세스입니다. macOS <c>DevelopmentProcess(filmType:isDigitalSource:)</c>
+    /// 와 같은 유도입니다 — 디지털 표시는 포지티브 경로에만 있고, 음화에 그 표시가 남아 있으면
+    /// 필름으로 읽습니다.
+    /// </summary>
+    public DevelopmentProcess DevelopmentProcess =>
+        SelectedFrame is not { } frame
+            ? DevelopmentProcess.C41
+            : DevelopProcesses.From(frame.Route.FilmType, frame.Route.IsDigitalSource);
+
+    /// <summary>
+    /// 현상 프로세스를 바꿉니다. 필름 룩과 세기는 그대로 두고 route 만 옮깁니다 — 프로세스를
+    /// 바꿨다고 고른 필름이 사라지면 사용자가 다시 고르게 됩니다.
+    /// </summary>
+    public LibraryFrameError SetDevelopmentProcess(DevelopmentProcess process)
+    {
+        if (SelectedFrame is not { } frame)
+        {
+            return LibraryFrameError.MissingId;
+        }
+        if (!Enum.IsDefined(process))
+        {
+            return LibraryFrameError.InvalidDevelopRoute;
+        }
+
+        DevelopRouteSelection selection = DevelopRouteSelection.FromProcess(
+            process,
+            frame.Route.FilmEmulation,
+            frame.Route.FilmEmulationIntensity);
+        LibraryFrameError error = host.EditRoute(frame.Id, selection);
+        if (error == LibraryFrameError.None)
+        {
+            Select(frame.Id);
+        }
+        return error;
+    }
+
     public FilmEmulation FilmEmulation => SelectedFrame?.Route.FilmEmulation ?? FilmEmulation.None;
 
     public double FilmEmulationIntensity => SelectedFrame?.Route.FilmEmulationIntensity ?? 0.5;

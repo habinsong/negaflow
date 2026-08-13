@@ -729,4 +729,5 @@ Load a scanner from Library to scan film.</value>
   <data name="developFilmGroupBWSlide.Text" xml:space="preserve"><value>B&amp;W Slide</value></data>
   <data name="developFilmLookIntensity.Text" xml:space="preserve"><value>Intensity</value></data>
   <data name="developFilmLookDigitalOnly.Text" xml:space="preserve"><value>Film looks apply only to Digital Color and Digital B&amp;W</value><comment>AppLocalizedPhrase.filmLookDigitalOnly</comment></data>
+  <data name="libraryProcessApplyFailed.Text" xml:space="preserve"><value>Could not save the develop process.</value></data>
 </root>

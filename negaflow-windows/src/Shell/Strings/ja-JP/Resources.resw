@@ -729,4 +729,5 @@
   <data name="developFilmGroupBWSlide.Text" xml:space="preserve"><value>白黒スライド</value></data>
   <data name="developFilmLookIntensity.Text" xml:space="preserve"><value>強度</value></data>
   <data name="developFilmLookDigitalOnly.Text" xml:space="preserve"><value>フィルムルックは Digital Color・Digital B&amp;W でのみ適用されます</value><comment>AppLocalizedPhrase.filmLookDigitalOnly</comment></data>
+  <data name="libraryProcessApplyFailed.Text" xml:space="preserve"><value>現像プロセスを保存できませんでした。</value></data>
 </root>

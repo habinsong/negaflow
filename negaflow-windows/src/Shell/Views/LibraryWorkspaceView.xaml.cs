@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Negaflow.Catalog;
+using Negaflow.Shell.Develop;
 using Negaflow.Shell.Library;
 using Negaflow.Shell.Localization;
 using Negaflow.Shell.Views.Controls;
@@ -385,6 +386,49 @@ public sealed partial class LibraryWorkspaceView : UserControl
                 return;
             }
         }
+    }
+
+    /// <summary>
+    /// 폴더 머리줄에서 현상 프로세스를 고르면 그 폴더의 frame 전부에 적용합니다. 지금까지는
+    /// 가져오기가 전부 C-41 로 고정돼 있어 슬라이드·흑백·디지털 경로에 아예 닿을 수 없었습니다.
+    /// </summary>
+    private void OnFolderProcessChanged(object sender, SelectionChangedEventArgs args)
+    {
+        _ = args;
+        if (libraryHost is null ||
+            sender is not ComboBox
+            {
+                Tag: LibraryBrowserFolderSection section,
+                SelectedItem: DevelopProcessChoice choice,
+            })
+        {
+            return;
+        }
+        // 이미 그 프로세스면 아무 것도 쓰지 않습니다 — 목록을 다시 그릴 때마다 저장하지
+        // 않으려는 것입니다.
+        if (section.Items.Count == 0 ||
+            DevelopProcesses.From(
+                section.Items[0].Frame.Route.FilmType,
+                section.Items[0].Frame.Route.IsDigitalSource) == choice.Process)
+        {
+            return;
+        }
+
+        foreach (LibraryFrameListItem item in section.Items)
+        {
+            LibraryFrameSnapshot frame = item.Frame;
+            _ = libraryHost.EditRoute(
+                frame.Id,
+                DevelopRouteSelection.FromProcess(
+                    choice.Process,
+                    frame.Route.FilmEmulation,
+                    frame.Route.FilmEmulationIntensity));
+        }
+        if (libraryHost.Save() != CatalogStoreError.None)
+        {
+            ImportStatusText.Text = AppResources.Get("libraryProcessApplyFailed", "Text");
+        }
+        ShowLibrary(libraryHost, importWindowId ?? default);
     }
 
     private void OnFiltersToggled(object sender, RoutedEventArgs args)

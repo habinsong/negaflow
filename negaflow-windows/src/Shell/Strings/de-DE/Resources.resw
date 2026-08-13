@@ -729,4 +729,5 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developFilmGroupBWSlide.Text" xml:space="preserve"><value>S/W-Dia</value></data>
   <data name="developFilmLookIntensity.Text" xml:space="preserve"><value>Intensität</value></data>
   <data name="developFilmLookDigitalOnly.Text" xml:space="preserve"><value>Film-Looks gelten nur für Digital Color und Digital B&amp;W</value><comment>AppLocalizedPhrase.filmLookDigitalOnly</comment></data>
+  <data name="libraryProcessApplyFailed.Text" xml:space="preserve"><value>Der Entwicklungsprozess konnte nicht gespeichert werden.</value></data>
 </root>

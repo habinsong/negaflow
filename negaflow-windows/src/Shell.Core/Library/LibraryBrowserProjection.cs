@@ -1,4 +1,5 @@
 using Negaflow.Catalog;
+using Negaflow.Shell.Develop;
 
 namespace Negaflow.Shell;
 
@@ -19,6 +20,40 @@ public sealed record LibraryBrowserFolderSection(
     IReadOnlyList<LibraryFrameListItem> Items) : IReadOnlyList<LibraryFrameListItem>
 {
     public int Count => Items.Count;
+
+    /// <summary>
+    /// 폴더 머리줄의 현상 프로세스 선택지입니다. macOS 가 그 자리에 두는 것과 같은 여섯 개이며,
+    /// 이름을 여기서 만들어야 XAML 이 문자열을 짓지 않습니다.
+    /// </summary>
+    public IReadOnlyList<DevelopProcessChoice> ProcessChoices { get; } =
+        [.. DevelopProcesses.All.Select(process =>
+            new DevelopProcessChoice(process, DevelopProcesses.DisplayName(process)))];
+
+    /// <summary>
+    /// 이 폴더가 지금 보여 줄 프로세스입니다. 폴더 안이 섞여 있으면 첫 frame 을 따릅니다 —
+    /// 고르면 폴더 전체에 적용되므로 하나를 대표로 보여 주는 편이 덜 헷갈립니다.
+    /// </summary>
+    public int ProcessIndex
+    {
+        get
+        {
+            if (Items.Count == 0)
+            {
+                return 0;
+            }
+            DevelopmentProcess current = DevelopProcesses.From(
+                Items[0].Frame.Route.FilmType,
+                Items[0].Frame.Route.IsDigitalSource);
+            for (int index = 0; index < ProcessChoices.Count; ++index)
+            {
+                if (ProcessChoices[index].Process == current)
+                {
+                    return index;
+                }
+            }
+            return 0;
+        }
+    }
 
     public LibraryFrameListItem this[int index] => Items[index];
 
@@ -159,3 +194,6 @@ public static class LibraryBrowserProjector
         }
     }
 }
+
+/// <summary>폴더 머리줄 프로세스 목록 한 칸입니다.</summary>
+public sealed record DevelopProcessChoice(DevelopmentProcess Process, string Name);

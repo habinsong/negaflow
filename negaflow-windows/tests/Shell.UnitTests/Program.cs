@@ -2517,6 +2517,31 @@ internal static class Program
 
             // digital source 에서는 룩과 세기가 catalog 를 왕복해야 합니다. 42종을 엔진이
             // 이미 갖고 있었는데 고를 길이 없던 자리입니다.
+            // 프로세스를 바꾸면 route 가 통째로 옮겨가야 합니다. 가져오기가 C-41 로 고정돼
+            // 있어 이 경로가 없으면 슬라이드·흑백·디지털에 영영 닿지 못합니다.
+            Check(panel.Select("frame-1"), "panel_selects_scan_frame_for_process_change");
+            Check(
+                panel.DevelopmentProcess == DevelopmentProcess.C41 && !panel.AppliesFilmLook,
+                "panel_reads_c41_from_a_negative_scan");
+            Check(
+                panel.SetDevelopmentProcess(DevelopmentProcess.DigitalColor) == LibraryFrameError.None &&
+                panel.DevelopmentProcess == DevelopmentProcess.DigitalColor &&
+                panel.AppliesFilmLook,
+                "panel_switches_to_digital_colour");
+            Check(
+                panel.SetFilmEmulation(FilmEmulation.Ektar100) == LibraryFrameError.None &&
+                panel.FilmEmulation == FilmEmulation.Ektar100,
+                "panel_can_pick_a_film_after_switching_to_digital");
+            Check(
+                panel.SetDevelopmentProcess(DevelopmentProcess.D76) == LibraryFrameError.None &&
+                panel.DevelopmentProcess == DevelopmentProcess.D76 &&
+                !panel.AppliesFilmLook &&
+                panel.FilmEmulation == FilmEmulation.Ektar100,
+                "panel_keeps_the_film_choice_across_process_changes");
+            Check(
+                panel.SetDevelopmentProcess(DevelopmentProcess.C41) == LibraryFrameError.None,
+                "panel_restores_c41");
+
             Check(panel.Select("frame-4"), "panel_selects_digital_frame");
             Check(panel.AppliesFilmLook, "panel_digital_frame_applies_film_look");
             Check(

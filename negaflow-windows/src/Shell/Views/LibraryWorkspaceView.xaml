@@ -335,6 +335,7 @@
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                                 <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
                                             <TextBlock FontSize="12" FontWeight="SemiBold" Text="{Binding Title}" />
                                             <TextBlock
@@ -342,9 +343,22 @@
                                                 FontSize="11"
                                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                                 Text="{Binding Count}" />
+                                            <!-- macOS 는 폴더 머리줄에 현상 프로세스와 적용을 답니다. -->
+                                            <ComboBox
+                                                Grid.Column="2"
+                                                MinWidth="128"
+                                                Height="26"
+                                                Margin="8,0,0,0"
+                                                AutomationProperties.AutomationId="negaflow.library.folder.process"
+                                                DisplayMemberPath="Name"
+                                                FontSize="11"
+                                                ItemsSource="{Binding ProcessChoices}"
+                                                SelectedIndex="{Binding ProcessIndex, Mode=OneWay}"
+                                                SelectionChanged="OnFolderProcessChanged"
+                                                Tag="{Binding}" />
                                             <Button
                                                 x:Uid="libraryLocateFolder"
-                                                Grid.Column="2"
+                                                Grid.Column="3"
                                                 Margin="8,0,0,0"
                                                 Tag="{Binding}"
                                                 Padding="4,0"
