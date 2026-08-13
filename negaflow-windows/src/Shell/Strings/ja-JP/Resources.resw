@@ -785,4 +785,15 @@
   <data name="developInfoSidecarNotFound.Text" xml:space="preserve"><value>なし</value></data>
   <data name="developInfoOriginScan.Text" xml:space="preserve"><value>スキャン</value></data>
   <data name="developInfoOriginImport.Text" xml:space="preserve"><value>読み込み</value></data>
+  <data name="developGrainMend.Text" xml:space="preserve"><value>GrainMend</value></data>
+  <data name="developGrainMendAuto.Content" xml:space="preserve"><value>自動</value></data>
+  <data name="developGrainMendAutoHelp.Value" xml:space="preserve"><value>自動 — フレーム全体を自動検出してゴミ・キズを除去</value></data>
+  <data name="developGrainMendGuided.Content" xml:space="preserve"><value>ガイド</value></data>
+  <data name="developGrainMendGuidedHelp.Value" xml:space="preserve"><value>ガイド — 範囲をドラッグしてから、Enter または「ゴミ・キズを除去」を押します。</value></data>
+  <data name="developGrainMendBrush.Content" xml:space="preserve"><value>ブラシ</value></data>
+  <data name="developGrainMendBrushHelp.Value" xml:space="preserve"><value>ブラシ — ゴミやキズをなぞって、離すと除去します。</value></data>
+  <data name="developGrainMendClone.Content" xml:space="preserve"><value>クローンスタンプ</value></data>
+  <data name="developGrainMendCloneHelp.Value" xml:space="preserve"><value>クローンスタンプ — Alt クリックでソースを指定し、ドラッグして複製します。</value></data>
+  <data name="developGrainMendReset.Value" xml:space="preserve"><value>リセット</value></data>
+  <data name="developGrainMendDetectorMissing.Value" xml:space="preserve"><value>自動検出はこのビルドにはまだありません</value></data>
 </root>

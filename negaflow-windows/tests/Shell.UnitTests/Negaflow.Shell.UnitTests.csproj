@@ -13,4 +13,13 @@
              Link="swift-ui-metrics.json"
              CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+
+  <!-- 씨앗 모드가 실제 TIFF 의 화소 수를 읽으려면 네이티브 엔진이 옆에 있어야 합니다.
+       시험 자체는 네이티브를 부르지 않으므로, 없으면 그냥 넘어갑니다. -->
+  <PropertyGroup>
+    <SeedNativeLibrary>$(MSBuildThisFileDirectory)..\..\out\build\native\x64-debug\Debug\Negaflow.Native.dll</SeedNativeLibrary>
+  </PropertyGroup>
+  <Target Name="CopyNativeEngineForSeeding" AfterTargets="Build" Condition="Exists('$(SeedNativeLibrary)')">
+    <Copy SourceFiles="$(SeedNativeLibrary)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
+  </Target>
 </Project>

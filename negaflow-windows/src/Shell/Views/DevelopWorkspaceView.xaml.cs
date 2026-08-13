@@ -364,7 +364,17 @@ public sealed partial class DevelopWorkspaceView : UserControl
         InfoCard.Visibility = inspectorPresentation.SelectedTab == DevelopInspectorTab.Info
             ? Visibility.Visible
             : Visibility.Collapsed;
+        GrainMendCard.Visibility = inspectorPresentation.SelectedTab == DevelopInspectorTab.Defects
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        if (inspectorPresentation.SelectedTab != DevelopInspectorTab.Defects)
+        {
+            // 탭을 떠나면 도구도 놓습니다. 보이지 않는 도구가 캔버스를 잡고 있으면
+            // 크롭이나 확대가 먹지 않는 것처럼 보입니다.
+            SetGrainMendTool(GrainMendTool.None);
+        }
         UpdateInfoCard();
+        UpdateGrainMendCard();
         GeometryControlCard.Visibility = inspectorPresentation.SelectedTab == DevelopInspectorTab.Edit
             ? Visibility.Visible
             : Visibility.Collapsed;
@@ -792,6 +802,11 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private void OnCanvasPointerPressed(object sender, PointerRoutedEventArgs args)
     {
         _ = sender;
+        if (TryBeginGrainMendStroke(args))
+        {
+            args.Handled = true;
+            return;
+        }
         if (cropSession is null || cropAwaitingPreview || !TryCanvasUnitPoint(args, out CropDisplayPoint point))
         {
             return;
@@ -810,6 +825,11 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private void OnCanvasPointerMoved(object sender, PointerRoutedEventArgs args)
     {
         _ = sender;
+        if (TryContinueGrainMendStroke(args))
+        {
+            args.Handled = true;
+            return;
+        }
         if (cropSession is null || cropDragMode == CropDragMode.None ||
             !TryCanvasUnitPoint(args, out CropDisplayPoint point))
         {
@@ -837,6 +857,11 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private void OnCanvasPointerReleased(object sender, PointerRoutedEventArgs args)
     {
         _ = sender;
+        if (TryFinishGrainMendStroke(args))
+        {
+            args.Handled = true;
+            return;
+        }
         EndCropDrag(args);
     }
 
@@ -1953,6 +1978,205 @@ public sealed partial class DevelopWorkspaceView : UserControl
         return groups.Count == 0
             ? AppResources.Get("developPasteScopeNone", "Text")
             : string.Join("/", groups);
+    }
+
+    /// <summary>지금 캔버스를 잡고 있는 GrainMend 도구입니다.</summary>
+    private enum GrainMendTool
+    {
+        None,
+        Brush,
+        Clone,
+    }
+
+    private GrainMendTool grainMendTool;
+    private readonly List<DefectPoint> grainMendStroke = [];
+    private DefectPoint? cloneSourceAnchor;
+    private bool grainMendDragging;
+
+    private void OnGrainMendBrushClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        SetGrainMendTool(grainMendTool == GrainMendTool.Brush
+            ? GrainMendTool.None
+            : GrainMendTool.Brush);
+    }
+
+    private void OnGrainMendCloneClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        SetGrainMendTool(grainMendTool == GrainMendTool.Clone
+            ? GrainMendTool.None
+            : GrainMendTool.Clone);
+    }
+
+    private void OnGrainMendBrushResetClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        RemoveGrainMendEdits(DefectEditKind.Brush);
+    }
+
+    private void OnGrainMendCloneResetClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        RemoveGrainMendEdits(DefectEditKind.Clone);
+    }
+
+    private void RemoveGrainMendEdits(DefectEditKind kind)
+    {
+        if (panel is null)
+        {
+            return;
+        }
+        SetGrainMendTool(GrainMendTool.None);
+        if (panel.RemoveDefectEdits(kind) != LibraryFrameError.None)
+        {
+            return;
+        }
+        UpdateGrainMendCard();
+        RequestPreview();
+    }
+
+    private void SetGrainMendTool(GrainMendTool tool)
+    {
+        if (grainMendTool == tool)
+        {
+            return;
+        }
+        grainMendTool = tool;
+        grainMendStroke.Clear();
+        cloneSourceAnchor = null;
+        grainMendDragging = false;
+        if (tool != GrainMendTool.None && cropSession is not null)
+        {
+            // 크롭과 결함 도구는 같은 포인터를 두고 다툽니다. macOS 도 서로를 끕니다.
+            EndCropSession();
+        }
+        UpdateGrainMendCard();
+    }
+
+    private void UpdateGrainMendCard()
+    {
+        if (GrainMendAutoButton is null)
+        {
+            return;
+        }
+        GrainMendTitleText.Text = AppResources.Get("developGrainMend", "Text");
+        GrainMendAutoButton.Content = AppResources.Get("developGrainMendAuto", "Content");
+        GrainMendGuidedButton.Content = AppResources.Get("developGrainMendGuided", "Content");
+        GrainMendBrushButton.Content = AppResources.Get("developGrainMendBrush", "Content");
+        GrainMendCloneButton.Content = AppResources.Get("developGrainMendClone", "Content");
+        SetLocalizedNameAndTooltip(
+            GrainMendBrushButton, AppResources.Get("developGrainMendBrushHelp", "Value"));
+        SetLocalizedNameAndTooltip(
+            GrainMendCloneButton, AppResources.Get("developGrainMendCloneHelp", "Value"));
+        // 자동·가이드는 검출기가 아직 네이티브 ABI 에 없습니다. 눌러도 아무 일이 없는 단추
+        // 대신 이유를 달아 끕니다.
+        string missing = AppResources.Get("developGrainMendDetectorMissing", "Value");
+        SetLocalizedNameAndTooltip(GrainMendAutoButton, missing);
+        SetLocalizedNameAndTooltip(GrainMendGuidedButton, missing);
+        GrainMendAutoButton.IsEnabled = false;
+        GrainMendGuidedButton.IsEnabled = false;
+        GrainMendAutoResetButton.IsEnabled = false;
+        GrainMendGuidedResetButton.IsEnabled = false;
+
+        string reset = AppResources.Get("developGrainMendReset", "Value");
+        SetLocalizedNameAndTooltip(GrainMendBrushResetButton, reset);
+        SetLocalizedNameAndTooltip(GrainMendCloneResetButton, reset);
+
+        bool hasFrame = panel?.SelectedFrame is not null;
+        GrainMendBrushButton.IsEnabled = hasFrame;
+        GrainMendCloneButton.IsEnabled = hasFrame;
+        GrainMendBrushResetButton.IsEnabled = panel?.HasDefectEdits(DefectEditKind.Brush) == true;
+        GrainMendCloneResetButton.IsEnabled = panel?.HasDefectEdits(DefectEditKind.Clone) == true;
+
+        string active = AppResources.Get("selected", "Value");
+        string inactive = AppResources.Get("notSelected", "Value");
+        AutomationProperties.SetItemStatus(
+            GrainMendBrushButton, grainMendTool == GrainMendTool.Brush ? active : inactive);
+        AutomationProperties.SetItemStatus(
+            GrainMendCloneButton, grainMendTool == GrainMendTool.Clone ? active : inactive);
+        var selection = (Microsoft.UI.Xaml.Media.Brush)
+            Application.Current.Resources["NegaflowSelectionBrush"];
+        GrainMendBrushButton.Background = grainMendTool == GrainMendTool.Brush
+            ? selection
+            : new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent);
+        GrainMendCloneButton.Background = grainMendTool == GrainMendTool.Clone
+            ? selection
+            : new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent);
+    }
+
+    /// <summary>
+    /// 도구가 잡고 있으면 포인터를 가로챕니다. 크롭 세션과 같은 이벤트를 쓰므로 어느 쪽이
+    /// 먼저인지가 분명해야 합니다 — 도구가 켜져 있으면 크롭은 이미 꺼져 있습니다.
+    /// </summary>
+    private bool TryBeginGrainMendStroke(PointerRoutedEventArgs args)
+    {
+        if (grainMendTool == GrainMendTool.None || panel?.SelectedFrame is null ||
+            !TryCanvasUnitPoint(args, out CropDisplayPoint point))
+        {
+            return false;
+        }
+
+        bool alt = InputKeyboardSource
+            .GetKeyStateForCurrentThread(Windows.System.VirtualKey.Menu)
+            .HasFlag(CoreVirtualKeyStates.Down);
+        if (grainMendTool == GrainMendTool.Clone && alt)
+        {
+            // Alt 클릭은 복제 원본을 정합니다. macOS 의 ⌥ 클릭과 같은 뜻입니다.
+            cloneSourceAnchor = new DefectPoint(point.X, point.Y);
+            return true;
+        }
+        if (grainMendTool == GrainMendTool.Clone && cloneSourceAnchor is null)
+        {
+            // 원본을 정하기 전에는 칠할 수 없습니다.
+            return true;
+        }
+
+        grainMendStroke.Clear();
+        grainMendStroke.Add(new DefectPoint(point.X, point.Y));
+        grainMendDragging = true;
+        CanvasHost.CapturePointer(args.Pointer);
+        return true;
+    }
+
+    private bool TryContinueGrainMendStroke(PointerRoutedEventArgs args)
+    {
+        if (!grainMendDragging || !TryCanvasUnitPoint(args, out CropDisplayPoint point))
+        {
+            return false;
+        }
+        grainMendStroke.Add(new DefectPoint(point.X, point.Y));
+        return true;
+    }
+
+    private bool TryFinishGrainMendStroke(PointerRoutedEventArgs args)
+    {
+        if (!grainMendDragging)
+        {
+            return false;
+        }
+        grainMendDragging = false;
+        CanvasHost.ReleasePointerCapture(args.Pointer);
+        List<DefectPoint> stroke = [.. grainMendStroke];
+        grainMendStroke.Clear();
+        if (panel is null || stroke.Count == 0)
+        {
+            return true;
+        }
+
+        LibraryFrameError error = grainMendTool == GrainMendTool.Clone
+            ? panel.AddCloneStroke(stroke, cloneSourceAnchor ?? stroke[0])
+            : panel.AddBrushStroke(stroke);
+        if (error == LibraryFrameError.None)
+        {
+            UpdateGrainMendCard();
+            RequestPreview();
+        }
+        return true;
     }
 
     /// <summary>정보 카드 한 줄입니다.</summary>

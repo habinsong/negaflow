@@ -33,11 +33,13 @@ internal static class Program
         VerifySwiftMetricsBaseline();
         VerifyDevelopRequestFactory();
         VerifyLookPresetReachesTheEngine();
+        VerifyDisplayToRawMapping();
         VerifyInfraredDefectRecipeCoordinator();
         VerifyDevelopExportCoordinator();
         VerifyLibraryDocument();
         VerifyLibraryHost();
         VerifyEditsSurviveClose();
+        VerifyBrushStrokeReachesTheEngine();
         VerifyLibraryAvailability();
         VerifyLibraryBrowserProjection();
         VerifyDevelopInspectorPresentationState();
@@ -461,6 +463,99 @@ internal static class Program
 
     private static bool Near(float actual, float expected) =>
         Math.Abs(actual - expected) < 1e-6f;
+
+    /// <summary>
+    /// 표시 좌표 → 원본 좌표. 결함 편집이 저장되는 공간이 바뀌는 자리이므로, 변형이 걸린
+    /// 프레임에서 어긋나면 엉뚱한 화소를 지웁니다. 네이티브가 하는 세 단계를 같은 식으로
+    /// 되짚는지만 봅니다.
+    /// </summary>
+    private static void VerifyDisplayToRawMapping()
+    {
+        const uint width = 4000U;
+        const uint height = 3000U;
+
+        static bool Map(
+            ImageTransformRecipe transform,
+            double displayX,
+            double displayY,
+            out double rawX,
+            out double rawY) =>
+            DevelopDisplayGeometry.TryMapDisplayToRaw(
+                transform, width, height, displayX, displayY, out rawX, out rawY);
+
+        static bool Close(double actual, double expected) =>
+            Math.Abs(actual - expected) < 1e-9;
+
+        // 변형이 없으면 표시 좌표가 곧 원본 좌표입니다.
+        Check(Map(ImageTransformRecipe.Identity, 0.25, 0.75, out double x, out double y) &&
+            Close(x, 0.25) && Close(y, 0.75),
+            "display_to_raw_identity");
+        Check(Map(ImageTransformRecipe.Identity, 0.0, 0.0, out x, out y) &&
+            Close(x, 0.0) && Close(y, 0.0),
+            "display_to_raw_identity_origin");
+
+        // 좌우 반전은 x 만 뒤집습니다.
+        ImageTransformRecipe flipped = ImageTransformRecipe.Identity with { FlipHorizontal = true };
+        Check(Map(flipped, 0.2, 0.6, out x, out y) && Close(x, 0.8) && Close(y, 0.6),
+            "display_to_raw_flip_horizontal");
+
+        // 90도 회전. 네이티브 orient 는 출력 (x,y) 를 원본 (y, H-1-x) 에서 읽으므로,
+        // 표시 왼쪽 위는 원본 왼쪽 아래입니다.
+        ImageTransformRecipe rotated =
+            ImageTransformRecipe.Identity with { Rotation = ImageRotation.Degrees90 };
+        Check(Map(rotated, 0.0, 0.0, out x, out y) && Close(x, 0.0) && Close(y, 1.0),
+            "display_to_raw_rotate_90_origin");
+        Check(Map(rotated, 1.0, 1.0, out x, out y) && Close(x, 1.0) && Close(y, 0.0),
+            "display_to_raw_rotate_90_far_corner");
+
+        ImageTransformRecipe halfTurn =
+            ImageTransformRecipe.Identity with { Rotation = ImageRotation.Degrees180 };
+        Check(Map(halfTurn, 0.3, 0.4, out x, out y) && Close(x, 0.7) && Close(y, 0.6),
+            "display_to_raw_rotate_180");
+
+        // 크롭: 표시 좌표 0.5 는 잘린 창의 가운데이고, 그것은 원본의 창 가운데입니다.
+        // 저장된 crop 은 y-up 이라 y 는 뒤집혀 들어갑니다.
+        ImageTransformRecipe cropped = ImageTransformRecipe.Identity with
+        {
+            Crop = new ImageCropRect(0.25, 0.5, 0.5, 0.25),
+        };
+        Check(Map(cropped, 0.5, 0.5, out x, out y) &&
+            Math.Abs(x - 0.5) < 1e-3 && Math.Abs(y - 0.375) < 1e-3,
+            "display_to_raw_crop_centre");
+        Check(Map(cropped, 0.0, 0.0, out x, out y) &&
+            Math.Abs(x - 0.25) < 1e-3 && Math.Abs(y - 0.25) < 1e-3,
+            "display_to_raw_crop_origin");
+
+        // 수평보정은 가운데를 가운데로 둡니다. 회전 중심이 어긋났다면 여기서 드러납니다.
+        ImageTransformRecipe straightened =
+            ImageTransformRecipe.Identity with { StraightenAngle = 7.5 };
+        Check(Map(straightened, 0.5, 0.5, out x, out y) &&
+            Math.Abs(x - 0.5) < 1e-6 && Math.Abs(y - 0.5) < 1e-6,
+            "display_to_raw_straighten_keeps_centre");
+        // 기울인 뒤의 가로 이동은 원본에서 살짝 위로 올라가야 합니다(시계 방향 보정).
+        Check(Map(straightened, 1.0, 0.5, out x, out double tiltedY) &&
+            Map(straightened, 0.0, 0.5, out _, out double tiltedOriginY) &&
+            tiltedY < tiltedOriginY,
+            "display_to_raw_straighten_tilts");
+
+        // 변형을 겹쳐도 가운데는 가운데입니다.
+        ImageTransformRecipe combined = new(
+            ImageRotation.Degrees270,
+            FlipHorizontal: true,
+            FlipVertical: false,
+            Crop: new ImageCropRect(0.2, 0.2, 0.6, 0.6),
+            StraightenAngle: -3.0,
+            CropAspect: null);
+        Check(Map(combined, 0.5, 0.5, out x, out y) &&
+            Math.Abs(x - 0.5) < 2e-3 && Math.Abs(y - 0.5) < 2e-3,
+            "display_to_raw_combined_centre");
+
+        Check(!Map(ImageTransformRecipe.Identity, double.NaN, 0.5, out _, out _),
+            "display_to_raw_rejects_non_finite");
+        Check(!DevelopDisplayGeometry.TryMapDisplayToRaw(
+                ImageTransformRecipe.Identity, 1U, 1U, 0.5, 0.5, out _, out _),
+            "display_to_raw_rejects_degenerate_source");
+    }
 
     private static void VerifyDevelopRequestFactory()
     {
@@ -1685,7 +1780,22 @@ internal static class Program
                     record["filmType"] = "bwNegative";
                     record["params"]!.AsObject()["filmType"] = "bwNegative";
                 }
-                record["rawScanPath"] = Path.GetFullPath(sourcePaths[index]);
+                string full = Path.GetFullPath(sourcePaths[index]);
+                record["rawScanPath"] = full;
+                // 실제 파일의 크기·화소 수가 있어야 셸이 결함 편집을 좌표로 옮길 수 있습니다.
+                if (TryProbe(full, out TiffSourceMetadata probed))
+                {
+                    record["sourceMetadata"] = new JsonObject
+                    {
+                        ["fileBytes"] = probed.FileBytes,
+                        ["pixelWidth"] = probed.PixelWidth,
+                        ["pixelHeight"] = probed.PixelHeight,
+                        ["samplesPerPixel"] = probed.SamplesPerPixel,
+                        ["bitsPerSample"] = probed.BitsPerSample,
+                        ["sampleFormat"] = probed.SampleFormat,
+                        ["orientation"] = probed.Orientation,
+                    };
+                }
                 record["customDisplayName"] = Path.GetFileNameWithoutExtension(sourcePaths[index]);
                 rows.Add(new CatalogEntityRow(id, record));
             }
@@ -1703,6 +1813,24 @@ internal static class Program
             Console.WriteLine($"seeded {rows.Count} frames into {roots.CatalogPath}");
         }
         return 0;
+    }
+
+    /// <summary>
+    /// 네이티브 엔진이 옆에 없으면 메타데이터 없이 심습니다. 씨앗은 검증 편의 도구이므로
+    /// 그것 때문에 실패하지는 않게 합니다.
+    /// </summary>
+    private static bool TryProbe(string path, out TiffSourceMetadata metadata)
+    {
+        metadata = default;
+        try
+        {
+            return NativeTiffSourceProbe.TryRead(path, out metadata);
+        }
+        catch (DllNotFoundException)
+        {
+            Console.Error.WriteLine("native engine missing; seeding without source metadata");
+            return false;
+        }
     }
 
     private static JsonObject FrameRecord(string id, string fileName, double exposure)
@@ -2022,6 +2150,142 @@ internal static class Program
             Check(reopened.Frames.Single().Tone.Exposure == 2.25,
                 "edit_persistence_close_writes_pending_edit");
             Check(!reopened.IsDirty, "edit_persistence_load_is_not_dirty");
+        }
+        finally
+        {
+            if (Directory.Exists(isolatedBase) &&
+                StoragePathPolicy.IsLexicallyContained(testParent, isolatedBase))
+            {
+                Directory.Delete(isolatedBase, recursive: true);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 캔버스 획 하나가 sidecar 와 catalog 를 지나 엔진 요청까지 가는지 봅니다. 이 경로가
+    /// 이어져야 GrainMend 브러시가 실제로 사진을 고칩니다.
+    /// </summary>
+    private static void VerifyBrushStrokeReachesTheEngine()
+    {
+        string testParent = Path.Combine(AppContext.BaseDirectory, "brush-stroke-tests");
+        string isolatedBase = Path.Combine(
+            testParent,
+            $"{Environment.ProcessId}-{Guid.NewGuid():N}");
+        StorageRootSet roots = StorageRootResolver.ResolveForTests(isolatedBase).Roots!;
+        Guid frameId = Guid.Parse("2f8a1d4c-7b90-4a1e-9f33-51c2b0d6ee71");
+        string sourcePath = Path.Combine(isolatedBase, "scans", "BRUSH_0001.tif");
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(sourcePath)!);
+            File.WriteAllBytes(sourcePath, [1, 2, 3, 4, 5, 6, 7, 8]);
+
+            using (CatalogSession seed = CatalogSession.Open(roots).Session!)
+            {
+                JsonObject payload = FrameRecord(frameId.ToString("D"), "BRUSH_0001.tif", 0.0);
+                payload["rawScanPath"] = sourcePath;
+                Check(seed.Write(new CatalogSnapshot(
+                    null,
+                    new Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>>
+                    {
+                        [CatalogEntityTable.Frames] =
+                        [new CatalogEntityRow(frameId.ToString("D"), payload)],
+                    })).IsSuccess, "brush_stroke_seed");
+            }
+
+            using LibraryHostService host = new(
+                new FakeDispatcher(accepts: true),
+                new FakeExporter(_ => OkResult()),
+                TestSourceMetadata);
+            Check(host.Open(roots) == LibraryHostState.Open, "brush_stroke_open");
+
+            DefectPoint[] points =
+            [
+                new(0.25, 0.25),
+                new(0.30, 0.28),
+                new(0.35, 0.31),
+            ];
+            Check(host.AppendDefectStroke(
+                    frameId.ToString("D"),
+                    (identity, existing) => DefectStrokeRecipeBuilder.AppendBrushStroke(
+                        frameId,
+                        identity,
+                        existing,
+                        points,
+                        DevelopPanelState.DefaultBrushThickness,
+                        new DefectSize(4000, 3000))) == LibraryFrameError.None,
+                "brush_stroke_appends");
+
+            LibraryFrameSnapshot brushed = host.Frames.Single();
+            Check(brushed.DefectRecipe?.Items.Count == 1 &&
+                brushed.DefectRecipe.Items[0].Kind == DefectEditKind.Brush &&
+                brushed.DefectRecipe.Items[0].Strokes?.Single().Points.Count == 3,
+                "brush_stroke_lands_in_the_recipe");
+
+            DevelopRequestResult request = DevelopRequestFactory.Create(
+                brushed,
+                Path.Combine(isolatedBase, "brush.png"));
+            Check(request.Request?.DefectBrushes.Count == 1 &&
+                request.Request.DefectEditOrder.Count == 1 &&
+                request.Request.DefectSourceIdentity is not null,
+                "brush_stroke_reaches_the_develop_request");
+
+            // 두 번째 획은 개정 번호를 올리며 앞의 획을 지우지 않습니다.
+            Check(host.AppendDefectStroke(
+                    frameId.ToString("D"),
+                    (identity, existing) => DefectStrokeRecipeBuilder.AppendBrushStroke(
+                        frameId,
+                        identity,
+                        existing,
+                        [new DefectPoint(0.6, 0.6), new DefectPoint(0.65, 0.62)],
+                        DevelopPanelState.DefaultBrushThickness,
+                        new DefectSize(4000, 3000))) == LibraryFrameError.None,
+                "brush_stroke_second_appends");
+            Check(host.Frames.Single().DefectRecipe is { } second &&
+                second.Items.Count == 2 && second.RecipeRevision == 2UL,
+                "brush_stroke_keeps_previous_edits");
+
+            // 도구별 초기화: 브러시 편집만 지우고 나머지는 남습니다.
+            Check(host.AppendDefectStroke(
+                    frameId.ToString("D"),
+                    (identity, existing) => DefectStrokeRecipeBuilder.AppendCloneStroke(
+                        frameId,
+                        identity,
+                        existing,
+                        [new DefectPoint(0.4, 0.4), new DefectPoint(0.42, 0.41)],
+                        0.01,
+                        0.05,
+                        0.05,
+                        new DefectSize(4000, 3000))) == LibraryFrameError.None,
+                "clone_stroke_appends");
+            Check(host.Frames.Single().DefectRecipe?.Items.Count == 3,
+                "clone_stroke_joins_brush_edits");
+
+            DefectRecipeSnapshot before = host.Frames.Single().DefectRecipe!;
+            Check(host.AppendDefectStroke(
+                    frameId.ToString("D"),
+                    (identity, _) => DefectRecipeSnapshot.Create(
+                        frameId,
+                        before.RecipeRevision + 1UL,
+                        identity,
+                        [.. before.Items.Where(item => item.Kind != DefectEditKind.Brush)]))
+                == LibraryFrameError.None,
+                "brush_reset_writes");
+            Check(host.Frames.Single().DefectRecipe is { } afterReset &&
+                afterReset.Items.Count == 1 &&
+                afterReset.Items[0].Kind == DefectEditKind.Clone,
+                "brush_reset_keeps_clone_edits");
+
+            // 변위가 0 인 복제 도장은 아무 일도 하지 않으므로 남기지 않습니다.
+            Check(DefectStrokeRecipeBuilder.AppendCloneStroke(
+                    frameId,
+                    new DefectSourceIdentity(8, new string('a', 64)),
+                    null,
+                    points,
+                    0.01,
+                    0.0,
+                    0.0,
+                    new DefectSize(4000, 3000)) is null,
+                "clone_stroke_rejects_zero_offset");
         }
         finally
         {

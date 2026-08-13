@@ -546,6 +546,159 @@ public sealed class DevelopPanelState
         return error;
     }
 
+    /// <summary>
+    /// macOS GrainMend 브러시의 기본 굵기입니다. 짧은 변에 대한 비율입니다.
+    /// </summary>
+    public const double DefaultBrushThickness = 0.01;
+
+    /// <summary>
+    /// 캔버스에서 그은 치유 브러시 획 하나를 남깁니다. 점은 <b>표시 좌표</b>로 받고 여기서
+    /// 원본 좌표로 되돌립니다 — 호출부가 좌표계를 알 필요가 없어야 어긋날 자리가 줄어듭니다.
+    /// </summary>
+    public LibraryFrameError AddBrushStroke(
+        IReadOnlyList<DefectPoint> displayPoints,
+        double thickness = DefaultBrushThickness)
+    {
+        ArgumentNullException.ThrowIfNull(displayPoints);
+        return AddStroke(
+            displayPoints,
+            (frameId, identity, existing, points, baseSize) =>
+                DefectStrokeRecipeBuilder.AppendBrushStroke(
+                    frameId, identity, existing, points, thickness, baseSize));
+    }
+
+    /// <summary>
+    /// 복제 도장 획 하나입니다. 원본 점은 표시 좌표로 받으며, 변위는 원본 공간에서 계산합니다 —
+    /// 표시 공간에서 뺀 변위는 회전·수평보정이 걸린 프레임에서 방향이 틀어집니다.
+    /// </summary>
+    public LibraryFrameError AddCloneStroke(
+        IReadOnlyList<DefectPoint> displayPoints,
+        DefectPoint displaySourceAnchor,
+        double diameter = DefaultBrushThickness)
+    {
+        ArgumentNullException.ThrowIfNull(displayPoints);
+        if (displayPoints.Count == 0 ||
+            !TryMapToRaw(displayPoints[0], out DefectPoint firstTarget) ||
+            !TryMapToRaw(displaySourceAnchor, out DefectPoint anchor))
+        {
+            return LibraryFrameError.InvalidDefectRecipe;
+        }
+        double offsetX = anchor.X - firstTarget.X;
+        double offsetY = anchor.Y - firstTarget.Y;
+        return AddStroke(
+            displayPoints,
+            (frameId, identity, existing, points, baseSize) =>
+                DefectStrokeRecipeBuilder.AppendCloneStroke(
+                    frameId, identity, existing, points, diameter, offsetX, offsetY, baseSize));
+    }
+
+    private LibraryFrameError AddStroke(
+        IReadOnlyList<DefectPoint> displayPoints,
+        Func<Guid, DefectSourceIdentity, DefectRecipeSnapshot?, IReadOnlyList<DefectPoint>,
+            DefectSize, DefectRecipeSnapshot?> build)
+    {
+        if (SelectedFrame is not { } frame ||
+            !Guid.TryParseExact(frame.Id, "D", out Guid frameId) ||
+            frame.SourceMetadata is not { } metadata ||
+            metadata.PixelWidth == 0U || metadata.PixelHeight == 0U)
+        {
+            return LibraryFrameError.MissingId;
+        }
+
+        List<DefectPoint> rawPoints = new(displayPoints.Count);
+        foreach (DefectPoint point in displayPoints)
+        {
+            if (TryMapToRaw(point, out DefectPoint raw))
+            {
+                rawPoints.Add(raw);
+            }
+        }
+        if (rawPoints.Count == 0)
+        {
+            return LibraryFrameError.InvalidDefectRecipe;
+        }
+
+        DefectSize baseSize = new(metadata.PixelWidth, metadata.PixelHeight);
+        LibraryFrameError error = host.AppendDefectStroke(
+            frame.Id,
+            (identity, existing) =>
+                build(frameId, identity, existing, rawPoints, baseSize));
+        if (error == LibraryFrameError.None)
+        {
+            Select(frame.Id);
+        }
+        return error;
+    }
+
+    public bool HasDefectEdits(DefectEditKind kind) =>
+        SelectedFrame?.DefectRecipe?.Items.Any(item => item.Kind == kind) == true;
+
+    /// <summary>
+    /// 한 도구가 남긴 편집만 지웁니다. 다른 도구의 편집과 자동 검출 결과는 남습니다 — macOS 의
+    /// 도구별 초기화와 같습니다.
+    /// </summary>
+    public LibraryFrameError RemoveDefectEdits(DefectEditKind kind)
+    {
+        if (SelectedFrame is not { } frame ||
+            !Guid.TryParseExact(frame.Id, "D", out Guid frameId))
+        {
+            return LibraryFrameError.MissingId;
+        }
+        if (frame.DefectRecipe is not { } recipe ||
+            recipe.Items.All(item => item.Kind != kind))
+        {
+            return LibraryFrameError.None;
+        }
+
+        DefectEditItem[] remaining = [.. recipe.Items.Where(item => item.Kind != kind)];
+        LibraryFrameError error = host.AppendDefectStroke(
+            frame.Id,
+            (identity, _) =>
+            {
+                try
+                {
+                    // 남은 항목이 없어도 recipe 자체는 남깁니다. 개정 번호가 이어져야
+                    // 이전 편집이 되살아나지 않습니다.
+                    return DefectRecipeSnapshot.Create(
+                        frameId,
+                        checked(recipe.RecipeRevision + 1UL),
+                        identity,
+                        remaining);
+                }
+                catch (Exception failure) when (failure is ArgumentException or OverflowException)
+                {
+                    return null;
+                }
+            });
+        if (error == LibraryFrameError.None)
+        {
+            Select(frame.Id);
+        }
+        return error;
+    }
+
+    private bool TryMapToRaw(DefectPoint displayPoint, out DefectPoint rawPoint)
+    {
+        rawPoint = default;
+        if (SelectedFrame is not { } frame || frame.SourceMetadata is not { } metadata)
+        {
+            return false;
+        }
+        if (!DevelopDisplayGeometry.TryMapDisplayToRaw(
+                frame.ImageTransform,
+                metadata.PixelWidth,
+                metadata.PixelHeight,
+                displayPoint.X,
+                displayPoint.Y,
+                out double rawX,
+                out double rawY))
+        {
+            return false;
+        }
+        rawPoint = new DefectPoint(rawX, rawY);
+        return true;
+    }
+
     public BwToningRecipe BwToning => SelectedFrame?.BwToning ?? BwToningRecipe.None;
 
     /// <summary>

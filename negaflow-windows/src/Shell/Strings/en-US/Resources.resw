@@ -785,4 +785,15 @@ Load a scanner from Library to scan film.</value>
   <data name="developInfoSidecarNotFound.Text" xml:space="preserve"><value>Not Found</value></data>
   <data name="developInfoOriginScan.Text" xml:space="preserve"><value>Scan</value></data>
   <data name="developInfoOriginImport.Text" xml:space="preserve"><value>Import</value></data>
+  <data name="developGrainMend.Text" xml:space="preserve"><value>GrainMend</value></data>
+  <data name="developGrainMendAuto.Content" xml:space="preserve"><value>Auto</value></data>
+  <data name="developGrainMendAutoHelp.Value" xml:space="preserve"><value>Auto — detect the full frame automatically, then remove defects</value></data>
+  <data name="developGrainMendGuided.Content" xml:space="preserve"><value>Guided</value></data>
+  <data name="developGrainMendGuidedHelp.Value" xml:space="preserve"><value>Guided — drag a region, then press Enter or Remove Defects.</value></data>
+  <data name="developGrainMendBrush.Content" xml:space="preserve"><value>Brush</value></data>
+  <data name="developGrainMendBrushHelp.Value" xml:space="preserve"><value>Brush — paint over dust or scratches, then release to remove.</value></data>
+  <data name="developGrainMendClone.Content" xml:space="preserve"><value>Clone Stamp</value></data>
+  <data name="developGrainMendCloneHelp.Value" xml:space="preserve"><value>Clone Stamp — Alt-click to set the source, then drag to paint.</value></data>
+  <data name="developGrainMendReset.Value" xml:space="preserve"><value>Reset</value></data>
+  <data name="developGrainMendDetectorMissing.Value" xml:space="preserve"><value>Automatic detection is not in this build yet</value></data>
 </root>

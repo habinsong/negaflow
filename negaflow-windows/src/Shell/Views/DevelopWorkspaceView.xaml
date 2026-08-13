@@ -689,6 +689,121 @@
                             </Grid>
                         </Border>
 
+                        <!-- GrainMend: macOS 와 같은 도구 넷입니다. 각 도구는 켜고 끄는 알약과
+                             그 도구만 되돌리는 초기화 단추로 되어 있습니다. 자동·가이드는 검출기가
+                             아직 네이티브 ABI 에 없어 꺼져 있습니다. -->
+                        <Border
+                            x:Name="GrainMendCard"
+                            HorizontalAlignment="Stretch"
+                            Padding="14"
+                            AutomationProperties.AutomationId="negaflow.develop.grainmend"
+                            Background="{ThemeResource NegaflowCardBrush}"
+                            CornerRadius="14"
+                            Visibility="Collapsed">
+                            <StackPanel HorizontalAlignment="Stretch" Spacing="12">
+                                <StackPanel Orientation="Horizontal" Spacing="7">
+                                    <FontIcon FontSize="14" Glyph="&#xE7A8;" VerticalAlignment="Center" />
+                                    <TextBlock x:Name="GrainMendTitleText" VerticalAlignment="Center" FontSize="14" FontWeight="SemiBold" />
+                                </StackPanel>
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid Grid.Column="0" ColumnSpacing="1">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <Button
+                                            x:Name="GrainMendAutoButton"
+                                            MinHeight="31"
+                                            HorizontalAlignment="Stretch"
+                                            AutomationProperties.AutomationId="negaflow.develop.grainmend.auto"
+                                            FontSize="12" />
+                                        <Button
+                                            x:Name="GrainMendAutoResetButton"
+                                            Grid.Column="1"
+                                            Width="26"
+                                            MinHeight="31"
+                                            Padding="0"
+                                            AutomationProperties.AutomationId="negaflow.develop.grainmend.auto.reset">
+                                            <FontIcon FontSize="11" Glyph="&#xE777;" />
+                                        </Button>
+                                    </Grid>
+                                    <Grid Grid.Column="1" ColumnSpacing="1">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <Button
+                                            x:Name="GrainMendGuidedButton"
+                                            MinHeight="31"
+                                            HorizontalAlignment="Stretch"
+                                            AutomationProperties.AutomationId="negaflow.develop.grainmend.guided"
+                                            FontSize="12" />
+                                        <Button
+                                            x:Name="GrainMendGuidedResetButton"
+                                            Grid.Column="1"
+                                            Width="26"
+                                            MinHeight="31"
+                                            Padding="0"
+                                            AutomationProperties.AutomationId="negaflow.develop.grainmend.guided.reset">
+                                            <FontIcon FontSize="11" Glyph="&#xE777;" />
+                                        </Button>
+                                    </Grid>
+                                    <Grid Grid.Column="2" ColumnSpacing="1">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <Button
+                                            x:Name="GrainMendBrushButton"
+                                            MinHeight="31"
+                                            HorizontalAlignment="Stretch"
+                                            AutomationProperties.AutomationId="negaflow.develop.grainmend.brush"
+                                            Click="OnGrainMendBrushClicked"
+                                            FontSize="12" />
+                                        <Button
+                                            x:Name="GrainMendBrushResetButton"
+                                            Grid.Column="1"
+                                            Width="26"
+                                            MinHeight="31"
+                                            Padding="0"
+                                            AutomationProperties.AutomationId="negaflow.develop.grainmend.brush.reset"
+                                            Click="OnGrainMendBrushResetClicked">
+                                            <FontIcon FontSize="11" Glyph="&#xE777;" />
+                                        </Button>
+                                    </Grid>
+                                    <Grid Grid.Column="3" ColumnSpacing="1">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <Button
+                                            x:Name="GrainMendCloneButton"
+                                            MinHeight="31"
+                                            HorizontalAlignment="Stretch"
+                                            AutomationProperties.AutomationId="negaflow.develop.grainmend.clone"
+                                            Click="OnGrainMendCloneClicked"
+                                            FontSize="12" />
+                                        <Button
+                                            x:Name="GrainMendCloneResetButton"
+                                            Grid.Column="1"
+                                            Width="26"
+                                            MinHeight="31"
+                                            Padding="0"
+                                            AutomationProperties.AutomationId="negaflow.develop.grainmend.clone.reset"
+                                            Click="OnGrainMendCloneResetClicked">
+                                            <FontIcon FontSize="11" Glyph="&#xE777;" />
+                                        </Button>
+                                    </Grid>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
                         <!-- 정보: macOS 의 여섯 줄 그대로입니다. 값은 원본 자체에서 오는 것만
                              내고, 아직 읽지 못하는 항목은 macOS 의 빈 상태와 같은 "—"입니다. -->
                         <Border

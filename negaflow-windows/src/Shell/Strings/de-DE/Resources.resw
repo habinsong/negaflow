@@ -785,4 +785,15 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developInfoSidecarNotFound.Text" xml:space="preserve"><value>Fehlt</value></data>
   <data name="developInfoOriginScan.Text" xml:space="preserve"><value>Scannen</value></data>
   <data name="developInfoOriginImport.Text" xml:space="preserve"><value>Importieren</value></data>
+  <data name="developGrainMend.Text" xml:space="preserve"><value>GrainMend</value></data>
+  <data name="developGrainMendAuto.Content" xml:space="preserve"><value>Auto</value></data>
+  <data name="developGrainMendAutoHelp.Value" xml:space="preserve"><value>Auto — gesamtes Bild automatisch prüfen und Defekte entfernen</value></data>
+  <data name="developGrainMendGuided.Content" xml:space="preserve"><value>Geführt</value></data>
+  <data name="developGrainMendGuidedHelp.Value" xml:space="preserve"><value>Geführt — Bereich aufziehen, dann Eingabetaste oder „Defekte entfernen“ drücken.</value></data>
+  <data name="developGrainMendBrush.Content" xml:space="preserve"><value>Pinsel</value></data>
+  <data name="developGrainMendBrushHelp.Value" xml:space="preserve"><value>Pinsel — Staub oder Kratzer übermalen, dann loslassen zum Entfernen.</value></data>
+  <data name="developGrainMendClone.Content" xml:space="preserve"><value>Klonstempel</value></data>
+  <data name="developGrainMendCloneHelp.Value" xml:space="preserve"><value>Klonstempel — mit Alt-Klick die Quelle festlegen, dann zum Malen ziehen.</value></data>
+  <data name="developGrainMendReset.Value" xml:space="preserve"><value>Zurücksetzen</value></data>
+  <data name="developGrainMendDetectorMissing.Value" xml:space="preserve"><value>Automatische Erkennung fehlt in diesem Build noch</value></data>
 </root>

@@ -478,6 +478,44 @@ public sealed class LibraryHostService : IDisposable
         onCompleted?.Invoke();
     }
 
+    /// <summary>
+    /// 캔버스에서 그은 결함 편집 한 획을 붙이고 sidecar 와 catalog 에 씁니다. 원본을 읽어
+    /// identity 를 확인하므로, 파일이 바뀐 사진에는 붙지 않습니다.
+    /// </summary>
+    public LibraryFrameError AppendDefectStroke(
+        string frameId,
+        Func<DefectSourceIdentity, DefectRecipeSnapshot?, DefectRecipeSnapshot?> build)
+    {
+        ArgumentNullException.ThrowIfNull(frameId);
+        ArgumentNullException.ThrowIfNull(build);
+        if (document is null)
+        {
+            return LibraryFrameError.MissingId;
+        }
+        if (document.Frames.FirstOrDefault(candidate => candidate.Id == frameId)
+            is not { } frame)
+        {
+            return LibraryFrameError.MissingId;
+        }
+        if (!TryReadSourceIdentity(frame.SourcePath, out DefectSourceIdentity identity))
+        {
+            return LibraryFrameError.InvalidDefectRecipe;
+        }
+        if (build(identity, frame.DefectRecipe) is not { } recipe)
+        {
+            return LibraryFrameError.InvalidDefectRecipe;
+        }
+        LibraryDefectRecipeWriteResult written = document.WriteDefectRecipe(frameId, recipe);
+        if (!written.IsSuccess)
+        {
+            return written.FrameError == LibraryFrameError.None
+                ? LibraryFrameError.InvalidDefectRecipe
+                : written.FrameError;
+        }
+        // sidecar 와 catalog 는 이미 여기서 함께 쓰였으므로 지연 저장을 다시 걸지 않습니다.
+        return LibraryFrameError.None;
+    }
+
     private static bool TryReadSourceIdentity(string path, out DefectSourceIdentity identity)
     {
         identity = default;

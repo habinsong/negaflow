@@ -785,4 +785,15 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="developInfoSidecarNotFound.Text" xml:space="preserve"><value>Absent</value></data>
   <data name="developInfoOriginScan.Text" xml:space="preserve"><value>Numériser</value></data>
   <data name="developInfoOriginImport.Text" xml:space="preserve"><value>Importer</value></data>
+  <data name="developGrainMend.Text" xml:space="preserve"><value>GrainMend</value></data>
+  <data name="developGrainMendAuto.Content" xml:space="preserve"><value>Auto</value></data>
+  <data name="developGrainMendAutoHelp.Value" xml:space="preserve"><value>Auto — détecte toute l'image automatiquement, puis supprime les défauts</value></data>
+  <data name="developGrainMendGuided.Content" xml:space="preserve"><value>Guidé</value></data>
+  <data name="developGrainMendGuidedHelp.Value" xml:space="preserve"><value>Guidé — tracez une zone, puis appuyez sur Entrée ou « Supprimer les défauts ».</value></data>
+  <data name="developGrainMendBrush.Content" xml:space="preserve"><value>Pinceau</value></data>
+  <data name="developGrainMendBrushHelp.Value" xml:space="preserve"><value>Pinceau — peignez sur les poussières ou rayures, puis relâchez pour supprimer.</value></data>
+  <data name="developGrainMendClone.Content" xml:space="preserve"><value>Tampon de clonage</value></data>
+  <data name="developGrainMendCloneHelp.Value" xml:space="preserve"><value>Tampon de clonage — Alt-clic pour définir la source, puis faites glisser pour peindre.</value></data>
+  <data name="developGrainMendReset.Value" xml:space="preserve"><value>Réinitialiser</value></data>
+  <data name="developGrainMendDetectorMissing.Value" xml:space="preserve"><value>La détection automatique n'est pas encore dans cette version</value></data>
 </root>
