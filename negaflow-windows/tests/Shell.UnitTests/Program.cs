@@ -1876,13 +1876,33 @@ internal static class Program
         }
 
         NativeDevelopExporterAdapter exporter = new();
-        byte[] previewPixels = new byte[1600 * 1200 * 4];
-        System.Diagnostics.Stopwatch clock = System.Diagnostics.Stopwatch.StartNew();
-        DevelopExportResult preview = exporter.Preview(request, 1600, 1200, previewPixels);
-        long previewMs = clock.ElapsedMilliseconds;
-        Console.WriteLine(
-            $"preview: succeeded={preview.Succeeded} {preview.ImageWidth}x{preview.ImageHeight} " +
-            $"{previewMs}ms stage={preview.FailedStage} name={preview.FailureName}");
+        System.Diagnostics.Stopwatch clock = new();
+        DevelopExportResult preview = default!;
+        // 미리보기 비용이 출력 크기에 비례하는지, 디코드 같은 고정비가 지배하는지를 봅니다.
+        // 인터랙티브 프록시를 줄이는 것이 도움이 되는지가 여기서 갈립니다.
+        // 조정값을 뺀 요청과 견주면 디코드 같은 고정비와 보정 단계 비용이 갈립니다.
+        DevelopExportRequest neutral = DevelopRequestFactory.Create(
+            frame with
+            {
+                Tone = ToneAdjustment.Neutral,
+                ColorModel = ColorModelRecipe.Identity,
+                Texture = TextureRecipe.Identity,
+            },
+            destination,
+            DevelopExportFormat.Png16).Request!;
+        foreach ((string label, DevelopExportRequest candidate) in
+            new[] { ("adjusted", request), ("neutral", neutral) })
+        {
+            foreach ((uint width, uint height) in new[] { (400U, 300U), (1600U, 1200U) })
+            {
+                byte[] pixels = new byte[(long)width * height * 4];
+                clock.Restart();
+                preview = exporter.Preview(candidate, width, height, pixels);
+                Console.WriteLine(
+                    $"preview {label} {width}x{height}: succeeded={preview.Succeeded} " +
+                    $"{preview.ImageWidth}x{preview.ImageHeight} {clock.ElapsedMilliseconds}ms");
+            }
+        }
 
         if (File.Exists(destination))
         {
