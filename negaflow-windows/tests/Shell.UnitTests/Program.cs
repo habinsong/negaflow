@@ -27,6 +27,10 @@ internal static class Program
             bool blackAndWhite = args[2] == "--bw";
             return SeedCatalog(args[1], args[(blackAndWhite ? 3 : 2)..], blackAndWhite);
         }
+        if (args.Length == 2 && args[0] == "--diagnose")
+        {
+            return DiagnoseCatalog(args[1]);
+        }
         VerifyPreferencesDefaults();
         VerifyPreferencesNormalization();
         VerifyAdaptiveLayout();
@@ -1746,6 +1750,36 @@ internal static class Program
         Check(exporter.CallCount == 1, "coordinator_dropped_still_ran_native");
     }
 
+    /// <summary>
+    /// 씨앗으로 만든 카탈로그를 셸과 같은 방식으로 열어, 사진이 왜 안 보이는지 UI 없이 봅니다.
+    /// </summary>
+    private static int DiagnoseCatalog(string storageRoot)
+    {
+        if (StorageRootResolver.ResolveForTests(storageRoot).Roots is not { } roots)
+        {
+            Console.Error.WriteLine("storage root refused");
+            return 2;
+        }
+        using LibraryHostService host = new(new FakeDispatcher(accepts: true));
+        Console.WriteLine($"state: {host.Open(roots)}");
+        Console.WriteLine($"frames: {host.Frames.Count}");
+        foreach (LibraryFrameSnapshot frame in host.Frames)
+        {
+            bool exists = File.Exists(frame.SourcePath);
+            host.SourceAvailabilityByFrameId.TryGetValue(
+                frame.Id, out LibrarySourceAvailability availability);
+            DevelopRequestResult request = DevelopRequestFactory.Create(
+                frame,
+                Path.Combine(Path.GetTempPath(), "diagnose.png"));
+            Console.WriteLine(
+                $"  {frame.Id} exists={exists} availability={availability} " +
+                $"metadata={(frame.SourceMetadata is null ? "none" : "present")} " +
+                $"request={(request.IsSuccess ? "ok" : request.Refusal.ToString())} " +
+                $"path={frame.SourcePath}");
+        }
+        return 0;
+    }
+
     private static int SeedCatalog(
         string storageRoot,
         string[] sourcePaths,
@@ -1773,7 +1807,9 @@ internal static class Program
             List<CatalogEntityRow> rows = [];
             for (int index = 0; index < sourcePaths.Length; ++index)
             {
-                string id = $"seed-{index + 1:D2}";
+                // 셸의 여러 경로가 frame id 를 GUID 로 해석합니다(썸네일 캐시 파일명, 결함
+                // sidecar). 사람이 읽기 좋은 id 를 심으면 그 경로들이 조용히 멈춥니다.
+                string id = Guid.NewGuid().ToString("D");
                 JsonObject record = FrameRecord(id, "unused.tif", 0.0);
                 if (blackAndWhite)
                 {
