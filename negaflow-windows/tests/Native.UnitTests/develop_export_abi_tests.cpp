@@ -2001,6 +2001,53 @@ void test_v3_grain_mend_detection_tuning(const std::filesystem::path& source) {
         "v3 GrainMend detection rejects nonzero tuning reserved field");
 }
 
+// v4 appends only the optional macOS micro-speck bit. It keeps the v3 review
+// tuning and ROI prefix frozen, and rejects a caller that tries to smuggle future
+// fields through the reserved tail.
+void test_v4_grain_mend_micro_speck_detection(const std::filesystem::path& source) {
+    expect(sizeof(nf_grain_mend_detect_parameters_v3) == 80U &&
+            offsetof(nf_grain_mend_detect_parameters_v3, detect_micro_specks) == 72U,
+        "v4 GrainMend micro-speck ABI layout is fixed");
+
+    const std::wstring source_text = source.wstring();
+    nf_develop_export_request_v27 request =
+        make_request_v27(source_text.c_str(), nullptr);
+    request.v26.v25.v24.v21.v20.v19.v18.v17.v16.v15.v14.v13.v12.v11.v10.v9.v8
+        .defect_removal_strength = 1.0;
+    nf_grain_mend_detect_parameters_v3 parameters{};
+    parameters.v2.v1.struct_size = static_cast<std::uint32_t>(sizeof(parameters));
+    parameters.v2.v1.roi_x = 0.2;
+    parameters.v2.v1.roi_y = 0.25;
+    parameters.v2.v1.roi_width = 0.5;
+    parameters.v2.v1.roi_height = 0.5;
+    parameters.v2.dust_sensitivity = 1.0;
+    parameters.v2.scratch_sensitivity = 1.0;
+    parameters.v2.protect_detail = 0.6;
+    parameters.detect_micro_specks = 1U;
+
+    nf_grain_mend_detection_v2 detection{};
+    detection.struct_size = static_cast<std::uint32_t>(sizeof(detection));
+    nf_develop_export_result_v3 result = make_result_v3();
+    expect(
+        nf_develop_detect_grain_mend_v4(
+            &request, &parameters, nullptr, 0U, nullptr, &detection, &result) ==
+                NF_STATUS_OK &&
+            result.succeeded == 1U && detection.width > 0U && detection.height > 0U &&
+            detection.mask_byte_count ==
+                static_cast<std::uint64_t>(detection.width) * detection.height,
+        "v4 GrainMend detection accepts the optional micro-speck setting");
+
+    parameters.reserved = 1U;
+    detection = {};
+    detection.struct_size = static_cast<std::uint32_t>(sizeof(detection));
+    result = make_result_v3();
+    expect(
+        nf_develop_detect_grain_mend_v4(
+            &request, &parameters, nullptr, 0U, nullptr, &detection, &result) ==
+            NF_STATUS_INVALID_ARGUMENT,
+        "v4 GrainMend detection rejects nonzero micro-speck reserved field");
+}
+
 // Neutrality of a monochrome develop is a property of the working image. The 8-bit
 // preview adds under one code value of dither per channel — as the macOS display path
 // does — so the check is "no visible tint", not "identical bytes". A real tint from the
@@ -3890,6 +3937,7 @@ int main(const int argument_count, const char* const arguments[]) {
             test_v8_grain_mend_preview(source);
             test_v2_grain_mend_detection(source);
             test_v3_grain_mend_detection_tuning(source);
+            test_v4_grain_mend_micro_speck_detection(source);
             test_v9_film_scan_denoise_preview(source);
             test_v10_texture_preview(source);
             test_v11_bw_transform_preview(source);

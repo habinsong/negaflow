@@ -68,6 +68,44 @@ void expect(const bool condition, const char* const message) {
                left.size() * sizeof(negaflow::core::Rgba32F)) == 0;
 }
 
+void add_chromatic_grain(
+    negaflow::imaging::WorkingImage& image,
+    const std::uint32_t seed,
+    const std::uint32_t probability_per_thousand,
+    const float amplitude) {
+    std::uint32_t state = seed;
+    for (auto& pixel : image.pixels) {
+        float* const channels[] = {&pixel.red, &pixel.green, &pixel.blue};
+        for (float* const channel : channels) {
+            state = state * 1664525U + 1013904223U;
+            if ((state >> 16U) % 1000U >= probability_per_thousand) {
+                continue;
+            }
+            state = state * 1664525U + 1013904223U;
+            *channel = std::clamp(
+                *channel + ((state & 1U) == 0U ? -amplitude : amplitude),
+                0.0F,
+                1.0F);
+        }
+    }
+}
+
+void add_dark_micro_speck(
+    negaflow::imaging::WorkingImage& image,
+    const std::uint32_t x,
+    const std::uint32_t y,
+    const std::uint32_t size,
+    const float drop) {
+    for (std::uint32_t row = y; row < y + size; ++row) {
+        for (std::uint32_t column = x; column < x + size; ++column) {
+            auto& pixel = image.pixels[static_cast<std::size_t>(row) * image.width + column];
+            pixel.red -= drop;
+            pixel.green -= drop;
+            pixel.blue -= drop;
+        }
+    }
+}
+
 [[nodiscard]] float pixel_error(
     const negaflow::core::Rgba32F actual,
     const negaflow::core::Rgba32F expected) noexcept {
@@ -793,6 +831,63 @@ void test_guided_detection_crops_to_the_selected_roi() {
         "guided detection analyses only the selected rectangle");
 }
 
+// macOS의 추가 미세 입자 패스는 기존 결함 후보를 약화시키지 않고, 세 채널에 같이 어두운
+// 2~7px 표면 이물만 선택적으로 더합니다. 토글을 끄면 이전 검출 마스크가 정확히 남아야 합니다.
+void test_micro_speck_detection_is_optional_and_additive() {
+    constexpr std::uint32_t width = 512U;
+    constexpr std::uint32_t height = 512U;
+    auto damaged = make_uniform_image(width, height, 0.20F);
+    add_chromatic_grain(damaged, 7U, 50U, 0.015F);
+    std::vector<std::pair<std::uint32_t, std::uint32_t>> specks{};
+    for (std::uint32_t x = 40U; x <= 400U; x += 60U) {
+        for (std::uint32_t y = 60U; y <= 420U; y += 90U) {
+            specks.push_back({x, y});
+            add_dark_micro_speck(damaged, x, y, 3U, 0.065F);
+        }
+    }
+
+    negaflow::imaging::GrainMendParameters off{1.0};
+    off.dust_sensitivity = 0.6;
+    off.scratch_sensitivity = 0.7;
+    off.protect_detail = 0.6;
+    off.detect_micro_specks = false;
+    const auto legacy = negaflow::imaging::detect_grain_mend(damaged, off);
+    negaflow::imaging::GrainMendParameters on = off;
+    on.detect_micro_specks = true;
+    const auto detected = negaflow::imaging::detect_grain_mend(damaged, on);
+
+    expect(
+        legacy.status == negaflow::imaging::GrainMendStatus::ok &&
+            detected.status == negaflow::imaging::GrainMendStatus::ok,
+        "micro-speck detection completes for both toggle states");
+    expect(
+        detected.accepted_pixels >= legacy.accepted_pixels &&
+            detected.mask.size() == legacy.mask.size(),
+        "the enabled micro-speck pass only adds to the legacy proposal");
+    bool preserves_legacy = true;
+    for (std::size_t index = 0U; index < legacy.mask.size(); ++index) {
+        preserves_legacy = preserves_legacy &&
+            (legacy.mask[index] == 0U || detected.mask[index] != 0U);
+    }
+    expect(preserves_legacy,
+        "the enabled micro-speck pass never removes a legacy candidate");
+
+    std::size_t found = 0U;
+    for (const auto [x, y] : specks) {
+        const std::size_t center = static_cast<std::size_t>(y + 1U) * width + x + 1U;
+        if (detected.mask[center] != 0U) {
+            ++found;
+        }
+    }
+    if (found < specks.size()) {
+        std::cerr << "diagnostic micro_found=" << found << "/" << specks.size()
+                  << " legacy=" << legacy.accepted_pixels
+                  << " enabled=" << detected.accepted_pixels << '\n';
+    }
+    expect(found == specks.size(),
+        "the optional micro-speck pass finds every neutral 3px speck on chromatic grain");
+}
+
 }  // namespace
 
 int main() {
@@ -814,6 +909,7 @@ int main() {
     test_cancellation_stops_detection_and_keeps_results();
     test_detection_only_agrees_with_the_repair_path();
     test_guided_detection_crops_to_the_selected_roi();
+    test_micro_speck_detection_is_optional_and_additive();
 
     std::cout << "{\"status\":\"" << (failures == 0 ? "ok" : "error")
               << "\",\"suite\":\"grain_mend\",\"failures\":"

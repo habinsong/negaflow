@@ -450,9 +450,12 @@ public readonly record struct GrainMendDetectionOptions(
     double DustSensitivity,
     double ScratchSensitivity,
     double ProtectDetail,
-    bool RejectStructureLines)
+    bool RejectStructureLines,
+    bool DetectMicroSpecks)
 {
-    public static GrainMendDetectionOptions LegacyDefault { get; } = new(0.5, 0.5, 0.75, false);
+    // The historical entry point did not expose the extra pass. Keep an omitted
+    // option backward compatible; the review UI explicitly follows macOS and enables it.
+    public static GrainMendDetectionOptions LegacyDefault { get; } = new(0.5, 0.5, 0.75, false, false);
 }
 
 public sealed class DevelopExportRequest

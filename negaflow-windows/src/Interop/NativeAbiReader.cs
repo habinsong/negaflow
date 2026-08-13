@@ -29,9 +29,9 @@ internal static unsafe class NativeAbiReader
       // preflight at import and relink, 38 for creative primary calibration, and 39 for
       // JPEG/PNG source preflight at import and relink, and 40 for JPEG output
       // quality plus DPI metadata, 41 for linear-light long-edge output scaling, and
-      // 42 for GrainMend review detector tuning.
+      // 42 for GrainMend review detector tuning, and 43 for its optional micro-speck pass.
     // An engine below this is refused at load, not at the call.
-    internal const ushort MinimumMinor = 42;
+    internal const ushort MinimumMinor = 43;
 
     private const uint StatusOk = 0;
 

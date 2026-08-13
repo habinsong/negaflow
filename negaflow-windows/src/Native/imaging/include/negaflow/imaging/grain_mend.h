@@ -38,6 +38,9 @@ struct GrainMendParameters final {
     double scratch_sensitivity{default_grain_mend_scratch_sensitivity};
     double protect_detail{default_grain_mend_protect_detail};
     bool reject_structure_lines{false};
+    // macOS 는 표면 이물의 작은 무채색 어두운 점을 별도 패스로 찾아, 보통의
+    // 색채 그레인과 섞이지 않게 합니다. false면 기존 dust/scratch 판정은 그대로입니다.
+    bool detect_micro_specks{true};
 };
 
 struct GrainMendInfo final {

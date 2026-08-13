@@ -3,6 +3,7 @@
 #include "grain_mend_components.h"
 #include "grain_mend_detector.h"
 #include "grain_mend_resample.h"
+#include "grain_mend_speck_detector.h"
 #include "grain_mend_tiled.h"
 
 #include <algorithm>
@@ -22,6 +23,7 @@ using grain_mend_detail::CandidateMaps;
 using grain_mend_detail::DetectionImage;
 using grain_mend_detail::build_automatic_mask;
 using grain_mend_detail::find_candidates;
+using grain_mend_detail::merge_micro_speck_mask;
 using grain_mend_detail::build_tiled_automatic_mask;
 using grain_mend_detail::make_detection_image;
 using grain_mend_detail::sample_transformed_mask;
@@ -232,11 +234,26 @@ GrainMendResult apply_grain_mend(
             candidates,
             parameters.reject_structure_lines,
             result.info.candidate_pixels);
+        std::vector<std::uint8_t> accepted_mask = mask;
+        if (parameters.detect_micro_specks) {
+            std::size_t added_micro_specks = 0U;
+            if (!merge_micro_speck_mask(
+                    detection,
+                    parameters.dust_sensitivity,
+                    accepted_mask,
+                    added_micro_specks,
+                    cancel)) {
+                result.status = GrainMendStatus::cancelled;
+                discard_pixels(result.image);
+                return result;
+            }
+            result.info.candidate_pixels += added_micro_specks;
+        }
         if (result.info.candidate_pixels != 0U) {
             repair_full_resolution(
                 result.image,
                 detection,
-                mask,
+                accepted_mask,
                 static_cast<float>(parameters.strength),
                 result.info.repaired_pixels);
         }
@@ -336,6 +353,19 @@ GrainMendDetection detect_grain_mend(
             candidates,
             parameters.reject_structure_lines,
             detection.accepted_pixels);
+        if (parameters.detect_micro_specks) {
+            std::size_t added_micro_specks = 0U;
+            if (!merge_micro_speck_mask(
+                    analysis,
+                    parameters.dust_sensitivity,
+                    detection.mask,
+                    added_micro_specks,
+                    cancel)) {
+                detection.status = GrainMendStatus::cancelled;
+                return detection;
+            }
+            detection.accepted_pixels += added_micro_specks;
+        }
         detection.status = GrainMendStatus::ok;
         return detection;
     } catch (...) {

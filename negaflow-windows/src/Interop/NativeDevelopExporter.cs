@@ -61,6 +61,7 @@ public static unsafe class NativeDevelopExporter
     internal const int SoftProofV1Size = 40;
     internal const int GrainMendDetectParametersV1Size = 40;
     internal const int GrainMendDetectParametersV2Size = 72;
+    internal const int GrainMendDetectParametersV3Size = 80;
     internal const int GrainMendDetectionV2Size = 56;
 
     private const int MaximumLocalAdjustments = 64;
@@ -129,6 +130,7 @@ public static unsafe class NativeDevelopExporter
             sizeof(NativeSoftProofV1) != SoftProofV1Size ||
             sizeof(NativeGrainMendDetectParametersV1) != GrainMendDetectParametersV1Size ||
             sizeof(NativeGrainMendDetectParametersV2) != GrainMendDetectParametersV2Size ||
+            sizeof(NativeGrainMendDetectParametersV3) != GrainMendDetectParametersV3Size ||
             sizeof(NativeGrainMendDetectionV2) != GrainMendDetectionV2Size)
         {
             throw new NativeBootstrapException(
@@ -2116,24 +2118,28 @@ public static unsafe class NativeDevelopExporter
             NativeDevelopExportRequestV27 v27 = BuildRequestV27(v26, request);
             if (detection is not null)
             {
-                NativeGrainMendDetectParametersV2 detectionParameters = new()
+                NativeGrainMendDetectParametersV3 detectionParameters = new()
                 {
-                    V1 = new NativeGrainMendDetectParametersV1
+                    V2 = new NativeGrainMendDetectParametersV2
                     {
-                        StructSize = (uint)sizeof(NativeGrainMendDetectParametersV2),
-                        RoiX = roiX,
-                        RoiY = roiY,
-                        RoiWidth = roiWidth,
-                        RoiHeight = roiHeight,
+                        V1 = new NativeGrainMendDetectParametersV1
+                        {
+                            StructSize = (uint)sizeof(NativeGrainMendDetectParametersV3),
+                            RoiX = roiX,
+                            RoiY = roiY,
+                            RoiWidth = roiWidth,
+                            RoiHeight = roiHeight,
+                        },
+                        DustSensitivity = effectiveDetectionOptions.DustSensitivity,
+                        ScratchSensitivity = effectiveDetectionOptions.ScratchSensitivity,
+                        ProtectDetail = effectiveDetectionOptions.ProtectDetail,
+                        RejectStructureLines =
+                            effectiveDetectionOptions.RejectStructureLines ? 1U : 0U,
                     },
-                    DustSensitivity = effectiveDetectionOptions.DustSensitivity,
-                    ScratchSensitivity = effectiveDetectionOptions.ScratchSensitivity,
-                    ProtectDetail = effectiveDetectionOptions.ProtectDetail,
-                    RejectStructureLines =
-                        effectiveDetectionOptions.RejectStructureLines ? 1U : 0U,
+                    DetectMicroSpecks = effectiveDetectionOptions.DetectMicroSpecks ? 1U : 0U,
                 };
                 detection->StructSize = (uint)sizeof(NativeGrainMendDetectionV2);
-                status = NativeMethods.nf_develop_detect_grain_mend_v3(
+                status = NativeMethods.nf_develop_detect_grain_mend_v4(
                     &v27,
                     &detectionParameters,
                     pixels.IsEmpty ? null : pixelBuffer,
@@ -2162,7 +2168,7 @@ public static unsafe class NativeDevelopExporter
             status,
             raw,
             detection is not null
-                ? "nf_develop_detect_grain_mend_v3"
+                ? "nf_develop_detect_grain_mend_v4"
                 : "nf_develop_preview_v29"));
     }
 

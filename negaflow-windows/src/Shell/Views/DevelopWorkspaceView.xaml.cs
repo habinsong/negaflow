@@ -2185,7 +2185,10 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private DefectRect? pendingDefectRawRoi;
     private readonly Dictionary<string, GrainMendSensitivityValues> grainMendSensitivityByFrame =
         new(StringComparer.Ordinal);
+    private readonly Dictionary<string, GrainMendMicroSpeckValues> grainMendMicroSpecksByFrame =
+        new(StringComparer.Ordinal);
     private bool updatingGrainMendSensitivity;
+    private bool updatingGrainMendMicroSpecks;
     private bool grainMendSensitivityChanged;
 
     private readonly record struct GrainMendSensitivityValues(double Automatic, double Guided)
@@ -2193,6 +2196,13 @@ public sealed partial class DevelopWorkspaceView : UserControl
         public static GrainMendSensitivityValues Default { get; } = new(
             GrainMendSensitivity.Default,
             GrainMendSensitivity.Default);
+    }
+
+    private readonly record struct GrainMendMicroSpeckValues(bool Automatic, bool Guided)
+    {
+        // macOS의 새 프레임 기본값과 같습니다. 자동·가이드는 독립된 검토 도구이므로
+        // 프레임 안에서도 따로 기억합니다.
+        public static GrainMendMicroSpeckValues Default { get; } = new(true, true);
     }
 
     private async void OnGrainMendAutoClicked(object sender, RoutedEventArgs args)
@@ -2233,7 +2243,8 @@ public sealed partial class DevelopWorkspaceView : UserControl
             bool automatic = IsWholeFrameGrainMendRoi(rawRoi);
             GrainMendDetectionOptions options = GrainMendSensitivity.ToDetectionOptions(
                 GetGrainMendSensitivity(automatic),
-                automatic);
+                automatic,
+                GetGrainMendMicroSpecks(automatic));
             await grainMendDetectCoordinator.RunAsync(
                 frame,
                 rawRoi,
@@ -2383,6 +2394,32 @@ public sealed partial class DevelopWorkspaceView : UserControl
             : prior with { Guided = clamped };
     }
 
+    private bool GetGrainMendMicroSpecks(bool automatic)
+    {
+        if (panel?.SelectedFrame is not { } frame ||
+            !grainMendMicroSpecksByFrame.TryGetValue(frame.Id, out GrainMendMicroSpeckValues values))
+        {
+            return true;
+        }
+        return automatic ? values.Automatic : values.Guided;
+    }
+
+    private void SetGrainMendMicroSpecks(bool automatic, bool enabled)
+    {
+        if (panel?.SelectedFrame is not { } frame)
+        {
+            return;
+        }
+        GrainMendMicroSpeckValues prior = grainMendMicroSpecksByFrame.TryGetValue(
+            frame.Id,
+            out GrainMendMicroSpeckValues values)
+            ? values
+            : GrainMendMicroSpeckValues.Default;
+        grainMendMicroSpecksByFrame[frame.Id] = automatic
+            ? prior with { Automatic = enabled }
+            : prior with { Guided = enabled };
+    }
+
     private void OnGrainMendSensitivityValueChanged(
         object sender,
         RangeBaseValueChangedEventArgs args)
@@ -2421,6 +2458,20 @@ public sealed partial class DevelopWorkspaceView : UserControl
             return;
         }
         grainMendSensitivityChanged = false;
+        await DetectGrainMendAsync(rawRoi);
+    }
+
+    private async void OnGrainMendMicroSpecksToggled(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (updatingGrainMendMicroSpecks || pendingDefectEdit is null ||
+            pendingDefectRawRoi is not { } rawRoi || grainMendDetecting)
+        {
+            return;
+        }
+        bool automatic = pendingDefectEdit.Label.Kind == DefectEditLabelKind.Automatic;
+        SetGrainMendMicroSpecks(automatic, GrainMendMicroSpecksToggle.IsOn);
         await DetectGrainMendAsync(rawRoi);
     }
 
@@ -2600,6 +2651,11 @@ public sealed partial class DevelopWorkspaceView : UserControl
         string grainMendSensitivity = AppResources.Get("developGrainMendSensitivity", "Text");
         AutomationProperties.SetName(GrainMendSensitivitySlider, grainMendSensitivity);
         ToolTipService.SetToolTip(GrainMendSensitivitySlider, grainMendSensitivity);
+        string grainMendMicroSpecks = AppResources.Get("developGrainMendMicroSpecks", "Text");
+        GrainMendMicroSpecksToggle.OnContent = grainMendMicroSpecks;
+        GrainMendMicroSpecksToggle.OffContent = grainMendMicroSpecks;
+        AutomationProperties.SetName(GrainMendMicroSpecksToggle, grainMendMicroSpecks);
+        ToolTipService.SetToolTip(GrainMendMicroSpecksToggle, grainMendMicroSpecks);
         GrainMendAutoButton.IsEnabled =
             panel?.SelectedFrame is not null && pendingDefectEdit is null && !grainMendDetecting;
         GrainMendAutoResetButton.IsEnabled =
@@ -2616,12 +2672,16 @@ public sealed partial class DevelopWorkspaceView : UserControl
             ? Visibility.Visible
             : Visibility.Collapsed;
         GrainMendSensitivitySlider.IsEnabled = reviewingDefects && !grainMendDetecting;
+        GrainMendMicroSpecksToggle.IsEnabled = reviewingDefects && !grainMendDetecting;
         if (reviewingDefects)
         {
             bool automatic = pendingDefectEdit!.Label.Kind == DefectEditLabelKind.Automatic;
             updatingGrainMendSensitivity = true;
             GrainMendSensitivitySlider.Value = GetGrainMendSensitivity(automatic);
             updatingGrainMendSensitivity = false;
+            updatingGrainMendMicroSpecks = true;
+            GrainMendMicroSpecksToggle.IsOn = GetGrainMendMicroSpecks(automatic);
+            updatingGrainMendMicroSpecks = false;
         }
         GrainMendRemoveButton.IsEnabled =
             pendingDefectEdit is not null && (pendingDefectReview?.IncludedCount ?? 1) > 0;

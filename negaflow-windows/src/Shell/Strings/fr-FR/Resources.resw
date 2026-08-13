@@ -797,6 +797,7 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="developGrainMendReset.Value" xml:space="preserve"><value>Réinitialiser</value></data>
   <data name="developGrainMendRemove.Content" xml:space="preserve"><value>Supprimer les défauts</value></data>
   <data name="developGrainMendSensitivity.Text" xml:space="preserve"><value>Sensibilité</value></data>
+  <data name="developGrainMendMicroSpecks.Text" xml:space="preserve"><value>Micro-particules</value></data>
   <data name="developGrainMendDetectorMissing.Value" xml:space="preserve"><value>La détection automatique n'est pas encore dans cette version</value></data>
   <data name="developPreviewFailed.Text" xml:space="preserve"><value>L'aperçu n'a pas pu être généré</value></data>
   <data name="libraryFilterMetadataUnknown.Content" xml:space="preserve"><value>État des métadonnées inconnu</value><comment>AppLocalizedPhrase.filterMetadataUnknown</comment></data>

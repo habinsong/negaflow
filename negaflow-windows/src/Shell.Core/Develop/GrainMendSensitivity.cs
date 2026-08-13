@@ -17,13 +17,15 @@ public static class GrainMendSensitivity
 
     public static GrainMendDetectionOptions ToDetectionOptions(
         double sliderValue,
-        bool automatic)
+        bool automatic,
+        bool detectMicroSpecks = true)
     {
         double normalized = (Clamp(sliderValue) - Minimum) / (Maximum - Minimum);
         return new GrainMendDetectionOptions(
             normalized,
             Math.Min(1.0, normalized + 0.1),
             0.6,
-            automatic);
+            automatic,
+            detectMicroSpecks);
     }
 }

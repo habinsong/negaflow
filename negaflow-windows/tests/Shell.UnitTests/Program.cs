@@ -806,7 +806,7 @@ internal static class Program
                 new DefectRect(0.1, 0.1, 0.5, 0.5),
                 minimumGuided,
                 outcome => seen = outcome).GetAwaiter().GetResult() &&
-            exporter.LastDetectOptions == new GrainMendDetectionOptions(0.0, 0.1, 0.6, false),
+            exporter.LastDetectOptions == new GrainMendDetectionOptions(0.0, 0.1, 0.6, false, true),
             "grain_mend_detect_forwards_guided_slider_tuning_without_structure_rejection");
 
         // 아무것도 못 찾으면 항목이 없고, 그것은 실패가 아닙니다.

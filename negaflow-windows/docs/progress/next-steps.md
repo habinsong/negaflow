@@ -183,8 +183,8 @@ py scripts/find-unreachable-api.py
 
 **최근에 닫은 큰 덩어리와 남은 경계** (다음에 고를 때 이 셈을 다시 하지 마십시오):
 
-1. **GrainMend 자동·가이드(완료).** 브러시·복제 도장·자동·가이드 ROI 검출과 review→수락→sidecar
-   저장까지 닫았습니다. 아래 내용은 이 경로의 설계 근거입니다.
+1. **GrainMend 네 도구와 미세 입자 검출(완료).** 브러시·복제 도장·자동·가이드 ROI 검출, review→수락→sidecar
+   저장, 그리고 모드별 미세 입자 토글까지 닫았습니다. 아래 내용은 이 경로의 설계 근거입니다.
 
    **가장 중요한 사실: 검출기는 원본 스캔이 아니라 현상된 양화 위에서 돕니다.**
    `pipeline/develop_export.cpp` 에서 `apply_grain_mend` 는 `film_look` **뒤**에 불립니다.
@@ -208,7 +208,7 @@ py scripts/find-unreachable-api.py
    **(a) 파이프라인 대상과 (b) ABI 진입점은 만들었습니다.**
    `pipeline::develop_detect_grain_mend(request, mask, capacity, control)` 가 preview 와
     같은 파이프라인을 GrainMend 단계까지 돌고 거기서 멈춥니다. 현재 ABI 는
-    ROI와 일회성 감도/구조선 설정을 받는 `nf_develop_detect_grain_mend_v3` 이고 **v27 요청**을 받습니다(v21 접두부만 받으면 뒤에
+    ROI와 일회성 감도/구조선/미세 입자 설정을 받는 `nf_develop_detect_grain_mend_v4` 이고 **v27 요청**을 받습니다(v21 접두부만 받으면 뒤에
    붙은 recipe 가 조용히 빠집니다). C# 은 `NativeDevelopExporter.DetectGrainMend` 이며
    `Preview` 와 요청 조립 코드를 공유합니다 — 60여 줄짜리 조립을 두 벌로 두지 않았습니다.
 
@@ -230,7 +230,9 @@ py scripts/find-unreachable-api.py
    그 상태 전환을 코드 모양으로 지켰습니다. 받아들이는 자리는
     `DevelopPanelState.AcceptDefectRegion(edit)` 입니다. ROI 가 (0,0,1,1) 이면 자동, 부분이면
     가이드로 이름표가 붙습니다. 감도 슬라이더는 macOS와 같이 `0.7...6.0`을 검출기 `0...1`로 바꿔
-    같은 ROI를 다시 검출하며, 자동일 때만 구조선 배제를 켭니다. `IDevelopExporter.DetectGrainMend` 로 추상화해 두어 시험이
+    같은 ROI를 다시 검출하며, 자동일 때만 구조선 배제를 켭니다. `Micro-specks` 토글은 macOS와 같이
+    자동/가이드별 기본 켜짐이며 기존 후보와 겹치지 않는 2~64px 중성 어두운 성분만 추가합니다.
+    `IDevelopExporter.DetectGrainMend` 로 추상화해 두어 시험이
    네이티브 없이 대역을 끼울 수 있습니다.
 
    **자동은 끝났습니다.** 버튼 → 검출 → 오버레이 → Enter 로 반영, Esc 로 취소까지 붙였고

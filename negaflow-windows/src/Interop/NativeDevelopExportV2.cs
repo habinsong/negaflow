@@ -743,6 +743,15 @@ internal struct NativeGrainMendDetectParametersV2
     internal uint Reserved;
 }
 
+/// <summary>v4 adds the review-only macOS micro-speck pass toggle.</summary>
+[StructLayout(LayoutKind.Sequential)]
+internal struct NativeGrainMendDetectParametersV3
+{
+    internal NativeGrainMendDetectParametersV2 V2;
+    internal uint DetectMicroSpecks;
+    internal uint Reserved;
+}
+
 /// <summary>
 /// ROI-aware GrainMend detection output. The source rectangle is raw pixels, top-first,
 /// and the returned one-byte mask is local to that rectangle after analysis downscaling.

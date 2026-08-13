@@ -1402,6 +1402,15 @@ typedef struct nf_grain_mend_detect_parameters_v2 {
     uint32_t reserved;
 } nf_grain_mend_detect_parameters_v2;
 
+/* v4 retains all transient review tuning and appends the optional macOS micro-speck
+   pass. The bit is intentionally separate from persisted Defects edits: it only
+   changes the proposal the user is about to accept. */
+typedef struct nf_grain_mend_detect_parameters_v3 {
+    nf_grain_mend_detect_parameters_v2 v2;
+    uint32_t detect_micro_specks;
+    uint32_t reserved;
+} nf_grain_mend_detect_parameters_v3;
+
 typedef struct nf_grain_mend_detection_v2 {
     uint32_t struct_size;
     uint32_t reserved;
@@ -1437,6 +1446,15 @@ NF_API nf_status_t NF_CALL nf_develop_detect_grain_mend_v2(
 NF_API nf_status_t NF_CALL nf_develop_detect_grain_mend_v3(
     const nf_develop_export_request_v27* request,
     const nf_grain_mend_detect_parameters_v2* parameters,
+    uint8_t* mask,
+    uint64_t mask_capacity_bytes,
+    nf_develop_run_state_v1* run_state,
+    nf_grain_mend_detection_v2* detection,
+    nf_develop_export_result_v3* result);
+
+NF_API nf_status_t NF_CALL nf_develop_detect_grain_mend_v4(
+    const nf_develop_export_request_v27* request,
+    const nf_grain_mend_detect_parameters_v3* parameters,
     uint8_t* mask,
     uint64_t mask_capacity_bytes,
     nf_develop_run_state_v1* run_state,

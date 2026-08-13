@@ -73,6 +73,10 @@ internal static unsafe class ContractTestRunner
             sizeof(NativeDevelopExportResultV1) == NativeDevelopExporter.ResultV1Size,
             "develop_export_result_size");
         Check(
+            sizeof(NativeGrainMendDetectParametersV3) ==
+                NativeDevelopExporter.GrainMendDetectParametersV3Size,
+            "grain_mend_detect_v4_parameters_size");
+        Check(
             sizeof(NativeDevelopExportRequestV2) == NativeDevelopExporter.RequestV2Size,
             "develop_export_v2_request_size");
         Check(

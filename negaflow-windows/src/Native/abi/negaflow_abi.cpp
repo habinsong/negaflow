@@ -146,6 +146,8 @@ static_assert(offsetof(nf_develop_export_request_v29, output_long_edge) == 4944U
 static_assert(sizeof(nf_grain_mend_detect_parameters_v1) == 40U);
 static_assert(sizeof(nf_grain_mend_detect_parameters_v2) == 72U);
 static_assert(offsetof(nf_grain_mend_detect_parameters_v2, dust_sensitivity) == 40U);
+static_assert(sizeof(nf_grain_mend_detect_parameters_v3) == 80U);
+static_assert(offsetof(nf_grain_mend_detect_parameters_v3, detect_micro_specks) == 72U);
 static_assert(sizeof(nf_develop_export_result_v1) == 136U);
 static_assert(offsetof(nf_develop_export_result_v1, failure_name) == 12U);
 static_assert(offsetof(nf_develop_export_result_v1, source_file_bytes) == 104U);
@@ -4521,11 +4523,100 @@ nf_status_t NF_CALL nf_develop_detect_grain_mend_v3(
     pipeline_request.grain_mend.protect_detail = parameters->protect_detail;
     pipeline_request.grain_mend.reject_structure_lines =
         parameters->reject_structure_lines != 0U;
+    pipeline_request.grain_mend.detect_micro_specks = false;
     const negaflow::imaging::GrainMendRoi roi{
         parameters->v1.roi_x,
         parameters->v1.roi_y,
         parameters->v1.roi_width,
         parameters->v1.roi_height,
+    };
+    const auto started = std::chrono::steady_clock::now();
+    const negaflow::pipeline::GrainMendDetectionOutcome detected =
+        negaflow::pipeline::develop_detect_grain_mend(
+            pipeline_request,
+            mask,
+            static_cast<std::size_t>(mask_capacity_bytes),
+            control,
+            roi);
+    const auto finished = std::chrono::steady_clock::now();
+    detection->width = detected.width;
+    detection->height = detected.height;
+    detection->accepted_pixels = detected.accepted_pixels;
+    detection->mask_byte_count = detected.mask_byte_count;
+    detection->source_width = detected.source_width;
+    detection->source_height = detected.source_height;
+    detection->roi_x = detected.roi_x;
+    detection->roi_y = detected.roi_y;
+    detection->roi_width = detected.roi_width;
+    detection->roi_height = detected.roi_height;
+    write_outcome_v3(
+        detected.outcome, elapsed_microseconds(started, finished), *result);
+    return NF_STATUS_OK;
+}
+
+nf_status_t NF_CALL nf_develop_detect_grain_mend_v4(
+    const nf_develop_export_request_v27* const request,
+    const nf_grain_mend_detect_parameters_v3* const parameters,
+    uint8_t* const mask,
+    const uint64_t mask_capacity_bytes,
+    nf_develop_run_state_v1* const run_state,
+    nf_grain_mend_detection_v2* const detection,
+    nf_develop_export_result_v3* const result) {
+    nf_status_t status = NF_STATUS_OK;
+    if (!prepare_result_v27(request, result, status)) {
+        return status;
+    }
+    if (parameters == nullptr ||
+        parameters->v2.v1.struct_size < static_cast<std::uint32_t>(sizeof(*parameters)) ||
+        parameters->v2.v1.reserved != 0U || parameters->v2.reserved != 0U ||
+        parameters->reserved != 0U ||
+        !std::isfinite(parameters->v2.dust_sensitivity) ||
+        !std::isfinite(parameters->v2.scratch_sensitivity) ||
+        !std::isfinite(parameters->v2.protect_detail) ||
+        parameters->v2.dust_sensitivity < negaflow::imaging::minimum_grain_mend_sensitivity ||
+        parameters->v2.dust_sensitivity > negaflow::imaging::maximum_grain_mend_sensitivity ||
+        parameters->v2.scratch_sensitivity < negaflow::imaging::minimum_grain_mend_sensitivity ||
+        parameters->v2.scratch_sensitivity > negaflow::imaging::maximum_grain_mend_sensitivity ||
+        parameters->v2.protect_detail < negaflow::imaging::minimum_grain_mend_sensitivity ||
+        parameters->v2.protect_detail > negaflow::imaging::maximum_grain_mend_sensitivity ||
+        detection == nullptr ||
+        detection->struct_size < static_cast<std::uint32_t>(sizeof(*detection))) {
+        return NF_STATUS_INVALID_ARGUMENT;
+    }
+    detection->width = 0U;
+    detection->height = 0U;
+    detection->accepted_pixels = 0U;
+    detection->mask_byte_count = 0U;
+    detection->source_width = 0U;
+    detection->source_height = 0U;
+    detection->roi_x = 0U;
+    detection->roi_y = 0U;
+    detection->roi_width = 0U;
+    detection->roi_height = 0U;
+    negaflow::pipeline::DevelopRunControl control{};
+    if (!prepare_run_state(run_state, control, status)) {
+        return status;
+    }
+    negaflow::pipeline::DevelopExportRequest pipeline_request{};
+    nf_develop_export_result_v2 mapping_result{};
+    mapping_result.struct_size = static_cast<std::uint32_t>(sizeof(mapping_result));
+    copy_failure_name("ok", mapping_result.failure_name);
+    if (!map_request_v27(*request, false, pipeline_request, mapping_result)) {
+        write_request_rejection_v3(mapping_result, *result);
+        return NF_STATUS_OK;
+    }
+    pipeline_request.grain_mend.dust_sensitivity = parameters->v2.dust_sensitivity;
+    pipeline_request.grain_mend.scratch_sensitivity = parameters->v2.scratch_sensitivity;
+    pipeline_request.grain_mend.protect_detail = parameters->v2.protect_detail;
+    pipeline_request.grain_mend.reject_structure_lines =
+        parameters->v2.reject_structure_lines != 0U;
+    pipeline_request.grain_mend.detect_micro_specks =
+        parameters->detect_micro_specks != 0U;
+    const negaflow::imaging::GrainMendRoi roi{
+        parameters->v2.v1.roi_x,
+        parameters->v2.v1.roi_y,
+        parameters->v2.v1.roi_width,
+        parameters->v2.v1.roi_height,
     };
     const auto started = std::chrono::steady_clock::now();
     const negaflow::pipeline::GrainMendDetectionOutcome detected =
