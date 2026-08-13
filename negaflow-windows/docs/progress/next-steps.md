@@ -533,8 +533,11 @@ Color/B&W positive film scan은 catalog `CanDevelop` 게이트까지 열어 Dmin
    유지했고 합산 시간은 직전보다 `1.2%` 짧았으며 peak는 `344.40/344.41 MiB`로 `4.40 MiB` 낮았습니다.
    다음은 같은 품질 fixture를 유지한 채 대형 TIFF와 수백 장 batch 처리량·장기 peak를 측정하는 것입니다.
 
-defect sidecar는 닫았습니다. catalog fault harness 중 process-kill/disk-full/power-loss의 디렉터리 교체
-중단 복구는 위 현상 품질 체크포인트 뒤에 남기며, 현재는 unresolved swap artifact를 fail-closed합니다.
+defect sidecar는 닫았습니다. pending restore가 Defects directory 두 번째 교체 뒤, catalog commit 전에
+중단되면 다음 `CatalogSession.Open`은 검증된 새 live sidecar와 `.previous`를 보고 commit만 재개합니다.
+첫 번째 교체 뒤 중단은 이전 directory를 write-through move로 되돌린 뒤 처음부터 다시 준비합니다.
+모호하거나 app-owned 형태가 아닌 artifact는 계속 fail-closed입니다. 실제 disk-full/power-loss와 나머지
+transaction 경계의 destructive fault harness는 위 현상 품질 체크포인트 뒤에 남습니다.
 
 **한 가지 사실이 바뀌었습니다.** 제품 payload 에 제3자 native 바이너리(`e_sqlite3.dll`)가
 처음 들어왔습니다. 네이티브 엔진의 0개는 그대로지만 두 문장은 이제 다른 뜻입니다. ADR-0025.

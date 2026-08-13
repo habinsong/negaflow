@@ -801,6 +801,7 @@ internal static class Program
             VerifyBackupGeneration(roots);
             VerifyPendingRestore(roots);
             VerifyDefectCatalogHealthAndRestore(roots);
+            VerifyInterruptedDefectRestore(roots);
             VerifyCatalogSession(roots);
         }
         finally
@@ -1342,6 +1343,129 @@ internal static class Program
                     value.Manifest?.DefectFrameIds.SequenceEqual(
                         [currentFrameId.ToString("D")]) == true),
                 "defect_restore_safety_generation_preserves_previous_sidecar");
+        }
+    }
+
+    /// <summary>
+    /// Defects directory의 두 번째 move가 끝난 뒤 catalog commit 전에 프로세스가 끊긴 상태입니다.
+    /// 다음 시작은 이미 새 sidecar가 live에 있다는 사실을 검증하고 commit만 재개해야 하며,
+    /// 서로 맞지 않는 현재 catalog/sidecar 조합으로 safety backup을 만들면 안 됩니다.
+    /// </summary>
+    private static void VerifyInterruptedDefectRestore(StorageRootSet parentRoots)
+    {
+        string restoreBase = Path.Combine(
+            parentRoots.LocalApplicationDataRoot,
+            "defect-interrupted-restore");
+        StorageRootSet roots = StorageRootResolver.ResolveForTests(restoreBase).Roots!;
+        Guid selectedFrameId = Guid.Parse("ed0b9d5e-7652-4fdf-b6c7-802abc4a9a2e");
+        Guid currentFrameId = Guid.Parse("6cae1efe-f8ff-42ea-aec1-96fb6372d4de");
+        DefectSourceIdentity identity = new(900, new string('d', 64));
+        DateTimeOffset now = new(2026, 8, 14, 4, 0, 0, TimeSpan.Zero);
+        string pendingPath = string.Empty;
+        CatalogPendingRestoreMarker? marker = null;
+
+        CatalogSessionOpenResult initialOpen = CatalogSession.Open(roots);
+        using (CatalogSession? initial = initialOpen.Session)
+        {
+            Check(initialOpen.IsSuccess, "interrupted_restore_initial_open");
+            if (initial is null)
+            {
+                return;
+            }
+
+            Check(initial.ReadOrCreate().IsSuccess,
+                "interrupted_restore_initial_create");
+            DefectRecipeSnapshot selectedRecipe = DefectRecipeSnapshot.Create(
+                selectedFrameId,
+                recipeRevision: 4,
+                identity,
+                DefectRecipeItems());
+            Check(initial.WriteDefectRecipe(selectedRecipe).IsSuccess &&
+                  initial.Write(Snapshot(
+                      "interrupted-selected",
+                      DefectCatalogRow(selectedFrameId, "selected"))).IsSuccess,
+                "interrupted_restore_selected_written");
+            CatalogBackupCreateResult selectedBackup = initial.CreateBackupForTesting(now);
+            Check(selectedBackup.IsSuccess && selectedBackup.GenerationPath is not null,
+                "interrupted_restore_selected_backed_up");
+
+            DefectRecipeSnapshot currentRecipe = DefectRecipeSnapshot.Create(
+                currentFrameId,
+                recipeRevision: 7,
+                identity,
+                [DefectRecipeItems()[1]]);
+            Check(initial.WriteDefectRecipe(currentRecipe).IsSuccess &&
+                  initial.Write(Snapshot(
+                      "interrupted-current",
+                      DefectCatalogRow(currentFrameId, "current"))).IsSuccess,
+                "interrupted_restore_current_written");
+            string generationId = selectedBackup.GenerationPath is null
+                ? string.Empty
+                : Path.GetFileName(selectedBackup.GenerationPath);
+            Check(initial.ScheduleRestoreForTesting(generationId, now.AddMinutes(1)).IsSuccess,
+                "interrupted_restore_scheduled");
+        }
+
+        Check(CatalogPendingRestoreFiles.TryReadMarker(roots, out CatalogPendingRestoreMarker read) &&
+              CatalogBackupStore.ValidateGeneration(
+                  pendingPath = Path.Combine(roots.PendingRestoreRoot, read.DirectoryName))
+                  .Manifest is not null,
+            "interrupted_restore_pending_copy_valid");
+        if (string.IsNullOrEmpty(pendingPath) ||
+            !CatalogPendingRestoreFiles.TryReadMarker(roots, out marker) ||
+            CatalogBackupStore.ValidateGeneration(pendingPath).Manifest is not { } manifest)
+        {
+            return;
+        }
+
+        // 실제 apply는 이 시점에서 현재 state를 safety generation으로 먼저 남깁니다.
+        Check(CatalogBackupStore.Create(
+                roots,
+                now.AddMinutes(2),
+                CatalogBackupStore.DefaultRetentionCount).IsSuccess,
+            "interrupted_restore_safety_generation_exists");
+        CatalogPendingRestoreError prepared = CatalogDefectRestoreTransaction.TryPrepare(
+            roots,
+            pendingPath,
+            marker.DirectoryName,
+            manifest,
+            out CatalogDefectRestoreTransaction transaction);
+        Check(prepared == CatalogPendingRestoreError.None &&
+              transaction.Activate() == CatalogPendingRestoreError.None,
+            "interrupted_restore_defect_swap_completed_before_kill");
+        CatalogPendingRestoreError recovery =
+            CatalogDefectRestoreTransaction.RecoverInterruptedActivation(
+                roots,
+                marker.DirectoryName,
+                manifest,
+                out CatalogDefectRestoreTransaction? recoveredTransaction);
+        Check(recovery == CatalogPendingRestoreError.None && recoveredTransaction is not null,
+            "interrupted_restore_recognizes_completed_defect_swap");
+        Check(DefectSidecarStore.ValidateCatalogDeclarations(
+                roots,
+                CatalogBackupStore.ValidateGeneration(pendingPath).Snapshot!).IsHealthy,
+            "interrupted_restore_swapped_defects_match_pending_catalog");
+
+        // 여기서 process가 죽었다고 가정합니다. rollback/cleanup/marker 갱신을 호출하지 않은 채
+        // 새 session을 열어, scheduled marker와 .previous artifact만으로 재개하는지 확인합니다.
+        CatalogSessionOpenResult resumedOpen = CatalogSession.Open(roots);
+        using (CatalogSession? resumed = resumedOpen.Session)
+        {
+            Check(resumedOpen.IsSuccess &&
+                  resumed?.PendingRestoreApplication.Kind ==
+                      CatalogPendingRestoreApplicationKind.Applied &&
+                  resumed.PendingRestoreApplication.DidApplyRestore,
+                "interrupted_restore_restart_resumes_catalog_commit");
+            Check(resumed is not null &&
+                  FrameOrder(resumed.Read()) == selectedFrameId.ToString("D") &&
+                  resumed.ReadDefectRecipe(selectedFrameId).Snapshot?.RecipeRevision == 4,
+                "interrupted_restore_catalog_and_defects_rejoin_selected_generation");
+            Check(!File.Exists(CatalogPendingRestoreFiles.MarkerPath(roots)) &&
+                  !Directory.EnumerateDirectories(
+                      roots.LibraryRoot,
+                      $".defects-{marker.DirectoryName}.*",
+                      SearchOption.TopDirectoryOnly).Any(),
+                "interrupted_restore_cleans_swap_artifacts_after_commit");
         }
     }
 

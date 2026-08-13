@@ -257,6 +257,17 @@ internal static class CatalogPendingRestoreStore
                 CatalogPendingRestoreError.SafetyBackupFailed);
         }
 
+        CatalogPendingRestoreError recovered =
+            CatalogDefectRestoreTransaction.RecoverInterruptedActivation(
+                roots,
+                marker.DirectoryName,
+                pending.Manifest!,
+                out CatalogDefectRestoreTransaction? resumedTransaction);
+        if (recovered != CatalogPendingRestoreError.None)
+        {
+            return CatalogPendingRestoreApplicationResult.Failure(recovered);
+        }
+
         CatalogReadResult current = SqliteCatalogStore.Read(roots.CatalogPath);
         if (current.Error is
             CatalogStoreError.UnsupportedCatalogVersion or
@@ -268,14 +279,17 @@ internal static class CatalogPendingRestoreStore
         }
         if (current.Snapshot is { })
         {
-            CatalogBackupCreateResult safetyBackup = CatalogBackupStore.Create(
-                roots,
-                now,
-                CatalogBackupStore.DefaultRetentionCount);
-            if (!safetyBackup.IsSuccess)
+            if (resumedTransaction is null)
             {
-                return CatalogPendingRestoreApplicationResult.Failure(
-                    MapSafetyBackupError(safetyBackup.Error));
+                CatalogBackupCreateResult safetyBackup = CatalogBackupStore.Create(
+                    roots,
+                    now,
+                    CatalogBackupStore.DefaultRetentionCount);
+                if (!safetyBackup.IsSuccess)
+                {
+                    return CatalogPendingRestoreApplicationResult.Failure(
+                        MapSafetyBackupError(safetyBackup.Error));
+                }
             }
         }
         else if (current.Error == CatalogStoreError.NotFound)
@@ -295,15 +309,23 @@ internal static class CatalogPendingRestoreStore
                     : CatalogPendingRestoreError.SafetyBackupFailed);
         }
 
-        CatalogPendingRestoreError prepared = CatalogDefectRestoreTransaction.TryPrepare(
-            roots,
-            pendingPath,
-            marker.DirectoryName,
-            pending.Manifest!,
-            out CatalogDefectRestoreTransaction defectTransaction);
-        if (prepared != CatalogPendingRestoreError.None)
+        CatalogDefectRestoreTransaction defectTransaction;
+        if (resumedTransaction is { } resumed)
         {
-            return CatalogPendingRestoreApplicationResult.Failure(prepared);
+            defectTransaction = resumed;
+        }
+        else
+        {
+            CatalogPendingRestoreError prepared = CatalogDefectRestoreTransaction.TryPrepare(
+                roots,
+                pendingPath,
+                marker.DirectoryName,
+                pending.Manifest!,
+                out defectTransaction);
+            if (prepared != CatalogPendingRestoreError.None)
+            {
+                return CatalogPendingRestoreApplicationResult.Failure(prepared);
+            }
         }
         CatalogPendingRestoreError activated = defectTransaction.Activate();
         if (activated != CatalogPendingRestoreError.None)

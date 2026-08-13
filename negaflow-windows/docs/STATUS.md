@@ -112,6 +112,19 @@ raw 좌상단 원점 ROI로 옮긴 뒤 그 부분만 네이티브에서 잘라 �
 Shell은 마스크를 bounded raw RGBA8 window와 y-up region ROI로 되돌립니다. 수락 전에는 pending
 overlay만 있고 sidecar를 쓰지 않으며 Enter 수락/Esc 취소는 자동과 같습니다.
 
+## 2026-08-14 Pending restore Defects 교체 중단 복구
+
+pending restore는 새 Defects directory를 live로 올린 뒤 catalog를 commit합니다. 이 둘 사이에 process가
+중단되면 이전에는 남은 `.previous` artifact 때문에 다음 시작도 막혔습니다. 이제 새 live directory가
+pending manifest의 sidecar 집합과 정확히 같으면 직전에 만든 safety generation을 그대로 보존한 채 catalog
+commit·applied marker·cleanup만 재개합니다. 첫 directory move 뒤 중단은 old Defects를 write-through move로
+되돌린 뒤 다시 준비하며, 모호하거나 reparse point·비정상 파일을 포함한 artifact는 여전히 fail-closed입니다.
+
+Catalog test는 selected generation과 current generation에 각각 Defects sidecar를 만든 뒤, 실제 Defects
+교체만 실행하고 의도적으로 commit/rollback/marker 갱신을 생략했습니다. 다음 `CatalogSession.Open`이 selected
+catalog와 sidecar를 다시 결합하고 swap artifact를 정리하는 것을 확인했습니다. x64 Debug Catalog 698
+assertions를 통과했습니다. disk-full·실제 power-loss와 다른 transaction 경계 process-kill은 아직 없습니다.
+
 x64 Debug에서 `native.grain_mend`는 선택한 0.25,0.25,0.5,0.5 ROI가 top-first `(24,18,48,36)`만
 분석함을 확인했고, 전체 native CTest는 **65/65** 통과했습니다. `native.develop_export_abi`는 실제
 TIFF에서 v2 크기 조회와 마스크 호출이 같은 원본 ROI를 보고함을 확인했습니다(1/1, 27.77초).
@@ -639,7 +652,7 @@ Grading·Primary Calibration·ColorModel·sRGB16 변환·픽셀 검증에 적용
 | Film Look source routing | film·digital 공통 수직 경로 통과 | macOS correctness fix에 따라 film scan은 profile 선택과 무관하게 identity. rendered digital은 color/motion 27종 또는 B&W 15종의 kind가 process와 맞을 때만 각 고정 그래프를 실행하며, 불일치는 identity. 실제 룩이 실행될 때만 Texture grain/halation 중복을 막음. 새 16종의 macOS pixel golden과 정식 UI control surface는 미구현 |
 | Catalog Develop route | SQLite→C ABI→WinUI 첫 연결 통과 | color/B&W와 negative/positive를 독립 축으로 투영해 4상태 film type을 보존. positive film/digital은 base·반전을 건너뛰고 tone/target/post pipeline을 공유. legacy marker·강도 1.0 호환, 새 강도 0.5, unknown field 보존, invalid 조합 fail-closed. 전체 macOS Develop control surface는 미구현 |
 | 세로 슬라이스 (catalog→C ABI→WinUI) | 앱 안에서 한 바퀴 완결·미리보기 연결 | Import→필름 base 슬라이더→노출→Export 를 UI Automation 으로 실제 조작해 `Exported 631×403 in 101 ms` 확인. base 슬라이더 범위가 엔진의 0.001..1.0 을 그대로 받음. 시작 시 `library.sqlite` 생성·lock 획득. ABI 0.6 미리보기를 `WriteableBitmap` 캔버스에 표시하고 겹친 요청은 마지막 상태를 보존. macOS와 동일한 정식 Develop UI, base picker, 취소·진행률은 미구현 |
-| catalog SQLite 영속성 | 검증 커밋·Defects sidecar·backup·pending restore 통과 | 새 연결 full canonical readback, 커밋 전용 UUID rollback snapshot, revision-aware Defects v2 sidecar와 optional compressed R16 attenuation, 논리 backup 세대, restart-only pending restore, 현재 catalog safety generation, future version 차단과 applied cleanup fence. x64 Debug/Release Catalog 587 assertions. process-kill/disk-full/power-loss 검증은 미구현 |
+| catalog SQLite 영속성 | 검증 커밋·Defects sidecar·backup·pending restore 통과 | 새 연결 full canonical readback, 커밋 전용 UUID rollback snapshot, revision-aware Defects v2 sidecar와 optional compressed R16 attenuation, 논리 backup 세대, restart-only pending restore, 현재 catalog safety generation, future version 차단과 applied cleanup fence. Defects 두 번째 directory 교체 뒤 process 중단은 restart 재개를 확인했다. disk-full·실제 power-loss와 나머지 process-kill 경계는 미구현 |
 | catalog logical backup generation | authoritative v3 통과 | canonical `library.json`과 모든 선언된 Defects sidecar, v3 manifest, byte count·SHA-256, monotonic sequence, staging 전체 검증 뒤 write-through rename, valid 세대만 기본 3개 retention. future/damaged 세대는 prune하지 않으며 restore도 catalog와 sidecar를 같은 세대로 교체 |
 | catalog 단일 작성자 강제 | 구조로 강제·프로세스 경계 관측 | `SqliteCatalogStore`는 `internal`. 공개 입구는 `CatalogSession` 하나이며 프로세스 lock 을 못 잡으면 세션이 만들어지지 않음. `NotFound`→빈 라이브러리 변환은 `ReadOrCreate` 한 자리뿐이고 손상·미지원 version 은 거기서도 실패. lock 없이 되는 것은 `CatalogRecovery.IsValidCatalogSource` 확인뿐 |
 | catalog 성능 (5만 frame) | 목표 규모 측정 완료 | 최초 쓰기 527ms, 전체 읽기 255ms, 무변경 재저장 343ms, 1건 편집 337ms, 전체 뒤집기 582ms, 파일 10.1MB. 비용이 변경량이 아니라 catalog 크기에 비례함을 기록 |
@@ -807,8 +820,9 @@ build ID는 빌드 당시 미커밋 작업이 있으면 `-dirty`로 표시합니
   import 는 `KERNEL32`, `SHLWAPI`, `ole32`, `mscms` 뿐입니다. 네이티브 엔진의 제3자 0개는 유지됩니다.
 
 전체 M0~M18 로드맵 진행률은 산출물 기준 약 31%, 현재 M0~M3 기반 구간은 약 66%로 추정합니다.
-`M14 영속성`은 SQLite 왕복·revision-aware Defects sidecar·backup 세대·pending restore까지 올라왔으나
-destructive fault harness가 남아 있으므로 완료로 세지 않습니다. 색상 수직 경로가 실제 코퍼스를 처리했다는 사실과
+`M14 영속성`은 SQLite 왕복·revision-aware Defects sidecar·backup 세대·pending restore와 Defects swap
+중단 재개까지 올라왔으나 disk-full·power-loss를 포함한 destructive fault harness가 남아 있으므로 완료로
+세지 않습니다. 색상 수직 경로가 실제 코퍼스를 처리했다는 사실과
 ColorSync 수치 동등성은 계속 구분합니다. 산정 방식과 단계별 공백은 `progress/overall-roadmap.md`에
 있습니다.
 

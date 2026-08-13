@@ -47,11 +47,24 @@ internal sealed class CatalogDefectRestoreTransaction
             roots.LibraryRoot,
             $".defects-{pendingDirectoryName}.previous");
         if (!IsDirectChild(roots.LibraryRoot, replacement) ||
-            !IsDirectChild(roots.LibraryRoot, previous) ||
-            File.Exists(replacement) || Directory.Exists(replacement) ||
-            File.Exists(previous) || Directory.Exists(previous))
+            !IsDirectChild(roots.LibraryRoot, previous))
         {
             return CatalogPendingRestoreError.DefectSidecarUnavailable;
+        }
+
+        // Defects 교체는 catalog commit보다 앞섭니다. 그 사이 프로세스가 죽으면 scheduled
+        // marker와 아래 두 private 디렉터리만 남습니다. 이전 상태로 되돌릴 수 있는 경우에는
+        // 먼저 되돌리고, 새 live directory가 manifest와 같은 경우에는 commit을 재개합니다.
+        // 모호하거나 app-owned 형태가 아닌 흔적은 계속 fail-closed입니다.
+        CatalogPendingRestoreError recovered = RecoverInterruptedActivation(
+            roots,
+            pendingDirectoryName,
+            manifest,
+            out CatalogDefectRestoreTransaction? recoveredTransaction);
+        if (recovered != CatalogPendingRestoreError.None || recoveredTransaction is not null)
+        {
+            transaction = recoveredTransaction!;
+            return recovered;
         }
 
         try
@@ -105,6 +118,10 @@ internal sealed class CatalogDefectRestoreTransaction
 
     public CatalogPendingRestoreError Activate()
     {
+        if (activated)
+        {
+            return CatalogPendingRestoreError.None;
+        }
         try
         {
             if (File.Exists(roots.DefectRecipeRoot) ||
@@ -197,6 +214,114 @@ internal sealed class CatalogDefectRestoreTransaction
             roots.LibraryRoot,
             $".defects-{pendingDirectoryName}.previous");
         return TryDeleteDirectory(replacement) && TryDeleteDirectory(previous);
+    }
+
+    internal static CatalogPendingRestoreError RecoverInterruptedActivation(
+        StorageRootSet roots,
+        string pendingDirectoryName,
+        CatalogBackupManifest manifest,
+        out CatalogDefectRestoreTransaction? resumed)
+    {
+        resumed = null;
+        if (!CatalogPendingRestoreFiles.HasValidRoots(roots) ||
+            !CatalogPendingRestoreFiles.IsValidPendingDirectoryName(
+                pendingDirectoryName))
+        {
+            return CatalogPendingRestoreError.InvalidStorageRoots;
+        }
+
+        string replacement = Path.Combine(
+            roots.LibraryRoot,
+            $".defects-{pendingDirectoryName}.replacement");
+        string previous = Path.Combine(
+            roots.LibraryRoot,
+            $".defects-{pendingDirectoryName}.previous");
+        if (!IsDirectChild(roots.LibraryRoot, replacement) ||
+            !IsDirectChild(roots.LibraryRoot, previous))
+        {
+            return CatalogPendingRestoreError.DefectSidecarUnavailable;
+        }
+        return TryRecoverInterruptedActivation(
+            roots,
+            replacement,
+            previous,
+            manifest,
+            out resumed);
+    }
+
+    private static CatalogPendingRestoreError TryRecoverInterruptedActivation(
+        StorageRootSet roots,
+        string replacement,
+        string previous,
+        CatalogBackupManifest manifest,
+        out CatalogDefectRestoreTransaction? resumed)
+    {
+        resumed = null;
+        string live = roots.DefectRecipeRoot;
+        if (File.Exists(replacement) || File.Exists(previous) || File.Exists(live) ||
+            StoragePathPolicy.IsExistingReparsePoint(replacement) ||
+            StoragePathPolicy.IsExistingReparsePoint(previous) ||
+            StoragePathPolicy.IsExistingReparsePoint(live))
+        {
+            return CatalogPendingRestoreError.DefectSidecarUnavailable;
+        }
+
+        bool hasReplacement = Directory.Exists(replacement);
+        bool hasPrevious = Directory.Exists(previous);
+        bool hasLive = Directory.Exists(live);
+        if (!hasReplacement && !hasPrevious)
+        {
+            return CatalogPendingRestoreError.None;
+        }
+
+        if (hasPrevious && !ValidateAppOwnedDirectoryShape(previous))
+        {
+            return CatalogPendingRestoreError.DefectSidecarUnavailable;
+        }
+        if (hasReplacement && !ValidateAppOwnedDirectoryShape(replacement))
+        {
+            return CatalogPendingRestoreError.DefectSidecarUnavailable;
+        }
+        if (hasLive && !ValidateAppOwnedDirectoryShape(live))
+        {
+            return CatalogPendingRestoreError.DefectSidecarUnavailable;
+        }
+
+        // 이전 live를 옮긴 뒤 새 directory를 올리기 전에 중단된 상태입니다. old state를 먼저
+        // write-through move로 복구한 뒤 새 시도에서 다시 준비합니다.
+        if (hasReplacement && hasPrevious && !hasLive)
+        {
+            if (!MoveDirectory(previous, live) || !TryDeleteDirectory(replacement))
+            {
+                return CatalogPendingRestoreError.ApplyFailed;
+            }
+            return CatalogPendingRestoreError.None;
+        }
+
+        // 준비 중 또는 첫 교체 전 중단입니다. pending copy는 여전히 남아 있으므로 이 임시
+        // replacement를 없애고 정상 prepare를 다시 시작할 수 있습니다.
+        if (hasReplacement && !hasPrevious)
+        {
+            return TryDeleteDirectory(replacement)
+                ? CatalogPendingRestoreError.None
+                : CatalogPendingRestoreError.ApplyFailed;
+        }
+
+        // old defects가 남고 live가 pending manifest와 정확히 같으면 두 directory move는 끝났고
+        // catalog commit만 남은 것입니다. Activate는 idempotent로 통과시켜 commit/marker/cleanup을
+        // 같은 정상 경로에서 마무리합니다.
+        if (!hasReplacement && hasPrevious && hasLive &&
+            ValidateDirectory(live, manifest.DefectFrameIds))
+        {
+            resumed = new CatalogDefectRestoreTransaction(roots, replacement, previous)
+            {
+                liveExisted = true,
+                activated = true,
+            };
+            return CatalogPendingRestoreError.None;
+        }
+
+        return CatalogPendingRestoreError.DefectSidecarUnavailable;
     }
 
     private static bool ValidateDirectory(
