@@ -216,12 +216,19 @@ public sealed partial class DevelopHistogram : UserControl
             return;
         }
 
-        int threshold = Math.Max((int)(bins.TotalPixels * 0.002), 1);
-        List<string> clipped = [];
-        if (bins.ShadowRed > threshold || bins.HighlightRed > threshold) clipped.Add(redChannelShort);
-        if (bins.ShadowGreen > threshold || bins.HighlightGreen > threshold) clipped.Add(greenChannelShort);
-        if (bins.ShadowBlue > threshold || bins.HighlightBlue > threshold) clipped.Add(blueChannelShort);
-        ClippingText.Text = clippingFormat.Replace("%@", string.Join("/", clipped), StringComparison.Ordinal);
+        // 문턱과 판정은 DevelopHistogramBins 가 소유합니다. 여기 한 벌 더 두면 언젠가 갈라집니다.
+        IReadOnlyList<string> clipped = bins.ClippedChannels;
+        string[] localized = new string[clipped.Count];
+        for (int index = 0; index < clipped.Count; ++index)
+        {
+            localized[index] = clipped[index] switch
+            {
+                "R" => redChannelShort,
+                "G" => greenChannelShort,
+                _ => blueChannelShort,
+            };
+        }
+        ClippingText.Text = clippingFormat.Replace("%@", string.Join("/", localized), StringComparison.Ordinal);
         ClippingText.Visibility = clipped.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 

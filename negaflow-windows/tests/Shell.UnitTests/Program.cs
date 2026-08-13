@@ -2217,6 +2217,30 @@ internal static class Program
             bins.ShadowGreen == 3 && bins.HighlightGreen == 1 &&
             bins.ShadowBlue == 3 && bins.HighlightBlue == 1,
             "develop_histogram_counts_channel_clipping");
+        // 클리핑 판정은 macOS 와 같은 "표본의 0.2%, 최소 1" 문턱입니다.
+        Check(bins.ClippingThreshold == 1, "develop_histogram_clipping_threshold_has_a_floor");
+        Check(
+            bins.ClippedChannels.Count == 3 &&
+            bins.ClippedChannels[0] == "R" &&
+            bins.ClippedChannels[1] == "G" &&
+            bins.ClippedChannels[2] == "B",
+            "develop_histogram_reports_clipped_channels_in_rgb_order");
+
+        // 문턱 아래는 경고하지 않습니다 — 화소 하나가 끝에 닿았다고 클리핑이라 부르지 않습니다.
+        byte[] mostlyMidGrey = new byte[4000];
+        for (int pixel = 0; pixel < 1000; ++pixel)
+        {
+            int offset = pixel * 4;
+            mostlyMidGrey[offset] = 128;
+            mostlyMidGrey[offset + 1] = 128;
+            mostlyMidGrey[offset + 2] = pixel == 0 ? (byte)255 : (byte)128;
+            mostlyMidGrey[offset + 3] = 255;
+        }
+        DevelopHistogramBins? gentle = DevelopHistogramSampler.SampleBgra8(mostlyMidGrey, 1000, 1);
+        Check(
+            gentle is not null && gentle.ClippingThreshold == 2 && gentle.ClippedChannels.Count == 0,
+            "develop_histogram_ignores_clipping_below_the_threshold");
+
         Check(DevelopHistogramSampler.SampleBgra8([0, 0, 0, 255], 2, 1) is null,
             "develop_histogram_rejects_truncated_buffer");
         Check(DevelopHistogramSampler.SampleBgra8([], 0, 1) is null,

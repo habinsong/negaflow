@@ -11,7 +11,40 @@ public sealed record DevelopHistogramBins(
     int ShadowBlue,
     int HighlightRed,
     int HighlightGreen,
-    int HighlightBlue);
+    int HighlightBlue)
+{
+    /// <summary>
+    /// 클리핑으로 볼 최소 화소 수입니다. macOS <c>HistogramBins.isClipped</c> 와 같이 표본의
+    /// 0.2% 이며 최소 1입니다 — 한두 화소가 끝에 닿았다고 경고를 띄우지 않기 위한 값입니다.
+    /// </summary>
+    public int ClippingThreshold => Math.Max((int)(TotalPixels * 0.002), 1);
+
+    /// <summary>
+    /// 어두운 쪽이든 밝은 쪽이든 문턱을 넘은 채널의 이름입니다. macOS 와 같은 R/G/B 순서이며,
+    /// 걸린 것이 없으면 빈 목록입니다.
+    /// </summary>
+    public IReadOnlyList<string> ClippedChannels
+    {
+        get
+        {
+            int threshold = ClippingThreshold;
+            List<string> clipped = [];
+            if (ShadowRed > threshold || HighlightRed > threshold)
+            {
+                clipped.Add("R");
+            }
+            if (ShadowGreen > threshold || HighlightGreen > threshold)
+            {
+                clipped.Add("G");
+            }
+            if (ShadowBlue > threshold || HighlightBlue > threshold)
+            {
+                clipped.Add("B");
+            }
+            return clipped;
+        }
+    }
+}
 
 public static class DevelopHistogramSampler
 {
