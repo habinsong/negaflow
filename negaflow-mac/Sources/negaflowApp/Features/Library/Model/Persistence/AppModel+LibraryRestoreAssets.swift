@@ -30,45 +30,96 @@ extension AppModel {
     /// 없으면 원본에서 생성해 캐시에 백킹한다(다음 실행부터는 로드만).
     func loadThumbnailsFromDisk(for restoredFrames: [ScanFrame]) {
         let jobs = restoredFrames.map { frame in
-            (frame: frame, thumbURL: thumbnailFileURL(for: frame),
-             rawURL: frame.rawScanURL, transform: frame.imageTransform)
+            (
+                frame: frame,
+                developedURL: thumbnailFileURL(for: frame),
+                rawCacheURL: rawThumbnailFileURL(for: frame),
+                legacyURL: legacyThumbnailFileURL(for: frame),
+                sourceURL: frame.rawScanURL,
+                transform: frame.imageTransform,
+                requiresInversion: frame.filmType.requiresInversion,
+                hasDevelopedOnce: frame.hasDevelopedOnce
+            )
         }
         let cache = thumbnailDiskCache
         Task.detached(priority: .utility) {
+            var framesNeedingDevelopedThumbnail: [ScanFrame] = []
             for job in jobs {
-                if let image = ThumbnailDiskCache.load(at: job.thumbURL) {
-                    await MainActor.run {
-                        guard self.ownsFrame(job.frame) else { return }
-                        if job.frame.filmType.requiresInversion,
-                           !job.frame.hasDevelopedOnce {
-                            if job.frame.rawPreviewImage == nil {
-                                job.frame.rawPreviewImage = image
-                                job.frame.rawPreviewTransform = job.transform
-                            }
-                        } else if job.frame.thumbnailImage == nil {
-                            job.frame.thumbnailImage = image
-                        }
-                    }
-                    continue
-                }
-                guard let raw = AppModel.rawThumbnailCGImage(for: job.rawURL, maxPixelSize: 360) else {
-                    continue
-                }
-                // 원본 픽셀이므로 현상 방향과 맞추기 위해 프레임 변형(회전/플립)을 적용한다.
-                let cg = AppModel.orientedThumbnail(raw, transform: job.transform)
+                let developed = ThumbnailDiskCache.load(at: job.developedURL)
+                let cachedRaw = ThumbnailDiskCache.load(at: job.rawCacheURL)
+                let legacy = ThumbnailDiskCache.load(at: job.legacyURL)
                 await MainActor.run {
                     guard self.ownsFrame(job.frame) else { return }
-                    let image = NSImage(
-                        cgImage: cg, size: NSSize(width: cg.width, height: cg.height)
-                    )
-                    job.frame.rawPreviewImage = image
-                    job.frame.rawPreviewTransform = job.transform
-                    if !job.frame.filmType.requiresInversion {
-                        job.frame.thumbnailImage = image
-                        job.frame.thumbnailTransform = job.transform
+                    if let cachedRaw, job.frame.rawPreviewImage == nil {
+                        job.frame.rawPreviewImage = cachedRaw
+                        job.frame.rawPreviewTransform = job.transform
                     }
-                    cache.store(cg, for: job.frame.id, at: job.thumbURL)
+                    if let developed, job.frame.thumbnailImage == nil {
+                        job.frame.thumbnailImage = developed
+                        job.frame.thumbnailTransform = job.transform
+                    } else if job.hasDevelopedOnce,
+                              let legacy,
+                              job.frame.thumbnailImage == nil {
+                        // 분리 전 캐시가 원본인지 현상본인지 확정할 수 없더라도 먼저 지워서
+                        // 라이브러리를 빈칸으로 만들면 안 된다. 마지막으로 보이던 썸네일을
+                        // 유지한 채 아래에서 저장된 params로 새 현상 캐시를 다시 만든다.
+                        job.frame.thumbnailImage = legacy
+                        job.frame.thumbnailTransform = job.transform
+                    } else if !job.requiresInversion,
+                              let fallback = legacy ?? cachedRaw,
+                              job.frame.thumbnailImage == nil {
+                        // 포지티브의 legacy 원본/현상본은 모두 포지티브다. 새 분리 캐시가
+                        // 생길 때까지 표시 폴백으로 안전하게 사용할 수 있다.
+                        job.frame.thumbnailImage = fallback
+                        job.frame.thumbnailTransform = job.transform
+                    } else if job.requiresInversion,
+                              !job.hasDevelopedOnce,
+                              let legacy,
+                              job.frame.rawPreviewImage == nil {
+                        // 한 번도 현상하지 않은 네거티브의 legacy 캐시는 원본 시드임이 확실하다.
+                        job.frame.rawPreviewImage = legacy
+                        job.frame.rawPreviewTransform = job.transform
+                    }
                 }
+
+                if cachedRaw == nil,
+                   let raw = AppModel.rawThumbnailCGImage(
+                       for: job.sourceURL,
+                       maxPixelSize: 360
+                   ) {
+                    // 원본 픽셀이므로 현상 방향과 맞추기 위해 프레임 변형을 적용한다.
+                    let cg = AppModel.orientedThumbnail(raw, transform: job.transform)
+                    await MainActor.run {
+                        guard self.ownsFrame(job.frame) else { return }
+                        let image = NSImage(
+                            cgImage: cg,
+                            size: NSSize(width: cg.width, height: cg.height)
+                        )
+                        job.frame.rawPreviewImage = image
+                        job.frame.rawPreviewTransform = job.transform
+                        if !job.requiresInversion, job.frame.thumbnailImage == nil {
+                            job.frame.thumbnailImage = image
+                            job.frame.thumbnailTransform = job.transform
+                        }
+                    }
+                    cache.store(cg, for: job.frame.id, at: job.rawCacheURL)
+                }
+
+                if job.requiresInversion,
+                   job.hasDevelopedOnce,
+                   developed == nil,
+                   FileManager.default.fileExists(atPath: job.sourceURL.path) {
+                    // 분리 전 단일 캐시는 원본/현상본을 판별할 수 없다. 원본을 현상본으로
+                    // 고정하지 않고 한 번 재현상해 신뢰 가능한 새 캐시를 만든다. legacy는
+                    // 새 캐시 쓰기가 예약될 때 persistThumbnail이 제거하므로 여기서 먼저
+                    // 지우지 않는다.
+                    framesNeedingDevelopedThumbnail.append(job.frame)
+                }
+            }
+            guard !framesNeedingDevelopedThumbnail.isEmpty else { return }
+            let framesToDevelop = framesNeedingDevelopedThumbnail
+            await MainActor.run {
+                _ = self.developImportedFramesSequentially(framesToDevelop)
             }
         }
     }

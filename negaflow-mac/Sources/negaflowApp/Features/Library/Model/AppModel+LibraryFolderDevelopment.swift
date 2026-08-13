@@ -39,6 +39,13 @@ extension AppModel {
         progress: (@MainActor (LibraryTaskProgress) -> Void)? = nil
     ) -> Task<Void, Never> {
         let frames = requestedFrames.filter { ownsFrame($0) && !$0.isPreviewScan }
+        // 사용자가 Apply를 누른 시점에 선택을 먼저 기록한다. 렌더 슬롯을 기다린 뒤 기록하면,
+        // 그 사이 Develop에서 더 최근에 고른 프로세스/타깃을 오래된 폴더 작업이 덮어쓴다.
+        let configuredFrames = configureLibraryFolderDevelopment(
+            process: process,
+            target: target,
+            frames: frames
+        )
         progress?(LibraryTaskProgress(completedCount: 0, totalCount: frames.count))
         let previousTask = sequentialLibraryDevelopmentTask
         let task = Task { [weak self] in
@@ -49,20 +56,19 @@ extension AppModel {
             var completedCount = 0
             await withTaskGroup(of: Void.self) { group in
                 func enqueueNext() {
-                    guard nextIndex < frames.count else { return }
-                    let frame = frames[nextIndex]
+                    guard nextIndex < configuredFrames.count else { return }
+                    let frame = configuredFrames[nextIndex]
                     nextIndex += 1
                     group.addTask { [weak self, weak frame] in
                         guard let self, let frame, !Task.isCancelled else { return }
-                        await self.developLibraryFolderFrame(
-                            frame,
-                            process: process,
-                            target: target
-                        )
+                        await self.developLibraryFolderFrame(frame)
                     }
                 }
 
-                for _ in 0..<min(self.developController.maxConcurrentDevelopments, frames.count) {
+                for _ in 0..<min(
+                    self.developController.maxConcurrentDevelopments,
+                    configuredFrames.count
+                ) {
                     enqueueNext()
                 }
                 while await group.next() != nil {
@@ -84,18 +90,11 @@ extension AppModel {
     }
 
     private func developLibraryFolderFrame(
-        _ frame: ScanFrame,
-        process: DevelopmentProcess,
-        target: DevelopTarget
+        _ frame: ScanFrame
     ) async {
         guard ownsFrame(frame) else { return }
         await waitForExistingDevelopmentToFinish(frame)
         guard !Task.isCancelled, ownsFrame(frame) else { return }
-        _ = configureLibraryFolderDevelopment(
-            process: process,
-            target: target,
-            frames: [frame]
-        )
         if let seed = frame.initialThumbnailSeedTask {
             await seed.value
         }

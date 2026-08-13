@@ -97,6 +97,10 @@ extension LibraryWorkspaceView {
         framesByID: [UUID: ScanFrame]
     ) -> some View {
         let isExpanded = folderCollapse.isExpanded(section.id)
+        let sectionFrames = section.orderedFrameIDs.compactMap { framesByID[$0] }
+        let referenceFrame = model.actionableFrame.flatMap { active in
+            sectionFrames.contains(where: { $0 === active }) ? active : nil
+        } ?? sectionFrames.first
         HStack(spacing: 8) {
             LibraryFolderDisclosureButton(
                 isExpanded: isExpanded,
@@ -113,14 +117,12 @@ extension LibraryWorkspaceView {
             Text(model.text(AppLocalizedPhrase.frameCountFormat, frameCount))
                 .font(.caption.monospacedDigit())
                 .foregroundStyle(.secondary)
-            LibraryFolderDevelopmentControls(
-                frames: section.orderedFrameIDs.compactMap { framesByID[$0] },
-                fallbackProcess: DevelopmentProcess(
-                    filmType: model.filmType,
-                    isDigitalSource: model.isDigitalSource
-                ),
-                fallbackTarget: model.developTarget
-            )
+            if let referenceFrame {
+                LibraryFolderDevelopmentControls(
+                    frames: sectionFrames,
+                    referenceFrame: referenceFrame
+                )
+            }
             Spacer(minLength: 0)
         }
         .padding(6)

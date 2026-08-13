@@ -86,7 +86,7 @@ extension ContentView {
     }
 
     var bottomFilmstripScope: FilmstripScope {
-        FilmstripScope(rawValue: filmstripScopeRaw) ?? .all
+        FilmstripScope(rawValue: filmstripScopeRaw) ?? .folder
     }
 
     var activeDevelopInteractionScopeFrameIDs: [UUID] {
@@ -214,4 +214,3 @@ extension ContentView {
     }
 
 }
-

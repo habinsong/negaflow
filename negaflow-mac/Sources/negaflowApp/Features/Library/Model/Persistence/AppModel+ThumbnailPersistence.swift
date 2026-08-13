@@ -8,21 +8,44 @@ import ScannerKit
 extension AppModel {
     // MARK: 썸네일 디스크 캐시
 
-    /// 프레임 썸네일의 디스크 경로: <썸네일 폴더>/<yyyyMMdd(최초 사용일)>/<출처>/<프레임 id>.jpg
+    /// 현상 썸네일과 원본 프리뷰는 서로 다른 파일에 저장한다. 한 경로를 공유하면 늦게 끝난
+    /// 원본 시드가 현상 썸네일을 덮어써, 재실행 뒤 네거티브 전체가 원본으로 보일 수 있다.
     func thumbnailFileURL(for frame: ScanFrame) -> URL {
+        thumbnailDirectoryURL(for: frame)
+            .appendingPathComponent("\(frame.id.uuidString)-developed.jpg")
+    }
+
+    func rawThumbnailFileURL(for frame: ScanFrame) -> URL {
+        thumbnailDirectoryURL(for: frame)
+            .appendingPathComponent("\(frame.id.uuidString)-raw.jpg")
+    }
+
+    /// 분리 전 캐시 경로. 네거티브에서는 원본인지 현상본인지 판별할 수 없어 표시용으로
+    /// 신뢰하지 않는다.
+    func legacyThumbnailFileURL(for frame: ScanFrame) -> URL {
+        thumbnailDirectoryURL(for: frame)
+            .appendingPathComponent("\(frame.id.uuidString).jpg")
+    }
+
+    private func thumbnailDirectoryURL(for frame: ScanFrame) -> URL {
         let group = FrameStorageNaming.sanitizeComponent(
             frame.storageGroupName ?? FrameStorageNaming.defaultImportGroup
         )
         return diskStorage.thumbnailsURL
             .appendingPathComponent(FrameStorageNaming.dateFolderName(for: frame.scannedAt), isDirectory: true)
             .appendingPathComponent(group.isEmpty ? FrameStorageNaming.defaultImportGroup : group, isDirectory: true)
-            .appendingPathComponent("\(frame.id.uuidString).jpg")
     }
 
     /// 최신 썸네일을 디스크에 덮어쓴다(현상 정착/가져오기 시점). 백그라운드 코얼레싱 쓰기.
     func persistThumbnail(for frame: ScanFrame, cgImage: CGImage) {
         guard libraryPersistenceEnabled, !frame.isPreviewScan else { return }
         thumbnailDiskCache.store(cgImage, for: frame.id, at: thumbnailFileURL(for: frame))
+        thumbnailDiskCache.remove(for: frame.id, at: legacyThumbnailFileURL(for: frame))
+    }
+
+    func persistRawThumbnail(for frame: ScanFrame, cgImage: CGImage) {
+        guard libraryPersistenceEnabled, !frame.isPreviewScan else { return }
+        thumbnailDiskCache.store(cgImage, for: frame.id, at: rawThumbnailFileURL(for: frame))
     }
 
     /// 대량 가져오기/스캔 완료의 시드 디코드 동시 폭 제한 — IO/메모리 폭주 방지(현상 슬롯과 분리).
@@ -72,7 +95,7 @@ extension AppModel {
                   frame.thumbnailImage == nil else { return }
             let image = NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))
             frame.rawPreviewImage = image
-            self.persistThumbnail(for: frame, cgImage: cg)
+            self.persistRawThumbnail(for: frame, cgImage: cg)
             if shouldPublishRawThumbnail {
                 frame.thumbnailImage = image
                 frame.thumbnailTransform = transform
@@ -98,8 +121,13 @@ extension AppModel {
 
     /// 프레임 삭제 시 디스크 썸네일도 제거한다.
     func removeThumbnailFile(for frame: ScanFrame) {
-        let url = thumbnailFileURL(for: frame)
-        thumbnailDiskCache.remove(for: frame.id, at: url)
+        for url in [
+            thumbnailFileURL(for: frame),
+            rawThumbnailFileURL(for: frame),
+            legacyThumbnailFileURL(for: frame),
+        ] {
+            thumbnailDiskCache.remove(for: frame.id, at: url)
+        }
     }
 
     // MARK: 캐시 관리(설정 디스크 탭)

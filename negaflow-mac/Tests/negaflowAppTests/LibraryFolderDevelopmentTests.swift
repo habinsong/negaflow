@@ -103,6 +103,40 @@ final class LibraryFolderDevelopmentTests: XCTestCase {
         XCTAssertEqual(updates.last, LibraryTaskProgress(completedCount: 1, totalCount: 1))
     }
 
+    func testNewerDevelopSelectionWinsOverAnOlderQueuedFolderApply() async throws {
+        let sourceURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("negaflow-folder-latest-selection-\(UUID().uuidString).tiff")
+        defer { try? FileManager.default.removeItem(at: sourceURL) }
+        try MockScannerBackend.writeSyntheticNegative(width: 24, height: 16, to: sourceURL)
+        let model = AppModel()
+        let frame = ScanFrame(
+            scanIndex: 1,
+            rawScanURL: sourceURL,
+            filmType: .colorPositive,
+            sourceKind: .importedFile
+        )
+        model.frames = [frame]
+        XCTAssertTrue(model.developController.beginFrame(frame))
+
+        let folderTask = model.applyLibraryFolderDevelopment(
+            process: .c41,
+            target: .hr,
+            frames: [frame]
+        )
+        model.applyDevelopmentProcess(.digitalBW, to: frame)
+        model.applyDevelopTarget(.main, to: frame)
+        model.developController.endFrame(frame)
+        await folderTask.value
+
+        XCTAssertEqual(frame.filmType, .bwPositive)
+        XCTAssertEqual(frame.params.isDigitalSource, true)
+        XCTAssertEqual(frame.params.developTarget, .main)
+        let restored = LibraryFrameRecord(frame: frame).makeFrame(presets: [])
+        XCTAssertEqual(restored.filmType, .bwPositive)
+        XCTAssertEqual(restored.params.isDigitalSource, true)
+        XCTAssertEqual(restored.params.developTarget, .main)
+    }
+
     private func makeFrame(index: Int) -> ScanFrame {
         ScanFrame(
             scanIndex: index,

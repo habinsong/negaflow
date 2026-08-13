@@ -123,6 +123,7 @@ extension AppModel {
             frame.preset = presets.first(where: { $0.id == "neutral" })
             frame.updateParams {
                 $0.filmType = filmType
+                $0.isDigitalSource = isDigitalSource ? true : nil
                 $0.developTarget = developTarget
                 $0.scannerProfileID = scannerProfileID
             }

@@ -1,5 +1,6 @@
 import XCTest
 import Chromabase
+import ScannerKit
 @testable import negaflowApp
 
 @MainActor
@@ -103,6 +104,44 @@ final class DevelopInspectorBindingsTests: XCTestCase {
         XCTAssertEqual(frame.params.filmType, .bwNegative)
         XCTAssertEqual(model.filmType, .bwNegative)
         XCTAssertEqual(model.scanFilmType, .colorPositive)
+    }
+
+    func testAllFilmProcessesRenderAndUseTheirExpectedPolarity() async throws {
+        let sourceURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("negaflow-film-process-selection-\(UUID().uuidString).tiff")
+        defer { try? FileManager.default.removeItem(at: sourceURL) }
+        try MockScannerBackend.writeSyntheticNegative(width: 32, height: 20, to: sourceURL)
+        let model = AppModel()
+        let processes: [DevelopmentProcess] = [.c41, .e6, .d76, .bwReversal]
+        var developedData: [DevelopmentProcess: Data] = [:]
+
+        for (offset, process) in processes.enumerated() {
+            let frame = ScanFrame(
+                scanIndex: offset + 1,
+                rawScanURL: sourceURL,
+                filmType: .colorPositive,
+                sourceKind: .importedFile
+            )
+            model.frames = [frame]
+
+            model.applyDevelopmentProcess(process, to: frame)
+            let deadline = Date().addingTimeInterval(10)
+            while (!frame.hasDevelopedOnce || !frame.developedIsSettled), Date() < deadline {
+                try await Task.sleep(for: .milliseconds(25))
+            }
+
+            XCTAssertEqual(frame.filmType, process.filmType)
+            XCTAssertEqual(frame.params.filmType, process.filmType)
+            XCTAssertEqual(frame.filmType.requiresInversion, process == .c41 || process == .d76)
+            XCTAssertNil(frame.params.isDigitalSource)
+            let raw = try XCTUnwrap(frame.rawPreviewImage?.tiffRepresentation)
+            let developed = try XCTUnwrap(frame.developedImage?.tiffRepresentation)
+            XCTAssertNotEqual(raw, developed)
+            developedData[process] = developed
+        }
+
+        XCTAssertNotEqual(developedData[.c41], developedData[.e6])
+        XCTAssertNotEqual(developedData[.d76], developedData[.bwReversal])
     }
 
     /// 프로세스 목록은 기존 필름 4종 뒤에 디지털 2종이 붙은 순서로 보인다.

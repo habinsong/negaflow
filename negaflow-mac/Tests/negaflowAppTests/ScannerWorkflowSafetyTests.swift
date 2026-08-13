@@ -838,6 +838,51 @@ final class ScannerWorkflowSafetyTests: XCTestCase {
         )
     }
 
+    func testBatchPublishesCompletedInfraredFrameBeforeNextScanFinishes() async throws {
+        let capabilities = ScannerCapabilities(
+            supportedResolutions: [.r3600],
+            supportedModes: [.color],
+            supportedBitDepths: [.eight, .sixteen],
+            supportsPreview: true,
+            supportsInfrared: true
+        )
+        let backend = ScannerWorkflowBackend(
+            capabilities: capabilities,
+            suspendScans: true,
+            includesInfrared: true
+        )
+        let fixture = try await makePersistentFixture(backend: backend)
+        defer { fixture.cleanup() }
+        let model = fixture.model
+        model.demoMode = true
+        await model.loadCapabilities()
+        model.infraredEnabled = true
+
+        let scanTask = Task { await model.scanFrames(count: 2, preview: false) }
+        while !backend.hasPendingScan { await Task.yield() }
+        _ = try backend.completePendingScan(createOutput: true)
+
+        let deadline = Date().addingTimeInterval(10)
+        while backend.fullRequestCount < 2, Date() < deadline {
+            await Task.yield()
+        }
+        XCTAssertEqual(backend.fullRequestCount, 2)
+        XCTAssertTrue(backend.hasPendingScan)
+
+        while model.frames.isEmpty, Date() < deadline {
+            try? await Task.sleep(nanoseconds: 10_000_000)
+        }
+        XCTAssertEqual(model.frames.count, 1)
+        XCTAssertNotNil(model.frames.only?.infraredScanURL)
+        XCTAssertTrue(model.isScanning)
+
+        _ = try backend.completePendingScan(createOutput: true)
+        await scanTask.value
+
+        XCTAssertEqual(model.frames.count, 2)
+        XCTAssertTrue(model.frames.allSatisfy { $0.infraredScanURL != nil })
+    }
+
     func testSelectingScanStorageRootUpdatesDiskSettingsSourceOfTruth() {
         let suiteName = "negaflow.scan-storage-root.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
@@ -1712,6 +1757,7 @@ private final class ScannerWorkflowBackend: ScannerBackend, @unchecked Sendable 
     let suspendScans: Bool
     let resultBackendType: BackendType
     let distortsFullScanAspect: Bool
+    let includesInfrared: Bool
 
     private let lock = NSLock()
     private var pending: (CheckedContinuation<ScanResult, Error>, ScanOptions)?
@@ -1725,13 +1771,15 @@ private final class ScannerWorkflowBackend: ScannerBackend, @unchecked Sendable 
         suspendScans: Bool = false,
         backendType: BackendType = .mock,
         resultBackendType: BackendType = .mock,
-        distortsFullScanAspect: Bool = false
+        distortsFullScanAspect: Bool = false,
+        includesInfrared: Bool = false
     ) {
         self.capabilities = capabilities
         self.suspendScans = suspendScans
         self.backendType = backendType
         self.resultBackendType = resultBackendType
         self.distortsFullScanAspect = distortsFullScanAspect
+        self.includesInfrared = includesInfrared
     }
 
     var hasPendingScan: Bool { locked { pending != nil } }
@@ -1809,6 +1857,14 @@ private final class ScannerWorkflowBackend: ScannerBackend, @unchecked Sendable 
     private func makeResult(_ options: ScanOptions) -> ScanResult {
         let rawFileURL = options.temporaryOutputURL
             ?? ScanTempFile.makeURL(prefix: "negaflow_test_scan", suffix: ".tiff")
+        let infraredFileURL: URL?
+        if includesInfrared, options.infraredEnabled {
+            let url = rawFileURL.deletingPathExtension().appendingPathExtension("ir.tiff")
+            try? Data("infrared scan".utf8).write(to: url, options: .atomic)
+            infraredFileURL = url
+        } else {
+            infraredFileURL = nil
+        }
         var appliedOptions = options
         appliedOptions.temporaryOutputURL = rawFileURL
         let size: (width: Int, height: Int)
@@ -1833,6 +1889,8 @@ private final class ScannerWorkflowBackend: ScannerBackend, @unchecked Sendable 
             bitDepth: options.bitDepth,
             reportedResolution: resultBackendType != .mock ? options.resolution : nil,
             reportedBitDepth: resultBackendType != .mock ? options.bitDepth : nil,
+            hasInfraredChannel: infraredFileURL != nil,
+            infraredFileURL: infraredFileURL,
             backendUsed: resultBackendType,
             appliedOptionsEvidence: .verified(appliedOptions)
         )

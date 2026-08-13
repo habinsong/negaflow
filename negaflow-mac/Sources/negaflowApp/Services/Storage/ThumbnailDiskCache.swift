@@ -7,25 +7,31 @@ import UniformTypeIdentifiers
 //
 // 필름스트립/라이브러리 썸네일의 디스크 백킹(썸네일 프리뷰 캐시 격). 메모리 FIFO 는
 // 그대로 두고, 정착 시점(가져오기 직후 원본 프리뷰 · 현상 정착 패스)마다 JPEG 로 덮어쓴다.
-// 프레임별로 마지막 요청만 남기는 코얼레싱 + 단일 유틸리티 큐라서 연속 현상 중에도 인코딩이
+// 프레임·경로별로 마지막 요청만 남기는 코얼레싱 + 단일 유틸리티 큐라서 연속 현상 중에도 인코딩이
 // 중복되지 않고 메인 스레드 IO 가 없다. 캐시이므로 전부 지워도 원본에서 재생성된다.
 final class ThumbnailDiskCache: @unchecked Sendable {
+    private struct StoreKey: Hashable {
+        let frameID: UUID
+        let path: String
+    }
+
     private static let queueLabel = "negaflow.thumbnail-disk-cache"
     private let queue = DispatchQueue(label: ThumbnailDiskCache.queueLabel, qos: .utility)
     private let lock = NSLock()
-    private var versions: [UUID: UInt64] = [:]
+    private var versions: [StoreKey: UInt64] = [:]
     private var clearGeneration: UInt64 = 0
 
-    /// 썸네일을 디스크에 저장한다(같은 프레임의 진행 중 요청은 최신 것으로 대체).
+    /// 썸네일을 디스크에 저장한다(같은 프레임·경로의 진행 중 요청은 최신 것으로 대체).
     func store(_ image: CGImage, for frameID: UUID, at url: URL) {
+        let key = StoreKey(frameID: frameID, path: url.standardizedFileURL.path)
         locked {
-            let version = (versions[frameID] ?? 0) &+ 1
-            versions[frameID] = version
+            let version = (versions[key] ?? 0) &+ 1
+            versions[key] = version
             let generation = clearGeneration
             queue.async { [weak self] in
                 guard let self else { return }
                 let isLatest = self.locked {
-                    self.clearGeneration == generation && self.versions[frameID] == version
+                    self.clearGeneration == generation && self.versions[key] == version
                 }
                 guard isLatest else { return }
                 Self.write(image, to: url)
@@ -34,8 +40,9 @@ final class ThumbnailDiskCache: @unchecked Sendable {
     }
 
     /// 해당 프레임에 먼저 예약된 저장 블록을 무효화한다.
-    private func invalidatePendingStore(for frameID: UUID) {
-        versions[frameID] = (versions[frameID] ?? 0) &+ 1
+    private func invalidatePendingStore(for frameID: UUID, at url: URL) {
+        let key = StoreKey(frameID: frameID, path: url.standardizedFileURL.path)
+        versions[key] = (versions[key] ?? 0) &+ 1
     }
 
     /// 디스크 썸네일 로드. 압축 데이터를 lazy 디코드하는 NSImage 로 돌려준다(대량 로드에 안전).
@@ -52,7 +59,7 @@ final class ThumbnailDiskCache: @unchecked Sendable {
     /// 이미 실행 중인 인코딩이 있더라도 제거 작업이 그 뒤에 실행되므로 파일이 되살아나지 않는다.
     func remove(for frameID: UUID, at url: URL) {
         locked {
-            invalidatePendingStore(for: frameID)
+            invalidatePendingStore(for: frameID, at: url)
             queue.async {
                 Self.remove(at: url)
             }

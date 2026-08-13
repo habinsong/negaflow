@@ -42,7 +42,7 @@ struct ContentView: View {
     @State private var workspaceTransitionMovesForward = true
     @AppStorage("workspace.filmstripSortKey") var filmstripSortKeyRaw = LibrarySortKey.inputOrder.rawValue
     @AppStorage("workspace.filmstripSortAscending") var filmstripSortAscending = true
-    @AppStorage("workspace.filmstripScope") var filmstripScopeRaw = FilmstripScope.all.rawValue
+    @AppStorage("workspace.filmstripScope") var filmstripScopeRaw = FilmstripScope.folder.rawValue
     @AppStorage("workspace.filmstripHeight") var filmstripHeight = FilmstripSizing.defaultHeight
     @AppStorage("workspace.filmstripItemScale") var filmstripItemScale = 1.0
     @State var didAttemptActiveFrameRestore = false
@@ -266,5 +266,4 @@ struct ContentView: View {
     }
 
 }
-
 

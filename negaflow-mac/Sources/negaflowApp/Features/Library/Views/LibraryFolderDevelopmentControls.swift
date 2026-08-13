@@ -3,6 +3,7 @@ import SwiftUI
 
 struct LibraryFolderDevelopmentControls: View {
     @EnvironmentObject private var model: AppModel
+    @ObservedObject private var referenceFrame: ScanFrame
 
     let frames: [ScanFrame]
 
@@ -14,17 +15,15 @@ struct LibraryFolderDevelopmentControls: View {
 
     init(
         frames: [ScanFrame],
-        fallbackProcess: DevelopmentProcess,
-        fallbackTarget: DevelopTarget
+        referenceFrame: ScanFrame
     ) {
         self.frames = frames
-        _process = State(initialValue: frames.first.map {
-            DevelopmentProcess(
-                filmType: $0.filmType,
-                isDigitalSource: $0.params.isDigitalSource
-            )
-        } ?? fallbackProcess)
-        _target = State(initialValue: frames.first?.params.developTarget ?? fallbackTarget)
+        _referenceFrame = ObservedObject(wrappedValue: referenceFrame)
+        _process = State(initialValue: DevelopmentProcess(
+            filmType: referenceFrame.filmType,
+            isDigitalSource: referenceFrame.params.isDigitalSource
+        ))
+        _target = State(initialValue: referenceFrame.params.developTarget)
     }
 
     var body: some View {
@@ -82,11 +81,32 @@ struct LibraryFolderDevelopmentControls: View {
         .controlSize(.regular)
         .font(.callout)
         .disabled(frames.isEmpty)
+        .onChange(of: referenceSelection) { _, selection in
+            // Develop 작업공간에서 같은 사진의 선택이 바뀌면 폴더 헤더도 즉시 그 최신값을
+            // 보여준다. 로컬 picker 초안은 프레임을 바꾸지 않으므로 Apply 전에는 유지된다.
+            process = selection.process
+            target = selection.target
+        }
+    }
+
+    private var referenceSelection: LibraryFolderDevelopmentSelection {
+        LibraryFolderDevelopmentSelection(
+            process: DevelopmentProcess(
+                filmType: referenceFrame.filmType,
+                isDigitalSource: referenceFrame.params.isDigitalSource
+            ),
+            target: referenceFrame.params.developTarget
+        )
     }
 
     private static let visibleTargets: [DevelopTarget] = [
         .main, .noritsu, .sp3000, .f135, .hr,
     ]
+}
+
+private struct LibraryFolderDevelopmentSelection: Equatable {
+    let process: DevelopmentProcess
+    let target: DevelopTarget
 }
 
 struct LibraryTaskProgressView: View {

@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://habinsong.github.io/negaflow-site/ko/"><img src="https://img.shields.io/badge/website-negaflow-1F6FEB" alt="웹사이트"></a>
-  <a href="docs/ko/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.8%20release-EF8B26" alt="출시 상태"></a>
+  <a href="docs/ko/product/PROJECT_STATUS.md"><img src="https://img.shields.io/badge/status-1.0.9%20release-EF8B26" alt="출시 상태"></a>
   <a href="#요구-사항"><img src="https://img.shields.io/badge/macOS-14.0+-000000?logo=apple&logoColor=white" alt="macOS 14 이상"></a>
   <a href="negaflow-mac/Package.swift"><img src="https://img.shields.io/badge/Swift-5.9+-F05138?logo=swift&logoColor=white" alt="Swift 5.9 이상"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6E7781" alt="Apache 2.0 라이선스"></a>
@@ -74,8 +74,8 @@
 
 | 설치 파일 | 지원하는 Mac |
 |---|---|
-| `negaflow-1.0.8-1-macOS-universal.pkg` | Apple Silicon, Intel |
-| `negaflow-1.0.8-1-macOS-arm64.pkg` | Apple Silicon 전용 |
+| `negaflow-1.0.9-1-macOS-universal.pkg` | Apple Silicon, Intel |
+| `negaflow-1.0.9-1-macOS-arm64.pkg` | Apple Silicon 전용 |
 
 1. 사용하는 Mac에 맞는 PKG를 내려받습니다.
 2. PKG를 열고 설치 프로그램의 안내에 따라 진행합니다.

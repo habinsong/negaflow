@@ -294,6 +294,6 @@ Le jugement de qualité des profils scanner suit
 - `Sources/Chromabase/Imaging/`
 - `Sources/Chromabase/Export/`
 
-La version produit actuelle est `1.0.8`.
+La version produit actuelle est `1.0.9`.
 L'historique d'édition et les schémas de profils continueront de passer par une procédure de
 validation avant de changer.

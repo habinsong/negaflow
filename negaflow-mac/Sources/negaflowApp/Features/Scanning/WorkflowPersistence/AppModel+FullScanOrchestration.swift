@@ -8,9 +8,11 @@ struct FullScanPlan {
     let assignment: LibraryScanRollAssignment
 }
 
-struct FullScanFinalizationWork {
-    let jobID: UUID
-    let task: Task<CaptureManifest, Error>
+struct FullScanPublicationState {
+    var canPublishNextManifest = true
+    var publishedFrameCount = 0
+    var stopReason: ScannerError?
+    var unrecordedOrdinals: [Int] = []
 }
 
 extension AppModel {
@@ -61,7 +63,7 @@ extension AppModel {
             return
         }
 
-        var finalizationWork: [FullScanFinalizationWork] = []
+        var publicationTask: Task<FullScanPublicationState, Never>?
         var hardwareFailed = false
 
         for ordinal in 1...count {
@@ -195,10 +197,85 @@ extension AppModel {
                         pendingCapture: pendingCapture
                     )
                 }
-                finalizationWork.append(FullScanFinalizationWork(
-                    jobID: finalizingJob.id,
-                    task: task
-                ))
+                let previousPublicationTask = publicationTask
+                publicationTask = Task { [weak self] in
+                    var state = await previousPublicationTask?.value
+                        ?? FullScanPublicationState()
+                    guard let self else { return state }
+                    let manifest: CaptureManifest
+                    do {
+                        manifest = try await task.value
+                    } catch {
+                        let scannerError = self.scannerError(from: error)
+                        let recorded = self.failFinalization(
+                            sessionID: sessionID,
+                            jobID: finalizingJob.id,
+                            error: scannerError
+                        )
+                        if state.canPublishNextManifest {
+                            state.canPublishNextManifest = false
+                            state.stopReason = scannerError
+                            self.setScanWorkflowError(
+                                scannerError,
+                                frameNumber: self.scanOrdinal(
+                                    sessionID: sessionID,
+                                    jobID: finalizingJob.id
+                                )
+                            )
+                        } else if !recorded {
+                            state.unrecordedOrdinals.append(self.scanOrdinal(
+                                sessionID: sessionID,
+                                jobID: finalizingJob.id
+                            ))
+                        }
+                        return state
+                    }
+
+                    guard state.canPublishNextManifest else {
+                        if let stopReason = state.stopReason,
+                           !self.failFinalization(
+                               sessionID: sessionID,
+                               jobID: finalizingJob.id,
+                               error: stopReason
+                           ) {
+                            state.unrecordedOrdinals.append(self.scanOrdinal(
+                                sessionID: sessionID,
+                                jobID: finalizingJob.id
+                            ))
+                        }
+                        return state
+                    }
+
+                    switch self.publishFinalizedScan(
+                        manifest,
+                        sessionID: sessionID,
+                        jobID: finalizingJob.id
+                    ) {
+                    case .success:
+                        state.publishedFrameCount += 1
+                    case .failure(let publishError):
+                        state.canPublishNextManifest = false
+                        state.stopReason = publishError
+                        if !self.failFinalization(
+                            sessionID: sessionID,
+                            jobID: finalizingJob.id,
+                            error: publishError
+                        ) {
+                            state.unrecordedOrdinals.append(self.scanOrdinal(
+                                sessionID: sessionID,
+                                jobID: finalizingJob.id
+                            ))
+                        }
+                        self.setScanWorkflowError(
+                            publishError,
+                            frameNumber: self.scanOrdinal(
+                                sessionID: sessionID,
+                                jobID: finalizingJob.id
+                            )
+                        )
+                    }
+                    return state
+                }
             } catch {
                 guard activeScanSessionID == sessionID else { break }
                 let scannerError = scannerError(from: error)
@@ -225,76 +302,17 @@ extension AppModel {
             _ = cancelQueuedJobs(in: session)
         }
 
-        if activeScanSessionID != sessionID, !finalizationWork.isEmpty {
+        if activeScanSessionID != sessionID, publicationTask != nil {
             isScanFinalizationInProgress = true
         }
 
-        // 한 프레임의 마무리가 실패하면 그 뒤로는 발행을 멈춘다. 다만 멈춘 뒤의 프레임을
-        // 조용히 잊으면 안 된다. 그러면 작업이 finalizing 상태로 남고 사용자는 어느 컷이
-        // 왜 사라졌는지 알 수 없다. 발행만 멈추고, 남은 프레임은 같은 원인으로 실패 처리한다.
-        var canPublishNextManifest = true
-        var publishedFrameCount = 0
-        var stopReason: ScannerError?
-        // 실패로 기록하는 것마저 실패할 수 있다(작업이 이미 finalizing이 아니면 거절된다).
-        // 그 경우까지 조용히 넘어가면 원래 증상으로 되돌아가므로 세어서 드러낸다.
-        var unrecordedOrdinals: [Int] = []
-        for work in finalizationWork {
-            do {
-                let manifest = try await work.task.value
-                guard canPublishNextManifest else {
-                    if let stopReason,
-                       !failFinalization(
-                           sessionID: sessionID,
-                           jobID: work.jobID,
-                           error: stopReason
-                       ) {
-                        unrecordedOrdinals.append(scanOrdinal(sessionID: sessionID, jobID: work.jobID))
-                    }
-                    continue
-                }
-                switch publishFinalizedScan(manifest, sessionID: sessionID, jobID: work.jobID) {
-                case .success:
-                    publishedFrameCount += 1
-                case .failure(let publishError):
-                    canPublishNextManifest = false
-                    stopReason = publishError
-                    // 발행에 실패한 작업도 실패로 닫는다. 그러지 않으면 이 컷만 finalizing으로
-                    // 남아 뒤따라 실패한 컷들과 상태가 어긋난다.
-                    if !failFinalization(
-                        sessionID: sessionID,
-                        jobID: work.jobID,
-                        error: publishError
-                    ) {
-                        unrecordedOrdinals.append(
-                            scanOrdinal(sessionID: sessionID, jobID: work.jobID)
-                        )
-                    }
-                    setScanWorkflowError(
-                        publishError,
-                        frameNumber: scanOrdinal(sessionID: sessionID, jobID: work.jobID)
-                    )
-                }
-            } catch {
-                let scannerError = scannerError(from: error)
-                let recorded = failFinalization(
-                    sessionID: sessionID,
-                    jobID: work.jobID,
-                    error: scannerError
-                )
-                guard canPublishNextManifest else {
-                    if !recorded {
-                        unrecordedOrdinals.append(scanOrdinal(sessionID: sessionID, jobID: work.jobID))
-                    }
-                    continue
-                }
-                canPublishNextManifest = false
-                stopReason = scannerError
-                setScanWorkflowError(
-                    scannerError,
-                    frameNumber: scanOrdinal(sessionID: sessionID, jobID: work.jobID)
-                )
-            }
-        }
+        // manifest 계산은 다음 하드웨어 스캔과 겹치지만, 발행은 ordinal 순서의 task chain으로
+        // 이어진다. 따라서 RGB/IR 파일이 모두 준비된 첫 프레임부터 즉시 보이면서도 앞 프레임
+        // 실패 뒤의 프레임을 잘못 발행하지 않는다.
+        let publicationState = await publicationTask?.value ?? FullScanPublicationState()
+        let canPublishNextManifest = publicationState.canPublishNextManifest
+        let publishedFrameCount = publicationState.publishedFrameCount
+        let unrecordedOrdinals = publicationState.unrecordedOrdinals
         if let firstUnrecorded = unrecordedOrdinals.first {
             setScanWorkflowError(
                 ScannerError(.ioFailure, text(AppLocalizedPhrase.scanWorkflowPersistenceFailed)),

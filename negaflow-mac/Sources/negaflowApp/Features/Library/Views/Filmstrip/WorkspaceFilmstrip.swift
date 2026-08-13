@@ -9,7 +9,7 @@ struct WorkspaceFilmstrip: View {
     @AppStorage("workspace.filmstripItemScale") private var itemScale = 1.0
     @AppStorage("workspace.filmstripSortKey") private var sortKeyRaw = LibrarySortKey.inputOrder.rawValue
     @AppStorage("workspace.filmstripSortAscending") private var sortAscending = true
-    @AppStorage("workspace.filmstripScope") private var scopeRaw = FilmstripScope.all.rawValue
+    @AppStorage("workspace.filmstripScope") private var scopeRaw = FilmstripScope.folder.rawValue
     @State private var liveFilmstripHeight = FilmstripSizing.defaultHeight
     @State private var resizeStartHeight: Double?
     @State private var lockedRowCount: Int?

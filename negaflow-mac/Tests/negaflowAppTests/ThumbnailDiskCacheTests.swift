@@ -1,5 +1,6 @@
 import XCTest
 import CoreGraphics
+import Chromabase
 @testable import negaflowApp
 
 final class ThumbnailDiskCacheTests: XCTestCase {
@@ -49,6 +50,28 @@ final class ThumbnailDiskCacheTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: temporaryDirectory.path))
     }
 
+    func testRawAndDevelopedDestinationsForSameFrameAreBothPersisted() async throws {
+        let cache = ThumbnailDiskCache()
+        let frameID = UUID()
+        let rawURL = temporaryDirectory.appendingPathComponent("raw.jpg")
+        let developedURL = temporaryDirectory.appendingPathComponent("developed.jpg")
+
+        cache.store(
+            try XCTUnwrap(Self.makeImage(red: 0.8, green: 0.1, blue: 0.1)),
+            for: frameID,
+            at: rawURL
+        )
+        cache.store(
+            try XCTUnwrap(Self.makeImage(red: 0.1, green: 0.8, blue: 0.1)),
+            for: frameID,
+            at: developedURL
+        )
+        await cache.waitUntilIdle()
+
+        XCTAssertNotNil(ThumbnailDiskCache.load(at: rawURL))
+        XCTAssertNotNil(ThumbnailDiskCache.load(at: developedURL))
+    }
+
     @MainActor
     func testNeverDevelopedNegativeRestoresDiskCacheAsRawPreview() async throws {
         let suiteName = "negaflow-thumbnail-restore.\(UUID().uuidString)"
@@ -80,7 +103,7 @@ final class ThumbnailDiskCacheTests: XCTestCase {
         model.thumbnailDiskCache.store(
             try XCTUnwrap(Self.makeImage()),
             for: frame.id,
-            at: model.thumbnailFileURL(for: frame)
+            at: model.rawThumbnailFileURL(for: frame)
         )
         await model.thumbnailDiskCache.waitUntilIdle()
         model.loadThumbnailsFromDisk(for: [frame])
@@ -95,7 +118,113 @@ final class ThumbnailDiskCacheTests: XCTestCase {
         XCTAssertFalse(frame.hasDevelopedOnce)
     }
 
-    private static func makeImage() -> CGImage? {
+    @MainActor
+    func testDevelopedNegativeKeepsLegacyThumbnailVisibleDuringCacheMigration() async throws {
+        let suiteName = "negaflow-thumbnail-legacy-migration.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let diskStorage = DiskStorageStore(defaults: defaults)
+        diskStorage.thumbnailsPath = temporaryDirectory.path
+        let model = AppModel(
+            diskStorageStore: diskStorage,
+            libraryCatalogURL: temporaryDirectory.appendingPathComponent("library.sqlite"),
+            libraryDefectDirectoryURL: temporaryDirectory.appendingPathComponent("defects"),
+            libraryBackupDirectoryURL: temporaryDirectory.appendingPathComponent("backups")
+        )
+        let frame = ScanFrame(
+            scanIndex: 1,
+            rawScanURL: temporaryDirectory.appendingPathComponent("offline-source.tiff"),
+            filmType: .colorNegative,
+            sourceKind: .importedFile
+        )
+        frame.hasDevelopedOnce = true
+        model.frames = [frame]
+        let legacyURL = model.legacyThumbnailFileURL(for: frame)
+        model.thumbnailDiskCache.store(
+            try XCTUnwrap(Self.makeImage()),
+            for: frame.id,
+            at: legacyURL
+        )
+        await model.thumbnailDiskCache.waitUntilIdle()
+
+        model.loadThumbnailsFromDisk(for: [frame])
+
+        let deadline = Date().addingTimeInterval(2)
+        while frame.thumbnailImage == nil, Date() < deadline {
+            try await Task.sleep(for: .milliseconds(25))
+        }
+        XCTAssertNotNil(frame.thumbnailImage)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: legacyURL.path))
+        XCTAssertNil(ThumbnailDiskCache.load(at: model.thumbnailFileURL(for: frame)))
+        XCTAssertTrue(frame.hasDevelopedOnce)
+    }
+
+    @MainActor
+    func testAllFilmProcessesRestoreRawAndDevelopedCachesSeparately() async throws {
+        let suiteName = "negaflow-thumbnail-separated-restore.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let diskStorage = DiskStorageStore(defaults: defaults)
+        diskStorage.thumbnailsPath = temporaryDirectory.path
+        let model = AppModel(
+            diskStorageStore: diskStorage,
+            libraryCatalogURL: temporaryDirectory.appendingPathComponent("library.sqlite"),
+            libraryDefectDirectoryURL: temporaryDirectory.appendingPathComponent("defects"),
+            libraryBackupDirectoryURL: temporaryDirectory.appendingPathComponent("backups")
+        )
+        let filmTypes: [FilmType] = [.colorNegative, .colorPositive, .bwNegative, .bwPositive]
+        let frames = filmTypes.enumerated().map { offset, filmType in
+            let frame = ScanFrame(
+                scanIndex: offset + 1,
+                rawScanURL: temporaryDirectory.appendingPathComponent("missing-source-\(offset).tiff"),
+                filmType: filmType,
+                sourceKind: .importedFile
+            )
+            frame.hasDevelopedOnce = true
+            return frame
+        }
+        model.frames = frames
+        let rawImage = try XCTUnwrap(Self.makeImage(red: 0.8, green: 0.1, blue: 0.1))
+        let developedImage = try XCTUnwrap(Self.makeImage(red: 0.1, green: 0.8, blue: 0.1))
+        for frame in frames {
+            model.thumbnailDiskCache.store(
+                rawImage,
+                for: frame.id,
+                at: model.rawThumbnailFileURL(for: frame)
+            )
+            model.thumbnailDiskCache.store(
+                developedImage,
+                for: frame.id,
+                at: model.thumbnailFileURL(for: frame)
+            )
+        }
+        await model.thumbnailDiskCache.waitUntilIdle()
+        model.loadThumbnailsFromDisk(for: frames)
+
+        let deadline = Date().addingTimeInterval(2)
+        while Date() < deadline {
+            let hasLoadedAll = frames.allSatisfy { frame in
+                frame.rawPreviewImage != nil && frame.thumbnailImage != nil
+            }
+            if hasLoadedAll { break }
+            try await Task.sleep(for: .milliseconds(25))
+        }
+
+        for (frame, filmType) in zip(frames, filmTypes) {
+            XCTAssertEqual(frame.filmType, filmType)
+            let raw = try XCTUnwrap(frame.rawPreviewImage?.tiffRepresentation)
+            let developed = try XCTUnwrap(frame.thumbnailImage?.tiffRepresentation)
+            XCTAssertNotEqual(raw, developed)
+        }
+    }
+
+    private static func makeImage(
+        red: CGFloat = 0.3,
+        green: CGFloat = 0.5,
+        blue: CGFloat = 0.7
+    ) -> CGImage? {
         let width = 2_048
         let height = 2_048
         let colorSpace = CGColorSpaceCreateDeviceRGB()
@@ -108,7 +237,7 @@ final class ThumbnailDiskCacheTests: XCTestCase {
             space: colorSpace,
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ) else { return nil }
-        context.setFillColor(red: 0.3, green: 0.5, blue: 0.7, alpha: 1)
+        context.setFillColor(red: red, green: green, blue: blue, alpha: 1)
         context.fill(CGRect(x: 0, y: 0, width: width, height: height))
         return context.makeImage()
     }

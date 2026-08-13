@@ -92,6 +92,124 @@ final class ImportDuplicateTests: XCTestCase {
         XCTAssertEqual(model.nextScanOrientation, scannerTemplate)
     }
 
+    func testImportPersistsSelectedDigitalBWProcessOnTheFrame() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("negaflow-import-digital-bw-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let sourceURL = root.appendingPathComponent("source.tiff")
+        try MockScannerBackend.writeSyntheticNegative(width: 8, height: 6, to: sourceURL)
+        let catalogURL = root.appendingPathComponent("library.json")
+        let defectsURL = root.appendingPathComponent("defects", isDirectory: true)
+        let backupsURL = root.appendingPathComponent("backups", isDirectory: true)
+        let model = AppModel(
+            libraryCatalogURL: catalogURL,
+            libraryDefectDirectoryURL: defectsURL,
+            libraryBackupDirectoryURL: backupsURL
+        )
+        model.applyDevelopmentProcess(.digitalBW, to: nil)
+
+        model.importImages(urls: [sourceURL])
+
+        let frame = try XCTUnwrap(model.frames.first)
+        XCTAssertEqual(frame.filmType, .bwPositive)
+        XCTAssertEqual(frame.params.isDigitalSource, true)
+        XCTAssertEqual(
+            DevelopmentProcess(
+                filmType: frame.filmType,
+                isDigitalSource: frame.params.isDigitalSource
+            ),
+            .digitalBW
+        )
+        model.librarySaveTask?.cancel()
+        model.librarySaveTask = nil
+        model.libraryPersistenceEnabled = true
+        XCTAssertTrue(model.saveLibrary(synchronous: true))
+        model.libraryPersistenceEnabled = false
+
+        let restoredModel = AppModel(
+            libraryCatalogURL: catalogURL,
+            libraryDefectDirectoryURL: defectsURL,
+            libraryBackupDirectoryURL: backupsURL
+        )
+        await restoredModel.restoreLibraryOnLaunch()
+        defer {
+            restoredModel.libraryPersistenceEnabled = false
+            restoredModel.librarySaveTask?.cancel()
+            restoredModel.librarySaveTask = nil
+        }
+        let restored = try XCTUnwrap(restoredModel.frames.first)
+        XCTAssertEqual(restored.params.isDigitalSource, true)
+        XCTAssertEqual(
+            DevelopmentProcess(
+                filmType: restored.filmType,
+                isDigitalSource: restored.params.isDigitalSource
+            ),
+            .digitalBW
+        )
+    }
+
+    func testAllFilmProcessesAndTargetsSurviveCatalogRestart() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("negaflow-film-process-restart-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let catalogURL = root.appendingPathComponent("library.json")
+        let defectsURL = root.appendingPathComponent("defects", isDirectory: true)
+        let backupsURL = root.appendingPathComponent("backups", isDirectory: true)
+        let processes: [DevelopmentProcess] = [.c41, .e6, .d76, .bwReversal]
+        let targets: [DevelopTarget] = [.main, .print, .rescue, .hr]
+        let sourceURLs = try processes.indices.map { index in
+            let url = root.appendingPathComponent("source-\(index).tiff")
+            try MockScannerBackend.writeSyntheticNegative(width: 8, height: 6, to: url)
+            return url
+        }
+        let model = AppModel(
+            libraryCatalogURL: catalogURL,
+            libraryDefectDirectoryURL: defectsURL,
+            libraryBackupDirectoryURL: backupsURL
+        )
+        model.importImages(urls: sourceURLs)
+        XCTAssertEqual(model.frames.count, processes.count)
+
+        for (frame, selection) in zip(model.frames, zip(processes, targets)) {
+            model.applyDevelopmentProcess(selection.0, to: frame)
+            model.applyDevelopTarget(selection.1, to: frame)
+        }
+        model.librarySaveTask?.cancel()
+        model.librarySaveTask = nil
+        model.libraryPersistenceEnabled = true
+        XCTAssertTrue(model.saveLibrary(synchronous: true))
+        model.libraryPersistenceEnabled = false
+
+        let restoredModel = AppModel(
+            libraryCatalogURL: catalogURL,
+            libraryDefectDirectoryURL: defectsURL,
+            libraryBackupDirectoryURL: backupsURL
+        )
+        await restoredModel.restoreLibraryOnLaunch()
+        defer {
+            restoredModel.libraryPersistenceEnabled = false
+            restoredModel.librarySaveTask?.cancel()
+            restoredModel.librarySaveTask = nil
+        }
+
+        let restoredByURL = Dictionary(
+            uniqueKeysWithValues: restoredModel.frames.map { ($0.rawScanURL, $0) }
+        )
+        for (sourceURL, selection) in zip(sourceURLs, zip(processes, targets)) {
+            let restored = try XCTUnwrap(restoredByURL[sourceURL])
+            XCTAssertEqual(
+                DevelopmentProcess(
+                    filmType: restored.filmType,
+                    isDigitalSource: restored.params.isDigitalSource
+                ),
+                selection.0
+            )
+            XCTAssertEqual(restored.params.developTarget, selection.1)
+        }
+    }
+
     func testImportDoesNotDevelopAutomaticallyByDefault() async throws {
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent("negaflow-import-manual-develop-\(UUID().uuidString)", isDirectory: true)

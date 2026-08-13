@@ -37,7 +37,7 @@ Write each result as `PASS`, `FAIL`, `BLOCKED`, or `N/A`.
 |  | First launch creates only the app data the documentation lists. |  |
 |  | With no scanner plugin, no fake device or capability turns on. |  |
 |  | App info, version, build, license, and help are right. |  |
-|  | About shows the localized Niépce bicentennial sentence in bold between “negaflow” and version `1.0.8`. |  |
+|  | About shows the localized Niépce bicentennial sentence in bold between “negaflow” and version `1.0.9`. |  |
 
 ## 2. Import, develop, export
 
