@@ -35,6 +35,10 @@ internal static class Program
         {
             return ProbeOpen(args[1]);
         }
+        if (args.Length is 2 or 3 && args[0] == "--export-check")
+        {
+            return ExportCheck(args[1], args.Length == 3 ? args[2] : null);
+        }
         VerifyPreferencesDefaults();
         VerifyPreferencesNormalization();
         VerifyAdaptiveLayout();
@@ -1827,6 +1831,74 @@ internal static class Program
             $"name={preview.FailureName} native=0x{preview.NativeErrorCode:X8} " +
             $"{preview.ImageWidth}x{preview.ImageHeight}");
         return preview.Succeeded ? 0 : 1;
+    }
+
+    /// <summary>
+    /// 실제 스캔 한 장을 조정값을 걸어 끝까지 내보내 봅니다. preview 와 export 가 같은 요청
+    /// 객체를 쓰므로, 여기서 파일이 제대로 나오면 두 경로가 같은 레시피를 쓴다는 계약이
+    /// 실물로 확인됩니다.
+    /// </summary>
+    private static int ExportCheck(string sourcePath, string? destinationPath)
+    {
+        string source = Path.GetFullPath(sourcePath);
+        string destination = destinationPath is null
+            ? Path.Combine(Path.GetTempPath(), "negaflow-export-check.png")
+            : Path.GetFullPath(destinationPath);
+
+        LibraryFrameSnapshot frame = new(
+            Guid.NewGuid().ToString("D"),
+            source,
+            "export-check",
+            new DevelopRouteSnapshot(
+                FrameSourceTransport.Imported,
+                SourceSignalKind.FilmNegativeScan,
+                DevelopmentProcess.C41,
+                FilmType.ColorNegative,
+                FilmEmulation.None,
+                0.5,
+                UsedLegacySourceSignal: false,
+                UsedLegacyIntensityDefault: false),
+            null,
+            new ToneAdjustment(0.35, 0.2, 0, 0, 0, 0, Density: 0.1, Highlight: -0.2, Shadow: 0.15))
+        {
+            ColorModel = ColorModelRecipe.Identity with { Warmth = 0.12, Saturation = 0.08 },
+            Texture = new TextureRecipe(0.15, 0.3, 0.1, 0.05, -0.1),
+        };
+
+        DevelopRequestResult built = DevelopRequestFactory.Create(
+            frame,
+            destination,
+            DevelopExportFormat.Png16);
+        if (built.Request is not { } request)
+        {
+            Console.WriteLine($"request refused: {built.Refusal}");
+            return 1;
+        }
+
+        NativeDevelopExporterAdapter exporter = new();
+        byte[] previewPixels = new byte[1600 * 1200 * 4];
+        System.Diagnostics.Stopwatch clock = System.Diagnostics.Stopwatch.StartNew();
+        DevelopExportResult preview = exporter.Preview(request, 1600, 1200, previewPixels);
+        long previewMs = clock.ElapsedMilliseconds;
+        Console.WriteLine(
+            $"preview: succeeded={preview.Succeeded} {preview.ImageWidth}x{preview.ImageHeight} " +
+            $"{previewMs}ms stage={preview.FailedStage} name={preview.FailureName}");
+
+        if (File.Exists(destination))
+        {
+            File.Delete(destination);
+        }
+        clock.Restart();
+        DevelopExportResult export = exporter.Run(request);
+        long exportMs = clock.ElapsedMilliseconds;
+        long bytes = File.Exists(destination) ? new FileInfo(destination).Length : -1;
+        Console.WriteLine(
+            $"export: succeeded={export.Succeeded} {export.ImageWidth}x{export.ImageHeight} " +
+            $"{exportMs}ms bytes={bytes} stage={export.FailedStage} name={export.FailureName}");
+
+        // 원본은 절대 바뀌지 않아야 합니다.
+        Console.WriteLine($"source bytes after export: {new FileInfo(source).Length}");
+        return preview.Succeeded && export.Succeeded && bytes > 0 ? 0 : 1;
     }
 
     private static int SeedCatalog(
