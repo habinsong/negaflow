@@ -24,6 +24,7 @@ using Microsoft::WRL::ComPtr;
     IStream* const stream,
     const Srgb16Image& image,
     IWICColorContext* const color_context,
+    const std::uint32_t output_dpi,
     std::uint32_t& native_error_code) noexcept {
     ComPtr<IWICBitmapEncoder> encoder{};
     HRESULT status = factory->CreateEncoder(
@@ -67,6 +68,7 @@ using Microsoft::WRL::ComPtr;
             frame.Get(),
             image,
             color_context,
+            output_dpi,
             native_error_code);
     if (configure_status == detail::WicSrgb16FrameStatus::pixel_format_coerced) {
         return WicPngExportStatus::pixel_format_coerced;
@@ -151,6 +153,7 @@ using Microsoft::WRL::ComPtr;
         frame.Get(),
         expected,
         expected_profile,
+        limits.output_dpi,
         limits.readback_buffer_bytes,
         native_error_code)) {
         case detail::WicSrgb16FrameStatus::ok:
@@ -215,6 +218,7 @@ WicPngExportResult export_working_to_srgb16_png(
         result.info.height = working.height;
         result.info.encoded_pixel_bytes = converted.info.encoded_pixel_bytes;
         result.info.clipped_color_components = converted.info.clipped_color_components;
+        result.info.output_dpi = limits.output_dpi;
         if (converted.status != WorkingToSrgb16Status::ok) {
             return result;
         }
@@ -275,6 +279,7 @@ WicPngExportResult export_working_to_srgb16_png(
             output->stream(),
             converted.image,
             color_context.Get(),
+            limits.output_dpi,
             result.native_error_code);
         if (result.status != WicPngExportStatus::ok) {
             discard_staging(output.get(), result);
@@ -319,6 +324,7 @@ WicPngExportResult export_working_to_srgb16_png(
         }
         result.info.pixels_verified = true;
         result.info.profile_verified = true;
+        result.info.resolution_verified = limits.output_dpi != 0U;
 
         const detail::AtomicOutputStatus publish_status = output->publish(
             result.info.artifact_bytes,

@@ -111,6 +111,10 @@ typedef struct nf_build_info_v1 {
 #define NF_OUTPUT_SHARPENING_MATTE_PAPER 1U
 #define NF_OUTPUT_SHARPENING_GLOSSY_PAPER 2U
 
+#define NF_TIFF_COMPRESSION_NONE 0U
+#define NF_TIFF_COMPRESSION_LZW 1U
+#define NF_TIFF_COMPRESSION_DEFLATE 2U
+
 #define NF_DEVELOP_TARGET_MAIN 0U
 #define NF_DEVELOP_TARGET_PRINT 1U
 #define NF_DEVELOP_TARGET_NORITSU 2U
@@ -785,6 +789,16 @@ typedef struct nf_develop_export_request_v29 {
     uint32_t output_geometry_reserved1;
     uint32_t output_geometry_reserved2;
 } nf_develop_export_request_v29;
+
+/* v30 preserves v29 and appends TIFF-only encoding selection. PNG and TIFF both
+   honor v28's output_dpi metadata; preview ignores all output-only fields. */
+typedef struct nf_develop_export_request_v30 {
+    nf_develop_export_request_v29 v29;
+    uint32_t tiff_compression;
+    uint32_t output_encoding_reserved0;
+    uint32_t output_encoding_reserved1;
+    uint32_t output_encoding_reserved2;
+} nf_develop_export_request_v30;
 
 typedef struct nf_develop_export_result_v1 {
     uint32_t struct_size;
@@ -1619,6 +1633,20 @@ NF_API nf_status_t NF_CALL nf_develop_export_v29(
     nf_develop_export_result_v3* result);
 NF_API nf_status_t NF_CALL nf_develop_preview_v29(
     const nf_develop_export_request_v29* request,
+    const nf_soft_proof_v1* soft_proof,
+    uint32_t maximum_width,
+    uint32_t maximum_height,
+    uint8_t* pixels,
+    uint32_t pixel_capacity_bytes,
+    nf_develop_run_state_v1* run_state,
+    nf_develop_export_result_v3* result);
+
+NF_API nf_status_t NF_CALL nf_develop_export_v30(
+    const nf_develop_export_request_v30* request,
+    nf_develop_run_state_v1* run_state,
+    nf_develop_export_result_v3* result);
+NF_API nf_status_t NF_CALL nf_develop_preview_v30(
+    const nf_develop_export_request_v30* request,
     const nf_soft_proof_v1* soft_proof,
     uint32_t maximum_width,
     uint32_t maximum_height,

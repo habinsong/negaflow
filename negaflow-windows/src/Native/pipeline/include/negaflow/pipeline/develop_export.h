@@ -104,6 +104,8 @@ struct DevelopExportRequest final {
     negaflow::imaging::ImageTransformParameters image_transform{};
     negaflow::imaging::OutputSharpeningParameters output_sharpening{};
     float jpeg_quality{1.0F};
+    negaflow::output::WicTiffCompression tiff_compression{
+        negaflow::output::WicTiffCompression::none};
     std::uint32_t output_dpi{0U};
     // Zero preserves source dimensions. Positive values cap the exported long edge;
     // they never upscale and do not alter previews or GrainMend detection.

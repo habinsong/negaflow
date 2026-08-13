@@ -34,6 +34,8 @@ enum class WicPngExportStatus : std::uint8_t {
 
 struct WicPngExportLimits final {
     WorkingToSrgb16Limits conversion{};
+    // Zero leaves the container's resolution unspecified; a positive value is metadata only.
+    std::uint32_t output_dpi{0U};
     std::uint64_t max_artifact_bytes{2ULL * 1024ULL * 1024ULL * 1024ULL};
     std::uint32_t max_color_profile_bytes{4U * 1024U * 1024U};
     std::uint32_t readback_buffer_bytes{16U * 1024U * 1024U};
@@ -47,9 +49,11 @@ struct WicPngExportInfo final {
     std::uint64_t artifact_bytes{0};
     std::uint32_t color_profile_bytes{0};
     std::uint32_t image_data_chunks{0};
+    std::uint32_t output_dpi{0};
     bool structure_verified{false};
     bool pixels_verified{false};
     bool profile_verified{false};
+    bool resolution_verified{false};
     bool published{false};
 };
 

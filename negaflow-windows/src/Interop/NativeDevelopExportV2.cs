@@ -596,6 +596,16 @@ internal unsafe struct NativeDevelopExportRequestV29
 }
 
 [StructLayout(LayoutKind.Sequential)]
+internal unsafe struct NativeDevelopExportRequestV30
+{
+    internal NativeDevelopExportRequestV29 V29;
+    internal uint TiffCompression;
+    internal uint OutputEncodingReserved0;
+    internal uint OutputEncodingReserved1;
+    internal uint OutputEncodingReserved2;
+}
+
+[StructLayout(LayoutKind.Sequential)]
 internal unsafe struct NativeDevelopExportResultV2
 {
     internal const int FailureNameCapacity = 64;

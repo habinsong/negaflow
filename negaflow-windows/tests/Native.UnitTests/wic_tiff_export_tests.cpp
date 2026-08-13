@@ -147,6 +147,36 @@ void test_existing_destination_is_preserved(const std::filesystem::path& root) {
     expect(!has_staging_file(root), "TIFF destination rejection leaves no staging file");
 }
 
+void test_compression_and_dpi(const std::filesystem::path& root) {
+    struct CompressionCase final {
+        negaflow::output::WicTiffCompression requested;
+        std::uint16_t encoded_tag;
+        const wchar_t* name;
+    };
+    constexpr std::array<CompressionCase, 2> cases{{
+        {negaflow::output::WicTiffCompression::lzw, 5U, L"lzw"},
+        {negaflow::output::WicTiffCompression::deflate, 8U, L"deflate"},
+    }};
+    for (const CompressionCase& entry : cases) {
+        negaflow::output::WicTiffExportLimits limits{};
+        limits.compression = entry.requested;
+        limits.output_dpi = 300U;
+        const auto result = negaflow::output::export_working_to_srgb16_tiff(
+            make_image(),
+            root / (std::wstring{L"round-trip-"} + entry.name + L".tif"),
+            limits);
+        report_failure(result);
+        expect(
+            result.status == negaflow::output::WicTiffExportStatus::ok &&
+                result.info.compression == entry.encoded_tag &&
+                result.info.output_dpi == 300U && result.info.resolution_verified &&
+                result.info.structure_verified && result.info.metadata_verified &&
+                result.info.pixels_verified && result.info.profile_verified &&
+                result.info.published,
+            "TIFF compression and DPI metadata round trip through WIC");
+    }
+}
+
 void test_failures_leave_no_file(const std::filesystem::path& root) {
     negaflow::imaging::WorkingImage image = make_image();
     image.pixels[0].alpha = 0.5F;
@@ -231,6 +261,7 @@ int main() {
     const TempDirectory temporary{};
     test_round_trip_and_publish(temporary.path());
     test_existing_destination_is_preserved(temporary.path());
+    test_compression_and_dpi(temporary.path());
     test_failures_leave_no_file(temporary.path());
     test_metadata_allowlist_rejects_descriptive_tag(temporary.path());
     if (failures != 0) {

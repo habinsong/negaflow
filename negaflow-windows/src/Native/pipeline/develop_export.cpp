@@ -486,6 +486,11 @@ struct PreviewTarget final {
         request.jpeg_quality > 1.0F) {
         return fail(DevelopExportStage::request_validation, "invalid_jpeg_quality");
     }
+    if (request.tiff_compression != negaflow::output::WicTiffCompression::none &&
+        request.tiff_compression != negaflow::output::WicTiffCompression::lzw &&
+        request.tiff_compression != negaflow::output::WicTiffCompression::deflate) {
+        return fail(DevelopExportStage::request_validation, "invalid_tiff_compression");
+    }
     if (request.film_polarity != FilmPolarity::negative &&
         request.film_polarity != FilmPolarity::positive) {
         return fail(DevelopExportStage::request_validation, "unknown_film_polarity");
@@ -1342,10 +1347,13 @@ struct PreviewTarget final {
     }
 
     if (request.format == DevelopExportFormat::png16) {
+        negaflow::output::WicPngExportLimits output_limits{};
+        output_limits.output_dpi = request.output_dpi;
         const negaflow::output::WicPngExportResult exported =
             negaflow::output::export_working_to_srgb16_png(
                 output_sharpening.image,
-                request.destination);
+                request.destination,
+                output_limits);
         if (exported.status != negaflow::output::WicPngExportStatus::ok) {
             if (exported.status ==
                 negaflow::output::WicPngExportStatus::working_conversion_failed) {
@@ -1401,10 +1409,14 @@ struct PreviewTarget final {
         return outcome;
     }
 
+    negaflow::output::WicTiffExportLimits output_limits{};
+    output_limits.compression = request.tiff_compression;
+    output_limits.output_dpi = request.output_dpi;
     const negaflow::output::WicTiffExportResult exported =
         negaflow::output::export_working_to_srgb16_tiff(
         output_sharpening.image,
-            request.destination);
+            request.destination,
+            output_limits);
     if (exported.status != negaflow::output::WicTiffExportStatus::ok) {
         if (exported.status ==
             negaflow::output::WicTiffExportStatus::working_conversion_failed) {

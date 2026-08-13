@@ -259,9 +259,10 @@ py scripts/find-unreachable-api.py
    (`appMetadataOverlay` — 개정 번호와 원본 SHA-256 결속 포함)와 내보내기 때 WIC 로 EXIF/IPTC 를
    쓰는 일이 함께 필요합니다. 저장만 하고 내보내기에 싣지 않으면 반쪽입니다.
 4. **출력 패널의 품질·소스 탭과 빠른 내보내기.** `DevelopExportFormat.Jpeg8`과 ABI 0.40/v28의
-   JPEG quality·DPI metadata, ABI 0.41/v29의 long-edge 축소는 모두 실제 native publish까지 연결됐고
-   기본 JPEG(quality 1.0, DPI 미지정)는 파일 탭에서 선택할 수 있습니다. 다음은 긴 변 값을 실제로
-   편집·저장하는 품질 탭, TIFF 압축/8-bit, PNG 8-bit/DPI, 그리고 OutputSharpening fields를 채우는 UI입니다.
+   JPEG quality·DPI metadata, ABI 0.41/v29의 long-edge 축소, ABI 0.44/v30의 TIFF None/LZW/Deflate와
+   PNG/TIFF DPI는 모두 실제 native publish까지 연결됐습니다. 기본 JPEG(quality 1.0, DPI 미지정)는
+   파일 탭에서 선택할 수 있습니다. 다음은 긴 변·DPI·TIFF 압축을 실제로 편집·저장하는 품질 탭,
+   PNG/TIFF 8-bit·alpha, 그리고 OutputSharpening fields를 채우는 UI입니다.
    아직 동작하지 않는 옵션 토글부터 만들지 마십시오.
 
 새 섹션을 만들기 전에, 이미 엔진에 있는데 UI 가 없는 축이 또 있는지부터 보십시오 — 이번

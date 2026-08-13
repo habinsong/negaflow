@@ -204,6 +204,9 @@ internal static unsafe class ContractTestRunner
             sizeof(NativeDevelopExportRequestV29) == NativeDevelopExporter.RequestV29Size,
             "develop_export_v29_request_size");
         Check(
+            sizeof(NativeDevelopExportRequestV30) == NativeDevelopExporter.RequestV30Size,
+            "develop_export_v30_request_size");
+        Check(
             sizeof(NativeDevelopExportResultV2) == NativeDevelopExporter.ResultV2Size,
             "develop_export_v2_result_size");
         Check(
@@ -369,6 +372,10 @@ internal static unsafe class ContractTestRunner
             Marshal.OffsetOf<NativeDevelopExportRequestV29>(
                 nameof(NativeDevelopExportRequestV29.OutputLongEdge)).ToInt32() == 4944,
             "develop_export_v29_long_edge_offset");
+        Check(
+            Marshal.OffsetOf<NativeDevelopExportRequestV30>(
+                nameof(NativeDevelopExportRequestV30.TiffCompression)).ToInt32() == 4960,
+            "develop_export_v30_tiff_compression_offset");
         Check(
             Marshal.OffsetOf<NativeDevelopExportResultV2>(
                 nameof(NativeDevelopExportResultV2.AppliedDminRed)).ToInt32() == 136,

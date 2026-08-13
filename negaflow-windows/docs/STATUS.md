@@ -8,11 +8,11 @@ macOS 대비 어림값입니다. 근거를 함께 적습니다 — 숫자만 옮
 
 | 영역 | 대략 | 근거와 남은 것 |
 | --- | --- | --- |
-| 현상 엔진·수학 | **87%** | 반전·base(auto/manual/preset)·톤·포인트 커브·컬러 믹서·컬러 그레이딩·캘리브레이션·색·질감·FilmScanDenoise·필름 42종·GrainMend 수리·검출(자동·가이드 ROI·미세 입자 ABI)·흑백 토닝·소프트 프루프·기하 변형·JPEG8·긴 변 Lanczos3 출력. 남은 것: 출력 색공간/PNG·TIFF 옵션, macOS 실입력 픽셀 golden |
+| 현상 엔진·수학 | **87%** | 반전·base(auto/manual/preset)·톤·포인트 커브·컬러 믹서·컬러 그레이딩·캘리브레이션·색·질감·FilmScanDenoise·필름 42종·GrainMend 수리·검출(자동·가이드 ROI·미세 입자 ABI)·흑백 토닝·소프트 프루프·기하 변형·JPEG8·긴 변 Lanczos3 출력·PNG/TIFF DPI·TIFF LZW/Deflate backend. 남은 것: 출력 색공간·8-bit/alpha 옵션, macOS 실입력 픽셀 golden |
 | 카탈로그·영속성 | **90%** | 모든 recipe, 버전, 결함 sidecar, 프리셋, 붙여넣기 범위, 사용자 프리셋, 지연 저장, 백업·복구, relink, 단일 작성자 잠금. 남은 것: 앱/촬영/롤 메타데이터 |
 | 라이브러리 화면 | **77%** | 카드 격자·정렬·카드 크기·소스 막대·파일 트리·폴더 프로세스 선택기·별점·깃발·가져오기·relink·중복 후보. 필터는 macOS 9개 중 7개(메타데이터 상태 미확인 추가). 남은 것: 현재 롤·미검증 프로파일, 컬렉션 |
 | 현상 화면 | **72%** | 캔버스·히스토그램·인스펙터 6탭·보정 8섹션 전부·좌측 5탭·크롭/기하·자동 보정·프리셋/복사붙여넣기·정보 탭·GrainMend 브러시/복제 도장/자동/가이드 ROI·검출 결과 성분별 포함/제외·감도/미세 입자 재검출. 남은 것: 출력 품질·소스 하위 탭, 빠른 내보내기, 메타데이터 카드 3종, 파일 탭 |
-| 내보내기 | **55%** | PNG16·TIFF16·JPEG8을 폴더·파일명 패턴으로. JPEG는 WIC sRGB ICC·DPI·구조 readback과 비덮어쓰기 게시까지 확인했고, 긴 변은 선형 Lanczos3로 축소만 합니다. 남은 것: 품질 탭에서의 긴 변 편집·저장, PNG/TIFF DPI·8-bit·압축, 출력 선명도 UI, 배치, XMP sidecar |
+| 내보내기 | **55%** | PNG16·TIFF16·JPEG8을 폴더·파일명 패턴으로. 세 포맷은 WIC sRGB ICC·DPI·구조/픽셀 readback과 비덮어쓰기 게시를 거치며, TIFF는 None/LZW/Deflate backend를 고릅니다. 긴 변은 선형 Lanczos3로 축소만 합니다. 남은 것: 품질 탭에서의 긴 변·DPI·TIFF 압축 편집/저장, PNG/TIFF 8-bit·alpha, 출력 선명도 UI, 배치, XMP sidecar |
 | 스캐너 | **35%** | 플러그인 클라이언트·발견·프로세스 호스트·프로토콜·artifact 트랜잭션·게시 영수증이 `Shell.Core/Scanner` 에 있으나 **셸에서 아무 데서도 부르지 않습니다**(`src/Shell` 에 참조 0). 엔진에 있는데 닿지 않는 기능 목록에 추가 |
 | 설정·다국어·접근성 | **70%** | 6개 로케일 전면 적용, 설정 창, 외관, 패널 너비·필름스트립 상태 저장. 남은 것: macOS 설정 항목 대조 |
 | 인화 | **5%** | 자리만 있습니다(312줄). 사용자가 뒤로 미룬 영역입니다 |
@@ -103,6 +103,20 @@ raw 좌상단 원점 ROI로 옮긴 뒤 그 부분만 네이티브에서 잘라 �
 사각형을 끈 뒤 검출 마스크를 raw y-up region recipe로 되돌리고, 자동과 같은 검토 상태를 씁니다.
 검토 중에는 마스크 연결 성분을 캔버스에서 클릭해 포함/제외할 수 있고, 제거 단추 또는 Enter로
 선택분만 sidecar에 저장합니다. 취소 단추 또는 Esc는 버리며, 수락 전에는 sidecar를 쓰지 않습니다.
+
+## 2026-08-14 PNG/TIFF DPI와 TIFF 압축 backend
+
+ABI 0.44/v30은 기존 v29 뒤에 TIFF `None`·`LZW`·`Deflate` 선택만 append-only로 추가합니다.
+기존 `output_dpi`는 JPEG만이 아니라 PNG/TIFF에도 동일하게 전달하며, 모두 픽셀 치수나 preview를
+바꾸지 않는 컨테이너 메타데이터입니다. WIC frame encode 뒤 staging artifact를 다시 열어 48bpp RGB,
+sRGB ICC, 픽셀과 지정 DPI를 확인한 뒤에만 atomic publish합니다. TIFF는 그 전에 IFD allowlist와
+실제 Compression tag(None=1, LZW=5, Deflate=8)도 확인합니다.
+
+x64 Debug에서 `native.wic_png_export`, `native.wic_tiff_export`, `native.develop_export_abi` 3건이
+통과했습니다. PNG 300 DPI와 TIFF 300 DPI/LZW/Deflate의 WIC readback, ABI v30 size/offset/reserved 및
+잘못된 압축 거부를 포함합니다. 관리 interop contract는 실제 DLL ABI 0.44/x64에서 198 assertions를
+통과했습니다. 품질 탭과 catalog persistence는 아직 없으므로 Shell 사용자는 이 값들을 아직 편집할 수
+없습니다.
 
 ## 2026-08-14 GrainMend 미세 입자 추가 검출
 

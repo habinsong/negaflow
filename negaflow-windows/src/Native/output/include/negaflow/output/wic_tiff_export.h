@@ -34,8 +34,17 @@ enum class WicTiffExportStatus : std::uint8_t {
     published_file_invalid,
 };
 
+enum class WicTiffCompression : std::uint8_t {
+    none = 0,
+    lzw,
+    deflate,
+};
+
 struct WicTiffExportLimits final {
     WorkingToSrgb16Limits conversion{};
+    WicTiffCompression compression{WicTiffCompression::none};
+    // Zero leaves the container's resolution unspecified; a positive value is metadata only.
+    std::uint32_t output_dpi{0U};
     std::uint64_t max_artifact_bytes{2ULL * 1024ULL * 1024ULL * 1024ULL};
     std::uint32_t max_color_profile_bytes{4U * 1024U * 1024U};
     std::uint32_t readback_buffer_bytes{16U * 1024U * 1024U};
@@ -51,12 +60,14 @@ struct WicTiffExportInfo final {
     std::uint64_t strip_count{0};
     std::uint32_t color_profile_bytes{0};
     std::uint32_t ifd_entry_count{0};
+    std::uint32_t output_dpi{0};
     std::uint16_t compression{0};
     std::uint16_t unexpected_metadata_tag{0};
     bool structure_verified{false};
     bool metadata_verified{false};
     bool pixels_verified{false};
     bool profile_verified{false};
+    bool resolution_verified{false};
     bool published{false};
 };
 

@@ -53,6 +53,7 @@ public static unsafe class NativeDevelopExporter
     internal const int RequestV27Size = 4928;
     internal const int RequestV28Size = 4944;
     internal const int RequestV29Size = 4960;
+    internal const int RequestV30Size = 4976;
     internal const int ResultV2Size = 152;
     internal const int ResultV3Size = 160;
     internal const int RunStateV1Size = 16;
@@ -122,6 +123,7 @@ public static unsafe class NativeDevelopExporter
             sizeof(NativeDevelopExportRequestV27) != RequestV27Size ||
             sizeof(NativeDevelopExportRequestV28) != RequestV28Size ||
             sizeof(NativeDevelopExportRequestV29) != RequestV29Size ||
+            sizeof(NativeDevelopExportRequestV30) != RequestV30Size ||
             sizeof(NativeDevelopExportResultV2) != ResultV2Size ||
             sizeof(NativeDevelopExportResultV3) != ResultV3Size ||
             sizeof(NativeDevelopRunStateV1) != RunStateV1Size ||
@@ -147,7 +149,8 @@ public static unsafe class NativeDevelopExporter
             !Enum.IsDefined(request.NoiseReductionFilmProfile) ||
             !Enum.IsDefined(request.BwToningMode) ||
             !Enum.IsDefined(request.ImageTransform.Rotation) ||
-            !Enum.IsDefined(request.OutputSharpeningMedium))
+            !Enum.IsDefined(request.OutputSharpeningMedium) ||
+            !Enum.IsDefined(request.TiffCompression))
         {
             throw new ArgumentException(
                 "The develop request carries a value outside its enumeration.",
@@ -1784,6 +1787,19 @@ public static unsafe class NativeDevelopExporter
         };
     }
 
+    private static NativeDevelopExportRequestV30 BuildRequestV30(
+        NativeDevelopExportRequestV29 v29,
+        DevelopExportRequest request)
+    {
+        v29.V28.V27.V26.V25.V24.V21.V20.V19.V18.V17.V16.V15.V14.V13.V12.V11.V10.V9.V8.V7.StructSize =
+            (uint)sizeof(NativeDevelopExportRequestV30);
+        return new NativeDevelopExportRequestV30
+        {
+            V29 = v29,
+            TiffCompression = (uint)request.TiffCompression,
+        };
+    }
+
     private static byte[] BuildDefectSourceSha256(DevelopExportRequest request) =>
         request.DefectSourceIdentity is { } identity
             ? Convert.FromHexString(identity.Sha256)
@@ -1888,14 +1904,15 @@ public static unsafe class NativeDevelopExporter
             NativeDevelopExportRequestV26 v26 = BuildRequestV26(v25, request);
             NativeDevelopExportRequestV27 v27 = BuildRequestV27(v26, request);
             NativeDevelopExportRequestV28 v28 = BuildRequestV28(v27, request);
-            NativeDevelopExportRequestV29 native = BuildRequestV29(v28, request);
-            status = NativeMethods.nf_develop_export_v29(
+            NativeDevelopExportRequestV29 v29 = BuildRequestV29(v28, request);
+            NativeDevelopExportRequestV30 native = BuildRequestV30(v29, request);
+            status = NativeMethods.nf_develop_export_v30(
                 &native,
                 runState,
                 &raw);
         }
 
-        return Translate(status, raw, "nf_develop_export_v29");
+        return Translate(status, raw, "nf_develop_export_v30");
     }
 
     /// <summary>
@@ -2151,8 +2168,9 @@ public static unsafe class NativeDevelopExporter
             else
             {
                 NativeDevelopExportRequestV28 v28 = BuildRequestV28(v27, request);
-                NativeDevelopExportRequestV29 native = BuildRequestV29(v28, request);
-                status = NativeMethods.nf_develop_preview_v29(
+                NativeDevelopExportRequestV29 v29 = BuildRequestV29(v28, request);
+                NativeDevelopExportRequestV30 native = BuildRequestV30(v29, request);
+                status = NativeMethods.nf_develop_preview_v30(
                     &native,
                     proofPointer,
                     maximumWidth,
@@ -2169,7 +2187,7 @@ public static unsafe class NativeDevelopExporter
             raw,
             detection is not null
                 ? "nf_develop_detect_grain_mend_v4"
-                : "nf_develop_preview_v29"));
+                : "nf_develop_preview_v30"));
     }
 
     private static DevelopExportResult Translate(

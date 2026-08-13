@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cmath>
 #include <limits>
 
 namespace negaflow::output::detail {
@@ -149,8 +150,14 @@ WicSrgb16FrameStatus configure_srgb16_frame(
     IWICBitmapFrameEncode* const frame,
     const Srgb16Image& image,
     IWICColorContext* const color_context,
+    const std::uint32_t output_dpi,
     std::uint32_t& native_error_code) noexcept {
     HRESULT status = frame->SetSize(image.width, image.height);
+    if (SUCCEEDED(status) && output_dpi != 0U) {
+        status = frame->SetResolution(
+            static_cast<double>(output_dpi),
+            static_cast<double>(output_dpi));
+    }
     if (FAILED(status)) {
         native_error_code = static_cast<std::uint32_t>(status);
         return WicSrgb16FrameStatus::configuration_failed;
@@ -210,6 +217,7 @@ WicSrgb16FrameStatus verify_srgb16_frame(
     IWICBitmapFrameDecode* const frame,
     const Srgb16Image& expected,
     const std::vector<std::uint8_t>& expected_profile,
+    const std::uint32_t output_dpi,
     const std::uint32_t readback_buffer_bytes,
     std::uint32_t& native_error_code) {
     UINT width = 0U;
@@ -223,6 +231,18 @@ WicSrgb16FrameStatus verify_srgb16_frame(
         IsEqualGUID(format, GUID_WICPixelFormat48bppRGB) == FALSE) {
         native_error_code = static_cast<std::uint32_t>(status);
         return WicSrgb16FrameStatus::readback_failed;
+    }
+    if (output_dpi != 0U) {
+        double horizontal_dpi = 0.0;
+        double vertical_dpi = 0.0;
+        status = frame->GetResolution(&horizontal_dpi, &vertical_dpi);
+        constexpr double tolerance = 0.01;
+        if (FAILED(status) ||
+            std::abs(horizontal_dpi - static_cast<double>(output_dpi)) > tolerance ||
+            std::abs(vertical_dpi - static_cast<double>(output_dpi)) > tolerance) {
+            native_error_code = static_cast<std::uint32_t>(status);
+            return WicSrgb16FrameStatus::readback_failed;
+        }
     }
     if (readback_buffer_bytes < expected.stride_bytes) {
         return WicSrgb16FrameStatus::readback_failed;

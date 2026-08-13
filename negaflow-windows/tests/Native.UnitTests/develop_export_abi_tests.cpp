@@ -451,6 +451,18 @@ void expect(const bool condition, const char* const message) {
     return request;
 }
 
+[[nodiscard]] nf_develop_export_request_v30 make_request_v30(
+    const wchar_t* const source,
+    const wchar_t* const destination,
+    const std::uint32_t base_mode = NF_BASE_ESTIMATION_AUTO) {
+    nf_develop_export_request_v30 request;
+    std::memset(&request, 0, sizeof(request));
+    request.v29 = make_request_v29(source, destination, base_mode);
+    request.v29.v28.v27.v26.v25.v24.v21.v20.v19.v18.v17.v16.v15.v14.v13.v12.v11.v10.v9.v8
+        .struct_size = static_cast<std::uint32_t>(sizeof(request));
+    return request;
+}
+
 [[nodiscard]] bool write_file(
     const std::filesystem::path& path,
     const std::vector<std::uint8_t>& bytes) {
@@ -1495,6 +1507,33 @@ void test_v29_contract() {
             result.failed_stage == NF_DEVELOP_STAGE_REQUEST_VALIDATION &&
             std::strcmp(result.failure_name, "invalid_output_geometry") == 0,
         "v29 rejects nonzero output geometry reserved fields");
+}
+
+void test_v30_contract() {
+    expect(sizeof(nf_develop_export_request_v30) == 4976U,
+           "v30 request layout is fixed");
+    expect(offsetof(nf_develop_export_request_v30, tiff_compression) == 4960U,
+           "v30 TIFF compression offset is fixed");
+
+    nf_develop_export_request_v30 request = make_request_v30(L"a.tif", L"b.tif");
+    request.v29.v28.v27.v26.v25.v24.v21.v20.v19.v18.v17.v16.v15.v14.v13.v12.v11.v10.v9.v8
+        .output_format = NF_EXPORT_FORMAT_TIFF16;
+    request.v29.v28.output_dpi = 300U;
+    request.tiff_compression = NF_TIFF_COMPRESSION_DEFLATE;
+    nf_develop_export_result_v3 result = make_result_v3();
+    expect(
+        nf_develop_export_v30(&request, nullptr, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            result.failed_stage == NF_DEVELOP_STAGE_OBSERVE_SOURCE_BEFORE,
+        "v30 TIFF encoding request reaches source observation");
+
+    request.tiff_compression = NF_TIFF_COMPRESSION_DEFLATE + 1U;
+    result = make_result_v3();
+    expect(
+        nf_develop_export_v30(&request, nullptr, &result) == NF_STATUS_OK &&
+            result.failed_stage == NF_DEVELOP_STAGE_REQUEST_VALIDATION &&
+            std::strcmp(result.failure_name, "invalid_output_encoding") == 0,
+        "v30 rejects unknown TIFF compression");
 }
 
 void test_missing_source_is_not_a_validation_error() {
@@ -3916,6 +3955,7 @@ int main(const int argument_count, const char* const arguments[]) {
     test_v27_contract();
     test_v28_contract();
     test_v29_contract();
+    test_v30_contract();
     test_missing_source_is_not_a_validation_error();
     test_v2_missing_source_is_not_a_validation_error();
     test_v18_defect_region_preview_and_export();

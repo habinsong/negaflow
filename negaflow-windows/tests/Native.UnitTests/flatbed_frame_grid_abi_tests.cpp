@@ -19,7 +19,7 @@ void expect(const bool condition, const char* const message) {
 void test_flatbed_grid_lifecycle() {
     static_assert(sizeof(nf_flatbed_frame_grid_summary_v1) == 24U);
     static_assert(sizeof(nf_flatbed_frame_detection_v1) == 56U);
-    expect(nf_get_abi_version() == 40U, "abi_minor_40");
+    expect(nf_get_abi_version() == NF_ABI_VERSION, "abi_version_matches_public_header");
 
     constexpr std::uint32_t width = 640U;
     constexpr std::uint32_t height = 1'680U;

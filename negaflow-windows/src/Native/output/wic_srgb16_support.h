@@ -55,6 +55,7 @@ enum class WicSrgb16FrameStatus : std::uint8_t {
     IWICBitmapFrameEncode* frame,
     const Srgb16Image& image,
     IWICColorContext* color_context,
+    std::uint32_t output_dpi,
     std::uint32_t& native_error_code) noexcept;
 
 [[nodiscard]] WicSrgb16FrameStatus write_srgb16_pixels(
@@ -67,6 +68,7 @@ enum class WicSrgb16FrameStatus : std::uint8_t {
     IWICBitmapFrameDecode* frame,
     const Srgb16Image& expected,
     const std::vector<std::uint8_t>& expected_profile,
+    std::uint32_t output_dpi,
     std::uint32_t readback_buffer_bytes,
     std::uint32_t& native_error_code);
 

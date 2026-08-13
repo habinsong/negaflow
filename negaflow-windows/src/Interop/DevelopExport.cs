@@ -7,6 +7,13 @@ public enum DevelopExportFormat
     Jpeg8 = 2,
 }
 
+public enum DevelopTiffCompression
+{
+    None = 0,
+    Lzw = 1,
+    Deflate = 2,
+}
+
 public enum NegativeFilmType
 {
     Color = 0,
@@ -610,7 +617,10 @@ public sealed class DevelopExportRequest
     /// <summary>JPEG encoding fidelity from zero through one. Other formats ignore it.</summary>
     public float JpegQuality { get; init; } = 1.0F;
 
-    /// <summary>Positive values are embedded as output metadata and do not resize pixels.</summary>
+    /// <summary>TIFF compression. PNG and JPEG ignore it.</summary>
+    public DevelopTiffCompression TiffCompression { get; init; }
+
+    /// <summary>Positive values are embedded in PNG, TIFF, and JPEG metadata and do not resize pixels.</summary>
     public uint OutputDpi { get; init; }
 
     /// <summary>

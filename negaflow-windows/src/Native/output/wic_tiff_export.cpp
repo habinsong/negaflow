@@ -21,11 +21,34 @@ namespace {
 
 using Microsoft::WRL::ComPtr;
 
+[[nodiscard]] bool map_wic_tiff_compression(
+    const WicTiffCompression compression,
+    BYTE& wic_value,
+    std::uint16_t& tiff_tag_value) noexcept {
+    switch (compression) {
+        case WicTiffCompression::none:
+            wic_value = static_cast<BYTE>(WICTiffCompressionNone);
+            tiff_tag_value = 1U;
+            return true;
+        case WicTiffCompression::lzw:
+            wic_value = static_cast<BYTE>(WICTiffCompressionLZW);
+            tiff_tag_value = 5U;
+            return true;
+        case WicTiffCompression::deflate:
+            wic_value = static_cast<BYTE>(WICTiffCompressionZIP);
+            tiff_tag_value = 8U;
+            return true;
+    }
+    return false;
+}
+
 [[nodiscard]] WicTiffExportStatus encode_tiff(
     IWICImagingFactory* const factory,
     IStream* const stream,
     const Srgb16Image& image,
     IWICColorContext* const color_context,
+    const WicTiffCompression compression,
+    const std::uint32_t output_dpi,
     std::uint32_t& native_error_code) noexcept {
     ComPtr<IWICBitmapEncoder> encoder{};
     HRESULT status = factory->CreateEncoder(
@@ -67,7 +90,13 @@ using Microsoft::WRL::ComPtr;
     compression_option.pstrName = const_cast<wchar_t*>(L"TiffCompressionMethod");
     VARIANT compression_value{};
     compression_value.vt = VT_UI1;
-    compression_value.bVal = static_cast<BYTE>(WICTiffCompressionNone);
+    std::uint16_t ignored_tiff_tag_value = 0U;
+    if (!map_wic_tiff_compression(
+            compression,
+            compression_value.bVal,
+            ignored_tiff_tag_value)) {
+        return WicTiffExportStatus::compression_configuration_failed;
+    }
     status = options->Write(1U, &compression_option, &compression_value);
     if (FAILED(status)) {
         native_error_code = static_cast<std::uint32_t>(status);
@@ -84,6 +113,7 @@ using Microsoft::WRL::ComPtr;
             frame.Get(),
             image,
             color_context,
+            output_dpi,
             native_error_code);
     if (configure_status == detail::WicSrgb16FrameStatus::pixel_format_coerced) {
         return WicTiffExportStatus::pixel_format_coerced;
@@ -168,6 +198,7 @@ using Microsoft::WRL::ComPtr;
         frame.Get(),
         expected,
         expected_profile,
+        limits.output_dpi,
         limits.readback_buffer_bytes,
         native_error_code)) {
         case detail::WicSrgb16FrameStatus::ok:
@@ -220,12 +251,13 @@ void discard_staging(
 [[nodiscard]] bool validate_tiff_structure(
     const negaflow::core::TiffProbeResult& probe,
     const Srgb16Image& expected,
+    const std::uint16_t expected_compression,
     const std::uint32_t expected_profile_bytes) noexcept {
     if (probe.status != negaflow::core::TiffProbeStatus::ok ||
         probe.info.variant != negaflow::core::TiffVariant::classic ||
         probe.info.organization != negaflow::core::TiffOrganization::stripped ||
         probe.info.width != expected.width || probe.info.height != expected.height ||
-        probe.info.samples_per_pixel != 3U || probe.info.compression != 1U ||
+        probe.info.samples_per_pixel != 3U || probe.info.compression != expected_compression ||
         probe.info.photometric_interpretation != 2U ||
         probe.info.planar_configuration != 1U || probe.info.orientation != 1U ||
         probe.info.bits_per_sample_count != 3U ||
@@ -254,6 +286,15 @@ WicTiffExportResult export_working_to_srgb16_tiff(
     const WicTiffExportLimits& limits) noexcept {
     WicTiffExportResult result{};
     try {
+        BYTE ignored_wic_value = 0U;
+        std::uint16_t expected_compression = 0U;
+        if (!map_wic_tiff_compression(
+                limits.compression,
+                ignored_wic_value,
+                expected_compression)) {
+            result.status = WicTiffExportStatus::compression_configuration_failed;
+            return result;
+        }
         WorkingToSrgb16Result converted =
             convert_working_to_srgb16(working, limits.conversion);
         result.conversion_status = converted.status;
@@ -261,6 +302,7 @@ WicTiffExportResult export_working_to_srgb16_tiff(
         result.info.height = working.height;
         result.info.encoded_pixel_bytes = converted.info.encoded_pixel_bytes;
         result.info.clipped_color_components = converted.info.clipped_color_components;
+        result.info.output_dpi = limits.output_dpi;
         if (converted.status != WorkingToSrgb16Status::ok) {
             return result;
         }
@@ -321,6 +363,8 @@ WicTiffExportResult export_working_to_srgb16_tiff(
             output->stream(),
             converted.image,
             color_context.Get(),
+            limits.compression,
+            limits.output_dpi,
             result.native_error_code);
         if (result.status != WicTiffExportStatus::ok) {
             discard_staging(output.get(), result);
@@ -346,6 +390,7 @@ WicTiffExportResult export_working_to_srgb16_tiff(
         if (!validate_tiff_structure(
                 probe,
                 converted.image,
+                expected_compression,
                 result.info.color_profile_bytes)) {
             result.status = WicTiffExportStatus::structure_verification_failed;
             discard_staging(output.get(), result);
@@ -383,6 +428,7 @@ WicTiffExportResult export_working_to_srgb16_tiff(
         }
         result.info.pixels_verified = true;
         result.info.profile_verified = true;
+        result.info.resolution_verified = limits.output_dpi != 0U;
 
         const detail::AtomicOutputStatus publish_status = output->publish(
             result.info.artifact_bytes,

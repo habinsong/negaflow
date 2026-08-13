@@ -241,6 +241,22 @@ void test_jpeg_standard_image_decode(const std::filesystem::path& root) {
         "an EXIF-oriented JPEG decodes as clockwise-oriented standard sRGB image input");
 }
 
+void test_dpi_metadata(const std::filesystem::path& root) {
+    negaflow::output::WicPngExportLimits limits{};
+    limits.output_dpi = 300U;
+    const auto result = negaflow::output::export_working_to_srgb16_png(
+        make_image(),
+        root / L"dpi.png",
+        limits);
+    report_failure(result);
+    expect(
+        result.status == negaflow::output::WicPngExportStatus::ok &&
+            result.info.output_dpi == 300U && result.info.resolution_verified &&
+            result.info.structure_verified && result.info.pixels_verified &&
+            result.info.profile_verified && result.info.published,
+        "PNG DPI metadata round trips through WIC");
+}
+
 void test_existing_destination_is_preserved(const std::filesystem::path& root) {
     const std::filesystem::path destination = root / L"existing.png";
     {
@@ -382,6 +398,7 @@ void test_publish_race_preserves_winner(const std::filesystem::path& root) {
 int main() {
     const TempDirectory temporary{};
     test_round_trip_and_publish(temporary.path());
+    test_dpi_metadata(temporary.path());
     test_jpeg_standard_image_decode(temporary.path());
     test_existing_destination_is_preserved(temporary.path());
     test_preflight_failures_leave_no_file(temporary.path());
