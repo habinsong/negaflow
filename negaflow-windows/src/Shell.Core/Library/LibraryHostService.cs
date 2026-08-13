@@ -44,6 +44,9 @@ public sealed record ScannerFramePublishResult(
 public sealed class LibraryHostService : IDisposable
 {
     private const int AsynchronousAvailabilityThreshold = 256;
+
+    /// <summary>macOS <c>scheduleLibrarySave</c> 와 같은 1.5 초입니다.</summary>
+    private static readonly TimeSpan AutomaticSaveDelay = TimeSpan.FromSeconds(1.5);
     private readonly DevelopExportCoordinator coordinator;
     private readonly IUiDispatcher dispatcher;
     private readonly Func<string, LibrarySourceMetadata?> sourceMetadataReader;
@@ -54,6 +57,7 @@ public sealed class LibraryHostService : IDisposable
     private int availabilityRefreshVersion;
     private LibraryDocument? document;
     private StorageRootSet? storageRoots;
+    private Timer? saveTimer;
 
     public LibraryHostService(IUiDispatcher dispatcher)
         : this(dispatcher, new NativeDevelopExporterAdapter(), ReadSourceMetadata)
@@ -123,24 +127,37 @@ public sealed class LibraryHostService : IDisposable
         return State;
     }
 
+    /// <summary>
+    /// 편집 셋은 모두 이 자리를 지나므로, 저장 예약도 여기서 겁니다. 호출부마다 예약을 걸게
+    /// 하면 한 군데만 빠져도 그 편집이 조용히 사라집니다.
+    /// </summary>
     public LibraryFrameError Edit(string frameId, LibraryFrameEdit edit) =>
-        document is null
+        AfterEdit(document is null
             ? LibraryFrameError.MissingId
-            : document.Edit(frameId, edit);
+            : document.Edit(frameId, edit));
 
     /// <summary>필름 룩처럼 develop route 자체를 바꾸는 편집입니다.</summary>
     public LibraryFrameError EditRoute(string frameId, DevelopRouteSelection selection) =>
-        document is null
+        AfterEdit(document is null
             ? LibraryFrameError.MissingId
-            : document.EditRoute(frameId, selection);
+            : document.EditRoute(frameId, selection));
 
-    /// <summary>현상 버전을 담거나 되돌리거나 지웁니다.</summary>
+    /// <summary>현상 버전을 담거나 되돌리거나, 현상 설정을 붙여넣습니다.</summary>
     public LibraryFrameError EditFrameRecord(
         string frameId,
         Func<System.Text.Json.Nodes.JsonObject, LibraryFrameWriteResult> edit) =>
-        document is null
+        AfterEdit(document is null
             ? LibraryFrameError.MissingId
-            : document.EditFrameRecord(frameId, edit);
+            : document.EditFrameRecord(frameId, edit));
+
+    private LibraryFrameError AfterEdit(LibraryFrameError error)
+    {
+        if (error == LibraryFrameError.None)
+        {
+            ScheduleSave();
+        }
+        return error;
+    }
 
     /// <summary>
     /// 고른 파일을 라이브러리에 넣고 바로 저장합니다. 넣기만 하고 저장하지 않으면 앱이 죽었을 때
@@ -354,8 +371,66 @@ public sealed class LibraryHostService : IDisposable
         frame => string.Equals(frame.SourcePath, scan.VisiblePath, StringComparison.OrdinalIgnoreCase) &&
                  string.Equals(frame.InfraredPath, scan.InfraredPath, StringComparison.OrdinalIgnoreCase)) == true;
 
-    public CatalogStoreError Save() =>
-        document is null ? CatalogStoreError.NotFound : document.Save();
+    public CatalogStoreError Save()
+    {
+        saveTimer?.Change(Timeout.Infinite, Timeout.Infinite);
+        return document is null ? CatalogStoreError.NotFound : document.Save();
+    }
+
+    /// <summary>
+    /// 마지막 저장 실패 사유입니다. 자동 저장은 조용히 일어나므로, 실패했다는 사실만은 셸이
+    /// 볼 수 있어야 합니다.
+    /// </summary>
+    public CatalogStoreError LastAutomaticSaveError { get; private set; }
+
+    /// <summary>
+    /// 잠시 뒤에 저장합니다. macOS 와 같이 1.5 초를 기다렸다가 그 사이의 변경을 한 번에
+    /// 씁니다 — 슬라이더를 끄는 동안 catalog 를 수백 번 쓰지 않기 위해서입니다.
+    /// </summary>
+    /// <remarks>
+    /// 편집은 메모리에서 먼저 일어나므로 이 예약이 없으면 창을 닫는 순간 조용히 사라집니다.
+    /// 타이머는 UI 스레드가 아닌 곳에서 울리므로 dispatcher 를 거쳐 문서를 만집니다 —
+    /// <see cref="LibraryDocument"/> 는 한 스레드에서만 쓰입니다.
+    /// </remarks>
+    public void ScheduleSave()
+    {
+        if (document is null)
+        {
+            return;
+        }
+        saveTimer ??= new Timer(_ => RequestAutomaticSave(), null, Timeout.Infinite, Timeout.Infinite);
+        saveTimer.Change(AutomaticSaveDelay, Timeout.InfiniteTimeSpan);
+    }
+
+    /// <summary>
+    /// 예약된 저장이 남아 있으면 지금 씁니다. 창을 닫기 전에 부릅니다.
+    /// </summary>
+    public CatalogStoreError SaveIfDirty()
+    {
+        saveTimer?.Change(Timeout.Infinite, Timeout.Infinite);
+        return document is { IsDirty: true } dirty ? dirty.Save() : CatalogStoreError.None;
+    }
+
+    private void RequestAutomaticSave()
+    {
+        if (dispatcher.HasThreadAccess)
+        {
+            AutomaticSave();
+            return;
+        }
+        // 큐에 넣지 못했다는 것은 창이 이미 닫혔다는 뜻입니다. 그때는 Dispose 가 마지막으로
+        // 한 번 씁니다.
+        _ = dispatcher.TryEnqueue(AutomaticSave);
+    }
+
+    private void AutomaticSave()
+    {
+        if (document is not { IsDirty: true } dirty)
+        {
+            return;
+        }
+        LastAutomaticSaveError = dirty.Save();
+    }
 
     public LibrarySourceRelinkResult Relink(SourceRelinkPlan plan) =>
         document is null
@@ -375,6 +450,10 @@ public sealed class LibraryHostService : IDisposable
 
     public void Dispose()
     {
+        // 놓아 주기 전에 마지막으로 씁니다. 여기서 빠지면 마지막 1.5 초의 편집이 사라집니다.
+        _ = SaveIfDirty();
+        saveTimer?.Dispose();
+        saveTimer = null;
         unchecked { ++availabilityRefreshVersion; }
         availabilityByFrameId = new Dictionary<string, LibrarySourceAvailability>();
         availabilityByFolderId = new Dictionary<string, bool>();

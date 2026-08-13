@@ -35,6 +35,7 @@ internal static class Program
         VerifyDevelopExportCoordinator();
         VerifyLibraryDocument();
         VerifyLibraryHost();
+        VerifyEditsSurviveClose();
         VerifyLibraryAvailability();
         VerifyLibraryBrowserProjection();
         VerifyDevelopInspectorPresentationState();
@@ -1965,6 +1966,61 @@ internal static class Program
                     snapshot.Rows(table)[0].Payload["marker"]?.GetValue<string>() ==
                     CatalogEntityTables.SqlName(table)),
             "library_document_save_preserves_every_non_frame_table");
+    }
+
+    /// <summary>
+    /// 현상 편집은 메모리에서 먼저 일어납니다. 창을 닫을 때 쓰지 않으면 조용히 사라지므로,
+    /// 이 계약은 시험으로 붙들어 둡니다 — 실제로 그렇게 잃고 있었습니다.
+    /// </summary>
+    private static void VerifyEditsSurviveClose()
+    {
+        string testParent = Path.Combine(AppContext.BaseDirectory, "edit-persistence-tests");
+        string isolatedBase = Path.Combine(
+            testParent,
+            $"{Environment.ProcessId}-{Guid.NewGuid():N}");
+        StorageRootSet roots = StorageRootResolver.ResolveForTests(isolatedBase).Roots!;
+        try
+        {
+            using (CatalogSession seed = CatalogSession.Open(roots).Session!)
+            {
+                Check(seed.Write(new CatalogSnapshot(
+                    null,
+                    new Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>>
+                    {
+                        [CatalogEntityTable.Frames] =
+                        [new("frame-1", FrameRecord("frame-1", "IMG_0001.tif", 0.0))],
+                    })).IsSuccess, "edit_persistence_seed");
+            }
+
+            using (LibraryHostService host = new(
+                new FakeDispatcher(accepts: true),
+                new FakeExporter(_ => OkResult()),
+                TestSourceMetadata))
+            {
+                Check(host.Open(roots) == LibraryHostState.Open, "edit_persistence_open");
+                Check(host.Edit(
+                        "frame-1",
+                        new LibraryFrameEdit(
+                            new ToneAdjustment(2.25, 0, 0, 0, 0, 0),
+                            null)) == LibraryFrameError.None,
+                    "edit_persistence_edit");
+                // 예약된 저장이 울리기 전에 닫습니다. macOS 도 1.5 초를 기다리므로 그 사이에
+                // 닫는 것이 가장 흔한 데이터 손실 상황입니다.
+            }
+
+            using LibraryDocument reopened = LibraryDocument.Open(roots).Document!;
+            Check(reopened.Frames.Single().Tone.Exposure == 2.25,
+                "edit_persistence_close_writes_pending_edit");
+            Check(!reopened.IsDirty, "edit_persistence_load_is_not_dirty");
+        }
+        finally
+        {
+            if (Directory.Exists(isolatedBase) &&
+                StoragePathPolicy.IsLexicallyContained(testParent, isolatedBase))
+            {
+                Directory.Delete(isolatedBase, recursive: true);
+            }
+        }
     }
 
     private static void VerifyLibraryHost()

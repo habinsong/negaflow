@@ -111,7 +111,15 @@ public sealed class LibraryDocument : IDisposable
         this.activeRollId = activeRollId;
         ProjectFolders();
         Project();
+        // 방금 읽은 것은 바뀐 것이 아닙니다.
+        IsDirty = false;
     }
+
+    /// <summary>
+    /// 마지막 저장 뒤에 바뀐 것이 있는지. 편집은 메모리에서 먼저 일어나므로 이 표시가 없으면
+    /// 셸은 무엇을 저장해야 하는지 알 수 없고, 창을 닫을 때 조용히 잃습니다.
+    /// </summary>
+    public bool IsDirty { get; private set; }
 
     public IReadOnlyList<LibraryFrameSnapshot> Frames => frames;
 
@@ -358,7 +366,12 @@ public sealed class LibraryDocument : IDisposable
 
     public CatalogStoreError Save()
     {
-        return session.Write(CreateSnapshot(FrameRows())).Error;
+        CatalogStoreError error = session.Write(CreateSnapshot(FrameRows())).Error;
+        if (error == CatalogStoreError.None)
+        {
+            IsDirty = false;
+        }
+        return error;
     }
 
     /// <summary>
@@ -552,6 +565,8 @@ public sealed class LibraryDocument : IDisposable
 
     private void Project()
     {
+        // 모든 변경이 이 자리를 지나므로, 여기서 표시하면 놓치는 편집이 없습니다.
+        IsDirty = true;
         frames.Clear();
         issues.Clear();
         indexById.Clear();
@@ -600,6 +615,7 @@ public sealed class LibraryDocument : IDisposable
 
     private void ProjectFolders()
     {
+        IsDirty = true;
         folders.Clear();
         HashSet<string> seenPaths = new(StringComparer.OrdinalIgnoreCase);
         foreach (CatalogEntityRow row in retainedRows[CatalogEntityTable.Folders])
