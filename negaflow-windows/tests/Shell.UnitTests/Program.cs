@@ -50,6 +50,7 @@ internal static class Program
         VerifyDevelopRequestFactory();
         VerifyLookPresetReachesTheEngine();
         VerifyDisplayToRawMapping();
+        VerifyGrainMendRegionEdit();
         VerifyInfraredDefectRecipeCoordinator();
         VerifyDevelopExportCoordinator();
         VerifyLibraryDocument();
@@ -587,6 +588,71 @@ internal static class Program
         Check(!DevelopDisplayGeometry.TryMapDisplayToRaw(
                 ImageTransformRecipe.Identity, 1U, 1U, 0.5, 0.5, out _, out _),
             "display_to_raw_rejects_degenerate_source");
+    }
+
+    /// <summary>
+    /// 검출 마스크(화소당 1바이트)가 catalog 의 region 항목(RGBA8)으로 넘어가는 자리입니다.
+    /// 표현이 바뀌는 곳이라 화소가 어긋나면 엉뚱한 자리를 고칩니다.
+    /// </summary>
+    private static void VerifyGrainMendRegionEdit()
+    {
+        const int width = 8;
+        const int height = 6;
+        byte[] mask = new byte[width * height];
+        mask[0] = 255;                       // 왼쪽 위
+        mask[(3 * width) + 5] = 128;         // 가운데 어딘가
+        mask[mask.Length - 1] = 200;         // 오른쪽 아래
+        DefectRect roi = new(0.0, 0.0, 1.0, 1.0);
+        DefectSize baseSize = new(width, height);
+
+        DefectEditItem? item = GrainMendRegionEdit.From(
+            mask, width, height, roi, baseSize, automatic: true);
+        Check(item is not null, "grain_mend_region_edit_built");
+        if (item is null)
+        {
+            return;
+        }
+        Check(item.Kind == DefectEditKind.Region &&
+            item.Label.Kind == DefectEditLabelKind.Automatic && item.Label.Value == 3,
+            "grain_mend_region_edit_labels_the_accepted_count");
+        Check(item.RegionWidth == width && item.RegionHeight == height &&
+            item.RegionRoi == roi && item.BaseSize == baseSize,
+            "grain_mend_region_edit_keeps_the_analysis_geometry");
+
+        byte[] rgba = item.RegionMask!.Data;
+        Check(rgba.Length == width * height * 4, "grain_mend_region_edit_is_rgba8");
+        // 표시된 화소는 네 채널 모두에 값이 들어가고, 나머지는 손대지 않습니다.
+        Check(rgba[0] == 255 && rgba[1] == 255 && rgba[2] == 255 && rgba[3] == 255,
+            "grain_mend_region_edit_widens_the_first_pixel");
+        int middle = ((3 * width) + 5) * 4;
+        Check(rgba[middle] == 128 && rgba[middle + 3] == 128,
+            "grain_mend_region_edit_keeps_partial_values");
+        Check(rgba[4] == 0 && rgba[5] == 0 && rgba[6] == 0 && rgba[7] == 0,
+            "grain_mend_region_edit_leaves_unmarked_pixels_clear");
+
+        // 아무것도 못 찾았으면 항목을 만들지 않습니다.
+        Check(GrainMendRegionEdit.From(
+                new byte[width * height], width, height, roi, baseSize, true) is null,
+            "grain_mend_region_edit_skips_an_empty_mask");
+        // 크기가 안 맞는 마스크는 닫히는 쪽으로 거절합니다.
+        Check(GrainMendRegionEdit.From(
+                new byte[7], width, height, roi, baseSize, true) is null,
+            "grain_mend_region_edit_rejects_a_mismatched_mask");
+
+        // 저장까지 통과해야 실제로 쓸 수 있습니다.
+        DefectRecipeSnapshot? recipe = DefectRecipeSnapshot.Create(
+            Guid.NewGuid(),
+            1UL,
+            new DefectSourceIdentity(1024, new string('b', 64)),
+            [item]);
+        // 검증기가 마스크를 zlib 으로 줄여 담습니다. 그래서 길이가 아니라 되풀어 본 화소로
+        // 확인합니다 — 줄이는 것 자체는 정상 동작입니다.
+        Check(recipe.Items.Count == 1 &&
+            DefectMaskCodec.TryDecodeRgba8(
+                recipe.Items[0].RegionMask!, width, height, out byte[] stored) &&
+            stored.Length == width * height * 4 &&
+            stored[0] == 255 && stored[middle] == 128 && stored[4] == 0,
+            "grain_mend_region_edit_survives_recipe_validation");
     }
 
     private static void VerifyDevelopRequestFactory()
