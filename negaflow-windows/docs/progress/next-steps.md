@@ -119,15 +119,32 @@ warm(약 858 MB)을 섞어 비교하지 마십시오.
 실제 앱에서 노출 0 → 1.5 → 되돌리기 → 0 까지 확인했습니다. 한동안 "카탈로그 행이 없어
 결정 대기"라고 잘못 적어 두었던 항목입니다.
 
-**다음 한 걸음은 프리셋입니다.** 확인해 보니 이쪽은 진짜 작업이 남아 있습니다:
+**프리셋도 끝났습니다.** 세 부분이었고 셋 다 붙였습니다.
 
-- macOS 는 `Chromabase/Presets` 의 **LookPreset JSON 6개**(clear-chrome, deep-slide,
-  neutral, rich-neutral, soft-print, warm-lab)를 `PresetRegistry.loadAll()` 로 읽습니다.
-- `LookPreset` 은 catalog 행이 아니라 **파일**입니다(id = 파일명 stem). tone/color/texture
-  세 묶음과 호환 filmTypes 목록을 담습니다.
-- **Windows 에는 preset 레지스트리가 아예 없습니다.** 프로파일 정의와 로더 둘 다 필요합니다.
+1. **번들 룩 프로파일 6개** — `assets/presets/*.json` 을 macOS 에서 그대로 가져왔고
+   `PresetRegistry` 가 같은 순서로 읽습니다. frame 은 `presetID` 를 `params` **바깥에**
+   들고 있으며(macOS 와 같은 자리), `DevelopRequestFactory` 가 엔진 요청을 만들 때 합성합니다.
+   합성을 팩토리 한 곳에서 하는 것이 요점입니다 — preview·thumbnail·export 가 모두 이 함수를
+   지나므로 세 경로가 같은 레시피를 쓰는 것이 호출부의 성실함이 아니라 구조로 보장됩니다.
+   축마다 합치는 방법이 다릅니다: 톤·색은 **더하고**, grain/sharpness/halation 은 **큰 쪽**을
+   쓰며(프리셋 질감이 사용자 0 에 지워지지 않도록), 프로파일이 정하지 않는 축은 그대로입니다.
+   `highlightRollOff` 의 부호 반전도 macOS 그대로 옮겼습니다.
+2. **복사 / 붙여넣기** — `DevelopSettingsPasteScope` 의 다섯 묶음과 소속 축까지 macOS 와
+   같습니다. 프리셋은 톤과 함께 움직입니다. **옮기지 않는 것 둘**: frame 자체의 신원·출처,
+   그리고 `DefectRecipe`(편집이 그 이미지 좌표와 원본 해시에 묶여 있어 다른 frame 에 옮기면
+   엉뚱한 자리를 지웁니다 — macOS 도 싣지 않습니다).
+3. **사용자 프리셋** — 저장·적용·삭제. 레시피를 frame record 모양으로 담아
+   `%LocalAppData%` 아래 `Negaflow/Development/user-presets.json` 에 둡니다. 새 직렬화기를
+   만들지 않고 이미 검증된 reader/writer 를 지나게 하려는 선택입니다.
 
-즉 "결정 대기"가 아니라 구현 대상이며, 크기는 버전보다 큽니다.
+**번들 룩 프로파일은 UI 에 나오지 않습니다.** 화면을 보고 확인했는데, macOS 의 프리셋 탭은
+복사/붙여넣기와 사용자 프리셋 둘뿐이고 6개 룩은 가져오기가 `neutral` 을 걸어 둘 뿐 고르는
+자리가 없습니다. 그러니 Windows 에도 만들지 마십시오 — 창작이 됩니다.
+
+확인한 것: catalog 670 · shell 486 어서션 전부 통과, 붙여넣기가 저장·재시작을 넘겨 살아남음,
+실제 앱에서 프리셋 탭의 일곱 컨트롤과 범위 메뉴 여섯 항목이 한국어로 뜨고 프레임이 없을 때
+정확히 비활성입니다. **아직 실제 앱에서 안 해 본 것**: 사진 두 장으로 복사→붙여넣기를 눌러
+그림이 바뀌는지. 레코드 수준과 catalog 왕복까지만 재 봤습니다.
 
 출력 패널에서 아직 만들지 않은 것: macOS 의 파일/품질/소스 하위 탭, 내보내기 설정 프리셋,
 그리고 빠른 내보내기 섹션(DPI·긴 변 픽셀·JPEG 품질). 지금은 파일 탭에 해당하는 것만 있습니다.

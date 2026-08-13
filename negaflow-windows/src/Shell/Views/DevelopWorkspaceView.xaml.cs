@@ -121,6 +121,12 @@ public sealed partial class DevelopWorkspaceView : UserControl
         libraryHost = host;
         toneLimits = limits;
         panel = new DevelopPanelState(host, limits, negativeLimits);
+        // 사용자 프리셋은 카탈로그가 아니라 앱 설정 옆에 삽니다. macOS 의 UserDefaults 자리입니다.
+        panel.OpenUserPresets(Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Negaflow",
+            "Development",
+            "user-presets.json"));
         FilmStockSelector.ItemsSource = BundledFilmBaseOptions.FilmStocks;
         LightSourceSelector.ItemsSource = BundledFilmBaseOptions.LightSources;
         ExposureControl.Minimum = -panel.MaximumExposureStops;
@@ -539,6 +545,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         UpdateCropAspectControls();
         UpdateFilmLookControls();
         UpdateVersionControls();
+        UpdatePresetControls();
         HistogramView.SynchronizeValues(
             panel.Shadows,
             panel.Density,
@@ -1541,11 +1548,12 @@ public sealed partial class DevelopWorkspaceView : UserControl
         UpdateDevelopSourcePanel();
     }
 
-    /// <summary>현상 왼쪽 소스입니다. macOS 의 다섯 탭 중 지금 내용이 있는 셋입니다.</summary>
+    /// <summary>현상 왼쪽 소스입니다. macOS 의 다섯 탭 중 지금 내용이 있는 넷입니다.</summary>
     private enum DevelopSourceKind
     {
         Library,
         Versions,
+        Presets,
         Film,
         Output,
     }
@@ -1554,12 +1562,14 @@ public sealed partial class DevelopWorkspaceView : UserControl
     {
         LibrarySourcePanel.Visibility = Show(DevelopSourceKind.Library);
         VersionsSourcePanel.Visibility = Show(DevelopSourceKind.Versions);
+        PresetsSourcePanel.Visibility = Show(DevelopSourceKind.Presets);
         FilmSourcePanel.Visibility = Show(DevelopSourceKind.Film);
         OutputSourcePanel.Visibility = Show(DevelopSourceKind.Output);
 
         (string headerKey, string glyph) = developSource switch
         {
             DevelopSourceKind.Versions => ("developSectionVersions", ""),
+            DevelopSourceKind.Presets => ("developSectionPresets", "\uE9E9"),
             DevelopSourceKind.Film => ("developSectionFilm", ""),
             DevelopSourceKind.Output => ("developSectionOutput", ""),
             _ => ("developLibrary", ""),
@@ -1583,6 +1593,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         }
         UpdateExportPreview();
         UpdateFilmLookControls();
+        UpdatePresetControls();
     }
 
     private Visibility Show(DevelopSourceKind kind) =>
@@ -1592,8 +1603,246 @@ public sealed partial class DevelopWorkspaceView : UserControl
     {
         yield return (LibraryRailButton, LibraryRailIcon, DevelopSourceKind.Library);
         yield return (VersionsRailButton, VersionsRailIcon, DevelopSourceKind.Versions);
+        yield return (PresetsRailButton, PresetsRailIcon, DevelopSourceKind.Presets);
         yield return (FilmRailButton, FilmRailIcon, DevelopSourceKind.Film);
         yield return (OutputRailButton, OutputRailIcon, DevelopSourceKind.Output);
+    }
+
+    private void OnCopyDevelopSettingsClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (panel?.CopyDevelopSettings() == true)
+        {
+            UpdatePresetControls();
+        }
+    }
+
+    private void OnPasteDevelopSettingsClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (panel is null || panel.PasteDevelopSettings() != LibraryFrameError.None)
+        {
+            return;
+        }
+        _ = panel.Save();
+        ReloadAfterRecipeReplaced();
+    }
+
+    private void OnPasteScopeAllClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (panel is null)
+        {
+            return;
+        }
+        panel.PasteScope = DevelopSettingsPasteScope.All;
+        UpdatePresetControls();
+    }
+
+    private void OnPasteScopeToggled(object sender, RoutedEventArgs args)
+    {
+        _ = args;
+        if (panel is null || sender is not ToggleMenuFlyoutItem { Tag: string group } item)
+        {
+            return;
+        }
+        DevelopSettingsPasteScope scope = panel.PasteScope;
+        panel.PasteScope = group switch
+        {
+            "Base" => scope with { Base = item.IsChecked },
+            "Tone" => scope with { Tone = item.IsChecked },
+            "Color" => scope with { Color = item.IsChecked },
+            "Detail" => scope with { Detail = item.IsChecked },
+            "Geometry" => scope with { Geometry = item.IsChecked },
+            _ => scope,
+        };
+        UpdatePresetControls();
+    }
+
+    private void OnUserPresetSelectionChanged(object sender, SelectionChangedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        UpdateUserPresetButtons();
+    }
+
+    private void OnSaveUserPresetClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (panel is null)
+        {
+            return;
+        }
+        string name = AppResources.FormatIntegers(
+            "developUserPresetNameFormat",
+            "Value",
+            panel.UserPresets.Count + 1);
+        if (panel.SaveUserPreset(name) is not { } saved)
+        {
+            return;
+        }
+        // 방금 저장한 것을 고른 상태로 둡니다 — macOS 도 저장 직후 그 프리셋을 가리킵니다.
+        UpdatePresetControls(saved.Id);
+    }
+
+    private void OnApplyUserPresetClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (panel is null ||
+            SelectedUserPresetId() is not { } id ||
+            panel.ApplyUserPreset(id) != LibraryFrameError.None)
+        {
+            return;
+        }
+        _ = panel.Save();
+        ReloadAfterRecipeReplaced();
+    }
+
+    private void OnDeleteUserPresetClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (panel is null || SelectedUserPresetId() is not { } id || !panel.DeleteUserPreset(id))
+        {
+            return;
+        }
+        UpdatePresetControls();
+    }
+
+    private Guid? SelectedUserPresetId() =>
+        UserPresetSelector.SelectedItem is ComboBoxItem { Tag: Guid id } ? id : null;
+
+    /// <summary>
+    /// recipe 가 통째로 바뀌었을 때 화면 전체를 다시 맞춥니다. 붙여넣기와 프리셋 적용이 같은
+    /// 자리를 쓰므로 한쪽만 갱신되는 일이 없습니다.
+    /// </summary>
+    private void ReloadAfterRecipeReplaced()
+    {
+        SynchronizeInspectorValues();
+        SyncBaseControls();
+        SyncToneControls();
+        UpdateFilmLookControls();
+        UpdatePresetControls();
+        RequestPreview();
+    }
+
+    private void UpdatePresetControls(Guid? select = null)
+    {
+        if (PasteScopeButton is null)
+        {
+            return;
+        }
+
+        CopyPasteSectionText.Text = AppResources.Get("developCopyPaste", "Text");
+        UserPresetSectionText.Text = AppResources.Get("developUserPreset", "Text");
+        UserPresetLabel.Text = AppResources.Get("developUserPreset", "Text");
+        PasteScopeLabel.Text = AppResources.Get("developPasteScope", "Text");
+        CopyDevelopSettingsButton.Content = AppResources.Get("developCopy", "Content");
+        PasteDevelopSettingsButton.Content = AppResources.Get("developPaste", "Content");
+        SaveUserPresetButton.Content = AppResources.Get("developUserPresetSave", "Content");
+        ApplyUserPresetButton.Content = AppResources.Get("developUserPresetApply", "Content");
+        DeleteUserPresetButton.Content = AppResources.Get("developUserPresetDelete", "Content");
+        PasteScopeAllItem.Text = AppResources.Get("developPasteScopeAll", "Text");
+        PasteScopeBaseItem.Text = AppResources.Get("developScopeBase", "Text");
+        PasteScopeToneItem.Text = AppResources.Get("developScopeTone", "Text");
+        PasteScopeColorItem.Text = AppResources.Get("developScopeColor", "Text");
+        PasteScopeDetailItem.Text = AppResources.Get("developScopeDetail", "Text");
+        PasteScopeGeometryItem.Text = AppResources.Get("developScopeGeometry", "Text");
+        AutomationProperties.SetHelpText(
+            CopyDevelopSettingsButton, AppResources.Get("developCopyHelp", "Value"));
+        AutomationProperties.SetHelpText(
+            PasteDevelopSettingsButton, AppResources.Get("developPasteHelp", "Value"));
+        AutomationProperties.SetHelpText(
+            PasteScopeButton, AppResources.Get("developPasteScopeHelp", "Value"));
+        AutomationProperties.SetHelpText(
+            SaveUserPresetButton, AppResources.Get("developUserPresetSaveHelp", "Value"));
+        AutomationProperties.SetHelpText(
+            ApplyUserPresetButton, AppResources.Get("developUserPresetApplyHelp", "Value"));
+        AutomationProperties.SetHelpText(
+            DeleteUserPresetButton, AppResources.Get("developUserPresetDeleteHelp", "Value"));
+
+        DevelopSettingsPasteScope scope = panel?.PasteScope ?? DevelopSettingsPasteScope.All;
+        PasteScopeBaseItem.IsChecked = scope.Base;
+        PasteScopeToneItem.IsChecked = scope.Tone;
+        PasteScopeColorItem.IsChecked = scope.Color;
+        PasteScopeDetailItem.IsChecked = scope.Detail;
+        PasteScopeGeometryItem.IsChecked = scope.Geometry;
+        PasteScopeButton.Content = DescribePasteScope(scope);
+
+        CopyDevelopSettingsButton.IsEnabled = panel?.SelectedFrame is not null;
+        PasteDevelopSettingsButton.IsEnabled =
+            panel?.SelectedFrame is not null && panel.CopiedSettings is not null && !scope.IsEmpty;
+        SaveUserPresetButton.IsEnabled = panel?.SelectedFrame is not null;
+
+        Guid? keep = select ?? SelectedUserPresetId();
+        IReadOnlyList<DevelopUserPreset> presets = panel?.UserPresets ?? [];
+        List<ComboBoxItem> items = [];
+        foreach (DevelopUserPreset preset in presets)
+        {
+            items.Add(new ComboBoxItem { Content = preset.Name, Tag = preset.Id });
+        }
+        UserPresetSelector.ItemsSource = items;
+        UserPresetSelector.IsEnabled = items.Count != 0;
+        if (items.Count == 0)
+        {
+            // macOS 는 목록이 비면 자리표시자 한 줄을 보여 주고 고를 수 없게 둡니다.
+            UserPresetSelector.PlaceholderText =
+                AppResources.Get("developUserPresetEmpty", "Text");
+        }
+        else
+        {
+            UserPresetSelector.SelectedItem =
+                items.FirstOrDefault(item => (Guid)item.Tag! == keep) ?? items[^1];
+        }
+        UpdateUserPresetButtons();
+    }
+
+    private void UpdateUserPresetButtons()
+    {
+        bool hasSelection = SelectedUserPresetId() is not null;
+        ApplyUserPresetButton.IsEnabled = hasSelection && panel?.SelectedFrame is not null;
+        DeleteUserPresetButton.IsEnabled = hasSelection;
+    }
+
+    /// <summary>
+    /// macOS 와 같은 요약 문구입니다. 전부면 "모든 설정", 하나도 없으면 "없음", 그 사이는 켜진
+    /// 묶음 이름을 순서대로 이어 붙입니다.
+    /// </summary>
+    private static string DescribePasteScope(DevelopSettingsPasteScope scope)
+    {
+        if (scope.IsFullDevelopScope)
+        {
+            return AppResources.Get("developPasteScopeAll", "Text");
+        }
+        List<string> groups = [];
+        if (scope.Base)
+        {
+            groups.Add(AppResources.Get("developScopeBase", "Text"));
+        }
+        if (scope.Tone)
+        {
+            groups.Add(AppResources.Get("developScopeTone", "Text"));
+        }
+        if (scope.Color)
+        {
+            groups.Add(AppResources.Get("developScopeColor", "Text"));
+        }
+        if (scope.Detail)
+        {
+            groups.Add(AppResources.Get("developScopeDetail", "Text"));
+        }
+        if (scope.Geometry)
+        {
+            groups.Add(AppResources.Get("developScopeGeometry", "Text"));
+        }
+        return groups.Count == 0
+            ? AppResources.Get("developPasteScopeNone", "Text")
+            : string.Join("/", groups);
     }
 
     /// <summary>버전 목록 한 줄입니다. 표시 문구를 XAML 이 짓지 않도록 여기서 만듭니다.</summary>

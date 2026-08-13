@@ -736,4 +736,28 @@
   <data name="developVersionDelete.Content" xml:space="preserve"><value>削除</value></data>
   <data name="developVersionNamePlaceholder.Text" xml:space="preserve"><value>バージョン名</value></data>
   <data name="developVersionsEmpty.Text" xml:space="preserve"><value>保存されたバージョンはありません。</value></data>
+  <data name="developSectionPresets.Text" xml:space="preserve"><value>プリセット</value></data>
+  <data name="developCopyPaste.Text" xml:space="preserve"><value>コピー / ペースト</value></data>
+  <data name="developCopy.Content" xml:space="preserve"><value>コピー</value></data>
+  <data name="developPaste.Content" xml:space="preserve"><value>ペースト</value></data>
+  <data name="developCopyHelp.Value" xml:space="preserve"><value>現在のコマの現像設定をコピーします。</value></data>
+  <data name="developPasteHelp.Value" xml:space="preserve"><value>コピーした現像設定をペーストします。</value></data>
+  <data name="developPasteScope.Text" xml:space="preserve"><value>ペースト範囲</value></data>
+  <data name="developPasteScopeHelp.Value" xml:space="preserve"><value>ペーストする現像設定を選択します。</value></data>
+  <data name="developPasteScopeAll.Text" xml:space="preserve"><value>すべての設定</value></data>
+  <data name="developPasteScopeNone.Text" xml:space="preserve"><value>なし</value></data>
+  <data name="developScopeBase.Text" xml:space="preserve"><value>ベース</value></data>
+  <data name="developScopeTone.Text" xml:space="preserve"><value>基本補正</value></data>
+  <data name="developScopeColor.Text" xml:space="preserve"><value>カラー</value></data>
+  <data name="developScopeDetail.Text" xml:space="preserve"><value>ディテールと効果</value></data>
+  <data name="developScopeGeometry.Text" xml:space="preserve"><value>ジオメトリ</value></data>
+  <data name="developUserPreset.Text" xml:space="preserve"><value>ユーザープリセット</value></data>
+  <data name="developUserPresetEmpty.Text" xml:space="preserve"><value>ユーザープリセットなし</value></data>
+  <data name="developUserPresetSave.Content" xml:space="preserve"><value>保存</value></data>
+  <data name="developUserPresetApply.Content" xml:space="preserve"><value>適用</value></data>
+  <data name="developUserPresetDelete.Content" xml:space="preserve"><value>削除</value></data>
+  <data name="developUserPresetSaveHelp.Value" xml:space="preserve"><value>現在の現像設定をユーザープリセットとして保存します</value></data>
+  <data name="developUserPresetApplyHelp.Value" xml:space="preserve"><value>選択したユーザープリセットを適用します</value></data>
+  <data name="developUserPresetDeleteHelp.Value" xml:space="preserve"><value>選択したユーザープリセットを削除します</value></data>
+  <data name="developUserPresetNameFormat.Value" xml:space="preserve"><value>プリセット %d</value></data>
 </root>

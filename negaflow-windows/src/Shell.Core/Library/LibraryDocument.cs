@@ -221,10 +221,10 @@ public sealed class LibraryDocument : IDisposable
     }
 
     /// <summary>
-    /// 현상 버전을 담거나, 되돌리거나, 지웁니다. 세 동작 모두 frame record 하나만 바꾸므로
-    /// 같은 자리를 씁니다.
+    /// frame record 하나를 통째로 바꿉니다. 버전 담기·되돌리기·지우기와 현상 설정 붙여넣기가
+    /// 모두 이 자리를 씁니다.
     /// </summary>
-    public LibraryFrameError EditVersions(
+    public LibraryFrameError EditFrameRecord(
         string frameId,
         Func<JsonObject, LibraryFrameWriteResult> edit)
     {

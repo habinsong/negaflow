@@ -736,4 +736,28 @@
   <data name="developVersionDelete.Content" xml:space="preserve"><value>删除</value></data>
   <data name="developVersionNamePlaceholder.Text" xml:space="preserve"><value>版本名称</value></data>
   <data name="developVersionsEmpty.Text" xml:space="preserve"><value>尚无已保存的版本。</value></data>
+  <data name="developSectionPresets.Text" xml:space="preserve"><value>预设</value></data>
+  <data name="developCopyPaste.Text" xml:space="preserve"><value>拷贝 / 粘贴</value></data>
+  <data name="developCopy.Content" xml:space="preserve"><value>拷贝</value></data>
+  <data name="developPaste.Content" xml:space="preserve"><value>粘贴</value></data>
+  <data name="developCopyHelp.Value" xml:space="preserve"><value>拷贝当前照片的显影设置。</value></data>
+  <data name="developPasteHelp.Value" xml:space="preserve"><value>粘贴已拷贝的显影设置。</value></data>
+  <data name="developPasteScope.Text" xml:space="preserve"><value>粘贴范围</value></data>
+  <data name="developPasteScopeHelp.Value" xml:space="preserve"><value>选择要粘贴哪些显影设置。</value></data>
+  <data name="developPasteScopeAll.Text" xml:space="preserve"><value>全部设置</value></data>
+  <data name="developPasteScopeNone.Text" xml:space="preserve"><value>无</value></data>
+  <data name="developScopeBase.Text" xml:space="preserve"><value>片基</value></data>
+  <data name="developScopeTone.Text" xml:space="preserve"><value>基本色调</value></data>
+  <data name="developScopeColor.Text" xml:space="preserve"><value>颜色</value></data>
+  <data name="developScopeDetail.Text" xml:space="preserve"><value>细节与效果</value></data>
+  <data name="developScopeGeometry.Text" xml:space="preserve"><value>几何</value></data>
+  <data name="developUserPreset.Text" xml:space="preserve"><value>用户预设</value></data>
+  <data name="developUserPresetEmpty.Text" xml:space="preserve"><value>没有用户预设</value></data>
+  <data name="developUserPresetSave.Content" xml:space="preserve"><value>存储</value></data>
+  <data name="developUserPresetApply.Content" xml:space="preserve"><value>应用</value></data>
+  <data name="developUserPresetDelete.Content" xml:space="preserve"><value>删除</value></data>
+  <data name="developUserPresetSaveHelp.Value" xml:space="preserve"><value>将当前显影设置存储为用户预设</value></data>
+  <data name="developUserPresetApplyHelp.Value" xml:space="preserve"><value>应用所选用户预设</value></data>
+  <data name="developUserPresetDeleteHelp.Value" xml:space="preserve"><value>删除所选用户预设</value></data>
+  <data name="developUserPresetNameFormat.Value" xml:space="preserve"><value>预设 %d</value></data>
 </root>

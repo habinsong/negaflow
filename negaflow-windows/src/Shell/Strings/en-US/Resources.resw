@@ -736,4 +736,28 @@ Load a scanner from Library to scan film.</value>
   <data name="developVersionDelete.Content" xml:space="preserve"><value>Delete</value></data>
   <data name="developVersionNamePlaceholder.Text" xml:space="preserve"><value>Version name</value></data>
   <data name="developVersionsEmpty.Text" xml:space="preserve"><value>No saved versions yet.</value></data>
+  <data name="developSectionPresets.Text" xml:space="preserve"><value>Presets</value></data>
+  <data name="developCopyPaste.Text" xml:space="preserve"><value>Copy / Paste</value></data>
+  <data name="developCopy.Content" xml:space="preserve"><value>Copy</value></data>
+  <data name="developPaste.Content" xml:space="preserve"><value>Paste</value></data>
+  <data name="developCopyHelp.Value" xml:space="preserve"><value>Copy current frame develop settings.</value></data>
+  <data name="developPasteHelp.Value" xml:space="preserve"><value>Paste copied develop settings.</value></data>
+  <data name="developPasteScope.Text" xml:space="preserve"><value>Paste Scope</value></data>
+  <data name="developPasteScopeHelp.Value" xml:space="preserve"><value>Choose which develop settings to paste.</value></data>
+  <data name="developPasteScopeAll.Text" xml:space="preserve"><value>All Settings</value></data>
+  <data name="developPasteScopeNone.Text" xml:space="preserve"><value>None</value></data>
+  <data name="developScopeBase.Text" xml:space="preserve"><value>Base</value></data>
+  <data name="developScopeTone.Text" xml:space="preserve"><value>Basic Tone</value></data>
+  <data name="developScopeColor.Text" xml:space="preserve"><value>Color</value></data>
+  <data name="developScopeDetail.Text" xml:space="preserve"><value>Detail &amp; Effects</value></data>
+  <data name="developScopeGeometry.Text" xml:space="preserve"><value>Geometry</value></data>
+  <data name="developUserPreset.Text" xml:space="preserve"><value>User Preset</value></data>
+  <data name="developUserPresetEmpty.Text" xml:space="preserve"><value>No user presets</value></data>
+  <data name="developUserPresetSave.Content" xml:space="preserve"><value>Save</value></data>
+  <data name="developUserPresetApply.Content" xml:space="preserve"><value>Apply</value></data>
+  <data name="developUserPresetDelete.Content" xml:space="preserve"><value>Delete</value></data>
+  <data name="developUserPresetSaveHelp.Value" xml:space="preserve"><value>Save the current develop settings as a user preset</value></data>
+  <data name="developUserPresetApplyHelp.Value" xml:space="preserve"><value>Apply the selected user preset</value></data>
+  <data name="developUserPresetDeleteHelp.Value" xml:space="preserve"><value>Delete the selected user preset</value></data>
+  <data name="developUserPresetNameFormat.Value" xml:space="preserve"><value>Preset %d</value></data>
 </root>

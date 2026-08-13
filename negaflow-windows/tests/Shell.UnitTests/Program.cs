@@ -1682,6 +1682,7 @@ internal static class Program
 
             SeedFrames(roots);
             VerifyLibraryDocumentRoundTrip(roots);
+            VerifyDevelopSettingsPastePersists(roots);
             VerifyLibraryDocumentPreservesNonFrameRows(roots);
             VerifyLibraryDocumentDefectProjection(isolatedBase);
         }
@@ -1836,6 +1837,36 @@ internal static class Program
         Check(
             reopened.Issues.Count == 1,
             "library_document_unreadable_record_survives_save");
+    }
+
+    /// <summary>
+    /// 붙여넣기가 catalog 를 지나 디스크까지 살아남는지 봅니다. 레코드 수준 규칙은 catalog
+    /// 테스트가 보고, 여기서는 저장·재시작 경계만 봅니다.
+    /// </summary>
+    private static void VerifyDevelopSettingsPastePersists(StorageRootSet roots)
+    {
+        using (LibraryDocument document = LibraryDocument.Open(roots).Document!)
+        {
+            LibraryFrameSnapshot source = document.Frames[0];
+            LibraryFrameSnapshot destination = document.Frames[1];
+            Check(source.Tone.Exposure != destination.Tone.Exposure,
+                "paste_persist_frames_differ_before");
+            Check(document.EditFrameRecord(
+                    destination.Id,
+                    record => DevelopSettingsTransfer.Paste(
+                        record, source, destination, DevelopSettingsPasteScope.All)) ==
+                LibraryFrameError.None,
+                "paste_persist_edit");
+            Check(document.Frames[1].Tone.Exposure == source.Tone.Exposure,
+                "paste_persist_visible_immediately");
+            Check(document.Frames[1].SourcePath == destination.SourcePath,
+                "paste_persist_keeps_destination_photo");
+            Check(document.Save() == CatalogStoreError.None, "paste_persist_save");
+        }
+
+        using LibraryDocument restarted = LibraryDocument.Open(roots).Document!;
+        Check(restarted.Frames[1].Tone.Exposure == restarted.Frames[0].Tone.Exposure,
+            "paste_persist_survives_restart");
     }
 
     private static void VerifyLibraryDocumentPreservesNonFrameRows(StorageRootSet roots)

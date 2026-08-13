@@ -43,8 +43,13 @@
                     Tag="Versions">
                     <FontIcon x:Name="VersionsRailIcon" FontSize="15" Glyph="&#xE823;" />
                 </Button>
-                <Button x:Name="PresetsRailButton" Style="{StaticResource NegaflowSidebarButtonStyle}">
-                    <FontIcon FontSize="15" Glyph="&#xE9E9;" />
+                <Button
+                    x:Name="PresetsRailButton"
+                    AutomationProperties.AutomationId="negaflow.develop.sources.presets"
+                    Click="OnDevelopSourceRailClicked"
+                    Style="{StaticResource NegaflowSidebarButtonStyle}"
+                    Tag="Presets">
+                    <FontIcon x:Name="PresetsRailIcon" FontSize="15" Glyph="&#xE9E9;" />
                 </Button>
                 <Button
                     x:Name="FilmRailButton"
@@ -226,6 +231,128 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- 프리셋 소스: macOS 의 복사/붙여넣기와 사용자 프리셋입니다. 번들 룩 프로파일은
+                     macOS 에서도 이 탭에 나오지 않습니다 — 가져오기가 neutral 을 걸어 둡니다. -->
+                <ScrollViewer x:Name="PresetsSourcePanel" Grid.Row="2" Visibility="Collapsed">
+                    <StackPanel Padding="12,14" Spacing="16">
+                        <StackPanel Spacing="9">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon FontSize="12" Glyph="&#xE8C8;" VerticalAlignment="Center" />
+                                <TextBlock x:Name="CopyPasteSectionText" FontSize="13" FontWeight="SemiBold" />
+                            </StackPanel>
+                            <Grid ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Button
+                                    x:Name="CopyDevelopSettingsButton"
+                                    HorizontalAlignment="Stretch"
+                                    AutomationProperties.AutomationId="negaflow.develop.presets.copy"
+                                    Click="OnCopyDevelopSettingsClicked" />
+                                <Button
+                                    x:Name="PasteDevelopSettingsButton"
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Stretch"
+                                    AutomationProperties.AutomationId="negaflow.develop.presets.paste"
+                                    Click="OnPasteDevelopSettingsClicked" />
+                            </Grid>
+                            <Grid ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="PasteScopeLabel" VerticalAlignment="Center" FontSize="12" />
+                                <DropDownButton
+                                    x:Name="PasteScopeButton"
+                                    Grid.Column="1"
+                                    Padding="8,2"
+                                    AutomationProperties.AutomationId="negaflow.develop.presets.scope"
+                                    FontSize="11">
+                                    <DropDownButton.Flyout>
+                                        <MenuFlyout Placement="Bottom">
+                                            <MenuFlyoutItem
+                                                x:Name="PasteScopeAllItem"
+                                                AutomationProperties.AutomationId="negaflow.develop.presets.scope.all"
+                                                Click="OnPasteScopeAllClicked" />
+                                            <MenuFlyoutSeparator />
+                                            <ToggleMenuFlyoutItem
+                                                x:Name="PasteScopeBaseItem"
+                                                AutomationProperties.AutomationId="negaflow.develop.presets.scope.base"
+                                                Click="OnPasteScopeToggled"
+                                                Tag="Base" />
+                                            <ToggleMenuFlyoutItem
+                                                x:Name="PasteScopeToneItem"
+                                                AutomationProperties.AutomationId="negaflow.develop.presets.scope.tone"
+                                                Click="OnPasteScopeToggled"
+                                                Tag="Tone" />
+                                            <ToggleMenuFlyoutItem
+                                                x:Name="PasteScopeColorItem"
+                                                AutomationProperties.AutomationId="negaflow.develop.presets.scope.color"
+                                                Click="OnPasteScopeToggled"
+                                                Tag="Color" />
+                                            <ToggleMenuFlyoutItem
+                                                x:Name="PasteScopeDetailItem"
+                                                AutomationProperties.AutomationId="negaflow.develop.presets.scope.detail"
+                                                Click="OnPasteScopeToggled"
+                                                Tag="Detail" />
+                                            <ToggleMenuFlyoutItem
+                                                x:Name="PasteScopeGeometryItem"
+                                                AutomationProperties.AutomationId="negaflow.develop.presets.scope.geometry"
+                                                Click="OnPasteScopeToggled"
+                                                Tag="Geometry" />
+                                        </MenuFlyout>
+                                    </DropDownButton.Flyout>
+                                </DropDownButton>
+                            </Grid>
+                        </StackPanel>
+
+                        <StackPanel Spacing="9">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon FontSize="12" Glyph="&#xE9E9;" VerticalAlignment="Center" />
+                                <TextBlock x:Name="UserPresetSectionText" FontSize="13" FontWeight="SemiBold" />
+                            </StackPanel>
+                            <Grid ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="UserPresetLabel" VerticalAlignment="Center" FontSize="12" />
+                                <ComboBox
+                                    x:Name="UserPresetSelector"
+                                    Grid.Column="1"
+                                    MinWidth="128"
+                                    AutomationProperties.AutomationId="negaflow.develop.presets.user"
+                                    SelectionChanged="OnUserPresetSelectionChanged" />
+                            </Grid>
+                            <Grid ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Button
+                                    x:Name="SaveUserPresetButton"
+                                    HorizontalAlignment="Stretch"
+                                    AutomationProperties.AutomationId="negaflow.develop.presets.save"
+                                    Click="OnSaveUserPresetClicked" />
+                                <Button
+                                    x:Name="ApplyUserPresetButton"
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Stretch"
+                                    AutomationProperties.AutomationId="negaflow.develop.presets.apply"
+                                    Click="OnApplyUserPresetClicked" />
+                                <Button
+                                    x:Name="DeleteUserPresetButton"
+                                    Grid.Column="2"
+                                    HorizontalAlignment="Stretch"
+                                    AutomationProperties.AutomationId="negaflow.develop.presets.delete"
+                                    Click="OnDeleteUserPresetClicked" />
+                            </Grid>
+                        </StackPanel>
                     </StackPanel>
                 </ScrollViewer>
 

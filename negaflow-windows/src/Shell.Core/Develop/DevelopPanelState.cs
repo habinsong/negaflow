@@ -640,7 +640,7 @@ public sealed class DevelopPanelState
     /// 담는 것이 되돌리는 것을 뜻하지는 않습니다.
     /// </summary>
     public LibraryFrameError CaptureVersion(string name) =>
-        EditVersions(record => LibraryVersions.Capture(
+        EditFrameRecord(record => LibraryVersions.Capture(
             record,
             Guid.NewGuid().ToString("D"),
             name,
@@ -648,24 +648,135 @@ public sealed class DevelopPanelState
 
     /// <summary>담아 둔 버전의 recipe 로 되돌립니다. 버전 목록은 남습니다.</summary>
     public LibraryFrameError RestoreVersion(string versionId) =>
-        EditVersions(record => LibraryVersions.Restore(record, versionId));
+        EditFrameRecord(record => LibraryVersions.Restore(record, versionId));
 
     public LibraryFrameError DeleteVersion(string versionId) =>
-        EditVersions(record => LibraryVersions.Delete(record, versionId));
+        EditFrameRecord(record => LibraryVersions.Delete(record, versionId));
 
-    private LibraryFrameError EditVersions(
+    private LibraryFrameError EditFrameRecord(
         Func<System.Text.Json.Nodes.JsonObject, LibraryFrameWriteResult> edit)
     {
         if (SelectedFrame is not { } frame)
         {
             return LibraryFrameError.MissingId;
         }
-        LibraryFrameError error = host.EditVersions(frame.Id, edit);
+        LibraryFrameError error = host.EditFrameRecord(frame.Id, edit);
         if (error == LibraryFrameError.None)
         {
             Select(frame.Id);
         }
         return error;
+    }
+
+    /// <summary>
+    /// 복사해 둔 현상 설정입니다. macOS 처럼 앱이 사는 동안만 남고 저장되지 않습니다 — 클립보드에
+    /// 가까운 물건이지 카탈로그의 일부가 아닙니다.
+    /// </summary>
+    public LibraryFrameSnapshot? CopiedSettings { get; private set; }
+
+    public string? CopiedSettingsSourceName { get; private set; }
+
+    /// <summary>
+    /// macOS 의 붙여넣기 범위입니다. 한 번 정하면 다음 붙여넣기에도 그대로 쓰입니다.
+    /// </summary>
+    public DevelopSettingsPasteScope PasteScope { get; set; } = DevelopSettingsPasteScope.All;
+
+    public IReadOnlyList<DevelopUserPreset> UserPresets { get; private set; } = [];
+
+    /// <summary>지금 프레임의 현상 설정을 복사해 둡니다.</summary>
+    public bool CopyDevelopSettings()
+    {
+        if (SelectedFrame is not { } frame)
+        {
+            return false;
+        }
+        CopiedSettings = frame;
+        CopiedSettingsSourceName = frame.DisplayName ?? Path.GetFileName(frame.SourcePath);
+        return true;
+    }
+
+    /// <summary>
+    /// 복사해 둔 설정을 지금 프레임에 <see cref="PasteScope"/> 만큼 붙입니다. 복사한 것이 없거나
+    /// 범위가 비어 있으면 아무것도 하지 않습니다.
+    /// </summary>
+    public LibraryFrameError PasteDevelopSettings()
+    {
+        if (CopiedSettings is not { } source)
+        {
+            return LibraryFrameError.MissingId;
+        }
+        if (PasteScope.IsEmpty)
+        {
+            return LibraryFrameError.None;
+        }
+        if (SelectedFrame is not { } destination)
+        {
+            return LibraryFrameError.MissingId;
+        }
+        return EditFrameRecord(record =>
+            DevelopSettingsTransfer.Paste(record, source, destination, PasteScope));
+    }
+
+    /// <summary>
+    /// 사용자 프리셋 목록을 이 파일에서 읽고, 이후 저장·삭제도 여기에 씁니다. 경로를 주지 않으면
+    /// 목록 기능이 그냥 비어 있습니다 — 셸이 저장소를 열지 못한 경우입니다.
+    /// </summary>
+    public void OpenUserPresets(string? path)
+    {
+        userPresetPath = path;
+        UserPresets = string.IsNullOrWhiteSpace(path)
+            ? []
+            : DevelopUserPresetStore.Load(path);
+    }
+
+    /// <summary>지금 프레임의 현상 설정을 이름 붙여 프리셋으로 저장합니다.</summary>
+    public DevelopUserPreset? SaveUserPreset(string name)
+    {
+        if (SelectedFrame is not { } frame ||
+            string.IsNullOrWhiteSpace(name) ||
+            DevelopUserPresetStore.Capture(frame, name.Trim()) is not { } preset)
+        {
+            return null;
+        }
+        UserPresets = [.. UserPresets, preset];
+        PersistUserPresets();
+        return preset;
+    }
+
+    public LibraryFrameError ApplyUserPreset(Guid id)
+    {
+        if (UserPresets.FirstOrDefault(preset => preset.Id == id) is not { } chosen)
+        {
+            return LibraryFrameError.MissingId;
+        }
+        if (SelectedFrame is not { } destination)
+        {
+            return LibraryFrameError.MissingId;
+        }
+        return EditFrameRecord(record =>
+            DevelopUserPresetStore.Apply(record, chosen, destination));
+    }
+
+    public bool DeleteUserPreset(Guid id)
+    {
+        int before = UserPresets.Count;
+        UserPresets = [.. UserPresets.Where(preset => preset.Id != id)];
+        if (UserPresets.Count == before)
+        {
+            return false;
+        }
+        PersistUserPresets();
+        return true;
+    }
+
+    private string? userPresetPath;
+
+    private void PersistUserPresets()
+    {
+        if (userPresetPath is { Length: > 0 } path)
+        {
+            _ = DevelopUserPresetStore.Save(path, UserPresets);
+        }
     }
 
     public FilmEmulation FilmEmulation => SelectedFrame?.Route.FilmEmulation ?? FilmEmulation.None;

@@ -736,4 +736,28 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="developVersionDelete.Content" xml:space="preserve"><value>Supprimer</value></data>
   <data name="developVersionNamePlaceholder.Text" xml:space="preserve"><value>Nom de version</value></data>
   <data name="developVersionsEmpty.Text" xml:space="preserve"><value>Aucune version enregistrée.</value></data>
+  <data name="developSectionPresets.Text" xml:space="preserve"><value>Paramètres prédéfinis</value></data>
+  <data name="developCopyPaste.Text" xml:space="preserve"><value>Copier / Coller</value></data>
+  <data name="developCopy.Content" xml:space="preserve"><value>Copier</value></data>
+  <data name="developPaste.Content" xml:space="preserve"><value>Coller</value></data>
+  <data name="developCopyHelp.Value" xml:space="preserve"><value>Copie les paramètres de développement de l'image actuelle.</value></data>
+  <data name="developPasteHelp.Value" xml:space="preserve"><value>Colle les paramètres de développement copiés.</value></data>
+  <data name="developPasteScope.Text" xml:space="preserve"><value>Portée du collage</value></data>
+  <data name="developPasteScopeHelp.Value" xml:space="preserve"><value>Choisissez les paramètres de développement à coller.</value></data>
+  <data name="developPasteScopeAll.Text" xml:space="preserve"><value>Tous les paramètres</value></data>
+  <data name="developPasteScopeNone.Text" xml:space="preserve"><value>Aucun</value></data>
+  <data name="developScopeBase.Text" xml:space="preserve"><value>Base</value></data>
+  <data name="developScopeTone.Text" xml:space="preserve"><value>Réglages de base</value></data>
+  <data name="developScopeColor.Text" xml:space="preserve"><value>Couleur</value></data>
+  <data name="developScopeDetail.Text" xml:space="preserve"><value>Détails et effets</value></data>
+  <data name="developScopeGeometry.Text" xml:space="preserve"><value>Géométrie</value></data>
+  <data name="developUserPreset.Text" xml:space="preserve"><value>Paramètre prédéfini utilisateur</value></data>
+  <data name="developUserPresetEmpty.Text" xml:space="preserve"><value>Aucun paramètre prédéfini utilisateur</value></data>
+  <data name="developUserPresetSave.Content" xml:space="preserve"><value>Enregistrer</value></data>
+  <data name="developUserPresetApply.Content" xml:space="preserve"><value>Appliquer</value></data>
+  <data name="developUserPresetDelete.Content" xml:space="preserve"><value>Supprimer</value></data>
+  <data name="developUserPresetSaveHelp.Value" xml:space="preserve"><value>Enregistre les paramètres de développement actuels comme paramètre prédéfini utilisateur</value></data>
+  <data name="developUserPresetApplyHelp.Value" xml:space="preserve"><value>Applique le paramètre prédéfini utilisateur sélectionné</value></data>
+  <data name="developUserPresetDeleteHelp.Value" xml:space="preserve"><value>Supprime le paramètre prédéfini utilisateur sélectionné</value></data>
+  <data name="developUserPresetNameFormat.Value" xml:space="preserve"><value>Paramètre prédéfini %d</value></data>
 </root>

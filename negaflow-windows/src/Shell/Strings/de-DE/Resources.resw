@@ -736,4 +736,28 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developVersionDelete.Content" xml:space="preserve"><value>Löschen</value></data>
   <data name="developVersionNamePlaceholder.Text" xml:space="preserve"><value>Versionsname</value></data>
   <data name="developVersionsEmpty.Text" xml:space="preserve"><value>Noch keine gesicherten Versionen.</value></data>
+  <data name="developSectionPresets.Text" xml:space="preserve"><value>Vorgaben</value></data>
+  <data name="developCopyPaste.Text" xml:space="preserve"><value>Kopieren / Einsetzen</value></data>
+  <data name="developCopy.Content" xml:space="preserve"><value>Kopieren</value></data>
+  <data name="developPaste.Content" xml:space="preserve"><value>Einsetzen</value></data>
+  <data name="developCopyHelp.Value" xml:space="preserve"><value>Kopiert die Entwicklungseinstellungen des aktuellen Bilds.</value></data>
+  <data name="developPasteHelp.Value" xml:space="preserve"><value>Setzt die kopierten Entwicklungseinstellungen ein.</value></data>
+  <data name="developPasteScope.Text" xml:space="preserve"><value>Einfügebereich</value></data>
+  <data name="developPasteScopeHelp.Value" xml:space="preserve"><value>Wählen Sie, welche Entwicklungseinstellungen eingesetzt werden.</value></data>
+  <data name="developPasteScopeAll.Text" xml:space="preserve"><value>Alle Einstellungen</value></data>
+  <data name="developPasteScopeNone.Text" xml:space="preserve"><value>Keine</value></data>
+  <data name="developScopeBase.Text" xml:space="preserve"><value>Filmbasis</value></data>
+  <data name="developScopeTone.Text" xml:space="preserve"><value>Grundeinstellungen</value></data>
+  <data name="developScopeColor.Text" xml:space="preserve"><value>Farbe</value></data>
+  <data name="developScopeDetail.Text" xml:space="preserve"><value>Details &amp; Effekte</value></data>
+  <data name="developScopeGeometry.Text" xml:space="preserve"><value>Geometrie</value></data>
+  <data name="developUserPreset.Text" xml:space="preserve"><value>Benutzervorgabe</value></data>
+  <data name="developUserPresetEmpty.Text" xml:space="preserve"><value>Keine Benutzervorgaben</value></data>
+  <data name="developUserPresetSave.Content" xml:space="preserve"><value>Sichern</value></data>
+  <data name="developUserPresetApply.Content" xml:space="preserve"><value>Anwenden</value></data>
+  <data name="developUserPresetDelete.Content" xml:space="preserve"><value>Löschen</value></data>
+  <data name="developUserPresetSaveHelp.Value" xml:space="preserve"><value>Sichert die aktuellen Entwicklungseinstellungen als Benutzervorgabe</value></data>
+  <data name="developUserPresetApplyHelp.Value" xml:space="preserve"><value>Wendet die ausgewählte Benutzervorgabe an</value></data>
+  <data name="developUserPresetDeleteHelp.Value" xml:space="preserve"><value>Löscht die ausgewählte Benutzervorgabe</value></data>
+  <data name="developUserPresetNameFormat.Value" xml:space="preserve"><value>Vorgabe %d</value></data>
 </root>

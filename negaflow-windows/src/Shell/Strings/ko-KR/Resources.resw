@@ -736,4 +736,28 @@
   <data name="developVersionDelete.Content" xml:space="preserve"><value>삭제</value></data>
   <data name="developVersionNamePlaceholder.Text" xml:space="preserve"><value>버전 이름</value></data>
   <data name="developVersionsEmpty.Text" xml:space="preserve"><value>저장된 버전이 없습니다.</value></data>
+  <data name="developSectionPresets.Text" xml:space="preserve"><value>프리셋</value></data>
+  <data name="developCopyPaste.Text" xml:space="preserve"><value>복사 / 붙여넣기</value></data>
+  <data name="developCopy.Content" xml:space="preserve"><value>복사</value></data>
+  <data name="developPaste.Content" xml:space="preserve"><value>붙여넣기</value></data>
+  <data name="developCopyHelp.Value" xml:space="preserve"><value>현재 사진 현상 설정 복사</value></data>
+  <data name="developPasteHelp.Value" xml:space="preserve"><value>복사한 현상 설정 붙여넣기</value></data>
+  <data name="developPasteScope.Text" xml:space="preserve"><value>붙여넣기 범위</value></data>
+  <data name="developPasteScopeHelp.Value" xml:space="preserve"><value>붙여넣을 현상 설정 범위 선택</value></data>
+  <data name="developPasteScopeAll.Text" xml:space="preserve"><value>모든 설정</value></data>
+  <data name="developPasteScopeNone.Text" xml:space="preserve"><value>없음</value></data>
+  <data name="developScopeBase.Text" xml:space="preserve"><value>베이스</value></data>
+  <data name="developScopeTone.Text" xml:space="preserve"><value>기본 톤</value></data>
+  <data name="developScopeColor.Text" xml:space="preserve"><value>색상</value></data>
+  <data name="developScopeDetail.Text" xml:space="preserve"><value>디테일 및 효과</value></data>
+  <data name="developScopeGeometry.Text" xml:space="preserve"><value>편집</value></data>
+  <data name="developUserPreset.Text" xml:space="preserve"><value>사용자 프리셋</value></data>
+  <data name="developUserPresetEmpty.Text" xml:space="preserve"><value>사용자 프리셋 없음</value></data>
+  <data name="developUserPresetSave.Content" xml:space="preserve"><value>저장</value></data>
+  <data name="developUserPresetApply.Content" xml:space="preserve"><value>적용</value></data>
+  <data name="developUserPresetDelete.Content" xml:space="preserve"><value>삭제</value></data>
+  <data name="developUserPresetSaveHelp.Value" xml:space="preserve"><value>현재 현상 설정을 사용자 프리셋으로 저장</value></data>
+  <data name="developUserPresetApplyHelp.Value" xml:space="preserve"><value>선택한 사용자 프리셋 적용</value></data>
+  <data name="developUserPresetDeleteHelp.Value" xml:space="preserve"><value>선택한 사용자 프리셋 삭제</value></data>
+  <data name="developUserPresetNameFormat.Value" xml:space="preserve"><value>프리셋 %d</value></data>
 </root>
