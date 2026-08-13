@@ -35,8 +35,13 @@
                 <Button x:Name="FilesRailButton" Style="{StaticResource NegaflowSidebarButtonStyle}">
                     <FontIcon FontSize="15" Glyph="&#xE8B7;" />
                 </Button>
-                <Button x:Name="VersionsRailButton" Style="{StaticResource NegaflowSidebarButtonStyle}">
-                    <FontIcon FontSize="15" Glyph="&#xE823;" />
+                <Button
+                    x:Name="VersionsRailButton"
+                    AutomationProperties.AutomationId="negaflow.develop.sources.versions"
+                    Click="OnDevelopSourceRailClicked"
+                    Style="{StaticResource NegaflowSidebarButtonStyle}"
+                    Tag="Versions">
+                    <FontIcon x:Name="VersionsRailIcon" FontSize="15" Glyph="&#xE823;" />
                 </Button>
                 <Button x:Name="PresetsRailButton" Style="{StaticResource NegaflowSidebarButtonStyle}">
                     <FontIcon FontSize="15" Glyph="&#xE9E9;" />
@@ -144,6 +149,83 @@
                                     TextWrapping="Wrap" />
                             </StackPanel>
                         </Border>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- 버전 소스: 지금 recipe 를 이름 붙여 담아 두고 되돌립니다. -->
+                <ScrollViewer x:Name="VersionsSourcePanel" Grid.Row="2" Visibility="Collapsed">
+                    <StackPanel Padding="12,14" Spacing="10">
+                        <Grid ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox
+                                x:Name="VersionNameBox"
+                                AutomationProperties.AutomationId="negaflow.develop.versions.name"
+                                TextChanged="OnVersionNameChanged" />
+                            <Button
+                                x:Name="CaptureVersionButton"
+                                Grid.Column="1"
+                                AutomationProperties.AutomationId="negaflow.develop.versions.capture"
+                                Click="OnCaptureVersionClicked"
+                                Style="{StaticResource AccentButtonStyle}" />
+                        </Grid>
+                        <TextBlock
+                            x:Name="VersionsEmptyText"
+                            FontSize="12"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            TextWrapping="Wrap" />
+                        <ItemsControl x:Name="VersionsList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border
+                                        Margin="0,0,0,6"
+                                        Padding="10,8"
+                                        Background="{ThemeResource NegaflowCardBrush}"
+                                        CornerRadius="8">
+                                        <Grid ColumnSpacing="6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" Spacing="1">
+                                                <TextBlock
+                                                    FontSize="12"
+                                                    FontWeight="SemiBold"
+                                                    Text="{Binding Name}"
+                                                    TextTrimming="CharacterEllipsis" />
+                                                <TextBlock
+                                                    FontSize="10"
+                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                    Text="{Binding CreatedText}" />
+                                            </StackPanel>
+                                            <Button
+                                                x:Name="RestoreVersionButton"
+                                                Grid.Column="1"
+                                                Padding="8,2"
+                                                AutomationProperties.AutomationId="negaflow.develop.versions.restore"
+                                                Click="OnRestoreVersionClicked"
+                                                Content="{Binding RestoreText}"
+                                                FontSize="11"
+                                                Tag="{Binding Id}" />
+                                            <Button
+                                                x:Name="DeleteVersionButton"
+                                                Grid.Column="2"
+                                                Padding="8,2"
+                                                AutomationProperties.AutomationId="negaflow.develop.versions.delete"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                Click="OnDeleteVersionClicked"
+                                                Content="{Binding DeleteText}"
+                                                FontSize="11"
+                                                Tag="{Binding Id}" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </StackPanel>
                 </ScrollViewer>
 

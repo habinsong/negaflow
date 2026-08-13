@@ -538,6 +538,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         AutoLevelsToggle.IsChecked = panel.AutoLevels;
         UpdateCropAspectControls();
         UpdateFilmLookControls();
+        UpdateVersionControls();
         HistogramView.SynchronizeValues(
             panel.Shadows,
             panel.Density,
@@ -1544,6 +1545,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private enum DevelopSourceKind
     {
         Library,
+        Versions,
         Film,
         Output,
     }
@@ -1551,11 +1553,13 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private void UpdateDevelopSourcePanel()
     {
         LibrarySourcePanel.Visibility = Show(DevelopSourceKind.Library);
+        VersionsSourcePanel.Visibility = Show(DevelopSourceKind.Versions);
         FilmSourcePanel.Visibility = Show(DevelopSourceKind.Film);
         OutputSourcePanel.Visibility = Show(DevelopSourceKind.Output);
 
         (string headerKey, string glyph) = developSource switch
         {
+            DevelopSourceKind.Versions => ("developSectionVersions", ""),
             DevelopSourceKind.Film => ("developSectionFilm", ""),
             DevelopSourceKind.Output => ("developSectionOutput", ""),
             _ => ("developLibrary", ""),
@@ -1587,8 +1591,100 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private IEnumerable<(Button Button, FontIcon Icon, DevelopSourceKind Kind)> DevelopSourceRailButtons()
     {
         yield return (LibraryRailButton, LibraryRailIcon, DevelopSourceKind.Library);
+        yield return (VersionsRailButton, VersionsRailIcon, DevelopSourceKind.Versions);
         yield return (FilmRailButton, FilmRailIcon, DevelopSourceKind.Film);
         yield return (OutputRailButton, OutputRailIcon, DevelopSourceKind.Output);
+    }
+
+    /// <summary>버전 목록 한 줄입니다. 표시 문구를 XAML 이 짓지 않도록 여기서 만듭니다.</summary>
+    private sealed record VersionRow(
+        string Id,
+        string Name,
+        string CreatedText,
+        string RestoreText,
+        string DeleteText);
+
+    private void UpdateVersionControls()
+    {
+        if (VersionsList is null)
+        {
+            return;
+        }
+        IReadOnlyList<LibraryVersionSnapshot> versions = panel?.Versions ?? [];
+        string restore = AppResources.Get("developVersionRestore", "Content");
+        string delete = AppResources.Get("developVersionDelete", "Content");
+        List<VersionRow> rows = [];
+        foreach (LibraryVersionSnapshot version in versions)
+        {
+            rows.Add(new VersionRow(
+                version.Id,
+                version.Name,
+                version.CreatedAt is { } created
+                    ? created.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)
+                    : string.Empty,
+                restore,
+                delete));
+        }
+        VersionsList.ItemsSource = rows;
+        VersionsEmptyText.Visibility = rows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        CaptureVersionButton.IsEnabled =
+            panel?.SelectedFrame is not null && !string.IsNullOrWhiteSpace(VersionNameBox.Text);
+    }
+
+    private void OnVersionNameChanged(object sender, TextChangedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        CaptureVersionButton.IsEnabled =
+            panel?.SelectedFrame is not null && !string.IsNullOrWhiteSpace(VersionNameBox.Text);
+    }
+
+    private void OnCaptureVersionClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (panel is null || panel.CaptureVersion(VersionNameBox.Text) != LibraryFrameError.None)
+        {
+            return;
+        }
+        // 담고 나면 이름 칸을 비웁니다 — 같은 이름으로 두 번 담는 실수를 줄입니다.
+        VersionNameBox.Text = string.Empty;
+        _ = panel.Save();
+        UpdateVersionControls();
+    }
+
+    private void OnRestoreVersionClicked(object sender, RoutedEventArgs args)
+    {
+        _ = args;
+        if (panel is null || sender is not Button { Tag: string versionId })
+        {
+            return;
+        }
+        if (panel.RestoreVersion(versionId) != LibraryFrameError.None)
+        {
+            return;
+        }
+        _ = panel.Save();
+        // 되돌린 recipe 가 인스펙터와 캔버스에 함께 반영돼야 합니다.
+        SynchronizeInspectorValues();
+        SyncBaseControls();
+        SyncToneControls();
+        RequestPreview();
+    }
+
+    private void OnDeleteVersionClicked(object sender, RoutedEventArgs args)
+    {
+        _ = args;
+        if (panel is null || sender is not Button { Tag: string versionId })
+        {
+            return;
+        }
+        if (panel.DeleteVersion(versionId) != LibraryFrameError.None)
+        {
+            return;
+        }
+        _ = panel.Save();
+        UpdateVersionControls();
     }
 
     /// <summary>필름 목록 한 줄과 한 묶음입니다. 화면에 나가는 것만 담습니다.</summary>
@@ -2080,6 +2176,12 @@ public sealed partial class DevelopWorkspaceView : UserControl
         SetButtonText(ExportButton, AppResources.Get("exportSection", "Text"));
         ExportFormatSelector.SelectedIndex = 0;
         SetLocalizedNameAndTooltip(LibraryRailButton, AppResources.Get("developLibrary", "Text"));
+        SetLocalizedNameAndTooltip(VersionsRailButton, AppResources.Get("developSectionVersions", "Text"));
+        SetButtonText(CaptureVersionButton, AppResources.Get("developVersionCapture", "Content"));
+        VersionsEmptyText.Text = AppResources.Get("developVersionsEmpty", "Text");
+        string versionName = AppResources.Get("developVersionNamePlaceholder", "Text");
+        VersionNameBox.PlaceholderText = versionName;
+        AutomationProperties.SetName(VersionNameBox, versionName);
         SetLocalizedNameAndTooltip(FilmRailButton, AppResources.Get("developSectionFilm", "Text"));
         SetLocalizedNameAndTooltip(OutputRailButton, AppResources.Get("developSectionOutput", "Text"));
         FilmLookUnavailableText.Text = AppResources.Get("developFilmLookDigitalOnly", "Text");

@@ -730,4 +730,10 @@ Load a scanner from Library to scan film.</value>
   <data name="developFilmLookIntensity.Text" xml:space="preserve"><value>Intensity</value></data>
   <data name="developFilmLookDigitalOnly.Text" xml:space="preserve"><value>Film looks apply only to Digital Color and Digital B&amp;W</value><comment>AppLocalizedPhrase.filmLookDigitalOnly</comment></data>
   <data name="libraryProcessApplyFailed.Text" xml:space="preserve"><value>Could not save the develop process.</value></data>
+  <data name="developSectionVersions.Text" xml:space="preserve"><value>Versions</value></data>
+  <data name="developVersionCapture.Content" xml:space="preserve"><value>Save</value></data>
+  <data name="developVersionRestore.Content" xml:space="preserve"><value>Restore</value></data>
+  <data name="developVersionDelete.Content" xml:space="preserve"><value>Delete</value></data>
+  <data name="developVersionNamePlaceholder.Text" xml:space="preserve"><value>Version name</value></data>
+  <data name="developVersionsEmpty.Text" xml:space="preserve"><value>No saved versions yet.</value></data>
 </root>

@@ -730,4 +730,10 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developFilmLookIntensity.Text" xml:space="preserve"><value>Intensität</value></data>
   <data name="developFilmLookDigitalOnly.Text" xml:space="preserve"><value>Film-Looks gelten nur für Digital Color und Digital B&amp;W</value><comment>AppLocalizedPhrase.filmLookDigitalOnly</comment></data>
   <data name="libraryProcessApplyFailed.Text" xml:space="preserve"><value>Der Entwicklungsprozess konnte nicht gespeichert werden.</value></data>
+  <data name="developSectionVersions.Text" xml:space="preserve"><value>Versionen</value></data>
+  <data name="developVersionCapture.Content" xml:space="preserve"><value>Sichern</value></data>
+  <data name="developVersionRestore.Content" xml:space="preserve"><value>Wiederherstellen</value></data>
+  <data name="developVersionDelete.Content" xml:space="preserve"><value>Löschen</value></data>
+  <data name="developVersionNamePlaceholder.Text" xml:space="preserve"><value>Versionsname</value></data>
+  <data name="developVersionsEmpty.Text" xml:space="preserve"><value>Noch keine gesicherten Versionen.</value></data>
 </root>
