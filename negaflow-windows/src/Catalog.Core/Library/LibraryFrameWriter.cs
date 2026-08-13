@@ -2,6 +2,16 @@ using System.Text.Json.Nodes;
 
 namespace Negaflow.Catalog;
 
+/// <summary>
+/// 프리셋 변경 의사입니다. edit 에서 이 값이 null 이면 손대지 않고, 값이 있으면서
+/// <see cref="Id"/> 가 null 이면 프리셋을 뗍니다 — "안 건드림"과 "떼기"는 다른 뜻이라
+/// <c>string?</c> 하나로는 표현할 수 없습니다.
+/// </summary>
+public readonly record struct LookPresetSelection(string? Id)
+{
+    public static LookPresetSelection None => new((string?)null);
+}
+
 /// <summary>셸이 한 번에 바꾸는 값들입니다. 지정하지 않은 것은 그대로 둡니다.</summary>
 public sealed record LibraryFrameEdit(
     ToneAdjustment Tone,
@@ -19,7 +29,8 @@ public sealed record LibraryFrameEdit(
     ImageTransformRecipe? ImageTransform = null,
     TextureRecipe? Texture = null,
     NoiseReductionRecipe? NoiseReduction = null,
-    int? Rating = null);
+    int? Rating = null,
+    LookPresetSelection? LookPreset = null);
 
 /// <summary>
 /// 톤, 수동 base, 그리고 지정된 경우 base recipe를 갱신합니다. 입력 record 는 바꾸지 않고 깊은 복사본을 돌려주며, 이 writer 가
@@ -88,12 +99,29 @@ public static class LibraryFrameWriter
         {
             return LibraryFrameWriteResult.Failure(LibraryFrameError.InvalidRating);
         }
+        if (edit.LookPreset is { Id: { } presetId } && string.IsNullOrWhiteSpace(presetId))
+        {
+            return LibraryFrameWriteResult.Failure(LibraryFrameError.InvalidLookPresetId);
+        }
 
         JsonObject updated = frameRecord.DeepClone().AsObject();
         if (edit.Rating is { } writtenRating)
         {
             // 별점은 recipe 가 아니라 frame 자체의 성질이므로 macOS 와 같이 최상위에 둡니다.
             updated[LibraryFrameReader.RatingName] = writtenRating;
+        }
+        if (edit.LookPreset is { } presetSelection)
+        {
+            // 프리셋은 params 의 델타가 아니라 그 델타가 얹히는 바탕이므로 macOS 와 같이
+            // params 바깥에 둡니다. 뗄 때는 키를 지웁니다 — Swift 도 nil 은 쓰지 않습니다.
+            if (presetSelection.Id is { } writtenPresetId)
+            {
+                updated[LibraryFrameReader.LookPresetIdName] = writtenPresetId;
+            }
+            else
+            {
+                updated.Remove(LibraryFrameReader.LookPresetIdName);
+            }
         }
         JsonObject parameters;
         if (!updated.TryGetPropertyValue(

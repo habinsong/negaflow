@@ -1,0 +1,24 @@
+{
+  "name": "Deep Slide",
+  "version": 2,
+  "filmTypes": ["colorPositive", "colorNegative"],
+  "tone": {
+    "exposure": 0.0,
+    "density": 0.14,
+    "contrast": 0.24,
+    "highlightRollOff": 0.30,
+    "blackSoftness": -0.10,
+    "midtoneLift": 0.0
+  },
+  "color": {
+    "warmth": 0.02,
+    "tint": 0.0,
+    "colorDepth": 0.22,
+    "saturation": 0.10
+  },
+  "texture": {
+    "grain": 0.02,
+    "sharpness": 0.22,
+    "halation": 0.02
+  }
+}

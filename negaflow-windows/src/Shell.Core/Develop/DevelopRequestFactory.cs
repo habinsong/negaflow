@@ -123,6 +123,19 @@ public static class DevelopRequestFactory
         {
             return DevelopRequestResult.Failure(defectRefusal);
         }
+        // 프리셋 합성은 여기 한 곳에서만 합니다. preview, thumbnail, export 가 모두 이 함수를
+        // 지나므로 세 경로가 같은 레시피를 쓰는 것이 구조로 보장됩니다.
+        LookPreset? preset = LookPresetLibrary.Resolve(frame.LookPresetId);
+        ToneAdjustment tone = preset is null
+            ? frame.Tone
+            : LookPresetComposition.Compose(preset, frame.Tone);
+        TextureRecipe texture = preset is null
+            ? frame.Texture
+            : LookPresetComposition.Compose(preset, frame.Texture);
+        ColorModelRecipe colorModel = preset is null
+            ? frame.ColorModel
+            : LookPresetComposition.Compose(preset, frame.ColorModel);
+
         DevelopDefectSourceIdentity? defectSourceIdentity = null;
         if (defectEditOrder.Count != 0)
         {
@@ -150,25 +163,25 @@ public static class DevelopRequestFactory
             FilmStockDminId = filmStockDminId,
             LightSourceProfileId = lightSourceProfileId,
             ScannerProfileId = frame.Base.ScannerProfileId,
-            ExposureStops = (float)frame.Tone.Exposure,
-            Contrast = (float)frame.Tone.Contrast,
-            Density = (float)frame.Tone.Density,
-            Highlight = (float)frame.Tone.Highlight,
-            Shadow = (float)frame.Tone.Shadow,
-            Whites = (float)frame.Tone.Whites,
-            Blacks = (float)frame.Tone.Blacks,
-            Highlights = (float)frame.Tone.CurveHighlights,
-            Lights = (float)frame.Tone.CurveLights,
-            Darks = (float)frame.Tone.CurveDarks,
-            Shadows = (float)frame.Tone.CurveShadows,
-            Warmth = (float)frame.ColorModel.Warmth,
-            Tint = (float)frame.ColorModel.Tint,
-            ColorDepth = (float)frame.ColorModel.ColorDepth,
-            Vibrance = (float)frame.ColorModel.Vibrance,
-            Saturation = (float)frame.ColorModel.Saturation,
-            RedPrimary = (float)frame.ColorModel.RedPrimary,
-            GreenPrimary = (float)frame.ColorModel.GreenPrimary,
-            BluePrimary = (float)frame.ColorModel.BluePrimary,
+            ExposureStops = (float)tone.Exposure,
+            Contrast = (float)tone.Contrast,
+            Density = (float)tone.Density,
+            Highlight = (float)tone.Highlight,
+            Shadow = (float)tone.Shadow,
+            Whites = (float)tone.Whites,
+            Blacks = (float)tone.Blacks,
+            Highlights = (float)tone.CurveHighlights,
+            Lights = (float)tone.CurveLights,
+            Darks = (float)tone.CurveDarks,
+            Shadows = (float)tone.CurveShadows,
+            Warmth = (float)colorModel.Warmth,
+            Tint = (float)colorModel.Tint,
+            ColorDepth = (float)colorModel.ColorDepth,
+            Vibrance = (float)colorModel.Vibrance,
+            Saturation = (float)colorModel.Saturation,
+            RedPrimary = (float)colorModel.RedPrimary,
+            GreenPrimary = (float)colorModel.GreenPrimary,
+            BluePrimary = (float)colorModel.BluePrimary,
             AutoLevels = frame.AutoLevels,
             AutoNeutralBalance = frame.AutoNeutralBalance,
             DevelopTarget = frame.DevelopTarget switch
@@ -222,11 +235,11 @@ public static class DevelopRequestFactory
             FilmEmulation = MapFilmEmulation(frame.Route.FilmEmulation),
             FilmEmulationIntensity = frame.Route.FilmEmulationIntensity,
             ImageTransform = MapImageTransform(frame.ImageTransform),
-            Grain = (float)frame.Texture.Grain,
-            Sharpness = (float)frame.Texture.Sharpness,
-            Halation = (float)frame.Texture.Halation,
-            Clarity = (float)frame.Texture.Clarity,
-            Vignette = (float)frame.Texture.Vignette,
+            Grain = (float)texture.Grain,
+            Sharpness = (float)texture.Sharpness,
+            Halation = (float)texture.Halation,
+            Clarity = (float)texture.Clarity,
+            Vignette = (float)texture.Vignette,
             NoiseReductionStrength = (float)frame.NoiseReduction.Strength,
             NoiseReductionLuma = (float)frame.NoiseReduction.Luma,
             NoiseReductionChroma = (float)frame.NoiseReduction.Chroma,

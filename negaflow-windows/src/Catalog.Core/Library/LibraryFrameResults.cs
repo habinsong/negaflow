@@ -21,6 +21,9 @@ public enum LibraryFrameError
 
     InvalidBaseRecipe,
 
+    /// <summary><c>presetID</c> 가 문자열이 아니거나 비어 있습니다.</summary>
+    InvalidLookPresetId,
+
     /// <summary><c>pointCurves</c>가 유효한 0...1 점 배열이 아닙니다.</summary>
     InvalidPointCurves,
     /// <summary><c>colorMixer</c>가 유효한 HSL 8밴드 배열이 아닙니다.</summary>

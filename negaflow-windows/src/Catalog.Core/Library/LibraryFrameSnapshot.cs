@@ -220,6 +220,13 @@ public sealed record LibraryFrameSnapshot(
     public BaseRecipe Base { get; init; } = BaseRecipe.Auto;
 
     /// <summary>
+    /// 이 frame 에 걸린 룩 프로파일의 id 입니다. macOS catalog 의 <c>presetID</c> 와 같은 자리이며
+    /// <c>params</c> 바깥에 있습니다 — <c>params</c> 는 프리셋 위에 얹는 델타이지 최종값이 아닙니다.
+    /// null 이면 프리셋 없이 <c>params</c> 가 곧 최종값입니다.
+    /// </summary>
+    public string? LookPresetId { get; init; }
+
+    /// <summary>
     /// Point Curve는 Basic/Parametric Tone 값과 분리된 macOS recipe입니다. 빈 채널은 identity입니다.
     /// </summary>
     public PointCurveRecipe PointCurves { get; init; } = PointCurveRecipe.Identity;

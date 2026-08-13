@@ -36,6 +36,7 @@ internal static class Program
         VerifyAllFilmEmulationNames(fixture.RootElement);
         VerifyInvalidSelections(fixture.RootElement);
         VerifyCanonicalJson();
+        VerifyLookPresets();
         VerifyStorageRootResolution();
         VerifyCatalogProcessLock();
         VerifySqliteCatalogStore();
@@ -253,6 +254,179 @@ internal static class Program
 
         Check(firstBytes.SequenceEqual(secondBytes), "canonical_order_independent");
         Check(Encoding.UTF8.GetString(firstBytes) == expected, "canonical_expected_bytes");
+    }
+
+    /// <summary>
+    /// 앱이 싣는 프로파일 여섯 개를 그대로 읽고, 프리셋이 현상 값으로 번역되는 규칙과 그 위에
+    /// 사용자 값이 얹히는 규칙을 확인합니다. 이 두 규칙이 곧 룩의 결과입니다.
+    /// </summary>
+    private static void VerifyLookPresets()
+    {
+        static bool Near(double actual, double expected) => Math.Abs(actual - expected) < 1e-12;
+
+        string presetRoot = Path.Combine(AppContext.BaseDirectory, "presets");
+        IReadOnlyList<LookPreset> bundled = PresetRegistry.LoadAll(presetRoot);
+        Check(bundled.Count == PresetRegistry.BundledIds.Count, "preset_all_bundled_load");
+        Check(bundled.Select(preset => preset.Id).SequenceEqual(PresetRegistry.BundledIds),
+            "preset_bundled_order");
+        Check(bundled.All(preset => preset.FilmTypes.Count > 0), "preset_bundled_have_film_types");
+
+        LookPreset? neutral = bundled.FirstOrDefault(preset => preset.Id == "neutral");
+        Check(neutral is not null && neutral.BaseTone == ToneAdjustment.Neutral,
+            "preset_neutral_is_identity_tone");
+        Check(neutral is not null && neutral.AppliesTo(FilmType.BlackAndWhitePositive),
+            "preset_neutral_applies_to_all_film");
+
+        // warm-lab 은 두 가지 미묘한 매핑을 모두 가진 유일한 번들 프로파일입니다.
+        LookPreset? warmLab = bundled.FirstOrDefault(preset => preset.Id == "warm-lab");
+        Check(warmLab is not null, "preset_warm_lab_present");
+        if (warmLab is not null)
+        {
+            ToneAdjustment tone = warmLab.BaseTone;
+            // highlightRollOff 0.30 → highlight -0.30. 부호가 살아 있지 않으면 명부 보호가
+            // 명부 증폭이 됩니다.
+            Check(Near(tone.Highlight, -0.30), "preset_highlight_roll_off_inverted");
+            // midtoneLift 0.02 → exposure +0.002.
+            Check(Near(tone.Exposure, 0.002), "preset_midtone_lift_scales_exposure");
+            Check(Near(tone.Density, 0.12) && Near(tone.Contrast, 0.08),
+                "preset_tone_passthrough");
+            Check(Near(tone.Shadow, -0.02), "preset_black_softness_is_shadow");
+            Check(tone.CurveHighlights == 0.0 && tone.CurveShadows == 0.0,
+                "preset_leaves_point_curve_alone");
+            Check(warmLab.AppliesTo(FilmType.ColorNegative) &&
+                !warmLab.AppliesTo(FilmType.BlackAndWhiteNegative),
+                "preset_film_type_gate");
+        }
+
+        Check(PresetRegistry.LoadAll(Path.Combine(presetRoot, "missing")).Count == 0,
+            "preset_missing_directory_is_empty");
+
+        // 어느 필름에도 걸리지 않는 프로파일은 UI 에서 조용히 사라집니다. 읽는 자리에서 거부합니다.
+        using JsonDocument noFilm = JsonDocument.Parse(
+            """{"name":"Ghost","filmTypes":[],"tone":{},"color":{},"texture":{}}""");
+        Check(PresetRegistry.Parse(noFilm.RootElement, "ghost") is null,
+            "preset_rejects_empty_film_types");
+        using JsonDocument unknownFilm = JsonDocument.Parse(
+            """{"name":"Ghost","filmTypes":["instant"],"tone":{},"color":{},"texture":{}}""");
+        Check(PresetRegistry.Parse(unknownFilm.RootElement, "ghost") is null,
+            "preset_rejects_unknown_film_types");
+        using JsonDocument noName = JsonDocument.Parse(
+            """{"filmTypes":["colorNegative"]}""");
+        Check(PresetRegistry.Parse(noName.RootElement, "nameless") is null,
+            "preset_requires_name");
+
+        LookPreset composed = new(
+            "test",
+            "Test",
+            1,
+            [FilmType.ColorNegative],
+            new LookPresetTone(0.1, 0.2, 0.3, 0.4, 0.05, 0.5),
+            new LookPresetColor(0.1, 0.2, 0.3, 0.4),
+            new LookPresetTexture(0.5, 0.2, 0.3));
+
+        ToneAdjustment userTone = new(
+            Exposure: 0.25,
+            Contrast: -0.1,
+            CurveHighlights: 0.7,
+            CurveLights: 0.0,
+            CurveDarks: 0.0,
+            CurveShadows: -0.4,
+            Density: 0.05,
+            Highlight: 0.2,
+            Shadow: 0.1,
+            Whites: 0.3,
+            Blacks: -0.3);
+        ToneAdjustment mergedTone = LookPresetComposition.Compose(composed, userTone);
+        Check(Near(mergedTone.Exposure, 0.15 + 0.25), "compose_tone_adds_exposure");
+        Check(Near(mergedTone.Contrast, 0.3 - 0.1), "compose_tone_adds_contrast");
+        // 프리셋이 정하지 않는 축은 사용자 값이 그대로 살아남아야 합니다.
+        Check(Near(mergedTone.CurveHighlights, 0.7) && Near(mergedTone.CurveShadows, -0.4),
+            "compose_tone_keeps_point_curve");
+        Check(Near(mergedTone.Whites, 0.3) && Near(mergedTone.Blacks, -0.3),
+            "compose_tone_keeps_whites_blacks");
+        Check(Near(mergedTone.Highlight, -0.4 + 0.2), "compose_tone_adds_over_inverted_highlight");
+
+        TextureRecipe userTexture = new(
+            Grain: 0.0, Sharpness: 0.9, Halation: 0.3, Clarity: -0.2, Vignette: 0.4);
+        TextureRecipe mergedTexture = LookPresetComposition.Compose(composed, userTexture);
+        // 사용자가 0 이어도 프리셋의 입자는 남습니다. 더하기였다면 0.5 가 아니라 0.5 를 넘습니다.
+        Check(Near(mergedTexture.Grain, 0.5), "compose_texture_takes_preset_grain");
+        Check(Near(mergedTexture.Sharpness, 0.9), "compose_texture_takes_larger_sharpness");
+        Check(Near(mergedTexture.Halation, 0.3), "compose_texture_halation_tie");
+        Check(Near(mergedTexture.Clarity, -0.2) && Near(mergedTexture.Vignette, 0.4),
+            "compose_texture_passes_clarity_vignette");
+        Check(mergedTexture.IsValid, "compose_texture_stays_in_range");
+
+        ColorModelRecipe userColor = new(
+            Warmth: 0.05, Tint: -0.05, ColorDepth: 0.1, Vibrance: 0.6,
+            Saturation: -0.2, RedPrimary: 0.11, GreenPrimary: -0.12, BluePrimary: 0.13);
+        ColorModelRecipe mergedColor = LookPresetComposition.Compose(composed, userColor);
+        Check(Near(mergedColor.Warmth, 0.15) && Near(mergedColor.Tint, 0.15),
+            "compose_color_adds_warmth_tint");
+        Check(Near(mergedColor.ColorDepth, 0.4) && Near(mergedColor.Saturation, 0.2),
+            "compose_color_adds_depth_saturation");
+        Check(Near(mergedColor.Vibrance, 0.6) && Near(mergedColor.RedPrimary, 0.11) &&
+            Near(mergedColor.GreenPrimary, -0.12) && Near(mergedColor.BluePrimary, 0.13),
+            "compose_color_keeps_unpreset_axes");
+
+        // catalog 왕복. presetID 는 params 형제이며, 떼기와 안 건드림이 구별돼야 합니다.
+        Check(ReadFrame(FrameRecord()).Frame?.LookPresetId is null,
+            "preset_absent_key_is_no_preset");
+
+        JsonObject tagged = FrameRecord();
+        LibraryFrameWriteResult applied = LibraryFrameWriter.Apply(
+            tagged,
+            new LibraryFrameEdit(ToneAdjustment.Neutral, null,
+                LookPreset: new LookPresetSelection("warm-lab")));
+        Check(applied.IsSuccess, "preset_write_success");
+        Check(tagged[LibraryFrameReader.LookPresetIdName] is null,
+            "preset_write_leaves_input_untouched");
+        if (applied.FrameRecord is { } writtenFrame)
+        {
+            Check(ReadFrame(writtenFrame).Frame?.LookPresetId == "warm-lab",
+                "preset_round_trips_through_catalog");
+            Check(writtenFrame[LibraryFrameReader.ParametersName]?
+                    .AsObject().ContainsKey(LibraryFrameReader.LookPresetIdName) != true,
+                "preset_is_not_written_into_params");
+
+            // 값을 주지 않으면 그대로 두고, None 을 주면 뗍니다.
+            LibraryFrameWriteResult untouched = LibraryFrameWriter.Apply(
+                writtenFrame, new LibraryFrameEdit(ToneAdjustment.Neutral, null));
+            Check(untouched.FrameRecord is { } keptFrame &&
+                ReadFrame(keptFrame).Frame?.LookPresetId == "warm-lab",
+                "preset_unspecified_edit_keeps_preset");
+
+            LibraryFrameWriteResult cleared = LibraryFrameWriter.Apply(
+                writtenFrame,
+                new LibraryFrameEdit(ToneAdjustment.Neutral, null,
+                    LookPreset: LookPresetSelection.None));
+            Check(cleared.FrameRecord is { } clearedFrame &&
+                ReadFrame(clearedFrame).Frame?.LookPresetId is null,
+                "preset_none_selection_detaches");
+        }
+
+        Check(LibraryFrameWriter.Apply(
+                FrameRecord(),
+                new LibraryFrameEdit(ToneAdjustment.Neutral, null,
+                    LookPreset: new LookPresetSelection("  "))).Error ==
+            LibraryFrameError.InvalidLookPresetId,
+            "preset_write_rejects_blank_id");
+
+        JsonObject brokenPreset = FrameRecord();
+        brokenPreset[LibraryFrameReader.LookPresetIdName] = 7;
+        Check(ReadFrame(brokenPreset).Error == LibraryFrameError.InvalidLookPresetId,
+            "preset_read_rejects_non_string");
+
+        // neutral 을 얹는 것은 아무것도 얹지 않는 것과 같아야 합니다.
+        if (neutral is not null)
+        {
+            Check(LookPresetComposition.Compose(neutral, userTone) == userTone,
+                "compose_neutral_tone_is_identity");
+            Check(LookPresetComposition.Compose(neutral, userColor) == userColor,
+                "compose_neutral_color_is_identity");
+            Check(LookPresetComposition.Compose(neutral, userTexture) == userTexture,
+                "compose_neutral_texture_is_identity");
+        }
     }
 
     private static void VerifyStorageRootResolution()

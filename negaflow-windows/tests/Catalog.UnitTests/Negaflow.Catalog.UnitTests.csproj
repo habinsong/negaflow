@@ -12,5 +12,10 @@
     <Content Include="..\fixtures\catalog\develop-route-v1.json"
              Link="develop-route-v1.json"
              CopyToOutputDirectory="PreserveNewest" />
+    <!-- 앱이 싣는 것과 같은 파일을 그대로 읽습니다. 테스트용 사본을 따로 두면 프로파일이
+         바뀌어도 테스트는 통과하는 자리가 생깁니다. -->
+    <Content Include="..\..\assets\presets\*.json"
+             Link="presets\%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

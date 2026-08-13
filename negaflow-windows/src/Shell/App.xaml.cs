@@ -19,6 +19,9 @@ public partial class App : Application
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
         _ = args;
+        // 첫 창을 만들기 전에 읽습니다. 썸네일과 미리보기가 곧바로 현상 요청을 만들기 시작하므로
+        // 그 뒤에 읽으면 처음 몇 장만 프리셋 없이 현상됩니다.
+        LookPresetLibrary.Load(Path.Combine(AppContext.BaseDirectory, "presets"));
         var settingsStore = new PresentationSettingsStore();
         var workspaceState = new WorkspacePresentationState(settingsStore);
         mainWindow = new MainWindow(

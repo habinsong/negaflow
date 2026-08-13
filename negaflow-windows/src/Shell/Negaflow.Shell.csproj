@@ -35,6 +35,12 @@
     <ProjectReference Include="..\Shell.Core\Negaflow.Shell.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="..\..\assets\presets\*.json"
+             Link="presets\%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <PropertyGroup>
     <NativePreset Condition="'$(Platform)' == 'x64' and '$(Configuration)' == 'Debug'">x64-debug</NativePreset>
     <NativePreset Condition="'$(Platform)' == 'x64' and '$(Configuration)' == 'Release'">x64-release</NativePreset>

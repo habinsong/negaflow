@@ -19,6 +19,7 @@ internal static class Program
         VerifyAdaptiveLayout();
         VerifySwiftMetricsBaseline();
         VerifyDevelopRequestFactory();
+        VerifyLookPresetReachesTheEngine();
         VerifyInfraredDefectRecipeCoordinator();
         VerifyDevelopExportCoordinator();
         VerifyLibraryDocument();
@@ -385,6 +386,67 @@ internal static class Program
                 is { Crop: null, CropAspect: null },
             "crop_aspect_original_clears_crop_and_ratio");
     }
+
+    /// <summary>
+    /// 프리셋이 실제로 엔진 요청까지 도달하는지 봅니다. 이 팩토리가 preview·thumbnail·export 의
+    /// 공통 관문이므로, 여기서 합성되면 세 경로가 같은 레시피를 씁니다.
+    /// </summary>
+    private static void VerifyLookPresetReachesTheEngine()
+    {
+        const string destination = @"C:\exports\IMG_0001.png";
+        LibraryFrameSnapshot plain = Frame(new ManualBaseRgb(0.21, 0.22, 0.23));
+        LibraryFrameSnapshot withPreset = plain with { LookPresetId = "warm-lab" };
+
+        // 목록에 없는 id 는 프리셋 없이 현상합니다 — 거부하면 사진을 아예 못 봅니다.
+        LookPresetLibrary.SetForTests([]);
+        DevelopExportRequest? unresolved = DevelopRequestFactory.Create(withPreset, destination).Request;
+        DevelopExportRequest? baseline = DevelopRequestFactory.Create(plain, destination).Request;
+        Check(unresolved is not null && baseline is not null &&
+            unresolved.ExposureStops == baseline.ExposureStops &&
+            unresolved.Grain == baseline.Grain,
+            "preset_unknown_id_falls_back_to_user_values");
+
+        LookPresetLibrary.SetForTests([new LookPreset(
+            "warm-lab",
+            "Warm Lab",
+            2,
+            [FilmType.ColorNegative],
+            new LookPresetTone(0.0, 0.12, 0.08, 0.30, -0.02, 0.02),
+            new LookPresetColor(0.16, 0.01, 0.08, 0.03),
+            new LookPresetTexture(0.04, 0.10, 0.04))]);
+        try
+        {
+            Check(LookPresetLibrary.Resolve("warm-lab") is not null, "preset_library_resolves");
+            if (DevelopRequestFactory.Create(withPreset, destination).Request is not { } request ||
+                baseline is null)
+            {
+                Check(false, "preset_request_built");
+                return;
+            }
+
+            // Frame() 의 톤은 exposure 1.5, density 0.5, highlight -0.6 입니다.
+            Check(Near(request.ExposureStops, 1.5f + 0.002f), "preset_exposure_composes");
+            Check(Near(request.Density, 0.5f + 0.12f), "preset_density_composes");
+            // highlightRollOff 0.30 은 부호가 뒤집혀 -0.30 이 되고 여기에 사용자 -0.6 이 더해집니다.
+            Check(Near(request.Highlight, -0.6f - 0.30f), "preset_highlight_roll_off_composes");
+            Check(Near(request.Warmth, 0.16f), "preset_warmth_composes");
+            // Frame() 은 질감을 지정하지 않아 0 입니다. 사용자가 0 이어도 프리셋 값이 남아야 합니다.
+            Check(Near(request.Grain, 0.04f) && Near(request.Sharpness, 0.10f),
+                "preset_texture_survives_zero_user_value");
+            // 프리셋이 정하지 않는 축은 그대로여야 합니다.
+            Check(request.Highlights == baseline.Highlights &&
+                request.Vibrance == baseline.Vibrance &&
+                request.Clarity == baseline.Clarity,
+                "preset_leaves_unpreset_axes_alone");
+        }
+        finally
+        {
+            LookPresetLibrary.SetForTests([]);
+        }
+    }
+
+    private static bool Near(float actual, float expected) =>
+        Math.Abs(actual - expected) < 1e-6f;
 
     private static void VerifyDevelopRequestFactory()
     {

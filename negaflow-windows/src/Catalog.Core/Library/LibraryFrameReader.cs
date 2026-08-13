@@ -27,6 +27,8 @@ public static class LibraryFrameReader
     internal const string PickStateName = "pickState";
     internal const string ScannedAtName = "scannedAt";
     internal const string ParametersName = "params";
+    /// <summary>macOS 와 같이 <c>params</c> 형제입니다. 델타와 프리셋을 섞어 두지 않습니다.</summary>
+    public const string LookPresetIdName = "presetID";
     internal const string BaseEstimationModeName = "baseEstimationMode";
     internal const string ManualBaseName = "manualBaseRGB";
     internal const string FilmStockDminIdName = "filmStockDminID";
@@ -166,6 +168,21 @@ public static class LibraryFrameReader
             displayName = displayElement.GetString();
         }
 
+        // 빈 문자열은 "프리셋 없음"과 구별되지 않으므로 조용히 넘기지 않습니다. 잘못 읽으면
+        // 프리셋이 통째로 사라진 그림이 나옵니다.
+        string? lookPresetId = null;
+        if (frameRecord.TryGetProperty(LookPresetIdName, out JsonElement presetElement) &&
+            presetElement.ValueKind != JsonValueKind.Null)
+        {
+            if (presetElement.ValueKind != JsonValueKind.String ||
+                presetElement.GetString() is not { Length: > 0 } parsedPresetId ||
+                string.IsNullOrWhiteSpace(parsedPresetId))
+            {
+                return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidLookPresetId);
+            }
+            lookPresetId = parsedPresetId;
+        }
+
         if (!TryReadRating(frameRecord, out int rating))
         {
             return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidRating);
@@ -268,6 +285,7 @@ public static class LibraryFrameReader
             InfraredPath = infraredPath,
             SourceMetadata = sourceMetadata,
             Base = baseRecipe,
+            LookPresetId = lookPresetId,
             PointCurves = pointCurves,
             ColorMixer = colorMixer,
             ColorGrading = colorGrading,
