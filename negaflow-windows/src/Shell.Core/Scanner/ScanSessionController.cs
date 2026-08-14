@@ -50,6 +50,16 @@ public interface IScannerPluginGateway
         ScannerPluginScanRequest request,
         LibraryHostService library,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// 스캔만 하고 카탈로그에는 올리지 않습니다. 프리뷰가 이 길을 씁니다 — 프리뷰는 판을 보려고
+    /// 찍는 것이지 사용자의 사진이 아니므로 라이브러리에 남기지 않습니다.
+    /// </summary>
+    Task<ScannerPluginScanResult> ScanAsync(
+        InstalledScannerPlugin plugin,
+        ScannerPluginTrustIdentity approvedIdentity,
+        ScannerPluginScanRequest request,
+        CancellationToken cancellationToken);
 }
 
 /// <summary>실제 플러그인 프로세스를 부르는 구현입니다.</summary>
@@ -92,6 +102,13 @@ public sealed class ScannerPluginGateway : IScannerPluginGateway
             request,
             library,
             cancellationToken: cancellationToken);
+
+    public Task<ScannerPluginScanResult> ScanAsync(
+        InstalledScannerPlugin plugin,
+        ScannerPluginTrustIdentity approvedIdentity,
+        ScannerPluginScanRequest request,
+        CancellationToken cancellationToken) =>
+        ScannerPluginClient.ScanAsync(plugin, approvedIdentity, request, cancellationToken);
 }
 
 /// <summary>사용자가 스캔 절에서 고른 값입니다.</summary>
@@ -189,6 +206,12 @@ public sealed class ScanSessionController
 
     /// <summary>마지막 실패의 이유입니다. 성공하면 지웁니다.</summary>
     public string? LastFailureName { get; private set; }
+
+    /// <summary>
+    /// 마지막 프리뷰 스캔이 남긴 파일입니다. 자동 프레임 찾기가 이 그림에서 프레임을 셉니다.
+    /// 프리뷰는 카탈로그에 올리지 않으므로 여기서만 붙잡습니다.
+    /// </summary>
+    public string? LastPreviewPath { get; private set; }
 
     /// <summary>
     /// 하드웨어 없이 스캔 흐름을 돌립니다. macOS 의 스캐너 시뮬레이터와 같은 자리이며, 켜면
@@ -726,6 +749,24 @@ public sealed class ScanSessionController
                 {
                     break;
                 }
+                if (preview)
+                {
+                    // 프리뷰는 판을 보려고 찍는 것이지 사용자의 사진이 아닙니다. 카탈로그에
+                    // 올리지 않고 파일만 붙잡아 자동 프레임 찾기에 넘깁니다.
+                    ScannerPluginScanResult scanned = await ActiveGateway
+                        .ScanAsync(plugin, identity, request, cancellationToken)
+                        .ConfigureAwait(false);
+                    lastScanStatus = scanned.Status;
+                    if (!scanned.IsSuccess)
+                    {
+                        LastFailureName = scanned.Status.ToString();
+                        break;
+                    }
+                    LastPreviewPath = scanned.ArtifactCommit?.Artifacts?.VisiblePath;
+                    ++published;
+                    continue;
+                }
+
                 ScannerPluginLibraryScanResult result = await ActiveGateway
                     .ScanAndPublishAsync(plugin, identity, request, library, cancellationToken)
                     .ConfigureAwait(false);

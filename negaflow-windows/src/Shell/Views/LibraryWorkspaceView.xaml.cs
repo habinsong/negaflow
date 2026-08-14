@@ -21,11 +21,8 @@ public sealed partial class LibraryWorkspaceView : UserControl
     private ScanSessionController? scanSession;
     private ScannerPluginTrustStore? scannerTrust;
     private bool isSynchronizingScan;
-    /// <summary>
-    /// 프리뷰 스캔의 밝기 값입니다. 자동 프레임 찾기가 이것으로 셉니다. 프리뷰 프레임을 잡아
-    /// 두는 경로가 아직 없어 지금은 늘 비어 있고, 그래서 자동 찾기 단추는 수동일 때만 켜집니다.
-    /// </summary>
-    private readonly float[] flatbedPreviewLuminance = [];
+    /// <summary>마지막 프리뷰 스캔의 밝기 값입니다. 자동 프레임 찾기가 이것으로 셉니다.</summary>
+    private PreviewLuminance flatbedPreview = PreviewLuminance.None;
     private bool isSynchronizingCollections;
     private string? selectedCollectionId;
     private ThumbnailService? thumbnails;
@@ -1152,7 +1149,10 @@ public sealed partial class LibraryWorkspaceView : UserControl
             return;
         }
         // 프리뷰 픽셀이 아직 없으면 찾을 근거가 없습니다. macOS 도 프리뷰 전에는 잠급니다.
-        _ = scanSession.RefreshRegions(flatbedPreviewLuminance, 0U, 0U);
+        _ = scanSession.RefreshRegions(
+            flatbedPreview.Values,
+            flatbedPreview.Width,
+            flatbedPreview.Height);
         RenderScanSection();
     }
 
@@ -1244,6 +1244,23 @@ public sealed partial class LibraryWorkspaceView : UserControl
             _ => ScanStorageLayout.NextAvailablePath(directory, stem),
             preview);
         ScanStatusText.Text = DescribeScanOutcome(outcome);
+        if (preview)
+        {
+            // 프리뷰는 카탈로그에 올리지 않습니다. 그림만 읽어 두었다가 프레임 찾기에 넘깁니다.
+            flatbedPreview = scanSession.LastPreviewPath is { } previewPath
+                ? await PreviewLuminanceReader.ReadAsync(previewPath)
+                : PreviewLuminance.None;
+            if (!flatbedPreview.IsEmpty &&
+                scanSession.Options.FrameDetectionMode == FlatbedFrameDetectionMode.Automatic)
+            {
+                _ = scanSession.RefreshRegions(
+                    flatbedPreview.Values,
+                    flatbedPreview.Width,
+                    flatbedPreview.Height);
+            }
+            RenderScanSection();
+            return;
+        }
         if (importWindowId is { } windowId)
         {
             ShowLibrary(libraryHost, windowId);
@@ -1389,7 +1406,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
         ScanRemoveFrameButton.IsEnabled = hasSelectedRegion;
         ScanPasteFrameButton.IsEnabled = scanSession.CopiedRegion is not null;
         // 프리뷰 픽셀이 없으면 찾을 근거가 없습니다.
-        ScanRefreshFramesButton.IsEnabled = flatbedPreviewLuminance.Length > 0 ||
+        ScanRefreshFramesButton.IsEnabled = !flatbedPreview.IsEmpty ||
             scanSession.Options.FrameDetectionMode == FlatbedFrameDetectionMode.Manual;
 
         bool hasDepths = scanSession.BitDepths.Count > 0;

@@ -4777,6 +4777,21 @@ internal static class Program
                 published.Route.SourceTransport == FrameSourceTransport.Scanner,
                 "simulator_frame_route_says_scanner");
             // 두 장이 서로 다른 파일이어야 합니다 — 배치가 같은 자리를 덮으면 안 됩니다.
+            // 프리뷰는 판을 보려고 찍는 것이지 사용자의 사진이 아닙니다. 카탈로그에 올리지
+            // 않고 파일만 붙잡아 자동 프레임 찾기에 넘깁니다.
+            int beforePreview = library.Frames.Count;
+            ScanRunOutcome previewRun = session2.RunAsync(
+                library,
+                _ => ScanStorageLayout.NextAvailablePath(rollDirectory, "Preview"),
+                preview: true).GetAwaiter().GetResult();
+            Check(previewRun.IsSuccess, "simulator_preview_runs");
+            Check(
+                library.Frames.Count == beforePreview,
+                "simulator_preview_stays_out_of_the_catalog");
+            Check(
+                session2.LastPreviewPath is { } previewPath && File.Exists(previewPath),
+                "simulator_preview_leaves_a_file");
+
             Check(
                 library.Frames.Count == 2 && !string.Equals(
                     library.Frames[0].SourcePath,
@@ -5232,6 +5247,13 @@ internal static class Program
             ScannerPluginTrustIdentity approvedIdentity,
             ScannerPluginScanRequest request,
             LibraryHostService library,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<ScannerPluginScanResult> ScanAsync(
+            InstalledScannerPlugin plugin,
+            ScannerPluginTrustIdentity approvedIdentity,
+            ScannerPluginScanRequest request,
             CancellationToken cancellationToken) =>
             throw new NotSupportedException();
     }

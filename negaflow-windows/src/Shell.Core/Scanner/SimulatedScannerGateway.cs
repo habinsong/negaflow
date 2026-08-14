@@ -115,8 +115,7 @@ public sealed class SimulatedScannerGateway : IScannerPluginGateway
     }
 
     /// <summary>
-    /// 합성 네거티브를 만들어 실제 스캔과 같은 경로로 게시합니다. 프리뷰는 짧은 변 기준으로
-    /// 작게 냅니다 — 실제 프리뷰도 본 스캔보다 훨씬 거칠기 때문입니다.
+    /// 합성 네거티브를 만들어 실제 스캔과 같은 경로로 게시합니다.
     /// </summary>
     public Task<ScannerPluginLibraryScanResult> ScanAndPublishAsync(
         InstalledScannerPlugin plugin,
@@ -129,16 +128,55 @@ public sealed class SimulatedScannerGateway : IScannerPluginGateway
         ArgumentNullException.ThrowIfNull(library);
         cancellationToken.ThrowIfCancellationRequested();
 
-        // 35mm 한 컷의 비율입니다. 프리뷰는 해상도 0 이므로 고정된 작은 크기를 씁니다.
+        if (Stage(request) is not { } commit)
+        {
+            return Task.FromResult(Failed(ScannerPluginScanStatus.StagingCreateFailed));
+        }
+        if (!commit.IsSuccess)
+        {
+            return Task.FromResult(new ScannerPluginLibraryScanResult(
+                ScannerPluginLibraryScanStatus.ScanFailed,
+                new ScannerPluginScanResult(
+                    ScannerPluginScanStatus.ArtifactCommitFailed,
+                    Succeeded(),
+                    ScannerPluginStreamStatus.Accepted,
+                    commit),
+                null));
+        }
+
+        ScannerFramePublishResult published = library.PublishScannerFrame(
+            new ScannerFrameImport(
+                commit.Artifacts!.VisiblePath,
+                commit.Artifacts.InfraredPath,
+                request.Process),
+            null,
+            null);
+        return Task.FromResult(new ScannerPluginLibraryScanResult(
+            published.Status == ScannerFramePublishStatus.CatalogWriteFailed
+                ? ScannerPluginLibraryScanStatus.CatalogPublicationFailed
+                : ScannerPluginLibraryScanStatus.Published,
+            new ScannerPluginScanResult(
+                ScannerPluginScanStatus.Completed,
+                Succeeded(),
+                ScannerPluginStreamStatus.Accepted,
+                commit),
+            published));
+    }
+
+    /// <summary>
+    /// 합성 네거티브를 staging 에 쓰고 실제 스캔과 같은 트랜잭션으로 커밋합니다. 프리뷰는
+    /// 짧은 변 기준으로 작게 냅니다 — 실제 프리뷰도 본 스캔보다 훨씬 거칩니다.
+    /// </summary>
+    private ScannerArtifactCommitResult? Stage(ScannerPluginScanRequest request)
+    {
         int longEdge = request.Preview ? 600 : Math.Clamp(request.ResolutionDpi / 2, 600, 5400);
         int width = longEdge;
         int height = Math.Max(1, (int)Math.Round(longEdge * 24.0 / 36.0));
 
         string destination = request.DestinationVisiblePath;
-        string? directory = Path.GetDirectoryName(destination);
-        if (directory is null)
+        if (Path.GetDirectoryName(destination) is not { } directory)
         {
-            return Task.FromResult(Failed(ScannerPluginScanStatus.InvalidRequest));
+            return null;
         }
         string staging = Path.Combine(directory, $".negaflow-simulated-{Guid.NewGuid():N}");
         try
@@ -151,45 +189,15 @@ public sealed class SimulatedScannerGateway : IScannerPluginGateway
                 height,
                 request.BitDepth,
                 string.Equals(request.ColorMode, "gray", StringComparison.Ordinal));
-
-            ScannerArtifactCommitResult commit = ScannerArtifactTransaction.Commit(
+            return ScannerArtifactTransaction.Commit(
                 new ScannerStagedArtifacts(staging, stagedPath, null),
                 destination,
                 metadataReader);
-            if (!commit.IsSuccess)
-            {
-                return Task.FromResult(new ScannerPluginLibraryScanResult(
-                    ScannerPluginLibraryScanStatus.ScanFailed,
-                    new ScannerPluginScanResult(
-                        ScannerPluginScanStatus.ArtifactCommitFailed,
-                        Succeeded(),
-                        ScannerPluginStreamStatus.Accepted,
-                        commit),
-                    null));
-            }
-
-            ScannerFramePublishResult published = library.PublishScannerFrame(
-                new ScannerFrameImport(
-                    commit.Artifacts!.VisiblePath,
-                    commit.Artifacts.InfraredPath,
-                    request.Process),
-                null,
-                null);
-            return Task.FromResult(new ScannerPluginLibraryScanResult(
-                published.Status == ScannerFramePublishStatus.CatalogWriteFailed
-                    ? ScannerPluginLibraryScanStatus.CatalogPublicationFailed
-                    : ScannerPluginLibraryScanStatus.Published,
-                new ScannerPluginScanResult(
-                    ScannerPluginScanStatus.Completed,
-                    Succeeded(),
-                    ScannerPluginStreamStatus.Accepted,
-                    commit),
-                published));
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or
             PathTooLongException or NotSupportedException)
         {
-            return Task.FromResult(Failed(ScannerPluginScanStatus.StagingCreateFailed));
+            return null;
         }
         finally
         {
@@ -205,6 +213,31 @@ public sealed class SimulatedScannerGateway : IScannerPluginGateway
                 // 뒤처리 실패는 게시 결과가 아닙니다.
             }
         }
+    }
+
+    public Task<ScannerPluginScanResult> ScanAsync(
+        InstalledScannerPlugin plugin,
+        ScannerPluginTrustIdentity approvedIdentity,
+        ScannerPluginScanRequest request,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (Stage(request) is not { } staged)
+        {
+            return Task.FromResult(new ScannerPluginScanResult(
+                ScannerPluginScanStatus.StagingCreateFailed,
+                Succeeded(),
+                null,
+                null));
+        }
+        return Task.FromResult(new ScannerPluginScanResult(
+            staged.IsSuccess
+                ? ScannerPluginScanStatus.Completed
+                : ScannerPluginScanStatus.ArtifactCommitFailed,
+            Succeeded(),
+            ScannerPluginStreamStatus.Accepted,
+            staged));
     }
 
     private static ScannerPluginProcessResult Succeeded() =>
