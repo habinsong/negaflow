@@ -886,4 +886,9 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developRollRecordCard.Text" xml:space="preserve"><value>Filmnotiz</value><comment>AppMetadataOverlayLocalizedText[20]</comment></data>
   <data name="developRollCreateFromSelection.Content" xml:space="preserve"><value>Film aus der Auswahl erstellen</value><comment>AppMetadataOverlayLocalizedText[26]</comment></data>
   <data name="filterCurrentRoll.Text" xml:space="preserve"><value>Aktueller Film</value><comment>AppLocalizedPhrase.filterCurrentRoll</comment></data>
+  <data name="developExportRecipeEmpty.Content" xml:space="preserve"><value>Keine gespeicherten Einstellungen</value><comment>ExportRecipeLocalizedText.empty</comment></data>
+  <data name="developExportRecipeName.Text" xml:space="preserve"><value>Einstellungsname</value><comment>ExportRecipeLocalizedText.name</comment></data>
+  <data name="developExportRecipeSaveCurrent.Text" xml:space="preserve"><value>Aktuelle Einstellungen sichern</value><comment>ExportRecipeLocalizedText.saveCurrent</comment></data>
+  <data name="developExportRecipeTitle.Text" xml:space="preserve"><value>Exporteinstellungen</value><comment>ExportRecipeLocalizedText.title</comment></data>
+  <data name="developExportRecipeDefaultName.Text" xml:space="preserve"><value>Exporteinstellungen %d</value><comment>ExportRecipeLocalizedText.defaultName</comment></data>
 </root>

@@ -43,6 +43,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
     /// <summary>폴더가 비어 있으면 원본 옆에 씁니다 — 목적지를 고르기 전에도 내보낼 수 있습니다.</summary>
     private ExportSettings exportSettings = new();
     private QuickExportSettings quickExportSettings = new();
+    private ExportRecipeLibrary exportRecipes = new();
     /// <summary>설정을 컨트롤에 되비추는 동안 켜집니다. 켜져 있으면 이벤트가 다시 저장하지 않습니다.</summary>
     private bool isSynchronizingExport;
     private bool isSynchronizingMetadata;
@@ -3463,6 +3464,105 @@ public sealed partial class DevelopWorkspaceView : UserControl
         SynchronizeExportControls();
     }
 
+    /// <summary>
+    /// 담아 둔 내보내기 설정을 고릅니다. 목적지와 파일명 패턴은 지금 것을 지킵니다 — 프리셋을
+    /// 고르는 것이 내보낼 폴더를 바꾸는 뜻은 아닙니다.
+    /// </summary>
+    private void OnExportRecipeChanged(object sender, SelectionChangedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (isSynchronizingExport ||
+            ExportRecipeSelector.SelectedItem is not ComboBoxItem item)
+        {
+            return;
+        }
+        string? recipeId = item.Tag as string;
+        workspaceState?.UpdateExportRecipes(library => library with { SelectedId = recipeId });
+        exportRecipes = exportRecipes with { SelectedId = recipeId };
+        if (exportRecipes.Selected is { } recipe)
+        {
+            MutateExportSettings(recipe.ApplyTo);
+        }
+        else
+        {
+            SynchronizeExportControls();
+        }
+    }
+
+    private void BuildExportRecipeMenu()
+    {
+        ExportRecipeFlyout.Items.Clear();
+        var save = new MenuFlyoutItem
+        {
+            Text = AppResources.Get("developExportRecipeSaveCurrent", "Text"),
+        };
+        save.Click += (_, _) => SaveCurrentExportRecipe();
+        ExportRecipeFlyout.Items.Add(save);
+        if (exportRecipes.Selected is not { } selected)
+        {
+            return;
+        }
+        // 이름 변경은 이름을 묻는 시트가 필요합니다. 없는 채로 다음 기본 이름을 다시 붙이는
+        // 것은 이름 변경이 아니므로 메뉴에 내지 않습니다.
+        ExportRecipeFlyout.Items.Add(new MenuFlyoutSeparator());
+        var delete = new MenuFlyoutItem { Text = AppResources.Get("libraryDelete", "Content") };
+        delete.Click += (_, _) =>
+        {
+            UpdateExportRecipes(library => library.Delete(selected.Id));
+        };
+        ExportRecipeFlyout.Items.Add(delete);
+    }
+
+    /// <summary>
+    /// 이름은 파일명 패턴 칸이 아니라 macOS 처럼 "내보내기 설정 N" 으로 짓습니다. 이름을 묻는
+    /// 시트는 아직 없으므로, 이름을 바꾸는 길은 메뉴의 이름 변경입니다.
+    /// </summary>
+    private void SaveCurrentExportRecipe()
+    {
+        string name = AppResources.FormatInteger(
+            "developExportRecipeDefaultName",
+            "Text",
+            exportRecipes.NextDefaultIndex());
+        UpdateExportRecipes(library => library.Save(name, exportSettings));
+    }
+
+    private void UpdateExportRecipes(Func<ExportRecipeLibrary, ExportRecipeLibrary> update)
+    {
+        exportRecipes = update(exportRecipes).Normalize();
+        workspaceState?.UpdateExportRecipes(_ => exportRecipes);
+        SynchronizeExportControls();
+    }
+
+    private void SynchronizeExportRecipeControls()
+    {
+        ExportRecipeSelector.Items.Clear();
+        ExportRecipeSelector.Items.Add(new ComboBoxItem
+        {
+            Content = AppResources.Get("developExportRecipeEmpty", "Content"),
+            Tag = null,
+        });
+        foreach (ExportRecipe recipe in exportRecipes.Recipes)
+        {
+            ExportRecipeSelector.Items.Add(new ComboBoxItem
+            {
+                Content = recipe.Name,
+                Tag = recipe.Id,
+            });
+        }
+        ExportRecipeSelector.SelectedIndex = 0;
+        for (int index = 0; index < ExportRecipeSelector.Items.Count; ++index)
+        {
+            if (ExportRecipeSelector.Items[index] is ComboBoxItem candidate &&
+                Equals(candidate.Tag, exportRecipes.SelectedId))
+            {
+                ExportRecipeSelector.SelectedIndex = index;
+                break;
+            }
+        }
+        BuildExportRecipeMenu();
+    }
+
     private void OnExportDetailTabChecked(object sender, RoutedEventArgs args)
     {
         _ = sender;
@@ -3708,6 +3808,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
             SelectByTag(QuickExportSizeSelector, quickExportSettings.LongEdge);
             QuickExportJpegQualitySlider.Value =
                 Math.Round(quickExportSettings.JpegQuality * 100.0);
+            SynchronizeExportRecipeControls();
             ExportOriginalRawToggle.IsOn = exportSettings.WriteOriginalRaw;
             ExportSidecarToggle.IsOn = exportSettings.WriteSidecar;
         }
@@ -3930,6 +4031,9 @@ public sealed partial class DevelopWorkspaceView : UserControl
 
         LocalizeToggleSwitch(ExportOriginalRawToggle, "developExportOriginalRaw");
         LocalizeToggleSwitch(ExportSidecarToggle, "developExportSidecar");
+        ExportRecipeLabel.Text = AppResources.Get("developExportRecipeTitle", "Text");
+        AutomationProperties.SetName(ExportRecipeSelector, ExportRecipeLabel.Text);
+        SetLocalizedNameAndTooltip(ExportRecipeMenuButton, ExportRecipeLabel.Text);
         ExportSourceLabel.Text = AppResources.Get("developExportSourceLabel", "Text");
 
         QuickExportSectionText.Text = AppResources.Get("quickExportSection", "Text");
@@ -4416,10 +4520,13 @@ public sealed partial class DevelopWorkspaceView : UserControl
         RightResizeThumb.Visibility = RightPanel.Visibility;
         Filmstrip.Visibility = preferences.IsFilmstripVisible ? Visibility.Visible : Visibility.Collapsed;
         SynchronizeWidths(preferences);
-        if (exportSettings != preferences.Export || quickExportSettings != preferences.QuickExport)
+        if (exportSettings != preferences.Export ||
+            quickExportSettings != preferences.QuickExport ||
+            exportRecipes != preferences.ExportRecipes)
         {
             exportSettings = preferences.Export;
             quickExportSettings = preferences.QuickExport;
+            exportRecipes = preferences.ExportRecipes;
             SynchronizeExportControls();
         }
     }

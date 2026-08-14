@@ -33,12 +33,16 @@ public sealed record ShellPreferences
 
     public QuickExportSettings QuickExport { get; init; } = new();
 
+    /// <summary>이름 붙여 담아 둔 내보내기 설정입니다.</summary>
+    public ExportRecipeLibrary ExportRecipes { get; init; } = new();
+
     public ShellPreferences Normalize()
     {
         return this with
         {
             Export = (Export ?? new ExportSettings()).Normalize(),
             QuickExport = (QuickExport ?? new QuickExportSettings()).Normalize(),
+            ExportRecipes = (ExportRecipes ?? new ExportRecipeLibrary()).Normalize(),
             SelectedWorkspace = Enum.IsDefined(SelectedWorkspace)
                 ? SelectedWorkspace
                 : WorkspaceModule.Develop,

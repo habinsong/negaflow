@@ -886,4 +886,9 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="developRollRecordCard.Text" xml:space="preserve"><value>Fiche de pellicule</value><comment>AppMetadataOverlayLocalizedText[20]</comment></data>
   <data name="developRollCreateFromSelection.Content" xml:space="preserve"><value>Créer une pellicule avec la sélection</value><comment>AppMetadataOverlayLocalizedText[26]</comment></data>
   <data name="filterCurrentRoll.Text" xml:space="preserve"><value>Pellicule actuelle</value><comment>AppLocalizedPhrase.filterCurrentRoll</comment></data>
+  <data name="developExportRecipeEmpty.Content" xml:space="preserve"><value>Aucun réglage enregistré</value><comment>ExportRecipeLocalizedText.empty</comment></data>
+  <data name="developExportRecipeName.Text" xml:space="preserve"><value>Nom des réglages</value><comment>ExportRecipeLocalizedText.name</comment></data>
+  <data name="developExportRecipeSaveCurrent.Text" xml:space="preserve"><value>Enregistrer les réglages</value><comment>ExportRecipeLocalizedText.saveCurrent</comment></data>
+  <data name="developExportRecipeTitle.Text" xml:space="preserve"><value>Réglages d’exportation</value><comment>ExportRecipeLocalizedText.title</comment></data>
+  <data name="developExportRecipeDefaultName.Text" xml:space="preserve"><value>Réglages d’exportation %d</value><comment>ExportRecipeLocalizedText.defaultName</comment></data>
 </root>

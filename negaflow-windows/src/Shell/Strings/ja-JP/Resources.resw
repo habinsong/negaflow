@@ -886,4 +886,9 @@
   <data name="developRollRecordCard.Text" xml:space="preserve"><value>ロール記録</value><comment>AppMetadataOverlayLocalizedText[20]</comment></data>
   <data name="developRollCreateFromSelection.Content" xml:space="preserve"><value>選択項目でロールを作成</value><comment>AppMetadataOverlayLocalizedText[26]</comment></data>
   <data name="filterCurrentRoll.Text" xml:space="preserve"><value>現在のロール</value><comment>AppLocalizedPhrase.filterCurrentRoll</comment></data>
+  <data name="developExportRecipeEmpty.Content" xml:space="preserve"><value>保存済み設定なし</value><comment>ExportRecipeLocalizedText.empty</comment></data>
+  <data name="developExportRecipeName.Text" xml:space="preserve"><value>設定名</value><comment>ExportRecipeLocalizedText.name</comment></data>
+  <data name="developExportRecipeSaveCurrent.Text" xml:space="preserve"><value>現在の設定を保存</value><comment>ExportRecipeLocalizedText.saveCurrent</comment></data>
+  <data name="developExportRecipeTitle.Text" xml:space="preserve"><value>書き出し設定</value><comment>ExportRecipeLocalizedText.title</comment></data>
+  <data name="developExportRecipeDefaultName.Text" xml:space="preserve"><value>書き出し設定 %d</value><comment>ExportRecipeLocalizedText.defaultName</comment></data>
 </root>

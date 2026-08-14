@@ -73,6 +73,7 @@ internal static class Program
         VerifyExportSidecar();
         VerifyLibraryCollections();
         VerifyLibraryRolls();
+        VerifyExportRecipes();
         VerifyDevelopHistogramSampler();
         VerifyDevelopPanelState();
         VerifyInspectorSliderValue();
@@ -4632,6 +4633,66 @@ internal static class Program
                 Directory.Delete(isolatedBase, true);
             }
         }
+    }
+
+    /// <summary>
+    /// 담아 둔 내보내기 설정입니다. 목적지와 파일명 패턴은 프리셋에 담기지도, 얹을 때 덮이지도
+    /// 않아야 합니다 — 프리셋을 고르는 것이 내보낼 폴더를 바꾸는 뜻은 아닙니다.
+    /// </summary>
+    private static void VerifyExportRecipes()
+    {
+        ExportSettings current = new()
+        {
+            Format = DevelopExportFormat.Tiff16,
+            Dpi = 300,
+            LongEdge = 4096,
+            FolderPath = @"D:\Export",
+            NamingTemplate = "{name}-{sequence}",
+            SequenceStart = 7,
+        };
+
+        ExportRecipeLibrary library = new ExportRecipeLibrary().Save("  Archive  ", current);
+        Check(library.Recipes.Count == 1, "export_recipe_saved");
+        Check(library.Recipes[0].Name == "Archive", "export_recipe_trims_the_name");
+        Check(library.SelectedId == library.Recipes[0].Id, "export_recipe_selects_what_was_saved");
+        Check(
+            library.Recipes[0].Settings.FolderPath.Length == 0 &&
+            library.Recipes[0].Settings.NamingTemplate == ExportNamingTemplate.DefaultPattern,
+            "export_recipe_does_not_store_the_destination");
+
+        ExportSettings elsewhere = current with
+        {
+            Format = DevelopExportFormat.Jpeg8,
+            Dpi = 0,
+            LongEdge = 0,
+            FolderPath = @"E:\Somewhere",
+            NamingTemplate = "{sequence}",
+            SequenceStart = 42,
+        };
+        ExportSettings applied = library.Recipes[0].ApplyTo(elsewhere);
+        Check(
+            applied.Format == DevelopExportFormat.Tiff16 && applied.Dpi == 300 &&
+            applied.LongEdge == 4096,
+            "export_recipe_applies_the_encoding");
+        Check(
+            applied.FolderPath == @"E:\Somewhere" && applied.NamingTemplate == "{sequence}" &&
+            applied.SequenceStart == 42,
+            "export_recipe_keeps_the_current_destination");
+
+        // 같은 이름으로 다시 담으면 덮어씁니다.
+        ExportRecipeLibrary again = library.Save("Archive", elsewhere);
+        Check(again.Recipes.Count == 1, "export_recipe_overwrites_the_same_name");
+        Check(
+            again.Recipes[0].Settings.Format == DevelopExportFormat.Jpeg8,
+            "export_recipe_overwrite_takes_the_new_values");
+        Check(
+            new ExportRecipeLibrary().Save("   ", current).Recipes.Count == 0,
+            "export_recipe_refuses_an_empty_name");
+        // 목록에 없는 선택은 빈 선택입니다.
+        Check(
+            (again with { SelectedId = "missing" }).Normalize().SelectedId is null,
+            "export_recipe_drops_a_dangling_selection");
+        Check(again.Delete(again.Recipes[0].Id).Recipes.Count == 0, "export_recipe_delete");
     }
 
     /// <summary>

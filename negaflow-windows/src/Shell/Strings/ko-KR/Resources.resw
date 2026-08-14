@@ -886,4 +886,9 @@
   <data name="developRollRecordCard.Text" xml:space="preserve"><value>롤 기록</value><comment>AppMetadataOverlayLocalizedText[20]</comment></data>
   <data name="developRollCreateFromSelection.Content" xml:space="preserve"><value>선택 항목으로 롤 만들기</value><comment>AppMetadataOverlayLocalizedText[26]</comment></data>
   <data name="filterCurrentRoll.Text" xml:space="preserve"><value>현재 롤</value><comment>AppLocalizedPhrase.filterCurrentRoll</comment></data>
+  <data name="developExportRecipeEmpty.Content" xml:space="preserve"><value>저장된 설정 없음</value><comment>ExportRecipeLocalizedText.empty</comment></data>
+  <data name="developExportRecipeName.Text" xml:space="preserve"><value>설정 이름</value><comment>ExportRecipeLocalizedText.name</comment></data>
+  <data name="developExportRecipeSaveCurrent.Text" xml:space="preserve"><value>현재 설정 저장</value><comment>ExportRecipeLocalizedText.saveCurrent</comment></data>
+  <data name="developExportRecipeTitle.Text" xml:space="preserve"><value>내보내기 설정</value><comment>ExportRecipeLocalizedText.title</comment></data>
+  <data name="developExportRecipeDefaultName.Text" xml:space="preserve"><value>내보내기 설정 %d</value><comment>ExportRecipeLocalizedText.defaultName</comment></data>
 </root>

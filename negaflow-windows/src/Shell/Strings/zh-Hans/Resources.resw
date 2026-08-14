@@ -886,4 +886,9 @@
   <data name="developRollRecordCard.Text" xml:space="preserve"><value>胶卷记录</value><comment>AppMetadataOverlayLocalizedText[20]</comment></data>
   <data name="developRollCreateFromSelection.Content" xml:space="preserve"><value>用所选项目创建胶卷</value><comment>AppMetadataOverlayLocalizedText[26]</comment></data>
   <data name="filterCurrentRoll.Text" xml:space="preserve"><value>当前胶卷</value><comment>AppLocalizedPhrase.filterCurrentRoll</comment></data>
+  <data name="developExportRecipeEmpty.Content" xml:space="preserve"><value>无已存设置</value><comment>ExportRecipeLocalizedText.empty</comment></data>
+  <data name="developExportRecipeName.Text" xml:space="preserve"><value>设置名称</value><comment>ExportRecipeLocalizedText.name</comment></data>
+  <data name="developExportRecipeSaveCurrent.Text" xml:space="preserve"><value>存储当前设置</value><comment>ExportRecipeLocalizedText.saveCurrent</comment></data>
+  <data name="developExportRecipeTitle.Text" xml:space="preserve"><value>导出设置</value><comment>ExportRecipeLocalizedText.title</comment></data>
+  <data name="developExportRecipeDefaultName.Text" xml:space="preserve"><value>导出设置 %d</value><comment>ExportRecipeLocalizedText.defaultName</comment></data>
 </root>

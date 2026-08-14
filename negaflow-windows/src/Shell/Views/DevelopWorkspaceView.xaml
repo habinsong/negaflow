@@ -132,6 +132,35 @@
                                         GroupName="ExportDetailPage" />
                                 </Grid>
 
+                                <!-- 내보내기 설정: 담아 둔 값을 골라 얹습니다. 목적지와 파일명
+                                     패턴은 지금 것을 지킵니다. -->
+                                <Grid ColumnSpacing="6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="ExportRecipeLabel" VerticalAlignment="Center" FontSize="12" />
+                                    <ComboBox
+                                        x:Name="ExportRecipeSelector"
+                                        Grid.Column="1"
+                                        HorizontalAlignment="Stretch"
+                                        AutomationProperties.AutomationId="negaflow.develop.output.recipe"
+                                        SelectionChanged="OnExportRecipeChanged" />
+                                    <DropDownButton
+                                        x:Name="ExportRecipeMenuButton"
+                                        Grid.Column="2"
+                                        Padding="8,4"
+                                        AutomationProperties.AutomationId="negaflow.develop.output.recipe-menu"
+                                        Content="&#xE712;"
+                                        FontFamily="{ThemeResource SymbolThemeFontFamily}"
+                                        FontSize="12">
+                                        <DropDownButton.Flyout>
+                                            <MenuFlyout x:Name="ExportRecipeFlyout" />
+                                        </DropDownButton.Flyout>
+                                    </DropDownButton>
+                                </Grid>
+
                                 <!-- 파일 -->
                                 <StackPanel x:Name="ExportFilePage" Spacing="9">
                                     <Grid ColumnSpacing="8">
