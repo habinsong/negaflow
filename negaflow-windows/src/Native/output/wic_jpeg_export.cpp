@@ -155,6 +155,19 @@ void discard_staging(
     if (IsEqualGUID(pixel_format, GUID_WICPixelFormat24bppBGR) == FALSE) {
         return WicJpegExportStatus::pixel_format_coerced;
     }
+    // **픽셀보다 먼저** 쓴다. WIC 의 JPEG 인코더는 WriteSource 뒤에 들어온 메타데이터를
+    // 조용히 버린다 — TIFF 는 받아들여서 이 차이를 실파일로 확인하기 전에는 보이지 않았다.
+    // 실패하면 게시를 접는다: 고른 정책이 무시된 파일을 내보내지 않는다.
+    const ExportMetadataStatus metadata_status = write_export_metadata(
+        frame.Get(),
+        ExportMetadataContainer::jpeg,
+        metadata_policy,
+        metadata,
+        native_error_code);
+    if (metadata_status == ExportMetadataStatus::write_failed) {
+        return WicJpegExportStatus::encode_failed;
+    }
+
     IWICColorContext* contexts[]{color_context};
     status = frame->SetColorContexts(1U, contexts);
     if (FAILED(status)) {
@@ -193,17 +206,6 @@ void discard_staging(
         status = frame->WriteSource(dithered.Get(), nullptr);
     }
     if (SUCCEEDED(status)) {
-        // 메타데이터는 커밋 전에만 받는다. 실패하면 게시를 접는다 — 사용자가 고른 정책이
-        // 조용히 무시된 파일을 내보내지 않는다. 컨테이너가 아예 지원하지 않는 경우는 다르다.
-        const ExportMetadataStatus metadata_status = write_export_metadata(
-            frame.Get(),
-            ExportMetadataContainer::jpeg,
-            metadata_policy,
-            metadata,
-            native_error_code);
-        if (metadata_status == ExportMetadataStatus::write_failed) {
-            return WicJpegExportStatus::encode_failed;
-        }
         status = frame->Commit();
     }
     if (SUCCEEDED(status)) {
