@@ -490,6 +490,8 @@ public sealed partial class LibraryWorkspaceView : UserControl
             Infrared = InfraredFilterToggle.IsChecked == true,
             DefectRecipe = DefectRecipeFilterToggle.IsChecked == true,
             MetadataUnknown = MetadataUnknownFilterToggle.IsChecked == true,
+            CurrentRoll = CurrentRollFilterToggle.IsChecked == true,
+            CurrentRollFrameIds = CurrentRollFrameIds(),
         };
         ShowFilteredItems();
     }
@@ -1367,6 +1369,20 @@ public sealed partial class LibraryWorkspaceView : UserControl
     /// <summary>목록 한 줄입니다. 이름을 한 곳에서만 만들어야 줄마다 말이 달라지지 않습니다.</summary>
     private sealed record CollectionRow(string? Id, string Name, string CountText, string Glyph);
 
+    /// <summary>
+    /// 지금 스캔 중인 롤의 사진들입니다. 활성 롤이 없으면 빈 목록이고, 그러면 이 축은 꺼진
+    /// 것과 같이 동작합니다.
+    /// </summary>
+    private IReadOnlyList<string> CurrentRollFrameIds()
+    {
+        if (libraryHost?.ActiveRollId is not { } activeRollId)
+        {
+            return [];
+        }
+        return libraryHost.Rolls.FirstOrDefault(roll =>
+            string.Equals(roll.Id, activeRollId, StringComparison.Ordinal))?.FrameIds ?? [];
+    }
+
     private void RebuildCollections()
     {
         if (CollectionsList is null || libraryHost is null)
@@ -1533,6 +1549,9 @@ public sealed partial class LibraryWorkspaceView : UserControl
         SetToggleText(OfflineFilterToggle, AppResources.Get("libraryOffline", "Text"));
         SetToggleText(InfraredFilterToggle, AppResources.Get("filterInfrared", "Text"));
         SetToggleText(DefectRecipeFilterToggle, AppResources.Get("filterDefectRecipe", "Text"));
+        SetToggleText(
+            CurrentRollFilterToggle,
+            AppResources.Get("filterCurrentRoll", "Text"));
         SetToggleText(
             MetadataUnknownFilterToggle,
             AppResources.Get("libraryFilterMetadataUnknown", "Content"));

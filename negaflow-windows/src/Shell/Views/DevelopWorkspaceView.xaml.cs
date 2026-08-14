@@ -3083,6 +3083,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         LibraryRollSnapshot? roll = libraryHost.RollFor(frame.Id);
         RollNameText.Text = roll?.Name ?? string.Empty;
         RollMissingText.Visibility = roll is null ? Visibility.Visible : Visibility.Collapsed;
+        RollCreateButton.Visibility = RollMissingText.Visibility;
         RollRecordFields.Visibility = roll is null ? Visibility.Collapsed : Visibility.Visible;
         if (roll is null)
         {
@@ -3105,6 +3106,38 @@ public sealed partial class DevelopWorkspaceView : UserControl
         {
             isSynchronizingMetadata = false;
         }
+    }
+
+    /// <summary>
+    /// 고른 사진으로 롤을 만듭니다. macOS 의 "선택 항목으로 롤 만들기" 와 같으며, 라이브러리에서
+    /// 고른 것이 없으면 지금 보고 있는 한 장으로 만듭니다.
+    /// </summary>
+    private void OnCreateRollClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (libraryHost is null || panel?.SelectedFrame is not { } frame)
+        {
+            return;
+        }
+        IReadOnlyList<LibraryFrameSnapshot> selection = SelectedExportFrames(frame);
+        // 이름은 원본이 들어 있는 폴더에서 옵니다. 사용자가 필름 봉투에 적은 이름이 대개
+        // 그 폴더 이름이며, 없으면 macOS 의 "무제 필름" 자리를 씁니다.
+        string name = Path.GetFileName(Path.GetDirectoryName(frame.SourcePath) ?? string.Empty);
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            name = AppResources.Get("scanUntitledFilm", "Text");
+        }
+        string? rollId = libraryHost.CreateRoll(
+            name,
+            frame.Route.FilmType,
+            selection.Select(item => item.Id));
+        if (rollId is not null)
+        {
+            // 새로 만든 롤이 곧 지금 스캔 중인 롤입니다 — macOS 도 만든 롤을 활성으로 둡니다.
+            _ = libraryHost.SetActiveRoll(rollId);
+        }
+        UpdateRollRecordCard();
     }
 
     private void OnRollRecordCommitted(object sender, RoutedEventArgs args)
@@ -3147,6 +3180,9 @@ public sealed partial class DevelopWorkspaceView : UserControl
         LocalizeMetadataBox(RollLensModelBox, "developFilmShotLensModel");
         LocalizeMetadataBox(RollFilmStockBox, "developFilmShotFilmStock");
         LocalizeMetadataBox(RollNotesBox, "developRollNotes");
+        SetButtonText(
+            RollCreateButton,
+            AppResources.Get("developRollCreateFromSelection", "Content"));
     }
 
     private void UpdateInfoCard()

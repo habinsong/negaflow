@@ -1421,6 +1421,12 @@
                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                     TextWrapping="Wrap"
                                     Visibility="Collapsed" />
+                                <Button
+                                    x:Name="RollCreateButton"
+                                    HorizontalAlignment="Stretch"
+                                    AutomationProperties.AutomationId="negaflow.develop.roll-record.create"
+                                    Click="OnCreateRollClicked"
+                                    Visibility="Collapsed" />
                                 <StackPanel x:Name="RollRecordFields" Spacing="8">
                                     <TextBox
                                         x:Name="RollCodeBox"

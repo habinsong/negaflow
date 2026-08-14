@@ -4603,6 +4603,26 @@ internal static class Program
                 reopened.Rolls[0].FilmType == FilmType.ColorNegative,
                 "roll_record_round_trip");
             Check(reopened.ActiveRollId == rollId, "roll_active_round_trip");
+
+            // 현재 롤 필터는 활성 롤의 사진만 남깁니다. 활성 롤이 없으면 아무 것도 걸러내지
+            // 않습니다 — 켠 순간 격자가 비면 사용자는 사진이 사라졌다고 읽습니다.
+            LibraryFrameListItem[] items =
+            [
+                new(reopened.Frames[0]),
+                new(Frame(new ManualBaseRgb(0.2, 0.2, 0.2)) with { Id = "other" }),
+            ];
+            LibraryQuickFilterState filter = new()
+            {
+                CurrentRoll = true,
+                CurrentRollFrameIds = reopened.Rolls[0].FrameIds,
+            };
+            Check(
+                filter.Apply(items).Count == 1 &&
+                filter.Apply(items)[0].Frame.Id == frameId,
+                "current_roll_filter_keeps_the_active_roll");
+            Check(
+                !(filter with { CurrentRollFrameIds = [] }).IsActive,
+                "current_roll_filter_is_inert_without_an_active_roll");
         }
         finally
         {

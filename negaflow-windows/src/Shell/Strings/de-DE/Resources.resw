@@ -884,4 +884,6 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developRollMissing.Text" xml:space="preserve"><value>Dieses Bild gehört noch zu keinem Film.</value><comment>AppMetadataOverlayLocalizedText[25]</comment></data>
   <data name="developRollNotes.Text" xml:space="preserve"><value>Notizen</value><comment>AppMetadataOverlayLocalizedText[22]</comment></data>
   <data name="developRollRecordCard.Text" xml:space="preserve"><value>Filmnotiz</value><comment>AppMetadataOverlayLocalizedText[20]</comment></data>
+  <data name="developRollCreateFromSelection.Content" xml:space="preserve"><value>Film aus der Auswahl erstellen</value><comment>AppMetadataOverlayLocalizedText[26]</comment></data>
+  <data name="filterCurrentRoll.Text" xml:space="preserve"><value>Aktueller Film</value><comment>AppLocalizedPhrase.filterCurrentRoll</comment></data>
 </root>

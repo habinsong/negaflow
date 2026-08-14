@@ -884,4 +884,6 @@ Load a scanner from Library to scan film.</value>
   <data name="developRollMissing.Text" xml:space="preserve"><value>This frame is not in a roll yet.</value><comment>AppMetadataOverlayLocalizedText[25]</comment></data>
   <data name="developRollNotes.Text" xml:space="preserve"><value>Notes</value><comment>AppMetadataOverlayLocalizedText[22]</comment></data>
   <data name="developRollRecordCard.Text" xml:space="preserve"><value>Roll Record</value><comment>AppMetadataOverlayLocalizedText[20]</comment></data>
+  <data name="developRollCreateFromSelection.Content" xml:space="preserve"><value>Create a roll from the selection</value><comment>AppMetadataOverlayLocalizedText[26]</comment></data>
+  <data name="filterCurrentRoll.Text" xml:space="preserve"><value>Current Roll</value><comment>AppLocalizedPhrase.filterCurrentRoll</comment></data>
 </root>

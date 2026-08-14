@@ -884,4 +884,6 @@
   <data name="developRollMissing.Text" xml:space="preserve"><value>이 프레임은 아직 롤에 속해 있지 않습니다.</value><comment>AppMetadataOverlayLocalizedText[25]</comment></data>
   <data name="developRollNotes.Text" xml:space="preserve"><value>메모</value><comment>AppMetadataOverlayLocalizedText[22]</comment></data>
   <data name="developRollRecordCard.Text" xml:space="preserve"><value>롤 기록</value><comment>AppMetadataOverlayLocalizedText[20]</comment></data>
+  <data name="developRollCreateFromSelection.Content" xml:space="preserve"><value>선택 항목으로 롤 만들기</value><comment>AppMetadataOverlayLocalizedText[26]</comment></data>
+  <data name="filterCurrentRoll.Text" xml:space="preserve"><value>현재 롤</value><comment>AppLocalizedPhrase.filterCurrentRoll</comment></data>
 </root>

@@ -31,9 +31,20 @@ public sealed record LibraryQuickFilterState
     /// </summary>
     public bool MetadataUnknown { get; init; }
 
+    /// <summary>
+    /// 지금 스캔 중인 롤의 사진만 봅니다. 활성 롤이 없으면 이 축은 아무 것도 걸러내지
+    /// 않습니다 — 켠 순간 격자가 비면 사용자는 사진이 사라졌다고 읽습니다.
+    /// </summary>
+    public bool CurrentRoll { get; init; }
+
+    /// <summary>활성 롤에 속한 frame id 입니다. 비면 이 축은 꺼진 것과 같습니다.</summary>
+    public IReadOnlyList<string> CurrentRollFrameIds { get; init; } = [];
+
     public bool IsActive =>
         MinimumRating is not null || Picked || Rejected || Offline || Infrared ||
-        DefectRecipe || MetadataUnknown;
+        DefectRecipe || MetadataUnknown || IsCurrentRollActive;
+
+    private bool IsCurrentRollActive => CurrentRoll && CurrentRollFrameIds.Count > 0;
 
     public static LibraryQuickFilterState None { get; } = new();
 
@@ -80,6 +91,11 @@ public sealed record LibraryQuickFilterState
         {
             return false;
         }
-        return !MetadataUnknown || item.Frame.SourceMetadata is null;
+        if (MetadataUnknown && item.Frame.SourceMetadata is not null)
+        {
+            return false;
+        }
+        return !IsCurrentRollActive ||
+            CurrentRollFrameIds.Contains(item.Frame.Id, StringComparer.Ordinal);
     }
 }

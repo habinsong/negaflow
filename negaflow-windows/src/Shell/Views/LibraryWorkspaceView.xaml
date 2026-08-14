@@ -555,6 +555,7 @@
                     <ToggleButton x:Name="InfraredFilterToggle" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.infrared" CornerRadius="13" Checked="OnQuickFilterToggled" FontSize="11" Unchecked="OnQuickFilterToggled" />
                     <ToggleButton x:Name="DefectRecipeFilterToggle" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.defect-recipe" CornerRadius="13" Checked="OnQuickFilterToggled" FontSize="11" Unchecked="OnQuickFilterToggled" />
                     <ToggleButton x:Name="MetadataUnknownFilterToggle" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.metadata-unknown" CornerRadius="13" Checked="OnQuickFilterToggled" FontSize="11" Unchecked="OnQuickFilterToggled" />
+                    <ToggleButton x:Name="CurrentRollFilterToggle" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.current-roll" CornerRadius="13" Checked="OnQuickFilterToggled" FontSize="11" Unchecked="OnQuickFilterToggled" />
                     <Button x:Name="ClearFiltersButton" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.clear" Background="Transparent" BorderThickness="0" Click="OnClearFiltersClicked" FontSize="11" />
                 </StackPanel>
             </ScrollViewer>

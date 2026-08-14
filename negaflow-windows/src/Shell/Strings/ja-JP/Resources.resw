@@ -884,4 +884,6 @@
   <data name="developRollMissing.Text" xml:space="preserve"><value>このコマはまだロールに属していません。</value><comment>AppMetadataOverlayLocalizedText[25]</comment></data>
   <data name="developRollNotes.Text" xml:space="preserve"><value>メモ</value><comment>AppMetadataOverlayLocalizedText[22]</comment></data>
   <data name="developRollRecordCard.Text" xml:space="preserve"><value>ロール記録</value><comment>AppMetadataOverlayLocalizedText[20]</comment></data>
+  <data name="developRollCreateFromSelection.Content" xml:space="preserve"><value>選択項目でロールを作成</value><comment>AppMetadataOverlayLocalizedText[26]</comment></data>
+  <data name="filterCurrentRoll.Text" xml:space="preserve"><value>現在のロール</value><comment>AppLocalizedPhrase.filterCurrentRoll</comment></data>
 </root>
