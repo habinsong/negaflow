@@ -69,6 +69,7 @@ internal static class Program
         VerifyExportDestination();
         VerifyExportSettingsReachTheRequest();
         VerifyScanSession();
+        VerifyExportBatchPlan();
         VerifyDevelopHistogramSampler();
         VerifyDevelopPanelState();
         VerifyInspectorSliderValue();
@@ -4342,6 +4343,79 @@ internal static class Program
 
     private static bool NearRect(CropDisplayRect actual, double x, double y, double width, double height) =>
         Near(actual.X, x) && Near(actual.Y, y) && Near(actual.Width, width) && Near(actual.Height, height);
+
+    /// <summary>
+    /// 배치 계획입니다. 같은 이름이 두 번 나오지 않아야 하고, 순번은 고른 순서를 따라야 하며,
+    /// 이미 있는 파일을 덮지 않아야 합니다 — 내보내기가 이전 결과를 지우면 되돌릴 수 없습니다.
+    /// </summary>
+    private static void VerifyExportBatchPlan()
+    {
+        string root = Path.Combine(
+            Path.GetTempPath(),
+            "negaflow-export-batch-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            LibraryFrameSnapshot[] frames =
+            [
+                Frame(new ManualBaseRgb(0.2, 0.2, 0.2), sourcePath: @"C:\scans\IMG_0001.tif"),
+                Frame(new ManualBaseRgb(0.2, 0.2, 0.2), sourcePath: @"C:\scans\IMG_0002.tif"),
+                // 다른 폴더의 같은 이름입니다. 한 폴더로 내보내면 부딪힙니다.
+                Frame(new ManualBaseRgb(0.2, 0.2, 0.2), sourcePath: @"D:\other\IMG_0001.tif"),
+            ];
+            ExportSettings settings = new()
+            {
+                Format = DevelopExportFormat.Tiff16,
+                FolderPath = root,
+                NamingTemplate = ExportNamingTemplate.DefaultPattern,
+            };
+
+            IReadOnlyList<ExportBatchPlan> plans = ExportBatchCoordinator.Plan(frames, settings);
+            Check(plans.Count == 3, "export_batch_plans_every_frame");
+            Check(
+                Path.GetFileName(plans[0].DestinationPath) == "IMG_0001.tif" &&
+                Path.GetFileName(plans[1].DestinationPath) == "IMG_0002.tif" &&
+                Path.GetFileName(plans[2].DestinationPath) == "IMG_0001-2.tif",
+                "export_batch_separates_colliding_names");
+
+            // 순번 패턴은 고른 순서를 따라 올라갑니다.
+            IReadOnlyList<ExportBatchPlan> numbered = ExportBatchCoordinator.Plan(
+                frames,
+                settings with
+                {
+                    NamingTemplate = ExportNamingTemplate.SequenceOnlyPattern,
+                    SequenceStart = 5,
+                });
+            Check(
+                Path.GetFileName(numbered[0].DestinationPath) == "0005.tif" &&
+                Path.GetFileName(numbered[2].DestinationPath) == "0007.tif",
+                "export_batch_sequence_follows_the_selection_order");
+
+            // 이미 있는 파일은 덮지 않습니다.
+            File.WriteAllText(Path.Combine(root, "0005.tif"), string.Empty);
+            IReadOnlyList<ExportBatchPlan> again = ExportBatchCoordinator.Plan(
+                frames,
+                settings with
+                {
+                    NamingTemplate = ExportNamingTemplate.SequenceOnlyPattern,
+                    SequenceStart = 5,
+                });
+            Check(
+                Path.GetFileName(again[0].DestinationPath) == "0005-2.tif",
+                "export_batch_never_overwrites_an_existing_file");
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(root, true);
+            }
+            catch (IOException)
+            {
+                // 시험 뒤처리 실패는 시험 결과가 아닙니다.
+            }
+        }
+    }
 
     /// <summary>
     /// 스캔 절의 상태 기계입니다. 승인 없는 플러그인으로는 장치를 묻지 않고, capability 를 읽은

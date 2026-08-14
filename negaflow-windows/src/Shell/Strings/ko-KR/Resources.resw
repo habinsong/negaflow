@@ -856,4 +856,5 @@
   <data name="scanStart.Content" xml:space="preserve"><value>스캔</value><comment>AppLocalizedPhrase.scan</comment></data>
   <data name="scanUntitledFilm.Text" xml:space="preserve"><value>무제 필름</value><comment>AppLocalizedPhrase.untitledFilm</comment></data>
   <data name="scanWaitingStatus.Text" xml:space="preserve"><value>스캐너 연결 대기 중</value><comment>AppLocalizedPhrase.scannerWaitingStatus</comment></data>
+  <data name="exportBatchFrameProgress.Text" xml:space="preserve"><value>사진 %d/%d</value><comment>AppLocalizedPhrase.batchFrameProgressFormat</comment></data>
 </root>

@@ -520,7 +520,8 @@
                         ContainerContentChanging="OnFrameContainerChanging"
                         DoubleTapped="OnFrameDoubleTapped"
                         IsItemClickEnabled="False"
-                        SelectionMode="Single">
+                        SelectionChanged="OnFrameSelectionChanged"
+                        SelectionMode="Extended">
                         <GridView.GroupStyle>
                             <GroupStyle>
                                 <GroupStyle.HeaderTemplate>

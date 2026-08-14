@@ -856,4 +856,5 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="scanStart.Content" xml:space="preserve"><value>Scannen</value><comment>AppLocalizedPhrase.scan</comment></data>
   <data name="scanUntitledFilm.Text" xml:space="preserve"><value>Unbenannter Film</value><comment>AppLocalizedPhrase.untitledFilm</comment></data>
   <data name="scanWaitingStatus.Text" xml:space="preserve"><value>Warten auf Scannerverbindung</value><comment>AppLocalizedPhrase.scannerWaitingStatus</comment></data>
+  <data name="exportBatchFrameProgress.Text" xml:space="preserve"><value>Bild %d/%d</value><comment>AppLocalizedPhrase.batchFrameProgressFormat</comment></data>
 </root>

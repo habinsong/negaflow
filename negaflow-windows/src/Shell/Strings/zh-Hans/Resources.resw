@@ -856,4 +856,5 @@
   <data name="scanStart.Content" xml:space="preserve"><value>扫描</value><comment>AppLocalizedPhrase.scan</comment></data>
   <data name="scanUntitledFilm.Text" xml:space="preserve"><value>未命名胶片</value><comment>AppLocalizedPhrase.untitledFilm</comment></data>
   <data name="scanWaitingStatus.Text" xml:space="preserve"><value>正在等待扫描仪连接</value><comment>AppLocalizedPhrase.scannerWaitingStatus</comment></data>
+  <data name="exportBatchFrameProgress.Text" xml:space="preserve"><value>照片 %d/%d</value><comment>AppLocalizedPhrase.batchFrameProgressFormat</comment></data>
 </root>

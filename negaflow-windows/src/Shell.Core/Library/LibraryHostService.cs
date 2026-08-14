@@ -94,6 +94,45 @@ public sealed class LibraryHostService : IDisposable
     public IReadOnlyList<LibraryFrameIssue> Issues =>
         document?.Issues ?? [];
 
+    /// <summary>
+    /// 사용자가 고른 frame 들입니다. macOS 처럼 라이브러리와 현상이 같은 선택을 봅니다 — 그래야
+    /// 출력 패널의 "내보내기 (N)" 이 격자에서 고른 것과 같은 것을 가리킵니다.
+    /// </summary>
+    public IReadOnlyList<string> SelectedFrameIds { get; private set; } = [];
+
+    public event EventHandler? SelectionChanged;
+
+    /// <summary>고른 순서를 지키며, 카탈로그에 없는 id 는 버립니다.</summary>
+    public void SetSelection(IEnumerable<string> frameIds)
+    {
+        ArgumentNullException.ThrowIfNull(frameIds);
+        var known = new HashSet<string>(Frames.Select(frame => frame.Id), StringComparer.Ordinal);
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        string[] next = [.. frameIds.Where(id => known.Contains(id) && seen.Add(id))];
+        if (next.SequenceEqual(SelectedFrameIds, StringComparer.Ordinal))
+        {
+            return;
+        }
+        SelectedFrameIds = next;
+        SelectionChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>선택된 frame 들입니다. 선택이 비면 빈 목록입니다.</summary>
+    public IReadOnlyList<LibraryFrameSnapshot> SelectedFrames
+    {
+        get
+        {
+            if (SelectedFrameIds.Count == 0)
+            {
+                return [];
+            }
+            var byId = Frames.ToDictionary(frame => frame.Id, StringComparer.Ordinal);
+            return [.. SelectedFrameIds
+                .Select(id => byId.TryGetValue(id, out LibraryFrameSnapshot? frame) ? frame : null)
+                .OfType<LibraryFrameSnapshot>()];
+        }
+    }
+
     public IReadOnlyList<LibraryFolderSnapshot> Folders =>
         document?.Folders ?? [];
 

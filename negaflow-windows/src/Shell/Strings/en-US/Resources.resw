@@ -856,4 +856,5 @@ Load a scanner from Library to scan film.</value>
   <data name="scanStart.Content" xml:space="preserve"><value>Scan</value><comment>AppLocalizedPhrase.scan</comment></data>
   <data name="scanUntitledFilm.Text" xml:space="preserve"><value>Untitled Film</value><comment>AppLocalizedPhrase.untitledFilm</comment></data>
   <data name="scanWaitingStatus.Text" xml:space="preserve"><value>Waiting for scanner connection</value><comment>AppLocalizedPhrase.scannerWaitingStatus</comment></data>
+  <data name="exportBatchFrameProgress.Text" xml:space="preserve"><value>Frame %d/%d</value><comment>AppLocalizedPhrase.batchFrameProgressFormat</comment></data>
 </root>

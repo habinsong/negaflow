@@ -125,7 +125,13 @@ public sealed partial class DevelopWorkspaceView : UserControl
         ArgumentNullException.ThrowIfNull(negativeLimits);
         importWindowId = windowId;
 
+        if (libraryHost is not null)
+        {
+            libraryHost.SelectionChanged -= OnLibrarySelectionChanged;
+        }
         libraryHost = host;
+        // 격자에서 고른 장수가 바뀌면 내보내기 단추의 이름도 따라갑니다.
+        host.SelectionChanged += OnLibrarySelectionChanged;
         toneLimits = limits;
         panel = new DevelopPanelState(host, limits, negativeLimits);
         // 사용자 프리셋은 카탈로그가 아니라 앱 설정 옆에 삽니다. macOS 의 UserDefaults 자리입니다.
@@ -3317,6 +3323,13 @@ public sealed partial class DevelopWorkspaceView : UserControl
         UpdateExportPreview();
     }
 
+    private void OnLibrarySelectionChanged(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        UpdateExportPreview();
+    }
+
     private static string Percent(double unit) =>
         Math.Round(unit * 100.0).ToString("0", CultureInfo.CurrentCulture) + "%";
 
@@ -3365,6 +3378,13 @@ public sealed partial class DevelopWorkspaceView : UserControl
         }
         ExportButton.IsEnabled = panel?.CanExport == true;
         QuickExportButton.IsEnabled = panel?.CanExport == true;
+        int selectedCount = libraryHost?.SelectedFrames.Count ?? 0;
+        string exportTitle = AppResources.Get("exportSection", "Text");
+        SetButtonText(
+            ExportButton,
+            selectedCount > 1
+                ? string.Create(CultureInfo.CurrentCulture, $"{exportTitle} ({selectedCount})")
+                : exportTitle);
     }
 
     /// <summary>
@@ -3563,6 +3583,12 @@ public sealed partial class DevelopWorkspaceView : UserControl
         OutputStatusText.Text = AppResources.Get("developExportRunning", "Text");
         try
         {
+            IReadOnlyList<LibraryFrameSnapshot> selection = SelectedExportFrames(frame);
+            if (selection.Count > 1)
+            {
+                await RunExportBatchAsync(selection);
+                return;
+            }
             _ = await panel.ExportAsync(
                 exportSettings.Destination.PathFor(
                     frame.SourcePath,
@@ -3576,6 +3602,52 @@ public sealed partial class DevelopWorkspaceView : UserControl
         {
             UpdateExportPreview();
         }
+    }
+
+    /// <summary>
+    /// 내보낼 대상입니다. 라이브러리에서 여러 장을 골랐으면 그 목록이고, 아니면 지금 보고 있는
+    /// 한 장입니다 — macOS 의 <c>exportSelection</c> 과 같은 규칙입니다.
+    /// </summary>
+    private IReadOnlyList<LibraryFrameSnapshot> SelectedExportFrames(LibraryFrameSnapshot current)
+    {
+        IReadOnlyList<LibraryFrameSnapshot> selected = libraryHost?.SelectedFrames ?? [];
+        return selected.Count > 1 ? selected : [current];
+    }
+
+    /// <summary>
+    /// 여러 장을 차례로 내보내며 진행을 한 줄로 보여 줍니다. 계획은 먼저 전부 세우므로 같은
+    /// 경로가 두 번 나오지 않고, 한 장이 실패해도 나머지는 계속 나갑니다.
+    /// </summary>
+    private async Task RunExportBatchAsync(IReadOnlyList<LibraryFrameSnapshot> frames)
+    {
+        if (libraryHost is null)
+        {
+            return;
+        }
+        IReadOnlyList<ExportBatchPlan> plans = ExportBatchCoordinator.Plan(frames, exportSettings);
+        var coordinator = new ExportBatchCoordinator(libraryHost);
+        int finished = 0;
+        coordinator.ItemChanged += (_, item) =>
+        {
+            if (item.State is ExportBatchItemState.Running)
+            {
+                return;
+            }
+            ++finished;
+            OutputStatusText.Text = AppResources.FormatIntegers(
+                "exportBatchFrameProgress",
+                "Text",
+                finished,
+                plans.Count);
+        };
+        ExportBatchSummary summary = await coordinator.RunAsync(
+            plans,
+            exportSettings.ToEncodingOptions());
+        OutputStatusText.Text = AppResources.FormatIntegers(
+            "exportBatchFrameProgress",
+            "Text",
+            summary.Succeeded,
+            summary.Total);
     }
 
     private void OnCropAngleDialChanged(object? sender, double angle)

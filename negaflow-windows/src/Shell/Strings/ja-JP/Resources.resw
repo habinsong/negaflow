@@ -856,4 +856,5 @@
   <data name="scanStart.Content" xml:space="preserve"><value>スキャン</value><comment>AppLocalizedPhrase.scan</comment></data>
   <data name="scanUntitledFilm.Text" xml:space="preserve"><value>名称未設定のフィルム</value><comment>AppLocalizedPhrase.untitledFilm</comment></data>
   <data name="scanWaitingStatus.Text" xml:space="preserve"><value>スキャナーの接続を待機中</value><comment>AppLocalizedPhrase.scannerWaitingStatus</comment></data>
+  <data name="exportBatchFrameProgress.Text" xml:space="preserve"><value>コマ %d/%d</value><comment>AppLocalizedPhrase.batchFrameProgressFormat</comment></data>
 </root>

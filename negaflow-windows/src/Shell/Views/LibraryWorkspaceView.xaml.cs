@@ -209,6 +209,19 @@ public sealed partial class LibraryWorkspaceView : UserControl
         workspaceState?.SelectWorkspace(WorkspaceModule.Develop);
     }
 
+    /// <summary>
+    /// 격자의 선택을 라이브러리에 알립니다. macOS 처럼 선택은 화면이 아니라 라이브러리가 들고
+    /// 있으므로, 현상의 출력 패널이 같은 선택을 보고 "내보내기 (N)" 을 냅니다.
+    /// </summary>
+    private void OnFrameSelectionChanged(object sender, SelectionChangedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        libraryHost?.SetSelection(FrameListView.SelectedItems
+            .OfType<LibraryFrameListItem>()
+            .Select(item => item.Id));
+    }
+
     /// <summary>사용자가 라이브러리에서 현상으로 넘기려는 frame 입니다.</summary>
     public event EventHandler<LibraryFrameListItem>? FrameOpenRequested;
 
