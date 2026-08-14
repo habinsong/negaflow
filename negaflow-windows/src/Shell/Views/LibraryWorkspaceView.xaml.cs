@@ -17,6 +17,9 @@ public sealed partial class LibraryWorkspaceView : UserControl
 {
     private WorkspacePresentationState? workspaceState;
     private LibraryHostService? libraryHost;
+    private ScanSessionController? scanSession;
+    private ScannerPluginTrustStore? scannerTrust;
+    private bool isSynchronizingScan;
     private ThumbnailService? thumbnails;
     private Microsoft.UI.WindowId? importWindowId;
     private bool isResizing;
@@ -892,6 +895,451 @@ public sealed partial class LibraryWorkspaceView : UserControl
         ControlsPanel.Width = liveWidth;
     }
 
+    // MARK: - 스캔 절
+    //
+    // macOS ScannerControlsSection 과 같은 구성입니다. 플러그인 경계와 카탈로그 게시는
+    // ScanSessionController 가 들고 있고, 여기서는 그 상태를 컨트롤에 옮기기만 합니다.
+
+    private void EnsureScanSession()
+    {
+        if (scanSession is not null)
+        {
+            return;
+        }
+        if (DispatcherQueueUiDispatcher.CaptureForCurrentThread() is not { } uiDispatcher)
+        {
+            return;
+        }
+        scannerTrust = new ScannerPluginTrustStore();
+        scanSession = new ScanSessionController(
+            new ScannerPluginGateway(),
+            scannerTrust,
+            uiDispatcher);
+        scanSession.Changed += OnScanSessionChanged;
+    }
+
+    private void OnScanSessionChanged(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (DispatcherQueue.HasThreadAccess)
+        {
+            RenderScanSection();
+            return;
+        }
+        _ = DispatcherQueue.TryEnqueue(RenderScanSection);
+    }
+
+    private async void OnImportScannerClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        EnsureScanSession();
+        if (scanSession is null || ImportScannerButton.IsChecked != true)
+        {
+            RenderScanSection();
+            return;
+        }
+        // 열 때마다 플러그인 목록을 다시 읽습니다 — 방금 설치한 플러그인이 보여야 합니다.
+        scanSession.Refresh();
+        if (scanSession.State is ScanSessionState.NoDevice)
+        {
+            await scanSession.RefreshDevicesAsync();
+        }
+    }
+
+    private void OnScanApprovePluginClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (scanSession?.PluginsRequiringApproval is not { Count: > 0 } pending)
+        {
+            return;
+        }
+        foreach (InstalledScannerPlugin plugin in pending)
+        {
+            scanSession.Approve(plugin);
+        }
+    }
+
+    private async void OnScanRescanClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (scanSession is not null)
+        {
+            await scanSession.RefreshDevicesAsync();
+        }
+    }
+
+    private async void OnScanDeviceChanged(object sender, SelectionChangedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (isSynchronizingScan ||
+            scanSession is null ||
+            ScanDeviceSelector.SelectedItem is not ComboBoxItem { Tag: string deviceId })
+        {
+            return;
+        }
+        await scanSession.SelectDeviceAsync(deviceId);
+    }
+
+    private void OnScanFilmChanged(object sender, SelectionChangedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (isSynchronizingScan ||
+            ScanFilmSelector.SelectedItem is not ComboBoxItem { Tag: FilmType filmType })
+        {
+            return;
+        }
+        scanSession?.UpdateOptions(options => options with { FilmType = filmType });
+    }
+
+    private void OnScanFolderNameChanged(object sender, TextChangedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (isSynchronizingScan)
+        {
+            return;
+        }
+        scanSession?.UpdateOptions(options => options with { FolderName = ScanFolderNameBox.Text });
+    }
+
+    private void OnScanResolutionChanged(object sender, SelectionChangedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (isSynchronizingScan ||
+            ScanResolutionSelector.SelectedItem is not ComboBoxItem { Tag: int dpi })
+        {
+            return;
+        }
+        scanSession?.UpdateOptions(options => options with { ResolutionDpi = dpi });
+    }
+
+    private void OnScanColorModeChanged(object sender, SelectionChangedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (isSynchronizingScan ||
+            ScanColorModeSelector.SelectedItem is not ComboBoxItem { Tag: string mode })
+        {
+            return;
+        }
+        scanSession?.UpdateOptions(options => options with { ColorMode = mode });
+    }
+
+    private void OnScanBitDepthChanged(object sender, SelectionChangedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (isSynchronizingScan ||
+            ScanBitDepthSelector.SelectedItem is not ComboBoxItem { Tag: int depth })
+        {
+            return;
+        }
+        scanSession?.UpdateOptions(options => options with { BitDepth = depth });
+    }
+
+    private void OnScanFrameCountChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
+    {
+        _ = sender;
+        if (isSynchronizingScan || double.IsNaN(args.NewValue))
+        {
+            return;
+        }
+        scanSession?.UpdateOptions(options => options with { BatchCount = (int)args.NewValue });
+    }
+
+    private void OnScanInfraredToggled(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (isSynchronizingScan)
+        {
+            return;
+        }
+        scanSession?.UpdateOptions(options => options with { Infrared = ScanInfraredToggle.IsOn });
+    }
+
+    private async void OnScanPreviewClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        await RunScanAsync(preview: true);
+    }
+
+    private async void OnScanStartClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        await RunScanAsync(preview: false);
+    }
+
+    /// <summary>
+    /// 스캔해서 카탈로그에 게시하고 격자를 다시 그립니다. 목적지는 매 장마다 새로 고르므로
+    /// 이어서 뜨는 배치가 서로를 덮지 않습니다.
+    /// </summary>
+    private async Task RunScanAsync(bool preview)
+    {
+        if (scanSession is null || libraryHost is null)
+        {
+            return;
+        }
+        if (libraryHost.StorageRoots is not { } roots)
+        {
+            ScanStatusText.Text = AppResources.Get("libraryImportFailed", "Text");
+            return;
+        }
+
+        string rollName = string.IsNullOrWhiteSpace(scanSession.Options.FolderName)
+            ? AppResources.Get("scanUntitledFilm", "Text")
+            : scanSession.Options.FolderName;
+        string stem = ScanStorageLayout.ScannerAbbreviation(
+            scanSession.SelectedDevice?.DisplayName);
+        string directory;
+        try
+        {
+            directory = ScanStorageLayout.EnsureRollDirectory(
+                Path.Combine(roots.LibraryRoot, "Scans"),
+                scanSession.Options.FilmType,
+                rollName,
+                DateTime.Now);
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            ScanStatusText.Text = AppResources.Get("libraryImportFailed", "Text");
+            return;
+        }
+
+        ScanStatusText.Text = AppResources.Get("scanSection", "Text");
+        ScanRunOutcome outcome = await scanSession.RunAsync(
+            libraryHost,
+            _ => ScanStorageLayout.NextAvailablePath(directory, stem),
+            preview);
+        ScanStatusText.Text = DescribeScanOutcome(outcome);
+        if (importWindowId is { } windowId)
+        {
+            ShowLibrary(libraryHost, windowId);
+        }
+    }
+
+    private string DescribeScanOutcome(ScanRunOutcome outcome)
+    {
+        if (outcome.IsSuccess)
+        {
+            return AppResources.FormatIntegers(
+                "libraryFolderImportResult",
+                "Text",
+                outcome.Published,
+                1);
+        }
+        // 실패는 어느 단계에서 멈췄는지를 남깁니다. "스캔 실패" 만으로는 다시 시도하는 것 말고
+        // 사용자가 할 수 있는 일이 없습니다.
+        string reason = scanSession?.LastFailureName ??
+            outcome.LastScanStatus?.ToString() ??
+            "unavailable";
+        return AppResources.Get("libraryImportFailed", "Text") + " — " + reason;
+    }
+
+    /// <summary>
+    /// 세션 상태를 컨트롤에 옮깁니다. macOS 와 같은 세 갈래(플러그인 없음 · 승인 필요 ·
+    /// 연결 대기)를 그대로 냅니다.
+    /// </summary>
+    private void RenderScanSection()
+    {
+        if (ScanSectionCard is null)
+        {
+            return;
+        }
+        bool wanted = ImportScannerButton.IsChecked == true;
+        ScanSessionState state = scanSession?.State ?? ScanSessionState.NoPlugin;
+        ScanSectionText.Visibility = wanted ? Visibility.Visible : Visibility.Collapsed;
+        ScanSectionCard.Visibility = ScanSectionText.Visibility;
+        if (!wanted || scanSession is null)
+        {
+            return;
+        }
+
+        bool ready = state is ScanSessionState.Ready or ScanSessionState.Scanning;
+        ScanControls.Visibility = ready ? Visibility.Visible : Visibility.Collapsed;
+        ScanApprovePluginButton.Visibility = state == ScanSessionState.NeedsApproval
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        ScanStateText.Text = state switch
+        {
+            ScanSessionState.NoPlugin => AppResources.Get("scanPluginMissingTitle", "Text") + "\n" +
+                AppResources.Get("scanPluginMissingBody", "Text"),
+            ScanSessionState.NeedsApproval => AppResources.Get("scanPluginApprovalTitle", "Text"),
+            ScanSessionState.Searching => AppResources.Get("scanSearching", "Text"),
+            ScanSessionState.NoDevice => AppResources.Get("scanWaitingStatus", "Text"),
+            _ => string.Empty,
+        };
+        ScanStateText.Visibility = ScanStateText.Text.Length == 0
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+        if (!ready)
+        {
+            return;
+        }
+
+        isSynchronizingScan = true;
+        try
+        {
+            FillTagged(
+                ScanDeviceSelector,
+                [.. scanSession.Devices.Select(device =>
+                    ((object)device.DisplayName, (object)device.Id))],
+                scanSession.SelectedDevice?.Id);
+            FillTagged(
+                ScanFilmSelector,
+                [.. FilmTypes.Select(film =>
+                    ((object)FilmTypeNameConverter.Name(film), (object)film))],
+                scanSession.Options.FilmType);
+            FillTagged(
+                ScanResolutionSelector,
+                [.. scanSession.Resolutions.Select(dpi =>
+                    ((object)string.Create(CultureInfo.CurrentCulture, $"{dpi} dpi"), (object)dpi))],
+                scanSession.Options.ResolutionDpi);
+            FillTagged(
+                ScanColorModeSelector,
+                [.. scanSession.ColorModes.Select(mode =>
+                    ((object)ColorModeLabel(mode), (object)mode))],
+                scanSession.Options.ColorMode);
+            int channels = string.Equals(
+                scanSession.Options.ColorMode,
+                ScanSessionController.ColorModeGray,
+                StringComparison.Ordinal) ? 1 : 3;
+            FillTagged(
+                ScanBitDepthSelector,
+                [.. scanSession.BitDepths.Select(depth => ((object)string.Create(
+                    CultureInfo.CurrentCulture,
+                    $"{depth}-bit/ch ({depth * channels}-bit)"), (object)depth))],
+                scanSession.Options.BitDepth);
+            if (ScanFolderNameBox.Text != scanSession.Options.FolderName)
+            {
+                ScanFolderNameBox.Text = scanSession.Options.FolderName;
+            }
+            ScanFrameCountBox.Value = scanSession.Options.BatchCount;
+            ScanInfraredToggle.IsOn = scanSession.Options.Infrared;
+        }
+        finally
+        {
+            isSynchronizingScan = false;
+        }
+
+        bool hasDepths = scanSession.BitDepths.Count > 0;
+        ScanBitDepthRow.Visibility = hasDepths ? Visibility.Visible : Visibility.Collapsed;
+        ScanBitDepthUnavailableText.Visibility = hasDepths
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+        ScanInfraredToggle.Visibility = scanSession.Capabilities?.SupportsInfrared == true
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        ScanInfraredToggle.IsEnabled = scanSession.CanUseInfrared;
+        ScanPreviewButton.Visibility = scanSession.Capabilities?.SupportsPreview == true
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        ScanPreviewButton.IsEnabled = scanSession.CanPreview;
+        ScanStartButton.IsEnabled = scanSession.CanScan;
+        ScanRescanButton.IsEnabled = !scanSession.IsDetecting && !scanSession.IsScanning;
+        ScanControls.IsHitTestVisible = !scanSession.IsScanning;
+        SetButtonText(
+            ScanStartButton,
+            scanSession.Options.BatchCount > 1
+                ? AppResources.FormatInteger("scanCountFormat", "Text", scanSession.Options.BatchCount)
+                : AppResources.Get("scanStart", "Content"));
+        ScanFrameCountLabel.Text = AppResources.FormatInteger(
+            "scanFramesFormat",
+            "Text",
+            scanSession.Options.BatchCount);
+    }
+
+    /// <summary>macOS 스캔 절의 필름 목록 순서입니다.</summary>
+    private static IReadOnlyList<FilmType> FilmTypes { get; } =
+    [
+        FilmType.ColorNegative,
+        FilmType.ColorPositive,
+        FilmType.BlackAndWhiteNegative,
+        FilmType.BlackAndWhitePositive,
+    ];
+
+    private static string ColorModeLabel(string mode) =>
+        mode.Length == 0 ? mode : char.ToUpperInvariant(mode[0]) + mode[1..];
+
+    /// <summary>
+    /// 목록을 갈아 끼우고 고른 값을 다시 잡습니다. 목록을 지우면 선택이 풀리므로 항상 짝으로
+    /// 해야 합니다.
+    /// </summary>
+    private static void FillTagged(
+        ComboBox selector,
+        IReadOnlyList<(object Text, object Tag)> items,
+        object? selectedTag)
+    {
+        selector.Items.Clear();
+        foreach ((object text, object tag) in items)
+        {
+            selector.Items.Add(new ComboBoxItem { Content = text, Tag = tag });
+        }
+        foreach (object item in selector.Items)
+        {
+            if (item is ComboBoxItem candidate && Equals(candidate.Tag, selectedTag))
+            {
+                selector.SelectedItem = candidate;
+                return;
+            }
+        }
+    }
+
+    private void LocalizeScanSection()
+    {
+        SetButtonText(ImportImagesButton, AppResources.Get("libraryImportImageShort", "Content"));
+        SetButtonText(ImportFoldersButton, AppResources.Get("libraryImportFolderShort", "Content"));
+        SetToggleButtonText(
+            ImportScannerButton,
+            AppResources.Get("libraryScannerLabel", "Content"));
+        ScanSectionText.Text = AppResources.Get("scanSection", "Text");
+        ScanDeviceLabel.Text = AppResources.Get("libraryScannerLabel", "Content");
+        AutomationProperties.SetName(ScanDeviceSelector, ScanDeviceLabel.Text);
+        SetButtonText(ScanApprovePluginButton, AppResources.Get("scanPluginApprove", "Content"));
+        string rescan = AppResources.Get("scanDetectScanners", "Text");
+        AutomationProperties.SetName(ScanRescanButton, rescan);
+        ToolTipService.SetToolTip(ScanRescanButton, rescan);
+        ScanFilmLabel.Text = AppResources.Get("scanFilm", "Text");
+        AutomationProperties.SetName(ScanFilmSelector, ScanFilmLabel.Text);
+        ScanFolderNameLabel.Text = AppResources.Get("scanFolderName", "Text");
+        ScanFolderNameBox.PlaceholderText = AppResources.Get("scanUntitledFilm", "Text");
+        AutomationProperties.SetName(ScanFolderNameBox, ScanFolderNameLabel.Text);
+        AutomationProperties.SetName(
+            ScanResolutionSelector,
+            AppResources.Get("scanResolution", "Text"));
+        AutomationProperties.SetName(
+            ScanColorModeSelector,
+            AppResources.Get("scanColorMode", "Text"));
+        ScanBitDepthLabel.Text = AppResources.Get("scanBitDepth", "Text");
+        AutomationProperties.SetName(ScanBitDepthSelector, ScanBitDepthLabel.Text);
+        ScanBitDepthUnavailableText.Text = AppResources.Get("scanBitDepthUnavailable", "Text");
+        ScanFrameCountLabel.Text = AppResources.FormatInteger("scanFramesFormat", "Text", 1);
+        AutomationProperties.SetName(ScanFrameCountBox, ScanFrameCountLabel.Text);
+        string infrared = AppResources.Get("scanInfrared", "Content");
+        ScanInfraredToggle.Header = infrared;
+        ScanInfraredToggle.OnContent = infrared;
+        ScanInfraredToggle.OffContent = infrared;
+        AutomationProperties.SetName(ScanInfraredToggle, infrared);
+        SetButtonText(ScanPreviewButton, AppResources.Get("scanPreview", "Content"));
+        SetButtonText(ScanStartButton, AppResources.Get("scanStart", "Content"));
+    }
+
+    private static void SetToggleButtonText(ToggleButton toggle, string text)
+    {
+        toggle.Content = text;
+        AutomationProperties.SetName(toggle, text);
+        ToolTipService.SetToolTip(toggle, text);
+    }
+
     private void LocalizeControls()
     {
         SetNameAndTooltip(ImportRailButton, "importSection");
@@ -905,7 +1353,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
         string importImages = AppResources.Get("importImages", "Content");
         SetButtonText(ImportImagesButton, importImages);
         SetButtonText(EmptyImportImagesButton, importImages);
-        SetButtonText(ImportFoldersButton, AppResources.Get("importFolder", "Content"));
+        LocalizeScanSection();
         SetButtonText(AllModeButton, AppResources.Get("libraryAllShort", "Text"));
         SetButtonText(FoldersModeButton, AppResources.Get("libraryFolders", "Text"));
         SetDropDownText(FilmTypeModeButton, AppResources.Get("libraryFilmType", "Text"));

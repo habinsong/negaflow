@@ -58,6 +58,9 @@ public sealed class LibraryHostService : IDisposable
     private int availabilityRefreshVersion;
     private LibraryDocument? document;
     private StorageRootSet? storageRoots;
+
+    /// <summary>열린 카탈로그가 쓰는 디스크 자리입니다. 열기 전에는 null 입니다.</summary>
+    public StorageRootSet? StorageRoots => storageRoots;
     private Timer? saveTimer;
 
     public LibraryHostService(IUiDispatcher dispatcher)

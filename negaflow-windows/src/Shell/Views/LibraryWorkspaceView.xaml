@@ -84,9 +84,198 @@
                         <Border Padding="12" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="8">
                             <StackPanel Spacing="9">
                                 <TextBlock x:Uid="importHint" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
-                                <Button x:Name="ImportImagesButton" Click="OnImportClicked" />
-                                <Button x:Name="ImportFoldersButton" Click="OnImportFoldersClicked" />
+                                <!-- macOS 의 가져오기 막대입니다. 세 방법이 같은 자리를 나눠 씁니다. -->
+                                <Grid ColumnSpacing="4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button
+                                        x:Name="ImportImagesButton"
+                                        HorizontalAlignment="Stretch"
+                                        AutomationProperties.AutomationId="negaflow.library.import.images"
+                                        Click="OnImportClicked" />
+                                    <Button
+                                        x:Name="ImportFoldersButton"
+                                        Grid.Column="1"
+                                        HorizontalAlignment="Stretch"
+                                        AutomationProperties.AutomationId="negaflow.library.import.folders"
+                                        Click="OnImportFoldersClicked" />
+                                    <ToggleButton
+                                        x:Name="ImportScannerButton"
+                                        Grid.Column="2"
+                                        HorizontalAlignment="Stretch"
+                                        AutomationProperties.AutomationId="negaflow.library.import.scanner"
+                                        Click="OnImportScannerClicked" />
+                                </Grid>
                                 <TextBlock x:Name="ImportStatusText" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- 스캔: macOS ScannerControlsSection 입니다. 설치된 플러그인이 있을 때만
+                             나오며, 승인·연결·준비 세 상태를 그대로 구분합니다. -->
+                        <TextBlock
+                            x:Name="ScanSectionText"
+                            FontSize="13"
+                            FontWeight="SemiBold"
+                            Visibility="Collapsed" />
+                        <Border
+                            x:Name="ScanSectionCard"
+                            Padding="12"
+                            Background="{ThemeResource NegaflowCardBrush}"
+                            CornerRadius="8"
+                            Visibility="Collapsed">
+                            <StackPanel Spacing="9">
+                                <TextBlock
+                                    x:Name="ScanStateText"
+                                    FontSize="12"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    TextWrapping="Wrap" />
+                                <Button
+                                    x:Name="ScanApprovePluginButton"
+                                    HorizontalAlignment="Stretch"
+                                    AutomationProperties.AutomationId="negaflow.library.scan.approve"
+                                    Click="OnScanApprovePluginClicked"
+                                    Visibility="Collapsed" />
+
+                                <StackPanel x:Name="ScanControls" Spacing="9" Visibility="Collapsed">
+                                    <Grid ColumnSpacing="6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="ScanDeviceLabel" VerticalAlignment="Center" FontSize="12" />
+                                        <ComboBox
+                                            x:Name="ScanDeviceSelector"
+                                            Grid.Column="1"
+                                            HorizontalAlignment="Stretch"
+                                            AutomationProperties.AutomationId="negaflow.library.scan.device"
+                                            SelectionChanged="OnScanDeviceChanged" />
+                                        <Button
+                                            x:Name="ScanRescanButton"
+                                            Grid.Column="2"
+                                            Padding="7,4"
+                                            AutomationProperties.AutomationId="negaflow.scanner.rescan"
+                                            Click="OnScanRescanClicked"
+                                            Content="&#xE72C;"
+                                            FontFamily="{ThemeResource SymbolThemeFontFamily}"
+                                            FontSize="12" />
+                                    </Grid>
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="ScanFilmLabel" VerticalAlignment="Center" FontSize="12" />
+                                        <ComboBox
+                                            x:Name="ScanFilmSelector"
+                                            Grid.Column="1"
+                                            MinWidth="132"
+                                            AutomationProperties.AutomationId="negaflow.library.scan.film"
+                                            SelectionChanged="OnScanFilmChanged" />
+                                    </Grid>
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="ScanFolderNameLabel" VerticalAlignment="Center" FontSize="12" />
+                                        <TextBox
+                                            x:Name="ScanFolderNameBox"
+                                            Grid.Column="1"
+                                            AutomationProperties.AutomationId="negaflow.library.scan.folder-name"
+                                            TextAlignment="Right"
+                                            TextChanged="OnScanFolderNameChanged" />
+                                    </Grid>
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <ComboBox
+                                            x:Name="ScanResolutionSelector"
+                                            HorizontalAlignment="Left"
+                                            AutomationProperties.AutomationId="negaflow.library.scan.resolution"
+                                            SelectionChanged="OnScanResolutionChanged" />
+                                        <TextBlock
+                                            Grid.Column="1"
+                                            VerticalAlignment="Center"
+                                            FontSize="11"
+                                            Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                            Text="|" />
+                                        <ComboBox
+                                            x:Name="ScanColorModeSelector"
+                                            Grid.Column="2"
+                                            HorizontalAlignment="Right"
+                                            AutomationProperties.AutomationId="negaflow.library.scan.color-mode"
+                                            SelectionChanged="OnScanColorModeChanged" />
+                                    </Grid>
+                                    <TextBlock
+                                        x:Name="ScanBitDepthUnavailableText"
+                                        FontSize="11"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        TextWrapping="Wrap"
+                                        Visibility="Collapsed" />
+                                    <Grid x:Name="ScanBitDepthRow" ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="ScanBitDepthLabel" VerticalAlignment="Center" FontSize="12" />
+                                        <ComboBox
+                                            x:Name="ScanBitDepthSelector"
+                                            Grid.Column="1"
+                                            MinWidth="132"
+                                            AutomationProperties.AutomationId="negaflow.library.scan.bit-depth"
+                                            SelectionChanged="OnScanBitDepthChanged" />
+                                    </Grid>
+                                    <Grid x:Name="ScanFrameCountRow" ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="ScanFrameCountLabel" VerticalAlignment="Center" FontSize="12" />
+                                        <NumberBox
+                                            x:Name="ScanFrameCountBox"
+                                            Grid.Column="1"
+                                            MinWidth="98"
+                                            AutomationProperties.AutomationId="negaflow.library.scan.frame-count"
+                                            Maximum="12"
+                                            Minimum="1"
+                                            SpinButtonPlacementMode="Compact"
+                                            ValueChanged="OnScanFrameCountChanged" />
+                                    </Grid>
+                                    <ToggleSwitch
+                                        x:Name="ScanInfraredToggle"
+                                        AutomationProperties.AutomationId="negaflow.library.scan.infrared"
+                                        Toggled="OnScanInfraredToggled" />
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Button
+                                            x:Name="ScanPreviewButton"
+                                            HorizontalAlignment="Stretch"
+                                            AutomationProperties.AutomationId="negaflow.library.scan.preview"
+                                            Click="OnScanPreviewClicked" />
+                                        <Button
+                                            x:Name="ScanStartButton"
+                                            Grid.Column="1"
+                                            HorizontalAlignment="Stretch"
+                                            AutomationProperties.AutomationId="negaflow.library.scan.start"
+                                            Click="OnScanStartClicked"
+                                            Style="{StaticResource AccentButtonStyle}" />
+                                    </Grid>
+                                </StackPanel>
+                                <TextBlock
+                                    x:Name="ScanStatusText"
+                                    FontSize="11"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    TextWrapping="Wrap" />
                             </StackPanel>
                         </Border>
                     </StackPanel>

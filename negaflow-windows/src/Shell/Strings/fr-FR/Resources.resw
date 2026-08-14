@@ -831,4 +831,29 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="developSharpenGlossyPaper.Content" xml:space="preserve"><value>Papier brillant</value><comment>OutputSharpening.glossyPaper</comment></data>
   <data name="developSharpenMattePaper.Content" xml:space="preserve"><value>Papier mat</value><comment>OutputSharpening.mattePaper</comment></data>
   <data name="developSharpenScreen.Content" xml:space="preserve"><value>Écran</value><comment>OutputSharpening.screen</comment></data>
+  <data name="libraryImportFolderShort.Content" xml:space="preserve"><value>Dossier</value><comment>AppLocalizedPhrase.importFolderShort</comment></data>
+  <data name="libraryImportImageShort.Content" xml:space="preserve"><value>Image</value><comment>AppLocalizedPhrase.importImageShort</comment></data>
+  <data name="libraryScannerLabel.Content" xml:space="preserve"><value>Scanner</value><comment>AppLocalizedPhrase.scannerLabel</comment></data>
+  <data name="scanBitDepth.Text" xml:space="preserve"><value>Profondeur de bits</value><comment>AppLocalizedPhrase.bitDepth</comment></data>
+  <data name="scanBitDepthUnavailable.Text" xml:space="preserve"><value>Ce scanner ne signale aucune option de profondeur de bits ; la numérisation est impossible.</value><comment>AppLocalizedPhrase.bitDepthUnavailable</comment></data>
+  <data name="scanCancel.Content" xml:space="preserve"><value>Annuler</value><comment>AppLocalizedPhrase.cancel</comment></data>
+  <data name="scanColorMode.Text" xml:space="preserve"><value>Mode</value><comment>AppLocalizedPhrase.colorMode</comment></data>
+  <data name="scanCountFormat.Text" xml:space="preserve"><value>Numériser x%d</value><comment>AppLocalizedPhrase.scanCountFormat</comment></data>
+  <data name="scanDetectScanners.Text" xml:space="preserve"><value>Rechercher les scanners</value><comment>AppLocalizedText.commandDetectScanners</comment></data>
+  <data name="scanFilm.Text" xml:space="preserve"><value>Film</value><comment>AppLocalizedPhrase.film</comment></data>
+  <data name="scanFolderName.Text" xml:space="preserve"><value>Nom du dossier</value><comment>AppLocalizedPhrase.scanFolderName</comment></data>
+  <data name="scanFramesFormat.Text" xml:space="preserve"><value>Images : %d</value><comment>AppLocalizedPhrase.framesFormat</comment></data>
+  <data name="scanInfrared.Content" xml:space="preserve"><value>Infrarouge (IR)</value><comment>AppLocalizedPhrase.infrared</comment></data>
+  <data name="scanNext.Content" xml:space="preserve"><value>Numériser la suivante</value><comment>AppLocalizedPhrase.scanNext</comment></data>
+  <data name="scanPluginApprovalTitle.Text" xml:space="preserve"><value>Approbation des modules scanner</value><comment>AppLocalizedPhrase.scannerPluginApprovalTitle</comment></data>
+  <data name="scanPluginApprove.Content" xml:space="preserve"><value>Approuver</value><comment>AppLocalizedPhrase.scannerPluginApprove</comment></data>
+  <data name="scanPluginMissingBody.Text" xml:space="preserve"><value>Les scanners de film sont fournis sous forme de modules séparés pour des raisons de licence. Une fois le module installé, vous pourrez numériser ici. En attendant, commencez le développement en important des images.</value><comment>AppLocalizedPhrase.scannerPluginMissingBody</comment></data>
+  <data name="scanPluginMissingTitle.Text" xml:space="preserve"><value>Aucun module scanner n'est installé.</value><comment>AppLocalizedPhrase.scannerPluginMissingTitle</comment></data>
+  <data name="scanPreview.Content" xml:space="preserve"><value>Aperçu</value><comment>AppLocalizedPhrase.preview</comment></data>
+  <data name="scanResolution.Text" xml:space="preserve"><value>Résolution</value><comment>AppLocalizedPhrase.resolution</comment></data>
+  <data name="scanSearching.Text" xml:space="preserve"><value>Recherche du scanner — vérifiez la connexion USB.</value><comment>AppLocalizedPhrase.scannerSearching</comment></data>
+  <data name="scanSection.Text" xml:space="preserve"><value>Numérisation</value><comment>AppLocalizedPhrase.scanSection</comment></data>
+  <data name="scanStart.Content" xml:space="preserve"><value>Numériser</value><comment>AppLocalizedPhrase.scan</comment></data>
+  <data name="scanUntitledFilm.Text" xml:space="preserve"><value>Film sans titre</value><comment>AppLocalizedPhrase.untitledFilm</comment></data>
+  <data name="scanWaitingStatus.Text" xml:space="preserve"><value>En attente de la connexion du scanner</value><comment>AppLocalizedPhrase.scannerWaitingStatus</comment></data>
 </root>
