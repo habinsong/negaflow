@@ -905,4 +905,9 @@
   <data name="scanPasteFrame.Text" xml:space="preserve"><value>コマをペースト</value><comment>AppLocalizedPhrase.flatbedPasteFrame</comment></data>
   <data name="scanRefreshFrames.Text" xml:space="preserve"><value>コマを検出し直す</value><comment>AppLocalizedPhrase.flatbedRefreshFrames</comment></data>
   <data name="scanRemoveFrame.Text" xml:space="preserve"><value>コマを削除</value><comment>AppLocalizedPhrase.flatbedRemoveFrame</comment></data>
+  <data name="libraryNewSmartCollection.Content" xml:space="preserve"><value>新規スマートコレクション</value><comment>AppLocalizedPhrase.libraryNewSmartCollection</comment></data>
+  <data name="librarySaveCurrentSearch.Content" xml:space="preserve"><value>現在の検索を保存</value><comment>AppLocalizedPhrase.librarySaveCurrentSearch</comment></data>
+  <data name="librarySavedSearches.Text" xml:space="preserve"><value>保存済みの検索</value><comment>AppLocalizedPhrase.librarySavedSearches</comment></data>
+  <data name="librarySearchName.Text" xml:space="preserve"><value>検索名</value><comment>AppLocalizedPhrase.librarySearchName</comment></data>
+  <data name="librarySmartCollections.Text" xml:space="preserve"><value>スマートコレクション</value><comment>AppLocalizedPhrase.librarySmartCollections</comment></data>
 </root>

@@ -395,7 +395,7 @@
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
                     <Grid Padding="14,4,10,2">
-                        <Button
+                        <DropDownButton
                             x:Name="CollectionsAddButton"
                             Width="22"
                             Height="22"
@@ -404,10 +404,13 @@
                             AutomationProperties.AutomationId="negaflow.library.collections.add"
                             Background="Transparent"
                             BorderThickness="0"
-                            Click="OnCreateCollectionClicked"
                             Content="&#xE710;"
                             FontFamily="{ThemeResource SymbolThemeFontFamily}"
-                            FontSize="12" />
+                            FontSize="12">
+                            <DropDownButton.Flyout>
+                                <MenuFlyout x:Name="CollectionsAddFlyout" />
+                            </DropDownButton.Flyout>
+                        </DropDownButton>
                     </Grid>
                     <ListView
                         x:Name="CollectionsList"

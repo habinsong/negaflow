@@ -905,4 +905,9 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="scanPasteFrame.Text" xml:space="preserve"><value>Bild einfügen</value><comment>AppLocalizedPhrase.flatbedPasteFrame</comment></data>
   <data name="scanRefreshFrames.Text" xml:space="preserve"><value>Bilder neu suchen</value><comment>AppLocalizedPhrase.flatbedRefreshFrames</comment></data>
   <data name="scanRemoveFrame.Text" xml:space="preserve"><value>Bild entfernen</value><comment>AppLocalizedPhrase.flatbedRemoveFrame</comment></data>
+  <data name="libraryNewSmartCollection.Content" xml:space="preserve"><value>Neue Smart-Sammlung</value><comment>AppLocalizedPhrase.libraryNewSmartCollection</comment></data>
+  <data name="librarySaveCurrentSearch.Content" xml:space="preserve"><value>Aktuelle Suche speichern</value><comment>AppLocalizedPhrase.librarySaveCurrentSearch</comment></data>
+  <data name="librarySavedSearches.Text" xml:space="preserve"><value>Gespeicherte Suchen</value><comment>AppLocalizedPhrase.librarySavedSearches</comment></data>
+  <data name="librarySearchName.Text" xml:space="preserve"><value>Suchname</value><comment>AppLocalizedPhrase.librarySearchName</comment></data>
+  <data name="librarySmartCollections.Text" xml:space="preserve"><value>Smart-Sammlungen</value><comment>AppLocalizedPhrase.librarySmartCollections</comment></data>
 </root>

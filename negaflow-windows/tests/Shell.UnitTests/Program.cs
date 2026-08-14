@@ -4471,6 +4471,29 @@ internal static class Program
                 document.Collections[0].FrameIds.Count == 1,
                 "collections_keep_only_known_frames");
 
+            // 저장된 찾기는 조건 본문을 카탈로그 구조와 분리해 담습니다.
+            LibraryQuickFilterState filters = new()
+            {
+                MinimumRating = 4,
+                Picked = true,
+                Infrared = true,
+            };
+            LibraryStoredQuery query = LibraryStoredQuery.From(filters, "  bukhansan  ");
+            Check(query.SearchText == "bukhansan", "stored_query_trims_the_search");
+            Check(
+                document.CreateStoredSearch("  ", LibraryStoredSearchKind.SavedSearch, query)
+                    is null,
+                "stored_search_refuses_an_empty_name");
+            string? smartId = document.CreateStoredSearch(
+                "Keepers",
+                LibraryStoredSearchKind.SmartCollection,
+                query);
+            Check(smartId is not null, "stored_search_create");
+            Check(document.StoredSearches.Count == 1, "stored_search_projected");
+            Check(
+                document.StoredSearches[0].Kind == LibraryStoredSearchKind.SmartCollection,
+                "stored_search_keeps_its_kind");
+
             Check(document.RenameCollection(id!, "Roll 02"), "collections_rename");
             Check(document.Collections[0].Name == "Roll 02", "collections_rename_applied");
             Check(!document.RenameCollection(id!, "  "), "collections_refuse_an_empty_rename");
@@ -4486,6 +4509,22 @@ internal static class Program
         using (reread)
         {
             Check(reread.Collections.Count == 1, "collections_survive_a_reopen");
+            Check(reread.StoredSearches.Count == 1, "stored_search_survives_a_reopen");
+            LibraryStoredQuery reloaded = reread.StoredSearches[0].Query;
+            Check(
+                reloaded.MinimumRating == 4 && reloaded.Picked && reloaded.Infrared &&
+                reloaded.SearchText == "bukhansan",
+                "stored_search_round_trips_the_condition");
+            // 저장할 때의 필터로 되돌아가야 고른 것과 걸리는 것이 갈라지지 않습니다.
+            LibraryQuickFilterState restored = reloaded.ToQuickFilters([]);
+            Check(
+                restored.MinimumRating == 4 && restored.Picked && restored.Infrared &&
+                !restored.Rejected,
+                "stored_search_restores_the_filters");
+            Check(
+                reread.DeleteStoredSearch(reread.StoredSearches[0].Id) &&
+                reread.StoredSearches.Count == 0,
+                "stored_search_delete");
             Check(reread.Collections[0].Name == "Roll 02", "collections_reread_the_name");
             Check(
                 reread.DeleteCollection(reread.Collections[0].Id) &&

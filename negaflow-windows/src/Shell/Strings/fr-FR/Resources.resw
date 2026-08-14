@@ -905,4 +905,9 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="scanPasteFrame.Text" xml:space="preserve"><value>Coller l'image</value><comment>AppLocalizedPhrase.flatbedPasteFrame</comment></data>
   <data name="scanRefreshFrames.Text" xml:space="preserve"><value>Redétecter les images</value><comment>AppLocalizedPhrase.flatbedRefreshFrames</comment></data>
   <data name="scanRemoveFrame.Text" xml:space="preserve"><value>Supprimer l'image</value><comment>AppLocalizedPhrase.flatbedRemoveFrame</comment></data>
+  <data name="libraryNewSmartCollection.Content" xml:space="preserve"><value>Nouvelle collection dynamique</value><comment>AppLocalizedPhrase.libraryNewSmartCollection</comment></data>
+  <data name="librarySaveCurrentSearch.Content" xml:space="preserve"><value>Enregistrer la recherche actuelle</value><comment>AppLocalizedPhrase.librarySaveCurrentSearch</comment></data>
+  <data name="librarySavedSearches.Text" xml:space="preserve"><value>Recherches enregistrées</value><comment>AppLocalizedPhrase.librarySavedSearches</comment></data>
+  <data name="librarySearchName.Text" xml:space="preserve"><value>Nom de la recherche</value><comment>AppLocalizedPhrase.librarySearchName</comment></data>
+  <data name="librarySmartCollections.Text" xml:space="preserve"><value>Collections dynamiques</value><comment>AppLocalizedPhrase.librarySmartCollections</comment></data>
 </root>

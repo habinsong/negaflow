@@ -25,6 +25,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
     private PreviewLuminance flatbedPreview = PreviewLuminance.None;
     private bool isSynchronizingCollections;
     private string? selectedCollectionId;
+    private string? selectedStoredSearchId;
     private ThumbnailService? thumbnails;
     private Microsoft.UI.WindowId? importWindowId;
     private bool isResizing;
@@ -1560,7 +1561,13 @@ public sealed partial class LibraryWorkspaceView : UserControl
     // 격자를 좁히며, 새 묶음은 지금 격자에서 고른 사진으로 만듭니다.
 
     /// <summary>목록 한 줄입니다. 이름을 한 곳에서만 만들어야 줄마다 말이 달라지지 않습니다.</summary>
-    private sealed record CollectionRow(string? Id, string Name, string CountText, string Glyph);
+    private sealed record CollectionRow(
+        string? Id,
+        string Name,
+        string CountText,
+        string Glyph,
+        bool IsStoredSearch = false,
+        bool IsGroupLabel = false);
 
     /// <summary>
     /// 지금 스캔 중인 롤의 사진들입니다. 활성 롤이 없으면 빈 목록이고, 그러면 이 축은 꺼진
@@ -1598,21 +1605,63 @@ public sealed partial class LibraryWorkspaceView : UserControl
                 collection.FrameIds.Count.ToString(CultureInfo.CurrentCulture),
                 "\uE8B7"));
         }
+        // macOS 목록 차례: 전체 보기 → 수동 컬렉션 → 스마트 컬렉션 → 저장된 검색.
+        AppendStoredSearches(
+            rows,
+            LibraryStoredSearchKind.SmartCollection,
+            "librarySmartCollections",
+            "\uE721");
+        AppendStoredSearches(
+            rows,
+            LibraryStoredSearchKind.SavedSearch,
+            "librarySavedSearches",
+            "\uE721");
         isSynchronizingCollections = true;
         try
         {
             CollectionsList.ItemsSource = rows;
+            string? selected = selectedStoredSearchId ?? selectedCollectionId;
             CollectionsList.SelectedItem = rows.FirstOrDefault(row =>
-                string.Equals(row.Id, selectedCollectionId, StringComparison.Ordinal))
+                !row.IsGroupLabel &&
+                string.Equals(row.Id, selected, StringComparison.Ordinal))
                 ?? rows[0];
         }
         finally
         {
             isSynchronizingCollections = false;
         }
-        bool hasSelection = selectedCollectionId is not null;
-        CollectionRenameButton.IsEnabled = hasSelection;
-        CollectionDeleteButton.IsEnabled = hasSelection;
+        CollectionRenameButton.IsEnabled = selectedCollectionId is not null;
+        CollectionDeleteButton.IsEnabled =
+            selectedCollectionId is not null || selectedStoredSearchId is not null;
+    }
+
+    private void AppendStoredSearches(
+        List<CollectionRow> rows,
+        LibraryStoredSearchKind kind,
+        string groupResourceKey,
+        string glyph)
+    {
+        LibraryStoredSearchSnapshot[] matching = [.. (libraryHost?.StoredSearches ?? [])
+            .Where(search => search.Kind == kind)];
+        if (matching.Length == 0)
+        {
+            return;
+        }
+        rows.Add(new CollectionRow(
+            null,
+            AppResources.Get(groupResourceKey, "Text"),
+            string.Empty,
+            string.Empty,
+            IsGroupLabel: true));
+        foreach (LibraryStoredSearchSnapshot search in matching)
+        {
+            rows.Add(new CollectionRow(
+                search.Id,
+                search.Name,
+                string.Empty,
+                glyph,
+                IsStoredSearch: true));
+        }
     }
 
     private void OnCollectionSelectionChanged(object sender, SelectionChangedEventArgs args)
@@ -1624,14 +1673,72 @@ public sealed partial class LibraryWorkspaceView : UserControl
         {
             return;
         }
-        selectedCollectionId = row.Id;
-        CollectionRenameButton.IsEnabled = row.Id is not null;
+        if (row.IsGroupLabel)
+        {
+            // 묶음 이름표는 고를 수 있는 항목이 아닙니다.
+            RebuildCollections();
+            return;
+        }
+        selectedCollectionId = row.IsStoredSearch ? null : row.Id;
+        selectedStoredSearchId = row.IsStoredSearch ? row.Id : null;
+        CollectionRenameButton.IsEnabled = selectedCollectionId is not null;
         CollectionDeleteButton.IsEnabled = row.Id is not null;
         if (row.Id is not null)
         {
             CollectionNameBox.Text = row.Name;
         }
+        if (row.IsStoredSearch &&
+            libraryHost?.StoredSearches.FirstOrDefault(search =>
+                string.Equals(search.Id, row.Id, StringComparison.Ordinal)) is { } stored)
+        {
+            // 저장한 조건을 그대로 겁니다 — 고른 것과 걸리는 것이 갈라지면 안 됩니다.
+            ApplyStoredQuery(stored.Query);
+            return;
+        }
         ShowFilteredItems();
+    }
+
+    /// <summary>저장한 조건을 검색어와 빠른 필터에 되돌립니다.</summary>
+    private void ApplyStoredQuery(LibraryStoredQuery query)
+    {
+        quickFilters = query.ToQuickFilters(CurrentRollFrameIds());
+        isSynchronizingFilters = true;
+        try
+        {
+            if (LibrarySearchBox is not null)
+            {
+                LibrarySearchBox.Text = query.SearchText;
+            }
+        }
+        finally
+        {
+            isSynchronizingFilters = false;
+        }
+        ShowFilteredItems();
+    }
+
+    private void OnCreateStoredSearchClicked(LibraryStoredSearchKind kind)
+    {
+        if (libraryHost is null)
+        {
+            return;
+        }
+        string name = CollectionNameBox.Text;
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            name = AppResources.Get(
+                kind == LibraryStoredSearchKind.SmartCollection
+                    ? "libraryNewSmartCollection"
+                    : "librarySaveCurrentSearch",
+                "Content");
+        }
+        selectedStoredSearchId = libraryHost.CreateStoredSearch(
+            name,
+            kind,
+            LibraryStoredQuery.From(quickFilters, LibrarySearchBox?.Text));
+        selectedCollectionId = null;
+        CollectionNameBox.Text = string.Empty;
+        RebuildCollections();
     }
 
     private void OnCreateCollectionClicked(object sender, RoutedEventArgs args)
@@ -1672,12 +1779,20 @@ public sealed partial class LibraryWorkspaceView : UserControl
     {
         _ = sender;
         _ = args;
-        if (libraryHost is null || selectedCollectionId is not { } collectionId)
+        if (libraryHost is null)
         {
             return;
         }
-        _ = libraryHost.DeleteCollection(collectionId);
-        selectedCollectionId = null;
+        if (selectedStoredSearchId is { } searchId)
+        {
+            _ = libraryHost.DeleteStoredSearch(searchId);
+            selectedStoredSearchId = null;
+        }
+        else if (selectedCollectionId is { } collectionId)
+        {
+            _ = libraryHost.DeleteCollection(collectionId);
+            selectedCollectionId = null;
+        }
         CollectionNameBox.Text = string.Empty;
         RebuildCollections();
         ShowFilteredItems();
@@ -1711,6 +1826,23 @@ public sealed partial class LibraryWorkspaceView : UserControl
         string create = AppResources.Get("libraryNewCollection", "Content");
         AutomationProperties.SetName(CollectionsAddButton, create);
         ToolTipService.SetToolTip(CollectionsAddButton, create);
+        CollectionsAddFlyout.Items.Clear();
+        var manual = new MenuFlyoutItem { Text = create };
+        manual.Click += (_, _) => OnCreateCollectionClicked(this, new RoutedEventArgs());
+        CollectionsAddFlyout.Items.Add(manual);
+        var smart = new MenuFlyoutItem
+        {
+            Text = AppResources.Get("libraryNewSmartCollection", "Content"),
+        };
+        smart.Click += (_, _) =>
+            OnCreateStoredSearchClicked(LibraryStoredSearchKind.SmartCollection);
+        CollectionsAddFlyout.Items.Add(smart);
+        var saved = new MenuFlyoutItem
+        {
+            Text = AppResources.Get("librarySaveCurrentSearch", "Content"),
+        };
+        saved.Click += (_, _) => OnCreateStoredSearchClicked(LibraryStoredSearchKind.SavedSearch);
+        CollectionsAddFlyout.Items.Add(saved);
     }
 
     private void LocalizeControls()

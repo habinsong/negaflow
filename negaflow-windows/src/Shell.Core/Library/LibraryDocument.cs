@@ -92,6 +92,7 @@ public sealed class LibraryDocument : IDisposable
     private readonly List<LibraryFolderSnapshot> folders = [];
     private readonly List<LibraryCollectionSnapshot> collections = [];
     private readonly List<LibraryRollSnapshot> rolls = [];
+    private readonly List<LibraryStoredSearchSnapshot> storedSearches = [];
     private readonly List<LibraryFrameSnapshot> frames = [];
     private readonly List<LibraryFrameIssue> issues = [];
     private readonly Dictionary<string, int> indexById = new(StringComparer.Ordinal);
@@ -114,6 +115,7 @@ public sealed class LibraryDocument : IDisposable
         ProjectFolders();
         ProjectCollections();
         ProjectRolls();
+        ProjectStoredSearches();
         Project();
         // 방금 읽은 것은 바뀐 것이 아닙니다.
         IsDirty = false;
@@ -128,6 +130,12 @@ public sealed class LibraryDocument : IDisposable
     public IReadOnlyList<LibraryFrameSnapshot> Frames => frames;
 
     public IReadOnlyList<LibraryFolderSnapshot> Folders => folders;
+
+    /// <summary>
+    /// 저장된 찾기입니다. 스마트 컬렉션이 먼저, 저장된 검색이 뒤에 옵니다 — macOS 목록과
+    /// 같은 차례입니다.
+    /// </summary>
+    public IReadOnlyList<LibraryStoredSearchSnapshot> StoredSearches => storedSearches;
 
     /// <summary>필름 롤입니다. 순서는 catalog 의 순서입니다.</summary>
     public IReadOnlyList<LibraryRollSnapshot> Rolls => rolls;
@@ -828,6 +836,85 @@ public sealed class LibraryDocument : IDisposable
             return true;
         }
         return false;
+    }
+
+    /// <summary>지금 조건을 이름 붙여 담습니다. 이름이 비면 담지 않습니다.</summary>
+    public string? CreateStoredSearch(
+        string name,
+        LibraryStoredSearchKind kind,
+        LibraryStoredQuery query)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        if (LibraryCollectionSnapshot.NormalizeName(name) is not { } normalized)
+        {
+            return null;
+        }
+        LibraryStoredSearchSnapshot created = new(
+            Guid.NewGuid().ToString("D"),
+            normalized,
+            kind,
+            query);
+        if (LibraryStoredSearchRecord.Write(created) is not { } row)
+        {
+            return null;
+        }
+        CatalogEntityTable table = TableFor(kind);
+        retainedRows[table] = [.. retainedRows[table], row];
+        ProjectStoredSearches();
+        return created.Id;
+    }
+
+    public bool DeleteStoredSearch(string searchId)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(searchId);
+        bool removed = false;
+        foreach (CatalogEntityTable table in new[]
+        {
+            CatalogEntityTable.SmartCollections,
+            CatalogEntityTable.SavedSearches,
+        })
+        {
+            List<CatalogEntityRow> rows = [.. retainedRows[table]];
+            if (rows.RemoveAll(row =>
+                    string.Equals(row.Id, searchId, StringComparison.Ordinal)) > 0)
+            {
+                retainedRows[table] = rows;
+                removed = true;
+            }
+        }
+        if (removed)
+        {
+            ProjectStoredSearches();
+        }
+        return removed;
+    }
+
+    private static CatalogEntityTable TableFor(LibraryStoredSearchKind kind) =>
+        kind == LibraryStoredSearchKind.SmartCollection
+            ? CatalogEntityTable.SmartCollections
+            : CatalogEntityTable.SavedSearches;
+
+    private void ProjectStoredSearches()
+    {
+        IsDirty = true;
+        storedSearches.Clear();
+        foreach ((CatalogEntityTable table, LibraryStoredSearchKind kind) in new[]
+        {
+            (CatalogEntityTable.SmartCollections, LibraryStoredSearchKind.SmartCollection),
+            (CatalogEntityTable.SavedSearches, LibraryStoredSearchKind.SavedSearch),
+        })
+        {
+            foreach (CatalogEntityRow row in retainedRows[table])
+            {
+                if (LibraryStoredSearchRecord.TryRead(
+                        row,
+                        kind,
+                        out LibraryStoredSearchSnapshot search))
+                {
+                    storedSearches.Add(search);
+                }
+            }
+        }
     }
 
     private void ProjectRolls()

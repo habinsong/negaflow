@@ -905,4 +905,9 @@ Load a scanner from Library to scan film.</value>
   <data name="scanPasteFrame.Text" xml:space="preserve"><value>Paste Frame</value><comment>AppLocalizedPhrase.flatbedPasteFrame</comment></data>
   <data name="scanRefreshFrames.Text" xml:space="preserve"><value>Find Frames Again</value><comment>AppLocalizedPhrase.flatbedRefreshFrames</comment></data>
   <data name="scanRemoveFrame.Text" xml:space="preserve"><value>Remove Frame</value><comment>AppLocalizedPhrase.flatbedRemoveFrame</comment></data>
+  <data name="libraryNewSmartCollection.Content" xml:space="preserve"><value>New Smart Collection</value><comment>AppLocalizedPhrase.libraryNewSmartCollection</comment></data>
+  <data name="librarySaveCurrentSearch.Content" xml:space="preserve"><value>Save Current Search</value><comment>AppLocalizedPhrase.librarySaveCurrentSearch</comment></data>
+  <data name="librarySavedSearches.Text" xml:space="preserve"><value>Saved Searches</value><comment>AppLocalizedPhrase.librarySavedSearches</comment></data>
+  <data name="librarySearchName.Text" xml:space="preserve"><value>Search Name</value><comment>AppLocalizedPhrase.librarySearchName</comment></data>
+  <data name="librarySmartCollections.Text" xml:space="preserve"><value>Smart Collections</value><comment>AppLocalizedPhrase.librarySmartCollections</comment></data>
 </root>

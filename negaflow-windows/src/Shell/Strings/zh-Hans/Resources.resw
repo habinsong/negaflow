@@ -905,4 +905,9 @@
   <data name="scanPasteFrame.Text" xml:space="preserve"><value>粘贴画幅</value><comment>AppLocalizedPhrase.flatbedPasteFrame</comment></data>
   <data name="scanRefreshFrames.Text" xml:space="preserve"><value>重新查找画幅</value><comment>AppLocalizedPhrase.flatbedRefreshFrames</comment></data>
   <data name="scanRemoveFrame.Text" xml:space="preserve"><value>删除画幅</value><comment>AppLocalizedPhrase.flatbedRemoveFrame</comment></data>
+  <data name="libraryNewSmartCollection.Content" xml:space="preserve"><value>新建智能收藏集</value><comment>AppLocalizedPhrase.libraryNewSmartCollection</comment></data>
+  <data name="librarySaveCurrentSearch.Content" xml:space="preserve"><value>保存当前搜索</value><comment>AppLocalizedPhrase.librarySaveCurrentSearch</comment></data>
+  <data name="librarySavedSearches.Text" xml:space="preserve"><value>已存搜索</value><comment>AppLocalizedPhrase.librarySavedSearches</comment></data>
+  <data name="librarySearchName.Text" xml:space="preserve"><value>搜索名称</value><comment>AppLocalizedPhrase.librarySearchName</comment></data>
+  <data name="librarySmartCollections.Text" xml:space="preserve"><value>智能收藏集</value><comment>AppLocalizedPhrase.librarySmartCollections</comment></data>
 </root>

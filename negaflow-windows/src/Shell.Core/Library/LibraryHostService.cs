@@ -190,6 +190,25 @@ public sealed class LibraryHostService : IDisposable
 
     public IReadOnlyList<LibraryRollSnapshot> Rolls => document?.Rolls ?? [];
 
+    public IReadOnlyList<LibraryStoredSearchSnapshot> StoredSearches =>
+        document?.StoredSearches ?? [];
+
+    public string? CreateStoredSearch(
+        string name,
+        LibraryStoredSearchKind kind,
+        LibraryStoredQuery query)
+    {
+        string? id = document?.CreateStoredSearch(name, kind, query);
+        if (id is not null)
+        {
+            _ = SaveIfDirty();
+        }
+        return id;
+    }
+
+    public bool DeleteStoredSearch(string searchId) =>
+        SavedAfter(document?.DeleteStoredSearch(searchId) == true);
+
     public string? ActiveRollId => document?.ActiveRollId;
 
     public LibraryRollSnapshot? RollFor(string frameId) => document?.RollFor(frameId);
