@@ -858,7 +858,7 @@ internal unsafe struct NativeSoftProofV1
     internal uint StructSize;
     internal uint Enabled;
     internal uint SimulatePaperAndBlackInk;
-    internal uint Reserved;
+    internal uint WarnOutOfGamut;
     internal fixed float PaperWhiteRgb[3];
     internal fixed float BlackInkRgb[3];
 }

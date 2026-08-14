@@ -4859,6 +4859,7 @@ nf_status_t NF_CALL nf_develop_preview_v23(
         proof.enabled = soft_proof->enabled != 0U;
         proof.simulate_paper_and_black_ink =
             soft_proof->simulate_paper_and_black_ink != 0U;
+        proof.warn_out_of_gamut = soft_proof->warn_out_of_gamut != 0U;
         for (std::size_t channel = 0U; channel < 3U; ++channel) {
             proof.paper.white[channel] =
                 static_cast<double>(soft_proof->paper_white_rgb[channel]);
@@ -4945,6 +4946,7 @@ nf_status_t NF_CALL nf_develop_preview_v24(
         proof.enabled = soft_proof->enabled != 0U;
         proof.simulate_paper_and_black_ink =
             soft_proof->simulate_paper_and_black_ink != 0U;
+        proof.warn_out_of_gamut = soft_proof->warn_out_of_gamut != 0U;
         for (std::size_t channel = 0U; channel < 3U; ++channel) {
             proof.paper.white[channel] =
                 static_cast<double>(soft_proof->paper_white_rgb[channel]);
@@ -5031,6 +5033,7 @@ nf_status_t NF_CALL nf_develop_preview_v25(
         proof.enabled = soft_proof->enabled != 0U;
         proof.simulate_paper_and_black_ink =
             soft_proof->simulate_paper_and_black_ink != 0U;
+        proof.warn_out_of_gamut = soft_proof->warn_out_of_gamut != 0U;
         for (std::size_t channel = 0U; channel < 3U; ++channel) {
             proof.paper.white[channel] =
                 static_cast<double>(soft_proof->paper_white_rgb[channel]);
@@ -5107,6 +5110,7 @@ nf_status_t NF_CALL nf_develop_preview_v26(
         proof.enabled = soft_proof->enabled != 0U;
         proof.simulate_paper_and_black_ink =
             soft_proof->simulate_paper_and_black_ink != 0U;
+        proof.warn_out_of_gamut = soft_proof->warn_out_of_gamut != 0U;
         for (std::size_t channel = 0U; channel < 3U; ++channel) {
             proof.paper.white[channel] = static_cast<double>(soft_proof->paper_white_rgb[channel]);
             proof.paper.black[channel] = static_cast<double>(soft_proof->black_ink_rgb[channel]);
@@ -5172,6 +5176,7 @@ nf_status_t NF_CALL nf_develop_preview_v27(
         proof.enabled = soft_proof->enabled != 0U;
         proof.simulate_paper_and_black_ink =
             soft_proof->simulate_paper_and_black_ink != 0U;
+        proof.warn_out_of_gamut = soft_proof->warn_out_of_gamut != 0U;
         for (std::size_t channel = 0U; channel < 3U; ++channel) {
             proof.paper.white[channel] = static_cast<double>(soft_proof->paper_white_rgb[channel]);
             proof.paper.black[channel] = static_cast<double>(soft_proof->black_ink_rgb[channel]);
@@ -5237,6 +5242,7 @@ nf_status_t NF_CALL nf_develop_preview_v28(
         proof.enabled = soft_proof->enabled != 0U;
         proof.simulate_paper_and_black_ink =
             soft_proof->simulate_paper_and_black_ink != 0U;
+        proof.warn_out_of_gamut = soft_proof->warn_out_of_gamut != 0U;
         for (std::size_t channel = 0U; channel < 3U; ++channel) {
             proof.paper.white[channel] = static_cast<double>(soft_proof->paper_white_rgb[channel]);
             proof.paper.black[channel] = static_cast<double>(soft_proof->black_ink_rgb[channel]);
@@ -5302,6 +5308,7 @@ nf_status_t NF_CALL nf_develop_preview_v29(
         proof.enabled = soft_proof->enabled != 0U;
         proof.simulate_paper_and_black_ink =
             soft_proof->simulate_paper_and_black_ink != 0U;
+        proof.warn_out_of_gamut = soft_proof->warn_out_of_gamut != 0U;
         for (std::size_t channel = 0U; channel < 3U; ++channel) {
             proof.paper.white[channel] = static_cast<double>(soft_proof->paper_white_rgb[channel]);
             proof.paper.black[channel] = static_cast<double>(soft_proof->black_ink_rgb[channel]);
@@ -5367,6 +5374,7 @@ nf_status_t NF_CALL nf_develop_preview_v30(
         proof.enabled = soft_proof->enabled != 0U;
         proof.simulate_paper_and_black_ink =
             soft_proof->simulate_paper_and_black_ink != 0U;
+        proof.warn_out_of_gamut = soft_proof->warn_out_of_gamut != 0U;
         for (std::size_t channel = 0U; channel < 3U; ++channel) {
             proof.paper.white[channel] = static_cast<double>(soft_proof->paper_white_rgb[channel]);
             proof.paper.black[channel] = static_cast<double>(soft_proof->black_ink_rgb[channel]);
@@ -5432,6 +5440,7 @@ nf_status_t NF_CALL nf_develop_preview_v31(
         proof.enabled = soft_proof->enabled != 0U;
         proof.simulate_paper_and_black_ink =
             soft_proof->simulate_paper_and_black_ink != 0U;
+        proof.warn_out_of_gamut = soft_proof->warn_out_of_gamut != 0U;
         for (std::size_t channel = 0U; channel < 3U; ++channel) {
             proof.paper.white[channel] = static_cast<double>(soft_proof->paper_white_rgb[channel]);
             proof.paper.black[channel] = static_cast<double>(soft_proof->black_ink_rgb[channel]);
@@ -5497,6 +5506,7 @@ nf_status_t NF_CALL nf_develop_preview_v32(
         proof.enabled = soft_proof->enabled != 0U;
         proof.simulate_paper_and_black_ink =
             soft_proof->simulate_paper_and_black_ink != 0U;
+        proof.warn_out_of_gamut = soft_proof->warn_out_of_gamut != 0U;
         for (std::size_t channel = 0U; channel < 3U; ++channel) {
             proof.paper.white[channel] = static_cast<double>(soft_proof->paper_white_rgb[channel]);
             proof.paper.black[channel] = static_cast<double>(soft_proof->black_ink_rgb[channel]);
@@ -5562,6 +5572,7 @@ nf_status_t NF_CALL nf_develop_preview_v33(
         proof.enabled = soft_proof->enabled != 0U;
         proof.simulate_paper_and_black_ink =
             soft_proof->simulate_paper_and_black_ink != 0U;
+        proof.warn_out_of_gamut = soft_proof->warn_out_of_gamut != 0U;
         for (std::size_t channel = 0U; channel < 3U; ++channel) {
             proof.paper.white[channel] = static_cast<double>(soft_proof->paper_white_rgb[channel]);
             proof.paper.black[channel] = static_cast<double>(soft_proof->black_ink_rgb[channel]);

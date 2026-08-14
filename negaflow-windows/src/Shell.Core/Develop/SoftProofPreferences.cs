@@ -48,6 +48,12 @@ public sealed record SoftProofPreferences
                     true,
                     SoftProofSimulation.ProfileOnly,
                     SoftProofRgb.White,
-                    SoftProofRgb.Black)
-                : SoftProofSettings.From(media, Simulation);
+                    SoftProofRgb.Black,
+                    GamutWarningEnabled)
+                : new SoftProofSettings(
+                    true,
+                    Simulation,
+                    media.PaperWhite,
+                    media.BlackInk,
+                    GamutWarningEnabled);
 }

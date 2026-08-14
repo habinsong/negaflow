@@ -1133,7 +1133,11 @@ typedef struct nf_soft_proof_v1 {
     uint32_t struct_size;
     uint32_t enabled;
     uint32_t simulate_paper_and_black_ink;
-    uint32_t reserved;
+    /* Mark pixels the output space cannot reproduce. Judged by ICM; when ICM cannot build
+       the transform nothing is marked, because an approximation would mark different
+       pixels than macOS marks on the same picture. Took the reserved slot, so the layout
+       is unchanged and an older caller that zeroed it simply gets no marking. */
+    uint32_t warn_out_of_gamut;
     float paper_white_rgb[3];
     float black_ink_rgb[3];
 } nf_soft_proof_v1;

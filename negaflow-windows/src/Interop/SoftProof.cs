@@ -80,12 +80,14 @@ public sealed class SoftProofSettings
         bool isEnabled,
         SoftProofSimulation simulation,
         SoftProofRgb paperWhite,
-        SoftProofRgb blackInk)
+        SoftProofRgb blackInk,
+        bool warnOutOfGamut = false)
     {
         IsEnabled = isEnabled;
         Simulation = simulation;
         PaperWhite = paperWhite;
         BlackInk = blackInk;
+        WarnOutOfGamut = warnOutOfGamut;
     }
 
     /// <summary>프로파일에서 읽은 용지와 잉크로 프루프를 켭니다.</summary>
@@ -102,6 +104,12 @@ public sealed class SoftProofSettings
     public SoftProofRgb PaperWhite { get; }
 
     public SoftProofRgb BlackInk { get; }
+
+    /// <summary>
+    /// 출력 공간이 재현하지 못하는 화소를 미리보기 위에 표시할지입니다. 판정은 ICM 이 하며,
+    /// 하지 못하면 아무것도 표시하지 않습니다 — 근사하면 macOS 와 다른 화소가 표시됩니다.
+    /// </summary>
+    public bool WarnOutOfGamut { get; }
 }
 
 /// <summary>
