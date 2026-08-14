@@ -87,12 +87,12 @@ macOS 는 이 선택을 **현상 화면이 아니라 설정 → 내보내기 탭
 > 선택한 출력 ICC가 재현할 수 없는 픽셀을 ColorSync의 실제 gamut-check transform으로
 > 판정한다. **채널 클리핑이나 변환 전후 RGB 차이로 근사하지 않으며**, transform을 만들거나
 > 실행하지 못하면 결과를 반환하지 않는다.
-> — 
+> — `DestinationGamutWarning.swift`
 
 근사로 만들면 같은 그림에서 macOS 와 다른 화소가 표시됩니다. 사용자에게 보이는 결과가
 달라지므로 이식이 아니라 다른 기능이 됩니다.
 
-Windows 의 짝은 ICM 입니다 —  의  에
- 을 주고  로 판정합니다. ColorSync 의 gamut-check
+Windows 의 짝은 ICM 입니다 — `mscms.dll` 의 `CreateColorTransform` 에
+`ENABLE_GAMUT_CHECKING` 을 주고 `CheckBitmapBits` 로 판정합니다. ColorSync 의 gamut-check
 와 같은 성격의 진짜 변환이며, 이것이 맞는 경로입니다. 지금 토글이 비활성인 이유이고,
-macOS 자신의 사유 문자열()을 그대로 달아 두었습니다.
+macOS 자신의 사유 문자열(`colorGamutUnavailableReason`)을 그대로 달아 두었습니다.
