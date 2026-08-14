@@ -84,6 +84,7 @@ target_link_libraries(negaflow_core PRIVATE negaflow_project_options)
 add_library(negaflow_color STATIC
     src/Native/color/icc_profile.cpp
     src/Native/color/soft_proof.cpp
+    src/Native/color/output_color_space.cpp
     src/Native/color/srgb_transfer.cpp
 )
 target_include_directories(negaflow_color
@@ -357,6 +358,15 @@ if(BUILD_TESTING)
         NAME native.image_file_observation
         COMMAND negaflow_image_file_observation_tests
     )
+
+    add_executable(negaflow_output_color_space_tests
+        tests/Native.UnitTests/output_color_space_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_output_color_space_tests
+        PRIVATE negaflow_color negaflow_project_options
+    )
+    add_test(NAME native.output_color_space COMMAND negaflow_output_color_space_tests)
 
     add_executable(negaflow_icc_profile_tests
         tests/Native.UnitTests/icc_profile_tests.cpp
