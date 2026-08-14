@@ -1,5 +1,6 @@
 ﻿#include "negaflow_abi.h"
 
+#include "negaflow/color/gamut_check.h"
 #include "negaflow/color/soft_proof.h"
 #include "negaflow/core/build_info.h"
 #include "negaflow/core/tiff_probe.h"
@@ -5581,6 +5582,20 @@ nf_status_t NF_CALL nf_develop_preview_v33(
         pipeline_request, maximum_width, maximum_height, pixels,
         static_cast<std::size_t>(pixel_capacity_bytes), control, proof);
     write_outcome_v3(outcome, elapsed_microseconds(started, std::chrono::steady_clock::now()), *result);
+    return NF_STATUS_OK;
+}
+
+nf_status_t NF_CALL nf_gamut_check_supported_v1(
+    const uint32_t output_color_space,
+    uint32_t* const supported) {
+    if (supported == nullptr) return NF_STATUS_INVALID_ARGUMENT;
+    *supported = 0U;
+    if (negaflow::color::output_color_space_name(
+            static_cast<negaflow::color::OutputColorSpace>(output_color_space)) == nullptr) {
+        return NF_STATUS_INVALID_ARGUMENT;
+    }
+    *supported = negaflow::color::gamut_check_supported(
+        static_cast<negaflow::color::OutputColorSpace>(output_color_space)) ? 1U : 0U;
     return NF_STATUS_OK;
 }
 

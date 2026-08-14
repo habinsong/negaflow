@@ -253,10 +253,10 @@
                                 <ToggleSwitch
                                     x:Name="GamutWarningToggle"
                                     x:Uid="settingsColorGamutWarning"
-                                    IsEnabled="False"
                                     AutomationProperties.AutomationId="settings.export.gamutWarning"
                                     Toggled="OnGamutWarningToggled" />
                                 <TextBlock
+                                    x:Name="GamutUnavailableReason"
                                     x:Uid="settingsColorGamutUnavailableReason"
                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                     TextWrapping="Wrap"

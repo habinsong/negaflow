@@ -495,6 +495,12 @@ internal static partial class NativeMethods
         NativeDevelopRunStateV1* runState,
         NativeDevelopExportResultV3* result);
 
+    [LibraryImport(LibraryName, EntryPoint = "nf_gamut_check_supported_v1")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static unsafe partial uint nf_gamut_check_supported_v1(
+        uint outputColorSpace,
+        uint* supported);
+
     [LibraryImport(LibraryName, EntryPoint = "nf_read_soft_proof_media_v1")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static unsafe partial uint nf_read_soft_proof_media_v1(

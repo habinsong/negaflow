@@ -160,7 +160,13 @@ public sealed partial class SettingsRootView : UserControl
         SoftProofDetailPanel.Visibility = proof.IsEnabled ? Visibility.Visible : Visibility.Collapsed;
         SoftProofSimulationComboBox.SelectedIndex =
             proof.Simulation == SoftProofSimulation.PaperAndBlackInk ? 1 : 0;
-        GamutWarningToggle.IsOn = proof.GamutWarningEnabled;
+        // 계산할 수 없는 경고는 켤 수 있게 두지 않습니다. ICM 이 이 색공간으로 gamut-check
+        // 변환을 만들 수 있을 때만 살아납니다 — macOS 도 같은 조건으로 끕니다.
+        bool gamutAvailable = NativeGamutCheck.IsSupported(preferences.Export.EffectiveColorSpace);
+        GamutWarningToggle.IsEnabled = gamutAvailable;
+        GamutUnavailableReason.Visibility =
+            gamutAvailable ? Visibility.Collapsed : Visibility.Visible;
+        GamutWarningToggle.IsOn = gamutAvailable && proof.GamutWarningEnabled;
         // 프루프 대상 프로파일을 아직 고를 수 없으므로 내보내기 색공간의 이름을 씁니다 —
         // macOS 도 프로파일이 없으면 같은 값을 보여줍니다.
         string profileName = proof.ProfileName.Length != 0

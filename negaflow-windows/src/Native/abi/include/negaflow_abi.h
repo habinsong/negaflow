@@ -1749,6 +1749,14 @@ NF_API nf_status_t NF_CALL nf_read_soft_proof_media_v1(
     uint32_t icc_byte_count,
     nf_soft_proof_media_v1* result);
 
+/* Can ICM judge out-of-gamut pixels for this output space? 0 sRGB, 1 Display P3,
+   2 Adobe RGB. Writes 1 when it can and 0 when it cannot - the settings screen asks this
+   before offering the gamut warning, because a warning that cannot be computed must not
+   be offered. */
+NF_API nf_status_t NF_CALL nf_gamut_check_supported_v1(
+    uint32_t output_color_space,
+    uint32_t* supported);
+
 NF_API nf_status_t NF_CALL nf_get_negative_limits_v1(nf_negative_limits_v1* output);
 
 #ifdef __cplusplus
