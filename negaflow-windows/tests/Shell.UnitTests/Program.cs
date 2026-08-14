@@ -72,6 +72,7 @@ internal static class Program
         VerifyExportBatchPlan();
         VerifyExportSidecar();
         VerifyLibraryCollections();
+        VerifyLibraryRolls();
         VerifyDevelopHistogramSampler();
         VerifyDevelopPanelState();
         VerifyInspectorSliderValue();
@@ -394,7 +395,7 @@ internal static class Program
             (tiff with { NamePattern = ExportNamingTemplate.PhotoNameSequencePattern })
                 .FileNameFor(source, 7) == "IMG_0007-0007.tif",
             "export_destination_expands_the_sequence_token");
-        Check(!ExportNamingTemplate.IsValid("{roll}"), "export_naming_refuses_unknown_tokens");
+        Check(!ExportNamingTemplate.IsValid("{date}"), "export_naming_refuses_unknown_tokens");
         Check(!ExportNamingTemplate.IsValid("{name"), "export_naming_refuses_unclosed_tokens");
         Check(
             ExportNamingTemplate.UsesSequence(ExportNamingTemplate.SequenceOnlyPattern),
@@ -4487,6 +4488,121 @@ internal static class Program
                 reread.Collections.Count == 0,
                 "collections_delete");
         }
+        }
+        finally
+        {
+            if (Directory.Exists(isolatedBase) &&
+                StoragePathPolicy.IsLexicallyContained(parent, isolatedBase))
+            {
+                Directory.Delete(isolatedBase, true);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 롤 기록입니다. 롤 값은 프레임의 <b>비어 있는 칸만</b> 채워야 하고, 롤 토큰이 파일명에
+    /// 실제로 나타나야 하며, 저장하고 다시 열었을 때 그대로 있어야 합니다.
+    /// </summary>
+    private static void VerifyLibraryRolls()
+    {
+        // 롤 값은 프레임에 없는 칸만 채웁니다 — 롤 중간에 렌즈를 바꾸는 일이 실제로 있습니다.
+        RollRecord record = new(
+            "R-2026-014",
+            new FilmShotMetadata("Leica", "M6", "Summicron 35mm", "Portra 400", 400),
+            "second half pushed one stop");
+        FilmShotMetadata frameShot = new(CameraModel: "M3", LensModel: "Elmar 50mm");
+        FilmShotMetadata? filled = record.Filling(frameShot);
+        Check(
+            filled is { CameraModel: "M3", LensModel: "Elmar 50mm", CameraMake: "Leica" },
+            "roll_record_fills_only_empty_fields");
+        Check(
+            filled?.FilmStock == "Portra 400" && filled?.IsoSpeed == 400,
+            "roll_record_supplies_the_missing_film");
+        Check(
+            record.Filling(filled) is null,
+            "roll_record_reports_nothing_to_fill");
+        Check(new RollRecord().Normalized().IsEmpty, "roll_record_empty");
+
+        LibraryFrameSnapshot frame = Frame(
+            new ManualBaseRgb(0.2, 0.2, 0.2),
+            sourcePath: @"C:\scans\IMG_0007.tif") with
+        {
+            AppMetadata = new AppMetadataOverlay
+            {
+                FilmShot = new FilmShotMetadata(CameraModel: "M3"),
+                Revision = 1,
+            },
+        };
+        LibraryRollSnapshot roll = new(
+            "roll-1",
+            LibraryRollKind.Physical,
+            "Roll 14",
+            DateTimeOffset.UtcNow,
+            FilmType.ColorNegative,
+            [frame.Id],
+            record);
+
+        ExportNamingContext context = ExportNamingContexts.For(frame, roll, 3);
+        ExportDestination destination = new(
+            @"D:\Export",
+            "{roll}-{rollcode}-{camera}-{film}-{sequence}",
+            DevelopExportFormat.Tiff16);
+        // 카메라는 프레임 값이 이기고, 필름은 프레임에 없으므로 롤 값이 옵니다.
+        Check(
+            destination.FileNameFor(frame.SourcePath, context)
+                == "Roll 14-R-2026-014-M3-Portra 400-0003.tif",
+            "roll_tokens_reach_the_filename");
+        Check(
+            ExportNamingTemplate.IsValid("{roll}{rollcode}{film}{camera}"),
+            "roll_tokens_are_valid");
+
+        string parent = Path.Combine(AppContext.BaseDirectory, "roll-tests");
+        string isolatedBase = Path.Combine(parent, $"{Environment.ProcessId}-{Guid.NewGuid():N}");
+        StorageRootSet roots = StorageRootResolver.ResolveForTests(isolatedBase).Roots!;
+        string frameId = Guid.NewGuid().ToString("D");
+        try
+        {
+            using (CatalogSession session = CatalogSession.Open(roots).Session!)
+            {
+                Check(session.ReadOrCreate().IsSuccess, "roll_catalog_create");
+                Check(session.Write(new CatalogSnapshot(
+                    null,
+                    new Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>>
+                    {
+                        [CatalogEntityTable.Frames] =
+                        [new CatalogEntityRow(frameId, FrameRecord(frameId, "R_0001.tif", 0))],
+                    })).IsSuccess, "roll_catalog_seed");
+            }
+
+            string? rollId;
+            using (LibraryDocument document = LibraryDocument.Open(roots).Document!)
+            {
+                Check(
+                    document.CreateRoll("  ", FilmType.ColorNegative, []) is null,
+                    "roll_refuses_an_empty_name");
+                rollId = document.CreateRoll(
+                    "Roll 14",
+                    FilmType.ColorNegative,
+                    [frameId, "not-in-the-catalog"]);
+                Check(rollId is not null, "roll_create");
+                Check(
+                    document.Rolls.Single().FrameIds.SequenceEqual([frameId]),
+                    "roll_keeps_only_known_frames");
+                Check(document.SetRollRecord(rollId!, record), "roll_set_record");
+                Check(document.RollFor(frameId)?.Id == rollId, "roll_for_frame");
+                Check(document.SetActiveRoll(rollId), "roll_set_active");
+                Check(!document.SetActiveRoll("missing"), "roll_refuses_an_unknown_active");
+                Check(document.Save() == CatalogStoreError.None, "roll_save");
+            }
+
+            using LibraryDocument reopened = LibraryDocument.Open(roots).Document!;
+            Check(reopened.Rolls.Count == 1, "roll_survives_a_reopen");
+            Check(
+                reopened.Rolls[0].Record?.Code == "R-2026-014" &&
+                reopened.Rolls[0].Record?.Shot?.CameraModel == "M6" &&
+                reopened.Rolls[0].FilmType == FilmType.ColorNegative,
+                "roll_record_round_trip");
+            Check(reopened.ActiveRollId == rollId, "roll_active_round_trip");
         }
         finally
         {

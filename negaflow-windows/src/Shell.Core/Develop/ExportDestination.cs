@@ -23,24 +23,31 @@ public sealed record ExportDestination(string FolderPath, string NamePattern, De
         };
 
     /// <summary>패턴을 원본 이름으로 채운 파일명입니다. 확장자는 형식이 정합니다.</summary>
-    public string FileNameFor(string sourcePath, int sequence = 0, string preset = "")
+    public string FileNameFor(string sourcePath, int sequence = 0, string preset = "") =>
+        FileNameFor(sourcePath, new ExportNamingContext(string.Empty, preset, sequence));
+
+    /// <summary>롤 토큰까지 채운 파일명입니다. frame 이름은 원본에서 옵니다.</summary>
+    public string FileNameFor(string sourcePath, ExportNamingContext context)
     {
         ArgumentException.ThrowIfNullOrEmpty(sourcePath);
         string stem = Path.GetFileNameWithoutExtension(sourcePath);
         string? rendered = ExportNamingTemplate.Render(
             NamePattern,
-            new ExportNamingContext(stem, preset, sequence));
+            context with { FrameName = stem });
         // 패턴이 비었거나 잘못됐으면 원본 이름으로 되돌립니다. 이름 없는 파일은 만들지 않습니다.
         return (rendered ?? ExportNamingTemplate.SanitizeComponent(stem)) + ExtensionFor(Format);
     }
 
     /// <summary>실제로 쓸 전체 경로입니다. 폴더가 비어 있으면 원본 옆에 씁니다.</summary>
-    public string PathFor(string sourcePath, int sequence = 0, string preset = "")
+    public string PathFor(string sourcePath, int sequence = 0, string preset = "") =>
+        PathFor(sourcePath, new ExportNamingContext(string.Empty, preset, sequence));
+
+    public string PathFor(string sourcePath, ExportNamingContext context)
     {
         ArgumentException.ThrowIfNullOrEmpty(sourcePath);
         string folder = string.IsNullOrWhiteSpace(FolderPath)
             ? Path.GetDirectoryName(sourcePath) ?? Path.GetTempPath()
             : FolderPath;
-        return Path.Combine(folder, FileNameFor(sourcePath, sequence, preset));
+        return Path.Combine(folder, FileNameFor(sourcePath, context));
     }
 }

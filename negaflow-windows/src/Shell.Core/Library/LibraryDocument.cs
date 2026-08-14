@@ -91,6 +91,7 @@ public sealed class LibraryDocument : IDisposable
     private readonly Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>> retainedRows;
     private readonly List<LibraryFolderSnapshot> folders = [];
     private readonly List<LibraryCollectionSnapshot> collections = [];
+    private readonly List<LibraryRollSnapshot> rolls = [];
     private readonly List<LibraryFrameSnapshot> frames = [];
     private readonly List<LibraryFrameIssue> issues = [];
     private readonly Dictionary<string, int> indexById = new(StringComparer.Ordinal);
@@ -112,6 +113,7 @@ public sealed class LibraryDocument : IDisposable
         this.activeRollId = activeRollId;
         ProjectFolders();
         ProjectCollections();
+        ProjectRolls();
         Project();
         // 방금 읽은 것은 바뀐 것이 아닙니다.
         IsDirty = false;
@@ -126,6 +128,20 @@ public sealed class LibraryDocument : IDisposable
     public IReadOnlyList<LibraryFrameSnapshot> Frames => frames;
 
     public IReadOnlyList<LibraryFolderSnapshot> Folders => folders;
+
+    /// <summary>필름 롤입니다. 순서는 catalog 의 순서입니다.</summary>
+    public IReadOnlyList<LibraryRollSnapshot> Rolls => rolls;
+
+    /// <summary>지금 스캔 중인 롤입니다. catalog 최상위에 macOS 와 같은 키로 삽니다.</summary>
+    public string? ActiveRollId => activeRollId;
+
+    /// <summary>이 frame 이 속한 롤입니다. 어느 롤에도 없으면 null 입니다.</summary>
+    public LibraryRollSnapshot? RollFor(string frameId)
+    {
+        ArgumentNullException.ThrowIfNull(frameId);
+        return rolls.FirstOrDefault(roll =>
+            roll.FrameIds.Contains(frameId, StringComparer.Ordinal));
+    }
 
     /// <summary>사용자가 손으로 모은 묶음입니다. 순서는 catalog 의 순서입니다.</summary>
     public IReadOnlyList<LibraryCollectionSnapshot> Collections => collections;
@@ -715,6 +731,116 @@ public sealed class LibraryDocument : IDisposable
     {
         var seen = new HashSet<string>(StringComparer.Ordinal);
         return [.. frameIds.Where(id => indexById.ContainsKey(id) && seen.Add(id))];
+    }
+
+    /// <summary>
+    /// 롤을 만듭니다. 이름이 비면 만들지 않습니다 — 이름 없는 롤은 목록에서 고를 수 없습니다.
+    /// </summary>
+    public string? CreateRoll(string name, FilmType filmType, IEnumerable<string> frameIds)
+    {
+        ArgumentNullException.ThrowIfNull(frameIds);
+        if (AppMetadataOverlay.NormalizeText(name) is not { } normalized)
+        {
+            return null;
+        }
+        LibraryRollSnapshot created = new(
+            Guid.NewGuid().ToString("D"),
+            LibraryRollKind.Physical,
+            normalized,
+            DateTimeOffset.UtcNow,
+            filmType,
+            KnownFrameIds(frameIds),
+            null);
+        List<CatalogEntityRow> rows = [.. retainedRows[CatalogEntityTable.Rolls]];
+        rows.Add(LibraryRollRecordCodec.Write(created));
+        retainedRows[CatalogEntityTable.Rolls] = rows;
+        ProjectRolls();
+        return created.Id;
+    }
+
+    /// <summary>롤 기록을 바꿉니다. 비우면 키 자체를 지웁니다.</summary>
+    public bool SetRollRecord(string rollId, RollRecord? record) =>
+        ReplaceRoll(rollId, existing => existing with
+        {
+            Record = record is { } value && !value.Normalized().IsEmpty
+                ? value.Normalized()
+                : null,
+        });
+
+    public bool SetRollFrames(string rollId, IEnumerable<string> frameIds)
+    {
+        ArgumentNullException.ThrowIfNull(frameIds);
+        IReadOnlyList<string> known = KnownFrameIds(frameIds);
+        return ReplaceRoll(rollId, existing => existing with { FrameIds = known });
+    }
+
+    public bool DeleteRoll(string rollId)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(rollId);
+        List<CatalogEntityRow> rows = [.. retainedRows[CatalogEntityTable.Rolls]];
+        if (rows.RemoveAll(row =>
+                string.Equals(row.Id, rollId, StringComparison.Ordinal)) == 0)
+        {
+            return false;
+        }
+        retainedRows[CatalogEntityTable.Rolls] = rows;
+        if (string.Equals(activeRollId, rollId, StringComparison.Ordinal))
+        {
+            activeRollId = null;
+        }
+        ProjectRolls();
+        return true;
+    }
+
+    /// <summary>지금 스캔 중인 롤을 정합니다. 없는 롤은 받지 않습니다.</summary>
+    public bool SetActiveRoll(string? rollId)
+    {
+        if (rollId is not null &&
+            !rolls.Any(roll => string.Equals(roll.Id, rollId, StringComparison.Ordinal)))
+        {
+            return false;
+        }
+        if (string.Equals(activeRollId, rollId, StringComparison.Ordinal))
+        {
+            return true;
+        }
+        activeRollId = rollId;
+        IsDirty = true;
+        return true;
+    }
+
+    private bool ReplaceRoll(
+        string rollId,
+        Func<LibraryRollSnapshot, LibraryRollSnapshot> update)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(rollId);
+        List<CatalogEntityRow> rows = [.. retainedRows[CatalogEntityTable.Rolls]];
+        for (int index = 0; index < rows.Count; ++index)
+        {
+            if (!string.Equals(rows[index].Id, rollId, StringComparison.Ordinal) ||
+                !LibraryRollRecordCodec.TryRead(rows[index], out LibraryRollSnapshot existing))
+            {
+                continue;
+            }
+            rows[index] = LibraryRollRecordCodec.Write(update(existing));
+            retainedRows[CatalogEntityTable.Rolls] = rows;
+            ProjectRolls();
+            return true;
+        }
+        return false;
+    }
+
+    private void ProjectRolls()
+    {
+        IsDirty = true;
+        rolls.Clear();
+        foreach (CatalogEntityRow row in retainedRows[CatalogEntityTable.Rolls])
+        {
+            if (LibraryRollRecordCodec.TryRead(row, out LibraryRollSnapshot roll))
+            {
+                rolls.Add(roll);
+            }
+        }
     }
 
     private void ProjectCollections()

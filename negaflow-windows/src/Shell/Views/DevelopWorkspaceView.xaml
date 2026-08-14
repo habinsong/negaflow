@@ -1385,6 +1385,76 @@
                             </StackPanel>
                         </Border>
 
+                        <!-- 롤 기록: 이 롤의 빈 칸을 채우는 원본입니다. -->
+                        <Border
+                            x:Name="RollRecordCard"
+                            HorizontalAlignment="Stretch"
+                            Padding="14"
+                            AutomationProperties.AutomationId="negaflow.develop.roll-record"
+                            Background="{ThemeResource NegaflowCardBrush}"
+                            CornerRadius="14"
+                            Visibility="Collapsed">
+                            <StackPanel HorizontalAlignment="Stretch" Spacing="8">
+                                <Grid ColumnSpacing="7">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon VerticalAlignment="Center" FontSize="14" Glyph="&#xE7C1;" />
+                                    <TextBlock
+                                        x:Name="RollRecordCardTitleText"
+                                        Grid.Column="1"
+                                        VerticalAlignment="Center"
+                                        FontSize="14"
+                                        FontWeight="SemiBold" />
+                                    <TextBlock
+                                        x:Name="RollNameText"
+                                        Grid.Column="2"
+                                        VerticalAlignment="Center"
+                                        FontSize="11"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                </Grid>
+                                <TextBlock
+                                    x:Name="RollMissingText"
+                                    FontSize="11"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    TextWrapping="Wrap"
+                                    Visibility="Collapsed" />
+                                <StackPanel x:Name="RollRecordFields" Spacing="8">
+                                    <TextBox
+                                        x:Name="RollCodeBox"
+                                        AutomationProperties.AutomationId="negaflow.develop.roll-record.code"
+                                        LostFocus="OnRollRecordCommitted" />
+                                    <TextBox
+                                        x:Name="RollCameraMakeBox"
+                                        AutomationProperties.AutomationId="negaflow.develop.roll-record.camera-make"
+                                        LostFocus="OnRollRecordCommitted" />
+                                    <TextBox
+                                        x:Name="RollCameraModelBox"
+                                        AutomationProperties.AutomationId="negaflow.develop.roll-record.camera-model"
+                                        LostFocus="OnRollRecordCommitted" />
+                                    <TextBox
+                                        x:Name="RollLensModelBox"
+                                        AutomationProperties.AutomationId="negaflow.develop.roll-record.lens"
+                                        LostFocus="OnRollRecordCommitted" />
+                                    <TextBox
+                                        x:Name="RollFilmStockBox"
+                                        AutomationProperties.AutomationId="negaflow.develop.roll-record.film"
+                                        LostFocus="OnRollRecordCommitted" />
+                                    <TextBox
+                                        x:Name="RollNotesBox"
+                                        AutomationProperties.AutomationId="negaflow.develop.roll-record.notes"
+                                        LostFocus="OnRollRecordCommitted" />
+                                    <TextBlock
+                                        x:Name="RollFillHintText"
+                                        FontSize="11"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        TextWrapping="Wrap" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
                         <Border
                             x:Name="BaseControlCard"
                             HorizontalAlignment="Stretch"

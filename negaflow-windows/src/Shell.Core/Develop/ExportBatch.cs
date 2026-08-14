@@ -63,7 +63,8 @@ public sealed class ExportBatchCoordinator
     /// </summary>
     public static IReadOnlyList<ExportBatchPlan> Plan(
         IReadOnlyList<LibraryFrameSnapshot> frames,
-        ExportSettings settings)
+        ExportSettings settings,
+        Func<LibraryFrameSnapshot, LibraryRollSnapshot?>? rollFor = null)
     {
         ArgumentNullException.ThrowIfNull(frames);
         ArgumentNullException.ThrowIfNull(settings);
@@ -76,8 +77,10 @@ public sealed class ExportBatchCoordinator
             LibraryFrameSnapshot frame = frames[index];
             string path = destination.PathFor(
                 frame.SourcePath,
-                normalized.SequenceStart + index,
-                frame.LookPresetId ?? string.Empty);
+                ExportNamingContexts.For(
+                    frame,
+                    rollFor?.Invoke(frame),
+                    normalized.SequenceStart + index));
             plans.Add(new ExportBatchPlan(
                 frame.Id,
                 Path.GetFileNameWithoutExtension(frame.SourcePath),

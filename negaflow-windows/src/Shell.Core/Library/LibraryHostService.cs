@@ -188,6 +188,34 @@ public sealed class LibraryHostService : IDisposable
     public IReadOnlyList<LibraryCollectionSnapshot> Collections =>
         document?.Collections ?? [];
 
+    public IReadOnlyList<LibraryRollSnapshot> Rolls => document?.Rolls ?? [];
+
+    public string? ActiveRollId => document?.ActiveRollId;
+
+    public LibraryRollSnapshot? RollFor(string frameId) => document?.RollFor(frameId);
+
+    public string? CreateRoll(string name, FilmType filmType, IEnumerable<string> frameIds)
+    {
+        string? id = document?.CreateRoll(name, filmType, frameIds);
+        if (id is not null)
+        {
+            _ = SaveIfDirty();
+        }
+        return id;
+    }
+
+    public bool SetRollRecord(string rollId, RollRecord? record) =>
+        SavedAfter(document?.SetRollRecord(rollId, record) == true);
+
+    public bool SetRollFrames(string rollId, IEnumerable<string> frameIds) =>
+        SavedAfter(document?.SetRollFrames(rollId, frameIds) == true);
+
+    public bool DeleteRoll(string rollId) =>
+        SavedAfter(document?.DeleteRoll(rollId) == true);
+
+    public bool SetActiveRoll(string? rollId) =>
+        SavedAfter(document?.SetActiveRoll(rollId) == true);
+
     /// <summary>묶음을 만들고 바로 저장합니다. 만들지 못하면 null 입니다.</summary>
     public string? CreateCollection(string name, IEnumerable<string> frameIds)
     {

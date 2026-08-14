@@ -879,4 +879,9 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="libraryNewCollection.Content" xml:space="preserve"><value>Nouvelle collection</value><comment>AppLocalizedPhrase.libraryNewCollection</comment></data>
   <data name="libraryDelete.Content" xml:space="preserve"><value>Supprimer</value><comment>AppLocalizedPhrase.delete</comment></data>
   <data name="libraryRename.Content" xml:space="preserve"><value>Renommer</value><comment>AppLocalizedPhrase.rename</comment></data>
+  <data name="developRollCode.Text" xml:space="preserve"><value>Code de pellicule</value><comment>AppMetadataOverlayLocalizedText[21]</comment></data>
+  <data name="developRollFillHint.Text" xml:space="preserve"><value>Remplit les champs vides de cette pellicule</value><comment>AppMetadataOverlayLocalizedText[23]</comment></data>
+  <data name="developRollMissing.Text" xml:space="preserve"><value>Cette vue n’appartient encore à aucune pellicule.</value><comment>AppMetadataOverlayLocalizedText[25]</comment></data>
+  <data name="developRollNotes.Text" xml:space="preserve"><value>Notes</value><comment>AppMetadataOverlayLocalizedText[22]</comment></data>
+  <data name="developRollRecordCard.Text" xml:space="preserve"><value>Fiche de pellicule</value><comment>AppMetadataOverlayLocalizedText[20]</comment></data>
 </root>

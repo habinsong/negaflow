@@ -879,4 +879,9 @@
   <data name="libraryNewCollection.Content" xml:space="preserve"><value>新規コレクション</value><comment>AppLocalizedPhrase.libraryNewCollection</comment></data>
   <data name="libraryDelete.Content" xml:space="preserve"><value>削除</value><comment>AppLocalizedPhrase.delete</comment></data>
   <data name="libraryRename.Content" xml:space="preserve"><value>変更</value><comment>AppLocalizedPhrase.rename</comment></data>
+  <data name="developRollCode.Text" xml:space="preserve"><value>ロールコード</value><comment>AppMetadataOverlayLocalizedText[21]</comment></data>
+  <data name="developRollFillHint.Text" xml:space="preserve"><value>このロールの空欄を埋めます</value><comment>AppMetadataOverlayLocalizedText[23]</comment></data>
+  <data name="developRollMissing.Text" xml:space="preserve"><value>このコマはまだロールに属していません。</value><comment>AppMetadataOverlayLocalizedText[25]</comment></data>
+  <data name="developRollNotes.Text" xml:space="preserve"><value>メモ</value><comment>AppMetadataOverlayLocalizedText[22]</comment></data>
+  <data name="developRollRecordCard.Text" xml:space="preserve"><value>ロール記録</value><comment>AppMetadataOverlayLocalizedText[20]</comment></data>
 </root>

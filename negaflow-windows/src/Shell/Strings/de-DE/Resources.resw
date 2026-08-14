@@ -879,4 +879,9 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="libraryNewCollection.Content" xml:space="preserve"><value>Neue Sammlung</value><comment>AppLocalizedPhrase.libraryNewCollection</comment></data>
   <data name="libraryDelete.Content" xml:space="preserve"><value>Löschen</value><comment>AppLocalizedPhrase.delete</comment></data>
   <data name="libraryRename.Content" xml:space="preserve"><value>Umbenennen</value><comment>AppLocalizedPhrase.rename</comment></data>
+  <data name="developRollCode.Text" xml:space="preserve"><value>Filmcode</value><comment>AppMetadataOverlayLocalizedText[21]</comment></data>
+  <data name="developRollFillHint.Text" xml:space="preserve"><value>Füllt leere Felder dieses Films</value><comment>AppMetadataOverlayLocalizedText[23]</comment></data>
+  <data name="developRollMissing.Text" xml:space="preserve"><value>Dieses Bild gehört noch zu keinem Film.</value><comment>AppMetadataOverlayLocalizedText[25]</comment></data>
+  <data name="developRollNotes.Text" xml:space="preserve"><value>Notizen</value><comment>AppMetadataOverlayLocalizedText[22]</comment></data>
+  <data name="developRollRecordCard.Text" xml:space="preserve"><value>Filmnotiz</value><comment>AppMetadataOverlayLocalizedText[20]</comment></data>
 </root>

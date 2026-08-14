@@ -879,4 +879,9 @@ Load a scanner from Library to scan film.</value>
   <data name="libraryNewCollection.Content" xml:space="preserve"><value>New Collection</value><comment>AppLocalizedPhrase.libraryNewCollection</comment></data>
   <data name="libraryDelete.Content" xml:space="preserve"><value>Delete</value><comment>AppLocalizedPhrase.delete</comment></data>
   <data name="libraryRename.Content" xml:space="preserve"><value>Rename</value><comment>AppLocalizedPhrase.rename</comment></data>
+  <data name="developRollCode.Text" xml:space="preserve"><value>Roll Code</value><comment>AppMetadataOverlayLocalizedText[21]</comment></data>
+  <data name="developRollFillHint.Text" xml:space="preserve"><value>Fills empty fields on this roll</value><comment>AppMetadataOverlayLocalizedText[23]</comment></data>
+  <data name="developRollMissing.Text" xml:space="preserve"><value>This frame is not in a roll yet.</value><comment>AppMetadataOverlayLocalizedText[25]</comment></data>
+  <data name="developRollNotes.Text" xml:space="preserve"><value>Notes</value><comment>AppMetadataOverlayLocalizedText[22]</comment></data>
+  <data name="developRollRecordCard.Text" xml:space="preserve"><value>Roll Record</value><comment>AppMetadataOverlayLocalizedText[20]</comment></data>
 </root>

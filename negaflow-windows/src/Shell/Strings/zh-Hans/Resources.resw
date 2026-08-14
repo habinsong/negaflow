@@ -879,4 +879,9 @@
   <data name="libraryNewCollection.Content" xml:space="preserve"><value>新建收藏集</value><comment>AppLocalizedPhrase.libraryNewCollection</comment></data>
   <data name="libraryDelete.Content" xml:space="preserve"><value>删除</value><comment>AppLocalizedPhrase.delete</comment></data>
   <data name="libraryRename.Content" xml:space="preserve"><value>重命名</value><comment>AppLocalizedPhrase.rename</comment></data>
+  <data name="developRollCode.Text" xml:space="preserve"><value>胶卷编号</value><comment>AppMetadataOverlayLocalizedText[21]</comment></data>
+  <data name="developRollFillHint.Text" xml:space="preserve"><value>填充该胶卷的空白项</value><comment>AppMetadataOverlayLocalizedText[23]</comment></data>
+  <data name="developRollMissing.Text" xml:space="preserve"><value>该画幅尚未归入任何胶卷。</value><comment>AppMetadataOverlayLocalizedText[25]</comment></data>
+  <data name="developRollNotes.Text" xml:space="preserve"><value>备注</value><comment>AppMetadataOverlayLocalizedText[22]</comment></data>
+  <data name="developRollRecordCard.Text" xml:space="preserve"><value>胶卷记录</value><comment>AppMetadataOverlayLocalizedText[20]</comment></data>
 </root>

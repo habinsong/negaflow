@@ -395,6 +395,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         }
         UpdateInfoCard();
         UpdateAppMetadataCards();
+        UpdateRollRecordCard();
         UpdateGrainMendCard();
         GeometryControlCard.Visibility = inspectorPresentation.SelectedTab == DevelopInspectorTab.Edit
             ? Visibility.Visible
@@ -3060,6 +3061,94 @@ public sealed partial class DevelopWorkspaceView : UserControl
         AutomationProperties.SetName(box, text);
     }
 
+    /// <summary>
+    /// 롤 기록 카드입니다. 이 frame 이 롤에 속해 있을 때만 칸이 나오고, 아니면 macOS 와 같이
+    /// 아직 롤에 속해 있지 않다고 알립니다.
+    /// </summary>
+    private void UpdateRollRecordCard()
+    {
+        if (RollCodeBox is null)
+        {
+            return;
+        }
+        bool onInfoTab = inspectorPresentation.SelectedTab == DevelopInspectorTab.Info;
+        RollRecordCard.Visibility = onInfoTab && panel?.SelectedFrame is not null
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        if (panel?.SelectedFrame is not { } frame || libraryHost is null)
+        {
+            return;
+        }
+
+        LibraryRollSnapshot? roll = libraryHost.RollFor(frame.Id);
+        RollNameText.Text = roll?.Name ?? string.Empty;
+        RollMissingText.Visibility = roll is null ? Visibility.Visible : Visibility.Collapsed;
+        RollRecordFields.Visibility = roll is null ? Visibility.Collapsed : Visibility.Visible;
+        if (roll is null)
+        {
+            return;
+        }
+
+        RollRecord record = roll.Record ?? new RollRecord();
+        FilmShotMetadata shot = record.Shot ?? new FilmShotMetadata();
+        isSynchronizingMetadata = true;
+        try
+        {
+            RollCodeBox.Text = record.Code ?? string.Empty;
+            RollNotesBox.Text = record.Notes ?? string.Empty;
+            RollCameraMakeBox.Text = shot.CameraMake ?? string.Empty;
+            RollCameraModelBox.Text = shot.CameraModel ?? string.Empty;
+            RollLensModelBox.Text = shot.LensModel ?? string.Empty;
+            RollFilmStockBox.Text = shot.FilmStock ?? string.Empty;
+        }
+        finally
+        {
+            isSynchronizingMetadata = false;
+        }
+    }
+
+    private void OnRollRecordCommitted(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (isSynchronizingMetadata ||
+            libraryHost is null ||
+            panel?.SelectedFrame is not { } frame ||
+            libraryHost.RollFor(frame.Id) is not { } roll)
+        {
+            return;
+        }
+        RollRecord next = new(
+            RollCodeBox.Text,
+            new FilmShotMetadata(
+                RollCameraMakeBox.Text,
+                RollCameraModelBox.Text,
+                RollLensModelBox.Text,
+                RollFilmStockBox.Text),
+            RollNotesBox.Text);
+        if (next.Normalized() == (roll.Record ?? new RollRecord()).Normalized())
+        {
+            return;
+        }
+        _ = libraryHost.SetRollRecord(roll.Id, next);
+        UpdateRollRecordCard();
+    }
+
+    private void LocalizeRollRecordCard()
+    {
+        string card = AppResources.Get("developRollRecordCard", "Text");
+        RollRecordCardTitleText.Text = card;
+        AutomationProperties.SetName(RollRecordCard, card);
+        RollMissingText.Text = AppResources.Get("developRollMissing", "Text");
+        RollFillHintText.Text = AppResources.Get("developRollFillHint", "Text");
+        LocalizeMetadataBox(RollCodeBox, "developRollCode");
+        LocalizeMetadataBox(RollCameraMakeBox, "developFilmShotCameraMake");
+        LocalizeMetadataBox(RollCameraModelBox, "developFilmShotCameraModel");
+        LocalizeMetadataBox(RollLensModelBox, "developFilmShotLensModel");
+        LocalizeMetadataBox(RollFilmStockBox, "developFilmShotFilmStock");
+        LocalizeMetadataBox(RollNotesBox, "developRollNotes");
+    }
+
     private void UpdateInfoCard()
     {
         if (InfoRows is null)
@@ -3671,6 +3760,12 @@ public sealed partial class DevelopWorkspaceView : UserControl
         UpdateExportPreview();
     }
 
+    private ExportNamingContext NamingContextFor(LibraryFrameSnapshot frame) =>
+        ExportNamingContexts.For(
+            frame,
+            libraryHost?.RollFor(frame.Id),
+            exportSettings.SequenceStart);
+
     private static string Percent(double unit) =>
         Math.Round(unit * 100.0).ToString("0", CultureInfo.CurrentCulture) + "%";
 
@@ -3705,8 +3800,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         {
             ExportPreviewText.Text = exportSettings.Destination.FileNameFor(
                 frame.SourcePath,
-                exportSettings.SequenceStart,
-                frame.LookPresetId ?? string.Empty);
+                NamingContextFor(frame));
             QuickExportFilenameText.Text =
                 quickExportSettings.Destination.FileNameFor(frame.SourcePath);
             ExportSourceSummaryText.Text = DescribeExportSource(frame);
@@ -3943,8 +4037,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
             }
             string exportedPath = exportSettings.Destination.PathFor(
                 frame.SourcePath,
-                exportSettings.SequenceStart,
-                frame.LookPresetId ?? string.Empty);
+                NamingContextFor(frame));
             _ = await panel.ExportAsync(
                 exportedPath,
                 exportSettings.Format,
@@ -3984,7 +4077,10 @@ public sealed partial class DevelopWorkspaceView : UserControl
         {
             return;
         }
-        IReadOnlyList<ExportBatchPlan> plans = ExportBatchCoordinator.Plan(frames, exportSettings);
+        IReadOnlyList<ExportBatchPlan> plans = ExportBatchCoordinator.Plan(
+            frames,
+            exportSettings,
+            frame => libraryHost.RollFor(frame.Id));
         var coordinator = new ExportBatchCoordinator(libraryHost);
         int finished = 0;
         coordinator.ItemChanged += (_, item) =>
@@ -4336,6 +4432,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         SetButtonText(ExportButton, AppResources.Get("exportSection", "Text"));
         LocalizeOutputPanel();
         LocalizeAppMetadataCards();
+        LocalizeRollRecordCard();
         SetLocalizedNameAndTooltip(LibraryRailButton, AppResources.Get("developLibrary", "Text"));
         SetLocalizedNameAndTooltip(VersionsRailButton, AppResources.Get("developSectionVersions", "Text"));
         SetButtonText(CaptureVersionButton, AppResources.Get("developVersionCapture", "Content"));
