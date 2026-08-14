@@ -13,6 +13,9 @@ public enum LibraryFrameError
     InvalidDisplayName,
     InvalidSourceMetadata,
 
+    /// <summary>적어 둔 메타데이터의 모양이 틀립니다. 카탈로그가 손상됐다는 뜻입니다.</summary>
+    InvalidAppMetadata,
+
     /// <summary><c>params</c> 가 없거나 object 가 아닙니다.</summary>
     MissingParameters,
 

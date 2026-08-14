@@ -214,6 +214,12 @@ public sealed record LibraryFrameSnapshot(
     public string? InfraredPath { get; init; }
 
     /// <summary>
+    /// 사용자가 적어 둔 제목·설명·키워드·저작권과 촬영 기록입니다. 원본 파일이 아니라
+    /// 카탈로그에만 살며, 적은 적이 없으면 null 입니다.
+    /// </summary>
+    public AppMetadataOverlay? AppMetadata { get; init; }
+
+    /// <summary>
     /// macOS-compatible base mode and preset identifiers. This is persisted independently
     /// from <see cref="ManualBase"/> because changing modes does not erase a manual sample.
     /// </summary>

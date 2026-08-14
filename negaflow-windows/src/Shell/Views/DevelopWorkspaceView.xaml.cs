@@ -44,6 +44,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private QuickExportSettings quickExportSettings = new();
     /// <summary>설정을 컨트롤에 되비추는 동안 켜집니다. 켜져 있으면 이벤트가 다시 저장하지 않습니다.</summary>
     private bool isSynchronizingExport;
+    private bool isSynchronizingMetadata;
     private CropSession? cropSession;
     private CropDragMode cropDragMode;
     private CropDisplayPoint cropDragStart;
@@ -390,6 +391,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
             SetGrainMendTool(GrainMendTool.None);
         }
         UpdateInfoCard();
+        UpdateAppMetadataCards();
         UpdateGrainMendCard();
         GeometryControlCard.Visibility = inspectorPresentation.SelectedTab == DevelopInspectorTab.Edit
             ? Visibility.Visible
@@ -2873,6 +2875,188 @@ public sealed partial class DevelopWorkspaceView : UserControl
     /// 제목·키워드는 아직 EXIF/IPTC 를 읽지 않으므로 macOS 의 빈 상태와 같은 "— · —" 입니다.
     /// 읽지 않은 값을 추측해서 채우지 않습니다.
     /// </summary>
+    /// <summary>
+    /// 적어 둔 메타데이터를 컨트롤에 되비춥니다. 값이 없으면 빈 칸이고, placeholder 가 무엇을
+    /// 적는 자리인지 말합니다 — macOS 도 라벨 대신 placeholder 를 씁니다.
+    /// </summary>
+    private void UpdateAppMetadataCards()
+    {
+        if (AppMetadataTitleBox is null)
+        {
+            return;
+        }
+        bool onInfoTab = inspectorPresentation.SelectedTab == DevelopInspectorTab.Info;
+        bool hasFrame = panel?.SelectedFrame is not null;
+        AppMetadataCard.Visibility = onInfoTab && hasFrame
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        FilmShotCard.Visibility = AppMetadataCard.Visibility;
+        if (panel?.SelectedFrame is not { } frame)
+        {
+            return;
+        }
+
+        AppMetadataOverlay overlay = frame.AppMetadata ?? new AppMetadataOverlay();
+        FilmShotMetadata shot = overlay.FilmShot ?? new FilmShotMetadata();
+        isSynchronizingMetadata = true;
+        try
+        {
+            AppMetadataTitleBox.Text = overlay.Title ?? string.Empty;
+            AppMetadataCaptionBox.Text = overlay.Caption ?? string.Empty;
+            AppMetadataKeywordsBox.Text = string.Join(", ", overlay.Keywords);
+            AppMetadataCopyrightBox.Text = overlay.Copyright ?? string.Empty;
+            FilmShotCameraMakeBox.Text = shot.CameraMake ?? string.Empty;
+            FilmShotCameraModelBox.Text = shot.CameraModel ?? string.Empty;
+            FilmShotLensModelBox.Text = shot.LensModel ?? string.Empty;
+            FilmShotFilmStockBox.Text = shot.FilmStock ?? string.Empty;
+            FilmShotIsoSpeedBox.Text = shot.IsoSpeed?.ToString(CultureInfo.CurrentCulture)
+                ?? string.Empty;
+            FilmShotShutterBox.Text = FormatShutter(shot.ExposureTimeSeconds);
+            FilmShotApertureBox.Text = shot.FNumber?.ToString("0.##", CultureInfo.CurrentCulture)
+                ?? string.Empty;
+            FilmShotFocalLengthBox.Text =
+                shot.FocalLengthMm?.ToString("0.##", CultureInfo.CurrentCulture) ?? string.Empty;
+        }
+        finally
+        {
+            isSynchronizingMetadata = false;
+        }
+        AppMetadataSavedText.Text = overlay.IsEmpty
+            ? string.Empty
+            : AppResources.Get("developAppMetadataSaved", "Text");
+    }
+
+    /// <summary>
+    /// 칸을 떠날 때 한 번만 씁니다. 글자마다 카탈로그를 건드리면 5만 행짜리 저장이 타이핑마다
+    /// 돕니다.
+    /// </summary>
+    private void OnAppMetadataCommitted(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (isSynchronizingMetadata || panel is null)
+        {
+            return;
+        }
+        FilmShotMetadata shot = new(
+            FilmShotCameraMakeBox.Text,
+            FilmShotCameraModelBox.Text,
+            FilmShotLensModelBox.Text,
+            FilmShotFilmStockBox.Text,
+            ParseInteger(FilmShotIsoSpeedBox.Text),
+            ParseShutter(FilmShotShutterBox.Text),
+            ParseNumber(FilmShotApertureBox.Text),
+            ParseNumber(FilmShotFocalLengthBox.Text));
+        AppMetadataOverlay next = new()
+        {
+            Title = AppMetadataTitleBox.Text,
+            Caption = AppMetadataCaptionBox.Text,
+            Keywords = SplitKeywords(AppMetadataKeywordsBox.Text),
+            Copyright = AppMetadataCopyrightBox.Text,
+            FilmShot = shot.Normalized().IsEmpty ? null : shot.Normalized(),
+        };
+        AppMetadataOverlay stored = panel.SelectedFrame?.AppMetadata ?? new AppMetadataOverlay();
+        // 같은 값을 다시 쓰면 revision 만 오르고 카탈로그가 매번 더러워집니다.
+        if (Equivalent(stored, next))
+        {
+            return;
+        }
+        _ = panel.SetAppMetadata(_ => next);
+        UpdateAppMetadataCards();
+        UpdateInfoCard();
+    }
+
+    private static bool Equivalent(AppMetadataOverlay stored, AppMetadataOverlay candidate)
+    {
+        AppMetadataOverlay left = stored.Normalized() with { Revision = 0, UpdatedAt = default };
+        AppMetadataOverlay right = candidate.Normalized() with { Revision = 0, UpdatedAt = default };
+        return left.Title == right.Title &&
+            left.Caption == right.Caption &&
+            left.Copyright == right.Copyright &&
+            left.FilmShot == right.FilmShot &&
+            left.Keywords.SequenceEqual(right.Keywords, StringComparer.Ordinal);
+    }
+
+    /// <summary>쉼표로 나눕니다. macOS 의 편집기도 한 줄에 쉼표로 적습니다.</summary>
+    private static IReadOnlyList<string> SplitKeywords(string? text) =>
+        AppMetadataOverlay.NormalizeKeywords(
+            (text ?? string.Empty).Split(',', StringSplitOptions.TrimEntries));
+
+    private static int? ParseInteger(string? text) =>
+        int.TryParse(text, NumberStyles.Integer, CultureInfo.CurrentCulture, out int value) &&
+        value > 0
+            ? value
+            : null;
+
+    private static double? ParseNumber(string? text) =>
+        double.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out double value) &&
+        double.IsFinite(value) && value > 0
+            ? value
+            : null;
+
+    /// <summary>
+    /// 셔터는 사진가가 적는 대로 <c>1/125</c> 또는 <c>2</c> 로 받습니다. 카탈로그에는 초로 둡니다.
+    /// </summary>
+    private static double? ParseShutter(string? text)
+    {
+        string value = (text ?? string.Empty).Trim();
+        if (value.Length == 0)
+        {
+            return null;
+        }
+        int slash = value.IndexOf('/');
+        if (slash < 0)
+        {
+            return ParseNumber(value);
+        }
+        double? numerator = ParseNumber(value[..slash]);
+        double? denominator = ParseNumber(value[(slash + 1)..]);
+        return numerator is { } top && denominator is { } bottom ? top / bottom : null;
+    }
+
+    private static string FormatShutter(double? seconds)
+    {
+        if (seconds is not { } value)
+        {
+            return string.Empty;
+        }
+        if (value >= 1.0)
+        {
+            return value.ToString("0.##", CultureInfo.CurrentCulture);
+        }
+        // 1 초보다 짧으면 사진가가 읽는 분수로 되돌립니다.
+        return string.Create(CultureInfo.CurrentCulture, $"1/{Math.Round(1.0 / value)}");
+    }
+
+    private void LocalizeAppMetadataCards()
+    {
+        string card = AppResources.Get("developAppMetadataCard", "Text");
+        AppMetadataCardTitleText.Text = card;
+        AutomationProperties.SetName(AppMetadataCard, card);
+        string shotCard = AppResources.Get("developFilmShotCard", "Text");
+        FilmShotCardTitleText.Text = shotCard;
+        AutomationProperties.SetName(FilmShotCard, shotCard);
+        LocalizeMetadataBox(AppMetadataTitleBox, "developAppMetadataTitle");
+        LocalizeMetadataBox(AppMetadataCaptionBox, "developAppMetadataCaption");
+        LocalizeMetadataBox(AppMetadataKeywordsBox, "developAppMetadataKeywords");
+        LocalizeMetadataBox(AppMetadataCopyrightBox, "developAppMetadataCopyright");
+        LocalizeMetadataBox(FilmShotCameraMakeBox, "developFilmShotCameraMake");
+        LocalizeMetadataBox(FilmShotCameraModelBox, "developFilmShotCameraModel");
+        LocalizeMetadataBox(FilmShotLensModelBox, "developFilmShotLensModel");
+        LocalizeMetadataBox(FilmShotFilmStockBox, "developFilmShotFilmStock");
+        LocalizeMetadataBox(FilmShotIsoSpeedBox, "developFilmShotIsoSpeed");
+        LocalizeMetadataBox(FilmShotShutterBox, "developFilmShotShutter");
+        LocalizeMetadataBox(FilmShotApertureBox, "developFilmShotAperture");
+        LocalizeMetadataBox(FilmShotFocalLengthBox, "developFilmShotFocalLength");
+    }
+
+    private static void LocalizeMetadataBox(TextBox box, string resourceKey)
+    {
+        string text = AppResources.Get(resourceKey, "Text");
+        box.PlaceholderText = text;
+        AutomationProperties.SetName(box, text);
+    }
+
     private void UpdateInfoCard()
     {
         if (InfoRows is null)
@@ -2902,11 +3086,29 @@ public sealed partial class DevelopWorkspaceView : UserControl
             new(AppResources.Get("developInfoSource", "Text"),
                 origin + " · " + Path.GetFileName(frame.SourcePath)),
             new(AppResources.Get("developInfoSidecar", "Text"), DescribeSidecar(frame)),
-            new(AppResources.Get("developInfoCamera", "Text"), empty),
+            new(AppResources.Get("developInfoCamera", "Text"), DescribeCamera(frame, empty)),
             new(AppResources.Get("developInfoDate", "Text"), empty),
-            new(AppResources.Get("developInfoTitle", "Text"), empty),
-            new(AppResources.Get("developInfoKeywords", "Text"), empty),
+            new(AppResources.Get("developInfoTitle", "Text"),
+                frame.AppMetadata?.Title ?? empty),
+            new(AppResources.Get("developInfoKeywords", "Text"),
+                frame.AppMetadata is { Keywords.Count: > 0 } withKeywords
+                    ? string.Join(", ", withKeywords.Keywords)
+                    : empty),
         };
+    }
+
+    /// <summary>
+    /// 카메라 줄은 적어 둔 촬영 기록에서 옵니다. 스캔 파일에 적힌 카메라는 스캐너의 것이지
+    /// 그 사진을 찍은 카메라의 것이 아니므로 쓰지 않습니다.
+    /// </summary>
+    private static string DescribeCamera(LibraryFrameSnapshot frame, string empty)
+    {
+        if (frame.AppMetadata?.FilmShot is not { } shot)
+        {
+            return empty;
+        }
+        string[] parts = [.. new[] { shot.CameraMake, shot.CameraModel }.OfType<string>()];
+        return parts.Length == 0 ? empty : string.Join(" · ", parts);
     }
 
     /// <summary>
@@ -4035,6 +4237,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         AutomationProperties.SetName(ExportNamePatternBox, ExportNamePatternLabel.Text);
         SetButtonText(ExportButton, AppResources.Get("exportSection", "Text"));
         LocalizeOutputPanel();
+        LocalizeAppMetadataCards();
         SetLocalizedNameAndTooltip(LibraryRailButton, AppResources.Get("developLibrary", "Text"));
         SetLocalizedNameAndTooltip(VersionsRailButton, AppResources.Get("developSectionVersions", "Text"));
         SetButtonText(CaptureVersionButton, AppResources.Get("developVersionCapture", "Content"));

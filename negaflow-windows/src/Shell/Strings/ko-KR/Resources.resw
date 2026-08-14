@@ -857,4 +857,19 @@
   <data name="scanUntitledFilm.Text" xml:space="preserve"><value>무제 필름</value><comment>AppLocalizedPhrase.untitledFilm</comment></data>
   <data name="scanWaitingStatus.Text" xml:space="preserve"><value>스캐너 연결 대기 중</value><comment>AppLocalizedPhrase.scannerWaitingStatus</comment></data>
   <data name="exportBatchFrameProgress.Text" xml:space="preserve"><value>사진 %d/%d</value><comment>AppLocalizedPhrase.batchFrameProgressFormat</comment></data>
+  <data name="developAppMetadataCaption.Text" xml:space="preserve"><value>설명</value><comment>AppMetadataOverlayLocalizedText[2]</comment></data>
+  <data name="developAppMetadataCard.Text" xml:space="preserve"><value>앱 메타데이터</value><comment>AppMetadataOverlayLocalizedText[0]</comment></data>
+  <data name="developAppMetadataCopyright.Text" xml:space="preserve"><value>저작권</value><comment>AppMetadataOverlayLocalizedText[4]</comment></data>
+  <data name="developAppMetadataKeywords.Text" xml:space="preserve"><value>키워드</value><comment>AppMetadataOverlayLocalizedText[3]</comment></data>
+  <data name="developAppMetadataSaved.Text" xml:space="preserve"><value>저장됨</value><comment>AppMetadataOverlayLocalizedText[5]</comment></data>
+  <data name="developAppMetadataTitle.Text" xml:space="preserve"><value>제목</value><comment>AppMetadataOverlayLocalizedText[1]</comment></data>
+  <data name="developFilmShotAperture.Text" xml:space="preserve"><value>조리개 (f/2.8)</value><comment>AppMetadataOverlayLocalizedText[16]</comment></data>
+  <data name="developFilmShotCameraMake.Text" xml:space="preserve"><value>카메라 제조사</value><comment>AppMetadataOverlayLocalizedText[10]</comment></data>
+  <data name="developFilmShotCameraModel.Text" xml:space="preserve"><value>카메라</value><comment>AppMetadataOverlayLocalizedText[11]</comment></data>
+  <data name="developFilmShotCard.Text" xml:space="preserve"><value>촬영 기록</value><comment>AppMetadataOverlayLocalizedText[9]</comment></data>
+  <data name="developFilmShotFilmStock.Text" xml:space="preserve"><value>필름</value><comment>AppMetadataOverlayLocalizedText[13]</comment></data>
+  <data name="developFilmShotFocalLength.Text" xml:space="preserve"><value>초점 거리 (mm)</value><comment>AppMetadataOverlayLocalizedText[17]</comment></data>
+  <data name="developFilmShotIsoSpeed.Text" xml:space="preserve"><value>ISO</value><comment>AppMetadataOverlayLocalizedText[14]</comment></data>
+  <data name="developFilmShotLensModel.Text" xml:space="preserve"><value>렌즈</value><comment>AppMetadataOverlayLocalizedText[12]</comment></data>
+  <data name="developFilmShotShutter.Text" xml:space="preserve"><value>셔터 (1/125)</value><comment>AppMetadataOverlayLocalizedText[15]</comment></data>
 </root>

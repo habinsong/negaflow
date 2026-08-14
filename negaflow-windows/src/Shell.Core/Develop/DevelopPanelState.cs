@@ -1041,6 +1041,33 @@ public sealed class DevelopPanelState
     public LibraryFrameError DeleteVersion(string versionId) =>
         EditFrameRecord(record => LibraryVersions.Delete(record, versionId));
 
+    /// <summary>
+    /// 적어 둔 메타데이터를 바꿉니다. 레시피가 아니므로 미리보기를 다시 돌리지 않습니다 —
+    /// 제목을 적었다고 사진이 다시 현상될 이유가 없습니다.
+    /// </summary>
+    public LibraryFrameError SetAppMetadata(
+        Func<AppMetadataOverlay, AppMetadataOverlay> update)
+    {
+        ArgumentNullException.ThrowIfNull(update);
+        if (SelectedFrame is not { } frame)
+        {
+            return LibraryFrameError.MissingId;
+        }
+        AppMetadataOverlay current = frame.AppMetadata ?? new AppMetadataOverlay();
+        AppMetadataOverlay next = update(current).Normalized();
+        if (next.IsEmpty)
+        {
+            return EditFrameRecord(record => AppMetadataWriter.Apply(record, null));
+        }
+        // 쓸 때마다 revision 이 오릅니다. macOS 가 같은 규칙으로 충돌을 알아챕니다.
+        next = next with
+        {
+            Revision = current.Revision + 1,
+            UpdatedAt = DateTimeOffset.UtcNow,
+        };
+        return EditFrameRecord(record => AppMetadataWriter.Apply(record, next));
+    }
+
     private LibraryFrameError EditFrameRecord(
         Func<System.Text.Json.Nodes.JsonObject, LibraryFrameWriteResult> edit)
     {

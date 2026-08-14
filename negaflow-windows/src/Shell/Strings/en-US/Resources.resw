@@ -857,4 +857,19 @@ Load a scanner from Library to scan film.</value>
   <data name="scanUntitledFilm.Text" xml:space="preserve"><value>Untitled Film</value><comment>AppLocalizedPhrase.untitledFilm</comment></data>
   <data name="scanWaitingStatus.Text" xml:space="preserve"><value>Waiting for scanner connection</value><comment>AppLocalizedPhrase.scannerWaitingStatus</comment></data>
   <data name="exportBatchFrameProgress.Text" xml:space="preserve"><value>Frame %d/%d</value><comment>AppLocalizedPhrase.batchFrameProgressFormat</comment></data>
+  <data name="developAppMetadataCaption.Text" xml:space="preserve"><value>Caption</value><comment>AppMetadataOverlayLocalizedText[2]</comment></data>
+  <data name="developAppMetadataCard.Text" xml:space="preserve"><value>App Metadata</value><comment>AppMetadataOverlayLocalizedText[0]</comment></data>
+  <data name="developAppMetadataCopyright.Text" xml:space="preserve"><value>Copyright</value><comment>AppMetadataOverlayLocalizedText[4]</comment></data>
+  <data name="developAppMetadataKeywords.Text" xml:space="preserve"><value>Keywords</value><comment>AppMetadataOverlayLocalizedText[3]</comment></data>
+  <data name="developAppMetadataSaved.Text" xml:space="preserve"><value>Saved</value><comment>AppMetadataOverlayLocalizedText[5]</comment></data>
+  <data name="developAppMetadataTitle.Text" xml:space="preserve"><value>Title</value><comment>AppMetadataOverlayLocalizedText[1]</comment></data>
+  <data name="developFilmShotAperture.Text" xml:space="preserve"><value>Aperture (f/2.8)</value><comment>AppMetadataOverlayLocalizedText[16]</comment></data>
+  <data name="developFilmShotCameraMake.Text" xml:space="preserve"><value>Camera Make</value><comment>AppMetadataOverlayLocalizedText[10]</comment></data>
+  <data name="developFilmShotCameraModel.Text" xml:space="preserve"><value>Camera</value><comment>AppMetadataOverlayLocalizedText[11]</comment></data>
+  <data name="developFilmShotCard.Text" xml:space="preserve"><value>Shot Details</value><comment>AppMetadataOverlayLocalizedText[9]</comment></data>
+  <data name="developFilmShotFilmStock.Text" xml:space="preserve"><value>Film</value><comment>AppMetadataOverlayLocalizedText[13]</comment></data>
+  <data name="developFilmShotFocalLength.Text" xml:space="preserve"><value>Focal Length (mm)</value><comment>AppMetadataOverlayLocalizedText[17]</comment></data>
+  <data name="developFilmShotIsoSpeed.Text" xml:space="preserve"><value>ISO</value><comment>AppMetadataOverlayLocalizedText[14]</comment></data>
+  <data name="developFilmShotLensModel.Text" xml:space="preserve"><value>Lens</value><comment>AppMetadataOverlayLocalizedText[12]</comment></data>
+  <data name="developFilmShotShutter.Text" xml:space="preserve"><value>Shutter (1/125)</value><comment>AppMetadataOverlayLocalizedText[15]</comment></data>
 </root>

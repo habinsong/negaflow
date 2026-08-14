@@ -22,6 +22,27 @@ public static class LibraryFrameReader
     public const string SourceSampleFormatName = "sampleFormat";
     public const string SourceOrientationName = "orientation";
     public const string InfraredPathName = "infraredScanPath";
+    /// <summary>macOS 와 같이 params 형제입니다 — 레시피가 아니라 사진의 사실입니다.</summary>
+    public const string AppMetadataName = "appMetadataOverlay";
+    internal const string AppMetadataVersionName = "version";
+    internal const string AppMetadataTitleName = "title";
+    internal const string AppMetadataCaptionName = "caption";
+    internal const string AppMetadataKeywordsName = "keywords";
+    internal const string AppMetadataCopyrightName = "copyright";
+    internal const string AppMetadataRevisionName = "revision";
+    internal const string AppMetadataUpdatedAtName = "updatedAt";
+    internal const string FilmShotName = "filmShot";
+    internal const string FilmShotCameraMakeName = "cameraMake";
+    internal const string FilmShotCameraModelName = "cameraModel";
+    internal const string FilmShotLensModelName = "lensModel";
+    internal const string FilmShotFilmStockName = "filmStock";
+    internal const string FilmShotIsoSpeedName = "isoSpeed";
+    internal const string FilmShotExposureTimeName = "exposureTimeSeconds";
+    internal const string FilmShotFNumberName = "fNumber";
+    internal const string FilmShotFocalLengthName = "focalLengthMM";
+    /// <summary>Swift Date 의 기준시각입니다. 같은 숫자를 읽고 씁니다.</summary>
+    public static readonly DateTimeOffset AppleReferenceDate =
+        new(2001, 1, 1, 0, 0, 0, TimeSpan.Zero);
     internal const string DisplayNameName = "customDisplayName";
     internal const string RatingName = "rating";
     internal const string PickStateName = "pickState";
@@ -161,6 +182,10 @@ public static class LibraryFrameReader
         if (!TryReadSourceMetadata(frameRecord, out LibrarySourceMetadata? sourceMetadata))
         {
             return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidSourceMetadata);
+        }
+        if (!TryReadAppMetadata(frameRecord, out AppMetadataOverlay? appMetadata))
+        {
+            return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidAppMetadata);
         }
 
         string? displayName = null;
@@ -303,6 +328,7 @@ public static class LibraryFrameReader
         {
             InfraredPath = infraredPath,
             SourceMetadata = sourceMetadata,
+            AppMetadata = appMetadata,
             Base = baseRecipe,
             LookPresetId = lookPresetId,
             PointCurves = pointCurves,
@@ -560,6 +586,174 @@ public static class LibraryFrameReader
         }
         if (element.ValueKind != JsonValueKind.Number || !element.TryGetDouble(out double parsed) ||
             !double.IsFinite(parsed) || parsed <= 0.0)
+        {
+            return false;
+        }
+        value = parsed;
+        return true;
+    }
+
+    /// <summary>
+    /// 적어 둔 메타데이터입니다. 키가 없으면 적은 적이 없다는 뜻이고, 있는데 모양이 틀리면
+    /// 카탈로그가 손상됐다는 뜻이므로 조용히 버리지 않고 거부합니다.
+    /// </summary>
+    private static bool TryReadAppMetadata(
+        JsonElement frameRecord,
+        out AppMetadataOverlay? overlay)
+    {
+        overlay = null;
+        if (!frameRecord.TryGetProperty(AppMetadataName, out JsonElement element) ||
+            element.ValueKind == JsonValueKind.Null)
+        {
+            return true;
+        }
+        if (element.ValueKind != JsonValueKind.Object ||
+            !TryReadRequiredUInt64(element, AppMetadataRevisionName, out ulong revision) ||
+            revision == 0)
+        {
+            return false;
+        }
+        if (element.TryGetProperty(AppMetadataVersionName, out JsonElement versionElement) &&
+            (versionElement.ValueKind != JsonValueKind.Number ||
+                !versionElement.TryGetInt32(out int version) ||
+                version != AppMetadataOverlay.CurrentVersion))
+        {
+            return false;
+        }
+        if (!TryReadOptionalText(element, AppMetadataTitleName, out string? title) ||
+            !TryReadOptionalText(element, AppMetadataCaptionName, out string? caption) ||
+            !TryReadOptionalText(element, AppMetadataCopyrightName, out string? copyright) ||
+            !TryReadKeywords(element, out IReadOnlyList<string> keywords) ||
+            !TryReadFilmShot(element, out FilmShotMetadata? filmShot))
+        {
+            return false;
+        }
+        double seconds = 0;
+        if (element.TryGetProperty(AppMetadataUpdatedAtName, out JsonElement updatedElement) &&
+            (updatedElement.ValueKind != JsonValueKind.Number ||
+                !updatedElement.TryGetDouble(out seconds) ||
+                !double.IsFinite(seconds)))
+        {
+            return false;
+        }
+        AppMetadataOverlay parsed = new()
+        {
+            Title = title,
+            Caption = caption,
+            Keywords = keywords,
+            Copyright = copyright,
+            FilmShot = filmShot,
+            Revision = revision,
+            UpdatedAt = AppleReferenceDate.AddSeconds(seconds),
+        };
+        if (!parsed.IsValid)
+        {
+            return false;
+        }
+        overlay = parsed;
+        return true;
+    }
+
+    private static bool TryReadOptionalText(JsonElement owner, string name, out string? value)
+    {
+        value = null;
+        if (!owner.TryGetProperty(name, out JsonElement element) ||
+            element.ValueKind == JsonValueKind.Null)
+        {
+            return true;
+        }
+        if (element.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+        value = element.GetString();
+        return true;
+    }
+
+    private static bool TryReadKeywords(JsonElement owner, out IReadOnlyList<string> keywords)
+    {
+        keywords = [];
+        if (!owner.TryGetProperty(AppMetadataKeywordsName, out JsonElement element) ||
+            element.ValueKind == JsonValueKind.Null)
+        {
+            return true;
+        }
+        if (element.ValueKind != JsonValueKind.Array ||
+            element.GetArrayLength() > AppMetadataOverlay.MaximumKeywords)
+        {
+            return false;
+        }
+        var read = new List<string>(element.GetArrayLength());
+        foreach (JsonElement item in element.EnumerateArray())
+        {
+            if (item.ValueKind != JsonValueKind.String || item.GetString() is not { } keyword)
+            {
+                return false;
+            }
+            read.Add(keyword);
+        }
+        keywords = read;
+        return true;
+    }
+
+    private static bool TryReadFilmShot(JsonElement owner, out FilmShotMetadata? filmShot)
+    {
+        filmShot = null;
+        if (!owner.TryGetProperty(FilmShotName, out JsonElement element) ||
+            element.ValueKind == JsonValueKind.Null)
+        {
+            return true;
+        }
+        if (element.ValueKind != JsonValueKind.Object ||
+            !TryReadOptionalText(element, FilmShotCameraMakeName, out string? cameraMake) ||
+            !TryReadOptionalText(element, FilmShotCameraModelName, out string? cameraModel) ||
+            !TryReadOptionalText(element, FilmShotLensModelName, out string? lensModel) ||
+            !TryReadOptionalText(element, FilmShotFilmStockName, out string? filmStock) ||
+            !TryReadOptionalInt(element, FilmShotIsoSpeedName, out int? isoSpeed) ||
+            !TryReadOptionalDouble(element, FilmShotExposureTimeName, out double? exposure) ||
+            !TryReadOptionalDouble(element, FilmShotFNumberName, out double? fNumber) ||
+            !TryReadOptionalDouble(element, FilmShotFocalLengthName, out double? focalLength))
+        {
+            return false;
+        }
+        FilmShotMetadata parsed = new(
+            cameraMake, cameraModel, lensModel, filmStock,
+            isoSpeed, exposure, fNumber, focalLength);
+        if (parsed.IsEmpty || !parsed.IsValid)
+        {
+            return false;
+        }
+        filmShot = parsed;
+        return true;
+    }
+
+    private static bool TryReadOptionalInt(JsonElement owner, string name, out int? value)
+    {
+        value = null;
+        if (!owner.TryGetProperty(name, out JsonElement element) ||
+            element.ValueKind == JsonValueKind.Null)
+        {
+            return true;
+        }
+        if (element.ValueKind != JsonValueKind.Number || !element.TryGetInt32(out int parsed))
+        {
+            return false;
+        }
+        value = parsed;
+        return true;
+    }
+
+    private static bool TryReadOptionalDouble(JsonElement owner, string name, out double? value)
+    {
+        value = null;
+        if (!owner.TryGetProperty(name, out JsonElement element) ||
+            element.ValueKind == JsonValueKind.Null)
+        {
+            return true;
+        }
+        if (element.ValueKind != JsonValueKind.Number ||
+            !element.TryGetDouble(out double parsed) ||
+            !double.IsFinite(parsed))
         {
             return false;
         }
