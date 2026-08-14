@@ -316,6 +316,14 @@
 
                                 <!-- 소스 -->
                                 <StackPanel x:Name="ExportSourcePage" Spacing="6" Visibility="Collapsed">
+                                    <ToggleSwitch
+                                        x:Name="ExportOriginalRawToggle"
+                                        AutomationProperties.AutomationId="negaflow.develop.output.original-raw"
+                                        Toggled="OnExportOriginalRawToggled" />
+                                    <ToggleSwitch
+                                        x:Name="ExportSidecarToggle"
+                                        AutomationProperties.AutomationId="negaflow.develop.output.sidecar"
+                                        Toggled="OnExportSidecarToggled" />
                                     <TextBlock x:Name="ExportSourceLabel" FontSize="12" />
                                     <TextBlock
                                         x:Name="ExportSourceSummaryText"

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json.Nodes;
 using System.IO;
 using System.Runtime.InteropServices.WindowsRuntime;
 using Microsoft.UI.Xaml;
@@ -45,6 +46,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
     /// <summary>설정을 컨트롤에 되비추는 동안 켜집니다. 켜져 있으면 이벤트가 다시 저장하지 않습니다.</summary>
     private bool isSynchronizingExport;
     private bool isSynchronizingMetadata;
+    private string engineVersion = "unknown";
     private CropSession? cropSession;
     private CropDragMode cropDragMode;
     private CropDisplayPoint cropDragStart;
@@ -93,6 +95,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         Filmstrip.Initialize(state);
         Filmstrip.FrameSelected += OnFilmstripFrameSelected;
         StatusBar.Initialize(nativeEngineStatus);
+        engineVersion = nativeEngineStatus.BuildInfo?.AbiVersion.ToString() ?? "unknown";
         UpdateState(state.Current);
         Unloaded += OnUnloaded;
     }
@@ -3446,6 +3449,23 @@ public sealed partial class DevelopWorkspaceView : UserControl
         MutateExportSettings(value => value with { OutputSharpeningMedium = medium });
     }
 
+    private void OnExportOriginalRawToggled(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        MutateExportSettings(value => value with
+        {
+            WriteOriginalRaw = ExportOriginalRawToggle.IsOn,
+        });
+    }
+
+    private void OnExportSidecarToggled(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        MutateExportSettings(value => value with { WriteSidecar = ExportSidecarToggle.IsOn });
+    }
+
     private void OnQuickExportFormatChanged(object sender, SelectionChangedEventArgs args)
     {
         _ = sender;
@@ -3563,6 +3583,8 @@ public sealed partial class DevelopWorkspaceView : UserControl
             SelectByTag(QuickExportSizeSelector, quickExportSettings.LongEdge);
             QuickExportJpegQualitySlider.Value =
                 Math.Round(quickExportSettings.JpegQuality * 100.0);
+            ExportOriginalRawToggle.IsOn = exportSettings.WriteOriginalRaw;
+            ExportSidecarToggle.IsOn = exportSettings.WriteSidecar;
         }
         finally
         {
@@ -3583,6 +3605,63 @@ public sealed partial class DevelopWorkspaceView : UserControl
         ExportSharpeningValue.Text = Percent(exportSettings.OutputSharpening);
         QuickExportJpegQualityValue.Text = Percent(quickExportSettings.JpegQuality);
         UpdateExportPreview();
+    }
+
+    /// <summary>어셈블리에 박힌 앱 판입니다. 사이드카가 어느 판이 만든 파일인지 남깁니다.</summary>
+    private static string ShellVersion =>
+        typeof(DevelopWorkspaceView).Assembly.GetName().Version?.ToString() ?? "0.0.0";
+
+    /// <summary>
+    /// 산출물 옆에 놓는 것들입니다. macOS 처럼 **산출물 옆에만** 쓰며, 원본 옆의 기존 사이드카를
+    /// 병합 없이 덮어쓰지 않습니다. 사진 자체는 이미 게시된 뒤이므로 여기서 실패해도 사진은
+    /// 남습니다 — 실패는 상태 줄로만 알립니다.
+    /// </summary>
+    private void WriteExportArtifacts(LibraryFrameSnapshot frame, string outputPath)
+    {
+        if (libraryHost is null || (!exportSettings.WriteSidecar && !exportSettings.WriteOriginalRaw))
+        {
+            return;
+        }
+        if (exportSettings.WriteOriginalRaw)
+        {
+            try
+            {
+                string original = ExportArtifactPairing.OriginalPath(outputPath, frame.SourcePath);
+                // 이미 있는 파일은 덮지 않습니다. 보관용 사본이 서로를 지우면 뜻이 없습니다.
+                if (!File.Exists(original))
+                {
+                    File.Copy(frame.SourcePath, original);
+                }
+            }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException or
+                PathTooLongException or NotSupportedException)
+            {
+                OutputStatusText.Text = AppResources.Get("developExportFolderFailed", "Text");
+            }
+        }
+        if (!exportSettings.WriteSidecar)
+        {
+            return;
+        }
+        JsonObject? record = libraryHost.FrameRecord(frame.Id);
+        ExportSidecarContent content = new()
+        {
+            OutputPath = outputPath,
+            Format = exportSettings.Format,
+            Encoding = exportSettings.ToEncodingOptions(),
+            AppVersion = ShellVersion,
+            EngineVersion = engineVersion,
+            FilmType = frame.Route.FilmType.ToString(),
+            PickState = frame.PickState.ToString().ToLowerInvariant(),
+            Rating = frame.Rating,
+            PresetName = frame.LookPresetId,
+            Parameters = record?["params"] as JsonObject,
+            AppMetadata = frame.AppMetadata,
+        };
+        if (ExportSidecarWriter.Write(outputPath, content) is { } failure)
+        {
+            OutputStatusText.Text = failure;
+        }
     }
 
     private void OnLibrarySelectionChanged(object? sender, EventArgs args)
@@ -3719,6 +3798,8 @@ public sealed partial class DevelopWorkspaceView : UserControl
                 OutputSharpeningMedium.GlossyPaper.ToString()),
         ]);
 
+        LocalizeToggleSwitch(ExportOriginalRawToggle, "developExportOriginalRaw");
+        LocalizeToggleSwitch(ExportSidecarToggle, "developExportSidecar");
         ExportSourceLabel.Text = AppResources.Get("developExportSourceLabel", "Text");
 
         QuickExportSectionText.Text = AppResources.Get("quickExportSection", "Text");
@@ -3776,6 +3857,15 @@ public sealed partial class DevelopWorkspaceView : UserControl
             tokens.Items.Add(item);
         }
         ExportNamingOptionsFlyout.Items.Add(tokens);
+    }
+
+    private static void LocalizeToggleSwitch(ToggleSwitch toggle, string resourceKey)
+    {
+        string text = AppResources.Get(resourceKey, "Content");
+        toggle.Header = text;
+        toggle.OnContent = text;
+        toggle.OffContent = text;
+        AutomationProperties.SetName(toggle, text);
     }
 
     private static void FillSelector(
@@ -3851,13 +3941,21 @@ public sealed partial class DevelopWorkspaceView : UserControl
                 await RunExportBatchAsync(selection);
                 return;
             }
+            string exportedPath = exportSettings.Destination.PathFor(
+                frame.SourcePath,
+                exportSettings.SequenceStart,
+                frame.LookPresetId ?? string.Empty);
             _ = await panel.ExportAsync(
-                exportSettings.Destination.PathFor(
-                    frame.SourcePath,
-                    exportSettings.SequenceStart,
-                    frame.LookPresetId ?? string.Empty),
+                exportedPath,
                 exportSettings.Format,
-                outcome => OutputStatusText.Text = DevelopPanelState.Describe(outcome),
+                outcome =>
+                {
+                    OutputStatusText.Text = DevelopPanelState.Describe(outcome);
+                    if (outcome is { Kind: DevelopExportOutcomeKind.Completed, Result.Succeeded: true })
+                    {
+                        WriteExportArtifacts(frame, exportedPath);
+                    }
+                },
                 exportSettings.ToEncodingOptions());
         }
         finally

@@ -872,4 +872,7 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="developFilmShotIsoSpeed.Text" xml:space="preserve"><value>ISO</value><comment>AppMetadataOverlayLocalizedText[14]</comment></data>
   <data name="developFilmShotLensModel.Text" xml:space="preserve"><value>Objectif</value><comment>AppMetadataOverlayLocalizedText[12]</comment></data>
   <data name="developFilmShotShutter.Text" xml:space="preserve"><value>Vitesse (1/125)</value><comment>AppMetadataOverlayLocalizedText[15]</comment></data>
+  <data name="developExportMainFlatMaster.Content" xml:space="preserve"><value>Master MAIN non corrigé</value><comment>AppLocalizedPhrase.exportMainFlatMaster</comment></data>
+  <data name="developExportOriginalRaw.Content" xml:space="preserve"><value>TIFF de numérisation original</value><comment>AppLocalizedPhrase.exportOriginalRawTIFF</comment></data>
+  <data name="developExportSidecar.Content" xml:space="preserve"><value>Fichiers annexes (JSON + XMP)</value><comment>AppLocalizedPhrase.exportSidecar</comment></data>
 </root>

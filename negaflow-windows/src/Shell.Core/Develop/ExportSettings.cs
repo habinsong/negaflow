@@ -39,6 +39,12 @@ public sealed record ExportSettings
     public OutputSharpeningMedium OutputSharpeningMedium { get; init; } =
         OutputSharpeningMedium.Screen;
 
+    /// <summary>산출물 옆에 원본을 그대로 한 벌 둡니다.</summary>
+    public bool WriteOriginalRaw { get; init; }
+
+    /// <summary>산출물 옆에 현상 레시피와 메타데이터를 JSON·XMP 로 적습니다.</summary>
+    public bool WriteSidecar { get; init; }
+
     public string FolderPath { get; init; } = string.Empty;
 
     public string NamingTemplate { get; init; } = ExportNamingTemplate.DefaultPattern;

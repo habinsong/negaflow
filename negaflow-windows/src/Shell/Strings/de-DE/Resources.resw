@@ -872,4 +872,7 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developFilmShotIsoSpeed.Text" xml:space="preserve"><value>ISO</value><comment>AppMetadataOverlayLocalizedText[14]</comment></data>
   <data name="developFilmShotLensModel.Text" xml:space="preserve"><value>Objektiv</value><comment>AppMetadataOverlayLocalizedText[12]</comment></data>
   <data name="developFilmShotShutter.Text" xml:space="preserve"><value>Verschluss (1/125)</value><comment>AppMetadataOverlayLocalizedText[15]</comment></data>
+  <data name="developExportMainFlatMaster.Content" xml:space="preserve"><value>Unkorrigiertes MAIN-Master</value><comment>AppLocalizedPhrase.exportMainFlatMaster</comment></data>
+  <data name="developExportOriginalRaw.Content" xml:space="preserve"><value>Original-Scan-TIFF</value><comment>AppLocalizedPhrase.exportOriginalRawTIFF</comment></data>
+  <data name="developExportSidecar.Content" xml:space="preserve"><value>Filialdateien (JSON + XMP)</value><comment>AppLocalizedPhrase.exportSidecar</comment></data>
 </root>

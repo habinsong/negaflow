@@ -70,6 +70,7 @@ internal static class Program
         VerifyExportSettingsReachTheRequest();
         VerifyScanSession();
         VerifyExportBatchPlan();
+        VerifyExportSidecar();
         VerifyDevelopHistogramSampler();
         VerifyDevelopPanelState();
         VerifyInspectorSliderValue();
@@ -4415,6 +4416,83 @@ internal static class Program
                 // 시험 뒤처리 실패는 시험 결과가 아닙니다.
             }
         }
+    }
+
+    /// <summary>
+    /// 사이드카 본문입니다. 다른 앱이 두 플랫폼의 파일을 같은 것으로 읽어야 하므로 XMP 는 macOS 와
+    /// 같은 네임스페이스·같은 속성 이름을 씁니다.
+    /// </summary>
+    private static void VerifyExportSidecar()
+    {
+        AppMetadataOverlay overlay = new()
+        {
+            Title = "Bukhansan",
+            Caption = "Morning ridge & mist",
+            Keywords = ["mountain", "temple"],
+            Copyright = "(c) 2026",
+            FilmShot = new FilmShotMetadata(
+                "Leica", "M6", "Summicron 35mm", "Portra 400", 400, 0.008, 2.8, 35),
+            Revision = 1,
+        };
+        ExportSidecarContent content = new()
+        {
+            OutputPath = @"D:\Export\IMG_0007.tif",
+            Format = DevelopExportFormat.Tiff16,
+            Encoding = new ExportSettings { Dpi = 300, LongEdge = 4096 }.ToEncodingOptions(),
+            AppVersion = "1.2.3",
+            EngineVersion = "0.44",
+            FilmType = "ColorNegative",
+            PickState = "rejected",
+            Rating = 4,
+            Parameters = new JsonObject { ["exposure"] = 1.5, ["nested"] = new JsonObject() },
+            AppMetadata = overlay,
+            ExportedAt = new DateTimeOffset(2026, 8, 14, 5, 6, 7, TimeSpan.Zero),
+        };
+
+        string json = ExportSidecarWriter.BuildJson(content);
+        Check(
+            json.Contains("\"exposure\": 1.5", StringComparison.Ordinal),
+            "export_sidecar_carries_the_catalog_parameters");
+        Check(
+            json.Contains("\"engineVersion\": \"0.44\"", StringComparison.Ordinal),
+            "export_sidecar_records_the_engine");
+        Check(
+            json.Contains("\"focalLengthMM\": 35", StringComparison.Ordinal),
+            "export_sidecar_carries_the_shot");
+
+        string xmp = ExportSidecarWriter.BuildXmp(content);
+        Check(
+            xmp.Contains("xmlns:negaflow=\"https://negaflow.app/ns/1.0/\"", StringComparison.Ordinal),
+            "export_xmp_uses_the_macos_namespace");
+        // 거부된 사진은 macOS 처럼 XMP 별점 -1 입니다.
+        Check(
+            xmp.Contains("xmp:Rating=\"-1\"", StringComparison.Ordinal) &&
+            xmp.Contains("negaflow:Rating=\"4\"", StringComparison.Ordinal),
+            "export_xmp_marks_a_rejected_frame");
+        Check(
+            xmp.Contains("negaflow:Exposure=\"1.5\"", StringComparison.Ordinal),
+            "export_xmp_lifts_numeric_parameters");
+        Check(
+            xmp.Contains("tiff:Model=\"M6\"", StringComparison.Ordinal) &&
+            xmp.Contains("aux:Lens=\"Summicron 35mm\"", StringComparison.Ordinal) &&
+            xmp.Contains("exif:ISOSpeedRatings=\"400\"", StringComparison.Ordinal),
+            "export_xmp_maps_the_shot_to_standard_tags");
+        // 속성 값의 XML 특수문자는 반드시 이스케이프돼야 파일이 깨지지 않습니다.
+        Check(
+            xmp.Contains("dc:description=\"Morning ridge &amp; mist\"", StringComparison.Ordinal),
+            "export_xmp_escapes_attribute_values");
+        Check(
+            xmp.TrimEnd().EndsWith("<?xpacket end=\"w\"?>", StringComparison.Ordinal),
+            "export_xmp_closes_the_packet");
+
+        Check(
+            ExportArtifactPairing.SidecarPath(@"D:\Export\IMG_0007.tif")
+                == @"D:\Export\IMG_0007.negaflow.json" &&
+            ExportArtifactPairing.XmpPath(@"D:\Export\IMG_0007.tif")
+                == @"D:\Export\IMG_0007.xmp" &&
+            ExportArtifactPairing.OriginalPath(@"D:\Export\IMG_0007.tif", @"C:\scans\a.tiff")
+                == @"D:\Export\IMG_0007-original.tiff",
+            "export_artifact_pairing_matches_macos_names");
     }
 
     /// <summary>

@@ -229,6 +229,19 @@ public sealed class LibraryDocument : IDisposable
     }
 
     /// <summary>
+    /// frame record 의 복사본입니다. 사이드카가 catalog 에 있는 그대로의 <c>params</c> 를 적기
+    /// 위해 씁니다 — 40여 개 필드를 다시 모델링하면 recipe 축이 늘 때마다 사이드카가 조용히
+    /// 뒤처집니다.
+    /// </summary>
+    public System.Text.Json.Nodes.JsonObject? FrameRecord(string frameId)
+    {
+        ArgumentNullException.ThrowIfNull(frameId);
+        return indexById.TryGetValue(frameId, out int index)
+            ? payloads[index].DeepClone().AsObject()
+            : null;
+    }
+
+    /// <summary>
     /// frame record 하나를 통째로 바꿉니다. 버전 담기·되돌리기·지우기와 현상 설정 붙여넣기가
     /// 모두 이 자리를 씁니다.
     /// </summary>

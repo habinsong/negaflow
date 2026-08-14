@@ -185,6 +185,10 @@ public sealed class LibraryHostService : IDisposable
             ? LibraryFrameError.MissingId
             : document.EditRoute(frameId, selection));
 
+    /// <summary>사이드카가 적을 frame record 의 복사본입니다.</summary>
+    public System.Text.Json.Nodes.JsonObject? FrameRecord(string frameId) =>
+        document?.FrameRecord(frameId);
+
     /// <summary>현상 버전을 담거나 되돌리거나, 현상 설정을 붙여넣습니다.</summary>
     public LibraryFrameError EditFrameRecord(
         string frameId,
