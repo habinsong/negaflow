@@ -1333,7 +1333,8 @@ public sealed class DevelopPanelState
     public Task<bool> ExportAsync(
         string destinationPath,
         DevelopExportFormat format,
-        Action<DevelopExportOutcome> onCompleted)
+        Action<DevelopExportOutcome> onCompleted,
+        ExportEncodingOptions? encoding = null)
     {
         ArgumentNullException.ThrowIfNull(onCompleted);
         if (SelectedFrame is not { } frame)
@@ -1345,7 +1346,7 @@ public sealed class DevelopPanelState
                 null));
             return Task.FromResult(true);
         }
-        return host.ExportAsync(frame, destinationPath, format, onCompleted);
+        return host.ExportAsync(frame, destinationPath, format, onCompleted, encoding);
     }
 
     /// <summary>

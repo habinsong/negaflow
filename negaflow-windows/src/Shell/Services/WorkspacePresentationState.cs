@@ -1,3 +1,5 @@
+using Negaflow.Shell.Develop;
+
 namespace Negaflow.Shell;
 
 public sealed class WorkspacePresentationState
@@ -52,6 +54,18 @@ public sealed class WorkspacePresentationState
 
     public void SetFilmstripHeight(double height) =>
         settingsStore.Update(value => value with { FilmstripHeight = height });
+
+    public void UpdateExport(Func<ExportSettings, ExportSettings> update)
+    {
+        ArgumentNullException.ThrowIfNull(update);
+        settingsStore.Update(value => value with { Export = update(value.Export) });
+    }
+
+    public void UpdateQuickExport(Func<QuickExportSettings, QuickExportSettings> update)
+    {
+        ArgumentNullException.ThrowIfNull(update);
+        settingsStore.Update(value => value with { QuickExport = update(value.QuickExport) });
+    }
 
     private void OnSettingsChanged(object? sender, ShellPreferences preferences)
     {

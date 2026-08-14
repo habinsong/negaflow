@@ -1,5 +1,6 @@
 using Negaflow.Catalog;
 using Negaflow.Interop;
+using Negaflow.Shell.Develop;
 using System.Security.Cryptography;
 
 namespace Negaflow.Shell;
@@ -445,8 +446,9 @@ public sealed class LibraryHostService : IDisposable
         LibraryFrameSnapshot frame,
         string destinationPath,
         DevelopExportFormat format,
-        Action<DevelopExportOutcome> onCompleted) =>
-        coordinator.StartAsync(frame, destinationPath, format, onCompleted);
+        Action<DevelopExportOutcome> onCompleted,
+        ExportEncodingOptions? encoding = null) =>
+        coordinator.StartAsync(frame, destinationPath, format, onCompleted, encoding);
 
     public void Dispose()
     {

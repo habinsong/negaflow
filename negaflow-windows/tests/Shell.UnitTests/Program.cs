@@ -67,6 +67,7 @@ internal static class Program
         VerifyLibrarySorter();
         VerifyLibraryQuickFilters();
         VerifyExportDestination();
+        VerifyExportSettingsReachTheRequest();
         VerifyDevelopHistogramSampler();
         VerifyDevelopPanelState();
         VerifyInspectorSliderValue();
@@ -383,6 +384,87 @@ internal static class Program
         Check(
             (tiff with { NamePattern = "a/b:c" }).FileNameFor(source) == "a_b_c.tif",
             "export_destination_replaces_path_characters");
+
+        // 순번 토큰은 macOS 와 같은 네 자리입니다.
+        Check(
+            (tiff with { NamePattern = ExportNamingTemplate.PhotoNameSequencePattern })
+                .FileNameFor(source, 7) == "IMG_0007-0007.tif",
+            "export_destination_expands_the_sequence_token");
+        Check(!ExportNamingTemplate.IsValid("{roll}"), "export_naming_refuses_unknown_tokens");
+        Check(!ExportNamingTemplate.IsValid("{name"), "export_naming_refuses_unclosed_tokens");
+        Check(
+            ExportNamingTemplate.UsesSequence(ExportNamingTemplate.SequenceOnlyPattern),
+            "export_naming_detects_the_sequence_token");
+    }
+
+    /// <summary>
+    /// 사용자가 품질 탭에서 고른 값이 실제 네이티브 요청에 실리는지 봅니다. 저장만 되고 요청에
+    /// 실리지 않으면 고른 것과 나오는 파일이 조용히 갈라집니다.
+    /// </summary>
+    private static void VerifyExportSettingsReachTheRequest()
+    {
+        ExportSettings settings = new()
+        {
+            Format = DevelopExportFormat.Tiff16,
+            Dpi = 300,
+            LongEdge = 4096,
+            JpegQuality = 0.8,
+            TiffCompression = DevelopTiffCompression.Deflate,
+            OutputSharpening = 0.5,
+            OutputSharpeningMedium = OutputSharpeningMedium.GlossyPaper,
+        };
+
+        DevelopRequestResult result = DevelopRequestFactory.Create(
+            Frame(new ManualBaseRgb(0.21, 0.22, 0.23)),
+            @"C:\exports\IMG_0001.tif",
+            settings.Format,
+            settings.ToEncodingOptions());
+        Check(result.IsSuccess, "export_settings_request_success");
+        if (result.Request is not { } request)
+        {
+            return;
+        }
+
+        Check(request.OutputDpi == 300U, "export_settings_dpi_reaches_the_request");
+        Check(request.OutputLongEdge == 4096U, "export_settings_long_edge_reaches_the_request");
+        Check(request.JpegQuality == 0.8f, "export_settings_jpeg_quality_reaches_the_request");
+        Check(
+            request.TiffCompression == DevelopTiffCompression.Deflate,
+            "export_settings_tiff_compression_reaches_the_request");
+        Check(request.OutputSharpening == 0.5f, "export_settings_sharpening_reaches_the_request");
+        Check(
+            request.OutputSharpeningMedium == OutputSharpeningMedium.GlossyPaper,
+            "export_settings_sharpening_medium_reaches_the_request");
+        // macOS 는 언샤프 기준 DPI 로 출력 DPI 를 그대로 씁니다.
+        Check(
+            request.OutputSharpeningDpi == 300,
+            "export_settings_sharpening_dpi_follows_the_output_dpi");
+
+        // 인코딩을 넘기지 않는 경로는 값을 바꾸지 않습니다 — 미리보기와 썸네일이 그 경로입니다.
+        DevelopRequestResult plain = DevelopRequestFactory.Create(
+            Frame(new ManualBaseRgb(0.21, 0.22, 0.23)),
+            @"C:\exports\IMG_0001.png");
+        Check(
+            plain.Request is { OutputDpi: 0U, OutputLongEdge: 0U, OutputSharpening: 0f },
+            "export_settings_default_encoding_changes_nothing");
+
+        // 저장된 값이 범위를 벗어나면 요청에 실리기 전에 잘립니다.
+        ExportSettings broken = settings with
+        {
+            JpegQuality = 4.0,
+            OutputSharpening = double.NaN,
+            Dpi = -10,
+        };
+        ExportSettings repaired = broken.Normalize();
+        Check(
+            repaired.JpegQuality == 1.0 && repaired.OutputSharpening == 0 && repaired.Dpi == 0,
+            "export_settings_normalize_clamps_out_of_range_values");
+
+        // 빠른 내보내기는 TIFF 를 내지 않습니다.
+        Check(
+            (new QuickExportSettings { Format = DevelopExportFormat.Tiff16 }).Normalize().Format
+                == DevelopExportFormat.Jpeg8,
+            "quick_export_refuses_tiff");
     }
 
     private static void VerifyCropSession()

@@ -1,5 +1,6 @@
 using Negaflow.Catalog;
 using Negaflow.Interop;
+using Negaflow.Shell.Develop;
 
 namespace Negaflow.Shell;
 
@@ -53,9 +54,13 @@ public static class DevelopRequestFactory
     public static DevelopRequestResult Create(
         LibraryFrameSnapshot frame,
         string destinationPath,
-        DevelopExportFormat format = DevelopExportFormat.Png16)
+        DevelopExportFormat format = DevelopExportFormat.Png16,
+        ExportEncodingOptions? encoding = null)
     {
         ArgumentNullException.ThrowIfNull(frame);
+        // 인코딩 값은 게시되는 파일에만 영향을 줍니다. preview 는 항상 기본값으로 도므로 크기·
+        // DPI·출력 선명도가 화면과 파일을 갈라놓지 않습니다.
+        ExportEncodingOptions output = (encoding ?? ExportEncodingOptions.Default).Sanitized();
 
         if (!Enum.IsDefined(format))
         {
@@ -154,6 +159,13 @@ public static class DevelopRequestFactory
             SourcePath = frame.SourcePath,
             DestinationPath = destinationPath,
             Format = format,
+            OutputDpi = (uint)output.Dpi,
+            OutputLongEdge = (uint)output.LongEdge,
+            JpegQuality = (float)output.JpegQuality,
+            TiffCompression = output.TiffCompression,
+            OutputSharpening = (float)output.OutputSharpening,
+            OutputSharpeningMedium = output.OutputSharpeningMedium,
+            OutputSharpeningDpi = output.Dpi,
             FilmType = MapFilmType(frame.Route.FilmType),
             FilmPolarity = positive ? FilmPolarity.Positive : FilmPolarity.Negative,
             BaseEstimationMode = baseMode,

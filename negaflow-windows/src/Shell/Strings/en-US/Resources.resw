@@ -805,4 +805,30 @@ Load a scanner from Library to scan film.</value>
   <data name="developGrainMendFoundNothing.Text" xml:space="preserve"><value>Nothing to repair was found</value></data>
   <data name="developGrainMendFoundFormat.Value" xml:space="preserve"><value>Found %d spots. Enter to remove, Esc to cancel</value></data>
   <data name="developGrainMendDetectFailed.Text" xml:space="preserve"><value>The detection failed</value></data>
+  <data name="developExportChangeFolder.Content" xml:space="preserve"><value>Change</value><comment>AppLocalizedText.exportChangeFolder</comment></data>
+  <data name="developExportCompressionDeflate.Content" xml:space="preserve"><value>ZIP</value><comment>ExportEncoding.deflate</comment></data>
+  <data name="developExportCompressionLzw.Content" xml:space="preserve"><value>LZW</value><comment>ExportEncoding.lzw</comment></data>
+  <data name="developExportCompressionNone.Content" xml:space="preserve"><value>None</value><comment>ExportEncoding.none</comment></data>
+  <data name="developExportDpi.Text" xml:space="preserve"><value>DPI</value><comment>AppLocalizedText.exportDPILabel</comment></data>
+  <data name="developExportFilename.Text" xml:space="preserve"><value>Filename</value><comment>ExportNaming.filename</comment></data>
+  <data name="developExportJpegQuality.Text" xml:space="preserve"><value>JPEG Quality</value><comment>ExportEncoding.jpegQuality</comment></data>
+  <data name="developExportLongEdgeSuffix.Text" xml:space="preserve"><value>px (long edge)</value><comment>AppLocalizedText.exportLongEdgeSuffix</comment></data>
+  <data name="developExportNamingOptions.Text" xml:space="preserve"><value>Naming Options</value><comment>ExportNaming.namingOptions</comment></data>
+  <data name="developExportNamingPreview.Text" xml:space="preserve"><value>Preview</value><comment>ExportNaming.preview</comment></data>
+  <data name="developExportPhotoName.Text" xml:space="preserve"><value>Photo Name</value><comment>ExportNaming.photoName</comment></data>
+  <data name="developExportPhotoNameSequence.Text" xml:space="preserve"><value>Photo Name + Sequence</value><comment>ExportNaming.photoNameSequence</comment></data>
+  <data name="developExportSequenceOnly.Text" xml:space="preserve"><value>Sequence Only</value><comment>ExportNaming.sequenceOnly</comment></data>
+  <data name="developExportSequenceStart.Text" xml:space="preserve"><value>Start Number</value><comment>ExportNaming.sequenceStart</comment></data>
+  <data name="developExportSize.Text" xml:space="preserve"><value>Size</value><comment>AppLocalizedText.exportSizeLabel</comment></data>
+  <data name="developExportSourceLabel.Text" xml:space="preserve"><value>Source</value><comment>AppLocalizedText.exportSourceLabel</comment></data>
+  <data name="developExportTabFile.Content" xml:space="preserve"><value>File</value><comment>AppLocalizedPhrase.exportFileSettings</comment></data>
+  <data name="developExportTabQuality.Content" xml:space="preserve"><value>Quality</value><comment>AppLocalizedPhrase.exportQualitySettings</comment></data>
+  <data name="developExportTabSource.Content" xml:space="preserve"><value>Source</value><comment>AppLocalizedPhrase.exportSourceSettings</comment></data>
+  <data name="developExportTiffCompression.Text" xml:space="preserve"><value>TIFF Compression</value><comment>ExportEncoding.tiffCompression</comment></data>
+  <data name="developExportTokens.Text" xml:space="preserve"><value>Tokens</value><comment>ExportNaming.tokens</comment></data>
+  <data name="developOutputSharpening.Text" xml:space="preserve"><value>Output Sharpening</value><comment>OutputSharpening.amount</comment></data>
+  <data name="developOutputSharpeningMedium.Text" xml:space="preserve"><value>Sharpen For</value><comment>OutputSharpening.medium</comment></data>
+  <data name="developSharpenGlossyPaper.Content" xml:space="preserve"><value>Glossy Paper</value><comment>OutputSharpening.glossyPaper</comment></data>
+  <data name="developSharpenMattePaper.Content" xml:space="preserve"><value>Matte Paper</value><comment>OutputSharpening.mattePaper</comment></data>
+  <data name="developSharpenScreen.Content" xml:space="preserve"><value>Screen</value><comment>OutputSharpening.screen</comment></data>
 </root>

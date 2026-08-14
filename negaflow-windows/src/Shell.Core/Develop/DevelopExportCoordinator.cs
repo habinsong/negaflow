@@ -1,5 +1,6 @@
 using Negaflow.Catalog;
 using Negaflow.Interop;
+using Negaflow.Shell.Develop;
 
 namespace Negaflow.Shell;
 
@@ -151,7 +152,8 @@ public sealed class DevelopExportCoordinator
         LibraryFrameSnapshot frame,
         string destinationPath,
         DevelopExportFormat format,
-        Action<DevelopExportOutcome> onCompleted)
+        Action<DevelopExportOutcome> onCompleted,
+        ExportEncodingOptions? encoding = null)
     {
         ArgumentNullException.ThrowIfNull(frame);
         ArgumentNullException.ThrowIfNull(onCompleted);
@@ -167,7 +169,8 @@ public sealed class DevelopExportCoordinator
             DevelopRequestResult built = DevelopRequestFactory.Create(
                 frame,
                 destinationPath,
-                format);
+                format,
+                encoding);
             if (built.Request is not { } request)
             {
                 return Deliver(DevelopExportOutcome.Refused(built.Refusal), onCompleted);

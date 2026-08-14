@@ -805,4 +805,30 @@
   <data name="developGrainMendFoundNothing.Text" xml:space="preserve"><value>고칠 것을 찾지 못했습니다</value></data>
   <data name="developGrainMendFoundFormat.Value" xml:space="preserve"><value>%d 곳을 찾았습니다. Enter 로 제거, Esc 로 취소</value></data>
   <data name="developGrainMendDetectFailed.Text" xml:space="preserve"><value>결함을 찾지 못했습니다</value></data>
+  <data name="developExportChangeFolder.Content" xml:space="preserve"><value>변경</value><comment>AppLocalizedText.exportChangeFolder</comment></data>
+  <data name="developExportCompressionDeflate.Content" xml:space="preserve"><value>ZIP</value><comment>ExportEncoding.deflate</comment></data>
+  <data name="developExportCompressionLzw.Content" xml:space="preserve"><value>LZW</value><comment>ExportEncoding.lzw</comment></data>
+  <data name="developExportCompressionNone.Content" xml:space="preserve"><value>없음</value><comment>ExportEncoding.none</comment></data>
+  <data name="developExportDpi.Text" xml:space="preserve"><value>DPI</value><comment>AppLocalizedText.exportDPILabel</comment></data>
+  <data name="developExportFilename.Text" xml:space="preserve"><value>파일명</value><comment>ExportNaming.filename</comment></data>
+  <data name="developExportJpegQuality.Text" xml:space="preserve"><value>JPEG 품질</value><comment>ExportEncoding.jpegQuality</comment></data>
+  <data name="developExportLongEdgeSuffix.Text" xml:space="preserve"><value>px (긴 변)</value><comment>AppLocalizedText.exportLongEdgeSuffix</comment></data>
+  <data name="developExportNamingOptions.Text" xml:space="preserve"><value>파일명 옵션</value><comment>ExportNaming.namingOptions</comment></data>
+  <data name="developExportNamingPreview.Text" xml:space="preserve"><value>미리보기</value><comment>ExportNaming.preview</comment></data>
+  <data name="developExportPhotoName.Text" xml:space="preserve"><value>사진명 유지</value><comment>ExportNaming.photoName</comment></data>
+  <data name="developExportPhotoNameSequence.Text" xml:space="preserve"><value>사진명 + 시퀀스</value><comment>ExportNaming.photoNameSequence</comment></data>
+  <data name="developExportSequenceOnly.Text" xml:space="preserve"><value>시퀀스만</value><comment>ExportNaming.sequenceOnly</comment></data>
+  <data name="developExportSequenceStart.Text" xml:space="preserve"><value>시작 번호</value><comment>ExportNaming.sequenceStart</comment></data>
+  <data name="developExportSize.Text" xml:space="preserve"><value>크기</value><comment>AppLocalizedText.exportSizeLabel</comment></data>
+  <data name="developExportSourceLabel.Text" xml:space="preserve"><value>소스</value><comment>AppLocalizedText.exportSourceLabel</comment></data>
+  <data name="developExportTabFile.Content" xml:space="preserve"><value>파일</value><comment>AppLocalizedPhrase.exportFileSettings</comment></data>
+  <data name="developExportTabQuality.Content" xml:space="preserve"><value>품질</value><comment>AppLocalizedPhrase.exportQualitySettings</comment></data>
+  <data name="developExportTabSource.Content" xml:space="preserve"><value>소스</value><comment>AppLocalizedPhrase.exportSourceSettings</comment></data>
+  <data name="developExportTiffCompression.Text" xml:space="preserve"><value>TIFF 압축</value><comment>ExportEncoding.tiffCompression</comment></data>
+  <data name="developExportTokens.Text" xml:space="preserve"><value>토큰</value><comment>ExportNaming.tokens</comment></data>
+  <data name="developOutputSharpening.Text" xml:space="preserve"><value>출력 선명도</value><comment>OutputSharpening.amount</comment></data>
+  <data name="developOutputSharpeningMedium.Text" xml:space="preserve"><value>출력 매체</value><comment>OutputSharpening.medium</comment></data>
+  <data name="developSharpenGlossyPaper.Content" xml:space="preserve"><value>광택 용지</value><comment>OutputSharpening.glossyPaper</comment></data>
+  <data name="developSharpenMattePaper.Content" xml:space="preserve"><value>무광 용지</value><comment>OutputSharpening.mattePaper</comment></data>
+  <data name="developSharpenScreen.Content" xml:space="preserve"><value>화면</value><comment>OutputSharpening.screen</comment></data>
 </root>

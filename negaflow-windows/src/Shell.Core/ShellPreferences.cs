@@ -1,3 +1,5 @@
+using Negaflow.Shell.Develop;
+
 namespace Negaflow.Shell;
 
 public sealed record ShellPreferences
@@ -26,10 +28,17 @@ public sealed record ShellPreferences
 
     public SettingsCategory SelectedSettingsCategory { get; init; } = SettingsCategory.General;
 
+    /// <summary>출력 패널의 내보내기 설정입니다. macOS 처럼 앱 전체에 하나만 있습니다.</summary>
+    public ExportSettings Export { get; init; } = new();
+
+    public QuickExportSettings QuickExport { get; init; } = new();
+
     public ShellPreferences Normalize()
     {
         return this with
         {
+            Export = (Export ?? new ExportSettings()).Normalize(),
+            QuickExport = (QuickExport ?? new QuickExportSettings()).Normalize(),
             SelectedWorkspace = Enum.IsDefined(SelectedWorkspace)
                 ? SelectedWorkspace
                 : WorkspaceModule.Develop,
