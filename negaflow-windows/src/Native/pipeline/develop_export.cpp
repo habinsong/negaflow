@@ -497,6 +497,10 @@ struct PreviewTarget final {
     if (negaflow::color::output_color_space_name(request.output_color_space) == nullptr) {
         return fail(DevelopExportStage::request_validation, "invalid_output_color_space");
     }
+    if (!negaflow::output::is_known_export_metadata_policy(
+            static_cast<std::uint32_t>(request.metadata_policy))) {
+        return fail(DevelopExportStage::request_validation, "invalid_metadata_policy");
+    }
     // JPEG 은 아직 sRGB 만 게시합니다. 고른 것과 다른 공간의 파일을 조용히 내보내느니
     // 거부합니다 — 잘못 이름 붙은 색은 나중에 되돌릴 수 없습니다.
     if (request.format == DevelopExportFormat::jpeg8 &&
@@ -1363,6 +1367,7 @@ struct PreviewTarget final {
         output_limits.output_dpi = request.output_dpi;
         output_limits.bits_per_sample = request.output_bit_depth;
         output_limits.color_space = request.output_color_space;
+        // PNG 는 EXIF 를 담지 않는다. 정책은 파일에 아무 흔적도 남기지 않는다.
         const negaflow::output::WicPngExportResult exported =
             negaflow::output::export_working_to_srgb16_png(
                 output_sharpening.image,
@@ -1393,12 +1398,16 @@ struct PreviewTarget final {
     }
 
     if (request.format == DevelopExportFormat::jpeg8) {
+        negaflow::output::WicJpegExportLimits jpeg_limits{};
+        jpeg_limits.metadata_policy = request.metadata_policy;
+        jpeg_limits.metadata = request.metadata;
         const negaflow::output::WicJpegExportResult exported =
             negaflow::output::export_working_to_srgb8_jpeg(
                 output_sharpening.image,
                 request.destination,
                 request.jpeg_quality,
-                request.output_dpi);
+                request.output_dpi,
+                jpeg_limits);
         if (exported.status != negaflow::output::WicJpegExportStatus::ok) {
             if (exported.status ==
                 negaflow::output::WicJpegExportStatus::working_conversion_failed) {
@@ -1428,6 +1437,8 @@ struct PreviewTarget final {
     output_limits.output_dpi = request.output_dpi;
     output_limits.bits_per_sample = request.output_bit_depth;
     output_limits.color_space = request.output_color_space;
+    output_limits.metadata_policy = request.metadata_policy;
+    output_limits.metadata = request.metadata;
     const negaflow::output::WicTiffExportResult exported =
         negaflow::output::export_working_to_srgb16_tiff(
         output_sharpening.image,

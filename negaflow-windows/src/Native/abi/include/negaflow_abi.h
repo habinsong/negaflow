@@ -824,6 +824,27 @@ typedef struct nf_develop_export_request_v32 {
     uint32_t output_space_reserved2;
 } nf_develop_export_request_v32;
 
+/* v33 preserves v32 and appends the export metadata policy with the values it writes.
+   Policy: 0 minimal, 1 copyright only, 2 remove location, 3 all. Every string is
+   optional; a null or empty one leaves that tag out. PNG carries no EXIF, so the
+   policy leaves no trace in a PNG. */
+typedef struct nf_develop_export_request_v33 {
+    nf_develop_export_request_v32 v32;
+    uint32_t metadata_policy;
+    uint32_t metadata_reserved0;
+    uint32_t metadata_reserved1;
+    uint32_t metadata_reserved2;
+    const wchar_t* metadata_make;
+    const wchar_t* metadata_model;
+    const wchar_t* metadata_software;
+    const wchar_t* metadata_artist;
+    const wchar_t* metadata_copyright;
+    const wchar_t* metadata_film_type;
+    const wchar_t* metadata_film_stock;
+    /* "yyyy:MM:dd HH:mm:ss", EXIF form, UTC. */
+    const wchar_t* metadata_captured_at;
+} nf_develop_export_request_v33;
+
 typedef struct nf_develop_export_result_v1 {
     uint32_t struct_size;
     uint32_t succeeded;
@@ -1677,6 +1698,20 @@ NF_API nf_status_t NF_CALL nf_develop_export_v31(
 
 NF_API nf_status_t NF_CALL nf_develop_export_v32(
     const nf_develop_export_request_v32* request,
+    nf_develop_run_state_v1* run_state,
+    nf_develop_export_result_v3* result);
+
+NF_API nf_status_t NF_CALL nf_develop_export_v33(
+    const nf_develop_export_request_v33* request,
+    nf_develop_run_state_v1* run_state,
+    nf_develop_export_result_v3* result);
+NF_API nf_status_t NF_CALL nf_develop_preview_v33(
+    const nf_develop_export_request_v33* request,
+    const nf_soft_proof_v1* soft_proof,
+    uint32_t maximum_width,
+    uint32_t maximum_height,
+    uint8_t* pixels,
+    uint32_t pixel_capacity_bytes,
     nf_develop_run_state_v1* run_state,
     nf_develop_export_result_v3* result);
 NF_API nf_status_t NF_CALL nf_develop_preview_v32(

@@ -176,6 +176,7 @@ target_link_libraries(
 
 add_library(negaflow_output STATIC
     src/Native/output/atomic_output_file.cpp
+    src/Native/output/export_metadata.cpp
     src/Native/output/png_structure_reader.cpp
     src/Native/output/tiff_ifd_allowlist.cpp
     src/Native/output/wic_jpeg_export.cpp

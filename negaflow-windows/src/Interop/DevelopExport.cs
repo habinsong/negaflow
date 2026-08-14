@@ -90,6 +90,42 @@ public enum DevelopImageRotation
 /// <summary>
 /// The space a published file is encoded in. macOS offers the same three.
 /// </summary>
+/// <summary>
+/// What a published file carries. macOS offers the same four.
+/// </summary>
+public enum ExportMetadataPolicy
+{
+    /// <summary>Nothing from the source; only what the app knows. macOS default.</summary>
+    Minimal = 0,
+    /// <summary>Rights only. Not even the scanner or the software name.</summary>
+    CopyrightOnly = 1,
+    RemoveLocation = 2,
+    All = 3,
+}
+
+/// <summary>
+/// Values written into the published file. An empty string leaves its tag out.
+/// </summary>
+public sealed record ExportMetadataValues
+{
+    public string Make { get; init; } = string.Empty;
+
+    public string Model { get; init; } = string.Empty;
+
+    public string Software { get; init; } = string.Empty;
+
+    public string Artist { get; init; } = string.Empty;
+
+    public string Copyright { get; init; } = string.Empty;
+
+    public string FilmType { get; init; } = string.Empty;
+
+    public string FilmStock { get; init; } = string.Empty;
+
+    /// <summary>EXIF form, <c>yyyy:MM:dd HH:mm:ss</c>, UTC.</summary>
+    public string CapturedAt { get; init; } = string.Empty;
+}
+
 public enum ExportColorSpace
 {
     Srgb = 0,
@@ -641,6 +677,14 @@ public sealed class DevelopExportRequest
     /// profile; JPEG publishes sRGB only and refuses anything else.
     /// </summary>
     public ExportColorSpace OutputColorSpace { get; init; } = ExportColorSpace.Srgb;
+
+    /// <summary>
+    /// What to write into the published file. PNG carries no EXIF, so the policy leaves
+    /// no trace in a PNG.
+    /// </summary>
+    public ExportMetadataPolicy MetadataPolicy { get; init; } = ExportMetadataPolicy.Minimal;
+
+    public ExportMetadataValues Metadata { get; init; } = new();
 
     /// <summary>Positive values are embedded in PNG, TIFF, and JPEG metadata and do not resize pixels.</summary>
     public uint OutputDpi { get; init; }

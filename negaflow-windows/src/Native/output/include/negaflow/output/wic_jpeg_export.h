@@ -1,6 +1,7 @@
 #pragma once
 
 #include "negaflow/output/working_to_srgb16.h"
+#include "negaflow/output/export_metadata.h"
 
 #include <cstdint>
 #include <filesystem>
@@ -40,6 +41,9 @@ struct WicJpegExportLimits final {
     WorkingToSrgb16Limits conversion{};
     std::uint64_t max_artifact_bytes{2ULL * 1024ULL * 1024ULL * 1024ULL};
     std::uint32_t max_color_profile_bytes{4U * 1024U * 1024U};
+    // 파일에 적을 메타데이터. 정책이 무엇을 적을지 가른다.
+    ExportMetadataPolicy metadata_policy{ExportMetadataPolicy::minimal};
+    ExportMetadataFields metadata{};
 };
 
 struct WicJpegExportInfo final {

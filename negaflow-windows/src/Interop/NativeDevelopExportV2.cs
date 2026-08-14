@@ -626,6 +626,24 @@ internal unsafe struct NativeDevelopExportRequestV32
 }
 
 [StructLayout(LayoutKind.Sequential)]
+internal unsafe struct NativeDevelopExportRequestV33
+{
+    internal NativeDevelopExportRequestV32 V32;
+    internal uint MetadataPolicy;
+    internal uint MetadataReserved0;
+    internal uint MetadataReserved1;
+    internal uint MetadataReserved2;
+    internal char* MetadataMake;
+    internal char* MetadataModel;
+    internal char* MetadataSoftware;
+    internal char* MetadataArtist;
+    internal char* MetadataCopyright;
+    internal char* MetadataFilmType;
+    internal char* MetadataFilmStock;
+    internal char* MetadataCapturedAt;
+}
+
+[StructLayout(LayoutKind.Sequential)]
 internal unsafe struct NativeDevelopExportResultV2
 {
     internal const int FailureNameCapacity = 64;

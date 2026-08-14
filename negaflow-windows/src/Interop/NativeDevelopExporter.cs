@@ -56,6 +56,7 @@ public static unsafe class NativeDevelopExporter
     internal const int RequestV30Size = 4976;
     internal const int RequestV31Size = 4992;
     internal const int RequestV32Size = 5008;
+    internal const int RequestV33Size = 5088;
     internal const int ResultV2Size = 152;
     internal const int ResultV3Size = 160;
     internal const int RunStateV1Size = 16;
@@ -128,6 +129,7 @@ public static unsafe class NativeDevelopExporter
             sizeof(NativeDevelopExportRequestV30) != RequestV30Size ||
             sizeof(NativeDevelopExportRequestV31) != RequestV31Size ||
             sizeof(NativeDevelopExportRequestV32) != RequestV32Size ||
+            sizeof(NativeDevelopExportRequestV33) != RequestV33Size ||
             sizeof(NativeDevelopExportResultV2) != ResultV2Size ||
             sizeof(NativeDevelopExportResultV3) != ResultV3Size ||
             sizeof(NativeDevelopRunStateV1) != RunStateV1Size ||
@@ -1830,6 +1832,39 @@ public static unsafe class NativeDevelopExporter
         };
     }
 
+    /// <summary>
+    /// 문자열은 네이티브가 호출 동안만 읽습니다. 고정한 포인터의 수명이 호출을 덮도록
+    /// 호출부가 <c>fixed</c> 안에서 이 메서드를 부르고 그 안에서 네이티브를 부릅니다.
+    /// </summary>
+    private static NativeDevelopExportRequestV33 BuildRequestV33(
+        NativeDevelopExportRequestV32 v32,
+        DevelopExportRequest request,
+        char* make,
+        char* model,
+        char* software,
+        char* artist,
+        char* copyright,
+        char* filmType,
+        char* filmStock,
+        char* capturedAt)
+    {
+        v32.V31.V30.V29.V28.V27.V26.V25.V24.V21.V20.V19.V18.V17.V16.V15.V14.V13.V12.V11.V10.V9
+            .V8.V7.StructSize = (uint)sizeof(NativeDevelopExportRequestV33);
+        return new NativeDevelopExportRequestV33
+        {
+            V32 = v32,
+            MetadataPolicy = (uint)request.MetadataPolicy,
+            MetadataMake = make,
+            MetadataModel = model,
+            MetadataSoftware = software,
+            MetadataArtist = artist,
+            MetadataCopyright = copyright,
+            MetadataFilmType = filmType,
+            MetadataFilmStock = filmStock,
+            MetadataCapturedAt = capturedAt,
+        };
+    }
+
     private static byte[] BuildDefectSourceSha256(DevelopExportRequest request) =>
         request.DefectSourceIdentity is { } identity
             ? Convert.FromHexString(identity.Sha256)
@@ -1935,16 +1970,30 @@ public static unsafe class NativeDevelopExporter
             NativeDevelopExportRequestV27 v27 = BuildRequestV27(v26, request);
             NativeDevelopExportRequestV28 v28 = BuildRequestV28(v27, request);
             NativeDevelopExportRequestV29 v29 = BuildRequestV29(v28, request);
-            NativeDevelopExportRequestV32 native = BuildRequestV32(
+            NativeDevelopExportRequestV32 v32 = BuildRequestV32(
                 BuildRequestV31(BuildRequestV30(v29, request), request),
                 request);
-            status = NativeMethods.nf_develop_export_v32(
-                &native,
-                runState,
-                &raw);
+            ExportMetadataValues values = request.Metadata;
+            fixed (char* make = values.Make)
+            fixed (char* model = values.Model)
+            fixed (char* software = values.Software)
+            fixed (char* artist = values.Artist)
+            fixed (char* copyright = values.Copyright)
+            fixed (char* filmType = values.FilmType)
+            fixed (char* filmStock = values.FilmStock)
+            fixed (char* capturedAt = values.CapturedAt)
+            {
+                NativeDevelopExportRequestV33 native = BuildRequestV33(
+                    v32, request, make, model, software, artist, copyright, filmType,
+                    filmStock, capturedAt);
+                status = NativeMethods.nf_develop_export_v33(
+                    &native,
+                    runState,
+                    &raw);
+            }
         }
 
-        return Translate(status, raw, "nf_develop_export_v32");
+        return Translate(status, raw, "nf_develop_export_v33");
     }
 
     /// <summary>
@@ -2201,10 +2250,13 @@ public static unsafe class NativeDevelopExporter
             {
                 NativeDevelopExportRequestV28 v28 = BuildRequestV28(v27, request);
                 NativeDevelopExportRequestV29 v29 = BuildRequestV29(v28, request);
-                NativeDevelopExportRequestV32 native = BuildRequestV32(
-                    BuildRequestV31(BuildRequestV30(v29, request), request),
-                    request);
-                status = NativeMethods.nf_develop_preview_v32(
+                NativeDevelopExportRequestV33 native = BuildRequestV33(
+                    BuildRequestV32(
+                        BuildRequestV31(BuildRequestV30(v29, request), request),
+                        request),
+                    request,
+                    null, null, null, null, null, null, null, null);
+                status = NativeMethods.nf_develop_preview_v33(
                     &native,
                     proofPointer,
                     maximumWidth,
@@ -2221,7 +2273,7 @@ public static unsafe class NativeDevelopExporter
             raw,
             detection is not null
                 ? "nf_develop_detect_grain_mend_v4"
-                : "nf_develop_preview_v32"));
+                : "nf_develop_preview_v33"));
     }
 
     private static DevelopExportResult Translate(

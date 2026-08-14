@@ -24,6 +24,7 @@
 #include "negaflow/output/wic_png_export.h"
 #include "negaflow/output/wic_jpeg_export.h"
 #include "negaflow/color/output_color_space.h"
+#include "negaflow/output/export_metadata.h"
 #include "negaflow/output/wic_tiff_export.h"
 
 #include <array>
@@ -115,6 +116,10 @@ struct DevelopExportRequest final {
     // ignores it - the canvas is always shown in the display's own space.
     negaflow::color::OutputColorSpace output_color_space{
         negaflow::color::OutputColorSpace::srgb};
+    // 게시하는 파일에 무엇을 적을지. 값이 비어 있으면 그 항목은 쓰지 않는다.
+    negaflow::output::ExportMetadataPolicy metadata_policy{
+        negaflow::output::ExportMetadataPolicy::minimal};
+    negaflow::output::ExportMetadataFields metadata{};
     // Zero preserves source dimensions. Positive values cap the exported long edge;
     // they never upscale and do not alter previews or GrainMend detection.
     std::uint32_t output_long_edge{0U};

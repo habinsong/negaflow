@@ -45,6 +45,12 @@ public sealed record ExportSettings
     /// </summary>
     public ExportColorSpace ColorSpace { get; init; } = ExportColorSpace.Srgb;
 
+    /// <summary>
+    /// 게시하는 파일에 무엇을 적을지입니다. PNG 는 EXIF 를 담지 않으므로 정책이 PNG 에는
+    /// 아무 흔적도 남기지 않습니다.
+    /// </summary>
+    public ExportMetadataPolicy MetadataPolicy { get; init; } = ExportMetadataPolicy.Minimal;
+
     /// <summary>형식이 실제로 낼 수 있는 색공간입니다.</summary>
     public ExportColorSpace EffectiveColorSpace =>
         Format == DevelopExportFormat.Jpeg8 ? ExportColorSpace.Srgb : ColorSpace;
@@ -91,6 +97,8 @@ public sealed record ExportSettings
             ? TiffCompression
             : DevelopTiffCompression.None,
         ColorSpace = Enum.IsDefined(ColorSpace) ? ColorSpace : ExportColorSpace.Srgb,
+        MetadataPolicy =
+            Enum.IsDefined(MetadataPolicy) ? MetadataPolicy : ExportMetadataPolicy.Minimal,
         TiffBitDepth = TiffBitDepth == 8 ? 8 : 16,
         PngBitDepth = PngBitDepth == 8 ? 8 : 16,
         OutputSharpening = ClampUnit(OutputSharpening, 0),
@@ -181,6 +189,11 @@ public readonly record struct ExportEncodingOptions
 
     public ExportColorSpace ColorSpace { get; init; }
 
+    public ExportMetadataPolicy MetadataPolicy { get; init; }
+
+    /// <summary>구조체라 기본값을 둘 수 없습니다. null 은 빈 값으로 봅니다.</summary>
+    public ExportMetadataValues? Metadata { get; init; }
+
     public double OutputSharpening { get; init; }
 
     public OutputSharpeningMedium OutputSharpeningMedium { get; init; }
@@ -200,6 +213,7 @@ public static class ExportSettingsExtensions
             TiffCompression = normalized.TiffCompression,
             BitDepth = normalized.EffectiveBitDepth,
             ColorSpace = normalized.EffectiveColorSpace,
+            MetadataPolicy = normalized.MetadataPolicy,
             OutputSharpening = normalized.OutputSharpening,
             OutputSharpeningMedium = normalized.OutputSharpeningMedium,
         };
@@ -221,6 +235,10 @@ public static class ExportSettingsExtensions
             : DevelopTiffCompression.None,
         BitDepth = encoding.BitDepth == 8 ? 8 : 16,
         ColorSpace = Enum.IsDefined(encoding.ColorSpace) ? encoding.ColorSpace : ExportColorSpace.Srgb,
+        MetadataPolicy = Enum.IsDefined(encoding.MetadataPolicy)
+            ? encoding.MetadataPolicy
+            : ExportMetadataPolicy.Minimal,
+        Metadata = encoding.Metadata ?? new ExportMetadataValues(),
         OutputSharpening = ExportSettings.ClampUnit(encoding.OutputSharpening, 0),
         OutputSharpeningMedium = Enum.IsDefined(encoding.OutputSharpeningMedium)
             ? encoding.OutputSharpeningMedium

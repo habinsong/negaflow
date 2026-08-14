@@ -52,6 +52,8 @@ using Microsoft::WRL::ComPtr;
     const WicTiffCompression compression,
     const std::uint32_t output_dpi,
     const std::uint32_t write_buffer_bytes,
+    const ExportMetadataPolicy metadata_policy,
+    const ExportMetadataFields& metadata,
     WorkingToSrgb16Status& conversion_status,
     std::uint32_t& native_error_code) noexcept {
     ComPtr<IWICBitmapEncoder> encoder{};
@@ -141,6 +143,17 @@ using Microsoft::WRL::ComPtr;
         return WicTiffExportStatus::allocation_failed;
     }
     if (write_status != detail::WicSrgb16FrameStatus::ok) {
+        return WicTiffExportStatus::encode_failed;
+    }
+    // 메타데이터는 커밋 전에만 받는다. 실패하면 게시를 접는다 — 사용자가 고른 정책이
+    // 조용히 무시된 파일을 내보내지 않는다. 컨테이너가 아예 지원하지 않는 경우는 다르다.
+    const ExportMetadataStatus metadata_status = write_export_metadata(
+        frame.Get(),
+        ExportMetadataContainer::tiff,
+        metadata_policy,
+        metadata,
+        native_error_code);
+    if (metadata_status == ExportMetadataStatus::write_failed) {
         return WicTiffExportStatus::encode_failed;
     }
     status = frame->Commit();
@@ -404,6 +417,8 @@ WicTiffExportResult export_working_to_srgb16_tiff(
             limits.compression,
             limits.output_dpi,
             limits.write_buffer_bytes,
+            limits.metadata_policy,
+            limits.metadata,
             result.conversion_status,
             result.native_error_code);
         if (result.status != WicTiffExportStatus::ok) {

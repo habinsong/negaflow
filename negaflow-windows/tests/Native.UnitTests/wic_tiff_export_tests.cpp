@@ -230,12 +230,14 @@ void test_failures_leave_no_file(const std::filesystem::path& root) {
     expect(!has_staging_file(root), "TIFF failures remove staging files");
 }
 
+// 이 목록은 "우리가 쓴 것만 들어 있다" 를 지킨다. 내보내기 메타데이터 정책이 쓰는 태그는
+// 허용되지만, 우리가 절대 쓰지 않는 것 — 특히 위치 — 은 여전히 게시를 막아야 한다.
 void test_metadata_allowlist_rejects_descriptive_tag(const std::filesystem::path& root) {
     const std::filesystem::path path = root / L"unexpected-metadata.tif";
     constexpr std::array<std::uint8_t, 26> bytes{
         0x49U, 0x49U, 0x2aU, 0x00U, 0x08U, 0x00U, 0x00U, 0x00U,
         0x01U, 0x00U,
-        0x0fU, 0x01U, 0x02U, 0x00U, 0x01U, 0x00U, 0x00U, 0x00U,
+        0x25U, 0x88U, 0x04U, 0x00U, 0x01U, 0x00U, 0x00U, 0x00U,
         0x00U, 0x00U, 0x00U, 0x00U,
         0x00U, 0x00U, 0x00U, 0x00U,
     };
@@ -255,8 +257,8 @@ void test_metadata_allowlist_rejects_descriptive_tag(const std::filesystem::path
         native_error);
     expect(
         status == negaflow::output::detail::TiffIfdAllowlistStatus::unexpected_tag &&
-            info.unexpected_tag == 271U,
-        "minimal metadata allowlist rejects TIFF Make");
+            info.unexpected_tag == 34853U,
+        "metadata allowlist rejects a GPS IFD");
 }
 
 }  // namespace

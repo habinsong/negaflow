@@ -85,6 +85,8 @@ void discard_staging(
     const float quality,
     const std::uint32_t dpi,
     const std::uint8_t expected_subsampling,
+    const ExportMetadataPolicy metadata_policy,
+    const ExportMetadataFields& metadata,
     std::uint32_t& native_error_code) noexcept {
     ComPtr<IWICBitmapEncoder> encoder{};
     HRESULT status = factory->CreateEncoder(
@@ -191,6 +193,17 @@ void discard_staging(
         status = frame->WriteSource(dithered.Get(), nullptr);
     }
     if (SUCCEEDED(status)) {
+        // 메타데이터는 커밋 전에만 받는다. 실패하면 게시를 접는다 — 사용자가 고른 정책이
+        // 조용히 무시된 파일을 내보내지 않는다. 컨테이너가 아예 지원하지 않는 경우는 다르다.
+        const ExportMetadataStatus metadata_status = write_export_metadata(
+            frame.Get(),
+            ExportMetadataContainer::jpeg,
+            metadata_policy,
+            metadata,
+            native_error_code);
+        if (metadata_status == ExportMetadataStatus::write_failed) {
+            return WicJpegExportStatus::encode_failed;
+        }
         status = frame->Commit();
     }
     if (SUCCEEDED(status)) {
@@ -463,6 +476,8 @@ WicJpegExportResult export_working_to_srgb8_jpeg(
             quality,
             dpi,
             expected_subsampling_option,
+            limits.metadata_policy,
+            limits.metadata,
             result.native_error_code);
         if (result.status != WicJpegExportStatus::ok) {
             discard_staging(output.get(), result);
