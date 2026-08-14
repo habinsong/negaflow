@@ -185,6 +185,38 @@ public sealed class LibraryHostService : IDisposable
             ? LibraryFrameError.MissingId
             : document.EditRoute(frameId, selection));
 
+    public IReadOnlyList<LibraryCollectionSnapshot> Collections =>
+        document?.Collections ?? [];
+
+    /// <summary>묶음을 만들고 바로 저장합니다. 만들지 못하면 null 입니다.</summary>
+    public string? CreateCollection(string name, IEnumerable<string> frameIds)
+    {
+        string? id = document?.CreateCollection(name, frameIds);
+        if (id is not null)
+        {
+            _ = SaveIfDirty();
+        }
+        return id;
+    }
+
+    public bool RenameCollection(string collectionId, string name) =>
+        SavedAfter(document?.RenameCollection(collectionId, name) == true);
+
+    public bool SetCollectionFrames(string collectionId, IEnumerable<string> frameIds) =>
+        SavedAfter(document?.SetCollectionFrames(collectionId, frameIds) == true);
+
+    public bool DeleteCollection(string collectionId) =>
+        SavedAfter(document?.DeleteCollection(collectionId) == true);
+
+    private bool SavedAfter(bool changed)
+    {
+        if (changed)
+        {
+            _ = SaveIfDirty();
+        }
+        return changed;
+    }
+
     /// <summary>사이드카가 적을 frame record 의 복사본입니다.</summary>
     public System.Text.Json.Nodes.JsonObject? FrameRecord(string frameId) =>
         document?.FrameRecord(frameId);

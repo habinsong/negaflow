@@ -71,6 +71,7 @@ internal static class Program
         VerifyScanSession();
         VerifyExportBatchPlan();
         VerifyExportSidecar();
+        VerifyLibraryCollections();
         VerifyDevelopHistogramSampler();
         VerifyDevelopPanelState();
         VerifyInspectorSliderValue();
@@ -4414,6 +4415,85 @@ internal static class Program
             catch (IOException)
             {
                 // 시험 뒤처리 실패는 시험 결과가 아닙니다.
+            }
+        }
+    }
+
+    /// <summary>
+    /// 묶음의 왕복입니다. 카탈로그에 없는 frame id 는 담기지 않아야 하고, 이름이 비면 만들지
+    /// 않아야 하며, 저장하고 다시 열었을 때 그대로 있어야 합니다.
+    /// </summary>
+    private static void VerifyLibraryCollections()
+    {
+        string parent = Path.Combine(AppContext.BaseDirectory, "collection-tests");
+        string isolatedBase = Path.Combine(parent, $"{Environment.ProcessId}-{Guid.NewGuid():N}");
+        StorageRootSet roots = StorageRootResolver.ResolveForTests(isolatedBase).Roots!;
+        string frameId = Guid.NewGuid().ToString("D");
+        try
+        {
+        using (CatalogSession session = CatalogSession.Open(roots).Session!)
+        {
+            Check(session.ReadOrCreate().IsSuccess, "collections_catalog_create");
+            Check(session.Write(new CatalogSnapshot(
+                null,
+                new Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>>
+                {
+                    [CatalogEntityTable.Frames] =
+                    [new CatalogEntityRow(frameId, FrameRecord(frameId, "C_0001.tif", 0))],
+                })).IsSuccess, "collections_catalog_seed");
+        }
+        LibraryDocumentOpenResult opened = LibraryDocument.Open(roots);
+        if (opened.Document is not { } document)
+        {
+            Check(false, "collections_open_document");
+            return;
+        }
+
+        using (document)
+        {
+            Check(
+                document.CreateCollection("   ", []) is null,
+                "collections_refuse_an_empty_name");
+
+            string? id = document.CreateCollection(
+                "  Roll 01  ",
+                [frameId, frameId, "not-in-the-catalog"]);
+            Check(id is not null, "collections_create");
+            Check(document.Collections.Count == 1, "collections_projected");
+            Check(document.Collections[0].Name == "Roll 01", "collections_trim_the_name");
+            // 없는 id 와 중복은 버립니다. 카탈로그에 있는 frame 하나만 남습니다.
+            Check(
+                document.Collections[0].FrameIds.Count == 1,
+                "collections_keep_only_known_frames");
+
+            Check(document.RenameCollection(id!, "Roll 02"), "collections_rename");
+            Check(document.Collections[0].Name == "Roll 02", "collections_rename_applied");
+            Check(!document.RenameCollection(id!, "  "), "collections_refuse_an_empty_rename");
+            Check(document.Save() == CatalogStoreError.None, "collections_save");
+        }
+
+        LibraryDocumentOpenResult reopened = LibraryDocument.Open(roots);
+        if (reopened.Document is not { } reread)
+        {
+            Check(false, "collections_reopen_document");
+            return;
+        }
+        using (reread)
+        {
+            Check(reread.Collections.Count == 1, "collections_survive_a_reopen");
+            Check(reread.Collections[0].Name == "Roll 02", "collections_reread_the_name");
+            Check(
+                reread.DeleteCollection(reread.Collections[0].Id) &&
+                reread.Collections.Count == 0,
+                "collections_delete");
+        }
+        }
+        finally
+        {
+            if (Directory.Exists(isolatedBase) &&
+                StoragePathPolicy.IsLexicallyContained(parent, isolatedBase))
+            {
+                Directory.Delete(isolatedBase, true);
             }
         }
     }

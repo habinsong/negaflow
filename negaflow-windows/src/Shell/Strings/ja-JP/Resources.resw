@@ -875,4 +875,8 @@
   <data name="developExportMainFlatMaster.Content" xml:space="preserve"><value>MAIN 無調整マスター</value><comment>AppLocalizedPhrase.exportMainFlatMaster</comment></data>
   <data name="developExportOriginalRaw.Content" xml:space="preserve"><value>元スキャン TIFF</value><comment>AppLocalizedPhrase.exportOriginalRawTIFF</comment></data>
   <data name="developExportSidecar.Content" xml:space="preserve"><value>サイドカー (JSON + XMP)</value><comment>AppLocalizedPhrase.exportSidecar</comment></data>
+  <data name="libraryCollectionName.Text" xml:space="preserve"><value>コレクション名</value><comment>AppLocalizedPhrase.libraryCollectionName</comment></data>
+  <data name="libraryNewCollection.Content" xml:space="preserve"><value>新規コレクション</value><comment>AppLocalizedPhrase.libraryNewCollection</comment></data>
+  <data name="libraryDelete.Content" xml:space="preserve"><value>削除</value><comment>AppLocalizedPhrase.delete</comment></data>
+  <data name="libraryRename.Content" xml:space="preserve"><value>変更</value><comment>AppLocalizedPhrase.rename</comment></data>
 </root>

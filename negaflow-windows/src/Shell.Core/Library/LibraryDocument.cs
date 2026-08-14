@@ -90,6 +90,7 @@ public sealed class LibraryDocument : IDisposable
     private readonly List<string> rowIds;
     private readonly Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>> retainedRows;
     private readonly List<LibraryFolderSnapshot> folders = [];
+    private readonly List<LibraryCollectionSnapshot> collections = [];
     private readonly List<LibraryFrameSnapshot> frames = [];
     private readonly List<LibraryFrameIssue> issues = [];
     private readonly Dictionary<string, int> indexById = new(StringComparer.Ordinal);
@@ -110,6 +111,7 @@ public sealed class LibraryDocument : IDisposable
         this.retainedRows = retainedRows;
         this.activeRollId = activeRollId;
         ProjectFolders();
+        ProjectCollections();
         Project();
         // 방금 읽은 것은 바뀐 것이 아닙니다.
         IsDirty = false;
@@ -124,6 +126,9 @@ public sealed class LibraryDocument : IDisposable
     public IReadOnlyList<LibraryFrameSnapshot> Frames => frames;
 
     public IReadOnlyList<LibraryFolderSnapshot> Folders => folders;
+
+    /// <summary>사용자가 손으로 모은 묶음입니다. 순서는 catalog 의 순서입니다.</summary>
+    public IReadOnlyList<LibraryCollectionSnapshot> Collections => collections;
 
     /// <summary>
     /// 투영에 실패한 frame 들입니다. **비어 있지 않은데 무시하면 사용자에게는 사진이 사라진
@@ -623,6 +628,105 @@ public sealed class LibraryDocument : IDisposable
                 rowIds[index],
                 read.Error,
                 read.RouteError));
+        }
+    }
+
+    /// <summary>
+    /// 묶음을 만듭니다. 이름이 비었거나 너무 길면 만들지 않습니다 — 이름 없는 묶음은 목록에서
+    /// 고를 수 없습니다.
+    /// </summary>
+    public string? CreateCollection(string name, IEnumerable<string> frameIds)
+    {
+        ArgumentNullException.ThrowIfNull(frameIds);
+        if (LibraryCollectionSnapshot.NormalizeName(name) is not { } normalized)
+        {
+            return null;
+        }
+        LibraryCollectionSnapshot created = new(
+            Guid.NewGuid().ToString("D"),
+            normalized,
+            KnownFrameIds(frameIds));
+        List<CatalogEntityRow> rows = [.. retainedRows[CatalogEntityTable.ManualCollections]];
+        rows.Add(LibraryCollectionRecord.Write(created));
+        retainedRows[CatalogEntityTable.ManualCollections] = rows;
+        ProjectCollections();
+        return created.Id;
+    }
+
+    public bool RenameCollection(string collectionId, string name)
+    {
+        if (LibraryCollectionSnapshot.NormalizeName(name) is not { } normalized)
+        {
+            return false;
+        }
+        return ReplaceCollection(
+            collectionId,
+            existing => existing with { Name = normalized });
+    }
+
+    /// <summary>묶음이 담는 사진을 통째로 바꿉니다. 카탈로그에 없는 id 는 버립니다.</summary>
+    public bool SetCollectionFrames(string collectionId, IEnumerable<string> frameIds)
+    {
+        ArgumentNullException.ThrowIfNull(frameIds);
+        IReadOnlyList<string> known = KnownFrameIds(frameIds);
+        return ReplaceCollection(collectionId, existing => existing with { FrameIds = known });
+    }
+
+    public bool DeleteCollection(string collectionId)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(collectionId);
+        List<CatalogEntityRow> rows = [.. retainedRows[CatalogEntityTable.ManualCollections]];
+        int removed = rows.RemoveAll(row =>
+            string.Equals(row.Id, collectionId, StringComparison.Ordinal));
+        if (removed == 0)
+        {
+            return false;
+        }
+        retainedRows[CatalogEntityTable.ManualCollections] = rows;
+        ProjectCollections();
+        return true;
+    }
+
+    private bool ReplaceCollection(
+        string collectionId,
+        Func<LibraryCollectionSnapshot, LibraryCollectionSnapshot> update)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(collectionId);
+        List<CatalogEntityRow> rows = [.. retainedRows[CatalogEntityTable.ManualCollections]];
+        for (int index = 0; index < rows.Count; ++index)
+        {
+            if (!string.Equals(rows[index].Id, collectionId, StringComparison.Ordinal) ||
+                !LibraryCollectionRecord.TryRead(
+                    rows[index],
+                    out LibraryCollectionSnapshot existing))
+            {
+                continue;
+            }
+            rows[index] = LibraryCollectionRecord.Write(update(existing));
+            retainedRows[CatalogEntityTable.ManualCollections] = rows;
+            ProjectCollections();
+            return true;
+        }
+        return false;
+    }
+
+    /// <summary>카탈로그에 실제로 있는 frame 만, 준 순서대로, 중복 없이 남깁니다.</summary>
+    private IReadOnlyList<string> KnownFrameIds(IEnumerable<string> frameIds)
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        return [.. frameIds.Where(id => indexById.ContainsKey(id) && seen.Add(id))];
+    }
+
+    private void ProjectCollections()
+    {
+        IsDirty = true;
+        collections.Clear();
+        foreach (CatalogEntityRow row in retainedRows[CatalogEntityTable.ManualCollections])
+        {
+            if (LibraryCollectionRecord.TryRead(row, out LibraryCollectionSnapshot collection))
+            {
+                collections.Add(collection);
+            }
         }
     }
 

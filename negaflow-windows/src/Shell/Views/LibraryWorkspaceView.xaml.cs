@@ -20,6 +20,8 @@ public sealed partial class LibraryWorkspaceView : UserControl
     private ScanSessionController? scanSession;
     private ScannerPluginTrustStore? scannerTrust;
     private bool isSynchronizingScan;
+    private bool isSynchronizingCollections;
+    private string? selectedCollectionId;
     private ThumbnailService? thumbnails;
     private Microsoft.UI.WindowId? importWindowId;
     private bool isResizing;
@@ -74,6 +76,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
         libraryHost = host;
         importWindowId = windowId;
         allItems = LibraryFrameListItems.From(host.Frames, host.SourceAvailabilityByFrameId);
+        RebuildCollections();
         ShowFilteredItems();
 
         bool hasFrames = allItems.Count > 0;
@@ -256,7 +259,10 @@ public sealed partial class LibraryWorkspaceView : UserControl
     {
         IReadOnlyList<LibraryFrameListItem> items = LibrarySorter.Sort(
             quickFilters.Apply(
-                LibraryFrameListItems.Filter(allItems, LibrarySearchBox?.Text ?? string.Empty)),
+                ApplyCollection(
+                    LibraryFrameListItems.Filter(
+                        allItems,
+                        LibrarySearchBox?.Text ?? string.Empty))),
             sortKey,
             sortAscending);
         UpdateSortControls();
@@ -1353,6 +1359,151 @@ public sealed partial class LibraryWorkspaceView : UserControl
         ToolTipService.SetToolTip(toggle, text);
     }
 
+    // MARK: - 컬렉션
+    //
+    // macOS 처럼 "전체 보기" 가 늘 맨 위에 있고 그 아래 사용자가 만든 묶음이 옵니다. 고른 묶음이
+    // 격자를 좁히며, 새 묶음은 지금 격자에서 고른 사진으로 만듭니다.
+
+    /// <summary>목록 한 줄입니다. 이름을 한 곳에서만 만들어야 줄마다 말이 달라지지 않습니다.</summary>
+    private sealed record CollectionRow(string? Id, string Name, string CountText, string Glyph);
+
+    private void RebuildCollections()
+    {
+        if (CollectionsList is null || libraryHost is null)
+        {
+            return;
+        }
+        var rows = new List<CollectionRow>
+        {
+            new(
+                null,
+                AppResources.Get("libraryAllPhotos", "Text"),
+                libraryHost.Frames.Count.ToString(CultureInfo.CurrentCulture),
+                "\uE91B"),
+        };
+        foreach (LibraryCollectionSnapshot collection in libraryHost.Collections)
+        {
+            rows.Add(new CollectionRow(
+                collection.Id,
+                collection.Name,
+                collection.FrameIds.Count.ToString(CultureInfo.CurrentCulture),
+                "\uE8B7"));
+        }
+        isSynchronizingCollections = true;
+        try
+        {
+            CollectionsList.ItemsSource = rows;
+            CollectionsList.SelectedItem = rows.FirstOrDefault(row =>
+                string.Equals(row.Id, selectedCollectionId, StringComparison.Ordinal))
+                ?? rows[0];
+        }
+        finally
+        {
+            isSynchronizingCollections = false;
+        }
+        bool hasSelection = selectedCollectionId is not null;
+        CollectionRenameButton.IsEnabled = hasSelection;
+        CollectionDeleteButton.IsEnabled = hasSelection;
+    }
+
+    private void OnCollectionSelectionChanged(object sender, SelectionChangedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (isSynchronizingCollections ||
+            CollectionsList.SelectedItem is not CollectionRow row)
+        {
+            return;
+        }
+        selectedCollectionId = row.Id;
+        CollectionRenameButton.IsEnabled = row.Id is not null;
+        CollectionDeleteButton.IsEnabled = row.Id is not null;
+        if (row.Id is not null)
+        {
+            CollectionNameBox.Text = row.Name;
+        }
+        ShowFilteredItems();
+    }
+
+    private void OnCreateCollectionClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (libraryHost is null)
+        {
+            return;
+        }
+        // macOS 와 같이 지금 고른 사진으로 만듭니다. 고른 것이 없으면 빈 묶음입니다.
+        string name = CollectionNameBox.Text;
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            name = AppResources.Get("libraryNewCollection", "Content");
+        }
+        selectedCollectionId = libraryHost.CreateCollection(
+            name,
+            FrameListView.SelectedItems.OfType<LibraryFrameListItem>().Select(item => item.Id));
+        CollectionNameBox.Text = string.Empty;
+        RebuildCollections();
+        ShowFilteredItems();
+    }
+
+    private void OnRenameCollectionClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (libraryHost is null || selectedCollectionId is not { } collectionId)
+        {
+            return;
+        }
+        _ = libraryHost.RenameCollection(collectionId, CollectionNameBox.Text);
+        RebuildCollections();
+    }
+
+    private void OnDeleteCollectionClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (libraryHost is null || selectedCollectionId is not { } collectionId)
+        {
+            return;
+        }
+        _ = libraryHost.DeleteCollection(collectionId);
+        selectedCollectionId = null;
+        CollectionNameBox.Text = string.Empty;
+        RebuildCollections();
+        ShowFilteredItems();
+    }
+
+    /// <summary>고른 묶음이 격자를 좁힙니다. "전체 보기" 는 좁히지 않습니다.</summary>
+    private IReadOnlyList<LibraryFrameListItem> ApplyCollection(
+        IReadOnlyList<LibraryFrameListItem> items)
+    {
+        if (selectedCollectionId is not { } collectionId || libraryHost is null)
+        {
+            return items;
+        }
+        if (libraryHost.Collections.FirstOrDefault(collection =>
+                string.Equals(collection.Id, collectionId, StringComparison.Ordinal))
+            is not { } selected)
+        {
+            return items;
+        }
+        var member = new HashSet<string>(selected.FrameIds, StringComparer.Ordinal);
+        return [.. items.Where(item => member.Contains(item.Id))];
+    }
+
+    private void LocalizeCollections()
+    {
+        SetButtonText(CollectionRenameButton, AppResources.Get("libraryRename", "Content"));
+        SetButtonText(CollectionDeleteButton, AppResources.Get("libraryDelete", "Content"));
+        string name = AppResources.Get("libraryCollectionName", "Text");
+        CollectionNameBox.PlaceholderText = name;
+        AutomationProperties.SetName(CollectionNameBox, name);
+        string create = AppResources.Get("libraryNewCollection", "Content");
+        AutomationProperties.SetName(CollectionsAddButton, create);
+        ToolTipService.SetToolTip(CollectionsAddButton, create);
+    }
+
     private void LocalizeControls()
     {
         SetNameAndTooltip(ImportRailButton, "importSection");
@@ -1361,7 +1512,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
         string import = AppResources.Get("importSection", "Text");
         ImportHeaderText.Text = import;
         ImportSectionText.Text = import;
-        CollectionsEmptyText.Text = AppResources.Get("libraryCollectionsEmpty", "Text");
+        LocalizeCollections();
         UpdateSourcePanel();
         string importImages = AppResources.Get("importImages", "Content");
         SetButtonText(ImportImagesButton, importImages);

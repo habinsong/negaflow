@@ -875,4 +875,8 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developExportMainFlatMaster.Content" xml:space="preserve"><value>Unkorrigiertes MAIN-Master</value><comment>AppLocalizedPhrase.exportMainFlatMaster</comment></data>
   <data name="developExportOriginalRaw.Content" xml:space="preserve"><value>Original-Scan-TIFF</value><comment>AppLocalizedPhrase.exportOriginalRawTIFF</comment></data>
   <data name="developExportSidecar.Content" xml:space="preserve"><value>Filialdateien (JSON + XMP)</value><comment>AppLocalizedPhrase.exportSidecar</comment></data>
+  <data name="libraryCollectionName.Text" xml:space="preserve"><value>Sammlungsname</value><comment>AppLocalizedPhrase.libraryCollectionName</comment></data>
+  <data name="libraryNewCollection.Content" xml:space="preserve"><value>Neue Sammlung</value><comment>AppLocalizedPhrase.libraryNewCollection</comment></data>
+  <data name="libraryDelete.Content" xml:space="preserve"><value>Löschen</value><comment>AppLocalizedPhrase.delete</comment></data>
+  <data name="libraryRename.Content" xml:space="preserve"><value>Umbenennen</value><comment>AppLocalizedPhrase.rename</comment></data>
 </root>
