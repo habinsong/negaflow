@@ -362,6 +362,10 @@
                                 <!-- 소스 -->
                                 <StackPanel x:Name="ExportSourcePage" Spacing="6" Visibility="Collapsed">
                                     <ToggleSwitch
+                                        x:Name="ExportMainFlatMasterToggle"
+                                        AutomationProperties.AutomationId="negaflow.develop.output.main-flat-master"
+                                        Toggled="OnExportMainFlatMasterToggled" />
+                                    <ToggleSwitch
                                         x:Name="ExportOriginalRawToggle"
                                         AutomationProperties.AutomationId="negaflow.develop.output.original-raw"
                                         Toggled="OnExportOriginalRawToggled" />

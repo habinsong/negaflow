@@ -53,6 +53,9 @@ public sealed record ExportSettings
     public OutputSharpeningMedium OutputSharpeningMedium { get; init; } =
         OutputSharpeningMedium.Screen;
 
+    /// <summary>같은 원본을 조정 없이 MAIN 으로 한 번 더 현상해 산출물 옆에 둡니다.</summary>
+    public bool WriteMainFlatMaster { get; init; }
+
     /// <summary>산출물 옆에 원본을 그대로 한 벌 둡니다.</summary>
     public bool WriteOriginalRaw { get; init; }
 

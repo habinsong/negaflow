@@ -3692,6 +3692,16 @@ public sealed partial class DevelopWorkspaceView : UserControl
         MutateExportSettings(value => value with { OutputSharpeningMedium = medium });
     }
 
+    private void OnExportMainFlatMasterToggled(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        MutateExportSettings(value => value with
+        {
+            WriteMainFlatMaster = ExportMainFlatMasterToggle.IsOn,
+        });
+    }
+
     private void OnExportOriginalRawToggled(object sender, RoutedEventArgs args)
     {
         _ = sender;
@@ -3830,6 +3840,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
             QuickExportJpegQualitySlider.Value =
                 Math.Round(quickExportSettings.JpegQuality * 100.0);
             SynchronizeExportRecipeControls();
+            ExportMainFlatMasterToggle.IsOn = exportSettings.WriteMainFlatMaster;
             ExportOriginalRawToggle.IsOn = exportSettings.WriteOriginalRaw;
             ExportSidecarToggle.IsOn = exportSettings.WriteSidecar;
         }
@@ -4059,6 +4070,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
                 OutputSharpeningMedium.GlossyPaper.ToString()),
         ]);
 
+        LocalizeToggleSwitch(ExportMainFlatMasterToggle, "developExportMainFlatMaster");
         LocalizeToggleSwitch(ExportOriginalRawToggle, "developExportOriginalRaw");
         LocalizeToggleSwitch(ExportSidecarToggle, "developExportSidecar");
         ExportRecipeLabel.Text = AppResources.Get("developExportRecipeTitle", "Text");
@@ -4197,6 +4209,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
 
         ExportButton.IsEnabled = false;
         OutputStatusText.Text = AppResources.Get("developExportRunning", "Text");
+        string? completedPath = null;
         try
         {
             IReadOnlyList<LibraryFrameSnapshot> selection = SelectedExportFrames(frame);
@@ -4217,6 +4230,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
                     if (outcome is { Kind: DevelopExportOutcomeKind.Completed, Result.Succeeded: true })
                     {
                         WriteExportArtifacts(frame, exportedPath);
+                        completedPath = exportedPath;
                     }
                 },
                 exportSettings.ToEncodingOptions());
@@ -4225,6 +4239,36 @@ public sealed partial class DevelopWorkspaceView : UserControl
         {
             UpdateExportPreview();
         }
+
+        // 무보정본은 사진이 나간 뒤에 한 장 더 냅니다. 여기서 실패해도 사진은 남습니다.
+        if (completedPath is { } published && exportSettings.WriteMainFlatMaster)
+        {
+            await WriteMainFlatMasterAsync(frame, published);
+        }
+    }
+
+    /// <summary>
+    /// 같은 원본을 조정 없이 MAIN 으로 한 번 더 현상합니다. 인코딩은 본 산출물과 같게 두어
+    /// 두 파일이 같은 형식·같은 크기로 나란히 놓이게 합니다.
+    /// </summary>
+    private async Task WriteMainFlatMasterAsync(LibraryFrameSnapshot frame, string outputPath)
+    {
+        if (panel is null || libraryHost is null)
+        {
+            return;
+        }
+        string masterPath = ExportFlatMaster.PathFor(outputPath);
+        if (File.Exists(masterPath))
+        {
+            // 이미 있는 무보정본은 덮지 않습니다. 보관용 사본이 서로를 지우면 뜻이 없습니다.
+            return;
+        }
+        _ = await libraryHost.ExportAsync(
+            ExportFlatMaster.Neutralize(frame),
+            masterPath,
+            exportSettings.Format,
+            outcome => OutputStatusText.Text = DevelopPanelState.Describe(outcome),
+            exportSettings.ToEncodingOptions());
     }
 
     /// <summary>

@@ -76,6 +76,7 @@ internal static class Program
         VerifyLibraryCollections();
         VerifyLibraryRolls();
         VerifyExportRecipes();
+        VerifyMainFlatMaster();
         VerifyDevelopHistogramSampler();
         VerifyDevelopPanelState();
         VerifyInspectorSliderValue();
@@ -4958,6 +4959,55 @@ internal static class Program
             session.RefreshRegions([], 0U, 0U) == FlatbedFrameGridStatus.Ok &&
             session.Regions.Count == 1,
             "flatbed_manual_refresh_starts_over");
+    }
+
+    /// <summary>
+    /// MAIN 무보정본입니다. 그림으로 만들기 위해 반드시 있어야 하는 것만 남고 나머지 조정은
+    /// 전부 걷혀야 합니다 — 걷지 않으면 "무보정본" 이 아니고, 기하를 걷으면 사용자가 보던 것과
+    /// 다른 화면이 됩니다.
+    /// </summary>
+    private static void VerifyMainFlatMaster()
+    {
+        ImageTransformRecipe transform = new(
+            ImageRotation.Degrees90,
+            true,
+            false,
+            new ImageCropRect(0.1, 0.2, 0.5, 0.6),
+            12.5,
+            null);
+        LibraryFrameSnapshot frame = Frame(new ManualBaseRgb(0.21, 0.22, 0.23)) with
+        {
+            LookPresetId = "portra-warm",
+            DevelopTarget = DevelopTarget.Noritsu,
+            ImageTransform = transform,
+            AutoLevels = true,
+            AutoNeutralBalance = true,
+            DefectRemovalStrength = 0.7,
+        };
+
+        LibraryFrameSnapshot master = ExportFlatMaster.Neutralize(frame);
+        // 남아야 하는 것.
+        Check(master.SourcePath == frame.SourcePath, "flat_master_keeps_the_source");
+        Check(master.ManualBase == frame.ManualBase, "flat_master_keeps_the_base_sample");
+        Check(master.Base == frame.Base, "flat_master_keeps_the_base_mode");
+        Check(master.Route.FilmType == frame.Route.FilmType, "flat_master_keeps_the_film_type");
+        Check(master.ImageTransform == transform, "flat_master_keeps_the_geometry");
+        // 걷혀야 하는 것.
+        Check(master.DevelopTarget == DevelopTarget.Main, "flat_master_targets_main");
+        Check(master.LookPresetId is null, "flat_master_drops_the_preset");
+        Check(master.Tone.Exposure == 0.0 && master.Tone.Contrast == 0.0, "flat_master_drops_tone");
+        Check(!master.AutoLevels && !master.AutoNeutralBalance, "flat_master_drops_auto");
+        Check(master.DefectRemovalStrength == 0.0, "flat_master_drops_defect_removal");
+        Check(
+            master.ColorModel == ColorModelRecipe.Identity &&
+            master.Texture == TextureRecipe.Identity &&
+            master.PointCurves == PointCurveRecipe.Identity,
+            "flat_master_drops_the_look");
+
+        Check(
+            ExportFlatMaster.PathFor(@"D:\Export\IMG_0007.tif")
+                == @"D:\Export\IMG_0007-main-flat.tif",
+            "flat_master_sits_beside_the_output");
     }
 
     /// <summary>
