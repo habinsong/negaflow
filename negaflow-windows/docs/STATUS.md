@@ -8,143 +8,19 @@ macOS 대비 어림값입니다. 근거를 함께 적습니다 — 숫자만 옮
 
 | 영역 | 대략 | 근거와 남은 것 |
 | --- | --- | --- |
-| 현상 엔진·수학 | **87%** | 반전·base(auto/manual/preset)·톤·포인트 커브·컬러 믹서·컬러 그레이딩·캘리브레이션·색·질감·FilmScanDenoise·필름 42종·GrainMend 수리·검출(자동·가이드 ROI·미세 입자 ABI)·흑백 토닝·소프트 프루프·기하 변형·JPEG8·긴 변 Lanczos3 출력·PNG/TIFF DPI·TIFF LZW/Deflate backend. 남은 것: 출력 색공간·8-bit/alpha 옵션, macOS 실입력 픽셀 golden |
-| 카탈로그·영속성 | **96%** | 모든 recipe, 버전, 결함 sidecar, 프리셋, 붙여넣기 범위, 사용자 프리셋, 지연 저장, 백업·복구, relink, 단일 작성자 잠금. 앱 메타데이터·촬영 기록·롤 기록·수동 컬렉션. 남은 것: 스마트 컬렉션과 저장된 검색의 질의 모델 |
-| 라이브러리 화면 | **86%** | 카드 격자·정렬·카드 크기·소스 막대·파일 트리·폴더 프로세스 선택기·별점·깃발·가져오기·relink·중복 후보. 필터는 macOS 9개 중 7개(메타데이터 상태 미확인 추가). 컬렉션(수동)도 만들고 고르고 지웁니다. 현재 롤 필터도 동작합니다. 남은 것: 미검증 프로파일 필터, 스마트 컬렉션·저장된 검색 |
-| 현상 화면 | **72%** | 캔버스·히스토그램·인스펙터 6탭·보정 8섹션 전부·좌측 5탭·크롭/기하·자동 보정·프리셋/복사붙여넣기·정보 탭·GrainMend 브러시/복제 도장/자동/가이드 ROI·검출 결과 성분별 포함/제외·감도/미세 입자 재검출. 남은 것: 출력 품질·소스 하위 탭, 빠른 내보내기, 메타데이터 카드 3종, 파일 탭 |
-| 내보내기 | **82%** | PNG16·TIFF16·JPEG8 을 폴더·파일명 패턴(순번 포함)으로. 출력 패널의 파일·품질·소스 하위 탭에서 DPI·긴 변·TIFF 압축·JPEG 품질·출력 선명도·선명도 매체를 고르며, 고른 값이 실제 요청에 실립니다. 빠른 내보내기 절, 여러 장 배치, JSON·XMP 사이드카와 원본 보관, 이름 붙인 설정 프리셋도 동작합니다. 세 포맷은 WIC sRGB ICC·DPI·구조/픽셀 readback 과 비덮어쓰기 게시를 거칩니다. PNG/TIFF 8-bit 은 macOS 출력 디더까지 함께 붙었습니다. 남은 것: 출력 색공간, alpha 보존, 메타데이터 정책, MAIN 무보정본, 프리셋 이름 변경 |
+| 현상 엔진·수학 | **90%** | 반전·base(auto/manual/preset)·톤·포인트 커브·컬러 믹서·컬러 그레이딩·캘리브레이션·색·질감·FilmScanDenoise·필름 42종·GrainMend 수리·검출(자동·가이드 ROI·미세 입자)·흑백 토닝·소프트 프루프·기하 변형·긴 변 Lanczos3·출력 선명도·PNG/TIFF/JPEG 게시·TIFF LZW/Deflate·PNG/TIFF 8-bit 과 macOS 출력 디더. 남은 것: 출력 색공간, alpha, **macOS 실입력 픽셀 golden(맥 호스트 필요)** |
+| 카탈로그·영속성 | **96%** | 모든 recipe, 버전, 결함 sidecar, 프리셋, 붙여넣기 범위, 사용자 프리셋, 지연 저장, 백업·복구, relink, 단일 작성자 잠금, 앱 메타데이터·촬영 기록·롤 기록·수동 컬렉션. 남은 것: 스마트 컬렉션과 저장된 검색의 질의 모델 |
+| 라이브러리 화면 | **86%** | 카드 격자·정렬·카드 크기·소스 막대·파일 트리·폴더 프로세스 선택기·별점·깃발·가져오기·relink·중복 후보·다중 선택. 필터는 macOS 9개 중 8개. 수동 컬렉션을 만들고 고르고 지웁니다. 남은 것: 미검증 프로파일 필터, 스마트 컬렉션·저장된 검색, 컬렉션 끌어 넣기 |
+| 현상 화면 | **88%** | 캔버스·히스토그램·인스펙터 6탭·보정 8섹션 전부·좌측 6탭(파일 탭 포함)·크롭/기하·자동 보정·프리셋/복사붙여넣기·GrainMend 네 도구·정보 탭의 메타데이터 카드 3종(앱·촬영·롤)·출력 패널의 파일/품질/소스 하위 탭과 빠른 내보내기. 남은 것: macOS 설정 항목 세부 대조, 소스 탭의 메타데이터 정책·MAIN 무보정본 |
+| 내보내기 | **82%** | PNG16/8·TIFF16/8·JPEG8 을 폴더·파일명 패턴(토큰 7종)으로. 품질 탭에서 DPI·긴 변·TIFF 압축·비트 심도·JPEG 품질·출력 선명도·선명도 매체를 고르며 고른 값이 실제 파일에 나타납니다(실촬영 확인). 빠른 내보내기, 여러 장 배치, JSON·XMP 사이드카, 원본 보관, 이름 붙인 설정 프리셋. 세 포맷 모두 WIC sRGB ICC·DPI·구조/픽셀 readback 과 비덮어쓰기 게시를 거칩니다. 남은 것: 출력 색공간, alpha, 메타데이터 정책, MAIN 무보정본, 프리셋 이름 변경 |
 | 스캐너 | **60%** | 플러그인 클라이언트·발견·프로세스 호스트·프로토콜 v2·artifact 트랜잭션·게시 영수증에 더해 `ScanSessionController`·`ScannerPluginTrustStore`·`ScanStorageLayout` 이 붙어 라이브러리 가져오기 탭에서 검출→capability→스캔→카탈로그 게시가 이어집니다. 남은 것: **실장치 검증 0회**, 평판 프레임 규격·프레임 찾기·스캔 영역, 스캐너 시뮬레이터 |
-| 설정·다국어·접근성 | **70%** | 6개 로케일 전면 적용, 설정 창, 외관, 패널 너비·필름스트립 상태 저장. 남은 것: macOS 설정 항목 대조 |
+| 설정·다국어·접근성 | **72%** | 6개 로케일 전면 적용(문자열은 전부 macOS 표에서 생성), 설정 창, 외관, 패널 너비·필름스트립 상태 저장. 남은 것: macOS 설정 항목 대조, 단축키 표 |
 | 인화 | **5%** | 자리만 있습니다(312줄). 사용자가 뒤로 미룬 영역입니다 |
 | ARM64·CI | **50%** | CI 에 native·managed·arm64 cross 잡이 있습니다. **순수 ARM64 실행은 하드웨어가 없어 확인 못 함** |
 
-**전체 어림 65%**, 사용자가 우선하라고 한 **라이브러리+현상 범위로는 약 72%** 입니다.
-인화를 뺀 값이며, 확인하지 않은 것(순수 ARM64 실행, macOS 픽셀 대조)은 완료로 세지
-않았습니다.
-
-## 2026-08-13 Library thumbnails, frame cards, filmstrip, crop canvas
-
-라이브러리가 텍스트 목록이 아니라 macOS 카드 격자입니다. 카드 한 장은 현상된 썸네일, 이름,
-필름 종류, 별점이며 치수는 macOS `LibraryGridCardLayout`/`cardSize` 를 그대로 씁니다 —
-폭 190·배율, 썸네일 3:2, 제목까지 3pt, 별점 줄 14pt. 필름스트립도 같은 카드를 쓰고 현상 대상
-선택을 구동하며, 카드 크기는 macOS `FilmstripSizing` 산술로 스트립 높이에서 나옵니다.
-
-썸네일은 캔버스와 **같은 현상 파이프라인**을 macOS 와 같은 360pt 상한으로 돌려 만들고, 동시
-렌더는 macOS 와 같은 폭 3 입니다. 캔버스 미리보기가 정착하면 그 픽셀을 그대로 넘겨받아 같은
-그림을 두 번 현상하지 않습니다. 결과는 JPEG(품질 0.85, WIC)로 `Cache/Thumbnails` 에 남아
-재실행 때 다시 현상하지 않고 격자를 채웁니다. 프레임마다 마지막 쓰기만 남기는 단일 워커라
-슬라이더를 끄는 동안 같은 카드의 인코딩이 쌓이지 않습니다.
-
-별점이 catalog projection 에 들어왔습니다. macOS 와 같은 최상위 `rating` 키이며 0...5 를 벗어난
-값은 잘라내지 않고 거부합니다 — 카탈로그가 손상됐다는 뜻이기 때문입니다.
-
-Develop canvas 에 crop session 이 붙었습니다. 진입하면 macOS 처럼 저장된 crop 을 지워 전체를
-보이고, 선택은 y-down 표시 좌표로 다루다 Apply 에서만 y-up engine 사각형을 씁니다. Full 은
-복원 기준까지 지우고 Cancel 은 이전 crop 을 되돌리며 Escape 가 취소입니다. 오버레이 상수는
-macOS `CropOverlay` 와 같습니다(0.45 dim, 1.5pt 흰 테두리·반경 2, 0.34 삼분할 0.5pt, 14/24pt 손잡이).
-
-라이브러리 헤더가 macOS 와 같아졌습니다. 정렬 메뉴는 macOS 비교자를 그대로 옮겼고(입력순·크기순은
-순서를 바꾸지 않고, 이름은 숫자를 숫자로 읽으며, 동점은 입력 순서 유지), 카드 크기는 0.72~1.42 를
-0.08 씩 움직이고 퍼센트를 누르면 100% 로 돌아갑니다. 필터 줄은 최소 별점·선택·제외·오프라인·
-적외선·보정 레시피이며 축끼리는 AND, 선택/제외 둘만 macOS 처럼 서로 OR 입니다. macOS 의
-현재 롤·미검증 프로파일·메타데이터 미상 세 가지는 catalog projection 이 아직 읽지 않는 필드가
-필요해 만들지 않았습니다. 카드를 두 번 누르면 그 frame 을 들고 현상으로 넘어갑니다.
-
-Develop 편집 탭에 종횡비 줄과 각도 다이얼이 붙었습니다. 종횡비는 17종 목록·순서가 macOS 와
-같고, 고정 비율은 회전을 반영해 가운데 정렬 최대 crop 을 만듭니다(`applyCropAspect` 와 같은
-계산). 잠금이 켜져 있으면 crop 드래그가 그 비율을 지킵니다. 다이얼은 macOS 처럼 crop 세션이
-열려 있을 때만 나오고 치수도 같습니다(지름 108·반지름 42, 15도 눈금, 두 번 눌러 0도).
-
-라이브러리 왼쪽 세로 막대가 살아났습니다. 가져오기·파일·컬렉션이 같은 자리를 나눠 쓰고,
-파일은 등록 폴더와 그 안의 frame 을 펼치는 macOS 트리입니다. 격자와 같은 투영을 쓰므로 검색과
-빠른 필터가 트리도 함께 좁힙니다. 컬렉션은 catalog 에 아직 행이 없어 빈 상태만 보입니다.
-
-현상 인스펙터의 하드코딩된 영어 문자열을 전부 걷어냈습니다. 톤 슬라이더 이름, base 모드,
-필름스톡·광원, 컬러 그레이딩의 세 구간과 휠, 컬러 믹서의 네 속성과 여덟 밴드 이름, 포인트
-커브의 채널·축이 모두 리소스에서 오고 macOS 문자열을 그대로 씁니다. 컬러 믹서의 automation
-id 는 더 이상 표시 이름에서 파생되지 않으므로 언어를 바꿔도 id 가 바뀌지 않습니다. macOS 에
-대응 문자열이 없는 세 컨트롤(점 추가·점 삭제·채널 초기화)만 일반 번역을 씁니다.
-
-자동 색상과 자동 레벨을 켤 수 있게 됐습니다. 두 축 모두 엔진까지는 이미 연결돼 있었는데
-셸에 setter 가 없어 아무도 켤 수 없었습니다. macOS 처럼 음화 route 에서만 토글을 내고,
-양화에서 켜려 하면 기록하지 않고 거부합니다.
-
-**현상 버전(스냅샷) 백엔드가 붙었습니다.** macOS `developSnapshots` 와 같은 키·같은 구조이며,
-recipe 본문은 `params` 노드를 통째로 보관합니다 — 40여 개 필드를 다시 모델링하면 recipe 축이
-늘 때마다 버전 저장이 조용히 뒤처지기 때문이고, macOS 도 같은 방식입니다. 담기는 현재 recipe 를
-바꾸지 않고 목록에만 더하며, 되돌리기는 담아 둔 params 와 presetID 를 되돌리되 목록은 남깁니다.
-왕복 시험이 첫 실행에서 실제 버그를 잡았습니다 — 되돌리기가 목록을 떼어내고 다시 붙이지 않아
-되돌리는 순간 그 frame 의 버전이 전부 사라졌습니다.
-
-**UI 패널도 붙였습니다.** 현상 왼쪽 버전 소스에서 이름을 적어 담고, 목록에서 담은 시각과 함께
-되돌리기·삭제를 할 수 있습니다. 되돌리면 인스펙터와 캔버스가 함께 따라옵니다. 실제 앱에서
-노출 0 → 1.5 → 되돌리기 → 0 을 확인했고, 확인용으로 만든 버전은 지워 카탈로그를 원래대로
-두었습니다.
-
-**실제 스캔을 끝까지 내보냈습니다.** 5088×3401 OpticFilm 8100 스캔에 톤·색·질감 조정을 걸어
-PNG16 으로 내보냈고, 원본 SHA-256 은 그대로였습니다. Release 네이티브로 미리보기 2.1 초,
-내보내기 4.2 초입니다. **개발용 Debug 실행은 같은 일을 20배 느리게 합니다**(41.4 초 / 43.2 초) —
-반응 속도를 그 실행으로 판단하지 마십시오. 자세한 수치는
-`verification/2026-08-13-real-scan-export.md` 에 있습니다.
-
-**GrainMend 자동·가이드가 붙었습니다.** 전체 프레임 자동은 호환 ABI
-`nf_develop_detect_grain_mend_v1`을 유지하고, 가이드는 ROI와 실제 source 사각형을 주고받는
-`nf_develop_detect_grain_mend_v2`를 씁니다. 가이드 드래그는 표시 좌표를 이미지 transform의 역함수로
-raw 좌상단 원점 ROI로 옮긴 뒤 그 부분만 네이티브에서 잘라 분석합니다. 검출은 미리보기와 같은
-파이프라인을 GrainMend 단계까지 돌고 멈춥니다 — GrainMend 는 film look 뒤, 현상된 양화 위에서
-돌기 때문에 원본 스캔을 따로 검출하면 macOS 와 다른 것을 찾습니다. 판정은 자동 수리와 같은
-함수를 공유하므로 보여 준 것과 고쳐지는 것이 갈라질 수 없습니다.
-
-실제 스캔으로 확인했습니다: 5088×3401 에서 **9,187 곳**을 찾아 캔버스에 오버레이로 표시하고,
-그 상태에서는 결함 sidecar 가 **0개**입니다 — macOS 처럼 버튼을 누르는 것만으로 사진이
-바뀌지 않습니다. Enter 를 누르면 sidecar 1개가 생기고 도구별 초기화가 켜집니다. Esc 는 버립니다.
-
-**GrainMend 탭의 네 도구가 연결됐습니다 — 자동·가이드·브러시·복제 도장.** 가이드는 캔버스에서
-사각형을 끈 뒤 검출 마스크를 raw y-up region recipe로 되돌리고, 자동과 같은 검토 상태를 씁니다.
-검토 중에는 마스크 연결 성분을 캔버스에서 클릭해 포함/제외할 수 있고, 제거 단추 또는 Enter로
-선택분만 sidecar에 저장합니다. 취소 단추 또는 Esc는 버리며, 수락 전에는 sidecar를 쓰지 않습니다.
-
-## 2026-08-14 PNG/TIFF DPI와 TIFF 압축 backend
-
-ABI 0.44/v30은 기존 v29 뒤에 TIFF `None`·`LZW`·`Deflate` 선택만 append-only로 추가합니다.
-기존 `output_dpi`는 JPEG만이 아니라 PNG/TIFF에도 동일하게 전달하며, 모두 픽셀 치수나 preview를
-바꾸지 않는 컨테이너 메타데이터입니다. WIC frame encode 뒤 staging artifact를 다시 열어 48bpp RGB,
-sRGB ICC, 픽셀과 지정 DPI를 확인한 뒤에만 atomic publish합니다. TIFF는 그 전에 IFD allowlist와
-실제 Compression tag(None=1, LZW=5, Deflate=8)도 확인합니다.
-
-x64 Debug에서 `native.wic_png_export`, `native.wic_tiff_export`, `native.develop_export_abi` 3건이
-통과했습니다. PNG 300 DPI와 TIFF 300 DPI/LZW/Deflate의 WIC readback, ABI v30 size/offset/reserved 및
-잘못된 압축 거부를 포함합니다. 관리 interop contract는 실제 DLL ABI 0.44/x64에서 198 assertions를
-통과했습니다. 품질 탭과 catalog persistence는 아직 없으므로 Shell 사용자는 이 값들을 아직 편집할 수
-없습니다.
-
-## 2026-08-14 PNG/TIFF bounded sRGB16 output
-
-PNG16/TIFF16은 더 이상 `WorkingImage` 전체를 별도 `Srgb16Image`로 물질화하지 않습니다. 먼저 범위·alpha
-검사와 clipping 수 집계를 병렬로 끝내므로 잘못된 입력은 staging 파일 생성 전 거부합니다. 이후 WIC
-encode와 publish 전 readback 검증은 각각 최대 16 MiB의 packed RGB16 행 버퍼로만 원본 working 행을
-다시 양자화합니다. 이로써 사용자 코드의 lossless 출력 경로에서 `width * height * 6` 바이트짜리
-추가 중간 버퍼를 없애되, sRGB 수식·clipping 수·ICC·48bpp·DPI·atomic publish 계약은 바꾸지 않았습니다.
-
-x64 Debug `native.working_to_srgb16`, `native.wic_png_export`, `native.wic_tiff_export`는 한 행(18 byte)
-write/readback 버퍼로도 실제 WIC 왕복을 통과했고, 전체 native CTest는 67/67 통과했습니다. 이는
-대형 이미지 타일 그래프 완료 증거가 아닙니다. `WorkingImage`와 현상 단계는 여전히 full-frame이고,
-JPEG8은 현재 full `Srgb16Image`와 WIC 24bpp BGR 변환 경로를 유지하며, 기본 512 MiB encoded-pixel 상한도 유지됩니다. 100 MP·batch의
-peak working set 및 ARM64 실기 측정은 아직 없습니다.
-
-## 2026-08-14 Scanner protocol v2 applied-options evidence
-
-v2 scan result의 `appliedOptions`는 null 가능 값도 key 자체를 생략할 수 없습니다. 기존 C# 역직렬화는
-nullable property의 omitted와 JSON `null`을 모두 null로 보았으므로, 어댑터가
-`hardwareExposureTime`·`brightnessAdjustment`·`contrastAdjustment` 중 하나를 빼도 요청과 같다고
-오인할 여지가 있었습니다. 이제 result JSON object를 typed decode 전에 검사해 12개 필수 key가 모두
-있을 때만 request-to-applied 및 result-to-applied 비교를 수행합니다. explicit null은 허용하지만 key
-생략은 staging TIFF를 publish하기 전에 거부합니다.
-
-x64 Debug Shell 단위 검사는 545 assertions를 통과했습니다. 같은 synthetic v2 result에서 explicit
-null 세 key와 exact requested values는 수락하고, `brightnessAdjustment` key 하나만 삭제하면 거부함을
-확인했습니다. 아직 실제 WIA/TWAIN adapter와 하드웨어에서 adapter read-back이 이 evidence를 채우는지,
-그리고 scanner service가 WinUI에서 도달 가능한지는 검증되지 않았습니다.
+**전체 어림 74%**, 사용자가 우선하라고 한 **라이브러리+현상 범위로는 약 86%** 입니다.
+인화를 뺀 값이며, 확인하지 않은 것(순수 ARM64 실행, macOS 픽셀 대조, 실제 스캐너)은 완료로
+세지 않았습니다.
 
 ## 2026-08-14 8-bit PNG/TIFF 출력과 출력 디더
 
