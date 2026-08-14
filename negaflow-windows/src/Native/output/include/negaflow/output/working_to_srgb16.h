@@ -1,6 +1,7 @@
 #pragma once
 
 #include "negaflow/imaging/scanner_to_working.h"
+#include "negaflow/color/output_color_space.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -22,6 +23,8 @@ enum class WorkingToSrgb16Status : std::uint8_t {
 
 struct WorkingToSrgb16Limits final {
     std::uint64_t max_encoded_pixel_bytes{512ULL * 1024ULL * 1024ULL};
+    // The space the published file is encoded in. sRGB leaves the pixels alone.
+    negaflow::color::OutputColorSpace color_space{negaflow::color::OutputColorSpace::srgb};
 };
 
 struct Srgb16Image final {

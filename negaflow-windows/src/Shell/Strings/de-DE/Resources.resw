@@ -432,9 +432,25 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
     <value>Arbeitsflächenhintergrund</value>
     <comment>AppLocalizedText.settingsCanvasBackgroundPicker</comment>
   </data>
+  <data name="settingsColorExport.Text" xml:space="preserve">
+    <value>Export</value>
+    <comment>AppLocalizedPhrase.colorExport</comment>
+  </data>
+  <data name="settingsColorManagementSection.Text" xml:space="preserve">
+    <value>Farbmanagement</value>
+    <comment>AppLocalizedText.colorManagementSection</comment>
+  </data>
+  <data name="settingsColorWorking.Text" xml:space="preserve">
+    <value>Arbeitsfarbraum</value>
+    <comment>AppLocalizedPhrase.colorWorking</comment>
+  </data>
   <data name="settingsDiskTab.Text" xml:space="preserve">
     <value>Datenträger</value>
     <comment>AppLocalizedPhrase.settingsDiskTab</comment>
+  </data>
+  <data name="settingsExportColorLabel.Text" xml:space="preserve">
+    <value>Farbe</value>
+    <comment>AppLocalizedText.exportColorLabel</comment>
   </data>
   <data name="settingsExportTab.Text" xml:space="preserve">
     <value>Exportieren</value>

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "negaflow/output/working_to_srgb16.h"
+#include "negaflow/color/output_color_space.h"
 
 #include <Windows.h>
 #include <wincodec.h>
@@ -33,6 +34,17 @@ enum class StandardSrgbStatus : std::uint8_t {
     unavailable,
     invalid,
 };
+
+// Loads the colour context a published file carries. sRGB comes from the system profile
+// so a file negaflow writes matches every other sRGB file on the machine byte for byte;
+// the wider spaces are generated, because Windows does not ship them.
+[[nodiscard]] StandardSrgbStatus load_output_color_context(
+    IWICImagingFactory* factory,
+    negaflow::color::OutputColorSpace space,
+    std::uint32_t max_color_profile_bytes,
+    Microsoft::WRL::ComPtr<IWICColorContext>& context,
+    std::vector<std::uint8_t>& profile_bytes,
+    std::uint32_t& native_error_code);
 
 [[nodiscard]] StandardSrgbStatus load_standard_srgb_context(
     IWICImagingFactory* factory,

@@ -91,6 +91,40 @@ bool create_wic_factory(
     return true;
 }
 
+StandardSrgbStatus load_output_color_context(
+    IWICImagingFactory* const factory,
+    const negaflow::color::OutputColorSpace space,
+    const std::uint32_t max_color_profile_bytes,
+    ComPtr<IWICColorContext>& context,
+    std::vector<std::uint8_t>& profile_bytes,
+    std::uint32_t& native_error_code) {
+    if (space == negaflow::color::OutputColorSpace::srgb) {
+        return load_standard_srgb_context(
+            factory,
+            max_color_profile_bytes,
+            context,
+            profile_bytes,
+            native_error_code);
+    }
+    std::vector<std::uint8_t> generated = negaflow::color::build_icc_profile(space);
+    if (generated.empty() ||
+        generated.size() > static_cast<std::size_t>(max_color_profile_bytes)) {
+        return StandardSrgbStatus::invalid;
+    }
+    HRESULT status = factory->CreateColorContext(&context);
+    if (SUCCEEDED(status)) {
+        status = context->InitializeFromMemory(
+            generated.data(),
+            static_cast<UINT>(generated.size()));
+    }
+    if (FAILED(status)) {
+        native_error_code = static_cast<std::uint32_t>(status);
+        return StandardSrgbStatus::unavailable;
+    }
+    profile_bytes = std::move(generated);
+    return StandardSrgbStatus::ok;
+}
+
 StandardSrgbStatus load_standard_srgb_context(
     IWICImagingFactory* const factory,
     const std::uint32_t max_color_profile_bytes,

@@ -213,6 +213,37 @@
                             </Grid>
                         </StackPanel>
                     </Border>
+                    <Border Padding="18" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="10">
+                        <StackPanel Spacing="12">
+                            <TextBlock x:Uid="settingsColorManagementSection" FontSize="13" FontWeight="SemiBold" />
+                            <Grid ColumnSpacing="16">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="230" /></Grid.ColumnDefinitions>
+                                <TextBlock x:Uid="settingsExportColorLabel" VerticalAlignment="Center" />
+                                <ComboBox
+                                    x:Name="ExportColorSpaceComboBox"
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Stretch"
+                                    AutomationProperties.AutomationId="settings.export.colorSpace"
+                                    SelectionChanged="OnExportColorSpaceChanged">
+                                    <ComboBoxItem Content="sRGB" />
+                                    <ComboBoxItem Content="Display P3" />
+                                    <ComboBoxItem Content="Adobe RGB" />
+                                </ComboBox>
+                            </Grid>
+                            <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
+                            <Grid ColumnSpacing="16">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="230" /></Grid.ColumnDefinitions>
+                                <TextBlock x:Uid="settingsColorWorking" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Linear sRGB (Chromabase)" />
+                            </Grid>
+                            <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
+                            <Grid ColumnSpacing="16">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="230" /></Grid.ColumnDefinitions>
+                                <TextBlock x:Uid="settingsColorExport" VerticalAlignment="Center" />
+                                <TextBlock x:Name="ExportColorSpaceSummary" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
 
                 <StackPanel x:Name="ShortcutsPage" AutomationProperties.AutomationId="settings.shortcuts" Spacing="16" Visibility="Collapsed">

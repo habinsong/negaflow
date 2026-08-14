@@ -26,13 +26,33 @@ namespace {
 
 [[nodiscard]] std::uint16_t quantize_component(
     const float linear,
+    const negaflow::color::OutputColorSpace space,
     std::uint64_t& clipped_components) noexcept {
     if (linear < 0.0F || linear > 1.0F) {
         ++clipped_components;
     }
     const float bounded = std::clamp(linear, 0.0F, 1.0F);
-    const float encoded = negaflow::color::linear_to_srgb_encoded(bounded);
+    const float encoded = negaflow::color::encode_output_component(bounded, space);
     return static_cast<std::uint16_t>(std::floor(encoded * 65'535.0F + 0.5F));
+}
+
+// The primaries change mixes channels, so it runs on the whole pixel before either
+// quantizer sees a component. Clipping is counted on the values the file will hold, not on
+// the working values - a colour outside the target gamut is clipped by the target.
+struct OutputPixel final {
+    float red{0.0F};
+    float green{0.0F};
+    float blue{0.0F};
+};
+
+[[nodiscard]] OutputPixel to_output_primaries(
+    const negaflow::core::Rgba32F& pixel,
+    const negaflow::color::ColorMatrix& matrix) noexcept {
+    return {
+        (matrix[0] * pixel.red) + (matrix[1] * pixel.green) + (matrix[2] * pixel.blue),
+        (matrix[3] * pixel.red) + (matrix[4] * pixel.green) + (matrix[5] * pixel.blue),
+        (matrix[6] * pixel.red) + (matrix[7] * pixel.green) + (matrix[8] * pixel.blue),
+    };
 }
 
 // Same mix as the grain stage. A hash of the absolute coordinate keeps the dither
@@ -53,6 +73,7 @@ namespace {
 
 [[nodiscard]] std::uint8_t quantize_component_8(
     const float linear,
+    const negaflow::color::OutputColorSpace space,
     const std::uint32_t x,
     const std::uint32_t y,
     const std::uint32_t channel,
@@ -61,7 +82,7 @@ namespace {
         ++clipped_components;
     }
     const float bounded = std::clamp(linear, 0.0F, 1.0F);
-    const float encoded = negaflow::color::linear_to_srgb_encoded(bounded);
+    const float encoded = negaflow::color::encode_output_component(bounded, space);
     const float noise =
         static_cast<float>(dither_hash(x, y, channel) >> 8U) / 16777215.0F - 0.5F;
     const float dithered = std::clamp(encoded + noise / 255.0F, 0.0F, 1.0F);
@@ -256,6 +277,8 @@ WorkingToSrgb16Status convert_working_to_srgb_rows(
     }
 
     auto* const samples16 = reinterpret_cast<std::uint16_t*>(destination_bytes);
+    const negaflow::color::OutputColorSpace space = limits.color_space;
+    const negaflow::color::ColorMatrix matrix = negaflow::color::linear_srgb_to(space);
     clipped_color_components = 0U;
     for (std::uint32_t row = 0U; row < row_count; ++row) {
         const std::uint32_t image_row = first_row + row;
@@ -272,23 +295,24 @@ WorkingToSrgb16Status convert_working_to_srgb_rows(
             if (pixel.alpha != 1.0F) {
                 return WorkingToSrgb16Status::non_opaque_alpha;
             }
+            const OutputPixel output = to_output_primaries(pixel, matrix);
             const std::size_t destination =
                 destination_row + static_cast<std::size_t>(column) * 3U;
             if (bits_per_sample == 8U) {
                 destination_bytes[destination] = quantize_component_8(
-                    pixel.red, column, image_row, 0U, clipped_color_components);
+                    output.red, space, column, image_row, 0U, clipped_color_components);
                 destination_bytes[destination + 1U] = quantize_component_8(
-                    pixel.green, column, image_row, 1U, clipped_color_components);
+                    output.green, space, column, image_row, 1U, clipped_color_components);
                 destination_bytes[destination + 2U] = quantize_component_8(
-                    pixel.blue, column, image_row, 2U, clipped_color_components);
+                    output.blue, space, column, image_row, 2U, clipped_color_components);
                 continue;
             }
             samples16[destination] =
-                quantize_component(pixel.red, clipped_color_components);
+                quantize_component(output.red, space, clipped_color_components);
             samples16[destination + 1U] =
-                quantize_component(pixel.green, clipped_color_components);
+                quantize_component(output.green, space, clipped_color_components);
             samples16[destination + 2U] =
-                quantize_component(pixel.blue, clipped_color_components);
+                quantize_component(output.blue, space, clipped_color_components);
         }
     }
     return WorkingToSrgb16Status::ok;
@@ -312,6 +336,8 @@ WorkingToSrgb16Result convert_working_to_srgb16(
         return result;
     }
 
+    const negaflow::color::OutputColorSpace space = limits.color_space;
+    const negaflow::color::ColorMatrix matrix = negaflow::color::linear_srgb_to(space);
     const std::uint64_t work_units =
         static_cast<std::uint64_t>(working.width) *
         static_cast<std::uint64_t>(working.height);
@@ -349,14 +375,15 @@ WorkingToSrgb16Result convert_working_to_srgb16(
                             block_clipped, std::memory_order_relaxed);
                         return;
                     }
+                    const OutputPixel output = to_output_primaries(pixel, matrix);
                     const std::size_t destination =
                         destination_row + static_cast<std::size_t>(column) * 3U;
                     result.image.samples[destination] =
-                        quantize_component(pixel.red, block_clipped);
+                        quantize_component(output.red, space, block_clipped);
                     result.image.samples[destination + 1U] =
-                        quantize_component(pixel.green, block_clipped);
+                        quantize_component(output.green, space, block_clipped);
                     result.image.samples[destination + 2U] =
-                        quantize_component(pixel.blue, block_clipped);
+                        quantize_component(output.blue, space, block_clipped);
                 }
             }
             clipped_components.fetch_add(block_clipped, std::memory_order_relaxed);

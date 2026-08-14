@@ -421,6 +421,7 @@ internal static class Program
             TiffCompression = DevelopTiffCompression.Deflate,
             OutputSharpening = 0.5,
             OutputSharpeningMedium = OutputSharpeningMedium.GlossyPaper,
+            ColorSpace = ExportColorSpace.DisplayP3,
         };
 
         DevelopRequestResult result = DevelopRequestFactory.Create(
@@ -468,6 +469,21 @@ internal static class Program
         Check(
             repaired.JpegQuality == 1.0 && repaired.OutputSharpening == 0 && repaired.Dpi == 0,
             "export_settings_normalize_clamps_out_of_range_values");
+
+        Check(
+            request.OutputColorSpace == ExportColorSpace.DisplayP3,
+            "export_settings_color_space_reaches_the_request");
+
+        // JPEG 은 sRGB 만 냅니다. 고른 값이 요청에 그대로 실리면 엔진이 거절하므로, 화면에
+        // 보이는 요약과 실제 파일이 어긋나지 않도록 여기서 sRGB 로 되돌립니다.
+        DevelopRequestResult jpeg = DevelopRequestFactory.Create(
+            Frame(new ManualBaseRgb(0.21, 0.22, 0.23)),
+            @"C:\exports\IMG_0001.jpg",
+            DevelopExportFormat.Jpeg8,
+            (settings with { Format = DevelopExportFormat.Jpeg8 }).ToEncodingOptions());
+        Check(
+            jpeg.Request is { OutputColorSpace: ExportColorSpace.Srgb },
+            "export_settings_jpeg_publishes_srgb");
 
         // 빠른 내보내기는 TIFF 를 내지 않습니다.
         Check(

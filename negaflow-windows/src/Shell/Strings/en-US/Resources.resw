@@ -432,9 +432,25 @@ Load a scanner from Library to scan film.</value>
     <value>Canvas Background</value>
     <comment>AppLocalizedText.settingsCanvasBackgroundPicker</comment>
   </data>
+  <data name="settingsColorExport.Text" xml:space="preserve">
+    <value>Export</value>
+    <comment>AppLocalizedPhrase.colorExport</comment>
+  </data>
+  <data name="settingsColorManagementSection.Text" xml:space="preserve">
+    <value>Color Management</value>
+    <comment>AppLocalizedText.colorManagementSection</comment>
+  </data>
+  <data name="settingsColorWorking.Text" xml:space="preserve">
+    <value>Working</value>
+    <comment>AppLocalizedPhrase.colorWorking</comment>
+  </data>
   <data name="settingsDiskTab.Text" xml:space="preserve">
     <value>Disk</value>
     <comment>AppLocalizedPhrase.settingsDiskTab</comment>
+  </data>
+  <data name="settingsExportColorLabel.Text" xml:space="preserve">
+    <value>Color</value>
+    <comment>AppLocalizedText.exportColorLabel</comment>
   </data>
   <data name="settingsExportTab.Text" xml:space="preserve">
     <value>Export</value>

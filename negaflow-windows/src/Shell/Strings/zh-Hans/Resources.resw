@@ -432,9 +432,25 @@
     <value>画布背景</value>
     <comment>AppLocalizedText.settingsCanvasBackgroundPicker</comment>
   </data>
+  <data name="settingsColorExport.Text" xml:space="preserve">
+    <value>导出</value>
+    <comment>AppLocalizedPhrase.colorExport</comment>
+  </data>
+  <data name="settingsColorManagementSection.Text" xml:space="preserve">
+    <value>色彩管理</value>
+    <comment>AppLocalizedText.colorManagementSection</comment>
+  </data>
+  <data name="settingsColorWorking.Text" xml:space="preserve">
+    <value>工作空间</value>
+    <comment>AppLocalizedPhrase.colorWorking</comment>
+  </data>
   <data name="settingsDiskTab.Text" xml:space="preserve">
     <value>磁盘</value>
     <comment>AppLocalizedPhrase.settingsDiskTab</comment>
+  </data>
+  <data name="settingsExportColorLabel.Text" xml:space="preserve">
+    <value>颜色</value>
+    <comment>AppLocalizedText.exportColorLabel</comment>
   </data>
   <data name="settingsExportTab.Text" xml:space="preserve">
     <value>导出</value>

@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using Negaflow.Interop;
 using Negaflow.Shell.Localization;
 
 namespace Negaflow.Shell.Views;
@@ -55,6 +56,24 @@ public sealed partial class SettingsRootView : UserControl
         workspaceState?.SetAppearance(appearance);
     }
 
+    private void OnExportColorSpaceChanged(object sender, SelectionChangedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (isUpdating)
+        {
+            return;
+        }
+
+        ExportColorSpace space = ExportColorSpaceComboBox.SelectedIndex switch
+        {
+            1 => ExportColorSpace.DisplayP3,
+            2 => ExportColorSpace.AdobeRgb,
+            _ => ExportColorSpace.Srgb,
+        };
+        workspaceState?.UpdateExport(settings => settings with { ColorSpace = space });
+    }
+
     private void OnImageHashToggled(object sender, RoutedEventArgs args)
     {
         _ = sender;
@@ -84,9 +103,26 @@ public sealed partial class SettingsRootView : UserControl
             _ => 0,
         };
         ImageHashToggle.IsOn = preferences.ImageContentHash == ImageContentHashMode.Sha256;
+        ExportColorSpaceComboBox.SelectedIndex = preferences.Export.ColorSpace switch
+        {
+            ExportColorSpace.DisplayP3 => 1,
+            ExportColorSpace.AdobeRgb => 2,
+            _ => 0,
+        };
+        // 요약 줄은 고른 값이 아니라 형식이 실제로 낼 수 있는 값을 적습니다 — JPEG 을 고른 채
+        // "Adobe RGB" 라고 적혀 있으면 파일과 화면이 어긋나기 때문입니다.
+        ExportColorSpaceSummary.Text = ColorSpaceLabel(preferences.Export.EffectiveColorSpace);
         SelectCategory(preferences.SelectedSettingsCategory);
         isUpdating = false;
     }
+
+    // macOS ExportColorSpace.uiLabel 과 같은 문자열입니다. 색공간 이름은 번역하지 않습니다.
+    private static string ColorSpaceLabel(ExportColorSpace space) => space switch
+    {
+        ExportColorSpace.DisplayP3 => "Display P3",
+        ExportColorSpace.AdobeRgb => "Adobe RGB",
+        _ => "sRGB",
+    };
 
     private void SelectCategory(SettingsCategory category)
     {

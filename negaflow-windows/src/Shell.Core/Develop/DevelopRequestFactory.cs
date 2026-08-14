@@ -164,6 +164,7 @@ public static class DevelopRequestFactory
             JpegQuality = (float)output.JpegQuality,
             TiffCompression = output.TiffCompression,
             OutputBitDepth = (uint)output.BitDepth,
+            OutputColorSpace = output.ColorSpace,
             OutputSharpening = (float)output.OutputSharpening,
             OutputSharpeningMedium = output.OutputSharpeningMedium,
             OutputSharpeningDpi = output.Dpi,

@@ -23,10 +23,10 @@
    and 0.41 linear-light long-edge export scaling v29, and 0.42 GrainMend
    review detector tuning, 0.43 GrainMend optional micro-speck review
    detection, and 0.44 TIFF compression plus PNG/TIFF DPI output metadata, and 0.45
-   eight-bit PNG/TIFF publication with output dither.
+   eight-bit PNG/TIFF publication with output dither, and 0.46 output colour space.
    The managed loader
    refuses anything below the minor it actually calls, so an older engine fails at load
    instead of at the first missing entry point. */
 #define NF_ABI_VERSION_MAJOR 0U
-#define NF_ABI_VERSION_MINOR 45U
+#define NF_ABI_VERSION_MINOR 46U
 #define NF_ABI_VERSION ((NF_ABI_VERSION_MAJOR << 16U) | NF_ABI_VERSION_MINOR)

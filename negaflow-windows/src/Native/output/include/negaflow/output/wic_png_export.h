@@ -36,6 +36,8 @@ struct WicPngExportLimits final {
     WorkingToSrgb16Limits conversion{};
     // 8 or 16. Eight-bit output is dithered before quantization; sixteen is not.
     std::uint32_t bits_per_sample{16U};
+    // The space the file is encoded in and whose profile it carries.
+    negaflow::color::OutputColorSpace color_space{negaflow::color::OutputColorSpace::srgb};
     // Zero leaves the container's resolution unspecified; a positive value is metadata only.
     std::uint32_t output_dpi{0U};
     std::uint64_t max_artifact_bytes{2ULL * 1024ULL * 1024ULL * 1024ULL};

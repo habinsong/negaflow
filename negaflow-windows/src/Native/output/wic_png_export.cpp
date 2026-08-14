@@ -166,12 +166,14 @@ using Microsoft::WRL::ComPtr;
         native_error_code = static_cast<std::uint32_t>(status);
         return WicPngExportStatus::readback_failed;
     }
+    WorkingToSrgb16Limits color_limits = limits.conversion;
+    color_limits.color_space = limits.color_space;
     switch (detail::verify_working_srgb16_frame(
         factory,
         frame.Get(),
         working,
         expected,
-        limits.conversion,
+        color_limits,
         expected_profile,
         limits.output_dpi,
         limits.readback_buffer_bytes,
@@ -235,9 +237,16 @@ WicPngExportResult export_working_to_srgb16_png(
     const std::filesystem::path& destination,
     const WicPngExportLimits& limits) noexcept {
     WicPngExportResult result{};
+    // 색공간은 변환과 프로파일 양쪽이 함께 알아야 합니다. 한쪽만 바뀌면 픽셀과 프로파일이
+    // 서로 다른 공간을 가리키게 됩니다.
+    WorkingToSrgb16Limits color_limits = limits.conversion;
+    color_limits.color_space = limits.color_space;
     try {
         WorkingToSrgb16Result converted =
-            inspect_working_to_srgb(working, limits.bits_per_sample, limits.conversion);
+            inspect_working_to_srgb(
+                working,
+                limits.bits_per_sample,
+                color_limits);
         result.conversion_status = converted.status;
         result.info.width = working.width;
         result.info.height = working.height;
@@ -272,8 +281,9 @@ WicPngExportResult export_working_to_srgb16_png(
 
         ComPtr<IWICColorContext> color_context{};
         std::vector<std::uint8_t> profile_bytes{};
-        switch (detail::load_standard_srgb_context(
+        switch (detail::load_output_color_context(
             factory.Get(),
+            limits.color_space,
             limits.max_color_profile_bytes,
             color_context,
             profile_bytes,
@@ -305,7 +315,7 @@ WicPngExportResult export_working_to_srgb16_png(
             working,
             converted.image,
             color_context.Get(),
-            limits.conversion,
+            color_limits,
             limits.output_dpi,
             limits.write_buffer_bytes,
             result.conversion_status,

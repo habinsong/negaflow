@@ -432,9 +432,25 @@
     <value>キャンバス背景</value>
     <comment>AppLocalizedText.settingsCanvasBackgroundPicker</comment>
   </data>
+  <data name="settingsColorExport.Text" xml:space="preserve">
+    <value>書き出し</value>
+    <comment>AppLocalizedPhrase.colorExport</comment>
+  </data>
+  <data name="settingsColorManagementSection.Text" xml:space="preserve">
+    <value>カラー管理</value>
+    <comment>AppLocalizedText.colorManagementSection</comment>
+  </data>
+  <data name="settingsColorWorking.Text" xml:space="preserve">
+    <value>作業用スペース</value>
+    <comment>AppLocalizedPhrase.colorWorking</comment>
+  </data>
   <data name="settingsDiskTab.Text" xml:space="preserve">
     <value>ディスク</value>
     <comment>AppLocalizedPhrase.settingsDiskTab</comment>
+  </data>
+  <data name="settingsExportColorLabel.Text" xml:space="preserve">
+    <value>カラー</value>
+    <comment>AppLocalizedText.exportColorLabel</comment>
   </data>
   <data name="settingsExportTab.Text" xml:space="preserve">
     <value>書き出し</value>

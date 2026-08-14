@@ -432,9 +432,25 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
     <value>Arrière-plan du canevas</value>
     <comment>AppLocalizedText.settingsCanvasBackgroundPicker</comment>
   </data>
+  <data name="settingsColorExport.Text" xml:space="preserve">
+    <value>Exportation</value>
+    <comment>AppLocalizedPhrase.colorExport</comment>
+  </data>
+  <data name="settingsColorManagementSection.Text" xml:space="preserve">
+    <value>Gestion des couleurs</value>
+    <comment>AppLocalizedText.colorManagementSection</comment>
+  </data>
+  <data name="settingsColorWorking.Text" xml:space="preserve">
+    <value>Espace de travail</value>
+    <comment>AppLocalizedPhrase.colorWorking</comment>
+  </data>
   <data name="settingsDiskTab.Text" xml:space="preserve">
     <value>Disque</value>
     <comment>AppLocalizedPhrase.settingsDiskTab</comment>
+  </data>
+  <data name="settingsExportColorLabel.Text" xml:space="preserve">
+    <value>Couleur</value>
+    <comment>AppLocalizedText.exportColorLabel</comment>
   </data>
   <data name="settingsExportTab.Text" xml:space="preserve">
     <value>Exportation</value>

@@ -494,6 +494,15 @@ struct PreviewTarget final {
     if (request.output_bit_depth != 8U && request.output_bit_depth != 16U) {
         return fail(DevelopExportStage::request_validation, "invalid_output_bit_depth");
     }
+    if (negaflow::color::output_color_space_name(request.output_color_space) == nullptr) {
+        return fail(DevelopExportStage::request_validation, "invalid_output_color_space");
+    }
+    // JPEG 은 아직 sRGB 만 게시합니다. 고른 것과 다른 공간의 파일을 조용히 내보내느니
+    // 거부합니다 — 잘못 이름 붙은 색은 나중에 되돌릴 수 없습니다.
+    if (request.format == DevelopExportFormat::jpeg8 &&
+        request.output_color_space != negaflow::color::OutputColorSpace::srgb) {
+        return fail(DevelopExportStage::request_validation, "jpeg_requires_srgb");
+    }
     if (request.film_polarity != FilmPolarity::negative &&
         request.film_polarity != FilmPolarity::positive) {
         return fail(DevelopExportStage::request_validation, "unknown_film_polarity");
@@ -1353,6 +1362,7 @@ struct PreviewTarget final {
         negaflow::output::WicPngExportLimits output_limits{};
         output_limits.output_dpi = request.output_dpi;
         output_limits.bits_per_sample = request.output_bit_depth;
+        output_limits.color_space = request.output_color_space;
         const negaflow::output::WicPngExportResult exported =
             negaflow::output::export_working_to_srgb16_png(
                 output_sharpening.image,
@@ -1417,6 +1427,7 @@ struct PreviewTarget final {
     output_limits.compression = request.tiff_compression;
     output_limits.output_dpi = request.output_dpi;
     output_limits.bits_per_sample = request.output_bit_depth;
+    output_limits.color_space = request.output_color_space;
     const negaflow::output::WicTiffExportResult exported =
         negaflow::output::export_working_to_srgb16_tiff(
         output_sharpening.image,

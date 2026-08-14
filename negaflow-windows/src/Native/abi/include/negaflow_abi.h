@@ -812,6 +812,18 @@ typedef struct nf_develop_export_request_v31 {
     uint32_t output_depth_reserved2;
 } nf_develop_export_request_v31;
 
+/* v32 preserves v31 and appends the published colour space: 0 sRGB, 1 Display P3,
+   2 Adobe RGB (1998). PNG and TIFF convert the pixels and carry the matching profile.
+   JPEG publishes sRGB only and refuses anything else rather than mislabelling the colour.
+   Preview ignores it. */
+typedef struct nf_develop_export_request_v32 {
+    nf_develop_export_request_v31 v31;
+    uint32_t output_color_space;
+    uint32_t output_space_reserved0;
+    uint32_t output_space_reserved1;
+    uint32_t output_space_reserved2;
+} nf_develop_export_request_v32;
+
 typedef struct nf_develop_export_result_v1 {
     uint32_t struct_size;
     uint32_t succeeded;
@@ -1660,6 +1672,20 @@ NF_API nf_status_t NF_CALL nf_develop_export_v30(
 
 NF_API nf_status_t NF_CALL nf_develop_export_v31(
     const nf_develop_export_request_v31* request,
+    nf_develop_run_state_v1* run_state,
+    nf_develop_export_result_v3* result);
+
+NF_API nf_status_t NF_CALL nf_develop_export_v32(
+    const nf_develop_export_request_v32* request,
+    nf_develop_run_state_v1* run_state,
+    nf_develop_export_result_v3* result);
+NF_API nf_status_t NF_CALL nf_develop_preview_v32(
+    const nf_develop_export_request_v32* request,
+    const nf_soft_proof_v1* soft_proof,
+    uint32_t maximum_width,
+    uint32_t maximum_height,
+    uint8_t* pixels,
+    uint32_t pixel_capacity_bytes,
     nf_develop_run_state_v1* run_state,
     nf_develop_export_result_v3* result);
 NF_API nf_status_t NF_CALL nf_develop_preview_v31(

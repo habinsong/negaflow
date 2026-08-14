@@ -39,6 +39,16 @@ public sealed record ExportSettings
     /// <summary>PNG 의 채널당 비트입니다. macOS 기본값은 16 입니다.</summary>
     public int PngBitDepth { get; init; } = 16;
 
+    /// <summary>
+    /// 게시할 색공간입니다. PNG·TIFF 는 픽셀을 옮기고 맞는 프로파일을 붙이며, JPEG 은 sRGB 만
+    /// 냅니다 — 고른 것과 다른 공간의 파일을 조용히 내보내지 않기 위해서입니다.
+    /// </summary>
+    public ExportColorSpace ColorSpace { get; init; } = ExportColorSpace.Srgb;
+
+    /// <summary>형식이 실제로 낼 수 있는 색공간입니다.</summary>
+    public ExportColorSpace EffectiveColorSpace =>
+        Format == DevelopExportFormat.Jpeg8 ? ExportColorSpace.Srgb : ColorSpace;
+
     /// <summary>고른 형식이 실제로 게시할 채널당 비트입니다. JPEG 은 정의상 8 입니다.</summary>
     public int EffectiveBitDepth => Format switch
     {
@@ -80,6 +90,7 @@ public sealed record ExportSettings
         TiffCompression = Enum.IsDefined(TiffCompression)
             ? TiffCompression
             : DevelopTiffCompression.None,
+        ColorSpace = Enum.IsDefined(ColorSpace) ? ColorSpace : ExportColorSpace.Srgb,
         TiffBitDepth = TiffBitDepth == 8 ? 8 : 16,
         PngBitDepth = PngBitDepth == 8 ? 8 : 16,
         OutputSharpening = ClampUnit(OutputSharpening, 0),
@@ -168,6 +179,8 @@ public readonly record struct ExportEncodingOptions
     /// <summary>8 또는 16. 0 은 16 으로 봅니다 — 기본 구조체가 곧 16bit 출력입니다.</summary>
     public int BitDepth { get; init; }
 
+    public ExportColorSpace ColorSpace { get; init; }
+
     public double OutputSharpening { get; init; }
 
     public OutputSharpeningMedium OutputSharpeningMedium { get; init; }
@@ -186,6 +199,7 @@ public static class ExportSettingsExtensions
             JpegQuality = normalized.JpegQuality,
             TiffCompression = normalized.TiffCompression,
             BitDepth = normalized.EffectiveBitDepth,
+            ColorSpace = normalized.EffectiveColorSpace,
             OutputSharpening = normalized.OutputSharpening,
             OutputSharpeningMedium = normalized.OutputSharpeningMedium,
         };
@@ -206,6 +220,7 @@ public static class ExportSettingsExtensions
             ? encoding.TiffCompression
             : DevelopTiffCompression.None,
         BitDepth = encoding.BitDepth == 8 ? 8 : 16,
+        ColorSpace = Enum.IsDefined(encoding.ColorSpace) ? encoding.ColorSpace : ExportColorSpace.Srgb,
         OutputSharpening = ExportSettings.ClampUnit(encoding.OutputSharpening, 0),
         OutputSharpeningMedium = Enum.IsDefined(encoding.OutputSharpeningMedium)
             ? encoding.OutputSharpeningMedium

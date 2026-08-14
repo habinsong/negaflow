@@ -55,6 +55,7 @@ public static unsafe class NativeDevelopExporter
     internal const int RequestV29Size = 4960;
     internal const int RequestV30Size = 4976;
     internal const int RequestV31Size = 4992;
+    internal const int RequestV32Size = 5008;
     internal const int ResultV2Size = 152;
     internal const int ResultV3Size = 160;
     internal const int RunStateV1Size = 16;
@@ -126,6 +127,7 @@ public static unsafe class NativeDevelopExporter
             sizeof(NativeDevelopExportRequestV29) != RequestV29Size ||
             sizeof(NativeDevelopExportRequestV30) != RequestV30Size ||
             sizeof(NativeDevelopExportRequestV31) != RequestV31Size ||
+            sizeof(NativeDevelopExportRequestV32) != RequestV32Size ||
             sizeof(NativeDevelopExportResultV2) != ResultV2Size ||
             sizeof(NativeDevelopExportResultV3) != ResultV3Size ||
             sizeof(NativeDevelopRunStateV1) != RunStateV1Size ||
@@ -1815,6 +1817,19 @@ public static unsafe class NativeDevelopExporter
         };
     }
 
+    private static NativeDevelopExportRequestV32 BuildRequestV32(
+        NativeDevelopExportRequestV31 v31,
+        DevelopExportRequest request)
+    {
+        v31.V30.V29.V28.V27.V26.V25.V24.V21.V20.V19.V18.V17.V16.V15.V14.V13.V12.V11.V10.V9.V8
+            .V7.StructSize = (uint)sizeof(NativeDevelopExportRequestV32);
+        return new NativeDevelopExportRequestV32
+        {
+            V31 = v31,
+            OutputColorSpace = (uint)request.OutputColorSpace,
+        };
+    }
+
     private static byte[] BuildDefectSourceSha256(DevelopExportRequest request) =>
         request.DefectSourceIdentity is { } identity
             ? Convert.FromHexString(identity.Sha256)
@@ -1920,15 +1935,16 @@ public static unsafe class NativeDevelopExporter
             NativeDevelopExportRequestV27 v27 = BuildRequestV27(v26, request);
             NativeDevelopExportRequestV28 v28 = BuildRequestV28(v27, request);
             NativeDevelopExportRequestV29 v29 = BuildRequestV29(v28, request);
-            NativeDevelopExportRequestV31 native =
-                BuildRequestV31(BuildRequestV30(v29, request), request);
-            status = NativeMethods.nf_develop_export_v31(
+            NativeDevelopExportRequestV32 native = BuildRequestV32(
+                BuildRequestV31(BuildRequestV30(v29, request), request),
+                request);
+            status = NativeMethods.nf_develop_export_v32(
                 &native,
                 runState,
                 &raw);
         }
 
-        return Translate(status, raw, "nf_develop_export_v31");
+        return Translate(status, raw, "nf_develop_export_v32");
     }
 
     /// <summary>
@@ -2185,9 +2201,10 @@ public static unsafe class NativeDevelopExporter
             {
                 NativeDevelopExportRequestV28 v28 = BuildRequestV28(v27, request);
                 NativeDevelopExportRequestV29 v29 = BuildRequestV29(v28, request);
-                NativeDevelopExportRequestV31 native =
-                    BuildRequestV31(BuildRequestV30(v29, request), request);
-                status = NativeMethods.nf_develop_preview_v31(
+                NativeDevelopExportRequestV32 native = BuildRequestV32(
+                    BuildRequestV31(BuildRequestV30(v29, request), request),
+                    request);
+                status = NativeMethods.nf_develop_preview_v32(
                     &native,
                     proofPointer,
                     maximumWidth,
@@ -2204,7 +2221,7 @@ public static unsafe class NativeDevelopExporter
             raw,
             detection is not null
                 ? "nf_develop_detect_grain_mend_v4"
-                : "nf_develop_preview_v31"));
+                : "nf_develop_preview_v32"));
     }
 
     private static DevelopExportResult Translate(

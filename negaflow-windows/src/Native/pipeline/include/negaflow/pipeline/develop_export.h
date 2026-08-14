@@ -23,6 +23,7 @@
 #include "negaflow/imaging/working_tone_adjuster.h"
 #include "negaflow/output/wic_png_export.h"
 #include "negaflow/output/wic_jpeg_export.h"
+#include "negaflow/color/output_color_space.h"
 #include "negaflow/output/wic_tiff_export.h"
 
 #include <array>
@@ -110,6 +111,10 @@ struct DevelopExportRequest final {
     // 8 or 16. PNG and TIFF publish at this depth; eight-bit output is dithered before
     // quantization, as macOS does. JPEG ignores it - it is eight-bit by definition.
     std::uint32_t output_bit_depth{16U};
+    // The space the published file is encoded in and whose profile it carries. Preview
+    // ignores it - the canvas is always shown in the display's own space.
+    negaflow::color::OutputColorSpace output_color_space{
+        negaflow::color::OutputColorSpace::srgb};
     // Zero preserves source dimensions. Positive values cap the exported long edge;
     // they never upscale and do not alter previews or GrainMend detection.
     std::uint32_t output_long_edge{0U};

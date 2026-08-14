@@ -1536,6 +1536,65 @@ void test_v30_contract() {
         "v30 rejects unknown TIFF compression");
 }
 
+void test_v32_contract() {
+    expect(sizeof(nf_develop_export_request_v32) == 5008U,
+           "v32 request layout is fixed");
+    expect(offsetof(nf_develop_export_request_v32, output_color_space) == 4992U,
+           "v32 colour space offset is fixed");
+
+    nf_develop_export_request_v32 request;
+    std::memset(&request, 0, sizeof(request));
+    request.v31.v30 = make_request_v30(L"a.tif", L"b.tif");
+    request.v31.output_bit_depth = 16U;
+    auto& base = request.v31.v30.v29.v28.v27.v26.v25.v24.v21.v20.v19.v18.v17.v16.v15.v14.v13
+                     .v12.v11.v10.v9.v8;
+    base.struct_size = static_cast<std::uint32_t>(sizeof(request));
+    base.output_format = NF_EXPORT_FORMAT_TIFF16;
+
+    request.output_color_space = 1U;  // Display P3
+    nf_develop_export_result_v3 result = make_result_v3();
+    expect(
+        nf_develop_export_v32(&request, nullptr, &result) == NF_STATUS_OK &&
+            result.succeeded == 0U &&
+            result.failed_stage == NF_DEVELOP_STAGE_OBSERVE_SOURCE_BEFORE,
+        "v32 wide-gamut TIFF request reaches source observation");
+
+    // JPEG carries no colour context here, so a wide-gamut JPEG would be pixels in one
+    // space labelled as another. Refusing beats publishing a file that reads wrong.
+    base.output_format = NF_EXPORT_FORMAT_JPEG8;
+    result = make_result_v3();
+    expect(
+        nf_develop_export_v32(&request, nullptr, &result) == NF_STATUS_OK &&
+            result.failed_stage == NF_DEVELOP_STAGE_REQUEST_VALIDATION &&
+            std::strcmp(result.failure_name, "jpeg_requires_srgb") == 0,
+        "v32 refuses a wide-gamut JPEG rather than mislabelling it");
+
+    request.output_color_space = 0U;
+    result = make_result_v3();
+    expect(
+        nf_develop_export_v32(&request, nullptr, &result) == NF_STATUS_OK &&
+            result.failed_stage == NF_DEVELOP_STAGE_OBSERVE_SOURCE_BEFORE,
+        "v32 sRGB JPEG is allowed");
+
+    base.output_format = NF_EXPORT_FORMAT_TIFF16;
+    request.output_color_space = 3U;
+    result = make_result_v3();
+    expect(
+        nf_develop_export_v32(&request, nullptr, &result) == NF_STATUS_OK &&
+            result.failed_stage == NF_DEVELOP_STAGE_REQUEST_VALIDATION &&
+            std::strcmp(result.failure_name, "invalid_output_color_space") == 0,
+        "v32 rejects an unknown colour space");
+
+    request.output_color_space = 0U;
+    request.output_space_reserved1 = 7U;
+    result = make_result_v3();
+    expect(
+        nf_develop_export_v32(&request, nullptr, &result) == NF_STATUS_OK &&
+            result.failed_stage == NF_DEVELOP_STAGE_REQUEST_VALIDATION &&
+            std::strcmp(result.failure_name, "invalid_output_color_space") == 0,
+        "v32 rejects a dirty reserved field");
+}
+
 void test_missing_source_is_not_a_validation_error() {
     const std::filesystem::path absent =
         std::filesystem::temp_directory_path() / L"negaflow-abi-absent-source.tif";
@@ -3956,6 +4015,7 @@ int main(const int argument_count, const char* const arguments[]) {
     test_v28_contract();
     test_v29_contract();
     test_v30_contract();
+    test_v32_contract();
     test_missing_source_is_not_a_validation_error();
     test_v2_missing_source_is_not_a_validation_error();
     test_v18_defect_region_preview_and_export();

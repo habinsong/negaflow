@@ -87,6 +87,16 @@ public enum DevelopImageRotation
     Degrees270 = 3,
 }
 
+/// <summary>
+/// The space a published file is encoded in. macOS offers the same three.
+/// </summary>
+public enum ExportColorSpace
+{
+    Srgb = 0,
+    DisplayP3 = 1,
+    AdobeRgb = 2,
+}
+
 public enum OutputSharpeningMedium
 {
     Screen = 0,
@@ -625,6 +635,12 @@ public sealed class DevelopExportRequest
     /// definition. Eight-bit output is dithered before quantization, as macOS does.
     /// </summary>
     public uint OutputBitDepth { get; init; } = 16U;
+
+    /// <summary>
+    /// Published colour space. PNG and TIFF convert the pixels and carry the matching
+    /// profile; JPEG publishes sRGB only and refuses anything else.
+    /// </summary>
+    public ExportColorSpace OutputColorSpace { get; init; } = ExportColorSpace.Srgb;
 
     /// <summary>Positive values are embedded in PNG, TIFF, and JPEG metadata and do not resize pixels.</summary>
     public uint OutputDpi { get; init; }

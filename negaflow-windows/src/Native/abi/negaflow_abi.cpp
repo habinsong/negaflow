@@ -147,6 +147,8 @@ static_assert(sizeof(nf_develop_export_request_v30) == 4976U);
 static_assert(offsetof(nf_develop_export_request_v30, tiff_compression) == 4960U);
 static_assert(sizeof(nf_develop_export_request_v31) == 4992U);
 static_assert(offsetof(nf_develop_export_request_v31, output_bit_depth) == 4976U);
+static_assert(sizeof(nf_develop_export_request_v32) == 5008U);
+static_assert(offsetof(nf_develop_export_request_v32, output_color_space) == 4992U);
 static_assert(sizeof(nf_grain_mend_detect_parameters_v1) == 40U);
 static_assert(sizeof(nf_grain_mend_detect_parameters_v2) == 72U);
 static_assert(offsetof(nf_grain_mend_detect_parameters_v2, dust_sensitivity) == 40U);
@@ -2443,6 +2445,26 @@ void fail_defect_region_request(
     return true;
 }
 
+[[nodiscard]] bool map_request_v32(
+    const nf_develop_export_request_v32& request,
+    const bool require_destination,
+    negaflow::pipeline::DevelopExportRequest& pipeline_request,
+    nf_develop_export_result_v2& result) noexcept {
+    if (request.output_space_reserved0 != 0U ||
+        request.output_space_reserved1 != 0U ||
+        request.output_space_reserved2 != 0U ||
+        request.output_color_space > 2U) {
+        fail_defect_region_request(result, "invalid_output_color_space");
+        return false;
+    }
+    if (!map_request_v31(request.v31, require_destination, pipeline_request, result)) {
+        return false;
+    }
+    pipeline_request.output_color_space =
+        static_cast<negaflow::color::OutputColorSpace>(request.output_color_space);
+    return true;
+}
+
 [[nodiscard]] std::uint64_t elapsed_microseconds(
     const std::chrono::steady_clock::time_point started,
     const std::chrono::steady_clock::time_point finished) noexcept {
@@ -3162,6 +3184,23 @@ void write_outcome_v2(
     result->failed_stage = NF_DEVELOP_STAGE_NONE;
     copy_failure_name("ok", result->failure_name);
     status = NF_STATUS_OK;
+    return true;
+}
+
+[[nodiscard]] bool prepare_result_v32(
+    const nf_develop_export_request_v32* const request,
+    nf_develop_export_result_v3* const result,
+    nf_status_t& status) noexcept {
+    if (request == nullptr || result == nullptr) {
+        status = NF_STATUS_INVALID_ARGUMENT;
+        return false;
+    }
+    if (request->v31.v30.v29.v28.v27.v26.v25.v24.v21.v20.v19.v18.v17.v16.v15.v14.v13.v12.v11
+                .v10.v9.v8.struct_size < static_cast<std::uint32_t>(sizeof(*request)) ||
+        result->struct_size < static_cast<std::uint32_t>(sizeof(*result))) {
+        status = NF_STATUS_STRUCT_TOO_SMALL;
+        return false;
+    }
     return true;
 }
 
@@ -5347,6 +5386,71 @@ nf_status_t NF_CALL nf_develop_preview_v31(
     mapping_result.struct_size = static_cast<std::uint32_t>(sizeof(mapping_result));
     copy_failure_name("ok", mapping_result.failure_name);
     if (!map_request_v31(*request, false, pipeline_request, mapping_result)) {
+        write_request_rejection_v3(mapping_result, *result);
+        return NF_STATUS_OK;
+    }
+    const auto started = std::chrono::steady_clock::now();
+    const auto outcome = negaflow::pipeline::develop_preview(
+        pipeline_request, maximum_width, maximum_height, pixels,
+        static_cast<std::size_t>(pixel_capacity_bytes), control, proof);
+    write_outcome_v3(outcome, elapsed_microseconds(started, std::chrono::steady_clock::now()), *result);
+    return NF_STATUS_OK;
+}
+
+nf_status_t NF_CALL nf_develop_export_v32(
+    const nf_develop_export_request_v32* const request,
+    nf_develop_run_state_v1* const run_state,
+    nf_develop_export_result_v3* const result) {
+    nf_status_t status = NF_STATUS_OK;
+    if (!prepare_result_v32(request, result, status)) return status;
+    negaflow::pipeline::DevelopRunControl control{};
+    if (!prepare_run_state(run_state, control, status)) return status;
+    negaflow::pipeline::DevelopExportRequest pipeline_request{};
+    nf_develop_export_result_v2 mapping_result{};
+    mapping_result.struct_size = static_cast<std::uint32_t>(sizeof(mapping_result));
+    copy_failure_name("ok", mapping_result.failure_name);
+    if (!map_request_v32(*request, true, pipeline_request, mapping_result)) {
+        write_request_rejection_v3(mapping_result, *result);
+        return NF_STATUS_OK;
+    }
+    const auto started = std::chrono::steady_clock::now();
+    const auto outcome = negaflow::pipeline::develop_and_export(pipeline_request, control);
+    write_outcome_v3(outcome, elapsed_microseconds(started, std::chrono::steady_clock::now()), *result);
+    return NF_STATUS_OK;
+}
+
+nf_status_t NF_CALL nf_develop_preview_v32(
+    const nf_develop_export_request_v32* const request,
+    const nf_soft_proof_v1* const soft_proof,
+    const uint32_t maximum_width,
+    const uint32_t maximum_height,
+    uint8_t* const pixels,
+    const uint32_t pixel_capacity_bytes,
+    nf_develop_run_state_v1* const run_state,
+    nf_develop_export_result_v3* const result) {
+    nf_status_t status = NF_STATUS_OK;
+    if (!prepare_result_v32(request, result, status)) return status;
+    if (pixels == nullptr) return NF_STATUS_INVALID_ARGUMENT;
+    negaflow::pipeline::DevelopPreviewProof proof{};
+    if (soft_proof != nullptr) {
+        if (soft_proof->struct_size < static_cast<std::uint32_t>(sizeof(*soft_proof))) {
+            return NF_STATUS_STRUCT_TOO_SMALL;
+        }
+        proof.enabled = soft_proof->enabled != 0U;
+        proof.simulate_paper_and_black_ink =
+            soft_proof->simulate_paper_and_black_ink != 0U;
+        for (std::size_t channel = 0U; channel < 3U; ++channel) {
+            proof.paper.white[channel] = static_cast<double>(soft_proof->paper_white_rgb[channel]);
+            proof.paper.black[channel] = static_cast<double>(soft_proof->black_ink_rgb[channel]);
+        }
+    }
+    negaflow::pipeline::DevelopRunControl control{};
+    if (!prepare_run_state(run_state, control, status)) return status;
+    negaflow::pipeline::DevelopExportRequest pipeline_request{};
+    nf_develop_export_result_v2 mapping_result{};
+    mapping_result.struct_size = static_cast<std::uint32_t>(sizeof(mapping_result));
+    copy_failure_name("ok", mapping_result.failure_name);
+    if (!map_request_v32(*request, false, pipeline_request, mapping_result)) {
         write_request_rejection_v3(mapping_result, *result);
         return NF_STATUS_OK;
     }
