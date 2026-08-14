@@ -32,8 +32,13 @@
                     Tag="Library">
                     <FontIcon x:Name="LibraryRailIcon" FontSize="15" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" Glyph="&#xE8FD;" />
                 </Button>
-                <Button x:Name="FilesRailButton" Style="{StaticResource NegaflowSidebarButtonStyle}">
-                    <FontIcon FontSize="15" Glyph="&#xE8B7;" />
+                <Button
+                    x:Name="FilesRailButton"
+                    AutomationProperties.AutomationId="negaflow.develop.sources.files.rail"
+                    Click="OnDevelopSourceRailClicked"
+                    Style="{StaticResource NegaflowSidebarButtonStyle}"
+                    Tag="Files">
+                    <FontIcon x:Name="FilesRailIcon" FontSize="15" Glyph="&#xE8B7;" />
                 </Button>
                 <Button
                     x:Name="VersionsRailButton"
@@ -704,6 +709,48 @@
                         </StackPanel>
                     </StackPanel>
                 </ScrollViewer>
+
+                <TreeView
+                    x:Name="DevelopFilesSourceTree"
+                    Grid.Row="2"
+                    Padding="4,6"
+                    AutomationProperties.AutomationId="negaflow.develop.sources.files"
+                    CanDragItems="False"
+                    CanReorderItems="False"
+                    ItemInvoked="OnDevelopFilesTreeItemInvoked"
+                    SelectionMode="Single"
+                    Visibility="Collapsed">
+                    <TreeView.ItemTemplate>
+                        <DataTemplate x:DataType="TreeViewNode">
+                            <TreeViewItem
+                                AutomationProperties.Name="{Binding Content.Title, Mode=OneWay}"
+                                IsExpanded="{Binding IsExpanded, Mode=TwoWay}"
+                                ItemsSource="{Binding Children}">
+                                <Grid ColumnSpacing="6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon
+                                        FontSize="12"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        Glyph="{Binding Content.Glyph, Mode=OneWay}" />
+                                    <TextBlock
+                                        Grid.Column="1"
+                                        FontSize="12"
+                                        Text="{Binding Content.Title, Mode=OneWay}"
+                                        TextTrimming="CharacterEllipsis" />
+                                    <TextBlock
+                                        Grid.Column="2"
+                                        FontSize="11"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        Text="{Binding Content.Detail, Mode=OneWay}" />
+                                </Grid>
+                            </TreeViewItem>
+                        </DataTemplate>
+                    </TreeView.ItemTemplate>
+                </TreeView>
 
                 <ScrollViewer x:Name="LibrarySourcePanel" Grid.Row="2">
                     <StackPanel Padding="12,14" Spacing="10">

@@ -1877,6 +1877,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private enum DevelopSourceKind
     {
         Library,
+        Files,
         Versions,
         Presets,
         Film,
@@ -1886,6 +1887,11 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private void UpdateDevelopSourcePanel()
     {
         LibrarySourcePanel.Visibility = Show(DevelopSourceKind.Library);
+        DevelopFilesSourceTree.Visibility = Show(DevelopSourceKind.Files);
+        if (developSource == DevelopSourceKind.Files)
+        {
+            RebuildDevelopFilesTree();
+        }
         VersionsSourcePanel.Visibility = Show(DevelopSourceKind.Versions);
         PresetsSourcePanel.Visibility = Show(DevelopSourceKind.Presets);
         FilmSourcePanel.Visibility = Show(DevelopSourceKind.Film);
@@ -1893,6 +1899,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
 
         (string headerKey, string glyph) = developSource switch
         {
+            DevelopSourceKind.Files => ("sidebarFiles", ""),
             DevelopSourceKind.Versions => ("developSectionVersions", ""),
             DevelopSourceKind.Presets => ("developSectionPresets", "\uE9E9"),
             DevelopSourceKind.Film => ("developSectionFilm", ""),
@@ -1921,12 +1928,65 @@ public sealed partial class DevelopWorkspaceView : UserControl
         UpdatePresetControls();
     }
 
+    /// <summary>
+    /// 라이브러리와 같은 폴더 트리입니다. 같은 투영을 쓰므로 두 화면이 서로 다른 폴더 목록을
+    /// 보여 주지 않습니다.
+    /// </summary>
+    private void RebuildDevelopFilesTree()
+    {
+        DevelopFilesSourceTree.RootNodes.Clear();
+        if (libraryHost is null)
+        {
+            return;
+        }
+        LibraryBrowserProjection projection = LibraryBrowserProjector.Create(
+            LibraryFrameListItems.From(
+                libraryHost.Frames,
+                libraryHost.SourceAvailabilityByFrameId),
+            libraryHost.Folders,
+            libraryHost.FolderAvailabilityById,
+            LibraryBrowserViewMode.Folders);
+        foreach (LibraryBrowserFolderSection section in projection.FolderSections)
+        {
+            var folder = new TreeViewNode
+            {
+                Content = LibrarySourceNode.Folder(
+                    section.Title,
+                    AppResources.FormatIntegers("libraryFolderFrameCount", "Text", section.Count)),
+            };
+            foreach (LibraryFrameListItem item in section.Items)
+            {
+                folder.Children.Add(new TreeViewNode
+                {
+                    Content = LibrarySourceNode.Frame(item.DisplayName, item.Id),
+                });
+            }
+            DevelopFilesSourceTree.RootNodes.Add(folder);
+        }
+    }
+
+    /// <summary>트리에서 frame 을 누르면 그 장을 현상 대상으로 잡습니다.</summary>
+    private void OnDevelopFilesTreeItemInvoked(TreeView sender, TreeViewItemInvokedEventArgs args)
+    {
+        _ = sender;
+        if (args.InvokedItem is not TreeViewNode { Content: LibrarySourceNode node } ||
+            node.FrameId is not { } frameId ||
+            panel is null)
+        {
+            return;
+        }
+        panel.Select(frameId);
+        SynchronizeInspectorValues();
+        RequestPreview();
+    }
+
     private Visibility Show(DevelopSourceKind kind) =>
         developSource == kind ? Visibility.Visible : Visibility.Collapsed;
 
     private IEnumerable<(Button Button, FontIcon Icon, DevelopSourceKind Kind)> DevelopSourceRailButtons()
     {
         yield return (LibraryRailButton, LibraryRailIcon, DevelopSourceKind.Library);
+        yield return (FilesRailButton, FilesRailIcon, DevelopSourceKind.Files);
         yield return (VersionsRailButton, VersionsRailIcon, DevelopSourceKind.Versions);
         yield return (PresetsRailButton, PresetsRailIcon, DevelopSourceKind.Presets);
         yield return (FilmRailButton, FilmRailIcon, DevelopSourceKind.Film);
