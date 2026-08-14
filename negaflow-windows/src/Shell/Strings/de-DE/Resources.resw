@@ -893,4 +893,6 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developExportRecipeDefaultName.Text" xml:space="preserve"><value>Exporteinstellungen %d</value><comment>ExportRecipeLocalizedText.defaultName</comment></data>
   <data name="developExportPngBitDepth.Text" xml:space="preserve"><value>PNG-Bittiefe</value><comment>ExportEncoding.pngBitDepth</comment></data>
   <data name="developExportTiffBitDepth.Text" xml:space="preserve"><value>TIFF-Bittiefe</value><comment>ExportEncoding.tiffBitDepth</comment></data>
+  <data name="scanSimulator.Content" xml:space="preserve"><value>Scanner-Simulator</value><comment>AppLocalizedPhrase.scannerSimulator</comment></data>
+  <data name="scanSimulatorHelp.Text" xml:space="preserve"><value>Integrierter Simulator, um den Scan-Workflow ohne Plug-in auszuprobieren.</value><comment>AppLocalizedPhrase.scannerSimulatorHelp</comment></data>
 </root>

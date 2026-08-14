@@ -401,7 +401,10 @@ public sealed class LibraryHostService : IDisposable
                 CatalogStoreError.None);
         }
 
-        FrameImportPlan plan = FrameImport.PlanScanner(scan, document.Frames);
+        FrameImportPlan plan = FrameImport.PlanScanner(
+            scan,
+            document.Frames,
+            sourceMetadataReader: sourceMetadataReader);
         if (plan.Rows.Count != 1)
         {
             if (existingReceipt is not null && HasPublishedFrame(scan))

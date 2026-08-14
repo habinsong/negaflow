@@ -893,4 +893,6 @@ Load a scanner from Library to scan film.</value>
   <data name="developExportRecipeDefaultName.Text" xml:space="preserve"><value>Export Settings %d</value><comment>ExportRecipeLocalizedText.defaultName</comment></data>
   <data name="developExportPngBitDepth.Text" xml:space="preserve"><value>PNG Bit Depth</value><comment>ExportEncoding.pngBitDepth</comment></data>
   <data name="developExportTiffBitDepth.Text" xml:space="preserve"><value>TIFF Bit Depth</value><comment>ExportEncoding.tiffBitDepth</comment></data>
+  <data name="scanSimulator.Content" xml:space="preserve"><value>Scanner Simulator</value><comment>AppLocalizedPhrase.scannerSimulator</comment></data>
+  <data name="scanSimulatorHelp.Text" xml:space="preserve"><value>Built-in simulator for demonstrating the scan workflow without a plug-in.</value><comment>AppLocalizedPhrase.scannerSimulatorHelp</comment></data>
 </root>

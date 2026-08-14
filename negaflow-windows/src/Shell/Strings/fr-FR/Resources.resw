@@ -893,4 +893,6 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="developExportRecipeDefaultName.Text" xml:space="preserve"><value>Réglages d’exportation %d</value><comment>ExportRecipeLocalizedText.defaultName</comment></data>
   <data name="developExportPngBitDepth.Text" xml:space="preserve"><value>Profondeur PNG</value><comment>ExportEncoding.pngBitDepth</comment></data>
   <data name="developExportTiffBitDepth.Text" xml:space="preserve"><value>Profondeur TIFF</value><comment>ExportEncoding.tiffBitDepth</comment></data>
+  <data name="scanSimulator.Content" xml:space="preserve"><value>Simulateur de scanner</value><comment>AppLocalizedPhrase.scannerSimulator</comment></data>
+  <data name="scanSimulatorHelp.Text" xml:space="preserve"><value>Simulateur intégré pour découvrir le flux de numérisation sans module.</value><comment>AppLocalizedPhrase.scannerSimulatorHelp</comment></data>
 </root>

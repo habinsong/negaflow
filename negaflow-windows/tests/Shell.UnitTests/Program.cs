@@ -69,6 +69,7 @@ internal static class Program
         VerifyExportDestination();
         VerifyExportSettingsReachTheRequest();
         VerifyScanSession();
+        VerifyScannerSimulator();
         VerifyExportBatchPlan();
         VerifyExportSidecar();
         VerifyLibraryCollections();
@@ -4693,6 +4694,172 @@ internal static class Program
             (again with { SelectedId = "missing" }).Normalize().SelectedId is null,
             "export_recipe_drops_a_dangling_selection");
         Check(again.Delete(again.Recipes[0].Id).Recipes.Count == 0, "export_recipe_delete");
+    }
+
+    /// <summary>
+    /// 시뮬레이터로 스캔 경로를 끝까지 돌립니다. 이 기계에는 필름 스캐너도 플러그인도 없으므로,
+    /// 검출부터 카탈로그 게시까지가 실제로 이어지는지 확인할 수 있는 유일한 길입니다.
+    /// </summary>
+    private static void VerifyScannerSimulator()
+    {
+        string parent = Path.Combine(AppContext.BaseDirectory, "scan-simulator-tests");
+        string isolatedBase = Path.Combine(parent, $"{Environment.ProcessId}-{Guid.NewGuid():N}");
+        StorageRootSet roots = StorageRootResolver.ResolveForTests(isolatedBase).Roots!;
+        var dispatcher = new ImmediateUiDispatcher();
+        try
+        {
+            using (CatalogSession session = CatalogSession.Open(roots).Session!)
+            {
+                Check(session.ReadOrCreate().IsSuccess, "simulator_catalog_create");
+            }
+
+            var trust = new ScannerPluginTrustStore(Path.Combine(isolatedBase, "trust.json"));
+            // 이 시험 프로세스는 네이티브를 띄우지 않으므로 TIFF probe 만 관리 코드로 읽습니다.
+            // 합성 TIFF 가 실제 디코더로도 읽히는지는 네이티브 하네스가 따로 확인했습니다.
+            var session2 = new ScanSessionController(
+                new FakeScannerGateway(Path.Combine(isolatedBase, "no-plugins")),
+                trust,
+                dispatcher,
+                new SimulatedScannerGateway(ReadTiffHeader));
+            Check(session2.State == ScanSessionState.NoPlugin, "simulator_off_has_no_plugin");
+
+            session2.SetSimulatorEnabled(true);
+            // 시뮬레이터는 이 앱의 코드이므로 승인을 묻지 않습니다.
+            Check(
+                session2.State == ScanSessionState.NoDevice &&
+                session2.PluginsRequiringApproval.Count == 0,
+                "simulator_needs_no_approval");
+
+            session2.RefreshDevicesAsync().GetAwaiter().GetResult();
+            Check(session2.State == ScanSessionState.Ready, "simulator_finds_devices");
+            Check(session2.Devices.Count == 2, "simulator_offers_film_and_flatbed");
+            Check(
+                session2.Resolutions.SequenceEqual([900, 1800, 3600, 7200]),
+                "simulator_film_resolutions");
+            Check(session2.CanScan && session2.CanPreview, "simulator_can_scan");
+
+            using var library = new LibraryHostService(
+                dispatcher,
+                new ThrowingDevelopExporter(),
+                ReadTiffHeader);
+            Check(library.Open(roots) == LibraryHostState.Open, "simulator_library_open");
+            Check(library.Frames.Count == 0, "simulator_library_starts_empty");
+
+            string rollDirectory = ScanStorageLayout.EnsureRollDirectory(
+                Path.Combine(roots.LibraryRoot, "Scans"),
+                FilmType.ColorNegative,
+                "Simulated",
+                DateTime.Now);
+            session2.UpdateOptions(options => options with { ResolutionDpi = 1800, BatchCount = 2 });
+            ScanRunOutcome outcome = session2.RunAsync(
+                library,
+                _ => ScanStorageLayout.NextAvailablePath(rollDirectory, "Simulator"),
+                preview: false).GetAwaiter().GetResult();
+
+            Check(outcome.IsSuccess, "simulator_scan_publishes");
+            Check(outcome.Published == 2, "simulator_scan_publishes_the_whole_batch");
+            Check(library.Frames.Count == 2, "simulator_frames_reach_the_catalog");
+
+            if (library.Frames.Count == 0)
+            {
+                Check(false, "simulator_scan_publishes_nothing");
+                return;
+            }
+            // 게시된 원본은 실제 디코더가 읽는 TIFF 여야 합니다.
+            LibraryFrameSnapshot published = library.Frames[0];
+            Check(File.Exists(published.SourcePath), "simulator_source_exists");
+            Check(
+                published.SourceMetadata is { IsValid: true, SamplesPerPixel: 3, BitsPerSample: 16 },
+                "simulator_source_metadata_is_readable");
+            Check(
+                published.Route.FilmType == FilmType.ColorNegative &&
+                published.Route.SourceTransport == FrameSourceTransport.Scanner,
+                "simulator_frame_route_says_scanner");
+            // 두 장이 서로 다른 파일이어야 합니다 — 배치가 같은 자리를 덮으면 안 됩니다.
+            Check(
+                library.Frames.Count == 2 && !string.Equals(
+                    library.Frames[0].SourcePath,
+                    library.Frames[1].SourcePath,
+                    StringComparison.OrdinalIgnoreCase),
+                "simulator_batch_never_overwrites");
+        }
+        finally
+        {
+            if (Directory.Exists(isolatedBase) &&
+                StoragePathPolicy.IsLexicallyContained(parent, isolatedBase))
+            {
+                try
+                {
+                    Directory.Delete(isolatedBase, true);
+                }
+                catch (IOException)
+                {
+                    // 시험 뒤처리 실패는 시험 결과가 아닙니다.
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// 합성 TIFF 의 첫 IFD 만 읽습니다. 관리 코드로 충분한 이유는 이 시험이 확인하려는 것이
+    /// 디코더가 아니라 스캔→커밋→게시의 연결이기 때문입니다.
+    /// </summary>
+    private static LibrarySourceMetadata? ReadTiffHeader(string path)
+    {
+        using FileStream stream = File.OpenRead(path);
+        Span<byte> header = stackalloc byte[8];
+        stream.ReadExactly(header);
+        if (header[0] != (byte)'I' || header[1] != (byte)'I')
+        {
+            return null;
+        }
+        stream.Position = BitConverter.ToUInt32(header[4..]);
+        Span<byte> countBytes = stackalloc byte[2];
+        stream.ReadExactly(countBytes);
+        int entries = BitConverter.ToUInt16(countBytes);
+        var tags = new Dictionary<ushort, uint>();
+        byte[] entry = new byte[12];
+        for (int index = 0; index < entries; ++index)
+        {
+            stream.ReadExactly(entry);
+            tags[BitConverter.ToUInt16(entry)] = BitConverter.ToUInt32(entry, 8);
+        }
+        if (!tags.TryGetValue(256, out uint width) || !tags.TryGetValue(257, out uint height))
+        {
+            return null;
+        }
+        return new LibrarySourceMetadata(
+            (ulong)new FileInfo(path).Length,
+            width,
+            height,
+            (ushort)(tags.TryGetValue(277, out uint spp) ? spp : 3U),
+            16,
+            1,
+            (ushort)(tags.TryGetValue(274, out uint orient) ? orient : 1U));
+    }
+
+    /// <summary>이 시험은 현상을 부르지 않습니다. 불리면 그것 자체가 실패입니다.</summary>
+    private sealed class ThrowingDevelopExporter : IDevelopExporter
+    {
+        public DevelopExportResult Run(DevelopExportRequest request) =>
+            throw new NotSupportedException();
+
+        public DevelopExportResult Preview(
+            DevelopExportRequest request,
+            uint maximumWidth,
+            uint maximumHeight,
+            byte[] pixels,
+            DevelopRun? run = null,
+            SoftProofSettings? softProof = null) =>
+            throw new NotSupportedException();
+
+        public GrainMendDetectionResult DetectGrainMend(
+            DevelopExportRequest request,
+            byte[] mask,
+            DefectRect rawRoi,
+            GrainMendDetectionOptions options,
+            DevelopRun? run = null) =>
+            throw new NotSupportedException();
     }
 
     /// <summary>

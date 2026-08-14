@@ -983,6 +983,25 @@ public sealed partial class LibraryWorkspaceView : UserControl
         }
     }
 
+    /// <summary>
+    /// 하드웨어 없이 스캔 흐름을 돌립니다. 켜면 가상 장치가 나타나고, 스캔은 합성 네거티브를
+    /// 실제와 같은 게시 경로로 카탈로그에 올립니다.
+    /// </summary>
+    private async void OnScanSimulatorToggled(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (isSynchronizingScan || scanSession is null)
+        {
+            return;
+        }
+        scanSession.SetSimulatorEnabled(ScanSimulatorToggle.IsOn);
+        if (scanSession.State is ScanSessionState.NoDevice)
+        {
+            await scanSession.RefreshDevicesAsync();
+        }
+    }
+
     private async void OnScanRescanClicked(object sender, RoutedEventArgs args)
     {
         _ = sender;
@@ -1199,6 +1218,15 @@ public sealed partial class LibraryWorkspaceView : UserControl
             ScanSessionState.NoDevice => AppResources.Get("scanWaitingStatus", "Text"),
             _ => string.Empty,
         };
+        isSynchronizingScan = true;
+        try
+        {
+            ScanSimulatorToggle.IsOn = scanSession.SimulatorEnabled;
+        }
+        finally
+        {
+            isSynchronizingScan = false;
+        }
         ScanStateText.Visibility = ScanStateText.Text.Length == 0
             ? Visibility.Collapsed
             : Visibility.Visible;
@@ -1326,6 +1354,14 @@ public sealed partial class LibraryWorkspaceView : UserControl
         ScanDeviceLabel.Text = AppResources.Get("libraryScannerLabel", "Content");
         AutomationProperties.SetName(ScanDeviceSelector, ScanDeviceLabel.Text);
         SetButtonText(ScanApprovePluginButton, AppResources.Get("scanPluginApprove", "Content"));
+        string simulator = AppResources.Get("scanSimulator", "Content");
+        ScanSimulatorToggle.Header = simulator;
+        ScanSimulatorToggle.OnContent = simulator;
+        ScanSimulatorToggle.OffContent = simulator;
+        AutomationProperties.SetName(ScanSimulatorToggle, simulator);
+        ToolTipService.SetToolTip(
+            ScanSimulatorToggle,
+            AppResources.Get("scanSimulatorHelp", "Text"));
         string rescan = AppResources.Get("scanDetectScanners", "Text");
         AutomationProperties.SetName(ScanRescanButton, rescan);
         ToolTipService.SetToolTip(ScanRescanButton, rescan);

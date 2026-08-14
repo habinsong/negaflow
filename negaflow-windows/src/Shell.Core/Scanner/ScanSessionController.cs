@@ -142,17 +142,20 @@ public sealed class ScanSessionController
     public const int MaximumBatchCount = 12;
 
     private readonly IScannerPluginGateway gateway;
+    private readonly SimulatedScannerGateway simulator;
     private readonly ScannerPluginTrustStore trust;
     private readonly IUiDispatcher dispatcher;
 
     public ScanSessionController(
         IScannerPluginGateway gateway,
         ScannerPluginTrustStore trust,
-        IUiDispatcher dispatcher)
+        IUiDispatcher dispatcher,
+        SimulatedScannerGateway? simulator = null)
     {
         ArgumentNullException.ThrowIfNull(gateway);
         ArgumentNullException.ThrowIfNull(trust);
         ArgumentNullException.ThrowIfNull(dispatcher);
+        this.simulator = simulator ?? new SimulatedScannerGateway();
         this.gateway = gateway;
         this.trust = trust;
         this.dispatcher = dispatcher;
@@ -179,6 +182,28 @@ public sealed class ScanSessionController
 
     /// <summary>마지막 실패의 이유입니다. 성공하면 지웁니다.</summary>
     public string? LastFailureName { get; private set; }
+
+    /// <summary>
+    /// 하드웨어 없이 스캔 흐름을 돌립니다. macOS 의 스캐너 시뮬레이터와 같은 자리이며, 켜면
+    /// 설치된 플러그인 대신 가상 장치를 씁니다.
+    /// </summary>
+    public bool SimulatorEnabled { get; private set; }
+
+    public void SetSimulatorEnabled(bool enabled)
+    {
+        if (SimulatorEnabled == enabled)
+        {
+            return;
+        }
+        SimulatorEnabled = enabled;
+        Devices = [];
+        SelectedDevice = null;
+        Capabilities = null;
+        Refresh();
+    }
+
+    /// <summary>지금 쓰는 경계입니다. 시뮬레이터가 켜져 있으면 가상 백엔드입니다.</summary>
+    private IScannerPluginGateway ActiveGateway => SimulatorEnabled ? simulator : gateway;
 
     public ScanSessionState State
     {
@@ -255,8 +280,10 @@ public sealed class ScanSessionController
     /// <summary>플러그인 목록과 승인 상태를 다시 읽습니다. 장치는 건드리지 않습니다.</summary>
     public void Refresh()
     {
-        Plugins = gateway.Discover();
-        PluginsRequiringApproval = trust.PluginsRequiringApproval(Plugins);
+        Plugins = ActiveGateway.Discover();
+        // 시뮬레이터는 이 앱의 코드입니다. 승인은 우리가 고르지 않은 제3자 바이트를 실행하기
+        // 전에 묻는 것이므로 물을 것이 없습니다.
+        PluginsRequiringApproval = SimulatorEnabled ? [] : trust.PluginsRequiringApproval(Plugins);
         if (Plugins.Count == 0)
         {
             Devices = [];
@@ -265,6 +292,9 @@ public sealed class ScanSessionController
         }
         Changed?.Invoke(this, EventArgs.Empty);
     }
+
+    private ScannerPluginTrustIdentity? ApprovedIdentityFor(InstalledScannerPlugin plugin) =>
+        SimulatorEnabled ? plugin.TrustIdentity : trust.ApprovedIdentityFor(plugin);
 
     public void Approve(InstalledScannerPlugin plugin)
     {
@@ -290,12 +320,12 @@ public sealed class ScanSessionController
         {
             foreach (InstalledScannerPlugin plugin in Plugins)
             {
-                if (trust.ApprovedIdentityFor(plugin) is not { } identity)
+                if (ApprovedIdentityFor(plugin) is not { } identity)
                 {
                     continue;
                 }
                 ScannerPluginDetectResult result =
-                    await gateway.DetectAsync(plugin, identity, cancellationToken)
+                    await ActiveGateway.DetectAsync(plugin, identity, cancellationToken)
                         .ConfigureAwait(false);
                 if (result.IsSuccess)
                 {
@@ -357,11 +387,11 @@ public sealed class ScanSessionController
         }
         foreach (InstalledScannerPlugin plugin in Plugins)
         {
-            if (trust.ApprovedIdentityFor(plugin) is not { } identity)
+            if (ApprovedIdentityFor(plugin) is not { } identity)
             {
                 continue;
             }
-            ScannerPluginCapabilitiesResult result = await gateway
+            ScannerPluginCapabilitiesResult result = await ActiveGateway
                 .GetCapabilitiesAsync(plugin, identity, device, cancellationToken)
                 .ConfigureAwait(false);
             if (!result.IsSuccess)
@@ -484,12 +514,12 @@ public sealed class ScanSessionController
                     break;
                 }
                 InstalledScannerPlugin? plugin = Plugins.FirstOrDefault(candidate =>
-                    trust.ApprovedIdentityFor(candidate) is not null);
-                if (plugin is null || trust.ApprovedIdentityFor(plugin) is not { } identity)
+                    ApprovedIdentityFor(candidate) is not null);
+                if (plugin is null || ApprovedIdentityFor(plugin) is not { } identity)
                 {
                     break;
                 }
-                ScannerPluginLibraryScanResult result = await gateway
+                ScannerPluginLibraryScanResult result = await ActiveGateway
                     .ScanAndPublishAsync(plugin, identity, request, library, cancellationToken)
                     .ConfigureAwait(false);
                 lastStatus = result.Status;

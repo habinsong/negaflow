@@ -138,6 +138,10 @@
                                     AutomationProperties.AutomationId="negaflow.library.scan.approve"
                                     Click="OnScanApprovePluginClicked"
                                     Visibility="Collapsed" />
+                                <ToggleSwitch
+                                    x:Name="ScanSimulatorToggle"
+                                    AutomationProperties.AutomationId="negaflow.library.scan.simulator"
+                                    Toggled="OnScanSimulatorToggled" />
 
                                 <StackPanel x:Name="ScanControls" Spacing="9" Visibility="Collapsed">
                                     <Grid ColumnSpacing="6">

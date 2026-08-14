@@ -893,4 +893,6 @@
   <data name="developExportRecipeDefaultName.Text" xml:space="preserve"><value>書き出し設定 %d</value><comment>ExportRecipeLocalizedText.defaultName</comment></data>
   <data name="developExportPngBitDepth.Text" xml:space="preserve"><value>PNGビット深度</value><comment>ExportEncoding.pngBitDepth</comment></data>
   <data name="developExportTiffBitDepth.Text" xml:space="preserve"><value>TIFFビット深度</value><comment>ExportEncoding.tiffBitDepth</comment></data>
+  <data name="scanSimulator.Content" xml:space="preserve"><value>スキャナーシミュレーター</value><comment>AppLocalizedPhrase.scannerSimulator</comment></data>
+  <data name="scanSimulatorHelp.Text" xml:space="preserve"><value>プラグインなしでスキャンワークフローを試せる内蔵シミュレーターです。</value><comment>AppLocalizedPhrase.scannerSimulatorHelp</comment></data>
 </root>

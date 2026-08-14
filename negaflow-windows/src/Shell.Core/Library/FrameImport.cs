@@ -140,7 +140,8 @@ public static class FrameImport
         ScannerFrameImport scan,
         IReadOnlyList<LibraryFrameSnapshot> existingFrames,
         Func<string, bool>? fileExists = null,
-        Func<string>? newId = null)
+        Func<string>? newId = null,
+        Func<string, LibrarySourceMetadata?>? sourceMetadataReader = null)
     {
         ArgumentNullException.ThrowIfNull(scan);
         ArgumentNullException.ThrowIfNull(existingFrames);
@@ -201,6 +202,12 @@ public static class FrameImport
         if (scan.InfraredPath is { } validInfrared)
         {
             record[LibraryFrameReader.InfraredPathName] = validInfrared;
+        }
+        // 스캔한 frame 도 가져온 frame 과 같은 원본 성질을 적습니다. 이 값이 없으면 relink 가
+        // 다른 사진을 같은 자리에 연결하는 것을 막지 못합니다.
+        if (sourceMetadataReader?.Invoke(scan.VisiblePath) is { IsValid: true } scannedMetadata)
+        {
+            record[LibraryFrameReader.SourceMetadataName] = WriteSourceMetadata(scannedMetadata);
         }
         DevelopRouteWriteResult written = DevelopRouteWriter.Apply(
             record,
