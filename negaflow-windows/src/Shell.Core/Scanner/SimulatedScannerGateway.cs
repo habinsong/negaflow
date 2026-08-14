@@ -1,4 +1,5 @@
 using Negaflow.Catalog;
+using Negaflow.Interop;
 
 namespace Negaflow.Shell;
 
@@ -28,6 +29,9 @@ public sealed class SimulatedScannerGateway : IScannerPluginGateway
     public const string FilmScannerId = "simulated-plustek-8200i";
     public const string FlatbedScannerId = "simulated-negaflow-flatbed";
     public const string PluginId = "negaflow.simulator";
+
+    /// <summary>합성 프리뷰의 스트립에 놓는 컷 수입니다. 35mm 다섯 컷이 A4 폭에 들어갑니다.</summary>
+    public const int SimulatedStripFrameCount = 5;
 
     private static readonly ScannerPluginTrustIdentity Identity = new(
         PluginId,
@@ -169,9 +173,15 @@ public sealed class SimulatedScannerGateway : IScannerPluginGateway
     /// </summary>
     private ScannerArtifactCommitResult? Stage(ScannerPluginScanRequest request)
     {
-        int longEdge = request.Preview ? 600 : Math.Clamp(request.ResolutionDpi / 2, 600, 5400);
+        bool platePreview = request.Preview && request.Capabilities.SupportsPositionedScanArea;
+        int longEdge = request.Preview ? 900 : Math.Clamp(request.ResolutionDpi / 2, 600, 5400);
         int width = longEdge;
-        int height = Math.Max(1, (int)Math.Round(longEdge * 24.0 / 36.0));
+        // 평판 프리뷰는 유리판 비율(A4)로, 필름 스캐너는 35mm 한 컷 비율로 냅니다.
+        double aspect = platePreview
+            ? (request.Capabilities.MaxScanHeightMm ?? 297.0) /
+                (request.Capabilities.MaxScanWidthMm ?? 210.0)
+            : 24.0 / 36.0;
+        int height = Math.Max(1, (int)Math.Round(longEdge * aspect));
 
         string destination = request.DestinationVisiblePath;
         if (Path.GetDirectoryName(destination) is not { } directory)
@@ -183,12 +193,33 @@ public sealed class SimulatedScannerGateway : IScannerPluginGateway
         {
             Directory.CreateDirectory(staging);
             string stagedPath = Path.Combine(staging, Path.GetFileName(destination));
-            SyntheticNegativeTiff.Write(
-                stagedPath,
-                width,
-                height,
-                request.BitDepth,
-                string.Equals(request.ColorMode, "gray", StringComparison.Ordinal));
+            if (request.Preview && request.Capabilities.SupportsPositionedScanArea)
+            {
+                // 평판 프리뷰는 판 위에 놓인 필름 스트립을 훑은 그림이어야 합니다. 한 장짜리
+                // 장면을 내면 자동 프레임 찾기가 셀 대상이 아예 없습니다.
+                float[] strip = SyntheticFilmStrip.Luminance(
+                    width,
+                    height,
+                    request.Capabilities.MaxScanWidthMm ?? 210.0,
+                    request.Capabilities.MaxScanHeightMm ?? 297.0,
+                    FlatbedFrameFormat.FullFrame35mm,
+                    SimulatedStripFrameCount);
+                SyntheticNegativeTiff.WriteLuminance(
+                    stagedPath,
+                    strip,
+                    width,
+                    height,
+                    request.BitDepth);
+            }
+            else
+            {
+                SyntheticNegativeTiff.Write(
+                    stagedPath,
+                    width,
+                    height,
+                    request.BitDepth,
+                    string.Equals(request.ColorMode, "gray", StringComparison.Ordinal));
+            }
             return ScannerArtifactTransaction.Commit(
                 new ScannerStagedArtifacts(staging, stagedPath, null),
                 destination,

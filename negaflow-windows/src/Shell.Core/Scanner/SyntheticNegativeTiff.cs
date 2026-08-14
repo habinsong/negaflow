@@ -16,6 +16,35 @@ public static class SyntheticNegativeTiff
     /// <summary>컬러 네거티브의 오렌지 마스크입니다. 채널별 최대 투과율에 해당합니다.</summary>
     private static readonly double[] Mask = [0.92, 0.58, 0.36];
 
+    /// <summary>이미 만들어 둔 밝기 배열을 그대로 TIFF 로 씁니다.</summary>
+    public static void WriteLuminance(
+        string path,
+        ReadOnlySpan<float> luminance,
+        int width,
+        int height,
+        int bitsPerSample)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(path);
+        ArgumentOutOfRangeException.ThrowIfNotEqual(luminance.Length, width * height);
+        if (bitsPerSample is not (8 or 16))
+        {
+            throw new ArgumentOutOfRangeException(nameof(bitsPerSample));
+        }
+        const int samplesPerPixel = 3;
+        int bytesPerSample = bitsPerSample / 8;
+        int rowBytes = width * samplesPerPixel * bytesPerSample;
+        byte[] pixels = new byte[checked(rowBytes * height)];
+        for (int index = 0; index < luminance.Length; ++index)
+        {
+            int at = index * samplesPerPixel * bytesPerSample;
+            for (int channel = 0; channel < samplesPerPixel; ++channel)
+            {
+                WriteSample(pixels, at + (channel * bytesPerSample), luminance[index], bitsPerSample);
+            }
+        }
+        WriteTiff(path, width, height, bitsPerSample, samplesPerPixel, pixels, rowBytes);
+    }
+
     public static void Write(
         string path,
         int width,
