@@ -107,6 +107,9 @@ struct DevelopExportRequest final {
     negaflow::output::WicTiffCompression tiff_compression{
         negaflow::output::WicTiffCompression::none};
     std::uint32_t output_dpi{0U};
+    // 8 or 16. PNG and TIFF publish at this depth; eight-bit output is dithered before
+    // quantization, as macOS does. JPEG ignores it - it is eight-bit by definition.
+    std::uint32_t output_bit_depth{16U};
     // Zero preserves source dimensions. Positive values cap the exported long edge;
     // they never upscale and do not alter previews or GrainMend detection.
     std::uint32_t output_long_edge{0U};

@@ -620,6 +620,12 @@ public sealed class DevelopExportRequest
     /// <summary>TIFF compression. PNG and JPEG ignore it.</summary>
     public DevelopTiffCompression TiffCompression { get; init; }
 
+    /// <summary>
+    /// Published sample depth, 8 or 16. PNG and TIFF honour it; JPEG is eight-bit by
+    /// definition. Eight-bit output is dithered before quantization, as macOS does.
+    /// </summary>
+    public uint OutputBitDepth { get; init; } = 16U;
+
     /// <summary>Positive values are embedded in PNG, TIFF, and JPEG metadata and do not resize pixels.</summary>
     public uint OutputDpi { get; init; }
 

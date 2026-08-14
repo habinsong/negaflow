@@ -28,6 +28,9 @@ struct Srgb16Image final {
     std::uint32_t width{0};
     std::uint32_t height{0};
     std::uint32_t stride_bytes{0};
+    // 8 or 16. Eight-bit output is dithered before quantization; sixteen is not, which is
+    // the macOS rule - a half-step of noise is invisible at 16 bits and pointless there.
+    std::uint32_t bits_per_sample{16};
     std::vector<std::uint16_t> samples{};
 };
 
@@ -50,6 +53,30 @@ struct WorkingToSrgb16Result final {
 // materializing the 16-bit samples. The returned image has an empty samples vector.
 [[nodiscard]] WorkingToSrgb16Result inspect_working_to_srgb16(
     const negaflow::imaging::WorkingImage& working,
+    const WorkingToSrgb16Limits& limits = {}) noexcept;
+
+// Reports the packed layout for a chosen sample depth without materializing samples.
+[[nodiscard]] WorkingToSrgb16Result inspect_working_to_srgb(
+    const negaflow::imaging::WorkingImage& working,
+    std::uint32_t bits_per_sample,
+    const WorkingToSrgb16Limits& limits = {}) noexcept;
+
+// Converts one contiguous range of rows into caller-owned packed RGB bytes at the chosen
+// depth. The caller must provide row_count * width * 3 * (bits_per_sample / 8) bytes.
+//
+// Eight-bit output adds the macOS dither: plus or minus half a step of white noise in the
+// sRGB-encoded space where quantization happens, which scatters the boundary pixels of a
+// smooth gradient across neighbouring steps instead of banding them. The noise is a hash of
+// the absolute pixel coordinate, not a running sequence, so a row range converts identically
+// however the work is split - the readback check re-runs this and compares byte for byte.
+[[nodiscard]] WorkingToSrgb16Status convert_working_to_srgb_rows(
+    const negaflow::imaging::WorkingImage& working,
+    std::uint32_t bits_per_sample,
+    std::uint32_t first_row,
+    std::uint32_t row_count,
+    std::uint8_t* destination_bytes,
+    std::size_t destination_byte_capacity,
+    std::uint64_t& clipped_color_components,
     const WorkingToSrgb16Limits& limits = {}) noexcept;
 
 // Converts one contiguous range of image rows into caller-owned packed RGB samples.

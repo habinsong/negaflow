@@ -237,7 +237,7 @@ WicPngExportResult export_working_to_srgb16_png(
     WicPngExportResult result{};
     try {
         WorkingToSrgb16Result converted =
-            inspect_working_to_srgb16(working, limits.conversion);
+            inspect_working_to_srgb(working, limits.bits_per_sample, limits.conversion);
         result.conversion_status = converted.status;
         result.info.width = working.width;
         result.info.height = working.height;
@@ -332,7 +332,8 @@ WicPngExportResult export_working_to_srgb16_png(
         result.info.image_data_chunks = structure.image_data_chunks;
         if (structure_status != detail::PngStructureStatus::ok ||
             structure.width != converted.image.width ||
-            structure.height != converted.image.height || structure.bit_depth != 16U ||
+            structure.height != converted.image.height ||
+            structure.bit_depth != static_cast<std::uint8_t>(limits.bits_per_sample) ||
             structure.color_type != 2U) {
             result.status = WicPngExportStatus::structure_verification_failed;
             discard_staging(output.get(), result);

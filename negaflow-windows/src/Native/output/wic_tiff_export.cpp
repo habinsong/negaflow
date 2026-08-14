@@ -286,9 +286,9 @@ void discard_staging(
         probe.info.photometric_interpretation != 2U ||
         probe.info.planar_configuration != 1U || probe.info.orientation != 1U ||
         probe.info.bits_per_sample_count != 3U ||
-        probe.info.bits_per_sample[0] != 16U ||
-        probe.info.bits_per_sample[1] != 16U ||
-        probe.info.bits_per_sample[2] != 16U ||
+        probe.info.bits_per_sample[0] != expected.bits_per_sample ||
+        probe.info.bits_per_sample[1] != expected.bits_per_sample ||
+        probe.info.bits_per_sample[2] != expected.bits_per_sample ||
         probe.info.extra_samples_count != 0U ||
         probe.info.icc_profile_bytes != expected_profile_bytes ||
         probe.info.packed_raster_bytes !=
@@ -322,7 +322,7 @@ WicTiffExportResult export_working_to_srgb16_tiff(
             return result;
         }
         WorkingToSrgb16Result converted =
-            inspect_working_to_srgb16(working, limits.conversion);
+            inspect_working_to_srgb(working, limits.bits_per_sample, limits.conversion);
         result.conversion_status = converted.status;
         result.info.width = working.width;
         result.info.height = working.height;

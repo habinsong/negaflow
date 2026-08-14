@@ -7,9 +7,9 @@ namespace Negaflow.Shell.Develop;
 /// 기본값·같은 검사 규칙이며, 여기서 만든 값이 그대로 네이티브 요청에 실립니다.
 /// </summary>
 /// <remarks>
-/// macOS 에 있고 여기 없는 축은 출력 색공간·비트 심도·알파 보존입니다. 셋 다 네이티브 인코더가
-/// 아직 sRGB 48bpp 불투명만 게시하므로, 값만 저장해 두면 사용자가 고른 것과 나오는 파일이
-/// 갈라집니다. 엔진이 그 출력을 낼 수 있을 때 함께 엽니다.
+/// macOS 에 있고 여기 없는 축은 출력 색공간과 알파 보존입니다. 둘 다 네이티브 인코더가 아직
+/// sRGB 불투명만 게시하므로, 값만 저장해 두면 사용자가 고른 것과 나오는 파일이 갈라집니다.
+/// 엔진이 그 출력을 낼 수 있을 때 함께 엽니다.
 /// </remarks>
 public sealed record ExportSettings
 {
@@ -32,6 +32,20 @@ public sealed record ExportSettings
     public double JpegQuality { get; init; } = DefaultJpegQuality;
 
     public DevelopTiffCompression TiffCompression { get; init; } = DevelopTiffCompression.None;
+
+    /// <summary>TIFF 의 채널당 비트입니다. macOS 기본값은 16 입니다.</summary>
+    public int TiffBitDepth { get; init; } = 16;
+
+    /// <summary>PNG 의 채널당 비트입니다. macOS 기본값은 16 입니다.</summary>
+    public int PngBitDepth { get; init; } = 16;
+
+    /// <summary>고른 형식이 실제로 게시할 채널당 비트입니다. JPEG 은 정의상 8 입니다.</summary>
+    public int EffectiveBitDepth => Format switch
+    {
+        DevelopExportFormat.Tiff16 => TiffBitDepth,
+        DevelopExportFormat.Png16 => PngBitDepth,
+        _ => 8,
+    };
 
     /// <summary>0...1 의 출력 전용 언샤프 강도입니다.</summary>
     public double OutputSharpening { get; init; }
@@ -63,6 +77,8 @@ public sealed record ExportSettings
         TiffCompression = Enum.IsDefined(TiffCompression)
             ? TiffCompression
             : DevelopTiffCompression.None,
+        TiffBitDepth = TiffBitDepth == 8 ? 8 : 16,
+        PngBitDepth = PngBitDepth == 8 ? 8 : 16,
         OutputSharpening = ClampUnit(OutputSharpening, 0),
         OutputSharpeningMedium = Enum.IsDefined(OutputSharpeningMedium)
             ? OutputSharpeningMedium
@@ -146,6 +162,9 @@ public readonly record struct ExportEncodingOptions
 
     public DevelopTiffCompression TiffCompression { get; init; }
 
+    /// <summary>8 또는 16. 0 은 16 으로 봅니다 — 기본 구조체가 곧 16bit 출력입니다.</summary>
+    public int BitDepth { get; init; }
+
     public double OutputSharpening { get; init; }
 
     public OutputSharpeningMedium OutputSharpeningMedium { get; init; }
@@ -163,6 +182,7 @@ public static class ExportSettingsExtensions
             LongEdge = normalized.LongEdge,
             JpegQuality = normalized.JpegQuality,
             TiffCompression = normalized.TiffCompression,
+            BitDepth = normalized.EffectiveBitDepth,
             OutputSharpening = normalized.OutputSharpening,
             OutputSharpeningMedium = normalized.OutputSharpeningMedium,
         };
@@ -182,6 +202,7 @@ public static class ExportSettingsExtensions
         TiffCompression = Enum.IsDefined(encoding.TiffCompression)
             ? encoding.TiffCompression
             : DevelopTiffCompression.None,
+        BitDepth = encoding.BitDepth == 8 ? 8 : 16,
         OutputSharpening = ExportSettings.ClampUnit(encoding.OutputSharpening, 0),
         OutputSharpeningMedium = Enum.IsDefined(encoding.OutputSharpeningMedium)
             ? encoding.OutputSharpeningMedium

@@ -183,7 +183,10 @@ PngStructureStatus inspect_png_structure(
             info.height = read_be_u32(header.data() + 4U);
             info.bit_depth = header[8];
             info.color_type = header[9];
-            if (info.width == 0U || info.height == 0U || info.bit_depth != 16U ||
+            // 8 과 16 만 받습니다. 색 형식은 언제나 truecolour(2) 이며 팔레트나 알파는
+            // 이 경로가 게시하지 않습니다.
+            if (info.width == 0U || info.height == 0U ||
+                (info.bit_depth != 8U && info.bit_depth != 16U) ||
                 info.color_type != 2U || header[10] != 0U || header[11] != 0U ||
                 header[12] != 0U) {
                 return PngStructureStatus::invalid_header;

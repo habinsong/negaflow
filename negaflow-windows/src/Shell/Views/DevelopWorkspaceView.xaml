@@ -278,6 +278,22 @@
                                             AutomationProperties.AutomationId="negaflow.develop.output.tiff-compression"
                                             SelectionChanged="OnExportTiffCompressionChanged" />
                                     </Grid>
+                                    <Grid x:Name="ExportBitDepthRow" ColumnSpacing="8" Visibility="Collapsed">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="ExportBitDepthLabel" VerticalAlignment="Center" FontSize="12" />
+                                        <ComboBox
+                                            x:Name="ExportBitDepthSelector"
+                                            Grid.Column="1"
+                                            MinWidth="96"
+                                            AutomationProperties.AutomationId="negaflow.develop.output.bit-depth"
+                                            SelectionChanged="OnExportBitDepthChanged">
+                                            <ComboBoxItem Content="8-bit" Tag="8" />
+                                            <ComboBoxItem Content="16-bit" Tag="16" />
+                                        </ComboBox>
+                                    </Grid>
                                     <Grid ColumnSpacing="8">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />

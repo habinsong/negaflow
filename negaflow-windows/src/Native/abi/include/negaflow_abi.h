@@ -800,6 +800,18 @@ typedef struct nf_develop_export_request_v30 {
     uint32_t output_encoding_reserved2;
 } nf_develop_export_request_v30;
 
+
+/* v31 preserves v30 and appends the published sample depth. 8 or 16; PNG and TIFF honor
+   it, JPEG is eight-bit by definition and ignores it, and preview ignores it entirely.
+   Eight-bit output is dithered in the sRGB-encoded space before quantization. */
+typedef struct nf_develop_export_request_v31 {
+    nf_develop_export_request_v30 v30;
+    uint32_t output_bit_depth;
+    uint32_t output_depth_reserved0;
+    uint32_t output_depth_reserved1;
+    uint32_t output_depth_reserved2;
+} nf_develop_export_request_v31;
+
 typedef struct nf_develop_export_result_v1 {
     uint32_t struct_size;
     uint32_t succeeded;
@@ -1643,6 +1655,20 @@ NF_API nf_status_t NF_CALL nf_develop_preview_v29(
 
 NF_API nf_status_t NF_CALL nf_develop_export_v30(
     const nf_develop_export_request_v30* request,
+    nf_develop_run_state_v1* run_state,
+    nf_develop_export_result_v3* result);
+
+NF_API nf_status_t NF_CALL nf_develop_export_v31(
+    const nf_develop_export_request_v31* request,
+    nf_develop_run_state_v1* run_state,
+    nf_develop_export_result_v3* result);
+NF_API nf_status_t NF_CALL nf_develop_preview_v31(
+    const nf_develop_export_request_v31* request,
+    const nf_soft_proof_v1* soft_proof,
+    uint32_t maximum_width,
+    uint32_t maximum_height,
+    uint8_t* pixels,
+    uint32_t pixel_capacity_bytes,
     nf_develop_run_state_v1* run_state,
     nf_develop_export_result_v3* result);
 NF_API nf_status_t NF_CALL nf_develop_preview_v30(

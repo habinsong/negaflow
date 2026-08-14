@@ -606,6 +606,16 @@ internal unsafe struct NativeDevelopExportRequestV30
 }
 
 [StructLayout(LayoutKind.Sequential)]
+internal unsafe struct NativeDevelopExportRequestV31
+{
+    internal NativeDevelopExportRequestV30 V30;
+    internal uint OutputBitDepth;
+    internal uint OutputDepthReserved0;
+    internal uint OutputDepthReserved1;
+    internal uint OutputDepthReserved2;
+}
+
+[StructLayout(LayoutKind.Sequential)]
 internal unsafe struct NativeDevelopExportResultV2
 {
     internal const int FailureNameCapacity = 64;

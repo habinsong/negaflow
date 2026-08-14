@@ -891,4 +891,6 @@
   <data name="developExportRecipeSaveCurrent.Text" xml:space="preserve"><value>存储当前设置</value><comment>ExportRecipeLocalizedText.saveCurrent</comment></data>
   <data name="developExportRecipeTitle.Text" xml:space="preserve"><value>导出设置</value><comment>ExportRecipeLocalizedText.title</comment></data>
   <data name="developExportRecipeDefaultName.Text" xml:space="preserve"><value>导出设置 %d</value><comment>ExportRecipeLocalizedText.defaultName</comment></data>
+  <data name="developExportPngBitDepth.Text" xml:space="preserve"><value>PNG位深度</value><comment>ExportEncoding.pngBitDepth</comment></data>
+  <data name="developExportTiffBitDepth.Text" xml:space="preserve"><value>TIFF位深度</value><comment>ExportEncoding.tiffBitDepth</comment></data>
 </root>

@@ -891,4 +891,6 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developExportRecipeSaveCurrent.Text" xml:space="preserve"><value>Aktuelle Einstellungen sichern</value><comment>ExportRecipeLocalizedText.saveCurrent</comment></data>
   <data name="developExportRecipeTitle.Text" xml:space="preserve"><value>Exporteinstellungen</value><comment>ExportRecipeLocalizedText.title</comment></data>
   <data name="developExportRecipeDefaultName.Text" xml:space="preserve"><value>Exporteinstellungen %d</value><comment>ExportRecipeLocalizedText.defaultName</comment></data>
+  <data name="developExportPngBitDepth.Text" xml:space="preserve"><value>PNG-Bittiefe</value><comment>ExportEncoding.pngBitDepth</comment></data>
+  <data name="developExportTiffBitDepth.Text" xml:space="preserve"><value>TIFF-Bittiefe</value><comment>ExportEncoding.tiffBitDepth</comment></data>
 </root>

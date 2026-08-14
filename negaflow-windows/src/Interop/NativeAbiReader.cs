@@ -30,9 +30,10 @@ internal static unsafe class NativeAbiReader
       // JPEG/PNG source preflight at import and relink, and 40 for JPEG output
       // quality plus DPI metadata, 41 for linear-light long-edge output scaling, and
       // 42 for GrainMend review detector tuning, 43 for its optional micro-speck pass,
-      // and 44 for TIFF compression plus PNG/TIFF DPI output metadata.
+      // 44 for TIFF compression plus PNG/TIFF DPI output metadata, and 45 for
+      // eight-bit PNG/TIFF publication with output dither.
     // An engine below this is refused at load, not at the call.
-    internal const ushort MinimumMinor = 44;
+    internal const ushort MinimumMinor = 45;
 
     private const uint StatusOk = 0;
 

@@ -891,4 +891,6 @@
   <data name="developExportRecipeSaveCurrent.Text" xml:space="preserve"><value>현재 설정 저장</value><comment>ExportRecipeLocalizedText.saveCurrent</comment></data>
   <data name="developExportRecipeTitle.Text" xml:space="preserve"><value>내보내기 설정</value><comment>ExportRecipeLocalizedText.title</comment></data>
   <data name="developExportRecipeDefaultName.Text" xml:space="preserve"><value>내보내기 설정 %d</value><comment>ExportRecipeLocalizedText.defaultName</comment></data>
+  <data name="developExportPngBitDepth.Text" xml:space="preserve"><value>PNG 비트 심도</value><comment>ExportEncoding.pngBitDepth</comment></data>
+  <data name="developExportTiffBitDepth.Text" xml:space="preserve"><value>TIFF 비트 심도</value><comment>ExportEncoding.tiffBitDepth</comment></data>
 </root>

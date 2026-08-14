@@ -147,6 +147,19 @@ StandardSrgbStatus load_standard_srgb_context(
     return StandardSrgbStatus::ok;
 }
 
+namespace {
+
+// RGB 로 만든 바이트를 WIC 의 24bppBGR 순서로 맞바꿉니다.
+void swap_red_and_blue(std::uint8_t* const bytes, const std::size_t byte_count) noexcept {
+    for (std::size_t index = 0U; index + 2U < byte_count; index += 3U) {
+        const std::uint8_t red = bytes[index];
+        bytes[index] = bytes[index + 2U];
+        bytes[index + 2U] = red;
+    }
+}
+
+}  // namespace
+
 WicSrgb16FrameStatus configure_srgb16_frame(
     IWICBitmapFrameEncode* const frame,
     const Srgb16Image& image,
@@ -163,13 +176,18 @@ WicSrgb16FrameStatus configure_srgb16_frame(
         native_error_code = static_cast<std::uint32_t>(status);
         return WicSrgb16FrameStatus::configuration_failed;
     }
-    WICPixelFormatGUID pixel_format = GUID_WICPixelFormat48bppRGB;
+    // 8-bit 출력의 WIC 원형 형식은 BGR 순서입니다. 우리 변환기는 RGB 로 내므로 쓰기 직전에
+    // 픽셀마다 두 바이트를 맞바꿉니다.
+    const WICPixelFormatGUID requested = image.bits_per_sample == 8U
+        ? GUID_WICPixelFormat24bppBGR
+        : GUID_WICPixelFormat48bppRGB;
+    WICPixelFormatGUID pixel_format = requested;
     status = frame->SetPixelFormat(&pixel_format);
     if (FAILED(status)) {
         native_error_code = static_cast<std::uint32_t>(status);
         return WicSrgb16FrameStatus::configuration_failed;
     }
-    if (IsEqualGUID(pixel_format, GUID_WICPixelFormat48bppRGB) == FALSE) {
+    if (IsEqualGUID(pixel_format, requested) == FALSE) {
         return WicSrgb16FrameStatus::pixel_format_coerced;
     }
     IWICColorContext* contexts[]{color_context};
@@ -204,14 +222,14 @@ WicSrgb16FrameStatus write_working_srgb16_pixels(
     const std::uint64_t buffer_bytes_64 =
         static_cast<std::uint64_t>(allocated_rows) * image.stride_bytes;
     try {
-        std::vector<std::uint16_t> buffer(
-            static_cast<std::size_t>(buffer_bytes_64 / sizeof(std::uint16_t)));
+        std::vector<std::uint8_t> buffer(static_cast<std::size_t>(buffer_bytes_64));
         for (std::uint32_t row = 0U; row < image.height;) {
             const std::uint32_t row_count = static_cast<std::uint32_t>(
                 std::min<std::uint64_t>(rows_per_write, image.height - row));
             std::uint64_t ignored_clipped_components = 0U;
-            conversion_status = convert_working_to_srgb16_rows(
+            conversion_status = convert_working_to_srgb_rows(
                 working,
+                image.bits_per_sample,
                 row,
                 row_count,
                 buffer.data(),
@@ -222,11 +240,14 @@ WicSrgb16FrameStatus write_working_srgb16_pixels(
                 return WicSrgb16FrameStatus::working_conversion_failed;
             }
             const UINT buffer_bytes = row_count * image.stride_bytes;
+            if (image.bits_per_sample == 8U) {
+                swap_red_and_blue(buffer.data(), buffer_bytes);
+            }
             const HRESULT status = frame->WritePixels(
                 row_count,
                 image.stride_bytes,
                 buffer_bytes,
-                reinterpret_cast<BYTE*>(buffer.data()));
+                buffer.data());
             if (FAILED(status)) {
                 native_error_code = static_cast<std::uint32_t>(status);
                 return WicSrgb16FrameStatus::write_failed;
@@ -257,8 +278,11 @@ WicSrgb16FrameStatus verify_working_srgb16_frame(
     if (SUCCEEDED(status)) {
         status = frame->GetPixelFormat(&format);
     }
+    const WICPixelFormatGUID expected_format = expected.bits_per_sample == 8U
+        ? GUID_WICPixelFormat24bppBGR
+        : GUID_WICPixelFormat48bppRGB;
     if (FAILED(status) || width != expected.width || height != expected.height ||
-        IsEqualGUID(format, GUID_WICPixelFormat48bppRGB) == FALSE) {
+        IsEqualGUID(format, expected_format) == FALSE) {
         native_error_code = static_cast<std::uint32_t>(status);
         return WicSrgb16FrameStatus::readback_failed;
     }
@@ -286,10 +310,8 @@ WicSrgb16FrameStatus verify_working_srgb16_frame(
     if (buffer_bytes_64 > std::numeric_limits<UINT>::max()) {
         return WicSrgb16FrameStatus::readback_failed;
     }
-    std::vector<std::uint16_t> readback_buffer(
-        static_cast<std::size_t>(buffer_bytes_64 / sizeof(std::uint16_t)));
-    std::vector<std::uint16_t> expected_buffer(
-        static_cast<std::size_t>(buffer_bytes_64 / sizeof(std::uint16_t)));
+    std::vector<std::uint8_t> readback_buffer(static_cast<std::size_t>(buffer_bytes_64));
+    std::vector<std::uint8_t> expected_buffer(static_cast<std::size_t>(buffer_bytes_64));
     for (std::uint32_t row = 0U; row < expected.height;) {
         const std::uint32_t row_count = std::min(rows_per_copy, expected.height - row);
         const UINT buffer_bytes = row_count * expected.stride_bytes;
@@ -303,14 +325,15 @@ WicSrgb16FrameStatus verify_working_srgb16_frame(
             &rectangle,
             expected.stride_bytes,
             buffer_bytes,
-            reinterpret_cast<BYTE*>(readback_buffer.data()));
+            readback_buffer.data());
         if (FAILED(status)) {
             native_error_code = static_cast<std::uint32_t>(status);
             return WicSrgb16FrameStatus::readback_failed;
         }
         std::uint64_t ignored_clipped_components = 0U;
-        conversion_status = convert_working_to_srgb16_rows(
+        conversion_status = convert_working_to_srgb_rows(
             working,
+            expected.bits_per_sample,
             row,
             row_count,
             expected_buffer.data(),
@@ -320,8 +343,10 @@ WicSrgb16FrameStatus verify_working_srgb16_frame(
         if (conversion_status != WorkingToSrgb16Status::ok) {
             return WicSrgb16FrameStatus::working_conversion_failed;
         }
-        const std::size_t sample_count =
-            static_cast<std::size_t>(row_count) * expected.width * 3U;
+        if (expected.bits_per_sample == 8U) {
+            swap_red_and_blue(expected_buffer.data(), buffer_bytes);
+        }
+        const std::size_t sample_count = static_cast<std::size_t>(buffer_bytes);
         if (!std::equal(
                 readback_buffer.begin(),
                 readback_buffer.begin() + static_cast<std::ptrdiff_t>(sample_count),

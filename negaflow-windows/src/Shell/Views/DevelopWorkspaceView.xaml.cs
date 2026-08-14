@@ -3628,6 +3628,24 @@ public sealed partial class DevelopWorkspaceView : UserControl
         MutateExportSettings(value => value with { TiffCompression = compression });
     }
 
+    /// <summary>
+    /// 채널당 비트입니다. macOS 처럼 형식마다 따로 기억합니다 — 보관용 TIFF 는 16, 화면용 PNG 는
+    /// 8 로 두는 사람이 형식을 오갈 때마다 다시 고르지 않아야 합니다.
+    /// </summary>
+    private void OnExportBitDepthChanged(object sender, SelectionChangedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (ExportBitDepthSelector.SelectedItem is not ComboBoxItem { Tag: string tag } ||
+            !int.TryParse(tag, out int depth))
+        {
+            return;
+        }
+        MutateExportSettings(value => value.Format == DevelopExportFormat.Tiff16
+            ? value with { TiffBitDepth = depth }
+            : value with { PngBitDepth = depth });
+    }
+
     private void OnExportDpiChanged(object sender, SelectionChangedEventArgs args)
     {
         _ = sender;
@@ -3790,6 +3808,9 @@ public sealed partial class DevelopWorkspaceView : UserControl
         {
             SelectByTag(ExportFormatSelector, exportSettings.Format.ToString());
             SelectByTag(ExportTiffCompressionSelector, exportSettings.TiffCompression.ToString());
+            SelectByTag(
+                ExportBitDepthSelector,
+                exportSettings.EffectiveBitDepth.ToString(CultureInfo.InvariantCulture));
             SelectByTag(ExportDpiSelector, exportSettings.Dpi);
             SelectByTag(ExportSizeSelector, exportSettings.LongEdge);
             SelectByTag(
@@ -3821,6 +3842,15 @@ public sealed partial class DevelopWorkspaceView : UserControl
             exportSettings.Format == DevelopExportFormat.Jpeg8);
         ExportTiffCompressionRow.Visibility = Visible(
             exportSettings.Format == DevelopExportFormat.Tiff16);
+        // JPEG 은 정의상 8-bit 이므로 고를 것이 없습니다.
+        ExportBitDepthRow.Visibility = Visible(
+            exportSettings.Format != DevelopExportFormat.Jpeg8);
+        ExportBitDepthLabel.Text = AppResources.Get(
+            exportSettings.Format == DevelopExportFormat.Tiff16
+                ? "developExportTiffBitDepth"
+                : "developExportPngBitDepth",
+            "Text");
+        AutomationProperties.SetName(ExportBitDepthSelector, ExportBitDepthLabel.Text);
         // macOS 는 강도가 0 이면 매체를 고를 수 없게 둡니다 — 아무 것도 바꾸지 않는 선택입니다.
         ExportSharpeningMediumSelector.IsEnabled = exportSettings.OutputSharpening > 0;
         ExportSequenceStartRow.Visibility = Visible(

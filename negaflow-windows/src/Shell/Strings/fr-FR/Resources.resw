@@ -891,4 +891,6 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="developExportRecipeSaveCurrent.Text" xml:space="preserve"><value>Enregistrer les réglages</value><comment>ExportRecipeLocalizedText.saveCurrent</comment></data>
   <data name="developExportRecipeTitle.Text" xml:space="preserve"><value>Réglages d’exportation</value><comment>ExportRecipeLocalizedText.title</comment></data>
   <data name="developExportRecipeDefaultName.Text" xml:space="preserve"><value>Réglages d’exportation %d</value><comment>ExportRecipeLocalizedText.defaultName</comment></data>
+  <data name="developExportPngBitDepth.Text" xml:space="preserve"><value>Profondeur PNG</value><comment>ExportEncoding.pngBitDepth</comment></data>
+  <data name="developExportTiffBitDepth.Text" xml:space="preserve"><value>Profondeur TIFF</value><comment>ExportEncoding.tiffBitDepth</comment></data>
 </root>

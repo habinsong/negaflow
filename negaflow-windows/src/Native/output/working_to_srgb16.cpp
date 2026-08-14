@@ -35,6 +35,39 @@ namespace {
     return static_cast<std::uint16_t>(std::floor(encoded * 65'535.0F + 0.5F));
 }
 
+// Same mix as the grain stage. A hash of the absolute coordinate keeps the dither
+// reproducible, which the published-file readback check depends on.
+[[nodiscard]] std::uint32_t dither_hash(
+    const std::uint32_t x,
+    const std::uint32_t y,
+    const std::uint32_t channel) noexcept {
+    std::uint32_t value =
+        x * 0x9e3779b9U ^ y * 0x85ebca6bU ^ (channel + 1U) * 0x27d4eb2fU ^ 0xc2b2ae35U;
+    value ^= value >> 16U;
+    value *= 0x7feb352dU;
+    value ^= value >> 15U;
+    value *= 0x846ca68bU;
+    value ^= value >> 16U;
+    return value;
+}
+
+[[nodiscard]] std::uint8_t quantize_component_8(
+    const float linear,
+    const std::uint32_t x,
+    const std::uint32_t y,
+    const std::uint32_t channel,
+    std::uint64_t& clipped_components) noexcept {
+    if (linear < 0.0F || linear > 1.0F) {
+        ++clipped_components;
+    }
+    const float bounded = std::clamp(linear, 0.0F, 1.0F);
+    const float encoded = negaflow::color::linear_to_srgb_encoded(bounded);
+    const float noise =
+        static_cast<float>(dither_hash(x, y, channel) >> 8U) / 16777215.0F - 0.5F;
+    const float dithered = std::clamp(encoded + noise / 255.0F, 0.0F, 1.0F);
+    return static_cast<std::uint8_t>(std::floor(dithered * 255.0F + 0.5F));
+}
+
 void count_clipped_component(
     const float linear,
     std::uint64_t& clipped_components) noexcept {
@@ -45,8 +78,14 @@ void count_clipped_component(
 
 [[nodiscard]] WorkingToSrgb16Result describe_working_as_srgb16(
     const negaflow::imaging::WorkingImage& working,
-    const WorkingToSrgb16Limits& limits) noexcept {
+    const WorkingToSrgb16Limits& limits,
+    const std::uint32_t bits_per_sample = 16U) noexcept {
     WorkingToSrgb16Result result{};
+    if (bits_per_sample != 8U && bits_per_sample != 16U) {
+        result.status = WorkingToSrgb16Status::invalid_dimensions;
+        return result;
+    }
+    result.image.bits_per_sample = bits_per_sample;
     if (working.width == 0U || working.height == 0U) {
         return result;
     }
@@ -72,13 +111,13 @@ void count_clipped_component(
         packed_sample_count > std::numeric_limits<std::size_t>::max() ||
         !checked_multiply(
             packed_sample_count,
-            sizeof(std::uint16_t),
+            bits_per_sample / 8U,
             result.info.encoded_pixel_bytes)) {
         result.status = WorkingToSrgb16Status::size_overflow;
         return result;
     }
     const std::uint64_t stride_bytes =
-        static_cast<std::uint64_t>(working.width) * 3U * sizeof(std::uint16_t);
+        static_cast<std::uint64_t>(working.width) * 3U * (result.image.bits_per_sample / 8U);
     if (stride_bytes > std::numeric_limits<std::uint32_t>::max()) {
         result.status = WorkingToSrgb16Status::size_overflow;
         return result;
@@ -100,7 +139,15 @@ void count_clipped_component(
 WorkingToSrgb16Result inspect_working_to_srgb16(
     const negaflow::imaging::WorkingImage& working,
     const WorkingToSrgb16Limits& limits) noexcept {
-    WorkingToSrgb16Result result = describe_working_as_srgb16(working, limits);
+    return inspect_working_to_srgb(working, 16U, limits);
+}
+
+WorkingToSrgb16Result inspect_working_to_srgb(
+    const negaflow::imaging::WorkingImage& working,
+    const std::uint32_t bits_per_sample,
+    const WorkingToSrgb16Limits& limits) noexcept {
+    WorkingToSrgb16Result result =
+        describe_working_as_srgb16(working, limits, bits_per_sample);
     if (result.status != WorkingToSrgb16Status::ok) {
         return result;
     }
@@ -172,7 +219,28 @@ WorkingToSrgb16Status convert_working_to_srgb16_rows(
     const std::size_t destination_sample_capacity,
     std::uint64_t& clipped_color_components,
     const WorkingToSrgb16Limits& limits) noexcept {
-    const WorkingToSrgb16Result description = describe_working_as_srgb16(working, limits);
+    return convert_working_to_srgb_rows(
+        working,
+        16U,
+        first_row,
+        row_count,
+        reinterpret_cast<std::uint8_t*>(destination_samples),
+        destination_sample_capacity * sizeof(std::uint16_t),
+        clipped_color_components,
+        limits);
+}
+
+WorkingToSrgb16Status convert_working_to_srgb_rows(
+    const negaflow::imaging::WorkingImage& working,
+    const std::uint32_t bits_per_sample,
+    const std::uint32_t first_row,
+    const std::uint32_t row_count,
+    std::uint8_t* const destination_bytes,
+    const std::size_t destination_byte_capacity,
+    std::uint64_t& clipped_color_components,
+    const WorkingToSrgb16Limits& limits) noexcept {
+    const WorkingToSrgb16Result description =
+        describe_working_as_srgb16(working, limits, bits_per_sample);
     if (description.status != WorkingToSrgb16Status::ok) {
         return description.status;
     }
@@ -181,15 +249,18 @@ WorkingToSrgb16Status convert_working_to_srgb16_rows(
     }
     const std::uint64_t sample_count =
         static_cast<std::uint64_t>(row_count) * working.width * 3U;
-    if (sample_count > destination_sample_capacity ||
-        (sample_count != 0U && destination_samples == nullptr)) {
+    const std::uint64_t byte_count = sample_count * (bits_per_sample / 8U);
+    if (byte_count > destination_byte_capacity ||
+        (byte_count != 0U && destination_bytes == nullptr)) {
         return WorkingToSrgb16Status::buffer_size_mismatch;
     }
 
+    auto* const samples16 = reinterpret_cast<std::uint16_t*>(destination_bytes);
     clipped_color_components = 0U;
     for (std::uint32_t row = 0U; row < row_count; ++row) {
+        const std::uint32_t image_row = first_row + row;
         const std::size_t source_row =
-            static_cast<std::size_t>(first_row + row) * working.stride_pixels;
+            static_cast<std::size_t>(image_row) * working.stride_pixels;
         const std::size_t destination_row =
             static_cast<std::size_t>(row) * working.width * 3U;
         for (std::uint32_t column = 0U; column < working.width; ++column) {
@@ -203,11 +274,20 @@ WorkingToSrgb16Status convert_working_to_srgb16_rows(
             }
             const std::size_t destination =
                 destination_row + static_cast<std::size_t>(column) * 3U;
-            destination_samples[destination] =
+            if (bits_per_sample == 8U) {
+                destination_bytes[destination] = quantize_component_8(
+                    pixel.red, column, image_row, 0U, clipped_color_components);
+                destination_bytes[destination + 1U] = quantize_component_8(
+                    pixel.green, column, image_row, 1U, clipped_color_components);
+                destination_bytes[destination + 2U] = quantize_component_8(
+                    pixel.blue, column, image_row, 2U, clipped_color_components);
+                continue;
+            }
+            samples16[destination] =
                 quantize_component(pixel.red, clipped_color_components);
-            destination_samples[destination + 1U] =
+            samples16[destination + 1U] =
                 quantize_component(pixel.green, clipped_color_components);
-            destination_samples[destination + 2U] =
+            samples16[destination + 2U] =
                 quantize_component(pixel.blue, clipped_color_components);
         }
     }

@@ -34,6 +34,8 @@ enum class WicPngExportStatus : std::uint8_t {
 
 struct WicPngExportLimits final {
     WorkingToSrgb16Limits conversion{};
+    // 8 or 16. Eight-bit output is dithered before quantization; sixteen is not.
+    std::uint32_t bits_per_sample{16U};
     // Zero leaves the container's resolution unspecified; a positive value is metadata only.
     std::uint32_t output_dpi{0U};
     std::uint64_t max_artifact_bytes{2ULL * 1024ULL * 1024ULL * 1024ULL};
