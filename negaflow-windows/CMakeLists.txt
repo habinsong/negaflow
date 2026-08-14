@@ -84,6 +84,7 @@ target_link_libraries(negaflow_core PRIVATE negaflow_project_options)
 add_library(negaflow_color STATIC
     src/Native/color/icc_profile.cpp
     src/Native/color/soft_proof.cpp
+    src/Native/color/gamut_check.cpp
     src/Native/color/output_color_space.cpp
     src/Native/color/srgb_transfer.cpp
 )
@@ -91,6 +92,8 @@ target_include_directories(negaflow_color
     PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/color/include"
 )
 target_link_libraries(negaflow_color PRIVATE negaflow_project_options)
+# ICM 의 gamut-check 변환(mscms)을 씁니다. 색역 판정은 근사하지 않습니다.
+target_link_libraries(negaflow_color PUBLIC mscms)
 
 add_library(negaflow_imageio STATIC
     src/Native/imageio/decoded_image.cpp
@@ -368,6 +371,15 @@ if(BUILD_TESTING)
         PRIVATE negaflow_color negaflow_project_options
     )
     add_test(NAME native.output_color_space COMMAND negaflow_output_color_space_tests)
+
+    add_executable(negaflow_gamut_check_tests
+        tests/Native.UnitTests/gamut_check_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_gamut_check_tests
+        PRIVATE negaflow_color negaflow_project_options
+    )
+    add_test(NAME native.gamut_check COMMAND negaflow_gamut_check_tests)
 
     add_executable(negaflow_icc_profile_tests
         tests/Native.UnitTests/icc_profile_tests.cpp
