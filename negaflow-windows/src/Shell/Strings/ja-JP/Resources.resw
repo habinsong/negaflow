@@ -895,4 +895,14 @@
   <data name="developExportTiffBitDepth.Text" xml:space="preserve"><value>TIFFビット深度</value><comment>ExportEncoding.tiffBitDepth</comment></data>
   <data name="scanSimulator.Content" xml:space="preserve"><value>スキャナーシミュレーター</value><comment>AppLocalizedPhrase.scannerSimulator</comment></data>
   <data name="scanSimulatorHelp.Text" xml:space="preserve"><value>プラグインなしでスキャンワークフローを試せる内蔵シミュレーターです。</value><comment>AppLocalizedPhrase.scannerSimulatorHelp</comment></data>
+  <data name="scanAddFrame.Text" xml:space="preserve"><value>コマを追加</value><comment>AppLocalizedPhrase.flatbedAddFrame</comment></data>
+  <data name="scanCopyFrame.Text" xml:space="preserve"><value>コマをコピー</value><comment>AppLocalizedPhrase.flatbedCopyFrame</comment></data>
+  <data name="scanDetectionAutomatic.Content" xml:space="preserve"><value>自動</value><comment>AppLocalizedPhrase.flatbedDetectionAutomatic</comment></data>
+  <data name="scanDetectionManual.Content" xml:space="preserve"><value>手動</value><comment>AppLocalizedPhrase.flatbedDetectionManual</comment></data>
+  <data name="scanDetectionMode.Text" xml:space="preserve"><value>コマ検出</value><comment>AppLocalizedPhrase.flatbedDetectionMode</comment></data>
+  <data name="scanFlatbedFramesFormat.Text" xml:space="preserve"><value>選択中: %d</value><comment>AppLocalizedPhrase.flatbedFramesFormat</comment></data>
+  <data name="scanFrameFormat.Text" xml:space="preserve"><value>フレーム形式</value><comment>AppLocalizedPhrase.filmFrameFormat</comment></data>
+  <data name="scanPasteFrame.Text" xml:space="preserve"><value>コマをペースト</value><comment>AppLocalizedPhrase.flatbedPasteFrame</comment></data>
+  <data name="scanRefreshFrames.Text" xml:space="preserve"><value>コマを検出し直す</value><comment>AppLocalizedPhrase.flatbedRefreshFrames</comment></data>
+  <data name="scanRemoveFrame.Text" xml:space="preserve"><value>コマを削除</value><comment>AppLocalizedPhrase.flatbedRemoveFrame</comment></data>
 </root>

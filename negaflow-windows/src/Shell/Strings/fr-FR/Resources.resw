@@ -895,4 +895,14 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="developExportTiffBitDepth.Text" xml:space="preserve"><value>Profondeur TIFF</value><comment>ExportEncoding.tiffBitDepth</comment></data>
   <data name="scanSimulator.Content" xml:space="preserve"><value>Simulateur de scanner</value><comment>AppLocalizedPhrase.scannerSimulator</comment></data>
   <data name="scanSimulatorHelp.Text" xml:space="preserve"><value>Simulateur intégré pour découvrir le flux de numérisation sans module.</value><comment>AppLocalizedPhrase.scannerSimulatorHelp</comment></data>
+  <data name="scanAddFrame.Text" xml:space="preserve"><value>Ajouter une image</value><comment>AppLocalizedPhrase.flatbedAddFrame</comment></data>
+  <data name="scanCopyFrame.Text" xml:space="preserve"><value>Copier l'image</value><comment>AppLocalizedPhrase.flatbedCopyFrame</comment></data>
+  <data name="scanDetectionAutomatic.Content" xml:space="preserve"><value>Auto</value><comment>AppLocalizedPhrase.flatbedDetectionAutomatic</comment></data>
+  <data name="scanDetectionManual.Content" xml:space="preserve"><value>Manuel</value><comment>AppLocalizedPhrase.flatbedDetectionManual</comment></data>
+  <data name="scanDetectionMode.Text" xml:space="preserve"><value>Détection</value><comment>AppLocalizedPhrase.flatbedDetectionMode</comment></data>
+  <data name="scanFlatbedFramesFormat.Text" xml:space="preserve"><value>Sélection : %d</value><comment>AppLocalizedPhrase.flatbedFramesFormat</comment></data>
+  <data name="scanFrameFormat.Text" xml:space="preserve"><value>Format d’image</value><comment>AppLocalizedPhrase.filmFrameFormat</comment></data>
+  <data name="scanPasteFrame.Text" xml:space="preserve"><value>Coller l'image</value><comment>AppLocalizedPhrase.flatbedPasteFrame</comment></data>
+  <data name="scanRefreshFrames.Text" xml:space="preserve"><value>Redétecter les images</value><comment>AppLocalizedPhrase.flatbedRefreshFrames</comment></data>
+  <data name="scanRemoveFrame.Text" xml:space="preserve"><value>Supprimer l'image</value><comment>AppLocalizedPhrase.flatbedRemoveFrame</comment></data>
 </root>

@@ -236,6 +236,64 @@
                                             AutomationProperties.AutomationId="negaflow.library.scan.bit-depth"
                                             SelectionChanged="OnScanBitDepthChanged" />
                                     </Grid>
+                                    <Grid x:Name="ScanFrameFormatRow" ColumnSpacing="8" Visibility="Collapsed">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="ScanFrameFormatLabel" VerticalAlignment="Center" FontSize="12" />
+                                        <ComboBox
+                                            x:Name="ScanFrameFormatSelector"
+                                            Grid.Column="1"
+                                            MinWidth="152"
+                                            AutomationProperties.AutomationId="negaflow.library.scan.frame-format"
+                                            SelectionChanged="OnScanFrameFormatChanged" />
+                                    </Grid>
+                                    <Grid x:Name="ScanDetectionModeRow" ColumnSpacing="6" Visibility="Collapsed">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="ScanDetectionModeLabel" VerticalAlignment="Center" FontSize="12" />
+                                        <RadioButton
+                                            x:Name="ScanDetectionAutomaticButton"
+                                            Grid.Column="1"
+                                            AutomationProperties.AutomationId="negaflow.library.scan.detection.automatic"
+                                            Checked="OnScanDetectionModeChecked"
+                                            GroupName="FlatbedDetectionMode"
+                                            IsChecked="True" />
+                                        <RadioButton
+                                            x:Name="ScanDetectionManualButton"
+                                            Grid.Column="2"
+                                            AutomationProperties.AutomationId="negaflow.library.scan.detection.manual"
+                                            Checked="OnScanDetectionModeChecked"
+                                            GroupName="FlatbedDetectionMode" />
+                                        <Button
+                                            x:Name="ScanRefreshFramesButton"
+                                            Grid.Column="3"
+                                            Padding="7,4"
+                                            AutomationProperties.AutomationId="negaflow.library.scan.refresh-frames"
+                                            Click="OnScanRefreshFramesClicked"
+                                            Content="&#xE72C;"
+                                            FontFamily="{ThemeResource SymbolThemeFontFamily}"
+                                            FontSize="12" />
+                                    </Grid>
+                                    <Grid x:Name="ScanRegionsRow" ColumnSpacing="6" Visibility="Collapsed">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="ScanRegionsLabel" VerticalAlignment="Center" FontSize="12" />
+                                        <Button x:Name="ScanCopyFrameButton" Grid.Column="1" Padding="7,4" AutomationProperties.AutomationId="negaflow.library.scan.frame.copy" Click="OnScanCopyFrameClicked" Content="&#xE8C8;" FontFamily="{ThemeResource SymbolThemeFontFamily}" FontSize="12" />
+                                        <Button x:Name="ScanPasteFrameButton" Grid.Column="2" Padding="7,4" AutomationProperties.AutomationId="negaflow.library.scan.frame.paste" Click="OnScanPasteFrameClicked" Content="&#xE77F;" FontFamily="{ThemeResource SymbolThemeFontFamily}" FontSize="12" />
+                                        <Button x:Name="ScanAddFrameButton" Grid.Column="3" Padding="7,4" AutomationProperties.AutomationId="negaflow.library.scan.frame.add" Click="OnScanAddFrameClicked" Content="&#xE710;" FontFamily="{ThemeResource SymbolThemeFontFamily}" FontSize="12" />
+                                        <Button x:Name="ScanRemoveFrameButton" Grid.Column="4" Padding="7,4" AutomationProperties.AutomationId="negaflow.library.scan.frame.remove" Click="OnScanRemoveFrameClicked" Content="&#xE74D;" FontFamily="{ThemeResource SymbolThemeFontFamily}" FontSize="12" />
+                                    </Grid>
                                     <Grid x:Name="ScanFrameCountRow" ColumnSpacing="8">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />

@@ -1,4 +1,5 @@
 using Negaflow.Catalog;
+using Negaflow.Interop;
 using Negaflow.Shell.Develop;
 
 namespace Negaflow.Shell;
@@ -111,6 +112,12 @@ public sealed record ScanOptions
 
     /// <summary>한 번 누를 때 이어서 뜰 프레임 수입니다. macOS 처럼 1...12 입니다.</summary>
     public int BatchCount { get; init; } = 1;
+
+    /// <summary>평판에 올린 필름의 규격입니다. 프레임 찾기가 이 크기를 기준으로 셉니다.</summary>
+    public FlatbedFrameFormat FrameFormat { get; init; } = FlatbedFrameFormat.FullFrame35mm;
+
+    public FlatbedFrameDetectionMode FrameDetectionMode { get; init; } =
+        FlatbedFrameDetectionMode.Automatic;
 }
 
 public sealed record ScanRunOutcome(
@@ -204,6 +211,191 @@ public sealed class ScanSessionController
 
     /// <summary>지금 쓰는 경계입니다. 시뮬레이터가 켜져 있으면 가상 백엔드입니다.</summary>
     private IScannerPluginGateway ActiveGateway => SimulatorEnabled ? simulator : gateway;
+
+    /// <summary>
+    /// 평판 흐름을 쓰는 장치인지. macOS 와 같은 조건입니다 — 위치를 지정한 스캔 영역과 프리뷰를
+    /// 둘 다 낼 수 있어야 프레임을 판 위에 놓는 방식이 뜻을 가집니다.
+    /// </summary>
+    public bool UsesFlatbedRegionWorkflow =>
+        Capabilities is { SupportsPositionedScanArea: true, SupportsPreview: true } &&
+        Capabilities.MaxScanWidthMm is not null &&
+        Capabilities.MaxScanHeightMm is not null;
+
+    /// <summary>이 장치에 올릴 수 있는 프레임 규격입니다.</summary>
+    public IReadOnlyList<FlatbedFrameFormat> AvailableFrameFormats =>
+        Capabilities is null
+            ? []
+            : FilmFrameFormats.Available(
+                Capabilities.MaxScanWidthMm,
+                Capabilities.MaxScanHeightMm);
+
+    /// <summary>판 위에 놓인 프레임들입니다. 평판 흐름이 아니면 비어 있습니다.</summary>
+    public IReadOnlyList<FlatbedScanRegion> Regions { get; private set; } = [];
+
+    public string? SelectedRegionId { get; private set; }
+
+    /// <summary>복사해 둔 프레임입니다. 앱이 사는 동안만 남습니다.</summary>
+    public FlatbedScanRegion? CopiedRegion { get; private set; }
+
+    public void SelectRegion(string? regionId)
+    {
+        if (regionId is not null &&
+            !Regions.Any(region => string.Equals(region.Id, regionId, StringComparison.Ordinal)))
+        {
+            return;
+        }
+        if (string.Equals(SelectedRegionId, regionId, StringComparison.Ordinal))
+        {
+            return;
+        }
+        SelectedRegionId = regionId;
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// 규격 크기의 프레임 하나를 판 왼쪽 위에 놓습니다. 이미 놓인 것이 있으면 그 아래로
+    /// 내려 붙여, 새 프레임이 기존 것을 가리지 않게 합니다.
+    /// </summary>
+    public string? AddRegion()
+    {
+        if (!UsesFlatbedRegionWorkflow || Capabilities is not { } capabilities)
+        {
+            return null;
+        }
+        double width = FilmFrameFormats.StripWidthMm(Options.FrameFormat);
+        double height = FilmFrameFormats.StripHeightMm(Options.FrameFormat);
+        double maxWidth = capabilities.MaxScanWidthMm!.Value;
+        double maxHeight = capabilities.MaxScanHeightMm!.Value;
+        if (width > maxWidth || height > maxHeight)
+        {
+            (width, height) = (height, width);
+        }
+        double top = Regions.Count == 0
+            ? 0.0
+            : Regions.Max(region => region.OriginYmm + region.HeightMm);
+        if (top + height > maxHeight)
+        {
+            return null;
+        }
+        FlatbedScanRegion created = FlatbedScanRegion.Create(0.0, top, width, height);
+        Regions = [.. Regions, created];
+        SelectedRegionId = created.Id;
+        Changed?.Invoke(this, EventArgs.Empty);
+        return created.Id;
+    }
+
+    public bool DeleteSelectedRegion()
+    {
+        if (SelectedRegionId is not { } regionId)
+        {
+            return false;
+        }
+        FlatbedScanRegion[] remaining = [.. Regions.Where(region =>
+            !string.Equals(region.Id, regionId, StringComparison.Ordinal))];
+        if (remaining.Length == Regions.Count)
+        {
+            return false;
+        }
+        Regions = remaining;
+        SelectedRegionId = null;
+        Changed?.Invoke(this, EventArgs.Empty);
+        return true;
+    }
+
+    public bool CopySelectedRegion()
+    {
+        if (Regions.FirstOrDefault(region =>
+                string.Equals(region.Id, SelectedRegionId, StringComparison.Ordinal))
+            is not { } selected)
+        {
+            return false;
+        }
+        CopiedRegion = selected;
+        Changed?.Invoke(this, EventArgs.Empty);
+        return true;
+    }
+
+    /// <summary>복사한 프레임을 같은 크기로 아래에 붙입니다. 자리가 없으면 붙이지 않습니다.</summary>
+    public bool PasteRegion()
+    {
+        if (CopiedRegion is not { } copied ||
+            !UsesFlatbedRegionWorkflow ||
+            Capabilities?.MaxScanHeightMm is not { } maxHeight)
+        {
+            return false;
+        }
+        double top = Regions.Count == 0
+            ? 0.0
+            : Regions.Max(region => region.OriginYmm + region.HeightMm);
+        if (top + copied.HeightMm > maxHeight)
+        {
+            return false;
+        }
+        FlatbedScanRegion pasted = FlatbedScanRegion.Create(
+            copied.OriginXmm,
+            top,
+            copied.WidthMm,
+            copied.HeightMm);
+        Regions = [.. Regions, pasted];
+        SelectedRegionId = pasted.Id;
+        Changed?.Invoke(this, EventArgs.Empty);
+        return true;
+    }
+
+    /// <summary>
+    /// 프리뷰에서 프레임을 찾아 목록을 다시 만듭니다. 자동일 때만 찾고, 수동이면 비운 뒤 규격
+    /// 프레임 하나를 놓아 다시 시작할 자리를 만듭니다 — macOS 새로고침과 같은 규칙입니다.
+    /// </summary>
+    public FlatbedFrameGridStatus RefreshRegions(
+        ReadOnlySpan<float> previewLuminance,
+        uint previewWidth,
+        uint previewHeight)
+    {
+        if (!UsesFlatbedRegionWorkflow || Capabilities is not { } capabilities)
+        {
+            return FlatbedFrameGridStatus.InvalidInput;
+        }
+        if (Options.FrameDetectionMode == FlatbedFrameDetectionMode.Manual)
+        {
+            Regions = [];
+            SelectedRegionId = null;
+            _ = AddRegion();
+            return FlatbedFrameGridStatus.Ok;
+        }
+
+        // 자동으로 찾으려면 프리뷰 픽셀이 있어야 합니다. 없으면 찾은 척하지 않고 거부합니다.
+        if (previewLuminance.IsEmpty || previewWidth == 0U || previewHeight == 0U ||
+            previewLuminance.Length != (int)((ulong)previewWidth * previewHeight))
+        {
+            return FlatbedFrameGridStatus.InvalidInput;
+        }
+
+        double plateWidth = capabilities.MaxScanWidthMm!.Value;
+        double plateHeight = capabilities.MaxScanHeightMm!.Value;
+        FlatbedFrameGridResult detected = NativeFlatbedFrameGridDetector.Detect(
+            previewLuminance,
+            previewWidth,
+            previewHeight,
+            plateWidth,
+            plateHeight,
+            Options.FrameFormat);
+        if (detected.Status != FlatbedFrameGridStatus.Ok)
+        {
+            return detected.Status;
+        }
+        // 검출은 정규화 좌표로 돌아옵니다. 유리판 크기를 곱해 밀리미터로 옮깁니다 — 프리뷰
+        // 해상도가 바뀌어도 사용자가 본 자리가 그대로여야 합니다.
+        Regions = [.. detected.Detections
+            .Select(detection => FlatbedScanRegion.Create(
+                detection.X * plateWidth,
+                detection.Y * plateHeight,
+                detection.Width * plateWidth,
+                detection.Height * plateHeight))
+            .Where(region => region.IsValid)];
+        SelectedRegionId = Regions.Count > 0 ? Regions[0].Id : null;
+        Changed?.Invoke(this, EventArgs.Empty);
+        return FlatbedFrameGridStatus.Ok;
+    }
 
     public ScanSessionState State
     {
@@ -442,8 +634,12 @@ public sealed class ScanSessionController
         bool infrared = options.Infrared &&
             Capabilities?.SupportsInfrared == true &&
             AllowsInfrared(options.FilmType);
+        IReadOnlyList<FlatbedFrameFormat> formats = AvailableFrameFormats;
         return options with
         {
+            FrameFormat = formats.Count == 0 || formats.Contains(options.FrameFormat)
+                ? options.FrameFormat
+                : formats[0],
             ResolutionDpi = resolution,
             BitDepth = depth,
             ColorMode = mode,
@@ -457,7 +653,14 @@ public sealed class ScanSessionController
     /// 지금 옵션으로 보낼 요청입니다. 스캔을 돌리기 전에 무엇이 나갈지 시험할 수 있도록 따로
     /// 냅니다 — 요청을 만드는 규칙이 스캔 실행 안에 숨으면 확인할 방법이 없습니다.
     /// </summary>
-    public ScannerPluginScanRequest? BuildRequest(bool preview, string destinationVisiblePath)
+    /// <summary>평판 흐름이면 그 번째 프레임의 자리입니다. 아니면 null 입니다.</summary>
+    private FlatbedScanRegion? RegionAt(int index) =>
+        UsesFlatbedRegionWorkflow && index >= 0 && index < Regions.Count ? Regions[index] : null;
+
+    public ScannerPluginScanRequest? BuildRequest(
+        bool preview,
+        string destinationVisiblePath,
+        int regionIndex = -1)
     {
         if (SelectedDevice is not { } device || Capabilities is not { } capabilities)
         {
@@ -475,7 +678,8 @@ public sealed class ScanSessionController
             // 프리뷰에는 IR 을 걸지 않습니다. macOS 도 프리뷰에서 IR 토글을 잠급니다.
             !preview && Options.Infrared,
             MultiExposure: false,
-            ScanArea: null,
+            // 프리뷰는 판 전체를 훑습니다 — 프레임을 찾으려면 판이 다 보여야 합니다.
+            ScanArea: preview ? null : RegionAt(regionIndex)?.ToScanArea(),
             OutputRawTiff: false,
             destinationVisiblePath);
     }
@@ -497,7 +701,10 @@ public sealed class ScanSessionController
             return new ScanRunOutcome(0, 0, null, null);
         }
 
-        int requested = preview ? 1 : Options.BatchCount;
+        // macOS 처럼 평판에서는 판 위에 놓인 프레임 수가 곧 스캔 수입니다.
+        int requested = preview
+            ? 1
+            : UsesFlatbedRegionWorkflow ? Regions.Count : Options.BatchCount;
         IsScanning = true;
         LastFailureName = null;
         Changed?.Invoke(this, EventArgs.Empty);
@@ -509,7 +716,7 @@ public sealed class ScanSessionController
             for (int index = 0; index < requested; ++index)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (BuildRequest(preview, destinationForIndex(index)) is not { } request)
+                if (BuildRequest(preview, destinationForIndex(index), index) is not { } request)
                 {
                     break;
                 }

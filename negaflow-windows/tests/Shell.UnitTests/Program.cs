@@ -70,6 +70,7 @@ internal static class Program
         VerifyExportSettingsReachTheRequest();
         VerifyScanSession();
         VerifyScannerSimulator();
+        VerifyFlatbedRegions();
         VerifyExportBatchPlan();
         VerifyExportSidecar();
         VerifyLibraryCollections();
@@ -4860,6 +4861,88 @@ internal static class Program
             GrainMendDetectionOptions options,
             DevelopRun? run = null) =>
             throw new NotSupportedException();
+    }
+
+    /// <summary>
+    /// 평판 프레임 자리입니다. 규격 목록이 장치 크기로 좁혀지는지, 프레임이 서로 겹치지 않게
+    /// 쌓이는지, 그리고 고른 프레임 자리가 실제 요청에 실리는지를 봅니다.
+    /// </summary>
+    private static void VerifyFlatbedRegions()
+    {
+        // 필름 스캐너(36×24)에는 35mm 세 규격만 올라갑니다.
+        Check(
+            FilmFrameFormats.Available(36.0, 24.0).SequenceEqual([
+                FlatbedFrameFormat.FullFrame35mm,
+                FlatbedFrameFormat.Square35mm,
+                FlatbedFrameFormat.HalfFrame35mm,
+            ]),
+            "frame_formats_narrow_to_the_device");
+        // A4 평판에는 열 규격이 모두 올라갑니다 — 617 도 눕히면 들어갑니다.
+        Check(
+            FilmFrameFormats.Available(210.0, 297.0).Count == 10,
+            "frame_formats_fit_a_flatbed");
+        // 크기를 모르면 좁히지 않습니다.
+        Check(FilmFrameFormats.Available(null, null).Count == 10, "frame_formats_unknown_bounds");
+
+        string parent = Path.Combine(AppContext.BaseDirectory, "flatbed-tests");
+        string isolatedBase = Path.Combine(parent, $"{Environment.ProcessId}-{Guid.NewGuid():N}");
+        var trust = new ScannerPluginTrustStore(Path.Combine(isolatedBase, "trust.json"));
+        var session = new ScanSessionController(
+            new FakeScannerGateway(Path.Combine(isolatedBase, "none")),
+            trust,
+            new ImmediateUiDispatcher());
+        session.SetSimulatorEnabled(true);
+        session.RefreshDevicesAsync().GetAwaiter().GetResult();
+        // 시뮬레이터의 첫 장치는 필름 스캐너입니다 — 평판 흐름이 아닙니다.
+        Check(!session.UsesFlatbedRegionWorkflow, "film_scanner_is_not_a_flatbed");
+
+        session.SelectDeviceAsync(SimulatedScannerGateway.FlatbedScannerId)
+            .GetAwaiter().GetResult();
+        Check(session.UsesFlatbedRegionWorkflow, "flatbed_uses_the_region_workflow");
+
+        // 프레임은 아래로 쌓이고 서로 겹치지 않습니다.
+        string? first = session.AddRegion();
+        string? second = session.AddRegion();
+        Check(first is not null && second is not null, "flatbed_adds_frames");
+        Check(session.Regions.Count == 2, "flatbed_frame_count");
+        Check(
+            session.Regions[1].OriginYmm >=
+                session.Regions[0].OriginYmm + session.Regions[0].HeightMm,
+            "flatbed_frames_do_not_overlap");
+
+        Check(session.CopySelectedRegion() && session.PasteRegion(), "flatbed_copy_paste");
+        Check(session.Regions.Count == 3, "flatbed_paste_adds_a_frame");
+        session.SelectRegion(session.Regions[0].Id);
+        Check(session.DeleteSelectedRegion() && session.Regions.Count == 2, "flatbed_delete");
+
+        // 고른 프레임 자리가 요청에 실려야 그 자리만 스캔합니다.
+        ScannerPluginScanRequest? request = session.BuildRequest(
+            false,
+            Path.Combine(isolatedBase, "a.tif"),
+            1);
+        Check(
+            request?.ScanArea is { } area &&
+            Math.Abs(area.HeightMm - session.Regions[1].HeightMm) < 1e-9 &&
+            Math.Abs(area.OriginYmm - session.Regions[1].OriginYmm) < 1e-9,
+            "flatbed_request_carries_the_region");
+        // 프리뷰는 판 전체를 훑습니다 — 프레임을 찾으려면 판이 다 보여야 합니다.
+        Check(
+            session.BuildRequest(true, Path.Combine(isolatedBase, "p.tif"), 0)?.ScanArea is null,
+            "flatbed_preview_scans_the_whole_plate");
+
+        // 프리뷰 픽셀이 없으면 자동으로 찾은 척하지 않습니다.
+        Check(
+            session.RefreshRegions([], 0U, 0U) == FlatbedFrameGridStatus.InvalidInput,
+            "flatbed_automatic_needs_a_preview");
+        // 수동은 지우고 규격 프레임 하나를 놓아 다시 시작할 자리를 만듭니다.
+        session.UpdateOptions(options => options with
+        {
+            FrameDetectionMode = FlatbedFrameDetectionMode.Manual,
+        });
+        Check(
+            session.RefreshRegions([], 0U, 0U) == FlatbedFrameGridStatus.Ok &&
+            session.Regions.Count == 1,
+            "flatbed_manual_refresh_starts_over");
     }
 
     /// <summary>

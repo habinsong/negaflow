@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Negaflow.Catalog;
+using Negaflow.Interop;
 using Negaflow.Shell.Develop;
 using Negaflow.Shell.Library;
 using Negaflow.Shell.Localization;
@@ -20,6 +21,11 @@ public sealed partial class LibraryWorkspaceView : UserControl
     private ScanSessionController? scanSession;
     private ScannerPluginTrustStore? scannerTrust;
     private bool isSynchronizingScan;
+    /// <summary>
+    /// 프리뷰 스캔의 밝기 값입니다. 자동 프레임 찾기가 이것으로 셉니다. 프리뷰 프레임을 잡아
+    /// 두는 경로가 아직 없어 지금은 늘 비어 있고, 그래서 자동 찾기 단추는 수동일 때만 켜집니다.
+    /// </summary>
+    private readonly float[] flatbedPreviewLuminance = [];
     private bool isSynchronizingCollections;
     private string? selectedCollectionId;
     private ThumbnailService? thumbnails;
@@ -1105,6 +1111,83 @@ public sealed partial class LibraryWorkspaceView : UserControl
         scanSession?.UpdateOptions(options => options with { Infrared = ScanInfraredToggle.IsOn });
     }
 
+    private void OnScanFrameFormatChanged(object sender, SelectionChangedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (isSynchronizingScan ||
+            ScanFrameFormatSelector.SelectedItem is not ComboBoxItem { Tag: FlatbedFrameFormat format })
+        {
+            return;
+        }
+        scanSession?.UpdateOptions(options => options with { FrameFormat = format });
+    }
+
+    private void OnScanDetectionModeChecked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (isSynchronizingScan || scanSession is null)
+        {
+            return;
+        }
+        scanSession.UpdateOptions(options => options with
+        {
+            FrameDetectionMode = ScanDetectionManualButton.IsChecked == true
+                ? FlatbedFrameDetectionMode.Manual
+                : FlatbedFrameDetectionMode.Automatic,
+        });
+    }
+
+    /// <summary>
+    /// 자동이면 프리뷰에서 다시 찾고, 수동이면 지우고 규격 프레임 하나를 놓아 다시 시작할 자리를
+    /// 만듭니다 — macOS 새로고침과 같은 규칙입니다.
+    /// </summary>
+    private void OnScanRefreshFramesClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (scanSession is null)
+        {
+            return;
+        }
+        // 프리뷰 픽셀이 아직 없으면 찾을 근거가 없습니다. macOS 도 프리뷰 전에는 잠급니다.
+        _ = scanSession.RefreshRegions(flatbedPreviewLuminance, 0U, 0U);
+        RenderScanSection();
+    }
+
+    private void OnScanAddFrameClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        _ = scanSession?.AddRegion();
+        RenderScanSection();
+    }
+
+    private void OnScanRemoveFrameClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        _ = scanSession?.DeleteSelectedRegion();
+        RenderScanSection();
+    }
+
+    private void OnScanCopyFrameClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        _ = scanSession?.CopySelectedRegion();
+        RenderScanSection();
+    }
+
+    private void OnScanPasteFrameClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        _ = scanSession?.PasteRegion();
+        RenderScanSection();
+    }
+
     private async void OnScanPreviewClicked(object sender, RoutedEventArgs args)
     {
         _ = sender;
@@ -1273,12 +1356,41 @@ public sealed partial class LibraryWorkspaceView : UserControl
                 ScanFolderNameBox.Text = scanSession.Options.FolderName;
             }
             ScanFrameCountBox.Value = scanSession.Options.BatchCount;
+            FillTagged(
+                ScanFrameFormatSelector,
+                [.. scanSession.AvailableFrameFormats.Select(format =>
+                    ((object)FilmFrameFormats.DisplayName(format), (object)format))],
+                scanSession.Options.FrameFormat);
+            ScanDetectionAutomaticButton.IsChecked =
+                scanSession.Options.FrameDetectionMode == FlatbedFrameDetectionMode.Automatic;
+            ScanDetectionManualButton.IsChecked =
+                scanSession.Options.FrameDetectionMode == FlatbedFrameDetectionMode.Manual;
             ScanInfraredToggle.IsOn = scanSession.Options.Infrared;
         }
         finally
         {
             isSynchronizingScan = false;
         }
+
+        bool flatbed = scanSession.UsesFlatbedRegionWorkflow;
+        ScanFrameFormatRow.Visibility = scanSession.AvailableFrameFormats.Count > 0
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        ScanDetectionModeRow.Visibility = flatbed ? Visibility.Visible : Visibility.Collapsed;
+        ScanRegionsRow.Visibility = ScanDetectionModeRow.Visibility;
+        // 평판에서는 판 위에 놓인 프레임 수가 곧 스캔 수이므로 사진 수 줄이 없습니다.
+        ScanFrameCountRow.Visibility = flatbed ? Visibility.Collapsed : Visibility.Visible;
+        ScanRegionsLabel.Text = AppResources.FormatInteger(
+            "scanFlatbedFramesFormat",
+            "Text",
+            scanSession.Regions.Count);
+        bool hasSelectedRegion = scanSession.SelectedRegionId is not null;
+        ScanCopyFrameButton.IsEnabled = hasSelectedRegion;
+        ScanRemoveFrameButton.IsEnabled = hasSelectedRegion;
+        ScanPasteFrameButton.IsEnabled = scanSession.CopiedRegion is not null;
+        // 프리뷰 픽셀이 없으면 찾을 근거가 없습니다.
+        ScanRefreshFramesButton.IsEnabled = flatbedPreviewLuminance.Length > 0 ||
+            scanSession.Options.FrameDetectionMode == FlatbedFrameDetectionMode.Manual;
 
         bool hasDepths = scanSession.BitDepths.Count > 0;
         ScanBitDepthRow.Visibility = hasDepths ? Visibility.Visible : Visibility.Collapsed;
@@ -1379,6 +1491,20 @@ public sealed partial class LibraryWorkspaceView : UserControl
         ScanBitDepthLabel.Text = AppResources.Get("scanBitDepth", "Text");
         AutomationProperties.SetName(ScanBitDepthSelector, ScanBitDepthLabel.Text);
         ScanBitDepthUnavailableText.Text = AppResources.Get("scanBitDepthUnavailable", "Text");
+        ScanFrameFormatLabel.Text = AppResources.Get("scanFrameFormat", "Text");
+        AutomationProperties.SetName(ScanFrameFormatSelector, ScanFrameFormatLabel.Text);
+        ScanDetectionModeLabel.Text = AppResources.Get("scanDetectionMode", "Text");
+        SetRadioText(
+            ScanDetectionAutomaticButton,
+            AppResources.Get("scanDetectionAutomatic", "Content"));
+        SetRadioText(
+            ScanDetectionManualButton,
+            AppResources.Get("scanDetectionManual", "Content"));
+        SetIconButtonName(ScanRefreshFramesButton, "scanRefreshFrames");
+        SetIconButtonName(ScanCopyFrameButton, "scanCopyFrame");
+        SetIconButtonName(ScanPasteFrameButton, "scanPasteFrame");
+        SetIconButtonName(ScanAddFrameButton, "scanAddFrame");
+        SetIconButtonName(ScanRemoveFrameButton, "scanRemoveFrame");
         ScanFrameCountLabel.Text = AppResources.FormatInteger("scanFramesFormat", "Text", 1);
         AutomationProperties.SetName(ScanFrameCountBox, ScanFrameCountLabel.Text);
         string infrared = AppResources.Get("scanInfrared", "Content");
@@ -1388,6 +1514,20 @@ public sealed partial class LibraryWorkspaceView : UserControl
         AutomationProperties.SetName(ScanInfraredToggle, infrared);
         SetButtonText(ScanPreviewButton, AppResources.Get("scanPreview", "Content"));
         SetButtonText(ScanStartButton, AppResources.Get("scanStart", "Content"));
+    }
+
+    /// <summary>글리프만 있는 단추의 이름입니다. 이름이 없으면 화면 낭독기가 읽지 못합니다.</summary>
+    private static void SetIconButtonName(Button button, string resourceKey)
+    {
+        string text = AppResources.Get(resourceKey, "Text");
+        AutomationProperties.SetName(button, text);
+        ToolTipService.SetToolTip(button, text);
+    }
+
+    private static void SetRadioText(RadioButton radio, string text)
+    {
+        radio.Content = text;
+        AutomationProperties.SetName(radio, text);
     }
 
     private static void SetToggleButtonText(ToggleButton toggle, string text)

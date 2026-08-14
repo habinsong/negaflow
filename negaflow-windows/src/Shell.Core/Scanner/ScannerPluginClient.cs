@@ -36,7 +36,13 @@ public sealed record ScannerPluginCapabilities(
     bool SupportsScanArea,
     bool SupportsPositionedScanArea,
     IReadOnlyList<string> OutputFormats,
-    string? CapabilityToken);
+    string? CapabilityToken,
+    /// <summary>
+    /// 장치가 한 번에 훑을 수 있는 최대 크기(mm)입니다. 플러그인이 보고하지 않으면 null 이며,
+    /// 그러면 프레임 규격 목록을 좁히지 않습니다 — 모르는 것을 근거로 목록을 지우지 않습니다.
+    /// </summary>
+    double? MaxScanWidthMm = null,
+    double? MaxScanHeightMm = null);
 
 public sealed record ScannerPluginCapabilitiesResult(
     ScannerPluginProcessResult Process,
@@ -253,7 +259,9 @@ public static class ScannerPluginClient
                 decoded.SupportsScanArea ?? false,
                 decoded.SupportsPositionedScanArea ?? false,
                 decoded.OutputFormats!,
-                string.IsNullOrWhiteSpace(decoded.CapabilityToken) ? null : decoded.CapabilityToken);
+                string.IsNullOrWhiteSpace(decoded.CapabilityToken) ? null : decoded.CapabilityToken,
+                Positive(decoded.MaxScanWidthMm),
+                Positive(decoded.MaxScanHeightMm));
             return true;
         }
         catch (JsonException)
@@ -261,6 +269,9 @@ public static class ScannerPluginClient
             return false;
         }
     }
+
+    private static double? Positive(double? value) =>
+        value is { } number && double.IsFinite(number) && number > 0.0 ? number : null;
 
     public static async Task<ScannerPluginScanResult> ScanAsync(
         InstalledScannerPlugin plugin,
@@ -639,7 +650,9 @@ public static class ScannerPluginClient
         bool? SupportsScanArea,
         bool? SupportsPositionedScanArea,
         List<string>? OutputFormats,
-        string? CapabilityToken);
+        string? CapabilityToken,
+        [property: JsonPropertyName("maxScanWidthMM")] double? MaxScanWidthMm,
+        [property: JsonPropertyName("maxScanHeightMM")] double? MaxScanHeightMm);
 
     public sealed record ScanWire(
         [property: JsonPropertyName("protocolVersion")] int ProtocolVersion,

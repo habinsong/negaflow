@@ -895,4 +895,14 @@
   <data name="developExportTiffBitDepth.Text" xml:space="preserve"><value>TIFF位深度</value><comment>ExportEncoding.tiffBitDepth</comment></data>
   <data name="scanSimulator.Content" xml:space="preserve"><value>扫描仪模拟器</value><comment>AppLocalizedPhrase.scannerSimulator</comment></data>
   <data name="scanSimulatorHelp.Text" xml:space="preserve"><value>内置模拟器，无需插件即可演示扫描流程。</value><comment>AppLocalizedPhrase.scannerSimulatorHelp</comment></data>
+  <data name="scanAddFrame.Text" xml:space="preserve"><value>添加画幅</value><comment>AppLocalizedPhrase.flatbedAddFrame</comment></data>
+  <data name="scanCopyFrame.Text" xml:space="preserve"><value>复制画幅</value><comment>AppLocalizedPhrase.flatbedCopyFrame</comment></data>
+  <data name="scanDetectionAutomatic.Content" xml:space="preserve"><value>自动</value><comment>AppLocalizedPhrase.flatbedDetectionAutomatic</comment></data>
+  <data name="scanDetectionManual.Content" xml:space="preserve"><value>手动</value><comment>AppLocalizedPhrase.flatbedDetectionManual</comment></data>
+  <data name="scanDetectionMode.Text" xml:space="preserve"><value>查找画幅</value><comment>AppLocalizedPhrase.flatbedDetectionMode</comment></data>
+  <data name="scanFlatbedFramesFormat.Text" xml:space="preserve"><value>已选择：%d</value><comment>AppLocalizedPhrase.flatbedFramesFormat</comment></data>
+  <data name="scanFrameFormat.Text" xml:space="preserve"><value>画幅格式</value><comment>AppLocalizedPhrase.filmFrameFormat</comment></data>
+  <data name="scanPasteFrame.Text" xml:space="preserve"><value>粘贴画幅</value><comment>AppLocalizedPhrase.flatbedPasteFrame</comment></data>
+  <data name="scanRefreshFrames.Text" xml:space="preserve"><value>重新查找画幅</value><comment>AppLocalizedPhrase.flatbedRefreshFrames</comment></data>
+  <data name="scanRemoveFrame.Text" xml:space="preserve"><value>删除画幅</value><comment>AppLocalizedPhrase.flatbedRemoveFrame</comment></data>
 </root>

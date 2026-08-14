@@ -107,7 +107,10 @@ public sealed class SimulatedScannerGateway : IScannerPluginGateway
                 SupportsScanArea: true,
                 SupportsPositionedScanArea: flatbed,
                 ["tiff"],
-                "simulator"),
+                "simulator",
+                // macOS mock 과 같은 크기입니다. 필름 스캐너는 35mm 한 컷, 평판은 A4 입니다.
+                flatbed ? 210.0 : 36.0,
+                flatbed ? 297.0 : 24.0),
             false));
     }
 
