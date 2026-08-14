@@ -284,7 +284,10 @@ x64 Debug Shell 단위 검사 582 assertions 는 통과했고 그중 새 22개�
 x64 Debug Shell 단위 검사 560 assertions 통과. 새로 든 것은 고른 DPI·긴 변·JPEG 품질·TIFF 압축·
 출력 선명도·선명도 매체·선명도 DPI 가 실제 `DevelopExportRequest` 에 실리는지, 인코딩을 넘기지
 않는 미리보기 경로는 아무 것도 바꾸지 않는지, 범위를 벗어난 저장값이 요청 전에 잘리는지입니다.
-실제 파일로의 왕복 확인(300 DPI TIFF Deflate 게시)은 아직 하지 않았습니다.
+실촬영 스캔으로 파일까지 확인했습니다 — 5088×3401 을 긴 변 2048·300 DPI·LZW·선명도 0.5(무광)로
+내보내 2048×1369, Compression 5, XResolution 300 을 IFD 에서 직접 읽었고, 선명도만 0 으로 바꾼
+두 번째 실행과 SHA-256 이 달라 선명도가 픽셀까지 닿는 것을 확인했습니다. 원본 SHA-256 은 두 번
+모두 그대로입니다. 자세한 수치는 `verification/2026-08-14-export-settings-real-scan.md` 에 있습니다.
 
 ## 2026-08-14 GrainMend 미세 입자 추가 검출
 
