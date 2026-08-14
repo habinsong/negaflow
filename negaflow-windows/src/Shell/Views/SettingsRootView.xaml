@@ -231,6 +231,44 @@
                                 </ComboBox>
                             </Grid>
                             <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
+                            <ToggleSwitch
+                                x:Name="SoftProofToggle"
+                                x:Uid="settingsExportSoftProofLabel"
+                                AutomationProperties.AutomationId="settings.export.softProof"
+                                Toggled="OnSoftProofToggled" />
+                            <StackPanel x:Name="SoftProofDetailPanel" Spacing="12" Visibility="Collapsed">
+                                <Grid ColumnSpacing="16">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="230" /></Grid.ColumnDefinitions>
+                                    <TextBlock x:Uid="settingsExportProofLabel" VerticalAlignment="Center" />
+                                    <ComboBox
+                                        x:Name="SoftProofSimulationComboBox"
+                                        Grid.Column="1"
+                                        HorizontalAlignment="Stretch"
+                                        AutomationProperties.AutomationId="settings.export.softProof.simulation"
+                                        SelectionChanged="OnSoftProofSimulationChanged">
+                                        <ComboBoxItem x:Uid="settingsSoftProofProfileOnly" />
+                                        <ComboBoxItem x:Uid="settingsSoftProofPaperAndBlack" />
+                                    </ComboBox>
+                                </Grid>
+                                <ToggleSwitch
+                                    x:Name="GamutWarningToggle"
+                                    x:Uid="settingsColorGamutWarning"
+                                    IsEnabled="False"
+                                    AutomationProperties.AutomationId="settings.export.gamutWarning"
+                                    Toggled="OnGamutWarningToggled" />
+                                <TextBlock
+                                    x:Uid="settingsColorGamutUnavailableReason"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    TextWrapping="Wrap"
+                                    FontSize="12" />
+                            </StackPanel>
+                            <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
+                            <Grid ColumnSpacing="16">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="230" /></Grid.ColumnDefinitions>
+                                <TextBlock x:Uid="settingsColorScannerInput" VerticalAlignment="Center" />
+                                <TextBlock x:Name="ScannerEmulationSummary" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            </Grid>
+                            <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
                             <Grid ColumnSpacing="16">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="230" /></Grid.ColumnDefinitions>
                                 <TextBlock x:Uid="settingsColorWorking" VerticalAlignment="Center" />
@@ -241,6 +279,12 @@
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="230" /></Grid.ColumnDefinitions>
                                 <TextBlock x:Uid="settingsColorExport" VerticalAlignment="Center" />
                                 <TextBlock x:Name="ExportColorSpaceSummary" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            </Grid>
+                            <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
+                            <Grid ColumnSpacing="16">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="230" /></Grid.ColumnDefinitions>
+                                <TextBlock x:Uid="settingsColorSoftProof" VerticalAlignment="Center" />
+                                <TextBlock x:Name="SoftProofSummary" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             </Grid>
                         </StackPanel>
                     </Border>

@@ -30,6 +30,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private ToneLimits? toneLimits;
     private Microsoft.UI.WindowId? importWindowId;
     private PreviewCoordinator? previewCoordinator;
+    private SoftProofPreferences softProofPreferences = new();
     private AutoAdjustCoordinator? autoAdjustCoordinator;
     private WriteableBitmap? previewBitmap;
     private bool isSynchronizingInspector;
@@ -4602,6 +4603,19 @@ public sealed partial class DevelopWorkspaceView : UserControl
             quickExportSettings = preferences.QuickExport;
             exportRecipes = preferences.ExportRecipes;
             SynchronizeExportControls();
+        }
+
+        // 프루프는 보기용이므로 미리보기에만 겁니다. 게시하는 파일은 그대로입니다.
+        if (softProofPreferences != preferences.SoftProof)
+        {
+            softProofPreferences = preferences.SoftProof;
+            if (previewCoordinator is { } coordinator)
+            {
+                // 프로파일을 아직 고를 수 없으므로 용지·잉크는 넘기지 않습니다. 없는 값을
+                // 지어내느니 프로파일만 보는 쪽이 정직합니다.
+                coordinator.SoftProof = softProofPreferences.ToSettings(null);
+                RequestPreview();
+            }
         }
     }
 

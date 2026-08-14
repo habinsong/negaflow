@@ -436,9 +436,45 @@
     <value>내보내기</value>
     <comment>AppLocalizedPhrase.colorExport</comment>
   </data>
+  <data name="settingsColorGamutUnavailableReason.Text" xml:space="preserve">
+    <value>선택한 출력 프로파일은 ColorSync 색역 검사를 지원하지 않습니다.</value>
+    <comment>AppLocalizedText.colorGamutUnavailableReason</comment>
+  </data>
+  <data name="settingsColorGamutWarning.Text" xml:space="preserve">
+    <value>색역 경고</value>
+    <comment>AppLocalizedPhrase.colorGamutWarning</comment>
+  </data>
   <data name="settingsColorManagementSection.Text" xml:space="preserve">
     <value>색상 관리</value>
     <comment>AppLocalizedText.colorManagementSection</comment>
+  </data>
+  <data name="settingsColorMonitor.Text" xml:space="preserve">
+    <value>모니터</value>
+    <comment>AppLocalizedPhrase.colorMonitor</comment>
+  </data>
+  <data name="settingsColorOff.Text" xml:space="preserve">
+    <value>끔</value>
+    <comment>AppLocalizedText.colorOff</comment>
+  </data>
+  <data name="settingsColorScannerInput.Text" xml:space="preserve">
+    <value>스캐너 에뮬레이션</value>
+    <comment>AppLocalizedPhrase.colorScannerInput</comment>
+  </data>
+  <data name="settingsColorScannerInputReason.Text" xml:space="preserve">
+    <value>선택된 스캐너 에뮬레이션 룩이 없습니다.</value>
+    <comment>AppLocalizedText.colorScannerInputReason</comment>
+  </data>
+  <data name="settingsColorSoftProof.Text" xml:space="preserve">
+    <value>소프트 프루프</value>
+    <comment>AppLocalizedPhrase.colorSoftProof</comment>
+  </data>
+  <data name="settingsColorSoftProofOffReason.Text" xml:space="preserve">
+    <value>소프트 프루프가 꺼져 있습니다.</value>
+    <comment>AppLocalizedText.colorSoftProofOffReason</comment>
+  </data>
+  <data name="settingsColorUnassigned.Text" xml:space="preserve">
+    <value>미지정</value>
+    <comment>AppLocalizedText.colorUnassigned</comment>
   </data>
   <data name="settingsColorWorking.Text" xml:space="preserve">
     <value>작업 공간</value>
@@ -451,6 +487,14 @@
   <data name="settingsExportColorLabel.Text" xml:space="preserve">
     <value>색상</value>
     <comment>AppLocalizedText.exportColorLabel</comment>
+  </data>
+  <data name="settingsExportProofLabel.Text" xml:space="preserve">
+    <value>프루프</value>
+    <comment>AppLocalizedText.exportProofLabel</comment>
+  </data>
+  <data name="settingsExportSoftProofLabel.Text" xml:space="preserve">
+    <value>소프트 프루프</value>
+    <comment>AppLocalizedText.exportSoftProofLabel</comment>
   </data>
   <data name="settingsExportTab.Text" xml:space="preserve">
     <value>내보내기</value>
@@ -495,6 +539,14 @@
   <data name="settingsShortcutsTab.Text" xml:space="preserve">
     <value>단축키</value>
     <comment>AppLocalizedText.settingsShortcutsTab</comment>
+  </data>
+  <data name="settingsSoftProofPaperAndBlack.Content" xml:space="preserve">
+    <value>용지 + 검정 잉크</value>
+    <comment>AppLocalizedPhrase.softProofPaperAndBlack</comment>
+  </data>
+  <data name="settingsSoftProofProfileOnly.Content" xml:space="preserve">
+    <value>프로파일</value>
+    <comment>AppLocalizedPhrase.softProofProfileOnly</comment>
   </data>
   <data name="settingsSourceDPI.Text" xml:space="preserve">
     <value>원본 DPI</value>

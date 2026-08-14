@@ -436,9 +436,45 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
     <value>Exportation</value>
     <comment>AppLocalizedPhrase.colorExport</comment>
   </data>
+  <data name="settingsColorGamutUnavailableReason.Text" xml:space="preserve">
+    <value>Le profil de sortie sélectionné ne prend pas en charge le contrôle de gamme ColorSync.</value>
+    <comment>AppLocalizedText.colorGamutUnavailableReason</comment>
+  </data>
+  <data name="settingsColorGamutWarning.Text" xml:space="preserve">
+    <value>Avertissement de gamme</value>
+    <comment>AppLocalizedPhrase.colorGamutWarning</comment>
+  </data>
   <data name="settingsColorManagementSection.Text" xml:space="preserve">
     <value>Gestion des couleurs</value>
     <comment>AppLocalizedText.colorManagementSection</comment>
+  </data>
+  <data name="settingsColorMonitor.Text" xml:space="preserve">
+    <value>Moniteur</value>
+    <comment>AppLocalizedPhrase.colorMonitor</comment>
+  </data>
+  <data name="settingsColorOff.Text" xml:space="preserve">
+    <value>Désactivé</value>
+    <comment>AppLocalizedText.colorOff</comment>
+  </data>
+  <data name="settingsColorScannerInput.Text" xml:space="preserve">
+    <value>Émulation scanner</value>
+    <comment>AppLocalizedPhrase.colorScannerInput</comment>
+  </data>
+  <data name="settingsColorScannerInputReason.Text" xml:space="preserve">
+    <value>Aucun rendu d’émulation de scanner n’est sélectionné.</value>
+    <comment>AppLocalizedText.colorScannerInputReason</comment>
+  </data>
+  <data name="settingsColorSoftProof.Text" xml:space="preserve">
+    <value>Épreuve écran</value>
+    <comment>AppLocalizedPhrase.colorSoftProof</comment>
+  </data>
+  <data name="settingsColorSoftProofOffReason.Text" xml:space="preserve">
+    <value>L'épreuve écran est désactivée.</value>
+    <comment>AppLocalizedText.colorSoftProofOffReason</comment>
+  </data>
+  <data name="settingsColorUnassigned.Text" xml:space="preserve">
+    <value>Non attribué</value>
+    <comment>AppLocalizedText.colorUnassigned</comment>
   </data>
   <data name="settingsColorWorking.Text" xml:space="preserve">
     <value>Espace de travail</value>
@@ -451,6 +487,14 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="settingsExportColorLabel.Text" xml:space="preserve">
     <value>Couleur</value>
     <comment>AppLocalizedText.exportColorLabel</comment>
+  </data>
+  <data name="settingsExportProofLabel.Text" xml:space="preserve">
+    <value>Épreuve</value>
+    <comment>AppLocalizedText.exportProofLabel</comment>
+  </data>
+  <data name="settingsExportSoftProofLabel.Text" xml:space="preserve">
+    <value>Épreuve écran</value>
+    <comment>AppLocalizedText.exportSoftProofLabel</comment>
   </data>
   <data name="settingsExportTab.Text" xml:space="preserve">
     <value>Exportation</value>
@@ -495,6 +539,14 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="settingsShortcutsTab.Text" xml:space="preserve">
     <value>Raccourcis</value>
     <comment>AppLocalizedText.settingsShortcutsTab</comment>
+  </data>
+  <data name="settingsSoftProofPaperAndBlack.Content" xml:space="preserve">
+    <value>Papier + encre noire</value>
+    <comment>AppLocalizedPhrase.softProofPaperAndBlack</comment>
+  </data>
+  <data name="settingsSoftProofProfileOnly.Content" xml:space="preserve">
+    <value>Profil</value>
+    <comment>AppLocalizedPhrase.softProofProfileOnly</comment>
   </data>
   <data name="settingsSourceDPI.Text" xml:space="preserve">
     <value>DPI source</value>

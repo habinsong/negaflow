@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Negaflow.Interop;
+using Negaflow.Shell.Develop;
 using Negaflow.Shell.Localization;
 
 namespace Negaflow.Shell.Views;
@@ -74,6 +75,46 @@ public sealed partial class SettingsRootView : UserControl
         workspaceState?.UpdateExport(settings => settings with { ColorSpace = space });
     }
 
+    private void OnSoftProofToggled(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (isUpdating)
+        {
+            return;
+        }
+
+        workspaceState?.UpdateSoftProof(value => value with { IsEnabled = SoftProofToggle.IsOn });
+    }
+
+    private void OnSoftProofSimulationChanged(object sender, SelectionChangedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (isUpdating)
+        {
+            return;
+        }
+
+        SoftProofSimulation simulation = SoftProofSimulationComboBox.SelectedIndex == 1
+            ? SoftProofSimulation.PaperAndBlackInk
+            : SoftProofSimulation.ProfileOnly;
+        workspaceState?.UpdateSoftProof(value => value with { Simulation = simulation });
+    }
+
+    private void OnGamutWarningToggled(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (isUpdating)
+        {
+            return;
+        }
+
+        workspaceState?.UpdateSoftProof(
+            value => value with { GamutWarningEnabled = GamutWarningToggle.IsOn });
+    }
+
     private void OnImageHashToggled(object sender, RoutedEventArgs args)
     {
         _ = sender;
@@ -112,9 +153,31 @@ public sealed partial class SettingsRootView : UserControl
         // 요약 줄은 고른 값이 아니라 형식이 실제로 낼 수 있는 값을 적습니다 — JPEG 을 고른 채
         // "Adobe RGB" 라고 적혀 있으면 파일과 화면이 어긋나기 때문입니다.
         ExportColorSpaceSummary.Text = ColorSpaceLabel(preferences.Export.EffectiveColorSpace);
+
+        SoftProofPreferences proof = preferences.SoftProof;
+        SoftProofToggle.IsOn = proof.IsEnabled;
+        // macOS 는 프루프가 꺼져 있으면 아래 줄들을 아예 그리지 않습니다.
+        SoftProofDetailPanel.Visibility = proof.IsEnabled ? Visibility.Visible : Visibility.Collapsed;
+        SoftProofSimulationComboBox.SelectedIndex =
+            proof.Simulation == SoftProofSimulation.PaperAndBlackInk ? 1 : 0;
+        GamutWarningToggle.IsOn = proof.GamutWarningEnabled;
+        // 프루프 대상 프로파일을 아직 고를 수 없으므로 내보내기 색공간의 이름을 씁니다 —
+        // macOS 도 프로파일이 없으면 같은 값을 보여줍니다.
+        string profileName = proof.ProfileName.Length != 0
+            ? proof.ProfileName
+            : ColorSpaceLabel(preferences.Export.EffectiveColorSpace);
+        SoftProofSummary.Text = proof.IsEnabled
+            ? $"{profileName} · {SimulationLabel(proof.Simulation)}"
+            : AppResources.Get("settingsColorOff", "Text");
+        ScannerEmulationSummary.Text = AppResources.Get("settingsColorUnassigned", "Text");
         SelectCategory(preferences.SelectedSettingsCategory);
         isUpdating = false;
     }
+
+    private static string SimulationLabel(SoftProofSimulation simulation) =>
+        simulation == SoftProofSimulation.PaperAndBlackInk
+            ? AppResources.Get("settingsSoftProofPaperAndBlack", "Content")
+            : AppResources.Get("settingsSoftProofProfileOnly", "Content");
 
     // macOS ExportColorSpace.uiLabel 과 같은 문자열입니다. 색공간 이름은 번역하지 않습니다.
     private static string ColorSpaceLabel(ExportColorSpace space) => space switch

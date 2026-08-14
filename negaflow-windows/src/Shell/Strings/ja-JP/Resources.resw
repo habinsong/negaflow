@@ -436,9 +436,45 @@
     <value>書き出し</value>
     <comment>AppLocalizedPhrase.colorExport</comment>
   </data>
+  <data name="settingsColorGamutUnavailableReason.Text" xml:space="preserve">
+    <value>選択した出力プロファイルは ColorSync の色域チェックに対応していません。</value>
+    <comment>AppLocalizedText.colorGamutUnavailableReason</comment>
+  </data>
+  <data name="settingsColorGamutWarning.Text" xml:space="preserve">
+    <value>色域外警告</value>
+    <comment>AppLocalizedPhrase.colorGamutWarning</comment>
+  </data>
   <data name="settingsColorManagementSection.Text" xml:space="preserve">
     <value>カラー管理</value>
     <comment>AppLocalizedText.colorManagementSection</comment>
+  </data>
+  <data name="settingsColorMonitor.Text" xml:space="preserve">
+    <value>ディスプレイ</value>
+    <comment>AppLocalizedPhrase.colorMonitor</comment>
+  </data>
+  <data name="settingsColorOff.Text" xml:space="preserve">
+    <value>オフ</value>
+    <comment>AppLocalizedText.colorOff</comment>
+  </data>
+  <data name="settingsColorScannerInput.Text" xml:space="preserve">
+    <value>スキャナーエミュレーション</value>
+    <comment>AppLocalizedPhrase.colorScannerInput</comment>
+  </data>
+  <data name="settingsColorScannerInputReason.Text" xml:space="preserve">
+    <value>スキャナーエミュレーションのルックが選択されていません。</value>
+    <comment>AppLocalizedText.colorScannerInputReason</comment>
+  </data>
+  <data name="settingsColorSoftProof.Text" xml:space="preserve">
+    <value>ソフト校正</value>
+    <comment>AppLocalizedPhrase.colorSoftProof</comment>
+  </data>
+  <data name="settingsColorSoftProofOffReason.Text" xml:space="preserve">
+    <value>ソフト校正はオフです。</value>
+    <comment>AppLocalizedText.colorSoftProofOffReason</comment>
+  </data>
+  <data name="settingsColorUnassigned.Text" xml:space="preserve">
+    <value>未割り当て</value>
+    <comment>AppLocalizedText.colorUnassigned</comment>
   </data>
   <data name="settingsColorWorking.Text" xml:space="preserve">
     <value>作業用スペース</value>
@@ -451,6 +487,14 @@
   <data name="settingsExportColorLabel.Text" xml:space="preserve">
     <value>カラー</value>
     <comment>AppLocalizedText.exportColorLabel</comment>
+  </data>
+  <data name="settingsExportProofLabel.Text" xml:space="preserve">
+    <value>校正</value>
+    <comment>AppLocalizedText.exportProofLabel</comment>
+  </data>
+  <data name="settingsExportSoftProofLabel.Text" xml:space="preserve">
+    <value>ソフト校正</value>
+    <comment>AppLocalizedText.exportSoftProofLabel</comment>
   </data>
   <data name="settingsExportTab.Text" xml:space="preserve">
     <value>書き出し</value>
@@ -495,6 +539,14 @@
   <data name="settingsShortcutsTab.Text" xml:space="preserve">
     <value>ショートカット</value>
     <comment>AppLocalizedText.settingsShortcutsTab</comment>
+  </data>
+  <data name="settingsSoftProofPaperAndBlack.Content" xml:space="preserve">
+    <value>用紙 + 黒インク</value>
+    <comment>AppLocalizedPhrase.softProofPaperAndBlack</comment>
+  </data>
+  <data name="settingsSoftProofProfileOnly.Content" xml:space="preserve">
+    <value>プロファイル</value>
+    <comment>AppLocalizedPhrase.softProofProfileOnly</comment>
   </data>
   <data name="settingsSourceDPI.Text" xml:space="preserve">
     <value>元の DPI</value>

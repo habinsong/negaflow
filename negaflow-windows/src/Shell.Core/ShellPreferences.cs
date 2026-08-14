@@ -33,6 +33,9 @@ public sealed record ShellPreferences
 
     public QuickExportSettings QuickExport { get; init; } = new();
 
+    /// <summary>보기용 프루프 시뮬레이션입니다. 게시하는 파일에는 들어가지 않습니다.</summary>
+    public SoftProofPreferences SoftProof { get; init; } = new();
+
     /// <summary>이름 붙여 담아 둔 내보내기 설정입니다.</summary>
     public ExportRecipeLibrary ExportRecipes { get; init; } = new();
 
@@ -42,6 +45,7 @@ public sealed record ShellPreferences
         {
             Export = (Export ?? new ExportSettings()).Normalize(),
             QuickExport = (QuickExport ?? new QuickExportSettings()).Normalize(),
+            SoftProof = (SoftProof ?? new SoftProofPreferences()).Normalize(),
             ExportRecipes = (ExportRecipes ?? new ExportRecipeLibrary()).Normalize(),
             SelectedWorkspace = Enum.IsDefined(SelectedWorkspace)
                 ? SelectedWorkspace

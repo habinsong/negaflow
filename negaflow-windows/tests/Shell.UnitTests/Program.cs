@@ -485,6 +485,32 @@ internal static class Program
             jpeg.Request is { OutputColorSpace: ExportColorSpace.Srgb },
             "export_settings_jpeg_publishes_srgb");
 
+        // 소프트 프루프는 보기용입니다. 꺼져 있으면 프루프를 도입하기 전과 같은 값이어야
+        // 합니다 — 껐는데 화면이 달라지면 그것이 곧 결함입니다.
+        var proofOff = new SoftProofPreferences().Normalize();
+        Check(
+            proofOff.ToSettings(null) == SoftProofSettings.Disabled,
+            "soft_proof_off_is_the_disabled_settings");
+
+        // 프루프를 끄면 색역 경고도 함께 꺼집니다. 켜 둔 채 남으면 다시 켤 때 사용자가
+        // 켠 적 없는 표시가 나타납니다.
+        var proofOn = new SoftProofPreferences
+        {
+            IsEnabled = true,
+            Simulation = SoftProofSimulation.PaperAndBlackInk,
+            GamutWarningEnabled = true,
+        };
+        Check(
+            (proofOn with { IsEnabled = false }).Normalize().GamutWarningEnabled == false,
+            "soft_proof_off_clears_the_gamut_warning");
+
+        // 프로파일을 아직 읽지 못했으면 용지·잉크를 흉내 내지 않습니다.
+        SoftProofSettings withoutMedia = proofOn.Normalize().ToSettings(null);
+        Check(
+            withoutMedia.IsEnabled &&
+                withoutMedia.Simulation == SoftProofSimulation.ProfileOnly,
+            "soft_proof_without_a_profile_stays_profile_only");
+
         // 빠른 내보내기는 TIFF 를 내지 않습니다.
         Check(
             (new QuickExportSettings { Format = DevelopExportFormat.Tiff16 }).Normalize().Format

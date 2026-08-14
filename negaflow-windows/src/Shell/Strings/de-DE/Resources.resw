@@ -436,9 +436,45 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
     <value>Export</value>
     <comment>AppLocalizedPhrase.colorExport</comment>
   </data>
+  <data name="settingsColorGamutUnavailableReason.Text" xml:space="preserve">
+    <value>Das gewählte Ausgabeprofil unterstützt keine ColorSync-Farbumfangprüfung.</value>
+    <comment>AppLocalizedText.colorGamutUnavailableReason</comment>
+  </data>
+  <data name="settingsColorGamutWarning.Text" xml:space="preserve">
+    <value>Farbumfang-Warnung</value>
+    <comment>AppLocalizedPhrase.colorGamutWarning</comment>
+  </data>
   <data name="settingsColorManagementSection.Text" xml:space="preserve">
     <value>Farbmanagement</value>
     <comment>AppLocalizedText.colorManagementSection</comment>
+  </data>
+  <data name="settingsColorMonitor.Text" xml:space="preserve">
+    <value>Monitor</value>
+    <comment>AppLocalizedPhrase.colorMonitor</comment>
+  </data>
+  <data name="settingsColorOff.Text" xml:space="preserve">
+    <value>Aus</value>
+    <comment>AppLocalizedText.colorOff</comment>
+  </data>
+  <data name="settingsColorScannerInput.Text" xml:space="preserve">
+    <value>Scanner-Emulation</value>
+    <comment>AppLocalizedPhrase.colorScannerInput</comment>
+  </data>
+  <data name="settingsColorScannerInputReason.Text" xml:space="preserve">
+    <value>Kein Scanner-Emulations-Look ausgewählt.</value>
+    <comment>AppLocalizedText.colorScannerInputReason</comment>
+  </data>
+  <data name="settingsColorSoftProof.Text" xml:space="preserve">
+    <value>Softproof</value>
+    <comment>AppLocalizedPhrase.colorSoftProof</comment>
+  </data>
+  <data name="settingsColorSoftProofOffReason.Text" xml:space="preserve">
+    <value>Softproof ist deaktiviert.</value>
+    <comment>AppLocalizedText.colorSoftProofOffReason</comment>
+  </data>
+  <data name="settingsColorUnassigned.Text" xml:space="preserve">
+    <value>Nicht zugewiesen</value>
+    <comment>AppLocalizedText.colorUnassigned</comment>
   </data>
   <data name="settingsColorWorking.Text" xml:space="preserve">
     <value>Arbeitsfarbraum</value>
@@ -451,6 +487,14 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="settingsExportColorLabel.Text" xml:space="preserve">
     <value>Farbe</value>
     <comment>AppLocalizedText.exportColorLabel</comment>
+  </data>
+  <data name="settingsExportProofLabel.Text" xml:space="preserve">
+    <value>Proof</value>
+    <comment>AppLocalizedText.exportProofLabel</comment>
+  </data>
+  <data name="settingsExportSoftProofLabel.Text" xml:space="preserve">
+    <value>Softproof</value>
+    <comment>AppLocalizedText.exportSoftProofLabel</comment>
   </data>
   <data name="settingsExportTab.Text" xml:space="preserve">
     <value>Exportieren</value>
@@ -495,6 +539,14 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="settingsShortcutsTab.Text" xml:space="preserve">
     <value>Kurzbefehle</value>
     <comment>AppLocalizedText.settingsShortcutsTab</comment>
+  </data>
+  <data name="settingsSoftProofPaperAndBlack.Content" xml:space="preserve">
+    <value>Papier + Schwarztinte</value>
+    <comment>AppLocalizedPhrase.softProofPaperAndBlack</comment>
+  </data>
+  <data name="settingsSoftProofProfileOnly.Content" xml:space="preserve">
+    <value>Profil</value>
+    <comment>AppLocalizedPhrase.softProofProfileOnly</comment>
   </data>
   <data name="settingsSourceDPI.Text" xml:space="preserve">
     <value>Quell-DPI</value>

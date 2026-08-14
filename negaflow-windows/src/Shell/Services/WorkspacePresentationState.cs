@@ -61,6 +61,12 @@ public sealed class WorkspacePresentationState
         settingsStore.Update(value => value with { Export = update(value.Export) });
     }
 
+    public void UpdateSoftProof(Func<SoftProofPreferences, SoftProofPreferences> update)
+    {
+        ArgumentNullException.ThrowIfNull(update);
+        settingsStore.Update(value => value with { SoftProof = update(value.SoftProof) });
+    }
+
     public void UpdateExportRecipes(Func<ExportRecipeLibrary, ExportRecipeLibrary> update)
     {
         ArgumentNullException.ThrowIfNull(update);
