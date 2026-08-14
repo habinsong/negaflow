@@ -592,6 +592,10 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
     <value>Versionen</value>
     <comment>AppLocalizedText.sidebarVersions</comment>
   </data>
+  <data name="softProofInvalidICC.Text" xml:space="preserve">
+    <value>Das gewählte ICC-Profil kann nicht für RGB-Softproofs verwendet werden.</value>
+    <comment>AppLocalizedPhrase.softProofInvalidICC</comment>
+  </data>
   <data name="sortInputOrder.Text" xml:space="preserve">
     <value>Importreihenfolge</value>
     <comment>AppLocalizedPhrase.sortInputOrder</comment>

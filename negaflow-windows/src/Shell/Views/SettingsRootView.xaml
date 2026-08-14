@@ -238,6 +238,30 @@
                                 Toggled="OnSoftProofToggled" />
                             <StackPanel x:Name="SoftProofDetailPanel" Spacing="12" Visibility="Collapsed">
                                 <Grid ColumnSpacing="16">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="SoftProofProfileName" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                                        <Button
+                                            x:Name="SoftProofChooseProfileButton"
+                                            x:Uid="developExportChangeFolder"
+                                            AutomationProperties.AutomationId="settings.export.softProof.chooseProfile"
+                                            Click="OnChooseSoftProofProfile" />
+                                        <Button
+                                            x:Name="SoftProofResetProfileButton"
+                                            x:Uid="developTabReset"
+                                            Visibility="Collapsed"
+                                            AutomationProperties.AutomationId="settings.export.softProof.resetProfile"
+                                            Click="OnResetSoftProofProfile" />
+                                    </StackPanel>
+                                </Grid>
+                                <TextBlock
+                                    x:Name="SoftProofProfileError"
+                                    x:Uid="softProofInvalidICC"
+                                    Visibility="Collapsed"
+                                    TextWrapping="Wrap"
+                                    FontSize="12"
+                                    Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                                <Grid ColumnSpacing="16">
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="230" /></Grid.ColumnDefinitions>
                                     <TextBlock x:Uid="settingsExportProofLabel" VerticalAlignment="Center" />
                                     <ComboBox

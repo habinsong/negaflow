@@ -18,7 +18,7 @@ public sealed partial class SettingsWindow : Window
         InitializeComponent();
         Title = AppResources.Get("commandSettings", "Value");
 
-        SettingsView.Initialize(workspaceState);
+        SettingsView.Initialize(workspaceState, AppWindow.Id);
         if (AppWindow.Presenter is OverlappedPresenter presenter)
         {
             presenter.IsResizable = false;

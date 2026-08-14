@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using System.IO;
 using Negaflow.Interop;
 using Negaflow.Shell.Develop;
 using Negaflow.Shell.Localization;
@@ -13,6 +14,8 @@ public sealed partial class SettingsRootView : UserControl
 {
     private WorkspacePresentationState? workspaceState;
     private bool isUpdating;
+    // 파일 선택기는 자기가 어느 창에 붙을지 알아야 합니다.
+    private Microsoft.UI.WindowId? pickerWindowId;
 
     public SettingsRootView()
     {
@@ -20,10 +23,13 @@ public sealed partial class SettingsRootView : UserControl
         LocalizeControls();
     }
 
-    public void Initialize(WorkspacePresentationState state)
+    public void Initialize(
+        WorkspacePresentationState state,
+        Microsoft.UI.WindowId? windowId = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         workspaceState = state;
+        pickerWindowId = windowId;
         state.Changed += OnStateChanged;
         UpdateState(state.Current);
         Unloaded += OnUnloaded;
@@ -115,6 +121,65 @@ public sealed partial class SettingsRootView : UserControl
             value => value with { GamutWarningEnabled = GamutWarningToggle.IsOn });
     }
 
+    private async void OnChooseSoftProofProfile(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (workspaceState is null || pickerWindowId is null)
+        {
+            return;
+        }
+
+        Microsoft.Windows.Storage.Pickers.FileOpenPicker picker = new(pickerWindowId.Value);
+        picker.FileTypeFilter.Add(".icc");
+        picker.FileTypeFilter.Add(".icm");
+
+        SoftProofChooseProfileButton.IsEnabled = false;
+        try
+        {
+            if (await picker.PickSingleFileAsync() is not { } file)
+            {
+                return;
+            }
+
+            // 프로파일을 **고를 때 한 번만** 읽습니다. RGB 프루프에 쓸 수 없는 프로파일이면
+            // 고른 것을 반영하지 않고 이유를 보여줍니다 — 쓸 수 없는 것을 고른 채로 두면
+            // 프루프가 조용히 다른 값을 씁니다.
+            bool usable;
+            try
+            {
+                byte[] bytes = await File.ReadAllBytesAsync(file.Path);
+                _ = NativeSoftProof.ReadMedia(bytes);
+                usable = true;
+            }
+            catch (Exception exception) when (
+                exception is IOException or UnauthorizedAccessException
+                    or NativeBootstrapException)
+            {
+                usable = false;
+            }
+
+            SoftProofProfileError.Visibility = usable ? Visibility.Collapsed : Visibility.Visible;
+            if (usable)
+            {
+                string name = Path.GetFileName(file.Path);
+                workspaceState.UpdateSoftProof(value => value with { ProfileName = name });
+            }
+        }
+        finally
+        {
+            SoftProofChooseProfileButton.IsEnabled = true;
+        }
+    }
+
+    private void OnResetSoftProofProfile(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        SoftProofProfileError.Visibility = Visibility.Collapsed;
+        workspaceState?.UpdateSoftProof(value => value with { ProfileName = string.Empty });
+    }
+
     private void OnImageHashToggled(object sender, RoutedEventArgs args)
     {
         _ = sender;
@@ -172,6 +237,10 @@ public sealed partial class SettingsRootView : UserControl
         string profileName = proof.ProfileName.Length != 0
             ? proof.ProfileName
             : ColorSpaceLabel(preferences.Export.EffectiveColorSpace);
+        SoftProofProfileName.Text = profileName;
+        // 되돌릴 것이 있을 때만 되돌리기를 보여줍니다. macOS 도 같은 조건입니다.
+        SoftProofResetProfileButton.Visibility =
+            proof.ProfileName.Length != 0 ? Visibility.Visible : Visibility.Collapsed;
         SoftProofSummary.Text = proof.IsEnabled
             ? $"{profileName} · {SimulationLabel(proof.Simulation)}"
             : AppResources.Get("settingsColorOff", "Text");

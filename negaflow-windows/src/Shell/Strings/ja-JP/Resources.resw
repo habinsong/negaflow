@@ -592,6 +592,10 @@
     <value>バージョン</value>
     <comment>AppLocalizedText.sidebarVersions</comment>
   </data>
+  <data name="softProofInvalidICC.Text" xml:space="preserve">
+    <value>選択した ICC プロファイルは RGB ソフト校正に使用できません。</value>
+    <comment>AppLocalizedPhrase.softProofInvalidICC</comment>
+  </data>
   <data name="sortInputOrder.Text" xml:space="preserve">
     <value>読み込み順</value>
     <comment>AppLocalizedPhrase.sortInputOrder</comment>

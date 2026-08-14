@@ -592,6 +592,10 @@
     <value>버전</value>
     <comment>AppLocalizedText.sidebarVersions</comment>
   </data>
+  <data name="softProofInvalidICC.Text" xml:space="preserve">
+    <value>선택한 ICC 프로파일은 RGB 소프트 프루프에 사용할 수 없습니다.</value>
+    <comment>AppLocalizedPhrase.softProofInvalidICC</comment>
+  </data>
   <data name="sortInputOrder.Text" xml:space="preserve">
     <value>입력순</value>
     <comment>AppLocalizedPhrase.sortInputOrder</comment>

@@ -592,6 +592,10 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
     <value>Versions</value>
     <comment>AppLocalizedText.sidebarVersions</comment>
   </data>
+  <data name="softProofInvalidICC.Text" xml:space="preserve">
+    <value>Le profil ICC sélectionné ne peut pas être utilisé pour l’épreuve écran RVB.</value>
+    <comment>AppLocalizedPhrase.softProofInvalidICC</comment>
+  </data>
   <data name="sortInputOrder.Text" xml:space="preserve">
     <value>Ordre d&apos;import</value>
     <comment>AppLocalizedPhrase.sortInputOrder</comment>
