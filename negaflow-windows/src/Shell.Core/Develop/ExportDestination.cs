@@ -31,9 +31,11 @@ public sealed record ExportDestination(string FolderPath, string NamePattern, De
     {
         ArgumentException.ThrowIfNullOrEmpty(sourcePath);
         string stem = Path.GetFileNameWithoutExtension(sourcePath);
+        // 부르는 쪽이 이름을 정해 두었으면 그것을 씁니다 — macOS 는 카드 이름으로 내보냅니다.
+        // 정하지 않은 자리(원본 경로만 아는 짧은 호출)에서는 파일 이름으로 물러납니다.
         string? rendered = ExportNamingTemplate.Render(
             NamePattern,
-            context with { FrameName = stem });
+            context.FrameName.Length == 0 ? context with { FrameName = stem } : context);
         // 패턴이 비었거나 잘못됐으면 원본 이름으로 되돌립니다. 이름 없는 파일은 만들지 않습니다.
         return (rendered ?? ExportNamingTemplate.SanitizeComponent(stem)) + ExtensionFor(Format);
     }

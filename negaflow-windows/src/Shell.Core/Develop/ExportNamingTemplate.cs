@@ -5,10 +5,9 @@ namespace Negaflow.Shell.Develop;
 /// 같은 길이 한계, 같은 정규화 순서를 씁니다.
 /// </summary>
 /// <remarks>
-/// macOS 는 아홉 개 토큰을 냅니다. 그중 <c>frame</c>·<c>date</c> 는 카탈로그가 아직 읽지 않는
-/// 촬영 순번과 촬영 일시를 필요로 하므로 여기서는 내지 않습니다 — 무엇으로도 치환되지 않는
-/// 토큰을 목록에 올리면 사용자가 빈 파일명을 만들게 됩니다. 나머지 일곱은 macOS 와 같은 이름·
-/// 같은 자리수·같은 치환 규칙입니다.
+/// macOS 의 아홉 토큰을 모두 냅니다 — 같은 이름, 같은 차례, 같은 자리수, 같은 치환 규칙입니다.
+/// <c>frame</c> 은 카드에 보이는 사진 번호이고 <c>date</c> 는 <b>내보내는 날</b>입니다(촬영일이
+/// 아닙니다 — macOS 도 <c>Date()</c> 를 넘깁니다).
 /// </remarks>
 public static class ExportNamingTemplate
 {
@@ -26,7 +25,7 @@ public static class ExportNamingTemplate
 
     /// <summary>목록 순서는 macOS 와 같습니다.</summary>
     public static IReadOnlyList<string> Tokens { get; } =
-        ["roll", "name", "preset", "sequence", "rollcode", "film", "camera"];
+        ["date", "roll", "frame", "name", "preset", "sequence", "rollcode", "film", "camera"];
 
     public static bool UsesSequence(string? pattern) =>
         Normalize(pattern).Contains("{sequence}", StringComparison.Ordinal);
@@ -82,7 +81,9 @@ public static class ExportNamingTemplate
             return null;
         }
         string rendered = Normalize(pattern)
+            .Replace("{date}", DateStamp(context.Date), StringComparison.Ordinal)
             .Replace("{roll}", SanitizeComponent(context.Roll), StringComparison.Ordinal)
+            .Replace("{frame}", Padded(context.FrameIndex), StringComparison.Ordinal)
             .Replace("{name}", SanitizeComponent(context.FrameName), StringComparison.Ordinal)
             .Replace("{preset}", SanitizeComponent(context.Preset), StringComparison.Ordinal)
             .Replace("{sequence}", Padded(context.Sequence), StringComparison.Ordinal)
@@ -98,6 +99,13 @@ public static class ExportNamingTemplate
     }
 
     private static string Padded(int value) => Math.Max(0, value).ToString("D4");
+
+    /// <summary>
+    /// macOS <c>FrameStorageNaming.dateFolderName</c> 과 같은 <c>yyyyMMdd</c> 입니다. 달력과
+    /// 자리수를 고정하지 않으면 사용자의 지역 설정에 따라 파일 이름이 갈립니다.
+    /// </summary>
+    private static string DateStamp(DateTimeOffset value) =>
+        value.ToString("yyyyMMdd", System.Globalization.CultureInfo.InvariantCulture);
 
     /// <summary>경로 한 칸으로 쓸 수 있게 다듬습니다. 파일 이름에 못 쓰는 글자는 밑줄이 됩니다.</summary>
     public static string SanitizeComponent(string? value)
@@ -122,6 +130,15 @@ public readonly record struct ExportNamingContext(
     string Preset,
     int Sequence)
 {
+    /// <summary>
+    /// 카드에 보이는 사진 번호입니다. macOS <c>presentationIndex</c> 와 같은 값이며 네 자리로
+    /// 채워 나갑니다.
+    /// </summary>
+    public int FrameIndex { get; init; }
+
+    /// <summary>내보내는 날입니다. 촬영일이 아닙니다.</summary>
+    public DateTimeOffset Date { get; init; } = DateTimeOffset.Now;
+
     /// <summary>롤 이름입니다. 롤에 속하지 않으면 빈 문자열이며 토큰은 사라집니다.</summary>
     public string Roll { get; init; } = string.Empty;
 

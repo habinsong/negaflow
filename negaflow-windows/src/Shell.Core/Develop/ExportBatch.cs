@@ -72,6 +72,9 @@ public sealed class ExportBatchCoordinator
         ExportDestination destination = normalized.Destination;
         var taken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var plans = new List<ExportBatchPlan>(frames.Count);
+        // 날짜는 배치 한 번에 하나입니다. frame 마다 지금을 물으면 자정을 넘긴 배치가 두 날짜로
+        // 갈립니다.
+        DateTimeOffset exportedAt = DateTimeOffset.Now;
         for (int index = 0; index < frames.Count; ++index)
         {
             LibraryFrameSnapshot frame = frames[index];
@@ -80,7 +83,8 @@ public sealed class ExportBatchCoordinator
                 ExportNamingContexts.For(
                     frame,
                     rollFor?.Invoke(frame),
-                    normalized.SequenceStart + index));
+                    normalized.SequenceStart + index,
+                    exportedAt));
             plans.Add(new ExportBatchPlan(
                 frame.Id,
                 Path.GetFileNameWithoutExtension(frame.SourcePath),

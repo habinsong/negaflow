@@ -399,7 +399,21 @@ internal static class Program
             (tiff with { NamePattern = ExportNamingTemplate.PhotoNameSequencePattern })
                 .FileNameFor(source, 7) == "IMG_0007-0007.tif",
             "export_destination_expands_the_sequence_token");
-        Check(!ExportNamingTemplate.IsValid("{date}"), "export_naming_refuses_unknown_tokens");
+        Check(!ExportNamingTemplate.IsValid("{shutter}"), "export_naming_refuses_unknown_tokens");
+        // macOS 의 아홉 토큰을 모두 받습니다. {date} 는 내보내는 날, {frame} 은 사진 번호입니다.
+        Check(
+            ExportNamingTemplate.IsValid("{date}-{frame}") &&
+                ExportNamingTemplate.Tokens.Count == 9,
+            "export_naming_accepts_every_mac_token");
+        Check(
+            ExportNamingTemplate.Render(
+                "{date}-{frame}",
+                new ExportNamingContext("ignored", string.Empty, 0)
+                {
+                    FrameIndex = 12,
+                    Date = new DateTimeOffset(2026, 8, 15, 9, 30, 0, TimeSpan.FromHours(9)),
+                }) == "20260815-0012",
+            "export_naming_date_and_frame_match_mac_shape");
         Check(!ExportNamingTemplate.IsValid("{name"), "export_naming_refuses_unclosed_tokens");
         Check(
             ExportNamingTemplate.UsesSequence(ExportNamingTemplate.SequenceOnlyPattern),
@@ -4471,12 +4485,22 @@ internal static class Program
         Directory.CreateDirectory(root);
         try
         {
+            // 이름은 카드에 보이는 이름입니다 — 원본 경로가 아니라 그것이 파일 이름이 됩니다.
             LibraryFrameSnapshot[] frames =
             [
-                Frame(new ManualBaseRgb(0.2, 0.2, 0.2), sourcePath: @"C:\scans\IMG_0001.tif"),
-                Frame(new ManualBaseRgb(0.2, 0.2, 0.2), sourcePath: @"C:\scans\IMG_0002.tif"),
+                Frame(
+                    new ManualBaseRgb(0.2, 0.2, 0.2),
+                    displayName: "IMG_0001",
+                    sourcePath: @"C:\scans\IMG_0001.tif"),
+                Frame(
+                    new ManualBaseRgb(0.2, 0.2, 0.2),
+                    displayName: "IMG_0002",
+                    sourcePath: @"C:\scans\IMG_0002.tif"),
                 // 다른 폴더의 같은 이름입니다. 한 폴더로 내보내면 부딪힙니다.
-                Frame(new ManualBaseRgb(0.2, 0.2, 0.2), sourcePath: @"D:\other\IMG_0001.tif"),
+                Frame(
+                    new ManualBaseRgb(0.2, 0.2, 0.2),
+                    displayName: "IMG_0001",
+                    sourcePath: @"D:\other\IMG_0001.tif"),
             ];
             ExportSettings settings = new()
             {

@@ -15,16 +15,22 @@ public static class ExportNamingContexts
     public static ExportNamingContext For(
         LibraryFrameSnapshot frame,
         LibraryRollSnapshot? roll,
-        int sequence)
+        int sequence,
+        DateTimeOffset? exportedAt = null)
     {
         ArgumentNullException.ThrowIfNull(frame);
         FilmShotMetadata? frameShot = frame.AppMetadata?.FilmShot;
         FilmShotMetadata? rollShot = roll?.Record?.Shot;
+        // {name} 은 **카드에 보이는 이름**입니다. 원본 파일 이름을 쓰면 macOS 와 다른 파일이
+        // 나옵니다 — 같은 사진을 두 앱에서 내보내면 이름이 갈립니다.
+        string frameName = LibraryFrameNaming.DisplayName(frame);
         return new ExportNamingContext(
-            string.Empty,
+            frameName,
             frame.LookPresetId ?? string.Empty,
             sequence)
         {
+            FrameIndex = frame.PresentationIndex,
+            Date = exportedAt ?? DateTimeOffset.Now,
             Roll = roll?.Name ?? string.Empty,
             RollCode = roll?.Record?.Code ?? string.Empty,
             Film = frameShot?.FilmStock ?? rollShot?.FilmStock ?? string.Empty,
