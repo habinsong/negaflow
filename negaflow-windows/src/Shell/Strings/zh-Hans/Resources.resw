@@ -998,4 +998,11 @@
   <data name="libraryShowInExplorer.Content" xml:space="preserve"><value>在文件资源管理器中显示</value><comment>AppLocalizedPhrase.showInFinder</comment></data>
   <data name="commonCancel.Content" xml:space="preserve"><value>取消</value><comment>AppLocalizedPhrase.cancel</comment></data>
   <data name="libraryRemoveConfirmFormat.Text" xml:space="preserve"><value>从目录中移除 %d 张照片？原始文件不会被删除。</value><comment>Windows only: macOS removes with undo; Windows asks first.</comment></data>
+  <data name="developScannerProfile.Text" xml:space="preserve"><value>配置文件</value><comment>AppLocalizedPhrase.profile</comment></data>
+  <data name="developScannerProfileNone.Text" xml:space="preserve"><value>无</value><comment>AppLocalizedPhrase.none</comment></data>
+  <data name="developProfileStatusDraft.Text" xml:space="preserve"><value>草稿</value><comment>AppLocalizedPhrase.scannerProfileStatusDraft</comment></data>
+  <data name="developProfileStatusRealOnly.Text" xml:space="preserve"><value>实测扫描</value><comment>AppLocalizedPhrase.scannerProfileStatusRealOnly</comment></data>
+  <data name="developProfileStatusPairedSmoke.Text" xml:space="preserve"><value>配对测试</value><comment>AppLocalizedPhrase.scannerProfileStatusPairedSmoke</comment></data>
+  <data name="developProfileStatusPairedValidated.Text" xml:space="preserve"><value>配对验证通过</value><comment>AppLocalizedPhrase.scannerProfileStatusPairedValidated</comment></data>
+  <data name="libraryFilterUnvalidatedProfile.Content" xml:space="preserve"><value>未验证的配置文件</value><comment>AppLocalizedPhrase.filterUnvalidatedProfile</comment></data>
 </root>

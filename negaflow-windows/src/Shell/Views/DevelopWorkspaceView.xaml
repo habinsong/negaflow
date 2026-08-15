@@ -1574,6 +1574,13 @@
                                         AutomationProperties.AutomationId="negaflow.develop.base.light-source"
                                         DisplayMemberPath="DisplayName"
                                         SelectionChanged="OnLightSourceSelectionChanged" />
+                                    <!-- macOS 는 필름·광원 다음 셋째 줄에 스캐너 프로파일을 둡니다. -->
+                                    <TextBlock x:Name="ScannerProfileLabel" FontSize="12" />
+                                    <ComboBox
+                                        x:Name="ScannerProfileSelector"
+                                        AutomationProperties.AutomationId="negaflow.develop.base.scanner-profile"
+                                        DisplayMemberPath="Label"
+                                        SelectionChanged="OnScannerProfileSelectionChanged" />
                                 </StackPanel>
                                 <!-- Minimum/Maximum 은 엔진이 알려 준 값으로 코드에서 설정한다. -->
                                 <StackPanel x:Name="ManualBaseControls" Spacing="10">

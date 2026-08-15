@@ -998,4 +998,11 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="libraryShowInExplorer.Content" xml:space="preserve"><value>Afficher dans l’Explorateur de fichiers</value><comment>AppLocalizedPhrase.showInFinder</comment></data>
   <data name="commonCancel.Content" xml:space="preserve"><value>Annuler</value><comment>AppLocalizedPhrase.cancel</comment></data>
   <data name="libraryRemoveConfirmFormat.Text" xml:space="preserve"><value>Retirer %d photo(s) du catalogue ? Les fichiers d’origine ne sont pas supprimés.</value><comment>Windows only: macOS removes with undo; Windows asks first.</comment></data>
+  <data name="developScannerProfile.Text" xml:space="preserve"><value>Profil</value><comment>AppLocalizedPhrase.profile</comment></data>
+  <data name="developScannerProfileNone.Text" xml:space="preserve"><value>Aucun</value><comment>AppLocalizedPhrase.none</comment></data>
+  <data name="developProfileStatusDraft.Text" xml:space="preserve"><value>Brouillon</value><comment>AppLocalizedPhrase.scannerProfileStatusDraft</comment></data>
+  <data name="developProfileStatusRealOnly.Text" xml:space="preserve"><value>Scans réels</value><comment>AppLocalizedPhrase.scannerProfileStatusRealOnly</comment></data>
+  <data name="developProfileStatusPairedSmoke.Text" xml:space="preserve"><value>Test apparié</value><comment>AppLocalizedPhrase.scannerProfileStatusPairedSmoke</comment></data>
+  <data name="developProfileStatusPairedValidated.Text" xml:space="preserve"><value>Validation appariée</value><comment>AppLocalizedPhrase.scannerProfileStatusPairedValidated</comment></data>
+  <data name="libraryFilterUnvalidatedProfile.Content" xml:space="preserve"><value>Profil non validé</value><comment>AppLocalizedPhrase.filterUnvalidatedProfile</comment></data>
 </root>

@@ -145,6 +145,44 @@ public sealed class DevelopPanelState
     }
 
     /// <summary>
+    /// 스캐너 프로파일을 고릅니다. 이 값이 붙어야 native 가 NORITSU·SP-3000 의 톤·색·질감
+    /// 성격을 얹습니다 — 고르지 않으면 그 단계는 통째로 건너뜁니다.
+    /// </summary>
+    public LibraryFrameError SetScannerProfile(string? scannerProfileId)
+    {
+        if (SelectedFrame is not { } frame)
+        {
+            return LibraryFrameError.MissingId;
+        }
+        if (!CanEditBase)
+        {
+            return LibraryFrameError.InvalidDevelopRoute;
+        }
+        if (frame.Base.Mode != BaseEstimationMode.Preset)
+        {
+            return LibraryFrameError.InvalidBaseRecipe;
+        }
+        // native 가 모르는 id 는 조용히 무시됩니다. 저장은 되고 그림은 그대로인 상태가 가장
+        // 나쁘므로 여기서 막습니다.
+        if (!BundledFilmBaseOptions.IsKnownScannerProfile(scannerProfileId))
+        {
+            return LibraryFrameError.InvalidBaseRecipe;
+        }
+
+        LibraryFrameError error = host.Edit(
+            frame.Id,
+            new LibraryFrameEdit(
+                frame.Tone,
+                frame.ManualBase,
+                frame.Base with { ScannerProfileId = scannerProfileId }));
+        if (error == LibraryFrameError.None)
+        {
+            Select(frame.Id);
+        }
+        return error;
+    }
+
+    /// <summary>
     /// 수동 필름 base 를 설정합니다. 범위는 엔진이 알려 준 것이며, 엔진은 벗어난 값을 거부하지
     /// 않고 조용히 clamp 하므로 여기서 먼저 묶어 저장된 값과 쓰인 값이 같게 합니다.
     /// </summary>

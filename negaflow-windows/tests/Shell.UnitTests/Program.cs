@@ -356,6 +356,37 @@ internal static class Program
             new LibraryQuickFilterState { MetadataUnknown = true }.Apply(metadata);
         Check(unknown.Count == 1 && unknown[0].Id == "unknown",
             "library_quick_filters_metadata_unknown");
+
+        // macOS 는 프로파일이 **없는** 사진을 이 축에 넣지 않습니다 — 검증할 프로파일이
+        // 없기 때문입니다. 함께 나가는 15개는 전부 realOnly 라 걸린 것은 모두 걸립니다.
+        LibraryFrameListItem[] profiles =
+        [
+            new(Frame(null) with
+            {
+                Id = "profiled",
+                Base = new BaseRecipe(
+                    BaseEstimationMode.Preset,
+                    "kodak-portra-400",
+                    null,
+                    "noritsu__color-nega__kodak-portra-400"),
+            }),
+            new(Frame(null) with
+            {
+                Id = "no-profile",
+                Base = new BaseRecipe(BaseEstimationMode.Preset, "kodak-portra-400", null, null),
+            }),
+        ];
+        IReadOnlyList<LibraryFrameListItem> unvalidated =
+            new LibraryQuickFilterState { UnvalidatedProfile = true }.Apply(profiles);
+        Check(unvalidated.Count == 1 && unvalidated[0].Id == "profiled",
+            "library_quick_filters_unvalidated_profile");
+
+        // 저장된 찾기가 이 축을 잃으면, 다시 연 스마트 컬렉션이 다른 사진을 보여 줍니다.
+        Check(
+            LibraryStoredQuery
+                .From(new LibraryQuickFilterState { UnvalidatedProfile = true }, null)
+                .ToQuickFilters([]).UnvalidatedProfile,
+            "stored_query_round_trips_unvalidated_profile");
     }
 
     /// <summary>

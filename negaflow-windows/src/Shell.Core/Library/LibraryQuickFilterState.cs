@@ -5,10 +5,8 @@ namespace Negaflow.Shell;
 /// 조건은 전부 AND 로 걸립니다.
 /// </summary>
 /// <remarks>
-/// macOS 의 <c>currentRoll</c> 과 <c>unvalidatedProfile</c> 은 아직 없습니다. 각각 storage
-/// group/scan session 과 스캐너 프로파일 검증 상태를 catalog projection 이 읽어야 하는데 둘 다
-/// 아직 투영되지 않습니다. 데이터 없이 토글만 만들면 눌러도 아무 일이 없는 컨트롤이 되므로
-/// 만들지 않았습니다.
+/// 여덟 축 모두 macOS 와 같은 이름·같은 뜻이며, 화면의 차례도 macOS
+/// <c>LibraryBrowserFilterBar</c> 와 같습니다.
 /// </remarks>
 public sealed record LibraryQuickFilterState
 {
@@ -32,6 +30,14 @@ public sealed record LibraryQuickFilterState
     public bool MetadataUnknown { get; init; }
 
     /// <summary>
+    /// 아직 쌍 비교로 검증되지 않은 스캐너 프로파일이 걸린 사진입니다. macOS 는
+    /// <c>scannerProfileState(isAnyOf: [.missing, .draft, .realOnly, .pairedSmoke])</c> 입니다 —
+    /// 그 목록에 <c>none</c> 은 <b>없습니다</b>. 프로파일을 아예 고르지 않은 사진은 검증할
+    /// 프로파일 자체가 없으므로 걸리지 않습니다.
+    /// </summary>
+    public bool UnvalidatedProfile { get; init; }
+
+    /// <summary>
     /// 지금 스캔 중인 롤의 사진만 봅니다. 활성 롤이 없으면 이 축은 아무 것도 걸러내지
     /// 않습니다 — 켠 순간 격자가 비면 사용자는 사진이 사라졌다고 읽습니다.
     /// </summary>
@@ -42,7 +48,7 @@ public sealed record LibraryQuickFilterState
 
     public bool IsActive =>
         MinimumRating is not null || Picked || Rejected || Offline || Infrared ||
-        DefectRecipe || MetadataUnknown || IsCurrentRollActive;
+        DefectRecipe || MetadataUnknown || UnvalidatedProfile || IsCurrentRollActive;
 
     private bool IsCurrentRollActive => CurrentRoll && CurrentRollFrameIds.Count > 0;
 
@@ -95,7 +101,22 @@ public sealed record LibraryQuickFilterState
         {
             return false;
         }
+        if (UnvalidatedProfile && !IsUnvalidatedProfile(item.Frame.Base.ScannerProfileId))
+        {
+            return false;
+        }
         return !IsCurrentRollActive ||
             CurrentRollFrameIds.Contains(item.Frame.Id, StringComparer.Ordinal);
     }
+
+    /// <summary>
+    /// 이 프로파일 id 가 macOS 의 "검증되지 않음" 네 상태 중 하나인지.
+    /// </summary>
+    /// <remarks>
+    /// 지금 함께 나가는 15개는 모두 <c>realOnly</c> 이고, 모르는 id 는 <c>missing</c> 입니다.
+    /// 둘 다 그 집합 안이므로 프로파일이 걸려 있기만 하면 참입니다. 프로파일이 <c>pairedValidated</c>
+    /// 인 판이 생기면 이 함수만 고치면 됩니다.
+    /// </remarks>
+    private static bool IsUnvalidatedProfile(string? scannerProfileId) =>
+        !string.IsNullOrEmpty(scannerProfileId);
 }

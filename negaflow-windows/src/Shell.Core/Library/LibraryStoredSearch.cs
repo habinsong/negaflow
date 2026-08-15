@@ -25,6 +25,8 @@ public sealed record LibraryStoredQuery
 
     public bool MetadataUnknown { get; init; }
 
+    public bool UnvalidatedProfile { get; init; }
+
     public bool CurrentRoll { get; init; }
 
     /// <summary>저장할 때의 필터 상태로 되돌립니다. 활성 롤 목록은 그때그때 다시 읽습니다.</summary>
@@ -38,6 +40,7 @@ public sealed record LibraryStoredQuery
             Infrared = Infrared,
             DefectRecipe = DefectRecipe,
             MetadataUnknown = MetadataUnknown,
+            UnvalidatedProfile = UnvalidatedProfile,
             CurrentRoll = CurrentRoll,
             CurrentRollFrameIds = CurrentRoll ? currentRollFrameIds : [],
         };
@@ -55,6 +58,7 @@ public sealed record LibraryStoredQuery
             Infrared = filters.Infrared,
             DefectRecipe = filters.DefectRecipe,
             MetadataUnknown = filters.MetadataUnknown,
+            UnvalidatedProfile = filters.UnvalidatedProfile,
             CurrentRoll = filters.CurrentRoll,
         };
     }

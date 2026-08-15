@@ -998,4 +998,11 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="libraryShowInExplorer.Content" xml:space="preserve"><value>Im Explorer anzeigen</value><comment>AppLocalizedPhrase.showInFinder</comment></data>
   <data name="commonCancel.Content" xml:space="preserve"><value>Abbrechen</value><comment>AppLocalizedPhrase.cancel</comment></data>
   <data name="libraryRemoveConfirmFormat.Text" xml:space="preserve"><value>%d Foto(s) aus dem Katalog entfernen? Die Originaldateien werden nicht gelöscht.</value><comment>Windows only: macOS removes with undo; Windows asks first.</comment></data>
+  <data name="developScannerProfile.Text" xml:space="preserve"><value>Profil</value><comment>AppLocalizedPhrase.profile</comment></data>
+  <data name="developScannerProfileNone.Text" xml:space="preserve"><value>Keine</value><comment>AppLocalizedPhrase.none</comment></data>
+  <data name="developProfileStatusDraft.Text" xml:space="preserve"><value>Entwurf</value><comment>AppLocalizedPhrase.scannerProfileStatusDraft</comment></data>
+  <data name="developProfileStatusRealOnly.Text" xml:space="preserve"><value>Reale Scans</value><comment>AppLocalizedPhrase.scannerProfileStatusRealOnly</comment></data>
+  <data name="developProfileStatusPairedSmoke.Text" xml:space="preserve"><value>Paartest</value><comment>AppLocalizedPhrase.scannerProfileStatusPairedSmoke</comment></data>
+  <data name="developProfileStatusPairedValidated.Text" xml:space="preserve"><value>Paarweise validiert</value><comment>AppLocalizedPhrase.scannerProfileStatusPairedValidated</comment></data>
+  <data name="libraryFilterUnvalidatedProfile.Content" xml:space="preserve"><value>Nicht validiertes Profil</value><comment>AppLocalizedPhrase.filterUnvalidatedProfile</comment></data>
 </root>

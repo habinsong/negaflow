@@ -998,4 +998,11 @@ Load a scanner from Library to scan film.</value>
   <data name="libraryShowInExplorer.Content" xml:space="preserve"><value>Show in File Explorer</value><comment>AppLocalizedPhrase.showInFinder</comment></data>
   <data name="commonCancel.Content" xml:space="preserve"><value>Cancel</value><comment>AppLocalizedPhrase.cancel</comment></data>
   <data name="libraryRemoveConfirmFormat.Text" xml:space="preserve"><value>Remove %d photo(s) from the catalog? The original files are not deleted.</value><comment>Windows only: macOS removes with undo; Windows asks first.</comment></data>
+  <data name="developScannerProfile.Text" xml:space="preserve"><value>Profile</value><comment>AppLocalizedPhrase.profile</comment></data>
+  <data name="developScannerProfileNone.Text" xml:space="preserve"><value>None</value><comment>AppLocalizedPhrase.none</comment></data>
+  <data name="developProfileStatusDraft.Text" xml:space="preserve"><value>Draft</value><comment>AppLocalizedPhrase.scannerProfileStatusDraft</comment></data>
+  <data name="developProfileStatusRealOnly.Text" xml:space="preserve"><value>Real Scans</value><comment>AppLocalizedPhrase.scannerProfileStatusRealOnly</comment></data>
+  <data name="developProfileStatusPairedSmoke.Text" xml:space="preserve"><value>Paired Test</value><comment>AppLocalizedPhrase.scannerProfileStatusPairedSmoke</comment></data>
+  <data name="developProfileStatusPairedValidated.Text" xml:space="preserve"><value>Paired Validated</value><comment>AppLocalizedPhrase.scannerProfileStatusPairedValidated</comment></data>
+  <data name="libraryFilterUnvalidatedProfile.Content" xml:space="preserve"><value>Unvalidated Profile</value><comment>AppLocalizedPhrase.filterUnvalidatedProfile</comment></data>
 </root>

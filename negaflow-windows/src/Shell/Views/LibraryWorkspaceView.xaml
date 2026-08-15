@@ -615,13 +615,14 @@
                             </MenuFlyout>
                         </DropDownButton.Flyout>
                     </DropDownButton>
+                    <ToggleButton x:Name="CurrentRollFilterToggle" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.current-roll" CornerRadius="13" Checked="OnQuickFilterToggled" FontSize="11" Unchecked="OnQuickFilterToggled" />
                     <ToggleButton x:Name="PickedFilterToggle" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.picked" CornerRadius="13" Checked="OnQuickFilterToggled" FontSize="11" Unchecked="OnQuickFilterToggled" />
                     <ToggleButton x:Name="RejectedFilterToggle" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.rejected" CornerRadius="13" Checked="OnQuickFilterToggled" FontSize="11" Unchecked="OnQuickFilterToggled" />
                     <ToggleButton x:Name="OfflineFilterToggle" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.offline" CornerRadius="13" Checked="OnQuickFilterToggled" FontSize="11" Unchecked="OnQuickFilterToggled" />
                     <ToggleButton x:Name="InfraredFilterToggle" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.infrared" CornerRadius="13" Checked="OnQuickFilterToggled" FontSize="11" Unchecked="OnQuickFilterToggled" />
                     <ToggleButton x:Name="DefectRecipeFilterToggle" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.defect-recipe" CornerRadius="13" Checked="OnQuickFilterToggled" FontSize="11" Unchecked="OnQuickFilterToggled" />
+                    <ToggleButton x:Name="UnvalidatedProfileFilterToggle" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.unvalidated-profile" CornerRadius="13" Checked="OnQuickFilterToggled" FontSize="11" Unchecked="OnQuickFilterToggled" />
                     <ToggleButton x:Name="MetadataUnknownFilterToggle" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.metadata-unknown" CornerRadius="13" Checked="OnQuickFilterToggled" FontSize="11" Unchecked="OnQuickFilterToggled" />
-                    <ToggleButton x:Name="CurrentRollFilterToggle" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.current-roll" CornerRadius="13" Checked="OnQuickFilterToggled" FontSize="11" Unchecked="OnQuickFilterToggled" />
                     <Button x:Name="ClearFiltersButton" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.clear" Background="Transparent" BorderThickness="0" Click="OnClearFiltersClicked" FontSize="11" />
                 </StackPanel>
             </ScrollViewer>

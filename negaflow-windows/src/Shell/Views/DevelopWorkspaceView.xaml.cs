@@ -148,6 +148,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
             "user-presets.json"));
         FilmStockSelector.ItemsSource = BundledFilmBaseOptions.FilmStocks;
         LightSourceSelector.ItemsSource = BundledFilmBaseOptions.LightSources;
+        ScannerProfileSelector.ItemsSource = ScannerProfileChoices();
         ExposureControl.Minimum = -panel.MaximumExposureStops;
         ExposureControl.Maximum = panel.MaximumExposureStops;
         HistogramView.ConfigureRanges(panel.MaximumExposureStops, panel.MaximumToneControl);
@@ -1300,12 +1301,16 @@ public sealed partial class DevelopWorkspaceView : UserControl
             option => option.Id == panel.SelectedFrame?.Base.FilmStockDminId);
         LightSourceSelector.SelectedItem = BundledFilmBaseOptions.LightSources.FirstOrDefault(
             option => option.Id == panel.SelectedFrame?.Base.LightSourceProfileId);
+        ScannerProfileSelector.SelectedItem = ScannerProfileSelector.Items
+            .OfType<ScannerProfileChoice>()
+            .FirstOrDefault(choice => choice.Id == panel.SelectedFrame?.Base.ScannerProfileId);
         isSynchronizingInspector = false;
         FilmBaseControls.Visibility = canEdit && panel.BaseMode == BaseEstimationMode.Preset
             ? Visibility.Visible
             : Visibility.Collapsed;
         FilmStockSelector.IsEnabled = canEdit && panel.BaseMode == BaseEstimationMode.Preset;
         LightSourceSelector.IsEnabled = canEdit && panel.BaseMode == BaseEstimationMode.Preset;
+        ScannerProfileSelector.IsEnabled = canEdit && panel.BaseMode == BaseEstimationMode.Preset;
         ManualBaseControls.Visibility = canEdit && panel.BaseMode == BaseEstimationMode.Manual
             ? Visibility.Visible
             : Visibility.Collapsed;
@@ -1482,6 +1487,49 @@ public sealed partial class DevelopWorkspaceView : UserControl
         _ = args;
         if (panel is null || isSynchronizingInspector ||
             panel.SetFilmStock((FilmStockSelector.SelectedItem as FilmStockOption)?.Id) != LibraryFrameError.None)
+        {
+            return;
+        }
+        UpdateAfterBaseRecipeChanged();
+    }
+
+    /// <summary>
+    /// 프로파일 목록입니다. macOS 처럼 이름 뒤에 검증 상태를 붙입니다 — 같은 스캐너의 프로파일이
+    /// 여럿일 때 무엇으로 만들어진 것인지가 고르는 근거입니다.
+    /// </summary>
+    private static IReadOnlyList<ScannerProfileChoice> ScannerProfileChoices()
+    {
+        List<ScannerProfileChoice> choices =
+        [
+            new(null, AppResources.Get("developScannerProfileNone", "Text")),
+        ];
+        foreach (ScannerProfileOption option in BundledFilmBaseOptions.ScannerProfiles)
+        {
+            choices.Add(new ScannerProfileChoice(
+                option.Id,
+                $"{option.DisplayName} · {StatusLabel(option.Status)}"));
+        }
+        return choices;
+    }
+
+    private static string StatusLabel(ScannerProfileValidationStatus status) =>
+        AppResources.Get(status switch
+        {
+            ScannerProfileValidationStatus.Draft => "developProfileStatusDraft",
+            ScannerProfileValidationStatus.PairedSmoke => "developProfileStatusPairedSmoke",
+            ScannerProfileValidationStatus.PairedValidated =>
+                "developProfileStatusPairedValidated",
+            _ => "developProfileStatusRealOnly",
+        }, "Text");
+
+    private void OnScannerProfileSelectionChanged(object sender, SelectionChangedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (panel is null || isSynchronizingInspector ||
+            panel.SetScannerProfile(
+                (ScannerProfileSelector.SelectedItem as ScannerProfileChoice)?.Id) !=
+                LibraryFrameError.None)
         {
             return;
         }
@@ -4683,6 +4731,8 @@ public sealed partial class DevelopWorkspaceView : UserControl
         AutomationProperties.SetName(FilmStockSelector, FilmStockLabel.Text);
         LightSourceLabel.Text = AppResources.Get("developLightSource", "Text");
         AutomationProperties.SetName(LightSourceSelector, LightSourceLabel.Text);
+        ScannerProfileLabel.Text = AppResources.Get("developScannerProfile", "Text");
+        AutomationProperties.SetName(ScannerProfileSelector, ScannerProfileLabel.Text);
         SetToggleText(AutoColorToggle, AppResources.Get("developAutoColor", "Content"));
         SetToggleText(AutoLevelsToggle, AppResources.Get("developAutoLevels", "Content"));
         SetButtonText(AutoToneButton, AppResources.Get("developAutoTone", "Content"));
