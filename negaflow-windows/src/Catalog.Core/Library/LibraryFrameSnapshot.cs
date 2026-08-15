@@ -312,8 +312,111 @@ public sealed record LibraryFrameSnapshot(
         _ => false,
     };
 
+    /// <summary>롤 안에서의 순번입니다(1부터). macOS <c>scanIndex</c> 와 같은 자리입니다.</summary>
+    public int ScanIndex { get; init; }
+
+    /// <summary>스캐너가 낸 것인지 사용자가 가져온 것인지. 이름 짓는 방식이 달라집니다.</summary>
+    public FrameSourceKind SourceKind { get; init; } = FrameSourceKind.ImportedFile;
+
+    /// <summary>
+    /// 가상 사본이 물려받은 원본의 이름입니다. macOS 만 적으며, 있으면 파일 이름보다 앞섭니다.
+    /// </summary>
+    public string? SourceFrameDisplayName { get; init; }
+
+    /// <summary>
+    /// 사용자가 "이름 변경"으로 지정한 사진 번호입니다. macOS 는 이 값을
+    /// <c>customDisplayName</c> 안에 <c>negaflow:photo-number:</c> 표식으로 넣어 두므로, 표식을
+    /// 모르면 카드에 그 문자열이 그대로 나옵니다.
+    /// </summary>
+    public int? AssignedPhotoNumber =>
+        DisplayName is { } name && name.StartsWith(AssignedPhotoNumberPrefix, StringComparison.Ordinal) &&
+        int.TryParse(
+            name.AsSpan(AssignedPhotoNumberPrefix.Length),
+            System.Globalization.NumberStyles.None,
+            System.Globalization.CultureInfo.InvariantCulture,
+            out int number) &&
+        number > 0
+            ? number
+            : null;
+
+    /// <summary>사용자가 직접 지은 이름입니다. 번호 표식은 이름이 아니므로 제외합니다.</summary>
+    public string? LiteralDisplayName =>
+        AssignedPhotoNumber is not null || string.IsNullOrWhiteSpace(DisplayName)
+            ? null
+            : DisplayName.Trim();
+
+    /// <summary>
+    /// 카드에 붙는 번호입니다. 지정한 번호가 있으면 그것을, 스캐너 파일이면 파일 이름 끝의
+    /// <c>_frame_&lt;n&gt;</c> 을, 아니면 롤 순번을 씁니다 — macOS <c>presentationIndex</c> 와
+    /// 같은 차례입니다.
+    /// </summary>
+    public int PresentationIndex
+    {
+        get
+        {
+            if (AssignedPhotoNumber is { } assigned)
+            {
+                return assigned;
+            }
+            if (SourceKind != FrameSourceKind.ScannerTiff)
+            {
+                return ScanIndex;
+            }
+            string baseName = Path.GetFileNameWithoutExtension(SourcePath);
+            int marker = baseName.LastIndexOf("_frame_", StringComparison.Ordinal);
+            if (marker < 0)
+            {
+                return ScanIndex;
+            }
+            ReadOnlySpan<char> suffix = baseName.AsSpan(marker + "_frame_".Length);
+            return !suffix.IsEmpty &&
+                int.TryParse(
+                    suffix,
+                    System.Globalization.NumberStyles.None,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    out int fileIndex) &&
+                fileIndex > 0
+                    ? fileIndex
+                    : ScanIndex;
+        }
+    }
+
+    /// <summary>
+    /// 번호를 붙이지 않고 그대로 쓸 이름입니다. 없으면 호출자가 번호로 이름을 지어야 합니다 —
+    /// 그 문구는 언어마다 다르므로 셸이 만듭니다.
+    /// </summary>
+    public string? PreferredBaseDisplayName =>
+        LiteralDisplayName
+            ?? (string.IsNullOrWhiteSpace(SourceFrameDisplayName)
+                ? null
+                : SourceFrameDisplayName.Trim())
+            ?? (SourceKind == FrameSourceKind.ImportedFile ? SourceFileBaseName : null);
+
+    /// <summary>확장자를 뗀 원본 파일 이름입니다. macOS <c>sourceFileBaseName</c> 과 같습니다.</summary>
+    public string? SourceFileBaseName =>
+        Path.GetFileNameWithoutExtension(SourcePath).Trim() is { Length: > 0 } name
+            ? name
+            : null;
+
+    /// <summary>
+    /// 번역이 닿지 않는 자리(로그, 진단)에서 쓰는 이름입니다. 화면에 보이는 이름은
+    /// <c>LibraryFrameNaming</c> 이 언어에 맞춰 짓습니다.
+    /// </summary>
     public string EffectiveDisplayName =>
-        string.IsNullOrWhiteSpace(DisplayName)
-            ? Path.GetFileName(SourcePath)
-            : DisplayName;
+        PreferredBaseDisplayName ?? Path.GetFileName(SourcePath);
+
+    internal const string AssignedPhotoNumberPrefix = "negaflow:photo-number:";
+
+    /// <summary>
+    /// 번호 표식입니다. macOS 가 <c>customDisplayName</c> 에 적는 것과 **글자 하나까지 같아야**
+    /// 두 앱이 같은 사진을 같은 번호로 부릅니다.
+    /// </summary>
+    public static string AssignedPhotoNumberPrefixValue => AssignedPhotoNumberPrefix;
+}
+
+/// <summary>macOS <c>FrameSource</c> 와 같습니다. catalog 에는 문자열로 삽니다.</summary>
+public enum FrameSourceKind
+{
+    ScannerTiff,
+    ImportedFile,
 }

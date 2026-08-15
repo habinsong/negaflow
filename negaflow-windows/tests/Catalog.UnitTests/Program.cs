@@ -44,6 +44,7 @@ internal static class Program
         VerifyCatalogProcessLock();
         VerifySqliteCatalogStore();
         VerifyLibraryFrameProjection();
+        VerifyFrameFlagAndNaming();
         VerifyLocalDodgeBurnPersistence();
 
         var report = new
@@ -2397,6 +2398,78 @@ internal static class Program
 
         VerifyLibraryFrameRefusals();
         VerifyLibraryFrameWriting();
+    }
+
+    /// <summary>
+    /// 깃발과 이름은 라이브러리가 사진을 부르고 고르는 방식 그 자체입니다. 읽기만 되고 쓰기가
+    /// 없으면 "선택한 사진만 보기" 필터는 영원히 비어 있습니다.
+    /// </summary>
+    private static void VerifyFrameFlagAndNaming()
+    {
+        // 깃발 세 상태가 모두 왕복하는지. macOS 가 적는 raw value 와 같은 글자여야 합니다.
+        foreach (FramePickState state in new[]
+        {
+            FramePickState.Picked,
+            FramePickState.Rejected,
+            FramePickState.Unflagged,
+        })
+        {
+            LibraryFrameWriteResult written = LibraryFrameWriter.Apply(
+                FrameRecord(),
+                new LibraryFrameEdit(
+                    ToneAdjustment.Neutral,
+                    null,
+                    PickState: state));
+            Check(
+                written.IsSuccess &&
+                    ReadFrame(written.FrameRecord!).Frame?.PickState == state,
+                $"library_frame_pick_state_round_trip_{state}");
+        }
+
+        // 이름을 떼면 키 자체가 사라져야 합니다. 빈 문자열이 남으면 파일 이름으로 돌아가지
+        // 못하고 이름 없는 사진이 됩니다.
+        LibraryFrameWriteResult cleared = LibraryFrameWriter.Apply(
+            FrameRecord(),
+            new LibraryFrameEdit(
+                ToneAdjustment.Neutral,
+                null,
+                DisplayName: DisplayNameSelection.Normalized("   ")));
+        Check(
+            cleared.IsSuccess && !cleared.FrameRecord!.ContainsKey("customDisplayName"),
+            "library_frame_display_name_cleared_removes_key");
+
+        // macOS 가 적는 번호 표식을 이름으로 착각하면 카드에 그 문자열이 그대로 나옵니다.
+        JsonObject numbered = FrameRecord();
+        numbered["customDisplayName"] = "negaflow:photo-number:7";
+        LibraryFrameSnapshot? assigned = ReadFrame(numbered).Frame;
+        Check(assigned?.AssignedPhotoNumber == 7, "library_frame_assigned_photo_number");
+        Check(assigned?.LiteralDisplayName is null, "library_frame_number_is_not_a_name");
+        Check(assigned?.PresentationIndex == 7, "library_frame_number_wins_presentation_index");
+
+        // 스캐너 파일은 파일 이름 끝의 _frame_<n> 이 번호입니다.
+        JsonObject scanned = FrameRecord();
+        scanned.Remove("customDisplayName");
+        scanned["rawScanPath"] = @"C:\scans\roll-01\roll_frame_12.tif";
+        scanned["scanIndex"] = 3;
+        LibraryFrameSnapshot? scannedFrame = ReadFrame(scanned).Frame;
+        Check(scannedFrame?.PresentationIndex == 12, "library_frame_scanner_file_index");
+        Check(
+            scannedFrame?.PreferredBaseDisplayName is null,
+            "library_frame_scanner_has_no_base_name");
+
+        // 표식이 없는 파일 이름이면 롤 순번으로 돌아갑니다.
+        JsonObject plain = FrameRecord();
+        plain.Remove("customDisplayName");
+        plain["scanIndex"] = 4;
+        Check(ReadFrame(plain).Frame?.PresentationIndex == 4, "library_frame_falls_back_to_scan_index");
+
+        // 가져온 파일은 확장자를 뗀 파일 이름으로 부릅니다.
+        JsonObject imported = FrameRecord();
+        imported.Remove("customDisplayName");
+        imported["sourceKind"] = "imported";
+        Check(
+            ReadFrame(imported).Frame?.PreferredBaseDisplayName == "IMG_0001",
+            "library_frame_imported_uses_file_base_name");
     }
 
     private static void VerifyLocalDodgeBurnPersistence()

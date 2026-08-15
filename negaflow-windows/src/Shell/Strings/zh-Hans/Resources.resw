@@ -982,4 +982,20 @@
   <data name="librarySavedSearches.Text" xml:space="preserve"><value>已存搜索</value><comment>AppLocalizedPhrase.librarySavedSearches</comment></data>
   <data name="librarySearchName.Text" xml:space="preserve"><value>搜索名称</value><comment>AppLocalizedPhrase.librarySearchName</comment></data>
   <data name="librarySmartCollections.Text" xml:space="preserve"><value>智能收藏集</value><comment>AppLocalizedPhrase.librarySmartCollections</comment></data>
+  <data name="frameDisplayFormat.Text" xml:space="preserve"><value>照片 %d</value><comment>AppLocalizedPhrase.frameDisplayFormat</comment></data>
+  <data name="libraryRating.Text" xml:space="preserve"><value>星级</value><comment>AppLocalizedPhrase.rating</comment></data>
+  <data name="libraryClearRating.Content" xml:space="preserve"><value>清除星级</value><comment>AppLocalizedPhrase.resetRating</comment></data>
+  <data name="libraryStarFormat.Text" xml:space="preserve"><value>%d 星</value><comment>AppLocalizedPhrase.starHelpFormat</comment></data>
+  <data name="libraryPick.Content" xml:space="preserve"><value>留用</value><comment>AppLocalizedPhrase.picked</comment></data>
+  <data name="libraryClearPick.Content" xml:space="preserve"><value>取消留用</value><comment>AppLocalizedPhrase.clearPick</comment></data>
+  <data name="libraryReject.Content" xml:space="preserve"><value>排除</value><comment>AppLocalizedPhrase.rejected</comment></data>
+  <data name="libraryClearReject.Content" xml:space="preserve"><value>取消排除</value><comment>AppLocalizedPhrase.clearReject</comment></data>
+  <data name="libraryAddToCollection.Text" xml:space="preserve"><value>添加到收藏集</value><comment>AppLocalizedPhrase.libraryAddToCollection</comment></data>
+  <data name="libraryRemoveFromCollection.Content" xml:space="preserve"><value>从收藏集中移除</value><comment>AppLocalizedPhrase.libraryRemoveFromCollection</comment></data>
+  <data name="libraryRenamePhoto.Content" xml:space="preserve"><value>重命名照片</value><comment>AppLocalizedPhrase.renamePhoto</comment></data>
+  <data name="libraryPhotoName.Text" xml:space="preserve"><value>照片名称</value><comment>AppLocalizedPhrase.photoName</comment></data>
+  <data name="libraryRemoveFromLibrary.Content" xml:space="preserve"><value>移除</value><comment>AppLocalizedPhrase.removeFromLibrary</comment></data>
+  <data name="libraryShowInExplorer.Content" xml:space="preserve"><value>在文件资源管理器中显示</value><comment>AppLocalizedPhrase.showInFinder</comment></data>
+  <data name="commonCancel.Content" xml:space="preserve"><value>取消</value><comment>AppLocalizedPhrase.cancel</comment></data>
+  <data name="libraryRemoveConfirmFormat.Text" xml:space="preserve"><value>从目录中移除 %d 张照片？原始文件不会被删除。</value><comment>Windows only: macOS removes with undo; Windows asks first.</comment></data>
 </root>

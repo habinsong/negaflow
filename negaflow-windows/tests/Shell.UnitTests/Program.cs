@@ -2595,12 +2595,19 @@ internal static class Program
         }
     }
 
-    private static JsonObject FrameRecord(string id, string fileName, double exposure)
+    private static JsonObject FrameRecord(
+        string id,
+        string fileName,
+        double exposure,
+        int scanIndex = 1)
     {
         return new JsonObject
         {
             ["id"] = id,
             ["rawScanPath"] = $@"C:\scans\{fileName}",
+            // 실제 importer 가 적는 것과 같은 모양입니다. 순번이 없으면 이름 짓기가 파일
+            // 이름으로 물러나므로, 시험이 실제와 다른 길을 타게 됩니다.
+            ["scanIndex"] = scanIndex,
             ["sourceKind"] = "scanner",
             ["filmType"] = "colorNegative",
             ["futureFrameValue"] = "preserve-me",
@@ -2642,6 +2649,7 @@ internal static class Program
             VerifyLibraryDocumentRoundTrip(roots);
             VerifyDevelopSettingsPastePersists(roots);
             VerifyLibraryDocumentPreservesNonFrameRows(roots);
+            VerifyLibraryFrameRemoval(isolatedBase);
             VerifyLibraryDocumentDefectProjection(isolatedBase);
         }
         finally
@@ -2652,6 +2660,63 @@ internal static class Program
                 Directory.Delete(isolatedBase, recursive: true);
             }
         }
+    }
+
+    /// <summary>
+    /// 사진을 빼면 롤과 묶음의 구성원 목록에서도 빠져야 합니다. frame 행만 지우면 죽은 id 가
+    /// 남아, 사용자에게는 "묶음에 두 장인데 한 장만 보인다"로 나타납니다.
+    /// </summary>
+    private static void VerifyLibraryFrameRemoval(string parent)
+    {
+        StorageRootSet roots = StorageRootResolver.ResolveForTests(
+            Path.Combine(parent, "frame-removal")).Roots!;
+
+        using (CatalogSession seed = CatalogSession.Open(roots).Session!)
+        {
+            Check(
+                seed.Write(new CatalogSnapshot(
+                    null,
+                    new Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>>
+                    {
+                        [CatalogEntityTable.Frames] =
+                        [
+                            new("frame-1", FrameRecord("frame-1", "IMG_0001.tif", 0.0)),
+                            new("frame-2", FrameRecord("frame-2", "IMG_0002.tif", 0.5)),
+                        ],
+                        [CatalogEntityTable.ManualCollections] =
+                        [
+                            new("collection-1", new JsonObject
+                            {
+                                ["id"] = "collection-1",
+                                ["name"] = "Keepers",
+                                ["frameIDs"] = new JsonArray("frame-1", "frame-2"),
+                            }),
+                        ],
+                    })).IsSuccess,
+                "library_removal_seed");
+        }
+
+        using (LibraryDocument document = LibraryDocument.Open(roots).Document!)
+        {
+            Check(
+                document.RemoveFrames(["missing-frame"]).Count == 0,
+                "library_removal_unknown_id_changes_nothing");
+            LibraryFrameRemoval removal = document.RemoveFrames(["frame-1"]);
+            Check(removal.Count == 1, "library_removal_reports_one");
+            Check(document.Frames.Count == 1, "library_removal_drops_frame");
+            Check(document.Frames[0].Id == "frame-2", "library_removal_keeps_the_other");
+            Check(
+                document.Collections[0].FrameIds.Count == 1 &&
+                    document.Collections[0].FrameIds[0] == "frame-2",
+                "library_removal_drops_collection_membership");
+            Check(document.Save() == CatalogStoreError.None, "library_removal_save");
+        }
+
+        using LibraryDocument reopened = LibraryDocument.Open(roots).Document!;
+        Check(reopened.RecordCount == 1, "library_removal_persisted");
+        Check(
+            reopened.Collections.Count == 1 && reopened.Collections[0].FrameIds.Count == 1,
+            "library_removal_collection_persisted");
     }
 
     private static void VerifyLibraryDocumentDefectProjection(string parent)
@@ -3169,7 +3234,8 @@ internal static class Program
 
             IReadOnlyList<LibraryFrameListItem> items =
                 LibraryFrameListItems.From(host.Frames);
-            Check(items[0].DisplayName == "IMG_0001.tif", "library_item_display_name");
+            // macOS 는 스캐너 프레임을 파일 이름이 아니라 번호로 부릅니다.
+            Check(items[0].DisplayName == "Frame 1", "library_item_display_name");
             Check(items[0].CanDevelop, "library_item_can_develop");
             Check(items[0].Detail == @"C:\scans\IMG_0001.tif", "library_item_detail_is_path");
             IReadOnlyList<LibraryFrameListItem> phraseMatches = LibraryFrameListItems.Filter(

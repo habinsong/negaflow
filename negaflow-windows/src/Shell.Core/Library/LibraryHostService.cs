@@ -255,6 +255,28 @@ public sealed class LibraryHostService : IDisposable
     public bool DeleteCollection(string collectionId) =>
         SavedAfter(document?.DeleteCollection(collectionId) == true);
 
+    /// <summary>
+    /// 사진을 라이브러리에서 빼고 바로 저장합니다. 원본 파일은 그대로 둡니다. 돌려주는 값은
+    /// 실제로 빠진 장수입니다.
+    /// </summary>
+    public int RemoveFrames(IEnumerable<string> frameIds)
+    {
+        ArgumentNullException.ThrowIfNull(frameIds);
+        if (document is not { } open)
+        {
+            return 0;
+        }
+        LibraryFrameRemoval removal = open.RemoveFrames(frameIds);
+        if (removal.Count == 0)
+        {
+            return 0;
+        }
+        _ = SaveIfDirty();
+        // sidecar 는 catalog 가 더 이상 그 사진을 말하지 않게 된 뒤에만 지울 수 있습니다.
+        open.PurgeDefectSidecars(removal);
+        return removal.Count;
+    }
+
     private bool SavedAfter(bool changed)
     {
         if (changed)

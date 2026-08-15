@@ -24,7 +24,7 @@ public sealed class LibraryFrameListItem : INotifyPropertyChanged
 
     public string Id => Frame.Id;
 
-    public string DisplayName => Frame.EffectiveDisplayName;
+    public string DisplayName => LibraryFrameNaming.DisplayName(Frame);
 
     /// <summary>
     /// 현상할 수 없는 frame 은 그 이유를 경로 대신 보여 줍니다. 목록에 있는데 Export 가 조용히
@@ -48,6 +48,20 @@ public sealed class LibraryFrameListItem : INotifyPropertyChanged
 
     /// <summary>macOS 와 같은 0...5 별점입니다.</summary>
     public int Rating => Frame.Rating;
+
+    /// <summary>깃발이 걸린 사진만 썸네일 왼쪽 위에 표시를 답니다 — macOS 와 같습니다.</summary>
+    public bool IsFlagged => Frame.PickState != FramePickState.Unflagged;
+
+    /// <summary>
+    /// 깃발 모양입니다. macOS 는 <c>flag.fill</c> 과 <c>xmark.octagon.fill</c> 을 쓰며, 여기서는
+    /// Segoe Fluent Icons 의 같은 뜻 글리프를 씁니다.
+    /// </summary>
+    public string PickGlyph => Frame.PickState == FramePickState.Rejected
+        ? ""
+        : "";
+
+    /// <summary>깃발 색을 정하는 값입니다. 색 자체는 셸의 converter 가 붙입니다.</summary>
+    public FramePickState PickState => Frame.PickState;
 
     /// <summary>
     /// 카드 썸네일입니다. Shell.Core 는 XAML 을 참조하지 않으므로 형식을 열어 두고, 셸이

@@ -44,6 +44,9 @@ public static class LibraryFrameReader
     public static readonly DateTimeOffset AppleReferenceDate =
         new(2001, 1, 1, 0, 0, 0, TimeSpan.Zero);
     internal const string DisplayNameName = "customDisplayName";
+    internal const string ScanIndexName = "scanIndex";
+    internal const string SourceKindName = "sourceKind";
+    internal const string SourceFrameDisplayNameName = "sourceFrameDisplayName";
     internal const string RatingName = "rating";
     internal const string PickStateName = "pickState";
     internal const string ScannedAtName = "scannedAt";
@@ -349,8 +352,36 @@ public static class LibraryFrameReader
             PickState = pickState,
             ScannedAt = scannedAt,
             Versions = versions,
+            ScanIndex = ReadScanIndex(frameRecord),
+            SourceKind = ReadSourceKind(frameRecord),
+            SourceFrameDisplayName = ReadOptionalText(frameRecord, SourceFrameDisplayNameName),
         });
     }
+
+    /// <summary>
+    /// 롤 안의 순번입니다. 이름 짓기에만 쓰이므로, 없거나 모양이 이상하면 읽기를 거부하지 않고
+    /// 0 으로 둡니다 — 순번 하나 때문에 사진이 목록에서 사라지는 편이 더 나쁩니다.
+    /// </summary>
+    private static int ReadScanIndex(JsonElement frameRecord) =>
+        frameRecord.TryGetProperty(ScanIndexName, out JsonElement element) &&
+        element.ValueKind == JsonValueKind.Number &&
+        element.TryGetInt32(out int scanIndex) &&
+        scanIndex > 0
+            ? scanIndex
+            : 0;
+
+    private static FrameSourceKind ReadSourceKind(JsonElement frameRecord) =>
+        frameRecord.TryGetProperty(SourceKindName, out JsonElement element) &&
+        element.ValueKind == JsonValueKind.String &&
+        element.GetString() == "scanner"
+            ? FrameSourceKind.ScannerTiff
+            : FrameSourceKind.ImportedFile;
+
+    private static string? ReadOptionalText(JsonElement frameRecord, string name) =>
+        frameRecord.TryGetProperty(name, out JsonElement element) &&
+        element.ValueKind == JsonValueKind.String
+            ? element.GetString()
+            : null;
 
     /// <summary>
     /// macOS <c>FramePickState</c> 의 raw value 입니다. 키가 없으면 깃발 없음입니다.

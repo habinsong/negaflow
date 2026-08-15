@@ -13,6 +13,7 @@
             IsSourceGrouped="True"
             ItemsPath="Items" />
         <controls:FilmTypeNameConverter x:Key="FilmTypeNameConverter" />
+        <controls:PickStateBrushConverter x:Key="PickStateBrushConverter" />
     </UserControl.Resources>
     <Grid x:Name="Root" Background="{ThemeResource NegaflowWindowBrush}" SizeChanged="OnRootSizeChanged">
         <Grid.ColumnDefinitions>
@@ -710,7 +711,11 @@
                         -->
                         <GridView.ItemTemplate>
                             <DataTemplate>
-                                <Grid Padding="8" RowSpacing="0">
+                                <Grid
+                                    Padding="8"
+                                    RightTapped="OnFrameRightTapped"
+                                    RowSpacing="0"
+                                    Tag="{Binding}">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="*" />
                                         <RowDefinition Height="3" />
@@ -731,6 +736,15 @@
                                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                             Glyph="&#xE91B;"
                                             Visibility="{Binding IsThumbnailPending, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                        <!-- macOS 는 깃발을 썸네일 왼쪽 위에 5pt 띄워 답니다. -->
+                                        <FontIcon
+                                            Margin="5"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Top"
+                                            FontSize="12"
+                                            Foreground="{Binding PickState, Converter={StaticResource PickStateBrushConverter}}"
+                                            Glyph="{Binding PickGlyph}"
+                                            Visibility="{Binding IsFlagged, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                         <Button
                                             x:Uid="libraryLocateOriginal"
                                             Margin="5"

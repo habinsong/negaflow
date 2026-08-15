@@ -982,4 +982,20 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="librarySavedSearches.Text" xml:space="preserve"><value>Recherches enregistrées</value><comment>AppLocalizedPhrase.librarySavedSearches</comment></data>
   <data name="librarySearchName.Text" xml:space="preserve"><value>Nom de la recherche</value><comment>AppLocalizedPhrase.librarySearchName</comment></data>
   <data name="librarySmartCollections.Text" xml:space="preserve"><value>Collections dynamiques</value><comment>AppLocalizedPhrase.librarySmartCollections</comment></data>
+  <data name="frameDisplayFormat.Text" xml:space="preserve"><value>Image %d</value><comment>AppLocalizedPhrase.frameDisplayFormat</comment></data>
+  <data name="libraryRating.Text" xml:space="preserve"><value>Note</value><comment>AppLocalizedPhrase.rating</comment></data>
+  <data name="libraryClearRating.Content" xml:space="preserve"><value>Effacer la note</value><comment>AppLocalizedPhrase.resetRating</comment></data>
+  <data name="libraryStarFormat.Text" xml:space="preserve"><value>%d étoile(s)</value><comment>AppLocalizedPhrase.starHelpFormat</comment></data>
+  <data name="libraryPick.Content" xml:space="preserve"><value>Retenue</value><comment>AppLocalizedPhrase.picked</comment></data>
+  <data name="libraryClearPick.Content" xml:space="preserve"><value>Retirer la marque Retenue</value><comment>AppLocalizedPhrase.clearPick</comment></data>
+  <data name="libraryReject.Content" xml:space="preserve"><value>Rejetée</value><comment>AppLocalizedPhrase.rejected</comment></data>
+  <data name="libraryClearReject.Content" xml:space="preserve"><value>Retirer la marque Rejetée</value><comment>AppLocalizedPhrase.clearReject</comment></data>
+  <data name="libraryAddToCollection.Text" xml:space="preserve"><value>Ajouter à la collection</value><comment>AppLocalizedPhrase.libraryAddToCollection</comment></data>
+  <data name="libraryRemoveFromCollection.Content" xml:space="preserve"><value>Retirer de la collection</value><comment>AppLocalizedPhrase.libraryRemoveFromCollection</comment></data>
+  <data name="libraryRenamePhoto.Content" xml:space="preserve"><value>Renommer la photo</value><comment>AppLocalizedPhrase.renamePhoto</comment></data>
+  <data name="libraryPhotoName.Text" xml:space="preserve"><value>Nom de la photo</value><comment>AppLocalizedPhrase.photoName</comment></data>
+  <data name="libraryRemoveFromLibrary.Content" xml:space="preserve"><value>Retirer</value><comment>AppLocalizedPhrase.removeFromLibrary</comment></data>
+  <data name="libraryShowInExplorer.Content" xml:space="preserve"><value>Afficher dans l’Explorateur de fichiers</value><comment>AppLocalizedPhrase.showInFinder</comment></data>
+  <data name="commonCancel.Content" xml:space="preserve"><value>Annuler</value><comment>AppLocalizedPhrase.cancel</comment></data>
+  <data name="libraryRemoveConfirmFormat.Text" xml:space="preserve"><value>Retirer %d photo(s) du catalogue ? Les fichiers d’origine ne sont pas supprimés.</value><comment>Windows only: macOS removes with undo; Windows asks first.</comment></data>
 </root>

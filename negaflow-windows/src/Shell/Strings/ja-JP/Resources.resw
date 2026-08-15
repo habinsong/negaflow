@@ -982,4 +982,20 @@
   <data name="librarySavedSearches.Text" xml:space="preserve"><value>保存済みの検索</value><comment>AppLocalizedPhrase.librarySavedSearches</comment></data>
   <data name="librarySearchName.Text" xml:space="preserve"><value>検索名</value><comment>AppLocalizedPhrase.librarySearchName</comment></data>
   <data name="librarySmartCollections.Text" xml:space="preserve"><value>スマートコレクション</value><comment>AppLocalizedPhrase.librarySmartCollections</comment></data>
+  <data name="frameDisplayFormat.Text" xml:space="preserve"><value>コマ %d</value><comment>AppLocalizedPhrase.frameDisplayFormat</comment></data>
+  <data name="libraryRating.Text" xml:space="preserve"><value>評価</value><comment>AppLocalizedPhrase.rating</comment></data>
+  <data name="libraryClearRating.Content" xml:space="preserve"><value>評価を解除</value><comment>AppLocalizedPhrase.resetRating</comment></data>
+  <data name="libraryStarFormat.Text" xml:space="preserve"><value>%dつ星</value><comment>AppLocalizedPhrase.starHelpFormat</comment></data>
+  <data name="libraryPick.Content" xml:space="preserve"><value>採用</value><comment>AppLocalizedPhrase.picked</comment></data>
+  <data name="libraryClearPick.Content" xml:space="preserve"><value>採用フラグを解除</value><comment>AppLocalizedPhrase.clearPick</comment></data>
+  <data name="libraryReject.Content" xml:space="preserve"><value>除外</value><comment>AppLocalizedPhrase.rejected</comment></data>
+  <data name="libraryClearReject.Content" xml:space="preserve"><value>除外フラグを解除</value><comment>AppLocalizedPhrase.clearReject</comment></data>
+  <data name="libraryAddToCollection.Text" xml:space="preserve"><value>コレクションに追加</value><comment>AppLocalizedPhrase.libraryAddToCollection</comment></data>
+  <data name="libraryRemoveFromCollection.Content" xml:space="preserve"><value>コレクションから削除</value><comment>AppLocalizedPhrase.libraryRemoveFromCollection</comment></data>
+  <data name="libraryRenamePhoto.Content" xml:space="preserve"><value>名前を変更</value><comment>AppLocalizedPhrase.renamePhoto</comment></data>
+  <data name="libraryPhotoName.Text" xml:space="preserve"><value>写真名</value><comment>AppLocalizedPhrase.photoName</comment></data>
+  <data name="libraryRemoveFromLibrary.Content" xml:space="preserve"><value>取り除く</value><comment>AppLocalizedPhrase.removeFromLibrary</comment></data>
+  <data name="libraryShowInExplorer.Content" xml:space="preserve"><value>エクスプローラーで表示</value><comment>AppLocalizedPhrase.showInFinder</comment></data>
+  <data name="commonCancel.Content" xml:space="preserve"><value>キャンセル</value><comment>AppLocalizedPhrase.cancel</comment></data>
+  <data name="libraryRemoveConfirmFormat.Text" xml:space="preserve"><value>写真%d件をカタログから取り除きます。元ファイルは削除されません。</value><comment>Windows only: macOS removes with undo; Windows asks first.</comment></data>
 </root>

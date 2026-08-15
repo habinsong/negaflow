@@ -76,6 +76,16 @@ public readonly record struct LibrarySourceRelinkResult(
 }
 
 /// <summary>
+/// 라이브러리에서 뺀 사진들과, 그와 함께 지워야 할 결함 sidecar 입니다.
+/// </summary>
+public sealed record LibraryFrameRemoval(
+    IReadOnlyList<string> FrameIds,
+    IReadOnlyList<(Guid FrameId, ulong Revision)> DefectSidecars)
+{
+    public int Count => FrameIds.Count;
+}
+
+/// <summary>
 /// 열려 있는 라이브러리 하나입니다. catalog 세션을 소유하므로 <see cref="Dispose"/> 할 때까지
 /// 다른 프로세스는 이 카탈로그의 작성자가 될 수 없습니다.
 /// </summary>
@@ -601,6 +611,107 @@ public sealed class LibraryDocument : IDisposable
         Project();
         return new(stored, LibraryFrameError.None,
             DefectSidecarError.None, CatalogStoreError.None);
+    }
+
+    /// <summary>
+    /// 사진을 라이브러리에서 뺍니다. **원본 파일은 건드리지 않습니다** — 목록에서 빼는 것과
+    /// 지우는 것은 다릅니다.
+    /// </summary>
+    /// <remarks>
+    /// 프레임 행만 지우면 롤과 묶음에 죽은 id 가 남고, 사용자에게는 "묶음에 5장인데 4장만
+    /// 보인다"로 나타납니다. macOS <c>performLibraryRemoval</c> 도 롤·묶음 소속을 같이
+    /// 정리하므로 여기서 한 번에 처리합니다. 결함 sidecar 는 프레임이 사라지면 주인이 없으므로
+    /// 함께 지우지만, 그것은 catalog 를 저장한 **뒤**여야 합니다 — sidecar 삭제는 catalog 가
+    /// 아직 그 사진의 결함 편집을 선언하고 있으면 거부하기 때문입니다. 그래서 여기서는 지울
+    /// sidecar 를 알려만 주고, 지우는 것은 <see cref="PurgeDefectSidecars"/> 가 합니다.
+    /// </remarks>
+    public LibraryFrameRemoval RemoveFrames(IEnumerable<string> frameIds)
+    {
+        ArgumentNullException.ThrowIfNull(frameIds);
+        var removing = new HashSet<string>(KnownFrameIds(frameIds), StringComparer.Ordinal);
+        if (removing.Count == 0)
+        {
+            return new LibraryFrameRemoval([], []);
+        }
+
+        var sidecars = new List<(Guid FrameId, ulong Revision)>();
+        for (int index = payloads.Count - 1; index >= 0; index--)
+        {
+            if (!removing.Contains(rowIds[index]))
+            {
+                continue;
+            }
+            if (defectRecipes.Remove(rowIds[index], out DefectRecipeSnapshot? recipe) &&
+                Guid.TryParseExact(rowIds[index], "D", out Guid sidecarId))
+            {
+                sidecars.Add((sidecarId, recipe.RecipeRevision));
+            }
+            payloads.RemoveAt(index);
+            rowIds.RemoveAt(index);
+        }
+
+        DropMembership(CatalogEntityTable.Rolls, removing);
+        DropMembership(CatalogEntityTable.ManualCollections, removing);
+        ProjectRolls();
+        ProjectCollections();
+        Project();
+        return new LibraryFrameRemoval([.. removing], sidecars);
+    }
+
+    /// <summary>
+    /// 주인이 사라진 결함 sidecar 를 지웁니다. **catalog 를 저장한 뒤에** 불러야 합니다.
+    /// 실패해도 아무 말 하지 않습니다 — 남은 파일은 아무도 읽지 않지만, 여기서 제거를
+    /// 되돌리면 사용자가 지운 사진이 되살아납니다.
+    /// </summary>
+    public void PurgeDefectSidecars(LibraryFrameRemoval removal)
+    {
+        ArgumentNullException.ThrowIfNull(removal);
+        foreach ((Guid frameId, ulong revision) in removal.DefectSidecars)
+        {
+            // revision 은 "이보다 낮은 판은 다시 쓰지 말라"는 바닥값입니다. 지금 판보다 하나
+            // 위를 주어야 지우는 사이에 날아든 옛 저장이 sidecar 를 되살리지 못합니다.
+            _ = session.RemoveDefectRecipe(frameId, revision + 1);
+        }
+    }
+
+    /// <summary>
+    /// 롤과 묶음의 구성원 목록에서 사라진 id 를 뺍니다. 두 표는 같은 <c>frameIDs</c> 배열
+    /// 모양을 쓰므로 한 함수로 다룹니다.
+    /// </summary>
+    private void DropMembership(CatalogEntityTable table, HashSet<string> removing)
+    {
+        List<CatalogEntityRow> rows = [.. retainedRows[table]];
+        bool changed = false;
+        for (int index = 0; index < rows.Count; index++)
+        {
+            if (rows[index].Payload["frameIDs"] is not JsonArray members)
+            {
+                continue;
+            }
+            var kept = new JsonArray();
+            bool dropped = false;
+            foreach (JsonNode? member in members)
+            {
+                if (member?.GetValue<string>() is { } frameId && removing.Contains(frameId))
+                {
+                    dropped = true;
+                    continue;
+                }
+                kept.Add(member?.DeepClone());
+            }
+            if (!dropped)
+            {
+                continue;
+            }
+            JsonObject payload = (JsonObject)rows[index].Payload.DeepClone();
+            payload["frameIDs"] = kept;
+            rows[index] = new CatalogEntityRow(rows[index].Id, payload);
+            changed = true;
+        }
+        if (changed)
+        {
+            retainedRows[table] = rows;
+        }
     }
 
     public void Dispose() => session.Dispose();

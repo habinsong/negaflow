@@ -12,6 +12,24 @@ public readonly record struct LookPresetSelection(string? Id)
     public static LookPresetSelection None => new((string?)null);
 }
 
+/// <summary>
+/// 이름 변경 의사입니다. <see cref="LookPresetSelection"/> 과 같은 이유로 <c>string?</c> 하나로는
+/// 모자랍니다 — "안 건드림"과 "직접 지은 이름 떼기(파일 이름으로 돌아가기)"는 다른 뜻입니다.
+/// </summary>
+public readonly record struct DisplayNameSelection(string? Name)
+{
+    public static DisplayNameSelection None => new((string?)null);
+
+    /// <summary>
+    /// macOS <c>renameDisplayName(to:)</c> 와 같이 앞뒤 공백을 떼고, 남는 것이 없으면 이름을 뗍니다.
+    /// </summary>
+    public static DisplayNameSelection Normalized(string? value)
+    {
+        string trimmed = (value ?? string.Empty).Trim();
+        return new DisplayNameSelection(trimmed.Length == 0 ? null : trimmed);
+    }
+}
+
 /// <summary>셸이 한 번에 바꾸는 값들입니다. 지정하지 않은 것은 그대로 둡니다.</summary>
 public sealed record LibraryFrameEdit(
     ToneAdjustment Tone,
@@ -32,7 +50,9 @@ public sealed record LibraryFrameEdit(
     BwToningRecipe? BwToning = null,
     double? DefectRemovalStrength = null,
     int? Rating = null,
-    LookPresetSelection? LookPreset = null);
+    LookPresetSelection? LookPreset = null,
+    FramePickState? PickState = null,
+    DisplayNameSelection? DisplayName = null);
 
 /// <summary>
 /// 톤, 수동 base, 그리고 지정된 경우 base recipe를 갱신합니다. 입력 record 는 바꾸지 않고 깊은 복사본을 돌려주며, 이 writer 가
@@ -120,6 +140,30 @@ public static class LibraryFrameWriter
         {
             // 별점은 recipe 가 아니라 frame 자체의 성질이므로 macOS 와 같이 최상위에 둡니다.
             updated[LibraryFrameReader.RatingName] = writtenRating;
+        }
+        if (edit.PickState is { } writtenPick)
+        {
+            // 깃발도 별점과 같은 자리입니다. 깃발 없음을 키 삭제가 아니라 "unflagged" 로 적는 것은
+            // macOS 가 enum raw value 를 그대로 내보내기 때문이며, reader 는 둘 다 읽습니다.
+            updated[LibraryFrameReader.PickStateName] = writtenPick switch
+            {
+                FramePickState.Picked => "picked",
+                FramePickState.Rejected => "rejected",
+                _ => "unflagged",
+            };
+        }
+        if (edit.DisplayName is { } writtenName)
+        {
+            // 이름을 뗄 때 빈 문자열을 남기면 reader 는 "이름이 있는데 비어 있다"로 읽어 파일
+            // 이름으로 돌아가지 못합니다. macOS 처럼 키 자체를 지웁니다.
+            if (writtenName.Name is { } displayName)
+            {
+                updated[LibraryFrameReader.DisplayNameName] = displayName;
+            }
+            else
+            {
+                updated.Remove(LibraryFrameReader.DisplayNameName);
+            }
         }
         if (edit.LookPreset is { } presetSelection)
         {

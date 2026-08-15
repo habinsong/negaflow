@@ -232,6 +232,354 @@ public sealed partial class LibraryWorkspaceView : UserControl
     /// <summary>사용자가 라이브러리에서 현상으로 넘기려는 frame 입니다.</summary>
     public event EventHandler<LibraryFrameListItem>? FrameOpenRequested;
 
+    /// <summary>
+    /// 카드의 오른쪽 단추 메뉴입니다. macOS <c>LibraryFrameContextMenu</c> 와 같은 차례로
+    /// 냅니다 — 현상, 이름 변경, 별점, 깃발, 컬렉션, 그리고 원본 명령들입니다.
+    /// </summary>
+    /// <remarks>
+    /// 메뉴를 XAML 의 <c>ContextFlyout</c> 으로 카드마다 붙이면 카드 한 장마다 메뉴 하나가
+    /// 함께 만들어집니다. macOS 도 같은 이유로 메뉴를 별도 뷰로 감싸 열릴 때만 만듭니다.
+    /// </remarks>
+    private void OnFrameRightTapped(object sender, RightTappedRoutedEventArgs args)
+    {
+        if (sender is not FrameworkElement { Tag: LibraryFrameListItem item } card ||
+            libraryHost is null)
+        {
+            return;
+        }
+        args.Handled = true;
+
+        // 오른쪽 단추는 선택을 바꾸지 않는 것이 macOS 동작입니다. 다만 선택 **밖**의 카드를
+        // 눌렀다면 그 카드 하나가 대상입니다 — 보이지 않는 선택에 명령이 가면 안 됩니다.
+        IReadOnlyList<LibraryFrameListItem> targets = ContextTargets(item);
+
+        MenuFlyout menu = new();
+        menu.Items.Add(MenuItem("menuDevelop", "Content", () =>
+        {
+            FrameOpenRequested?.Invoke(this, item);
+            workspaceState?.SelectWorkspace(WorkspaceModule.Develop);
+        }));
+        menu.Items.Add(MenuItem("libraryRenamePhoto", "Content", () => RenameFrame(item)));
+
+        MenuFlyoutSubItem rating = new()
+        {
+            Text = AppResources.Get("libraryRating", "Text"),
+        };
+        rating.Items.Add(MenuItem("libraryClearRating", "Content", () => SetRating(targets, 0)));
+        for (int stars = 1; stars <= 5; ++stars)
+        {
+            int value = stars;
+            MenuFlyoutItem star = new()
+            {
+                Text = AppResources.FormatIntegers("libraryStarFormat", "Text", value),
+            };
+            star.Click += (_, _) => SetRating(targets, value);
+            rating.Items.Add(star);
+        }
+        menu.Items.Add(rating);
+
+        bool isPicked = item.Frame.PickState == FramePickState.Picked;
+        bool isRejected = item.Frame.PickState == FramePickState.Rejected;
+        menu.Items.Add(MenuItem(
+            isPicked ? "libraryClearPick" : "libraryPick",
+            "Content",
+            () => SetPickState(
+                targets,
+                isPicked ? FramePickState.Unflagged : FramePickState.Picked)));
+        menu.Items.Add(MenuItem(
+            isRejected ? "libraryClearReject" : "libraryReject",
+            "Content",
+            () => SetPickState(
+                targets,
+                isRejected ? FramePickState.Unflagged : FramePickState.Rejected)));
+
+        if (libraryHost.Collections.Count > 0)
+        {
+            MenuFlyoutSubItem collections = new()
+            {
+                Text = AppResources.Get("libraryAddToCollection", "Text"),
+            };
+            foreach (LibraryCollectionSnapshot collection in libraryHost.Collections)
+            {
+                string collectionId = collection.Id;
+                MenuFlyoutItem entry = new() { Text = collection.Name };
+                entry.Click += (_, _) => AddToCollection(collectionId, targets);
+                collections.Items.Add(entry);
+            }
+            menu.Items.Add(collections);
+            if (selectedCollectionId is { } activeCollectionId)
+            {
+                menu.Items.Add(MenuItem(
+                    "libraryRemoveFromCollection",
+                    "Content",
+                    () => RemoveFromCollection(activeCollectionId, targets)));
+            }
+        }
+
+        menu.Items.Add(new MenuFlyoutSeparator());
+        menu.Items.Add(MenuItem(
+            "libraryShowInExplorer",
+            "Content",
+            () => ShowInExplorer(item)));
+        menu.Items.Add(MenuItem(
+            "libraryRemoveFromLibrary",
+            "Content",
+            () => RemoveFromLibrary(targets)));
+
+        menu.ShowAt(card, new FlyoutShowOptions { Position = args.GetPosition(card) });
+    }
+
+    /// <summary>
+    /// 명령이 닿을 사진들입니다. 누른 카드가 선택 안에 있으면 선택 전체, 밖이면 그 카드
+    /// 하나입니다 — macOS <c>framesForContextAction</c> 과 같은 규칙입니다.
+    /// </summary>
+    private IReadOnlyList<LibraryFrameListItem> ContextTargets(LibraryFrameListItem item)
+    {
+        LibraryFrameListItem[] selected = [.. FrameListView.SelectedItems
+            .OfType<LibraryFrameListItem>()];
+        return selected.Any(candidate =>
+            string.Equals(candidate.Id, item.Id, StringComparison.Ordinal))
+                ? selected
+                : [item];
+    }
+
+    private static MenuFlyoutItem MenuItem(string key, string property, Action action)
+    {
+        MenuFlyoutItem item = new() { Text = AppResources.Get(key, property) };
+        item.Click += (_, _) => action();
+        return item;
+    }
+
+    private void SetRating(IReadOnlyList<LibraryFrameListItem> targets, int rating)
+    {
+        ApplyEdit(targets, frame =>
+            new LibraryFrameEdit(frame.Tone, frame.ManualBase, Rating: rating));
+    }
+
+    private void SetPickState(
+        IReadOnlyList<LibraryFrameListItem> targets,
+        FramePickState pickState)
+    {
+        ApplyEdit(targets, frame =>
+            new LibraryFrameEdit(frame.Tone, frame.ManualBase, PickState: pickState));
+    }
+
+    /// <summary>
+    /// 여러 장에 같은 편집을 겁니다. 저장은 한 번만 합니다 — 200장을 고르고 별점을 주면
+    /// catalog 를 200번 쓰게 되어 눈에 보이게 멈춥니다.
+    /// </summary>
+    private void ApplyEdit(
+        IReadOnlyList<LibraryFrameListItem> targets,
+        Func<LibraryFrameSnapshot, LibraryFrameEdit> makeEdit)
+    {
+        if (libraryHost is null || targets.Count == 0)
+        {
+            return;
+        }
+        bool changed = false;
+        foreach (LibraryFrameListItem target in targets)
+        {
+            if (libraryHost.Edit(target.Frame.Id, makeEdit(target.Frame)) ==
+                LibraryFrameError.None)
+            {
+                changed = true;
+            }
+        }
+        if (changed && libraryHost.Save() == CatalogStoreError.None)
+        {
+            ShowLibrary(libraryHost, importWindowId ?? default);
+        }
+    }
+
+    private void AddToCollection(
+        string collectionId,
+        IReadOnlyList<LibraryFrameListItem> targets)
+    {
+        if (libraryHost?.Collections.FirstOrDefault(collection =>
+                string.Equals(collection.Id, collectionId, StringComparison.Ordinal))
+            is not { } existing)
+        {
+            return;
+        }
+        // 이미 들어 있는 사진은 다시 넣지 않습니다. 넣으면 같은 사진이 두 번 보입니다.
+        List<string> frameIds = [.. existing.FrameIds];
+        var present = new HashSet<string>(frameIds, StringComparer.Ordinal);
+        foreach (LibraryFrameListItem target in targets)
+        {
+            if (present.Add(target.Id))
+            {
+                frameIds.Add(target.Id);
+            }
+        }
+        if (frameIds.Count == existing.FrameIds.Count)
+        {
+            return;
+        }
+        if (libraryHost.SetCollectionFrames(collectionId, frameIds))
+        {
+            RebuildCollections();
+            ShowFilteredItems();
+        }
+    }
+
+    private void RemoveFromCollection(
+        string collectionId,
+        IReadOnlyList<LibraryFrameListItem> targets)
+    {
+        if (libraryHost?.Collections.FirstOrDefault(collection =>
+                string.Equals(collection.Id, collectionId, StringComparison.Ordinal))
+            is not { } existing)
+        {
+            return;
+        }
+        var removing = new HashSet<string>(
+            targets.Select(target => target.Id),
+            StringComparer.Ordinal);
+        List<string> frameIds = [.. existing.FrameIds.Where(id => !removing.Contains(id))];
+        if (frameIds.Count == existing.FrameIds.Count)
+        {
+            return;
+        }
+        if (libraryHost.SetCollectionFrames(collectionId, frameIds))
+        {
+            RebuildCollections();
+            ShowFilteredItems();
+        }
+    }
+
+    /// <summary>
+    /// 원본이 있는 폴더를 열고 그 파일을 고릅니다. macOS 의 "Finder 에서 보기" 와 같은 자리이며,
+    /// **원본을 열지 않습니다** — 여는 것은 다른 프로그램의 일입니다.
+    /// </summary>
+    private static void ShowInExplorer(LibraryFrameListItem item)
+    {
+        string path = item.Frame.SourcePath;
+        if (!File.Exists(path))
+        {
+            return;
+        }
+        _ = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = "explorer.exe",
+            // 인용은 반드시 있어야 합니다. 공백이 든 경로가 인용 없이 가면 탐색기는 엉뚱한
+            // 폴더를 열고 아무 말도 하지 않습니다.
+            Arguments = $"/select,\"{path}\"",
+            UseShellExecute = true,
+        });
+    }
+
+    private async void RemoveFromLibrary(IReadOnlyList<LibraryFrameListItem> targets)
+    {
+        if (libraryHost is null || targets.Count == 0)
+        {
+            return;
+        }
+        ContentDialog confirm = new()
+        {
+            XamlRoot = XamlRoot,
+            Title = AppResources.Get("libraryRemoveFromLibrary", "Content"),
+            Content = AppResources.FormatIntegers(
+                "libraryRemoveConfirmFormat",
+                "Text",
+                targets.Count),
+            PrimaryButtonText = AppResources.Get("libraryRemoveFromLibrary", "Content"),
+            CloseButtonText = AppResources.Get("commonCancel", "Content"),
+            DefaultButton = ContentDialogButton.Close,
+        };
+        if (await confirm.ShowAsync() != ContentDialogResult.Primary)
+        {
+            return;
+        }
+        if (libraryHost.RemoveFrames(targets.Select(target => target.Id)) > 0)
+        {
+            foreach (LibraryFrameListItem target in targets)
+            {
+                thumbnails?.Invalidate(target.Id);
+            }
+            RebuildCollections();
+            ShowLibrary(libraryHost, importWindowId ?? default);
+        }
+    }
+
+    /// <summary>
+    /// 사진 번호를 바꿉니다. macOS 와 같이 이름이 아니라 **번호**를 받습니다 — 라이브러리의
+    /// 이름은 폴더 안의 순번이기 때문입니다.
+    /// </summary>
+    private async void RenameFrame(LibraryFrameListItem item)
+    {
+        if (libraryHost is null)
+        {
+            return;
+        }
+        TextBox field = new()
+        {
+            PlaceholderText = AppResources.Get("libraryPhotoName", "Text"),
+            Text = LibraryFrameNaming.EditableNumberText(item.Frame),
+        };
+        AutomationProperties.SetName(field, field.PlaceholderText);
+        AutomationProperties.SetAutomationId(field, "negaflow.photo-number-field");
+        // macOS 는 숫자가 아닌 글자를 입력 즉시 지웁니다. 확인 단추에서만 막으면 사용자는
+        // 무엇이 잘못됐는지 모른 채 눌리지 않는 단추를 봅니다.
+        field.TextChanged += (_, _) =>
+        {
+            string digits = new([.. field.Text.Where(char.IsAsciiDigit)]);
+            if (!string.Equals(digits, field.Text, StringComparison.Ordinal))
+            {
+                int caret = field.SelectionStart;
+                field.Text = digits;
+                field.SelectionStart = Math.Min(caret, digits.Length);
+            }
+        };
+        ContentDialog dialog = new()
+        {
+            XamlRoot = XamlRoot,
+            Title = AppResources.Get("libraryRenamePhoto", "Content"),
+            Content = field,
+            PrimaryButtonText = AppResources.Get("libraryRename", "Content"),
+            CloseButtonText = AppResources.Get("commonCancel", "Content"),
+            DefaultButton = ContentDialogButton.Primary,
+        };
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary)
+        {
+            return;
+        }
+        if (!int.TryParse(
+                field.Text,
+                NumberStyles.None,
+                CultureInfo.InvariantCulture,
+                out int number) ||
+            !LibraryFrameNaming.IsNumberAvailable(libraryHost.Frames, item.Frame, number))
+        {
+            return;
+        }
+        // 같은 원본을 가리키는 사진들은 함께 번호가 바뀝니다 — macOS 도 원본 경로로 묶습니다.
+        DisplayNameSelection selection = LibraryFrameNaming.NumberSelection(number);
+        bool changed = false;
+        foreach (LibraryFrameSnapshot frame in libraryHost.Frames)
+        {
+            if (!string.Equals(
+                    frame.SourcePath,
+                    item.Frame.SourcePath,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+            if (libraryHost.Edit(
+                    frame.Id,
+                    new LibraryFrameEdit(
+                        frame.Tone,
+                        frame.ManualBase,
+                        DisplayName: selection)) == LibraryFrameError.None)
+            {
+                changed = true;
+            }
+        }
+        if (changed && libraryHost.Save() == CatalogStoreError.None)
+        {
+            ShowLibrary(libraryHost, importWindowId ?? default);
+        }
+    }
+
     private void OnRatingCommitted(object? sender, int rating)
     {
         if (libraryHost is null ||
@@ -1847,6 +2195,10 @@ public sealed partial class LibraryWorkspaceView : UserControl
 
     private void LocalizeControls()
     {
+        // 사진 이름은 Shell.Core 가 짓지만 문구는 여기에 있습니다. 꽂아 두지 않으면 카드가
+        // 영어 기본값으로 불립니다.
+        LibraryFrameNaming.NumberFormat = static number =>
+            AppResources.FormatIntegers("frameDisplayFormat", "Text", number);
         SetNameAndTooltip(ImportRailButton, "importSection");
         SetNameAndTooltip(FilesRailButton, "libraryFiles");
         SetNameAndTooltip(CollectionsRailButton, "libraryCollections");
