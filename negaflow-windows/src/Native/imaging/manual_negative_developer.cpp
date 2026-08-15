@@ -51,9 +51,13 @@ void discard_pixels(WorkingImage& image) noexcept {
     // second full-frame allocation.
     constexpr std::uint32_t maximum_sample_width = 320U;
     constexpr std::uint32_t minimum_sample_width = 64U;
-    // A normal 2:3 portrait frame produces the macOS 320 x 480 sample grid. Keep that
-    // grid intact; only more extreme panoramas are reduced before allocating statistics.
-    constexpr std::size_t maximum_sample_count = 153600U;
+    // macOS bounds only the width; the height follows the aspect ratio with no cap. The
+    // guard here exists so a 1:10 panorama cannot turn a statistic into a second
+    // full-frame allocation -- but at 320 x 480 it also fired on ordinary film frames
+    // slightly taller than 2:3 (a 2272 x 3471 scan wants 320 x 488), shrinking the grid
+    // to 317 x 484 and measuring a different percentile than macOS. Admit anything up to
+    // a 1:4 frame so the guard catches only what it was written for.
+    constexpr std::size_t maximum_sample_count = 320U * 1280U;
     std::uint64_t sample_width = std::clamp(
         image.width,
         minimum_sample_width,
@@ -178,7 +182,8 @@ void discard_pixels(WorkingImage& image) noexcept {
         const float gate = base_luma * 1.12F;
         const float dark_cut = base_luma * 0.15F;
         const float base_ratio = dmin[0] / std::max(dmin[2], 1.0e-4F);
-        const std::optional<float> neutral_dark_ratio_cut = base_ratio >= 1.5F
+        const std::optional<float> neutral_dark_ratio_cut =
+            base_ratio >= 1.5F
             ? std::optional<float>{base_ratio * 0.55F}
             : std::nullopt;
         std::vector<negaflow::core::Rgba32F> film;
