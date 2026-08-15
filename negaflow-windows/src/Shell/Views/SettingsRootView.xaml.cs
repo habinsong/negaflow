@@ -295,6 +295,7 @@ public sealed partial class SettingsRootView : UserControl
             ? $"{profileName} · {SimulationLabel(proof.Simulation)}"
             : AppResources.Get("settingsColorOff", "Text");
         ScannerEmulationSummary.Text = AppResources.Get("settingsColorUnassigned", "Text");
+        SynchronizeScanTab(preferences);
         SelectCategory(preferences.SelectedSettingsCategory);
         isUpdating = false;
     }
@@ -347,6 +348,7 @@ public sealed partial class SettingsRootView : UserControl
         SetCategoryText(ExportSettingsButton, ExportLabel, ExportHeading, "settingsExportTab");
         SetCategoryText(ShortcutsButton, ShortcutsLabel, ShortcutsHeading, "settingsShortcutsTab");
         SetCategoryText(LegalButton, LegalLabel, LegalHeading, "settingsLegalTab");
+        LocalizeScanTab();
 
         AppearanceLabel.Text = AppResources.Get("settingsAppearancePicker", "Text");
         SystemAppearanceItem.Content = AppResources.Get("appearanceSystem", "Content");

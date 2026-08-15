@@ -1128,4 +1128,14 @@
   <data name="developExportMetadataCopyright.Text" xml:space="preserve"><value>저작권만</value><comment>ExportMetadataLocalizedText.copyrightOnly</comment></data>
   <data name="developExportMetadataRemoveLocation.Text" xml:space="preserve"><value>위치 제거</value><comment>ExportMetadataLocalizedText.removeLocation</comment></data>
   <data name="developExportMetadataMinimal.Text" xml:space="preserve"><value>최소</value><comment>ExportMetadataLocalizedText.minimal</comment></data>
+  <data name="settingsDefaultScanRotation.Text" xml:space="preserve"><value>기본 스캔 회전</value><comment>AppLocalizedPhrase.settingsDefaultScanRotationPicker</comment></data>
+  <data name="settingsDefaultScanRotationHelp.Text" xml:space="preserve"><value>새로 스캔한 사진에만 걸립니다. 기존 사진은 그대로입니다.</value><comment>AppLocalizedPhrase.settingsDefaultScanRotationHelp</comment></data>
+  <data name="settingsRotation0.Text" xml:space="preserve"><value>없음</value><comment>ImageRotation.degrees0</comment></data>
+  <data name="settingsRotation90.Text" xml:space="preserve"><value>90°</value><comment>ImageRotation.degrees90</comment></data>
+  <data name="settingsRotation180.Text" xml:space="preserve"><value>180°</value><comment>ImageRotation.degrees180</comment></data>
+  <data name="settingsRotation270.Text" xml:space="preserve"><value>270°</value><comment>ImageRotation.degrees270</comment></data>
+  <data name="settingsScannerTruth.Text" xml:space="preserve"><value>스캐너 성능</value><comment>AppLocalizedPhrase.scannerTruth</comment></data>
+  <data name="settingsScannerTruthNone.Text" xml:space="preserve"><value>스캐너를 연결하면 장치가 보고하는 값이 나옵니다.</value><comment>Windows only: no scanner connected yet.</comment></data>
+  <data name="settingsMicroSpecksSection.Text" xml:space="preserve"><value>미세 반점 기본값</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecks</comment></data>
+  <data name="settingsMicroSpecksHelp.Text" xml:space="preserve"><value>새로 여는 결함 도구가 가장 작은 반점까지 찾기로 시작할지입니다.</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecksHelp</comment></data>
 </root>

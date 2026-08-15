@@ -1621,6 +1621,12 @@ public sealed partial class LibraryWorkspaceView : UserControl
 
     private void OnStateChanged(object? sender, ShellPreferences preferences)
     {
+        // 설정에서 고른 기본 스캔 회전을 스캔 흐름에 꽂습니다. Shell.Core 는 설정 파일을
+        // 읽지 않으므로 여기가 유일한 연결점입니다.
+        if (scanSession is not null)
+        {
+            scanSession.DefaultRotation = preferences.DefaultScanRotation;
+        }
         _ = sender;
         if (!isResizing)
         {

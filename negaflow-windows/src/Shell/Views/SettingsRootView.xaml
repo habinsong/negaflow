@@ -150,12 +150,66 @@
                             <ToggleSwitch x:Name="ScannerSimulatorToggle" x:Uid="commandToggleScannerSimulator" IsEnabled="False" />
                             <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
                             <ToggleSwitch x:Name="DevelopImportsToggle" x:Uid="developImportsAutomatically" IsEnabled="False" />
+                            <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
+                            <TextBlock x:Name="MicroSpecksHeading" FontSize="13" FontWeight="SemiBold" />
+                            <ToggleSwitch
+                                x:Name="AutoDefectMicroSpecksToggle"
+                                AutomationProperties.AutomationId="settings.workflow.auto-defect-micro-specks"
+                                Toggled="OnAutoDefectMicroSpecksToggled" />
+                            <ToggleSwitch
+                                x:Name="GuidedDefectMicroSpecksToggle"
+                                AutomationProperties.AutomationId="settings.workflow.guided-defect-micro-specks"
+                                Toggled="OnGuidedDefectMicroSpecksToggled" />
+                            <TextBlock
+                                x:Name="MicroSpecksHelp"
+                                FontSize="12"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
                 </StackPanel>
 
                 <StackPanel x:Name="ScanPage" AutomationProperties.AutomationId="settings.scan" Spacing="16" Visibility="Collapsed">
                     <TextBlock x:Name="ScanHeading" FontSize="24" FontWeight="SemiBold" />
+                    <Border Padding="18" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="10">
+                        <StackPanel Spacing="10">
+                            <Grid ColumnSpacing="16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="230" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="ScanRotationLabel" VerticalAlignment="Center" />
+                                <ComboBox
+                                    x:Name="ScanRotationComboBox"
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Stretch"
+                                    AutomationProperties.AutomationId="settings.scan.default-rotation"
+                                    SelectionChanged="OnScanRotationChanged">
+                                    <ComboBoxItem x:Name="ScanRotation0Item" />
+                                    <ComboBoxItem x:Name="ScanRotation90Item" />
+                                    <ComboBoxItem x:Name="ScanRotation180Item" />
+                                    <ComboBoxItem x:Name="ScanRotation270Item" />
+                                </ComboBox>
+                            </Grid>
+                            <TextBlock
+                                x:Name="ScanRotationHelp"
+                                FontSize="12"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+                    <!-- 장치가 스스로 보고한 값만 보여 줍니다. 앱이 지어낸 값은 없습니다. -->
+                    <Border Padding="18" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="10">
+                        <StackPanel Spacing="10">
+                            <TextBlock x:Name="ScannerTruthHeading" FontSize="13" FontWeight="SemiBold" />
+                            <StackPanel x:Name="ScannerTruthRows" Spacing="6" />
+                            <TextBlock
+                                x:Name="ScannerTruthEmpty"
+                                FontSize="12"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
 
                 <StackPanel x:Name="DiskPage" AutomationProperties.AutomationId="settings.disk" Spacing="16" Visibility="Collapsed">

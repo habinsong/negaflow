@@ -73,7 +73,11 @@ public sealed record ScannerPluginScanRequest(
     string DestinationVisiblePath,
     double? BrightnessAdjustment = null,
     double? ContrastAdjustment = null,
-    int? HardwareExposureTime = null);
+    int? HardwareExposureTime = null,
+    /// <summary>
+    /// 설정의 기본 스캔 회전입니다. 스캔한 사진의 recipe 에만 적히며 원본 파일은 그대로입니다.
+    /// </summary>
+    ImageRotation Rotation = ImageRotation.Degrees0);
 
 public enum ScannerPluginScanStatus
 {
@@ -390,7 +394,10 @@ public static class ScannerPluginClient
             new ScannerFrameImport(
                 artifacts.VisiblePath,
                 artifacts.InfraredPath,
-                request.Process),
+                request.Process)
+            {
+                Rotation = request.Rotation,
+            },
             infraredParameters,
             run);
         return new(

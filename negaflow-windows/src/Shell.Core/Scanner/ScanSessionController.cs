@@ -704,8 +704,17 @@ public sealed class ScanSessionController
             // 프리뷰는 판 전체를 훑습니다 — 프레임을 찾으려면 판이 다 보여야 합니다.
             ScanArea: preview ? null : RegionAt(regionIndex)?.ToScanArea(),
             OutputRawTiff: false,
-            destinationVisiblePath);
+            destinationVisiblePath,
+            // 프리뷰는 프레임을 찾기 위한 것이므로 돌리지 않습니다 — 돌리면 찾은 좌표가
+            // 실제 판의 좌표와 어긋납니다.
+            Rotation: preview ? Catalog.ImageRotation.Degrees0 : DefaultRotation);
     }
+
+    /// <summary>
+    /// 설정에서 정한 기본 스캔 회전입니다. 셸이 꽂아 줍니다 — Shell.Core 는 설정 파일을
+    /// 읽지 않습니다.
+    /// </summary>
+    public Catalog.ImageRotation DefaultRotation { get; set; } = Catalog.ImageRotation.Degrees0;
 
     /// <summary>
     /// 스캔해서 카탈로그에 게시합니다. 배치는 macOS 처럼 한 장씩 이어서 돌며, 한 장이 실패하면

@@ -26,7 +26,14 @@ public sealed record FrameImportRejection(string Path, FrameImportRefusal Refusa
 public sealed record ScannerFrameImport(
     string VisiblePath,
     string? InfraredPath,
-    DevelopmentProcess Process);
+    DevelopmentProcess Process)
+{
+    /// <summary>
+    /// 가져올 때 걸어 둘 회전입니다. 홀더에 필름을 늘 같은 방향으로 넣는 사용자가 매번 돌리지
+    /// 않도록 설정에서 정합니다. <b>원본은 건드리지 않습니다</b> — recipe 에만 적힙니다.
+    /// </summary>
+    public ImageRotation Rotation { get; init; } = ImageRotation.Degrees0;
+}
 
 public sealed record FrameImportPlan(
     IReadOnlyList<CatalogEntityRow> Rows,
@@ -197,7 +204,7 @@ public static class FrameImport
             ["customDisplayName"] = Path.GetFileName(scan.VisiblePath),
             ["scanIndex"] = nextScanIndex,
             ["sourceKind"] = "scanner",
-            ["params"] = new JsonObject(),
+            ["params"] = RotationParameters(scan.Rotation),
         };
         if (scan.InfraredPath is { } validInfrared)
         {
@@ -216,6 +223,20 @@ public static class FrameImport
             ? new FrameImportPlan([new CatalogEntityRow(routed["id"]!.GetValue<string>(), routed)], [])
             : Rejected(scan.VisiblePath, FrameImportRefusal.RouteRejected);
     }
+
+    /// <summary>
+    /// 설정의 기본 회전을 recipe 로 만듭니다. 회전이 없으면 빈 params 이며, 그때 결과는 이
+    /// 기능이 없던 때와 바이트 단위로 같습니다.
+    /// </summary>
+    private static JsonObject RotationParameters(ImageRotation rotation) =>
+        rotation == ImageRotation.Degrees0
+            ? []
+            : new JsonObject
+            {
+                // 회전은 params 바로 밑이 아니라 imageTransform 안에 삽니다 — reader 가 거기서
+                // 찾습니다.
+                ["imageTransform"] = new JsonObject { ["rotation"] = (int)rotation },
+            };
 
     /// <summary>
     /// 결과를 한 줄로 만듭니다. 거부된 것이 있으면 몇 건이고 왜인지 말합니다 — 고른 파일 다섯 개

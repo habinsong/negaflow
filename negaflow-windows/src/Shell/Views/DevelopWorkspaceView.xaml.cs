@@ -2523,10 +2523,19 @@ public sealed partial class DevelopWorkspaceView : UserControl
         if (panel?.SelectedFrame is not { } frame ||
             !grainMendMicroSpecksByFrame.TryGetValue(frame.Id, out GrainMendMicroSpeckValues values))
         {
-            return true;
+            // 이 프레임에서 아직 고른 적이 없으면 설정의 기본값으로 시작합니다.
+            return MicroSpeckDefault(automatic);
         }
         return automatic ? values.Automatic : values.Guided;
     }
+
+    /// <summary>설정에 담긴 기본값입니다. 설정을 못 읽으면 macOS 기본인 켬입니다.</summary>
+    private bool MicroSpeckDefault(bool automatic) =>
+        workspaceState?.Current is { } preferences
+            ? automatic
+                ? preferences.AutoDefectDetectsMicroSpecks
+                : preferences.GuidedDefectDetectsMicroSpecks
+            : true;
 
     private void SetGrainMendMicroSpecks(bool automatic, bool enabled)
     {
@@ -2538,7 +2547,9 @@ public sealed partial class DevelopWorkspaceView : UserControl
             frame.Id,
             out GrainMendMicroSpeckValues values)
             ? values
-            : GrainMendMicroSpeckValues.Default;
+            : new GrainMendMicroSpeckValues(
+                MicroSpeckDefault(automatic: true),
+                MicroSpeckDefault(automatic: false));
         grainMendMicroSpecksByFrame[frame.Id] = automatic
             ? prior with { Automatic = enabled }
             : prior with { Guided = enabled };

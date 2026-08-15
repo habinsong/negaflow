@@ -1128,4 +1128,14 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developExportMetadataCopyright.Text" xml:space="preserve"><value>Nur Urheberrecht</value><comment>ExportMetadataLocalizedText.copyrightOnly</comment></data>
   <data name="developExportMetadataRemoveLocation.Text" xml:space="preserve"><value>Standort entfernen</value><comment>ExportMetadataLocalizedText.removeLocation</comment></data>
   <data name="developExportMetadataMinimal.Text" xml:space="preserve"><value>Minimal</value><comment>ExportMetadataLocalizedText.minimal</comment></data>
+  <data name="settingsDefaultScanRotation.Text" xml:space="preserve"><value>Standard-Scandrehung</value><comment>AppLocalizedPhrase.settingsDefaultScanRotationPicker</comment></data>
+  <data name="settingsDefaultScanRotationHelp.Text" xml:space="preserve"><value>Gilt nur für neu gescannte Fotos. Vorhandene Fotos bleiben unverändert.</value><comment>AppLocalizedPhrase.settingsDefaultScanRotationHelp</comment></data>
+  <data name="settingsRotation0.Text" xml:space="preserve"><value>Keine</value><comment>ImageRotation.degrees0</comment></data>
+  <data name="settingsRotation90.Text" xml:space="preserve"><value>90°</value><comment>ImageRotation.degrees90</comment></data>
+  <data name="settingsRotation180.Text" xml:space="preserve"><value>180°</value><comment>ImageRotation.degrees180</comment></data>
+  <data name="settingsRotation270.Text" xml:space="preserve"><value>270°</value><comment>ImageRotation.degrees270</comment></data>
+  <data name="settingsScannerTruth.Text" xml:space="preserve"><value>Scannerfunktionen</value><comment>AppLocalizedPhrase.scannerTruth</comment></data>
+  <data name="settingsScannerTruthNone.Text" xml:space="preserve"><value>Scanner anschließen, um die gemeldeten Werte zu sehen.</value><comment>Windows only: no scanner connected yet.</comment></data>
+  <data name="settingsMicroSpecksSection.Text" xml:space="preserve"><value>Standard für Mikroflecken</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecks</comment></data>
+  <data name="settingsMicroSpecksHelp.Text" xml:space="preserve"><value>Ob ein neu geöffnetes Defektwerkzeug nach kleinsten Flecken sucht.</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecksHelp</comment></data>
 </root>

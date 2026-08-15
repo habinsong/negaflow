@@ -1128,4 +1128,14 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="developExportMetadataCopyright.Text" xml:space="preserve"><value>Droits uniquement</value><comment>ExportMetadataLocalizedText.copyrightOnly</comment></data>
   <data name="developExportMetadataRemoveLocation.Text" xml:space="preserve"><value>Supprimer la position</value><comment>ExportMetadataLocalizedText.removeLocation</comment></data>
   <data name="developExportMetadataMinimal.Text" xml:space="preserve"><value>Minimales</value><comment>ExportMetadataLocalizedText.minimal</comment></data>
+  <data name="settingsDefaultScanRotation.Text" xml:space="preserve"><value>Rotation de numérisation par défaut</value><comment>AppLocalizedPhrase.settingsDefaultScanRotationPicker</comment></data>
+  <data name="settingsDefaultScanRotationHelp.Text" xml:space="preserve"><value>S’applique aux nouvelles numérisations. Les photos existantes ne changent pas.</value><comment>AppLocalizedPhrase.settingsDefaultScanRotationHelp</comment></data>
+  <data name="settingsRotation0.Text" xml:space="preserve"><value>Aucune</value><comment>ImageRotation.degrees0</comment></data>
+  <data name="settingsRotation90.Text" xml:space="preserve"><value>90°</value><comment>ImageRotation.degrees90</comment></data>
+  <data name="settingsRotation180.Text" xml:space="preserve"><value>180°</value><comment>ImageRotation.degrees180</comment></data>
+  <data name="settingsRotation270.Text" xml:space="preserve"><value>270°</value><comment>ImageRotation.degrees270</comment></data>
+  <data name="settingsScannerTruth.Text" xml:space="preserve"><value>Capacités du scanner</value><comment>AppLocalizedPhrase.scannerTruth</comment></data>
+  <data name="settingsScannerTruthNone.Text" xml:space="preserve"><value>Connectez un scanner pour voir ce qu’il signale.</value><comment>Windows only: no scanner connected yet.</comment></data>
+  <data name="settingsMicroSpecksSection.Text" xml:space="preserve"><value>Valeurs par défaut des micro-taches</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecks</comment></data>
+  <data name="settingsMicroSpecksHelp.Text" xml:space="preserve"><value>Si un outil de défauts nouvellement ouvert cherche les plus petites taches.</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecksHelp</comment></data>
 </root>

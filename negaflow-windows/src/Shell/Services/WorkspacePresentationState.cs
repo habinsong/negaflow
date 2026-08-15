@@ -80,6 +80,15 @@ public sealed class WorkspacePresentationState
         settingsStore.Update(value => value with { Shortcuts = update(value.Shortcuts) });
     }
 
+    public void SetAutoDefectMicroSpecks(bool value) =>
+        settingsStore.Update(current => current with { AutoDefectDetectsMicroSpecks = value });
+
+    public void SetGuidedDefectMicroSpecks(bool value) =>
+        settingsStore.Update(current => current with { GuidedDefectDetectsMicroSpecks = value });
+
+    public void SetDefaultScanRotation(Negaflow.Catalog.ImageRotation rotation) =>
+        settingsStore.Update(current => current with { DefaultScanRotation = rotation });
+
     public void UpdatePrint(Func<Print.PrintPreferences, Print.PrintPreferences> update)
     {
         ArgumentNullException.ThrowIfNull(update);
