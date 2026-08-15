@@ -1123,4 +1123,9 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="printCustomAdd.Content" xml:space="preserve"><value>Zelle hinzufügen</value><comment>Windows only: custom placement editor.</comment></data>
   <data name="printCustomRemove.Content" xml:space="preserve"><value>Zelle entfernen</value><comment>Windows only: custom placement editor.</comment></data>
   <data name="printCustomHint.Text" xml:space="preserve"><value>Zelle ziehen zum Bewegen, Ecke ziehen zum Skalieren.</value><comment>Windows only: custom placement editor.</comment></data>
+  <data name="developExportMetadata.Text" xml:space="preserve"><value>Metadaten</value><comment>ExportMetadataLocalizedText.label</comment></data>
+  <data name="developExportMetadataAll.Text" xml:space="preserve"><value>Alle</value><comment>ExportMetadataLocalizedText.all</comment></data>
+  <data name="developExportMetadataCopyright.Text" xml:space="preserve"><value>Nur Urheberrecht</value><comment>ExportMetadataLocalizedText.copyrightOnly</comment></data>
+  <data name="developExportMetadataRemoveLocation.Text" xml:space="preserve"><value>Standort entfernen</value><comment>ExportMetadataLocalizedText.removeLocation</comment></data>
+  <data name="developExportMetadataMinimal.Text" xml:space="preserve"><value>Minimal</value><comment>ExportMetadataLocalizedText.minimal</comment></data>
 </root>

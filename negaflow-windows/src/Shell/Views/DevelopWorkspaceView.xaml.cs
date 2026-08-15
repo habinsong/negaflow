@@ -3768,6 +3768,28 @@ public sealed partial class DevelopWorkspaceView : UserControl
         MutateExportSettings(value => value with { WriteSidecar = ExportSidecarToggle.IsOn });
     }
 
+    /// <summary>
+    /// 게시하는 파일에 무엇을 적을지입니다. 기본은 최소 — 원본이 담고 있던 위치나 장비 정보를
+    /// 사용자가 고르지 않았는데 흘려보내지 않습니다.
+    /// </summary>
+    private void OnExportMetadataPolicyChanged(object sender, SelectionChangedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (isSynchronizingInspector)
+        {
+            return;
+        }
+        ExportMetadataPolicy policy = ExportMetadataSelector.SelectedIndex switch
+        {
+            1 => ExportMetadataPolicy.CopyrightOnly,
+            2 => ExportMetadataPolicy.RemoveLocation,
+            3 => ExportMetadataPolicy.All,
+            _ => ExportMetadataPolicy.Minimal,
+        };
+        MutateExportSettings(value => value with { MetadataPolicy = policy });
+    }
+
     private void OnQuickExportFormatChanged(object sender, SelectionChangedEventArgs args)
     {
         _ = sender;
@@ -3892,6 +3914,13 @@ public sealed partial class DevelopWorkspaceView : UserControl
             ExportMainFlatMasterToggle.IsOn = exportSettings.WriteMainFlatMaster;
             ExportOriginalRawToggle.IsOn = exportSettings.WriteOriginalRaw;
             ExportSidecarToggle.IsOn = exportSettings.WriteSidecar;
+            ExportMetadataSelector.SelectedIndex = exportSettings.MetadataPolicy switch
+            {
+                ExportMetadataPolicy.CopyrightOnly => 1,
+                ExportMetadataPolicy.RemoveLocation => 2,
+                ExportMetadataPolicy.All => 3,
+                _ => 0,
+            };
         }
         finally
         {
@@ -4125,6 +4154,15 @@ public sealed partial class DevelopWorkspaceView : UserControl
         ExportRecipeLabel.Text = AppResources.Get("developExportRecipeTitle", "Text");
         AutomationProperties.SetName(ExportRecipeSelector, ExportRecipeLabel.Text);
         SetLocalizedNameAndTooltip(ExportRecipeMenuButton, ExportRecipeLabel.Text);
+        ExportMetadataLabel.Text = AppResources.Get("developExportMetadata", "Text");
+        AutomationProperties.SetName(ExportMetadataSelector, ExportMetadataLabel.Text);
+        ExportMetadataMinimalItem.Content =
+            AppResources.Get("developExportMetadataMinimal", "Text");
+        ExportMetadataCopyrightItem.Content =
+            AppResources.Get("developExportMetadataCopyright", "Text");
+        ExportMetadataRemoveLocationItem.Content =
+            AppResources.Get("developExportMetadataRemoveLocation", "Text");
+        ExportMetadataAllItem.Content = AppResources.Get("developExportMetadataAll", "Text");
         ExportSourceLabel.Text = AppResources.Get("developExportSourceLabel", "Text");
 
         QuickExportSectionText.Text = AppResources.Get("quickExportSection", "Text");

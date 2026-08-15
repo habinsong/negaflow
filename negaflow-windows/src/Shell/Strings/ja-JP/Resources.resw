@@ -1123,4 +1123,9 @@
   <data name="printCustomAdd.Content" xml:space="preserve"><value>セルを追加</value><comment>Windows only: custom placement editor.</comment></data>
   <data name="printCustomRemove.Content" xml:space="preserve"><value>セルを削除</value><comment>Windows only: custom placement editor.</comment></data>
   <data name="printCustomHint.Text" xml:space="preserve"><value>セルをドラッグして移動、角でサイズ変更。</value><comment>Windows only: custom placement editor.</comment></data>
+  <data name="developExportMetadata.Text" xml:space="preserve"><value>メタデータ</value><comment>ExportMetadataLocalizedText.label</comment></data>
+  <data name="developExportMetadataAll.Text" xml:space="preserve"><value>すべて</value><comment>ExportMetadataLocalizedText.all</comment></data>
+  <data name="developExportMetadataCopyright.Text" xml:space="preserve"><value>著作権のみ</value><comment>ExportMetadataLocalizedText.copyrightOnly</comment></data>
+  <data name="developExportMetadataRemoveLocation.Text" xml:space="preserve"><value>位置情報を削除</value><comment>ExportMetadataLocalizedText.removeLocation</comment></data>
+  <data name="developExportMetadataMinimal.Text" xml:space="preserve"><value>最小</value><comment>ExportMetadataLocalizedText.minimal</comment></data>
 </root>

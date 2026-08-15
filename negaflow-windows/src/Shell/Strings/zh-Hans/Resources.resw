@@ -1123,4 +1123,9 @@
   <data name="printCustomAdd.Content" xml:space="preserve"><value>添加单元</value><comment>Windows only: custom placement editor.</comment></data>
   <data name="printCustomRemove.Content" xml:space="preserve"><value>删除单元</value><comment>Windows only: custom placement editor.</comment></data>
   <data name="printCustomHint.Text" xml:space="preserve"><value>拖动单元可移动，拖动角可调整大小。</value><comment>Windows only: custom placement editor.</comment></data>
+  <data name="developExportMetadata.Text" xml:space="preserve"><value>元数据</value><comment>ExportMetadataLocalizedText.label</comment></data>
+  <data name="developExportMetadataAll.Text" xml:space="preserve"><value>全部</value><comment>ExportMetadataLocalizedText.all</comment></data>
+  <data name="developExportMetadataCopyright.Text" xml:space="preserve"><value>仅版权</value><comment>ExportMetadataLocalizedText.copyrightOnly</comment></data>
+  <data name="developExportMetadataRemoveLocation.Text" xml:space="preserve"><value>移除位置</value><comment>ExportMetadataLocalizedText.removeLocation</comment></data>
+  <data name="developExportMetadataMinimal.Text" xml:space="preserve"><value>最少</value><comment>ExportMetadataLocalizedText.minimal</comment></data>
 </root>

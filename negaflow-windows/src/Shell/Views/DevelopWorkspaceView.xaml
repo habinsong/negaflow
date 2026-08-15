@@ -373,6 +373,20 @@
                                         x:Name="ExportSidecarToggle"
                                         AutomationProperties.AutomationId="negaflow.develop.output.sidecar"
                                         Toggled="OnExportSidecarToggled" />
+                                    <!-- 게시하는 파일에 무엇을 적을지입니다. macOS 도 이 자리에
+                                         둡니다 — 원본 보관·사이드카와 같은 "무엇이 나가는가" 묶음입니다. -->
+                                    <TextBlock x:Name="ExportMetadataLabel" FontSize="12" />
+                                    <ComboBox
+                                        x:Name="ExportMetadataSelector"
+                                        HorizontalAlignment="Stretch"
+                                        AutomationProperties.AutomationId="negaflow.develop.output.metadata-policy"
+                                        FontSize="12"
+                                        SelectionChanged="OnExportMetadataPolicyChanged">
+                                        <ComboBoxItem x:Name="ExportMetadataMinimalItem" />
+                                        <ComboBoxItem x:Name="ExportMetadataCopyrightItem" />
+                                        <ComboBoxItem x:Name="ExportMetadataRemoveLocationItem" />
+                                        <ComboBoxItem x:Name="ExportMetadataAllItem" />
+                                    </ComboBox>
                                     <TextBlock x:Name="ExportSourceLabel" FontSize="12" />
                                     <TextBlock
                                         x:Name="ExportSourceSummaryText"

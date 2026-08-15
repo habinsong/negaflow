@@ -1123,4 +1123,9 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="printCustomAdd.Content" xml:space="preserve"><value>Ajouter une case</value><comment>Windows only: custom placement editor.</comment></data>
   <data name="printCustomRemove.Content" xml:space="preserve"><value>Supprimer la case</value><comment>Windows only: custom placement editor.</comment></data>
   <data name="printCustomHint.Text" xml:space="preserve"><value>Faites glisser une case pour la déplacer, son coin pour la redimensionner.</value><comment>Windows only: custom placement editor.</comment></data>
+  <data name="developExportMetadata.Text" xml:space="preserve"><value>Métadonnées</value><comment>ExportMetadataLocalizedText.label</comment></data>
+  <data name="developExportMetadataAll.Text" xml:space="preserve"><value>Toutes</value><comment>ExportMetadataLocalizedText.all</comment></data>
+  <data name="developExportMetadataCopyright.Text" xml:space="preserve"><value>Droits uniquement</value><comment>ExportMetadataLocalizedText.copyrightOnly</comment></data>
+  <data name="developExportMetadataRemoveLocation.Text" xml:space="preserve"><value>Supprimer la position</value><comment>ExportMetadataLocalizedText.removeLocation</comment></data>
+  <data name="developExportMetadataMinimal.Text" xml:space="preserve"><value>Minimales</value><comment>ExportMetadataLocalizedText.minimal</comment></data>
 </root>
