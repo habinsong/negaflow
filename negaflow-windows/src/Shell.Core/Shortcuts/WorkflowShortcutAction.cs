@@ -27,6 +27,9 @@ public enum WorkflowShortcutAction
     ImportImages,
     ImportFolder,
     RefreshLibrary,
+    LibraryGrid,
+    LibraryCompare,
+    LibrarySurvey,
     PreviousPhoto,
     NextPhoto,
     PickPhoto,
@@ -83,7 +86,10 @@ public static class WorkflowShortcutActions
         WorkflowShortcutAction.Redo or
         WorkflowShortcutAction.ImportImages or
         WorkflowShortcutAction.ImportFolder or
-        WorkflowShortcutAction.RefreshLibrary => WorkflowShortcutGroup.Library,
+        WorkflowShortcutAction.RefreshLibrary or
+        WorkflowShortcutAction.LibraryGrid or
+        WorkflowShortcutAction.LibraryCompare or
+        WorkflowShortcutAction.LibrarySurvey => WorkflowShortcutGroup.Library,
 
         WorkflowShortcutAction.PreviousPhoto or
         WorkflowShortcutAction.NextPhoto or
@@ -130,6 +136,9 @@ public static class WorkflowShortcutActions
         WorkflowShortcutAction.ImportFolder =>
             new("i", WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Shift),
         WorkflowShortcutAction.RefreshLibrary => new("r", WorkflowShortcutModifiers.Control),
+        WorkflowShortcutAction.LibraryGrid => new("g", WorkflowShortcutModifiers.None),
+        WorkflowShortcutAction.LibraryCompare => new("c", WorkflowShortcutModifiers.None),
+        WorkflowShortcutAction.LibrarySurvey => new("n", WorkflowShortcutModifiers.None),
         WorkflowShortcutAction.PreviousPhoto => new("[", WorkflowShortcutModifiers.None),
         WorkflowShortcutAction.NextPhoto => new("]", WorkflowShortcutModifiers.None),
         WorkflowShortcutAction.PickPhoto => new("p", WorkflowShortcutModifiers.None),

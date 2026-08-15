@@ -262,6 +262,12 @@ public sealed partial class LibraryWorkspaceView : UserControl
                     ShowLibrary(host, importWindowId ?? default);
                 }
                 return true;
+            case WorkflowShortcutAction.LibraryGrid:
+                return SetCullingMode(LibraryCullingMode.Grid);
+            case WorkflowShortcutAction.LibraryCompare:
+                return SetCullingMode(LibraryCullingMode.Compare);
+            case WorkflowShortcutAction.LibrarySurvey:
+                return SetCullingMode(LibraryCullingMode.Survey);
             case WorkflowShortcutAction.PreviousPhoto:
                 return MoveSelection(-1);
             case WorkflowShortcutAction.NextPhoto:
@@ -897,6 +903,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
         {
             FrameListView.ItemsSource = items;
             LibraryCountText.Text = items.Count.ToString(CultureInfo.CurrentCulture);
+            SynchronizeCulling(items);
             return;
         }
 
@@ -919,6 +926,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
         LibraryCountText.Text = projection.MatchedCount.ToString(CultureInfo.CurrentCulture);
         UpdateViewModeControls();
         SynchronizeDevelopDefaults();
+        SynchronizeCulling(items);
         if (sourceKind == LibrarySourceKind.Files)
         {
             RebuildFilesSourceTree();
@@ -2573,6 +2581,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
         ImportSectionText.Text = import;
         LocalizeCollections();
         LocalizeDevelopDefaults();
+        LocalizeCulling();
         UpdateSourcePanel();
         string importImages = AppResources.Get("importImages", "Content");
         SetButtonText(ImportImagesButton, importImages);

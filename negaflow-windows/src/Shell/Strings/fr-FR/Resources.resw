@@ -1061,4 +1061,13 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="shortcutUndo.Text" xml:space="preserve"><value>Annuler</value><comment>AppLocalizedText.commandUndo</comment></data>
   <data name="shortcutRedo.Text" xml:space="preserve"><value>Rétablir</value><comment>AppLocalizedText.commandRedo</comment></data>
   <data name="libraryUndoneFormat.Text" xml:space="preserve"><value>Annulé : {0}</value><comment>Windows only: undo has no macOS status line of its own.</comment></data>
+  <data name="libraryCullingGrid.Text" xml:space="preserve"><value>Grille</value><comment>AppCullingText.grid</comment></data>
+  <data name="libraryCullingCompare.Text" xml:space="preserve"><value>Comparer</value><comment>AppCullingText.compare</comment></data>
+  <data name="libraryCullingSurvey.Text" xml:space="preserve"><value>Ensemble</value><comment>AppCullingText.survey</comment></data>
+  <data name="libraryCullingReference.Text" xml:space="preserve"><value>Référence</value><comment>AppCullingText.reference</comment></data>
+  <data name="libraryCullingCandidate.Text" xml:space="preserve"><value>Candidate</value><comment>AppCullingText.candidate</comment></data>
+  <data name="libraryCompareNeedsTwoTitle.Text" xml:space="preserve"><value>Sélectionnez deux photos</value><comment>AppCullingText.compareNeedsTwoTitle</comment></data>
+  <data name="libraryCompareNeedsTwoBody.Text" xml:space="preserve"><value>Dans la grille, utilisez Ctrl ou Maj pour choisir les photos à comparer.</value><comment>AppCullingText.compareNeedsTwoDescription</comment></data>
+  <data name="librarySurveyNeedsSelectionTitle.Text" xml:space="preserve"><value>Sélectionnez des photos</value><comment>AppCullingText.surveyNeedsSelectionTitle</comment></data>
+  <data name="librarySurveyNeedsSelectionBody.Text" xml:space="preserve"><value>Sélectionnez plusieurs photos dans la grille pour les examiner ensemble.</value><comment>AppCullingText.surveyNeedsSelectionDescription</comment></data>
 </root>

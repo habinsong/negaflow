@@ -1061,4 +1061,13 @@ Load a scanner from Library to scan film.</value>
   <data name="shortcutUndo.Text" xml:space="preserve"><value>Undo</value><comment>AppLocalizedText.commandUndo</comment></data>
   <data name="shortcutRedo.Text" xml:space="preserve"><value>Redo</value><comment>AppLocalizedText.commandRedo</comment></data>
   <data name="libraryUndoneFormat.Text" xml:space="preserve"><value>Undone: {0}</value><comment>Windows only: undo has no macOS status line of its own.</comment></data>
+  <data name="libraryCullingGrid.Text" xml:space="preserve"><value>Grid</value><comment>AppCullingText.grid</comment></data>
+  <data name="libraryCullingCompare.Text" xml:space="preserve"><value>Compare</value><comment>AppCullingText.compare</comment></data>
+  <data name="libraryCullingSurvey.Text" xml:space="preserve"><value>Survey</value><comment>AppCullingText.survey</comment></data>
+  <data name="libraryCullingReference.Text" xml:space="preserve"><value>Select</value><comment>AppCullingText.reference</comment></data>
+  <data name="libraryCullingCandidate.Text" xml:space="preserve"><value>Candidate</value><comment>AppCullingText.candidate</comment></data>
+  <data name="libraryCompareNeedsTwoTitle.Text" xml:space="preserve"><value>Select two photos</value><comment>AppCullingText.compareNeedsTwoTitle</comment></data>
+  <data name="libraryCompareNeedsTwoBody.Text" xml:space="preserve"><value>In Grid, Ctrl-click or Shift-click the photos to compare.</value><comment>AppCullingText.compareNeedsTwoDescription</comment></data>
+  <data name="librarySurveyNeedsSelectionTitle.Text" xml:space="preserve"><value>Select photos</value><comment>AppCullingText.surveyNeedsSelectionTitle</comment></data>
+  <data name="librarySurveyNeedsSelectionBody.Text" xml:space="preserve"><value>Select multiple photos in Grid to review them together.</value><comment>AppCullingText.surveyNeedsSelectionDescription</comment></data>
 </root>

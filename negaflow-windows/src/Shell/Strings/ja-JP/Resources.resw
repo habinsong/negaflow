@@ -1061,4 +1061,13 @@
   <data name="shortcutUndo.Text" xml:space="preserve"><value>取り消す</value><comment>AppLocalizedText.commandUndo</comment></data>
   <data name="shortcutRedo.Text" xml:space="preserve"><value>やり直す</value><comment>AppLocalizedText.commandRedo</comment></data>
   <data name="libraryUndoneFormat.Text" xml:space="preserve"><value>元に戻しました: {0}</value><comment>Windows only: undo has no macOS status line of its own.</comment></data>
+  <data name="libraryCullingGrid.Text" xml:space="preserve"><value>グリッド</value><comment>AppCullingText.grid</comment></data>
+  <data name="libraryCullingCompare.Text" xml:space="preserve"><value>比較</value><comment>AppCullingText.compare</comment></data>
+  <data name="libraryCullingSurvey.Text" xml:space="preserve"><value>一覧比較</value><comment>AppCullingText.survey</comment></data>
+  <data name="libraryCullingReference.Text" xml:space="preserve"><value>基準</value><comment>AppCullingText.reference</comment></data>
+  <data name="libraryCullingCandidate.Text" xml:space="preserve"><value>候補</value><comment>AppCullingText.candidate</comment></data>
+  <data name="libraryCompareNeedsTwoTitle.Text" xml:space="preserve"><value>写真を2枚選択してください</value><comment>AppCullingText.compareNeedsTwoTitle</comment></data>
+  <data name="libraryCompareNeedsTwoBody.Text" xml:space="preserve"><value>グリッドで Ctrl または Shift を押しながら比較する写真を選択します。</value><comment>AppCullingText.compareNeedsTwoDescription</comment></data>
+  <data name="librarySurveyNeedsSelectionTitle.Text" xml:space="preserve"><value>写真を選択してください</value><comment>AppCullingText.surveyNeedsSelectionTitle</comment></data>
+  <data name="librarySurveyNeedsSelectionBody.Text" xml:space="preserve"><value>グリッドで複数の写真を選ぶと、同じ画面で一覧比較できます。</value><comment>AppCullingText.surveyNeedsSelectionDescription</comment></data>
 </root>

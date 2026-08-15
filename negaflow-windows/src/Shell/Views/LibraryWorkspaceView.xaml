@@ -593,6 +593,55 @@
                             </MenuFlyout>
                         </DropDownButton.Flyout>
                     </DropDownButton>
+                    <!-- macOS LibraryCullingModePicker: 격자와 살펴보기 두 칸, 그리고 고른 수. -->
+                    <StackPanel Orientation="Horizontal" Spacing="2">
+                        <Button
+                            x:Name="CullingGridButton"
+                            Width="27"
+                            Height="24"
+                            Padding="0"
+                            AutomationProperties.AutomationId="negaflow.library.culling.grid"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Click="OnCullingModeClicked"
+                            CornerRadius="6"
+                            Tag="Grid">
+                            <FontIcon FontSize="12" Glyph="&#xE80A;" />
+                        </Button>
+                        <Button
+                            x:Name="CullingSurveyButton"
+                            Width="27"
+                            Height="24"
+                            Padding="0"
+                            AutomationProperties.AutomationId="negaflow.library.culling.survey"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Click="OnCullingModeClicked"
+                            CornerRadius="6"
+                            Tag="Survey">
+                            <FontIcon FontSize="12" Glyph="&#xF0E2;" />
+                        </Button>
+                        <Button
+                            x:Name="CullingCompareButton"
+                            Width="27"
+                            Height="24"
+                            Padding="0"
+                            AutomationProperties.AutomationId="negaflow.library.culling.compare"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Click="OnCullingModeClicked"
+                            CornerRadius="6"
+                            Tag="Compare">
+                            <FontIcon FontSize="12" Glyph="&#xE8B3;" />
+                        </Button>
+                        <TextBlock
+                            x:Name="CullingSelectionCountText"
+                            MinWidth="22"
+                            VerticalAlignment="Center"
+                            FontSize="11"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Visibility="Collapsed" />
+                    </StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="1">
                         <Button
                             x:Name="CardSizeDecreaseButton"
@@ -850,6 +899,38 @@
                             </DataTemplate>
                         </GridView.ItemTemplate>
                     </GridView>
+
+                    <!-- 비교·살펴보기는 격자와 같은 자리를 씁니다. macOS 도 격자를 감추고
+                         그 자리에 판을 올립니다. -->
+                    <Grid
+                        x:Name="CullingSurface"
+                        Grid.Row="1"
+                        Background="{ThemeResource NegaflowWindowBrush}"
+                        Visibility="Collapsed">
+                        <ScrollViewer x:Name="CullingScroll" Padding="12">
+                            <Grid x:Name="CullingBoard" ColumnSpacing="10" RowSpacing="10" />
+                        </ScrollViewer>
+                        <StackPanel
+                            x:Name="CullingEmptyPanel"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Spacing="6"
+                            Visibility="Collapsed">
+                            <TextBlock
+                                x:Name="CullingEmptyTitle"
+                                HorizontalAlignment="Center"
+                                FontSize="15"
+                                FontWeight="SemiBold" />
+                            <TextBlock
+                                x:Name="CullingEmptyBody"
+                                MaxWidth="360"
+                                HorizontalAlignment="Center"
+                                FontSize="12"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                TextAlignment="Center"
+                                TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Grid>
                 </Grid>
 
                 <StackPanel

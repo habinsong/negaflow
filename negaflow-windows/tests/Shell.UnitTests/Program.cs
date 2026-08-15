@@ -59,6 +59,7 @@ internal static class Program
         VerifyLibraryDocument();
         VerifySourceMove();
         VerifyDevelopTargets();
+        VerifyLibraryCulling();
         VerifyWorkflowShortcuts();
         VerifyLibraryHost();
         VerifyEditsSurviveClose();
@@ -3007,6 +3008,50 @@ internal static class Program
         Check(
             undone == LibraryUndoStack.MaximumDepth,
             "library_undo_depth_is_capped");
+    }
+
+
+    /// <summary>
+    /// 비교·살펴보기에 올라가는 사진은 **격자에 보이는 차례**를 따라야 합니다 — 고른 차례가
+    /// 아닙니다. 정렬을 바꾼 뒤 비교를 열었을 때 좌우가 화면과 어긋나면 어느 쪽이 어느 쪽인지
+    /// 알 수 없습니다.
+    /// </summary>
+    private static void VerifyLibraryCulling()
+    {
+        string[] ordered = ["a", "b", "c", "d"];
+
+        // 고른 차례가 아니라 격자 차례로 늘어놓습니다.
+        Check(
+            string.Join(',', LibraryCullingProjection.SelectedFrameIds(ordered, ["d", "b"])) ==
+                "b,d",
+            "culling_selection_follows_the_grid_order");
+        // 격자에 없는 id 는 빠집니다.
+        Check(
+            LibraryCullingProjection.SelectedFrameIds(ordered, ["z"]).Count == 0,
+            "culling_selection_drops_unknown_ids");
+
+        // 두 장이 안 되면 비교가 아닙니다.
+        Check(
+            LibraryCullingProjection.CompareFrameIds(ordered, ["b"], "b").Count == 0,
+            "culling_compare_needs_two");
+
+        // 후보는 활성 사진, 기준은 그 앞의 첫 사진입니다.
+        Check(
+            string.Join(',', LibraryCullingProjection.CompareFrameIds(
+                ordered, ["a", "b", "c"], "c")) == "a,c",
+            "culling_compare_puts_the_active_photo_second");
+        // 활성이 고른 것 밖이면 두 번째를 후보로 씁니다.
+        Check(
+            string.Join(',', LibraryCullingProjection.CompareFrameIds(
+                ordered, ["a", "b", "c"], "d")) == "a,b",
+            "culling_compare_falls_back_to_the_second");
+        // 활성이 첫 사진이면 기준은 그 다음 사진이어야 합니다 — 자기 자신과 견줄 수 없습니다.
+        IReadOnlyList<string> firstActive = LibraryCullingProjection.CompareFrameIds(
+            ordered, ["a", "b"], "a");
+        Check(
+            firstActive.Count == 2 && firstActive[0] != firstActive[1] &&
+                firstActive[1] == "a",
+            "culling_compare_never_pairs_a_photo_with_itself");
     }
 
     private static void VerifyLibraryDocument()
