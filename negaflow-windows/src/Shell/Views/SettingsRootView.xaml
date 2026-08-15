@@ -261,6 +261,32 @@
                                     TextWrapping="Wrap"
                                     FontSize="12"
                                     Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                                <!-- 인화 대상의 출력 프로파일입니다. 프루프 프로파일과 따로
+                                     둡니다 — 화면 목적지와 종이 목적지는 같지 않습니다. -->
+                                <Grid ColumnSpacing="16">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="PrinterProfileName" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                                        <Button
+                                            x:Name="PrinterProfileButton"
+                                            x:Uid="developExportChangeFolder"
+                                            AutomationProperties.AutomationId="settings.export.printerProfile.choose"
+                                            Click="OnChoosePrinterProfile" />
+                                        <Button
+                                            x:Name="PrinterProfileResetButton"
+                                            x:Uid="developTabReset"
+                                            Visibility="Collapsed"
+                                            AutomationProperties.AutomationId="settings.export.printerProfile.reset"
+                                            Click="OnResetPrinterProfile" />
+                                    </StackPanel>
+                                </Grid>
+                                <TextBlock
+                                    x:Name="PrinterProfileError"
+                                    x:Uid="softProofInvalidICC"
+                                    Visibility="Collapsed"
+                                    TextWrapping="Wrap"
+                                    FontSize="12"
+                                    Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
                                 <Grid ColumnSpacing="16">
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="230" /></Grid.ColumnDefinitions>
                                     <TextBlock x:Uid="settingsExportProofLabel" VerticalAlignment="Center" />

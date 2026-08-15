@@ -26,13 +26,37 @@ public sealed record SoftProofPreferences
     /// </summary>
     public string ProfileName { get; init; } = string.Empty;
 
+    /// <summary>
+    /// 고른 ICC 파일의 자리입니다. 이름만 담아 두면 다음 실행에서 용지 흰색과 잉크 검정을
+    /// 다시 읽을 수 없어, 프루프가 "용지와 잉크" 를 골라도 중립 흰색으로 돌아갑니다.
+    /// </summary>
+    public string ProfilePath { get; init; } = string.Empty;
+
+    /// <summary>
+    /// 인화 대상이 쓰는 출력 프로파일의 자리입니다. macOS <c>printerOutputICCProfileData</c> 와
+    /// 같은 뜻이며, 현상 대상이 PRINT 일 때 프루프 목적지를 이것으로 바꿉니다.
+    /// </summary>
+    public string PrinterProfilePath { get; init; } = string.Empty;
+
     public SoftProofPreferences Normalize() => this with
     {
+        ProfilePath = (ProfilePath ?? string.Empty).Trim(),
+        PrinterProfilePath = (PrinterProfilePath ?? string.Empty).Trim(),
         Simulation = Enum.IsDefined(Simulation) ? Simulation : SoftProofSimulation.ProfileOnly,
         ProfileName = (ProfileName ?? string.Empty).Trim(),
         // 프루프가 꺼져 있으면 색역 경고도 의미가 없습니다. 켤 때 함께 살아납니다.
         GamutWarningEnabled = IsEnabled && GamutWarningEnabled,
     };
+
+    /// <summary>
+    /// 현상 대상에 맞는 프루프 목적지입니다. macOS <c>displaySoftProofSettings</c> 와 같이,
+    /// **PRINT 로 현상할 때는 프린터 출력 프로파일**이 목적지가 됩니다 — 인화할 종이가
+    /// 목적지여야 프루프가 인화 결과를 보여 줍니다.
+    /// </summary>
+    public string DestinationProfilePath(Catalog.DevelopTarget target) =>
+        target == Catalog.DevelopTarget.Print && PrinterProfilePath.Length > 0
+            ? PrinterProfilePath
+            : ProfilePath;
 
     /// <summary>
     /// 미리보기에 넘길 값입니다. 꺼져 있으면 <see cref="SoftProofSettings.Disabled"/> 이며,

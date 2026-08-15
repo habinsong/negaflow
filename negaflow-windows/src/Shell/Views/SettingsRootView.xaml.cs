@@ -147,25 +147,18 @@ public sealed partial class SettingsRootView : UserControl
             // 프로파일을 **고를 때 한 번만** 읽습니다. RGB 프루프에 쓸 수 없는 프로파일이면
             // 고른 것을 반영하지 않고 이유를 보여줍니다 — 쓸 수 없는 것을 고른 채로 두면
             // 프루프가 조용히 다른 값을 씁니다.
-            bool usable;
-            try
-            {
-                byte[] bytes = await File.ReadAllBytesAsync(file.Path);
-                _ = NativeSoftProof.ReadMedia(bytes);
-                usable = true;
-            }
-            catch (Exception exception) when (
-                exception is IOException or UnauthorizedAccessException
-                    or NativeBootstrapException)
-            {
-                usable = false;
-            }
-
+            // 읽어 보는 것이 곧 검사입니다. RGB 출력 프로파일이 아니면 null 이 돌아옵니다.
+            bool usable = SoftProofProfileReader.Read(file.Path) is not null;
             SoftProofProfileError.Visibility = usable ? Visibility.Collapsed : Visibility.Visible;
             if (usable)
             {
-                string name = Path.GetFileName(file.Path);
-                workspaceState.UpdateSoftProof(value => value with { ProfileName = name });
+                // 이름과 **자리**를 함께 담습니다. 이름만 담으면 다음 실행에서 용지 흰색을
+                // 다시 읽을 수 없어 프루프가 중립 흰색으로 돌아갑니다.
+                workspaceState.UpdateSoftProof(value => value with
+                {
+                    ProfileName = Path.GetFileName(file.Path),
+                    ProfilePath = file.Path,
+                });
             }
         }
         finally
@@ -179,7 +172,57 @@ public sealed partial class SettingsRootView : UserControl
         _ = sender;
         _ = args;
         SoftProofProfileError.Visibility = Visibility.Collapsed;
-        workspaceState?.UpdateSoftProof(value => value with { ProfileName = string.Empty });
+        workspaceState?.UpdateSoftProof(value => value with
+        {
+            ProfileName = string.Empty,
+            ProfilePath = string.Empty,
+        });
+    }
+
+    /// <summary>
+    /// 인화 대상이 쓸 출력 프로파일입니다. macOS 처럼 프루프 프로파일과 따로 둡니다 — 화면을
+    /// 보는 목적지와 종이에 찍는 목적지는 같지 않습니다.
+    /// </summary>
+    private async void OnChoosePrinterProfile(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (workspaceState is null || pickerWindowId is null)
+        {
+            return;
+        }
+        Microsoft.Windows.Storage.Pickers.FileOpenPicker picker = new(pickerWindowId.Value);
+        picker.FileTypeFilter.Add(".icc");
+        picker.FileTypeFilter.Add(".icm");
+        PrinterProfileButton.IsEnabled = false;
+        try
+        {
+            if (await picker.PickSingleFileAsync() is not { } file)
+            {
+                return;
+            }
+            bool usable = SoftProofProfileReader.Read(file.Path) is not null;
+            PrinterProfileError.Visibility = usable ? Visibility.Collapsed : Visibility.Visible;
+            if (usable)
+            {
+                workspaceState.UpdateSoftProof(value => value with
+                {
+                    PrinterProfilePath = file.Path,
+                });
+            }
+        }
+        finally
+        {
+            PrinterProfileButton.IsEnabled = true;
+        }
+    }
+
+    private void OnResetPrinterProfile(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        PrinterProfileError.Visibility = Visibility.Collapsed;
+        workspaceState?.UpdateSoftProof(value => value with { PrinterProfilePath = string.Empty });
     }
 
     private void OnImageHashToggled(object sender, RoutedEventArgs args)
@@ -234,8 +277,8 @@ public sealed partial class SettingsRootView : UserControl
         GamutUnavailableReason.Visibility =
             gamutAvailable ? Visibility.Collapsed : Visibility.Visible;
         GamutWarningToggle.IsOn = gamutAvailable && proof.GamutWarningEnabled;
-        // 프루프 대상 프로파일을 아직 고를 수 없으므로 내보내기 색공간의 이름을 씁니다 —
-        // macOS 도 프로파일이 없으면 같은 값을 보여줍니다.
+        // 프로파일을 고르지 않았으면 내보내기 색공간의 이름을 씁니다 — macOS 도 프로파일이
+        // 없으면 같은 값을 보여줍니다.
         string profileName = proof.ProfileName.Length != 0
             ? proof.ProfileName
             : ColorSpaceLabel(preferences.Export.EffectiveColorSpace);
@@ -243,6 +286,11 @@ public sealed partial class SettingsRootView : UserControl
         // 되돌릴 것이 있을 때만 되돌리기를 보여줍니다. macOS 도 같은 조건입니다.
         SoftProofResetProfileButton.Visibility =
             proof.ProfileName.Length != 0 ? Visibility.Visible : Visibility.Collapsed;
+        PrinterProfileName.Text = proof.PrinterProfilePath.Length != 0
+            ? Path.GetFileName(proof.PrinterProfilePath)
+            : AppResources.Get("settingsColorUnassigned", "Text");
+        PrinterProfileResetButton.Visibility =
+            proof.PrinterProfilePath.Length != 0 ? Visibility.Visible : Visibility.Collapsed;
         SoftProofSummary.Text = proof.IsEnabled
             ? $"{profileName} · {SimulationLabel(proof.Simulation)}"
             : AppResources.Get("settingsColorOff", "Text");

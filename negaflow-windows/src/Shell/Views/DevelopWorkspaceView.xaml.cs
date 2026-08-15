@@ -4657,14 +4657,28 @@ public sealed partial class DevelopWorkspaceView : UserControl
         if (softProofPreferences != preferences.SoftProof)
         {
             softProofPreferences = preferences.SoftProof;
-            if (previewCoordinator is { } coordinator)
-            {
-                // 프로파일을 아직 고를 수 없으므로 용지·잉크는 넘기지 않습니다. 없는 값을
-                // 지어내느니 프로파일만 보는 쪽이 정직합니다.
-                coordinator.SoftProof = softProofPreferences.ToSettings(null);
-                RequestPreview();
-            }
+            ApplySoftProof();
         }
+    }
+
+    /// <summary>
+    /// 고른 프로파일의 용지 흰색과 잉크 검정을 미리보기에 겁니다.
+    /// </summary>
+    /// <remarks>
+    /// 목적지는 현상 대상이 정합니다 — PRINT 로 현상할 때는 프린터 출력 프로파일이 목적지이며,
+    /// 그래야 프루프가 화면이 아니라 인화될 종이를 보여 줍니다. 프로파일을 읽지 못하면 용지·
+    /// 잉크를 흉내 내지 않습니다: 없는 값을 지어내느니 프로파일만 보는 쪽이 정직합니다.
+    /// </remarks>
+    private void ApplySoftProof()
+    {
+        if (previewCoordinator is not { } coordinator)
+        {
+            return;
+        }
+        DevelopTarget target = panel?.SelectedFrame?.DevelopTarget ?? DevelopTarget.Main;
+        coordinator.SoftProof = softProofPreferences.ToSettings(
+            SoftProofProfileReader.Read(softProofPreferences.DestinationProfilePath(target)));
+        RequestPreview();
     }
 
     private void SynchronizeWidths(ShellPreferences preferences)
