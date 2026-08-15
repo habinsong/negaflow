@@ -1052,4 +1052,5 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="frameCopyDisplayFormat.Text" xml:space="preserve"><value>Bild %d Kopie %d</value><comment>AppLocalizedPhrase.frameCopyDisplayFormat</comment></data>
   <data name="namedFrameCopyDisplayFormat.Text" xml:space="preserve"><value>{0} Kopie %d</value><comment>AppLocalizedPhrase.namedFrameCopyDisplayFormat</comment></data>
   <data name="libraryVirtualCopy.Content" xml:space="preserve"><value>Virtuelle Kopie</value><comment>AppLocalizedPhrase.virtualCopy</comment></data>
+  <data name="librarySourceMoveFailed.Text" xml:space="preserve"><value>Die Quelldateien konnten nicht bewegt werden. Die Änderungen wurden zurückgenommen.</value><comment>AppLocalizedPhrase.sourceMoveFailedStatus</comment></data>
 </root>

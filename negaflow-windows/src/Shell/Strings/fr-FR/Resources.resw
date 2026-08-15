@@ -1052,4 +1052,5 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="frameCopyDisplayFormat.Text" xml:space="preserve"><value>Image %d copie %d</value><comment>AppLocalizedPhrase.frameCopyDisplayFormat</comment></data>
   <data name="namedFrameCopyDisplayFormat.Text" xml:space="preserve"><value>{0} copie %d</value><comment>AppLocalizedPhrase.namedFrameCopyDisplayFormat</comment></data>
   <data name="libraryVirtualCopy.Content" xml:space="preserve"><value>Copie virtuelle</value><comment>AppLocalizedPhrase.virtualCopy</comment></data>
+  <data name="librarySourceMoveFailed.Text" xml:space="preserve"><value>Impossible de déplacer les fichiers source. Les modifications ont été annulées.</value><comment>AppLocalizedPhrase.sourceMoveFailedStatus</comment></data>
 </root>

@@ -1052,4 +1052,5 @@
   <data name="frameCopyDisplayFormat.Text" xml:space="preserve"><value>コマ %d コピー %d</value><comment>AppLocalizedPhrase.frameCopyDisplayFormat</comment></data>
   <data name="namedFrameCopyDisplayFormat.Text" xml:space="preserve"><value>{0} コピー %d</value><comment>AppLocalizedPhrase.namedFrameCopyDisplayFormat</comment></data>
   <data name="libraryVirtualCopy.Content" xml:space="preserve"><value>仮想コピー</value><comment>AppLocalizedPhrase.virtualCopy</comment></data>
+  <data name="librarySourceMoveFailed.Text" xml:space="preserve"><value>元ファイルを移動できませんでした。変更を元に戻しました。</value><comment>AppLocalizedPhrase.sourceMoveFailedStatus</comment></data>
 </root>

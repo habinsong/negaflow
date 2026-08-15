@@ -1052,4 +1052,5 @@ Load a scanner from Library to scan film.</value>
   <data name="frameCopyDisplayFormat.Text" xml:space="preserve"><value>Frame %d Copy %d</value><comment>AppLocalizedPhrase.frameCopyDisplayFormat</comment></data>
   <data name="namedFrameCopyDisplayFormat.Text" xml:space="preserve"><value>{0} Copy %d</value><comment>AppLocalizedPhrase.namedFrameCopyDisplayFormat</comment></data>
   <data name="libraryVirtualCopy.Content" xml:space="preserve"><value>Virtual Copy</value><comment>AppLocalizedPhrase.virtualCopy</comment></data>
+  <data name="librarySourceMoveFailed.Text" xml:space="preserve"><value>The source files could not be moved. Changes were rolled back.</value><comment>AppLocalizedPhrase.sourceMoveFailedStatus</comment></data>
 </root>

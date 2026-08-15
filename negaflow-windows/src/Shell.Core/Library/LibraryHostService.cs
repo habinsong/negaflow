@@ -617,6 +617,37 @@ public sealed class LibraryHostService : IDisposable
         LastAutomaticSaveError = dirty.Save();
     }
 
+    /// <summary>
+    /// 고른 사진의 원본을 다른 폴더로 옮기고 카탈로그를 따라가게 합니다. 파일 이동이 실패하면
+    /// 카탈로그는 손대지 않습니다 — 없는 자리를 가리키는 사진을 만들지 않기 위해서입니다.
+    /// </summary>
+    public SourceMoveOutcome MoveSources(
+        IReadOnlyList<LibraryFrameSnapshot> frames,
+        string destinationFolder)
+    {
+        ArgumentNullException.ThrowIfNull(frames);
+        SourceMovePlanResult planned = SourceMovePlanner.Files(
+            [.. frames.Select(frame => new SourceMovePair(frame.SourcePath, frame.InfraredPath))],
+            destinationFolder);
+        if (planned.Plan is not { } plan)
+        {
+            return planned.Error == SourceMovePlanError.Collision
+                ? SourceMoveOutcome.Collision
+                : SourceMoveOutcome.SourceMissing;
+        }
+        SourceMoveResult moved = SourceMoveTransaction.Move(plan.FileMoves);
+        if (!moved.IsSuccess)
+        {
+            return moved.Outcome;
+        }
+        // 파일이 옮겨진 뒤에야 카탈로그를 고칩니다. 이 순서를 뒤집으면 이동이 실패했을 때
+        // 카탈로그가 빈 자리를 가리킵니다.
+        LibrarySourceRelinkResult relinked = Relink(plan.RelinkPlan);
+        return relinked.IsSuccess && relinked.UpdatedSourceCount == plan.SourceCount
+            ? SourceMoveOutcome.Moved
+            : SourceMoveOutcome.Failed;
+    }
+
     public LibrarySourceRelinkResult Relink(SourceRelinkPlan plan) =>
         document is null
             ? new(0, 0, plan?.Mappings.Count ?? 0, CatalogStoreError.NotFound)

@@ -11,6 +11,7 @@ using Negaflow.Shell.Develop;
 using Negaflow.Shell.Library;
 using Negaflow.Shell.Localization;
 using Negaflow.Shell.Shortcuts;
+using Windows.ApplicationModel.DataTransfer;
 using Negaflow.Shell.Views.Controls;
 
 namespace Negaflow.Shell.Views;
@@ -937,7 +938,8 @@ public sealed partial class LibraryWorkspaceView : UserControl
             {
                 Content = LibrarySourceNode.Folder(
                     section.Title,
-                    AppResources.FormatIntegers("libraryFolderFrameCount", "Text", section.Count)),
+                    AppResources.FormatIntegers("libraryFolderFrameCount", "Text", section.Count),
+                    section.Id),
             };
             foreach (LibraryFrameListItem item in section.Items)
             {
@@ -953,6 +955,88 @@ public sealed partial class LibraryWorkspaceView : UserControl
             "Text",
             projection.MatchedCount);
     }
+
+    /// <summary>
+    /// 격자에서 카드를 끌기 시작합니다. 담는 것은 frame id 뿐입니다 — 파일 경로를 담으면
+    /// 탐색기로 끌어 놓았을 때 원본이 딸려 나갑니다.
+    /// </summary>
+    private void OnFrameDragStarting(object sender, DragItemsStartingEventArgs args)
+    {
+        _ = sender;
+        string[] frameIds = [.. args.Items.OfType<LibraryFrameListItem>().Select(item => item.Id)];
+        if (frameIds.Length == 0)
+        {
+            args.Cancel = true;
+            return;
+        }
+        args.Data.SetText(string.Join('\n', frameIds));
+        args.Data.Properties.Title = FrameDragFormat;
+        args.Data.RequestedOperation = DataPackageOperation.Move;
+    }
+
+    /// <summary>
+    /// 폴더 줄 위에 있는 동안입니다. 우리 카드가 아니면 아무 표시도 내지 않습니다 — 밖에서 온
+    /// 파일을 여기로 받으면 사용자는 가져오기가 될 것으로 읽습니다.
+    /// </summary>
+    private void OnFolderDragOver(object sender, DragEventArgs args)
+    {
+        args.AcceptedOperation =
+            sender is FrameworkElement { DataContext: TreeViewNode { Content: LibrarySourceNode { FolderPath: not null } } } &&
+            string.Equals(args.DataView?.Properties.Title, FrameDragFormat, StringComparison.Ordinal)
+                ? DataPackageOperation.Move
+                : DataPackageOperation.None;
+        args.Handled = true;
+    }
+
+    /// <summary>
+    /// 원본 파일을 이 폴더로 옮깁니다. **원본을 실제로 옮기는 유일한 자리**이며, 파일 이동이
+    /// 실패하면 카탈로그는 손대지 않습니다.
+    /// </summary>
+    private async void OnFolderDrop(object sender, DragEventArgs args)
+    {
+        if (sender is not FrameworkElement
+            {
+                DataContext: TreeViewNode { Content: LibrarySourceNode { FolderPath: { } destination } },
+            } ||
+            libraryHost is not { } host ||
+            args.DataView is not { } data ||
+            !string.Equals(data.Properties.Title, FrameDragFormat, StringComparison.Ordinal))
+        {
+            return;
+        }
+        args.Handled = true;
+        DragOperationDeferral deferral = args.GetDeferral();
+        try
+        {
+            string payload = await data.GetTextAsync();
+            var wanted = new HashSet<string>(
+                payload.Split('\n', StringSplitOptions.RemoveEmptyEntries),
+                StringComparer.Ordinal);
+            LibraryFrameSnapshot[] frames = [.. host.Frames.Where(frame => wanted.Contains(frame.Id))];
+            if (frames.Length == 0)
+            {
+                return;
+            }
+            SourceMoveOutcome outcome = host.MoveSources(frames, destination);
+            ImportStatusText.Text = outcome == SourceMoveOutcome.Moved
+                ? string.Empty
+                : AppResources.Get("librarySourceMoveFailed", "Text");
+            if (outcome == SourceMoveOutcome.Moved)
+            {
+                ShowLibrary(host, importWindowId ?? default);
+            }
+        }
+        finally
+        {
+            deferral.Complete();
+        }
+    }
+
+    /// <summary>
+    /// 우리 카드에서 시작한 끌기인지 알아보는 표식입니다. 이것이 없으면 탐색기에서 끌어온
+    /// 파일도 폴더 줄이 받아들입니다.
+    /// </summary>
+    private const string FrameDragFormat = "negaflow.library-source";
 
     /// <summary>트리에서 frame 을 누르면 격자의 선택도 따라갑니다.</summary>
     private void OnSourceTreeItemInvoked(TreeView sender, TreeViewItemInvokedEventArgs args)

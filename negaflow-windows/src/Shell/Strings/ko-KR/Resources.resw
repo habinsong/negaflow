@@ -1052,4 +1052,5 @@
   <data name="frameCopyDisplayFormat.Text" xml:space="preserve"><value>사진 %d 사본 %d</value><comment>AppLocalizedPhrase.frameCopyDisplayFormat</comment></data>
   <data name="namedFrameCopyDisplayFormat.Text" xml:space="preserve"><value>{0} 사본 %d</value><comment>AppLocalizedPhrase.namedFrameCopyDisplayFormat</comment></data>
   <data name="libraryVirtualCopy.Content" xml:space="preserve"><value>가상 사본</value><comment>AppLocalizedPhrase.virtualCopy</comment></data>
+  <data name="librarySourceMoveFailed.Text" xml:space="preserve"><value>원본 파일을 이동하지 못했습니다. 변경 사항을 되돌렸습니다.</value><comment>AppLocalizedPhrase.sourceMoveFailedStatus</comment></data>
 </root>

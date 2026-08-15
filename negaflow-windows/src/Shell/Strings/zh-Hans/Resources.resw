@@ -1052,4 +1052,5 @@
   <data name="frameCopyDisplayFormat.Text" xml:space="preserve"><value>照片 %d 副本 %d</value><comment>AppLocalizedPhrase.frameCopyDisplayFormat</comment></data>
   <data name="namedFrameCopyDisplayFormat.Text" xml:space="preserve"><value>{0} 副本 %d</value><comment>AppLocalizedPhrase.namedFrameCopyDisplayFormat</comment></data>
   <data name="libraryVirtualCopy.Content" xml:space="preserve"><value>虚拟副本</value><comment>AppLocalizedPhrase.virtualCopy</comment></data>
+  <data name="librarySourceMoveFailed.Text" xml:space="preserve"><value>无法移动原始文件，已撤销更改。</value><comment>AppLocalizedPhrase.sourceMoveFailedStatus</comment></data>
 </root>

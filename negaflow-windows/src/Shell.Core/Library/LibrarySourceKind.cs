@@ -19,12 +19,21 @@ public enum LibrarySourceKind
 /// </remarks>
 public sealed record LibrarySourceNode(string Title, string Detail, string Glyph, string? FrameId)
 {
+    /// <summary>
+    /// 폴더 줄이면 그 폴더의 경로입니다. 사진 줄은 null 입니다 — 원본을 끌어다 놓을 자리를
+    /// 정하는 데 씁니다.
+    /// </summary>
+    public string? FolderPath { get; init; }
+
     /// <summary>Segoe Fluent Icons 의 폴더와 사진 글리프입니다.</summary>
     private const string FolderGlyph = "";
     private const string FrameGlyph = "";
 
-    public static LibrarySourceNode Folder(string title, string countText) =>
-        new(title, countText, FolderGlyph, null);
+    public static LibrarySourceNode Folder(
+        string title,
+        string countText,
+        string? folderPath = null) =>
+        new(title, countText, FolderGlyph, null) { FolderPath = folderPath };
 
     public static LibrarySourceNode Frame(string title, string frameId) =>
         new(title, string.Empty, FrameGlyph, frameId);

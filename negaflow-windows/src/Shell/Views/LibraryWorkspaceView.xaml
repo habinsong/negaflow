@@ -358,7 +358,10 @@
                     <TreeView.ItemTemplate>
                         <DataTemplate x:DataType="TreeViewNode">
                             <TreeViewItem
+                                AllowDrop="True"
                                 AutomationProperties.Name="{Binding Content.Title, Mode=OneWay}"
+                                DragOver="OnFolderDragOver"
+                                Drop="OnFolderDrop"
                                 IsExpanded="{Binding IsExpanded, Mode=TwoWay}"
                                 ItemsSource="{Binding Children}">
                                 <Grid ColumnSpacing="6">
@@ -654,8 +657,10 @@
                         Grid.Row="1"
                         Padding="8,6"
                         AutomationProperties.AutomationId="negaflow.library.frames"
+                        CanDragItems="True"
                         ContainerContentChanging="OnFrameContainerChanging"
                         DoubleTapped="OnFrameDoubleTapped"
+                        DragItemsStarting="OnFrameDragStarting"
                         IsItemClickEnabled="False"
                         SelectionChanged="OnFrameSelectionChanged"
                         SelectionMode="Extended">
