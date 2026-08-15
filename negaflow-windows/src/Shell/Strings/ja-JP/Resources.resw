@@ -997,7 +997,6 @@
   <data name="libraryRemoveFromLibrary.Content" xml:space="preserve"><value>取り除く</value><comment>AppLocalizedPhrase.removeFromLibrary</comment></data>
   <data name="libraryShowInExplorer.Content" xml:space="preserve"><value>エクスプローラーで表示</value><comment>AppLocalizedPhrase.showInFinder</comment></data>
   <data name="commonCancel.Content" xml:space="preserve"><value>キャンセル</value><comment>AppLocalizedPhrase.cancel</comment></data>
-  <data name="libraryRemoveConfirmFormat.Text" xml:space="preserve"><value>写真%d件をカタログから取り除きます。元ファイルは削除されません。</value><comment>Windows only: macOS removes with undo; Windows asks first.</comment></data>
   <data name="developScannerProfile.Text" xml:space="preserve"><value>プロファイル</value><comment>AppLocalizedPhrase.profile</comment></data>
   <data name="developScannerProfileNone.Text" xml:space="preserve"><value>なし</value><comment>AppLocalizedPhrase.none</comment></data>
   <data name="developProfileStatusDraft.Text" xml:space="preserve"><value>下書き</value><comment>AppLocalizedPhrase.scannerProfileStatusDraft</comment></data>
@@ -1058,4 +1057,8 @@
   <data name="libraryTarget.Text" xml:space="preserve"><value>ターゲット</value><comment>AppLocalizedPhrase.target</comment></data>
   <data name="libraryFilmProfile.Text" xml:space="preserve"><value>フィルムプロファイル</value><comment>AppLocalizedPhrase.filmProfile</comment></data>
   <data name="libraryLook.Text" xml:space="preserve"><value>ルック</value><comment>AppLocalizedPhrase.look</comment></data>
+  <data name="libraryRemovalUndoFormat.Text" xml:space="preserve"><value>カタログ項目%d件を削除 · 取り消し可能</value><comment>AppLocalizedPhrase.libraryRemovalUndoAvailableFormat</comment></data>
+  <data name="shortcutUndo.Text" xml:space="preserve"><value>取り消す</value><comment>AppLocalizedText.commandUndo</comment></data>
+  <data name="shortcutRedo.Text" xml:space="preserve"><value>やり直す</value><comment>AppLocalizedText.commandRedo</comment></data>
+  <data name="libraryUndoneFormat.Text" xml:space="preserve"><value>元に戻しました: {0}</value><comment>Windows only: undo has no macOS status line of its own.</comment></data>
 </root>

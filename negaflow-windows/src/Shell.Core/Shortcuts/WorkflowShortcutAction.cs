@@ -22,6 +22,8 @@ public enum WorkflowShortcutGroup
 /// </remarks>
 public enum WorkflowShortcutAction
 {
+    Undo,
+    Redo,
     ImportImages,
     ImportFolder,
     RefreshLibrary,
@@ -77,6 +79,8 @@ public static class WorkflowShortcutActions
 
     public static WorkflowShortcutGroup Group(WorkflowShortcutAction action) => action switch
     {
+        WorkflowShortcutAction.Undo or
+        WorkflowShortcutAction.Redo or
         WorkflowShortcutAction.ImportImages or
         WorkflowShortcutAction.ImportFolder or
         WorkflowShortcutAction.RefreshLibrary => WorkflowShortcutGroup.Library,
@@ -118,6 +122,10 @@ public static class WorkflowShortcutActions
     /// </summary>
     public static WorkflowShortcut Default(WorkflowShortcutAction action) => action switch
     {
+        // macOS 는 command+Z 와 command+shift+Z 입니다.
+        WorkflowShortcutAction.Undo => new("z", WorkflowShortcutModifiers.Control),
+        WorkflowShortcutAction.Redo =>
+            new("z", WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Shift),
         WorkflowShortcutAction.ImportImages => new("i", WorkflowShortcutModifiers.Control),
         WorkflowShortcutAction.ImportFolder =>
             new("i", WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Shift),

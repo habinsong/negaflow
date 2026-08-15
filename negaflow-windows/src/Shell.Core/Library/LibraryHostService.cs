@@ -236,63 +236,51 @@ public sealed class LibraryHostService : IDisposable
         SavedAfter(document?.SetActiveRoll(rollId) == true);
 
     /// <summary>묶음을 만들고 바로 저장합니다. 만들지 못하면 null 입니다.</summary>
-    public string? CreateCollection(string name, IEnumerable<string> frameIds)
-    {
-        string? id = document?.CreateCollection(name, frameIds);
-        if (id is not null)
-        {
-            _ = SaveIfDirty();
-        }
-        return id;
-    }
+    public string? CreateCollection(string name, IEnumerable<string> frameIds) =>
+        Undoable(UndoActions.CreateCollection, () => document?.CreateCollection(name, frameIds));
 
     public bool RenameCollection(string collectionId, string name) =>
-        SavedAfter(document?.RenameCollection(collectionId, name) == true);
+        Undoable(UndoActions.RenameCollection, () =>
+            document?.RenameCollection(collectionId, name) == true);
 
     public bool SetCollectionFrames(string collectionId, IEnumerable<string> frameIds) =>
-        SavedAfter(document?.SetCollectionFrames(collectionId, frameIds) == true);
+        Undoable(UndoActions.EditCollection, () =>
+            document?.SetCollectionFrames(collectionId, frameIds) == true);
 
     public bool DeleteCollection(string collectionId) =>
-        SavedAfter(document?.DeleteCollection(collectionId) == true);
+        Undoable(UndoActions.DeleteCollection, () =>
+            document?.DeleteCollection(collectionId) == true);
 
     /// <summary>
     /// 가상 사본을 만들고 바로 저장합니다. 원본 파일은 그대로이며 카탈로그에만 줄이 늘어납니다.
     /// </summary>
-    public string? CreateVirtualCopy(string frameId)
-    {
-        string? id = document?.CreateVirtualCopy(frameId);
-        if (id is not null)
-        {
-            _ = SaveIfDirty();
-        }
-        return id;
-    }
+    public string? CreateVirtualCopy(string frameId) =>
+        Undoable(UndoActions.VirtualCopy, () => document?.CreateVirtualCopy(frameId));
 
     /// <summary>한 장으로 접어 둔 사진 묶음입니다.</summary>
     public IReadOnlyList<LibraryStackSnapshot> Stacks => document?.Stacks ?? [];
 
     public LibraryStackSnapshot? StackFor(string frameId) => document?.StackFor(frameId);
 
-    public string? CreateStack(IEnumerable<string> frameIds)
-    {
-        string? id = document?.CreateStack(frameIds);
-        if (id is not null)
-        {
-            _ = SaveIfDirty();
-        }
-        return id;
-    }
+    public string? CreateStack(IEnumerable<string> frameIds) =>
+        Undoable(UndoActions.CreateStack, () => document?.CreateStack(frameIds));
 
     public bool UngroupStack(string stackId) =>
-        SavedAfter(document?.UngroupStack(stackId) == true);
+        Undoable(UndoActions.UngroupStack, () => document?.UngroupStack(stackId) == true);
 
     public bool ToggleStackCollapsed(string stackId) =>
-        SavedAfter(document?.ToggleStackCollapsed(stackId) == true);
+        Undoable(UndoActions.ToggleStack, () =>
+            document?.ToggleStackCollapsed(stackId) == true);
 
     /// <summary>
     /// 사진을 라이브러리에서 빼고 바로 저장합니다. 원본 파일은 그대로 둡니다. 돌려주는 값은
     /// 실제로 빠진 장수입니다.
     /// </summary>
+    /// <remarks>
+    /// **결함 sidecar 는 지우지 않고 남깁니다.** 되돌리기가 사진을 되살릴 수 있어야 하고,
+    /// 되살아난 사진이 결함 편집을 잃으면 그것은 되돌린 것이 아닙니다. 주인이 영영 없는
+    /// sidecar 는 아무도 읽지 않는 파일일 뿐입니다.
+    /// </remarks>
     public int RemoveFrames(IEnumerable<string> frameIds)
     {
         ArgumentNullException.ThrowIfNull(frameIds);
@@ -300,15 +288,87 @@ public sealed class LibraryHostService : IDisposable
         {
             return 0;
         }
+        open.CaptureUndo(UndoActions.RemoveFrames);
         LibraryFrameRemoval removal = open.RemoveFrames(frameIds);
         if (removal.Count == 0)
         {
+            // 아무것도 빠지지 않았으면 되돌릴 것도 없습니다.
+            _ = open.Undo();
             return 0;
         }
         _ = SaveIfDirty();
-        // sidecar 는 catalog 가 더 이상 그 사진을 말하지 않게 된 뒤에만 지울 수 있습니다.
-        open.PurgeDefectSidecars(removal);
         return removal.Count;
+    }
+
+    /// <summary>되돌리기·다시 실행에 붙는 이름입니다. 셸이 이 값을 번역해 보여 줍니다.</summary>
+    public static class UndoActions
+    {
+        public const string RemoveFrames = "libraryRemoveFromLibrary";
+        public const string CreateCollection = "libraryNewCollection";
+        public const string RenameCollection = "libraryRename";
+        public const string EditCollection = "libraryAddToCollection";
+        public const string DeleteCollection = "libraryDelete";
+        public const string VirtualCopy = "libraryVirtualCopy";
+        public const string CreateStack = "libraryStackGroup";
+        public const string UngroupStack = "libraryStackUngroup";
+        public const string ToggleStack = "libraryStackCollapse";
+    }
+
+    public bool CanUndo => document?.CanUndo == true;
+
+    public bool CanRedo => document?.CanRedo == true;
+
+    public string? UndoActionName => document?.UndoActionName;
+
+    public string? RedoActionName => document?.RedoActionName;
+
+    /// <summary>한 단계 되돌리고 저장합니다. 되돌린 동작의 이름을 돌려줍니다.</summary>
+    public string? Undo()
+    {
+        string? name = document?.Undo();
+        if (name is not null)
+        {
+            _ = SaveIfDirty();
+        }
+        return name;
+    }
+
+    public string? Redo()
+    {
+        string? name = document?.Redo();
+        if (name is not null)
+        {
+            _ = SaveIfDirty();
+        }
+        return name;
+    }
+
+    /// <summary>
+    /// 바꾸기 직전 상태를 담고 편집을 돌린 뒤 저장합니다. 편집이 아무것도 바꾸지 않았으면
+    /// 담아 둔 상태를 도로 버립니다 — 아무 일도 없었던 편집이 되돌리기 더미를 채우면 Ctrl+Z 가
+    /// 헛돕니다.
+    /// </summary>
+    private T Undoable<T>(string actionName, Func<T> mutate)
+    {
+        if (document is not { } open)
+        {
+            return mutate();
+        }
+        open.CaptureUndo(actionName);
+        T result = mutate();
+        bool changed = result switch
+        {
+            bool flag => flag,
+            null => false,
+            _ => true,
+        };
+        if (!changed)
+        {
+            _ = open.Undo();
+            return result;
+        }
+        _ = SaveIfDirty();
+        return result;
     }
 
     private bool SavedAfter(bool changed)

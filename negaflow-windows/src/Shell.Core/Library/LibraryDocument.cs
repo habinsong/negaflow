@@ -109,6 +109,7 @@ public sealed class LibraryDocument : IDisposable
     private readonly Dictionary<string, int> indexById = new(StringComparer.Ordinal);
     private readonly Dictionary<string, DefectRecipeSnapshot> defectRecipes =
         new(StringComparer.Ordinal);
+    private readonly LibraryUndoStack undoStack = new();
     private string? activeRollId;
 
     private LibraryDocument(
@@ -168,6 +169,87 @@ public sealed class LibraryDocument : IDisposable
 
     /// <summary>한 장으로 접어 둔 사진 묶음입니다.</summary>
     public IReadOnlyList<LibraryStackSnapshot> Stacks => stacks;
+
+    public bool CanUndo => undoStack.CanUndo;
+
+    public bool CanRedo => undoStack.CanRedo;
+
+    /// <summary>되돌릴 동작의 이름입니다. 화면에 그대로 보여 줄 수 있는 문구입니다.</summary>
+    public string? UndoActionName => undoStack.UndoActionName;
+
+    public string? RedoActionName => undoStack.RedoActionName;
+
+    /// <summary>
+    /// 이 편집을 되돌릴 수 있게 지금 상태를 담아 둡니다. **바꾸기 직전에** 불러야 합니다.
+    /// </summary>
+    /// <remarks>
+    /// 담는 것은 카탈로그 상태 전부입니다 — 연산마다 역연산을 쓰면 열 가지 연산이 열 가지 실수
+    /// 자리를 만들지만, 상태 복원은 한 자리뿐입니다.
+    /// </remarks>
+    public void CaptureUndo(string actionName)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(actionName);
+        undoStack.Push(Capture(actionName));
+    }
+
+    /// <summary>
+    /// 한 단계 되돌립니다. 되돌린 동작의 이름을 돌려주며, 되돌릴 것이 없으면 null 입니다.
+    /// </summary>
+    public string? Undo()
+    {
+        if (undoStack.Undo(Capture(string.Empty)) is not { } restored)
+        {
+            return null;
+        }
+        Restore(restored);
+        return restored.ActionName;
+    }
+
+    public string? Redo()
+    {
+        if (undoStack.Redo(Capture(string.Empty)) is not { } restored)
+        {
+            return null;
+        }
+        Restore(restored);
+        return restored.ActionName;
+    }
+
+    private LibraryUndoSnapshot Capture(string actionName) => new(
+        actionName,
+        [.. rowIds],
+        // payload 는 깊은 복사입니다. 얕게 담으면 이어지는 편집이 담아 둔 상태까지 함께
+        // 바꿔 버려 되돌리기가 아무 일도 하지 않습니다.
+        [.. payloads.Select(payload => (JsonObject)payload.DeepClone())],
+        retainedRows.ToDictionary(pair => pair.Key, pair => CloneRows(pair.Value)),
+        new Dictionary<string, DefectRecipeSnapshot>(defectRecipes, StringComparer.Ordinal),
+        activeRollId);
+
+    private void Restore(LibraryUndoSnapshot snapshot)
+    {
+        rowIds.Clear();
+        rowIds.AddRange(snapshot.RowIds);
+        payloads.Clear();
+        payloads.AddRange(snapshot.Payloads.Select(payload => (JsonObject)payload.DeepClone()));
+        retainedRows.Clear();
+        foreach ((CatalogEntityTable table, IReadOnlyList<CatalogEntityRow> rows) in
+                 snapshot.RetainedRows)
+        {
+            retainedRows[table] = CloneRows(rows);
+        }
+        defectRecipes.Clear();
+        foreach ((string frameId, DefectRecipeSnapshot recipe) in snapshot.DefectRecipes)
+        {
+            defectRecipes[frameId] = recipe;
+        }
+        activeRollId = snapshot.ActiveRollId;
+        ProjectFolders();
+        ProjectCollections();
+        ProjectStacks();
+        ProjectRolls();
+        ProjectStoredSearches();
+        Project();
+    }
 
     /// <summary>
     /// 이 사진이 든 묶음입니다. 두 묶음에 걸쳐 있으면 null 입니다 — 손상된 카탈로그에서
@@ -694,9 +776,12 @@ public sealed class LibraryDocument : IDisposable
 
     /// <summary>
     /// 주인이 사라진 결함 sidecar 를 지웁니다. **catalog 를 저장한 뒤에** 불러야 합니다.
-    /// 실패해도 아무 말 하지 않습니다 — 남은 파일은 아무도 읽지 않지만, 여기서 제거를
-    /// 되돌리면 사용자가 지운 사진이 되살아납니다.
     /// </summary>
+    /// <remarks>
+    /// 라이브러리 제거는 이것을 부르지 <b>않습니다</b>. 되돌리기가 사진을 되살릴 수 있어야 하고,
+    /// 되살아난 사진이 결함 편집을 잃으면 되돌린 것이 아니기 때문입니다. 주인이 영영 없어진
+    /// sidecar 를 정리해야 할 자리가 생기면 여기를 씁니다.
+    /// </remarks>
     public void PurgeDefectSidecars(LibraryFrameRemoval removal)
     {
         ArgumentNullException.ThrowIfNull(removal);

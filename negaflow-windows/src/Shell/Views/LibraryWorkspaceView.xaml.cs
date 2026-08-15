@@ -252,6 +252,10 @@ public sealed partial class LibraryWorkspaceView : UserControl
             case WorkflowShortcutAction.ImportFolder:
                 OnImportFoldersClicked(this, new RoutedEventArgs());
                 return true;
+            case WorkflowShortcutAction.Undo:
+                return UndoLibraryChange(redo: false);
+            case WorkflowShortcutAction.Redo:
+                return UndoLibraryChange(redo: true);
             case WorkflowShortcutAction.RefreshLibrary:
                 if (libraryHost is { } host)
                 {
@@ -691,38 +695,77 @@ public sealed partial class LibraryWorkspaceView : UserControl
         });
     }
 
-    private async void RemoveFromLibrary(IReadOnlyList<LibraryFrameListItem> targets)
+    /// <summary>
+    /// 사진을 라이브러리에서 뺍니다. **묻지 않습니다** — macOS 처럼 곧바로 빼고 되돌릴 수 있다고
+    /// 알립니다. 되돌리기가 붙기 전에는 물어봤지만, 물음은 되돌리기의 대용품이었을 뿐입니다.
+    /// </summary>
+    private void RemoveFromLibrary(IReadOnlyList<LibraryFrameListItem> targets)
     {
-        if (libraryHost is null || targets.Count == 0)
+        if (libraryHost is not { } host || targets.Count == 0)
         {
             return;
         }
-        ContentDialog confirm = new()
-        {
-            XamlRoot = XamlRoot,
-            Title = AppResources.Get("libraryRemoveFromLibrary", "Content"),
-            Content = AppResources.FormatIntegers(
-                "libraryRemoveConfirmFormat",
-                "Text",
-                targets.Count),
-            PrimaryButtonText = AppResources.Get("libraryRemoveFromLibrary", "Content"),
-            CloseButtonText = AppResources.Get("commonCancel", "Content"),
-            DefaultButton = ContentDialogButton.Close,
-        };
-        if (await confirm.ShowAsync() != ContentDialogResult.Primary)
+        int removed = host.RemoveFrames(targets.Select(target => target.Id));
+        if (removed == 0)
         {
             return;
         }
-        if (libraryHost.RemoveFrames(targets.Select(target => target.Id)) > 0)
-        {
-            foreach (LibraryFrameListItem target in targets)
-            {
-                thumbnails?.Invalidate(target.Id);
-            }
-            RebuildCollections();
-            ShowLibrary(libraryHost, importWindowId ?? default);
-        }
+        // 썸네일은 지우지 않습니다. 되돌리면 그 사진이 다시 오고, 그때 다시 만들게 하면
+        // 되살아난 격자가 한동안 빈 칸으로 보입니다.
+        RebuildCollections();
+        ShowLibrary(host, importWindowId ?? default);
+        ImportStatusText.Text = AppResources.FormatIntegers(
+            "libraryRemovalUndoFormat",
+            "Text",
+            removed);
     }
+
+    /// <summary>
+    /// 한 단계 되돌리고 무엇을 되돌렸는지 알립니다. 조용히 되돌리면 사용자는 무엇이 바뀌었는지
+    /// 격자에서 찾아내야 합니다.
+    /// </summary>
+    private bool UndoLibraryChange(bool redo)
+    {
+        if (libraryHost is not { } host)
+        {
+            return false;
+        }
+        string? actionKey = redo ? host.Redo() : host.Undo();
+        if (actionKey is null)
+        {
+            return false;
+        }
+        RebuildCollections();
+        ShowLibrary(host, importWindowId ?? default);
+        ImportStatusText.Text = AppResources
+            .Get("libraryUndoneFormat", "Text")
+            .Replace("{0}", ActionDisplayName(actionKey), StringComparison.Ordinal);
+        return true;
+    }
+
+    /// <summary>
+    /// 되돌린 동작의 이름입니다. 카탈로그 쪽은 리소스 키만 알고, 번역은 셸이 붙입니다.
+    /// </summary>
+    private static string ActionDisplayName(string actionKey) => actionKey switch
+    {
+        LibraryHostService.UndoActions.RemoveFrames =>
+            AppResources.Get("libraryRemoveFromLibrary", "Content"),
+        LibraryHostService.UndoActions.CreateCollection =>
+            AppResources.Get("libraryNewCollection", "Content"),
+        LibraryHostService.UndoActions.RenameCollection =>
+            AppResources.Get("libraryRename", "Content"),
+        LibraryHostService.UndoActions.EditCollection =>
+            AppResources.Get("libraryAddToCollection", "Text"),
+        LibraryHostService.UndoActions.DeleteCollection =>
+            AppResources.Get("libraryDelete", "Content"),
+        LibraryHostService.UndoActions.VirtualCopy =>
+            AppResources.Get("libraryVirtualCopy", "Content"),
+        LibraryHostService.UndoActions.CreateStack =>
+            AppResources.Get("libraryStackGroup", "Content"),
+        LibraryHostService.UndoActions.UngroupStack =>
+            AppResources.Get("libraryStackUngroup", "Content"),
+        _ => AppResources.Get("libraryStackCollapse", "Content"),
+    };
 
     /// <summary>
     /// 사진 번호를 바꿉니다. macOS 와 같이 이름이 아니라 **번호**를 받습니다 — 라이브러리의

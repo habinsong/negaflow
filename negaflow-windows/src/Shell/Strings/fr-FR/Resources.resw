@@ -997,7 +997,6 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="libraryRemoveFromLibrary.Content" xml:space="preserve"><value>Retirer</value><comment>AppLocalizedPhrase.removeFromLibrary</comment></data>
   <data name="libraryShowInExplorer.Content" xml:space="preserve"><value>Afficher dans l’Explorateur de fichiers</value><comment>AppLocalizedPhrase.showInFinder</comment></data>
   <data name="commonCancel.Content" xml:space="preserve"><value>Annuler</value><comment>AppLocalizedPhrase.cancel</comment></data>
-  <data name="libraryRemoveConfirmFormat.Text" xml:space="preserve"><value>Retirer %d photo(s) du catalogue ? Les fichiers d’origine ne sont pas supprimés.</value><comment>Windows only: macOS removes with undo; Windows asks first.</comment></data>
   <data name="developScannerProfile.Text" xml:space="preserve"><value>Profil</value><comment>AppLocalizedPhrase.profile</comment></data>
   <data name="developScannerProfileNone.Text" xml:space="preserve"><value>Aucun</value><comment>AppLocalizedPhrase.none</comment></data>
   <data name="developProfileStatusDraft.Text" xml:space="preserve"><value>Brouillon</value><comment>AppLocalizedPhrase.scannerProfileStatusDraft</comment></data>
@@ -1058,4 +1057,8 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="libraryTarget.Text" xml:space="preserve"><value>Cible</value><comment>AppLocalizedPhrase.target</comment></data>
   <data name="libraryFilmProfile.Text" xml:space="preserve"><value>Profil de film</value><comment>AppLocalizedPhrase.filmProfile</comment></data>
   <data name="libraryLook.Text" xml:space="preserve"><value>Rendu</value><comment>AppLocalizedPhrase.look</comment></data>
+  <data name="libraryRemovalUndoFormat.Text" xml:space="preserve"><value>%d élément(s) retiré(s) du catalogue · Annulation disponible</value><comment>AppLocalizedPhrase.libraryRemovalUndoAvailableFormat</comment></data>
+  <data name="shortcutUndo.Text" xml:space="preserve"><value>Annuler</value><comment>AppLocalizedText.commandUndo</comment></data>
+  <data name="shortcutRedo.Text" xml:space="preserve"><value>Rétablir</value><comment>AppLocalizedText.commandRedo</comment></data>
+  <data name="libraryUndoneFormat.Text" xml:space="preserve"><value>Annulé : {0}</value><comment>Windows only: undo has no macOS status line of its own.</comment></data>
 </root>

@@ -2911,6 +2911,104 @@ internal static class Program
             "develop_target_main_drops_the_profile");
     }
 
+
+    /// <summary>
+    /// 되돌리기가 없으면 제거는 물어봐야 하는 조작이 됩니다. 되살아난 사진이 원래 자리와 원래
+    /// 소속을 되찾지 못하면 되돌린 것이 아닙니다.
+    /// </summary>
+    private static void VerifyLibraryUndo(string parent)
+    {
+        StorageRootSet roots = StorageRootResolver.ResolveForTests(
+            Path.Combine(parent, "undo")).Roots!;
+
+        using (CatalogSession seed = CatalogSession.Open(roots).Session!)
+        {
+            Check(
+                seed.Write(new CatalogSnapshot(
+                    null,
+                    new Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>>
+                    {
+                        [CatalogEntityTable.Frames] =
+                        [
+                            new("frame-1", FrameRecord("frame-1", "IMG_0001.tif", 0.0, 1)),
+                            new("frame-2", FrameRecord("frame-2", "IMG_0002.tif", 0.5, 2)),
+                            new("frame-3", FrameRecord("frame-3", "IMG_0003.tif", 1.0, 3)),
+                        ],
+                        [CatalogEntityTable.ManualCollections] =
+                        [
+                            new("collection-1", new JsonObject
+                            {
+                                ["id"] = "collection-1",
+                                ["name"] = "Keepers",
+                                ["frameIDs"] = new JsonArray("frame-1", "frame-2"),
+                            }),
+                        ],
+                    })).IsSuccess,
+                "library_undo_seed");
+        }
+
+        using LibraryDocument document = LibraryDocument.Open(roots).Document!;
+        Check(!document.CanUndo && !document.CanRedo, "library_undo_starts_empty");
+
+        document.CaptureUndo("remove");
+        Check(document.RemoveFrames(["frame-2"]).Count == 1, "library_undo_removal");
+        Check(document.Frames.Count == 2, "library_undo_removal_applied");
+        Check(document.CanUndo && document.UndoActionName == "remove", "library_undo_available");
+
+        Check(document.Undo() == "remove", "library_undo_returns_the_action");
+        Check(document.Frames.Count == 3, "library_undo_restores_the_frame");
+        // 자리까지 돌아와야 합니다 — 끝에 다시 붙이면 정렬이 "입력 순서"인 사용자에게는
+        // 사진이 옮겨 다닌 것으로 보입니다.
+        Check(
+            string.Join(',', document.Frames.Select(frame => frame.Id)) ==
+                "frame-1,frame-2,frame-3",
+            "library_undo_restores_the_position");
+        // 소속도 돌아와야 합니다.
+        Check(
+            document.Collections[0].FrameIds.Count == 2,
+            "library_undo_restores_collection_membership");
+        Check(document.CanRedo, "library_undo_enables_redo");
+
+        Check(document.Redo() == "remove", "library_redo_returns_the_action");
+        Check(document.Frames.Count == 2, "library_redo_applies_again");
+        Check(document.Undo() == "remove", "library_undo_after_redo");
+        Check(document.Frames.Count == 3, "library_undo_after_redo_restores");
+
+        // 되돌린 뒤 다른 길로 가면 옛 앞길은 사라집니다.
+        document.CaptureUndo("stack");
+        Check(document.CreateStack(["frame-1", "frame-3"]) is not null, "library_undo_new_branch");
+        Check(!document.CanRedo, "library_undo_new_edit_clears_redo");
+        Check(document.Undo() == "stack", "library_undo_the_stack");
+        Check(document.Stacks.Count == 0, "library_undo_removes_the_stack");
+
+        // 담아 둔 상태는 깊은 복사여야 합니다. 얕으면 뒤 편집이 담아 둔 것까지 바꿉니다.
+        document.CaptureUndo("tone");
+        Check(
+            document.Edit(
+                "frame-1",
+                new LibraryFrameEdit(new ToneAdjustment(2.5, 0, 0, 0, 0, 0), null)) ==
+                LibraryFrameError.None,
+            "library_undo_tone_edit");
+        Check(document.Frames[0].Tone.Exposure == 2.5, "library_undo_tone_applied");
+        Check(document.Undo() == "tone", "library_undo_tone");
+        Check(document.Frames[0].Tone.Exposure == 0.0, "library_undo_tone_restored");
+
+        // 더미는 깊이가 제한됩니다.
+        for (int index = 0; index < LibraryUndoStack.MaximumDepth + 5; ++index)
+        {
+            document.CaptureUndo("depth");
+            _ = document.CreateVirtualCopy("frame-1");
+        }
+        int undone = 0;
+        while (document.Undo() is not null)
+        {
+            ++undone;
+        }
+        Check(
+            undone == LibraryUndoStack.MaximumDepth,
+            "library_undo_depth_is_capped");
+    }
+
     private static void VerifyLibraryDocument()
     {
         string testParent = Path.Combine(AppContext.BaseDirectory, "library-document-tests");
@@ -2943,6 +3041,7 @@ internal static class Program
             VerifyLibraryFrameRemoval(isolatedBase);
             VerifyLibraryStacks(isolatedBase);
             VerifyVirtualCopies(isolatedBase);
+            VerifyLibraryUndo(isolatedBase);
             VerifyLibraryDocumentDefectProjection(isolatedBase);
         }
         finally

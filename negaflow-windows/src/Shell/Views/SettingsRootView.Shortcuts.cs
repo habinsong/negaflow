@@ -263,6 +263,8 @@ public sealed partial class SettingsRootView
     /// </summary>
     private static string ActionTitle(WorkflowShortcutAction action) => action switch
     {
+        WorkflowShortcutAction.Undo => AppResources.Get("shortcutUndo", "Text"),
+        WorkflowShortcutAction.Redo => AppResources.Get("shortcutRedo", "Text"),
         WorkflowShortcutAction.ImportImages => AppResources.Get("shortcutImportImages", "Text"),
         WorkflowShortcutAction.ImportFolder => AppResources.Get("shortcutImportFolder", "Text"),
         WorkflowShortcutAction.RefreshLibrary => AppResources.Get("shortcutRefreshLibrary", "Text"),
