@@ -21,10 +21,37 @@ public static class LibraryFrameNaming
     public static Func<int, string> NumberFormat { get; set; } =
         number => $"Frame {number}";
 
+    /// <summary>
+    /// 이름이 없는 사진의 사본 문구입니다. 첫 수가 사진 번호, 둘째가 사본 번호입니다 — macOS
+    /// <c>frameCopyDisplayFormat</c> 과 같습니다.
+    /// </summary>
+    public static Func<int, int, string> CopyFormat { get; set; } =
+        (number, copy) => $"Frame {number} Copy {copy}";
+
+    /// <summary>
+    /// 이름이 있는 사진의 사본 문구입니다 — macOS <c>namedFrameCopyDisplayFormat</c> 입니다.
+    /// </summary>
+    public static Func<string, int, string> NamedCopyFormat { get; set; } =
+        (name, copy) => $"{name} Copy {copy}";
+
     /// <summary>이 사진을 화면에 부를 이름입니다.</summary>
     public static string DisplayName(LibraryFrameSnapshot frame)
     {
         ArgumentNullException.ThrowIfNull(frame);
+        // 사본은 본 이름 뒤에 사본 번호를 답니다. **가름은 이름이 있느냐**이고, 붙이는 값은
+        // 그 사진을 부르는 이름입니다 — 번호를 직접 지정한 사본은 지정한 번호로 불립니다.
+        // macOS displayName(language:) 과 같은 두 갈래입니다.
+        if (frame.VirtualCopyNumber is { } copyNumber)
+        {
+            return frame.PreferredBaseDisplayName is not null
+                ? NamedCopyFormat(BaseName(frame), copyNumber)
+                : CopyFormat(frame.PresentationIndex, copyNumber);
+        }
+        return BaseName(frame);
+    }
+
+    private static string BaseName(LibraryFrameSnapshot frame)
+    {
         // 번호를 직접 지정했으면 파일 이름이 무엇이든 그 번호로 부릅니다 — 사용자가 그렇게
         // 정했기 때문입니다.
         if (frame.AssignedPhotoNumber is { } assigned)

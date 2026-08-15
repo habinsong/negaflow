@@ -1049,4 +1049,7 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="libraryStackExpand.Content" xml:space="preserve"><value>Développer la pile</value><comment>AppStackText.expand</comment></data>
   <data name="libraryStackCollapse.Content" xml:space="preserve"><value>Réduire la pile</value><comment>AppStackText.collapse</comment></data>
   <data name="libraryStackCountFormat.Text" xml:space="preserve"><value>%d photos dans la pile</value><comment>AppStackText.count</comment></data>
+  <data name="frameCopyDisplayFormat.Text" xml:space="preserve"><value>Image %d copie %d</value><comment>AppLocalizedPhrase.frameCopyDisplayFormat</comment></data>
+  <data name="namedFrameCopyDisplayFormat.Text" xml:space="preserve"><value>{0} copie %d</value><comment>AppLocalizedPhrase.namedFrameCopyDisplayFormat</comment></data>
+  <data name="libraryVirtualCopy.Content" xml:space="preserve"><value>Copie virtuelle</value><comment>AppLocalizedPhrase.virtualCopy</comment></data>
 </root>

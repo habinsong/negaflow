@@ -47,6 +47,8 @@ public static class LibraryFrameReader
     internal const string ScanIndexName = "scanIndex";
     internal const string SourceKindName = "sourceKind";
     internal const string SourceFrameDisplayNameName = "sourceFrameDisplayName";
+    internal const string SourceFrameIdName = "sourceFrameID";
+    internal const string VirtualCopyNumberName = "virtualCopyNumber";
     internal const string RatingName = "rating";
     internal const string PickStateName = "pickState";
     internal const string ScannedAtName = "scannedAt";
@@ -355,6 +357,8 @@ public static class LibraryFrameReader
             ScanIndex = ReadScanIndex(frameRecord),
             SourceKind = ReadSourceKind(frameRecord),
             SourceFrameDisplayName = ReadOptionalText(frameRecord, SourceFrameDisplayNameName),
+            SourceFrameId = ReadOptionalText(frameRecord, SourceFrameIdName),
+            VirtualCopyNumber = ReadOptionalPositiveInt(frameRecord, VirtualCopyNumberName),
         });
     }
 
@@ -376,6 +380,18 @@ public static class LibraryFrameReader
         element.GetString() == "scanner"
             ? FrameSourceKind.ScannerTiff
             : FrameSourceKind.ImportedFile;
+
+    /// <summary>
+    /// 사본 번호처럼 "있으면 1 이상" 인 값입니다. 모양이 이상하면 없는 것으로 봅니다 — 번호
+    /// 하나 때문에 사진이 목록에서 사라지는 편이 더 나쁩니다.
+    /// </summary>
+    private static int? ReadOptionalPositiveInt(JsonElement frameRecord, string name) =>
+        frameRecord.TryGetProperty(name, out JsonElement element) &&
+        element.ValueKind == JsonValueKind.Number &&
+        element.TryGetInt32(out int value) &&
+        value > 0
+            ? value
+            : null;
 
     private static string? ReadOptionalText(JsonElement frameRecord, string name) =>
         frameRecord.TryGetProperty(name, out JsonElement element) &&

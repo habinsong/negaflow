@@ -324,6 +324,24 @@ public sealed record LibraryFrameSnapshot(
     public string? SourceFrameDisplayName { get; init; }
 
     /// <summary>
+    /// 이 사진이 가상 사본이면 원본 사진의 id 입니다. 원본 자신은 null 이며, 그때 가족의
+    /// 뿌리는 자기 자신입니다.
+    /// </summary>
+    public string? SourceFrameId { get; init; }
+
+    /// <summary>가상 사본 번호입니다(1부터). 원본은 null 입니다.</summary>
+    public int? VirtualCopyNumber { get; init; }
+
+    /// <summary>가상 사본인지. macOS <c>isVirtualCopy</c> 와 같습니다.</summary>
+    public bool IsVirtualCopy => VirtualCopyNumber is not null;
+
+    /// <summary>
+    /// 같은 원본을 나눠 쓰는 가족의 뿌리 id 입니다 — macOS <c>rootFrameID</c> 와 같습니다.
+    /// 사본의 사본을 만들어도 뿌리는 하나로 유지됩니다.
+    /// </summary>
+    public string RootFrameId => SourceFrameId ?? Id;
+
+    /// <summary>
     /// 사용자가 "이름 변경"으로 지정한 사진 번호입니다. macOS 는 이 값을
     /// <c>customDisplayName</c> 안에 <c>negaflow:photo-number:</c> 표식으로 넣어 두므로, 표식을
     /// 모르면 카드에 그 문자열이 그대로 나옵니다.

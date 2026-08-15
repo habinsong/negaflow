@@ -16,9 +16,9 @@ public enum WorkflowShortcutGroup
 /// </summary>
 /// <remarks>
 /// macOS 는 57개를 냅니다. 여기 있는 것은 그중 **Windows 가 실제로 할 수 있는 것들**이며, 이름과
-/// 기본 키는 macOS 와 같습니다. 아직 못 하는 명령(가상 사본, 비교·설문 보기, HS/SP/F135 대상
-/// 등)을 목록에만 올리면 사용자는 눌러도 아무 일이 없는 키를 배우게 됩니다 — 이 저장소가
-/// 파일명 토큰에서 이미 내린 것과 같은 판단입니다. 그 명령이 붙는 날 여기에 한 줄씩 늘립니다.
+/// 기본 키는 macOS 와 같습니다. 아직 못 하는 명령(비교·설문 보기, HS/SP/F135 현상 대상 등)을
+/// 목록에만 올리면 사용자는 눌러도 아무 일이 없는 키를 배우게 됩니다 — 이 저장소가 파일명
+/// 토큰에서 이미 내린 것과 같은 판단입니다. 그 명령이 붙는 날 여기에 한 줄씩 늘립니다.
 /// </remarks>
 public enum WorkflowShortcutAction
 {
@@ -37,6 +37,7 @@ public enum WorkflowShortcutAction
     RateThree,
     RateFour,
     RateFive,
+    CreateVirtualCopy,
     ResetAdjustments,
     CopyDevelopSettings,
     PasteDevelopSettings,
@@ -84,7 +85,8 @@ public static class WorkflowShortcutActions
         WorkflowShortcutAction.RateTwo or
         WorkflowShortcutAction.RateThree or
         WorkflowShortcutAction.RateFour or
-        WorkflowShortcutAction.RateFive => WorkflowShortcutGroup.Photo,
+        WorkflowShortcutAction.RateFive or
+        WorkflowShortcutAction.CreateVirtualCopy => WorkflowShortcutGroup.Photo,
 
         WorkflowShortcutAction.ShowHideSidebar or
         WorkflowShortcutAction.ShowHideFilmstrip or
@@ -125,6 +127,9 @@ public static class WorkflowShortcutActions
         WorkflowShortcutAction.RateThree => new("3", WorkflowShortcutModifiers.None),
         WorkflowShortcutAction.RateFour => new("4", WorkflowShortcutModifiers.None),
         WorkflowShortcutAction.RateFive => new("5", WorkflowShortcutModifiers.None),
+        // macOS 는 command+' 입니다.
+        WorkflowShortcutAction.CreateVirtualCopy =>
+            new("'", WorkflowShortcutModifiers.Control),
         WorkflowShortcutAction.ResetAdjustments =>
             new("r", WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Shift),
         WorkflowShortcutAction.CopyDevelopSettings =>

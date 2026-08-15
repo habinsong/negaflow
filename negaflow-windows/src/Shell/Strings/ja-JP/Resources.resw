@@ -1049,4 +1049,7 @@
   <data name="libraryStackExpand.Content" xml:space="preserve"><value>スタックを展開</value><comment>AppStackText.expand</comment></data>
   <data name="libraryStackCollapse.Content" xml:space="preserve"><value>スタックを折りたたむ</value><comment>AppStackText.collapse</comment></data>
   <data name="libraryStackCountFormat.Text" xml:space="preserve"><value>スタック内の写真 %d 枚</value><comment>AppStackText.count</comment></data>
+  <data name="frameCopyDisplayFormat.Text" xml:space="preserve"><value>コマ %d コピー %d</value><comment>AppLocalizedPhrase.frameCopyDisplayFormat</comment></data>
+  <data name="namedFrameCopyDisplayFormat.Text" xml:space="preserve"><value>{0} コピー %d</value><comment>AppLocalizedPhrase.namedFrameCopyDisplayFormat</comment></data>
+  <data name="libraryVirtualCopy.Content" xml:space="preserve"><value>仮想コピー</value><comment>AppLocalizedPhrase.virtualCopy</comment></data>
 </root>

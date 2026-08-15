@@ -281,6 +281,11 @@ public sealed partial class LibraryWorkspaceView : UserControl
             case WorkflowShortcutAction.DeletePhoto:
                 RemoveFromLibrary(targets);
                 return true;
+            case WorkflowShortcutAction.CreateVirtualCopy:
+                // 사본은 한 장에 하나씩입니다. 여러 장을 골랐으면 macOS 처럼 활성 사진만
+                // 복사합니다 — 한 번에 열 장을 복사하는 것은 되돌리기 어렵습니다.
+                CreateVirtualCopy(targets[0]);
+                return true;
             case WorkflowShortcutAction.RateZero:
             case WorkflowShortcutAction.RateOne:
             case WorkflowShortcutAction.RateTwo:
@@ -374,6 +379,27 @@ public sealed partial class LibraryWorkspaceView : UserControl
             return;
         }
         menu.Items.Add(new MenuFlyoutSeparator());
+    }
+
+    /// <summary>
+    /// 같은 원본을 가리키는 사진을 하나 더 만듭니다. 만든 사본을 바로 고릅니다 — macOS 도
+    /// 그렇게 하며, 그래야 다음 조정이 사본에 걸립니다.
+    /// </summary>
+    private void CreateVirtualCopy(LibraryFrameListItem item)
+    {
+        if (libraryHost is not { } host || host.CreateVirtualCopy(item.Id) is not { } copyId)
+        {
+            return;
+        }
+        ShowLibrary(host, importWindowId ?? default);
+        LibraryFrameListItem? created = FrameListView.Items
+            .OfType<LibraryFrameListItem>()
+            .FirstOrDefault(candidate => candidate.Id == copyId);
+        if (created is not null)
+        {
+            FrameListView.SelectedItem = created;
+            FrameListView.ScrollIntoView(created);
+        }
     }
 
     private IReadOnlyList<LibraryFrameListItem> SelectedItems() =>
@@ -484,6 +510,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
         }
 
         menu.Items.Add(new MenuFlyoutSeparator());
+        menu.Items.Add(MenuItem("libraryVirtualCopy", "Content", () => CreateVirtualCopy(item)));
         menu.Items.Add(MenuItem(
             "libraryShowInExplorer",
             "Content",
@@ -2375,6 +2402,13 @@ public sealed partial class LibraryWorkspaceView : UserControl
         // 영어 기본값으로 불립니다.
         LibraryFrameNaming.NumberFormat = static number =>
             AppResources.FormatIntegers("frameDisplayFormat", "Text", number);
+        LibraryFrameNaming.CopyFormat = static (number, copy) =>
+            AppResources.FormatIntegers("frameCopyDisplayFormat", "Text", number, copy);
+        // 이름 자리는 macOS 가 %@ 로 두는 곳입니다. .NET 리소스에서는 {0} 으로 두고 여기서
+        // 갈아 끼웁니다 — 숫자 치환기가 %d 만 알기 때문입니다.
+        LibraryFrameNaming.NamedCopyFormat = static (name, copy) =>
+            AppResources.FormatIntegers("namedFrameCopyDisplayFormat", "Text", copy)
+                .Replace("{0}", name, StringComparison.Ordinal);
         SetNameAndTooltip(ImportRailButton, "importSection");
         SetNameAndTooltip(FilesRailButton, "libraryFiles");
         SetNameAndTooltip(CollectionsRailButton, "libraryCollections");

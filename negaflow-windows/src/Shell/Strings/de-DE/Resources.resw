@@ -1049,4 +1049,7 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="libraryStackExpand.Content" xml:space="preserve"><value>Stapel erweitern</value><comment>AppStackText.expand</comment></data>
   <data name="libraryStackCollapse.Content" xml:space="preserve"><value>Stapel reduzieren</value><comment>AppStackText.collapse</comment></data>
   <data name="libraryStackCountFormat.Text" xml:space="preserve"><value>%d Fotos im Stapel</value><comment>AppStackText.count</comment></data>
+  <data name="frameCopyDisplayFormat.Text" xml:space="preserve"><value>Bild %d Kopie %d</value><comment>AppLocalizedPhrase.frameCopyDisplayFormat</comment></data>
+  <data name="namedFrameCopyDisplayFormat.Text" xml:space="preserve"><value>{0} Kopie %d</value><comment>AppLocalizedPhrase.namedFrameCopyDisplayFormat</comment></data>
+  <data name="libraryVirtualCopy.Content" xml:space="preserve"><value>Virtuelle Kopie</value><comment>AppLocalizedPhrase.virtualCopy</comment></data>
 </root>

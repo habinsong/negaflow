@@ -1049,4 +1049,7 @@
   <data name="libraryStackExpand.Content" xml:space="preserve"><value>展开堆栈</value><comment>AppStackText.expand</comment></data>
   <data name="libraryStackCollapse.Content" xml:space="preserve"><value>折叠堆栈</value><comment>AppStackText.collapse</comment></data>
   <data name="libraryStackCountFormat.Text" xml:space="preserve"><value>堆栈中有 %d 张照片</value><comment>AppStackText.count</comment></data>
+  <data name="frameCopyDisplayFormat.Text" xml:space="preserve"><value>照片 %d 副本 %d</value><comment>AppLocalizedPhrase.frameCopyDisplayFormat</comment></data>
+  <data name="namedFrameCopyDisplayFormat.Text" xml:space="preserve"><value>{0} 副本 %d</value><comment>AppLocalizedPhrase.namedFrameCopyDisplayFormat</comment></data>
+  <data name="libraryVirtualCopy.Content" xml:space="preserve"><value>虚拟副本</value><comment>AppLocalizedPhrase.virtualCopy</comment></data>
 </root>

@@ -157,6 +157,7 @@ public sealed partial class WorkspaceShellView : UserControl
         (VirtualKey)219 => "[",
         (VirtualKey)221 => "]",
         (VirtualKey)220 => "\\",
+        (VirtualKey)222 => "'",
         _ => null,
     };
 

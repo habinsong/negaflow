@@ -231,6 +231,7 @@ public sealed partial class SettingsRootView
         (VirtualKey)219 => "[",
         (VirtualKey)221 => "]",
         (VirtualKey)220 => "\\",
+        (VirtualKey)222 => "'",
         _ => null,
     };
 
@@ -275,6 +276,8 @@ public sealed partial class SettingsRootView
         WorkflowShortcutAction.RateThree => Stars(3),
         WorkflowShortcutAction.RateFour => Stars(4),
         WorkflowShortcutAction.RateFive => Stars(5),
+        WorkflowShortcutAction.CreateVirtualCopy =>
+            AppResources.Get("libraryVirtualCopy", "Content"),
         WorkflowShortcutAction.ResetAdjustments =>
             AppResources.Get("shortcutResetAdjustments", "Text"),
         WorkflowShortcutAction.CopyDevelopSettings =>

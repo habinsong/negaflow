@@ -1076,6 +1076,80 @@ public sealed class LibraryDocument : IDisposable
     }
 
     /// <summary>
+    /// 가상 사본을 만듭니다. **원본 파일은 하나 그대로**이고, 카탈로그에만 같은 원본을 가리키는
+    /// 줄이 하나 늘어납니다 — 현상만 따로 갈 수 있는 사진입니다.
+    /// </summary>
+    /// <remarks>
+    /// payload 를 통째로 복제합니다. 아는 field 만 옮기면 이 빌드가 모르는 값이 사본에서
+    /// 사라져, 원본과 사본의 현상 결과가 갈립니다. 새 줄은 <b>가족의 마지막 뒤</b>에 넣습니다 —
+    /// macOS 도 그렇게 하며, 그래야 사본이 원본 옆에 붙어 보입니다.
+    /// </remarks>
+    public string? CreateVirtualCopy(string frameId)
+    {
+        ArgumentNullException.ThrowIfNull(frameId);
+        if (!indexById.TryGetValue(frameId, out int index))
+        {
+            return null;
+        }
+        LibraryFrameSnapshot source = frames.First(frame => frame.Id == frameId);
+        string rootId = source.RootFrameId;
+
+        int lastFamilyIndex = index;
+        int nextNumber = 1;
+        for (int candidate = 0; candidate < frames.Count; candidate++)
+        {
+            if (frames[candidate].RootFrameId != rootId)
+            {
+                continue;
+            }
+            lastFamilyIndex = indexById[frames[candidate].Id];
+            if (frames[candidate].VirtualCopyNumber is { } number && number >= nextNumber)
+            {
+                nextNumber = number + 1;
+            }
+        }
+
+        string copyId = Guid.NewGuid().ToString("D");
+        // 사본이 물려받는 것은 **뿌리의 이름**입니다. 원본 이름을 나중에 바꿔도 이미 만든 사본의
+        // 이름은 그대로 남습니다 — macOS 도 만들 때 한 번 적습니다.
+        JsonObject copy = LibraryFrameWriter.MakeVirtualCopy(
+            payloads[index],
+            copyId,
+            rootId,
+            nextNumber,
+            LibraryFrameNaming.DisplayName(source));
+
+        payloads.Insert(lastFamilyIndex + 1, copy);
+        rowIds.Insert(lastFamilyIndex + 1, copyId);
+
+        // 결함 편집은 물려받되 sidecar 는 **각자의 파일**이어야 합니다. 하나를 지우는 것이
+        // 다른 하나를 깨뜨리면 안 됩니다. payload 에 hasDefectEdits 가 복제되어 왔으므로,
+        // 사본 몫의 sidecar 를 지금 만들지 않으면 투영이 그 사진을 읽지 못해 목록에서
+        // 사라집니다.
+        if (defectRecipes.TryGetValue(frameId, out DefectRecipeSnapshot? recipe) &&
+            Guid.TryParseExact(copyId, "D", out Guid copyGuid))
+        {
+            DefectRecipeSnapshot copied = DefectRecipeSnapshot.Create(
+                copyGuid,
+                recipe.RecipeRevision,
+                recipe.SourceIdentity,
+                recipe.Items);
+            if (session.WriteDefectRecipe(copied).IsSuccess)
+            {
+                defectRecipes[copyId] = copied;
+            }
+            else
+            {
+                // sidecar 를 못 만들면 사본은 결함 편집 없이 시작합니다. 읽을 수 없는 사진을
+                // 목록에 남기는 것보다 낫습니다.
+                copy.Remove("hasDefectEdits");
+            }
+        }
+        Project();
+        return copyId;
+    }
+
+    /// <summary>
     /// 고른 사진들을 한 묶음으로 접습니다. 이미 다른 묶음에 든 사진이 하나라도 있으면 만들지
     /// 않습니다 — 한 사진이 두 묶음에 들면 어느 쪽을 접어야 할지 정할 수 없습니다.
     /// </summary>

@@ -61,6 +61,37 @@ public sealed record LibraryFrameEdit(
 /// </summary>
 public static class LibraryFrameWriter
 {
+    /// <summary>
+    /// 가상 사본의 frame record 를 만듭니다. 원본 payload 를 **통째로** 복제하고 신원 세 칸만
+    /// 바꿉니다.
+    /// </summary>
+    /// <remarks>
+    /// 아는 field 만 옮기면 이 빌드가 모르는 값이 사본에서 사라져 원본과 현상 결과가 갈립니다.
+    /// 그래서 복제 뒤 덮어쓰기이며, 그 세 칸의 이름은 macOS catalog 와 같습니다.
+    /// </remarks>
+    public static JsonObject MakeVirtualCopy(
+        JsonObject source,
+        string copyId,
+        string rootFrameId,
+        int copyNumber,
+        string? rootDisplayName)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentException.ThrowIfNullOrEmpty(copyId);
+        ArgumentException.ThrowIfNullOrEmpty(rootFrameId);
+        ArgumentOutOfRangeException.ThrowIfLessThan(copyNumber, 1);
+
+        JsonObject copy = (JsonObject)source.DeepClone();
+        copy[LibraryFrameReader.IdName] = copyId;
+        copy[LibraryFrameReader.SourceFrameIdName] = rootFrameId;
+        copy[LibraryFrameReader.VirtualCopyNumberName] = copyNumber;
+        if (!string.IsNullOrWhiteSpace(rootDisplayName))
+        {
+            copy[LibraryFrameReader.SourceFrameDisplayNameName] = rootDisplayName;
+        }
+        return copy;
+    }
+
     public static LibraryFrameWriteResult Apply(JsonObject frameRecord, LibraryFrameEdit edit)
     {
         ArgumentNullException.ThrowIfNull(frameRecord);

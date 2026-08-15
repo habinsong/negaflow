@@ -2782,6 +2782,7 @@ internal static class Program
             VerifyLibraryDocumentPreservesNonFrameRows(roots);
             VerifyLibraryFrameRemoval(isolatedBase);
             VerifyLibraryStacks(isolatedBase);
+            VerifyVirtualCopies(isolatedBase);
             VerifyLibraryDocumentDefectProjection(isolatedBase);
         }
         finally
@@ -2792,6 +2793,93 @@ internal static class Program
                 Directory.Delete(isolatedBase, recursive: true);
             }
         }
+    }
+
+    /// <summary>
+    /// 가상 사본은 같은 원본을 가리키는 두 번째 줄입니다. 원본 파일은 하나 그대로이고, 이
+    /// 빌드가 모르는 field 까지 함께 넘어가야 두 사진의 현상 결과가 갈리지 않습니다.
+    /// </summary>
+    private static void VerifyVirtualCopies(string parent)
+    {
+        StorageRootSet roots = StorageRootResolver.ResolveForTests(
+            Path.Combine(parent, "virtual-copies")).Roots!;
+
+        using (CatalogSession seed = CatalogSession.Open(roots).Session!)
+        {
+            Check(
+                seed.Write(new CatalogSnapshot(
+                    null,
+                    new Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>>
+                    {
+                        [CatalogEntityTable.Frames] =
+                        [
+                            new("frame-1", FrameRecord("frame-1", "IMG_0001.tif", 1.25, 1)),
+                            new("frame-2", FrameRecord("frame-2", "IMG_0002.tif", 0.5, 2)),
+                        ],
+                    })).IsSuccess,
+                "virtual_copy_seed");
+        }
+
+        string? firstCopy;
+        using (LibraryDocument document = LibraryDocument.Open(roots).Document!)
+        {
+            Check(document.CreateVirtualCopy("missing") is null, "virtual_copy_unknown_id");
+            firstCopy = document.CreateVirtualCopy("frame-1");
+            if (firstCopy is null)
+            {
+                Check(false, "virtual_copy_create");
+                return;
+            }
+            Check(true, "virtual_copy_create");
+
+            // 사본은 원본 바로 뒤에 들어갑니다 — 목록에서 나란히 보여야 합니다.
+            Check(
+                string.Join(',', document.Frames.Select(frame => frame.Id)) ==
+                    $"frame-1,{firstCopy},frame-2",
+                "virtual_copy_sits_next_to_its_original");
+
+            LibraryFrameSnapshot copy = document.Frames[1];
+            Check(copy.SourcePath == @"C:\scans\IMG_0001.tif", "virtual_copy_shares_the_source");
+            Check(copy.Tone.Exposure == 1.25, "virtual_copy_inherits_the_recipe");
+            Check(copy.VirtualCopyNumber == 1 && copy.IsVirtualCopy, "virtual_copy_number");
+            Check(copy.RootFrameId == "frame-1", "virtual_copy_root");
+            Check(document.Frames[0].RootFrameId == "frame-1", "virtual_copy_original_is_its_own_root");
+
+            // 이 빌드가 모르는 field 도 넘어가야 합니다.
+            Check(
+                document.FrameRecord(firstCopy)?["futureFrameValue"]?.GetValue<string>() ==
+                    "preserve-me",
+                "virtual_copy_keeps_unknown_fields");
+
+            // 사본의 사본도 뿌리는 하나이고 번호는 이어집니다.
+            string? secondCopy = document.CreateVirtualCopy(firstCopy);
+            Check(secondCopy is not null, "virtual_copy_of_a_copy");
+            Check(
+                document.Frames[2].VirtualCopyNumber == 2 &&
+                    document.Frames[2].RootFrameId == "frame-1",
+                "virtual_copy_numbers_continue_within_the_family");
+            Check(
+                string.Join(',', document.Frames.Select(frame => frame.Id)) ==
+                    $"frame-1,{firstCopy},{secondCopy},frame-2",
+                "virtual_copy_family_stays_together");
+
+            // 이름은 macOS 와 같은 "사본 N" 모양입니다.
+            Check(
+                LibraryFrameNaming.DisplayName(document.Frames[1]) == "Frame 1 Copy 1",
+                "virtual_copy_display_name");
+
+            Check(document.Save() == CatalogStoreError.None, "virtual_copy_save");
+        }
+
+        using LibraryDocument reopened = LibraryDocument.Open(roots).Document!;
+        Check(reopened.Frames.Count == 4, "virtual_copy_survives_a_reopen");
+        Check(
+            reopened.Frames[1].VirtualCopyNumber == 1 &&
+                reopened.Frames[1].SourceFrameId == "frame-1",
+            "virtual_copy_identity_persisted");
+        // 원본을 빼도 사본은 남습니다 — 사본은 카탈로그의 독립된 줄입니다.
+        Check(reopened.RemoveFrames(["frame-1"]).Count == 1, "virtual_copy_original_removal");
+        Check(reopened.Frames.Count == 3, "virtual_copy_outlives_its_original");
     }
 
     /// <summary>

@@ -1049,4 +1049,7 @@ Load a scanner from Library to scan film.</value>
   <data name="libraryStackExpand.Content" xml:space="preserve"><value>Expand Stack</value><comment>AppStackText.expand</comment></data>
   <data name="libraryStackCollapse.Content" xml:space="preserve"><value>Collapse Stack</value><comment>AppStackText.collapse</comment></data>
   <data name="libraryStackCountFormat.Text" xml:space="preserve"><value>%d photos in stack</value><comment>AppStackText.count</comment></data>
+  <data name="frameCopyDisplayFormat.Text" xml:space="preserve"><value>Frame %d Copy %d</value><comment>AppLocalizedPhrase.frameCopyDisplayFormat</comment></data>
+  <data name="namedFrameCopyDisplayFormat.Text" xml:space="preserve"><value>{0} Copy %d</value><comment>AppLocalizedPhrase.namedFrameCopyDisplayFormat</comment></data>
+  <data name="libraryVirtualCopy.Content" xml:space="preserve"><value>Virtual Copy</value><comment>AppLocalizedPhrase.virtualCopy</comment></data>
 </root>
