@@ -1119,4 +1119,5 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="printRulerUnit.Text" xml:space="preserve"><value>Einheit</value><comment>AppLocalizedPhrase.rulerUnit</comment></data>
   <data name="printRulerInches.Text" xml:space="preserve"><value>Zoll</value><comment>PrintRulerUnit.inches</comment></data>
   <data name="printRulerCentimeters.Text" xml:space="preserve"><value>Zentimeter</value><comment>PrintRulerUnit.centimeters</comment></data>
+  <data name="printModeCustomPackage.Text" xml:space="preserve"><value>Eigenes Paket</value><comment>PrintWorkspaceLayoutMode.customPackage</comment></data>
 </root>

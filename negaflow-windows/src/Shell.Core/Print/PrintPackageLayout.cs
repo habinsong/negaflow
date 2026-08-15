@@ -31,6 +31,37 @@ public enum PrintPackageCaptionAlignment
     Trailing,
 }
 
+/// <summary>
+/// 사용자가 손으로 놓은 칸 하나입니다. macOS <c>PrintCustomPackageItem</c> 과 같습니다.
+/// </summary>
+/// <remarks>
+/// 자리는 <b>내용 영역에 대한 0…1 비율</b>입니다. 화소로 담으면 용지나 해상도를 바꾼 순간
+/// 배치가 통째로 어긋납니다.
+/// </remarks>
+public sealed record PrintCustomPackageItem(
+    int SourceIndex,
+    PrintRect NormalizedRect)
+{
+    public int PageIndex { get; init; }
+
+    public PrintPackageContentMode ContentMode { get; init; } = PrintPackageContentMode.Fit;
+
+    public bool RotateToFit { get; init; }
+
+    /// <summary>겹칠 때 위로 오는 차례입니다. 같으면 목록 차례를 따릅니다.</summary>
+    public int ZIndex { get; init; }
+
+    /// <summary>판 밖으로 나가거나 넓이가 없는 칸은 놓지 않습니다.</summary>
+    public bool IsValid =>
+        SourceIndex >= 0 &&
+        PageIndex >= 0 &&
+        double.IsFinite(NormalizedRect.X) && double.IsFinite(NormalizedRect.Y) &&
+        double.IsFinite(NormalizedRect.Width) && double.IsFinite(NormalizedRect.Height) &&
+        NormalizedRect.Width > 0 && NormalizedRect.Height > 0 &&
+        NormalizedRect.X >= 0 && NormalizedRect.Y >= 0 &&
+        NormalizedRect.MaxX <= 1.0001 && NormalizedRect.MaxY <= 1.0001;
+}
+
 /// <summary>크롭마크 선분 하나입니다.</summary>
 public readonly record struct PrintLineSegment(
     double StartX,
@@ -91,13 +122,20 @@ public sealed record PrintPackageSettings
 
     public double CropMarkLengthMm { get; init; } = 4;
 
+    /// <summary>커스텀 배치의 칸들입니다. 그 모드가 아니면 쓰이지 않습니다.</summary>
+    public IReadOnlyList<PrintCustomPackageItem> CustomItems { get; init; } = [];
+
+    /// <summary>손으로 놓을 수 있는 칸 수의 한계입니다. macOS 와 같은 128 입니다.</summary>
+    public const int MaximumCustomItems = 128;
+
     public bool IsValid =>
         ContactRows > 0 && ContactColumns > 0 &&
         ContactRows * ContactColumns <= MaximumCells &&
         double.IsFinite(HorizontalSpacingMm) && HorizontalSpacingMm is >= 0 and <= 50 &&
         double.IsFinite(VerticalSpacingMm) && VerticalSpacingMm is >= 0 and <= 50 &&
         double.IsFinite(CaptionHeightMm) && CaptionHeightMm is >= 0 and <= 40 &&
-        double.IsFinite(CropMarkLengthMm) && CropMarkLengthMm is >= 0 and <= 30;
+        double.IsFinite(CropMarkLengthMm) && CropMarkLengthMm is >= 0 and <= 30 &&
+        CustomItems.Count <= MaximumCustomItems;
 }
 
 /// <summary>판 위의 사진 한 칸입니다.</summary>
@@ -175,6 +213,10 @@ public static class PrintPackageLayout
 
         double horizontalGap = package.HorizontalSpacingMm * pixelsPerMm;
         double verticalGap = package.VerticalSpacingMm * pixelsPerMm;
+        if (package.Mode == PrintPackageMode.CustomPackage)
+        {
+            return CustomPackagePages(sourceSizes, package, canvas, content, pixelsPerMm);
+        }
         if (picturePackage)
         {
             return PicturePackagePages(
@@ -296,6 +338,78 @@ public static class PrintPackageLayout
             {
                 return null;
             }
+        }
+        return pages;
+    }
+
+    /// <summary>
+    /// 손으로 놓은 배치입니다. 칸이 겹칠 수 있으므로 <c>ZIndex</c> 차례로 쌓습니다 — 같으면
+    /// 목록에 적힌 차례입니다.
+    /// </summary>
+    /// <remarks>
+    /// 판 번호는 <b>0 부터 빈 곳 없이</b> 이어져야 합니다. 1번 판만 있고 0번이 없으면 첫 장이
+    /// 빈 채로 인쇄되므로, 그런 배치는 아예 만들지 않습니다 — macOS 도 같은 조건입니다.
+    /// </remarks>
+    private static IReadOnlyList<PrintPackagePageLayout>? CustomPackagePages(
+        IReadOnlyList<PrintSizeMm> sourceSizes,
+        PrintPackageSettings package,
+        PrintSizeMm canvas,
+        PrintRect content,
+        double pixelsPerMm)
+    {
+        if (package.CustomItems.Count == 0 ||
+            package.CustomItems.Any(item =>
+                !item.IsValid || item.SourceIndex >= sourceSizes.Count))
+        {
+            return null;
+        }
+        int highestPage = package.CustomItems.Max(item => item.PageIndex);
+        if (highestPage + 1 > PrintPackageSettings.MaximumPageCount)
+        {
+            return null;
+        }
+        var usedPages = package.CustomItems.Select(item => item.PageIndex).ToHashSet();
+        for (int pageIndex = 0; pageIndex <= highestPage; ++pageIndex)
+        {
+            if (!usedPages.Contains(pageIndex))
+            {
+                return null;
+            }
+        }
+
+        List<PrintPackagePageLayout> pages = new(highestPage + 1);
+        for (int pageIndex = 0; pageIndex <= highestPage; ++pageIndex)
+        {
+            List<PrintPackageItemLayout> items = [];
+            IEnumerable<PrintCustomPackageItem> ordered = package.CustomItems
+                .Select((item, order) => (item, order))
+                .Where(pair => pair.item.PageIndex == pageIndex)
+                .OrderBy(pair => pair.item.ZIndex)
+                .ThenBy(pair => pair.order)
+                .Select(pair => pair.item);
+            foreach (PrintCustomPackageItem definition in ordered)
+            {
+                PrintRect cell = new(
+                    content.MinX + (definition.NormalizedRect.X * content.Width),
+                    content.MinY + (definition.NormalizedRect.Y * content.Height),
+                    definition.NormalizedRect.Width * content.Width,
+                    definition.NormalizedRect.Height * content.Height);
+                items.Add(MakeItem(
+                    definition.SourceIndex,
+                    sourceSizes[definition.SourceIndex],
+                    cell,
+                    // 칸마다 맞추기·돌리기를 따로 고를 수 있습니다.
+                    package with
+                    {
+                        ContentMode = definition.ContentMode,
+                        RotateToFit = definition.RotateToFit,
+                    },
+                    pixelsPerMm));
+            }
+            pages.Add(new PrintPackagePageLayout(pageIndex, canvas, content, items)
+            {
+                CropMarks = CropMarks(items, content, package, pixelsPerMm),
+            });
         }
         return pages;
     }

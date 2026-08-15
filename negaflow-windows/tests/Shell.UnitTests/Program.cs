@@ -3218,6 +3218,196 @@ internal static class Program
 
         VerifyPicturePackage(a4);
         VerifyPrintCaptionsAndCropMarks(a4);
+        VerifyPrintCaptionText();
+        VerifyPrintRuler();
+        VerifyCustomPackage(a4);
+    }
+
+    /// <summary>
+    /// 손으로 놓은 배치입니다. 자리는 비율이라 용지를 바꿔도 배치가 살아남아야 하고, 판 번호에
+    /// 구멍이 있으면 빈 장이 인쇄되므로 아예 만들지 않아야 합니다.
+    /// </summary>
+    private static void VerifyCustomPackage(PrintCompositionSettings a4)
+    {
+        PrintSizeMm[] sizes = [new(3000, 2000), new(2000, 3000)];
+        PrintPackageSettings custom = new()
+        {
+            Mode = PrintPackageMode.CustomPackage,
+            CustomItems =
+            [
+                new PrintCustomPackageItem(0, new PrintRect(0, 0, 0.5, 0.5)),
+                new PrintCustomPackageItem(1, new PrintRect(0.5, 0.5, 0.5, 0.5)),
+            ],
+        };
+        IReadOnlyList<PrintPackagePageLayout> pages =
+            PrintPackageLayout.Make(sizes, a4, custom)!;
+        Check(pages.Count == 1 && pages[0].Items.Count == 2, "print_custom_places_both");
+        // 비율이 실제 자리로 풀립니다.
+        PrintRect content = pages[0].ContentRect;
+        Check(
+            Math.Abs(pages[0].Items[0].CellRect.X - content.MinX) < 0.001 &&
+                Math.Abs(pages[0].Items[0].CellRect.Width - (content.Width / 2)) < 0.001,
+            "print_custom_rect_is_a_fraction_of_the_content");
+        Check(
+            Math.Abs(pages[0].Items[1].CellRect.X - (content.MinX + (content.Width / 2))) < 0.001,
+            "print_custom_second_cell_is_offset");
+
+        // 용지를 바꿔도 비율은 그대로입니다.
+        IReadOnlyList<PrintPackagePageLayout> letter =
+            PrintPackageLayout.Make(sizes, a4 with { PaperSize = PrintPaperSize.Letter }, custom)!;
+        Check(
+            Math.Abs(
+                (letter[0].Items[0].CellRect.Width / letter[0].ContentRect.Width) -
+                (pages[0].Items[0].CellRect.Width / content.Width)) < 0.001,
+            "print_custom_survives_a_paper_change");
+
+        // 겹칠 때는 ZIndex 차례로 쌓고, 같으면 목록 차례입니다.
+        IReadOnlyList<PrintPackagePageLayout> stacked = PrintPackageLayout.Make(
+            sizes,
+            a4,
+            custom with
+            {
+                CustomItems =
+                [
+                    new PrintCustomPackageItem(0, new PrintRect(0, 0, 1, 1)) { ZIndex = 5 },
+                    new PrintCustomPackageItem(1, new PrintRect(0, 0, 0.4, 0.4)) { ZIndex = 1 },
+                ],
+            })!;
+        Check(
+            stacked[0].Items[0].SourceIndex == 1 && stacked[0].Items[1].SourceIndex == 0,
+            "print_custom_sorts_by_z_index");
+
+        // 판 번호에 구멍이 있으면 빈 장이 인쇄됩니다 — 만들지 않습니다.
+        Check(
+            PrintPackageLayout.Make(
+                sizes,
+                a4,
+                custom with
+                {
+                    CustomItems =
+                    [
+                        new PrintCustomPackageItem(0, new PrintRect(0, 0, 1, 1)) { PageIndex = 1 },
+                    ],
+                }) is null,
+            "print_custom_refuses_a_gap_in_the_page_numbers");
+
+        // 판 밖으로 나가는 칸과 없는 사진을 가리키는 칸은 거절합니다.
+        Check(
+            PrintPackageLayout.Make(
+                sizes,
+                a4,
+                custom with
+                {
+                    CustomItems = [new PrintCustomPackageItem(0, new PrintRect(0.8, 0, 0.5, 0.5))],
+                }) is null,
+            "print_custom_refuses_a_cell_off_the_page");
+        Check(
+            PrintPackageLayout.Make(
+                sizes,
+                a4,
+                custom with
+                {
+                    CustomItems = [new PrintCustomPackageItem(9, new PrintRect(0, 0, 0.5, 0.5))],
+                }) is null,
+            "print_custom_refuses_a_missing_photo");
+        Check(
+            PrintPackageLayout.Make(sizes, a4, custom with { CustomItems = [] }) is null,
+            "print_custom_refuses_an_empty_layout");
+
+        // 칸마다 맞추기·돌리기를 따로 고릅니다.
+        IReadOnlyList<PrintPackagePageLayout> mixed = PrintPackageLayout.Make(
+            sizes,
+            a4,
+            custom with
+            {
+                CustomItems =
+                [
+                    new PrintCustomPackageItem(0, new PrintRect(0, 0, 0.5, 1))
+                    {
+                        ContentMode = PrintPackageContentMode.Fill,
+                    },
+                    new PrintCustomPackageItem(0, new PrintRect(0.5, 0, 0.5, 1)),
+                ],
+            })!;
+        Check(
+            mixed[0].Items[0].ImageRect.Height >= mixed[0].Items[0].CellRect.Height - 0.001 &&
+                mixed[0].Items[1].ImageRect.Height <= mixed[0].Items[1].CellRect.Height + 0.001,
+            "print_custom_content_mode_is_per_cell");
+    }
+
+    /// <summary>
+    /// 캡션 글자입니다. 별점 0 이 빈칸이면 캡션이 켜졌는지조차 알 수 없습니다.
+    /// </summary>
+    private static void VerifyPrintCaptionText()
+    {
+        LibraryFrameSnapshot frame = Frame(null, sourcePath: @"C:\scans\IMG_0007.tif") with
+        {
+            ScanIndex = 7,
+            Rating = 3,
+        };
+        Check(
+            PrintCaptionFormatter.Caption(frame, PrintPackageCaptionMode.None, 1) is null,
+            "print_caption_none_writes_nothing");
+        // 확장자까지 적습니다 — 같은 이름의 TIFF 와 PNG 를 구별해야 합니다.
+        Check(
+            PrintCaptionFormatter.Caption(frame, PrintPackageCaptionMode.FileName, 1) ==
+                "IMG_0007.tif",
+            "print_caption_file_name_keeps_the_extension");
+        Check(
+            PrintCaptionFormatter.Caption(frame, PrintPackageCaptionMode.FrameNumber, 1) == "7",
+            "print_caption_frame_number");
+        Check(
+            PrintCaptionFormatter.Caption(frame, PrintPackageCaptionMode.SequenceNumber, 4) == "4",
+            "print_caption_sequence_number_is_the_slot");
+        Check(
+            PrintCaptionFormatter.Caption(frame, PrintPackageCaptionMode.Rating, 1) == "★★★",
+            "print_caption_rating_draws_stars");
+        Check(
+            PrintCaptionFormatter.Caption(
+                frame with { Rating = 0 },
+                PrintPackageCaptionMode.Rating,
+                1) == "—",
+            "print_caption_zero_rating_is_a_dash_not_a_blank");
+    }
+
+    /// <summary>
+    /// 눈금자는 용지의 실제 mm 를 따릅니다 — 화면 배율이 아닙니다. 그래야 화면에서 잰 길이가
+    /// 인화물에서도 같습니다.
+    /// </summary>
+    private static void VerifyPrintRuler()
+    {
+        // A4 세로 297mm: 1cm 눈금이 0…29 로 서른 개, 5mm 눈금이 그 사이에 듭니다.
+        IReadOnlyList<PrintRulerTick> metric =
+            PrintRuler.Ticks(297, PrintRulerUnit.Centimeters);
+        Check(metric.Count == 60, "print_ruler_metric_tick_count");
+        Check(
+            metric.Count(tick => tick.Label is not null) == 30,
+            "print_ruler_metric_labels_every_centimetre");
+        Check(metric[0].Label == "0" && metric[2].Label == "1", "print_ruler_metric_numbering");
+        Check(
+            metric[1].Label is null && metric[1].Length < metric[0].Length,
+            "print_ruler_half_centimetre_is_shorter_and_unlabelled");
+        // 자리는 0…1 이라 화면이든 판이든 곱하기만 하면 됩니다.
+        Check(
+            metric.All(tick => tick.Position is >= 0 and <= 1),
+            "print_ruler_positions_are_normalized");
+        Check(
+            Math.Abs(metric[2].Position - (10.0 / 297)) < 1e-9,
+            "print_ruler_position_follows_millimetres");
+
+        // 인치는 1/4 마다 눈금, 1인치마다 숫자입니다.
+        IReadOnlyList<PrintRulerTick> imperial = PrintRuler.Ticks(254, PrintRulerUnit.Inches);
+        Check(
+            imperial.Count(tick => tick.Label is not null) == 11,
+            "print_ruler_inch_labels");
+        Check(
+            imperial[2].Length > imperial[1].Length && imperial[4].Length > imperial[2].Length,
+            "print_ruler_inch_tick_lengths_step_up");
+
+        Check(PrintRuler.Ticks(0, PrintRulerUnit.Inches).Count == 0, "print_ruler_refuses_zero");
+        Check(
+            PrintRuler.Ticks(double.NaN, PrintRulerUnit.Inches).Count == 0,
+            "print_ruler_refuses_nan");
     }
 
     /// <summary>

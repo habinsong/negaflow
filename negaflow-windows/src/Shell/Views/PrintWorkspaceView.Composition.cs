@@ -104,6 +104,7 @@ public sealed partial class PrintWorkspaceView
             Choice(PrintLayoutMode.SingleImage, "printModeSingle"),
             Choice(PrintLayoutMode.ContactSheet, "printModeContactSheet"),
             Choice(PrintLayoutMode.PicturePackage, "printModePicturePackage"),
+            Choice(PrintLayoutMode.CustomPackage, "printModeCustomPackage"),
             Choice(PrintLayoutMode.Cyanotype, "printModeCyanotype"),
             Choice(PrintLayoutMode.GlassPlate, "printModeGlassPlate"),
             Choice(PrintLayoutMode.Gelatin, "printModeGelatin"),
@@ -335,6 +336,7 @@ public sealed partial class PrintWorkspaceView
             PageCountText.Text = string.Empty;
             PageSizeSummaryText.Text = string.Empty;
             PrintExportButton.IsEnabled = false;
+            RulerCanvas.Children.Clear();
             return;
         }
         NoFramePanel.Visibility = Visibility.Collapsed;
@@ -388,6 +390,7 @@ public sealed partial class PrintWorkspaceView
                 layout.PerforationCornerRadius * scale));
         }
         PageCountText.Text = string.Empty;
+        DrawRulers(layout.CanvasSize, scale, composition);
         WritePageSummary(layout.CanvasSize, composition);
     }
 
@@ -437,6 +440,7 @@ public sealed partial class PrintWorkspaceView
         PageCountText.Text = pages.Count > 1
             ? AppResources.FormatIntegers("printPageCountFormat", "Text", pages.Count)
             : string.Empty;
+        DrawRulers(page.CanvasSize, scale, composition);
         WritePageSummary(page.CanvasSize, composition);
     }
 
@@ -456,6 +460,73 @@ public sealed partial class PrintWorkspaceView
             CanvasHost.ActualHeight - 48));
         double longest = Math.Max(canvas.Width, canvas.Height);
         return longest > 0 ? available / longest : 1;
+    }
+
+    /// <summary>
+    /// 판 위와 왼쪽에 눈금자를 답니다. 눈금은 용지의 실제 mm 를 따르므로, 화면에서 잰 길이가
+    /// 인화물에서도 같습니다.
+    /// </summary>
+    private void DrawRulers(PrintSizeMm canvasPixels, double scale, PrintCompositionSettings composition)
+    {
+        RulerCanvas.Children.Clear();
+        if (workspaceState is not { } state || !state.Current.Print.ShowsRulers)
+        {
+            return;
+        }
+        PrintRulerUnit unit = state.Current.Print.RulerUnit;
+        double pixelsPerMm = composition.Dpi / 25.4;
+        double widthMm = canvasPixels.Width / pixelsPerMm;
+        double heightMm = canvasPixels.Height / pixelsPerMm;
+        double pageWidth = canvasPixels.Width * scale;
+        double pageHeight = canvasPixels.Height * scale;
+        // 판은 가운데 있습니다. 눈금자는 그 가장자리에 맞춰 놓습니다.
+        double pageLeft = (CanvasHost.ActualWidth - pageWidth) / 2;
+        double pageTop = (CanvasHost.ActualHeight - pageHeight) / 2;
+        const double band = 16;
+
+        foreach (PrintRulerTick tick in PrintRuler.Ticks(widthMm, unit))
+        {
+            double x = pageLeft + (tick.Position * pageWidth);
+            AddRulerLine(x, pageTop - (band * tick.Length), x, pageTop);
+            AddRulerLabel(tick.Label, x + 2, pageTop - band);
+        }
+        foreach (PrintRulerTick tick in PrintRuler.Ticks(heightMm, unit))
+        {
+            double y = pageTop + (tick.Position * pageHeight);
+            AddRulerLine(pageLeft - (band * tick.Length), y, pageLeft, y);
+            AddRulerLabel(tick.Label, pageLeft - band, y + 2);
+        }
+    }
+
+    private void AddRulerLine(double x1, double y1, double x2, double y2)
+    {
+        Microsoft.UI.Xaml.Shapes.Line line = new()
+        {
+            X1 = x1,
+            Y1 = y1,
+            X2 = x2,
+            Y2 = y2,
+            StrokeThickness = 1,
+            Stroke = new SolidColorBrush(Windows.UI.Color.FromArgb(0xAA, 0xB4, 0xB4, 0xB4)),
+        };
+        RulerCanvas.Children.Add(line);
+    }
+
+    private void AddRulerLabel(string? text, double left, double top)
+    {
+        if (text is null)
+        {
+            return;
+        }
+        TextBlock label = new()
+        {
+            Text = text,
+            FontSize = 9,
+            Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(0xCC, 0xB4, 0xB4, 0xB4)),
+        };
+        Canvas.SetLeft(label, left);
+        Canvas.SetTop(label, top);
+        RulerCanvas.Children.Add(label);
     }
 
     private void SetPageSize(PrintSizeMm canvas, double scale, PrintSheetBackground background)
@@ -513,7 +584,8 @@ public sealed partial class PrintWorkspaceView
                 sources,
                 state.Current.Print,
                 folder.Path,
-                LibraryFrameNaming.DisplayName(sources[0]));
+                LibraryFrameNaming.DisplayName(sources[0]),
+                TextRasterHost);
             PrintStatusText.Text = result.IsSuccess
                 ? AppResources
                     .Get("printExportDone", "Text")

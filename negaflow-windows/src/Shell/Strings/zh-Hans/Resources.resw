@@ -1119,4 +1119,5 @@
   <data name="printRulerUnit.Text" xml:space="preserve"><value>单位</value><comment>AppLocalizedPhrase.rulerUnit</comment></data>
   <data name="printRulerInches.Text" xml:space="preserve"><value>英寸</value><comment>PrintRulerUnit.inches</comment></data>
   <data name="printRulerCentimeters.Text" xml:space="preserve"><value>厘米</value><comment>PrintRulerUnit.centimeters</comment></data>
+  <data name="printModeCustomPackage.Text" xml:space="preserve"><value>自定义套组</value><comment>PrintWorkspaceLayoutMode.customPackage</comment></data>
 </root>

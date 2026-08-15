@@ -41,7 +41,8 @@ public static class PrintSheetWriter
         IReadOnlyList<LibraryFrameSnapshot> sources,
         PrintPreferences print,
         string destinationFolder,
-        string baseName)
+        string baseName,
+        Microsoft.UI.Xaml.Controls.Panel? textHost = null)
     {
         ArgumentNullException.ThrowIfNull(sources);
         ArgumentNullException.ThrowIfNull(print);
@@ -93,7 +94,15 @@ public static class PrintSheetWriter
                 foreach (PrintPackagePageLayout page in pages)
                 {
                     string path = PagePath(destinationFolder, baseName, page.PageIndex, pages.Count);
-                    if (!await WritePageAsync(path, page, composition, developed))
+                    if (!await WritePageAsync(
+                            path,
+                            page,
+                            composition,
+                            developed,
+                            sources,
+                            print.CaptionMode,
+                            print.CaptionAlignment,
+                            textHost))
                     {
                         return new PrintSheetWriteResult(PrintSheetWriteStatus.WriteFailed, written);
                     }
@@ -196,7 +205,11 @@ public static class PrintSheetWriter
         string destination,
         PrintPackagePageLayout layout,
         PrintCompositionSettings composition,
-        IReadOnlyList<string> developed)
+        IReadOnlyList<string> developed,
+        IReadOnlyList<LibraryFrameSnapshot> sources,
+        PrintPackageCaptionMode captionMode,
+        PrintPackageCaptionAlignment captionAlignment,
+        Microsoft.UI.Xaml.Controls.Panel? textHost)
     {
         int width = (int)layout.CanvasSize.Width;
         int height = (int)layout.CanvasSize.Height;
@@ -214,14 +227,86 @@ public static class PrintSheetWriter
                 return false;
             }
         }
+        bool light = composition.SheetBackground != PrintSheetBackground.White;
+        // 캡션은 사진 위, 재단선 아래입니다.
+        if (captionMode != PrintPackageCaptionMode.None && textHost is not null)
+        {
+            for (int slot = 0; slot < layout.Items.Count; ++slot)
+            {
+                PrintPackageItemLayout item = layout.Items[slot];
+                if (item.CaptionRect is not { } caption ||
+                    PrintCaptionFormatter.Caption(
+                        sources[item.SourceIndex],
+                        captionMode,
+                        slot + 1) is not { Length: > 0 } text)
+                {
+                    continue;
+                }
+                await DrawCaptionAsync(page, width, height, textHost, text, caption,
+                    captionAlignment, light);
+            }
+        }
         // 재단선은 사진 위에 얹습니다 — 칸 모서리를 가리키는 선이므로 사진 아래로 들어가면
         // 보이지 않습니다.
-        bool light = composition.SheetBackground != PrintSheetBackground.White;
         foreach (PrintLineSegment segment in layout.CropMarks)
         {
             DrawLine(page, width, height, segment, light);
         }
         return await EncodeAsync(destination, page, width, height, composition.Dpi);
+    }
+
+    /// <summary>
+    /// 캡션 글자를 판에 얹습니다. 글자 화소의 알파로 섞으므로 글자 둘레가 종이 색과 자연스럽게
+    /// 이어집니다 — 알파를 무시하면 글자마다 네모난 상자가 남습니다.
+    /// </summary>
+    private static async Task DrawCaptionAsync(
+        byte[] page,
+        int pageWidth,
+        int pageHeight,
+        Microsoft.UI.Xaml.Controls.Panel textHost,
+        string text,
+        PrintRect rect,
+        PrintPackageCaptionAlignment alignment,
+        bool light)
+    {
+        int width = Math.Max(1, (int)Math.Round(rect.Width));
+        int height = Math.Max(1, (int)Math.Round(rect.Height));
+        if (await PrintTextRasterizer.RenderAsync(textHost, text, width, height, alignment, light)
+            is not { } rendered)
+        {
+            return;
+        }
+        int left = (int)Math.Round(rect.X);
+        int top = (int)Math.Round(rect.Y);
+        for (int y = 0; y < rendered.Height; ++y)
+        {
+            int pageY = top + y;
+            if (pageY < 0 || pageY >= pageHeight)
+            {
+                continue;
+            }
+            for (int x = 0; x < rendered.Width; ++x)
+            {
+                int pageX = left + x;
+                if (pageX < 0 || pageX >= pageWidth)
+                {
+                    continue;
+                }
+                int from = ((y * rendered.Width) + x) * 4;
+                byte alpha = rendered.Pixels[from + 3];
+                if (alpha == 0)
+                {
+                    continue;
+                }
+                int to = ((pageY * pageWidth) + pageX) * 4;
+                for (int channel = 0; channel < 3; ++channel)
+                {
+                    page[to + channel] = (byte)(
+                        ((rendered.Pixels[from + channel] * alpha) +
+                            (page[to + channel] * (255 - alpha))) / 255);
+                }
+            }
+        }
     }
 
     /// <summary>

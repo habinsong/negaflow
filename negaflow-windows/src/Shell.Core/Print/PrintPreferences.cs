@@ -56,6 +56,9 @@ public sealed record PrintPreferences
 
     public double CropMarkLengthMm { get; init; } = 4;
 
+    /// <summary>손으로 놓은 배치입니다. 커스텀 패키지 모드에서만 쓰입니다.</summary>
+    public IReadOnlyList<PrintCustomPackageItem> CustomItems { get; init; } = [];
+
     /// <summary>
     /// 이 값들로 만든 판 설정입니다. 레이아웃 모드가 공정을 고르면 그 겉모습이 함께 갑니다 —
     /// macOS <c>presentationStyle</c> 과 같은 대응입니다.
@@ -89,6 +92,7 @@ public sealed record PrintPreferences
         CaptionHeightMm = CaptionHeightMm,
         ShowsCropMarks = ShowsCropMarks,
         CropMarkLengthMm = CropMarkLengthMm,
+        CustomItems = CustomItems,
     };
 
     /// <summary>
@@ -153,5 +157,8 @@ public sealed record PrintPreferences
         CropMarkLengthMm = double.IsFinite(CropMarkLengthMm)
             ? Math.Clamp(CropMarkLengthMm, 0, 30)
             : 4,
+        // 손으로 고친 파일이 판 밖의 칸을 담고 있으면 배치가 통째로 거절됩니다. 그런 칸만
+        // 버리고 나머지는 살립니다 — 배치 하나 때문에 화면이 비지 않게.
+        CustomItems = [.. (CustomItems ?? []).Where(item => item.IsValid)],
     };
 }

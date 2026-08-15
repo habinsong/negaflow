@@ -1119,4 +1119,5 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="printRulerUnit.Text" xml:space="preserve"><value>Unité</value><comment>AppLocalizedPhrase.rulerUnit</comment></data>
   <data name="printRulerInches.Text" xml:space="preserve"><value>Pouces</value><comment>PrintRulerUnit.inches</comment></data>
   <data name="printRulerCentimeters.Text" xml:space="preserve"><value>Centimètres</value><comment>PrintRulerUnit.centimeters</comment></data>
+  <data name="printModeCustomPackage.Text" xml:space="preserve"><value>Planche personnalisée</value><comment>PrintWorkspaceLayoutMode.customPackage</comment></data>
 </root>
