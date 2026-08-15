@@ -8,12 +8,22 @@ import AppKit
 // (현재 결과 기준 델타는 이미 보정된 상태라 노출 외에는 0 에 수렴 → 과거 버그였다.)
 extension AppModel {
     /// 자동 화이트 밸런스(⇧⌘U) — Warmth/Tint 를 0 으로 둔 중립본의 평균색을 gray-world 로 무채색화.
-    func autoWhiteBalance(_ frame: ScanFrame) {
+    func autoWhiteBalance(
+        _ frame: ScanFrame,
+        source: AutoAdjustTrace.Source = .inspectorButton
+    ) {
         let expectedParams = frame.params
+        AutoAdjustTrace.began("autoWhiteBalance", source: source, frameID: frame.id)
         Task {
-            guard await prepareCleanedRawForConsumption(frame),
-                  ownsFrame(frame),
-                  frame.params == expectedParams else { return }
+            guard await prepareCleanedRawForConsumption(frame) else {
+                return AutoAdjustTrace.stopped("autoWhiteBalance", source: source, at: .cleanedRawUnavailable)
+            }
+            guard ownsFrame(frame) else {
+                return AutoAdjustTrace.stopped("autoWhiteBalance", source: source, at: .frameNotOwned)
+            }
+            guard frame.params == expectedParams else {
+                return AutoAdjustTrace.stopped("autoWhiteBalance", source: source, at: .paramsChangedBeforeRender)
+            }
             let expectedDefectIdentity = frame.boundDefectRecipeIdentity
             let cleanRawRevision = frame.cleanRawRevision
             let snapshot = neutralSnapshot(frame, clearWB: true)
@@ -21,13 +31,27 @@ extension AppModel {
                 guard let cg = try? DevelopFrameRenderer.render(snapshot).developed,
                       let stats = AutoAdjust.imageStats(cg) else { return nil }
                 return AutoAdjust.autoWhiteBalance(stats)
-            }).value else { return }
-            guard ownsFrame(frame),
-                  frame.params == expectedParams,
-                  frame.cleanRawRevision == cleanRawRevision,
-                  frame.boundDefectRecipeIdentity == expectedDefectIdentity else { return }
+            }).value else {
+                return AutoAdjustTrace.stopped("autoWhiteBalance", source: source, at: .renderOrStatsFailed)
+            }
+            guard ownsFrame(frame) else {
+                return AutoAdjustTrace.stopped("autoWhiteBalance", source: source, at: .frameNotOwned)
+            }
+            guard frame.params == expectedParams else {
+                return AutoAdjustTrace.stopped("autoWhiteBalance", source: source, at: .paramsChangedAfterRender)
+            }
+            guard frame.cleanRawRevision == cleanRawRevision else {
+                return AutoAdjustTrace.stopped("autoWhiteBalance", source: source, at: .cleanRawRevisionChanged)
+            }
+            guard frame.boundDefectRecipeIdentity == expectedDefectIdentity else {
+                return AutoAdjustTrace.stopped("autoWhiteBalance", source: source, at: .defectIdentityChanged)
+            }
             frame.params.warmth = result.0
             frame.params.tint = result.1
+            AutoAdjustTrace.applied(
+                "autoWhiteBalance", source: source,
+                values: String(format: "warmth=%.4f tint=%.4f", result.0, result.1)
+            )
             statusMessage = text(AppLocalizedPhrase.autoWhiteBalanceStatus)
             Task { await developFrame(frame) }
         }
@@ -36,12 +60,22 @@ extension AppModel {
     /// 자동 톤(⌘U) — 톤/색 조정을 0 으로 둔 중립본의 히스토그램으로 Exposure·Contrast·Density·
     /// Highlights·Shadows·Whites·Blacks·Vibrance·Saturation 절대값을 계산해 대입. WB(Warmth/Tint)는
     /// 건드리지 않는다.
-    func autoTone(_ frame: ScanFrame) {
+    func autoTone(
+        _ frame: ScanFrame,
+        source: AutoAdjustTrace.Source = .inspectorButton
+    ) {
         let expectedParams = frame.params
+        AutoAdjustTrace.began("autoTone", source: source, frameID: frame.id)
         Task {
-            guard await prepareCleanedRawForConsumption(frame),
-                  ownsFrame(frame),
-                  frame.params == expectedParams else { return }
+            guard await prepareCleanedRawForConsumption(frame) else {
+                return AutoAdjustTrace.stopped("autoTone", source: source, at: .cleanedRawUnavailable)
+            }
+            guard ownsFrame(frame) else {
+                return AutoAdjustTrace.stopped("autoTone", source: source, at: .frameNotOwned)
+            }
+            guard frame.params == expectedParams else {
+                return AutoAdjustTrace.stopped("autoTone", source: source, at: .paramsChangedBeforeRender)
+            }
             let expectedDefectIdentity = frame.boundDefectRecipeIdentity
             let cleanRawRevision = frame.cleanRawRevision
             let snapshot = neutralSnapshot(frame, clearTone: true)
@@ -49,11 +83,21 @@ extension AppModel {
                 guard let cg = try? DevelopFrameRenderer.render(snapshot).developed,
                       let stats = AutoAdjust.imageStats(cg) else { return nil }
                 return AutoAdjust.autoTone(stats)
-            }).value else { return }
-            guard ownsFrame(frame),
-                  frame.params == expectedParams,
-                  frame.cleanRawRevision == cleanRawRevision,
-                  frame.boundDefectRecipeIdentity == expectedDefectIdentity else { return }
+            }).value else {
+                return AutoAdjustTrace.stopped("autoTone", source: source, at: .renderOrStatsFailed)
+            }
+            guard ownsFrame(frame) else {
+                return AutoAdjustTrace.stopped("autoTone", source: source, at: .frameNotOwned)
+            }
+            guard frame.params == expectedParams else {
+                return AutoAdjustTrace.stopped("autoTone", source: source, at: .paramsChangedAfterRender)
+            }
+            guard frame.cleanRawRevision == cleanRawRevision else {
+                return AutoAdjustTrace.stopped("autoTone", source: source, at: .cleanRawRevisionChanged)
+            }
+            guard frame.boundDefectRecipeIdentity == expectedDefectIdentity else {
+                return AutoAdjustTrace.stopped("autoTone", source: source, at: .defectIdentityChanged)
+            }
             var p = frame.params
             p.exposure = adjustment.exposure
             p.contrast = adjustment.contrast
@@ -65,6 +109,14 @@ extension AppModel {
             p.vibrance = adjustment.vibrance
             p.saturation = adjustment.saturation
             frame.params = p
+            AutoAdjustTrace.applied(
+                "autoTone", source: source,
+                values: String(
+                    format: "ev=%.4f contrast=%.4f whites=%.4f blacks=%.4f vibrance=%.4f",
+                    adjustment.exposure, adjustment.contrast,
+                    adjustment.whites, adjustment.blacks, adjustment.vibrance
+                )
+            )
             statusMessage = text(AppLocalizedPhrase.autoToneStatus)
             Task { await developFrame(frame) }
         }

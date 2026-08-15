@@ -189,6 +189,11 @@ extension AppModel {
         selectedFrameDevelopTask?.cancel()
         frameStore.selectedFrameID = id
         handleSelectedFrameChange(from: oldValue)
+        AutoAdjustTrace.selection(
+            selected: id,
+            scopeCount: interactionFrameIDs.count,
+            actionable: actionableFrame != nil
+        )
     }
 
     var selectedFrame: ScanFrame? { frameStore.selectedFrame }

@@ -40,13 +40,11 @@ struct AppStandardMenuCommands: Commands {
                 model.performWorkflowShortcutAction(.quickExport)
             }
             .workflowKeyboardShortcut(model.shortcut(for: .quickExport))
-            .disabled(!model.canPerformWorkflowShortcutAction(.quickExport))
 
             Button(model.text(.commandExport)) {
                 model.performWorkflowShortcutAction(.exportPhoto)
             }
             .workflowKeyboardShortcut(model.shortcut(for: .exportPhoto))
-            .disabled(!model.canPerformWorkflowShortcutAction(.exportPhoto))
         }
 
         CommandGroup(after: .pasteboard) {
@@ -54,13 +52,11 @@ struct AppStandardMenuCommands: Commands {
                 model.performWorkflowShortcutAction(.copyDevelopSettings)
             }
             .workflowKeyboardShortcut(model.shortcut(for: .copyDevelopSettings))
-            .disabled(!model.canPerformWorkflowShortcutAction(.copyDevelopSettings))
 
             Button(model.text(.commandPasteDevelopSettings)) {
                 model.performWorkflowShortcutAction(.pasteDevelopSettings)
             }
             .workflowKeyboardShortcut(model.shortcut(for: .pasteDevelopSettings))
-            .disabled(!model.canPerformWorkflowShortcutAction(.pasteDevelopSettings))
         }
 
         CommandGroup(after: .textEditing) {
@@ -68,19 +64,16 @@ struct AppStandardMenuCommands: Commands {
                 model.performWorkflowShortcutAction(.pickPhoto)
             }
             .workflowKeyboardShortcut(model.shortcut(for: .pickPhoto))
-            .disabled(!model.canPerformWorkflowShortcutAction(.pickPhoto))
 
             Button(model.text(.commandReject)) {
                 model.performWorkflowShortcutAction(.rejectPhoto)
             }
             .workflowKeyboardShortcut(model.shortcut(for: .rejectPhoto))
-            .disabled(!model.canPerformWorkflowShortcutAction(.rejectPhoto))
 
             Button(model.text(.commandDeletePhoto), role: .destructive) {
                 model.performWorkflowShortcutAction(.deletePhoto)
             }
             .workflowKeyboardShortcut(model.shortcut(for: .deletePhoto))
-            .disabled(!model.canPerformWorkflowShortcutAction(.deletePhoto))
         }
 
         CommandGroup(after: .sidebar) {

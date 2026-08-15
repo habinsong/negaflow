@@ -49,13 +49,11 @@ struct AppWorkflowMenuCommands: Commands {
                 model.performWorkflowShortcutAction(.previousPhoto)
             }
             .workflowKeyboardShortcut(model.shortcut(for: .previousPhoto))
-            .disabled(!model.canPerformWorkflowShortcutAction(.previousPhoto))
 
             Button(model.text(AppLocalizedPhrase.nextFrame)) {
                 model.performWorkflowShortcutAction(.nextPhoto)
             }
             .workflowKeyboardShortcut(model.shortcut(for: .nextPhoto))
-            .disabled(!model.canPerformWorkflowShortcutAction(.nextPhoto))
 
             Divider()
 
@@ -63,25 +61,21 @@ struct AppWorkflowMenuCommands: Commands {
                 model.performWorkflowShortcutAction(.pickPhoto)
             }
             .workflowKeyboardShortcut(model.shortcut(for: .pickPhoto))
-            .disabled(!model.canPerformWorkflowShortcutAction(.pickPhoto))
 
             Button(model.text(AppLocalizedPhrase.clearPick)) {
                 model.performWorkflowShortcutAction(.clearPick)
             }
             .workflowKeyboardShortcut(model.shortcut(for: .clearPick))
-            .disabled(!model.canPerformWorkflowShortcutAction(.clearPick))
 
             Button(model.text(.commandReject)) {
                 model.performWorkflowShortcutAction(.rejectPhoto)
             }
             .workflowKeyboardShortcut(model.shortcut(for: .rejectPhoto))
-            .disabled(!model.canPerformWorkflowShortcutAction(.rejectPhoto))
 
             Button(model.text(.commandDeletePhoto), role: .destructive) {
                 model.performWorkflowShortcutAction(.deletePhoto)
             }
             .workflowKeyboardShortcut(model.shortcut(for: .deletePhoto))
-            .disabled(!model.canPerformWorkflowShortcutAction(.deletePhoto))
 
             Divider()
 
@@ -89,7 +83,6 @@ struct AppWorkflowMenuCommands: Commands {
                 model.performWorkflowShortcutAction(.rateZero)
             }
             .workflowKeyboardShortcut(model.shortcut(for: .rateZero))
-            .disabled(!model.canPerformWorkflowShortcutAction(.rateZero))
 
             ForEach(1...5, id: \.self) { value in
                 let action = WorkflowShortcutAction.ratingAction(value)
@@ -97,7 +90,6 @@ struct AppWorkflowMenuCommands: Commands {
                     model.performWorkflowShortcutAction(action)
                 }
                 .workflowKeyboardShortcut(model.shortcut(for: action))
-                .disabled(!model.canPerformWorkflowShortcutAction(action))
             }
 
             Divider()
@@ -106,19 +98,16 @@ struct AppWorkflowMenuCommands: Commands {
                 model.performWorkflowShortcutAction(.createVirtualCopy)
             }
             .workflowKeyboardShortcut(model.shortcut(for: .createVirtualCopy))
-            .disabled(!model.canPerformWorkflowShortcutAction(.createVirtualCopy))
 
             Button(model.text(.commandCopyDevelopSettings)) {
                 model.performWorkflowShortcutAction(.copyDevelopSettings)
             }
             .workflowKeyboardShortcut(model.shortcut(for: .copyDevelopSettings))
-            .disabled(!model.canPerformWorkflowShortcutAction(.copyDevelopSettings))
 
             Button(model.text(.commandPasteDevelopSettings)) {
                 model.performWorkflowShortcutAction(.pasteDevelopSettings)
             }
             .workflowKeyboardShortcut(model.shortcut(for: .pasteDevelopSettings))
-            .disabled(!model.canPerformWorkflowShortcutAction(.pasteDevelopSettings))
 
             Divider()
 
@@ -126,25 +115,21 @@ struct AppWorkflowMenuCommands: Commands {
                 model.performWorkflowShortcutAction(.rotateLeft)
             }
             .workflowKeyboardShortcut(model.shortcut(for: .rotateLeft))
-            .disabled(!model.canPerformWorkflowShortcutAction(.rotateLeft))
 
             Button(model.text(AppLocalizedPhrase.rotateRight)) {
                 model.performWorkflowShortcutAction(.rotateRight)
             }
             .workflowKeyboardShortcut(model.shortcut(for: .rotateRight))
-            .disabled(!model.canPerformWorkflowShortcutAction(.rotateRight))
 
             Button(model.text(AppLocalizedPhrase.flipHorizontal)) {
                 model.performWorkflowShortcutAction(.flipHorizontal)
             }
             .workflowKeyboardShortcut(model.shortcut(for: .flipHorizontal))
-            .disabled(!model.canPerformWorkflowShortcutAction(.flipHorizontal))
 
             Button(model.text(AppLocalizedPhrase.flipVertical)) {
                 model.performWorkflowShortcutAction(.flipVertical)
             }
             .workflowKeyboardShortcut(model.shortcut(for: .flipVertical))
-            .disabled(!model.canPerformWorkflowShortcutAction(.flipVertical))
         }
 
         CommandMenu(model.text(.menuDevelop)) {
@@ -152,13 +137,11 @@ struct AppWorkflowMenuCommands: Commands {
                 model.performWorkflowShortcutAction(.autoTone)
             }
             .workflowKeyboardShortcut(model.shortcut(for: .autoTone))
-            .disabled(!model.canPerformWorkflowShortcutAction(.autoTone))
 
             Button(model.text(.commandAutoWhiteBalance)) {
                 model.performWorkflowShortcutAction(.autoWhiteBalance)
             }
             .workflowKeyboardShortcut(model.shortcut(for: .autoWhiteBalance))
-            .disabled(!model.canPerformWorkflowShortcutAction(.autoWhiteBalance))
 
             Toggle(
                 model.text(AppLocalizedPhrase.autoColor),
@@ -168,7 +151,6 @@ struct AppWorkflowMenuCommands: Commands {
                 )
             )
             .workflowKeyboardShortcut(model.shortcut(for: .toggleAutoColor))
-            .disabled(!model.canPerformWorkflowShortcutAction(.toggleAutoColor))
 
             Toggle(
                 model.text(AppLocalizedPhrase.autoLevels),
@@ -178,7 +160,6 @@ struct AppWorkflowMenuCommands: Commands {
                 )
             )
             .workflowKeyboardShortcut(model.shortcut(for: .toggleAutoLevels))
-            .disabled(!model.canPerformWorkflowShortcutAction(.toggleAutoLevels))
 
             Toggle(
                 model.text(AppLocalizedPhrase.noiseReduction),
@@ -188,7 +169,6 @@ struct AppWorkflowMenuCommands: Commands {
                 )
             )
             .workflowKeyboardShortcut(model.shortcut(for: .toggleNoiseReduction))
-            .disabled(!model.canPerformWorkflowShortcutAction(.toggleNoiseReduction))
 
             Divider()
 
@@ -234,13 +214,11 @@ struct AppWorkflowMenuCommands: Commands {
                 model.performWorkflowShortcutAction(.cropTool)
             }
             .workflowKeyboardShortcut(model.shortcut(for: .cropTool))
-            .disabled(!model.canPerformWorkflowShortcutAction(.cropTool))
 
             Button(model.text(AppLocalizedPhrase.pickBase)) {
                 model.performWorkflowShortcutAction(.basePickerTool)
             }
             .workflowKeyboardShortcut(model.shortcut(for: .basePickerTool))
-            .disabled(!model.canPerformWorkflowShortcutAction(.basePickerTool))
 
             Menu(model.text(AppLocalizedPhrase.inspectorTabDefect)) {
                 ForEach([
@@ -253,7 +231,6 @@ struct AppWorkflowMenuCommands: Commands {
                         model.performWorkflowShortcutAction(action)
                     }
                     .workflowKeyboardShortcut(model.shortcut(for: action))
-                    .disabled(!model.canPerformWorkflowShortcutAction(action))
                 }
             }
 
@@ -263,13 +240,11 @@ struct AppWorkflowMenuCommands: Commands {
                 model.performWorkflowShortcutAction(.resetAdjustments)
             }
             .workflowKeyboardShortcut(model.shortcut(for: .resetAdjustments))
-            .disabled(!model.canPerformWorkflowShortcutAction(.resetAdjustments))
 
             Button(model.text(AppLocalizedPhrase.compareSplitVertical)) {
                 model.performWorkflowShortcutAction(.toggleBeforeAfter)
             }
             .workflowKeyboardShortcut(model.shortcut(for: .toggleBeforeAfter))
-            .disabled(!model.canPerformWorkflowShortcutAction(.toggleBeforeAfter))
         }
 
         CommandMenu(model.text(.menuScanner)) {
@@ -306,13 +281,11 @@ struct AppWorkflowMenuCommands: Commands {
                     model.performWorkflowShortcutAction(.addFlatbedFrame)
                 }
                 .workflowKeyboardShortcut(model.shortcut(for: .addFlatbedFrame))
-                .disabled(!model.canPerformWorkflowShortcutAction(.addFlatbedFrame))
 
                 Button(model.text(AppLocalizedPhrase.flatbedRemoveFrame)) {
                     model.performWorkflowShortcutAction(.removeFlatbedFrame)
                 }
                 .workflowKeyboardShortcut(model.shortcut(for: .removeFlatbedFrame))
-                .disabled(!model.canPerformWorkflowShortcutAction(.removeFlatbedFrame))
             }
         }
 

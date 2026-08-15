@@ -19,6 +19,10 @@ READMES = (
 # English is the default and lives at the top of docs/. Every other language is a
 # sibling folder holding the same set of documents.
 TRANSLATIONS = ("ko", "ja", "zh-Hans", "fr", "de")
+# 번역 대상이 아닌 최상위 폴더. 제품 문서가 아니라 특정 실행에서 뽑은 엔지니어링 기준값
+# (측정 수치·해시·재현 명령)이라 5개 언어로 복제할 내용이 없다. 마크다운 블록 검사 등
+# 나머지 문서 계약은 그대로 적용된다.
+UNTRANSLATED_DIRECTORIES = ("verification",)
 DOCS_HOME_LINKS = {
     "": "[Docs home](../README.md)",
     "ko": "[문서 홈](../README.md)",
@@ -53,7 +57,10 @@ def documents_in(language: str) -> list[Path]:
     base = docs_root(language)
     found = []
     for document in sorted(base.rglob("*.md")):
-        if not language and document.relative_to(base).parts[0] in TRANSLATIONS:
+        head = document.relative_to(base).parts[0]
+        if not language and head in TRANSLATIONS:
+            continue
+        if head in UNTRANSLATED_DIRECTORIES:
             continue
         found.append(document)
     return found

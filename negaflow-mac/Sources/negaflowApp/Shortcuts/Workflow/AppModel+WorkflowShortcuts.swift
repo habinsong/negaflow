@@ -73,7 +73,21 @@ extension AppModel {
     }
 
     func performWorkflowShortcutAction(_ action: WorkflowShortcutAction) {
-        guard canPerformWorkflowShortcutAction(action) else { return }
+        guard canPerformWorkflowShortcutAction(action) else {
+            // 여기서 조용히 멈추면 화면에는 아무 일도 일어나지 않는다. 자동 보정 두 동작은
+            // 신고가 잦아 중단 사실을 남긴다.
+            switch action {
+            case .autoTone, .autoWhiteBalance:
+                AutoAdjustTrace.stopped(
+                    action == .autoTone ? "autoTone" : "autoWhiteBalance",
+                    source: .menuCommand,
+                    at: .shortcutActionDisabled
+                )
+            default:
+                break
+            }
+            return
+        }
 
         switch action {
         case .importImages:
@@ -130,9 +144,17 @@ extension AppModel {
         case .createVirtualCopy:
             if let frame = actionableFrame { createVirtualCopy(from: frame) }
         case .autoTone:
-            if let frame = actionableFrame { autoTone(frame) }
+            if let frame = actionableFrame {
+                autoTone(frame, source: .menuCommand)
+            } else {
+                AutoAdjustTrace.stopped("autoTone", source: .menuCommand, at: .noActionableFrame)
+            }
         case .autoWhiteBalance:
-            if let frame = actionableFrame { autoWhiteBalance(frame) }
+            if let frame = actionableFrame {
+                autoWhiteBalance(frame, source: .menuCommand)
+            } else {
+                AutoAdjustTrace.stopped("autoWhiteBalance", source: .menuCommand, at: .noActionableFrame)
+            }
         case .toggleAutoColor:
             if let frame = actionableFrame {
                 frame.updateParams { $0.autoNeutralBalance.toggle() }
