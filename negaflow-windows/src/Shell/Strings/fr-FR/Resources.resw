@@ -1053,4 +1053,9 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="namedFrameCopyDisplayFormat.Text" xml:space="preserve"><value>{0} copie %d</value><comment>AppLocalizedPhrase.namedFrameCopyDisplayFormat</comment></data>
   <data name="libraryVirtualCopy.Content" xml:space="preserve"><value>Copie virtuelle</value><comment>AppLocalizedPhrase.virtualCopy</comment></data>
   <data name="librarySourceMoveFailed.Text" xml:space="preserve"><value>Impossible de déplacer les fichiers source. Les modifications ont été annulées.</value><comment>AppLocalizedPhrase.sourceMoveFailedStatus</comment></data>
+  <data name="libraryDevelopDefaults.Text" xml:space="preserve"><value>Développement</value><comment>AppLocalizedText.developDefaults</comment></data>
+  <data name="libraryProcess.Text" xml:space="preserve"><value>Procédé</value><comment>AppLocalizedPhrase.process</comment></data>
+  <data name="libraryTarget.Text" xml:space="preserve"><value>Cible</value><comment>AppLocalizedPhrase.target</comment></data>
+  <data name="libraryFilmProfile.Text" xml:space="preserve"><value>Profil de film</value><comment>AppLocalizedPhrase.filmProfile</comment></data>
+  <data name="libraryLook.Text" xml:space="preserve"><value>Rendu</value><comment>AppLocalizedPhrase.look</comment></data>
 </root>

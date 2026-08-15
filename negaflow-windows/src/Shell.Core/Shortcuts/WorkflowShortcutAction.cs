@@ -45,6 +45,13 @@ public enum WorkflowShortcutAction
     ProcessColorPositive,
     ProcessBwNegative,
     ProcessBwPositive,
+    TargetMain,
+    TargetPrint,
+    TargetNoritsu,
+    TargetSp3000,
+    TargetF135,
+    TargetHr,
+    TargetExpired,
     RotateLeft,
     RotateRight,
     FlipHorizontal,
@@ -146,6 +153,15 @@ public static class WorkflowShortcutActions
             new("3", WorkflowShortcutModifiers.Alt | WorkflowShortcutModifiers.Shift),
         WorkflowShortcutAction.ProcessBwPositive =>
             new("4", WorkflowShortcutModifiers.Alt | WorkflowShortcutModifiers.Shift),
+        // macOS 는 control 하나만 씁니다. 그 자리를 Windows 에서는 Control 이 이미 쓰므로
+        // 프로세스와 같은 이유로 Alt 로 옮깁니다.
+        WorkflowShortcutAction.TargetMain => new("1", WorkflowShortcutModifiers.Alt),
+        WorkflowShortcutAction.TargetPrint => new("2", WorkflowShortcutModifiers.Alt),
+        WorkflowShortcutAction.TargetNoritsu => new("3", WorkflowShortcutModifiers.Alt),
+        WorkflowShortcutAction.TargetSp3000 => new("4", WorkflowShortcutModifiers.Alt),
+        WorkflowShortcutAction.TargetF135 => new("5", WorkflowShortcutModifiers.Alt),
+        WorkflowShortcutAction.TargetHr => new("6", WorkflowShortcutModifiers.Alt),
+        WorkflowShortcutAction.TargetExpired => new("7", WorkflowShortcutModifiers.Alt),
         WorkflowShortcutAction.RotateLeft =>
             new("[", WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Shift),
         WorkflowShortcutAction.RotateRight =>

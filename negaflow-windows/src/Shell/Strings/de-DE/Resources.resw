@@ -1053,4 +1053,9 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="namedFrameCopyDisplayFormat.Text" xml:space="preserve"><value>{0} Kopie %d</value><comment>AppLocalizedPhrase.namedFrameCopyDisplayFormat</comment></data>
   <data name="libraryVirtualCopy.Content" xml:space="preserve"><value>Virtuelle Kopie</value><comment>AppLocalizedPhrase.virtualCopy</comment></data>
   <data name="librarySourceMoveFailed.Text" xml:space="preserve"><value>Die Quelldateien konnten nicht bewegt werden. Die Änderungen wurden zurückgenommen.</value><comment>AppLocalizedPhrase.sourceMoveFailedStatus</comment></data>
+  <data name="libraryDevelopDefaults.Text" xml:space="preserve"><value>Entwicklung</value><comment>AppLocalizedText.developDefaults</comment></data>
+  <data name="libraryProcess.Text" xml:space="preserve"><value>Prozess</value><comment>AppLocalizedPhrase.process</comment></data>
+  <data name="libraryTarget.Text" xml:space="preserve"><value>Ziel</value><comment>AppLocalizedPhrase.target</comment></data>
+  <data name="libraryFilmProfile.Text" xml:space="preserve"><value>Filmprofil</value><comment>AppLocalizedPhrase.filmProfile</comment></data>
+  <data name="libraryLook.Text" xml:space="preserve"><value>Look</value><comment>AppLocalizedPhrase.look</comment></data>
 </root>

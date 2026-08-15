@@ -229,6 +229,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
         libraryHost?.SetSelection(FrameListView.SelectedItems
             .OfType<LibraryFrameListItem>()
             .Select(item => item.Id));
+        SynchronizeDevelopDefaults();
     }
 
     /// <summary>사용자가 라이브러리에서 현상으로 넘기려는 frame 입니다.</summary>
@@ -281,6 +282,33 @@ public sealed partial class LibraryWorkspaceView : UserControl
                 return true;
             case WorkflowShortcutAction.DeletePhoto:
                 RemoveFromLibrary(targets);
+                return true;
+            case WorkflowShortcutAction.ProcessColorNegative:
+            case WorkflowShortcutAction.ProcessColorPositive:
+            case WorkflowShortcutAction.ProcessBwNegative:
+            case WorkflowShortcutAction.ProcessBwPositive:
+                ApplyDevelopProcess(action);
+                return true;
+            case WorkflowShortcutAction.TargetMain:
+                ApplyDevelopTarget(DevelopTarget.Main);
+                return true;
+            case WorkflowShortcutAction.TargetPrint:
+                ApplyDevelopTarget(DevelopTarget.Print);
+                return true;
+            case WorkflowShortcutAction.TargetNoritsu:
+                ApplyDevelopTarget(DevelopTarget.Noritsu);
+                return true;
+            case WorkflowShortcutAction.TargetSp3000:
+                ApplyDevelopTarget(DevelopTarget.Sp3000);
+                return true;
+            case WorkflowShortcutAction.TargetF135:
+                ApplyDevelopTarget(DevelopTarget.F135);
+                return true;
+            case WorkflowShortcutAction.TargetHr:
+                ApplyDevelopTarget(DevelopTarget.Hr);
+                return true;
+            case WorkflowShortcutAction.TargetExpired:
+                ApplyDevelopTarget(DevelopTarget.Rescue);
                 return true;
             case WorkflowShortcutAction.CreateVirtualCopy:
                 // 사본은 한 장에 하나씩입니다. 여러 장을 골랐으면 macOS 처럼 활성 사진만
@@ -847,6 +875,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
         }
         LibraryCountText.Text = projection.MatchedCount.ToString(CultureInfo.CurrentCulture);
         UpdateViewModeControls();
+        SynchronizeDevelopDefaults();
         if (sourceKind == LibrarySourceKind.Files)
         {
             RebuildFilesSourceTree();
@@ -2500,6 +2529,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
         ImportHeaderText.Text = import;
         ImportSectionText.Text = import;
         LocalizeCollections();
+        LocalizeDevelopDefaults();
         UpdateSourcePanel();
         string importImages = AppResources.Get("importImages", "Content");
         SetButtonText(ImportImagesButton, importImages);

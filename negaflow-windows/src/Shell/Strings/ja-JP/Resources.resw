@@ -1053,4 +1053,9 @@
   <data name="namedFrameCopyDisplayFormat.Text" xml:space="preserve"><value>{0} コピー %d</value><comment>AppLocalizedPhrase.namedFrameCopyDisplayFormat</comment></data>
   <data name="libraryVirtualCopy.Content" xml:space="preserve"><value>仮想コピー</value><comment>AppLocalizedPhrase.virtualCopy</comment></data>
   <data name="librarySourceMoveFailed.Text" xml:space="preserve"><value>元ファイルを移動できませんでした。変更を元に戻しました。</value><comment>AppLocalizedPhrase.sourceMoveFailedStatus</comment></data>
+  <data name="libraryDevelopDefaults.Text" xml:space="preserve"><value>現像</value><comment>AppLocalizedText.developDefaults</comment></data>
+  <data name="libraryProcess.Text" xml:space="preserve"><value>現像処理</value><comment>AppLocalizedPhrase.process</comment></data>
+  <data name="libraryTarget.Text" xml:space="preserve"><value>ターゲット</value><comment>AppLocalizedPhrase.target</comment></data>
+  <data name="libraryFilmProfile.Text" xml:space="preserve"><value>フィルムプロファイル</value><comment>AppLocalizedPhrase.filmProfile</comment></data>
+  <data name="libraryLook.Text" xml:space="preserve"><value>ルック</value><comment>AppLocalizedPhrase.look</comment></data>
 </root>

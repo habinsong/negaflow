@@ -1053,4 +1053,9 @@
   <data name="namedFrameCopyDisplayFormat.Text" xml:space="preserve"><value>{0} 사본 %d</value><comment>AppLocalizedPhrase.namedFrameCopyDisplayFormat</comment></data>
   <data name="libraryVirtualCopy.Content" xml:space="preserve"><value>가상 사본</value><comment>AppLocalizedPhrase.virtualCopy</comment></data>
   <data name="librarySourceMoveFailed.Text" xml:space="preserve"><value>원본 파일을 이동하지 못했습니다. 변경 사항을 되돌렸습니다.</value><comment>AppLocalizedPhrase.sourceMoveFailedStatus</comment></data>
+  <data name="libraryDevelopDefaults.Text" xml:space="preserve"><value>현상</value><comment>AppLocalizedText.developDefaults</comment></data>
+  <data name="libraryProcess.Text" xml:space="preserve"><value>프로세스</value><comment>AppLocalizedPhrase.process</comment></data>
+  <data name="libraryTarget.Text" xml:space="preserve"><value>타깋</value><comment>AppLocalizedPhrase.target</comment></data>
+  <data name="libraryFilmProfile.Text" xml:space="preserve"><value>필름 프로필</value><comment>AppLocalizedPhrase.filmProfile</comment></data>
+  <data name="libraryLook.Text" xml:space="preserve"><value>룹</value><comment>AppLocalizedPhrase.look</comment></data>
 </root>

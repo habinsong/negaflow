@@ -5,6 +5,8 @@ using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Negaflow.Catalog;
+using Negaflow.Shell.Develop;
 using Negaflow.Shell.Localization;
 using Negaflow.Shell.Shortcuts;
 using Windows.System;
@@ -288,6 +290,13 @@ public sealed partial class SettingsRootView
         WorkflowShortcutAction.ProcessColorPositive => Process("filmTypeColorPositive"),
         WorkflowShortcutAction.ProcessBwNegative => Process("filmTypeBlackAndWhiteNegative"),
         WorkflowShortcutAction.ProcessBwPositive => Process("filmTypeBlackAndWhitePositive"),
+        WorkflowShortcutAction.TargetMain => Target(DevelopTarget.Main),
+        WorkflowShortcutAction.TargetPrint => Target(DevelopTarget.Print),
+        WorkflowShortcutAction.TargetNoritsu => Target(DevelopTarget.Noritsu),
+        WorkflowShortcutAction.TargetSp3000 => Target(DevelopTarget.Sp3000),
+        WorkflowShortcutAction.TargetF135 => Target(DevelopTarget.F135),
+        WorkflowShortcutAction.TargetHr => Target(DevelopTarget.Hr),
+        WorkflowShortcutAction.TargetExpired => Target(DevelopTarget.Rescue),
         WorkflowShortcutAction.RotateLeft => AppResources.Get("shortcutRotateLeft", "Text"),
         WorkflowShortcutAction.RotateRight => AppResources.Get("shortcutRotateRight", "Text"),
         WorkflowShortcutAction.FlipHorizontal =>
@@ -315,6 +324,9 @@ public sealed partial class SettingsRootView
 
     private static string Stars(int value) =>
         AppResources.FormatIntegers("libraryStarFormat", "Text", value);
+
+    private static string Target(DevelopTarget target) =>
+        AppResources.Get("libraryTarget", "Text") + ": " + DevelopTargets.DisplayName(target);
 
     private static string Process(string filmTypeKey) =>
         AppResources.Get("shortcutProcess", "Text") + ": " +

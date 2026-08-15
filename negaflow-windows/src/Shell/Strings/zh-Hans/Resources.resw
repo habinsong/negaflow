@@ -1053,4 +1053,9 @@
   <data name="namedFrameCopyDisplayFormat.Text" xml:space="preserve"><value>{0} 副本 %d</value><comment>AppLocalizedPhrase.namedFrameCopyDisplayFormat</comment></data>
   <data name="libraryVirtualCopy.Content" xml:space="preserve"><value>虚拟副本</value><comment>AppLocalizedPhrase.virtualCopy</comment></data>
   <data name="librarySourceMoveFailed.Text" xml:space="preserve"><value>无法移动原始文件，已撤销更改。</value><comment>AppLocalizedPhrase.sourceMoveFailedStatus</comment></data>
+  <data name="libraryDevelopDefaults.Text" xml:space="preserve"><value>显影</value><comment>AppLocalizedText.developDefaults</comment></data>
+  <data name="libraryProcess.Text" xml:space="preserve"><value>冲洗工艺</value><comment>AppLocalizedPhrase.process</comment></data>
+  <data name="libraryTarget.Text" xml:space="preserve"><value>目标</value><comment>AppLocalizedPhrase.target</comment></data>
+  <data name="libraryFilmProfile.Text" xml:space="preserve"><value>胶片配置文件</value><comment>AppLocalizedPhrase.filmProfile</comment></data>
+  <data name="libraryLook.Text" xml:space="preserve"><value>风格</value><comment>AppLocalizedPhrase.look</comment></data>
 </root>
