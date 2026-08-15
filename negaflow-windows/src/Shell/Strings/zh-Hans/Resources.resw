@@ -1120,4 +1120,7 @@
   <data name="printRulerInches.Text" xml:space="preserve"><value>英寸</value><comment>PrintRulerUnit.inches</comment></data>
   <data name="printRulerCentimeters.Text" xml:space="preserve"><value>厘米</value><comment>PrintRulerUnit.centimeters</comment></data>
   <data name="printModeCustomPackage.Text" xml:space="preserve"><value>自定义套组</value><comment>PrintWorkspaceLayoutMode.customPackage</comment></data>
+  <data name="printCustomAdd.Content" xml:space="preserve"><value>添加单元</value><comment>Windows only: custom placement editor.</comment></data>
+  <data name="printCustomRemove.Content" xml:space="preserve"><value>删除单元</value><comment>Windows only: custom placement editor.</comment></data>
+  <data name="printCustomHint.Text" xml:space="preserve"><value>拖动单元可移动，拖动角可调整大小。</value><comment>Windows only: custom placement editor.</comment></data>
 </root>

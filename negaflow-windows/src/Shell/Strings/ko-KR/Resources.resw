@@ -1120,4 +1120,7 @@
   <data name="printRulerInches.Text" xml:space="preserve"><value>인치</value><comment>PrintRulerUnit.inches</comment></data>
   <data name="printRulerCentimeters.Text" xml:space="preserve"><value>센티미터</value><comment>PrintRulerUnit.centimeters</comment></data>
   <data name="printModeCustomPackage.Text" xml:space="preserve"><value>커스텀 패키지</value><comment>PrintWorkspaceLayoutMode.customPackage</comment></data>
+  <data name="printCustomAdd.Content" xml:space="preserve"><value>칸 추가</value><comment>Windows only: custom placement editor.</comment></data>
+  <data name="printCustomRemove.Content" xml:space="preserve"><value>칸 제거</value><comment>Windows only: custom placement editor.</comment></data>
+  <data name="printCustomHint.Text" xml:space="preserve"><value>칸을 끌어 옮기고, 모서리를 끌어 크기를 바꿉니다.</value><comment>Windows only: custom placement editor.</comment></data>
 </root>

@@ -291,6 +291,12 @@ public sealed partial class PrintWorkspaceView
             ? Visibility.Visible
             : Visibility.Collapsed;
         RulerUnitSelector.IsEnabled = print.ShowsRulers;
+        CustomCard.Visibility = print.LayoutMode == PrintLayoutMode.CustomPackage
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        CustomHintText.Text = AppResources.Get("printCustomHint", "Text");
+        // 모드를 막 고른 참이면 쓸 수 있는 배치를 하나 깔아 둡니다.
+        SeedCustomLayoutIfEmpty();
         DrawPrintPreview();
     }
 
@@ -441,6 +447,7 @@ public sealed partial class PrintWorkspaceView
             ? AppResources.FormatIntegers("printPageCountFormat", "Text", pages.Count)
             : string.Empty;
         DrawRulers(page.CanvasSize, scale, composition);
+        DrawCustomEditor(page, scale);
         WritePageSummary(page.CanvasSize, composition);
     }
 

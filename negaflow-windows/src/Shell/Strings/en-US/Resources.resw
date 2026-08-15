@@ -1120,4 +1120,7 @@ Load a scanner from Library to scan film.</value>
   <data name="printRulerInches.Text" xml:space="preserve"><value>Inches</value><comment>PrintRulerUnit.inches</comment></data>
   <data name="printRulerCentimeters.Text" xml:space="preserve"><value>Centimeters</value><comment>PrintRulerUnit.centimeters</comment></data>
   <data name="printModeCustomPackage.Text" xml:space="preserve"><value>Custom Package</value><comment>PrintWorkspaceLayoutMode.customPackage</comment></data>
+  <data name="printCustomAdd.Content" xml:space="preserve"><value>Add cell</value><comment>Windows only: custom placement editor.</comment></data>
+  <data name="printCustomRemove.Content" xml:space="preserve"><value>Remove cell</value><comment>Windows only: custom placement editor.</comment></data>
+  <data name="printCustomHint.Text" xml:space="preserve"><value>Drag a cell to move it, or its corner to resize.</value><comment>Windows only: custom placement editor.</comment></data>
 </root>

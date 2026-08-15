@@ -1120,4 +1120,7 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="printRulerInches.Text" xml:space="preserve"><value>Zoll</value><comment>PrintRulerUnit.inches</comment></data>
   <data name="printRulerCentimeters.Text" xml:space="preserve"><value>Zentimeter</value><comment>PrintRulerUnit.centimeters</comment></data>
   <data name="printModeCustomPackage.Text" xml:space="preserve"><value>Eigenes Paket</value><comment>PrintWorkspaceLayoutMode.customPackage</comment></data>
+  <data name="printCustomAdd.Content" xml:space="preserve"><value>Zelle hinzufügen</value><comment>Windows only: custom placement editor.</comment></data>
+  <data name="printCustomRemove.Content" xml:space="preserve"><value>Zelle entfernen</value><comment>Windows only: custom placement editor.</comment></data>
+  <data name="printCustomHint.Text" xml:space="preserve"><value>Zelle ziehen zum Bewegen, Ecke ziehen zum Skalieren.</value><comment>Windows only: custom placement editor.</comment></data>
 </root>

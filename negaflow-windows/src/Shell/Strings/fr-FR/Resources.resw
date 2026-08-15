@@ -1120,4 +1120,7 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="printRulerInches.Text" xml:space="preserve"><value>Pouces</value><comment>PrintRulerUnit.inches</comment></data>
   <data name="printRulerCentimeters.Text" xml:space="preserve"><value>Centimètres</value><comment>PrintRulerUnit.centimeters</comment></data>
   <data name="printModeCustomPackage.Text" xml:space="preserve"><value>Planche personnalisée</value><comment>PrintWorkspaceLayoutMode.customPackage</comment></data>
+  <data name="printCustomAdd.Content" xml:space="preserve"><value>Ajouter une case</value><comment>Windows only: custom placement editor.</comment></data>
+  <data name="printCustomRemove.Content" xml:space="preserve"><value>Supprimer la case</value><comment>Windows only: custom placement editor.</comment></data>
+  <data name="printCustomHint.Text" xml:space="preserve"><value>Faites glisser une case pour la déplacer, son coin pour la redimensionner.</value><comment>Windows only: custom placement editor.</comment></data>
 </root>

@@ -1120,4 +1120,7 @@
   <data name="printRulerInches.Text" xml:space="preserve"><value>インチ</value><comment>PrintRulerUnit.inches</comment></data>
   <data name="printRulerCentimeters.Text" xml:space="preserve"><value>センチメートル</value><comment>PrintRulerUnit.centimeters</comment></data>
   <data name="printModeCustomPackage.Text" xml:space="preserve"><value>カスタムパッケージ</value><comment>PrintWorkspaceLayoutMode.customPackage</comment></data>
+  <data name="printCustomAdd.Content" xml:space="preserve"><value>セルを追加</value><comment>Windows only: custom placement editor.</comment></data>
+  <data name="printCustomRemove.Content" xml:space="preserve"><value>セルを削除</value><comment>Windows only: custom placement editor.</comment></data>
+  <data name="printCustomHint.Text" xml:space="preserve"><value>セルをドラッグして移動、角でサイズ変更。</value><comment>Windows only: custom placement editor.</comment></data>
 </root>

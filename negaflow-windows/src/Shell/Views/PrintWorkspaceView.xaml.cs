@@ -17,6 +17,7 @@ public sealed partial class PrintWorkspaceView : UserControl
         InitializeComponent();
         LocalizeControls();
         LocalizePrintInspector();
+        LocalizeCustomEditor();
     }
 
     public void Initialize(WorkspacePresentationState state, NativeEngineStatus nativeEngineStatus)

@@ -360,6 +360,39 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- 커스텀 배치에서만 나옵니다. 칸은 캔버스에서 끌어 옮깁니다. -->
+                    <Border
+                        x:Name="CustomCard"
+                        Padding="14"
+                        Background="{ThemeResource NegaflowCardBrush}"
+                        CornerRadius="9"
+                        Visibility="Collapsed">
+                        <StackPanel Spacing="10">
+                            <StackPanel Orientation="Horizontal" Spacing="7">
+                                <FontIcon FontSize="13" Glyph="&#xE7C4;" />
+                                <TextBlock x:Name="CustomSectionText" FontSize="13" FontWeight="SemiBold" />
+                            </StackPanel>
+                            <TextBlock x:Name="CustomHintText" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                            <Grid ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Button
+                                    x:Name="CustomAddButton"
+                                    HorizontalAlignment="Stretch"
+                                    AutomationProperties.AutomationId="negaflow.print.custom.add"
+                                    Click="OnCustomAddClicked" />
+                                <Button
+                                    x:Name="CustomRemoveButton"
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Stretch"
+                                    AutomationProperties.AutomationId="negaflow.print.custom.remove"
+                                    Click="OnCustomRemoveClicked" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
                     <Border Padding="14" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="9">
                         <StackPanel Spacing="10">
                             <StackPanel Orientation="Horizontal" Spacing="7">
