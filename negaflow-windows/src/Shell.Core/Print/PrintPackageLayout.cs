@@ -6,6 +6,38 @@ public enum PrintPackageContentMode
     Fill,
 }
 
+/// <summary>픽처 패키지의 칸 배치입니다. macOS <c>PrintPicturePackageTemplate</c> 과 같습니다.</summary>
+public enum PrintPicturePackageTemplate
+{
+    OneLargeTwoSmall,
+    TwoUp,
+    FourUp,
+}
+
+/// <summary>칸 아래에 무엇을 적을지입니다. macOS <c>PrintPackageCaptionMode</c> 와 같습니다.</summary>
+public enum PrintPackageCaptionMode
+{
+    None,
+    FileName,
+    FrameNumber,
+    SequenceNumber,
+    Rating,
+}
+
+public enum PrintPackageCaptionAlignment
+{
+    Leading,
+    Center,
+    Trailing,
+}
+
+/// <summary>크롭마크 선분 하나입니다.</summary>
+public readonly record struct PrintLineSegment(
+    double StartX,
+    double StartY,
+    double EndX,
+    double EndY);
+
 /// <summary>여러 장을 한 판에 놓는 방식입니다. macOS <c>PrintPackageLayoutMode</c> 와 같습니다.</summary>
 public enum PrintPackageMode
 {
@@ -44,11 +76,28 @@ public sealed record PrintPackageSettings
 
     public PrintSheetBackground SheetBackground { get; init; } = PrintSheetBackground.White;
 
+    public PrintPicturePackageTemplate PictureTemplate { get; init; } =
+        PrintPicturePackageTemplate.OneLargeTwoSmall;
+
+    public PrintPackageCaptionMode CaptionMode { get; init; } = PrintPackageCaptionMode.None;
+
+    public PrintPackageCaptionAlignment CaptionAlignment { get; init; } =
+        PrintPackageCaptionAlignment.Center;
+
+    /// <summary>캡션이 차지하는 높이입니다. 사진은 그만큼 위로 물러납니다.</summary>
+    public double CaptionHeightMm { get; init; } = 6;
+
+    public bool ShowsCropMarks { get; init; }
+
+    public double CropMarkLengthMm { get; init; } = 4;
+
     public bool IsValid =>
         ContactRows > 0 && ContactColumns > 0 &&
         ContactRows * ContactColumns <= MaximumCells &&
         double.IsFinite(HorizontalSpacingMm) && HorizontalSpacingMm is >= 0 and <= 50 &&
-        double.IsFinite(VerticalSpacingMm) && VerticalSpacingMm is >= 0 and <= 50;
+        double.IsFinite(VerticalSpacingMm) && VerticalSpacingMm is >= 0 and <= 50 &&
+        double.IsFinite(CaptionHeightMm) && CaptionHeightMm is >= 0 and <= 40 &&
+        double.IsFinite(CropMarkLengthMm) && CropMarkLengthMm is >= 0 and <= 30;
 }
 
 /// <summary>판 위의 사진 한 칸입니다.</summary>
@@ -56,14 +105,22 @@ public sealed record PrintPackageItemLayout(
     int SourceIndex,
     PrintRect CellRect,
     PrintRect ImageRect,
-    int QuarterTurns);
+    int QuarterTurns)
+{
+    /// <summary>캡션이 놓이는 자리입니다. 캡션이 없으면 null 입니다.</summary>
+    public PrintRect? CaptionRect { get; init; }
+}
 
 /// <summary>판 한 장입니다.</summary>
 public sealed record PrintPackagePageLayout(
     int PageIndex,
     PrintSizeMm CanvasSize,
     PrintRect ContentRect,
-    IReadOnlyList<PrintPackageItemLayout> Items);
+    IReadOnlyList<PrintPackageItemLayout> Items)
+{
+    /// <summary>재단선입니다. 켜지 않았으면 빕니다.</summary>
+    public IReadOnlyList<PrintLineSegment> CropMarks { get; init; } = [];
+}
 
 public static class PrintPackageLayout
 {
@@ -96,11 +153,15 @@ public static class PrintPackageLayout
 
         int rows = package.ContactRows;
         int columns = package.ContactColumns;
+        bool picturePackage = package.Mode == PrintPackageMode.PicturePackage;
         // 판의 방향은 칸 배치를 따릅니다 — 가로로 넓은 격자에는 가로 용지가 맞습니다.
+        // 픽처 패키지는 칸이 정해져 있으므로 첫 사진의 방향을 따릅니다.
         PrintSizeMm page = PrintCompositionLayout.PageDimensions(
             composition.PaperDimensionsMm,
             composition.Orientation,
-            columns >= rows);
+            picturePackage
+                ? sourceSizes[0].Width >= sourceSizes[0].Height
+                : columns >= rows);
         double pixelsPerMm = composition.Dpi / 25.4;
         PrintSizeMm canvas = new(
             Math.Max(1, Math.Round(page.Width * pixelsPerMm)),
@@ -114,6 +175,17 @@ public static class PrintPackageLayout
 
         double horizontalGap = package.HorizontalSpacingMm * pixelsPerMm;
         double verticalGap = package.VerticalSpacingMm * pixelsPerMm;
+        if (picturePackage)
+        {
+            return PicturePackagePages(
+                sourceSizes,
+                package,
+                canvas,
+                content,
+                horizontalGap,
+                verticalGap,
+                pixelsPerMm);
+        }
         double availableWidth = content.Width - ((columns - 1) * horizontalGap);
         double availableHeight = content.Height - ((rows - 1) * verticalGap);
         if (availableWidth <= 1 || availableHeight <= 1)
@@ -160,27 +232,219 @@ public static class PrintPackageLayout
                     content.MinY + (row * (cellHeight + verticalGap)),
                     cellWidth,
                     cellHeight);
-                items.Add(MakeItem(sourceIndices[slot], sourceSizes[sourceIndices[slot]], cell, package));
+                items.Add(MakeItem(
+                    sourceIndices[slot],
+                    sourceSizes[sourceIndices[slot]],
+                    cell,
+                    package,
+                    pixelsPerMm));
             }
-            pages.Add(new PrintPackagePageLayout(pageIndex, canvas, content, items));
+            pages.Add(new PrintPackagePageLayout(pageIndex, canvas, content, items)
+            {
+                CropMarks = CropMarks(items, content, package, pixelsPerMm),
+            });
         }
         return pages;
+    }
+
+    /// <summary>
+    /// 픽처 패키지 한 판씩입니다. 칸 수가 템플릿에 매여 있어, 사진이 칸보다 적으면 앞에서부터
+    /// 다시 씁니다 — macOS 도 <c>slot % sourceIndices.count</c> 로 돌려 씁니다.
+    /// </summary>
+    private static IReadOnlyList<PrintPackagePageLayout>? PicturePackagePages(
+        IReadOnlyList<PrintSizeMm> sourceSizes,
+        PrintPackageSettings package,
+        PrintSizeMm canvas,
+        PrintRect content,
+        double horizontalGap,
+        double verticalGap,
+        double pixelsPerMm)
+    {
+        int capacity = package.PictureTemplate switch
+        {
+            PrintPicturePackageTemplate.TwoUp => 2,
+            PrintPicturePackageTemplate.FourUp => 4,
+            _ => 3,
+        };
+        if (PictureCells(package.PictureTemplate, content, horizontalGap, verticalGap)
+            is not { } cells)
+        {
+            return null;
+        }
+        List<PrintPackagePageLayout> pages = [];
+        for (int start = 0; start < sourceSizes.Count; start += capacity)
+        {
+            int[] sourceIndices = [.. Enumerable.Range(
+                start,
+                Math.Min(capacity, sourceSizes.Count - start))];
+            List<PrintPackageItemLayout> items = new(cells.Count);
+            for (int slot = 0; slot < cells.Count; ++slot)
+            {
+                int sourceIndex = sourceIndices[slot % sourceIndices.Length];
+                items.Add(MakeItem(
+                    sourceIndex,
+                    sourceSizes[sourceIndex],
+                    cells[slot],
+                    package,
+                    pixelsPerMm));
+            }
+            pages.Add(new PrintPackagePageLayout(pages.Count, canvas, content, items)
+            {
+                CropMarks = CropMarks(items, content, package, pixelsPerMm),
+            });
+            if (pages.Count > PrintPackageSettings.MaximumPageCount)
+            {
+                return null;
+            }
+        }
+        return pages;
+    }
+
+    /// <summary>
+    /// 템플릿의 칸입니다. macOS <c>pictureCells</c> 와 같은 비율 — 큰 칸이 가로의 2/3 를
+    /// 가지고, 작은 두 칸이 나머지를 위아래로 나눕니다.
+    /// </summary>
+    private static IReadOnlyList<PrintRect>? PictureCells(
+        PrintPicturePackageTemplate template,
+        PrintRect content,
+        double horizontalGap,
+        double verticalGap)
+    {
+        switch (template)
+        {
+            case PrintPicturePackageTemplate.TwoUp:
+            {
+                double width = (content.Width - horizontalGap) / 2;
+                return width <= 1
+                    ? null
+                    : new PrintRect[]
+                    {
+                        new(content.MinX, content.MinY, width, content.Height),
+                        new(content.MinX + width + horizontalGap, content.MinY, width,
+                            content.Height),
+                    };
+            }
+
+            case PrintPicturePackageTemplate.FourUp:
+            {
+                double width = (content.Width - horizontalGap) / 2;
+                double height = (content.Height - verticalGap) / 2;
+                if (width <= 1 || height <= 1)
+                {
+                    return null;
+                }
+                List<PrintRect> quad = new(4);
+                for (int slot = 0; slot < 4; ++slot)
+                {
+                    quad.Add(new PrintRect(
+                        content.MinX + ((slot % 2) * (width + horizontalGap)),
+                        content.MinY + ((slot / 2) * (height + verticalGap)),
+                        width,
+                        height));
+                }
+                return quad;
+            }
+
+            default:
+            {
+                double availableWidth = content.Width - horizontalGap;
+                double availableHeight = content.Height - verticalGap;
+                if (availableWidth <= 2 || availableHeight <= 2)
+                {
+                    return null;
+                }
+                double largeWidth = availableWidth * 2 / 3;
+                double smallWidth = availableWidth - largeWidth;
+                double smallHeight = availableHeight / 2;
+                double smallX = content.MinX + largeWidth + horizontalGap;
+                return new PrintRect[]
+                {
+                    new(content.MinX, content.MinY, largeWidth, content.Height),
+                    new(smallX, content.MinY, smallWidth, smallHeight),
+                    new(smallX, content.MinY + smallHeight + verticalGap, smallWidth, smallHeight),
+                };
+            }
+        }
+    }
+
+    /// <summary>
+    /// 재단선입니다. macOS 와 같이 칸 모서리 밖으로 뻗되 **판을 넘지 않습니다** — 넘은 선은
+    /// 잘려 나가 인쇄물에 반쪽만 남습니다.
+    /// </summary>
+    private static IReadOnlyList<PrintLineSegment> CropMarks(
+        IReadOnlyList<PrintPackageItemLayout> items,
+        PrintRect content,
+        PrintPackageSettings package,
+        double pixelsPerMm)
+    {
+        if (!package.ShowsCropMarks || package.CropMarkLengthMm <= 0)
+        {
+            return [];
+        }
+        double length = package.CropMarkLengthMm * pixelsPerMm;
+        List<PrintLineSegment> segments = new(items.Count * 8);
+        foreach (PrintPackageItemLayout item in items)
+        {
+            PrintRect cell = item.CellRect;
+            double left = Math.Max(content.MinX, cell.MinX - length);
+            double right = Math.Min(content.MaxX, cell.MaxX + length);
+            double top = Math.Max(content.MinY, cell.MinY - length);
+            double bottom = Math.Min(content.MaxY, cell.MaxY + length);
+            Add(segments, left, cell.MinY, cell.MinX, cell.MinY);
+            Add(segments, left, cell.MaxY, cell.MinX, cell.MaxY);
+            Add(segments, cell.MaxX, cell.MinY, right, cell.MinY);
+            Add(segments, cell.MaxX, cell.MaxY, right, cell.MaxY);
+            Add(segments, cell.MinX, top, cell.MinX, cell.MinY);
+            Add(segments, cell.MaxX, top, cell.MaxX, cell.MinY);
+            Add(segments, cell.MinX, cell.MaxY, cell.MinX, bottom);
+            Add(segments, cell.MaxX, cell.MaxY, cell.MaxX, bottom);
+        }
+        return segments;
+    }
+
+    private static void Add(
+        List<PrintLineSegment> segments,
+        double startX,
+        double startY,
+        double endX,
+        double endY)
+    {
+        // 길이 0 인 선은 그리지 않습니다 — 칸이 판 가장자리에 붙으면 그런 선이 생깁니다.
+        if (Math.Abs(startX - endX) < 0.001 && Math.Abs(startY - endY) < 0.001)
+        {
+            return;
+        }
+        segments.Add(new PrintLineSegment(startX, startY, endX, endY));
     }
 
     private static PrintPackageItemLayout MakeItem(
         int sourceIndex,
         PrintSizeMm sourceSize,
         PrintRect cell,
-        PrintPackageSettings package)
+        PrintPackageSettings package,
+        double pixelsPerMm)
     {
+        // 캡션은 칸 아래를 차지하고, 사진은 남은 자리에 듭니다.
+        double captionHeight = package.CaptionMode == PrintPackageCaptionMode.None
+            ? 0
+            : Math.Min(package.CaptionHeightMm * pixelsPerMm, cell.Height / 2);
+        PrintRect? caption = captionHeight > 0
+            ? new PrintRect(cell.X, cell.MaxY - captionHeight, cell.Width, captionHeight)
+            : null;
+        PrintRect imageCell = captionHeight > 0
+            ? new PrintRect(cell.X, cell.Y, cell.Width, cell.Height - captionHeight)
+            : cell;
+
         PrintSizeMm effective = sourceSize;
         int quarterTurns = 0;
         if (package.RotateToFit)
         {
             // 돌렸을 때 칸을 더 많이 채우면 돌립니다. 같으면 돌리지 않습니다 — 이유 없이
             // 돌아간 사진은 사용자가 실수로 본 것으로 읽습니다.
-            double upright = FitScale(sourceSize, cell);
-            double turned = FitScale(new PrintSizeMm(sourceSize.Height, sourceSize.Width), cell);
+            double upright = FitScale(sourceSize, imageCell);
+            double turned = FitScale(
+                new PrintSizeMm(sourceSize.Height, sourceSize.Width),
+                imageCell);
             if (turned > upright)
             {
                 effective = new PrintSizeMm(sourceSize.Height, sourceSize.Width);
@@ -188,9 +452,12 @@ public static class PrintPackageLayout
             }
         }
         PrintRect image = package.ContentMode == PrintPackageContentMode.Fill
-            ? AspectFill(effective, cell)
-            : PrintCompositionLayout.AspectFit(effective, cell);
-        return new PrintPackageItemLayout(sourceIndex, cell, image, quarterTurns);
+            ? AspectFill(effective, imageCell)
+            : PrintCompositionLayout.AspectFit(effective, imageCell);
+        return new PrintPackageItemLayout(sourceIndex, cell, image, quarterTurns)
+        {
+            CaptionRect = caption,
+        };
     }
 
     private static double FitScale(PrintSizeMm size, PrintRect bounds) =>

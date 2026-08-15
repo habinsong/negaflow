@@ -137,6 +137,32 @@ public sealed partial class PrintWorkspaceView
             Choice(PrintSheetBackground.Gray, "printBackgroundGray"),
             Choice(PrintSheetBackground.Black, "printBackgroundBlack"),
         };
+        TemplateText.Text = AppResources.Get("printTemplate", "Text");
+        TemplateSelector.ItemsSource = new[]
+        {
+            Choice(PrintPicturePackageTemplate.OneLargeTwoSmall,
+                "printTemplateOneLargeTwoSmall"),
+            Choice(PrintPicturePackageTemplate.TwoUp, "printTemplateTwoUp"),
+            Choice(PrintPicturePackageTemplate.FourUp, "printTemplateFourUp"),
+        };
+        CaptionModeText.Text = AppResources.Get("printCaption", "Text");
+        CaptionModeSelector.ItemsSource = new[]
+        {
+            Choice(PrintPackageCaptionMode.None, "printCaptionNone"),
+            Choice(PrintPackageCaptionMode.FileName, "printCaptionFileName"),
+            Choice(PrintPackageCaptionMode.FrameNumber, "printCaptionFrameNumber"),
+            Choice(PrintPackageCaptionMode.SequenceNumber, "printCaptionSequence"),
+            Choice(PrintPackageCaptionMode.Rating, "printCaptionRating"),
+        };
+        SetToggleLabel(CropMarksToggle, AppResources.Get("printCropMarks", "Text"));
+        ViewSectionText.Text = AppResources.Get("printViewSection", "Text");
+        SetToggleLabel(RulersToggle, AppResources.Get("printRulers", "Text"));
+        RulerUnitText.Text = AppResources.Get("printRulerUnit", "Text");
+        RulerUnitSelector.ItemsSource = new[]
+        {
+            Choice(PrintRulerUnit.Centimeters, "printRulerCentimeters"),
+            Choice(PrintRulerUnit.Inches, "printRulerInches"),
+        };
     }
 
     private static PrintChoice<T> Choice<T>(T value, string key) =>
@@ -201,6 +227,11 @@ public sealed partial class PrintWorkspaceView
             RotateToFit = RotateToFitToggle.IsOn,
             RepeatOnePhotoPerPage = RepeatToggle.IsOn,
             SheetBackground = Selected(SheetBackgroundSelector, current.SheetBackground),
+            PictureTemplate = Selected(TemplateSelector, current.PictureTemplate),
+            CaptionMode = Selected(CaptionModeSelector, current.CaptionMode),
+            ShowsCropMarks = CropMarksToggle.IsOn,
+            ShowsRulers = RulersToggle.IsOn,
+            RulerUnit = Selected(RulerUnitSelector, current.RulerUnit),
         });
         SynchronizePrint();
     }
@@ -232,6 +263,11 @@ public sealed partial class PrintWorkspaceView
             RotateToFitToggle.IsOn = print.RotateToFit;
             RepeatToggle.IsOn = print.RepeatOnePhotoPerPage;
             Select(SheetBackgroundSelector, print.SheetBackground);
+            Select(TemplateSelector, print.PictureTemplate);
+            Select(CaptionModeSelector, print.CaptionMode);
+            CropMarksToggle.IsOn = print.ShowsCropMarks;
+            RulersToggle.IsOn = print.ShowsRulers;
+            Select(RulerUnitSelector, print.RulerUnit);
         }
         finally
         {
@@ -249,6 +285,11 @@ public sealed partial class PrintWorkspaceView
         SheetCard.Visibility = PrintPreferences.PackageModeFor(print.LayoutMode) is null
             ? Visibility.Collapsed
             : Visibility.Visible;
+        // 템플릿은 픽처 패키지에만 있습니다 — 컨택트 시트는 행·열이 곧 배치입니다.
+        TemplatePanel.Visibility = print.LayoutMode == PrintLayoutMode.PicturePackage
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        RulerUnitSelector.IsEnabled = print.ShowsRulers;
         DrawPrintPreview();
     }
 
@@ -376,6 +417,23 @@ public sealed partial class PrintWorkspaceView
                 scale,
                 item.QuarterTurns));
         }
+        foreach (PrintPackageItemLayout item in page.Items)
+        {
+            if (item.CaptionRect is not { } caption)
+            {
+                continue;
+            }
+            // 캡션 자리를 옅게 표시합니다. 글자는 판을 쓸 때 들어갑니다 — 미리보기에서 자리를
+            // 보여야 사용자가 사진이 왜 위로 물러났는지 압니다.
+            PageCanvas.Children.Add(Rect(
+                caption,
+                scale,
+                Windows.UI.Color.FromArgb(0x33, 0x80, 0x80, 0x80)));
+        }
+        foreach (PrintLineSegment segment in page.CropMarks)
+        {
+            PageCanvas.Children.Add(Line(segment, scale, print.SheetBackground));
+        }
         PageCountText.Text = pages.Count > 1
             ? AppResources.FormatIntegers("printPageCountFormat", "Text", pages.Count)
             : string.Empty;
@@ -472,6 +530,25 @@ public sealed partial class PrintWorkspaceView
     private Microsoft.UI.WindowId? printWindowId;
 
     public void AttachWindow(Microsoft.UI.WindowId windowId) => printWindowId = windowId;
+
+    /// <summary>
+    /// 재단선 하나입니다. 종이가 어두우면 밝게 그립니다 — macOS
+    /// <c>prefersLightForeground</c> 와 같은 판단입니다.
+    /// </summary>
+    private static Microsoft.UI.Xaml.Shapes.Line Line(
+        PrintLineSegment segment,
+        double scale,
+        PrintSheetBackground background) => new()
+    {
+        X1 = segment.StartX * scale,
+        Y1 = segment.StartY * scale,
+        X2 = segment.EndX * scale,
+        Y2 = segment.EndY * scale,
+        StrokeThickness = 1,
+        Stroke = new SolidColorBrush(background == PrintSheetBackground.White
+            ? Windows.UI.Color.FromArgb(0x99, 0x00, 0x00, 0x00)
+            : Windows.UI.Color.FromArgb(0x99, 0xFF, 0xFF, 0xFF)),
+    };
 
     private static Rectangle Rect(
         PrintRect rect,

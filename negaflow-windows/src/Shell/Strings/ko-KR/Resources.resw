@@ -1103,4 +1103,20 @@
   <data name="printPageCountFormat.Text" xml:space="preserve"><value>%d장</value><comment>Windows only: sheet count over the canvas.</comment></data>
   <data name="printExportDone.Text" xml:space="preserve"><value>{0} 에 저장했습니다.</value><comment>Windows only: print export result line.</comment></data>
   <data name="printExportFailed.Text" xml:space="preserve"><value>인화물을 쓰지 못했습니다.</value><comment>Windows only: print export failure line.</comment></data>
+  <data name="printTemplate.Text" xml:space="preserve"><value>템플릿</value><comment>AppLocalizedPhrase.template</comment></data>
+  <data name="printTemplateOneLargeTwoSmall.Text" xml:space="preserve"><value>큰 1 + 작은 2</value><comment>PrintPicturePackageTemplate.oneLargeTwoSmall</comment></data>
+  <data name="printTemplateTwoUp.Text" xml:space="preserve"><value>2분할</value><comment>PrintPicturePackageTemplate.twoUp</comment></data>
+  <data name="printTemplateFourUp.Text" xml:space="preserve"><value>4분할</value><comment>PrintPicturePackageTemplate.fourUp</comment></data>
+  <data name="printCaption.Text" xml:space="preserve"><value>캐션</value><comment>AppLocalizedPhrase.caption</comment></data>
+  <data name="printCaptionNone.Text" xml:space="preserve"><value>없음</value><comment>PrintPackageCaptionMode.none</comment></data>
+  <data name="printCaptionFileName.Text" xml:space="preserve"><value>파일 이름</value><comment>PrintPackageCaptionMode.fileName</comment></data>
+  <data name="printCaptionFrameNumber.Text" xml:space="preserve"><value>사진 번호</value><comment>PrintPackageCaptionMode.frameNumber</comment></data>
+  <data name="printCaptionSequence.Text" xml:space="preserve"><value>순번</value><comment>PrintPackageCaptionMode.sequenceNumber</comment></data>
+  <data name="printCaptionRating.Text" xml:space="preserve"><value>별점</value><comment>PrintPackageCaptionMode.rating</comment></data>
+  <data name="printCropMarks.Text" xml:space="preserve"><value>재단선</value><comment>AppLocalizedPhrase.cropMarks</comment></data>
+  <data name="printViewSection.Text" xml:space="preserve"><value>보기</value><comment>AppLocalizedPhrase.view</comment></data>
+  <data name="printRulers.Text" xml:space="preserve"><value>눈금자</value><comment>AppLocalizedPhrase.rulers</comment></data>
+  <data name="printRulerUnit.Text" xml:space="preserve"><value>단위</value><comment>AppLocalizedPhrase.rulerUnit</comment></data>
+  <data name="printRulerInches.Text" xml:space="preserve"><value>인치</value><comment>PrintRulerUnit.inches</comment></data>
+  <data name="printRulerCentimeters.Text" xml:space="preserve"><value>센티미터</value><comment>PrintRulerUnit.centimeters</comment></data>
 </root>

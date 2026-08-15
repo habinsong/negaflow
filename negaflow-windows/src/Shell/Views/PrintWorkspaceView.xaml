@@ -302,6 +302,50 @@
                                 DisplayMemberPath="Label"
                                 FontSize="12"
                                 SelectionChanged="OnPrintSettingChanged" />
+                            <!-- 픽처 패키지에서만 나옵니다. -->
+                            <StackPanel x:Name="TemplatePanel" Spacing="4" Visibility="Collapsed">
+                                <TextBlock x:Name="TemplateText" FontSize="11" />
+                                <ComboBox
+                                    x:Name="TemplateSelector"
+                                    HorizontalAlignment="Stretch"
+                                    AutomationProperties.AutomationId="negaflow.print.template"
+                                    DisplayMemberPath="Label"
+                                    FontSize="12"
+                                    SelectionChanged="OnPrintSettingChanged" />
+                            </StackPanel>
+                            <TextBlock x:Name="CaptionModeText" FontSize="11" />
+                            <ComboBox
+                                x:Name="CaptionModeSelector"
+                                HorizontalAlignment="Stretch"
+                                AutomationProperties.AutomationId="negaflow.print.caption-mode"
+                                DisplayMemberPath="Label"
+                                FontSize="12"
+                                SelectionChanged="OnPrintSettingChanged" />
+                            <ToggleSwitch
+                                x:Name="CropMarksToggle"
+                                AutomationProperties.AutomationId="negaflow.print.crop-marks"
+                                Toggled="OnPrintToggled" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Padding="14" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="9">
+                        <StackPanel Spacing="10">
+                            <StackPanel Orientation="Horizontal" Spacing="7">
+                                <FontIcon FontSize="13" Glyph="&#xE1A6;" />
+                                <TextBlock x:Name="ViewSectionText" FontSize="13" FontWeight="SemiBold" />
+                            </StackPanel>
+                            <ToggleSwitch
+                                x:Name="RulersToggle"
+                                AutomationProperties.AutomationId="negaflow.print.rulers"
+                                Toggled="OnPrintToggled" />
+                            <TextBlock x:Name="RulerUnitText" FontSize="11" />
+                            <ComboBox
+                                x:Name="RulerUnitSelector"
+                                HorizontalAlignment="Stretch"
+                                AutomationProperties.AutomationId="negaflow.print.ruler-unit"
+                                DisplayMemberPath="Label"
+                                FontSize="12"
+                                SelectionChanged="OnPrintSettingChanged" />
                         </StackPanel>
                     </Border>
 

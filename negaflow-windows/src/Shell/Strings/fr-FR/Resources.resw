@@ -1103,4 +1103,20 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="printPageCountFormat.Text" xml:space="preserve"><value>%d pages</value><comment>Windows only: sheet count over the canvas.</comment></data>
   <data name="printExportDone.Text" xml:space="preserve"><value>Enregistré dans {0}</value><comment>Windows only: print export result line.</comment></data>
   <data name="printExportFailed.Text" xml:space="preserve"><value>Impossible d’écrire le tirage.</value><comment>Windows only: print export failure line.</comment></data>
+  <data name="printTemplate.Text" xml:space="preserve"><value>Modèle</value><comment>AppLocalizedPhrase.template</comment></data>
+  <data name="printTemplateOneLargeTwoSmall.Text" xml:space="preserve"><value>1 grande + 2 petites</value><comment>PrintPicturePackageTemplate.oneLargeTwoSmall</comment></data>
+  <data name="printTemplateTwoUp.Text" xml:space="preserve"><value>2 par page</value><comment>PrintPicturePackageTemplate.twoUp</comment></data>
+  <data name="printTemplateFourUp.Text" xml:space="preserve"><value>4 par page</value><comment>PrintPicturePackageTemplate.fourUp</comment></data>
+  <data name="printCaption.Text" xml:space="preserve"><value>Légende</value><comment>AppLocalizedPhrase.caption</comment></data>
+  <data name="printCaptionNone.Text" xml:space="preserve"><value>Aucune</value><comment>PrintPackageCaptionMode.none</comment></data>
+  <data name="printCaptionFileName.Text" xml:space="preserve"><value>Nom de fichier</value><comment>PrintPackageCaptionMode.fileName</comment></data>
+  <data name="printCaptionFrameNumber.Text" xml:space="preserve"><value>Numéro d’image</value><comment>PrintPackageCaptionMode.frameNumber</comment></data>
+  <data name="printCaptionSequence.Text" xml:space="preserve"><value>Séquence</value><comment>PrintPackageCaptionMode.sequenceNumber</comment></data>
+  <data name="printCaptionRating.Text" xml:space="preserve"><value>Note</value><comment>PrintPackageCaptionMode.rating</comment></data>
+  <data name="printCropMarks.Text" xml:space="preserve"><value>Traits de coupe</value><comment>AppLocalizedPhrase.cropMarks</comment></data>
+  <data name="printViewSection.Text" xml:space="preserve"><value>Présentation</value><comment>AppLocalizedPhrase.view</comment></data>
+  <data name="printRulers.Text" xml:space="preserve"><value>Règles</value><comment>AppLocalizedPhrase.rulers</comment></data>
+  <data name="printRulerUnit.Text" xml:space="preserve"><value>Unité</value><comment>AppLocalizedPhrase.rulerUnit</comment></data>
+  <data name="printRulerInches.Text" xml:space="preserve"><value>Pouces</value><comment>PrintRulerUnit.inches</comment></data>
+  <data name="printRulerCentimeters.Text" xml:space="preserve"><value>Centimètres</value><comment>PrintRulerUnit.centimeters</comment></data>
 </root>

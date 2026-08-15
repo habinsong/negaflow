@@ -3215,6 +3215,127 @@ internal static class Program
                 safe.ContactColumns == 20 && safe.HorizontalSpacingMm == 4,
             "print_preferences_clamp_a_hand_edited_file");
         Check(safe.Composition().IsValid, "print_normalized_preferences_make_a_valid_page");
+
+        VerifyPicturePackage(a4);
+        VerifyPrintCaptionsAndCropMarks(a4);
+    }
+
+    /// <summary>
+    /// 픽처 패키지는 칸이 템플릿에 매여 있습니다. 사진이 칸보다 적으면 앞에서부터 다시 써야
+    /// 합니다 — 빈 칸을 남기면 인화지 한 장이 반만 쓰입니다.
+    /// </summary>
+    private static void VerifyPicturePackage(PrintCompositionSettings a4)
+    {
+        PrintPackageSettings twoUp = new()
+        {
+            Mode = PrintPackageMode.PicturePackage,
+            PictureTemplate = PrintPicturePackageTemplate.TwoUp,
+        };
+        IReadOnlyList<PrintPackagePageLayout> pages = PrintPackageLayout.Make(
+            [new PrintSizeMm(3000, 2000), new PrintSizeMm(2000, 3000)],
+            a4,
+            twoUp)!;
+        Check(pages.Count == 1 && pages[0].Items.Count == 2, "print_two_up_holds_two");
+        Check(
+            pages[0].Items[0].CellRect.X < pages[0].Items[1].CellRect.X,
+            "print_two_up_sits_side_by_side");
+
+        // 사진 한 장이면 두 칸 모두 그 사진입니다.
+        IReadOnlyList<PrintPackagePageLayout> single = PrintPackageLayout.Make(
+            [new PrintSizeMm(3000, 2000)],
+            a4,
+            twoUp)!;
+        Check(
+            single[0].Items.Count == 2 && single[0].Items.All(item => item.SourceIndex == 0),
+            "print_picture_package_reuses_a_single_photo");
+
+        // 큰 칸 하나에 작은 칸 둘. 큰 칸이 가로의 2/3 를 가집니다.
+        IReadOnlyList<PrintPackagePageLayout> mixed = PrintPackageLayout.Make(
+            [.. Enumerable.Repeat(new PrintSizeMm(3000, 2000), 3)],
+            a4,
+            twoUp with { PictureTemplate = PrintPicturePackageTemplate.OneLargeTwoSmall })!;
+        Check(mixed[0].Items.Count == 3, "print_one_large_two_small_holds_three");
+        Check(
+            mixed[0].Items[0].CellRect.Width > mixed[0].Items[1].CellRect.Width * 1.5,
+            "print_one_large_two_small_gives_the_large_cell_two_thirds");
+        Check(
+            mixed[0].Items[1].CellRect.Y < mixed[0].Items[2].CellRect.Y,
+            "print_one_large_two_small_stacks_the_small_cells");
+
+        // 넉 장은 2×2 입니다.
+        IReadOnlyList<PrintPackagePageLayout> quad = PrintPackageLayout.Make(
+            [.. Enumerable.Repeat(new PrintSizeMm(3000, 2000), 4)],
+            a4,
+            twoUp with { PictureTemplate = PrintPicturePackageTemplate.FourUp })!;
+        Check(quad[0].Items.Count == 4, "print_four_up_holds_four");
+        Check(
+            quad[0].Items[2].CellRect.Y > quad[0].Items[0].CellRect.Y &&
+                Math.Abs(quad[0].Items[2].CellRect.X - quad[0].Items[0].CellRect.X) < 0.001,
+            "print_four_up_is_two_by_two");
+
+        // 다섯 장이면 판이 둘입니다.
+        IReadOnlyList<PrintPackagePageLayout> spill = PrintPackageLayout.Make(
+            [.. Enumerable.Repeat(new PrintSizeMm(3000, 2000), 5)],
+            a4,
+            twoUp with { PictureTemplate = PrintPicturePackageTemplate.FourUp })!;
+        Check(spill.Count == 2, "print_picture_package_spills_to_a_second_page");
+    }
+
+    /// <summary>
+    /// 캡션은 칸 아래를 차지하고 사진은 그만큼 물러납니다. 재단선은 판을 넘지 않습니다 —
+    /// 넘은 선은 잘려 반쪽만 남습니다.
+    /// </summary>
+    private static void VerifyPrintCaptionsAndCropMarks(PrintCompositionSettings a4)
+    {
+        PrintPackageSettings plain = new() { ContactRows = 2, ContactColumns = 2 };
+        PrintPackageSettings captioned = plain with
+        {
+            CaptionMode = PrintPackageCaptionMode.FileName,
+            CaptionHeightMm = 6,
+        };
+        PrintSizeMm[] four = [.. Enumerable.Repeat(new PrintSizeMm(3000, 2000), 4)];
+        PrintPackageItemLayout without = PrintPackageLayout.Make(four, a4, plain)![0].Items[0];
+        PrintPackageItemLayout with = PrintPackageLayout.Make(four, a4, captioned)![0].Items[0];
+
+        Check(without.CaptionRect is null, "print_no_caption_leaves_no_room");
+        Check(with.CaptionRect is not null, "print_caption_gets_a_rect");
+        Check(
+            Math.Abs(with.CellRect.Height - without.CellRect.Height) < 0.001,
+            "print_caption_does_not_change_the_cell");
+        Check(
+            with.ImageRect.Height < without.ImageRect.Height,
+            "print_caption_pushes_the_photo_up");
+        Check(
+            with.CaptionRect!.Value.MaxY <= with.CellRect.MaxY + 0.001 &&
+                with.CaptionRect.Value.MinY >= with.ImageRect.MaxY - 0.001,
+            "print_caption_sits_below_the_photo");
+
+        // 캡션이 칸보다 크면 절반까지만 씁니다 — 사진이 사라지면 안 됩니다.
+        PrintPackageItemLayout huge = PrintPackageLayout.Make(
+            four,
+            a4,
+            captioned with { CaptionHeightMm = 40 })![0].Items[0];
+        Check(
+            huge.CaptionRect!.Value.Height <= (huge.CellRect.Height / 2) + 0.001 &&
+                huge.ImageRect.Height > 1,
+            "print_caption_never_eats_the_whole_cell");
+
+        // 재단선은 칸마다 여덟 개이되, 판을 넘는 선은 짧아집니다.
+        PrintPackagePageLayout marked = PrintPackageLayout.Make(
+            four,
+            a4,
+            plain with { ShowsCropMarks = true, CropMarkLengthMm = 4 })![0];
+        Check(marked.CropMarks.Count > 0, "print_crop_marks_appear");
+        Check(
+            marked.CropMarks.All(segment =>
+                segment.StartX >= marked.ContentRect.MinX - 0.001 &&
+                segment.EndX <= marked.ContentRect.MaxX + 0.001 &&
+                segment.StartY >= marked.ContentRect.MinY - 0.001 &&
+                segment.EndY <= marked.ContentRect.MaxY + 0.001),
+            "print_crop_marks_stay_inside_the_page");
+        Check(
+            PrintPackageLayout.Make(four, a4, plain)![0].CropMarks.Count == 0,
+            "print_crop_marks_are_off_by_default");
     }
 
     private static void VerifyLibraryDocument()

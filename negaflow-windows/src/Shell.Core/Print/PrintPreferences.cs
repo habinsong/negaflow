@@ -42,6 +42,20 @@ public sealed record PrintPreferences
 
     public bool RepeatOnePhotoPerPage { get; init; }
 
+    public PrintPicturePackageTemplate PictureTemplate { get; init; } =
+        PrintPicturePackageTemplate.OneLargeTwoSmall;
+
+    public PrintPackageCaptionMode CaptionMode { get; init; } = PrintPackageCaptionMode.None;
+
+    public PrintPackageCaptionAlignment CaptionAlignment { get; init; } =
+        PrintPackageCaptionAlignment.Center;
+
+    public double CaptionHeightMm { get; init; } = 6;
+
+    public bool ShowsCropMarks { get; init; }
+
+    public double CropMarkLengthMm { get; init; } = 4;
+
     /// <summary>
     /// 이 값들로 만든 판 설정입니다. 레이아웃 모드가 공정을 고르면 그 겉모습이 함께 갑니다 —
     /// macOS <c>presentationStyle</c> 과 같은 대응입니다.
@@ -69,6 +83,12 @@ public sealed record PrintPreferences
         RotateToFit = RotateToFit,
         RepeatOnePhotoPerPage = RepeatOnePhotoPerPage,
         SheetBackground = SheetBackground,
+        PictureTemplate = PictureTemplate,
+        CaptionMode = CaptionMode,
+        CaptionAlignment = CaptionAlignment,
+        CaptionHeightMm = CaptionHeightMm,
+        ShowsCropMarks = ShowsCropMarks,
+        CropMarkLengthMm = CropMarkLengthMm,
     };
 
     /// <summary>
@@ -120,5 +140,18 @@ public sealed record PrintPreferences
             ? Math.Clamp(VerticalSpacingMm, 0, 50)
             : 4,
         ContentMode = Enum.IsDefined(ContentMode) ? ContentMode : PrintPackageContentMode.Fit,
+        PictureTemplate = Enum.IsDefined(PictureTemplate)
+            ? PictureTemplate
+            : PrintPicturePackageTemplate.OneLargeTwoSmall,
+        CaptionMode = Enum.IsDefined(CaptionMode) ? CaptionMode : PrintPackageCaptionMode.None,
+        CaptionAlignment = Enum.IsDefined(CaptionAlignment)
+            ? CaptionAlignment
+            : PrintPackageCaptionAlignment.Center,
+        CaptionHeightMm = double.IsFinite(CaptionHeightMm)
+            ? Math.Clamp(CaptionHeightMm, 0, 40)
+            : 6,
+        CropMarkLengthMm = double.IsFinite(CropMarkLengthMm)
+            ? Math.Clamp(CropMarkLengthMm, 0, 30)
+            : 4,
     };
 }

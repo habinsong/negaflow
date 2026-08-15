@@ -93,7 +93,7 @@ public static class PrintSheetWriter
                 foreach (PrintPackagePageLayout page in pages)
                 {
                     string path = PagePath(destinationFolder, baseName, page.PageIndex, pages.Count);
-                    if (!await WritePageAsync(path, page.CanvasSize, composition, developed, page.Items))
+                    if (!await WritePageAsync(path, page, composition, developed))
                     {
                         return new PrintSheetWriteResult(PrintSheetWriteStatus.WriteFailed, written);
                     }
@@ -194,15 +194,14 @@ public static class PrintSheetWriter
 
     private static async Task<bool> WritePageAsync(
         string destination,
-        PrintSizeMm canvas,
+        PrintPackagePageLayout layout,
         PrintCompositionSettings composition,
-        IReadOnlyList<string> developed,
-        IReadOnlyList<PrintPackageItemLayout> items)
+        IReadOnlyList<string> developed)
     {
-        int width = (int)canvas.Width;
-        int height = (int)canvas.Height;
+        int width = (int)layout.CanvasSize.Width;
+        int height = (int)layout.CanvasSize.Height;
         byte[] page = NewPage(width, height, composition.SheetBackground);
-        foreach (PrintPackageItemLayout item in items)
+        foreach (PrintPackageItemLayout item in layout.Items)
         {
             if (!await BlitAsync(
                     page,
@@ -215,7 +214,41 @@ public static class PrintSheetWriter
                 return false;
             }
         }
+        // 재단선은 사진 위에 얹습니다 — 칸 모서리를 가리키는 선이므로 사진 아래로 들어가면
+        // 보이지 않습니다.
+        bool light = composition.SheetBackground != PrintSheetBackground.White;
+        foreach (PrintLineSegment segment in layout.CropMarks)
+        {
+            DrawLine(page, width, height, segment, light);
+        }
         return await EncodeAsync(destination, page, width, height, composition.Dpi);
+    }
+
+    /// <summary>
+    /// 재단선 한 줄입니다. 가로나 세로로만 놓이므로 기울어진 선을 그릴 일이 없습니다 — macOS 도
+    /// 칸 모서리에서 수평·수직으로만 뻗습니다.
+    /// </summary>
+    private static void DrawLine(
+        byte[] page,
+        int width,
+        int height,
+        PrintLineSegment segment,
+        bool light)
+    {
+        byte level = light ? (byte)0xFF : (byte)0x00;
+        int x0 = (int)Math.Round(Math.Min(segment.StartX, segment.EndX));
+        int x1 = (int)Math.Round(Math.Max(segment.StartX, segment.EndX));
+        int y0 = (int)Math.Round(Math.Min(segment.StartY, segment.EndY));
+        int y1 = (int)Math.Round(Math.Max(segment.StartY, segment.EndY));
+        // 한 화소 선은 눈에 잘 띄지 않습니다. macOS 와 같이 얇게 두되 최소 한 화소는 채웁니다.
+        Fill(
+            page,
+            width,
+            height,
+            new PrintRect(x0, y0, Math.Max(1, x1 - x0), Math.Max(1, y1 - y0)),
+            level,
+            level,
+            level);
     }
 
     /// <summary>BGRA8 한 장입니다. 종이 색으로 채워 시작합니다.</summary>
