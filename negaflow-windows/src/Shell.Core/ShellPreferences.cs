@@ -1,4 +1,5 @@
 using Negaflow.Shell.Develop;
+using Negaflow.Shell.Print;
 using Negaflow.Shell.Shortcuts;
 
 namespace Negaflow.Shell;
@@ -43,6 +44,9 @@ public sealed record ShellPreferences
     /// <summary>사용자가 바꾼 단축키입니다. 기본값과 같은 것은 담지 않습니다.</summary>
     public WorkflowShortcutMap Shortcuts { get; init; } = new();
 
+    /// <summary>인화 화면의 설정입니다. macOS 처럼 앱 전체에 하나만 있습니다.</summary>
+    public PrintPreferences Print { get; init; } = new();
+
     public ShellPreferences Normalize()
     {
         return this with
@@ -52,6 +56,7 @@ public sealed record ShellPreferences
             SoftProof = (SoftProof ?? new SoftProofPreferences()).Normalize(),
             ExportRecipes = (ExportRecipes ?? new ExportRecipeLibrary()).Normalize(),
             Shortcuts = (Shortcuts ?? new WorkflowShortcutMap()).Normalize(),
+            Print = (Print ?? new PrintPreferences()).Normalize(),
             SelectedWorkspace = Enum.IsDefined(SelectedWorkspace)
                 ? SelectedWorkspace
                 : WorkspaceModule.Develop,

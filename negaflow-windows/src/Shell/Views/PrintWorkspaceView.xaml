@@ -75,11 +75,38 @@
                 <RowDefinition Height="30" />
             </Grid.RowDefinitions>
 
-            <Grid Grid.Row="0" AutomationProperties.AutomationId="negaflow.print.canvas" Background="#FF282828">
-                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
+            <Grid
+                x:Name="CanvasHost"
+                Grid.Row="0"
+                AutomationProperties.AutomationId="negaflow.print.canvas"
+                Background="#FF282828"
+                SizeChanged="OnCanvasHostSizeChanged">
+                <!-- 판 한 장입니다. 화면과 내보내기가 같은 layout 값을 쓰므로, 여기 보이는
+                     비율이 곧 나올 파일의 비율입니다. -->
+                <Border
+                    x:Name="PageBorder"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Background="White"
+                    BorderBrush="#33000000"
+                    BorderThickness="1">
+                    <Canvas x:Name="PageCanvas" />
+                </Border>
+                <StackPanel
+                    x:Name="NoFramePanel"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Spacing="10">
                     <FontIcon FontSize="42" Foreground="#FF8A8A8A" Glyph="&#xE749;" />
                     <TextBlock x:Name="NoFrameCenterText" HorizontalAlignment="Center" FontSize="18" FontWeight="SemiBold" Foreground="#FFE2E2E2" />
                 </StackPanel>
+                <TextBlock
+                    x:Name="PageCountText"
+                    Margin="14"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    FontSize="11"
+                    Foreground="#FFB4B4B4" />
             </Grid>
 
             <views:FilmstripView x:Name="Filmstrip" Grid.Row="1" />
@@ -141,17 +168,157 @@
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0" Spacing="4">
                                     <TextBlock x:Name="LayoutModeText" FontSize="11" />
-                                    <ComboBox HorizontalAlignment="Stretch" IsEnabled="False" SelectedIndex="0">
-                                        <ComboBoxItem x:Uid="printSingleImage" />
-                                    </ComboBox>
+                                    <ComboBox
+                                        x:Name="LayoutModeSelector"
+                                        HorizontalAlignment="Stretch"
+                                        AutomationProperties.AutomationId="negaflow.print.layout-mode"
+                                        DisplayMemberPath="Label"
+                                        FontSize="12"
+                                        SelectionChanged="OnPrintSettingChanged" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" Spacing="4">
-                                    <TextBlock x:Uid="printPaperSize" FontSize="11" />
-                                    <ComboBox HorizontalAlignment="Stretch" IsEnabled="False" SelectedIndex="0">
-                                        <ComboBoxItem Content="A4" />
-                                    </ComboBox>
+                                    <TextBlock x:Name="PaperSizeText" FontSize="11" />
+                                    <ComboBox
+                                        x:Name="PaperSizeSelector"
+                                        HorizontalAlignment="Stretch"
+                                        AutomationProperties.AutomationId="negaflow.print.paper-size"
+                                        DisplayMemberPath="Label"
+                                        FontSize="12"
+                                        SelectionChanged="OnPrintSettingChanged" />
                                 </StackPanel>
                             </Grid>
+                            <Grid ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Spacing="4">
+                                    <TextBlock x:Name="OrientationText" FontSize="11" />
+                                    <ComboBox
+                                        x:Name="OrientationSelector"
+                                        HorizontalAlignment="Stretch"
+                                        AutomationProperties.AutomationId="negaflow.print.orientation"
+                                        DisplayMemberPath="Label"
+                                        FontSize="12"
+                                        SelectionChanged="OnPrintSettingChanged" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Spacing="4">
+                                    <TextBlock x:Name="PerforationText" FontSize="11" />
+                                    <ComboBox
+                                        x:Name="PerforationSelector"
+                                        HorizontalAlignment="Stretch"
+                                        AutomationProperties.AutomationId="negaflow.print.perforation"
+                                        DisplayMemberPath="Label"
+                                        FontSize="12"
+                                        SelectionChanged="OnPrintSettingChanged" />
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock x:Name="MarginText" FontSize="11" />
+                            <Slider
+                                x:Name="MarginSlider"
+                                AutomationProperties.AutomationId="negaflow.print.margin"
+                                Maximum="50"
+                                Minimum="0"
+                                StepFrequency="0.5"
+                                ValueChanged="OnPrintSliderChanged" />
+                            <TextBlock x:Name="DpiText" FontSize="11" />
+                            <ComboBox
+                                x:Name="DpiSelector"
+                                HorizontalAlignment="Stretch"
+                                AutomationProperties.AutomationId="negaflow.print.dpi"
+                                DisplayMemberPath="Label"
+                                FontSize="12"
+                                SelectionChanged="OnPrintSettingChanged" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 여러 장을 한 판에 놓는 모드에서만 나옵니다. -->
+                    <Border
+                        x:Name="SheetCard"
+                        Padding="14"
+                        Background="{ThemeResource NegaflowCardBrush}"
+                        CornerRadius="9"
+                        Visibility="Collapsed">
+                        <StackPanel Spacing="10">
+                            <StackPanel Orientation="Horizontal" Spacing="7">
+                                <FontIcon FontSize="13" Glyph="&#xE80A;" />
+                                <TextBlock x:Name="SheetSectionText" FontSize="13" FontWeight="SemiBold" />
+                            </StackPanel>
+                            <Grid ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Spacing="4">
+                                    <TextBlock x:Name="RowsText" FontSize="11" />
+                                    <NumberBox
+                                        x:Name="RowsBox"
+                                        AutomationProperties.AutomationId="negaflow.print.rows"
+                                        Maximum="20"
+                                        Minimum="1"
+                                        SpinButtonPlacementMode="Compact"
+                                        ValueChanged="OnPrintNumberChanged" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Spacing="4">
+                                    <TextBlock x:Name="ColumnsText" FontSize="11" />
+                                    <NumberBox
+                                        x:Name="ColumnsBox"
+                                        AutomationProperties.AutomationId="negaflow.print.columns"
+                                        Maximum="20"
+                                        Minimum="1"
+                                        SpinButtonPlacementMode="Compact"
+                                        ValueChanged="OnPrintNumberChanged" />
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock x:Name="SpacingText" FontSize="11" />
+                            <Slider
+                                x:Name="SpacingSlider"
+                                AutomationProperties.AutomationId="negaflow.print.spacing"
+                                Maximum="50"
+                                Minimum="0"
+                                StepFrequency="0.5"
+                                ValueChanged="OnPrintSliderChanged" />
+                            <TextBlock x:Name="ContentModeText" FontSize="11" />
+                            <ComboBox
+                                x:Name="ContentModeSelector"
+                                HorizontalAlignment="Stretch"
+                                AutomationProperties.AutomationId="negaflow.print.content-mode"
+                                DisplayMemberPath="Label"
+                                FontSize="12"
+                                SelectionChanged="OnPrintSettingChanged" />
+                            <ToggleSwitch
+                                x:Name="RotateToFitToggle"
+                                AutomationProperties.AutomationId="negaflow.print.rotate-to-fit"
+                                Toggled="OnPrintToggled" />
+                            <ToggleSwitch
+                                x:Name="RepeatToggle"
+                                AutomationProperties.AutomationId="negaflow.print.repeat"
+                                Toggled="OnPrintToggled" />
+                            <TextBlock x:Name="SheetBackgroundText" FontSize="11" />
+                            <ComboBox
+                                x:Name="SheetBackgroundSelector"
+                                HorizontalAlignment="Stretch"
+                                AutomationProperties.AutomationId="negaflow.print.sheet-background"
+                                DisplayMemberPath="Label"
+                                FontSize="12"
+                                SelectionChanged="OnPrintSettingChanged" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Padding="14" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="9">
+                        <StackPanel Spacing="10">
+                            <StackPanel Orientation="Horizontal" Spacing="7">
+                                <FontIcon FontSize="13" Glyph="&#xE72D;" />
+                                <TextBlock x:Name="OutputSectionText" FontSize="13" FontWeight="SemiBold" />
+                            </StackPanel>
+                            <TextBlock x:Name="PageSizeSummaryText" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                            <Button
+                                x:Name="PrintExportButton"
+                                HorizontalAlignment="Stretch"
+                                AutomationProperties.AutomationId="negaflow.print.export"
+                                Click="OnPrintExportClicked"
+                                Style="{StaticResource AccentButtonStyle}" />
+                            <TextBlock x:Name="PrintStatusText" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
                 </StackPanel>

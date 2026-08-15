@@ -1070,4 +1070,37 @@
   <data name="libraryCompareNeedsTwoBody.Text" xml:space="preserve"><value>グリッドで Ctrl または Shift を押しながら比較する写真を選択します。</value><comment>AppCullingText.compareNeedsTwoDescription</comment></data>
   <data name="librarySurveyNeedsSelectionTitle.Text" xml:space="preserve"><value>写真を選択してください</value><comment>AppCullingText.surveyNeedsSelectionTitle</comment></data>
   <data name="librarySurveyNeedsSelectionBody.Text" xml:space="preserve"><value>グリッドで複数の写真を選ぶと、同じ画面で一覧比較できます。</value><comment>AppCullingText.surveyNeedsSelectionDescription</comment></data>
+  <data name="printOrientation.Text" xml:space="preserve"><value>向き</value><comment>AppLocalizedPhrase.orientation</comment></data>
+  <data name="printPerforation.Text" xml:space="preserve"><value>パーフォレーション</value><comment>AppLocalizedPhrase.perforation</comment></data>
+  <data name="printMarginFormat.Text" xml:space="preserve"><value>余白 {0} mm</value><comment>AppLocalizedPhrase.margin</comment></data>
+  <data name="printResolution.Text" xml:space="preserve"><value>解像度</value><comment>AppLocalizedPhrase.resolution</comment></data>
+  <data name="printSheetSection.Text" xml:space="preserve"><value>コンタクトシート</value><comment>AppLocalizedPhrase.contactSheet</comment></data>
+  <data name="printRows.Text" xml:space="preserve"><value>行</value><comment>AppLocalizedPhrase.rows</comment></data>
+  <data name="printColumns.Text" xml:space="preserve"><value>列</value><comment>AppLocalizedPhrase.columns</comment></data>
+  <data name="printSpacingFormat.Text" xml:space="preserve"><value>間隔 {0} mm</value><comment>AppLocalizedPhrase.spacing</comment></data>
+  <data name="printContentMode.Text" xml:space="preserve"><value>内容の合わせ方</value><comment>AppLocalizedPhrase.contentMode</comment></data>
+  <data name="printFit.Text" xml:space="preserve"><value>全体を表示</value><comment>PrintPackageContentMode.fit</comment></data>
+  <data name="printFill.Text" xml:space="preserve"><value>全体を埋める</value><comment>PrintPackageContentMode.fill</comment></data>
+  <data name="printRotateToFit.Text" xml:space="preserve"><value>セルに合わせて回転</value><comment>AppLocalizedPhrase.rotateToFit</comment></data>
+  <data name="printRepeatOnePhoto.Text" xml:space="preserve"><value>1ページに1枚</value><comment>AppLocalizedPhrase.repeatOnePhotoPerPage</comment></data>
+  <data name="printSheetBackground.Text" xml:space="preserve"><value>シートの背景</value><comment>AppLocalizedPhrase.sheetBackground</comment></data>
+  <data name="printBackgroundWhite.Text" xml:space="preserve"><value>白</value><comment>PrintContactSheetBackground.white</comment></data>
+  <data name="printBackgroundGray.Text" xml:space="preserve"><value>グレー</value><comment>PrintContactSheetBackground.gray</comment></data>
+  <data name="printBackgroundBlack.Text" xml:space="preserve"><value>黒</value><comment>PrintContactSheetBackground.black</comment></data>
+  <data name="printPerforationNone.Text" xml:space="preserve"><value>なし</value><comment>PrintPerforationStyle.none</comment></data>
+  <data name="printPerforation35mm.Text" xml:space="preserve"><value>35 mm</value><comment>PrintPerforationStyle.thirtyFiveMillimeter</comment></data>
+  <data name="printOrientationAuto.Text" xml:space="preserve"><value>自動</value><comment>PrintPaperOrientation.automatic</comment></data>
+  <data name="printOrientationPortrait.Text" xml:space="preserve"><value>縦</value><comment>PrintPaperOrientation.portrait</comment></data>
+  <data name="printOrientationLandscape.Text" xml:space="preserve"><value>横</value><comment>PrintPaperOrientation.landscape</comment></data>
+  <data name="printModeSingle.Text" xml:space="preserve"><value>1枚</value><comment>PrintWorkspaceLayoutMode.singleImage</comment></data>
+  <data name="printModeContactSheet.Text" xml:space="preserve"><value>コンタクトシート</value><comment>PrintWorkspaceLayoutMode.contactSheet</comment></data>
+  <data name="printModePicturePackage.Text" xml:space="preserve"><value>ピクチャパッケージ</value><comment>PrintWorkspaceLayoutMode.picturePackage</comment></data>
+  <data name="printModeCyanotype.Text" xml:space="preserve"><value>サイアノタイプ</value><comment>PrintWorkspaceLayoutMode.cyanotype</comment></data>
+  <data name="printModeGlassPlate.Text" xml:space="preserve"><value>乾板</value><comment>PrintWorkspaceLayoutMode.glassPlate</comment></data>
+  <data name="printModeGelatin.Text" xml:space="preserve"><value>ゼラチンシルバー</value><comment>PrintWorkspaceLayoutMode.gelatin</comment></data>
+  <data name="printExport.Content" xml:space="preserve"><value>プリントを書き出す</value><comment>AppLocalizedPhrase.exportPrint</comment></data>
+  <data name="printPageSummaryFormat.Text" xml:space="preserve"><value>{0} · {1} × {2} px、%d dpi</value><comment>Windows only: page size readout under the inspector.</comment></data>
+  <data name="printPageCountFormat.Text" xml:space="preserve"><value>%d ページ</value><comment>Windows only: sheet count over the canvas.</comment></data>
+  <data name="printExportDone.Text" xml:space="preserve"><value>{0} に保存しました。</value><comment>Windows only: print export result line.</comment></data>
+  <data name="printExportFailed.Text" xml:space="preserve"><value>プリントを書き出せませんでした。</value><comment>Windows only: print export failure line.</comment></data>
 </root>

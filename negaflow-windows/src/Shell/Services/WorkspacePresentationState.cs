@@ -80,6 +80,12 @@ public sealed class WorkspacePresentationState
         settingsStore.Update(value => value with { Shortcuts = update(value.Shortcuts) });
     }
 
+    public void UpdatePrint(Func<Print.PrintPreferences, Print.PrintPreferences> update)
+    {
+        ArgumentNullException.ThrowIfNull(update);
+        settingsStore.Update(value => value with { Print = update(value.Print) });
+    }
+
     public void UpdateQuickExport(Func<QuickExportSettings, QuickExportSettings> update)
     {
         ArgumentNullException.ThrowIfNull(update);

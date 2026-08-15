@@ -321,6 +321,8 @@ public sealed partial class SettingsRootView
             AppResources.Get("shortcutOpenLibrary", "Text"),
         WorkflowShortcutAction.OpenDevelopWorkspace =>
             AppResources.Get("shortcutOpenDevelop", "Text"),
+        WorkflowShortcutAction.OpenPrintWorkspace =>
+            AppResources.Get("menuPrint", "Text"),
         WorkflowShortcutAction.DetectScanners =>
             AppResources.Get("shortcutDetectScanners", "Text"),
         WorkflowShortcutAction.PreviewScan => AppResources.Get("shortcutPreviewScan", "Text"),

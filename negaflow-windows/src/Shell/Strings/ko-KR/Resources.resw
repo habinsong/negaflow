@@ -1070,4 +1070,37 @@
   <data name="libraryCompareNeedsTwoBody.Text" xml:space="preserve"><value>격자에서 Ctrl 또는 Shift를 눌러 비교할 사진을 선택합니다.</value><comment>AppCullingText.compareNeedsTwoDescription</comment></data>
   <data name="librarySurveyNeedsSelectionTitle.Text" xml:space="preserve"><value>사진을 선택하세요</value><comment>AppCullingText.surveyNeedsSelectionTitle</comment></data>
   <data name="librarySurveyNeedsSelectionBody.Text" xml:space="preserve"><value>격자에서 여러 사진을 선택하면 한 화면에서 함께 살펴볼 수 있습니다.</value><comment>AppCullingText.surveyNeedsSelectionDescription</comment></data>
+  <data name="printOrientation.Text" xml:space="preserve"><value>방향</value><comment>AppLocalizedPhrase.orientation</comment></data>
+  <data name="printPerforation.Text" xml:space="preserve"><value>퍼포레이션</value><comment>AppLocalizedPhrase.perforation</comment></data>
+  <data name="printMarginFormat.Text" xml:space="preserve"><value>여백 {0} mm</value><comment>AppLocalizedPhrase.margin</comment></data>
+  <data name="printResolution.Text" xml:space="preserve"><value>해상도</value><comment>AppLocalizedPhrase.resolution</comment></data>
+  <data name="printSheetSection.Text" xml:space="preserve"><value>컨택트 시트</value><comment>AppLocalizedPhrase.contactSheet</comment></data>
+  <data name="printRows.Text" xml:space="preserve"><value>행</value><comment>AppLocalizedPhrase.rows</comment></data>
+  <data name="printColumns.Text" xml:space="preserve"><value>열</value><comment>AppLocalizedPhrase.columns</comment></data>
+  <data name="printSpacingFormat.Text" xml:space="preserve"><value>간격 {0} mm</value><comment>AppLocalizedPhrase.spacing</comment></data>
+  <data name="printContentMode.Text" xml:space="preserve"><value>내용 맞추기</value><comment>AppLocalizedPhrase.contentMode</comment></data>
+  <data name="printFit.Text" xml:space="preserve"><value>맞추기</value><comment>PrintPackageContentMode.fit</comment></data>
+  <data name="printFill.Text" xml:space="preserve"><value>채우기</value><comment>PrintPackageContentMode.fill</comment></data>
+  <data name="printRotateToFit.Text" xml:space="preserve"><value>칸에 맞게 돌리기</value><comment>AppLocalizedPhrase.rotateToFit</comment></data>
+  <data name="printRepeatOnePhoto.Text" xml:space="preserve"><value>한 판에 한 사진만</value><comment>AppLocalizedPhrase.repeatOnePhotoPerPage</comment></data>
+  <data name="printSheetBackground.Text" xml:space="preserve"><value>바탕색</value><comment>AppLocalizedPhrase.sheetBackground</comment></data>
+  <data name="printBackgroundWhite.Text" xml:space="preserve"><value>흰색</value><comment>PrintContactSheetBackground.white</comment></data>
+  <data name="printBackgroundGray.Text" xml:space="preserve"><value>회색</value><comment>PrintContactSheetBackground.gray</comment></data>
+  <data name="printBackgroundBlack.Text" xml:space="preserve"><value>검정</value><comment>PrintContactSheetBackground.black</comment></data>
+  <data name="printPerforationNone.Text" xml:space="preserve"><value>없음</value><comment>PrintPerforationStyle.none</comment></data>
+  <data name="printPerforation35mm.Text" xml:space="preserve"><value>35 mm</value><comment>PrintPerforationStyle.thirtyFiveMillimeter</comment></data>
+  <data name="printOrientationAuto.Text" xml:space="preserve"><value>자동</value><comment>PrintPaperOrientation.automatic</comment></data>
+  <data name="printOrientationPortrait.Text" xml:space="preserve"><value>세로</value><comment>PrintPaperOrientation.portrait</comment></data>
+  <data name="printOrientationLandscape.Text" xml:space="preserve"><value>가로</value><comment>PrintPaperOrientation.landscape</comment></data>
+  <data name="printModeSingle.Text" xml:space="preserve"><value>단일 이미지</value><comment>PrintWorkspaceLayoutMode.singleImage</comment></data>
+  <data name="printModeContactSheet.Text" xml:space="preserve"><value>컨택트 시트</value><comment>PrintWorkspaceLayoutMode.contactSheet</comment></data>
+  <data name="printModePicturePackage.Text" xml:space="preserve"><value>픽처 패키지</value><comment>PrintWorkspaceLayoutMode.picturePackage</comment></data>
+  <data name="printModeCyanotype.Text" xml:space="preserve"><value>슬이아노타입</value><comment>PrintWorkspaceLayoutMode.cyanotype</comment></data>
+  <data name="printModeGlassPlate.Text" xml:space="preserve"><value>유리 건판</value><comment>PrintWorkspaceLayoutMode.glassPlate</comment></data>
+  <data name="printModeGelatin.Text" xml:space="preserve"><value>젤라틴 실버</value><comment>PrintWorkspaceLayoutMode.gelatin</comment></data>
+  <data name="printExport.Content" xml:space="preserve"><value>인화 내보내기</value><comment>AppLocalizedPhrase.exportPrint</comment></data>
+  <data name="printPageSummaryFormat.Text" xml:space="preserve"><value>{0} · {1} × {2} px, %d dpi</value><comment>Windows only: page size readout under the inspector.</comment></data>
+  <data name="printPageCountFormat.Text" xml:space="preserve"><value>%d장</value><comment>Windows only: sheet count over the canvas.</comment></data>
+  <data name="printExportDone.Text" xml:space="preserve"><value>{0} 에 저장했습니다.</value><comment>Windows only: print export result line.</comment></data>
+  <data name="printExportFailed.Text" xml:space="preserve"><value>인화물을 쓰지 못했습니다.</value><comment>Windows only: print export failure line.</comment></data>
 </root>

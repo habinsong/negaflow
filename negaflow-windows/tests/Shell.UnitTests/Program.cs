@@ -4,6 +4,7 @@ using Negaflow.Catalog;
 using Negaflow.Interop;
 using Negaflow.Shell.Develop;
 using Negaflow.Shell.Library;
+using Negaflow.Shell.Print;
 using Negaflow.Shell.Shortcuts;
 
 namespace Negaflow.Shell.UnitTests;
@@ -60,6 +61,7 @@ internal static class Program
         VerifySourceMove();
         VerifyDevelopTargets();
         VerifyLibraryCulling();
+        VerifyPrintComposition();
         VerifyWorkflowShortcuts();
         VerifyLibraryHost();
         VerifyEditsSurviveClose();
@@ -3052,6 +3054,167 @@ internal static class Program
             firstActive.Count == 2 && firstActive[0] != firstActive[1] &&
                 firstActive[1] == "a",
             "culling_compare_never_pairs_a_photo_with_itself");
+    }
+
+
+    /// <summary>
+    /// 인화 판의 기하입니다. 여기 수가 macOS 와 다르면 같은 설정에서 다른 크기의 인화물이
+    /// 나옵니다 — 사용자가 눈으로 알아채기 가장 어려운 종류의 어긋남입니다.
+    /// </summary>
+    private static void VerifyPrintComposition()
+    {
+        // 용지 치수는 macOS dimensionsMM 과 같은 수여야 합니다.
+        Check(
+            PrintPaper.DimensionsMm(PrintPaperSize.A4) == new PrintSizeMm(210, 297) &&
+                PrintPaper.DimensionsMm(PrintPaperSize.Letter) == new PrintSizeMm(215.9, 279.4) &&
+                PrintPaper.DimensionsMm(PrintPaperSize.EightByTen) == new PrintSizeMm(203.2, 254),
+            "print_paper_dimensions_match_mac");
+        Check(PrintPaper.All.Count == 27, "print_paper_count_matches_mac");
+
+        // 사진 비율 용지는 사진을 따라갑니다. 비율을 모르면 3:2 입니다.
+        Check(
+            PrintPaper.DimensionsMm(PrintPaperSize.PhotoRatio, null) ==
+                new PrintSizeMm(PrintPaper.PhotoRatioLongEdgeMm * 2 / 3,
+                    PrintPaper.PhotoRatioLongEdgeMm),
+            "print_photo_ratio_defaults_to_three_by_two");
+        Check(
+            PrintPaper.DimensionsMm(PrintPaperSize.PhotoRatio, 1.5) ==
+                new PrintSizeMm(254, 254 / 1.5),
+            "print_photo_ratio_follows_a_landscape_photo");
+
+        PrintCompositionSettings a4 = new() { PaperSize = PrintPaperSize.A4, Dpi = 300 };
+        // 자동 방향은 사진을 따라갑니다 — 가로 사진에는 가로 용지입니다.
+        PrintCompositionLayout landscape =
+            PrintCompositionLayout.Make(new PrintSizeMm(3000, 2000), a4)!;
+        Check(
+            landscape.CanvasSize.Width > landscape.CanvasSize.Height,
+            "print_automatic_orientation_follows_the_photo");
+        // 297mm 를 300dpi 로 재면 3508 화소입니다.
+        Check(
+            Math.Abs(landscape.CanvasSize.Width - 3508) < 1 &&
+                Math.Abs(landscape.CanvasSize.Height - 2480) < 1,
+            "print_canvas_is_the_paper_at_the_chosen_dpi");
+        // 여백은 화소가 아니라 밀리미터입니다.
+        Check(
+            Math.Abs(landscape.ContentRect.X - (10 * 300 / 25.4)) < 0.5,
+            "print_margin_is_millimetres_not_pixels");
+
+        PrintCompositionLayout portrait = PrintCompositionLayout.Make(
+            new PrintSizeMm(2000, 3000),
+            a4 with { Orientation = PrintPaperOrientation.Landscape })!;
+        Check(
+            portrait.CanvasSize.Width > portrait.CanvasSize.Height,
+            "print_explicit_orientation_overrides_the_photo");
+
+        // 말이 안 되는 설정은 판을 만들지 않습니다.
+        Check(
+            PrintCompositionLayout.Make(new PrintSizeMm(0, 100), a4) is null,
+            "print_refuses_an_empty_source");
+        Check(
+            PrintCompositionLayout.Make(new PrintSizeMm(100, 100), a4 with { MarginMm = 200 })
+                is null,
+            "print_refuses_a_margin_that_eats_the_page");
+        Check(
+            !(a4 with { Dpi = 20 }).IsValid && !(a4 with { MarginMm = 60 }).IsValid,
+            "print_settings_validity_matches_mac_limits");
+
+        // 천공은 ISO 1007 의 135 규격입니다 — 한 쪽 8개씩 모두 16개.
+        PrintCompositionLayout perforated = PrintCompositionLayout.Make(
+            new PrintSizeMm(3000, 2000),
+            a4 with { PerforationStyle = PrintPerforationStyle.ThirtyFiveMillimeter })!;
+        Check(perforated.PerforationRects.Count == 16, "print_perforation_count_matches_iso_1007");
+        Check(perforated.FilmRect is not null, "print_perforation_adds_a_film_rect");
+        // 필름 폭 35mm 안의 게이트는 24mm 이므로 이미지가 필름보다 작아야 합니다.
+        Check(
+            perforated.ImageRect.Height < perforated.FilmRect!.Value.Height,
+            "print_image_sits_inside_the_film_gate");
+
+        // 시아노타입만 색이 다릅니다.
+        Check(
+            PrintPresentationAppearance.For(PrintPresentationStyle.Cyanotype).ShadowBlue > 0.3 &&
+                PrintPresentationAppearance.For(PrintPresentationStyle.GelatinSilver).ShadowBlue == 0,
+            "print_presentation_colours_match_mac");
+
+        // 판 배치: 7 곱하기 6 격자에 42장이 한 판, 43장이면 두 판입니다.
+        PrintPackageSettings sheet = new() { ContactRows = 7, ContactColumns = 6 };
+        PrintSizeMm[] fortyTwo = [.. Enumerable.Repeat(new PrintSizeMm(3000, 2000), 42)];
+        IReadOnlyList<PrintPackagePageLayout> onePage =
+            PrintPackageLayout.Make(fortyTwo, a4, sheet)!;
+        Check(
+            onePage.Count == 1 && onePage[0].Items.Count == 42,
+            "print_contact_sheet_fills_one_page");
+        PrintSizeMm[] fortyThree = [.. Enumerable.Repeat(new PrintSizeMm(3000, 2000), 43)];
+        IReadOnlyList<PrintPackagePageLayout> twoPages =
+            PrintPackageLayout.Make(fortyThree, a4, sheet)!;
+        Check(
+            twoPages.Count == 2 && twoPages[1].Items.Count == 1,
+            "print_contact_sheet_spills_to_a_second_page");
+
+        // 칸은 왼쪽 위부터 오른쪽으로 채웁니다.
+        Check(
+            onePage[0].Items[0].CellRect.X < onePage[0].Items[1].CellRect.X &&
+                Math.Abs(onePage[0].Items[0].CellRect.Y - onePage[0].Items[1].CellRect.Y) < 0.001,
+            "print_contact_sheet_fills_left_to_right");
+        Check(
+            onePage[0].Items[6].CellRect.Y > onePage[0].Items[0].CellRect.Y,
+            "print_contact_sheet_wraps_to_the_next_row");
+
+        // 한 판에 한 사진을 반복하면 사진 수만큼 판이 나옵니다.
+        IReadOnlyList<PrintPackagePageLayout> repeated = PrintPackageLayout.Make(
+            [new PrintSizeMm(3000, 2000), new PrintSizeMm(2000, 3000)],
+            a4,
+            sheet with { RepeatOnePhotoPerPage = true })!;
+        Check(
+            repeated.Count == 2 && repeated[0].Items.Count == 42 &&
+                repeated[0].Items.All(item => item.SourceIndex == 0),
+            "print_repeat_gives_each_photo_its_own_page");
+
+        // 채우기는 칸을 넘고, 맞추기는 칸 안에 듭니다.
+        PrintPackageItemLayout fit = onePage[0].Items[0];
+        PrintPackageItemLayout fill = PrintPackageLayout.Make(
+            [new PrintSizeMm(3000, 2000)],
+            a4,
+            sheet with { ContentMode = PrintPackageContentMode.Fill })![0].Items[0];
+        Check(
+            fit.ImageRect.Width <= fit.CellRect.Width + 0.001 &&
+                fit.ImageRect.Height <= fit.CellRect.Height + 0.001,
+            "print_fit_stays_inside_the_cell");
+        Check(
+            fill.ImageRect.Width >= fill.CellRect.Width - 0.001 &&
+                fill.ImageRect.Height >= fill.CellRect.Height - 0.001,
+            "print_fill_covers_the_cell");
+
+        // 돌려 맞추기는 더 커질 때만 돕니다.
+        IReadOnlyList<PrintPackagePageLayout> rotated = PrintPackageLayout.Make(
+            [new PrintSizeMm(2000, 3000)],
+            a4,
+            new PrintPackageSettings { ContactRows = 1, ContactColumns = 1, RotateToFit = true })!;
+        Check(
+            rotated[0].Items[0].QuarterTurns == 1,
+            "print_rotate_to_fit_turns_a_portrait_photo_on_a_landscape_cell");
+        IReadOnlyList<PrintPackagePageLayout> notRotated = PrintPackageLayout.Make(
+            [new PrintSizeMm(3000, 2000)],
+            a4,
+            new PrintPackageSettings { ContactRows = 1, ContactColumns = 1, RotateToFit = true })!;
+        Check(
+            notRotated[0].Items[0].QuarterTurns == 0,
+            "print_rotate_to_fit_leaves_a_matching_photo_alone");
+
+        // 설정 파일이 이상해도 화면이 비지 않아야 합니다.
+        PrintPreferences wild = new()
+        {
+            MarginMm = 900,
+            Dpi = 5,
+            ContactRows = 0,
+            ContactColumns = 999,
+            HorizontalSpacingMm = double.NaN,
+        };
+        PrintPreferences safe = wild.Normalize();
+        Check(
+            safe.MarginMm == 50 && safe.Dpi == 72 && safe.ContactRows == 1 &&
+                safe.ContactColumns == 20 && safe.HorizontalSpacingMm == 4,
+            "print_preferences_clamp_a_hand_edited_file");
+        Check(safe.Composition().IsValid, "print_normalized_preferences_make_a_valid_page");
     }
 
     private static void VerifyLibraryDocument()

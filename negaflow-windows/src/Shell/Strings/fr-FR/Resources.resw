@@ -1070,4 +1070,37 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="libraryCompareNeedsTwoBody.Text" xml:space="preserve"><value>Dans la grille, utilisez Ctrl ou Maj pour choisir les photos à comparer.</value><comment>AppCullingText.compareNeedsTwoDescription</comment></data>
   <data name="librarySurveyNeedsSelectionTitle.Text" xml:space="preserve"><value>Sélectionnez des photos</value><comment>AppCullingText.surveyNeedsSelectionTitle</comment></data>
   <data name="librarySurveyNeedsSelectionBody.Text" xml:space="preserve"><value>Sélectionnez plusieurs photos dans la grille pour les examiner ensemble.</value><comment>AppCullingText.surveyNeedsSelectionDescription</comment></data>
+  <data name="printOrientation.Text" xml:space="preserve"><value>Orientation</value><comment>AppLocalizedPhrase.orientation</comment></data>
+  <data name="printPerforation.Text" xml:space="preserve"><value>Perforation</value><comment>AppLocalizedPhrase.perforation</comment></data>
+  <data name="printMarginFormat.Text" xml:space="preserve"><value>Marge {0} mm</value><comment>AppLocalizedPhrase.margin</comment></data>
+  <data name="printResolution.Text" xml:space="preserve"><value>Résolution</value><comment>AppLocalizedPhrase.resolution</comment></data>
+  <data name="printSheetSection.Text" xml:space="preserve"><value>Planche-contact</value><comment>AppLocalizedPhrase.contactSheet</comment></data>
+  <data name="printRows.Text" xml:space="preserve"><value>Lignes</value><comment>AppLocalizedPhrase.rows</comment></data>
+  <data name="printColumns.Text" xml:space="preserve"><value>Colonnes</value><comment>AppLocalizedPhrase.columns</comment></data>
+  <data name="printSpacingFormat.Text" xml:space="preserve"><value>Espacement {0} mm</value><comment>AppLocalizedPhrase.spacing</comment></data>
+  <data name="printContentMode.Text" xml:space="preserve"><value>Contenu</value><comment>AppLocalizedPhrase.contentMode</comment></data>
+  <data name="printFit.Text" xml:space="preserve"><value>Ajuster</value><comment>PrintPackageContentMode.fit</comment></data>
+  <data name="printFill.Text" xml:space="preserve"><value>Remplir</value><comment>PrintPackageContentMode.fill</comment></data>
+  <data name="printRotateToFit.Text" xml:space="preserve"><value>Pivoter pour ajuster</value><comment>AppLocalizedPhrase.rotateToFit</comment></data>
+  <data name="printRepeatOnePhoto.Text" xml:space="preserve"><value>Une photo par page</value><comment>AppLocalizedPhrase.repeatOnePhotoPerPage</comment></data>
+  <data name="printSheetBackground.Text" xml:space="preserve"><value>Fond de planche</value><comment>AppLocalizedPhrase.sheetBackground</comment></data>
+  <data name="printBackgroundWhite.Text" xml:space="preserve"><value>Blanc</value><comment>PrintContactSheetBackground.white</comment></data>
+  <data name="printBackgroundGray.Text" xml:space="preserve"><value>Gris</value><comment>PrintContactSheetBackground.gray</comment></data>
+  <data name="printBackgroundBlack.Text" xml:space="preserve"><value>Noir</value><comment>PrintContactSheetBackground.black</comment></data>
+  <data name="printPerforationNone.Text" xml:space="preserve"><value>Aucune</value><comment>PrintPerforationStyle.none</comment></data>
+  <data name="printPerforation35mm.Text" xml:space="preserve"><value>35 mm</value><comment>PrintPerforationStyle.thirtyFiveMillimeter</comment></data>
+  <data name="printOrientationAuto.Text" xml:space="preserve"><value>Automatique</value><comment>PrintPaperOrientation.automatic</comment></data>
+  <data name="printOrientationPortrait.Text" xml:space="preserve"><value>Portrait</value><comment>PrintPaperOrientation.portrait</comment></data>
+  <data name="printOrientationLandscape.Text" xml:space="preserve"><value>Paysage</value><comment>PrintPaperOrientation.landscape</comment></data>
+  <data name="printModeSingle.Text" xml:space="preserve"><value>Image unique</value><comment>PrintWorkspaceLayoutMode.singleImage</comment></data>
+  <data name="printModeContactSheet.Text" xml:space="preserve"><value>Planche-contact</value><comment>PrintWorkspaceLayoutMode.contactSheet</comment></data>
+  <data name="printModePicturePackage.Text" xml:space="preserve"><value>Planche de photos</value><comment>PrintWorkspaceLayoutMode.picturePackage</comment></data>
+  <data name="printModeCyanotype.Text" xml:space="preserve"><value>Cyanotype</value><comment>PrintWorkspaceLayoutMode.cyanotype</comment></data>
+  <data name="printModeGlassPlate.Text" xml:space="preserve"><value>Plaque de verre</value><comment>PrintWorkspaceLayoutMode.glassPlate</comment></data>
+  <data name="printModeGelatin.Text" xml:space="preserve"><value>Gélatino-argentique</value><comment>PrintWorkspaceLayoutMode.gelatin</comment></data>
+  <data name="printExport.Content" xml:space="preserve"><value>Exporter le tirage</value><comment>AppLocalizedPhrase.exportPrint</comment></data>
+  <data name="printPageSummaryFormat.Text" xml:space="preserve"><value>{0} · {1} × {2} px à %d ppp</value><comment>Windows only: page size readout under the inspector.</comment></data>
+  <data name="printPageCountFormat.Text" xml:space="preserve"><value>%d pages</value><comment>Windows only: sheet count over the canvas.</comment></data>
+  <data name="printExportDone.Text" xml:space="preserve"><value>Enregistré dans {0}</value><comment>Windows only: print export result line.</comment></data>
+  <data name="printExportFailed.Text" xml:space="preserve"><value>Impossible d’écrire le tirage.</value><comment>Windows only: print export failure line.</comment></data>
 </root>

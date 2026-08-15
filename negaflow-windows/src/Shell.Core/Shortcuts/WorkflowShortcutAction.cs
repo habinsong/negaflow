@@ -67,6 +67,7 @@ public enum WorkflowShortcutAction
     ShowHideInspector,
     OpenLibraryWorkspace,
     OpenDevelopWorkspace,
+    OpenPrintWorkspace,
     DetectScanners,
     PreviewScan,
     ScanFrame,
@@ -110,6 +111,7 @@ public static class WorkflowShortcutActions
         WorkflowShortcutAction.ShowHideInspector or
         WorkflowShortcutAction.OpenLibraryWorkspace or
         WorkflowShortcutAction.OpenDevelopWorkspace or
+        WorkflowShortcutAction.OpenPrintWorkspace or
         WorkflowShortcutAction.ToggleBeforeAfter => WorkflowShortcutGroup.View,
 
         WorkflowShortcutAction.DetectScanners or
@@ -198,6 +200,8 @@ public static class WorkflowShortcutActions
             new("4", WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Alt),
         WorkflowShortcutAction.OpenDevelopWorkspace =>
             new("5", WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Alt),
+        WorkflowShortcutAction.OpenPrintWorkspace =>
+            new("6", WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Alt),
         WorkflowShortcutAction.DetectScanners =>
             new("d", WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Shift),
         WorkflowShortcutAction.PreviewScan =>

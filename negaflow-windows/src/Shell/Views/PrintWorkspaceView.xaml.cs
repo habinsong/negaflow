@@ -16,6 +16,7 @@ public sealed partial class PrintWorkspaceView : UserControl
     {
         InitializeComponent();
         LocalizeControls();
+        LocalizePrintInspector();
     }
 
     public void Initialize(WorkspacePresentationState state, NativeEngineStatus nativeEngineStatus)
@@ -27,6 +28,7 @@ public sealed partial class PrintWorkspaceView : UserControl
         Filmstrip.Initialize(state);
         StatusBar.Initialize(nativeEngineStatus);
         UpdateState(state.Current);
+        SynchronizePrint();
         Unloaded += OnUnloaded;
     }
 

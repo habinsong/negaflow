@@ -80,6 +80,19 @@ public sealed partial class WorkspaceShellView : UserControl
         }
         Toolbar.SetQuickExportEnabled(DevelopWorkspace.CanQuickExport);
         PrintWorkspace.Initialize(state, nativeEngineStatus);
+        if (thumbnails is not null)
+        {
+            PrintWorkspace.AttachThumbnails(thumbnails);
+        }
+        if (windowId is { } printWindowId)
+        {
+            PrintWorkspace.AttachWindow(printWindowId);
+        }
+        if (libraryHost is not null)
+        {
+            // 인화는 라이브러리의 선택을 그대로 봅니다 — macOS 도 같은 선택을 씁니다.
+            PrintWorkspace.ShowLibrary(libraryHost);
+        }
         Toolbar.SettingsRequested += OnToolbarSettingsRequested;
         state.Changed += OnStateChanged;
         UpdateWorkspace(state.Current.SelectedWorkspace);
@@ -174,6 +187,9 @@ public sealed partial class WorkspaceShellView : UserControl
                 return true;
             case WorkflowShortcutAction.OpenDevelopWorkspace:
                 state.SelectWorkspace(WorkspaceModule.Develop);
+                return true;
+            case WorkflowShortcutAction.OpenPrintWorkspace:
+                state.SelectWorkspace(WorkspaceModule.Print);
                 return true;
             case WorkflowShortcutAction.ShowHideSidebar:
                 state.ToggleSidebar();
