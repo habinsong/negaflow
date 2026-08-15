@@ -1,4 +1,5 @@
 using Negaflow.Shell.Develop;
+using Negaflow.Shell.Shortcuts;
 
 namespace Negaflow.Shell;
 
@@ -39,6 +40,9 @@ public sealed record ShellPreferences
     /// <summary>이름 붙여 담아 둔 내보내기 설정입니다.</summary>
     public ExportRecipeLibrary ExportRecipes { get; init; } = new();
 
+    /// <summary>사용자가 바꾼 단축키입니다. 기본값과 같은 것은 담지 않습니다.</summary>
+    public WorkflowShortcutMap Shortcuts { get; init; } = new();
+
     public ShellPreferences Normalize()
     {
         return this with
@@ -47,6 +51,7 @@ public sealed record ShellPreferences
             QuickExport = (QuickExport ?? new QuickExportSettings()).Normalize(),
             SoftProof = (SoftProof ?? new SoftProofPreferences()).Normalize(),
             ExportRecipes = (ExportRecipes ?? new ExportRecipeLibrary()).Normalize(),
+            Shortcuts = (Shortcuts ?? new WorkflowShortcutMap()).Normalize(),
             SelectedWorkspace = Enum.IsDefined(SelectedWorkspace)
                 ? SelectedWorkspace
                 : WorkspaceModule.Develop,

@@ -1005,4 +1005,43 @@
   <data name="developProfileStatusPairedSmoke.Text" xml:space="preserve"><value>쌍 비교 시험</value><comment>AppLocalizedPhrase.scannerProfileStatusPairedSmoke</comment></data>
   <data name="developProfileStatusPairedValidated.Text" xml:space="preserve"><value>쌍 비교 검증 완료</value><comment>AppLocalizedPhrase.scannerProfileStatusPairedValidated</comment></data>
   <data name="libraryFilterUnvalidatedProfile.Content" xml:space="preserve"><value>미검증 프로파일</value><comment>AppLocalizedPhrase.filterUnvalidatedProfile</comment></data>
+  <data name="shortcutImportImages.Text" xml:space="preserve"><value>이미지 가져오기</value><comment>AppLocalizedText.commandImportImages</comment></data>
+  <data name="shortcutImportFolder.Text" xml:space="preserve"><value>폴더 가져오기</value><comment>AppLocalizedText.importFolder</comment></data>
+  <data name="shortcutRefreshLibrary.Text" xml:space="preserve"><value>라이브러리 새로고침</value><comment>AppLocalizedText.commandRefreshLibrary</comment></data>
+  <data name="shortcutPreviousPhoto.Text" xml:space="preserve"><value>이전 사진</value><comment>AppLocalizedText.previousFrame</comment></data>
+  <data name="shortcutNextPhoto.Text" xml:space="preserve"><value>다음 사진</value><comment>AppLocalizedText.nextFrame</comment></data>
+  <data name="shortcutPickPhoto.Text" xml:space="preserve"><value>선택</value><comment>AppLocalizedText.commandPick</comment></data>
+  <data name="shortcutClearPick.Text" xml:space="preserve"><value>선택 해제</value><comment>AppLocalizedText.clearPick</comment></data>
+  <data name="shortcutRejectPhoto.Text" xml:space="preserve"><value>제외</value><comment>AppLocalizedText.commandReject</comment></data>
+  <data name="shortcutDeletePhoto.Text" xml:space="preserve"><value>negaflow에서 제거</value><comment>AppLocalizedText.commandDeletePhoto</comment></data>
+  <data name="shortcutRateZero.Text" xml:space="preserve"><value>별점 초기화</value><comment>AppLocalizedText.resetRating</comment></data>
+  <data name="shortcutResetAdjustments.Text" xml:space="preserve"><value>모든 보정 초기화</value><comment>AppLocalizedText.commandResetAdjustments</comment></data>
+  <data name="shortcutCopyDevelopSettings.Text" xml:space="preserve"><value>현상 설정 복사</value><comment>AppLocalizedText.commandCopyDevelopSettings</comment></data>
+  <data name="shortcutPasteDevelopSettings.Text" xml:space="preserve"><value>현상 설정 붙여넣기</value><comment>AppLocalizedText.commandPasteDevelopSettings</comment></data>
+  <data name="shortcutProcess.Text" xml:space="preserve"><value>프로세스</value><comment>AppLocalizedText.process</comment></data>
+  <data name="shortcutRotateLeft.Text" xml:space="preserve"><value>왼쪽으로 90도 회전</value><comment>AppLocalizedText.rotateLeft</comment></data>
+  <data name="shortcutRotateRight.Text" xml:space="preserve"><value>오른쪽으로 90도 회전</value><comment>AppLocalizedText.rotateRight</comment></data>
+  <data name="shortcutFlipHorizontal.Text" xml:space="preserve"><value>좌우 반전</value><comment>AppLocalizedText.flipHorizontal</comment></data>
+  <data name="shortcutFlipVertical.Text" xml:space="preserve"><value>상하 반전</value><comment>AppLocalizedText.flipVertical</comment></data>
+  <data name="shortcutToggleBeforeAfter.Text" xml:space="preserve"><value>좌우 이전/이후</value><comment>AppLocalizedText.compareSplitVertical</comment></data>
+  <data name="shortcutShowHideSidebar.Text" xml:space="preserve"><value>사이드바 보기/숨기기</value><comment>AppLocalizedText.commandShowHideSidebar</comment></data>
+  <data name="shortcutShowHideFilmstrip.Text" xml:space="preserve"><value>필름스트립 보기/숨기기</value><comment>AppLocalizedText.commandShowHideFilmstrip</comment></data>
+  <data name="shortcutShowHideInspector.Text" xml:space="preserve"><value>인스펙터 보기/숨기기</value><comment>AppLocalizedText.commandShowHideInspector</comment></data>
+  <data name="shortcutOpenLibrary.Text" xml:space="preserve"><value>라이브러리</value><comment>AppLocalizedText.menuLibrary</comment></data>
+  <data name="shortcutOpenDevelop.Text" xml:space="preserve"><value>현상</value><comment>AppLocalizedText.menuDevelop</comment></data>
+  <data name="shortcutDetectScanners.Text" xml:space="preserve"><value>스캐너 다시 찾기</value><comment>AppLocalizedText.commandDetectScanners</comment></data>
+  <data name="shortcutPreviewScan.Text" xml:space="preserve"><value>프리뷰 스캔</value><comment>AppLocalizedText.commandPreviewScan</comment></data>
+  <data name="shortcutScanFrame.Text" xml:space="preserve"><value>사진 스캔</value><comment>AppLocalizedText.commandScanFrame</comment></data>
+  <data name="shortcutQuickExport.Text" xml:space="preserve"><value>빠른 내보내기</value><comment>AppLocalizedText.commandQuickExport</comment></data>
+  <data name="shortcutExportPhoto.Text" xml:space="preserve"><value>내보내기</value><comment>AppLocalizedText.commandExport</comment></data>
+  <data name="shortcutGroupLibrary.Text" xml:space="preserve"><value>라이브러리</value><comment>AppLocalizedText.menuLibrary</comment></data>
+  <data name="shortcutGroupPhoto.Text" xml:space="preserve"><value>사진</value><comment>AppLocalizedText.menuPhoto</comment></data>
+  <data name="shortcutGroupDevelop.Text" xml:space="preserve"><value>현상</value><comment>AppLocalizedText.menuDevelop</comment></data>
+  <data name="shortcutGroupView.Text" xml:space="preserve"><value>보기</value><comment>AppLocalizedText.menuView</comment></data>
+  <data name="shortcutGroupScanner.Text" xml:space="preserve"><value>스캐너</value><comment>AppLocalizedText.menuScanner</comment></data>
+  <data name="shortcutGroupExport.Text" xml:space="preserve"><value>내보내기</value><comment>AppLocalizedText.menuExport</comment></data>
+  <data name="shortcutReset.Content" xml:space="preserve"><value>초기화</value><comment>AppLocalizedText.shortcutReset</comment></data>
+  <data name="shortcutInvalidOrConflict.Text" xml:space="preserve"><value>사용할 수 없거나 이미 사용 중인 단축키입니다.</value><comment>AppLocalizedText.shortcutInvalidOrConflict</comment></data>
+  <data name="shortcutClickToRecord.Text" xml:space="preserve"><value>클릭한 다음 키를 누르세요</value><comment>AppLocalizedText.shortcutClickToRecord</comment></data>
+  <data name="shortcutRecordingPrompt.Text" xml:space="preserve"><value>단축키 입력</value><comment>AppLocalizedText.shortcutRecordingPrompt</comment></data>
 </root>

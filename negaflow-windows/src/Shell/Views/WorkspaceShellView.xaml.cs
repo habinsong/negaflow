@@ -1,6 +1,11 @@
+using Microsoft.UI.Input;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Negaflow.Interop;
+using Negaflow.Shell.Shortcuts;
+using Windows.System;
+using Windows.UI.Core;
 
 namespace Negaflow.Shell.Views;
 
@@ -79,6 +84,113 @@ public sealed partial class WorkspaceShellView : UserControl
         state.Changed += OnStateChanged;
         UpdateWorkspace(state.Current.SelectedWorkspace);
         Unloaded += OnUnloaded;
+    }
+
+    /// <summary>
+    /// 작업 흐름 단축키입니다. macOS 는 메뉴 막대가 이 일을 하지만 Windows 앱에는 메뉴 막대가
+    /// 없으므로 창이 직접 받습니다.
+    /// </summary>
+    /// <remarks>
+    /// **글자를 입력하는 중이면 손대지 않습니다.** 이름 상자에 "p" 를 치는 것이 사진을 선택으로
+    /// 표시하면 안 됩니다. 조합 키가 붙은 단축키는 입력 중에도 살려 둡니다 — Ctrl+E 는 어디서
+    /// 눌러도 내보내기입니다.
+    /// </remarks>
+    private void OnShellPreviewKeyDown(object sender, KeyRoutedEventArgs args)
+    {
+        _ = sender;
+        if (workspaceState is null || args.Handled)
+        {
+            return;
+        }
+        WorkflowShortcutModifiers modifiers = PressedModifiers();
+        if (modifiers == WorkflowShortcutModifiers.None && IsTypingTarget(FocusManager.GetFocusedElement(XamlRoot)))
+        {
+            return;
+        }
+        if (KeyName(args.Key) is not { } key ||
+            workspaceState.Current.Shortcuts.Resolve(key, modifiers) is not { } action)
+        {
+            return;
+        }
+        args.Handled = Invoke(action);
+    }
+
+    private static WorkflowShortcutModifiers PressedModifiers()
+    {
+        WorkflowShortcutModifiers modifiers = WorkflowShortcutModifiers.None;
+        if (IsDown(VirtualKey.Control))
+        {
+            modifiers |= WorkflowShortcutModifiers.Control;
+        }
+        if (IsDown(VirtualKey.Menu))
+        {
+            modifiers |= WorkflowShortcutModifiers.Alt;
+        }
+        if (IsDown(VirtualKey.Shift))
+        {
+            modifiers |= WorkflowShortcutModifiers.Shift;
+        }
+        return modifiers;
+    }
+
+    private static bool IsDown(VirtualKey key) =>
+        InputKeyboardSource.GetKeyStateForCurrentThread(key)
+            .HasFlag(CoreVirtualKeyStates.Down);
+
+    private static bool IsTypingTarget(object? focused) =>
+        focused is TextBox or RichEditBox or AutoSuggestBox or PasswordBox;
+
+    /// <summary>
+    /// 눌린 키를 단축키 표가 쓰는 이름으로 바꿉니다. 모르는 키는 null 이며, 그 경우 아무 명령도
+    /// 부르지 않습니다.
+    /// </summary>
+    private static string? KeyName(VirtualKey key) => key switch
+    {
+        >= VirtualKey.A and <= VirtualKey.Z => ((char)('a' + (key - VirtualKey.A))).ToString(),
+        >= VirtualKey.Number0 and <= VirtualKey.Number9 =>
+            ((char)('0' + (key - VirtualKey.Number0))).ToString(),
+        >= VirtualKey.NumberPad0 and <= VirtualKey.NumberPad9 =>
+            ((char)('0' + (key - VirtualKey.NumberPad0))).ToString(),
+        VirtualKey.Delete => "delete",
+        // 미국 자판의 [ ] \ 입니다. 다른 자판에서는 같은 자리의 글쇠가 잡힙니다 — macOS 도
+        // 키 코드가 아니라 글쇠 자리로 답니다.
+        (VirtualKey)219 => "[",
+        (VirtualKey)221 => "]",
+        (VirtualKey)220 => "\\",
+        _ => null,
+    };
+
+    private bool Invoke(WorkflowShortcutAction action)
+    {
+        if (workspaceState is not { } state)
+        {
+            return false;
+        }
+        switch (action)
+        {
+            case WorkflowShortcutAction.OpenLibraryWorkspace:
+                state.SelectWorkspace(WorkspaceModule.Library);
+                return true;
+            case WorkflowShortcutAction.OpenDevelopWorkspace:
+                state.SelectWorkspace(WorkspaceModule.Develop);
+                return true;
+            case WorkflowShortcutAction.ShowHideSidebar:
+                state.ToggleSidebar();
+                return true;
+            case WorkflowShortcutAction.ShowHideInspector:
+                state.ToggleInspector();
+                return true;
+            case WorkflowShortcutAction.ShowHideFilmstrip:
+                state.ToggleFilmstrip();
+                return true;
+            case WorkflowShortcutAction.QuickExport:
+                _ = DevelopWorkspace.QuickExportAsync();
+                return true;
+        }
+        // 나머지는 지금 보이는 화면이 맡습니다. 보이지 않는 화면이 조용히 사진을 바꾸면
+        // 사용자는 무엇이 일어났는지 볼 수 없습니다.
+        return state.Current.SelectedWorkspace == WorkspaceModule.Library &&
+            LibraryWorkspace.InvokeShortcut(action);
     }
 
     private void OnLibraryFrameOpenRequested(object? sender, LibraryFrameListItem item)

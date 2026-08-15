@@ -32,6 +32,8 @@ public sealed partial class SettingsRootView : UserControl
         pickerWindowId = windowId;
         state.Changed += OnStateChanged;
         UpdateState(state.Current);
+        BuildShortcutGroups();
+        BuildShortcutRows();
         Unloaded += OnUnloaded;
     }
 

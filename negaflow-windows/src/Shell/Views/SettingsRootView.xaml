@@ -316,8 +316,27 @@
 
                 <StackPanel x:Name="ShortcutsPage" AutomationProperties.AutomationId="settings.shortcuts" Spacing="16" Visibility="Collapsed">
                     <TextBlock x:Name="ShortcutsHeading" FontSize="24" FontWeight="SemiBold" />
+                    <!-- macOS 는 묶음 고르개 · 그 묶음의 표 · 전체 초기화 세 덩이입니다. -->
                     <Border Padding="18" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="10">
-                        <Button x:Uid="shortcutResetAll" HorizontalAlignment="Left" IsEnabled="False" />
+                        <StackPanel Spacing="14">
+                            <StackPanel
+                                x:Name="ShortcutGroupBar"
+                                AutomationProperties.AutomationId="settings.shortcuts.groups"
+                                Orientation="Horizontal"
+                                Spacing="4" />
+                            <StackPanel
+                                x:Name="ShortcutRows"
+                                AutomationProperties.AutomationId="settings.shortcuts.rows"
+                                Spacing="8" />
+                        </StackPanel>
+                    </Border>
+                    <Border Padding="18" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="10">
+                        <Button
+                            x:Name="ShortcutResetAllButton"
+                            x:Uid="shortcutResetAll"
+                            HorizontalAlignment="Left"
+                            AutomationProperties.AutomationId="settings.shortcuts.reset-all"
+                            Click="OnShortcutResetAllClicked" />
                     </Border>
                 </StackPanel>
 

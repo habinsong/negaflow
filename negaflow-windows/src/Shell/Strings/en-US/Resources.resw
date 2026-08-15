@@ -1005,4 +1005,43 @@ Load a scanner from Library to scan film.</value>
   <data name="developProfileStatusPairedSmoke.Text" xml:space="preserve"><value>Paired Test</value><comment>AppLocalizedPhrase.scannerProfileStatusPairedSmoke</comment></data>
   <data name="developProfileStatusPairedValidated.Text" xml:space="preserve"><value>Paired Validated</value><comment>AppLocalizedPhrase.scannerProfileStatusPairedValidated</comment></data>
   <data name="libraryFilterUnvalidatedProfile.Content" xml:space="preserve"><value>Unvalidated Profile</value><comment>AppLocalizedPhrase.filterUnvalidatedProfile</comment></data>
+  <data name="shortcutImportImages.Text" xml:space="preserve"><value>Import Photos</value><comment>AppLocalizedText.commandImportImages</comment></data>
+  <data name="shortcutImportFolder.Text" xml:space="preserve"><value>Import Folder</value><comment>AppLocalizedText.importFolder</comment></data>
+  <data name="shortcutRefreshLibrary.Text" xml:space="preserve"><value>Refresh Library</value><comment>AppLocalizedText.commandRefreshLibrary</comment></data>
+  <data name="shortcutPreviousPhoto.Text" xml:space="preserve"><value>Previous Frame</value><comment>AppLocalizedText.previousFrame</comment></data>
+  <data name="shortcutNextPhoto.Text" xml:space="preserve"><value>Next Frame</value><comment>AppLocalizedText.nextFrame</comment></data>
+  <data name="shortcutPickPhoto.Text" xml:space="preserve"><value>Pick</value><comment>AppLocalizedText.commandPick</comment></data>
+  <data name="shortcutClearPick.Text" xml:space="preserve"><value>Clear Pick</value><comment>AppLocalizedText.clearPick</comment></data>
+  <data name="shortcutRejectPhoto.Text" xml:space="preserve"><value>Reject</value><comment>AppLocalizedText.commandReject</comment></data>
+  <data name="shortcutDeletePhoto.Text" xml:space="preserve"><value>Remove from negaflow</value><comment>AppLocalizedText.commandDeletePhoto</comment></data>
+  <data name="shortcutRateZero.Text" xml:space="preserve"><value>Clear Rating</value><comment>AppLocalizedText.resetRating</comment></data>
+  <data name="shortcutResetAdjustments.Text" xml:space="preserve"><value>Reset All Adjustments</value><comment>AppLocalizedText.commandResetAdjustments</comment></data>
+  <data name="shortcutCopyDevelopSettings.Text" xml:space="preserve"><value>Copy Develop Settings</value><comment>AppLocalizedText.commandCopyDevelopSettings</comment></data>
+  <data name="shortcutPasteDevelopSettings.Text" xml:space="preserve"><value>Paste Develop Settings</value><comment>AppLocalizedText.commandPasteDevelopSettings</comment></data>
+  <data name="shortcutProcess.Text" xml:space="preserve"><value>Process</value><comment>AppLocalizedText.process</comment></data>
+  <data name="shortcutRotateLeft.Text" xml:space="preserve"><value>Rotate Left 90 Degrees</value><comment>AppLocalizedText.rotateLeft</comment></data>
+  <data name="shortcutRotateRight.Text" xml:space="preserve"><value>Rotate Right 90 Degrees</value><comment>AppLocalizedText.rotateRight</comment></data>
+  <data name="shortcutFlipHorizontal.Text" xml:space="preserve"><value>Flip Horizontal</value><comment>AppLocalizedText.flipHorizontal</comment></data>
+  <data name="shortcutFlipVertical.Text" xml:space="preserve"><value>Flip Vertical</value><comment>AppLocalizedText.flipVertical</comment></data>
+  <data name="shortcutToggleBeforeAfter.Text" xml:space="preserve"><value>Left/right Before/After</value><comment>AppLocalizedText.compareSplitVertical</comment></data>
+  <data name="shortcutShowHideSidebar.Text" xml:space="preserve"><value>Show/Hide Sidebar</value><comment>AppLocalizedText.commandShowHideSidebar</comment></data>
+  <data name="shortcutShowHideFilmstrip.Text" xml:space="preserve"><value>Show/Hide Filmstrip</value><comment>AppLocalizedText.commandShowHideFilmstrip</comment></data>
+  <data name="shortcutShowHideInspector.Text" xml:space="preserve"><value>Show/Hide Inspector</value><comment>AppLocalizedText.commandShowHideInspector</comment></data>
+  <data name="shortcutOpenLibrary.Text" xml:space="preserve"><value>Library</value><comment>AppLocalizedText.menuLibrary</comment></data>
+  <data name="shortcutOpenDevelop.Text" xml:space="preserve"><value>Develop</value><comment>AppLocalizedText.menuDevelop</comment></data>
+  <data name="shortcutDetectScanners.Text" xml:space="preserve"><value>Detect Scanners</value><comment>AppLocalizedText.commandDetectScanners</comment></data>
+  <data name="shortcutPreviewScan.Text" xml:space="preserve"><value>Preview Scan</value><comment>AppLocalizedText.commandPreviewScan</comment></data>
+  <data name="shortcutScanFrame.Text" xml:space="preserve"><value>Scan Frame</value><comment>AppLocalizedText.commandScanFrame</comment></data>
+  <data name="shortcutQuickExport.Text" xml:space="preserve"><value>Quick Export</value><comment>AppLocalizedText.commandQuickExport</comment></data>
+  <data name="shortcutExportPhoto.Text" xml:space="preserve"><value>Export</value><comment>AppLocalizedText.commandExport</comment></data>
+  <data name="shortcutGroupLibrary.Text" xml:space="preserve"><value>Library</value><comment>AppLocalizedText.menuLibrary</comment></data>
+  <data name="shortcutGroupPhoto.Text" xml:space="preserve"><value>Photo</value><comment>AppLocalizedText.menuPhoto</comment></data>
+  <data name="shortcutGroupDevelop.Text" xml:space="preserve"><value>Develop</value><comment>AppLocalizedText.menuDevelop</comment></data>
+  <data name="shortcutGroupView.Text" xml:space="preserve"><value>View</value><comment>AppLocalizedText.menuView</comment></data>
+  <data name="shortcutGroupScanner.Text" xml:space="preserve"><value>Scanner</value><comment>AppLocalizedText.menuScanner</comment></data>
+  <data name="shortcutGroupExport.Text" xml:space="preserve"><value>Export</value><comment>AppLocalizedText.menuExport</comment></data>
+  <data name="shortcutReset.Content" xml:space="preserve"><value>Reset</value><comment>AppLocalizedText.shortcutReset</comment></data>
+  <data name="shortcutInvalidOrConflict.Text" xml:space="preserve"><value>Shortcut is unavailable or already used.</value><comment>AppLocalizedText.shortcutInvalidOrConflict</comment></data>
+  <data name="shortcutClickToRecord.Text" xml:space="preserve"><value>Click, then press keys</value><comment>AppLocalizedText.shortcutClickToRecord</comment></data>
+  <data name="shortcutRecordingPrompt.Text" xml:space="preserve"><value>Press shortcut</value><comment>AppLocalizedText.shortcutRecordingPrompt</comment></data>
 </root>

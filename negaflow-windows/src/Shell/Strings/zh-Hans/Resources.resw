@@ -1005,4 +1005,43 @@
   <data name="developProfileStatusPairedSmoke.Text" xml:space="preserve"><value>配对测试</value><comment>AppLocalizedPhrase.scannerProfileStatusPairedSmoke</comment></data>
   <data name="developProfileStatusPairedValidated.Text" xml:space="preserve"><value>配对验证通过</value><comment>AppLocalizedPhrase.scannerProfileStatusPairedValidated</comment></data>
   <data name="libraryFilterUnvalidatedProfile.Content" xml:space="preserve"><value>未验证的配置文件</value><comment>AppLocalizedPhrase.filterUnvalidatedProfile</comment></data>
+  <data name="shortcutImportImages.Text" xml:space="preserve"><value>导入图像</value><comment>AppLocalizedText.commandImportImages</comment></data>
+  <data name="shortcutImportFolder.Text" xml:space="preserve"><value>导入文件夹</value><comment>AppLocalizedText.importFolder</comment></data>
+  <data name="shortcutRefreshLibrary.Text" xml:space="preserve"><value>刷新图库</value><comment>AppLocalizedText.commandRefreshLibrary</comment></data>
+  <data name="shortcutPreviousPhoto.Text" xml:space="preserve"><value>上一张</value><comment>AppLocalizedText.previousFrame</comment></data>
+  <data name="shortcutNextPhoto.Text" xml:space="preserve"><value>下一张</value><comment>AppLocalizedText.nextFrame</comment></data>
+  <data name="shortcutPickPhoto.Text" xml:space="preserve"><value>留用</value><comment>AppLocalizedText.commandPick</comment></data>
+  <data name="shortcutClearPick.Text" xml:space="preserve"><value>取消留用</value><comment>AppLocalizedText.clearPick</comment></data>
+  <data name="shortcutRejectPhoto.Text" xml:space="preserve"><value>排除</value><comment>AppLocalizedText.commandReject</comment></data>
+  <data name="shortcutDeletePhoto.Text" xml:space="preserve"><value>从 negaflow 中移除</value><comment>AppLocalizedText.commandDeletePhoto</comment></data>
+  <data name="shortcutRateZero.Text" xml:space="preserve"><value>清除星级</value><comment>AppLocalizedText.resetRating</comment></data>
+  <data name="shortcutResetAdjustments.Text" xml:space="preserve"><value>重置所有调整</value><comment>AppLocalizedText.commandResetAdjustments</comment></data>
+  <data name="shortcutCopyDevelopSettings.Text" xml:space="preserve"><value>复制显影设置</value><comment>AppLocalizedText.commandCopyDevelopSettings</comment></data>
+  <data name="shortcutPasteDevelopSettings.Text" xml:space="preserve"><value>粘贴显影设置</value><comment>AppLocalizedText.commandPasteDevelopSettings</comment></data>
+  <data name="shortcutProcess.Text" xml:space="preserve"><value>冲洗工艺</value><comment>AppLocalizedText.process</comment></data>
+  <data name="shortcutRotateLeft.Text" xml:space="preserve"><value>向左旋转 90°</value><comment>AppLocalizedText.rotateLeft</comment></data>
+  <data name="shortcutRotateRight.Text" xml:space="preserve"><value>向右旋转 90°</value><comment>AppLocalizedText.rotateRight</comment></data>
+  <data name="shortcutFlipHorizontal.Text" xml:space="preserve"><value>水平翻转</value><comment>AppLocalizedText.flipHorizontal</comment></data>
+  <data name="shortcutFlipVertical.Text" xml:space="preserve"><value>垂直翻转</value><comment>AppLocalizedText.flipVertical</comment></data>
+  <data name="shortcutToggleBeforeAfter.Text" xml:space="preserve"><value>左右对比调整前/调整后</value><comment>AppLocalizedText.compareSplitVertical</comment></data>
+  <data name="shortcutShowHideSidebar.Text" xml:space="preserve"><value>显示/隐藏边栏</value><comment>AppLocalizedText.commandShowHideSidebar</comment></data>
+  <data name="shortcutShowHideFilmstrip.Text" xml:space="preserve"><value>显示/隐藏胶片栏</value><comment>AppLocalizedText.commandShowHideFilmstrip</comment></data>
+  <data name="shortcutShowHideInspector.Text" xml:space="preserve"><value>显示/隐藏检查器</value><comment>AppLocalizedText.commandShowHideInspector</comment></data>
+  <data name="shortcutOpenLibrary.Text" xml:space="preserve"><value>图库</value><comment>AppLocalizedText.menuLibrary</comment></data>
+  <data name="shortcutOpenDevelop.Text" xml:space="preserve"><value>显影</value><comment>AppLocalizedText.menuDevelop</comment></data>
+  <data name="shortcutDetectScanners.Text" xml:space="preserve"><value>重新检测扫描仪</value><comment>AppLocalizedText.commandDetectScanners</comment></data>
+  <data name="shortcutPreviewScan.Text" xml:space="preserve"><value>预览扫描</value><comment>AppLocalizedText.commandPreviewScan</comment></data>
+  <data name="shortcutScanFrame.Text" xml:space="preserve"><value>扫描照片</value><comment>AppLocalizedText.commandScanFrame</comment></data>
+  <data name="shortcutQuickExport.Text" xml:space="preserve"><value>快速导出</value><comment>AppLocalizedText.commandQuickExport</comment></data>
+  <data name="shortcutExportPhoto.Text" xml:space="preserve"><value>导出</value><comment>AppLocalizedText.commandExport</comment></data>
+  <data name="shortcutGroupLibrary.Text" xml:space="preserve"><value>图库</value><comment>AppLocalizedText.menuLibrary</comment></data>
+  <data name="shortcutGroupPhoto.Text" xml:space="preserve"><value>照片</value><comment>AppLocalizedText.menuPhoto</comment></data>
+  <data name="shortcutGroupDevelop.Text" xml:space="preserve"><value>显影</value><comment>AppLocalizedText.menuDevelop</comment></data>
+  <data name="shortcutGroupView.Text" xml:space="preserve"><value>视图</value><comment>AppLocalizedText.menuView</comment></data>
+  <data name="shortcutGroupScanner.Text" xml:space="preserve"><value>扫描仪</value><comment>AppLocalizedText.menuScanner</comment></data>
+  <data name="shortcutGroupExport.Text" xml:space="preserve"><value>导出</value><comment>AppLocalizedText.menuExport</comment></data>
+  <data name="shortcutReset.Content" xml:space="preserve"><value>重置</value><comment>AppLocalizedText.shortcutReset</comment></data>
+  <data name="shortcutInvalidOrConflict.Text" xml:space="preserve"><value>快捷键不可用或已被使用。</value><comment>AppLocalizedText.shortcutInvalidOrConflict</comment></data>
+  <data name="shortcutClickToRecord.Text" xml:space="preserve"><value>点击后按键</value><comment>AppLocalizedText.shortcutClickToRecord</comment></data>
+  <data name="shortcutRecordingPrompt.Text" xml:space="preserve"><value>输入快捷键</value><comment>AppLocalizedText.shortcutRecordingPrompt</comment></data>
 </root>

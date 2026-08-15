@@ -10,6 +10,7 @@ using Negaflow.Interop;
 using Negaflow.Shell.Develop;
 using Negaflow.Shell.Library;
 using Negaflow.Shell.Localization;
+using Negaflow.Shell.Shortcuts;
 using Negaflow.Shell.Views.Controls;
 
 namespace Negaflow.Shell.Views;
@@ -231,6 +232,89 @@ public sealed partial class LibraryWorkspaceView : UserControl
 
     /// <summary>사용자가 라이브러리에서 현상으로 넘기려는 frame 입니다.</summary>
     public event EventHandler<LibraryFrameListItem>? FrameOpenRequested;
+
+    /// <summary>
+    /// 단축키가 부른 명령입니다. 이 화면이 맡을 수 있으면 처리하고 true 를 돌려줍니다.
+    /// </summary>
+    /// <remarks>
+    /// 고른 사진이 없으면 사진 명령은 조용히 지나갑니다 — 아무것도 고르지 않은 채 X 를 눌러
+    /// 무엇이 제외됐는지 모르게 되는 편이 더 나쁩니다.
+    /// </remarks>
+    public bool InvokeShortcut(WorkflowShortcutAction action)
+    {
+        switch (action)
+        {
+            case WorkflowShortcutAction.ImportImages:
+                OnImportClicked(this, new RoutedEventArgs());
+                return true;
+            case WorkflowShortcutAction.ImportFolder:
+                OnImportFoldersClicked(this, new RoutedEventArgs());
+                return true;
+            case WorkflowShortcutAction.RefreshLibrary:
+                if (libraryHost is { } host)
+                {
+                    ShowLibrary(host, importWindowId ?? default);
+                }
+                return true;
+            case WorkflowShortcutAction.PreviousPhoto:
+                return MoveSelection(-1);
+            case WorkflowShortcutAction.NextPhoto:
+                return MoveSelection(1);
+        }
+
+        IReadOnlyList<LibraryFrameListItem> targets = SelectedItems();
+        if (targets.Count == 0)
+        {
+            return false;
+        }
+        switch (action)
+        {
+            case WorkflowShortcutAction.PickPhoto:
+                SetPickState(targets, FramePickState.Picked);
+                return true;
+            case WorkflowShortcutAction.ClearPick:
+                SetPickState(targets, FramePickState.Unflagged);
+                return true;
+            case WorkflowShortcutAction.RejectPhoto:
+                SetPickState(targets, FramePickState.Rejected);
+                return true;
+            case WorkflowShortcutAction.DeletePhoto:
+                RemoveFromLibrary(targets);
+                return true;
+            case WorkflowShortcutAction.RateZero:
+            case WorkflowShortcutAction.RateOne:
+            case WorkflowShortcutAction.RateTwo:
+            case WorkflowShortcutAction.RateThree:
+            case WorkflowShortcutAction.RateFour:
+            case WorkflowShortcutAction.RateFive:
+                SetRating(targets, action - WorkflowShortcutAction.RateZero);
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private IReadOnlyList<LibraryFrameListItem> SelectedItems() =>
+        [.. FrameListView.SelectedItems.OfType<LibraryFrameListItem>()];
+
+    /// <summary>
+    /// 격자에서 한 칸 옮깁니다. 고른 것이 없으면 첫 칸부터 시작합니다 — macOS 도 그렇게 하며,
+    /// 그래야 마우스를 쓰지 않고 훑기를 시작할 수 있습니다.
+    /// </summary>
+    private bool MoveSelection(int offset)
+    {
+        if (FrameListView.Items.Count == 0)
+        {
+            return false;
+        }
+        int current = FrameListView.SelectedIndex;
+        int next = current < 0
+            ? (offset > 0 ? 0 : FrameListView.Items.Count - 1)
+            : Math.Clamp(current + offset, 0, FrameListView.Items.Count - 1);
+        FrameListView.SelectedIndex = next;
+        FrameListView.ScrollIntoView(FrameListView.Items[next]);
+        return true;
+    }
 
     /// <summary>
     /// 카드의 오른쪽 단추 메뉴입니다. macOS <c>LibraryFrameContextMenu</c> 와 같은 차례로

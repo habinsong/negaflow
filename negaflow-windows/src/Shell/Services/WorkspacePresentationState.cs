@@ -73,6 +73,13 @@ public sealed class WorkspacePresentationState
         settingsStore.Update(value => value with { ExportRecipes = update(value.ExportRecipes) });
     }
 
+    public void UpdateShortcuts(
+        Func<Shortcuts.WorkflowShortcutMap, Shortcuts.WorkflowShortcutMap> update)
+    {
+        ArgumentNullException.ThrowIfNull(update);
+        settingsStore.Update(value => value with { Shortcuts = update(value.Shortcuts) });
+    }
+
     public void UpdateQuickExport(Func<QuickExportSettings, QuickExportSettings> update)
     {
         ArgumentNullException.ThrowIfNull(update);
