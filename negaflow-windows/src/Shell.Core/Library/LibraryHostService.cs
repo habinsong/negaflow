@@ -255,6 +255,27 @@ public sealed class LibraryHostService : IDisposable
     public bool DeleteCollection(string collectionId) =>
         SavedAfter(document?.DeleteCollection(collectionId) == true);
 
+    /// <summary>한 장으로 접어 둔 사진 묶음입니다.</summary>
+    public IReadOnlyList<LibraryStackSnapshot> Stacks => document?.Stacks ?? [];
+
+    public LibraryStackSnapshot? StackFor(string frameId) => document?.StackFor(frameId);
+
+    public string? CreateStack(IEnumerable<string> frameIds)
+    {
+        string? id = document?.CreateStack(frameIds);
+        if (id is not null)
+        {
+            _ = SaveIfDirty();
+        }
+        return id;
+    }
+
+    public bool UngroupStack(string stackId) =>
+        SavedAfter(document?.UngroupStack(stackId) == true);
+
+    public bool ToggleStackCollapsed(string stackId) =>
+        SavedAfter(document?.ToggleStackCollapsed(stackId) == true);
+
     /// <summary>
     /// 사진을 라이브러리에서 빼고 바로 저장합니다. 원본 파일은 그대로 둡니다. 돌려주는 값은
     /// 실제로 빠진 장수입니다.

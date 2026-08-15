@@ -64,6 +64,37 @@ public sealed class LibraryFrameListItem : INotifyPropertyChanged
     public FramePickState PickState => Frame.PickState;
 
     /// <summary>
+    /// 이 사진이 대표로 있는 묶음의 장수입니다. 묶음이 없으면 0 이며 배지도 붙지 않습니다.
+    /// 셸이 접기 투영을 마친 뒤 채웁니다 — 어떤 사진이 대표인지는 그때에야 정해집니다.
+    /// </summary>
+    public int StackCount
+    {
+        get => stackCount;
+        set
+        {
+            if (stackCount == value)
+            {
+                return;
+            }
+            stackCount = value;
+            PropertyChanged?.Invoke(this, StackCountChangedArgs);
+            PropertyChanged?.Invoke(this, HasStackChangedArgs);
+            PropertyChanged?.Invoke(this, StackGlyphChangedArgs);
+        }
+    }
+
+    public bool HasStack => stackCount > 0;
+
+    /// <summary>
+    /// 접힌 묶음은 채운 모양, 펼친 묶음은 빈 모양입니다 — macOS <c>rectangle.stack.fill</c> 과
+    /// <c>rectangle.stack</c> 에 대응합니다.
+    /// </summary>
+    public string StackGlyph => IsStackCollapsed ? "" : "";
+
+    /// <summary>배지 모양을 정하는 값입니다. 셸이 채웁니다.</summary>
+    public bool IsStackCollapsed { get; set; } = true;
+
+    /// <summary>
     /// 카드 썸네일입니다. Shell.Core 는 XAML 을 참조하지 않으므로 형식을 열어 두고, 셸이
     /// <c>ImageSource</c> 를 넣습니다. 도착이 비동기라 여기만 알림을 냅니다 — 그리드가 카드
     /// 전체를 다시 만들지 않고 그림만 바꿔 끼웁니다.
@@ -93,12 +124,22 @@ public sealed class LibraryFrameListItem : INotifyPropertyChanged
 
     private object? thumbnail;
 
+    private int stackCount;
+
     private static readonly PropertyChangedEventArgs ThumbnailChangedArgs = new(nameof(Thumbnail));
 
     private static readonly PropertyChangedEventArgs HasThumbnailChangedArgs = new(nameof(HasThumbnail));
 
     private static readonly PropertyChangedEventArgs ThumbnailPendingChangedArgs =
         new(nameof(IsThumbnailPending));
+
+    private static readonly PropertyChangedEventArgs StackCountChangedArgs =
+        new(nameof(StackCount));
+
+    private static readonly PropertyChangedEventArgs HasStackChangedArgs = new(nameof(HasStack));
+
+    private static readonly PropertyChangedEventArgs StackGlyphChangedArgs =
+        new(nameof(StackGlyph));
 }
 
 public static class LibraryFrameListItems

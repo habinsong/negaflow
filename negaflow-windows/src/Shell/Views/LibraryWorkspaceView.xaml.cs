@@ -294,6 +294,88 @@ public sealed partial class LibraryWorkspaceView : UserControl
         }
     }
 
+    /// <summary>
+    /// 남아 있는 카드에 묶음 배지를 답니다. 접힌 묶음은 대표 한 장만 남았고, 펼친 묶음은 모든
+    /// 구성원이 남아 있으므로 전부에 답니다 — macOS 도 구성원마다 배지를 답니다.
+    /// </summary>
+    private void ApplyStackBadges(IReadOnlyList<LibraryFrameListItem> items)
+    {
+        if (libraryHost is not { } host)
+        {
+            return;
+        }
+        Dictionary<string, LibraryStackSnapshot> byFrameId = [];
+        foreach (LibraryStackSnapshot stack in host.Stacks)
+        {
+            foreach (string frameId in stack.FrameIds)
+            {
+                byFrameId[frameId] = stack;
+            }
+        }
+        foreach (LibraryFrameListItem item in items)
+        {
+            if (byFrameId.TryGetValue(item.Id, out LibraryStackSnapshot? stack))
+            {
+                item.IsStackCollapsed = stack.IsCollapsed;
+                item.StackCount = stack.FrameIds.Count;
+            }
+            else
+            {
+                item.StackCount = 0;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 메뉴 맨 위의 묶음 명령입니다. macOS <c>LibraryStackMenu</c> 와 같이 셋 중 하나만 나옵니다 —
+    /// 이미 묶여 있으면 접기/펼치기와 해제, 아니면 두 장 이상 골랐을 때만 묶기.
+    /// </summary>
+    private void AddStackCommands(
+        MenuFlyout menu,
+        LibraryFrameListItem item,
+        IReadOnlyList<LibraryFrameListItem> targets)
+    {
+        if (libraryHost is not { } host)
+        {
+            return;
+        }
+        if (host.StackFor(item.Id) is { } stack)
+        {
+            menu.Items.Add(MenuItem(
+                stack.IsCollapsed ? "libraryStackExpand" : "libraryStackCollapse",
+                "Content",
+                () =>
+                {
+                    if (host.ToggleStackCollapsed(stack.Id))
+                    {
+                        ShowFilteredItems();
+                    }
+                }));
+            menu.Items.Add(MenuItem("libraryStackUngroup", "Content", () =>
+            {
+                if (host.UngroupStack(stack.Id))
+                {
+                    ShowFilteredItems();
+                }
+            }));
+        }
+        else if (targets.Count >= 2)
+        {
+            menu.Items.Add(MenuItem("libraryStackGroup", "Content", () =>
+            {
+                if (host.CreateStack(targets.Select(target => target.Id)) is not null)
+                {
+                    ShowFilteredItems();
+                }
+            }));
+        }
+        else
+        {
+            return;
+        }
+        menu.Items.Add(new MenuFlyoutSeparator());
+    }
+
     private IReadOnlyList<LibraryFrameListItem> SelectedItems() =>
         [.. FrameListView.SelectedItems.OfType<LibraryFrameListItem>()];
 
@@ -338,6 +420,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
         IReadOnlyList<LibraryFrameListItem> targets = ContextTargets(item);
 
         MenuFlyout menu = new();
+        AddStackCommands(menu, item, targets);
         menu.Items.Add(MenuItem("menuDevelop", "Content", () =>
         {
             FrameOpenRequested?.Invoke(this, item);
@@ -701,6 +784,13 @@ public sealed partial class LibraryWorkspaceView : UserControl
                         LibrarySearchBox?.Text ?? string.Empty))),
             sortKey,
             sortAscending);
+        // 접기는 **정렬 뒤**에 걸립니다. 대표로 남는 것이 화면 차례에서 가장 앞선 사진이어야
+        // 정렬을 바꿀 때 대표도 따라 바뀝니다.
+        if (libraryHost is not null)
+        {
+            items = LibraryStackProjection.Apply(items, libraryHost.Stacks);
+            ApplyStackBadges(items);
+        }
         UpdateSortControls();
         UpdateCardSizeControls();
         UpdateFilterControls();

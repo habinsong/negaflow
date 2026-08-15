@@ -2781,6 +2781,7 @@ internal static class Program
             VerifyDevelopSettingsPastePersists(roots);
             VerifyLibraryDocumentPreservesNonFrameRows(roots);
             VerifyLibraryFrameRemoval(isolatedBase);
+            VerifyLibraryStacks(isolatedBase);
             VerifyLibraryDocumentDefectProjection(isolatedBase);
         }
         finally
@@ -2791,6 +2792,96 @@ internal static class Program
                 Directory.Delete(isolatedBase, recursive: true);
             }
         }
+    }
+
+    /// <summary>
+    /// 스택은 두 장 미만이 되는 순간 사라져야 합니다. 한 장짜리 스택은 접어도 아무것도 감추지
+    /// 않으면서 배지만 남기므로 사용자에게는 고장으로 보입니다.
+    /// </summary>
+    private static void VerifyLibraryStacks(string parent)
+    {
+        StorageRootSet roots = StorageRootResolver.ResolveForTests(
+            Path.Combine(parent, "stacks")).Roots!;
+
+        using (CatalogSession seed = CatalogSession.Open(roots).Session!)
+        {
+            Check(
+                seed.Write(new CatalogSnapshot(
+                    null,
+                    new Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>>
+                    {
+                        [CatalogEntityTable.Frames] =
+                        [
+                            new("frame-1", FrameRecord("frame-1", "IMG_0001.tif", 0.0, 1)),
+                            new("frame-2", FrameRecord("frame-2", "IMG_0002.tif", 0.0, 2)),
+                            new("frame-3", FrameRecord("frame-3", "IMG_0003.tif", 0.0, 3)),
+                        ],
+                    })).IsSuccess,
+                "library_stack_seed");
+        }
+
+        string? stackId;
+        using (LibraryDocument document = LibraryDocument.Open(roots).Document!)
+        {
+            Check(document.CreateStack(["frame-1"]) is null, "library_stack_refuses_one_photo");
+            Check(
+                document.CreateStack(["frame-1", "frame-1"]) is null,
+                "library_stack_refuses_a_duplicate");
+            stackId = document.CreateStack(["frame-1", "frame-2"])!;
+            if (stackId is null)
+            {
+                Check(false, "library_stack_create");
+                return;
+            }
+            Check(true, "library_stack_create");
+            Check(document.Stacks.Count == 1, "library_stack_projected");
+            Check(document.Stacks[0].IsCollapsed, "library_stack_starts_collapsed");
+            Check(document.StackFor("frame-2")?.Id == stackId, "library_stack_lookup_by_member");
+            Check(document.StackFor("frame-3") is null, "library_stack_lookup_misses_outsider");
+
+            // 이미 묶인 사진은 다른 묶음에 들어가지 못합니다.
+            Check(
+                document.CreateStack(["frame-2", "frame-3"]) is null,
+                "library_stack_refuses_an_already_stacked_photo");
+
+            Check(document.ToggleStackCollapsed(stackId), "library_stack_toggle");
+            Check(!document.Stacks[0].IsCollapsed, "library_stack_toggle_applied");
+            Check(document.ToggleStackCollapsed(stackId), "library_stack_toggle_back");
+
+            // 접힌 묶음은 화면 차례에서 가장 앞선 구성원만 남깁니다.
+            LibraryFrameListItem[] items =
+            [
+                new(document.Frames[0]),
+                new(document.Frames[1]),
+                new(document.Frames[2]),
+            ];
+            IReadOnlyList<LibraryFrameListItem> projected =
+                LibraryStackProjection.Apply(items, document.Stacks);
+            Check(
+                projected.Count == 2 && projected[0].Id == "frame-1" &&
+                    projected[1].Id == "frame-3",
+                "library_stack_collapse_hides_the_rest");
+
+            // 뒤집으면 대표도 뒤집힙니다 — 묶음에 적힌 첫 id 가 아니라 화면 차례입니다.
+            LibraryFrameListItem[] reversed = [items[1], items[0], items[2]];
+            Check(
+                LibraryStackProjection.Apply(reversed, document.Stacks)[0].Id == "frame-2",
+                "library_stack_cover_follows_the_sort");
+
+            Check(document.Save() == CatalogStoreError.None, "library_stack_save");
+        }
+
+        using (LibraryDocument reopened = LibraryDocument.Open(roots).Document!)
+        {
+            Check(reopened.Stacks.Count == 1, "library_stack_survives_a_reopen");
+            // 두 장짜리에서 한 장을 빼면 묶음이 사라집니다.
+            Check(reopened.RemoveFrames(["frame-2"]).Count == 1, "library_stack_removal");
+            Check(reopened.Stacks.Count == 0, "library_stack_vanishes_below_two");
+            Check(reopened.Save() == CatalogStoreError.None, "library_stack_removal_save");
+        }
+
+        using LibraryDocument final = LibraryDocument.Open(roots).Document!;
+        Check(final.Stacks.Count == 0, "library_stack_removal_persisted");
     }
 
     /// <summary>

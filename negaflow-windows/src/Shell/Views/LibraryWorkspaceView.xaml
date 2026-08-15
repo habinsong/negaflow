@@ -746,6 +746,24 @@
                                             Foreground="{Binding PickState, Converter={StaticResource PickStateBrushConverter}}"
                                             Glyph="{Binding PickGlyph}"
                                             Visibility="{Binding IsFlagged, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                        <!-- 묶음 배지는 macOS 와 같이 오른쪽 위입니다. -->
+                                        <Border
+                                            Margin="5"
+                                            Padding="6,4"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Top"
+                                            Background="#B8000000"
+                                            CornerRadius="9"
+                                            Visibility="{Binding HasStack, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <StackPanel Orientation="Horizontal" Spacing="3">
+                                                <FontIcon FontSize="10" Foreground="White" Glyph="{Binding StackGlyph}" />
+                                                <TextBlock
+                                                    FontSize="10"
+                                                    FontWeight="SemiBold"
+                                                    Foreground="White"
+                                                    Text="{Binding StackCount}" />
+                                            </StackPanel>
+                                        </Border>
                                         <Button
                                             x:Uid="libraryLocateOriginal"
                                             Margin="5"

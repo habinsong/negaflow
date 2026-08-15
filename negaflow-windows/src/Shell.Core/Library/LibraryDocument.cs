@@ -101,6 +101,7 @@ public sealed class LibraryDocument : IDisposable
     private readonly Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>> retainedRows;
     private readonly List<LibraryFolderSnapshot> folders = [];
     private readonly List<LibraryCollectionSnapshot> collections = [];
+    private readonly List<LibraryStackSnapshot> stacks = [];
     private readonly List<LibraryRollSnapshot> rolls = [];
     private readonly List<LibraryStoredSearchSnapshot> storedSearches = [];
     private readonly List<LibraryFrameSnapshot> frames = [];
@@ -124,6 +125,7 @@ public sealed class LibraryDocument : IDisposable
         this.activeRollId = activeRollId;
         ProjectFolders();
         ProjectCollections();
+        ProjectStacks();
         ProjectRolls();
         ProjectStoredSearches();
         Project();
@@ -163,6 +165,32 @@ public sealed class LibraryDocument : IDisposable
 
     /// <summary>사용자가 손으로 모은 묶음입니다. 순서는 catalog 의 순서입니다.</summary>
     public IReadOnlyList<LibraryCollectionSnapshot> Collections => collections;
+
+    /// <summary>한 장으로 접어 둔 사진 묶음입니다.</summary>
+    public IReadOnlyList<LibraryStackSnapshot> Stacks => stacks;
+
+    /// <summary>
+    /// 이 사진이 든 묶음입니다. 두 묶음에 걸쳐 있으면 null 입니다 — 손상된 카탈로그에서
+    /// 어느 쪽을 고를지는 알 수 없고, 아무 쪽이나 고르면 접기·펼치기가 엉뚱한 묶음에 걸립니다.
+    /// </summary>
+    public LibraryStackSnapshot? StackFor(string frameId)
+    {
+        ArgumentNullException.ThrowIfNull(frameId);
+        LibraryStackSnapshot? found = null;
+        foreach (LibraryStackSnapshot stack in stacks)
+        {
+            if (!stack.FrameIds.Contains(frameId, StringComparer.Ordinal))
+            {
+                continue;
+            }
+            if (found is not null)
+            {
+                return null;
+            }
+            found = stack;
+        }
+        return found;
+    }
 
     /// <summary>
     /// 투영에 실패한 frame 들입니다. **비어 있지 않은데 무시하면 사용자에게는 사진이 사라진
@@ -652,8 +680,14 @@ public sealed class LibraryDocument : IDisposable
 
         DropMembership(CatalogEntityTable.Rolls, removing);
         DropMembership(CatalogEntityTable.ManualCollections, removing);
+        DropMembership(CatalogEntityTable.Stacks, removing);
+        // 한 장만 남은 묶음은 접어도 아무것도 감추지 않으면서 배지만 남깁니다. 없앱니다.
+        retainedRows[CatalogEntityTable.Stacks] =
+            [.. retainedRows[CatalogEntityTable.Stacks].Where(row =>
+                LibraryStackRecord.TryRead(row, out _))];
         ProjectRolls();
         ProjectCollections();
+        ProjectStacks();
         Project();
         return new LibraryFrameRemoval([.. removing], sidecars);
     }
@@ -1037,6 +1071,78 @@ public sealed class LibraryDocument : IDisposable
             if (LibraryRollRecordCodec.TryRead(row, out LibraryRollSnapshot roll))
             {
                 rolls.Add(roll);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 고른 사진들을 한 묶음으로 접습니다. 이미 다른 묶음에 든 사진이 하나라도 있으면 만들지
+    /// 않습니다 — 한 사진이 두 묶음에 들면 어느 쪽을 접어야 할지 정할 수 없습니다.
+    /// </summary>
+    public string? CreateStack(IEnumerable<string> frameIds)
+    {
+        ArgumentNullException.ThrowIfNull(frameIds);
+        IReadOnlyList<string> known = KnownFrameIds(frameIds);
+        if (known.Any(frameId => StackFor(frameId) is not null))
+        {
+            return null;
+        }
+        string id = Guid.NewGuid().ToString("D");
+        if (LibraryStackSnapshot.TryCreate(id, known, isCollapsed: true) is not { } created)
+        {
+            return null;
+        }
+        List<CatalogEntityRow> rows = [.. retainedRows[CatalogEntityTable.Stacks]];
+        rows.Add(LibraryStackRecord.Write(created));
+        retainedRows[CatalogEntityTable.Stacks] = rows;
+        ProjectStacks();
+        return id;
+    }
+
+    /// <summary>묶음을 풀어 사진들을 각자 돌려보냅니다. 사진 자체는 그대로입니다.</summary>
+    public bool UngroupStack(string stackId)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(stackId);
+        List<CatalogEntityRow> rows = [.. retainedRows[CatalogEntityTable.Stacks]];
+        if (rows.RemoveAll(row =>
+                string.Equals(row.Id, stackId, StringComparison.Ordinal)) == 0)
+        {
+            return false;
+        }
+        retainedRows[CatalogEntityTable.Stacks] = rows;
+        ProjectStacks();
+        return true;
+    }
+
+    public bool ToggleStackCollapsed(string stackId)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(stackId);
+        List<CatalogEntityRow> rows = [.. retainedRows[CatalogEntityTable.Stacks]];
+        for (int index = 0; index < rows.Count; index++)
+        {
+            if (!string.Equals(rows[index].Id, stackId, StringComparison.Ordinal) ||
+                !LibraryStackRecord.TryRead(rows[index], out LibraryStackSnapshot existing))
+            {
+                continue;
+            }
+            rows[index] = LibraryStackRecord.Write(
+                existing with { IsCollapsed = !existing.IsCollapsed });
+            retainedRows[CatalogEntityTable.Stacks] = rows;
+            ProjectStacks();
+            return true;
+        }
+        return false;
+    }
+
+    private void ProjectStacks()
+    {
+        IsDirty = true;
+        stacks.Clear();
+        foreach (CatalogEntityRow row in retainedRows[CatalogEntityTable.Stacks])
+        {
+            if (LibraryStackRecord.TryRead(row, out LibraryStackSnapshot stack))
+            {
+                stacks.Add(stack);
             }
         }
     }

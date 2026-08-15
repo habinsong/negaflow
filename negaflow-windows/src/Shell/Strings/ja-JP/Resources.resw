@@ -1044,4 +1044,9 @@
   <data name="shortcutInvalidOrConflict.Text" xml:space="preserve"><value>使用できない、または既に使われているショートカットです。</value><comment>AppLocalizedText.shortcutInvalidOrConflict</comment></data>
   <data name="shortcutClickToRecord.Text" xml:space="preserve"><value>クリックしてキーを押す</value><comment>AppLocalizedText.shortcutClickToRecord</comment></data>
   <data name="shortcutRecordingPrompt.Text" xml:space="preserve"><value>ショートカットを入力</value><comment>AppLocalizedText.shortcutRecordingPrompt</comment></data>
+  <data name="libraryStackGroup.Content" xml:space="preserve"><value>スタックにまとめる</value><comment>AppStackText.group</comment></data>
+  <data name="libraryStackUngroup.Content" xml:space="preserve"><value>スタックを解除</value><comment>AppStackText.ungroup</comment></data>
+  <data name="libraryStackExpand.Content" xml:space="preserve"><value>スタックを展開</value><comment>AppStackText.expand</comment></data>
+  <data name="libraryStackCollapse.Content" xml:space="preserve"><value>スタックを折りたたむ</value><comment>AppStackText.collapse</comment></data>
+  <data name="libraryStackCountFormat.Text" xml:space="preserve"><value>スタック内の写真 %d 枚</value><comment>AppStackText.count</comment></data>
 </root>
