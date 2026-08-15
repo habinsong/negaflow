@@ -1,0 +1,39 @@
+{
+  "a": "task3-grainmend/grainmend-off.tif",
+  "b": "task3-grainmend/grainmend-on.tif",
+  "shape": [
+    3471,
+    2272,
+    3
+  ],
+  "views": [
+    {
+      "max": 16000,
+      "mean": 46.782125336287386,
+      "nonZeroCount": 7718637,
+      "nonZeroPercent": 97.87632993292512,
+      "over100Count": 7959,
+      "over100Percent": 0.10092425773308825,
+      "p50": 45.0,
+      "p90": 53.0,
+      "p99": 57.0,
+      "p99_9": 395.77800000086427,
+      "sampleCount": 7886112,
+      "view": "perPixelMaxChannel"
+    },
+    {
+      "max": 16000,
+      "mean": 19.16794731463785,
+      "nonZeroCount": 20205387,
+      "nonZeroPercent": 85.40493718577672,
+      "over100Count": 23863,
+      "over100Percent": 0.10086508197364345,
+      "p50": 6.0,
+      "p90": 50.0,
+      "p99": 55.0,
+      "p99_9": 166.0,
+      "sampleCount": 23658336,
+      "view": "pooledChannel"
+    }
+  ]
+}

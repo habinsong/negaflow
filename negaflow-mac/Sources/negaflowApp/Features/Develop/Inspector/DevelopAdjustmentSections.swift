@@ -53,8 +53,8 @@ struct DevelopAdjustmentSections: View {
             InspectorSlider(model.text(AppLocalizedPhrase.contrast), value: toneBinding(\.contrast), range: -1...1, focusID: .contrast, focusedSlider: focusedSlider)
             InspectorSlider(model.text(AppLocalizedPhrase.toneHighlights), value: toneBinding(\.highlight), range: -1...1, focusID: .highlight, focusedSlider: focusedSlider)
             InspectorSlider(model.text(AppLocalizedPhrase.shadows), value: toneBinding(\.shadow), range: -1...1, focusID: .shadow, focusedSlider: focusedSlider)
-            InspectorSlider(model.text(AppLocalizedPhrase.whites), value: toneBinding(\.whites), range: -1...1, focusID: .whites, focusedSlider: focusedSlider)
-            InspectorSlider(model.text(AppLocalizedPhrase.blacks), value: toneBinding(\.blacks), range: -1...1, focusID: .blacks, focusedSlider: focusedSlider)
+            InspectorSlider(model.text(AppLocalizedPhrase.whites), value: toneBinding(\.whites), range: DevelopToneRange.whites, focusID: .whites, focusedSlider: focusedSlider)
+            InspectorSlider(model.text(AppLocalizedPhrase.blacks), value: toneBinding(\.blacks), range: DevelopToneRange.blacks, focusID: .blacks, focusedSlider: focusedSlider)
             InspectorSlider(model.text(AppLocalizedPhrase.density), value: toneBinding(\.density), range: -1...1, focusID: .density, focusedSlider: focusedSlider)
         }
     }

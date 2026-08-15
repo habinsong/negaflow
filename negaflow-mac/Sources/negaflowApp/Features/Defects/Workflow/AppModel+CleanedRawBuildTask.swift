@@ -20,6 +20,10 @@ extension AppModel {
         let rawURL = frame.rawScanURL
         let frameID = frame.id
         let sourceKind = frame.sourceKind
+        // RAW 디코드 의도는 develop 과 같아야 한다 — 다르면 cleaned raw 가 현상 입력과 다른
+        // 이미지가 된다.
+        let rawRendering = ImageLoader.RAWRendering
+            .forDigitalSource(frame.params.isDigitalSource)
         // 커밋될 픽셀이 담게 될 편집 접두(totalEditCount개)의 현재 상태 스탬프.
         let appliedStamps = frame.defectEdits.prefix(totalEditCount).map(\.appliedStamp)
         let cachedPatchEditID = frame.defectEdits.prefix(totalEditCount).last?.id
@@ -89,7 +93,7 @@ extension AppModel {
                     let engine = ChromabaseEngine()                // 전체: 원본 raw 디코드
                     // 가져온 파일은 develop 과 동일 로더(방향·색 일치). 스캐너 TIFF는 기존 경로.
                     let rawCI = sourceKind == .importedFile
-                        ? engine.loadImportedImage(rawURL)
+                        ? engine.loadImportedImage(rawURL, rawRendering: rawRendering)
                         : engine.loadScannerImage(rawURL)
                     if let rawCI, !Task.isCancelled {
                         inputCG = cleanedRawContext.createCGImage(rawCI, from: rawCI.extent,

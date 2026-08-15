@@ -1,0 +1,63 @@
+{
+  "detection" : {
+    "alignmentStatus" : "aligned",
+    "candidateCount" : 120,
+    "clusterCount" : 14,
+    "confirmedCount" : 59,
+    "coverage" : 0.0010060967029705756,
+    "coveragePercent" : 0.10060967029705756,
+    "medianGain" : 4,
+    "offsetX" : 1,
+    "offsetY" : -1
+  },
+  "exports" : [
+    {
+      "bytes" : 47323110,
+      "case" : "grainmend-off",
+      "file" : "grainmend-off.tif",
+      "measuredBase" : {
+        "b" : 0.2333984375,
+        "g" : 0.293212890625,
+        "r" : 0.338134765625,
+        "source" : "auto"
+      },
+      "sha256" : "172438eb2526bee200d13c7e62ea3f937f62b0dd25f1a8219c8bb86c43c53ebb"
+    },
+    {
+      "bytes" : 47323110,
+      "case" : "grainmend-on",
+      "file" : "grainmend-on.tif",
+      "measuredBase" : {
+        "b" : 0.2333984375,
+        "g" : 0.293212890625,
+        "r" : 0.338134765625,
+        "source" : "auto"
+      },
+      "sha256" : "ae7f6913745dbd74281648550f46d56ffaa9c25c28d55fc55642bb8ccec43ae9"
+    }
+  ],
+  "fixedSettings" : {
+    "baseEstimationMode" : "auto (현상 입력마다 재추정)",
+    "developTarget" : "main",
+    "exportColorSpace" : "sRGB",
+    "filmType" : "colorNegative",
+    "infraredSensitivity" : 0.5,
+    "look" : "none (plain DevelopParameters())",
+    "tiffBitDepth" : 16,
+    "tiffCompression" : "none"
+  },
+  "input" : {
+    "infrared" : {
+      "path" : "/Users/songhabin/tiff_test/golden/v700/GT-X900_frame_4.tiff.ir.tiff",
+      "sha256" : "67747cd11919c5aaa84c2897d52675e65ceb32d69d7930d1480c1e316775f16e"
+    },
+    "pixelHeight" : 3471,
+    "pixelWidth" : 2272,
+    "raw" : {
+      "path" : "/Users/songhabin/tiff_test/golden/v700/GT-X900_frame_4.tiff",
+      "sha256" : "9e3d0daf2537273a299d5a77ed17c2d3c617131e59cc6afa9d90daf867d1a198"
+    }
+  },
+  "patchCount" : 14,
+  "task" : "3 · GrainMend repair magnitude"
+}

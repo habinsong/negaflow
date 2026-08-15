@@ -19,9 +19,9 @@ enum DevelopInspectorKeyboardController {
         case .shadow:
             nudgeParam(\.shadow, range: -1...1, frame: frame, direction: direction, coarse: coarse)
         case .whites:
-            nudgeParam(\.whites, range: -1...1, frame: frame, direction: direction, coarse: coarse)
+            nudgeParam(\.whites, range: DevelopToneRange.whites, frame: frame, direction: direction, coarse: coarse)
         case .blacks:
-            nudgeParam(\.blacks, range: -1...1, frame: frame, direction: direction, coarse: coarse)
+            nudgeParam(\.blacks, range: DevelopToneRange.blacks, frame: frame, direction: direction, coarse: coarse)
         case .density:
             nudgeParam(\.density, range: -1...1, frame: frame, direction: direction, coarse: coarse)
         case .curveHighlights:

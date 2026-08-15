@@ -345,8 +345,11 @@ public final class ChromabaseEngine: @unchecked Sendable {
 
     // MARK: helpers
     /// 파일 로드는 ImageLoader로 위임. TIFF/JPEG/PNG/DNG/RAW 모두 지원.
-    public func loadImage(_ url: URL) -> CIImage? {
-        ImageLoader.load(url, allowRaw: true)
+    public func loadImage(
+        _ url: URL,
+        rawRendering: ImageLoader.RAWRendering = .sceneLinear
+    ) -> CIImage? {
+        ImageLoader.load(url, allowRaw: true, rawRendering: rawRendering)
     }
 
     public func loadScannerImage(_ url: URL) -> CIImage? {
@@ -355,8 +358,19 @@ public final class ChromabaseEngine: @unchecked Sendable {
 
     /// 가져온 파일(사용자 이미지) 전용 로더. 카메라 RAW/DNG 데모사이크 + 임베디드 색상 프로필 존중
     /// + 프로필 없는 16bit 스캐너 raw(VueScan/SilverFast)를 linear 로 해석한다.
-    public func loadImportedImage(_ url: URL) -> CIImage? {
-        ImageLoader.loadImported(url)
+    public func loadImportedImage(
+        _ url: URL,
+        rawRendering: ImageLoader.RAWRendering = .sceneLinear
+    ) -> CIImage? {
+        ImageLoader.loadImported(url, rawRendering: rawRendering)
+    }
+
+    /// 프레임 파라미터가 곧 디코드 의도다 — 호출부가 매번 같은 판단을 반복하지 않게 한 곳에 둔다.
+    public func loadImportedImage(_ url: URL, params: DevelopParameters) -> CIImage? {
+        loadImportedImage(
+            url,
+            rawRendering: .forDigitalSource(params.isDigitalSource)
+        )
     }
 
     private static func scannerPreviewProxy(_ input: CIImage, maxDimension: CGFloat) -> CIImage {

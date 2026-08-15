@@ -292,7 +292,8 @@ enum ExportDevelopedFrameRenderer {
             ? ImageLoader.loadImportedPreview(
                 sourceURL,
                 maxDimension: proxyLongEdge,
-                highResolutionThreshold: proxyLongEdge
+                highResolutionThreshold: proxyLongEdge,
+                rawRendering: .forDigitalSource(snapshot.params.isDigitalSource)
             )
             : ImageLoader.loadScannerPreview(
                 sourceURL,
@@ -302,7 +303,10 @@ enum ExportDevelopedFrameRenderer {
             return LoadedSource(image: preview.image, provenance: nil)
         }
         let decoded = snapshot.sourceKind == .importedFile
-            ? ImageLoader.loadImportedDecoded(sourceURL)
+            ? ImageLoader.loadImportedDecoded(
+                sourceURL,
+                rawRendering: .forDigitalSource(snapshot.params.isDigitalSource)
+            )
             : ImageLoader.loadScannerTIFFDecoded(sourceURL)
         return decoded.map { LoadedSource(image: $0.image, provenance: $0.provenance) }
     }

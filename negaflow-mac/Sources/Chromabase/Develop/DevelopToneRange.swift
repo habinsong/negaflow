@@ -10,4 +10,15 @@ public enum DevelopToneRange {
     /// 자동 톤(AutoAdjust.autoTone)이 내는 노출은 자체적으로 -1.2...1.5 로 제한되어 이 범위 안에
     /// 들어온다 — 범위를 넓혀도 자동 조정과 어긋나지 않는다.
     public static let exposure: ClosedRange<Double> = -5...5
+
+    /// 흰색 계열 / 검정 계열. 끝점(백점·흑점) 제어라 ±1 로는 밀리지 않는 장면이 있어 ±2 로 둔다.
+    ///
+    /// 커널 계수(basicTone 의 whites 0.12 / blacks 0.06)와 마스크는 바꾸지 않는다 — ±1 구간의
+    /// 결과는 이전과 완전히 동일하고, 넓어진 구간만 같은 기울기로 이어진다. 최종 clamp(0,1)이
+    /// 끝점을 넘기지 않으므로 확장 구간에서도 값이 발산하지 않는다.
+    ///
+    /// 자동 톤(AutoAdjust.autoTone)은 whites 를 -1...1, blacks 를 -1...0.15 로 스스로 제한한다.
+    /// 그 값은 이 범위 안에 그대로 들어오므로 자동 톤/자동 화이트밸런스/자동 색상과 어긋나지 않는다.
+    public static let whites: ClosedRange<Double> = -2...2
+    public static let blacks: ClosedRange<Double> = -2...2
 }

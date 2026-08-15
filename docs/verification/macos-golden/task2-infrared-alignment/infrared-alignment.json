@@ -1,0 +1,66 @@
+{
+  "detect" : {
+    "alignment" : {
+      "downsampleFactor" : 1,
+      "isAccepted" : true,
+      "offsetX" : 1,
+      "offsetY" : -1,
+      "peakCorrelation" : 0.012493191491005515,
+      "runnerUpCorrelation" : 0.011389978663363401,
+      "searchRadius" : 32,
+      "status" : "aligned"
+    },
+    "candidateCount" : 120,
+    "clusterCount" : 14,
+    "componentCount" : 59,
+    "confirmedCount" : 59,
+    "coverage" : 0.0010060967029705756,
+    "coveragePercent" : 0.10060967029705756,
+    "elapsedSeconds" : 28.61641800403595,
+    "medianGain" : 4,
+    "offsetX" : 1,
+    "offsetY" : -1,
+    "result" : "success"
+  },
+  "estimateAlignment" : {
+    "downsampleFactor" : 1,
+    "isAccepted" : true,
+    "offsetX" : 1,
+    "offsetY" : -1,
+    "peakCorrelation" : 0.012493191491005515,
+    "runnerUpCorrelation" : 0.011389978663363401,
+    "searchRadius" : 32,
+    "status" : "aligned"
+  },
+  "estimateDefectAlignment" : {
+    "atSearchLimit" : false,
+    "offsetX" : 1,
+    "offsetY" : -1,
+    "peak" : 0.012493191491005515,
+    "peakOverRunnerUp" : 1.0968581996725479,
+    "pointCount" : 5149,
+    "runnerUp" : 0.011389978663363401
+  },
+  "input" : {
+    "infrared" : {
+      "path" : "/Users/songhabin/tiff_test/golden/v700/GT-X900_frame_4.tiff.ir.tiff",
+      "sha256" : "67747cd11919c5aaa84c2897d52675e65ceb32d69d7930d1480c1e316775f16e"
+    },
+    "pixelHeight" : 3471,
+    "pixelWidth" : 2272,
+    "raw" : {
+      "path" : "/Users/songhabin/tiff_test/golden/v700/GT-X900_frame_4.tiff",
+      "sha256" : "9e3d0daf2537273a299d5a77ed17c2d3c617131e59cc6afa9d90daf867d1a198"
+    }
+  },
+  "parameters" : {
+    "alignmentSearchRadius" : 32,
+    "clusterPadding" : 40,
+    "clusterTile" : 768,
+    "dilateRadius" : 1,
+    "maxCoverage" : 0.050000000000000003,
+    "minArea" : 2,
+    "sensitivity" : 0.5
+  },
+  "task" : "2 · infrared alignment correlation"
+}

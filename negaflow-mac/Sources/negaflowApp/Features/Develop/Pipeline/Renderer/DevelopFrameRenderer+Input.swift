@@ -141,7 +141,8 @@ extension DevelopFrameRenderer {
             return ImageLoader.loadImportedPreview(
                 snapshot.rawScanURL,
                 maxDimension: snapshot.proxyMaxDimension,
-                highResolutionThreshold: fullMaxDimension
+                highResolutionThreshold: fullMaxDimension,
+                rawRendering: .forDigitalSource(snapshot.params.isDigitalSource)
             )
         }
     }
@@ -196,7 +197,8 @@ extension DevelopFrameRenderer {
         // 16bit raw만 linear로 해석한다. 가져온 파일은 RAW 데모사이크와 동일한 프로필 규칙을 쓴다.
         switch snapshot.sourceKind {
         case .scannerTIFF:  return engine.loadScannerImage(snapshot.rawScanURL)
-        case .importedFile: return engine.loadImportedImage(snapshot.rawScanURL)
+        case .importedFile: return engine.loadImportedImage(snapshot.rawScanURL,
+                                                            params: snapshot.params)
         }
     }
 

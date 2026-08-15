@@ -225,13 +225,14 @@ enum ChromabaseMetalKernels {
         float shadowMask = smoothstep(0.02, 0.08, gy) * (1.0 - smoothstep(0.32, 0.46, gy));
         target += shadowAmount * 0.10 * shadowMask;
 
-        // Whites: 최상단 백점 영역.
+        // Whites: 최상단 백점 영역. 범위는 DevelopToneRange.whites(±2) — 계수/마스크는 그대로라
+        // ±1 구간 결과가 이전과 동일하고, 확장 구간만 같은 기울기로 이어진다.
         float whiteMask = smoothstep(0.68, 0.92, gy);
-        target += whitesAmount * 0.12 * whiteMask;
+        target += clamp(whitesAmount, -2.0, 2.0) * 0.12 * whiteMask;
 
-        // Blacks: 흑점 제어 — 순검정 바로 위 띠(full 0.03~0.14), y=0 앵커.
+        // Blacks: 흑점 제어 — 순검정 바로 위 띠(full 0.03~0.14), y=0 앵커. 범위 ±2.
         float blackMask = smoothstep(0.0, 0.03, gy) * (1.0 - smoothstep(0.14, 0.30, gy));
-        target += blacksAmount * 0.06 * blackMask;
+        target += clamp(blacksAmount, -2.0, 2.0) * 0.06 * blackMask;
 
         float newY = srgbDecodeLuma(clamp(target, 0.0, 1.0));
         float3 rgb = sourceRGB + float3(newY - y);

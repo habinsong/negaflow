@@ -69,6 +69,8 @@ extension AppModel {
 
         let rawURL = frame.rawScanURL
         let sourceKind = frame.sourceKind
+        let rawRendering = ImageLoader.RAWRendering
+            .forDigitalSource(frame.params.isDigitalSource)
         // IR 레이어를 빼고 굽는 경우, 캐시된 패치는 IR 이 섞인 베이스 위에서 계산된 것이라
         // 그대로 쓰면 IR 픽셀이 패치 안으로 따라 들어간다. 다시 계산한다.
         let bakeEdits = hasInfrared
@@ -98,6 +100,7 @@ extension AppModel {
                     finalCG = Self.composeCleanedRawForBake(
                         rawURL: rawURL,
                         sourceKind: sourceKind,
+                        rawRendering: rawRendering,
                         edits: bakeEdits
                     )
                 }
@@ -180,11 +183,12 @@ extension AppModel {
     nonisolated private static func composeCleanedRawForBake(
         rawURL: URL,
         sourceKind: FrameSource,
+        rawRendering: ImageLoader.RAWRendering,
         edits: [DefectEditItem]
     ) -> CGImage? {
         let engine = ChromabaseEngine()
         let rawCI = sourceKind == .importedFile
-            ? engine.loadImportedImage(rawURL)
+            ? engine.loadImportedImage(rawURL, rawRendering: rawRendering)
             : engine.loadScannerImage(rawURL)
         guard let rawCI,
               let inputCG = cleanedRawContext.createCGImage(

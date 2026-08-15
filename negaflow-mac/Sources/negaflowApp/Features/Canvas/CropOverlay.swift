@@ -126,7 +126,10 @@ struct CropOverlay: View {
         .font(.caption)
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
-        .liquidSurface(cornerRadius: 8, interactive: true)
+        // 글래스가 아니라 캔버스 배경에서 유도한 불투명 면을 쓴다 — 줌 HUD 와 같은 표면이다.
+        // 글래스는 뒤의 캔버스 색을 그대로 통과시켜, 배경을 흰색으로 두면 버튼과 글자가 함께
+        // 흰색이 돼 읽히지 않는다. 버튼 구성·순서·라벨·배치는 그대로 둔다.
+        .canvasControlSurface(model.canvasBackground, cornerRadius: 8)
         .position(
             x: min(max(r.midX, imageFrame.minX + 86), imageFrame.maxX - 86),
             y: min(max(r.maxY + 30, imageFrame.minY + 28), imageFrame.maxY - 28)

@@ -130,10 +130,14 @@ public enum ImageLoader {
     /// 파일을 CIImage로 로드. RAW/DNG면 데모사이크까지 수행.
     /// - Parameters:
     ///   - allowRaw: RAW 입력을 CIRAWFilter로 처리할지. false면 RAW를 거부한다.
-    public static func load(_ url: URL, allowRaw: Bool = true) -> CIImage? {
+    public static func load(
+        _ url: URL,
+        allowRaw: Bool = true,
+        rawRendering: RAWRendering = .sceneLinear
+    ) -> CIImage? {
         switch kind(of: url) {
         case .rawDng:
-            return allowRaw ? loadRAW(url) : nil
+            return allowRaw ? loadRAW(url, rendering: rawRendering) : nil
         case .standardImage:
             return loadStandard(url)
         case .unknown:
@@ -158,17 +162,23 @@ public enum ImageLoader {
     /// linear 이며 스캐너 디바이스 프로필을 임베드한다.
     public static func loadImported(
         _ url: URL,
-        untaggedTIFFRole: UntaggedTIFFRole = .linearScannerRaw
+        untaggedTIFFRole: UntaggedTIFFRole = .linearScannerRaw,
+        rawRendering: RAWRendering = .sceneLinear
     ) -> CIImage? {
-        loadImportedDecoded(url, untaggedTIFFRole: untaggedTIFFRole)?.image
+        loadImportedDecoded(
+            url,
+            untaggedTIFFRole: untaggedTIFFRole,
+            rawRendering: rawRendering
+        )?.image
     }
 
     public static func loadImportedDecoded(
         _ url: URL,
-        untaggedTIFFRole: UntaggedTIFFRole = .linearScannerRaw
+        untaggedTIFFRole: UntaggedTIFFRole = .linearScannerRaw,
+        rawRendering: RAWRendering = .sceneLinear
     ) -> DecodedImage? {
         // RAW/DNG는 CIRAWFilter가 파일 orientation을 기본 적용하므로 여기서 재적용하지 않는다.
-        if kind(of: url) == .rawDng { return loadRAWDecoded(url) }
+        if kind(of: url) == .rawDng { return loadRAWDecoded(url, rendering: rawRendering) }
         guard let src = CGImageSourceCreateWithURL(url as CFURL, nil),
               let cg = createFullyDecodedImage(src) else {
             guard let image = loadStandard(url) else { return nil }
@@ -226,7 +236,8 @@ public enum ImageLoader {
     }
 
     public static func loadImportedPreview(_ url: URL, maxDimension: CGFloat,
-                                           highResolutionThreshold: CGFloat) -> PreviewImage? {
+                                           highResolutionThreshold: CGFloat,
+                                           rawRendering: RAWRendering = .sceneLinear) -> PreviewImage? {
         guard maxDimension > 0,
               let src = imageSource(url),
               let size = sourcePixelSize(src),
@@ -236,7 +247,9 @@ public enum ImageLoader {
         }
         if kind(of: url) == .rawDng {
             let scale = max(0.01, min(1.0, maxDimension / max(size.width, size.height)))
-            guard let image = loadRAW(url, scaleFactor: scale) else { return nil }
+            guard let image = loadRAW(url, scaleFactor: scale, rendering: rawRendering) else {
+                return nil
+            }
             return PreviewImage(image: image, sourcePixelSize: size, usesLinearSRGB: true)
         }
         let props = CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as? [CFString: Any]

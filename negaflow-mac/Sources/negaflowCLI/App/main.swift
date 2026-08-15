@@ -86,8 +86,8 @@ struct CLI {
             --contrast <v>               Basic Tone contrast (-1...1)
             --highlights <v>             Basic Tone highlights (-1...1)
             --shadows <v>                Basic Tone shadows (-1...1)
-            --whites <v>                 Basic Tone whites (-1...1)
-            --blacks <v>                 Basic Tone blacks (-1...1)
+            --whites <v>                 Basic Tone whites (-2...2)
+            --blacks <v>                 Basic Tone blacks (-2...2)
             --density <v>                Basic Tone density (-1...1)
             --defects [strength]             GrainMend RGB strength (0...1, default 1)
             --defect-mask <png>             write defect mask PNG
