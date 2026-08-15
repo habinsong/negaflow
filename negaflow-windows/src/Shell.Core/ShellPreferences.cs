@@ -58,6 +58,18 @@ public sealed record ShellPreferences
     public bool GuidedDefectDetectsMicroSpecks { get; init; } = true;
 
     /// <summary>
+    /// 캔버스에서 포인터 아래 화소의 값을 읽어 보여 줄지입니다. 끄면 읽지도 않습니다 —
+    /// 보이지 않는 값을 계산하느라 포인터가 무거워지지 않게.
+    /// </summary>
+    public bool PixelSamplerEnabled { get; init; }
+
+    /// <summary>
+    /// 앱 언어입니다. 빈 문자열이면 시스템 언어를 따릅니다 — macOS 의 <c>system</c> 과 같은
+    /// 뜻이며, 그때는 Windows 가 고른 것을 그대로 씁니다.
+    /// </summary>
+    public string Language { get; init; } = string.Empty;
+
+    /// <summary>
     /// 스캔한 사진을 가져올 때 걸어 둘 회전입니다. 홀더에 필름을 늘 같은 방향으로 넣는
     /// 사용자가 매번 돌리지 않도록 macOS 가 두는 값입니다.
     /// </summary>
@@ -73,6 +85,7 @@ public sealed record ShellPreferences
             ExportRecipes = (ExportRecipes ?? new ExportRecipeLibrary()).Normalize(),
             Shortcuts = (Shortcuts ?? new WorkflowShortcutMap()).Normalize(),
             Print = (Print ?? new PrintPreferences()).Normalize(),
+            Language = AppLanguages.Normalize(Language),
             DefaultScanRotation = Enum.IsDefined(DefaultScanRotation)
                 ? DefaultScanRotation
                 : ImageRotation.Degrees0,

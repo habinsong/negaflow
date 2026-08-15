@@ -1138,4 +1138,11 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="settingsScannerTruthNone.Text" xml:space="preserve"><value>Connectez un scanner pour voir ce qu’il signale.</value><comment>Windows only: no scanner connected yet.</comment></data>
   <data name="settingsMicroSpecksSection.Text" xml:space="preserve"><value>Valeurs par défaut des micro-taches</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecks</comment></data>
   <data name="settingsMicroSpecksHelp.Text" xml:space="preserve"><value>Si un outil de défauts nouvellement ouvert cherche les plus petites taches.</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecksHelp</comment></data>
+  <data name="samplerOriginal.Text" xml:space="preserve"><value>Original</value><comment>PixelSamplerLocalizedText[0]</comment></data>
+  <data name="samplerWorking.Text" xml:space="preserve"><value>Travail</value><comment>PixelSamplerLocalizedText[1]</comment></data>
+  <data name="samplerProof.Text" xml:space="preserve"><value>Épreuve</value><comment>PixelSamplerLocalizedText[2]</comment></data>
+  <data name="samplerSourcePixel.Text" xml:space="preserve"><value>Pixel source</value><comment>PixelSamplerLocalizedText[3]</comment></data>
+  <data name="samplerMovePointer.Text" xml:space="preserve"><value>Placez le pointeur sur la photo</value><comment>PixelSamplerLocalizedText[4]</comment></data>
+  <data name="samplerEnabled.Text" xml:space="preserve"><value>Échantillonneur de pixels</value><comment>PixelSamplerLocalizedText[5]</comment></data>
+  <data name="settingsLanguageRestart.Text" xml:space="preserve"><value>La nouvelle langue s’applique après le redémarrage de Negaflow.</value><comment>Windows only: language applies on restart.</comment></data>
 </root>

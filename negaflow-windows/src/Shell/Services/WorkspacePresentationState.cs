@@ -86,6 +86,12 @@ public sealed class WorkspacePresentationState
     public void SetGuidedDefectMicroSpecks(bool value) =>
         settingsStore.Update(current => current with { GuidedDefectDetectsMicroSpecks = value });
 
+    public void SetLanguage(string language) =>
+        settingsStore.Update(current => current with { Language = language });
+
+    public void SetPixelSamplerEnabled(bool value) =>
+        settingsStore.Update(current => current with { PixelSamplerEnabled = value });
+
     public void SetDefaultScanRotation(Negaflow.Catalog.ImageRotation rotation) =>
         settingsStore.Update(current => current with { DefaultScanRotation = rotation });
 

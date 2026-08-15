@@ -1138,4 +1138,11 @@
   <data name="settingsScannerTruthNone.Text" xml:space="preserve"><value>连接扫描仪后将显示其报告的能力。</value><comment>Windows only: no scanner connected yet.</comment></data>
   <data name="settingsMicroSpecksSection.Text" xml:space="preserve"><value>微尘点默认值</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecks</comment></data>
   <data name="settingsMicroSpecksHelp.Text" xml:space="preserve"><value>新打开的瑕疵工具是否从最小尘点开始查找。</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecksHelp</comment></data>
+  <data name="samplerOriginal.Text" xml:space="preserve"><value>原始</value><comment>PixelSamplerLocalizedText[0]</comment></data>
+  <data name="samplerWorking.Text" xml:space="preserve"><value>工作</value><comment>PixelSamplerLocalizedText[1]</comment></data>
+  <data name="samplerProof.Text" xml:space="preserve"><value>打样</value><comment>PixelSamplerLocalizedText[2]</comment></data>
+  <data name="samplerSourcePixel.Text" xml:space="preserve"><value>源像素</value><comment>PixelSamplerLocalizedText[3]</comment></data>
+  <data name="samplerMovePointer.Text" xml:space="preserve"><value>将指针移到照片上</value><comment>PixelSamplerLocalizedText[4]</comment></data>
+  <data name="samplerEnabled.Text" xml:space="preserve"><value>像素取样器</value><comment>PixelSamplerLocalizedText[5]</comment></data>
+  <data name="settingsLanguageRestart.Text" xml:space="preserve"><value>新语言将在重新启动 Negaflow 后生效。</value><comment>Windows only: language applies on restart.</comment></data>
 </root>

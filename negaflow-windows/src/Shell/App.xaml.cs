@@ -16,9 +16,32 @@ public partial class App : Application
         InitializeComponent();
     }
 
+    /// <summary>
+    /// 설정에 담긴 언어를 겁니다. 비어 있으면 시스템 언어를 그대로 씁니다 — 빈 문자열이 곧
+    /// "시스템을 따르라" 는 뜻입니다.
+    /// </summary>
+    private static void ApplySavedLanguage()
+    {
+        try
+        {
+            string language = AppLanguages.Normalize(
+                new PresentationSettingsStore().Current.Language);
+            Windows.Globalization.ApplicationLanguages.PrimaryLanguageOverride = language;
+        }
+        catch (Exception exception) when (exception is IOException or
+            UnauthorizedAccessException or ArgumentException)
+        {
+            // 설정을 못 읽으면 시스템 언어로 뜹니다. 언어 하나 때문에 앱이 시작하지 못하는
+            // 것보다 낫습니다.
+        }
+    }
+
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
         _ = args;
+        // 언어는 **창을 만들기 전에** 걸어야 합니다. 창이 뜬 뒤에 바꾸면 이미 만들어진
+        // 컨트롤은 옛 언어를 들고 있어 한 화면에 두 언어가 섞입니다.
+        ApplySavedLanguage();
         // 첫 창을 만들기 전에 읽습니다. 썸네일과 미리보기가 곧바로 현상 요청을 만들기 시작하므로
         // 그 뒤에 읽으면 처음 몇 장만 프리셋 없이 현상됩니다.
         LookPresetLibrary.Load(Path.Combine(AppContext.BaseDirectory, "presets"));

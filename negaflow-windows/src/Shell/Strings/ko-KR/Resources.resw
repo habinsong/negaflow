@@ -1138,4 +1138,11 @@
   <data name="settingsScannerTruthNone.Text" xml:space="preserve"><value>스캐너를 연결하면 장치가 보고하는 값이 나옵니다.</value><comment>Windows only: no scanner connected yet.</comment></data>
   <data name="settingsMicroSpecksSection.Text" xml:space="preserve"><value>미세 반점 기본값</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecks</comment></data>
   <data name="settingsMicroSpecksHelp.Text" xml:space="preserve"><value>새로 여는 결함 도구가 가장 작은 반점까지 찾기로 시작할지입니다.</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecksHelp</comment></data>
+  <data name="samplerOriginal.Text" xml:space="preserve"><value>원본</value><comment>PixelSamplerLocalizedText[0]</comment></data>
+  <data name="samplerWorking.Text" xml:space="preserve"><value>작업</value><comment>PixelSamplerLocalizedText[1]</comment></data>
+  <data name="samplerProof.Text" xml:space="preserve"><value>프루프</value><comment>PixelSamplerLocalizedText[2]</comment></data>
+  <data name="samplerSourcePixel.Text" xml:space="preserve"><value>원본 픽셀</value><comment>PixelSamplerLocalizedText[3]</comment></data>
+  <data name="samplerMovePointer.Text" xml:space="preserve"><value>사진 위로 포인터를 이동하세요</value><comment>PixelSamplerLocalizedText[4]</comment></data>
+  <data name="samplerEnabled.Text" xml:space="preserve"><value>픽셀 샘플러</value><comment>PixelSamplerLocalizedText[5]</comment></data>
+  <data name="settingsLanguageRestart.Text" xml:space="preserve"><value>새 언어는 Negaflow 를 다시 시작한 뒤 보입니다.</value><comment>Windows only: language applies on restart.</comment></data>
 </root>

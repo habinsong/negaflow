@@ -225,6 +225,40 @@ public sealed partial class SettingsRootView : UserControl
         workspaceState?.UpdateSoftProof(value => value with { PrinterProfilePath = string.Empty });
     }
 
+    /// <summary>
+    /// 앱 언어를 고릅니다. **다시 시작한 뒤에 보입니다** — WinUI 는 리소스를 시작할 때 한 번
+    /// 고르므로, 켜져 있는 창의 문자열을 그 자리에서 바꾸면 이미 만들어진 컨트롤만 남아
+    /// 두 언어가 섞입니다.
+    /// </summary>
+    private void OnLanguageSelectionChanged(object sender, SelectionChangedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (isUpdating)
+        {
+            return;
+        }
+        int index = LanguageComboBox.SelectedIndex;
+        if (index < 0 || index >= AppLanguages.All.Count)
+        {
+            return;
+        }
+        string language = AppLanguages.All[index];
+        workspaceState?.SetLanguage(language);
+        // 다음 실행에서 이 언어로 뜨도록 지금 적어 둡니다.
+        Windows.Globalization.ApplicationLanguages.PrimaryLanguageOverride = language;
+    }
+
+    private void OnPixelSamplerToggled(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (!isUpdating)
+        {
+            workspaceState?.SetPixelSamplerEnabled(PixelSamplerToggle.IsOn);
+        }
+    }
+
     private void OnImageHashToggled(object sender, RoutedEventArgs args)
     {
         _ = sender;
@@ -296,6 +330,10 @@ public sealed partial class SettingsRootView : UserControl
             : AppResources.Get("settingsColorOff", "Text");
         ScannerEmulationSummary.Text = AppResources.Get("settingsColorUnassigned", "Text");
         SynchronizeScanTab(preferences);
+        PixelSamplerToggle.IsOn = preferences.PixelSamplerEnabled;
+        LanguageComboBox.SelectedIndex = Math.Max(
+            0,
+            AppLanguages.All.ToList().IndexOf(AppLanguages.Normalize(preferences.Language)));
         SelectCategory(preferences.SelectedSettingsCategory);
         isUpdating = false;
     }
@@ -349,6 +387,10 @@ public sealed partial class SettingsRootView : UserControl
         SetCategoryText(ShortcutsButton, ShortcutsLabel, ShortcutsHeading, "settingsShortcutsTab");
         SetCategoryText(LegalButton, LegalLabel, LegalHeading, "settingsLegalTab");
         LocalizeScanTab();
+        PixelSamplerToggle.Header = AppResources.Get("samplerEnabled", "Text");
+        AutomationProperties.SetName(PixelSamplerToggle, PixelSamplerToggle.Header.ToString());
+        PixelSamplerHelp.Text = AppResources.Get("samplerMovePointer", "Text");
+        LanguageRestartHint.Text = AppResources.Get("settingsLanguageRestart", "Text");
 
         AppearanceLabel.Text = AppResources.Get("settingsAppearancePicker", "Text");
         SystemAppearanceItem.Content = AppResources.Get("appearanceSystem", "Content");

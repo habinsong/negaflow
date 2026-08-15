@@ -1138,4 +1138,11 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="settingsScannerTruthNone.Text" xml:space="preserve"><value>Scanner anschließen, um die gemeldeten Werte zu sehen.</value><comment>Windows only: no scanner connected yet.</comment></data>
   <data name="settingsMicroSpecksSection.Text" xml:space="preserve"><value>Standard für Mikroflecken</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecks</comment></data>
   <data name="settingsMicroSpecksHelp.Text" xml:space="preserve"><value>Ob ein neu geöffnetes Defektwerkzeug nach kleinsten Flecken sucht.</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecksHelp</comment></data>
+  <data name="samplerOriginal.Text" xml:space="preserve"><value>Original</value><comment>PixelSamplerLocalizedText[0]</comment></data>
+  <data name="samplerWorking.Text" xml:space="preserve"><value>Arbeitsfarbraum</value><comment>PixelSamplerLocalizedText[1]</comment></data>
+  <data name="samplerProof.Text" xml:space="preserve"><value>Proof</value><comment>PixelSamplerLocalizedText[2]</comment></data>
+  <data name="samplerSourcePixel.Text" xml:space="preserve"><value>Quellpixel</value><comment>PixelSamplerLocalizedText[3]</comment></data>
+  <data name="samplerMovePointer.Text" xml:space="preserve"><value>Zeiger über das Foto bewegen</value><comment>PixelSamplerLocalizedText[4]</comment></data>
+  <data name="samplerEnabled.Text" xml:space="preserve"><value>Pixel-Sampler</value><comment>PixelSamplerLocalizedText[5]</comment></data>
+  <data name="settingsLanguageRestart.Text" xml:space="preserve"><value>Die neue Sprache erscheint nach einem Neustart von Negaflow.</value><comment>Windows only: language applies on restart.</comment></data>
 </root>

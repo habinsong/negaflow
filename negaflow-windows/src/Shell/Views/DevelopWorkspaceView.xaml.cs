@@ -684,6 +684,9 @@ public sealed partial class DevelopWorkspaceView : UserControl
 
     private void ShowPreview(PreviewOutcome outcome)
     {
+        // 샘플러가 읽을 버퍼는 화면에 그린 것과 같아야 합니다 — 다른 것을 읽으면 보이는 색과
+        // 적히는 수가 갈립니다.
+        KeepPreviewPixels(outcome.Pixels, outcome.Width, outcome.Height);
         if (outcome.Kind != DevelopExportOutcomeKind.Completed ||
             outcome.Pixels is not { } pixels ||
             outcome.Width == 0U ||
@@ -868,6 +871,9 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private void OnCanvasPointerMoved(object sender, PointerRoutedEventArgs args)
     {
         _ = sender;
+        // 샘플러는 다른 도구를 막지 않습니다 — 값을 읽기만 하므로 크롭이나 브러시와 함께
+        // 돌아도 서로 방해하지 않습니다.
+        UpdatePixelSampler(args);
         if (TryContinueGuidedDefectSelection(args))
         {
             args.Handled = true;

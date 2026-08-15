@@ -87,8 +87,13 @@
                                     <ColumnDefinition Width="230" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock x:Uid="settingsLanguagePicker" VerticalAlignment="Center" />
-                                <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" IsEnabled="False" SelectedIndex="0">
-                                    <ComboBoxItem Content="System" />
+                                <ComboBox
+                                    x:Name="LanguageComboBox"
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Stretch"
+                                    AutomationProperties.AutomationId="settings.language"
+                                    SelectionChanged="OnLanguageSelectionChanged">
+                                    <ComboBoxItem x:Name="LanguageSystemItem" Content="System" />
                                     <ComboBoxItem Content="English" />
                                     <ComboBoxItem Content="한국어" />
                                     <ComboBoxItem Content="日本語" />
@@ -97,6 +102,11 @@
                                     <ComboBoxItem Content="Deutsch" />
                                 </ComboBox>
                             </Grid>
+                            <TextBlock
+                                x:Name="LanguageRestartHint"
+                                FontSize="12"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                TextWrapping="Wrap" />
                             <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
                             <Grid ColumnSpacing="16">
                                 <Grid.ColumnDefinitions>
@@ -139,6 +149,16 @@
                             </Grid>
                             <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
                             <ToggleSwitch x:Name="ClippingOverlayToggle" x:Uid="colorClippingOverlay" IsEnabled="False" />
+                            <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
+                            <ToggleSwitch
+                                x:Name="PixelSamplerToggle"
+                                AutomationProperties.AutomationId="settings.interface.pixel-sampler"
+                                Toggled="OnPixelSamplerToggled" />
+                            <TextBlock
+                                x:Name="PixelSamplerHelp"
+                                FontSize="12"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
                 </StackPanel>
