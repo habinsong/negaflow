@@ -1,5 +1,7 @@
 #include "negaflow/imaging/auto_negative_base_resolver.h"
 
+#include "negaflow/imaging/mipmap_downsampler.h"
+
 #include "bilinear_rgb_sampler.h"
 
 #include <algorithm>
@@ -357,66 +359,14 @@ struct SampleGridGeometry final {
         image.height,
         image.stride_pixels,
     };
-    for (std::uint32_t y = 0U; y < grid.height; ++y) {
-        const double source_y =
-            (static_cast<double>(y) + 0.5) / geometry->uniform_scale - 0.5;
-        for (std::uint32_t x = 0U; x < grid.width; ++x) {
-            const double source_x =
-                (static_cast<double>(x) + 0.5) / geometry->uniform_scale - 0.5;
-            const std::size_t index = static_cast<std::size_t>(y) * grid.width + x;
-            // 이 표본이 대표하는 원본 칸 전체를 평균한다. 장면 통계 격자와 같은 이유다 —
-            // 이웃 네 화소만 읽는 bilinear 는 크게 줄일 때 칸 안의 수십 화소 중 넷만 보므로
-            // 입자·먼지가 후보 분포와 성분 경계를 좌우한다. 베이스는 결맞은 **구조**를 찾는
-            // 일이라 표본이 시끄러우면 구조가 흩어진다.
-            const double next_source_x =
-                (static_cast<double>(x) + 1.5) / geometry->uniform_scale - 0.5;
-            const double next_source_y =
-                (static_cast<double>(y) + 1.5) / geometry->uniform_scale - 0.5;
-            const auto cell_x0 = static_cast<std::int64_t>(std::floor(source_x + 0.5));
-            const auto cell_y0 = static_cast<std::int64_t>(std::floor(source_y + 0.5));
-            const auto cell_x1 = static_cast<std::int64_t>(std::floor(next_source_x + 0.5));
-            const auto cell_y1 = static_cast<std::int64_t>(std::floor(next_source_y + 0.5));
-            if (cell_x1 > cell_x0 + 1 && cell_y1 > cell_y0 + 1) {
-                double sum_red = 0.0;
-                double sum_green = 0.0;
-                double sum_blue = 0.0;
-                std::uint64_t taken = 0U;
-                for (std::int64_t cy = cell_y0; cy < cell_y1; ++cy) {
-                    if (cy < 0 || cy >= static_cast<std::int64_t>(image.height)) {
-                        continue;
-                    }
-                    for (std::int64_t cx = cell_x0; cx < cell_x1; ++cx) {
-                        if (cx < 0 || cx >= static_cast<std::int64_t>(image.width)) {
-                            continue;
-                        }
-                        const negaflow::core::Rgba32F cell = source.pixels[
-                            (static_cast<std::size_t>(cy) * source.stride_pixels) +
-                            static_cast<std::size_t>(cx)];
-                        sum_red += cell.red;
-                        sum_green += cell.green;
-                        sum_blue += cell.blue;
-                        ++taken;
-                    }
-                }
-                const double count_taken = taken == 0U ? 1.0 : static_cast<double>(taken);
-                grid.pixels[index] = {
-                    static_cast<float>(sum_red / count_taken),
-                    static_cast<float>(sum_green / count_taken),
-                    static_cast<float>(sum_blue / count_taken),
-                    1.0F,
-                };
-            } else {
-                const detail::BilinearRgb sampled =
-                    detail::sample_bilinear_rgb_transparent(source, source_x, source_y);
-                grid.pixels[index] = {
-                    static_cast<float>(sampled.red),
-                    static_cast<float>(sampled.green),
-                    static_cast<float>(sampled.blue),
-                    1.0F,
-                };
-            }
-            grid.lumas[index] = luma_of(grid.pixels[index]);
-        }
+    const DownsampledProxy proxy =
+        downsample_for_statistics(source, grid.width, grid.height);
+    if (proxy.pixels.empty()) {
+        return std::nullopt;
+    }
+    for (std::size_t index = 0U; index < count; ++index) {
+        grid.pixels[index] = proxy.pixels[index];
+        grid.lumas[index] = luma_of(grid.pixels[index]);
     }
     return grid;
 }

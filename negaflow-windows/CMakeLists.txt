@@ -158,6 +158,7 @@ add_library(negaflow_imaging STATIC
       src/Native/imaging/scanner_profile_grade.cpp
       src/Native/imaging/scanner_target_grade.cpp
     src/Native/imaging/manual_negative_developer.cpp
+    src/Native/imaging/mipmap_downsampler.cpp
     src/Native/imaging/point_curve.cpp
     src/Native/imaging/primary_calibration.cpp
     src/Native/imaging/scanner_tiff_to_working.cpp

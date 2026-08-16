@@ -1,5 +1,7 @@
 #include "negaflow/imaging/manual_negative_developer.h"
 
+#include "negaflow/imaging/mipmap_downsampler.h"
+
 #include "bilinear_rgb_sampler.h"
 #include "negaflow/core/negative_inversion.h"
 
@@ -80,8 +82,6 @@ void discard_pixels(WorkingImage& image) noexcept {
 
     const std::uint32_t bounded_width = static_cast<std::uint32_t>(sample_width);
     const std::uint32_t bounded_height = static_cast<std::uint32_t>(sample_height);
-    const double uniform_scale =
-        static_cast<double>(bounded_width) / static_cast<double>(image.width);
 
     const std::uint32_t inset_x = std::max(1U, static_cast<std::uint32_t>(bounded_width * 0.06));
     const std::uint32_t inset_y = std::max(1U, static_cast<std::uint32_t>(bounded_height * 0.06));
@@ -100,73 +100,15 @@ void discard_pixels(WorkingImage& image) noexcept {
             image.height,
             image.stride_pixels,
         };
+        const DownsampledProxy proxy = downsample_for_statistics(
+            source, bounded_width, bounded_height);
+        if (proxy.pixels.empty()) {
+            return std::nullopt;
+        }
         for (std::uint32_t y = inset_y; y < bounded_height - inset_y; ++y) {
-            const double source_y =
-                (static_cast<double>(y) + 0.5) / uniform_scale - 0.5;
             for (std::uint32_t x = inset_x; x < bounded_width - inset_x; ++x) {
-                const double source_x =
-                    (static_cast<double>(x) + 0.5) / uniform_scale - 0.5;
-                // 이 표본이 대표하는 원본 칸 전체를 평균한다. 이웃 네 화소만 읽는 bilinear
-                // 로는 1/7 축소에서 칸 안의 50여 화소 중 넷만 보게 되어 입자·먼지 같은
-                // 극단값이 그대로 남고, 그것이 p0.002(최농부)를 끌어내려 dmaxNorm 을 키운다.
-                // macOS 는 Core Image 축소가 면적 평균을 하므로 같은 장면에서 더 얌전한
-                // 최농부를 본다 — 두 앱의 사진이 갈리던 자리다.
-                const double next_source_x =
-                    (static_cast<double>(x) + 1.5) / uniform_scale - 0.5;
-                const double next_source_y =
-                    (static_cast<double>(y) + 1.5) / uniform_scale - 0.5;
-                const std::int64_t cell_x0 = static_cast<std::int64_t>(
-                    std::floor(source_x + 0.5));
-                const std::int64_t cell_y0 = static_cast<std::int64_t>(
-                    std::floor(source_y + 0.5));
-                const std::int64_t cell_x1 = static_cast<std::int64_t>(
-                    std::floor(next_source_x + 0.5));
-                const std::int64_t cell_y1 = static_cast<std::int64_t>(
-                    std::floor(next_source_y + 0.5));
-                negaflow::core::Rgba32F pixel{};
-                if (cell_x1 > cell_x0 + 1 && cell_y1 > cell_y0 + 1) {
-                    double sum_red = 0.0;
-                    double sum_green = 0.0;
-                    double sum_blue = 0.0;
-                    std::uint64_t taken = 0U;
-                    for (std::int64_t cy = cell_y0; cy < cell_y1; ++cy) {
-                        if (cy < 0 || cy >= static_cast<std::int64_t>(image.height)) {
-                            continue;
-                        }
-                        for (std::int64_t cx = cell_x0; cx < cell_x1; ++cx) {
-                            if (cx < 0 || cx >= static_cast<std::int64_t>(image.width)) {
-                                continue;
-                            }
-                            const negaflow::core::Rgba32F cell = source.pixels[
-                                (static_cast<std::size_t>(cy) * source.stride_pixels) +
-                                static_cast<std::size_t>(cx)];
-                            sum_red += cell.red;
-                            sum_green += cell.green;
-                            sum_blue += cell.blue;
-                            ++taken;
-                        }
-                    }
-                    if (taken == 0U) {
-                        return std::nullopt;
-                    }
-                    const double count = static_cast<double>(taken);
-                    pixel = negaflow::core::Rgba32F{
-                        static_cast<float>(sum_red / count),
-                        static_cast<float>(sum_green / count),
-                        static_cast<float>(sum_blue / count),
-                        1.0F,
-                    };
-                } else {
-                    // 축소가 아니거나 칸이 한 화소면 평균할 것이 없다.
-                    const detail::BilinearRgb sampled =
-                        detail::sample_bilinear_rgb_transparent(source, source_x, source_y);
-                    pixel = negaflow::core::Rgba32F{
-                        static_cast<float>(sampled.red),
-                        static_cast<float>(sampled.green),
-                        static_cast<float>(sampled.blue),
-                        1.0F,
-                    };
-                }
+                const negaflow::core::Rgba32F pixel =
+                    proxy.pixels[(static_cast<std::size_t>(y) * bounded_width) + x];
                 if (!std::isfinite(pixel.red) || !std::isfinite(pixel.green) ||
                     !std::isfinite(pixel.blue)) {
                     return std::nullopt;
