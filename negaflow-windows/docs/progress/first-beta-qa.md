@@ -98,3 +98,11 @@ Library·Develop·Print는 하나의 catalog와 하나의 사용자 작업 흐�
 - 수정할 것: 로컬 CI를 통과한 setup을 실제 기본 경로에 설치한 뒤 `computer-use` 전체 워크플로 QA를 진행한다.
 - 수정한 것: 패키지 ID 없이 실행한 Negaflow와 빈 WinUI 진단 앱이 모두 `0x80073D54`를 stowed exception으로 남기며 종료되는 배포 결함을 확인했다. setup이 unsigned loose package를 현재 사용자에게 등록하고 실패 시 이전 설치를 복구하도록 바꿨으며, setup 검증에 실제 창 생성과 package 제거를 추가했다.
 - 검증한 것: `scripts/local-ci.ps1` 통과. native CTest 71/71, catalog 721 assertions, shell 905 assertions, setup 설치·package identity·창 생성·제거 통과. 설치 파일 SHA-256은 `d43909ab55f3c16164e5e3445f19d318bf782d52180e89f0bcfc97b228d97f6d`, 로그는 `out\logs\local-ci-20260817-000901.log`이다.
+
+### CP3 — 로컬 CI 통과 setup의 실제 기본 경로 설치
+
+- 한 것: 로컬 CI를 통과한 본체 1.0.9 setup과 SANE 1.0.4 setup을 실제 기본 경로에 설치하고 설치본을 `computer-use`로 실행했다.
+- 안 한 것: 화면이 열렸다는 사실은 Library→Develop→Print, GrainMend, 성능, UI/UX parity 통과가 아니다.
+- 수정할 것: `computer-use` 캡처에서 다시 확인된 한국어 글자 깨짐·잘림, 좌측 패널의 macOS 불일치, 접근성 트리 미노출을 목표 2·5와 다국어 검증 항목에서 수정한다.
+- 수정한 것: 이전에 창이 열리지 않던 unpackaged 설치본을 package identity를 가진 최신 설치본으로 교체했다.
+- 검증한 것: `Negaflow.Windows_1.0.9.0_x64__esnvpjf0wq370`, `InstallLocation=C:\Users\habin\AppData\Local\Negaflow\App`, `Status=Ok`; `computer-use`가 `Negaflow.Windows_esnvpjf0wq370!App`의 2560×1392 창을 캡처했다. 같은 시점의 설치본 SANE `detect`는 GT-X900과 OpticFilm 8100을 모두 반환했다.
