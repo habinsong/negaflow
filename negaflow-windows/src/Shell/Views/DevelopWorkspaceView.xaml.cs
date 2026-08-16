@@ -3569,9 +3569,13 @@ public sealed partial class DevelopWorkspaceView : UserControl
         {
             return;
         }
-        // 이름 변경은 이름을 묻는 시트가 필요합니다. 없는 채로 다음 기본 이름을 다시 붙이는
-        // 것은 이름 변경이 아니므로 메뉴에 내지 않습니다.
         ExportRecipeFlyout.Items.Add(new MenuFlyoutSeparator());
+        var rename = new MenuFlyoutItem
+        {
+            Text = AppResources.Get("libraryRename", "Content"),
+        };
+        rename.Click += (_, _) => RenameExportRecipe(selected);
+        ExportRecipeFlyout.Items.Add(rename);
         var delete = new MenuFlyoutItem { Text = AppResources.Get("libraryDelete", "Content") };
         delete.Click += (_, _) =>
         {
@@ -3581,8 +3585,39 @@ public sealed partial class DevelopWorkspaceView : UserControl
     }
 
     /// <summary>
-    /// 이름은 파일명 패턴 칸이 아니라 macOS 처럼 "내보내기 설정 N" 으로 짓습니다. 이름을 묻는
-    /// 시트는 아직 없으므로, 이름을 바꾸는 길은 메뉴의 이름 변경입니다.
+    /// 담아 둔 내보내기 설정의 이름을 바꿉니다. 저장은 이름을 짓지 않고 "내보내기 설정 N" 을
+    /// 붙이므로, 사용자가 자기 이름을 주는 자리는 여기뿐입니다.
+    /// </summary>
+    private async void RenameExportRecipe(ExportRecipe recipe)
+    {
+        TextBox field = new()
+        {
+            Text = recipe.Name,
+            PlaceholderText = AppResources.Get("developExportRecipe", "Text"),
+        };
+        AutomationProperties.SetName(field, field.PlaceholderText);
+        AutomationProperties.SetAutomationId(field, "negaflow.develop.export.recipe-name");
+        ContentDialog dialog = new()
+        {
+            XamlRoot = XamlRoot,
+            Title = AppResources.Get("libraryRename", "Content"),
+            Content = field,
+            PrimaryButtonText = AppResources.Get("libraryRename", "Content"),
+            CloseButtonText = AppResources.Get("commonCancel", "Content"),
+            DefaultButton = ContentDialogButton.Primary,
+        };
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary)
+        {
+            return;
+        }
+        // 빈 이름이나 공백뿐인 이름은 Rename 이 스스로 거절합니다 — 이름 없는 프리셋은
+        // 목록에서 고를 수 없습니다.
+        UpdateExportRecipes(library => library.Rename(recipe.Id, field.Text));
+    }
+
+    /// <summary>
+    /// 이름은 파일명 패턴 칸이 아니라 macOS 처럼 "내보내기 설정 N" 으로 짓습니다. 사용자가
+    /// 자기 이름을 주려면 메뉴의 이름 변경을 씁니다.
     /// </summary>
     private void SaveCurrentExportRecipe()
     {
