@@ -78,17 +78,28 @@ constexpr std::uint32_t color_space_profile_signature = 0x73706163U;
         return ScannerToWorkingStatus::unsupported_alpha;
     }
 
-    const std::size_t source_stride = decoded.stride_bytes / sizeof(std::uint16_t);
-    for (std::uint32_t row = 0U; row < decoded.height; ++row) {
-        const std::uint16_t* const source =
-            decoded.samples.data() + static_cast<std::size_t>(row) * source_stride;
-        for (std::uint32_t column = 0U; column < decoded.width; ++column) {
-            if (source[static_cast<std::size_t>(column) * 4U + 3U] != 65'535U) {
-                return ScannerToWorkingStatus::non_opaque_alpha;
-            }
-        }
-    }
     return ScannerToWorkingStatus::ok;
+}
+
+[[nodiscard]] float decoded_alpha(
+    const negaflow::imageio::DecodedImage& decoded,
+    const std::uint16_t* const source,
+    const std::size_t offset) noexcept {
+    constexpr float u16_scale = 1.0F / 65'535.0F;
+    return decoded.layout == negaflow::imageio::DecodedPixelLayout::rgba16
+        ? static_cast<float>(source[offset + 3U]) * u16_scale
+        : 1.0F;
+}
+
+[[nodiscard]] std::uint16_t unassociate_component(
+    const std::uint16_t component,
+    const std::uint16_t alpha) noexcept {
+    if (alpha == 0U) {
+        return 0U;
+    }
+    const std::uint64_t restored =
+        (static_cast<std::uint64_t>(component) * 65'535U + alpha / 2U) / alpha;
+    return static_cast<std::uint16_t>(std::min<std::uint64_t>(restored, 65'535U));
 }
 
 [[nodiscard]] ScannerToWorkingStatus decode_srgb16_to_working(
@@ -141,13 +152,19 @@ constexpr std::uint32_t color_space_profile_signature = 0x73706163U;
         for (std::uint32_t column = 0U; column < decoded.width; ++column) {
             const std::size_t offset = static_cast<std::size_t>(column) * channels;
             destination[column] = {
-                negaflow::color::srgb_encoded_to_linear(
-                    static_cast<float>(source[offset]) * u16_scale),
-                negaflow::color::srgb_encoded_to_linear(
-                    static_cast<float>(source[offset + 1U]) * u16_scale),
-                negaflow::color::srgb_encoded_to_linear(
-                    static_cast<float>(source[offset + 2U]) * u16_scale),
-                1.0F,
+                negaflow::color::srgb_encoded_to_linear(static_cast<float>(
+                    decoded.alpha_mode == negaflow::imageio::AlphaMode::associated
+                        ? unassociate_component(source[offset], source[offset + 3U])
+                        : source[offset]) * u16_scale),
+                negaflow::color::srgb_encoded_to_linear(static_cast<float>(
+                    decoded.alpha_mode == negaflow::imageio::AlphaMode::associated
+                        ? unassociate_component(source[offset + 1U], source[offset + 3U])
+                        : source[offset + 1U]) * u16_scale),
+                negaflow::color::srgb_encoded_to_linear(static_cast<float>(
+                    decoded.alpha_mode == negaflow::imageio::AlphaMode::associated
+                        ? unassociate_component(source[offset + 2U], source[offset + 3U])
+                        : source[offset + 2U]) * u16_scale),
+                decoded_alpha(decoded, source, offset),
             };
         }
     }
@@ -223,6 +240,20 @@ ScannerToWorkingResult convert_scanner_to_working(
             decoded.width,
             decoded.height,
             result.image);
+        if (result.status == ScannerToWorkingStatus::ok &&
+            decoded.layout == negaflow::imageio::DecodedPixelLayout::rgba16) {
+            const std::size_t source_stride = decoded.stride_bytes / sizeof(std::uint16_t);
+            constexpr float u16_scale = 1.0F / 65'535.0F;
+            for (std::uint32_t row = 0U; row < decoded.height; ++row) {
+                const std::uint16_t* const source = decoded.samples.data() +
+                    static_cast<std::size_t>(row) * source_stride;
+                for (std::uint32_t column = 0U; column < decoded.width; ++column) {
+                    result.image.pixels[static_cast<std::size_t>(row) * decoded.width + column]
+                        .alpha = static_cast<float>(source[static_cast<std::size_t>(column) * 4U + 3U]) *
+                            u16_scale;
+                }
+            }
+        }
         if (result.status == ScannerToWorkingStatus::ok) {
             result.info.transform = ScannerWorkingTransform::embedded_icc_windows_icm_srgb16;
             result.info.intermediate_bits_per_color_channel = 16U;

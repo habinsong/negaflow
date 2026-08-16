@@ -679,6 +679,12 @@ public sealed class DevelopExportRequest
     public ExportColorSpace OutputColorSpace { get; init; } = ExportColorSpace.Srgb;
 
     /// <summary>
+    /// PNG/TIFF exports preserve straight source alpha. JPEG requests with this flag are
+    /// rejected before the native pipeline reads the source.
+    /// </summary>
+    public bool PreserveAlpha { get; init; }
+
+    /// <summary>
     /// What to write into the published file. PNG carries no EXIF, so the policy leaves
     /// no trace in a PNG.
     /// </summary>

@@ -476,6 +476,7 @@ internal static class Program
             OutputSharpening = 0.5,
             OutputSharpeningMedium = OutputSharpeningMedium.GlossyPaper,
             ColorSpace = ExportColorSpace.DisplayP3,
+            PreserveAlpha = true,
         };
 
         DevelopRequestResult result = DevelopRequestFactory.Create(
@@ -527,6 +528,7 @@ internal static class Program
         Check(
             request.OutputColorSpace == ExportColorSpace.DisplayP3,
             "export_settings_color_space_reaches_the_request");
+        Check(request.PreserveAlpha, "export_settings_preserve_alpha_reaches_the_request");
 
         // JPEG 은 sRGB 만 냅니다. 고른 값이 요청에 그대로 실리면 엔진이 거절하므로, 화면에
         // 보이는 요약과 실제 파일이 어긋나지 않도록 여기서 sRGB 로 되돌립니다.
@@ -534,10 +536,18 @@ internal static class Program
             Frame(new ManualBaseRgb(0.21, 0.22, 0.23)),
             @"C:\exports\IMG_0001.jpg",
             DevelopExportFormat.Jpeg8,
-            (settings with { Format = DevelopExportFormat.Jpeg8 }).ToEncodingOptions());
+            (settings with { Format = DevelopExportFormat.Jpeg8, PreserveAlpha = false }).ToEncodingOptions());
         Check(
             jpeg.Request is { OutputColorSpace: ExportColorSpace.Srgb },
             "export_settings_jpeg_publishes_srgb");
+        DevelopRequestResult alphaJpeg = DevelopRequestFactory.Create(
+            Frame(new ManualBaseRgb(0.21, 0.22, 0.23)),
+            @"C:\exports\IMG_0001.jpg",
+            DevelopExportFormat.Jpeg8,
+            (settings with { Format = DevelopExportFormat.Jpeg8 }).ToEncodingOptions());
+        Check(
+            alphaJpeg.Refusal == DevelopRequestRefusal.UnsupportedAlpha,
+            "export_settings_jpeg_refuses_preserved_alpha");
 
         // 소프트 프루프는 보기용입니다. 꺼져 있으면 프루프를 도입하기 전과 같은 값이어야
         // 합니다 — 껐는데 화면이 달라지면 그것이 곧 결함입니다.
@@ -6417,6 +6427,9 @@ internal static class Program
         Check(
             json.Contains("\"focalLengthMM\": 35", StringComparison.Ordinal),
             "export_sidecar_carries_the_shot");
+        Check(
+            json.Contains("\"preserveAlpha\": false", StringComparison.Ordinal),
+            "export_sidecar_records_alpha_policy");
 
         string xmp = ExportSidecarWriter.BuildXmp(content);
         Check(

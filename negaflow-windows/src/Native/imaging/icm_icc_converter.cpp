@@ -4,6 +4,7 @@
 #include <Windows.h>
 #include <icm.h>
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -13,6 +14,17 @@
 
 namespace negaflow::imaging::detail {
 namespace {
+
+[[nodiscard]] std::uint16_t unassociate_component(
+    const std::uint16_t component,
+    const std::uint16_t alpha) noexcept {
+    if (alpha == 0U) {
+        return 0U;
+    }
+    const std::uint64_t restored =
+        (static_cast<std::uint64_t>(component) * 65'535U + alpha / 2U) / alpha;
+    return static_cast<std::uint16_t>(std::min<std::uint64_t>(restored, 65'535U));
+}
 
 [[nodiscard]] HPROFILE open_standard_srgb_profile(std::uint32_t& native_error_code) {
     DWORD path_bytes = 0U;
@@ -185,9 +197,18 @@ EncodedSrgb16Result convert_embedded_icc_to_srgb16(
                 for (std::uint32_t column = 0U; column < decoded.width; ++column) {
                     const std::size_t source_offset = static_cast<std::size_t>(column) * 4U;
                     const std::size_t destination_offset = static_cast<std::size_t>(column) * 3U;
-                    destination[destination_offset] = source[source_offset];
-                    destination[destination_offset + 1U] = source[source_offset + 1U];
-                    destination[destination_offset + 2U] = source[source_offset + 2U];
+                    const bool associated =
+                        decoded.alpha_mode == negaflow::imageio::AlphaMode::associated;
+                    const std::uint16_t alpha = source[source_offset + 3U];
+                    destination[destination_offset] = associated
+                        ? unassociate_component(source[source_offset], alpha)
+                        : source[source_offset];
+                    destination[destination_offset + 1U] = associated
+                        ? unassociate_component(source[source_offset + 1U], alpha)
+                        : source[source_offset + 1U];
+                    destination[destination_offset + 2U] = associated
+                        ? unassociate_component(source[source_offset + 2U], alpha)
+                        : source[source_offset + 2U];
                 }
             }
             source_samples = packed_rgb.data();

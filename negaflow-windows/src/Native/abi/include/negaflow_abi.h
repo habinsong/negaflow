@@ -845,6 +845,16 @@ typedef struct nf_develop_export_request_v33 {
     const wchar_t* metadata_captured_at;
 } nf_develop_export_request_v33;
 
+/* v34 appends the macOS preserve-alpha export option. JPEG rejects it; PNG and TIFF
+   publish straight alpha when it is non-zero. Reserved words must be zero. */
+typedef struct nf_develop_export_request_v34 {
+    nf_develop_export_request_v33 v33;
+    uint32_t preserve_alpha;
+    uint32_t alpha_reserved0;
+    uint32_t alpha_reserved1;
+    uint32_t alpha_reserved2;
+} nf_develop_export_request_v34;
+
 typedef struct nf_develop_export_result_v1 {
     uint32_t struct_size;
     uint32_t succeeded;
@@ -1711,6 +1721,19 @@ NF_API nf_status_t NF_CALL nf_develop_export_v33(
     nf_develop_export_result_v3* result);
 NF_API nf_status_t NF_CALL nf_develop_preview_v33(
     const nf_develop_export_request_v33* request,
+    const nf_soft_proof_v1* soft_proof,
+    uint32_t maximum_width,
+    uint32_t maximum_height,
+    uint8_t* pixels,
+    uint32_t pixel_capacity_bytes,
+    nf_develop_run_state_v1* run_state,
+    nf_develop_export_result_v3* result);
+NF_API nf_status_t NF_CALL nf_develop_export_v34(
+    const nf_develop_export_request_v34* request,
+    nf_develop_run_state_v1* run_state,
+    nf_develop_export_result_v3* result);
+NF_API nf_status_t NF_CALL nf_develop_preview_v34(
+    const nf_develop_export_request_v34* request,
     const nf_soft_proof_v1* soft_proof,
     uint32_t maximum_width,
     uint32_t maximum_height,

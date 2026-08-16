@@ -89,6 +89,16 @@ struct OutputPixel final {
     return static_cast<std::uint8_t>(std::floor(dithered * 255.0F + 0.5F));
 }
 
+[[nodiscard]] std::uint16_t quantize_alpha(const float alpha) noexcept {
+    const float bounded = std::clamp(alpha, 0.0F, 1.0F);
+    return static_cast<std::uint16_t>(std::floor(bounded * 65'535.0F + 0.5F));
+}
+
+[[nodiscard]] std::uint8_t quantize_alpha_8(const float alpha) noexcept {
+    const float bounded = std::clamp(alpha, 0.0F, 1.0F);
+    return static_cast<std::uint8_t>(std::floor(bounded * 255.0F + 0.5F));
+}
+
 void count_clipped_component(
     const float linear,
     std::uint64_t& clipped_components) noexcept {
@@ -107,6 +117,7 @@ void count_clipped_component(
         return result;
     }
     result.image.bits_per_sample = bits_per_sample;
+    result.image.channels = limits.preserve_alpha ? 4U : 3U;
     if (working.width == 0U || working.height == 0U) {
         return result;
     }
@@ -128,7 +139,7 @@ void count_clipped_component(
 
     std::uint64_t packed_sample_count = 0U;
     if (!checked_multiply(working.width, working.height, packed_sample_count) ||
-        !checked_multiply(packed_sample_count, 3U, packed_sample_count) ||
+        !checked_multiply(packed_sample_count, result.image.channels, packed_sample_count) ||
         packed_sample_count > std::numeric_limits<std::size_t>::max() ||
         !checked_multiply(
             packed_sample_count,
@@ -138,7 +149,8 @@ void count_clipped_component(
         return result;
     }
     const std::uint64_t stride_bytes =
-        static_cast<std::uint64_t>(working.width) * 3U * (result.image.bits_per_sample / 8U);
+        static_cast<std::uint64_t>(working.width) * result.image.channels *
+        (result.image.bits_per_sample / 8U);
     if (stride_bytes > std::numeric_limits<std::uint32_t>::max()) {
         result.status = WorkingToSrgb16Status::size_overflow;
         return result;
@@ -197,15 +209,6 @@ WorkingToSrgb16Result inspect_working_to_srgb(
                             first_failure,
                             row,
                             WorkingToSrgb16Status::non_finite_pixel);
-                        clipped_components.fetch_add(
-                            block_clipped, std::memory_order_relaxed);
-                        return;
-                    }
-                    if (pixel.alpha != 1.0F) {
-                        negaflow::core::record_row_failure(
-                            first_failure,
-                            row,
-                            WorkingToSrgb16Status::non_opaque_alpha);
                         clipped_components.fetch_add(
                             block_clipped, std::memory_order_relaxed);
                         return;
@@ -269,7 +272,7 @@ WorkingToSrgb16Status convert_working_to_srgb_rows(
         return WorkingToSrgb16Status::invalid_dimensions;
     }
     const std::uint64_t sample_count =
-        static_cast<std::uint64_t>(row_count) * working.width * 3U;
+        static_cast<std::uint64_t>(row_count) * working.width * description.image.channels;
     const std::uint64_t byte_count = sample_count * (bits_per_sample / 8U);
     if (byte_count > destination_byte_capacity ||
         (byte_count != 0U && destination_bytes == nullptr)) {
@@ -285,19 +288,16 @@ WorkingToSrgb16Status convert_working_to_srgb_rows(
         const std::size_t source_row =
             static_cast<std::size_t>(image_row) * working.stride_pixels;
         const std::size_t destination_row =
-            static_cast<std::size_t>(row) * working.width * 3U;
+            static_cast<std::size_t>(row) * working.width * description.image.channels;
         for (std::uint32_t column = 0U; column < working.width; ++column) {
             const negaflow::core::Rgba32F& pixel = working.pixels[source_row + column];
             if (!std::isfinite(pixel.red) || !std::isfinite(pixel.green) ||
                 !std::isfinite(pixel.blue) || !std::isfinite(pixel.alpha)) {
                 return WorkingToSrgb16Status::non_finite_pixel;
             }
-            if (pixel.alpha != 1.0F) {
-                return WorkingToSrgb16Status::non_opaque_alpha;
-            }
             const OutputPixel output = to_output_primaries(pixel, matrix);
             const std::size_t destination =
-                destination_row + static_cast<std::size_t>(column) * 3U;
+                destination_row + static_cast<std::size_t>(column) * description.image.channels;
             if (bits_per_sample == 8U) {
                 destination_bytes[destination] = quantize_component_8(
                     output.red, space, column, image_row, 0U, clipped_color_components);
@@ -305,6 +305,9 @@ WorkingToSrgb16Status convert_working_to_srgb_rows(
                     output.green, space, column, image_row, 1U, clipped_color_components);
                 destination_bytes[destination + 2U] = quantize_component_8(
                     output.blue, space, column, image_row, 2U, clipped_color_components);
+                if (description.image.channels == 4U) {
+                    destination_bytes[destination + 3U] = quantize_alpha_8(pixel.alpha);
+                }
                 continue;
             }
             samples16[destination] =
@@ -313,6 +316,9 @@ WorkingToSrgb16Status convert_working_to_srgb_rows(
                 quantize_component(output.green, space, clipped_color_components);
             samples16[destination + 2U] =
                 quantize_component(output.blue, space, clipped_color_components);
+            if (description.image.channels == 4U) {
+                samples16[destination + 3U] = quantize_alpha(pixel.alpha);
+            }
         }
     }
     return WorkingToSrgb16Status::ok;
@@ -352,7 +358,7 @@ WorkingToSrgb16Result convert_working_to_srgb16(
                 const std::size_t source_row =
                     static_cast<std::size_t>(row) * working.stride_pixels;
                 const std::size_t destination_row =
-                    static_cast<std::size_t>(row) * working.width * 3U;
+                    static_cast<std::size_t>(row) * working.width * result.image.channels;
                 for (std::uint32_t column = 0U; column < working.width; ++column) {
                     const negaflow::core::Rgba32F& pixel =
                         working.pixels[source_row + column];
@@ -366,24 +372,18 @@ WorkingToSrgb16Result convert_working_to_srgb16(
                             block_clipped, std::memory_order_relaxed);
                         return;
                     }
-                    if (pixel.alpha != 1.0F) {
-                        negaflow::core::record_row_failure(
-                            first_failure,
-                            row,
-                            WorkingToSrgb16Status::non_opaque_alpha);
-                        clipped_components.fetch_add(
-                            block_clipped, std::memory_order_relaxed);
-                        return;
-                    }
                     const OutputPixel output = to_output_primaries(pixel, matrix);
                     const std::size_t destination =
-                        destination_row + static_cast<std::size_t>(column) * 3U;
+                        destination_row + static_cast<std::size_t>(column) * result.image.channels;
                     result.image.samples[destination] =
                         quantize_component(output.red, space, block_clipped);
                     result.image.samples[destination + 1U] =
                         quantize_component(output.green, space, block_clipped);
                     result.image.samples[destination + 2U] =
                         quantize_component(output.blue, space, block_clipped);
+                    if (result.image.channels == 4U) {
+                        result.image.samples[destination + 3U] = quantize_alpha(pixel.alpha);
+                    }
                 }
             }
             clipped_components.fetch_add(block_clipped, std::memory_order_relaxed);

@@ -1,4 +1,5 @@
 #include "negaflow/imaging/scanner_target_grade.h"
+#include "negaflow/color/srgb_transfer.h"
 
 #include <algorithm>
 #include <cmath>
@@ -191,6 +192,34 @@ void test_matched_profile_relative_signature_selection() {
            "relative refinement changes documented-only pixels");
 }
 
+void test_target_tone_knots_interpolate_to_the_physical_endpoints() {
+    constexpr std::uint32_t width = 64U;
+    constexpr std::uint32_t height = 16U;
+    std::vector<negaflow::core::Rgba32F> pixels(width * height);
+    for (std::uint32_t y = 0U; y < height; ++y) {
+        for (std::uint32_t x = 0U; x < width; ++x) {
+            const float encoded = 0.02F + (0.95F * static_cast<float>(x) / (width - 1U));
+            const float linear = negaflow::color::srgb_encoded_to_linear(encoded);
+            pixels[static_cast<std::size_t>(y) * width + x] = {linear, linear, linear, 0.63F};
+        }
+    }
+
+    negaflow::imaging::ScannerTargetGradeInfo info{};
+    expect(
+        negaflow::imaging::apply_scanner_target_grade(
+            view(pixels, width, height),
+            negaflow::imaging::ScannerTargetStyle::sp3000,
+            false, false, {}, info) == negaflow::core::KernelStatus::ok,
+        "SP-3000 endpoint interpolation succeeds");
+
+    const auto& highlight = pixels[width - 1U];
+    const float encoded_highlight = negaflow::color::linear_to_srgb_encoded(highlight.red);
+    // The last SP-3000 measured knot is (0.94, 0.955).  macOS adds (1, 1),
+    // so the 0.97 sample must continue toward white rather than pinning at 0.955.
+    expect(encoded_highlight > 0.97F && highlight.alpha == 0.63F,
+           "SP-3000 highlights continue from the last measured knot to white");
+}
+
 }  // namespace
 
 int main() {
@@ -198,6 +227,7 @@ int main() {
         test_four_targets_are_distinct_and_bounded();
         test_positive_is_weaker_and_monochrome_stays_neutral();
         test_matched_profile_relative_signature_selection();
+        test_target_tone_knots_interpolate_to_the_physical_endpoints();
         std::cout << "Scanner target grade tests passed\n";
         return 0;
     } catch (const std::exception& exception) {

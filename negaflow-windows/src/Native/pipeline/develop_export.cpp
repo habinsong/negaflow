@@ -508,6 +508,9 @@ struct PreviewTarget final {
         request.output_color_space != negaflow::color::OutputColorSpace::srgb) {
         return fail(DevelopExportStage::request_validation, "jpeg_requires_srgb");
     }
+    if (request.format == DevelopExportFormat::jpeg8 && request.preserve_alpha) {
+        return fail(DevelopExportStage::request_validation, "jpeg_does_not_support_alpha");
+    }
     if (request.film_polarity != FilmPolarity::negative &&
         request.film_polarity != FilmPolarity::positive) {
         return fail(DevelopExportStage::request_validation, "unknown_film_polarity");
@@ -1368,6 +1371,7 @@ struct PreviewTarget final {
         output_limits.output_dpi = request.output_dpi;
         output_limits.bits_per_sample = request.output_bit_depth;
         output_limits.color_space = request.output_color_space;
+        output_limits.conversion.preserve_alpha = request.preserve_alpha;
         // PNG 는 EXIF 를 담지 않는다. 정책은 파일에 아무 흔적도 남기지 않는다.
         const negaflow::output::WicPngExportResult exported =
             negaflow::output::export_working_to_srgb16_png(
@@ -1438,6 +1442,7 @@ struct PreviewTarget final {
     output_limits.output_dpi = request.output_dpi;
     output_limits.bits_per_sample = request.output_bit_depth;
     output_limits.color_space = request.output_color_space;
+    output_limits.conversion.preserve_alpha = request.preserve_alpha;
     output_limits.metadata_policy = request.metadata_policy;
     output_limits.metadata = request.metadata;
     const negaflow::output::WicTiffExportResult exported =

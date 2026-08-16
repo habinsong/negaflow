@@ -1865,6 +1865,19 @@ public static unsafe class NativeDevelopExporter
         };
     }
 
+    private static NativeDevelopExportRequestV34 BuildRequestV34(
+        NativeDevelopExportRequestV33 v33,
+        DevelopExportRequest request)
+    {
+        v33.V32.V31.V30.V29.V28.V27.V26.V25.V24.V21.V20.V19.V18.V17.V16.V15.V14.V13.V12.V11
+            .V10.V9.V8.V7.StructSize = (uint)sizeof(NativeDevelopExportRequestV34);
+        return new NativeDevelopExportRequestV34
+        {
+            V33 = v33,
+            PreserveAlpha = request.PreserveAlpha ? 1U : 0U,
+        };
+    }
+
     private static byte[] BuildDefectSourceSha256(DevelopExportRequest request) =>
         request.DefectSourceIdentity is { } identity
             ? Convert.FromHexString(identity.Sha256)
@@ -1983,17 +1996,17 @@ public static unsafe class NativeDevelopExporter
             fixed (char* filmStock = values.FilmStock)
             fixed (char* capturedAt = values.CapturedAt)
             {
-                NativeDevelopExportRequestV33 native = BuildRequestV33(
+                NativeDevelopExportRequestV34 native = BuildRequestV34(BuildRequestV33(
                     v32, request, make, model, software, artist, copyright, filmType,
-                    filmStock, capturedAt);
-                status = NativeMethods.nf_develop_export_v33(
+                    filmStock, capturedAt), request);
+                status = NativeMethods.nf_develop_export_v34(
                     &native,
                     runState,
                     &raw);
             }
         }
 
-        return Translate(status, raw, "nf_develop_export_v33");
+        return Translate(status, raw, "nf_develop_export_v34");
     }
 
     /// <summary>
@@ -2250,13 +2263,13 @@ public static unsafe class NativeDevelopExporter
             {
                 NativeDevelopExportRequestV28 v28 = BuildRequestV28(v27, request);
                 NativeDevelopExportRequestV29 v29 = BuildRequestV29(v28, request);
-                NativeDevelopExportRequestV33 native = BuildRequestV33(
+                NativeDevelopExportRequestV34 native = BuildRequestV34(BuildRequestV33(
                     BuildRequestV32(
                         BuildRequestV31(BuildRequestV30(v29, request), request),
                         request),
                     request,
-                    null, null, null, null, null, null, null, null);
-                status = NativeMethods.nf_develop_preview_v33(
+                    null, null, null, null, null, null, null, null), request);
+                status = NativeMethods.nf_develop_preview_v34(
                     &native,
                     proofPointer,
                     maximumWidth,
@@ -2273,7 +2286,7 @@ public static unsafe class NativeDevelopExporter
             raw,
             detection is not null
                 ? "nf_develop_detect_grain_mend_v4"
-                : "nf_develop_preview_v33"));
+                : "nf_develop_preview_v34"));
     }
 
     private static DevelopExportResult Translate(

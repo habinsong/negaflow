@@ -1595,6 +1595,44 @@ void test_v32_contract() {
         "v32 rejects a dirty reserved field");
 }
 
+void test_v34_contract() {
+    expect(sizeof(nf_develop_export_request_v34) == 5104U,
+           "v34 request layout is fixed");
+    expect(offsetof(nf_develop_export_request_v34, preserve_alpha) == 5088U,
+           "v34 preserve-alpha offset is fixed");
+
+    nf_develop_export_request_v34 request;
+    std::memset(&request, 0, sizeof(request));
+    request.v33.v32.v31.v30 = make_request_v30(L"a.tif", L"b.tif");
+    request.v33.v32.v31.output_bit_depth = 16U;
+    auto& base = request.v33.v32.v31.v30.v29.v28.v27.v26.v25.v24.v21.v20.v19.v18.v17.v16
+                     .v15.v14.v13.v12.v11.v10.v9.v8;
+    base.struct_size = static_cast<std::uint32_t>(sizeof(request));
+    base.output_format = NF_EXPORT_FORMAT_TIFF16;
+    request.preserve_alpha = 1U;
+    nf_develop_export_result_v3 result = make_result_v3();
+    expect(
+        nf_develop_export_v34(&request, nullptr, &result) == NF_STATUS_OK &&
+            result.failed_stage == NF_DEVELOP_STAGE_OBSERVE_SOURCE_BEFORE,
+        "v34 TIFF alpha request reaches source observation");
+
+    base.output_format = NF_EXPORT_FORMAT_JPEG8;
+    result = make_result_v3();
+    expect(
+        nf_develop_export_v34(&request, nullptr, &result) == NF_STATUS_OK &&
+            result.failed_stage == NF_DEVELOP_STAGE_REQUEST_VALIDATION &&
+            std::strcmp(result.failure_name, "jpeg_does_not_support_alpha") == 0,
+        "v34 refuses alpha JPEG before source observation");
+
+    request.preserve_alpha = 2U;
+    result = make_result_v3();
+    expect(
+        nf_develop_export_v34(&request, nullptr, &result) == NF_STATUS_OK &&
+            result.failed_stage == NF_DEVELOP_STAGE_REQUEST_VALIDATION &&
+            std::strcmp(result.failure_name, "invalid_preserve_alpha") == 0,
+        "v34 rejects an invalid alpha flag");
+}
+
 void test_missing_source_is_not_a_validation_error() {
     const std::filesystem::path absent =
         std::filesystem::temp_directory_path() / L"negaflow-abi-absent-source.tif";
@@ -4016,6 +4054,7 @@ int main(const int argument_count, const char* const arguments[]) {
     test_v29_contract();
     test_v30_contract();
     test_v32_contract();
+    test_v34_contract();
     test_missing_source_is_not_a_validation_error();
     test_v2_missing_source_is_not_a_validation_error();
     test_v18_defect_region_preview_and_export();

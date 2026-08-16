@@ -947,6 +947,7 @@ Load a scanner from Library to scan film.</value>
   <data name="developExportMainFlatMaster.Content" xml:space="preserve"><value>Main Flat Master</value><comment>AppLocalizedPhrase.exportMainFlatMaster</comment></data>
   <data name="developExportOriginalRaw.Content" xml:space="preserve"><value>Original Raw TIFF</value><comment>AppLocalizedPhrase.exportOriginalRawTIFF</comment></data>
   <data name="developExportSidecar.Content" xml:space="preserve"><value>Sidecar (JSON + XMP)</value><comment>AppLocalizedPhrase.exportSidecar</comment></data>
+  <data name="developExportPreserveAlpha.Content" xml:space="preserve"><value>Preserve Alpha</value><comment>AppLocalizedPhrase.exportPreserveAlpha</comment></data>
   <data name="libraryCollectionName.Text" xml:space="preserve"><value>Collection Name</value><comment>AppLocalizedPhrase.libraryCollectionName</comment></data>
   <data name="libraryNewCollection.Content" xml:space="preserve"><value>New Collection</value><comment>AppLocalizedPhrase.libraryNewCollection</comment></data>
   <data name="libraryDelete.Content" xml:space="preserve"><value>Delete</value><comment>AppLocalizedPhrase.delete</comment></data>

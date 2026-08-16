@@ -344,7 +344,7 @@ WicPngExportResult export_working_to_srgb16_png(
             structure.width != converted.image.width ||
             structure.height != converted.image.height ||
             structure.bit_depth != static_cast<std::uint8_t>(limits.bits_per_sample) ||
-            structure.color_type != 2U) {
+            structure.color_type != (converted.image.channels == 4U ? 6U : 2U)) {
             result.status = WicPngExportStatus::structure_verification_failed;
             discard_staging(output.get(), result);
             return result;

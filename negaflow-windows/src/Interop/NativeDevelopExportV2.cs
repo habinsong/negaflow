@@ -644,6 +644,16 @@ internal unsafe struct NativeDevelopExportRequestV33
 }
 
 [StructLayout(LayoutKind.Sequential)]
+internal unsafe struct NativeDevelopExportRequestV34
+{
+    internal NativeDevelopExportRequestV33 V33;
+    internal uint PreserveAlpha;
+    internal uint AlphaReserved0;
+    internal uint AlphaReserved1;
+    internal uint AlphaReserved2;
+}
+
+[StructLayout(LayoutKind.Sequential)]
 internal unsafe struct NativeDevelopExportResultV2
 {
     internal const int FailureNameCapacity = 64;

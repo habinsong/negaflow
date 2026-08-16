@@ -206,8 +206,13 @@ void test_rejections() {
     rgba.samples = {1U, 2U, 3U, 65'534U};
     expect(
         negaflow::imaging::convert_scanner_to_working(rgba).status ==
-            negaflow::imaging::ScannerToWorkingStatus::non_opaque_alpha,
-        "non-opaque alpha is rejected until its semantic path is implemented");
+            negaflow::imaging::ScannerToWorkingStatus::ok,
+        "non-opaque alpha enters the working image");
+    const auto alpha_result = negaflow::imaging::convert_scanner_to_working(rgba);
+    expect(
+        alpha_result.image.pixels.size() == 1U &&
+            std::abs(alpha_result.image.pixels[0].alpha - (65'534.0F / 65'535.0F)) < 1.0e-7F,
+        "the decoded alpha sample is preserved in working space");
 
     rgba.samples[3] = 65'535U;
     rgba.icc_profile.resize(132U, 0U);

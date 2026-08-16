@@ -25,6 +25,9 @@ struct WorkingToSrgb16Limits final {
     std::uint64_t max_encoded_pixel_bytes{512ULL * 1024ULL * 1024ULL};
     // The space the published file is encoded in. sRGB leaves the pixels alone.
     negaflow::color::OutputColorSpace color_space{negaflow::color::OutputColorSpace::srgb};
+    // False publishes RGB and deliberately omits alpha, matching the macOS export option.
+    // True keeps straight (unassociated) alpha as a fourth output component.
+    bool preserve_alpha{false};
 };
 
 struct Srgb16Image final {
@@ -34,6 +37,8 @@ struct Srgb16Image final {
     // 8 or 16. Eight-bit output is dithered before quantization; sixteen is not, which is
     // the macOS rule - a half-step of noise is invisible at 16 bits and pointless there.
     std::uint32_t bits_per_sample{16};
+    // Three for RGB, four for unassociated RGBA.
+    std::uint32_t channels{3};
     std::vector<std::uint16_t> samples{};
 };
 
@@ -64,8 +69,9 @@ struct WorkingToSrgb16Result final {
     std::uint32_t bits_per_sample,
     const WorkingToSrgb16Limits& limits = {}) noexcept;
 
-// Converts one contiguous range of rows into caller-owned packed RGB bytes at the chosen
-// depth. The caller must provide row_count * width * 3 * (bits_per_sample / 8) bytes.
+// Converts one contiguous range of rows into caller-owned packed RGB(A) bytes at the chosen
+// depth. The caller must provide row_count * width * channels * (bits_per_sample / 8) bytes;
+// `channels` is controlled by WorkingToSrgb16Limits::preserve_alpha.
 //
 // Eight-bit output adds the macOS dither: plus or minus half a step of white noise in the
 // sRGB-encoded space where quantization happens, which scatters the boundary pixels of a
@@ -82,8 +88,8 @@ struct WorkingToSrgb16Result final {
     std::uint64_t& clipped_color_components,
     const WorkingToSrgb16Limits& limits = {}) noexcept;
 
-// Converts one contiguous range of image rows into caller-owned packed RGB samples.
-// The caller must provide space for row_count * width * 3 samples.
+// Converts one contiguous range of image rows into caller-owned packed RGB(A) samples.
+// The caller must provide space for row_count * width * channels samples.
 [[nodiscard]] WorkingToSrgb16Status convert_working_to_srgb16_rows(
     const negaflow::imaging::WorkingImage& working,
     std::uint32_t first_row,

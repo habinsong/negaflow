@@ -947,6 +947,7 @@
   <data name="developExportMainFlatMaster.Content" xml:space="preserve"><value>MAIN 무보정본</value><comment>AppLocalizedPhrase.exportMainFlatMaster</comment></data>
   <data name="developExportOriginalRaw.Content" xml:space="preserve"><value>원본 TIFF</value><comment>AppLocalizedPhrase.exportOriginalRawTIFF</comment></data>
   <data name="developExportSidecar.Content" xml:space="preserve"><value>사이드카 (JSON + XMP)</value><comment>AppLocalizedPhrase.exportSidecar</comment></data>
+  <data name="developExportPreserveAlpha.Content" xml:space="preserve"><value>알파 보존</value><comment>AppLocalizedPhrase.exportPreserveAlpha</comment></data>
   <data name="libraryCollectionName.Text" xml:space="preserve"><value>컬렉션 이름</value><comment>AppLocalizedPhrase.libraryCollectionName</comment></data>
   <data name="libraryNewCollection.Content" xml:space="preserve"><value>새 컬렉션</value><comment>AppLocalizedPhrase.libraryNewCollection</comment></data>
   <data name="libraryDelete.Content" xml:space="preserve"><value>삭제</value><comment>AppLocalizedPhrase.delete</comment></data>

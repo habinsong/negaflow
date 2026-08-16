@@ -1,8 +1,23 @@
 #include "scanner_to_working_detail.h"
 
+#include <algorithm>
 #include <cstddef>
 
 namespace negaflow::imaging::detail {
+namespace {
+
+[[nodiscard]] float unassociated_component(
+    const std::uint16_t component,
+    const std::uint16_t alpha) noexcept {
+    if (alpha == 0U) {
+        return 0.0F;
+    }
+    const std::uint64_t restored =
+        (static_cast<std::uint64_t>(component) * 65'535U + alpha / 2U) / alpha;
+    return static_cast<float>(std::min<std::uint64_t>(restored, 65'535U)) / 65'535.0F;
+}
+
+}  // namespace
 
 ScannerToWorkingStatus convert_linear_scanner_raw(
     const negaflow::imageio::DecodedImage& decoded,
@@ -24,11 +39,19 @@ ScannerToWorkingStatus convert_linear_scanner_raw(
             output.pixels.data() + static_cast<std::size_t>(row) * output.stride_pixels;
         for (std::uint32_t column = 0U; column < decoded.width; ++column) {
             const std::size_t offset = static_cast<std::size_t>(column) * channels;
+            const bool has_alpha =
+                decoded.layout == negaflow::imageio::DecodedPixelLayout::rgba16;
+            const std::uint16_t alpha16 = has_alpha ? source[offset + 3U] : 65'535U;
+            const bool associated =
+                decoded.alpha_mode == negaflow::imageio::AlphaMode::associated;
             destination[column] = {
-                static_cast<float>(source[offset]) * u16_scale,
-                static_cast<float>(source[offset + 1U]) * u16_scale,
-                static_cast<float>(source[offset + 2U]) * u16_scale,
-                1.0F,
+                associated ? unassociated_component(source[offset], alpha16)
+                           : static_cast<float>(source[offset]) * u16_scale,
+                associated ? unassociated_component(source[offset + 1U], alpha16)
+                           : static_cast<float>(source[offset + 1U]) * u16_scale,
+                associated ? unassociated_component(source[offset + 2U], alpha16)
+                           : static_cast<float>(source[offset + 2U]) * u16_scale,
+                static_cast<float>(alpha16) * u16_scale,
             };
         }
     }

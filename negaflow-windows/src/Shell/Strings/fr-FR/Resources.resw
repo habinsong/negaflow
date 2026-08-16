@@ -947,6 +947,7 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="developExportMainFlatMaster.Content" xml:space="preserve"><value>Master MAIN non corrigé</value><comment>AppLocalizedPhrase.exportMainFlatMaster</comment></data>
   <data name="developExportOriginalRaw.Content" xml:space="preserve"><value>TIFF de numérisation original</value><comment>AppLocalizedPhrase.exportOriginalRawTIFF</comment></data>
   <data name="developExportSidecar.Content" xml:space="preserve"><value>Fichiers annexes (JSON + XMP)</value><comment>AppLocalizedPhrase.exportSidecar</comment></data>
+  <data name="developExportPreserveAlpha.Content" xml:space="preserve"><value>Conserver l’alpha</value><comment>AppLocalizedPhrase.exportPreserveAlpha</comment></data>
   <data name="libraryCollectionName.Text" xml:space="preserve"><value>Nom de la collection</value><comment>AppLocalizedPhrase.libraryCollectionName</comment></data>
   <data name="libraryNewCollection.Content" xml:space="preserve"><value>Nouvelle collection</value><comment>AppLocalizedPhrase.libraryNewCollection</comment></data>
   <data name="libraryDelete.Content" xml:space="preserve"><value>Supprimer</value><comment>AppLocalizedPhrase.delete</comment></data>

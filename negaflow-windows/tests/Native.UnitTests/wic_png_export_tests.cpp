@@ -283,17 +283,40 @@ void test_existing_destination_is_preserved(const std::filesystem::path& root) {
 void test_preflight_failures_leave_no_file(const std::filesystem::path& root) {
     negaflow::imaging::WorkingImage image = make_image();
     image.pixels[0].alpha = 0.5F;
-    const std::filesystem::path alpha_destination = root / L"alpha-rejected.png";
+    const std::filesystem::path alpha_destination = root / L"alpha-preserved.png";
+    negaflow::output::WicPngExportLimits alpha_limits{};
+    alpha_limits.conversion.preserve_alpha = true;
     const auto alpha_result = negaflow::output::export_working_to_srgb16_png(
-        image,
-        alpha_destination);
+        image, alpha_destination, alpha_limits);
+    report_failure(alpha_result);
     expect(
-        alpha_result.status ==
-                negaflow::output::WicPngExportStatus::working_conversion_failed &&
-            alpha_result.conversion_status ==
-                negaflow::output::WorkingToSrgb16Status::non_opaque_alpha,
-        "alpha is rejected before staging");
-    expect(!std::filesystem::exists(alpha_destination), "alpha rejection creates no output");
+        alpha_result.status == negaflow::output::WicPngExportStatus::ok &&
+            alpha_result.info.encoded_pixel_bytes == 48U && alpha_result.info.structure_verified &&
+            alpha_result.info.pixels_verified && alpha_result.info.published,
+        "16-bit PNG preserves a non-opaque alpha channel through structure and readback");
+    const auto alpha_decoded = negaflow::imageio::decode_standard_image_with_wic(alpha_destination);
+    expect(
+        alpha_decoded.status == negaflow::imageio::WicStandardImageDecodeStatus::ok &&
+            alpha_decoded.image.samples.size() >= 4U &&
+            alpha_decoded.image.samples[3] == 32'768U,
+        "published PNG stores the straight alpha sample without gamma conversion");
+
+    alpha_limits.bits_per_sample = 8U;
+    const std::filesystem::path alpha8_destination = root / L"alpha-preserved-8.png";
+    const auto alpha8_result = negaflow::output::export_working_to_srgb16_png(
+        image, alpha8_destination, alpha_limits);
+    report_failure(alpha8_result);
+    expect(
+        alpha8_result.status == negaflow::output::WicPngExportStatus::ok &&
+            alpha8_result.info.encoded_pixel_bytes == 24U && alpha8_result.info.structure_verified &&
+            alpha8_result.info.pixels_verified && alpha8_result.info.published,
+        "8-bit PNG preserves a non-opaque alpha channel through BGRA WIC structure and readback");
+    const auto alpha8_decoded = negaflow::imageio::decode_standard_image_with_wic(alpha8_destination);
+    expect(
+        alpha8_decoded.status == negaflow::imageio::WicStandardImageDecodeStatus::ok &&
+            alpha8_decoded.image.samples.size() >= 4U &&
+            alpha8_decoded.image.samples[3] == 32'896U,
+        "8-bit PNG expands the straight 128 alpha sample without gamma conversion");
 
     negaflow::output::WicPngExportLimits limits{};
     limits.conversion.max_encoded_pixel_bytes = 35U;

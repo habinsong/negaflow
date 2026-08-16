@@ -297,14 +297,18 @@ void discard_staging(
         probe.info.variant != negaflow::core::TiffVariant::classic ||
         probe.info.organization != negaflow::core::TiffOrganization::stripped ||
         probe.info.width != expected.width || probe.info.height != expected.height ||
-        probe.info.samples_per_pixel != 3U || probe.info.compression != expected_compression ||
+        probe.info.samples_per_pixel != expected.channels ||
+        probe.info.compression != expected_compression ||
         probe.info.photometric_interpretation != 2U ||
         probe.info.planar_configuration != 1U || probe.info.orientation != 1U ||
-        probe.info.bits_per_sample_count != 3U ||
+        probe.info.bits_per_sample_count != expected.channels ||
         probe.info.bits_per_sample[0] != expected.bits_per_sample ||
         probe.info.bits_per_sample[1] != expected.bits_per_sample ||
         probe.info.bits_per_sample[2] != expected.bits_per_sample ||
-        probe.info.extra_samples_count != 0U ||
+        (expected.channels == 4U &&
+             (probe.info.bits_per_sample[3] != expected.bits_per_sample ||
+              probe.info.extra_samples_count != 1U || probe.info.extra_samples[0] != 2U)) ||
+        (expected.channels == 3U && probe.info.extra_samples_count != 0U) ||
         probe.info.icc_profile_bytes != expected_profile_bytes ||
         probe.info.packed_raster_bytes !=
             static_cast<std::uint64_t>(expected.stride_bytes) * expected.height) {
@@ -313,10 +317,11 @@ void discard_staging(
     if (probe.info.sample_format_count == 1U) {
         return probe.info.sample_format[0] == 1U;
     }
-    return probe.info.sample_format_count == 3U &&
+    return probe.info.sample_format_count == expected.channels &&
            probe.info.sample_format[0] == 1U &&
            probe.info.sample_format[1] == 1U &&
-           probe.info.sample_format[2] == 1U;
+           probe.info.sample_format[2] == 1U &&
+           (expected.channels == 3U || probe.info.sample_format[3] == 1U);
 }
 
 }  // namespace

@@ -150,6 +150,7 @@ public static class ExportSidecarWriter
             ["longEdge"] = content.Encoding.LongEdge,
             ["jpegQuality"] = content.Encoding.JpegQuality,
             ["tiffCompression"] = content.Encoding.TiffCompression.ToString(),
+            ["preserveAlpha"] = content.Encoding.PreserveAlpha,
             ["outputSharpening"] = content.Encoding.OutputSharpening,
             ["outputSharpeningMedium"] = content.Encoding.OutputSharpeningMedium.ToString(),
         };

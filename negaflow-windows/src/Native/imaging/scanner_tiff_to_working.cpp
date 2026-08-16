@@ -91,6 +91,7 @@ public:
             height_ = frame.height;
             source_stride_bytes_ = frame.stride_bytes;
             layout_ = frame.layout;
+            alpha_mode_ = frame.alpha_mode;
             result_.image.width = frame.width;
             result_.image.height = frame.height;
             result_.image.stride_pixels = frame.width;
@@ -194,31 +195,28 @@ public:
     }
 
 private:
-    [[nodiscard]] ScannerToWorkingStatus validate_opaque_alpha(
-        const negaflow::imageio::WicTiffRowChunk& rows) const noexcept {
-        if (layout_ != negaflow::imageio::DecodedPixelLayout::rgba16) {
-            return ScannerToWorkingStatus::ok;
+    [[nodiscard]] std::uint16_t unassociate_component(
+        const std::uint16_t component,
+        const std::uint16_t alpha) const noexcept {
+        if (alpha == 0U) {
+            return 0U;
         }
-        const std::size_t source_stride =
-            source_stride_bytes_ / sizeof(std::uint16_t);
-        for (std::uint32_t row = 0U; row < rows.row_count; ++row) {
-            const std::uint16_t* const source =
-                rows.samples.data() + static_cast<std::size_t>(row) * source_stride;
-            for (std::uint32_t column = 0U; column < width_; ++column) {
-                if (source[static_cast<std::size_t>(column) * 4U + 3U] != 65'535U) {
-                    return ScannerToWorkingStatus::non_opaque_alpha;
-                }
-            }
-        }
-        return ScannerToWorkingStatus::ok;
+        const std::uint64_t restored =
+            (static_cast<std::uint64_t>(component) * 65'535U + alpha / 2U) / alpha;
+        return static_cast<std::uint16_t>(std::min<std::uint64_t>(restored, 65'535U));
+    }
+
+    [[nodiscard]] float row_alpha(
+        const std::uint16_t* const source,
+        const std::size_t offset) const noexcept {
+        constexpr float u16_scale = 1.0F / 65'535.0F;
+        return layout_ == negaflow::imageio::DecodedPixelLayout::rgba16
+            ? static_cast<float>(source[offset + 3U]) * u16_scale
+            : 1.0F;
     }
 
     [[nodiscard]] ScannerToWorkingStatus convert_linear_rows(
         const negaflow::imageio::WicTiffRowChunk& rows) noexcept {
-        const ScannerToWorkingStatus alpha_status = validate_opaque_alpha(rows);
-        if (alpha_status != ScannerToWorkingStatus::ok) {
-            return alpha_status;
-        }
         constexpr float u16_scale = 1.0F / 65'535.0F;
         const std::size_t channels = negaflow::imageio::channel_count(layout_);
         const std::size_t source_stride =
@@ -234,11 +232,19 @@ private:
                 static_cast<std::size_t>(rows.first_row + row) * width_;
             for (std::uint32_t column = 0U; column < width_; ++column) {
                 const std::size_t offset = static_cast<std::size_t>(column) * channels;
+                const bool associated =
+                    alpha_mode_ == negaflow::imageio::AlphaMode::associated;
+                const std::uint16_t alpha16 = layout_ == negaflow::imageio::DecodedPixelLayout::rgba16
+                    ? source[offset + 3U]
+                    : 65'535U;
                 destination[column] = {
-                    static_cast<float>(source[offset]) * u16_scale,
-                    static_cast<float>(source[offset + 1U]) * u16_scale,
-                    static_cast<float>(source[offset + 2U]) * u16_scale,
-                    1.0F,
+                    associated ? static_cast<float>(unassociate_component(source[offset], alpha16)) * u16_scale
+                               : static_cast<float>(source[offset]) * u16_scale,
+                    associated ? static_cast<float>(unassociate_component(source[offset + 1U], alpha16)) * u16_scale
+                               : static_cast<float>(source[offset + 1U]) * u16_scale,
+                    associated ? static_cast<float>(unassociate_component(source[offset + 2U], alpha16)) * u16_scale
+                               : static_cast<float>(source[offset + 2U]) * u16_scale,
+                    row_alpha(source, offset),
                 };
             }
         }
@@ -247,11 +253,6 @@ private:
 
     [[nodiscard]] ScannerToWorkingStatus convert_icc_rows(
         const negaflow::imageio::WicTiffRowChunk& rows) {
-        const ScannerToWorkingStatus alpha_status = validate_opaque_alpha(rows);
-        if (alpha_status != ScannerToWorkingStatus::ok) {
-            return alpha_status;
-        }
-
         const std::uint64_t rgb_stride_bytes =
             static_cast<std::uint64_t>(width_) * 3ULL * sizeof(std::uint16_t);
         const std::uint64_t rgb_chunk_bytes = rgb_stride_bytes * rows.row_count;
@@ -288,9 +289,18 @@ private:
                     const std::size_t source_offset = static_cast<std::size_t>(column) * 4U;
                     const std::size_t destination_offset =
                         static_cast<std::size_t>(column) * 3U;
-                    destination_row[destination_offset] = source_row[source_offset];
-                    destination_row[destination_offset + 1U] = source_row[source_offset + 1U];
-                    destination_row[destination_offset + 2U] = source_row[source_offset + 2U];
+                    const bool associated =
+                        alpha_mode_ == negaflow::imageio::AlphaMode::associated;
+                    const std::uint16_t alpha = source_row[source_offset + 3U];
+                    destination_row[destination_offset] = associated
+                        ? unassociate_component(source_row[source_offset], alpha)
+                        : source_row[source_offset];
+                    destination_row[destination_offset + 1U] = associated
+                        ? unassociate_component(source_row[source_offset + 1U], alpha)
+                        : source_row[source_offset + 1U];
+                    destination_row[destination_offset + 2U] = associated
+                        ? unassociate_component(source_row[source_offset + 2U], alpha)
+                        : source_row[source_offset + 2U];
                 }
             }
             source = packed_rgb_.data();
@@ -326,6 +336,10 @@ private:
                 static_cast<std::size_t>(rows.first_row + row) * width_;
             for (std::uint32_t column = 0U; column < width_; ++column) {
                 const std::size_t offset = static_cast<std::size_t>(column) * 3U;
+                const std::size_t input_offset = static_cast<std::size_t>(column) *
+                    negaflow::imageio::channel_count(layout_);
+                const std::uint16_t* const input_row = rows.samples.data() +
+                    static_cast<std::size_t>(row) * (source_stride_bytes_ / sizeof(std::uint16_t));
                 destination[column] = {
                     negaflow::color::srgb_encoded_to_linear(
                         static_cast<float>(source_row[offset]) * u16_scale),
@@ -333,7 +347,7 @@ private:
                         static_cast<float>(source_row[offset + 1U]) * u16_scale),
                     negaflow::color::srgb_encoded_to_linear(
                         static_cast<float>(source_row[offset + 2U]) * u16_scale),
-                    1.0F,
+                    row_alpha(input_row, input_offset),
                 };
             }
         }
@@ -353,6 +367,7 @@ private:
     std::uint32_t next_row_{0};
     negaflow::imageio::DecodedPixelLayout layout_{
         negaflow::imageio::DecodedPixelLayout::rgb16};
+    negaflow::imageio::AlphaMode alpha_mode_{negaflow::imageio::AlphaMode::opaque};
     bool has_icc_{false};
     bool active_{false};
 };

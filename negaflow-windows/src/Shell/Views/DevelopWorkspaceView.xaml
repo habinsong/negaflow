@@ -294,6 +294,10 @@
                                             <ComboBoxItem Content="16-bit" Tag="16" />
                                         </ComboBox>
                                     </Grid>
+                                    <ToggleSwitch
+                                        x:Name="ExportPreserveAlphaToggle"
+                                        AutomationProperties.AutomationId="negaflow.develop.output.preserve-alpha"
+                                        Toggled="OnExportPreserveAlphaToggled" />
                                     <Grid ColumnSpacing="8">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />

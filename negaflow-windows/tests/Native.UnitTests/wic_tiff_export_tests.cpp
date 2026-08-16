@@ -1,4 +1,5 @@
 #include "negaflow/output/wic_tiff_export.h"
+#include "negaflow/core/tiff_probe.h"
 #include "export_metadata_rules.h"
 #include "tiff_ifd_allowlist.h"
 
@@ -185,17 +186,41 @@ void test_compression_and_dpi(const std::filesystem::path& root) {
 void test_failures_leave_no_file(const std::filesystem::path& root) {
     negaflow::imaging::WorkingImage image = make_image();
     image.pixels[0].alpha = 0.5F;
-    const std::filesystem::path alpha_destination = root / L"alpha-rejected.tif";
+    const std::filesystem::path alpha_destination = root / L"alpha-preserved.tif";
+    negaflow::output::WicTiffExportLimits alpha_limits{};
+    alpha_limits.conversion.preserve_alpha = true;
     const auto alpha_result = negaflow::output::export_working_to_srgb16_tiff(
-        image,
-        alpha_destination);
+        image, alpha_destination, alpha_limits);
+    report_failure(alpha_result);
     expect(
-        alpha_result.status ==
-                negaflow::output::WicTiffExportStatus::working_conversion_failed &&
-            alpha_result.conversion_status ==
-                negaflow::output::WorkingToSrgb16Status::non_opaque_alpha,
-        "TIFF alpha is rejected before staging");
-    expect(!std::filesystem::exists(alpha_destination), "alpha rejection creates no TIFF");
+        alpha_result.status == negaflow::output::WicTiffExportStatus::ok &&
+            alpha_result.info.encoded_pixel_bytes == 48U && alpha_result.info.structure_verified &&
+            alpha_result.info.pixels_verified && alpha_result.info.published,
+        "16-bit TIFF preserves a non-opaque alpha channel through structure and readback");
+    const auto alpha_probe = negaflow::core::probe_tiff_file(alpha_destination);
+    expect(
+        alpha_probe.status == negaflow::core::TiffProbeStatus::ok &&
+            alpha_probe.info.samples_per_pixel == 4U && alpha_probe.info.extra_samples_count == 1U &&
+            alpha_probe.info.extra_samples[0] == 2U,
+        "published TIFF declares one unassociated ExtraSamples alpha channel");
+
+    alpha_limits.bits_per_sample = 8U;
+    const std::filesystem::path alpha8_destination = root / L"alpha-preserved-8.tif";
+    const auto alpha8_result = negaflow::output::export_working_to_srgb16_tiff(
+        image, alpha8_destination, alpha_limits);
+    report_failure(alpha8_result);
+    expect(
+        alpha8_result.status == negaflow::output::WicTiffExportStatus::ok &&
+            alpha8_result.info.encoded_pixel_bytes == 24U && alpha8_result.info.structure_verified &&
+            alpha8_result.info.pixels_verified && alpha8_result.info.published,
+        "8-bit TIFF preserves a non-opaque alpha channel through BGRA WIC structure and readback");
+    const auto alpha8_probe = negaflow::core::probe_tiff_file(alpha8_destination);
+    expect(
+        alpha8_probe.status == negaflow::core::TiffProbeStatus::ok &&
+            alpha8_probe.info.samples_per_pixel == 4U && alpha8_probe.info.bits_per_sample_count == 4U &&
+            alpha8_probe.info.bits_per_sample[3] == 8U && alpha8_probe.info.extra_samples_count == 1U &&
+            alpha8_probe.info.extra_samples[0] == 2U,
+        "8-bit TIFF declares one unassociated ExtraSamples alpha channel");
 
     negaflow::output::WicTiffExportLimits limits{};
     limits.max_artifact_bytes = 64U;

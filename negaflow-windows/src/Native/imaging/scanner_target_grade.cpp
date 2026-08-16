@@ -361,8 +361,21 @@ struct InsetStats final { double median; double p05; double p95; };
     const double value,
     const std::array<double, 9U>& xs,
     const std::array<double, 9U>& ys) noexcept {
-    if (value <= xs.front()) return ys.front();
-    if (value >= xs.back()) return ys.back();
+    // The macOS cube authoring path fixes the two physical endpoints before it
+    // interpolates the measured knots: (0, 0), knots, (1, 1).  Holding the
+    // first/last knot flat here compresses SP-3000 (0.94...) and HS (0.995...)
+    // highlights before the final output boundary.  Keep the same endpoint
+    // interpolation rather than treating a measured knot as a clipping point.
+    if (value <= xs.front()) {
+        return clamp(value * ys.front() / std::max(xs.front(), 1.0e-9), 0.0, 1.0);
+    }
+    if (value >= xs.back()) {
+        const double remaining = std::max(1.0 - xs.back(), 1.0e-9);
+        return clamp(
+            ys.back() + ((1.0 - ys.back()) * (value - xs.back()) / remaining),
+            0.0,
+            1.0);
+    }
     for (std::size_t i = 1U; i < xs.size(); ++i) {
         if (value <= xs[i]) {
             const double f = (value - xs[i - 1U]) / std::max(xs[i] - xs[i - 1U], 1.0e-9);

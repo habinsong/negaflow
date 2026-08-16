@@ -116,6 +116,8 @@ struct DevelopExportRequest final {
     // ignores it - the canvas is always shown in the display's own space.
     negaflow::color::OutputColorSpace output_color_space{
         negaflow::color::OutputColorSpace::srgb};
+    // PNG/TIFF only. When false, the RGB export deliberately omits source alpha.
+    bool preserve_alpha{false};
     // 게시하는 파일에 무엇을 적을지. 값이 비어 있으면 그 항목은 쓰지 않는다.
     negaflow::output::ExportMetadataPolicy metadata_policy{
         negaflow::output::ExportMetadataPolicy::minimal};

@@ -101,7 +101,7 @@ enum class ByteOrder : std::uint8_t {
     // 271·272·305·306·315·33432·34665 는 내보내기 메타데이터 정책이 쓰는 태그다.
     // binary_search 로 찾으므로 **태그 번호 순서로** 둔다. 뒤에 그냥 붙이면
     // 조용히 못 찾는다.
-    constexpr std::array<std::uint16_t, 26> allowed{
+    constexpr std::array<std::uint16_t, 27> allowed{
         254U,     // NewSubfileType
         256U,     // ImageWidth
         257U,     // ImageLength
@@ -124,6 +124,7 @@ enum class ByteOrder : std::uint8_t {
         306U,     // DateTime
         315U,     // Artist
         317U,     // Predictor
+        338U,     // ExtraSamples (straight alpha when present)
         339U,     // SampleFormat
         33432U,   // Copyright
         34665U,   // ExifIFD

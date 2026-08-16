@@ -6,11 +6,6 @@ namespace Negaflow.Shell.Develop;
 /// 출력 패널이 정하는 인코딩·크기·선명도 값입니다. macOS <c>ExportOptions</c> 와 같은 축·같은
 /// 기본값·같은 검사 규칙이며, 여기서 만든 값이 그대로 네이티브 요청에 실립니다.
 /// </summary>
-/// <remarks>
-/// macOS 에 있고 여기 없는 축은 출력 색공간과 알파 보존입니다. 둘 다 네이티브 인코더가 아직
-/// sRGB 불투명만 게시하므로, 값만 저장해 두면 사용자가 고른 것과 나오는 파일이 갈라집니다.
-/// 엔진이 그 출력을 낼 수 있을 때 함께 엽니다.
-/// </remarks>
 public sealed record ExportSettings
 {
     /// <summary>macOS 의 DPI 목록입니다. 0 은 "원본 DPI"(메타데이터 미기록)입니다.</summary>
@@ -44,6 +39,9 @@ public sealed record ExportSettings
     /// 냅니다 — 고른 것과 다른 공간의 파일을 조용히 내보내지 않기 위해서입니다.
     /// </summary>
     public ExportColorSpace ColorSpace { get; init; } = ExportColorSpace.Srgb;
+
+    /// <summary>PNG·TIFF 에 straight alpha 를 보존합니다. JPEG 에서는 허용하지 않습니다.</summary>
+    public bool PreserveAlpha { get; init; }
 
     /// <summary>
     /// 게시하는 파일에 무엇을 적을지입니다. PNG 는 EXIF 를 담지 않으므로 정책이 PNG 에는
@@ -197,6 +195,8 @@ public readonly record struct ExportEncodingOptions
     public double OutputSharpening { get; init; }
 
     public OutputSharpeningMedium OutputSharpeningMedium { get; init; }
+
+    public bool PreserveAlpha { get; init; }
 }
 
 public static class ExportSettingsExtensions
@@ -213,6 +213,7 @@ public static class ExportSettingsExtensions
             TiffCompression = normalized.TiffCompression,
             BitDepth = normalized.EffectiveBitDepth,
             ColorSpace = normalized.EffectiveColorSpace,
+            PreserveAlpha = normalized.PreserveAlpha,
             MetadataPolicy = normalized.MetadataPolicy,
             OutputSharpening = normalized.OutputSharpening,
             OutputSharpeningMedium = normalized.OutputSharpeningMedium,
@@ -239,6 +240,7 @@ public static class ExportSettingsExtensions
             ? encoding.MetadataPolicy
             : ExportMetadataPolicy.Minimal,
         Metadata = encoding.Metadata ?? new ExportMetadataValues(),
+        PreserveAlpha = encoding.PreserveAlpha,
         OutputSharpening = ExportSettings.ClampUnit(encoding.OutputSharpening, 0),
         OutputSharpeningMedium = Enum.IsDefined(encoding.OutputSharpeningMedium)
             ? encoding.OutputSharpeningMedium

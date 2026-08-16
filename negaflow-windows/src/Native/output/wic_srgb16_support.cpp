@@ -184,8 +184,11 @@ StandardSrgbStatus load_standard_srgb_context(
 namespace {
 
 // RGB 로 만든 바이트를 WIC 의 24bppBGR 순서로 맞바꿉니다.
-void swap_red_and_blue(std::uint8_t* const bytes, const std::size_t byte_count) noexcept {
-    for (std::size_t index = 0U; index + 2U < byte_count; index += 3U) {
+void swap_red_and_blue(
+    std::uint8_t* const bytes,
+    const std::size_t byte_count,
+    const std::uint32_t channels) noexcept {
+    for (std::size_t index = 0U; index + 2U < byte_count; index += channels) {
         const std::uint8_t red = bytes[index];
         bytes[index] = bytes[index + 2U];
         bytes[index + 2U] = red;
@@ -213,8 +216,8 @@ WicSrgb16FrameStatus configure_srgb16_frame(
     // 8-bit 출력의 WIC 원형 형식은 BGR 순서입니다. 우리 변환기는 RGB 로 내므로 쓰기 직전에
     // 픽셀마다 두 바이트를 맞바꿉니다.
     const WICPixelFormatGUID requested = image.bits_per_sample == 8U
-        ? GUID_WICPixelFormat24bppBGR
-        : GUID_WICPixelFormat48bppRGB;
+        ? (image.channels == 4U ? GUID_WICPixelFormat32bppBGRA : GUID_WICPixelFormat24bppBGR)
+        : (image.channels == 4U ? GUID_WICPixelFormat64bppRGBA : GUID_WICPixelFormat48bppRGB);
     WICPixelFormatGUID pixel_format = requested;
     status = frame->SetPixelFormat(&pixel_format);
     if (FAILED(status)) {
@@ -275,7 +278,7 @@ WicSrgb16FrameStatus write_working_srgb16_pixels(
             }
             const UINT buffer_bytes = row_count * image.stride_bytes;
             if (image.bits_per_sample == 8U) {
-                swap_red_and_blue(buffer.data(), buffer_bytes);
+                swap_red_and_blue(buffer.data(), buffer_bytes, image.channels);
             }
             const HRESULT status = frame->WritePixels(
                 row_count,
@@ -313,8 +316,10 @@ WicSrgb16FrameStatus verify_working_srgb16_frame(
         status = frame->GetPixelFormat(&format);
     }
     const WICPixelFormatGUID expected_format = expected.bits_per_sample == 8U
-        ? GUID_WICPixelFormat24bppBGR
-        : GUID_WICPixelFormat48bppRGB;
+        ? (expected.channels == 4U ? GUID_WICPixelFormat32bppBGRA
+                                   : GUID_WICPixelFormat24bppBGR)
+        : (expected.channels == 4U ? GUID_WICPixelFormat64bppRGBA
+                                   : GUID_WICPixelFormat48bppRGB);
     if (FAILED(status) || width != expected.width || height != expected.height ||
         IsEqualGUID(format, expected_format) == FALSE) {
         native_error_code = static_cast<std::uint32_t>(status);
@@ -378,7 +383,7 @@ WicSrgb16FrameStatus verify_working_srgb16_frame(
             return WicSrgb16FrameStatus::working_conversion_failed;
         }
         if (expected.bits_per_sample == 8U) {
-            swap_red_and_blue(expected_buffer.data(), buffer_bytes);
+            swap_red_and_blue(expected_buffer.data(), buffer_bytes, expected.channels);
         }
         const std::size_t sample_count = static_cast<std::size_t>(buffer_bytes);
         if (!std::equal(

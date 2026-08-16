@@ -84,8 +84,17 @@ void test_rejections() {
     image.pixels[0].alpha = 0.5F;
     expect(
         negaflow::output::convert_working_to_srgb16(image).status ==
-            negaflow::output::WorkingToSrgb16Status::non_opaque_alpha,
-        "alpha is not silently discarded");
+            negaflow::output::WorkingToSrgb16Status::ok,
+        "RGB export deliberately omits non-opaque alpha when preservation is off");
+
+    negaflow::output::WorkingToSrgb16Limits alpha_limits{};
+    alpha_limits.preserve_alpha = true;
+    const auto alpha_result = negaflow::output::convert_working_to_srgb16(image, alpha_limits);
+    expect(
+        alpha_result.status == negaflow::output::WorkingToSrgb16Status::ok &&
+            alpha_result.image.channels == 4U && alpha_result.image.stride_bytes == 16U &&
+            alpha_result.image.samples.size() == 8U && alpha_result.image.samples[3] == 32'768U,
+        "preserved alpha is straight, fourth-channel and linearly quantized");
 
     image = make_image();
     negaflow::output::WorkingToSrgb16Limits limits{};

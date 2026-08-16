@@ -3747,6 +3747,19 @@ public sealed partial class DevelopWorkspaceView : UserControl
             : value with { PngBitDepth = depth });
     }
 
+    private void OnExportPreserveAlphaToggled(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (!isSynchronizingExport)
+        {
+            MutateExportSettings(value => value with
+            {
+                PreserveAlpha = ExportPreserveAlphaToggle.IsOn,
+            });
+        }
+    }
+
     private void OnExportDpiChanged(object sender, SelectionChangedEventArgs args)
     {
         _ = sender;
@@ -3966,6 +3979,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
             ExportMainFlatMasterToggle.IsOn = exportSettings.WriteMainFlatMaster;
             ExportOriginalRawToggle.IsOn = exportSettings.WriteOriginalRaw;
             ExportSidecarToggle.IsOn = exportSettings.WriteSidecar;
+            ExportPreserveAlphaToggle.IsOn = exportSettings.PreserveAlpha;
             ExportMetadataSelector.SelectedIndex = exportSettings.MetadataPolicy switch
             {
                 ExportMetadataPolicy.CopyrightOnly => 1,
@@ -3985,6 +3999,8 @@ public sealed partial class DevelopWorkspaceView : UserControl
             exportSettings.Format == DevelopExportFormat.Tiff16);
         // JPEG 은 정의상 8-bit 이므로 고를 것이 없습니다.
         ExportBitDepthRow.Visibility = Visible(
+            exportSettings.Format != DevelopExportFormat.Jpeg8);
+        ExportPreserveAlphaToggle.Visibility = Visible(
             exportSettings.Format != DevelopExportFormat.Jpeg8);
         ExportBitDepthLabel.Text = AppResources.Get(
             exportSettings.Format == DevelopExportFormat.Tiff16
@@ -4203,6 +4219,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         LocalizeToggleSwitch(ExportMainFlatMasterToggle, "developExportMainFlatMaster");
         LocalizeToggleSwitch(ExportOriginalRawToggle, "developExportOriginalRaw");
         LocalizeToggleSwitch(ExportSidecarToggle, "developExportSidecar");
+        LocalizeToggleSwitch(ExportPreserveAlphaToggle, "developExportPreserveAlpha");
         ExportRecipeLabel.Text = AppResources.Get("developExportRecipeTitle", "Text");
         AutomationProperties.SetName(ExportRecipeSelector, ExportRecipeLabel.Text);
         SetLocalizedNameAndTooltip(ExportRecipeMenuButton, ExportRecipeLabel.Text);

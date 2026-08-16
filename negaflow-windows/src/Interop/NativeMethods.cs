@@ -483,6 +483,25 @@ internal static partial class NativeMethods
         NativeDevelopRunStateV1* runState,
         NativeDevelopExportResultV3* result);
 
+    [LibraryImport(LibraryName, EntryPoint = "nf_develop_export_v34")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static unsafe partial uint nf_develop_export_v34(
+        NativeDevelopExportRequestV34* request,
+        NativeDevelopRunStateV1* runState,
+        NativeDevelopExportResultV3* result);
+
+    [LibraryImport(LibraryName, EntryPoint = "nf_develop_preview_v34")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static unsafe partial uint nf_develop_preview_v34(
+        NativeDevelopExportRequestV34* request,
+        NativeSoftProofV1* softProof,
+        uint maximumWidth,
+        uint maximumHeight,
+        byte* pixels,
+        uint pixelCapacityBytes,
+        NativeDevelopRunStateV1* runState,
+        NativeDevelopExportResultV3* result);
+
     [LibraryImport(LibraryName, EntryPoint = "nf_develop_preview_v32")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static unsafe partial uint nf_develop_preview_v32(

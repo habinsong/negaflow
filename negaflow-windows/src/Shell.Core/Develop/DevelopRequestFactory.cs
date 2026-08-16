@@ -23,6 +23,8 @@ public enum DevelopRequestRefusal
     /// <summary>출력 형식이 알려진 값이 아닙니다.</summary>
     UnknownOutputFormat,
 
+    UnsupportedAlpha,
+
     /// <summary>출력 경로가 비었거나 절대 경로가 아닙니다.</summary>
     InvalidDestination,
 
@@ -65,6 +67,10 @@ public static class DevelopRequestFactory
         if (!Enum.IsDefined(format))
         {
             return DevelopRequestResult.Failure(DevelopRequestRefusal.UnknownOutputFormat);
+        }
+        if (output.PreserveAlpha && format == DevelopExportFormat.Jpeg8)
+        {
+            return DevelopRequestResult.Failure(DevelopRequestRefusal.UnsupportedAlpha);
         }
         if (string.IsNullOrWhiteSpace(destinationPath) ||
             !Path.IsPathFullyQualified(destinationPath))
@@ -165,6 +171,7 @@ public static class DevelopRequestFactory
             TiffCompression = output.TiffCompression,
             OutputBitDepth = (uint)output.BitDepth,
             OutputColorSpace = output.ColorSpace,
+            PreserveAlpha = output.PreserveAlpha,
             MetadataPolicy = output.MetadataPolicy,
             Metadata = output.Metadata ?? new ExportMetadataValues(),
             OutputSharpening = (float)output.OutputSharpening,
