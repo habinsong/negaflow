@@ -47,6 +47,19 @@ struct Rgb final {
     float blue;
 };
 
+constexpr std::array<float, 5U> tone_curve_x{{0.0F, 0.23F, 0.50F, 0.82F, 1.0F}};
+constexpr std::array<float, 4U> tone_curve_width{{
+    tone_curve_x[1U] - tone_curve_x[0U],
+    tone_curve_x[2U] - tone_curve_x[1U],
+    tone_curve_x[3U] - tone_curve_x[2U],
+    tone_curve_x[4U] - tone_curve_x[3U],
+}};
+
+struct ToneCurve final {
+    std::array<float, 5U> y;
+    std::array<float, 5U> second;
+};
+
 [[nodiscard]] float luminance(const Rgb value) noexcept {
     return (0.2126F * value.red) + (0.7152F * value.green) +
            (0.0722F * value.blue);
@@ -61,10 +74,8 @@ struct Rgb final {
     };
 }
 
-[[nodiscard]] float tone_curve(
-    const float value,
+[[nodiscard]] ToneCurve make_tone_curve(
     const ScannerProfileGradeParameters& grade) noexcept {
-    constexpr std::array<float, 5U> x{{0.0F, 0.23F, 0.50F, 0.82F, 1.0F}};
     const std::array<float, 5U> y{{
         0.0F,
         grade.shadow_point,
@@ -72,6 +83,35 @@ struct Rgb final {
         grade.highlight_point,
         1.0F,
     }};
+    const std::array<float, 3U> rhs{{
+        6.0F * (((y[2U] - y[1U]) / tone_curve_width[1U]) -
+                ((y[1U] - y[0U]) / tone_curve_width[0U])),
+        6.0F * (((y[3U] - y[2U]) / tone_curve_width[2U]) -
+                ((y[2U] - y[1U]) / tone_curve_width[1U])),
+        6.0F * (((y[4U] - y[3U]) / tone_curve_width[3U]) -
+                ((y[3U] - y[2U]) / tone_curve_width[2U])),
+    }};
+    const float diagonal1 = 2.0F * (tone_curve_width[0U] + tone_curve_width[1U]);
+    const float diagonal2 =
+        2.0F * (tone_curve_width[1U] + tone_curve_width[2U]) -
+        ((tone_curve_width[1U] * tone_curve_width[1U]) / diagonal1);
+    const float diagonal3 =
+        2.0F * (tone_curve_width[2U] + tone_curve_width[3U]) -
+        ((tone_curve_width[2U] * tone_curve_width[2U]) / diagonal2);
+    const float m3 = (rhs[2U] - ((tone_curve_width[2U] / diagonal2) * rhs[1U]) +
+                      ((tone_curve_width[2U] * tone_curve_width[1U]) /
+                       (diagonal2 * diagonal1)) * rhs[0U]) /
+        diagonal3;
+    const float m2 = (rhs[1U] - (tone_curve_width[2U] * m3) -
+                      ((tone_curve_width[1U] / diagonal1) * rhs[0U])) /
+        diagonal2;
+    const float m1 = (rhs[0U] - (tone_curve_width[1U] * m2)) / diagonal1;
+    return {y, {0.0F, m1, m2, m3, 0.0F}};
+}
+
+[[nodiscard]] float tone_curve(
+    const float value,
+    const ToneCurve& curve) noexcept {
     if (value <= 0.0F) return 0.0F;
     if (value >= 1.0F) return 1.0F;
 
@@ -79,45 +119,24 @@ struct Rgb final {
     // working color space. The profile control points are therefore not a
     // linear-light curve.
     const float perceptual_value = std::sqrt(value);
-
     std::size_t segment = 0U;
-    while (segment + 1U < x.size() && perceptual_value > x[segment + 1U]) ++segment;
-    const float width = x[segment + 1U] - x[segment];
-    const std::array<float, 4U> h{{
-        x[1U] - x[0U],
-        x[2U] - x[1U],
-        x[3U] - x[2U],
-        x[4U] - x[3U],
-    }};
-    const std::array<float, 3U> rhs{{
-        6.0F * (((y[2U] - y[1U]) / h[1U]) - ((y[1U] - y[0U]) / h[0U])),
-        6.0F * (((y[3U] - y[2U]) / h[2U]) - ((y[2U] - y[1U]) / h[1U])),
-        6.0F * (((y[4U] - y[3U]) / h[3U]) - ((y[3U] - y[2U]) / h[2U])),
-    }};
-    const float diagonal1 = 2.0F * (h[0U] + h[1U]);
-    const float diagonal2 =
-        2.0F * (h[1U] + h[2U]) - ((h[1U] * h[1U]) / diagonal1);
-    const float diagonal3 =
-        2.0F * (h[2U] + h[3U]) - ((h[2U] * h[2U]) / diagonal2);
-    const float m3 = (rhs[2U] - ((h[2U] / diagonal2) * rhs[1U]) +
-                      ((h[2U] * h[1U]) / (diagonal2 * diagonal1)) * rhs[0U]) /
-        diagonal3;
-    const float m2 = (rhs[1U] - (h[2U] * m3) - ((h[1U] / diagonal1) * rhs[0U])) /
-        diagonal2;
-    const float m1 = (rhs[0U] - (h[1U] * m2)) / diagonal1;
-    const std::array<float, 5U> second{{0.0F, m1, m2, m3, 0.0F}};
-    const float a = (x[segment + 1U] - perceptual_value) / width;
+    while (segment + 1U < tone_curve_x.size() &&
+           perceptual_value > tone_curve_x[segment + 1U]) ++segment;
+    const float width = tone_curve_width[segment];
+    const float a = (tone_curve_x[segment + 1U] - perceptual_value) / width;
     const float b = 1.0F - a;
-    const float perceptual_output = (a * y[segment]) + (b * y[segment + 1U]) +
-        (((a * a * a - a) * second[segment]) +
-         ((b * b * b - b) * second[segment + 1U])) *
+    const float perceptual_output = (a * curve.y[segment]) +
+        (b * curve.y[segment + 1U]) +
+        (((a * a * a - a) * curve.second[segment]) +
+         ((b * b * b - b) * curve.second[segment + 1U])) *
             width * width / 6.0F;
     return perceptual_output * perceptual_output;
 }
 
 [[nodiscard]] Rgb point_grade(
     Rgb value,
-    const ScannerProfileGradeParameters& grade) noexcept {
+    const ScannerProfileGradeParameters& grade,
+    const ToneCurve& curve) noexcept {
     value.red = std::pow(std::max(value.red, 0.0F), grade.gamma);
     value.green = std::pow(std::max(value.green, 0.0F), grade.gamma);
     value.blue = std::pow(std::max(value.blue, 0.0F), grade.gamma);
@@ -140,9 +159,9 @@ struct Rgb final {
     value.blue *= 1.0F + ((grade.blue_gain - 1.0F) * tint);
 
     return {
-        tone_curve(value.red, grade),
-        tone_curve(value.green, grade),
-        tone_curve(value.blue, grade),
+        tone_curve(value.red, curve),
+        tone_curve(value.green, curve),
+        tone_curve(value.blue, curve),
     };
 }
 
@@ -235,6 +254,7 @@ negaflow::core::KernelStatus apply_scanner_profile_grade(
     info.profile_found = true;
 
     try {
+        const ToneCurve curve = make_tone_curve(grade);
         std::vector<Rgb> scratch;
         if (grade.unsharp > 0.0F) {
             scratch.resize(static_cast<std::size_t>(image.width) * image.height);
@@ -244,7 +264,7 @@ negaflow::core::KernelStatus apply_scanner_profile_grade(
                 auto& pixel = image.pixels[
                     static_cast<std::size_t>(y) * image.stride_pixels + x];
                 const Rgb result = point_grade(
-                    {pixel.red, pixel.green, pixel.blue}, grade);
+                    {pixel.red, pixel.green, pixel.blue}, grade, curve);
                 pixel.red = result.red;
                 pixel.green = result.green;
                 pixel.blue = result.blue;

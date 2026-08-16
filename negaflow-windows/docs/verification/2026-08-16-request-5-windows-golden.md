@@ -40,6 +40,10 @@ Portra 400의 종전 중앙값 차이는 Windows의 `ScannerProfileGrade`가 `CI
 `−876/−616/−550`에서 `−18/+9/+6`으로 수렴했다. max abs는 여전히 크므로 pixel-exact 동등성이나
 CI 내부 neighborhood filter의 동일성을 주장하지 않는다.
 
+2026-08-16에 spline의 2차 미분 계수는 프로파일을 적용하기 전에 한 번만 계산하도록 정리했다.
+실제 V700 source 여덟 조건 재렌더는 위 표와 같은 중앙값·최대 차이를 냈다. 이는 입력별 보정이
+아니며, 프로파일 고정 curve의 반복 계산 단위를 옮긴 것이다.
+
 ## Task 9 수치
 
 색상 양화 8개는 RGB16 채널 중앙값 차이가 -7부터 +19 코드였고, 테스트는 절대값 32 코드
@@ -78,6 +82,8 @@ heal-brush·FilmScanDenoise와 함께 다시 빌드하고 `native.texture_stage`
 통과했다. 그 뒤 root 문자열 값 비교를 더한 `native.task6_metadata_golden`도 x64 Release에서
 1/1 통과했다. 공통 Gaussian 사상 변경 뒤에도 x64 Release `ci-gate`의 native CTest 71/71과
 `test-managed.ps1 -Preset x64-release`의 Catalog 721/Shell 905 assertion이 다시 통과했다.
+GitHub Actions Windows CI run `31942387620`은 Task 6·9의 LFS TIFF fixture를 명시적으로 내려받아
+native 71/71, managed, ARM64 cross build를 모두 통과했다. ARM64 결과는 교차 빌드이며 runtime 증거가 아니다.
 `-IncludeArm64Cross`는 순수 ARM64 native와 managed graph를 교차 빌드했고 native DLL의 PE machine은
 `0xAA64`이며, 별도 ARM64 managed build도 경고·오류 없이 통과했다. 이는 ARM64 runtime 결과가 아니다.
 
