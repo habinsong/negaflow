@@ -127,3 +127,117 @@ NEGA_DEBUG=1 NEGA_DUMP_PROXY=1 negaflow develop GT-X900_frame_4.tiff /tmp/out.ti
        blackIn=(0.1469,0.0927,0.0693) midD=0.626
 [vib] meanSat=0.1538 amount=0.259
 ```
+
+---
+
+# REQUEST-4 추가분 (33³ · 65³ · 실사진 사다리)
+
+규약은 3차와 같습니다 — 리틀엔디언 `Float32`, `RGBAf`, 행 우선(y-down), linear sRGB,
+현상 파이프라인과 같은 컨텍스트(`SamplingContextPool`, workingColorSpace linearSRGB).
+
+## 요청 A — 33³ 격자, amount 0.05…0.50
+
+```
+N = 33*33*33 = 35937,  이미지 256 × 141 = 36,096 화소, 앞 35,937 개가 격자
+i → (R, G, B) = (i / 1089, (i / 33) % 33, i % 33) / 32,  alpha = 1
+```
+
+| 파일 | 크기 | sha256 |
+| --- | ---: | --- |
+| `civibrance33-a0.050-256x141.f32` | 577536 | `369642dc2cfd1c1b0aeca63fa3e13620274fd8732fffb089d8d3f188c0ac73ed` |
+| `civibrance33-a0.100-256x141.f32` | 577536 | `84491e94010a22d4af01bb57f25170d2a45a65feb1d11def46eaf60b694d02b6` |
+| `civibrance33-a0.150-256x141.f32` | 577536 | `7a1bce6fb84b11826296009dcdce038d066ae046b5e4cf27be8a198cb26bf124` |
+| `civibrance33-a0.200-256x141.f32` | 577536 | `c0fc211feb7dafeec23f4c8eb6eb9edee7c50f6d3dddc8b67943ab5274233ecc` |
+| `civibrance33-a0.250-256x141.f32` | 577536 | `61b49975722a206418b4ecfde13c92d322e9579001ceb9dd1f977950f51ee0fe` |
+| `civibrance33-a0.300-256x141.f32` | 577536 | `61c19e43cc217674954ca4a0a6161afb43385c275621def71790840a39677898` |
+| `civibrance33-a0.350-256x141.f32` | 577536 | `1280d9019b7024d314b0a316cd578bb13d896a58f69256a66e81c1653d28d160` |
+| `civibrance33-a0.400-256x141.f32` | 577536 | `3a1942aa8d08b2f26da6d9a4cc7ef9eb4929362c047f3b774cbfd47d773fac18` |
+| `civibrance33-a0.450-256x141.f32` | 577536 | `e8cc9046782f2bfb077969a30f7f16f2c009ca2cb0f134afbdf8ed3fb1a8c58d` |
+| `civibrance33-a0.500-256x141.f32` | 577536 | `039f6cc299d8df76946c64c5bb91ec7d58fd47020bcaeb418655160edc4da44c` |
+| `civibrance33-input-256x141.f32` | 577536 | `30498501656c7843eeb4e5ed5bf3045bbf5869a526758761709a310dabf82629` |
+
+## 요청 B — 65³ 한 판 (독립 검증용)
+
+```
+N = 65*65*65 = 274625,  이미지 640 × 430 = 275,200 화소
+i → (R, G, B) = (i / 4225, (i / 65) % 65, i % 65) / 64,  alpha = 1
+```
+
+| 파일 | 크기 | sha256 |
+| --- | ---: | --- |
+| `civibrance65-a0.250-640x430.f32` | 4403200 | `df7a8328ac5bad70baab3f99dceb35d26df94a16136769edd52772444aa25ecb` |
+| `civibrance65-input-640x430.f32` | 4403200 | `6b57227acba448f117926c14ced3091c5239be123b289ee32d2e247721f8b5be` |
+
+## 요청 C — 실제 프레임 한 쌍 더
+
+**요청하신 형태로는 드릴 수 없습니다.** 8100 프레임은 vibrance 단계를 아예 건너뜁니다.
+
+```
+[nega-proxy] targetW=320 targetH=220 inset=(19,13) pixels=54708 film=54456
+             gate=0.133005 darkCut=0.017813
+             densest=(0.0005,0.0003,0.0003) densestFloor=(0.0030,0.0015,0.0011)
+             measuredDmax=(1.8000,1.8000,1.8000)
+[nega] dmin=(0.1913,0.0939,0.0711) dmaxNorm=(1.8000,1.8000,1.8000)
+       blackIn=(0.1205,0.0697,0.0560) midD=0.482
+[vib] meanSat=0.4099 amount=0.000
+```
+
+`meanSat 0.4099 > 0.24` 라 `amount = 0.000` 이고, `guard amount > 0.01` 에서 반환합니다.
+그래서 전/후 두 덤프의 sha256 이 **같습니다**(`e99e5fe9…3ef3`). 게이트가 도는 것을 확인하는
+자료로는 유효하지만, 표를 검증하는 자료로는 쓸 수 없습니다.
+
+가진 스캔을 전부 재 봤는데 vibrance 가 실제로 도는 것은 `GT-X900_frame_4` 하나뿐입니다.
+
+| 스캔 | meanSat | amount |
+| --- | ---: | ---: |
+| `GT-X900_frame_4` | 0.1538 | **0.259** |
+| `OpticFilm8100_frame_1` | 0.4099 | 0.000 |
+| `color_nega` | 0.3417 | 0.000 |
+| `fa_2_colornegative_1slot` | 0.4032 | 0.000 |
+| `fa_color_negative_2x2slot` | 0.2634 | 0.000 |
+
+| 파일 | 크기 | sha256 |
+| --- | ---: | --- |
+| `frame8100-preview-320x220.f32` | 1,126,400 | `e99e5fe9c47f0cb9c129839dbd27f1a720e047500ed64b3f79ae5dde7cef3ef3` |
+| `frame8100-postvib-320x220.f32` | 1,126,400 | `e99e5fe9c47f0cb9c129839dbd27f1a720e047500ed64b3f79ae5dde7cef3ef3` |
+
+### 대신 드리는 것 — 같은 사진, amount 사다리
+
+요청 C 의 목적은 "격자에 맞추고 사진에서 틀리는 것"을 잡는 것이었습니다. 그 목적은 사진이
+달라야 달성되는 게 아니라 **맞출 때 쓰지 않은 자료**면 됩니다. `frame4-preview` 버퍼를
+여러 amount 로 통과시킨 판을 드립니다 — 격자가 아니라 실제 화소 분포이고, 33³ 표를 맞출 때
+쓰는 `a0.259` 한 판과 별개입니다.
+
+| 파일 | 크기 | sha256 |
+| --- | ---: | --- |
+| `frame4-postvib-a0.050-320x488.f32` | 2,498,560 | `5671093fe2cb722e882b3c5a842c48824f1e115eec52aa0d190dc85e8c37cb82` |
+| `frame4-postvib-a0.100-320x488.f32` | 2,498,560 | `6b957e28087c8ce38cf678ea321ad30f6c1836b9d9e80049e42f5836d90fbdfe` |
+| `frame4-postvib-a0.150-320x488.f32` | 2,498,560 | `f1f67ed0638288e91c4b4e2e7a42a252e72984052456d6afa7640aa11519cc31` |
+| `frame4-postvib-a0.250-320x488.f32` | 2,498,560 | `ce33a59b6de6056ce868bce9ae9c2dcfa2a0de5adca1802e1bebb917d806ac96` |
+| `frame4-postvib-a0.350-320x488.f32` | 2,498,560 | `486c5610fbaf862271a95eddeaab96d8844cf2a9a6b585caee534ffb2358ba18` |
+| `frame4-postvib-a0.500-320x488.f32` | 2,498,560 | `1fc1fdb1d8ea11a30130fd75e8f20ec6b7c8868e936797e5fe35bd88f2cbbd6b` |
+
+입력은 전부 `frame4-preview-320x488.f32` 입니다.
+
+## 그쪽 결론 1·2 를 새 격자로 재확인했습니다
+
+`out = A + (in − A) · f`, `A = (R+G+B)/3` 로 화소마다 스칼라 `f` 하나를 맞춘 잔차입니다.
+
+| 판 | 점 수 | 아핀 잔차 최대 | f 범위 |
+| --- | ---: | ---: | --- |
+| 33³ a0.05 | 35,937 | 1.25 × 10⁻⁶ | 1.0000 ~ 1.1251 |
+| 33³ a0.25 | 35,937 | 6.14 × 10⁻⁶ | 1.0000 ~ 1.6195 |
+| 33³ a0.50 | 35,937 | 1.23 × 10⁻⁵ | 1.0000 ~ 2.2239 |
+| **65³ a0.25** | **274,625** | **6.26 × 10⁻⁶** | 1.0000 ~ 1.6288 |
+
+274,625 점에서도 성립하므로 1·2번 결론은 17³ 우연이 아닙니다. `f ≥ 1` 이 항상 유지되는 것도
+확인했습니다 — 이 필터는 채도를 낮추는 방향으로는 가지 않습니다.
+
+## 재현
+
+```bash
+NEGAFLOW_VIBRANCE_GOLDEN_DIR=docs/verification/macos-golden/vibrance \
+  swift test --filter VibranceMappingGoldenTests    # 17³ · 33³ · 65³
+NEGAFLOW_VIBRANCE_GOLDEN_DIR=docs/verification/macos-golden/vibrance \
+  swift test --filter VibranceRealFrameLadderTests  # 실사진 사다리
+```
