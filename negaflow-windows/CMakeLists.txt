@@ -247,7 +247,9 @@ set_target_properties(negaflow_native PROPERTIES OUTPUT_NAME "Negaflow.Native")
 add_executable(negaflow_cli
     src/Cli/main.cpp
     src/Cli/commands/develop_negative_tiff.cpp
-    src/Cli/commands/export_developed_image.cpp
+    src/Cli/commands/Export/developed_export_options.cpp
+    src/Cli/commands/Export/developed_export_report.cpp
+    src/Cli/commands/Export/export_developed_image_command.cpp
     src/Cli/commands/export_developed_png.cpp
     src/Cli/commands/export_developed_tiff.cpp
     src/Cli/commands/film_look_command_support.cpp
