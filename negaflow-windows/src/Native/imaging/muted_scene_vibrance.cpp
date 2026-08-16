@@ -116,7 +116,7 @@ MutedSceneVibranceResult apply_muted_scene_vibrance(
             image.pixels + (static_cast<std::size_t>(row) * image.stride_pixels);
         for (std::uint32_t column = 0U; column < image.width; ++column) {
             auto& pixel = row_pixels[column];
-            detail::apply_vibrance_to_channels(
+            detail::apply_measured_vibrance_to_channels(
                 pixel.red,
                 pixel.green,
                 pixel.blue,

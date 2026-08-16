@@ -153,6 +153,7 @@ add_library(negaflow_imaging STATIC
     src/Native/imaging/linear_scanner_converter.cpp
       src/Native/imaging/local_dodge_burn.cpp
       src/Native/imaging/muted_scene_vibrance.cpp
+      src/Native/imaging/muted_scene_vibrance_table.cpp
       src/Native/imaging/scene_correction.cpp
       src/Native/imaging/rescue_grade.cpp
       src/Native/imaging/scanner_profile_grade.cpp
