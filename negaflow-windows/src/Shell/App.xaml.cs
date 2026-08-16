@@ -2,6 +2,7 @@ using Microsoft.UI.Xaml;
 using Negaflow.Catalog;
 using Negaflow.Shell.Library;
 using Negaflow.Shell.Services;
+using System.Runtime.InteropServices;
 
 namespace Negaflow.Shell;
 
@@ -29,7 +30,7 @@ public partial class App : Application
             Windows.Globalization.ApplicationLanguages.PrimaryLanguageOverride = language;
         }
         catch (Exception exception) when (exception is IOException or
-            UnauthorizedAccessException or ArgumentException)
+            UnauthorizedAccessException or ArgumentException or COMException)
         {
             // 설정을 못 읽으면 시스템 언어로 뜹니다. 언어 하나 때문에 앱이 시작하지 못하는
             // 것보다 낫습니다.

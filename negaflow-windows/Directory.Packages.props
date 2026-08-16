@@ -12,7 +12,7 @@
     <PackageVersion Include="SQLitePCLRaw.config.e_sqlite3" Version="3.0.5" />
     <PackageVersion Include="SourceGear.sqlite3" Version="3.53.4" />
     <PackageVersion Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.7705" />
-    <PackageVersion Include="Microsoft.WindowsAppSDK.Runtime" Version="1.8.260710003" />
-    <PackageVersion Include="Microsoft.WindowsAppSDK.WinUI" Version="1.8.260709004" />
+    <PackageVersion Include="Microsoft.Windows.SDK.BuildTools.WinApp" Version="0.3.1" />
+    <PackageVersion Include="Microsoft.WindowsAppSDK" Version="1.8.260710003" />
   </ItemGroup>
 </Project>

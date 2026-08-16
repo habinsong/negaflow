@@ -16,6 +16,7 @@ public sealed partial class SettingsWindow : Window
         ArgumentNullException.ThrowIfNull(workspaceState);
         this.settingsStore = settingsStore;
         InitializeComponent();
+        WindowIcon.Apply(AppWindow);
         Title = AppResources.Get("commandSettings", "Value");
 
         SettingsView.Initialize(workspaceState, AppWindow.Id);

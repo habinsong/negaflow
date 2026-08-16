@@ -12,10 +12,10 @@
     <RuntimeIdentifier Condition="'$(Platform)' == 'ARM64'">win-arm64</RuntimeIdentifier>
     <UseWinUI>true</UseWinUI>
     <DefaultLanguage>en-US</DefaultLanguage>
-    <WinUISDKReferences>false</WinUISDKReferences>
-    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsPackageType>MSIX</WindowsPackageType>
     <WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained>
-    <EnableMsixTooling>false</EnableMsixTooling>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <ApplicationIcon>Assets\Negaflow.ico</ApplicationIcon>
     <PublishTrimmed>false</PublishTrimmed>
     <PublishReadyToRun>false</PublishReadyToRun>
   </PropertyGroup>
@@ -26,8 +26,8 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.WindowsAppSDK.Runtime" />
-    <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools.WinApp" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" />
   </ItemGroup>
 
   <ItemGroup>
@@ -49,6 +49,14 @@
     <NativeLibrarySource>$(MSBuildThisFileDirectory)..\..\out\build\native\$(NativePreset)\$(Configuration)\Negaflow.Native.dll</NativeLibrarySource>
   </PropertyGroup>
 
+  <!-- MSIX loose layout과 최종 패키지에 모두 넣는다. Build 뒤 TargetDir에만
+       복사하면 패키징은 이미 끝나 ABI 엔진이 빠진 채 앱이 LoadFailed가 된다. -->
+  <ItemGroup Condition="Exists('$(NativeLibrarySource)')">
+    <Content Include="$(NativeLibrarySource)"
+             Link="Negaflow.Native.dll"
+             CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <!-- 셸은 웹 콘텐츠를 렌더링하지 않는데도 WinUI package graph가 WebView2 페이로드
        약 1.6MB를 binplace한다. 배포물에서 빼면 BSD-3-Clause 재배포 의무와 WebView2가
        끌고 오는 하위 third-party notice 사슬이 함께 사라진다. ADR-0022 참조.
@@ -61,7 +69,33 @@
     </ItemGroup>
   </Target>
 
-  <Target Name="CopyNativeEngine" AfterTargets="Build" Condition="Exists('$(NativeLibrarySource)')">
+  <!-- Publish 는 Build 출력의 모든 임의 DLL을 자동 수집하지 않는다. 설치 payload가
+       native ABI 엔진 없이 만들어지는 것을 막기 위해 Build와 Publish 양쪽에 둔다. -->
+  <Target Name="CopyNativeEngine" AfterTargets="Build;Publish" Condition="Exists('$(NativeLibrarySource)')">
     <Copy SourceFiles="$(NativeLibrarySource)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(NativeLibrarySource)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true"
+          Condition="'$(PublishDir)' != ''" />
+  </Target>
+
+  <!-- `winapp run`은 AppX 느슨한 레이아웃에서 실행한다. Content 메타데이터만으로는
+       일반 Build 뒤 이 디렉터리에 파일이 생기지 않으므로, ABI 엔진을 명시적으로 동기화한다. -->
+  <Target Name="CopyNativeEngineToAppxLayout" AfterTargets="Build"
+          Condition="Exists('$(NativeLibrarySource)') And Exists('$(TargetDir)AppX')">
+    <Copy SourceFiles="$(NativeLibrarySource)" DestinationFolder="$(TargetDir)AppX"
+          SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="CopyApplicationIcon" AfterTargets="Build;Publish">
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)Assets\Negaflow.ico" DestinationFolder="$(TargetDir)"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)Assets\Negaflow.ico" DestinationFolder="$(PublishDir)"
+          SkipUnchangedFiles="true" Condition="'$(PublishDir)' != ''" />
+  </Target>
+
+  <!-- 설치본에서 XAML 리소스 PRI를 빠뜨리지 않는다. -->
+  <Target Name="CopyUnpackagedPriResources" AfterTargets="Publish"
+          Condition="Exists('$(TargetDir)$(AssemblyName).pri')">
+    <Copy SourceFiles="$(TargetDir)$(AssemblyName).pri" DestinationFolder="$(PublishDir)"
+          SkipUnchangedFiles="true" />
   </Target>
 </Project>

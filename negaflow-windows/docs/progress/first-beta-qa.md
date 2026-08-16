@@ -30,6 +30,7 @@
 - Library·Develop·Print는 분리된 기능이 아니라 하나의 연속된 워크플로다. 현재 끊긴 이미지·썸네일·선택·filmstrip·Print 대상 전달을 모두 수정한다.
 - Negaflow 본체와 `negaflow-scanner-sane` 모두 저장소에 이미 있는 setup/build-installer 경로로 최신 소스를 빌드·설치한 뒤 `computer-use` 검증을 수행한다. 설치된 오래된 실행 파일이나 임의 실행 경로를 기준으로 삼지 않는다.
 - 체크포인트 커밋·푸시는 별도 작업 브랜치를 만들지 않고 각 저장소의 `main`에 직접 수행한다. 저장소에는 `main`만 유지한다.
+- macOS `negaflow-mac/scripts/ci-gate.sh`처럼 각 Windows 프로젝트에 단일 로컬 CI 진입점을 둔다. 이후 수동으로 빌드 단계를 반복하지 않고 본체는 `scripts/local-ci.ps1`의 core gate→setup build→설치→package identity→실제 창 생성→제거를, SANE은 Release build→CTest→setup build→설치 payload→`detect`→제거를 각각 한 번에 통과한 산출물만 QA에 사용한다. 각 실행 로그 경로를 문서 증거에 남긴다.
 
 ## 상태 표
 
@@ -89,3 +90,11 @@ Library·Develop·Print는 하나의 catalog와 하나의 사용자 작업 흐�
 - 수정할 것: 두 setup을 현재 소스로 빌드하고 설치한 뒤 설치 시각·해시·실행 결과를 기록한다.
 - 수정한 것: 최신 setup만 실제 QA 기준으로 사용한다는 운영 규칙을 이 문서에 추가했다.
 - 검증한 것: 현재 설치된 `C:\Users\habin\AppData\Local\Negaflow\App\Negaflow.Shell.exe`가 `computer-use` 실행 뒤 창을 노출하지 않았고, 현재 소스보다 앞선 2026-08-16 22:16 빌드임을 확인했다. 원인은 아직 확정하지 않았다.
+
+### CP2 — 로컬 CI와 설치본 시작 경로
+
+- 한 것: macOS `ci-gate.sh`와 같은 단일 Windows 진입점 `scripts/local-ci.ps1`을 만들고 x64 Release core gate, setup build, 임시 설치, package identity 등록, 실제 창 생성, 제거를 한 번에 실행했다.
+- 안 한 것: 이 통과는 macOS UI/UX·이미지 품질 parity, 실제 8100/V700 스캔, GrainMend 사용자 워크플로 검증을 의미하지 않는다.
+- 수정할 것: 로컬 CI를 통과한 setup을 실제 기본 경로에 설치한 뒤 `computer-use` 전체 워크플로 QA를 진행한다.
+- 수정한 것: 패키지 ID 없이 실행한 Negaflow와 빈 WinUI 진단 앱이 모두 `0x80073D54`를 stowed exception으로 남기며 종료되는 배포 결함을 확인했다. setup이 unsigned loose package를 현재 사용자에게 등록하고 실패 시 이전 설치를 복구하도록 바꿨으며, setup 검증에 실제 창 생성과 package 제거를 추가했다.
+- 검증한 것: `scripts/local-ci.ps1` 통과. native CTest 71/71, catalog 721 assertions, shell 905 assertions, setup 설치·package identity·창 생성·제거 통과. 설치 파일 SHA-256은 `d43909ab55f3c16164e5e3445f19d318bf782d52180e89f0bcfc97b228d97f6d`, 로그는 `out\logs\local-ci-20260817-000901.log`이다.

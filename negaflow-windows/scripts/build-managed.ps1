@@ -12,6 +12,8 @@ $solution = Join-Path $projectRoot 'Negaflow.Windows.slnx'
 
 Push-Location $projectRoot
 try {
+    # Directory.Build.props maps the platform to the selected RID and keeps
+    # every project graph aligned with its RID-specific lock-file assets.
     & dotnet restore $solution --locked-mode -p:Platform=$platform
     if ($LASTEXITCODE -ne 0) {
         throw "Managed restore failed for preset '$Preset'."

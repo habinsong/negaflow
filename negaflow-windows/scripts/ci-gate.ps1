@@ -41,7 +41,7 @@ try {
         if ($LASTEXITCODE -ne 0) {
             throw 'ARM64 native cross build failed.'
         }
-        & dotnet build Negaflow.Windows.slnx -c Release -p:Platform=ARM64 --nologo
+        & (Join-Path $PSScriptRoot 'build-managed.ps1') -Preset 'arm64-release'
         if ($LASTEXITCODE -ne 0) {
             throw 'ARM64 managed cross build failed.'
         }

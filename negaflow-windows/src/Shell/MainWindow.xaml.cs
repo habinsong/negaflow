@@ -19,6 +19,7 @@ public sealed partial class MainWindow : Window
         this.settingsStore = settingsStore;
         this.workspaceState = workspaceState;
         InitializeComponent();
+        WindowIcon.Apply(AppWindow);
 
         ShellView.Initialize(
             workspaceState,

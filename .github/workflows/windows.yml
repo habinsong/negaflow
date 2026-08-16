@@ -86,6 +86,43 @@ jobs:
       - name: Shell unit tests
         run: dotnet run --project tests/Shell.UnitTests/Negaflow.Shell.UnitTests.csproj -c Release -p:Platform=x64 --no-build --no-restore
 
+  # 배포물은 일반 build 출력과 다르다. self-contained publish가 App Runtime·.NET을
+  # 빠뜨리지 않는지, NSIS가 실제 user-scope 설치/제거를 끝내는지를 매 변경에서 확인한다.
+  installer-smoke:
+    name: x64 installer smoke
+    needs: [native, managed]
+    runs-on: windows-2025
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: negaflow-windows
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - name: Install NSIS
+        run: choco install nsis --yes --no-progress
+      - name: Build installer
+        shell: pwsh
+        run: >
+          powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-release.ps1
+          -Architecture x64
+      - name: Verify silent install and uninstall
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem .\out\release\win-x64\Negaflow-*-x64-setup.exe | Select-Object -First 1
+          if ($null -eq $installer) { throw 'Installer artifact was not created.' }
+          powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-installer.ps1 -InstallerPath $installer.FullName
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: Negaflow-x64-installer-${{ github.sha }}
+          path: |
+            negaflow-windows/out/release/win-x64/Negaflow-*-x64-setup.exe
+            negaflow-windows/out/release/win-x64/Negaflow-*-x64-setup.exe.sha256
+          if-no-files-found: error
+          retention-days: 14
+
   # ARM64 는 교차 빌드만 확인한다. x64 호스트에서 실행할 수 없으므로 통과를 runtime 검증으로
   # 읽으면 안 된다. 매 PR 마다 돌릴 가치가 낮아 main push 와 수동 실행에서만 돈다.
   arm64-cross:
