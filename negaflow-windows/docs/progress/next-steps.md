@@ -1,4 +1,15 @@
-# 다음에 어디서부터 이어서 할 것인가
+# 이력 — 다음에 어디서부터 이어서 할 것인가
+
+> **2026-08-16 현재 재개 지점:** 이 문서의 아래 내용은 2026-08-13 당시의 이력입니다.
+> 현재 구현·golden·검증 상태와 남은 일은
+> [`remaining-2026-08-16.md`](remaining-2026-08-16.md) 및
+> [`../verification/2026-08-16-request-5-windows-golden.md`](../verification/2026-08-16-request-5-windows-golden.md)를
+> 우선합니다. 현재 Windows에서 새로 구현할 REQUEST-5 항목은 없으며, 다음 필요한 증거는 순수
+> ARM64 Windows 장치의 native·managed runtime 실행입니다. Task 1과 Task 9의 국소 최대 차이는
+> pixel-exact 동등성으로 닫힌 것이 아니며, 별도 macOS 중간-stage golden 없이는 제품 코드를
+> 추측으로 바꾸지 않습니다.
+
+## 2026-08-13 이력
 
 기준일: 2026-08-13 (macOS 1.0.8 flatbed frame-grid correctness 반영)
 
