@@ -198,13 +198,14 @@ void discard_pixels(WorkingImage& image) noexcept {
         const float confidence = transition * transition * (3.0F - (2.0F * transition));
         const float scale = response.normal_range +
             ((geometric_mean - response.normal_range) * confidence);
-        if (film_type == NegativeFilmType::black_and_white) {
-            return std::array<float, 3>{scale, scale, scale};
-        }
         std::array<float, 3> result{};
-        for (std::size_t channel = 0U; channel < result.size(); ++channel) {
-            result[channel] = scale *
-                (1.0F + ((measured[channel] / geometric_mean) - 1.0F) * confidence);
+        if (film_type == NegativeFilmType::black_and_white) {
+            result = {scale, scale, scale};
+        } else {
+            for (std::size_t channel = 0U; channel < result.size(); ++channel) {
+                result[channel] = scale *
+                    (1.0F + ((measured[channel] / geometric_mean) - 1.0F) * confidence);
+            }
         }
         if (debug_enabled()) {
             // blackInput 과 midDensity 는 macOS 에서도 지표 전용이라 반전 수식에 들어가지

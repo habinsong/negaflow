@@ -5,6 +5,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <limits>
 #include <utility>
@@ -172,6 +174,105 @@ void expect(const bool condition, const char* const message) {
                left.size() * sizeof(negaflow::core::Rgba32F)) == 0;
 }
 
+[[nodiscard]] negaflow::imaging::WorkingImage load_rgba_f32(
+    const std::filesystem::path& path) {
+    constexpr std::uint32_t width = 256U;
+    constexpr std::uint32_t height = 256U;
+    std::ifstream input(path, std::ios::binary);
+    std::vector<float> samples(
+        static_cast<std::size_t>(width) * height * 4U);
+    input.read(
+        reinterpret_cast<char*>(samples.data()),
+        static_cast<std::streamsize>(samples.size() * sizeof(float)));
+    expect(
+        input.good() || input.eof(),
+        "Core Image f32 golden is readable");
+    expect(
+        input.gcount() == static_cast<std::streamsize>(samples.size() * sizeof(float)),
+        "Core Image f32 golden has the expected RGBAf byte count");
+
+    negaflow::imaging::WorkingImage image{};
+    image.width = width;
+    image.height = height;
+    image.stride_pixels = width;
+    image.pixels.resize(static_cast<std::size_t>(width) * height);
+    for (std::size_t index = 0U; index < image.pixels.size(); ++index) {
+        image.pixels[index] = {
+            samples[index * 4U],
+            samples[index * 4U + 1U],
+            samples[index * 4U + 2U],
+            samples[index * 4U + 3U],
+        };
+    }
+    return image;
+}
+
+[[nodiscard]] float max_abs_difference(
+    const negaflow::imaging::WorkingImage& actual,
+    const negaflow::imaging::WorkingImage& expected) noexcept {
+    if (actual.width != expected.width || actual.height != expected.height ||
+        actual.pixels.size() != expected.pixels.size()) {
+        return std::numeric_limits<float>::infinity();
+    }
+    float maximum = 0.0F;
+    for (std::size_t index = 0U; index < actual.pixels.size(); ++index) {
+        const auto& left = actual.pixels[index];
+        const auto& right = expected.pixels[index];
+        maximum = std::max(maximum, std::abs(left.red - right.red));
+        maximum = std::max(maximum, std::abs(left.green - right.green));
+        maximum = std::max(maximum, std::abs(left.blue - right.blue));
+        maximum = std::max(maximum, std::abs(left.alpha - right.alpha));
+    }
+    return maximum;
+}
+
+void expect_coreimage_close(
+    const negaflow::imaging::WorkingImage& actual,
+    const negaflow::imaging::WorkingImage& expected,
+    const char* const message) {
+    const float difference = max_abs_difference(actual, expected);
+    // The CPU implementation is within 0.008 (about two encoded 8-bit levels) of every
+    // supplied CIUnsharpMask/ CIGaussianBlur output. The remaining maximum is confined to
+    // Core Image's undocumented CIUnsharpMask boundary kernel, while interior and direct
+    // Gaussian values are substantially tighter; retain this executable ceiling so it cannot
+    // silently drift farther from the golden contract.
+    constexpr float coreimage_abs_error_budget = 0.0080F;
+    if (difference >= coreimage_abs_error_budget) {
+        for (std::uint32_t y = 0U; y < actual.height; ++y) {
+            for (std::uint32_t x = 0U; x < actual.width; ++x) {
+                const auto& left = actual.pixels[static_cast<std::size_t>(y) * actual.stride_pixels + x];
+                const auto& right = expected.pixels[static_cast<std::size_t>(y) * expected.stride_pixels + x];
+                if (std::abs(left.red - right.red) == difference ||
+                    std::abs(left.green - right.green) == difference ||
+                    std::abs(left.blue - right.blue) == difference ||
+                    std::abs(left.alpha - right.alpha) == difference) {
+                    std::cerr << "  max_abs_difference=" << difference
+                              << " at=" << x << ',' << y << '\n';
+                    y = actual.height;
+                    break;
+                }
+            }
+        }
+    }
+    expect(difference < coreimage_abs_error_budget, message);
+}
+
+[[nodiscard]] negaflow::imaging::WorkingImage mixed(
+    const negaflow::imaging::WorkingImage& source,
+    const negaflow::imaging::WorkingImage& blurred,
+    const float amount) {
+    auto result = source;
+    for (std::size_t index = 0U; index < result.pixels.size(); ++index) {
+        auto& destination = result.pixels[index];
+        const auto& target = blurred.pixels[index];
+        destination.red += (target.red - destination.red) * amount;
+        destination.green += (target.green - destination.green) * amount;
+        destination.blue += (target.blue - destination.blue) * amount;
+        destination.alpha += (target.alpha - destination.alpha) * amount;
+    }
+    return result;
+}
+
 void test_identity_and_invalid_controls() {
     auto source = texture_patch();
     const auto original = source.pixels;
@@ -331,13 +432,83 @@ void test_output_sharpening() {
         "invalid output sharpening controls fail closed");
 }
 
+void test_coreimage_filter_goldens(const std::filesystem::path& golden_root) {
+    const auto input = load_rgba_f32(golden_root / L"coreimage-filter-input-256x256.f32");
+    struct ClarityCase final {
+        float clarity;
+        const wchar_t* file;
+    };
+    constexpr ClarityCase clarity_cases[]{
+        {0.01F, L"ciunsharpmask-clarity-0.01-256x256.f32"},
+        {0.50F, L"ciunsharpmask-clarity-0.50-256x256.f32"},
+        {1.00F, L"ciunsharpmask-clarity-1.00-256x256.f32"},
+    };
+    for (const ClarityCase& entry : clarity_cases) {
+        negaflow::imaging::TextureStageParameters parameters{};
+        parameters.clarity = entry.clarity;
+        const auto actual = negaflow::imaging::apply_texture_stage(input, parameters);
+        const auto expected = load_rgba_f32(golden_root / entry.file);
+        expect(actual.status == negaflow::imaging::TextureStageStatus::ok,
+               "positive clarity execution succeeds");
+        expect_coreimage_close(
+            actual.image,
+            expected,
+            "positive clarity follows the Core Image unsharp golden");
+    }
+
+    const auto blur7 = load_rgba_f32(
+        golden_root / L"cigaussianblur-clarity-0.50-radius7.0-256x256.f32");
+    negaflow::imaging::TextureStageParameters negative{};
+    negative.clarity = -0.50F;
+    const auto actual_negative = negaflow::imaging::apply_texture_stage(input, negative);
+    const auto expected_negative = mixed(input, blur7, 0.40F);
+    expect(actual_negative.status == negaflow::imaging::TextureStageStatus::ok,
+           "negative clarity execution succeeds");
+    expect_coreimage_close(
+        actual_negative.image,
+        expected_negative,
+        "negative clarity follows the Core Image Gaussian golden and dissolve amount");
+
+    struct OutputCase final {
+        negaflow::imaging::OutputSharpeningMedium medium;
+        std::uint32_t dpi;
+        const wchar_t* file;
+    };
+    constexpr OutputCase output_cases[]{
+        {negaflow::imaging::OutputSharpeningMedium::screen, 144U,
+         L"ciunsharpmask-export-screen-dpi144-strength1-256x256.f32"},
+        {negaflow::imaging::OutputSharpeningMedium::matte_paper, 300U,
+         L"ciunsharpmask-export-matte-dpi300-strength1-256x256.f32"},
+        {negaflow::imaging::OutputSharpeningMedium::glossy_paper, 300U,
+         L"ciunsharpmask-export-glossy-dpi300-strength1-256x256.f32"},
+    };
+    for (const OutputCase& entry : output_cases) {
+        negaflow::imaging::OutputSharpeningParameters parameters{};
+        parameters.medium = entry.medium;
+        parameters.dpi = entry.dpi;
+        parameters.strength = 1.0F;
+        const auto actual = negaflow::imaging::apply_output_sharpening(input, parameters);
+        const auto expected = load_rgba_f32(golden_root / entry.file);
+        expect(actual.status == negaflow::imaging::TextureStageStatus::ok,
+               "output sharpening execution succeeds");
+        expect_coreimage_close(
+            actual.image,
+            expected,
+            "output sharpening follows the Core Image unsharp golden");
+    }
+}
+
 }  // namespace
 
-int main() {
+int main(const int argc, char** argv) {
     test_identity_and_invalid_controls();
     test_grain_and_detail_controls();
     test_halation_and_vignette();
     test_output_sharpening();
+    expect(argc == 2, "texture-stage CTest receives the Core Image golden directory");
+    if (argc == 2) {
+        test_coreimage_filter_goldens(argv[1]);
+    }
 
     std::cout << "{\"status\":\"" << (failures == 0 ? "ok" : "error")
               << "\",\"suite\":\"texture_stage\",\"failures\":"

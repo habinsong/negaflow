@@ -6,6 +6,13 @@
 
 macOS 대비 어림값입니다. 근거를 함께 적습니다 — 숫자만 옮겨 적지 마십시오.
 
+> **2026-08-16 최신 golden 반영:** 이 표의 `alpha`와 `CIVibrance ±0.8` 미완료 표기는
+> 뒤의 이전 서술입니다. alpha는 ABI v34부터 Shell·sidecar·PNG/TIFF 8·16bit 구조까지 닫았고,
+> CIVibrance 17개 macOS RGBAf plane은 Windows CTest에 연결했습니다. Task 7/8 golden도 각각
+> 회귀 상한(0.008/0.005)으로 연결했습니다. 반대로 Task 1의 GT-X900 원본은 현재 저장소에 없어
+> 재렌더하지 못했고, Task 9의 B&W 7개는 +1,089…+1,909 RGB16 중앙값 밝기 차이가 남아 있습니다.
+> 상세 명령·수치는 `verification/2026-08-16-request-5-windows-golden.md`를 우선합니다.
+
 | 영역 | 대략 | 근거와 남은 것 |
 | --- | --- | --- |
 | 현상 엔진·수학 | **98%** | 반전·base(auto/manual/preset)·톤·포인트 커브·컬러 믹서·컬러 그레이딩·캘리브레이션·색·질감·FilmScanDenoise·필름 42종·GrainMend 수리·검출·흑백 토닝·소프트 프루프·기하 변형·긴 변 Lanczos3·출력 선명도·PNG/TIFF/JPEG 게시·TIFF LZW/Deflate·8-bit 디더·출력 색공간(sRGB/Display P3/Adobe RGB, ICC 생성). **macOS 픽셀 대조가 사실상 닫혔습니다.** 8100 은 여섯 지점 정확 일치, V700 은 **R +16 · G +55 · B +64**(8비트로 0.06 · 0.21 · 0.25 레벨)이고 B max 는 정확히 일치합니다. `CIVibrance` 는 Apple 내장이라 커널이 없으므로 **수식을 되짚지 않고 잰 사상을 33³ 표(211 KiB)로 넣었습니다** — 그 필터가 화소마다 정확히 아핀이고(65³ 274,625점 잔차 6.3e-6) 앵커가 산술 평균임을 확인한 결과입니다. 표를 만들 때 쓰지 않은 자료(65³ 격자, 실사진 여섯 amount 사다리)로만 검증했고 실사진 RMS 가 707 → 45.5(16비트)입니다. **색역 클리핑도 대조를 끝냈습니다** — 커널이 macOS 와 같은 계산이고, 게시 파일에는 안 걸고(맥도 안 겁니다) 프루프보다 먼저 접으며 썸네일과 캔버스가 한 경로입니다. 썸네일에서 접는 순서 하나만 다르고 기본 현상에서는 항등이라 보이지 않습니다. 남은 것: alpha, ColorModel vibrance 슬라이더 범위(±0.8) 골든. `docs/verification/2026-08-16-civibrance-table.md` |

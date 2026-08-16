@@ -293,6 +293,19 @@ if(BUILD_TESTING)
         PRIVATE negaflow_native negaflow_color negaflow_imaging negaflow_project_options
     )
 
+    add_executable(negaflow_task9_bw_slide_golden_tests
+        tests/Native.UnitTests/task9_bw_slide_golden_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_task9_bw_slide_golden_tests
+        PRIVATE negaflow_native negaflow_color negaflow_imaging negaflow_project_options
+    )
+    add_test(
+        NAME native.task9_bw_slide_golden
+        COMMAND negaflow_task9_bw_slide_golden_tests
+            "${CMAKE_CURRENT_SOURCE_DIR}/../docs/verification/macos-golden/task9-bw-slide"
+    )
+
     add_executable(negaflow_infrared_detector_abi_tests
         tests/Native.UnitTests/infrared_detector_abi_tests.cpp
         tests/fixtures/tiff/synthetic_wic_tiff.cpp
@@ -581,6 +594,7 @@ if(BUILD_TESTING)
     add_test(
         NAME native.working_film_look
         COMMAND negaflow_working_film_look_tests
+            "${CMAKE_CURRENT_SOURCE_DIR}/../docs/verification/macos-golden/task8-digital-film-look"
     )
 
     add_executable(negaflow_grain_mend_tests
@@ -714,7 +728,11 @@ if(BUILD_TESTING)
         negaflow_color_model_tests
         PRIVATE negaflow_imaging negaflow_project_options
     )
-    add_test(NAME native.color_model COMMAND negaflow_color_model_tests)
+    add_test(
+        NAME native.color_model
+        COMMAND negaflow_color_model_tests
+            "${CMAKE_CURRENT_SOURCE_DIR}/../docs/verification/macos-golden/vibrance"
+    )
 
     add_executable(negaflow_scene_correction_tests
         tests/Native.UnitTests/scene_correction_tests.cpp
@@ -765,7 +783,11 @@ if(BUILD_TESTING)
         negaflow_texture_stage_tests
         PRIVATE negaflow_imaging negaflow_project_options
     )
-    add_test(NAME native.texture_stage COMMAND negaflow_texture_stage_tests)
+    add_test(
+        NAME native.texture_stage
+        COMMAND negaflow_texture_stage_tests
+            "${CMAKE_CURRENT_SOURCE_DIR}/../docs/verification/macos-golden/task7-coreimage-filters"
+    )
 
     add_executable(negaflow_bw_toning_tests
         tests/Native.UnitTests/bw_toning_tests.cpp

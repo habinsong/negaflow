@@ -1,5 +1,7 @@
 #include "negaflow/imaging/scanner_profile_grade.h"
 
+#include "vibrance_math.h"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -110,10 +112,11 @@ struct Rgb final {
     value.green = ((value.green - 0.5F) * grade.contrast) + 0.5F;
     value.blue = ((value.blue - 0.5F) * grade.contrast) + 0.5F;
 
-    const float maximum = std::max({value.red, value.green, value.blue});
-    const float minimum = std::min({value.red, value.green, value.blue});
-    const float chroma = std::clamp(maximum - minimum, 0.0F, 1.0F);
-    value = saturation(value, 1.0F + (grade.vibrance * (1.0F - chroma)));
+    detail::apply_measured_vibrance_to_channels(
+        value.red,
+        value.green,
+        value.blue,
+        grade.vibrance);
 
     const float highlight = std::clamp((luminance(value) - 0.50F) / 0.22F, 0.0F, 1.0F);
     const float tint = 1.0F - highlight;

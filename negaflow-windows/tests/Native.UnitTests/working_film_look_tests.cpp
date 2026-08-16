@@ -5,10 +5,13 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <limits>
 #include <memory>
 #include <new>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -45,6 +48,90 @@ allocate_cube() {
     const negaflow::core::Rgba32F right) noexcept {
     return left.red == right.red && left.green == right.green &&
            left.blue == right.blue && left.alpha == right.alpha;
+}
+
+[[nodiscard]] negaflow::imaging::WorkingImage load_digital_film_look_f32(
+    const std::filesystem::path& path) {
+    constexpr std::uint32_t width = 256U;
+    constexpr std::uint32_t height = 256U;
+    std::ifstream input(path, std::ios::binary);
+    std::vector<negaflow::core::Rgba32F> pixels(
+        static_cast<std::size_t>(width) * height);
+    input.read(
+        reinterpret_cast<char*>(pixels.data()),
+        static_cast<std::streamsize>(pixels.size() * sizeof(pixels.front())));
+    expect(
+        (input.good() || input.eof()) &&
+            input.gcount() == static_cast<std::streamsize>(
+                pixels.size() * sizeof(pixels.front())),
+        "DigitalFilmLook RGBAf golden is readable");
+    return {width, height, width, std::move(pixels)};
+}
+
+[[nodiscard]] float max_abs_difference(
+    const negaflow::imaging::WorkingImage& actual,
+    const negaflow::imaging::WorkingImage& expected) noexcept {
+    if (actual.width != expected.width || actual.height != expected.height ||
+        actual.pixels.size() != expected.pixels.size()) {
+        return std::numeric_limits<float>::infinity();
+    }
+    float maximum = 0.0F;
+    for (std::size_t index = 0U; index < actual.pixels.size(); ++index) {
+        maximum = std::max(maximum, std::abs(actual.pixels[index].red - expected.pixels[index].red));
+        maximum = std::max(maximum, std::abs(actual.pixels[index].green - expected.pixels[index].green));
+        maximum = std::max(maximum, std::abs(actual.pixels[index].blue - expected.pixels[index].blue));
+        maximum = std::max(maximum, std::abs(actual.pixels[index].alpha - expected.pixels[index].alpha));
+    }
+    return maximum;
+}
+
+void test_digital_film_look_goldens(const std::filesystem::path& golden_root) {
+    const auto source = load_digital_film_look_f32(
+        golden_root / L"digital-film-look-input-256x256.f32");
+    struct Case final {
+        negaflow::imaging::FilmEmulation emulation;
+        double intensity;
+        bool monochrome;
+        const wchar_t* file;
+    };
+    constexpr Case cases[]{
+        {negaflow::imaging::FilmEmulation::portra_400, 0.5, false,
+         L"digital-film-look-portra400-i0.500-256x256.f32"},
+        {negaflow::imaging::FilmEmulation::portra_400, 1.0, false,
+         L"digital-film-look-portra400-i1.000-256x256.f32"},
+        {negaflow::imaging::FilmEmulation::velvia_50, 0.5, false,
+         L"digital-film-look-velvia50-i0.500-256x256.f32"},
+        {negaflow::imaging::FilmEmulation::velvia_50, 1.0, false,
+         L"digital-film-look-velvia50-i1.000-256x256.f32"},
+        {negaflow::imaging::FilmEmulation::tri_x_400, 0.5, true,
+         L"digital-film-look-triX400-i0.500-256x256.f32"},
+        {negaflow::imaging::FilmEmulation::tri_x_400, 1.0, true,
+         L"digital-film-look-triX400-i1.000-256x256.f32"},
+    };
+    for (const Case& entry : cases) {
+        auto cube = allocate_cube();
+        std::vector<negaflow::imaging::FilmEmulationAcutanceScratchPixel> scratch(
+            negaflow::imaging::film_emulation_acutance_scratch_pixel_count(
+                source.width));
+        const auto actual = negaflow::imaging::apply_working_film_look(
+            source,
+            {negaflow::imaging::DevelopSourceKind::rendered_digital,
+             entry.emulation,
+             entry.intensity,
+             0.0,
+             0.0,
+             entry.monochrome},
+            {cube.get(), {scratch.data(), scratch.size()}});
+        const auto expected = load_digital_film_look_f32(golden_root / entry.file);
+        const float difference = max_abs_difference(actual.image, expected);
+        std::cerr << "  DigitalFilmLook file="
+                  << std::filesystem::path(entry.file).string()
+                  << " max_abs_difference=" << difference << '\n';
+        expect(
+            actual.status == negaflow::imaging::WorkingFilmLookStatus::ok &&
+                difference < 0.0050F,
+            "DigitalFilmLook remains within the measured macOS RGBAf golden bound");
+    }
 }
 
 void test_explicit_route_resolution() {
@@ -201,11 +288,15 @@ void test_fail_closed_routes_and_workspace_errors() {
 
 }  // namespace
 
-int main() {
+int main(const int argc, char** argv) {
     test_explicit_route_resolution();
     test_film_scan_order_and_workspace_reuse();
     test_identity();
     test_fail_closed_routes_and_workspace_errors();
+    expect(argc == 2, "WorkingFilmLook CTest receives the DigitalFilmLook golden directory");
+    if (argc == 2) {
+        test_digital_film_look_goldens(argv[1]);
+    }
 
     std::cout << "{\"status\":\"" << (failures == 0 ? "ok" : "error")
               << "\",\"suite\":\"working_film_look\",\"failures\":"

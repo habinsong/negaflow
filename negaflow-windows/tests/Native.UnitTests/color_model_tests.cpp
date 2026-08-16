@@ -1,9 +1,14 @@
 #include "negaflow/imaging/color_model.h"
 
+#include <algorithm>
 #include <array>
 #include <cmath>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <limits>
+#include <string>
+#include <vector>
 
 namespace {
 
@@ -87,11 +92,91 @@ void test_chroma_controls_and_validation() {
         "ColorModel rejects non-finite controls");
 }
 
+[[nodiscard]] std::vector<negaflow::core::Rgba32F> read_rgba_f32(
+    const std::filesystem::path& path) {
+    std::ifstream input(path, std::ios::binary);
+    std::vector<negaflow::core::Rgba32F> pixels(256U * 141U);
+    input.read(
+        reinterpret_cast<char*>(pixels.data()),
+        static_cast<std::streamsize>(pixels.size() * sizeof(negaflow::core::Rgba32F)));
+    expect(
+        (input.good() || input.eof()) &&
+            input.gcount() == static_cast<std::streamsize>(pixels.size() * sizeof(negaflow::core::Rgba32F)),
+        "CIVibrance f32 golden is readable");
+    pixels.resize(33U * 33U * 33U);
+    return pixels;
+}
+
+[[nodiscard]] float max_rgb_difference(
+    const std::vector<negaflow::core::Rgba32F>& actual,
+    const std::vector<negaflow::core::Rgba32F>& expected) noexcept {
+    if (actual.size() != expected.size()) return std::numeric_limits<float>::infinity();
+    float maximum = 0.0F;
+    for (std::size_t index = 0U; index < actual.size(); ++index) {
+        maximum = std::max(maximum, std::abs(actual[index].red - expected[index].red));
+        maximum = std::max(maximum, std::abs(actual[index].green - expected[index].green));
+        maximum = std::max(maximum, std::abs(actual[index].blue - expected[index].blue));
+        maximum = std::max(maximum, std::abs(actual[index].alpha - expected[index].alpha));
+    }
+    return maximum;
+}
+
+void test_civibrance_goldens(const std::filesystem::path& golden_root) {
+    const auto input = read_rgba_f32(golden_root / L"civibrance33-input-256x141.f32");
+    struct Case final {
+        float amount;
+        const wchar_t* file;
+    };
+    constexpr Case cases[]{
+        {-0.80F, L"civibrance33-am0.800-256x141.f32"},
+        {-0.60F, L"civibrance33-am0.600-256x141.f32"},
+        {-0.40F, L"civibrance33-am0.400-256x141.f32"},
+        {-0.20F, L"civibrance33-am0.200-256x141.f32"},
+        {-0.05F, L"civibrance33-am0.050-256x141.f32"},
+        { 0.05F, L"civibrance33-a0.050-256x141.f32"},
+        { 0.10F, L"civibrance33-a0.100-256x141.f32"},
+        { 0.15F, L"civibrance33-a0.150-256x141.f32"},
+        { 0.20F, L"civibrance33-a0.200-256x141.f32"},
+        { 0.25F, L"civibrance33-a0.250-256x141.f32"},
+        { 0.30F, L"civibrance33-a0.300-256x141.f32"},
+        { 0.35F, L"civibrance33-a0.350-256x141.f32"},
+        { 0.40F, L"civibrance33-a0.400-256x141.f32"},
+        { 0.45F, L"civibrance33-a0.450-256x141.f32"},
+        { 0.50F, L"civibrance33-a0.500-256x141.f32"},
+        { 0.60F, L"civibrance33-a0.600-256x141.f32"},
+        { 0.80F, L"civibrance33-a0.800-256x141.f32"},
+    };
+    for (const Case& entry : cases) {
+        auto actual = input;
+        negaflow::imaging::ColorModelParameters parameters{};
+        parameters.vibrance = entry.amount / 0.8F;
+        const auto status = negaflow::imaging::apply_color_model(
+            {actual.data(), actual.size(), static_cast<std::uint32_t>(actual.size()), 1U,
+             static_cast<std::uint32_t>(actual.size())},
+            {actual.data(), actual.size(), static_cast<std::uint32_t>(actual.size()), 1U,
+             static_cast<std::uint32_t>(actual.size())},
+            parameters);
+        const auto expected = read_rgba_f32(golden_root / entry.file);
+        const float difference = max_rgb_difference(actual, expected);
+        if (difference >= 0.0020F) {
+            std::cerr << "  CIVibrance amount=" << entry.amount
+                      << " max_abs_difference=" << difference << '\n';
+        }
+        expect(
+            status == negaflow::core::KernelStatus::ok && difference < 0.0020F,
+            "ColorModel vibrance follows the full macOS CIVibrance golden range");
+    }
+}
+
 }  // namespace
 
-int main() {
+int main(const int argc, char** argv) {
     test_identity_and_fixed_matrix_controls();
     test_chroma_controls_and_validation();
+    expect(argc == 2, "ColorModel CTest receives the CIVibrance golden directory");
+    if (argc == 2) {
+        test_civibrance_goldens(argv[1]);
+    }
     if (failures == 0) {
         std::cout << "ColorModel tests passed\n";
     }

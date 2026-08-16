@@ -6,8 +6,8 @@ namespace negaflow::imaging::detail {
 
 /// 격자 한 변의 표본 수. RGB 각 축이 0…1 을 32 등분한 33 점입니다.
 inline constexpr std::uint32_t vibrance_table_side = 33U;
-/// 담아 둔 amount 판의 수.
-inline constexpr std::uint32_t vibrance_table_plane_count = 3U;
+/// 담아 둔 amount 판의 수. 음수 ColorModel 구간과 0.80 상한도 포함합니다.
+inline constexpr std::uint32_t vibrance_table_plane_count = 6U;
 inline constexpr std::uint32_t vibrance_table_entry_count =
     vibrance_table_side * vibrance_table_side * vibrance_table_side *
     vibrance_table_plane_count;

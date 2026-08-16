@@ -5,10 +5,11 @@
 
 ---
 
-## 1. macOS 픽셀 골든 — 여덟 조건 중 다섯이 닫혔습니다
+## 1. macOS 픽셀 골든 — Task 1 원본이 현재 저장소에 없습니다
 
-`GT-X900_frame_4.tiff`, macOS 골든 대비 median 차이(16비트). CIVibrance 표를 넣은 뒤의
-실측입니다.
+아래 표는 `GT-X900_frame_4.tiff`가 작업 트리에 있던 때의 마지막 측정입니다. 현재 golden 출력과
+통계는 받았지만 원본 TIFF는 저장소에 없으므로, 2026-08-16 이후의 `ScannerTargetGrade` 끝점 보정을
+같은 실제 입력으로 다시 검증할 수 없습니다.
 
 | 조건 | R | G | B | 판정 |
 | --- | ---: | ---: | ---: | --- |
@@ -42,11 +43,11 @@ median 만 보면 안 됩니다. **max 가 훨씬 크게 어긋납니다.**
 **중요:** F135 와 HR 은 같은 `ScannerTargetGrade` 경로인데 맞습니다. 그러므로 경로 자체가
 아니라 **HS(Noritsu)·SP-3000 두 타깃의 데이터나 계수**가 다릅니다.
 
-### 이건 맥이 없어도 됩니다
+### 원본이 들어오면 맥 없이 할 수 있습니다
 
-골든 통계(`docs/verification/macos-golden/task1-pixels/pixel-stats.json`)가 이미 저장소에
-있고, 원본도 있습니다. Windows 쪽 `scanner_target_grade.cpp` 와 `scanner_profile_grade.cpp`
-를 macOS 원본과 대조하면 됩니다. **다음에 할 일 중 가장 값이 큽니다.**
+golden 통계(`docs/verification/macos-golden/task1-pixels/pixel-stats.json`)와 출력은 저장소에
+있습니다. `GT-X900_frame_4.tiff` 원본이 제공되면 Windows 쪽
+`scanner_target_grade.cpp`·`scanner_profile_grade.cpp`를 실제 ABI 경로로 다시 비교합니다.
 
 ---
 
@@ -67,33 +68,15 @@ median 만 보면 안 됩니다. **max 가 훨씬 크게 어긋납니다.**
 
 ---
 
-## 3. alpha — 전 계층이 비어 있습니다
+## 3. alpha — Windows 전 계층 구현·검증 완료
 
 macOS 는 `ExportOptions.preserveAlpha` 가 있습니다(기본 false).
 
-| 계층 | macOS | Windows |
-| --- | --- | --- |
-| 옵션 | `preserveAlpha: Bool` | **없음** |
-| 거절 규칙 | JPEG + alpha → `unsupportedAlpha`, rawScanTIFF + alpha → 거절 | 없음 |
-| 렌더 | true 면 RGBA 유지, false 면 `noneSkipLast` 로 표시 | 언제나 불투명 RGB |
-| 작업 이미지 | CIImage 가 알파를 가집니다 | `Rgba32F` 에 alpha 필드는 있으나 `working_to_srgb16` 이 alpha ≠ 1 을 **거절**합니다 |
-| UI | 출력 패널 토글 | 없음 |
-| 사이드카 | `Sidecar` 에 기록 | 없음 |
-
-**해야 할 일 (전부 Windows 안에서 가능):**
-
-1. `ExportSettings` 에 `PreserveAlpha`, ABI v34 에 `preserve_alpha`
-2. `DevelopRequestFactory` 에 거절 규칙 두 가지(JPEG, raw TIFF)
-3. `working_to_srgb16` 이 알파를 통과시키는 경로 — 지금은 실패로 처리합니다
-4. WIC 로 64bpp/32bpp RGBA 쓰기 + TIFF `ExtraSamples`(338) 허용
-5. TIFF 구조 검증이 4 채널을 받도록
-6. 출력 패널 토글 + 6개 로케일 문자열(macOS 표에서 생성)
-7. 내보내기 프리셋·사이드카에 값 싣기
-
-**주의:** 알파가 실제로 1 미만이 되는 자리가 Windows 에 있는지 먼저 재야 합니다. 기하 변형이
-남기는 모서리가 후보입니다. 맥의 채도 프록시에서는 알파 최소가 0.938965 였고 1 미만이 0.41 %
-였습니다(맥이 알려준 값). Windows 에서 같은 자리를 재지 않고 구현하면 **쓸 수 없는 토글**을
-만드는 것입니다.
+`preserve_alpha`는 ABI v34, Shell 설정·사이드카·여섯 로케일, PNG/TIFF 8·16bit WIC 경로와
+TIFF `ExtraSamples`(338) 구조 검증까지 연결했습니다. JPEG와 raw scanner TIFF는 macOS 계약대로
+거절합니다. x64 Debug에서 alpha 보존 PNG/TIFF, RGB 경로, ABI export와 managed test를 확인했습니다.
+alpha의 실제 macOS 픽셀 golden은 Windows에서 다시 만들 수 없으므로, 이 결과는 Windows
+구조·왕복 검증이지 macOS pixel-exact 주장에는 쓰지 않습니다.
 
 ---
 
@@ -114,11 +97,28 @@ macOS 는 `ExportOptions.preserveAlpha` 가 있습니다(기본 false).
 | 항목 | 이유 |
 | --- | --- |
 | 순수 ARM64 실행 | 하드웨어가 없습니다. CI 에 cross 잡은 있습니다 |
-| 정렬 상관값 실측 | 사용자가 제외한 항목입니다 |
+| Task 1 실제 재렌더 | golden 출력은 있으나 `GT-X900_frame_4.tiff` 원본이 저장소에 없습니다 |
 
 ---
 
-## 6. 확인은 됐지만 골든과 태그 단위 대조는 안 한 것
+## 6. golden을 받은 뒤 Windows에서 실행한 것
+
+- **CIVibrance** — 음수·양수 17개 macOS RGBAf plane을 `native.color_model`에 연결했습니다.
+  표는 특정 사진 분기가 아니라 33³ 전체 입력의 일반 response 사상입니다.
+- **Task 7** — CIUnsharpMask/CIGaussianBlur 10개 RGBAf fixture를 `native.texture_stage`에
+  연결했습니다. 최대 절대 차이 상한은 0.008이며, CI 경계 표본 방식 때문에 exact 판정은 아닙니다.
+- **Task 8** — Digital Film Look 6개 RGBAf fixture를 `native.working_film_look`에 연결했습니다.
+  최대 관측 차이는 0.004713 미만, 회귀 상한은 0.005입니다.
+- **Task 9** — 실제 16-bit TIFF 15개를 Windows ABI v32 export로 다시 썼습니다. color-positive
+  8개는 RGB16 중앙값 절대 차이 32 이하를 자동 검증합니다. B&W 7개는 +1,089…+1,909 중앙값
+  밝기 차이가 남아 아직 수치 pass 기준으로 고정하지 않았습니다.
+
+전체 명령과 수치·경계는
+`../verification/2026-08-16-request-5-windows-golden.md`에 기록했습니다.
+
+---
+
+## 7. 확인은 됐지만 golden 파일과 바이트 단위 대조는 안 한 것
 
 - **메타데이터 정책** — TIFF·JPEG 실파일로 네 정책의 **구성**을 확인했습니다
   (`2026-08-16-export-source-metadata.md`). 다만 macOS task6 골든의 `tiff-tags.json` 과
@@ -129,5 +129,6 @@ macOS 는 `ExportOptions.preserveAlpha` 가 있습니다(기본 false).
 
 ## 다음 한 가지를 고른다면
 
-**`c-target-hs` / `c-target-sp` 의 명부입니다.** 맥이 필요 없고, 골든이 이미 있고, G max 가
-7692 어긋나 있어 원인이 크고 뚜렷합니다. F135·HR 이 같은 경로에서 맞으므로 범위도 좁습니다.
+**Task 1 원본 TIFF를 받는 일입니다.** 그 다음 `c-target-hs`/`c-target-sp`의 명부를 실제 출력으로
+재현할 수 있습니다. B&W Task 9는 그 다음이며, macOS intermediate 진단값 또는 pre-inversion
+golden이 있어야 일반적인 원인을 좁힐 수 있습니다.

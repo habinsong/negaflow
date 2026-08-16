@@ -22,7 +22,8 @@ namespace negaflow::imaging::detail {
 /// 0.122 → 0.033 으로 색상을 넣어야 줄어듭니다) 수식으로 되짚지 않습니다. 잰 값을 그대로
 /// 표에서 읽습니다. 이 조사에서 방향만 보고 세운 가설 여덟 개가 전부 측정에서 떨어졌습니다.
 ///
-/// 잰 구간은 amount 0.05…0.50 입니다. muted-scene 단계는 그 안에서만 돕니다
+/// 이 표는 ColorModel 이 쓰는 −0.80…+0.80 전 범위와 scanner-profile의 작은 양수까지
+/// 덮습니다. muted-scene 단계는 그 안의 0…0.50만 씁니다
 /// (`min(0.5, max(0, (0.24 − meanSat) × 3))`).
 [[nodiscard]] inline float measured_vibrance_scale(
     const float red,
@@ -47,7 +48,8 @@ namespace negaflow::imaging::detail {
     const float fg = axis(green, g0);
     const float fb = axis(blue, b0);
 
-    // amount 판 두 장을 고른다. 잰 구간 밖은 양끝 판을 그대로 쓴다 — 표 밖으로 뻗지 않는다.
+    // amount 판 두 장을 고른다. −0.05보다 낮은 쪽은 측정상 같은 음수 slope를 쓰고,
+    // 나머지 표 밖은 양끝 slope를 쓴다. amount 자체는 그대로 곱하므로 0은 정확한 항등이다.
     std::uint32_t low = 0U;
     while (low + 2U < vibrance_table_plane_count &&
            amount > vibrance_table_amounts[low + 1U]) {
@@ -83,9 +85,7 @@ namespace negaflow::imaging::detail {
             }
         }
     }
-    // 맥 격자에서 f 는 잰 amount 전 구간에서 1 아래로 내려간 적이 없습니다. 이 필터는 채도를
-    // 낮추는 쪽으로 가지 않습니다.
-    return std::max(1.0F, 1.0F + (amount * total * vibrance_table_quantum));
+    return 1.0F + (amount * total * vibrance_table_quantum);
 }
 
 /// 잰 사상을 쓰는 쪽. muted-scene 단계 전용입니다.
@@ -101,23 +101,13 @@ inline void apply_measured_vibrance_to_channels(
     blue = anchor + ((blue - anchor) * scale);
 }
 
-/// ColorModel 의 vibrance 슬라이더가 쓰는 예전 수학입니다. 이쪽은 amount 가 ±0.8 까지 가고
-/// **음수도 납니다** — 맥에서 잰 구간(0.05…0.50)이 덮지 않는 범위입니다. 잰 적 없는 곳에
-/// 표를 뻗으면 재지 않은 값을 낸 것이므로, 그 범위의 골든을 받기 전까지는 그대로 둡니다.
+/// ColorModel 의 vibrance 슬라이더도 같은 실측 CIVibrance 사상을 씁니다.
 inline void apply_vibrance_to_channels(
     float& red,
     float& green,
     float& blue,
     const float amount) noexcept {
-    const float maximum = std::max(red, std::max(green, blue));
-    const float minimum = std::min(red, std::min(green, blue));
-    const float chroma = std::clamp(maximum - minimum, 0.0F, 1.0F);
-    const float factor = 1.0F + (amount * (1.0F - chroma));
-    const float luminance =
-        (0.2126F * red) + (0.7152F * green) + (0.0722F * blue);
-    red = luminance + ((red - luminance) * factor);
-    green = luminance + ((green - luminance) * factor);
-    blue = luminance + ((blue - luminance) * factor);
+    apply_measured_vibrance_to_channels(red, green, blue, amount);
 }
 
 }  // namespace negaflow::imaging::detail

@@ -21,6 +21,17 @@ struct Rgb final {
     float blue;
 };
 
+struct FilterSample final {
+    Rgb color{};
+    float alpha{0.0F};
+};
+
+enum class GaussianEdgeMode {
+    clamp,
+    mirror,
+    transparent,
+};
+
 void discard_pixels(WorkingImage& image) noexcept {
     std::vector<negaflow::core::Rgba32F>{}.swap(image.pixels);
 }
@@ -131,25 +142,39 @@ template <typename Extract, typename Combine>
 void gaussian_transform(
     WorkingImage& image,
     const float sigma,
+    const GaussianEdgeMode edge_mode,
     Extract extract,
     Combine combine,
     std::size_t& scratch_peak_bytes) {
-    const int radius = std::max(1, static_cast<int>(std::ceil(3.0F * sigma)));
+    // Core Image's radius is slightly wider than the mathematical sigma at small radii.
+    // The task7 impulse goldens fit sigma² = radius² + 0.08.
+    const float effective_sigma = std::sqrt((sigma * sigma) + 0.08F);
+    const int radius = std::max(1, static_cast<int>(std::ceil(3.0F * effective_sigma)));
     std::vector<float> weights(static_cast<std::size_t>(radius * 2 + 1));
     float weight_total = 0.0F;
     for (int offset = -radius; offset <= radius; ++offset) {
         const float weight = std::exp(
             -static_cast<float>(offset * offset) /
-            (2.0F * sigma * sigma));
+            (2.0F * effective_sigma * effective_sigma));
         weights[static_cast<std::size_t>(offset + radius)] = weight;
         weight_total += weight;
     }
     for (float& weight : weights) {
         weight /= weight_total;
     }
+    const auto coordinate = [edge_mode](const int candidate, const int limit) noexcept {
+        if (edge_mode != GaussianEdgeMode::mirror || limit <= 1) {
+            return std::clamp(candidate, 0, limit - 1);
+        }
+        // Core Image mirrors the boundary pixel itself: -1 → 0 and limit → limit - 1.
+        const int period = limit * 2;
+        int folded = candidate % period;
+        if (folded < 0) folded += period;
+        return folded < limit ? folded : period - 1 - folded;
+    };
 
-    std::vector<Rgb> output(checked_count(image.width, image.height));
-    const std::size_t output_bytes = output.size() * sizeof(Rgb);
+    std::vector<FilterSample> output(checked_count(image.width, image.height));
+    const std::size_t output_bytes = output.size() * sizeof(FilterSample);
 
     // Same shape as FilmScanDenoise: a tile reads an apron of `radius` but writes only its
     // own core into `output`, and the cores are disjoint. `image` is read-only until the
@@ -190,13 +215,13 @@ void gaussian_transform(
             const std::uint32_t tile_width = source_right - source_x;
             const std::uint32_t tile_height = source_bottom - source_y;
             const std::size_t tile_count = checked_count(tile_width, tile_height);
-            std::vector<Rgb> source(tile_count);
-            std::vector<Rgb> horizontal(tile_count);
-            std::vector<Rgb> blurred(tile_count);
+            std::vector<FilterSample> source(tile_count);
+            std::vector<FilterSample> horizontal(tile_count);
+            std::vector<FilterSample> blurred(tile_count);
             // Reduced with an atomic maximum so the reported peak is the same figure the
             // sequential loop produced, whatever order the tiles finish in.
             const std::size_t tile_scratch =
-                output_bytes + tile_count * sizeof(Rgb) * 3U +
+                output_bytes + tile_count * sizeof(FilterSample) * 3U +
                 weights.size() * sizeof(float);
             std::size_t seen = peak_scratch.load(std::memory_order_relaxed);
             while (tile_scratch > seen &&
@@ -211,36 +236,43 @@ void gaussian_transform(
                 const auto* const row = image.pixels.data() +
                     static_cast<std::size_t>(source_y + y) * image.stride_pixels;
                 for (std::uint32_t x = 0U; x < tile_width; ++x) {
-                    source[index_of(x, y, tile_width)] =
-                        extract(rgb(row[source_x + x]));
+                    source[index_of(x, y, tile_width)] = extract(row[source_x + x]);
                 }
             }
             for (std::uint32_t y = 0U; y < tile_height; ++y) {
                 for (std::uint32_t x = 0U; x < tile_width; ++x) {
-                    Rgb value{};
+                    FilterSample value{};
                     for (int offset = -radius; offset <= radius; ++offset) {
-                        const auto sample_x = static_cast<std::uint32_t>(std::clamp(
-                            static_cast<int>(x) + offset,
-                            0,
-                            static_cast<int>(tile_width) - 1));
-                        value = value +
-                            source[index_of(sample_x, y, tile_width)] *
-                            weights[static_cast<std::size_t>(offset + radius)];
+                        const int candidate_x = static_cast<int>(x) + offset;
+                        if (edge_mode == GaussianEdgeMode::transparent &&
+                            (candidate_x < 0 || candidate_x >= static_cast<int>(tile_width))) {
+                            continue;
+                        }
+                        const auto sample_x = static_cast<std::uint32_t>(
+                            coordinate(candidate_x, static_cast<int>(tile_width)));
+                        const FilterSample& sample = source[index_of(sample_x, y, tile_width)];
+                        const float weight = weights[static_cast<std::size_t>(offset + radius)];
+                        value.color = value.color + sample.color * weight;
+                        value.alpha += sample.alpha * weight;
                     }
                     horizontal[index_of(x, y, tile_width)] = value;
                 }
             }
             for (std::uint32_t y = 0U; y < tile_height; ++y) {
                 for (std::uint32_t x = 0U; x < tile_width; ++x) {
-                    Rgb value{};
+                    FilterSample value{};
                     for (int offset = -radius; offset <= radius; ++offset) {
-                        const auto sample_y = static_cast<std::uint32_t>(std::clamp(
-                            static_cast<int>(y) + offset,
-                            0,
-                            static_cast<int>(tile_height) - 1));
-                        value = value +
-                            horizontal[index_of(x, sample_y, tile_width)] *
-                            weights[static_cast<std::size_t>(offset + radius)];
+                        const int candidate_y = static_cast<int>(y) + offset;
+                        if (edge_mode == GaussianEdgeMode::transparent &&
+                            (candidate_y < 0 || candidate_y >= static_cast<int>(tile_height))) {
+                            continue;
+                        }
+                        const auto sample_y = static_cast<std::uint32_t>(
+                            coordinate(candidate_y, static_cast<int>(tile_height)));
+                        const FilterSample& sample = horizontal[index_of(x, sample_y, tile_width)];
+                        const float weight = weights[static_cast<std::size_t>(offset + radius)];
+                        value.color = value.color + sample.color * weight;
+                        value.alpha += sample.alpha * weight;
                     }
                     blurred[index_of(x, y, tile_width)] = value;
                 }
@@ -252,13 +284,12 @@ void gaussian_transform(
                 const auto* const row = image.pixels.data() +
                     static_cast<std::size_t>(core_y + y) * image.stride_pixels;
                 for (std::uint32_t x = 0U; x < core_width; ++x) {
-                    output[index_of(core_x + x, core_y + y, image.width)] =
-                        combine(
-                            rgb(row[core_x + x]),
-                            blurred[index_of(
-                                local_core_x + x,
-                                local_core_y + y,
-                                tile_width)]);
+                    output[index_of(core_x + x, core_y + y, image.width)] = combine(
+                        row[core_x + x],
+                        blurred[index_of(
+                            local_core_x + x,
+                            local_core_y + y,
+                            tile_width)]);
                 }
             }
         }
@@ -274,10 +305,11 @@ void gaussian_transform(
                 auto* const row = image.pixels.data() +
                     static_cast<std::size_t>(y) * image.stride_pixels;
                 for (std::uint32_t x = 0U; x < image.width; ++x) {
-                    const Rgb value = output[index_of(x, y, image.width)];
-                    row[x].red = value.red;
-                    row[x].green = value.green;
-                    row[x].blue = value.blue;
+                    const FilterSample value = output[index_of(x, y, image.width)];
+                    row[x].red = value.color.red;
+                    row[x].green = value.color.green;
+                    row[x].blue = value.color.blue;
+                    row[x].alpha = value.alpha;
                 }
             }
         });
@@ -291,9 +323,17 @@ void apply_unsharp(
     gaussian_transform(
         image,
         radius,
-        [](const Rgb source) noexcept { return source; },
-        [intensity](const Rgb source, const Rgb blurred) noexcept {
-            return source + (source - blurred) * intensity;
+        GaussianEdgeMode::mirror,
+        [](const negaflow::core::Rgba32F source) noexcept {
+            return FilterSample{rgb(source), source.alpha};
+        },
+        [intensity](const negaflow::core::Rgba32F source,
+                    const FilterSample blurred) noexcept {
+            const Rgb original = rgb(source);
+            return FilterSample{
+                original + (original - blurred.color) * intensity,
+                source.alpha,
+            };
         },
         scratch_peak_bytes);
 }
@@ -340,9 +380,16 @@ void apply_negative_clarity(
     gaussian_transform(
         image,
         4.0F - clarity * 6.0F,
-        [](const Rgb source) noexcept { return source; },
-        [amount](const Rgb source, const Rgb blurred) noexcept {
-            return mix(source, blurred, amount);
+        GaussianEdgeMode::transparent,
+        [](const negaflow::core::Rgba32F source) noexcept {
+            return FilterSample{rgb(source), source.alpha};
+        },
+        [amount](const negaflow::core::Rgba32F source,
+                 const FilterSample blurred) noexcept {
+            return FilterSample{
+                mix(rgb(source), blurred.color, amount),
+                source.alpha + ((blurred.alpha - source.alpha) * amount),
+            };
         },
         scratch_peak_bytes);
 }
@@ -354,22 +401,26 @@ void apply_halation(
     gaussian_transform(
         image,
         5.0F + strength * 12.0F,
-        [](const Rgb source) noexcept {
+        GaussianEdgeMode::clamp,
+        [](const negaflow::core::Rgba32F source) noexcept {
+            const Rgb color = rgb(source);
             const float highlight_mask = clamp_unit(
-                (luminance(source) - 0.5F) * 4.0F + 0.5F - 0.42F);
-            return source * highlight_mask;
+                (luminance(color) - 0.5F) * 4.0F + 0.5F - 0.42F);
+            return FilterSample{color * highlight_mask, source.alpha * highlight_mask};
         },
-        [strength](const Rgb source, const Rgb glow) noexcept {
+        [strength](const negaflow::core::Rgba32F source,
+                   const FilterSample glow) noexcept {
+            const Rgb original = rgb(source);
             const Rgb warm{
-                glow.red * 0.85F * strength,
-                glow.green * 0.40F * strength,
-                glow.blue * 0.18F * strength,
+                glow.color.red * 0.85F * strength,
+                glow.color.green * 0.40F * strength,
+                glow.color.blue * 0.18F * strength,
             };
-            return Rgb{
-                source.red + warm.red - source.red * warm.red,
-                source.green + warm.green - source.green * warm.green,
-                source.blue + warm.blue - source.blue * warm.blue,
-            };
+            return FilterSample{Rgb{
+                original.red + warm.red - original.red * warm.red,
+                original.green + warm.green - original.green * warm.green,
+                original.blue + warm.blue - original.blue * warm.blue,
+            }, source.alpha};
         },
         scratch_peak_bytes);
 }
