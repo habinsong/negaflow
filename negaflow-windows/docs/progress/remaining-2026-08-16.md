@@ -109,10 +109,13 @@ alpha의 실제 macOS 픽셀 golden은 Windows에서 다시 만들 수 없으므
   만들고, root IFD의 Artist/Copyright/ImageDescription 문자열 값과 EXIF·IPTC·GPS 블록
   보존/제거를 `native.task6_metadata_golden`에서 확인합니다. 태그 순서·IPTC IIM 바이트열의
   동일성은 이 검증 범위가 아닙니다.
-- **Task 7** — clarity 양수 3개, 음수 2개(반경 7·10)와 출력 선명화 3개 RGBAf fixture를
-  `native.texture_stage`에 연결했습니다. 최대 절대 차이 상한은 0.008이며, CI 경계 표본 방식
-  때문에 exact 판정은 아닙니다. 반경 1.0·1.3·2.4의 단독 CI blur 출력은 각각 heal brush,
-  denoise, scanner noise-reduction 내부 단계여서 현재의 공개 stage 출력과 1:1 비교하지 않습니다.
+- **Task 7** — `native.texture_stage`가 CIUnsharpMask 6개와 clarity 양수 3개, 음수 2개(반경
+  7·10) RGBAf fixture를 실제 stage 출력으로 비교합니다. 추가로 공통 `CIGaussianBlur` 반경
+  사상은 1.0·1.3·2.4·4.0·7.0·10.0 여섯 fixture 전체를 직접 비교합니다. 이 사상은
+  `sigma² = radius² + 0.08`, ±3σ support이며, 실제 1.0 heal-brush와 1.3 FilmScanDenoise도
+  같은 함수를 사용합니다. 최대 절대 차이 상한은 0.008이며 CI 경계 표본 방식 때문에 exact
+  판정은 아닙니다. 2.4는 현재 macOS `ScannerNoiseReduction` 정의에는 있으나 제품 호출 경로가
+  없어 Windows에 비노출 기능을 임의로 추가하지 않았습니다.
 - **Task 8** — Digital Film Look 6개 RGBAf fixture를 `native.working_film_look`에 연결했습니다.
   최대 관측 차이는 0.004713 미만, 회귀 상한은 0.005입니다.
 - **Task 9** — 실제 16-bit TIFF 15개를 Windows ABI v32 export로 다시 썼습니다. color-positive

@@ -1,6 +1,7 @@
 #include "negaflow/imaging/film_scan_denoise.h"
 
 #include "negaflow/core/parallel_rows.h"
+#include "negaflow/imaging/coreimage_gaussian.h"
 
 #include <algorithm>
 #include <array>
@@ -19,8 +20,7 @@ namespace {
 constexpr float gamma_lift_power = 0.45F;
 constexpr float inverse_gamma_lift_power = 1.0F / gamma_lift_power;
 constexpr float guided_epsilon = 0.001F;
-constexpr int gaussian_radius = 4;
-constexpr float gaussian_sigma = 1.3F;
+constexpr float gaussian_radius = 1.3F;
 
 struct Rgb final {
     float red{0.0F};
@@ -197,13 +197,16 @@ void discard_pixels(WorkingImage& image) noexcept {
     const std::vector<Rgb>& source,
     const std::uint32_t width,
     const std::uint32_t height) {
-    std::array<float, gaussian_radius * 2 + 1> weights{};
+    const float sigma = coreimage_gaussian_effective_sigma(gaussian_radius);
+    const int support_radius = coreimage_gaussian_support_radius(gaussian_radius);
+    std::vector<float> weights(
+        static_cast<std::size_t>(support_radius * 2 + 1));
     float total = 0.0F;
-    for (int offset = -gaussian_radius; offset <= gaussian_radius; ++offset) {
+    for (int offset = -support_radius; offset <= support_radius; ++offset) {
         const float value = std::exp(
             -static_cast<float>(offset * offset) /
-            (2.0F * gaussian_sigma * gaussian_sigma));
-        weights[static_cast<std::size_t>(offset + gaussian_radius)] = value;
+            (2.0F * sigma * sigma));
+        weights[static_cast<std::size_t>(offset + support_radius)] = value;
         total += value;
     }
     for (float& weight : weights) {
@@ -215,8 +218,8 @@ void discard_pixels(WorkingImage& image) noexcept {
     for (std::uint32_t y = 0U; y < height; ++y) {
         for (std::uint32_t x = 0U; x < width; ++x) {
             Rgb value{};
-            for (int offset = -gaussian_radius;
-                 offset <= gaussian_radius;
+            for (int offset = -support_radius;
+                 offset <= support_radius;
                  ++offset) {
                 const std::uint32_t sample_x = static_cast<std::uint32_t>(
                     std::clamp(
@@ -224,7 +227,7 @@ void discard_pixels(WorkingImage& image) noexcept {
                         0,
                         static_cast<int>(width) - 1));
                 value = value + source[index_of(sample_x, y, width)] *
-                    weights[static_cast<std::size_t>(offset + gaussian_radius)];
+                    weights[static_cast<std::size_t>(offset + support_radius)];
             }
             horizontal[index_of(x, y, width)] = value;
         }
@@ -232,8 +235,8 @@ void discard_pixels(WorkingImage& image) noexcept {
     for (std::uint32_t y = 0U; y < height; ++y) {
         for (std::uint32_t x = 0U; x < width; ++x) {
             Rgb value{};
-            for (int offset = -gaussian_radius;
-                 offset <= gaussian_radius;
+            for (int offset = -support_radius;
+                 offset <= support_radius;
                  ++offset) {
                 const std::uint32_t sample_y = static_cast<std::uint32_t>(
                     std::clamp(
@@ -241,7 +244,7 @@ void discard_pixels(WorkingImage& image) noexcept {
                         0,
                         static_cast<int>(height) - 1));
                 value = value + horizontal[index_of(x, sample_y, width)] *
-                    weights[static_cast<std::size_t>(offset + gaussian_radius)];
+                    weights[static_cast<std::size_t>(offset + support_radius)];
             }
             result[index_of(x, y, width)] = value;
         }

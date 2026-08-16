@@ -5,6 +5,7 @@
 
 #include "negaflow/color/srgb_transfer.h"
 #include "negaflow/core/pixel.h"
+#include "negaflow/imaging/coreimage_gaussian.h"
 #include "negaflow/imaging/defect_component_repair.h"
 
 #include <algorithm>
@@ -311,46 +312,53 @@ void discard_pixels(WorkingImage& image) noexcept {
     const std::vector<float>& source,
     const int width,
     const int height) {
-    constexpr std::array<double, 7U> raw{{
-        0.0111089965,
-        0.1353352832,
-        0.6065306597,
-        1.0,
-        0.6065306597,
-        0.1353352832,
-        0.0111089965,
-    }};
-    constexpr double sum = 2.5059498789;
+    constexpr float radius = 1.0F;
+    const float sigma = coreimage_gaussian_effective_sigma(radius);
+    const int support_radius = coreimage_gaussian_support_radius(radius);
+    std::vector<float> weights(
+        static_cast<std::size_t>(support_radius * 2 + 1));
+    float total = 0.0F;
+    for (int offset = -support_radius; offset <= support_radius; ++offset) {
+        const float value = std::exp(
+            -static_cast<float>(offset * offset) / (2.0F * sigma * sigma));
+        weights[static_cast<std::size_t>(offset + support_radius)] = value;
+        total += value;
+    }
+    for (float& weight : weights) {
+        weight /= total;
+    }
     std::vector<float> horizontal(source.size(), 0.0F);
     std::vector<float> output(source.size(), 0.0F);
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
-            double value = 0.0;
-            for (int offset = -3; offset <= 3; ++offset) {
+            float value = 0.0F;
+            for (int offset = -support_radius;
+                 offset <= support_radius;
+                 ++offset) {
                 const int sample_x = x + offset;
                 if (sample_x >= 0 && sample_x < width) {
                     value += source[
                         static_cast<std::size_t>(y) * width + sample_x] *
-                        raw[static_cast<std::size_t>(offset + 3)];
+                        weights[static_cast<std::size_t>(offset + support_radius)];
                 }
             }
-            horizontal[static_cast<std::size_t>(y) * width + x] =
-                static_cast<float>(value / sum);
+            horizontal[static_cast<std::size_t>(y) * width + x] = value;
         }
     }
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
-            double value = 0.0;
-            for (int offset = -3; offset <= 3; ++offset) {
+            float value = 0.0F;
+            for (int offset = -support_radius;
+                 offset <= support_radius;
+                 ++offset) {
                 const int sample_y = y + offset;
                 if (sample_y >= 0 && sample_y < height) {
                     value += horizontal[
                         static_cast<std::size_t>(sample_y) * width + x] *
-                        raw[static_cast<std::size_t>(offset + 3)];
+                        weights[static_cast<std::size_t>(offset + support_radius)];
                 }
             }
-            output[static_cast<std::size_t>(y) * width + x] =
-                static_cast<float>(value / sum);
+            output[static_cast<std::size_t>(y) * width + x] = value;
         }
     }
     return output;

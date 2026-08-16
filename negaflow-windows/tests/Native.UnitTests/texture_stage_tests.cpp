@@ -1,5 +1,7 @@
 #include "negaflow/imaging/texture_stage.h"
 
+#include "negaflow/imaging/coreimage_gaussian.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -226,6 +228,76 @@ void expect(const bool condition, const char* const message) {
     return maximum;
 }
 
+[[nodiscard]] negaflow::imaging::WorkingImage direct_coreimage_gaussian(
+    const negaflow::imaging::WorkingImage& input,
+    const float radius) {
+    const float sigma = negaflow::imaging::coreimage_gaussian_effective_sigma(radius);
+    const int support_radius =
+        negaflow::imaging::coreimage_gaussian_support_radius(radius);
+    std::vector<float> weights(
+        static_cast<std::size_t>(support_radius * 2 + 1));
+    float total = 0.0F;
+    for (int offset = -support_radius; offset <= support_radius; ++offset) {
+        const float weight = std::exp(
+            -static_cast<float>(offset * offset) / (2.0F * sigma * sigma));
+        weights[static_cast<std::size_t>(offset + support_radius)] = weight;
+        total += weight;
+    }
+    for (float& weight : weights) {
+        weight /= total;
+    }
+
+    auto horizontal = input;
+    auto output = input;
+    for (std::uint32_t y = 0U; y < input.height; ++y) {
+        for (std::uint32_t x = 0U; x < input.width; ++x) {
+            negaflow::core::Rgba32F value{};
+            for (int offset = -support_radius;
+                 offset <= support_radius;
+                 ++offset) {
+                const int sample_x = static_cast<int>(x) + offset;
+                if (sample_x < 0 || sample_x >= static_cast<int>(input.width)) {
+                    continue;
+                }
+                const auto& sample = input.pixels[
+                    static_cast<std::size_t>(y) * input.stride_pixels +
+                    static_cast<std::uint32_t>(sample_x)];
+                const float weight =
+                    weights[static_cast<std::size_t>(offset + support_radius)];
+                value.red += sample.red * weight;
+                value.green += sample.green * weight;
+                value.blue += sample.blue * weight;
+                value.alpha += sample.alpha * weight;
+            }
+            horizontal.pixels[static_cast<std::size_t>(y) * horizontal.stride_pixels + x] =
+                value;
+        }
+    }
+    for (std::uint32_t y = 0U; y < input.height; ++y) {
+        for (std::uint32_t x = 0U; x < input.width; ++x) {
+            negaflow::core::Rgba32F value{};
+            for (int offset = -support_radius;
+                 offset <= support_radius;
+                 ++offset) {
+                const int sample_y = static_cast<int>(y) + offset;
+                if (sample_y < 0 || sample_y >= static_cast<int>(input.height)) {
+                    continue;
+                }
+                const auto& sample = horizontal.pixels[
+                    static_cast<std::size_t>(sample_y) * horizontal.stride_pixels + x];
+                const float weight =
+                    weights[static_cast<std::size_t>(offset + support_radius)];
+                value.red += sample.red * weight;
+                value.green += sample.green * weight;
+                value.blue += sample.blue * weight;
+                value.alpha += sample.alpha * weight;
+            }
+            output.pixels[static_cast<std::size_t>(y) * output.stride_pixels + x] = value;
+        }
+    }
+    return output;
+}
+
 void expect_coreimage_close(
     const negaflow::imaging::WorkingImage& actual,
     const negaflow::imaging::WorkingImage& expected,
@@ -434,6 +506,25 @@ void test_output_sharpening() {
 
 void test_coreimage_filter_goldens(const std::filesystem::path& golden_root) {
     const auto input = load_rgba_f32(golden_root / L"coreimage-filter-input-256x256.f32");
+    struct GaussianCase final {
+        float radius;
+        const wchar_t* file;
+    };
+    constexpr GaussianCase gaussian_cases[]{
+        {1.00F, L"cigaussianblur-radius1.0-256x256.f32"},
+        {1.30F, L"cigaussianblur-radius1.3-256x256.f32"},
+        {2.40F, L"cigaussianblur-radius2.4-256x256.f32"},
+        {4.00F, L"cigaussianblur-clarity-0.00-radius4.0-256x256.f32"},
+        {7.00F, L"cigaussianblur-clarity-0.50-radius7.0-256x256.f32"},
+        {10.00F, L"cigaussianblur-clarity-1.00-radius10.0-256x256.f32"},
+    };
+    for (const GaussianCase& entry : gaussian_cases) {
+        expect_coreimage_close(
+            direct_coreimage_gaussian(input, entry.radius),
+            load_rgba_f32(golden_root / entry.file),
+            "Core Image Gaussian radius follows the macOS golden");
+    }
+
     struct ClarityCase final {
         float clarity;
         const wchar_t* file;

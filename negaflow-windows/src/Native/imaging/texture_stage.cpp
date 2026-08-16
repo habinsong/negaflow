@@ -1,5 +1,7 @@
 #include "negaflow/imaging/texture_stage.h"
 
+#include "negaflow/imaging/coreimage_gaussian.h"
+
 #include "negaflow/core/parallel_rows.h"
 
 #include <algorithm>
@@ -146,10 +148,8 @@ void gaussian_transform(
     Extract extract,
     Combine combine,
     std::size_t& scratch_peak_bytes) {
-    // Core Image's radius is slightly wider than the mathematical sigma at small radii.
-    // The task7 impulse goldens fit sigma² = radius² + 0.08.
-    const float effective_sigma = std::sqrt((sigma * sigma) + 0.08F);
-    const int radius = std::max(1, static_cast<int>(std::ceil(3.0F * effective_sigma)));
+    const float effective_sigma = coreimage_gaussian_effective_sigma(sigma);
+    const int radius = std::max(1, coreimage_gaussian_support_radius(sigma));
     std::vector<float> weights(static_cast<std::size_t>(radius * 2 + 1));
     float weight_total = 0.0F;
     for (int offset = -radius; offset <= radius; ++offset) {
