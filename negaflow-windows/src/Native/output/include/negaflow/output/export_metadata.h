@@ -33,6 +33,9 @@ struct ExportMetadataFields final {
     std::wstring film_stock;
     /// `yyyy:MM:dd HH:mm:ss` (EXIF 형식, UTC). 비면 날짜를 쓰지 않는다.
     std::wstring captured_at;
+    /// 원본 파일. `minimal` 이 아닌 정책에서 여기 실린 메타데이터를 정책대로 걸러 옮긴다.
+    /// 비면 원본에서 아무것도 가져오지 않는다.
+    std::wstring source_path;
 };
 
 /// 컨테이너마다 WIC 질의 경로가 다르다.

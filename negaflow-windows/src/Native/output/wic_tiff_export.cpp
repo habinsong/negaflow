@@ -459,6 +459,7 @@ WicTiffExportResult export_working_to_srgb16_tiff(
                 output->staging_path(),
                 limits.max_artifact_bytes,
                 limits.max_ifd_entries,
+                limits.metadata_policy != ExportMetadataPolicy::minimal,
                 metadata_info,
                 result.native_error_code);
         result.info.ifd_entry_count = metadata_info.tag_count;

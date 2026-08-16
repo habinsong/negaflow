@@ -138,6 +138,7 @@ TiffIfdAllowlistStatus inspect_minimal_rgb_tiff_ifd(
     const std::filesystem::path& path,
     const std::uint64_t max_file_bytes,
     const std::uint32_t max_ifd_entries,
+    const bool descriptive_tags_allowed,
     TiffIfdAllowlistInfo& info,
     std::uint32_t& native_error_code) noexcept {
     info = {};
@@ -234,7 +235,7 @@ TiffIfdAllowlistStatus inspect_minimal_rgb_tiff_ifd(
             return TiffIfdAllowlistStatus::duplicate_tag;
         }
         info.tag_ids[info.tag_count++] = tag;
-        if (!is_allowed_minimal_tag(tag)) {
+        if (!is_allowed_minimal_tag(tag) && !descriptive_tags_allowed) {
             info.unexpected_tag = tag;
             return TiffIfdAllowlistStatus::unexpected_tag;
         }

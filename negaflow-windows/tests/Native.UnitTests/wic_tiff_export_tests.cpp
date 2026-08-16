@@ -1,4 +1,5 @@
 #include "negaflow/output/wic_tiff_export.h"
+#include "export_metadata_rules.h"
 #include "tiff_ifd_allowlist.h"
 
 #include <Windows.h>
@@ -253,18 +254,109 @@ void test_metadata_allowlist_rejects_descriptive_tag(const std::filesystem::path
         path,
         1U * 1024U * 1024U,
         128U,
+        false,
         info,
         native_error);
     expect(
         status == negaflow::output::detail::TiffIfdAllowlistStatus::unexpected_tag &&
             info.unexpected_tag == 34853U,
         "metadata allowlist rejects a GPS IFD");
+
+    // 사용자가 원본 메타데이터를 실으라고 고른 경우 GPS 태그 자체는 더 이상 거절 사유가
+    // 아니다. 그렇다고 검사가 없어지지는 않는다 — 이 픽스처는 색 프로파일이 없고, 그것은
+    // 정책과 무관하게 여전히 걸린다.
+    negaflow::output::detail::TiffIfdAllowlistInfo carried{};
+    const auto carried_status = negaflow::output::detail::inspect_minimal_rgb_tiff_ifd(
+        path,
+        1U * 1024U * 1024U,
+        128U,
+        true,
+        carried,
+        native_error);
+    expect(
+        carried_status ==
+                negaflow::output::detail::TiffIfdAllowlistStatus::missing_color_profile &&
+            carried.unexpected_tag == 0U && carried.tag_count == 1U,
+        "carrying source metadata stops rejecting GPS but still demands a profile");
+}
+
+/// 원본 메타데이터를 정책대로 거르는 판정. 이 규칙은 실물 파일 없이 이름만 보고 정해지므로
+/// 여기서 표로 못 박는다 — 실제 파일 왕복은 셸 하네스가 따로 본다.
+void test_source_metadata_policy_rules() {
+    using negaflow::output::ExportMetadataPolicy;
+    using negaflow::output::detail::copies_source_leaf;
+    using negaflow::output::detail::enters_source_block;
+    using negaflow::output::detail::source_block_of;
+    using Block = negaflow::output::detail::SourceMetadataBlock;
+
+    // WIC 는 하위 덩이를 가리키는 태그 번호로 열거한다. 이름으로 찾으면 하나도 못 찾는다.
+    expect(source_block_of(L"/{ushort=34665}") == Block::exif, "34665 is the Exif block");
+    expect(source_block_of(L"/{ushort=34853}") == Block::gps, "34853 is the GPS block");
+    expect(source_block_of(L"/{ushort=33723}") == Block::iptc, "33723 is the IPTC block");
+    expect(source_block_of(L"/exif") == Block::exif, "the JPEG spelling still resolves");
+    expect(source_block_of(L"/{ushort=315}") == Block::other, "Artist is not a block");
+
+    // 장소는 `all` 에서만 남는다. 촬영 기록은 저작권만 남기는 정책에서 빠진다.
+    expect(
+        enters_source_block(ExportMetadataPolicy::all, Block::gps) &&
+            !enters_source_block(ExportMetadataPolicy::remove_location, Block::gps) &&
+            !enters_source_block(ExportMetadataPolicy::copyright_only, Block::gps),
+        "GPS is entered only by the policy that carries everything");
+    expect(
+        enters_source_block(ExportMetadataPolicy::remove_location, Block::exif) &&
+            !enters_source_block(ExportMetadataPolicy::copyright_only, Block::exif),
+        "Exif is entered by every policy but copyright only");
+
+    // 픽셀과 어긋날 수 있는 구조 태그는 어느 정책에서도 옮기지 않는다.
+    constexpr std::array<std::uint16_t, 5> structural_tags{256U, 273U, 274U, 279U, 34675U};
+    for (const std::uint16_t structural : structural_tags) {
+        const std::wstring name = L"/{ushort=" + std::to_wstring(structural) + L"}";
+        expect(
+            !copies_source_leaf(ExportMetadataPolicy::all, Block::root, name),
+            "structural tags never travel");
+    }
+    expect(
+        copies_source_leaf(ExportMetadataPolicy::all, Block::root, L"/{ushort=270}") &&
+            !copies_source_leaf(
+                ExportMetadataPolicy::copyright_only, Block::root, L"/{ushort=270}") &&
+            copies_source_leaf(
+                ExportMetadataPolicy::copyright_only, Block::root, L"/{ushort=315}") &&
+            copies_source_leaf(
+                ExportMetadataPolicy::copyright_only, Block::root, L"/{ushort=33432}"),
+        "copyright only keeps Artist and Copyright and drops the description");
+
+    // IPTC 항목은 `/{str=By-line}` 처럼 나온다. 껍데기를 못 벗기면 어떤 이름과도 안 맞는다.
+    expect(
+        !copies_source_leaf(
+            ExportMetadataPolicy::remove_location, Block::iptc, L"/{str=City}") &&
+            !copies_source_leaf(
+                ExportMetadataPolicy::remove_location, Block::iptc, L"/{str=Sub-location}") &&
+            !copies_source_leaf(
+                ExportMetadataPolicy::remove_location,
+                Block::iptc,
+                L"/{str=Country/Primary Location Name}"),
+        "removing location drops the place fields whatever their spelling");
+    expect(
+        copies_source_leaf(
+            ExportMetadataPolicy::remove_location, Block::iptc, L"/{str=Headline}") &&
+            copies_source_leaf(
+                ExportMetadataPolicy::remove_location, Block::iptc, L"/{str=By-line}"),
+        "removing location keeps what is not a place");
+    expect(
+        copies_source_leaf(
+            ExportMetadataPolicy::copyright_only, Block::iptc, L"/{str=Copyright Notice}") &&
+            copies_source_leaf(
+                ExportMetadataPolicy::copyright_only, Block::iptc, L"/{str=By-line}") &&
+            !copies_source_leaf(
+                ExportMetadataPolicy::copyright_only, Block::iptc, L"/{str=Headline}"),
+        "copyright only keeps the byline and the notice");
 }
 
 }  // namespace
 
 int main() {
     const TempDirectory temporary{};
+    test_source_metadata_policy_rules();
     test_round_trip_and_publish(temporary.path());
     test_existing_destination_is_preserved(temporary.path());
     test_compression_and_dpi(temporary.path());

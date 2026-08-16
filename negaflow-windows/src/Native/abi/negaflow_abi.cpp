@@ -2499,6 +2499,9 @@ void fail_defect_region_request(
         pipeline_request.metadata.film_type = optional_text(request.metadata_film_type);
         pipeline_request.metadata.film_stock = optional_text(request.metadata_film_stock);
         pipeline_request.metadata.captured_at = optional_text(request.metadata_captured_at);
+        // 원본은 이미 요청에 있다. 정책이 원본 메타데이터를 실으라고 하면 여기서 읽는다 —
+        // 호출측이 경로를 한 번 더 넘길 이유가 없으므로 ABI 는 그대로 둔다.
+        pipeline_request.metadata.source_path = pipeline_request.source.wstring();
     } catch (const std::bad_alloc&) {
         fail_defect_region_request(result, "allocation_failed");
         return false;
