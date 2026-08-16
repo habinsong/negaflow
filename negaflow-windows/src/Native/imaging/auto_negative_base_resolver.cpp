@@ -807,7 +807,11 @@ AutoNegativeBaseResult resolve_auto_negative_base(
             std::min(
                 static_cast<double>(resolved.dmin[1]),
                 static_cast<double>(resolved.dmin[2])));
-        if (minimum <= 1.0e-6 || maximum / minimum <= 1.25) {
+        // macOS's estimator returns nil when neutral-base measurement fails.  Its
+        // fallback constant is applied only after the chromogenic retry, so the
+        // Windows fallback must not be mistaken for a measured neutral base here.
+        if (resolved.source != AutoNegativeBaseSource::fallback &&
+            (minimum <= 1.0e-6 || maximum / minimum <= 1.25)) {
             return resolved;
         }
         const AutoNegativeBaseResult chromogenic = resolve_auto_negative_base(image, NegativeFilmType::color);

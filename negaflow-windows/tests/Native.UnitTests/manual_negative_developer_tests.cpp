@@ -726,6 +726,15 @@ int main() {
             auto_fallback.dmin == std::array<float, 3>{0.86F, 0.68F, 0.50F},
         "filmless edge falls back to the macOS color base");
 
+    const auto bw_auto_fallback = negaflow::imaging::resolve_auto_negative_base(
+        clipped_auto_image,
+        negaflow::imaging::NegativeFilmType::black_and_white);
+    expect(
+        bw_auto_fallback.status == negaflow::imaging::AutoNegativeBaseStatus::ok &&
+            bw_auto_fallback.source == negaflow::imaging::AutoNegativeBaseSource::fallback &&
+            bw_auto_fallback.dmin == std::array<float, 3>{0.80F, 0.80F, 0.80F},
+        "filmless B&W retries chromogenic measurement before retaining its neutral fallback");
+
     auto invalid_auto_image = make_auto_base_image({0.72F, 0.54F, 0.34F, 1.0F});
     invalid_auto_image.stride_pixels = 1U;
     expect(

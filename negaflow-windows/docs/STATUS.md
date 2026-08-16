@@ -8,10 +8,13 @@ macOS 대비 어림값입니다. 근거를 함께 적습니다 — 숫자만 옮
 
 > **2026-08-16 최신 golden 반영:** 이 표의 `alpha`와 `CIVibrance ±0.8` 미완료 표기는
 > 뒤의 이전 서술입니다. alpha는 ABI v34부터 Shell·sidecar·PNG/TIFF 8·16bit 구조까지 닫았고,
-> CIVibrance 17개 macOS RGBAf plane은 Windows CTest에 연결했습니다. Task 7/8 golden도 각각
-> 회귀 상한(0.008/0.005)으로 연결했습니다. 반대로 Task 1의 GT-X900 원본은 현재 저장소에 없어
-> 재렌더하지 못했고, Task 9의 B&W 7개는 +1,089…+1,909 RGB16 중앙값 밝기 차이가 남아 있습니다.
-> 상세 명령·수치는 `verification/2026-08-16-request-5-windows-golden.md`를 우선합니다.
+> CIVibrance 17개 macOS RGBAf plane은 Windows CTest에 연결했습니다. Task 6은 macOS
+> `policy-all.tif`를 source로 실제 Windows TIFF 네 정책의 root IFD 보존/제거를 회귀화했고,
+> Task 7/8 golden도 각각 회귀 상한(0.008/0.005)으로 연결했습니다. Task 9 B&W는 자동 base의
+> 크로모제닉 재시도 누락을 고쳐 7개 중앙값을 64 RGB16 코드 이내로 회귀화했습니다. 반대로
+> Task 1의 GT-X900 원본은 현재 저장소에 없어 재렌더하지 못했고, B&W Noritsu의 국소 최대 차이
+> 1,093 코드는 남아 있습니다. 상세 명령·수치는
+> `verification/2026-08-16-request-5-windows-golden.md`를 우선합니다.
 
 | 영역 | 대략 | 근거와 남은 것 |
 | --- | --- | --- |

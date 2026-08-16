@@ -206,12 +206,12 @@ void run_case(
     const ChannelDifference red = channel_difference(actual.image.samples, expected.image.samples, 0U);
     const ChannelDifference green = channel_difference(actual.image.samples, expected.image.samples, 1U);
     const ChannelDifference blue = channel_difference(actual.image.samples, expected.image.samples, 2U);
-    if (entry.polarity == NF_FILM_POLARITY_POSITIVE) {
-        expect(
-            std::abs(red.median) <= 32 && std::abs(green.median) <= 32 &&
-                std::abs(blue.median) <= 32,
-            "color-positive task9 median channel differences stay within 32 RGB16 codes");
-    }
+    const int median_error_budget = entry.film_type == NF_FILM_TYPE_BLACK_AND_WHITE ? 64 : 32;
+    expect(
+        std::abs(red.median) <= median_error_budget &&
+            std::abs(green.median) <= median_error_budget &&
+            std::abs(blue.median) <= median_error_budget,
+        "task9 median channel differences stay within the polarity-specific RGB16 budget");
     std::cout << std::filesystem::path(entry.directory).string() << '/'
               << std::filesystem::path(entry.output).string()
               << " median_delta_rgb=[" << red.median << ',' << green.median << ',' << blue.median

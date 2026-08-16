@@ -105,13 +105,20 @@ alpha의 실제 macOS 픽셀 golden은 Windows에서 다시 만들 수 없으므
 
 - **CIVibrance** — 음수·양수 17개 macOS RGBAf plane을 `native.color_model`에 연결했습니다.
   표는 특정 사진 분기가 아니라 33³ 전체 입력의 일반 response 사상입니다.
-- **Task 7** — CIUnsharpMask/CIGaussianBlur 10개 RGBAf fixture를 `native.texture_stage`에
-  연결했습니다. 최대 절대 차이 상한은 0.008이며, CI 경계 표본 방식 때문에 exact 판정은 아닙니다.
+- **Task 6** — macOS `policy-all.tif`를 실제 source로 하여 Windows TIFF 네 정책을 다시
+  만들고, root IFD의 Artist/Copyright·EXIF·IPTC·GPS 블록 보존/제거를
+  `native.task6_metadata_golden`에서 확인합니다. 태그 순서·IPTC IIM 바이트열의 동일성은
+  이 검증 범위가 아닙니다.
+- **Task 7** — clarity 양수 3개, 음수 2개(반경 7·10)와 출력 선명화 3개 RGBAf fixture를
+  `native.texture_stage`에 연결했습니다. 최대 절대 차이 상한은 0.008이며, CI 경계 표본 방식
+  때문에 exact 판정은 아닙니다. 반경 1.0·1.3·2.4의 단독 CI blur 출력은 각각 heal brush,
+  denoise, scanner noise-reduction 내부 단계여서 현재의 공개 stage 출력과 1:1 비교하지 않습니다.
 - **Task 8** — Digital Film Look 6개 RGBAf fixture를 `native.working_film_look`에 연결했습니다.
   최대 관측 차이는 0.004713 미만, 회귀 상한은 0.005입니다.
 - **Task 9** — 실제 16-bit TIFF 15개를 Windows ABI v32 export로 다시 썼습니다. color-positive
-  8개는 RGB16 중앙값 절대 차이 32 이하를 자동 검증합니다. B&W 7개는 +1,089…+1,909 중앙값
-  밝기 차이가 남아 아직 수치 pass 기준으로 고정하지 않았습니다.
+  8개는 RGB16 중앙값 절대 차이 32 이하, B&W 7개는 64 이하를 자동 검증합니다. B&W 자동 base가
+  측정 실패 뒤 크로모제닉 재시도를 건너뛰던 Windows 제어 흐름을 고쳐, 중앙값 차이는
+  0…−56 코드까지 줄었습니다.
 
 전체 명령과 수치·경계는
 `../verification/2026-08-16-request-5-windows-golden.md`에 기록했습니다.
@@ -120,15 +127,13 @@ alpha의 실제 macOS 픽셀 golden은 Windows에서 다시 만들 수 없으므
 
 ## 7. 확인은 됐지만 golden 파일과 바이트 단위 대조는 안 한 것
 
-- **메타데이터 정책** — TIFF·JPEG 실파일로 네 정책의 **구성**을 확인했습니다
-  (`2026-08-16-export-source-metadata.md`). 다만 macOS task6 골든의 `tiff-tags.json` 과
-  **태그 대 태그**로 맞춘 것은 아닙니다. 맥과 같은 고정 픽스처를 Windows 에서 만들어야
-  하고, IPTC IIM 을 WIC 로 같은 바이트로 쓰는 것이 남은 부분입니다.
+- **메타데이터 정책** — `native.task6_metadata_golden`이 macOS `policy-all.tif`를 source로
+  네 Windows TIFF를 만들고 root IFD 정책 결과를 검사합니다. 다만 `tiff-tags.json`과
+  모든 값·태그 순서·IPTC IIM/XMP 바이트열을 동일하다고 주장하지는 않습니다.
 
 ---
 
 ## 다음 한 가지를 고른다면
 
 **Task 1 원본 TIFF를 받는 일입니다.** 그 다음 `c-target-hs`/`c-target-sp`의 명부를 실제 출력으로
-재현할 수 있습니다. B&W Task 9는 그 다음이며, macOS intermediate 진단값 또는 pre-inversion
-golden이 있어야 일반적인 원인을 좁힐 수 있습니다.
+재현할 수 있습니다.

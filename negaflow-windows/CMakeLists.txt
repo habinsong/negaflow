@@ -306,6 +306,19 @@ if(BUILD_TESTING)
             "${CMAKE_CURRENT_SOURCE_DIR}/../docs/verification/macos-golden/task9-bw-slide"
     )
 
+    add_executable(negaflow_task6_metadata_golden_tests
+        tests/Native.UnitTests/task6_metadata_golden_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_task6_metadata_golden_tests
+        PRIVATE negaflow_output negaflow_project_options
+    )
+    add_test(
+        NAME native.task6_metadata_golden
+        COMMAND negaflow_task6_metadata_golden_tests
+            "${CMAKE_CURRENT_SOURCE_DIR}/../docs/verification/macos-golden/task6-metadata-policy"
+    )
+
     add_executable(negaflow_infrared_detector_abi_tests
         tests/Native.UnitTests/infrared_detector_abi_tests.cpp
         tests/fixtures/tiff/synthetic_wic_tiff.cpp
