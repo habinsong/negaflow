@@ -68,7 +68,9 @@ extension AppModel {
             manualCollections: snapshotManualCollections ?? manualCollections,
             smartCollections: smartCollections,
             savedSearches: savedSearches,
-            stacks: stacks
+            stacks: stacks,
+            // 다시 켰을 때 마지막으로 보던 사진으로 돌아가기 위한 값.
+            lastActiveFrameID: selectedFrameID
         )
     }
 

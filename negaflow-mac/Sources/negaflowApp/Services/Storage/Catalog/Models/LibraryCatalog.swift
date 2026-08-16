@@ -44,6 +44,9 @@ struct LibraryCatalog: Codable, Equatable {
     var savedSearches: [LibrarySavedSearch]
     /// 사진 정리용 논리 스택. 원본/가상 사본 수명주기와 물리 롤 소속은 변경하지 않는다.
     var stacks: [LibraryPhotoStack]
+    /// 마지막으로 작업하던 사진. 다시 켰을 때 그 사진으로 돌아가기 위한 값이며, 없거나
+    /// 그 사진을 더 이상 열 수 없으면 기존처럼 가장 최근 사진을 고른다.
+    var lastActiveFrameID: UUID?
 
     init(
         version: Int = currentVersion,
@@ -57,7 +60,8 @@ struct LibraryCatalog: Codable, Equatable {
         manualCollections: [LibraryManualCollection] = [],
         smartCollections: [LibrarySmartCollection] = [],
         savedSearches: [LibrarySavedSearch] = [],
-        stacks: [LibraryPhotoStack] = []
+        stacks: [LibraryPhotoStack] = [],
+        lastActiveFrameID: UUID? = nil
     ) {
         self.version = version
         self.minimumReaderVersion = minimumReaderVersion
@@ -80,6 +84,7 @@ struct LibraryCatalog: Codable, Equatable {
         self.smartCollections = smartCollections
         self.savedSearches = savedSearches
         self.stacks = stacks
+        self.lastActiveFrameID = lastActiveFrameID
     }
 }
 
@@ -97,6 +102,7 @@ extension LibraryCatalog {
         case smartCollections
         case savedSearches
         case stacks
+        case lastActiveFrameID
     }
 
     /// v6 key는 모두 required다. 잘린 current catalog를 빈 컬렉션이나 미추적 상태로
@@ -127,5 +133,7 @@ extension LibraryCatalog {
             forKey: .savedSearches
         )
         stacks = try container.decode([LibraryPhotoStack].self, forKey: .stacks)
+        // 나중에 추가된 선택 항목이라 예전 카탈로그에는 없다 — 없으면 nil 이면 된다.
+        lastActiveFrameID = try container.decodeIfPresent(UUID.self, forKey: .lastActiveFrameID)
     }
 }

@@ -55,7 +55,6 @@ struct DevelopQuickActionsSection: View {
                     action: onAutoTone,
                     reset: onResetAutoTone
                 )
-                .workflowKeyboardShortcut(model.shortcut(for: .autoTone))
                 .disabled(!canAutoAdjust)
 
                 QuickActionPill(
@@ -66,7 +65,6 @@ struct DevelopQuickActionsSection: View {
                     action: onAutoWhiteBalance,
                     reset: onResetAutoWhiteBalance
                 )
-                .workflowKeyboardShortcut(model.shortcut(for: .autoWhiteBalance))
                 .disabled(!canAutoAdjust)
             }
             .controlSize(.large)

@@ -96,7 +96,8 @@ enum LibraryCatalogSQLiteStore {
                 manualCollections: manual,
                 smartCollections: smart,
                 savedSearches: searches,
-                stacks: stacks
+                stacks: stacks,
+                lastActiveFrameID: metadata.lastActiveFrameID
             )
             LibraryCatalogSQLiteWriteCache.shared.store(catalog, for: url)
             return .loaded(catalog)
@@ -313,6 +314,9 @@ enum LibraryCatalogSQLiteStore {
               active_roll_id TEXT
             )
             """)
+        // 나중에 추가된 컬럼. 이미 만들어진 DB 에는 CREATE TABLE 이 걸리지 않으므로 ALTER 로
+        // 붙인다(이미 있으면 SQLite 가 에러를 내므로 조용히 넘긴다).
+        try? execute(database, "ALTER TABLE catalog_metadata ADD COLUMN last_active_frame_id TEXT")
         for table in entityTables {
             try execute(database, """
                 CREATE TABLE IF NOT EXISTS \(table) (
@@ -330,12 +334,14 @@ enum LibraryCatalogSQLiteStore {
     ) throws {
         let statement = try prepare(database, """
             INSERT INTO catalog_metadata(
-              singleton, catalog_version, minimum_reader_version, active_roll_id
-            ) VALUES(1, ?, ?, ?)
+              singleton, catalog_version, minimum_reader_version, active_roll_id,
+              last_active_frame_id
+            ) VALUES(1, ?, ?, ?, ?)
             ON CONFLICT(singleton) DO UPDATE SET
               catalog_version=excluded.catalog_version,
               minimum_reader_version=excluded.minimum_reader_version,
-              active_roll_id=excluded.active_roll_id
+              active_roll_id=excluded.active_roll_id,
+              last_active_frame_id=excluded.last_active_frame_id
             """)
         defer { sqlite3_finalize(statement) }
         sqlite3_bind_int64(statement, 1, sqlite3_int64(catalog.version))
@@ -344,6 +350,11 @@ enum LibraryCatalogSQLiteStore {
             try bindText(statement, index: 3, value: activeRollID.uuidString)
         } else {
             sqlite3_bind_null(statement, 3)
+        }
+        if let lastActiveFrameID = catalog.lastActiveFrameID {
+            try bindText(statement, index: 4, value: lastActiveFrameID.uuidString)
+        } else {
+            sqlite3_bind_null(statement, 4)
         }
         try stepDone(database, statement)
     }
@@ -470,9 +481,15 @@ enum LibraryCatalogSQLiteStore {
 
     private static func metadataRow(
         _ database: OpaquePointer
-    ) throws -> (version: Int, minimumReaderVersion: Int, activeRollID: UUID?) {
+    ) throws -> (
+        version: Int,
+        minimumReaderVersion: Int,
+        activeRollID: UUID?,
+        lastActiveFrameID: UUID?
+    ) {
         let statement = try prepare(database, """
-            SELECT catalog_version, minimum_reader_version, active_roll_id
+            SELECT catalog_version, minimum_reader_version, active_roll_id,
+                   last_active_frame_id
             FROM catalog_metadata WHERE singleton=1
             """)
         defer { sqlite3_finalize(statement) }
@@ -488,8 +505,15 @@ enum LibraryCatalogSQLiteStore {
         } else {
             throw StoreError.invalidValue
         }
+        // 기억해 둔 사진은 없어도 되고 값이 깨졌으면 조용히 버린다 — 이것 때문에 라이브러리
+        // 전체를 못 여는 일은 없어야 한다.
+        var lastActiveFrameID: UUID?
+        if sqlite3_column_type(statement, 3) != SQLITE_NULL,
+           let raw = sqlite3_column_text(statement, 3) {
+            lastActiveFrameID = UUID(uuidString: String(cString: raw))
+        }
         guard sqlite3_step(statement) == SQLITE_DONE else { throw StoreError.invalidValue }
-        return (version, minimumReaderVersion, activeRollID)
+        return (version, minimumReaderVersion, activeRollID, lastActiveFrameID)
     }
 
     private static func requireIntegrity(_ database: OpaquePointer) throws {

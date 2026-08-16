@@ -218,6 +218,11 @@ extension AppModel {
         }
         libraryPersistenceEnabled = true
         frames = restored + transientPreviewFrames
+        // 다시 켜면 마지막으로 작업하던 사진으로 돌아간다. 그 사진이 카탈로그에서 사라졌거나
+        // 원본을 열 수 없으면 값을 버리고 기존 규칙(가장 최근 사진)에 맡긴다.
+        restoredLastActiveFrameID = catalog.lastActiveFrameID.flatMap { id in
+            restored.contains { $0.id == id } ? id : nil
+        }
         guard !restored.isEmpty else {
             transitionLibraryLifecycle(to: .ready)
             _ = await reconcilePersistedScanWorkflowAfterRestore()

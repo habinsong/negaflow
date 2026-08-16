@@ -88,6 +88,9 @@ final class AppModel: ObservableObject {
     let stackStore = StackStore()
     let libraryImportProgressStore = LibraryImportProgressStore()
     @Published var selectedFrameIDs: Set<UUID> = []
+    /// 카탈로그에서 되살린 "마지막으로 작업하던 사진". 시작 직후 한 번만 쓰고 비운다 —
+    /// 남겨 두면 사용자가 다른 사진을 고른 뒤에도 이 값으로 되돌아간다.
+    var restoredLastActiveFrameID: UUID?
     @Published var interactionScopeFrameIDs: [UUID]?
     var frameSelectionAnchorID: UUID?
     var softProofRefreshTask: Task<Void, Never>?

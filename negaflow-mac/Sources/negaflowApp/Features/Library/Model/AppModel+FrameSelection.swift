@@ -101,6 +101,17 @@ extension AppModel {
     func selectMostRecentAvailableFrameIfNeeded() -> Bool {
         guard actionableFrame == nil else { return false }
         let scope = Set(interactionFrameIDs)
+        // 다시 켠 직후라면 마지막으로 작업하던 사진이 우선이다. 한 번 쓰고 비운다.
+        if let remembered = restoredLastActiveFrameID {
+            restoredLastActiveFrameID = nil
+            if scope.contains(remembered),
+               let frame = frames.first(where: { $0.id == remembered }),
+               !frame.isPreviewScan,
+               isSourceAvailable(frame) {
+                selectedFrameID = remembered
+                return true
+            }
+        }
         let candidate = frames.enumerated()
             .filter { _, frame in
                 !frame.isPreviewScan
@@ -189,6 +200,9 @@ extension AppModel {
         selectedFrameDevelopTask?.cancel()
         frameStore.selectedFrameID = id
         handleSelectedFrameChange(from: oldValue)
+        // 마지막으로 작업하던 사진은 카탈로그에 남아야 다시 켰을 때 그 사진으로 돌아간다.
+        // 종료 저장만 믿으면 비정상 종료에서 잃는다.
+        scheduleLibrarySave()
         AutoAdjustTrace.selection(
             selected: id,
             scopeCount: interactionFrameIDs.count,

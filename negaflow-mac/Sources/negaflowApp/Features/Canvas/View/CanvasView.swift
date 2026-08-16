@@ -236,9 +236,6 @@ struct CanvasView: View {
                     .keyboardShortcut("z", modifiers: .command)
                     .disabled(!frame.canUndoDefects)
 
-                Button("") { toggleDevelopedShortcut() }
-                    .workflowKeyboardShortcut(model.shortcut(for: .toggleBeforeAfter))
-                    .disabled(!canCompare)
             }
             .opacity(0)
             .frame(width: 0, height: 0)
