@@ -1,4 +1,5 @@
 #include "negaflow/imaging/muted_scene_vibrance.h"
+#include "negaflow/imaging/mipmap_downsampler.h"
 
 #include "bilinear_rgb_sampler.h"
 #include "vibrance_math.h"
@@ -40,21 +41,21 @@ constexpr double activation_threshold = 0.01;
         image.stride_pixels,
     };
 
+    // 장면 채도도 축소본에서 잽니다. 통계·base 격자와 **같은 축소기**를 써야 합니다 —
+    // 점 표본은 입자를 그대로 남겨 채도를 실제보다 높게 재고, 그러면 vibrance 가 덜 걸립니다.
+    const DownsampledProxy proxy = downsample_for_statistics(
+        source, target_width, static_cast<std::uint32_t>(target_height));
+    if (proxy.pixels.empty()) {
+        return 0.5;
+    }
+
     double sum = 0.0;
-    for (std::uint64_t row = 0U; row < target_height; ++row) {
-        const double source_y =
-            (static_cast<double>(row) + 0.5) / scale - 0.5;
-        for (std::uint32_t column = 0U; column < target_width; ++column) {
-            const double source_x =
-                (static_cast<double>(column) + 0.5) / scale - 0.5;
-            const detail::BilinearRgb pixel =
-                detail::sample_bilinear_rgb_transparent(source, source_x, source_y);
-            const double maximum =
-                std::max(pixel.red, std::max(pixel.green, pixel.blue));
-            const double minimum =
-                std::min(pixel.red, std::min(pixel.green, pixel.blue));
-            sum += maximum > 1.0e-6 ? (maximum - minimum) / maximum : 0.0;
-        }
+    for (const negaflow::core::Rgba32F pixel : proxy.pixels) {
+        const double maximum =
+            std::max(pixel.red, std::max(pixel.green, pixel.blue));
+        const double minimum =
+            std::min(pixel.red, std::min(pixel.green, pixel.blue));
+        sum += maximum > 1.0e-6 ? (maximum - minimum) / maximum : 0.0;
     }
     const double sample_count =
         static_cast<double>(target_width) * static_cast<double>(target_height);
