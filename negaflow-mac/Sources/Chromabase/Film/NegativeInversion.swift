@@ -388,6 +388,23 @@ public enum NegativeInversion {
             max(0.4, log10(dmin.z / densestFloor.z))
         )
         let dmaxGeo = pow(measuredDmax.x * measuredDmax.y * measuredDmax.z, 1.0 / 3.0)
+        // Windows 포팅본과 축소본 표본을 대조하기 위한 진단(둘 다 opt-in — 평소에는 안 돈다).
+        // dmaxNorm 은 이 축소본의 채널별 p0.002 로 정해지므로, 값이 갈리면 최종 픽셀이
+        // 채널마다 다르게 움직인다.
+        if ProcessInfo.processInfo.environment["NEGA_DEBUG"] != nil {
+            FileHandle.standardError.write(Data((
+                String(format: "[nega-proxy] targetW=%d targetH=%d inset=(%d,%d) ",
+                       targetW, targetH, insetX, insetY)
+                + String(format: "pixels=%d film=%d gate=%.6f darkCut=%.6f ",
+                         pixels.count, film.count, gate, darkCut)
+                + "densest=\(fmt(densest)) densestFloor=\(fmt(densestFloor))"
+                + " measuredDmax=\(fmt(measuredDmax))\n"
+            ).utf8))
+        }
+        if ProcessInfo.processInfo.environment["NEGA_DUMP_PROXY"] != nil {
+            let data = bitmap.withUnsafeBufferPointer { Data(buffer: $0) }
+            try? data.write(to: URL(fileURLWithPath: "/tmp/proxy-\(targetW)x\(targetH).f32"))
+        }
 
         // 저DR(평탄/흐린 날) 신뢰도 shrinkage. 측정 Dmax 기하평균이 필름 물성 범위보다 크게
         // 낮으면 장면이 필름 밀도 범위를 거의 안 쓴 것(평탄/흐린 날)이고, per-channel 측정이
