@@ -305,6 +305,26 @@ struct SampleGridGeometry final {
         }
     }
     const double selected_p75 = components[selected_index].p75;
+
+    // 고른 성분이 후보 밝기 봉우리에 한참 못 미치면 이것은 필름 베이스가 아니다.
+    //
+    // 베이스는 오렌지 마스크 후보들 가운데 **가장 밝은** 결맞은 구조다. 후보 분포의
+    // 봉우리보다 훨씬 어두운 성분을 베이스로 채택하면, 실제 베이스는 성분을 이루지
+    // 못했고 어두운 덩어리 하나만 남았다는 뜻이다. 그 값을 Dmin 으로 쓰면 대부분
+    // 화소의 밀도가 음수가 되어 사진이 통째로 검게 눌린다(OpticFilm 8100 실기: 성분
+    // 하나, p75 0.0168, 후보 봉우리 0.122 — 결과 median 19).
+    //
+    // 여기서 포기하면 호출부의 다음 전략(경계·분산 마스크)이 받는다. 같은 프레임에서
+    // 그 전략은 0.1764/0.0929/0.0703 을 내며 macOS 의 0.1913/0.0939/0.0711 에 가깝다.
+    // 정상 프레임(V700)은 고른 성분이 후보 봉우리와 사실상 같아 이 관문에 걸리지 않는다.
+    // 강등이 일어났다면 더 어두운 성분을 **일부러** 고른 것이므로 이 관문을 적용하지 않는다.
+    // 웜 백라이트 강등은 밝은 쪽이 광원이라고 판단한 결과이지 증거가 약한 것이 아니다.
+    const double candidate_peak = floor * 10.0;
+    if (selected_index == 0U && candidate_peak > 0.0 &&
+        selected_p75 < candidate_peak * 0.5) {
+        return std::nullopt;
+    }
+
     std::vector<std::size_t> members;
     for (const Component& component : components) {
         if (component.p75 >= selected_p75 * 0.90 && component.p75 <= selected_p75 / 0.90) {
