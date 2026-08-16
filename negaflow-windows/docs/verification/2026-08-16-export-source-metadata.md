@@ -80,6 +80,11 @@ macOS task6 골든(`docs/verification/macos-golden/task6-metadata-policy/tiff-ta
 
 ## 아직 아닌 것
 
-- **JPEG 은 확인하지 않았습니다.** 코드 경로는 같고(`/app1/ifd` 접두사만 다름) TIFF 로만
-  실측했습니다. 확인 전에는 됐다고 적지 않습니다.
 - PNG 은 EXIF 를 받지 않으므로 정책이 흔적을 남기지 않습니다. 이는 macOS 도 같습니다.
+
+## JPEG 도 같습니다
+
+TIFF 로만 재고 "JPEG 은 확인 안 했다" 고 적어 두었다가, 같은 하네스로 JPEG 도 돌렸습니다.
+네 정책 모두 TIFF 와 **같은 구성**입니다 — `minimal` 은 앱 값만, `copyrightOnly` 는
+Artist·Copyright 와 IPTC 저작권 두 항목만, `removeLocation` 은 IPTC 장소와 GPS 를 빼고,
+`all` 만 GPS 와 City 를 남깁니다. 컨테이너 차이는 `/app1/ifd` 접두사 하나뿐이었습니다.
