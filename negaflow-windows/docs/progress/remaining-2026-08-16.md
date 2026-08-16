@@ -50,18 +50,20 @@ median 만 보면 안 됩니다. **max 가 훨씬 크게 어긋납니다.**
 
 ---
 
-## 2. macOS 골든이 있어야 하는 것
+## 2. macOS 골든 — 5차 요청의 방출 결과
 
-`docs/verification/macos-golden/REQUEST-5.md` 에 요청서를 두었습니다.
+`docs/verification/macos-golden/REQUEST-5.md` 의 macOS 전용 요청은 아래처럼 방출했습니다.
+각 산출물의 `manifest.json` 에 입력 SHA-256·렌더 형식·필터 파라미터·출력 SHA-256이 있으며,
+실입력 TIFF는 Git LFS로 함께 추적합니다.
 
-| 항목 | 왜 필요한가 |
+| 항목 | 결과 |
 | --- | --- |
-| **ColorModel vibrance 범위 (−0.8…+0.8)** | 사용자 슬라이더는 `CIVibrance` 를 `슬라이더 × 0.8` 로 부릅니다. 잰 구간은 0.05…0.50 뿐이라 **음수와 0.5 초과를 안 쟀습니다.** 지금은 예전 수식을 그대로 두었습니다 |
-| **채도 낮은 다른 스캔** | vibrance 표를 실사진으로 검증한 것이 `GT-X900_frame_4` 하나입니다. 맥이 가진 스캔 중 vibrance 가 실제로 도는 것이 그것뿐입니다(나머지는 amount 0) |
-| **CIUnsharpMask 사상** | 출력 선명도가 쓰는 Apple 내장 필터입니다. CIVibrance 와 같은 이유로 소스가 없습니다 |
-| **CIGaussianBlur 사상** | 위와 같습니다 |
-| **DigitalFilmLook 픽셀 골든** | 디지털 소스 전용 룩. 실측 대조가 없습니다 |
-| **흑백·슬라이드 골든** | 지금 골든은 컬러 네거티브 두 장뿐입니다. `bwResponse`(토우 0.0005 / 화이트 0.85 / 천장 0.98)와 E-6 경로는 실측 대조가 없습니다 |
+| **ColorModel vibrance 범위 (−0.8…+0.8)** | `vibrance/civibrance33-am0.800…a0.800-256x141.f32` 일곱 판을 추가했습니다. 양수 0.05…0.50 기존 열한 판은 그대로 둡니다. |
+| **채도 낮은 다른 컬러 네거티브** | 아직 없습니다. 새 원본이 없으므로 `GT-X900_frame_4` 이외의 실사진 vibrance 검증이라고 쓰지 않습니다. |
+| **CIUnsharpMask 사상** | `task7-coreimage-filters/`에 256² RGBAf 시험 무늬와 clarity·출력 선명화 앵커 여섯 출력을 기록했습니다. 연속 슬라이더 구간은 매니페스트의 정확한 파라미터 식으로 함께 남겼습니다. |
+| **CIGaussianBlur 사상** | 같은 시험 무늬에 반경 1.0, 1.3, 2.4, 4.0, 7.0, 10.0을 기록했습니다. |
+| **DigitalFilmLook 픽셀 골든** | `task8-digital-film-look/`에 합성 positive 장면의 Portra 400·Velvia 50·Tri-X 400, 강도 0.5/1.0 여섯 출력을 기록했습니다. 필름 스캔 현상 골든으로 오인하면 안 됩니다. |
+| **흑백·슬라이드 골든** | `task9-bw-slide/`에 실제 16-bit TIFF 원본과 출력·통계를 모두 넣었습니다. 원본 TIFF에 현상액/필름 화학 정보가 없으므로 D-76 또는 E-6 실측이라고 부르지 않고, 각각 `bwNegative`·`colorPositive` 경로 골든으로 한정합니다. 흑백은 호환 스캐너 프로파일이 없어 b) 조건을 만들지 않았습니다. |
 
 ---
 

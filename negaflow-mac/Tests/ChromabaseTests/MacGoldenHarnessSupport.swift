@@ -1,4 +1,6 @@
 import CryptoKit
+import CoreGraphics
+import CoreImage
 import Foundation
 
 /// Windows 포팅본 대조용 macOS 기준값(golden) 하네스가 공유하는 최소 도구.
@@ -41,5 +43,47 @@ enum MacGoldenHarness {
             options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
         )
         try data.write(to: url, options: .atomic)
+    }
+
+    static func makeLinearImage(
+        pixels: [Float],
+        width: Int,
+        height: Int,
+        colorSpace: CGColorSpace
+    ) -> CIImage {
+        precondition(pixels.count == width * height * 4)
+        let data = pixels.withUnsafeBufferPointer { Data(buffer: $0) }
+        return CIImage(
+            bitmapData: data,
+            bytesPerRow: width * 4 * MemoryLayout<Float>.size,
+            size: CGSize(width: width, height: height),
+            format: .RGBAf,
+            colorSpace: colorSpace
+        )
+    }
+
+    static func renderLinearRGBAf(
+        _ image: CIImage,
+        width: Int,
+        height: Int,
+        context: CIContext,
+        colorSpace: CGColorSpace
+    ) -> [Float] {
+        var bitmap = [Float](repeating: 0, count: width * height * 4)
+        bitmap.withUnsafeMutableBytes { buffer in
+            context.render(
+                image,
+                toBitmap: buffer.baseAddress!,
+                rowBytes: width * 4 * MemoryLayout<Float>.size,
+                bounds: CGRect(x: 0, y: 0, width: width, height: height),
+                format: .RGBAf,
+                colorSpace: colorSpace
+            )
+        }
+        return bitmap
+    }
+
+    static func writeFloat32(_ bitmap: [Float], to url: URL) throws {
+        try bitmap.withUnsafeBufferPointer { Data(buffer: $0) }.write(to: url, options: .atomic)
     }
 }

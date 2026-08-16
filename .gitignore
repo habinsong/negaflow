@@ -32,6 +32,7 @@ xcuserdata/
 !Sources/ScannerKit/Resources/Frame_Perforation.tiff
 !Sources/ScannerKit/Resources/Roll.tiff
 !Sources/ScannerKit/Resources/Roll_Perforation.tiff
+!docs/verification/macos-golden/**/*.tiff
 
 # macOS / 편집기 메타데이터
 .DS_Store

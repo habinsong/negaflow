@@ -165,6 +165,41 @@ python3 tools/pixel_stats.py task1-pixels
 
 ---
 
+## [작업 7] Core Image 이웃 필터 사상
+
+산출물: `task7-coreimage-filters/`
+
+`REQUEST-5`의 `CIUnsharpMask`·`CIGaussianBlur` 요청대로 256 × 256, linear sRGB,
+little-endian `RGBAf` 시험 무늬를 Apple Core Image로 렌더했습니다. 입력은 수직·수평 계단,
+임펄스 격자, 정현파 스윕, 0.18/0.50/0.90 균일면을 모두 포함합니다.
+
+`manifest.json`에는 입력과 각 출력 SHA-256, 출력 선명화 및 clarity가 실제로 넘기는 파라미터
+식, 그리고 실행한 이산 앵커가 있습니다. 출력 선명화와 clarity는 연속 슬라이더이므로, 여섯
+앵커 파일만으로 슬라이더 전 범위를 임의 보간하지 말고 매니페스트의 식을 같이 사용해야 합니다.
+
+## [작업 8] DigitalFilmLook 픽셀 golden
+
+산출물: `task8-digital-film-look/`
+
+합성 positive 디지털 장면을 입력으로 Portra 400·Velvia 50·Tri-X 400에 각각 강도 0.5와 1.0을
+적용했습니다. 이는 디지털 소스 전용 `DigitalFilmLook` 기준값이며, 필름 스캔 반전·현상
+경로의 근거가 아닙니다. 파일 규약과 SHA-256은 `manifest.json`에 있습니다.
+
+## [작업 9] 흑백·컬러 포지티브 실입력 golden
+
+산출물: `task9-bw-slide/bw-negative/`, `task9-bw-slide/color-positive-slide/`
+
+두 폴더는 사용한 16-bit TIFF를 `source.tiff`로 함께 포함합니다. 대형 TIFF는 Git LFS로
+추적하므로 Windows에서 `git lfs pull` 후 같은 입력과 SHA-256을 확인할 수 있습니다. 각 폴더의
+`manifest.json`과 `pixel-stats.json`에는 조건·출력 SHA-256·채널 통계가 있습니다.
+
+원본 TIFF에는 필름·현상 화학 정보가 기록돼 있지 않습니다. 따라서 이 자료는 각각
+`bwNegative`와 `colorPositive` 코드 경로 golden이며, D-76 또는 E-6 측정값이라고 주장하지
+않습니다. 번들에 B&W 호환 스캐너 프로파일이 없으므로 흑백 폴더의 b) 조건은 의도적으로
+생략했고, 색 네거티브 프로파일로 대체하지 않았습니다.
+
+---
+
 ## [작업 2] 적외선 정렬 상관값
 
 산출물: `task2-infrared-alignment/infrared-alignment.json`

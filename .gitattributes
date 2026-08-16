@@ -26,3 +26,9 @@
 *.exe   binary
 *.pdb   binary
 *.lib   binary
+
+# macOS golden TIFFs are intentionally shared with the Windows checkout. Some
+# real-scan outputs exceed GitHub's normal blob limit, so keep the complete
+# inputs and outputs available through the repository's configured LFS remote.
+docs/verification/macos-golden/**/*.tif filter=lfs diff=lfs merge=lfs -text
+docs/verification/macos-golden/**/*.tiff filter=lfs diff=lfs merge=lfs -text

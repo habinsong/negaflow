@@ -3,8 +3,8 @@
 
     python3 pixel_stats.py <dir-or-file> [...]
 
-Prints, and emits JSON on --json, the per-channel min / median / max / mean in
-raw 16-bit code values (0..65535).
+Prints, emits JSON on --json, or writes JSON with --output. All statistics are
+per-channel min / median / max / mean in raw 16-bit code values (0..65535).
 """
 import json
 import os
@@ -41,12 +41,13 @@ def stats(path):
     return report
 
 
-def collect(paths):
+def collect(paths, exclude_source=False):
     files = []
     for path in paths:
         if os.path.isdir(path):
             files += [os.path.join(path, n) for n in sorted(os.listdir(path))
-                      if n.lower().endswith((".tif", ".tiff"))]
+                      if n.lower().endswith((".tif", ".tiff"))
+                      and (not exclude_source or n != "source.tiff")]
         else:
             files.append(path)
     return files
@@ -54,10 +55,27 @@ def collect(paths):
 
 def main(argv):
     as_json = "--json" in argv
-    files = collect([a for a in argv[1:] if not a.startswith("--")])
+    exclude_source = "--exclude-source" in argv
+    output = None
+    paths = []
+    iterator = iter(argv[1:])
+    for argument in iterator:
+        if argument == "--json" or argument == "--exclude-source":
+            continue
+        if argument == "--output":
+            output = next(iterator, None)
+            if not output:
+                raise SystemExit("--output requires a destination path")
+            continue
+        paths.append(argument)
+    files = collect(paths, exclude_source=exclude_source)
     reports = [stats(path) for path in files]
+    rendered_json = json.dumps(reports, indent=2, sort_keys=True) + "\n"
+    if output:
+        with open(output, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(rendered_json)
     if as_json:
-        print(json.dumps(reports, indent=2, sort_keys=True))
+        print(rendered_json, end="")
         return
     header = "%-44s %-11s %s" % ("file", "size", "ch  min   median      max        mean")
     print(header)

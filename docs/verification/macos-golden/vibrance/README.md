@@ -8,7 +8,7 @@ REQUEST-3 의 요청 A·B·C 에 대한 답입니다. `CIVibrance` 는 Apple 내
 
 모든 `.f32` 는 리틀엔디언 `Float32`, `RGBAf`, 행 우선(y-down), **linear sRGB** 입니다.
 
-| 파일 | 크기 | sha256 |
+| 이전 파일(삭제됨) | 크기 | sha256 |
 | --- | ---: | --- |
 | `civibrance-input-128x39.f32` | 79,872 | `75c3102c56181938a7ef292b7ea0389e734a03f9d6af5f0d490932ba0882881a` |
 | `civibrance-a0.000-128x39.f32` | 79,872 | `75c3102c56181938a7ef292b7ea0389e734a03f9d6af5f0d490932ba0882881a` |
@@ -28,7 +28,8 @@ REQUEST-3 의 요청 A·B·C 에 대한 답입니다. `CIVibrance` 는 Apple 내
 i → (R, G, B) = (i / 289, (i / 17) % 17, i % 17) / 16,  alpha = 1
 ```
 
-입력 격자도 함께 올렸습니다(`civibrance-input-…`) — 인덱스 규약을 다시 만들 필요가 없습니다.
+17³ 자료는 33³ 자료로 대체되어 `REQUEST-5` 정리에 따라 삭제했습니다. 위 표는 당시의
+측정 결과와 SHA-256 기록만 보존합니다.
 
 **`amount = 0.000` 은 입력과 sha256 이 같습니다.** 렌더 경로가 값을 건드리지 않는다는
 확인이며, 요청하신 항등 검사입니다.
@@ -156,17 +157,36 @@ i → (R, G, B) = (i / 1089, (i / 33) % 33, i % 33) / 32,  alpha = 1
 | `civibrance33-a0.500-256x141.f32` | 577536 | `039f6cc299d8df76946c64c5bb91ec7d58fd47020bcaeb418655160edc4da44c` |
 | `civibrance33-input-256x141.f32` | 577536 | `30498501656c7843eeb4e5ed5bf3045bbf5869a526758761709a310dabf82629` |
 
-## 요청 B — 65³ 한 판 (독립 검증용)
+## 요청 B — 65³ 한 판 (독립 검증용, 삭제됨)
 
 ```
 N = 65*65*65 = 274625,  이미지 640 × 430 = 275,200 화소
 i → (R, G, B) = (i / 4225, (i / 65) % 65, i % 65) / 64,  alpha = 1
 ```
 
-| 파일 | 크기 | sha256 |
+| 이전 파일(삭제됨) | 크기 | sha256 |
 | --- | ---: | --- |
 | `civibrance65-a0.250-640x430.f32` | 4403200 | `df7a8328ac5bad70baab3f99dceb35d26df94a16136769edd52772444aa25ecb` |
 | `civibrance65-input-640x430.f32` | 4403200 | `6b57227acba448f117926c14ced3091c5239be123b289ee32d2e247721f8b5be` |
+
+65³ 자료는 33³ 사상의 독립 검증을 마쳤고 결과가 이 문서에 남아 있으므로 `REQUEST-5` 정리에
+따라 삭제했습니다.
+
+## REQUEST-5 — ColorModel 전체 범위 33³ 격자
+
+ColorModel 슬라이더는 `CIVibrance` amount `−0.80…+0.80`을 쓸 수 있습니다. 기존 33³ 양수
+0.05…0.50 표는 유지하고, 비어 있던 음수와 0.5 초과 구간을 아래 일곱 판으로 채웠습니다.
+파일 규약과 인덱스는 위 33³ 표와 같습니다.
+
+| 파일 | 크기 | sha256 |
+| --- | ---: | --- |
+| `civibrance33-am0.800-256x141.f32` | 577536 | `754c00b9758d9e06bae016811fa8ed62b94616c03ea7ad1b2125e7794c6153b6` |
+| `civibrance33-am0.600-256x141.f32` | 577536 | `e61e5f2cfc8640abd84af2a381a25af68f5b64754949dbfb2df4020a93a04ad8` |
+| `civibrance33-am0.400-256x141.f32` | 577536 | `eab7b606f3f461db0e70534c20895aa58115e2b8f073b7b84586fce6c54a9b31` |
+| `civibrance33-am0.200-256x141.f32` | 577536 | `b1c82d982c7f0105820dd8e0c6e41ef551108c3e2e5b0c7d29d02eb5277f594d` |
+| `civibrance33-am0.050-256x141.f32` | 577536 | `506aae14b073975b560e062cb4f5a6ce019781efa66880df9f8b1d4550b59a8b` |
+| `civibrance33-a0.600-256x141.f32` | 577536 | `bb844764d04c6205a31781bf0fd1420b3fa4a5dd4b6787710fb82c840ed17dd4` |
+| `civibrance33-a0.800-256x141.f32` | 577536 | `42a8cc1a5c8eeee0497442d90d8313a248138f998075574fc9b3861db56bd0b3` |
 
 ## 요청 C — 실제 프레임 한 쌍 더
 
@@ -237,7 +257,7 @@ i → (R, G, B) = (i / 4225, (i / 65) % 65, i % 65) / 64,  alpha = 1
 
 ```bash
 NEGAFLOW_VIBRANCE_GOLDEN_DIR=docs/verification/macos-golden/vibrance \
-  swift test --filter VibranceMappingGoldenTests    # 17³ · 33³ · 65³
+  swift test --filter VibranceMappingGoldenTests    # 필요 시 17³ · 33³ · 65³ 생성
 NEGAFLOW_VIBRANCE_GOLDEN_DIR=docs/verification/macos-golden/vibrance \
   swift test --filter VibranceRealFrameLadderTests  # 실사진 사다리
 ```
