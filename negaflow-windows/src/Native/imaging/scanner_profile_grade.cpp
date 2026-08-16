@@ -75,29 +75,44 @@ struct Rgb final {
     if (value <= 0.0F) return 0.0F;
     if (value >= 1.0F) return 1.0F;
 
-    std::array<float, 4U> slope{};
-    for (std::size_t i = 0U; i < slope.size(); ++i) {
-        slope[i] = (y[i + 1U] - y[i]) / (x[i + 1U] - x[i]);
-    }
-    std::array<float, 5U> tangent{};
-    tangent.front() = slope.front();
-    tangent.back() = slope.back();
-    for (std::size_t i = 1U; i + 1U < tangent.size(); ++i) {
-        tangent[i] = slope[i - 1U] * slope[i] <= 0.0F
-            ? 0.0F
-            : 2.0F / ((1.0F / slope[i - 1U]) + (1.0F / slope[i]));
-    }
+    // CIToneCurve applies its spline in the gamma-2 perceptual version of the
+    // working color space. The profile control points are therefore not a
+    // linear-light curve.
+    const float perceptual_value = std::sqrt(value);
 
     std::size_t segment = 0U;
-    while (segment + 1U < x.size() && value > x[segment + 1U]) ++segment;
+    while (segment + 1U < x.size() && perceptual_value > x[segment + 1U]) ++segment;
     const float width = x[segment + 1U] - x[segment];
-    const float t = (value - x[segment]) / width;
-    const float t2 = t * t;
-    const float t3 = t2 * t;
-    return ((2.0F * t3 - 3.0F * t2 + 1.0F) * y[segment]) +
-           ((t3 - 2.0F * t2 + t) * width * tangent[segment]) +
-           ((-2.0F * t3 + 3.0F * t2) * y[segment + 1U]) +
-           ((t3 - t2) * width * tangent[segment + 1U]);
+    const std::array<float, 4U> h{{
+        x[1U] - x[0U],
+        x[2U] - x[1U],
+        x[3U] - x[2U],
+        x[4U] - x[3U],
+    }};
+    const std::array<float, 3U> rhs{{
+        6.0F * (((y[2U] - y[1U]) / h[1U]) - ((y[1U] - y[0U]) / h[0U])),
+        6.0F * (((y[3U] - y[2U]) / h[2U]) - ((y[2U] - y[1U]) / h[1U])),
+        6.0F * (((y[4U] - y[3U]) / h[3U]) - ((y[3U] - y[2U]) / h[2U])),
+    }};
+    const float diagonal1 = 2.0F * (h[0U] + h[1U]);
+    const float diagonal2 =
+        2.0F * (h[1U] + h[2U]) - ((h[1U] * h[1U]) / diagonal1);
+    const float diagonal3 =
+        2.0F * (h[2U] + h[3U]) - ((h[2U] * h[2U]) / diagonal2);
+    const float m3 = (rhs[2U] - ((h[2U] / diagonal2) * rhs[1U]) +
+                      ((h[2U] * h[1U]) / (diagonal2 * diagonal1)) * rhs[0U]) /
+        diagonal3;
+    const float m2 = (rhs[1U] - (h[2U] * m3) - ((h[1U] / diagonal1) * rhs[0U])) /
+        diagonal2;
+    const float m1 = (rhs[0U] - (h[1U] * m2)) / diagonal1;
+    const std::array<float, 5U> second{{0.0F, m1, m2, m3, 0.0F}};
+    const float a = (x[segment + 1U] - perceptual_value) / width;
+    const float b = 1.0F - a;
+    const float perceptual_output = (a * y[segment]) + (b * y[segment + 1U]) +
+        (((a * a * a - a) * second[segment]) +
+         ((b * b * b - b) * second[segment + 1U])) *
+            width * width / 6.0F;
+    return perceptual_output * perceptual_output;
 }
 
 [[nodiscard]] Rgb point_grade(

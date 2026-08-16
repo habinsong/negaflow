@@ -5,49 +5,35 @@
 
 ---
 
-## 1. macOS 픽셀 골든 — Task 1 원본이 현재 저장소에 없습니다
+## 1. macOS 픽셀 골든 — Task 1 실제 ABI 재렌더 완료
 
-아래 표는 `GT-X900_frame_4.tiff`가 작업 트리에 있던 때의 마지막 측정입니다. 현재 golden 출력과
-통계는 받았지만 원본 TIFF는 저장소에 없으므로, 2026-08-16 이후의 `ScannerTargetGrade` 끝점 보정을
-같은 실제 입력으로 다시 검증할 수 없습니다.
+사용자가 제공한 저장소 밖 `GT-X900_frame_4.tiff`를 사용했습니다. 파일은 golden manifest의
+SHA-256 `9e3d0daf…d1a198` 및 47,316,912 bytes와 일치합니다. Windows ABI v32 export가 원본과
+여덟 macOS 출력 TIFF의 SHA-256을 먼저 확인한 뒤 다시 TIFF16을 만들고 WIC RGB16으로 비교합니다.
+원본은 제품·테스트에 경로로 고정하거나 저장소에 복사하지 않습니다.
 
 | 조건 | R | G | B | 판정 |
 | --- | ---: | ---: | ---: | --- |
-| a-default-main-srgb | **+16** | +55 | +64 | ✅ 닫힘 |
-| d-main-displayp3 | **+23** | +54 | +60 | ✅ 닫힘 |
-| d-main-adobergb | **+21** | +50 | +58 | ✅ 닫힘 |
-| c-target-f135-srgb | **+26** | +40 | +41 | ✅ 닫힘 |
-| c-target-hr-srgb | **+13** | +75 | +93 | ✅ 닫힘 |
-| **b-main-scannerprofile-portra400** | **−876** | −616 | −550 | ❌ |
-| **c-target-hs-srgb** | **−1025** | −158 | −1180 | ❌ |
-| **c-target-sp-srgb** | **−1048** | −573 | −1459 | ❌ |
+| a-default-main-srgb | +13 | +49 | +56 | 중앙값 회귀 통과 |
+| b-main-scannerprofile-portra400-srgb | −18 | +9 | +6 | 중앙값 회귀 통과 |
+| c-target-hs-srgb | +23 | +48 | +63 | 중앙값 회귀 통과 |
+| c-target-sp-srgb | +15 | +85 | +55 | 중앙값 회귀 통과 |
+| c-target-f135-srgb | +16 | +43 | +49 | 중앙값 회귀 통과 |
+| c-target-hr-srgb | 0 | +53 | +54 | 중앙값 회귀 통과 |
+| d-main-displayp3 | +20 | +49 | +55 | 중앙값 회귀 통과 |
+| d-main-adobergb | +19 | +45 | +51 | 중앙값 회귀 통과 |
 
-닫힌 다섯은 8비트로 0.06 ~ 0.36 레벨입니다. 8100 프레임도 여섯 지점이 정확히 일치합니다
-(R min 58, G min 71, B max 62256).
+수치는 RGB16 channel median 차이이며 자동 회귀 한계는 채널별 절대값 96 코드(8-bit 0.4 레벨)입니다.
+Portra 400의 이전 중앙값 밀림은 Windows가 `CIToneCurve`를 선형광에 직접 적용한 결함이었습니다.
+macOS 계약의 감마 2 지각 공간 spline으로 바꿔 해결했습니다.
 
-### 남은 셋의 성격 — 명부가 눌립니다
+### 아직 pixel-exact는 아닙니다
 
-median 만 보면 안 됩니다. **max 가 훨씬 크게 어긋납니다.**
-
-| 조건 | Windows max | macOS max | 차이 |
-| --- | ---: | ---: | ---: |
-| c-target-hs R | 53889 | 59268 | **−5379** |
-| c-target-hs G | 51474 | 59166 | **−7692** |
-| c-target-sp G | 49907 | 55497 | **−5590** |
-| b-scannerprofile B | 62905 | 63001 | −96 |
-
-`c-target-hs` 와 `c-target-sp` 는 **명부가 통째로 눌려 있습니다**. G max 가 7692 낮다는 것은
-중간 계조가 아니라 곡선의 어깨가 다르다는 뜻입니다. 반면 `b-scannerprofile` 은 max 가 거의
-맞고 median 만 낮으므로 다른 문제입니다 — 곡선 전체가 아니라 위치가 밀려 있습니다.
-
-**중요:** F135 와 HR 은 같은 `ScannerTargetGrade` 경로인데 맞습니다. 그러므로 경로 자체가
-아니라 **HS(Noritsu)·SP-3000 두 타깃의 데이터나 계수**가 다릅니다.
-
-### 원본이 들어오면 맥 없이 할 수 있습니다
-
-golden 통계(`docs/verification/macos-golden/task1-pixels/pixel-stats.json`)와 출력은 저장소에
-있습니다. `GT-X900_frame_4.tiff` 원본이 제공되면 Windows 쪽
-`scanner_target_grade.cpp`·`scanner_profile_grade.cpp`를 실제 ABI 경로로 다시 비교합니다.
+중앙값 회귀는 여덟 조건 모두 통과했지만, 국소 최대 절대 차이는 Portra 400에서
+R/G/B `5677/6482/5705`, HS에서 `4478/3102/3061`, SP에서 `2954/2601/3921` RGB16 코드입니다.
+따라서 이 결과를 전 픽셀 동등성으로 해석하지 않습니다. 남은 국소 차이는 macOS의 비공개
+neighborhood/color-filter 구현과 Windows CPU 근사의 차이로만 기록하며, 제품 코드에 입력별
+보정값을 넣지 않습니다.
 
 ---
 
@@ -97,7 +83,6 @@ alpha의 실제 macOS 픽셀 golden은 Windows에서 다시 만들 수 없으므
 | 항목 | 이유 |
 | --- | --- |
 | 순수 ARM64 실행 | 하드웨어가 없습니다. CI 에 cross 잡은 있습니다 |
-| Task 1 실제 재렌더 | golden 출력은 있으나 `GT-X900_frame_4.tiff` 원본이 저장소에 없습니다 |
 
 ---
 
@@ -138,5 +123,5 @@ alpha의 실제 macOS 픽셀 golden은 Windows에서 다시 만들 수 없으므
 
 ## 다음 한 가지를 고른다면
 
-**Task 1 원본 TIFF를 받는 일입니다.** 그 다음 `c-target-hs`/`c-target-sp`의 명부를 실제 출력으로
-재현할 수 있습니다.
+**순수 ARM64 Windows 장비에서의 실행입니다.** Task 1은 실제 입력의 중앙값 회귀를 닫았지만,
+국소 최대 차이는 별도의 macOS 중간-stage golden 없이는 더 줄였다고 주장할 수 없습니다.

@@ -306,6 +306,18 @@ if(BUILD_TESTING)
             "${CMAKE_CURRENT_SOURCE_DIR}/../docs/verification/macos-golden/task9-bw-slide"
     )
 
+    # Task 1's source TIFF is intentionally outside the repository. The
+    # executable takes its source and golden directories as explicit arguments
+    # so a machine-local path is never compiled into the product or CTest.
+    add_executable(negaflow_task1_pixel_golden_tests
+        tests/Native.UnitTests/task1_pixel_golden_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_task1_pixel_golden_tests
+        PRIVATE negaflow_native negaflow_color negaflow_imaging negaflow_imageio
+            negaflow_project_options
+    )
+
     add_executable(negaflow_task6_metadata_golden_tests
         tests/Native.UnitTests/task6_metadata_golden_tests.cpp
     )
