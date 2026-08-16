@@ -1,4 +1,3 @@
-using System.Globalization;
 using Negaflow.Catalog;
 using Negaflow.Interop;
 using Negaflow.Shell.Develop;
@@ -12,9 +11,15 @@ namespace Negaflow.Shell;
 public sealed class DevelopPanelState
 {
     private readonly LibraryHostService host;
-    private readonly ToneLimits limits;
-    private readonly NegativeLimits negativeLimits;
+    private readonly DevelopBaseEditor baseEditor;
+    private readonly DevelopColorEditor colorEditor;
     private readonly DevelopDefectEditor defectEditor;
+    private readonly DevelopEffectsEditor effectsEditor;
+    private readonly DevelopExportController exports;
+    private readonly DevelopRouteEditor routeEditor;
+    private readonly DevelopToneEditor toneEditor;
+    private readonly DevelopTransformEditor transformEditor;
+    private readonly DevelopVersionPresetController versionPresets;
 
     public DevelopPanelState(
         LibraryHostService host,
@@ -25,124 +30,49 @@ public sealed class DevelopPanelState
         ArgumentNullException.ThrowIfNull(limits);
         ArgumentNullException.ThrowIfNull(negativeLimits);
         this.host = host;
-        this.limits = limits;
-        this.negativeLimits = negativeLimits;
+        baseEditor = new DevelopBaseEditor(host, negativeLimits);
+        colorEditor = new DevelopColorEditor(host);
         defectEditor = new DevelopDefectEditor(host);
+        effectsEditor = new DevelopEffectsEditor(host);
+        exports = new DevelopExportController(host);
+        routeEditor = new DevelopRouteEditor(host);
+        toneEditor = new DevelopToneEditor(host, limits);
+        transformEditor = new DevelopTransformEditor(host);
+        versionPresets = new DevelopVersionPresetController(host);
     }
 
-    public double MinimumManualDmin => negativeLimits.MinimumManualDmin;
+    public double MinimumManualDmin => baseEditor.MinimumManualDmin;
 
-    public double MaximumManualDmin => negativeLimits.MaximumManualDmin;
+    public double MaximumManualDmin => baseEditor.MaximumManualDmin;
 
     /// <summary>
     /// 아직 수동 base 를 고르지 않은 frame 의 슬라이더 시작 위치입니다. **이 값이 catalog 에 저장되지는
     /// 않습니다.** Auto 모드의 preview/export는 이 값이 아니라 native resolver를 사용합니다.
     /// </summary>
-    public double SuggestedManualDmin =>
-        negativeLimits.ClampChannel((MinimumManualDmin + MaximumManualDmin) / 4.0);
+    public double SuggestedManualDmin => baseEditor.SuggestedManualDmin;
 
     public ManualBaseRgb? ManualBase => SelectedFrame?.ManualBase;
 
     public BaseEstimationMode BaseMode => SelectedFrame?.Base.Mode ?? BaseEstimationMode.Auto;
 
-    public bool CanEditBase => SelectedFrame?.Route.FilmType is FilmType.ColorNegative or FilmType.BlackAndWhiteNegative;
+    public bool CanEditBase => DevelopBaseEditor.CanEdit(SelectedFrame);
 
     public bool CanEditTone => SelectedFrame is not null;
 
     public LibraryFrameError SetBaseMode(BaseEstimationMode mode)
     {
-        if (SelectedFrame is not { } frame)
-        {
-            return LibraryFrameError.MissingId;
-        }
-        if (mode is not (BaseEstimationMode.Auto or BaseEstimationMode.Preset or BaseEstimationMode.Manual))
-        {
-            return LibraryFrameError.InvalidBaseRecipe;
-        }
-        if (!CanEditBase)
-        {
-            return LibraryFrameError.InvalidDevelopRoute;
-        }
-
-        ManualBaseRgb? manualBase = frame.ManualBase;
-        if (mode == BaseEstimationMode.Manual && manualBase is null)
-        {
-            manualBase = new ManualBaseRgb(
-                negativeLimits.ClampChannel(0.90),
-                negativeLimits.ClampChannel(0.65),
-                negativeLimits.ClampChannel(0.45));
-        }
-
-        LibraryFrameError error = host.Edit(
-            frame.Id,
-            new LibraryFrameEdit(frame.Tone, manualBase, frame.Base with { Mode = mode }));
-        if (error == LibraryFrameError.None)
-        {
-            Select(frame.Id);
-        }
-        return error;
+        return RefreshAfterEdit(baseEditor.SetMode(SelectedFrame, mode));
     }
 
     public LibraryFrameError SetFilmStock(string? filmStockDminId)
     {
-        if (SelectedFrame is not { } frame)
-        {
-            return LibraryFrameError.MissingId;
-        }
-        if (!CanEditBase)
-        {
-            return LibraryFrameError.InvalidDevelopRoute;
-        }
-        if (!BundledFilmBaseOptions.IsKnownFilmStock(filmStockDminId))
-        {
-            return LibraryFrameError.InvalidBaseRecipe;
-        }
-
-        BaseRecipe updated = frame.Base with
-        {
-            Mode = filmStockDminId is null ? BaseEstimationMode.Auto : BaseEstimationMode.Preset,
-            FilmStockDminId = filmStockDminId,
-        };
-        LibraryFrameError error = host.Edit(
-            frame.Id,
-            new LibraryFrameEdit(frame.Tone, frame.ManualBase, updated));
-        if (error == LibraryFrameError.None)
-        {
-            Select(frame.Id);
-        }
-        return error;
+        return RefreshAfterEdit(baseEditor.SetFilmStock(SelectedFrame, filmStockDminId));
     }
 
     public LibraryFrameError SetLightSourceProfile(string? lightSourceProfileId)
     {
-        if (SelectedFrame is not { } frame)
-        {
-            return LibraryFrameError.MissingId;
-        }
-        if (!CanEditBase)
-        {
-            return LibraryFrameError.InvalidDevelopRoute;
-        }
-        if (frame.Base.Mode != BaseEstimationMode.Preset)
-        {
-            return LibraryFrameError.InvalidBaseRecipe;
-        }
-        if (!BundledFilmBaseOptions.IsKnownLightSource(lightSourceProfileId))
-        {
-            return LibraryFrameError.InvalidBaseRecipe;
-        }
-
-        LibraryFrameError error = host.Edit(
-            frame.Id,
-            new LibraryFrameEdit(
-                frame.Tone,
-                frame.ManualBase,
-                frame.Base with { LightSourceProfileId = lightSourceProfileId }));
-        if (error == LibraryFrameError.None)
-        {
-            Select(frame.Id);
-        }
-        return error;
+        return RefreshAfterEdit(
+            baseEditor.SetLightSource(SelectedFrame, lightSourceProfileId));
     }
 
     /// <summary>
@@ -151,36 +81,8 @@ public sealed class DevelopPanelState
     /// </summary>
     public LibraryFrameError SetScannerProfile(string? scannerProfileId)
     {
-        if (SelectedFrame is not { } frame)
-        {
-            return LibraryFrameError.MissingId;
-        }
-        if (!CanEditBase)
-        {
-            return LibraryFrameError.InvalidDevelopRoute;
-        }
-        if (frame.Base.Mode != BaseEstimationMode.Preset)
-        {
-            return LibraryFrameError.InvalidBaseRecipe;
-        }
-        // native 가 모르는 id 는 조용히 무시됩니다. 저장은 되고 그림은 그대로인 상태가 가장
-        // 나쁘므로 여기서 막습니다.
-        if (!BundledFilmBaseOptions.IsKnownScannerProfile(scannerProfileId))
-        {
-            return LibraryFrameError.InvalidBaseRecipe;
-        }
-
-        LibraryFrameError error = host.Edit(
-            frame.Id,
-            new LibraryFrameEdit(
-                frame.Tone,
-                frame.ManualBase,
-                frame.Base with { ScannerProfileId = scannerProfileId }));
-        if (error == LibraryFrameError.None)
-        {
-            Select(frame.Id);
-        }
-        return error;
+        return RefreshAfterEdit(
+            baseEditor.SetScannerProfile(SelectedFrame, scannerProfileId));
     }
 
     /// <summary>
@@ -189,37 +91,14 @@ public sealed class DevelopPanelState
     /// </summary>
     public LibraryFrameError SetManualBase(double red, double green, double blue)
     {
-        if (SelectedFrame is not { } frame)
-        {
-            return LibraryFrameError.MissingId;
-        }
-        if (!CanEditBase)
-        {
-            return LibraryFrameError.InvalidDevelopRoute;
-        }
-
-        ManualBaseRgb clamped = new(
-            negativeLimits.ClampChannel(red),
-            negativeLimits.ClampChannel(green),
-            negativeLimits.ClampChannel(blue));
-        LibraryFrameError error = host.Edit(
-            frame.Id,
-            new LibraryFrameEdit(
-                frame.Tone,
-                clamped,
-                frame.Base with { Mode = BaseEstimationMode.Manual }));
-        if (error == LibraryFrameError.None)
-        {
-            Select(frame.Id);
-        }
-        return error;
+        return RefreshAfterEdit(baseEditor.SetManualBase(SelectedFrame, red, green, blue));
     }
 
     public LibraryFrameSnapshot? SelectedFrame { get; private set; }
 
-    public double MaximumExposureStops => limits.MaximumExposureStops;
+    public double MaximumExposureStops => toneEditor.MaximumExposureStops;
 
-    public double MaximumToneControl => limits.MaximumToneControl;
+    public double MaximumToneControl => toneEditor.MaximumToneControl;
 
     public double Exposure => SelectedFrame?.Tone.Exposure ?? 0.0;
 
@@ -264,18 +143,12 @@ public sealed class DevelopPanelState
 
     public LibraryFrameError ApplyAutoTone(AutoAdjustSettings settings)
     {
-        ArgumentNullException.ThrowIfNull(settings);
-        return SelectedFrame is not { } frame
-            ? LibraryFrameError.MissingId
-            : ApplyAutoAdjusted(AutoAdjustCoordinator.ApplyTone(frame, settings));
+        return RefreshAfterEdit(toneEditor.ApplyAutoTone(SelectedFrame, settings));
     }
 
     public LibraryFrameError ApplyAutoWhiteBalance(AutoAdjustSettings settings)
     {
-        ArgumentNullException.ThrowIfNull(settings);
-        return SelectedFrame is not { } frame
-            ? LibraryFrameError.MissingId
-            : ApplyAutoAdjusted(AutoAdjustCoordinator.ApplyWhiteBalance(frame, settings));
+        return RefreshAfterEdit(toneEditor.ApplyAutoWhiteBalance(SelectedFrame, settings));
     }
 
     public bool Select(string frameId)
@@ -299,80 +172,45 @@ public sealed class DevelopPanelState
     /// </summary>
     public LibraryFrameError SetExposure(double stops)
     {
-        return SetTone(tone => tone with { Exposure = limits.ClampExposure(stops) });
+        return RefreshAfterEdit(toneEditor.SetExposure(SelectedFrame, stops));
     }
 
     public LibraryFrameError SetContrast(double value) =>
-        SetTone(tone => tone with { Contrast = limits.ClampToneControl(value) });
+        RefreshAfterEdit(toneEditor.SetContrast(SelectedFrame, value));
 
     public LibraryFrameError SetHighlights(double value) =>
-        SetTone(tone => tone with { Highlight = limits.ClampToneControl(value) });
+        RefreshAfterEdit(toneEditor.SetHighlights(SelectedFrame, value));
 
     public LibraryFrameError SetShadows(double value) =>
-        SetTone(tone => tone with { Shadow = limits.ClampToneControl(value) });
+        RefreshAfterEdit(toneEditor.SetShadows(SelectedFrame, value));
 
     public LibraryFrameError SetWhites(double value) =>
-        SetTone(tone => tone with { Whites = limits.ClampToneControl(value) });
+        RefreshAfterEdit(toneEditor.SetWhites(SelectedFrame, value));
 
     public LibraryFrameError SetBlacks(double value) =>
-        SetTone(tone => tone with { Blacks = limits.ClampToneControl(value) });
+        RefreshAfterEdit(toneEditor.SetBlacks(SelectedFrame, value));
 
     public LibraryFrameError SetDensity(double value) =>
-        SetTone(tone => tone with { Density = limits.ClampToneControl(value) });
+        RefreshAfterEdit(toneEditor.SetDensity(SelectedFrame, value));
 
     public LibraryFrameError SetCurveHighlights(double value) =>
-        SetTone(tone => tone with { CurveHighlights = limits.ClampToneControl(value) });
+        RefreshAfterEdit(toneEditor.SetCurveHighlights(SelectedFrame, value));
 
     public LibraryFrameError SetCurveLights(double value) =>
-        SetTone(tone => tone with { CurveLights = limits.ClampToneControl(value) });
+        RefreshAfterEdit(toneEditor.SetCurveLights(SelectedFrame, value));
 
     public LibraryFrameError SetCurveDarks(double value) =>
-        SetTone(tone => tone with { CurveDarks = limits.ClampToneControl(value) });
+        RefreshAfterEdit(toneEditor.SetCurveDarks(SelectedFrame, value));
 
     public LibraryFrameError SetCurveShadows(double value) =>
-        SetTone(tone => tone with { CurveShadows = limits.ClampToneControl(value) });
+        RefreshAfterEdit(toneEditor.SetCurveShadows(SelectedFrame, value));
 
     public LibraryFrameError ResetBasicTone() =>
-        SetTone(tone => tone with
-        {
-            Exposure = 0,
-            Contrast = 0,
-            Density = 0,
-            Highlight = 0,
-            Shadow = 0,
-            Whites = 0,
-            Blacks = 0,
-        });
+        RefreshAfterEdit(toneEditor.ResetBasicTone(SelectedFrame));
 
     public LibraryFrameError ResetToneCurve()
     {
-        if (SelectedFrame is not { } frame)
-        {
-            return LibraryFrameError.MissingId;
-        }
-        if (!CanEditTone)
-        {
-            return LibraryFrameError.InvalidDevelopRoute;
-        }
-
-        ToneAdjustment tone = frame.Tone with
-        {
-            CurveHighlights = 0,
-            CurveLights = 0,
-            CurveDarks = 0,
-            CurveShadows = 0,
-        };
-        LibraryFrameError error = host.Edit(
-            frame.Id,
-            new LibraryFrameEdit(
-                tone,
-                frame.ManualBase,
-                PointCurves: PointCurveRecipe.Identity));
-        if (error == LibraryFrameError.None)
-        {
-            Select(frame.Id);
-        }
-        return error;
+        return RefreshAfterEdit(toneEditor.ResetToneCurve(SelectedFrame));
     }
 
     /// <summary>
@@ -381,81 +219,19 @@ public sealed class DevelopPanelState
     /// </summary>
     public LibraryFrameError ResetColor()
     {
-        if (SelectedFrame is not { } frame)
-        {
-            return LibraryFrameError.MissingId;
-        }
-        if (!CanEditTone)
-        {
-            return LibraryFrameError.InvalidDevelopRoute;
-        }
-
-        LibraryFrameError error = host.Edit(
-            frame.Id,
-            new LibraryFrameEdit(
-                frame.Tone,
-                frame.ManualBase,
-                ColorModel: frame.ColorModel with
-                {
-                    Warmth = 0.0,
-                    Tint = 0.0,
-                    Vibrance = 0.0,
-                    Saturation = 0.0,
-                    ColorDepth = 0.0,
-                }));
-        if (error == LibraryFrameError.None)
-        {
-            Select(frame.Id);
-        }
-        return error;
+        return RefreshAfterEdit(colorEditor.ResetColor(SelectedFrame));
     }
 
     public LibraryFrameError ResetColorMixer()
     {
-        if (SelectedFrame is not { } frame)
-        {
-            return LibraryFrameError.MissingId;
-        }
-        if (!CanEditTone)
-        {
-            return LibraryFrameError.InvalidDevelopRoute;
-        }
-
-        LibraryFrameError error = host.Edit(
-            frame.Id,
-            new LibraryFrameEdit(
-                frame.Tone,
-                frame.ManualBase,
-                ColorMixer: ColorMixerRecipe.Identity));
-        if (error == LibraryFrameError.None)
-        {
-            Select(frame.Id);
-        }
-        return error;
+        return RefreshAfterEdit(
+            colorEditor.SetColorMixer(SelectedFrame, ColorMixerRecipe.Identity));
     }
 
     public LibraryFrameError ResetColorGrading()
     {
-        if (SelectedFrame is not { } frame)
-        {
-            return LibraryFrameError.MissingId;
-        }
-        if (!CanEditTone)
-        {
-            return LibraryFrameError.InvalidDevelopRoute;
-        }
-
-        LibraryFrameError error = host.Edit(
-            frame.Id,
-            new LibraryFrameEdit(
-                frame.Tone,
-                frame.ManualBase,
-                ColorGrading: ColorGradingRecipe.Identity));
-        if (error == LibraryFrameError.None)
-        {
-            Select(frame.Id);
-        }
-        return error;
+        return RefreshAfterEdit(
+            colorEditor.SetColorGrading(SelectedFrame, ColorGradingRecipe.Identity));
     }
 
     public LibraryFrameError ResetPrimaryCalibration() =>
@@ -463,27 +239,7 @@ public sealed class DevelopPanelState
 
     public LibraryFrameError ResetDetailAndEffects()
     {
-        if (SelectedFrame is not { } frame)
-        {
-            return LibraryFrameError.MissingId;
-        }
-        if (!CanEditTone)
-        {
-            return LibraryFrameError.InvalidDevelopRoute;
-        }
-
-        LibraryFrameError error = host.Edit(
-            frame.Id,
-            new LibraryFrameEdit(
-                frame.Tone,
-                frame.ManualBase,
-                Texture: TextureRecipe.Identity,
-                NoiseReduction: NoiseReductionRecipe.Identity));
-        if (error == LibraryFrameError.None)
-        {
-            Select(frame.Id);
-        }
-        return error;
+        return RefreshAfterEdit(effectsEditor.Reset(SelectedFrame));
     }
 
     /// <summary>
@@ -492,70 +248,19 @@ public sealed class DevelopPanelState
     /// </summary>
     public LibraryFrameError SetPointCurves(PointCurveRecipe pointCurves)
     {
-        ArgumentNullException.ThrowIfNull(pointCurves);
-        if (SelectedFrame is not { } frame)
-        {
-            return LibraryFrameError.MissingId;
-        }
-        if (!CanEditTone)
-        {
-            return LibraryFrameError.InvalidDevelopRoute;
-        }
-
-        LibraryFrameError error = host.Edit(
-            frame.Id,
-            new LibraryFrameEdit(frame.Tone, frame.ManualBase, PointCurves: pointCurves));
-        if (error == LibraryFrameError.None)
-        {
-            Select(frame.Id);
-        }
-        return error;
+        return RefreshAfterEdit(colorEditor.SetPointCurves(SelectedFrame, pointCurves));
     }
 
     /// <summary>Color Mixer는 Tone과 별도 recipe로 저장되어 preview/export에 같은 값을 전달합니다.</summary>
     public LibraryFrameError SetColorMixer(ColorMixerRecipe colorMixer)
     {
-        ArgumentNullException.ThrowIfNull(colorMixer);
-        if (SelectedFrame is not { } frame)
-        {
-            return LibraryFrameError.MissingId;
-        }
-        if (!CanEditTone)
-        {
-            return LibraryFrameError.InvalidDevelopRoute;
-        }
-
-        LibraryFrameError error = host.Edit(
-            frame.Id,
-            new LibraryFrameEdit(frame.Tone, frame.ManualBase, ColorMixer: colorMixer));
-        if (error == LibraryFrameError.None)
-        {
-            Select(frame.Id);
-        }
-        return error;
+        return RefreshAfterEdit(colorEditor.SetColorMixer(SelectedFrame, colorMixer));
     }
 
     /// <summary>Color Grading은 Tone과 별도 recipe로 저장되어 preview/export에 같은 값을 전달합니다.</summary>
     public LibraryFrameError SetColorGrading(ColorGradingRecipe colorGrading)
     {
-        ArgumentNullException.ThrowIfNull(colorGrading);
-        if (SelectedFrame is not { } frame)
-        {
-            return LibraryFrameError.MissingId;
-        }
-        if (!CanEditTone)
-        {
-            return LibraryFrameError.InvalidDevelopRoute;
-        }
-
-        LibraryFrameError error = host.Edit(
-            frame.Id,
-            new LibraryFrameEdit(frame.Tone, frame.ManualBase, ColorGrading: colorGrading));
-        if (error == LibraryFrameError.None)
-        {
-            Select(frame.Id);
-        }
-        return error;
+        return RefreshAfterEdit(colorEditor.SetColorGrading(SelectedFrame, colorGrading));
     }
 
     /// <summary>
@@ -565,24 +270,7 @@ public sealed class DevelopPanelState
 
     public LibraryFrameError SetColorModel(ColorModelRecipe colorModel)
     {
-        ArgumentNullException.ThrowIfNull(colorModel);
-        if (SelectedFrame is not { } frame)
-        {
-            return LibraryFrameError.MissingId;
-        }
-        if (!CanEditTone)
-        {
-            return LibraryFrameError.InvalidDevelopRoute;
-        }
-
-        LibraryFrameError error = host.Edit(
-            frame.Id,
-            new LibraryFrameEdit(frame.Tone, frame.ManualBase, ColorModel: colorModel));
-        if (error == LibraryFrameError.None)
-        {
-            Select(frame.Id);
-        }
-        return error;
+        return RefreshAfterEdit(colorEditor.SetColorModel(SelectedFrame, colorModel));
     }
 
     /// <summary>
@@ -710,6 +398,15 @@ public sealed class DevelopPanelState
         return result.Error;
     }
 
+    private LibraryFrameError RefreshAfterEdit(DevelopEditResult result)
+    {
+        if (result.Changed && SelectedFrame is { } frame)
+        {
+            Select(frame.Id);
+        }
+        return result.Error;
+    }
+
     public BwToningRecipe BwToning => SelectedFrame?.BwToning ?? BwToningRecipe.None;
 
     /// <summary>
@@ -720,23 +417,7 @@ public sealed class DevelopPanelState
 
     public LibraryFrameError SetBwToning(BwToningRecipe bwToning)
     {
-        if (SelectedFrame is not { } frame)
-        {
-            return LibraryFrameError.MissingId;
-        }
-        if (!CanEditTone)
-        {
-            return LibraryFrameError.InvalidDevelopRoute;
-        }
-
-        LibraryFrameError error = host.Edit(
-            frame.Id,
-            new LibraryFrameEdit(frame.Tone, frame.ManualBase, BwToning: bwToning));
-        if (error == LibraryFrameError.None)
-        {
-            Select(frame.Id);
-        }
-        return error;
+        return RefreshAfterEdit(colorEditor.SetBwToning(SelectedFrame, bwToning));
     }
 
     /// <summary>
@@ -745,86 +426,26 @@ public sealed class DevelopPanelState
     /// </summary>
     public LibraryFrameError SetBwToningMode(Catalog.BwToningMode mode)
     {
-        if (!Enum.IsDefined(mode))
-        {
-            return LibraryFrameError.InvalidBwToning;
-        }
-        return SetBwToning(mode == Catalog.BwToningMode.None
-            ? BwToningRecipe.None
-            : BwToningRecipe.For(
-                mode,
-                Math.Max(BwToning.ClampedStrength, BwToningRecipe.EngagedStrength)));
+        return RefreshAfterEdit(colorEditor.SetBwToningMode(SelectedFrame, mode));
     }
 
     public LibraryFrameError ResetBwToning() => SetBwToning(BwToningRecipe.None);
 
     public LibraryFrameError SetPrimaryCalibration(PrimaryCalibrationRecipe primaryCalibration)
     {
-        ArgumentNullException.ThrowIfNull(primaryCalibration);
-        if (SelectedFrame is not { } frame)
-        {
-            return LibraryFrameError.MissingId;
-        }
-        if (!CanEditTone)
-        {
-            return LibraryFrameError.InvalidDevelopRoute;
-        }
-
-        LibraryFrameError error = host.Edit(
-            frame.Id,
-            new LibraryFrameEdit(
-                frame.Tone,
-                frame.ManualBase,
-                PrimaryCalibration: primaryCalibration));
-        if (error == LibraryFrameError.None)
-        {
-            Select(frame.Id);
-        }
-        return error;
+        return RefreshAfterEdit(
+            colorEditor.SetPrimaryCalibration(SelectedFrame, primaryCalibration));
     }
 
     public LibraryFrameError SetTexture(TextureRecipe texture)
     {
-        ArgumentNullException.ThrowIfNull(texture);
-        if (SelectedFrame is not { } frame)
-        {
-            return LibraryFrameError.MissingId;
-        }
-        if (!CanEditTone)
-        {
-            return LibraryFrameError.InvalidDevelopRoute;
-        }
-
-        LibraryFrameError error = host.Edit(
-            frame.Id,
-            new LibraryFrameEdit(frame.Tone, frame.ManualBase, Texture: texture));
-        if (error == LibraryFrameError.None)
-        {
-            Select(frame.Id);
-        }
-        return error;
+        return RefreshAfterEdit(effectsEditor.SetTexture(SelectedFrame, texture));
     }
 
     public LibraryFrameError SetNoiseReduction(NoiseReductionRecipe noiseReduction)
     {
-        ArgumentNullException.ThrowIfNull(noiseReduction);
-        if (SelectedFrame is not { } frame)
-        {
-            return LibraryFrameError.MissingId;
-        }
-        if (!CanEditTone)
-        {
-            return LibraryFrameError.InvalidDevelopRoute;
-        }
-
-        LibraryFrameError error = host.Edit(
-            frame.Id,
-            new LibraryFrameEdit(frame.Tone, frame.ManualBase, NoiseReduction: noiseReduction));
-        if (error == LibraryFrameError.None)
-        {
-            Select(frame.Id);
-        }
-        return error;
+        return RefreshAfterEdit(
+            effectsEditor.SetNoiseReduction(SelectedFrame, noiseReduction));
     }
 
     public LibraryFrameError SetNoiseReductionEnabled(bool enabled) =>
@@ -832,41 +453,25 @@ public sealed class DevelopPanelState
 
     public LibraryFrameError Rotate(bool clockwise)
     {
-        ImageRotation rotation = ImageTransform.Rotation;
-        ImageRotation updated = clockwise
-            ? rotation switch
-            {
-                ImageRotation.Degrees0 => ImageRotation.Degrees90,
-                ImageRotation.Degrees90 => ImageRotation.Degrees180,
-                ImageRotation.Degrees180 => ImageRotation.Degrees270,
-                _ => ImageRotation.Degrees0,
-            }
-            : rotation switch
-            {
-                ImageRotation.Degrees0 => ImageRotation.Degrees270,
-                ImageRotation.Degrees90 => ImageRotation.Degrees0,
-                ImageRotation.Degrees180 => ImageRotation.Degrees90,
-                _ => ImageRotation.Degrees180,
-            };
-        return SetImageTransform(ImageTransform with { Rotation = updated });
+        return RefreshAfterEdit(transformEditor.Rotate(SelectedFrame, clockwise));
     }
 
     public LibraryFrameError FlipHorizontally() =>
-        SetImageTransform(ImageTransform with { FlipHorizontal = !ImageTransform.FlipHorizontal });
+        RefreshAfterEdit(transformEditor.FlipHorizontally(SelectedFrame));
 
     public LibraryFrameError FlipVertically() =>
-        SetImageTransform(ImageTransform with { FlipVertical = !ImageTransform.FlipVertical });
+        RefreshAfterEdit(transformEditor.FlipVertically(SelectedFrame));
 
     /// <summary>
     /// 반전 직후에 걸리는 opt-in Auto Levels 입니다. macOS 는 음화 route 에서만 이 토글을
     /// 내놓으므로, 양화에서 켜지지 않도록 여기서 막습니다.
     /// </summary>
     public LibraryFrameError SetAutoLevels(bool enabled) =>
-        SetAutoCorrection(enabled, neutralBalance: null);
+        RefreshAfterEdit(routeEditor.SetAutoLevels(SelectedFrame, enabled));
 
     /// <summary>Auto Neutral Balance 입니다. macOS 의 "자동 색상" 토글과 같은 자리입니다.</summary>
     public LibraryFrameError SetAutoNeutralBalance(bool enabled) =>
-        SetAutoCorrection(autoLevels: null, neutralBalance: enabled);
+        RefreshAfterEdit(routeEditor.SetAutoNeutralBalance(SelectedFrame, enabled));
 
     /// <summary>
     /// 지금 프레임의 현상 프로세스입니다. macOS <c>DevelopmentProcess(filmType:isDigitalSource:)</c>
@@ -874,9 +479,7 @@ public sealed class DevelopPanelState
     /// 필름으로 읽습니다.
     /// </summary>
     public DevelopmentProcess DevelopmentProcess =>
-        SelectedFrame is not { } frame
-            ? DevelopmentProcess.C41
-            : DevelopProcesses.From(frame.Route.FilmType, frame.Route.IsDigitalSource);
+        DevelopRouteEditor.DevelopmentProcess(SelectedFrame);
 
     /// <summary>
     /// 현상 프로세스를 바꿉니다. 필름 룩과 세기는 그대로 두고 route 만 옮깁니다 — 프로세스를
@@ -884,25 +487,8 @@ public sealed class DevelopPanelState
     /// </summary>
     public LibraryFrameError SetDevelopmentProcess(DevelopmentProcess process)
     {
-        if (SelectedFrame is not { } frame)
-        {
-            return LibraryFrameError.MissingId;
-        }
-        if (!Enum.IsDefined(process))
-        {
-            return LibraryFrameError.InvalidDevelopRoute;
-        }
-
-        DevelopRouteSelection selection = DevelopRouteSelection.FromProcess(
-            process,
-            frame.Route.FilmEmulation,
-            frame.Route.FilmEmulationIntensity);
-        LibraryFrameError error = host.EditRoute(frame.Id, selection);
-        if (error == LibraryFrameError.None)
-        {
-            Select(frame.Id);
-        }
-        return error;
+        return RefreshAfterEdit(
+            routeEditor.SetDevelopmentProcess(SelectedFrame, process));
     }
 
     /// <summary>이 frame 에 담긴 현상 버전입니다. 최근에 담은 것이 뒤에 옵니다.</summary>
@@ -914,18 +500,14 @@ public sealed class DevelopPanelState
     /// 담는 것이 되돌리는 것을 뜻하지는 않습니다.
     /// </summary>
     public LibraryFrameError CaptureVersion(string name) =>
-        EditFrameRecord(record => LibraryVersions.Capture(
-            record,
-            Guid.NewGuid().ToString("D"),
-            name,
-            DateTimeOffset.UtcNow));
+        RefreshAfterEdit(versionPresets.CaptureVersion(SelectedFrame, name));
 
     /// <summary>담아 둔 버전의 recipe 로 되돌립니다. 버전 목록은 남습니다.</summary>
     public LibraryFrameError RestoreVersion(string versionId) =>
-        EditFrameRecord(record => LibraryVersions.Restore(record, versionId));
+        RefreshAfterEdit(versionPresets.RestoreVersion(SelectedFrame, versionId));
 
     public LibraryFrameError DeleteVersion(string versionId) =>
-        EditFrameRecord(record => LibraryVersions.Delete(record, versionId));
+        RefreshAfterEdit(versionPresets.DeleteVersion(SelectedFrame, versionId));
 
     /// <summary>
     /// 적어 둔 메타데이터를 바꿉니다. 레시피가 아니므로 미리보기를 다시 돌리지 않습니다 —
@@ -934,66 +516,32 @@ public sealed class DevelopPanelState
     public LibraryFrameError SetAppMetadata(
         Func<AppMetadataOverlay, AppMetadataOverlay> update)
     {
-        ArgumentNullException.ThrowIfNull(update);
-        if (SelectedFrame is not { } frame)
-        {
-            return LibraryFrameError.MissingId;
-        }
-        AppMetadataOverlay current = frame.AppMetadata ?? new AppMetadataOverlay();
-        AppMetadataOverlay next = update(current).Normalized();
-        if (next.IsEmpty)
-        {
-            return EditFrameRecord(record => AppMetadataWriter.Apply(record, null));
-        }
-        // 쓸 때마다 revision 이 오릅니다. macOS 가 같은 규칙으로 충돌을 알아챕니다.
-        next = next with
-        {
-            Revision = current.Revision + 1,
-            UpdatedAt = DateTimeOffset.UtcNow,
-        };
-        return EditFrameRecord(record => AppMetadataWriter.Apply(record, next));
-    }
-
-    private LibraryFrameError EditFrameRecord(
-        Func<System.Text.Json.Nodes.JsonObject, LibraryFrameWriteResult> edit)
-    {
-        if (SelectedFrame is not { } frame)
-        {
-            return LibraryFrameError.MissingId;
-        }
-        LibraryFrameError error = host.EditFrameRecord(frame.Id, edit);
-        if (error == LibraryFrameError.None)
-        {
-            Select(frame.Id);
-        }
-        return error;
+        return RefreshAfterEdit(versionPresets.SetAppMetadata(SelectedFrame, update));
     }
 
     /// <summary>
     /// 복사해 둔 현상 설정입니다. macOS 처럼 앱이 사는 동안만 남고 저장되지 않습니다 — 클립보드에
     /// 가까운 물건이지 카탈로그의 일부가 아닙니다.
     /// </summary>
-    public LibraryFrameSnapshot? CopiedSettings { get; private set; }
+    public LibraryFrameSnapshot? CopiedSettings => versionPresets.CopiedSettings;
 
-    public string? CopiedSettingsSourceName { get; private set; }
+    public string? CopiedSettingsSourceName => versionPresets.CopiedSettingsSourceName;
 
     /// <summary>
     /// macOS 의 붙여넣기 범위입니다. 한 번 정하면 다음 붙여넣기에도 그대로 쓰입니다.
     /// </summary>
-    public DevelopSettingsPasteScope PasteScope { get; set; } = DevelopSettingsPasteScope.All;
+    public DevelopSettingsPasteScope PasteScope
+    {
+        get => versionPresets.PasteScope;
+        set => versionPresets.PasteScope = value;
+    }
 
-    public IReadOnlyList<DevelopUserPreset> UserPresets { get; private set; } = [];
+    public IReadOnlyList<DevelopUserPreset> UserPresets => versionPresets.UserPresets;
 
     /// <summary>지금 프레임의 현상 설정을 복사해 둡니다.</summary>
     public bool CopyDevelopSettings()
     {
-        if (SelectedFrame is not { } frame)
-        {
-            return false;
-        }
-        CopiedSettings = frame;
-        CopiedSettingsSourceName = frame.DisplayName ?? Path.GetFileName(frame.SourcePath);
-        return true;
+        return versionPresets.CopyDevelopSettings(SelectedFrame);
     }
 
     /// <summary>
@@ -1002,20 +550,7 @@ public sealed class DevelopPanelState
     /// </summary>
     public LibraryFrameError PasteDevelopSettings()
     {
-        if (CopiedSettings is not { } source)
-        {
-            return LibraryFrameError.MissingId;
-        }
-        if (PasteScope.IsEmpty)
-        {
-            return LibraryFrameError.None;
-        }
-        if (SelectedFrame is not { } destination)
-        {
-            return LibraryFrameError.MissingId;
-        }
-        return EditFrameRecord(record =>
-            DevelopSettingsTransfer.Paste(record, source, destination, PasteScope));
+        return RefreshAfterEdit(versionPresets.PasteDevelopSettings(SelectedFrame));
     }
 
     /// <summary>
@@ -1024,60 +559,23 @@ public sealed class DevelopPanelState
     /// </summary>
     public void OpenUserPresets(string? path)
     {
-        userPresetPath = path;
-        UserPresets = string.IsNullOrWhiteSpace(path)
-            ? []
-            : DevelopUserPresetStore.Load(path);
+        versionPresets.OpenUserPresets(path);
     }
 
     /// <summary>지금 프레임의 현상 설정을 이름 붙여 프리셋으로 저장합니다.</summary>
     public DevelopUserPreset? SaveUserPreset(string name)
     {
-        if (SelectedFrame is not { } frame ||
-            string.IsNullOrWhiteSpace(name) ||
-            DevelopUserPresetStore.Capture(frame, name.Trim()) is not { } preset)
-        {
-            return null;
-        }
-        UserPresets = [.. UserPresets, preset];
-        PersistUserPresets();
-        return preset;
+        return versionPresets.SaveUserPreset(SelectedFrame, name);
     }
 
     public LibraryFrameError ApplyUserPreset(Guid id)
     {
-        if (UserPresets.FirstOrDefault(preset => preset.Id == id) is not { } chosen)
-        {
-            return LibraryFrameError.MissingId;
-        }
-        if (SelectedFrame is not { } destination)
-        {
-            return LibraryFrameError.MissingId;
-        }
-        return EditFrameRecord(record =>
-            DevelopUserPresetStore.Apply(record, chosen, destination));
+        return RefreshAfterEdit(versionPresets.ApplyUserPreset(SelectedFrame, id));
     }
 
     public bool DeleteUserPreset(Guid id)
     {
-        int before = UserPresets.Count;
-        UserPresets = [.. UserPresets.Where(preset => preset.Id != id)];
-        if (UserPresets.Count == before)
-        {
-            return false;
-        }
-        PersistUserPresets();
-        return true;
-    }
-
-    private string? userPresetPath;
-
-    private void PersistUserPresets()
-    {
-        if (userPresetPath is { Length: > 0 } path)
-        {
-            _ = DevelopUserPresetStore.Save(path, UserPresets);
-        }
+        return versionPresets.DeleteUserPreset(id);
     }
 
     public FilmEmulation FilmEmulation => SelectedFrame?.Route.FilmEmulation ?? FilmEmulation.None;
@@ -1088,160 +586,42 @@ public sealed class DevelopPanelState
     /// macOS 는 필름 룩을 digital source 에서만 적용합니다. 스캔 프레임에서는 고르는 자리
     /// 대신 그 안내를 냅니다.
     /// </summary>
-    public bool AppliesFilmLook => SelectedFrame?.Route.IsDigitalSource == true;
+    public bool AppliesFilmLook => DevelopRouteEditor.AppliesFilmLook(SelectedFrame);
 
     /// <summary>필름 룩을 고릅니다. <c>None</c> 이면 룩을 끕니다.</summary>
     public LibraryFrameError SetFilmEmulation(FilmEmulation emulation) =>
-        SetFilmLook(emulation, null);
+        RefreshAfterEdit(routeEditor.SetFilmEmulation(SelectedFrame, emulation));
 
     /// <summary>룩의 세기입니다. macOS 와 같이 0...1 로 자릅니다.</summary>
     public LibraryFrameError SetFilmEmulationIntensity(double intensity) =>
-        SetFilmLook(null, Math.Clamp(intensity, 0.0, 1.0));
-
-    private LibraryFrameError SetFilmLook(FilmEmulation? emulation, double? intensity)
-    {
-        if (SelectedFrame is not { } frame)
-        {
-            return LibraryFrameError.MissingId;
-        }
-        // 스캔 프레임에 룩을 적으면 macOS 가 내지 않는 단계가 걸립니다. 기록하지 않고 막습니다.
-        if (!AppliesFilmLook)
-        {
-            return LibraryFrameError.InvalidDevelopRoute;
-        }
-
-        LibraryFrameError error = host.EditRoute(
-            frame.Id,
-            new DevelopRouteSelection(
-                frame.Route.SourceSignalKind,
-                frame.Route.FilmType,
-                emulation ?? frame.Route.FilmEmulation,
-                intensity ?? frame.Route.FilmEmulationIntensity));
-        if (error == LibraryFrameError.None)
-        {
-            Select(frame.Id);
-        }
-        return error;
-    }
+        RefreshAfterEdit(routeEditor.SetFilmEmulationIntensity(SelectedFrame, intensity));
 
     /// <summary>macOS 와 같이 음화 route 에서만 자동 보정 토글을 보여 줍니다.</summary>
     public bool ShowsAutoCorrections =>
-        SelectedFrame?.Route.FilmType is FilmType.ColorNegative or FilmType.BlackAndWhiteNegative;
+        DevelopRouteEditor.ShowsAutoCorrections(SelectedFrame);
 
     public bool AutoLevels => SelectedFrame?.AutoLevels ?? false;
 
     public bool AutoNeutralBalance => SelectedFrame?.AutoNeutralBalance ?? false;
 
-    private LibraryFrameError SetAutoCorrection(bool? autoLevels, bool? neutralBalance)
-    {
-        if (SelectedFrame is not { } frame)
-        {
-            return LibraryFrameError.MissingId;
-        }
-        if (!ShowsAutoCorrections)
-        {
-            return LibraryFrameError.InvalidDevelopRoute;
-        }
-
-        LibraryFrameError error = host.Edit(
-            frame.Id,
-            new LibraryFrameEdit(
-                frame.Tone,
-                frame.ManualBase,
-                AutoLevels: autoLevels ?? frame.AutoLevels,
-                AutoNeutralBalance: neutralBalance ?? frame.AutoNeutralBalance));
-        if (error == LibraryFrameError.None)
-        {
-            Select(frame.Id);
-        }
-        return error;
-    }
-
     public LibraryFrameError SetStraightenAngle(double angle) =>
-        SetImageTransform(ImageTransform with { StraightenAngle = Math.Clamp(angle, -45.0, 45.0) });
+        RefreshAfterEdit(transformEditor.SetStraightenAngle(SelectedFrame, angle));
 
     /// <summary>
     /// Canvas crop session의 단일 commit 지점입니다. null은 전체 프레임을 뜻하며, drag 중에는
     /// 이 메서드를 호출하지 않아 preview/export와 catalog가 중간 선택 상태를 보지 않습니다.
     /// </summary>
     public LibraryFrameError SetCrop(ImageCropRect? crop) =>
-        SetImageTransform(ImageTransform with { Crop = crop });
+        RefreshAfterEdit(transformEditor.SetCrop(SelectedFrame, crop));
 
     /// <summary>
     /// 종횡비를 고릅니다. 원본은 비율과 crop 을 함께 지우고, 고정 비율은 그 비율로 가운데
     /// 정렬된 최대 crop 을 만듭니다 — macOS <c>applyCropAspect</c> 와 같습니다.
     /// </summary>
     public LibraryFrameError SetCropAspect(CropAspectOption option) =>
-        SelectedFrame is not { } frame
-            ? LibraryFrameError.MissingId
-            : SetImageTransform(CropAspect.Apply(
-                ImageTransform,
-                option,
-                frame.SourceMetadata?.PixelWidth ?? 0U,
-                frame.SourceMetadata?.PixelHeight ?? 0U));
+        RefreshAfterEdit(transformEditor.SetCropAspect(SelectedFrame, option));
 
-    private LibraryFrameError SetImageTransform(ImageTransformRecipe imageTransform)
-    {
-        ArgumentNullException.ThrowIfNull(imageTransform);
-        if (SelectedFrame is not { } frame)
-        {
-            return LibraryFrameError.MissingId;
-        }
-        if (!CanEditTone)
-        {
-            return LibraryFrameError.InvalidDevelopRoute;
-        }
-
-        LibraryFrameError error = host.Edit(
-            frame.Id,
-            new LibraryFrameEdit(frame.Tone, frame.ManualBase, ImageTransform: imageTransform));
-        if (error == LibraryFrameError.None)
-        {
-            Select(frame.Id);
-        }
-        return error;
-    }
-
-    private LibraryFrameError ApplyAutoAdjusted(LibraryFrameSnapshot adjusted)
-    {
-        LibraryFrameError error = host.Edit(
-            adjusted.Id,
-            new LibraryFrameEdit(
-                adjusted.Tone,
-                adjusted.ManualBase,
-                ColorModel: adjusted.ColorModel));
-        if (error == LibraryFrameError.None)
-        {
-            Select(adjusted.Id);
-        }
-        return error;
-    }
-
-    private LibraryFrameError SetTone(Func<ToneAdjustment, ToneAdjustment> update)
-    {
-        ArgumentNullException.ThrowIfNull(update);
-        if (SelectedFrame is not { } frame)
-        {
-            return LibraryFrameError.MissingId;
-        }
-        if (!CanEditTone)
-        {
-            return LibraryFrameError.InvalidDevelopRoute;
-        }
-
-        ToneAdjustment tone = update(frame.Tone);
-        LibraryFrameError error = host.Edit(
-            frame.Id,
-            new LibraryFrameEdit(tone, frame.ManualBase));
-        if (error == LibraryFrameError.None)
-        {
-            // 편집 뒤 snapshot 은 새 객체이므로 선택을 다시 잡습니다.
-            Select(frame.Id);
-        }
-        return error;
-    }
-
-    public CatalogStoreError Save() => host.Save();
+    public CatalogStoreError Save() => exports.Save();
 
     public Task<bool> ExportAsync(
         string destinationPath,
@@ -1249,17 +629,12 @@ public sealed class DevelopPanelState
         Action<DevelopExportOutcome> onCompleted,
         ExportEncodingOptions? encoding = null)
     {
-        ArgumentNullException.ThrowIfNull(onCompleted);
-        if (SelectedFrame is not { } frame)
-        {
-            onCompleted(new DevelopExportOutcome(
-                DevelopExportOutcomeKind.Refused,
-                null,
-                DevelopRequestRefusal.MissingManualBase,
-                null));
-            return Task.FromResult(true);
-        }
-        return host.ExportAsync(frame, destinationPath, format, onCompleted, encoding);
+        return exports.ExportAsync(
+            SelectedFrame,
+            destinationPath,
+            format,
+            onCompleted,
+            encoding);
     }
 
     /// <summary>
@@ -1268,61 +643,6 @@ public sealed class DevelopPanelState
     /// </summary>
     public static string Describe(DevelopExportOutcome outcome)
     {
-        ArgumentNullException.ThrowIfNull(outcome);
-        switch (outcome.Kind)
-        {
-            case DevelopExportOutcomeKind.Completed when outcome.Result is { } result:
-                if (!result.Succeeded)
-                {
-                    return $"Develop stopped at {Humanize(result.FailedStage)}: {result.FailureName}";
-                }
-                double milliseconds = result.WallMicroseconds / 1000.0;
-                return string.Create(
-                    CultureInfo.CurrentCulture,
-                    $"Exported {result.ImageWidth}×{result.ImageHeight} in {milliseconds:F0} ms");
-
-            case DevelopExportOutcomeKind.Refused:
-                return outcome.Refusal switch
-                {
-                    DevelopRequestRefusal.MissingManualBase =>
-                        "Set the film base (Dmin) before developing this frame.",
-                    DevelopRequestRefusal.MissingFilmStock =>
-                        "Select a film stock before developing this frame.",
-                    DevelopRequestRefusal.UnsupportedBaseEstimationMode =>
-                        "This film-base mode is not supported by the Windows engine yet.",
-                    DevelopRequestRefusal.UnsupportedDigitalSource =>
-                        "This frame is a rendered digital source, which cannot be developed yet.",
-                    DevelopRequestRefusal.UnsupportedPositiveFilm =>
-                        "Positive film development is not supported by the Windows engine yet.",
-                    DevelopRequestRefusal.InvalidDestination =>
-                        "Choose a full path to export to.",
-                    DevelopRequestRefusal.UnknownOutputFormat =>
-                        "That export format is not supported.",
-                    _ => "The develop request was refused.",
-                };
-
-            case DevelopExportOutcomeKind.Faulted:
-                return $"The engine failed: {outcome.FaultMessage}";
-
-            case DevelopExportOutcomeKind.Busy:
-                return "A develop is already running.";
-
-            default:
-                return "The develop produced no result.";
-        }
+        return DevelopExportOutcomePresenter.Describe(outcome);
     }
-
-    private static string Humanize(DevelopExportStage stage) => stage switch
-    {
-        DevelopExportStage.RequestValidation => "request validation",
-        DevelopExportStage.ObserveSourceBefore => "reading the source file",
-        DevelopExportStage.Decode => "decoding",
-        DevelopExportStage.ObserveSourceAfter => "re-checking the source file",
-        DevelopExportStage.FilmLookWorkspace => "preparing the Film Look",
-        DevelopExportStage.Develop => "developing",
-        DevelopExportStage.ToneAdjust => "tone adjustment",
-        DevelopExportStage.FilmLook => "the Film Look",
-        DevelopExportStage.Output => "writing the file",
-        _ => "an unknown stage",
-    };
 }

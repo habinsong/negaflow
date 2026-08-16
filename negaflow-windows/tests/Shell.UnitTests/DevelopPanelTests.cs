@@ -123,6 +123,47 @@ internal static class DevelopPanelTests
                 "panel_delete_version_leaves_the_recipe_alone");
             _ = panel.SetExposure(0.0);
 
+            Check(panel.SetAppMetadata(metadata => metadata with { Title = "  Archive title  " }) ==
+                    LibraryFrameError.None &&
+                panel.SelectedFrame?.AppMetadata?.Title == "Archive title" &&
+                panel.SelectedFrame.AppMetadata.Revision == 1UL,
+                "panel_metadata_normalizes_and_refreshes_the_frame");
+            Check(panel.SetAppMetadata(metadata => metadata with { Caption = "Caption" }) ==
+                    LibraryFrameError.None &&
+                panel.SelectedFrame?.AppMetadata?.Revision == 2UL,
+                "panel_metadata_increments_revision");
+
+            Check(panel.CopyDevelopSettings() &&
+                panel.CopiedSettings?.Id == "frame-1" &&
+                panel.CopiedSettingsSourceName == "IMG_0001.tif",
+                "panel_copies_develop_settings_with_source_name");
+            panel.PasteScope = new DevelopSettingsPasteScope(
+                Base: false,
+                Tone: true,
+                Color: false,
+                Detail: false,
+                Geometry: false);
+            Check(panel.Select("frame-2") &&
+                panel.SetExposure(-1.0) == LibraryFrameError.None &&
+                panel.PasteDevelopSettings() == LibraryFrameError.None &&
+                panel.Exposure == 0.0,
+                "panel_pastes_the_selected_settings_scope");
+            Check(panel.Select("frame-1"), "panel_reselects_source_after_paste");
+
+            string userPresetPath = Path.Combine(isolatedBase, "user-presets.json");
+            panel.OpenUserPresets(userPresetPath);
+            DevelopUserPreset? savedPreset = panel.SaveUserPreset("Archive preset");
+            Guid savedPresetId = savedPreset?.Id ?? Guid.Empty;
+            Check(savedPreset is not null && panel.UserPresets.Count == 1 &&
+                File.Exists(userPresetPath),
+                "panel_saves_user_preset_through_the_controller");
+            Check(panel.SetExposure(1.0) == LibraryFrameError.None &&
+                panel.ApplyUserPreset(savedPresetId) == LibraryFrameError.None &&
+                panel.Exposure == 0.0,
+                "panel_applies_user_preset_and_refreshes_the_frame");
+            Check(panel.DeleteUserPreset(savedPresetId) && panel.UserPresets.Count == 0,
+                "panel_deletes_user_preset");
+
             // 자동 보정 두 축은 음화에서만 열립니다. 양화에서도 켜지면 macOS 가 내지 않는
             // 단계가 걸려 결과가 갈립니다.
             Check(panel.ShowsAutoCorrections, "panel_negative_shows_auto_corrections");
