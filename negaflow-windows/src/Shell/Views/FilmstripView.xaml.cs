@@ -190,9 +190,17 @@ public sealed partial class FilmstripView : UserControl
         if (FrameStrip?.ItemsSource is not null)
         {
             object? selected = FrameStrip.SelectedItem;
-            FrameStrip.ItemsSource = null;
-            FrameStrip.ItemsSource = items;
-            FrameStrip.SelectedItem = selected;
+            isSynchronizingSelection = true;
+            try
+            {
+                FrameStrip.ItemsSource = null;
+                FrameStrip.ItemsSource = items;
+                FrameStrip.SelectedItem = selected;
+            }
+            finally
+            {
+                isSynchronizingSelection = false;
+            }
         }
         AutomationProperties.SetHelpText(
             ResizeThumb,
@@ -221,7 +229,7 @@ public sealed partial class FilmstripView : UserControl
     private void OnStateChanged(object? sender, ShellPreferences preferences)
     {
         _ = sender;
-        if (!isResizing)
+        if (!isResizing && Math.Abs(preferences.FilmstripHeight - liveHeight) > 0.01)
         {
             SetHeight(preferences.FilmstripHeight);
         }

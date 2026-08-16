@@ -9,6 +9,13 @@ public sealed record ShellPreferences
 {
     public WorkspaceModule SelectedWorkspace { get; init; } = WorkspaceModule.Develop;
 
+    /// <summary>
+    /// Library, Develop, Print가 함께 보는 현재 사진입니다. macOS
+    /// <c>workspace.activeFrameID</c>와 같은 presentation 상태이며 catalog 선택 집합과는
+    /// 별도로 저장합니다.
+    /// </summary>
+    public string? ActiveFrameId { get; init; }
+
     public bool IsSidebarVisible { get; init; } = true;
 
     public bool IsInspectorVisible { get; init; } = true;
@@ -92,6 +99,7 @@ public sealed record ShellPreferences
             SelectedWorkspace = Enum.IsDefined(SelectedWorkspace)
                 ? SelectedWorkspace
                 : WorkspaceModule.Develop,
+            ActiveFrameId = NormalizeActiveFrameId(ActiveFrameId),
             SidebarWidth = FiniteOrDefault(
                 SidebarWidth,
                 ShellLayoutMetrics.DevelopPanelDefaultWidth),
@@ -121,4 +129,10 @@ public sealed record ShellPreferences
 
     private static double FiniteOrDefault(double value, double fallback) =>
         double.IsFinite(value) ? value : fallback;
+
+    private static string? NormalizeActiveFrameId(string? value)
+    {
+        string? normalized = value?.Trim();
+        return string.IsNullOrEmpty(normalized) || normalized.Length > 256 ? null : normalized;
+    }
 }

@@ -39,14 +39,14 @@
 | 목표 | 상태 | 현재 확인 사실 | 수정할 것 | 수정한 것 | 검증한 것 |
 | --- | --- | --- | --- | --- | --- |
 | 1 | 미재현 | 사용자 보고: 후보 없음만 표시, 복제 도구 클리핑, 자동·가이드·브러시·복제·IR 동작 실패 | 실제 앱에서 다섯 경로를 각각 재현하고 macOS 동작·결과와 대조 | 없음 | 없음 |
-| 2 | 미재현 | 사용자 보고: 화면 크기·형태·라운딩·위치·정렬 불일치, 현상 버튼 누락, 미구현 UI와 미연결 백엔드 존재 | 스크린샷·SwiftUI·고정 UI metric을 화면별로 대조 | 없음 | 없음 |
-| 3 | 미재현 | 사용자 보고: Library 가져오기 뒤 Develop 이미지·썸네일·하단 탭 단절 | frame selection·interaction scope·thumbnail·filmstrip·workspace 전달 경로 점검 | 없음 | 없음 |
+| 2 | 재현 | 2560×1392 실제 설치본과 `print_overview.png`를 대조해 Print 파일 트리 누락, 빈 활성 프레임 헤더, 패널·검사기 차이를 확인했다. 전체 화면별 치수·라운딩·위치 대조는 아직 남았다. | 스크린샷·SwiftUI·고정 UI metric을 화면별로 계속 대조 | Print 왼쪽 파일 영역을 macOS `PrintWorkspaceSidebar`와 같은 Library 파일 투영으로 연결하고 활성 프레임 헤더를 연결했다. | `computer-use`로 수정 전 빈 패널과 수정 후 폴더 3개·사진 17장 트리를 캡처했다. 전체 UI parity는 미검증이다. |
+| 3 | 부분 검증 | `negaflow_test`의 `OpticFilm8100_frame_1.tiff`를 Library에서 고르면 같은 frame id가 Develop 중앙 이미지·왼쪽 선택기·하단 filmstrip에 전달된다. | 다중 선택·오프라인·삭제·재연결·키보드 경로와 macOS 상호작용 대조 | `ActiveFrameId`를 LibraryHost와 presentation에 연결하고, Library 선택 복원 및 Filmstrip 재진입 덮어쓰기를 수정했다. | `activeFrameId=7bcc36cb-cda8-46bd-9d2e-b5896e45ceac`, Develop 중앙 8100 이미지와 선택 filmstrip 카드, 재시작 뒤 같은 id 유지 확인. |
 | 4 | 미재현 | 사용자 보고: Develop 좌측 탭이 macOS와 다르고 한 장 가져오기 흐름으로 축소됨 | macOS Develop 좌측 6탭과 Library interaction scope를 그대로 연결 | 없음 | 없음 |
 | 5 | 미재현 | 사용자 보고: 문자열 클리핑·가림 | 여섯 로케일·DPI·창 크기별 실제 렌더 대조 | 없음 | 없음 |
 | 6 | 미재현 | 사용자 보고: Develop 우측 슬라이더 반영이 수초 지연 | 입력→recipe→preview scheduling→native render→present 지연 계측 및 실시간 갱신 | 없음 | 없음 |
 | 7 | 미재현 | 사용자 보고: 자동 톤·자동 색상·자동 레벨이 실패하거나 매우 느림 | 세 기능을 독립 재현하고 macOS 결과·지연과 대조 | 없음 | 없음 |
 | 8 | 미재현 | 사용자 보고: crop·rotate·flip 등 기하 편집이 매우 느림 | gesture→transform preview 경로와 불필요한 전체 렌더·I/O 점검 | 없음 | 없음 |
-| 9 | 미재현 | 사용자 보고: Print에 이미지가 전달되지 않고 UI/UX도 불일치 | Library/Develop 선택 집합→Print layout·preview 전달과 macOS 화면 대조 | 없음 | 없음 |
+| 9 | 부분 검증 | Library에서 고른 8100 frame이 Print 미리보기와 하단 filmstrip에 전달되며 재시작 뒤에도 유지된다. 수정 전에는 첫 테스트 fixture로 되돌아가고 왼쪽이 항상 "사진 없음"이었다. | Print의 나머지 Layout·Content·Output 기능과 치수·라운딩·간격·상태를 macOS 기준으로 대조 | Print filmstrip을 공유 선택에 연결하고, 왼쪽 파일 트리·활성 프레임 헤더·트리 클릭 선택을 macOS `PrintWorkspaceSidebar.swift` 기준으로 연결했다. | `computer-use`에서 트리의 `OpticFilm8100_frame_1.tiff` 클릭→상단/좌측/우측 헤더→미리보기→filmstrip 동일 프레임, 앱 재시작 뒤 동일 상태를 확인했다. 전체 Print parity는 미검증이다. |
 | 10 | 미재현 | 전체 macOS UI/UX·기능, 8100/V700 스캔, 보정, 인화, 내보내기, 지정 입력·IR 검증 요구 | 1~9를 닫은 뒤 실제 장치·입력으로 전 구간 검증 | 없음 | 없음 |
 
 UI 완료 판정에는 각 화면·상태별로 다음 증거가 모두 필요하다: macOS에 해당 요소가 존재하는지, 같은 동작인지, 같은 위치인지, 같은 높이·너비인지, 같은 모양인지, 같은 모서리 반경인지, 문자열이 잘리거나 가리지 않는지, 백엔드가 실제로 연결됐는지, 같은 입력 상태에서 렌더한 Windows 캡처가 기준과 일치하는지. 하나라도 없으면 완료가 아니다.
@@ -106,3 +106,11 @@ Library·Develop·Print는 하나의 catalog와 하나의 사용자 작업 흐�
 - 수정할 것: `computer-use` 캡처에서 다시 확인된 한국어 글자 깨짐·잘림, 좌측 패널의 macOS 불일치, 접근성 트리 미노출을 목표 2·5와 다국어 검증 항목에서 수정한다.
 - 수정한 것: 이전에 창이 열리지 않던 unpackaged 설치본을 package identity를 가진 최신 설치본으로 교체했다.
 - 검증한 것: `Negaflow.Windows_1.0.9.0_x64__esnvpjf0wq370`, `InstallLocation=C:\Users\habin\AppData\Local\Negaflow\App`, `Status=Ok`; `computer-use`가 `Negaflow.Windows_esnvpjf0wq370!App`의 2560×1392 창을 캡처했다. 같은 시점의 설치본 SANE `detect`는 GT-X900과 OpticFilm 8100을 모두 반환했다.
+
+### CP4 — Library→Develop→Print 공유 활성 프레임
+
+- 한 것: `C:\Users\habin\OneDrive\바탕 화면\negaflow_test` 카탈로그에서 `OpticFilm8100_frame_1.tiff`를 선택하고 Library→Develop→Print를 이동한 뒤 앱을 재시작해 같은 frame id·이미지·썸네일·filmstrip·인화 대상이 유지되는지 확인했다. macOS `PrintWorkspaceSidebar.swift`, `ContentView+PrintWorkspace.swift`, `print_overview.png`를 함께 대조했다.
+- 안 한 것: 이 체크포인트는 GrainMend 다섯 경로, 실제 장치 신규 스캔, Print 전체 기능·픽셀/치수 parity, 여섯 언어 렌더링, 전체 성능 목표를 완료하지 않았다.
+- 수정할 것: 목표 1의 GrainMend 자동·가이드·브러시·복제·IR 실제 입력 검증으로 이동한다. UI/UX 전체 대조는 화면별 metric·상태·언어 증거가 모일 때까지 완료로 표시하지 않는다.
+- 수정한 것: LibraryHost의 선택 집합과 활성 한 장을 분리하고 `presentation.json`에 활성 frame id를 저장했다. Library의 그룹화된 `GridView` 선택 delta를 공유 상태에 반영하고 projection 교체 전체에서 프로그램 선택 이벤트를 차단했다. 모든 presentation 변경 때 Filmstrip이 불필요하게 항목을 재바인딩하면서 이전 선택으로 되돌리던 재진입을 제거했다. Develop·Print filmstrip과 Print 미리보기를 같은 활성 frame에 연결했다. Print 왼쪽의 고정 빈 상태를 Library와 같은 폴더/사진 트리로 교체하고 트리 선택, 상단·좌측·우측 활성 프레임명을 연결했다.
+- 검증한 것: 실제 설치본 2560×1392 화면에서 `activeFrameId=7bcc36cb-cda8-46bd-9d2e-b5896e45ceac`, Develop 중앙 이미지·왼쪽 선택기·하단 선택 카드, Print 파일 트리·미리보기·하단 선택 카드·세 헤더가 모두 `OpticFilm8100_frame_1.tiff`를 가리켰다. 재시작 뒤 같은 id가 유지됐다. 최종 `scripts/local-ci.ps1` 종료 코드는 0이고 로그는 `out\logs\local-ci-20260817-010313.log`, setup SHA-256은 `855f19360a5e7a19d4540255ddbcc2ec80bc8d4c021a51b3f452fe7d1032e742`다. native x64 Release 71/71, catalog 721 assertions, shell 909 assertions를 확인했고 setup 설치, package identity, 실제 창 생성, 제거를 통과했다.

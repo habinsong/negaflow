@@ -19,6 +19,9 @@ public sealed class WorkspacePresentationState
     public void SelectWorkspace(WorkspaceModule module) =>
         settingsStore.Update(value => value with { SelectedWorkspace = module });
 
+    public void SetActiveFrame(string? frameId) =>
+        settingsStore.Update(value => value with { ActiveFrameId = frameId });
+
     public void SetAppearance(AppearanceMode appearance) =>
         settingsStore.Update(value => value with { Appearance = appearance });
 

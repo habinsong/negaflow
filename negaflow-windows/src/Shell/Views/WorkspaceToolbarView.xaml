@@ -51,7 +51,13 @@
             Orientation="Horizontal"
             Spacing="6">
             <FontIcon FontSize="11" Glyph="&#xE72E;" />
-            <TextBlock x:Uid="noSelection" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            <TextBlock
+                x:Name="ActiveFrameText"
+                x:Uid="noSelection"
+                MaxWidth="520"
+                FontSize="12"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                TextTrimming="CharacterEllipsis" />
         </StackPanel>
 
         <Grid Grid.Column="3" ColumnSpacing="10">

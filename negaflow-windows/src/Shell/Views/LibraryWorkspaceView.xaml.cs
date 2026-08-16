@@ -40,6 +40,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
     private LibraryQuickFilterState quickFilters = LibraryQuickFilterState.None;
     private LibrarySourceKind sourceKind = LibrarySourceKind.Importing;
     private bool isSynchronizingFilters;
+    private bool isSynchronizingFrameSelection;
 
     public LibraryWorkspaceView()
     {
@@ -99,6 +100,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
             {
                 return;
             }
+            host.ReconcileActiveFrameAvailability();
             allItems = LibraryFrameListItems.From(host.Frames, host.SourceAvailabilityByFrameId);
             ShowFilteredItems();
         });
@@ -225,10 +227,30 @@ public sealed partial class LibraryWorkspaceView : UserControl
     private void OnFrameSelectionChanged(object sender, SelectionChangedEventArgs args)
     {
         _ = sender;
-        _ = args;
-        libraryHost?.SetSelection(FrameListView.SelectedItems
-            .OfType<LibraryFrameListItem>()
-            .Select(item => item.Id));
+        if (isSynchronizingFrameSelection)
+        {
+            return;
+        }
+        if (libraryHost is { } host)
+        {
+            // Grouped GridView에서는 SelectionChanged 시점의 SelectedItems가 이전 collection
+            // snapshot을 돌려줄 수 있습니다. 이벤트가 보장하는 removed/added delta를 공유 선택에
+            // 적용해야 화면의 선택과 Develop active frame이 같은 순간에 바뀝니다.
+            List<string> next = [.. host.SelectedFrameIds];
+            foreach (LibraryFrameListItem removed in args.RemovedItems.OfType<LibraryFrameListItem>())
+            {
+                next.RemoveAll(id => string.Equals(id, removed.Id, StringComparison.Ordinal));
+            }
+            LibraryFrameListItem[] added = [.. args.AddedItems.OfType<LibraryFrameListItem>()];
+            foreach (LibraryFrameListItem item in added)
+            {
+                if (!next.Contains(item.Id, StringComparer.Ordinal))
+                {
+                    next.Add(item.Id);
+                }
+            }
+            host.SetSelection(next, added.LastOrDefault()?.Id);
+        }
         SynchronizeDevelopDefaults();
     }
 
@@ -913,17 +935,26 @@ public sealed partial class LibraryWorkspaceView : UserControl
             libraryHost.FolderAvailabilityById,
             viewMode,
             selectedFilmType);
-        if (viewMode is LibraryBrowserViewMode.Folders or LibraryBrowserViewMode.FilmType)
+        isSynchronizingFrameSelection = true;
+        try
         {
-            FolderGroupedItems.Source = projection.FolderSections;
-            FrameListView.ItemsSource = FolderGroupedItems.View;
+            if (viewMode is LibraryBrowserViewMode.Folders or LibraryBrowserViewMode.FilmType)
+            {
+                FolderGroupedItems.Source = projection.FolderSections;
+                FrameListView.ItemsSource = FolderGroupedItems.View;
+            }
+            else
+            {
+                FolderGroupedItems.Source = null;
+                FrameListView.ItemsSource = projection.Items;
+            }
+            LibraryCountText.Text = projection.MatchedCount.ToString(CultureInfo.CurrentCulture);
+            SynchronizeFrameSelection(projection.Items);
         }
-        else
+        finally
         {
-            FolderGroupedItems.Source = null;
-            FrameListView.ItemsSource = projection.Items;
+            isSynchronizingFrameSelection = false;
         }
-        LibraryCountText.Text = projection.MatchedCount.ToString(CultureInfo.CurrentCulture);
         UpdateViewModeControls();
         SynchronizeDevelopDefaults();
         SynchronizeCulling(items);
@@ -1662,6 +1693,41 @@ public sealed partial class LibraryWorkspaceView : UserControl
             scannerTrust,
             uiDispatcher);
         scanSession.Changed += OnScanSessionChanged;
+    }
+
+    private void SynchronizeFrameSelection(IReadOnlyList<LibraryFrameListItem> visibleItems)
+    {
+        if (libraryHost is null)
+        {
+            return;
+        }
+        Dictionary<string, LibraryFrameListItem> byId = visibleItems.ToDictionary(
+            item => item.Id,
+            StringComparer.Ordinal);
+        FrameListView.SelectionChanged -= OnFrameSelectionChanged;
+        try
+        {
+            FrameListView.SelectedItems.Clear();
+            foreach (string frameId in libraryHost.SelectedFrameIds.Where(id =>
+                         !string.Equals(id, libraryHost.ActiveFrameId, StringComparison.Ordinal)))
+            {
+                if (byId.TryGetValue(frameId, out LibraryFrameListItem? item))
+                {
+                    FrameListView.SelectedItems.Add(item);
+                }
+            }
+            if (libraryHost.ActiveFrameId is { } activeFrameId &&
+                byId.TryGetValue(activeFrameId, out LibraryFrameListItem? active))
+            {
+                // 마지막에 넣은 항목이 WinUI의 active item이 되므로 multi-selection도 보존됩니다.
+                FrameListView.SelectedItems.Add(active);
+                FrameListView.ScrollIntoView(active);
+            }
+        }
+        finally
+        {
+            FrameListView.SelectionChanged += OnFrameSelectionChanged;
+        }
     }
 
     private void OnScanSessionChanged(object? sender, EventArgs args)

@@ -2,6 +2,7 @@ using Microsoft.UI.Text;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
+using Negaflow.Catalog;
 using Negaflow.Shell.Localization;
 
 namespace Negaflow.Shell.Views;
@@ -9,6 +10,7 @@ namespace Negaflow.Shell.Views;
 public sealed partial class WorkspaceToolbarView : UserControl
 {
     private WorkspacePresentationState? workspaceState;
+    private LibraryHostService? libraryHost;
 
     public WorkspaceToolbarView()
     {
@@ -30,13 +32,40 @@ public sealed partial class WorkspaceToolbarView : UserControl
 
     public void SetQuickExportEnabled(bool isEnabled) => QuickExportButton.IsEnabled = isEnabled;
 
-    public void Initialize(WorkspacePresentationState state)
+    public void Initialize(WorkspacePresentationState state, LibraryHostService? host = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         workspaceState = state;
+        libraryHost = host;
         state.Changed += OnStateChanged;
+        if (libraryHost is not null)
+        {
+            libraryHost.SelectionChanged += OnLibrarySelectionChanged;
+        }
         UpdateState(state.Current);
+        UpdateActiveFrame();
         Unloaded += OnUnloaded;
+    }
+
+    private void OnLibrarySelectionChanged(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        UpdateActiveFrame();
+    }
+
+    private void UpdateActiveFrame()
+    {
+        LibraryFrameSnapshot? frame = libraryHost?.ActiveFrameId is { } activeFrameId
+            ? libraryHost.Frames.FirstOrDefault(candidate =>
+                string.Equals(candidate.Id, activeFrameId, StringComparison.Ordinal))
+            : null;
+        string text = frame is null
+            ? AppResources.Get("noSelection", "Text")
+            : LibraryFrameNaming.DisplayName(frame);
+        ActiveFrameText.Text = text;
+        AutomationProperties.SetName(ActiveFrameText, text);
+        ToolTipService.SetToolTip(ActiveFrameText, text);
     }
 
     private void OnLibraryClick(object sender, RoutedEventArgs args)
@@ -193,6 +222,10 @@ public sealed partial class WorkspaceToolbarView : UserControl
         if (workspaceState is not null)
         {
             workspaceState.Changed -= OnStateChanged;
+        }
+        if (libraryHost is not null)
+        {
+            libraryHost.SelectionChanged -= OnLibrarySelectionChanged;
         }
     }
 }

@@ -34,6 +34,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private AutoAdjustCoordinator? autoAdjustCoordinator;
     private WriteableBitmap? previewBitmap;
     private bool isSynchronizingInspector;
+    private bool isSynchronizingFrameSelection;
     private bool isSynchronizingInspectorPresentation;
     private bool isInspectorPresentationReady;
     private Negaflow.Shell.Library.ThumbnailService? thumbnails;
@@ -236,6 +237,9 @@ public sealed partial class DevelopWorkspaceView : UserControl
         DevelopInspectorContent.Visibility = hasFrames ? Visibility.Visible : Visibility.Collapsed;
         if (!hasFrames)
         {
+            string noFrame = AppResources.Get("noFrame", "Text");
+            NoFrameHeaderText.Text = noFrame;
+            ToolTipService.SetToolTip(NoFrameHeaderText, noFrame);
             FrameSelector.ItemsSource = null;
             Filmstrip.ShowFrames([], -1);
             HistogramView.Clear();
@@ -244,10 +248,24 @@ public sealed partial class DevelopWorkspaceView : UserControl
             return;
         }
 
-        FrameSelector.ItemsSource = items;
-        FrameSelector.SelectedIndex = 0;
-        // 필름스트립과 왼쪽 목록은 같은 항목을 봅니다. 썸네일이 도착하면 둘 다 채워집니다.
-        Filmstrip.ShowFrames(items, 0);
+        int selectedIndex = IndexOf(items, libraryHost.ActiveFrameId);
+        if (selectedIndex < 0)
+        {
+            selectedIndex = 0;
+        }
+        isSynchronizingFrameSelection = true;
+        try
+        {
+            FrameSelector.ItemsSource = items;
+            FrameSelector.SelectedIndex = selectedIndex;
+            // 필름스트립과 왼쪽 목록은 같은 항목을 봅니다. 썸네일이 도착하면 둘 다 채워집니다.
+            Filmstrip.ShowFrames(items, selectedIndex);
+        }
+        finally
+        {
+            isSynchronizingFrameSelection = false;
+        }
+        ActivateFrame(items[selectedIndex], selectedIndex, publishSelection: false);
         foreach (LibraryFrameListItem item in items)
         {
             if (thumbnails?.TryGet(item.Id) is not null)
@@ -512,14 +530,34 @@ public sealed partial class DevelopWorkspaceView : UserControl
     {
         _ = sender;
         _ = args;
-        if (panel is null || FrameSelector.SelectedItem is not LibraryFrameListItem item)
+        if (isSynchronizingFrameSelection || panel is null ||
+            FrameSelector.SelectedItem is not LibraryFrameListItem item)
+        {
+            return;
+        }
+
+        ActivateFrame(item, FrameSelector.SelectedIndex, publishSelection: true);
+    }
+
+    private void ActivateFrame(
+        LibraryFrameListItem item,
+        int selectedIndex,
+        bool publishSelection)
+    {
+        if (panel is null)
         {
             return;
         }
 
         CancelCrop();
+        if (publishSelection)
+        {
+            libraryHost?.SetSelection([item.Id], item.Id);
+        }
         panel.Select(item.Id);
-        Filmstrip.SynchronizeSelection(FrameSelector.SelectedIndex);
+        Filmstrip.SynchronizeSelection(selectedIndex);
+        NoFrameHeaderText.Text = item.DisplayName;
+        ToolTipService.SetToolTip(NoFrameHeaderText, item.DisplayName);
         UpdateSelectedFrameText();
         SynchronizeInspectorValues();
         SyncBaseControls();
@@ -533,6 +571,22 @@ public sealed partial class DevelopWorkspaceView : UserControl
                 RefusalFor(item.Frame),
                 null));
         RequestPreview();
+    }
+
+    private static int IndexOf(IReadOnlyList<LibraryFrameListItem> items, string? frameId)
+    {
+        if (frameId is null)
+        {
+            return -1;
+        }
+        for (int index = 0; index < items.Count; ++index)
+        {
+            if (string.Equals(items[index].Id, frameId, StringComparison.Ordinal))
+            {
+                return index;
+            }
+        }
+        return -1;
     }
 
     private void SynchronizeInspectorValues()
@@ -4081,7 +4135,32 @@ public sealed partial class DevelopWorkspaceView : UserControl
     {
         _ = sender;
         _ = args;
+        SynchronizeSharedSelection();
         UpdateExportPreview();
+    }
+
+    private void SynchronizeSharedSelection()
+    {
+        if (libraryHost?.ActiveFrameId is not { } activeFrameId ||
+            FrameSelector.ItemsSource is not IReadOnlyList<LibraryFrameListItem> items)
+        {
+            return;
+        }
+        int index = IndexOf(items, activeFrameId);
+        if (index < 0 || index == FrameSelector.SelectedIndex)
+        {
+            return;
+        }
+        isSynchronizingFrameSelection = true;
+        try
+        {
+            FrameSelector.SelectedIndex = index;
+        }
+        finally
+        {
+            isSynchronizingFrameSelection = false;
+        }
+        ActivateFrame(items[index], index, publishSelection: false);
     }
 
     private ExportNamingContext NamingContextFor(LibraryFrameSnapshot frame) =>

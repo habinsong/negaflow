@@ -27,6 +27,7 @@ public sealed partial class PrintWorkspaceView : UserControl
         workspaceState = state;
         state.Changed += OnStateChanged;
         Filmstrip.Initialize(state);
+        Filmstrip.FrameSelected += OnPrintFilmstripFrameSelected;
         StatusBar.Initialize(nativeEngineStatus);
         UpdateState(state.Current);
         SynchronizePrint();
@@ -150,5 +151,6 @@ public sealed partial class PrintWorkspaceView : UserControl
         {
             workspaceState.Changed -= OnStateChanged;
         }
+        Filmstrip.FrameSelected -= OnPrintFilmstripFrameSelected;
     }
 }

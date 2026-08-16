@@ -23,6 +23,9 @@ public sealed partial class PrintWorkspaceView
 {
     private LibraryHostService? libraryHost;
     private bool isSynchronizingPrint;
+    private IReadOnlyList<LibraryFrameListItem> printFilmstripItems = [];
+    private readonly Dictionary<string, TreeViewNode> printSourceNodesByFrameId =
+        new(StringComparer.Ordinal);
 
     /// <summary>고르개 한 줄입니다. 값과 보이는 이름을 함께 듭니다.</summary>
     private sealed record PrintChoice<T>(T Value, string Label);
@@ -57,7 +60,15 @@ public sealed partial class PrintWorkspaceView
 
     private void OnPrintThumbnailReady(string frameId)
     {
-        _ = frameId;
+        if (thumbnails?.TryGet(frameId) is { } jpeg)
+        {
+            LibraryFrameListItem? item = printFilmstripItems.FirstOrDefault(candidate =>
+                string.Equals(candidate.Id, frameId, StringComparison.Ordinal));
+            if (item is not null)
+            {
+                item.Thumbnail = LibraryWorkspaceView.DecodeThumbnail(jpeg);
+            }
+        }
         DrawPrintPreview();
     }
 
@@ -72,6 +83,9 @@ public sealed partial class PrintWorkspaceView
         {
             thumbnails?.Request(frame);
         }
+        RebuildPrintFilesTree();
+        SynchronizePrintFilmstrip();
+        SynchronizePrintSourceSidebar();
         SynchronizePrint();
     }
 
@@ -79,7 +93,135 @@ public sealed partial class PrintWorkspaceView
     {
         _ = sender;
         _ = args;
+        SynchronizePrintFilmstrip();
+        if (printSourceNodesByFrameId.Count != HostFrameCount())
+        {
+            RebuildPrintFilesTree();
+        }
+        SynchronizePrintSourceSidebar();
         SynchronizePrint();
+    }
+
+    private int HostFrameCount() => libraryHost?.Frames.Count ?? 0;
+
+    /// <summary>
+    /// macOS PrintWorkspaceSidebar의 Files 탭과 같은 폴더/사진 트리입니다. Library와 같은
+    /// 투영을 사용해 인화 화면만 별도의 파일 목록을 갖지 않게 합니다.
+    /// </summary>
+    private void RebuildPrintFilesTree()
+    {
+        PrintFilesSourceTree.RootNodes.Clear();
+        printSourceNodesByFrameId.Clear();
+        if (libraryHost is null)
+        {
+            return;
+        }
+        LibraryBrowserProjection projection = LibraryBrowserProjector.Create(
+            LibraryFrameListItems.From(
+                libraryHost.Frames,
+                libraryHost.SourceAvailabilityByFrameId),
+            libraryHost.Folders,
+            libraryHost.FolderAvailabilityById,
+            LibraryBrowserViewMode.Folders);
+        foreach (LibraryBrowserFolderSection section in projection.FolderSections)
+        {
+            var folder = new TreeViewNode
+            {
+                Content = LibrarySourceNode.Folder(
+                    section.Title,
+                    AppResources.FormatIntegers("libraryFolderFrameCount", "Text", section.Count)),
+                IsExpanded = true,
+            };
+            foreach (LibraryFrameListItem item in section.Items)
+            {
+                var frameNode = new TreeViewNode
+                {
+                    Content = LibrarySourceNode.Frame(item.DisplayName, item.Id),
+                };
+                folder.Children.Add(frameNode);
+                printSourceNodesByFrameId[item.Id] = frameNode;
+            }
+            PrintFilesSourceTree.RootNodes.Add(folder);
+        }
+    }
+
+    private void SynchronizePrintSourceSidebar()
+    {
+        string? activeFrameId = libraryHost?.ActiveFrameId;
+        LibraryFrameSnapshot? activeFrame = activeFrameId is null
+            ? null
+            : libraryHost?.Frames.FirstOrDefault(frame =>
+                string.Equals(frame.Id, activeFrameId, StringComparison.Ordinal));
+        string title = activeFrame is null
+            ? AppResources.Get("noFrame", "Text")
+            : LibraryFrameNaming.DisplayName(activeFrame);
+        NoFrameLeftHeaderText.Text = title;
+        NoFrameRightHeaderText.Text = title;
+        ToolTipService.SetToolTip(NoFrameLeftHeaderText, title);
+        ToolTipService.SetToolTip(NoFrameRightHeaderText, title);
+
+        bool hasFrames = libraryHost?.Frames.Count > 0;
+        PrintFilesSourceTree.Visibility = hasFrames ? Visibility.Visible : Visibility.Collapsed;
+        NoFrameLeftPanel.Visibility = hasFrames ? Visibility.Collapsed : Visibility.Visible;
+        if (activeFrameId is not null &&
+            printSourceNodesByFrameId.TryGetValue(activeFrameId, out TreeViewNode? selectedNode))
+        {
+            PrintFilesSourceTree.SelectedNode = selectedNode;
+        }
+    }
+
+    private void OnPrintFilesTreeItemInvoked(TreeView sender, TreeViewItemInvokedEventArgs args)
+    {
+        _ = sender;
+        if (args.InvokedItem is TreeViewNode
+            {
+                Content: LibrarySourceNode { FrameId: { } frameId },
+            })
+        {
+            libraryHost?.SetSelection([frameId], frameId);
+        }
+    }
+
+    private void SynchronizePrintFilmstrip()
+    {
+        if (libraryHost is null)
+        {
+            Filmstrip.ShowFrames([], -1);
+            printFilmstripItems = [];
+            return;
+        }
+        printFilmstripItems = LibraryFrameListItems.From(
+            libraryHost.Frames,
+            libraryHost.SourceAvailabilityByFrameId);
+        int selectedIndex = 0;
+        if (libraryHost.ActiveFrameId is { } activeFrameId)
+        {
+            int found = printFilmstripItems
+                .Select((item, index) => (item, index))
+                .FirstOrDefault(entry => string.Equals(
+                    entry.item.Id,
+                    activeFrameId,
+                    StringComparison.Ordinal)).index;
+            selectedIndex = found;
+        }
+        foreach (LibraryFrameListItem item in printFilmstripItems)
+        {
+            if (thumbnails?.TryGet(item.Id) is { } jpeg)
+            {
+                item.Thumbnail = LibraryWorkspaceView.DecodeThumbnail(jpeg);
+            }
+            else
+            {
+                thumbnails?.Request(item.Frame);
+            }
+        }
+        Filmstrip.ShowFrames(printFilmstripItems, selectedIndex);
+    }
+
+    private void OnPrintFilmstripFrameSelected(object? sender, LibraryFrameListItem item)
+    {
+        _ = sender;
+        libraryHost?.SetSelection([item.Id], item.Id);
     }
 
     private void LocalizePrintInspector()

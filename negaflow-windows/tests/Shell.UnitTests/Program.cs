@@ -112,6 +112,7 @@ internal static class Program
     {
         var preferences = new ShellPreferences();
         Check(preferences.SelectedWorkspace == WorkspaceModule.Develop, "default_workspace");
+        Check(preferences.ActiveFrameId is null, "default_active_frame");
         Check(preferences.IsSidebarVisible, "sidebar_visible");
         Check(preferences.IsInspectorVisible, "inspector_visible");
         Check(preferences.IsFilmstripVisible, "filmstrip_visible");
@@ -129,6 +130,7 @@ internal static class Program
         ShellPreferences normalized = new ShellPreferences
         {
             SelectedWorkspace = (WorkspaceModule)99,
+            ActiveFrameId = new string('x', 257),
             SidebarWidth = double.NaN,
             InspectorWidth = double.PositiveInfinity,
             FilmstripHeight = 999,
@@ -139,6 +141,7 @@ internal static class Program
         }.Normalize();
 
         Check(normalized.SelectedWorkspace == WorkspaceModule.Develop, "normalize_workspace");
+        Check(normalized.ActiveFrameId is null, "normalize_active_frame");
         Check(normalized.SidebarWidth == 430, "normalize_sidebar_width");
         Check(normalized.InspectorWidth == 430, "normalize_inspector_width");
         Check(normalized.FilmstripHeight == 340, "normalize_filmstrip_height");
@@ -4376,6 +4379,10 @@ internal static class Program
 
             Check(host.Open(roots) == LibraryHostState.Open, "library_host_open");
             Check(host.Frames.Count == 1, "library_host_loads_frames");
+            Check(host.RestoreActiveFrame("frame-1") == "frame-1" &&
+                host.ActiveFrameId == "frame-1" &&
+                host.SelectedFrameIds.SequenceEqual(["frame-1"]),
+                "library_host_restores_shared_active_frame");
 
             string oldRelinkPath = Path.Combine(isolatedBase, "missing", "relink-source.tif");
             string newRelinkPath = Path.Combine(isolatedBase, "recovered", "relink-source.tif");
@@ -4384,6 +4391,9 @@ internal static class Program
             File.WriteAllBytes(oldRelinkPath, [4, 5, 6]);
             Check(host.Import([oldRelinkPath], DevelopmentProcess.C41).Rows.Count == 1,
                 "library_relink_imports_source");
+            Check(host.ActiveFrameId == host.Frames[^1].Id &&
+                host.SelectedFrameIds.SequenceEqual([host.Frames[^1].Id]),
+                "library_import_selects_the_newest_frame_for_develop");
             string incompatibleRelinkPath = Path.Combine(
                 isolatedBase, "recovered", "incompatible-source.tif");
             File.WriteAllBytes(incompatibleRelinkPath, [9, 9, 9]);

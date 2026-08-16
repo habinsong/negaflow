@@ -49,10 +49,57 @@
                     <TextBlock x:Name="NoFrameLeftHeaderText" Grid.Column="2" VerticalAlignment="Center" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                 </Grid>
                 <Border Grid.Row="1" Background="{ThemeResource NegaflowDividerBrush}" />
-                <StackPanel Grid.Row="2" Margin="14" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
-                    <FontIcon FontSize="28" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE91B;" />
-                    <TextBlock x:Name="NoFrameLeftText" FontSize="14" FontWeight="SemiBold" />
-                </StackPanel>
+                <Grid Grid.Row="2">
+                    <TreeView
+                        x:Name="PrintFilesSourceTree"
+                        Padding="4,6"
+                        AutomationProperties.AutomationId="negaflow.print.sources.files"
+                        CanDragItems="False"
+                        CanReorderItems="False"
+                        ItemInvoked="OnPrintFilesTreeItemInvoked"
+                        SelectionMode="Single"
+                        Visibility="Collapsed">
+                        <TreeView.ItemTemplate>
+                            <DataTemplate x:DataType="TreeViewNode">
+                                <TreeViewItem
+                                    AutomationProperties.Name="{Binding Content.Title, Mode=OneWay}"
+                                    IsExpanded="{Binding IsExpanded, Mode=TwoWay}"
+                                    ItemsSource="{Binding Children}">
+                                    <Grid ColumnSpacing="6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon
+                                            FontSize="12"
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                            Glyph="{Binding Content.Glyph, Mode=OneWay}" />
+                                        <TextBlock
+                                            Grid.Column="1"
+                                            FontSize="12"
+                                            Text="{Binding Content.Title, Mode=OneWay}"
+                                            TextTrimming="CharacterEllipsis" />
+                                        <TextBlock
+                                            Grid.Column="2"
+                                            FontSize="11"
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                            Text="{Binding Content.Detail, Mode=OneWay}" />
+                                    </Grid>
+                                </TreeViewItem>
+                            </DataTemplate>
+                        </TreeView.ItemTemplate>
+                    </TreeView>
+                    <StackPanel
+                        x:Name="NoFrameLeftPanel"
+                        Margin="14"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="8">
+                        <FontIcon FontSize="28" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE91B;" />
+                        <TextBlock x:Name="NoFrameLeftText" FontSize="14" FontWeight="SemiBold" />
+                    </StackPanel>
+                </Grid>
             </Grid>
         </Grid>
 

@@ -12,6 +12,7 @@ namespace Negaflow.Shell.Views;
 public sealed partial class WorkspaceShellView : UserControl
 {
     private WorkspacePresentationState? workspaceState;
+    private LibraryHostService? libraryHost;
     private bool isInitialized;
 
     public WorkspaceShellView()
@@ -42,8 +43,15 @@ public sealed partial class WorkspaceShellView : UserControl
 
         isInitialized = true;
         workspaceState = state;
+        this.libraryHost = libraryHost;
+        if (libraryHost is not null)
+        {
+            libraryHost.RestoreActiveFrame(state.Current.ActiveFrameId);
+            libraryHost.SelectionChanged += OnLibrarySelectionChanged;
+            state.SetActiveFrame(libraryHost.ActiveFrameId);
+        }
         NativeEngineStatus nativeEngineStatus = nativeEngineStatusService.Probe();
-        Toolbar.Initialize(state);
+        Toolbar.Initialize(state, libraryHost);
         LibraryWorkspace.Initialize(state);
         if (thumbnails is not null)
         {
@@ -216,6 +224,13 @@ public sealed partial class WorkspaceShellView : UserControl
         DevelopWorkspace.SelectFrame(item.Id);
     }
 
+    private void OnLibrarySelectionChanged(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        workspaceState?.SetActiveFrame(libraryHost?.ActiveFrameId);
+    }
+
     private void OnToolbarSettingsRequested(object? sender, EventArgs args)
     {
         _ = sender;
@@ -266,6 +281,10 @@ public sealed partial class WorkspaceShellView : UserControl
         if (workspaceState is not null)
         {
             workspaceState.Changed -= OnStateChanged;
+        }
+        if (libraryHost is not null)
+        {
+            libraryHost.SelectionChanged -= OnLibrarySelectionChanged;
         }
     }
 }

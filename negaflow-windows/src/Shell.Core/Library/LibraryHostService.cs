@@ -100,22 +100,75 @@ public sealed class LibraryHostService : IDisposable
     /// </summary>
     public IReadOnlyList<string> SelectedFrameIds { get; private set; } = [];
 
+    /// <summary>
+    /// 선택 집합 안에서 Library, Develop, Print가 현재 보여 주는 한 장입니다. 다중 선택과
+    /// 분리해야 Print 대상 전체를 유지하면서 Develop 캔버스는 한 장만 정확히 가리킬 수 있습니다.
+    /// </summary>
+    public string? ActiveFrameId { get; private set; }
+
     public event EventHandler? SelectionChanged;
 
     /// <summary>고른 순서를 지키며, 카탈로그에 없는 id 는 버립니다.</summary>
-    public void SetSelection(IEnumerable<string> frameIds)
+    public void SetSelection(IEnumerable<string> frameIds, string? activeFrameId = null)
     {
         ArgumentNullException.ThrowIfNull(frameIds);
         var known = new HashSet<string>(Frames.Select(frame => frame.Id), StringComparer.Ordinal);
         var seen = new HashSet<string>(StringComparer.Ordinal);
         string[] next = [.. frameIds.Where(id => known.Contains(id) && seen.Add(id))];
-        if (next.SequenceEqual(SelectedFrameIds, StringComparer.Ordinal))
+        string? nextActive = activeFrameId is not null && next.Contains(activeFrameId, StringComparer.Ordinal)
+            ? activeFrameId
+            : ActiveFrameId is not null && next.Contains(ActiveFrameId, StringComparer.Ordinal)
+                ? ActiveFrameId
+                : next.FirstOrDefault();
+        if (next.SequenceEqual(SelectedFrameIds, StringComparer.Ordinal) &&
+            string.Equals(nextActive, ActiveFrameId, StringComparison.Ordinal))
         {
             return;
         }
         SelectedFrameIds = next;
+        ActiveFrameId = nextActive;
         SelectionChanged?.Invoke(this, EventArgs.Empty);
     }
+
+    /// <summary>
+    /// 앱을 다시 열 때 저장된 active frame을 복구합니다. 없거나 원본이 오프라인이면 macOS처럼
+    /// 가장 최근의 사용 가능한 사진을 고릅니다.
+    /// </summary>
+    public string? RestoreActiveFrame(string? savedFrameId)
+    {
+        string? candidate = Frames.FirstOrDefault(frame =>
+                string.Equals(frame.Id, savedFrameId, StringComparison.Ordinal) && IsAvailable(frame.Id))?.Id
+            ?? MostRecentAvailableFrameId();
+        SetSelection(candidate is null ? [] : [candidate], candidate);
+        return candidate;
+    }
+
+    /// <summary>
+    /// 비동기 원본 가용성 검사가 끝난 뒤 오프라인 active frame을 바로잡습니다. 살아 있는
+    /// 선택을 먼저 지키고, 없을 때만 최근 사진으로 이동합니다.
+    /// </summary>
+    public string? ReconcileActiveFrameAvailability()
+    {
+        if (ActiveFrameId is { } activeFrameId && IsAvailable(activeFrameId))
+        {
+            return activeFrameId;
+        }
+        string? candidate = SelectedFrameIds.FirstOrDefault(IsAvailable)
+            ?? MostRecentAvailableFrameId();
+        SetSelection(candidate is null ? [] : [candidate], candidate);
+        return candidate;
+    }
+
+    private bool IsAvailable(string frameId) =>
+        !availabilityByFrameId.TryGetValue(frameId, out LibrarySourceAvailability availability) ||
+        availability != LibrarySourceAvailability.Offline;
+
+    private string? MostRecentAvailableFrameId() => Frames
+        .Select((frame, index) => (frame, index))
+        .Where(entry => IsAvailable(entry.frame.Id))
+        .OrderBy(entry => entry.frame.ScannedAt ?? DateTimeOffset.MinValue)
+        .ThenBy(entry => entry.index)
+        .LastOrDefault().frame?.Id;
 
     /// <summary>선택된 frame 들입니다. 선택이 비면 빈 목록입니다.</summary>
     public IReadOnlyList<LibraryFrameSnapshot> SelectedFrames
@@ -421,7 +474,12 @@ public sealed class LibraryHostService : IDisposable
             filePaths, document.Frames, process, sourceMetadataReader: sourceMetadataReader);
         if (plan.Rows.Count > 0)
         {
-            _ = document.AppendAndSave(plan.Rows, out _);
+            _ = document.AppendAndSave(plan.Rows, out int added);
+            if (added > 0)
+            {
+                string importedId = plan.Rows[^1].Id;
+                SetSelection([importedId], importedId);
+            }
         }
         return plan;
     }
@@ -449,6 +507,11 @@ public sealed class LibraryHostService : IDisposable
             plan.Frames.Rows,
             out int addedFolders,
             out int addedFrames);
+        if (save == CatalogStoreError.None && addedFrames > 0 && plan.Frames.Rows.Count > 0)
+        {
+            string importedId = plan.Frames.Rows[^1].Id;
+            SetSelection([importedId], importedId);
+        }
         return new FolderImportResult(plan, addedFolders, addedFrames, save);
     }
 
@@ -565,6 +628,7 @@ public sealed class LibraryHostService : IDisposable
             return new(ScannerFramePublishStatus.CatalogWriteFailed, plan, null, null,
                 CatalogStoreError.InvalidSnapshot);
         }
+        SetSelection([frame.Id], frame.Id);
         if (frame.InfraredPath is null ||
             frame.Route.FilmType is not (FilmType.ColorNegative or FilmType.ColorPositive))
         {
