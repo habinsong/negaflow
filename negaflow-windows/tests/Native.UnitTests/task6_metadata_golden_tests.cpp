@@ -2,13 +2,15 @@
 
 #include <Windows.h>
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <set>
+#include <map>
+#include <optional>
 #include <string>
 #include <system_error>
 #include <vector>
@@ -61,8 +63,14 @@ private:
     return image;
 }
 
+struct TiffEntry final {
+    std::uint16_t type{0U};
+    std::uint32_t count{0U};
+    std::vector<std::uint8_t> value{};
+};
+
 struct TiffIfd final {
-    std::set<std::uint16_t> tags{};
+    std::map<std::uint16_t, TiffEntry> entries{};
 };
 
 [[nodiscard]] std::uint16_t read_u16(
@@ -103,6 +111,28 @@ struct TiffIfd final {
            static_cast<std::uint32_t>(bytes[offset + 3U]);
 }
 
+[[nodiscard]] std::optional<std::size_t> type_size(const std::uint16_t type) noexcept {
+    switch (type) {
+        case 1U:  // BYTE
+        case 2U:  // ASCII
+        case 6U:  // SBYTE
+        case 7U:  // UNDEFINED
+            return 1U;
+        case 3U:  // SHORT
+        case 8U:  // SSHORT
+            return 2U;
+        case 4U:  // LONG
+        case 9U:  // SLONG
+        case 11U: // FLOAT
+            return 4U;
+        case 5U:  // RATIONAL
+        case 10U: // SRATIONAL
+        case 12U: // DOUBLE
+            return 8U;
+    }
+    return std::nullopt;
+}
+
 [[nodiscard]] TiffIfd read_root_ifd(const std::filesystem::path& path) {
     std::ifstream input(path, std::ios::binary);
     const std::vector<std::uint8_t> bytes{
@@ -119,23 +149,55 @@ struct TiffIfd final {
     for (std::uint16_t index = 0U; valid && index < entry_count; ++index) {
         const std::size_t entry = static_cast<std::size_t>(ifd_offset) + 2U +
             static_cast<std::size_t>(index) * 12U;
-        result.tags.insert(read_u16(bytes, entry, little_endian, valid));
-        static_cast<void>(read_u16(bytes, entry + 2U, little_endian, valid));
-        static_cast<void>(read_u32(bytes, entry + 4U, little_endian, valid));
-        static_cast<void>(read_u32(bytes, entry + 8U, little_endian, valid));
+        const std::uint16_t tag = read_u16(bytes, entry, little_endian, valid);
+        const std::uint16_t type = read_u16(bytes, entry + 2U, little_endian, valid);
+        const std::uint32_t count = read_u32(bytes, entry + 4U, little_endian, valid);
+        const std::optional<std::size_t> size = type_size(type);
+        if (!size.has_value() || count > bytes.size() / *size) {
+            valid = false;
+            break;
+        }
+        const std::size_t value_bytes = static_cast<std::size_t>(count) * *size;
+        const std::size_t value_offset = value_bytes <= 4U
+            ? entry + 8U
+            : static_cast<std::size_t>(read_u32(bytes, entry + 8U, little_endian, valid));
+        if (value_offset > bytes.size() || bytes.size() - value_offset < value_bytes) {
+            valid = false;
+            break;
+        }
+        result.entries.emplace(
+            tag,
+            TiffEntry{
+                type,
+                count,
+                std::vector<std::uint8_t>(
+                    bytes.begin() + static_cast<std::ptrdiff_t>(value_offset),
+                    bytes.begin() + static_cast<std::ptrdiff_t>(value_offset + value_bytes)),
+            });
     }
     expect(valid, "published Task6 TIFF has a readable classic root IFD");
     return result;
 }
 
 [[nodiscard]] bool has(const TiffIfd& ifd, const std::uint16_t tag) noexcept {
-    return ifd.tags.contains(tag);
+    return ifd.entries.contains(tag);
+}
+
+[[nodiscard]] std::optional<std::string> ascii(const TiffIfd& ifd, const std::uint16_t tag) {
+    const auto found = ifd.entries.find(tag);
+    if (found == ifd.entries.end() || found->second.type != 2U || found->second.value.empty()) {
+        return std::nullopt;
+    }
+    const auto terminator = std::find(
+        found->second.value.begin(), found->second.value.end(), static_cast<std::uint8_t>(0U));
+    return std::string(found->second.value.begin(), terminator);
 }
 
 struct Case final {
     negaflow::output::ExportMetadataPolicy policy;
     const wchar_t* output;
     bool carries_source_identity;
+    bool carries_source_description;
     bool carries_exif;
     bool carries_iptc;
     bool carries_gps;
@@ -161,6 +223,7 @@ struct Case final {
 
 void verify_case(
     const std::filesystem::path& source,
+    const TiffIfd& source_ifd,
     const TempDirectory& temporary,
     const Case& entry) {
     const std::filesystem::path destination = temporary.path() / entry.output;
@@ -186,6 +249,20 @@ void verify_case(
         has(ifd, 315U) == entry.carries_source_identity &&
             has(ifd, 33432U) == entry.carries_source_identity,
         "Task6 policy preserves source Artist and Copyright only when permitted");
+    if (entry.carries_source_identity) {
+        expect(
+            ascii(ifd, 315U) == ascii(source_ifd, 315U) &&
+                ascii(ifd, 33432U) == ascii(source_ifd, 33432U),
+            "Task6 policy preserves the source Artist and Copyright text values");
+    }
+    expect(
+        has(ifd, 270U) == entry.carries_source_description,
+        "Task6 policy preserves the source description only when permitted");
+    if (entry.carries_source_description) {
+        expect(
+            ascii(ifd, 270U) == ascii(source_ifd, 270U),
+            "Task6 policy preserves the source description text value");
+    }
     expect(
         has(ifd, 34665U) == entry.carries_exif,
         "Task6 policy preserves an EXIF block only when permitted");
@@ -203,15 +280,20 @@ void test_task6_goldens(const std::filesystem::path& root) {
     if (!std::filesystem::is_regular_file(source)) {
         return;
     }
+    const TiffIfd source_ifd = read_root_ifd(source);
+    expect(
+        ascii(source_ifd, 270U).has_value() && ascii(source_ifd, 315U).has_value() &&
+            ascii(source_ifd, 33432U).has_value(),
+        "Task6 macOS source exposes the description, Artist and Copyright text values");
     constexpr std::array<Case, 4U> cases{{
-        {negaflow::output::ExportMetadataPolicy::minimal, L"minimal.tif", false, true, false, false},
-        {negaflow::output::ExportMetadataPolicy::copyright_only, L"copyright.tif", true, false, true, false},
-        {negaflow::output::ExportMetadataPolicy::remove_location, L"remove-location.tif", true, true, true, false},
-        {negaflow::output::ExportMetadataPolicy::all, L"all.tif", true, true, true, true},
+        {negaflow::output::ExportMetadataPolicy::minimal, L"minimal.tif", false, false, true, false, false},
+        {negaflow::output::ExportMetadataPolicy::copyright_only, L"copyright.tif", true, false, false, true, false},
+        {negaflow::output::ExportMetadataPolicy::remove_location, L"remove-location.tif", true, true, true, true, false},
+        {negaflow::output::ExportMetadataPolicy::all, L"all.tif", true, true, true, true, true},
     }};
     const TempDirectory temporary{};
     for (const Case& entry : cases) {
-        verify_case(source, temporary, entry);
+        verify_case(source, source_ifd, temporary, entry);
     }
 }
 

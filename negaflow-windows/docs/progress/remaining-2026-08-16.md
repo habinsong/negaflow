@@ -106,9 +106,9 @@ alpha의 실제 macOS 픽셀 golden은 Windows에서 다시 만들 수 없으므
 - **CIVibrance** — 음수·양수 17개 macOS RGBAf plane을 `native.color_model`에 연결했습니다.
   표는 특정 사진 분기가 아니라 33³ 전체 입력의 일반 response 사상입니다.
 - **Task 6** — macOS `policy-all.tif`를 실제 source로 하여 Windows TIFF 네 정책을 다시
-  만들고, root IFD의 Artist/Copyright·EXIF·IPTC·GPS 블록 보존/제거를
-  `native.task6_metadata_golden`에서 확인합니다. 태그 순서·IPTC IIM 바이트열의 동일성은
-  이 검증 범위가 아닙니다.
+  만들고, root IFD의 Artist/Copyright/ImageDescription 문자열 값과 EXIF·IPTC·GPS 블록
+  보존/제거를 `native.task6_metadata_golden`에서 확인합니다. 태그 순서·IPTC IIM 바이트열의
+  동일성은 이 검증 범위가 아닙니다.
 - **Task 7** — clarity 양수 3개, 음수 2개(반경 7·10)와 출력 선명화 3개 RGBAf fixture를
   `native.texture_stage`에 연결했습니다. 최대 절대 차이 상한은 0.008이며, CI 경계 표본 방식
   때문에 exact 판정은 아닙니다. 반경 1.0·1.3·2.4의 단독 CI blur 출력은 각각 heal brush,
@@ -128,7 +128,7 @@ alpha의 실제 macOS 픽셀 golden은 Windows에서 다시 만들 수 없으므
 ## 7. 확인은 됐지만 golden 파일과 바이트 단위 대조는 안 한 것
 
 - **메타데이터 정책** — `native.task6_metadata_golden`이 macOS `policy-all.tif`를 source로
-  네 Windows TIFF를 만들고 root IFD 정책 결과를 검사합니다. 다만 `tiff-tags.json`과
+  네 Windows TIFF를 만들고 root IFD 정책과 보존 문자열 값을 검사합니다. 다만 `tiff-tags.json`과
   모든 값·태그 순서·IPTC IIM/XMP 바이트열을 동일하다고 주장하지는 않습니다.
 
 ---

@@ -11,7 +11,7 @@ macOS에서 확정해 저장소에 올린 `docs/verification/macos-golden/REQUES
 | 요청 항목 | Windows 결과 | 근거 |
 | --- | --- | --- |
 | 1. scanner target | 부분 | GT-X900 원본 TIFF가 저장소에 없어 실제 재렌더는 못 했다. HS/SP 어깨 끝점은 일반 보간으로 고쳤고 `native.scanner_target_grade`를 실행했다. |
-| 6. metadata policy | 실제 source 정책 회귀 | macOS `policy-all.tif`를 source로 네 Windows TIFF를 다시 만들고 root IFD의 Artist/Copyright·EXIF·IPTC·GPS 보존/제거를 `native.task6_metadata_golden`에서 확인했다. IPTC IIM/XMP 바이트열과 파일별 태그 순서의 동일성은 주장하지 않는다. |
+| 6. metadata policy | 실제 source 정책 회귀 | macOS `policy-all.tif`를 source로 네 Windows TIFF를 다시 만들고 root IFD의 Artist/Copyright/ImageDescription 문자열 값 및 EXIF·IPTC·GPS 보존/제거를 `native.task6_metadata_golden`에서 확인했다. IPTC IIM/XMP 바이트열과 파일별 태그 순서의 동일성은 주장하지 않는다. |
 | 7. Core Image filters | 경계 포함 회귀 상한 | clarity 양수 3·음수 2(반경 7·10), 출력 선명화 3 RGBAf fixture를 `native.texture_stage`에 연결했다. 최악 절대 차이는 0.008 이하이다. 반경 1.0·1.3·2.4 단독 blur는 현재 공개 stage 출력과 1:1 비교하지 않는다. |
 | 8. Digital Film Look | 회귀 상한 | Portra 400, Velvia 50, Tri-X 400 각 0.5/1.0의 RGBAf 6장을 `native.working_film_look`에 연결했다. 관측 최댓값은 0.004713 미만이며 검증 상한은 0.005이다. |
 | 9. 실입력 B&W/슬라이드 | 중앙값 회귀 범위 통과 | 15개 1768×2906 RGB16 TIFF를 실제 ABI v32 export로 다시 만들고 WIC로 golden과 비교했다. color-positive는 32, B&W는 64 RGB16 코드의 채널 중앙값 한계를 자동 검증한다. |
@@ -46,7 +46,8 @@ ctest --preset x64-debug -R '^(native\.working_to_srgb16|native\.wic_png_export|
 새 Task6/Texture/auto-base CTest는 3/3 통과했다. Task 9는 1/1, 기존 출력 경로 CTest는 6/6
 통과했다. Debug Task 9 전체 재검증은 대형 TIFF 15개를 다시 써서 121.46초가 걸렸다.
 최종 x64 Release gate는 native 71/71, Catalog 721 assertion, Shell 905 assertion을 모두
-통과했다.
+통과했다. 그 뒤 root 문자열 값 비교를 더한 `native.task6_metadata_golden`도 x64 Release에서
+1/1 통과했다.
 
 ## 남은 경계
 
