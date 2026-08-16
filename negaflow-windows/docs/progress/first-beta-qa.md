@@ -4,6 +4,13 @@
 
 이 문서는 최초 QA·프리뷰 데모·베타 테스트의 단일 추적 문서다. 아래 사용자 목표의 기능·품질·성능·검증 범위는 축약하거나 재해석하지 않는다. 각 목표는 실제 Windows 앱, 지정 입력, 실제 장치, macOS 기준 화면·코드로 검증되기 전까지 완료로 표시하지 않는다.
 
+## 현재 최우선 구조 작업
+
+- GrainMend 기능 확장보다 먼저 저장소 전체의 God Object를 해소한다.
+- 최소 필수 대상은 `DevelopWorkspaceView.xaml.cs`와 `tests/Shell.UnitTests/Program.cs`이며, 파일 크기뿐 아니라 한 타입이 UI 상태·도메인 상태·오케스트레이션·I/O 또는 서로 독립적인 테스트 suite를 함께 소유하는 모든 지점을 전수 조사한다.
+- partial 분할이나 메서드의 기계적 이동은 완료로 보지 않는다. 서로 다른 변경 이유를 실제 응집된 타입·모듈·테스트 프로젝트 경계로 분리하고 기존 동작 보존을 빌드와 관련 테스트로 검증한다.
+- 이 구조 체크포인트가 닫히기 전에는 GrainMend를 비롯한 새 기능을 기존 God Object에 추가하지 않는다.
+
 ## 사용자 목표
 
 1. GrainMend 기능이 동작하지 않고 "고칠 것을 찾지 못했습니다"만 표시된다. 자동·가이드·브러시·복제 도구·IR을 모두 macOS와 동일하게 동작하게 한다. 복제 도구가 잘려 보이는 문제도 수정한다.
@@ -25,6 +32,7 @@
 - UI/UX를 창작하지 않는다. 아예 존재하지 않거나 동작하지 않는 요소를 모두 찾아 구현·연결하고, 각종 뷰의 크기·모양·모서리 라운딩·위치·높이·너비가 macOS와 완전히 동일하게 한다.
 - 이미지 현상·보정·인화·내보내기의 품질·속도·성능을 모두 최적화한다. 특히 속도를 우선하며 슬라이더는 한 가지 예일 뿐이고 전체 이미지 처리 경로를 포함한다.
 - 속도·품질·성능 최적화는 로그를 남겨 추측이나 확인되지 않은 가설 없이 검증하면서 해결한다.
+- GrainMend 성능 기준은 macOS와 같이 자동 검출 약 5초 이내, 가이드·브러시·복제·IR은 입력 후 즉각적인 반응(1초 미만)이다. 검출 품질·오탐 방지·원본 불변·preview/export 동일 recipe를 낮춰 속도를 맞추지 않는다.
 - UI/UX는 `computer-use`를 사용해 Windows 실제 화면을 캡처하고 macOS 스크린샷과 비교하며, 양쪽 코드와 고정 metric도 함께 비교한다.
 - 다국어 텍스트 길이 확장을 고려해 UI/UX를 구현한다. 지원 언어별 문자열이 길어져도 뒤쪽 글자가 잘리거나 가려지지 않게 하고, macOS 계약을 벗어나지 않는 범위에서 줄바꿈·가변 너비·최소 높이와 접근성 이름이 자연스럽게 동작하도록 한다. 여섯 언어(`de`, `en`, `fr`, `ja`, `ko`, `zh-Hans`)의 실제 렌더링을 각각 검증한다.
 - Library·Develop·Print는 분리된 기능이 아니라 하나의 연속된 워크플로다. 현재 끊긴 이미지·썸네일·선택·filmstrip·Print 대상 전달을 모두 수정한다.
@@ -38,11 +46,11 @@
 
 | 목표 | 상태 | 현재 확인 사실 | 수정할 것 | 수정한 것 | 검증한 것 |
 | --- | --- | --- | --- | --- | --- |
-| 1 | 미재현 | 사용자 보고: 후보 없음만 표시, 복제 도구 클리핑, 자동·가이드·브러시·복제·IR 동작 실패 | 실제 앱에서 다섯 경로를 각각 재현하고 macOS 동작·결과와 대조 | 없음 | 없음 |
-| 2 | 재현 | 2560×1392 실제 설치본과 `print_overview.png`를 대조해 Print 파일 트리 누락, 빈 활성 프레임 헤더, 패널·검사기 차이를 확인했다. 전체 화면별 치수·라운딩·위치 대조는 아직 남았다. | 스크린샷·SwiftUI·고정 UI metric을 화면별로 계속 대조 | Print 왼쪽 파일 영역을 macOS `PrintWorkspaceSidebar`와 같은 Library 파일 투영으로 연결하고 활성 프레임 헤더를 연결했다. | `computer-use`로 수정 전 빈 패널과 수정 후 폴더 3개·사진 17장 트리를 캡처했다. 전체 UI parity는 미검증이다. |
+| 1 | 부분 검증 | 설치본 Auto가 네이티브 0/1 마스크를 review 단계에서 임계값 8로 다시 걸러 `고칠 것을 찾지 못했습니다`를 표시한 원인을 실제 frame 진단과 앱 계측으로 확정했다. Auto는 macOS 기준 약 5초 이내, Guided·Brush·Clone·IR은 1초 미만 반응이 필요하다. IR은 현재 Shell 진입점이 없다. | Guided·Brush·Clone·IR을 실제 설치본과 지정 입력에서 macOS 품질·시간 기준으로 수정·검증하고, Auto 편집 재시작 영속성을 추가 확인 | review 마스크는 0이 아닌 모든 native 후보를 유지하도록 수정했다. Release CI 네이티브 DLL 복사를 구성별로 수정하고 실제 frame 진단 매트릭스·선택 review 진단·JSONL 계측을 추가했다. GrainMend 네 도구는 macOS 캡슐 높이·라운딩·간격·축소 규칙으로 다시 배치했다. | `OpticFilm8100_frame_1.tiff` 설치본 Auto에서 4,096 후보 overlay와 제거/취소 review를 3,761ms에 표시했고 `제거`로 편집을 확정했다. 원본 SHA-256 `F281DEECF07FE8E6B4019EB2BE0D87985F2F1D7A861119388279796DDB5A872B`와 수정 시각은 바뀌지 않았다. Auto 외 경로는 미검증이다. |
+| 2 | 수정 중 | Print 불일치에 더해 Develop 좌측 탭 전체와 히스토그램 아래 검사기 탭의 폭·정렬·히트 영역이 macOS와 다름을 확인했다. 전체 화면별 치수·라운딩·위치 대조는 아직 남았다. | 스크린샷·SwiftUI·고정 UI metric을 화면별로 계속 대조하고 설치본에서 동일 창 크기·DPI로 다시 캡처 | Print 왼쪽 파일 영역·활성 프레임 헤더를 연결했다. Develop 검사기 탭은 macOS `HStack(spacing: 0)`과 `frame(maxWidth: .infinity, minHeight: 32)` 계약대로 여섯 등분, 각 구간 전체 Stretch 히트 영역, 아이콘 중앙 정렬, 15px 구분선, 외곽 3px·18px 라운딩으로 고정했다. | `computer-use`로 Print 수정 전후와 Develop 좌측 Library/Files 상태, GrainMend 캡슐을 캡처했다. 검사기 탭 최신 Stretch 수정은 Release 빌드만 통과했고 설치본 렌더·히트 영역은 아직 재검증 전이다. 전체 UI parity는 미검증이다. |
 | 3 | 부분 검증 | `negaflow_test`의 `OpticFilm8100_frame_1.tiff`를 Library에서 고르면 같은 frame id가 Develop 중앙 이미지·왼쪽 선택기·하단 filmstrip에 전달된다. | 다중 선택·오프라인·삭제·재연결·키보드 경로와 macOS 상호작용 대조 | `ActiveFrameId`를 LibraryHost와 presentation에 연결하고, Library 선택 복원 및 Filmstrip 재진입 덮어쓰기를 수정했다. | `activeFrameId=7bcc36cb-cda8-46bd-9d2e-b5896e45ceac`, Develop 중앙 8100 이미지와 선택 filmstrip 카드, 재시작 뒤 같은 id 유지 확인. |
-| 4 | 미재현 | 사용자 보고: Develop 좌측 탭이 macOS와 다르고 한 장 가져오기 흐름으로 축소됨 | macOS Develop 좌측 6탭과 Library interaction scope를 그대로 연결 | 없음 | 없음 |
-| 5 | 미재현 | 사용자 보고: 문자열 클리핑·가림 | 여섯 로케일·DPI·창 크기별 실제 렌더 대조 | 없음 | 없음 |
+| 4 | 부분 검증 | 설치본에서 Windows가 창작한 단일 이미지 가져오기/Frame ComboBox 구조와 macOS에 없는 좌측 탭 내용을 확인했다. | Library 탭의 인라인 scanner controls·Develop defaults와 Versions·Presets·Film·Output의 실제 기능·상태·키보드 흐름을 macOS와 동일하게 연결 | macOS `WorkflowSidebar.swift`의 Library·Files·Versions·Presets·Film·Output 6탭과 76/48 rail, 32px 버튼, 7px 간격, header padding을 적용했다. 단일 Frame ComboBox를 렌더에서 제거하고 `LibrarySourceSection.swift` 기준 이미지·폴더·스캐너 3분할 가져오기 캡슐과 현재 폴더 트리를 공유 catalog/active frame에 연결했다. Files 탭은 같은 catalog 전체 폴더 트리를 사용하며 선택 탭을 presentation에 저장한다. | 설치본 2560×1392에서 Library의 3분할 캡슐과 `negaflow_test` 15장, Files의 `negaflow_test` 15장·`Temp` 1장·`scratchpad` 1장을 확인했다. 앱 재시작 뒤 Files 탭 선택 유지도 확인했다. 나머지 기능은 미검증이다. |
+| 5 | 부분 검증 | 설치본에서 기존 복제 도구 문자열 클리핑을 재현했다. | 여섯 로케일·DPI·창 크기별 실제 렌더 대조 | GrainMend 네 캡슐과 Develop 가져오기 3분할의 사용자 문자열을 macOS와 같은 축소 가능 단일 행으로 배치해 구간을 넘지 않게 했다. | 한국어 2560×1392 설치본에서 `복제 도장`과 이미지·폴더·스캐너 캡슐이 잘리지 않음을 확인했다. `de`, `en`, `fr`, `ja`, `zh-Hans`와 다른 DPI는 미검증이다. |
 | 6 | 미재현 | 사용자 보고: Develop 우측 슬라이더 반영이 수초 지연 | 입력→recipe→preview scheduling→native render→present 지연 계측 및 실시간 갱신 | 없음 | 없음 |
 | 7 | 미재현 | 사용자 보고: 자동 톤·자동 색상·자동 레벨이 실패하거나 매우 느림 | 세 기능을 독립 재현하고 macOS 결과·지연과 대조 | 없음 | 없음 |
 | 8 | 미재현 | 사용자 보고: crop·rotate·flip 등 기하 편집이 매우 느림 | gesture→transform preview 경로와 불필요한 전체 렌더·I/O 점검 | 없음 | 없음 |

@@ -589,6 +589,13 @@ public sealed class DevelopPanelState
     /// </summary>
     public const double DefaultBrushThickness = 0.01;
 
+    /// <summary>macOS 복제 도장의 기본 지름입니다. 원본 raw 화소 단위입니다.</summary>
+    public const double DefaultCloneDiameterPixels = 48.0;
+
+    public const double MinimumCloneDiameterPixels = 4.0;
+
+    public const double MaximumCloneDiameterPixels = 512.0;
+
     /// <summary>
     /// 캔버스에서 그은 치유 브러시 획 하나를 남깁니다. 점은 <b>표시 좌표</b>로 받고 여기서
     /// 원본 좌표로 되돌립니다 — 호출부가 좌표계를 알 필요가 없어야 어긋날 자리가 줄어듭니다.
@@ -612,22 +619,77 @@ public sealed class DevelopPanelState
     public LibraryFrameError AddCloneStroke(
         IReadOnlyList<DefectPoint> displayPoints,
         DefectPoint displaySourceAnchor,
-        double diameter = DefaultBrushThickness)
+        double diameter = DefaultCloneDiameterPixels) =>
+        AddCloneStroke(
+            displayPoints,
+            displaySourceAnchor,
+            alignedRawOffset: null,
+            out _,
+            diameter,
+            DefectStrokeRecipeBuilder.DefaultCloneHardness);
+
+    /// <summary>
+    /// 첫 획에서 확정한 원본 공간 오프셋을 이후 획에도 그대로 씁니다. macOS 복제 도장은
+    /// 소스가 브러시를 따라 움직이므로, 새 획의 시작점마다 소스 앵커와의 변위를 다시 계산하면
+    /// 복제 위치가 튑니다.
+    /// </summary>
+    public LibraryFrameError AddCloneStroke(
+        IReadOnlyList<DefectPoint> displayPoints,
+        DefectPoint displaySourceAnchor,
+        DefectPoint? alignedRawOffset,
+        out DefectPoint usedRawOffset,
+        double diameter = DefaultCloneDiameterPixels,
+        double hardness = DefectStrokeRecipeBuilder.DefaultCloneHardness)
     {
         ArgumentNullException.ThrowIfNull(displayPoints);
+        usedRawOffset = default;
         if (displayPoints.Count == 0 ||
             !TryMapToRaw(displayPoints[0], out DefectPoint firstTarget) ||
-            !TryMapToRaw(displaySourceAnchor, out DefectPoint anchor))
+            !double.IsFinite(diameter) || !double.IsFinite(hardness))
         {
             return LibraryFrameError.InvalidDefectRecipe;
         }
-        double offsetX = anchor.X - firstTarget.X;
-        double offsetY = anchor.Y - firstTarget.Y;
-        return AddStroke(
+        DefectPoint offset;
+        if (alignedRawOffset is { } aligned)
+        {
+            offset = aligned;
+        }
+        else if (TryMapToRaw(displaySourceAnchor, out DefectPoint anchor))
+        {
+            offset = new DefectPoint(anchor.X - firstTarget.X, anchor.Y - firstTarget.Y);
+        }
+        else
+        {
+            return LibraryFrameError.InvalidDefectRecipe;
+        }
+        if (!double.IsFinite(offset.X) || !double.IsFinite(offset.Y) ||
+            (offset.X == 0.0 && offset.Y == 0.0))
+        {
+            return LibraryFrameError.InvalidDefectRecipe;
+        }
+        double clampedDiameter = Math.Clamp(
+            diameter,
+            MinimumCloneDiameterPixels,
+            MaximumCloneDiameterPixels);
+        double clampedHardness = Math.Clamp(hardness, 0.0, 1.0);
+        LibraryFrameError error = AddStroke(
             displayPoints,
             (frameId, identity, existing, points, baseSize) =>
                 DefectStrokeRecipeBuilder.AppendCloneStroke(
-                    frameId, identity, existing, points, diameter, offsetX, offsetY, baseSize));
+                    frameId,
+                    identity,
+                    existing,
+                    points,
+                    clampedDiameter,
+                    offset.X,
+                    offset.Y,
+                    baseSize,
+                    clampedHardness));
+        if (error == LibraryFrameError.None)
+        {
+            usedRawOffset = offset;
+        }
+        return error;
     }
 
     private LibraryFrameError AddStroke(

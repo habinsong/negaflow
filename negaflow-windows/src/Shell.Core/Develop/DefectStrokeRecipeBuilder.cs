@@ -11,9 +11,9 @@ namespace Negaflow.Shell;
 /// 이 자리에서는 공간을 바꾸지 않습니다 — 두 곳에서 변환하면 언젠가 한쪽만 고쳐집니다.
 /// </para>
 /// <para>
-/// 굵기와 지름은 <b>짧은 변에 대한 비율</b>입니다(<c>defect_heal_brush.h</c>,
-/// <c>defect_clone_stamp.h</c>). 화면 화소가 아니라 원본 기준이라 확대해서 칠해도 같은 굵기가
-/// 나옵니다.
+/// 브러시 굵기는 짧은 변에 대한 비율이고, 복제 도장 지름은 macOS와 같은 원본 raw 화소
+/// 단위입니다. 서로 다른 단위를 섞으면 48px 복제 도장이 0.01px로 축소되어 사실상 보이지
+/// 않습니다.
 /// </para>
 /// </remarks>
 public static class DefectStrokeRecipeBuilder
@@ -85,7 +85,9 @@ public static class DefectStrokeRecipeBuilder
                 DefectEditKind.Clone,
                 Enabled: true,
                 Strength: 1.0,
-                new DefectEditLabel(DefectEditLabelKind.Clone, 1),
+                new DefectEditLabel(
+                    DefectEditLabelKind.Clone,
+                    (int)Math.Clamp(Math.Truncate(points.Size), 0.0, int.MaxValue)),
                 new DefectEditSummary(DefectEditSummaryKind.Clone, null),
                 size,
                 [])

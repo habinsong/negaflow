@@ -5,6 +5,17 @@ using Negaflow.Shell.Shortcuts;
 
 namespace Negaflow.Shell;
 
+/// <summary>macOS <c>WorkflowSidebarTab</c>과 같은 현상 왼쪽 소스 탭입니다.</summary>
+public enum WorkflowSidebarTab
+{
+    Library,
+    Files,
+    Versions,
+    Presets,
+    Film,
+    Output,
+}
+
 public sealed record ShellPreferences
 {
     public WorkspaceModule SelectedWorkspace { get; init; } = WorkspaceModule.Develop;
@@ -15,6 +26,9 @@ public sealed record ShellPreferences
     /// 별도로 저장합니다.
     /// </summary>
     public string? ActiveFrameId { get; init; }
+
+    /// <summary>현상 화면을 다시 열어도 마지막 왼쪽 탭을 유지합니다.</summary>
+    public WorkflowSidebarTab SelectedDevelopSidebarTab { get; init; } = WorkflowSidebarTab.Library;
 
     public bool IsSidebarVisible { get; init; } = true;
 
@@ -99,6 +113,9 @@ public sealed record ShellPreferences
             SelectedWorkspace = Enum.IsDefined(SelectedWorkspace)
                 ? SelectedWorkspace
                 : WorkspaceModule.Develop,
+            SelectedDevelopSidebarTab = Enum.IsDefined(SelectedDevelopSidebarTab)
+                ? SelectedDevelopSidebarTab
+                : WorkflowSidebarTab.Library,
             ActiveFrameId = NormalizeActiveFrameId(ActiveFrameId),
             SidebarWidth = FiniteOrDefault(
                 SidebarWidth,

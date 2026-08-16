@@ -8,8 +8,6 @@ namespace Negaflow.Shell.Develop;
 /// </summary>
 public sealed class GrainMendReviewSession
 {
-    private const byte MarkedThreshold = 8;
-
     private readonly DefectEditItem source;
     private readonly byte[] rgba;
     private readonly int[] componentByPixel;
@@ -61,7 +59,7 @@ public sealed class GrainMendReviewSession
         int componentCount = 0;
         for (int index = 0; index < labels.Length; ++index)
         {
-            if (labels[index] != -1 || rgba[index * 4] <= MarkedThreshold)
+            if (labels[index] != -1 || rgba[index * 4] == 0)
             {
                 continue;
             }
@@ -90,7 +88,7 @@ public sealed class GrainMendReviewSession
                             continue;
                         }
                         int next = (nextY * width) + nextX;
-                        if (labels[next] != -1 || rgba[next * 4] <= MarkedThreshold)
+                        if (labels[next] != -1 || rgba[next * 4] == 0)
                         {
                             continue;
                         }

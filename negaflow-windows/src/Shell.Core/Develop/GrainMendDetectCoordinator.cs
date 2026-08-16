@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Text.Json;
 using Negaflow.Catalog;
 using Negaflow.Interop;
 
@@ -32,6 +34,11 @@ public sealed record GrainMendDetectOutcome(
 /// </remarks>
 public sealed class GrainMendDetectCoordinator
 {
+    private const string TraceEnvironmentVariable = "NEGAFLOW_GRAIN_MEND_TRACE";
+    private const string TraceFileName = "grain-mend-detection.jsonl";
+    private const string TraceMarkerFileName = "grain-mend-trace.enabled";
+    private static readonly object TraceGate = new();
+
     /// <summary>
     /// 검출 이미지의 긴 변 상한입니다. 네이티브 <c>grain_mend_maximum_detection_dimension</c>
     /// 과 같은 값이며, 마스크 버퍼를 한 번만 잡기 위해 여기서도 압니다.
@@ -80,12 +87,18 @@ public sealed class GrainMendDetectCoordinator
     {
         ArgumentNullException.ThrowIfNull(frame);
         ArgumentNullException.ThrowIfNull(onCompleted);
+        Stopwatch clock = Stopwatch.StartNew();
 
         // 검출은 파일을 쓰지 않지만 요청 팩토리는 목적지를 요구합니다.
         string unusedDestination = Path.ChangeExtension(frame.SourcePath, ".detect.png");
         DevelopRequestResult built = DevelopRequestFactory.Create(frame, unusedDestination);
         if (built.Request is not { } request)
         {
+            WriteTrace(frame.Id, roi, options, clock.ElapsedMilliseconds, new
+            {
+                outcome = "refused",
+                refusal = built.Refusal.ToString(),
+            });
             return Deliver(GrainMendDetectOutcome.Refused(built.Refusal), onCompleted);
         }
 
@@ -95,6 +108,12 @@ public sealed class GrainMendDetectCoordinator
                 () => exporter.DetectGrainMend(request, mask, roi, options)).ConfigureAwait(false);
             if (!detected.Result.Succeeded)
             {
+                WriteTrace(frame.Id, roi, options, clock.ElapsedMilliseconds, new
+                {
+                    outcome = "native-failure",
+                    stage = detected.Result.FailedStage.ToString(),
+                    detected.Result.FailureName,
+                });
                 return Deliver(
                     GrainMendDetectOutcome.Faulted(detected.Result.FailureName),
                     onCompleted);
@@ -112,6 +131,22 @@ public sealed class GrainMendDetectCoordinator
                 detected.RoiHeight,
                 detected.AcceptedPixels,
                 automatic: IsWholeFrame(roi));
+            WriteTrace(frame.Id, roi, options, clock.ElapsedMilliseconds, new
+            {
+                outcome = "completed",
+                detected.Width,
+                detected.Height,
+                detected.SourceWidth,
+                detected.SourceHeight,
+                detected.RoiX,
+                detected.RoiY,
+                detected.RoiWidth,
+                detected.RoiHeight,
+                detected.AcceptedPixels,
+                detected.MaskByteCount,
+                markedPixels = CountMarkedPixels(mask, detected.MaskByteCount),
+                editCreated = edit is not null,
+            });
             return Deliver(
                 new GrainMendDetectOutcome(
                     DevelopExportOutcomeKind.Completed,
@@ -125,7 +160,92 @@ public sealed class GrainMendDetectCoordinator
         catch (Exception error) when (error is NativeBootstrapException or
             OverflowException or ArgumentException)
         {
+            WriteTrace(frame.Id, roi, options, clock.ElapsedMilliseconds, new
+            {
+                outcome = "exception",
+                exception = error.GetType().Name,
+            });
             return Deliver(GrainMendDetectOutcome.Faulted(error.Message), onCompleted);
+        }
+    }
+
+    private static long CountMarkedPixels(byte[] mask, ulong maskByteCount)
+    {
+        if (!TraceEnabled() || maskByteCount > (ulong)mask.Length)
+        {
+            return -1L;
+        }
+        long count = 0L;
+        for (int index = 0; index < checked((int)maskByteCount); ++index)
+        {
+            if (mask[index] != 0)
+            {
+                ++count;
+            }
+        }
+        return count;
+    }
+
+    private static bool TraceEnabled()
+    {
+        if (string.Equals(
+            Environment.GetEnvironmentVariable(TraceEnvironmentVariable),
+            "1",
+            StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        try
+        {
+            return File.Exists(Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Negaflow",
+                "Development",
+                TraceMarkerFileName));
+        }
+        catch (Exception error) when (error is IOException or
+            UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            return false;
+        }
+    }
+
+    private static void WriteTrace(
+        string frameId,
+        DefectRect roi,
+        GrainMendDetectionOptions options,
+        long elapsedMilliseconds,
+        object result)
+    {
+        if (!TraceEnabled() ||
+            StorageRootResolver.ResolveProduction().Roots is not { } roots)
+        {
+            return;
+        }
+        try
+        {
+            string line = JsonSerializer.Serialize(new
+            {
+                timestampUtc = DateTimeOffset.UtcNow,
+                frameId,
+                roi,
+                options,
+                elapsedMilliseconds,
+                result,
+            });
+            lock (TraceGate)
+            {
+                Directory.CreateDirectory(roots.LogRoot);
+                File.AppendAllText(
+                    Path.Combine(roots.LogRoot, TraceFileName),
+                    line + Environment.NewLine);
+            }
+        }
+        catch (Exception error) when (error is IOException or
+            UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            // 진단 로그가 제품 동작을 바꿔서는 안 됩니다.
         }
     }
 
