@@ -66,6 +66,24 @@ def documents_in(language: str) -> list[Path]:
     return found
 
 
+def without_fenced_code(text: str) -> str:
+    """펜스 코드 블록을 지운 본문. 코드 안의 `[Float](repeating: ...)` 같은 제네릭·호출은
+    마크다운 링크가 아니다 — 링크 검사기가 그걸 깨진 링크로 신고했었다."""
+    lines = text.splitlines()
+    kept: list[str] = []
+    fence: str | None = None
+    for line in lines:
+        stripped = line.lstrip()
+        if fence is None:
+            if stripped.startswith("```") or stripped.startswith("~~~"):
+                fence = stripped[:3]
+                continue
+            kept.append(line)
+        elif stripped.startswith(fence):
+            fence = None
+    return "\n".join(kept)
+
+
 class DocumentationStateTests(unittest.TestCase):
     def test_local_markdown_links_resolve_in_a_clean_checkout(self) -> None:
         documents = sorted(ROOT.glob("*.md")) + sorted((ROOT / "docs").rglob("*.md"))
@@ -75,7 +93,7 @@ class DocumentationStateTests(unittest.TestCase):
         ignored: list[str] = []
 
         for document in documents:
-            text = document.read_text(encoding="utf-8")
+            text = without_fenced_code(document.read_text(encoding="utf-8"))
             targets = markdown_link_pattern.findall(text) + html_link_pattern.findall(text)
             for target in targets:
                 if "://" in target or target.startswith("mailto:"):

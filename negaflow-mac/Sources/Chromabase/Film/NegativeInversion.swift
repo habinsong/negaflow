@@ -176,6 +176,10 @@ public enum NegativeInversion {
     /// "뮤트한 장면만 살리는" 일반 규칙이다. 흑백은 chroma 가 없어 무연산.
     static func applyMutedSceneVibrance(to image: CIImage, monochrome: Bool) -> CIImage {
         guard !monochrome else { return image }
+        // Windows 포팅본이 CIVibrance 의 사상을 재현할 수 있도록 이 단계의 입출력을 남긴다.
+        // Apple 내장 필터라 커널 소스가 없어, 값을 주고받는 것 말고는 맞출 방법이 없다.
+        dumpProxy(image, name: "preview")
+
         let meanSaturation = sceneMeanSaturation(image)
         // linear 채도 기준(실측 캘리브레이션): flat 흐린풍경≈0.037, 흐린/뮤트 풍경≈0.14~0.15,
         // 유채색 장면≈0.36. target 0.24 아래일수록 부스트(흐린 풍경 살림), 유채색(>0.24)은 0으로
@@ -185,11 +189,38 @@ public enum NegativeInversion {
             FileHandle.standardError.write(Data(
                 String(format: "[vib] meanSat=%.4f amount=%.3f\n", meanSaturation, amount).utf8))
         }
-        guard amount > 0.01 else { return image }
+        guard amount > 0.01 else {
+            dumpProxy(image, name: "postvib")
+            return image
+        }
         let extent = image.extent
-        return image.applyingFilter("CIVibrance", parameters: [
+        let boosted = image.applyingFilter("CIVibrance", parameters: [
             "inputAmount": amount,
         ]).cropped(to: extent)
+        dumpProxy(boosted, name: "postvib")
+        return boosted
+    }
+
+    /// 320 폭 축소본을 RGBAf 로 덤프한다(NEGA_DUMP_PROXY 전용). sampleStats 의 프록시와 같은
+    /// 축소 규칙이라 두 덤프를 화소 단위로 맞대어 볼 수 있다.
+    static func dumpProxy(_ image: CIImage, name: String) {
+        guard ProcessInfo.processInfo.environment["NEGA_DUMP_PROXY"] != nil,
+              let linear = CGColorSpace(name: CGColorSpace.linearSRGB) else { return }
+        let extent = image.extent.integral
+        guard extent.width > 8, extent.height > 8 else { return }
+        let targetW = max(64, min(320, Int(extent.width)))
+        let scale = Double(targetW) / Double(extent.width)
+        let targetH = max(1, Int(Double(extent.height) * scale))
+        let scaled = image.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+        var bitmap = [Float](repeating: 0, count: targetW * targetH * 4)
+        SamplingContextPool.context(workingColorSpace: linear).render(
+            scaled, toBitmap: &bitmap,
+            rowBytes: targetW * 4 * MemoryLayout<Float>.size,
+            bounds: CGRect(x: 0, y: 0, width: targetW, height: targetH),
+            format: .RGBAf, colorSpace: linear
+        )
+        let data = bitmap.withUnsafeBufferPointer { Data(buffer: $0) }
+        try? data.write(to: URL(fileURLWithPath: "/tmp/\(name)-\(targetW)x\(targetH).f32"))
     }
 
     /// 작은 프록시를 linear 작업공간 그대로 렌더해 장면 평균 채도(HSV S = (max−min)/max)를 잰다.
@@ -210,6 +241,12 @@ public enum NegativeInversion {
             bounds: CGRect(x: 0, y: 0, width: targetW, height: targetH),
             format: .RGBAf, colorSpace: linear
         )
+        if ProcessInfo.processInfo.environment["NEGA_DUMP_PROXY"] != nil {
+            let data = bitmap.withUnsafeBufferPointer { Data(buffer: $0) }
+            try? data.write(to: URL(
+                fileURLWithPath: "/tmp/satproxy-\(targetW)x\(targetH).f32"
+            ))
+        }
         var sum = 0.0
         let n = targetW * targetH
         for i in 0..<n {
