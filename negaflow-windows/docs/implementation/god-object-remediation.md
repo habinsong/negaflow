@@ -45,7 +45,7 @@
 | P0 | `src/Shell.Core/Scanner/ScannerPluginClient.cs` | 706 | wire DTO, JSON parse/validation, process/client calls, path/option/result 검증, publish contract | wire models/codec, transport client, result validator | 대기 |
 | P0 | `src/Catalog.Core/Library/LibraryFrameWriter.cs` | 644 | frame core, route/base/tone/color/effects/transform/local-adjust recipe 검증·직렬화 | reader와 대응하는 recipe별 codec | 대기 |
 | P1 | `tests/Shell.UnitTests/DevelopRequestFactoryTests.cs` | 638 | source/base/tone/color/output/defect/IR/clone/brush request 계약을 한 메서드가 소유 | 요청 영역별 suite와 공용 frame fixture | 대기 |
-| P1 | `tests/Shell.UnitTests/DevelopPanelTests.cs` | 550 | panel recipe, version/preset/metadata, slider, export 결과 표현 | editor/workflow/presentation suite | 대기 |
+| 완료 | `tests/Shell.UnitTests/DevelopPanelTests.cs` | 11개 suite 진입점, 변경 전 550 | panel recipe, version/preset/metadata, slider, export 결과 표현 | `DevelopPanelStateTests`, `InspectorSliderValueTests`, `DevelopOutcomePresenterTests` 실제 타입 분리 | 완료·938 assertions 검증 |
 | P1 | `src/Shell/Views/PrintSheetWriter.cs` | 505 | develop 호출, 크기 probe, page 합성, caption/ruler drawing, PNG encode/file I/O | source renderer, page compositor, encoder/writer | 대기 |
 | 완료 | `tests/Shell.UnitTests/Program.cs` | 62, 변경 전 약 7,000 | 진입점·진단·fixture/fake·전 도메인 suite | 실행/집계만 남기고 26개 suite와 진단/fixture 타입 분리 | 완료·검증·푸시 |
 | 완료 | `tests/Catalog.UnitTests/Program.cs` | 33, 변경 전 3,301 | 전 catalog suite와 fixture | 19개 suite/fixture 타입과 실행/집계 분리 | 완료·검증·푸시 |
@@ -103,6 +103,8 @@
 - Shell 단위 테스트는 구조 변경 전후 Release 918 assertions가 모두 통과했다.
 - `DevelopPanelState`가 소유하던 GrainMend 좌표 역변환, 브러시·복제 획 조립, 검토 결과 수락, 종류/라벨별 제거, sidecar/catalog 쓰기를 `DevelopDefectEditor`로 이동했다. 공개 facade는 선택 frame 전달과 실제 변경 뒤 재선택만 담당한다.
 - `DevelopDefectEditResult.Changed`로 성공한 실제 쓰기와 변경 없는 제거를 구분해, 기존의 no-op 제거가 불필요한 재선택을 하지 않던 동작도 보존했다.
+- `DevelopPanelTests`는 550줄 단일 타입에서 11줄 suite 진입점으로 축소했다. panel/catalog 왕복, slider 값 계약, export 결과 표현을 `tests/Shell.UnitTests/Develop/` 아래의 독립 타입으로 옮겼고 각 구현 파일은 500줄 미만이다.
+- 변경된 working tree에서 Shell 단위 테스트 938 assertions가 통과했다. 이 수치는 사용자의 진행 중 GrainMend 테스트 변경도 함께 포함하므로, 체크포인트 커밋 전에는 clean index 검증을 별도로 남긴다.
 - 스테이징한 파일만 내보낸 깨끗한 인덱스에서 `test-managed.ps1 -Preset x64-release`를 실행해 빌드 경고 0개·오류 0개, Catalog 721 assertions, Shell 921 assertions가 통과했다. 추가된 서로 다른 검증 경로는 `DevelopPanelState`를 통한 표시→raw 좌표 변환, 검토 region 수락, 라벨별 선택 제거다.
 - `Catalog.UnitTests/Program.cs`는 lock contender 분기, suite 순서, 결과 집계만 남겼다. 현상 경로 계약, 현상 recipe/프리셋, 저장 경로, 프로세스 lock, SQLite 수명주기, defect sidecar, defect 복구, backup/pending restore, catalog session, Library frame 투영·검증·쓰기·정리·앱 메타데이터를 각각 독립 suite 타입으로 이동했다.
 - 공용 상태는 `CatalogTestAssert`, frame fixture는 `LibraryFrameFixture`, defect fixture는 `DefectTestFixture`, 저장 fixture는 `CatalogStorageFixtures`로 분리했다. 분리 뒤 가장 큰 suite는 `CatalogBackupRestoreTests` 448줄이며, 서로 다른 저장·복구 책임을 다시 한 타입에 합치지 않았다.
