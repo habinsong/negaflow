@@ -33,7 +33,7 @@
 | P0 | `src/Shell/Views/LibraryWorkspaceView.xaml.cs` | 2,835 | 탐색·선택·rating/flag·collection·folder DnD·scanner session·filter/sort·resize·localization | 탐색/정리, scanner workflow, source sidebar, view presentation 타입 | 대기 |
 | P0 | `src/Shell/Views/DevelopWorkspaceView.xaml` | 2,508 | source sidebar, canvas/crop, histogram/tabs, 전체 inspector, GrainMend, metadata/version/export UI | macOS surface 단위 실제 UserControl; 공유 상태를 partial로 숨기지 않음 | 대기 |
 | P0 | `src/Interop/NativeDevelopExporter.cs` | 2,342 | ABI layout 검증, recipe validation, 각 payload marshaling, 30여 request version, export/preview/auto/GrainMend 실행 | validation, payload marshaler, version request builder, command adapter | 대기 |
-| P0 | `src/Catalog.Core/Library/LibraryFrameReader.cs` | 1,584 | frame identity/source, base/tone/color/effects/transform/metadata/local-adjust recipe 파싱 | frame core reader와 recipe별 codec | 대기 |
+| 완료 | `src/Catalog.Core/Library/LibraryFrameReader.cs` | 372, 변경 전 1,584 | frame identity/source, base/tone/color/effects/transform/metadata/local-adjust recipe 파싱 | `Library/Reading` core/value reader와 `Reading/Codecs`의 recipe별 실제 reader | 완료·Catalog 721·Shell 938 assertions 검증 |
 | P0 | `src/Native/pipeline/develop_export.cpp` | 1,575 | decode, source observation, develop/tone/look/defect/transform/output stage와 progress/cancel orchestration | stage executor와 pipeline coordinator | 대기 |
 | P0 | `src/Shell.Core/Library/LibraryDocument.cs` | 1,468 | document 상태, undo/redo, frame/roll/collection/stack/search 변경, defect sidecar, relink/save | aggregate별 command와 persistence transaction | 대기 |
 | P0 | `src/Native/core/tiff_probe.cpp` | 1,425 | Win32 random file I/O, TIFF/BigTIFF parsing, directory selection, segment/deflate 검증, metadata projection | byte reader, directory parser, segment validator, projection | 대기 |
@@ -118,6 +118,8 @@
 - point curve 정렬·중복 허용 오차, color mixer·grading·primary 범위, nullable base key 삭제, BW toning key 삭제를 기존 writer와 동일하게 보존했다. working tree Catalog 721 assertions와 Shell 938 assertions가 통과했다.
 - CLI developed export는 726줄 단일 번역 단위에서 option parser 93줄, pipeline command 303줄, timing/JSON report writer 330줄로 분리했다. parser가 argument count·Dmin·film type·tone·film look을 소유하고 command는 decode→develop→tone→look→encode 순서만 소유한다.
 - x64 Debug `negaflow_cli` target이 빌드됐고 `cli.develop_negative_tiff` 4개 변형과 `cli.export_developed_tiff_film_look`까지 5개 CTest가 통과했다.
+- `LibraryFrameReader`는 1,584줄에서 372줄 snapshot 조립 facade로 축소했다. frame/app/source metadata, 공용 JSON primitive, base, tone, color, transform/effect/BW, local dodge-burn parser를 `Library/Reading` 아래 실제 타입으로 이동했다.
+- 모든 reader codec은 기존 `LibraryFrameReader` 키 상수를 단일 소스로 참조한다. 메서드 본문을 그대로 이동한 뒤 working tree Catalog 721 assertions와 Shell 938 assertions가 통과했다.
 - 스테이징한 파일만 내보낸 깨끗한 인덱스에서 `test-managed.ps1 -Preset x64-release`를 실행해 빌드 경고 0개·오류 0개, Catalog 721 assertions, Shell 921 assertions가 통과했다. 추가된 서로 다른 검증 경로는 `DevelopPanelState`를 통한 표시→raw 좌표 변환, 검토 region 수락, 라벨별 선택 제거다.
 - `Catalog.UnitTests/Program.cs`는 lock contender 분기, suite 순서, 결과 집계만 남겼다. 현상 경로 계약, 현상 recipe/프리셋, 저장 경로, 프로세스 lock, SQLite 수명주기, defect sidecar, defect 복구, backup/pending restore, catalog session, Library frame 투영·검증·쓰기·정리·앱 메타데이터를 각각 독립 suite 타입으로 이동했다.
 - 공용 상태는 `CatalogTestAssert`, frame fixture는 `LibraryFrameFixture`, defect fixture는 `DefectTestFixture`, 저장 fixture는 `CatalogStorageFixtures`로 분리했다. 분리 뒤 가장 큰 suite는 `CatalogBackupRestoreTests` 448줄이며, 서로 다른 저장·복구 책임을 다시 한 타입에 합치지 않았다.
