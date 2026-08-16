@@ -19,7 +19,7 @@
 | P0 | `tests/Catalog.UnitTests/Program.cs` | 약 3,300줄 | 카탈로그 전체 suite와 fixture를 한 타입이 소유 | 저장소·복구·sidecar·reader/writer suite와 공용 fixture 분리 | 대기 |
 | P0 | `src/Interop/NativeDevelopExporter.cs` | 약 2,300줄 | ABI marshaling, 요청 검증, preview/export, 자동보정, GrainMend/IR 검출 | 호출별 marshaler와 명령별 adapter로 분리하되 public ABI facade는 얇게 유지 | 대기 |
 | P0 | `src/Native/abi/negaflow_abi.cpp` | 약 6,300줄 | 여러 독립 ABI 명령의 검증·변환·호출 | ABI 함수군별 내부 adapter 번역 단위로 분리하고 공개 C ABI는 얇은 진입점으로 유지 | 대기 |
-| P1 | `src/Shell.Core/Develop/DevelopPanelState.cs` | 약 1,500줄 | 현상 recipe 전 영역과 버전·내보내기·결함 편집 | recipe 영역별 command/service로 분리하고 선택 frame facade는 얇게 유지 | 대기 |
+| P1 | `src/Shell.Core/Develop/DevelopPanelState.cs` | 1,328줄, 변경 전 1,542줄 | 현상 recipe 전 영역과 버전·내보내기·결함 편집 | recipe 영역별 command/service로 분리하고 선택 frame facade는 얇게 유지 | 진행 중: 결함 편집 분리 |
 | P1 | `src/Shell.Core/Library/LibraryDocument.cs` | 약 1,500줄 | 문서 상태, 저장, undo, sidecar, defect, collection 변경 | 저장 트랜잭션·undo·defect persistence 책임 분리 | 대기 |
 | P1 | `tests/Native.UnitTests/develop_export_abi_tests.cpp` | 약 4,100줄 | 독립 ABI stage suite와 fixture | stage군별 실행 파일 또는 suite 번역 단위로 분리 | 대기 |
 
@@ -32,4 +32,7 @@
 - `Shell.UnitTests/Program.cs`에서 수동 진단 라우팅, 공용 test assertion/frame factory/fake, 26개 도메인 suite를 실제 별도 타입으로 이동했다. `Program`은 진단 위임, suite 실행, 결과 집계만 남는다.
 - 진단도 `CatalogSeedDiagnostics`, `CatalogInspectionDiagnostics`, `DevelopPipelineDiagnostics`로 분리해 테스트 suite와 I/O 진단 책임을 섞지 않는다.
 - Shell 단위 테스트는 구조 변경 전후 Release 918 assertions가 모두 통과했다.
+- `DevelopPanelState`가 소유하던 GrainMend 좌표 역변환, 브러시·복제 획 조립, 검토 결과 수락, 종류/라벨별 제거, sidecar/catalog 쓰기를 `DevelopDefectEditor`로 이동했다. 공개 facade는 선택 frame 전달과 실제 변경 뒤 재선택만 담당한다.
+- `DevelopDefectEditResult.Changed`로 성공한 실제 쓰기와 변경 없는 제거를 구분해, 기존의 no-op 제거가 불필요한 재선택을 하지 않던 동작도 보존했다.
+- 스테이징한 파일만 내보낸 깨끗한 인덱스에서 `test-managed.ps1 -Preset x64-release`를 실행해 빌드 경고 0개·오류 0개, Catalog 721 assertions, Shell 921 assertions가 통과했다. 추가된 서로 다른 검증 경로는 `DevelopPanelState`를 통한 표시→raw 좌표 변환, 검토 region 수락, 라벨별 선택 제거다.
 - 일반 `dotnet build`의 AnyCPU 패키징은 `RuntimeIdentifier`가 없어 실패했다. 저장소의 x64 preset/setup 경로로 최종 빌드해야 하며 이 실패를 기능 실패나 통과로 바꾸어 말하지 않는다.

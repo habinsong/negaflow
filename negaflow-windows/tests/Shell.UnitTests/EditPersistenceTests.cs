@@ -96,8 +96,8 @@ internal static class EditPersistenceTests
                 payload["sourceMetadata"] = new JsonObject
                 {
                     ["fileBytes"] = 8,
-                    ["pixelWidth"] = 4,
-                    ["pixelHeight"] = 2,
+                    ["pixelWidth"] = 100,
+                    ["pixelHeight"] = 100,
                     ["samplesPerPixel"] = 3,
                     ["bitsPerSample"] = 16,
                     ["sampleFormat"] = 1,
@@ -117,6 +117,11 @@ internal static class EditPersistenceTests
                 new FakeExporter(_ => OkResult()),
                 TestSourceMetadata);
             Check(host.Open(roots) == LibraryHostState.Open, "brush_stroke_open");
+            DevelopPanelState panel = new(
+                host,
+                new ToneLimits(5.0f, 1.0f, 0.0, 1.0),
+                new NegativeLimits(0.001f, 1.0f));
+            Check(panel.Select(frameId.ToString("D")), "defect_editor_selects_frame");
 
             DefectPoint[] points =
             [
@@ -124,15 +129,7 @@ internal static class EditPersistenceTests
                 new(0.30, 0.28),
                 new(0.35, 0.31),
             ];
-            Check(host.AppendDefectStroke(
-                    frameId.ToString("D"),
-                    (identity, existing) => DefectStrokeRecipeBuilder.AppendBrushStroke(
-                        frameId,
-                        identity,
-                        existing,
-                        points,
-                        DevelopPanelState.DefaultBrushThickness,
-                        new DefectSize(4000, 3000))) == LibraryFrameError.None,
+            Check(panel.AddBrushStroke(points) == LibraryFrameError.None,
                 "brush_stroke_appends");
 
             LibraryFrameSnapshot brushed = host.Frames.Single();
@@ -150,32 +147,18 @@ internal static class EditPersistenceTests
                 "brush_stroke_reaches_the_develop_request");
 
             // 두 번째 획은 개정 번호를 올리며 앞의 획을 지우지 않습니다.
-            Check(host.AppendDefectStroke(
-                    frameId.ToString("D"),
-                    (identity, existing) => DefectStrokeRecipeBuilder.AppendBrushStroke(
-                        frameId,
-                        identity,
-                        existing,
-                        [new DefectPoint(0.6, 0.6), new DefectPoint(0.65, 0.62)],
-                        DevelopPanelState.DefaultBrushThickness,
-                        new DefectSize(4000, 3000))) == LibraryFrameError.None,
+            Check(panel.AddBrushStroke(
+                    [new DefectPoint(0.6, 0.6), new DefectPoint(0.65, 0.62)]) ==
+                    LibraryFrameError.None,
                 "brush_stroke_second_appends");
             Check(host.Frames.Single().DefectRecipe is { } second &&
                 second.Items.Count == 2 && second.RecipeRevision == 2UL,
                 "brush_stroke_keeps_previous_edits");
 
             // 도구별 초기화: 브러시 편집만 지우고 나머지는 남습니다.
-            Check(host.AppendDefectStroke(
-                    frameId.ToString("D"),
-                    (identity, existing) => DefectStrokeRecipeBuilder.AppendCloneStroke(
-                        frameId,
-                        identity,
-                        existing,
-                        [new DefectPoint(0.4, 0.4), new DefectPoint(0.42, 0.41)],
-                        DevelopPanelState.DefaultCloneDiameterPixels,
-                        0.05,
-                        0.05,
-                        new DefectSize(4000, 3000))) == LibraryFrameError.None,
+            Check(panel.AddCloneStroke(
+                    [new DefectPoint(0.4, 0.4), new DefectPoint(0.42, 0.41)],
+                    new DefectPoint(0.45, 0.45)) == LibraryFrameError.None,
                 "clone_stroke_appends");
             Check(host.Frames.Single().DefectRecipe?.Items.Count == 3,
                 "clone_stroke_joins_brush_edits");
@@ -188,26 +171,41 @@ internal static class EditPersistenceTests
                         (int)DevelopPanelState.DefaultCloneDiameterPixels),
                 "clone_stroke_label_uses_the_pixel_diameter");
 
-            DefectRecipeSnapshot before = host.Frames.Single().DefectRecipe!;
-            Check(host.AppendDefectStroke(
-                    frameId.ToString("D"),
-                    (identity, _) => DefectRecipeSnapshot.Create(
-                        frameId,
-                        before.RecipeRevision + 1UL,
-                        identity,
-                        [.. before.Items.Where(item => item.Kind != DefectEditKind.Brush)]))
-                == LibraryFrameError.None,
+            Check(panel.RemoveDefectEdits(DefectEditKind.Brush) == LibraryFrameError.None,
                 "brush_reset_writes");
             Check(host.Frames.Single().DefectRecipe is { } afterReset &&
                 afterReset.Items.Count == 1 &&
                 afterReset.Items[0].Kind == DefectEditKind.Clone,
                 "brush_reset_keeps_clone_edits");
 
-            DevelopPanelState panel = new(
-                host,
-                new ToneLimits(5.0f, 1.0f, 0.0, 1.0),
-                new NegativeLimits(0.001f, 1.0f));
-            Check(panel.Select(frameId.ToString("D")), "clone_panel_selects_frame");
+            Check(panel.TryMapDisplayRectToRaw(
+                    new DefectRect(0.2, 0.3, 0.4, 0.5),
+                    out DefectRect mappedRect) &&
+                Near(mappedRect.X, 0.2) && Near(mappedRect.Y, 0.3) &&
+                Near(mappedRect.Width, 0.4) && Near(mappedRect.Height, 0.5),
+                "defect_editor_maps_identity_display_rect_to_raw");
+
+            DefectEditItem acceptedRegion = GrainMendRegionEdit.From(
+                [0, 0, 0, 0, 0, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                4,
+                4,
+                100,
+                100,
+                0,
+                0,
+                100,
+                100,
+                1,
+                automatic: true)!;
+            Check(panel.AcceptDefectRegion(acceptedRegion) == LibraryFrameError.None &&
+                panel.HasDefectEdits(DefectEditLabelKind.Automatic),
+                "defect_editor_accepts_reviewed_region");
+            Check(panel.RemoveDefectEdits(DefectEditLabelKind.Automatic) ==
+                    LibraryFrameError.None &&
+                !panel.HasDefectEdits(DefectEditLabelKind.Automatic) &&
+                panel.HasDefectEdits(DefectEditKind.Clone),
+                "defect_editor_removes_only_the_selected_label");
+
             LibraryFrameError firstCloneError = panel.AddCloneStroke(
                     [new DefectPoint(0.2, 0.5)],
                     new DefectPoint(0.8, 0.5),

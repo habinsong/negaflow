@@ -13,8 +13,8 @@ public sealed class DevelopPanelState
 {
     private readonly LibraryHostService host;
     private readonly ToneLimits limits;
-
     private readonly NegativeLimits negativeLimits;
+    private readonly DevelopDefectEditor defectEditor;
 
     public DevelopPanelState(
         LibraryHostService host,
@@ -27,6 +27,7 @@ public sealed class DevelopPanelState
         this.host = host;
         this.limits = limits;
         this.negativeLimits = negativeLimits;
+        defectEditor = new DevelopDefectEditor(host);
     }
 
     public double MinimumManualDmin => negativeLimits.MinimumManualDmin;
@@ -604,12 +605,11 @@ public sealed class DevelopPanelState
         IReadOnlyList<DefectPoint> displayPoints,
         double thickness = DefaultBrushThickness)
     {
-        ArgumentNullException.ThrowIfNull(displayPoints);
-        return AddStroke(
+        DevelopDefectEditResult result = defectEditor.AddBrushStroke(
+            SelectedFrame,
             displayPoints,
-            (frameId, identity, existing, points, baseSize) =>
-                DefectStrokeRecipeBuilder.AppendBrushStroke(
-                    frameId, identity, existing, points, thickness, baseSize));
+            thickness);
+        return RefreshAfterDefectEdit(result);
     }
 
     /// <summary>
@@ -641,93 +641,17 @@ public sealed class DevelopPanelState
         double diameter = DefaultCloneDiameterPixels,
         double hardness = DefectStrokeRecipeBuilder.DefaultCloneHardness)
     {
-        ArgumentNullException.ThrowIfNull(displayPoints);
-        usedRawOffset = default;
-        if (displayPoints.Count == 0 ||
-            !TryMapToRaw(displayPoints[0], out DefectPoint firstTarget) ||
-            !double.IsFinite(diameter) || !double.IsFinite(hardness))
-        {
-            return LibraryFrameError.InvalidDefectRecipe;
-        }
-        DefectPoint offset;
-        if (alignedRawOffset is { } aligned)
-        {
-            offset = aligned;
-        }
-        else if (TryMapToRaw(displaySourceAnchor, out DefectPoint anchor))
-        {
-            offset = new DefectPoint(anchor.X - firstTarget.X, anchor.Y - firstTarget.Y);
-        }
-        else
-        {
-            return LibraryFrameError.InvalidDefectRecipe;
-        }
-        if (!double.IsFinite(offset.X) || !double.IsFinite(offset.Y) ||
-            (offset.X == 0.0 && offset.Y == 0.0))
-        {
-            return LibraryFrameError.InvalidDefectRecipe;
-        }
-        double clampedDiameter = Math.Clamp(
+        DevelopDefectEditResult result = defectEditor.AddCloneStroke(
+            SelectedFrame,
+            displayPoints,
+            displaySourceAnchor,
+            alignedRawOffset,
+            out usedRawOffset,
             diameter,
+            hardness,
             MinimumCloneDiameterPixels,
             MaximumCloneDiameterPixels);
-        double clampedHardness = Math.Clamp(hardness, 0.0, 1.0);
-        LibraryFrameError error = AddStroke(
-            displayPoints,
-            (frameId, identity, existing, points, baseSize) =>
-                DefectStrokeRecipeBuilder.AppendCloneStroke(
-                    frameId,
-                    identity,
-                    existing,
-                    points,
-                    clampedDiameter,
-                    offset.X,
-                    offset.Y,
-                    baseSize,
-                    clampedHardness));
-        if (error == LibraryFrameError.None)
-        {
-            usedRawOffset = offset;
-        }
-        return error;
-    }
-
-    private LibraryFrameError AddStroke(
-        IReadOnlyList<DefectPoint> displayPoints,
-        Func<Guid, DefectSourceIdentity, DefectRecipeSnapshot?, IReadOnlyList<DefectPoint>,
-            DefectSize, DefectRecipeSnapshot?> build)
-    {
-        if (SelectedFrame is not { } frame ||
-            !Guid.TryParseExact(frame.Id, "D", out Guid frameId) ||
-            frame.SourceMetadata is not { } metadata ||
-            metadata.PixelWidth == 0U || metadata.PixelHeight == 0U)
-        {
-            return LibraryFrameError.MissingId;
-        }
-
-        List<DefectPoint> rawPoints = new(displayPoints.Count);
-        foreach (DefectPoint point in displayPoints)
-        {
-            if (TryMapToRaw(point, out DefectPoint raw))
-            {
-                rawPoints.Add(raw);
-            }
-        }
-        if (rawPoints.Count == 0)
-        {
-            return LibraryFrameError.InvalidDefectRecipe;
-        }
-
-        DefectSize baseSize = new(metadata.PixelWidth, metadata.PixelHeight);
-        LibraryFrameError error = host.AppendDefectStroke(
-            frame.Id,
-            (identity, existing) =>
-                build(frameId, identity, existing, rawPoints, baseSize));
-        if (error == LibraryFrameError.None)
-        {
-            Select(frame.Id);
-        }
-        return error;
+        return RefreshAfterDefectEdit(result);
     }
 
     /// <summary>
@@ -736,42 +660,15 @@ public sealed class DevelopPanelState
     /// </summary>
     public LibraryFrameError AcceptDefectRegion(DefectEditItem edit)
     {
-        ArgumentNullException.ThrowIfNull(edit);
-        if (SelectedFrame is not { } frame ||
-            !Guid.TryParseExact(frame.Id, "D", out Guid frameId))
-        {
-            return LibraryFrameError.MissingId;
-        }
-
-        LibraryFrameError error = host.AppendDefectStroke(
-            frame.Id,
-            (identity, existing) =>
-            {
-                try
-                {
-                    return DefectRecipeSnapshot.Create(
-                        frameId,
-                        checked((existing?.RecipeRevision ?? 0UL) + 1UL),
-                        identity,
-                        existing is null ? [edit] : [.. existing.Items, edit]);
-                }
-                catch (Exception failure) when (failure is ArgumentException or OverflowException)
-                {
-                    return null;
-                }
-            });
-        if (error == LibraryFrameError.None)
-        {
-            Select(frame.Id);
-        }
-        return error;
+        DevelopDefectEditResult result = defectEditor.AcceptRegion(SelectedFrame, edit);
+        return RefreshAfterDefectEdit(result);
     }
 
     public bool HasDefectEdits(DefectEditKind kind) =>
-        SelectedFrame?.DefectRecipe?.Items.Any(item => item.Kind == kind) == true;
+        DevelopDefectEditor.HasEdits(SelectedFrame, kind);
 
     public bool HasDefectEdits(DefectEditLabelKind label) =>
-        SelectedFrame?.DefectRecipe?.Items.Any(item => item.Label.Kind == label) == true;
+        DevelopDefectEditor.HasEdits(SelectedFrame, label);
 
     /// <summary>
     /// 한 도구가 남긴 편집만 지웁니다. 다른 도구의 편집과 자동 검출 결과는 남습니다 — macOS 의
@@ -779,103 +676,15 @@ public sealed class DevelopPanelState
     /// </summary>
     public LibraryFrameError RemoveDefectEdits(DefectEditKind kind)
     {
-        if (SelectedFrame is not { } frame ||
-            !Guid.TryParseExact(frame.Id, "D", out Guid frameId))
-        {
-            return LibraryFrameError.MissingId;
-        }
-        if (frame.DefectRecipe is not { } recipe ||
-            recipe.Items.All(item => item.Kind != kind))
-        {
-            return LibraryFrameError.None;
-        }
-
-        DefectEditItem[] remaining = [.. recipe.Items.Where(item => item.Kind != kind)];
-        LibraryFrameError error = host.AppendDefectStroke(
-            frame.Id,
-            (identity, _) =>
-            {
-                try
-                {
-                    // 남은 항목이 없어도 recipe 자체는 남깁니다. 개정 번호가 이어져야
-                    // 이전 편집이 되살아나지 않습니다.
-                    return DefectRecipeSnapshot.Create(
-                        frameId,
-                        checked(recipe.RecipeRevision + 1UL),
-                        identity,
-                        remaining);
-                }
-                catch (Exception failure) when (failure is ArgumentException or OverflowException)
-                {
-                    return null;
-                }
-            });
-        if (error == LibraryFrameError.None)
-        {
-            Select(frame.Id);
-        }
-        return error;
+        DevelopDefectEditResult result = defectEditor.RemoveEdits(SelectedFrame, kind);
+        return RefreshAfterDefectEdit(result);
     }
 
     /// <summary>Resets just one visible GrainMend tool without discarding its siblings.</summary>
     public LibraryFrameError RemoveDefectEdits(DefectEditLabelKind label)
     {
-        if (SelectedFrame is not { } frame ||
-            !Guid.TryParseExact(frame.Id, "D", out Guid frameId))
-        {
-            return LibraryFrameError.MissingId;
-        }
-        if (frame.DefectRecipe is not { } recipe ||
-            recipe.Items.All(item => item.Label.Kind != label))
-        {
-            return LibraryFrameError.None;
-        }
-
-        DefectEditItem[] remaining = [.. recipe.Items.Where(item => item.Label.Kind != label)];
-        LibraryFrameError error = host.AppendDefectStroke(
-            frame.Id,
-            (identity, _) =>
-            {
-                try
-                {
-                    return DefectRecipeSnapshot.Create(
-                        frameId,
-                        checked(recipe.RecipeRevision + 1UL),
-                        identity,
-                        remaining);
-                }
-                catch (Exception failure) when (failure is ArgumentException or OverflowException)
-                {
-                    return null;
-                }
-            });
-        if (error == LibraryFrameError.None)
-        {
-            Select(frame.Id);
-        }
-        return error;
-    }
-
-    private bool TryMapToRaw(DefectPoint displayPoint, out DefectPoint rawPoint)
-    {
-        rawPoint = default;
-        if (SelectedFrame is not { } frame || frame.SourceMetadata is not { } metadata)
-        {
-            return false;
-        }
-        if (!DevelopDisplayGeometry.TryMapDisplayToRaw(
-                frame.ImageTransform,
-                metadata.PixelWidth,
-                metadata.PixelHeight,
-                displayPoint.X,
-                displayPoint.Y,
-                out double rawX,
-                out double rawY))
-        {
-            return false;
-        }
-        rawPoint = new DefectPoint(rawX, rawY);
-        return true;
+        DevelopDefectEditResult result = defectEditor.RemoveEdits(SelectedFrame, label);
+        return RefreshAfterDefectEdit(result);
     }
 
     /// <summary>
@@ -886,42 +695,19 @@ public sealed class DevelopPanelState
     /// </summary>
     public bool TryMapDisplayRectToRaw(DefectRect displayRect, out DefectRect rawRect)
     {
-        rawRect = default;
-        if (!double.IsFinite(displayRect.X) || !double.IsFinite(displayRect.Y) ||
-            !double.IsFinite(displayRect.Width) || !double.IsFinite(displayRect.Height) ||
-            displayRect.Width <= 0.0 || displayRect.Height <= 0.0)
-        {
-            return false;
-        }
+        return DevelopDefectEditor.TryMapDisplayRectToRaw(
+            SelectedFrame,
+            displayRect,
+            out rawRect);
+    }
 
-        DefectPoint[] corners =
-        [
-            new(displayRect.X, displayRect.Y),
-            new(displayRect.X + displayRect.Width, displayRect.Y),
-            new(displayRect.X, displayRect.Y + displayRect.Height),
-            new(displayRect.X + displayRect.Width, displayRect.Y + displayRect.Height),
-        ];
-        double minX = 1.0;
-        double minY = 1.0;
-        double maxX = 0.0;
-        double maxY = 0.0;
-        foreach (DefectPoint corner in corners)
+    private LibraryFrameError RefreshAfterDefectEdit(DevelopDefectEditResult result)
+    {
+        if (result.Changed && SelectedFrame is { } frame)
         {
-            if (!TryMapToRaw(corner, out DefectPoint raw))
-            {
-                return false;
-            }
-            minX = Math.Min(minX, raw.X);
-            minY = Math.Min(minY, raw.Y);
-            maxX = Math.Max(maxX, raw.X);
-            maxY = Math.Max(maxY, raw.Y);
+            Select(frame.Id);
         }
-        if (maxX <= minX || maxY <= minY)
-        {
-            return false;
-        }
-        rawRect = new DefectRect(minX, minY, maxX - minX, maxY - minY);
-        return true;
+        return result.Error;
     }
 
     public BwToningRecipe BwToning => SelectedFrame?.BwToning ?? BwToningRecipe.None;
