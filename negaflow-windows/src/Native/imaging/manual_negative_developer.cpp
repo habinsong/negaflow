@@ -9,12 +9,21 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <cstdio>
+#include <cstdlib>
 #include <optional>
 #include <utility>
 #include <vector>
 
 namespace negaflow::imaging {
 namespace {
+
+// macOS 가 NEGA_DEBUG 로 내보내는 것과 **같은 줄**을 같은 이름·같은 자릿수로 씁니다. 두
+// 구현을 나란히 놓고 견주는 것이 이 진단의 유일한 용도이므로 서식이 갈리면 쓸모가 없습니다.
+[[nodiscard]] bool debug_enabled() noexcept {
+    std::size_t length = 0U;
+    return getenv_s(&length, nullptr, 0U, "NEGA_DEBUG") == 0 && length > 0U;
+}
 
 void discard_pixels(WorkingImage& image) noexcept {
     std::vector<negaflow::core::Rgba32F>{}.swap(image.pixels);
@@ -119,6 +128,7 @@ void discard_pixels(WorkingImage& image) noexcept {
         if (pixels.size() < 64U) {
             return std::nullopt;
         }
+        const std::size_t pixel_count = pixels.size();
 
         const float base_luma = (dmin[0] + dmin[1] + dmin[2]) / 3.0F;
         const float gate = base_luma * 1.12F;
@@ -156,13 +166,30 @@ void discard_pixels(WorkingImage& image) noexcept {
             std::sort(channel.begin(), channel.end());
         }
 
+        std::array<float, 3> densest{};
+        std::array<float, 3> densest_floor{};
         std::array<float, 3> measured{};
         for (std::size_t channel = 0U; channel < measured.size(); ++channel) {
-            const float densest = std::max(percentile(channels[channel], 0.002), 1.0e-5F);
-            const float densest_floor = std::max(
-                densest,
+            densest[channel] = std::max(percentile(channels[channel], 0.002), 1.0e-5F);
+            densest_floor[channel] = std::max(
+                densest[channel],
                 dmin[channel] * std::pow(10.0F, -1.8F));
-            measured[channel] = std::max(0.4F, std::log10(dmin[channel] / densest_floor));
+            measured[channel] =
+                std::max(0.4F, std::log10(dmin[channel] / densest_floor[channel]));
+        }
+        if (debug_enabled()) {
+            std::fprintf(
+                stderr,
+                "[nega-proxy] targetW=%u targetH=%u inset=(%u,%u) pixels=%zu film=%zu "
+                "gate=%.6f darkCut=%.6f densest=(%.4f,%.4f,%.4f) "
+                "densestFloor=(%.4f,%.4f,%.4f) measuredDmax=(%.4f,%.4f,%.4f)\n",
+                bounded_width, bounded_height, inset_x, inset_y, pixel_count, film.size(),
+                static_cast<double>(gate), static_cast<double>(dark_cut),
+                static_cast<double>(densest[0]), static_cast<double>(densest[1]),
+                static_cast<double>(densest[2]), static_cast<double>(densest_floor[0]),
+                static_cast<double>(densest_floor[1]), static_cast<double>(densest_floor[2]),
+                static_cast<double>(measured[0]), static_cast<double>(measured[1]),
+                static_cast<double>(measured[2]));
         }
         const float geometric_mean = std::pow(
             measured[0] * measured[1] * measured[2],
@@ -178,6 +205,28 @@ void discard_pixels(WorkingImage& image) noexcept {
         for (std::size_t channel = 0U; channel < result.size(); ++channel) {
             result[channel] = scale *
                 (1.0F + ((measured[channel] / geometric_mean) - 1.0F) * confidence);
+        }
+        if (debug_enabled()) {
+            // blackInput 과 midDensity 는 macOS 에서도 지표 전용이라 반전 수식에 들어가지
+            // 않습니다. 대조에만 쓰므로 진단이 켜졌을 때만 계산합니다.
+            std::array<double, 3> black_input{};
+            double mid_density = 0.0;
+            for (std::size_t channel = 0U; channel < 3U; ++channel) {
+                black_input[channel] =
+                    static_cast<double>(percentile(channels[channel], 0.90)) * 0.97;
+                mid_density += std::log10(
+                    static_cast<double>(dmin[channel]) /
+                    std::max(static_cast<double>(percentile(channels[channel], 0.5)), 1.0e-5));
+            }
+            mid_density = std::max(0.0, mid_density / 3.0);
+            std::fprintf(
+                stderr,
+                "[nega] dmin=(%.4f,%.4f,%.4f) dmaxNorm=(%.4f,%.4f,%.4f) "
+                "blackIn=(%.4f,%.4f,%.4f) midD=%.3f\n",
+                static_cast<double>(dmin[0]), static_cast<double>(dmin[1]),
+                static_cast<double>(dmin[2]), static_cast<double>(result[0]),
+                static_cast<double>(result[1]), static_cast<double>(result[2]),
+                black_input[0], black_input[1], black_input[2], mid_density);
         }
         return result;
     } catch (const std::bad_alloc&) {

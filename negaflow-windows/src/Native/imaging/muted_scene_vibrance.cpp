@@ -8,9 +8,17 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
+#include <cstdlib>
 
 namespace negaflow::imaging {
 namespace {
+
+// macOS 의 [vib] 줄과 같은 이름·같은 자릿수로 씁니다(NEGA_DEBUG opt-in).
+[[nodiscard]] bool debug_enabled() noexcept {
+    std::size_t length = 0U;
+    return getenv_s(&length, nullptr, 0U, "NEGA_DEBUG") == 0 && length > 0U;
+}
 
 constexpr std::uint32_t minimum_proxy_width = 32U;
 constexpr std::uint32_t maximum_proxy_width = 160U;
@@ -90,6 +98,13 @@ MutedSceneVibranceResult apply_muted_scene_vibrance(
         (saturation_target - result.info.mean_saturation) * vibrance_scale,
         0.0,
         maximum_vibrance);
+    if (debug_enabled()) {
+        std::fprintf(
+            stderr,
+            "[vib] meanSat=%.4f amount=%.3f\n",
+            result.info.mean_saturation,
+            result.info.amount);
+    }
     if (result.info.amount <= activation_threshold) {
         result.status = negaflow::core::KernelStatus::ok;
         return result;
