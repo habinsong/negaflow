@@ -1,7 +1,6 @@
 using Negaflow.Catalog;
 using Negaflow.Interop;
 using Negaflow.Shell.Develop;
-using System.Security.Cryptography;
 
 namespace Negaflow.Shell;
 
@@ -44,27 +43,21 @@ public sealed record ScannerFramePublishResult(
 /// </remarks>
 public sealed class LibraryHostService : IDisposable
 {
-    private const int AsynchronousAvailabilityThreshold = 256;
-
-    /// <summary>macOS <c>scheduleLibrarySave</c> 와 같은 1.5 초입니다.</summary>
-    private static readonly TimeSpan AutomaticSaveDelay = TimeSpan.FromSeconds(1.5);
+    private readonly LibraryAutosaveController autosave;
+    private readonly LibraryAvailabilityController availability;
     private readonly DevelopExportCoordinator coordinator;
-    private readonly IUiDispatcher dispatcher;
+    private readonly LibraryImportController importer;
+    private readonly ScannerFramePublisher scannerPublisher;
+    private readonly LibrarySelectionState selection;
+    private readonly LibrarySourceController sourceController;
     private readonly Func<string, LibrarySourceMetadata?> sourceMetadataReader;
-    private IReadOnlyDictionary<string, LibrarySourceAvailability> availabilityByFrameId =
-        new Dictionary<string, LibrarySourceAvailability>();
-    private IReadOnlyDictionary<string, bool> availabilityByFolderId =
-        new Dictionary<string, bool>();
-    private int availabilityRefreshVersion;
     private LibraryDocument? document;
     private StorageRootSet? storageRoots;
 
     /// <summary>열린 카탈로그가 쓰는 디스크 자리입니다. 열기 전에는 null 입니다.</summary>
     public StorageRootSet? StorageRoots => storageRoots;
-    private Timer? saveTimer;
-
     public LibraryHostService(IUiDispatcher dispatcher)
-        : this(dispatcher, new NativeDevelopExporterAdapter(), ReadSourceMetadata)
+        : this(dispatcher, new NativeDevelopExporterAdapter(), LibrarySourceMetadataReader.Read)
     {
     }
 
@@ -75,8 +68,14 @@ public sealed class LibraryHostService : IDisposable
     {
         ArgumentNullException.ThrowIfNull(dispatcher);
         ArgumentNullException.ThrowIfNull(exporter);
-        this.dispatcher = dispatcher;
-        this.sourceMetadataReader = sourceMetadataReader ?? ReadSourceMetadata;
+        this.sourceMetadataReader = sourceMetadataReader ?? LibrarySourceMetadataReader.Read;
+        selection = new LibrarySelectionState(
+            () => SelectionChanged?.Invoke(this, EventArgs.Empty));
+        availability = new LibraryAvailabilityController(dispatcher, () => document);
+        autosave = new LibraryAutosaveController(dispatcher, () => document);
+        importer = new LibraryImportController(this.sourceMetadataReader, SelectSingleFrame);
+        scannerPublisher = new ScannerFramePublisher(this.sourceMetadataReader, SelectSingleFrame);
+        sourceController = new LibrarySourceController(this.sourceMetadataReader);
         coordinator = new DevelopExportCoordinator(exporter, dispatcher);
     }
 
@@ -98,101 +97,44 @@ public sealed class LibraryHostService : IDisposable
     /// 사용자가 고른 frame 들입니다. macOS 처럼 라이브러리와 현상이 같은 선택을 봅니다 — 그래야
     /// 출력 패널의 "내보내기 (N)" 이 격자에서 고른 것과 같은 것을 가리킵니다.
     /// </summary>
-    public IReadOnlyList<string> SelectedFrameIds { get; private set; } = [];
+    public IReadOnlyList<string> SelectedFrameIds => selection.SelectedFrameIds;
 
     /// <summary>
     /// 선택 집합 안에서 Library, Develop, Print가 현재 보여 주는 한 장입니다. 다중 선택과
     /// 분리해야 Print 대상 전체를 유지하면서 Develop 캔버스는 한 장만 정확히 가리킬 수 있습니다.
     /// </summary>
-    public string? ActiveFrameId { get; private set; }
+    public string? ActiveFrameId => selection.ActiveFrameId;
 
     public event EventHandler? SelectionChanged;
 
     /// <summary>고른 순서를 지키며, 카탈로그에 없는 id 는 버립니다.</summary>
     public void SetSelection(IEnumerable<string> frameIds, string? activeFrameId = null)
-    {
-        ArgumentNullException.ThrowIfNull(frameIds);
-        var known = new HashSet<string>(Frames.Select(frame => frame.Id), StringComparer.Ordinal);
-        var seen = new HashSet<string>(StringComparer.Ordinal);
-        string[] next = [.. frameIds.Where(id => known.Contains(id) && seen.Add(id))];
-        string? nextActive = activeFrameId is not null && next.Contains(activeFrameId, StringComparer.Ordinal)
-            ? activeFrameId
-            : ActiveFrameId is not null && next.Contains(ActiveFrameId, StringComparer.Ordinal)
-                ? ActiveFrameId
-                : next.FirstOrDefault();
-        if (next.SequenceEqual(SelectedFrameIds, StringComparer.Ordinal) &&
-            string.Equals(nextActive, ActiveFrameId, StringComparison.Ordinal))
-        {
-            return;
-        }
-        SelectedFrameIds = next;
-        ActiveFrameId = nextActive;
-        SelectionChanged?.Invoke(this, EventArgs.Empty);
-    }
+        => selection.Set(Frames, frameIds, activeFrameId);
 
     /// <summary>
     /// 앱을 다시 열 때 저장된 active frame을 복구합니다. 없거나 원본이 오프라인이면 macOS처럼
     /// 가장 최근의 사용 가능한 사진을 고릅니다.
     /// </summary>
     public string? RestoreActiveFrame(string? savedFrameId)
-    {
-        string? candidate = Frames.FirstOrDefault(frame =>
-                string.Equals(frame.Id, savedFrameId, StringComparison.Ordinal) && IsAvailable(frame.Id))?.Id
-            ?? MostRecentAvailableFrameId();
-        SetSelection(candidate is null ? [] : [candidate], candidate);
-        return candidate;
-    }
+        => selection.RestoreActiveFrame(Frames, savedFrameId, availability.IsAvailable);
 
     /// <summary>
     /// 비동기 원본 가용성 검사가 끝난 뒤 오프라인 active frame을 바로잡습니다. 살아 있는
     /// 선택을 먼저 지키고, 없을 때만 최근 사진으로 이동합니다.
     /// </summary>
     public string? ReconcileActiveFrameAvailability()
-    {
-        if (ActiveFrameId is { } activeFrameId && IsAvailable(activeFrameId))
-        {
-            return activeFrameId;
-        }
-        string? candidate = SelectedFrameIds.FirstOrDefault(IsAvailable)
-            ?? MostRecentAvailableFrameId();
-        SetSelection(candidate is null ? [] : [candidate], candidate);
-        return candidate;
-    }
-
-    private bool IsAvailable(string frameId) =>
-        !availabilityByFrameId.TryGetValue(frameId, out LibrarySourceAvailability availability) ||
-        availability != LibrarySourceAvailability.Offline;
-
-    private string? MostRecentAvailableFrameId() => Frames
-        .Select((frame, index) => (frame, index))
-        .Where(entry => IsAvailable(entry.frame.Id))
-        .OrderBy(entry => entry.frame.ScannedAt ?? DateTimeOffset.MinValue)
-        .ThenBy(entry => entry.index)
-        .LastOrDefault().frame?.Id;
+        => selection.ReconcileActiveFrameAvailability(Frames, availability.IsAvailable);
 
     /// <summary>선택된 frame 들입니다. 선택이 비면 빈 목록입니다.</summary>
-    public IReadOnlyList<LibraryFrameSnapshot> SelectedFrames
-    {
-        get
-        {
-            if (SelectedFrameIds.Count == 0)
-            {
-                return [];
-            }
-            var byId = Frames.ToDictionary(frame => frame.Id, StringComparer.Ordinal);
-            return [.. SelectedFrameIds
-                .Select(id => byId.TryGetValue(id, out LibraryFrameSnapshot? frame) ? frame : null)
-                .OfType<LibraryFrameSnapshot>()];
-        }
-    }
+    public IReadOnlyList<LibraryFrameSnapshot> SelectedFrames => selection.SelectedFrames(Frames);
 
     public IReadOnlyList<LibraryFolderSnapshot> Folders =>
         document?.Folders ?? [];
 
     public IReadOnlyDictionary<string, LibrarySourceAvailability> SourceAvailabilityByFrameId =>
-        availabilityByFrameId;
+        availability.ByFrameId;
 
-    public IReadOnlyDictionary<string, bool> FolderAvailabilityById => availabilityByFolderId;
+    public IReadOnlyDictionary<string, bool> FolderAvailabilityById => availability.ByFolderId;
 
     public bool IsExporting => coordinator.IsRunning;
 
@@ -213,7 +155,7 @@ public sealed class LibraryHostService : IDisposable
             document = loaded;
             storageRoots = roots;
             State = LibraryHostState.Open;
-            RecoverScannerPublications();
+            scannerPublisher.Recover(document, storageRoots);
             return State;
         }
 
@@ -461,99 +403,19 @@ public sealed class LibraryHostService : IDisposable
     public FrameImportPlan Import(
         IReadOnlyList<string> filePaths,
         DevelopmentProcess process)
-    {
-        ArgumentNullException.ThrowIfNull(filePaths);
-        if (document is null)
-        {
-            return new FrameImportPlan([], [new FrameImportRejection(
-                string.Empty,
-                FrameImportRefusal.NoFiles)]);
-        }
-
-        FrameImportPlan plan = FrameImport.Plan(
-            filePaths, document.Frames, process, sourceMetadataReader: sourceMetadataReader);
-        if (plan.Rows.Count > 0)
-        {
-            _ = document.AppendAndSave(plan.Rows, out int added);
-            if (added > 0)
-            {
-                string importedId = plan.Rows[^1].Id;
-                SetSelection([importedId], importedId);
-            }
-        }
-        return plan;
-    }
+        => importer.Import(document, filePaths, process);
 
     public FolderImportResult ImportFolders(
         IReadOnlyList<string> folderPaths,
         DevelopmentProcess process)
-    {
-        ArgumentNullException.ThrowIfNull(folderPaths);
-        if (document is null)
-        {
-            FolderImportPlan unavailable = new(
-                [],
-                new FrameImportPlan([], [new FrameImportRejection(
-                    string.Empty,
-                    FrameImportRefusal.NoFiles)]),
-                [new FolderImportRejection(string.Empty, FolderImportRefusal.NoFolders)]);
-            return new FolderImportResult(unavailable, 0, 0, CatalogStoreError.NotFound);
-        }
-
-        FolderImportPlan plan = FolderImport.Plan(
-            folderPaths, document.Frames, process, sourceMetadataReader: sourceMetadataReader);
-        CatalogStoreError save = document.AppendFoldersAndFramesAndSave(
-            plan.Folders,
-            plan.Frames.Rows,
-            out int addedFolders,
-            out int addedFrames);
-        if (save == CatalogStoreError.None && addedFrames > 0 && plan.Frames.Rows.Count > 0)
-        {
-            string importedId = plan.Frames.Rows[^1].Id;
-            SetSelection([importedId], importedId);
-        }
-        return new FolderImportResult(plan, addedFolders, addedFrames, save);
-    }
+        => importer.ImportFolders(document, folderPaths, process);
 
     /// <summary>
     /// macOS와 같은 source/folder snapshot을 만듭니다. 작은 library는 즉시 갱신하고, 256개를
     /// 넘으면 UI thread 밖에서 검사한 뒤 아직 같은 document인 경우에만 결과를 반영합니다.
     /// </summary>
     public void RefreshAvailability(Action? onCompleted = null)
-    {
-        LibraryDocument? currentDocument = document;
-        if (currentDocument is null)
-        {
-            return;
-        }
-
-        IReadOnlyList<LibraryFrameSnapshot> frames = currentDocument.Frames.ToArray();
-        IReadOnlyList<LibraryFolderSnapshot> folders = currentDocument.Folders.ToArray();
-        int refreshVersion = unchecked(++availabilityRefreshVersion);
-        if (frames.Count <= AsynchronousAvailabilityThreshold)
-        {
-            ApplyAvailability(currentDocument, refreshVersion,
-                LibraryAvailability.Probe(frames, folders), onCompleted);
-            return;
-        }
-
-        _ = Task.Run(() => LibraryAvailability.Probe(frames, folders)).ContinueWith(
-            task =>
-            {
-                if (task.Status != TaskStatus.RanToCompletion)
-                {
-                    return;
-                }
-                _ = dispatcher.TryEnqueue(() => ApplyAvailability(
-                    currentDocument,
-                    refreshVersion,
-                    task.Result,
-                    onCompleted));
-            },
-            CancellationToken.None,
-            TaskContinuationOptions.ExecuteSynchronously,
-            TaskScheduler.Default);
-    }
+        => availability.Refresh(onCompleted);
 
     /// <summary>
     /// scanner host가 두 artifact를 commit한 뒤 호출하는 publication 경계입니다. RGB record가
@@ -563,183 +425,19 @@ public sealed class LibraryHostService : IDisposable
     public ScannerFramePublishResult PublishScannerFrame(
         ScannerFrameImport scan,
         InfraredDetectorParameters? parameters = null,
-        DevelopRun? run = null)
-    {
-        return PublishScannerFrame(scan, parameters, run, null);
-    }
+        DevelopRun? run = null) =>
+        scannerPublisher.Publish(document, storageRoots, scan, parameters, run);
 
-    private ScannerFramePublishResult PublishScannerFrame(
-        ScannerFrameImport scan,
-        InfraredDetectorParameters? parameters,
-        DevelopRun? run,
-        string? existingReceipt)
-    {
-        ArgumentNullException.ThrowIfNull(scan);
-        if (document is null)
-        {
-            return new(
-                ScannerFramePublishStatus.CatalogWriteFailed,
-                new FrameImportPlan([], [new FrameImportRejection(
-                    scan.VisiblePath,
-                    FrameImportRefusal.NoFiles)]),
-                null,
-                null,
-                CatalogStoreError.NotFound);
-        }
+    public CatalogStoreError Save() => autosave.Save();
 
-        string? receiptPath = existingReceipt;
-        if (receiptPath is null && storageRoots is not null &&
-            !ScannerPublicationReceiptStore.TrySchedule(storageRoots, scan, out receiptPath))
-        {
-            return new(
-                ScannerFramePublishStatus.ReceiptWriteFailed,
-                new FrameImportPlan([], [new FrameImportRejection(scan.VisiblePath, FrameImportRefusal.NoFiles)]),
-                null,
-                null,
-                CatalogStoreError.None);
-        }
+    /// <summary>마지막 자동 저장 실패 사유입니다.</summary>
+    public CatalogStoreError LastAutomaticSaveError => autosave.LastAutomaticSaveError;
 
-        FrameImportPlan plan = FrameImport.PlanScanner(
-            scan,
-            document.Frames,
-            sourceMetadataReader: sourceMetadataReader);
-        if (plan.Rows.Count != 1)
-        {
-            if (existingReceipt is not null && HasPublishedFrame(scan))
-            {
-                ScannerPublicationReceiptStore.Complete(existingReceipt);
-            }
-            return new(ScannerFramePublishStatus.CatalogWriteFailed, plan, null, null,
-                CatalogStoreError.None);
-        }
-        CatalogStoreError save = document.AppendAndSave(plan.Rows, out int added);
-        if (save != CatalogStoreError.None || added != 1)
-        {
-            return new(ScannerFramePublishStatus.CatalogWriteFailed, plan, null, null, save);
-        }
-        if (receiptPath is not null)
-        {
-            ScannerPublicationReceiptStore.Complete(receiptPath);
-        }
-        LibraryFrameSnapshot? frame = document.Frames.FirstOrDefault(
-            candidate => candidate.Id == plan.Rows[0].Id);
-        if (frame is null)
-        {
-            return new(ScannerFramePublishStatus.CatalogWriteFailed, plan, null, null,
-                CatalogStoreError.InvalidSnapshot);
-        }
-        SetSelection([frame.Id], frame.Id);
-        if (frame.InfraredPath is null ||
-            frame.Route.FilmType is not (FilmType.ColorNegative or FilmType.ColorPositive))
-        {
-            return new(ScannerFramePublishStatus.InfraredSkipped, plan, frame, null,
-                CatalogStoreError.None);
-        }
-        if (!TryReadSourceIdentity(frame.SourcePath, out DefectSourceIdentity identity))
-        {
-            return new(ScannerFramePublishStatus.InfraredSourceUnreadable, plan, frame, null,
-                CatalogStoreError.None);
-        }
-        InfraredDefectApplyResult infrared = InfraredDefectRecipeCoordinator.RunFiles(
-            document,
-            frame,
-            identity,
-            frame.SourcePath,
-            frame.InfraredPath,
-            parameters,
-            run);
-        return new(
-            infrared.Status == InfraredDefectApplyStatus.Applied
-                ? ScannerFramePublishStatus.InfraredApplied
-                : ScannerFramePublishStatus.Published,
-            plan,
-            document.Frames.FirstOrDefault(candidate => candidate.Id == frame.Id) ?? frame,
-            infrared,
-            CatalogStoreError.None);
-    }
+    /// <summary>macOS와 같은 1.5초 debounce 뒤 catalog 저장을 예약합니다.</summary>
+    public void ScheduleSave() => autosave.Schedule();
 
-    private void RecoverScannerPublications()
-    {
-        if (storageRoots is null || document is null)
-        {
-            return;
-        }
-
-        foreach ((string path, ScannerPublicationReceipt receipt) in
-                 ScannerPublicationReceiptStore.ReadPending(storageRoots))
-        {
-            _ = PublishScannerFrame(
-                new ScannerFrameImport(receipt.VisiblePath, receipt.InfraredPath, receipt.Process),
-                null,
-                null,
-                path);
-        }
-    }
-
-    private bool HasPublishedFrame(ScannerFrameImport scan) => document?.Frames.Any(
-        frame => string.Equals(frame.SourcePath, scan.VisiblePath, StringComparison.OrdinalIgnoreCase) &&
-                 string.Equals(frame.InfraredPath, scan.InfraredPath, StringComparison.OrdinalIgnoreCase)) == true;
-
-    public CatalogStoreError Save()
-    {
-        saveTimer?.Change(Timeout.Infinite, Timeout.Infinite);
-        return document is null ? CatalogStoreError.NotFound : document.Save();
-    }
-
-    /// <summary>
-    /// 마지막 저장 실패 사유입니다. 자동 저장은 조용히 일어나므로, 실패했다는 사실만은 셸이
-    /// 볼 수 있어야 합니다.
-    /// </summary>
-    public CatalogStoreError LastAutomaticSaveError { get; private set; }
-
-    /// <summary>
-    /// 잠시 뒤에 저장합니다. macOS 와 같이 1.5 초를 기다렸다가 그 사이의 변경을 한 번에
-    /// 씁니다 — 슬라이더를 끄는 동안 catalog 를 수백 번 쓰지 않기 위해서입니다.
-    /// </summary>
-    /// <remarks>
-    /// 편집은 메모리에서 먼저 일어나므로 이 예약이 없으면 창을 닫는 순간 조용히 사라집니다.
-    /// 타이머는 UI 스레드가 아닌 곳에서 울리므로 dispatcher 를 거쳐 문서를 만집니다 —
-    /// <see cref="LibraryDocument"/> 는 한 스레드에서만 쓰입니다.
-    /// </remarks>
-    public void ScheduleSave()
-    {
-        if (document is null)
-        {
-            return;
-        }
-        saveTimer ??= new Timer(_ => RequestAutomaticSave(), null, Timeout.Infinite, Timeout.Infinite);
-        saveTimer.Change(AutomaticSaveDelay, Timeout.InfiniteTimeSpan);
-    }
-
-    /// <summary>
-    /// 예약된 저장이 남아 있으면 지금 씁니다. 창을 닫기 전에 부릅니다.
-    /// </summary>
-    public CatalogStoreError SaveIfDirty()
-    {
-        saveTimer?.Change(Timeout.Infinite, Timeout.Infinite);
-        return document is { IsDirty: true } dirty ? dirty.Save() : CatalogStoreError.None;
-    }
-
-    private void RequestAutomaticSave()
-    {
-        if (dispatcher.HasThreadAccess)
-        {
-            AutomaticSave();
-            return;
-        }
-        // 큐에 넣지 못했다는 것은 창이 이미 닫혔다는 뜻입니다. 그때는 Dispose 가 마지막으로
-        // 한 번 씁니다.
-        _ = dispatcher.TryEnqueue(AutomaticSave);
-    }
-
-    private void AutomaticSave()
-    {
-        if (document is not { IsDirty: true } dirty)
-        {
-            return;
-        }
-        LastAutomaticSaveError = dirty.Save();
-    }
+    /// <summary>예약된 저장이 남아 있으면 창을 닫기 전에 즉시 씁니다.</summary>
+    public CatalogStoreError SaveIfDirty() => autosave.SaveIfDirty();
 
     /// <summary>
     /// 고른 사진의 원본을 다른 폴더로 옮기고 카탈로그를 따라가게 합니다. 파일 이동이 실패하면
@@ -748,34 +446,10 @@ public sealed class LibraryHostService : IDisposable
     public SourceMoveOutcome MoveSources(
         IReadOnlyList<LibraryFrameSnapshot> frames,
         string destinationFolder)
-    {
-        ArgumentNullException.ThrowIfNull(frames);
-        SourceMovePlanResult planned = SourceMovePlanner.Files(
-            [.. frames.Select(frame => new SourceMovePair(frame.SourcePath, frame.InfraredPath))],
-            destinationFolder);
-        if (planned.Plan is not { } plan)
-        {
-            return planned.Error == SourceMovePlanError.Collision
-                ? SourceMoveOutcome.Collision
-                : SourceMoveOutcome.SourceMissing;
-        }
-        SourceMoveResult moved = SourceMoveTransaction.Move(plan.FileMoves);
-        if (!moved.IsSuccess)
-        {
-            return moved.Outcome;
-        }
-        // 파일이 옮겨진 뒤에야 카탈로그를 고칩니다. 이 순서를 뒤집으면 이동이 실패했을 때
-        // 카탈로그가 빈 자리를 가리킵니다.
-        LibrarySourceRelinkResult relinked = Relink(plan.RelinkPlan);
-        return relinked.IsSuccess && relinked.UpdatedSourceCount == plan.SourceCount
-            ? SourceMoveOutcome.Moved
-            : SourceMoveOutcome.Failed;
-    }
+        => sourceController.Move(document, frames, destinationFolder);
 
     public LibrarySourceRelinkResult Relink(SourceRelinkPlan plan) =>
-        document is null
-            ? new(0, 0, plan?.Mappings.Count ?? 0, CatalogStoreError.NotFound)
-            : document.Relink(plan, sourceMetadataReader);
+        sourceController.Relink(document, plan);
 
     /// <summary>
     /// 현상해서 파일로 씁니다. 네이티브 호출은 워커 스레드에서 돌고 결과는 dispatcher 를 거쳐
@@ -793,30 +467,11 @@ public sealed class LibraryHostService : IDisposable
     {
         // 놓아 주기 전에 마지막으로 씁니다. 여기서 빠지면 마지막 1.5 초의 편집이 사라집니다.
         _ = SaveIfDirty();
-        saveTimer?.Dispose();
-        saveTimer = null;
-        unchecked { ++availabilityRefreshVersion; }
-        availabilityByFrameId = new Dictionary<string, LibrarySourceAvailability>();
-        availabilityByFolderId = new Dictionary<string, bool>();
+        autosave.Dispose();
+        availability.Reset();
         document?.Dispose();
         document = null;
         State = LibraryHostState.NotOpened;
-    }
-
-    private void ApplyAvailability(
-        LibraryDocument expectedDocument,
-        int refreshVersion,
-        LibraryAvailabilitySnapshot snapshot,
-        Action? onCompleted)
-    {
-        if (!ReferenceEquals(document, expectedDocument) ||
-            availabilityRefreshVersion != refreshVersion)
-        {
-            return;
-        }
-        availabilityByFrameId = snapshot.ByFrameId;
-        availabilityByFolderId = snapshot.ByFolderId;
-        onCompleted?.Invoke();
     }
 
     /// <summary>
@@ -826,81 +481,8 @@ public sealed class LibraryHostService : IDisposable
     public LibraryFrameError AppendDefectStroke(
         string frameId,
         Func<DefectSourceIdentity, DefectRecipeSnapshot?, DefectRecipeSnapshot?> build)
-    {
-        ArgumentNullException.ThrowIfNull(frameId);
-        ArgumentNullException.ThrowIfNull(build);
-        if (document is null)
-        {
-            return LibraryFrameError.MissingId;
-        }
-        if (document.Frames.FirstOrDefault(candidate => candidate.Id == frameId)
-            is not { } frame)
-        {
-            return LibraryFrameError.MissingId;
-        }
-        if (!TryReadSourceIdentity(frame.SourcePath, out DefectSourceIdentity identity))
-        {
-            return LibraryFrameError.InvalidDefectRecipe;
-        }
-        if (build(identity, frame.DefectRecipe) is not { } recipe)
-        {
-            return LibraryFrameError.InvalidDefectRecipe;
-        }
-        LibraryDefectRecipeWriteResult written = document.WriteDefectRecipe(frameId, recipe);
-        if (!written.IsSuccess)
-        {
-            return written.FrameError == LibraryFrameError.None
-                ? LibraryFrameError.InvalidDefectRecipe
-                : written.FrameError;
-        }
-        // sidecar 와 catalog 는 이미 여기서 함께 쓰였으므로 지연 저장을 다시 걸지 않습니다.
-        return LibraryFrameError.None;
-    }
+        => LibraryDefectEditor.AppendStroke(document, frameId, build);
 
-    private static bool TryReadSourceIdentity(string path, out DefectSourceIdentity identity)
-    {
-        identity = default;
-        try
-        {
-            using FileStream stream = new(
-                path,
-                FileMode.Open,
-                FileAccess.Read,
-                FileShare.Read,
-                bufferSize: 128 * 1024,
-                FileOptions.SequentialScan);
-            if (stream.Length <= 0)
-            {
-                return false;
-            }
-            byte[] hash = SHA256.HashData(stream);
-            identity = new DefectSourceIdentity(
-                checked((ulong)stream.Length),
-                Convert.ToHexString(hash).ToLowerInvariant());
-            return true;
-        }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException or
-            NotSupportedException or ArgumentException or PathTooLongException or OverflowException)
-        {
-            return false;
-        }
-    }
-
-    private static LibrarySourceMetadata? ReadSourceMetadata(string path)
-    {
-        bool read = ImageSourcePaths.UsesWicStandardDecoder(path)
-            ? NativeStandardImageSourceProbe.TryRead(path, out TiffSourceMetadata metadata)
-            : NativeTiffSourceProbe.TryRead(path, out metadata);
-        return read
-            ? new LibrarySourceMetadata(
-                metadata.FileBytes,
-                metadata.PixelWidth,
-                metadata.PixelHeight,
-                metadata.SamplesPerPixel,
-                metadata.BitsPerSample,
-                metadata.SampleFormat,
-                metadata.Orientation)
-            : null;
-    }
+    private void SelectSingleFrame(string frameId) => SetSelection([frameId], frameId);
 
 }
