@@ -2887,8 +2887,6 @@ public sealed partial class DevelopWorkspaceView : UserControl
     }
 
     /// <summary>정보 카드 한 줄입니다.</summary>
-    private sealed record InfoRow(string Label, string Value);
-
     /// <summary>
     /// macOS 정보 카드의 여섯 줄입니다. 원본과 Sidecar 는 지금 알 수 있는 사실이고, 카메라·날짜·
     /// 제목·키워드는 아직 EXIF/IPTC 를 읽지 않으므로 macOS 의 빈 상태와 같은 "— · —" 입니다.
@@ -2930,7 +2928,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
             FilmShotFilmStockBox.Text = shot.FilmStock ?? string.Empty;
             FilmShotIsoSpeedBox.Text = shot.IsoSpeed?.ToString(CultureInfo.CurrentCulture)
                 ?? string.Empty;
-            FilmShotShutterBox.Text = FormatShutter(shot.ExposureTimeSeconds);
+            FilmShotShutterBox.Text = DevelopMetadataFields.FormatShutter(shot.ExposureTimeSeconds);
             FilmShotApertureBox.Text = shot.FNumber?.ToString("0.##", CultureInfo.CurrentCulture)
                 ?? string.Empty;
             FilmShotFocalLengthBox.Text =
@@ -2962,89 +2960,27 @@ public sealed partial class DevelopWorkspaceView : UserControl
             FilmShotCameraModelBox.Text,
             FilmShotLensModelBox.Text,
             FilmShotFilmStockBox.Text,
-            ParseInteger(FilmShotIsoSpeedBox.Text),
-            ParseShutter(FilmShotShutterBox.Text),
-            ParseNumber(FilmShotApertureBox.Text),
-            ParseNumber(FilmShotFocalLengthBox.Text));
+            DevelopMetadataFields.ParseInteger(FilmShotIsoSpeedBox.Text),
+            DevelopMetadataFields.ParseShutter(FilmShotShutterBox.Text),
+            DevelopMetadataFields.ParseNumber(FilmShotApertureBox.Text),
+            DevelopMetadataFields.ParseNumber(FilmShotFocalLengthBox.Text));
         AppMetadataOverlay next = new()
         {
             Title = AppMetadataTitleBox.Text,
             Caption = AppMetadataCaptionBox.Text,
-            Keywords = SplitKeywords(AppMetadataKeywordsBox.Text),
+            Keywords = DevelopMetadataFields.SplitKeywords(AppMetadataKeywordsBox.Text),
             Copyright = AppMetadataCopyrightBox.Text,
             FilmShot = shot.Normalized().IsEmpty ? null : shot.Normalized(),
         };
         AppMetadataOverlay stored = panel.SelectedFrame?.AppMetadata ?? new AppMetadataOverlay();
         // 같은 값을 다시 쓰면 revision 만 오르고 카탈로그가 매번 더러워집니다.
-        if (Equivalent(stored, next))
+        if (DevelopMetadataFields.Equivalent(stored, next))
         {
             return;
         }
         _ = panel.SetAppMetadata(_ => next);
         UpdateAppMetadataCards();
         UpdateInfoCard();
-    }
-
-    private static bool Equivalent(AppMetadataOverlay stored, AppMetadataOverlay candidate)
-    {
-        AppMetadataOverlay left = stored.Normalized() with { Revision = 0, UpdatedAt = default };
-        AppMetadataOverlay right = candidate.Normalized() with { Revision = 0, UpdatedAt = default };
-        return left.Title == right.Title &&
-            left.Caption == right.Caption &&
-            left.Copyright == right.Copyright &&
-            left.FilmShot == right.FilmShot &&
-            left.Keywords.SequenceEqual(right.Keywords, StringComparer.Ordinal);
-    }
-
-    /// <summary>쉼표로 나눕니다. macOS 의 편집기도 한 줄에 쉼표로 적습니다.</summary>
-    private static IReadOnlyList<string> SplitKeywords(string? text) =>
-        AppMetadataOverlay.NormalizeKeywords(
-            (text ?? string.Empty).Split(',', StringSplitOptions.TrimEntries));
-
-    private static int? ParseInteger(string? text) =>
-        int.TryParse(text, NumberStyles.Integer, CultureInfo.CurrentCulture, out int value) &&
-        value > 0
-            ? value
-            : null;
-
-    private static double? ParseNumber(string? text) =>
-        double.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out double value) &&
-        double.IsFinite(value) && value > 0
-            ? value
-            : null;
-
-    /// <summary>
-    /// 셔터는 사진가가 적는 대로 <c>1/125</c> 또는 <c>2</c> 로 받습니다. 카탈로그에는 초로 둡니다.
-    /// </summary>
-    private static double? ParseShutter(string? text)
-    {
-        string value = (text ?? string.Empty).Trim();
-        if (value.Length == 0)
-        {
-            return null;
-        }
-        int slash = value.IndexOf('/');
-        if (slash < 0)
-        {
-            return ParseNumber(value);
-        }
-        double? numerator = ParseNumber(value[..slash]);
-        double? denominator = ParseNumber(value[(slash + 1)..]);
-        return numerator is { } top && denominator is { } bottom ? top / bottom : null;
-    }
-
-    private static string FormatShutter(double? seconds)
-    {
-        if (seconds is not { } value)
-        {
-            return string.Empty;
-        }
-        if (value >= 1.0)
-        {
-            return value.ToString("0.##", CultureInfo.CurrentCulture);
-        }
-        // 1 초보다 짧으면 사진가가 읽는 분수로 되돌립니다.
-        return string.Create(CultureInfo.CurrentCulture, $"1/{Math.Round(1.0 / value)}");
     }
 
     private void LocalizeAppMetadataCards()
@@ -3210,69 +3146,24 @@ public sealed partial class DevelopWorkspaceView : UserControl
         InfoCardTitleText.Text = cardTitle;
         // 이름이 없는 Border 는 접근성 트리에 나오지 않습니다 — 화면 낭독기도, 검증도 못 봅니다.
         AutomationProperties.SetName(InfoCard, cardTitle);
-        if (panel?.SelectedFrame is not { } frame)
-        {
-            InfoRows.ItemsSource = Array.Empty<InfoRow>();
-            return;
-        }
-
-        string none = AppResources.Get("developInfoNotAvailable", "Text");
-        // 값과 출처를 가운뎃점으로 잇는 macOS 표기입니다. 둘 다 없으면 "— · —" 가 됩니다.
-        string empty = none + " · " + none;
-        string origin = AppResources.Get(
-            frame.Route.SourceTransport == FrameSourceTransport.Scanner
-                ? "developInfoOriginScan"
-                : "developInfoOriginImport",
-            "Text");
-        InfoRows.ItemsSource = new List<InfoRow>
-        {
-            new(AppResources.Get("developInfoSource", "Text"),
-                origin + " · " + Path.GetFileName(frame.SourcePath)),
-            new(AppResources.Get("developInfoSidecar", "Text"), DescribeSidecar(frame)),
-            new(AppResources.Get("developInfoCamera", "Text"), DescribeCamera(frame, empty)),
-            new(AppResources.Get("developInfoDate", "Text"), empty),
-            new(AppResources.Get("developInfoTitle", "Text"),
-                frame.AppMetadata?.Title ?? empty),
-            new(AppResources.Get("developInfoKeywords", "Text"),
-                frame.AppMetadata is { Keywords.Count: > 0 } withKeywords
-                    ? string.Join(", ", withKeywords.Keywords)
-                    : empty),
-        };
+        InfoRows.ItemsSource = DevelopInfoCardProjection.Rows(
+            panel?.SelectedFrame,
+            InfoCardText(),
+            File.Exists);
     }
 
-    /// <summary>
-    /// 카메라 줄은 적어 둔 촬영 기록에서 옵니다. 스캔 파일에 적힌 카메라는 스캐너의 것이지
-    /// 그 사진을 찍은 카메라의 것이 아니므로 쓰지 않습니다.
-    /// </summary>
-    private static string DescribeCamera(LibraryFrameSnapshot frame, string empty)
-    {
-        if (frame.AppMetadata?.FilmShot is not { } shot)
-        {
-            return empty;
-        }
-        string[] parts = [.. new[] { shot.CameraMake, shot.CameraModel }.OfType<string>()];
-        return parts.Length == 0 ? empty : string.Join(" · ", parts);
-    }
-
-    /// <summary>
-    /// XMP sidecar 는 아직 읽지 않습니다. 옆에 파일이 없다는 것은 확실히 말할 수 있고, 있는
-    /// 경우에 "읽음"이라고 하면 읽지 않은 것을 읽었다고 말하는 것이라 "미확인"입니다.
-    /// </summary>
-    private static string DescribeSidecar(LibraryFrameSnapshot frame)
-    {
-        string sidecarPath = Path.ChangeExtension(frame.SourcePath, ".xmp");
-        try
-        {
-            return AppResources.Get(
-                File.Exists(sidecarPath) ? "developInfoUnknown" : "developInfoSidecarNotFound",
-                "Text");
-        }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException or
-            ArgumentException or NotSupportedException)
-        {
-            return AppResources.Get("developInfoUnknown", "Text");
-        }
-    }
+    private static DevelopInfoCardText InfoCardText() => new(
+        AppResources.Get("developInfoSource", "Text"),
+        AppResources.Get("developInfoSidecar", "Text"),
+        AppResources.Get("developInfoCamera", "Text"),
+        AppResources.Get("developInfoDate", "Text"),
+        AppResources.Get("developInfoTitle", "Text"),
+        AppResources.Get("developInfoKeywords", "Text"),
+        AppResources.Get("developInfoNotAvailable", "Text"),
+        AppResources.Get("developInfoOriginScan", "Text"),
+        AppResources.Get("developInfoOriginImport", "Text"),
+        AppResources.Get("developInfoUnknown", "Text"),
+        AppResources.Get("developInfoSidecarNotFound", "Text"));
 
     /// <summary>버전 목록 한 줄입니다. 표시 문구를 XAML 이 짓지 않도록 여기서 만듭니다.</summary>
     private sealed record VersionRow(

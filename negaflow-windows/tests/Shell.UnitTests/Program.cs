@@ -34,6 +34,7 @@ internal static class Program
         DevelopTargetTests.Run();
         LibraryCullingTests.Run();
         PrintCompositionTests.Run();
+        DevelopMetadataTests.Run();
         ScanRotationDefaultTests.Run();
         PixelSamplerTests.Run();
         AppLanguageTests.Run();
