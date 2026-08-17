@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Negaflow.Shell.Views.Develop.Versions.DevelopVersionsPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer>
+        <StackPanel Padding="12,14" Spacing="10">
+            <Grid ColumnSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBox
+                    x:Name="VersionNameBox"
+                    x:FieldModifier="internal"
+                    AutomationProperties.AutomationId="negaflow.develop.versions.name"
+                    TextChanged="OnVersionNameChanged" />
+                <Button
+                    x:Name="CaptureVersionButton"
+                    x:FieldModifier="internal"
+                    Grid.Column="1"
+                    AutomationProperties.AutomationId="negaflow.develop.versions.capture"
+                    Click="OnCaptureVersionClicked"
+                    Style="{StaticResource AccentButtonStyle}" />
+            </Grid>
+            <TextBlock
+                x:Name="VersionsEmptyText"
+                x:FieldModifier="internal"
+                FontSize="12"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                TextWrapping="Wrap" />
+            <ItemsControl x:Name="VersionsList" x:FieldModifier="internal">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border
+                            Margin="0,0,0,6"
+                            Padding="10,8"
+                            Background="{ThemeResource NegaflowCardBrush}"
+                            CornerRadius="8">
+                            <Grid ColumnSpacing="6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Spacing="1">
+                                    <TextBlock
+                                        FontSize="12"
+                                        FontWeight="SemiBold"
+                                        Text="{Binding Name}"
+                                        TextTrimming="CharacterEllipsis" />
+                                    <TextBlock
+                                        FontSize="10"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        Text="{Binding CreatedText}" />
+                                </StackPanel>
+                                <Button
+                                    Grid.Column="1"
+                                    Padding="8,2"
+                                    AutomationProperties.AutomationId="negaflow.develop.versions.restore"
+                                    Click="OnRestoreVersionClicked"
+                                    Content="{Binding RestoreText}"
+                                    FontSize="11"
+                                    Tag="{Binding Id}" />
+                                <Button
+                                    Grid.Column="2"
+                                    Padding="8,2"
+                                    AutomationProperties.AutomationId="negaflow.develop.versions.delete"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Click="OnDeleteVersionClicked"
+                                    Content="{Binding DeleteText}"
+                                    FontSize="11"
+                                    Tag="{Binding Id}" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

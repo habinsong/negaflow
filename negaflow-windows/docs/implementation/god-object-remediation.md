@@ -246,5 +246,12 @@
   - `DevelopExportRecipes.cs` 123 — 담아 둔 설정 목록
   - `DevelopExportRunner.cs` 203 — 파일 쓰기
 - 뷰는 `ExportPanel.Attach`·`Bind`·`ApplyPreferences`·`Localize`·`RefreshPreview` 만 부른다. 빠른 보내기의 상태 줄(`ExportStatusText`)은 왼쪽 패널에 남으므로 뷰의 `QuickExportAsync` 가 그대로 수행한다.
-- 줄 수: 코드비하인드 4,844 → 3,886, XAML 2,512 → 2,081. 둘 다 아직 500줄 초과라 완료로 쓰지 않는다.
+- 줄 수(출력 패널 직후): 코드비하인드 4,844 → 3,886, XAML 2,512 → 2,081. 둘 다 아직 500줄 초과라 완료로 쓰지 않는다.
+
+## 2026-08-17 Develop 버전·프리셋 UserControl — 검증됨, 파일은 미해결
+
+- 버전 목록은 `Views/Develop/Versions/DevelopVersionsPanel`(XAML 82, CS 105)로 옮겼다. 되돌리기는 `VersionRestored` 로 뷰가 인스펙터·미리보기를 맞춘다.
+- 복사/붙여넣기·사용자 프리셋은 `Views/Develop/Presets/DevelopPresetsPanel`(XAML 125, CS 226)로 옮겼다. recipe 통째 교체는 `RecipeReplaced` 로 뷰의 `ReloadAfterRecipeReplaced` 가 받는다.
+- 줄 수: 코드비하인드 3,636, XAML 1,898. 아직 500줄 초과.
+- 검증: `build.ps1 -Preset x64-release` 통과, `test.ps1` 71/71, `test-managed.ps1` Catalog 721, Shell 1032.
 - 검증: `build.ps1 -Preset x64-release` 통과, `test.ps1` 71/71, `test-managed.ps1` 경고 0·오류 0, Catalog 721, Shell 1032.
