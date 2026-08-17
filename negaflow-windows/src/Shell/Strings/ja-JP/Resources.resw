@@ -873,7 +873,11 @@
   <data name="developGrainMendDetectorMissing.Value" xml:space="preserve"><value>自動検出はこのビルドにはまだありません</value></data>
   <data name="developPreviewFailed.Text" xml:space="preserve"><value>プレビューを作成できませんでした</value></data>
   <data name="libraryFilterMetadataUnknown.Content" xml:space="preserve"><value>メタデータ状態不明</value><comment>AppLocalizedPhrase.filterMetadataUnknown</comment></data>
-  <data name="developGrainMendDetecting.Text" xml:space="preserve"><value>ゴミ・キズを探しています…</value></data>
+  <data name="developGrainMendDetecting.Text" xml:space="preserve"><value>ゴミ・キズを検出中</value><comment>AppLocalizedPhrase.detectingDefectsStatus</comment></data>
+  <data name="developGrainMendNoDefects.Text" xml:space="preserve"><value>ゴミ・キズは見つかりませんでした</value><comment>AppLocalizedPhrase.noDefectsStatus</comment></data>
+  <data name="developGrainMendDefectsFormat.Value" xml:space="preserve"><value>ゴミ・キズ %d件</value><comment>AppLocalizedPhrase.defectsCountFormat</comment></data>
+  <data name="developGrainMendDefectsExcludedFormat.Value" xml:space="preserve"><value>ゴミ・キズ %d件（除外 %d件）</value><comment>AppLocalizedPhrase.defectsCountExcludedFormat</comment></data>
+  <data name="developGrainMendDragRegion.Text" xml:space="preserve"><value>ゴミ・キズのある範囲をドラッグ</value><comment>AppLocalizedPhrase.dragDefectRegion</comment></data>
   <data name="developGrainMendFoundNothing.Text" xml:space="preserve"><value>修復するものが見つかりませんでした</value></data>
   <data name="developGrainMendFoundFormat.Value" xml:space="preserve"><value>%d 箇所見つかりました。Enter で除去、Esc で取消</value></data>
   <data name="developGrainMendDetectFailed.Text" xml:space="preserve"><value>検出に失敗しました</value></data>

@@ -873,7 +873,11 @@
   <data name="developGrainMendDetectorMissing.Value" xml:space="preserve"><value>此版本尚未提供自动检测</value></data>
   <data name="developPreviewFailed.Text" xml:space="preserve"><value>无法生成预览</value></data>
   <data name="libraryFilterMetadataUnknown.Content" xml:space="preserve"><value>元数据状态未知</value><comment>AppLocalizedPhrase.filterMetadataUnknown</comment></data>
-  <data name="developGrainMendDetecting.Text" xml:space="preserve"><value>正在查找瑕疵…</value></data>
+  <data name="developGrainMendDetecting.Text" xml:space="preserve"><value>正在检测瑕疵</value><comment>AppLocalizedPhrase.detectingDefectsStatus</comment></data>
+  <data name="developGrainMendNoDefects.Text" xml:space="preserve"><value>未发现瑕疵</value><comment>AppLocalizedPhrase.noDefectsStatus</comment></data>
+  <data name="developGrainMendDefectsFormat.Value" xml:space="preserve"><value>%d 处瑕疵</value><comment>AppLocalizedPhrase.defectsCountFormat</comment></data>
+  <data name="developGrainMendDefectsExcludedFormat.Value" xml:space="preserve"><value>%d 处瑕疵（已排除 %d 处）</value><comment>AppLocalizedPhrase.defectsCountExcludedFormat</comment></data>
+  <data name="developGrainMendDragRegion.Text" xml:space="preserve"><value>在瑕疵区域上拖动</value><comment>AppLocalizedPhrase.dragDefectRegion</comment></data>
   <data name="developGrainMendFoundNothing.Text" xml:space="preserve"><value>未找到需要修复的地方</value></data>
   <data name="developGrainMendFoundFormat.Value" xml:space="preserve"><value>找到 %d 处。按 Enter 移除，Esc 取消</value></data>
   <data name="developGrainMendDetectFailed.Text" xml:space="preserve"><value>检测失败</value></data>

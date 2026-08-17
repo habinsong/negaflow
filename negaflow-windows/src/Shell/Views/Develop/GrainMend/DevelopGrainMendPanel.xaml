@@ -179,53 +179,8 @@
                         </Grid>
                     </Border>
                 </Grid>
-                <StackPanel
-                    x:Name="GrainMendReviewTuning" x:FieldModifier="internal"
-                    HorizontalAlignment="Center"
-                    Orientation="Horizontal"
-                    Spacing="8"
-                    Visibility="Collapsed">
-                    <TextBlock
-                        x:Name="GrainMendSensitivityLabel" x:FieldModifier="internal"
-                        VerticalAlignment="Center"
-                        FontSize="12" />
-                    <Slider
-                        x:Name="GrainMendSensitivitySlider" x:FieldModifier="internal"
-                        Width="110"
-                        Minimum="0.7"
-                        Maximum="6"
-                        StepFrequency="0.1"
-                        SmallChange="0.1"
-                        LargeChange="0.5"
-                        AutomationProperties.AutomationId="negaflow.develop.grainmend.sensitivity"
-                        ValueChanged="OnGrainMendSensitivityValueChanged"
-                        PointerReleased="OnGrainMendSensitivityPointerReleased"
-                        KeyUp="OnGrainMendSensitivityKeyUp" />
-                    <ToggleSwitch
-                        x:Name="GrainMendMicroSpecksToggle" x:FieldModifier="internal"
-                        MinWidth="112"
-                        OffContent=""
-                        OnContent=""
-                        AutomationProperties.AutomationId="negaflow.develop.grainmend.micro-specks"
-                        Toggled="OnGrainMendMicroSpecksToggled" />
-                </StackPanel>
-                <StackPanel
-                    x:Name="GrainMendReviewActions" x:FieldModifier="internal"
-                    HorizontalAlignment="Center"
-                    Orientation="Horizontal"
-                    Spacing="8"
-                    Visibility="Collapsed">
-                    <Button
-                        x:Name="GrainMendRemoveButton" x:FieldModifier="internal"
-                        MinHeight="30"
-                        AutomationProperties.AutomationId="negaflow.develop.grainmend.remove"
-                        Click="OnGrainMendRemoveClicked" />
-                    <Button
-                        x:Name="GrainMendCancelButton" x:FieldModifier="internal"
-                        MinHeight="30"
-                        AutomationProperties.AutomationId="negaflow.develop.grainmend.cancel"
-                        Click="OnGrainMendCancelClicked" />
-                </StackPanel>
+                <!-- 민감도·미세 입자·제거·취소는 캔버스 위 캡슐에 있습니다
+                     (macOS RegionDefectOverlay). 카드에는 도구 네 개만 둡니다. -->
             </StackPanel>
         </Border>
 

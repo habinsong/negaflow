@@ -18,8 +18,143 @@ internal static class GrainMendRecipeTests
     {
         VerifyGrainMendRegionEdit();
         VerifyGrainMendReviewSession();
+        VerifyGrainMendClassReview();
+        VerifyGrainMendHudProjection();
         VerifyGrainMendWorkspaceStateAndOverlay();
         VerifyGrainMendDetectCoordinator();
+    }
+
+    /// <summary>
+    /// 검출기가 분류를 냈을 때입니다. 성분 하나가 제외 단위여야 하고, 종류별 칩이 실제 개수와
+    /// 평균 신뢰도를 내야 하며, 수락한 항목의 요약은 <b>남은 결함에서 다시 센 것</b>이어야
+    /// 합니다 — 예전에는 "먼지 × 채택 화소" 를 지어냈습니다.
+    /// </summary>
+    private static void VerifyGrainMendClassReview()
+    {
+        const int width = 8;
+        const int height = 6;
+        byte[] rgba = new byte[width * height * 4];
+        Mark(rgba, width, 1, 1);
+        Mark(rgba, width, 6, 1);
+        Mark(rgba, width, 2, 4);
+        Mark(rgba, width, 3, 4);
+        Mark(rgba, width, 4, 4);
+
+        DefectPreviewComponent dustLeft = new(
+            DefectClassification.Dust, 0.4, [Raw(1, 1)]);
+        DefectPreviewComponent dustRight = new(
+            DefectClassification.Dust, 0.6, [Raw(6, 1)]);
+        DefectPreviewComponent scratch = new(
+            DefectClassification.ScratchHorizontal,
+            0.8,
+            [Raw(2, 4), Raw(3, 4), Raw(4, 4)]);
+        DefectEditItem item = new(
+            Guid.Parse("3d0d9f7f-1a2b-4c3d-8e5f-6a7b8c9d0e1f"),
+            DefectEditKind.Region,
+            Enabled: true,
+            Strength: 1.0,
+            new DefectEditLabel(DefectEditLabelKind.Automatic, 3),
+            new DefectEditSummary(
+                DefectEditSummaryKind.ClassBreakdown,
+                new DefectClassBreakdown(
+                    [
+                        new DefectClassCount(DefectClassification.Dust, 2),
+                        new DefectClassCount(DefectClassification.ScratchHorizontal, 1),
+                    ],
+                    0.6)),
+            new DefectSize(width, height),
+            [dustLeft, dustRight, scratch])
+        {
+            RegionMask = new DefectMask(false, rgba),
+            RegionRoi = new DefectRect(0.0, 0.0, width, height),
+            RegionWidth = width,
+            RegionHeight = height,
+        };
+
+        GrainMendReviewSession? review = GrainMendReviewSession.TryCreate(item);
+        Check(review is { IsClassified: true, ComponentCount: 3, IncludedCount: 3 },
+            "grain_mend_review_uses_the_detector_components_not_mask_blobs");
+        if (review is null)
+        {
+            return;
+        }
+
+        IReadOnlyList<GrainMendClassSummary> summaries = review.ClassSummaries();
+        Check(summaries.Count == 2 &&
+            summaries[0] == new GrainMendClassSummary(
+                DefectClassification.Dust, 2, 0.5, false) &&
+            summaries[1] == new GrainMendClassSummary(
+                DefectClassification.ScratchHorizontal, 1, 0.8, false),
+            "grain_mend_review_summarises_each_class_in_definition_order");
+
+        // 칩 한 번이면 그 종류가 통째로 빠집니다.
+        Check(review.ToggleClass(DefectClassification.Dust) && review.IncludedCount == 1 &&
+            review.ClassSummaries()[0].AllExcluded &&
+            !review.ClassSummaries()[1].AllExcluded,
+            "grain_mend_review_toggles_a_whole_class");
+
+        DefectEditItem? accepted = review.BuildAcceptedEdit();
+        Check(accepted is { Label.Value: 1, Preview.Count: 1 } &&
+            accepted.Preview[0].Classification == DefectClassification.ScratchHorizontal &&
+            accepted.Summary.ClassBreakdown is { MeanConfidence: 0.8 } breakdown &&
+            breakdown.Counts.Count == 1 &&
+            breakdown.Counts[0] == new DefectClassCount(
+                DefectClassification.ScratchHorizontal, 1),
+            "grain_mend_review_recounts_the_summary_from_the_survivors");
+        Check(accepted is not null &&
+            DefectMaskCodec.TryDecodeRgba8(
+                accepted.RegionMask!, width, height, out byte[] selected) &&
+            selected[((1 * width) + 1) * 4] == 0 &&
+            selected[((1 * width) + 6) * 4] == 0 &&
+            selected[((4 * width) + 3) * 4] == 255,
+            "grain_mend_review_clears_only_the_excluded_class_pixels");
+
+        Check(review.ToggleClass(DefectClassification.Dust) && review.IncludedCount == 3,
+            "grain_mend_review_puts_a_class_back");
+
+        // macOS nearestComponentID: 정확히 짚지 않아도 반경 안이면 잡습니다.
+        Check(review.ToggleAtRaw(Raw(6, 0)) && review.IncludedCount == 2 &&
+            review.IsExcludedAtRaw(Raw(6, 1)),
+            "grain_mend_review_hits_a_component_near_the_click");
+
+        // 분류가 없으면 종류별 칩도 없습니다 — 종류를 지어내지 않습니다.
+        GrainMendReviewSession? unclassified = GrainMendReviewSession.TryCreate(
+            item with { Preview = [] });
+        Check(unclassified is { IsClassified: false } &&
+            unclassified.ClassSummaries().Count == 0 &&
+            !unclassified.ToggleClass(DefectClassification.Dust),
+            "grain_mend_review_invents_no_class_without_a_detector_component");
+
+        static DefectPoint Raw(int x, int y) =>
+            new(x / (double)(width - 1), y / (double)(height - 1));
+
+        static void Mark(byte[] rgba, int stride, int x, int y)
+        {
+            int offset = ((y * stride) + x) * 4;
+            rgba[offset] = rgba[offset + 1] = rgba[offset + 2] = rgba[offset + 3] = 255;
+        }
+    }
+
+    /// <summary>
+    /// 캔버스 위 캡슐이 언제 무엇을 내는지입니다. 창을 띄우지 않고 확인할 수 있어야 "검출은
+    /// 됐는데 칩이 안 뜬다" 를 좁힐 수 있습니다.
+    /// </summary>
+    private static void VerifyGrainMendHudProjection()
+    {
+        Check(!GrainMendHudProjection
+                .Create(false, false, null, null, GrainMendTool.None).IsVisible &&
+            !GrainMendHudProjection
+                .Create(true, false, null, null, GrainMendTool.None).IsVisible,
+            "grain_mend_hud_stays_out_of_the_way_without_a_tool");
+        Check(GrainMendHudProjection
+                .Create(true, false, null, null, GrainMendTool.Guided).Mode ==
+                GrainMendHudMode.Waiting,
+            "grain_mend_hud_waits_for_a_guided_drag");
+        GrainMendHudState detecting = GrainMendHudProjection.Create(
+            true, true, DefectEditLabelKind.Automatic, null, GrainMendTool.None);
+        Check(detecting is { Mode: GrainMendHudMode.Detecting, RemoveEnabled: false } &&
+            detecting.Chips.Count == 0,
+            "grain_mend_hud_offers_nothing_while_detecting");
     }
 
     private static void VerifyGrainMendRegionEdit()

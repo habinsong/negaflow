@@ -873,7 +873,11 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developGrainMendDetectorMissing.Value" xml:space="preserve"><value>Automatische Erkennung fehlt in diesem Build noch</value></data>
   <data name="developPreviewFailed.Text" xml:space="preserve"><value>Die Vorschau konnte nicht erstellt werden</value></data>
   <data name="libraryFilterMetadataUnknown.Content" xml:space="preserve"><value>Metadatenstatus unbekannt</value><comment>AppLocalizedPhrase.filterMetadataUnknown</comment></data>
-  <data name="developGrainMendDetecting.Text" xml:space="preserve"><value>Suche nach Defekten…</value></data>
+  <data name="developGrainMendDetecting.Text" xml:space="preserve"><value>Defekte werden erkannt</value><comment>AppLocalizedPhrase.detectingDefectsStatus</comment></data>
+  <data name="developGrainMendNoDefects.Text" xml:space="preserve"><value>Keine Defekte</value><comment>AppLocalizedPhrase.noDefectsStatus</comment></data>
+  <data name="developGrainMendDefectsFormat.Value" xml:space="preserve"><value>%d Defekte</value><comment>AppLocalizedPhrase.defectsCountFormat</comment></data>
+  <data name="developGrainMendDefectsExcludedFormat.Value" xml:space="preserve"><value>%d Defekte (%d ausgeschlossen)</value><comment>AppLocalizedPhrase.defectsCountExcludedFormat</comment></data>
+  <data name="developGrainMendDragRegion.Text" xml:space="preserve"><value>Über den Defektbereich ziehen</value><comment>AppLocalizedPhrase.dragDefectRegion</comment></data>
   <data name="developGrainMendFoundNothing.Text" xml:space="preserve"><value>Nichts zu reparieren gefunden</value></data>
   <data name="developGrainMendFoundFormat.Value" xml:space="preserve"><value>%d Stellen gefunden. Eingabetaste zum Entfernen, Esc zum Abbrechen</value></data>
   <data name="developGrainMendDetectFailed.Text" xml:space="preserve"><value>Die Erkennung ist fehlgeschlagen</value></data>

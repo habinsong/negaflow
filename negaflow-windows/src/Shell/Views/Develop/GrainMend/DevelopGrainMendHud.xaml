@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    macOS Features/Defects/RegionDefectOverlay.swift 의 캡슐 두 줄입니다. 위 가운데가 컨트롤
+    바(검출 상태·민감도·미세 입자·취소·결함 제거), 아래 가운데가 종류별 칩입니다. 오른쪽 카드가
+    아니라 사진 위에 있어야 검출 결과를 보면서 손이 사진을 떠나지 않습니다.
+
+    글리프는 Segoe Fluent 에서 뜻이 같은 것을 고른 것입니다 — scope 는 GrainMend 카드 머리와
+    같은 E7A8, bandage 는 GrainMend 레이어 카드 머리와 같은 E90F, slider.horizontal.3 은
+    프리셋 레일과 같은 E9E9 입니다.
+-->
+<UserControl
+    x:Class="Negaflow.Shell.Views.Develop.GrainMend.DevelopGrainMendHud"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <!-- macOS .buttonStyle(.plain) 아이콘 단추 -->
+        <Style x:Key="NegaflowHudGlyphButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="7,3" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="CornerRadius" Value="12" />
+        </Style>
+        <!-- macOS DefectClassChip: 배경은 중성, 색은 점에만. -->
+        <Style x:Key="NegaflowHudChipStyle" TargetType="Button">
+            <Setter Property="Background" Value="{ThemeResource NegaflowSubtleFillBrush}" />
+            <Setter Property="BorderBrush" Value="{ThemeResource NegaflowDividerBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="9,5" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="CornerRadius" Value="999" />
+        </Style>
+        <DataTemplate x:Key="GrainMendClassChipTemplate">
+            <Button
+                AutomationProperties.Name="{Binding AutomationName}"
+                Click="OnChipClicked"
+                Style="{StaticResource NegaflowHudChipStyle}"
+                Tag="{Binding Classification}"
+                ToolTipService.ToolTip="{Binding Name}">
+                <!-- macOS HStack(spacing: 5) -->
+                <StackPanel
+                    Orientation="Horizontal"
+                    Opacity="{Binding Opacity}"
+                    Spacing="5">
+                    <Ellipse
+                        Width="7"
+                        Height="7"
+                        VerticalAlignment="Center"
+                        Fill="{Binding Dot}" />
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        FontSize="12"
+                        FontWeight="Medium"
+                        Text="{Binding Name}"
+                        TextDecorations="{Binding NameDecorations}" />
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        FontFamily="Consolas"
+                        FontSize="12"
+                        FontWeight="SemiBold"
+                        Text="{Binding CountText}" />
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        FontFamily="Consolas"
+                        FontSize="11"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Text="{Binding ConfidenceText}" />
+                </StackPanel>
+            </Button>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <!-- 캡슐이 없는 자리는 그대로 캔버스입니다 — 배경을 칠하면 드래그가 막힙니다. -->
+    <Grid x:Name="HudRoot" Visibility="Collapsed">
+        <!-- macOS: VStack { controlBar; Spacer; classChipsBar }.padding(.vertical, 12) -->
+        <Border
+            x:Name="ControlCapsule"
+            Margin="0,12,0,0"
+            Padding="12,8"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Top"
+            AutomationProperties.AutomationId="negaflow.canvas.grainmend.capsule"
+            Background="{ThemeResource NegaflowPanelBrush}"
+            BorderBrush="{ThemeResource NegaflowDividerBrush}"
+            BorderThickness="1"
+            CornerRadius="999">
+            <!-- macOS HStack(spacing: 10) -->
+            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                <!-- macOS Image(systemName: "scope").foregroundStyle(.red) -->
+                <FontIcon
+                    VerticalAlignment="Center"
+                    FontSize="14"
+                    Foreground="#FFFF3B30"
+                    Glyph="&#xE7A8;" />
+                <ProgressRing
+                    x:Name="DetectingRing"
+                    Width="16"
+                    Height="16"
+                    VerticalAlignment="Center"
+                    IsActive="False"
+                    Visibility="Collapsed" />
+                <TextBlock
+                    x:Name="StatusText"
+                    VerticalAlignment="Center"
+                    AutomationProperties.AutomationId="negaflow.canvas.grainmend.status"
+                    FontSize="12"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                <Border
+                    x:Name="FirstDivider"
+                    Width="1"
+                    Height="16"
+                    VerticalAlignment="Center"
+                    Background="{ThemeResource NegaflowDividerBrush}"
+                    Visibility="Collapsed" />
+                <!-- macOS HStack(spacing: 6) { slider.horizontal.3, Slider(width: 110) } -->
+                <StackPanel
+                    x:Name="SensitivityGroup"
+                    Orientation="Horizontal"
+                    Spacing="6"
+                    VerticalAlignment="Center"
+                    Visibility="Collapsed">
+                    <FontIcon
+                        VerticalAlignment="Center"
+                        FontSize="11"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Glyph="&#xE9E9;" />
+                    <Slider
+                        x:Name="SensitivitySlider"
+                        Width="110"
+                        VerticalAlignment="Center"
+                        Minimum="0.7"
+                        Maximum="6"
+                        StepFrequency="0.1"
+                        SmallChange="0.1"
+                        LargeChange="0.5"
+                        AutomationProperties.AutomationId="negaflow.canvas.grainmend.sensitivity"
+                        IsThumbToolTipEnabled="False"
+                        ValueChanged="OnSensitivityValueChanged"
+                        PointerCaptureLost="OnSensitivityCommitted"
+                        KeyUp="OnSensitivityKeyUp" />
+                </StackPanel>
+                <!-- macOS Toggle(...).toggleStyle(.checkbox).font(.caption) -->
+                <CheckBox
+                    x:Name="MicroSpecksCheck"
+                    VerticalAlignment="Center"
+                    MinWidth="0"
+                    AutomationProperties.AutomationId="negaflow.canvas.grainmend.micro-specks"
+                    Checked="OnMicroSpecksToggled"
+                    Unchecked="OnMicroSpecksToggled">
+                    <TextBlock x:Name="MicroSpecksText" FontSize="12" />
+                </CheckBox>
+                <Border
+                    x:Name="SecondDivider"
+                    Width="1"
+                    Height="16"
+                    VerticalAlignment="Center"
+                    Background="{ThemeResource NegaflowDividerBrush}"
+                    Visibility="Collapsed" />
+                <!-- macOS Button { Image(systemName: "xmark") } -->
+                <Button
+                    x:Name="CancelButton"
+                    VerticalAlignment="Center"
+                    AutomationProperties.AutomationId="negaflow.canvas.grainmend.cancel"
+                    Click="OnCancelClicked"
+                    Style="{StaticResource NegaflowHudGlyphButtonStyle}"
+                    Visibility="Collapsed">
+                    <FontIcon FontSize="12" Glyph="&#xE711;" />
+                </Button>
+                <!-- macOS Button { Label(removeDefects, systemImage: "bandage") }.buttonStyle(.borderedProminent) -->
+                <Button
+                    x:Name="RemoveButton"
+                    VerticalAlignment="Center"
+                    MinHeight="28"
+                    Padding="10,3"
+                    AutomationProperties.AutomationId="negaflow.canvas.grainmend.remove"
+                    Click="OnRemoveClicked"
+                    CornerRadius="14"
+                    Style="{StaticResource AccentButtonStyle}"
+                    Visibility="Collapsed">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon
+                            x:Name="RemoveIcon"
+                            VerticalAlignment="Center"
+                            FontSize="12"
+                            Glyph="&#xE90F;"
+                            Visibility="Visible" />
+                        <TextBlock
+                            x:Name="RemoveText"
+                            VerticalAlignment="Center"
+                            FontSize="12" />
+                        <ProgressRing
+                            x:Name="RemovingRing"
+                            Width="14"
+                            Height="14"
+                            VerticalAlignment="Center"
+                            IsActive="False"
+                            Visibility="Collapsed" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Border>
+
+        <!-- macOS classChipsBar: 콘텐츠 폭에 딱 맞춰 가운데. -->
+        <Border
+            x:Name="ChipsCapsule"
+            Margin="0,0,0,12"
+            Padding="10,6"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Bottom"
+            AutomationProperties.AutomationId="negaflow.canvas.grainmend.class-chips"
+            Background="{ThemeResource NegaflowPanelBrush}"
+            BorderBrush="{ThemeResource NegaflowDividerBrush}"
+            BorderThickness="1"
+            CornerRadius="999"
+            Visibility="Collapsed">
+            <ItemsControl
+                x:Name="ClassChips"
+                ItemTemplate="{StaticResource GrainMendClassChipTemplate}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="6" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+            </ItemsControl>
+        </Border>
+    </Grid>
+</UserControl>

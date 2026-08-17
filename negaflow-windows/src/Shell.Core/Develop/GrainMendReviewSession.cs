@@ -3,38 +3,50 @@ using Negaflow.Catalog;
 namespace Negaflow.Shell.Develop;
 
 /// <summary>
-/// 자동·가이드 검출 결과를 저장 전에 검토하는 짧은 수명 세션입니다. 검출 마스크의 연결 성분을
-/// 각각 포함/제외할 수 있으며, 수락할 때에만 제외 성분을 뺀 region 편집을 만듭니다.
+/// 결함 한 종류의 요약입니다. macOS <c>AppModel.DefectClassSummary</c> 와 같습니다 — 화면의
+/// 종류별 칩이 이것만 읽습니다.
+/// </summary>
+public readonly record struct GrainMendClassSummary(
+    DefectClassification Classification,
+    int Count,
+    double MeanConfidence,
+    bool AllExcluded);
+
+/// <summary>
+/// 자동·가이드 검출 결과를 저장 전에 검토하는 짧은 수명 세션입니다. 검출한 결함을 하나씩 또는
+/// 종류째로 포함/제외할 수 있으며, 수락할 때에만 제외한 것을 뺀 region 편집을 만듭니다.
 /// </summary>
 public sealed class GrainMendReviewSession
 {
+    /// <summary>
+    /// 클릭 관용 반경의 하한입니다. macOS <c>max(3, field.width / 100)</c> 과 같습니다.
+    /// </summary>
+    private const int MinimumHitRadius = 3;
+
+    private const int HitRadiusDivisor = 100;
+
     private readonly DefectEditItem source;
     private readonly byte[] rgba;
-    private readonly int[] componentByPixel;
+    private readonly GrainMendComponentMap map;
+    private readonly GrainMendMaskWindow window;
     private readonly bool[] excluded;
-    private readonly int width;
-    private readonly int height;
-    private readonly DefectRect roi;
-    private readonly DefectSize baseSize;
+
+    /// <summary>검출기가 낸 성분입니다. 분류를 내지 못했으면 비어 있습니다.</summary>
+    private readonly IReadOnlyList<DefectPreviewComponent> components;
 
     private GrainMendReviewSession(
         DefectEditItem source,
         byte[] rgba,
-        int[] componentByPixel,
-        int componentCount,
-        int width,
-        int height,
-        DefectRect roi,
-        DefectSize baseSize)
+        GrainMendComponentMap map,
+        GrainMendMaskWindow window,
+        IReadOnlyList<DefectPreviewComponent> components)
     {
         this.source = source;
         this.rgba = rgba;
-        this.componentByPixel = componentByPixel;
-        excluded = new bool[componentCount];
-        this.width = width;
-        this.height = height;
-        this.roi = roi;
-        this.baseSize = baseSize;
+        this.map = map;
+        this.window = window;
+        this.components = components;
+        excluded = new bool[map.ComponentCount];
     }
 
     public int ComponentCount => excluded.Length;
@@ -43,72 +55,46 @@ public sealed class GrainMendReviewSession
 
     public int ExcludedCount => excluded.Length - IncludedCount;
 
+    /// <summary>검출기가 분류를 냈는지입니다. 내지 못했으면 종류별 칩이 없습니다.</summary>
+    public bool IsClassified => components.Count > 0;
+
     public static GrainMendReviewSession? TryCreate(DefectEditItem item)
     {
         ArgumentNullException.ThrowIfNull(item);
-        if (item.RegionMask is not { } mask || item.RegionRoi is not { } roi ||
-            item.RegionWidth is not { } width || item.RegionHeight is not { } height ||
-            item.BaseSize is not { } baseSize || width <= 0 || height <= 0 ||
-            !DefectMaskCodec.TryDecodeRgba8(mask, width, height, out byte[] rgba))
+        if (item.RegionMask is not { } mask ||
+            GrainMendMaskWindow.For(item) is not { } window ||
+            !DefectMaskCodec.TryDecodeRgba8(mask, window.Width, window.Height, out byte[] rgba))
         {
             return null;
         }
 
-        int[] labels = Enumerable.Repeat(-1, checked(width * height)).ToArray();
-        int[] queue = new int[labels.Length];
-        int componentCount = 0;
-        for (int index = 0; index < labels.Length; ++index)
+        // 검출기 성분이 있으면 그것이 제외 단위입니다 — macOS 와 같이 결함 하나가 하나입니다.
+        // 마스크 덩어리로 다시 나누면 붙어 버린 결함 둘이 하나로 보입니다.
+        GrainMendComponentMap? seeded = GrainMendComponentMap.Seeded(rgba, window, item.Preview);
+        if (seeded is { } byComponent)
         {
-            if (labels[index] != -1 || rgba[index * 4] == 0)
-            {
-                continue;
-            }
-
-            int head = 0;
-            int tail = 0;
-            queue[tail++] = index;
-            labels[index] = componentCount;
-            while (head < tail)
-            {
-                int current = queue[head++];
-                int x = current % width;
-                int y = current / width;
-                for (int offsetY = -1; offsetY <= 1; ++offsetY)
-                {
-                    for (int offsetX = -1; offsetX <= 1; ++offsetX)
-                    {
-                        if (offsetX == 0 && offsetY == 0)
-                        {
-                            continue;
-                        }
-                        int nextX = x + offsetX;
-                        int nextY = y + offsetY;
-                        if (nextX < 0 || nextX >= width || nextY < 0 || nextY >= height)
-                        {
-                            continue;
-                        }
-                        int next = (nextY * width) + nextX;
-                        if (labels[next] != -1 || rgba[next * 4] == 0)
-                        {
-                            continue;
-                        }
-                        labels[next] = componentCount;
-                        queue[tail++] = next;
-                    }
-                }
-            }
-            ++componentCount;
+            return new GrainMendReviewSession(item, rgba, byComponent, window, item.Preview);
         }
-
-        return componentCount == 0
-            ? null
-            : new GrainMendReviewSession(
-                item, rgba, labels, componentCount, width, height, roi, baseSize);
+        return GrainMendComponentMap.Blobs(rgba, window.Width, window.Height) is { } byBlob
+            ? new GrainMendReviewSession(item, rgba, byBlob, window, [])
+            : null;
     }
 
+    /// <summary>
+    /// 화면에서 찍은 자리의 결함을 제외↔포함으로 바꿉니다. 정확히 짚지 않아도 반경 안에서
+    /// 가장 가까운 것을 잡습니다 — macOS <c>toggleRegionComponent</c> 와 같습니다.
+    /// </summary>
     public bool ToggleAtRaw(DefectPoint rawPoint)
     {
-        if (!TryGetComponent(rawPoint, out int component))
+        if (!window.TryLocate(rawPoint, out int x, out int y))
+        {
+            return false;
+        }
+        int component = map.NearestOwner(
+            x,
+            y,
+            Math.Max(MinimumHitRadius, window.Width / HitRadiusDivisor));
+        if (component < 0 || component >= excluded.Length)
         {
             return false;
         }
@@ -116,65 +102,168 @@ public sealed class GrainMendReviewSession
         return true;
     }
 
-    public bool IsExcludedAtRaw(DefectPoint rawPoint) =>
-        TryGetComponent(rawPoint, out int component) && excluded[component];
+    /// <summary>그 성분을 지금 빼고 있는지입니다. 덮개가 성분마다 한 번만 묻습니다.</summary>
+    public bool IsComponentExcluded(int component) =>
+        component >= 0 && component < excluded.Length && excluded[component];
 
-    /// <summary>선택된 component만 남긴 새 item입니다. 모두 제외했으면 수락할 것이 없습니다.</summary>
+    /// <summary>원본 정규 좌표 한 점이 제외한 성분에 속하는지입니다.</summary>
+    public bool IsExcludedAtRaw(DefectPoint rawPoint) =>
+        window.TryLocate(rawPoint, out int x, out int y) &&
+        IsComponentExcluded(map.Owner(x, y));
+
+    /// <summary>
+    /// 지금 검출 결과의 종류별 요약입니다. macOS <c>defectClassSummaries</c> 와 같이
+    /// <see cref="DefectClassification"/> 정의 순서로 내며, 없는 종류는 넣지 않습니다.
+    /// </summary>
+    public IReadOnlyList<GrainMendClassSummary> ClassSummaries()
+    {
+        if (components.Count == 0)
+        {
+            return [];
+        }
+
+        int classCount = Enum.GetValues<DefectClassification>().Length;
+        int[] counts = new int[classCount];
+        double[] confidenceSums = new double[classCount];
+        int[] excludedCounts = new int[classCount];
+        for (int component = 0; component < components.Count; ++component)
+        {
+            int index = (int)components[component].Classification;
+            if (index < 0 || index >= classCount)
+            {
+                continue;
+            }
+            ++counts[index];
+            confidenceSums[index] += components[component].Confidence;
+            if (IsComponentExcluded(component))
+            {
+                ++excludedCounts[index];
+            }
+        }
+
+        List<GrainMendClassSummary> summaries = new(classCount);
+        for (int index = 0; index < classCount; ++index)
+        {
+            if (counts[index] == 0)
+            {
+                continue;
+            }
+            summaries.Add(new GrainMendClassSummary(
+                (DefectClassification)index,
+                counts[index],
+                confidenceSums[index] / counts[index],
+                excludedCounts[index] == counts[index]));
+        }
+        return summaries;
+    }
+
+    /// <summary>
+    /// 한 종류를 통째로 제외↔포함합니다. 하나씩 누른 제외와 같은 목록을 나눠 쓰며, 다시
+    /// 검출하지 않습니다 — macOS <c>toggleRegionClass</c> 와 같습니다.
+    /// </summary>
+    public bool ToggleClass(DefectClassification classification)
+    {
+        if (components.Count == 0)
+        {
+            return false;
+        }
+
+        bool any = false;
+        bool allExcluded = true;
+        for (int component = 0; component < components.Count; ++component)
+        {
+            if (components[component].Classification != classification)
+            {
+                continue;
+            }
+            any = true;
+            allExcluded &= IsComponentExcluded(component);
+        }
+        if (!any)
+        {
+            return false;
+        }
+
+        for (int component = 0; component < components.Count && component < excluded.Length; ++component)
+        {
+            if (components[component].Classification == classification)
+            {
+                excluded[component] = !allExcluded;
+            }
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// 남긴 결함만 담은 새 항목입니다. 모두 제외했으면 수락할 것이 없습니다. 이름표의 수와
+    /// 분류별 개수·평균 신뢰도는 <b>남은 결함에서 다시 셉니다</b> — macOS
+    /// <c>commitRegionDefect</c> 가 생존 성분으로 요약을 다시 만드는 것과 같습니다.
+    /// </summary>
     public DefectEditItem? BuildAcceptedEdit()
     {
-        int included = IncludedCount;
-        if (included == 0)
+        if (IncludedCount == 0)
         {
             return null;
         }
 
-        byte[] selected = (byte[])rgba.Clone();
-        for (int pixel = 0; pixel < componentByPixel.Length; ++pixel)
+        byte[] selected = map.WithoutExcluded(rgba, excluded);
+        if (components.Count == 0)
         {
-            int component = componentByPixel[pixel];
-            if (component < 0 || !excluded[component])
+            // 분류가 없습니다. 종류를 지어내지 않고, 검출이 낸 요약을 그대로 둔 채 남은
+            // 화소 수만 이름표에 적습니다(원래 이름표와 같은 단위입니다).
+            return source with
             {
-                continue;
+                Label = new DefectEditLabel(source.Label.Kind, CountMarked(selected)),
+                RegionMask = new DefectMask(false, selected),
+            };
+        }
+
+        List<DefectPreviewComponent> survivors = new(components.Count);
+        for (int component = 0; component < components.Count; ++component)
+        {
+            if (!IsComponentExcluded(component))
+            {
+                survivors.Add(components[component]);
             }
-            int offset = pixel * 4;
-            selected[offset] = 0;
-            selected[offset + 1] = 0;
-            selected[offset + 2] = 0;
-            selected[offset + 3] = 0;
         }
 
         return source with
         {
-            Label = new DefectEditLabel(source.Label.Kind, included),
+            Label = new DefectEditLabel(source.Label.Kind, survivors.Count),
             Summary = new DefectEditSummary(
                 DefectEditSummaryKind.ClassBreakdown,
-                new DefectClassBreakdown(
-                    [new DefectClassCount(DefectClassification.Dust, included)],
-                    1.0)),
+                Breakdown(survivors)),
+            Preview = survivors,
             RegionMask = new DefectMask(false, selected),
         };
     }
 
-    private bool TryGetComponent(DefectPoint rawPoint, out int component)
+    /// <summary>
+    /// macOS <c>DefectClassBreakdown(components:)</c> 와 같이 분류 순서로 세고 평균 신뢰도를
+    /// 냅니다.
+    /// </summary>
+    private static DefectClassBreakdown Breakdown(
+        IReadOnlyList<DefectPreviewComponent> survivors)
     {
-        component = -1;
-        if (!double.IsFinite(rawPoint.X) || !double.IsFinite(rawPoint.Y) ||
-            rawPoint.X < 0.0 || rawPoint.X > 1.0 || rawPoint.Y < 0.0 || rawPoint.Y > 1.0 ||
-            baseSize.Width <= 1.0 || baseSize.Height <= 1.0)
-        {
-            return false;
-        }
+        DefectClassCount[] counts = [.. survivors
+            .GroupBy(component => component.Classification)
+            .OrderBy(group => group.Key)
+            .Select(group => new DefectClassCount(group.Key, group.Count()))];
+        return new DefectClassBreakdown(
+            counts,
+            survivors.Average(component => component.Confidence));
+    }
 
-        // Raw points are normalized top-first while recipe ROI is y-up; bitmap rows stay
-        // top-first, so convert the ROI origin once before indexing its mask.
-        double rawTop = baseSize.Height - roi.Y - roi.Height;
-        int localX = (int)Math.Round((rawPoint.X * (baseSize.Width - 1.0)) - roi.X);
-        int localY = (int)Math.Round((rawPoint.Y * (baseSize.Height - 1.0)) - rawTop);
-        if (localX < 0 || localX >= width || localY < 0 || localY >= height)
+    private static int CountMarked(byte[] rgba)
+    {
+        int marked = 0;
+        for (int pixel = 0; pixel * 4 < rgba.Length; ++pixel)
         {
-            return false;
+            if (rgba[pixel * 4] != 0)
+            {
+                ++marked;
+            }
         }
-        component = componentByPixel[(localY * width) + localX];
-        return component >= 0;
+        return marked;
     }
 }

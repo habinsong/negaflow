@@ -28,7 +28,10 @@ internal static class DefectLayerTextFactory
         AppResources.Get("developDefectLayerDelete", "Value"),
         AppResources.Get("developDefectLayerDone", "Content"));
 
-    private static IReadOnlyDictionary<DefectClassification, string> ClassNames() =>
+    /// <summary>
+    /// 분류 이름표만 따로 씁니다 — 캔버스 위 종류별 칩은 나머지 열일곱 개 문구가 필요 없습니다.
+    /// </summary>
+    internal static IReadOnlyDictionary<DefectClassification, string> ClassNames() =>
         new Dictionary<DefectClassification, string>
         {
             [DefectClassification.Dust] = AppResources.Get("developDefectClassDust", "Text"),

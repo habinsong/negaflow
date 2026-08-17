@@ -25,9 +25,6 @@ internal sealed class DevelopGrainMendChrome
         view.GrainMendGuidedText.Text = AppResources.Get("developGrainMendGuided", "Content");
         view.GrainMendBrushText.Text = AppResources.Get("developGrainMendBrush", "Content");
         view.GrainMendCloneText.Text = AppResources.Get("developGrainMendClone", "Content");
-        view.GrainMendRemoveButton.Content = AppResources.Get("developGrainMendRemove", "Content");
-        view.GrainMendCancelButton.Content = AppResources.Get("developCropCancel", "Text");
-        view.GrainMendSensitivityLabel.Text = AppResources.Get("developGrainMendSensitivity", "Text");
         SetLocalizedNameAndTooltip(
             view.GrainMendBrushButton, AppResources.Get("developGrainMendBrushHelp", "Value"));
         SetLocalizedNameAndTooltip(
@@ -37,18 +34,6 @@ internal sealed class DevelopGrainMendChrome
         SetLocalizedNameAndTooltip(
             view.GrainMendGuidedButton,
             AppResources.Get("developGrainMendGuidedHelp", "Value"));
-        SetLocalizedNameAndTooltip(
-            view.GrainMendRemoveButton, AppResources.Get("developGrainMendRemove", "Content"));
-        SetLocalizedNameAndTooltip(
-            view.GrainMendCancelButton, AppResources.Get("developCropCancel", "Text"));
-        string grainMendSensitivity = AppResources.Get("developGrainMendSensitivity", "Text");
-        AutomationProperties.SetName(view.GrainMendSensitivitySlider, grainMendSensitivity);
-        ToolTipService.SetToolTip(view.GrainMendSensitivitySlider, grainMendSensitivity);
-        string grainMendMicroSpecks = AppResources.Get("developGrainMendMicroSpecks", "Text");
-        view.GrainMendMicroSpecksToggle.OnContent = grainMendMicroSpecks;
-        view.GrainMendMicroSpecksToggle.OffContent = grainMendMicroSpecks;
-        AutomationProperties.SetName(view.GrainMendMicroSpecksToggle, grainMendMicroSpecks);
-        ToolTipService.SetToolTip(view.GrainMendMicroSpecksToggle, grainMendMicroSpecks);
         GrainMendCardState card = GrainMendCardProjection.Create(
             view.panel?.SelectedFrame is not null,
             view.grainMend.IsDetecting,
@@ -63,21 +48,7 @@ internal sealed class DevelopGrainMendChrome
         view.GrainMendAutoResetButton.IsEnabled = card.AutoResetEnabled;
         view.GrainMendGuidedButton.IsEnabled = card.GuidedEnabled;
         view.GrainMendGuidedResetButton.IsEnabled = card.GuidedResetEnabled;
-        view.GrainMendReviewTuning.Visibility = card.Reviewing ? Visibility.Visible : Visibility.Collapsed;
-        view.GrainMendReviewActions.Visibility = card.Reviewing ? Visibility.Visible : Visibility.Collapsed;
-        view.GrainMendSensitivitySlider.IsEnabled = card.SensitivityEnabled;
-        view.GrainMendMicroSpecksToggle.IsEnabled = card.MicroSpecksEnabled;
-        if (card.Reviewing)
-        {
-            view.updatingGrainMendSensitivity = true;
-            view.GrainMendSensitivitySlider.Value = view.options.GetSensitivity(card.ReviewingAutomatic);
-            view.updatingGrainMendSensitivity = false;
-            view.updatingGrainMendMicroSpecks = true;
-            view.GrainMendMicroSpecksToggle.IsOn = view.options.GetMicroSpecks(card.ReviewingAutomatic);
-            view.updatingGrainMendMicroSpecks = false;
-        }
-        view.GrainMendRemoveButton.IsEnabled = card.RemoveEnabled;
-        view.GrainMendCancelButton.IsEnabled = card.CancelEnabled;
+        UpdateHud(card);
 
         string reset = AppResources.Get("developGrainMendReset", "Value");
         SetLocalizedNameAndTooltip(view.GrainMendAutoResetButton, reset);
@@ -97,6 +68,31 @@ internal sealed class DevelopGrainMendChrome
         // 카드가 바뀌는 모든 자리는 목록도 바뀌는 자리입니다. 열두 군데를 따로 부르면
         // 언젠가 한 군데가 빠지고 목록만 옛 값을 붙듭니다.
         view.layers.Update();
+    }
+
+    /// <summary>
+    /// 캔버스 위 캡슐입니다. 카드가 바뀌는 자리는 캡슐도 바뀌는 자리이므로 같은 한 번에 냅니다.
+    /// </summary>
+    private void UpdateHud(GrainMendCardState card)
+    {
+        if (view.canvas?.GrainMendHud is not { } hud)
+        {
+            return;
+        }
+        // 검토 중이 아니면 캡슐이 남아 있는 것은 가이드를 켜 둔 때뿐이고, 가이드는 자동이
+        // 아닙니다 — 두 모드는 민감도도 미세 입자도 나눠 씁니다.
+        bool automatic = card.Reviewing && card.ReviewingAutomatic;
+        hud.Update(
+            GrainMendHudProjection.Create(
+                view.panel?.SelectedFrame is not null,
+                view.grainMend.IsDetecting,
+                view.grainMend.PendingEdit?.Label.Kind,
+                view.grainMend.PendingReview,
+                view.grainMend.Strokes.Tool),
+            view.options.GetSensitivity(automatic),
+            view.options.GetMicroSpecks(automatic),
+            view.isRemovingDefects,
+            DefectLayerTextFactory.ClassNames());
     }
 
     /// <summary>

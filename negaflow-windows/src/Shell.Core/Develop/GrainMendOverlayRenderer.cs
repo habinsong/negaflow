@@ -24,7 +24,7 @@ public static class GrainMendOverlayRenderer
                 previewWidth,
                 previewHeight,
                 edit.Preview,
-                point => review?.IsExcludedAtRaw(point) == true);
+                component => review?.IsComponentExcluded(component) == true);
             if (classified is not null)
             {
                 return classified;

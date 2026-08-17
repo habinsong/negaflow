@@ -2,7 +2,8 @@
 <UserControl
     x:Class="Negaflow.Shell.Views.Develop.Canvas.DevelopPreviewCanvas"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:grainmend="using:Negaflow.Shell.Views.Develop.GrainMend">
     <Grid
         x:Name="CanvasHost"
         x:FieldModifier="internal"
@@ -131,5 +132,9 @@
             </StackPanel>
         </Border>
     </Canvas>
+
+    <!-- macOS RegionDefectOverlay 의 캡슐 두 줄입니다. 크롭과 결함 도구는 서로를 끄므로
+         가장 위에 두어도 다투지 않습니다. -->
+    <grainmend:DevelopGrainMendHud x:Name="GrainMendHud" x:FieldModifier="internal" />
 </Grid>
 </UserControl>

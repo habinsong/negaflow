@@ -1,9 +1,9 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Negaflow.Catalog;
 using Negaflow.Shell.Develop;
+using Negaflow.Shell.Localization;
 using Negaflow.Shell.Views.Develop.Canvas;
 
 namespace Negaflow.Shell.Views.Develop.GrainMend;
@@ -22,8 +22,12 @@ public sealed partial class DevelopGrainMendPanel : UserControl
     internal Action<string>? setStatus;
     internal Action? requestPreview;
     internal readonly GrainMendWorkspaceState grainMend = new();
-    internal bool updatingGrainMendSensitivity;
-    internal bool updatingGrainMendMicroSpecks;
+
+    /// <summary>
+    /// "결함 제거"가 도는 중입니다. macOS 는 이 동안 단추 안을 프로그래스로 바꿉니다.
+    /// Windows 의 수락은 아직 동기라 눈에 보일 틈이 없지만, 상태는 어긋나지 않게 둡니다.
+    /// </summary>
+    internal bool isRemovingDefects;
     internal readonly DevelopGrainMendChrome chrome;
     internal readonly DevelopGrainMendDetector detector;
     internal readonly DevelopGrainMendReview review;
@@ -63,6 +67,82 @@ public sealed partial class DevelopGrainMendPanel : UserControl
         endCropSession = endCrop;
         setStatus = status;
         requestPreview = preview;
+        AttachHud(previewCanvas.GrainMendHud);
+    }
+
+    /// <summary>
+    /// 캔버스 위 캡슐을 잇습니다. 캡슐은 무엇을 눌렀는지만 알리고, 무엇을 할지는 여기서
+    /// 정합니다 — 카드에 있던 검토 줄과 같은 경로로 들어갑니다.
+    /// </summary>
+    private void AttachHud(DevelopGrainMendHud hud)
+    {
+        hud.SensitivityChanged += OnHudSensitivityChanged;
+        hud.SensitivityCommitted += OnHudSensitivityCommitted;
+        hud.MicroSpecksToggled += OnHudMicroSpecksToggled;
+        hud.CancelRequested += () => review.CancelPending();
+        hud.RemoveRequested += OnHudRemoveRequested;
+        hud.ClassToggled += OnHudClassToggled;
+    }
+
+    private void OnHudSensitivityChanged(double value)
+    {
+        if (grainMend.PendingEdit is null)
+        {
+            return;
+        }
+        options.SetSensitivity(
+            grainMend.PendingEdit.Label.Kind == DefectEditLabelKind.Automatic,
+            value);
+    }
+
+    private async void OnHudSensitivityCommitted() =>
+        await detector.RedetectForSensitivityAsync();
+
+    private async void OnHudMicroSpecksToggled(bool enabled)
+    {
+        // 검토 중이 아니면(가이드를 켜 두고 기다리는 중) 값만 담아 둡니다. macOS 도 이때는
+        // 재검출하지 않습니다 — 아직 검출한 것이 없습니다.
+        bool automatic = grainMend.PendingEdit?.Label.Kind == DefectEditLabelKind.Automatic;
+        options.SetMicroSpecks(automatic, enabled);
+        if (grainMend.PendingEdit is null || grainMend.PendingRawRoi is not { } rawRoi ||
+            grainMend.IsDetecting)
+        {
+            return;
+        }
+        await detector.DetectAsync(rawRoi);
+    }
+
+    private void OnHudRemoveRequested()
+    {
+        isRemovingDefects = true;
+        try
+        {
+            review.AcceptPending();
+        }
+        finally
+        {
+            isRemovingDefects = false;
+        }
+        chrome.Update();
+    }
+
+    /// <summary>
+    /// 종류별 칩 한 번입니다. 그 종류 전체를 제외↔포함하고 덮개를 다시 칠합니다 — macOS
+    /// <c>toggleRegionClass</c> 와 같이 재검출은 없습니다.
+    /// </summary>
+    private void OnHudClassToggled(DefectClassification classification)
+    {
+        if (grainMend.PendingReview?.ToggleClass(classification) != true ||
+            grainMend.PendingEdit is not { } edit)
+        {
+            return;
+        }
+        SetStatus(AppResources.FormatIntegers(
+            "developGrainMendFoundFormat",
+            "Value",
+            grainMend.IncludedCount));
+        review.ShowOverlay(edit);
+        chrome.Update();
     }
 
     public void Bind(DevelopPanelState hostPanel)
@@ -201,61 +281,4 @@ public sealed partial class DevelopGrainMendPanel : UserControl
         review.RemoveEdits(DefectEditKind.Clone);
     }
 
-    private void OnGrainMendRemoveClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        review.AcceptPending();
-    }
-
-    private void OnGrainMendCancelClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        review.CancelPending();
-    }
-
-    private void OnGrainMendSensitivityValueChanged(
-        object sender,
-        RangeBaseValueChangedEventArgs args)
-    {
-        _ = sender;
-        if (updatingGrainMendSensitivity || grainMend.PendingEdit is null)
-        {
-            return;
-        }
-        options.SetSensitivity(
-            grainMend.PendingEdit.Label.Kind == DefectEditLabelKind.Automatic,
-            args.NewValue);
-    }
-
-    private async void OnGrainMendSensitivityPointerReleased(
-        object sender,
-        PointerRoutedEventArgs args)
-    {
-        _ = sender;
-        args.Handled = true;
-        await detector.RedetectForSensitivityAsync();
-    }
-
-    private async void OnGrainMendSensitivityKeyUp(object sender, KeyRoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        await detector.RedetectForSensitivityAsync();
-    }
-
-    private async void OnGrainMendMicroSpecksToggled(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (updatingGrainMendMicroSpecks || grainMend.PendingEdit is null ||
-            grainMend.PendingRawRoi is not { } rawRoi || grainMend.IsDetecting)
-        {
-            return;
-        }
-        bool automatic = grainMend.PendingEdit.Label.Kind == DefectEditLabelKind.Automatic;
-        options.SetMicroSpecks(automatic, GrainMendMicroSpecksToggle.IsOn);
-        await detector.DetectAsync(rawRoi);
-    }
 }

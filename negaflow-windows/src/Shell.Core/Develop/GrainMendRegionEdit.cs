@@ -201,9 +201,14 @@ public static class GrainMendRegionEdit
         }
 
         // 검출 이미지는 ROI 를 줄인 것입니다. 화소 좌표를 ROI 안의 원본 화소로 되돌린 뒤
-        // 원본 크기로 나눕니다.
+        // 원본 크기로 나눕니다. 정규 좌표 0 과 1 은 첫·마지막 화소의 **중심**이므로
+        // `sourceWidth - 1` 로 나눕니다 — `DevelopDisplayGeometry` 와 같은 규약입니다.
+        // 크기로 나누면 오른쪽·아래로 갈수록 한 화소까지 밀려, 덮개와 클릭이 검출 자리와
+        // 어긋납니다.
         double scaleX = (double)roiWidth / width;
         double scaleY = (double)roiHeight / height;
+        double spanX = Math.Max(1.0, sourceWidth - 1.0);
+        double spanY = Math.Max(1.0, sourceHeight - 1.0);
         List<DefectPreviewComponent> preview = new(defects.Count);
         foreach (GrainMendComponent defect in defects)
         {
@@ -217,11 +222,11 @@ public static class GrainMendRegionEdit
             {
                 mapped[index] = new DefectPoint(
                     Math.Clamp(
-                        (roiX + ((points[index].X + 0.5) * scaleX)) / sourceWidth,
+                        (roiX + ((points[index].X + 0.5) * scaleX) - 0.5) / spanX,
                         0.0,
                         1.0),
                     Math.Clamp(
-                        (roiY + ((points[index].Y + 0.5) * scaleY)) / sourceHeight,
+                        (roiY + ((points[index].Y + 0.5) * scaleY) - 0.5) / spanY,
                         0.0,
                         1.0));
             }
