@@ -141,6 +141,7 @@ std::vector<std::uint8_t> build_automatic_mask_from_evidence(
     const std::vector<std::uint8_t>& evidence,
     const std::vector<float>& scratch_response,
     const std::size_t maximum_dust_area,
+    const std::size_t classification_dust_area,
     const int structure_radius_reference,
     const bool reject_structure_lines,
     std::size_t& accepted_pixels,
@@ -201,7 +202,7 @@ std::vector<std::uint8_t> build_automatic_mask_from_evidence(
             drop_scratch,
             image,
             candidates,
-            maximum_dust_area,
+            classification_dust_area,
             *components);
     }
     return mask;
@@ -226,6 +227,7 @@ std::vector<std::uint8_t> build_automatic_mask(
         image,
         evidence,
         candidates.scratch_response,
+        maximum_automatic_dust_area,
         maximum_automatic_dust_area,
         static_cast<int>(std::min(image.width, image.height)),
         reject_structure_lines,

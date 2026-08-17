@@ -40,15 +40,31 @@ public sealed class GrainMendDetectCoordinator
     private static readonly object TraceGate = new();
 
     /// <summary>
-    /// 검출 이미지의 긴 변 상한입니다. 네이티브 <c>grain_mend_maximum_detection_dimension</c>
-    /// 과 같은 값이며, 마스크 버퍼를 한 번만 잡기 위해 여기서도 압니다.
+    /// 처음 잡아 두는 마스크 버퍼의 한 변입니다. 자동·가이드는 macOS 와 같이 <b>원본
+    /// 해상도</b>로 검출하므로 프레임이 이보다 크면 그 프레임 크기로 다시 잡습니다.
     /// </summary>
-    private const int MaximumDetectionDimension = 1800;
+    private const int InitialMaskDimension = 1800;
 
     private readonly IDevelopExporter exporter;
     private readonly IUiDispatcher dispatcher;
-    private readonly byte[] mask =
-        new byte[MaximumDetectionDimension * MaximumDetectionDimension];
+    private byte[] mask = new byte[InitialMaskDimension * InitialMaskDimension];
+
+    /// <summary>
+    /// 원본 해상도 검출은 화소마다 한 바이트를 냅니다. 버퍼가 작으면 마스크가 잘려 검출
+    /// 결과가 조용히 사라지므로, 필요한 만큼 키워 두고 다음 검출에 다시 씁니다.
+    /// </summary>
+    private void EnsureMask(LibraryFrameSnapshot frame)
+    {
+        if (frame.SourceMetadata is not { } metadata)
+        {
+            return;
+        }
+        long required = checked((long)metadata.PixelWidth * metadata.PixelHeight);
+        if (required > mask.Length && required <= int.MaxValue)
+        {
+            mask = new byte[(int)required];
+        }
+    }
 
     public GrainMendDetectCoordinator(IDevelopExporter exporter, IUiDispatcher dispatcher)
     {
@@ -88,6 +104,7 @@ public sealed class GrainMendDetectCoordinator
         ArgumentNullException.ThrowIfNull(frame);
         ArgumentNullException.ThrowIfNull(onCompleted);
         Stopwatch clock = Stopwatch.StartNew();
+        EnsureMask(frame);
 
         // 검출은 파일을 쓰지 않지만 요청 팩토리는 목적지를 요구합니다.
         string unusedDestination = Path.ChangeExtension(frame.SourcePath, ".detect.png");

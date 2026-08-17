@@ -32,11 +32,14 @@ void build_automatic_evidence(
 // `components` 가 null 이 아니면 채택된 컴포넌트를 분류까지 채워 담습니다. 마스크만 필요한
 // 호출(브러시 경로 등)은 null 을 넘겨 그 일을 건너뜁니다 — macOS 도 라벨 검출에서만 분류합니다.
 // `candidates` 는 분류기가 읽는 국소 통계를 들고 있어야 하며, 없으면 분류를 건너뜁니다.
+// `classification_dust_area` 는 분류 임계 전용입니다. macOS 도 큰 이물 검출 허용치를 그대로
+// pinhole/emulsion 분류에 쓰지 않습니다 — 재사용하면 같은 컴포넌트가 단순 먼지로 재분류됩니다.
 [[nodiscard]] std::vector<std::uint8_t> build_automatic_mask_from_evidence(
     const DetectionImage& image,
     const std::vector<std::uint8_t>& evidence,
     const std::vector<float>& scratch_response,
     std::size_t maximum_dust_area,
+    std::size_t classification_dust_area,
     int structure_radius_reference,
     bool reject_structure_lines,
     std::size_t& accepted_pixels,

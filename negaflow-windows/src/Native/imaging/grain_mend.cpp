@@ -24,7 +24,9 @@ using grain_mend_detail::DetectionImage;
 using grain_mend_detail::build_automatic_mask;
 using grain_mend_detail::find_candidates;
 using grain_mend_detail::merge_micro_speck_mask;
+using grain_mend_detail::AutomaticDetection;
 using grain_mend_detail::build_tiled_automatic_mask;
+using grain_mend_detail::make_detection_image_region;
 using grain_mend_detail::make_detection_image;
 using grain_mend_detail::sample_transformed_mask;
 
@@ -186,13 +188,18 @@ GrainMendResult apply_grain_mend(
         if (parameters.reject_structure_lines) {
             result.info.detection_width = result.image.width;
             result.info.detection_height = result.image.height;
+            AutomaticDetection request{};
+            request.width = result.image.width;
+            request.height = result.image.height;
+            request.dust_sensitivity = parameters.dust_sensitivity;
+            request.scratch_sensitivity = parameters.scratch_sensitivity;
+            request.protect_detail = parameters.protect_detail;
             const std::vector<std::uint8_t> mask =
                 build_tiled_automatic_mask(
                     result.image,
-                    parameters.dust_sensitivity,
-                    parameters.scratch_sensitivity,
-                    parameters.protect_detail,
+                    request,
                     result.info.candidate_pixels,
+                    nullptr,
                     cancel);
             if (cancel.requested()) {
                 result.status = GrainMendStatus::cancelled;
@@ -293,10 +300,8 @@ GrainMendDetection detect_grain_mend(
     }
 
     try {
-        // 부분 ROI 는 잘라 낸 뒤 분석합니다. 전체를 재고 나중에 가리면 주변 통계가 달라져
+        // 부분 ROI 는 그 범위만 분석합니다. 전체를 재고 나중에 가리면 주변 통계가 달라져
         // 사용자가 고른 범위 안에서 macOS 와 다른 것을 찾습니다.
-        WorkingImage cropped{};
-        const WorkingImage* analysed = &image;
         std::uint32_t left = 0U;
         std::uint32_t top = 0U;
         std::uint32_t right = image.width;
@@ -316,50 +321,47 @@ GrainMendDetection detect_grain_mend(
                 std::ceil((roi.y + roi.height) * height),
                 static_cast<double>(top) + 1.0,
                 height));
-            cropped.width = right - left;
-            cropped.height = bottom - top;
-            cropped.stride_pixels = cropped.width;
-            cropped.pixels.resize(
-                static_cast<std::size_t>(cropped.width) * cropped.height);
-            for (std::uint32_t row = 0U; row < cropped.height; ++row) {
-                const auto* const source = image.pixels.data() +
-                    (static_cast<std::size_t>(top + row) * image.stride_pixels) + left;
-                auto* const target = cropped.pixels.data() +
-                    (static_cast<std::size_t>(row) * cropped.width);
-                std::copy_n(source, cropped.width, target);
-            }
-            analysed = &cropped;
         }
-        const DetectionImage analysis = make_detection_image(*analysed);
-        detection.width = analysis.width;
-        detection.height = analysis.height;
+        // macOS `detectComponents` 는 **다운스케일 없이** 봅니다. 자동을 1800px 로 줄여
+        // 보면 3~8px 짜리 진짜 먼지가 게이트 아래로 사라지고, 수천 px 짜리 직선 구조물만
+        // 살아남아 스크래치로 잡힙니다.
+        AutomaticDetection request{};
+        request.origin_x = left;
+        request.origin_y = top;
+        request.width = right - left;
+        request.height = bottom - top;
+        request.dust_sensitivity = parameters.dust_sensitivity;
+        request.scratch_sensitivity = parameters.scratch_sensitivity;
+        request.protect_detail = parameters.protect_detail;
+        // macOS `constrainedRegion`: 자동(전체 프레임)은 언제나 거짓입니다. ROI 가 반올림으로
+        // 1px 어긋나도 전역 자동 계약이 유지되어야 오검출이 폭증하지 않습니다.
+        request.constrained_region =
+            !parameters.reject_structure_lines && !roi.covers_everything();
+        detection.width = request.width;
+        detection.height = request.height;
         detection.roi_x = left;
         detection.roi_y = top;
-        detection.roi_width = right - left;
-        detection.roi_height = bottom - top;
-        const CandidateMaps candidates = find_candidates(
-            analysis,
-            parameters.dust_sensitivity,
-            parameters.scratch_sensitivity,
-            parameters.protect_detail,
-            false,
+        detection.roi_width = request.width;
+        detection.roi_height = request.height;
+        detection.mask = build_tiled_automatic_mask(
+            image,
+            request,
+            detection.accepted_pixels,
+            &detection.components,
             cancel);
         if (cancel.requested()) {
             detection.status = GrainMendStatus::cancelled;
             return detection;
         }
-        // 채택된 결함을 분류까지 담아 냅니다. 화면이 "먼지 7 · 가로 스크래치 2" 를 낼 수
-        // 있으려면 마스크 한 장이 아니라 컴포넌트가 나와야 합니다.
-        detection.mask = build_automatic_mask(
-            analysis,
-            candidates,
-            parameters.reject_structure_lines,
-            detection.accepted_pixels,
-            &detection.components);
         if (parameters.detect_micro_specks) {
+            // 미세 입자는 같은 화소를 다시 봅니다. macOS 도 검출과 같은 해상도에서 돕니다 —
+            // 줄여서 보면 입자가 사라져 아무것도 더하지 못합니다.
+            DetectionImage geometry{};
+            make_detection_image_region(
+                image, left, top, request.width, request.height, geometry);
             std::size_t added_micro_specks = 0U;
             if (!merge_micro_speck_mask(
-                    analysis,
+                    geometry,
                     parameters.dust_sensitivity,
                     detection.mask,
                     added_micro_specks,
