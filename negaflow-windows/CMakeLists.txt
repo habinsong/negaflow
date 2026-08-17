@@ -235,10 +235,42 @@ target_link_libraries(
 
 add_library(negaflow_native SHARED
     src/Native/abi/negaflow_abi.cpp
+    src/Native/abi/adjust/auto_adjust_abi.cpp
+    src/Native/abi/detect/flatbed_detect_abi.cpp
+    src/Native/abi/detect/grain_mend_detect_abi.cpp
+    src/Native/abi/detect/infrared_detect_abi.cpp
+    src/Native/abi/export/develop_export_v1_v21.cpp
+    src/Native/abi/preview/develop_preview_v1_v10.cpp
+    src/Native/abi/preview/develop_preview_v11_v21.cpp
+    src/Native/abi/probe/standard_image_probe_abi.cpp
+    src/Native/abi/probe/tiff_probe_abi.cpp
+    src/Native/abi/proof/gamut_check_abi.cpp
+    src/Native/abi/proof/soft_proof_abi.cpp
+    src/Native/abi/request/develop_request_enums.cpp
+    src/Native/abi/request/develop_request_shared.cpp
+    src/Native/abi/request/develop_request_v1_v4.cpp
+    src/Native/abi/request/develop_request_v5_v11.cpp
+    src/Native/abi/request/develop_request_v12_v17.cpp
+    src/Native/abi/request/develop_request_v18_v19.cpp
+    src/Native/abi/request/develop_request_v20_v21.cpp
+    src/Native/abi/request/develop_request_v24_v25.cpp
+    src/Native/abi/request/develop_request_v26_v34.cpp
+    src/Native/abi/result/develop_result_prepare_v1_v12.cpp
+    src/Native/abi/result/develop_result_prepare_v13_v21.cpp
+    src/Native/abi/result/develop_result_prepare_v22_v34.cpp
+    src/Native/abi/result/develop_result_write.cpp
+    src/Native/abi/run/develop_run_v22.cpp
+    src/Native/abi/run/develop_run_v23_v28.cpp
+    src/Native/abi/run/develop_run_v29_v34.cpp
+    src/Native/abi/support/abi_layout.cpp
+    src/Native/abi/support/abi_text.cpp
+    src/Native/abi/support/build_info_abi.cpp
+    src/Native/abi/support/limits_abi.cpp
 )
 target_compile_definitions(negaflow_native PRIVATE NEGAFLOW_NATIVE_EXPORTS)
 target_include_directories(negaflow_native
     PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/abi/include"
+    PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/abi"
 )
 target_link_libraries(
     negaflow_native
