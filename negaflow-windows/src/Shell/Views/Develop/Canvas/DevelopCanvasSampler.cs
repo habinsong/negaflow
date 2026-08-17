@@ -3,7 +3,7 @@ using Microsoft.UI.Xaml.Input;
 using Negaflow.Shell.Develop;
 using Negaflow.Shell.Localization;
 
-namespace Negaflow.Shell.Views;
+namespace Negaflow.Shell.Views.Develop.Canvas;
 
 /// <summary>
 /// 캔버스의 픽셀 샘플러입니다. 포인터 아래 화소의 값을 읽어 보여 줍니다.
@@ -14,8 +14,13 @@ namespace Negaflow.Shell.Views;
 /// 결과입니다. 셋을 다 보이려면 슬라이더를 움직이는 동안 렌더가 두 배가 되므로, 보이는 줄이
 /// 지금 무엇인지를 <b>이름으로</b> 밝히는 쪽을 골랐습니다.
 /// </remarks>
-public sealed partial class DevelopWorkspaceView
+internal sealed class DevelopCanvasSampler
 {
+    private readonly DevelopPreviewCanvas view;
+    private Func<bool> isEnabled = static () => false;
+    private Func<string?> selectedSourcePath = static () => null;
+    private Func<bool> displayedIsProof = static () => false;
+
     /// <summary>화면에 그려진 미리보기 화소입니다. 샘플러가 이것을 읽습니다.</summary>
     private byte[]? previewPixels;
     private int previewPixelWidth;
@@ -27,36 +32,48 @@ public sealed partial class DevelopWorkspaceView
     private int samplerSourceWidth;
     private int samplerSourceHeight;
 
+    internal DevelopCanvasSampler(DevelopPreviewCanvas view) => this.view = view;
+
+    internal void Bind(
+        Func<bool> isEnabled,
+        Func<string?> selectedSourcePath,
+        Func<bool> displayedIsProof)
+    {
+        ArgumentNullException.ThrowIfNull(isEnabled);
+        ArgumentNullException.ThrowIfNull(selectedSourcePath);
+        ArgumentNullException.ThrowIfNull(displayedIsProof);
+        this.isEnabled = isEnabled;
+        this.selectedSourcePath = selectedSourcePath;
+        this.displayedIsProof = displayedIsProof;
+    }
+
     /// <summary>미리보기가 도착할 때마다 샘플러가 읽을 버퍼를 갈아 끼웁니다.</summary>
-    private void KeepPreviewPixels(byte[]? pixels, uint width, uint height)
+    internal void KeepPreviewPixels(byte[]? pixels, uint width, uint height)
     {
         previewPixels = pixels;
         previewPixelWidth = (int)width;
         previewPixelHeight = (int)height;
     }
 
-    private bool IsPixelSamplerOn =>
-        workspaceState?.Current.PixelSamplerEnabled == true;
-
-    internal void UpdatePixelSampler(PointerRoutedEventArgs args)
+    internal void Update(PointerRoutedEventArgs args)
     {
-        if (!IsPixelSamplerOn || previewPixels is null)
+        if (!isEnabled() || previewPixels is null)
         {
-            PixelSamplerPanel.Visibility = Visibility.Collapsed;
+            view.PixelSamplerPanel.Visibility = Visibility.Collapsed;
             return;
         }
-        PixelSamplerPanel.Visibility = Visibility.Visible;
+        view.PixelSamplerPanel.Visibility = Visibility.Visible;
 
-        Windows.Foundation.Point point = args.GetCurrentPoint(PreviewImage).Position;
+        Windows.Foundation.Point point = args.GetCurrentPoint(view.PreviewImage).Position;
         if (PixelSampler.ToSourceCoordinate(
                 point.X,
                 point.Y,
-                PreviewImage.ActualWidth,
-                PreviewImage.ActualHeight,
+                view.PreviewImage.ActualWidth,
+                view.PreviewImage.ActualHeight,
                 previewPixelWidth,
                 previewPixelHeight) is not { } preview)
         {
-            ShowSamplerHint();
+            ShowHint();
             return;
         }
 
@@ -84,43 +101,43 @@ public sealed partial class DevelopWorkspaceView
                 source.Y);
         }
 
-        ShowSamplerReadout(new PixelSamplerReadout(
+        ShowReadout(new PixelSamplerReadout(
             source,
             original,
             displayed,
-            softProofPreferences.IsEnabled));
+            displayedIsProof()));
     }
 
-    internal void ClearPixelSampler()
+    internal void Clear()
     {
-        if (IsPixelSamplerOn)
+        if (isEnabled())
         {
-            ShowSamplerHint();
+            ShowHint();
         }
         else
         {
-            PixelSamplerPanel.Visibility = Visibility.Collapsed;
+            view.PixelSamplerPanel.Visibility = Visibility.Collapsed;
         }
     }
 
-    private void ShowSamplerHint()
+    private void ShowHint()
     {
-        PixelSamplerCoordinate.Text = string.Empty;
-        PixelSamplerOriginal.Text = string.Empty;
-        PixelSamplerDisplayed.Text = string.Empty;
-        PixelSamplerHint.Text = AppResources.Get("samplerMovePointer", "Text");
+        view.PixelSamplerCoordinate.Text = string.Empty;
+        view.PixelSamplerOriginal.Text = string.Empty;
+        view.PixelSamplerDisplayed.Text = string.Empty;
+        view.PixelSamplerHint.Text = AppResources.Get("samplerMovePointer", "Text");
     }
 
-    private void ShowSamplerReadout(PixelSamplerReadout readout)
+    private void ShowReadout(PixelSamplerReadout readout)
     {
-        PixelSamplerHint.Text = string.Empty;
-        PixelSamplerCoordinate.Text =
+        view.PixelSamplerHint.Text = string.Empty;
+        view.PixelSamplerCoordinate.Text =
             $"{AppResources.Get("samplerSourcePixel", "Text")}  " +
             $"{readout.SourceCoordinate.X}, {readout.SourceCoordinate.Y}";
-        PixelSamplerOriginal.Text = Row(
+        view.PixelSamplerOriginal.Text = Row(
             AppResources.Get("samplerOriginal", "Text"),
             readout.Original);
-        PixelSamplerDisplayed.Text = Row(
+        view.PixelSamplerDisplayed.Text = Row(
             AppResources.Get(
                 readout.DisplayedIsProof ? "samplerProof" : "samplerWorking",
                 "Text"),
@@ -147,7 +164,7 @@ public sealed partial class DevelopWorkspaceView
     /// </summary>
     private void EnsureSamplerSource()
     {
-        string? path = panel?.SelectedFrame?.SourcePath;
+        string? path = selectedSourcePath();
         if (path is null)
         {
             samplerSourcePixels = null;

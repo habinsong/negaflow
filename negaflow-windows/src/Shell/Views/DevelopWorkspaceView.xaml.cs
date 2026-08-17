@@ -1,12 +1,10 @@
 using System.Text.Json.Nodes;
 using System.IO;
-using System.Runtime.InteropServices.WindowsRuntime;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Input;
 using Negaflow.Catalog;
 using Negaflow.Interop;
@@ -31,7 +29,6 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private PreviewCoordinator? previewCoordinator;
     private SoftProofPreferences softProofPreferences = new();
     private AutoAdjustCoordinator? autoAdjustCoordinator;
-    private WriteableBitmap? previewBitmap;
     private bool isSynchronizingInspector;
     private bool isSynchronizingFrameSelection;
     private bool isSynchronizingInspectorPresentation;
@@ -68,6 +65,20 @@ public sealed partial class DevelopWorkspaceView : UserControl
         GeometryCard.TransformRequested += OnGeometryTransformRequested;
         GeometryCard.AspectChosen += OnGeometryAspectChosen;
         GeometryCard.AspectLockToggled += OnGeometryAspectLockToggled;
+        PreviewCanvas.Attach(crop);
+        PreviewCanvas.BindSampler(
+            () => workspaceState?.Current.PixelSamplerEnabled == true,
+            () => panel?.SelectedFrame?.SourcePath,
+            () => softProofPreferences.IsEnabled);
+        PreviewCanvas.TryHandlePointerPressed = TryHandleGrainMendPointerPressed;
+        PreviewCanvas.TryHandlePointerMoved = TryHandleGrainMendPointerMoved;
+        PreviewCanvas.TryHandlePointerReleased = TryHandleGrainMendPointerReleased;
+        PreviewCanvas.HandlePointerCancelled = EndGuidedDefectSelection;
+        PreviewCanvas.TryHandleKeyDown = TryHandleGrainMendKeyDown;
+        PreviewCanvas.CropApplyRequested += OnCropApplyClicked;
+        PreviewCanvas.CropCancelRequested += OnCropCancelClicked;
+        PreviewCanvas.CropFullRequested += OnCropFullClicked;
+        PreviewCanvas.HostSizeChanged += OnPreviewCanvasSizeChanged;
         ApplyInspectorPresentation();
         LocalizeControls();
     }
@@ -536,14 +547,13 @@ public sealed partial class DevelopWorkspaceView : UserControl
     {
         // 샘플러가 읽을 버퍼는 화면에 그린 것과 같아야 합니다 — 다른 것을 읽으면 보이는 색과
         // 적히는 수가 갈립니다.
-        KeepPreviewPixels(outcome.Pixels, outcome.Width, outcome.Height);
+        PreviewCanvas.KeepPreviewPixels(outcome.Pixels, outcome.Width, outcome.Height);
         if (outcome.Kind != DevelopExportOutcomeKind.Completed ||
             outcome.Pixels is not { } pixels ||
             outcome.Width == 0U ||
             outcome.Height == 0U)
         {
-            PreviewImage.Visibility = Visibility.Collapsed;
-            EmptyCanvasPanel.Visibility = Visibility.Visible;
+            PreviewCanvas.ShowEmpty();
             HistogramView.Clear();
             // 현상이 실패한 것과 사진이 없는 것은 다릅니다. 같은 빈 화면만 내면 사용자는
             // 사진을 넣으라는 말을 다시 읽을 뿐이고, 무엇이 잘못됐는지 알 길이 없습니다.
@@ -557,21 +567,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
 
         int width = (int)outcome.Width;
         int height = (int)outcome.Height;
-        // 크기가 바뀔 때만 새로 만듭니다. 슬라이더를 끄는 동안 매 프레임 할당하지 않기 위해서입니다.
-        if (previewBitmap is null ||
-            previewBitmap.PixelWidth != width ||
-            previewBitmap.PixelHeight != height)
-        {
-            previewBitmap = new WriteableBitmap(width, height);
-            PreviewImage.Source = previewBitmap;
-        }
-
-        int written = width * height * 4;
-        using (Stream buffer = previewBitmap.PixelBuffer.AsStream())
-        {
-            buffer.Write(pixels, 0, written);
-        }
-        previewBitmap.Invalidate();
+        PreviewCanvas.Present(pixels, width, height);
         HistogramView.UpdatePixels(pixels, width, height);
         // 방금 현상한 그림이 곧 라이브러리 카드의 썸네일입니다. 같은 픽셀을 두 번 만들지
         // 않으려고 여기서 넘깁니다.
@@ -580,10 +576,8 @@ public sealed partial class DevelopWorkspaceView : UserControl
             thumbnails?.Publish(settled.Id, pixels, width, height);
         }
 
-        PreviewImage.Visibility = Visibility.Visible;
-        EmptyCanvasPanel.Visibility = Visibility.Collapsed;
         crop.MarkPreviewReady();
-        RenderCropOverlay();
+        PreviewCanvas.RenderCropOverlay();
     }
 
     private void OnGeometryCropClicked(object? sender, EventArgs args)
@@ -602,7 +596,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
             CancelCrop();
             return;
         }
-        if (panel is null || panel.SelectedFrame is null || PreviewImage.Visibility != Visibility.Visible)
+        if (panel is null || panel.SelectedFrame is null || !PreviewCanvas.HasPreview)
         {
             return;
         }
@@ -615,11 +609,11 @@ public sealed partial class DevelopWorkspaceView : UserControl
         }
         crop.Begin(panel.ImageTransform.Crop, LockedNormalizedAspectRatio());
         GeometryCard.SetDialVisible(true);
-        CanvasHost.Focus(FocusState.Programmatic);
+        PreviewCanvas.FocusHost();
         RequestPreview();
     }
 
-    private void OnCropApplyClicked(object sender, RoutedEventArgs args)
+    private void OnCropApplyClicked(object? sender, EventArgs args)
     {
         _ = sender;
         _ = args;
@@ -635,7 +629,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         RequestPreview();
     }
 
-    private void OnCropFullClicked(object sender, RoutedEventArgs args)
+    private void OnCropFullClicked(object? sender, EventArgs args)
     {
         _ = sender;
         _ = args;
@@ -643,10 +637,10 @@ public sealed partial class DevelopWorkspaceView : UserControl
         {
             return;
         }
-        RenderCropOverlay();
+        PreviewCanvas.RenderCropOverlay();
     }
 
-    private void OnCropCancelClicked(object sender, RoutedEventArgs args)
+    private void OnCropCancelClicked(object? sender, EventArgs args)
     {
         _ = sender;
         _ = args;
@@ -671,106 +665,65 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private void EndCropSession()
     {
         crop.End();
-        CropOverlay.Visibility = Visibility.Collapsed;
+        PreviewCanvas.HideCropOverlay();
         GeometryCard.SetDialVisible(false);
     }
 
-    private void OnCanvasSizeChanged(object sender, SizeChangedEventArgs args)
+    private void OnPreviewCanvasSizeChanged(object? sender, SizeChangedEventArgs args)
     {
         _ = sender;
         _ = args;
-        RenderCropOverlay();
         RenderGuidedDefectSelection();
     }
 
-    private void OnCanvasPointerPressed(object sender, PointerRoutedEventArgs args)
+    private bool TryHandleGrainMendPointerPressed(PointerRoutedEventArgs args)
     {
-        _ = sender;
         if (TryTogglePendingDefectComponent(args))
         {
             args.Handled = true;
-            return;
+            return true;
         }
         if (TryBeginGuidedDefectSelection(args))
         {
             args.Handled = true;
-            return;
+            return true;
         }
         if (TryBeginGrainMendStroke(args))
         {
             args.Handled = true;
-            return;
+            return true;
         }
-        if (!TryCanvasUnitPoint(args, out CropDisplayPoint point) || !crop.TryBeginDrag(point))
-        {
-            return;
-        }
-        CanvasHost.CapturePointer(args.Pointer);
-        args.Handled = true;
+        return false;
     }
 
-    private void OnCanvasPointerMoved(object sender, PointerRoutedEventArgs args)
+    private bool TryHandleGrainMendPointerMoved(PointerRoutedEventArgs args)
     {
-        _ = sender;
-        // 샘플러는 다른 도구를 막지 않습니다 — 값을 읽기만 하므로 크롭이나 브러시와 함께
-        // 돌아도 서로 방해하지 않습니다.
-        UpdatePixelSampler(args);
         if (TryContinueGuidedDefectSelection(args))
         {
             args.Handled = true;
-            return;
+            return true;
         }
         if (TryContinueGrainMendStroke(args))
         {
             args.Handled = true;
-            return;
+            return true;
         }
-        if (!TryCanvasUnitPoint(args, out CropDisplayPoint point) || !crop.TryContinueDrag(point))
-        {
-            return;
-        }
-        RenderCropOverlay();
-        args.Handled = true;
+        return false;
     }
 
-    private void OnCanvasPointerReleased(object sender, PointerRoutedEventArgs args)
+    private bool TryHandleGrainMendPointerReleased(PointerRoutedEventArgs args)
     {
-        _ = sender;
         if (TryFinishGuidedDefectSelection(args))
         {
             args.Handled = true;
-            return;
+            return true;
         }
         if (TryFinishGrainMendStroke(args))
         {
             args.Handled = true;
-            return;
+            return true;
         }
-        EndCropDrag(args);
-    }
-
-    private void OnCanvasPointerCancelled(object sender, PointerRoutedEventArgs args)
-    {
-        _ = sender;
-        EndGuidedDefectSelection(args);
-        EndCropDrag(args);
-    }
-
-    private void OnCanvasPointerCaptureLost(object sender, PointerRoutedEventArgs args)
-    {
-        _ = sender;
-        EndGuidedDefectSelection(args);
-        EndCropDrag(args);
-    }
-
-    private void EndCropDrag(PointerRoutedEventArgs args)
-    {
-        if (!crop.EndDrag())
-        {
-            return;
-        }
-        CanvasHost.ReleasePointerCapture(args.Pointer);
-        args.Handled = true;
+        return false;
     }
 
     private bool TryBeginGuidedDefectSelection(PointerRoutedEventArgs args)
@@ -785,7 +738,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         guidedDefectDragCurrent = point;
         guidedDefectDragging = true;
         RenderGuidedDefectSelection();
-        CanvasHost.CapturePointer(args.Pointer);
+        PreviewCanvas.CaptureHost(args.Pointer);
         return true;
     }
 
@@ -841,9 +794,9 @@ public sealed partial class DevelopWorkspaceView : UserControl
         {
             guidedDefectDragCurrent = point;
         }
-        CanvasHost.ReleasePointerCapture(args.Pointer);
+        PreviewCanvas.ReleaseHost(args.Pointer);
         guidedDefectDragging = false;
-        GuidedDefectOverlay.Visibility = Visibility.Collapsed;
+        PreviewCanvas.HideGuidedSelection();
 
         double width = Math.Abs(guidedDefectDragCurrent.X - guidedDefectDragStart.X);
         double height = Math.Abs(guidedDefectDragCurrent.Y - guidedDefectDragStart.Y);
@@ -869,34 +822,23 @@ public sealed partial class DevelopWorkspaceView : UserControl
         {
             return;
         }
-        CanvasHost.ReleasePointerCapture(args.Pointer);
+        PreviewCanvas.ReleaseHost(args.Pointer);
         guidedDefectDragging = false;
-        GuidedDefectOverlay.Visibility = Visibility.Collapsed;
+        PreviewCanvas.HideGuidedSelection();
     }
 
     private void RenderGuidedDefectSelection()
     {
-        if (!guidedDefectDragging || !TryGetPreviewFrame(out PreviewFrame frame))
+        if (!guidedDefectDragging)
         {
-            GuidedDefectOverlay.Visibility = Visibility.Collapsed;
+            PreviewCanvas.HideGuidedSelection();
             return;
         }
-        double x = Math.Min(guidedDefectDragStart.X, guidedDefectDragCurrent.X);
-        double y = Math.Min(guidedDefectDragStart.Y, guidedDefectDragCurrent.Y);
-        double selectionWidth = Math.Abs(guidedDefectDragCurrent.X - guidedDefectDragStart.X);
-        double selectionHeight = Math.Abs(guidedDefectDragCurrent.Y - guidedDefectDragStart.Y);
-        Place(
-            GuidedDefectSelection,
-            frame.Left + x * frame.Width,
-            frame.Top + y * frame.Height,
-            selectionWidth * frame.Width,
-            selectionHeight * frame.Height);
-        GuidedDefectOverlay.Visibility = Visibility.Visible;
+        PreviewCanvas.ShowGuidedSelection(guidedDefectDragStart, guidedDefectDragCurrent);
     }
 
-    private void OnCanvasKeyDown(object sender, KeyRoutedEventArgs args)
+    private bool TryHandleGrainMendKeyDown(KeyRoutedEventArgs args)
     {
-        _ = sender;
         // 검토 중인 검출이 있으면 그것이 먼저입니다. 도움말이 안내하는 대로 Enter 가 받아들이고
         // Esc 가 버립니다.
         if (grainMend.PendingEdit is not null)
@@ -905,136 +847,26 @@ public sealed partial class DevelopWorkspaceView : UserControl
             {
                 AcceptPendingDefectEdit();
                 args.Handled = true;
-                return;
+                return true;
             }
             if (args.Key == VirtualKey.Escape)
             {
                 CancelPendingDefectEdit();
                 args.Handled = true;
-                return;
+                return true;
             }
         }
         if (args.Key == VirtualKey.Escape && grainMend.Strokes.Tool == GrainMendTool.Guided)
         {
             SetGrainMendTool(GrainMendTool.None);
             args.Handled = true;
+            // 크롭이 켜져 있으면 Esc 는 이어서 크롭도 닫습니다. 여기서 삼키지 않습니다.
         }
-        if (!crop.IsActive)
-        {
-            return;
-        }
-        if (args.Key == VirtualKey.Escape)
-        {
-            CancelCrop();
-            args.Handled = true;
-            return;
-        }
-
-        double step = InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Shift)
-            .HasFlag(CoreVirtualKeyStates.Down) ? 0.02 : 0.005;
-        switch (args.Key)
-        {
-            case VirtualKey.Left:
-                crop.TryMove(-step, 0.0);
-                break;
-            case VirtualKey.Right:
-                crop.TryMove(step, 0.0);
-                break;
-            case VirtualKey.Up:
-                crop.TryMove(0.0, -step);
-                break;
-            case VirtualKey.Down:
-                crop.TryMove(0.0, step);
-                break;
-            default:
-                return;
-        }
-        RenderCropOverlay();
-        args.Handled = true;
+        return false;
     }
 
-    private bool TryCanvasUnitPoint(PointerRoutedEventArgs args, out CropDisplayPoint point)
-    {
-        Windows.Foundation.Point position = args.GetCurrentPoint(CanvasHost).Position;
-        if (!TryGetPreviewFrame(out PreviewFrame frame))
-        {
-            point = default;
-            return false;
-        }
-        return frame.TryMapPoint(position.X, position.Y, out point);
-    }
-
-    private bool TryGetPreviewFrame(out PreviewFrame frame)
-    {
-        if (previewBitmap is null)
-        {
-            frame = default;
-            return false;
-        }
-        return PreviewFrame.TryFrom(
-            CanvasHost.ActualWidth,
-            CanvasHost.ActualHeight,
-            previewBitmap.PixelWidth,
-            previewBitmap.PixelHeight,
-            out frame);
-    }
-
-    private void RenderCropOverlay()
-    {
-        if (crop.Session is not { } session || crop.AwaitingPreview ||
-            !TryGetPreviewFrame(out PreviewFrame frame))
-        {
-            CropOverlay.Visibility = Visibility.Collapsed;
-            return;
-        }
-
-        // 기하는 CropInteraction 이 계산합니다. 뷰는 계산된 자리에 요소를 놓기만 합니다.
-        CropOverlayLayout layout = CropInteraction.Layout(
-            frame,
-            session.Selection,
-            CropActionBar.ActualHeight);
-        CropOverlay.Visibility = Visibility.Visible;
-        Place(CropDimTop, layout.DimTop);
-        Place(CropDimBottom, layout.DimBottom);
-        Place(CropDimLeft, layout.DimLeft);
-        Place(CropDimRight, layout.DimRight);
-        Place(CropSelection, layout.Selection);
-        Place(CropThirdVerticalFirst, layout.ThirdVerticalFirst);
-        Place(CropThirdVerticalSecond, layout.ThirdVerticalSecond);
-        Place(CropThirdHorizontalFirst, layout.ThirdHorizontalFirst);
-        Place(CropThirdHorizontalSecond, layout.ThirdHorizontalSecond);
-        Place(CropHandleTopLeft, layout.HandleTopLeft);
-        Place(CropHandleTop, layout.HandleTop);
-        Place(CropHandleTopRight, layout.HandleTopRight);
-        Place(CropHandleRight, layout.HandleRight);
-        Place(CropHandleBottomRight, layout.HandleBottomRight);
-        Place(CropHandleBottom, layout.HandleBottom);
-        Place(CropHandleBottomLeft, layout.HandleBottomLeft);
-        Place(CropHandleLeft, layout.HandleLeft);
-        Canvas.SetLeft(CropActionBar, layout.ActionBarLeft);
-        Canvas.SetTop(CropActionBar, layout.ActionBarTop);
-    }
-
-    private static void Place(FrameworkElement element, double left, double top, double width, double height)
-    {
-        element.Width = width;
-        element.Height = height;
-        Canvas.SetLeft(element, left);
-        Canvas.SetTop(element, top);
-    }
-
-    private static void Place(FrameworkElement element, CropOverlayPlacement placement) =>
-        Place(element, placement.Left, placement.Top, placement.Width, placement.Height);
-
-    private static void Place(
-        Microsoft.UI.Xaml.Shapes.Line line,
-        (double X1, double Y1, double X2, double Y2) segment)
-    {
-        line.X1 = segment.X1;
-        line.Y1 = segment.Y1;
-        line.X2 = segment.X2;
-        line.Y2 = segment.Y2;
-    }
+    private bool TryCanvasUnitPoint(PointerRoutedEventArgs args, out CropDisplayPoint point) =>
+        PreviewCanvas.TryMapPointer(args, out point);
 
     private void SyncBaseControls() => BaseCard.Sync();
 
@@ -1235,7 +1067,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
             : GrainMendTool.Guided);
         if (grainMend.Strokes.Tool == GrainMendTool.Guided)
         {
-            _ = CanvasHost.Focus(FocusState.Programmatic);
+            PreviewCanvas.FocusHost();
         }
     }
 
@@ -1296,7 +1128,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         ShowDefectOverlay(edit);
         UpdateGrainMendCard();
         // Enter 와 Esc 를 받으려면 캔버스가 초점을 가져야 합니다.
-        _ = CanvasHost.Focus(FocusState.Programmatic);
+        PreviewCanvas.FocusHost();
     }
 
     /// <summary>
@@ -1305,13 +1137,13 @@ public sealed partial class DevelopWorkspaceView : UserControl
     /// </summary>
     private void ShowDefectOverlay(DefectEditItem edit)
     {
-        if (panel?.SelectedFrame is not { } frame || previewBitmap is null)
+        if (panel?.SelectedFrame is not { } frame || PreviewCanvas.PreviewBitmap is null)
         {
             return;
         }
 
-        int width = previewBitmap.PixelWidth;
-        int height = previewBitmap.PixelHeight;
+        int width = PreviewCanvas.PreviewBitmap.PixelWidth;
+        int height = PreviewCanvas.PreviewBitmap.PixelHeight;
         if (GrainMendOverlayRenderer.Render(
                 frame,
                 width,
@@ -1321,14 +1153,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         {
             return;
         }
-        WriteableBitmap bitmap = new(width, height);
-        using (Stream buffer = bitmap.PixelBuffer.AsStream())
-        {
-            buffer.Write(bgra, 0, bgra.Length);
-        }
-        bitmap.Invalidate();
-        DefectOverlayImage.Source = bitmap;
-        DefectOverlayImage.Visibility = Visibility.Visible;
+        PreviewCanvas.ShowDefectPixels(bgra, width, height);
     }
 
     private void ClearPendingDefectEdit()
@@ -1337,11 +1162,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         HideDefectOverlay();
     }
 
-    private void HideDefectOverlay()
-    {
-        DefectOverlayImage.Source = null;
-        DefectOverlayImage.Visibility = Visibility.Collapsed;
-    }
+    private void HideDefectOverlay() => PreviewCanvas.HideDefectOverlay();
 
     private static bool IsWholeFrameGrainMendRoi(DefectRect roi) =>
         roi.X == 0.0 && roi.Y == 0.0 && roi.Width == 1.0 && roi.Height == 1.0;
@@ -1581,7 +1402,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         if (tool != GrainMendTool.Guided)
         {
             guidedDefectDragging = false;
-            GuidedDefectOverlay.Visibility = Visibility.Collapsed;
+            PreviewCanvas.HideGuidedSelection();
         }
         if (tool != GrainMendTool.None && crop.IsActive)
         {
@@ -1709,7 +1530,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
             alt);
         if (grainMend.Strokes.IsDragging)
         {
-            CanvasHost.CapturePointer(args.Pointer);
+            PreviewCanvas.CaptureHost(args.Pointer);
         }
         return handled;
     }
@@ -1729,7 +1550,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         {
             return false;
         }
-        CanvasHost.ReleasePointerCapture(args.Pointer);
+        PreviewCanvas.ReleaseHost(args.Pointer);
         if (panel is null)
         {
             grainMend.Strokes.CancelStroke();
@@ -2092,10 +1913,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         SetLocalizedNameAndTooltip(DefectsTabButton, defects);
         SetLocalizedNameAndTooltip(InfoTabButton, info);
         SetLocalizedNameAndTooltip(ResetTabButton, reset);
-        SetButtonText(CropApplyButton, AppResources.Get("developCropApply", "Text"));
-        SetButtonText(CropFullButton, AppResources.Get("developCropFull", "Text"));
-        SetButtonText(CropCancelButton, AppResources.Get("developCropCancel", "Text"));
-        AutomationProperties.SetName(CropSelection, AppResources.Get("developCropArea", "Text"));
+        PreviewCanvas.Localize();
     }
 
     private static void SetNameAndTooltip(ButtonBase button, string resourceKey)
@@ -2109,12 +1927,6 @@ public sealed partial class DevelopWorkspaceView : UserControl
     {
         AutomationProperties.SetName(button, text);
         ToolTipService.SetToolTip(button, text);
-    }
-
-    private static void SetButtonText(Button button, string text)
-    {
-        button.Content = text;
-        SetLocalizedNameAndTooltip(button, text);
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs args)

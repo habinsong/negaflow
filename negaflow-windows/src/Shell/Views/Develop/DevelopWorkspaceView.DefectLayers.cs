@@ -1,7 +1,3 @@
-using System.IO;
-using System.Runtime.InteropServices.WindowsRuntime;
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Media.Imaging;
 using Negaflow.Catalog;
 using Negaflow.Shell.Develop;
 using Negaflow.Shell.Localization;
@@ -97,34 +93,27 @@ public sealed partial class DevelopWorkspaceView
     /// </summary>
     private void ShowDefectMaskOverlay()
     {
-        if (panel is null || DefectOverlayImage is null || grainMend.PendingEdit is not null)
+        if (panel is null || PreviewCanvas is null || grainMend.PendingEdit is not null)
         {
             return;
         }
         if (panel.DefectLayers.MaskPreviewId is not { } id ||
             panel.SelectedFrame is not { } frame ||
-            previewBitmap is null ||
+            PreviewCanvas.PreviewBitmap is null ||
             panel.DefectLayers.Items.FirstOrDefault(item => item.Id == id) is not { } item)
         {
             HideDefectOverlay();
             return;
         }
 
-        int width = previewBitmap.PixelWidth;
-        int height = previewBitmap.PixelHeight;
+        int width = PreviewCanvas.PreviewBitmap.PixelWidth;
+        int height = PreviewCanvas.PreviewBitmap.PixelHeight;
         if (DefectMaskOverlayRenderer.Render(frame, width, height, item) is not { } bgra)
         {
             HideDefectOverlay();
             return;
         }
-        WriteableBitmap bitmap = new(width, height);
-        using (Stream buffer = bitmap.PixelBuffer.AsStream())
-        {
-            buffer.Write(bgra, 0, bgra.Length);
-        }
-        bitmap.Invalidate();
-        DefectOverlayImage.Source = bitmap;
-        DefectOverlayImage.Visibility = Visibility.Visible;
+        PreviewCanvas.ShowDefectPixels(bgra, width, height);
     }
 
     private bool IsLayerEnabled(Guid id) =>

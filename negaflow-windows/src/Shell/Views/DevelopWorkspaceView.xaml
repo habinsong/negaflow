@@ -8,7 +8,8 @@
     xmlns:views="using:Negaflow.Shell.Views"
     xmlns:sources="using:Negaflow.Shell.Views.Develop.Sources"
     xmlns:info="using:Negaflow.Shell.Views.Develop.Info"
-    xmlns:inspector="using:Negaflow.Shell.Views.Develop.Inspector">
+    xmlns:inspector="using:Negaflow.Shell.Views.Develop.Inspector"
+    xmlns:canvas="using:Negaflow.Shell.Views.Develop.Canvas">
     <UserControl.Resources>
         <!-- macOS DevelopInspectorTabLabel: outer radius 18, selected/hover radius 15,
              icon row minimum height 32. WinUI 기본 ToggleButton chrome은 이 형상을 바꾸므로
@@ -146,135 +147,9 @@
                 <RowDefinition Height="30" />
             </Grid.RowDefinitions>
 
-            <Grid
-                x:Name="CanvasHost"
-                Grid.Row="0"
-                AutomationProperties.AutomationId="negaflow.canvas"
-                Background="{ThemeResource NegaflowCanvasBrush}"
-                IsTabStop="True"
-                KeyDown="OnCanvasKeyDown"
-                PointerCanceled="OnCanvasPointerCancelled"
-                PointerCaptureLost="OnCanvasPointerCaptureLost"
-                PointerMoved="OnCanvasPointerMoved"
-                PointerPressed="OnCanvasPointerPressed"
-                PointerReleased="OnCanvasPointerReleased"
-                SizeChanged="OnCanvasSizeChanged">
-                <StackPanel x:Name="EmptyCanvasPanel" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
-                    <FontIcon FontSize="42" Foreground="#FF8A8A8A" Glyph="&#xE91B;" />
-                    <TextBlock x:Uid="emptyCanvasTitle" HorizontalAlignment="Center" FontSize="18" FontWeight="SemiBold" Foreground="#FFE2E2E2" />
-                    <TextBlock
-                        x:Uid="emptyCanvasDescription"
-                        MaxWidth="420"
-                        HorizontalAlignment="Center"
-                        TextAlignment="Center"
-                        Foreground="#FFA8A8A8"
-                        TextWrapping="Wrap" />
-                </StackPanel>
-
-                <Image
-                    x:Name="PreviewImage"
-                    Margin="24"
-                    AutomationProperties.AutomationId="negaflow.canvas.preview"
-                    Stretch="Uniform"
-                    Visibility="Collapsed" />
-
-                <!-- 픽셀 샘플러의 읽은 값입니다. 설정에서 켰을 때만 나옵니다. -->
-                <Border
-                    x:Name="PixelSamplerPanel"
-                    Margin="24"
-                    Padding="10,8"
-                    HorizontalAlignment="Left"
-                    VerticalAlignment="Bottom"
-                    AutomationProperties.AutomationId="negaflow.canvas.pixel-sampler"
-                    Background="#CC101010"
-                    CornerRadius="9"
-                    IsHitTestVisible="False"
-                    Visibility="Collapsed">
-                    <StackPanel MaxWidth="390" Spacing="5">
-                        <TextBlock
-                            x:Name="PixelSamplerCoordinate"
-                            FontFamily="Consolas"
-                            FontSize="11"
-                            FontWeight="SemiBold"
-                            Foreground="#FFE6E6E6" />
-                        <TextBlock
-                            x:Name="PixelSamplerOriginal"
-                            FontFamily="Consolas"
-                            FontSize="11"
-                            Foreground="#FFCFCFCF" />
-                        <TextBlock
-                            x:Name="PixelSamplerDisplayed"
-                            FontFamily="Consolas"
-                            FontSize="11"
-                            Foreground="#FFCFCFCF" />
-                        <TextBlock
-                            x:Name="PixelSamplerHint"
-                            FontSize="11"
-                            Foreground="#FF9A9A9A"
-                            TextWrapping="Wrap" />
-                    </StackPanel>
-                </Border>
-
-                <!-- 검출 결과 오버레이입니다. 미리보기와 같은 사각형을 차지하도록 같은
-                     여백과 Stretch 를 씁니다 — 어긋나면 표시가 실제 자리와 달라집니다. -->
-                <Image
-                    x:Name="DefectOverlayImage"
-                    Margin="24"
-                    AutomationProperties.AutomationId="negaflow.canvas.defect-overlay"
-                    IsHitTestVisible="False"
-                    Opacity="0.75"
-                    Stretch="Uniform"
-                    Visibility="Collapsed" />
-
-                <Canvas x:Name="GuidedDefectOverlay" IsHitTestVisible="False" Visibility="Collapsed">
-                    <Rectangle
-                        x:Name="GuidedDefectSelection"
-                        AutomationProperties.AutomationId="negaflow.canvas.defect-guided.selection"
-                        Fill="#12FFD84A"
-                        Stroke="#E6FFD84A"
-                        StrokeThickness="1.5" />
-                </Canvas>
-
-                <Canvas x:Name="CropOverlay" Visibility="Collapsed">
-                    <Rectangle x:Name="CropDimTop" Fill="#73000000" />
-                    <Rectangle x:Name="CropDimBottom" Fill="#73000000" />
-                    <Rectangle x:Name="CropDimLeft" Fill="#73000000" />
-                    <Rectangle x:Name="CropDimRight" Fill="#73000000" />
-                    <Rectangle
-                        x:Name="CropSelection"
-                        AutomationProperties.AutomationId="negaflow.canvas.crop.selection"
-                        Fill="Transparent"
-                        RadiusX="2"
-                        RadiusY="2"
-                        Stroke="White"
-                        StrokeThickness="1.5" />
-                    <Line x:Name="CropThirdVerticalFirst" Stroke="#57FFFFFF" StrokeThickness="0.5" />
-                    <Line x:Name="CropThirdVerticalSecond" Stroke="#57FFFFFF" StrokeThickness="0.5" />
-                    <Line x:Name="CropThirdHorizontalFirst" Stroke="#57FFFFFF" StrokeThickness="0.5" />
-                    <Line x:Name="CropThirdHorizontalSecond" Stroke="#57FFFFFF" StrokeThickness="0.5" />
-                    <Rectangle x:Name="CropHandleTopLeft" Fill="White" RadiusX="2" RadiusY="2" Stroke="#66000000" StrokeThickness="1" />
-                    <Rectangle x:Name="CropHandleTop" Fill="White" RadiusX="2" RadiusY="2" Stroke="#66000000" StrokeThickness="1" />
-                    <Rectangle x:Name="CropHandleTopRight" Fill="White" RadiusX="2" RadiusY="2" Stroke="#66000000" StrokeThickness="1" />
-                    <Rectangle x:Name="CropHandleRight" Fill="White" RadiusX="2" RadiusY="2" Stroke="#66000000" StrokeThickness="1" />
-                    <Rectangle x:Name="CropHandleBottomRight" Fill="White" RadiusX="2" RadiusY="2" Stroke="#66000000" StrokeThickness="1" />
-                    <Rectangle x:Name="CropHandleBottom" Fill="White" RadiusX="2" RadiusY="2" Stroke="#66000000" StrokeThickness="1" />
-                    <Rectangle x:Name="CropHandleBottomLeft" Fill="White" RadiusX="2" RadiusY="2" Stroke="#66000000" StrokeThickness="1" />
-                    <Rectangle x:Name="CropHandleLeft" Fill="White" RadiusX="2" RadiusY="2" Stroke="#66000000" StrokeThickness="1" />
-                    <Border
-                        x:Name="CropActionBar"
-                        Background="{ThemeResource NegaflowPanelBrush}"
-                        BorderBrush="{ThemeResource NegaflowDividerBrush}"
-                        BorderThickness="1"
-                        CornerRadius="8"
-                        Padding="6">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <Button x:Name="CropApplyButton" Click="OnCropApplyClicked" Style="{StaticResource AccentButtonStyle}" />
-                            <Button x:Name="CropFullButton" Click="OnCropFullClicked" />
-                            <Button x:Name="CropCancelButton" Click="OnCropCancelClicked" />
-                        </StackPanel>
-                    </Border>
-                </Canvas>
-            </Grid>
+            <canvas:DevelopPreviewCanvas
+                x:Name="PreviewCanvas"
+                Grid.Row="0" />
 
             <views:FilmstripView x:Name="Filmstrip" Grid.Row="1" />
             <views:StatusBarView x:Name="StatusBar" Grid.Row="2" />
