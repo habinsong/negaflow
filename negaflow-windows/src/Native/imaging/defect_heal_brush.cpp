@@ -1,5 +1,7 @@
 #include "negaflow/imaging/defect_heal_brush.h"
 
+#include "grain_mend_shape.h"
+
 #include "defect_component_repair_detail.h"
 #include "grain_mend_morphology.h"
 
@@ -54,10 +56,6 @@ struct StoredPatch final {
     std::vector<Rgba32F> pixels{};
 };
 
-struct PcaMetrics final {
-    double thickness{1.0};
-    double angle_degrees{0.0};
-};
 
 struct Displacement final {
     int dx{0};
@@ -364,50 +362,12 @@ void discard_pixels(WorkingImage& image) noexcept {
     return output;
 }
 
-[[nodiscard]] PcaMetrics pca_metrics(
+// 형태 측정은 grain_mend_shape 하나만 씁니다. 두께와 각도만 쓰지만 같은 셈이어야
+// 브러시가 보는 획 방향과 검출 게이트가 보는 방향이 갈리지 않습니다.
+[[nodiscard]] grain_mend_detail::PcaMetrics pca_metrics(
     const std::vector<int>& component,
     const int width) noexcept {
-    const double count = static_cast<double>(component.size());
-    if (component.empty()) {
-        return {};
-    }
-    double mean_x = 0.0;
-    double mean_y = 0.0;
-    for (const int pixel : component) {
-        mean_x += pixel % width;
-        mean_y += pixel / width;
-    }
-    mean_x /= count;
-    mean_y /= count;
-    double xx = 0.0;
-    double yy = 0.0;
-    double xy = 0.0;
-    for (const int pixel : component) {
-        const double dx = static_cast<double>(pixel % width) - mean_x;
-        const double dy = static_cast<double>(pixel / width) - mean_y;
-        xx += dx * dx;
-        yy += dy * dy;
-        xy += dx * dy;
-    }
-    xx /= count;
-    yy /= count;
-    xy /= count;
-    const double half = (xx + yy) * 0.5;
-    const double determinant = xx * yy - xy * xy;
-    const double discriminant = std::sqrt(std::max(
-        0.0,
-        half * half - determinant));
-    const double length = std::max(
-        1.0,
-        std::floor(std::sqrt(12.0 * (half + discriminant))) + 1.0);
-    double angle = 0.5 * std::atan2(2.0 * xy, xx - yy) * 180.0 / pi;
-    if (angle < 0.0) {
-        angle += 180.0;
-    }
-    if (angle >= 180.0) {
-        angle -= 180.0;
-    }
-    return {std::max(1.0, count / length), angle};
+    return grain_mend_detail::pca_metrics(component, width);
 }
 
 [[nodiscard]] std::optional<double> stroke_angle(
@@ -605,7 +565,7 @@ void add_displacement(
     const int height,
     const std::optional<double> preferred_angle,
     std::vector<Rgba32F>& healed) {
-    const PcaMetrics pca = pca_metrics(component, width);
+    const grain_mend_detail::PcaMetrics pca = pca_metrics(component, width);
     const double angle_degrees = preferred_angle.value_or(pca.angle_degrees);
     const double axis = angle_degrees * pi / 180.0;
     const double thickness = std::max(4.0, pca.thickness);

@@ -1,5 +1,7 @@
 #include "grain_mend_components.h"
 
+#include "grain_mend_shape.h"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -67,13 +69,6 @@ struct SmallComponent final {
     int center_y{0};
     bool dust{false};
     std::size_t component_index{0U};
-};
-
-struct PcaMetrics final {
-    double length{0.0};
-    double thickness{1.0};
-    double aspect{0.0};
-    double angle_degrees{0.0};
 };
 
 struct StructureLine final {
@@ -191,54 +186,11 @@ struct StructureLine final {
            average_thickness <= maximum_thickness;
 }
 
+// 형태 측정은 grain_mend_shape 하나만 씁니다 — 게이트와 분류기가 같은 모양을 봐야 합니다.
 [[nodiscard]] PcaMetrics pca_metrics(
     const Component& component,
     const std::uint32_t image_width) noexcept {
-    if (component.pixels.empty()) {
-        return {};
-    }
-    const double count = static_cast<double>(component.pixels.size());
-    double mean_x = 0.0;
-    double mean_y = 0.0;
-    for (const std::size_t index : component.pixels) {
-        mean_x += static_cast<double>(index % image_width);
-        mean_y += static_cast<double>(index / image_width);
-    }
-    mean_x /= count;
-    mean_y /= count;
-    double covariance_xx = 0.0;
-    double covariance_yy = 0.0;
-    double covariance_xy = 0.0;
-    for (const std::size_t index : component.pixels) {
-        const double dx = static_cast<double>(index % image_width) - mean_x;
-        const double dy = static_cast<double>(index / image_width) - mean_y;
-        covariance_xx += dx * dx;
-        covariance_yy += dy * dy;
-        covariance_xy += dx * dy;
-    }
-    covariance_xx /= count;
-    covariance_yy /= count;
-    covariance_xy /= count;
-    const double half_trace = (covariance_xx + covariance_yy) * 0.5;
-    const double determinant =
-        covariance_xx * covariance_yy - covariance_xy * covariance_xy;
-    const double discriminant =
-        std::sqrt(std::max(0.0, half_trace * half_trace - determinant));
-    const double major = half_trace + discriminant;
-    const double length = std::max(
-        1.0,
-        std::floor(std::sqrt(12.0 * major)) + 1.0);
-    const double thickness = std::max(1.0, count / length);
-    double angle = 0.5 * std::atan2(
-        2.0 * covariance_xy,
-        covariance_xx - covariance_yy) * 180.0 / 3.14159265358979323846;
-    if (angle < 0.0) {
-        angle += 180.0;
-    }
-    if (angle >= 180.0) {
-        angle -= 180.0;
-    }
-    return {length, thickness, length / thickness, angle};
+    return grain_mend_detail::pca_metrics(component.pixels, image_width);
 }
 
 [[nodiscard]] bool passes_scratch_gate(
