@@ -15,6 +15,7 @@ public sealed partial class PrintWorkspaceView : UserControl
     public PrintWorkspaceView()
     {
         InitializeComponent();
+        BindPrintComposition();
         LocalizeControls();
         LocalizePrintInspector();
         LocalizeCustomEditor();

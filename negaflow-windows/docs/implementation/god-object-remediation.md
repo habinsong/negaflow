@@ -49,7 +49,7 @@
 | `src/Interop/NativeDevelopExportV2.cs` | 874 | append-only ABI 구조체/결과 DTO 선언. 동작 상태가 없다 |
 | `src/Native/imaging/flatbed_frame_grid_detector.cpp` | 862 | flatbed frame grid 검출의 단일 알고리즘 |
 | `src/Catalog.Core/Defects/DefectSidecarCodec.cs` | 856 | 하나의 sidecar schema encode/decode 계약 |
-| `src/Shell/Views/PrintWorkspaceView.Composition.cs` | 826 | 미해결 |
+| ~~`src/Shell/Views/PrintWorkspaceView.Composition.cs`~~ | 826 → 192 | **해결.** 소스 트리·검사기·미리보기·게시를 `Views/Print/{Sources,Settings,Preview,Export}/` 실제 타입으로 옮겼다. leftover parent는 XAML 배선만 |
 | `tests/Native.UnitTests/tiff_probe_tests.cpp` | 824 | TIFF probe 단일 모듈 fixture/suite |
 | `src/Native/imaging/film_scan_denoise.cpp` | 802 | film scan denoise 단일 알고리즘 |
 | `src/Interop/DevelopExport.cs` | 796 | managed request/result/recipe DTO와 enum 계약. I/O·오케스트레이션이 없다 |
@@ -78,7 +78,7 @@
 | `src/Native/core/tiff_deflate_validator.cpp` | 515 | TIFF Deflate payload 검증 단일 알고리즘 |
 | ~~`src/Shell/Views/PrintSheetWriter.cs`~~ | 505 → 258 | **해결.** 판 합성 오케스트레이션만 남기고 화소 그리기를 `Views/Print/PrintPageCanvas.cs`(215줄), PNG 굽기를 `Views/Print/PrintSheetEncoder.cs`(49줄), 파일 스트림을 `Views/Print/PrintSheetFile.cs`(20줄)로 옮겼다. 네 파일 모두 500줄 미만 |
 
-미해결 1개: `PrintWorkspaceView.Composition.cs`.
+사유 없이 500줄을 넘는 파일은 없다.
 
 사유가 적힌 35개도 "줄 수가 커도 된다"는 뜻이 아니라 "지금 확인한 근거로는 서로 독립적인 변경 이유가 하나뿐"이라는 뜻이다. 새 책임이 붙으면 다시 미해결로 옮긴다.
 
@@ -100,7 +100,7 @@
 | 완료 | `src/Native/core/tiff_probe.cpp` | 278, 변경 전 1,425 | Win32 random file I/O, TIFF/BigTIFF parsing, directory selection, segment/deflate 검증, metadata projection | `core/tiff/{io,parse,layout}` 실제 번역 단위; facade는 공개 진입점과 헤더 조율만 | 완료·build.ps1·CTest 71/71·Catalog 721·Shell 1032 |
 | 완료 | `tests/Interop.ContractTests/ContractTestRunner.cs` | 54줄 orchestration, 변경 전 1,414 | layout, run state, auto, IR, flatbed, TIFF, proof, limits, export, path, build contract suite | `Layout`, `Runtime`, `Develop`의 15개 계약 suite와 `ContractTestContext` | 완료·x64 Debug 198 assertions 검증 |
 | 완료 | `src/Shell.Core/Library/LibraryHostService.cs` | 488, 변경 전 906 | selection, document lifecycle, edits, collections/rolls/stacks, import/scanner publish, autosave, move/relink, export, defects | `Library/{Selection,Availability,Persistence,Import,Scanner,Source,Defects}` 협력 타입; facade에는 session·library command 위임만 유지 | 완료·Shell.Core build·938 assertions 검증 |
-| P0 | `src/Shell/Views/PrintWorkspaceView.Composition.cs` | 826 | source selection, file tree/filmstrip, inspector, preview drawing/rulers, settings, export | partial 분할 폐기; source controller, preview renderer, settings binder, export workflow | 대기 |
+| 완료 | `src/Shell/Views/PrintWorkspaceView.Composition.cs` | 192, 변경 전 826 | source selection, file tree/filmstrip, inspector, preview drawing/rulers, settings, export | `Views/Print/{Sources,Settings,Preview,Export}` 실제 타입; leftover parent는 XAML 배선만 | 완료·build.ps1·CTest 71/71·Catalog 721·Shell 1032 |
 | 완료 | `src/Shell.Core/Scanner/ScanSessionController.cs` | 392, 변경 전 801 | gateway adapter, device/capability state, region clipboard/editing, approval, option clamp, scan orchestration | `Scanner/{Gateway,Models,Regions,Options,Workflow}` 실제 타입; facade에는 device session 상태·위임 유지 | 완료·Shell 938 assertions 검증 |
 | 완료 | `src/Cli/commands/export_developed_image.cpp` | `Export/export_developed_image_command.cpp` 303, 변경 전 726 | CLI 인자 해석, pipeline orchestration, progress/timing, PNG/TIFF 결과 출력 | `DevelopedExportOptions` parser, pipeline command, `DevelopedExportPipelineReport` writer 번역 단위 | 완료·CLI target build·5 CTest 검증 |
 | 완료 | `src/Shell.Core/Scanner/ScannerPluginClient.cs` | `Client/ScannerPluginClient.cs` 124, 변경 전 706 | wire DTO, JSON parse/validation, process/client calls, path/option/result 검증, publish contract | `Scanner/{Client,Models,Protocol,Workflow}` 실제 타입; 공개 facade API 유지 | 완료·Shell.Core build·938 assertions 검증 |
@@ -465,3 +465,15 @@
   - `finalize` 18 / 172 — 레이아웃·메모리 한도·압축 이어 주기
 - facade 278줄: `probe_tiff` 헤더 조율, `probe_tiff_file`, 상태 이름만. 네임스페이스는 `negaflow::core::tiff_probe_detail`이다.
 - 검증: `build.ps1 -Preset x64-release` 통과, `test.ps1` 71/71(`native.tiff_probe` 포함), `test-managed.ps1` 경고 0·오류 0, Catalog 721, Shell 1032.
+
+## 2026-08-17 PrintWorkspaceView.Composition 실제 타입 — 검증됨
+
+- `PrintWorkspaceView.Composition.cs` 826줄을 `Views/Print/` 실제 타입으로 옮겼다. leftover parent partial 을 더 쪼개지 않았다. 함수 본문은 그대로다.
+- 새 자리:
+  - `PrintChoice` 37 — 고르개 값·이름
+  - `Sources/PrintSourceSurface` 15 / `PrintSourceController` 221 — 파일 트리·필름스트립·선택·썸네일
+  - `Settings/PrintInspectorSurface` 49 / `PrintInspectorBinder` 205 — 검사기 지역화·설정 반영
+  - `Preview/PrintPreviewSurface` 17 / `PrintPreviewRenderer` 343 — 판 미리보기·눈금자·타일
+  - `Export/PrintExportWorkflow` 68 — 폴더 고르기와 판 쓰기
+- leftover parent 192줄: 컨트롤 표면을 넘기고 XAML 이벤트만 위임한다. 공개 `ShowLibrary`/`AttachThumbnails`/`AttachWindow`는 그대로다.
+- 검증: `build.ps1 -Preset x64-release` 통과, `test.ps1` 71/71, `test-managed.ps1` 경고 0·오류 0, Catalog 721, Shell 1032.
