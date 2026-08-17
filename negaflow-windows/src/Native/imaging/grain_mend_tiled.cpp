@@ -65,6 +65,9 @@ struct TileWorkspace {
     CandidateMaps candidates{};
     std::vector<std::uint8_t> evidence{};
     std::vector<std::uint8_t> specks{};
+    std::uint64_t image_microseconds{0U};
+    std::uint64_t evidence_microseconds{0U};
+    std::uint64_t speck_microseconds{0U};
 };
 
 struct TilePlacement {
@@ -178,6 +181,7 @@ std::vector<std::uint8_t> build_tiled_automatic_mask(
                 std::launch::async,
                 [&image, &request, &workspace, placement, sensitivity,
                  dust_area, cancel] {
+                    const auto image_started = std::chrono::steady_clock::now();
                     make_detection_image_region(
                         image,
                         request.origin_x + placement.detect_x0,
@@ -185,6 +189,10 @@ std::vector<std::uint8_t> build_tiled_automatic_mask(
                         placement.detect_x1 - placement.detect_x0,
                         placement.detect_y1 - placement.detect_y0,
                         workspace.tile);
+                    const auto candidates_started = std::chrono::steady_clock::now();
+                    workspace.image_microseconds = static_cast<std::uint64_t>(
+                        std::chrono::duration_cast<std::chrono::microseconds>(
+                            candidates_started - image_started).count());
                     // macOS `detectLabeled` 계약입니다 — strong/weak 히스테리시스와 가는
                     // 결함(thin) 합치기가 여기서만 돕니다. 브러시 경로(false)와 다릅니다.
                     find_candidates(
@@ -198,6 +206,7 @@ std::vector<std::uint8_t> build_tiled_automatic_mask(
                     if (cancel.requested()) {
                         return;
                     }
+                    const auto evidence_started = std::chrono::steady_clock::now();
                     build_automatic_evidence(
                         workspace.tile,
                         workspace.candidates,
@@ -206,6 +215,11 @@ std::vector<std::uint8_t> build_tiled_automatic_mask(
                         sensitivity,
                         true,
                         workspace.evidence);
+                    const auto speck_started = std::chrono::steady_clock::now();
+                    workspace.evidence_microseconds = static_cast<std::uint64_t>(
+                        std::chrono::duration_cast<std::chrono::microseconds>(
+                            speck_started - evidence_started).count());
+                    workspace.speck_microseconds = 0U;
                     if (!request.detect_micro_specks) {
                         workspace.specks.clear();
                         return;
@@ -219,6 +233,9 @@ std::vector<std::uint8_t> build_tiled_automatic_mask(
                         workspace.specks,
                         added,
                         cancel));
+                    workspace.speck_microseconds = static_cast<std::uint64_t>(
+                        std::chrono::duration_cast<std::chrono::microseconds>(
+                            std::chrono::steady_clock::now() - speck_started).count());
                 }));
         }
         for (std::size_t slot = 0U; slot < futures.size(); ++slot) {
@@ -237,6 +254,9 @@ std::vector<std::uint8_t> build_tiled_automatic_mask(
                 workspace.candidates.dust_morphology_microseconds;
             measured.scratch_angles_microseconds +=
                 workspace.candidates.scratch_angles_microseconds;
+            measured.detection_image_microseconds += workspace.image_microseconds;
+            measured.evidence_microseconds += workspace.evidence_microseconds;
+            measured.speck_microseconds += workspace.speck_microseconds;
             const bool has_statistics =
                 workspace.candidates.dust_magnitude.size() ==
                     workspace.evidence.size() &&

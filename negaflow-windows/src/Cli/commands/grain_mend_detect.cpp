@@ -150,6 +150,12 @@ int run_grain_mend_detect(
               << ",\"detect_microseconds\":" << micros(detect_started, finished)
               << ",\"tile_count\":" << detection.timings.tile_count
               << ",\"worker_count\":" << detection.timings.worker_count
+              << ",\"detection_image_microseconds\":"
+              << detection.timings.detection_image_microseconds
+              << ",\"evidence_microseconds\":"
+              << detection.timings.evidence_microseconds
+              << ",\"speck_microseconds\":"
+              << detection.timings.speck_microseconds
               << ",\"dust_morphology_microseconds\":"
               << detection.timings.dust_morphology_microseconds
               << ",\"scratch_angles_microseconds\":"

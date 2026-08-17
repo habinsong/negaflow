@@ -51,6 +51,7 @@ struct GrainMendTimings final {
     std::uint64_t dust_morphology_microseconds{0U};
     std::uint64_t scratch_angles_microseconds{0U};
     std::uint64_t evidence_microseconds{0U};
+    std::uint64_t speck_microseconds{0U};
     std::uint64_t stitch_microseconds{0U};
     std::uint64_t components_microseconds{0U};
     std::uint64_t total_microseconds{0U};
