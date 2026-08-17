@@ -3,7 +3,10 @@ param(
     [Parameter(Mandatory)]
     [string]$InstallerPath,
 
-    [string]$InstallDirectory
+    [string]$InstallDirectory,
+
+    [ValidateRange(1, 60)]
+    [int]$InstallTimeoutMinutes = 10
 )
 
 $ErrorActionPreference = 'Stop'
@@ -20,7 +23,27 @@ if (Test-Path -LiteralPath $InstallDirectory) {
     throw "Verification install directory must not already exist: $InstallDirectory"
 }
 
-$process = Start-Process -FilePath $InstallerPath -ArgumentList @('/S', "/D=$InstallDirectory") -Wait -PassThru
+# 무인 설치는 payload 를 풀고 PowerShell 로 패키지를 등록한다. 그 등록이 멈추면 -Wait 는
+# 영원히 돌아오지 않고, CI 에서는 잡이 취소될 때까지 아무 것도 남지 않는다(2026-08-17 관측:
+# 25분 뒤 Negaflow-1.0.9-x64-setup 이 orphan 으로 종료됨). 기다림에 경계를 두어 멈춘 자리를
+# 로그로 남긴다.
+$installTimeout = [TimeSpan]::FromMinutes($InstallTimeoutMinutes)
+$process = Start-Process -FilePath $InstallerPath -ArgumentList @('/S', "/D=$InstallDirectory") -PassThru
+if (-not $process.WaitForExit($installTimeout.TotalMilliseconds)) {
+    Write-Host "Silent install did not finish within $($installTimeout.TotalMinutes) minute(s)."
+    Write-Host 'Processes still running:'
+    Get-Process -ErrorAction SilentlyContinue |
+        Where-Object { $_.ProcessName -match 'Negaflow|powershell|makeappx|AppxDeployment' } |
+        Format-Table -AutoSize Id, ProcessName, StartTime |
+        Out-String |
+        Write-Host
+    Get-AppxPackage -Name 'Negaflow.Windows' -ErrorAction SilentlyContinue |
+        Format-List Name, PackageFullName, Status |
+        Out-String |
+        Write-Host
+    try { $process.Kill($true) } catch { }
+    throw "Silent install timed out after $($installTimeout.TotalMinutes) minute(s)."
+}
 if ($process.ExitCode -ne 0) {
     throw "Silent install failed with exit code $($process.ExitCode)."
 }
