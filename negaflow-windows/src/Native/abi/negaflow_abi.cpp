@@ -1,4 +1,4 @@
-﻿#include "negaflow_abi.h"
+#include "negaflow_abi.h"
 
 #include "negaflow/color/gamut_check.h"
 #include "negaflow/color/soft_proof.h"
@@ -4786,11 +4786,16 @@ nf_status_t NF_CALL nf_develop_detect_grain_mend_v3(
     return NF_STATUS_OK;
 }
 
-nf_status_t NF_CALL nf_develop_detect_grain_mend_v4(
+// v4 와 v5 의 몸통입니다. 두 벌로 두면 한쪽만 고쳐질 자리라 하나만 둡니다.
+// `components` 가 null 이 아니면 채택된 결함을 분류까지 복사하고, 언제나 개수는 채웁니다.
+static nf_status_t detect_grain_mend_shared(
     const nf_develop_export_request_v27* const request,
     const nf_grain_mend_detect_parameters_v3* const parameters,
     uint8_t* const mask,
     const uint64_t mask_capacity_bytes,
+    nf_grain_mend_component_v1* const components,
+    const uint64_t component_capacity,
+    uint64_t* const component_count,
     nf_develop_run_state_v1* const run_state,
     nf_grain_mend_detection_v2* const detection,
     nf_develop_export_result_v3* const result) {
@@ -4825,6 +4830,9 @@ nf_status_t NF_CALL nf_develop_detect_grain_mend_v4(
     detection->roi_y = 0U;
     detection->roi_width = 0U;
     detection->roi_height = 0U;
+    if (component_count != nullptr) {
+        *component_count = 0U;
+    }
     negaflow::pipeline::DevelopRunControl control{};
     if (!prepare_run_state(run_state, control, status)) {
         return status;
@@ -4869,9 +4877,87 @@ nf_status_t NF_CALL nf_develop_detect_grain_mend_v4(
     detection->roi_y = detected.roi_y;
     detection->roi_width = detected.roi_width;
     detection->roi_height = detected.roi_height;
+    // 컴포넌트는 마스크와 같은 두 번 부르기 규약입니다: 버퍼가 null 이면 개수만
+    // 알려 주고, 모자라면 거절합니다 — 잘라 담으면 화면이 일부만 보고 판단합니다.
+    if (component_count != nullptr) {
+        *component_count = detected.components.size();
+        if (components != nullptr) {
+            if (component_capacity < detected.components.size()) {
+                result->succeeded = 0U;
+                copy_failure_name(
+                    "component_buffer_too_small",
+                    result->failure_name);
+                return NF_STATUS_OK;
+            }
+            for (std::size_t index = 0U; index < detected.components.size(); ++index) {
+                const auto& source = detected.components[index];
+                nf_grain_mend_component_v1& target = components[index];
+                target.struct_size = static_cast<std::uint32_t>(sizeof(target));
+                target.classification =
+                    static_cast<std::uint32_t>(source.classification);
+                target.confidence = source.confidence;
+                target.area = source.pixels.size();
+                target.minimum_x = source.minimum_x;
+                target.minimum_y = source.minimum_y;
+                target.maximum_x = source.maximum_x;
+                target.maximum_y = source.maximum_y;
+            }
+        }
+    }
     write_outcome_v3(
         detected.outcome, elapsed_microseconds(started, finished), *result);
     return NF_STATUS_OK;
+}
+
+nf_status_t NF_CALL nf_develop_detect_grain_mend_v4(
+    const nf_develop_export_request_v27* const request,
+    const nf_grain_mend_detect_parameters_v3* const parameters,
+    uint8_t* const mask,
+    const uint64_t mask_capacity_bytes,
+    nf_develop_run_state_v1* const run_state,
+    nf_grain_mend_detection_v2* const detection,
+    nf_develop_export_result_v3* const result) {
+    return detect_grain_mend_shared(
+        request,
+        parameters,
+        mask,
+        mask_capacity_bytes,
+        nullptr,
+        0U,
+        nullptr,
+        run_state,
+        detection,
+        result);
+}
+
+nf_status_t NF_CALL nf_develop_detect_grain_mend_v5(
+    const nf_develop_export_request_v27* const request,
+    const nf_grain_mend_detect_parameters_v3* const parameters,
+    uint8_t* const mask,
+    const uint64_t mask_capacity_bytes,
+    nf_grain_mend_component_v1* const components,
+    const uint64_t component_capacity,
+    nf_develop_run_state_v1* const run_state,
+    nf_grain_mend_detection_v3* const detection,
+    nf_develop_export_result_v3* const result) {
+    // 중첩 구조는 안쪽 v2 가 전체 크기를 말합니다 — nf_grain_mend_detect_parameters_v3 와
+    // 같은 규약이라 호출부가 두 벌의 규칙을 외우지 않아도 됩니다.
+    if (detection == nullptr ||
+        detection->v2.struct_size <
+            static_cast<std::uint32_t>(sizeof(*detection))) {
+        return NF_STATUS_INVALID_ARGUMENT;
+    }
+    return detect_grain_mend_shared(
+        request,
+        parameters,
+        mask,
+        mask_capacity_bytes,
+        components,
+        component_capacity,
+        &detection->component_count,
+        run_state,
+        &detection->v2,
+        result);
 }
 
 nf_status_t NF_CALL nf_develop_preview_v23(

@@ -1499,6 +1499,27 @@ typedef struct nf_grain_mend_detection_v2 {
     uint32_t roi_height;
 } nf_grain_mend_detection_v2;
 
+/* 채택된 결함 하나. 분류 값은 grain_mend_detail::DefectClassification 과 같은 순서다:
+   0 dust, 1 pinhole, 2 scratch_horizontal, 3 scratch_vertical, 4 scratch_diagonal,
+   5 emulsion_damage, 6 micro_speck. 좌표는 검출 이미지(width x height) 기준이다. */
+typedef struct nf_grain_mend_component_v1 {
+    uint32_t struct_size;
+    uint32_t classification;
+    double confidence;
+    uint64_t area;
+    uint32_t minimum_x;
+    uint32_t minimum_y;
+    uint32_t maximum_x;
+    uint32_t maximum_y;
+} nf_grain_mend_component_v1;
+
+/* v2 에 컴포넌트 수를 더한다. 마스크와 같은 두 번 부르기 규약이다: 버퍼를 null 로 주면
+   개수만 채워 돌려주고, 그 크기로 다시 부르면 복사한다. 검출을 다시 돌리지 않는다. */
+typedef struct nf_grain_mend_detection_v3 {
+    nf_grain_mend_detection_v2 v2;
+    uint64_t component_count;
+} nf_grain_mend_detection_v3;
+
 NF_API nf_status_t NF_CALL nf_develop_detect_grain_mend_v1(
     const nf_develop_export_request_v27* request,
     uint8_t* mask,
@@ -1532,6 +1553,19 @@ NF_API nf_status_t NF_CALL nf_develop_detect_grain_mend_v4(
     uint64_t mask_capacity_bytes,
     nf_develop_run_state_v1* run_state,
     nf_grain_mend_detection_v2* detection,
+    nf_develop_export_result_v3* result);
+
+/* v4 와 같은 검출이되 채택된 결함을 분류까지 함께 낸다. `components` 가 null 이면
+   `detection->component_count` 만 채운다. */
+NF_API nf_status_t NF_CALL nf_develop_detect_grain_mend_v5(
+    const nf_develop_export_request_v27* request,
+    const nf_grain_mend_detect_parameters_v3* parameters,
+    uint8_t* mask,
+    uint64_t mask_capacity_bytes,
+    nf_grain_mend_component_v1* components,
+    uint64_t component_capacity,
+    nf_develop_run_state_v1* run_state,
+    nf_grain_mend_detection_v3* detection,
     nf_develop_export_result_v3* result);
 
 /* Detects one paired top-first linear float IR/red frame exactly once. The returned

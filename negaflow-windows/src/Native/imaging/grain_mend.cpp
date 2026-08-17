@@ -348,11 +348,14 @@ GrainMendDetection detect_grain_mend(
             detection.status = GrainMendStatus::cancelled;
             return detection;
         }
+        // 채택된 결함을 분류까지 담아 냅니다. 화면이 "먼지 7 · 가로 스크래치 2" 를 낼 수
+        // 있으려면 마스크 한 장이 아니라 컴포넌트가 나와야 합니다.
         detection.mask = build_automatic_mask(
             analysis,
             candidates,
             parameters.reject_structure_lines,
-            detection.accepted_pixels);
+            detection.accepted_pixels,
+            &detection.components);
         if (parameters.detect_micro_specks) {
             std::size_t added_micro_specks = 0U;
             if (!merge_micro_speck_mask(

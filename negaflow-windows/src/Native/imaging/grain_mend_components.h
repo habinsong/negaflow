@@ -1,6 +1,6 @@
 #pragma once
 
-#include "grain_mend_classifier.h"
+#include "negaflow/imaging/grain_mend_classifier.h"
 #include "grain_mend_detector.h"
 
 #include <cstddef>
@@ -43,10 +43,12 @@ void build_automatic_evidence(
     const CandidateMaps* candidates = nullptr,
     std::vector<ClassifiedComponent>* components = nullptr);
 
+// `components` 가 null 이 아니면 채택된 결함을 분류까지 담아 냅니다.
 [[nodiscard]] std::vector<std::uint8_t> build_automatic_mask(
     const DetectionImage& image,
     const CandidateMaps& candidates,
     bool reject_structure_lines,
-    std::size_t& accepted_pixels);
+    std::size_t& accepted_pixels,
+    std::vector<ClassifiedComponent>* components = nullptr);
 
 }  // namespace negaflow::imaging::grain_mend_detail

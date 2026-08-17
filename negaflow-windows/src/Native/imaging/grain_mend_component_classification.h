@@ -1,6 +1,6 @@
 #pragma once
 
-#include "grain_mend_classifier.h"
+#include "negaflow/imaging/grain_mend_classifier.h"
 #include "grain_mend_component_types.h"
 #include "grain_mend_detector.h"
 

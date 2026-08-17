@@ -1,4 +1,4 @@
-#include "grain_mend_classifier.h"
+#include "negaflow/imaging/grain_mend_classifier.h"
 
 #include "grain_mend_shape.h"
 

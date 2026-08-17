@@ -285,6 +285,10 @@ struct GrainMendDetectionOutcome final {
     std::uint32_t roi_y{0U};
     std::uint32_t roi_width{0U};
     std::uint32_t roi_height{0U};
+    // 채택된 결함 하나하나. 분류와 confidence 가 붙어 있으며 좌표는 검출 이미지 기준입니다.
+    // macOS `DefectLabelField.components` 와 같은 자리이고, 이것이 있어야 화면이 종류별
+    // 개수를 낼 수 있습니다.
+    std::vector<negaflow::imaging::grain_mend_detail::ClassifiedComponent> components{};
 };
 
 [[nodiscard]] GrainMendDetectionOutcome develop_detect_grain_mend(

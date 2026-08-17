@@ -211,7 +211,8 @@ std::vector<std::uint8_t> build_automatic_mask(
     const DetectionImage& image,
     const CandidateMaps& candidates,
     const bool reject_structure_lines,
-    std::size_t& accepted_pixels) {
+    std::size_t& accepted_pixels,
+    std::vector<ClassifiedComponent>* const components) {
     const std::uint32_t minimum_scratch_length =
         std::max(10U, image.width / 120U);
     const std::vector<std::uint8_t> evidence = build_automatic_evidence(
@@ -228,7 +229,9 @@ std::vector<std::uint8_t> build_automatic_mask(
         maximum_automatic_dust_area,
         static_cast<int>(std::min(image.width, image.height)),
         reject_structure_lines,
-        accepted_pixels);
+        accepted_pixels,
+        &candidates,
+        components);
 }
 
 

@@ -2,6 +2,7 @@
 
 #include "negaflow/core/cancel_flag.h"
 #include "negaflow/core/pixel.h"
+#include "negaflow/imaging/grain_mend_classifier.h"
 #include "negaflow/imaging/scanner_to_working.h"
 
 #include <cstddef>
@@ -97,6 +98,10 @@ struct GrainMendDetection final {
     std::uint32_t roi_height{0U};
     std::size_t accepted_pixels{0U};
     std::vector<std::uint8_t> mask{};
+    // 채택된 결함 하나하나. 분류(먼지·핀홀·가로/세로/대각 스크래치·유제손상·미세입자)와
+    // confidence 가 붙어 있으며, 좌표는 검출 이미지(width×height) 기준입니다.
+    // macOS `DefectLabelField.components` 와 같은 자리입니다.
+    std::vector<grain_mend_detail::ClassifiedComponent> components{};
 };
 
 // `roi` 는 정규 좌표(좌상단 원점)이며 검출을 그 안에서만 돕니다. 가이드 도구가 쓰는 자리이고,
