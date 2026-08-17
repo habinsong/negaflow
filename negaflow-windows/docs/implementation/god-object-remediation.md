@@ -254,4 +254,9 @@
 - 복사/붙여넣기·사용자 프리셋은 `Views/Develop/Presets/DevelopPresetsPanel`(XAML 125, CS 226)로 옮겼다. recipe 통째 교체는 `RecipeReplaced` 로 뷰의 `ReloadAfterRecipeReplaced` 가 받는다.
 - 줄 수: 코드비하인드 3,636, XAML 1,898. 아직 500줄 초과.
 - 검증: `build.ps1 -Preset x64-release` 통과, `test.ps1` 71/71, `test-managed.ps1` Catalog 721, Shell 1032.
+
+## 2026-08-17 Develop 필름 룩 UserControl — 검증됨, 파일은 미해결
+
+- 필름 룩 선택은 `Views/Develop/Film/DevelopFilmLookPanel`(XAML 57, CS 90)로 옮겼다. recipe 쓰기는 `LookChanged` 로 뷰의 `UpdateImageTransform` 이 받는다.
+- 줄 수: 코드비하인드 3,592, XAML 1,854. 아직 500줄 초과.
 - 검증: `build.ps1 -Preset x64-release` 통과, `test.ps1` 71/71, `test-managed.ps1` 경고 0·오류 0, Catalog 721, Shell 1032.

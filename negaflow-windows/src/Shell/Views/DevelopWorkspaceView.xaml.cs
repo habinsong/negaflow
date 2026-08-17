@@ -15,6 +15,7 @@ using Negaflow.Shell.Develop;
 using Negaflow.Shell.Localization;
 using Negaflow.Shell.Views.Controls;
 using Negaflow.Shell.Views.Develop.Export;
+using Negaflow.Shell.Views.Develop.Film;
 using Negaflow.Shell.Views.Develop.Presets;
 using Negaflow.Shell.Views.Develop.Versions;
 using Negaflow.Shell.Views.Layout;
@@ -128,6 +129,8 @@ public sealed partial class DevelopWorkspaceView : UserControl
         VersionsPanel.VersionRestored += OnVersionRestored;
         PresetsPanel.Bind(panel);
         PresetsPanel.RecipeReplaced += OnPresetRecipeReplaced;
+        FilmLookPanel.Bind(panel);
+        FilmLookPanel.LookChanged += OnFilmLookChanged;
         // 사용자 프리셋은 카탈로그가 아니라 앱 설정 옆에 삽니다. macOS 의 UserDefaults 자리입니다.
         panel.OpenUserPresets(Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -721,7 +724,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         AutoColorToggle.IsChecked = panel.AutoNeutralBalance;
         AutoLevelsToggle.IsChecked = panel.AutoLevels;
         UpdateCropAspectControls();
-        UpdateFilmLookControls();
+        FilmLookPanel.Update();
         UpdateVersionControls();
         PresetsPanel.Update();
         HistogramView.SynchronizeValues(
@@ -1973,7 +1976,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         }
         VersionsPanel.Visibility = Show(WorkflowSidebarTab.Versions);
         PresetsPanel.Visibility = Show(WorkflowSidebarTab.Presets);
-        FilmSourcePanel.Visibility = Show(WorkflowSidebarTab.Film);
+        FilmLookPanel.Visibility = Show(WorkflowSidebarTab.Film);
         ExportPanel.Visibility = Show(WorkflowSidebarTab.Output);
 
         (string headerKey, string glyph) = developSource switch
@@ -2003,7 +2006,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
                 AppResources.Get(selected ? "selected" : "notSelected", "Value"));
         }
         ExportPanel.RefreshPreview();
-        UpdateFilmLookControls();
+        FilmLookPanel.Update();
         PresetsPanel.Update();
     }
 
@@ -2125,7 +2128,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         SynchronizeInspectorValues();
         SyncBaseControls();
         SyncToneControls();
-        UpdateFilmLookControls();
+        FilmLookPanel.Update();
         PresetsPanel.Update();
         RequestPreview();
     }
@@ -2964,60 +2967,14 @@ public sealed partial class DevelopWorkspaceView : UserControl
         RequestPreview();
     }
 
-    /// <summary>필름 목록 한 줄과 한 묶음입니다. 화면에 나가는 것만 담습니다.</summary>
-    private void UpdateFilmLookControls()
-    {
-        if (FilmLookGroups is null)
-        {
-            return;
-        }
-        bool applies = panel?.AppliesFilmLook == true;
-        FilmLookControls.Visibility = applies ? Visibility.Visible : Visibility.Collapsed;
-        FilmLookUnavailableText.Visibility = applies ? Visibility.Collapsed : Visibility.Visible;
-        if (!applies || panel?.SelectedFrame is not { } frame)
-        {
-            FilmLookGroups.ItemsSource = null;
-            return;
-        }
+    private void UpdateFilmLookControls() => FilmLookPanel.Update();
 
-        FilmLookGroups.ItemsSource = FilmLookMenuProjection.Groups(
-            frame.Route.FilmType,
-            panel.FilmEmulation,
-            AppResources.Get("developFilmLookNone", "Text"),
-            FilmGroupTitle);
-        isSynchronizingInspector = true;
-        try
-        {
-            FilmLookIntensityControl.Value = panel.FilmEmulationIntensity;
-        }
-        finally
-        {
-            isSynchronizingInspector = false;
-        }
-    }
-
-    private static string FilmGroupTitle(FilmEmulationKind kind) =>
-        AppResources.Get(FilmLookMenuProjection.GroupTitleKey(kind), "Text");
-
-    private void OnFilmLookChecked(object sender, RoutedEventArgs args)
-    {
-        _ = args;
-        if (isSynchronizingInspector ||
-            sender is not RadioButton { Tag: FilmEmulation emulation })
-        {
-            return;
-        }
-        UpdateImageTransform(state => state.SetFilmEmulation(emulation));
-    }
-
-    private void OnFilmLookIntensityChanged(object? sender, InspectorSliderValueChangedEventArgs args)
+    private void OnFilmLookChanged(
+        object? sender,
+        Func<DevelopPanelState, LibraryFrameError> update)
     {
         _ = sender;
-        if (isSynchronizingInspector)
-        {
-            return;
-        }
-        UpdateImageTransform(state => state.SetFilmEmulationIntensity(args.Value));
+        UpdateImageTransform(update);
     }
 
 
@@ -3413,8 +3370,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         VersionsPanel.Localize();
         SetLocalizedNameAndTooltip(FilmRailButton, AppResources.Get("developSectionFilm", "Text"));
         SetLocalizedNameAndTooltip(OutputRailButton, AppResources.Get("developSectionOutput", "Text"));
-        FilmLookUnavailableText.Text = AppResources.Get("developFilmLookDigitalOnly", "Text");
-        FilmLookIntensityControl.Label = AppResources.Get("developFilmLookIntensity", "Text");
+        FilmLookPanel.Localize();
         UpdateDevelopSourcePanel();
         SetRadioText(BaseAutoModeButton, AppResources.Get("developBaseModeAuto", "Content"));
         SetRadioText(BaseFilmModeButton, AppResources.Get("developBaseModeFilm", "Content"));

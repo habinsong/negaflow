@@ -8,7 +8,8 @@
     xmlns:views="using:Negaflow.Shell.Views"
     xmlns:export="using:Negaflow.Shell.Views.Develop.Export"
     xmlns:versions="using:Negaflow.Shell.Views.Develop.Versions"
-    xmlns:presets="using:Negaflow.Shell.Views.Develop.Presets">
+    xmlns:presets="using:Negaflow.Shell.Views.Develop.Presets"
+    xmlns:film="using:Negaflow.Shell.Views.Develop.Film">
     <UserControl.Resources>
         <!-- macOS DevelopInspectorTabLabel: outer radius 18, selected/hover radius 15,
              icon row minimum height 32. WinUI 기본 ToggleButton chrome은 이 형상을 바꾸므로
@@ -225,56 +226,11 @@
 
                 <!-- 필름 소스: macOS 처럼 digital source 에서만 고를 수 있고, 스캔 프레임에는
                      안내만 냅니다. 묶음과 순서는 FilmEmulationCatalog 가 정합니다. -->
-                <ScrollViewer x:Name="FilmSourcePanel" Grid.Row="2" Visibility="Collapsed">
-                    <StackPanel Padding="12,14" Spacing="12">
-                        <TextBlock
-                            x:Name="FilmLookUnavailableText"
-                            FontSize="12"
-                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                            TextWrapping="Wrap" />
-                        <StackPanel x:Name="FilmLookControls" Spacing="12" Visibility="Collapsed">
-                            <controls:InspectorSlider
-                                x:Name="FilmLookIntensityControl"
-                                HorizontalAlignment="Stretch"
-                                Maximum="1"
-                                Minimum="0"
-                                ResetValue="0.5"
-                                SliderAutomationId="negaflow.develop.film.intensity"
-                                ValueChanged="OnFilmLookIntensityChanged" />
-                            <ItemsControl x:Name="FilmLookGroups">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border
-                                            Margin="0,0,0,10"
-                                            Padding="10"
-                                            Background="{ThemeResource NegaflowCardBrush}"
-                                            CornerRadius="10">
-                                            <StackPanel Spacing="7">
-                                                <TextBlock
-                                                    FontSize="12"
-                                                    FontWeight="SemiBold"
-                                                    Text="{Binding Title}" />
-                                                <ItemsControl ItemsSource="{Binding Films}">
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate>
-                                                            <RadioButton
-                                                                GroupName="FilmLookSelection"
-                                                                Checked="OnFilmLookChecked"
-                                                                Content="{Binding Name}"
-                                                                FontSize="12"
-                                                                IsChecked="{Binding IsSelected, Mode=OneWay}"
-                                                                Tag="{Binding Emulation}" />
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
-                                            </StackPanel>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
-                    </StackPanel>
-                </ScrollViewer>
+                <!-- 필름 소스: macOS 처럼 digital source 에서만 고를 수 있습니다. -->
+                <film:DevelopFilmLookPanel
+                    x:Name="FilmLookPanel"
+                    Grid.Row="2"
+                    Visibility="Collapsed" />
 
                 <TreeView
                     x:Name="DevelopFilesSourceTree"
