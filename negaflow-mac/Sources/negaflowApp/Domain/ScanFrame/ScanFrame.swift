@@ -414,6 +414,16 @@ final class ScanFrame: ObservableObject, Identifiable {
         self.sourceMetadata = sourceMetadata
     }
 
+    /// 본 스캔 픽셀은 그대로 두고 IR 채널 짝만 붙인다. 원본 재연결(updateSourceLocation)과 달리
+    /// sourceLocationRevision 을 올리지 않는다 — 본 스캔 파일이 바뀌지 않았으므로 진행 중인
+    /// 현상/파생 캐시를 버릴 이유가 없다.
+    func attachInfraredScan(_ url: URL) {
+        let infrared = url.standardizedFileURL
+        guard infraredScanURL?.path != infrared.path else { return }
+        infraredScanURL = infrared
+        infraredScanBookmarkData = SourceBookmark.create(for: infrared)
+    }
+
     func setAppMetadataOverlay(_ overlay: AppMetadataOverlay?) {
         appMetadataOverlay = overlay
     }

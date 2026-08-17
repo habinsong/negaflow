@@ -149,7 +149,11 @@ extension AppModel {
                 if item.files.isEmpty {
                     emptyFolderCount += 1
                 } else {
-                    importedImageCount += item.files.count
+                    // IR 채널은 사진이 아니라 본 스캔의 부속이다 — 가져온 장수에서 뺀다.
+                    importedImageCount += InfraredImportPairing
+                        .resolve(item.files)
+                        .baseURLs
+                        .count
                     let group = FrameStorageNaming.sanitizeComponent(item.url.lastPathComponent)
                     let storageGroup = group.isEmpty
                         ? FrameStorageNaming.defaultImportGroup

@@ -69,8 +69,20 @@ extension AppModel {
             statusMessage = text(AppLocalizedPhrase.noImportableImages)
             return
         }
-        let filtered = Self.filterDuplicateImports(
+        // 예전 가져오기가 사진으로 세워 둔 IR 프레임을 먼저 접는다. 그래야 이 폴더를 다시
+        // 가져오는 것만으로 목록이 정상 상태가 된다(전부 중복이라 아래에서 조기 반환해도 유효).
+        repairStrayInfraredFrames()
+        // IR 채널은 사진이 아니라 본 스캔의 부속이다 — 짝을 먼저 풀어 프레임 목록에서 걷어낸다.
+        let pairing = InfraredImportPairing.resolve(
             supported,
+            existingBaseURLs: frames.map(\.rawScanURL)
+        )
+        // 짝이 이미 라이브러리에 있는 프레임이면 그 프레임에 붙이고 목록에서 소비한다.
+        // 남은 항목만 이번에 새로 만들 프레임의 IR 이 된다.
+        var infraredByBaseIdentity = pairing.infraredByBaseIdentity
+        attachInfraredToExistingFrames(&infraredByBaseIdentity)
+        let filtered = Self.filterDuplicateImports(
+            pairing.baseURLs,
             existingSourceURLs: frames.map(\.rawScanURL)
         )
         let importURLs = filtered.urls
@@ -108,6 +120,8 @@ extension AppModel {
                 scanIndex: firstScanIndex + offset,
                 rawScanURL: url,
                 filmType: filmType,
+                // 같은 폴더에서 찾은 IR 채널. 붙어 있어야 GrainMend IR 이 자동으로 돈다.
+                infraredScanURL: infraredByBaseIdentity[identities[offset]],
                 sourceKind: .importedFile,
                 sourcePixelWidth: metadata?.pixelWidth,
                 sourcePixelHeight: metadata?.pixelHeight,
@@ -166,12 +180,22 @@ extension AppModel {
         // 중복 판정은 URL 마다 심볼릭 링크를 푸는(파일 시스템을 만지는) 일이라 라이브러리가
         // 커질수록 무겁다. MainActor 에서 돌리지 않는다.
         let existingSourceURLs = frames.map(\.rawScanURL)
-        let importURLs = await Task.detached(priority: .userInitiated) {
-            Self.filterDuplicateImports(
+        // IR 짝을 여기서 미리 풀어 진행률 모수와 메타데이터 읽기에서 IR 을 뺀다(프레임이 되지
+        // 않는 파일이다). 실제 짝짓기 판정은 importImages 한 곳이 다시 하므로 결과는 같다.
+        let prepared = await Task.detached(priority: .userInitiated) {
+            let pairing = InfraredImportPairing.resolve(
                 urls.filter { Self.isSupportedImport($0) },
-                existingSourceURLs: existingSourceURLs
-            ).urls
+                existingBaseURLs: existingSourceURLs
+            )
+            return PreparedImportSources(
+                baseURLs: Self.filterDuplicateImports(
+                    pairing.baseURLs,
+                    existingSourceURLs: existingSourceURLs
+                ).urls,
+                infraredURLs: pairing.pairedInfraredURLs
+            )
         }.value
+        let importURLs = prepared.baseURLs
         guard allowsLibraryMutation, !importURLs.isEmpty else {
             importImages(urls: urls, groupName: groupName)
             return
@@ -179,7 +203,11 @@ extension AppModel {
 
         let progressID = libraryImportProgressStore.begin(totalCount: importURLs.count)
         let progressStore = libraryImportProgressStore
-        await materializeEvictedImportSources(importURLs, progressID: progressID)
+        // IR 도 함께 내려받는다 — GrainMend IR 이 읽을 때 iCloud 대기에 걸리지 않게.
+        await materializeEvictedImportSources(
+            importURLs + prepared.infraredURLs,
+            progressID: progressID
+        )
         guard allowsLibraryMutation, !Task.isCancelled else {
             libraryImportProgressStore.finish(id: progressID)
             return
@@ -425,6 +453,12 @@ extension AppModel {
 struct PreloadedImageImport: Sendable {
     let metadata: SourceMetadataSnapshot?
     let groupName: String
+}
+
+/// 백그라운드에서 미리 정리한 가져오기 대상. 프레임이 될 파일과 그 부속 IR 채널을 나눈다.
+struct PreparedImportSources: Sendable {
+    let baseURLs: [URL]
+    let infraredURLs: [URL]
 }
 
 struct LibraryTaskProgress: Equatable, Sendable {
