@@ -25,7 +25,7 @@
 
 ## 2026-08-17 500줄 기준 전수 재집계
 
-`src/`와 `tests/`의 `.cs`·`.cpp`·`.h`·`.xaml` **674개**를 세었다. 그중 **47개**가 500줄을 넘는다. 아래가 전부이며 하나도 빼지 않았다. 사유 칸이 비어 있는 것은 미해결이다.
+`src/`와 `tests/`의 `.cs`·`.cpp`·`.h`·`.xaml`을 2026-08-17에 다시 세면 **947개**이고 그중 **33개**가 500줄을 넘는다(해소로 줄인 파일은 초과 목록에서 뺐다). 사유 칸이 비어 있는 것은 미해결이다.
 
 | 대상 | 줄 | 500줄 초과 사유 (없으면 미해결) |
 |---|---:|---|
@@ -36,26 +36,26 @@
 | ~~`src/Shell/Views/LibraryWorkspaceView.xaml.cs`~~ | 2,835 → 328 | **해결.** 스캔·기본값·훑어보기·소스·컬렉션·가져오기·필터·격자 선택·메뉴·단축키·레이아웃을 `Views/Library/{Scanner,Defaults,Culling,Sources,Collections,Browser,Host}/` 실제 타입으로 옮겼다 |
 | ~~`src/Shell/Views/DevelopWorkspaceView.xaml`~~ | 525 → 297 | **해결.** GrainMend 카드 XAML 을 `Develop/GrainMend/DevelopGrainMendPanel.xaml`(236줄)로 옮겼다 |
 | ~~`src/Interop/NativeDevelopExporter.cs`~~ | 2,482 → 95 | **해결.** ABI 크기·검증·페이로드·요청 조립·실행·검출을 `Interop/DevelopExport/` 실제 타입으로 옮겼다. facade는 크기 상수와 Run/Preview/Detect 위임만 |
-| `src/Native/abi/include/negaflow_abi.h` | 1,791 | 외부 소비자가 포함하는 append-only 공개 C ABI 선언 집합. 구현 상태가 없다 |
+| `src/Native/abi/include/negaflow_abi.h` | 1,838 | 외부 소비자가 포함하는 append-only 공개 C ABI 선언 집합. 구현 상태가 없다 |
 | ~~`src/Native/pipeline/develop_export.cpp`~~ | 1,575 → 237 | **해결.** 검증·관측·디코드·결함·반전·그레이드·룩·GrainMend·마무리·게시를 `src/Native/pipeline/export/{support,stages}/` 실제 번역 단위로 옮겼다. 공개 진입점과 `run_develop` 순서만 facade에 남겼다. 함수 본문은 그대로 옮겼다 |
 | ~~`src/Native/core/tiff_probe.cpp`~~ | 1,425 → 278 | **해결.** Win32 I/O·엔디안·IFD 파싱·디렉터리 선택·세그먼트·압축 검증·레이아웃 투영을 `src/Native/core/tiff/{io,parse,layout}/` 실제 번역 단위로 옮겼다. 공개 진입점과 헤더 조율만 facade에 남겼다. 함수 본문은 그대로 옮겼다 |
 | `src/Native/imaging/infrared_defect_detector.cpp` | 1,197 | IR 정렬·마스크·성분 판정의 단일 검출 알고리즘 |
-| `src/Native/imaging/grain_mend_components.cpp` | 1,066 | GrainMend component/evidence/mask 구성의 단일 알고리즘 |
-| `src/Native/imaging/defect_heal_brush.cpp` | 985 | brush mask·patch 탐색·합성의 단일 치유 알고리즘 |
+| ~~`src/Native/imaging/grain_mend_components.cpp`~~ | 1,066 → 238 | **해결.** evidence·게이트·구조선·그레인 밭·마스크를 실제 번역 단위로 옮겼다 |
+| `src/Native/imaging/defect_heal_brush.cpp` | 945 | brush mask·patch 탐색·합성의 단일 치유 알고리즘 |
 | ~~`src/Shell/Views/LibraryWorkspaceView.xaml`~~ | 975 → 472 | **해결.** 스캔·현상 기본값·훑어보기·파일 트리·컬렉션·격자 카드를 `Views/Library/{Scanner,Defaults,Culling,Sources,Collections,Browser}/` 실제 UserControl 로 옮겼다 |
 | `tests/Native.UnitTests/grain_mend_tests.cpp` | 918 | 동일 GrainMend 알고리즘의 고정 입력 suite |
 | `src/Native/imaging/auto_negative_base_resolver.cpp` | 893 | 자동 Dmin 추정의 단일 알고리즘 |
 | `src/Catalog.Core/Storage/CatalogBackupStore.cs` | 885 | 하나의 backup generation 생성·검증·prune transaction |
-| `src/Interop/NativeDevelopExportV2.cs` | 874 | append-only ABI 구조체/결과 DTO 선언. 동작 상태가 없다 |
+| ~~`src/Interop/NativeDevelopExportV2.cs`~~ | 914 → `DevelopExport/Layout/` | **해결.** 요청 v2–v6, v7–v17, v18–v34, 결과, 검출, 프루프 레이아웃을 실제 타입 파일로 옮겼다. 함수 본문(필드 선언)은 그대로다 |
 | `src/Native/imaging/flatbed_frame_grid_detector.cpp` | 862 | flatbed frame grid 검출의 단일 알고리즘 |
 | `src/Catalog.Core/Defects/DefectSidecarCodec.cs` | 856 | 하나의 sidecar schema encode/decode 계약 |
 | ~~`src/Shell/Views/PrintWorkspaceView.Composition.cs`~~ | 826 → 192 | **해결.** 소스 트리·검사기·미리보기·게시를 `Views/Print/{Sources,Settings,Preview,Export}/` 실제 타입으로 옮겼다. leftover parent는 XAML 배선만 |
 | `tests/Native.UnitTests/tiff_probe_tests.cpp` | 824 | TIFF probe 단일 모듈 fixture/suite |
 | `src/Native/imaging/film_scan_denoise.cpp` | 802 | film scan denoise 단일 알고리즘 |
-| `src/Interop/DevelopExport.cs` | 796 | managed request/result/recipe DTO와 enum 계약. I/O·오케스트레이션이 없다 |
+| `src/Interop/DevelopExport.cs` | 844 | managed request/result/recipe DTO와 enum 계약. I/O·오케스트레이션이 없다 |
 | `tests/Native.UnitTests/manual_negative_developer_tests.cpp` | 772 | manual negative developer 단일 알고리즘 suite |
 | `src/Native/imageio/wic_tiff_decoder.cpp` | 765 | WIC TIFF decode 단일 I/O boundary |
-| `src/Interop/NativeMethods.cs` | 757 | source-generated P/Invoke 선언 집합. 상태·실행 조립이 없다 |
+| `src/Interop/NativeMethods.cs` | 772 | source-generated P/Invoke 선언 집합. 상태·실행 조립이 없다 |
 | `tests/Native.UnitTests/wic_tiff_decoder_tests.cpp` | 728 | WIC TIFF decoder 단일 suite |
 | `src/Native/imaging/scanner_target_grade.cpp` | 713 | scanner target grade 단일 알고리즘 |
 | `src/Catalog.Core/Defects/DefectRecipeValidator.cs` | 700 | defect recipe 불변식 검증·복사의 단일 boundary |
@@ -107,10 +107,10 @@
 | 완료 | `src/Catalog.Core/Library/LibraryFrameWriter.cs` | `Writing/LibraryFrameWriter.cs` 48, 변경 전 644 | frame core, base/tone/color/effects/transform/local-adjust recipe 검증·직렬화 | edit validator, metadata/parameter writer, `Writing/Codecs`의 recipe별 실제 codec | 완료·Catalog 721·Shell 938 assertions 검증 |
 | 완료 | `tests/Shell.UnitTests/DevelopRequestFactoryTests.cs` | 12개 suite 진입점, 변경 전 638 | source/base/tone/color/output/defect/IR/clone/brush request 계약을 한 메서드가 소유 | recipe, defect, route/output의 3개 실제 suite 타입 | 완료·938 assertions 검증 |
 | 완료 | `tests/Shell.UnitTests/DevelopPanelTests.cs` | 11개 suite 진입점, 변경 전 550 | panel recipe, version/preset/metadata, slider, export 결과 표현 | `DevelopPanelStateTests`, `InspectorSliderValueTests`, `DevelopOutcomePresenterTests` 실제 타입 분리 | 완료·938 assertions 검증 |
-| P1 | `src/Shell/Views/PrintSheetWriter.cs` | 505 | develop 호출, 크기 probe, page 합성, caption/ruler drawing, PNG encode/file I/O | source renderer, page compositor, encoder/writer | 대기 |
+| 완료 | `src/Shell/Views/PrintSheetWriter.cs` | 258, 변경 전 505 | develop 호출, 크기 probe, page 합성, caption/ruler drawing, PNG encode/file I/O | `Views/Print`의 canvas·encoder·file 실제 타입 | 완료 |
 | 완료 | `tests/Shell.UnitTests/Program.cs` | 62, 변경 전 약 7,000 | 진입점·진단·fixture/fake·전 도메인 suite | 실행/집계만 남기고 26개 suite와 진단/fixture 타입 분리 | 완료·검증·푸시 |
 | 완료 | `tests/Catalog.UnitTests/Program.cs` | 33, 변경 전 3,301 | 전 catalog suite와 fixture | 19개 suite/fixture 타입과 실행/집계 분리 | 완료·검증·푸시 |
-| 완료 | `src/Shell.Core/Develop/DevelopPanelState.cs` | 525, 변경 전 1,542 | base/tone/color/effects/route/transform/defect/version/preset/export 상태·검증·I/O | `Develop/{Editing,Defects,Workflow,Presentation}` 협력 타입; 현재 타입은 선택 frame 호환 facade | 완료·clean-index 검증. 현재 525줄은 공개 facade이며 다음 재집계에서 독립 책임이 다시 쌓이면 재분류한다 |
+| 완료 | `src/Shell.Core/Develop/DevelopPanelState.cs` | 489, 변경 전 1,542 | base/tone/color/effects/route/transform/defect/version/preset/export 상태·검증·I/O | `Develop/{Editing,Defects,Workflow,Presentation}` 협력 타입; 현재 타입은 선택 frame 호환 facade | 완료. 현재 489줄 |
 
 ## 500줄 이상 전수 재집계: 검토 후 분해 제외
 
@@ -119,22 +119,20 @@
 | 대상 | 줄 | 제외 근거 |
 |---|---:|---|
 | `src/Native/imaging/muted_scene_vibrance_table.cpp` | 9,003 | 2026-08-17 재확인: 첫 줄이 `Generated by scripts/generate-civibrance-table.ps1. Do not edit by hand.`이며, `if`/`for`/`while`/`switch`/`return`/`class`/`struct`가 0개다. 내용은 `vibrance_table_amounts` 6값, `vibrance_table_quantum` 1값, `vibrance_table_g` uint16 격자뿐이다. 실행 로직은 `muted_scene_vibrance.cpp`(121줄)와 `vibrance_math.h`(102줄)에 이미 분리돼 있다. 줄 수만 큰 생성 데이터이므로 파일 분할은 God Object 해소가 아니다. |
-| `src/Native/abi/include/negaflow_abi.h` | 1,791 | 외부 소비자가 포함하는 append-only 공개 ABI 선언 집합; 구현 상태 없음 |
+| `src/Native/abi/include/negaflow_abi.h` | 1,838 | 외부 소비자가 포함하는 append-only 공개 ABI 선언 집합; 구현 상태 없음 |
 | `src/Native/imaging/infrared_defect_detector.cpp` | 1,197 | IR alignment·mask·component 판정의 단일 검출 알고리즘 |
-| `src/Native/imaging/grain_mend_components.cpp` | 1,066 | GrainMend component/evidence/mask 구성의 단일 알고리즘 |
-| `src/Native/imaging/defect_heal_brush.cpp` | 985 | brush mask·patch 탐색·합성의 단일 치유 알고리즘 |
+| `src/Native/imaging/defect_heal_brush.cpp` | 945 | brush mask·patch 탐색·합성의 단일 치유 알고리즘 |
 | `tests/Native.UnitTests/grain_mend_tests.cpp` | 918 | 동일 GrainMend 알고리즘의 고정 입력 suite |
 | `src/Native/imaging/auto_negative_base_resolver.cpp` | 893 | 자동 Dmin 추정의 단일 알고리즘 |
 | `src/Catalog.Core/Storage/CatalogBackupStore.cs` | 885 | 하나의 backup generation 생성·검증·prune transaction |
-| `src/Interop/NativeDevelopExportV2.cs` | 874 | append-only ABI 구조체/결과 DTO 선언; 동작 상태 없음 |
 | `src/Native/imaging/flatbed_frame_grid_detector.cpp` | 862 | flatbed frame grid 검출의 단일 알고리즘 |
 | `src/Catalog.Core/Defects/DefectSidecarCodec.cs` | 856 | 하나의 sidecar schema encode/decode 계약 |
 | `tests/Native.UnitTests/tiff_probe_tests.cpp` | 824 | TIFF probe 단일 모듈 fixture/suite |
 | `src/Native/imaging/film_scan_denoise.cpp` | 802 | film scan denoise 단일 알고리즘 |
-| `src/Interop/DevelopExport.cs` | 796 | managed request/result/recipe DTO와 enum 계약; I/O·오케스트레이션 없음 |
+| `src/Interop/DevelopExport.cs` | 844 | managed request/result/recipe DTO와 enum 계약; I/O·오케스트레이션 없음 |
 | `tests/Native.UnitTests/manual_negative_developer_tests.cpp` | 772 | manual negative developer 단일 알고리즘 suite |
 | `src/Native/imageio/wic_tiff_decoder.cpp` | 765 | WIC TIFF decode 단일 I/O boundary |
-| `src/Interop/NativeMethods.cs` | 757 | source-generated P/Invoke 선언 집합; 상태·실행 조립 없음 |
+| `src/Interop/NativeMethods.cs` | 772 | source-generated P/Invoke 선언 집합; 상태·실행 조립 없음 |
 | `tests/Native.UnitTests/wic_tiff_decoder_tests.cpp` | 728 | WIC TIFF decoder 단일 suite |
 | `src/Native/imaging/scanner_target_grade.cpp` | 713 | scanner target grade 단일 알고리즘 |
 | `src/Catalog.Core/Defects/DefectRecipeValidator.cs` | 700 | defect recipe 불변식 검증·복사의 단일 boundary |
@@ -476,4 +474,17 @@
   - `Preview/PrintPreviewSurface` 17 / `PrintPreviewRenderer` 343 — 판 미리보기·눈금자·타일
   - `Export/PrintExportWorkflow` 68 — 폴더 고르기와 판 쓰기
 - leftover parent 192줄: 컨트롤 표면을 넘기고 XAML 이벤트만 위임한다. 공개 `ShowLibrary`/`AttachThumbnails`/`AttachWindow`는 그대로다.
+- 검증: `build.ps1 -Preset x64-release` 통과, `test.ps1` 71/71, `test-managed.ps1` 경고 0·오류 0, Catalog 721, Shell 1032.
+
+## 2026-08-17 NativeDevelopExportV2 레이아웃 파일 — 검증됨
+
+- `NativeDevelopExportV2.cs` 914줄을 `Interop/DevelopExport/Layout/` 실제 타입 파일로 옮겼다. partial 이 아니다. 필드 선언은 그대로다.
+- 새 자리:
+  - `NativeDevelopExportRequestV2V6` 176 — 요청 v2–v6, 포인트 커브
+  - `NativeDevelopExportRequestV7V17` 210 — 요청 v7–v17, 닷지/번
+  - `NativeDevelopExportRequestV18V34` 280 — 결함 페이로드와 요청 v18–v34
+  - `NativeDevelopResultV2V3` 84 — 결과 v2–v3
+  - `NativeDevelopDetectLayout` 153 — 자동 보정·GrainMend·실행 상태
+  - `NativeDevelopProofLayout` 38 — 소프트 프루프
+- 원본 파일은 삭제했다. 공개 구조체 이름은 같다.
 - 검증: `build.ps1 -Preset x64-release` 통과, `test.ps1` 71/71, `test-managed.ps1` 경고 0·오류 0, Catalog 721, Shell 1032.

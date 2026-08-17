@@ -12,11 +12,11 @@
 
 ## 2026-08-17 God Object 진행
 
+- **재집계:** `src/`·`tests/` `.cs`·`.cpp`·`.h`·`.xaml` 947개 중 33개가 500줄을 넘는다. 사유 없이 남은 미해결은 없다. 전 목록은 `docs/implementation/god-object-remediation.md`에 있다.
+- 이 세션에서 닫은 것: `develop_export.cpp` 1,575→237, `tiff_probe.cpp` 1,425→278, `PrintWorkspaceView.Composition.cs` 826→192, `NativeDevelopExportV2.cs` 914→`DevelopExport/Layout/` 여섯 파일.
+- `DevelopWorkspaceView.xaml.cs`는 329줄, `LibraryWorkspaceView.xaml.cs`는 328줄, `PrintSheetWriter`는 258줄이다.
+- 검증(직전 체크포인트): `build.ps1`·`test.ps1` 71/71·`test-managed.ps1` Catalog 721·Shell 1032. GrainMend UI/UX 전면 대조와 GitHub CI 통과는 아직 검증하지 않았다.
 - `LibraryDocument`는 1,468줄에서 325줄 공개 파사드로 줄였다. catalog 열기, 상태, 투영, 저장, 조직, frame 편집, 가상 사본, 제거, relink, defect sidecar, undo를 세부 폴더의 실제 타입으로 옮겼다.
-- 검증: Shell.Core x64 Release 경고 0·오류 0, Shell 단위 테스트 938 assertions 통과. GrainMend 동작, UI/UX 패리티, GitHub CI 통과는 아직 검증하지 않았다.
-- **판정 기준은 500줄이다.** `src/`·`tests/`의 674개 파일 중 47개가 초과하며, 사유 없이 남은 미해결은 **11개**다. 전 목록은 `docs/implementation/god-object-remediation.md`에 있다.
-- `PrintSheetWriter`는 505 → 258줄로 **해결**했다. 화소 그리기·PNG 굽기·파일 스트림을 `Views/Print/`의 실제 타입(215/49/20줄)으로 옮겼다.
-- `DevelopWorkspaceView.xaml.cs`는 5,057 → 4,835줄이다. 크롭(`Develop/Canvas`), 메타데이터 변환·정보 카드(`Develop/Metadata`), 출력 패널 투영·필름 룩·GrainMend 카드 규칙·버전 목록·붙여넣기 범위(`Develop/Presentation`)를 실제 타입으로 옮겼다. 아직 기준의 9배가 넘으므로 미해결이다.
 - 검증: 로컬 `ci-gate.ps1 -Preset x64-release` 전체 통과 — 네이티브 CTest 71/71, 관리 빌드 경고 0·오류 0, Catalog 721 assertions, Shell 1,011 assertions(시작 시 938).
 - **스캐너 실패 원인 확정·수정**: 플러그인은 `bitDepths`를 정상 보고한다(OpticFilm 8100 `[16]`, Epson GT-X900 `[8,16]`). Shell이 `capabilityToken`을 표시용 512자 규칙으로 검사해 **응답 전체를 버리고** 있었다(실측 토큰 4,148자·5,012자). 화면에는 "심도 옵션을 보고하지 않는다"만 남았다.
 - **GrainMend 백엔드는 실제로 동작한다**(고정 입력 실측). `OpticFilm8100_frame_1.tiff` 5088×3401에서 검출 이미지 1800×1203, 크기 질의와 마스크 호출이 9,306으로 일치하고 작은 버퍼는 `mask_buffer_too_small`로 거부한다. 민감도 옵션도 실제로 결과를 바꾼다 — legacy 9,306 / current-ui 4,096 / 구조선 배제 끔 16,592 / 미세반점 끔 2,587.

@@ -1,6 +1,6 @@
 # 이력 — 다음에 어디서부터 이어서 할 것인가
 
-> **2026-08-17 최신 재개 지점:** 판정 기준은 **500줄**이다(사유 없는 초과는 미해결). 674개 중 47개 초과, 미해결 11개. `PrintSheetWriter`는 505 → 258줄로 닫았다. `DevelopWorkspaceView.xaml.cs`는 5,057 → 4,835줄이며 여전히 미해결이다. 로컬 `ci-gate.ps1 -Preset x64-release` 전체 통과(네이티브 71/71, Catalog 721, Shell 1,011). 다음 한 걸음은 `DevelopPanelState.cs`(648줄) — 전부 한 줄 위임인 파사드라 `panel.Tone.Exposure` 꼴의 도메인 하위 타입으로 나누고 호출부를 함께 옮겨야 한다. 스캐너 심도 오류는 `capabilityToken` 512자 제한이 원인이었고 고쳤다. macOS `DefectLayerSection`(결함 레이어 목록)은 Windows에 아직 없다.
+> **2026-08-17 최신 재개 지점:** 판정 기준은 **500줄**이다. 재집계 947개 중 33개 초과. 사유 없는 미해결은 없다. `develop_export.cpp`·`tiff_probe.cpp`·`PrintWorkspaceView.Composition.cs`·`NativeDevelopExportV2.cs`는 세부 폴더 실제 타입으로 닫았다. 다음 God Object 후보가 있다면 `infrared_defect_detector.cpp`(1,197줄)인데, 문서에는 단일 검출 알고리즘으로 적혀 있다. 새 책임이 보이면 그때 다시 나눈다. God Object 1단계 다음은 GrainMend 확정·영속성 앱 왕복, macOS UI/UX 전면 대조, GitHub CI다. 로컬 공식 스크립트는 Catalog 721·Shell 1032·CTest 71/71이다.
 >
 > **이전 재개 지점:** God Object 1단계가 우선이다. `LibraryDocument`는 325줄 파사드까지 실제 타입 분해를 검증했다. `DevelopWorkspaceView`의 크롭 세션·히트테스트·오버레이 기하·프리뷰 기하는 `Develop/Canvas`(`CropWorkspaceState`·`CropInteraction`·`PreviewFrame`)로 옮기고 뷰 위임을 닫았다 — Shell x64 Release 경고 0·오류 0, Catalog 721·Shell 938 assertions 통과. 다만 그 뷰는 아직 5,057줄이라 1단계는 닫히지 않았다. 다음 한 걸음은 같은 뷰의 미리보기 렌더·export 실행 책임을 실제 타입으로 옮기는 것이다. GrainMend 백엔드 검증, UI/UX, GitHub CI는 그 다음이다.
 
