@@ -28,14 +28,14 @@
 | 우선순위 | 대상 | 줄 | 확인된 독립 책임 | 분해 방향 | 상태 |
 |---|---|---:|---|---|---|
 | P0 | `src/Native/abi/negaflow_abi.cpp` | 6,264 | export/preview 버전 매핑, auto adjust, GrainMend, IR, flatbed, TIFF probe, soft proof, handle 수명 | ABI 함수군별 adapter와 request mapper; 공개 C ABI만 얇게 유지 | 대기 |
-| P0 | `src/Shell/Views/DevelopWorkspaceView.xaml.cs` | 5,167 | 선택·가져오기·미리보기·crop·GrainMend·metadata·version·export·sidebar·resize·localization 이벤트/상태 | `Shell.Core` session/coordinator와 실제 UserControl 경계로 이동 | 진행 중 |
+| P0 | `src/Shell/Views/DevelopWorkspaceView.xaml.cs` | 4,823 | 선택·가져오기·미리보기·crop·GrainMend·metadata·version·export·sidebar·resize·localization 이벤트/상태 | `Shell.Core` session/coordinator와 실제 UserControl 경계로 이동 | 대기 |
 | P0 | `tests/Native.UnitTests/develop_export_abi_tests.cpp` | 4,107 | 서로 독립적인 ABI version/stage/defect/output suite와 fixture | ABI stage군별 suite 번역 단위와 공용 fixture | 대기 |
-| P0 | `src/Shell/Views/LibraryWorkspaceView.xaml.cs` | 2,835 | 탐색·선택·rating/flag·collection·folder DnD·scanner session·filter/sort·resize·localization | 탐색/정리, scanner workflow, source sidebar, view presentation 타입 | 대기 |
-| P0 | `src/Shell/Views/DevelopWorkspaceView.xaml` | 2,508 | source sidebar, canvas/crop, histogram/tabs, 전체 inspector, GrainMend, metadata/version/export UI | macOS surface 단위 실제 UserControl; 공유 상태를 partial로 숨기지 않음 | 대기 |
+| P0 | `src/Shell/Views/LibraryWorkspaceView.xaml.cs` | 2,670 | 탐색·선택·rating/flag·collection·folder DnD·scanner session·filter/sort·resize·localization | 탐색/정리, scanner workflow, source sidebar, view presentation 타입 | 대기 |
+| P0 | `src/Shell/Views/DevelopWorkspaceView.xaml` | 2,461 | source sidebar, canvas/crop, histogram/tabs, 전체 inspector, GrainMend, metadata/version/export UI | macOS surface 단위 실제 UserControl; 공유 상태를 partial로 숨기지 않음 | 대기 |
 | P0 | `src/Interop/NativeDevelopExporter.cs` | 2,342 | ABI layout 검증, recipe validation, 각 payload marshaling, 30여 request version, export/preview/auto/GrainMend 실행 | validation, payload marshaler, version request builder, command adapter | 대기 |
 | 완료 | `src/Catalog.Core/Library/LibraryFrameReader.cs` | 372, 변경 전 1,584 | frame identity/source, base/tone/color/effects/transform/metadata/local-adjust recipe 파싱 | `Library/Reading` core/value reader와 `Reading/Codecs`의 recipe별 실제 reader | 완료·Catalog 721·Shell 938 assertions 검증 |
 | P0 | `src/Native/pipeline/develop_export.cpp` | 1,575 | decode, source observation, develop/tone/look/defect/transform/output stage와 progress/cancel orchestration | stage executor와 pipeline coordinator | 대기 |
-| P0 | `src/Shell.Core/Library/LibraryDocument.cs` | 1,468 | document 상태, undo/redo, frame/roll/collection/stack/search 변경, defect sidecar, relink/save | aggregate별 command와 persistence transaction | 대기 |
+| 완료 | `src/Shell.Core/Library/LibraryDocument.cs` | 325, 변경 전 1,468 | document 상태, undo/redo, frame/roll/collection/stack/search 변경, defect sidecar, relink/save | `Library/{State,Projection,Persistence,Organization,Editing,Source,Defects}` 실제 협력 타입; facade에는 공개 API 위임만 유지 | 완료·Shell.Core x64 Release 경고 0/오류 0·Shell 938 assertions 검증 |
 | P0 | `src/Native/core/tiff_probe.cpp` | 1,425 | Win32 random file I/O, TIFF/BigTIFF parsing, directory selection, segment/deflate 검증, metadata projection | byte reader, directory parser, segment validator, projection | 대기 |
 | 완료 | `tests/Interop.ContractTests/ContractTestRunner.cs` | 54줄 orchestration, 변경 전 1,414 | layout, run state, auto, IR, flatbed, TIFF, proof, limits, export, path, build contract suite | `Layout`, `Runtime`, `Develop`의 15개 계약 suite와 `ContractTestContext` | 완료·x64 Debug 198 assertions 검증 |
 | 완료 | `src/Shell.Core/Library/LibraryHostService.cs` | 488, 변경 전 906 | selection, document lifecycle, edits, collections/rolls/stacks, import/scanner publish, autosave, move/relink, export, defects | `Library/{Selection,Availability,Persistence,Import,Scanner,Source,Defects}` 협력 타입; facade에는 session·library command 위임만 유지 | 완료·Shell.Core build·938 assertions 검증 |
@@ -49,7 +49,7 @@
 | P1 | `src/Shell/Views/PrintSheetWriter.cs` | 505 | develop 호출, 크기 probe, page 합성, caption/ruler drawing, PNG encode/file I/O | source renderer, page compositor, encoder/writer | 대기 |
 | 완료 | `tests/Shell.UnitTests/Program.cs` | 62, 변경 전 약 7,000 | 진입점·진단·fixture/fake·전 도메인 suite | 실행/집계만 남기고 26개 suite와 진단/fixture 타입 분리 | 완료·검증·푸시 |
 | 완료 | `tests/Catalog.UnitTests/Program.cs` | 33, 변경 전 3,301 | 전 catalog suite와 fixture | 19개 suite/fixture 타입과 실행/집계 분리 | 완료·검증·푸시 |
-| 완료 | `src/Shell.Core/Develop/DevelopPanelState.cs` | 648, 변경 전 1,542 | base/tone/color/effects/route/transform/defect/version/preset/export 상태·검증·I/O | `Develop/{Editing,Defects,Workflow,Presentation}` 협력 타입; 현재 타입은 선택 frame 호환 facade | 완료·clean-index 검증 |
+| 완료 | `src/Shell.Core/Develop/DevelopPanelState.cs` | 525, 변경 전 1,542 | base/tone/color/effects/route/transform/defect/version/preset/export 상태·검증·I/O | `Develop/{Editing,Defects,Workflow,Presentation}` 협력 타입; 현재 타입은 선택 frame 호환 facade | 완료·clean-index 검증. 현재 525줄은 공개 facade이며 다음 재집계에서 독립 책임이 다시 쌓이면 재분류한다 |
 
 ## 500줄 이상 전수 재집계: 검토 후 분해 제외
 
@@ -57,7 +57,7 @@
 
 | 대상 | 줄 | 제외 근거 |
 |---|---:|---|
-| `src/Native/imaging/muted_scene_vibrance_table.cpp` | 9,003 | 생성된 정적 계수 데이터; 실행 상태·오케스트레이션 없음 |
+| `src/Native/imaging/muted_scene_vibrance_table.cpp` | 9,003 | 2026-08-17 재확인: 첫 줄이 `Generated by scripts/generate-civibrance-table.ps1. Do not edit by hand.`이며, `if`/`for`/`while`/`switch`/`return`/`class`/`struct`가 0개다. 내용은 `vibrance_table_amounts` 6값, `vibrance_table_quantum` 1값, `vibrance_table_g` uint16 격자뿐이다. 실행 로직은 `muted_scene_vibrance.cpp`(121줄)와 `vibrance_math.h`(102줄)에 이미 분리돼 있다. 줄 수만 큰 생성 데이터이므로 파일 분할은 God Object 해소가 아니다. |
 | `src/Native/abi/include/negaflow_abi.h` | 1,791 | 외부 소비자가 포함하는 append-only 공개 ABI 선언 집합; 구현 상태 없음 |
 | `src/Native/imaging/infrared_defect_detector.cpp` | 1,197 | IR alignment·mask·component 판정의 단일 검출 알고리즘 |
 | `src/Native/imaging/grain_mend_components.cpp` | 1,066 | GrainMend component/evidence/mask 구성의 단일 알고리즘 |
@@ -130,3 +130,17 @@
 - 이 체크포인트만 내보낸 깨끗한 인덱스에서 `test-managed.ps1 -Preset x64-release`를 실행해 빌드 경고 0개·오류 0개, Catalog 721 assertions, Shell 929 assertions가 통과했다. 작업트리의 별도 GrainMend 테스트 9개는 제외된 수치다.
 - 같은 gate의 직전 1회 실행에서는 Catalog pending-restore 4개 assertion이 실패했으나 동일 바이너리 단독 재실행과 전체 gate 재실행은 각각 721개 전부 통과했다. 소스 변경과 직접 연결된 재현은 없었지만 최초 실패 사실은 숨기지 않으며 clean-index gate를 별도로 실행한다.
 - 일반 `dotnet build`의 AnyCPU 패키징은 `RuntimeIdentifier`가 없어 실패했다. 저장소의 x64 preset/setup 경로로 최종 빌드해야 하며 이 실패를 기능 실패나 통과로 바꾸어 말하지 않는다.
+
+## 2026-08-17 LibraryDocument 체크포인트
+
+- `LibraryDocument`는 1,468줄에서 325줄 공개 파사드로 줄였다. partial 분할이 아니라 catalog 열기, 상태, 투영, 저장, 조직, frame 편집, 가상 사본, 제거, relink, defect sidecar, undo를 세부 폴더의 실제 타입으로 옮겼다.
+- 새 경계: `Library/Persistence/LibraryDocumentOpener`, `Library/State/LibraryDocumentState`, `Library/State/LibraryUndoCoordinator`, `Library/Projection/LibraryDocumentProjection`, `Library/Persistence/LibraryCatalogPersistence`, `Library/Organization/LibraryOrganizationService`, `Library/Organization/LibraryFrameRemovalService`, `Library/Editing/LibraryFrameEditor`, `Library/Editing/LibraryVirtualCopyService`, `Library/Source/LibrarySourceRelinker`, `Library/Defects/LibraryDefectRecipeStore`.
+- 공개 API(`Open`, `Edit`, `Save`, `RemoveFrames`, `CreateVirtualCopy`, 조직/undo/relink/defect)는 유지하고 내부 서비스에 위임한다.
+- 검증: `dotnet build src/Shell.Core/Negaflow.Shell.Core.csproj -c Release -p:Platform=x64 --no-restore` 경고 0·오류 0. `dotnet run --project tests/Shell.UnitTests/Negaflow.Shell.UnitTests.csproj -c Release -p:Platform=x64 --no-build --no-restore` 938 assertions, failures 없음.
+- God Object 1단계는 닫히지 않았다. 다음 실제 분해 대상은 `DevelopWorkspaceView.xaml.cs`, `LibraryWorkspaceView.xaml.cs`, `DevelopWorkspaceView.xaml`, `NativeDevelopExporter.cs`, `negaflow_abi.cpp`, `develop_export.cpp`다.
+- 사용자 목표 단계(축약 없음):
+  1. 현재 windows 프로젝트에서 500줄 이상인 God Object를 먼저 전수 식별·분해해라. 단순히 파일만 나누는 partial 분할로 눈속임하지 않고, 서로 다른 변경 이유를 가진 상태·오케스트레이션·I/O·UI 이벤트 책임을 실제 타입 경계로 이동하고 조치해라. 유지보수 가능하게 세부폴더별로 파일과 코드 분할할것.
+  2. Negaflow Windows에서 GrainMend 백엔드 자동·가이드·브러시·복제·IR, 민감도 옵션, 결함 제거 확정·영속성, preview/export 동일 recipe를 먼저 실제 동작·로그·고정 입력으로 검증하고, 그 뒤 macOS 코드·스크린샷·metrics와 동일한 UI/UX 및 전체 클릭 영역을 구현·설치본 검증하며, 문서·메모리를 최신화하고 의미 있는 체크포인트마다 main에 커밋·푸시한다. GrainMend 관련해서 성능,속도,최적화,품질,기능,UI/UX 는 맥 버전과 동일하게 할것. Computer-use 로 직접 동작시키고 UI/UX 는 창작하거나 없는 기능 없이 동일하게 할것. 하드코딩해서 문제를 회피하지 말것. 가설이나 추측없이 검증해서 문제를 해결할것.
+  3. 깃허브 CI 테스트 통과하게 만들것. 지금 계속 실패함.
+- 추가 고정 요구: 다국어 텍스트가 길어져도 UI가 잘리지 않게 할 것. Library/Develop/Print는 분리된 앱이 아니라 하나의 워크플로. 작업은 `main`에서만 한다. 로컬 CI로 확인한 뒤 GitHub Actions 실패 check와 원본 로그를 본다. GrainMend가 먼저가 아니다.
+- GrainMend 자동·가이드·브러시·복제·IR, UI/UX, GitHub CI는 이 구조 선행 조건이 끝난 뒤에만 완료로 말할 수 있다. 이번 체크포인트는 LibraryDocument 책임 이동만 검증했다.

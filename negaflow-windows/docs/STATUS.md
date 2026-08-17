@@ -1,6 +1,20 @@
 # 구현·검증 상태
 
-기준일: 2026-08-16
+기준일: 2026-08-17
+
+## 현재 목표 단계 (축약 없음)
+
+1. 현재 windows 프로젝트에서 500줄 이상인 God Object를 먼저 전수 식별·분해해라. 단순히 파일만 나누는 partial 분할로 눈속임하지 않고, 서로 다른 변경 이유를 가진 상태·오케스트레이션·I/O·UI 이벤트 책임을 실제 타입 경계로 이동하고 조치해라. 유지보수 가능하게 세부폴더별로 파일과 코드 분할할것.
+2. Negaflow Windows에서 GrainMend 백엔드 자동·가이드·브러시·복제·IR, 민감도 옵션, 결함 제거 확정·영속성, preview/export 동일 recipe를 먼저 실제 동작·로그·고정 입력으로 검증하고, 그 뒤 macOS 코드·스크린샷·metrics와 동일한 UI/UX 및 전체 클릭 영역을 구현·설치본 검증하며, 문서·메모리를 최신화하고 의미 있는 체크포인트마다 main에 커밋·푸시한다. GrainMend 관련해서 성능,속도,최적화,품질,기능,UI/UX 는 맥 버전과 동일하게 할것. Computer-use 로 직접 동작시키고 UI/UX 는 창작하거나 없는 기능 없이 동일하게 할것. 하드코딩해서 문제를 회피하지 말것. 가설이나 추측없이 검증해서 문제를 해결할것.
+3. 깃허브 CI 테스트 통과하게 만들것. 지금 계속 실패함.
+
+고정 요구: UI/UX 창작 금지. macOS가 유일한 권위. Library/Develop/Print는 하나의 워크플로. 다국어 텍스트가 길어져도 잘리지 않게 할 것. 브랜치를 만들지 않고 `main`에서만 작업. 로컬 CI를 만들고 의미 있는 체크포인트마다 문서·메모리를 최신화한 뒤 `main`에 커밋·푸시. 검증하지 않은 항목은 완성했다고 쓰지 않는다.
+
+## 2026-08-17 God Object 진행
+
+- `LibraryDocument`는 1,468줄에서 325줄 공개 파사드로 줄였다. catalog 열기, 상태, 투영, 저장, 조직, frame 편집, 가상 사본, 제거, relink, defect sidecar, undo를 세부 폴더의 실제 타입으로 옮겼다.
+- 검증: Shell.Core x64 Release 경고 0·오류 0, Shell 단위 테스트 938 assertions 통과. GrainMend 동작, UI/UX 패리티, GitHub CI 통과는 아직 검증하지 않았다.
+- God Object 1단계는 닫히지 않았다. 다음 분해 대상은 `DevelopWorkspaceView.xaml.cs`, `LibraryWorkspaceView.xaml.cs`, `DevelopWorkspaceView.xaml`, `NativeDevelopExporter.cs`, `negaflow_abi.cpp`, `develop_export.cpp`다.
 
 ## 완성도 (2026-08-16 기준)
 
