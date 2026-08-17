@@ -22,15 +22,20 @@
             <Setter Property="MinHeight" Value="0" />
             <Setter Property="CornerRadius" Value="12" />
         </Style>
-        <!-- macOS DefectClassChip: 배경은 중성, 색은 점에만. -->
+        <!--
+            macOS DefectClassChip: 배경은 중성, 색은 점에만.
+            모서리는 알약처럼 **직사각형에 모서리만 둥글게** 입니다. 999 를 넣으면 짧은 변의
+            절반으로 잘려 찌그러진 타원이 됩니다 — 앱의 다른 캡슐(도구 알약 16, 카드 14)과
+            같은 값을 씁니다.
+        -->
         <Style x:Key="NegaflowHudChipStyle" TargetType="Button">
             <Setter Property="Background" Value="{ThemeResource NegaflowSubtleFillBrush}" />
             <Setter Property="BorderBrush" Value="{ThemeResource NegaflowDividerBrush}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Padding" Value="9,5" />
+            <Setter Property="Padding" Value="10,6" />
             <Setter Property="MinWidth" Value="0" />
-            <Setter Property="MinHeight" Value="0" />
-            <Setter Property="CornerRadius" Value="999" />
+            <Setter Property="MinHeight" Value="30" />
+            <Setter Property="CornerRadius" Value="15" />
         </Style>
         <DataTemplate x:Key="GrainMendClassChipTemplate">
             <Button
@@ -85,7 +90,7 @@
             Background="{ThemeResource NegaflowPanelBrush}"
             BorderBrush="{ThemeResource NegaflowDividerBrush}"
             BorderThickness="1"
-            CornerRadius="999">
+            CornerRadius="18">
             <!-- macOS HStack(spacing: 10) -->
             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                 <!-- macOS Image(systemName: "scope").foregroundStyle(.red) -->
@@ -213,7 +218,7 @@
             Background="{ThemeResource NegaflowPanelBrush}"
             BorderBrush="{ThemeResource NegaflowDividerBrush}"
             BorderThickness="1"
-            CornerRadius="999"
+            CornerRadius="18"
             Visibility="Collapsed">
             <ItemsControl
                 x:Name="ClassChips"
