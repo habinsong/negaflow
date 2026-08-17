@@ -44,6 +44,20 @@ struct GrainMendParameters final {
     bool detect_micro_specks{true};
 };
 
+// 검출 한 번을 단계로 나눈 시간입니다. "자동이 몇 초"만으로는 어디를 고쳐야 하는지 알 수
+// 없어서, 형태학·스크래치 각도·성분 조립을 따로 잽니다.
+struct GrainMendTimings final {
+    std::uint64_t detection_image_microseconds{0U};
+    std::uint64_t dust_morphology_microseconds{0U};
+    std::uint64_t scratch_angles_microseconds{0U};
+    std::uint64_t evidence_microseconds{0U};
+    std::uint64_t stitch_microseconds{0U};
+    std::uint64_t components_microseconds{0U};
+    std::uint64_t total_microseconds{0U};
+    std::uint32_t tile_count{0U};
+    std::uint32_t worker_count{0U};
+};
+
 struct GrainMendInfo final {
     bool applied{false};
     std::uint32_t detection_width{0U};
@@ -97,6 +111,7 @@ struct GrainMendDetection final {
     std::uint32_t roi_width{0U};
     std::uint32_t roi_height{0U};
     std::size_t accepted_pixels{0U};
+    GrainMendTimings timings{};
     std::vector<std::uint8_t> mask{};
     // 채택된 결함 하나하나. 분류(먼지·핀홀·가로/세로/대각 스크래치·유제손상·미세입자)와
     // confidence 가 붙어 있으며, 좌표는 검출 이미지(width×height) 기준입니다.

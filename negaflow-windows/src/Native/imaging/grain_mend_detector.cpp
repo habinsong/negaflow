@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -83,6 +84,7 @@ void find_candidates(
                 : 0U;
         }
     }
+    const auto dust_started = std::chrono::steady_clock::now();
     {
         std::vector<float> dust_magnitude(count, 0.0F);
         std::vector<float> thin_magnitude(count, 0.0F);
@@ -172,6 +174,10 @@ void find_candidates(
         result.thin_magnitude = std::move(thin_magnitude);
         result.noise_scale = std::move(noise_scale);
     }
+    const auto scratch_started = std::chrono::steady_clock::now();
+    result.dust_morphology_microseconds =
+        static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(
+            scratch_started - dust_started).count());
     std::vector<float>& best = result.scratch_response;
     std::vector<float> local_ridge(count, 0.0F);
     constexpr std::array<double, 8U> angles{
@@ -247,6 +253,9 @@ void find_candidates(
             result.weak[index] |= 2U;
         }
     }
+    result.scratch_angles_microseconds =
+        static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::steady_clock::now() - scratch_started).count());
 }
 
 }  // namespace negaflow::imaging::grain_mend_detail

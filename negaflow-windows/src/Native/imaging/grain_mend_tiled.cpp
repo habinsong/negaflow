@@ -3,9 +3,11 @@
 #include "grain_mend_components.h"
 #include "grain_mend_detection_image.h"
 #include "grain_mend_detector.h"
+#include "grain_mend_speck_detector.h"
 #include "negaflow/imaging/grain_mend.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -62,6 +64,7 @@ struct TileWorkspace {
     DetectionImage tile{};
     CandidateMaps candidates{};
     std::vector<std::uint8_t> evidence{};
+    std::vector<std::uint8_t> specks{};
 };
 
 struct TilePlacement {
@@ -82,7 +85,10 @@ std::vector<std::uint8_t> build_tiled_automatic_mask(
     const AutomaticDetection& request,
     std::size_t& accepted_pixels,
     std::vector<ClassifiedComponent>* const components,
+    GrainMendTimings* const timings,
     const negaflow::core::CancelFlag cancel) {
+    const auto started = std::chrono::steady_clock::now();
+    GrainMendTimings measured{};
     const std::uint32_t region_width = request.width;
     const std::uint32_t region_height = request.height;
     const std::size_t count = checked_pixel_count(region_width, region_height);
@@ -100,6 +106,10 @@ std::vector<std::uint8_t> build_tiled_automatic_mask(
     const bool reject_line_grid = !request.constrained_region;
 
     std::vector<std::uint8_t> frame_evidence(count, 0U);
+    std::vector<std::uint8_t> frame_specks{};
+    if (request.detect_micro_specks) {
+        frame_specks.assign(count, 0U);
+    }
     std::vector<float> frame_scratch_response(count, 0.0F);
     // 분류기가 읽는 국소 통계입니다. 타일이 낸 것을 core 만 프레임으로 옮깁니다 — 분류를
     // 타일 안에서 하면 타일 경계에서 잘린 한 결함이 조각마다 다른 종류가 됩니다.
@@ -196,6 +206,19 @@ std::vector<std::uint8_t> build_tiled_automatic_mask(
                         sensitivity,
                         true,
                         workspace.evidence);
+                    if (!request.detect_micro_specks) {
+                        workspace.specks.clear();
+                        return;
+                    }
+                    // 같은 타일 화소를 다시 씁니다. 겹치는 입자는 기존 검출이 임자입니다.
+                    workspace.specks.assign(workspace.evidence.size(), 0U);
+                    std::size_t added = 0U;
+                    static_cast<void>(merge_micro_speck_mask(
+                        workspace.tile,
+                        request.dust_sensitivity,
+                        workspace.specks,
+                        added,
+                        cancel));
                 }));
         }
         for (std::size_t slot = 0U; slot < futures.size(); ++slot) {
@@ -204,9 +227,16 @@ std::vector<std::uint8_t> build_tiled_automatic_mask(
         if (cancel.requested()) {
             return {};
         }
+        const auto stitch_started = std::chrono::steady_clock::now();
         for (std::size_t slot = 0U; slot < futures.size(); ++slot) {
             const TileWorkspace& workspace = workspaces[slot];
             const TilePlacement placement = placements[first + slot];
+            // 배치는 병렬로 돌므로 타일 시간을 더하면 벽시계보다 큽니다. 어느 단계가 무거운지
+            // 비교하는 것이 목적이므로 합계 그대로 냅니다.
+            measured.dust_morphology_microseconds +=
+                workspace.candidates.dust_morphology_microseconds;
+            measured.scratch_angles_microseconds +=
+                workspace.candidates.scratch_angles_microseconds;
             const bool has_statistics =
                 workspace.candidates.dust_magnitude.size() ==
                     workspace.evidence.size() &&
@@ -227,6 +257,9 @@ std::vector<std::uint8_t> build_tiled_automatic_mask(
                     const std::size_t tile_index =
                         tile_row + static_cast<std::size_t>(x - placement.detect_x0);
                     frame_evidence[frame_index] = workspace.evidence[tile_index];
+                    if (!frame_specks.empty() && !workspace.specks.empty()) {
+                        frame_specks[frame_index] = workspace.specks[tile_index];
+                    }
                     frame_scratch_response[frame_index] =
                         workspace.candidates.scratch_response[tile_index];
                     frame.brightest_channel[frame_index] =
@@ -242,11 +275,15 @@ std::vector<std::uint8_t> build_tiled_automatic_mask(
                 }
             }
         }
+        measured.stitch_microseconds +=
+            static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::steady_clock::now() - stitch_started).count());
     }
 
     // 구조선 배제는 프레임 전체에서 한 번에 판정합니다. 타일 안에서는 프레임에 퍼진 구조가
     // 판정 최소 선 개수에 못 미치고, 연장 증거는 halo 밖을 볼 수 없습니다.
-    return build_automatic_mask_from_evidence(
+    const auto components_started = std::chrono::steady_clock::now();
+    std::vector<std::uint8_t> mask = build_automatic_mask_from_evidence(
         frame,
         frame_evidence,
         frame_scratch_response,
@@ -257,6 +294,26 @@ std::vector<std::uint8_t> build_tiled_automatic_mask(
         accepted_pixels,
         &frame_candidates,
         components);
+    // 미세 입자는 더하기만 합니다 — 이미 채택된 화소는 기존 검출이 임자입니다.
+    for (std::size_t index = 0U; index < frame_specks.size(); ++index) {
+        if (frame_specks[index] != 0U && mask[index] == 0U) {
+            mask[index] = 1U;
+            ++accepted_pixels;
+        }
+    }
+    const auto finished = std::chrono::steady_clock::now();
+    measured.components_microseconds =
+        static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(
+            finished - components_started).count());
+    measured.total_microseconds =
+        static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(
+            finished - started).count());
+    measured.tile_count = static_cast<std::uint32_t>(placements.size());
+    measured.worker_count = static_cast<std::uint32_t>(workers);
+    if (timings != nullptr) {
+        *timings = measured;
+    }
+    return mask;
 }
 
 }  // namespace negaflow::imaging::grain_mend_detail

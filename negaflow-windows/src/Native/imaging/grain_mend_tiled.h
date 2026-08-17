@@ -1,6 +1,7 @@
 #pragma once
 
 #include "negaflow/core/cancel_flag.h"
+#include "negaflow/imaging/grain_mend.h"
 #include "negaflow/imaging/grain_mend_classifier.h"
 #include "negaflow/imaging/scanner_to_working.h"
 
@@ -24,6 +25,10 @@ struct AutomaticDetection {
     // 사용자가 ROI 로 범위를 지목했는지. macOS `constrainedRegion` 과 같습니다 — 참이면 먼지
     // 면적 상한이 커지고(×48) 구조선 격자 배제를 끕니다.
     bool constrained_region = false;
+    // 미세 입자 추가 패스. macOS `detectLabeledWithResponse(detectSpecks:)` 와 같이 **타일
+    // 안에서** 이미 만든 화소를 다시 써서 돕니다 — 끝난 뒤 프레임을 처음부터 다시 만들면
+    // 검출 이미지 한 벌을 통째로 두 번 짓게 됩니다(실측 12.3초).
+    bool detect_micro_specks = false;
 };
 
 // Full-resolution automatic detection uses non-overlapping cores with a
@@ -34,6 +39,7 @@ struct AutomaticDetection {
     const AutomaticDetection& request,
     std::size_t& accepted_pixels,
     std::vector<ClassifiedComponent>* components = nullptr,
+    GrainMendTimings* timings = nullptr,
     negaflow::core::CancelFlag cancel = {});
 
 }  // namespace negaflow::imaging::grain_mend_detail

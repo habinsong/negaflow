@@ -4,6 +4,7 @@
 #include "negaflow/imageio/wic_tiff_decoder.h"
 #include "commands/develop_negative_tiff.h"
 #include "commands/export_developed_png.h"
+#include "commands/grain_mend_detect.h"
 #include "commands/export_developed_tiff.h"
 #include "commands/hash_image.h"
 #include "commands/prepare_scanner_tiff.h"
@@ -297,6 +298,9 @@ int wmain(const int argument_count, const wchar_t* const arguments[]) {
     }
     if (command == L"--export-developed-tiff16") {
         return negaflow::cli::run_export_developed_tiff(argument_count, arguments);
+    }
+    if (command == L"--grain-mend-detect") {
+        return negaflow::cli::run_grain_mend_detect(argument_count, arguments);
     }
     if (command == L"--sha256-image") {
         return negaflow::cli::run_hash_image(argument_count, arguments);

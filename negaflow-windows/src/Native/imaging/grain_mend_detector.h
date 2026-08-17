@@ -28,6 +28,10 @@ struct CandidateMaps final {
     std::vector<float> dust_magnitude{};
     std::vector<float> thin_magnitude{};
     std::vector<float> noise_scale{};
+    // 이 타일에서 두 무거운 단계가 각각 얼마나 걸렸는지입니다. "자동이 몇 초"만으로는 어디를
+    // 고쳐야 하는지 알 수 없습니다.
+    std::uint64_t dust_morphology_microseconds{0U};
+    std::uint64_t scratch_angles_microseconds{0U};
 };
 
 [[nodiscard]] DetectionImage make_detection_image(const WorkingImage& image);

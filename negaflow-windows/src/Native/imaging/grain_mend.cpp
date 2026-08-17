@@ -200,6 +200,7 @@ GrainMendResult apply_grain_mend(
                     request,
                     result.info.candidate_pixels,
                     nullptr,
+                    nullptr,
                     cancel);
             if (cancel.requested()) {
                 result.status = GrainMendStatus::cancelled;
@@ -337,6 +338,7 @@ GrainMendDetection detect_grain_mend(
         // 1px 어긋나도 전역 자동 계약이 유지되어야 오검출이 폭증하지 않습니다.
         request.constrained_region =
             !parameters.reject_structure_lines && !roi.covers_everything();
+        request.detect_micro_specks = parameters.detect_micro_specks;
         detection.width = request.width;
         detection.height = request.height;
         detection.roi_x = left;
@@ -348,28 +350,11 @@ GrainMendDetection detect_grain_mend(
             request,
             detection.accepted_pixels,
             &detection.components,
+            &detection.timings,
             cancel);
         if (cancel.requested()) {
             detection.status = GrainMendStatus::cancelled;
             return detection;
-        }
-        if (parameters.detect_micro_specks) {
-            // 미세 입자는 같은 화소를 다시 봅니다. macOS 도 검출과 같은 해상도에서 돕니다 —
-            // 줄여서 보면 입자가 사라져 아무것도 더하지 못합니다.
-            DetectionImage geometry{};
-            make_detection_image_region(
-                image, left, top, request.width, request.height, geometry);
-            std::size_t added_micro_specks = 0U;
-            if (!merge_micro_speck_mask(
-                    geometry,
-                    parameters.dust_sensitivity,
-                    detection.mask,
-                    added_micro_specks,
-                    cancel)) {
-                detection.status = GrainMendStatus::cancelled;
-                return detection;
-            }
-            detection.accepted_pixels += added_micro_specks;
         }
         detection.status = GrainMendStatus::ok;
         return detection;
