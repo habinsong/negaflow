@@ -1146,4 +1146,27 @@
   <data name="samplerMovePointer.Text" xml:space="preserve"><value>사진 위로 포인터를 이동하세요</value><comment>PixelSamplerLocalizedText[4]</comment></data>
   <data name="samplerEnabled.Text" xml:space="preserve"><value>픽셀 샘플러</value><comment>PixelSamplerLocalizedText[5]</comment></data>
   <data name="settingsLanguageRestart.Text" xml:space="preserve"><value>새 언어는 Negaflow 를 다시 시작한 뒤 보입니다.</value><comment>Windows only: language applies on restart.</comment></data>
+  <data name="developDefectLayers.Text" xml:space="preserve"><value>GrainMend 레이어</value><comment>AppLocalizedPhrase.defectLayers</comment></data>
+  <data name="developDefectLayerEnable.Value" xml:space="preserve"><value>레이어 켜기(복원 적용)</value><comment>AppLocalizedPhrase.enableLayer</comment></data>
+  <data name="developDefectLayerDisable.Value" xml:space="preserve"><value>레이어 끄기(복원 전 보기)</value><comment>AppLocalizedPhrase.disableLayer</comment></data>
+  <data name="developDefectLayerShowMask.Value" xml:space="preserve"><value>마스크 표시</value><comment>AppLocalizedPhrase.showMask</comment></data>
+  <data name="developDefectLayerHideMask.Value" xml:space="preserve"><value>마스크 숨기기</value><comment>AppLocalizedPhrase.hideMask</comment></data>
+  <data name="developDefectLayerDelete.Value" xml:space="preserve"><value>레이어 삭제</value><comment>AppLocalizedPhrase.deleteLayer</comment></data>
+  <data name="developDefectLayerStrength.Text" xml:space="preserve"><value>강도</value><comment>AppLocalizedPhrase.strength</comment></data>
+  <data name="developDefectLayerDone.Content" xml:space="preserve"><value>완료</value><comment>AppLocalizedPhrase.done</comment></data>
+  <data name="developDefectLayerAutoFormat.Value" xml:space="preserve"><value>GrainMend · 자동 · %d개</value><comment>AppLocalizedPhrase.grainMendAutoEditTitleFormat</comment></data>
+  <data name="developDefectLayerGuidedFormat.Value" xml:space="preserve"><value>GrainMend · 가이드 · %d개</value><comment>AppLocalizedPhrase.grainMendGuidedEditTitleFormat</comment></data>
+  <data name="developDefectLayerBrushFormat.Value" xml:space="preserve"><value>GrainMend · 브러시 · %d획</value><comment>AppLocalizedPhrase.grainMendBrushEditTitleFormat</comment></data>
+  <data name="developDefectLayerCloneFormat.Value" xml:space="preserve"><value>복제 도장 %dpx</value><comment>AppLocalizedPhrase.cloneStampEditTitleFormat</comment></data>
+  <data name="developDefectLayerInfraredFormat.Value" xml:space="preserve"><value>GrainMend · IR · %d개</value><comment>AppLocalizedPhrase.grainMendIREditTitleFormat</comment></data>
+  <data name="developDefectLayerBrushSummary.Text" xml:space="preserve"><value>사용자 지정 영역 정밀 검출·복원</value><comment>AppLocalizedPhrase.brushEditSummary</comment></data>
+  <data name="developDefectLayerCloneSummary.Text" xml:space="preserve"><value>지정한 소스 픽셀 복제</value><comment>AppLocalizedPhrase.cloneStampEditSummary</comment></data>
+  <data name="developDefectLayerConfidenceFormat.Value" xml:space="preserve"><value>%@ · 신뢰도 %.0f%%</value><comment>AppLocalizedPhrase.confidenceSummaryFormat</comment></data>
+  <data name="developDefectClassDust.Text" xml:space="preserve"><value>먼지</value><comment>AppLocalizedPhrase.defectDust</comment></data>
+  <data name="developDefectClassPinhole.Text" xml:space="preserve"><value>핀홀</value><comment>AppLocalizedPhrase.defectPinhole</comment></data>
+  <data name="developDefectClassScratchHorizontal.Text" xml:space="preserve"><value>가로 스크래치</value><comment>AppLocalizedPhrase.defectScratchHorizontal</comment></data>
+  <data name="developDefectClassScratchVertical.Text" xml:space="preserve"><value>세로 스크래치</value><comment>AppLocalizedPhrase.defectScratchVertical</comment></data>
+  <data name="developDefectClassScratchDiagonal.Text" xml:space="preserve"><value>대각 스크래치</value><comment>AppLocalizedPhrase.defectScratchDiagonal</comment></data>
+  <data name="developDefectClassEmulsionDamage.Text" xml:space="preserve"><value>유제 손상</value><comment>AppLocalizedPhrase.defectEmulsionDamage</comment></data>
+  <data name="developDefectClassMicroSpeck.Text" xml:space="preserve"><value>미세 입자</value><comment>AppLocalizedPhrase.defectMicroSpeck</comment></data>
 </root>

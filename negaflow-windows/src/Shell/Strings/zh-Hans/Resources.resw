@@ -1146,4 +1146,27 @@
   <data name="samplerMovePointer.Text" xml:space="preserve"><value>将指针移到照片上</value><comment>PixelSamplerLocalizedText[4]</comment></data>
   <data name="samplerEnabled.Text" xml:space="preserve"><value>像素取样器</value><comment>PixelSamplerLocalizedText[5]</comment></data>
   <data name="settingsLanguageRestart.Text" xml:space="preserve"><value>新语言将在重新启动 Negaflow 后生效。</value><comment>Windows only: language applies on restart.</comment></data>
+  <data name="developDefectLayers.Text" xml:space="preserve"><value>GrainMend 图层</value><comment>AppLocalizedPhrase.defectLayers</comment></data>
+  <data name="developDefectLayerEnable.Value" xml:space="preserve"><value>启用图层（应用修复）</value><comment>AppLocalizedPhrase.enableLayer</comment></data>
+  <data name="developDefectLayerDisable.Value" xml:space="preserve"><value>停用图层（查看修复前）</value><comment>AppLocalizedPhrase.disableLayer</comment></data>
+  <data name="developDefectLayerShowMask.Value" xml:space="preserve"><value>显示蒙版</value><comment>AppLocalizedPhrase.showMask</comment></data>
+  <data name="developDefectLayerHideMask.Value" xml:space="preserve"><value>隐藏蒙版</value><comment>AppLocalizedPhrase.hideMask</comment></data>
+  <data name="developDefectLayerDelete.Value" xml:space="preserve"><value>删除图层</value><comment>AppLocalizedPhrase.deleteLayer</comment></data>
+  <data name="developDefectLayerStrength.Text" xml:space="preserve"><value>强度</value><comment>AppLocalizedPhrase.strength</comment></data>
+  <data name="developDefectLayerDone.Content" xml:space="preserve"><value>完成</value><comment>AppLocalizedPhrase.done</comment></data>
+  <data name="developDefectLayerAutoFormat.Value" xml:space="preserve"><value>GrainMend · 自动 · %d 处</value><comment>AppLocalizedPhrase.grainMendAutoEditTitleFormat</comment></data>
+  <data name="developDefectLayerGuidedFormat.Value" xml:space="preserve"><value>GrainMend · 引导 · %d 个区域</value><comment>AppLocalizedPhrase.grainMendGuidedEditTitleFormat</comment></data>
+  <data name="developDefectLayerBrushFormat.Value" xml:space="preserve"><value>GrainMend · 画笔 · %d 笔</value><comment>AppLocalizedPhrase.grainMendBrushEditTitleFormat</comment></data>
+  <data name="developDefectLayerCloneFormat.Value" xml:space="preserve"><value>克隆图章 %dpx</value><comment>AppLocalizedPhrase.cloneStampEditTitleFormat</comment></data>
+  <data name="developDefectLayerInfraredFormat.Value" xml:space="preserve"><value>GrainMend · IR · %d 处</value><comment>AppLocalizedPhrase.grainMendIREditTitleFormat</comment></data>
+  <data name="developDefectLayerBrushSummary.Text" xml:space="preserve"><value>对自选区域进行精细检测与修复</value><comment>AppLocalizedPhrase.brushEditSummary</comment></data>
+  <data name="developDefectLayerCloneSummary.Text" xml:space="preserve"><value>复制所选源的像素</value><comment>AppLocalizedPhrase.cloneStampEditSummary</comment></data>
+  <data name="developDefectLayerConfidenceFormat.Value" xml:space="preserve"><value>%@ · 置信度 %.0f%%</value><comment>AppLocalizedPhrase.confidenceSummaryFormat</comment></data>
+  <data name="developDefectClassDust.Text" xml:space="preserve"><value>灰尘</value><comment>AppLocalizedPhrase.defectDust</comment></data>
+  <data name="developDefectClassPinhole.Text" xml:space="preserve"><value>针孔</value><comment>AppLocalizedPhrase.defectPinhole</comment></data>
+  <data name="developDefectClassScratchHorizontal.Text" xml:space="preserve"><value>水平划痕</value><comment>AppLocalizedPhrase.defectScratchHorizontal</comment></data>
+  <data name="developDefectClassScratchVertical.Text" xml:space="preserve"><value>垂直划痕</value><comment>AppLocalizedPhrase.defectScratchVertical</comment></data>
+  <data name="developDefectClassScratchDiagonal.Text" xml:space="preserve"><value>斜向划痕</value><comment>AppLocalizedPhrase.defectScratchDiagonal</comment></data>
+  <data name="developDefectClassEmulsionDamage.Text" xml:space="preserve"><value>药膜损伤</value><comment>AppLocalizedPhrase.defectEmulsionDamage</comment></data>
+  <data name="developDefectClassMicroSpeck.Text" xml:space="preserve"><value>微小颗粒</value><comment>AppLocalizedPhrase.defectMicroSpeck</comment></data>
 </root>

@@ -1146,4 +1146,27 @@ Load a scanner from Library to scan film.</value>
   <data name="samplerMovePointer.Text" xml:space="preserve"><value>Move the pointer over the photo</value><comment>PixelSamplerLocalizedText[4]</comment></data>
   <data name="samplerEnabled.Text" xml:space="preserve"><value>Pixel sampler</value><comment>PixelSamplerLocalizedText[5]</comment></data>
   <data name="settingsLanguageRestart.Text" xml:space="preserve"><value>The new language appears after Negaflow restarts.</value><comment>Windows only: language applies on restart.</comment></data>
+  <data name="developDefectLayers.Text" xml:space="preserve"><value>GrainMend Layers</value><comment>AppLocalizedPhrase.defectLayers</comment></data>
+  <data name="developDefectLayerEnable.Value" xml:space="preserve"><value>Enable layer (apply repair)</value><comment>AppLocalizedPhrase.enableLayer</comment></data>
+  <data name="developDefectLayerDisable.Value" xml:space="preserve"><value>Disable layer (view before repair)</value><comment>AppLocalizedPhrase.disableLayer</comment></data>
+  <data name="developDefectLayerShowMask.Value" xml:space="preserve"><value>Show Mask</value><comment>AppLocalizedPhrase.showMask</comment></data>
+  <data name="developDefectLayerHideMask.Value" xml:space="preserve"><value>Hide Mask</value><comment>AppLocalizedPhrase.hideMask</comment></data>
+  <data name="developDefectLayerDelete.Value" xml:space="preserve"><value>Delete Layer</value><comment>AppLocalizedPhrase.deleteLayer</comment></data>
+  <data name="developDefectLayerStrength.Text" xml:space="preserve"><value>Strength</value><comment>AppLocalizedPhrase.strength</comment></data>
+  <data name="developDefectLayerDone.Content" xml:space="preserve"><value>Done</value><comment>AppLocalizedPhrase.done</comment></data>
+  <data name="developDefectLayerAutoFormat.Value" xml:space="preserve"><value>GrainMend · Auto · %d defects</value><comment>AppLocalizedPhrase.grainMendAutoEditTitleFormat</comment></data>
+  <data name="developDefectLayerGuidedFormat.Value" xml:space="preserve"><value>GrainMend · Guided · %d regions</value><comment>AppLocalizedPhrase.grainMendGuidedEditTitleFormat</comment></data>
+  <data name="developDefectLayerBrushFormat.Value" xml:space="preserve"><value>GrainMend · Brush · %d strokes</value><comment>AppLocalizedPhrase.grainMendBrushEditTitleFormat</comment></data>
+  <data name="developDefectLayerCloneFormat.Value" xml:space="preserve"><value>Clone stamp %dpx</value><comment>AppLocalizedPhrase.cloneStampEditTitleFormat</comment></data>
+  <data name="developDefectLayerInfraredFormat.Value" xml:space="preserve"><value>GrainMend · IR · %d defects</value><comment>AppLocalizedPhrase.grainMendIREditTitleFormat</comment></data>
+  <data name="developDefectLayerBrushSummary.Text" xml:space="preserve"><value>Custom region precision detect and repair</value><comment>AppLocalizedPhrase.brushEditSummary</comment></data>
+  <data name="developDefectLayerCloneSummary.Text" xml:space="preserve"><value>Clones pixels from the sampled source</value><comment>AppLocalizedPhrase.cloneStampEditSummary</comment></data>
+  <data name="developDefectLayerConfidenceFormat.Value" xml:space="preserve"><value>%@ · confidence %.0f%%</value><comment>AppLocalizedPhrase.confidenceSummaryFormat</comment></data>
+  <data name="developDefectClassDust.Text" xml:space="preserve"><value>Dust</value><comment>AppLocalizedPhrase.defectDust</comment></data>
+  <data name="developDefectClassPinhole.Text" xml:space="preserve"><value>Pinhole</value><comment>AppLocalizedPhrase.defectPinhole</comment></data>
+  <data name="developDefectClassScratchHorizontal.Text" xml:space="preserve"><value>Horizontal Scratch</value><comment>AppLocalizedPhrase.defectScratchHorizontal</comment></data>
+  <data name="developDefectClassScratchVertical.Text" xml:space="preserve"><value>Vertical Scratch</value><comment>AppLocalizedPhrase.defectScratchVertical</comment></data>
+  <data name="developDefectClassScratchDiagonal.Text" xml:space="preserve"><value>Diagonal Scratch</value><comment>AppLocalizedPhrase.defectScratchDiagonal</comment></data>
+  <data name="developDefectClassEmulsionDamage.Text" xml:space="preserve"><value>Emulsion Damage</value><comment>AppLocalizedPhrase.defectEmulsionDamage</comment></data>
+  <data name="developDefectClassMicroSpeck.Text" xml:space="preserve"><value>Micro Specks</value><comment>AppLocalizedPhrase.defectMicroSpeck</comment></data>
 </root>
