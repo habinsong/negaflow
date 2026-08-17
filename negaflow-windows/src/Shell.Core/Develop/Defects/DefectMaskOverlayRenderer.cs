@@ -58,6 +58,53 @@ public static class DefectMaskOverlayRenderer
     }
 
     /// <summary>
+    /// 검토 중인 후보를 분류색으로 그립니다. macOS <c>RegionDefectOverlay</c> 와 같은
+    /// 그림이며, 제외한 성분은 회색으로 남겨 무엇을 빼고 있는지 보이게 합니다.
+    /// </summary>
+    /// <param name="isExcluded">원본 정규 좌표 한 점이 제외됐는지.</param>
+    public static byte[]? RenderPreview(
+        LibraryFrameSnapshot frame,
+        int width,
+        int height,
+        IReadOnlyList<DefectPreviewComponent> preview,
+        Func<DefectPoint, bool> isExcluded)
+    {
+        ArgumentNullException.ThrowIfNull(frame);
+        ArgumentNullException.ThrowIfNull(preview);
+        ArgumentNullException.ThrowIfNull(isExcluded);
+        if (preview.Count == 0 ||
+            DefectDisplayLocator.Build(frame, width, height) is not { } locator)
+        {
+            return null;
+        }
+
+        byte[] bgra = new byte[checked(width * height * 4)];
+        DefectCanvas canvas = new(bgra, width, height);
+        foreach (DefectPreviewComponent component in preview)
+        {
+            DefectOverlayColor color = DefectClassPalette.ForComponent(
+                component.Classification,
+                component.Confidence);
+            foreach (DefectPoint point in component.Points)
+            {
+                if (!locator.TryLocate(point, out int x, out int y))
+                {
+                    continue;
+                }
+                canvas.FillSquare(
+                    x,
+                    y,
+                    PreviewPointSize,
+                    isExcluded(point) ? ExcludedColor : color);
+            }
+        }
+        return canvas.Touched ? bgra : null;
+    }
+
+    /// <summary>제외한 성분의 색입니다. 지우지 않고 흐리게 남깁니다.</summary>
+    private static readonly DefectOverlayColor ExcludedColor = new(115, 115, 115, 0.4);
+
+    /// <summary>
     /// macOS <c>drawRegion</c>: 미리보기 점마다 분류색 3×3 사각형. 확신이 불투명도가 됩니다.
     /// </summary>
     private static void DrawRegion(

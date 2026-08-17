@@ -167,7 +167,7 @@ public static class GrainMendRegionEdit
                 DefectEditSummaryKind.ClassBreakdown,
                 Breakdown(defects, acceptedPixels)),
             new DefectSize(sourceWidth, sourceHeight),
-            [])
+            Preview(defects, width, height, sourceWidth, sourceHeight, roiX, roiY, roiWidth, roiHeight))
         {
             RegionMask = new DefectMask(false, rgba),
             // The catalog's region recipe is raw y-up while its bitmap rows remain
@@ -176,6 +176,61 @@ public static class GrainMendRegionEdit
             RegionWidth = storedWidth,
             RegionHeight = storedHeight,
         };
+    }
+
+    /// <summary>
+    /// 화면에 결함 자리를 그릴 점들입니다. macOS <c>previewComponents</c> 와 같이
+    /// <b>원본 정규 좌표(0~1, 좌상단 원점)</b>로 냅니다 — 검출 좌표 그대로 두면 회전·크롭이
+    /// 걸린 프레임에서 엉뚱한 자리에 그려집니다.
+    /// </summary>
+    private static IReadOnlyList<DefectPreviewComponent> Preview(
+        IReadOnlyList<GrainMendComponent>? defects,
+        int width,
+        int height,
+        uint sourceWidth,
+        uint sourceHeight,
+        uint roiX,
+        uint roiY,
+        uint roiWidth,
+        uint roiHeight)
+    {
+        if (defects is not { Count: > 0 } || width <= 0 || height <= 0 ||
+            sourceWidth == 0U || sourceHeight == 0U)
+        {
+            return [];
+        }
+
+        // 검출 이미지는 ROI 를 줄인 것입니다. 화소 좌표를 ROI 안의 원본 화소로 되돌린 뒤
+        // 원본 크기로 나눕니다.
+        double scaleX = (double)roiWidth / width;
+        double scaleY = (double)roiHeight / height;
+        List<DefectPreviewComponent> preview = new(defects.Count);
+        foreach (GrainMendComponent defect in defects)
+        {
+            IReadOnlyList<GrainMendPreviewPoint> points = defect.Points;
+            if (points.Count == 0)
+            {
+                continue;
+            }
+            DefectPoint[] mapped = new DefectPoint[points.Count];
+            for (int index = 0; index < mapped.Length; ++index)
+            {
+                mapped[index] = new DefectPoint(
+                    Math.Clamp(
+                        (roiX + ((points[index].X + 0.5) * scaleX)) / sourceWidth,
+                        0.0,
+                        1.0),
+                    Math.Clamp(
+                        (roiY + ((points[index].Y + 0.5) * scaleY)) / sourceHeight,
+                        0.0,
+                        1.0));
+            }
+            preview.Add(new DefectPreviewComponent(
+                Map(defect.Classification),
+                defect.Confidence,
+                mapped));
+        }
+        return preview;
     }
 
     /// <summary>
