@@ -13,7 +13,8 @@ internal static class ShellDiagnostics
     {
         return CatalogSeedDiagnostics.TryRun(args, out exitCode) ||
             CatalogInspectionDiagnostics.TryRun(args, out exitCode) ||
-            DevelopPipelineDiagnostics.TryRun(args, out exitCode);
+            DevelopPipelineDiagnostics.TryRun(args, out exitCode) ||
+            DefectRoundTripDiagnostics.TryRun(args, out exitCode);
     }
 
 }
