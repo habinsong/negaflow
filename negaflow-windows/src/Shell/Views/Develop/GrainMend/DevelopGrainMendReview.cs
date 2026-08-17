@@ -50,6 +50,32 @@ internal sealed class DevelopGrainMendReview
 
     internal void HideOverlay() => view.canvas?.HideDefectOverlay();
 
+    /// <summary>
+    /// macOS <c>BrushOverlay</c>: 모아 둔 칠과 진행 중인 획을 빨강으로 캔버스에 올립니다.
+    /// 칠이 없으면 덮개를 내립니다.
+    /// </summary>
+    internal void RenderPaintOverlay()
+    {
+        if (view.panel?.SelectedFrame is not { } frame || view.canvas?.PreviewBitmap is null)
+        {
+            return;
+        }
+        int width = view.canvas.PreviewBitmap.PixelWidth;
+        int height = view.canvas.PreviewBitmap.PixelHeight;
+        if (GrainMendPaintOverlayRenderer.Render(
+                frame,
+                width,
+                height,
+                view.grainMend.Strokes.PaintedStrokes,
+                view.grainMend.Strokes.InProgressStroke,
+                view.grainMend.Strokes.BrushThickness) is not { } bgra)
+        {
+            HideOverlay();
+            return;
+        }
+        view.canvas.ShowDefectPixels(bgra, width, height);
+    }
+
     internal void ShowOverlay(DefectEditItem edit)
     {
         if (view.panel?.SelectedFrame is not { } frame || view.canvas?.PreviewBitmap is null)

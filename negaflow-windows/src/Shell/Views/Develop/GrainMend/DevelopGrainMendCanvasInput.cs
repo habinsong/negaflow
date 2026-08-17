@@ -246,7 +246,14 @@ internal sealed class DevelopGrainMendCanvasInput
         {
             return false;
         }
-        return view.grainMend.Strokes.Continue(new DefectPoint(point.X, point.Y));
+        if (!view.grainMend.Strokes.Continue(new DefectPoint(point.X, point.Y)))
+        {
+            return false;
+        }
+        // macOS `BrushOverlay` 는 칠하는 동안 빨강으로 보여 줍니다 — 획이 끝나야 보이면
+        // 어디를 칠했는지 모르고 칠합니다.
+        view.review.RenderPaintOverlay();
+        return true;
     }
 
     private bool TryFinishStroke(PointerRoutedEventArgs args)
@@ -261,9 +268,17 @@ internal sealed class DevelopGrainMendCanvasInput
             view.grainMend.Strokes.CancelStroke();
             return true;
         }
+        bool wasBrush = view.grainMend.Strokes.Tool == GrainMendTool.Brush;
         if (!view.grainMend.Strokes.Finish(view.panel, out LibraryFrameError error))
         {
             return false;
+        }
+        // 브러시는 recipe 로 가지 않고 칠로 남습니다(macOS 와 같은 "모았다가 적용").
+        if (wasBrush)
+        {
+            view.review.RenderPaintOverlay();
+            view.chrome.Update();
+            return true;
         }
         if (error == LibraryFrameError.None)
         {

@@ -14,6 +14,13 @@ public static class DefectClassPalette
     /// <summary>macOS <c>Color.orange</c>. 브러시·복제 도장 경로도 이 색을 씁니다.</summary>
     public static readonly DefectOverlayColor Orange = new(255, 149, 0, 1.0);
 
+    /// <summary>
+    /// macOS <c>BrushOverlay.paint</c> 의 <c>Color.red.opacity(0.45)</c> 입니다. 칠하는
+    /// 동안 보이는 라이브 색이며, 적용된 레이어를 그리는 주황(<see cref="Orange"/> 0.4)과
+    /// 다릅니다 — macOS 도 두 표면이 서로 다른 색을 씁니다.
+    /// </summary>
+    public static readonly DefectOverlayColor BrushPaint = new(255, 59, 48, 0.45);
+
     public static DefectOverlayColor For(DefectClassification classification) =>
         classification switch
         {

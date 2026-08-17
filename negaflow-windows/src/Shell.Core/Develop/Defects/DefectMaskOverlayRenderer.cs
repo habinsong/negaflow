@@ -213,7 +213,7 @@ public static class DefectMaskOverlayRenderer
     /// 점 하나면 원, 여럿이면 이은 선입니다. 선은 표시 공간에서 굵기만큼의 원을 따라 찍어
     /// 그립니다 — macOS 의 <c>lineCap: .round</c> 와 같은 모양입니다.
     /// </summary>
-    private static void DrawPath(
+    internal static void DrawPath(
         DefectCanvas canvas,
         DefectDisplayLocator locator,
         IReadOnlyList<DefectPoint> points,
@@ -244,7 +244,7 @@ public static class DefectMaskOverlayRenderer
         }
     }
 
-    private static void Stamp(
+    internal static void Stamp(
         DefectCanvas canvas,
         (int X, int Y) from,
         (int X, int Y) to,
