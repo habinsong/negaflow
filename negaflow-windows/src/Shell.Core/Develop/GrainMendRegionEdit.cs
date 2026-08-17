@@ -30,6 +30,11 @@ public static class GrainMendRegionEdit
     /// <param name="roiY">검출 원본 사각형의 좌상단 y입니다.</param>
     /// <param name="roiWidth">검출 원본 사각형의 폭입니다.</param>
     /// <param name="roiHeight">검출 원본 사각형의 높이입니다.</param>
+    /// <summary>
+    /// 수리 커널이 받는 손상 가중치의 최댓값입니다. 커널은 `weight > 8` 을 손상으로 봅니다.
+    /// </summary>
+    public const byte DefectMaskWeight = 255;
+
     public static DefectEditItem? From(
         ReadOnlySpan<byte> mask,
         int width,
@@ -102,6 +107,20 @@ public static class GrainMendRegionEdit
             return null;
         }
 
+        // 검출기는 "받아들인 화소"를 1 로 표시하는 플래그 마스크를 냅니다. 수리 커널은 0~255
+        // 가중치를 받고 `weight > 8` 인 화소만 손상으로 봅니다 — 플래그를 그대로 넘기면
+        // 최댓값이 1 이라 한 화소도 고쳐지지 않습니다(실측: nonzero 295,756 · peak 1 ·
+        // over_gate 0). 계조를 담아 오는 마스크는 그대로 두고, 플래그일 때만 올립니다.
+        byte peak = 0;
+        foreach (byte sample in mask)
+        {
+            if (sample > peak)
+            {
+                peak = sample;
+            }
+        }
+        bool flagMask = peak != 0 && peak <= 1;
+
         int storedWidth = right - left;
         int storedHeight = bottom - top;
         byte[] rgba = new byte[checked(storedWidth * storedHeight * 4)];
@@ -116,11 +135,12 @@ public static class GrainMendRegionEdit
                 {
                     continue;
                 }
+                byte weight = flagMask ? DefectMaskWeight : value;
                 int target = ((y * storedWidth) + x) * 4;
-                rgba[target] = value;
-                rgba[target + 1] = value;
-                rgba[target + 2] = value;
-                rgba[target + 3] = value;
+                rgba[target] = weight;
+                rgba[target + 1] = weight;
+                rgba[target + 2] = weight;
+                rgba[target + 3] = weight;
             }
         }
 

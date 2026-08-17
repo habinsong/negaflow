@@ -113,6 +113,25 @@ DefectRegionStageResult apply_defect_region_edits(
         for (const DefectRegionEdit& edit : parameters.edits) {
             // 어느 조건이 region 을 건너뛰게 하는지 밖에서 물어볼 수 없었습니다.
             if (region_debug_enabled()) {
+                // 커널과 같은 기준으로 셉니다. 0 이면 마스크가 손상을 표시하지 못한 것입니다.
+                std::size_t nonzero = 0U;
+                std::size_t over_gate = 0U;
+                std::uint8_t peak = 0U;
+                for (const std::uint8_t value : edit.mask) {
+                    if (value != 0U) {
+                        ++nonzero;
+                    }
+                    if (value > 8U) {
+                        ++over_gate;
+                    }
+                    peak = std::max(peak, value);
+                }
+                std::fprintf(
+                    stderr,
+                    "[nega-region-mask] nonzero=%llu over_gate=%llu peak=%u\n",
+                    static_cast<unsigned long long>(nonzero),
+                    static_cast<unsigned long long>(over_gate),
+                    static_cast<unsigned>(peak));
                 std::fprintf(
                     stderr,
                     "[nega-region] enabled=%d strength=%.6f roi=%llux%llu+%llu+%llu "
