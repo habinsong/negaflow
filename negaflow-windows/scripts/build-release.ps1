@@ -43,6 +43,28 @@ if ((Test-Path -LiteralPath $installerPath) -and -not $Overwrite) {
     throw "Installer already exists: $installerPath. Pass -Overwrite to replace this release artifact."
 }
 
+# makeappx 는 Windows SDK 와 함께 온다. 여러 SDK 가 깔려 있으면 가장 높은 버전을 쓴다.
+function Resolve-MakeAppx {
+    $command = Get-Command makeappx -ErrorAction SilentlyContinue
+    if ($null -ne $command) {
+        return $command.Source
+    }
+    $architectureFolder = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64' } else { 'x64' }
+    $binRoot = 'C:\Program Files (x86)\Windows Kits\10\bin'
+    if (Test-Path -LiteralPath $binRoot) {
+        $candidate = Get-ChildItem -LiteralPath $binRoot -Directory -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -match '^10\.' } |
+            Sort-Object { [version]$_.Name } -Descending |
+            ForEach-Object { Join-Path $_.FullName "$architectureFolder\makeappx.exe" } |
+            Where-Object { Test-Path -LiteralPath $_ } |
+            Select-Object -First 1
+        if ($null -ne $candidate) {
+            return $candidate
+        }
+    }
+    throw 'makeappx.exe was not found. Install the Windows 10/11 SDK first.'
+}
+
 $makensis = Get-Command makensis -ErrorAction SilentlyContinue
 if ($null -eq $makensis -and (Test-Path -LiteralPath 'C:\Program Files (x86)\NSIS\makensis.exe')) {
     $makensis = Get-Item -LiteralPath 'C:\Program Files (x86)\NSIS\makensis.exe'
@@ -58,7 +80,7 @@ else {
 }
 
 $payloadDirectory = Join-Path $OutputDirectory ('.payload-' + [Guid]::NewGuid().ToString('N'))
-$managedPublishDirectory = Join-Path $OutputDirectory ('.managed-publish-' + [Guid]::NewGuid().ToString('N'))
+$packageDirectory = Join-Path $OutputDirectory ('.msix-' + [Guid]::NewGuid().ToString('N'))
 $shellProject = Join-Path $projectRoot 'src\Shell\Negaflow.Shell.csproj'
 $nativeLibrary = Join-Path $projectRoot "out\build\native\$nativePreset\Release\Negaflow.Native.dll"
 $installerScript = Join-Path $projectRoot 'Installer\windows\negaflow.nsi'
@@ -77,43 +99,48 @@ try {
 
     # 설치본은 패키지 ID가 필요한 WinUI XAML을 사용하므로 unsigned loose package
     # 레이아웃을 만든다. NSIS가 파일을 배치하고 현재 사용자에게 manifest를 등록한다.
+    #
+    # 레이아웃은 빌드가 만든 unsigned MSIX를 풀어서 얻는다. `dotnet publish` 산출물에는
+    # AppxManifest.xml 과 Assets\ 가 없고, 저장소의 Package.appxmanifest 는 아직
+    # `$targetnametoken$`/`$targetentrypoint$` 토큰을 들고 있어 그대로 쓸 수 없다. MSIX 를
+    # 만들어 푸는 경로만이 토큰이 해석된 manifest 를 손으로 짜맞추지 않고 얻는 길이다.
     & dotnet clean $shellProject --configuration Release -p:Platform=$Architecture `
         -p:WindowsPackageType=MSIX -p:EnableMsixTooling=true --verbosity minimal
     if ($LASTEXITCODE -ne 0) {
         throw "Managed Release clean failed for '$Architecture'."
     }
 
-    & dotnet publish $shellProject --configuration Release --runtime $runtimeIdentifier --self-contained true `
+    & dotnet build $shellProject --configuration Release --runtime $runtimeIdentifier --self-contained true `
         -p:Platform=$Architecture -p:Version=$Version -p:WindowsAppSDKSelfContained=false `
         -p:WindowsPackageType=MSIX -p:EnableMsixTooling=true `
-        -p:AppxPackageSigningEnabled=false -p:GenerateAppxPackageOnBuild=false `
-        -p:PublishSingleFile=false -p:PublishReadyToRun=false --output $managedPublishDirectory
+        -p:AppxPackageSigningEnabled=false -p:GenerateAppxPackageOnBuild=true `
+        -p:AppxBundle=Never -p:UapAppxPackageBuildMode=SideloadOnly `
+        -p:AppxPackageDir=$packageDirectory\
     if ($LASTEXITCODE -ne 0) {
         throw "Packaged Release build failed for '$runtimeIdentifier'."
     }
 
-    $propertyOutput = (& dotnet msbuild $shellProject -nologo `
-        -p:Configuration=Release -p:Platform=$Architecture -p:RuntimeIdentifier=$runtimeIdentifier `
-        -getProperty:TargetDir) -join "`n"
+    # Dependencies\ 아래에는 Windows App Runtime 프레임워크 패키지가 함께 놓인다. 앱
+    # 패키지만 골라야 하므로 그 하위 폴더는 제외한다.
+    $appPackages = @(Get-ChildItem -LiteralPath $packageDirectory -Recurse -Filter '*.msix' -File |
+        Where-Object { $_.FullName -notmatch '\\Dependencies\\' })
+    if ($appPackages.Count -ne 1) {
+        throw "Expected exactly one application MSIX in '$packageDirectory' but found $($appPackages.Count)."
+    }
+    $appPackage = $appPackages[0].FullName
+
+    $makeappxPath = Resolve-MakeAppx
+    & $makeappxPath unpack /p $appPackage /d $payloadDirectory /o /nv
     if ($LASTEXITCODE -ne 0) {
-        throw "Could not resolve the managed TargetDir for '$Architecture'."
+        throw "Could not unpack the application MSIX: $appPackage"
     }
-    $trimmedPropertyOutput = $propertyOutput.Trim()
-    $targetDirectory = if ($trimmedPropertyOutput.StartsWith('{')) {
-        ($trimmedPropertyOutput | ConvertFrom-Json).Properties.TargetDir
+
+    # 블록 맵은 압축된 패키지의 무결성 목록이다. 느슨한 레이아웃을 등록할 때는 쓰이지
+    # 않으므로 설치본에 싣지 않는다.
+    $blockMap = Join-Path $payloadDirectory 'AppxBlockMap.xml'
+    if (Test-Path -LiteralPath $blockMap) {
+        Remove-Item -LiteralPath $blockMap -Force
     }
-    else {
-        $trimmedPropertyOutput
-    }
-    $appxLayout = Join-Path $targetDirectory 'AppX'
-    if (-not (Test-Path -LiteralPath (Join-Path $appxLayout 'AppxManifest.xml'))) {
-        throw "Packaged layout is missing: $appxLayout"
-    }
-    New-Item -ItemType Directory -Force -Path $payloadDirectory | Out-Null
-    Get-ChildItem -LiteralPath $appxLayout -Force |
-        Copy-Item -Destination $payloadDirectory -Recurse -Force
-    Get-ChildItem -LiteralPath $managedPublishDirectory -Force |
-        Copy-Item -Destination $payloadDirectory -Recurse -Force
 
     # Package identity version has four fields and must follow the release version.
     $manifestPath = Join-Path $payloadDirectory 'AppxManifest.xml'
@@ -183,7 +210,7 @@ finally {
     if (Test-Path -LiteralPath $payloadDirectory) {
         Remove-Item -LiteralPath $payloadDirectory -Recurse -Force
     }
-    if (Test-Path -LiteralPath $managedPublishDirectory) {
-        Remove-Item -LiteralPath $managedPublishDirectory -Recurse -Force
+    if (Test-Path -LiteralPath $packageDirectory) {
+        Remove-Item -LiteralPath $packageDirectory -Recurse -Force
     }
 }
