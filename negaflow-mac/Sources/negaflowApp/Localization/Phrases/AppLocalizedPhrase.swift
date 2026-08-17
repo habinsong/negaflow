@@ -481,6 +481,7 @@ enum AppLocalizedPhrase: CaseIterable {
     case proofCopyHelp
     case dragDefectRegion
     case undo
+    case redo
     case undoDefectRemovalHelp
     case defectsCountExcludedFormat
     case toneCurveEditorHelp

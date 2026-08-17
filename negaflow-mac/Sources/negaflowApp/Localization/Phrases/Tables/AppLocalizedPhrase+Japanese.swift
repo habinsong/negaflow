@@ -533,6 +533,7 @@ extension AppLocalization {
         .proofCopyHelp: "選択した校正プロファイルに関連付けた非破壊コピーを作成します",
         .dragDefectRegion: "ゴミ・キズのある範囲をドラッグ",
         .undo: "取り消す",
+        .redo: "やり直す",
         .undoDefectRemovalHelp: "直前のゴミ・キズ除去を取り消します",
         .defectsCountExcludedFormat: "ゴミ・キズ %d件（除外 %d件）",
         .toneCurveEditorHelp: "クリックでポイントを追加 · ドラッグで移動 · ダブルクリックで削除",

@@ -174,7 +174,17 @@ final class AppModel: ObservableObject {
     var frameObservations: [UUID: AnyCancellable] = [:]
     var libraryFrameRecordCache: [UUID: LibraryFrameRecord] = [:]
     var dirtyLibraryFrameRecordIDs: Set<UUID> = []
-    weak var catalogUndoManager: UndoManager?
+    /// 앱이 직접 소유하는 되돌리기 히스토리. 창 환경의 UndoManager(@Environment(\.undoManager))는
+    /// 화면·창 구성에 따라 없거나 교체되고, weak 로 물고 있으면 등록만 된 채 조용히 사라진다 —
+    /// "되돌릴 수 있습니다"라고 안내하고도 ⌘Z 가 아무 일도 하지 않던 원인이다.
+    var catalogUndoManager: UndoManager? = UndoManager()
+    /// 사진별 편집 되돌리기 기준점(필름 종류·프리셋·현상 파라미터·기하 변형).
+    var frameEditBaselines: [UUID: FrameEditSnapshot] = [:]
+    var frameEditCoalesceTasks: [UUID: Task<Void, Never>] = [:]
+    var isApplyingFrameEditHistory = false
+    var printSettingsHistoryCancellables = Set<AnyCancellable>()
+    var printSettingsCoalesceTask: Task<Void, Never>?
+    var isApplyingPrintSettingsHistory = false
 
     @Published var copiedDevelopSettings: DevelopSettingsSnapshot?
     @Published var snapshotCompareState: SnapshotCompareState?
@@ -292,6 +302,7 @@ final class AppModel: ObservableObject {
             objectWillChange.send()
         }
         .store(in: &storeCancellables)
+        observePrintWorkspaceSettingsHistory()
         self.printLayoutTemplateStore.objectWillChange.sink { [objectWillChange] _ in
             objectWillChange.send()
         }

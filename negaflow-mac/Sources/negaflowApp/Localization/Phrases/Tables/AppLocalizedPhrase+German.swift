@@ -533,6 +533,7 @@ extension AppLocalization {
         .proofCopyHelp: "Erstellt eine nicht-destruktive Kopie für das gewählte Proof-Profil",
         .dragDefectRegion: "Über den Defektbereich ziehen",
         .undo: "Widerrufen",
+        .redo: "Wiederholen",
         .undoDefectRemovalHelp: "Macht die letzte Defektkorrektur rückgängig",
         .defectsCountExcludedFormat: "%d Defekte (%d ausgeschlossen)",
         .toneCurveEditorHelp: "Klicken fügt Punkte hinzu · Ziehen verschiebt · Doppelklick löscht",

@@ -533,6 +533,7 @@ extension AppLocalization {
         .proofCopyHelp: "创建与所选校样配置文件关联的非破坏性副本",
         .dragDefectRegion: "在瑕疵区域上拖动",
         .undo: "撤销",
+        .redo: "重做",
         .undoDefectRemovalHelp: "撤销上一次瑕疵修复",
         .defectsCountExcludedFormat: "%d 处瑕疵（已排除 %d 处）",
         .toneCurveEditorHelp: "点按添加节点 · 拖动移动 · 双击删除",

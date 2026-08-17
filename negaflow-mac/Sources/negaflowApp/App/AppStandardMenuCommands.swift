@@ -47,6 +47,22 @@ struct AppStandardMenuCommands: Commands {
             .workflowKeyboardShortcut(model.shortcut(for: .exportPhoto))
         }
 
+        // 되돌리기/다시 실행은 앱 전체에서 이 두 항목만 받는다. 화면·도구별 ⌘Z 를 따로 두면
+        // 마지막에 한 일이 아니라 그 화면이 아는 일을 되돌리게 된다.
+        // 활성/비활성을 여기서 계산하지 않는 이유: UndoManager 의 스택 변화는 발행되지 않아
+        // 메뉴가 옛 상태로 굳는다. 되돌릴 것이 없으면 동작이 조용히 아무 일도 하지 않는다.
+        CommandGroup(replacing: .undoRedo) {
+            Button(model.text(AppLocalizedPhrase.undo)) {
+                model.performUndo()
+            }
+            .keyboardShortcut("z", modifiers: .command)
+
+            Button(model.text(AppLocalizedPhrase.redo)) {
+                model.performRedo()
+            }
+            .keyboardShortcut("z", modifiers: [.command, .shift])
+        }
+
         CommandGroup(after: .pasteboard) {
             Button(model.text(.commandCopyDevelopSettings)) {
                 model.performWorkflowShortcutAction(.copyDevelopSettings)

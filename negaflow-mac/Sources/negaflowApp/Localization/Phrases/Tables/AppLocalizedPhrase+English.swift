@@ -533,6 +533,7 @@ extension AppLocalization {
             .proofCopyHelp: "Create a non-destructive copy tied to the selected proof profile",
             .dragDefectRegion: "Drag over a defect area",
             .undo: "Undo",
+            .redo: "Redo",
             .undoDefectRemovalHelp: "Undo the last defect removal edit",
             .defectsCountExcludedFormat: "%d defects (%d excluded)",
             .toneCurveEditorHelp: "Click to add points · drag to move · double-click to delete",

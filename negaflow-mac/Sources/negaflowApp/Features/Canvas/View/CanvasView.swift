@@ -229,18 +229,8 @@ struct CanvasView: View {
             }
         }
         .modifier(BeforeAfterToggleRequestModifier(model: model, action: toggleDevelopedShortcut))
-        .background {
-            Group {
-                // ⌘Z: 마지막 결함 제거 복구(다단계). 숨김 버튼으로 단축키만 받는다.
-                Button("") { model.undoDefects(frame) }
-                    .keyboardShortcut("z", modifiers: .command)
-                    .disabled(!frame.canUndoDefects)
-
-            }
-            .opacity(0)
-            .frame(width: 0, height: 0)
-            .accessibilityHidden(true)
-        }
+        // ⌘Z/⇧⌘Z 는 편집 메뉴 한 곳에서만 받는다. 캔버스가 ⌘Z 를 가로채면 사진을 지운 직후의
+        // 되돌리기가 지운 사진이 아니라 지금 사진의 GrainMend 로 가 버린다.
     }
 
     /// 캔버스가 실제로 쓰는 픽셀 수를 모델에 반영한다.

@@ -533,6 +533,7 @@ extension AppLocalization {
         .proofCopyHelp: "Crée une copie non destructive liée au profil d’épreuve sélectionné",
         .dragDefectRegion: "Tracez un rectangle sur la zone du défaut",
         .undo: "Annuler",
+        .redo: "Rétablir",
         .undoDefectRemovalHelp: "Annule la dernière correction de défaut",
         .defectsCountExcludedFormat: "%d défauts (%d exclus)",
         .toneCurveEditorHelp: "Cliquez pour ajouter un point · glissez pour déplacer · double-cliquez pour supprimer",

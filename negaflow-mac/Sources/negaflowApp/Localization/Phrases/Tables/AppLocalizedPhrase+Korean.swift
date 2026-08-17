@@ -533,6 +533,7 @@ extension AppLocalization {
             .proofCopyHelp: "선택한 프루프 프로파일에 연결된 비파괴 사본 생성",
             .dragDefectRegion: "결함 영역을 드래그하세요",
             .undo: "되돌리기",
+            .redo: "다시 실행",
             .undoDefectRemovalHelp: "마지막 결함 제거 편집 취소",
             .defectsCountExcludedFormat: "결함 %d개 (제외 %d)",
             .toneCurveEditorHelp: "클릭으로 점 추가 · 드래그로 이동 · 더블클릭으로 삭제",

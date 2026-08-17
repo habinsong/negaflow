@@ -130,7 +130,6 @@ struct ContentView: View {
             await model.startApplication()
         }
         .onAppear {
-            model.catalogUndoManager = undoManager
             model.activeWorkspaceModule = selectedWorkspaceModule
             synchronizeDevelopInteractionScope()
             model.refreshExternalBackupDestinationStatus()
