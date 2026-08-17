@@ -16,6 +16,7 @@ public sealed partial class DevelopGrainMendHud : UserControl
 {
     private bool updatingSensitivity;
     private bool updatingMicroSpecks;
+    private bool updatingBrushThickness;
 
     public DevelopGrainMendHud() => InitializeComponent();
 
@@ -33,6 +34,21 @@ public sealed partial class DevelopGrainMendHud : UserControl
 
     /// <summary>칩 하나를 눌렀습니다. 그 종류 전체를 제외↔포함합니다.</summary>
     public event Action<DefectClassification>? ClassToggled;
+
+    /// <summary>macOS <c>BrushControlBar</c> 의 굵기 슬라이더입니다.</summary>
+    public event Action<double>? BrushThicknessChanged;
+
+    /// <summary>macOS <c>onUndo</c> — 마지막으로 칠한 획 하나를 지웁니다.</summary>
+    public event Action? BrushUndoRequested;
+
+    /// <summary>macOS <c>onClear</c> — 칠한 것을 전부 지웁니다.</summary>
+    public event Action? BrushClearRequested;
+
+    /// <summary>macOS <c>onResetAll</c> — 이미 적용된 브러시 편집을 지웁니다.</summary>
+    public event Action? BrushResetRequested;
+
+    /// <summary>macOS <c>onApply</c> — 칠한 것을 recipe 로 보냅니다.</summary>
+    public event Action? BrushApplyRequested;
 
     /// <summary>
     /// 지금 상태를 화면에 옮깁니다. 여는 순서와 여백은 macOS 컨트롤 바와 같습니다.
@@ -93,6 +109,78 @@ public sealed partial class DevelopGrainMendHud : UserControl
 
         Localize();
         UpdateChips(state, classNames);
+    }
+
+    /// <summary>
+    /// macOS <c>CanvasHUDLayer</c>: 브러시 도구를 켜면 컨트롤 바가 위 가운데에 섭니다.
+    /// 단추가 열리는 조건은 <c>BrushControlBar</c> 의 <c>disabled</c> 와 같습니다 —
+    /// 되돌리기·지우기·제거는 칠한 것이 있어야, 초기화는 적용된 것이 있어야 열립니다.
+    /// </summary>
+    public void UpdateBrushBar(
+        bool visible,
+        double thickness,
+        bool hasPaintedStrokes,
+        bool hasAppliedBrushEdits,
+        bool isBusy)
+    {
+        BrushCapsule.Visibility = Show(visible);
+        if (!visible)
+        {
+            return;
+        }
+        if (HudRoot.Visibility != Visibility.Visible)
+        {
+            HudRoot.Visibility = Visibility.Visible;
+        }
+        updatingBrushThickness = true;
+        BrushThicknessSlider.Value = thickness;
+        updatingBrushThickness = false;
+        BrushThicknessSlider.IsEnabled = !isBusy;
+        BrushUndoButton.IsEnabled = hasPaintedStrokes && !isBusy;
+        BrushClearButton.IsEnabled = hasPaintedStrokes && !isBusy;
+        BrushResetButton.IsEnabled = hasAppliedBrushEdits && !isBusy;
+        BrushApplyButton.IsEnabled = hasPaintedStrokes && !isBusy;
+        BrushApplyText.Text = AppResources.Get("developGrainMendRemove", "Content");
+    }
+
+    private void OnBrushThicknessChanged(
+        object sender,
+        RangeBaseValueChangedEventArgs args)
+    {
+        _ = sender;
+        if (updatingBrushThickness)
+        {
+            return;
+        }
+        BrushThicknessChanged?.Invoke(args.NewValue);
+    }
+
+    private void OnBrushUndoClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        BrushUndoRequested?.Invoke();
+    }
+
+    private void OnBrushClearClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        BrushClearRequested?.Invoke();
+    }
+
+    private void OnBrushResetClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        BrushResetRequested?.Invoke();
+    }
+
+    private void OnBrushApplyClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        BrushApplyRequested?.Invoke();
     }
 
     /// <summary>말이 바뀌면 다시 짓습니다. macOS 도 표시 시점에 현재 언어로 짓습니다.</summary>

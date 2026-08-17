@@ -93,6 +93,13 @@ internal sealed class DevelopGrainMendChrome
             view.options.GetMicroSpecks(automatic),
             view.isRemovingDefects,
             DefectLayerTextFactory.ClassNames());
+        // macOS `CanvasHUDLayer`: 브러시 도구를 켜면 브러시 컨트롤 바가 섭니다.
+        hud.UpdateBrushBar(
+            view.grainMend.Strokes.Tool == GrainMendTool.Brush,
+            view.grainMend.Strokes.BrushThickness,
+            view.grainMend.Strokes.HasPaintedStrokes,
+            card.BrushResetEnabled,
+            view.isRemovingDefects);
     }
 
     /// <summary>

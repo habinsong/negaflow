@@ -5,13 +5,18 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:Negaflow.Shell.Views.Controls">
 
+<!--
+    카드가 보이는지는 인스펙터 탭이 정합니다(DevelopInspectorChrome 이 이 UserControl 의
+    Visibility 를 켭니다). 이 안쪽 Border 까지 Collapsed 로 두면 탭을 눌러도 빈 자리만
+    보이고, 아무도 이것을 다시 켜지 않았습니다 — 베이스 탭이 "눌러도 아무 일도 없다"던
+    이유입니다.
+-->
 <Border
     x:Name="BaseControlCard"
     HorizontalAlignment="Stretch"
     Padding="14"
     Background="{ThemeResource NegaflowCardBrush}"
-    CornerRadius="14"
-    Visibility="Collapsed">
+    CornerRadius="14">
     <StackPanel HorizontalAlignment="Stretch" Spacing="12">
         <Grid>
             <Grid.ColumnDefinitions>

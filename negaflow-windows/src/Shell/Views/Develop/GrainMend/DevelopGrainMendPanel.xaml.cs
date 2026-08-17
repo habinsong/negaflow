@@ -82,6 +82,60 @@ public sealed partial class DevelopGrainMendPanel : UserControl
         hud.CancelRequested += () => review.CancelPending();
         hud.RemoveRequested += OnHudRemoveRequested;
         hud.ClassToggled += OnHudClassToggled;
+        hud.BrushThicknessChanged += OnHudBrushThicknessChanged;
+        hud.BrushUndoRequested += OnHudBrushUndoRequested;
+        hud.BrushClearRequested += OnHudBrushClearRequested;
+        hud.BrushResetRequested += () => review.RemoveEdits(DefectEditKind.Brush);
+        hud.BrushApplyRequested += OnHudBrushApplyRequested;
+    }
+
+    /// <summary>
+    /// macOS 굵기 슬라이더는 진행 중인 획에도 곧바로 반영됩니다 — 값만 저장하고 오버레이를
+    /// 다시 그립니다.
+    /// </summary>
+    private void OnHudBrushThicknessChanged(double value)
+    {
+        grainMend.Strokes.BrushThickness = value;
+        review.RenderPaintOverlay();
+        chrome.Update();
+    }
+
+    private void OnHudBrushUndoRequested()
+    {
+        if (!grainMend.Strokes.UndoLastPaintedStroke())
+        {
+            return;
+        }
+        review.RenderPaintOverlay();
+        chrome.Update();
+    }
+
+    private void OnHudBrushClearRequested()
+    {
+        if (!grainMend.Strokes.ClearPaintedStrokes())
+        {
+            return;
+        }
+        review.RenderPaintOverlay();
+        chrome.Update();
+    }
+
+    /// <summary>
+    /// macOS <c>onApply</c>: 모아 둔 칠을 recipe 로 보냅니다. 그때에만 현상이 다시 돕니다.
+    /// </summary>
+    private void OnHudBrushApplyRequested()
+    {
+        if (panel is null ||
+            !grainMend.Strokes.ApplyPaintedStrokes(panel, out LibraryFrameError error))
+        {
+            return;
+        }
+        review.RenderPaintOverlay();
+        chrome.Update();
+        if (error == LibraryFrameError.None)
+        {
+            RequestPreview();
+        }
     }
 
     private void OnHudSensitivityChanged(double value)

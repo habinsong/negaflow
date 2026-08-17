@@ -5,14 +5,17 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:Negaflow.Shell.Views.Controls">
 
+<!--
+    베이스 카드와 같은 이유로 안쪽 Border 는 Collapsed 로 두지 않습니다 — 편집 탭이 이
+    UserControl 을 켜도 안쪽이 닫혀 있으면 크롭·회전 컨트롤이 아예 나오지 않습니다.
+-->
 <Border
     x:Name="GeometryControlCard"
     HorizontalAlignment="Stretch"
     Padding="14"
     AutomationProperties.AutomationId="negaflow.develop.geometry"
     Background="{ThemeResource NegaflowCardBrush}"
-    CornerRadius="14"
-    Visibility="Collapsed">
+    CornerRadius="14">
     <StackPanel HorizontalAlignment="Stretch" Spacing="12">
         <Grid>
             <Grid.ColumnDefinitions>

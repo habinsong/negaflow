@@ -207,6 +207,105 @@
             </StackPanel>
         </Border>
 
+        <!--
+            macOS Features/Defects/Brush/BrushControlBar.swift — 브러시 도구를 켜면 검출
+            캡슐 대신 이것이 위 가운데에 섭니다(CanvasHUDLayer 도 .padding(.top, 12)).
+            글리프: 브러시는 결함 탭 머리와 같은 E771, 굵기는 민감도 슬라이더와 같은 E9E9,
+            되돌리기 E7A7, 지우기 E74D, 초기화(eraser) E75C, 제거(bandage) E90F.
+        -->
+        <Border
+            x:Name="BrushCapsule"
+            Margin="0,12,0,0"
+            Padding="12,8"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Top"
+            AutomationProperties.AutomationId="negaflow.canvas.grainmend.brush-bar"
+            Background="{ThemeResource NegaflowPanelBrush}"
+            BorderBrush="{ThemeResource NegaflowDividerBrush}"
+            BorderThickness="1"
+            CornerRadius="18"
+            Visibility="Collapsed">
+            <!-- macOS HStack(spacing: 10) -->
+            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                <!-- macOS Image(systemName: "paintbrush.pointed.fill").foregroundStyle(.red) -->
+                <FontIcon
+                    VerticalAlignment="Center"
+                    FontSize="14"
+                    Foreground="#FFFF3B30"
+                    Glyph="&#xE771;" />
+                <!-- macOS HStack(spacing: 6) { lineweight, Slider(0.004...0.06, width: 110) } -->
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <FontIcon
+                        VerticalAlignment="Center"
+                        FontSize="11"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Glyph="&#xE9E9;" />
+                    <Slider
+                        x:Name="BrushThicknessSlider"
+                        Width="110"
+                        VerticalAlignment="Center"
+                        Minimum="0.004"
+                        Maximum="0.06"
+                        StepFrequency="0.001"
+                        SmallChange="0.001"
+                        LargeChange="0.005"
+                        AutomationProperties.AutomationId="negaflow.canvas.grainmend.brush-thickness"
+                        IsThumbToolTipEnabled="False"
+                        ValueChanged="OnBrushThicknessChanged" />
+                </StackPanel>
+                <Border
+                    Width="1"
+                    Height="16"
+                    VerticalAlignment="Center"
+                    Background="{ThemeResource NegaflowDividerBrush}" />
+                <!-- macOS Button { Image(systemName: "arrow.uturn.backward") } -->
+                <Button
+                    x:Name="BrushUndoButton"
+                    VerticalAlignment="Center"
+                    AutomationProperties.AutomationId="negaflow.canvas.grainmend.brush-undo"
+                    Click="OnBrushUndoClicked"
+                    Style="{StaticResource NegaflowHudGlyphButtonStyle}">
+                    <FontIcon FontSize="12" Glyph="&#xE7A7;" />
+                </Button>
+                <!-- macOS Button { Image(systemName: "trash") } -->
+                <Button
+                    x:Name="BrushClearButton"
+                    VerticalAlignment="Center"
+                    AutomationProperties.AutomationId="negaflow.canvas.grainmend.brush-clear"
+                    Click="OnBrushClearClicked"
+                    Style="{StaticResource NegaflowHudGlyphButtonStyle}">
+                    <FontIcon FontSize="12" Glyph="&#xE74D;" />
+                </Button>
+                <!-- macOS Button { Image(systemName: "eraser.fill") } — 적용된 것을 되돌립니다 -->
+                <Button
+                    x:Name="BrushResetButton"
+                    VerticalAlignment="Center"
+                    AutomationProperties.AutomationId="negaflow.canvas.grainmend.brush-reset"
+                    Click="OnBrushResetClicked"
+                    Style="{StaticResource NegaflowHudGlyphButtonStyle}">
+                    <FontIcon FontSize="12" Glyph="&#xE75C;" />
+                </Button>
+                <!-- macOS Button { Label(removeDefects, systemImage: "bandage") }.buttonStyle(.borderedProminent) -->
+                <Button
+                    x:Name="BrushApplyButton"
+                    VerticalAlignment="Center"
+                    MinHeight="28"
+                    Padding="10,3"
+                    AutomationProperties.AutomationId="negaflow.canvas.grainmend.brush-apply"
+                    Click="OnBrushApplyClicked"
+                    CornerRadius="14"
+                    Style="{StaticResource AccentButtonStyle}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon VerticalAlignment="Center" FontSize="12" Glyph="&#xE90F;" />
+                        <TextBlock
+                            x:Name="BrushApplyText"
+                            VerticalAlignment="Center"
+                            FontSize="12" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Border>
+
         <!-- macOS classChipsBar: 콘텐츠 폭에 딱 맞춰 가운데. -->
         <Border
             x:Name="ChipsCapsule"
