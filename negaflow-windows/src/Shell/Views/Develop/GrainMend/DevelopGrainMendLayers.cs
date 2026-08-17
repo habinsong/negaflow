@@ -3,56 +3,60 @@ using Negaflow.Shell.Develop;
 using Negaflow.Shell.Localization;
 using Negaflow.Shell.Views.Controls;
 
-namespace Negaflow.Shell.Views;
+namespace Negaflow.Shell.Views.Develop.GrainMend;
 
 /// <summary>
 /// GrainMend 레이어 목록의 배선입니다. macOS <c>DefectLayerSection</c> 이 <c>AppModel</c> 의
 /// 어느 함수를 부르는지에 대응하는 자리이며, 캔버스·검출·내보내기와 다른 이유로 바뀌므로
 /// 여기 따로 둡니다.
 /// </summary>
-public sealed partial class DevelopWorkspaceView
+internal sealed class DevelopGrainMendLayers
 {
+    private readonly DevelopGrainMendPanel view;
+
+    internal DevelopGrainMendLayers(DevelopGrainMendPanel view) => this.view = view;
+
     /// <summary>
     /// 목록을 다시 그립니다. 고른 사진이 바뀌거나, 항목이 늘거나 줄거나, 켜짐·강도가 바뀔 때
     /// 부릅니다.
     /// </summary>
-    private void UpdateDefectLayers()
+    internal void Update()
     {
-        if (DefectLayers is null || panel is null)
+        if (view.DefectLayers is null || view.panel is null)
         {
             return;
         }
-        panel.DefectLayers.ForgetMissingMaskPreview();
+        view.panel.DefectLayers.ForgetMissingMaskPreview();
         DefectLayerSectionState state = DefectLayerProjection.Create(
-            panel.SelectedFrame,
+            view.panel.SelectedFrame,
             DefectLayerTextFactory.Create(),
-            panel.DefectLayers.MaskPreviewId,
+            view.panel.DefectLayers.MaskPreviewId,
             // 검토 완료 기록은 아직 카탈로그에 없습니다. 없는 것을 있는 것처럼 내지 않고,
             // 언제나 "아직 완료하지 않음"으로 냅니다.
             reviewed: null,
-            grainMend.IsDetecting);
-        DefectLayers.Update(state, DefectLayerTextFactory.Create(), grainMend.IsDetecting);
-        ShowDefectMaskOverlay();
+            view.grainMend.IsDetecting);
+        view.DefectLayers.Update(state, DefectLayerTextFactory.Create(), view.grainMend.IsDetecting);
+        ShowMaskOverlay();
     }
 
-    private void OnDefectLayerCommand(object? sender, DefectLayerCommandEventArgs args)
+    internal void OnCommand(object? sender, DefectLayerCommandEventArgs args)
     {
         _ = sender;
-        if (panel is null)
+        if (view.panel is null)
         {
             return;
         }
         switch (args.Command)
         {
             case DefectLayerCommand.ToggleEnabled:
-                Apply(panel.DefectLayers.SetEnabled(args.Id, !IsLayerEnabled(args.Id)));
+                Apply(view.panel.DefectLayers.SetEnabled(args.Id, !IsLayerEnabled(args.Id)));
                 break;
             case DefectLayerCommand.Delete:
-                Apply(panel.DefectLayers.Remove(args.Id));
+                Apply(view.panel.DefectLayers.Remove(args.Id));
                 break;
             case DefectLayerCommand.ToggleMask:
-                panel.DefectLayers.ToggleMaskPreview(args.Id);
-                UpdateDefectLayers();
+                view.panel.DefectLayers.ToggleMaskPreview(args.Id);
+                Update();
                 break;
             case DefectLayerCommand.SetStrength:
                 SetLayerStrength(args);
@@ -71,19 +75,19 @@ public sealed partial class DevelopWorkspaceView
     /// </summary>
     private void SetLayerStrength(DefectLayerCommandEventArgs args)
     {
-        if (panel is null ||
-            panel.DefectLayers.SetStrength(args.Id, args.Strength, args.IsLive) !=
+        if (view.panel is null ||
+            view.panel.DefectLayers.SetStrength(args.Id, args.Strength, args.IsLive) !=
                 LibraryFrameError.None)
         {
             return;
         }
         if (args.IsLive)
         {
-            RequestPreview();
+            view.RequestPreview();
             return;
         }
-        UpdateDefectLayers();
-        RequestPreview();
+        Update();
+        view.RequestPreview();
     }
 
     /// <summary>
@@ -91,33 +95,33 @@ public sealed partial class DevelopWorkspaceView
     /// 쓰므로, 검토가 진행 중이면 그쪽을 건드리지 않습니다 — 두 덮개가 한 자리를 다투면
     /// 나중 것만 보이고 사용자는 어느 쪽을 보고 있는지 알 수 없습니다.
     /// </summary>
-    private void ShowDefectMaskOverlay()
+    private void ShowMaskOverlay()
     {
-        if (panel is null || PreviewCanvas is null || grainMend.PendingEdit is not null)
+        if (view.panel is null || view.canvas is null || view.grainMend.PendingEdit is not null)
         {
             return;
         }
-        if (panel.DefectLayers.MaskPreviewId is not { } id ||
-            panel.SelectedFrame is not { } frame ||
-            PreviewCanvas.PreviewBitmap is null ||
-            panel.DefectLayers.Items.FirstOrDefault(item => item.Id == id) is not { } item)
+        if (view.panel.DefectLayers.MaskPreviewId is not { } id ||
+            view.panel.SelectedFrame is not { } frame ||
+            view.canvas.PreviewBitmap is null ||
+            view.panel.DefectLayers.Items.FirstOrDefault(item => item.Id == id) is not { } item)
         {
-            HideDefectOverlay();
+            view.review.HideOverlay();
             return;
         }
 
-        int width = PreviewCanvas.PreviewBitmap.PixelWidth;
-        int height = PreviewCanvas.PreviewBitmap.PixelHeight;
+        int width = view.canvas.PreviewBitmap.PixelWidth;
+        int height = view.canvas.PreviewBitmap.PixelHeight;
         if (DefectMaskOverlayRenderer.Render(frame, width, height, item) is not { } bgra)
         {
-            HideDefectOverlay();
+            view.review.HideOverlay();
             return;
         }
-        PreviewCanvas.ShowDefectPixels(bgra, width, height);
+        view.canvas.ShowDefectPixels(bgra, width, height);
     }
 
     private bool IsLayerEnabled(Guid id) =>
-        panel?.DefectLayers.Items.FirstOrDefault(item => item.Id == id)?.Enabled == true;
+        view.panel?.DefectLayers.Items.FirstOrDefault(item => item.Id == id)?.Enabled == true;
 
     private void Apply(LibraryFrameError error)
     {
@@ -125,8 +129,8 @@ public sealed partial class DevelopWorkspaceView
         {
             return;
         }
-        // UpdateGrainMendCard 가 끝에서 목록도 다시 그립니다.
-        UpdateGrainMendCard();
-        RequestPreview();
+        // Update 가 끝에서 목록도 다시 그립니다.
+        view.chrome.Update();
+        view.RequestPreview();
     }
 }

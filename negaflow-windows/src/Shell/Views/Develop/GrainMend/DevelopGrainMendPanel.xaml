@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Negaflow.Shell.Views.Develop.GrainMend.DevelopGrainMendPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Negaflow.Shell.Views.Controls">
+    <UserControl.Resources>
+        <Style x:Key="NegaflowGrainMendActionStyle" TargetType="Button">
+            <Setter Property="MinHeight" Value="31" />
+            <Setter Property="Padding" Value="7,0,2,0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        </Style>
+        <Style x:Key="NegaflowGrainMendResetStyle" TargetType="Button">
+            <Setter Property="Width" Value="26" />
+            <Setter Property="Height" Value="31" />
+            <Setter Property="Padding" Value="0,0,3,0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="12" />
+        </Style>
+    </UserControl.Resources>
+    <StackPanel HorizontalAlignment="Stretch" Spacing="12">
+        <!-- GrainMend: macOS 와 같은 네 도구입니다. 검출 결과는 아래의 명시적
+             제거/취소와 Canvas Enter/Esc에서만 recipe로 확정하거나 버립니다. -->
+        <Border
+            x:Name="GrainMendCard" x:FieldModifier="internal"
+            HorizontalAlignment="Stretch"
+            Padding="14"
+            AutomationProperties.AutomationId="negaflow.develop.grainmend"
+            Background="{ThemeResource NegaflowCardBrush}"
+            CornerRadius="14">
+            <StackPanel HorizontalAlignment="Stretch" Spacing="12">
+                <StackPanel Orientation="Horizontal" Spacing="7">
+                    <FontIcon FontSize="14" Glyph="&#xE7A8;" VerticalAlignment="Center" />
+                    <TextBlock x:Name="GrainMendTitleText" x:FieldModifier="internal" VerticalAlignment="Center" FontSize="14" FontWeight="SemiBold" />
+                </StackPanel>
+                <Grid ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Border
+                        x:Name="GrainMendAutoPill" x:FieldModifier="internal"
+                        Grid.Column="0"
+                        MinHeight="31"
+                        Background="{ThemeResource NegaflowSubtleFillBrush}"
+                        BorderBrush="{ThemeResource NegaflowDividerBrush}"
+                        BorderThickness="1"
+                        CornerRadius="16">
+                        <Grid ColumnSpacing="1">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Button
+                                x:Name="GrainMendAutoButton" x:FieldModifier="internal"
+                                HorizontalAlignment="Stretch"
+                                AutomationProperties.AutomationId="negaflow.develop.grainmend.auto"
+                                Click="OnGrainMendAutoClicked"
+                                Style="{StaticResource NegaflowGrainMendActionStyle}">
+                                <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                    <TextBlock x:Name="GrainMendAutoText" x:FieldModifier="internal" />
+                                </Viewbox>
+                            </Button>
+                            <Button
+                                x:Name="GrainMendAutoResetButton" x:FieldModifier="internal"
+                                Grid.Column="1"
+                                AutomationProperties.AutomationId="negaflow.develop.grainmend.auto.reset"
+                                Click="OnGrainMendAutoResetClicked"
+                                Style="{StaticResource NegaflowGrainMendResetStyle}">
+                                <FontIcon FontSize="11" Glyph="&#xE777;" />
+                            </Button>
+                        </Grid>
+                    </Border>
+                    <Border
+                        x:Name="GrainMendGuidedPill" x:FieldModifier="internal"
+                        Grid.Column="1"
+                        MinHeight="31"
+                        Background="{ThemeResource NegaflowSubtleFillBrush}"
+                        BorderBrush="{ThemeResource NegaflowDividerBrush}"
+                        BorderThickness="1"
+                        CornerRadius="16">
+                        <Grid ColumnSpacing="1">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Button
+                                x:Name="GrainMendGuidedButton" x:FieldModifier="internal"
+                                HorizontalAlignment="Stretch"
+                                AutomationProperties.AutomationId="negaflow.develop.grainmend.guided"
+                                Click="OnGrainMendGuidedClicked"
+                                Style="{StaticResource NegaflowGrainMendActionStyle}">
+                                <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                    <TextBlock x:Name="GrainMendGuidedText" x:FieldModifier="internal" />
+                                </Viewbox>
+                            </Button>
+                            <Button
+                                x:Name="GrainMendGuidedResetButton" x:FieldModifier="internal"
+                                Grid.Column="1"
+                                AutomationProperties.AutomationId="negaflow.develop.grainmend.guided.reset"
+                                Click="OnGrainMendGuidedResetClicked"
+                                Style="{StaticResource NegaflowGrainMendResetStyle}">
+                                <FontIcon FontSize="11" Glyph="&#xE777;" />
+                            </Button>
+                        </Grid>
+                    </Border>
+                    <Border
+                        x:Name="GrainMendBrushPill" x:FieldModifier="internal"
+                        Grid.Column="2"
+                        MinHeight="31"
+                        Background="{ThemeResource NegaflowSubtleFillBrush}"
+                        BorderBrush="{ThemeResource NegaflowDividerBrush}"
+                        BorderThickness="1"
+                        CornerRadius="16">
+                        <Grid ColumnSpacing="1">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Button
+                                x:Name="GrainMendBrushButton" x:FieldModifier="internal"
+                                HorizontalAlignment="Stretch"
+                                AutomationProperties.AutomationId="negaflow.develop.grainmend.brush"
+                                Click="OnGrainMendBrushClicked"
+                                Style="{StaticResource NegaflowGrainMendActionStyle}">
+                                <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                    <TextBlock x:Name="GrainMendBrushText" x:FieldModifier="internal" />
+                                </Viewbox>
+                            </Button>
+                            <Button
+                                x:Name="GrainMendBrushResetButton" x:FieldModifier="internal"
+                                Grid.Column="1"
+                                AutomationProperties.AutomationId="negaflow.develop.grainmend.brush.reset"
+                                Click="OnGrainMendBrushResetClicked"
+                                Style="{StaticResource NegaflowGrainMendResetStyle}">
+                                <FontIcon FontSize="11" Glyph="&#xE777;" />
+                            </Button>
+                        </Grid>
+                    </Border>
+                    <Border
+                        x:Name="GrainMendClonePill" x:FieldModifier="internal"
+                        Grid.Column="3"
+                        MinHeight="31"
+                        Background="{ThemeResource NegaflowSubtleFillBrush}"
+                        BorderBrush="{ThemeResource NegaflowDividerBrush}"
+                        BorderThickness="1"
+                        CornerRadius="16">
+                        <Grid ColumnSpacing="1">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Button
+                                x:Name="GrainMendCloneButton" x:FieldModifier="internal"
+                                HorizontalAlignment="Stretch"
+                                AutomationProperties.AutomationId="negaflow.develop.grainmend.clone"
+                                Click="OnGrainMendCloneClicked"
+                                Style="{StaticResource NegaflowGrainMendActionStyle}">
+                                <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                    <TextBlock x:Name="GrainMendCloneText" x:FieldModifier="internal" />
+                                </Viewbox>
+                            </Button>
+                            <Button
+                                x:Name="GrainMendCloneResetButton" x:FieldModifier="internal"
+                                Grid.Column="1"
+                                AutomationProperties.AutomationId="negaflow.develop.grainmend.clone.reset"
+                                Click="OnGrainMendCloneResetClicked"
+                                Style="{StaticResource NegaflowGrainMendResetStyle}">
+                                <FontIcon FontSize="11" Glyph="&#xE777;" />
+                            </Button>
+                        </Grid>
+                    </Border>
+                </Grid>
+                <StackPanel
+                    x:Name="GrainMendReviewTuning" x:FieldModifier="internal"
+                    HorizontalAlignment="Center"
+                    Orientation="Horizontal"
+                    Spacing="8"
+                    Visibility="Collapsed">
+                    <TextBlock
+                        x:Name="GrainMendSensitivityLabel" x:FieldModifier="internal"
+                        VerticalAlignment="Center"
+                        FontSize="12" />
+                    <Slider
+                        x:Name="GrainMendSensitivitySlider" x:FieldModifier="internal"
+                        Width="110"
+                        Minimum="0.7"
+                        Maximum="6"
+                        StepFrequency="0.1"
+                        SmallChange="0.1"
+                        LargeChange="0.5"
+                        AutomationProperties.AutomationId="negaflow.develop.grainmend.sensitivity"
+                        ValueChanged="OnGrainMendSensitivityValueChanged"
+                        PointerReleased="OnGrainMendSensitivityPointerReleased"
+                        KeyUp="OnGrainMendSensitivityKeyUp" />
+                    <ToggleSwitch
+                        x:Name="GrainMendMicroSpecksToggle" x:FieldModifier="internal"
+                        MinWidth="112"
+                        OffContent=""
+                        OnContent=""
+                        AutomationProperties.AutomationId="negaflow.develop.grainmend.micro-specks"
+                        Toggled="OnGrainMendMicroSpecksToggled" />
+                </StackPanel>
+                <StackPanel
+                    x:Name="GrainMendReviewActions" x:FieldModifier="internal"
+                    HorizontalAlignment="Center"
+                    Orientation="Horizontal"
+                    Spacing="8"
+                    Visibility="Collapsed">
+                    <Button
+                        x:Name="GrainMendRemoveButton" x:FieldModifier="internal"
+                        MinHeight="30"
+                        AutomationProperties.AutomationId="negaflow.develop.grainmend.remove"
+                        Click="OnGrainMendRemoveClicked" />
+                    <Button
+                        x:Name="GrainMendCancelButton" x:FieldModifier="internal"
+                        MinHeight="30"
+                        AutomationProperties.AutomationId="negaflow.develop.grainmend.cancel"
+                        Click="OnGrainMendCancelClicked" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- GrainMend 레이어: 적용된 결함 제거를 항목별로 되돌릴 수 있는
+             목록입니다. macOS DefectLayerSection 과 같은 자리, 같은 순서입니다. -->
+        <controls:DefectLayerSection x:Name="DefectLayers" x:FieldModifier="internal" />
+    </StackPanel>
+</UserControl>
