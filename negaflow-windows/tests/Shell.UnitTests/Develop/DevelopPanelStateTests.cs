@@ -75,37 +75,37 @@ internal static class DevelopPanelStateTests
 
             Check(panel.Select("frame-1"), "panel_select");
             Check(panel.CanExport, "panel_can_export_after_select");
-            Check(panel.MaximumExposureStops == 5.0, "panel_exposure_range_from_engine");
+            Check(panel.Tone.MaximumExposureStops == 5.0, "panel_exposure_range_from_engine");
 
             Check(
-                panel.SetExposure(1.25) == LibraryFrameError.None,
+                panel.Tone.SetExposure(1.25) == LibraryFrameError.None,
                 "panel_set_exposure");
-            Check(panel.Exposure == 1.25, "panel_exposure_visible_immediately");
+            Check(panel.Tone.Exposure == 1.25, "panel_exposure_visible_immediately");
 
             // 범위를 넘는 값은 엔진이 거부할 값이므로 여기서 묶습니다.
-            Check(panel.SetExposure(99.0) == LibraryFrameError.None, "panel_set_high_exposure");
-            Check(panel.Exposure == 5.0, "panel_clamps_high_exposure");
-            Check(panel.SetExposure(-99.0) == LibraryFrameError.None, "panel_set_low_exposure");
-            Check(panel.Exposure == -5.0, "panel_clamps_low_exposure");
+            Check(panel.Tone.SetExposure(99.0) == LibraryFrameError.None, "panel_set_high_exposure");
+            Check(panel.Tone.Exposure == 5.0, "panel_clamps_high_exposure");
+            Check(panel.Tone.SetExposure(-99.0) == LibraryFrameError.None, "panel_set_low_exposure");
+            Check(panel.Tone.Exposure == -5.0, "panel_clamps_low_exposure");
 
             // 현상 버전: 담고 → 바꾸고 → 되돌리면 recipe 가 담을 때 값으로 돌아와야 합니다.
             // 이게 어긋나면 사용자가 되돌렸다고 믿은 상태가 실제와 다릅니다.
-            Check(panel.SetExposure(0.75) == LibraryFrameError.None && panel.Versions.Count == 0,
+            Check(panel.Tone.SetExposure(0.75) == LibraryFrameError.None && panel.Versions.Count == 0,
                 "panel_starts_with_no_versions");
             Check(
                 panel.CaptureVersion("before") == LibraryFrameError.None &&
                 panel.Versions.Count == 1 &&
                 panel.Versions[0].Name == "before" &&
-                panel.Exposure == 0.75,
+                panel.Tone.Exposure == 0.75,
                 "panel_capture_version_keeps_current_recipe");
 
             string capturedId = panel.Versions[0].Id;
             Check(
-                panel.SetExposure(-2.0) == LibraryFrameError.None && panel.Exposure == -2.0,
+                panel.Tone.SetExposure(-2.0) == LibraryFrameError.None && panel.Tone.Exposure == -2.0,
                 "panel_edits_after_capturing");
             Check(
                 panel.RestoreVersion(capturedId) == LibraryFrameError.None &&
-                panel.Exposure == 0.75 &&
+                panel.Tone.Exposure == 0.75 &&
                 panel.Versions.Count == 1,
                 "panel_restore_version_brings_the_recipe_back");
             Check(
@@ -118,9 +118,9 @@ internal static class DevelopPanelStateTests
             Check(
                 panel.DeleteVersion(capturedId) == LibraryFrameError.None &&
                 panel.Versions.Count == 0 &&
-                panel.Exposure == 0.75,
+                panel.Tone.Exposure == 0.75,
                 "panel_delete_version_leaves_the_recipe_alone");
-            _ = panel.SetExposure(0.0);
+            _ = panel.Tone.SetExposure(0.0);
 
             Check(panel.SetAppMetadata(metadata => metadata with { Title = "  Archive title  " }) ==
                     LibraryFrameError.None &&
@@ -143,9 +143,9 @@ internal static class DevelopPanelStateTests
                 Detail: false,
                 Geometry: false);
             Check(panel.Select("frame-2") &&
-                panel.SetExposure(-1.0) == LibraryFrameError.None &&
+                panel.Tone.SetExposure(-1.0) == LibraryFrameError.None &&
                 panel.PasteDevelopSettings() == LibraryFrameError.None &&
-                panel.Exposure == 0.0,
+                panel.Tone.Exposure == 0.0,
                 "panel_pastes_the_selected_settings_scope");
             Check(panel.Select("frame-1"), "panel_reselects_source_after_paste");
 
@@ -156,9 +156,9 @@ internal static class DevelopPanelStateTests
             Check(savedPreset is not null && panel.UserPresets.Count == 1 &&
                 File.Exists(userPresetPath),
                 "panel_saves_user_preset_through_the_controller");
-            Check(panel.SetExposure(1.0) == LibraryFrameError.None &&
+            Check(panel.Tone.SetExposure(1.0) == LibraryFrameError.None &&
                 panel.ApplyUserPreset(savedPresetId) == LibraryFrameError.None &&
-                panel.Exposure == 0.0,
+                panel.Tone.Exposure == 0.0,
                 "panel_applies_user_preset_and_refreshes_the_frame");
             Check(panel.DeleteUserPreset(savedPresetId) && panel.UserPresets.Count == 0,
                 "panel_deletes_user_preset");
@@ -178,35 +178,35 @@ internal static class DevelopPanelStateTests
                 !panel.AutoLevels && panel.AutoNeutralBalance,
                 "panel_clear_auto_levels_keeps_auto_colour");
 
-            Check(panel.MaximumToneControl == 1.0, "panel_basic_tone_range_from_engine");
-            Check(panel.SetContrast(-0.25) == LibraryFrameError.None && panel.Contrast == -0.25,
+            Check(panel.Tone.MaximumToneControl == 1.0, "panel_basic_tone_range_from_engine");
+            Check(panel.Tone.SetContrast(-0.25) == LibraryFrameError.None && panel.Tone.Contrast == -0.25,
                 "panel_set_contrast");
-            Check(panel.SetHighlights(0.5) == LibraryFrameError.None && panel.Highlights == 0.5,
+            Check(panel.Tone.SetHighlights(0.5) == LibraryFrameError.None && panel.Tone.Highlights == 0.5,
                 "panel_set_highlights");
-            Check(panel.SetShadows(-0.5) == LibraryFrameError.None && panel.Shadows == -0.5,
+            Check(panel.Tone.SetShadows(-0.5) == LibraryFrameError.None && panel.Tone.Shadows == -0.5,
                 "panel_set_shadows");
-            Check(panel.SetWhites(0.75) == LibraryFrameError.None && panel.Whites == 0.75,
+            Check(panel.Tone.SetWhites(0.75) == LibraryFrameError.None && panel.Tone.Whites == 0.75,
                 "panel_set_whites");
-            Check(panel.SetBlacks(-0.75) == LibraryFrameError.None && panel.Blacks == -0.75,
+            Check(panel.Tone.SetBlacks(-0.75) == LibraryFrameError.None && panel.Tone.Blacks == -0.75,
                 "panel_set_blacks");
-            Check(panel.SetDensity(99.0) == LibraryFrameError.None && panel.Density == 1.0,
+            Check(panel.Tone.SetDensity(99.0) == LibraryFrameError.None && panel.Tone.Density == 1.0,
                 "panel_clamps_density");
-            Check(panel.SetCurveHighlights(-0.25) == LibraryFrameError.None &&
-                panel.CurveHighlights == -0.25, "panel_set_curve_highlights");
-            Check(panel.SetCurveLights(0.5) == LibraryFrameError.None &&
-                panel.CurveLights == 0.5, "panel_set_curve_lights");
-            Check(panel.SetCurveDarks(-0.5) == LibraryFrameError.None &&
-                panel.CurveDarks == -0.5, "panel_set_curve_darks");
-            Check(panel.SetCurveShadows(99.0) == LibraryFrameError.None &&
-                panel.CurveShadows == 1.0, "panel_clamps_curve_shadows");
+            Check(panel.Tone.SetCurveHighlights(-0.25) == LibraryFrameError.None &&
+                panel.Tone.CurveHighlights == -0.25, "panel_set_curve_highlights");
+            Check(panel.Tone.SetCurveLights(0.5) == LibraryFrameError.None &&
+                panel.Tone.CurveLights == 0.5, "panel_set_curve_lights");
+            Check(panel.Tone.SetCurveDarks(-0.5) == LibraryFrameError.None &&
+                panel.Tone.CurveDarks == -0.5, "panel_set_curve_darks");
+            Check(panel.Tone.SetCurveShadows(99.0) == LibraryFrameError.None &&
+                panel.Tone.CurveShadows == 1.0, "panel_clamps_curve_shadows");
             PointCurveRecipe editedPointCurves = new(
                 [new PointCurvePoint(0.0, 0.0), new PointCurvePoint(0.5, 0.6), new PointCurvePoint(1.0, 1.0)],
                 [], [], []);
-            Check(panel.SetPointCurves(editedPointCurves) == LibraryFrameError.None &&
-                panel.PointCurves.Rgb[1] == new PointCurvePoint(0.5, 0.6),
+            Check(panel.Color.SetPointCurves(editedPointCurves) == LibraryFrameError.None &&
+                panel.Color.PointCurves.Rgb[1] == new PointCurvePoint(0.5, 0.6),
                 "panel_sets_point_curves");
             Check(
-                panel.SetPointCurves(new PointCurveRecipe(
+                panel.Color.SetPointCurves(new PointCurveRecipe(
                     [new PointCurvePoint(0.5, 0.4), new PointCurvePoint(0.5, 0.6)],
                     [], [], [])) == LibraryFrameError.InvalidPointCurves,
                 "panel_rejects_invalid_point_curves");
@@ -214,10 +214,10 @@ internal static class DevelopPanelStateTests
                 [0.2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
                 new double[ColorMixerRecipe.BandCount],
                 new double[ColorMixerRecipe.BandCount]);
-            Check(panel.SetColorMixer(editedColorMixer) == LibraryFrameError.None &&
-                panel.ColorMixer.Hue[0] == 0.2,
+            Check(panel.Color.SetColorMixer(editedColorMixer) == LibraryFrameError.None &&
+                panel.Color.ColorMixer.Hue[0] == 0.2,
                 "panel_sets_color_mixer");
-            Check(panel.SetColorMixer(new ColorMixerRecipe(
+            Check(panel.Color.SetColorMixer(new ColorMixerRecipe(
                     new double[ColorMixerRecipe.BandCount],
                     [0.0, 0.0],
                     new double[ColorMixerRecipe.BandCount])) == LibraryFrameError.InvalidColorMixer,
@@ -228,12 +228,12 @@ internal static class DevelopPanelStateTests
                 new ColorGradeRegionRecipe(0.6, 0.7, 0.2),
                 0.25,
                 -0.2);
-            Check(panel.SetColorGrading(editedColorGrading) == LibraryFrameError.None &&
-                panel.ColorGrading == editedColorGrading,
+            Check(panel.Color.SetColorGrading(editedColorGrading) == LibraryFrameError.None &&
+                panel.Color.ColorGrading == editedColorGrading,
                 "panel_sets_color_grading");
             PrimaryCalibrationRecipe editedCalibration = new(0.2, -0.3, 0.4, -0.5, 0.6, -0.7);
-            Check(panel.SetPrimaryCalibration(editedCalibration) == LibraryFrameError.None &&
-                panel.PrimaryCalibration == editedCalibration,
+            Check(panel.Color.SetPrimaryCalibration(editedCalibration) == LibraryFrameError.None &&
+                panel.Color.PrimaryCalibration == editedCalibration,
                 "panel_sets_primary_calibration");
             TextureRecipe editedTexture = new(0.2, 0.3, 0.4, -0.5, 0.6);
             Check(panel.SetTexture(editedTexture) == LibraryFrameError.None &&
@@ -250,29 +250,29 @@ internal static class DevelopPanelStateTests
                 panel.NoiseReduction.Strength == 0.7,
                 "panel_enables_noise_reduction_with_macos_default_strength");
 
-            Check(panel.ResetBasicTone() == LibraryFrameError.None &&
-                panel.Exposure == 0 && panel.Contrast == 0 && panel.Highlights == 0 &&
-                panel.Shadows == 0 && panel.Whites == 0 && panel.Blacks == 0 &&
-                panel.Density == 0,
+            Check(panel.Tone.ResetBasicTone() == LibraryFrameError.None &&
+                panel.Tone.Exposure == 0 && panel.Tone.Contrast == 0 && panel.Tone.Highlights == 0 &&
+                panel.Tone.Shadows == 0 && panel.Tone.Whites == 0 && panel.Tone.Blacks == 0 &&
+                panel.Tone.Density == 0,
                 "panel_resets_basic_tone");
-            Check(panel.CurveHighlights == -0.25 && panel.CurveLights == 0.5 &&
-                panel.CurveDarks == -0.5 && panel.CurveShadows == 1.0,
+            Check(panel.Tone.CurveHighlights == -0.25 && panel.Tone.CurveLights == 0.5 &&
+                panel.Tone.CurveDarks == -0.5 && panel.Tone.CurveShadows == 1.0,
                 "panel_basic_tone_reset_preserves_tone_curve");
-            Check(panel.ResetToneCurve() == LibraryFrameError.None &&
-                panel.CurveHighlights == 0 && panel.CurveLights == 0 &&
-                panel.CurveDarks == 0 && panel.CurveShadows == 0 &&
-                panel.PointCurves.Rgb.Count == 0,
+            Check(panel.Tone.ResetToneCurve() == LibraryFrameError.None &&
+                panel.Tone.CurveHighlights == 0 && panel.Tone.CurveLights == 0 &&
+                panel.Tone.CurveDarks == 0 && panel.Tone.CurveShadows == 0 &&
+                panel.Color.PointCurves.Rgb.Count == 0,
                 "panel_resets_tone_curve_and_points");
-            Check(panel.ResetColorMixer() == LibraryFrameError.None &&
-                panel.ColorMixer.Hue.All(value => value == 0) &&
-                panel.ColorMixer.Saturation.All(value => value == 0) &&
-                panel.ColorMixer.Luminance.All(value => value == 0),
+            Check(panel.Color.ResetColorMixer() == LibraryFrameError.None &&
+                panel.Color.ColorMixer.Hue.All(value => value == 0) &&
+                panel.Color.ColorMixer.Saturation.All(value => value == 0) &&
+                panel.Color.ColorMixer.Luminance.All(value => value == 0),
                 "panel_resets_color_mixer");
-            Check(panel.ResetColorGrading() == LibraryFrameError.None &&
-                panel.ColorGrading == ColorGradingRecipe.Identity,
+            Check(panel.Color.ResetColorGrading() == LibraryFrameError.None &&
+                panel.Color.ColorGrading == ColorGradingRecipe.Identity,
                 "panel_resets_color_grading");
-            Check(panel.ResetPrimaryCalibration() == LibraryFrameError.None &&
-                panel.PrimaryCalibration == PrimaryCalibrationRecipe.Identity,
+            Check(panel.Color.ResetPrimaryCalibration() == LibraryFrameError.None &&
+                panel.Color.PrimaryCalibration == PrimaryCalibrationRecipe.Identity,
                 "panel_resets_primary_calibration");
             Check(panel.ResetDetailAndEffects() == LibraryFrameError.None &&
                 panel.Texture == TextureRecipe.Identity &&
@@ -440,13 +440,13 @@ internal static class DevelopPanelStateTests
                 "panel_rejects_auto_corrections_for_positive_frame");
             Check(panel.SetManualBase(0.3, 0.3, 0.3) == LibraryFrameError.InvalidDevelopRoute,
                 "panel_rejects_manual_base_for_positive_frame");
-            Check(panel.SetContrast(0.3) == LibraryFrameError.None,
+            Check(panel.Tone.SetContrast(0.3) == LibraryFrameError.None,
                 "panel_edits_tone_for_positive_frame");
-            Check(panel.SetCurveHighlights(0.3) == LibraryFrameError.None,
+            Check(panel.Tone.SetCurveHighlights(0.3) == LibraryFrameError.None,
                 "panel_edits_curve_for_positive_frame");
-            Check(panel.SetPointCurves(PointCurveRecipe.Identity) == LibraryFrameError.None,
+            Check(panel.Color.SetPointCurves(PointCurveRecipe.Identity) == LibraryFrameError.None,
                 "panel_edits_point_curve_for_positive_frame");
-            Check(panel.SetColorMixer(ColorMixerRecipe.Identity) == LibraryFrameError.None,
+            Check(panel.Color.SetColorMixer(ColorMixerRecipe.Identity) == LibraryFrameError.None,
                 "panel_edits_color_mixer_for_positive_frame");
             Check(panel.Select("frame-2"), "panel_reselects_developable_frame");
 

@@ -132,9 +132,9 @@ public sealed partial class DevelopWorkspaceView : UserControl
         FilmStockSelector.ItemsSource = BundledFilmBaseOptions.FilmStocks;
         LightSourceSelector.ItemsSource = BundledFilmBaseOptions.LightSources;
         ScannerProfileSelector.ItemsSource = ScannerProfileChoices();
-        ExposureControl.Minimum = -panel.MaximumExposureStops;
-        ExposureControl.Maximum = panel.MaximumExposureStops;
-        HistogramView.ConfigureRanges(panel.MaximumExposureStops, panel.MaximumToneControl);
+        ExposureControl.Minimum = -panel.Tone.MaximumExposureStops;
+        ExposureControl.Maximum = panel.Tone.MaximumExposureStops;
+        HistogramView.ConfigureRanges(panel.Tone.MaximumExposureStops, panel.Tone.MaximumToneControl);
         foreach (InspectorSlider slider in new[]
                  {
                      ContrastControl,
@@ -157,8 +157,8 @@ public sealed partial class DevelopWorkspaceView : UserControl
                      VignetteControl,
                  })
         {
-            slider.Minimum = -panel.MaximumToneControl;
-            slider.Maximum = panel.MaximumToneControl;
+            slider.Minimum = -panel.Tone.MaximumToneControl;
+            slider.Maximum = panel.Tone.MaximumToneControl;
         }
         foreach (InspectorSlider slider in new[]
                  {
@@ -640,29 +640,29 @@ public sealed partial class DevelopWorkspaceView : UserControl
         }
 
         isSynchronizingInspector = true;
-        ExposureControl.Value = panel.Exposure;
-        ContrastControl.Value = panel.Contrast;
-        HighlightsControl.Value = panel.Highlights;
-        ShadowsControl.Value = panel.Shadows;
-        WhitesControl.Value = panel.Whites;
-        BlacksControl.Value = panel.Blacks;
-        DensityControl.Value = panel.Density;
-        CurveHighlightsControl.Value = panel.CurveHighlights;
-        CurveLightsControl.Value = panel.CurveLights;
-        CurveDarksControl.Value = panel.CurveDarks;
-        CurveShadowsControl.Value = panel.CurveShadows;
-        PointCurveEditor.Curves = panel.PointCurves;
-        ColorMixerEditor.Mixer = panel.ColorMixer;
-        ColorGradingEditor.Grading = panel.ColorGrading;
-        ColorModelRecipe colorModel = panel.ColorModel;
+        ExposureControl.Value = panel.Tone.Exposure;
+        ContrastControl.Value = panel.Tone.Contrast;
+        HighlightsControl.Value = panel.Tone.Highlights;
+        ShadowsControl.Value = panel.Tone.Shadows;
+        WhitesControl.Value = panel.Tone.Whites;
+        BlacksControl.Value = panel.Tone.Blacks;
+        DensityControl.Value = panel.Tone.Density;
+        CurveHighlightsControl.Value = panel.Tone.CurveHighlights;
+        CurveLightsControl.Value = panel.Tone.CurveLights;
+        CurveDarksControl.Value = panel.Tone.CurveDarks;
+        CurveShadowsControl.Value = panel.Tone.CurveShadows;
+        PointCurveEditor.Curves = panel.Color.PointCurves;
+        ColorMixerEditor.Mixer = panel.Color.ColorMixer;
+        ColorGradingEditor.Grading = panel.Color.ColorGrading;
+        ColorModelRecipe colorModel = panel.Color.ColorModel;
         WarmthControl.Value = colorModel.Warmth;
         TintControl.Value = colorModel.Tint;
         VibranceControl.Value = colorModel.Vibrance;
         SaturationControl.Value = colorModel.Saturation;
         ColorDepthControl.Value = colorModel.ColorDepth;
-        BwToningRecipe bwToning = panel.BwToning;
+        BwToningRecipe bwToning = panel.Color.BwToning;
         // macOS 는 흑백 필름에서만 이 섹션을 냅니다.
-        BwToningSection.Visibility = panel.ShowsBwToning
+        BwToningSection.Visibility = panel.Color.ShowsBwToning
             ? Visibility.Visible
             : Visibility.Collapsed;
         BwToningModeSelector.SelectedIndex = bwToning.Mode switch
@@ -678,7 +678,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         BwToningStrengthControl.Value = bwToning.ClampedStrength;
         BwToningShadowHueControl.Value = bwToning.ShadowHue;
         BwToningHighlightHueControl.Value = bwToning.HighlightHue;
-        PrimaryCalibrationRecipe calibration = panel.PrimaryCalibration;
+        PrimaryCalibrationRecipe calibration = panel.Color.PrimaryCalibration;
         RedPrimaryHueControl.Value = calibration.RedHue;
         RedPrimarySaturationControl.Value = calibration.RedSaturation;
         GreenPrimaryHueControl.Value = calibration.GreenHue;
@@ -717,10 +717,10 @@ public sealed partial class DevelopWorkspaceView : UserControl
         UpdateVersionControls();
         UpdatePresetControls();
         HistogramView.SynchronizeValues(
-            panel.Shadows,
-            panel.Density,
-            panel.Exposure,
-            panel.Highlights);
+            panel.Tone.Shadows,
+            panel.Tone.Density,
+            panel.Tone.Exposure,
+            panel.Tone.Highlights);
         // Auto에는 수동 base가 없으므로 slider에는 시작 위치만 보입니다. 사용자가 값을 바꾸면
         // manual mode로 전환되며, 그 전까지 preview/export는 native Auto resolver를 사용합니다.
         ManualBaseRgb shown = panel.ManualBase ?? new ManualBaseRgb(
@@ -1453,8 +1453,8 @@ public sealed partial class DevelopWorkspaceView : UserControl
                 panel?.SelectedFrame == frame)
             {
                 LibraryFrameError error = operation == AutoAdjustOperation.Tone
-                    ? panel.ApplyAutoTone(outcome.Settings)
-                    : panel.ApplyAutoWhiteBalance(outcome.Settings);
+                    ? panel.Tone.ApplyAutoTone(outcome.Settings)
+                    : panel.Tone.ApplyAutoWhiteBalance(outcome.Settings);
                 if (error == LibraryFrameError.None)
                 {
                     SynchronizeInspectorValues();
@@ -1632,10 +1632,10 @@ public sealed partial class DevelopWorkspaceView : UserControl
 
         LibraryFrameError error = args.Region switch
         {
-            DevelopHistogramRegion.Shadow => panel.SetShadows(args.Value),
-            DevelopHistogramRegion.Density => panel.SetDensity(args.Value),
-            DevelopHistogramRegion.Exposure => panel.SetExposure(args.Value),
-            DevelopHistogramRegion.Highlight => panel.SetHighlights(args.Value),
+            DevelopHistogramRegion.Shadow => panel.Tone.SetShadows(args.Value),
+            DevelopHistogramRegion.Density => panel.Tone.SetDensity(args.Value),
+            DevelopHistogramRegion.Exposure => panel.Tone.SetExposure(args.Value),
+            DevelopHistogramRegion.Highlight => panel.Tone.SetHighlights(args.Value),
             _ => LibraryFrameError.InvalidToneValue,
         };
         if (error == LibraryFrameError.None)
@@ -1654,7 +1654,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         {
             return;
         }
-        panel.SetExposure(args.Value);
+        panel.Tone.SetExposure(args.Value);
         RequestPreview();
     }
 
@@ -1668,17 +1668,17 @@ public sealed partial class DevelopWorkspaceView : UserControl
         LibraryFrameError error = sender switch
         {
             InspectorSlider control when ReferenceEquals(control, ContrastControl) =>
-                panel.SetContrast(args.Value),
+                panel.Tone.SetContrast(args.Value),
             InspectorSlider control when ReferenceEquals(control, HighlightsControl) =>
-                panel.SetHighlights(args.Value),
+                panel.Tone.SetHighlights(args.Value),
             InspectorSlider control when ReferenceEquals(control, ShadowsControl) =>
-                panel.SetShadows(args.Value),
+                panel.Tone.SetShadows(args.Value),
             InspectorSlider control when ReferenceEquals(control, WhitesControl) =>
-                panel.SetWhites(args.Value),
+                panel.Tone.SetWhites(args.Value),
             InspectorSlider control when ReferenceEquals(control, BlacksControl) =>
-                panel.SetBlacks(args.Value),
+                panel.Tone.SetBlacks(args.Value),
             InspectorSlider control when ReferenceEquals(control, DensityControl) =>
-                panel.SetDensity(args.Value),
+                panel.Tone.SetDensity(args.Value),
             _ => LibraryFrameError.InvalidToneValue,
         };
         if (error == LibraryFrameError.None)
@@ -1697,13 +1697,13 @@ public sealed partial class DevelopWorkspaceView : UserControl
         LibraryFrameError error = sender switch
         {
             InspectorSlider control when ReferenceEquals(control, CurveHighlightsControl) =>
-                panel.SetCurveHighlights(args.Value),
+                panel.Tone.SetCurveHighlights(args.Value),
             InspectorSlider control when ReferenceEquals(control, CurveLightsControl) =>
-                panel.SetCurveLights(args.Value),
+                panel.Tone.SetCurveLights(args.Value),
             InspectorSlider control when ReferenceEquals(control, CurveDarksControl) =>
-                panel.SetCurveDarks(args.Value),
+                panel.Tone.SetCurveDarks(args.Value),
             InspectorSlider control when ReferenceEquals(control, CurveShadowsControl) =>
-                panel.SetCurveShadows(args.Value),
+                panel.Tone.SetCurveShadows(args.Value),
             _ => LibraryFrameError.InvalidToneValue,
         };
         if (error == LibraryFrameError.None)
@@ -1719,7 +1719,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         {
             return;
         }
-        if (panel.SetPointCurves(args.Curves) == LibraryFrameError.None)
+        if (panel.Color.SetPointCurves(args.Curves) == LibraryFrameError.None)
         {
             RequestPreview();
         }
@@ -1732,7 +1732,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         {
             return;
         }
-        if (panel.SetColorMixer(args.Mixer) == LibraryFrameError.None)
+        if (panel.Color.SetColorMixer(args.Mixer) == LibraryFrameError.None)
         {
             RequestPreview();
         }
@@ -1745,7 +1745,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         {
             return;
         }
-        if (panel.SetColorGrading(args.Grading) == LibraryFrameError.None)
+        if (panel.Color.SetColorGrading(args.Grading) == LibraryFrameError.None)
         {
             RequestPreview();
         }
@@ -1762,7 +1762,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         {
             return;
         }
-        if (panel.SetColorModel(panel.ColorModel with
+        if (panel.Color.SetColorModel(panel.Color.ColorModel with
             {
                 Warmth = WarmthControl.Value,
                 Tint = TintControl.Value,
@@ -1785,7 +1785,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         {
             return;
         }
-        if (panel.SetBwToningMode(mode) == LibraryFrameError.None)
+        if (panel.Color.SetBwToningMode(mode) == LibraryFrameError.None)
         {
             SynchronizeInspectorValues();
             RequestPreview();
@@ -1800,7 +1800,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         {
             return;
         }
-        if (panel.SetBwToning(panel.BwToning with
+        if (panel.Color.SetBwToning(panel.Color.BwToning with
             {
                 Strength = BwToningStrengthControl.Value,
                 ShadowHue = BwToningRecipe.NormalizeHue(BwToningShadowHueControl.Value),
@@ -1815,7 +1815,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
     {
         _ = sender;
         _ = args;
-        if (panel is null || panel.ResetBwToning() != LibraryFrameError.None)
+        if (panel is null || panel.Color.ResetBwToning() != LibraryFrameError.None)
         {
             return;
         }
@@ -1831,7 +1831,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         {
             return;
         }
-        if (panel.SetPrimaryCalibration(new PrimaryCalibrationRecipe(
+        if (panel.Color.SetPrimaryCalibration(new PrimaryCalibrationRecipe(
                 RedPrimaryHueControl.Value,
                 RedPrimarySaturationControl.Value,
                 GreenPrimaryHueControl.Value,
@@ -4331,42 +4331,42 @@ public sealed partial class DevelopWorkspaceView : UserControl
     {
         _ = sender;
         _ = args;
-        ResetInspectorSection(static state => state.ResetBasicTone());
+        ResetInspectorSection(static state => state.Tone.ResetBasicTone());
     }
 
     private void OnToneCurveResetClicked(object sender, RoutedEventArgs args)
     {
         _ = sender;
         _ = args;
-        ResetInspectorSection(static state => state.ResetToneCurve());
+        ResetInspectorSection(static state => state.Tone.ResetToneCurve());
     }
 
     private void OnColorMixerResetClicked(object sender, RoutedEventArgs args)
     {
         _ = sender;
         _ = args;
-        ResetInspectorSection(static state => state.ResetColorMixer());
+        ResetInspectorSection(static state => state.Color.ResetColorMixer());
     }
 
     private void OnColorResetClicked(object sender, RoutedEventArgs args)
     {
         _ = sender;
         _ = args;
-        ResetInspectorSection(static state => state.ResetColor());
+        ResetInspectorSection(static state => state.Color.ResetColor());
     }
 
     private void OnColorGradingResetClicked(object sender, RoutedEventArgs args)
     {
         _ = sender;
         _ = args;
-        ResetInspectorSection(static state => state.ResetColorGrading());
+        ResetInspectorSection(static state => state.Color.ResetColorGrading());
     }
 
     private void OnCalibrationResetClicked(object sender, RoutedEventArgs args)
     {
         _ = sender;
         _ = args;
-        ResetInspectorSection(static state => state.ResetPrimaryCalibration());
+        ResetInspectorSection(static state => state.Color.ResetPrimaryCalibration());
     }
 
     private void OnDetailAndEffectsResetClicked(object sender, RoutedEventArgs args)

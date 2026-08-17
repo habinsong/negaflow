@@ -61,7 +61,7 @@
 | `src/Catalog.Core/Defects/DefectRecipeValidator.cs` | 700 | defect recipe 불변식 검증·복사의 단일 boundary |
 | `src/Catalog.Core/Storage/CatalogCommitVerifier.cs` | 681 | 검증된 catalog commit/rollback 단일 transaction |
 | `src/Native/imaging/local_dodge_burn.cpp` | 656 | local dodge/burn 단일 알고리즘 |
-| `src/Shell.Core/Develop/DevelopPanelState.cs` | 648 | 미해결. 현재는 선택 frame 호환 파사드이나 500줄을 넘으므로 다시 분해 대상이다 |
+| ~~`src/Shell.Core/Develop/DevelopPanelState.cs`~~ | 648 → 482 | **해결.** 톤 표면을 `Develop/Editing/DevelopTonePanel.cs`(101줄), 색 표면을 `Develop/Editing/DevelopColorPanel.cs`(102줄)로 나눴다. `panel.Tone.SetExposure`·`panel.Color.SetColorMixer` 꼴로 호출부까지 옮겼고, "실제로 바뀐 뒤에만 다시 고른다"는 규칙은 `RefreshAfterEdit` 한 곳에만 남겼다 |
 | `src/Native/imaging/texture_stage.cpp` | 646 | texture stage 단일 알고리즘 |
 | `tests/Native.UnitTests/texture_stage_tests.cpp` | 620 | texture stage 단일 suite |
 | `src/Native/imaging/digital_film_color_preset.cpp` | 597 | digital film color preset 단일 알고리즘 |
@@ -77,7 +77,7 @@
 | `src/Native/core/tiff_deflate_validator.cpp` | 515 | TIFF Deflate payload 검증 단일 알고리즘 |
 | ~~`src/Shell/Views/PrintSheetWriter.cs`~~ | 505 → 258 | **해결.** 판 합성 오케스트레이션만 남기고 화소 그리기를 `Views/Print/PrintPageCanvas.cs`(215줄), PNG 굽기를 `Views/Print/PrintSheetEncoder.cs`(49줄), 파일 스트림을 `Views/Print/PrintSheetFile.cs`(20줄)로 옮겼다. 네 파일 모두 500줄 미만 |
 
-미해결 11개: `negaflow_abi.cpp`, `DevelopWorkspaceView.xaml.cs`, `develop_export_abi_tests.cpp`, `LibraryWorkspaceView.xaml.cs`, `DevelopWorkspaceView.xaml`, `NativeDevelopExporter.cs`, `develop_export.cpp`, `tiff_probe.cpp`, `LibraryWorkspaceView.xaml`, `PrintWorkspaceView.Composition.cs`, `DevelopPanelState.cs`.
+미해결 10개: `negaflow_abi.cpp`, `DevelopWorkspaceView.xaml.cs`, `develop_export_abi_tests.cpp`, `LibraryWorkspaceView.xaml.cs`, `DevelopWorkspaceView.xaml`, `NativeDevelopExporter.cs`, `develop_export.cpp`, `tiff_probe.cpp`, `LibraryWorkspaceView.xaml`, `PrintWorkspaceView.Composition.cs`.
 
 사유가 적힌 35개도 "줄 수가 커도 된다"는 뜻이 아니라 "지금 확인한 근거로는 서로 독립적인 변경 이유가 하나뿐"이라는 뜻이다. 새 책임이 붙으면 다시 미해결로 옮긴다.
 

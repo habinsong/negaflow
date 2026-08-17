@@ -39,6 +39,8 @@ public sealed class DevelopPanelState
         toneEditor = new DevelopToneEditor(host, limits);
         transformEditor = new DevelopTransformEditor(host);
         versionPresets = new DevelopVersionPresetController(host);
+        Tone = new DevelopTonePanel(this, toneEditor);
+        Color = new DevelopColorPanel(this, colorEditor);
     }
 
     public double MinimumManualDmin => baseEditor.MinimumManualDmin;
@@ -57,7 +59,7 @@ public sealed class DevelopPanelState
 
     public bool CanEditBase => DevelopBaseEditor.CanEdit(SelectedFrame);
 
-    public bool CanEditTone => SelectedFrame is not null;
+    public bool CanEditTone => Tone.CanEdit;
 
     public LibraryFrameError SetBaseMode(BaseEstimationMode mode)
     {
@@ -96,40 +98,11 @@ public sealed class DevelopPanelState
 
     public LibraryFrameSnapshot? SelectedFrame { get; private set; }
 
-    public double MaximumExposureStops => toneEditor.MaximumExposureStops;
+    /// <summary>기본 톤과 톤 커브의 조작 표면입니다.</summary>
+    public DevelopTonePanel Tone { get; }
 
-    public double MaximumToneControl => toneEditor.MaximumToneControl;
-
-    public double Exposure => SelectedFrame?.Tone.Exposure ?? 0.0;
-
-    public double Contrast => SelectedFrame?.Tone.Contrast ?? 0.0;
-
-    public double Highlights => SelectedFrame?.Tone.Highlight ?? 0.0;
-
-    public double Shadows => SelectedFrame?.Tone.Shadow ?? 0.0;
-
-    public double Whites => SelectedFrame?.Tone.Whites ?? 0.0;
-
-    public double Blacks => SelectedFrame?.Tone.Blacks ?? 0.0;
-
-    public double Density => SelectedFrame?.Tone.Density ?? 0.0;
-
-    public double CurveHighlights => SelectedFrame?.Tone.CurveHighlights ?? 0.0;
-
-    public double CurveLights => SelectedFrame?.Tone.CurveLights ?? 0.0;
-
-    public double CurveDarks => SelectedFrame?.Tone.CurveDarks ?? 0.0;
-
-    public double CurveShadows => SelectedFrame?.Tone.CurveShadows ?? 0.0;
-
-    public PointCurveRecipe PointCurves => SelectedFrame?.PointCurves ?? PointCurveRecipe.Identity;
-
-    public ColorMixerRecipe ColorMixer => SelectedFrame?.ColorMixer ?? ColorMixerRecipe.Identity;
-
-    public ColorGradingRecipe ColorGrading => SelectedFrame?.ColorGrading ?? ColorGradingRecipe.Identity;
-
-    public PrimaryCalibrationRecipe PrimaryCalibration =>
-        SelectedFrame?.PrimaryCalibration ?? PrimaryCalibrationRecipe.Identity;
+    /// <summary>포인트 커브·믹서·그레이딩·색상 다섯 축·원색 캘리브레이션·흑백 토닝입니다.</summary>
+    public DevelopColorPanel Color { get; }
 
     public TextureRecipe Texture => SelectedFrame?.Texture ?? TextureRecipe.Identity;
 
@@ -140,16 +113,6 @@ public sealed class DevelopPanelState
         SelectedFrame?.ImageTransform ?? ImageTransformRecipe.Identity;
 
     public bool CanExport => SelectedFrame is { CanDevelop: true } && !host.IsExporting;
-
-    public LibraryFrameError ApplyAutoTone(AutoAdjustSettings settings)
-    {
-        return RefreshAfterEdit(toneEditor.ApplyAutoTone(SelectedFrame, settings));
-    }
-
-    public LibraryFrameError ApplyAutoWhiteBalance(AutoAdjustSettings settings)
-    {
-        return RefreshAfterEdit(toneEditor.ApplyAutoWhiteBalance(SelectedFrame, settings));
-    }
 
     public bool Select(string frameId)
     {
@@ -165,114 +128,6 @@ public sealed class DevelopPanelState
         SelectedFrame = null;
         return false;
     }
-
-    /// <summary>
-    /// 노출을 바꿉니다. 범위는 엔진이 알려 준 값이고, clamp 를 통과한 값은 엔진이 받습니다.
-    /// 저장은 하지 않습니다 — <see cref="Save"/> 를 부르십시오.
-    /// </summary>
-    public LibraryFrameError SetExposure(double stops)
-    {
-        return RefreshAfterEdit(toneEditor.SetExposure(SelectedFrame, stops));
-    }
-
-    public LibraryFrameError SetContrast(double value) =>
-        RefreshAfterEdit(toneEditor.SetContrast(SelectedFrame, value));
-
-    public LibraryFrameError SetHighlights(double value) =>
-        RefreshAfterEdit(toneEditor.SetHighlights(SelectedFrame, value));
-
-    public LibraryFrameError SetShadows(double value) =>
-        RefreshAfterEdit(toneEditor.SetShadows(SelectedFrame, value));
-
-    public LibraryFrameError SetWhites(double value) =>
-        RefreshAfterEdit(toneEditor.SetWhites(SelectedFrame, value));
-
-    public LibraryFrameError SetBlacks(double value) =>
-        RefreshAfterEdit(toneEditor.SetBlacks(SelectedFrame, value));
-
-    public LibraryFrameError SetDensity(double value) =>
-        RefreshAfterEdit(toneEditor.SetDensity(SelectedFrame, value));
-
-    public LibraryFrameError SetCurveHighlights(double value) =>
-        RefreshAfterEdit(toneEditor.SetCurveHighlights(SelectedFrame, value));
-
-    public LibraryFrameError SetCurveLights(double value) =>
-        RefreshAfterEdit(toneEditor.SetCurveLights(SelectedFrame, value));
-
-    public LibraryFrameError SetCurveDarks(double value) =>
-        RefreshAfterEdit(toneEditor.SetCurveDarks(SelectedFrame, value));
-
-    public LibraryFrameError SetCurveShadows(double value) =>
-        RefreshAfterEdit(toneEditor.SetCurveShadows(SelectedFrame, value));
-
-    public LibraryFrameError ResetBasicTone() =>
-        RefreshAfterEdit(toneEditor.ResetBasicTone(SelectedFrame));
-
-    public LibraryFrameError ResetToneCurve()
-    {
-        return RefreshAfterEdit(toneEditor.ResetToneCurve(SelectedFrame));
-    }
-
-    /// <summary>
-    /// 색상 섹션의 다섯 축만 0 으로 돌립니다. 같은 recipe 에 있는 원색 세 축은 이 섹션의 것이
-    /// 아니므로 건드리지 않습니다.
-    /// </summary>
-    public LibraryFrameError ResetColor()
-    {
-        return RefreshAfterEdit(colorEditor.ResetColor(SelectedFrame));
-    }
-
-    public LibraryFrameError ResetColorMixer()
-    {
-        return RefreshAfterEdit(
-            colorEditor.SetColorMixer(SelectedFrame, ColorMixerRecipe.Identity));
-    }
-
-    public LibraryFrameError ResetColorGrading()
-    {
-        return RefreshAfterEdit(
-            colorEditor.SetColorGrading(SelectedFrame, ColorGradingRecipe.Identity));
-    }
-
-    public LibraryFrameError ResetPrimaryCalibration() =>
-        SetPrimaryCalibration(PrimaryCalibrationRecipe.Identity);
-
-    public LibraryFrameError ResetDetailAndEffects()
-    {
-        return RefreshAfterEdit(effectsEditor.Reset(SelectedFrame));
-    }
-
-    /// <summary>
-    /// Point Curve는 Parametric Tone Curve와 별도 recipe로 저장합니다. Catalog writer가
-    /// 좌표의 finite/range/중복 조건을 검증해 preview와 export가 같은 값만 받습니다.
-    /// </summary>
-    public LibraryFrameError SetPointCurves(PointCurveRecipe pointCurves)
-    {
-        return RefreshAfterEdit(colorEditor.SetPointCurves(SelectedFrame, pointCurves));
-    }
-
-    /// <summary>Color Mixer는 Tone과 별도 recipe로 저장되어 preview/export에 같은 값을 전달합니다.</summary>
-    public LibraryFrameError SetColorMixer(ColorMixerRecipe colorMixer)
-    {
-        return RefreshAfterEdit(colorEditor.SetColorMixer(SelectedFrame, colorMixer));
-    }
-
-    /// <summary>Color Grading은 Tone과 별도 recipe로 저장되어 preview/export에 같은 값을 전달합니다.</summary>
-    public LibraryFrameError SetColorGrading(ColorGradingRecipe colorGrading)
-    {
-        return RefreshAfterEdit(colorEditor.SetColorGrading(SelectedFrame, colorGrading));
-    }
-
-    /// <summary>
-    /// macOS 색상 섹션의 다섯 축입니다. 원색 세 축은 이 섹션에 없으므로 그대로 둡니다.
-    /// </summary>
-    public ColorModelRecipe ColorModel => SelectedFrame?.ColorModel ?? ColorModelRecipe.Identity;
-
-    public LibraryFrameError SetColorModel(ColorModelRecipe colorModel)
-    {
-        return RefreshAfterEdit(colorEditor.SetColorModel(SelectedFrame, colorModel));
-    }
-
     /// <summary>
     /// macOS GrainMend 브러시의 기본 굵기입니다. 짧은 변에 대한 비율입니다.
     /// </summary>
@@ -398,7 +253,11 @@ public sealed class DevelopPanelState
         return result.Error;
     }
 
-    private LibraryFrameError RefreshAfterEdit(DevelopEditResult result)
+    /// <summary>
+    /// 실제로 바뀐 뒤에만 다시 고릅니다. 이 규칙은 여기 한 곳에만 있고, 도메인별 하위 표면도
+    /// 이것을 거쳐야 합니다 — 두 벌이 되면 한쪽만 고쳐질 때 화면이 옛 값을 붙듭니다.
+    /// </summary>
+    internal LibraryFrameError RefreshAfterEdit(DevelopEditResult result)
     {
         if (result.Changed && SelectedFrame is { } frame)
         {
@@ -407,34 +266,9 @@ public sealed class DevelopPanelState
         return result.Error;
     }
 
-    public BwToningRecipe BwToning => SelectedFrame?.BwToning ?? BwToningRecipe.None;
-
-    /// <summary>
-    /// macOS 는 흑백 필름에서만 토닝 섹션을 냅니다. 컬러에서는 자리째 사라집니다.
-    /// </summary>
-    public bool ShowsBwToning => SelectedFrame?.Route.FilmType is
-        FilmType.BlackAndWhiteNegative or FilmType.BlackAndWhitePositive;
-
-    public LibraryFrameError SetBwToning(BwToningRecipe bwToning)
+    public LibraryFrameError ResetDetailAndEffects()
     {
-        return RefreshAfterEdit(colorEditor.SetBwToning(SelectedFrame, bwToning));
-    }
-
-    /// <summary>
-    /// 모드를 고릅니다. 켜는 순간 macOS 처럼 최소 세기를 보장합니다 — 0 인 채로 켜면 아무 일도
-    /// 일어나지 않아 고장으로 보입니다. 색조는 그 모드의 기본값에서 시작합니다.
-    /// </summary>
-    public LibraryFrameError SetBwToningMode(Catalog.BwToningMode mode)
-    {
-        return RefreshAfterEdit(colorEditor.SetBwToningMode(SelectedFrame, mode));
-    }
-
-    public LibraryFrameError ResetBwToning() => SetBwToning(BwToningRecipe.None);
-
-    public LibraryFrameError SetPrimaryCalibration(PrimaryCalibrationRecipe primaryCalibration)
-    {
-        return RefreshAfterEdit(
-            colorEditor.SetPrimaryCalibration(SelectedFrame, primaryCalibration));
+        return RefreshAfterEdit(effectsEditor.Reset(SelectedFrame));
     }
 
     public LibraryFrameError SetTexture(TextureRecipe texture)
