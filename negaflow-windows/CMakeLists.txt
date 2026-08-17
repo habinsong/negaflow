@@ -216,10 +216,25 @@ add_library(negaflow_pipeline STATIC
     src/Native/pipeline/defect_recipe_stage.cpp
     src/Native/pipeline/defect_region_stage.cpp
     src/Native/pipeline/develop_export.cpp
+    src/Native/pipeline/export/stages/decode.cpp
+    src/Native/pipeline/export/stages/defect.cpp
+    src/Native/pipeline/export/stages/finish.cpp
+    src/Native/pipeline/export/stages/grade.cpp
+    src/Native/pipeline/export/stages/grain.cpp
+    src/Native/pipeline/export/stages/invert.cpp
+    src/Native/pipeline/export/stages/look.cpp
+    src/Native/pipeline/export/stages/observe.cpp
+    src/Native/pipeline/export/stages/publish.cpp
+    src/Native/pipeline/export/stages/validate.cpp
+    src/Native/pipeline/export/support/gamut.cpp
+    src/Native/pipeline/export/support/outcome.cpp
+    src/Native/pipeline/export/support/preview.cpp
+    src/Native/pipeline/export/support/progress.cpp
     src/Native/pipeline/film_look_workspace.cpp
 )
 target_include_directories(negaflow_pipeline
     PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/pipeline/include"
+    PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/pipeline"
 )
 target_link_libraries(
     negaflow_pipeline

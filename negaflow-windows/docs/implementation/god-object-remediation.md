@@ -37,7 +37,7 @@
 | ~~`src/Shell/Views/DevelopWorkspaceView.xaml`~~ | 525 → 297 | **해결.** GrainMend 카드 XAML 을 `Develop/GrainMend/DevelopGrainMendPanel.xaml`(236줄)로 옮겼다 |
 | ~~`src/Interop/NativeDevelopExporter.cs`~~ | 2,482 → 95 | **해결.** ABI 크기·검증·페이로드·요청 조립·실행·검출을 `Interop/DevelopExport/` 실제 타입으로 옮겼다. facade는 크기 상수와 Run/Preview/Detect 위임만 |
 | `src/Native/abi/include/negaflow_abi.h` | 1,791 | 외부 소비자가 포함하는 append-only 공개 C ABI 선언 집합. 구현 상태가 없다 |
-| `src/Native/pipeline/develop_export.cpp` | 1,575 | 미해결 |
+| ~~`src/Native/pipeline/develop_export.cpp`~~ | 1,575 → 237 | **해결.** 검증·관측·디코드·결함·반전·그레이드·룩·GrainMend·마무리·게시를 `src/Native/pipeline/export/{support,stages}/` 실제 번역 단위로 옮겼다. 공개 진입점과 `run_develop` 순서만 facade에 남겼다. 함수 본문은 그대로 옮겼다 |
 | `src/Native/core/tiff_probe.cpp` | 1,425 | 미해결 |
 | `src/Native/imaging/infrared_defect_detector.cpp` | 1,197 | IR 정렬·마스크·성분 판정의 단일 검출 알고리즘 |
 | `src/Native/imaging/grain_mend_components.cpp` | 1,066 | GrainMend component/evidence/mask 구성의 단일 알고리즘 |
@@ -78,7 +78,7 @@
 | `src/Native/core/tiff_deflate_validator.cpp` | 515 | TIFF Deflate payload 검증 단일 알고리즘 |
 | ~~`src/Shell/Views/PrintSheetWriter.cs`~~ | 505 → 258 | **해결.** 판 합성 오케스트레이션만 남기고 화소 그리기를 `Views/Print/PrintPageCanvas.cs`(215줄), PNG 굽기를 `Views/Print/PrintSheetEncoder.cs`(49줄), 파일 스트림을 `Views/Print/PrintSheetFile.cs`(20줄)로 옮겼다. 네 파일 모두 500줄 미만 |
 
-미해결 3개: `develop_export.cpp`, `tiff_probe.cpp`, `PrintWorkspaceView.Composition.cs`.
+미해결 2개: `tiff_probe.cpp`, `PrintWorkspaceView.Composition.cs`.
 
 사유가 적힌 35개도 "줄 수가 커도 된다"는 뜻이 아니라 "지금 확인한 근거로는 서로 독립적인 변경 이유가 하나뿐"이라는 뜻이다. 새 책임이 붙으면 다시 미해결로 옮긴다.
 
@@ -95,7 +95,7 @@
 | 완료 | `src/Shell/Views/DevelopWorkspaceView.xaml` | 297, 변경 전 2,512 | histogram/tabs, GrainMend | macOS surface 단위 실제 UserControl | 완료. GrainMend 카드 XAML 분리 후 297줄 |
 | 완료 | `src/Interop/NativeDevelopExporter.cs` | 95, 변경 전 2,482 | ABI layout 검증, recipe validation, payload marshaling, 요청 버전, export/preview/GrainMend 실행 | `Interop/DevelopExport` 실제 타입; facade는 크기 상수와 Run/Preview/Detect 위임 | 완료·build.ps1·CTest 71/71·Catalog 721·Shell 1032 |
 | 완료 | `src/Catalog.Core/Library/LibraryFrameReader.cs` | 372, 변경 전 1,584 | frame identity/source, base/tone/color/effects/transform/metadata/local-adjust recipe 파싱 | `Library/Reading` core/value reader와 `Reading/Codecs`의 recipe별 실제 reader | 완료·Catalog 721·Shell 938 assertions 검증 |
-| P0 | `src/Native/pipeline/develop_export.cpp` | 1,575 | decode, source observation, develop/tone/look/defect/transform/output stage와 progress/cancel orchestration | stage executor와 pipeline coordinator | 대기 |
+| 완료 | `src/Native/pipeline/develop_export.cpp` | 237, 변경 전 1,575 | decode, source observation, develop/tone/look/defect/transform/output stage와 progress/cancel orchestration | `pipeline/export/{support,stages}` 실제 번역 단위; facade는 공개 진입점과 `run_develop` 순서만 | 완료·build.ps1·CTest 71/71·Catalog 721·Shell 1032 |
 | 완료 | `src/Shell.Core/Library/LibraryDocument.cs` | 325, 변경 전 1,468 | document 상태, undo/redo, frame/roll/collection/stack/search 변경, defect sidecar, relink/save | `Library/{State,Projection,Persistence,Organization,Editing,Source,Defects}` 실제 협력 타입; facade에는 공개 API 위임만 유지 | 완료·Shell.Core x64 Release 경고 0/오류 0·Shell 938 assertions 검증 |
 | P0 | `src/Native/core/tiff_probe.cpp` | 1,425 | Win32 random file I/O, TIFF/BigTIFF parsing, directory selection, segment/deflate 검증, metadata projection | byte reader, directory parser, segment validator, projection | 대기 |
 | 완료 | `tests/Interop.ContractTests/ContractTestRunner.cs` | 54줄 orchestration, 변경 전 1,414 | layout, run state, auto, IR, flatbed, TIFF, proof, limits, export, path, build contract suite | `Layout`, `Runtime`, `Develop`의 15개 계약 suite와 `ContractTestContext` | 완료·x64 Debug 198 assertions 검증 |
@@ -423,3 +423,25 @@
   - `NativeDevelopResultTranslator` 58 — 네이티브 결과 번역
 - facade 95줄: 크기 상수와 `Run`/`Preview`/`DetectGrainMend` 위임만. 공개 API는 그대로다.
 - 검증: `build.ps1 -Preset x64-release` 통과, `test.ps1` 71/71, `test-managed.ps1` 경고 0·오류 0, Catalog 721, Shell 1032.
+
+## 2026-08-17 develop_export.cpp 번역 단위 — 검증됨
+
+- `develop_export.cpp` 1,575줄을 `src/Native/pipeline/export/` 실제 번역 단위로 옮겼다. `#include` 조각내기가 아니다. 함수 본문은 그대로다.
+- 새 자리 `export/support/`:
+  - `outcome` 20 / 25 — 실패·취소 outcome
+  - `progress` 93 / 143 — 단계 비용, `RunTracker`, 디코드·해시 진행 브리지
+  - `preview` 37 / 170 — 표시용 BGRA8 상자 평균
+  - `gamut` 17 / 54 — 미리보기 색역 경고 덧칠
+- 새 자리 `export/stages/`:
+  - `validate` 17 / 140 — 요청 필드 불변식
+  - `observe` 24 / 58 — 디코드 전 관측·결함 원본 해시
+  - `decode` 22 / 113 — TIFF/WIC 디코드와 디코드 중 원본 변경 확인
+  - `defect` 22 / 73 — 결함 recipe 적용
+  - `invert` 29 / 114 — 자동·프리셋·수동 베이스와 음성 반전
+  - `grade` 18 / 174 — 장면·타깃/구조/프로파일·색 모델
+  - `look` 42 / 99 — Film Look 작업 공간, 톤, Film Look
+  - `grain` 28 / 106 — GrainMend 검출 또는 적용
+  - `finish` 42 / 208 — denoise, dodge, texture, BW, 변환, 긴 변, 샤픈
+  - `publish` 28 / 187 — PNG/JPEG/TIFF 게시와 성공 outcome
+- facade 237줄: 단계 이름, `run_develop` 순서, `develop_and_export` / `develop_preview` / `develop_detect_grain_mend`만. 네임스페이스는 `negaflow::pipeline::develop_export_detail`이다.
+- 검증: `build.ps1 -Preset x64-release` 통과, `test.ps1` 71/71(`native.develop_export_abi` 포함), `test-managed.ps1` 경고 0·오류 0, Catalog 721, Shell 1032.
