@@ -17,6 +17,20 @@ internal sealed class DevelopGrainMendCanvasInput
     private CropDisplayPoint guidedDragStart;
     private CropDisplayPoint guidedDragCurrent;
     private bool guidedDragging;
+    private DefectPoint? cloneCursor;
+
+    /// <summary>
+    /// macOS <c>hoverPoint</c> / 진행 중 획의 마지막 점입니다. 복제 커서가 이 자리에 섭니다.
+    /// </summary>
+    internal DefectPoint? CloneCursor => cloneCursor;
+
+    /// <summary>
+    /// macOS <c>optionDown</c>: Alt 를 누르고 있으면 소스 지정 모드이며 십자선만 냅니다.
+    /// </summary>
+    internal bool CloneSourceModifierDown =>
+        InputKeyboardSource
+            .GetKeyStateForCurrentThread(Windows.System.VirtualKey.Menu)
+            .HasFlag(CoreVirtualKeyStates.Down);
 
     internal DevelopGrainMendCanvasInput(DevelopGrainMendPanel view) => this.view = view;
 
@@ -42,6 +56,13 @@ internal sealed class DevelopGrainMendCanvasInput
 
     internal bool TryHandleMoved(PointerRoutedEventArgs args)
     {
+        // macOS 는 드래그하지 않을 때에도 커서를 따라 원을 그립니다(onContinuousHover).
+        if (view.grainMend.Strokes.Tool == GrainMendTool.Clone &&
+            TryMap(args, out CropDisplayPoint hover))
+        {
+            cloneCursor = new DefectPoint(hover.X, hover.Y);
+            view.review.RenderCloneCursor();
+        }
         if (TryContinueGuided(args))
         {
             args.Handled = true;

@@ -306,6 +306,120 @@
             </StackPanel>
         </Border>
 
+        <!--
+            macOS Features/Defects/CloneStamp/CloneStampOverlay.swift 의 controlBar 입니다.
+            소스를 지정하기 전에는 안내와 구분선이 먼저 서고, 그 뒤에 크기(4~512px)·경도(0~1)
+            슬라이더와 되돌리기가 옵니다. 위치도 같습니다(.padding(.top, 12)).
+            글리프: rectangle.on.rectangle 은 겹친 사각형 E7C4, 되돌리기 E7A7.
+        -->
+        <Border
+            x:Name="CloneCapsule"
+            Margin="0,12,0,0"
+            Padding="12,8"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Top"
+            AutomationProperties.AutomationId="negaflow.canvas.grainmend.clone-bar"
+            Background="{ThemeResource NegaflowPanelBrush}"
+            BorderBrush="{ThemeResource NegaflowDividerBrush}"
+            BorderThickness="1"
+            CornerRadius="18"
+            Visibility="Collapsed">
+            <!-- macOS HStack(spacing: 10) -->
+            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                <FontIcon
+                    VerticalAlignment="Center"
+                    FontSize="14"
+                    Foreground="#FFFF3B30"
+                    Glyph="&#xE7C4;" />
+                <!-- macOS: sourceBase == nil 일 때만 안내 + 구분선 -->
+                <TextBlock
+                    x:Name="CloneSourceHint"
+                    VerticalAlignment="Center"
+                    FontSize="12"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                <Border
+                    x:Name="CloneHintDivider"
+                    Width="1"
+                    Height="16"
+                    VerticalAlignment="Center"
+                    Background="{ThemeResource NegaflowDividerBrush}" />
+                <!-- macOS HStack(spacing: 6) { 크기, Slider(4...512, width: 96), "Npx"(width 42) } -->
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <TextBlock
+                        x:Name="CloneSizeLabel"
+                        VerticalAlignment="Center"
+                        FontSize="11"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <Slider
+                        x:Name="CloneSizeSlider"
+                        Width="96"
+                        VerticalAlignment="Center"
+                        Minimum="4"
+                        Maximum="512"
+                        StepFrequency="1"
+                        SmallChange="1"
+                        LargeChange="8"
+                        AutomationProperties.AutomationId="negaflow.canvas.grainmend.clone-size"
+                        IsThumbToolTipEnabled="False"
+                        ValueChanged="OnCloneSizeChanged" />
+                    <TextBlock
+                        x:Name="CloneSizeValue"
+                        Width="42"
+                        VerticalAlignment="Center"
+                        FontFamily="Consolas"
+                        FontSize="11"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        TextAlignment="Right" />
+                </StackPanel>
+                <Border
+                    Width="1"
+                    Height="16"
+                    VerticalAlignment="Center"
+                    Background="{ThemeResource NegaflowDividerBrush}" />
+                <!-- macOS HStack(spacing: 6) { 경도, Slider(0...1, width: 80), "N%"(width 34) } -->
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <TextBlock
+                        x:Name="CloneHardnessLabel"
+                        VerticalAlignment="Center"
+                        FontSize="11"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <Slider
+                        x:Name="CloneHardnessSlider"
+                        Width="80"
+                        VerticalAlignment="Center"
+                        Minimum="0"
+                        Maximum="1"
+                        StepFrequency="0.01"
+                        SmallChange="0.01"
+                        LargeChange="0.1"
+                        AutomationProperties.AutomationId="negaflow.canvas.grainmend.clone-hardness"
+                        IsThumbToolTipEnabled="False"
+                        ValueChanged="OnCloneHardnessChanged" />
+                    <TextBlock
+                        x:Name="CloneHardnessValue"
+                        Width="34"
+                        VerticalAlignment="Center"
+                        FontFamily="Consolas"
+                        FontSize="11"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        TextAlignment="Right" />
+                </StackPanel>
+                <Border
+                    Width="1"
+                    Height="16"
+                    VerticalAlignment="Center"
+                    Background="{ThemeResource NegaflowDividerBrush}" />
+                <Button
+                    x:Name="CloneUndoButton"
+                    VerticalAlignment="Center"
+                    AutomationProperties.AutomationId="negaflow.canvas.grainmend.clone-undo"
+                    Click="OnCloneUndoClicked"
+                    Style="{StaticResource NegaflowHudGlyphButtonStyle}">
+                    <FontIcon FontSize="12" Glyph="&#xE7A7;" />
+                </Button>
+            </StackPanel>
+        </Border>
+
         <!-- macOS classChipsBar: 콘텐츠 폭에 딱 맞춰 가운데. -->
         <Border
             x:Name="ChipsCapsule"

@@ -874,6 +874,9 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="developPreviewFailed.Text" xml:space="preserve"><value>L'aperçu n'a pas pu être généré</value></data>
   <data name="libraryFilterMetadataUnknown.Content" xml:space="preserve"><value>État des métadonnées inconnu</value><comment>AppLocalizedPhrase.filterMetadataUnknown</comment></data>
   <data name="developGrainMendFalsePositiveRisk.Text" xml:space="preserve"><value>Risque élevé de fausses détections.</value><comment>AppLocalizedPhrase.automaticDefectFalsePositiveRiskStatus</comment></data>
+  <data name="developGrainMendCloneSourceHint.Text" xml:space="preserve"><value>Alt-clic pour définir la source du clonage</value><comment>AppLocalizedPhrase.cloneStampSourceHint</comment></data>
+  <data name="developGrainMendCloneSize.Text" xml:space="preserve"><value>Taille</value><comment>AppLocalizedPhrase.cloneStampSize</comment></data>
+  <data name="developGrainMendCloneHardness.Text" xml:space="preserve"><value>Dureté</value><comment>AppLocalizedPhrase.cloneStampHardness</comment></data>
   <data name="developGrainMendDetecting.Text" xml:space="preserve"><value>Détection des défauts en cours</value><comment>AppLocalizedPhrase.detectingDefectsStatus</comment></data>
   <data name="developGrainMendNoDefects.Text" xml:space="preserve"><value>Aucun défaut</value><comment>AppLocalizedPhrase.noDefectsStatus</comment></data>
   <data name="developGrainMendDefectsFormat.Value" xml:space="preserve"><value>%d défauts</value><comment>AppLocalizedPhrase.defectsCountFormat</comment></data>

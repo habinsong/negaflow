@@ -104,10 +104,19 @@ Windows 주요 위치:
 | 도구 | 백엔드 | 프론트엔드 |
 |---|---|---|
 | 자동 | **완료** (아래 5.1) | **완료** — 오검출 위험 문구까지 캡슐에 옴 |
-| 가이드 | **완료** (아래 5.2) | 자동과 `RegionDefectOverlay` 공유 — 앱에서 동작 확인됨 |
-| 브러시 | `DefectHealBrush` 있음 | **없음** — 빨간 칠 오버레이·컨트롤 바 히트 0 |
-| 복제 도장 | `defect_clone_stamp.cpp` 있음 | **없음** — 원 커서·Alt 십자선·크기/경도 바 히트 0 |
+| 가이드 | **완료** (아래 5.2) | **완료** — 자동과 `RegionDefectOverlay` 공유, 앱에서 동작 확인 |
+| 브러시 | `DefectHealBrush` 있음 | **완료** — 빨강 0.45 라이브 칠 + 컨트롤 바 + "모았다가 적용" |
+| 복제 도장 | `defect_clone_stamp.cpp` 있음 | **진행 중** — 원 커서·Alt 십자선·크기/경도 바 이식 중 |
 | IR | 있음 | 미확인 |
+
+이식한 macOS 프론트엔드 수치(전부 Swift 에서 그대로):
+
+| macOS Swift | Windows | 수치 |
+|---|---|---|
+| `BrushOverlay.paint` | `GrainMendPaintOverlayRenderer` | `Color.red.opacity(0.45)` = (255,59,48)@0.45, 굵기 `max(1, thickness × min(w,h))`, round cap/join, 점 하나면 그 지름의 원 |
+| `BrushControlBar` | HUD `BrushCapsule` | 굵기 `0.004...0.06`(폭 110) · 기본 `0.010` · 되돌리기/지우기/초기화/제거, 열림 조건은 `hasStrokes`·`hasAppliedDefects`·`isBusy` |
+| `CloneStampOverlay.draw` | `CloneStampCursorRenderer` | 원 지름 `max(3, sizePx × 배율)`, 테두리 검정 0.55@2.5 + 흰 0.9@1, 십자선 팔 7 · 검정 0.65@3 + 흰 0.95@1.2 |
+| `CloneStampOverlay.controlBar` | HUD `CloneCapsule` | 크기 `4...512`(폭 96) + `Npx`(폭 42) · 경도 `0...1`(폭 80) + `N%`(폭 34) · 기본 48px/0.5 |
 
 ### 5.1 검출 품질 — 자동 (다섯 장, cleaned raw, `Windows/macOS`)
 

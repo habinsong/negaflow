@@ -874,6 +874,9 @@
   <data name="developPreviewFailed.Text" xml:space="preserve"><value>미리보기를 만들지 못했습니다</value></data>
   <data name="libraryFilterMetadataUnknown.Content" xml:space="preserve"><value>메타데이터 상태 미확인</value><comment>AppLocalizedPhrase.filterMetadataUnknown</comment></data>
   <data name="developGrainMendFalsePositiveRisk.Text" xml:space="preserve"><value>오탐지가 발생할 위험이 높습니다.</value><comment>AppLocalizedPhrase.automaticDefectFalsePositiveRiskStatus</comment></data>
+  <data name="developGrainMendCloneSourceHint.Text" xml:space="preserve"><value>Alt 클릭으로 복제 소스 지정</value><comment>AppLocalizedPhrase.cloneStampSourceHint</comment></data>
+  <data name="developGrainMendCloneSize.Text" xml:space="preserve"><value>크기</value><comment>AppLocalizedPhrase.cloneStampSize</comment></data>
+  <data name="developGrainMendCloneHardness.Text" xml:space="preserve"><value>경도</value><comment>AppLocalizedPhrase.cloneStampHardness</comment></data>
   <data name="developGrainMendDetecting.Text" xml:space="preserve"><value>결함 검출 중</value><comment>AppLocalizedPhrase.detectingDefectsStatus</comment></data>
   <data name="developGrainMendNoDefects.Text" xml:space="preserve"><value>결함 없음</value><comment>AppLocalizedPhrase.noDefectsStatus</comment></data>
   <data name="developGrainMendDefectsFormat.Value" xml:space="preserve"><value>결함 %d개</value><comment>AppLocalizedPhrase.defectsCountFormat</comment></data>

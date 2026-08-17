@@ -87,6 +87,23 @@ public sealed partial class DevelopGrainMendPanel : UserControl
         hud.BrushClearRequested += OnHudBrushClearRequested;
         hud.BrushResetRequested += () => review.RemoveEdits(DefectEditKind.Brush);
         hud.BrushApplyRequested += OnHudBrushApplyRequested;
+        hud.CloneDiameterChanged += OnHudCloneDiameterChanged;
+        hud.CloneHardnessChanged += OnHudCloneHardnessChanged;
+        hud.CloneUndoRequested += () => review.RemoveEdits(DefectEditKind.Clone);
+    }
+
+    /// <summary>크기가 바뀌면 커서 원도 곧바로 그 크기가 됩니다(macOS <c>screenDiameter</c>).</summary>
+    private void OnHudCloneDiameterChanged(double value)
+    {
+        grainMend.Strokes.CloneDiameterPixels = value;
+        review.RenderCloneCursor();
+        chrome.Update();
+    }
+
+    private void OnHudCloneHardnessChanged(double value)
+    {
+        grainMend.Strokes.CloneHardness = value;
+        chrome.Update();
     }
 
     /// <summary>

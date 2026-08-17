@@ -100,6 +100,14 @@ internal sealed class DevelopGrainMendChrome
             view.grainMend.Strokes.HasPaintedStrokes,
             card.BrushResetEnabled,
             view.isRemovingDefects);
+        // macOS `CloneStampOverlay` 는 복제 도구를 켜면 자기 컨트롤 바를 냅니다.
+        hud.UpdateCloneBar(
+            view.grainMend.Strokes.Tool == GrainMendTool.Clone,
+            view.grainMend.Strokes.CloneSourceAnchor is not null,
+            view.grainMend.Strokes.CloneDiameterPixels,
+            view.grainMend.Strokes.CloneHardness,
+            card.CloneResetEnabled,
+            view.isRemovingDefects);
     }
 
     /// <summary>

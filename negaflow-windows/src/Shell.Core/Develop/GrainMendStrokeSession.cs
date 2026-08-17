@@ -24,11 +24,23 @@ public sealed class GrainMendStrokeSession
     /// <summary>macOS <c>CanvasView.brushThickness</c> 의 초기값입니다.</summary>
     public const double DefaultBrushThickness = 0.010;
 
+    /// <summary>macOS <c>CloneStampOverlay</c> 의 크기 슬라이더 범위(px)입니다.</summary>
+    public const double MinimumCloneDiameterPixels = 4.0;
+
+    public const double MaximumCloneDiameterPixels = 512.0;
+
+    /// <summary>macOS <c>CanvasView.cloneStampSizePx</c> / <c>cloneStampHardness</c>.</summary>
+    public const double DefaultCloneDiameterPixels = 48.0;
+
+    public const double DefaultCloneHardness = 0.5;
+
     private readonly List<DefectPoint> stroke = [];
     private readonly List<DefectStroke> painted = [];
     private DefectPoint? cloneSourceAnchor;
     private DefectPoint? cloneAlignedOffsetRaw;
     private double brushThickness = DefaultBrushThickness;
+    private double cloneDiameterPixels = DefaultCloneDiameterPixels;
+    private double cloneHardness = DefaultCloneHardness;
 
     public GrainMendTool Tool { get; private set; }
 
@@ -54,6 +66,32 @@ public sealed class GrainMendStrokeSession
             double.IsFinite(value) ? value : DefaultBrushThickness,
             MinimumBrushThickness,
             MaximumBrushThickness);
+    }
+
+    /// <summary>
+    /// macOS 는 소스를 지정하기 전에는 컨트롤 바에 안내를 띄우고, 원 안에 미리보기를 넣지
+    /// 않습니다(<c>sourceBase == nil</c>).
+    /// </summary>
+    public DefectPoint? CloneSourceAnchor => cloneSourceAnchor;
+
+    /// <summary>복제 지름(원본 화소). 슬라이더 범위로 잘립니다.</summary>
+    public double CloneDiameterPixels
+    {
+        get => cloneDiameterPixels;
+        set => cloneDiameterPixels = Math.Clamp(
+            double.IsFinite(value) ? value : DefaultCloneDiameterPixels,
+            MinimumCloneDiameterPixels,
+            MaximumCloneDiameterPixels);
+    }
+
+    /// <summary>복제 경도(0~1).</summary>
+    public double CloneHardness
+    {
+        get => cloneHardness;
+        set => cloneHardness = Math.Clamp(
+            double.IsFinite(value) ? value : DefaultCloneHardness,
+            0.0,
+            1.0);
     }
 
     public void Select(GrainMendTool tool)
@@ -178,7 +216,9 @@ public sealed class GrainMendStrokeSession
                 completed,
                 cloneSourceAnchor ?? completed[0],
                 cloneAlignedOffsetRaw,
-                out DefectPoint usedOffset);
+                out DefectPoint usedOffset,
+                cloneDiameterPixels,
+                cloneHardness);
             if (error == LibraryFrameError.None)
             {
                 cloneAlignedOffsetRaw = usedOffset;

@@ -17,6 +17,7 @@ public sealed partial class DevelopGrainMendHud : UserControl
     private bool updatingSensitivity;
     private bool updatingMicroSpecks;
     private bool updatingBrushThickness;
+    private bool updatingClone;
 
     public DevelopGrainMendHud() => InitializeComponent();
 
@@ -49,6 +50,15 @@ public sealed partial class DevelopGrainMendHud : UserControl
 
     /// <summary>macOS <c>onApply</c> — 칠한 것을 recipe 로 보냅니다.</summary>
     public event Action? BrushApplyRequested;
+
+    /// <summary>macOS <c>CloneStampOverlay</c> 의 크기 슬라이더(px)입니다.</summary>
+    public event Action<double>? CloneDiameterChanged;
+
+    /// <summary>같은 바의 경도 슬라이더(0~1)입니다.</summary>
+    public event Action<double>? CloneHardnessChanged;
+
+    /// <summary>같은 바의 되돌리기입니다 — macOS 도 통합 undo 를 부릅니다.</summary>
+    public event Action? CloneUndoRequested;
 
     /// <summary>
     /// 지금 상태를 화면에 옮깁니다. 여는 순서와 여백은 macOS 컨트롤 바와 같습니다.
@@ -141,6 +151,71 @@ public sealed partial class DevelopGrainMendHud : UserControl
         BrushResetButton.IsEnabled = hasAppliedBrushEdits && !isBusy;
         BrushApplyButton.IsEnabled = hasPaintedStrokes && !isBusy;
         BrushApplyText.Text = AppResources.Get("developGrainMendRemove", "Content");
+    }
+
+    /// <summary>
+    /// macOS <c>CloneStampOverlay.controlBar</c>: 소스를 지정하기 전에는 안내와 구분선이
+    /// 먼저 서고, 그 뒤에 크기·경도 슬라이더와 되돌리기가 옵니다.
+    /// </summary>
+    public void UpdateCloneBar(
+        bool visible,
+        bool hasSource,
+        double diameterPixels,
+        double hardness,
+        bool canUndo,
+        bool isBusy)
+    {
+        CloneCapsule.Visibility = Show(visible);
+        if (!visible)
+        {
+            return;
+        }
+        if (HudRoot.Visibility != Visibility.Visible)
+        {
+            HudRoot.Visibility = Visibility.Visible;
+        }
+        CloneSourceHint.Visibility = Show(!hasSource);
+        CloneHintDivider.Visibility = Show(!hasSource);
+        updatingClone = true;
+        CloneSizeSlider.Value = diameterPixels;
+        CloneHardnessSlider.Value = hardness;
+        updatingClone = false;
+        CloneSizeSlider.IsEnabled = !isBusy;
+        CloneHardnessSlider.IsEnabled = !isBusy;
+        CloneUndoButton.IsEnabled = canUndo && !isBusy;
+        // macOS: "\(Int(sizePx))px" 와 "\(Int((hardness * 100).rounded()))%"
+        CloneSizeValue.Text = $"{(int)diameterPixels}px";
+        CloneHardnessValue.Text = $"{(int)Math.Round(hardness * 100.0)}%";
+        CloneSourceHint.Text = AppResources.Get("developGrainMendCloneSourceHint", "Text");
+        CloneSizeLabel.Text = AppResources.Get("developGrainMendCloneSize", "Text");
+        CloneHardnessLabel.Text = AppResources.Get("developGrainMendCloneHardness", "Text");
+    }
+
+    private void OnCloneSizeChanged(object sender, RangeBaseValueChangedEventArgs args)
+    {
+        _ = sender;
+        if (updatingClone)
+        {
+            return;
+        }
+        CloneDiameterChanged?.Invoke(args.NewValue);
+    }
+
+    private void OnCloneHardnessChanged(object sender, RangeBaseValueChangedEventArgs args)
+    {
+        _ = sender;
+        if (updatingClone)
+        {
+            return;
+        }
+        CloneHardnessChanged?.Invoke(args.NewValue);
+    }
+
+    private void OnCloneUndoClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        CloneUndoRequested?.Invoke();
     }
 
     private void OnBrushThicknessChanged(

@@ -51,6 +51,38 @@ internal sealed class DevelopGrainMendReview
     internal void HideOverlay() => view.canvas?.HideDefectOverlay();
 
     /// <summary>
+    /// macOS <c>CloneStampOverlay.draw</c>: 커서 원과 십자선을 캔버스에 올립니다. Alt 를
+    /// 누르고 있으면 원 대신 십자선만 냅니다.
+    /// </summary>
+    internal void RenderCloneCursor()
+    {
+        if (view.panel?.SelectedFrame is not { SourceMetadata: { } metadata } frame ||
+            view.canvas?.PreviewBitmap is null)
+        {
+            return;
+        }
+        int width = view.canvas.PreviewBitmap.PixelWidth;
+        int height = view.canvas.PreviewBitmap.PixelHeight;
+        double diameter = CloneStampCursorRenderer.ScreenDiameter(
+            view.grainMend.Strokes.CloneDiameterPixels,
+            width,
+            metadata.PixelWidth);
+        if (CloneStampCursorRenderer.Render(
+                frame,
+                width,
+                height,
+                view.input.CloneCursor,
+                view.grainMend.Strokes.CloneSourceAnchor,
+                diameter,
+                view.input.CloneSourceModifierDown) is not { } bgra)
+        {
+            HideOverlay();
+            return;
+        }
+        view.canvas.ShowDefectPixels(bgra, width, height);
+    }
+
+    /// <summary>
     /// macOS <c>BrushOverlay</c>: 모아 둔 칠과 진행 중인 획을 빨강으로 캔버스에 올립니다.
     /// 칠이 없으면 덮개를 내립니다.
     /// </summary>

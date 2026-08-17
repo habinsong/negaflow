@@ -874,6 +874,9 @@
   <data name="developPreviewFailed.Text" xml:space="preserve"><value>プレビューを作成できませんでした</value></data>
   <data name="libraryFilterMetadataUnknown.Content" xml:space="preserve"><value>メタデータ状態不明</value><comment>AppLocalizedPhrase.filterMetadataUnknown</comment></data>
   <data name="developGrainMendFalsePositiveRisk.Text" xml:space="preserve"><value>誤検出が発生する可能性が高いです。</value><comment>AppLocalizedPhrase.automaticDefectFalsePositiveRiskStatus</comment></data>
+  <data name="developGrainMendCloneSourceHint.Text" xml:space="preserve"><value>Alt クリックで複製ソースを指定</value><comment>AppLocalizedPhrase.cloneStampSourceHint</comment></data>
+  <data name="developGrainMendCloneSize.Text" xml:space="preserve"><value>サイズ</value><comment>AppLocalizedPhrase.cloneStampSize</comment></data>
+  <data name="developGrainMendCloneHardness.Text" xml:space="preserve"><value>硬さ</value><comment>AppLocalizedPhrase.cloneStampHardness</comment></data>
   <data name="developGrainMendDetecting.Text" xml:space="preserve"><value>ゴミ・キズを検出中</value><comment>AppLocalizedPhrase.detectingDefectsStatus</comment></data>
   <data name="developGrainMendNoDefects.Text" xml:space="preserve"><value>ゴミ・キズは見つかりませんでした</value><comment>AppLocalizedPhrase.noDefectsStatus</comment></data>
   <data name="developGrainMendDefectsFormat.Value" xml:space="preserve"><value>ゴミ・キズ %d件</value><comment>AppLocalizedPhrase.defectsCountFormat</comment></data>
