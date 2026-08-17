@@ -78,9 +78,11 @@ internal static class DefectToolDiagnostics
         string? infraredPath)
     {
         DefectEditItem? automatic = DefectToolRecipes.Automatic(frame, exporter, out string why);
+        Elapsed("automatic");
         yield return ("automatic", automatic, why);
 
         DefectEditItem? guided = DefectToolRecipes.Guided(frame, exporter, out why);
+        Elapsed("guided");
         yield return ("guided", guided, why);
 
         DefectEditItem? brush = DefectToolRecipes.Brush(frame, out why);
@@ -98,6 +100,18 @@ internal static class DefectToolDiagnostics
         }
         yield return ("infrared", infrared, why);
     }
+
+    /// <summary>
+    /// 검출 한 번에 걸린 시간입니다. 자동은 5초 미만이어야 합니다 — 화소가 바뀌는지만 보고
+    /// 넘어가면 이식이 느려진 것을 아무도 못 봅니다.
+    /// </summary>
+    private static void Elapsed(string tool) =>
+        Console.WriteLine(JsonSerializer.Serialize(new
+        {
+            stage = "timing",
+            tool,
+            detectMilliseconds = DefectToolRecipes.LastDetectMilliseconds,
+        }));
 
     /// <returns>이 도구가 실제로 화소를 바꿨으면 참입니다.</returns>
     private static bool Report(

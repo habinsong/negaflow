@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Negaflow.Catalog;
 using Negaflow.Interop;
 using Negaflow.Shell.Develop;
@@ -12,6 +13,12 @@ internal static class DefectToolRecipes
 {
     /// <summary>검출 이미지의 긴 변 상한입니다. 네이티브 상한과 같은 값입니다.</summary>
     private const int MaximumDetectionDimension = 1800;
+
+    /// <summary>
+    /// 마지막 검출 한 번에 걸린 시간입니다. 자동은 5초 미만이어야 합니다 — 재지 않으면
+    /// 이식이 느려졌는지 알 수 없습니다.
+    /// </summary>
+    public static long LastDetectMilliseconds { get; private set; } = -1L;
 
     /// <summary>가이드는 사용자가 끈 사각형입니다. 가운데 절반을 씁니다.</summary>
     private static readonly DefectRect GuidedRoi = new(0.25, 0.25, 0.5, 0.5);
@@ -166,7 +173,10 @@ internal static class DefectToolRecipes
         GrainMendDetectionOptions options = GrainMendSensitivity.ToDetectionOptions(
             GrainMendSensitivity.Default,
             automatic);
+        Stopwatch clock = Stopwatch.StartNew();
         GrainMendDetectionResult detected = exporter.DetectGrainMend(request, mask, roi, options);
+        clock.Stop();
+        LastDetectMilliseconds = clock.ElapsedMilliseconds;
         if (!detected.Result.Succeeded)
         {
             reason = $"detect failed: {detected.Result.FailureName}";
