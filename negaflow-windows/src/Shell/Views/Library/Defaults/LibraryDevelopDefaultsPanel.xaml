@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Negaflow.Shell.Views.Library.Defaults.LibraryDevelopDefaultsPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel Spacing="12">
+                        <!-- 현상 기본값: macOS DevelopDefaultsSection 입니다. 프로세스, 타깃,
+                             그리고 필름 프로파일과 룩이 한 줄에 옵니다. -->
+                        <TextBlock x:Name="DevelopDefaultsText" x:FieldModifier="internal" FontSize="13" FontWeight="SemiBold" />
+                        <Border Padding="12" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="8">
+                            <StackPanel Spacing="9">
+                                <TextBlock x:Name="DevelopProcessLabel" x:FieldModifier="internal" FontSize="12" />
+                                <ComboBox
+                                    x:Name="DevelopProcessSelector" x:FieldModifier="internal"
+                                    HorizontalAlignment="Stretch"
+                                    AutomationProperties.AutomationId="negaflow.library.develop.process"
+                                    DisplayMemberPath="Name"
+                                    FontSize="12"
+                                    SelectionChanged="OnDevelopProcessChanged" />
+                                <TextBlock x:Name="DevelopTargetLabel" x:FieldModifier="internal" FontSize="12" />
+                                <!-- macOS 는 다섯 칸 세그먼트입니다. 폭을 똑같이 나눠 가집니다. -->
+                                <Grid x:Name="DevelopTargetBar" x:FieldModifier="internal" ColumnSpacing="4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                </Grid>
+                                <TextBlock x:Name="DevelopFilmProfileLabel" x:FieldModifier="internal" FontSize="12" />
+                                <ComboBox
+                                    x:Name="DevelopFilmProfileSelector" x:FieldModifier="internal"
+                                    HorizontalAlignment="Stretch"
+                                    AutomationProperties.AutomationId="negaflow.library.develop.film-profile"
+                                    DisplayMemberPath="Label"
+                                    FontSize="12"
+                                    SelectionChanged="OnDevelopFilmProfileChanged" />
+                                <TextBlock x:Name="DevelopLookLabel" x:FieldModifier="internal" FontSize="12" />
+                                <ComboBox
+                                    x:Name="DevelopLookSelector" x:FieldModifier="internal"
+                                    HorizontalAlignment="Stretch"
+                                    AutomationProperties.AutomationId="negaflow.library.develop.look"
+                                    DisplayMemberPath="Label"
+                                    FontSize="12"
+                                    SelectionChanged="OnDevelopLookChanged" />
+                            </StackPanel>
+                        </Border>
+    </StackPanel>
+</UserControl>

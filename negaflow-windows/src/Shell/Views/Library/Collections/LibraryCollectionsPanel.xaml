@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Negaflow.Shell.Views.Library.Collections.LibraryCollectionsPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- 컬렉션: macOS 처럼 "전체 보기" 가 늘 맨 위에 있고 그 아래 사용자가 만든
+         묶음이 옵니다. + 는 지금 고른 사진으로 새 묶음을 만듭니다. -->
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <Grid Padding="14,4,10,2">
+            <DropDownButton
+                x:Name="CollectionsAddButton" x:FieldModifier="internal"
+                Width="22"
+                Height="22"
+                Padding="0"
+                HorizontalAlignment="Right"
+                AutomationProperties.AutomationId="negaflow.library.collections.add"
+                Background="Transparent"
+                BorderThickness="0"
+                Content="&#xE710;"
+                FontFamily="{ThemeResource SymbolThemeFontFamily}"
+                FontSize="12">
+                <DropDownButton.Flyout>
+                    <MenuFlyout x:Name="CollectionsAddFlyout" x:FieldModifier="internal" />
+                </DropDownButton.Flyout>
+            </DropDownButton>
+        </Grid>
+        <ListView
+            x:Name="CollectionsList" x:FieldModifier="internal"
+            Grid.Row="1"
+            Padding="10,0,10,8"
+            AutomationProperties.AutomationId="negaflow.library.collections"
+            SelectionChanged="OnCollectionSelectionChanged"
+            SelectionMode="Single">
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <FontIcon
+                            VerticalAlignment="Center"
+                            FontSize="12"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Glyph="{Binding Glyph, Mode=OneWay}" />
+                        <TextBlock
+                            Grid.Column="1"
+                            VerticalAlignment="Center"
+                            FontSize="12"
+                            Text="{Binding Name, Mode=OneWay}"
+                            TextTrimming="CharacterEllipsis" />
+                        <TextBlock
+                            Grid.Column="2"
+                            VerticalAlignment="Center"
+                            FontSize="11"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Text="{Binding CountText, Mode=OneWay}" />
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+        <StackPanel Grid.Row="2" Padding="10,0,10,10" Spacing="6">
+            <TextBox
+                x:Name="CollectionNameBox" x:FieldModifier="internal"
+                AutomationProperties.AutomationId="negaflow.library.collections.name"
+                FontSize="12" />
+            <Grid ColumnSpacing="6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Button
+                    x:Name="CollectionRenameButton" x:FieldModifier="internal"
+                    HorizontalAlignment="Stretch"
+                    AutomationProperties.AutomationId="negaflow.library.collections.rename"
+                    Click="OnRenameCollectionClicked"
+                    FontSize="11" />
+                <Button
+                    x:Name="CollectionDeleteButton" x:FieldModifier="internal"
+                    Grid.Column="1"
+                    HorizontalAlignment="Stretch"
+                    AutomationProperties.AutomationId="negaflow.library.collections.delete"
+                    Click="OnDeleteCollectionClicked"
+                    FontSize="11" />
+            </Grid>
+        </StackPanel>
+    </Grid>
+</UserControl>

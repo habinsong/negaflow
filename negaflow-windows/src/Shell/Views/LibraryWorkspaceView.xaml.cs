@@ -6,7 +6,6 @@ using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Negaflow.Catalog;
-using Negaflow.Interop;
 using Negaflow.Shell.Develop;
 using Negaflow.Shell.Library;
 using Negaflow.Shell.Localization;
@@ -20,15 +19,6 @@ public sealed partial class LibraryWorkspaceView : UserControl
 {
     private WorkspacePresentationState? workspaceState;
     private LibraryHostService? libraryHost;
-    private ScanSessionController? scanSession;
-    private ScannerPluginTrustStore? scannerTrust;
-    private bool initialScannerDetectionStarted;
-    private bool isSynchronizingScan;
-    /// <summary>마지막 프리뷰 스캔의 밝기 값입니다. 자동 프레임 찾기가 이것으로 셉니다.</summary>
-    private PreviewLuminance flatbedPreview = PreviewLuminance.None;
-    private bool isSynchronizingCollections;
-    private string? selectedCollectionId;
-    private string? selectedStoredSearchId;
     private ThumbnailService? thumbnails;
     private Microsoft.UI.WindowId? importWindowId;
     private bool isResizing;
@@ -46,6 +36,25 @@ public sealed partial class LibraryWorkspaceView : UserControl
     public LibraryWorkspaceView()
     {
         InitializeComponent();
+        ScanPanel.IsWanted = () => ImportScannerButton.IsChecked == true;
+        ScanPanel.ExpandRequested += (_, _) => ImportScannerButton.IsChecked = true;
+        ScanPanel.LibraryChanged += OnEmbeddedLibraryChanged;
+        DevelopDefaultsPanel.LibraryChanged += OnEmbeddedLibraryChanged;
+        CullingSurface.AttachChrome(
+            CullingGridButton,
+            CullingSurveyButton,
+            CullingCompareButton,
+            CullingSelectionCountText);
+        CullingSurface.Bind(item =>
+        {
+            FrameListView.SelectedItem = item;
+            ShowFilteredItems();
+        });
+        FilesSourceTree.FrameSelected += OnFilesSourceFrameSelected;
+        FilesSourceTree.LibraryChanged += OnEmbeddedLibraryChanged;
+        FilesSourceTree.StatusChanged += (_, text) => ImportStatusText.Text = text;
+        CollectionsPanel.FilterChanged += (_, _) => ShowFilteredItems();
+        CollectionsPanel.StoredQueryApplied += (_, query) => ApplyStoredQuery(query);
         LocalizeControls();
         Loaded += OnLoaded;
     }
@@ -55,6 +64,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
         ArgumentNullException.ThrowIfNull(state);
         workspaceState = state;
         state.Changed += OnStateChanged;
+        ScanPanel.ApplyDefaultRotation(state.Current.DefaultScanRotation);
         SynchronizeWidth(state.Current.LibraryControlsWidth);
         Unloaded += OnUnloaded;
     }
@@ -84,8 +94,15 @@ public sealed partial class LibraryWorkspaceView : UserControl
 
         libraryHost = host;
         importWindowId = windowId;
+        ScanPanel.Bind(host);
+        DevelopDefaultsPanel.Bind(host, ActionableFrameFromGrid);
+        FilesSourceTree.Bind(host);
+        CollectionsPanel.Bind(
+            host,
+            () => FrameListView.SelectedItems.OfType<LibraryFrameListItem>().Select(item => item.Id),
+            () => LibraryStoredQuery.From(quickFilters, LibrarySearchBox?.Text));
         allItems = LibraryFrameListItems.From(host.Frames, host.SourceAvailabilityByFrameId);
-        RebuildCollections();
+        CollectionsPanel.Rebuild();
         ShowFilteredItems();
 
         bool hasFrames = allItems.Count > 0;
@@ -253,7 +270,48 @@ public sealed partial class LibraryWorkspaceView : UserControl
             }
             host.SetSelection(next, added.LastOrDefault()?.Id);
         }
-        SynchronizeDevelopDefaults();
+        DevelopDefaultsPanel.Synchronize();
+    }
+
+    private LibraryFrameSnapshot? ActionableFrameFromGrid() =>
+        FrameListView?.SelectedItem is LibraryFrameListItem item ? item.Frame : null;
+
+    private void OnCullingModeClicked(object sender, RoutedEventArgs args)
+    {
+        _ = args;
+        CullingSurface.ToggleFrom(sender);
+        ShowFilteredItems();
+    }
+
+    private bool ApplyCullingMode(LibraryCullingMode mode)
+    {
+        if (!CullingSurface.SetMode(mode))
+        {
+            return true;
+        }
+        ShowFilteredItems();
+        return true;
+    }
+
+    private void SynchronizeCullingView(IReadOnlyList<LibraryFrameListItem> ordered)
+    {
+        CullingSurface.Synchronize(
+            ordered,
+            SelectedItems(),
+            FrameListView.SelectedItem as LibraryFrameListItem);
+        FrameListView.Visibility = CullingSurface.IsGrid
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
+
+    private void OnEmbeddedLibraryChanged(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (libraryHost is { } host)
+        {
+            ShowLibrary(host, importWindowId ?? default);
+        }
     }
 
     /// <summary>사용자가 라이브러리에서 현상으로 넘기려는 frame 입니다.</summary>
@@ -268,7 +326,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
         sourceKind = LibrarySourceKind.Importing;
         UpdateSourcePanel();
         ImportScannerButton.IsChecked = true;
-        OnImportScannerClicked(this, new RoutedEventArgs());
+        ScanPanel.Open();
     }
 
     /// <summary>
@@ -299,11 +357,11 @@ public sealed partial class LibraryWorkspaceView : UserControl
                 }
                 return true;
             case WorkflowShortcutAction.LibraryGrid:
-                return SetCullingMode(LibraryCullingMode.Grid);
+                return ApplyCullingMode(LibraryCullingMode.Grid);
             case WorkflowShortcutAction.LibraryCompare:
-                return SetCullingMode(LibraryCullingMode.Compare);
+                return ApplyCullingMode(LibraryCullingMode.Compare);
             case WorkflowShortcutAction.LibrarySurvey:
-                return SetCullingMode(LibraryCullingMode.Survey);
+                return ApplyCullingMode(LibraryCullingMode.Survey);
             case WorkflowShortcutAction.PreviousPhoto:
                 return MoveSelection(-1);
             case WorkflowShortcutAction.NextPhoto:
@@ -333,28 +391,28 @@ public sealed partial class LibraryWorkspaceView : UserControl
             case WorkflowShortcutAction.ProcessColorPositive:
             case WorkflowShortcutAction.ProcessBwNegative:
             case WorkflowShortcutAction.ProcessBwPositive:
-                ApplyDevelopProcess(action);
+                DevelopDefaultsPanel.ApplyProcess(action);
                 return true;
             case WorkflowShortcutAction.TargetMain:
-                ApplyDevelopTarget(DevelopTarget.Main);
+                DevelopDefaultsPanel.ApplyTarget(DevelopTarget.Main);
                 return true;
             case WorkflowShortcutAction.TargetPrint:
-                ApplyDevelopTarget(DevelopTarget.Print);
+                DevelopDefaultsPanel.ApplyTarget(DevelopTarget.Print);
                 return true;
             case WorkflowShortcutAction.TargetNoritsu:
-                ApplyDevelopTarget(DevelopTarget.Noritsu);
+                DevelopDefaultsPanel.ApplyTarget(DevelopTarget.Noritsu);
                 return true;
             case WorkflowShortcutAction.TargetSp3000:
-                ApplyDevelopTarget(DevelopTarget.Sp3000);
+                DevelopDefaultsPanel.ApplyTarget(DevelopTarget.Sp3000);
                 return true;
             case WorkflowShortcutAction.TargetF135:
-                ApplyDevelopTarget(DevelopTarget.F135);
+                DevelopDefaultsPanel.ApplyTarget(DevelopTarget.F135);
                 return true;
             case WorkflowShortcutAction.TargetHr:
-                ApplyDevelopTarget(DevelopTarget.Hr);
+                DevelopDefaultsPanel.ApplyTarget(DevelopTarget.Hr);
                 return true;
             case WorkflowShortcutAction.TargetExpired:
-                ApplyDevelopTarget(DevelopTarget.Rescue);
+                DevelopDefaultsPanel.ApplyTarget(DevelopTarget.Rescue);
                 return true;
             case WorkflowShortcutAction.CreateVirtualCopy:
                 // 사본은 한 장에 하나씩입니다. 여러 장을 골랐으면 macOS 처럼 활성 사진만
@@ -575,7 +633,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
                 collections.Items.Add(entry);
             }
             menu.Items.Add(collections);
-            if (selectedCollectionId is { } activeCollectionId)
+            if (CollectionsPanel.SelectedCollectionId is { } activeCollectionId)
             {
                 menu.Items.Add(MenuItem(
                     "libraryRemoveFromCollection",
@@ -686,7 +744,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
         }
         if (libraryHost.SetCollectionFrames(collectionId, frameIds))
         {
-            RebuildCollections();
+            CollectionsPanel.Rebuild();
             ShowFilteredItems();
         }
     }
@@ -711,7 +769,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
         }
         if (libraryHost.SetCollectionFrames(collectionId, frameIds))
         {
-            RebuildCollections();
+            CollectionsPanel.Rebuild();
             ShowFilteredItems();
         }
     }
@@ -754,7 +812,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
         }
         // 썸네일은 지우지 않습니다. 되돌리면 그 사진이 다시 오고, 그때 다시 만들게 하면
         // 되살아난 격자가 한동안 빈 칸으로 보입니다.
-        RebuildCollections();
+        CollectionsPanel.Rebuild();
         ShowLibrary(host, importWindowId ?? default);
         ImportStatusText.Text = AppResources.FormatIntegers(
             "libraryRemovalUndoFormat",
@@ -777,7 +835,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
         {
             return false;
         }
-        RebuildCollections();
+        CollectionsPanel.Rebuild();
         ShowLibrary(host, importWindowId ?? default);
         ImportStatusText.Text = AppResources
             .Get("libraryUndoneFormat", "Text")
@@ -919,7 +977,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
     {
         IReadOnlyList<LibraryFrameListItem> items = LibrarySorter.Sort(
             quickFilters.Apply(
-                ApplyCollection(
+                CollectionsPanel.Apply(
                     LibraryFrameListItems.Filter(
                         allItems,
                         LibrarySearchBox?.Text ?? string.Empty))),
@@ -939,7 +997,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
         {
             FrameListView.ItemsSource = items;
             LibraryCountText.Text = items.Count.ToString(CultureInfo.CurrentCulture);
-            SynchronizeCulling(items);
+            SynchronizeCullingView(items);
             return;
         }
 
@@ -970,8 +1028,8 @@ public sealed partial class LibraryWorkspaceView : UserControl
             isSynchronizingFrameSelection = false;
         }
         UpdateViewModeControls();
-        SynchronizeDevelopDefaults();
-        SynchronizeCulling(items);
+        DevelopDefaultsPanel.Synchronize();
+        SynchronizeCullingView(items);
         if (sourceKind == LibrarySourceKind.Files)
         {
             RebuildFilesSourceTree();
@@ -1002,7 +1060,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
         FilesSourceTree.Visibility = sourceKind == LibrarySourceKind.Files
             ? Visibility.Visible
             : Visibility.Collapsed;
-        CollectionsSourcePanel.Visibility = sourceKind == LibrarySourceKind.Collections
+        CollectionsPanel.Visibility = sourceKind == LibrarySourceKind.Collections
             ? Visibility.Visible
             : Visibility.Collapsed;
 
@@ -1046,39 +1104,14 @@ public sealed partial class LibraryWorkspaceView : UserControl
     /// </summary>
     private void RebuildFilesSourceTree()
     {
-        FilesSourceTree.RootNodes.Clear();
-        if (libraryHost is null)
-        {
-            return;
-        }
-        LibraryBrowserProjection projection = LibraryBrowserProjector.Create(
-            quickFilters.Apply(
-                LibraryFrameListItems.Filter(allItems, LibrarySearchBox?.Text ?? string.Empty)),
-            libraryHost.Folders,
-            libraryHost.FolderAvailabilityById,
-            LibraryBrowserViewMode.Folders);
-        foreach (LibraryBrowserFolderSection section in projection.FolderSections)
-        {
-            var folder = new TreeViewNode
-            {
-                Content = LibrarySourceNode.Folder(
-                    section.Title,
-                    AppResources.FormatIntegers("libraryFolderFrameCount", "Text", section.Count),
-                    section.Id),
-            };
-            foreach (LibraryFrameListItem item in section.Items)
-            {
-                folder.Children.Add(new TreeViewNode
-                {
-                    Content = LibrarySourceNode.Frame(item.DisplayName, item.Id),
-                });
-            }
-            FilesSourceTree.RootNodes.Add(folder);
-        }
+        int matched = FilesSourceTree.Rebuild(
+            allItems,
+            LibrarySearchBox?.Text ?? string.Empty,
+            quickFilters);
         SourceHeaderCountText.Text = AppResources.FormatIntegers(
             "libraryFolderFrameCount",
             "Text",
-            projection.MatchedCount);
+            matched);
     }
 
     /// <summary>
@@ -1100,78 +1133,15 @@ public sealed partial class LibraryWorkspaceView : UserControl
     }
 
     /// <summary>
-    /// 폴더 줄 위에 있는 동안입니다. 우리 카드가 아니면 아무 표시도 내지 않습니다 — 밖에서 온
-    /// 파일을 여기로 받으면 사용자는 가져오기가 될 것으로 읽습니다.
-    /// </summary>
-    private void OnFolderDragOver(object sender, DragEventArgs args)
-    {
-        args.AcceptedOperation =
-            sender is FrameworkElement { DataContext: TreeViewNode { Content: LibrarySourceNode { FolderPath: not null } } } &&
-            string.Equals(args.DataView?.Properties.Title, FrameDragFormat, StringComparison.Ordinal)
-                ? DataPackageOperation.Move
-                : DataPackageOperation.None;
-        args.Handled = true;
-    }
-
-    /// <summary>
-    /// 원본 파일을 이 폴더로 옮깁니다. **원본을 실제로 옮기는 유일한 자리**이며, 파일 이동이
-    /// 실패하면 카탈로그는 손대지 않습니다.
-    /// </summary>
-    private async void OnFolderDrop(object sender, DragEventArgs args)
-    {
-        if (sender is not FrameworkElement
-            {
-                DataContext: TreeViewNode { Content: LibrarySourceNode { FolderPath: { } destination } },
-            } ||
-            libraryHost is not { } host ||
-            args.DataView is not { } data ||
-            !string.Equals(data.Properties.Title, FrameDragFormat, StringComparison.Ordinal))
-        {
-            return;
-        }
-        args.Handled = true;
-        DragOperationDeferral deferral = args.GetDeferral();
-        try
-        {
-            string payload = await data.GetTextAsync();
-            var wanted = new HashSet<string>(
-                payload.Split('\n', StringSplitOptions.RemoveEmptyEntries),
-                StringComparer.Ordinal);
-            LibraryFrameSnapshot[] frames = [.. host.Frames.Where(frame => wanted.Contains(frame.Id))];
-            if (frames.Length == 0)
-            {
-                return;
-            }
-            SourceMoveOutcome outcome = host.MoveSources(frames, destination);
-            ImportStatusText.Text = outcome == SourceMoveOutcome.Moved
-                ? string.Empty
-                : AppResources.Get("librarySourceMoveFailed", "Text");
-            if (outcome == SourceMoveOutcome.Moved)
-            {
-                ShowLibrary(host, importWindowId ?? default);
-            }
-        }
-        finally
-        {
-            deferral.Complete();
-        }
-    }
-
-    /// <summary>
     /// 우리 카드에서 시작한 끌기인지 알아보는 표식입니다. 이것이 없으면 탐색기에서 끌어온
     /// 파일도 폴더 줄이 받아들입니다.
     /// </summary>
     private const string FrameDragFormat = "negaflow.library-source";
 
     /// <summary>트리에서 frame 을 누르면 격자의 선택도 따라갑니다.</summary>
-    private void OnSourceTreeItemInvoked(TreeView sender, TreeViewItemInvokedEventArgs args)
+    private void OnFilesSourceFrameSelected(object? sender, string frameId)
     {
         _ = sender;
-        if (args.InvokedItem is not TreeViewNode { Content: LibrarySourceNode node } ||
-            node.FrameId is not { } frameId)
-        {
-            return;
-        }
         foreach (object candidate in FrameListView.Items)
         {
             if (candidate is LibraryFrameListItem item &&
@@ -1668,10 +1638,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
     {
         // 설정에서 고른 기본 스캔 회전을 스캔 흐름에 꽂습니다. Shell.Core 는 설정 파일을
         // 읽지 않으므로 여기가 유일한 연결점입니다.
-        if (scanSession is not null)
-        {
-            scanSession.DefaultRotation = preferences.DefaultScanRotation;
-        }
+        ScanPanel.ApplyDefaultRotation(preferences.DefaultScanRotation);
         _ = sender;
         if (!isResizing)
         {
@@ -1684,29 +1651,6 @@ public sealed partial class LibraryWorkspaceView : UserControl
         liveWidth = WorkspaceLayoutCalculator.Calculate(Root.ActualWidth)
             .ClampLibraryControlsWidth(storedWidth);
         ControlsPanel.Width = liveWidth;
-    }
-
-    // MARK: - 스캔 절
-    //
-    // macOS ScannerControlsSection 과 같은 구성입니다. 플러그인 경계와 카탈로그 게시는
-    // ScanSessionController 가 들고 있고, 여기서는 그 상태를 컨트롤에 옮기기만 합니다.
-
-    private void EnsureScanSession()
-    {
-        if (scanSession is not null)
-        {
-            return;
-        }
-        if (DispatcherQueueUiDispatcher.CaptureForCurrentThread() is not { } uiDispatcher)
-        {
-            return;
-        }
-        scannerTrust = new ScannerPluginTrustStore();
-        scanSession = new ScanSessionController(
-            new ScannerPluginGateway(),
-            scannerTrust,
-            uiDispatcher);
-        scanSession.Changed += OnScanSessionChanged;
     }
 
     private void SynchronizeFrameSelection(IReadOnlyList<LibraryFrameListItem> visibleItems)
@@ -1744,569 +1688,18 @@ public sealed partial class LibraryWorkspaceView : UserControl
         }
     }
 
-    // 이미 승인한 플러그인만 앱을 열 때 한 번 탐색합니다. 새 플러그인은 신뢰 승인
-    // 전에는 실행하지 않되, 사용자가 바로 승인할 수 있도록 절만 엽니다. 연결된 스캐너가
-    // 있으면 macOS와 같이 Import Scanner 절을 바로 펼칩니다.
     private async void OnLoaded(object sender, RoutedEventArgs args)
     {
         _ = sender;
         _ = args;
-        if (initialScannerDetectionStarted)
-        {
-            return;
-        }
-        initialScannerDetectionStarted = true;
-        EnsureScanSession();
-        if (scanSession is null)
-        {
-            return;
-        }
-        if (scanSession.State is ScanSessionState.NeedsApproval)
-        {
-            ImportScannerButton.IsChecked = true;
-            RenderScanSection();
-            return;
-        }
-        if (scanSession.State is not ScanSessionState.NoDevice)
-        {
-            return;
-        }
-        await scanSession.RefreshDevicesAsync();
-        if (scanSession.Devices.Count > 0)
-        {
-            ImportScannerButton.IsChecked = true;
-            RenderScanSection();
-        }
+        await ScanPanel.DetectOnLoadAsync();
     }
 
-    private void OnScanSessionChanged(object? sender, EventArgs args)
+    private void OnImportScannerClicked(object sender, RoutedEventArgs args)
     {
         _ = sender;
         _ = args;
-        if (DispatcherQueue.HasThreadAccess)
-        {
-            RenderScanSection();
-            return;
-        }
-        _ = DispatcherQueue.TryEnqueue(RenderScanSection);
-    }
-
-    private async void OnImportScannerClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        EnsureScanSession();
-        if (scanSession is null || ImportScannerButton.IsChecked != true)
-        {
-            RenderScanSection();
-            return;
-        }
-        // 열 때마다 플러그인 목록을 다시 읽습니다 — 방금 설치한 플러그인이 보여야 합니다.
-        scanSession.Refresh();
-        if (scanSession.State is ScanSessionState.NoDevice)
-        {
-            await scanSession.RefreshDevicesAsync();
-        }
-    }
-
-    private void OnScanApprovePluginClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (scanSession?.PluginsRequiringApproval is not { Count: > 0 } pending)
-        {
-            return;
-        }
-        foreach (InstalledScannerPlugin plugin in pending)
-        {
-            scanSession.Approve(plugin);
-        }
-    }
-
-    /// <summary>
-    /// 하드웨어 없이 스캔 흐름을 돌립니다. 켜면 가상 장치가 나타나고, 스캔은 합성 네거티브를
-    /// 실제와 같은 게시 경로로 카탈로그에 올립니다.
-    /// </summary>
-    private async void OnScanSimulatorToggled(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (isSynchronizingScan || scanSession is null)
-        {
-            return;
-        }
-        scanSession.SetSimulatorEnabled(ScanSimulatorToggle.IsOn);
-        if (scanSession.State is ScanSessionState.NoDevice)
-        {
-            await scanSession.RefreshDevicesAsync();
-        }
-    }
-
-    private async void OnScanRescanClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (scanSession is not null)
-        {
-            await scanSession.RefreshDevicesAsync();
-        }
-    }
-
-    private async void OnScanDeviceChanged(object sender, SelectionChangedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (isSynchronizingScan ||
-            scanSession is null ||
-            ScanDeviceSelector.SelectedItem is not ComboBoxItem { Tag: string deviceId })
-        {
-            return;
-        }
-        await scanSession.SelectDeviceAsync(deviceId);
-    }
-
-    private void OnScanFilmChanged(object sender, SelectionChangedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (isSynchronizingScan ||
-            ScanFilmSelector.SelectedItem is not ComboBoxItem { Tag: FilmType filmType })
-        {
-            return;
-        }
-        scanSession?.UpdateOptions(options => options with { FilmType = filmType });
-    }
-
-    private void OnScanFolderNameChanged(object sender, TextChangedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (isSynchronizingScan)
-        {
-            return;
-        }
-        scanSession?.UpdateOptions(options => options with { FolderName = ScanFolderNameBox.Text });
-    }
-
-    private void OnScanResolutionChanged(object sender, SelectionChangedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (isSynchronizingScan ||
-            ScanResolutionSelector.SelectedItem is not ComboBoxItem { Tag: int dpi })
-        {
-            return;
-        }
-        scanSession?.UpdateOptions(options => options with { ResolutionDpi = dpi });
-    }
-
-    private void OnScanColorModeChanged(object sender, SelectionChangedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (isSynchronizingScan ||
-            ScanColorModeSelector.SelectedItem is not ComboBoxItem { Tag: string mode })
-        {
-            return;
-        }
-        scanSession?.UpdateOptions(options => options with { ColorMode = mode });
-    }
-
-    private void OnScanBitDepthChanged(object sender, SelectionChangedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (isSynchronizingScan ||
-            ScanBitDepthSelector.SelectedItem is not ComboBoxItem { Tag: int depth })
-        {
-            return;
-        }
-        scanSession?.UpdateOptions(options => options with { BitDepth = depth });
-    }
-
-    private void OnScanFrameCountChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
-    {
-        _ = sender;
-        if (isSynchronizingScan || double.IsNaN(args.NewValue))
-        {
-            return;
-        }
-        scanSession?.UpdateOptions(options => options with { BatchCount = (int)args.NewValue });
-    }
-
-    private void OnScanInfraredToggled(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (isSynchronizingScan)
-        {
-            return;
-        }
-        scanSession?.UpdateOptions(options => options with { Infrared = ScanInfraredToggle.IsOn });
-    }
-
-    private void OnScanFrameFormatChanged(object sender, SelectionChangedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (isSynchronizingScan ||
-            ScanFrameFormatSelector.SelectedItem is not ComboBoxItem { Tag: FlatbedFrameFormat format })
-        {
-            return;
-        }
-        scanSession?.UpdateOptions(options => options with { FrameFormat = format });
-    }
-
-    private void OnScanDetectionModeChecked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (isSynchronizingScan || scanSession is null)
-        {
-            return;
-        }
-        scanSession.UpdateOptions(options => options with
-        {
-            FrameDetectionMode = ScanDetectionManualButton.IsChecked == true
-                ? FlatbedFrameDetectionMode.Manual
-                : FlatbedFrameDetectionMode.Automatic,
-        });
-    }
-
-    /// <summary>
-    /// 자동이면 프리뷰에서 다시 찾고, 수동이면 지우고 규격 프레임 하나를 놓아 다시 시작할 자리를
-    /// 만듭니다 — macOS 새로고침과 같은 규칙입니다.
-    /// </summary>
-    private void OnScanRefreshFramesClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (scanSession is null)
-        {
-            return;
-        }
-        // 프리뷰 픽셀이 아직 없으면 찾을 근거가 없습니다. macOS 도 프리뷰 전에는 잠급니다.
-        _ = scanSession.RefreshRegions(
-            flatbedPreview.Values,
-            flatbedPreview.Width,
-            flatbedPreview.Height);
-        RenderScanSection();
-    }
-
-    private void OnScanAddFrameClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        _ = scanSession?.AddRegion();
-        RenderScanSection();
-    }
-
-    private void OnScanRemoveFrameClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        _ = scanSession?.DeleteSelectedRegion();
-        RenderScanSection();
-    }
-
-    private void OnScanCopyFrameClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        _ = scanSession?.CopySelectedRegion();
-        RenderScanSection();
-    }
-
-    private void OnScanPasteFrameClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        _ = scanSession?.PasteRegion();
-        RenderScanSection();
-    }
-
-    private async void OnScanPreviewClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        await RunScanAsync(preview: true);
-    }
-
-    private async void OnScanStartClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        await RunScanAsync(preview: false);
-    }
-
-    /// <summary>
-    /// 스캔해서 카탈로그에 게시하고 격자를 다시 그립니다. 목적지는 매 장마다 새로 고르므로
-    /// 이어서 뜨는 배치가 서로를 덮지 않습니다.
-    /// </summary>
-    private async Task RunScanAsync(bool preview)
-    {
-        if (scanSession is null || libraryHost is null)
-        {
-            return;
-        }
-        if (libraryHost.StorageRoots is not { } roots)
-        {
-            ScanStatusText.Text = AppResources.Get("libraryImportFailed", "Text");
-            return;
-        }
-
-        string rollName = string.IsNullOrWhiteSpace(scanSession.Options.FolderName)
-            ? AppResources.Get("scanUntitledFilm", "Text")
-            : scanSession.Options.FolderName;
-        string stem = ScanStorageLayout.ScannerAbbreviation(
-            scanSession.SelectedDevice?.DisplayName);
-        string directory;
-        try
-        {
-            directory = ScanStorageLayout.EnsureRollDirectory(
-                Path.Combine(roots.LibraryRoot, "Scans"),
-                scanSession.Options.FilmType,
-                rollName,
-                DateTime.Now);
-        }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
-        {
-            ScanStatusText.Text = AppResources.Get("libraryImportFailed", "Text");
-            return;
-        }
-
-        ScanStatusText.Text = AppResources.Get("scanSection", "Text");
-        ScanRunOutcome outcome = await scanSession.RunAsync(
-            libraryHost,
-            _ => ScanStorageLayout.NextAvailablePath(directory, stem),
-            preview);
-        ScanStatusText.Text = DescribeScanOutcome(outcome);
-        if (preview)
-        {
-            // 프리뷰는 카탈로그에 올리지 않습니다. 그림만 읽어 두었다가 프레임 찾기에 넘깁니다.
-            flatbedPreview = scanSession.LastPreviewPath is { } previewPath
-                ? await PreviewLuminanceReader.ReadAsync(previewPath)
-                : PreviewLuminance.None;
-            if (!flatbedPreview.IsEmpty &&
-                scanSession.Options.FrameDetectionMode == FlatbedFrameDetectionMode.Automatic)
-            {
-                _ = scanSession.RefreshRegions(
-                    flatbedPreview.Values,
-                    flatbedPreview.Width,
-                    flatbedPreview.Height);
-            }
-            RenderScanSection();
-            return;
-        }
-        if (importWindowId is { } windowId)
-        {
-            ShowLibrary(libraryHost, windowId);
-        }
-    }
-
-    private string DescribeScanOutcome(ScanRunOutcome outcome)
-    {
-        if (outcome.IsSuccess)
-        {
-            return AppResources.FormatIntegers(
-                "libraryFolderImportResult",
-                "Text",
-                outcome.Published,
-                1);
-        }
-        // 실패는 어느 단계에서 멈췄는지를 남깁니다. "스캔 실패" 만으로는 다시 시도하는 것 말고
-        // 사용자가 할 수 있는 일이 없습니다.
-        string reason = scanSession?.LastFailureName ??
-            outcome.LastScanStatus?.ToString() ??
-            "unavailable";
-        return AppResources.Get("libraryImportFailed", "Text") + " — " + reason;
-    }
-
-    /// <summary>
-    /// 세션 상태를 컨트롤에 옮깁니다. macOS 와 같은 세 갈래(플러그인 없음 · 승인 필요 ·
-    /// 연결 대기)를 그대로 냅니다.
-    /// </summary>
-    private void RenderScanSection()
-    {
-        if (ScanSectionCard is null)
-        {
-            return;
-        }
-        bool wanted = ImportScannerButton.IsChecked == true;
-        ScanSessionState state = scanSession?.State ?? ScanSessionState.NoPlugin;
-        ScanSectionText.Visibility = wanted ? Visibility.Visible : Visibility.Collapsed;
-        ScanSectionCard.Visibility = ScanSectionText.Visibility;
-        if (!wanted || scanSession is null)
-        {
-            return;
-        }
-
-        bool ready = state is ScanSessionState.Ready or ScanSessionState.Scanning;
-        ScanControls.Visibility = ready ? Visibility.Visible : Visibility.Collapsed;
-        ScanApprovePluginButton.Visibility = state == ScanSessionState.NeedsApproval
-            ? Visibility.Visible
-            : Visibility.Collapsed;
-        ScanStateText.Text = state switch
-        {
-            ScanSessionState.NoPlugin => AppResources.Get("scanPluginMissingTitle", "Text") + "\n" +
-                AppResources.Get("scanPluginMissingBody", "Text"),
-            ScanSessionState.NeedsApproval => AppResources.Get("scanPluginApprovalTitle", "Text"),
-            ScanSessionState.Searching => AppResources.Get("scanSearching", "Text"),
-            ScanSessionState.NoDevice => AppResources.Get("scanWaitingStatus", "Text"),
-            _ => string.Empty,
-        };
-        isSynchronizingScan = true;
-        try
-        {
-            ScanSimulatorToggle.IsOn = scanSession.SimulatorEnabled;
-        }
-        finally
-        {
-            isSynchronizingScan = false;
-        }
-        ScanStateText.Visibility = ScanStateText.Text.Length == 0
-            ? Visibility.Collapsed
-            : Visibility.Visible;
-        if (!ready)
-        {
-            return;
-        }
-
-        isSynchronizingScan = true;
-        try
-        {
-            FillTagged(
-                ScanDeviceSelector,
-                [.. scanSession.Devices.Select(device =>
-                    ((object)device.DisplayName, (object)device.Id))],
-                scanSession.SelectedDevice?.Id);
-            FillTagged(
-                ScanFilmSelector,
-                [.. FilmTypes.Select(film =>
-                    ((object)FilmTypeNameConverter.Name(film), (object)film))],
-                scanSession.Options.FilmType);
-            FillTagged(
-                ScanResolutionSelector,
-                [.. scanSession.Resolutions.Select(dpi =>
-                    ((object)string.Create(CultureInfo.CurrentCulture, $"{dpi} dpi"), (object)dpi))],
-                scanSession.Options.ResolutionDpi);
-            FillTagged(
-                ScanColorModeSelector,
-                [.. scanSession.ColorModes.Select(mode =>
-                    ((object)ColorModeLabel(mode), (object)mode))],
-                scanSession.Options.ColorMode);
-            int channels = string.Equals(
-                scanSession.Options.ColorMode,
-                ScanSessionController.ColorModeGray,
-                StringComparison.Ordinal) ? 1 : 3;
-            FillTagged(
-                ScanBitDepthSelector,
-                [.. scanSession.BitDepths.Select(depth => ((object)string.Create(
-                    CultureInfo.CurrentCulture,
-                    $"{depth}-bit/ch ({depth * channels}-bit)"), (object)depth))],
-                scanSession.Options.BitDepth);
-            if (ScanFolderNameBox.Text != scanSession.Options.FolderName)
-            {
-                ScanFolderNameBox.Text = scanSession.Options.FolderName;
-            }
-            ScanFrameCountBox.Value = scanSession.Options.BatchCount;
-            FillTagged(
-                ScanFrameFormatSelector,
-                [.. scanSession.AvailableFrameFormats.Select(format =>
-                    ((object)FilmFrameFormats.DisplayName(format), (object)format))],
-                scanSession.Options.FrameFormat);
-            ScanDetectionAutomaticButton.IsChecked =
-                scanSession.Options.FrameDetectionMode == FlatbedFrameDetectionMode.Automatic;
-            ScanDetectionManualButton.IsChecked =
-                scanSession.Options.FrameDetectionMode == FlatbedFrameDetectionMode.Manual;
-            ScanInfraredToggle.IsOn = scanSession.Options.Infrared;
-        }
-        finally
-        {
-            isSynchronizingScan = false;
-        }
-
-        bool flatbed = scanSession.UsesFlatbedRegionWorkflow;
-        ScanFrameFormatRow.Visibility = scanSession.AvailableFrameFormats.Count > 0
-            ? Visibility.Visible
-            : Visibility.Collapsed;
-        ScanDetectionModeRow.Visibility = flatbed ? Visibility.Visible : Visibility.Collapsed;
-        ScanRegionsRow.Visibility = ScanDetectionModeRow.Visibility;
-        // 평판에서는 판 위에 놓인 프레임 수가 곧 스캔 수이므로 사진 수 줄이 없습니다.
-        ScanFrameCountRow.Visibility = flatbed ? Visibility.Collapsed : Visibility.Visible;
-        ScanRegionsLabel.Text = AppResources.FormatInteger(
-            "scanFlatbedFramesFormat",
-            "Text",
-            scanSession.Regions.Count);
-        bool hasSelectedRegion = scanSession.SelectedRegionId is not null;
-        ScanCopyFrameButton.IsEnabled = hasSelectedRegion;
-        ScanRemoveFrameButton.IsEnabled = hasSelectedRegion;
-        ScanPasteFrameButton.IsEnabled = scanSession.CopiedRegion is not null;
-        // 프리뷰 픽셀이 없으면 찾을 근거가 없습니다.
-        ScanRefreshFramesButton.IsEnabled = !flatbedPreview.IsEmpty ||
-            scanSession.Options.FrameDetectionMode == FlatbedFrameDetectionMode.Manual;
-
-        bool hasDepths = scanSession.BitDepths.Count > 0;
-        ScanBitDepthRow.Visibility = hasDepths ? Visibility.Visible : Visibility.Collapsed;
-        ScanBitDepthUnavailableText.Visibility = hasDepths
-            ? Visibility.Collapsed
-            : Visibility.Visible;
-        ScanInfraredToggle.Visibility = scanSession.Capabilities?.SupportsInfrared == true
-            ? Visibility.Visible
-            : Visibility.Collapsed;
-        ScanInfraredToggle.IsEnabled = scanSession.CanUseInfrared;
-        ScanPreviewButton.Visibility = scanSession.Capabilities?.SupportsPreview == true
-            ? Visibility.Visible
-            : Visibility.Collapsed;
-        ScanPreviewButton.IsEnabled = scanSession.CanPreview;
-        ScanStartButton.IsEnabled = scanSession.CanScan;
-        ScanRescanButton.IsEnabled = !scanSession.IsDetecting && !scanSession.IsScanning;
-        ScanControls.IsHitTestVisible = !scanSession.IsScanning;
-        SetButtonText(
-            ScanStartButton,
-            scanSession.Options.BatchCount > 1
-                ? AppResources.FormatInteger("scanCountFormat", "Text", scanSession.Options.BatchCount)
-                : AppResources.Get("scanStart", "Content"));
-        ScanFrameCountLabel.Text = AppResources.FormatInteger(
-            "scanFramesFormat",
-            "Text",
-            scanSession.Options.BatchCount);
-    }
-
-    /// <summary>macOS 스캔 절의 필름 목록 순서입니다.</summary>
-    private static IReadOnlyList<FilmType> FilmTypes { get; } =
-    [
-        FilmType.ColorNegative,
-        FilmType.ColorPositive,
-        FilmType.BlackAndWhiteNegative,
-        FilmType.BlackAndWhitePositive,
-    ];
-
-    private static string ColorModeLabel(string mode) =>
-        mode.Length == 0 ? mode : char.ToUpperInvariant(mode[0]) + mode[1..];
-
-    /// <summary>
-    /// 목록을 갈아 끼우고 고른 값을 다시 잡습니다. 목록을 지우면 선택이 풀리므로 항상 짝으로
-    /// 해야 합니다.
-    /// </summary>
-    private static void FillTagged(
-        ComboBox selector,
-        IReadOnlyList<(object Text, object Tag)> items,
-        object? selectedTag)
-    {
-        selector.Items.Clear();
-        foreach ((object text, object tag) in items)
-        {
-            selector.Items.Add(new ComboBoxItem { Content = text, Tag = tag });
-        }
-        foreach (object item in selector.Items)
-        {
-            if (item is ComboBoxItem candidate && Equals(candidate.Tag, selectedTag))
-            {
-                selector.SelectedItem = candidate;
-                return;
-            }
-        }
+        _ = ScanPanel.OpenAsync();
     }
 
     private void LocalizeScanSection()
@@ -2316,72 +1709,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
         SetToggleButtonText(
             ImportScannerButton,
             AppResources.Get("libraryScannerLabel", "Content"));
-        ScanSectionText.Text = AppResources.Get("scanSection", "Text");
-        ScanDeviceLabel.Text = AppResources.Get("libraryScannerLabel", "Content");
-        AutomationProperties.SetName(ScanDeviceSelector, ScanDeviceLabel.Text);
-        SetButtonText(ScanApprovePluginButton, AppResources.Get("scanPluginApprove", "Content"));
-        string simulator = AppResources.Get("scanSimulator", "Content");
-        ScanSimulatorToggle.Header = simulator;
-        ScanSimulatorToggle.OnContent = simulator;
-        ScanSimulatorToggle.OffContent = simulator;
-        AutomationProperties.SetName(ScanSimulatorToggle, simulator);
-        ToolTipService.SetToolTip(
-            ScanSimulatorToggle,
-            AppResources.Get("scanSimulatorHelp", "Text"));
-        string rescan = AppResources.Get("scanDetectScanners", "Text");
-        AutomationProperties.SetName(ScanRescanButton, rescan);
-        ToolTipService.SetToolTip(ScanRescanButton, rescan);
-        ScanFilmLabel.Text = AppResources.Get("scanFilm", "Text");
-        AutomationProperties.SetName(ScanFilmSelector, ScanFilmLabel.Text);
-        ScanFolderNameLabel.Text = AppResources.Get("scanFolderName", "Text");
-        ScanFolderNameBox.PlaceholderText = AppResources.Get("scanUntitledFilm", "Text");
-        AutomationProperties.SetName(ScanFolderNameBox, ScanFolderNameLabel.Text);
-        AutomationProperties.SetName(
-            ScanResolutionSelector,
-            AppResources.Get("scanResolution", "Text"));
-        AutomationProperties.SetName(
-            ScanColorModeSelector,
-            AppResources.Get("scanColorMode", "Text"));
-        ScanBitDepthLabel.Text = AppResources.Get("scanBitDepth", "Text");
-        AutomationProperties.SetName(ScanBitDepthSelector, ScanBitDepthLabel.Text);
-        ScanBitDepthUnavailableText.Text = AppResources.Get("scanBitDepthUnavailable", "Text");
-        ScanFrameFormatLabel.Text = AppResources.Get("scanFrameFormat", "Text");
-        AutomationProperties.SetName(ScanFrameFormatSelector, ScanFrameFormatLabel.Text);
-        ScanDetectionModeLabel.Text = AppResources.Get("scanDetectionMode", "Text");
-        SetRadioText(
-            ScanDetectionAutomaticButton,
-            AppResources.Get("scanDetectionAutomatic", "Content"));
-        SetRadioText(
-            ScanDetectionManualButton,
-            AppResources.Get("scanDetectionManual", "Content"));
-        SetIconButtonName(ScanRefreshFramesButton, "scanRefreshFrames");
-        SetIconButtonName(ScanCopyFrameButton, "scanCopyFrame");
-        SetIconButtonName(ScanPasteFrameButton, "scanPasteFrame");
-        SetIconButtonName(ScanAddFrameButton, "scanAddFrame");
-        SetIconButtonName(ScanRemoveFrameButton, "scanRemoveFrame");
-        ScanFrameCountLabel.Text = AppResources.FormatInteger("scanFramesFormat", "Text", 1);
-        AutomationProperties.SetName(ScanFrameCountBox, ScanFrameCountLabel.Text);
-        string infrared = AppResources.Get("scanInfrared", "Content");
-        ScanInfraredToggle.Header = infrared;
-        ScanInfraredToggle.OnContent = infrared;
-        ScanInfraredToggle.OffContent = infrared;
-        AutomationProperties.SetName(ScanInfraredToggle, infrared);
-        SetButtonText(ScanPreviewButton, AppResources.Get("scanPreview", "Content"));
-        SetButtonText(ScanStartButton, AppResources.Get("scanStart", "Content"));
-    }
-
-    /// <summary>글리프만 있는 단추의 이름입니다. 이름이 없으면 화면 낭독기가 읽지 못합니다.</summary>
-    private static void SetIconButtonName(Button button, string resourceKey)
-    {
-        string text = AppResources.Get(resourceKey, "Text");
-        AutomationProperties.SetName(button, text);
-        ToolTipService.SetToolTip(button, text);
-    }
-
-    private static void SetRadioText(RadioButton radio, string text)
-    {
-        radio.Content = text;
-        AutomationProperties.SetName(radio, text);
+        ScanPanel.Localize();
     }
 
     private static void SetToggleButtonText(ToggleButton toggle, string text)
@@ -2390,20 +1718,6 @@ public sealed partial class LibraryWorkspaceView : UserControl
         AutomationProperties.SetName(toggle, text);
         ToolTipService.SetToolTip(toggle, text);
     }
-
-    // MARK: - 컬렉션
-    //
-    // macOS 처럼 "전체 보기" 가 늘 맨 위에 있고 그 아래 사용자가 만든 묶음이 옵니다. 고른 묶음이
-    // 격자를 좁히며, 새 묶음은 지금 격자에서 고른 사진으로 만듭니다.
-
-    /// <summary>목록 한 줄입니다. 이름을 한 곳에서만 만들어야 줄마다 말이 달라지지 않습니다.</summary>
-    private sealed record CollectionRow(
-        string? Id,
-        string Name,
-        string CountText,
-        string Glyph,
-        bool IsStoredSearch = false,
-        bool IsGroupLabel = false);
 
     /// <summary>
     /// 지금 스캔 중인 롤의 사진들입니다. 활성 롤이 없으면 빈 목록이고, 그러면 이 축은 꺼진
@@ -2417,121 +1731,6 @@ public sealed partial class LibraryWorkspaceView : UserControl
         }
         return libraryHost.Rolls.FirstOrDefault(roll =>
             string.Equals(roll.Id, activeRollId, StringComparison.Ordinal))?.FrameIds ?? [];
-    }
-
-    private void RebuildCollections()
-    {
-        if (CollectionsList is null || libraryHost is null)
-        {
-            return;
-        }
-        var rows = new List<CollectionRow>
-        {
-            new(
-                null,
-                AppResources.Get("libraryAllPhotos", "Text"),
-                libraryHost.Frames.Count.ToString(CultureInfo.CurrentCulture),
-                "\uE91B"),
-        };
-        foreach (LibraryCollectionSnapshot collection in libraryHost.Collections)
-        {
-            rows.Add(new CollectionRow(
-                collection.Id,
-                collection.Name,
-                collection.FrameIds.Count.ToString(CultureInfo.CurrentCulture),
-                "\uE8B7"));
-        }
-        // macOS 목록 차례: 전체 보기 → 수동 컬렉션 → 스마트 컬렉션 → 저장된 검색.
-        AppendStoredSearches(
-            rows,
-            LibraryStoredSearchKind.SmartCollection,
-            "librarySmartCollections",
-            "\uE721");
-        AppendStoredSearches(
-            rows,
-            LibraryStoredSearchKind.SavedSearch,
-            "librarySavedSearches",
-            "\uE721");
-        isSynchronizingCollections = true;
-        try
-        {
-            CollectionsList.ItemsSource = rows;
-            string? selected = selectedStoredSearchId ?? selectedCollectionId;
-            CollectionsList.SelectedItem = rows.FirstOrDefault(row =>
-                !row.IsGroupLabel &&
-                string.Equals(row.Id, selected, StringComparison.Ordinal))
-                ?? rows[0];
-        }
-        finally
-        {
-            isSynchronizingCollections = false;
-        }
-        CollectionRenameButton.IsEnabled = selectedCollectionId is not null;
-        CollectionDeleteButton.IsEnabled =
-            selectedCollectionId is not null || selectedStoredSearchId is not null;
-    }
-
-    private void AppendStoredSearches(
-        List<CollectionRow> rows,
-        LibraryStoredSearchKind kind,
-        string groupResourceKey,
-        string glyph)
-    {
-        LibraryStoredSearchSnapshot[] matching = [.. (libraryHost?.StoredSearches ?? [])
-            .Where(search => search.Kind == kind)];
-        if (matching.Length == 0)
-        {
-            return;
-        }
-        rows.Add(new CollectionRow(
-            null,
-            AppResources.Get(groupResourceKey, "Text"),
-            string.Empty,
-            string.Empty,
-            IsGroupLabel: true));
-        foreach (LibraryStoredSearchSnapshot search in matching)
-        {
-            rows.Add(new CollectionRow(
-                search.Id,
-                search.Name,
-                string.Empty,
-                glyph,
-                IsStoredSearch: true));
-        }
-    }
-
-    private void OnCollectionSelectionChanged(object sender, SelectionChangedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (isSynchronizingCollections ||
-            CollectionsList.SelectedItem is not CollectionRow row)
-        {
-            return;
-        }
-        if (row.IsGroupLabel)
-        {
-            // 묶음 이름표는 고를 수 있는 항목이 아닙니다.
-            RebuildCollections();
-            return;
-        }
-        selectedCollectionId = row.IsStoredSearch ? null : row.Id;
-        selectedStoredSearchId = row.IsStoredSearch ? row.Id : null;
-        CollectionRenameButton.IsEnabled = selectedCollectionId is not null;
-        CollectionDeleteButton.IsEnabled = row.Id is not null;
-        if (row.Id is not null)
-        {
-            CollectionNameBox.Text = row.Name;
-        }
-        if (row.IsStoredSearch &&
-            libraryHost?.StoredSearches.FirstOrDefault(search =>
-                string.Equals(search.Id, row.Id, StringComparison.Ordinal)) is { } stored)
-        {
-            // 저장한 조건을 그대로 겁니다 — 고른 것과 걸리는 것이 갈라지면 안 됩니다.
-            ApplyStoredQuery(stored.Query);
-            return;
-        }
-        ShowFilteredItems();
     }
 
     /// <summary>저장한 조건을 검색어와 빠른 필터에 되돌립니다.</summary>
@@ -2553,134 +1752,6 @@ public sealed partial class LibraryWorkspaceView : UserControl
         ShowFilteredItems();
     }
 
-    private void OnCreateStoredSearchClicked(LibraryStoredSearchKind kind)
-    {
-        if (libraryHost is null)
-        {
-            return;
-        }
-        string name = CollectionNameBox.Text;
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            name = AppResources.Get(
-                kind == LibraryStoredSearchKind.SmartCollection
-                    ? "libraryNewSmartCollection"
-                    : "librarySaveCurrentSearch",
-                "Content");
-        }
-        selectedStoredSearchId = libraryHost.CreateStoredSearch(
-            name,
-            kind,
-            LibraryStoredQuery.From(quickFilters, LibrarySearchBox?.Text));
-        selectedCollectionId = null;
-        CollectionNameBox.Text = string.Empty;
-        RebuildCollections();
-    }
-
-    private void OnCreateCollectionClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (libraryHost is null)
-        {
-            return;
-        }
-        // macOS 와 같이 지금 고른 사진으로 만듭니다. 고른 것이 없으면 빈 묶음입니다.
-        string name = CollectionNameBox.Text;
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            name = AppResources.Get("libraryNewCollection", "Content");
-        }
-        selectedCollectionId = libraryHost.CreateCollection(
-            name,
-            FrameListView.SelectedItems.OfType<LibraryFrameListItem>().Select(item => item.Id));
-        CollectionNameBox.Text = string.Empty;
-        RebuildCollections();
-        ShowFilteredItems();
-    }
-
-    private void OnRenameCollectionClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (libraryHost is null || selectedCollectionId is not { } collectionId)
-        {
-            return;
-        }
-        _ = libraryHost.RenameCollection(collectionId, CollectionNameBox.Text);
-        RebuildCollections();
-    }
-
-    private void OnDeleteCollectionClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (libraryHost is null)
-        {
-            return;
-        }
-        if (selectedStoredSearchId is { } searchId)
-        {
-            _ = libraryHost.DeleteStoredSearch(searchId);
-            selectedStoredSearchId = null;
-        }
-        else if (selectedCollectionId is { } collectionId)
-        {
-            _ = libraryHost.DeleteCollection(collectionId);
-            selectedCollectionId = null;
-        }
-        CollectionNameBox.Text = string.Empty;
-        RebuildCollections();
-        ShowFilteredItems();
-    }
-
-    /// <summary>고른 묶음이 격자를 좁힙니다. "전체 보기" 는 좁히지 않습니다.</summary>
-    private IReadOnlyList<LibraryFrameListItem> ApplyCollection(
-        IReadOnlyList<LibraryFrameListItem> items)
-    {
-        if (selectedCollectionId is not { } collectionId || libraryHost is null)
-        {
-            return items;
-        }
-        if (libraryHost.Collections.FirstOrDefault(collection =>
-                string.Equals(collection.Id, collectionId, StringComparison.Ordinal))
-            is not { } selected)
-        {
-            return items;
-        }
-        var member = new HashSet<string>(selected.FrameIds, StringComparer.Ordinal);
-        return [.. items.Where(item => member.Contains(item.Id))];
-    }
-
-    private void LocalizeCollections()
-    {
-        SetButtonText(CollectionRenameButton, AppResources.Get("libraryRename", "Content"));
-        SetButtonText(CollectionDeleteButton, AppResources.Get("libraryDelete", "Content"));
-        string name = AppResources.Get("libraryCollectionName", "Text");
-        CollectionNameBox.PlaceholderText = name;
-        AutomationProperties.SetName(CollectionNameBox, name);
-        string create = AppResources.Get("libraryNewCollection", "Content");
-        AutomationProperties.SetName(CollectionsAddButton, create);
-        ToolTipService.SetToolTip(CollectionsAddButton, create);
-        CollectionsAddFlyout.Items.Clear();
-        var manual = new MenuFlyoutItem { Text = create };
-        manual.Click += (_, _) => OnCreateCollectionClicked(this, new RoutedEventArgs());
-        CollectionsAddFlyout.Items.Add(manual);
-        var smart = new MenuFlyoutItem
-        {
-            Text = AppResources.Get("libraryNewSmartCollection", "Content"),
-        };
-        smart.Click += (_, _) =>
-            OnCreateStoredSearchClicked(LibraryStoredSearchKind.SmartCollection);
-        CollectionsAddFlyout.Items.Add(smart);
-        var saved = new MenuFlyoutItem
-        {
-            Text = AppResources.Get("librarySaveCurrentSearch", "Content"),
-        };
-        saved.Click += (_, _) => OnCreateStoredSearchClicked(LibraryStoredSearchKind.SavedSearch);
-        CollectionsAddFlyout.Items.Add(saved);
-    }
-
     private void LocalizeControls()
     {
         // 사진 이름은 Shell.Core 가 짓지만 문구는 여기에 있습니다. 꽂아 두지 않으면 카드가
@@ -2700,9 +1771,9 @@ public sealed partial class LibraryWorkspaceView : UserControl
         string import = AppResources.Get("importSection", "Text");
         ImportHeaderText.Text = import;
         ImportSectionText.Text = import;
-        LocalizeCollections();
-        LocalizeDevelopDefaults();
-        LocalizeCulling();
+        CollectionsPanel.Localize();
+        DevelopDefaultsPanel.Localize();
+        CullingSurface.Localize();
         UpdateSourcePanel();
         string importImages = AppResources.Get("importImages", "Content");
         SetButtonText(ImportImagesButton, importImages);

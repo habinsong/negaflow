@@ -4,25 +4,31 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:Negaflow.Shell.Views.Controls"
-    xmlns:primitives="using:Microsoft.UI.Xaml.Controls.Primitives">
+    xmlns:primitives="using:Microsoft.UI.Xaml.Controls.Primitives"
+    xmlns:scanner="using:Negaflow.Shell.Views.Library.Scanner"
+    xmlns:defaults="using:Negaflow.Shell.Views.Library.Defaults"
+    xmlns:culling="using:Negaflow.Shell.Views.Library.Culling"
+    xmlns:sources="using:Negaflow.Shell.Views.Library.Sources"
+    xmlns:collections="using:Negaflow.Shell.Views.Library.Collections"
+    xmlns:browser="using:Negaflow.Shell.Views.Library.Browser">
     <UserControl.Resources>
         <!-- ItemsPath 가 없으면 그룹 자체를 열거해 그리드가 항목을 전부 realize 합니다.
              200장에서 200개가 모두 만들어지는 것을 계측으로 확인했습니다. -->
         <CollectionViewSource
-            x:Name="FolderGroupedItems"
+            x:Name="FolderGroupedItems" x:FieldModifier="internal"
             IsSourceGrouped="True"
             ItemsPath="Items" />
         <controls:FilmTypeNameConverter x:Key="FilmTypeNameConverter" />
         <controls:PickStateBrushConverter x:Key="PickStateBrushConverter" />
     </UserControl.Resources>
-    <Grid x:Name="Root" Background="{ThemeResource NegaflowWindowBrush}" SizeChanged="OnRootSizeChanged">
+    <Grid x:Name="Root" x:FieldModifier="internal" Background="{ThemeResource NegaflowWindowBrush}" SizeChanged="OnRootSizeChanged">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto" />
             <ColumnDefinition Width="1" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <Grid x:Name="ControlsPanel" Grid.Column="0" Background="{ThemeResource NegaflowPanelBrush}">
+        <Grid x:Name="ControlsPanel" x:FieldModifier="internal" Grid.Column="0" Background="{ThemeResource NegaflowPanelBrush}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="76" />
                 <ColumnDefinition Width="1" />
@@ -31,29 +37,29 @@
 
             <StackPanel Grid.Column="0" Padding="22,10,22,0" Spacing="7">
                 <Button
-                    x:Name="ImportRailButton"
+                    x:Name="ImportRailButton" x:FieldModifier="internal"
                     AutomationProperties.AutomationId="negaflow.library.controls.importing"
                     Background="{ThemeResource NegaflowSelectionBrush}"
                     Click="OnSourceRailClicked"
                     Style="{StaticResource NegaflowSidebarButtonStyle}"
                     Tag="Importing">
-                    <FontIcon x:Name="ImportRailIcon" FontSize="15" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" Glyph="&#xE896;" />
+                    <FontIcon x:Name="ImportRailIcon" x:FieldModifier="internal" FontSize="15" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" Glyph="&#xE896;" />
                 </Button>
                 <Button
-                    x:Name="FilesRailButton"
+                    x:Name="FilesRailButton" x:FieldModifier="internal"
                     AutomationProperties.AutomationId="negaflow.library.controls.files"
                     Click="OnSourceRailClicked"
                     Style="{StaticResource NegaflowSidebarButtonStyle}"
                     Tag="Files">
-                    <FontIcon x:Name="FilesRailIcon" FontSize="15" Glyph="&#xE8B7;" />
+                    <FontIcon x:Name="FilesRailIcon" x:FieldModifier="internal" FontSize="15" Glyph="&#xE8B7;" />
                 </Button>
                 <Button
-                    x:Name="CollectionsRailButton"
+                    x:Name="CollectionsRailButton" x:FieldModifier="internal"
                     AutomationProperties.AutomationId="negaflow.library.controls.collections"
                     Click="OnSourceRailClicked"
                     Style="{StaticResource NegaflowSidebarButtonStyle}"
                     Tag="Collections">
-                    <FontIcon x:Name="CollectionsRailIcon" FontSize="15" Glyph="&#xE8FD;" />
+                    <FontIcon x:Name="CollectionsRailIcon" x:FieldModifier="internal" FontSize="15" Glyph="&#xE8FD;" />
                 </Button>
             </StackPanel>
 
@@ -72,16 +78,16 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <FontIcon x:Name="SourceHeaderIcon" Grid.Column="0" Margin="0,0,7,0" VerticalAlignment="Center" FontSize="14" Glyph="&#xE896;" />
-                    <TextBlock x:Name="ImportHeaderText" Grid.Column="1" VerticalAlignment="Center" FontSize="14" FontWeight="SemiBold" />
-                    <TextBlock x:Name="SourceHeaderCountText" Grid.Column="2" VerticalAlignment="Center" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="0" />
+                    <FontIcon x:Name="SourceHeaderIcon" x:FieldModifier="internal" Grid.Column="0" Margin="0,0,7,0" VerticalAlignment="Center" FontSize="14" Glyph="&#xE896;" />
+                    <TextBlock x:Name="ImportHeaderText" x:FieldModifier="internal" Grid.Column="1" VerticalAlignment="Center" FontSize="14" FontWeight="SemiBold" />
+                    <TextBlock x:Name="SourceHeaderCountText" x:FieldModifier="internal" Grid.Column="2" VerticalAlignment="Center" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="0" />
                 </Grid>
 
                 <Border Grid.Row="1" Background="{ThemeResource NegaflowDividerBrush}" />
 
-                <ScrollViewer x:Name="ImportSourcePanel" Grid.Row="2">
+                <ScrollViewer x:Name="ImportSourcePanel" x:FieldModifier="internal" Grid.Row="2">
                     <StackPanel Padding="12,14" Spacing="12">
-                        <TextBlock x:Name="ImportSectionText" FontSize="13" FontWeight="SemiBold" />
+                        <TextBlock x:Name="ImportSectionText" x:FieldModifier="internal" FontSize="13" FontWeight="SemiBold" />
                         <Border Padding="12" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="8">
                             <StackPanel Spacing="9">
                                 <TextBlock x:Uid="importHint" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
@@ -93,440 +99,46 @@
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
                                     <Button
-                                        x:Name="ImportImagesButton"
+                                        x:Name="ImportImagesButton" x:FieldModifier="internal"
                                         HorizontalAlignment="Stretch"
                                         AutomationProperties.AutomationId="negaflow.library.import.images"
                                         Click="OnImportClicked" />
                                     <Button
-                                        x:Name="ImportFoldersButton"
+                                        x:Name="ImportFoldersButton" x:FieldModifier="internal"
                                         Grid.Column="1"
                                         HorizontalAlignment="Stretch"
                                         AutomationProperties.AutomationId="negaflow.library.import.folders"
                                         Click="OnImportFoldersClicked" />
                                     <ToggleButton
-                                        x:Name="ImportScannerButton"
+                                        x:Name="ImportScannerButton" x:FieldModifier="internal"
                                         Grid.Column="2"
                                         HorizontalAlignment="Stretch"
                                         AutomationProperties.AutomationId="negaflow.library.import.scanner"
                                         Click="OnImportScannerClicked" />
                                 </Grid>
-                                <TextBlock x:Name="ImportStatusText" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                <TextBlock x:Name="ImportStatusText" x:FieldModifier="internal" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
                             </StackPanel>
                         </Border>
 
-                        <!-- 스캔: macOS ScannerControlsSection 입니다. 설치된 플러그인이 있을 때만
-                             나오며, 승인·연결·준비 세 상태를 그대로 구분합니다. -->
-                        <TextBlock
-                            x:Name="ScanSectionText"
-                            FontSize="13"
-                            FontWeight="SemiBold"
-                            Visibility="Collapsed" />
-                        <Border
-                            x:Name="ScanSectionCard"
-                            Padding="12"
-                            Background="{ThemeResource NegaflowCardBrush}"
-                            CornerRadius="8"
-                            Visibility="Collapsed">
-                            <StackPanel Spacing="9">
-                                <TextBlock
-                                    x:Name="ScanStateText"
-                                    FontSize="12"
-                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                    TextWrapping="Wrap" />
-                                <Button
-                                    x:Name="ScanApprovePluginButton"
-                                    HorizontalAlignment="Stretch"
-                                    AutomationProperties.AutomationId="negaflow.library.scan.approve"
-                                    Click="OnScanApprovePluginClicked"
-                                    Visibility="Collapsed" />
-                                <ToggleSwitch
-                                    x:Name="ScanSimulatorToggle"
-                                    AutomationProperties.AutomationId="negaflow.library.scan.simulator"
-                                    Toggled="OnScanSimulatorToggled" />
-
-                                <StackPanel x:Name="ScanControls" Spacing="9" Visibility="Collapsed">
-                                    <Grid ColumnSpacing="6">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock x:Name="ScanDeviceLabel" VerticalAlignment="Center" FontSize="12" />
-                                        <ComboBox
-                                            x:Name="ScanDeviceSelector"
-                                            Grid.Column="1"
-                                            HorizontalAlignment="Stretch"
-                                            AutomationProperties.AutomationId="negaflow.library.scan.device"
-                                            SelectionChanged="OnScanDeviceChanged" />
-                                        <Button
-                                            x:Name="ScanRescanButton"
-                                            Grid.Column="2"
-                                            Padding="7,4"
-                                            AutomationProperties.AutomationId="negaflow.scanner.rescan"
-                                            Click="OnScanRescanClicked"
-                                            Content="&#xE72C;"
-                                            FontFamily="{ThemeResource SymbolThemeFontFamily}"
-                                            FontSize="12" />
-                                    </Grid>
-                                    <Grid ColumnSpacing="8">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock x:Name="ScanFilmLabel" VerticalAlignment="Center" FontSize="12" />
-                                        <ComboBox
-                                            x:Name="ScanFilmSelector"
-                                            Grid.Column="1"
-                                            MinWidth="132"
-                                            AutomationProperties.AutomationId="negaflow.library.scan.film"
-                                            SelectionChanged="OnScanFilmChanged" />
-                                    </Grid>
-                                    <Grid ColumnSpacing="8">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock x:Name="ScanFolderNameLabel" VerticalAlignment="Center" FontSize="12" />
-                                        <TextBox
-                                            x:Name="ScanFolderNameBox"
-                                            Grid.Column="1"
-                                            AutomationProperties.AutomationId="negaflow.library.scan.folder-name"
-                                            TextAlignment="Right"
-                                            TextChanged="OnScanFolderNameChanged" />
-                                    </Grid>
-                                    <Grid ColumnSpacing="8">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <ComboBox
-                                            x:Name="ScanResolutionSelector"
-                                            HorizontalAlignment="Left"
-                                            AutomationProperties.AutomationId="negaflow.library.scan.resolution"
-                                            SelectionChanged="OnScanResolutionChanged" />
-                                        <TextBlock
-                                            Grid.Column="1"
-                                            VerticalAlignment="Center"
-                                            FontSize="11"
-                                            Foreground="{ThemeResource TextFillColorTertiaryBrush}"
-                                            Text="|" />
-                                        <ComboBox
-                                            x:Name="ScanColorModeSelector"
-                                            Grid.Column="2"
-                                            HorizontalAlignment="Right"
-                                            AutomationProperties.AutomationId="negaflow.library.scan.color-mode"
-                                            SelectionChanged="OnScanColorModeChanged" />
-                                    </Grid>
-                                    <TextBlock
-                                        x:Name="ScanBitDepthUnavailableText"
-                                        FontSize="11"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                        TextWrapping="Wrap"
-                                        Visibility="Collapsed" />
-                                    <Grid x:Name="ScanBitDepthRow" ColumnSpacing="8">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock x:Name="ScanBitDepthLabel" VerticalAlignment="Center" FontSize="12" />
-                                        <ComboBox
-                                            x:Name="ScanBitDepthSelector"
-                                            Grid.Column="1"
-                                            MinWidth="132"
-                                            AutomationProperties.AutomationId="negaflow.library.scan.bit-depth"
-                                            SelectionChanged="OnScanBitDepthChanged" />
-                                    </Grid>
-                                    <Grid x:Name="ScanFrameFormatRow" ColumnSpacing="8" Visibility="Collapsed">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock x:Name="ScanFrameFormatLabel" VerticalAlignment="Center" FontSize="12" />
-                                        <ComboBox
-                                            x:Name="ScanFrameFormatSelector"
-                                            Grid.Column="1"
-                                            MinWidth="152"
-                                            AutomationProperties.AutomationId="negaflow.library.scan.frame-format"
-                                            SelectionChanged="OnScanFrameFormatChanged" />
-                                    </Grid>
-                                    <Grid x:Name="ScanDetectionModeRow" ColumnSpacing="6" Visibility="Collapsed">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock x:Name="ScanDetectionModeLabel" VerticalAlignment="Center" FontSize="12" />
-                                        <RadioButton
-                                            x:Name="ScanDetectionAutomaticButton"
-                                            Grid.Column="1"
-                                            AutomationProperties.AutomationId="negaflow.library.scan.detection.automatic"
-                                            Checked="OnScanDetectionModeChecked"
-                                            GroupName="FlatbedDetectionMode"
-                                            IsChecked="True" />
-                                        <RadioButton
-                                            x:Name="ScanDetectionManualButton"
-                                            Grid.Column="2"
-                                            AutomationProperties.AutomationId="negaflow.library.scan.detection.manual"
-                                            Checked="OnScanDetectionModeChecked"
-                                            GroupName="FlatbedDetectionMode" />
-                                        <Button
-                                            x:Name="ScanRefreshFramesButton"
-                                            Grid.Column="3"
-                                            Padding="7,4"
-                                            AutomationProperties.AutomationId="negaflow.library.scan.refresh-frames"
-                                            Click="OnScanRefreshFramesClicked"
-                                            Content="&#xE72C;"
-                                            FontFamily="{ThemeResource SymbolThemeFontFamily}"
-                                            FontSize="12" />
-                                    </Grid>
-                                    <Grid x:Name="ScanRegionsRow" ColumnSpacing="6" Visibility="Collapsed">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock x:Name="ScanRegionsLabel" VerticalAlignment="Center" FontSize="12" />
-                                        <Button x:Name="ScanCopyFrameButton" Grid.Column="1" Padding="7,4" AutomationProperties.AutomationId="negaflow.library.scan.frame.copy" Click="OnScanCopyFrameClicked" Content="&#xE8C8;" FontFamily="{ThemeResource SymbolThemeFontFamily}" FontSize="12" />
-                                        <Button x:Name="ScanPasteFrameButton" Grid.Column="2" Padding="7,4" AutomationProperties.AutomationId="negaflow.library.scan.frame.paste" Click="OnScanPasteFrameClicked" Content="&#xE77F;" FontFamily="{ThemeResource SymbolThemeFontFamily}" FontSize="12" />
-                                        <Button x:Name="ScanAddFrameButton" Grid.Column="3" Padding="7,4" AutomationProperties.AutomationId="negaflow.library.scan.frame.add" Click="OnScanAddFrameClicked" Content="&#xE710;" FontFamily="{ThemeResource SymbolThemeFontFamily}" FontSize="12" />
-                                        <Button x:Name="ScanRemoveFrameButton" Grid.Column="4" Padding="7,4" AutomationProperties.AutomationId="negaflow.library.scan.frame.remove" Click="OnScanRemoveFrameClicked" Content="&#xE74D;" FontFamily="{ThemeResource SymbolThemeFontFamily}" FontSize="12" />
-                                    </Grid>
-                                    <Grid x:Name="ScanFrameCountRow" ColumnSpacing="8">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock x:Name="ScanFrameCountLabel" VerticalAlignment="Center" FontSize="12" />
-                                        <NumberBox
-                                            x:Name="ScanFrameCountBox"
-                                            Grid.Column="1"
-                                            MinWidth="98"
-                                            AutomationProperties.AutomationId="negaflow.library.scan.frame-count"
-                                            Maximum="12"
-                                            Minimum="1"
-                                            SpinButtonPlacementMode="Compact"
-                                            ValueChanged="OnScanFrameCountChanged" />
-                                    </Grid>
-                                    <ToggleSwitch
-                                        x:Name="ScanInfraredToggle"
-                                        AutomationProperties.AutomationId="negaflow.library.scan.infrared"
-                                        Toggled="OnScanInfraredToggled" />
-                                    <Grid ColumnSpacing="8">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <Button
-                                            x:Name="ScanPreviewButton"
-                                            HorizontalAlignment="Stretch"
-                                            AutomationProperties.AutomationId="negaflow.library.scan.preview"
-                                            Click="OnScanPreviewClicked" />
-                                        <Button
-                                            x:Name="ScanStartButton"
-                                            Grid.Column="1"
-                                            HorizontalAlignment="Stretch"
-                                            AutomationProperties.AutomationId="negaflow.library.scan.start"
-                                            Click="OnScanStartClicked"
-                                            Style="{StaticResource AccentButtonStyle}" />
-                                    </Grid>
-                                </StackPanel>
-                                <TextBlock
-                                    x:Name="ScanStatusText"
-                                    FontSize="11"
-                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                    TextWrapping="Wrap" />
-                            </StackPanel>
-                        </Border>
-
-                        <!-- 현상 기본값: macOS DevelopDefaultsSection 입니다. 프로세스, 타깃,
-                             그리고 필름 프로파일과 룩이 한 줄에 옵니다. -->
-                        <TextBlock x:Name="DevelopDefaultsText" FontSize="13" FontWeight="SemiBold" />
-                        <Border Padding="12" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="8">
-                            <StackPanel Spacing="9">
-                                <TextBlock x:Name="DevelopProcessLabel" FontSize="12" />
-                                <ComboBox
-                                    x:Name="DevelopProcessSelector"
-                                    HorizontalAlignment="Stretch"
-                                    AutomationProperties.AutomationId="negaflow.library.develop.process"
-                                    DisplayMemberPath="Name"
-                                    FontSize="12"
-                                    SelectionChanged="OnDevelopProcessChanged" />
-                                <TextBlock x:Name="DevelopTargetLabel" FontSize="12" />
-                                <!-- macOS 는 다섯 칸 세그먼트입니다. 폭을 똑같이 나눠 가집니다. -->
-                                <Grid x:Name="DevelopTargetBar" ColumnSpacing="4">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                </Grid>
-                                <TextBlock x:Name="DevelopFilmProfileLabel" FontSize="12" />
-                                <ComboBox
-                                    x:Name="DevelopFilmProfileSelector"
-                                    HorizontalAlignment="Stretch"
-                                    AutomationProperties.AutomationId="negaflow.library.develop.film-profile"
-                                    DisplayMemberPath="Label"
-                                    FontSize="12"
-                                    SelectionChanged="OnDevelopFilmProfileChanged" />
-                                <TextBlock x:Name="DevelopLookLabel" FontSize="12" />
-                                <ComboBox
-                                    x:Name="DevelopLookSelector"
-                                    HorizontalAlignment="Stretch"
-                                    AutomationProperties.AutomationId="negaflow.library.develop.look"
-                                    DisplayMemberPath="Label"
-                                    FontSize="12"
-                                    SelectionChanged="OnDevelopLookChanged" />
-                            </StackPanel>
-                        </Border>
+                        <scanner:LibraryScanPanel x:Name="ScanPanel" x:FieldModifier="internal" />
+                        <defaults:LibraryDevelopDefaultsPanel x:Name="DevelopDefaultsPanel" x:FieldModifier="internal" />
                     </StackPanel>
                 </ScrollViewer>
 
-                <!-- 파일 소스: 폴더를 펼쳐 그 안의 frame 이름까지 보이는 macOS 트리입니다. -->
-                <TreeView
-                    x:Name="FilesSourceTree"
+                <sources:LibraryFilesSourceTree
+                    x:Name="FilesSourceTree" x:FieldModifier="internal"
                     Grid.Row="2"
-                    Padding="4,6"
-                    AutomationProperties.AutomationId="negaflow.library.sources.files"
-                    CanDragItems="False"
-                    CanReorderItems="False"
-                    ItemInvoked="OnSourceTreeItemInvoked"
-                    SelectionMode="Single"
-                    Visibility="Collapsed">
-                    <TreeView.ItemTemplate>
-                        <DataTemplate x:DataType="TreeViewNode">
-                            <TreeViewItem
-                                AllowDrop="True"
-                                AutomationProperties.Name="{Binding Content.Title, Mode=OneWay}"
-                                DragOver="OnFolderDragOver"
-                                Drop="OnFolderDrop"
-                                IsExpanded="{Binding IsExpanded, Mode=TwoWay}"
-                                ItemsSource="{Binding Children}">
-                                <Grid ColumnSpacing="6">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <FontIcon
-                                        FontSize="12"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                        Glyph="{Binding Content.Glyph, Mode=OneWay}" />
-                                    <TextBlock
-                                        Grid.Column="1"
-                                        FontSize="12"
-                                        Text="{Binding Content.Title, Mode=OneWay}"
-                                        TextTrimming="CharacterEllipsis" />
-                                    <TextBlock
-                                        Grid.Column="2"
-                                        FontSize="11"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                        Text="{Binding Content.Detail, Mode=OneWay}" />
-                                </Grid>
-                            </TreeViewItem>
-                        </DataTemplate>
-                    </TreeView.ItemTemplate>
-                </TreeView>
-
-                <!-- 컬렉션: macOS 처럼 "전체 보기" 가 늘 맨 위에 있고 그 아래 사용자가 만든
-                     묶음이 옵니다. + 는 지금 고른 사진으로 새 묶음을 만듭니다. -->
-                <Grid x:Name="CollectionsSourcePanel" Grid.Row="2" Visibility="Collapsed">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid Padding="14,4,10,2">
-                        <DropDownButton
-                            x:Name="CollectionsAddButton"
-                            Width="22"
-                            Height="22"
-                            Padding="0"
-                            HorizontalAlignment="Right"
-                            AutomationProperties.AutomationId="negaflow.library.collections.add"
-                            Background="Transparent"
-                            BorderThickness="0"
-                            Content="&#xE710;"
-                            FontFamily="{ThemeResource SymbolThemeFontFamily}"
-                            FontSize="12">
-                            <DropDownButton.Flyout>
-                                <MenuFlyout x:Name="CollectionsAddFlyout" />
-                            </DropDownButton.Flyout>
-                        </DropDownButton>
-                    </Grid>
-                    <ListView
-                        x:Name="CollectionsList"
-                        Grid.Row="1"
-                        Padding="10,0,10,8"
-                        AutomationProperties.AutomationId="negaflow.library.collections"
-                        SelectionChanged="OnCollectionSelectionChanged"
-                        SelectionMode="Single">
-                        <ListView.ItemTemplate>
-                            <DataTemplate>
-                                <Grid ColumnSpacing="8">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <FontIcon
-                                        VerticalAlignment="Center"
-                                        FontSize="12"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                        Glyph="{Binding Glyph, Mode=OneWay}" />
-                                    <TextBlock
-                                        Grid.Column="1"
-                                        VerticalAlignment="Center"
-                                        FontSize="12"
-                                        Text="{Binding Name, Mode=OneWay}"
-                                        TextTrimming="CharacterEllipsis" />
-                                    <TextBlock
-                                        Grid.Column="2"
-                                        VerticalAlignment="Center"
-                                        FontSize="11"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                        Text="{Binding CountText, Mode=OneWay}" />
-                                </Grid>
-                            </DataTemplate>
-                        </ListView.ItemTemplate>
-                    </ListView>
-                    <StackPanel Grid.Row="2" Padding="10,0,10,10" Spacing="6">
-                        <TextBox
-                            x:Name="CollectionNameBox"
-                            AutomationProperties.AutomationId="negaflow.library.collections.name"
-                            FontSize="12" />
-                        <Grid ColumnSpacing="6">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <Button
-                                x:Name="CollectionRenameButton"
-                                HorizontalAlignment="Stretch"
-                                AutomationProperties.AutomationId="negaflow.library.collections.rename"
-                                Click="OnRenameCollectionClicked"
-                                FontSize="11" />
-                            <Button
-                                x:Name="CollectionDeleteButton"
-                                Grid.Column="1"
-                                HorizontalAlignment="Stretch"
-                                AutomationProperties.AutomationId="negaflow.library.collections.delete"
-                                Click="OnDeleteCollectionClicked"
-                                FontSize="11" />
-                        </Grid>
-                    </StackPanel>
-                </Grid>
+                    Visibility="Collapsed" />
+                <collections:LibraryCollectionsPanel
+                    x:Name="CollectionsPanel" x:FieldModifier="internal"
+                    Grid.Row="2"
+                    Visibility="Collapsed" />
             </Grid>
         </Grid>
 
         <Border Grid.Column="1" Background="{ThemeResource NegaflowDividerBrush}" />
         <primitives:Thumb
-            x:Name="ControlsResizeThumb"
+            x:Name="ControlsResizeThumb" x:FieldModifier="internal"
             Grid.Column="1"
             Width="8"
             HorizontalAlignment="Center"
@@ -551,11 +163,11 @@
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" VerticalAlignment="Center" Orientation="Horizontal" Spacing="6">
                     <TextBlock x:Uid="libraryAllPhotos" FontSize="14" FontWeight="SemiBold" />
-                    <TextBlock x:Name="LibraryCountText" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <TextBlock x:Name="LibraryCountText" x:FieldModifier="internal" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Horizontal" Spacing="8">
                     <ToggleButton
-                        x:Name="FiltersButton"
+                        x:Name="FiltersButton" x:FieldModifier="internal"
                         Height="28"
                         Padding="6,0"
                         AutomationProperties.AutomationId="negaflow.library.filters"
@@ -564,39 +176,39 @@
                         Checked="OnFiltersToggled"
                         Unchecked="OnFiltersToggled">
                         <StackPanel Orientation="Horizontal" Spacing="5">
-                            <FontIcon x:Name="FiltersIcon" FontSize="12" Glyph="&#xE71C;" />
-                            <TextBlock x:Name="FiltersText" FontSize="11" FontWeight="Medium" />
+                            <FontIcon x:Name="FiltersIcon" x:FieldModifier="internal" FontSize="12" Glyph="&#xE71C;" />
+                            <TextBlock x:Name="FiltersText" x:FieldModifier="internal" FontSize="11" FontWeight="Medium" />
                         </StackPanel>
                     </ToggleButton>
                     <DropDownButton
-                        x:Name="SortButton"
+                        x:Name="SortButton" x:FieldModifier="internal"
                         Height="22"
                         Padding="4,0"
                         AutomationProperties.AutomationId="negaflow.library.sort"
                         Background="Transparent"
                         BorderThickness="0">
                         <StackPanel Orientation="Horizontal" Spacing="3">
-                            <FontIcon x:Name="SortDirectionIcon" FontSize="9" Glyph="&#xE74A;" />
-                            <TextBlock x:Name="SortKeyText" FontSize="11" FontWeight="SemiBold" />
+                            <FontIcon x:Name="SortDirectionIcon" x:FieldModifier="internal" FontSize="9" Glyph="&#xE74A;" />
+                            <TextBlock x:Name="SortKeyText" x:FieldModifier="internal" FontSize="11" FontWeight="SemiBold" />
                         </StackPanel>
                         <DropDownButton.Flyout>
                             <MenuFlyout>
-                                <MenuFlyoutItem x:Name="SortInputOrderItem" Tag="InputOrder" Click="OnSortKeyClicked" />
-                                <MenuFlyoutItem x:Name="SortTimeItem" Tag="Time" Click="OnSortKeyClicked" />
-                                <MenuFlyoutItem x:Name="SortNameItem" Tag="Name" Click="OnSortKeyClicked" />
-                                <MenuFlyoutItem x:Name="SortFlagItem" Tag="Flag" Click="OnSortKeyClicked" />
-                                <MenuFlyoutItem x:Name="SortRatingItem" Tag="Rating" Click="OnSortKeyClicked" />
-                                <MenuFlyoutItem x:Name="SortFileSizeItem" Tag="FileSize" Click="OnSortKeyClicked" />
+                                <MenuFlyoutItem x:Name="SortInputOrderItem" x:FieldModifier="internal" Tag="InputOrder" Click="OnSortKeyClicked" />
+                                <MenuFlyoutItem x:Name="SortTimeItem" x:FieldModifier="internal" Tag="Time" Click="OnSortKeyClicked" />
+                                <MenuFlyoutItem x:Name="SortNameItem" x:FieldModifier="internal" Tag="Name" Click="OnSortKeyClicked" />
+                                <MenuFlyoutItem x:Name="SortFlagItem" x:FieldModifier="internal" Tag="Flag" Click="OnSortKeyClicked" />
+                                <MenuFlyoutItem x:Name="SortRatingItem" x:FieldModifier="internal" Tag="Rating" Click="OnSortKeyClicked" />
+                                <MenuFlyoutItem x:Name="SortFileSizeItem" x:FieldModifier="internal" Tag="FileSize" Click="OnSortKeyClicked" />
                                 <MenuFlyoutSeparator />
-                                <MenuFlyoutItem x:Name="SortAscendingItem" Tag="Ascending" Click="OnSortDirectionClicked" />
-                                <MenuFlyoutItem x:Name="SortDescendingItem" Tag="Descending" Click="OnSortDirectionClicked" />
+                                <MenuFlyoutItem x:Name="SortAscendingItem" x:FieldModifier="internal" Tag="Ascending" Click="OnSortDirectionClicked" />
+                                <MenuFlyoutItem x:Name="SortDescendingItem" x:FieldModifier="internal" Tag="Descending" Click="OnSortDirectionClicked" />
                             </MenuFlyout>
                         </DropDownButton.Flyout>
                     </DropDownButton>
                     <!-- macOS LibraryCullingModePicker: 격자와 살펴보기 두 칸, 그리고 고른 수. -->
                     <StackPanel Orientation="Horizontal" Spacing="2">
                         <Button
-                            x:Name="CullingGridButton"
+                            x:Name="CullingGridButton" x:FieldModifier="internal"
                             Width="27"
                             Height="24"
                             Padding="0"
@@ -609,7 +221,7 @@
                             <FontIcon FontSize="12" Glyph="&#xE80A;" />
                         </Button>
                         <Button
-                            x:Name="CullingSurveyButton"
+                            x:Name="CullingSurveyButton" x:FieldModifier="internal"
                             Width="27"
                             Height="24"
                             Padding="0"
@@ -622,7 +234,7 @@
                             <FontIcon FontSize="12" Glyph="&#xF0E2;" />
                         </Button>
                         <Button
-                            x:Name="CullingCompareButton"
+                            x:Name="CullingCompareButton" x:FieldModifier="internal"
                             Width="27"
                             Height="24"
                             Padding="0"
@@ -635,7 +247,7 @@
                             <FontIcon FontSize="12" Glyph="&#xE8B3;" />
                         </Button>
                         <TextBlock
-                            x:Name="CullingSelectionCountText"
+                            x:Name="CullingSelectionCountText" x:FieldModifier="internal"
                             MinWidth="22"
                             VerticalAlignment="Center"
                             FontSize="11"
@@ -644,7 +256,7 @@
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="1">
                         <Button
-                            x:Name="CardSizeDecreaseButton"
+                            x:Name="CardSizeDecreaseButton" x:FieldModifier="internal"
                             Width="22"
                             Height="22"
                             Padding="0"
@@ -654,7 +266,7 @@
                             Click="OnCardSizeDecreaseClicked"
                             Content="&#x2212;" />
                         <Button
-                            x:Name="CardSizeResetButton"
+                            x:Name="CardSizeResetButton" x:FieldModifier="internal"
                             Width="38"
                             Height="22"
                             Padding="0"
@@ -665,7 +277,7 @@
                             FontSize="11"
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                         <Button
-                            x:Name="CardSizeIncreaseButton"
+                            x:Name="CardSizeIncreaseButton" x:FieldModifier="internal"
                             Width="22"
                             Height="22"
                             Padding="0"
@@ -683,7 +295,7 @@
             <!-- 필터를 켰을 때만 나오는 줄입니다. macOS 는 팝오버지만 여기서는 헤더 바로 아래에
                  붙여 두 화면 모두에서 같은 순서·같은 항목으로 보이게 합니다. -->
             <ScrollViewer
-                x:Name="FilterBar"
+                x:Name="FilterBar" x:FieldModifier="internal"
                 Grid.Row="2"
                 Padding="16,6"
                 HorizontalScrollBarVisibility="Auto"
@@ -693,7 +305,7 @@
                 Visibility="Collapsed">
                 <StackPanel Orientation="Horizontal" Spacing="4">
                     <DropDownButton
-                        x:Name="RatingFilterButton"
+                        x:Name="RatingFilterButton" x:FieldModifier="internal"
                         Height="26"
                         Padding="8,0"
                         AutomationProperties.AutomationId="negaflow.library.filter.rating"
@@ -701,35 +313,35 @@
                         FontSize="11">
                         <DropDownButton.Flyout>
                             <MenuFlyout>
-                                <MenuFlyoutItem x:Name="RatingFilterAnyItem" Tag="0" Click="OnRatingFilterClicked" />
-                                <MenuFlyoutItem x:Name="RatingFilterOneItem" Tag="1" Click="OnRatingFilterClicked" />
-                                <MenuFlyoutItem x:Name="RatingFilterTwoItem" Tag="2" Click="OnRatingFilterClicked" />
-                                <MenuFlyoutItem x:Name="RatingFilterThreeItem" Tag="3" Click="OnRatingFilterClicked" />
-                                <MenuFlyoutItem x:Name="RatingFilterFourItem" Tag="4" Click="OnRatingFilterClicked" />
-                                <MenuFlyoutItem x:Name="RatingFilterFiveItem" Tag="5" Click="OnRatingFilterClicked" />
+                                <MenuFlyoutItem x:Name="RatingFilterAnyItem" x:FieldModifier="internal" Tag="0" Click="OnRatingFilterClicked" />
+                                <MenuFlyoutItem x:Name="RatingFilterOneItem" x:FieldModifier="internal" Tag="1" Click="OnRatingFilterClicked" />
+                                <MenuFlyoutItem x:Name="RatingFilterTwoItem" x:FieldModifier="internal" Tag="2" Click="OnRatingFilterClicked" />
+                                <MenuFlyoutItem x:Name="RatingFilterThreeItem" x:FieldModifier="internal" Tag="3" Click="OnRatingFilterClicked" />
+                                <MenuFlyoutItem x:Name="RatingFilterFourItem" x:FieldModifier="internal" Tag="4" Click="OnRatingFilterClicked" />
+                                <MenuFlyoutItem x:Name="RatingFilterFiveItem" x:FieldModifier="internal" Tag="5" Click="OnRatingFilterClicked" />
                             </MenuFlyout>
                         </DropDownButton.Flyout>
                     </DropDownButton>
-                    <ToggleButton x:Name="CurrentRollFilterToggle" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.current-roll" CornerRadius="13" Checked="OnQuickFilterToggled" FontSize="11" Unchecked="OnQuickFilterToggled" />
-                    <ToggleButton x:Name="PickedFilterToggle" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.picked" CornerRadius="13" Checked="OnQuickFilterToggled" FontSize="11" Unchecked="OnQuickFilterToggled" />
-                    <ToggleButton x:Name="RejectedFilterToggle" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.rejected" CornerRadius="13" Checked="OnQuickFilterToggled" FontSize="11" Unchecked="OnQuickFilterToggled" />
-                    <ToggleButton x:Name="OfflineFilterToggle" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.offline" CornerRadius="13" Checked="OnQuickFilterToggled" FontSize="11" Unchecked="OnQuickFilterToggled" />
-                    <ToggleButton x:Name="InfraredFilterToggle" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.infrared" CornerRadius="13" Checked="OnQuickFilterToggled" FontSize="11" Unchecked="OnQuickFilterToggled" />
-                    <ToggleButton x:Name="DefectRecipeFilterToggle" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.defect-recipe" CornerRadius="13" Checked="OnQuickFilterToggled" FontSize="11" Unchecked="OnQuickFilterToggled" />
-                    <ToggleButton x:Name="UnvalidatedProfileFilterToggle" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.unvalidated-profile" CornerRadius="13" Checked="OnQuickFilterToggled" FontSize="11" Unchecked="OnQuickFilterToggled" />
-                    <ToggleButton x:Name="MetadataUnknownFilterToggle" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.metadata-unknown" CornerRadius="13" Checked="OnQuickFilterToggled" FontSize="11" Unchecked="OnQuickFilterToggled" />
-                    <Button x:Name="ClearFiltersButton" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.clear" Background="Transparent" BorderThickness="0" Click="OnClearFiltersClicked" FontSize="11" />
+                    <ToggleButton x:Name="CurrentRollFilterToggle" x:FieldModifier="internal" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.current-roll" CornerRadius="13" Checked="OnQuickFilterToggled" FontSize="11" Unchecked="OnQuickFilterToggled" />
+                    <ToggleButton x:Name="PickedFilterToggle" x:FieldModifier="internal" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.picked" CornerRadius="13" Checked="OnQuickFilterToggled" FontSize="11" Unchecked="OnQuickFilterToggled" />
+                    <ToggleButton x:Name="RejectedFilterToggle" x:FieldModifier="internal" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.rejected" CornerRadius="13" Checked="OnQuickFilterToggled" FontSize="11" Unchecked="OnQuickFilterToggled" />
+                    <ToggleButton x:Name="OfflineFilterToggle" x:FieldModifier="internal" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.offline" CornerRadius="13" Checked="OnQuickFilterToggled" FontSize="11" Unchecked="OnQuickFilterToggled" />
+                    <ToggleButton x:Name="InfraredFilterToggle" x:FieldModifier="internal" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.infrared" CornerRadius="13" Checked="OnQuickFilterToggled" FontSize="11" Unchecked="OnQuickFilterToggled" />
+                    <ToggleButton x:Name="DefectRecipeFilterToggle" x:FieldModifier="internal" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.defect-recipe" CornerRadius="13" Checked="OnQuickFilterToggled" FontSize="11" Unchecked="OnQuickFilterToggled" />
+                    <ToggleButton x:Name="UnvalidatedProfileFilterToggle" x:FieldModifier="internal" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.unvalidated-profile" CornerRadius="13" Checked="OnQuickFilterToggled" FontSize="11" Unchecked="OnQuickFilterToggled" />
+                    <ToggleButton x:Name="MetadataUnknownFilterToggle" x:FieldModifier="internal" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.metadata-unknown" CornerRadius="13" Checked="OnQuickFilterToggled" FontSize="11" Unchecked="OnQuickFilterToggled" />
+                    <Button x:Name="ClearFiltersButton" x:FieldModifier="internal" Height="26" Padding="8,0" AutomationProperties.AutomationId="negaflow.library.filter.clear" Background="Transparent" BorderThickness="0" Click="OnClearFiltersClicked" FontSize="11" />
                 </StackPanel>
             </ScrollViewer>
 
             <Grid Grid.Row="3">
-                <StackPanel x:Name="EmptyLibraryPanel" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="9">
+                <StackPanel x:Name="EmptyLibraryPanel" x:FieldModifier="internal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="9">
                     <FontIcon FontSize="34" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE8FD;" />
                     <TextBlock x:Uid="noImages" HorizontalAlignment="Center" FontSize="18" FontWeight="SemiBold" />
-                    <Button x:Name="EmptyImportImagesButton" HorizontalAlignment="Center" Click="OnImportClicked" />
+                    <Button x:Name="EmptyImportImagesButton" x:FieldModifier="internal" HorizontalAlignment="Center" Click="OnImportClicked" />
                 </StackPanel>
 
-                <Grid x:Name="LibraryContentPanel" Visibility="Collapsed">
+                <Grid x:Name="LibraryContentPanel" x:FieldModifier="internal" Visibility="Collapsed">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
@@ -737,7 +349,7 @@
 
                     <!-- 읽지 못한 frame 을 조용히 감추면 사용자에게는 사진이 사라진 것으로 보인다. -->
                     <InfoBar
-                        x:Name="LibraryIssueBar"
+                        x:Name="LibraryIssueBar" x:FieldModifier="internal"
                         Grid.Row="0"
                         Margin="16,10,16,0"
                         IsClosable="False"
@@ -745,7 +357,7 @@
                         Severity="Warning" />
 
                     <GridView
-                        x:Name="FrameListView"
+                        x:Name="FrameListView" x:FieldModifier="internal"
                         Grid.Row="1"
                         Padding="8,6"
                         AutomationProperties.AutomationId="negaflow.library.frames"
@@ -802,135 +414,20 @@
                                 </GroupStyle.HeaderTemplate>
                             </GroupStyle>
                         </GridView.GroupStyle>
-                        <!--
-                            카드 한 장의 구조는 macOS FrameStripItemView 와 같습니다 — 썸네일,
-                            3pt 간격, 이름, 필름 종류, 그리고 맨 아래 별점입니다. 카드 크기는
-                            컨테이너에서 정하므로 여기서는 비율만 잡습니다.
-                        -->
                         <GridView.ItemTemplate>
                             <DataTemplate>
-                                <Grid
-                                    Padding="8"
-                                    RightTapped="OnFrameRightTapped"
-                                    RowSpacing="0"
-                                    Tag="{Binding}">
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="*" />
-                                        <RowDefinition Height="3" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="14" />
-                                    </Grid.RowDefinitions>
-
-                                    <Grid Grid.Row="0">
-                                        <Border Background="{ThemeResource NegaflowThumbnailWellBrush}" CornerRadius="6" />
-                                        <Border
-                                            CornerRadius="6"
-                                            Visibility="{Binding HasThumbnail, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                            <Image Source="{Binding Thumbnail}" Stretch="Uniform" />
-                                        </Border>
-                                        <FontIcon
-                                            FontSize="13"
-                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                            Glyph="&#xE91B;"
-                                            Visibility="{Binding IsThumbnailPending, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                        <!-- macOS 는 깃발을 썸네일 왼쪽 위에 5pt 띄워 답니다. -->
-                                        <FontIcon
-                                            Margin="5"
-                                            HorizontalAlignment="Left"
-                                            VerticalAlignment="Top"
-                                            FontSize="12"
-                                            Foreground="{Binding PickState, Converter={StaticResource PickStateBrushConverter}}"
-                                            Glyph="{Binding PickGlyph}"
-                                            Visibility="{Binding IsFlagged, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                        <!-- 묶음 배지는 macOS 와 같이 오른쪽 위입니다. -->
-                                        <Border
-                                            Margin="5"
-                                            Padding="6,4"
-                                            HorizontalAlignment="Right"
-                                            VerticalAlignment="Top"
-                                            Background="#B8000000"
-                                            CornerRadius="9"
-                                            Visibility="{Binding HasStack, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                            <StackPanel Orientation="Horizontal" Spacing="3">
-                                                <FontIcon FontSize="10" Foreground="White" Glyph="{Binding StackGlyph}" />
-                                                <TextBlock
-                                                    FontSize="10"
-                                                    FontWeight="SemiBold"
-                                                    Foreground="White"
-                                                    Text="{Binding StackCount}" />
-                                            </StackPanel>
-                                        </Border>
-                                        <Button
-                                            x:Uid="libraryLocateOriginal"
-                                            Margin="5"
-                                            Padding="6,2"
-                                            HorizontalAlignment="Left"
-                                            VerticalAlignment="Bottom"
-                                            Background="#B8000000"
-                                            BorderThickness="0"
-                                            CornerRadius="9"
-                                            FontSize="10"
-                                            Click="OnLocateOriginalClicked"
-                                            Tag="{Binding}"
-                                            Visibility="{Binding IsSourceOffline, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                    </Grid>
-
-                                    <TextBlock
-                                        Grid.Row="2"
-                                        FontSize="12"
-                                        FontWeight="SemiBold"
-                                        Text="{Binding DisplayName}"
-                                        TextTrimming="CharacterEllipsis" />
-                                    <TextBlock
-                                        Grid.Row="3"
-                                        Margin="0,2,0,0"
-                                        FontSize="11"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                        Text="{Binding FilmType, Converter={StaticResource FilmTypeNameConverter}}"
-                                        TextTrimming="CharacterEllipsis" />
-                                    <controls:FrameRatingStars
-                                        Grid.Row="4"
-                                        HorizontalAlignment="Left"
-                                        Rating="{Binding Rating}"
-                                        RatingCommitted="OnRatingCommitted"
-                                        Tag="{Binding}" />
-                                </Grid>
+                                <browser:LibraryFrameCard
+                                    CardRightTapped="OnFrameRightTapped"
+                                    LocateOriginalClicked="OnLocateOriginalClicked"
+                                    RatingCommitted="OnRatingCommitted" />
                             </DataTemplate>
                         </GridView.ItemTemplate>
                     </GridView>
 
-                    <!-- 비교·살펴보기는 격자와 같은 자리를 씁니다. macOS 도 격자를 감추고
-                         그 자리에 판을 올립니다. -->
-                    <Grid
-                        x:Name="CullingSurface"
+                    <culling:LibraryCullingSurface
+                        x:Name="CullingSurface" x:FieldModifier="internal"
                         Grid.Row="1"
-                        Background="{ThemeResource NegaflowWindowBrush}"
-                        Visibility="Collapsed">
-                        <ScrollViewer x:Name="CullingScroll" Padding="12">
-                            <Grid x:Name="CullingBoard" ColumnSpacing="10" RowSpacing="10" />
-                        </ScrollViewer>
-                        <StackPanel
-                            x:Name="CullingEmptyPanel"
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            Spacing="6"
-                            Visibility="Collapsed">
-                            <TextBlock
-                                x:Name="CullingEmptyTitle"
-                                HorizontalAlignment="Center"
-                                FontSize="15"
-                                FontWeight="SemiBold" />
-                            <TextBlock
-                                x:Name="CullingEmptyBody"
-                                MaxWidth="360"
-                                HorizontalAlignment="Center"
-                                FontSize="12"
-                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                TextAlignment="Center"
-                                TextWrapping="Wrap" />
-                        </StackPanel>
-                    </Grid>
+                        Visibility="Collapsed" />
                 </Grid>
 
                 <StackPanel
@@ -946,23 +443,23 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <Button x:Name="AllModeButton" Grid.Column="0" Padding="6,0" Background="Transparent" BorderThickness="0" AutomationProperties.AutomationId="negaflow.library.view.all" Click="OnAllModeClicked" />
-                            <Button x:Name="FoldersModeButton" Grid.Column="1" Padding="6,0" Background="Transparent" BorderThickness="0" AutomationProperties.AutomationId="negaflow.library.view.folders" Click="OnFoldersModeClicked" />
-                            <DropDownButton x:Name="FilmTypeModeButton" Grid.Column="2" Padding="6,0" Background="Transparent" BorderThickness="0" AutomationProperties.AutomationId="negaflow.library.view.film-type">
+                            <Button x:Name="AllModeButton" x:FieldModifier="internal" Grid.Column="0" Padding="6,0" Background="Transparent" BorderThickness="0" AutomationProperties.AutomationId="negaflow.library.view.all" Click="OnAllModeClicked" />
+                            <Button x:Name="FoldersModeButton" x:FieldModifier="internal" Grid.Column="1" Padding="6,0" Background="Transparent" BorderThickness="0" AutomationProperties.AutomationId="negaflow.library.view.folders" Click="OnFoldersModeClicked" />
+                            <DropDownButton x:Name="FilmTypeModeButton" x:FieldModifier="internal" Grid.Column="2" Padding="6,0" Background="Transparent" BorderThickness="0" AutomationProperties.AutomationId="negaflow.library.view.film-type">
                                 <DropDownButton.Flyout>
                                     <MenuFlyout>
-                                        <MenuFlyoutItem x:Name="ColorNegativeFilmTypeItem" Tag="ColorNegative" Click="OnFilmTypeClicked" />
-                                        <MenuFlyoutItem x:Name="ColorPositiveFilmTypeItem" Tag="ColorPositive" Click="OnFilmTypeClicked" />
-                                        <MenuFlyoutItem x:Name="BlackAndWhiteNegativeFilmTypeItem" Tag="BlackAndWhiteNegative" Click="OnFilmTypeClicked" />
-                                        <MenuFlyoutItem x:Name="BlackAndWhitePositiveFilmTypeItem" Tag="BlackAndWhitePositive" Click="OnFilmTypeClicked" />
+                                        <MenuFlyoutItem x:Name="ColorNegativeFilmTypeItem" x:FieldModifier="internal" Tag="ColorNegative" Click="OnFilmTypeClicked" />
+                                        <MenuFlyoutItem x:Name="ColorPositiveFilmTypeItem" x:FieldModifier="internal" Tag="ColorPositive" Click="OnFilmTypeClicked" />
+                                        <MenuFlyoutItem x:Name="BlackAndWhiteNegativeFilmTypeItem" x:FieldModifier="internal" Tag="BlackAndWhiteNegative" Click="OnFilmTypeClicked" />
+                                        <MenuFlyoutItem x:Name="BlackAndWhitePositiveFilmTypeItem" x:FieldModifier="internal" Tag="BlackAndWhitePositive" Click="OnFilmTypeClicked" />
                                     </MenuFlyout>
                                 </DropDownButton.Flyout>
                             </DropDownButton>
-                            <Button x:Name="OfflineModeButton" Grid.Column="3" Padding="6,0" Background="Transparent" BorderThickness="0" AutomationProperties.AutomationId="negaflow.library.view.offline" Click="OnOfflineModeClicked" />
+                            <Button x:Name="OfflineModeButton" x:FieldModifier="internal" Grid.Column="3" Padding="6,0" Background="Transparent" BorderThickness="0" AutomationProperties.AutomationId="negaflow.library.view.offline" Click="OnOfflineModeClicked" />
                         </Grid>
                     </Border>
                     <TextBox
-                        x:Name="LibrarySearchBox"
+                        x:Name="LibrarySearchBox" x:FieldModifier="internal"
                         x:Uid="librarySearchPlaceholder"
                         Width="280"
                         Height="28"

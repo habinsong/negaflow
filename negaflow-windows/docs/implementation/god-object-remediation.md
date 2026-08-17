@@ -33,7 +33,7 @@
 | ~~`src/Native/abi/negaflow_abi.cpp`~~ | 6,409 → 14 | **해결.** 요청 매핑·결과 쓰기·export/preview·검출·probe·프루프·자동 조정을 `src/Native/abi/{request,result,export,preview,run,detect,probe,proof,adjust,support}/` 실제 번역 단위로 옮겼다. 공개 C 진입점과 매퍼는 입출력이 명시된 `negaflow::abi::detail` 함수이고, 핸들 수명은 검출 번역 단위가 소유한다. 함수 본문은 그대로 옮겼다 |
 | ~~`src/Shell/Views/DevelopWorkspaceView.xaml.cs`~~ | 1,942 → 329 | **해결.** GrainMend 카드·검출·획·레이어와 frame 선택·탭·레이아웃·자동 조정·크롭 세션을 `Views/Develop/{GrainMend,Host}/` 실제 타입으로 옮겼다 |
 | ~~`tests/Native.UnitTests/develop_export_abi_tests.cpp`~~ | 4,107 → `DevelopExportAbi/main.cpp` 84 | **해결.** 요청 공장·파일 I/O·버전 계약·미리보기·GrainMend·run state·자동 조정·결함·프루프·probe를 `tests/Native.UnitTests/DevelopExportAbi/` 실제 번역 단위로 옮겼다. `#include` 조각내기가 아니다 |
-| `src/Shell/Views/LibraryWorkspaceView.xaml.cs` | 2,835 | 미해결 |
+| `src/Shell/Views/LibraryWorkspaceView.xaml.cs` | 1,906 | 미해결 |
 | ~~`src/Shell/Views/DevelopWorkspaceView.xaml`~~ | 525 → 297 | **해결.** GrainMend 카드 XAML 을 `Develop/GrainMend/DevelopGrainMendPanel.xaml`(236줄)로 옮겼다 |
 | `src/Interop/NativeDevelopExporter.cs` | 2,342 | 미해결 |
 | `src/Native/abi/include/negaflow_abi.h` | 1,791 | 외부 소비자가 포함하는 append-only 공개 C ABI 선언 집합. 구현 상태가 없다 |
@@ -42,7 +42,7 @@
 | `src/Native/imaging/infrared_defect_detector.cpp` | 1,197 | IR 정렬·마스크·성분 판정의 단일 검출 알고리즘 |
 | `src/Native/imaging/grain_mend_components.cpp` | 1,066 | GrainMend component/evidence/mask 구성의 단일 알고리즘 |
 | `src/Native/imaging/defect_heal_brush.cpp` | 985 | brush mask·patch 탐색·합성의 단일 치유 알고리즘 |
-| `src/Shell/Views/LibraryWorkspaceView.xaml` | 975 | 미해결 |
+| ~~`src/Shell/Views/LibraryWorkspaceView.xaml`~~ | 975 → 472 | **해결.** 스캔·현상 기본값·훑어보기·파일 트리·컬렉션·격자 카드를 `Views/Library/{Scanner,Defaults,Culling,Sources,Collections,Browser}/` 실제 UserControl 로 옮겼다 |
 | `tests/Native.UnitTests/grain_mend_tests.cpp` | 918 | 동일 GrainMend 알고리즘의 고정 입력 suite |
 | `src/Native/imaging/auto_negative_base_resolver.cpp` | 893 | 자동 Dmin 추정의 단일 알고리즘 |
 | `src/Catalog.Core/Storage/CatalogBackupStore.cs` | 885 | 하나의 backup generation 생성·검증·prune transaction |
@@ -78,7 +78,7 @@
 | `src/Native/core/tiff_deflate_validator.cpp` | 515 | TIFF Deflate payload 검증 단일 알고리즘 |
 | ~~`src/Shell/Views/PrintSheetWriter.cs`~~ | 505 → 258 | **해결.** 판 합성 오케스트레이션만 남기고 화소 그리기를 `Views/Print/PrintPageCanvas.cs`(215줄), PNG 굽기를 `Views/Print/PrintSheetEncoder.cs`(49줄), 파일 스트림을 `Views/Print/PrintSheetFile.cs`(20줄)로 옮겼다. 네 파일 모두 500줄 미만 |
 
-미해결 6개: `LibraryWorkspaceView.xaml.cs`, `NativeDevelopExporter.cs`, `develop_export.cpp`, `tiff_probe.cpp`, `LibraryWorkspaceView.xaml`, `PrintWorkspaceView.Composition.cs`.
+미해결 5개: `LibraryWorkspaceView.xaml.cs`, `NativeDevelopExporter.cs`, `develop_export.cpp`, `tiff_probe.cpp`, `PrintWorkspaceView.Composition.cs`.
 
 사유가 적힌 35개도 "줄 수가 커도 된다"는 뜻이 아니라 "지금 확인한 근거로는 서로 독립적인 변경 이유가 하나뿐"이라는 뜻이다. 새 책임이 붙으면 다시 미해결로 옮긴다.
 
@@ -91,7 +91,7 @@
 | 완료 | `src/Native/abi/negaflow_abi.cpp` | 14, 변경 전 6,409 | export/preview 버전 매핑, auto adjust, GrainMend, IR, flatbed, TIFF probe, soft proof, handle 수명 | `abi/{request,result,export,preview,run,detect,probe,proof,adjust,support}` 실제 번역 단위; facade는 자리만 유지 | 완료·build.ps1·CTest 71/71·Catalog 721·Shell 1032 |
 | 완료 | `src/Shell/Views/DevelopWorkspaceView.xaml.cs` | 329, 변경 전 4,844 | 선택·미리보기·crop 세션·GrainMend·resize·localization | macOS surface 단위 실제 UserControl | 완료. GrainMend·Host 분리 후 329줄 |
 | 완료 | `tests/Native.UnitTests/develop_export_abi_tests.cpp` | `DevelopExportAbi/main.cpp` 84, 변경 전 4,107 | 서로 독립적인 ABI version/stage/defect/output suite와 fixture | `DevelopExportAbi/` 실제 번역 단위; 결함 fixture는 `defect_region.cpp` 606줄로 한 순서 고정 suite | 완료·build.ps1·CTest 71/71·Catalog 721·Shell 1032 |
-| P0 | `src/Shell/Views/LibraryWorkspaceView.xaml.cs` | 2,670 | 탐색·선택·rating/flag·collection·folder DnD·scanner session·filter/sort·resize·localization | 탐색/정리, scanner workflow, source sidebar, view presentation 타입 | 대기 |
+| P0 | `src/Shell/Views/LibraryWorkspaceView.xaml.cs` | 1,906, 변경 전 2,835 | 탐색·선택·rating/flag·가져오기·filter/sort·resize·localization | 스캔·기본값·훑어보기·소스·컬렉션 추출됨. 남은 것은 격자 오케스트레이션·가져오기·필터 | 진행 중 |
 | 완료 | `src/Shell/Views/DevelopWorkspaceView.xaml` | 297, 변경 전 2,512 | histogram/tabs, GrainMend | macOS surface 단위 실제 UserControl | 완료. GrainMend 카드 XAML 분리 후 297줄 |
 | P0 | `src/Interop/NativeDevelopExporter.cs` | 2,342 | ABI layout 검증, recipe validation, 각 payload marshaling, 30여 request version, export/preview/auto/GrainMend 실행 | validation, payload marshaler, version request builder, command adapter | 대기 |
 | 완료 | `src/Catalog.Core/Library/LibraryFrameReader.cs` | 372, 변경 전 1,584 | frame identity/source, base/tone/color/effects/transform/metadata/local-adjust recipe 파싱 | `Library/Reading` core/value reader와 `Reading/Codecs`의 recipe별 실제 reader | 완료·Catalog 721·Shell 938 assertions 검증 |
@@ -372,3 +372,20 @@
   - `main.cpp` 84 — 호출 순서만
 - `defect_region.cpp` 606줄은 한 순서 고정 fixture라 파일별 사유를 적는다. 나머지 새 파일은 500줄 미만이다.
 - 검증: `build.ps1 -Preset x64-release` 통과, `test.ps1` 71/71(`native.develop_export_abi` 포함), `test-managed.ps1` 경고 0·오류 0, Catalog 721, Shell 1032.
+
+## 2026-08-17 Library 스캔·기본값·훑어보기·소스 UserControl
+
+- `LibraryWorkspaceView` 의 독립 표면을 `Views/Library/` 실제 타입으로 옮겼다. leftover `LibraryWorkspaceView.DevelopDefaults.cs`·`LibraryWorkspaceView.Culling.cs` partial 은 폐기했다.
+- 새 자리:
+  - `Scanner/LibraryScanPanel` XAML 233 / CS 378 — 플러그인 승인·장치·스캔 실행. I/O: `Bind`·`IsWanted`·`ExpandRequested`·`LibraryChanged`·`ApplyDefaultRotation`
+  - `Scanner/LibraryScanRenderer` 202 · `LibraryScanRunner` 92 · `LibraryScanCopy` 91
+  - `Defaults/LibraryDevelopDefaultsPanel` XAML 50 / CS 320 — 프로세스·타깃·필름 프로파일·룩. `ApplyProcess`/`ApplyTarget` 단축키
+  - `Culling/LibraryCullingSurface` XAML 32 / CS 121 — 격자·비교·살펴보기 판
+  - `Culling/LibraryCullingBoard` 222 · `LibraryCullingChrome` 85
+  - `Sources/LibraryFilesSourceTree` XAML 49 / CS 92 — 폴더 트리
+  - `Sources/LibraryFilesSourceDrop` 76 — 원본 이동
+  - `Collections/LibraryCollectionsPanel` XAML 94 / CS 288 — 묶음·스마트 컬렉션·저장된 검색
+  - `Collections/LibraryCollectionRow` 10
+  - `Browser/LibraryFrameCard` XAML 103 / CS 32 — 격자 한 칸
+- 줄 수: 코드비하인드 2,835 → 1,906, XAML 975 → 472. XAML 은 500줄 이하. 코드비하인드는 아직 초과라 완료로 쓰지 않는다.
+- 검증: `build.ps1 -Preset x64-release` 통과, `test.ps1` 71/71, `test-managed.ps1` 경고 0·오류 0, Catalog 721, Shell 1032.

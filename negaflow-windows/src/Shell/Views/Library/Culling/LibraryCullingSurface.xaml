@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Negaflow.Shell.Views.Library.Culling.LibraryCullingSurface"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- 비교·살펴보기는 격자와 같은 자리를 씁니다. macOS 도 격자를 감추고 그 자리에 판을 올립니다. -->
+    <Grid Background="{ThemeResource NegaflowWindowBrush}">
+        <ScrollViewer x:Name="CullingScroll" x:FieldModifier="internal" Padding="12">
+            <Grid x:Name="CullingBoard" x:FieldModifier="internal" ColumnSpacing="10" RowSpacing="10" />
+        </ScrollViewer>
+        <StackPanel
+            x:Name="CullingEmptyPanel" x:FieldModifier="internal"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Spacing="6"
+            Visibility="Collapsed">
+            <TextBlock
+                x:Name="CullingEmptyTitle" x:FieldModifier="internal"
+                HorizontalAlignment="Center"
+                FontSize="15"
+                FontWeight="SemiBold" />
+            <TextBlock
+                x:Name="CullingEmptyBody" x:FieldModifier="internal"
+                MaxWidth="360"
+                HorizontalAlignment="Center"
+                FontSize="12"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                TextAlignment="Center"
+                TextWrapping="Wrap" />
+        </StackPanel>
+    </Grid>
+</UserControl>

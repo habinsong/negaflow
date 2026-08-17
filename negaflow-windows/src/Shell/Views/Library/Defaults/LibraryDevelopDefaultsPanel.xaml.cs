@@ -6,8 +6,9 @@ using Microsoft.UI.Xaml.Media;
 using Negaflow.Catalog;
 using Negaflow.Shell.Develop;
 using Negaflow.Shell.Localization;
+using Negaflow.Shell.Shortcuts;
 
-namespace Negaflow.Shell.Views;
+namespace Negaflow.Shell.Views.Library.Defaults;
 
 /// <summary>
 /// 가져오기 패널의 "현상" 구획입니다. macOS <c>DevelopDefaultsSection</c> 과 같은 세 줄 —
@@ -17,18 +18,31 @@ namespace Negaflow.Shell.Views;
 /// 여기서 고른 것은 **지금 고른 사진**에 걸립니다. 고른 사진이 없으면 컨트롤이 꺼집니다 —
 /// 아무 데도 닿지 않는 고르개를 켜 두면 사용자는 눌러 놓고 왜 안 바뀌는지 알 수 없습니다.
 /// </remarks>
-public sealed partial class LibraryWorkspaceView
+public sealed partial class LibraryDevelopDefaultsPanel : UserControl
 {
+    private LibraryHostService? libraryHost;
+    private Func<LibraryFrameSnapshot?>? actionableFrame;
     private bool isSynchronizingDevelopDefaults;
+
+    public LibraryDevelopDefaultsPanel() => InitializeComponent();
+
+    public event EventHandler? LibraryChanged;
+
+    public void Bind(LibraryHostService host, Func<LibraryFrameSnapshot?> actionable)
+    {
+        ArgumentNullException.ThrowIfNull(host);
+        ArgumentNullException.ThrowIfNull(actionable);
+        libraryHost = host;
+        actionableFrame = actionable;
+    }
 
     /// <summary>
     /// 이 구획이 손대는 사진입니다. macOS <c>actionableFrame</c> 과 같이 격자에서 마지막으로
     /// 고른 한 장입니다.
     /// </summary>
-    private LibraryFrameSnapshot? ActionableFrame =>
-        FrameListView?.SelectedItem is LibraryFrameListItem item ? item.Frame : null;
+    private LibraryFrameSnapshot? ActionableFrame => actionableFrame?.Invoke();
 
-    private void LocalizeDevelopDefaults()
+    public void Localize()
     {
         DevelopDefaultsText.Text = AppResources.Get("libraryDevelopDefaults", "Text");
         DevelopProcessLabel.Text = AppResources.Get("libraryProcess", "Text");
@@ -69,7 +83,7 @@ public sealed partial class LibraryWorkspaceView
     }
 
     /// <summary>고른 사진의 값으로 구획을 맞춥니다.</summary>
-    private void SynchronizeDevelopDefaults()
+    public void Synchronize()
     {
         if (DevelopTargetBar is null)
         {
@@ -194,7 +208,7 @@ public sealed partial class LibraryWorkspaceView
         if (libraryHost.EditRoute(frame.Id, DevelopRouteSelection.FromProcess(choice.Process)) ==
             LibraryFrameError.None)
         {
-            ShowLibrary(libraryHost, importWindowId ?? default);
+            LibraryChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 
@@ -220,12 +234,15 @@ public sealed partial class LibraryWorkspaceView
                     frame.Base with { ScannerProfileId = profileId },
                     DevelopTarget: target)) == LibraryFrameError.None)
         {
-            ShowLibrary(host, importWindowId ?? default);
+            LibraryChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 
+    /// <summary>단축키가 부른 타깃 전환입니다. 타깃 막대를 누른 것과 같은 길을 탑니다.</summary>
+    public void ApplyTarget(DevelopTarget target) => ApplyDevelopTarget(target);
+
     /// <summary>단축키가 부른 프로세스 전환입니다. 고르개를 누른 것과 같은 길을 탑니다.</summary>
-    private void ApplyDevelopProcess(Shortcuts.WorkflowShortcutAction action)
+    public void ApplyProcess(WorkflowShortcutAction action)
     {
         if (libraryHost is not { } host || ActionableFrame is not { } frame)
         {
@@ -233,16 +250,16 @@ public sealed partial class LibraryWorkspaceView
         }
         DevelopmentProcess process = action switch
         {
-            Shortcuts.WorkflowShortcutAction.ProcessColorPositive => DevelopmentProcess.E6,
-            Shortcuts.WorkflowShortcutAction.ProcessBwNegative => DevelopmentProcess.D76,
-            Shortcuts.WorkflowShortcutAction.ProcessBwPositive =>
+            WorkflowShortcutAction.ProcessColorPositive => DevelopmentProcess.E6,
+            WorkflowShortcutAction.ProcessBwNegative => DevelopmentProcess.D76,
+            WorkflowShortcutAction.ProcessBwPositive =>
                 DevelopmentProcess.BlackAndWhiteReversal,
             _ => DevelopmentProcess.C41,
         };
         if (host.EditRoute(frame.Id, DevelopRouteSelection.FromProcess(process)) ==
             LibraryFrameError.None)
         {
-            ShowLibrary(host, importWindowId ?? default);
+            LibraryChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 
@@ -279,7 +296,7 @@ public sealed partial class LibraryWorkspaceView
                     frame.ManualBase,
                     frame.Base with { ScannerProfileId = choice.Id })) == LibraryFrameError.None)
         {
-            ShowLibrary(host, importWindowId ?? default);
+            LibraryChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 
@@ -301,7 +318,7 @@ public sealed partial class LibraryWorkspaceView
                     frame.ManualBase,
                     LookPreset: new LookPresetSelection(choice.Id))) == LibraryFrameError.None)
         {
-            ShowLibrary(host, importWindowId ?? default);
+            LibraryChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 }
