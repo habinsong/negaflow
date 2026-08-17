@@ -2755,36 +2755,35 @@ public sealed partial class DevelopWorkspaceView : UserControl
         GrainMendMicroSpecksToggle.OffContent = grainMendMicroSpecks;
         AutomationProperties.SetName(GrainMendMicroSpecksToggle, grainMendMicroSpecks);
         ToolTipService.SetToolTip(GrainMendMicroSpecksToggle, grainMendMicroSpecks);
-        GrainMendAutoButton.IsEnabled =
-            panel?.SelectedFrame is not null && grainMend.PendingEdit is null && !grainMend.IsDetecting;
-        GrainMendAutoResetButton.IsEnabled =
-            panel?.HasDefectEdits(DefectEditLabelKind.Automatic) == true;
-        GrainMendGuidedButton.IsEnabled =
-            panel?.SelectedFrame is not null && grainMend.PendingEdit is null && !grainMend.IsDetecting;
-        GrainMendGuidedResetButton.IsEnabled =
-            panel?.HasDefectEdits(DefectEditLabelKind.Guided) == true;
-        bool reviewingDefects = grainMend.PendingEdit is not null;
-        GrainMendReviewTuning.Visibility = reviewingDefects
-            ? Visibility.Visible
-            : Visibility.Collapsed;
-        GrainMendReviewActions.Visibility = reviewingDefects
-            ? Visibility.Visible
-            : Visibility.Collapsed;
-        GrainMendSensitivitySlider.IsEnabled = reviewingDefects && !grainMend.IsDetecting;
-        GrainMendMicroSpecksToggle.IsEnabled = reviewingDefects && !grainMend.IsDetecting;
-        if (reviewingDefects)
+        GrainMendCardState card = GrainMendCardProjection.Create(
+            panel?.SelectedFrame is not null,
+            grainMend.IsDetecting,
+            grainMend.PendingEdit?.Label.Kind,
+            grainMend.PendingReview?.IncludedCount,
+            grainMend.Strokes.Tool,
+            panel?.HasDefectEdits(DefectEditLabelKind.Automatic) == true,
+            panel?.HasDefectEdits(DefectEditLabelKind.Guided) == true,
+            panel?.HasDefectEdits(DefectEditKind.Brush) == true,
+            panel?.HasDefectEdits(DefectEditKind.Clone) == true);
+        GrainMendAutoButton.IsEnabled = card.AutoEnabled;
+        GrainMendAutoResetButton.IsEnabled = card.AutoResetEnabled;
+        GrainMendGuidedButton.IsEnabled = card.GuidedEnabled;
+        GrainMendGuidedResetButton.IsEnabled = card.GuidedResetEnabled;
+        GrainMendReviewTuning.Visibility = Visible(card.Reviewing);
+        GrainMendReviewActions.Visibility = Visible(card.Reviewing);
+        GrainMendSensitivitySlider.IsEnabled = card.SensitivityEnabled;
+        GrainMendMicroSpecksToggle.IsEnabled = card.MicroSpecksEnabled;
+        if (card.Reviewing)
         {
-            bool automatic = grainMend.PendingEdit!.Label.Kind == DefectEditLabelKind.Automatic;
             updatingGrainMendSensitivity = true;
-            GrainMendSensitivitySlider.Value = GetGrainMendSensitivity(automatic);
+            GrainMendSensitivitySlider.Value = GetGrainMendSensitivity(card.ReviewingAutomatic);
             updatingGrainMendSensitivity = false;
             updatingGrainMendMicroSpecks = true;
-            GrainMendMicroSpecksToggle.IsOn = GetGrainMendMicroSpecks(automatic);
+            GrainMendMicroSpecksToggle.IsOn = GetGrainMendMicroSpecks(card.ReviewingAutomatic);
             updatingGrainMendMicroSpecks = false;
         }
-        GrainMendRemoveButton.IsEnabled =
-            grainMend.PendingEdit is not null && (grainMend.PendingReview?.IncludedCount ?? 1) > 0;
-        GrainMendCancelButton.IsEnabled = grainMend.PendingEdit is not null;
+        GrainMendRemoveButton.IsEnabled = card.RemoveEnabled;
+        GrainMendCancelButton.IsEnabled = card.CancelEnabled;
 
         string reset = AppResources.Get("developGrainMendReset", "Value");
         SetLocalizedNameAndTooltip(GrainMendAutoResetButton, reset);
@@ -2792,40 +2791,28 @@ public sealed partial class DevelopWorkspaceView : UserControl
         SetLocalizedNameAndTooltip(GrainMendBrushResetButton, reset);
         SetLocalizedNameAndTooltip(GrainMendCloneResetButton, reset);
 
-        bool hasFrame = panel?.SelectedFrame is not null;
-        GrainMendBrushButton.IsEnabled = hasFrame;
-        GrainMendCloneButton.IsEnabled = hasFrame;
-        GrainMendBrushResetButton.IsEnabled = panel?.HasDefectEdits(DefectEditKind.Brush) == true;
-        GrainMendCloneResetButton.IsEnabled = panel?.HasDefectEdits(DefectEditKind.Clone) == true;
+        GrainMendBrushButton.IsEnabled = card.BrushEnabled;
+        GrainMendCloneButton.IsEnabled = card.CloneEnabled;
+        GrainMendBrushResetButton.IsEnabled = card.BrushResetEnabled;
+        GrainMendCloneResetButton.IsEnabled = card.CloneResetEnabled;
 
-        string active = AppResources.Get("selected", "Value");
-        string inactive = AppResources.Get("notSelected", "Value");
+        ApplyGrainMendPill(GrainMendAutoPill, GrainMendAutoButton, card.AutoActive);
+        ApplyGrainMendPill(GrainMendGuidedPill, GrainMendGuidedButton, card.GuidedActive);
+        ApplyGrainMendPill(GrainMendBrushPill, GrainMendBrushButton, card.BrushActive);
+        ApplyGrainMendPill(GrainMendClonePill, GrainMendCloneButton, card.CloneActive);
+    }
+
+    /// <summary>
+    /// macOS InspectorActionPill 의 켜짐 표시입니다. 캡슐 바탕과 낭독기 상태가 함께 바뀌어야
+    /// 눈으로 보는 것과 읽어 주는 것이 어긋나지 않습니다.
+    /// </summary>
+    private static void ApplyGrainMendPill(Border pill, Button action, bool isActive)
+    {
+        pill.Background = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources[
+            isActive ? "NegaflowSelectionBrush" : "NegaflowSubtleFillBrush"];
         AutomationProperties.SetItemStatus(
-            GrainMendBrushButton,
-            grainMend.Strokes.Tool == GrainMendTool.Brush ? active : inactive);
-        AutomationProperties.SetItemStatus(
-            GrainMendCloneButton,
-            grainMend.Strokes.Tool == GrainMendTool.Clone ? active : inactive);
-        AutomationProperties.SetItemStatus(
-            GrainMendGuidedButton,
-            grainMend.Strokes.Tool == GrainMendTool.Guided ? active : inactive);
-        AutomationProperties.SetItemStatus(
-            GrainMendAutoButton,
-            grainMend.PendingEdit?.Label.Kind == DefectEditLabelKind.Automatic ? active : inactive);
-        var selection = (Microsoft.UI.Xaml.Media.Brush)
-            Application.Current.Resources["NegaflowSelectionBrush"];
-        GrainMendBrushPill.Background = grainMend.Strokes.Tool == GrainMendTool.Brush
-            ? selection
-            : (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["NegaflowSubtleFillBrush"];
-        GrainMendGuidedPill.Background = grainMend.Strokes.Tool == GrainMendTool.Guided
-            ? selection
-            : (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["NegaflowSubtleFillBrush"];
-        GrainMendAutoPill.Background = grainMend.PendingEdit?.Label.Kind == DefectEditLabelKind.Automatic
-            ? selection
-            : (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["NegaflowSubtleFillBrush"];
-        GrainMendClonePill.Background = grainMend.Strokes.Tool == GrainMendTool.Clone
-            ? selection
-            : (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["NegaflowSubtleFillBrush"];
+            action,
+            AppResources.Get(isActive ? "selected" : "notSelected", "Value"));
     }
 
     /// <summary>
