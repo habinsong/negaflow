@@ -152,10 +152,34 @@ DefectRegionStageResult apply_defect_region_edits(
                             static_cast<std::size_t>(y) * edit.width));
             }
 
+            // 수리 커널은 마스크를 화소당 1바이트로 읽습니다(브러시·IR·시험 모두 그렇게
+            // 보냅니다). region 편집만 catalog 의 RGBA8 마스크를 그대로 싣고 오므로, 선언된
+            // stride 가 정확히 width*4 일 때만 한 채널로 펴서 넘깁니다. 펴지 않으면 커널이 각
+            // 행의 앞 width 바이트, 즉 화소 0..width/4 의 R·G·B·A 를 화소 가중치로 잘못 읽어
+            // 행의 3/4 를 보지 못하고 아무것도 고치지 않습니다.
+            const bool rgba_mask =
+                edit.mask_stride_bytes == static_cast<std::size_t>(edit.width) * 4U &&
+                edit.mask.size() >=
+                    static_cast<std::size_t>(edit.height) * edit.mask_stride_bytes;
+            std::vector<std::uint8_t> single_channel;
+            if (rgba_mask) {
+                single_channel.resize(
+                    static_cast<std::size_t>(edit.width) * edit.height);
+                for (std::uint32_t y = 0U; y < edit.height; ++y) {
+                    const std::size_t source_row =
+                        static_cast<std::size_t>(y) * edit.mask_stride_bytes;
+                    const std::size_t destination_row =
+                        static_cast<std::size_t>(y) * edit.width;
+                    for (std::uint32_t x = 0U; x < edit.width; ++x) {
+                        single_channel[destination_row + x] =
+                            edit.mask[source_row + (static_cast<std::size_t>(x) * 4U)];
+                    }
+                }
+            }
             auto repaired = negaflow::imaging::repair_defect_components(
                 std::move(roi),
-                edit.mask,
-                edit.mask_stride_bytes,
+                rgba_mask ? std::span<const std::uint8_t>{single_channel} : edit.mask,
+                rgba_mask ? static_cast<std::size_t>(edit.width) : edit.mask_stride_bytes,
                 edit.repair);
             if (repaired.status !=
                 negaflow::imaging::DefectComponentRepairStatus::ok) {
