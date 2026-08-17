@@ -88,7 +88,7 @@
 | 우선순위 | 대상 | 줄 | 확인된 독립 책임 | 분해 방향 | 상태 |
 |---|---|---:|---|---|---|
 | 완료 | `src/Native/abi/negaflow_abi.cpp` | 14, 변경 전 6,409 | export/preview 버전 매핑, auto adjust, GrainMend, IR, flatbed, TIFF probe, soft proof, handle 수명 | `abi/{request,result,export,preview,run,detect,probe,proof,adjust,support}` 실제 번역 단위; facade는 자리만 유지 | 완료·build.ps1·CTest 71/71·Catalog 721·Shell 1032 |
-| P0 | `src/Shell/Views/DevelopWorkspaceView.xaml.cs` | 5,057 | 선택·가져오기·미리보기·crop·GrainMend·metadata·version·export·sidebar·resize·localization 이벤트/상태 | `Shell.Core` session/coordinator와 실제 UserControl 경계로 이동 | 진행 중. 크롭 세션·히트테스트·오버레이 기하·프리뷰 기하는 `Develop/Canvas`로 이동해 위임을 닫고 검증했다. 나머지 책임은 대기 |
+| P0 | `src/Shell/Views/DevelopWorkspaceView.xaml.cs` | 3,886 | 선택·가져오기·미리보기·crop·GrainMend·metadata·version·export·sidebar·resize·localization 이벤트/상태 | macOS surface 단위 실제 UserControl | 진행 중. 출력 패널을 `Views/Develop/Export/` 로 옮겼다(설정 동기화·문구·레시피·파일 쓰기). 코드비하인드 4,844→3,886, XAML 2,512→2,081. 아직 500줄 초과 |
 | P0 | `tests/Native.UnitTests/develop_export_abi_tests.cpp` | 4,107 | 서로 독립적인 ABI version/stage/defect/output suite와 fixture | ABI stage군별 suite 번역 단위와 공용 fixture | 대기 |
 | P0 | `src/Shell/Views/LibraryWorkspaceView.xaml.cs` | 2,670 | 탐색·선택·rating/flag·collection·folder DnD·scanner session·filter/sort·resize·localization | 탐색/정리, scanner workflow, source sidebar, view presentation 타입 | 대기 |
 | P0 | `src/Shell/Views/DevelopWorkspaceView.xaml` | 2,461 | source sidebar, canvas/crop, histogram/tabs, 전체 inspector, GrainMend, metadata/version/export UI | macOS surface 단위 실제 UserControl; 공유 상태를 partial로 숨기지 않음 | 대기 |
@@ -215,7 +215,7 @@
 - 프리뷰 기하도 일원화했다. 뷰의 `TryGetPreviewFrame(out double, out double, out double, out double)`을 `PreviewFrame.TryFrom` 위임으로 바꿔 크롭 오버레이·가이드 선택·좌표 매핑이 같은 사각형을 쓴다.
 - 검증: `Negaflow.Shell.csproj` x64 Release 경고 0·오류 0, `test-managed.ps1 -Preset x64-release` 빌드 경고 0·오류 0, Catalog 721 assertions, Shell 938 assertions 통과(failures 없음).
 - 이 체크포인트는 크롭 조각만 닫았다. `DevelopWorkspaceView.xaml.cs`는 여전히 5,057줄이며 선택·가져오기·미리보기·GrainMend·metadata·version·export·sidebar·resize·localization 책임이 남아 있다. 완료로 쓰지 않는다.
-- 재개 지점: 같은 뷰에서 미리보기 렌더·export 실행 책임을 다음 실제 타입으로 옮긴다. 그 뒤 `LibraryWorkspaceView.xaml.cs`, `DevelopWorkspaceView.xaml`, `NativeDevelopExporter.cs`, `develop_export.cpp`다. GrainMend 백엔드 검증과 GitHub CI는 이 단계가 아니다.
+- 재개 지점: 같은 뷰에서 버전·프리셋·필름 룩·소스 사이드바·인스펙터 카드를 실제 UserControl 로 옮긴다. GrainMend 카드는 마지막에 둔다.
 
 ## 2026-08-17 negaflow_abi.cpp 책임 이동 — 검증됨
 
@@ -235,3 +235,16 @@
 - 함수 본문은 옮기기만 했다. 새로 연 번역 단위가 쓰던 표준 헤더(`span`, `cmath`, `filesystem`)만 그 파일에 적었다.
 - 가장 큰 새 파일은 `request/develop_request_v20_v21.cpp` 469줄이다. 500줄을 넘는 ABI 구현 파일은 없다. 공개 헤더 `negaflow_abi.h` 1,838줄은 기존처럼 append-only 선언 집합이다.
 - 검증: `build.ps1 -Preset x64-release` 통과, `test.ps1 -Preset x64-release` 71/71, `test-managed.ps1 -Preset x64-release` 경고 0·오류 0, Catalog 721, Shell 1032.
+
+## 2026-08-17 Develop 출력 패널 UserControl — 검증됨, 파일은 미해결
+
+- `DevelopWorkspaceView` 에서 출력(보내기) 패널만 먼저 분리했다. 캔버스·인스펙터·GrainMend 와 다른 변경 이유이기 때문이다. partial 분할이 아니다.
+- 새 자리 `src/Shell/Views/Develop/Export/`:
+  - `DevelopExportPanel.xaml` 442 / `.xaml.cs` 453 — 화면과 값 변경 이벤트
+  - `DevelopExportControlSync.cs` 149 — 저장값을 컨트롤에 되비춤
+  - `DevelopExportCopy.cs` 219 — 이름·목록
+  - `DevelopExportRecipes.cs` 123 — 담아 둔 설정 목록
+  - `DevelopExportRunner.cs` 203 — 파일 쓰기
+- 뷰는 `ExportPanel.Attach`·`Bind`·`ApplyPreferences`·`Localize`·`RefreshPreview` 만 부른다. 빠른 보내기의 상태 줄(`ExportStatusText`)은 왼쪽 패널에 남으므로 뷰의 `QuickExportAsync` 가 그대로 수행한다.
+- 줄 수: 코드비하인드 4,844 → 3,886, XAML 2,512 → 2,081. 둘 다 아직 500줄 초과라 완료로 쓰지 않는다.
+- 검증: `build.ps1 -Preset x64-release` 통과, `test.ps1` 71/71, `test-managed.ps1` 경고 0·오류 0, Catalog 721, Shell 1032.

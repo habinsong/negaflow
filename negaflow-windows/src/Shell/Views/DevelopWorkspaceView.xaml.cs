@@ -14,6 +14,7 @@ using Negaflow.Interop;
 using Negaflow.Shell.Develop;
 using Negaflow.Shell.Localization;
 using Negaflow.Shell.Views.Controls;
+using Negaflow.Shell.Views.Develop.Export;
 using Negaflow.Shell.Views.Layout;
 using Windows.System;
 using Windows.UI.Core;
@@ -40,12 +41,6 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private Negaflow.Shell.Library.ThumbnailService? thumbnails;
     private WorkflowSidebarTab developSource = WorkflowSidebarTab.Library;
     private GrainMendDetectCoordinator? grainMendDetectCoordinator;
-    /// <summary>폴더가 비어 있으면 원본 옆에 씁니다 — 목적지를 고르기 전에도 내보낼 수 있습니다.</summary>
-    private ExportSettings exportSettings = new();
-    private QuickExportSettings quickExportSettings = new();
-    private ExportRecipeLibrary exportRecipes = new();
-    /// <summary>설정을 컨트롤에 되비추는 동안 켜집니다. 켜져 있으면 이벤트가 다시 저장하지 않습니다.</summary>
-    private bool isSynchronizingExport;
     private bool isSynchronizingMetadata;
     private string engineVersion = "unknown";
     private readonly CropWorkspaceState crop = new();
@@ -80,6 +75,8 @@ public sealed partial class DevelopWorkspaceView : UserControl
         state.Changed += OnStateChanged;
         Filmstrip.Initialize(state);
         Filmstrip.FrameSelected += OnFilmstripFrameSelected;
+        ExportPanel.Attach(state);
+        ExportPanel.RunQuickExport = QuickExportAsync;
         StatusBar.Initialize(nativeEngineStatus);
         engineVersion = nativeEngineStatus.BuildInfo?.AbiVersion.ToString() ?? "unknown";
         UpdateState(state.Current);
@@ -124,6 +121,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         host.SelectionChanged += OnLibrarySelectionChanged;
         toneLimits = limits;
         panel = new DevelopPanelState(host, limits, negativeLimits);
+        ExportPanel.Bind(panel, host, windowId, engineVersion);
         // 사용자 프리셋은 카탈로그가 아니라 앱 설정 옆에 삽니다. macOS 의 UserDefaults 자리입니다.
         panel.OpenUserPresets(Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -1970,7 +1968,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         VersionsSourcePanel.Visibility = Show(WorkflowSidebarTab.Versions);
         PresetsSourcePanel.Visibility = Show(WorkflowSidebarTab.Presets);
         FilmSourcePanel.Visibility = Show(WorkflowSidebarTab.Film);
-        OutputSourcePanel.Visibility = Show(WorkflowSidebarTab.Output);
+        ExportPanel.Visibility = Show(WorkflowSidebarTab.Output);
 
         (string headerKey, string glyph) = developSource switch
         {
@@ -1998,7 +1996,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
                 button,
                 AppResources.Get(selected ? "selected" : "notSelected", "Value"));
         }
-        UpdateExportPreview();
+        ExportPanel.RefreshPreview();
         UpdateFilmLookControls();
         UpdatePresetControls();
     }
@@ -2751,8 +2749,8 @@ public sealed partial class DevelopWorkspaceView : UserControl
         GrainMendAutoResetButton.IsEnabled = card.AutoResetEnabled;
         GrainMendGuidedButton.IsEnabled = card.GuidedEnabled;
         GrainMendGuidedResetButton.IsEnabled = card.GuidedResetEnabled;
-        GrainMendReviewTuning.Visibility = Visible(card.Reviewing);
-        GrainMendReviewActions.Visibility = Visible(card.Reviewing);
+        GrainMendReviewTuning.Visibility = card.Reviewing ? Visibility.Visible : Visibility.Collapsed;
+        GrainMendReviewActions.Visibility = card.Reviewing ? Visibility.Visible : Visibility.Collapsed;
         GrainMendSensitivitySlider.IsEnabled = card.SensitivityEnabled;
         GrainMendMicroSpecksToggle.IsEnabled = card.MicroSpecksEnabled;
         if (card.Reviewing)
@@ -3043,7 +3041,9 @@ public sealed partial class DevelopWorkspaceView : UserControl
         {
             return;
         }
-        IReadOnlyList<LibraryFrameSnapshot> selection = SelectedExportFrames(frame);
+        IReadOnlyList<LibraryFrameSnapshot> selected = libraryHost.SelectedFrames;
+        IReadOnlyList<LibraryFrameSnapshot> selection =
+            selected.Count > 1 ? selected : [frame];
         // 이름은 원본이 들어 있는 폴더에서 옵니다. 사용자가 필름 봉투에 적은 이름이 대개
         // 그 폴더 이름이며, 없으면 macOS 의 "무제 필름" 자리를 씁니다.
         string name = Path.GetFileName(Path.GetDirectoryName(frame.SourcePath) ?? string.Empty);
@@ -3266,578 +3266,6 @@ public sealed partial class DevelopWorkspaceView : UserControl
         UpdateImageTransform(state => state.SetFilmEmulationIntensity(args.Value));
     }
 
-    /// <summary>
-    /// 출력 패널의 값을 하나 바꿔 저장하고, 저장된 값을 다시 컨트롤에 되비춥니다. 설정이
-    /// 앱 설정 파일에 살기 때문에 여기가 유일한 쓰기 지점입니다.
-    /// </summary>
-    private void MutateExportSettings(Func<ExportSettings, ExportSettings> update)
-    {
-        if (isSynchronizingExport)
-        {
-            return;
-        }
-        exportSettings = update(exportSettings).Normalize();
-        workspaceState?.UpdateExport(_ => exportSettings);
-        SynchronizeExportControls();
-    }
-
-    private void MutateQuickExportSettings(Func<QuickExportSettings, QuickExportSettings> update)
-    {
-        if (isSynchronizingExport)
-        {
-            return;
-        }
-        quickExportSettings = update(quickExportSettings).Normalize();
-        workspaceState?.UpdateQuickExport(_ => quickExportSettings);
-        SynchronizeExportControls();
-    }
-
-    /// <summary>
-    /// 담아 둔 내보내기 설정을 고릅니다. 목적지와 파일명 패턴은 지금 것을 지킵니다 — 프리셋을
-    /// 고르는 것이 내보낼 폴더를 바꾸는 뜻은 아닙니다.
-    /// </summary>
-    private void OnExportRecipeChanged(object sender, SelectionChangedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (isSynchronizingExport ||
-            ExportRecipeSelector.SelectedItem is not ComboBoxItem item)
-        {
-            return;
-        }
-        string? recipeId = item.Tag as string;
-        workspaceState?.UpdateExportRecipes(library => library with { SelectedId = recipeId });
-        exportRecipes = exportRecipes with { SelectedId = recipeId };
-        if (exportRecipes.Selected is { } recipe)
-        {
-            MutateExportSettings(recipe.ApplyTo);
-        }
-        else
-        {
-            SynchronizeExportControls();
-        }
-    }
-
-    private void BuildExportRecipeMenu()
-    {
-        ExportRecipeFlyout.Items.Clear();
-        var save = new MenuFlyoutItem
-        {
-            Text = AppResources.Get("developExportRecipeSaveCurrent", "Text"),
-        };
-        save.Click += (_, _) => SaveCurrentExportRecipe();
-        ExportRecipeFlyout.Items.Add(save);
-        if (exportRecipes.Selected is not { } selected)
-        {
-            return;
-        }
-        ExportRecipeFlyout.Items.Add(new MenuFlyoutSeparator());
-        var rename = new MenuFlyoutItem
-        {
-            Text = AppResources.Get("libraryRename", "Content"),
-        };
-        rename.Click += (_, _) => RenameExportRecipe(selected);
-        ExportRecipeFlyout.Items.Add(rename);
-        var delete = new MenuFlyoutItem { Text = AppResources.Get("libraryDelete", "Content") };
-        delete.Click += (_, _) =>
-        {
-            UpdateExportRecipes(library => library.Delete(selected.Id));
-        };
-        ExportRecipeFlyout.Items.Add(delete);
-    }
-
-    /// <summary>
-    /// 담아 둔 내보내기 설정의 이름을 바꿉니다. 저장은 이름을 짓지 않고 "내보내기 설정 N" 을
-    /// 붙이므로, 사용자가 자기 이름을 주는 자리는 여기뿐입니다.
-    /// </summary>
-    private async void RenameExportRecipe(ExportRecipe recipe)
-    {
-        TextBox field = new()
-        {
-            Text = recipe.Name,
-            PlaceholderText = AppResources.Get("developExportRecipe", "Text"),
-        };
-        AutomationProperties.SetName(field, field.PlaceholderText);
-        AutomationProperties.SetAutomationId(field, "negaflow.develop.export.recipe-name");
-        ContentDialog dialog = new()
-        {
-            XamlRoot = XamlRoot,
-            Title = AppResources.Get("libraryRename", "Content"),
-            Content = field,
-            PrimaryButtonText = AppResources.Get("libraryRename", "Content"),
-            CloseButtonText = AppResources.Get("commonCancel", "Content"),
-            DefaultButton = ContentDialogButton.Primary,
-        };
-        if (await dialog.ShowAsync() != ContentDialogResult.Primary)
-        {
-            return;
-        }
-        // 빈 이름이나 공백뿐인 이름은 Rename 이 스스로 거절합니다 — 이름 없는 프리셋은
-        // 목록에서 고를 수 없습니다.
-        UpdateExportRecipes(library => library.Rename(recipe.Id, field.Text));
-    }
-
-    /// <summary>
-    /// 이름은 파일명 패턴 칸이 아니라 macOS 처럼 "내보내기 설정 N" 으로 짓습니다. 사용자가
-    /// 자기 이름을 주려면 메뉴의 이름 변경을 씁니다.
-    /// </summary>
-    private void SaveCurrentExportRecipe()
-    {
-        string name = AppResources.FormatInteger(
-            "developExportRecipeDefaultName",
-            "Text",
-            exportRecipes.NextDefaultIndex());
-        UpdateExportRecipes(library => library.Save(name, exportSettings));
-    }
-
-    private void UpdateExportRecipes(Func<ExportRecipeLibrary, ExportRecipeLibrary> update)
-    {
-        exportRecipes = update(exportRecipes).Normalize();
-        workspaceState?.UpdateExportRecipes(_ => exportRecipes);
-        SynchronizeExportControls();
-    }
-
-    private void SynchronizeExportRecipeControls()
-    {
-        ExportRecipeSelector.Items.Clear();
-        ExportRecipeSelector.Items.Add(new ComboBoxItem
-        {
-            Content = AppResources.Get("developExportRecipeEmpty", "Content"),
-            Tag = null,
-        });
-        foreach (ExportRecipe recipe in exportRecipes.Recipes)
-        {
-            ExportRecipeSelector.Items.Add(new ComboBoxItem
-            {
-                Content = recipe.Name,
-                Tag = recipe.Id,
-            });
-        }
-        ExportRecipeSelector.SelectedIndex = 0;
-        for (int index = 0; index < ExportRecipeSelector.Items.Count; ++index)
-        {
-            if (ExportRecipeSelector.Items[index] is ComboBoxItem candidate &&
-                Equals(candidate.Tag, exportRecipes.SelectedId))
-            {
-                ExportRecipeSelector.SelectedIndex = index;
-                break;
-            }
-        }
-        BuildExportRecipeMenu();
-    }
-
-    private void OnExportDetailTabChecked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (ExportFilePage is null)
-        {
-            return;
-        }
-        ExportFilePage.Visibility = Visible(ExportFileTabButton.IsChecked == true);
-        ExportQualityPage.Visibility = Visible(ExportQualityTabButton.IsChecked == true);
-        ExportSourcePage.Visibility = Visible(ExportSourceTabButton.IsChecked == true);
-    }
-
-    private void OnExportFormatChanged(object sender, SelectionChangedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (ExportFormatSelector.SelectedItem is not ComboBoxItem { Tag: string tag } ||
-            !Enum.TryParse(tag, out DevelopExportFormat format))
-        {
-            return;
-        }
-        MutateExportSettings(value => value with { Format = format });
-    }
-
-    private void OnExportNamePatternChanged(object sender, TextChangedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        // 사용자가 타이핑하는 중에는 패턴이 잠깐 잘못될 수 있습니다. 잘못된 패턴을 정규화가
-        // 기본값으로 되돌려 버리면 글자를 지울 수 없으므로 원문 그대로 담고 미리보기로만 알립니다.
-        if (isSynchronizingExport)
-        {
-            return;
-        }
-        exportSettings = exportSettings with
-        {
-            NamingTemplate = ExportNamingTemplate.Normalize(ExportNamePatternBox.Text),
-        };
-        workspaceState?.UpdateExport(_ => exportSettings);
-        UpdateExportPreview();
-    }
-
-    private void OnExportSequenceStartChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
-    {
-        _ = sender;
-        if (double.IsNaN(args.NewValue))
-        {
-            return;
-        }
-        MutateExportSettings(value => value with { SequenceStart = (int)args.NewValue });
-    }
-
-    private void OnExportTiffCompressionChanged(object sender, SelectionChangedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (ExportTiffCompressionSelector.SelectedItem is not ComboBoxItem { Tag: string tag } ||
-            !Enum.TryParse(tag, out DevelopTiffCompression compression))
-        {
-            return;
-        }
-        MutateExportSettings(value => value with { TiffCompression = compression });
-    }
-
-    /// <summary>
-    /// 채널당 비트입니다. macOS 처럼 형식마다 따로 기억합니다 — 보관용 TIFF 는 16, 화면용 PNG 는
-    /// 8 로 두는 사람이 형식을 오갈 때마다 다시 고르지 않아야 합니다.
-    /// </summary>
-    private void OnExportBitDepthChanged(object sender, SelectionChangedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (ExportBitDepthSelector.SelectedItem is not ComboBoxItem { Tag: string tag } ||
-            !int.TryParse(tag, out int depth))
-        {
-            return;
-        }
-        MutateExportSettings(value => value.Format == DevelopExportFormat.Tiff16
-            ? value with { TiffBitDepth = depth }
-            : value with { PngBitDepth = depth });
-    }
-
-    private void OnExportPreserveAlphaToggled(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (!isSynchronizingExport)
-        {
-            MutateExportSettings(value => value with
-            {
-                PreserveAlpha = ExportPreserveAlphaToggle.IsOn,
-            });
-        }
-    }
-
-    private void OnExportDpiChanged(object sender, SelectionChangedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (ExportDpiSelector.SelectedItem is not ComboBoxItem { Tag: int dpi })
-        {
-            return;
-        }
-        MutateExportSettings(value => value with { Dpi = dpi });
-    }
-
-    private void OnExportSizeChanged(object sender, SelectionChangedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (ExportSizeSelector.SelectedItem is not ComboBoxItem { Tag: int longEdge })
-        {
-            return;
-        }
-        MutateExportSettings(value => value with { LongEdge = longEdge });
-    }
-
-    private void OnExportJpegQualityChanged(object sender, RangeBaseValueChangedEventArgs args)
-    {
-        _ = sender;
-        MutateExportSettings(value => value with { JpegQuality = args.NewValue / 100.0 });
-    }
-
-    private void OnExportSharpeningChanged(object sender, RangeBaseValueChangedEventArgs args)
-    {
-        _ = sender;
-        MutateExportSettings(value => value with { OutputSharpening = args.NewValue / 100.0 });
-    }
-
-    private void OnExportSharpeningMediumChanged(object sender, SelectionChangedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (ExportSharpeningMediumSelector.SelectedItem is not ComboBoxItem { Tag: string tag } ||
-            !Enum.TryParse(tag, out OutputSharpeningMedium medium))
-        {
-            return;
-        }
-        MutateExportSettings(value => value with { OutputSharpeningMedium = medium });
-    }
-
-    private void OnExportMainFlatMasterToggled(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        MutateExportSettings(value => value with
-        {
-            WriteMainFlatMaster = ExportMainFlatMasterToggle.IsOn,
-        });
-    }
-
-    private void OnExportOriginalRawToggled(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        MutateExportSettings(value => value with
-        {
-            WriteOriginalRaw = ExportOriginalRawToggle.IsOn,
-        });
-    }
-
-    private void OnExportSidecarToggled(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        MutateExportSettings(value => value with { WriteSidecar = ExportSidecarToggle.IsOn });
-    }
-
-    /// <summary>
-    /// 게시하는 파일에 무엇을 적을지입니다. 기본은 최소 — 원본이 담고 있던 위치나 장비 정보를
-    /// 사용자가 고르지 않았는데 흘려보내지 않습니다.
-    /// </summary>
-    private void OnExportMetadataPolicyChanged(object sender, SelectionChangedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (isSynchronizingInspector)
-        {
-            return;
-        }
-        ExportMetadataPolicy policy = ExportMetadataSelector.SelectedIndex switch
-        {
-            1 => ExportMetadataPolicy.CopyrightOnly,
-            2 => ExportMetadataPolicy.RemoveLocation,
-            3 => ExportMetadataPolicy.All,
-            _ => ExportMetadataPolicy.Minimal,
-        };
-        MutateExportSettings(value => value with { MetadataPolicy = policy });
-    }
-
-    private void OnQuickExportFormatChanged(object sender, SelectionChangedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (QuickExportFormatSelector.SelectedItem is not ComboBoxItem { Tag: string tag } ||
-            !Enum.TryParse(tag, out DevelopExportFormat format))
-        {
-            return;
-        }
-        MutateQuickExportSettings(value => value with { Format = format });
-    }
-
-    private void OnQuickExportDpiChanged(object sender, SelectionChangedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (QuickExportDpiSelector.SelectedItem is not ComboBoxItem { Tag: int dpi })
-        {
-            return;
-        }
-        MutateQuickExportSettings(value => value with { Dpi = dpi });
-    }
-
-    private void OnQuickExportSizeChanged(object sender, SelectionChangedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (QuickExportSizeSelector.SelectedItem is not ComboBoxItem { Tag: int longEdge })
-        {
-            return;
-        }
-        MutateQuickExportSettings(value => value with { LongEdge = longEdge });
-    }
-
-    private void OnQuickExportJpegQualityChanged(object sender, RangeBaseValueChangedEventArgs args)
-    {
-        _ = sender;
-        MutateQuickExportSettings(value => value with { JpegQuality = args.NewValue / 100.0 });
-    }
-
-    private async void OnExportFolderClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (await PickExportFolderAsync() is { } folder)
-        {
-            MutateExportSettings(value => value with { FolderPath = folder });
-        }
-    }
-
-    private async void OnQuickExportFolderClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (await PickExportFolderAsync() is { } folder)
-        {
-            MutateQuickExportSettings(value => value with { FolderPath = folder });
-        }
-    }
-
-    private async Task<string?> PickExportFolderAsync()
-    {
-        if (importWindowId is not { } windowId)
-        {
-            return null;
-        }
-        var picker = new Microsoft.Windows.Storage.Pickers.FolderPicker(windowId)
-        {
-            CommitButtonText = AppResources.Get("developExportFolderChange", "Content"),
-        };
-        try
-        {
-            Microsoft.Windows.Storage.Pickers.PickFolderResult? picked =
-                await picker.PickSingleFolderAsync();
-            return picked?.Path;
-        }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException or
-            NotSupportedException or ArgumentException or PathTooLongException)
-        {
-            OutputStatusText.Text = AppResources.Get("developExportFolderFailed", "Text");
-            return null;
-        }
-    }
-
-    /// <summary>
-    /// 저장된 값을 컨트롤에 되비춥니다. 형식마다 화질을 정하는 손잡이가 다르므로 보이는 줄도
-    /// 형식이 정합니다 — macOS 와 같은 규칙입니다.
-    /// </summary>
-    private void SynchronizeExportControls()
-    {
-        if (ExportFormatSelector is null)
-        {
-            return;
-        }
-        isSynchronizingExport = true;
-        try
-        {
-            SelectByTag(ExportFormatSelector, exportSettings.Format.ToString());
-            SelectByTag(ExportTiffCompressionSelector, exportSettings.TiffCompression.ToString());
-            SelectByTag(
-                ExportBitDepthSelector,
-                exportSettings.EffectiveBitDepth.ToString(CultureInfo.InvariantCulture));
-            SelectByTag(ExportDpiSelector, exportSettings.Dpi);
-            SelectByTag(ExportSizeSelector, exportSettings.LongEdge);
-            SelectByTag(
-                ExportSharpeningMediumSelector,
-                exportSettings.OutputSharpeningMedium.ToString());
-            ExportJpegQualitySlider.Value = Math.Round(exportSettings.JpegQuality * 100.0);
-            ExportSharpeningSlider.Value = Math.Round(exportSettings.OutputSharpening * 100.0);
-            if (ExportNamePatternBox.Text != exportSettings.NamingTemplate)
-            {
-                ExportNamePatternBox.Text = exportSettings.NamingTemplate;
-            }
-            ExportSequenceStartBox.Value = exportSettings.SequenceStart;
-
-            SelectByTag(QuickExportFormatSelector, quickExportSettings.Format.ToString());
-            SelectByTag(QuickExportDpiSelector, quickExportSettings.Dpi);
-            SelectByTag(QuickExportSizeSelector, quickExportSettings.LongEdge);
-            QuickExportJpegQualitySlider.Value =
-                Math.Round(quickExportSettings.JpegQuality * 100.0);
-            SynchronizeExportRecipeControls();
-            ExportMainFlatMasterToggle.IsOn = exportSettings.WriteMainFlatMaster;
-            ExportOriginalRawToggle.IsOn = exportSettings.WriteOriginalRaw;
-            ExportSidecarToggle.IsOn = exportSettings.WriteSidecar;
-            ExportPreserveAlphaToggle.IsOn = exportSettings.PreserveAlpha;
-            ExportMetadataSelector.SelectedIndex = exportSettings.MetadataPolicy switch
-            {
-                ExportMetadataPolicy.CopyrightOnly => 1,
-                ExportMetadataPolicy.RemoveLocation => 2,
-                ExportMetadataPolicy.All => 3,
-                _ => 0,
-            };
-        }
-        finally
-        {
-            isSynchronizingExport = false;
-        }
-
-        ExportJpegQualityRow.Visibility = Visible(
-            exportSettings.Format == DevelopExportFormat.Jpeg8);
-        ExportTiffCompressionRow.Visibility = Visible(
-            exportSettings.Format == DevelopExportFormat.Tiff16);
-        // JPEG 은 정의상 8-bit 이므로 고를 것이 없습니다.
-        ExportBitDepthRow.Visibility = Visible(
-            exportSettings.Format != DevelopExportFormat.Jpeg8);
-        ExportPreserveAlphaToggle.Visibility = Visible(
-            exportSettings.Format != DevelopExportFormat.Jpeg8);
-        ExportBitDepthLabel.Text = AppResources.Get(
-            exportSettings.Format == DevelopExportFormat.Tiff16
-                ? "developExportTiffBitDepth"
-                : "developExportPngBitDepth",
-            "Text");
-        AutomationProperties.SetName(ExportBitDepthSelector, ExportBitDepthLabel.Text);
-        // macOS 는 강도가 0 이면 매체를 고를 수 없게 둡니다 — 아무 것도 바꾸지 않는 선택입니다.
-        ExportSharpeningMediumSelector.IsEnabled = exportSettings.OutputSharpening > 0;
-        ExportSequenceStartRow.Visibility = Visible(
-            ExportNamingTemplate.UsesSequence(exportSettings.NamingTemplate));
-        QuickExportJpegQualityRow.Visibility = Visible(
-            quickExportSettings.Format == DevelopExportFormat.Jpeg8);
-        ExportJpegQualityValue.Text = Percent(exportSettings.JpegQuality);
-        ExportSharpeningValue.Text = Percent(exportSettings.OutputSharpening);
-        QuickExportJpegQualityValue.Text = Percent(quickExportSettings.JpegQuality);
-        UpdateExportPreview();
-    }
-
-    /// <summary>어셈블리에 박힌 앱 판입니다. 사이드카가 어느 판이 만든 파일인지 남깁니다.</summary>
-    private static string ShellVersion =>
-        typeof(DevelopWorkspaceView).Assembly.GetName().Version?.ToString() ?? "0.0.0";
-
-    /// <summary>
-    /// 산출물 옆에 놓는 것들입니다. macOS 처럼 **산출물 옆에만** 쓰며, 원본 옆의 기존 사이드카를
-    /// 병합 없이 덮어쓰지 않습니다. 사진 자체는 이미 게시된 뒤이므로 여기서 실패해도 사진은
-    /// 남습니다 — 실패는 상태 줄로만 알립니다.
-    /// </summary>
-    private void WriteExportArtifacts(LibraryFrameSnapshot frame, string outputPath)
-    {
-        if (libraryHost is null || (!exportSettings.WriteSidecar && !exportSettings.WriteOriginalRaw))
-        {
-            return;
-        }
-        if (exportSettings.WriteOriginalRaw)
-        {
-            try
-            {
-                string original = ExportArtifactPairing.OriginalPath(outputPath, frame.SourcePath);
-                // 이미 있는 파일은 덮지 않습니다. 보관용 사본이 서로를 지우면 뜻이 없습니다.
-                if (!File.Exists(original))
-                {
-                    File.Copy(frame.SourcePath, original);
-                }
-            }
-            catch (Exception error) when (error is IOException or UnauthorizedAccessException or
-                PathTooLongException or NotSupportedException)
-            {
-                OutputStatusText.Text = AppResources.Get("developExportFolderFailed", "Text");
-            }
-        }
-        if (!exportSettings.WriteSidecar)
-        {
-            return;
-        }
-        JsonObject? record = libraryHost.FrameRecord(frame.Id);
-        ExportSidecarContent content = new()
-        {
-            OutputPath = outputPath,
-            Format = exportSettings.Format,
-            Encoding = exportSettings.ToEncodingOptions(),
-            AppVersion = ShellVersion,
-            EngineVersion = engineVersion,
-            FilmType = frame.Route.FilmType.ToString(),
-            PickState = frame.PickState.ToString().ToLowerInvariant(),
-            Rating = frame.Rating,
-            PresetName = frame.LookPresetId,
-            Parameters = record?["params"] as JsonObject,
-            AppMetadata = frame.AppMetadata,
-        };
-        if (ExportSidecarWriter.Write(outputPath, content) is { } failure)
-        {
-            OutputStatusText.Text = failure;
-        }
-    }
 
     private void OnLibrarySelectionChanged(object? sender, EventArgs args)
     {
@@ -3854,7 +3282,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
             SynchronizeSharedSelection();
         }
         RebuildDevelopLibraryTree();
-        UpdateExportPreview();
+        ExportPanel.RefreshPreview();
     }
 
     private void SynchronizeSharedSelection()
@@ -3881,370 +3309,6 @@ public sealed partial class DevelopWorkspaceView : UserControl
         ActivateFrame(items[index], index, publishSelection: false);
     }
 
-    private ExportNamingContext NamingContextFor(LibraryFrameSnapshot frame) =>
-        ExportNamingContexts.For(
-            frame,
-            libraryHost?.RollFor(frame.Id),
-            exportSettings.SequenceStart);
-
-    private static string Percent(double unit) =>
-        Math.Round(unit * 100.0).ToString("0", CultureInfo.CurrentCulture) + "%";
-
-    private static Visibility Visible(bool value) =>
-        value ? Visibility.Visible : Visibility.Collapsed;
-
-    private static void SelectByTag(ComboBox selector, object tag)
-    {
-        foreach (object item in selector.Items)
-        {
-            if (item is ComboBoxItem candidate && Equals(candidate.Tag, tag))
-            {
-                selector.SelectedItem = candidate;
-                return;
-            }
-        }
-    }
-
-    private void UpdateExportPreview()
-    {
-        if (ExportPreviewText is null)
-        {
-            return;
-        }
-        LibraryFrameSnapshot? frame = panel?.SelectedFrame;
-        ExportPanelView view = ExportPanelProjection.Create(
-            frame,
-            exportSettings,
-            quickExportSettings,
-            frame is null ? null : NamingContextFor(frame),
-            panel?.CanExport == true,
-            libraryHost?.SelectedFrames.Count ?? 0,
-            AppResources.Get("developExportFolderBesideSource", "Text"),
-            AppResources.Get("exportSection", "Text"));
-        ExportFolderPathText.Text = view.ExportFolderPath;
-        QuickExportFolderPathText.Text = view.QuickExportFolderPath;
-        ExportPreviewText.Text = view.ExportFileNamePreview;
-        QuickExportFilenameText.Text = view.QuickExportFileName;
-        ExportSourceSummaryText.Text = view.SourceSummary;
-        ExportButton.IsEnabled = view.CanExport;
-        QuickExportButton.IsEnabled = view.CanExport;
-        SetButtonText(ExportButton, view.ExportButtonText);
-    }
-
-    /// <summary>
-    /// 출력 패널의 이름과 목록을 채웁니다. DPI·크기 목록은 항목 이름이 번역돼야 하므로 XAML 이
-    /// 아니라 여기서 만듭니다.
-    /// </summary>
-    private void LocalizeOutputPanel()
-    {
-        SetRadioText(ExportFileTabButton, AppResources.Get("developExportTabFile", "Content"));
-        SetRadioText(ExportQualityTabButton, AppResources.Get("developExportTabQuality", "Content"));
-        SetRadioText(ExportSourceTabButton, AppResources.Get("developExportTabSource", "Content"));
-
-        ExportSequenceStartLabel.Text = AppResources.Get("developExportSequenceStart", "Text");
-        AutomationProperties.SetName(ExportSequenceStartBox, ExportSequenceStartLabel.Text);
-        SetLocalizedNameAndTooltip(
-            ExportNamingOptionsButton,
-            AppResources.Get("developExportNamingOptions", "Text"));
-        BuildNamingOptionsMenu();
-
-        ExportJpegQualityLabel.Text = AppResources.Get("developExportJpegQuality", "Text");
-        AutomationProperties.SetName(ExportJpegQualitySlider, ExportJpegQualityLabel.Text);
-        ExportTiffCompressionLabel.Text = AppResources.Get("developExportTiffCompression", "Text");
-        AutomationProperties.SetName(
-            ExportTiffCompressionSelector,
-            ExportTiffCompressionLabel.Text);
-        FillSelector(ExportTiffCompressionSelector, [
-            (AppResources.Get("developExportCompressionNone", "Content"),
-                DevelopTiffCompression.None.ToString()),
-            (AppResources.Get("developExportCompressionLzw", "Content"),
-                DevelopTiffCompression.Lzw.ToString()),
-            (AppResources.Get("developExportCompressionDeflate", "Content"),
-                DevelopTiffCompression.Deflate.ToString()),
-        ]);
-
-        ExportDpiLabel.Text = AppResources.Get("developExportDpi", "Text");
-        AutomationProperties.SetName(ExportDpiSelector, ExportDpiLabel.Text);
-        ExportSizeLabel.Text = AppResources.Get("developExportSize", "Text");
-        AutomationProperties.SetName(ExportSizeSelector, ExportSizeLabel.Text);
-        FillDpiSelector(ExportDpiSelector);
-        FillSizeSelector(ExportSizeSelector);
-
-        ExportSharpeningLabel.Text = AppResources.Get("developOutputSharpening", "Text");
-        AutomationProperties.SetName(ExportSharpeningSlider, ExportSharpeningLabel.Text);
-        ExportSharpeningMediumLabel.Text =
-            AppResources.Get("developOutputSharpeningMedium", "Text");
-        AutomationProperties.SetName(
-            ExportSharpeningMediumSelector,
-            ExportSharpeningMediumLabel.Text);
-        FillSelector(ExportSharpeningMediumSelector, [
-            (AppResources.Get("developSharpenScreen", "Content"),
-                OutputSharpeningMedium.Screen.ToString()),
-            (AppResources.Get("developSharpenMattePaper", "Content"),
-                OutputSharpeningMedium.MattePaper.ToString()),
-            (AppResources.Get("developSharpenGlossyPaper", "Content"),
-                OutputSharpeningMedium.GlossyPaper.ToString()),
-        ]);
-
-        LocalizeToggleSwitch(ExportMainFlatMasterToggle, "developExportMainFlatMaster");
-        LocalizeToggleSwitch(ExportOriginalRawToggle, "developExportOriginalRaw");
-        LocalizeToggleSwitch(ExportSidecarToggle, "developExportSidecar");
-        LocalizeToggleSwitch(ExportPreserveAlphaToggle, "developExportPreserveAlpha");
-        ExportRecipeLabel.Text = AppResources.Get("developExportRecipeTitle", "Text");
-        AutomationProperties.SetName(ExportRecipeSelector, ExportRecipeLabel.Text);
-        SetLocalizedNameAndTooltip(ExportRecipeMenuButton, ExportRecipeLabel.Text);
-        ExportMetadataLabel.Text = AppResources.Get("developExportMetadata", "Text");
-        AutomationProperties.SetName(ExportMetadataSelector, ExportMetadataLabel.Text);
-        ExportMetadataMinimalItem.Content =
-            AppResources.Get("developExportMetadataMinimal", "Text");
-        ExportMetadataCopyrightItem.Content =
-            AppResources.Get("developExportMetadataCopyright", "Text");
-        ExportMetadataRemoveLocationItem.Content =
-            AppResources.Get("developExportMetadataRemoveLocation", "Text");
-        ExportMetadataAllItem.Content = AppResources.Get("developExportMetadataAll", "Text");
-        ExportSourceLabel.Text = AppResources.Get("developExportSourceLabel", "Text");
-
-        QuickExportSectionText.Text = AppResources.Get("quickExportSection", "Text");
-        QuickExportFormatLabel.Text = AppResources.Get("developExportFormat", "Text");
-        AutomationProperties.SetName(QuickExportFormatSelector, QuickExportFormatLabel.Text);
-        QuickExportDpiLabel.Text = ExportDpiLabel.Text;
-        AutomationProperties.SetName(QuickExportDpiSelector, QuickExportDpiLabel.Text);
-        QuickExportSizeLabel.Text = ExportSizeLabel.Text;
-        AutomationProperties.SetName(QuickExportSizeSelector, QuickExportSizeLabel.Text);
-        QuickExportJpegQualityLabel.Text = ExportJpegQualityLabel.Text;
-        AutomationProperties.SetName(
-            QuickExportJpegQualitySlider,
-            QuickExportJpegQualityLabel.Text);
-        QuickExportFolderLabel.Text = ExportFolderLabel.Text;
-        SetButtonText(
-            QuickExportFolderButton,
-            AppResources.Get("developExportFolderChange", "Content"));
-        QuickExportFilenameLabel.Text = AppResources.Get("developExportFilename", "Text");
-        SetButtonText(QuickExportButton, AppResources.Get("commandQuickExport", "Text"));
-        FillDpiSelector(QuickExportDpiSelector);
-        FillSizeSelector(QuickExportSizeSelector);
-
-        SynchronizeExportControls();
-        OnExportDetailTabChecked(this, new RoutedEventArgs());
-    }
-
-    private void BuildNamingOptionsMenu()
-    {
-        ExportNamingOptionsFlyout.Items.Clear();
-        foreach ((string key, string pattern) in new[]
-        {
-            ("developExportPhotoName", ExportNamingTemplate.DefaultPattern),
-            ("developExportPhotoNameSequence", ExportNamingTemplate.PhotoNameSequencePattern),
-            ("developExportSequenceOnly", ExportNamingTemplate.SequenceOnlyPattern),
-        })
-        {
-            var item = new MenuFlyoutItem { Text = AppResources.Get(key, "Text") };
-            string chosen = pattern;
-            item.Click += (_, _) => MutateExportSettings(value => value with
-            {
-                NamingTemplate = chosen,
-            });
-            ExportNamingOptionsFlyout.Items.Add(item);
-        }
-        ExportNamingOptionsFlyout.Items.Add(new MenuFlyoutSeparator());
-        var tokens = new MenuFlyoutSubItem { Text = AppResources.Get("developExportTokens", "Text") };
-        foreach (string token in ExportNamingTemplate.Tokens)
-        {
-            string appended = "{" + token + "}";
-            var item = new MenuFlyoutItem { Text = appended };
-            item.Click += (_, _) => MutateExportSettings(value => value with
-            {
-                NamingTemplate = value.NamingTemplate + appended,
-            });
-            tokens.Items.Add(item);
-        }
-        ExportNamingOptionsFlyout.Items.Add(tokens);
-    }
-
-    private static void LocalizeToggleSwitch(ToggleSwitch toggle, string resourceKey)
-    {
-        string text = AppResources.Get(resourceKey, "Content");
-        toggle.Header = text;
-        toggle.OnContent = text;
-        toggle.OffContent = text;
-        AutomationProperties.SetName(toggle, text);
-    }
-
-    private static void FillSelector(
-        ComboBox selector,
-        IReadOnlyList<(string Text, string Tag)> items)
-    {
-        selector.Items.Clear();
-        foreach ((string text, string tag) in items)
-        {
-            selector.Items.Add(new ComboBoxItem { Content = text, Tag = tag });
-        }
-    }
-
-    private static void FillDpiSelector(ComboBox selector)
-    {
-        string sourceDpi = AppResources.Get("settingsSourceDPI", "Text");
-        selector.Items.Clear();
-        foreach (int dpi in ExportSettings.DpiOptions)
-        {
-            selector.Items.Add(new ComboBoxItem
-            {
-                Content = dpi == 0
-                    ? sourceDpi
-                    : string.Create(CultureInfo.CurrentCulture, $"{dpi} dpi"),
-                Tag = dpi,
-            });
-        }
-    }
-
-    private static void FillSizeSelector(ComboBox selector)
-    {
-        string fullSize = AppResources.Get("exportFullSize", "Text");
-        string suffix = AppResources.Get("developExportLongEdgeSuffix", "Text");
-        selector.Items.Clear();
-        foreach (int edge in ExportSettings.LongEdgeOptions)
-        {
-            selector.Items.Add(new ComboBoxItem
-            {
-                Content = edge == 0
-                    ? fullSize
-                    : string.Create(CultureInfo.CurrentCulture, $"{edge} {suffix}"),
-                Tag = edge,
-            });
-        }
-    }
-
-    /// <summary>
-    /// 출력 패널의 내보내기입니다. 빠른 내보내기와 같은 경로를 쓰되 목적지와 형식을 사용자가
-    /// 정한 값으로 씁니다.
-    /// </summary>
-    private async void OnExportClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (panel?.SelectedFrame is not { } frame)
-        {
-            return;
-        }
-        // 편집은 메모리에만 있었으므로, 현상하기 전에 저장해 파일과 catalog 가 어긋나지 않게 합니다.
-        if (panel.Save() != CatalogStoreError.None)
-        {
-            OutputStatusText.Text = AppResources.Get("developExportSaveFailed", "Text");
-            return;
-        }
-
-        ExportButton.IsEnabled = false;
-        OutputStatusText.Text = AppResources.Get("developExportRunning", "Text");
-        string? completedPath = null;
-        try
-        {
-            IReadOnlyList<LibraryFrameSnapshot> selection = SelectedExportFrames(frame);
-            if (selection.Count > 1)
-            {
-                await RunExportBatchAsync(selection);
-                return;
-            }
-            string exportedPath = exportSettings.Destination.PathFor(
-                frame.SourcePath,
-                NamingContextFor(frame));
-            _ = await panel.ExportAsync(
-                exportedPath,
-                exportSettings.Format,
-                outcome =>
-                {
-                    OutputStatusText.Text = DevelopPanelState.Describe(outcome);
-                    if (outcome is { Kind: DevelopExportOutcomeKind.Completed, Result.Succeeded: true })
-                    {
-                        WriteExportArtifacts(frame, exportedPath);
-                        completedPath = exportedPath;
-                    }
-                },
-                exportSettings.ToEncodingOptions());
-        }
-        finally
-        {
-            UpdateExportPreview();
-        }
-
-        // 무보정본은 사진이 나간 뒤에 한 장 더 냅니다. 여기서 실패해도 사진은 남습니다.
-        if (completedPath is { } published && exportSettings.WriteMainFlatMaster)
-        {
-            await WriteMainFlatMasterAsync(frame, published);
-        }
-    }
-
-    /// <summary>
-    /// 같은 원본을 조정 없이 MAIN 으로 한 번 더 현상합니다. 인코딩은 본 산출물과 같게 두어
-    /// 두 파일이 같은 형식·같은 크기로 나란히 놓이게 합니다.
-    /// </summary>
-    private async Task WriteMainFlatMasterAsync(LibraryFrameSnapshot frame, string outputPath)
-    {
-        if (panel is null || libraryHost is null)
-        {
-            return;
-        }
-        string masterPath = ExportFlatMaster.PathFor(outputPath);
-        if (File.Exists(masterPath))
-        {
-            // 이미 있는 무보정본은 덮지 않습니다. 보관용 사본이 서로를 지우면 뜻이 없습니다.
-            return;
-        }
-        _ = await libraryHost.ExportAsync(
-            ExportFlatMaster.Neutralize(frame),
-            masterPath,
-            exportSettings.Format,
-            outcome => OutputStatusText.Text = DevelopPanelState.Describe(outcome),
-            exportSettings.ToEncodingOptions());
-    }
-
-    /// <summary>
-    /// 내보낼 대상입니다. 라이브러리에서 여러 장을 골랐으면 그 목록이고, 아니면 지금 보고 있는
-    /// 한 장입니다 — macOS 의 <c>exportSelection</c> 과 같은 규칙입니다.
-    /// </summary>
-    private IReadOnlyList<LibraryFrameSnapshot> SelectedExportFrames(LibraryFrameSnapshot current)
-    {
-        IReadOnlyList<LibraryFrameSnapshot> selected = libraryHost?.SelectedFrames ?? [];
-        return selected.Count > 1 ? selected : [current];
-    }
-
-    /// <summary>
-    /// 여러 장을 차례로 내보내며 진행을 한 줄로 보여 줍니다. 계획은 먼저 전부 세우므로 같은
-    /// 경로가 두 번 나오지 않고, 한 장이 실패해도 나머지는 계속 나갑니다.
-    /// </summary>
-    private async Task RunExportBatchAsync(IReadOnlyList<LibraryFrameSnapshot> frames)
-    {
-        if (libraryHost is null)
-        {
-            return;
-        }
-        IReadOnlyList<ExportBatchPlan> plans = ExportBatchCoordinator.Plan(
-            frames,
-            exportSettings,
-            frame => libraryHost.RollFor(frame.Id));
-        var coordinator = new ExportBatchCoordinator(libraryHost);
-        int finished = 0;
-        coordinator.ItemChanged += (_, item) =>
-        {
-            if (item.State is ExportBatchItemState.Running)
-            {
-                return;
-            }
-            ++finished;
-            OutputStatusText.Text = AppResources.FormatIntegers(
-                "exportBatchFrameProgress",
-                "Text",
-                finished,
-                plans.Count);
-        };
-        ExportBatchSummary summary = await coordinator.RunAsync(
-            plans,
-            exportSettings.ToEncodingOptions());
-        OutputStatusText.Text = AppResources.FormatIntegers(
-            "exportBatchFrameProgress",
-            "Text",
-            summary.Succeeded,
-            summary.Total);
-    }
 
     private void OnCropAngleDialChanged(object? sender, double angle)
     {
@@ -4413,10 +3477,10 @@ public sealed partial class DevelopWorkspaceView : UserControl
 
         ExportStatusText.Text = AppResources.Get("developExportRunning", "Text");
         Task<bool> exportTask = panel.ExportAsync(
-            quickExportSettings.Destination.PathFor(frame.SourcePath),
-            quickExportSettings.Format,
+            ExportPanel.QuickSettings.Destination.PathFor(frame.SourcePath),
+            ExportPanel.QuickSettings.Format,
             outcome => ExportStatusText.Text = DevelopPanelState.Describe(outcome),
-            quickExportSettings.Encoding);
+            ExportPanel.QuickSettings.Encoding);
         NotifyQuickExportAvailabilityChanged();
         bool delivered = await exportTask;
         if (!delivered)
@@ -4427,20 +3491,6 @@ public sealed partial class DevelopWorkspaceView : UserControl
         NotifyQuickExportAvailabilityChanged();
     }
 
-    private async void OnQuickExportClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        QuickExportButton.IsEnabled = false;
-        try
-        {
-            await QuickExportAsync();
-        }
-        finally
-        {
-            UpdateExportPreview();
-        }
-    }
 
     private void NotifyQuickExportAvailabilityChanged() =>
         QuickExportAvailabilityChanged?.Invoke(this, EventArgs.Empty);
@@ -4517,14 +3567,14 @@ public sealed partial class DevelopWorkspaceView : UserControl
             developSource = preferences.SelectedDevelopSidebarTab;
             UpdateDevelopSourcePanel();
         }
-        if (exportSettings != preferences.Export ||
-            quickExportSettings != preferences.QuickExport ||
-            exportRecipes != preferences.ExportRecipes)
+        if (ExportPanel.Settings != preferences.Export ||
+            ExportPanel.QuickSettings != preferences.QuickExport ||
+            ExportPanel.Recipes != preferences.ExportRecipes)
         {
-            exportSettings = preferences.Export;
-            quickExportSettings = preferences.QuickExport;
-            exportRecipes = preferences.ExportRecipes;
-            SynchronizeExportControls();
+            ExportPanel.ApplyPreferences(
+                preferences.Export,
+                preferences.QuickExport,
+                preferences.ExportRecipes);
         }
 
         // 프루프는 보기용이므로 미리보기에만 겁니다. 게시하는 파일은 그대로입니다.
@@ -4601,15 +3651,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         AutomationProperties.SetName(ImportButton, ImportImageText.Text);
         AutomationProperties.SetName(ImportFolderButton, ImportFolderText.Text);
         AutomationProperties.SetName(ImportScannerButton, ImportScannerText.Text);
-        ExportSectionText.Text = AppResources.Get("exportSection", "Text");
-        ExportFormatLabel.Text = AppResources.Get("developExportFormat", "Text");
-        AutomationProperties.SetName(ExportFormatSelector, ExportFormatLabel.Text);
-        ExportFolderLabel.Text = AppResources.Get("developExportFolder", "Text");
-        SetButtonText(ExportFolderButton, AppResources.Get("developExportFolderChange", "Content"));
-        ExportNamePatternLabel.Text = AppResources.Get("developExportNamePattern", "Text");
-        AutomationProperties.SetName(ExportNamePatternBox, ExportNamePatternLabel.Text);
-        SetButtonText(ExportButton, AppResources.Get("exportSection", "Text"));
-        LocalizeOutputPanel();
+        ExportPanel.Localize();
         LocalizeAppMetadataCards();
         LocalizeRollRecordCard();
         SetLocalizedNameAndTooltip(LibraryRailButton, AppResources.Get("developLibrary", "Text"));

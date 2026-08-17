@@ -1,0 +1,442 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Negaflow.Shell.Views.Develop.Export.DevelopExportPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer>
+                    <StackPanel Padding="12,14" Spacing="12">
+                        <TextBlock x:Name="ExportSectionText" FontSize="13" FontWeight="SemiBold"  x:FieldModifier="internal" />
+                        <Border Padding="12" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="8">
+                            <StackPanel Spacing="9">
+                                <!-- 파일·품질·소스. macOS 는 같은 카드 안에서 이 셋을 갈아 끼웁니다. -->
+                                <Grid
+                                    x:Name="ExportDetailTabs" x:FieldModifier="internal"
+                                    AutomationProperties.AutomationId="negaflow.develop.output.tabs"
+                                    ColumnSpacing="4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <RadioButton
+                                        x:Name="ExportFileTabButton" x:FieldModifier="internal"
+                                        Grid.Column="0"
+                                        AutomationProperties.AutomationId="negaflow.develop.output.tab.file"
+                                        Checked="OnExportDetailTabChecked"
+                                        GroupName="ExportDetailPage"
+                                        IsChecked="True" />
+                                    <RadioButton
+                                        x:Name="ExportQualityTabButton" x:FieldModifier="internal"
+                                        Grid.Column="1"
+                                        AutomationProperties.AutomationId="negaflow.develop.output.tab.quality"
+                                        Checked="OnExportDetailTabChecked"
+                                        GroupName="ExportDetailPage" />
+                                    <RadioButton
+                                        x:Name="ExportSourceTabButton" x:FieldModifier="internal"
+                                        Grid.Column="2"
+                                        AutomationProperties.AutomationId="negaflow.develop.output.tab.source"
+                                        Checked="OnExportDetailTabChecked"
+                                        GroupName="ExportDetailPage" />
+                                </Grid>
+
+                                <!-- 내보내기 설정: 담아 둔 값을 골라 얹습니다. 목적지와 파일명
+                                     패턴은 지금 것을 지킵니다. -->
+                                <Grid ColumnSpacing="6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="ExportRecipeLabel" VerticalAlignment="Center" FontSize="12"  x:FieldModifier="internal" />
+                                    <ComboBox
+                                        x:Name="ExportRecipeSelector" x:FieldModifier="internal"
+                                        Grid.Column="1"
+                                        HorizontalAlignment="Stretch"
+                                        AutomationProperties.AutomationId="negaflow.develop.output.recipe"
+                                        SelectionChanged="OnExportRecipeChanged" />
+                                    <DropDownButton
+                                        x:Name="ExportRecipeMenuButton" x:FieldModifier="internal"
+                                        Grid.Column="2"
+                                        Padding="8,4"
+                                        AutomationProperties.AutomationId="negaflow.develop.output.recipe-menu"
+                                        Content="&#xE712;"
+                                        FontFamily="{ThemeResource SymbolThemeFontFamily}"
+                                        FontSize="12">
+                                        <DropDownButton.Flyout>
+                                            <MenuFlyout x:Name="ExportRecipeFlyout"  x:FieldModifier="internal" />
+                                        </DropDownButton.Flyout>
+                                    </DropDownButton>
+                                </Grid>
+
+                                <!-- 파일 -->
+                                <StackPanel x:Name="ExportFilePage" Spacing="9" x:FieldModifier="internal">
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="ExportFormatLabel" VerticalAlignment="Center" FontSize="12"  x:FieldModifier="internal" />
+                                        <ComboBox
+                                            x:Name="ExportFormatSelector" x:FieldModifier="internal"
+                                            Grid.Column="1"
+                                            MinWidth="96"
+                                            AutomationProperties.AutomationId="negaflow.develop.output.format"
+                                            SelectionChanged="OnExportFormatChanged">
+                                            <ComboBoxItem Content="JPEG" Tag="Jpeg8" />
+                                            <ComboBoxItem Content="PNG" Tag="Png16" />
+                                            <ComboBoxItem Content="TIFF" Tag="Tiff16" />
+                                        </ComboBox>
+                                    </Grid>
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="ExportFolderLabel" VerticalAlignment="Center" FontSize="12"  x:FieldModifier="internal" />
+                                        <Button
+                                            x:Name="ExportFolderButton" x:FieldModifier="internal"
+                                            Grid.Column="1"
+                                            Padding="8,2"
+                                            AutomationProperties.AutomationId="negaflow.develop.output.folder"
+                                            Click="OnExportFolderClicked"
+                                            FontSize="11" />
+                                    </Grid>
+                                    <TextBlock
+                                        x:Name="ExportFolderPathText" x:FieldModifier="internal"
+                                        FontSize="11"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        TextTrimming="CharacterEllipsis" />
+                                    <TextBlock x:Name="ExportNamePatternLabel" FontSize="12"  x:FieldModifier="internal" />
+                                    <Grid ColumnSpacing="6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox
+                                            x:Name="ExportNamePatternBox" x:FieldModifier="internal"
+                                            AutomationProperties.AutomationId="negaflow.develop.output.name-pattern"
+                                            TextChanged="OnExportNamePatternChanged" />
+                                        <DropDownButton
+                                            x:Name="ExportNamingOptionsButton" x:FieldModifier="internal"
+                                            Grid.Column="1"
+                                            Padding="8,4"
+                                            AutomationProperties.AutomationId="negaflow.develop.output.naming-options"
+                                            Content="&#xE710;"
+                                            FontFamily="{ThemeResource SymbolThemeFontFamily}"
+                                            FontSize="12">
+                                            <DropDownButton.Flyout>
+                                                <MenuFlyout x:Name="ExportNamingOptionsFlyout"  x:FieldModifier="internal" />
+                                            </DropDownButton.Flyout>
+                                        </DropDownButton>
+                                    </Grid>
+                                    <Grid x:Name="ExportSequenceStartRow" ColumnSpacing="8" Visibility="Collapsed" x:FieldModifier="internal">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="ExportSequenceStartLabel" VerticalAlignment="Center" FontSize="12"  x:FieldModifier="internal" />
+                                        <NumberBox
+                                            x:Name="ExportSequenceStartBox" x:FieldModifier="internal"
+                                            Grid.Column="1"
+                                            MinWidth="82"
+                                            AutomationProperties.AutomationId="negaflow.develop.output.sequence-start"
+                                            Minimum="0"
+                                            SpinButtonPlacementMode="Compact"
+                                            ValueChanged="OnExportSequenceStartChanged" />
+                                    </Grid>
+                                </StackPanel>
+
+                                <!-- 품질 -->
+                                <StackPanel x:Name="ExportQualityPage" Spacing="9" Visibility="Collapsed" x:FieldModifier="internal">
+                                    <Grid x:Name="ExportJpegQualityRow" ColumnSpacing="8" x:FieldModifier="internal">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="ExportJpegQualityLabel" VerticalAlignment="Center" FontSize="12"  x:FieldModifier="internal" />
+                                        <Slider
+                                            x:Name="ExportJpegQualitySlider" x:FieldModifier="internal"
+                                            Grid.Column="1"
+                                            AutomationProperties.AutomationId="negaflow.develop.output.jpeg-quality"
+                                            Maximum="100"
+                                            Minimum="0"
+                                            StepFrequency="1"
+                                            ValueChanged="OnExportJpegQualityChanged" />
+                                        <TextBlock
+                                            x:Name="ExportJpegQualityValue" x:FieldModifier="internal"
+                                            Grid.Column="2"
+                                            MinWidth="40"
+                                            VerticalAlignment="Center"
+                                            FontSize="11"
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                            TextAlignment="Right" />
+                                    </Grid>
+                                    <Grid x:Name="ExportTiffCompressionRow" ColumnSpacing="8" Visibility="Collapsed" x:FieldModifier="internal">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="ExportTiffCompressionLabel" VerticalAlignment="Center" FontSize="12"  x:FieldModifier="internal" />
+                                        <ComboBox
+                                            x:Name="ExportTiffCompressionSelector" x:FieldModifier="internal"
+                                            Grid.Column="1"
+                                            MinWidth="96"
+                                            AutomationProperties.AutomationId="negaflow.develop.output.tiff-compression"
+                                            SelectionChanged="OnExportTiffCompressionChanged" />
+                                    </Grid>
+                                    <Grid x:Name="ExportBitDepthRow" ColumnSpacing="8" Visibility="Collapsed" x:FieldModifier="internal">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="ExportBitDepthLabel" VerticalAlignment="Center" FontSize="12"  x:FieldModifier="internal" />
+                                        <ComboBox
+                                            x:Name="ExportBitDepthSelector" x:FieldModifier="internal"
+                                            Grid.Column="1"
+                                            MinWidth="96"
+                                            AutomationProperties.AutomationId="negaflow.develop.output.bit-depth"
+                                            SelectionChanged="OnExportBitDepthChanged">
+                                            <ComboBoxItem Content="8-bit" Tag="8" />
+                                            <ComboBoxItem Content="16-bit" Tag="16" />
+                                        </ComboBox>
+                                    </Grid>
+                                    <ToggleSwitch
+                                        x:Name="ExportPreserveAlphaToggle" x:FieldModifier="internal"
+                                        AutomationProperties.AutomationId="negaflow.develop.output.preserve-alpha"
+                                        Toggled="OnExportPreserveAlphaToggled" />
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="ExportDpiLabel" VerticalAlignment="Center" FontSize="12"  x:FieldModifier="internal" />
+                                        <ComboBox
+                                            x:Name="ExportDpiSelector" x:FieldModifier="internal"
+                                            Grid.Column="1"
+                                            MinWidth="112"
+                                            AutomationProperties.AutomationId="negaflow.develop.output.dpi"
+                                            SelectionChanged="OnExportDpiChanged" />
+                                    </Grid>
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="ExportSizeLabel" VerticalAlignment="Center" FontSize="12"  x:FieldModifier="internal" />
+                                        <ComboBox
+                                            x:Name="ExportSizeSelector" x:FieldModifier="internal"
+                                            Grid.Column="1"
+                                            MinWidth="132"
+                                            AutomationProperties.AutomationId="negaflow.develop.output.long-edge"
+                                            SelectionChanged="OnExportSizeChanged" />
+                                    </Grid>
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="ExportSharpeningLabel" VerticalAlignment="Center" FontSize="12"  x:FieldModifier="internal" />
+                                        <Slider
+                                            x:Name="ExportSharpeningSlider" x:FieldModifier="internal"
+                                            Grid.Column="1"
+                                            AutomationProperties.AutomationId="negaflow.develop.output.sharpening"
+                                            Maximum="100"
+                                            Minimum="0"
+                                            StepFrequency="1"
+                                            ValueChanged="OnExportSharpeningChanged" />
+                                        <TextBlock
+                                            x:Name="ExportSharpeningValue" x:FieldModifier="internal"
+                                            Grid.Column="2"
+                                            MinWidth="40"
+                                            VerticalAlignment="Center"
+                                            FontSize="11"
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                            TextAlignment="Right" />
+                                    </Grid>
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="ExportSharpeningMediumLabel" VerticalAlignment="Center" FontSize="12"  x:FieldModifier="internal" />
+                                        <ComboBox
+                                            x:Name="ExportSharpeningMediumSelector" x:FieldModifier="internal"
+                                            Grid.Column="1"
+                                            MinWidth="112"
+                                            AutomationProperties.AutomationId="negaflow.develop.output.sharpening-medium"
+                                            SelectionChanged="OnExportSharpeningMediumChanged" />
+                                    </Grid>
+                                </StackPanel>
+
+                                <!-- 소스 -->
+                                <StackPanel x:Name="ExportSourcePage" Spacing="6" Visibility="Collapsed" x:FieldModifier="internal">
+                                    <ToggleSwitch
+                                        x:Name="ExportMainFlatMasterToggle" x:FieldModifier="internal"
+                                        AutomationProperties.AutomationId="negaflow.develop.output.main-flat-master"
+                                        Toggled="OnExportMainFlatMasterToggled" />
+                                    <ToggleSwitch
+                                        x:Name="ExportOriginalRawToggle" x:FieldModifier="internal"
+                                        AutomationProperties.AutomationId="negaflow.develop.output.original-raw"
+                                        Toggled="OnExportOriginalRawToggled" />
+                                    <ToggleSwitch
+                                        x:Name="ExportSidecarToggle" x:FieldModifier="internal"
+                                        AutomationProperties.AutomationId="negaflow.develop.output.sidecar"
+                                        Toggled="OnExportSidecarToggled" />
+                                    <!-- 게시하는 파일에 무엇을 적을지입니다. macOS 도 이 자리에
+                                         둡니다 — 원본 보관·사이드카와 같은 "무엇이 나가는가" 묶음입니다. -->
+                                    <TextBlock x:Name="ExportMetadataLabel" FontSize="12"  x:FieldModifier="internal" />
+                                    <ComboBox
+                                        x:Name="ExportMetadataSelector" x:FieldModifier="internal"
+                                        HorizontalAlignment="Stretch"
+                                        AutomationProperties.AutomationId="negaflow.develop.output.metadata-policy"
+                                        FontSize="12"
+                                        SelectionChanged="OnExportMetadataPolicyChanged">
+                                        <ComboBoxItem x:Name="ExportMetadataMinimalItem"  x:FieldModifier="internal" />
+                                        <ComboBoxItem x:Name="ExportMetadataCopyrightItem"  x:FieldModifier="internal" />
+                                        <ComboBoxItem x:Name="ExportMetadataRemoveLocationItem"  x:FieldModifier="internal" />
+                                        <ComboBoxItem x:Name="ExportMetadataAllItem"  x:FieldModifier="internal" />
+                                    </ComboBox>
+                                    <TextBlock x:Name="ExportSourceLabel" FontSize="12"  x:FieldModifier="internal" />
+                                    <TextBlock
+                                        x:Name="ExportSourceSummaryText" x:FieldModifier="internal"
+                                        FontSize="11"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+
+                                <TextBlock
+                                    x:Name="ExportPreviewText" x:FieldModifier="internal"
+                                    FontSize="11"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    TextTrimming="CharacterEllipsis" />
+                                <Button
+                                    x:Name="ExportButton" x:FieldModifier="internal"
+                                    HorizontalAlignment="Stretch"
+                                    AutomationProperties.AutomationId="negaflow.develop.output.export"
+                                    Click="OnExportClicked"
+                                    Style="{StaticResource AccentButtonStyle}" />
+                                <TextBlock
+                                    x:Name="OutputStatusText" x:FieldModifier="internal"
+                                    FontSize="11"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- 빠른 내보내기: macOS 와 같은 두 번째 절입니다. 형식이 JPEG·PNG 로 좁고
+                             파일명은 원본 이름 그대로입니다. -->
+                        <TextBlock x:Name="QuickExportSectionText" FontSize="13" FontWeight="SemiBold"  x:FieldModifier="internal" />
+                        <Border Padding="12" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="8">
+                            <StackPanel Spacing="9">
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="QuickExportFormatLabel" VerticalAlignment="Center" FontSize="12"  x:FieldModifier="internal" />
+                                    <ComboBox
+                                        x:Name="QuickExportFormatSelector" x:FieldModifier="internal"
+                                        Grid.Column="1"
+                                        MinWidth="96"
+                                        AutomationProperties.AutomationId="negaflow.develop.quick-export.format"
+                                        SelectionChanged="OnQuickExportFormatChanged">
+                                        <ComboBoxItem Content="JPEG" Tag="Jpeg8" />
+                                        <ComboBoxItem Content="PNG" Tag="Png16" />
+                                    </ComboBox>
+                                </Grid>
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="QuickExportDpiLabel" VerticalAlignment="Center" FontSize="12"  x:FieldModifier="internal" />
+                                    <ComboBox
+                                        x:Name="QuickExportDpiSelector" x:FieldModifier="internal"
+                                        Grid.Column="1"
+                                        MinWidth="112"
+                                        AutomationProperties.AutomationId="negaflow.develop.quick-export.dpi"
+                                        SelectionChanged="OnQuickExportDpiChanged" />
+                                </Grid>
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="QuickExportSizeLabel" VerticalAlignment="Center" FontSize="12"  x:FieldModifier="internal" />
+                                    <ComboBox
+                                        x:Name="QuickExportSizeSelector" x:FieldModifier="internal"
+                                        Grid.Column="1"
+                                        MinWidth="132"
+                                        AutomationProperties.AutomationId="negaflow.develop.quick-export.long-edge"
+                                        SelectionChanged="OnQuickExportSizeChanged" />
+                                </Grid>
+                                <Grid x:Name="QuickExportJpegQualityRow" ColumnSpacing="8" x:FieldModifier="internal">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="QuickExportJpegQualityLabel" VerticalAlignment="Center" FontSize="12"  x:FieldModifier="internal" />
+                                    <Slider
+                                        x:Name="QuickExportJpegQualitySlider" x:FieldModifier="internal"
+                                        Grid.Column="1"
+                                        AutomationProperties.AutomationId="negaflow.develop.quick-export.jpeg-quality"
+                                        Maximum="100"
+                                        Minimum="0"
+                                        StepFrequency="1"
+                                        ValueChanged="OnQuickExportJpegQualityChanged" />
+                                    <TextBlock
+                                        x:Name="QuickExportJpegQualityValue" x:FieldModifier="internal"
+                                        Grid.Column="2"
+                                        MinWidth="40"
+                                        VerticalAlignment="Center"
+                                        FontSize="11"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        TextAlignment="Right" />
+                                </Grid>
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="QuickExportFolderLabel" VerticalAlignment="Center" FontSize="12"  x:FieldModifier="internal" />
+                                    <Button
+                                        x:Name="QuickExportFolderButton" x:FieldModifier="internal"
+                                        Grid.Column="1"
+                                        Padding="8,2"
+                                        AutomationProperties.AutomationId="negaflow.develop.quick-export.folder"
+                                        Click="OnQuickExportFolderClicked"
+                                        FontSize="11" />
+                                </Grid>
+                                <TextBlock
+                                    x:Name="QuickExportFolderPathText" x:FieldModifier="internal"
+                                    FontSize="11"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    TextTrimming="CharacterEllipsis" />
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="QuickExportFilenameLabel" VerticalAlignment="Center" FontSize="12"  x:FieldModifier="internal" />
+                                    <TextBlock
+                                        x:Name="QuickExportFilenameText" x:FieldModifier="internal"
+                                        Grid.Column="1"
+                                        VerticalAlignment="Center"
+                                        FontSize="11"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        TextAlignment="Right"
+                                        TextTrimming="CharacterEllipsis" />
+                                </Grid>
+                                <Button
+                                    x:Name="QuickExportButton" x:FieldModifier="internal"
+                                    HorizontalAlignment="Stretch"
+                                    AutomationProperties.AutomationId="negaflow.develop.quick-export.run"
+                                    Click="OnQuickExportClicked" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+</UserControl>
