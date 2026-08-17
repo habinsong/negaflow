@@ -6,10 +6,7 @@
     xmlns:controls="using:Negaflow.Shell.Views.Controls"
     xmlns:primitives="using:Microsoft.UI.Xaml.Controls.Primitives"
     xmlns:views="using:Negaflow.Shell.Views"
-    xmlns:export="using:Negaflow.Shell.Views.Develop.Export"
-    xmlns:versions="using:Negaflow.Shell.Views.Develop.Versions"
-    xmlns:presets="using:Negaflow.Shell.Views.Develop.Presets"
-    xmlns:film="using:Negaflow.Shell.Views.Develop.Film">
+    xmlns:sources="using:Negaflow.Shell.Views.Develop.Sources">
     <UserControl.Resources>
         <!-- macOS DevelopInspectorTabLabel: outer radius 18, selected/hover radius 15,
              icon row minimum height 32. WinUI 기본 ToggleButton chrome은 이 형상을 바꾸므로
@@ -102,18 +99,6 @@
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="CornerRadius" Value="12" />
         </Style>
-        <!-- macOS ImportGlassAction: 한 줄, 24 high, horizontal padding 6,
-             hover surface radius 12. 긴 번역은 내부 Viewbox가 아래로만 줄입니다. -->
-        <Style x:Key="NegaflowImportActionStyle" TargetType="Button">
-            <Setter Property="MinHeight" Value="24" />
-            <Setter Property="Padding" Value="6,0" />
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="CornerRadius" Value="12" />
-            <Setter Property="FontSize" Value="12" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-        </Style>
     </UserControl.Resources>
     <Grid x:Name="Root" Background="{ThemeResource NegaflowWindowBrush}" SizeChanged="OnRootSizeChanged">
         <Grid.ColumnDefinitions>
@@ -124,269 +109,21 @@
             <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
 
-        <Grid x:Name="LeftPanel" Grid.Column="0" Background="{ThemeResource NegaflowPanelBrush}">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition x:Name="LeftRailColumn" Width="76" />
-                <ColumnDefinition Width="1" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
+        <sources:DevelopSourceSidebar
+            x:Name="LeftPanel"
+            Grid.Column="0" />
 
-            <StackPanel x:Name="DevelopSourceRail" Grid.Column="0" Padding="22,10,22,0" Spacing="7">
-                <Button
-                    x:Name="LibraryRailButton"
-                    AutomationProperties.AutomationId="negaflow.develop.sources.library"
-                    Background="{ThemeResource NegaflowSelectionBrush}"
-                    Click="OnDevelopSourceRailClicked"
-                    Style="{StaticResource NegaflowSidebarButtonStyle}"
-                    Tag="Library">
-                    <FontIcon x:Name="LibraryRailIcon" FontSize="15" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" Glyph="&#xE8FD;" />
-                </Button>
-                <Button
-                    x:Name="FilesRailButton"
-                    AutomationProperties.AutomationId="negaflow.develop.sources.files.rail"
-                    Click="OnDevelopSourceRailClicked"
-                    Style="{StaticResource NegaflowSidebarButtonStyle}"
-                    Tag="Files">
-                    <FontIcon x:Name="FilesRailIcon" FontSize="15" Glyph="&#xE8B7;" />
-                </Button>
-                <Button
-                    x:Name="VersionsRailButton"
-                    AutomationProperties.AutomationId="negaflow.develop.sources.versions"
-                    Click="OnDevelopSourceRailClicked"
-                    Style="{StaticResource NegaflowSidebarButtonStyle}"
-                    Tag="Versions">
-                    <FontIcon x:Name="VersionsRailIcon" FontSize="15" Glyph="&#xE823;" />
-                </Button>
-                <Button
-                    x:Name="PresetsRailButton"
-                    AutomationProperties.AutomationId="negaflow.develop.sources.presets"
-                    Click="OnDevelopSourceRailClicked"
-                    Style="{StaticResource NegaflowSidebarButtonStyle}"
-                    Tag="Presets">
-                    <FontIcon x:Name="PresetsRailIcon" FontSize="15" Glyph="&#xE9E9;" />
-                </Button>
-                <Button
-                    x:Name="FilmRailButton"
-                    AutomationProperties.AutomationId="negaflow.develop.sources.film"
-                    Click="OnDevelopSourceRailClicked"
-                    Style="{StaticResource NegaflowSidebarButtonStyle}"
-                    Tag="Film">
-                    <FontIcon x:Name="FilmRailIcon" FontSize="15" Glyph="&#xE722;" />
-                </Button>
-                <Button
-                    x:Name="OutputRailButton"
-                    AutomationProperties.AutomationId="negaflow.develop.sources.output"
-                    Click="OnDevelopSourceRailClicked"
-                    Style="{StaticResource NegaflowSidebarButtonStyle}"
-                    Tag="Output">
-                    <FontIcon x:Name="OutputRailIcon" FontSize="15" Glyph="&#xE72D;" />
-                </Button>
+        <!-- 선택/단축키 호환을 위한 비표시 상태 컨트롤입니다. macOS 화면에는
+             단일 프레임 ComboBox가 없으므로 렌더링하지 않습니다. -->
+        <Grid Visibility="Collapsed">
+            <StackPanel x:Name="NoFrameLeftPanel">
+                <TextBlock x:Name="NoFrameLeftText" />
             </StackPanel>
-
-            <Border Grid.Column="1" Background="{ThemeResource NegaflowDividerBrush}" />
-
-            <Grid Grid.Column="2">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="44" />
-                    <RowDefinition Height="1" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-                <Grid x:Name="DevelopSourceHeader" Grid.Row="0" Padding="12,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <FontIcon x:Name="DevelopSourceIcon" Grid.Column="0" Margin="0,0,7,0" VerticalAlignment="Center" FontSize="14" Glyph="&#xE8FD;" />
-                    <TextBlock x:Name="LibraryHeaderText" Grid.Column="1" VerticalAlignment="Center" FontSize="14" FontWeight="SemiBold" />
-                    <TextBlock x:Name="NoFrameHeaderText" Grid.Column="2" VerticalAlignment="Center" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                </Grid>
-                <Border Grid.Row="1" Background="{ThemeResource NegaflowDividerBrush}" />
-
-                <!-- 출력 소스: macOS 의 내보내기 설정 패널입니다. 형식·폴더·파일명 패턴을
-                     정하고 미리보기로 실제 파일명을 확인한 뒤 내보냅니다. -->
-                <export:DevelopExportPanel
-                    x:Name="ExportPanel"
-                    Grid.Row="2"
-                    Visibility="Collapsed" />
-
-                <!-- 버전 소스: 지금 recipe 를 이름 붙여 담아 두고 되돌립니다. -->
-                <versions:DevelopVersionsPanel
-                    x:Name="VersionsPanel"
-                    Grid.Row="2"
-                    Visibility="Collapsed" />
-
-                <!-- 프리셋 소스: macOS 의 복사/붙여넣기와 사용자 프리셋입니다. 번들 룩 프로파일은
-                     macOS 에서도 이 탭에 나오지 않습니다 — 가져오기가 neutral 을 걸어 둡니다. -->
-                <!-- 프리셋 소스: macOS 의 복사/붙여넣기와 사용자 프리셋입니다. -->
-                <presets:DevelopPresetsPanel
-                    x:Name="PresetsPanel"
-                    Grid.Row="2"
-                    Visibility="Collapsed" />
-
-                <!-- 필름 소스: macOS 처럼 digital source 에서만 고를 수 있고, 스캔 프레임에는
-                     안내만 냅니다. 묶음과 순서는 FilmEmulationCatalog 가 정합니다. -->
-                <!-- 필름 소스: macOS 처럼 digital source 에서만 고를 수 있습니다. -->
-                <film:DevelopFilmLookPanel
-                    x:Name="FilmLookPanel"
-                    Grid.Row="2"
-                    Visibility="Collapsed" />
-
-                <TreeView
-                    x:Name="DevelopFilesSourceTree"
-                    Grid.Row="2"
-                    Padding="4,6"
-                    AutomationProperties.AutomationId="negaflow.develop.sources.files"
-                    CanDragItems="False"
-                    CanReorderItems="False"
-                    ItemInvoked="OnDevelopFilesTreeItemInvoked"
-                    SelectionMode="Single"
-                    Visibility="Collapsed">
-                    <TreeView.ItemTemplate>
-                        <DataTemplate x:DataType="TreeViewNode">
-                            <TreeViewItem
-                                AutomationProperties.Name="{Binding Content.Title, Mode=OneWay}"
-                                IsExpanded="{Binding IsExpanded, Mode=TwoWay}"
-                                ItemsSource="{Binding Children}">
-                                <Grid ColumnSpacing="6">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <FontIcon
-                                        FontSize="12"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                        Glyph="{Binding Content.Glyph, Mode=OneWay}" />
-                                    <TextBlock
-                                        Grid.Column="1"
-                                        FontSize="12"
-                                        Text="{Binding Content.Title, Mode=OneWay}"
-                                        TextTrimming="CharacterEllipsis" />
-                                    <TextBlock
-                                        Grid.Column="2"
-                                        FontSize="11"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                        Text="{Binding Content.Detail, Mode=OneWay}" />
-                                </Grid>
-                            </TreeViewItem>
-                        </DataTemplate>
-                    </TreeView.ItemTemplate>
-                </TreeView>
-
-                <!-- macOS LibrarySourceSection(content: .combined): 가져오기 3분할 캡슐과
-                     현재 프레임 폴더 트리를 같은 스크롤 패널에 둡니다. -->
-                <ScrollViewer x:Name="LibrarySourcePanel" Grid.Row="2">
-                    <StackPanel Padding="12,14" Spacing="14">
-                        <StackPanel Spacing="8">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <FontIcon FontSize="12" Glyph="&#xE896;" />
-                                <TextBlock x:Name="LibraryImportSectionText" FontSize="13" FontWeight="SemiBold" />
-                            </StackPanel>
-                            <Border
-                                Padding="2"
-                                Background="{ThemeResource NegaflowSubtleFillBrush}"
-                                CornerRadius="16">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="1" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="1" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <Button
-                                        x:Name="ImportButton"
-                                        AutomationProperties.AutomationId="negaflow.develop.import.image"
-                                        Click="OnImportClicked"
-                                        Style="{StaticResource NegaflowImportActionStyle}">
-                                        <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
-                                            <StackPanel Orientation="Horizontal" Spacing="5">
-                                                <FontIcon FontSize="12" Glyph="&#xE91B;" />
-                                                <TextBlock x:Name="ImportImageText" />
-                                            </StackPanel>
-                                        </Viewbox>
-                                    </Button>
-                                    <Border Grid.Column="1" Height="16" VerticalAlignment="Center" Background="{ThemeResource NegaflowDividerBrush}" />
-                                    <Button
-                                        x:Name="ImportFolderButton"
-                                        Grid.Column="2"
-                                        AutomationProperties.AutomationId="negaflow.develop.import.folder"
-                                        Click="OnImportFolderClicked"
-                                        Style="{StaticResource NegaflowImportActionStyle}">
-                                        <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
-                                            <StackPanel Orientation="Horizontal" Spacing="5">
-                                                <FontIcon FontSize="12" Glyph="&#xE8B7;" />
-                                                <TextBlock x:Name="ImportFolderText" />
-                                            </StackPanel>
-                                        </Viewbox>
-                                    </Button>
-                                    <Border Grid.Column="3" Height="16" VerticalAlignment="Center" Background="{ThemeResource NegaflowDividerBrush}" />
-                                    <Button
-                                        x:Name="ImportScannerButton"
-                                        Grid.Column="4"
-                                        AutomationProperties.AutomationId="negaflow.develop.import.scanner"
-                                        Click="OnImportScannerClicked"
-                                        Style="{StaticResource NegaflowImportActionStyle}">
-                                        <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
-                                            <StackPanel Orientation="Horizontal" Spacing="5">
-                                                <FontIcon FontSize="12" Glyph="&#xE950;" />
-                                                <TextBlock x:Name="ImportScannerText" />
-                                            </StackPanel>
-                                        </Viewbox>
-                                    </Button>
-                                </Grid>
-                            </Border>
-                        </StackPanel>
-                        <TextBlock
-                            x:Name="ImportStatusText"
-                            FontSize="11"
-                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                            TextWrapping="Wrap" />
-                        <TreeView
-                            x:Name="DevelopLibrarySourceTree"
-                            Padding="0"
-                            AutomationProperties.AutomationId="negaflow.develop.sources.library-tree"
-                            CanDragItems="False"
-                            CanReorderItems="False"
-                            ItemInvoked="OnDevelopLibraryTreeItemInvoked"
-                            SelectionMode="Single">
-                            <TreeView.ItemTemplate>
-                                <DataTemplate x:DataType="TreeViewNode">
-                                    <TreeViewItem
-                                        AutomationProperties.Name="{Binding Content.Title, Mode=OneWay}"
-                                        IsExpanded="{Binding IsExpanded, Mode=TwoWay}"
-                                        ItemsSource="{Binding Children}">
-                                        <Grid ColumnSpacing="6">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <FontIcon FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="{Binding Content.Glyph, Mode=OneWay}" />
-                                            <TextBlock Grid.Column="1" FontSize="12" Text="{Binding Content.Title, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
-                                            <TextBlock Grid.Column="2" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{Binding Content.Detail, Mode=OneWay}" />
-                                        </Grid>
-                                    </TreeViewItem>
-                                </DataTemplate>
-                            </TreeView.ItemTemplate>
-                        </TreeView>
-
-                        <!-- 선택/단축키 호환을 위한 비표시 상태 컨트롤입니다. macOS 화면에는
-                             단일 프레임 ComboBox가 없으므로 렌더링하지 않습니다. -->
-                        <Grid Visibility="Collapsed">
-                            <StackPanel x:Name="NoFrameLeftPanel">
-                                <TextBlock x:Name="NoFrameLeftText" />
-                            </StackPanel>
-                            <StackPanel x:Name="FramePanel">
-                                <TextBlock x:Name="SelectedFrameText" />
-                                <ComboBox x:Name="FrameSelector" DisplayMemberPath="DisplayName" SelectionChanged="OnFrameSelectionChanged" />
-                                <TextBlock x:Name="ExportStatusText" />
-                            </StackPanel>
-                        </Grid>
-                    </StackPanel>
-                </ScrollViewer>
-            </Grid>
+            <StackPanel x:Name="FramePanel">
+                <TextBlock x:Name="SelectedFrameText" />
+                <ComboBox x:Name="FrameSelector" DisplayMemberPath="DisplayName" SelectionChanged="OnFrameSelectionChanged" />
+                <TextBlock x:Name="ExportStatusText" />
+            </StackPanel>
         </Grid>
 
         <Border x:Name="LeftDivider" Grid.Column="1" Background="{ThemeResource NegaflowDividerBrush}" />

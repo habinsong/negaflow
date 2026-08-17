@@ -14,10 +14,6 @@ using Negaflow.Interop;
 using Negaflow.Shell.Develop;
 using Negaflow.Shell.Localization;
 using Negaflow.Shell.Views.Controls;
-using Negaflow.Shell.Views.Develop.Export;
-using Negaflow.Shell.Views.Develop.Film;
-using Negaflow.Shell.Views.Develop.Presets;
-using Negaflow.Shell.Views.Develop.Versions;
 using Negaflow.Shell.Views.Layout;
 using Windows.System;
 using Windows.UI.Core;
@@ -32,7 +28,6 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private DevelopPanelState? panel;
     private LibraryHostService? libraryHost;
     private ToneLimits? toneLimits;
-    private Microsoft.UI.WindowId? importWindowId;
     private PreviewCoordinator? previewCoordinator;
     private SoftProofPreferences softProofPreferences = new();
     private AutoAdjustCoordinator? autoAdjustCoordinator;
@@ -42,7 +37,6 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private bool isSynchronizingInspectorPresentation;
     private bool isInspectorPresentationReady;
     private Negaflow.Shell.Library.ThumbnailService? thumbnails;
-    private WorkflowSidebarTab developSource = WorkflowSidebarTab.Library;
     private GrainMendDetectCoordinator? grainMendDetectCoordinator;
     private bool isSynchronizingMetadata;
     private string engineVersion = "unknown";
@@ -57,6 +51,9 @@ public sealed partial class DevelopWorkspaceView : UserControl
         InitializeComponent();
         isInspectorPresentationReady = true;
         DefectLayers.Command += OnDefectLayerCommand;
+        LeftPanel.FrameSelected += OnSourceFrameSelected;
+        LeftPanel.FramesImported += OnSourceFramesImported;
+        LeftPanel.ScannerSetupRequested += OnSourceScannerSetupRequested;
         ApplyInspectorPresentation();
         LocalizeControls();
     }
@@ -78,8 +75,8 @@ public sealed partial class DevelopWorkspaceView : UserControl
         state.Changed += OnStateChanged;
         Filmstrip.Initialize(state);
         Filmstrip.FrameSelected += OnFilmstripFrameSelected;
-        ExportPanel.Attach(state);
-        ExportPanel.RunQuickExport = QuickExportAsync;
+        LeftPanel.Attach(state);
+        LeftPanel.ExportPanel.RunQuickExport = QuickExportAsync;
         StatusBar.Initialize(nativeEngineStatus);
         engineVersion = nativeEngineStatus.BuildInfo?.AbiVersion.ToString() ?? "unknown";
         UpdateState(state.Current);
@@ -113,7 +110,6 @@ public sealed partial class DevelopWorkspaceView : UserControl
         ArgumentNullException.ThrowIfNull(host);
         ArgumentNullException.ThrowIfNull(limits);
         ArgumentNullException.ThrowIfNull(negativeLimits);
-        importWindowId = windowId;
 
         if (libraryHost is not null)
         {
@@ -124,13 +120,10 @@ public sealed partial class DevelopWorkspaceView : UserControl
         host.SelectionChanged += OnLibrarySelectionChanged;
         toneLimits = limits;
         panel = new DevelopPanelState(host, limits, negativeLimits);
-        ExportPanel.Bind(panel, host, windowId, engineVersion);
-        VersionsPanel.Bind(panel);
-        VersionsPanel.VersionRestored += OnVersionRestored;
-        PresetsPanel.Bind(panel);
-        PresetsPanel.RecipeReplaced += OnPresetRecipeReplaced;
-        FilmLookPanel.Bind(panel);
-        FilmLookPanel.LookChanged += OnFilmLookChanged;
+        LeftPanel.Bind(panel, host, windowId, engineVersion);
+        LeftPanel.VersionsPanel.VersionRestored += OnVersionRestored;
+        LeftPanel.PresetsPanel.RecipeReplaced += OnPresetRecipeReplaced;
+        LeftPanel.FilmLookPanel.LookChanged += OnFilmLookChanged;
         // 사용자 프리셋은 카탈로그가 아니라 앱 설정 옆에 삽니다. macOS 의 UserDefaults 자리입니다.
         panel.OpenUserPresets(Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -227,13 +220,11 @@ public sealed partial class DevelopWorkspaceView : UserControl
         DevelopInspectorContent.Visibility = hasFrames ? Visibility.Visible : Visibility.Collapsed;
         if (!hasFrames)
         {
-            string noFrame = AppResources.Get("noFrame", "Text");
-            NoFrameHeaderText.Text = noFrame;
-            ToolTipService.SetToolTip(NoFrameHeaderText, noFrame);
+            LeftPanel.SetHeaderTitle(AppResources.Get("noFrame", "Text"));
             FrameSelector.ItemsSource = null;
             Filmstrip.ShowFrames([], -1);
             HistogramView.Clear();
-            RebuildDevelopLibraryTree();
+            LeftPanel.RebuildLibraryTree();
             SyncToneControls();
             NotifyQuickExportAvailabilityChanged();
             return;
@@ -250,7 +241,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
             FrameSelector.ItemsSource = items;
             FrameSelector.SelectedIndex = selectedIndex;
             // 필름스트립과 왼쪽 목록은 같은 항목을 봅니다. 썸네일이 도착하면 둘 다 채워집니다.
-            RebuildDevelopLibraryTree();
+            LeftPanel.RebuildLibraryTree();
             Filmstrip.ShowFrames(items, selectedIndex);
         }
         finally
@@ -474,110 +465,31 @@ public sealed partial class DevelopWorkspaceView : UserControl
         content.Visibility = isExpanded ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    private async void OnImportClicked(object sender, RoutedEventArgs args)
+    private void OnSourceFrameSelected(object? sender, string frameId)
     {
         _ = sender;
-        _ = args;
-        if (libraryHost is null || importWindowId is null)
+        if (panel is null)
         {
             return;
         }
-
-        // Windows App SDK 1.8 의 picker 는 WindowId 를 받으므로 InitializeWithWindow 가
-        // 필요 없습니다. 미패키지 구성에서도 그대로 동작합니다.
-        Microsoft.Windows.Storage.Pickers.FileOpenPicker picker = new(importWindowId.Value)
-        {
-            CommitButtonText = AppResources.Get("importSection", "Value"),
-        };
-        foreach (string extension in ImageSourcePaths.SupportedImportExtensions)
-        {
-            picker.FileTypeFilter.Add(extension);
-        }
-
-        SetImportActionsEnabled(false);
-        try
-        {
-            IReadOnlyList<Microsoft.Windows.Storage.Pickers.PickFileResult> picked =
-                await picker.PickMultipleFilesAsync();
-            List<string> paths = [];
-            foreach (Microsoft.Windows.Storage.Pickers.PickFileResult file in picked)
-            {
-                paths.Add(file.Path);
-            }
-
-            FrameImportPlan plan = libraryHost.Import(paths, DevelopmentProcess.C41);
-            ImportStatusText.Text = FrameImport.Describe(plan);
-            RefreshFrames();
-        }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException or
-            NotSupportedException or ArgumentException or PathTooLongException)
-        {
-            ImportStatusText.Text = AppResources.Get("libraryImportFailed", "Text");
-        }
-        finally
-        {
-            SetImportActionsEnabled(true);
-        }
+        panel.Select(frameId);
+        SynchronizeInspectorValues();
+        RequestPreview();
+        LeftPanel.RebuildLibraryTree();
     }
 
-    private async void OnImportFolderClicked(object sender, RoutedEventArgs args)
+    private void OnSourceFramesImported(object? sender, EventArgs args)
     {
         _ = sender;
         _ = args;
-        if (libraryHost is null || importWindowId is null)
-        {
-            return;
-        }
-
-        Microsoft.Windows.Storage.Pickers.FolderPicker picker = new(importWindowId.Value)
-        {
-            CommitButtonText = AppResources.Get("importFolder", "Content"),
-        };
-        SetImportActionsEnabled(false);
-        ImportStatusText.Text = string.Empty;
-        try
-        {
-            Microsoft.Windows.Storage.Pickers.PickFolderResult? picked =
-                await picker.PickSingleFolderAsync();
-            if (picked is null)
-            {
-                return;
-            }
-            FolderImportResult imported = libraryHost.ImportFolders(
-                [picked.Path],
-                DevelopmentProcess.C41);
-            ImportStatusText.Text = imported.IsSuccess
-                ? AppResources.FormatIntegers(
-                    "libraryFolderImportResult",
-                    "Text",
-                    imported.AddedFrameCount,
-                    imported.AddedFolderCount)
-                : AppResources.Get("libraryImportFailed", "Text");
-            RefreshFrames();
-        }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException or
-            NotSupportedException or ArgumentException or PathTooLongException)
-        {
-            ImportStatusText.Text = AppResources.Get("libraryImportFailed", "Text");
-        }
-        finally
-        {
-            SetImportActionsEnabled(true);
-        }
+        RefreshFrames();
     }
 
-    private void OnImportScannerClicked(object sender, RoutedEventArgs args)
+    private void OnSourceScannerSetupRequested(object? sender, EventArgs args)
     {
         _ = sender;
         _ = args;
         ScannerSetupRequested?.Invoke(this, EventArgs.Empty);
-    }
-
-    private void SetImportActionsEnabled(bool enabled)
-    {
-        ImportButton.IsEnabled = enabled;
-        ImportFolderButton.IsEnabled = enabled;
-        ImportScannerButton.IsEnabled = enabled;
     }
 
     private void OnFrameSelectionChanged(object sender, SelectionChangedEventArgs args)
@@ -610,8 +522,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         }
         panel.Select(item.Id);
         Filmstrip.SynchronizeSelection(selectedIndex);
-        NoFrameHeaderText.Text = item.DisplayName;
-        ToolTipService.SetToolTip(NoFrameHeaderText, item.DisplayName);
+        LeftPanel.SetHeaderTitle(item.DisplayName);
         UpdateSelectedFrameText();
         SynchronizeInspectorValues();
         SyncBaseControls();
@@ -724,9 +635,9 @@ public sealed partial class DevelopWorkspaceView : UserControl
         AutoColorToggle.IsChecked = panel.AutoNeutralBalance;
         AutoLevelsToggle.IsChecked = panel.AutoLevels;
         UpdateCropAspectControls();
-        FilmLookPanel.Update();
+        LeftPanel.FilmLookPanel.Update();
         UpdateVersionControls();
-        PresetsPanel.Update();
+        LeftPanel.PresetsPanel.Update();
         HistogramView.SynchronizeValues(
             panel.Tone.Shadows,
             panel.Tone.Density,
@@ -1948,177 +1859,6 @@ public sealed partial class DevelopWorkspaceView : UserControl
         UpdateImageTransform(state => state.SetStraightenAngle(args.Value));
     }
 
-    /// <summary>macOS <c>WorkflowSidebarTab</c>과 같은 현상 왼쪽 소스를 바꿉니다.</summary>
-    private void OnDevelopSourceRailClicked(object sender, RoutedEventArgs args)
-    {
-        _ = args;
-        if (sender is not Button { Tag: string tag } ||
-            !Enum.TryParse(tag, out WorkflowSidebarTab kind))
-        {
-            return;
-        }
-        developSource = kind;
-        workspaceState?.SelectDevelopSidebarTab(kind);
-        UpdateDevelopSourcePanel();
-    }
-
-    private void UpdateDevelopSourcePanel()
-    {
-        LibrarySourcePanel.Visibility = Show(WorkflowSidebarTab.Library);
-        if (developSource == WorkflowSidebarTab.Library)
-        {
-            RebuildDevelopLibraryTree();
-        }
-        DevelopFilesSourceTree.Visibility = Show(WorkflowSidebarTab.Files);
-        if (developSource == WorkflowSidebarTab.Files)
-        {
-            RebuildDevelopFilesTree();
-        }
-        VersionsPanel.Visibility = Show(WorkflowSidebarTab.Versions);
-        PresetsPanel.Visibility = Show(WorkflowSidebarTab.Presets);
-        FilmLookPanel.Visibility = Show(WorkflowSidebarTab.Film);
-        ExportPanel.Visibility = Show(WorkflowSidebarTab.Output);
-
-        (string headerKey, string glyph) = developSource switch
-        {
-            WorkflowSidebarTab.Files => ("sidebarFiles", ""),
-            WorkflowSidebarTab.Versions => ("developSectionVersions", ""),
-            WorkflowSidebarTab.Presets => ("developSectionPresets", "\uE9E9"),
-            WorkflowSidebarTab.Film => ("developSectionFilm", ""),
-            WorkflowSidebarTab.Output => ("developSectionOutput", ""),
-            _ => ("developLibrary", ""),
-        };
-        LibraryHeaderText.Text = AppResources.Get(headerKey, "Text");
-        DevelopSourceIcon.Glyph = glyph;
-
-        var accent = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"];
-        var normal = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorPrimaryBrush"];
-        var selection = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["NegaflowSelectionBrush"];
-        foreach ((Button button, FontIcon icon, WorkflowSidebarTab kind) in DevelopSourceRailButtons())
-        {
-            bool selected = kind == developSource;
-            button.Background = selected
-                ? selection
-                : new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent);
-            icon.Foreground = selected ? accent : normal;
-            AutomationProperties.SetItemStatus(
-                button,
-                AppResources.Get(selected ? "selected" : "notSelected", "Value"));
-        }
-        ExportPanel.RefreshPreview();
-        FilmLookPanel.Update();
-        PresetsPanel.Update();
-    }
-
-    /// <summary>
-    /// 라이브러리와 같은 폴더 트리입니다. 같은 투영을 쓰므로 두 화면이 서로 다른 폴더 목록을
-    /// 보여 주지 않습니다.
-    /// </summary>
-    private void RebuildDevelopFilesTree()
-    {
-        DevelopFilesSourceTree.RootNodes.Clear();
-        if (libraryHost is null)
-        {
-            return;
-        }
-        LibraryBrowserProjection projection = LibraryBrowserProjector.Create(
-            LibraryFrameListItems.From(
-                libraryHost.Frames,
-                libraryHost.SourceAvailabilityByFrameId),
-            libraryHost.Folders,
-            libraryHost.FolderAvailabilityById,
-            LibraryBrowserViewMode.Folders);
-        AddDevelopFolderNodes(DevelopFilesSourceTree, projection.FolderSections);
-    }
-
-    /// <summary>
-    /// macOS combined Library 탭처럼 현재 frame이 든 폴더만 보입니다. Files 탭은 전체 폴더를
-    /// 보이므로 두 탭의 역할을 섞지 않습니다.
-    /// </summary>
-    private void RebuildDevelopLibraryTree()
-    {
-        DevelopLibrarySourceTree.RootNodes.Clear();
-        if (libraryHost?.ActiveFrameId is not { } activeFrameId)
-        {
-            return;
-        }
-        LibraryBrowserProjection projection = LibraryBrowserProjector.Create(
-            LibraryFrameListItems.From(
-                libraryHost.Frames,
-                libraryHost.SourceAvailabilityByFrameId),
-            libraryHost.Folders,
-            libraryHost.FolderAvailabilityById,
-            LibraryBrowserViewMode.Folders);
-        AddDevelopFolderNodes(
-            DevelopLibrarySourceTree,
-            projection.FolderSections.Where(section =>
-                section.Items.Any(item => string.Equals(
-                    item.Id,
-                    activeFrameId,
-                    StringComparison.Ordinal))));
-    }
-
-    private static void AddDevelopFolderNodes(
-        TreeView tree,
-        IEnumerable<LibraryBrowserFolderSection> sections)
-    {
-        foreach (LibraryBrowserFolderSection section in sections)
-        {
-            var folder = new TreeViewNode
-            {
-                Content = LibrarySourceNode.Folder(
-                    section.Title,
-                    AppResources.FormatIntegers("libraryFolderFrameCount", "Text", section.Count)),
-            };
-            foreach (LibraryFrameListItem item in section.Items)
-            {
-                folder.Children.Add(new TreeViewNode
-                {
-                    Content = LibrarySourceNode.Frame(item.DisplayName, item.Id),
-                });
-            }
-            tree.RootNodes.Add(folder);
-        }
-    }
-
-    /// <summary>트리에서 frame 을 누르면 그 장을 현상 대상으로 잡습니다.</summary>
-    private void OnDevelopFilesTreeItemInvoked(TreeView sender, TreeViewItemInvokedEventArgs args)
-    {
-        SelectDevelopTreeFrame(args);
-    }
-
-    private void OnDevelopLibraryTreeItemInvoked(TreeView sender, TreeViewItemInvokedEventArgs args)
-    {
-        SelectDevelopTreeFrame(args);
-    }
-
-    private void SelectDevelopTreeFrame(TreeViewItemInvokedEventArgs args)
-    {
-        if (args.InvokedItem is not TreeViewNode { Content: LibrarySourceNode node } ||
-            node.FrameId is not { } frameId ||
-            panel is null)
-        {
-            return;
-        }
-        panel.Select(frameId);
-        SynchronizeInspectorValues();
-        RequestPreview();
-        RebuildDevelopLibraryTree();
-    }
-
-    private Visibility Show(WorkflowSidebarTab kind) =>
-        developSource == kind ? Visibility.Visible : Visibility.Collapsed;
-
-    private IEnumerable<(Button Button, FontIcon Icon, WorkflowSidebarTab Kind)> DevelopSourceRailButtons()
-    {
-        yield return (LibraryRailButton, LibraryRailIcon, WorkflowSidebarTab.Library);
-        yield return (FilesRailButton, FilesRailIcon, WorkflowSidebarTab.Files);
-        yield return (VersionsRailButton, VersionsRailIcon, WorkflowSidebarTab.Versions);
-        yield return (PresetsRailButton, PresetsRailIcon, WorkflowSidebarTab.Presets);
-        yield return (FilmRailButton, FilmRailIcon, WorkflowSidebarTab.Film);
-        yield return (OutputRailButton, OutputRailIcon, WorkflowSidebarTab.Output);
-    }
-
     /// <summary>
     /// recipe 가 통째로 바뀌었을 때 화면 전체를 다시 맞춥니다. 붙여넣기와 프리셋 적용이 같은
     /// 자리를 쓰므로 한쪽만 갱신되는 일이 없습니다.
@@ -2128,8 +1868,8 @@ public sealed partial class DevelopWorkspaceView : UserControl
         SynchronizeInspectorValues();
         SyncBaseControls();
         SyncToneControls();
-        FilmLookPanel.Update();
-        PresetsPanel.Update();
+        LeftPanel.FilmLookPanel.Update();
+        LeftPanel.PresetsPanel.Update();
         RequestPreview();
     }
 
@@ -2954,7 +2694,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         AppResources.Get("developInfoUnknown", "Text"),
         AppResources.Get("developInfoSidecarNotFound", "Text"));
 
-    private void UpdateVersionControls() => VersionsPanel.Update();
+    private void UpdateVersionControls() => LeftPanel.VersionsPanel.Update();
 
     private void OnVersionRestored(object? sender, EventArgs args)
     {
@@ -2967,7 +2707,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         RequestPreview();
     }
 
-    private void UpdateFilmLookControls() => FilmLookPanel.Update();
+    private void UpdateFilmLookControls() => LeftPanel.FilmLookPanel.Update();
 
     private void OnFilmLookChanged(
         object? sender,
@@ -2992,8 +2732,8 @@ public sealed partial class DevelopWorkspaceView : UserControl
         {
             SynchronizeSharedSelection();
         }
-        RebuildDevelopLibraryTree();
-        ExportPanel.RefreshPreview();
+        LeftPanel.RebuildLibraryTree();
+        LeftPanel.ExportPanel.RefreshPreview();
     }
 
     private void SynchronizeSharedSelection()
@@ -3188,10 +2928,10 @@ public sealed partial class DevelopWorkspaceView : UserControl
 
         ExportStatusText.Text = AppResources.Get("developExportRunning", "Text");
         Task<bool> exportTask = panel.ExportAsync(
-            ExportPanel.QuickSettings.Destination.PathFor(frame.SourcePath),
-            ExportPanel.QuickSettings.Format,
+            LeftPanel.ExportPanel.QuickSettings.Destination.PathFor(frame.SourcePath),
+            LeftPanel.ExportPanel.QuickSettings.Format,
             outcome => ExportStatusText.Text = DevelopPanelState.Describe(outcome),
-            ExportPanel.QuickSettings.Encoding);
+            LeftPanel.ExportPanel.QuickSettings.Encoding);
         NotifyQuickExportAvailabilityChanged();
         bool delivered = await exportTask;
         if (!delivered)
@@ -3273,16 +3013,12 @@ public sealed partial class DevelopWorkspaceView : UserControl
         RightResizeThumb.Visibility = RightPanel.Visibility;
         Filmstrip.Visibility = preferences.IsFilmstripVisible ? Visibility.Visible : Visibility.Collapsed;
         SynchronizeWidths(preferences);
-        if (developSource != preferences.SelectedDevelopSidebarTab)
+        LeftPanel.SynchronizeTab(preferences.SelectedDevelopSidebarTab);
+        if (LeftPanel.ExportPanel.Settings != preferences.Export ||
+            LeftPanel.ExportPanel.QuickSettings != preferences.QuickExport ||
+            LeftPanel.ExportPanel.Recipes != preferences.ExportRecipes)
         {
-            developSource = preferences.SelectedDevelopSidebarTab;
-            UpdateDevelopSourcePanel();
-        }
-        if (ExportPanel.Settings != preferences.Export ||
-            ExportPanel.QuickSettings != preferences.QuickExport ||
-            ExportPanel.Recipes != preferences.ExportRecipes)
-        {
-            ExportPanel.ApplyPreferences(
+            LeftPanel.ExportPanel.ApplyPreferences(
                 preferences.Export,
                 preferences.QuickExport,
                 preferences.ExportRecipes);
@@ -3327,51 +3063,17 @@ public sealed partial class DevelopWorkspaceView : UserControl
         UpdateCompactRail();
     }
 
-    private void UpdateCompactRail()
-    {
-        bool compact = LeftPanel.Width < ShellLayoutMetrics.SidebarCompactThreshold;
-        LeftRailColumn.Width = new GridLength(compact
-            ? ShellLayoutMetrics.SidebarCompactRailWidth
-            : ShellLayoutMetrics.SidebarRegularRailWidth);
-        DevelopSourceRail.Padding = compact
-            ? new Thickness(8, 10, 8, 0)
-            : new Thickness(22, 10, 22, 0);
-        DevelopSourceHeader.Padding = compact
-            ? new Thickness(8, 0, 8, 0)
-            : new Thickness(12, 0, 12, 0);
-    }
+    private void UpdateCompactRail() => LeftPanel.UpdateCompactRail();
 
     private void LocalizeControls()
     {
-        SetNameAndTooltip(LibraryRailButton, "sidebarLibrary");
-        SetNameAndTooltip(FilesRailButton, "sidebarFiles");
-        SetNameAndTooltip(VersionsRailButton, "sidebarVersions");
-        SetNameAndTooltip(PresetsRailButton, "sidebarPresets");
-        SetNameAndTooltip(FilmRailButton, "sidebarFilm");
-        SetNameAndTooltip(OutputRailButton, "sidebarOutput");
-        LibraryHeaderText.Text = AppResources.Get("sidebarLibrary", "Text");
+        LeftPanel.Localize();
         string noFrame = AppResources.Get("noFrame", "Text");
-        NoFrameHeaderText.Text = noFrame;
         NoFrameLeftText.Text = noFrame;
         NoFrameInspectorText.Text = noFrame;
         DevelopHeaderText.Text = AppResources.Get("menuDevelop", "Text");
-        LibraryImportSectionText.Text = AppResources.Get("importSection", "Text");
-        ImportImageText.Text = AppResources.Get("libraryImportImageShort", "Content");
-        ImportFolderText.Text = AppResources.Get("libraryImportFolderShort", "Content");
-        ImportScannerText.Text = AppResources.Get("libraryScannerLabel", "Content");
-        AutomationProperties.SetName(ImportButton, ImportImageText.Text);
-        AutomationProperties.SetName(ImportFolderButton, ImportFolderText.Text);
-        AutomationProperties.SetName(ImportScannerButton, ImportScannerText.Text);
-        ExportPanel.Localize();
         LocalizeAppMetadataCards();
         LocalizeRollRecordCard();
-        SetLocalizedNameAndTooltip(LibraryRailButton, AppResources.Get("developLibrary", "Text"));
-        SetLocalizedNameAndTooltip(VersionsRailButton, AppResources.Get("developSectionVersions", "Text"));
-        VersionsPanel.Localize();
-        SetLocalizedNameAndTooltip(FilmRailButton, AppResources.Get("developSectionFilm", "Text"));
-        SetLocalizedNameAndTooltip(OutputRailButton, AppResources.Get("developSectionOutput", "Text"));
-        FilmLookPanel.Localize();
-        UpdateDevelopSourcePanel();
         SetRadioText(BaseAutoModeButton, AppResources.Get("developBaseModeAuto", "Content"));
         SetRadioText(BaseFilmModeButton, AppResources.Get("developBaseModeFilm", "Content"));
         SetRadioText(BaseManualModeButton, AppResources.Get("developBaseModeManual", "Content"));

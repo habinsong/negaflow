@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Negaflow.Shell.Views.Develop.Sources.DevelopSourceRail"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel x:Name="Rail" x:FieldModifier="internal" Padding="22,10,22,0" Spacing="7">
+        <Button
+            x:Name="LibraryRailButton"
+            x:FieldModifier="internal"
+            AutomationProperties.AutomationId="negaflow.develop.sources.library"
+            Background="{ThemeResource NegaflowSelectionBrush}"
+            Click="OnRailClicked"
+            Style="{StaticResource NegaflowSidebarButtonStyle}"
+            Tag="Library">
+            <FontIcon x:Name="LibraryRailIcon" x:FieldModifier="internal" FontSize="15" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" Glyph="&#xE8FD;" />
+        </Button>
+        <Button
+            x:Name="FilesRailButton"
+            x:FieldModifier="internal"
+            AutomationProperties.AutomationId="negaflow.develop.sources.files.rail"
+            Click="OnRailClicked"
+            Style="{StaticResource NegaflowSidebarButtonStyle}"
+            Tag="Files">
+            <FontIcon x:Name="FilesRailIcon" x:FieldModifier="internal" FontSize="15" Glyph="&#xE8B7;" />
+        </Button>
+        <Button
+            x:Name="VersionsRailButton"
+            x:FieldModifier="internal"
+            AutomationProperties.AutomationId="negaflow.develop.sources.versions"
+            Click="OnRailClicked"
+            Style="{StaticResource NegaflowSidebarButtonStyle}"
+            Tag="Versions">
+            <FontIcon x:Name="VersionsRailIcon" x:FieldModifier="internal" FontSize="15" Glyph="&#xE823;" />
+        </Button>
+        <Button
+            x:Name="PresetsRailButton"
+            x:FieldModifier="internal"
+            AutomationProperties.AutomationId="negaflow.develop.sources.presets"
+            Click="OnRailClicked"
+            Style="{StaticResource NegaflowSidebarButtonStyle}"
+            Tag="Presets">
+            <FontIcon x:Name="PresetsRailIcon" x:FieldModifier="internal" FontSize="15" Glyph="&#xE9E9;" />
+        </Button>
+        <Button
+            x:Name="FilmRailButton"
+            x:FieldModifier="internal"
+            AutomationProperties.AutomationId="negaflow.develop.sources.film"
+            Click="OnRailClicked"
+            Style="{StaticResource NegaflowSidebarButtonStyle}"
+            Tag="Film">
+            <FontIcon x:Name="FilmRailIcon" x:FieldModifier="internal" FontSize="15" Glyph="&#xE722;" />
+        </Button>
+        <Button
+            x:Name="OutputRailButton"
+            x:FieldModifier="internal"
+            AutomationProperties.AutomationId="negaflow.develop.sources.output"
+            Click="OnRailClicked"
+            Style="{StaticResource NegaflowSidebarButtonStyle}"
+            Tag="Output">
+            <FontIcon x:Name="OutputRailIcon" x:FieldModifier="internal" FontSize="15" Glyph="&#xE72D;" />
+        </Button>
+    </StackPanel>
+</UserControl>
