@@ -14,6 +14,7 @@ using Negaflow.Interop;
 using Negaflow.Shell.Develop;
 using Negaflow.Shell.Localization;
 using Negaflow.Shell.Views.Controls;
+using Negaflow.Shell.Views.Develop.Inspector;
 using Negaflow.Shell.Views.Layout;
 using Windows.System;
 using Windows.UI.Core;
@@ -53,6 +54,15 @@ public sealed partial class DevelopWorkspaceView : UserControl
         LeftPanel.FrameSelected += OnSourceFrameSelected;
         LeftPanel.FramesImported += OnSourceFramesImported;
         LeftPanel.ScannerSetupRequested += OnSourceScannerSetupRequested;
+        Adjustments.PreviewRequested += OnAdjustmentsPreviewRequested;
+        Adjustments.RefreshRequested += OnAdjustmentsRefreshRequested;
+        Adjustments.ResetRequested += OnAdjustmentsResetRequested;
+        Adjustments.SectionToggleRequested += OnAdjustmentSectionToggle;
+        Adjustments.SectionExpansionRequested += OnAdjustmentSectionExpansion;
+        Adjustments.AutoColorToggled += OnAdjustmentAutoColorToggled;
+        Adjustments.AutoLevelsToggled += OnAdjustmentAutoLevelsToggled;
+        Adjustments.AutoToneClicked += OnAdjustmentAutoToneClicked;
+        Adjustments.AutoWhiteBalanceClicked += OnAdjustmentAutoWhiteBalanceClicked;
         ApplyInspectorPresentation();
         LocalizeControls();
     }
@@ -121,6 +131,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         panel = new DevelopPanelState(host, limits, negativeLimits);
         LeftPanel.Bind(panel, host, windowId, engineVersion);
         InfoCards.Bind(panel, host);
+        Adjustments.Bind(panel);
         LeftPanel.VersionsPanel.VersionRestored += OnVersionRestored;
         LeftPanel.PresetsPanel.RecipeReplaced += OnPresetRecipeReplaced;
         LeftPanel.FilmLookPanel.LookChanged += OnFilmLookChanged;
@@ -133,50 +144,8 @@ public sealed partial class DevelopWorkspaceView : UserControl
         FilmStockSelector.ItemsSource = BundledFilmBaseOptions.FilmStocks;
         LightSourceSelector.ItemsSource = BundledFilmBaseOptions.LightSources;
         ScannerProfileSelector.ItemsSource = ScannerProfileChoices();
-        ExposureControl.Minimum = -panel.Tone.MaximumExposureStops;
-        ExposureControl.Maximum = panel.Tone.MaximumExposureStops;
+        Adjustments.ConfigureRanges(panel.Tone.MaximumExposureStops, panel.Tone.MaximumToneControl);
         HistogramView.ConfigureRanges(panel.Tone.MaximumExposureStops, panel.Tone.MaximumToneControl);
-        foreach (InspectorSlider slider in new[]
-                 {
-                     ContrastControl,
-                     HighlightsControl,
-                     ShadowsControl,
-                     WhitesControl,
-                     BlacksControl,
-                     DensityControl,
-                     CurveHighlightsControl,
-                     CurveLightsControl,
-                     CurveDarksControl,
-                     CurveShadowsControl,
-                     RedPrimaryHueControl,
-                     RedPrimarySaturationControl,
-                     GreenPrimaryHueControl,
-                     GreenPrimarySaturationControl,
-                     BluePrimaryHueControl,
-                     BluePrimarySaturationControl,
-                     ClarityControl,
-                     VignetteControl,
-                 })
-        {
-            slider.Minimum = -panel.Tone.MaximumToneControl;
-            slider.Maximum = panel.Tone.MaximumToneControl;
-        }
-        foreach (InspectorSlider slider in new[]
-                 {
-                     NoiseReductionStrengthControl,
-                     NoiseReductionLumaControl,
-                     NoiseReductionChromaControl,
-                     NoiseReductionDarkToneControl,
-                     NoiseReductionDetailControl,
-                     NoiseReductionGrainProtectControl,
-                     GrainControl,
-                     SharpnessControl,
-                     HalationControl,
-                 })
-        {
-            slider.Minimum = 0;
-            slider.Maximum = 1;
-        }
         foreach (InspectorSlider slider in new[] { BaseRedControl, BaseGreenControl, BaseBlueControl })
         {
             slider.Minimum = panel.MinimumManualDmin;
@@ -323,13 +292,10 @@ public sealed partial class DevelopWorkspaceView : UserControl
         ApplyInspectorPresentation();
     }
 
-    private void OnInspectorSectionHeaderClicked(object sender, RoutedEventArgs args)
+    private void OnAdjustmentSectionToggle(object? sender, DevelopInspectorSection section)
     {
-        _ = args;
-        if (!isInspectorPresentationReady ||
-            isSynchronizingInspectorPresentation ||
-            sender is not Button { Tag: string tag } ||
-            !Enum.TryParse(tag, out DevelopInspectorSection section))
+        _ = sender;
+        if (!isInspectorPresentationReady || isSynchronizingInspectorPresentation)
         {
             return;
         }
@@ -345,25 +311,23 @@ public sealed partial class DevelopWorkspaceView : UserControl
         ApplyInspectorPresentation();
     }
 
-    private void OnInspectorSectionExpansionRequested(
+    private void OnAdjustmentSectionExpansion(
         object? sender,
-        DisclosureExpansionRequestedEventArgs args)
+        DevelopInspectorSectionExpansion request)
     {
-        if (!isInspectorPresentationReady ||
-            isSynchronizingInspectorPresentation ||
-            sender is not DisclosureButton { Tag: string tag } ||
-            !Enum.TryParse(tag, out DevelopInspectorSection section))
+        _ = sender;
+        if (!isInspectorPresentationReady || isSynchronizingInspectorPresentation)
         {
             return;
         }
 
-        if (args.IsExpanded)
+        if (request.IsExpanded)
         {
-            inspectorPresentation.Expand(section);
+            inspectorPresentation.Expand(request.Section);
         }
         else
         {
-            inspectorPresentation.Collapse(section);
+            inspectorPresentation.Collapse(request.Section);
         }
         ApplyInspectorPresentation();
     }
@@ -402,62 +366,8 @@ public sealed partial class DevelopWorkspaceView : UserControl
         GeometryControlCard.Visibility = inspectorPresentation.SelectedTab == DevelopInspectorTab.Edit
             ? Visibility.Visible
             : Visibility.Collapsed;
-        CommonAdjustmentStack.Visibility = inspectorPresentation.ShowsAdjustmentSections
-            ? Visibility.Visible
-            : Visibility.Collapsed;
-        ApplyInspectorSectionState(
-            DevelopInspectorSection.Tone,
-            BasicToneHeaderButton,
-            BasicToneChevron,
-            BasicToneControls);
-        ApplyInspectorSectionState(
-            DevelopInspectorSection.ToneCurve,
-            ToneCurveHeaderButton,
-            ToneCurveChevron,
-            ToneCurveControls);
-        ApplyInspectorSectionState(
-            DevelopInspectorSection.Color,
-            ColorHeaderButton,
-            ColorChevron,
-            ColorControls);
-        ApplyInspectorSectionState(
-            DevelopInspectorSection.ColorMixer,
-            ColorMixerHeaderButton,
-            ColorMixerChevron,
-            ColorMixerEditor);
-        ApplyInspectorSectionState(
-            DevelopInspectorSection.ColorGrading,
-            ColorGradingHeaderButton,
-            ColorGradingChevron,
-            ColorGradingEditor);
-        ApplyInspectorSectionState(
-            DevelopInspectorSection.BlackAndWhiteToning,
-            BwToningHeaderButton,
-            BwToningChevron,
-            BwToningControls);
-        ApplyInspectorSectionState(
-            DevelopInspectorSection.Calibration,
-            CalibrationHeaderButton,
-            CalibrationChevron,
-            CalibrationControls);
-        ApplyInspectorSectionState(
-            DevelopInspectorSection.DetailAndEffects,
-            DetailAndEffectsHeaderButton,
-            DetailAndEffectsChevron,
-            DetailAndEffectsControls);
+        Adjustments.Apply(inspectorPresentation);
         isSynchronizingInspectorPresentation = false;
-    }
-
-    private void ApplyInspectorSectionState(
-        DevelopInspectorSection section,
-        DisclosureButton header,
-        FontIcon chevron,
-        FrameworkElement content)
-    {
-        bool isExpanded = inspectorPresentation.ExpandedSection == section;
-        header.IsExpanded = isExpanded;
-        chevron.Glyph = isExpanded ? "\uE70D" : "\uE76C";
-        content.Visibility = isExpanded ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void OnSourceFrameSelected(object? sender, string frameId)
@@ -557,78 +467,9 @@ public sealed partial class DevelopWorkspaceView : UserControl
         }
 
         isSynchronizingInspector = true;
-        ExposureControl.Value = panel.Tone.Exposure;
-        ContrastControl.Value = panel.Tone.Contrast;
-        HighlightsControl.Value = panel.Tone.Highlights;
-        ShadowsControl.Value = panel.Tone.Shadows;
-        WhitesControl.Value = panel.Tone.Whites;
-        BlacksControl.Value = panel.Tone.Blacks;
-        DensityControl.Value = panel.Tone.Density;
-        CurveHighlightsControl.Value = panel.Tone.CurveHighlights;
-        CurveLightsControl.Value = panel.Tone.CurveLights;
-        CurveDarksControl.Value = panel.Tone.CurveDarks;
-        CurveShadowsControl.Value = panel.Tone.CurveShadows;
-        PointCurveEditor.Curves = panel.Color.PointCurves;
-        ColorMixerEditor.Mixer = panel.Color.ColorMixer;
-        ColorGradingEditor.Grading = panel.Color.ColorGrading;
-        ColorModelRecipe colorModel = panel.Color.ColorModel;
-        WarmthControl.Value = colorModel.Warmth;
-        TintControl.Value = colorModel.Tint;
-        VibranceControl.Value = colorModel.Vibrance;
-        SaturationControl.Value = colorModel.Saturation;
-        ColorDepthControl.Value = colorModel.ColorDepth;
-        BwToningRecipe bwToning = panel.Color.BwToning;
-        // macOS 는 흑백 필름에서만 이 섹션을 냅니다.
-        BwToningSection.Visibility = panel.Color.ShowsBwToning
-            ? Visibility.Visible
-            : Visibility.Collapsed;
-        BwToningModeSelector.SelectedIndex = bwToning.Mode switch
-        {
-            Catalog.BwToningMode.Selenium => 1,
-            Catalog.BwToningMode.Sepia => 2,
-            _ => 0,
-        };
-        // 끈 상태에서는 세기와 색조가 뜻이 없어 macOS 도 자리째 감춥니다.
-        BwToningTintControls.Visibility = bwToning.Mode == Catalog.BwToningMode.None
-            ? Visibility.Collapsed
-            : Visibility.Visible;
-        BwToningStrengthControl.Value = bwToning.ClampedStrength;
-        BwToningShadowHueControl.Value = bwToning.ShadowHue;
-        BwToningHighlightHueControl.Value = bwToning.HighlightHue;
-        PrimaryCalibrationRecipe calibration = panel.Color.PrimaryCalibration;
-        RedPrimaryHueControl.Value = calibration.RedHue;
-        RedPrimarySaturationControl.Value = calibration.RedSaturation;
-        GreenPrimaryHueControl.Value = calibration.GreenHue;
-        GreenPrimarySaturationControl.Value = calibration.GreenSaturation;
-        BluePrimaryHueControl.Value = calibration.BlueHue;
-        BluePrimarySaturationControl.Value = calibration.BlueSaturation;
-        NoiseReductionRecipe noiseReduction = panel.NoiseReduction;
-        NoiseReductionToggle.IsOn = noiseReduction.Strength > 0.001;
-        NoiseReductionControls.Visibility = NoiseReductionToggle.IsOn
-            ? Visibility.Visible
-            : Visibility.Collapsed;
-        NoiseReductionStrengthControl.Value = noiseReduction.Strength;
-        NoiseReductionLumaControl.Value = noiseReduction.Luma;
-        NoiseReductionChromaControl.Value = noiseReduction.Chroma;
-        NoiseReductionDarkToneControl.Value = noiseReduction.DarkTone;
-        NoiseReductionDetailControl.Value = noiseReduction.Detail;
-        NoiseReductionGrainProtectControl.Value = noiseReduction.GrainProtect;
-        TextureRecipe texture = panel.Texture;
-        GrainControl.Value = texture.Grain;
-        SharpnessControl.Value = texture.Sharpness;
-        ClarityControl.Value = texture.Clarity;
-        HalationControl.Value = texture.Halation;
-        VignetteControl.Value = texture.Vignette;
+        Adjustments.Show(panel);
         StraightenAngleControl.Value = panel.ImageTransform.StraightenAngle;
         CropAngleDialControl.Angle = panel.ImageTransform.StraightenAngle;
-        // macOS 는 음화에서만 두 토글을 냅니다. 양화에서는 자리째 사라집니다.
-        Visibility autoCorrections = panel.ShowsAutoCorrections
-            ? Visibility.Visible
-            : Visibility.Collapsed;
-        AutoColorToggle.Visibility = autoCorrections;
-        AutoLevelsToggle.Visibility = autoCorrections;
-        AutoColorToggle.IsChecked = panel.AutoNeutralBalance;
-        AutoLevelsToggle.IsChecked = panel.AutoLevels;
         UpdateCropAspectControls();
         LeftPanel.FilmLookPanel.Update();
         UpdateVersionControls();
@@ -1261,50 +1102,9 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private void SyncToneControls()
     {
         bool canEdit = panel?.CanEditTone == true;
-        foreach (InspectorSlider slider in new[]
-                 {
-                     ExposureControl,
-                     ContrastControl,
-                     HighlightsControl,
-                     ShadowsControl,
-                     WhitesControl,
-                     BlacksControl,
-                     DensityControl,
-                     CurveHighlightsControl,
-                     CurveLightsControl,
-                     CurveDarksControl,
-                     CurveShadowsControl,
-                 })
-        {
-            slider.IsEnabled = canEdit;
-        }
-        PointCurveEditor.IsEnabled = canEdit;
-        ColorMixerEditor.IsEnabled = canEdit;
-        ColorGradingEditor.IsEnabled = canEdit;
-        foreach (InspectorSlider slider in new[]
-                 {
-                     RedPrimaryHueControl,
-                     RedPrimarySaturationControl,
-                     GreenPrimaryHueControl,
-                     GreenPrimarySaturationControl,
-                     BluePrimaryHueControl,
-                     BluePrimarySaturationControl,
-                     NoiseReductionStrengthControl,
-                     NoiseReductionLumaControl,
-                     NoiseReductionChromaControl,
-                     NoiseReductionDarkToneControl,
-                     NoiseReductionDetailControl,
-                     NoiseReductionGrainProtectControl,
-                     GrainControl,
-                     SharpnessControl,
-                     ClarityControl,
-                     HalationControl,
-                     VignetteControl,
-                 })
-        {
-            slider.IsEnabled = canEdit;
-        }
-        NoiseReductionToggle.IsEnabled = canEdit;
+        bool canAutoAdjust = panel?.SelectedFrame?.CanDevelop == true &&
+                             autoAdjustCoordinator is not null;
+        Adjustments.SetEnabled(canEdit, canAutoAdjust);
         StraightenAngleControl.IsEnabled = canEdit;
         CropAspectButton.IsEnabled = canEdit;
         CropAspectLockButton.IsEnabled = canEdit;
@@ -1313,13 +1113,9 @@ public sealed partial class DevelopWorkspaceView : UserControl
         FlipHorizontalButton.IsEnabled = canEdit;
         FlipVerticalButton.IsEnabled = canEdit;
         HistogramView.IsEnabled = canEdit;
-        bool canAutoAdjust = panel?.SelectedFrame?.CanDevelop == true &&
-                             autoAdjustCoordinator is not null;
-        AutoToneButton.IsEnabled = canAutoAdjust;
-        AutoWhiteBalanceButton.IsEnabled = canAutoAdjust;
     }
 
-    private void OnAutoColorToggled(object sender, RoutedEventArgs args)
+    private void OnAdjustmentAutoColorToggled(object? sender, EventArgs args)
     {
         _ = sender;
         _ = args;
@@ -1328,10 +1124,10 @@ public sealed partial class DevelopWorkspaceView : UserControl
             return;
         }
         UpdateImageTransform(state =>
-            state.SetAutoNeutralBalance(AutoColorToggle.IsChecked == true));
+            state.SetAutoNeutralBalance(Adjustments.AutoColorIsOn));
     }
 
-    private void OnAutoLevelsToggled(object sender, RoutedEventArgs args)
+    private void OnAdjustmentAutoLevelsToggled(object? sender, EventArgs args)
     {
         _ = sender;
         _ = args;
@@ -1339,17 +1135,17 @@ public sealed partial class DevelopWorkspaceView : UserControl
         {
             return;
         }
-        UpdateImageTransform(state => state.SetAutoLevels(AutoLevelsToggle.IsChecked == true));
+        UpdateImageTransform(state => state.SetAutoLevels(Adjustments.AutoLevelsIsOn));
     }
 
-    private async void OnAutoToneClicked(object sender, RoutedEventArgs args)
+    private async void OnAdjustmentAutoToneClicked(object? sender, EventArgs args)
     {
         _ = sender;
         _ = args;
         await RunAutoAdjustAsync(AutoAdjustOperation.Tone);
     }
 
-    private async void OnAutoWhiteBalanceClicked(object sender, RoutedEventArgs args)
+    private async void OnAdjustmentAutoWhiteBalanceClicked(object? sender, EventArgs args)
     {
         _ = sender;
         _ = args;
@@ -1363,9 +1159,8 @@ public sealed partial class DevelopWorkspaceView : UserControl
             return;
         }
 
-        AutoToneButton.IsEnabled = false;
-        AutoWhiteBalanceButton.IsEnabled = false;
-        AutoAdjustStatusText.Text = string.Empty;
+        Adjustments.SetAutoAdjustEnabled(false);
+        Adjustments.SetAutoAdjustStatus(string.Empty);
         Action<AutoAdjustOutcome> completed = outcome =>
         {
             if (outcome.Kind == DevelopExportOutcomeKind.Completed && outcome.Settings is not null &&
@@ -1381,12 +1176,12 @@ public sealed partial class DevelopWorkspaceView : UserControl
                 }
                 else
                 {
-                    AutoAdjustStatusText.Text = AppResources.Get("developAutoAdjustFailed", "Text");
+                    Adjustments.SetAutoAdjustStatus(AppResources.Get("developAutoAdjustFailed", "Text"));
                 }
             }
             else if (outcome.Kind != DevelopExportOutcomeKind.Completed)
             {
-                AutoAdjustStatusText.Text = AppResources.Get("developAutoAdjustFailed", "Text");
+                Adjustments.SetAutoAdjustStatus(AppResources.Get("developAutoAdjustFailed", "Text"));
             }
             SyncToneControls();
         };
@@ -1396,7 +1191,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
             : await autoAdjustCoordinator.RunWhiteBalanceAsync(frame, completed);
         if (!delivered)
         {
-            AutoAdjustStatusText.Text = AppResources.Get("developAutoAdjustFailed", "Text");
+            Adjustments.SetAutoAdjustStatus(AppResources.Get("developAutoAdjustFailed", "Text"));
             SyncToneControls();
         }
     }
@@ -1560,258 +1355,6 @@ public sealed partial class DevelopWorkspaceView : UserControl
         if (error == LibraryFrameError.None)
         {
             SynchronizeInspectorValues();
-            RequestPreview();
-        }
-    }
-
-    private void OnExposureChanged(object? sender, InspectorSliderValueChangedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        // 선택을 바꾸며 슬라이더를 맞출 때는 catalog 를 건드리지 않습니다.
-        if (panel is null || isSynchronizingInspector)
-        {
-            return;
-        }
-        panel.Tone.SetExposure(args.Value);
-        RequestPreview();
-    }
-
-    private void OnBasicToneChanged(object? sender, InspectorSliderValueChangedEventArgs args)
-    {
-        if (panel is null || isSynchronizingInspector)
-        {
-            return;
-        }
-
-        LibraryFrameError error = sender switch
-        {
-            InspectorSlider control when ReferenceEquals(control, ContrastControl) =>
-                panel.Tone.SetContrast(args.Value),
-            InspectorSlider control when ReferenceEquals(control, HighlightsControl) =>
-                panel.Tone.SetHighlights(args.Value),
-            InspectorSlider control when ReferenceEquals(control, ShadowsControl) =>
-                panel.Tone.SetShadows(args.Value),
-            InspectorSlider control when ReferenceEquals(control, WhitesControl) =>
-                panel.Tone.SetWhites(args.Value),
-            InspectorSlider control when ReferenceEquals(control, BlacksControl) =>
-                panel.Tone.SetBlacks(args.Value),
-            InspectorSlider control when ReferenceEquals(control, DensityControl) =>
-                panel.Tone.SetDensity(args.Value),
-            _ => LibraryFrameError.InvalidToneValue,
-        };
-        if (error == LibraryFrameError.None)
-        {
-            RequestPreview();
-        }
-    }
-
-    private void OnToneCurveChanged(object? sender, InspectorSliderValueChangedEventArgs args)
-    {
-        if (panel is null || isSynchronizingInspector)
-        {
-            return;
-        }
-
-        LibraryFrameError error = sender switch
-        {
-            InspectorSlider control when ReferenceEquals(control, CurveHighlightsControl) =>
-                panel.Tone.SetCurveHighlights(args.Value),
-            InspectorSlider control when ReferenceEquals(control, CurveLightsControl) =>
-                panel.Tone.SetCurveLights(args.Value),
-            InspectorSlider control when ReferenceEquals(control, CurveDarksControl) =>
-                panel.Tone.SetCurveDarks(args.Value),
-            InspectorSlider control when ReferenceEquals(control, CurveShadowsControl) =>
-                panel.Tone.SetCurveShadows(args.Value),
-            _ => LibraryFrameError.InvalidToneValue,
-        };
-        if (error == LibraryFrameError.None)
-        {
-            RequestPreview();
-        }
-    }
-
-    private void OnPointCurvesChanged(object? sender, ToneCurveChangedEventArgs args)
-    {
-        _ = sender;
-        if (panel is null || isSynchronizingInspector)
-        {
-            return;
-        }
-        if (panel.Color.SetPointCurves(args.Curves) == LibraryFrameError.None)
-        {
-            RequestPreview();
-        }
-    }
-
-    private void OnColorMixerChanged(object? sender, ColorMixerChangedEventArgs args)
-    {
-        _ = sender;
-        if (panel is null || isSynchronizingInspector)
-        {
-            return;
-        }
-        if (panel.Color.SetColorMixer(args.Mixer) == LibraryFrameError.None)
-        {
-            RequestPreview();
-        }
-    }
-
-    private void OnColorGradingChanged(object? sender, ColorGradingChangedEventArgs args)
-    {
-        _ = sender;
-        if (panel is null || isSynchronizingInspector)
-        {
-            return;
-        }
-        if (panel.Color.SetColorGrading(args.Grading) == LibraryFrameError.None)
-        {
-            RequestPreview();
-        }
-    }
-
-    /// <summary>
-    /// macOS 색상 섹션의 다섯 축입니다. 원색 세 축은 이 섹션에 없으므로 지금 값을 그대로 둡니다.
-    /// </summary>
-    private void OnColorModelChanged(object? sender, InspectorSliderValueChangedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (panel is null || isSynchronizingInspector)
-        {
-            return;
-        }
-        if (panel.Color.SetColorModel(panel.Color.ColorModel with
-            {
-                Warmth = WarmthControl.Value,
-                Tint = TintControl.Value,
-                Vibrance = VibranceControl.Value,
-                Saturation = SaturationControl.Value,
-                ColorDepth = ColorDepthControl.Value,
-            }) == LibraryFrameError.None)
-        {
-            RequestPreview();
-        }
-    }
-
-    private void OnBwToningModeChanged(object sender, SelectionChangedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (panel is null || isSynchronizingInspector ||
-            BwToningModeSelector.SelectedItem is not ComboBoxItem { Tag: string tag } ||
-            !Enum.TryParse(tag, out Catalog.BwToningMode mode))
-        {
-            return;
-        }
-        if (panel.Color.SetBwToningMode(mode) == LibraryFrameError.None)
-        {
-            SynchronizeInspectorValues();
-            RequestPreview();
-        }
-    }
-
-    private void OnBwToningValueChanged(object? sender, InspectorSliderValueChangedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (panel is null || isSynchronizingInspector)
-        {
-            return;
-        }
-        if (panel.Color.SetBwToning(panel.Color.BwToning with
-            {
-                Strength = BwToningStrengthControl.Value,
-                ShadowHue = BwToningRecipe.NormalizeHue(BwToningShadowHueControl.Value),
-                HighlightHue = BwToningRecipe.NormalizeHue(BwToningHighlightHueControl.Value),
-            }) == LibraryFrameError.None)
-        {
-            RequestPreview();
-        }
-    }
-
-    private void OnBwToningResetClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (panel is null || panel.Color.ResetBwToning() != LibraryFrameError.None)
-        {
-            return;
-        }
-        SynchronizeInspectorValues();
-        RequestPreview();
-    }
-
-    private void OnPrimaryCalibrationChanged(object? sender, InspectorSliderValueChangedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (panel is null || isSynchronizingInspector)
-        {
-            return;
-        }
-        if (panel.Color.SetPrimaryCalibration(new PrimaryCalibrationRecipe(
-                RedPrimaryHueControl.Value,
-                RedPrimarySaturationControl.Value,
-                GreenPrimaryHueControl.Value,
-                GreenPrimarySaturationControl.Value,
-                BluePrimaryHueControl.Value,
-                BluePrimarySaturationControl.Value)) == LibraryFrameError.None)
-        {
-            RequestPreview();
-        }
-    }
-
-    private void OnNoiseReductionToggled(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (panel is null || isSynchronizingInspector)
-        {
-            return;
-        }
-        if (panel.SetNoiseReductionEnabled(NoiseReductionToggle.IsOn) == LibraryFrameError.None)
-        {
-            SynchronizeInspectorValues();
-            RequestPreview();
-        }
-    }
-
-    private void OnNoiseReductionChanged(object? sender, InspectorSliderValueChangedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (panel is null || isSynchronizingInspector)
-        {
-            return;
-        }
-        if (panel.SetNoiseReduction(new NoiseReductionRecipe(
-                NoiseReductionStrengthControl.Value,
-                NoiseReductionLumaControl.Value,
-                NoiseReductionChromaControl.Value,
-                NoiseReductionDarkToneControl.Value,
-                NoiseReductionDetailControl.Value,
-                NoiseReductionGrainProtectControl.Value)) == LibraryFrameError.None)
-        {
-            RequestPreview();
-        }
-    }
-
-    private void OnTextureChanged(object? sender, InspectorSliderValueChangedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (panel is null || isSynchronizingInspector)
-        {
-            return;
-        }
-        if (panel.SetTexture(new TextureRecipe(
-                GrainControl.Value,
-                SharpnessControl.Value,
-                HalationControl.Value,
-                ClarityControl.Value,
-                VignetteControl.Value)) == LibraryFrameError.None)
-        {
             RequestPreview();
         }
     }
@@ -2565,55 +2108,6 @@ public sealed partial class DevelopWorkspaceView : UserControl
         RequestPreview();
     }
 
-    private void OnBasicToneResetClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        ResetInspectorSection(static state => state.Tone.ResetBasicTone());
-    }
-
-    private void OnToneCurveResetClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        ResetInspectorSection(static state => state.Tone.ResetToneCurve());
-    }
-
-    private void OnColorMixerResetClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        ResetInspectorSection(static state => state.Color.ResetColorMixer());
-    }
-
-    private void OnColorResetClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        ResetInspectorSection(static state => state.Color.ResetColor());
-    }
-
-    private void OnColorGradingResetClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        ResetInspectorSection(static state => state.Color.ResetColorGrading());
-    }
-
-    private void OnCalibrationResetClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        ResetInspectorSection(static state => state.Color.ResetPrimaryCalibration());
-    }
-
-    private void OnDetailAndEffectsResetClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        ResetInspectorSection(static state => state.ResetDetailAndEffects());
-    }
-
     private void ResetInspectorSection(Func<DevelopPanelState, LibraryFrameError> reset)
     {
         if (panel is null || reset(panel) != LibraryFrameError.None)
@@ -2623,6 +2117,29 @@ public sealed partial class DevelopWorkspaceView : UserControl
 
         SynchronizeInspectorValues();
         RequestPreview();
+    }
+
+    private void OnAdjustmentsPreviewRequested(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        RequestPreview();
+    }
+
+    private void OnAdjustmentsRefreshRequested(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        SynchronizeInspectorValues();
+        RequestPreview();
+    }
+
+    private void OnAdjustmentsResetRequested(
+        object? sender,
+        Func<DevelopPanelState, LibraryFrameError> reset)
+    {
+        _ = sender;
+        ResetInspectorSection(reset);
     }
 
     public async Task QuickExportAsync()
@@ -2787,6 +2304,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         NoFrameInspectorText.Text = noFrame;
         DevelopHeaderText.Text = AppResources.Get("menuDevelop", "Text");
         InfoCards.Localize();
+        Adjustments.Localize();
         SetRadioText(BaseAutoModeButton, AppResources.Get("developBaseModeAuto", "Content"));
         SetRadioText(BaseFilmModeButton, AppResources.Get("developBaseModeFilm", "Content"));
         SetRadioText(BaseManualModeButton, AppResources.Get("developBaseModeManual", "Content"));
@@ -2796,12 +2314,6 @@ public sealed partial class DevelopWorkspaceView : UserControl
         AutomationProperties.SetName(LightSourceSelector, LightSourceLabel.Text);
         ScannerProfileLabel.Text = AppResources.Get("developScannerProfile", "Text");
         AutomationProperties.SetName(ScannerProfileSelector, ScannerProfileLabel.Text);
-        SetToggleText(AutoColorToggle, AppResources.Get("developAutoColor", "Content"));
-        SetToggleText(AutoLevelsToggle, AppResources.Get("developAutoLevels", "Content"));
-        SetButtonText(AutoToneButton, AppResources.Get("developAutoTone", "Content"));
-        SetButtonText(
-            AutoWhiteBalanceButton,
-            AppResources.Get("developAutoWhiteBalance", "Content"));
         HistogramView.Localize(
             AppResources.Get("developHistogram", "Text"),
             AppResources.Get("developHistogramShadow", "Text"),
@@ -2841,19 +2353,6 @@ public sealed partial class DevelopWorkspaceView : UserControl
         SetButtonText(CropCancelButton, AppResources.Get("developCropCancel", "Text"));
         AutomationProperties.SetName(CropSelection, AppResources.Get("developCropArea", "Text"));
         StraightenAngleControl.Label = AppResources.Get("developAngle", "Text");
-        // 슬라이더 이름은 macOS 와 같은 문자열이며 XAML 에 박아 두지 않습니다.
-        ExposureControl.Label = AppResources.Get("developExposure", "Text");
-        ContrastControl.Label = AppResources.Get("developContrast", "Text");
-        HighlightsControl.Label = AppResources.Get("developHighlights", "Text");
-        ShadowsControl.Label = AppResources.Get("developShadows", "Text");
-        WhitesControl.Label = AppResources.Get("developWhites", "Text");
-        BlacksControl.Label = AppResources.Get("developBlacks", "Text");
-        DensityControl.Label = AppResources.Get("developDensity", "Text");
-        // 톤 커브의 네 축은 Basic 과 같은 이름을 쓰되 가운데 둘만 따로 있습니다.
-        CurveHighlightsControl.Label = AppResources.Get("developHighlights", "Text");
-        CurveLightsControl.Label = AppResources.Get("developLights", "Text");
-        CurveDarksControl.Label = AppResources.Get("developDarks", "Text");
-        CurveShadowsControl.Label = AppResources.Get("developShadows", "Text");
         BaseRedControl.Label = AppResources.Get("developBaseRed", "Text");
         BaseGreenControl.Label = AppResources.Get("developBaseGreen", "Text");
         BaseBlueControl.Label = AppResources.Get("developBaseBlue", "Text");
@@ -2862,105 +2361,6 @@ public sealed partial class DevelopWorkspaceView : UserControl
             .Select(option => new CropAspectChoice(option, CropAspectText(option.Label)))
             .ToList();
         UpdateCropAspectControls();
-        SetInspectorSectionText(
-            BasicToneSection,
-            BasicToneHeaderButton,
-            BasicToneSectionTitleText,
-            BasicToneResetButton,
-            AppResources.Get("developSectionBasicTone", "Text"));
-        SetInspectorSectionText(
-            ToneCurveSection,
-            ToneCurveHeaderButton,
-            ToneCurveSectionTitleText,
-            ToneCurveResetButton,
-            AppResources.Get("developSectionToneCurve", "Text"));
-        SetInspectorSectionText(
-            ColorSection,
-            ColorHeaderButton,
-            ColorSectionTitleText,
-            ColorResetButton,
-            AppResources.Get("developSectionColor", "Text"));
-        SetInspectorSectionText(
-            ColorMixerSection,
-            ColorMixerHeaderButton,
-            ColorMixerSectionTitleText,
-            ColorMixerResetButton,
-            AppResources.Get("developSectionColorMixer", "Text"));
-        SetInspectorSectionText(
-            ColorGradingSection,
-            ColorGradingHeaderButton,
-            ColorGradingSectionTitleText,
-            ColorGradingResetButton,
-            AppResources.Get("developSectionColorGrading", "Text"));
-        SetInspectorSectionText(
-            BwToningSection,
-            BwToningHeaderButton,
-            BwToningSectionTitleText,
-            BwToningResetButton,
-            AppResources.Get("developSectionBwToning", "Text"));
-        BwToningModeLabel.Text = AppResources.Get("developBwToningMode", "Text");
-        BwToningOffItem.Content = AppResources.Get("developBwToningOff", "Content");
-        BwToningSeleniumItem.Content = AppResources.Get("developBwToningSelenium", "Content");
-        BwToningSepiaItem.Content = AppResources.Get("developBwToningSepia", "Content");
-        BwToningStrengthControl.Label = AppResources.Get("developBwToningStrength", "Text");
-        BwToningShadowHueControl.Label = AppResources.Get("developBwToningShadowHue", "Text");
-        BwToningHighlightHueControl.Label =
-            AppResources.Get("developBwToningHighlightHue", "Text");
-        SetInspectorSectionText(
-            CalibrationSection,
-            CalibrationHeaderButton,
-            CalibrationSectionTitleText,
-            CalibrationResetButton,
-            AppResources.Get("developSectionCalibration", "Text"));
-        SetInspectorSectionText(
-            DetailAndEffectsSection,
-            DetailAndEffectsHeaderButton,
-            DetailAndEffectsSectionTitleText,
-            DetailAndEffectsResetButton,
-            AppResources.Get("developSectionDetailAndEffects", "Text"));
-        RedPrimaryText.Text = AppResources.Get("developCalibrationRedPrimary", "Text");
-        GreenPrimaryText.Text = AppResources.Get("developCalibrationGreenPrimary", "Text");
-        BluePrimaryText.Text = AppResources.Get("developCalibrationBluePrimary", "Text");
-        string hue = AppResources.Get("developCalibrationHue", "Text");
-        string saturation = AppResources.Get("developCalibrationSaturation", "Text");
-        RedPrimaryHueControl.Label = hue;
-        GreenPrimaryHueControl.Label = hue;
-        BluePrimaryHueControl.Label = hue;
-        RedPrimarySaturationControl.Label = saturation;
-        GreenPrimarySaturationControl.Label = saturation;
-        BluePrimarySaturationControl.Label = saturation;
-        NoiseReductionLabelText.Text = AppResources.Get("developNoiseReduction", "Text");
-        NoiseReductionStrengthControl.Label = AppResources.Get("developNoiseReductionStrength", "Text");
-        NoiseReductionLumaControl.Label = AppResources.Get("developNoiseReductionLuminance", "Text");
-        NoiseReductionChromaControl.Label = AppResources.Get("developNoiseReductionColor", "Text");
-        NoiseReductionDarkToneControl.Label = AppResources.Get("developNoiseReductionDarkTones", "Text");
-        NoiseReductionDetailControl.Label = AppResources.Get("developNoiseReductionDetail", "Text");
-        NoiseReductionGrainProtectControl.Label = AppResources.Get("developNoiseReductionGrainProtect", "Text");
-        WarmthControl.Label = AppResources.Get("developWarmth", "Text");
-        TintControl.Label = AppResources.Get("developTint", "Text");
-        VibranceControl.Label = AppResources.Get("developVibrance", "Text");
-        SaturationControl.Label = AppResources.Get("developSaturation", "Text");
-        ColorDepthControl.Label = AppResources.Get("developColorDepth", "Text");
-        GrainControl.Label = AppResources.Get("developTextureGrain", "Text");
-        SharpnessControl.Label = AppResources.Get("developTextureSharpness", "Text");
-        ClarityControl.Label = AppResources.Get("developTextureClarity", "Text");
-        HalationControl.Label = AppResources.Get("developTextureHalation", "Text");
-        VignetteControl.Label = AppResources.Get("developTextureVignette", "Text");
-    }
-
-    private static void SetInspectorSectionText(
-        FrameworkElement section,
-        ButtonBase headerButton,
-        TextBlock titleText,
-        Button resetButton,
-        string title)
-    {
-        titleText.Text = title;
-        AutomationProperties.SetName(section, title);
-        SetLocalizedNameAndTooltip(headerButton, title);
-        string resetName = AppResources.Get("developResetSectionFormat", "Value")
-            .Replace("%@", title, StringComparison.Ordinal);
-        SetLocalizedNameAndTooltip(resetButton, resetName);
     }
 
     private static void SetNameAndTooltip(ButtonBase button, string resourceKey)

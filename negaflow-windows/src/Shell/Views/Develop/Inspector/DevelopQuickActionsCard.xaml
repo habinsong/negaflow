@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Negaflow.Shell.Views.Develop.Inspector.DevelopQuickActionsCard"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Negaflow.Shell.Views.Controls">
+
+    <Border
+        x:Name="QuickActionsCard"
+        HorizontalAlignment="Stretch"
+        Padding="10"
+        AutomationProperties.AutomationId="negaflow.develop.quick-actions"
+        Background="{ThemeResource NegaflowCardBrush}"
+        CornerRadius="14">
+        <StackPanel Spacing="8">
+            <!-- macOS 는 자동 색상·자동 레벨(토글)과 자동 톤·자동 화이트
+                 밸런스(동작)를 2×2 로 놓고, 토글 두 개는 음화에서만 냅니다. -->
+            <Grid ColumnSpacing="8" RowSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <ToggleButton
+                    x:Name="AutoColorToggle"
+                    Grid.Row="0"
+                    Grid.Column="0"
+                    HorizontalAlignment="Stretch"
+                    AutomationProperties.AutomationId="negaflow.develop.auto-color"
+                    Checked="OnAutoColorToggled"
+                    Unchecked="OnAutoColorToggled" />
+                <ToggleButton
+                    x:Name="AutoLevelsToggle"
+                    Grid.Row="0"
+                    Grid.Column="1"
+                    HorizontalAlignment="Stretch"
+                    AutomationProperties.AutomationId="negaflow.develop.auto-levels"
+                    Checked="OnAutoLevelsToggled"
+                    Unchecked="OnAutoLevelsToggled" />
+                <Button
+                    x:Name="AutoToneButton"
+                    Grid.Row="1"
+                    Grid.Column="0"
+                    HorizontalAlignment="Stretch"
+                    AutomationProperties.AutomationId="negaflow.develop.auto-tone"
+                    Click="OnAutoToneClicked" />
+                <Button
+                    x:Name="AutoWhiteBalanceButton"
+                    Grid.Row="1"
+                    Grid.Column="1"
+                    HorizontalAlignment="Stretch"
+                    AutomationProperties.AutomationId="negaflow.develop.auto-white-balance"
+                    Click="OnAutoWhiteBalanceClicked" />
+            </Grid>
+            <TextBlock
+                x:Name="AutoAdjustStatusText"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                TextWrapping="Wrap" />
+        </StackPanel>
+    </Border>
+</UserControl>

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Negaflow.Shell.Views.Develop.Inspector.DevelopCalibrationSection"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Negaflow.Shell.Views.Controls">
+
+    <Border
+        x:Name="CalibrationSection"
+        HorizontalAlignment="Stretch"
+        Padding="14"
+        AutomationProperties.AutomationId="negaflow.develop.section.calibration"
+        Background="{ThemeResource NegaflowCardBrush}"
+        CornerRadius="14">
+        <StackPanel HorizontalAlignment="Stretch" Spacing="12">
+            <Grid HorizontalAlignment="Stretch">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <controls:DisclosureButton
+                    x:Name="CalibrationHeaderButton"
+                    Grid.Column="0"
+                    MinHeight="26"
+                    Padding="0"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Stretch"
+                    AutomationProperties.AutomationId="negaflow.develop.section.calibration.header"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Click="OnInspectorSectionHeaderClicked"
+                    ExpansionRequested="OnInspectorSectionExpansionRequested"
+                    Tag="Calibration">
+                    <Grid HorizontalAlignment="Stretch">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <FontIcon Grid.Column="0" Width="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE7F8;" />
+                        <TextBlock x:Name="CalibrationSectionTitleText" Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="14" FontWeight="SemiBold" />
+                        <FontIcon x:Name="CalibrationChevron" Grid.Column="2" Margin="8,0,0,0" FontSize="12" Glyph="&#xE76C;" />
+                    </Grid>
+                </controls:DisclosureButton>
+                <Button x:Name="CalibrationResetButton" Grid.Column="1" Width="30" Height="26" Margin="6,0,0,0" Padding="0" Click="OnCalibrationResetClicked">
+                    <FontIcon FontSize="12" Glyph="&#xE777;" />
+                </Button>
+            </Grid>
+            <StackPanel x:Name="CalibrationControls" HorizontalAlignment="Stretch" Spacing="10" Visibility="Collapsed">
+                <TextBlock x:Name="RedPrimaryText" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                <controls:InspectorSlider x:Name="RedPrimaryHueControl" HorizontalAlignment="Stretch" ResetValue="0" SliderAutomationId="negaflow.develop.calibration.red.hue" ValueChanged="OnPrimaryCalibrationChanged" />
+                <controls:InspectorSlider x:Name="RedPrimarySaturationControl" HorizontalAlignment="Stretch" ResetValue="0" SliderAutomationId="negaflow.develop.calibration.red.saturation" ValueChanged="OnPrimaryCalibrationChanged" />
+                <Border Height="1" HorizontalAlignment="Stretch" Background="{ThemeResource NegaflowDividerBrush}" />
+                <TextBlock x:Name="GreenPrimaryText" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                <controls:InspectorSlider x:Name="GreenPrimaryHueControl" HorizontalAlignment="Stretch" ResetValue="0" SliderAutomationId="negaflow.develop.calibration.green.hue" ValueChanged="OnPrimaryCalibrationChanged" />
+                <controls:InspectorSlider x:Name="GreenPrimarySaturationControl" HorizontalAlignment="Stretch" ResetValue="0" SliderAutomationId="negaflow.develop.calibration.green.saturation" ValueChanged="OnPrimaryCalibrationChanged" />
+                <Border Height="1" HorizontalAlignment="Stretch" Background="{ThemeResource NegaflowDividerBrush}" />
+                <TextBlock x:Name="BluePrimaryText" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                <controls:InspectorSlider x:Name="BluePrimaryHueControl" HorizontalAlignment="Stretch" ResetValue="0" SliderAutomationId="negaflow.develop.calibration.blue.hue" ValueChanged="OnPrimaryCalibrationChanged" />
+                <controls:InspectorSlider x:Name="BluePrimarySaturationControl" HorizontalAlignment="Stretch" ResetValue="0" SliderAutomationId="negaflow.develop.calibration.blue.saturation" ValueChanged="OnPrimaryCalibrationChanged" />
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</UserControl>

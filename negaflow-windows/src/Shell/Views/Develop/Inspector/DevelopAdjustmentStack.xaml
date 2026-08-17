@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Negaflow.Shell.Views.Develop.Inspector.DevelopAdjustmentStack"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:inspector="using:Negaflow.Shell.Views.Develop.Inspector">
+    <StackPanel HorizontalAlignment="Stretch" Spacing="12">
+        <inspector:DevelopQuickActionsCard x:Name="QuickActions" x:FieldModifier="internal" />
+        <inspector:DevelopToneSection x:Name="Tone" x:FieldModifier="internal" />
+        <inspector:DevelopToneCurveSection x:Name="ToneCurve" x:FieldModifier="internal" />
+        <inspector:DevelopColorSection x:Name="Color" x:FieldModifier="internal" />
+        <inspector:DevelopColorMixerSection x:Name="Mixer" x:FieldModifier="internal" />
+        <inspector:DevelopColorGradingSection x:Name="Grading" x:FieldModifier="internal" />
+        <inspector:DevelopBwToningSection x:Name="BwToning" x:FieldModifier="internal" />
+        <inspector:DevelopCalibrationSection x:Name="Calibration" x:FieldModifier="internal" />
+        <inspector:DevelopDetailSection x:Name="Detail" x:FieldModifier="internal" />
+    </StackPanel>
+</UserControl>
