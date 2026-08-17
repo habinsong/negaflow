@@ -34,7 +34,7 @@ internal sealed class LibraryWorkspaceCopy
         view.CollectionsPanel.Localize();
         view.DevelopDefaultsPanel.Localize();
         view.CullingSurface.Localize();
-        view.UpdateSourcePanel();
+        view.rail.Update();
         string importImages = AppResources.Get("importImages", "Content");
         SetButtonText(view.ImportImagesButton, importImages);
         SetButtonText(view.EmptyImportImagesButton, importImages);
