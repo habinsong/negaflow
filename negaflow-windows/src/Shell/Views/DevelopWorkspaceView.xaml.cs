@@ -2307,41 +2307,17 @@ public sealed partial class DevelopWorkspaceView : UserControl
         DeleteUserPresetButton.IsEnabled = hasSelection;
     }
 
-    /// <summary>
-    /// macOS 와 같은 요약 문구입니다. 전부면 "모든 설정", 하나도 없으면 "없음", 그 사이는 켜진
-    /// 묶음 이름을 순서대로 이어 붙입니다.
-    /// </summary>
-    private static string DescribePasteScope(DevelopSettingsPasteScope scope)
-    {
-        if (scope.IsFullDevelopScope)
-        {
-            return AppResources.Get("developPasteScopeAll", "Text");
-        }
-        List<string> groups = [];
-        if (scope.Base)
-        {
-            groups.Add(AppResources.Get("developScopeBase", "Text"));
-        }
-        if (scope.Tone)
-        {
-            groups.Add(AppResources.Get("developScopeTone", "Text"));
-        }
-        if (scope.Color)
-        {
-            groups.Add(AppResources.Get("developScopeColor", "Text"));
-        }
-        if (scope.Detail)
-        {
-            groups.Add(AppResources.Get("developScopeDetail", "Text"));
-        }
-        if (scope.Geometry)
-        {
-            groups.Add(AppResources.Get("developScopeGeometry", "Text"));
-        }
-        return groups.Count == 0
-            ? AppResources.Get("developPasteScopeNone", "Text")
-            : string.Join("/", groups);
-    }
+    private static string DescribePasteScope(DevelopSettingsPasteScope scope) =>
+        PasteScopeSummary.Describe(
+            scope,
+            new PasteScopeText(
+                AppResources.Get("developPasteScopeAll", "Text"),
+                AppResources.Get("developPasteScopeNone", "Text"),
+                AppResources.Get("developScopeBase", "Text"),
+                AppResources.Get("developScopeTone", "Text"),
+                AppResources.Get("developScopeColor", "Text"),
+                AppResources.Get("developScopeDetail", "Text"),
+                AppResources.Get("developScopeGeometry", "Text")));
 
     private bool updatingGrainMendSensitivity;
     private bool updatingGrainMendMicroSpecks;

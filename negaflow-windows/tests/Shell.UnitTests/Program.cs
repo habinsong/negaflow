@@ -39,6 +39,7 @@ internal static class Program
         FilmLookMenuProjectionTests.Run();
         GrainMendCardProjectionTests.Run();
         VersionListProjectionTests.Run();
+        PasteScopeSummaryTests.Run();
         ScanRotationDefaultTests.Run();
         PixelSamplerTests.Run();
         AppLanguageTests.Run();
