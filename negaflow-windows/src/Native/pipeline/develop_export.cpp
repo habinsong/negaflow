@@ -10,6 +10,8 @@
 #include "negaflow/imageio/wic_standard_image_decoder.h"
 #include "negaflow/pipeline/film_look_workspace.h"
 
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <algorithm>
 #include <atomic>
@@ -123,6 +125,12 @@ constexpr StageCost black_and_white_cost{1U, 20U};
 constexpr StageCost transform_cost{1U, 40U};
 constexpr StageCost output_sharpening_cost{1U, 80U};
 constexpr StageCost preview_output_cost{60U, 60U};
+
+// 다른 단계의 NEGA_DEBUG 줄과 같은 방식으로 켜집니다.
+[[nodiscard]] bool debug_enabled() noexcept {
+    std::size_t length = 0U;
+    return getenv_s(&length, nullptr, 0U, "NEGA_DEBUG") == 0 && length > 0U;
+}
 constexpr StageCost export_output_cost{2600U, 2600U};
 
 [[nodiscard]] constexpr std::uint32_t cost_of(
@@ -740,6 +748,23 @@ struct PreviewTarget final {
             defect_recipe_stage_status_name(defect_recipe));
     }
     decoded_image = std::move(defect_recipe.image);
+    // 결함 수리가 실제로 일어났는지 물어볼 방법이 여태 없었습니다 — 파이프라인은 세어 두지만
+    // ABI 로 내보내지 않아, preview 와 export 중 어느 쪽이 recipe 를 흘리는지 코드 밖에서
+    // 가릴 수 없었습니다. NEGA_DEBUG 로만 켜지므로 평시 비용은 없습니다.
+    if (debug_enabled()) {
+        std::size_t length = 0U;
+        std::fprintf(
+            stderr,
+            "[nega-defect] target=%s order=%zu region_applied=%d region_edits=%zu "
+            "region_repaired_px=%zu\n",
+            preview != nullptr ? "preview" : (detect != nullptr ? "detect" : "export"),
+            request.defect_recipe.order.size(),
+            defect_recipe.info.region_applied ? 1 : 0,
+            static_cast<std::size_t>(defect_recipe.info.region_applied_edit_count),
+            static_cast<std::size_t>(defect_recipe.info.region_repaired_pixels));
+        (void)length;
+        std::fflush(stderr);
+    }
     tracker.finish();
     if (tracker.cancelled()) {
         return cancelled_outcome(DevelopExportStage::defect_component_repair);

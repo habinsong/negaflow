@@ -1,5 +1,7 @@
 #include "negaflow/pipeline/defect_region_stage.h"
 
+#include <cstdio>
+#include <cstdlib>
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -65,6 +67,11 @@ void discard_pixels(WorkingImage& image) noexcept {
              edit.repair.preferred_angle_degrees <= 180.0));
 }
 
+[[nodiscard]] bool region_debug_enabled() noexcept {
+    std::size_t length = 0U;
+    return getenv_s(&length, nullptr, 0U, "NEGA_DEBUG") == 0 && length > 0U;
+}
+
 [[nodiscard]] DefectRegionStageStatus map_status(
     const negaflow::imaging::DefectComponentRepairStatus status) noexcept {
     switch (status) {
@@ -104,6 +111,22 @@ DefectRegionStageResult apply_defect_region_edits(
 
     try {
         for (const DefectRegionEdit& edit : parameters.edits) {
+            // 어느 조건이 region 을 건너뛰게 하는지 밖에서 물어볼 수 없었습니다.
+            if (region_debug_enabled()) {
+                std::fprintf(
+                    stderr,
+                    "[nega-region] enabled=%d strength=%.6f roi=%llux%llu+%llu+%llu "
+                    "mask_bytes=%llu stride=%llu\n",
+                    edit.enabled ? 1 : 0,
+                    static_cast<double>(edit.repair.strength),
+                    static_cast<unsigned long long>(edit.width),
+                    static_cast<unsigned long long>(edit.height),
+                    static_cast<unsigned long long>(edit.roi_x),
+                    static_cast<unsigned long long>(edit.roi_y),
+                    static_cast<unsigned long long>(edit.mask.size()),
+                    static_cast<unsigned long long>(edit.mask_stride_bytes));
+                std::fflush(stderr);
+            }
             if (!edit.enabled || edit.repair.strength <= 1.0e-3) {
                 continue;
             }
