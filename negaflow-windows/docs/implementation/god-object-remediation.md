@@ -35,7 +35,7 @@
 | ~~`tests/Native.UnitTests/develop_export_abi_tests.cpp`~~ | 4,107 → `DevelopExportAbi/main.cpp` 84 | **해결.** 요청 공장·파일 I/O·버전 계약·미리보기·GrainMend·run state·자동 조정·결함·프루프·probe를 `tests/Native.UnitTests/DevelopExportAbi/` 실제 번역 단위로 옮겼다. `#include` 조각내기가 아니다 |
 | ~~`src/Shell/Views/LibraryWorkspaceView.xaml.cs`~~ | 2,835 → 328 | **해결.** 스캔·기본값·훑어보기·소스·컬렉션·가져오기·필터·격자 선택·메뉴·단축키·레이아웃을 `Views/Library/{Scanner,Defaults,Culling,Sources,Collections,Browser,Host}/` 실제 타입으로 옮겼다 |
 | ~~`src/Shell/Views/DevelopWorkspaceView.xaml`~~ | 525 → 297 | **해결.** GrainMend 카드 XAML 을 `Develop/GrainMend/DevelopGrainMendPanel.xaml`(236줄)로 옮겼다 |
-| `src/Interop/NativeDevelopExporter.cs` | 2,342 | 미해결 |
+| ~~`src/Interop/NativeDevelopExporter.cs`~~ | 2,482 → 95 | **해결.** ABI 크기·검증·페이로드·요청 조립·실행·검출을 `Interop/DevelopExport/` 실제 타입으로 옮겼다. facade는 크기 상수와 Run/Preview/Detect 위임만 |
 | `src/Native/abi/include/negaflow_abi.h` | 1,791 | 외부 소비자가 포함하는 append-only 공개 C ABI 선언 집합. 구현 상태가 없다 |
 | `src/Native/pipeline/develop_export.cpp` | 1,575 | 미해결 |
 | `src/Native/core/tiff_probe.cpp` | 1,425 | 미해결 |
@@ -78,7 +78,7 @@
 | `src/Native/core/tiff_deflate_validator.cpp` | 515 | TIFF Deflate payload 검증 단일 알고리즘 |
 | ~~`src/Shell/Views/PrintSheetWriter.cs`~~ | 505 → 258 | **해결.** 판 합성 오케스트레이션만 남기고 화소 그리기를 `Views/Print/PrintPageCanvas.cs`(215줄), PNG 굽기를 `Views/Print/PrintSheetEncoder.cs`(49줄), 파일 스트림을 `Views/Print/PrintSheetFile.cs`(20줄)로 옮겼다. 네 파일 모두 500줄 미만 |
 
-미해결 4개: `NativeDevelopExporter.cs`, `develop_export.cpp`, `tiff_probe.cpp`, `PrintWorkspaceView.Composition.cs`.
+미해결 3개: `develop_export.cpp`, `tiff_probe.cpp`, `PrintWorkspaceView.Composition.cs`.
 
 사유가 적힌 35개도 "줄 수가 커도 된다"는 뜻이 아니라 "지금 확인한 근거로는 서로 독립적인 변경 이유가 하나뿐"이라는 뜻이다. 새 책임이 붙으면 다시 미해결로 옮긴다.
 
@@ -93,7 +93,7 @@
 | 완료 | `tests/Native.UnitTests/develop_export_abi_tests.cpp` | `DevelopExportAbi/main.cpp` 84, 변경 전 4,107 | 서로 독립적인 ABI version/stage/defect/output suite와 fixture | `DevelopExportAbi/` 실제 번역 단위; 결함 fixture는 `defect_region.cpp` 606줄로 한 순서 고정 suite | 완료·build.ps1·CTest 71/71·Catalog 721·Shell 1032 |
 | 완료 | `src/Shell/Views/LibraryWorkspaceView.xaml.cs` | 328, 변경 전 2,835 | 탐색·선택·rating/flag·scanner·filter/sort·resize·localization | `Views/Library/{Scanner,Defaults,Culling,Sources,Collections,Browser,Host}` 실제 타입; facade는 바인딩·XAML 위임만 | 완료·build.ps1·CTest 71/71·Catalog 721·Shell 1032 |
 | 완료 | `src/Shell/Views/DevelopWorkspaceView.xaml` | 297, 변경 전 2,512 | histogram/tabs, GrainMend | macOS surface 단위 실제 UserControl | 완료. GrainMend 카드 XAML 분리 후 297줄 |
-| P0 | `src/Interop/NativeDevelopExporter.cs` | 2,342 | ABI layout 검증, recipe validation, 각 payload marshaling, 30여 request version, export/preview/auto/GrainMend 실행 | validation, payload marshaler, version request builder, command adapter | 대기 |
+| 완료 | `src/Interop/NativeDevelopExporter.cs` | 95, 변경 전 2,482 | ABI layout 검증, recipe validation, payload marshaling, 요청 버전, export/preview/GrainMend 실행 | `Interop/DevelopExport` 실제 타입; facade는 크기 상수와 Run/Preview/Detect 위임 | 완료·build.ps1·CTest 71/71·Catalog 721·Shell 1032 |
 | 완료 | `src/Catalog.Core/Library/LibraryFrameReader.cs` | 372, 변경 전 1,584 | frame identity/source, base/tone/color/effects/transform/metadata/local-adjust recipe 파싱 | `Library/Reading` core/value reader와 `Reading/Codecs`의 recipe별 실제 reader | 완료·Catalog 721·Shell 938 assertions 검증 |
 | P0 | `src/Native/pipeline/develop_export.cpp` | 1,575 | decode, source observation, develop/tone/look/defect/transform/output stage와 progress/cancel orchestration | stage executor와 pipeline coordinator | 대기 |
 | 완료 | `src/Shell.Core/Library/LibraryDocument.cs` | 325, 변경 전 1,468 | document 상태, undo/redo, frame/roll/collection/stack/search 변경, defect sidecar, relink/save | `Library/{State,Projection,Persistence,Organization,Editing,Source,Defects}` 실제 협력 타입; facade에는 공개 API 위임만 유지 | 완료·Shell.Core x64 Release 경고 0/오류 0·Shell 938 assertions 검증 |
@@ -399,4 +399,27 @@
   - `Host/LibrarySourceRail` 149 — 왼쪽 소스 레일
   - `Host/LibraryWorkspaceLayout` 64 — 패널 폭
 - 줄 수: 코드비하인드 2,835 → 328, XAML 975 → 472. 둘 다 500줄 이하.
+- 검증: `build.ps1 -Preset x64-release` 통과, `test.ps1` 71/71, `test-managed.ps1` 경고 0·오류 0, Catalog 721, Shell 1032.
+
+## 2026-08-17 NativeDevelopExporter 실제 타입 — 검증됨
+
+- `NativeDevelopExporter.cs` 2,482줄을 `src/Interop/DevelopExport/` 실제 타입으로 옮겼다. partial 분할이 아니다. 함수 본문은 그대로다.
+- 새 자리:
+  - `NativeDevelopAbiSizes` 62 — C ABI 구조체 크기
+  - `NativeDevelopExportLimits` 25 — 레시피 상한·상태 코드
+  - `NativeDevelopRequestValidator` 174 — 검증 순서
+  - `NativeDevelopToneValidator` 100 — 톤·색·캘리브레이션
+  - `NativeDevelopLocalValidator` 108 — 로컬 닷지/번
+  - `NativeDevelopDefectValidator` 356 — 결함 레시피
+  - `NativeDevelopToneMarshaler` 55 — 커브·믹서 버퍼
+  - `NativeDevelopLocalPayload` 85 — 닷지/번 페이로드
+  - `NativeDevelopDefectRegionPayload` 136 — 영역·IR 페이로드
+  - `NativeDevelopDefectStrokePayload` 150 — 복제·브러시·순서
+  - `NativeDevelopRequestV7V17` 347 — v7–v17 요청
+  - `NativeDevelopRequestV18V34` 365 — v18–v34 요청
+  - `NativeDevelopExportCommand` 170 — 파일 export
+  - `NativeDevelopPreviewRender` 238 — 미리보기·검출 공유 렌더
+  - `NativeDevelopGrainMendDetect` 170 — GrainMend 검출
+  - `NativeDevelopResultTranslator` 58 — 네이티브 결과 번역
+- facade 95줄: 크기 상수와 `Run`/`Preview`/`DetectGrainMend` 위임만. 공개 API는 그대로다.
 - 검증: `build.ps1 -Preset x64-release` 통과, `test.ps1` 71/71, `test-managed.ps1` 경고 0·오류 0, Catalog 721, Shell 1032.

@@ -1,0 +1,62 @@
+namespace Negaflow.Interop;
+
+/// <summary>C ABI 구조체 크기입니다. 검증·요청 조립과 다른 이유입니다.</summary>
+internal static class NativeDevelopAbiSizes
+{
+    internal const int RequestV1Size = 96;
+    internal const int ResultV1Size = 136;
+    internal const int RequestV2Size = 96;
+    internal const int RequestV3Size = 112;
+    internal const int RequestV4Size = 128;
+    internal const int PointCurveV1Size = 1032;
+    internal const int RequestV5Size = 4256;
+    internal const int RequestV6Size = 4352;
+    internal const int RequestV7Size = 4400;
+    internal const int RequestV8Size = 4408;
+    internal const int RequestV9Size = 4440;
+    internal const int RequestV10Size = 4464;
+    internal const int RequestV11Size = 4552;
+    internal const int LocalDodgeBurnPointV1Size = 8;
+    internal const int LocalDodgeBurnStrokeV1Size = 16;
+    internal const int LocalDodgeBurnAdjustmentV1Size = 64;
+    internal const int RequestV12Size = 4600;
+    internal const int RequestV13Size = 4632;
+    internal const int RequestV14Size = 4640;
+    internal const int RequestV15Size = 4648;
+    internal const int RequestV16Size = 4656;
+    internal const int RequestV17Size = 4664;
+    internal const int DefectRegionEditV1Size = 56;
+    internal const int RequestV18Size = 4696;
+    internal const int RequestV19Size = 4720;
+    internal const int DefectClonePointV1Size = 16;
+    internal const int DefectCloneStrokeV1Size = 40;
+    internal const int DefectCloneEditV1Size = 24;
+    internal const int DefectRecipeEditRefV1Size = 8;
+    internal const int RequestV20Size = 4784;
+    internal const int DefectBrushPointV1Size = 16;
+    internal const int DefectBrushStrokeV1Size = 16;
+    internal const int DefectBrushEditV1Size = 24;
+    internal const int RequestV21Size = 4832;
+    internal const int DefectInfraredEditV1Size = 24;
+    internal const int RequestV24Size = 4864;
+    internal const int DefectInfraredItemV1Size = 16;
+    internal const int RequestV25Size = 4880;
+    internal const int RequestV26Size = 4896;
+    internal const int RequestV27Size = 4928;
+    internal const int RequestV28Size = 4944;
+    internal const int RequestV29Size = 4960;
+    internal const int RequestV30Size = 4976;
+    internal const int RequestV31Size = 4992;
+    internal const int RequestV32Size = 5008;
+    internal const int RequestV33Size = 5088;
+    internal const int ResultV2Size = 152;
+    internal const int ResultV3Size = 160;
+    internal const int RunStateV1Size = 16;
+    internal const int AutoAdjustResultV1Size = 88;
+    internal const int SoftProofMediaV1Size = 40;
+    internal const int SoftProofV1Size = 40;
+    internal const int GrainMendDetectParametersV1Size = 40;
+    internal const int GrainMendDetectParametersV2Size = 72;
+    internal const int GrainMendDetectParametersV3Size = 80;
+    internal const int GrainMendDetectionV2Size = 56;
+}
