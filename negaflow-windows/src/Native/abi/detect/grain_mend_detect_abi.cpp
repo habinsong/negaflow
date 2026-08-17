@@ -233,6 +233,9 @@ static nf_status_t detect_grain_mend_shared(
     const uint64_t preview_point_capacity,
     uint64_t* const preview_point_count,
     uint64_t* const component_count,
+    // macOS `applyingWholeFrameAutomaticRiskFlag` 의 결과입니다. v6 만 받아 갑니다.
+    uint32_t* const automatic_false_positive_risk,
+    double* const automatic_candidate_pixel_fraction,
     nf_develop_run_state_v1* const run_state,
     nf_grain_mend_detection_v2* const detection,
     nf_develop_export_result_v3* const result) {
@@ -272,6 +275,12 @@ static nf_status_t detect_grain_mend_shared(
     }
     if (preview_point_count != nullptr) {
         *preview_point_count = 0U;
+    }
+    if (automatic_false_positive_risk != nullptr) {
+        *automatic_false_positive_risk = 0U;
+    }
+    if (automatic_candidate_pixel_fraction != nullptr) {
+        *automatic_candidate_pixel_fraction = 0.0;
     }
     negaflow::pipeline::DevelopRunControl control{};
     if (!prepare_run_state(run_state, control, status)) {
@@ -317,6 +326,14 @@ static nf_status_t detect_grain_mend_shared(
     detection->roi_y = detected.roi_y;
     detection->roi_width = detected.roi_width;
     detection->roi_height = detected.roi_height;
+    if (automatic_false_positive_risk != nullptr) {
+        *automatic_false_positive_risk =
+            detected.automatic_false_positive_risk ? 1U : 0U;
+    }
+    if (automatic_candidate_pixel_fraction != nullptr) {
+        *automatic_candidate_pixel_fraction =
+            detected.automatic_candidate_pixel_fraction;
+    }
     // 컴포넌트는 마스크와 같은 두 번 부르기 규약입니다: 버퍼가 null 이면 개수만
     // 알려 주고, 모자라면 거절합니다 — 잘라 담으면 화면이 일부만 보고 판단합니다.
     //
@@ -413,6 +430,8 @@ nf_status_t NF_CALL nf_develop_detect_grain_mend_v4(
         0U,
         nullptr,
         nullptr,
+        nullptr,
+        nullptr,
         run_state,
         detection,
         result);
@@ -448,7 +467,45 @@ nf_status_t NF_CALL nf_develop_detect_grain_mend_v5(
         preview_point_capacity,
         &detection->preview_point_count,
         &detection->component_count,
+        nullptr,
+        nullptr,
         run_state,
         &detection->v2,
+        result);
+}
+
+nf_status_t NF_CALL nf_develop_detect_grain_mend_v6(
+    const nf_develop_export_request_v27* const request,
+    const nf_grain_mend_detect_parameters_v3* const parameters,
+    uint8_t* const mask,
+    const uint64_t mask_capacity_bytes,
+    nf_grain_mend_component_v1* const components,
+    const uint64_t component_capacity,
+    nf_grain_mend_preview_point_v1* const preview_points,
+    const uint64_t preview_point_capacity,
+    nf_develop_run_state_v1* const run_state,
+    nf_grain_mend_detection_v4* const detection,
+    nf_develop_export_result_v3* const result) {
+    // v5 와 같은 규약입니다 — 가장 안쪽 v2 의 struct_size 가 전체 크기를 말합니다.
+    if (detection == nullptr ||
+        detection->v3.v2.struct_size <
+            static_cast<std::uint32_t>(sizeof(*detection))) {
+        return NF_STATUS_INVALID_ARGUMENT;
+    }
+    return detect_grain_mend_shared(
+        request,
+        parameters,
+        mask,
+        mask_capacity_bytes,
+        components,
+        component_capacity,
+        preview_points,
+        preview_point_capacity,
+        &detection->v3.preview_point_count,
+        &detection->v3.component_count,
+        &detection->automatic_false_positive_risk,
+        &detection->automatic_candidate_pixel_fraction,
+        run_state,
+        &detection->v3.v2,
         result);
 }

@@ -35,7 +35,10 @@ internal static unsafe class NativeDevelopPreviewRender
         ulong* componentCount = null,
         NativeGrainMendPreviewPointV1* previewPoints = null,
         ulong previewPointCapacity = 0UL,
-        ulong* previewPointCount = null)
+        ulong* previewPointCount = null,
+        // macOS `applyingWholeFrameAutomaticRiskFlag` 의 결과입니다. 자동에서만 채워집니다.
+        bool* automaticRisk = null,
+        double* automaticCandidateFraction = null)
     {
         ValidateLayoutAndEnums(request);
         GrainMendDetectionOptions effectiveDetectionOptions =
@@ -180,10 +183,10 @@ internal static unsafe class NativeDevelopPreviewRender
                     },
                     DetectMicroSpecks = effectiveDetectionOptions.DetectMicroSpecks ? 1U : 0U,
                 };
-                // 중첩 구조라 안쪽 V2 의 StructSize 가 전체 크기를 말합니다.
-                NativeGrainMendDetectionV3 detectionV3 = default;
-                detectionV3.V2.StructSize = (uint)sizeof(NativeGrainMendDetectionV3);
-                status = NativeMethods.nf_develop_detect_grain_mend_v5(
+                // 중첩 구조라 가장 안쪽 V2 의 StructSize 가 전체 크기를 말합니다.
+                NativeGrainMendDetectionV4 detectionV4 = default;
+                detectionV4.V3.V2.StructSize = (uint)sizeof(NativeGrainMendDetectionV4);
+                status = NativeMethods.nf_develop_detect_grain_mend_v6(
                     &v27,
                     &detectionParameters,
                     pixels.IsEmpty ? null : pixelBuffer,
@@ -193,17 +196,26 @@ internal static unsafe class NativeDevelopPreviewRender
                     previewPoints,
                     previewPointCapacity,
                     runState,
-                    &detectionV3,
+                    &detectionV4,
                     &raw);
-                *detection = detectionV3.V2;
+                *detection = detectionV4.V3.V2;
                 detection->StructSize = (uint)sizeof(NativeGrainMendDetectionV2);
                 if (componentCount is not null)
                 {
-                    *componentCount = detectionV3.ComponentCount;
+                    *componentCount = detectionV4.V3.ComponentCount;
                 }
                 if (previewPointCount is not null)
                 {
-                    *previewPointCount = detectionV3.PreviewPointCount;
+                    *previewPointCount = detectionV4.V3.PreviewPointCount;
+                }
+                if (automaticRisk is not null)
+                {
+                    *automaticRisk = detectionV4.AutomaticFalsePositiveRisk != 0U;
+                }
+                if (automaticCandidateFraction is not null)
+                {
+                    *automaticCandidateFraction =
+                        detectionV4.AutomaticCandidatePixelFraction;
                 }
             }
             else

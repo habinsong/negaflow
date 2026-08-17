@@ -36,10 +36,14 @@ public sealed class GrainMendWorkspaceState
 
     public void EndDetection() => IsDetecting = false;
 
-    public bool SetDetectedEdit(DefectEditItem edit, DefectRect rawRoi)
+    public bool SetDetectedEdit(
+        DefectEditItem edit,
+        DefectRect rawRoi,
+        bool falsePositiveRisk = false)
     {
         ArgumentNullException.ThrowIfNull(edit);
-        GrainMendReviewSession? review = GrainMendReviewSession.TryCreate(edit);
+        GrainMendReviewSession? review = GrainMendReviewSession.TryCreate(
+            edit, falsePositiveRisk);
         if (review is null)
         {
             return false;

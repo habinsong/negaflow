@@ -31,6 +31,9 @@ internal static unsafe class NativeDevelopGrainMendDetect
         NativeGrainMendPreviewPointV1[] points =
             new NativeGrainMendPreviewPointV1[MaximumGrainMendPreviewPoints];
         ulong pointCount = 0UL;
+        // macOS `applyingWholeFrameAutomaticRiskFlag` 의 결과입니다.
+        bool automaticRisk = false;
+        double automaticCandidateFraction = 0.0;
         DevelopExportResult result;
         fixed (NativeGrainMendComponentV1* components = buffer)
         fixed (NativeGrainMendPreviewPointV1* previewPoints = points)
@@ -53,7 +56,9 @@ internal static unsafe class NativeDevelopGrainMendDetect
                 &componentCount,
                 previewPoints,
                 (ulong)points.Length,
-                &pointCount).Result;
+                &pointCount,
+                &automaticRisk,
+                &automaticCandidateFraction).Result;
         }
         // 모자랐으면 네이티브가 필요한 수를 알려 주고 거절합니다. 잘라 담으면 화면이 일부만
         // 보고 판단하므로, 정확한 크기로 한 번 더 부릅니다.
@@ -83,7 +88,9 @@ internal static unsafe class NativeDevelopGrainMendDetect
                     &componentCount,
                     previewPoints,
                     (ulong)points.Length,
-                    &pointCount).Result;
+                    &pointCount,
+                    &automaticRisk,
+                    &automaticCandidateFraction).Result;
             }
         }
         return new GrainMendDetectionResult(
@@ -98,7 +105,9 @@ internal static unsafe class NativeDevelopGrainMendDetect
             detection.RoiY,
             detection.RoiWidth,
             detection.RoiHeight,
-            ReadComponents(buffer, componentCount, points, pointCount));
+            ReadComponents(buffer, componentCount, points, pointCount),
+            automaticRisk,
+            automaticCandidateFraction);
     }
 
     /// <summary>

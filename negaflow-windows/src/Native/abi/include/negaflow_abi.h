@@ -1531,6 +1531,16 @@ typedef struct nf_grain_mend_detection_v3 {
     uint64_t preview_point_count;
 } nf_grain_mend_detection_v3;
 
+/* v3 에 macOS `DefectLabelField.automaticFalsePositiveRisk` /
+   `automaticCandidatePixelFraction` 을 더한다. 전체 프레임 자동에서만 채워지고, 성분은
+   하나도 버리지 않는다 — 화면은 개수 대신 경고 문구를 낼 뿐이다. */
+typedef struct nf_grain_mend_detection_v4 {
+    nf_grain_mend_detection_v3 v3;
+    uint32_t automatic_false_positive_risk;
+    uint32_t reserved;
+    double automatic_candidate_pixel_fraction;
+} nf_grain_mend_detection_v4;
+
 NF_API nf_status_t NF_CALL nf_develop_detect_grain_mend_v1(
     const nf_develop_export_request_v27* request,
     uint8_t* mask,
@@ -1579,6 +1589,21 @@ NF_API nf_status_t NF_CALL nf_develop_detect_grain_mend_v5(
     uint64_t preview_point_capacity,
     nf_develop_run_state_v1* run_state,
     nf_grain_mend_detection_v3* detection,
+    nf_develop_export_result_v3* result);
+
+/* v5 와 같은 검출이되 자동 오검출 위험 플래그까지 낸다. macOS
+   `applyingWholeFrameAutomaticRiskFlag` 의 결과이며 전체 프레임 자동에서만 채워진다. */
+NF_API nf_status_t NF_CALL nf_develop_detect_grain_mend_v6(
+    const nf_develop_export_request_v27* request,
+    const nf_grain_mend_detect_parameters_v3* parameters,
+    uint8_t* mask,
+    uint64_t mask_capacity_bytes,
+    nf_grain_mend_component_v1* components,
+    uint64_t component_capacity,
+    nf_grain_mend_preview_point_v1* preview_points,
+    uint64_t preview_point_capacity,
+    nf_develop_run_state_v1* run_state,
+    nf_grain_mend_detection_v4* detection,
     nf_develop_export_result_v3* result);
 
 /* Detects one paired top-first linear float IR/red frame exactly once. The returned

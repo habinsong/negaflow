@@ -32,7 +32,10 @@ public sealed record GrainMendHudState(
     int Excluded,
     bool RemoveEnabled,
     bool TuningEnabled,
-    IReadOnlyList<GrainMendClassSummary> Chips)
+    IReadOnlyList<GrainMendClassSummary> Chips,
+    // macOS <c>detectSummary</c> 는 이 플래그가 서면 개수 대신 경고 문구를 냅니다. 결과를
+    // 줄이지는 않습니다 — 제외는 사용자가 클릭으로 합니다.
+    bool FalsePositiveRisk = false)
 {
     public bool IsVisible => Mode != GrainMendHudMode.Hidden;
 
@@ -88,7 +91,8 @@ public static class GrainMendHudProjection
                 RemoveEnabled: total - excluded > 0,
                 TuningEnabled: true,
                 // macOS 는 검출 결과가 있을 때에만 칩 줄을 냅니다.
-                Chips: review?.ClassSummaries() ?? []);
+                Chips: review?.ClassSummaries() ?? [],
+                FalsePositiveRisk: review?.FalsePositiveRisk == true);
         }
         // 자동은 누르는 즉시 검출로 넘어갑니다. 기다리는 상태가 남는 것은 가이드뿐입니다.
         return tool == GrainMendTool.Guided

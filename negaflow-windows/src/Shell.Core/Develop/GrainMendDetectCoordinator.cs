@@ -11,7 +11,10 @@ public sealed record GrainMendDetectOutcome(
     uint Width,
     uint Height,
     DevelopRequestRefusal Refusal,
-    string? FaultMessage)
+    string? FaultMessage,
+    // macOS `DefectLabelField.automaticFalsePositiveRisk`. 전체 프레임 자동에서만 서고,
+    // 성분을 하나도 버리지 않습니다 — 캡슐이 개수 대신 경고 문구를 냅니다.
+    bool AutomaticFalsePositiveRisk = false)
 {
     /// <summary>검출은 됐지만 고칠 것이 없었습니다. 실패가 아닙니다.</summary>
     public bool FoundNothing => Kind == DevelopExportOutcomeKind.Completed && Edit is null;
@@ -172,7 +175,8 @@ public sealed class GrainMendDetectCoordinator
                     detected.Width,
                     detected.Height,
                     DevelopRequestRefusal.None,
-                    null),
+                    null,
+                    detected.AutomaticFalsePositiveRisk),
                 onCompleted);
         }
         catch (Exception error) when (error is NativeBootstrapException or

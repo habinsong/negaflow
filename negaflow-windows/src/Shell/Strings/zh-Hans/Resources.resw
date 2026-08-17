@@ -873,6 +873,7 @@
   <data name="developGrainMendDetectorMissing.Value" xml:space="preserve"><value>此版本尚未提供自动检测</value></data>
   <data name="developPreviewFailed.Text" xml:space="preserve"><value>无法生成预览</value></data>
   <data name="libraryFilterMetadataUnknown.Content" xml:space="preserve"><value>元数据状态未知</value><comment>AppLocalizedPhrase.filterMetadataUnknown</comment></data>
+  <data name="developGrainMendFalsePositiveRisk.Text" xml:space="preserve"><value>误检风险较高。</value><comment>AppLocalizedPhrase.automaticDefectFalsePositiveRiskStatus</comment></data>
   <data name="developGrainMendDetecting.Text" xml:space="preserve"><value>正在检测瑕疵</value><comment>AppLocalizedPhrase.detectingDefectsStatus</comment></data>
   <data name="developGrainMendNoDefects.Text" xml:space="preserve"><value>未发现瑕疵</value><comment>AppLocalizedPhrase.noDefectsStatus</comment></data>
   <data name="developGrainMendDefectsFormat.Value" xml:space="preserve"><value>%d 处瑕疵</value><comment>AppLocalizedPhrase.defectsCountFormat</comment></data>

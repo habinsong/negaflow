@@ -119,6 +119,10 @@ public sealed partial class DevelopGrainMendHud : UserControl
     private static string Status(GrainMendHudState state) => state.Mode switch
     {
         GrainMendHudMode.Detecting => AppResources.Get("developGrainMendDetecting", "Text"),
+        // macOS `detectSummary` 의 첫 분기입니다 — 위험 플래그가 서면 개수 대신 경고만
+        // 냅니다. 결과는 그대로 남고 제외는 사용자가 클릭으로 합니다.
+        GrainMendHudMode.Reviewing when state.FalsePositiveRisk =>
+            AppResources.Get("developGrainMendFalsePositiveRisk", "Text"),
         GrainMendHudMode.Reviewing when state.Total == 0 =>
             AppResources.Get("developGrainMendNoDefects", "Text"),
         GrainMendHudMode.Reviewing when state.Excluded > 0 => AppResources.FormatIntegers(

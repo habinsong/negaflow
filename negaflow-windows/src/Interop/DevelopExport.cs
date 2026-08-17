@@ -535,7 +535,12 @@ public readonly record struct GrainMendDetectionResult(
     uint RoiY = 0U,
     uint RoiWidth = 0U,
     uint RoiHeight = 0U,
-    IReadOnlyList<GrainMendComponent>? Components = null)
+    IReadOnlyList<GrainMendComponent>? Components = null,
+    // macOS `DefectLabelField.automaticFalsePositiveRisk` /
+    // `automaticCandidatePixelFraction`. 전체 프레임 자동에서만 채워지고, 성분은 하나도
+    // 버리지 않습니다 — 화면이 개수 대신 경고 문구를 낼 뿐입니다.
+    bool AutomaticFalsePositiveRisk = false,
+    double AutomaticCandidatePixelFraction = 0.0)
 {
     /// <summary>
     /// 채택된 결함 하나하나. 비어 있으면 분류가 없는 것이며, 지어내지 않습니다.

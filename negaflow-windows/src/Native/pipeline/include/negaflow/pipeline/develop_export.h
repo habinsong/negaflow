@@ -288,6 +288,11 @@ struct GrainMendDetectionOutcome final {
     // macOS `DefectLabelField.components` 와 같은 자리이고, 이것이 있어야 화면이 종류별
     // 개수를 낼 수 있습니다.
     std::vector<negaflow::imaging::grain_mend_detail::ClassifiedComponent> components{};
+    // macOS `DefectLabelField.automaticFalsePositiveRisk` /
+    // `automaticCandidatePixelFraction`. 전체 프레임 자동에서만 채워지고 성분은 하나도
+    // 버리지 않습니다 — 화면이 경고 문구만 바꿔 답니다.
+    bool automatic_false_positive_risk{false};
+    double automatic_candidate_pixel_fraction{0.0};
 };
 
 [[nodiscard]] GrainMendDetectionOutcome develop_detect_grain_mend(

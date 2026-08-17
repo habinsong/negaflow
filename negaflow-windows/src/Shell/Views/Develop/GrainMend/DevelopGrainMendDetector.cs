@@ -66,7 +66,8 @@ internal sealed class DevelopGrainMendDetector
             return;
         }
 
-        if (!view.grainMend.SetDetectedEdit(edit, rawRoi))
+        if (!view.grainMend.SetDetectedEdit(
+                edit, rawRoi, outcome.AutomaticFalsePositiveRisk))
         {
             view.SetStatus(AppResources.Get("developGrainMendFoundNothing", "Text"));
             return;

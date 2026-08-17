@@ -143,6 +143,20 @@ internal struct NativeGrainMendDetectionV3
     internal ulong PreviewPointCount;
 }
 
+/// <summary>
+/// v3 에 macOS <c>DefectLabelField.automaticFalsePositiveRisk</c> /
+/// <c>automaticCandidatePixelFraction</c> 을 더한 것입니다. 전체 프레임 자동에서만 채워지고
+/// 성분은 하나도 버리지 않습니다 — 화면이 개수 대신 경고 문구를 낼 뿐입니다.
+/// </summary>
+[StructLayout(LayoutKind.Sequential)]
+internal struct NativeGrainMendDetectionV4
+{
+    internal NativeGrainMendDetectionV3 V3;
+    internal uint AutomaticFalsePositiveRisk;
+    internal uint Reserved;
+    internal double AutomaticCandidatePixelFraction;
+}
+
 [StructLayout(LayoutKind.Sequential)]
 internal struct NativeDevelopRunStateV1
 {

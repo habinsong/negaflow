@@ -39,15 +39,23 @@ public sealed class GrainMendReviewSession
         byte[] rgba,
         GrainMendComponentMap map,
         GrainMendMaskWindow window,
-        IReadOnlyList<DefectPreviewComponent> components)
+        IReadOnlyList<DefectPreviewComponent> components,
+        bool falsePositiveRisk)
     {
         this.source = source;
         this.rgba = rgba;
         this.map = map;
         this.window = window;
         this.components = components;
+        FalsePositiveRisk = falsePositiveRisk;
         excluded = new bool[map.ComponentCount];
     }
+
+    /// <summary>
+    /// macOS <c>DefectLabelField.automaticFalsePositiveRisk</c>. 전체 프레임 자동에서만
+    /// 서고, 성분을 하나도 버리지 않습니다 — 캡슐이 개수 대신 경고 문구를 냅니다.
+    /// </summary>
+    public bool FalsePositiveRisk { get; }
 
     public int ComponentCount => excluded.Length;
 
@@ -58,7 +66,9 @@ public sealed class GrainMendReviewSession
     /// <summary>검출기가 분류를 냈는지입니다. 내지 못했으면 종류별 칩이 없습니다.</summary>
     public bool IsClassified => components.Count > 0;
 
-    public static GrainMendReviewSession? TryCreate(DefectEditItem item)
+    public static GrainMendReviewSession? TryCreate(
+        DefectEditItem item,
+        bool falsePositiveRisk = false)
     {
         ArgumentNullException.ThrowIfNull(item);
         if (item.RegionMask is not { } mask ||
@@ -73,10 +83,11 @@ public sealed class GrainMendReviewSession
         GrainMendComponentMap? seeded = GrainMendComponentMap.Seeded(rgba, window, item.Preview);
         if (seeded is { } byComponent)
         {
-            return new GrainMendReviewSession(item, rgba, byComponent, window, item.Preview);
+            return new GrainMendReviewSession(
+                item, rgba, byComponent, window, item.Preview, falsePositiveRisk);
         }
         return GrainMendComponentMap.Blobs(rgba, window.Width, window.Height) is { } byBlob
-            ? new GrainMendReviewSession(item, rgba, byBlob, window, [])
+            ? new GrainMendReviewSession(item, rgba, byBlob, window, [], falsePositiveRisk)
             : null;
     }
 

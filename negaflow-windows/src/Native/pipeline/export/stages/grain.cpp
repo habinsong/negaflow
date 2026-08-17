@@ -50,6 +50,10 @@ std::optional<DevelopExportOutcome> apply_grain_stage(
             detect->result->roi_y = detected.roi_y;
             detect->result->roi_width = detected.roi_width;
             detect->result->roi_height = detected.roi_height;
+            detect->result->automatic_false_positive_risk =
+                detected.automatic_false_positive_risk;
+            detect->result->automatic_candidate_pixel_fraction =
+                detected.automatic_candidate_pixel_fraction;
             detect->result->components = std::move(detected.components);
         }
         // 크기만 묻는 호출(mask 가 null)도 실패가 아니라 정상 결과입니다.
