@@ -152,7 +152,16 @@ internal static class DefectRoundTripDiagnostics
         bool anyDifference = false;
         // 미리보기를 크게 볼수록 작은 먼지가 살아남습니다. 한 크기만 보고 "안 바뀐다"고
         // 말하지 않기 위해 세 크기를 잽니다.
-        foreach ((int width, int height) in new[] { (900, 700), (1600, 1200), (2400, 1800) })
+        foreach ((int width, int height) in new[]
+                 {
+                     (900, 700),
+                     (1600, 1200),
+                     (2400, 1800),
+                     // 원본 크기로도 재 봅니다. 여기서 같으면 축소 탓이 아니라 preview 경로가
+                     // recipe 를 버린 것입니다.
+                     ((int)(persisted.SourceMetadata?.PixelWidth ?? 5088U),
+                      (int)(persisted.SourceMetadata?.PixelHeight ?? 3401U)),
+                 })
         {
             byte[] baseline = new byte[width * height * 4];
             byte[] repaired = new byte[width * height * 4];
@@ -188,6 +197,44 @@ internal static class DefectRoundTripDiagnostics
                 maximumDifference,
             }));
         }
-        return persistedItems > 0 && anyDifference ? 0 : 1;
+        // 미리보기는 5088x3401 을 900 안팎으로 줄입니다. 먼지가 축소에 씻겨 나가서 같아 보이는
+        // 것인지, 수리 자체가 아무 일도 하지 않는 것인지를 가르려면 원본 해상도로 내보내
+        // 견주어야 합니다.
+        DevelopExportResult withoutRun = NativeDevelopExporter.Run(withoutRecipe);
+        DevelopExportResult withRun = NativeDevelopExporter.Run(withRecipe);
+        long exportDifferingBytes = -1;
+        long withoutBytes = -1;
+        long withBytes = -1;
+        if (withoutRun.Succeeded && withRun.Succeeded &&
+            File.Exists(withoutRecipe.DestinationPath) && File.Exists(withRecipe.DestinationPath))
+        {
+            byte[] withoutFile = File.ReadAllBytes(withoutRecipe.DestinationPath);
+            byte[] withFile = File.ReadAllBytes(withRecipe.DestinationPath);
+            withoutBytes = withoutFile.LongLength;
+            withBytes = withFile.LongLength;
+            exportDifferingBytes = 0;
+            for (long index = 0; index < Math.Min(withoutBytes, withBytes); ++index)
+            {
+                if (withoutFile[index] != withFile[index])
+                {
+                    ++exportDifferingBytes;
+                }
+            }
+        }
+        Console.WriteLine(JsonSerializer.Serialize(new
+        {
+            stage = "export",
+            withoutSucceeded = withoutRun.Succeeded,
+            withSucceeded = withRun.Succeeded,
+            withRun.ImageWidth,
+            withRun.ImageHeight,
+            failedStage = withRun.FailedStage.ToString(),
+            withRun.FailureName,
+            withoutBytes,
+            withBytes,
+            exportDifferingBytes,
+        }));
+
+        return persistedItems > 0 && (anyDifference || exportDifferingBytes > 0) ? 0 : 1;
     }
 }
