@@ -764,7 +764,9 @@ void test_detection_only_agrees_with_the_repair_path() {
             {0.02F, 0.02F, 0.02F, 1.0F};
     }
 
-    const negaflow::imaging::GrainMendParameters parameters{1.0};
+    negaflow::imaging::GrainMendParameters parameters{1.0};
+    // 자동 검토와 자동 복원은 같은 타일·라벨 경로를 쓴다(macOS detectComponents).
+    parameters.reject_structure_lines = true;
     const auto detected =
         negaflow::imaging::detect_grain_mend(damaged, parameters);
     const auto repaired =
@@ -777,6 +779,15 @@ void test_detection_only_agrees_with_the_repair_path() {
         detected.width == repaired.info.detection_width &&
             detected.height == repaired.info.detection_height,
         "detection only reports the same capped analysis size as the repair");
+    if (detected.accepted_pixels != repaired.info.candidate_pixels) {
+        std::cerr << "diagnostic detect_vs_repair detect="
+                  << detected.accepted_pixels << " repair="
+                  << repaired.info.candidate_pixels
+                  << " detect_w=" << detected.width
+                  << " repair_w=" << repaired.info.detection_width
+                  << " detect_components=" << detected.components.size()
+                  << '\n';
+    }
     expect(
         detected.accepted_pixels == repaired.info.candidate_pixels &&
             detected.accepted_pixels != 0U,
@@ -833,6 +844,67 @@ void test_guided_detection_crops_to_the_selected_roi() {
 
 // macOS의 추가 미세 입자 패스는 기존 결함 후보를 약화시키지 않고, 세 채널에 같이 어두운
 // 2~7px 표면 이물만 선택적으로 더합니다. 토글을 끄면 이전 검출 마스크가 정확히 남아야 합니다.
+void test_micro_specks_become_classified_components() {
+    constexpr std::uint32_t width = 256U;
+    constexpr std::uint32_t height = 256U;
+    auto damaged = make_uniform_image(width, height, 0.20F);
+    std::vector<std::pair<std::uint32_t, std::uint32_t>> specks{};
+    for (std::uint32_t x = 40U; x <= 200U; x += 80U) {
+        for (std::uint32_t y = 40U; y <= 200U; y += 80U) {
+            specks.push_back({x, y});
+            add_dark_micro_speck(damaged, x, y, 3U, 0.065F);
+        }
+    }
+
+    negaflow::imaging::GrainMendParameters off{1.0};
+    off.dust_sensitivity = 0.6;
+    off.scratch_sensitivity = 0.7;
+    off.protect_detail = 0.6;
+    off.detect_micro_specks = false;
+    const auto legacy = negaflow::imaging::detect_grain_mend(damaged, off);
+    negaflow::imaging::GrainMendParameters on = off;
+    on.detect_micro_specks = true;
+    const auto detected = negaflow::imaging::detect_grain_mend(damaged, on);
+
+    std::size_t classified = 0U;
+    for (const auto& component : detected.components) {
+        if (component.classification ==
+            negaflow::imaging::grain_mend_detail::DefectClassification::
+                micro_speck) {
+            ++classified;
+        }
+    }
+    std::size_t planted_classified = 0U;
+    for (const auto [x, y] : specks) {
+        const std::size_t center =
+            static_cast<std::size_t>(y + 1U) * width + x + 1U;
+        for (const auto& component : detected.components) {
+            if (component.classification !=
+                negaflow::imaging::grain_mend_detail::DefectClassification::
+                    micro_speck) {
+                continue;
+            }
+            if (std::find(component.pixels.begin(), component.pixels.end(),
+                          center) != component.pixels.end()) {
+                ++planted_classified;
+                break;
+            }
+        }
+    }
+    if (classified == 0U || planted_classified == 0U) {
+        std::cerr << "diagnostic classify_specks classified=" << classified
+                  << " planted=" << planted_classified << "/" << specks.size()
+                  << " legacy=" << legacy.accepted_pixels
+                  << " enabled=" << detected.accepted_pixels
+                  << " components=" << detected.components.size() << '\n';
+    }
+    expect(legacy.status == negaflow::imaging::GrainMendStatus::ok &&
+               detected.status == negaflow::imaging::GrainMendStatus::ok,
+           "micro-speck classification probe completes");
+    expect(classified > 0U && planted_classified > 0U,
+           "detect_grain_mend promotes planted specks to MicroSpeck components");
+}
+
 void test_micro_speck_detection_is_optional_and_additive() {
     constexpr std::uint32_t width = 512U;
     constexpr std::uint32_t height = 512U;
@@ -886,6 +958,48 @@ void test_micro_speck_detection_is_optional_and_additive() {
     }
     expect(found == specks.size(),
         "the optional micro-speck pass finds every neutral 3px speck on chromatic grain");
+
+    std::size_t classified_micro_specks = 0U;
+    std::size_t classified_when_off = 0U;
+    for (const auto& component : detected.components) {
+        if (component.classification ==
+            negaflow::imaging::grain_mend_detail::DefectClassification::micro_speck) {
+            ++classified_micro_specks;
+        }
+    }
+    for (const auto& component : legacy.components) {
+        if (component.classification ==
+            negaflow::imaging::grain_mend_detail::DefectClassification::micro_speck) {
+            ++classified_when_off;
+        }
+    }
+    expect(classified_when_off == 0U,
+        "disabling the micro-speck pass leaves no MicroSpeck components");
+    std::size_t added_centers = 0U;
+    std::size_t added_classified = 0U;
+    for (const auto [x, y] : specks) {
+        const std::size_t center =
+            static_cast<std::size_t>(y + 1U) * width + x + 1U;
+        if (legacy.mask[center] != 0U || detected.mask[center] == 0U) {
+            continue;
+        }
+        ++added_centers;
+        for (const auto& component : detected.components) {
+            if (component.classification !=
+                negaflow::imaging::grain_mend_detail::DefectClassification::
+                    micro_speck) {
+                continue;
+            }
+            if (std::find(component.pixels.begin(), component.pixels.end(),
+                          center) != component.pixels.end()) {
+                ++added_classified;
+                break;
+            }
+        }
+    }
+    expect(
+        added_centers == 0U || added_classified == added_centers,
+        "specks added only by the micro-speck pass are classified MicroSpeck");
 }
 
 }  // namespace
@@ -910,6 +1024,7 @@ int main() {
     test_detection_only_agrees_with_the_repair_path();
     test_guided_detection_crops_to_the_selected_roi();
     test_micro_speck_detection_is_optional_and_additive();
+    test_micro_specks_become_classified_components();
 
     std::cout << "{\"status\":\"" << (failures == 0 ? "ok" : "error")
               << "\",\"suite\":\"grain_mend\",\"failures\":"

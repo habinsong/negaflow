@@ -65,6 +65,7 @@ struct TileWorkspace {
     CandidateMaps candidates{};
     std::vector<std::uint8_t> evidence{};
     std::vector<std::uint8_t> specks{};
+    std::vector<float> speck_confidence{};
     std::uint64_t image_microseconds{0U};
     std::uint64_t evidence_microseconds{0U};
     std::uint64_t speck_microseconds{0U};
@@ -110,8 +111,10 @@ std::vector<std::uint8_t> build_tiled_automatic_mask(
 
     std::vector<std::uint8_t> frame_evidence(count, 0U);
     std::vector<std::uint8_t> frame_specks{};
+    std::vector<float> frame_speck_confidence{};
     if (request.detect_micro_specks) {
         frame_specks.assign(count, 0U);
+        frame_speck_confidence.assign(count, 0.0F);
     }
     std::vector<float> frame_scratch_response(count, 0.0F);
     // 분류기가 읽는 국소 통계입니다. 타일이 낸 것을 core 만 프레임으로 옮깁니다 — 분류를
@@ -226,6 +229,8 @@ std::vector<std::uint8_t> build_tiled_automatic_mask(
                     }
                     // 같은 타일 화소를 다시 씁니다. 겹치는 입자는 기존 검출이 임자입니다.
                     workspace.specks.assign(workspace.evidence.size(), 0U);
+                    workspace.speck_confidence.assign(
+                        workspace.evidence.size(), 0.0F);
                     std::size_t added = 0U;
                     static_cast<void>(merge_micro_speck_mask(
                         workspace.tile,
@@ -233,7 +238,8 @@ std::vector<std::uint8_t> build_tiled_automatic_mask(
                         workspace.specks,
                         added,
                         cancel,
-                        &workspace.candidates.valid));
+                        &workspace.candidates.valid,
+                        &workspace.speck_confidence));
                     workspace.speck_microseconds = static_cast<std::uint64_t>(
                         std::chrono::duration_cast<std::chrono::microseconds>(
                             std::chrono::steady_clock::now() - speck_started).count());
@@ -280,6 +286,10 @@ std::vector<std::uint8_t> build_tiled_automatic_mask(
                     frame_evidence[frame_index] = workspace.evidence[tile_index];
                     if (!frame_specks.empty() && !workspace.specks.empty()) {
                         frame_specks[frame_index] = workspace.specks[tile_index];
+                        if (tile_index < workspace.speck_confidence.size()) {
+                            frame_speck_confidence[frame_index] =
+                                workspace.speck_confidence[tile_index];
+                        }
                     }
                     frame_scratch_response[frame_index] =
                         workspace.candidates.scratch_response[tile_index];
@@ -315,12 +325,17 @@ std::vector<std::uint8_t> build_tiled_automatic_mask(
         accepted_pixels,
         &frame_candidates,
         components);
-    // 미세 입자는 더하기만 합니다 — 이미 채택된 화소는 기존 검출이 임자입니다.
-    for (std::size_t index = 0U; index < frame_specks.size(); ++index) {
-        if (frame_specks[index] != 0U && mask[index] == 0U) {
-            mask[index] = 1U;
-            ++accepted_pixels;
-        }
+    // macOS `DefectSpeckDetector.merged(into:specks:)` — 마스크 바이트가 아니라
+    // 컴포넌트를 더한다. 겹치면 기존 검출이 임자이다.
+    if (!frame_specks.empty()) {
+        merge_micro_specks_into(
+            frame_specks,
+            frame_speck_confidence,
+            region_width,
+            region_height,
+            components,
+            mask,
+            accepted_pixels);
     }
     const auto finished = std::chrono::steady_clock::now();
     measured.components_microseconds =

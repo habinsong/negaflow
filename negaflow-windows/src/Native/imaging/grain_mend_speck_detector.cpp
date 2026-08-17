@@ -212,7 +212,8 @@ bool merge_micro_speck_mask(
     std::vector<std::uint8_t>& mask,
     std::size_t& added_pixels,
     const negaflow::core::CancelFlag cancel,
-    const std::vector<std::uint8_t>* const supplied_valid) {
+    const std::vector<std::uint8_t>* const supplied_valid,
+    std::vector<float>* const confidence) {
     added_pixels = 0U;
     const std::size_t count = image.luminance.size();
     if (image.width == 0U || image.height == 0U ||
@@ -313,12 +314,96 @@ bool merge_micro_speck_mask(
                         [&mask](const std::size_t index) { return mask[index] != 0U; })) {
             continue;
         }
+        // macOS: 평균 임계 초과 배율(≥1)을 0.25~1 로 요약 — UI 표시용, 게이트 아님.
+        double ratio_sum = 0.0;
+        for (const std::size_t index : component.pixels) {
+            const std::uint32_t pixel_y =
+                static_cast<std::uint32_t>(index / image.width);
+            const std::uint32_t pixel_x =
+                static_cast<std::uint32_t>(index % image.width);
+            const float threshold = std::max(
+                absolute_floor,
+                noise_multiple *
+                    floor[static_cast<std::size_t>(pixel_y / speck_cell_size) *
+                              cells_x +
+                          (pixel_x / speck_cell_size)]);
+            ratio_sum += static_cast<double>(
+                coherence[index] / std::max(1.0e-5F, threshold));
+        }
+        const double mean_ratio =
+            ratio_sum / static_cast<double>(component.pixels.size());
+        const double speck_confidence = std::min(
+            1.0, 0.25 + 0.25 * std::max(0.0, mean_ratio - 1.0));
+        if (confidence != nullptr) {
+            if (confidence->size() != count) {
+                confidence->assign(count, 0.0F);
+            }
+            for (const std::size_t index : component.pixels) {
+                (*confidence)[index] = static_cast<float>(speck_confidence);
+            }
+        }
         for (const std::size_t index : component.pixels) {
             mask[index] = 1U;
             ++added_pixels;
         }
     }
     return true;
+}
+
+void merge_micro_specks_into(
+    const std::vector<std::uint8_t>& speck_mask,
+    const std::vector<float>& speck_confidence,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    std::vector<ClassifiedComponent>* const components,
+    std::vector<std::uint8_t>& mask,
+    std::size_t& accepted_pixels) {
+    const std::size_t count = static_cast<std::size_t>(width) * height;
+    if (width == 0U || height == 0U || speck_mask.size() != count ||
+        mask.size() != count) {
+        return;
+    }
+
+    // macOS `merged(into:)`: 한 화소라도 기존 필드와 겹치면 입자 전체를 버린다.
+    // 검출·복원이 같은 화소를 고르도록 기존 마스크를 점유 집합으로 쓴다.
+    for (const Component& component :
+         collect_components(speck_mask, width, height)) {
+        if (component.pixels.empty() ||
+            std::any_of(
+                component.pixels.begin(),
+                component.pixels.end(),
+                [&mask](const std::size_t index) {
+                    return mask[index] != 0U;
+                })) {
+            continue;
+        }
+        double confidence_sum = 0.0;
+        std::size_t confidence_samples = 0U;
+        for (const std::size_t index : component.pixels) {
+            if (index < speck_confidence.size() &&
+                speck_confidence[index] > 0.0F) {
+                confidence_sum += static_cast<double>(speck_confidence[index]);
+                ++confidence_samples;
+            }
+            mask[index] = 1U;
+            ++accepted_pixels;
+        }
+        if (components == nullptr) {
+            continue;
+        }
+        ClassifiedComponent entry{};
+        entry.pixels = component.pixels;
+        entry.minimum_x = component.minimum_x;
+        entry.maximum_x = component.maximum_x;
+        entry.minimum_y = component.minimum_y;
+        entry.maximum_y = component.maximum_y;
+        entry.is_scratch = false;
+        entry.classification = DefectClassification::micro_speck;
+        entry.confidence = confidence_samples == 0U
+            ? 0.25
+            : confidence_sum / static_cast<double>(confidence_samples);
+        components->push_back(std::move(entry));
+    }
 }
 
 }  // namespace negaflow::imaging::grain_mend_detail

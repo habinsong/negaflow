@@ -26,7 +26,6 @@ using grain_mend_detail::find_candidates;
 using grain_mend_detail::merge_micro_speck_mask;
 using grain_mend_detail::AutomaticDetection;
 using grain_mend_detail::build_tiled_automatic_mask;
-using grain_mend_detail::make_detection_image_region;
 using grain_mend_detail::make_detection_image;
 using grain_mend_detail::sample_transformed_mask;
 
@@ -194,6 +193,7 @@ GrainMendResult apply_grain_mend(
             request.dust_sensitivity = parameters.dust_sensitivity;
             request.scratch_sensitivity = parameters.scratch_sensitivity;
             request.protect_detail = parameters.protect_detail;
+            request.detect_micro_specks = parameters.detect_micro_specks;
             const std::vector<std::uint8_t> mask =
                 build_tiled_automatic_mask(
                     result.image,
