@@ -21,6 +21,7 @@
 - **스캐너 실패 원인 확정·수정**: 플러그인은 `bitDepths`를 정상 보고한다(OpticFilm 8100 `[16]`, Epson GT-X900 `[8,16]`). Shell이 `capabilityToken`을 표시용 512자 규칙으로 검사해 **응답 전체를 버리고** 있었다(실측 토큰 4,148자·5,012자). 화면에는 "심도 옵션을 보고하지 않는다"만 남았다.
 - **GrainMend 백엔드는 실제로 동작한다**(고정 입력 실측). `OpticFilm8100_frame_1.tiff` 5088×3401에서 검출 이미지 1800×1203, 크기 질의와 마스크 호출이 9,306으로 일치하고 작은 버퍼는 `mask_buffer_too_small`로 거부한다. 민감도 옵션도 실제로 결과를 바꾼다 — legacy 9,306 / current-ui 4,096 / 구조선 배제 끔 16,592 / 미세반점 끔 2,587.
 - 앱에서 자동·가이드가 눌리지 않는 이유는 **검토가 열려 있으면 새 검출을 잠그는 규칙**이다. 그 규칙을 `GrainMendCardProjection`으로 꺼내 테스트로 고정했다.
+- **확정된 GrainMend 수리가 preview 화소에 전혀 닿지 않는다 — 재현됨.** `--defect-roundtrip`으로 실제 스캔·실제 엔진에서 잰 결과다. 받아들인 항목은 정상적으로 남는다(`Region`·`Automatic`·`Enabled`·`Strength 1`·마스크 78,574바이트·ROI 5088×3401), catalog를 닫았다 열어도 남고, develop 요청에도 실린다(`projectedRegions`·`projectedOrder` 모두 0 아님). 그런데 recipe 있는 preview와 없는 preview가 900×700·1600×1200·2400×1800 **세 크기 모두에서 바이트 단위로 같다**(`differingBytes 0`, 세 번 다 `ok`). 즉 사용자가 확정한 결함 제거가 화면에서 아무 일도 하지 않는다. 원인은 아직 특정하지 못했다 — 검출·저장·투영은 모두 통과하므로 남은 자리는 native `apply_defect_recipe` 안쪽이다. 고쳤다고 쓰지 않는다.
 - 아직 검증하지 않은 것: GrainMend 확정·영속성의 실제 앱 왕복, macOS UI/UX 전면 대조(macOS에 있는 `DefectLayerSection` 결함 레이어 목록이 Windows에 **없다**), Windows CI 설치본 잡.
 - 다음 분해 대상: `DevelopPanelState.cs`(648줄, 전부 한 줄 위임 파사드 — 도메인별 하위 타입으로 나눠야 한다), `PrintWorkspaceView.Composition.cs`, `LibraryWorkspaceView.xaml.cs`, `DevelopWorkspaceView.xaml`, `NativeDevelopExporter.cs`, `negaflow_abi.cpp`, `develop_export.cpp`.
 
