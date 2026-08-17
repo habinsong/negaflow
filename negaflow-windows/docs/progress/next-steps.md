@@ -1,6 +1,6 @@
 # 이력 — 다음에 어디서부터 이어서 할 것인가
 
-> **2026-08-17 현재 재개 지점:** God Object 1단계가 우선이다. `LibraryDocument`는 325줄 파사드까지 실제 타입 분해를 검증했다. 다음 한 걸음은 `DevelopWorkspaceView.xaml.cs`와 나머지 500줄 이상 God Object를 세부 폴더의 실제 타입 경계로 옮기는 것이다. GrainMend 백엔드 검증, UI/UX, GitHub CI는 그 다음이다.
+> **2026-08-17 현재 재개 지점:** God Object 1단계가 우선이다. `LibraryDocument`는 325줄 파사드까지 실제 타입 분해를 검증했다. `DevelopWorkspaceView`의 크롭 세션·히트테스트·오버레이 기하·프리뷰 기하는 `Develop/Canvas`(`CropWorkspaceState`·`CropInteraction`·`PreviewFrame`)로 옮기고 뷰 위임을 닫았다 — Shell x64 Release 경고 0·오류 0, Catalog 721·Shell 938 assertions 통과. 다만 그 뷰는 아직 5,057줄이라 1단계는 닫히지 않았다. 다음 한 걸음은 같은 뷰의 미리보기 렌더·export 실행 책임을 실제 타입으로 옮기는 것이다. GrainMend 백엔드 검증, UI/UX, GitHub CI는 그 다음이다.
 
 현재 목표 단계(축약 없음):
 

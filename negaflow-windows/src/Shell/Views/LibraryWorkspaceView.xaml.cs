@@ -22,6 +22,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
     private LibraryHostService? libraryHost;
     private ScanSessionController? scanSession;
     private ScannerPluginTrustStore? scannerTrust;
+    private bool initialScannerDetectionStarted;
     private bool isSynchronizingScan;
     /// <summary>마지막 프리뷰 스캔의 밝기 값입니다. 자동 프레임 찾기가 이것으로 셉니다.</summary>
     private PreviewLuminance flatbedPreview = PreviewLuminance.None;
@@ -46,6 +47,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
     {
         InitializeComponent();
         LocalizeControls();
+        Loaded += OnLoaded;
     }
 
     public void Initialize(WorkspacePresentationState state)
@@ -256,6 +258,18 @@ public sealed partial class LibraryWorkspaceView : UserControl
 
     /// <summary>사용자가 라이브러리에서 현상으로 넘기려는 frame 입니다.</summary>
     public event EventHandler<LibraryFrameListItem>? FrameOpenRequested;
+
+    /// <summary>
+    /// 공유 현상 사이드바의 스캐너 명령이 이 화면의 실제 스캔 세션을 엽니다. 별도 스캔 상태를
+    /// 만들지 않고 Library와 Develop이 같은 컨트롤러와 catalog를 사용합니다.
+    /// </summary>
+    public void PresentScannerSetup()
+    {
+        sourceKind = LibrarySourceKind.Importing;
+        UpdateSourcePanel();
+        ImportScannerButton.IsChecked = true;
+        OnImportScannerClicked(this, new RoutedEventArgs());
+    }
 
     /// <summary>
     /// 단축키가 부른 명령입니다. 이 화면이 맡을 수 있으면 처리하고 true 를 돌려줍니다.
@@ -1727,6 +1741,41 @@ public sealed partial class LibraryWorkspaceView : UserControl
         finally
         {
             FrameListView.SelectionChanged += OnFrameSelectionChanged;
+        }
+    }
+
+    // 이미 승인한 플러그인만 앱을 열 때 한 번 탐색합니다. 새 플러그인은 신뢰 승인
+    // 전에는 실행하지 않되, 사용자가 바로 승인할 수 있도록 절만 엽니다. 연결된 스캐너가
+    // 있으면 macOS와 같이 Import Scanner 절을 바로 펼칩니다.
+    private async void OnLoaded(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (initialScannerDetectionStarted)
+        {
+            return;
+        }
+        initialScannerDetectionStarted = true;
+        EnsureScanSession();
+        if (scanSession is null)
+        {
+            return;
+        }
+        if (scanSession.State is ScanSessionState.NeedsApproval)
+        {
+            ImportScannerButton.IsChecked = true;
+            RenderScanSection();
+            return;
+        }
+        if (scanSession.State is not ScanSessionState.NoDevice)
+        {
+            return;
+        }
+        await scanSession.RefreshDevicesAsync();
+        if (scanSession.Devices.Count > 0)
+        {
+            ImportScannerButton.IsChecked = true;
+            RenderScanSection();
         }
     }
 

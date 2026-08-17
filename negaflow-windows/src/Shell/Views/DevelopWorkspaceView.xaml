@@ -6,6 +6,111 @@
     xmlns:controls="using:Negaflow.Shell.Views.Controls"
     xmlns:primitives="using:Microsoft.UI.Xaml.Controls.Primitives"
     xmlns:views="using:Negaflow.Shell.Views">
+    <UserControl.Resources>
+        <!-- macOS DevelopInspectorTabLabel: outer radius 18, selected/hover radius 15,
+             icon row minimum height 32. WinUI 기본 ToggleButton chrome은 이 형상을 바꾸므로
+             이 표면에서만 쓰는 plain template으로 고정합니다. -->
+        <Style x:Key="NegaflowDevelopInspectorTabStyle" TargetType="ToggleButton">
+            <Setter Property="MinHeight" Value="32" />
+            <Setter Property="Padding" Value="6,0" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="15" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Grid>
+                            <VisualStateManager.VisualStateGroups>
+                                <VisualStateGroup x:Name="CommonStates">
+                                    <VisualState x:Name="Normal" />
+                                    <VisualState x:Name="PointerOver">
+                                        <VisualState.Setters>
+                                            <Setter Target="Surface.Background" Value="{ThemeResource NegaflowSubtleFillBrush}" />
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                    <VisualState x:Name="Pressed">
+                                        <VisualState.Setters>
+                                            <Setter Target="Surface.Opacity" Value="0.72" />
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                    <VisualState x:Name="Disabled">
+                                        <VisualState.Setters>
+                                            <Setter Target="Surface.Opacity" Value="0.45" />
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                    <VisualState x:Name="Checked">
+                                        <VisualState.Setters>
+                                            <Setter Target="Surface.Background" Value="{ThemeResource NegaflowCardBrush}" />
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                    <VisualState x:Name="CheckedPointerOver">
+                                        <VisualState.Setters>
+                                            <Setter Target="Surface.Background" Value="{ThemeResource NegaflowCardBrush}" />
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                    <VisualState x:Name="CheckedPressed">
+                                        <VisualState.Setters>
+                                            <Setter Target="Surface.Background" Value="{ThemeResource NegaflowCardBrush}" />
+                                            <Setter Target="Surface.Opacity" Value="0.72" />
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                    <VisualState x:Name="CheckedDisabled">
+                                        <VisualState.Setters>
+                                            <Setter Target="Surface.Background" Value="{ThemeResource NegaflowCardBrush}" />
+                                            <Setter Target="Surface.Opacity" Value="0.45" />
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                </VisualStateGroup>
+                            </VisualStateManager.VisualStateGroups>
+                            <Border
+                                x:Name="Surface"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="{TemplateBinding CornerRadius}">
+                                <ContentPresenter
+                                    Padding="{TemplateBinding Padding}"
+                                    HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                    VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+                            </Border>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="NegaflowGrainMendActionStyle" TargetType="Button">
+            <Setter Property="MinHeight" Value="31" />
+            <Setter Property="Padding" Value="7,0,2,0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        </Style>
+        <Style x:Key="NegaflowGrainMendResetStyle" TargetType="Button">
+            <Setter Property="Width" Value="26" />
+            <Setter Property="Height" Value="31" />
+            <Setter Property="Padding" Value="0,0,3,0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="12" />
+        </Style>
+        <!-- macOS ImportGlassAction: 한 줄, 24 high, horizontal padding 6,
+             hover surface radius 12. 긴 번역은 내부 Viewbox가 아래로만 줄입니다. -->
+        <Style x:Key="NegaflowImportActionStyle" TargetType="Button">
+            <Setter Property="MinHeight" Value="24" />
+            <Setter Property="Padding" Value="6,0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        </Style>
+    </UserControl.Resources>
     <Grid x:Name="Root" Background="{ThemeResource NegaflowWindowBrush}" SizeChanged="OnRootSizeChanged">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto" />
@@ -22,7 +127,7 @@
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <StackPanel Grid.Column="0" Padding="22,10,22,0" Spacing="7">
+            <StackPanel x:Name="DevelopSourceRail" Grid.Column="0" Padding="22,10,22,0" Spacing="7">
                 <Button
                     x:Name="LibraryRailButton"
                     AutomationProperties.AutomationId="negaflow.develop.sources.library"
@@ -82,7 +187,7 @@
                     <RowDefinition Height="1" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
-                <Grid Grid.Row="0" Padding="12,0">
+                <Grid x:Name="DevelopSourceHeader" Grid.Row="0" Padding="12,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
@@ -827,41 +932,116 @@
                     </TreeView.ItemTemplate>
                 </TreeView>
 
+                <!-- macOS LibrarySourceSection(content: .combined): 가져오기 3분할 캡슐과
+                     현재 프레임 폴더 트리를 같은 스크롤 패널에 둡니다. -->
                 <ScrollViewer x:Name="LibrarySourcePanel" Grid.Row="2">
-                    <StackPanel Padding="12,14" Spacing="10">
-                        <Button
-                            x:Name="ImportButton"
-                            HorizontalAlignment="Stretch"
-                            AutomationProperties.AutomationId="negaflow.develop.import"
-                            Click="OnImportClicked"
-                            />
+                    <StackPanel Padding="12,14" Spacing="14">
+                        <StackPanel Spacing="8">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon FontSize="12" Glyph="&#xE896;" />
+                                <TextBlock x:Name="LibraryImportSectionText" FontSize="13" FontWeight="SemiBold" />
+                            </StackPanel>
+                            <Border
+                                Padding="2"
+                                Background="{ThemeResource NegaflowSubtleFillBrush}"
+                                CornerRadius="16">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="1" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="1" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button
+                                        x:Name="ImportButton"
+                                        AutomationProperties.AutomationId="negaflow.develop.import.image"
+                                        Click="OnImportClicked"
+                                        Style="{StaticResource NegaflowImportActionStyle}">
+                                        <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                                <FontIcon FontSize="12" Glyph="&#xE91B;" />
+                                                <TextBlock x:Name="ImportImageText" />
+                                            </StackPanel>
+                                        </Viewbox>
+                                    </Button>
+                                    <Border Grid.Column="1" Height="16" VerticalAlignment="Center" Background="{ThemeResource NegaflowDividerBrush}" />
+                                    <Button
+                                        x:Name="ImportFolderButton"
+                                        Grid.Column="2"
+                                        AutomationProperties.AutomationId="negaflow.develop.import.folder"
+                                        Click="OnImportFolderClicked"
+                                        Style="{StaticResource NegaflowImportActionStyle}">
+                                        <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                                <FontIcon FontSize="12" Glyph="&#xE8B7;" />
+                                                <TextBlock x:Name="ImportFolderText" />
+                                            </StackPanel>
+                                        </Viewbox>
+                                    </Button>
+                                    <Border Grid.Column="3" Height="16" VerticalAlignment="Center" Background="{ThemeResource NegaflowDividerBrush}" />
+                                    <Button
+                                        x:Name="ImportScannerButton"
+                                        Grid.Column="4"
+                                        AutomationProperties.AutomationId="negaflow.develop.import.scanner"
+                                        Click="OnImportScannerClicked"
+                                        Style="{StaticResource NegaflowImportActionStyle}">
+                                        <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                                <FontIcon FontSize="12" Glyph="&#xE950;" />
+                                                <TextBlock x:Name="ImportScannerText" />
+                                            </StackPanel>
+                                        </Viewbox>
+                                    </Button>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
                         <TextBlock
                             x:Name="ImportStatusText"
                             FontSize="11"
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                             TextWrapping="Wrap" />
-                        <StackPanel x:Name="NoFrameLeftPanel" HorizontalAlignment="Center" Spacing="8">
-                            <FontIcon FontSize="28" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE91B;" />
-                            <TextBlock x:Name="NoFrameLeftText" FontSize="14" FontWeight="SemiBold" />
-                        </StackPanel>
-                        <StackPanel x:Name="FramePanel" Spacing="10" Visibility="Collapsed">
-                            <TextBlock
-                                x:Name="SelectedFrameText"
-                                FontSize="13"
-                                FontWeight="SemiBold"
-                                TextTrimming="CharacterEllipsis" />
-                            <ComboBox
-                                x:Name="FrameSelector"
-                                HorizontalAlignment="Stretch"
-                                AutomationProperties.AutomationId="negaflow.develop.frame"
-                                DisplayMemberPath="DisplayName"
-                                SelectionChanged="OnFrameSelectionChanged" />
-                            <TextBlock
-                                x:Name="ExportStatusText"
-                                FontSize="11"
-                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                TextWrapping="Wrap" />
-                        </StackPanel>
+                        <TreeView
+                            x:Name="DevelopLibrarySourceTree"
+                            Padding="0"
+                            AutomationProperties.AutomationId="negaflow.develop.sources.library-tree"
+                            CanDragItems="False"
+                            CanReorderItems="False"
+                            ItemInvoked="OnDevelopLibraryTreeItemInvoked"
+                            SelectionMode="Single">
+                            <TreeView.ItemTemplate>
+                                <DataTemplate x:DataType="TreeViewNode">
+                                    <TreeViewItem
+                                        AutomationProperties.Name="{Binding Content.Title, Mode=OneWay}"
+                                        IsExpanded="{Binding IsExpanded, Mode=TwoWay}"
+                                        ItemsSource="{Binding Children}">
+                                        <Grid ColumnSpacing="6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <FontIcon FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="{Binding Content.Glyph, Mode=OneWay}" />
+                                            <TextBlock Grid.Column="1" FontSize="12" Text="{Binding Content.Title, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Grid.Column="2" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{Binding Content.Detail, Mode=OneWay}" />
+                                        </Grid>
+                                    </TreeViewItem>
+                                </DataTemplate>
+                            </TreeView.ItemTemplate>
+                        </TreeView>
+
+                        <!-- 선택/단축키 호환을 위한 비표시 상태 컨트롤입니다. macOS 화면에는
+                             단일 프레임 ComboBox가 없으므로 렌더링하지 않습니다. -->
+                        <Grid Visibility="Collapsed">
+                            <StackPanel x:Name="NoFrameLeftPanel">
+                                <TextBlock x:Name="NoFrameLeftText" />
+                            </StackPanel>
+                            <StackPanel x:Name="FramePanel">
+                                <TextBlock x:Name="SelectedFrameText" />
+                                <ComboBox x:Name="FrameSelector" DisplayMemberPath="DisplayName" SelectionChanged="OnFrameSelectionChanged" />
+                                <TextBlock x:Name="ExportStatusText" />
+                            </StackPanel>
+                        </Grid>
                     </StackPanel>
                 </ScrollViewer>
             </Grid>
@@ -1076,11 +1256,12 @@
                             ValueChanged="OnHistogramValueChanged" />
 
                         <Border
+                            HorizontalAlignment="Stretch"
                             Padding="3"
                             AutomationProperties.AutomationId="negaflow.develop.tabs"
                             Background="{ThemeResource NegaflowSubtleFillBrush}"
                             CornerRadius="18">
-                            <Grid ColumnSpacing="0">
+                            <Grid HorizontalAlignment="Stretch" ColumnSpacing="0">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="*" />
@@ -1092,7 +1273,7 @@
                                 <ToggleButton
                                     x:Name="BasicTabButton"
                                     Grid.Column="0"
-                                    MinHeight="30"
+                                    Style="{StaticResource NegaflowDevelopInspectorTabStyle}"
                                     AutomationProperties.AutomationId="negaflow.develop.tabs.basic"
                                     AutomationProperties.PositionInSet="1"
                                     AutomationProperties.SizeOfSet="6"
@@ -1104,7 +1285,7 @@
                                 <ToggleButton
                                     x:Name="BaseTabButton"
                                     Grid.Column="1"
-                                    MinHeight="30"
+                                    Style="{StaticResource NegaflowDevelopInspectorTabStyle}"
                                     AutomationProperties.AutomationId="negaflow.develop.tabs.base"
                                     AutomationProperties.PositionInSet="2"
                                     AutomationProperties.SizeOfSet="6"
@@ -1115,7 +1296,7 @@
                                 <ToggleButton
                                     x:Name="EditTabButton"
                                     Grid.Column="2"
-                                    MinHeight="30"
+                                    Style="{StaticResource NegaflowDevelopInspectorTabStyle}"
                                     AutomationProperties.AutomationId="negaflow.develop.tabs.edit"
                                     AutomationProperties.PositionInSet="3"
                                     AutomationProperties.SizeOfSet="6"
@@ -1126,7 +1307,7 @@
                                 <ToggleButton
                                     x:Name="DefectsTabButton"
                                     Grid.Column="3"
-                                    MinHeight="30"
+                                    Style="{StaticResource NegaflowDevelopInspectorTabStyle}"
                                     AutomationProperties.AutomationId="negaflow.develop.tabs.defects"
                                     AutomationProperties.PositionInSet="4"
                                     AutomationProperties.SizeOfSet="6"
@@ -1137,7 +1318,7 @@
                                 <ToggleButton
                                     x:Name="InfoTabButton"
                                     Grid.Column="4"
-                                    MinHeight="30"
+                                    Style="{StaticResource NegaflowDevelopInspectorTabStyle}"
                                     AutomationProperties.AutomationId="negaflow.develop.tabs.info"
                                     AutomationProperties.PositionInSet="5"
                                     AutomationProperties.SizeOfSet="6"
@@ -1148,7 +1329,7 @@
                                 <ToggleButton
                                     x:Name="ResetTabButton"
                                     Grid.Column="5"
-                                    MinHeight="30"
+                                    Style="{StaticResource NegaflowDevelopInspectorTabStyle}"
                                     AutomationProperties.AutomationId="negaflow.develop.tabs.reset"
                                     AutomationProperties.PositionInSet="6"
                                     AutomationProperties.SizeOfSet="6"
@@ -1186,98 +1367,138 @@
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
-                                    <Grid Grid.Column="0" ColumnSpacing="1">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <Button
-                                            x:Name="GrainMendAutoButton"
-                                            MinHeight="31"
-                                            HorizontalAlignment="Stretch"
-                                            AutomationProperties.AutomationId="negaflow.develop.grainmend.auto"
-                                            Click="OnGrainMendAutoClicked"
-                                            FontSize="12" />
-                                        <Button
-                                            x:Name="GrainMendAutoResetButton"
-                                            Grid.Column="1"
-                                            Width="26"
-                                            MinHeight="31"
-                                            Padding="0"
-                                            AutomationProperties.AutomationId="negaflow.develop.grainmend.auto.reset"
-                                            Click="OnGrainMendAutoResetClicked">
-                                            <FontIcon FontSize="11" Glyph="&#xE777;" />
-                                        </Button>
-                                    </Grid>
-                                    <Grid Grid.Column="1" ColumnSpacing="1">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <Button
-                                            x:Name="GrainMendGuidedButton"
-                                            MinHeight="31"
-                                            HorizontalAlignment="Stretch"
-                                            AutomationProperties.AutomationId="negaflow.develop.grainmend.guided"
-                                            Click="OnGrainMendGuidedClicked"
-                                            FontSize="12" />
-                                        <Button
-                                            x:Name="GrainMendGuidedResetButton"
-                                            Grid.Column="1"
-                                            Width="26"
-                                            MinHeight="31"
-                                            Padding="0"
-                                            AutomationProperties.AutomationId="negaflow.develop.grainmend.guided.reset"
-                                            Click="OnGrainMendGuidedResetClicked">
-                                            <FontIcon FontSize="11" Glyph="&#xE777;" />
-                                        </Button>
-                                    </Grid>
-                                    <Grid Grid.Column="2" ColumnSpacing="1">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <Button
-                                            x:Name="GrainMendBrushButton"
-                                            MinHeight="31"
-                                            HorizontalAlignment="Stretch"
-                                            AutomationProperties.AutomationId="negaflow.develop.grainmend.brush"
-                                            Click="OnGrainMendBrushClicked"
-                                            FontSize="12" />
-                                        <Button
-                                            x:Name="GrainMendBrushResetButton"
-                                            Grid.Column="1"
-                                            Width="26"
-                                            MinHeight="31"
-                                            Padding="0"
-                                            AutomationProperties.AutomationId="negaflow.develop.grainmend.brush.reset"
-                                            Click="OnGrainMendBrushResetClicked">
-                                            <FontIcon FontSize="11" Glyph="&#xE777;" />
-                                        </Button>
-                                    </Grid>
-                                    <Grid Grid.Column="3" ColumnSpacing="1">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <Button
-                                            x:Name="GrainMendCloneButton"
-                                            MinHeight="31"
-                                            HorizontalAlignment="Stretch"
-                                            AutomationProperties.AutomationId="negaflow.develop.grainmend.clone"
-                                            Click="OnGrainMendCloneClicked"
-                                            FontSize="12" />
-                                        <Button
-                                            x:Name="GrainMendCloneResetButton"
-                                            Grid.Column="1"
-                                            Width="26"
-                                            MinHeight="31"
-                                            Padding="0"
-                                            AutomationProperties.AutomationId="negaflow.develop.grainmend.clone.reset"
-                                            Click="OnGrainMendCloneResetClicked">
-                                            <FontIcon FontSize="11" Glyph="&#xE777;" />
-                                        </Button>
-                                    </Grid>
+                                    <Border
+                                        x:Name="GrainMendAutoPill"
+                                        Grid.Column="0"
+                                        MinHeight="31"
+                                        Background="{ThemeResource NegaflowSubtleFillBrush}"
+                                        BorderBrush="{ThemeResource NegaflowDividerBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="16">
+                                        <Grid ColumnSpacing="1">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <Button
+                                                x:Name="GrainMendAutoButton"
+                                                HorizontalAlignment="Stretch"
+                                                AutomationProperties.AutomationId="negaflow.develop.grainmend.auto"
+                                                Click="OnGrainMendAutoClicked"
+                                                Style="{StaticResource NegaflowGrainMendActionStyle}">
+                                                <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                                    <TextBlock x:Name="GrainMendAutoText" />
+                                                </Viewbox>
+                                            </Button>
+                                            <Button
+                                                x:Name="GrainMendAutoResetButton"
+                                                Grid.Column="1"
+                                                AutomationProperties.AutomationId="negaflow.develop.grainmend.auto.reset"
+                                                Click="OnGrainMendAutoResetClicked"
+                                                Style="{StaticResource NegaflowGrainMendResetStyle}">
+                                                <FontIcon FontSize="11" Glyph="&#xE777;" />
+                                            </Button>
+                                        </Grid>
+                                    </Border>
+                                    <Border
+                                        x:Name="GrainMendGuidedPill"
+                                        Grid.Column="1"
+                                        MinHeight="31"
+                                        Background="{ThemeResource NegaflowSubtleFillBrush}"
+                                        BorderBrush="{ThemeResource NegaflowDividerBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="16">
+                                        <Grid ColumnSpacing="1">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <Button
+                                                x:Name="GrainMendGuidedButton"
+                                                HorizontalAlignment="Stretch"
+                                                AutomationProperties.AutomationId="negaflow.develop.grainmend.guided"
+                                                Click="OnGrainMendGuidedClicked"
+                                                Style="{StaticResource NegaflowGrainMendActionStyle}">
+                                                <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                                    <TextBlock x:Name="GrainMendGuidedText" />
+                                                </Viewbox>
+                                            </Button>
+                                            <Button
+                                                x:Name="GrainMendGuidedResetButton"
+                                                Grid.Column="1"
+                                                AutomationProperties.AutomationId="negaflow.develop.grainmend.guided.reset"
+                                                Click="OnGrainMendGuidedResetClicked"
+                                                Style="{StaticResource NegaflowGrainMendResetStyle}">
+                                                <FontIcon FontSize="11" Glyph="&#xE777;" />
+                                            </Button>
+                                        </Grid>
+                                    </Border>
+                                    <Border
+                                        x:Name="GrainMendBrushPill"
+                                        Grid.Column="2"
+                                        MinHeight="31"
+                                        Background="{ThemeResource NegaflowSubtleFillBrush}"
+                                        BorderBrush="{ThemeResource NegaflowDividerBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="16">
+                                        <Grid ColumnSpacing="1">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <Button
+                                                x:Name="GrainMendBrushButton"
+                                                HorizontalAlignment="Stretch"
+                                                AutomationProperties.AutomationId="negaflow.develop.grainmend.brush"
+                                                Click="OnGrainMendBrushClicked"
+                                                Style="{StaticResource NegaflowGrainMendActionStyle}">
+                                                <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                                    <TextBlock x:Name="GrainMendBrushText" />
+                                                </Viewbox>
+                                            </Button>
+                                            <Button
+                                                x:Name="GrainMendBrushResetButton"
+                                                Grid.Column="1"
+                                                AutomationProperties.AutomationId="negaflow.develop.grainmend.brush.reset"
+                                                Click="OnGrainMendBrushResetClicked"
+                                                Style="{StaticResource NegaflowGrainMendResetStyle}">
+                                                <FontIcon FontSize="11" Glyph="&#xE777;" />
+                                            </Button>
+                                        </Grid>
+                                    </Border>
+                                    <Border
+                                        x:Name="GrainMendClonePill"
+                                        Grid.Column="3"
+                                        MinHeight="31"
+                                        Background="{ThemeResource NegaflowSubtleFillBrush}"
+                                        BorderBrush="{ThemeResource NegaflowDividerBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="16">
+                                        <Grid ColumnSpacing="1">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <Button
+                                                x:Name="GrainMendCloneButton"
+                                                HorizontalAlignment="Stretch"
+                                                AutomationProperties.AutomationId="negaflow.develop.grainmend.clone"
+                                                Click="OnGrainMendCloneClicked"
+                                                Style="{StaticResource NegaflowGrainMendActionStyle}">
+                                                <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+                                                    <TextBlock x:Name="GrainMendCloneText" />
+                                                </Viewbox>
+                                            </Button>
+                                            <Button
+                                                x:Name="GrainMendCloneResetButton"
+                                                Grid.Column="1"
+                                                AutomationProperties.AutomationId="negaflow.develop.grainmend.clone.reset"
+                                                Click="OnGrainMendCloneResetClicked"
+                                                Style="{StaticResource NegaflowGrainMendResetStyle}">
+                                                <FontIcon FontSize="11" Glyph="&#xE777;" />
+                                            </Button>
+                                        </Grid>
+                                    </Border>
                                 </Grid>
                                 <StackPanel
                                     x:Name="GrainMendReviewTuning"

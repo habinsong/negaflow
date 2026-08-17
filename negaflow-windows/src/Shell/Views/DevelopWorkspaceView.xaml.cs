@@ -38,9 +38,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private bool isSynchronizingInspectorPresentation;
     private bool isInspectorPresentationReady;
     private Negaflow.Shell.Library.ThumbnailService? thumbnails;
-    /// <summary>macOS 의 <c>crop.aspectLocked</c> 와 같이 잠긴 상태로 시작합니다.</summary>
-    private bool isCropAspectLocked = true;
-    private DevelopSourceKind developSource = DevelopSourceKind.Library;
+    private WorkflowSidebarTab developSource = WorkflowSidebarTab.Library;
     private GrainMendDetectCoordinator? grainMendDetectCoordinator;
     /// <summary>폴더가 비어 있으면 원본 옆에 씁니다 — 목적지를 고르기 전에도 내보낼 수 있습니다.</summary>
     private ExportSettings exportSettings = new();
@@ -50,30 +48,11 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private bool isSynchronizingExport;
     private bool isSynchronizingMetadata;
     private string engineVersion = "unknown";
-    private CropSession? cropSession;
-    private CropDragMode cropDragMode;
-    private CropDisplayPoint cropDragStart;
-    private CropDisplayRect cropDragStartRect;
-    private bool cropAwaitingPreview;
+    private readonly CropWorkspaceState crop = new();
     private CropDisplayPoint guidedDefectDragStart;
     private CropDisplayPoint guidedDefectDragCurrent;
     private bool guidedDefectDragging;
-    private bool grainMendDetecting;
-
-    private enum CropDragMode
-    {
-        None,
-        Create,
-        Move,
-        TopLeft,
-        Top,
-        TopRight,
-        Right,
-        BottomRight,
-        Bottom,
-        BottomLeft,
-        Left,
-    }
+    private readonly GrainMendWorkspaceState grainMend = new();
 
     public DevelopWorkspaceView()
     {
@@ -84,6 +63,9 @@ public sealed partial class DevelopWorkspaceView : UserControl
     }
 
     public event EventHandler? QuickExportAvailabilityChanged;
+
+    /// <summary>macOS의 스캐너 가져오기 명령을 공유 Library 소스에 요청합니다.</summary>
+    public event EventHandler? ScannerSetupRequested;
 
     public bool CanQuickExport => panel?.CanExport == true;
 
@@ -243,6 +225,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
             FrameSelector.ItemsSource = null;
             Filmstrip.ShowFrames([], -1);
             HistogramView.Clear();
+            RebuildDevelopLibraryTree();
             SyncToneControls();
             NotifyQuickExportAvailabilityChanged();
             return;
@@ -259,6 +242,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
             FrameSelector.ItemsSource = items;
             FrameSelector.SelectedIndex = selectedIndex;
             // 필름스트립과 왼쪽 목록은 같은 항목을 봅니다. 썸네일이 도착하면 둘 다 채워집니다.
+            RebuildDevelopLibraryTree();
             Filmstrip.ShowFrames(items, selectedIndex);
         }
         finally
@@ -492,14 +476,14 @@ public sealed partial class DevelopWorkspaceView : UserControl
         // 필요 없습니다. 미패키지 구성에서도 그대로 동작합니다.
         Microsoft.Windows.Storage.Pickers.FileOpenPicker picker = new(importWindowId.Value)
         {
-            CommitButtonText = "Import",
+            CommitButtonText = AppResources.Get("importSection", "Value"),
         };
         foreach (string extension in ImageSourcePaths.SupportedImportExtensions)
         {
             picker.FileTypeFilter.Add(extension);
         }
 
-        ImportButton.IsEnabled = false;
+        SetImportActionsEnabled(false);
         try
         {
             IReadOnlyList<Microsoft.Windows.Storage.Pickers.PickFileResult> picked =
@@ -514,16 +498,75 @@ public sealed partial class DevelopWorkspaceView : UserControl
             ImportStatusText.Text = FrameImport.Describe(plan);
             RefreshFrames();
         }
-        catch (Exception error)
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or
+            NotSupportedException or ArgumentException or PathTooLongException)
         {
-            // async void 는 예외를 삼킵니다. 잡지 않으면 버튼을 눌러도 아무 일도 일어나지 않고
-            // 이유도 알 수 없습니다.
-            ImportStatusText.Text = $"Import failed: {error.GetType().Name}: {error.Message}";
+            ImportStatusText.Text = AppResources.Get("libraryImportFailed", "Text");
         }
         finally
         {
-            ImportButton.IsEnabled = true;
+            SetImportActionsEnabled(true);
         }
+    }
+
+    private async void OnImportFolderClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (libraryHost is null || importWindowId is null)
+        {
+            return;
+        }
+
+        Microsoft.Windows.Storage.Pickers.FolderPicker picker = new(importWindowId.Value)
+        {
+            CommitButtonText = AppResources.Get("importFolder", "Content"),
+        };
+        SetImportActionsEnabled(false);
+        ImportStatusText.Text = string.Empty;
+        try
+        {
+            Microsoft.Windows.Storage.Pickers.PickFolderResult? picked =
+                await picker.PickSingleFolderAsync();
+            if (picked is null)
+            {
+                return;
+            }
+            FolderImportResult imported = libraryHost.ImportFolders(
+                [picked.Path],
+                DevelopmentProcess.C41);
+            ImportStatusText.Text = imported.IsSuccess
+                ? AppResources.FormatIntegers(
+                    "libraryFolderImportResult",
+                    "Text",
+                    imported.AddedFrameCount,
+                    imported.AddedFolderCount)
+                : AppResources.Get("libraryImportFailed", "Text");
+            RefreshFrames();
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or
+            NotSupportedException or ArgumentException or PathTooLongException)
+        {
+            ImportStatusText.Text = AppResources.Get("libraryImportFailed", "Text");
+        }
+        finally
+        {
+            SetImportActionsEnabled(true);
+        }
+    }
+
+    private void OnImportScannerClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        ScannerSetupRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void SetImportActionsEnabled(bool enabled)
+    {
+        ImportButton.IsEnabled = enabled;
+        ImportFolderButton.IsEnabled = enabled;
+        ImportScannerButton.IsEnabled = enabled;
     }
 
     private void OnFrameSelectionChanged(object sender, SelectionChangedEventArgs args)
@@ -786,10 +829,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
 
         PreviewImage.Visibility = Visibility.Visible;
         EmptyCanvasPanel.Visibility = Visibility.Collapsed;
-        if (cropAwaitingPreview)
-        {
-            cropAwaitingPreview = false;
-        }
+        crop.MarkPreviewReady();
         RenderCropOverlay();
     }
 
@@ -797,7 +837,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
     {
         _ = sender;
         _ = args;
-        if (cropSession is not null)
+        if (crop.IsActive)
         {
             CancelCrop();
             return;
@@ -807,17 +847,14 @@ public sealed partial class DevelopWorkspaceView : UserControl
             return;
         }
 
-        CropSession next = CropSession.Start(panel.ImageTransform.Crop);
-        next.LockedNormalizedAspectRatio = LockedNormalizedAspectRatio();
         // macOS와 같이 crop을 먼저 해제해 전체 프레임에서 새 선택을 만들게 합니다. 드래그 중
         // catalog를 쓰지 않고 Apply/Cancel에서 한 번만 저장합니다.
         if (panel.SetCrop(null) != LibraryFrameError.None)
         {
             return;
         }
-        cropSession = next;
+        crop.Begin(panel.ImageTransform.Crop, LockedNormalizedAspectRatio());
         CropAngleDialControl.Visibility = Visibility.Visible;
-        cropAwaitingPreview = true;
         CanvasHost.Focus(FocusState.Programmatic);
         RequestPreview();
     }
@@ -826,11 +863,11 @@ public sealed partial class DevelopWorkspaceView : UserControl
     {
         _ = sender;
         _ = args;
-        if (cropSession is null || panel is null)
+        if (!crop.IsActive || panel is null)
         {
             return;
         }
-        if (panel.SetCrop(cropSession.Apply()) != LibraryFrameError.None)
+        if (panel.SetCrop(crop.Apply()) != LibraryFrameError.None)
         {
             return;
         }
@@ -842,11 +879,10 @@ public sealed partial class DevelopWorkspaceView : UserControl
     {
         _ = sender;
         _ = args;
-        if (cropSession is null)
+        if (!crop.Full())
         {
             return;
         }
-        cropSession.Full();
         RenderCropOverlay();
     }
 
@@ -859,11 +895,11 @@ public sealed partial class DevelopWorkspaceView : UserControl
 
     private void CancelCrop()
     {
-        if (cropSession is null)
+        if (!crop.IsActive)
         {
             return;
         }
-        ImageCropRect? restore = cropSession.Cancel();
+        ImageCropRect? restore = crop.Cancel();
         if (panel?.SetCrop(restore) != LibraryFrameError.None)
         {
             return;
@@ -874,9 +910,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
 
     private void EndCropSession()
     {
-        cropSession = null;
-        cropDragMode = CropDragMode.None;
-        cropAwaitingPreview = false;
+        crop.End();
         CropOverlay.Visibility = Visibility.Collapsed;
         CropAngleDialControl.Visibility = Visibility.Collapsed;
     }
@@ -907,17 +941,10 @@ public sealed partial class DevelopWorkspaceView : UserControl
             args.Handled = true;
             return;
         }
-        if (cropSession is null || cropAwaitingPreview || !TryCanvasUnitPoint(args, out CropDisplayPoint point))
+        if (!TryCanvasUnitPoint(args, out CropDisplayPoint point) || !crop.TryBeginDrag(point))
         {
             return;
         }
-
-        cropDragStart = point;
-        cropDragStartRect = cropSession.Selection;
-        cropDragMode = HitCropHandle(point, cropDragStartRect) ??
-            (Contains(cropDragStartRect, point) && !cropDragStartRect.IsFull
-                ? CropDragMode.Move
-                : CropDragMode.Create);
         CanvasHost.CapturePointer(args.Pointer);
         args.Handled = true;
     }
@@ -938,25 +965,9 @@ public sealed partial class DevelopWorkspaceView : UserControl
             args.Handled = true;
             return;
         }
-        if (cropSession is null || cropDragMode == CropDragMode.None ||
-            !TryCanvasUnitPoint(args, out CropDisplayPoint point))
+        if (!TryCanvasUnitPoint(args, out CropDisplayPoint point) || !crop.TryContinueDrag(point))
         {
             return;
-        }
-
-        switch (cropDragMode)
-        {
-            case CropDragMode.Create:
-                cropSession.Select(cropDragStart, point);
-                break;
-            case CropDragMode.Move:
-                cropSession.SetSelection(cropDragStartRect.Move(
-                    point.X - cropDragStart.X,
-                    point.Y - cropDragStart.Y));
-                break;
-            default:
-                cropSession.SetSelection(cropDragStartRect.Resize(ToCropHandle(cropDragMode), point));
-                break;
         }
         RenderCropOverlay();
         args.Handled = true;
@@ -994,18 +1005,17 @@ public sealed partial class DevelopWorkspaceView : UserControl
 
     private void EndCropDrag(PointerRoutedEventArgs args)
     {
-        if (cropDragMode == CropDragMode.None)
+        if (!crop.EndDrag())
         {
             return;
         }
         CanvasHost.ReleasePointerCapture(args.Pointer);
-        cropDragMode = CropDragMode.None;
         args.Handled = true;
     }
 
     private bool TryBeginGuidedDefectSelection(PointerRoutedEventArgs args)
     {
-        if (grainMendTool != GrainMendTool.Guided || grainMendDetecting ||
+        if (grainMend.Strokes.Tool != GrainMendTool.Guided || grainMend.IsDetecting ||
             panel?.SelectedFrame is null ||
             !TryCanvasUnitPoint(args, out CropDisplayPoint point))
         {
@@ -1025,7 +1035,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
     /// </summary>
     private bool TryTogglePendingDefectComponent(PointerRoutedEventArgs args)
     {
-        if (pendingDefectReview is null || pendingDefectEdit is null ||
+        if (grainMend.PendingReview is null || grainMend.PendingEdit is null ||
             panel?.SelectedFrame is not { SourceMetadata: { } metadata } frame ||
             !TryCanvasUnitPoint(args, out CropDisplayPoint displayPoint) ||
             !DevelopDisplayGeometry.TryMapDisplayToRaw(
@@ -1036,7 +1046,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
                 displayPoint.Y,
                 out double rawX,
                 out double rawY) ||
-            !pendingDefectReview.ToggleAtRaw(new DefectPoint(rawX, rawY)))
+            !grainMend.ToggleReviewAtRaw(new DefectPoint(rawX, rawY)))
         {
             return false;
         }
@@ -1044,8 +1054,8 @@ public sealed partial class DevelopWorkspaceView : UserControl
         ExportStatusText.Text = AppResources.FormatIntegers(
             "developGrainMendFoundFormat",
             "Value",
-            pendingDefectReview.IncludedCount);
-        ShowDefectOverlay(pendingDefectEdit);
+            grainMend.IncludedCount);
+        ShowDefectOverlay(grainMend.PendingEdit);
         UpdateGrainMendCard();
         return true;
     }
@@ -1106,8 +1116,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
 
     private void RenderGuidedDefectSelection()
     {
-        if (!guidedDefectDragging ||
-            !TryGetPreviewFrame(out double left, out double top, out double width, out double height))
+        if (!guidedDefectDragging || !TryGetPreviewFrame(out PreviewFrame frame))
         {
             GuidedDefectOverlay.Visibility = Visibility.Collapsed;
             return;
@@ -1118,10 +1127,10 @@ public sealed partial class DevelopWorkspaceView : UserControl
         double selectionHeight = Math.Abs(guidedDefectDragCurrent.Y - guidedDefectDragStart.Y);
         Place(
             GuidedDefectSelection,
-            left + x * width,
-            top + y * height,
-            selectionWidth * width,
-            selectionHeight * height);
+            frame.Left + x * frame.Width,
+            frame.Top + y * frame.Height,
+            selectionWidth * frame.Width,
+            selectionHeight * frame.Height);
         GuidedDefectOverlay.Visibility = Visibility.Visible;
     }
 
@@ -1130,7 +1139,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         _ = sender;
         // 검토 중인 검출이 있으면 그것이 먼저입니다. 도움말이 안내하는 대로 Enter 가 받아들이고
         // Esc 가 버립니다.
-        if (pendingDefectEdit is not null)
+        if (grainMend.PendingEdit is not null)
         {
             if (args.Key == VirtualKey.Enter)
             {
@@ -1145,12 +1154,12 @@ public sealed partial class DevelopWorkspaceView : UserControl
                 return;
             }
         }
-        if (args.Key == VirtualKey.Escape && grainMendTool == GrainMendTool.Guided)
+        if (args.Key == VirtualKey.Escape && grainMend.Strokes.Tool == GrainMendTool.Guided)
         {
             SetGrainMendTool(GrainMendTool.None);
             args.Handled = true;
         }
-        if (cropSession is null)
+        if (!crop.IsActive)
         {
             return;
         }
@@ -1166,16 +1175,16 @@ public sealed partial class DevelopWorkspaceView : UserControl
         switch (args.Key)
         {
             case VirtualKey.Left:
-                cropSession.Move(-step, 0.0);
+                crop.TryMove(-step, 0.0);
                 break;
             case VirtualKey.Right:
-                cropSession.Move(step, 0.0);
+                crop.TryMove(step, 0.0);
                 break;
             case VirtualKey.Up:
-                cropSession.Move(0.0, -step);
+                crop.TryMove(0.0, -step);
                 break;
             case VirtualKey.Down:
-                cropSession.Move(0.0, step);
+                crop.TryMove(0.0, step);
                 break;
             default:
                 return;
@@ -1187,77 +1196,63 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private bool TryCanvasUnitPoint(PointerRoutedEventArgs args, out CropDisplayPoint point)
     {
         Windows.Foundation.Point position = args.GetCurrentPoint(CanvasHost).Position;
-        if (!TryGetPreviewFrame(out double left, out double top, out double width, out double height) ||
-            position.X < left || position.X > left + width || position.Y < top || position.Y > top + height)
+        if (!TryGetPreviewFrame(out PreviewFrame frame))
         {
             point = default;
             return false;
         }
-        point = new CropDisplayPoint((position.X - left) / width, (position.Y - top) / height).Clamp();
-        return true;
+        return frame.TryMapPoint(position.X, position.Y, out point);
     }
 
-    private bool TryGetPreviewFrame(out double left, out double top, out double width, out double height)
+    private bool TryGetPreviewFrame(out PreviewFrame frame)
     {
-        left = top = width = height = 0.0;
-        if (previewBitmap is null || CanvasHost.ActualWidth <= 0.0 || CanvasHost.ActualHeight <= 0.0)
+        if (previewBitmap is null)
         {
+            frame = default;
             return false;
         }
-        double availableWidth = Math.Max(1.0, CanvasHost.ActualWidth - 48.0);
-        double availableHeight = Math.Max(1.0, CanvasHost.ActualHeight - 48.0);
-        double scale = Math.Min(availableWidth / previewBitmap.PixelWidth, availableHeight / previewBitmap.PixelHeight);
-        width = previewBitmap.PixelWidth * scale;
-        height = previewBitmap.PixelHeight * scale;
-        left = (CanvasHost.ActualWidth - width) / 2.0;
-        top = (CanvasHost.ActualHeight - height) / 2.0;
-        return width > 0.0 && height > 0.0;
+        return PreviewFrame.TryFrom(
+            CanvasHost.ActualWidth,
+            CanvasHost.ActualHeight,
+            previewBitmap.PixelWidth,
+            previewBitmap.PixelHeight,
+            out frame);
     }
 
     private void RenderCropOverlay()
     {
-        if (cropSession is null || cropAwaitingPreview ||
-            !TryGetPreviewFrame(out double left, out double top, out double width, out double height))
+        if (crop.Session is not { } session || crop.AwaitingPreview ||
+            !TryGetPreviewFrame(out PreviewFrame frame))
         {
             CropOverlay.Visibility = Visibility.Collapsed;
             return;
         }
 
-        CropDisplayRect selection = cropSession.Selection;
-        double cropLeft = left + selection.X * width;
-        double cropTop = top + selection.Y * height;
-        double cropWidth = selection.Width * width;
-        double cropHeight = selection.Height * height;
+        // 기하는 CropInteraction 이 계산합니다. 뷰는 계산된 자리에 요소를 놓기만 합니다.
+        CropOverlayLayout layout = CropInteraction.Layout(
+            frame,
+            session.Selection,
+            CropActionBar.ActualHeight);
         CropOverlay.Visibility = Visibility.Visible;
-        Place(CropDimTop, left, top, width, Math.Max(0.0, cropTop - top));
-        Place(CropDimBottom, left, cropTop + cropHeight, width, Math.Max(0.0, top + height - (cropTop + cropHeight)));
-        Place(CropDimLeft, left, cropTop, Math.Max(0.0, cropLeft - left), cropHeight);
-        Place(CropDimRight, cropLeft + cropWidth, cropTop, Math.Max(0.0, left + width - (cropLeft + cropWidth)), cropHeight);
-        Place(CropSelection, cropLeft, cropTop, cropWidth, cropHeight);
-        CropThirdVerticalFirst.X1 = CropThirdVerticalFirst.X2 = cropLeft + cropWidth / 3.0;
-        CropThirdVerticalFirst.Y1 = cropTop;
-        CropThirdVerticalFirst.Y2 = cropTop + cropHeight;
-        CropThirdVerticalSecond.X1 = CropThirdVerticalSecond.X2 = cropLeft + cropWidth * 2.0 / 3.0;
-        CropThirdVerticalSecond.Y1 = cropTop;
-        CropThirdVerticalSecond.Y2 = cropTop + cropHeight;
-        CropThirdHorizontalFirst.X1 = cropLeft;
-        CropThirdHorizontalFirst.X2 = cropLeft + cropWidth;
-        CropThirdHorizontalFirst.Y1 = CropThirdHorizontalFirst.Y2 = cropTop + cropHeight / 3.0;
-        CropThirdHorizontalSecond.X1 = cropLeft;
-        CropThirdHorizontalSecond.X2 = cropLeft + cropWidth;
-        CropThirdHorizontalSecond.Y1 = CropThirdHorizontalSecond.Y2 = cropTop + cropHeight * 2.0 / 3.0;
-        PlaceHandle(CropHandleTopLeft, cropLeft, cropTop, false, false);
-        PlaceHandle(CropHandleTop, cropLeft + cropWidth / 2.0, cropTop, true, false);
-        PlaceHandle(CropHandleTopRight, cropLeft + cropWidth, cropTop, false, false);
-        PlaceHandle(CropHandleRight, cropLeft + cropWidth, cropTop + cropHeight / 2.0, false, true);
-        PlaceHandle(CropHandleBottomRight, cropLeft + cropWidth, cropTop + cropHeight, false, false);
-        PlaceHandle(CropHandleBottom, cropLeft + cropWidth / 2.0, cropTop + cropHeight, true, false);
-        PlaceHandle(CropHandleBottomLeft, cropLeft, cropTop + cropHeight, false, false);
-        PlaceHandle(CropHandleLeft, cropLeft, cropTop + cropHeight / 2.0, false, true);
-        // macOS는 막대 중심을 (crop 하단 + 30)에 두고 이미지 프레임 안쪽 86/28pt로 가둡니다.
-        double barHalfHeight = CropActionBar.ActualHeight > 0 ? CropActionBar.ActualHeight / 2.0 : 21.0;
-        Canvas.SetLeft(CropActionBar, Math.Clamp(cropLeft + cropWidth / 2.0, left + 86.0, Math.Max(left + 86.0, left + width - 86.0)) - 86.0);
-        Canvas.SetTop(CropActionBar, Math.Clamp(cropTop + cropHeight + 30.0, top + 28.0, Math.Max(top + 28.0, top + height - 28.0)) - barHalfHeight);
+        Place(CropDimTop, layout.DimTop);
+        Place(CropDimBottom, layout.DimBottom);
+        Place(CropDimLeft, layout.DimLeft);
+        Place(CropDimRight, layout.DimRight);
+        Place(CropSelection, layout.Selection);
+        Place(CropThirdVerticalFirst, layout.ThirdVerticalFirst);
+        Place(CropThirdVerticalSecond, layout.ThirdVerticalSecond);
+        Place(CropThirdHorizontalFirst, layout.ThirdHorizontalFirst);
+        Place(CropThirdHorizontalSecond, layout.ThirdHorizontalSecond);
+        Place(CropHandleTopLeft, layout.HandleTopLeft);
+        Place(CropHandleTop, layout.HandleTop);
+        Place(CropHandleTopRight, layout.HandleTopRight);
+        Place(CropHandleRight, layout.HandleRight);
+        Place(CropHandleBottomRight, layout.HandleBottomRight);
+        Place(CropHandleBottom, layout.HandleBottom);
+        Place(CropHandleBottomLeft, layout.HandleBottomLeft);
+        Place(CropHandleLeft, layout.HandleLeft);
+        Canvas.SetLeft(CropActionBar, layout.ActionBarLeft);
+        Canvas.SetTop(CropActionBar, layout.ActionBarTop);
     }
 
     private static void Place(FrameworkElement element, double left, double top, double width, double height)
@@ -1268,51 +1263,18 @@ public sealed partial class DevelopWorkspaceView : UserControl
         Canvas.SetTop(element, top);
     }
 
-    private static void PlaceHandle(FrameworkElement element, double centerX, double centerY, bool horizontal, bool vertical)
+    private static void Place(FrameworkElement element, CropOverlayPlacement placement) =>
+        Place(element, placement.Left, placement.Top, placement.Width, placement.Height);
+
+    private static void Place(
+        Microsoft.UI.Xaml.Shapes.Line line,
+        (double X1, double Y1, double X2, double Y2) segment)
     {
-        double width = horizontal ? 24.0 : 14.0;
-        double height = vertical ? 24.0 : 14.0;
-        Place(element, centerX - width / 2.0, centerY - height / 2.0, width, height);
+        line.X1 = segment.X1;
+        line.Y1 = segment.Y1;
+        line.X2 = segment.X2;
+        line.Y2 = segment.Y2;
     }
-
-    private static bool Contains(CropDisplayRect rect, CropDisplayPoint point) =>
-        point.X >= rect.X && point.X <= rect.Right && point.Y >= rect.Y && point.Y <= rect.Bottom;
-
-    private static CropDragMode? HitCropHandle(CropDisplayPoint point, CropDisplayRect rect)
-    {
-        const double radius = 0.025;
-        foreach ((CropDragMode mode, double x, double y) candidate in new[]
-                 {
-                     (CropDragMode.TopLeft, rect.X, rect.Y),
-                     (CropDragMode.Top, rect.X + rect.Width / 2.0, rect.Y),
-                     (CropDragMode.TopRight, rect.Right, rect.Y),
-                     (CropDragMode.Right, rect.Right, rect.Y + rect.Height / 2.0),
-                     (CropDragMode.BottomRight, rect.Right, rect.Bottom),
-                     (CropDragMode.Bottom, rect.X + rect.Width / 2.0, rect.Bottom),
-                     (CropDragMode.BottomLeft, rect.X, rect.Bottom),
-                     (CropDragMode.Left, rect.X, rect.Y + rect.Height / 2.0),
-                 })
-        {
-            if (Math.Abs(point.X - candidate.x) <= radius && Math.Abs(point.Y - candidate.y) <= radius)
-            {
-                return candidate.mode;
-            }
-        }
-        return null;
-    }
-
-    private static CropHandle ToCropHandle(CropDragMode mode) => mode switch
-    {
-        CropDragMode.TopLeft => CropHandle.TopLeft,
-        CropDragMode.Top => CropHandle.Top,
-        CropDragMode.TopRight => CropHandle.TopRight,
-        CropDragMode.Right => CropHandle.Right,
-        CropDragMode.BottomRight => CropHandle.BottomRight,
-        CropDragMode.Bottom => CropHandle.Bottom,
-        CropDragMode.BottomLeft => CropHandle.BottomLeft,
-        CropDragMode.Left => CropHandle.Left,
-        _ => throw new ArgumentOutOfRangeException(nameof(mode)),
-    };
 
     private void UpdateManualBaseText()
     {
@@ -1973,53 +1935,44 @@ public sealed partial class DevelopWorkspaceView : UserControl
         UpdateImageTransform(state => state.SetStraightenAngle(args.Value));
     }
 
-    /// <summary>
-    /// 현상 왼쪽 소스를 바꿉니다. 지금은 라이브러리와 출력 둘이며, 나머지 macOS 탭(필름·프리셋·
-    /// 버전)은 아직 내용이 없어 막대에만 있습니다.
-    /// </summary>
+    /// <summary>macOS <c>WorkflowSidebarTab</c>과 같은 현상 왼쪽 소스를 바꿉니다.</summary>
     private void OnDevelopSourceRailClicked(object sender, RoutedEventArgs args)
     {
         _ = args;
         if (sender is not Button { Tag: string tag } ||
-            !Enum.TryParse(tag, out DevelopSourceKind kind))
+            !Enum.TryParse(tag, out WorkflowSidebarTab kind))
         {
             return;
         }
         developSource = kind;
+        workspaceState?.SelectDevelopSidebarTab(kind);
         UpdateDevelopSourcePanel();
-    }
-
-    /// <summary>현상 왼쪽 소스입니다. macOS 의 다섯 탭 중 지금 내용이 있는 넷입니다.</summary>
-    private enum DevelopSourceKind
-    {
-        Library,
-        Files,
-        Versions,
-        Presets,
-        Film,
-        Output,
     }
 
     private void UpdateDevelopSourcePanel()
     {
-        LibrarySourcePanel.Visibility = Show(DevelopSourceKind.Library);
-        DevelopFilesSourceTree.Visibility = Show(DevelopSourceKind.Files);
-        if (developSource == DevelopSourceKind.Files)
+        LibrarySourcePanel.Visibility = Show(WorkflowSidebarTab.Library);
+        if (developSource == WorkflowSidebarTab.Library)
+        {
+            RebuildDevelopLibraryTree();
+        }
+        DevelopFilesSourceTree.Visibility = Show(WorkflowSidebarTab.Files);
+        if (developSource == WorkflowSidebarTab.Files)
         {
             RebuildDevelopFilesTree();
         }
-        VersionsSourcePanel.Visibility = Show(DevelopSourceKind.Versions);
-        PresetsSourcePanel.Visibility = Show(DevelopSourceKind.Presets);
-        FilmSourcePanel.Visibility = Show(DevelopSourceKind.Film);
-        OutputSourcePanel.Visibility = Show(DevelopSourceKind.Output);
+        VersionsSourcePanel.Visibility = Show(WorkflowSidebarTab.Versions);
+        PresetsSourcePanel.Visibility = Show(WorkflowSidebarTab.Presets);
+        FilmSourcePanel.Visibility = Show(WorkflowSidebarTab.Film);
+        OutputSourcePanel.Visibility = Show(WorkflowSidebarTab.Output);
 
         (string headerKey, string glyph) = developSource switch
         {
-            DevelopSourceKind.Files => ("sidebarFiles", ""),
-            DevelopSourceKind.Versions => ("developSectionVersions", ""),
-            DevelopSourceKind.Presets => ("developSectionPresets", "\uE9E9"),
-            DevelopSourceKind.Film => ("developSectionFilm", ""),
-            DevelopSourceKind.Output => ("developSectionOutput", ""),
+            WorkflowSidebarTab.Files => ("sidebarFiles", ""),
+            WorkflowSidebarTab.Versions => ("developSectionVersions", ""),
+            WorkflowSidebarTab.Presets => ("developSectionPresets", "\uE9E9"),
+            WorkflowSidebarTab.Film => ("developSectionFilm", ""),
+            WorkflowSidebarTab.Output => ("developSectionOutput", ""),
             _ => ("developLibrary", ""),
         };
         LibraryHeaderText.Text = AppResources.Get(headerKey, "Text");
@@ -2028,7 +1981,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         var accent = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"];
         var normal = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorPrimaryBrush"];
         var selection = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["NegaflowSelectionBrush"];
-        foreach ((Button button, FontIcon icon, DevelopSourceKind kind) in DevelopSourceRailButtons())
+        foreach ((Button button, FontIcon icon, WorkflowSidebarTab kind) in DevelopSourceRailButtons())
         {
             bool selected = kind == developSource;
             button.Background = selected
@@ -2062,7 +2015,41 @@ public sealed partial class DevelopWorkspaceView : UserControl
             libraryHost.Folders,
             libraryHost.FolderAvailabilityById,
             LibraryBrowserViewMode.Folders);
-        foreach (LibraryBrowserFolderSection section in projection.FolderSections)
+        AddDevelopFolderNodes(DevelopFilesSourceTree, projection.FolderSections);
+    }
+
+    /// <summary>
+    /// macOS combined Library 탭처럼 현재 frame이 든 폴더만 보입니다. Files 탭은 전체 폴더를
+    /// 보이므로 두 탭의 역할을 섞지 않습니다.
+    /// </summary>
+    private void RebuildDevelopLibraryTree()
+    {
+        DevelopLibrarySourceTree.RootNodes.Clear();
+        if (libraryHost?.ActiveFrameId is not { } activeFrameId)
+        {
+            return;
+        }
+        LibraryBrowserProjection projection = LibraryBrowserProjector.Create(
+            LibraryFrameListItems.From(
+                libraryHost.Frames,
+                libraryHost.SourceAvailabilityByFrameId),
+            libraryHost.Folders,
+            libraryHost.FolderAvailabilityById,
+            LibraryBrowserViewMode.Folders);
+        AddDevelopFolderNodes(
+            DevelopLibrarySourceTree,
+            projection.FolderSections.Where(section =>
+                section.Items.Any(item => string.Equals(
+                    item.Id,
+                    activeFrameId,
+                    StringComparison.Ordinal))));
+    }
+
+    private static void AddDevelopFolderNodes(
+        TreeView tree,
+        IEnumerable<LibraryBrowserFolderSection> sections)
+    {
+        foreach (LibraryBrowserFolderSection section in sections)
         {
             var folder = new TreeViewNode
             {
@@ -2077,14 +2064,23 @@ public sealed partial class DevelopWorkspaceView : UserControl
                     Content = LibrarySourceNode.Frame(item.DisplayName, item.Id),
                 });
             }
-            DevelopFilesSourceTree.RootNodes.Add(folder);
+            tree.RootNodes.Add(folder);
         }
     }
 
     /// <summary>트리에서 frame 을 누르면 그 장을 현상 대상으로 잡습니다.</summary>
     private void OnDevelopFilesTreeItemInvoked(TreeView sender, TreeViewItemInvokedEventArgs args)
     {
-        _ = sender;
+        SelectDevelopTreeFrame(args);
+    }
+
+    private void OnDevelopLibraryTreeItemInvoked(TreeView sender, TreeViewItemInvokedEventArgs args)
+    {
+        SelectDevelopTreeFrame(args);
+    }
+
+    private void SelectDevelopTreeFrame(TreeViewItemInvokedEventArgs args)
+    {
         if (args.InvokedItem is not TreeViewNode { Content: LibrarySourceNode node } ||
             node.FrameId is not { } frameId ||
             panel is null)
@@ -2094,19 +2090,20 @@ public sealed partial class DevelopWorkspaceView : UserControl
         panel.Select(frameId);
         SynchronizeInspectorValues();
         RequestPreview();
+        RebuildDevelopLibraryTree();
     }
 
-    private Visibility Show(DevelopSourceKind kind) =>
+    private Visibility Show(WorkflowSidebarTab kind) =>
         developSource == kind ? Visibility.Visible : Visibility.Collapsed;
 
-    private IEnumerable<(Button Button, FontIcon Icon, DevelopSourceKind Kind)> DevelopSourceRailButtons()
+    private IEnumerable<(Button Button, FontIcon Icon, WorkflowSidebarTab Kind)> DevelopSourceRailButtons()
     {
-        yield return (LibraryRailButton, LibraryRailIcon, DevelopSourceKind.Library);
-        yield return (FilesRailButton, FilesRailIcon, DevelopSourceKind.Files);
-        yield return (VersionsRailButton, VersionsRailIcon, DevelopSourceKind.Versions);
-        yield return (PresetsRailButton, PresetsRailIcon, DevelopSourceKind.Presets);
-        yield return (FilmRailButton, FilmRailIcon, DevelopSourceKind.Film);
-        yield return (OutputRailButton, OutputRailIcon, DevelopSourceKind.Output);
+        yield return (LibraryRailButton, LibraryRailIcon, WorkflowSidebarTab.Library);
+        yield return (FilesRailButton, FilesRailIcon, WorkflowSidebarTab.Files);
+        yield return (VersionsRailButton, VersionsRailIcon, WorkflowSidebarTab.Versions);
+        yield return (PresetsRailButton, PresetsRailIcon, WorkflowSidebarTab.Presets);
+        yield return (FilmRailButton, FilmRailIcon, WorkflowSidebarTab.Film);
+        yield return (OutputRailButton, OutputRailIcon, WorkflowSidebarTab.Output);
     }
 
     private void OnCopyDevelopSettingsClicked(object sender, RoutedEventArgs args)
@@ -2346,48 +2343,8 @@ public sealed partial class DevelopWorkspaceView : UserControl
             : string.Join("/", groups);
     }
 
-    /// <summary>지금 캔버스를 잡고 있는 GrainMend 도구입니다.</summary>
-    private enum GrainMendTool
-    {
-        None,
-        Guided,
-        Brush,
-        Clone,
-    }
-
-    private GrainMendTool grainMendTool;
-    private readonly List<DefectPoint> grainMendStroke = [];
-    private DefectPoint? cloneSourceAnchor;
-    private bool grainMendDragging;
-
-    /// <summary>
-    /// 검출은 됐지만 아직 받아들이지 않은 결과입니다. macOS 와 같이 Enter 를 받아야 사진이
-    /// 바뀝니다 — 여기 값이 있는 동안 사진은 그대로입니다.
-    /// </summary>
-    private DefectEditItem? pendingDefectEdit;
-    private GrainMendReviewSession? pendingDefectReview;
-    private DefectRect? pendingDefectRawRoi;
-    private readonly Dictionary<string, GrainMendSensitivityValues> grainMendSensitivityByFrame =
-        new(StringComparer.Ordinal);
-    private readonly Dictionary<string, GrainMendMicroSpeckValues> grainMendMicroSpecksByFrame =
-        new(StringComparer.Ordinal);
     private bool updatingGrainMendSensitivity;
     private bool updatingGrainMendMicroSpecks;
-    private bool grainMendSensitivityChanged;
-
-    private readonly record struct GrainMendSensitivityValues(double Automatic, double Guided)
-    {
-        public static GrainMendSensitivityValues Default { get; } = new(
-            GrainMendSensitivity.Default,
-            GrainMendSensitivity.Default);
-    }
-
-    private readonly record struct GrainMendMicroSpeckValues(bool Automatic, bool Guided)
-    {
-        // macOS의 새 프레임 기본값과 같습니다. 자동·가이드는 독립된 검토 도구이므로
-        // 프레임 안에서도 따로 기억합니다.
-        public static GrainMendMicroSpeckValues Default { get; } = new(true, true);
-    }
 
     private async void OnGrainMendAutoClicked(object sender, RoutedEventArgs args)
     {
@@ -2402,10 +2359,10 @@ public sealed partial class DevelopWorkspaceView : UserControl
         _ = sender;
         _ = args;
         ClearPendingDefectEdit();
-        SetGrainMendTool(grainMendTool == GrainMendTool.Guided
+        SetGrainMendTool(grainMend.Strokes.Tool == GrainMendTool.Guided
             ? GrainMendTool.None
             : GrainMendTool.Guided);
-        if (grainMendTool == GrainMendTool.Guided)
+        if (grainMend.Strokes.Tool == GrainMendTool.Guided)
         {
             _ = CanvasHost.Focus(FocusState.Programmatic);
         }
@@ -2414,12 +2371,12 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private async Task DetectGrainMendAsync(DefectRect rawRoi)
     {
         if (panel?.SelectedFrame is not { } frame || grainMendDetectCoordinator is null ||
-            grainMendDetecting)
+            grainMend.IsDetecting)
         {
             return;
         }
-        ClearPendingDefectEdit();
-        grainMendDetecting = true;
+        grainMend.BeginDetection();
+        HideDefectOverlay();
         ExportStatusText.Text = AppResources.Get("developGrainMendDetecting", "Text");
         UpdateGrainMendCard();
         try
@@ -2437,7 +2394,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         }
         finally
         {
-            grainMendDetecting = false;
+            grainMend.EndDetection();
             UpdateGrainMendCard();
         }
     }
@@ -2456,18 +2413,15 @@ public sealed partial class DevelopWorkspaceView : UserControl
             return;
         }
 
-        pendingDefectReview = GrainMendReviewSession.TryCreate(edit);
-        if (pendingDefectReview is null)
+        if (!grainMend.SetDetectedEdit(edit, rawRoi))
         {
             ExportStatusText.Text = AppResources.Get("developGrainMendFoundNothing", "Text");
             return;
         }
-        pendingDefectEdit = edit;
-        pendingDefectRawRoi = rawRoi;
         ExportStatusText.Text = AppResources.FormatIntegers(
             "developGrainMendFoundFormat",
             "Value",
-            pendingDefectReview.IncludedCount);
+            grainMend.IncludedCount);
         ShowDefectOverlay(edit);
         UpdateGrainMendCard();
         // Enter 와 Esc 를 받으려면 캔버스가 초점을 가져야 합니다.
@@ -2480,55 +2434,23 @@ public sealed partial class DevelopWorkspaceView : UserControl
     /// </summary>
     private void ShowDefectOverlay(DefectEditItem edit)
     {
-        if (panel?.SelectedFrame is not { } frame || previewBitmap is null ||
-            edit.RegionMask is not { } mask || edit.RegionRoi is not { } roi ||
-            edit.RegionWidth is not { } maskWidth || edit.RegionHeight is not { } maskHeight ||
-            edit.BaseSize is not { } sourceSize ||
-            !DefectMaskCodec.TryDecodeRgba8(mask, maskWidth, maskHeight, out byte[] rgba))
+        if (panel?.SelectedFrame is not { } frame || previewBitmap is null)
         {
             return;
         }
 
         int width = previewBitmap.PixelWidth;
         int height = previewBitmap.PixelHeight;
-        WriteableBitmap bitmap = new(width, height);
-        byte[] bgra = new byte[checked(width * height * 4)];
-        double rawTop = sourceSize.Height - roi.Y - roi.Height;
-        for (int y = 0; y < height; ++y)
+        if (GrainMendOverlayRenderer.Render(
+                frame,
+                width,
+                height,
+                edit,
+                grainMend.PendingReview) is not { } bgra)
         {
-            double displayY = height == 1 ? 0.0 : (double)y / (height - 1);
-            for (int x = 0; x < width; ++x)
-            {
-                double displayX = width == 1 ? 0.0 : (double)x / (width - 1);
-                if (!DevelopDisplayGeometry.TryMapDisplayToRaw(
-                        frame.ImageTransform,
-                        checked((uint)sourceSize.Width),
-                        checked((uint)sourceSize.Height),
-                        displayX,
-                        displayY,
-                        out double rawX,
-                        out double rawY))
-                {
-                    continue;
-                }
-                double maskX = rawX * (sourceSize.Width - 1.0) - roi.X;
-                double maskY = rawY * (sourceSize.Height - 1.0) - rawTop;
-                int localX = (int)Math.Round(maskX);
-                int localY = (int)Math.Round(maskY);
-                if (localX < 0 || localX >= maskWidth || localY < 0 || localY >= maskHeight ||
-                    rgba[((localY * maskWidth) + localX) * 4] == 0)
-                {
-                    continue;
-                }
-                int pixel = ((y * width) + x) * 4;
-                bool excluded = pendingDefectReview?.IsExcludedAtRaw(
-                    new DefectPoint(rawX, rawY)) == true;
-                bgra[pixel] = excluded ? (byte)115 : (byte)30;
-                bgra[pixel + 1] = excluded ? (byte)115 : (byte)30;
-                bgra[pixel + 2] = excluded ? (byte)115 : (byte)200;
-                bgra[pixel + 3] = excluded ? (byte)100 : (byte)200;
-            }
+            return;
         }
+        WriteableBitmap bitmap = new(width, height);
         using (Stream buffer = bitmap.PixelBuffer.AsStream())
         {
             buffer.Write(bgra, 0, bgra.Length);
@@ -2540,10 +2462,12 @@ public sealed partial class DevelopWorkspaceView : UserControl
 
     private void ClearPendingDefectEdit()
     {
-        pendingDefectEdit = null;
-        pendingDefectReview = null;
-        pendingDefectRawRoi = null;
-        grainMendSensitivityChanged = false;
+        grainMend.ClearPending();
+        HideDefectOverlay();
+    }
+
+    private void HideDefectOverlay()
+    {
         DefectOverlayImage.Source = null;
         DefectOverlayImage.Visibility = Visibility.Collapsed;
     }
@@ -2553,12 +2477,9 @@ public sealed partial class DevelopWorkspaceView : UserControl
 
     private double GetGrainMendSensitivity(bool automatic)
     {
-        if (panel?.SelectedFrame is not { } frame ||
-            !grainMendSensitivityByFrame.TryGetValue(frame.Id, out GrainMendSensitivityValues values))
-        {
-            return GrainMendSensitivity.Default;
-        }
-        return automatic ? values.Automatic : values.Guided;
+        return panel?.SelectedFrame is { } frame
+            ? grainMend.Sensitivity(frame.Id, automatic)
+            : GrainMendSensitivity.Default;
     }
 
     private void SetGrainMendSensitivity(bool automatic, double value)
@@ -2567,26 +2488,18 @@ public sealed partial class DevelopWorkspaceView : UserControl
         {
             return;
         }
-        GrainMendSensitivityValues prior = grainMendSensitivityByFrame.TryGetValue(
-            frame.Id,
-            out GrainMendSensitivityValues values)
-            ? values
-            : GrainMendSensitivityValues.Default;
-        double clamped = GrainMendSensitivity.Clamp(value);
-        grainMendSensitivityByFrame[frame.Id] = automatic
-            ? prior with { Automatic = clamped }
-            : prior with { Guided = clamped };
+        grainMend.SetSensitivity(frame.Id, automatic, value);
     }
 
     private bool GetGrainMendMicroSpecks(bool automatic)
     {
-        if (panel?.SelectedFrame is not { } frame ||
-            !grainMendMicroSpecksByFrame.TryGetValue(frame.Id, out GrainMendMicroSpeckValues values))
-        {
-            // 이 프레임에서 아직 고른 적이 없으면 설정의 기본값으로 시작합니다.
-            return MicroSpeckDefault(automatic);
-        }
-        return automatic ? values.Automatic : values.Guided;
+        return panel?.SelectedFrame is { } frame
+            ? grainMend.MicroSpecks(
+                frame.Id,
+                automatic,
+                MicroSpeckDefault(automatic: true),
+                MicroSpeckDefault(automatic: false))
+            : MicroSpeckDefault(automatic);
     }
 
     /// <summary>설정에 담긴 기본값입니다. 설정을 못 읽으면 macOS 기본인 켬입니다.</summary>
@@ -2603,16 +2516,12 @@ public sealed partial class DevelopWorkspaceView : UserControl
         {
             return;
         }
-        GrainMendMicroSpeckValues prior = grainMendMicroSpecksByFrame.TryGetValue(
+        grainMend.SetMicroSpecks(
             frame.Id,
-            out GrainMendMicroSpeckValues values)
-            ? values
-            : new GrainMendMicroSpeckValues(
-                MicroSpeckDefault(automatic: true),
-                MicroSpeckDefault(automatic: false));
-        grainMendMicroSpecksByFrame[frame.Id] = automatic
-            ? prior with { Automatic = enabled }
-            : prior with { Guided = enabled };
+            automatic,
+            enabled,
+            MicroSpeckDefault(automatic: true),
+            MicroSpeckDefault(automatic: false));
     }
 
     private void OnGrainMendSensitivityValueChanged(
@@ -2620,14 +2529,13 @@ public sealed partial class DevelopWorkspaceView : UserControl
         RangeBaseValueChangedEventArgs args)
     {
         _ = sender;
-        if (updatingGrainMendSensitivity || pendingDefectEdit is null)
+        if (updatingGrainMendSensitivity || grainMend.PendingEdit is null)
         {
             return;
         }
         SetGrainMendSensitivity(
-            pendingDefectEdit.Label.Kind == DefectEditLabelKind.Automatic,
+            grainMend.PendingEdit.Label.Kind == DefectEditLabelKind.Automatic,
             args.NewValue);
-        grainMendSensitivityChanged = true;
     }
 
     private async void OnGrainMendSensitivityPointerReleased(
@@ -2648,11 +2556,10 @@ public sealed partial class DevelopWorkspaceView : UserControl
 
     private async Task RedetectGrainMendForSensitivityAsync()
     {
-        if (!grainMendSensitivityChanged || pendingDefectRawRoi is not { } rawRoi)
+        if (grainMend.TakeSensitivityRedetectionRoi() is not { } rawRoi)
         {
             return;
         }
-        grainMendSensitivityChanged = false;
         await DetectGrainMendAsync(rawRoi);
     }
 
@@ -2660,12 +2567,12 @@ public sealed partial class DevelopWorkspaceView : UserControl
     {
         _ = sender;
         _ = args;
-        if (updatingGrainMendMicroSpecks || pendingDefectEdit is null ||
-            pendingDefectRawRoi is not { } rawRoi || grainMendDetecting)
+        if (updatingGrainMendMicroSpecks || grainMend.PendingEdit is null ||
+            grainMend.PendingRawRoi is not { } rawRoi || grainMend.IsDetecting)
         {
             return;
         }
-        bool automatic = pendingDefectEdit.Label.Kind == DefectEditLabelKind.Automatic;
+        bool automatic = grainMend.PendingEdit.Label.Kind == DefectEditLabelKind.Automatic;
         SetGrainMendMicroSpecks(automatic, GrainMendMicroSpecksToggle.IsOn);
         await DetectGrainMendAsync(rawRoi);
     }
@@ -2673,11 +2580,11 @@ public sealed partial class DevelopWorkspaceView : UserControl
     /// <summary>검토 중인 검출을 받아들여 recipe 에 담습니다.</summary>
     private void AcceptPendingDefectEdit()
     {
-        if (panel is null || pendingDefectEdit is null)
+        if (panel is null || grainMend.PendingEdit is null)
         {
             return;
         }
-        DefectEditItem? edit = pendingDefectReview?.BuildAcceptedEdit() ?? pendingDefectEdit;
+        DefectEditItem? edit = grainMend.BuildAcceptedEdit();
         if (edit is null)
         {
             CancelPendingDefectEdit();
@@ -2719,7 +2626,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
     {
         _ = sender;
         _ = args;
-        SetGrainMendTool(grainMendTool == GrainMendTool.Brush
+        SetGrainMendTool(grainMend.Strokes.Tool == GrainMendTool.Brush
             ? GrainMendTool.None
             : GrainMendTool.Brush);
     }
@@ -2728,7 +2635,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
     {
         _ = sender;
         _ = args;
-        SetGrainMendTool(grainMendTool == GrainMendTool.Clone
+        SetGrainMendTool(grainMend.Strokes.Tool == GrainMendTool.Clone
             ? GrainMendTool.None
             : GrainMendTool.Clone);
     }
@@ -2795,20 +2702,17 @@ public sealed partial class DevelopWorkspaceView : UserControl
 
     private void SetGrainMendTool(GrainMendTool tool)
     {
-        if (grainMendTool == tool)
+        if (grainMend.Strokes.Tool == tool)
         {
             return;
         }
-        grainMendTool = tool;
-        grainMendStroke.Clear();
-        cloneSourceAnchor = null;
-        grainMendDragging = false;
+        grainMend.Strokes.Select(tool);
         if (tool != GrainMendTool.Guided)
         {
             guidedDefectDragging = false;
             GuidedDefectOverlay.Visibility = Visibility.Collapsed;
         }
-        if (tool != GrainMendTool.None && cropSession is not null)
+        if (tool != GrainMendTool.None && crop.IsActive)
         {
             // 크롭과 결함 도구는 같은 포인터를 두고 다툽니다. macOS 도 서로를 끕니다.
             EndCropSession();
@@ -2823,10 +2727,10 @@ public sealed partial class DevelopWorkspaceView : UserControl
             return;
         }
         GrainMendTitleText.Text = AppResources.Get("developGrainMend", "Text");
-        GrainMendAutoButton.Content = AppResources.Get("developGrainMendAuto", "Content");
-        GrainMendGuidedButton.Content = AppResources.Get("developGrainMendGuided", "Content");
-        GrainMendBrushButton.Content = AppResources.Get("developGrainMendBrush", "Content");
-        GrainMendCloneButton.Content = AppResources.Get("developGrainMendClone", "Content");
+        GrainMendAutoText.Text = AppResources.Get("developGrainMendAuto", "Content");
+        GrainMendGuidedText.Text = AppResources.Get("developGrainMendGuided", "Content");
+        GrainMendBrushText.Text = AppResources.Get("developGrainMendBrush", "Content");
+        GrainMendCloneText.Text = AppResources.Get("developGrainMendClone", "Content");
         GrainMendRemoveButton.Content = AppResources.Get("developGrainMendRemove", "Content");
         GrainMendCancelButton.Content = AppResources.Get("developCropCancel", "Text");
         GrainMendSensitivityLabel.Text = AppResources.Get("developGrainMendSensitivity", "Text");
@@ -2852,25 +2756,25 @@ public sealed partial class DevelopWorkspaceView : UserControl
         AutomationProperties.SetName(GrainMendMicroSpecksToggle, grainMendMicroSpecks);
         ToolTipService.SetToolTip(GrainMendMicroSpecksToggle, grainMendMicroSpecks);
         GrainMendAutoButton.IsEnabled =
-            panel?.SelectedFrame is not null && pendingDefectEdit is null && !grainMendDetecting;
+            panel?.SelectedFrame is not null && grainMend.PendingEdit is null && !grainMend.IsDetecting;
         GrainMendAutoResetButton.IsEnabled =
             panel?.HasDefectEdits(DefectEditLabelKind.Automatic) == true;
         GrainMendGuidedButton.IsEnabled =
-            panel?.SelectedFrame is not null && pendingDefectEdit is null && !grainMendDetecting;
+            panel?.SelectedFrame is not null && grainMend.PendingEdit is null && !grainMend.IsDetecting;
         GrainMendGuidedResetButton.IsEnabled =
             panel?.HasDefectEdits(DefectEditLabelKind.Guided) == true;
-        bool reviewingDefects = pendingDefectEdit is not null;
+        bool reviewingDefects = grainMend.PendingEdit is not null;
         GrainMendReviewTuning.Visibility = reviewingDefects
             ? Visibility.Visible
             : Visibility.Collapsed;
         GrainMendReviewActions.Visibility = reviewingDefects
             ? Visibility.Visible
             : Visibility.Collapsed;
-        GrainMendSensitivitySlider.IsEnabled = reviewingDefects && !grainMendDetecting;
-        GrainMendMicroSpecksToggle.IsEnabled = reviewingDefects && !grainMendDetecting;
+        GrainMendSensitivitySlider.IsEnabled = reviewingDefects && !grainMend.IsDetecting;
+        GrainMendMicroSpecksToggle.IsEnabled = reviewingDefects && !grainMend.IsDetecting;
         if (reviewingDefects)
         {
-            bool automatic = pendingDefectEdit!.Label.Kind == DefectEditLabelKind.Automatic;
+            bool automatic = grainMend.PendingEdit!.Label.Kind == DefectEditLabelKind.Automatic;
             updatingGrainMendSensitivity = true;
             GrainMendSensitivitySlider.Value = GetGrainMendSensitivity(automatic);
             updatingGrainMendSensitivity = false;
@@ -2879,8 +2783,8 @@ public sealed partial class DevelopWorkspaceView : UserControl
             updatingGrainMendMicroSpecks = false;
         }
         GrainMendRemoveButton.IsEnabled =
-            pendingDefectEdit is not null && (pendingDefectReview?.IncludedCount ?? 1) > 0;
-        GrainMendCancelButton.IsEnabled = pendingDefectEdit is not null;
+            grainMend.PendingEdit is not null && (grainMend.PendingReview?.IncludedCount ?? 1) > 0;
+        GrainMendCancelButton.IsEnabled = grainMend.PendingEdit is not null;
 
         string reset = AppResources.Get("developGrainMendReset", "Value");
         SetLocalizedNameAndTooltip(GrainMendAutoResetButton, reset);
@@ -2897,28 +2801,31 @@ public sealed partial class DevelopWorkspaceView : UserControl
         string active = AppResources.Get("selected", "Value");
         string inactive = AppResources.Get("notSelected", "Value");
         AutomationProperties.SetItemStatus(
-            GrainMendBrushButton, grainMendTool == GrainMendTool.Brush ? active : inactive);
+            GrainMendBrushButton,
+            grainMend.Strokes.Tool == GrainMendTool.Brush ? active : inactive);
         AutomationProperties.SetItemStatus(
-            GrainMendCloneButton, grainMendTool == GrainMendTool.Clone ? active : inactive);
+            GrainMendCloneButton,
+            grainMend.Strokes.Tool == GrainMendTool.Clone ? active : inactive);
         AutomationProperties.SetItemStatus(
-            GrainMendGuidedButton, grainMendTool == GrainMendTool.Guided ? active : inactive);
+            GrainMendGuidedButton,
+            grainMend.Strokes.Tool == GrainMendTool.Guided ? active : inactive);
         AutomationProperties.SetItemStatus(
             GrainMendAutoButton,
-            pendingDefectEdit?.Label.Kind == DefectEditLabelKind.Automatic ? active : inactive);
+            grainMend.PendingEdit?.Label.Kind == DefectEditLabelKind.Automatic ? active : inactive);
         var selection = (Microsoft.UI.Xaml.Media.Brush)
             Application.Current.Resources["NegaflowSelectionBrush"];
-        GrainMendBrushButton.Background = grainMendTool == GrainMendTool.Brush
+        GrainMendBrushPill.Background = grainMend.Strokes.Tool == GrainMendTool.Brush
             ? selection
-            : new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent);
-        GrainMendGuidedButton.Background = grainMendTool == GrainMendTool.Guided
+            : (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["NegaflowSubtleFillBrush"];
+        GrainMendGuidedPill.Background = grainMend.Strokes.Tool == GrainMendTool.Guided
             ? selection
-            : new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent);
-        GrainMendAutoButton.Background = pendingDefectEdit?.Label.Kind == DefectEditLabelKind.Automatic
+            : (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["NegaflowSubtleFillBrush"];
+        GrainMendAutoPill.Background = grainMend.PendingEdit?.Label.Kind == DefectEditLabelKind.Automatic
             ? selection
-            : new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent);
-        GrainMendCloneButton.Background = grainMendTool == GrainMendTool.Clone
+            : (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["NegaflowSubtleFillBrush"];
+        GrainMendClonePill.Background = grainMend.Strokes.Tool == GrainMendTool.Clone
             ? selection
-            : new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent);
+            : (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["NegaflowSubtleFillBrush"];
     }
 
     /// <summary>
@@ -2927,8 +2834,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
     /// </summary>
     private bool TryBeginGrainMendStroke(PointerRoutedEventArgs args)
     {
-        if (grainMendTool is GrainMendTool.None or GrainMendTool.Guided ||
-            panel?.SelectedFrame is null ||
+        if (panel?.SelectedFrame is null ||
             !TryCanvasUnitPoint(args, out CropDisplayPoint point))
         {
             return false;
@@ -2937,53 +2843,41 @@ public sealed partial class DevelopWorkspaceView : UserControl
         bool alt = InputKeyboardSource
             .GetKeyStateForCurrentThread(Windows.System.VirtualKey.Menu)
             .HasFlag(CoreVirtualKeyStates.Down);
-        if (grainMendTool == GrainMendTool.Clone && alt)
+        bool handled = grainMend.Strokes.Begin(
+            new DefectPoint(point.X, point.Y),
+            alt);
+        if (grainMend.Strokes.IsDragging)
         {
-            // Alt 클릭은 복제 원본을 정합니다. macOS 의 ⌥ 클릭과 같은 뜻입니다.
-            cloneSourceAnchor = new DefectPoint(point.X, point.Y);
-            return true;
+            CanvasHost.CapturePointer(args.Pointer);
         }
-        if (grainMendTool == GrainMendTool.Clone && cloneSourceAnchor is null)
-        {
-            // 원본을 정하기 전에는 칠할 수 없습니다.
-            return true;
-        }
-
-        grainMendStroke.Clear();
-        grainMendStroke.Add(new DefectPoint(point.X, point.Y));
-        grainMendDragging = true;
-        CanvasHost.CapturePointer(args.Pointer);
-        return true;
+        return handled;
     }
 
     private bool TryContinueGrainMendStroke(PointerRoutedEventArgs args)
     {
-        if (!grainMendDragging || !TryCanvasUnitPoint(args, out CropDisplayPoint point))
+        if (!TryCanvasUnitPoint(args, out CropDisplayPoint point))
         {
             return false;
         }
-        grainMendStroke.Add(new DefectPoint(point.X, point.Y));
-        return true;
+        return grainMend.Strokes.Continue(new DefectPoint(point.X, point.Y));
     }
 
     private bool TryFinishGrainMendStroke(PointerRoutedEventArgs args)
     {
-        if (!grainMendDragging)
+        if (!grainMend.Strokes.IsDragging)
         {
             return false;
         }
-        grainMendDragging = false;
         CanvasHost.ReleasePointerCapture(args.Pointer);
-        List<DefectPoint> stroke = [.. grainMendStroke];
-        grainMendStroke.Clear();
-        if (panel is null || stroke.Count == 0)
+        if (panel is null)
         {
+            grainMend.Strokes.CancelStroke();
             return true;
         }
-
-        LibraryFrameError error = grainMendTool == GrainMendTool.Clone
-            ? panel.AddCloneStroke(stroke, cloneSourceAnchor ?? stroke[0])
-            : panel.AddBrushStroke(stroke);
+        if (!grainMend.Strokes.Finish(panel, out LibraryFrameError error))
+        {
+            return false;
+        }
         if (error == LibraryFrameError.None)
         {
             UpdateGrainMendCard();
@@ -4135,7 +4029,17 @@ public sealed partial class DevelopWorkspaceView : UserControl
     {
         _ = sender;
         _ = args;
-        SynchronizeSharedSelection();
+        if (libraryHost?.ActiveFrameId is { } activeFrameId &&
+            (FrameSelector.ItemsSource is not IReadOnlyList<LibraryFrameListItem> items ||
+             IndexOf(items, activeFrameId) < 0))
+        {
+            RefreshFrames();
+        }
+        else
+        {
+            SynchronizeSharedSelection();
+        }
+        RebuildDevelopLibraryTree();
         UpdateExportPreview();
     }
 
@@ -4574,21 +4478,16 @@ public sealed partial class DevelopWorkspaceView : UserControl
     /// </summary>
     private double? LockedNormalizedAspectRatio()
     {
-        if (!isCropAspectLocked ||
-            panel?.SelectedFrame is not { SourceMetadata: { } metadata } ||
-            panel.ImageTransform.CropAspect is not { } aspect ||
-            !double.IsFinite(aspect) || aspect <= 0.0 ||
-            metadata.PixelWidth == 0U || metadata.PixelHeight == 0U)
+        if (panel?.SelectedFrame is not { SourceMetadata: { } metadata })
         {
             return null;
         }
-        double width = metadata.PixelWidth;
-        double height = metadata.PixelHeight;
-        if (panel.ImageTransform.Rotation is ImageRotation.Degrees90 or ImageRotation.Degrees270)
-        {
-            (width, height) = (height, width);
-        }
-        return aspect * height / width;
+        return CropInteraction.LockedNormalizedAspectRatio(
+            crop.IsAspectLocked,
+            panel.ImageTransform.CropAspect,
+            metadata.PixelWidth,
+            metadata.PixelHeight,
+            panel.ImageTransform.Rotation);
     }
 
     private void OnCropAspectClicked(object sender, ItemClickEventArgs args)
@@ -4609,13 +4508,10 @@ public sealed partial class DevelopWorkspaceView : UserControl
     {
         _ = sender;
         _ = args;
-        isCropAspectLocked = !isCropAspectLocked;
+        bool nextLocked = crop.ToggleAspectLock();
         // 잠금은 catalog 가 아니라 다음 crop 드래그의 동작만 바꿉니다.
-        CropAspectLockIcon.Glyph = isCropAspectLocked ? "" : "";
-        if (cropSession is not null)
-        {
-            cropSession.LockedNormalizedAspectRatio = LockedNormalizedAspectRatio();
-        }
+        CropAspectLockIcon.Glyph = nextLocked ? "" : "";
+        crop.SyncLockedAspect(LockedNormalizedAspectRatio());
         UpdateCropAspectControls();
     }
 
@@ -4628,7 +4524,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         string label = CropAspect.LabelFor(panel.ImageTransform);
         CropAspectButton.Content = CropAspectText(label);
         AutomationProperties.SetName(CropAspectButton, CropAspectButton.Content.ToString());
-        bool locked = isCropAspectLocked;
+        bool locked = crop.IsAspectLocked;
         string lockName = AppResources.Get(
             locked ? "cropAspectLocked" : "cropAspectUnlocked",
             "Value");
@@ -4829,6 +4725,11 @@ public sealed partial class DevelopWorkspaceView : UserControl
         RightResizeThumb.Visibility = RightPanel.Visibility;
         Filmstrip.Visibility = preferences.IsFilmstripVisible ? Visibility.Visible : Visibility.Collapsed;
         SynchronizeWidths(preferences);
+        if (developSource != preferences.SelectedDevelopSidebarTab)
+        {
+            developSource = preferences.SelectedDevelopSidebarTab;
+            UpdateDevelopSourcePanel();
+        }
         if (exportSettings != preferences.Export ||
             quickExportSettings != preferences.QuickExport ||
             exportRecipes != preferences.ExportRecipes)
@@ -4880,10 +4781,16 @@ public sealed partial class DevelopWorkspaceView : UserControl
 
     private void UpdateCompactRail()
     {
-        LeftRailColumn.Width = new GridLength(
-            LeftPanel.Width < ShellLayoutMetrics.SidebarCompactThreshold
-                ? ShellLayoutMetrics.SidebarCompactRailWidth
-                : ShellLayoutMetrics.SidebarRegularRailWidth);
+        bool compact = LeftPanel.Width < ShellLayoutMetrics.SidebarCompactThreshold;
+        LeftRailColumn.Width = new GridLength(compact
+            ? ShellLayoutMetrics.SidebarCompactRailWidth
+            : ShellLayoutMetrics.SidebarRegularRailWidth);
+        DevelopSourceRail.Padding = compact
+            ? new Thickness(8, 10, 8, 0)
+            : new Thickness(22, 10, 22, 0);
+        DevelopSourceHeader.Padding = compact
+            ? new Thickness(8, 0, 8, 0)
+            : new Thickness(12, 0, 12, 0);
     }
 
     private void LocalizeControls()
@@ -4900,7 +4807,13 @@ public sealed partial class DevelopWorkspaceView : UserControl
         NoFrameLeftText.Text = noFrame;
         NoFrameInspectorText.Text = noFrame;
         DevelopHeaderText.Text = AppResources.Get("menuDevelop", "Text");
-        SetButtonText(ImportButton, AppResources.Get("importImages", "Content"));
+        LibraryImportSectionText.Text = AppResources.Get("importSection", "Text");
+        ImportImageText.Text = AppResources.Get("libraryImportImageShort", "Content");
+        ImportFolderText.Text = AppResources.Get("libraryImportFolderShort", "Content");
+        ImportScannerText.Text = AppResources.Get("libraryScannerLabel", "Content");
+        AutomationProperties.SetName(ImportButton, ImportImageText.Text);
+        AutomationProperties.SetName(ImportFolderButton, ImportFolderText.Text);
+        AutomationProperties.SetName(ImportScannerButton, ImportScannerText.Text);
         ExportSectionText.Text = AppResources.Get("exportSection", "Text");
         ExportFormatLabel.Text = AppResources.Get("developExportFormat", "Text");
         AutomationProperties.SetName(ExportFormatSelector, ExportFormatLabel.Text);

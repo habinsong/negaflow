@@ -18,6 +18,7 @@ internal static class GrainMendRecipeTests
     {
         VerifyGrainMendRegionEdit();
         VerifyGrainMendReviewSession();
+        VerifyGrainMendWorkspaceStateAndOverlay();
         VerifyGrainMendDetectCoordinator();
     }
 
@@ -166,6 +167,68 @@ internal static class GrainMendRecipeTests
             "grain_mend_review_persists_only_included_components");
         Check(review.ToggleAtRaw(secondRaw) && review.BuildAcceptedEdit() is null,
             "grain_mend_review_rejects_an_empty_acceptance");
+    }
+
+    private static void VerifyGrainMendWorkspaceStateAndOverlay()
+    {
+        GrainMendWorkspaceState state = new();
+        state.BeginDetection();
+        Check(state.IsDetecting && !state.IsReviewing,
+            "grain_mend_workspace_begins_without_a_persisted_edit");
+        state.EndDetection();
+
+        byte[] rgba = new byte[2 * 2 * 4];
+        rgba[0] = rgba[1] = rgba[2] = rgba[3] = 1;
+        DefectEditItem edit = new(
+            Guid.NewGuid(),
+            DefectEditKind.Region,
+            Enabled: true,
+            Strength: 1.0,
+            new DefectEditLabel(DefectEditLabelKind.Guided, 1),
+            new DefectEditSummary(DefectEditSummaryKind.ClassBreakdown),
+            new DefectSize(2, 2),
+            [])
+        {
+            RegionMask = new DefectMask(false, rgba),
+            RegionRoi = new DefectRect(0, 0, 2, 2),
+            RegionWidth = 2,
+            RegionHeight = 2,
+        };
+        DefectRect roi = new(0.1, 0.2, 0.3, 0.4);
+        Check(state.SetDetectedEdit(edit, roi) && state.IsReviewing &&
+            state.PendingReview?.IncludedCount == 1,
+            "grain_mend_workspace_owns_unaccepted_review_state");
+
+        state.SetSensitivity("frame-a", automatic: false, 99.0);
+        Check(state.Sensitivity("frame-a", automatic: false) == GrainMendSensitivity.Maximum &&
+            state.Sensitivity("frame-a", automatic: true) == GrainMendSensitivity.Default &&
+            state.TakeSensitivityRedetectionRoi() == roi,
+            "grain_mend_workspace_keeps_frame_and_mode_specific_sensitivity");
+        state.SetMicroSpecks(
+            "frame-a",
+            automatic: false,
+            enabled: false,
+            automaticDefault: true,
+            guidedDefault: true);
+        Check(!state.MicroSpecks("frame-a", false, true, true) &&
+            state.MicroSpecks("frame-a", true, true, true),
+            "grain_mend_workspace_keeps_auto_and_guided_micro_specks_separate");
+
+        LibraryFrameSnapshot frame = Frame(new ManualBaseRgb(0.2, 0.2, 0.2));
+        byte[]? included = GrainMendOverlayRenderer.Render(
+            frame, 2, 2, edit, state.PendingReview);
+        Check(included is not null && included[3] == 200,
+            "grain_mend_overlay_marks_an_included_component");
+        Check(state.ToggleReviewAtRaw(new DefectPoint(0, 0)),
+            "grain_mend_workspace_toggles_the_review_component");
+        byte[]? excluded = GrainMendOverlayRenderer.Render(frame, 2, 2, edit, state.PendingReview);
+        Check(excluded is not null && excluded[3] == 100,
+            "grain_mend_overlay_marks_an_excluded_component");
+        Check(state.BuildAcceptedEdit() is null,
+            "grain_mend_workspace_refuses_an_empty_acceptance");
+        state.ClearPending();
+        Check(!state.IsReviewing && state.PendingRawRoi is null,
+            "grain_mend_workspace_clears_unaccepted_state");
     }
 
     /// <summary>

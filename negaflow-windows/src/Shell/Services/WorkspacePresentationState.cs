@@ -22,6 +22,9 @@ public sealed class WorkspacePresentationState
     public void SetActiveFrame(string? frameId) =>
         settingsStore.Update(value => value with { ActiveFrameId = frameId });
 
+    public void SelectDevelopSidebarTab(WorkflowSidebarTab tab) =>
+        settingsStore.Update(value => value with { SelectedDevelopSidebarTab = tab });
+
     public void SetAppearance(AppearanceMode appearance) =>
         settingsStore.Update(value => value with { Appearance = appearance });
 

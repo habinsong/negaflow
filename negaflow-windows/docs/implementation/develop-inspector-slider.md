@@ -96,4 +96,4 @@ inset 뒤 `left=3228, width=561`이었고, Tone Curve header의 UIA state는
 이 체크포인트는 전체 Inspector 완료가 아닙니다. Edit/Defects/Info/Reset의 고유 tab content,
 Color/BW Toning/Calibration/Detail sections, tab Selection pattern, tool-state 취소, compact/high contrast,
 실제 ARM64 runtime은 남아 있습니다. 최신 사용자 우선순위에 따라 이 UI 확장은 보류하고
-`docs/progress/next-steps.md`의 backend 순서로 전환합니다.
+다음 우선순위는 `docs/progress/next-steps.md`에서 관리합니다.

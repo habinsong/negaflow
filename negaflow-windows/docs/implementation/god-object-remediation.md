@@ -28,7 +28,7 @@
 | 우선순위 | 대상 | 줄 | 확인된 독립 책임 | 분해 방향 | 상태 |
 |---|---|---:|---|---|---|
 | P0 | `src/Native/abi/negaflow_abi.cpp` | 6,264 | export/preview 버전 매핑, auto adjust, GrainMend, IR, flatbed, TIFF probe, soft proof, handle 수명 | ABI 함수군별 adapter와 request mapper; 공개 C ABI만 얇게 유지 | 대기 |
-| P0 | `src/Shell/Views/DevelopWorkspaceView.xaml.cs` | 4,823 | 선택·가져오기·미리보기·crop·GrainMend·metadata·version·export·sidebar·resize·localization 이벤트/상태 | `Shell.Core` session/coordinator와 실제 UserControl 경계로 이동 | 대기 |
+| P0 | `src/Shell/Views/DevelopWorkspaceView.xaml.cs` | 5,057 | 선택·가져오기·미리보기·crop·GrainMend·metadata·version·export·sidebar·resize·localization 이벤트/상태 | `Shell.Core` session/coordinator와 실제 UserControl 경계로 이동 | 진행 중. 크롭 세션·히트테스트·오버레이 기하·프리뷰 기하는 `Develop/Canvas`로 이동해 위임을 닫고 검증했다. 나머지 책임은 대기 |
 | P0 | `tests/Native.UnitTests/develop_export_abi_tests.cpp` | 4,107 | 서로 독립적인 ABI version/stage/defect/output suite와 fixture | ABI stage군별 suite 번역 단위와 공용 fixture | 대기 |
 | P0 | `src/Shell/Views/LibraryWorkspaceView.xaml.cs` | 2,670 | 탐색·선택·rating/flag·collection·folder DnD·scanner session·filter/sort·resize·localization | 탐색/정리, scanner workflow, source sidebar, view presentation 타입 | 대기 |
 | P0 | `src/Shell/Views/DevelopWorkspaceView.xaml` | 2,461 | source sidebar, canvas/crop, histogram/tabs, 전체 inspector, GrainMend, metadata/version/export UI | macOS surface 단위 실제 UserControl; 공유 상태를 partial로 숨기지 않음 | 대기 |
@@ -144,3 +144,15 @@
   3. 깃허브 CI 테스트 통과하게 만들것. 지금 계속 실패함.
 - 추가 고정 요구: 다국어 텍스트가 길어져도 UI가 잘리지 않게 할 것. Library/Develop/Print는 분리된 앱이 아니라 하나의 워크플로. 작업은 `main`에서만 한다. 로컬 CI로 확인한 뒤 GitHub Actions 실패 check와 원본 로그를 본다. GrainMend가 먼저가 아니다.
 - GrainMend 자동·가이드·브러시·복제·IR, UI/UX, GitHub CI는 이 구조 선행 조건이 끝난 뒤에만 완료로 말할 수 있다. 이번 체크포인트는 LibraryDocument 책임 이동만 검증했다.
+
+## 2026-08-17 Develop 크롭 책임 이동 — 위임 닫힘·검증됨
+
+- `DevelopWorkspaceView`에서 크롭만 먼저 분리했다. 미리보기 렌더, GrainMend, 내보내기와 다른 변경 이유이기 때문이다.
+- 새 타입: `Develop/Canvas/PreviewFrame.cs`, `Develop/Canvas/CropInteraction.cs`, `Develop/Canvas/CropWorkspaceState.cs`. partial 분할이 아니라 세션 상태, 히트테스트, 오버레이 기하를 실제 타입으로 옮겼다.
+- 직전 기록의 잔여 참조를 모두 닫았다. 빌드로 실측한 잔여 참조는 4곳이었다: `RenderCropOverlay`의 `cropSession`/`cropAwaitingPreview`, `SetGrainMendTool`의 `cropSession`, `LockedNormalizedAspectRatio`/`OnCropAspectLockToggled`/`UpdateCropAspectControls`의 `isCropAspectLocked`.
+- 크롭 상태 필드는 뷰에서 사라졌다. 뷰는 `crop` 하나만 들고 `crop.Session`/`crop.AwaitingPreview`/`crop.IsActive`/`crop.IsAspectLocked`/`crop.ToggleAspectLock()`/`crop.SyncLockedAspect()`로만 접근한다.
+- 오버레이 기하는 `CropInteraction.Layout`이 계산하고 뷰는 계산된 자리에 요소를 놓기만 한다. 뷰에 있던 `PlaceHandle`·`Contains`·`HitCropHandle`·`ToCropHandle`과 손잡이 크기·액션 막대 86/28/30pt 상수를 지우고 `CropInteraction`의 것을 단일 소스로 삼았다.
+- 프리뷰 기하도 일원화했다. 뷰의 `TryGetPreviewFrame(out double, out double, out double, out double)`을 `PreviewFrame.TryFrom` 위임으로 바꿔 크롭 오버레이·가이드 선택·좌표 매핑이 같은 사각형을 쓴다.
+- 검증: `Negaflow.Shell.csproj` x64 Release 경고 0·오류 0, `test-managed.ps1 -Preset x64-release` 빌드 경고 0·오류 0, Catalog 721 assertions, Shell 938 assertions 통과(failures 없음).
+- 이 체크포인트는 크롭 조각만 닫았다. `DevelopWorkspaceView.xaml.cs`는 여전히 5,057줄이며 선택·가져오기·미리보기·GrainMend·metadata·version·export·sidebar·resize·localization 책임이 남아 있다. 완료로 쓰지 않는다.
+- 재개 지점: 같은 뷰에서 미리보기 렌더·export 실행 책임을 다음 실제 타입으로 옮긴다. 그 뒤 `LibraryWorkspaceView.xaml.cs`, `DevelopWorkspaceView.xaml`, `NativeDevelopExporter.cs`, `negaflow_abi.cpp`, `develop_export.cpp`다. GrainMend 백엔드 검증과 GitHub CI는 이 단계가 아니다.

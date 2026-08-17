@@ -68,6 +68,7 @@ public sealed partial class WorkspaceShellView : UserControl
         }
         DevelopWorkspace.Initialize(state, nativeEngineStatus);
         LibraryWorkspace.FrameOpenRequested += OnLibraryFrameOpenRequested;
+        DevelopWorkspace.ScannerSetupRequested += OnDevelopScannerSetupRequested;
         Toolbar.QuickExportRequested += OnToolbarQuickExportRequested;
         DevelopWorkspace.QuickExportAvailabilityChanged += OnQuickExportAvailabilityChanged;
         // 한계값은 엔진이 알려 줍니다. 엔진을 못 읽으면 슬라이더 범위를 지어내는 대신
@@ -224,6 +225,14 @@ public sealed partial class WorkspaceShellView : UserControl
         DevelopWorkspace.SelectFrame(item.Id);
     }
 
+    private void OnDevelopScannerSetupRequested(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        workspaceState?.SelectWorkspace(WorkspaceModule.Library);
+        LibraryWorkspace.PresentScannerSetup();
+    }
+
     private void OnLibrarySelectionChanged(object? sender, EventArgs args)
     {
         _ = sender;
@@ -278,6 +287,7 @@ public sealed partial class WorkspaceShellView : UserControl
         Toolbar.SettingsRequested -= OnToolbarSettingsRequested;
         Toolbar.QuickExportRequested -= OnToolbarQuickExportRequested;
         DevelopWorkspace.QuickExportAvailabilityChanged -= OnQuickExportAvailabilityChanged;
+        DevelopWorkspace.ScannerSetupRequested -= OnDevelopScannerSetupRequested;
         if (workspaceState is not null)
         {
             workspaceState.Changed -= OnStateChanged;

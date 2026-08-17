@@ -14,7 +14,10 @@
 
 - `LibraryDocument`는 1,468줄에서 325줄 공개 파사드로 줄였다. catalog 열기, 상태, 투영, 저장, 조직, frame 편집, 가상 사본, 제거, relink, defect sidecar, undo를 세부 폴더의 실제 타입으로 옮겼다.
 - 검증: Shell.Core x64 Release 경고 0·오류 0, Shell 단위 테스트 938 assertions 통과. GrainMend 동작, UI/UX 패리티, GitHub CI 통과는 아직 검증하지 않았다.
-- God Object 1단계는 닫히지 않았다. 다음 분해 대상은 `DevelopWorkspaceView.xaml.cs`, `LibraryWorkspaceView.xaml.cs`, `DevelopWorkspaceView.xaml`, `NativeDevelopExporter.cs`, `negaflow_abi.cpp`, `develop_export.cpp`다.
+- `DevelopWorkspaceView`의 크롭 책임을 `Develop/Canvas`의 실제 타입(`CropWorkspaceState`·`CropInteraction`·`PreviewFrame`)으로 옮기고 뷰 위임을 닫았다. 크롭 상태 필드와 히트테스트·오버레이 기하·손잡이 상수가 뷰에서 사라졌다.
+- 검증: Shell x64 Release 경고 0·오류 0, `test-managed.ps1 -Preset x64-release`에서 Catalog 721 assertions, Shell 938 assertions 통과.
+- God Object 1단계는 닫히지 않았다. `DevelopWorkspaceView.xaml.cs`는 아직 5,057줄이고 크롭 조각만 분리됐다. GrainMend 동작, UI/UX 패리티, GitHub CI 통과는 아직 검증하지 않았다.
+- 다음 분해 대상은 같은 뷰의 미리보기 렌더·export 실행 책임, 이어서 `LibraryWorkspaceView.xaml.cs`, `DevelopWorkspaceView.xaml`, `NativeDevelopExporter.cs`, `negaflow_abi.cpp`, `develop_export.cpp`다.
 
 ## 완성도 (2026-08-16 기준)
 

@@ -188,8 +188,7 @@ ARM64 교차 빌드만 하고 테스트는 실행하지 않습니다(호스트�
 
 ### 남은 튜닝
 
-1. `main`에서 안정적으로 초록이 유지되면 `docs/STATUS.md`의 CI 항목과
-   `progress/overall-roadmap.md`의 M1 추정치를 올립니다.
+1. `main`에서 안정적으로 초록이 유지되면 `docs/STATUS.md`에 실행 날짜·구성·실패 여부를 추가합니다.
 2. 러너 이미지가 Windows SDK 10.0.26100 관련 문제를 보고한 적이 있으므로, 네이티브 잡이 실패하면
    `Toolchain` 단계의 CMake SDK 선택 로그를 먼저 확인합니다. 첫 실행에서는 문제가 없었습니다.
 3. ARM64 교차 빌드는 `main` push와 수동 실행에서만 돕니다. 통과해도 runtime 검증이 아닙니다.

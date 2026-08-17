@@ -89,9 +89,10 @@ Visual Studio component 설치 여부와 app이 참조하는 NuGet/runtime 버�
 - `Microsoft.WindowsAppSDK.WinUI 1.8.260709004`
 - `Microsoft.Windows.SDK.BuildTools 10.0.26100.7705` build-only
 
-셸은 unpackaged, framework-dependent이므로 개발 PC와 최종 설치 대상에 .NET 10 runtime과 Windows App
-Runtime 1.8이 필요합니다. 개발 PC에서는 실제 x64 셸 실행을 확인했습니다. 제품 installer는 아직 없으므로
-M17에서 prerequisite 설치/탐지, license notice, SBOM과 서명을 함께 닫아야 합니다.
+개발 빌드는 unpackaged, framework-dependent이므로 개발 PC에 .NET 10 runtime과 Windows App
+Runtime 1.8이 필요합니다. 반면 최종 사용자용 x64 설치 파일은 self-contained publish와 App Runtime을
+포함하므로 별도 .NET/Windows App Runtime 설치가 필요하지 않습니다. 실제 설치·제거 smoke와 배포 명령은
+[`windows-build-and-install.md`](windows-build-and-install.md)가 소유합니다.
 
 Visual Studio 업데이트처럼 compiler 경로가 바뀐 경우 기존 generated build tree를 직접 삭제하지 않고
 다음 공식 CMake 재구성 명령을 preset별로 한 번 실행합니다.
