@@ -118,11 +118,11 @@ internal static class DefectRoundTripDiagnostics
         // 4) 저장된 recipe 가 실제 preview 화소를 바꾸는지 셉니다.
         if (DevelopRequestFactory.Create(
                 persisted,
-                Path.Combine(Path.GetTempPath(), "defect-roundtrip-with.png")).Request
+                Path.Combine(Path.GetTempPath(), $"defect-roundtrip-with-{Guid.NewGuid():N}.png")).Request
                 is not { } withRecipe ||
             DevelopRequestFactory.Create(
                 persisted with { DefectRecipe = null },
-                Path.Combine(Path.GetTempPath(), "defect-roundtrip-without.png")).Request
+                Path.Combine(Path.GetTempPath(), $"defect-roundtrip-without-{Guid.NewGuid():N}.png")).Request
                 is not { } withoutRecipe)
         {
             Console.WriteLine("preview request refused");
@@ -221,9 +221,40 @@ internal static class DefectRoundTripDiagnostics
                 }
             }
         }
+        // 대조군: 같은 요청을 두 번 내보내 견줍니다. 여기서도 바이트가 다르면 PNG 출력이
+        // 결정적이지 않다는 뜻이고, 위의 export 차이는 수리의 증거가 되지 못합니다.
+        long controlDifferingBytes = -1;
+        if (withoutRun.Succeeded && File.Exists(withoutRecipe.DestinationPath) &&
+            DevelopRequestFactory.Create(
+                persisted with { DefectRecipe = null },
+                Path.Combine(
+                    Path.GetTempPath(),
+                    $"defect-roundtrip-control-{Guid.NewGuid():N}.png")).Request
+                is { } controlRequest)
+        {
+            DevelopExportResult again = NativeDevelopExporter.Run(controlRequest);
+            if (again.Succeeded && File.Exists(controlRequest.DestinationPath))
+            {
+                byte[] first = File.ReadAllBytes(withoutRecipe.DestinationPath);
+                byte[] second = File.ReadAllBytes(controlRequest.DestinationPath);
+                controlDifferingBytes = first.LongLength == second.LongLength ? 0 : -2;
+                if (controlDifferingBytes == 0)
+                {
+                    for (long index = 0; index < first.LongLength; ++index)
+                    {
+                        if (first[index] != second[index])
+                        {
+                            ++controlDifferingBytes;
+                        }
+                    }
+                }
+            }
+        }
+
         Console.WriteLine(JsonSerializer.Serialize(new
         {
             stage = "export",
+            controlDifferingBytes,
             withoutSucceeded = withoutRun.Succeeded,
             withSucceeded = withRun.Succeeded,
             withRun.ImageWidth,
