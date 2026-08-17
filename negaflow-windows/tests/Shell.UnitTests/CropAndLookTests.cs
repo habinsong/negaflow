@@ -238,6 +238,83 @@ internal static class CropAndLookTests
         Check(!DevelopDisplayGeometry.TryMapDisplayToRaw(
                 ImageTransformRecipe.Identity, 1U, 1U, 0.5, 0.5, out _, out _),
             "display_to_raw_rejects_degenerate_source");
+
+        VerifyRawToDisplayIsTheExactInverse(width, height);
+    }
+
+    /// <summary>
+    /// 원본 → 표시. macOS <c>ImageTransform.baseUnitToDisplay</c> 에 해당하며, 복제 도장이 원 안에
+    /// 보여 줄 소스 화소의 자리를 이것으로 셉니다. 두 방향이 어긋나면 커서와 다른 자리의 화소가
+    /// 보이므로, <b>왕복이 제자리로 돌아오는지</b>를 변형마다 고정합니다.
+    /// </summary>
+    private static void VerifyRawToDisplayIsTheExactInverse(uint width, uint height)
+    {
+        ImageTransformRecipe[] transforms =
+        [
+            ImageTransformRecipe.Identity,
+            ImageTransformRecipe.Identity with { FlipHorizontal = true },
+            ImageTransformRecipe.Identity with { FlipVertical = true },
+            ImageTransformRecipe.Identity with { Rotation = ImageRotation.Degrees90 },
+            ImageTransformRecipe.Identity with { Rotation = ImageRotation.Degrees180 },
+            ImageTransformRecipe.Identity with { Rotation = ImageRotation.Degrees270 },
+            ImageTransformRecipe.Identity with { StraightenAngle = 7.5 },
+            ImageTransformRecipe.Identity with
+            {
+                Crop = new ImageCropRect(0.25, 0.5, 0.5, 0.25),
+            },
+            new(
+                ImageRotation.Degrees270,
+                FlipHorizontal: true,
+                FlipVertical: false,
+                Crop: new ImageCropRect(0.2, 0.2, 0.6, 0.6),
+                StraightenAngle: -3.0,
+                CropAspect: null),
+        ];
+        double[] samples = [0.1, 0.35, 0.5, 0.72, 0.9];
+
+        bool roundTrips = true;
+        foreach (ImageTransformRecipe transform in transforms)
+        {
+            foreach (double displayX in samples)
+            {
+                foreach (double displayY in samples)
+                {
+                    if (!DevelopDisplayGeometry.TryMapDisplayToRaw(
+                            transform, width, height, displayX, displayY,
+                            out double rawX, out double rawY) ||
+                        !DevelopDisplayGeometry.TryMapRawToDisplay(
+                            transform, width, height, rawX, rawY,
+                            out double backX, out double backY) ||
+                        Math.Abs(backX - displayX) > 1e-9 ||
+                        Math.Abs(backY - displayY) > 1e-9)
+                    {
+                        roundTrips = false;
+                    }
+                }
+            }
+        }
+        Check(roundTrips, "raw_to_display_round_trips_for_every_transform");
+
+        // 변형이 없으면 원본 좌표가 곧 표시 좌표입니다.
+        Check(DevelopDisplayGeometry.TryMapRawToDisplay(
+                ImageTransformRecipe.Identity, width, height, 0.25, 0.75,
+                out double identityX, out double identityY) &&
+            Math.Abs(identityX - 0.25) < 1e-12 && Math.Abs(identityY - 0.75) < 1e-12,
+            "raw_to_display_identity");
+
+        // 잘려 나간 자리는 0~1 밖으로 나옵니다 — macOS 도 자르지 않고 내며 호출부가 거릅니다.
+        ImageTransformRecipe cropped = ImageTransformRecipe.Identity with
+        {
+            Crop = new ImageCropRect(0.25, 0.25, 0.5, 0.5),
+        };
+        Check(DevelopDisplayGeometry.TryMapRawToDisplay(
+                cropped, width, height, 0.05, 0.5, out double outsideX, out _) &&
+            outsideX < 0.0,
+            "raw_to_display_reports_points_outside_the_crop");
+
+        Check(!DevelopDisplayGeometry.TryMapRawToDisplay(
+                ImageTransformRecipe.Identity, width, height, double.NaN, 0.5, out _, out _),
+            "raw_to_display_rejects_non_finite");
     }
 
     /// <summary>

@@ -90,6 +90,8 @@ macOS `Features/Workspace/WorkflowSidebar.swift`. 현상 뷰 기준 6개(위→�
 | 4.6 | 칩 호버 | **없음** | macOS 는 배경 `primary.opacity(0.05 → 0.10)`. Windows 는 호버 상태 없음 |
 | 4.7 | 대기 중 되돌리기 | **없음** | macOS 컨트롤 바의 `arrow.uturn.backward`. undo 스택이 없어서 못 넣음 |
 | 4.8 | 오검출 위험 문구 | **없음** | macOS `automaticDefectFalsePositiveRiskStatus`. 개념 자체가 없음 |
+| 4.9 | **덮개 표면 `Opacity="0.75"`** | **창작(고침)** | `DevelopPreviewCanvas.xaml` 의 `DefectOverlayImage` 가 표면 전체에 0.75 를 곱했습니다. macOS 는 불투명도를 **색마다** 넣습니다(성분 `0.35 + 0.5×신뢰도`, 브러시 칠 `0.45`) — 표면에 한 번 더 곱하면 자동·가이드·브러시·복제 덮개가 전부 macOS 보다 25% 흐려집니다. 도입 커밋(`53c81a8`)에 사유가 적혀 있지 않습니다. **지웠습니다.** |
+| 4.10 | **복제 획 중 빨강 칠** | **다름(고침)** | `TryContinueStroke` 가 도구를 가리지 않고 브러시 오버레이를 그려, 복제 도장으로 끌면 macOS 에 없는 빨강 칠이 보였습니다. macOS 는 `BrushOverlay` 와 `CloneStampOverlay` 가 별개 뷰입니다. **도구에 맞는 쪽만 그리게 고쳤습니다.** |
 
 ---
 

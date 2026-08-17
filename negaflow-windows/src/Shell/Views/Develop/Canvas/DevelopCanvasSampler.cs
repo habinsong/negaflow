@@ -47,6 +47,12 @@ internal sealed class DevelopCanvasSampler
         this.displayedIsProof = displayedIsProof;
     }
 
+    /// <summary>
+    /// 화면에 그린 미리보기 화소입니다. macOS 복제 도장이 <c>referenceImage: image</c> 로 받는
+    /// 것과 같은 것이며, 원 안에 보여 줄 소스 화소를 여기서 읽습니다.
+    /// </summary>
+    internal byte[]? PreviewPixels => previewPixels;
+
     /// <summary>미리보기가 도착할 때마다 샘플러가 읽을 버퍼를 갈아 끼웁니다.</summary>
     internal void KeepPreviewPixels(byte[]? pixels, uint width, uint height)
     {

@@ -28,6 +28,24 @@ public static class DevelopDisplayGeometry
     /// <summary>네이티브와 같은 판정입니다. 이보다 작은 각도는 수평보정을 걸지 않습니다.</summary>
     private const double StraightenThreshold = 1.0e-4;
 
+    /// <summary>
+    /// 변형 단계마다의 크기입니다. 표시→원본과 원본→표시가 <b>같은 수</b>를 써야 서로의 역이
+    /// 됩니다 — 두 벌로 두면 언젠가 한쪽만 고쳐지고, 두 방향이 어긋나면 복제 도장이 커서와 다른
+    /// 자리의 화소를 보여 줍니다.
+    /// </summary>
+    private readonly record struct TransformStages(
+        double Width,
+        double Height,
+        double OrientedWidth,
+        double OrientedHeight,
+        bool Straightened,
+        double StraightenedWidth,
+        double StraightenedHeight,
+        double CropLeft,
+        double CropTop,
+        double CroppedWidth,
+        double CroppedHeight);
+
     public static bool TryMapDisplayToRaw(
         ImageTransformRecipe transform,
         uint sourceWidth,
@@ -40,10 +58,132 @@ public static class DevelopDisplayGeometry
         ArgumentNullException.ThrowIfNull(transform);
         rawX = 0.0;
         rawY = 0.0;
+        if (!double.IsFinite(displayX) || !double.IsFinite(displayY) ||
+            !TryStages(transform, sourceWidth, sourceHeight, out TransformStages stages))
+        {
+            return false;
+        }
+
+        // 표시 정규 좌표 → 잘린 이미지의 화소 좌표.
+        double x = Math.Clamp(displayX, 0.0, 1.0) * (stages.CroppedWidth - 1.0);
+        double y = Math.Clamp(displayY, 0.0, 1.0) * (stages.CroppedHeight - 1.0);
+
+        // crop 되돌리기: 잘라낸 왼쪽·위를 더하면 수평보정된 이미지의 좌표입니다.
+        x += stages.CropLeft;
+        y += stages.CropTop;
+
+        if (stages.Straightened)
+        {
+            double theta = transform.StraightenAngle * Math.PI / 180.0;
+            double cos = Math.Cos(theta);
+            double sin = Math.Sin(theta);
+            double dx = x - ((stages.StraightenedWidth - 1.0) * 0.5);
+            double dy = y - ((stages.StraightenedHeight - 1.0) * 0.5);
+            x = ((stages.OrientedWidth - 1.0) * 0.5) + (dx * cos) + (dy * sin);
+            y = ((stages.OrientedHeight - 1.0) * 0.5) - (dx * sin) + (dy * cos);
+        }
+
+        // orient 되돌리기. 네이티브와 같이 회전을 먼저 풀고 반전을 나중에 적용합니다.
+        (double sourceX, double sourceY) = transform.Rotation switch
+        {
+            ImageRotation.Degrees90 => (y, stages.Height - 1.0 - x),
+            ImageRotation.Degrees180 => (stages.Width - 1.0 - x, stages.Height - 1.0 - y),
+            ImageRotation.Degrees270 => (stages.Width - 1.0 - y, x),
+            _ => (x, y),
+        };
+        if (transform.FlipHorizontal)
+        {
+            sourceX = stages.Width - 1.0 - sourceX;
+        }
+        if (transform.FlipVertical)
+        {
+            sourceY = stages.Height - 1.0 - sourceY;
+        }
+
+        rawX = Math.Clamp(sourceX / (stages.Width - 1.0), 0.0, 1.0);
+        rawY = Math.Clamp(sourceY / (stages.Height - 1.0), 0.0, 1.0);
+        return true;
+    }
+
+    /// <summary>
+    /// 원본 파일 위의 한 점을 화면에 보이는 사진 위의 한 점으로 옮깁니다. macOS
+    /// <c>ImageTransform.baseUnitToDisplay</c> 와 같은 방향이며,
+    /// <see cref="TryMapDisplayToRaw"/> 의 정확한 역입니다.
+    /// </summary>
+    /// <remarks>
+    /// macOS 는 두 방향을 모두 들고 있습니다 — 복제 도장이 <c>displayOffset(forCursorAt:)</c> 에서
+    /// <c>cursorBase + offset</c> 을 다시 표시 좌표로 돌려놓아야 원 안에 보여 줄 소스 화소의
+    /// 자리를 알 수 있기 때문입니다. 잘려 나간 자리는 0~1 <b>밖</b>의 값이 됩니다. macOS 도 자르지
+    /// 않고 내며 호출부가 <c>imageFrame.contains</c> 로 거릅니다.
+    /// </remarks>
+    public static bool TryMapRawToDisplay(
+        ImageTransformRecipe transform,
+        uint sourceWidth,
+        uint sourceHeight,
+        double rawX,
+        double rawY,
+        out double displayX,
+        out double displayY)
+    {
+        ArgumentNullException.ThrowIfNull(transform);
+        displayX = 0.0;
+        displayY = 0.0;
+        if (!double.IsFinite(rawX) || !double.IsFinite(rawY) ||
+            !TryStages(transform, sourceWidth, sourceHeight, out TransformStages stages))
+        {
+            return false;
+        }
+
+        double sourceX = Math.Clamp(rawX, 0.0, 1.0) * (stages.Width - 1.0);
+        double sourceY = Math.Clamp(rawY, 0.0, 1.0) * (stages.Height - 1.0);
+        // 역방향이 회전 → 수평반전 → 수직반전 순이므로 정방향은 그 반대입니다.
+        if (transform.FlipVertical)
+        {
+            sourceY = stages.Height - 1.0 - sourceY;
+        }
+        if (transform.FlipHorizontal)
+        {
+            sourceX = stages.Width - 1.0 - sourceX;
+        }
+
+        (double x, double y) = transform.Rotation switch
+        {
+            ImageRotation.Degrees90 => (stages.Height - 1.0 - sourceY, sourceX),
+            ImageRotation.Degrees180 =>
+                (stages.Width - 1.0 - sourceX, stages.Height - 1.0 - sourceY),
+            ImageRotation.Degrees270 => (sourceY, stages.Width - 1.0 - sourceX),
+            _ => (sourceX, sourceY),
+        };
+
+        if (stages.Straightened)
+        {
+            // 역방향 행렬 [[cos, sin], [−sin, cos]] 의 역은 [[cos, −sin], [sin, cos]] 입니다.
+            double theta = transform.StraightenAngle * Math.PI / 180.0;
+            double cos = Math.Cos(theta);
+            double sin = Math.Sin(theta);
+            double dx = x - ((stages.OrientedWidth - 1.0) * 0.5);
+            double dy = y - ((stages.OrientedHeight - 1.0) * 0.5);
+            x = ((stages.StraightenedWidth - 1.0) * 0.5) + (dx * cos) - (dy * sin);
+            y = ((stages.StraightenedHeight - 1.0) * 0.5) + (dx * sin) + (dy * cos);
+        }
+
+        displayX = (x - stages.CropLeft) / (stages.CroppedWidth - 1.0);
+        displayY = (y - stages.CropTop) / (stages.CroppedHeight - 1.0);
+        return true;
+    }
+
+    /// <summary>
+    /// orient → straighten → crop 각 단계의 크기입니다. 두 방향이 같은 것을 씁니다.
+    /// </summary>
+    private static bool TryStages(
+        ImageTransformRecipe transform,
+        uint sourceWidth,
+        uint sourceHeight,
+        out TransformStages stages)
+    {
+        stages = default;
         // 한 줄짜리 이미지는 정규 좌표를 만들 수 없고, 브러시로 칠할 것도 없습니다.
-        if (sourceWidth < 2U || sourceHeight < 2U ||
-            !double.IsFinite(displayX) || !double.IsFinite(displayY) ||
-            !transform.IsValid)
+        if (sourceWidth < 2U || sourceHeight < 2U || !transform.IsValid)
         {
             return false;
         }
@@ -88,44 +228,18 @@ public static class DevelopDisplayGeometry
             return false;
         }
 
-        // 표시 정규 좌표 → 잘린 이미지의 화소 좌표.
-        double x = Math.Clamp(displayX, 0.0, 1.0) * (croppedWidth - 1.0);
-        double y = Math.Clamp(displayY, 0.0, 1.0) * (croppedHeight - 1.0);
-
-        // crop 되돌리기: 잘라낸 왼쪽·위를 더하면 수평보정된 이미지의 좌표입니다.
-        x += cropLeft;
-        y += cropTop;
-
-        if (straightened)
-        {
-            double theta = transform.StraightenAngle * Math.PI / 180.0;
-            double cos = Math.Cos(theta);
-            double sin = Math.Sin(theta);
-            double dx = x - ((straightenedWidth - 1.0) * 0.5);
-            double dy = y - ((straightenedHeight - 1.0) * 0.5);
-            x = ((orientedWidth - 1.0) * 0.5) + (dx * cos) + (dy * sin);
-            y = ((orientedHeight - 1.0) * 0.5) - (dx * sin) + (dy * cos);
-        }
-
-        // orient 되돌리기. 네이티브와 같이 회전을 먼저 풀고 반전을 나중에 적용합니다.
-        (double sourceX, double sourceY) = transform.Rotation switch
-        {
-            ImageRotation.Degrees90 => (y, height - 1.0 - x),
-            ImageRotation.Degrees180 => (width - 1.0 - x, height - 1.0 - y),
-            ImageRotation.Degrees270 => (width - 1.0 - y, x),
-            _ => (x, y),
-        };
-        if (transform.FlipHorizontal)
-        {
-            sourceX = width - 1.0 - sourceX;
-        }
-        if (transform.FlipVertical)
-        {
-            sourceY = height - 1.0 - sourceY;
-        }
-
-        rawX = Math.Clamp(sourceX / (width - 1.0), 0.0, 1.0);
-        rawY = Math.Clamp(sourceY / (height - 1.0), 0.0, 1.0);
+        stages = new TransformStages(
+            width,
+            height,
+            orientedWidth,
+            orientedHeight,
+            straightened,
+            straightenedWidth,
+            straightenedHeight,
+            cropLeft,
+            cropTop,
+            croppedWidth,
+            croppedHeight);
         return true;
     }
 

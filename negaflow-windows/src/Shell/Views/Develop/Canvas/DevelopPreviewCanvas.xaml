@@ -74,13 +74,15 @@
     </Border>
 
     <!-- 검출 결과 오버레이입니다. 미리보기와 같은 사각형을 차지하도록 같은
-         여백과 Stretch 를 씁니다 — 어긋나면 표시가 실제 자리와 달라집니다. -->
+         여백과 Stretch 를 씁니다 — 어긋나면 표시가 실제 자리와 달라집니다.
+         불투명도는 macOS 와 같이 색마다 정해집니다(예: 성분은 0.35 + 0.5×신뢰도, 브러시 칠은
+         0.45). 표면 전체에 한 번 더 곱하면 macOS 보다 흐려지고, 복제 도장이 원 안에 보여 주는
+         소스 화소는 불투명해야 하므로 아예 보이지 않습니다. -->
     <Image
         x:Name="DefectOverlayImage" x:FieldModifier="internal"
         Margin="24"
         AutomationProperties.AutomationId="negaflow.canvas.defect-overlay"
         IsHitTestVisible="False"
-        Opacity="0.75"
         Stretch="Uniform"
         Visibility="Collapsed" />
 

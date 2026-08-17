@@ -51,8 +51,8 @@ internal sealed class DevelopGrainMendReview
     internal void HideOverlay() => view.canvas?.HideDefectOverlay();
 
     /// <summary>
-    /// macOS <c>CloneStampOverlay.draw</c>: 커서 원과 십자선을 캔버스에 올립니다. Alt 를
-    /// 누르고 있으면 원 대신 십자선만 냅니다.
+    /// macOS <c>CloneStampOverlay.draw</c>: 소스 창 미리보기, 커서 원과 그 안의 소스 화소,
+    /// 그리고 샘플 십자선을 캔버스에 올립니다. Alt 를 누르고 있으면 원 대신 십자선만 냅니다.
     /// </summary>
     internal void RenderCloneCursor()
     {
@@ -71,8 +71,11 @@ internal sealed class DevelopGrainMendReview
                 frame,
                 width,
                 height,
+                view.canvas.PreviewPixels,
                 view.input.CloneCursor,
+                view.grainMend.Strokes.InProgressStroke,
                 view.grainMend.Strokes.CloneSourceAnchor,
+                view.grainMend.Strokes.CloneAlignedRawOffset,
                 diameter,
                 view.input.CloneSourceModifierDown) is not { } bgra)
         {

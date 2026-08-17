@@ -5,13 +5,9 @@ namespace Negaflow.Shell.Develop;
 /// <summary>
 /// 복제 도장 커서입니다. macOS
 /// <c>Features/Defects/CloneStamp/CloneStampOverlay.swift</c> 의 <c>draw</c> 를 그대로 옮긴
-/// 것입니다 — 브러시 원, Alt 를 누르고 있을 때의 십자선, 그리고 소스 십자선.
+/// 것입니다 — Alt 를 누르고 있을 때의 십자선, 진행 중 획의 소스 창 미리보기, 브러시 원과 그 안의
+/// 소스 화소 미리보기, 그리고 샘플 위치 십자선입니다.
 /// </summary>
-/// <remarks>
-/// macOS 는 원 안에 복제될 소스 화소를 미리 보여 줍니다. 그것은 표시 이미지 자체를 오프셋만큼
-/// 옮겨 원으로 잘라 그리는 것이므로 캔버스 합성 단계의 일이고, 여기서는 macOS 와 같은 굵기·색의
-/// 테두리와 십자선만 냅니다.
-/// </remarks>
 public static class CloneStampCursorRenderer
 {
     /// <summary>macOS <c>drawCrosshair</c> 의 팔 길이입니다.</summary>
@@ -51,47 +47,149 @@ public static class CloneStampCursorRenderer
     /// 표시 크기 <paramref name="width"/>×<paramref name="height"/> 의 BGRA8 커서입니다.
     /// 그릴 것이 없으면 <see langword="null"/> 입니다.
     /// </summary>
-    /// <param name="cursor">커서(또는 진행 중 획의 마지막 점)의 표시 정규 좌표.</param>
-    /// <param name="source">지정된 복제 소스의 표시 정규 좌표. 없으면 <see langword="null"/>.</param>
+    /// <param name="reference">
+    /// macOS <c>referenceImage</c> — 화면에 보이는 미리보기 화소(BGRA8, 덮개와 같은 격자)입니다.
+    /// 없으면 미리보기 없이 테두리와 십자선만 냅니다.
+    /// </param>
+    /// <param name="cursor">macOS <c>current.last ?? hoverPoint</c> 의 표시 정규 좌표.</param>
+    /// <param name="stroke">macOS <c>current</c> — 진행 중인 획의 표시 정규 좌표.</param>
+    /// <param name="source">macOS <c>sourceBase</c> — 지정된 복제 소스. 없으면 <see langword="null"/>.</param>
+    /// <param name="alignedRawOffset">macOS <c>alignedOffsetBase</c>.</param>
     /// <param name="optionDown">
-    /// Alt 를 누르고 있는지. macOS 는 이때 브러시 원 대신 십자선만 냅니다.
+    /// macOS <c>optionDown</c>. 이때는 브러시 원 대신 십자선만 냅니다.
     /// </param>
     public static byte[]? Render(
         LibraryFrameSnapshot frame,
         int width,
         int height,
+        byte[]? reference,
         DefectPoint? cursor,
+        IReadOnlyList<DefectPoint> stroke,
         DefectPoint? source,
+        DefectPoint? alignedRawOffset,
         double screenDiameter,
         bool optionDown)
     {
         ArgumentNullException.ThrowIfNull(frame);
+        ArgumentNullException.ThrowIfNull(stroke);
         if (width <= 0 || height <= 0 ||
-            (cursor is null && source is null) ||
-            DefectDisplayLocator.Build(frame, width, height) is not { } locator)
+            (cursor is null && source is null && stroke.Count == 0))
         {
             return null;
         }
 
         byte[] bgra = new byte[checked(width * height * 4)];
         DefectCanvas canvas = new(bgra, width, height);
+        double diameter = screenDiameter;
 
         // macOS: `if optionDown { source 와 cursor 에 십자선만; return }`
         if (optionDown)
         {
-            DrawCrosshair(canvas, locator, source);
-            DrawCrosshair(canvas, locator, cursor);
+            DrawCrosshair(canvas, source, width, height);
+            DrawCrosshair(canvas, cursor, width, height);
             return canvas.Touched ? bgra : null;
         }
 
-        if (cursor is { } point && locator.TryLocate(point, out int x, out int y))
+        // macOS: `let anchor = current.first ?? cursor`,
+        //        `let offset = anchor.flatMap { displayOffset(forCursorAt: $0) }`
+        DefectPoint? anchor = stroke.Count > 0 ? stroke[0] : cursor;
+        (int X, int Y)? offset = source is { } sourceAnchor && anchor is { } anchorPoint
+            ? CloneStampSourceWindow.TryOffset(
+                frame, width, height, anchorPoint, sourceAnchor, alignedRawOffset)
+            : null;
+        CloneStampSourceWindow? window = offset is { } shift
+            ? CloneStampSourceWindow.TryCreate(reference, width, height, shift.X, shift.Y)
+            : null;
+
+        // macOS: 진행 중 스트로크는 소스 창의 실제 픽셀을 스트로크 모양으로 보여 줍니다.
+        if (stroke.Count > 0 && window is not null)
         {
-            DrawRing(canvas, x, y, screenDiameter);
+            Fill(
+                canvas,
+                CloneStampShapeMask.ForStroke(
+                    Pixels(stroke, width, height), diameter / 2.0, width, height),
+                window);
         }
-        // macOS: 획 중에는 커서를 따라가고, 그 외에는 지정된 소스에 십자선을 냅니다.
-        DrawCrosshair(canvas, locator, source);
+
+        // macOS: `if let p = cursor, imageFrame.insetBy(dx: -diameter, dy: -diameter).contains(p)`
+        if (cursor is { } point)
+        {
+            (int x, int y) = CloneStampSourceWindow.Pixel(point.X, point.Y, width, height);
+            if (WithinExpandedImage(x, y, diameter, width, height))
+            {
+                // macOS: 원 안에 복제될 소스 픽셀 미리보기(소스 지정 후).
+                if (source is not null && window is not null)
+                {
+                    Fill(
+                        canvas,
+                        CloneStampShapeMask.ForDisc(x, y, diameter / 2.0, width, height),
+                        window);
+                }
+                DrawRing(canvas, x, y, diameter);
+            }
+        }
+
+        // macOS: 샘플 위치 십자 — 획 중에는 커서를 따라가고, 그 외에는 지정된 소스에 냅니다.
+        if (stroke.Count > 0 && offset is { } sample)
+        {
+            (int lastX, int lastY) = CloneStampSourceWindow.Pixel(
+                stroke[^1].X, stroke[^1].Y, width, height);
+            DrawCrosshair(canvas, lastX + sample.X, lastY + sample.Y);
+        }
+        else if (source is { } marker)
+        {
+            DrawCrosshair(canvas, marker, width, height);
+        }
         return canvas.Touched ? bgra : null;
     }
+
+    private static List<(int X, int Y)> Pixels(
+        IReadOnlyList<DefectPoint> points,
+        int width,
+        int height)
+    {
+        List<(int X, int Y)> located = new(points.Count);
+        foreach (DefectPoint point in points)
+        {
+            located.Add(CloneStampSourceWindow.Pixel(point.X, point.Y, width, height));
+        }
+        return located;
+    }
+
+    /// <summary>잘라 낸 모양 안을 소스 화소로 채웁니다 — macOS 는 여기서 이미지를 한 번 그립니다.</summary>
+    private static void Fill(
+        DefectCanvas canvas,
+        CloneStampShapeMask? shape,
+        CloneStampSourceWindow window)
+    {
+        if (shape is null)
+        {
+            return;
+        }
+        for (int y = shape.Top; y <= shape.Bottom; ++y)
+        {
+            for (int x = shape.Left; x <= shape.Right; ++x)
+            {
+                if (shape.Contains(x, y))
+                {
+                    window.CopyInto(canvas, x, y);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// macOS <c>imageFrame.insetBy(dx: -diameter, dy: -diameter).contains(p)</c> — 사진 밖으로
+    /// 지름만큼 나가도 원은 그립니다.
+    /// </summary>
+    private static bool WithinExpandedImage(
+        int x,
+        int y,
+        double diameter,
+        int width,
+        int height) =>
+        x >= -diameter && x <= (width - 1) + diameter &&
+        y >= -diameter && y <= (height - 1) + diameter;
 
     private static void DrawRing(
         DefectCanvas canvas,
@@ -129,26 +227,37 @@ public static class CloneStampCursorRenderer
                 double distance = (dx * dx) + (dy * dy);
                 if (distance <= outerSquared && distance >= innerSquared)
                 {
-                    canvas.FillRectangle(centerX + dx, centerY + dy, 1, 1, color);
+                    canvas.BlendOver(centerX + dx, centerY + dy, color);
                 }
             }
         }
     }
 
-    /// <summary>macOS <c>drawCrosshair</c>: 팔 7, 검정 3 위에 흰색 1.2.</summary>
     private static void DrawCrosshair(
         DefectCanvas canvas,
-        DefectDisplayLocator locator,
-        DefectPoint? point)
+        DefectPoint? point,
+        int width,
+        int height)
     {
-        if (point is not { } value || !locator.TryLocate(value, out int x, out int y))
+        if (point is not { } value)
         {
             return;
         }
+        (int x, int y) = CloneStampSourceWindow.Pixel(value.X, value.Y, width, height);
+        DrawCrosshair(canvas, x, y);
+    }
+
+    /// <summary>macOS <c>drawCrosshair</c>: 팔 7, 검정 3 위에 흰색 1.2.</summary>
+    private static void DrawCrosshair(DefectCanvas canvas, int x, int y)
+    {
         Cross(canvas, x, y, CrosshairShadowThickness, CrosshairShadow);
         Cross(canvas, x, y, CrosshairHighlightThickness, CrosshairHighlight);
     }
 
+    /// <summary>
+    /// 가로 팔과 세로 팔을 한 번에 냅니다. macOS 는 하위 경로 둘을 담은 <c>Path</c> 하나를 한 번
+    /// 긋기 때문에 교차하는 가운데도 <b>한 번만</b> 칠해집니다 — 두 번 얹으면 가운데가 진해집니다.
+    /// </summary>
     private static void Cross(
         DefectCanvas canvas,
         int x,
@@ -157,17 +266,21 @@ public static class CloneStampCursorRenderer
         DefectOverlayColor color)
     {
         double half = thickness / 2.0;
-        canvas.FillRectangle(
-            x - CrosshairArm,
-            (int)Math.Round(y - half),
-            (CrosshairArm * 2) + 1,
-            thickness,
-            color);
-        canvas.FillRectangle(
-            (int)Math.Round(x - half),
-            y - CrosshairArm,
-            thickness,
-            (CrosshairArm * 2) + 1,
-            color);
+        int horizontalTop = (int)Math.Round(y - half);
+        int horizontalBottom = (int)Math.Ceiling(horizontalTop + thickness) - 1;
+        int verticalLeft = (int)Math.Round(x - half);
+        int verticalRight = (int)Math.Ceiling(verticalLeft + thickness) - 1;
+        for (int row = y - CrosshairArm; row <= y + CrosshairArm; ++row)
+        {
+            for (int column = x - CrosshairArm; column <= x + CrosshairArm; ++column)
+            {
+                bool horizontal = row >= horizontalTop && row <= horizontalBottom;
+                bool vertical = column >= verticalLeft && column <= verticalRight;
+                if (horizontal || vertical)
+                {
+                    canvas.BlendOver(column, row, color);
+                }
+            }
+        }
     }
 }

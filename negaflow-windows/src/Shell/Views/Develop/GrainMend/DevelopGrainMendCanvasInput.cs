@@ -56,12 +56,12 @@ internal sealed class DevelopGrainMendCanvasInput
 
     internal bool TryHandleMoved(PointerRoutedEventArgs args)
     {
-        // macOS 는 드래그하지 않을 때에도 커서를 따라 원을 그립니다(onContinuousHover).
-        if (view.grainMend.Strokes.Tool == GrainMendTool.Clone &&
-            TryMap(args, out CropDisplayPoint hover))
+        // macOS 는 드래그하지 않을 때에도 커서를 따라 원을 그립니다(onContinuousHover). 커서를
+        // 먼저 옮겨 두어야 획을 이을 때 같은 점으로 그립니다.
+        bool clone = view.grainMend.Strokes.Tool == GrainMendTool.Clone;
+        if (clone && TryMap(args, out CropDisplayPoint hover))
         {
             cloneCursor = new DefectPoint(hover.X, hover.Y);
-            view.review.RenderCloneCursor();
         }
         if (TryContinueGuided(args))
         {
@@ -72,6 +72,10 @@ internal sealed class DevelopGrainMendCanvasInput
         {
             args.Handled = true;
             return true;
+        }
+        if (clone)
+        {
+            view.review.RenderCloneCursor();
         }
         return false;
     }
@@ -251,12 +255,22 @@ internal sealed class DevelopGrainMendCanvasInput
         bool alt = InputKeyboardSource
             .GetKeyStateForCurrentThread(Windows.System.VirtualKey.Menu)
             .HasFlag(CoreVirtualKeyStates.Down);
+        if (view.grainMend.Strokes.Tool == GrainMendTool.Clone)
+        {
+            // macOS `current.last ?? hoverPoint` — 획이 시작되면 커서는 곧 그 획의 끝입니다.
+            cloneCursor = new DefectPoint(point.X, point.Y);
+        }
         bool handled = view.grainMend.Strokes.Begin(
             new DefectPoint(point.X, point.Y),
             alt);
         if (view.grainMend.Strokes.IsDragging)
         {
             view.canvas?.CaptureHost(args.Pointer);
+        }
+        if (handled && view.grainMend.Strokes.Tool == GrainMendTool.Clone)
+        {
+            // ⌥ 클릭으로 소스를 새로 잡았으면 십자선이 곧바로 그 자리로 갑니다.
+            view.review.RenderCloneCursor();
         }
         return handled;
     }
@@ -271,10 +285,24 @@ internal sealed class DevelopGrainMendCanvasInput
         {
             return false;
         }
-        // macOS `BrushOverlay` 는 칠하는 동안 빨강으로 보여 줍니다 — 획이 끝나야 보이면
-        // 어디를 칠했는지 모르고 칠합니다.
-        view.review.RenderPaintOverlay();
+        RenderActiveTool();
         return true;
+    }
+
+    /// <summary>
+    /// macOS 는 브러시와 복제 도장에 <b>서로 다른 오버레이</b>를 답니다 —
+    /// <c>BrushOverlay</c> 는 칠하는 동안 빨강으로 보여 주고(획이 끝나야 보이면 어디를 칠했는지
+    /// 모르고 칠합니다), <c>CloneStampOverlay</c> 는 빨강 대신 <b>소스 창의 실제 화소</b>를 획
+    /// 모양으로 보여 줍니다. Windows 는 한 표면을 나눠 쓰므로 도구에 맞는 쪽을 그립니다.
+    /// </summary>
+    private void RenderActiveTool()
+    {
+        if (view.grainMend.Strokes.Tool == GrainMendTool.Clone)
+        {
+            view.review.RenderCloneCursor();
+            return;
+        }
+        view.review.RenderPaintOverlay();
     }
 
     private bool TryFinishStroke(PointerRoutedEventArgs args)
@@ -306,6 +334,9 @@ internal sealed class DevelopGrainMendCanvasInput
             view.chrome.Update();
             view.RequestPreview();
         }
+        // macOS 는 획이 끝나면 `current` 가 비어 획 모양 미리보기가 사라지고, 원과 소스 십자선만
+        // 남습니다. 이제 정렬 오프셋이 확정됐으므로 원 안에는 그 오프셋의 소스가 보입니다.
+        RenderActiveTool();
         return true;
     }
 

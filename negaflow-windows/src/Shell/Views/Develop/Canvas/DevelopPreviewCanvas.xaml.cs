@@ -59,6 +59,12 @@ public sealed partial class DevelopPreviewCanvas : UserControl
 
     public WriteableBitmap? PreviewBitmap => previewBitmap;
 
+    /// <summary>
+    /// 화면에 그린 미리보기 화소(BGRA8)입니다. macOS <c>CanvasView</c> 가 복제 도장에
+    /// <c>referenceImage: image</c> 로 넘기는 것과 같은 것입니다.
+    /// </summary>
+    public byte[]? PreviewPixels => sampler.PreviewPixels;
+
     public bool HasPreview => PreviewImage.Visibility == Visibility.Visible;
 
     public void Attach(CropWorkspaceState cropState)

@@ -151,14 +151,45 @@ Windows 현재: **아무것도 없습니다.** 굵기는 `DevelopPanelState.Defa
 
 Windows: 없음. 지름 48px·경도 기본값 고정.
 
-### 4.2 커서/미리보기 (전부 없음)
+### 4.2 커서/미리보기 — **이식 완료**
 
-- ⌥ 유지 중: 브러시 원 대신 **십자 커서만**. 소스에도 십자.
-- 소스 지정 후: 커서 원 안에 **복제될 소스 픽셀을 실제로 보여줌**
-- 드래그 중: 스트로크 모양으로 클리핑해 소스 창 픽셀을 미리 그림, 십자가 샘플 위치를 따라감
-- 원 테두리: 검정 0.55 두께 2.5 위에 흰색 0.9 두께 1
-- 십자: 팔 7, 검정 0.65 두께 3 위에 흰색 0.95 두께 1.2
-- 지름 = `max(3, sizePx × pxToScreenScale)`
+`CloneStampCursorRenderer` + `CloneStampSourceWindow` + `CloneStampShapeMask`.
+
+| macOS `draw` | Windows | 상태 |
+|---|---|---|
+| ⌥ 유지 중: 브러시 원 대신 **십자 커서만**, 소스에도 십자 | `optionDown` 분기 | **됨** |
+| 소스 지정 후 커서 원 안에 **복제될 소스 픽셀** | `ForDisc` + `CopyInto` | **됨** |
+| 드래그 중 스트로크 모양으로 클리핑한 소스 창 | `ForStroke` + `CopyInto` | **됨** |
+| 십자가 샘플 위치(마지막 점 + 오프셋)를 따라감 | `stroke[^1] + offset` | **됨** |
+| `displayOffset(forCursorAt:)` | `CloneStampSourceWindow.TryOffset` | **됨** |
+| `imageFrame.insetBy(-diameter).contains(p)` | `WithinExpandedImage` | **됨** |
+| 원 테두리: 검정 0.55 두께 2.5 위에 흰색 0.9 두께 1 | `StrokeCircle` | 됨(이전 세션) |
+| 십자: 팔 7, 검정 0.65 두께 3 위에 흰색 0.95 두께 1.2 | `Cross` | 됨(이전 세션) |
+| 지름 = `max(3, sizePx × pxToScreenScale)` | `ScreenDiameter` | 됨(이전 세션) |
+
+이식하면서 함께 고친 것:
+
+1. **`baseUnitToDisplay` 가 Windows 에 없었습니다.** macOS 는 표시↔원본 두 방향을 다 들고
+   있고 `displayOffset` 이 정방향을 씁니다. `DevelopDisplayGeometry.TryMapRawToDisplay` 로
+   이식하고, 단계 크기 계산을 두 방향이 공유하게 묶었습니다. 왕복이 제자리로 오는지를
+   변형 9종 × 표본 25점으로 고정했습니다(`raw_to_display_round_trips_for_every_transform`).
+2. **덮개 표면의 `Opacity="0.75"` 는 창작이었습니다.** macOS 는 불투명도를 색마다 넣습니다
+   (성분 `0.35 + 0.5×신뢰도`, 브러시 칠 `0.45`). 표면에 한 번 더 곱하면 모든 덮개가 macOS
+   보다 25% 흐려지고, 불투명해야 하는 소스 미리보기는 아예 보이지 않습니다. 지웠습니다.
+3. **복제 획 중에 빨강 칠이 보였습니다.** `TryContinueStroke` 가 도구를 가리지 않고
+   `RenderPaintOverlay` 를 불렀습니다. macOS 는 `BrushOverlay` 와 `CloneStampOverlay` 가
+   별개 뷰입니다 — 도구에 맞는 쪽만 그리게 했습니다(`RenderActiveTool`).
+4. **`DefectCanvas` 의 "더 진한 쪽만 남기기" 규칙**은 획을 원으로 촘촘히 찍는 브러시 전용입니다.
+   불투명한 소스 미리보기 위에 테두리(0.55/0.9)를 얹으면 테두리가 통째로 사라집니다. macOS 와
+   같은 source-over 를 `BlendOver` 로 넣고 복제 커서만 그것을 씁니다.
+
+### 4.3 남은 격차
+
+**소스 앵커를 표시 정규 좌표로 들고 있습니다.** macOS 는 `sourceBase` 를 **base(원본) 정규**로
+보관해 "줌/팬/회전/크롭과 무관하게 정합"합니다(파일 머리 주석). Windows `GrainMendStrokeSession`
+은 표시 정규로 들고 커밋할 때 원본으로 옮깁니다. 소스를 지정한 **뒤에** 회전이나 크롭을 바꾸면
+소스 마커가 다른 자리를 가리킵니다. 고치려면 `Begin` 과 `AddCloneStroke` 가 원본 좌표를 받아야
+합니다.
 
 ## 5. undo — `AppModel+DefectHistory.swift` (163줄)
 

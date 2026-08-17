@@ -72,6 +72,16 @@
 재판정**하는 짝입니다. Windows 는 `build_automatic_mask_from_evidence` 안에서 비슷한 일을
 하지만 **파일 대조를 하지 않았습니다.** 오탐지 억제의 핵심이라 반드시 대조해야 합니다.
 
+### 1.4.1 함수 단위로 없던 것 (2026-08-18 발견 · 이식함)
+
+| macOS | Windows | 왜 필요했나 |
+|---|---|---|
+| `Imaging/ImageTransform.baseUnitToDisplay` | `DevelopDisplayGeometry.TryMapRawToDisplay` | 원본→표시 **정방향**이 한 방향도 없었습니다. `CloneStampOverlay.displayOffset` 이 `cursorBase + offset` 을 표시 좌표로 되돌려야 원 안에 보여 줄 소스 화소의 자리를 알 수 있습니다. 역방향과 단계 크기를 공유하게 묶고, 왕복이 제자리로 오는지를 변형 9종 × 표본 25점으로 고정했습니다 |
+
+**파일 이름으로 훑으면 이런 것이 안 잡힙니다.** `ImageTransform` 은 "있는" 개념이고 역방향
+하나는 있었습니다. 없던 것은 **그 안의 함수 하나**입니다 — 브리프 3절이 말하는
+"함수·상수 단위로 대조하고 나서 판정" 이 이 경우입니다.
+
 ### 1.5 라이브러리 백엔드
 
 | macOS 파일 | 하는 일 | Windows |

@@ -74,6 +74,12 @@ public sealed class GrainMendStrokeSession
     /// </summary>
     public DefectPoint? CloneSourceAnchor => cloneSourceAnchor;
 
+    /// <summary>
+    /// macOS <c>alignedOffsetBase</c> — 첫 획에서 확정된 원본 공간 변위입니다. 커서 오버레이가
+    /// 원 안에 보여 줄 소스 화소의 자리를 이것으로 셉니다(macOS <c>displayOffset</c>).
+    /// </summary>
+    public DefectPoint? CloneAlignedRawOffset => cloneAlignedOffsetRaw;
+
     /// <summary>복제 지름(원본 화소). 슬라이더 범위로 잘립니다.</summary>
     public double CloneDiameterPixels
     {
