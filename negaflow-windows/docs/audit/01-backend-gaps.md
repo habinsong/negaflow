@@ -1,0 +1,171 @@
+# 01 — 백엔드 감사 (엔진)
+
+macOS `Sources/Chromabase/` **159파일**을 개념 키워드로 Windows 전 트리에 대조했습니다.
+히트 0 = 한 글자도 없음. 히트가 있으면 파일을 열어 함수·상수 단위로 확인했습니다.
+
+---
+
+## 1. 완전히 없음 — 히트 0 (28개 개념)
+
+### 1.1 GPU · 실행 장치 (가장 큼)
+
+| macOS | 줄 | Windows |
+|---|---:|---|
+| `Engine/ChromabaseMetalKernels.swift` | — | **없음** |
+| `Engine/SamplingContextPool.swift` | — | **없음** |
+| CoreImage 전반 (`CIImage` 83파일) | — | **없음** |
+
+`d3d11` · `D3D11` · `Direct3D` · `ID3D11Device` · `ComputeShader` · `.hlsl` · `DirectML` ·
+`DirectCompute` · `CUDA` · `OpenCL` · `Vulkan` · `ID2D1` · `Direct2D` · `DXGI` · `Win2D`
+**전부 히트 0.** 셰이더 파일(`.hlsl`/`.cso`/`.fx`)도 0개.
+
+**Windows 이미지 파이프라인은 전부 스칼라 CPU C++ 입니다.** → [`04-gpu-plan.md`](04-gpu-plan.md)
+
+### 1.2 현상 경로
+
+| macOS | Windows | 영향 |
+|---|---|---|
+| `Engine/ChromabaseEngine+PositivePipeline.swift` | **없음** | 슬라이드(포지티브) 현상 경로 전체 |
+| `Film/PositiveDevelop.swift` | **없음** | 〃 |
+| `Adjustments/FilmEmulationProfile+Slide.swift` | **없음** | 슬라이드 필름 에뮬레이션 |
+| `Digital/DigitalFilmDevelop.swift` | **없음** | 디지털 소스 현상 |
+| `Digital/DigitalSceneReconstruct.swift` | **없음** | 디지털 장면 재구성 |
+
+### 1.3 편집 상태 · 이력
+
+| macOS | 줄 | Windows | 영향 |
+|---|---:|---|---|
+| `Develop/DevelopHistory.swift` | 23 | **없음** | **현상 undo/redo 스택 자체가 없음** |
+| `Features/Defects/Workflow/AppModel+DefectHistory.swift` | 205 | **없음** | 결함 도구 undo — 복제/브러시 캡슐의 되돌리기 단추가 걸 곳이 없음 |
+| `Develop/DevelopKeyboardNudge.swift` | — | **없음** | 키보드 미세 조정 |
+| `Develop/DevelopToneRange.swift` | — | **없음** | 톤 범위 모델 |
+| `Develop/DevelopDebugFrame.swift` | — | **없음** | 디버그 오버레이 |
+
+`CanUndo` 히트 6건은 전부 `Library*` (라이브러리 편집 undo)이고 **현상·결함과 무관**합니다.
+
+### 1.4 스캐너 프로파일링
+
+| macOS | 파일 | 줄 | Windows |
+|---|---:|---:|---|
+| `Profiles/Noise/*` | 4 | 364 | **없음** (`ScannerNoiseReduction` 도 3파일 전부 없음) |
+| `Adjustments/ScannerNoiseReduction*.swift` | 3 | — | **없음** |
+| `Profiles/ColorTarget/*` (IT8) | 6 | **3,255** | **없음** |
+| `Profiles/ScannerProfile/ScannerProfileRegistry.swift` | 1 | — | **없음** |
+
+**IT8 프로파일링 3,255줄이 통째로 없습니다.**
+
+### 1.5 내보내기 · 기록
+
+| macOS | 파일 | Windows |
+|---|---:|---|
+| `Export/RenderManifest*.swift` | 5 | **없음** — 무엇을 어떤 설정으로 냈는지 기록·해시·검증 |
+| `Export/DestinationGamutWarning.swift` | 1 | **없음** |
+| `Export/ICCOutputProfileSnapshot.swift` | 1 | **없음** |
+| `Export/ExportEngine.swift` | 1 | **없음** |
+| `Export/ExportRenderedImage.swift` | 1 | **없음** |
+| `Export/PrintPackageRenderer.swift` | 1 | **없음** |
+| `Imaging/ChannelClippingOverlay.swift` | 1 | **없음** — 채널 클리핑 표시 |
+| `Adjustments/OutputDither.swift` | 1 | **없음** — 8bit 출력 디더 |
+
+### 1.6 필름 베이스 측정
+
+| macOS | Windows |
+|---|---|
+| `Film/FilmBaseMeasurementDiagnostics.swift` | **없음** |
+| `Film/FilmBasePicker.swift` | **없음** |
+| `Film/FilmBaseStatistics.swift` | **없음** |
+| `Film/PrintPaperGrade.swift` | **없음**(엔진 쪽) |
+
+### 1.7 GrainMend 내부
+
+| macOS | Windows |
+|---|---|
+| `DefectRemoval/DefectContext.swift` | **없음** |
+| `DefectRemoval/DefectLabeledMask.swift` | **없음** |
+| `DefectRemoval/DefectParallelAccumulators.swift` | **없음** |
+| `DefectRemoval/ConcurrentResultStore.swift` | **없음** |
+| `DefectRemoval/DefectBench*.swift` (4) | **없음** (벤치 도구) |
+
+---
+
+## 2. 있으나 macOS 의 절반 이하 — "얇은 구현"
+
+줄 수는 규모의 지표일 뿐이지만, **절반 이하는 기능이 빠졌다는 뜻**입니다.
+
+| 서브시스템 | macOS | Windows | 비 | 무엇이 빠졌나 |
+|---|---:|---:|---:|---|
+| `Profiles/ScannerTargetGrade` (8파일) | 1,697 | 749 | **44%** | `+Signature`·`+PositiveSignature`·`+Texture`·`+DocumentedCharacter` 히트 **0** |
+| `Profiles/ScannerProfile` (5파일) | 681 | 297 | **44%** | `ScannerProfileRegistry` 없음, `Matcher` 히트 1 |
+| `Engine` (6파일) | 1,718 | 256 | **15%** | 포지티브 파이프라인·Metal 커널·샘플링 풀 없음 |
+| `Film` (11파일) | 1,993 | 1,111 | **56%** | 베이스 측정 진단·피커·통계 없음 |
+| `Digital` (13파일) | 2,435 | 1,618 | **66%** | `DigitalFilmDevelop`·`SceneReconstruct` 없음 |
+| `Export` (23파일) | 3,985 | 2,703 | **68%** | `RenderManifest` 5파일·감마워닝·ICC 스냅샷 없음 |
+
+---
+
+## 3. 구조 문제 — 성능의 근본 원인
+
+### 3.1 `run_develop` 이 호출마다 원본을 디코드합니다
+
+`src/Native/pipeline/develop_export.cpp:101`
+
+```
+run_develop()
+  → validate_request
+  → observe_source_before   ← 파일 관찰·해시
+  → decode_source           ← 5088×3401 16bit TIFF 디코드 (실측 2,695 ms)
+  → apply_defect_stage → ... → publish_developed
+```
+
+`src/Native/pipeline/export/stages/decode.cpp` 에서 `cache` · `preloaded` · `reuse`
+**히트 0** — 캐시가 없습니다.
+
+프리뷰(`abi/preview/develop_preview_*.cpp`)·검출·내보내기가 **같은 `run_develop`** 을 씁니다.
+그래서 슬라이더를 한 칸 움직여도 내보내기와 같은 준비 비용을 전부 냅니다.
+
+**macOS 는 정반대입니다** (`DevelopFrameRenderer+Input.swift:48-66`):
+
+```swift
+if let cached = snapshot.preloadedPreviewRaw { return ... }   // 디코드 0회
+if let full = snapshot.preloadedFullPreviewRaw { ... }        // GPU Lanczos 축소만
+```
+
+주석 원문: *"수십 MP 원본을 디스크에서 재디코딩(수백 ms)하는 대신 한 번의 Lanczos 축소로 끝난다."*
+
+### 3.2 macOS 의 2단 렌더가 Windows 에 없습니다
+
+| macOS | 값 | Windows |
+|---|---|---|
+| `interactiveMaxDimension` | 2560 (폴백) | 없음 |
+| `interactiveProxyDimension()` | 표시 픽셀 → 256 양자화, 1024~3600 | 없음 |
+| `fullMaxDimension` (정착) | 3600 | 없음 |
+| `fastPreviewMaxDimension` | 720 | 없음 |
+| `waitForDevelopSettle` | **0.14초** 무편집 대기 | 없음 |
+| `cachedInteractivePreviewRaw` / `cachedSettledPreviewRaw` | 두 슬롯 | 없음 |
+
+Windows 는 `DevelopWorkspaceView.xaml.cs:157` 에서 `new PreviewCoordinator(..., 1600, 1200)`
+**고정 한 단계**입니다. 표시 크기에 맞추지도, 정착 패스로 올리지도 않습니다.
+
+---
+
+## 4. 창작 — macOS 에 없는 것
+
+| Windows | 줄 | 판정 |
+|---|---:|---|
+| `imaging/muted_scene_vibrance_table.cpp` | 9,003 | **정당함.** macOS 는 `CIFilter("CIVibrance")` 라는 Apple 비공개 커널을 씁니다. Windows 는 그것을 33³ LUT 로 **측정해** 옮겼고 golden 해시가 문서에 있습니다. 창작이 아니라 이식 수단입니다. 다만 God object 입니다 |
+| `DefectOverlayImage` 의 `Opacity="0.75"` | 1줄 | **창작이었음 — 2026-08-18 제거.** macOS 는 불투명도를 색마다 넣습니다 |
+| `NativeEngineStatusService` 의 `ABI 0.48 · X64` | — | **창작이었음 — `f5d9a5b` 에서 제거** |
+| GrainMend 캡슐 `CornerRadius="999"` | — | **창작이었음 — `f5d9a5b` 에서 18/15 로 수정** |
+
+---
+
+## 5. 대조 결과 "맞음" (오해 방지)
+
+| 항목 | 결과 |
+|---|---|
+| 점 커브 보간 | macOS `CurveLUT.monotoneTangents` (Fritsch–Carlson PCHIP)가 `point_curve.cpp:158-186` 에 **정확히** 있음 — `deltas`, `0.5` 평균, `> 9.0` 클램프, `3/sqrt` 까지 동일 |
+| `gridLineDrops` ↔ `structure_grid_drops` | 두 메커니즘·보조 함수·상수 12개 전부 일치 |
+| 먼지·핀홀·유제 검출 | 다섯 프레임 전부 macOS 와 개수 정확히 일치 |
+
+**`MonotoneCubic` 이름이 없다고 "톤 곡선이 macOS 와 다르다"고 적은 기존 문서는 틀렸습니다** —
+[`06-false-claims.md`](06-false-claims.md) 1절.

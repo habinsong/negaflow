@@ -42,10 +42,11 @@
                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                     TextAlignment="Right" />
             </Button>
+            <!-- 보일 때는 탭으로도 닿아야 합니다. 접혀 있으면 어차피 탭 순서에서 빠지므로
+                 `IsTabStop="False"` 는 얻는 것 없이 포커스만 막습니다. -->
             <TextBox
                 x:Name="ValueEditor"
                 Grid.Column="1"
-                IsTabStop="False"
                 Padding="3,1"
                 HorizontalContentAlignment="Right"
                 VerticalContentAlignment="Center"
@@ -63,8 +64,12 @@
             Padding="8"
             Background="Transparent"
             DoubleTapped="OnSliderDoubleTapped">
+            <!-- WinUI `StepFrequency` 의 기본값은 1 이고 `SnapsTo` 의 기본값은 StepValues 라,
+                 적지 않으면 끌 때 정수로 스냅됩니다. macOS 는 `Slider(value:in:)` 를 step 없이
+                 쓰므로 연속입니다 — 화면에 두 자리로 적으므로 0.01 이 그 눈금입니다. -->
             <Slider
                 x:Name="Slider"
+                StepFrequency="0.01"
                 SmallChange="0.01"
                 LargeChange="0.10"
                 ThumbToolTipValueConverter="{x:Null}"

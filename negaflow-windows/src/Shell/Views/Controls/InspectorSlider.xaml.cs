@@ -212,8 +212,33 @@ public sealed partial class InspectorSlider : UserControl
         draftEdited = false;
         ValueEditor.Visibility = Visibility.Visible;
         ValueButton.Visibility = Visibility.Collapsed;
-        ValueEditor.Focus(FocusState.Programmatic);
-        ValueEditor.SelectAll();
+        FocusEditor();
+    }
+
+    /// <summary>
+    /// 값 편집기에 키보드 포커스를 줍니다.
+    /// </summary>
+    /// <remarks>
+    /// 막 <see cref="Visibility.Visible"/> 로 바꾼 요소는 배치가 끝나기 전이라 같은 틱에
+    /// <see cref="UIElement.Focus"/> 가 <see langword="false"/> 를 냅니다. 그러면 포커스는 방금
+    /// 접은 단추를 떠나 슬라이더로 가고, <b>글자도 안 들어가고 Enter·Esc 도 편집기에 오지
+    /// 않습니다.</b> 실패하면 배치가 끝난 다음 틱에 한 번 더 잡습니다.
+    /// </remarks>
+    private void FocusEditor()
+    {
+        if (ValueEditor.Focus(FocusState.Programmatic))
+        {
+            ValueEditor.SelectAll();
+            return;
+        }
+        _ = DispatcherQueue.TryEnqueue(() =>
+        {
+            if (ValueEditor.Visibility == Visibility.Visible &&
+                ValueEditor.Focus(FocusState.Programmatic))
+            {
+                ValueEditor.SelectAll();
+            }
+        });
     }
 
     private void OnEditorKeyDown(object sender, KeyRoutedEventArgs args)
@@ -272,17 +297,29 @@ public sealed partial class InspectorSlider : UserControl
 
         SetControlValue(parsed);
         ClearEditorError();
-        draftEdited = false;
-        ValueEditor.Visibility = Visibility.Collapsed;
-        ValueButton.Visibility = Visibility.Visible;
+        CloseEditor();
     }
 
     private void CancelEditor()
     {
         ClearEditorError();
+        CloseEditor();
+    }
+
+    /// <summary>
+    /// 편집기를 접고 포커스를 슬라이더로 돌려 놓습니다. 접힌 요소에 포커스를 남기면 다음 키가
+    /// 아무 데도 가지 않습니다.
+    /// </summary>
+    private void CloseEditor()
+    {
+        bool hadFocus = ValueEditor.FocusState != FocusState.Unfocused;
         draftEdited = false;
         ValueEditor.Visibility = Visibility.Collapsed;
         ValueButton.Visibility = Visibility.Visible;
+        if (hadFocus)
+        {
+            _ = Slider.Focus(FocusState.Programmatic);
+        }
     }
 
     private void ClearEditorError()
