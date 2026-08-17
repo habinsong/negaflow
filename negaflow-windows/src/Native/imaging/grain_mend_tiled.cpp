@@ -264,6 +264,25 @@ std::vector<std::uint8_t> build_tiled_automatic_mask(
             measured.detection_image_microseconds += workspace.image_microseconds;
             measured.evidence_microseconds += workspace.evidence_microseconds;
             measured.speck_microseconds += workspace.speck_microseconds;
+            measured.dust_components_collected +=
+                workspace.candidates.dust_components_collected;
+            measured.dust_dropped_no_strong +=
+                workspace.candidates.dust_dropped_no_strong;
+            measured.dust_dropped_strong_fraction +=
+                workspace.candidates.dust_dropped_strong_fraction;
+            measured.dust_dropped_gate +=
+                workspace.candidates.dust_dropped_gate;
+            measured.dust_dropped_isolation +=
+                workspace.candidates.dust_dropped_isolation;
+            measured.dust_kept += workspace.candidates.dust_kept;
+            measured.dust_pixels_above_weak_abs +=
+                workspace.candidates.dust_pixels_above_weak_abs;
+            measured.dust_pixels_above_abs +=
+                workspace.candidates.dust_pixels_above_abs;
+            measured.valid_pixels += workspace.candidates.valid_pixels;
+            measured.dust_magnitude_sum +=
+                workspace.candidates.dust_magnitude_sum;
+            measured.dust_noise_sum += workspace.candidates.dust_noise_sum;
             const bool has_statistics =
                 workspace.candidates.dust_magnitude.size() ==
                     workspace.evidence.size() &&
@@ -303,6 +322,14 @@ std::vector<std::uint8_t> build_tiled_automatic_mask(
                         frame_candidates.noise_scale[frame_index] =
                             workspace.candidates.noise_scale[tile_index];
                     }
+                    if (tile_index < workspace.candidates.strong.size() &&
+                        (workspace.candidates.strong[tile_index] & 1U) != 0U) {
+                        ++measured.dust_strong_pixels;
+                    }
+                    if (tile_index < workspace.candidates.weak.size() &&
+                        (workspace.candidates.weak[tile_index] & 1U) != 0U) {
+                        ++measured.dust_raw_weak_pixels;
+                    }
                 }
             }
         }
@@ -324,7 +351,8 @@ std::vector<std::uint8_t> build_tiled_automatic_mask(
         reject_line_grid,
         accepted_pixels,
         &frame_candidates,
-        components);
+        components,
+        &measured);
     // macOS `DefectSpeckDetector.merged(into:specks:)` — 마스크 바이트가 아니라
     // 컴포넌트를 더한다. 겹치면 기존 검출이 임자이다.
     if (!frame_specks.empty()) {
@@ -335,7 +363,17 @@ std::vector<std::uint8_t> build_tiled_automatic_mask(
             region_height,
             components,
             mask,
-            accepted_pixels);
+            accepted_pixels,
+            &measured.speck_merged,
+            &measured.speck_skipped_overlap);
+        measured.speck_mask_pixels = static_cast<std::uint64_t>(
+            std::count(frame_specks.begin(), frame_specks.end(),
+                       static_cast<std::uint8_t>(1U)));
+    }
+    for (const std::uint8_t bit : frame_evidence) {
+        if ((bit & 1U) != 0U) {
+            ++measured.dust_weak_pixels;
+        }
     }
     const auto finished = std::chrono::steady_clock::now();
     measured.components_microseconds =

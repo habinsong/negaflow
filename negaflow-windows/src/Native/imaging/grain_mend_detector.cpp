@@ -114,19 +114,29 @@ void find_candidates(
         far_texture = box_mean(
             dust_magnitude, image.width, image.height, 36U);
 
+        const double dust_s = std::clamp(dust_sensitivity, 0.0, 1.0);
         const float dust_absolute = static_cast<float>(
-            0.14 - dust_sensitivity * 0.08);
+            0.14 - dust_s * 0.08);
         const float dust_weak_absolute = dust_absolute * 0.5F;
         const float dust_noise_multiplier = static_cast<float>(
-            4.5 - dust_sensitivity * 1.5);
+            4.5 - dust_s * 1.5);
         const float dust_strong_magnitude =
             dust_absolute * static_cast<float>(
-                5.0 - dust_sensitivity * 3.0);
+                5.0 - dust_s * 3.0);
         for (std::size_t index = 0U; index < count; ++index) {
             if (valid[index] == 0U) {
                 continue;
             }
+            ++result.valid_pixels;
             const float magnitude = dust_magnitude[index];
+            result.dust_magnitude_sum += static_cast<double>(magnitude);
+            result.dust_noise_sum += static_cast<double>(noise_scale[index]);
+            if (magnitude > dust_weak_absolute) {
+                ++result.dust_pixels_above_weak_abs;
+            }
+            if (magnitude > dust_absolute) {
+                ++result.dust_pixels_above_abs;
+            }
             const bool soft =
                 magnitude > dust_noise_multiplier * noise_scale[index] ||
                 magnitude > dust_strong_magnitude;

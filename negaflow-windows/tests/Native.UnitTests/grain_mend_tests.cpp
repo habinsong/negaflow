@@ -844,6 +844,43 @@ void test_guided_detection_crops_to_the_selected_roi() {
 
 // macOS의 추가 미세 입자 패스는 기존 결함 후보를 약화시키지 않고, 세 채널에 같이 어두운
 // 2~7px 표면 이물만 선택적으로 더합니다. 토글을 끄면 이전 검출 마스크가 정확히 남아야 합니다.
+void test_isolated_dark_blob_is_classified_dust_or_pinhole() {
+    constexpr std::uint32_t width = 256U;
+    constexpr std::uint32_t height = 256U;
+    auto damaged = make_uniform_image(width, height, 0.20F);
+    for (std::uint32_t y = 80U; y < 92U; ++y) {
+        for (std::uint32_t x = 80U; x < 92U; ++x) {
+            auto& pixel =
+                damaged.pixels[static_cast<std::size_t>(y) * width + x];
+            pixel.red = 0.02F;
+            pixel.green = 0.02F;
+            pixel.blue = 0.02F;
+        }
+    }
+
+    negaflow::imaging::GrainMendParameters parameters{1.0};
+    parameters.dust_sensitivity = 1.0;
+    parameters.scratch_sensitivity = 1.0;
+    parameters.protect_detail = 0.6;
+    parameters.reject_structure_lines = true;
+    parameters.detect_micro_specks = false;
+    const auto detected = negaflow::imaging::detect_grain_mend(damaged, parameters);
+    std::size_t dust_like = 0U;
+    for (const auto& component : detected.components) {
+        if (component.classification ==
+                negaflow::imaging::grain_mend_detail::DefectClassification::dust ||
+            component.classification ==
+                negaflow::imaging::grain_mend_detail::DefectClassification::
+                    pinhole) {
+            ++dust_like;
+        }
+    }
+    expect(detected.status == negaflow::imaging::GrainMendStatus::ok,
+           "isolated dark blob detection completes");
+    expect(dust_like > 0U,
+           "detect_grain_mend classifies an isolated dark blob as dust or pinhole");
+}
+
 void test_micro_specks_become_classified_components() {
     constexpr std::uint32_t width = 256U;
     constexpr std::uint32_t height = 256U;
@@ -1025,6 +1062,7 @@ int main() {
     test_guided_detection_crops_to_the_selected_roi();
     test_micro_speck_detection_is_optional_and_additive();
     test_micro_specks_become_classified_components();
+    test_isolated_dark_blob_is_classified_dust_or_pinhole();
 
     std::cout << "{\"status\":\"" << (failures == 0 ? "ok" : "error")
               << "\",\"suite\":\"grain_mend\",\"failures\":"

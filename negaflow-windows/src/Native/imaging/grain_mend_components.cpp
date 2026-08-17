@@ -21,7 +21,7 @@ using namespace tuning;
 
 std::vector<std::uint8_t> build_automatic_evidence(
     const DetectionImage& image,
-    const CandidateMaps& candidates,
+    CandidateMaps& candidates,
     const std::size_t maximum_dust_area,
     const std::uint32_t minimum_scratch_length,
     const double dust_sensitivity,
@@ -40,7 +40,7 @@ std::vector<std::uint8_t> build_automatic_evidence(
 
 void build_automatic_evidence(
     const DetectionImage& image,
-    const CandidateMaps& candidates,
+    CandidateMaps& candidates,
     const std::size_t maximum_dust_area,
     const std::uint32_t minimum_scratch_length,
     const double dust_sensitivity,
@@ -48,8 +48,17 @@ void build_automatic_evidence(
     std::vector<std::uint8_t>& evidence) {
     const std::size_t count =
         static_cast<std::size_t>(image.width) * image.height;
+    // 측정: 이 스캔에서 dustMag 평균 0.128 ≥ strongMag 0.12 라 weak 가 그레인
+    // 카펫이 된다(프레임당 weak 740만). Swift 주석의 전제("그레인은 ≪ strongMag")가
+    // 깨진 상태다. 카펫에서 8-연결하면 코어 2434px 가 32개 거대 성분에 녹아 8%
+    // 게이트에서 전멸한다. 채택은 hard 코어(SNR 또는 far 게이트를 통과한 strong)
+    // 만 연결한다 — macOS 가 strong 없는 weak 성분을 버리는 것과 같은 채택 집합의
+    // 코어다. 가장자리 프린지는 카펫이라 붙이지 않는다.
     std::vector<Component> dust = collect_components(
-        image, candidates.weak, candidates.strong, 1U);
+        image,
+        labeled_detection ? candidates.strong : candidates.weak,
+        candidates.strong,
+        1U);
     std::vector<Component> scratch = collect_components(
         image, candidates.weak, candidates.strong, 2U);
     const std::vector<std::uint8_t> chunky = make_chunky_map(dust, count);
@@ -64,23 +73,38 @@ void build_automatic_evidence(
         ? 12.0 + dust_sensitivity * 12.0
         : 0.0;
 
+    candidates.dust_components_collected += dust.size();
     dust.erase(
         std::remove_if(
             dust.begin(),
             dust.end(),
             [&](const Component& component) {
-                return !component.has_strong ||
-                       (labeled_detection &&
-                        static_cast<double>(component.strong_count) /
-                                static_cast<double>(component.pixels.size()) <
-                            dust_minimum_strong_fraction) ||
-                       !passes_dust_gate(
-                           component,
-                           maximum_dust_area,
-                           maximum_dust_aspect,
-                           minimum_thick_defect,
-                           maximum_thick_defect) ||
-                       !is_isolated(component, chunky, image);
+                if (!component.has_strong) {
+                    ++candidates.dust_dropped_no_strong;
+                    return true;
+                }
+                if (labeled_detection &&
+                    static_cast<double>(component.strong_count) /
+                            static_cast<double>(component.pixels.size()) <
+                        dust_minimum_strong_fraction) {
+                    ++candidates.dust_dropped_strong_fraction;
+                    return true;
+                }
+                if (!passes_dust_gate(
+                        component,
+                        maximum_dust_area,
+                        maximum_dust_aspect,
+                        minimum_thick_defect,
+                        maximum_thick_defect)) {
+                    ++candidates.dust_dropped_gate;
+                    return true;
+                }
+                if (!is_isolated(component, chunky, image)) {
+                    ++candidates.dust_dropped_isolation;
+                    return true;
+                }
+                ++candidates.dust_kept;
+                return false;
             }),
         dust.end());
     scratch.erase(
@@ -146,7 +170,8 @@ std::vector<std::uint8_t> build_automatic_mask_from_evidence(
     const bool reject_structure_lines,
     std::size_t& accepted_pixels,
     const CandidateMaps* const candidates,
-    std::vector<ClassifiedComponent>* const components) {
+    std::vector<ClassifiedComponent>* const components,
+    negaflow::imaging::GrainMendTimings* const timings) {
     const std::size_t count =
         static_cast<std::size_t>(image.width) * image.height;
     if (evidence.size() != count) {
@@ -165,6 +190,15 @@ std::vector<std::uint8_t> build_automatic_mask_from_evidence(
         image.width,
         drop_dust,
         drop_scratch);
+    if (timings != nullptr) {
+        timings->dust_components_raw = dust.size();
+        timings->dust_components_after_grain_field = 0U;
+        for (const std::uint8_t drop : drop_dust) {
+            if (drop == 0U) {
+                ++timings->dust_components_after_grain_field;
+            }
+        }
+    }
     if (reject_structure_lines) {
         const std::vector<std::uint8_t> grid_drops =
             structure_grid_drops(scratch, image, structure_radius_reference);
@@ -210,7 +244,7 @@ std::vector<std::uint8_t> build_automatic_mask_from_evidence(
 
 std::vector<std::uint8_t> build_automatic_mask(
     const DetectionImage& image,
-    const CandidateMaps& candidates,
+    CandidateMaps& candidates,
     const bool reject_structure_lines,
     std::size_t& accepted_pixels,
     std::vector<ClassifiedComponent>* const components) {

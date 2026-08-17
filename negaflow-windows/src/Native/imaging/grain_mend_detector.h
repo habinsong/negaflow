@@ -35,6 +35,17 @@ struct CandidateMaps final {
     // 고쳐야 하는지 알 수 없습니다.
     std::uint64_t dust_morphology_microseconds{0U};
     std::uint64_t scratch_angles_microseconds{0U};
+    std::uint64_t dust_components_collected{0U};
+    std::uint64_t dust_dropped_no_strong{0U};
+    std::uint64_t dust_dropped_strong_fraction{0U};
+    std::uint64_t dust_dropped_gate{0U};
+    std::uint64_t dust_dropped_isolation{0U};
+    std::uint64_t dust_kept{0U};
+    std::uint64_t dust_pixels_above_weak_abs{0U};
+    std::uint64_t dust_pixels_above_abs{0U};
+    std::uint64_t valid_pixels{0U};
+    double dust_magnitude_sum{0.0};
+    double dust_noise_sum{0.0};
 };
 
 [[nodiscard]] DetectionImage make_detection_image(const WorkingImage& image);

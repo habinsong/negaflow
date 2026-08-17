@@ -57,6 +57,26 @@ struct GrainMendTimings final {
     std::uint64_t total_microseconds{0U};
     std::uint32_t tile_count{0U};
     std::uint32_t worker_count{0U};
+    // 검출 깔때기. 먼지 0 이 후보 부재인지 게이트 전멸인지 숫자로 가른다.
+    std::uint64_t dust_weak_pixels{0U};
+    std::uint64_t dust_raw_weak_pixels{0U};
+    std::uint64_t dust_strong_pixels{0U};
+    std::uint64_t dust_components_raw{0U};
+    std::uint64_t dust_components_after_grain_field{0U};
+    std::uint64_t speck_mask_pixels{0U};
+    std::uint64_t speck_merged{0U};
+    std::uint64_t speck_skipped_overlap{0U};
+    std::uint64_t dust_components_collected{0U};
+    std::uint64_t dust_dropped_no_strong{0U};
+    std::uint64_t dust_dropped_strong_fraction{0U};
+    std::uint64_t dust_dropped_gate{0U};
+    std::uint64_t dust_dropped_isolation{0U};
+    std::uint64_t dust_kept{0U};
+    std::uint64_t dust_pixels_above_weak_abs{0U};
+    std::uint64_t dust_pixels_above_abs{0U};
+    std::uint64_t valid_pixels{0U};
+    double dust_magnitude_sum{0.0};
+    double dust_noise_sum{0.0};
 };
 
 struct GrainMendInfo final {

@@ -225,7 +225,7 @@ GrainMendResult apply_grain_mend(
         const DetectionImage detection = make_detection_image(result.image);
         result.info.detection_width = detection.width;
         result.info.detection_height = detection.height;
-        const CandidateMaps candidates = find_candidates(
+        CandidateMaps candidates = find_candidates(
             detection,
             parameters.dust_sensitivity,
             parameters.scratch_sensitivity,

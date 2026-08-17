@@ -165,7 +165,53 @@ int run_grain_mend_detect(
               << ",\"components_microseconds\":"
               << detection.timings.components_microseconds
               << ",\"tiled_total_microseconds\":"
-              << detection.timings.total_microseconds << '}'
+              << detection.timings.total_microseconds
+              << ",\"dust_weak_pixels\":"
+              << detection.timings.dust_weak_pixels
+              << ",\"dust_raw_weak_pixels\":"
+              << detection.timings.dust_raw_weak_pixels
+              << ",\"dust_strong_pixels\":"
+              << detection.timings.dust_strong_pixels
+              << ",\"dust_components_raw\":"
+              << detection.timings.dust_components_raw
+              << ",\"dust_components_after_grain_field\":"
+              << detection.timings.dust_components_after_grain_field
+              << ",\"speck_mask_pixels\":"
+              << detection.timings.speck_mask_pixels
+              << ",\"speck_merged\":"
+              << detection.timings.speck_merged
+              << ",\"speck_skipped_overlap\":"
+              << detection.timings.speck_skipped_overlap
+              << ",\"dust_components_collected\":"
+              << detection.timings.dust_components_collected
+              << ",\"dust_dropped_no_strong\":"
+              << detection.timings.dust_dropped_no_strong
+              << ",\"dust_dropped_strong_fraction\":"
+              << detection.timings.dust_dropped_strong_fraction
+              << ",\"dust_dropped_gate\":"
+              << detection.timings.dust_dropped_gate
+              << ",\"dust_dropped_isolation\":"
+              << detection.timings.dust_dropped_isolation
+              << ",\"dust_kept\":"
+              << detection.timings.dust_kept
+              << ",\"dust_pixels_above_weak_abs\":"
+              << detection.timings.dust_pixels_above_weak_abs
+              << ",\"dust_pixels_above_abs\":"
+              << detection.timings.dust_pixels_above_abs
+              << ",\"valid_pixels\":"
+              << detection.timings.valid_pixels
+              << ",\"dust_magnitude_mean\":"
+              << (detection.timings.valid_pixels == 0U
+                      ? 0.0
+                      : detection.timings.dust_magnitude_sum /
+                            static_cast<double>(
+                                detection.timings.valid_pixels))
+              << ",\"dust_noise_mean\":"
+              << (detection.timings.valid_pixels == 0U
+                      ? 0.0
+                      : detection.timings.dust_noise_sum /
+                            static_cast<double>(
+                                detection.timings.valid_pixels)) << '}'
               << ",\"total_microseconds\":" << micros(decode_started, finished)
               << "}\n";
     return detection.status == negaflow::imaging::GrainMendStatus::ok ? 0 : 1;

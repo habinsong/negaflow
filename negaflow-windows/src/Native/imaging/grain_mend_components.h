@@ -1,5 +1,6 @@
 #pragma once
 
+#include "negaflow/imaging/grain_mend.h"
 #include "negaflow/imaging/grain_mend_classifier.h"
 #include "grain_mend_detector.h"
 
@@ -14,7 +15,7 @@ namespace negaflow::imaging::grain_mend_detail {
 // before the frame-wide structure-line decision.
 [[nodiscard]] std::vector<std::uint8_t> build_automatic_evidence(
     const DetectionImage& image,
-    const CandidateMaps& candidates,
+    CandidateMaps& candidates,
     std::size_t maximum_dust_area,
     std::uint32_t minimum_scratch_length,
     double dust_sensitivity,
@@ -22,7 +23,7 @@ namespace negaflow::imaging::grain_mend_detail {
 
 void build_automatic_evidence(
     const DetectionImage& image,
-    const CandidateMaps& candidates,
+    CandidateMaps& candidates,
     std::size_t maximum_dust_area,
     std::uint32_t minimum_scratch_length,
     double dust_sensitivity,
@@ -44,12 +45,13 @@ void build_automatic_evidence(
     bool reject_structure_lines,
     std::size_t& accepted_pixels,
     const CandidateMaps* candidates = nullptr,
-    std::vector<ClassifiedComponent>* components = nullptr);
+    std::vector<ClassifiedComponent>* components = nullptr,
+    negaflow::imaging::GrainMendTimings* timings = nullptr);
 
 // `components` 가 null 이 아니면 채택된 결함을 분류까지 담아 냅니다.
 [[nodiscard]] std::vector<std::uint8_t> build_automatic_mask(
     const DetectionImage& image,
-    const CandidateMaps& candidates,
+    CandidateMaps& candidates,
     bool reject_structure_lines,
     std::size_t& accepted_pixels,
     std::vector<ClassifiedComponent>* components = nullptr);

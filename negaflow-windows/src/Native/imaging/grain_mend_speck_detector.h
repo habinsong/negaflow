@@ -39,6 +39,8 @@ void merge_micro_specks_into(
     std::uint32_t height,
     std::vector<ClassifiedComponent>* components,
     std::vector<std::uint8_t>& mask,
-    std::size_t& accepted_pixels);
+    std::size_t& accepted_pixels,
+    std::uint64_t* merged = nullptr,
+    std::uint64_t* skipped_overlap = nullptr);
 
 }  // namespace negaflow::imaging::grain_mend_detail
