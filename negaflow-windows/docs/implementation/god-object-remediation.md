@@ -33,7 +33,7 @@
 | ~~`src/Native/abi/negaflow_abi.cpp`~~ | 6,409 → 14 | **해결.** 요청 매핑·결과 쓰기·export/preview·검출·probe·프루프·자동 조정을 `src/Native/abi/{request,result,export,preview,run,detect,probe,proof,adjust,support}/` 실제 번역 단위로 옮겼다. 공개 C 진입점과 매퍼는 입출력이 명시된 `negaflow::abi::detail` 함수이고, 핸들 수명은 검출 번역 단위가 소유한다. 함수 본문은 그대로 옮겼다 |
 | ~~`src/Shell/Views/DevelopWorkspaceView.xaml.cs`~~ | 1,942 → 329 | **해결.** GrainMend 카드·검출·획·레이어와 frame 선택·탭·레이아웃·자동 조정·크롭 세션을 `Views/Develop/{GrainMend,Host}/` 실제 타입으로 옮겼다 |
 | ~~`tests/Native.UnitTests/develop_export_abi_tests.cpp`~~ | 4,107 → `DevelopExportAbi/main.cpp` 84 | **해결.** 요청 공장·파일 I/O·버전 계약·미리보기·GrainMend·run state·자동 조정·결함·프루프·probe를 `tests/Native.UnitTests/DevelopExportAbi/` 실제 번역 단위로 옮겼다. `#include` 조각내기가 아니다 |
-| `src/Shell/Views/LibraryWorkspaceView.xaml.cs` | 1,906 | 미해결 |
+| `src/Shell/Views/LibraryWorkspaceView.xaml.cs` | 1,399 | 미해결 |
 | ~~`src/Shell/Views/DevelopWorkspaceView.xaml`~~ | 525 → 297 | **해결.** GrainMend 카드 XAML 을 `Develop/GrainMend/DevelopGrainMendPanel.xaml`(236줄)로 옮겼다 |
 | `src/Interop/NativeDevelopExporter.cs` | 2,342 | 미해결 |
 | `src/Native/abi/include/negaflow_abi.h` | 1,791 | 외부 소비자가 포함하는 append-only 공개 C ABI 선언 집합. 구현 상태가 없다 |
@@ -91,7 +91,7 @@
 | 완료 | `src/Native/abi/negaflow_abi.cpp` | 14, 변경 전 6,409 | export/preview 버전 매핑, auto adjust, GrainMend, IR, flatbed, TIFF probe, soft proof, handle 수명 | `abi/{request,result,export,preview,run,detect,probe,proof,adjust,support}` 실제 번역 단위; facade는 자리만 유지 | 완료·build.ps1·CTest 71/71·Catalog 721·Shell 1032 |
 | 완료 | `src/Shell/Views/DevelopWorkspaceView.xaml.cs` | 329, 변경 전 4,844 | 선택·미리보기·crop 세션·GrainMend·resize·localization | macOS surface 단위 실제 UserControl | 완료. GrainMend·Host 분리 후 329줄 |
 | 완료 | `tests/Native.UnitTests/develop_export_abi_tests.cpp` | `DevelopExportAbi/main.cpp` 84, 변경 전 4,107 | 서로 독립적인 ABI version/stage/defect/output suite와 fixture | `DevelopExportAbi/` 실제 번역 단위; 결함 fixture는 `defect_region.cpp` 606줄로 한 순서 고정 suite | 완료·build.ps1·CTest 71/71·Catalog 721·Shell 1032 |
-| P0 | `src/Shell/Views/LibraryWorkspaceView.xaml.cs` | 1,906, 변경 전 2,835 | 탐색·선택·rating/flag·가져오기·filter/sort·resize·localization | 스캔·기본값·훑어보기·소스·컬렉션 추출됨. 남은 것은 격자 오케스트레이션·가져오기·필터 | 진행 중 |
+| P0 | `src/Shell/Views/LibraryWorkspaceView.xaml.cs` | 1,399, 변경 전 2,835 | 탐색·선택·rating/flag·resize | 스캔·기본값·훑어보기·소스·컬렉션·가져오기·필터·이름표 추출됨. 남은 것은 격자 오케스트레이션 | 진행 중 |
 | 완료 | `src/Shell/Views/DevelopWorkspaceView.xaml` | 297, 변경 전 2,512 | histogram/tabs, GrainMend | macOS surface 단위 실제 UserControl | 완료. GrainMend 카드 XAML 분리 후 297줄 |
 | P0 | `src/Interop/NativeDevelopExporter.cs` | 2,342 | ABI layout 검증, recipe validation, 각 payload marshaling, 30여 request version, export/preview/auto/GrainMend 실행 | validation, payload marshaler, version request builder, command adapter | 대기 |
 | 완료 | `src/Catalog.Core/Library/LibraryFrameReader.cs` | 372, 변경 전 1,584 | frame identity/source, base/tone/color/effects/transform/metadata/local-adjust recipe 파싱 | `Library/Reading` core/value reader와 `Reading/Codecs`의 recipe별 실제 reader | 완료·Catalog 721·Shell 938 assertions 검증 |
@@ -387,5 +387,8 @@
   - `Collections/LibraryCollectionsPanel` XAML 94 / CS 288 — 묶음·스마트 컬렉션·저장된 검색
   - `Collections/LibraryCollectionRow` 10
   - `Browser/LibraryFrameCard` XAML 103 / CS 32 — 격자 한 칸
-- 줄 수: 코드비하인드 2,835 → 1,906, XAML 975 → 472. XAML 은 500줄 이하. 코드비하인드는 아직 초과라 완료로 쓰지 않는다.
+  - `Browser/LibraryBrowserFilters` 258 — 필터·정렬·카드 크기·보기 모드
+  - `Host/LibraryImportActions` 196 — 파일·폴더 가져오기와 원본 다시 찾기
+  - `Host/LibraryWorkspaceCopy` 165 — 이름표
+- 줄 수: 코드비하인드 2,835 → 1,399, XAML 975 → 473. XAML 은 500줄 이하. 코드비하인드는 아직 초과라 완료로 쓰지 않는다.
 - 검증: `build.ps1 -Preset x64-release` 통과, `test.ps1` 71/71, `test-managed.ps1` 경고 0·오류 0, Catalog 721, Shell 1032.

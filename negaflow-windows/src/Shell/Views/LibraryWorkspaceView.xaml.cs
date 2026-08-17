@@ -12,30 +12,38 @@ using Negaflow.Shell.Localization;
 using Negaflow.Shell.Shortcuts;
 using Windows.ApplicationModel.DataTransfer;
 using Negaflow.Shell.Views.Controls;
+using Negaflow.Shell.Views.Library.Browser;
+using Negaflow.Shell.Views.Library.Host;
 
 namespace Negaflow.Shell.Views;
 
 public sealed partial class LibraryWorkspaceView : UserControl
 {
-    private WorkspacePresentationState? workspaceState;
-    private LibraryHostService? libraryHost;
-    private ThumbnailService? thumbnails;
-    private Microsoft.UI.WindowId? importWindowId;
-    private bool isResizing;
-    private double liveWidth = ShellLayoutMetrics.LibraryControlsDefaultWidth;
-    private IReadOnlyList<LibraryFrameListItem> allItems = [];
-    private LibraryBrowserViewMode viewMode = LibraryBrowserViewMode.Folders;
-    private FilmType selectedFilmType = FilmType.ColorNegative;
-    private LibrarySortKey sortKey = LibrarySortKey.InputOrder;
-    private bool sortAscending = true;
-    private LibraryQuickFilterState quickFilters = LibraryQuickFilterState.None;
-    private LibrarySourceKind sourceKind = LibrarySourceKind.Importing;
-    private bool isSynchronizingFilters;
-    private bool isSynchronizingFrameSelection;
+    internal WorkspacePresentationState? workspaceState;
+    internal LibraryHostService? libraryHost;
+    internal ThumbnailService? thumbnails;
+    internal Microsoft.UI.WindowId? importWindowId;
+    internal bool isResizing;
+    internal double liveWidth = ShellLayoutMetrics.LibraryControlsDefaultWidth;
+    internal IReadOnlyList<LibraryFrameListItem> allItems = [];
+    internal LibraryBrowserViewMode viewMode = LibraryBrowserViewMode.Folders;
+    internal FilmType selectedFilmType = FilmType.ColorNegative;
+    internal LibrarySortKey sortKey = LibrarySortKey.InputOrder;
+    internal bool sortAscending = true;
+    internal LibraryQuickFilterState quickFilters = LibraryQuickFilterState.None;
+    internal LibrarySourceKind sourceKind = LibrarySourceKind.Importing;
+    internal bool isSynchronizingFilters;
+    internal bool isSynchronizingFrameSelection;
+    internal readonly LibraryImportActions import;
+    internal readonly LibraryBrowserFilters filters;
+    internal readonly LibraryWorkspaceCopy copy;
 
     public LibraryWorkspaceView()
     {
         InitializeComponent();
+        import = new LibraryImportActions(this);
+        filters = new LibraryBrowserFilters(this);
+        copy = new LibraryWorkspaceCopy(this);
         ScanPanel.IsWanted = () => ImportScannerButton.IsChecked == true;
         ScanPanel.ExpandRequested += (_, _) => ImportScannerButton.IsChecked = true;
         ScanPanel.LibraryChanged += OnEmbeddedLibraryChanged;
@@ -55,7 +63,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
         FilesSourceTree.StatusChanged += (_, text) => ImportStatusText.Text = text;
         CollectionsPanel.FilterChanged += (_, _) => ShowFilteredItems();
         CollectionsPanel.StoredQueryApplied += (_, query) => ApplyStoredQuery(query);
-        LocalizeControls();
+        copy.Localize();
         Loaded += OnLoaded;
     }
 
@@ -973,7 +981,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
         ShowFilteredItems();
     }
 
-    private void ShowFilteredItems()
+    internal void ShowFilteredItems()
     {
         IReadOnlyList<LibraryFrameListItem> items = LibrarySorter.Sort(
             quickFilters.Apply(
@@ -990,9 +998,9 @@ public sealed partial class LibraryWorkspaceView : UserControl
             items = LibraryStackProjection.Apply(items, libraryHost.Stacks);
             ApplyStackBadges(items);
         }
-        UpdateSortControls();
-        UpdateCardSizeControls();
-        UpdateFilterControls();
+        filters.UpdateSortControls();
+        filters.UpdateCardSizeControls();
+        filters.UpdateFilterControls();
         if (libraryHost is null)
         {
             FrameListView.ItemsSource = items;
@@ -1027,7 +1035,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
         {
             isSynchronizingFrameSelection = false;
         }
-        UpdateViewModeControls();
+        filters.UpdateViewModeControls();
         DevelopDefaultsPanel.Synchronize();
         SynchronizeCullingView(items);
         if (sourceKind == LibrarySourceKind.Files)
@@ -1052,7 +1060,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
     /// 왼쪽 소스를 바꿉니다. 가져오기·파일·컬렉션이 같은 자리를 나눠 쓰므로 셋 중 하나만
     /// 보입니다 — macOS 도 이 자리를 겹쳐 씁니다.
     /// </summary>
-    private void UpdateSourcePanel()
+    internal void UpdateSourcePanel()
     {
         ImportSourcePanel.Visibility = sourceKind == LibrarySourceKind.Importing
             ? Visibility.Visible
@@ -1197,409 +1205,56 @@ public sealed partial class LibraryWorkspaceView : UserControl
         ShowLibrary(libraryHost, importWindowId ?? default);
     }
 
-    private void OnFiltersToggled(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        FilterBar.Visibility = FiltersButton.IsChecked == true
-            ? Visibility.Visible
-            : Visibility.Collapsed;
-    }
+    private void OnFiltersToggled(object sender, RoutedEventArgs args) =>
+        filters.OnFiltersToggled(sender, args);
 
-    private void OnQuickFilterToggled(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (isSynchronizingFilters)
-        {
-            return;
-        }
-        quickFilters = quickFilters with
-        {
-            Picked = PickedFilterToggle.IsChecked == true,
-            Rejected = RejectedFilterToggle.IsChecked == true,
-            Offline = OfflineFilterToggle.IsChecked == true,
-            Infrared = InfraredFilterToggle.IsChecked == true,
-            DefectRecipe = DefectRecipeFilterToggle.IsChecked == true,
-            MetadataUnknown = MetadataUnknownFilterToggle.IsChecked == true,
-            UnvalidatedProfile = UnvalidatedProfileFilterToggle.IsChecked == true,
-            CurrentRoll = CurrentRollFilterToggle.IsChecked == true,
-            CurrentRollFrameIds = CurrentRollFrameIds(),
-        };
-        ShowFilteredItems();
-    }
+    private void OnQuickFilterToggled(object sender, RoutedEventArgs args) =>
+        filters.OnQuickFilterToggled(sender, args);
 
-    private void OnRatingFilterClicked(object sender, RoutedEventArgs args)
-    {
-        _ = args;
-        if (sender is not MenuFlyoutItem { Tag: string value } ||
-            !int.TryParse(value, CultureInfo.InvariantCulture, out int minimum))
-        {
-            return;
-        }
-        quickFilters = quickFilters with { MinimumRating = minimum == 0 ? null : minimum };
-        ShowFilteredItems();
-    }
+    private void OnRatingFilterClicked(object sender, RoutedEventArgs args) =>
+        filters.OnRatingFilterClicked(sender, args);
 
-    private void OnClearFiltersClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        quickFilters = LibraryQuickFilterState.None;
-        LibrarySearchBox.Text = string.Empty;
-        ShowFilteredItems();
-    }
+    private void OnClearFiltersClicked(object sender, RoutedEventArgs args) =>
+        filters.OnClearFiltersClicked(sender, args);
 
-    private void UpdateFilterControls()
-    {
-        isSynchronizingFilters = true;
-        try
-        {
-            PickedFilterToggle.IsChecked = quickFilters.Picked;
-            RejectedFilterToggle.IsChecked = quickFilters.Rejected;
-            OfflineFilterToggle.IsChecked = quickFilters.Offline;
-            InfraredFilterToggle.IsChecked = quickFilters.Infrared;
-            DefectRecipeFilterToggle.IsChecked = quickFilters.DefectRecipe;
-            MetadataUnknownFilterToggle.IsChecked = quickFilters.MetadataUnknown;
-            UnvalidatedProfileFilterToggle.IsChecked = quickFilters.UnvalidatedProfile;
-        }
-        finally
-        {
-            isSynchronizingFilters = false;
-        }
-        RatingFilterButton.Content = quickFilters.MinimumRating is { } minimum
-            ? AppResources.FormatIntegers("filterMinimumRating", "Text", minimum)
-            : AppResources.Get("rating", "Value");
-        // 필터가 걸려 있으면 헤더 버튼이 강조됩니다 — 접힌 상태에서도 걸린 줄 알 수 있어야 합니다.
-        FiltersIcon.Foreground = quickFilters.IsActive
-            ? (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"]
-            : (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
-        // 오프라인 보기에서는 이미 오프라인만 남으므로 macOS 와 같이 토글을 잠급니다.
-        OfflineFilterToggle.IsEnabled = viewMode != LibraryBrowserViewMode.Offline;
-    }
+    private void OnSortKeyClicked(object sender, RoutedEventArgs args) =>
+        filters.OnSortKeyClicked(sender, args);
 
-    private void OnSortKeyClicked(object sender, RoutedEventArgs args)
-    {
-        _ = args;
-        if (sender is not MenuFlyoutItem { Tag: string value } ||
-            !Enum.TryParse(value, out LibrarySortKey key))
-        {
-            return;
-        }
-        sortKey = key;
-        ShowFilteredItems();
-    }
+    private void OnSortDirectionClicked(object sender, RoutedEventArgs args) =>
+        filters.OnSortDirectionClicked(sender, args);
 
-    private void OnSortDirectionClicked(object sender, RoutedEventArgs args)
-    {
-        _ = args;
-        if (sender is not MenuFlyoutItem { Tag: string value })
-        {
-            return;
-        }
-        sortAscending = string.Equals(value, "Ascending", StringComparison.Ordinal);
-        ShowFilteredItems();
-    }
+    private void OnCardSizeDecreaseClicked(object sender, RoutedEventArgs args) =>
+        filters.OnCardSizeDecreaseClicked(sender, args);
 
-    private void OnCardSizeDecreaseClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        SetCardScale(LibraryCardMetrics.Scale - LibraryCardMetrics.ScaleStep);
-    }
+    private void OnCardSizeIncreaseClicked(object sender, RoutedEventArgs args) =>
+        filters.OnCardSizeIncreaseClicked(sender, args);
 
-    private void OnCardSizeIncreaseClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        SetCardScale(LibraryCardMetrics.Scale + LibraryCardMetrics.ScaleStep);
-    }
+    private void OnCardSizeResetClicked(object sender, RoutedEventArgs args) =>
+        filters.OnCardSizeResetClicked(sender, args);
 
-    /// <summary>퍼센트를 누르면 100% 로 돌아갑니다 — macOS 와 같습니다.</summary>
-    private void OnCardSizeResetClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        SetCardScale(1.0);
-    }
+    private void OnAllModeClicked(object sender, RoutedEventArgs args) =>
+        filters.OnAllModeClicked(sender, args);
 
-    private void SetCardScale(double scale)
-    {
-        LibraryCardMetrics.Scale = scale;
-        UpdateCardSizeControls();
-        // 카드 크기는 컨테이너에서 정해지므로 항목을 다시 붙여야 새 크기로 재어집니다.
-        ShowFilteredItems();
-    }
+    private void OnFoldersModeClicked(object sender, RoutedEventArgs args) =>
+        filters.OnFoldersModeClicked(sender, args);
 
-    private void UpdateCardSizeControls()
-    {
-        double scale = LibraryCardMetrics.Scale;
-        CardSizeResetButton.Content = string.Create(
-            CultureInfo.CurrentCulture,
-            $"{(int)Math.Round(scale * 100.0)}%");
-        CardSizeDecreaseButton.IsEnabled = scale > LibraryCardMetrics.MinimumScale;
-        CardSizeIncreaseButton.IsEnabled = scale < LibraryCardMetrics.MaximumScale;
-    }
+    private void OnOfflineModeClicked(object sender, RoutedEventArgs args) =>
+        filters.OnOfflineModeClicked(sender, args);
 
-    private void UpdateSortControls()
-    {
-        SortKeyText.Text = SortKeyName(sortKey);
-        SortDirectionIcon.Glyph = sortAscending ? "" : "";
-        AutomationProperties.SetName(SortButton, SortKeyText.Text);
-        foreach ((MenuFlyoutItem item, LibrarySortKey key) in SortMenuItems())
-        {
-            AutomationProperties.SetItemStatus(
-                item,
-                AppResources.Get(key == sortKey ? "selected" : "notSelected", "Value"));
-        }
-        AutomationProperties.SetItemStatus(
-            SortAscendingItem,
-            AppResources.Get(sortAscending ? "selected" : "notSelected", "Value"));
-        AutomationProperties.SetItemStatus(
-            SortDescendingItem,
-            AppResources.Get(sortAscending ? "notSelected" : "selected", "Value"));
-    }
+    private void OnFilmTypeClicked(object sender, RoutedEventArgs args) =>
+        filters.OnFilmTypeClicked(sender, args);
 
-    private IEnumerable<(MenuFlyoutItem Item, LibrarySortKey Key)> SortMenuItems()
-    {
-        yield return (SortInputOrderItem, LibrarySortKey.InputOrder);
-        yield return (SortTimeItem, LibrarySortKey.Time);
-        yield return (SortNameItem, LibrarySortKey.Name);
-        yield return (SortFlagItem, LibrarySortKey.Flag);
-        yield return (SortRatingItem, LibrarySortKey.Rating);
-        yield return (SortFileSizeItem, LibrarySortKey.FileSize);
-    }
+    private void OnImportClicked(object sender, RoutedEventArgs args) =>
+        import.OnImagesClicked(sender, args);
 
-    private static string SortKeyName(LibrarySortKey key) => AppResources.Get(
-        key switch
-        {
-            LibrarySortKey.Time => "sortTime",
-            LibrarySortKey.Name => "sortName",
-            LibrarySortKey.Flag => "sortFlag",
-            LibrarySortKey.Rating => "sortRating",
-            LibrarySortKey.FileSize => "sortFileSize",
-            _ => "sortInputOrder",
-        },
-        "Text");
+    private void OnImportFoldersClicked(object sender, RoutedEventArgs args) =>
+        import.OnFoldersClicked(sender, args);
 
-    private void OnAllModeClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        viewMode = LibraryBrowserViewMode.All;
-        ShowFilteredItems();
-    }
+    private void OnLocateOriginalClicked(object sender, RoutedEventArgs args) =>
+        import.OnLocateOriginalClicked(sender, args);
 
-    private void OnFoldersModeClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        viewMode = LibraryBrowserViewMode.Folders;
-        ShowFilteredItems();
-    }
-
-    private void OnOfflineModeClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        viewMode = LibraryBrowserViewMode.Offline;
-        ShowFilteredItems();
-    }
-
-    private void OnFilmTypeClicked(object sender, RoutedEventArgs args)
-    {
-        _ = args;
-        if (sender is not MenuFlyoutItem { Tag: string value } ||
-            !Enum.TryParse(value, out FilmType filmType))
-        {
-            return;
-        }
-        selectedFilmType = filmType;
-        viewMode = LibraryBrowserViewMode.FilmType;
-        ShowFilteredItems();
-    }
-
-    private async void OnImportClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (libraryHost is null || importWindowId is null)
-        {
-            return;
-        }
-
-        Microsoft.Windows.Storage.Pickers.FileOpenPicker picker = new(importWindowId.Value)
-        {
-            CommitButtonText = AppResources.Get("importSection", "Value"),
-        };
-        foreach (string extension in ImageSourcePaths.SupportedImportExtensions)
-        {
-            picker.FileTypeFilter.Add(extension);
-        }
-
-        ImportImagesButton.IsEnabled = false;
-        EmptyImportImagesButton.IsEnabled = false;
-        ImportFoldersButton.IsEnabled = false;
-        ImportStatusText.Text = string.Empty;
-        try
-        {
-            IReadOnlyList<Microsoft.Windows.Storage.Pickers.PickFileResult> picked =
-                await picker.PickMultipleFilesAsync();
-            List<string> paths = [];
-            foreach (Microsoft.Windows.Storage.Pickers.PickFileResult file in picked)
-            {
-                paths.Add(file.Path);
-            }
-            _ = libraryHost.Import(paths, DevelopmentProcess.C41);
-            ShowLibrary(libraryHost, importWindowId.Value);
-        }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException or
-            NotSupportedException or ArgumentException or PathTooLongException)
-        {
-            ImportStatusText.Text = AppResources.Get("libraryImportFailed", "Text");
-        }
-        finally
-        {
-            ImportImagesButton.IsEnabled = true;
-            EmptyImportImagesButton.IsEnabled = true;
-            ImportFoldersButton.IsEnabled = true;
-        }
-    }
-
-    private async void OnImportFoldersClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (libraryHost is null || importWindowId is null)
-        {
-            return;
-        }
-
-        Microsoft.Windows.Storage.Pickers.FolderPicker picker = new(importWindowId.Value)
-        {
-            CommitButtonText = AppResources.Get("importFolder", "Content"),
-        };
-
-        ImportImagesButton.IsEnabled = false;
-        EmptyImportImagesButton.IsEnabled = false;
-        ImportFoldersButton.IsEnabled = false;
-        ImportStatusText.Text = string.Empty;
-        try
-        {
-            Microsoft.Windows.Storage.Pickers.PickFolderResult? picked =
-                await picker.PickSingleFolderAsync();
-            if (picked is null)
-            {
-                return;
-            }
-
-            FolderImportResult imported = libraryHost.ImportFolders(
-                [picked.Path],
-                DevelopmentProcess.C41);
-            if (!imported.IsSuccess)
-            {
-                ImportStatusText.Text = AppResources.Get("libraryImportFailed", "Text");
-                return;
-            }
-            ImportStatusText.Text = AppResources.FormatIntegers(
-                "libraryFolderImportResult",
-                "Text",
-                imported.AddedFrameCount,
-                imported.AddedFolderCount);
-            ShowLibrary(libraryHost, importWindowId.Value);
-        }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException or
-            NotSupportedException or ArgumentException or PathTooLongException)
-        {
-            ImportStatusText.Text = AppResources.Get("libraryImportFailed", "Text");
-        }
-        finally
-        {
-            ImportImagesButton.IsEnabled = true;
-            EmptyImportImagesButton.IsEnabled = true;
-            ImportFoldersButton.IsEnabled = true;
-        }
-    }
-
-    private async void OnLocateOriginalClicked(object sender, RoutedEventArgs args)
-    {
-        _ = args;
-        if (libraryHost is null || importWindowId is null ||
-            sender is not Button { Tag: LibraryFrameListItem item })
-        {
-            return;
-        }
-
-        Microsoft.Windows.Storage.Pickers.FileOpenPicker picker = new(importWindowId.Value)
-        {
-            CommitButtonText = AppResources.Get("libraryLocateOriginal", "Content"),
-        };
-        foreach (string extension in ImageSourcePaths.SupportedImportExtensions)
-        {
-            picker.FileTypeFilter.Add(extension);
-        }
-
-        try
-        {
-            Microsoft.Windows.Storage.Pickers.PickFileResult? picked = await picker.PickSingleFileAsync();
-            if (picked is null)
-            {
-                return;
-            }
-            SourceRelinkPlan? plan = SourceRelinkPlanner.FilePlan(item.Frame.SourcePath, picked.Path);
-            if (plan is null || !libraryHost.Relink(plan).IsSuccess)
-            {
-                ImportStatusText.Text = AppResources.Get("libraryRelinkFailed", "Text");
-                return;
-            }
-            ShowLibrary(libraryHost, importWindowId.Value);
-        }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException or
-            NotSupportedException or ArgumentException or PathTooLongException)
-        {
-            ImportStatusText.Text = AppResources.Get("libraryRelinkFailed", "Text");
-        }
-    }
-
-    private async void OnLocateFolderClicked(object sender, RoutedEventArgs args)
-    {
-        _ = args;
-        if (libraryHost is null || importWindowId is null ||
-            sender is not Button { Tag: LibraryBrowserFolderSection { IsRegistered: true } section })
-        {
-            return;
-        }
-
-        Microsoft.Windows.Storage.Pickers.FolderPicker picker = new(importWindowId.Value)
-        {
-            CommitButtonText = AppResources.Get("libraryLocateFolder", "Content"),
-        };
-        try
-        {
-            Microsoft.Windows.Storage.Pickers.PickFolderResult? picked =
-                await picker.PickSingleFolderAsync();
-            if (picked is null)
-            {
-                return;
-            }
-
-            SourceRelinkPlan plan = SourceRelinkPlanner.FolderPlan(
-                section.Id,
-                picked.Path,
-                libraryHost.Frames);
-            if (!libraryHost.Relink(plan).IsSuccess)
-            {
-                ImportStatusText.Text = AppResources.Get("libraryFolderRelinkFailed", "Text");
-                return;
-            }
-            ShowLibrary(libraryHost, importWindowId.Value);
-        }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException or
-            NotSupportedException or ArgumentException or PathTooLongException)
-        {
-            ImportStatusText.Text = AppResources.Get("libraryFolderRelinkFailed", "Text");
-        }
-    }
+    private void OnLocateFolderClicked(object sender, RoutedEventArgs args) =>
+        import.OnLocateFolderClicked(sender, args);
 
     private void OnRootSizeChanged(object sender, SizeChangedEventArgs args)
     {
@@ -1702,28 +1357,7 @@ public sealed partial class LibraryWorkspaceView : UserControl
         _ = ScanPanel.OpenAsync();
     }
 
-    private void LocalizeScanSection()
-    {
-        SetButtonText(ImportImagesButton, AppResources.Get("libraryImportImageShort", "Content"));
-        SetButtonText(ImportFoldersButton, AppResources.Get("libraryImportFolderShort", "Content"));
-        SetToggleButtonText(
-            ImportScannerButton,
-            AppResources.Get("libraryScannerLabel", "Content"));
-        ScanPanel.Localize();
-    }
-
-    private static void SetToggleButtonText(ToggleButton toggle, string text)
-    {
-        toggle.Content = text;
-        AutomationProperties.SetName(toggle, text);
-        ToolTipService.SetToolTip(toggle, text);
-    }
-
-    /// <summary>
-    /// 지금 스캔 중인 롤의 사진들입니다. 활성 롤이 없으면 빈 목록이고, 그러면 이 축은 꺼진
-    /// 것과 같이 동작합니다.
-    /// </summary>
-    private IReadOnlyList<string> CurrentRollFrameIds()
+    internal IReadOnlyList<string> CurrentRollFrameIds()
     {
         if (libraryHost?.ActiveRollId is not { } activeRollId)
         {
@@ -1750,148 +1384,6 @@ public sealed partial class LibraryWorkspaceView : UserControl
             isSynchronizingFilters = false;
         }
         ShowFilteredItems();
-    }
-
-    private void LocalizeControls()
-    {
-        // 사진 이름은 Shell.Core 가 짓지만 문구는 여기에 있습니다. 꽂아 두지 않으면 카드가
-        // 영어 기본값으로 불립니다.
-        LibraryFrameNaming.NumberFormat = static number =>
-            AppResources.FormatIntegers("frameDisplayFormat", "Text", number);
-        LibraryFrameNaming.CopyFormat = static (number, copy) =>
-            AppResources.FormatIntegers("frameCopyDisplayFormat", "Text", number, copy);
-        // 이름 자리는 macOS 가 %@ 로 두는 곳입니다. .NET 리소스에서는 {0} 으로 두고 여기서
-        // 갈아 끼웁니다 — 숫자 치환기가 %d 만 알기 때문입니다.
-        LibraryFrameNaming.NamedCopyFormat = static (name, copy) =>
-            AppResources.FormatIntegers("namedFrameCopyDisplayFormat", "Text", copy)
-                .Replace("{0}", name, StringComparison.Ordinal);
-        SetNameAndTooltip(ImportRailButton, "importSection");
-        SetNameAndTooltip(FilesRailButton, "libraryFiles");
-        SetNameAndTooltip(CollectionsRailButton, "libraryCollections");
-        string import = AppResources.Get("importSection", "Text");
-        ImportHeaderText.Text = import;
-        ImportSectionText.Text = import;
-        CollectionsPanel.Localize();
-        DevelopDefaultsPanel.Localize();
-        CullingSurface.Localize();
-        UpdateSourcePanel();
-        string importImages = AppResources.Get("importImages", "Content");
-        SetButtonText(ImportImagesButton, importImages);
-        SetButtonText(EmptyImportImagesButton, importImages);
-        LocalizeScanSection();
-        SetButtonText(AllModeButton, AppResources.Get("libraryAllShort", "Text"));
-        SetButtonText(FoldersModeButton, AppResources.Get("libraryFolders", "Text"));
-        SetDropDownText(FilmTypeModeButton, AppResources.Get("libraryFilmType", "Text"));
-        SetButtonText(OfflineModeButton, AppResources.Get("libraryOffline", "Text"));
-        SetMenuItemText(ColorNegativeFilmTypeItem, AppResources.Get("filmTypeColorNegative", "Text"));
-        SetMenuItemText(ColorPositiveFilmTypeItem, AppResources.Get("filmTypeColorPositive", "Text"));
-        SetMenuItemText(BlackAndWhiteNegativeFilmTypeItem, AppResources.Get("filmTypeBlackAndWhiteNegative", "Text"));
-        SetMenuItemText(BlackAndWhitePositiveFilmTypeItem, AppResources.Get("filmTypeBlackAndWhitePositive", "Text"));
-        FiltersText.Text = AppResources.Get("libraryFilters", "Content");
-        AutomationProperties.SetName(FiltersButton, FiltersText.Text);
-        SetToggleText(PickedFilterToggle, AppResources.Get("picked", "Text"));
-        SetToggleText(RejectedFilterToggle, AppResources.Get("rejected", "Text"));
-        SetToggleText(OfflineFilterToggle, AppResources.Get("libraryOffline", "Text"));
-        SetToggleText(InfraredFilterToggle, AppResources.Get("filterInfrared", "Text"));
-        SetToggleText(DefectRecipeFilterToggle, AppResources.Get("filterDefectRecipe", "Text"));
-        SetToggleText(
-            CurrentRollFilterToggle,
-            AppResources.Get("filterCurrentRoll", "Text"));
-        SetToggleText(
-            MetadataUnknownFilterToggle,
-            AppResources.Get("libraryFilterMetadataUnknown", "Content"));
-        SetToggleText(
-            UnvalidatedProfileFilterToggle,
-            AppResources.Get("libraryFilterUnvalidatedProfile", "Content"));
-        SetButtonText(ClearFiltersButton, AppResources.Get("clearFilters", "Text"));
-        SetMenuItemText(RatingFilterAnyItem, AppResources.Get("filterAll", "Text"));
-        for (int rating = 1; rating <= 5; ++rating)
-        {
-            SetMenuItemText(
-                RatingFilterItem(rating),
-                AppResources.FormatIntegers("filterMinimumRating", "Text", rating));
-        }
-        SetMenuItemText(SortInputOrderItem, AppResources.Get("sortInputOrder", "Text"));
-        SetMenuItemText(SortTimeItem, AppResources.Get("sortTime", "Text"));
-        SetMenuItemText(SortNameItem, AppResources.Get("sortName", "Text"));
-        SetMenuItemText(SortFlagItem, AppResources.Get("sortFlag", "Text"));
-        SetMenuItemText(SortRatingItem, AppResources.Get("sortRating", "Text"));
-        SetMenuItemText(SortFileSizeItem, AppResources.Get("sortFileSize", "Text"));
-        SetMenuItemText(SortAscendingItem, AppResources.Get("sortAscending", "Text"));
-        SetMenuItemText(SortDescendingItem, AppResources.Get("sortDescending", "Text"));
-        string cardSizeHelp = AppResources.Get("frameCardSizeHelp", "Value");
-        foreach (Button button in new[] { CardSizeDecreaseButton, CardSizeResetButton, CardSizeIncreaseButton })
-        {
-            AutomationProperties.SetName(button, cardSizeHelp);
-            ToolTipService.SetToolTip(button, cardSizeHelp);
-        }
-        UpdateSortControls();
-        UpdateCardSizeControls();
-        UpdateViewModeControls();
-        LibraryCountText.Text = AppResources.FormatIntegers(
-            "libraryResultCountFormat",
-            "Value",
-            0,
-            0);
-    }
-
-    private static void SetNameAndTooltip(Button button, string resourceKey)
-    {
-        string text = AppResources.Get(resourceKey, "Value");
-        AutomationProperties.SetName(button, text);
-        ToolTipService.SetToolTip(button, text);
-    }
-
-    private static void SetButtonText(Button button, string text)
-    {
-        button.Content = text;
-        AutomationProperties.SetName(button, text);
-    }
-
-    private static void SetDropDownText(DropDownButton button, string text)
-    {
-        button.Content = text;
-        AutomationProperties.SetName(button, text);
-        ToolTipService.SetToolTip(button, text);
-    }
-
-    private MenuFlyoutItem RatingFilterItem(int rating) => rating switch
-    {
-        1 => RatingFilterOneItem,
-        2 => RatingFilterTwoItem,
-        3 => RatingFilterThreeItem,
-        4 => RatingFilterFourItem,
-        _ => RatingFilterFiveItem,
-    };
-
-    private static void SetToggleText(ToggleButton toggle, string text)
-    {
-        toggle.Content = text;
-        AutomationProperties.SetName(toggle, text);
-    }
-
-    private static void SetMenuItemText(MenuFlyoutItem item, string text)
-    {
-        item.Text = text;
-        AutomationProperties.SetName(item, text);
-    }
-
-    private void UpdateViewModeControls()
-    {
-        SetModeAppearance(AllModeButton, viewMode == LibraryBrowserViewMode.All);
-        SetModeAppearance(FoldersModeButton, viewMode == LibraryBrowserViewMode.Folders);
-        SetModeAppearance(FilmTypeModeButton, viewMode == LibraryBrowserViewMode.FilmType);
-        SetModeAppearance(OfflineModeButton, viewMode == LibraryBrowserViewMode.Offline);
-    }
-
-    private static void SetModeAppearance(Control control, bool selected)
-    {
-        control.Background = selected
-            ? (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["NegaflowSelectionBrush"]
-            : (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["NegaflowSubtleFillBrush"];
-        AutomationProperties.SetItemStatus(
-            control,
-            AppResources.Get(selected ? "selected" : "notSelected", "Value"));
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs args)
