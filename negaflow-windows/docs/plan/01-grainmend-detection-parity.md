@@ -1,7 +1,37 @@
 # 01 — GrainMend 검출 품질 1:1 대조
 
-목표: **같은 사진에서 macOS 와 같은 것을 결함으로 고른다.** 지금은 먼지를 하나도 못 잡고
-직선 구조물만 잡습니다.
+목표: **같은 사진에서 macOS 와 같은 것을 결함으로 고른다.**
+
+## 0.0 전수 감사 (2026-08-18) — 자동 말고 나머지가 이식되지 않았다
+
+macOS `DefectRemoval` 27개 파일 + 앱 `Features/Defects` 를 Windows `grain_mend_*` 33개
+파일과 함수·상수 단위로 대조했습니다. **자동(전체 프레임) 경로는 대체로 맞고, 가이드·브러시
+경로의 메커니즘이 통째로 빠져 있었습니다.**
+
+측정으로 확인한 증상 — `Negaflow.Shell.UnitTests.exe --defect-tools`:
+가이드가 frame_7 가운데 ROI 에서 **408개 중 가로 스크래치 363개**. 자동은 같은 프레임에서
+가로 34개입니다. 가이드가 격자 배제를 끄는 대신 macOS 가 함께 켜는 확장 스케일 규칙이
+없어서, 가드레일·아스팔트 줄이 통째로 스크래치가 된 것입니다.
+
+| macOS 메커니즘 | Windows 상태 | 결과 |
+|---|---|---|
+| `extendedDustScales` — `microDustMag`·`microNoiseScale`·`largeDustMag` 3채널 | **히트 0** → 이식함 | 가이드 게이트가 아예 없었음 |
+| `dustTrustedStrong` + `compactTrusted`(≤16px) | **히트 0** → 이식함 | 밀집 고대비 먼지 구제 불가 |
+| `microDustMinArea` 1↔3 | **히트 0** → 이식함 | micro-only 1~2px 성분이 그대로 통과 |
+| `constrainedRegionGrainFieldSmallMax` 12↔4 | **히트 0** → 이식함 | 가이드 그레인 안전선 없음 |
+| `preferredAngle` 방향 게이트(`bestPerp`·`alignTolerance 32`·role 0/1/2) | **히트 0** — 미이식 | 브러시가 획을 가로지르는 정상 구조선을 파괴 |
+| 브러시 와이프 퓨즈(`regionArea`·`scratchBudget*`·`totalBudgetAreaFraction`) | **히트 0** — 미이식 | 칠 면적이 통째로 재합성될 수 있음 |
+| `applyingWholeFrameAutomaticRiskFlag`(+`0.0006`·`0.02`·국소 밀도) | **히트 0** — 미이식 | 자동 오검출 위험 경고 없음 |
+| `holeCap = min(maxHoleArea, count*2)` | `fill_interior_holes` 안에 있음 | 1:1 |
+| `DefectShape.pcaMetrics` | `grain_mend_shape.cpp` 1:1 | speck 검출기만 사본을 씀(수치 동일, 중복) |
+| `DefectClassifier` 상수·수식 전부 | 1:1 | 일치 |
+| `DefectSpeckDetector` 상수·수식 전부 | 1:1 | 일치 |
+
+계측기 자체도 낡아 있었습니다: `DefectToolRecipes` 가 검출 마스크를 `1800×1800` 으로 잡아
+풀해상도(5088×3401) 검출을 `mask_buffer_too_small` 로 거절했고, 그 거절이 "자동 검출이
+깨졌다"로 읽혔습니다. 원본 화소 수로 고쳤습니다.
+
+지금은 먼지를 하나도 못 잡고 직선 구조물만 잡습니다.
 
 ## 0. 정답지와 현재 값
 
@@ -9,16 +39,16 @@
 
 | 분류 | macOS (정답) | Windows (지금) | 차이 |
 |---|---:|---:|---:|
-| 먼지 | 13 | **575** | +562 |
-| 핀홀 | 2 | **1** | −1 |
-| 가로 스크래치 | 5 | 3 | −2 |
-| 세로 스크래치 | 10 | 11 | +1 |
-| 대각 스크래치 | 0 | 1 | +1 |
+| 먼지 | 13 | 13 | 0 |
+| 핀홀 | 2 | 2 | 0 |
+| 가로 스크래치 | 5 | 6 | +1 |
+| 세로 스크래치 | 10 | 8 | −2 |
+| 대각 스크래치 | 0 | 0 | 0 |
 | 유제 손상 | 0 | 0 | 0 |
-| **미세 입자** | **197** | **524** | **+327** |
-| **합계** | **227** | **1115** | **+888** |
+| **미세 입자** | **197** | **164** | **−33** |
+| **합계** | **227** | **193** | **−34** |
 
-Windows 부가 정보: 평균 신뢰도 0.246, 채택 화소 10,669.
+Windows 부가 정보: cleaned raw + `stitchRegionDefectTiles`, 채택 화소 4,352. 다섯 장 표는 [06](06-detection-reference.md). **완료 아님** — frame_2 세로 15/21.
 
 **사용자 확인 사항: macOS 에서도 오검출이 많습니다.** 즉 목표는 "오검출 0" 이 아니라
 **"macOS 와 같은 것을 고른다"** 입니다. macOS 가 잡는 전봇대는 Windows 도 잡아야 하고,

@@ -11,8 +11,19 @@ namespace Negaflow.Shell.UnitTests;
 /// </summary>
 internal static class DefectToolRecipes
 {
-    /// <summary>검출 이미지의 긴 변 상한입니다. 네이티브 상한과 같은 값입니다.</summary>
-    private const int MaximumDetectionDimension = 1800;
+    /// <summary>
+    /// 검출 마스크 버퍼의 크기입니다. 자동·가이드는 macOS <c>detectLabeled</c> 와 같이
+    /// <b>다운스케일 없이</b> 원본 해상도로 돕니다(1,800px 상한은 브러시 경로만 씁니다). 그래서
+    /// 버퍼는 프레임 화소 수만큼 필요합니다 — 1,800×1,800 으로 잡으면 5,088×3,401 스캔에서
+    /// 네이티브가 <c>mask_buffer_too_small</c> 로 거절하고, 그 거절이 "자동 검출이 깨졌다"로
+    /// 잘못 읽힙니다(실제로 그렇게 읽혔습니다).
+    /// </summary>
+    private static int MaskByteCapacity(LibraryFrameSnapshot frame)
+    {
+        long width = frame.SourceMetadata?.PixelWidth ?? 0U;
+        long height = frame.SourceMetadata?.PixelHeight ?? 0U;
+        return checked((int)Math.Max(1L, width * height));
+    }
 
     /// <summary>
     /// 마지막 검출 한 번에 걸린 시간입니다. 자동은 5초 미만이어야 합니다 — 재지 않으면
@@ -172,7 +183,7 @@ internal static class DefectToolRecipes
             reason = "request refused";
             return null;
         }
-        byte[] mask = new byte[MaximumDetectionDimension * MaximumDetectionDimension];
+        byte[] mask = new byte[MaskByteCapacity(frame)];
         GrainMendDetectionOptions options = GrainMendSensitivity.ToDetectionOptions(
             GrainMendSensitivity.Default,
             automatic);

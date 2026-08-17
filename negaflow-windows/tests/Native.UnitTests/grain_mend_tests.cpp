@@ -2,6 +2,7 @@
 
 #include "grain_mend_detector.h"
 #include "grain_mend_resample.h"
+#include "grain_mend_stitch.h"
 
 #include <algorithm>
 #include <array>
@@ -601,6 +602,64 @@ void test_whole_frame_structure_filter_preserves_grid_lines() {
         "whole-frame structure protection rejects a repeated grid but keeps an isolated scratch");
 }
 
+void test_stitch_keeps_highest_confidence_classification() {
+    using negaflow::imaging::grain_mend_detail::ClassifiedComponent;
+    using negaflow::imaging::grain_mend_detail::DefectClassification;
+    using negaflow::imaging::grain_mend_detail::stitch_region_defect_tiles;
+
+    // Two core pieces that 8-connect across a tile seam. macOS keeps the
+    // higher-confidence class instead of re-running PCA on the union.
+    ClassifiedComponent vertical{};
+    vertical.pixels = {10U * 32U + 15U, 11U * 32U + 15U, 12U * 32U + 15U};
+    vertical.minimum_x = 15U;
+    vertical.maximum_x = 15U;
+    vertical.minimum_y = 10U;
+    vertical.maximum_y = 12U;
+    vertical.is_scratch = true;
+    vertical.classification = DefectClassification::scratch_vertical;
+    vertical.confidence = 0.90;
+
+    ClassifiedComponent horizontal{};
+    horizontal.pixels = {12U * 32U + 16U, 12U * 32U + 17U};
+    horizontal.minimum_x = 16U;
+    horizontal.maximum_x = 17U;
+    horizontal.minimum_y = 12U;
+    horizontal.maximum_y = 12U;
+    horizontal.is_scratch = true;
+    horizontal.classification = DefectClassification::scratch_horizontal;
+    horizontal.confidence = 0.30;
+
+    ClassifiedComponent dust{};
+    dust.pixels = {12U * 32U + 16U};
+    dust.minimum_x = 16U;
+    dust.maximum_x = 16U;
+    dust.minimum_y = 12U;
+    dust.maximum_y = 12U;
+    dust.is_scratch = false;
+    dust.classification = DefectClassification::dust;
+    dust.confidence = 0.80;
+
+    const auto stitched = stitch_region_defect_tiles(
+        {vertical, horizontal, dust}, 32U, 24U);
+    std::size_t scratches = 0U;
+    std::size_t dusts = 0U;
+    bool kept_vertical = false;
+    for (const auto& component : stitched) {
+        if (component.is_scratch) {
+            ++scratches;
+            kept_vertical = kept_vertical ||
+                (component.classification ==
+                     DefectClassification::scratch_vertical &&
+                 component.confidence == 0.90 &&
+                 component.pixels.size() == 5U);
+        } else {
+            ++dusts;
+        }
+    }
+    expect(scratches == 1U && dusts == 1U && kept_vertical,
+           "stitch unions same-kind 8-neighbors and keeps the higher-confidence class");
+}
+
 void test_whole_frame_tiles_stitch_a_boundary_scratch() {
     const auto clean = make_uniform_image(1'600U, 96U);
     auto source = clean;
@@ -1054,6 +1113,7 @@ int main() {
     test_strength_zero_is_bit_exact_and_partial_strength_blends();
     test_detection_sensitivity_controls_candidate_thresholds();
     test_whole_frame_structure_filter_preserves_grid_lines();
+    test_stitch_keeps_highest_confidence_classification();
     test_whole_frame_tiles_stitch_a_boundary_scratch();
     test_labeled_detection_adds_curved_thin_scratch_evidence();
     test_invalid_inputs_fail_closed();

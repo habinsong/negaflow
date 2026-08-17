@@ -24,8 +24,8 @@ std::optional<DevelopExportOutcome> apply_grain_stage(
             request.grain_mend.strength >
                 negaflow::imaging::grain_mend_identity_threshold));
     if (detect != nullptr) {
-        // 검토 도구는 수리 결과가 아니라 판정을 원합니다. 여기서 멈추는 이유는
-        // GrainMend 가 film look 뒤, 즉 현상된 양화 위에서 돌기 때문입니다.
+        // 검토 도구는 수리 결과가 아니라 판정을 원합니다. 호출측이 cleaned raw
+        // (반전 전 스캔)를 넘깁니다 — macOS `detectComponents(in: cleanedRaw)`.
         const auto detected = negaflow::imaging::detect_grain_mend(
             image,
             request.grain_mend,

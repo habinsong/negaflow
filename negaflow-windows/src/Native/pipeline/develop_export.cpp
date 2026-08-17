@@ -128,6 +128,25 @@ using develop_export_detail::validate_request;
         return *failed;
     }
 
+    // macOS `runRegionDetect` 는 반전·톤·필름룩 전 cleaned raw 에서 검출한다.
+    // 양화 뒤에서 돌리면 같은 먼지가 전혀 다른 대비로 보인다.
+    if (detect != nullptr) {
+        GrainStageOutput grain{};
+        if (auto failed = apply_grain_stage(
+                request,
+                control,
+                detect,
+                tracker,
+                std::move(decoded_image),
+                grain)) {
+            return *failed;
+        }
+        if (grain.detect_complete) {
+            return grain.detect_outcome;
+        }
+        return cancelled_outcome(DevelopExportStage::grain_mend);
+    }
+
     LookWorkspaceOutput look_workspace{};
     if (auto failed =
             prepare_look_workspace(request, decoded_image.width, look_workspace)) {

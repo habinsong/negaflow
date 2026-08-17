@@ -1,7 +1,6 @@
 #include "grain_mend_detect.h"
 
 #include "negaflow/imaging/grain_mend.h"
-#include "negaflow/imaging/manual_negative_developer.h"
 #include "negaflow/imaging/scanner_tiff_to_working.h"
 
 #include <array>
@@ -11,6 +10,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <string_view>
 #include <system_error>
@@ -47,29 +47,91 @@ int print_error(const std::string_view code) {
     return 2;
 }
 
+constexpr std::wstring_view dump_prefix = L"dump=";
+
+/// 성분 하나하나를 CSV 로 적습니다. 개수만 보면 "어디를" 골랐는지 알 수 없어서, 화면
+/// 대조 없이도 영역별 밀도를 셀 수 있게 좌표를 남깁니다.
+void write_component_dump(
+    const std::filesystem::path& path,
+    const negaflow::imaging::GrainMendDetection& detection) {
+    std::ofstream file{path, std::ios::binary | std::ios::trunc};
+    if (!file) {
+        return;
+    }
+    file << "classification,centroid_x,centroid_y,minimum_x,minimum_y,"
+            "maximum_x,maximum_y,area,confidence\n";
+    for (const auto& component : detection.components) {
+        std::size_t sum_x = 0U;
+        std::size_t sum_y = 0U;
+        for (const std::size_t pixel : component.pixels) {
+            sum_x += pixel % detection.width;
+            sum_y += pixel / detection.width;
+        }
+        const std::size_t area = std::max<std::size_t>(
+            1U, component.pixels.size());
+        file << static_cast<unsigned>(component.classification) << ','
+             << (sum_x / area) << ',' << (sum_y / area) << ','
+             << component.minimum_x << ',' << component.minimum_y << ','
+             << component.maximum_x << ',' << component.maximum_y << ','
+             << component.pixels.size() << ',' << component.confidence << '\n';
+    }
+}
+
 }  // namespace
 
 int run_grain_mend_detect(
-    const int argument_count,
+    const int input_argument_count,
     const wchar_t* const arguments[]) {
-    if (argument_count < 6 || argument_count > 8) {
+    // 마지막 인자가 `dump=<경로>` 면 계측 출력이며 나머지 파싱에서 뺍니다.
+    std::filesystem::path dump_path{};
+    int argument_count = input_argument_count;
+    if (argument_count >= 4) {
+        const std::wstring_view last{arguments[argument_count - 1]};
+        if (last.size() > dump_prefix.size() &&
+            last.substr(0U, dump_prefix.size()) == dump_prefix) {
+            dump_path = std::filesystem::path{last.substr(dump_prefix.size())};
+            --argument_count;
+        }
+    }
+    const bool use_auto_dmin = argument_count >= 4 &&
+        std::wstring_view{arguments[3]} == L"auto";
+    if (use_auto_dmin) {
+        if (argument_count < 4 || argument_count > 6) {
+            std::cerr << "usage: negaflow-cli --grain-mend-detect <source> "
+                         "auto [sensitivity] [guided]\n";
+            return 2;
+        }
+    } else if (argument_count < 6 || argument_count > 8) {
         std::cerr << "usage: negaflow-cli --grain-mend-detect <source> "
-                     "<dmin-r> <dmin-g> <dmin-b> [sensitivity] [guided]\n";
+                     "<dmin-r> <dmin-g> <dmin-b> [sensitivity] [guided]\n"
+                     "   or: negaflow-cli --grain-mend-detect <source> "
+                     "auto [sensitivity] [guided]\n";
         return 2;
     }
 
-    negaflow::imaging::ManualNegativeDevelopParameters develop{};
-    if (!parse_finite_float(arguments[3], develop.dmin[0]) ||
-        !parse_finite_float(arguments[4], develop.dmin[1]) ||
-        !parse_finite_float(arguments[5], develop.dmin[2])) {
-        return print_error("invalid_dmin");
-    }
     float sensitivity = 1.0F;
-    if (argument_count >= 7 && !parse_finite_float(arguments[6], sensitivity)) {
-        return print_error("invalid_sensitivity");
+    bool guided = false;
+    if (use_auto_dmin) {
+        if (argument_count >= 5 &&
+            !parse_finite_float(arguments[4], sensitivity)) {
+            return print_error("invalid_sensitivity");
+        }
+        guided = argument_count >= 6 &&
+            std::wstring_view{arguments[5]} == L"guided";
+    } else {
+        float ignored_dmin = 0.0F;
+        if (!parse_finite_float(arguments[3], ignored_dmin) ||
+            !parse_finite_float(arguments[4], ignored_dmin) ||
+            !parse_finite_float(arguments[5], ignored_dmin)) {
+            return print_error("invalid_dmin");
+        }
+        if (argument_count >= 7 &&
+            !parse_finite_float(arguments[6], sensitivity)) {
+            return print_error("invalid_sensitivity");
+        }
+        guided = argument_count >= 8 &&
+            std::wstring_view{arguments[7]} == L"guided";
     }
-    const bool guided = argument_count >= 8 &&
-        std::wstring_view{arguments[7]} == L"guided";
 
     const auto decode_started = std::chrono::steady_clock::now();
     negaflow::imageio::WicTiffDecodeControl decode_control{};
@@ -80,12 +142,8 @@ int run_grain_mend_detect(
         prepared.working.status != negaflow::imaging::ScannerToWorkingStatus::ok) {
         return print_error("decode_failed");
     }
-    const auto develop_started = std::chrono::steady_clock::now();
-    auto developed = negaflow::imaging::develop_manual_negative(
-        std::move(prepared.working.image), develop);
-    if (developed.status != negaflow::imaging::ManualNegativeDevelopStatus::ok) {
-        return print_error("develop_failed");
-    }
+    // macOS `runRegionDetect` 는 현상(반전/톤/필름룩) 전 cleaned raw 에서 검출한다.
+    // dmin 인자는 예전 계측기 호환용으로만 받고, 검출 입력에는 쓰지 않는다.
     const auto detect_started = std::chrono::steady_clock::now();
 
     negaflow::imaging::GrainMendParameters parameters{};
@@ -104,8 +162,12 @@ int run_grain_mend_detect(
         roi.height = 0.5;
     }
     const negaflow::imaging::GrainMendDetection detection =
-        negaflow::imaging::detect_grain_mend(developed.image, parameters, roi);
+        negaflow::imaging::detect_grain_mend(
+            prepared.working.image, parameters, roi);
     const auto finished = std::chrono::steady_clock::now();
+    if (!dump_path.empty()) {
+        write_component_dump(dump_path, detection);
+    }
 
     const auto micros = [](const auto from, const auto to) {
         return static_cast<std::uint64_t>(
@@ -125,8 +187,10 @@ int run_grain_mend_detect(
                       ? "ok"
                       : "failed")
               << "\",\"operation\":\"grain_mend_detect\""
-              << ",\"source_width\":" << developed.image.width
-              << ",\"source_height\":" << developed.image.height
+              << ",\"source_width\":" << prepared.working.image.width
+              << ",\"source_height\":" << prepared.working.image.height
+              << ",\"input_domain\":\"cleaned_raw\""
+              << ",\"dmin_mode\":\"unused\""
               << ",\"detection_width\":" << detection.width
               << ",\"detection_height\":" << detection.height
               << ",\"accepted_pixels\":" << detection.accepted_pixels
@@ -144,9 +208,8 @@ int run_grain_mend_detect(
               << ",\"emulsion\":" << by_class[5]
               << ",\"micro_speck\":" << by_class[6] << '}'
               << ",\"stages\":{\"decode_microseconds\":"
-              << micros(decode_started, develop_started)
-              << ",\"develop_microseconds\":"
-              << micros(develop_started, detect_started)
+              << micros(decode_started, detect_started)
+              << ",\"develop_microseconds\":0"
               << ",\"detect_microseconds\":" << micros(detect_started, finished)
               << ",\"tile_count\":" << detection.timings.tile_count
               << ",\"worker_count\":" << detection.timings.worker_count

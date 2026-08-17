@@ -56,6 +56,19 @@ inline constexpr std::size_t isolation_minimum_structure = 8U;
 inline constexpr std::uint32_t isolation_maximum_ring_padding = 24U;
 inline constexpr double isolation_maximum_ring_density = 0.10;
 inline constexpr std::size_t grain_field_small_component_maximum = 12U;
+// macOS `constrainedRegionGrainFieldSmallMax` — 부분 ROI(가이드)도 필름 그레인 안전선을
+// 유지합니다. 확장 검출의 trusted 경로로 들어온 고대비 입자도 1~2px 로 밀집하면 예외
+// 없이 버리고, 3x3 이상 실제 먼지는 크기 범위 밖이라 보존됩니다.
+inline constexpr std::size_t constrained_region_grain_field_small_maximum = 4U;
+// macOS `buildLabeled(microDustMinArea:)` — 낮은 임계의 micro-only 경로가 새로 만든
+// 1~2px 컴포넌트는 필름 입자와 구분할 증거가 부족하므로 채택하지 않습니다. 기존 보수·큰
+// 이물 strong 은 이 제한을 받지 않습니다(자동은 1 이라 사실상 무제한).
+inline constexpr std::size_t micro_dust_minimum_area_extended = 3U;
+inline constexpr std::size_t micro_dust_minimum_area_default = 1U;
+// macOS `compactTrusted` 의 크기 상한. 원거리 통계가 서로를 억제한 밀집 고대비 먼지는
+// 작은 컴포넌트일 때만 절대 대비 증거로 구제합니다 — 긴 띠·창문 같은 정상 구조는 이
+// 상한을 넘으므로 strong 우회가 불가능합니다.
+inline constexpr std::size_t compact_trusted_maximum_area = 16U;
 inline constexpr int grain_field_radius = 48;
 inline constexpr int grain_field_count = 10;
 inline constexpr std::size_t grid_line_minimum_field = 8U;

@@ -81,7 +81,8 @@ void mark_grain_field_drops(
     const std::vector<Component>& scratch,
     const std::uint32_t width,
     std::vector<std::uint8_t>& drop_dust,
-    std::vector<std::uint8_t>& drop_scratch) {
+    std::vector<std::uint8_t>& drop_scratch,
+    const std::size_t small_maximum) {
     std::vector<SmallComponent> small{};
     const auto add_small = [&](const std::vector<Component>& components,
                                const bool dust_kind) {
@@ -89,7 +90,7 @@ void mark_grain_field_drops(
              component_index < components.size();
              ++component_index) {
             const Component& component = components[component_index];
-            if (component.pixels.size() > grain_field_small_component_maximum) {
+            if (component.pixels.size() > small_maximum) {
                 continue;
             }
             std::size_t sum_x = 0U;

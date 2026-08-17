@@ -28,6 +28,11 @@ struct CandidateMaps final {
     std::vector<float> dust_magnitude{};
     std::vector<float> thin_magnitude{};
     std::vector<float> noise_scale{};
+    // macOS `buildLabeled(dustTrustedStrong:)` — 기존 보수 검출이나 큰 이물 검출이 직접
+    // 확인한 화소입니다. 낮은 임계의 micro-only 후보와 구분해, 밀집 미세 입자는 그레인
+    // 퓨즈로 버리면서 실제 고대비 먼지 여러 개는 살립니다. 확장 스케일이 꺼진 자동
+    // 경로에서는 macOS 도 `nil` 을 넘기므로 비어 있습니다.
+    std::vector<std::uint8_t> trusted_strong{};
     // macOS `DefectContrastField.valid` — 클리핑 명부와 순흑 평탄을 뺀 화소입니다. 미세 입자
     // 패스가 같은 것을 다시 만들지 않도록 들고 나갑니다.
     std::vector<std::uint8_t> valid{};
@@ -68,12 +73,17 @@ void make_detection_image_region(
 // Cancellation is checked between the morphology passes and the directional scratch
 // integration, which is where nearly all of the time goes. A cancelled call returns
 // partial maps; the caller polls the same flag and discards them.
+// `extended_dust_scales` 는 macOS `DefectContrastField(extendedDustScales:)` 이며 가이드
+// (부분 ROI) 경로에서만 참입니다. 참이면 미세 이물 채널(반경 4 top-hat 재사용 + 반경 8
+// 잡음 바닥)과 큰 이물 채널(luma − 반경 80 박스평균)이 후보 판정에 함께 들어가고
+// `trusted_strong` 이 채워집니다. 전체 프레임 자동은 macOS 도 거짓이라 기존과 같습니다.
 [[nodiscard]] CandidateMaps find_candidates(
     const DetectionImage& image,
     double dust_sensitivity,
     double scratch_sensitivity,
     double protect_detail,
     bool labeled_detection = false,
+    bool extended_dust_scales = false,
     negaflow::core::CancelFlag cancel = {});
 
 void find_candidates(
@@ -82,6 +92,7 @@ void find_candidates(
     double scratch_sensitivity,
     double protect_detail,
     bool labeled_detection,
+    bool extended_dust_scales,
     CandidateMaps& result,
     negaflow::core::CancelFlag cancel = {});
 

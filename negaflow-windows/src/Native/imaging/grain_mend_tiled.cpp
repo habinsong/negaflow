@@ -1,9 +1,15 @@
 #include "grain_mend_tiled.h"
 
+#include "grain_mend_component_classification.h"
+#include "grain_mend_component_gates.h"
+#include "grain_mend_component_types.h"
 #include "grain_mend_components.h"
 #include "grain_mend_detection_image.h"
 #include "grain_mend_detector.h"
+#include "grain_mend_mask_paint.h"
 #include "grain_mend_speck_detector.h"
+#include "grain_mend_stitch.h"
+#include "grain_mend_structure_lines.h"
 #include "negaflow/imaging/grain_mend.h"
 
 #include <algorithm>
@@ -82,6 +88,97 @@ struct TilePlacement {
     std::uint32_t detect_y1 = 0U;
 };
 
+[[nodiscard]] Component to_raw_component(const ClassifiedComponent& source) {
+    Component component{};
+    component.pixels = source.pixels;
+    component.minimum_x = source.minimum_x;
+    component.maximum_x = source.maximum_x;
+    component.minimum_y = source.minimum_y;
+    component.maximum_y = source.maximum_y;
+    return component;
+}
+
+// macOS 타일 `detectLabeled`: 게이트가 끝난 evidence 에서 성분을 모으고 그 타일에서
+// 분류한 뒤, core 화소만 전역 좌표로 옮긴다. stitch 가 이 목록을 union 한다.
+void append_mapped_core_components(
+    const TileWorkspace& workspace,
+    const TilePlacement& placement,
+    const std::uint32_t region_width,
+    const std::size_t classification_dust_area,
+    std::vector<ClassifiedComponent>& mapped) {
+    std::vector<Component> dust = collect_components(
+        workspace.tile, workspace.evidence, workspace.evidence, 1U);
+    std::vector<Component> scratch = collect_components(
+        workspace.tile, workspace.evidence, workspace.evidence, 2U);
+    const std::vector<std::uint8_t> keep_dust(dust.size(), 0U);
+    const std::vector<std::uint8_t> keep_scratch(scratch.size(), 0U);
+    std::vector<ClassifiedComponent> tile_components{};
+    collect_classified(
+        dust,
+        keep_dust,
+        scratch,
+        keep_scratch,
+        workspace.tile,
+        &workspace.candidates,
+        classification_dust_area,
+        tile_components);
+    if (!workspace.specks.empty()) {
+        std::vector<std::uint8_t> occupancy(workspace.evidence.size(), 0U);
+        std::size_t accepted = 0U;
+        for (std::size_t index = 0U; index < workspace.evidence.size(); ++index) {
+            if (workspace.evidence[index] != 0U) {
+                occupancy[index] = 1U;
+                ++accepted;
+            }
+        }
+        merge_micro_specks_into(
+            workspace.specks,
+            workspace.speck_confidence,
+            workspace.tile.width,
+            workspace.tile.height,
+            &tile_components,
+            occupancy,
+            accepted,
+            nullptr,
+            nullptr);
+    }
+    const std::uint32_t tile_width = workspace.tile.width;
+    for (const ClassifiedComponent& component : tile_components) {
+        ClassifiedComponent mapped_component = component;
+        mapped_component.pixels.clear();
+        std::uint32_t minimum_x = region_width;
+        std::uint32_t minimum_y = std::numeric_limits<std::uint32_t>::max();
+        std::uint32_t maximum_x = 0U;
+        std::uint32_t maximum_y = 0U;
+        for (const std::size_t pixel : component.pixels) {
+            const std::uint32_t tile_x =
+                static_cast<std::uint32_t>(pixel % tile_width);
+            const std::uint32_t tile_y =
+                static_cast<std::uint32_t>(pixel / tile_width);
+            const std::uint32_t frame_x = placement.detect_x0 + tile_x;
+            const std::uint32_t frame_y = placement.detect_y0 + tile_y;
+            if (frame_x < placement.core_x0 || frame_x >= placement.core_x1 ||
+                frame_y < placement.core_y0 || frame_y >= placement.core_y1) {
+                continue;
+            }
+            mapped_component.pixels.push_back(
+                static_cast<std::size_t>(frame_y) * region_width + frame_x);
+            minimum_x = std::min(minimum_x, frame_x);
+            minimum_y = std::min(minimum_y, frame_y);
+            maximum_x = std::max(maximum_x, frame_x);
+            maximum_y = std::max(maximum_y, frame_y);
+        }
+        if (mapped_component.pixels.empty()) {
+            continue;
+        }
+        mapped_component.minimum_x = minimum_x;
+        mapped_component.minimum_y = minimum_y;
+        mapped_component.maximum_x = maximum_x;
+        mapped_component.maximum_y = maximum_y;
+        mapped.push_back(std::move(mapped_component));
+    }
+}
+
 }  // namespace
 
 std::vector<std::uint8_t> build_tiled_automatic_mask(
@@ -108,7 +205,12 @@ std::vector<std::uint8_t> build_tiled_automatic_mask(
     // 사용자가 ROI 로 결함을 지목한 가이드에서는 대상 스크래치를 격자로 오인해 지우지
     // 않도록 끕니다 — macOS `rejectLineGrid = !constrainedRegion`.
     const bool reject_line_grid = !request.constrained_region;
+    // macOS `detectComponents`: `extendedDustScales: constrainedRegion`. 전체 프레임 자동은
+    // FILM-R no-regression 기준의 보수 계약을 유지하고, 사용자가 부분 ROI 를 그려 범위를
+    // 지정한 가이드에서만 미세·대형 이물 확장 규칙을 켭니다.
+    const bool extended_dust_scales = request.constrained_region;
 
+    std::vector<ClassifiedComponent> mapped_components{};
     std::vector<std::uint8_t> frame_evidence(count, 0U);
     std::vector<std::uint8_t> frame_specks{};
     std::vector<float> frame_speck_confidence{};
@@ -183,7 +285,7 @@ std::vector<std::uint8_t> build_tiled_automatic_mask(
             futures.push_back(std::async(
                 std::launch::async,
                 [&image, &request, &workspace, placement, sensitivity,
-                 dust_area, cancel] {
+                 dust_area, extended_dust_scales, cancel] {
                     const auto image_started = std::chrono::steady_clock::now();
                     make_detection_image_region(
                         image,
@@ -204,6 +306,7 @@ std::vector<std::uint8_t> build_tiled_automatic_mask(
                         request.scratch_sensitivity,
                         request.protect_detail,
                         true,
+                        extended_dust_scales,
                         workspace.candidates,
                         cancel);
                     if (cancel.requested()) {
@@ -217,6 +320,7 @@ std::vector<std::uint8_t> build_tiled_automatic_mask(
                         minimum_scratch_length(workspace.tile, sensitivity),
                         sensitivity,
                         true,
+                        extended_dust_scales,
                         workspace.evidence);
                     const auto speck_started = std::chrono::steady_clock::now();
                     workspace.evidence_microseconds = static_cast<std::uint64_t>(
@@ -332,40 +436,74 @@ std::vector<std::uint8_t> build_tiled_automatic_mask(
                     }
                 }
             }
+            append_mapped_core_components(
+                workspace,
+                placement,
+                region_width,
+                classification_dust_area,
+                mapped_components);
         }
         measured.stitch_microseconds +=
             static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(
                 std::chrono::steady_clock::now() - stitch_started).count());
     }
 
-    // 구조선 배제는 프레임 전체에서 한 번에 판정합니다. 타일 안에서는 프레임에 퍼진 구조가
-    // 판정 최소 선 개수에 못 미치고, 연장 증거는 halo 밖을 볼 수 없습니다.
+    // macOS `stitchRegionDefectTiles` 후 `rejectingGlobalStructureLines`.
+    // 타일에서 이미 분류된 성분을 union 하고, 합친 덩어리를 다시 분류하지 않는다.
     const auto components_started = std::chrono::steady_clock::now();
-    std::vector<std::uint8_t> mask = build_automatic_mask_from_evidence(
-        frame,
-        frame_evidence,
-        frame_scratch_response,
-        dust_area,
-        classification_dust_area,
-        static_cast<int>(std::min(core_width, core_height)),
-        reject_line_grid,
-        accepted_pixels,
-        &frame_candidates,
-        components,
-        &measured);
-    // macOS `DefectSpeckDetector.merged(into:specks:)` — 마스크 바이트가 아니라
-    // 컴포넌트를 더한다. 겹치면 기존 검출이 임자이다.
+    std::vector<ClassifiedComponent> stitched = stitch_region_defect_tiles(
+        mapped_components, region_width, region_height);
+    std::vector<std::uint8_t> drop(stitched.size(), 0U);
+    if (reject_line_grid) {
+        std::vector<Component> scratch{};
+        std::vector<std::size_t> scratch_index{};
+        scratch.reserve(stitched.size());
+        scratch_index.reserve(stitched.size());
+        for (std::size_t index = 0U; index < stitched.size(); ++index) {
+            if (stitched[index].is_scratch) {
+                scratch.push_back(to_raw_component(stitched[index]));
+                scratch_index.push_back(index);
+            }
+        }
+        if (scratch.size() >= tuning::grid_line_minimum_field) {
+            const std::vector<std::uint8_t> grid_drops = structure_grid_drops(
+                scratch,
+                frame,
+                static_cast<int>(std::min(core_width, core_height)));
+            const std::vector<std::uint8_t> line_drops = continuation_drops(
+                scratch, frame, frame_scratch_response);
+            for (std::size_t index = 0U; index < scratch.size(); ++index) {
+                if (grid_drops[index] != 0U || line_drops[index] != 0U) {
+                    drop[scratch_index[index]] = 1U;
+                }
+            }
+        }
+    }
+
+    std::vector<std::uint8_t> mask(count, 0U);
+    if (components != nullptr) {
+        components->clear();
+        components->reserve(stitched.size());
+    }
+    for (std::size_t index = 0U; index < stitched.size(); ++index) {
+        if (drop[index] != 0U) {
+            continue;
+        }
+        ClassifiedComponent& component = stitched[index];
+        const Component raw = to_raw_component(component);
+        if (component.is_scratch) {
+            paint_component(raw, 1, frame, mask);
+        } else {
+            paint_component(raw, 0, frame, mask);
+            fill_interior_holes(raw, frame, dust_area, mask);
+        }
+        if (components != nullptr) {
+            components->push_back(std::move(component));
+        }
+    }
+    accepted_pixels = static_cast<std::size_t>(std::count(
+        mask.begin(), mask.end(), static_cast<std::uint8_t>(1U)));
     if (!frame_specks.empty()) {
-        merge_micro_specks_into(
-            frame_specks,
-            frame_speck_confidence,
-            region_width,
-            region_height,
-            components,
-            mask,
-            accepted_pixels,
-            &measured.speck_merged,
-            &measured.speck_skipped_overlap);
         measured.speck_mask_pixels = static_cast<std::uint64_t>(
             std::count(frame_specks.begin(), frame_specks.end(),
                        static_cast<std::uint8_t>(1U)));

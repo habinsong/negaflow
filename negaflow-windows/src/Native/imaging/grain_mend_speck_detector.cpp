@@ -1,6 +1,5 @@
 #include "grain_mend_speck_detector.h"
 
-#include "grain_mend_grain_field.h"
 #include "grain_mend_morphology.h"
 
 #include <algorithm>
@@ -297,37 +296,6 @@ bool merge_micro_speck_mask(
             static_cast<double>(count) * speck_maximum_candidate_fraction) {
         return true;
     }
-    // 같은 1.5% 퓨즈를 바닥 셀(32×32)에도 적용한다. 타일 전체 분모는 헤일로 때문에
-    // 국소 그레인 폭발을 삼킨다 — 셀이 붕괴하면 그 셀의 후보만 버린다.
-    const std::uint32_t cells_y =
-        (image.height + speck_cell_size - 1U) / speck_cell_size;
-    std::vector<std::uint32_t> cell_hits(
-        static_cast<std::size_t>(cells_x) * cells_y, 0U);
-    for (std::uint32_t y = 0U; y < image.height; ++y) {
-        const std::uint32_t cell_y = y / speck_cell_size;
-        for (std::uint32_t x = 0U; x < image.width; ++x) {
-            const std::size_t index = static_cast<std::size_t>(y) * image.width + x;
-            if (candidates[index] == 0U) {
-                continue;
-            }
-            ++cell_hits[static_cast<std::size_t>(cell_y) * cells_x + (x / speck_cell_size)];
-        }
-    }
-    const std::uint32_t cell_limit = std::max(
-        1U,
-        static_cast<std::uint32_t>(
-            static_cast<double>(speck_cell_size) * speck_cell_size *
-            speck_maximum_candidate_fraction));
-    for (std::uint32_t y = 0U; y < image.height; ++y) {
-        const std::uint32_t cell_y = y / speck_cell_size;
-        for (std::uint32_t x = 0U; x < image.width; ++x) {
-            const std::size_t cell =
-                static_cast<std::size_t>(cell_y) * cells_x + (x / speck_cell_size);
-            if (cell_hits[cell] > cell_limit) {
-                candidates[static_cast<std::size_t>(y) * image.width + x] = 0U;
-            }
-        }
-    }
 
     for (const SpeckBlob& component : collect_components(candidates, image.width, image.height)) {
         if (component.pixels.size() < speck_minimum_area ||
@@ -400,7 +368,6 @@ void merge_micro_specks_into(
 
     // macOS `merged(into:)`: 한 화소라도 기존 필드와 겹치면 입자 전체를 버린다.
     // 검출·복원이 같은 화소를 고르도록 기존 마스크를 점유 집합으로 쓴다.
-    std::vector<SpeckBlob> accepted{};
     for (const SpeckBlob& component :
          collect_components(speck_mask, width, height)) {
         if (component.pixels.empty() ||
@@ -415,33 +382,6 @@ void merge_micro_specks_into(
             }
             continue;
         }
-        accepted.push_back(component);
-    }
-
-    // 그레인 필드 가드(먼지와 같은 상수). 미세 입자는 면적 2~64 이라 그레인과
-    // 같은 크기대다. 먼지 경로가 버린 빽빽한 작은 점을 입자로 다시 올리면 안 된다.
-    std::vector<grain_mend_detail::Component> field_dust{};
-    field_dust.reserve(accepted.size());
-    for (const SpeckBlob& component : accepted) {
-        grain_mend_detail::Component entry{};
-        entry.pixels = component.pixels;
-        entry.minimum_x = component.minimum_x;
-        entry.maximum_x = component.maximum_x;
-        entry.minimum_y = component.minimum_y;
-        entry.maximum_y = component.maximum_y;
-        field_dust.push_back(std::move(entry));
-    }
-    std::vector<grain_mend_detail::Component> no_scratch{};
-    std::vector<std::uint8_t> drop(field_dust.size(), 0U);
-    std::vector<std::uint8_t> drop_scratch{};
-    mark_grain_field_drops(
-        field_dust, no_scratch, width, drop, drop_scratch);
-
-    for (std::size_t index = 0U; index < accepted.size(); ++index) {
-        if (index < drop.size() && drop[index] != 0U) {
-            continue;
-        }
-        const SpeckBlob& component = accepted[index];
         if (merged != nullptr) {
             ++*merged;
         }

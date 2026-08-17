@@ -230,6 +230,9 @@ GrainMendResult apply_grain_mend(
             parameters.dust_sensitivity,
             parameters.scratch_sensitivity,
             parameters.protect_detail,
+            // macOS `detect()` — 브러시 경로입니다. 히스테리시스도, 확장 스케일도 쓰지
+            // 않습니다(그건 `detectLabeled` 계약입니다).
+            false,
             false,
             cancel);
         if (cancel.requested()) {

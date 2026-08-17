@@ -21,6 +21,63 @@ namespace {
 constexpr float clip_high = 0.985F;
 constexpr float clip_low = 0.020F;
 constexpr float dust_far_context_multiplier = 6.0F;
+// macOS `DefectContrastField.largeDustContextRadius` — 큰 이물의 내부까지 주변 정상 톤과
+// 비교하는 고정 문맥 반경입니다. ROI 크기에 따라 창이 바뀌면 같은 결함의 타일/비타일
+// 결과가 달라지므로 물리 화소로 고정합니다.
+constexpr std::uint32_t large_dust_context_radius = 80U;
+// macOS `microNoiseScale` 의 반경입니다. 일반 반경 12 통계는 가까운 먼지 여러 개를 서로의
+// 잡음으로 세어 자기억제하므로 8 로 분리합니다.
+constexpr std::uint32_t micro_noise_radius = 8U;
+// macOS `hasLargeContext` — 짧은 변이 이보다 작으면 큰 이물 문맥을 잡을 수 없습니다.
+constexpr std::uint32_t large_context_minimum_side = 224U;
+
+/// macOS `DefectDustDetector.passesSoft` — SNR 통과 또는 절대 강도 면제입니다.
+[[nodiscard]] inline bool passes_soft(
+    const float magnitude,
+    const float noise_multiplier,
+    const float noise,
+    const float strong_magnitude) noexcept {
+    return magnitude > noise_multiplier * noise || magnitude > strong_magnitude;
+}
+
+/// macOS `DefectDustDetector.passesHard` — 절대 강도 면제에 farTexture 컨텍스트 게이트를
+/// 더합니다.
+[[nodiscard]] inline bool passes_hard(
+    const float magnitude,
+    const float noise_multiplier,
+    const float noise,
+    const float strong_magnitude,
+    const float far) noexcept {
+    return magnitude > noise_multiplier * noise ||
+           (magnitude > strong_magnitude &&
+            magnitude > dust_far_context_multiplier * far);
+}
+
+/// 한 채널의 임계 묶음입니다. macOS `candidatesLeveled` 이 normal·micro·large 세 벌을
+/// 같은 모양으로 계산하므로 한 표로 둡니다.
+struct ChannelThresholds final {
+    float absolute{0.0F};
+    float weak_absolute{0.0F};
+    float noise_multiplier{0.0F};
+    float strong_magnitude{0.0F};
+};
+
+[[nodiscard]] ChannelThresholds make_thresholds(
+    const double base,
+    const double base_slope,
+    const double noise_base,
+    const double noise_slope,
+    const double strong_multiple,
+    const double sensitivity) noexcept {
+    ChannelThresholds thresholds{};
+    thresholds.absolute = static_cast<float>(base - sensitivity * base_slope);
+    thresholds.weak_absolute = thresholds.absolute * 0.5F;
+    thresholds.noise_multiplier = static_cast<float>(
+        noise_base - sensitivity * noise_slope);
+    thresholds.strong_magnitude = thresholds.absolute *
+        static_cast<float>(strong_multiple);
+    return thresholds;
+}
 
 }  // namespace
 
@@ -30,6 +87,7 @@ CandidateMaps find_candidates(
     const double scratch_sensitivity,
     const double protect_detail,
     const bool labeled_detection,
+    const bool extended_dust_scales,
     const negaflow::core::CancelFlag cancel) {
     CandidateMaps result{};
     find_candidates(
@@ -38,6 +96,7 @@ CandidateMaps find_candidates(
         scratch_sensitivity,
         protect_detail,
         labeled_detection,
+        extended_dust_scales,
         result,
         cancel);
     return result;
@@ -49,6 +108,7 @@ void find_candidates(
     const double scratch_sensitivity,
     const double protect_detail,
     const bool labeled_detection,
+    const bool extended_dust_scales,
     CandidateMaps& result,
     const negaflow::core::CancelFlag cancel) {
     const std::size_t count = checked_pixel_count(image.width, image.height);
@@ -114,41 +174,127 @@ void find_candidates(
         far_texture = box_mean(
             dust_magnitude, image.width, image.height, 36U);
 
+        // macOS `DefectContrastField` 확장 스케일. `micro` 는 이미 계산한 반경 4 결과를
+        // 낮은 임계로 재사용하고, `large` 는 단일 적분영상 박스평균과의 편차로 봅니다 —
+        // 추가 opening/closing 은 돌지 않습니다(macOS 도 그 8단계를 제거했습니다).
+        const bool has_large_context =
+            std::min(image.width, image.height) >= large_context_minimum_side;
+        std::vector<float> micro_noise_scale{};
+        std::vector<float> large_magnitude{};
+        if (extended_dust_scales) {
+            micro_noise_scale = box_mean(
+                thin_magnitude, image.width, image.height, micro_noise_radius);
+            if (has_large_context) {
+                const std::vector<float> background = box_mean(
+                    image.luminance,
+                    image.width,
+                    image.height,
+                    large_dust_context_radius);
+                large_magnitude.resize(count);
+                for (std::size_t index = 0U; index < count; ++index) {
+                    large_magnitude[index] = std::abs(
+                        image.luminance[index] - background[index]);
+                }
+            }
+        }
+
         const double dust_s = std::clamp(dust_sensitivity, 0.0, 1.0);
-        const float dust_absolute = static_cast<float>(
-            0.14 - dust_s * 0.08);
-        const float dust_weak_absolute = dust_absolute * 0.5F;
-        const float dust_noise_multiplier = static_cast<float>(
-            4.5 - dust_s * 1.5);
-        const float dust_strong_magnitude =
-            dust_absolute * static_cast<float>(
-                5.0 - dust_s * 3.0);
+        // macOS `candidatesLeveled` 의 세 벌 임계입니다(aggressive=false 가지).
+        const ChannelThresholds normal = make_thresholds(
+            0.14, 0.08, 4.5, 1.5, 5.0 - dust_s * 3.0, dust_s);
+        const ChannelThresholds micro = make_thresholds(
+            0.06, 0.04, 4.5, 1.5, 2.5, dust_s);
+        const ChannelThresholds large = make_thresholds(
+            0.12, 0.07, 4.5, 1.5, 2.0, dust_s);
+        // macOS `compactAbsoluteStrong` — 여러 고대비 먼지가 가까우면 서로 farTexture 를
+        // 높여 normalStrong 이 전부 꺼질 수 있으므로, 보수 임계의 1.5배를 넘는 화소는 절대
+        // 대비 코어로 인정합니다.
+        const float compact_absolute_strong = std::max(
+            0.16F, normal.absolute * 1.5F);
+        const bool has_micro = extended_dust_scales &&
+            micro_noise_scale.size() == count;
+        const bool has_large = extended_dust_scales &&
+            large_magnitude.size() == count;
+        if (extended_dust_scales) {
+            result.trusted_strong.assign(count, 0U);
+        }
         for (std::size_t index = 0U; index < count; ++index) {
             if (valid[index] == 0U) {
                 continue;
             }
             ++result.valid_pixels;
             const float magnitude = dust_magnitude[index];
+            const float noise = noise_scale[index];
+            const float far = far_texture[index];
             result.dust_magnitude_sum += static_cast<double>(magnitude);
-            result.dust_noise_sum += static_cast<double>(noise_scale[index]);
-            if (magnitude > dust_weak_absolute) {
+            result.dust_noise_sum += static_cast<double>(noise);
+            if (magnitude > normal.weak_absolute) {
                 ++result.dust_pixels_above_weak_abs;
             }
-            if (magnitude > dust_absolute) {
+            if (magnitude > normal.absolute) {
                 ++result.dust_pixels_above_abs;
             }
-            const bool soft =
-                magnitude > dust_noise_multiplier * noise_scale[index] ||
-                magnitude > dust_strong_magnitude;
-            if (magnitude > dust_weak_absolute && soft) {
-                result.weak[index] |= 1U;
+            const bool normal_weak = magnitude > normal.weak_absolute &&
+                passes_soft(
+                    magnitude,
+                    normal.noise_multiplier,
+                    noise,
+                    normal.strong_magnitude);
+            const float micro_magnitude = has_micro
+                ? thin_magnitude[index]
+                : 0.0F;
+            const float micro_noise = has_micro
+                ? micro_noise_scale[index]
+                : 0.0F;
+            const bool micro_weak = has_micro &&
+                micro_magnitude > micro.weak_absolute &&
+                passes_soft(
+                    micro_magnitude,
+                    micro.noise_multiplier,
+                    micro_noise,
+                    micro.strong_magnitude);
+            const float large_value = has_large ? large_magnitude[index] : 0.0F;
+            const bool large_weak = has_large &&
+                large_value > large.weak_absolute &&
+                passes_soft(
+                    large_value,
+                    large.noise_multiplier,
+                    noise,
+                    large.strong_magnitude);
+            if (!normal_weak && !micro_weak && !large_weak) {
+                continue;
             }
-            const bool hard =
-                magnitude > dust_noise_multiplier * noise_scale[index] ||
-                (magnitude > dust_strong_magnitude &&
-                 magnitude > dust_far_context_multiplier * far_texture[index]);
-            if (magnitude > dust_absolute && hard) {
+            result.weak[index] |= 1U;
+            const bool normal_strong = magnitude > normal.absolute &&
+                passes_hard(
+                    magnitude,
+                    normal.noise_multiplier,
+                    noise,
+                    normal.strong_magnitude,
+                    far);
+            const bool micro_strong = has_micro &&
+                micro_magnitude > micro.absolute &&
+                passes_hard(
+                    micro_magnitude,
+                    micro.noise_multiplier,
+                    micro_noise,
+                    micro.strong_magnitude,
+                    far);
+            const bool large_strong = has_large &&
+                large_value > large.absolute &&
+                passes_hard(
+                    large_value,
+                    large.noise_multiplier,
+                    noise,
+                    large.strong_magnitude,
+                    far);
+            if (normal_strong || micro_strong || large_strong) {
                 result.strong[index] |= 1U;
+            }
+            if (!result.trusted_strong.empty() &&
+                (normal_strong || large_strong ||
+                 magnitude > compact_absolute_strong)) {
+                result.trusted_strong[index] = 1U;
             }
         }
         if (labeled_detection) {
@@ -220,12 +366,14 @@ void find_candidates(
             ScratchAngleMaps& workspace = workspaces[angle - first];
             futures.push_back(std::async(
                 std::launch::async,
-                [&image, &valid, &workspace, value = angles[angle], scratch_balance_limit] {
+                [&image, &valid, &workspace, value = angles[angle], scratch_balance_limit,
+                 labeled_detection] {
                     make_scratch_angle_maps(
                         image,
                         value,
                         valid,
                         scratch_balance_limit,
+                        labeled_detection,
                         workspace);
                 }));
         }

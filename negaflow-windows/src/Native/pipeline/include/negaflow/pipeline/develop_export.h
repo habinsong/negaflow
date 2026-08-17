@@ -260,13 +260,12 @@ struct DevelopExportOutcome final {
     const DevelopRunControl& control = {},
     const DevelopPreviewProof& proof = {}) noexcept;
 
-// Runs the same pipeline as the preview but stops at the GrainMend stage and reports what
-// the automatic repair would touch, instead of touching it. The reviewable tools need the
-// decision, not the result.
+// Runs decode and any already-accepted defect recipe, then reports what automatic
+// GrainMend would mark. Detection does not invert or apply a film look.
 //
-// Detection has to happen here rather than in a standalone call because GrainMend runs on
-// the developed positive, after the film look — the same dust looks nothing alike on the
-// negative. Anything shown to the user must therefore come from this pipeline.
+// macOS `runRegionDetect` reads cleaned raw (linear scan, before develop). The same
+// dust on the inverted positive is a different image, so the review tools must
+// see this pre-develop domain.
 //
 // `mask` receives one byte per pixel of the capped analysis image, whose size is reported
 // in the result. Pass a null `mask` to learn `mask_byte_count` first; the maximum is

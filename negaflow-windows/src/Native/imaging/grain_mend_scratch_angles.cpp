@@ -15,6 +15,7 @@ namespace {
 constexpr int scratch_short_half = 2;
 constexpr double scratch_side_offset = 2.0;
 constexpr int scratch_long_half = 12;
+constexpr int scratch_curve_half = 6;
 
 struct Offset final {
     int x{0};
@@ -148,6 +149,7 @@ void make_scratch_angle_maps(
     const double angle_degrees,
     const std::vector<std::uint8_t>& valid,
     const float balance_limit,
+    const bool multi_scale,
     ScratchAngleMaps& result) {
     const std::size_t count = checked_pixel_count(image.width, image.height);
     const double radians = angle_degrees * 3.14159265358979323846 / 180.0;
@@ -257,6 +259,18 @@ void make_scratch_angle_maps(
         dy,
         scratch_long_half,
         result.integrated);
+    if (multi_scale) {
+        // macOS `computeMaps(multiScale: true)` — 급곡 결함의 짧은 적분을 픽셀별 max 로 합친다.
+        integrate_ridge(
+            result.ridge,
+            valid,
+            image.width,
+            image.height,
+            dx,
+            dy,
+            scratch_curve_half,
+            result.integrated);
+    }
 }
 
 }  // namespace negaflow::imaging::grain_mend_detail

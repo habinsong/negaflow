@@ -25,7 +25,8 @@ std::vector<std::uint8_t> build_automatic_evidence(
     const std::size_t maximum_dust_area,
     const std::uint32_t minimum_scratch_length,
     const double dust_sensitivity,
-    const bool labeled_detection) {
+    const bool labeled_detection,
+    const bool extended_dust_scales) {
     std::vector<std::uint8_t> evidence{};
     build_automatic_evidence(
         image,
@@ -34,6 +35,7 @@ std::vector<std::uint8_t> build_automatic_evidence(
         minimum_scratch_length,
         dust_sensitivity,
         labeled_detection,
+        extended_dust_scales,
         evidence);
     return evidence;
 }
@@ -45,20 +47,12 @@ void build_automatic_evidence(
     const std::uint32_t minimum_scratch_length,
     const double dust_sensitivity,
     const bool labeled_detection,
+    const bool extended_dust_scales,
     std::vector<std::uint8_t>& evidence) {
     const std::size_t count =
         static_cast<std::size_t>(image.width) * image.height;
-    // 측정: 이 스캔에서 dustMag 평균 0.128 ≥ strongMag 0.12 라 weak 가 그레인
-    // 카펫이 된다(프레임당 weak 740만). Swift 주석의 전제("그레인은 ≪ strongMag")가
-    // 깨진 상태다. 카펫에서 8-연결하면 코어 2434px 가 32개 거대 성분에 녹아 8%
-    // 게이트에서 전멸한다. 채택은 hard 코어(SNR 또는 far 게이트를 통과한 strong)
-    // 만 연결한다 — macOS 가 strong 없는 weak 성분을 버리는 것과 같은 채택 집합의
-    // 코어다. 가장자리 프린지는 카펫이라 붙이지 않는다.
     std::vector<Component> dust = collect_components(
-        image,
-        labeled_detection ? candidates.strong : candidates.weak,
-        candidates.strong,
-        1U);
+        image, candidates.weak, candidates.strong, 1U);
     std::vector<Component> scratch = collect_components(
         image, candidates.weak, candidates.strong, 2U);
     const std::vector<std::uint8_t> chunky = make_chunky_map(dust, count);
@@ -73,21 +67,55 @@ void build_automatic_evidence(
         ? 12.0 + dust_sensitivity * 12.0
         : 0.0;
 
+    // macOS `buildLabeled` 의 `dustTrustedStrong` 유무입니다. 자동은 nil 을 넘기므로
+    // `hasTrustedEvidence` 가 항상 거짓이고 아래 두 규칙이 사실상 꺼집니다.
+    const std::vector<std::uint8_t>* const trusted =
+        extended_dust_scales && candidates.trusted_strong.size() == count
+            ? &candidates.trusted_strong
+            : nullptr;
+    const std::size_t micro_dust_minimum_area = extended_dust_scales
+        ? micro_dust_minimum_area_extended
+        : micro_dust_minimum_area_default;
+
     candidates.dust_components_collected += dust.size();
     dust.erase(
         std::remove_if(
             dust.begin(),
             dust.end(),
             [&](const Component& component) {
-                if (!component.has_strong) {
+                // 원거리 통계가 서로를 억제한 밀집 고대비 먼지는 작은 컴포넌트일 때만
+                // 절대 대비 증거로 구제합니다 — macOS `compactTrusted`.
+                bool has_trusted_evidence = false;
+                if (trusted != nullptr) {
+                    for (const std::size_t pixel : component.pixels) {
+                        if ((*trusted)[pixel] != 0U) {
+                            has_trusted_evidence = true;
+                            break;
+                        }
+                    }
+                }
+                const bool compact_trusted = has_trusted_evidence &&
+                    component.pixels.size() <= compact_trusted_maximum_area;
+                if (!component.has_strong && !compact_trusted) {
                     ++candidates.dust_dropped_no_strong;
                     return true;
                 }
-                if (labeled_detection &&
+                if (labeled_detection && component.has_strong &&
                     static_cast<double>(component.strong_count) /
-                            static_cast<double>(component.pixels.size()) <
+                            static_cast<double>(std::max<std::size_t>(
+                                1U, component.pixels.size())) <
                         dust_minimum_strong_fraction) {
                     ++candidates.dust_dropped_strong_fraction;
+                    return true;
+                }
+                // 낮은 임계의 micro-only 경로가 새로 만든 1~2px 컴포넌트는 필름 입자와
+                // 구분할 증거가 부족하므로 채택하지 않습니다 — macOS `microDustMinArea`.
+                const bool component_trusted = component.has_strong
+                    ? has_trusted_evidence
+                    : compact_trusted;
+                if (!component_trusted &&
+                    component.pixels.size() < micro_dust_minimum_area) {
+                    ++candidates.dust_dropped_gate;
                     return true;
                 }
                 if (!passes_dust_gate(
@@ -137,7 +165,10 @@ void build_automatic_evidence(
         scratch,
         image.width,
         drop_dust,
-        drop_scratch);
+        drop_scratch,
+        extended_dust_scales
+            ? constrained_region_grain_field_small_maximum
+            : grain_field_small_component_maximum);
 
     evidence.resize(count);
     std::fill(
@@ -182,24 +213,19 @@ std::vector<std::uint8_t> build_automatic_mask_from_evidence(
     std::vector<Component> scratch = collect_components(
         image, evidence, evidence, 2U);
 
+    // macOS `detectComponents` 는 타일마다 `buildLabeled`(그레인 필드 1회)만 돌리고
+    // stitch 뒤에는 전역 구조선 배제만 한다. 여기서 그레인 필드를 다시 돌리면
+    // 타일에서 이미 살아남은 작은 먼지가 한 번 더 떨어진다.
     std::vector<std::uint8_t> drop_dust(dust.size(), 0U);
     std::vector<std::uint8_t> drop_scratch(scratch.size(), 0U);
-    mark_grain_field_drops(
-        dust,
-        scratch,
-        image.width,
-        drop_dust,
-        drop_scratch);
     if (timings != nullptr) {
         timings->dust_components_raw = dust.size();
-        timings->dust_components_after_grain_field = 0U;
-        for (const std::uint8_t drop : drop_dust) {
-            if (drop == 0U) {
-                ++timings->dust_components_after_grain_field;
-            }
-        }
+        timings->dust_components_after_grain_field = dust.size();
     }
-    if (reject_structure_lines) {
+    // macOS `rejectingGlobalStructureLines`: 전역 스크래치가 gridLineMinField(8) 미만이면
+    // 격자·연장 배제를 아예 하지 않는다. 적은 선을 구조로 오인하지 않기 위함이다.
+    if (reject_structure_lines &&
+        scratch.size() >= grid_line_minimum_field) {
         const std::vector<std::uint8_t> grid_drops =
             structure_grid_drops(scratch, image, structure_radius_reference);
         const std::vector<std::uint8_t> line_drops = continuation_drops(
