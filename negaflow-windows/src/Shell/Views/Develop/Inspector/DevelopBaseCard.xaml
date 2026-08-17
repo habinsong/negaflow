@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Negaflow.Shell.Views.Develop.Inspector.DevelopBaseCard"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Negaflow.Shell.Views.Controls">
+
+<Border
+    x:Name="BaseControlCard"
+    HorizontalAlignment="Stretch"
+    Padding="14"
+    Background="{ThemeResource NegaflowCardBrush}"
+    CornerRadius="14"
+    Visibility="Collapsed">
+    <StackPanel HorizontalAlignment="Stretch" Spacing="12">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <FontIcon Grid.Column="0" Width="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE706;" />
+            <TextBlock x:Name="BaseSectionTitleText" Grid.Column="1" Margin="8,0,0,0" FontSize="14" FontWeight="SemiBold" />
+            <TextBlock
+                x:Name="ManualBaseValueText"
+                Grid.Column="2"
+                FontSize="11"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+        </Grid>
+        <Grid
+            x:Name="BaseModeControl"
+            AutomationProperties.AutomationId="negaflow.develop.base"
+            AutomationProperties.Name="Film base mode"
+            ColumnSpacing="4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <RadioButton
+                x:Name="BaseAutoModeButton"
+                Grid.Column="0"
+                AutomationProperties.AutomationId="negaflow.develop.base.mode.auto"
+                GroupName="BaseEstimationMode"
+                Checked="OnBaseAutoModeChecked" />
+            <RadioButton
+                x:Name="BaseFilmModeButton"
+                Grid.Column="1"
+                AutomationProperties.AutomationId="negaflow.develop.base.mode.film"
+                GroupName="BaseEstimationMode"
+                Checked="OnBaseFilmModeChecked" />
+            <RadioButton
+                x:Name="BaseManualModeButton"
+                Grid.Column="2"
+                AutomationProperties.AutomationId="negaflow.develop.base.mode.manual"
+                GroupName="BaseEstimationMode"
+                Checked="OnBaseManualModeChecked" />
+        </Grid>
+        <StackPanel x:Name="FilmBaseControls" Spacing="8">
+            <TextBlock x:Name="FilmStockLabel" FontSize="12" />
+            <ComboBox
+                x:Name="FilmStockSelector"
+                AutomationProperties.AutomationId="negaflow.develop.base.film-stock"
+                DisplayMemberPath="DisplayName"
+                SelectionChanged="OnFilmStockSelectionChanged" />
+            <TextBlock x:Name="LightSourceLabel" FontSize="12" />
+            <ComboBox
+                x:Name="LightSourceSelector"
+                AutomationProperties.AutomationId="negaflow.develop.base.light-source"
+                DisplayMemberPath="DisplayName"
+                SelectionChanged="OnLightSourceSelectionChanged" />
+            <!-- macOS 는 필름·광원 다음 셋째 줄에 스캐너 프로파일을 둡니다. -->
+            <TextBlock x:Name="ScannerProfileLabel" FontSize="12" />
+            <ComboBox
+                x:Name="ScannerProfileSelector"
+                AutomationProperties.AutomationId="negaflow.develop.base.scanner-profile"
+                DisplayMemberPath="Label"
+                SelectionChanged="OnScannerProfileSelectionChanged" />
+        </StackPanel>
+        <!-- Minimum/Maximum 은 엔진이 알려 준 값으로 코드에서 설정한다. -->
+        <StackPanel x:Name="ManualBaseControls" Spacing="10">
+            <controls:InspectorSlider
+                x:Name="BaseRedControl"
+                CanReset="False"
+                SliderAutomationId="negaflow.develop.base.red"
+                ValueChanged="OnManualBaseChanged" />
+            <controls:InspectorSlider
+                x:Name="BaseGreenControl"
+                CanReset="False"
+                SliderAutomationId="negaflow.develop.base.green"
+                ValueChanged="OnManualBaseChanged" />
+            <controls:InspectorSlider
+                x:Name="BaseBlueControl"
+                CanReset="False"
+                SliderAutomationId="negaflow.develop.base.blue"
+                ValueChanged="OnManualBaseChanged" />
+        </StackPanel>
+    </StackPanel>
+</Border>
+</UserControl>

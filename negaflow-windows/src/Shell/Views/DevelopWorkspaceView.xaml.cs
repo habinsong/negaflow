@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text.Json.Nodes;
 using System.IO;
 using System.Runtime.InteropServices.WindowsRuntime;
@@ -63,6 +62,12 @@ public sealed partial class DevelopWorkspaceView : UserControl
         Adjustments.AutoLevelsToggled += OnAdjustmentAutoLevelsToggled;
         Adjustments.AutoToneClicked += OnAdjustmentAutoToneClicked;
         Adjustments.AutoWhiteBalanceClicked += OnAdjustmentAutoWhiteBalanceClicked;
+        BaseCard.RecipeChanged += OnBaseRecipeChanged;
+        BaseCard.ManualBaseCommitted += OnManualBaseCommitted;
+        GeometryCard.CropClicked += OnGeometryCropClicked;
+        GeometryCard.TransformRequested += OnGeometryTransformRequested;
+        GeometryCard.AspectChosen += OnGeometryAspectChosen;
+        GeometryCard.AspectLockToggled += OnGeometryAspectLockToggled;
         ApplyInspectorPresentation();
         LocalizeControls();
     }
@@ -132,6 +137,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         LeftPanel.Bind(panel, host, windowId, engineVersion);
         InfoCards.Bind(panel, host);
         Adjustments.Bind(panel);
+        BaseCard.Bind(panel);
         LeftPanel.VersionsPanel.VersionRestored += OnVersionRestored;
         LeftPanel.PresetsPanel.RecipeReplaced += OnPresetRecipeReplaced;
         LeftPanel.FilmLookPanel.LookChanged += OnFilmLookChanged;
@@ -141,18 +147,10 @@ public sealed partial class DevelopWorkspaceView : UserControl
             "Negaflow",
             "Development",
             "user-presets.json"));
-        FilmStockSelector.ItemsSource = BundledFilmBaseOptions.FilmStocks;
-        LightSourceSelector.ItemsSource = BundledFilmBaseOptions.LightSources;
-        ScannerProfileSelector.ItemsSource = ScannerProfileChoices();
         Adjustments.ConfigureRanges(panel.Tone.MaximumExposureStops, panel.Tone.MaximumToneControl);
         HistogramView.ConfigureRanges(panel.Tone.MaximumExposureStops, panel.Tone.MaximumToneControl);
-        foreach (InspectorSlider slider in new[] { BaseRedControl, BaseGreenControl, BaseBlueControl })
-        {
-            slider.Minimum = panel.MinimumManualDmin;
-            slider.Maximum = panel.MaximumManualDmin;
-        }
-        StraightenAngleControl.Minimum = -45;
-        StraightenAngleControl.Maximum = 45;
+        BaseCard.ConfigureRanges(panel.MinimumManualDmin, panel.MaximumManualDmin);
+        GeometryCard.ConfigureRanges();
         // 미리보기는 캔버스에 맞는 크기면 충분합니다. 전체 해상도로 그리면 슬라이더를 끄는
         // 동안 엔진이 밀립니다.
         // 이 메서드는 UI 스레드에서만 불리므로 여기서 dispatcher 를 잡을 수 있습니다.
@@ -346,7 +344,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         DefectsTabButton.IsChecked = inspectorPresentation.SelectedTab == DevelopInspectorTab.Defects;
         InfoTabButton.IsChecked = inspectorPresentation.SelectedTab == DevelopInspectorTab.Info;
         ResetTabButton.IsChecked = inspectorPresentation.SelectedTab == DevelopInspectorTab.Reset;
-        BaseControlCard.Visibility = inspectorPresentation.SelectedTab == DevelopInspectorTab.Base
+        BaseCard.Visibility = inspectorPresentation.SelectedTab == DevelopInspectorTab.Base
             ? Visibility.Visible
             : Visibility.Collapsed;
         InfoCards.Apply(inspectorPresentation.SelectedTab == DevelopInspectorTab.Info);
@@ -363,7 +361,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         }
         UpdateGrainMendCard();
         UpdateDefectLayers();
-        GeometryControlCard.Visibility = inspectorPresentation.SelectedTab == DevelopInspectorTab.Edit
+        GeometryCard.Visibility = inspectorPresentation.SelectedTab == DevelopInspectorTab.Edit
             ? Visibility.Visible
             : Visibility.Collapsed;
         Adjustments.Apply(inspectorPresentation);
@@ -468,9 +466,8 @@ public sealed partial class DevelopWorkspaceView : UserControl
 
         isSynchronizingInspector = true;
         Adjustments.Show(panel);
-        StraightenAngleControl.Value = panel.ImageTransform.StraightenAngle;
-        CropAngleDialControl.Angle = panel.ImageTransform.StraightenAngle;
-        UpdateCropAspectControls();
+        GeometryCard.Show(panel);
+        GeometryCard.UpdateAspectControls(panel, crop.IsAspectLocked);
         LeftPanel.FilmLookPanel.Update();
         UpdateVersionControls();
         LeftPanel.PresetsPanel.Update();
@@ -481,30 +478,19 @@ public sealed partial class DevelopWorkspaceView : UserControl
             panel.Tone.Highlights);
         // Auto에는 수동 base가 없으므로 slider에는 시작 위치만 보입니다. 사용자가 값을 바꾸면
         // manual mode로 전환되며, 그 전까지 preview/export는 native Auto resolver를 사용합니다.
-        ManualBaseRgb shown = panel.ManualBase ?? new ManualBaseRgb(
-            panel.SuggestedManualDmin,
-            panel.SuggestedManualDmin,
-            panel.SuggestedManualDmin);
-        BaseRedControl.Value = shown.Red;
-        BaseGreenControl.Value = shown.Green;
-        BaseBlueControl.Value = shown.Blue;
+        BaseCard.ShowManualValues(panel);
         isSynchronizingInspector = false;
     }
 
-    private void OnManualBaseChanged(object? sender, InspectorSliderValueChangedEventArgs args)
+    private void OnManualBaseCommitted(object? sender, EventArgs args)
     {
         _ = sender;
         _ = args;
-        if (panel is null || isSynchronizingInspector)
+        if (panel is null)
         {
             return;
         }
 
-        panel.SetManualBase(
-            BaseRedControl.Value,
-            BaseGreenControl.Value,
-            BaseBlueControl.Value);
-        SyncBaseControls();
         // slider 변경은 Auto를 Manual로 전환합니다. 선택 행과 export 상태도 즉시 같은 snapshot으로
         // 갱신해야 preview/export의 요청 mode가 화면과 어긋나지 않습니다.
         UpdateSelectedFrameText();
@@ -514,6 +500,13 @@ public sealed partial class DevelopWorkspaceView : UserControl
             ExportStatusText.Text = string.Empty;
         }
         RequestPreview();
+    }
+
+    private void OnBaseRecipeChanged(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        UpdateAfterBaseRecipeChanged();
     }
 
     private void UpdateSelectedFrameText()
@@ -593,6 +586,13 @@ public sealed partial class DevelopWorkspaceView : UserControl
         RenderCropOverlay();
     }
 
+    private void OnGeometryCropClicked(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        OnCropClicked(this, new RoutedEventArgs());
+    }
+
     private void OnCropClicked(object sender, RoutedEventArgs args)
     {
         _ = sender;
@@ -614,7 +614,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
             return;
         }
         crop.Begin(panel.ImageTransform.Crop, LockedNormalizedAspectRatio());
-        CropAngleDialControl.Visibility = Visibility.Visible;
+        GeometryCard.SetDialVisible(true);
         CanvasHost.Focus(FocusState.Programmatic);
         RequestPreview();
     }
@@ -672,7 +672,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
     {
         crop.End();
         CropOverlay.Visibility = Visibility.Collapsed;
-        CropAngleDialControl.Visibility = Visibility.Collapsed;
+        GeometryCard.SetDialVisible(false);
     }
 
     private void OnCanvasSizeChanged(object sender, SizeChangedEventArgs args)
@@ -1036,68 +1036,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         line.Y2 = segment.Y2;
     }
 
-    private void UpdateManualBaseText()
-    {
-        if (panel?.SelectedFrame?.Base.Mode == BaseEstimationMode.Auto)
-        {
-            ManualBaseValueText.Text = "Auto";
-            return;
-        }
-        if (panel?.SelectedFrame?.Base.Mode == BaseEstimationMode.Preset)
-        {
-            FilmStockOption? filmStock = BundledFilmBaseOptions.FilmStocks.FirstOrDefault(
-                option => option.Id == panel.SelectedFrame.Base.FilmStockDminId);
-            ManualBaseValueText.Text = filmStock?.Id is not null
-                ? filmStock.DisplayName
-                : panel.SelectedFrame.Base.FilmStockDminId is null
-                    ? "Select film stock"
-                    : "Film preset unavailable";
-            return;
-        }
-        if (panel?.ManualBase is { } manualBase)
-        {
-            ManualBaseValueText.Text = string.Create(
-                CultureInfo.CurrentCulture,
-                $"{manualBase.Red:F3} / {manualBase.Green:F3} / {manualBase.Blue:F3}");
-            return;
-        }
-        ManualBaseValueText.Text = "not set";
-    }
-
-    private void SyncBaseControls()
-    {
-        if (panel is null)
-        {
-            return;
-        }
-
-        bool canEdit = panel.CanEditBase;
-        BaseAutoModeButton.IsEnabled = canEdit;
-        BaseFilmModeButton.IsEnabled = canEdit;
-        BaseManualModeButton.IsEnabled = canEdit;
-        isSynchronizingInspector = true;
-        BaseAutoModeButton.IsChecked = panel.BaseMode == BaseEstimationMode.Auto;
-        BaseFilmModeButton.IsChecked = panel.BaseMode == BaseEstimationMode.Preset;
-        BaseManualModeButton.IsChecked = panel.BaseMode == BaseEstimationMode.Manual;
-        FilmStockSelector.SelectedItem = BundledFilmBaseOptions.FilmStocks.FirstOrDefault(
-            option => option.Id == panel.SelectedFrame?.Base.FilmStockDminId);
-        LightSourceSelector.SelectedItem = BundledFilmBaseOptions.LightSources.FirstOrDefault(
-            option => option.Id == panel.SelectedFrame?.Base.LightSourceProfileId);
-        ScannerProfileSelector.SelectedItem = ScannerProfileSelector.Items
-            .OfType<ScannerProfileChoice>()
-            .FirstOrDefault(choice => choice.Id == panel.SelectedFrame?.Base.ScannerProfileId);
-        isSynchronizingInspector = false;
-        FilmBaseControls.Visibility = canEdit && panel.BaseMode == BaseEstimationMode.Preset
-            ? Visibility.Visible
-            : Visibility.Collapsed;
-        FilmStockSelector.IsEnabled = canEdit && panel.BaseMode == BaseEstimationMode.Preset;
-        LightSourceSelector.IsEnabled = canEdit && panel.BaseMode == BaseEstimationMode.Preset;
-        ScannerProfileSelector.IsEnabled = canEdit && panel.BaseMode == BaseEstimationMode.Preset;
-        ManualBaseControls.Visibility = canEdit && panel.BaseMode == BaseEstimationMode.Manual
-            ? Visibility.Visible
-            : Visibility.Collapsed;
-        UpdateManualBaseText();
-    }
+    private void SyncBaseControls() => BaseCard.Sync();
 
     private void SyncToneControls()
     {
@@ -1105,13 +1044,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         bool canAutoAdjust = panel?.SelectedFrame?.CanDevelop == true &&
                              autoAdjustCoordinator is not null;
         Adjustments.SetEnabled(canEdit, canAutoAdjust);
-        StraightenAngleControl.IsEnabled = canEdit;
-        CropAspectButton.IsEnabled = canEdit;
-        CropAspectLockButton.IsEnabled = canEdit;
-        RotateLeftButton.IsEnabled = canEdit;
-        RotateRightButton.IsEnabled = canEdit;
-        FlipHorizontalButton.IsEnabled = canEdit;
-        FlipVerticalButton.IsEnabled = canEdit;
+        GeometryCard.SetEnabled(canEdit);
         HistogramView.IsEnabled = canEdit;
     }
 
@@ -1196,113 +1129,6 @@ public sealed partial class DevelopWorkspaceView : UserControl
         }
     }
 
-    private void OnBaseAutoModeChecked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        SetBaseMode(BaseEstimationMode.Auto);
-    }
-
-    private void OnBaseManualModeChecked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        SetBaseMode(BaseEstimationMode.Manual);
-    }
-
-    private void OnBaseFilmModeChecked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        SetBaseMode(BaseEstimationMode.Preset);
-    }
-
-    private void OnFilmStockSelectionChanged(object sender, SelectionChangedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (panel is null || isSynchronizingInspector ||
-            panel.SetFilmStock((FilmStockSelector.SelectedItem as FilmStockOption)?.Id) != LibraryFrameError.None)
-        {
-            return;
-        }
-        UpdateAfterBaseRecipeChanged();
-    }
-
-    /// <summary>
-    /// 프로파일 목록입니다. macOS 처럼 이름 뒤에 검증 상태를 붙입니다 — 같은 스캐너의 프로파일이
-    /// 여럿일 때 무엇으로 만들어진 것인지가 고르는 근거입니다.
-    /// </summary>
-    private static IReadOnlyList<ScannerProfileChoice> ScannerProfileChoices()
-    {
-        List<ScannerProfileChoice> choices =
-        [
-            new(null, AppResources.Get("developScannerProfileNone", "Text")),
-        ];
-        foreach (ScannerProfileOption option in BundledFilmBaseOptions.ScannerProfiles)
-        {
-            choices.Add(new ScannerProfileChoice(
-                option.Id,
-                $"{option.DisplayName} · {StatusLabel(option.Status)}"));
-        }
-        return choices;
-    }
-
-    private static string StatusLabel(ScannerProfileValidationStatus status) =>
-        AppResources.Get(status switch
-        {
-            ScannerProfileValidationStatus.Draft => "developProfileStatusDraft",
-            ScannerProfileValidationStatus.PairedSmoke => "developProfileStatusPairedSmoke",
-            ScannerProfileValidationStatus.PairedValidated =>
-                "developProfileStatusPairedValidated",
-            _ => "developProfileStatusRealOnly",
-        }, "Text");
-
-    private void OnScannerProfileSelectionChanged(object sender, SelectionChangedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (panel is null || isSynchronizingInspector ||
-            panel.SetScannerProfile(
-                (ScannerProfileSelector.SelectedItem as ScannerProfileChoice)?.Id) !=
-                LibraryFrameError.None)
-        {
-            return;
-        }
-        UpdateAfterBaseRecipeChanged();
-    }
-
-    private void OnLightSourceSelectionChanged(object sender, SelectionChangedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (panel is null || isSynchronizingInspector ||
-            panel.SetLightSourceProfile((LightSourceSelector.SelectedItem as LightSourceOption)?.Id) != LibraryFrameError.None)
-        {
-            return;
-        }
-        UpdateAfterBaseRecipeChanged();
-    }
-
-    private void SetBaseMode(BaseEstimationMode mode)
-    {
-        if (panel is null || isSynchronizingInspector || panel.SetBaseMode(mode) != LibraryFrameError.None)
-        {
-            return;
-        }
-
-        isSynchronizingInspector = true;
-        ManualBaseRgb shown = panel.ManualBase ?? new ManualBaseRgb(
-            panel.SuggestedManualDmin,
-            panel.SuggestedManualDmin,
-            panel.SuggestedManualDmin);
-        BaseRedControl.Value = shown.Red;
-        BaseGreenControl.Value = shown.Green;
-        BaseBlueControl.Value = shown.Blue;
-        isSynchronizingInspector = false;
-        UpdateAfterBaseRecipeChanged();
-    }
-
     private void UpdateAfterBaseRecipeChanged()
     {
         if (panel is null)
@@ -1359,42 +1185,12 @@ public sealed partial class DevelopWorkspaceView : UserControl
         }
     }
 
-    private void OnRotateLeftClicked(object sender, RoutedEventArgs args)
+    private void OnGeometryTransformRequested(
+        object? sender,
+        Func<DevelopPanelState, LibraryFrameError> update)
     {
         _ = sender;
-        _ = args;
-        UpdateImageTransform(static state => state.Rotate(clockwise: false));
-    }
-
-    private void OnRotateRightClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        UpdateImageTransform(static state => state.Rotate(clockwise: true));
-    }
-
-    private void OnFlipHorizontalClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        UpdateImageTransform(static state => state.FlipHorizontally());
-    }
-
-    private void OnFlipVerticalClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        UpdateImageTransform(static state => state.FlipVertically());
-    }
-
-    private void OnStraightenAngleChanged(object? sender, InspectorSliderValueChangedEventArgs args)
-    {
-        _ = sender;
-        if (isSynchronizingInspector)
-        {
-            return;
-        }
-        UpdateImageTransform(state => state.SetStraightenAngle(args.Value));
+        UpdateImageTransform(update);
     }
 
     /// <summary>
@@ -2018,19 +1814,6 @@ public sealed partial class DevelopWorkspaceView : UserControl
     }
 
 
-    private void OnCropAngleDialChanged(object? sender, double angle)
-    {
-        _ = sender;
-        if (isSynchronizingInspector)
-        {
-            return;
-        }
-        UpdateImageTransform(state => state.SetStraightenAngle(angle));
-    }
-
-    /// <summary>비율 목록 한 칸입니다. 화면에 나가는 이름만 여기서 만듭니다.</summary>
-    private sealed record CropAspectChoice(CropAspectOption Option, string Text);
-
     /// <summary>
     /// 드래그를 가둘 정규 비율입니다. 잠금이 꺼져 있거나 비율이 없으면 null 입니다. 화소
     /// 비율을 정규 비율로 바꾸려면 원본의 가로세로가 필요합니다 — 회전이 걸려 있으면 뒤집습니다.
@@ -2049,54 +1832,28 @@ public sealed partial class DevelopWorkspaceView : UserControl
             panel.ImageTransform.Rotation);
     }
 
-    private void OnCropAspectClicked(object sender, ItemClickEventArgs args)
+    private void OnGeometryAspectChosen(object? sender, CropAspectOption option)
     {
         _ = sender;
-        if (args.ClickedItem is not CropAspectChoice choice)
-        {
-            return;
-        }
-        CropAspectButton.Flyout?.Hide();
         // 비율이 crop 을 다시 만드는 동안에는 진행 중인 crop session 을 접습니다 — 두 곳이
         // 같은 사각형을 서로 다르게 들고 있으면 Apply 가 어느 쪽을 쓸지 알 수 없습니다.
         CancelCrop();
-        UpdateImageTransform(state => state.SetCropAspect(choice.Option));
+        UpdateImageTransform(state => state.SetCropAspect(option));
     }
 
-    private void OnCropAspectLockToggled(object sender, RoutedEventArgs args)
+    private void OnGeometryAspectLockToggled(object? sender, EventArgs args)
     {
         _ = sender;
         _ = args;
         bool nextLocked = crop.ToggleAspectLock();
         // 잠금은 catalog 가 아니라 다음 crop 드래그의 동작만 바꿉니다.
-        CropAspectLockIcon.Glyph = nextLocked ? "" : "";
+        GeometryCard.SetLockGlyph(nextLocked);
         crop.SyncLockedAspect(LockedNormalizedAspectRatio());
-        UpdateCropAspectControls();
-    }
-
-    private void UpdateCropAspectControls()
-    {
-        if (panel is null)
+        if (panel is not null)
         {
-            return;
+            GeometryCard.UpdateAspectControls(panel, crop.IsAspectLocked);
         }
-        string label = CropAspect.LabelFor(panel.ImageTransform);
-        CropAspectButton.Content = CropAspectText(label);
-        AutomationProperties.SetName(CropAspectButton, CropAspectButton.Content.ToString());
-        bool locked = crop.IsAspectLocked;
-        string lockName = AppResources.Get(
-            locked ? "cropAspectLocked" : "cropAspectUnlocked",
-            "Value");
-        AutomationProperties.SetName(CropAspectLockButton, lockName);
-        ToolTipService.SetToolTip(CropAspectLockButton, lockName);
     }
-
-    private static string CropAspectText(string label) => label switch
-    {
-        "original" => AppResources.Get("cropAspectOriginal", "Text"),
-        "custom" => AppResources.Get("cropAspectCustom", "Text"),
-        _ => label,
-    };
 
     private void UpdateImageTransform(Func<DevelopPanelState, LibraryFrameError> update)
     {
@@ -2305,15 +2062,12 @@ public sealed partial class DevelopWorkspaceView : UserControl
         DevelopHeaderText.Text = AppResources.Get("menuDevelop", "Text");
         InfoCards.Localize();
         Adjustments.Localize();
-        SetRadioText(BaseAutoModeButton, AppResources.Get("developBaseModeAuto", "Content"));
-        SetRadioText(BaseFilmModeButton, AppResources.Get("developBaseModeFilm", "Content"));
-        SetRadioText(BaseManualModeButton, AppResources.Get("developBaseModeManual", "Content"));
-        FilmStockLabel.Text = AppResources.Get("developFilmStock", "Text");
-        AutomationProperties.SetName(FilmStockSelector, FilmStockLabel.Text);
-        LightSourceLabel.Text = AppResources.Get("developLightSource", "Text");
-        AutomationProperties.SetName(LightSourceSelector, LightSourceLabel.Text);
-        ScannerProfileLabel.Text = AppResources.Get("developScannerProfile", "Text");
-        AutomationProperties.SetName(ScannerProfileSelector, ScannerProfileLabel.Text);
+        BaseCard.Localize();
+        GeometryCard.Localize();
+        if (panel is not null)
+        {
+            GeometryCard.UpdateAspectControls(panel, crop.IsAspectLocked);
+        }
         HistogramView.Localize(
             AppResources.Get("developHistogram", "Text"),
             AppResources.Get("developHistogramShadow", "Text"),
@@ -2338,29 +2092,10 @@ public sealed partial class DevelopWorkspaceView : UserControl
         SetLocalizedNameAndTooltip(DefectsTabButton, defects);
         SetLocalizedNameAndTooltip(InfoTabButton, info);
         SetLocalizedNameAndTooltip(ResetTabButton, reset);
-        BaseSectionTitleText.Text = baseTitle;
-        AutomationProperties.SetName(BaseControlCard, baseTitle);
-        string geometry = AppResources.Get("developGeometry", "Text");
-        GeometrySectionTitleText.Text = geometry;
-        AutomationProperties.SetName(GeometryControlCard, geometry);
-        SetLocalizedNameAndTooltip(RotateLeftButton, AppResources.Get("developRotateLeft", "Text"));
-        SetLocalizedNameAndTooltip(RotateRightButton, AppResources.Get("developRotateRight", "Text"));
-        SetLocalizedNameAndTooltip(FlipHorizontalButton, AppResources.Get("developFlipHorizontal", "Text"));
-        SetLocalizedNameAndTooltip(FlipVerticalButton, AppResources.Get("developFlipVertical", "Text"));
-        SetLocalizedNameAndTooltip(CropButton, AppResources.Get("developCrop", "Text"));
         SetButtonText(CropApplyButton, AppResources.Get("developCropApply", "Text"));
         SetButtonText(CropFullButton, AppResources.Get("developCropFull", "Text"));
         SetButtonText(CropCancelButton, AppResources.Get("developCropCancel", "Text"));
         AutomationProperties.SetName(CropSelection, AppResources.Get("developCropArea", "Text"));
-        StraightenAngleControl.Label = AppResources.Get("developAngle", "Text");
-        BaseRedControl.Label = AppResources.Get("developBaseRed", "Text");
-        BaseGreenControl.Label = AppResources.Get("developBaseGreen", "Text");
-        BaseBlueControl.Label = AppResources.Get("developBaseBlue", "Text");
-        CropAspectLabel.Text = AppResources.Get("cropAspectRatio", "Text");
-        CropAspectOptions.ItemsSource = CropAspect.Options
-            .Select(option => new CropAspectChoice(option, CropAspectText(option.Label)))
-            .ToList();
-        UpdateCropAspectControls();
     }
 
     private static void SetNameAndTooltip(ButtonBase button, string resourceKey)
@@ -2380,18 +2115,6 @@ public sealed partial class DevelopWorkspaceView : UserControl
     {
         button.Content = text;
         SetLocalizedNameAndTooltip(button, text);
-    }
-
-    private static void SetToggleText(ToggleButton toggle, string text)
-    {
-        toggle.Content = text;
-        SetLocalizedNameAndTooltip(toggle, text);
-    }
-
-    private static void SetRadioText(RadioButton radio, string text)
-    {
-        radio.Content = text;
-        AutomationProperties.SetName(radio, text);
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs args)
