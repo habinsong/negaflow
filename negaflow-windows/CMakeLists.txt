@@ -70,6 +70,15 @@ add_library(negaflow_core STATIC
     src/Native/core/parallel_rows.cpp
     src/Native/core/pixel.cpp
     src/Native/core/pointwise.cpp
+    src/Native/core/tiff/io/endian.cpp
+    src/Native/core/tiff/io/file.cpp
+    src/Native/core/tiff/layout/compressed.cpp
+    src/Native/core/tiff/layout/finalize.cpp
+    src/Native/core/tiff/layout/samples.cpp
+    src/Native/core/tiff/layout/segments.cpp
+    src/Native/core/tiff/parse/capture.cpp
+    src/Native/core/tiff/parse/directory.cpp
+    src/Native/core/tiff/parse/entry.cpp
     src/Native/core/tiff_deflate_validator.cpp
     src/Native/core/tiff_lzw_validator.cpp
     src/Native/core/tiff_probe.cpp
@@ -78,6 +87,8 @@ target_include_directories(negaflow_core
     PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/core/include"
         "${CMAKE_CURRENT_BINARY_DIR}/generated"
+    PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/core"
 )
 target_link_libraries(negaflow_core PRIVATE negaflow_project_options)
 
