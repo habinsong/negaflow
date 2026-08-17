@@ -76,6 +76,7 @@ Windows 전 트리에서 `MenuBar` · `MenuBarItem` **히트 0**.
 | C10 | **모든 UI/UX 가 창작, 아이콘 없는 것도 있음** | 아이콘 macOS 117 vs Windows 56 — [`08-icons-and-chrome.md`](08-icons-and-chrome.md) | **확정** |
 | C11 | **인화뷰 우측탭 전부 창작** | macOS 는 `PrintWorkspaceInspector.swift` + `PrintInspectorComponents.swift` + `PrintInspectorControls.swift` + `PrintPackageInspectorControls.swift` + `PrintLayoutTemplateControls.swift` **5파일**. Windows 는 `Views/Print/Settings/PrintInspectorBinder.cs` + `PrintInspectorSurface.cs` **2파일**뿐이고 `PrintLayoutTemplateControls`·`PrintPackageInspectorControls` 히트 **0** | **확정** |
 | C12 | **인화 출력(내보내기·빠른내보내기) 백엔드·UI 틀림** | macOS 는 `AppModel+PrintExport.swift` + `AppModel+PrintPackageExport.swift` + `PrintPackageExportWriter.swift` + `PrintPackageArtifactLayout.swift` + `Chromabase/Export/PrintPackageRenderer.swift`. Windows 는 `Views/Print/Export/PrintExportWorkflow.cs` 하나. `PrintPackageRenderer` 히트 **0**, `PrintPackageArtifactLayout` 히트 **0** | **확정** |
+| C13 | **자동 색상·자동 레벨·자동 톤·자동 화이트밸런스 버튼 모양 창작** | macOS `DevelopQuickActionsSection.swift`(158줄): 아이콘 `camera.filters`(자동 색상) · `chart.bar.xaxis`(자동 레벨, **토글**) · `circle.lefthalf.filled`(자동 톤) · `thermometer.medium`(자동 화이트밸런스), 각각 `Label(title, systemImage:)` + `minHeight: 32` + `.buttonStyle(.plain)` + `maxWidth: .infinity`. 맨 위에 `arrow.counterclockwise.circle` **모든 보정 초기화**(`role: .destructive`). Windows 는 GrainMend 카드 아래 텍스트만 있는 사각 단추 4개이고 **아이콘 없음**, 자동 레벨의 **토글 성격 없음**, 초기화 단추 **없음** | **확정** |
 
 ---
 
