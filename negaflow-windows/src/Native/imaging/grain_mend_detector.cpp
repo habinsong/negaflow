@@ -514,6 +514,11 @@ void find_candidates(
                 }
             }
         }
+        // 분류기가 읽을 국소 통계를 넘깁니다. 이미 계산해 둔 배열을 옮기기만 하므로 검출
+        // 비용이 늘지 않습니다 — macOS 도 DefectContrastField 를 분류까지 들고 있습니다.
+        result.dust_magnitude = std::move(dust_magnitude);
+        result.thin_magnitude = std::move(thin_magnitude);
+        result.noise_scale = std::move(noise_scale);
     }
     std::vector<float>& best = result.scratch_response;
     std::vector<float> local_ridge(count, 0.0F);

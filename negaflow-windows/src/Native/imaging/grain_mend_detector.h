@@ -22,6 +22,12 @@ struct CandidateMaps final {
     std::vector<std::uint8_t> weak{};
     std::vector<std::uint8_t> strong{};
     std::vector<float> scratch_response{};
+    // 분류기가 읽는 국소 통계입니다. macOS `DefectContrastField` 의 같은 이름 배열이며,
+    // 검출이 이미 계산해 둔 값을 버리지 않고 들고 있을 뿐이라 추가 비용이 없습니다.
+    // 분류를 요청하지 않은 호출에서는 비어 있습니다.
+    std::vector<float> dust_magnitude{};
+    std::vector<float> thin_magnitude{};
+    std::vector<float> noise_scale{};
 };
 
 [[nodiscard]] DetectionImage make_detection_image(const WorkingImage& image);
