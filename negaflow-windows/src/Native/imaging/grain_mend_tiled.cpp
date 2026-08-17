@@ -232,7 +232,8 @@ std::vector<std::uint8_t> build_tiled_automatic_mask(
                         request.dust_sensitivity,
                         workspace.specks,
                         added,
-                        cancel));
+                        cancel,
+                        &workspace.candidates.valid));
                     workspace.speck_microseconds = static_cast<std::uint64_t>(
                         std::chrono::duration_cast<std::chrono::microseconds>(
                             std::chrono::steady_clock::now() - speck_started).count());

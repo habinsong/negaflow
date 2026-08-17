@@ -28,6 +28,9 @@ struct CandidateMaps final {
     std::vector<float> dust_magnitude{};
     std::vector<float> thin_magnitude{};
     std::vector<float> noise_scale{};
+    // macOS `DefectContrastField.valid` — 클리핑 명부와 순흑 평탄을 뺀 화소입니다. 미세 입자
+    // 패스가 같은 것을 다시 만들지 않도록 들고 나갑니다.
+    std::vector<std::uint8_t> valid{};
     // 이 타일에서 두 무거운 단계가 각각 얼마나 걸렸는지입니다. "자동이 몇 초"만으로는 어디를
     // 고쳐야 하는지 알 수 없습니다.
     std::uint64_t dust_morphology_microseconds{0U};

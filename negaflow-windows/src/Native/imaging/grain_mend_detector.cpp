@@ -71,7 +71,8 @@ void find_candidates(
         return;
     }
 
-    std::vector<std::uint8_t> valid(count, 0U);
+    result.valid.assign(count, 0U);
+    std::vector<std::uint8_t>& valid = result.valid;
     {
         const std::vector<float> luma_open =
             opening(image.luminance, image.width, image.height, 4U);

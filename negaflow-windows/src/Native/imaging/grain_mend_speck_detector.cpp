@@ -211,7 +211,8 @@ bool merge_micro_speck_mask(
     const double dust_sensitivity,
     std::vector<std::uint8_t>& mask,
     std::size_t& added_pixels,
-    const negaflow::core::CancelFlag cancel) {
+    const negaflow::core::CancelFlag cancel,
+    const std::vector<std::uint8_t>* const supplied_valid) {
     added_pixels = 0U;
     const std::size_t count = image.luminance.size();
     if (image.width == 0U || image.height == 0U ||
@@ -225,7 +226,13 @@ bool merge_micro_speck_mask(
         }
     }
 
-    const std::vector<std::uint8_t> valid = make_valid_mask(image);
+    // 검출이 이미 만든 것이 있으면 그것을 씁니다. 없을 때만 만듭니다.
+    const std::vector<std::uint8_t> own_valid =
+        supplied_valid != nullptr && supplied_valid->size() == count
+            ? std::vector<std::uint8_t>{}
+            : make_valid_mask(image);
+    const std::vector<std::uint8_t>& valid =
+        own_valid.empty() && supplied_valid != nullptr ? *supplied_valid : own_valid;
     std::vector<float> coherence(count, 0.0F);
     std::vector<float> balance(count, 0.0F);
     for (const std::uint32_t radius : speck_radii) {
