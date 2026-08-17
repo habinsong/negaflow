@@ -162,7 +162,16 @@ internal sealed class CloneStampShapeMask
         }
     }
 
-    /// <summary><see cref="DefectCanvas.FillCircle"/> 과 같은 원입니다 — 두 표면이 같은 모양이어야 합니다.</summary>
+    /// <summary>
+    /// <see cref="DefectCanvas.FillCircle"/> 과 <b>같은 화소 집합</b>인 원입니다
+    /// (<c>dx² + dy² ≤ radius²</c>). 두 표면이 같은 모양이어야 합니다.
+    /// </summary>
+    /// <remarks>
+    /// 행마다 반너비를 구해 <see cref="Array.Fill{T}(T[], T, int, int)"/> 로 한 번에 채웁니다.
+    /// 화소마다 거리를 재면 원 하나가 O(r²) 이고, 획은 1화소 간격으로 원을 찍으므로 크기를
+    /// 512px 로 올린 긴 획에서 한 프레임에 <b>49.8ms</b> 가 들었습니다(계측기
+    /// <c>--clone-cursor-bench</c>). 행 단위로 바꾸면 원 하나가 O(r) 입니다.
+    /// </remarks>
     private void Stamp(int centerX, int centerY, double radius)
     {
         if (radius < 0.5)
@@ -170,18 +179,41 @@ internal sealed class CloneStampShapeMask
             Mark(centerX, centerY);
             return;
         }
-        int extent = (int)Math.Ceiling(radius);
         double squared = radius * radius;
-        for (int dy = -extent; dy <= extent; ++dy)
+        int extent = (int)Math.Ceiling(radius);
+        int top = Math.Max(Top, centerY - extent);
+        int bottom = Math.Min(Bottom, centerY + extent);
+        for (int y = top; y <= bottom; ++y)
         {
-            for (int dx = -extent; dx <= extent; ++dx)
+            double dy = y - centerY;
+            double remaining = squared - (dy * dy);
+            if (remaining < 0.0)
             {
-                if ((dx * dx) + (dy * dy) <= squared)
-                {
-                    Mark(centerX + dx, centerY + dy);
-                }
+                continue;
             }
+            int half = HalfWidth(remaining);
+            int left = Math.Max(Left, centerX - half);
+            int right = Math.Min(Right, centerX + half);
+            if (right < left)
+            {
+                continue;
+            }
+            Array.Fill(cells, true, ((y - Top) * columns) + (left - Left), right - left + 1);
         }
+    }
+
+    /// <summary>
+    /// <c>dx² ≤ remaining</c> 을 만족하는 가장 큰 정수입니다. <see cref="Math.Sqrt"/> 가 한 눈금
+    /// 어긋나도 원의 화소 집합이 달라지지 않게 한 걸음 고칩니다.
+    /// </summary>
+    private static int HalfWidth(double remaining)
+    {
+        int half = (int)Math.Sqrt(remaining);
+        if ((double)(half + 1) * (half + 1) <= remaining)
+        {
+            return half + 1;
+        }
+        return (double)half * half > remaining ? half - 1 : half;
     }
 
     private void Mark(int x, int y)

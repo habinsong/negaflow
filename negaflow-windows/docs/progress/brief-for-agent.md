@@ -187,6 +187,9 @@ negaflow-cli --export-developed-tiff16 <source> <dest> <dmin-r> <dmin-g> <dmin-b
 
 # 결함 도구 다섯이 실제로 화소를 바꾸는지 (앱 종료 후 단독 실행)
 Negaflow.Shell.UnitTests.exe --defect-tools <storageRoot> <frameId> [irPath]
+
+# 복제 도장 커서 덮개 한 번 그리는 시간 (포인터가 움직일 때마다 도는 경로)
+Negaflow.Shell.UnitTests.exe --clone-cursor-bench [width] [height] [diameterPx]
 ```
 
 `negaflow-cli.exe` 는 `out/build/native/x64-release/Release/` 에 있습니다.

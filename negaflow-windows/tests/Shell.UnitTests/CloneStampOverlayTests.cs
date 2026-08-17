@@ -32,6 +32,51 @@ internal static class CloneStampOverlayTests
         VerifyRingShowsTheSourcePixels();
         VerifyStrokeShowsTheSourceWindow();
         VerifyAlignedOffsetWins();
+        VerifyDiscShapeMatchesTheDistanceTest();
+    }
+
+    /// <summary>
+    /// 원 안 미리보기가 칠하는 화소 집합이 <c>dx² + dy² ≤ r²</c> 그대로인지 봅니다. 모양을
+    /// 그대로 두고 속도만 올린 자리라(행 단위 채우기), 한 눈금이라도 어긋나면 여기서 드러납니다.
+    /// </summary>
+    private static void VerifyDiscShapeMatchesTheDistanceTest()
+    {
+        const int centerX = 20;
+        const int centerY = 15;
+        // 소스 마커를 구석으로 보내 십자선이 원에 닿지 않게 합니다. 오프셋은 정렬 값으로 주므로
+        // 원 안에 오는 화소는 그대로 −10 만큼 옮긴 것입니다.
+        DefectPoint corner = new(0.02, 0.9);
+        DefectPoint aligned = new(-0.25, 0.0);
+        byte[] reference = Reference();
+        bool matches = true;
+        foreach (double diameter in new[] { 3.0, 8.0, 9.0, 13.0 })
+        {
+            byte[]? bgra = CloneStampCursorRenderer.Render(
+                FrameUnderTest(), Width, Height, reference, Cursor, [], corner, aligned,
+                diameter, optionDown: false);
+            double radius = diameter / 2.0;
+            // 테두리 띠(안쪽 반지름 r − 1.25)는 색을 바꾸므로 그 안쪽만 셉니다.
+            double inside = Math.Max(0.0, radius - (2.5 / 2.0));
+            for (int y = 0; y < Height; ++y)
+            {
+                for (int x = 0; x < Width; ++x)
+                {
+                    double distance = ((x - centerX) * (x - centerX)) +
+                        ((y - centerY) * (y - centerY));
+                    if (bgra is null || distance >= inside * inside)
+                    {
+                        continue;
+                    }
+                    bool copied = Alpha(bgra, x, y) == 255 &&
+                        Blue(bgra, x, y) == (byte)(x - 10) && Green(bgra, x, y) == (byte)y;
+                    if (copied != (distance <= radius * radius))
+                    {
+                        matches = false;
+                    }
+                }
+            }
+        }
+        Check(matches, "clone_cursor_disc_matches_the_distance_test");
     }
 
     /// <summary>
@@ -151,6 +196,13 @@ internal static class CloneStampOverlayTests
         return reference;
     }
 
+    /// <summary>변형이 없는 100×80 원본입니다 — 표시 정규가 곧 원본 정규입니다.</summary>
+    private static LibraryFrameSnapshot FrameUnderTest() =>
+        Frame(new ManualBaseRgb(0.2, 0.2, 0.2)) with
+        {
+            SourceMetadata = new LibrarySourceMetadata(1024UL, 100U, 80U, 3, 16, 1, 1),
+        };
+
     private static byte[]? Render(
         byte[]? reference,
         DefectPoint? cursor,
@@ -159,10 +211,7 @@ internal static class CloneStampOverlayTests
         DefectPoint? alignedRawOffset,
         bool optionDown) =>
         CloneStampCursorRenderer.Render(
-            Frame(new ManualBaseRgb(0.2, 0.2, 0.2)) with
-            {
-                SourceMetadata = new LibrarySourceMetadata(1024UL, 100U, 80U, 3, 16, 1, 1),
-            },
+            FrameUnderTest(),
             Width,
             Height,
             reference,
