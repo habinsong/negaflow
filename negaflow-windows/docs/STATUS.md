@@ -14,10 +14,15 @@
 
 - `LibraryDocument`는 1,468줄에서 325줄 공개 파사드로 줄였다. catalog 열기, 상태, 투영, 저장, 조직, frame 편집, 가상 사본, 제거, relink, defect sidecar, undo를 세부 폴더의 실제 타입으로 옮겼다.
 - 검증: Shell.Core x64 Release 경고 0·오류 0, Shell 단위 테스트 938 assertions 통과. GrainMend 동작, UI/UX 패리티, GitHub CI 통과는 아직 검증하지 않았다.
-- `DevelopWorkspaceView`의 크롭 책임을 `Develop/Canvas`의 실제 타입(`CropWorkspaceState`·`CropInteraction`·`PreviewFrame`)으로 옮기고 뷰 위임을 닫았다. 크롭 상태 필드와 히트테스트·오버레이 기하·손잡이 상수가 뷰에서 사라졌다.
-- 검증: Shell x64 Release 경고 0·오류 0, `test-managed.ps1 -Preset x64-release`에서 Catalog 721 assertions, Shell 938 assertions 통과.
-- God Object 1단계는 닫히지 않았다. `DevelopWorkspaceView.xaml.cs`는 아직 5,057줄이고 크롭 조각만 분리됐다. GrainMend 동작, UI/UX 패리티, GitHub CI 통과는 아직 검증하지 않았다.
-- 다음 분해 대상은 같은 뷰의 미리보기 렌더·export 실행 책임, 이어서 `LibraryWorkspaceView.xaml.cs`, `DevelopWorkspaceView.xaml`, `NativeDevelopExporter.cs`, `negaflow_abi.cpp`, `develop_export.cpp`다.
+- **판정 기준은 500줄이다.** `src/`·`tests/`의 674개 파일 중 47개가 초과하며, 사유 없이 남은 미해결은 **11개**다. 전 목록은 `docs/implementation/god-object-remediation.md`에 있다.
+- `PrintSheetWriter`는 505 → 258줄로 **해결**했다. 화소 그리기·PNG 굽기·파일 스트림을 `Views/Print/`의 실제 타입(215/49/20줄)으로 옮겼다.
+- `DevelopWorkspaceView.xaml.cs`는 5,057 → 4,835줄이다. 크롭(`Develop/Canvas`), 메타데이터 변환·정보 카드(`Develop/Metadata`), 출력 패널 투영·필름 룩·GrainMend 카드 규칙·버전 목록·붙여넣기 범위(`Develop/Presentation`)를 실제 타입으로 옮겼다. 아직 기준의 9배가 넘으므로 미해결이다.
+- 검증: 로컬 `ci-gate.ps1 -Preset x64-release` 전체 통과 — 네이티브 CTest 71/71, 관리 빌드 경고 0·오류 0, Catalog 721 assertions, Shell 1,011 assertions(시작 시 938).
+- **스캐너 실패 원인 확정·수정**: 플러그인은 `bitDepths`를 정상 보고한다(OpticFilm 8100 `[16]`, Epson GT-X900 `[8,16]`). Shell이 `capabilityToken`을 표시용 512자 규칙으로 검사해 **응답 전체를 버리고** 있었다(실측 토큰 4,148자·5,012자). 화면에는 "심도 옵션을 보고하지 않는다"만 남았다.
+- **GrainMend 백엔드는 실제로 동작한다**(고정 입력 실측). `OpticFilm8100_frame_1.tiff` 5088×3401에서 검출 이미지 1800×1203, 크기 질의와 마스크 호출이 9,306으로 일치하고 작은 버퍼는 `mask_buffer_too_small`로 거부한다. 민감도 옵션도 실제로 결과를 바꾼다 — legacy 9,306 / current-ui 4,096 / 구조선 배제 끔 16,592 / 미세반점 끔 2,587.
+- 앱에서 자동·가이드가 눌리지 않는 이유는 **검토가 열려 있으면 새 검출을 잠그는 규칙**이다. 그 규칙을 `GrainMendCardProjection`으로 꺼내 테스트로 고정했다.
+- 아직 검증하지 않은 것: GrainMend 확정·영속성의 실제 앱 왕복, macOS UI/UX 전면 대조(macOS에 있는 `DefectLayerSection` 결함 레이어 목록이 Windows에 **없다**), Windows CI 설치본 잡.
+- 다음 분해 대상: `DevelopPanelState.cs`(648줄, 전부 한 줄 위임 파사드 — 도메인별 하위 타입으로 나눠야 한다), `PrintWorkspaceView.Composition.cs`, `LibraryWorkspaceView.xaml.cs`, `DevelopWorkspaceView.xaml`, `NativeDevelopExporter.cs`, `negaflow_abi.cpp`, `develop_export.cpp`.
 
 ## 완성도 (2026-08-16 기준)
 
