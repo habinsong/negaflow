@@ -192,13 +192,23 @@ using namespace tuning;
     return drop;
 }
 
+// macOS `medianResponse` — 컴포넌트 본체의 대표 응답(중앙값)이며 비율 판정의 분모입니다.
+// 평균은 밝은 교차점 하나에 끌려갑니다. `sampler` 는 macOS 의 `responseAt` 클로저 자리이며,
+// 타일 로컬 배열과 프레임 전역 저해상도 맵을 같은 판정으로 씁니다.
+template <typename Sampler>
 [[nodiscard]] float median_response(
     const Component& component,
-    const std::vector<float>& response) {
+    const std::uint32_t width,
+    const Sampler& sampler) {
     std::vector<float> values{};
     values.reserve(component.pixels.size());
     for (const std::size_t pixel : component.pixels) {
-        values.push_back(response[pixel]);
+        const int y = static_cast<int>(pixel / width);
+        const int x = static_cast<int>(pixel - static_cast<std::size_t>(y) * width);
+        float value = 0.0F;
+        if (sampler(x, y, value)) {
+            values.push_back(value);
+        }
     }
     if (values.empty()) {
         return 0.0F;
@@ -209,6 +219,10 @@ using namespace tuning;
     return *middle;
 }
 
+// macOS `continuationCoverageOf` — 끝점에서 (dx,dy) 방향으로 연장하며 응답이 level 이상으로
+// 이어지는 샘플 비율(0~1)입니다. 샘플 경로가 판정 범위 밖으로 나가면 판정 불가를 뜻하는
+// 음수를 돌려줍니다.
+template <typename Sampler>
 [[nodiscard]] double continuation_coverage_from(
     const double start_x,
     const double start_y,
@@ -216,8 +230,7 @@ using namespace tuning;
     const double dy,
     const int span,
     const float level,
-    const DetectionImage& image,
-    const std::vector<float>& response) noexcept {
+    const Sampler& sampler) {
     const double perpendicular_x = -dy;
     const double perpendicular_y = dx;
     int samples = 0;
@@ -236,16 +249,12 @@ using namespace tuning;
                 center_x + perpendicular_x * static_cast<double>(offset)));
             const int y = static_cast<int>(std::lround(
                 center_y + perpendicular_y * static_cast<double>(offset)));
-            if (x < 0 || y < 0 ||
-                x >= static_cast<int>(image.width) ||
-                y >= static_cast<int>(image.height)) {
+            float value = 0.0F;
+            if (!sampler(x, y, value)) {
                 continue;
             }
             inside = true;
-            strongest = std::max(
-                strongest,
-                response[static_cast<std::size_t>(y) * image.width +
-                         static_cast<std::size_t>(x)]);
+            strongest = std::max(strongest, value);
         }
         if (!inside) {
             return -1.0;
@@ -260,25 +269,26 @@ using namespace tuning;
         : -1.0;
 }
 
-[[nodiscard]] std::vector<std::uint8_t> continuation_drops(
+// macOS `continuationDrops(scratch:width:responseAt:)` — 양 끝 연장선에 같은 선이 계속되는
+// 스크래치 컴포넌트를 고릅니다.
+template <typename Sampler>
+[[nodiscard]] std::vector<std::uint8_t> continuation_drops_with(
     const std::vector<Component>& scratch,
-    const DetectionImage& image,
-    const std::vector<float>& response) {
+    const std::uint32_t width,
+    const Sampler& sampler) {
     std::vector<std::uint8_t> drop(scratch.size(), 0U);
-    const std::size_t expected =
-        static_cast<std::size_t>(image.width) * image.height;
-    if (response.size() != expected) {
+    if (width == 0U) {
         return drop;
     }
     for (std::size_t index = 0U; index < scratch.size(); ++index) {
         const Component& component = scratch[index];
-        const PcaMetrics metrics = pca_metrics(component, image.width);
+        const PcaMetrics metrics = pca_metrics(component, width);
         if (metrics.length < continuation_minimum_length ||
             (metrics.length < static_cast<double>(continuation_minimum_span) &&
              metrics.aspect < continuation_short_minimum_aspect)) {
             continue;
         }
-        const float body = median_response(component, response);
+        const float body = median_response(component, width, sampler);
         if (body < continuation_minimum_body_response) {
             continue;
         }
@@ -293,8 +303,8 @@ using namespace tuning;
         double maximum_x = 0.0;
         double maximum_y = 0.0;
         for (const std::size_t pixel : component.pixels) {
-            const double x = static_cast<double>(pixel % image.width);
-            const double y = static_cast<double>(pixel / image.width);
+            const double x = static_cast<double>(pixel % width);
+            const double y = static_cast<double>(pixel / width);
             const double projection = x * axis_x + y * axis_y;
             if (projection < minimum_projection) {
                 minimum_projection = projection;
@@ -314,23 +324,9 @@ using namespace tuning;
                 static_cast<int>(metrics.length)));
         const float level = body * continuation_level_ratio;
         const double forward = continuation_coverage_from(
-            maximum_x,
-            maximum_y,
-            axis_x,
-            axis_y,
-            span,
-            level,
-            image,
-            response);
+            maximum_x, maximum_y, axis_x, axis_y, span, level, sampler);
         const double backward = continuation_coverage_from(
-            minimum_x,
-            minimum_y,
-            -axis_x,
-            -axis_y,
-            span,
-            level,
-            image,
-            response);
+            minimum_x, minimum_y, -axis_x, -axis_y, span, level, sampler);
         if (forward >= strong_continuation_coverage ||
             backward >= strong_continuation_coverage ||
             (forward >= continuation_coverage &&
@@ -341,5 +337,51 @@ using namespace tuning;
     return drop;
 }
 
+// macOS `continuationDrops(scratch:response:width:height:)` — 타일 로컬 응답 배열용
+// 편의 진입점입니다.
+std::vector<std::uint8_t> continuation_drops(
+    const std::vector<Component>& scratch,
+    const DetectionImage& image,
+    const std::vector<float>& response) {
+    const std::size_t expected =
+        static_cast<std::size_t>(image.width) * image.height;
+    if (image.width == 0U || image.height == 0U || response.size() != expected) {
+        return std::vector<std::uint8_t>(scratch.size(), 0U);
+    }
+    const std::uint32_t width = image.width;
+    const std::uint32_t height = image.height;
+    return continuation_drops_with(
+        scratch,
+        width,
+        [&](const int x, const int y, float& value) {
+            if (x < 0 || y < 0 || x >= static_cast<int>(width) ||
+                y >= static_cast<int>(height)) {
+                return false;
+            }
+            value = response[static_cast<std::size_t>(y) * width +
+                             static_cast<std::size_t>(x)];
+            return true;
+        });
+}
+
+// macOS `rejectingGlobalStructureLines` 가 쓰는 진입점입니다 — 전역 저해상도 응답 맵을
+// 같은 판정에 넘깁니다(`responseAt: { x, y in responseMap.value(atX: x, y: y) }`).
+std::vector<std::uint8_t> continuation_drops(
+    const std::vector<Component>& scratch,
+    const std::uint32_t width,
+    const ScratchResponseMap& response) {
+    return continuation_drops_with(
+        scratch,
+        width,
+        [&](const int x, const int y, float& value) {
+            if (x < 0 || y < 0) {
+                return false;
+            }
+            return response.value(
+                static_cast<std::uint32_t>(x),
+                static_cast<std::uint32_t>(y),
+                value);
+        });
+}
 
 }  // namespace negaflow::imaging::grain_mend_detail

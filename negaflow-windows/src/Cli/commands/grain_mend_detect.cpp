@@ -194,6 +194,12 @@ int run_grain_mend_detect(
               << ",\"detection_width\":" << detection.width
               << ",\"detection_height\":" << detection.height
               << ",\"accepted_pixels\":" << detection.accepted_pixels
+              // macOS `applyingWholeFrameAutomaticRiskFlag` 의 결과입니다. 자동에서만
+              // 채워지고, 성분을 버리지 않으므로 개수와 함께 읽어야 합니다.
+              << ",\"automatic_false_positive_risk\":"
+              << (detection.automatic_false_positive_risk ? "true" : "false")
+              << ",\"automatic_candidate_pixel_fraction\":"
+              << detection.automatic_candidate_pixel_fraction
               << ",\"component_count\":" << detection.components.size()
               << ",\"mean_confidence\":"
               << (detection.components.empty()

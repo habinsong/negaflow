@@ -152,11 +152,13 @@ add_library(negaflow_imaging STATIC
       src/Native/imaging/grain_mend.cpp
       src/Native/imaging/grain_mend_classifier.cpp
       src/Native/imaging/grain_mend_component_classification.cpp
+      src/Native/imaging/grain_mend_automatic_risk.cpp
       src/Native/imaging/grain_mend_component_gates.cpp
       src/Native/imaging/grain_mend_components.cpp
       src/Native/imaging/grain_mend_detection_image.cpp
       src/Native/imaging/grain_mend_detector.cpp
       src/Native/imaging/grain_mend_scratch_angles.cpp
+      src/Native/imaging/grain_mend_scratch_response_map.cpp
       src/Native/imaging/grain_mend_grain_field.cpp
       src/Native/imaging/grain_mend_mask_paint.cpp
       src/Native/imaging/grain_mend_shape.cpp

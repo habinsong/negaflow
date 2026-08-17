@@ -21,7 +21,9 @@ macOS `DefectRemoval` 27개 파일 + 앱 `Features/Defects` 를 Windows `grain_m
 | `constrainedRegionGrainFieldSmallMax` 12↔4 | **히트 0** → 이식함 | 가이드 그레인 안전선 없음 |
 | `preferredAngle` 방향 게이트(`bestPerp`·`alignTolerance 32`·role 0/1/2) | **히트 0** — 미이식 | 브러시가 획을 가로지르는 정상 구조선을 파괴 |
 | 브러시 와이프 퓨즈(`regionArea`·`scratchBudget*`·`totalBudgetAreaFraction`) | **히트 0** — 미이식 | 칠 면적이 통째로 재합성될 수 있음 |
-| `applyingWholeFrameAutomaticRiskFlag`(+`0.0006`·`0.02`·국소 밀도) | **히트 0** — 미이식 | 자동 오검출 위험 경고 없음 |
+| `applyingWholeFrameAutomaticRiskFlag`(+`0.0006`·`0.02`·`maximumLocalCandidateDensity`) | **히트 0** → 이식함 (`grain_mend_automatic_risk.{h,cpp}`) | 자동 오검출 위험 경고가 없었음. 프론트엔드(HUD 문구)는 남음 |
+| `DefectScratchResponseMap`(2배 다운샘플 max-pooling, 타일 전체 병합) | **히트 0** → 이식함 (`grain_mend_scratch_response_map.{h,cpp}`) | 전역 연장 판정이 풀해상도·core 화소만 봐서 구조선을 덜 버렸음 → frame_4 가로 6→**5**(macOS 5) |
+| `DefectStructureLineFilter.continuationDrops(responseAt:)` 접근자 계약 | 배열 전용이었음 → 두 진입점으로 이식함 | 전역 판정이 저해상도 맵을 못 읽었음 |
 | `holeCap = min(maxHoleArea, count*2)` | `fill_interior_holes` 안에 있음 | 1:1 |
 | `DefectShape.pcaMetrics` | `grain_mend_shape.cpp` 1:1 | speck 검출기만 사본을 씀(수치 동일, 중복) |
 | `DefectClassifier` 상수·수식 전부 | 1:1 | 일치 |

@@ -1,5 +1,6 @@
 #include "negaflow/imaging/grain_mend.h"
 
+#include "grain_mend_automatic_risk.h"
 #include "grain_mend_components.h"
 #include "grain_mend_detector.h"
 #include "grain_mend_resample.h"
@@ -358,6 +359,17 @@ GrainMendDetection detect_grain_mend(
         if (cancel.requested()) {
             detection.status = GrainMendStatus::cancelled;
             return detection;
+        }
+        // macOS `detectComponents` 의 마지막 줄: `wholeFrameAuto ?
+        // applyingWholeFrameAutomaticRiskFlag(to: field) : field`. 가이드(부분 ROI)는
+        // 사용자가 범위를 지목했으므로 경고하지 않습니다.
+        if (!request.constrained_region) {
+            const grain_mend_detail::AutomaticRisk risk =
+                grain_mend_detail::measure_automatic_risk(
+                    detection.components, request.width, request.height);
+            detection.automatic_false_positive_risk = risk.false_positive_risk;
+            detection.automatic_candidate_pixel_fraction =
+                risk.candidate_pixel_fraction;
         }
         detection.status = GrainMendStatus::ok;
         return detection;

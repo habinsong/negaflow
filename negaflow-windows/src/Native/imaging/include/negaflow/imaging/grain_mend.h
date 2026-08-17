@@ -132,6 +132,11 @@ struct GrainMendDetection final {
     std::uint32_t roi_width{0U};
     std::uint32_t roi_height{0U};
     std::size_t accepted_pixels{0U};
+    // macOS `DefectLabelField.automaticFalsePositiveRisk` / `automaticCandidatePixelFraction`.
+    // 전체 프레임 자동에서만 채워집니다(가이드는 사용자가 범위를 지목했으므로 경고하지
+    // 않습니다). **성분은 하나도 버리지 않고** 화면이 경고만 표시합니다.
+    bool automatic_false_positive_risk{false};
+    double automatic_candidate_pixel_fraction{0.0};
     GrainMendTimings timings{};
     std::vector<std::uint8_t> mask{};
     // 채택된 결함 하나하나. 분류(먼지·핀홀·가로/세로/대각 스크래치·유제손상·미세입자)와

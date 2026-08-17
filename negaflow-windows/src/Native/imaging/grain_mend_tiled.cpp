@@ -218,7 +218,10 @@ std::vector<std::uint8_t> build_tiled_automatic_mask(
         frame_specks.assign(count, 0U);
         frame_speck_confidence.assign(count, 0.0F);
     }
-    std::vector<float> frame_scratch_response(count, 0.0F);
+    // macOS `detectComponents` 는 타일 응답을 `DefectScratchResponseMap`(2배 다운샘플
+    // max-pooling)에 **타일 전체(halo 포함)** 로 병합하고, stitch 뒤 전역 판정에 그 맵을
+    // 넘깁니다. core 화소만 풀해상도로 옮기면 판정이 보는 값이 달라집니다.
+    ScratchResponseMap frame_scratch_response(region_width, region_height);
     // 분류기가 읽는 국소 통계입니다. 타일이 낸 것을 core 만 프레임으로 옮깁니다 — 분류를
     // 타일 안에서 하면 타일 경계에서 잘린 한 결함이 조각마다 다른 종류가 됩니다.
     CandidateMaps frame_candidates{};
@@ -414,8 +417,6 @@ std::vector<std::uint8_t> build_tiled_automatic_mask(
                                 workspace.speck_confidence[tile_index];
                         }
                     }
-                    frame_scratch_response[frame_index] =
-                        workspace.candidates.scratch_response[tile_index];
                     frame.brightest_channel[frame_index] =
                         workspace.tile.brightest_channel[tile_index];
                     if (has_statistics) {
@@ -435,6 +436,17 @@ std::vector<std::uint8_t> build_tiled_automatic_mask(
                         ++measured.dust_raw_weak_pixels;
                     }
                 }
+            }
+            // macOS: `responseMap.merge(tile: tile.scratchResponse, tileWidth: tile.dw,
+            // tileHeight: tileHeight, originX: tile.dx0, originY: tile.fieldY0)` —
+            // core 가 아니라 검출 사각형 전체를 그 원점에 병합합니다.
+            if (reject_line_grid) {
+                frame_scratch_response.merge(
+                    workspace.candidates.scratch_response,
+                    workspace.tile.width,
+                    workspace.tile.height,
+                    placement.detect_x0,
+                    placement.detect_y0);
             }
             append_mapped_core_components(
                 workspace,
@@ -471,7 +483,7 @@ std::vector<std::uint8_t> build_tiled_automatic_mask(
                 frame,
                 static_cast<int>(std::min(core_width, core_height)));
             const std::vector<std::uint8_t> line_drops = continuation_drops(
-                scratch, frame, frame_scratch_response);
+                scratch, region_width, frame_scratch_response);
             for (std::size_t index = 0U; index < scratch.size(); ++index) {
                 if (grid_drops[index] != 0U || line_drops[index] != 0U) {
                     drop[scratch_index[index]] = 1U;
