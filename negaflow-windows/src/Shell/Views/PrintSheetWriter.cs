@@ -168,7 +168,7 @@ public static class PrintSheetWriter
 
     private static async Task<PrintSizeMm?> PixelSizeAsync(string path)
     {
-        using IRandomAccessStream stream = await OpenAsync(path, FileAccess.Read);
+        using IRandomAccessStream stream = await PrintSheetFile.OpenAsync(path, FileAccess.Read);
         BitmapDecoder decoder = await BitmapDecoder.CreateAsync(stream);
         return decoder.PixelWidth > 0 && decoder.PixelHeight > 0
             ? new PrintSizeMm(decoder.PixelWidth, decoder.PixelHeight)
@@ -183,22 +183,22 @@ public static class PrintSheetWriter
     {
         int width = (int)layout.CanvasSize.Width;
         int height = (int)layout.CanvasSize.Height;
-        byte[] page = NewPage(width, height, composition.SheetBackground);
+        byte[] page = PrintPageCanvas.NewPage(width, height, composition.SheetBackground);
 
         if (layout.FilmRect is { } film)
         {
             // 현상된 컬러 네거티브의 마스크가 남은 비노광 가장자리입니다.
-            Fill(page, width, height, film, 0x0E, 0x2B, 0x70);
+            PrintPageCanvas.Fill(page, width, height, film, 0x0E, 0x2B, 0x70);
         }
-        if (!await BlitAsync(page, width, height, developedPath, layout.ImageRect, 0))
+        if (!await PrintPageCanvas.BlitAsync(page, width, height, developedPath, layout.ImageRect, 0))
         {
             return false;
         }
         foreach (PrintRect hole in layout.PerforationRects)
         {
-            Fill(page, width, height, hole, 0xFF, 0xFF, 0xFF);
+            PrintPageCanvas.Fill(page, width, height, hole, 0xFF, 0xFF, 0xFF);
         }
-        return await EncodeAsync(destination, page, width, height, composition.Dpi);
+        return await PrintSheetEncoder.EncodeAsync(destination, page, width, height, composition.Dpi);
     }
 
     private static async Task<bool> WritePageAsync(
@@ -213,10 +213,10 @@ public static class PrintSheetWriter
     {
         int width = (int)layout.CanvasSize.Width;
         int height = (int)layout.CanvasSize.Height;
-        byte[] page = NewPage(width, height, composition.SheetBackground);
+        byte[] page = PrintPageCanvas.NewPage(width, height, composition.SheetBackground);
         foreach (PrintPackageItemLayout item in layout.Items)
         {
-            if (!await BlitAsync(
+            if (!await PrintPageCanvas.BlitAsync(
                     page,
                     width,
                     height,
@@ -242,7 +242,7 @@ public static class PrintSheetWriter
                 {
                     continue;
                 }
-                await DrawCaptionAsync(page, width, height, textHost, text, caption,
+                await PrintPageCanvas.DrawCaptionAsync(page, width, height, textHost, text, caption,
                     captionAlignment, light);
             }
         }
@@ -250,256 +250,9 @@ public static class PrintSheetWriter
         // 보이지 않습니다.
         foreach (PrintLineSegment segment in layout.CropMarks)
         {
-            DrawLine(page, width, height, segment, light);
+            PrintPageCanvas.DrawLine(page, width, height, segment, light);
         }
-        return await EncodeAsync(destination, page, width, height, composition.Dpi);
+        return await PrintSheetEncoder.EncodeAsync(destination, page, width, height, composition.Dpi);
     }
 
-    /// <summary>
-    /// 캡션 글자를 판에 얹습니다. 글자 화소의 알파로 섞으므로 글자 둘레가 종이 색과 자연스럽게
-    /// 이어집니다 — 알파를 무시하면 글자마다 네모난 상자가 남습니다.
-    /// </summary>
-    private static async Task DrawCaptionAsync(
-        byte[] page,
-        int pageWidth,
-        int pageHeight,
-        Microsoft.UI.Xaml.Controls.Panel textHost,
-        string text,
-        PrintRect rect,
-        PrintPackageCaptionAlignment alignment,
-        bool light)
-    {
-        int width = Math.Max(1, (int)Math.Round(rect.Width));
-        int height = Math.Max(1, (int)Math.Round(rect.Height));
-        if (await PrintTextRasterizer.RenderAsync(textHost, text, width, height, alignment, light)
-            is not { } rendered)
-        {
-            return;
-        }
-        int left = (int)Math.Round(rect.X);
-        int top = (int)Math.Round(rect.Y);
-        for (int y = 0; y < rendered.Height; ++y)
-        {
-            int pageY = top + y;
-            if (pageY < 0 || pageY >= pageHeight)
-            {
-                continue;
-            }
-            for (int x = 0; x < rendered.Width; ++x)
-            {
-                int pageX = left + x;
-                if (pageX < 0 || pageX >= pageWidth)
-                {
-                    continue;
-                }
-                int from = ((y * rendered.Width) + x) * 4;
-                byte alpha = rendered.Pixels[from + 3];
-                if (alpha == 0)
-                {
-                    continue;
-                }
-                int to = ((pageY * pageWidth) + pageX) * 4;
-                for (int channel = 0; channel < 3; ++channel)
-                {
-                    page[to + channel] = (byte)(
-                        ((rendered.Pixels[from + channel] * alpha) +
-                            (page[to + channel] * (255 - alpha))) / 255);
-                }
-            }
-        }
-    }
-
-    /// <summary>
-    /// 재단선 한 줄입니다. 가로나 세로로만 놓이므로 기울어진 선을 그릴 일이 없습니다 — macOS 도
-    /// 칸 모서리에서 수평·수직으로만 뻗습니다.
-    /// </summary>
-    private static void DrawLine(
-        byte[] page,
-        int width,
-        int height,
-        PrintLineSegment segment,
-        bool light)
-    {
-        byte level = light ? (byte)0xFF : (byte)0x00;
-        int x0 = (int)Math.Round(Math.Min(segment.StartX, segment.EndX));
-        int x1 = (int)Math.Round(Math.Max(segment.StartX, segment.EndX));
-        int y0 = (int)Math.Round(Math.Min(segment.StartY, segment.EndY));
-        int y1 = (int)Math.Round(Math.Max(segment.StartY, segment.EndY));
-        // 한 화소 선은 눈에 잘 띄지 않습니다. macOS 와 같이 얇게 두되 최소 한 화소는 채웁니다.
-        Fill(
-            page,
-            width,
-            height,
-            new PrintRect(x0, y0, Math.Max(1, x1 - x0), Math.Max(1, y1 - y0)),
-            level,
-            level,
-            level);
-    }
-
-    /// <summary>BGRA8 한 장입니다. 종이 색으로 채워 시작합니다.</summary>
-    private static byte[] NewPage(int width, int height, PrintSheetBackground background)
-    {
-        byte level = background switch
-        {
-            PrintSheetBackground.Black => 0x00,
-            PrintSheetBackground.Gray => 0x80,
-            _ => 0xFF,
-        };
-        byte[] page = new byte[checked(width * height * 4)];
-        for (int index = 0; index < page.Length; index += 4)
-        {
-            page[index] = level;
-            page[index + 1] = level;
-            page[index + 2] = level;
-            page[index + 3] = 0xFF;
-        }
-        return page;
-    }
-
-    private static void Fill(
-        byte[] page,
-        int width,
-        int height,
-        PrintRect rect,
-        byte blue,
-        byte green,
-        byte red)
-    {
-        int left = Math.Max(0, (int)Math.Round(rect.X));
-        int top = Math.Max(0, (int)Math.Round(rect.Y));
-        int right = Math.Min(width, (int)Math.Round(rect.MaxX));
-        int bottom = Math.Min(height, (int)Math.Round(rect.MaxY));
-        for (int y = top; y < bottom; ++y)
-        {
-            int row = y * width * 4;
-            for (int x = left; x < right; ++x)
-            {
-                int at = row + (x * 4);
-                page[at] = blue;
-                page[at + 1] = green;
-                page[at + 2] = red;
-                page[at + 3] = 0xFF;
-            }
-        }
-    }
-
-    /// <summary>
-    /// 현상된 사진을 그 자리에 놓습니다. 크기 맞추기는 <b>WIC 가</b> 합니다 — 직접 재표본화하면
-    /// 내보내기의 긴 변 축소와 다른 결과가 나옵니다.
-    /// </summary>
-    private static async Task<bool> BlitAsync(
-        byte[] page,
-        int pageWidth,
-        int pageHeight,
-        string sourcePath,
-        PrintRect rect,
-        int quarterTurns)
-    {
-        int width = Math.Max(1, (int)Math.Round(rect.Width));
-        int height = Math.Max(1, (int)Math.Round(rect.Height));
-        // 돌려 놓을 자리라면 원본을 돌린 뒤의 크기로 뽑아야 합니다.
-        bool turned = quarterTurns % 2 != 0;
-        BitmapTransform transform = new()
-        {
-            ScaledWidth = (uint)(turned ? height : width),
-            ScaledHeight = (uint)(turned ? width : height),
-            InterpolationMode = BitmapInterpolationMode.Fant,
-            Rotation = (quarterTurns % 4) switch
-            {
-                1 => BitmapRotation.Clockwise90Degrees,
-                2 => BitmapRotation.Clockwise180Degrees,
-                3 => BitmapRotation.Clockwise270Degrees,
-                _ => BitmapRotation.None,
-            },
-        };
-
-        using IRandomAccessStream stream = await OpenAsync(sourcePath, FileAccess.Read);
-        BitmapDecoder decoder = await BitmapDecoder.CreateAsync(stream);
-        PixelDataProvider pixels = await decoder.GetPixelDataAsync(
-            BitmapPixelFormat.Bgra8,
-            BitmapAlphaMode.Ignore,
-            transform,
-            ExifOrientationMode.IgnoreExifOrientation,
-            ColorManagementMode.DoNotColorManage);
-        byte[] tile = pixels.DetachPixelData();
-        if (tile.Length < width * height * 4)
-        {
-            return false;
-        }
-
-        int left = (int)Math.Round(rect.X);
-        int top = (int)Math.Round(rect.Y);
-        for (int y = 0; y < height; ++y)
-        {
-            int pageY = top + y;
-            if (pageY < 0 || pageY >= pageHeight)
-            {
-                continue;
-            }
-            int sourceRow = y * width * 4;
-            int pageRow = pageY * pageWidth * 4;
-            for (int x = 0; x < width; ++x)
-            {
-                int pageX = left + x;
-                if (pageX < 0 || pageX >= pageWidth)
-                {
-                    continue;
-                }
-                int from = sourceRow + (x * 4);
-                int to = pageRow + (pageX * 4);
-                page[to] = tile[from];
-                page[to + 1] = tile[from + 1];
-                page[to + 2] = tile[from + 2];
-                page[to + 3] = 0xFF;
-            }
-        }
-        return true;
-    }
-
-    /// <summary>
-    /// 판을 PNG 로 씁니다. **해상도를 파일에 적습니다** — 인화소는 그 값으로 실제 크기를
-    /// 정하므로, 빠뜨리면 300dpi 로 짠 판이 72dpi 로 인쇄됩니다.
-    /// </summary>
-    private static async Task<bool> EncodeAsync(
-        string destination,
-        byte[] page,
-        int width,
-        int height,
-        int dpi)
-    {
-        try
-        {
-            Directory.CreateDirectory(Path.GetDirectoryName(destination) ?? ".");
-            using IRandomAccessStream stream = await OpenAsync(destination, FileAccess.ReadWrite);
-            stream.Size = 0;
-            BitmapEncoder encoder = await BitmapEncoder.CreateAsync(
-                BitmapEncoder.PngEncoderId,
-                stream);
-            encoder.SetPixelData(
-                BitmapPixelFormat.Bgra8,
-                BitmapAlphaMode.Ignore,
-                (uint)width,
-                (uint)height,
-                dpi,
-                dpi,
-                page);
-            await encoder.FlushAsync();
-            return true;
-        }
-        catch (Exception exception) when (
-            exception is IOException or UnauthorizedAccessException)
-        {
-            return false;
-        }
-    }
-
-    private static async Task<IRandomAccessStream> OpenAsync(string path, FileAccess access)
-    {
-        FileStream file = new(
-            path,
-            access == FileAccess.Read ? FileMode.Open : FileMode.OpenOrCreate,
-            access,
-            FileShare.Read);
-        return await Task.FromResult(file.AsRandomAccessStream());
-    }
 }

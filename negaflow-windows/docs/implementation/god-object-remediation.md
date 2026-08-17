@@ -75,9 +75,9 @@
 | `tests/Native.ConformanceTests/scalar_conformance.cpp` | 526 | scalar/native conformance 단일 suite |
 | `src/Native/imaging/defect_clone_stamp.cpp` | 522 | clone stamp 단일 알고리즘 |
 | `src/Native/core/tiff_deflate_validator.cpp` | 515 | TIFF Deflate payload 검증 단일 알고리즘 |
-| `src/Shell/Views/PrintSheetWriter.cs` | 505 | 미해결 |
+| ~~`src/Shell/Views/PrintSheetWriter.cs`~~ | 505 → 258 | **해결.** 판 합성 오케스트레이션만 남기고 화소 그리기를 `Views/Print/PrintPageCanvas.cs`(215줄), PNG 굽기를 `Views/Print/PrintSheetEncoder.cs`(49줄), 파일 스트림을 `Views/Print/PrintSheetFile.cs`(20줄)로 옮겼다. 네 파일 모두 500줄 미만 |
 
-미해결 12개: `negaflow_abi.cpp`, `DevelopWorkspaceView.xaml.cs`, `develop_export_abi_tests.cpp`, `LibraryWorkspaceView.xaml.cs`, `DevelopWorkspaceView.xaml`, `NativeDevelopExporter.cs`, `develop_export.cpp`, `tiff_probe.cpp`, `LibraryWorkspaceView.xaml`, `PrintWorkspaceView.Composition.cs`, `DevelopPanelState.cs`, `PrintSheetWriter.cs`.
+미해결 11개: `negaflow_abi.cpp`, `DevelopWorkspaceView.xaml.cs`, `develop_export_abi_tests.cpp`, `LibraryWorkspaceView.xaml.cs`, `DevelopWorkspaceView.xaml`, `NativeDevelopExporter.cs`, `develop_export.cpp`, `tiff_probe.cpp`, `LibraryWorkspaceView.xaml`, `PrintWorkspaceView.Composition.cs`, `DevelopPanelState.cs`.
 
 사유가 적힌 35개도 "줄 수가 커도 된다"는 뜻이 아니라 "지금 확인한 근거로는 서로 독립적인 변경 이유가 하나뿐"이라는 뜻이다. 새 책임이 붙으면 다시 미해결로 옮긴다.
 
