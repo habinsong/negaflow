@@ -482,6 +482,36 @@ public sealed record DevelopDefectSourceIdentity(ulong ByteCount, string Sha256)
 /// 마스크에 필요한 바이트 수입니다. 버퍼가 모자라 실패했을 때도 채워지므로, 이 값으로
 /// 다시 부르면 됩니다.
 /// </param>
+/// <summary>
+/// 검출기가 고른 물리 결함 종류입니다. 값은 네이티브
+/// <c>grain_mend_detail::DefectClassification</c> 과 같은 순서여야 합니다 — 순서가 어긋나면
+/// 분류가 통째로 밀립니다.
+/// </summary>
+public enum GrainMendDefectClass
+{
+    Dust = 0,
+    Pinhole = 1,
+    ScratchHorizontal = 2,
+    ScratchVertical = 3,
+    ScratchDiagonal = 4,
+    EmulsionDamage = 5,
+    MicroSpeck = 6,
+}
+
+/// <summary>
+/// 채택된 결함 하나입니다. 좌표는 검출 이미지
+/// (<see cref="GrainMendDetectionResult.Width"/>×<see cref="GrainMendDetectionResult.Height"/>)
+/// 기준입니다.
+/// </summary>
+public readonly record struct GrainMendComponent(
+    GrainMendDefectClass Classification,
+    double Confidence,
+    ulong Area,
+    uint MinimumX,
+    uint MinimumY,
+    uint MaximumX,
+    uint MaximumY);
+
 public readonly record struct GrainMendDetectionResult(
     DevelopExportResult Result,
     uint Width,
@@ -493,7 +523,14 @@ public readonly record struct GrainMendDetectionResult(
     uint RoiX = 0U,
     uint RoiY = 0U,
     uint RoiWidth = 0U,
-    uint RoiHeight = 0U);
+    uint RoiHeight = 0U,
+    IReadOnlyList<GrainMendComponent>? Components = null)
+{
+    /// <summary>
+    /// 채택된 결함 하나하나. 비어 있으면 분류가 없는 것이며, 지어내지 않습니다.
+    /// </summary>
+    public IReadOnlyList<GrainMendComponent> Defects => Components ?? [];
+}
 
 /// <summary>
 /// GrainMend 자동·가이드 검토에서만 쓰는 일회성 검출기 설정입니다. 수락 전 후보를 바꿀 뿐

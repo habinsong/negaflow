@@ -280,6 +280,19 @@ internal static partial class NativeMethods
         NativeGrainMendDetectionV2* detection,
         NativeDevelopExportResultV3* result);
 
+    [LibraryImport(LibraryName, EntryPoint = "nf_develop_detect_grain_mend_v5")]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static unsafe partial uint nf_develop_detect_grain_mend_v5(
+        NativeDevelopExportRequestV27* request,
+        NativeGrainMendDetectParametersV3* parameters,
+        byte* mask,
+        ulong maskCapacityBytes,
+        NativeGrainMendComponentV1* components,
+        ulong componentCapacity,
+        NativeDevelopRunStateV1* runState,
+        NativeGrainMendDetectionV3* detection,
+        NativeDevelopExportResultV3* result);
+
     [LibraryImport(LibraryName, EntryPoint = "nf_develop_preview_v22")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static unsafe partial uint nf_develop_preview_v22(

@@ -20,6 +20,9 @@ internal static class DefectToolRecipes
     /// </summary>
     public static long LastDetectMilliseconds { get; private set; } = -1L;
 
+    /// <summary>마지막 검출이 낸 결함 컴포넌트 수입니다. 0 이면 분류가 오지 않은 것입니다.</summary>
+    public static int LastDetectComponents { get; private set; } = -1;
+
     /// <summary>가이드는 사용자가 끈 사각형입니다. 가운데 절반을 씁니다.</summary>
     private static readonly DefectRect GuidedRoi = new(0.25, 0.25, 0.5, 0.5);
 
@@ -198,7 +201,9 @@ internal static class DefectToolRecipes
             detected.RoiWidth,
             detected.RoiHeight,
             detected.AcceptedPixels,
-            automatic);
+            automatic,
+            detected.Defects);
+        LastDetectComponents = detected.Defects.Count;
         if (edit is null)
         {
             reason = "region edit refused";

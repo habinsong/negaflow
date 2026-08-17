@@ -130,7 +130,8 @@ public sealed class GrainMendDetectCoordinator
                 detected.RoiWidth,
                 detected.RoiHeight,
                 detected.AcceptedPixels,
-                automatic: IsWholeFrame(roi));
+                automatic: IsWholeFrame(roi),
+                detected.Defects);
             WriteTrace(frame.Id, roi, options, clock.ElapsedMilliseconds, new
             {
                 outcome = "completed",

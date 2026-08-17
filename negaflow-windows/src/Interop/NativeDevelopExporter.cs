@@ -2057,8 +2057,15 @@ public static unsafe class NativeDevelopExporter
     {
         ArgumentNullException.ThrowIfNull(request);
         NativeGrainMendDetectionV2 detection = default;
-        DevelopExportResult result =
-            Render(
+        ulong componentCount = 0UL;
+        // 넉넉히 한 번에 받습니다. 두 번 부르면 검출을 두 번 돌게 되고, 실제 스캔에서
+        // 검출 한 번이 3초를 넘습니다 — 개수를 묻자고 그 값을 두 번 치를 수 없습니다.
+        NativeGrainMendComponentV1[] buffer = new NativeGrainMendComponentV1[
+            InitialGrainMendComponentCapacity];
+        DevelopExportResult result;
+        fixed (NativeGrainMendComponentV1* components = buffer)
+        {
+            result = Render(
                 request,
                 0U,
                 0U,
@@ -2070,7 +2077,38 @@ public static unsafe class NativeDevelopExporter
                 roiY,
                 roiWidth,
                 roiHeight,
-                detectionOptions).Result;
+                detectionOptions,
+                components,
+                (ulong)buffer.Length,
+                &componentCount).Result;
+        }
+        // 모자랐으면 네이티브가 필요한 수를 알려 주고 거절합니다. 잘라 담으면 화면이 일부만
+        // 보고 판단하므로, 정확한 크기로 한 번 더 부릅니다.
+        if (!result.Succeeded &&
+            string.Equals(result.FailureName, "component_buffer_too_small", StringComparison.Ordinal) &&
+            componentCount > 0UL && componentCount <= MaximumGrainMendComponents)
+        {
+            buffer = new NativeGrainMendComponentV1[(int)componentCount];
+            fixed (NativeGrainMendComponentV1* components = buffer)
+            {
+                result = Render(
+                    request,
+                    0U,
+                    0U,
+                    mask,
+                    run,
+                    null,
+                    &detection,
+                    roiX,
+                    roiY,
+                    roiWidth,
+                    roiHeight,
+                    detectionOptions,
+                    components,
+                    (ulong)buffer.Length,
+                    &componentCount).Result;
+            }
+        }
         return new GrainMendDetectionResult(
             result,
             detection.Width,
@@ -2082,7 +2120,41 @@ public static unsafe class NativeDevelopExporter
             detection.RoiX,
             detection.RoiY,
             detection.RoiWidth,
-            detection.RoiHeight);
+            detection.RoiHeight,
+            ReadComponents(buffer, componentCount));
+    }
+
+    /// <summary>
+    /// 한 프레임에서 나올 법한 결함 수보다 넉넉합니다. 실제 스캔에서 자동 검출은 수천 개를
+    /// 냅니다.
+    /// </summary>
+    private const int InitialGrainMendComponentCapacity = 65_536;
+
+    /// <summary>지어낸 수를 믿고 거대한 배열을 잡지 않기 위한 상한입니다.</summary>
+    private const ulong MaximumGrainMendComponents = 4_000_000UL;
+
+    private static IReadOnlyList<GrainMendComponent> ReadComponents(
+        NativeGrainMendComponentV1[] buffer,
+        ulong count)
+    {
+        if (count == 0UL || count > (ulong)buffer.Length)
+        {
+            return [];
+        }
+        GrainMendComponent[] components = new GrainMendComponent[(int)count];
+        for (int index = 0; index < components.Length; ++index)
+        {
+            NativeGrainMendComponentV1 native = buffer[index];
+            components[index] = new GrainMendComponent(
+                (GrainMendDefectClass)native.Classification,
+                native.Confidence,
+                native.Area,
+                native.MinimumX,
+                native.MinimumY,
+                native.MaximumX,
+                native.MaximumY);
+        }
+        return components;
     }
 
     private readonly ref struct RenderOutcome
@@ -2104,7 +2176,10 @@ public static unsafe class NativeDevelopExporter
         double roiY = 0.0,
         double roiWidth = 1.0,
         double roiHeight = 1.0,
-        GrainMendDetectionOptions? detectionOptions = null)
+        GrainMendDetectionOptions? detectionOptions = null,
+        NativeGrainMendComponentV1* components = null,
+        ulong componentCapacity = 0UL,
+        ulong* componentCount = null)
     {
         ValidateLayoutAndEnums(request);
         GrainMendDetectionOptions effectiveDetectionOptions =
@@ -2249,15 +2324,25 @@ public static unsafe class NativeDevelopExporter
                     },
                     DetectMicroSpecks = effectiveDetectionOptions.DetectMicroSpecks ? 1U : 0U,
                 };
-                detection->StructSize = (uint)sizeof(NativeGrainMendDetectionV2);
-                status = NativeMethods.nf_develop_detect_grain_mend_v4(
+                // 중첩 구조라 안쪽 V2 의 StructSize 가 전체 크기를 말합니다.
+                NativeGrainMendDetectionV3 detectionV3 = default;
+                detectionV3.V2.StructSize = (uint)sizeof(NativeGrainMendDetectionV3);
+                status = NativeMethods.nf_develop_detect_grain_mend_v5(
                     &v27,
                     &detectionParameters,
                     pixels.IsEmpty ? null : pixelBuffer,
                     (ulong)pixels.Length,
+                    components,
+                    componentCapacity,
                     runState,
-                    detection,
+                    &detectionV3,
                     &raw);
+                *detection = detectionV3.V2;
+                detection->StructSize = (uint)sizeof(NativeGrainMendDetectionV2);
+                if (componentCount is not null)
+                {
+                    *componentCount = detectionV3.ComponentCount;
+                }
             }
             else
             {

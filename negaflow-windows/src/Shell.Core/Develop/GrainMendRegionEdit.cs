@@ -1,4 +1,5 @@
 using Negaflow.Catalog;
+using Negaflow.Interop;
 
 namespace Negaflow.Shell;
 
@@ -35,6 +36,11 @@ public static class GrainMendRegionEdit
     /// </summary>
     public const byte DefectMaskWeight = 255;
 
+    /// <param name="defects">
+    /// 검출기가 분류한 결함들입니다. 비어 있으면 종류를 지어내지 않고 검출 화소 수만
+    /// 먼지 하나로 냅니다 — 옛 경로와 같은 모양이며, 그것이 정확하지 않다는 사실은
+    /// <see cref="DefectClassBreakdown"/> 가 하나뿐인 것으로 드러납니다.
+    /// </param>
     public static DefectEditItem? From(
         ReadOnlySpan<byte> mask,
         int width,
@@ -46,7 +52,8 @@ public static class GrainMendRegionEdit
         uint roiWidth,
         uint roiHeight,
         ulong acceptedPixels,
-        bool automatic)
+        bool automatic,
+        IReadOnlyList<GrainMendComponent>? defects = null)
     {
         if (width <= 2 || height <= 2 ||
             mask.Length != checked(width * height) ||
@@ -149,16 +156,16 @@ public static class GrainMendRegionEdit
             DefectEditKind.Region,
             Enabled: true,
             Strength: 1.0,
+            // 이름표의 수는 macOS 와 같이 **결함 개수**입니다. 분류가 없을 때만 채택 화소
+            // 수로 물러섭니다.
             new DefectEditLabel(
                 automatic ? DefectEditLabelKind.Automatic : DefectEditLabelKind.Guided,
-                checked((int)acceptedPixels)),
+                defects is { Count: > 0 }
+                    ? defects.Count
+                    : checked((int)acceptedPixels)),
             new DefectEditSummary(
                 DefectEditSummaryKind.ClassBreakdown,
-                // 검출기는 먼지와 스크래치를 한 마스크로 합쳐 내주므로 종류별로 나눌 수
-                // 없습니다. 지어내지 않고 하나로 셉니다.
-                new DefectClassBreakdown(
-                    [new DefectClassCount(DefectClassification.Dust, checked((int)acceptedPixels))],
-                    1.0)),
+                Breakdown(defects, acceptedPixels)),
             new DefectSize(sourceWidth, sourceHeight),
             [])
         {
@@ -170,6 +177,44 @@ public static class GrainMendRegionEdit
             RegionHeight = storedHeight,
         };
     }
+
+    /// <summary>
+    /// 분류별 개수와 평균 confidence 입니다. macOS <c>DefectClassBreakdown(components:)</c> 과
+    /// 같이 <b>분류 순서</b>대로 셉니다.
+    /// </summary>
+    private static DefectClassBreakdown Breakdown(
+        IReadOnlyList<GrainMendComponent>? defects,
+        ulong acceptedPixels)
+    {
+        if (defects is not { Count: > 0 })
+        {
+            // 검출기가 분류를 내지 못했습니다. 종류를 지어내는 대신 옛 모양 그대로 냅니다.
+            return new DefectClassBreakdown(
+                [new DefectClassCount(DefectClassification.Dust, checked((int)acceptedPixels))],
+                1.0);
+        }
+
+        DefectClassCount[] counts = [.. defects
+            .GroupBy(defect => Map(defect.Classification))
+            .OrderBy(group => group.Key)
+            .Select(group => new DefectClassCount(group.Key, group.Count()))];
+        return new DefectClassBreakdown(
+            counts,
+            defects.Average(defect => defect.Confidence));
+    }
+
+    private static DefectClassification Map(GrainMendDefectClass classification) =>
+        classification switch
+        {
+            GrainMendDefectClass.Pinhole => DefectClassification.Pinhole,
+            GrainMendDefectClass.ScratchHorizontal =>
+                DefectClassification.ScratchHorizontal,
+            GrainMendDefectClass.ScratchVertical => DefectClassification.ScratchVertical,
+            GrainMendDefectClass.ScratchDiagonal => DefectClassification.ScratchDiagonal,
+            GrainMendDefectClass.EmulsionDamage => DefectClassification.EmulsionDamage,
+            GrainMendDefectClass.MicroSpeck => DefectClassification.MicroSpeck,
+            _ => DefectClassification.Dust,
+        };
 
     private static byte SampleMask(
         ReadOnlySpan<byte> mask,

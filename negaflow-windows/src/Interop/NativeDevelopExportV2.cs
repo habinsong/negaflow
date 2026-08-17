@@ -831,6 +831,35 @@ internal struct NativeGrainMendDetectionV2
     internal uint RoiHeight;
 }
 
+/// <summary>
+/// 채택된 결함 하나입니다. <c>Classification</c> 은 네이티브
+/// <c>grain_mend_detail::DefectClassification</c> 과 같은 순서이며, 좌표는 검출 이미지
+/// 기준입니다.
+/// </summary>
+[StructLayout(LayoutKind.Sequential)]
+internal struct NativeGrainMendComponentV1
+{
+    internal uint StructSize;
+    internal uint Classification;
+    internal double Confidence;
+    internal ulong Area;
+    internal uint MinimumX;
+    internal uint MinimumY;
+    internal uint MaximumX;
+    internal uint MaximumY;
+}
+
+/// <summary>
+/// V2 에 컴포넌트 수를 더한 것입니다. 중첩 구조라 <b>안쪽 V2 의 StructSize 가 전체 크기를
+/// 말합니다</b> — 네이티브 <c>nf_grain_mend_detect_parameters_v3</c> 와 같은 규약입니다.
+/// </summary>
+[StructLayout(LayoutKind.Sequential)]
+internal struct NativeGrainMendDetectionV3
+{
+    internal NativeGrainMendDetectionV2 V2;
+    internal ulong ComponentCount;
+}
+
 [StructLayout(LayoutKind.Sequential)]
 internal struct NativeDevelopRunStateV1
 {

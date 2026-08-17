@@ -111,6 +111,7 @@ internal static class DefectToolDiagnostics
             stage = "timing",
             tool,
             detectMilliseconds = DefectToolRecipes.LastDetectMilliseconds,
+            components = DefectToolRecipes.LastDetectComponents,
         }));
 
     /// <returns>이 도구가 실제로 화소를 바꿨으면 참입니다.</returns>
@@ -164,6 +165,12 @@ internal static class DefectToolDiagnostics
             cloneStrokes = item.CloneStrokes?.Count ?? 0,
             clusters = item.Clusters?.Count ?? 0,
             regionMaskBytes = item.RegionMask?.Data.Length ?? 0,
+            // 분류가 실제로 화면까지 오는지 봅니다. "Dust N · 100%" 하나뿐이면 아직
+            // 검출기가 종류를 못 내고 있다는 뜻입니다.
+            classes = item.Summary.ClassBreakdown?.Counts
+                .Select(count => $"{count.Classification}:{count.Count}")
+                .ToArray() ?? [],
+            meanConfidence = item.Summary.ClassBreakdown?.MeanConfidence ?? -1.0,
             projectedRegions = projected?.DefectRegions.Count ?? -1,
             projectedBrushes = projected?.DefectBrushes.Count ?? -1,
             projectedClones = projected?.DefectClones.Count ?? -1,
