@@ -3988,51 +3988,24 @@ public sealed partial class DevelopWorkspaceView : UserControl
         {
             return;
         }
-        ExportFolderPathText.Text = string.IsNullOrWhiteSpace(exportSettings.FolderPath)
-            ? AppResources.Get("developExportFolderBesideSource", "Text")
-            : exportSettings.FolderPath;
-        QuickExportFolderPathText.Text = string.IsNullOrWhiteSpace(quickExportSettings.FolderPath)
-            ? AppResources.Get("developExportFolderBesideSource", "Text")
-            : quickExportSettings.FolderPath;
-        if (panel?.SelectedFrame is { } frame)
-        {
-            ExportPreviewText.Text = exportSettings.Destination.FileNameFor(
-                frame.SourcePath,
-                NamingContextFor(frame));
-            QuickExportFilenameText.Text =
-                quickExportSettings.Destination.FileNameFor(frame.SourcePath);
-            ExportSourceSummaryText.Text = DescribeExportSource(frame);
-        }
-        else
-        {
-            ExportPreviewText.Text = string.Empty;
-            QuickExportFilenameText.Text = string.Empty;
-            ExportSourceSummaryText.Text = string.Empty;
-        }
-        ExportButton.IsEnabled = panel?.CanExport == true;
-        QuickExportButton.IsEnabled = panel?.CanExport == true;
-        int selectedCount = libraryHost?.SelectedFrames.Count ?? 0;
-        string exportTitle = AppResources.Get("exportSection", "Text");
-        SetButtonText(
-            ExportButton,
-            selectedCount > 1
-                ? string.Create(CultureInfo.CurrentCulture, $"{exportTitle} ({selectedCount})")
-                : exportTitle);
-    }
-
-    /// <summary>
-    /// 소스 탭의 한 줄 요약입니다. macOS 는 여기에 스캔 DPI 도 적지만 Windows 카탈로그는 아직
-    /// DPI 를 기록하지 않으므로 기록된 값만 냅니다.
-    /// </summary>
-    private static string DescribeExportSource(LibraryFrameSnapshot frame)
-    {
-        if (frame.SourceMetadata is not { IsValid: true } metadata)
-        {
-            return string.Empty;
-        }
-        return string.Create(
-            CultureInfo.CurrentCulture,
-            $"{metadata.PixelWidth}×{metadata.PixelHeight} px · {metadata.BitsPerSample}-bit");
+        LibraryFrameSnapshot? frame = panel?.SelectedFrame;
+        ExportPanelView view = ExportPanelProjection.Create(
+            frame,
+            exportSettings,
+            quickExportSettings,
+            frame is null ? null : NamingContextFor(frame),
+            panel?.CanExport == true,
+            libraryHost?.SelectedFrames.Count ?? 0,
+            AppResources.Get("developExportFolderBesideSource", "Text"),
+            AppResources.Get("exportSection", "Text"));
+        ExportFolderPathText.Text = view.ExportFolderPath;
+        QuickExportFolderPathText.Text = view.QuickExportFolderPath;
+        ExportPreviewText.Text = view.ExportFileNamePreview;
+        QuickExportFilenameText.Text = view.QuickExportFileName;
+        ExportSourceSummaryText.Text = view.SourceSummary;
+        ExportButton.IsEnabled = view.CanExport;
+        QuickExportButton.IsEnabled = view.CanExport;
+        SetButtonText(ExportButton, view.ExportButtonText);
     }
 
     /// <summary>
