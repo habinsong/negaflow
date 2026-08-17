@@ -847,6 +847,16 @@ internal struct NativeGrainMendComponentV1
     internal uint MinimumY;
     internal uint MaximumX;
     internal uint MaximumY;
+    internal ulong PreviewPointOffset;
+    internal ulong PreviewPointCount;
+}
+
+/// <summary>검출 이미지 기준 좌표입니다(원본 화소가 아닙니다).</summary>
+[StructLayout(LayoutKind.Sequential)]
+internal struct NativeGrainMendPreviewPointV1
+{
+    internal uint X;
+    internal uint Y;
 }
 
 /// <summary>
@@ -858,6 +868,7 @@ internal struct NativeGrainMendDetectionV3
 {
     internal NativeGrainMendDetectionV2 V2;
     internal ulong ComponentCount;
+    internal ulong PreviewPointCount;
 }
 
 [StructLayout(LayoutKind.Sequential)]

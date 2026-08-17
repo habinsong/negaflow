@@ -1511,13 +1511,24 @@ typedef struct nf_grain_mend_component_v1 {
     uint32_t minimum_y;
     uint32_t maximum_x;
     uint32_t maximum_y;
+    /* 이 컴포넌트의 미리보기 점이 놓인 자리. 점들은 컴포넌트 순서대로 한 평면 배열에
+       이어 담긴다 — 배열 하나만 넘기면 되므로 IR 경로와 같은 모양이다. */
+    uint64_t preview_point_offset;
+    uint64_t preview_point_count;
 } nf_grain_mend_component_v1;
+
+/* 검출 이미지 기준 좌표다(원본 화소가 아니다). */
+typedef struct nf_grain_mend_preview_point_v1 {
+    uint32_t x;
+    uint32_t y;
+} nf_grain_mend_preview_point_v1;
 
 /* v2 에 컴포넌트 수를 더한다. 마스크와 같은 두 번 부르기 규약이다: 버퍼를 null 로 주면
    개수만 채워 돌려주고, 그 크기로 다시 부르면 복사한다. 검출을 다시 돌리지 않는다. */
 typedef struct nf_grain_mend_detection_v3 {
     nf_grain_mend_detection_v2 v2;
     uint64_t component_count;
+    uint64_t preview_point_count;
 } nf_grain_mend_detection_v3;
 
 NF_API nf_status_t NF_CALL nf_develop_detect_grain_mend_v1(
@@ -1564,6 +1575,8 @@ NF_API nf_status_t NF_CALL nf_develop_detect_grain_mend_v5(
     uint64_t mask_capacity_bytes,
     nf_grain_mend_component_v1* components,
     uint64_t component_capacity,
+    nf_grain_mend_preview_point_v1* preview_points,
+    uint64_t preview_point_capacity,
     nf_develop_run_state_v1* run_state,
     nf_grain_mend_detection_v3* detection,
     nf_develop_export_result_v3* result);

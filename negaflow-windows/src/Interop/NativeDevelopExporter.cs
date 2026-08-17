@@ -2062,8 +2062,13 @@ public static unsafe class NativeDevelopExporter
         // 검출 한 번이 3초를 넘습니다 — 개수를 묻자고 그 값을 두 번 치를 수 없습니다.
         NativeGrainMendComponentV1[] buffer = new NativeGrainMendComponentV1[
             InitialGrainMendComponentCapacity];
+        // 미리보기 점은 macOS 와 같은 예산(24,000)으로 솎여 오므로 상한이 정해져 있습니다.
+        NativeGrainMendPreviewPointV1[] points =
+            new NativeGrainMendPreviewPointV1[MaximumGrainMendPreviewPoints];
+        ulong pointCount = 0UL;
         DevelopExportResult result;
         fixed (NativeGrainMendComponentV1* components = buffer)
+        fixed (NativeGrainMendPreviewPointV1* previewPoints = points)
         {
             result = Render(
                 request,
@@ -2080,7 +2085,10 @@ public static unsafe class NativeDevelopExporter
                 detectionOptions,
                 components,
                 (ulong)buffer.Length,
-                &componentCount).Result;
+                &componentCount,
+                previewPoints,
+                (ulong)points.Length,
+                &pointCount).Result;
         }
         // 모자랐으면 네이티브가 필요한 수를 알려 주고 거절합니다. 잘라 담으면 화면이 일부만
         // 보고 판단하므로, 정확한 크기로 한 번 더 부릅니다.
@@ -2090,6 +2098,7 @@ public static unsafe class NativeDevelopExporter
         {
             buffer = new NativeGrainMendComponentV1[(int)componentCount];
             fixed (NativeGrainMendComponentV1* components = buffer)
+            fixed (NativeGrainMendPreviewPointV1* previewPoints = points)
             {
                 result = Render(
                     request,
@@ -2106,7 +2115,10 @@ public static unsafe class NativeDevelopExporter
                     detectionOptions,
                     components,
                     (ulong)buffer.Length,
-                    &componentCount).Result;
+                    &componentCount,
+                    previewPoints,
+                    (ulong)points.Length,
+                    &pointCount).Result;
             }
         }
         return new GrainMendDetectionResult(
@@ -2121,7 +2133,7 @@ public static unsafe class NativeDevelopExporter
             detection.RoiY,
             detection.RoiWidth,
             detection.RoiHeight,
-            ReadComponents(buffer, componentCount));
+            ReadComponents(buffer, componentCount, points, pointCount));
     }
 
     /// <summary>
@@ -2133,9 +2145,42 @@ public static unsafe class NativeDevelopExporter
     /// <summary>지어낸 수를 믿고 거대한 배열을 잡지 않기 위한 상한입니다.</summary>
     private const ulong MaximumGrainMendComponents = 4_000_000UL;
 
+    /// <summary>macOS 미리보기 예산과 같습니다. 넘게 오지 않습니다.</summary>
+    private const int MaximumGrainMendPreviewPoints = 24_000;
+
+    /// <summary>
+    /// 한 컴포넌트의 미리보기 점입니다. 네이티브가 모든 컴포넌트의 점을 한 평면 배열에
+    /// 이어 담고 각자 어디서 시작하는지만 알려 줍니다 — 배열 하나만 오가면 되므로 IR
+    /// 경로와 같은 모양입니다.
+    /// </summary>
+    private static IReadOnlyList<GrainMendPreviewPoint> ReadPoints(
+        NativeGrainMendPreviewPointV1[] points,
+        ulong pointCount,
+        NativeGrainMendComponentV1 component)
+    {
+        ulong available = Math.Min(pointCount, (ulong)points.Length);
+        if (component.PreviewPointCount == 0UL ||
+            component.PreviewPointOffset >= available ||
+            component.PreviewPointCount > available - component.PreviewPointOffset)
+        {
+            return [];
+        }
+        GrainMendPreviewPoint[] result =
+            new GrainMendPreviewPoint[(int)component.PreviewPointCount];
+        for (int index = 0; index < result.Length; ++index)
+        {
+            NativeGrainMendPreviewPointV1 point =
+                points[(int)component.PreviewPointOffset + index];
+            result[index] = new GrainMendPreviewPoint(point.X, point.Y);
+        }
+        return result;
+    }
+
     private static IReadOnlyList<GrainMendComponent> ReadComponents(
         NativeGrainMendComponentV1[] buffer,
-        ulong count)
+        ulong count,
+        NativeGrainMendPreviewPointV1[] points,
+        ulong pointCount)
     {
         if (count == 0UL || count > (ulong)buffer.Length)
         {
@@ -2152,7 +2197,8 @@ public static unsafe class NativeDevelopExporter
                 native.MinimumX,
                 native.MinimumY,
                 native.MaximumX,
-                native.MaximumY);
+                native.MaximumY,
+                ReadPoints(points, pointCount, native));
         }
         return components;
     }
@@ -2179,7 +2225,10 @@ public static unsafe class NativeDevelopExporter
         GrainMendDetectionOptions? detectionOptions = null,
         NativeGrainMendComponentV1* components = null,
         ulong componentCapacity = 0UL,
-        ulong* componentCount = null)
+        ulong* componentCount = null,
+        NativeGrainMendPreviewPointV1* previewPoints = null,
+        ulong previewPointCapacity = 0UL,
+        ulong* previewPointCount = null)
     {
         ValidateLayoutAndEnums(request);
         GrainMendDetectionOptions effectiveDetectionOptions =
@@ -2334,6 +2383,8 @@ public static unsafe class NativeDevelopExporter
                     (ulong)pixels.Length,
                     components,
                     componentCapacity,
+                    previewPoints,
+                    previewPointCapacity,
                     runState,
                     &detectionV3,
                     &raw);
@@ -2342,6 +2393,10 @@ public static unsafe class NativeDevelopExporter
                 if (componentCount is not null)
                 {
                     *componentCount = detectionV3.ComponentCount;
+                }
+                if (previewPointCount is not null)
+                {
+                    *previewPointCount = detectionV3.PreviewPointCount;
                 }
             }
             else

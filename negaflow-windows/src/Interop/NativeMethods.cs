@@ -289,6 +289,8 @@ internal static partial class NativeMethods
         ulong maskCapacityBytes,
         NativeGrainMendComponentV1* components,
         ulong componentCapacity,
+        NativeGrainMendPreviewPointV1* previewPoints,
+        ulong previewPointCapacity,
         NativeDevelopRunStateV1* runState,
         NativeGrainMendDetectionV3* detection,
         NativeDevelopExportResultV3* result);

@@ -510,7 +510,18 @@ public readonly record struct GrainMendComponent(
     uint MinimumX,
     uint MinimumY,
     uint MaximumX,
-    uint MaximumY);
+    uint MaximumY,
+    IReadOnlyList<GrainMendPreviewPoint>? PreviewPoints = null)
+{
+    /// <summary>
+    /// 이 결함을 화면에 표시할 점들입니다. macOS <c>previewComponents</c> 와 같은 규칙으로
+    /// 솎여 있습니다 — 전체 예산 24,000 점, 컴포넌트당 최대 800 점.
+    /// </summary>
+    public IReadOnlyList<GrainMendPreviewPoint> Points => PreviewPoints ?? [];
+}
+
+/// <summary>검출 이미지 기준 좌표입니다(원본 화소가 아닙니다).</summary>
+public readonly record struct GrainMendPreviewPoint(uint X, uint Y);
 
 public readonly record struct GrainMendDetectionResult(
     DevelopExportResult Result,

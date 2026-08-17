@@ -4795,6 +4795,9 @@ static nf_status_t detect_grain_mend_shared(
     const uint64_t mask_capacity_bytes,
     nf_grain_mend_component_v1* const components,
     const uint64_t component_capacity,
+    nf_grain_mend_preview_point_v1* const preview_points,
+    const uint64_t preview_point_capacity,
+    uint64_t* const preview_point_count,
     uint64_t* const component_count,
     nf_develop_run_state_v1* const run_state,
     nf_grain_mend_detection_v2* const detection,
@@ -4832,6 +4835,9 @@ static nf_status_t detect_grain_mend_shared(
     detection->roi_height = 0U;
     if (component_count != nullptr) {
         *component_count = 0U;
+    }
+    if (preview_point_count != nullptr) {
+        *preview_point_count = 0U;
     }
     negaflow::pipeline::DevelopRunControl control{};
     if (!prepare_run_state(run_state, control, status)) {
@@ -4879,16 +4885,41 @@ static nf_status_t detect_grain_mend_shared(
     detection->roi_height = detected.roi_height;
     // 컴포넌트는 마스크와 같은 두 번 부르기 규약입니다: 버퍼가 null 이면 개수만
     // 알려 주고, 모자라면 거절합니다 — 잘라 담으면 화면이 일부만 보고 판단합니다.
+    //
+    // 미리보기 점은 macOS `previewComponents` 와 같은 규칙으로 솎습니다: 전체 예산
+    // 24,000 점을 컴포넌트 수로 나누되 하나당 800 을 넘지 않게 하고, 그 수에 맞는
+    // 간격으로 건너뛰며 고릅니다. 전부 실으면 화면이 과밀해지고 비용도 큽니다.
     if (component_count != nullptr) {
+        constexpr std::size_t total_preview_budget = 24000U;
+        constexpr std::size_t maximum_preview_per_component = 800U;
         *component_count = detected.components.size();
+        const std::size_t per_component = std::max<std::size_t>(
+            1U,
+            std::min(
+                maximum_preview_per_component,
+                total_preview_budget /
+                    std::max<std::size_t>(1U, detected.components.size())));
+        std::size_t total_points = 0U;
+        for (const auto& source : detected.components) {
+            const std::size_t stride = std::max<std::size_t>(
+                1U,
+                (source.pixels.size() + per_component - 1U) / per_component);
+            total_points += (source.pixels.size() + stride - 1U) / stride;
+        }
+        if (preview_point_count != nullptr) {
+            *preview_point_count = total_points;
+        }
         if (components != nullptr) {
-            if (component_capacity < detected.components.size()) {
+            if (component_capacity < detected.components.size() ||
+                (preview_points != nullptr &&
+                 preview_point_capacity < total_points)) {
                 result->succeeded = 0U;
                 copy_failure_name(
                     "component_buffer_too_small",
                     result->failure_name);
                 return NF_STATUS_OK;
             }
+            std::size_t written = 0U;
             for (std::size_t index = 0U; index < detected.components.size(); ++index) {
                 const auto& source = detected.components[index];
                 nf_grain_mend_component_v1& target = components[index];
@@ -4901,6 +4932,26 @@ static nf_status_t detect_grain_mend_shared(
                 target.minimum_y = source.minimum_y;
                 target.maximum_x = source.maximum_x;
                 target.maximum_y = source.maximum_y;
+                target.preview_point_offset = written;
+                const std::size_t stride = std::max<std::size_t>(
+                    1U,
+                    (source.pixels.size() + per_component - 1U) / per_component);
+                std::size_t taken = 0U;
+                for (std::size_t pixel = 0U;
+                     pixel < source.pixels.size();
+                     pixel += stride) {
+                    if (preview_points != nullptr) {
+                        nf_grain_mend_preview_point_v1& point =
+                            preview_points[written + taken];
+                        point.x = static_cast<std::uint32_t>(
+                            source.pixels[pixel] % detected.width);
+                        point.y = static_cast<std::uint32_t>(
+                            source.pixels[pixel] / detected.width);
+                    }
+                    ++taken;
+                }
+                target.preview_point_count = taken;
+                written += taken;
             }
         }
     }
@@ -4925,6 +4976,9 @@ nf_status_t NF_CALL nf_develop_detect_grain_mend_v4(
         nullptr,
         0U,
         nullptr,
+        0U,
+        nullptr,
+        nullptr,
         run_state,
         detection,
         result);
@@ -4937,6 +4991,8 @@ nf_status_t NF_CALL nf_develop_detect_grain_mend_v5(
     const uint64_t mask_capacity_bytes,
     nf_grain_mend_component_v1* const components,
     const uint64_t component_capacity,
+    nf_grain_mend_preview_point_v1* const preview_points,
+    const uint64_t preview_point_capacity,
     nf_develop_run_state_v1* const run_state,
     nf_grain_mend_detection_v3* const detection,
     nf_develop_export_result_v3* const result) {
@@ -4954,6 +5010,9 @@ nf_status_t NF_CALL nf_develop_detect_grain_mend_v5(
         mask_capacity_bytes,
         components,
         component_capacity,
+        preview_points,
+        preview_point_capacity,
+        &detection->preview_point_count,
         &detection->component_count,
         run_state,
         &detection->v2,
