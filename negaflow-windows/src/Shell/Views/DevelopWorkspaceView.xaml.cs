@@ -3257,10 +3257,6 @@ public sealed partial class DevelopWorkspaceView : UserControl
     }
 
     /// <summary>필름 목록 한 줄과 한 묶음입니다. 화면에 나가는 것만 담습니다.</summary>
-    private sealed record FilmLookChoice(FilmEmulation Emulation, string Name, bool IsSelected);
-
-    private sealed record FilmLookGroup(string Title, IReadOnlyList<FilmLookChoice> Films);
-
     private void UpdateFilmLookControls()
     {
         if (FilmLookGroups is null)
@@ -3276,30 +3272,11 @@ public sealed partial class DevelopWorkspaceView : UserControl
             return;
         }
 
-        FilmEmulation current = panel.FilmEmulation;
-        List<FilmLookGroup> groups =
-        [
-            // macOS 와 같이 첫 자리는 룩을 끄는 선택입니다.
-            new(
-                AppResources.Get("developFilmLookNone", "Text"),
-                [new FilmLookChoice(
-                    FilmEmulation.None,
-                    AppResources.Get("developFilmLookNone", "Text"),
-                    current == FilmEmulation.None)]),
-        ];
-        foreach (FilmEmulationKind kind in FilmEmulationCatalog.KindsFor(frame.Route.FilmType))
-        {
-            List<FilmLookChoice> films = [];
-            foreach (FilmEmulation emulation in FilmEmulationCatalog.Films(kind))
-            {
-                films.Add(new FilmLookChoice(
-                    emulation,
-                    FilmEmulationCatalog.DisplayName(emulation),
-                    emulation == current));
-            }
-            groups.Add(new FilmLookGroup(FilmGroupTitle(kind), films));
-        }
-        FilmLookGroups.ItemsSource = groups;
+        FilmLookGroups.ItemsSource = FilmLookMenuProjection.Groups(
+            frame.Route.FilmType,
+            panel.FilmEmulation,
+            AppResources.Get("developFilmLookNone", "Text"),
+            FilmGroupTitle);
         isSynchronizingInspector = true;
         try
         {
@@ -3311,16 +3288,8 @@ public sealed partial class DevelopWorkspaceView : UserControl
         }
     }
 
-    private static string FilmGroupTitle(FilmEmulationKind kind) => AppResources.Get(
-        kind switch
-        {
-            FilmEmulationKind.Slide => "filmTypeColorPositive",
-            FilmEmulationKind.Negative => "filmTypeColorNegative",
-            FilmEmulationKind.MotionPicture => "developFilmGroupMotion",
-            FilmEmulationKind.BlackAndWhiteReversal => "developFilmGroupBWSlide",
-            _ => "filmTypeBlackAndWhiteNegative",
-        },
-        "Text");
+    private static string FilmGroupTitle(FilmEmulationKind kind) =>
+        AppResources.Get(FilmLookMenuProjection.GroupTitleKey(kind), "Text");
 
     private void OnFilmLookChecked(object sender, RoutedEventArgs args)
     {

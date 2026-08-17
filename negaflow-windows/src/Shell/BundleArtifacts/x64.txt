@@ -1,0 +1,1 @@
+MainPackage=C:\Users\habin\negaflow\negaflow-windows\out\build\managed\Negaflow.Shell\x64\Release\net10.0-windows10.0.26100.0\win-x64\Negaflow.Shell_1.0.0.0_x64.msix
