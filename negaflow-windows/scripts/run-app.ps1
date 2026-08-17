@@ -1,0 +1,151 @@
+[CmdletBinding()]
+param(
+    [ValidateSet('x64', 'ARM64')]
+    [string]$Architecture = 'x64',
+
+    [ValidateSet('Debug', 'Release')]
+    [string]$Configuration = 'Release',
+
+    # 이미 만들어 둔 레이아웃을 그대로 다시 등록해 띄운다. 코드를 고치지 않았을 때만 쓴다.
+    [switch]$SkipBuild,
+
+    # 등록만 풀고 끝낸다. 설치본으로 넘어가기 전에 개발용 등록을 치우는 용도다.
+    [switch]$Unregister,
+
+    [int]$RegisterTimeoutSeconds = 180
+)
+
+# 앱을 띄우는 유일한 입구다.
+#
+# Negaflow.Shell 은 `WindowsPackageType=MSIX` 로 빌드된다. 그래서 빌드 폴더의 느슨한 exe 는
+# 실행되지 않는다 — apphost 가 런타임을 앱 폴더에서만 찾도록 박혀 있어 "You must install or
+# update .NET to run this application" 으로 끝난다. 손으로 자체 포함 publish 를 하나 더 만들면
+# 그 순간만 뜨고, 그것은 배포되는 물건이 아니라 확인의 값어치가 없다.
+#
+# 그래서 여기서는 배포와 같은 길을 간다: 패키지 MSIX 를 만들고, 풀고, 현재 사용자에게
+# 등록하고, AUMID 로 띄운다. scripts/build-release.ps1 이 설치본을 만들 때 쓰는 것과 같은
+# 단계이며 NSIS 만 빠져 있다.
+
+$ErrorActionPreference = 'Stop'
+$projectRoot = Split-Path -Parent $PSScriptRoot
+$packageName = 'Negaflow.Windows'
+$runtimeIdentifier = if ($Architecture -eq 'ARM64') { 'win-arm64' } else { 'win-x64' }
+$nativePreset = "$($Architecture.ToLowerInvariant())-$($Configuration.ToLowerInvariant())"
+$layoutRoot = Join-Path $projectRoot "out\run\$runtimeIdentifier-$($Configuration.ToLowerInvariant())"
+$payloadDirectory = Join-Path $layoutRoot 'payload'
+$packageDirectory = Join-Path $layoutRoot 'msix'
+$shellProject = Join-Path $projectRoot 'src\Shell\Negaflow.Shell.csproj'
+
+function Remove-Registration {
+    $installed = Get-AppxPackage -Name $packageName -ErrorAction SilentlyContinue
+    if ($null -eq $installed) {
+        return $false
+    }
+    foreach ($package in $installed) {
+        Write-Host "[run-app] removing $($package.PackageFullName)" -ForegroundColor DarkGray
+        Remove-AppxPackage -Package $package.PackageFullName -ErrorAction Stop
+    }
+    return $true
+}
+
+if ($Unregister) {
+    if (Remove-Registration) { Write-Host '[run-app] unregistered' -ForegroundColor Green }
+    else { Write-Host '[run-app] nothing was registered' -ForegroundColor Yellow }
+    return
+}
+
+# makeappx 는 Windows SDK 와 함께 온다. 여러 SDK 가 깔려 있으면 가장 높은 버전을 쓴다.
+function Resolve-MakeAppx {
+    $command = Get-Command makeappx -ErrorAction SilentlyContinue
+    if ($null -ne $command) {
+        return $command.Source
+    }
+    $architectureFolder = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64' } else { 'x64' }
+    $binRoot = 'C:\Program Files (x86)\Windows Kits\10\bin'
+    if (Test-Path -LiteralPath $binRoot) {
+        $candidate = Get-ChildItem -LiteralPath $binRoot -Directory -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -match '^10\.' } |
+            Sort-Object { [version]$_.Name } -Descending |
+            ForEach-Object { Join-Path $_.FullName "$architectureFolder\makeappx.exe" } |
+            Where-Object { Test-Path -LiteralPath $_ } |
+            Select-Object -First 1
+        if ($null -ne $candidate) {
+            return $candidate
+        }
+    }
+    throw 'makeappx.exe was not found. Install the Windows 10/11 SDK first.'
+}
+
+if (-not $SkipBuild) {
+    Write-Host "[run-app] native: $nativePreset" -ForegroundColor Cyan
+    & (Join-Path $PSScriptRoot 'build.ps1') -Preset $nativePreset
+    if ($LASTEXITCODE -ne 0) {
+        throw "Native build failed for '$nativePreset'."
+    }
+
+    Write-Host "[run-app] packaged build: $Architecture $Configuration" -ForegroundColor Cyan
+    if (Test-Path -LiteralPath $packageDirectory) {
+        Remove-Item -LiteralPath $packageDirectory -Recurse -Force
+    }
+    # 자체 포함으로 만든다. 등록된 패키지 안에서는 공유 런타임을 찾지 않기 때문이다.
+    & dotnet build $shellProject --configuration $Configuration --runtime $runtimeIdentifier `
+        --self-contained true -p:Platform=$Architecture -p:WindowsAppSDKSelfContained=false `
+        -p:WindowsPackageType=MSIX -p:EnableMsixTooling=true `
+        -p:AppxPackageSigningEnabled=false -p:GenerateAppxPackageOnBuild=true `
+        -p:AppxBundle=Never -p:UapAppxPackageBuildMode=SideloadOnly `
+        -p:AppxPackageDir=$packageDirectory\
+    if ($LASTEXITCODE -ne 0) {
+        throw "Packaged build failed for '$runtimeIdentifier'."
+    }
+
+    # Dependencies\ 아래에는 Windows App Runtime 프레임워크 패키지가 함께 놓인다. 앱
+    # 패키지만 골라야 하므로 그 하위 폴더는 제외한다.
+    $appPackages = @(Get-ChildItem -LiteralPath $packageDirectory -Recurse -Filter '*.msix' -File |
+        Where-Object { $_.FullName -notmatch '\\Dependencies\\' })
+    if ($appPackages.Count -ne 1) {
+        throw "Expected exactly one application MSIX in '$packageDirectory' but found $($appPackages.Count)."
+    }
+
+    if (Test-Path -LiteralPath $payloadDirectory) {
+        Remove-Item -LiteralPath $payloadDirectory -Recurse -Force
+    }
+    & (Resolve-MakeAppx) unpack /p $appPackages[0].FullName /d $payloadDirectory /o /nv
+    if ($LASTEXITCODE -ne 0) {
+        throw "Could not unpack the application MSIX: $($appPackages[0].FullName)"
+    }
+    # 블록 맵은 압축된 패키지의 무결성 목록이라 느슨한 레이아웃 등록에는 쓰이지 않는다.
+    $blockMap = Join-Path $payloadDirectory 'AppxBlockMap.xml'
+    if (Test-Path -LiteralPath $blockMap) {
+        Remove-Item -LiteralPath $blockMap -Force
+    }
+}
+
+$manifestPath = Join-Path $payloadDirectory 'AppxManifest.xml'
+if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
+    throw "Package manifest is missing: $manifestPath. Run without -SkipBuild first."
+}
+
+# 등록은 멈출 수 있는 단계다(CI 설치본 잡이 실제로 여기서 멈춘다). 어디서 멈췄는지 말하고
+# 끝나도록 시간을 재고, 넘기면 그 사실을 알린다 — 조용히 매달려 있지 않는다.
+Write-Host '[run-app] registering the loose package' -ForegroundColor Cyan
+$null = Remove-Registration
+$register = Start-Job -ScriptBlock {
+    param($manifest)
+    Add-AppxPackage -Register $manifest -ForceApplicationShutdown -ForceUpdateFromAnyVersion
+} -ArgumentList $manifestPath
+if (-not (Wait-Job -Job $register -Timeout $RegisterTimeoutSeconds)) {
+    Stop-Job -Job $register
+    Remove-Job -Job $register -Force
+    throw "Add-AppxPackage -Register did not finish within $RegisterTimeoutSeconds seconds."
+}
+Receive-Job -Job $register
+Remove-Job -Job $register -Force
+
+$installed = Get-AppxPackage -Name $packageName -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($null -eq $installed) {
+    throw 'The package registered without error but is not installed.'
+}
+$aumid = "$($installed.PackageFamilyName)!App"
+Write-Host "[run-app] launching $aumid" -ForegroundColor Cyan
+Start-Process -FilePath 'explorer.exe' -ArgumentList "shell:AppsFolder\$aumid"
+Write-Host '[run-app] started' -ForegroundColor Green

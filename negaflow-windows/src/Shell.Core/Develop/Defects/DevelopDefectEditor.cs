@@ -127,6 +127,45 @@ internal sealed class DevelopDefectEditor
         return new(error, error == LibraryFrameError.None);
     }
 
+    /// <summary>
+    /// 목록 전체를 한 번에 갈아 끼웁니다. <paramref name="map"/> 이 null 을 내면 바뀐 것이 없다는
+    /// 뜻이고 아무것도 쓰지 않습니다 — 같은 값을 다시 쓰면 개정 번호만 오르고 원본 해시를
+    /// 다시 내느라 시간만 듭니다.
+    /// </summary>
+    public DevelopDefectEditResult ReplaceItems(
+        LibraryFrameSnapshot? frame,
+        Func<DefectRecipeSnapshot, IReadOnlyList<DefectEditItem>?> map)
+    {
+        ArgumentNullException.ThrowIfNull(map);
+        if (frame is null || !Guid.TryParseExact(frame.Id, "D", out Guid frameId))
+        {
+            return new(LibraryFrameError.MissingId, false);
+        }
+        if (frame.DefectRecipe is not { } recipe || map(recipe) is not { } items)
+        {
+            return new(LibraryFrameError.None, false);
+        }
+
+        LibraryFrameError error = host.AppendDefectStroke(
+            frame.Id,
+            (identity, _) =>
+            {
+                try
+                {
+                    return DefectRecipeSnapshot.Create(
+                        frameId,
+                        checked(recipe.RecipeRevision + 1UL),
+                        identity,
+                        items);
+                }
+                catch (Exception failure) when (failure is ArgumentException or OverflowException)
+                {
+                    return null;
+                }
+            });
+        return new(error, error == LibraryFrameError.None);
+    }
+
     public static bool HasEdits(LibraryFrameSnapshot? frame, DefectEditKind kind) =>
         frame?.DefectRecipe?.Items.Any(item => item.Kind == kind) == true;
 

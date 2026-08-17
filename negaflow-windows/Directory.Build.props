@@ -14,5 +14,14 @@
     <RuntimeIdentifier Condition="'$(Platform)' == 'ARM64' and '$(RuntimeIdentifier)' == ''">win-arm64</RuntimeIdentifier>
     <BaseOutputPath>$(MSBuildThisFileDirectory)out\build\managed\$(MSBuildProjectName)\</BaseOutputPath>
     <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)out\obj\managed\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
+    <!--
+      obj\ 와 bin\ 은 out\ 으로 옮겨 놓았으므로 프로젝트 폴더 안에는 없어야 합니다. 그런데
+      SDK 가 기본으로 거는 제외는 위에서 옮긴 경로를 따라가므로, 어떤 이유로든 프로젝트 폴더
+      안에 obj\ 가 생기면 기본 `**\*.cs` 글롭이 그 안의 생성된 AssemblyInfo 를 함께 컴파일해
+      전체 빌드가 CS0579(특성 중복)로 무너집니다. 실제로 BaseIntermediateOutputPath 를 상대
+      경로로 넘긴 한 번의 publish 가 모든 프로젝트에 obj\ 를 남겨 그렇게 됐습니다.
+      경로를 옮긴 쪽이 책임지고 여기서 다시 막습니다.
+    -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);obj\**;bin\**</DefaultItemExcludes>
   </PropertyGroup>
 </Project>

@@ -1550,6 +1550,10 @@
                             </StackPanel>
                         </Border>
 
+                        <!-- GrainMend 레이어: 적용된 결함 제거를 항목별로 되돌릴 수 있는
+                             목록입니다. macOS DefectLayerSection 과 같은 자리, 같은 순서입니다. -->
+                        <controls:DefectLayerSection x:Name="DefectLayers" />
+
                         <!-- 정보: macOS 의 여섯 줄 그대로입니다. 값은 원본 자체에서 오는 것만
                              내고, 아직 읽지 못하는 항목은 macOS 의 빈 상태와 같은 "—"입니다. -->
                         <Border

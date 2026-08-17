@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    macOS Features/Defects/DefectLayerSection.swift 를 그대로 옮긴 것입니다. 적용된 결함 제거를
+    원본을 덮어쓴 화소가 아니라 "복원 레이어" 목록으로 보여 줍니다 — 항목별 켜기·끄기(그 결함
+    하나만의 before/after), 강도, 마스크 표시, 삭제.
+-->
+<UserControl
+    x:Class="Negaflow.Shell.Views.Controls.DefectLayerSection"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Negaflow.Shell.Views.Controls">
+    <UserControl.Resources>
+        <controls:DefectLayerBrushConverter x:Key="LayerBrush" />
+        <!-- macOS .buttonStyle(.borderless): 글리프만 있고 판이 없습니다. -->
+        <Style x:Key="DefectLayerGlyphButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="2" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+        </Style>
+        <DataTemplate x:Key="DefectLayerRowTemplate">
+            <!-- macOS VStack(alignment: .leading, spacing: 3).padding(.vertical, 3) -->
+            <StackPanel
+                Margin="0,3"
+                Opacity="{Binding RowOpacity}"
+                Spacing="3">
+                <Grid ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="18" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <!-- macOS caption2.monospacedDigit().weight(.semibold), width 18, trailing -->
+                    <TextBlock
+                        Grid.Column="0"
+                        VerticalAlignment="Center"
+                        FontFamily="Consolas"
+                        FontSize="11"
+                        FontWeight="SemiBold"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Text="{Binding IndexText}"
+                        TextAlignment="Right" />
+                    <!-- 켜기/끄기 = 이 결함 하나만의 before/after -->
+                    <Button
+                        Grid.Column="1"
+                        VerticalAlignment="Center"
+                        IsEnabled="{Binding CanEdit}"
+                        Style="{StaticResource DefectLayerGlyphButtonStyle}"
+                        Tag="{Binding Id}"
+                        Click="OnEnabledClicked">
+                        <FontIcon
+                            FontSize="13"
+                            Foreground="{Binding Enabled, Converter={StaticResource LayerBrush}}"
+                            Glyph="{Binding EnabledGlyph}" />
+                    </Button>
+                    <FontIcon
+                        Grid.Column="2"
+                        VerticalAlignment="Center"
+                        FontSize="12"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Glyph="{Binding KindGlyph}" />
+                    <!-- macOS .font(.callout).lineLimit(1) -->
+                    <TextBlock
+                        Grid.Column="3"
+                        VerticalAlignment="Center"
+                        FontSize="13"
+                        Text="{Binding Title}"
+                        TextTrimming="CharacterEllipsis"
+                        TextWrapping="NoWrap" />
+                    <!-- 마스크 표시: 검출 위치를 분류색으로 덮어 봅니다. -->
+                    <Button
+                        Grid.Column="4"
+                        VerticalAlignment="Center"
+                        Style="{StaticResource DefectLayerGlyphButtonStyle}"
+                        Tag="{Binding Id}"
+                        Click="OnMaskClicked">
+                        <FontIcon
+                            FontSize="13"
+                            Foreground="{Binding MaskShown, Converter={StaticResource LayerBrush}, ConverterParameter=Accent}"
+                            Glyph="{Binding MaskGlyphValue}" />
+                    </Button>
+                    <Button
+                        Grid.Column="5"
+                        VerticalAlignment="Center"
+                        IsEnabled="{Binding CanEdit}"
+                        Style="{StaticResource DefectLayerGlyphButtonStyle}"
+                        Tag="{Binding Id}"
+                        Click="OnDeleteClicked">
+                        <FontIcon
+                            FontSize="13"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Glyph="{Binding DeleteGlyphValue}" />
+                    </Button>
+                </Grid>
+                <Grid ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="72" />
+                    </Grid.ColumnDefinitions>
+                    <!-- macOS .font(.caption2).foregroundStyle(.secondary).lineLimit(1) -->
+                    <TextBlock
+                        Grid.Column="0"
+                        VerticalAlignment="Center"
+                        FontSize="11"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Text="{Binding Summary}"
+                        TextTrimming="CharacterEllipsis"
+                        TextWrapping="NoWrap" />
+                    <TextBlock
+                        Grid.Column="1"
+                        VerticalAlignment="Center"
+                        FontSize="11"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Text="{Binding StrengthLabel}" />
+                    <!-- macOS Slider(value:in: 0.1...1.0).frame(width: 72).controlSize(.mini) -->
+                    <Slider
+                        Grid.Column="2"
+                        VerticalAlignment="Center"
+                        Width="72"
+                        Minimum="0.1"
+                        Maximum="1.0"
+                        StepFrequency="0.01"
+                        SmallChange="0.01"
+                        LargeChange="0.1"
+                        IsEnabled="{Binding CanSetStrength}"
+                        IsThumbToolTipEnabled="False"
+                        Tag="{Binding Id}"
+                        Value="{Binding Strength}"
+                        Loaded="OnStrengthSliderLoaded"
+                        ValueChanged="OnStrengthValueChanged"
+                        PointerCaptureLost="OnStrengthCommitted"
+                        KeyUp="OnStrengthKeyUp" />
+                </Grid>
+            </StackPanel>
+        </DataTemplate>
+    </UserControl.Resources>
+    <Border
+        x:Name="LayerCard"
+        HorizontalAlignment="Stretch"
+        Padding="14"
+        AutomationProperties.AutomationId="negaflow.develop.defect-layers"
+        Background="{ThemeResource NegaflowCardBrush}"
+        CornerRadius="14"
+        Visibility="Collapsed">
+        <StackPanel HorizontalAlignment="Stretch" Spacing="10">
+            <!-- macOS InspectorCardHeader(title:systemImage:trailing:) — 오른쪽이 개수 배지 -->
+            <Grid ColumnSpacing="7">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <FontIcon
+                    Grid.Column="0"
+                    VerticalAlignment="Center"
+                    FontSize="14"
+                    Glyph="&#xE90F;" />
+                <TextBlock
+                    x:Name="TitleText"
+                    Grid.Column="1"
+                    VerticalAlignment="Center"
+                    FontSize="14"
+                    FontWeight="SemiBold" />
+                <TextBlock
+                    x:Name="CountText"
+                    Grid.Column="2"
+                    VerticalAlignment="Center"
+                    AutomationProperties.AutomationId="negaflow.develop.defect-layers.count"
+                    FontSize="12"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            </Grid>
+            <!--
+                macOS: 항목이 다섯 이하면 그냥 쌓고, 넘으면 스크롤에 담아 높이를 다섯 줄로
+                묶습니다. 새 항목이 생기면 마지막으로 스크롤합니다.
+            -->
+            <ScrollViewer
+                x:Name="RowScroller"
+                HorizontalScrollMode="Disabled"
+                VerticalScrollBarVisibility="Auto">
+                <ItemsControl
+                    x:Name="Rows"
+                    AutomationProperties.AutomationId="negaflow.develop.defect-layers.rows"
+                    ItemTemplate="{StaticResource DefectLayerRowTemplate}" />
+            </ScrollViewer>
+            <StackPanel x:Name="DoneRow" Spacing="10" Visibility="Collapsed">
+                <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
+                <Button
+                    x:Name="DoneButton"
+                    HorizontalAlignment="Right"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Padding="6,2"
+                    AutomationProperties.AutomationId="negaflow.develop.defect-layers.done"
+                    Click="OnDoneClicked">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon x:Name="DoneIcon" FontSize="13" Glyph="&#xE73E;" />
+                        <TextBlock x:Name="DoneText" FontSize="12" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</UserControl>

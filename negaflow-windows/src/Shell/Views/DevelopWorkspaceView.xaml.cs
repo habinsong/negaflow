@@ -58,6 +58,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
     {
         InitializeComponent();
         isInspectorPresentationReady = true;
+        DefectLayers.Command += OnDefectLayerCommand;
         ApplyInspectorPresentation();
         LocalizeControls();
     }
@@ -392,6 +393,8 @@ public sealed partial class DevelopWorkspaceView : UserControl
         GrainMendCard.Visibility = inspectorPresentation.SelectedTab == DevelopInspectorTab.Defects
             ? Visibility.Visible
             : Visibility.Collapsed;
+        // 레이어 목록은 GrainMend 카드와 한 탭에 삽니다. macOS 도 같은 인스펙터에 붙습니다.
+        DefectLayers.Visibility = GrainMendCard.Visibility;
         if (inspectorPresentation.SelectedTab != DevelopInspectorTab.Defects)
         {
             // 탭을 떠나면 도구도 놓습니다. 보이지 않는 도구가 캔버스를 잡고 있으면
@@ -402,6 +405,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         UpdateAppMetadataCards();
         UpdateRollRecordCard();
         UpdateGrainMendCard();
+        UpdateDefectLayers();
         GeometryControlCard.Visibility = inspectorPresentation.SelectedTab == DevelopInspectorTab.Edit
             ? Visibility.Visible
             : Visibility.Collapsed;
@@ -772,7 +776,9 @@ public sealed partial class DevelopWorkspaceView : UserControl
     /// </summary>
     private void RequestPreview()
     {
-        if (previewCoordinator is null || panel?.SelectedFrame is not { } frame)
+        // 레이어 강도를 끄는 동안에는 아직 저장하지 않은 값을 얹은 사본을 그립니다 — 저장은
+        // 원본 파일 전체를 다시 해싱하므로 드래그 중에 하면 슬라이더가 멈춥니다.
+        if (previewCoordinator is null || panel?.DefectLayers.PreviewFrame is not { } frame)
         {
             return;
         }
@@ -2776,6 +2782,9 @@ public sealed partial class DevelopWorkspaceView : UserControl
         ApplyGrainMendPill(GrainMendGuidedPill, GrainMendGuidedButton, card.GuidedActive);
         ApplyGrainMendPill(GrainMendBrushPill, GrainMendBrushButton, card.BrushActive);
         ApplyGrainMendPill(GrainMendClonePill, GrainMendCloneButton, card.CloneActive);
+        // 카드가 바뀌는 모든 자리는 목록도 바뀌는 자리입니다. 열두 군데를 따로 부르면
+        // 언젠가 한 군데가 빠지고 목록만 옛 값을 붙듭니다.
+        UpdateDefectLayers();
     }
 
     /// <summary>

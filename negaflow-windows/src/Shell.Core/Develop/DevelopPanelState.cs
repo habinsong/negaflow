@@ -41,7 +41,14 @@ public sealed class DevelopPanelState
         versionPresets = new DevelopVersionPresetController(host);
         Tone = new DevelopTonePanel(this, toneEditor);
         Color = new DevelopColorPanel(this, colorEditor);
+        DefectLayers = new DevelopDefectLayerPanel(this, defectEditor);
     }
+
+    /// <summary>
+    /// 적용된 결함 제거를 항목별로 다루는 표면입니다. 획을 새로 긋는 것과 다른 이유로
+    /// 바뀝니다 — macOS 도 Defect Layer 패널을 따로 둡니다.
+    /// </summary>
+    public DevelopDefectLayerPanel DefectLayers { get; }
 
     public double MinimumManualDmin => baseEditor.MinimumManualDmin;
 
@@ -244,7 +251,7 @@ public sealed class DevelopPanelState
             out rawRect);
     }
 
-    private LibraryFrameError RefreshAfterDefectEdit(DevelopDefectEditResult result)
+    internal LibraryFrameError RefreshAfterDefectEdit(DevelopDefectEditResult result)
     {
         if (result.Changed && SelectedFrame is { } frame)
         {
