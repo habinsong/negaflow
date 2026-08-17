@@ -3153,34 +3153,16 @@ public sealed partial class DevelopWorkspaceView : UserControl
         AppResources.Get("developInfoSidecarNotFound", "Text"));
 
     /// <summary>버전 목록 한 줄입니다. 표시 문구를 XAML 이 짓지 않도록 여기서 만듭니다.</summary>
-    private sealed record VersionRow(
-        string Id,
-        string Name,
-        string CreatedText,
-        string RestoreText,
-        string DeleteText);
-
     private void UpdateVersionControls()
     {
         if (VersionsList is null)
         {
             return;
         }
-        IReadOnlyList<LibraryVersionSnapshot> versions = panel?.Versions ?? [];
-        string restore = AppResources.Get("developVersionRestore", "Content");
-        string delete = AppResources.Get("developVersionDelete", "Content");
-        List<VersionRow> rows = [];
-        foreach (LibraryVersionSnapshot version in versions)
-        {
-            rows.Add(new VersionRow(
-                version.Id,
-                version.Name,
-                version.CreatedAt is { } created
-                    ? created.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)
-                    : string.Empty,
-                restore,
-                delete));
-        }
+        IReadOnlyList<VersionRow> rows = VersionListProjection.Rows(
+            panel?.Versions ?? [],
+            AppResources.Get("developVersionRestore", "Content"),
+            AppResources.Get("developVersionDelete", "Content"));
         VersionsList.ItemsSource = rows;
         VersionsEmptyText.Visibility = rows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         CaptureVersionButton.IsEnabled =
