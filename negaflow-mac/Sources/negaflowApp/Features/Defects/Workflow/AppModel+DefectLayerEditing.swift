@@ -4,9 +4,11 @@ import CoreImage
 import AppKit
 
 extension AppModel {
+    /// 강도 드래그 시작. 히스토리는 드래그가 끝나 값이 확정될 때 한 칸만 남기므로, 여기서는
+    /// 시작 시점 상태만 들고 있는다.
     func beginDefectEditGesture(_ frame: ScanFrame) {
         guard !frame.defectGestureUndoPushed else { return }
-        frame.defectEditUndoStack.append(frame.makeDefectEditUndoSnapshot())
+        frame.pendingDefectHistorySnapshot = frame.makeDefectEditUndoSnapshot()
         frame.defectGestureUndoPushed = true
     }
 
@@ -14,7 +16,7 @@ extension AppModel {
     func setDefectEditEnabled(_ frame: ScanFrame, id: UUID, enabled: Bool) {
         guard let idx = frame.defectEdits.firstIndex(where: { $0.id == id }),
               frame.defectEdits[idx].enabled != enabled else { return }
-        frame.defectEditUndoStack.append(frame.makeDefectEditUndoSnapshot())
+        recordDefectHistory(frame, before: frame.makeDefectEditUndoSnapshot())
         frame.defectEdits[idx].enabled = enabled
         guard let recipeSnapshot = refreshDefectRecipeState(
             frame,
@@ -54,9 +56,14 @@ extension AppModel {
             return
         } else {
             if frame.defectGestureUndoPushed {
-                frame.defectGestureUndoPushed = false   // 제스처 시작 때 이미 푸시됨
+                // 드래그 시작 시점 상태를 이제서야 히스토리 한 칸으로 굳힌다.
+                if let pending = frame.pendingDefectHistorySnapshot {
+                    recordDefectHistory(frame, before: pending)
+                }
+                frame.pendingDefectHistorySnapshot = nil
+                frame.defectGestureUndoPushed = false
             } else if changed {
-                frame.defectEditUndoStack.append(frame.makeDefectEditUndoSnapshot())
+                recordDefectHistory(frame, before: frame.makeDefectEditUndoSnapshot())
             }
             // 최종 커밋은 값이 같아도 수행한다 — live 빌드가 저장을 건너뛰었으므로 디스크 백킹을 맞춘다.
         }

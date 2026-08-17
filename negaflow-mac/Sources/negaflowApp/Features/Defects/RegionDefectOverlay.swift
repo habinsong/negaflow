@@ -84,7 +84,7 @@ struct RegionDefectOverlay: View {
                     Divider().frame(height: 16)
                     // 가이드 되돌리기. 통합 편집(defectEdits)이라 마지막 편집이 브러시든 가이드든
                     // 되돌린다 — 두 도구가 한 히스토리를 공유한다.
-                    Button(action: { model.undoDefects(frame) }) {
+                    Button(action: { model.performUndo() }) {
                         Label(model.text(AppLocalizedPhrase.undo), systemImage: "arrow.uturn.backward")
                     }
                     .help(model.text(AppLocalizedPhrase.undoDefectRemovalHelp))

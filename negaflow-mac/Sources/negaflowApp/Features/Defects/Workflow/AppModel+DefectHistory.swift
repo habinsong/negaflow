@@ -4,9 +4,11 @@ import CoreImage
 import AppKit
 
 extension AppModel {
+    /// 레이어 휴지통. 사용자가 명시적으로 지우는 유일한 경로이므로 IR 도 지울 수 있고,
+    /// 되돌리면 그 IR 이 정확히 돌아온다(`.exact`).
     func removeDefectEdit(_ frame: ScanFrame, id: UUID) {
         guard let idx = frame.defectEdits.firstIndex(where: { $0.id == id }) else { return }
-        frame.defectEditUndoStack.append(frame.makeDefectEditUndoSnapshot())
+        recordDefectHistory(frame, before: frame.makeDefectEditUndoSnapshot(), mode: .exact)
         let wasLast = idx == frame.defectEdits.count - 1
         frame.defectEdits.remove(at: idx)
         let recipeSnapshot = refreshDefectRecipeState(
@@ -79,7 +81,7 @@ extension AppModel {
     ) -> Bool {
         let retained = frame.defectEdits.filter { !shouldRemove($0) }
         guard retained.count != frame.defectEdits.count else { return false }
-        frame.defectEditUndoStack.append(frame.makeDefectEditUndoSnapshot())
+        recordDefectHistory(frame, before: frame.makeDefectEditUndoSnapshot())
         frame.defectEdits = retained
         let recipeSnapshot = refreshDefectRecipeState(
             frame,
@@ -95,19 +97,59 @@ extension AppModel {
         return true
     }
 
-    /// ⌘Z: 마지막 "결함 제거" 적용을 취소(다단계). 브러시·가이드 어느 것이든 마지막 편집을 되돌린다.
-    /// Undo 스냅샷은 무거운 런타임 패치 캐시를 제외하므로 필요할 때 원본+명령에서 재빌드한다.
-    func undoDefects(_ frame: ScanFrame) {
-        guard let previous = frame.defectEditUndoStack.popLast() else { return }
-        frame.defectEdits = previous
+    /// 결함 편집 하나를 앱 공용 히스토리에 남긴다. 반드시 **바꾸기 직전** 스냅샷을 넘긴다.
+    ///
+    /// 카탈로그 편집과 같은 UndoManager 를 쓰므로 ⌘Z 는 언제나 "마지막에 한 일"을 되돌린다 —
+    /// 사진을 지운 뒤 ⌘Z 가 엉뚱하게 다음 사진의 GrainMend 기록을 지우던 원인이 이 분리였다.
+    func recordDefectHistory(
+        _ frame: ScanFrame,
+        before snapshot: [DefectEditItem],
+        mode: DefectHistorySnapshot.Mode = .preservingInfrared
+    ) {
+        frame.defectHistoryDepth += 1
+        registerDefectHistoryUndo(frame, snapshot: snapshot, mode: mode)
+    }
+
+    private func registerDefectHistoryUndo(
+        _ frame: ScanFrame,
+        snapshot: [DefectEditItem],
+        mode: DefectHistorySnapshot.Mode
+    ) {
+        guard let undoManager = catalogUndoManager else { return }
+        undoManager.registerUndo(withTarget: self) { model in
+            model.applyDefectHistorySnapshot(snapshot, to: frame, mode: mode)
+        }
+    }
+
+    /// 히스토리 한 칸을 적용한다. 되돌리기 중 등록한 것은 UndoManager 가 다시 실행으로 잡아 주므로
+    /// ⌘Z 와 ⇧⌘Z 가 같은 코드로 왕복한다.
+    func applyDefectHistorySnapshot(
+        _ snapshot: [DefectEditItem],
+        to frame: ScanFrame,
+        mode: DefectHistorySnapshot.Mode
+    ) {
+        guard frames.contains(where: { $0 === frame }) else { return }
+        let current = frame.makeDefectEditUndoSnapshot()
+        let restored = DefectHistorySnapshot.resolve(
+            snapshot,
+            current: frame.defectEdits,
+            mode: mode
+        )
+        frame.defectHistoryDepth = catalogUndoManager?.isRedoing == true
+            ? frame.defectHistoryDepth + 1
+            : max(0, frame.defectHistoryDepth - 1)
+        registerDefectHistoryUndo(frame, snapshot: current, mode: mode)
+
+        frame.defectEdits = restored
         let recipeSnapshot = refreshDefectRecipeState(
             frame,
             advanceRevision: true,
             persist: true
         )
+        frame.pendingDefectHistorySnapshot = nil
         frame.defectGestureUndoPushed = false
         frame.defectGestureRecipeAdvanced = false
-        if let id = frame.defectMaskPreviewID, !previous.contains(where: { $0.id == id }) {
+        if let id = frame.defectMaskPreviewID, !restored.contains(where: { $0.id == id }) {
             frame.defectMaskPreviewID = nil   // 사라진 레이어의 마스크 표시 해제
         }
         invalidatePreviousBase(frame)

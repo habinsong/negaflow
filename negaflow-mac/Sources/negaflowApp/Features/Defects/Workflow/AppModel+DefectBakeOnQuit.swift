@@ -149,7 +149,8 @@ extension AppModel {
 
     private func clearDefectStateAfterBake(_ frame: ScanFrame) {
         frame.defectEdits = []
-        frame.defectEditUndoStack = []
+        frame.defectHistoryDepth = 0
+        frame.pendingDefectHistorySnapshot = nil
         frame.defectRecipeIdentity = nil
         frame.defectRecipeRevision = 0
         frame.defectGestureRecipeAdvanced = false

@@ -62,7 +62,7 @@ struct CloneStampOverlay: View {
                     .frame(width: 34, alignment: .trailing)
             }
             Divider().frame(height: 16)
-            Button(action: { model.undoDefects(frame) }) { Image(systemName: "arrow.uturn.backward") }
+            Button(action: { model.performUndo() }) { Image(systemName: "arrow.uturn.backward") }
                 .help(model.text(AppLocalizedPhrase.undoDefectRemovalHelp))
                 .disabled(!frame.canUndoDefects || frame.isRemovingDefects)
         }

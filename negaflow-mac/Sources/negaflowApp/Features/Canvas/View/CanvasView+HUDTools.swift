@@ -89,7 +89,7 @@ extension CanvasView {
         if !brushStrokes.isEmpty {
             _ = brushStrokes.popLast()
         } else {
-            model.undoDefects(frame)
+            model.performUndo()
         }
     }
 

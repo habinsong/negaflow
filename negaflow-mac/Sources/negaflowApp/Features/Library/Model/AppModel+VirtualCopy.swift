@@ -54,7 +54,9 @@ extension ScanFrame {
         // defectEdits는 복사하되 cleaned raw 임시 파일은 공유하지 않는다(각 프레임이 자기 파일을
         // 새로 생성해야 한 쪽 삭제가 다른 쪽을 깨뜨리지 않는다).
         copy.defectEdits = defectEdits
-        copy.defectEditUndoStack = defectEditUndoStack
+        // 히스토리는 앱 공용 스택에 원본 프레임을 가리키며 남아 있다 — 사본은 새 프레임이라
+        // 자기 되돌리기 기록 없이 시작한다.
+        copy.defectHistoryDepth = 0
         if let recipeSHA256 = copy.currentLibraryDevelopRecipeSHA256() {
             // 가상 사본은 생성 시점의 recipe를 독립 기준점으로 삼고, 원본의 내보내기·검토
             // 이력을 물려받지 않는다.

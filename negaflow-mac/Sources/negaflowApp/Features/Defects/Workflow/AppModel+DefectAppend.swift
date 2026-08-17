@@ -26,8 +26,8 @@ extension AppModel {
         let previousRecipeIdentity = frame.defectRecipeIdentity
         let previousRecipeRevision = frame.defectRecipeRevision
         let previousWorkflowTrackingState = frame.libraryWorkflowTrackingState
-        let previousUndoCount = frame.defectEditUndoStack.count
-        frame.defectEditUndoStack.append(frame.makeDefectEditUndoSnapshot())
+        // 히스토리는 성공한 뒤에 남긴다 — 실패한 편집이 되돌리기 한 칸을 잡아먹지 않게.
+        let previousEdits = frame.makeDefectEditUndoSnapshot()
         frame.defectEdits.append(item)
         guard let recipeSnapshot = refreshDefectRecipeState(
             frame,
@@ -35,9 +35,6 @@ extension AppModel {
             persist: true
         ) else {
             frame.defectEdits.removeLast()
-            if frame.defectEditUndoStack.count > previousUndoCount {
-                frame.defectEditUndoStack.removeLast()
-            }
             frame.defectRecipeRevision = previousRecipeRevision
             frame.defectRecipeIdentity = previousRecipeIdentity
             frame.libraryWorkflowTrackingState = previousWorkflowTrackingState
@@ -45,6 +42,7 @@ extension AppModel {
             scheduleLibrarySave()
             return false
         }
+        recordDefectHistory(frame, before: previousEdits)
 
         // 증분 적용: 커밋된 메모리 베이스의 적용 스탬프가 현재 편집 리스트의 접두(prefix)와 그대로
         // 일치하면, 원본부터 전부 다시 합성하는 대신 아직 안 담긴 편집(suffix)만 그 위에 적용한다.

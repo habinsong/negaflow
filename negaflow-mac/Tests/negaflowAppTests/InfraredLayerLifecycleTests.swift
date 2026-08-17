@@ -128,7 +128,7 @@ final class InfraredLayerLifecycleTests: XCTestCase {
         XCTAssertTrue(frame.defectEdits[0].isInfrared)
         XCTAssertTrue(frame.canUndoDefects, "초기화는 ⌘Z 로 되돌릴 수 있어야 한다.")
 
-        model.undoDefects(frame)
+        model.performUndo()
         XCTAssertEqual(frame.defectEdits.count, 2, "되돌리면 지워진 레이어가 살아난다.")
     }
 

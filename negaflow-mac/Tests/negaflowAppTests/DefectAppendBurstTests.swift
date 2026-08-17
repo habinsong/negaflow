@@ -206,8 +206,9 @@ final class DefectAppendBurstTests: XCTestCase {
             XCTAssertEqual(frame.cleanedRawAppliedStamps, frame.defectEdits.map(\.appliedStamp))
             XCTAssertEqual(frame.cleanedRawMemoryIdentity, frame.defectRecipeIdentity)
             XCTAssertEqual(frame.defectEdits.filter { $0.cachedPatches != nil }.count, 1)
-            XCTAssertTrue(frame.defectEditUndoStack.allSatisfy { snapshot in
-                snapshot.allSatisfy { $0.cachedPatches == nil }
+            XCTAssertEqual(frame.defectHistoryDepth, pass)
+            XCTAssertTrue(frame.makeDefectEditUndoSnapshot().allSatisfy {
+                $0.cachedPatches == nil
             })
         }
 
@@ -235,7 +236,7 @@ final class DefectAppendBurstTests: XCTestCase {
         }
 
         XCTAssertTrue(frame.defectEdits.isEmpty)
-        XCTAssertTrue(frame.defectEditUndoStack.isEmpty)
+        XCTAssertEqual(frame.defectHistoryDepth, 0)
         XCTAssertNil(frame.cleanRawTask)
         XCTAssertTrue(frame.defectActive)
         XCTAssertNotNil(frame.defectLabelField)

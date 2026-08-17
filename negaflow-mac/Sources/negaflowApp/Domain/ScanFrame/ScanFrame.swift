@@ -210,9 +210,12 @@ final class ScanFrame: ObservableObject, Identifiable {
     // 카탈로그 복원 직후 사이드카가 아직 로드되지 않은 짧은 구간을 표시한다. 선택/편집 전에
     // 동기 복원해 비동기 로드와 새 편집이 서로 덮어쓰지 않게 한다.
     var defectEditsNeedRestore = false
-    // Undo 스택: 각 "결함 제거" 적용 직전 defectEdits 스냅샷. ⌘Z로 다단계 복구.
-    // 런타임 CGImage 패치 캐시는 제외하고 명령 객체(스트로크/마스크)만 COW로 공유한다.
-    var defectEditUndoStack: [[DefectEditItem]] = []
+    // 되돌리기 히스토리는 앱 공용 UndoManager 한 곳에 있다(카탈로그 편집과 같은 스택) —
+    // ⌘Z/⇧⌘Z 가 마지막에 한 일을 순서대로 되돌리고 다시 실행한다. 스냅샷은 그 등록에 실려
+    // 있으므로 프레임은 도구 버튼 활성화 판정에 쓸 깊이만 센다.
+    var defectHistoryDepth: Int = 0
+    /// 강도 드래그처럼 시작과 커밋이 떨어진 조작의 "시작 시점" 스냅샷. 커밋할 때 히스토리로 넘긴다.
+    var pendingDefectHistorySnapshot: [DefectEditItem]?
 
     func makeDefectEditUndoSnapshot() -> [DefectEditItem] {
         var snapshot = defectEdits
@@ -226,26 +229,17 @@ final class ScanFrame: ObservableObject, Identifiable {
         for index in defectEdits.indices where defectEdits[index].id != editID {
             defectEdits[index].cachedPatches = nil
         }
-        for snapshotIndex in defectEditUndoStack.indices {
-            for itemIndex in defectEditUndoStack[snapshotIndex].indices {
-                defectEditUndoStack[snapshotIndex][itemIndex].cachedPatches = nil
-            }
-        }
     }
 
-    /// 축출 시 패치 캐시(CGImage — 무거움)를 편집 리스트/undo 스택 전체에서 내려놓는다.
+    /// 축출 시 패치 캐시(CGImage — 무거움)를 편집 리스트에서 내려놓는다.
     /// 패치는 재빌드 때 재계산되므로 결과는 동일하다(RAM 만 회수).
+    /// 히스토리 스냅샷은 만들 때 이미 패치를 뺀 채로 굳는다.
     func stripDefectPatchCaches() {
         for i in defectEdits.indices where defectEdits[i].cachedPatches != nil {
             defectEdits[i].cachedPatches = nil
         }
-        for s in defectEditUndoStack.indices {
-            for i in defectEditUndoStack[s].indices where defectEditUndoStack[s][i].cachedPatches != nil {
-                defectEditUndoStack[s][i].cachedPatches = nil
-            }
-        }
     }
-    var canUndoDefects: Bool { !defectEditUndoStack.isEmpty }
+    var canUndoDefects: Bool { defectHistoryDepth > 0 }
     // Defect Layer 마스크 오버레이 표시 대상(nil=끔, 항목 id=그 레이어만 표시).
     @Published var defectMaskPreviewID: UUID?
 

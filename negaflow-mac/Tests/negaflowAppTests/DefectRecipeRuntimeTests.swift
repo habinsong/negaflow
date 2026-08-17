@@ -301,7 +301,10 @@ final class DefectRecipeRuntimeTests: XCTestCase {
         XCTAssertNil(frame.defectRecipeIdentity)
         XCTAssertNotNil(frame.defectRecipeRefreshTask)
         XCTAssertEqual(frame.defectRecipeRevision, initial.identity.revision + 1)
-        XCTAssertEqual(frame.defectEditUndoStack.count, 1)
+        // 드래그 중에는 되돌리기 한 칸이 아직 확정되지 않는다 — 시작 시점 상태만 들고 있다가
+        // 값이 확정될 때 한 번만 히스토리로 넘어간다.
+        XCTAssertNotNil(frame.pendingDefectHistorySnapshot)
+        XCTAssertEqual(frame.defectHistoryDepth, 0)
         XCTAssertTrue(frame.defectGestureRecipeAdvanced)
 
         for _ in 0..<400 where frame.defectRecipeRefreshTask != nil {
@@ -359,7 +362,10 @@ final class DefectRecipeRuntimeTests: XCTestCase {
 
         XCTAssertTrue(observedLiveIdentityDuringInput)
         XCTAssertEqual(frame.defectRecipeRevision, initial.identity.revision + 1)
-        XCTAssertEqual(frame.defectEditUndoStack.count, 1)
+        // 드래그 중에는 되돌리기 한 칸이 아직 확정되지 않는다 — 시작 시점 상태만 들고 있다가
+        // 값이 확정될 때 한 번만 히스토리로 넘어간다.
+        XCTAssertNotNil(frame.pendingDefectHistorySnapshot)
+        XCTAssertEqual(frame.defectHistoryDepth, 0)
 
         let finalStrength = try XCTUnwrap(frame.defectEdits.first?.strength)
         model.setDefectEditStrength(frame, id: editID, strength: finalStrength)
