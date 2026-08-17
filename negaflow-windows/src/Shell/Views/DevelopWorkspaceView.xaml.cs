@@ -38,7 +38,6 @@ public sealed partial class DevelopWorkspaceView : UserControl
     private bool isInspectorPresentationReady;
     private Negaflow.Shell.Library.ThumbnailService? thumbnails;
     private GrainMendDetectCoordinator? grainMendDetectCoordinator;
-    private bool isSynchronizingMetadata;
     private string engineVersion = "unknown";
     private readonly CropWorkspaceState crop = new();
     private CropDisplayPoint guidedDefectDragStart;
@@ -121,6 +120,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         toneLimits = limits;
         panel = new DevelopPanelState(host, limits, negativeLimits);
         LeftPanel.Bind(panel, host, windowId, engineVersion);
+        InfoCards.Bind(panel, host);
         LeftPanel.VersionsPanel.VersionRestored += OnVersionRestored;
         LeftPanel.PresetsPanel.RecipeReplaced += OnPresetRecipeReplaced;
         LeftPanel.FilmLookPanel.LookChanged += OnFilmLookChanged;
@@ -385,9 +385,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         BaseControlCard.Visibility = inspectorPresentation.SelectedTab == DevelopInspectorTab.Base
             ? Visibility.Visible
             : Visibility.Collapsed;
-        InfoCard.Visibility = inspectorPresentation.SelectedTab == DevelopInspectorTab.Info
-            ? Visibility.Visible
-            : Visibility.Collapsed;
+        InfoCards.Apply(inspectorPresentation.SelectedTab == DevelopInspectorTab.Info);
         GrainMendCard.Visibility = inspectorPresentation.SelectedTab == DevelopInspectorTab.Defects
             ? Visibility.Visible
             : Visibility.Collapsed;
@@ -399,9 +397,6 @@ public sealed partial class DevelopWorkspaceView : UserControl
             // 크롭이나 확대가 먹지 않는 것처럼 보입니다.
             SetGrainMendTool(GrainMendTool.None);
         }
-        UpdateInfoCard();
-        UpdateAppMetadataCards();
-        UpdateRollRecordCard();
         UpdateGrainMendCard();
         UpdateDefectLayers();
         GeometryControlCard.Visibility = inspectorPresentation.SelectedTab == DevelopInspectorTab.Edit
@@ -2413,287 +2408,6 @@ public sealed partial class DevelopWorkspaceView : UserControl
         return true;
     }
 
-    /// <summary>정보 카드 한 줄입니다.</summary>
-    /// <summary>
-    /// macOS 정보 카드의 여섯 줄입니다. 원본과 Sidecar 는 지금 알 수 있는 사실이고, 카메라·날짜·
-    /// 제목·키워드는 아직 EXIF/IPTC 를 읽지 않으므로 macOS 의 빈 상태와 같은 "— · —" 입니다.
-    /// 읽지 않은 값을 추측해서 채우지 않습니다.
-    /// </summary>
-    /// <summary>
-    /// 적어 둔 메타데이터를 컨트롤에 되비춥니다. 값이 없으면 빈 칸이고, placeholder 가 무엇을
-    /// 적는 자리인지 말합니다 — macOS 도 라벨 대신 placeholder 를 씁니다.
-    /// </summary>
-    private void UpdateAppMetadataCards()
-    {
-        if (AppMetadataTitleBox is null)
-        {
-            return;
-        }
-        bool onInfoTab = inspectorPresentation.SelectedTab == DevelopInspectorTab.Info;
-        bool hasFrame = panel?.SelectedFrame is not null;
-        AppMetadataCard.Visibility = onInfoTab && hasFrame
-            ? Visibility.Visible
-            : Visibility.Collapsed;
-        FilmShotCard.Visibility = AppMetadataCard.Visibility;
-        if (panel?.SelectedFrame is not { } frame)
-        {
-            return;
-        }
-
-        AppMetadataOverlay overlay = frame.AppMetadata ?? new AppMetadataOverlay();
-        FilmShotMetadata shot = overlay.FilmShot ?? new FilmShotMetadata();
-        isSynchronizingMetadata = true;
-        try
-        {
-            AppMetadataTitleBox.Text = overlay.Title ?? string.Empty;
-            AppMetadataCaptionBox.Text = overlay.Caption ?? string.Empty;
-            AppMetadataKeywordsBox.Text = string.Join(", ", overlay.Keywords);
-            AppMetadataCopyrightBox.Text = overlay.Copyright ?? string.Empty;
-            FilmShotCameraMakeBox.Text = shot.CameraMake ?? string.Empty;
-            FilmShotCameraModelBox.Text = shot.CameraModel ?? string.Empty;
-            FilmShotLensModelBox.Text = shot.LensModel ?? string.Empty;
-            FilmShotFilmStockBox.Text = shot.FilmStock ?? string.Empty;
-            FilmShotIsoSpeedBox.Text = shot.IsoSpeed?.ToString(CultureInfo.CurrentCulture)
-                ?? string.Empty;
-            FilmShotShutterBox.Text = DevelopMetadataFields.FormatShutter(shot.ExposureTimeSeconds);
-            FilmShotApertureBox.Text = shot.FNumber?.ToString("0.##", CultureInfo.CurrentCulture)
-                ?? string.Empty;
-            FilmShotFocalLengthBox.Text =
-                shot.FocalLengthMm?.ToString("0.##", CultureInfo.CurrentCulture) ?? string.Empty;
-        }
-        finally
-        {
-            isSynchronizingMetadata = false;
-        }
-        AppMetadataSavedText.Text = overlay.IsEmpty
-            ? string.Empty
-            : AppResources.Get("developAppMetadataSaved", "Text");
-    }
-
-    /// <summary>
-    /// 칸을 떠날 때 한 번만 씁니다. 글자마다 카탈로그를 건드리면 5만 행짜리 저장이 타이핑마다
-    /// 돕니다.
-    /// </summary>
-    private void OnAppMetadataCommitted(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (isSynchronizingMetadata || panel is null)
-        {
-            return;
-        }
-        FilmShotMetadata shot = new(
-            FilmShotCameraMakeBox.Text,
-            FilmShotCameraModelBox.Text,
-            FilmShotLensModelBox.Text,
-            FilmShotFilmStockBox.Text,
-            DevelopMetadataFields.ParseInteger(FilmShotIsoSpeedBox.Text),
-            DevelopMetadataFields.ParseShutter(FilmShotShutterBox.Text),
-            DevelopMetadataFields.ParseNumber(FilmShotApertureBox.Text),
-            DevelopMetadataFields.ParseNumber(FilmShotFocalLengthBox.Text));
-        AppMetadataOverlay next = new()
-        {
-            Title = AppMetadataTitleBox.Text,
-            Caption = AppMetadataCaptionBox.Text,
-            Keywords = DevelopMetadataFields.SplitKeywords(AppMetadataKeywordsBox.Text),
-            Copyright = AppMetadataCopyrightBox.Text,
-            FilmShot = shot.Normalized().IsEmpty ? null : shot.Normalized(),
-        };
-        AppMetadataOverlay stored = panel.SelectedFrame?.AppMetadata ?? new AppMetadataOverlay();
-        // 같은 값을 다시 쓰면 revision 만 오르고 카탈로그가 매번 더러워집니다.
-        if (DevelopMetadataFields.Equivalent(stored, next))
-        {
-            return;
-        }
-        _ = panel.SetAppMetadata(_ => next);
-        UpdateAppMetadataCards();
-        UpdateInfoCard();
-    }
-
-    private void LocalizeAppMetadataCards()
-    {
-        string card = AppResources.Get("developAppMetadataCard", "Text");
-        AppMetadataCardTitleText.Text = card;
-        AutomationProperties.SetName(AppMetadataCard, card);
-        string shotCard = AppResources.Get("developFilmShotCard", "Text");
-        FilmShotCardTitleText.Text = shotCard;
-        AutomationProperties.SetName(FilmShotCard, shotCard);
-        LocalizeMetadataBox(AppMetadataTitleBox, "developAppMetadataTitle");
-        LocalizeMetadataBox(AppMetadataCaptionBox, "developAppMetadataCaption");
-        LocalizeMetadataBox(AppMetadataKeywordsBox, "developAppMetadataKeywords");
-        LocalizeMetadataBox(AppMetadataCopyrightBox, "developAppMetadataCopyright");
-        LocalizeMetadataBox(FilmShotCameraMakeBox, "developFilmShotCameraMake");
-        LocalizeMetadataBox(FilmShotCameraModelBox, "developFilmShotCameraModel");
-        LocalizeMetadataBox(FilmShotLensModelBox, "developFilmShotLensModel");
-        LocalizeMetadataBox(FilmShotFilmStockBox, "developFilmShotFilmStock");
-        LocalizeMetadataBox(FilmShotIsoSpeedBox, "developFilmShotIsoSpeed");
-        LocalizeMetadataBox(FilmShotShutterBox, "developFilmShotShutter");
-        LocalizeMetadataBox(FilmShotApertureBox, "developFilmShotAperture");
-        LocalizeMetadataBox(FilmShotFocalLengthBox, "developFilmShotFocalLength");
-    }
-
-    private static void LocalizeMetadataBox(TextBox box, string resourceKey)
-    {
-        string text = AppResources.Get(resourceKey, "Text");
-        box.PlaceholderText = text;
-        AutomationProperties.SetName(box, text);
-    }
-
-    /// <summary>
-    /// 롤 기록 카드입니다. 이 frame 이 롤에 속해 있을 때만 칸이 나오고, 아니면 macOS 와 같이
-    /// 아직 롤에 속해 있지 않다고 알립니다.
-    /// </summary>
-    private void UpdateRollRecordCard()
-    {
-        if (RollCodeBox is null)
-        {
-            return;
-        }
-        bool onInfoTab = inspectorPresentation.SelectedTab == DevelopInspectorTab.Info;
-        RollRecordCard.Visibility = onInfoTab && panel?.SelectedFrame is not null
-            ? Visibility.Visible
-            : Visibility.Collapsed;
-        if (panel?.SelectedFrame is not { } frame || libraryHost is null)
-        {
-            return;
-        }
-
-        LibraryRollSnapshot? roll = libraryHost.RollFor(frame.Id);
-        RollNameText.Text = roll?.Name ?? string.Empty;
-        RollMissingText.Visibility = roll is null ? Visibility.Visible : Visibility.Collapsed;
-        RollCreateButton.Visibility = RollMissingText.Visibility;
-        RollRecordFields.Visibility = roll is null ? Visibility.Collapsed : Visibility.Visible;
-        if (roll is null)
-        {
-            return;
-        }
-
-        RollRecord record = roll.Record ?? new RollRecord();
-        FilmShotMetadata shot = record.Shot ?? new FilmShotMetadata();
-        isSynchronizingMetadata = true;
-        try
-        {
-            RollCodeBox.Text = record.Code ?? string.Empty;
-            RollNotesBox.Text = record.Notes ?? string.Empty;
-            RollCameraMakeBox.Text = shot.CameraMake ?? string.Empty;
-            RollCameraModelBox.Text = shot.CameraModel ?? string.Empty;
-            RollLensModelBox.Text = shot.LensModel ?? string.Empty;
-            RollFilmStockBox.Text = shot.FilmStock ?? string.Empty;
-        }
-        finally
-        {
-            isSynchronizingMetadata = false;
-        }
-    }
-
-    /// <summary>
-    /// 고른 사진으로 롤을 만듭니다. macOS 의 "선택 항목으로 롤 만들기" 와 같으며, 라이브러리에서
-    /// 고른 것이 없으면 지금 보고 있는 한 장으로 만듭니다.
-    /// </summary>
-    private void OnCreateRollClicked(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (libraryHost is null || panel?.SelectedFrame is not { } frame)
-        {
-            return;
-        }
-        IReadOnlyList<LibraryFrameSnapshot> selected = libraryHost.SelectedFrames;
-        IReadOnlyList<LibraryFrameSnapshot> selection =
-            selected.Count > 1 ? selected : [frame];
-        // 이름은 원본이 들어 있는 폴더에서 옵니다. 사용자가 필름 봉투에 적은 이름이 대개
-        // 그 폴더 이름이며, 없으면 macOS 의 "무제 필름" 자리를 씁니다.
-        string name = Path.GetFileName(Path.GetDirectoryName(frame.SourcePath) ?? string.Empty);
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            name = AppResources.Get("scanUntitledFilm", "Text");
-        }
-        string? rollId = libraryHost.CreateRoll(
-            name,
-            frame.Route.FilmType,
-            selection.Select(item => item.Id));
-        if (rollId is not null)
-        {
-            // 새로 만든 롤이 곧 지금 스캔 중인 롤입니다 — macOS 도 만든 롤을 활성으로 둡니다.
-            _ = libraryHost.SetActiveRoll(rollId);
-        }
-        UpdateRollRecordCard();
-    }
-
-    private void OnRollRecordCommitted(object sender, RoutedEventArgs args)
-    {
-        _ = sender;
-        _ = args;
-        if (isSynchronizingMetadata ||
-            libraryHost is null ||
-            panel?.SelectedFrame is not { } frame ||
-            libraryHost.RollFor(frame.Id) is not { } roll)
-        {
-            return;
-        }
-        RollRecord next = new(
-            RollCodeBox.Text,
-            new FilmShotMetadata(
-                RollCameraMakeBox.Text,
-                RollCameraModelBox.Text,
-                RollLensModelBox.Text,
-                RollFilmStockBox.Text),
-            RollNotesBox.Text);
-        if (next.Normalized() == (roll.Record ?? new RollRecord()).Normalized())
-        {
-            return;
-        }
-        _ = libraryHost.SetRollRecord(roll.Id, next);
-        UpdateRollRecordCard();
-    }
-
-    private void LocalizeRollRecordCard()
-    {
-        string card = AppResources.Get("developRollRecordCard", "Text");
-        RollRecordCardTitleText.Text = card;
-        AutomationProperties.SetName(RollRecordCard, card);
-        RollMissingText.Text = AppResources.Get("developRollMissing", "Text");
-        RollFillHintText.Text = AppResources.Get("developRollFillHint", "Text");
-        LocalizeMetadataBox(RollCodeBox, "developRollCode");
-        LocalizeMetadataBox(RollCameraMakeBox, "developFilmShotCameraMake");
-        LocalizeMetadataBox(RollCameraModelBox, "developFilmShotCameraModel");
-        LocalizeMetadataBox(RollLensModelBox, "developFilmShotLensModel");
-        LocalizeMetadataBox(RollFilmStockBox, "developFilmShotFilmStock");
-        LocalizeMetadataBox(RollNotesBox, "developRollNotes");
-        SetButtonText(
-            RollCreateButton,
-            AppResources.Get("developRollCreateFromSelection", "Content"));
-    }
-
-    private void UpdateInfoCard()
-    {
-        if (InfoRows is null)
-        {
-            return;
-        }
-        string cardTitle = AppResources.Get("developInfoCard", "Text");
-        InfoCardTitleText.Text = cardTitle;
-        // 이름이 없는 Border 는 접근성 트리에 나오지 않습니다 — 화면 낭독기도, 검증도 못 봅니다.
-        AutomationProperties.SetName(InfoCard, cardTitle);
-        InfoRows.ItemsSource = DevelopInfoCardProjection.Rows(
-            panel?.SelectedFrame,
-            InfoCardText(),
-            File.Exists);
-    }
-
-    private static DevelopInfoCardText InfoCardText() => new(
-        AppResources.Get("developInfoSource", "Text"),
-        AppResources.Get("developInfoSidecar", "Text"),
-        AppResources.Get("developInfoCamera", "Text"),
-        AppResources.Get("developInfoDate", "Text"),
-        AppResources.Get("developInfoTitle", "Text"),
-        AppResources.Get("developInfoKeywords", "Text"),
-        AppResources.Get("developInfoNotAvailable", "Text"),
-        AppResources.Get("developInfoOriginScan", "Text"),
-        AppResources.Get("developInfoOriginImport", "Text"),
-        AppResources.Get("developInfoUnknown", "Text"),
-        AppResources.Get("developInfoSidecarNotFound", "Text"));
-
     private void UpdateVersionControls() => LeftPanel.VersionsPanel.Update();
 
     private void OnVersionRestored(object? sender, EventArgs args)
@@ -3072,8 +2786,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
         NoFrameLeftText.Text = noFrame;
         NoFrameInspectorText.Text = noFrame;
         DevelopHeaderText.Text = AppResources.Get("menuDevelop", "Text");
-        LocalizeAppMetadataCards();
-        LocalizeRollRecordCard();
+        InfoCards.Localize();
         SetRadioText(BaseAutoModeButton, AppResources.Get("developBaseModeAuto", "Content"));
         SetRadioText(BaseFilmModeButton, AppResources.Get("developBaseModeFilm", "Content"));
         SetRadioText(BaseManualModeButton, AppResources.Get("developBaseModeManual", "Content"));

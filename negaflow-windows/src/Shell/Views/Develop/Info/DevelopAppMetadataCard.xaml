@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Negaflow.Shell.Views.Develop.Info.DevelopAppMetadataCard"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- 앱 메타데이터: 사용자가 적어 두는 값입니다. 원본 파일이 아니라
+         카탈로그에만 씁니다. -->
+    <Border
+        x:Name="Card"
+        x:FieldModifier="internal"
+        HorizontalAlignment="Stretch"
+        Padding="14"
+        AutomationProperties.AutomationId="negaflow.develop.app-metadata"
+        Background="{ThemeResource NegaflowCardBrush}"
+        CornerRadius="14">
+        <StackPanel HorizontalAlignment="Stretch" Spacing="8">
+            <Grid ColumnSpacing="7">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <FontIcon VerticalAlignment="Center" FontSize="14" Glyph="&#xE70F;" />
+                <TextBlock
+                    x:Name="TitleText"
+                    x:FieldModifier="internal"
+                    Grid.Column="1"
+                    VerticalAlignment="Center"
+                    FontSize="14"
+                    FontWeight="SemiBold" />
+                <TextBlock
+                    x:Name="SavedText"
+                    x:FieldModifier="internal"
+                    Grid.Column="2"
+                    VerticalAlignment="Center"
+                    FontSize="11"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            </Grid>
+            <TextBox
+                x:Name="TitleBox"
+                x:FieldModifier="internal"
+                AutomationProperties.AutomationId="negaflow.develop.app-metadata.title"
+                LostFocus="OnCommitted" />
+            <TextBox
+                x:Name="CaptionBox"
+                x:FieldModifier="internal"
+                AutomationProperties.AutomationId="negaflow.develop.app-metadata.caption"
+                LostFocus="OnCommitted" />
+            <TextBox
+                x:Name="KeywordsBox"
+                x:FieldModifier="internal"
+                AutomationProperties.AutomationId="negaflow.develop.app-metadata.keywords"
+                LostFocus="OnCommitted" />
+            <TextBox
+                x:Name="CopyrightBox"
+                x:FieldModifier="internal"
+                AutomationProperties.AutomationId="negaflow.develop.app-metadata.copyright"
+                LostFocus="OnCommitted" />
+        </StackPanel>
+    </Border>
+</UserControl>
