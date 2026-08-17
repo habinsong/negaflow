@@ -120,6 +120,25 @@ internal static class ScannerPluginTests
                     "{\"resolutionsDPI\":[3600,3600],\"modes\":[\"color\"],\"bitDepths\":[16],\"outputFormats\":[\"tiff\"]}",
                     out _),
                 "scanner_plugin_rejects_duplicate_capability_values");
+            // 실제 플러그인의 capabilityToken 은 장치의 SANE 옵션 덤프를 담아 수천 자다 —
+            // OpticFilm 8100 이 4,148자, Epson GT-X900 이 5,012자였다. 표시용 512자 규칙을
+            // 여기에 적용하면 응답 전체가 버려지고 화면에는 심도 옵션이 없다고만 나온다.
+            string longToken = new('A', 8_192);
+            Check(ScannerPluginClient.TryParseCapabilities(
+                    "{\"resolutionsDPI\":[600,3600],\"modes\":[\"color\",\"gray\"],\"bitDepths\":[16]," +
+                        "\"supportsPreview\":true,\"supportsTransparency\":true," +
+                        "\"outputFormats\":[\"tiff\"],\"capabilityToken\":\"" + longToken + "\"}",
+                    out ScannerPluginCapabilities? tokenCapabilities) &&
+                  tokenCapabilities is { CapabilityToken.Length: 8_192 } &&
+                  tokenCapabilities.BitDepths.Count == 1 && tokenCapabilities.BitDepths[0] == 16,
+                "scanner_plugin_keeps_a_multi_kilobyte_capability_token");
+            // 그래도 무한히 받지는 않는다. 전송 계층의 stdout 한 줄 상한과 같은 자리에서 끊는다.
+            Check(!ScannerPluginClient.TryParseCapabilities(
+                    "{\"resolutionsDPI\":[600],\"modes\":[\"color\"],\"bitDepths\":[16]," +
+                        "\"outputFormats\":[\"tiff\"],\"capabilityToken\":\"" +
+                        new string('A', (256 * 1024) + 1) + "\"}",
+                    out _),
+                "scanner_plugin_rejects_an_unbounded_capability_token");
 
             string scanDestination = Path.Combine(root, "scan.tiff");
             ScannerPluginScanRequest scanRequest = new(
