@@ -19,6 +19,8 @@ extension AppModel {
     // 제한한다. 과거처럼 매 틱마다 리비전을 올려 루프가 무제한 렌더하지 않으므로 GPU(IOSurface) 압박이
     // 사라지고 간헐적 블랭크 렌더가 방지된다. 마지막(정착) 호출이 풀해상도 패스까지 마무리한다.
     func requestDevelop(_ frame: ScanFrame) {
+        // 인스펙터의 모든 조정이 여기로 모인다 — 되돌리기 기록도 여기 한 곳에서 남긴다.
+        recordFrameEditIfChanged(frame)
         developController.requestDevelop(frame) { [weak self] frame in
             await self?.developFrame(frame)
         }

@@ -236,6 +236,8 @@ extension AppModel {
             rebuildCleanedRaw(frame)
         }
         markDevelopedResident(frame)
+        // 이 사진의 편집 되돌리기 기준점. 없으면 첫 조정이 기준점 세우기로 소모돼 되돌릴 수 없다.
+        if frameEditBaselines[frame.id] == nil { noteFrameEditBaseline(frame) }
         // IR 쌍이 있으면 GrainMend IR 을 되살린다. 기록은 세션 메모리에만 살기 때문에,
         // 앱을 다시 켠 뒤 처음 선택하는 프레임은 여기서 다시 만들어야 레이어가 보인다.
         scheduleInfraredCleanForSelection(frame)

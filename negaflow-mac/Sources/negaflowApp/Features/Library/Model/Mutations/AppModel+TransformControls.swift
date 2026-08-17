@@ -90,6 +90,8 @@ extension AppModel {
     /// 루프가 항상 최신 transform 하나만 렌더한다 — 드래그 중엔 표시 해상도 한 장(작은 readback),
     /// 정착 후 풀해상도 + raw/무보정/썸네일을 채운다.
     func applyTransformFast(_ frame: ScanFrame) {
+        // 회전·뒤집기·크롭·각도 초기화가 모두 이 길목을 지난다.
+        recordFrameEditIfChanged(frame)
         nextScanOrientation = frame.imageTransform.orientationTemplate
         frame.transformRevision += 1
         // 변형 전 현상 결과를 변형한다. 입력 raw가 cleaned raw라 결함 제거도 이미 포함되어 있어
