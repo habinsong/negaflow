@@ -324,12 +324,30 @@ if(BUILD_TESTING)
     add_test(NAME native.build_info COMMAND negaflow_native_tests)
 
     add_executable(negaflow_develop_export_abi_tests
-        tests/Native.UnitTests/develop_export_abi_tests.cpp
+        tests/Native.UnitTests/DevelopExportAbi/main.cpp
+        tests/Native.UnitTests/DevelopExportAbi/support.cpp
+        tests/Native.UnitTests/DevelopExportAbi/requests.cpp
+        tests/Native.UnitTests/DevelopExportAbi/contract_validation.cpp
+        tests/Native.UnitTests/DevelopExportAbi/contract_v2_v12.cpp
+        tests/Native.UnitTests/DevelopExportAbi/contract_v18_v25.cpp
+        tests/Native.UnitTests/DevelopExportAbi/contract_v26_v34.cpp
+        tests/Native.UnitTests/DevelopExportAbi/preview_core.cpp
+        tests/Native.UnitTests/DevelopExportAbi/preview_tone_color.cpp
+        tests/Native.UnitTests/DevelopExportAbi/preview_grain_mend.cpp
+        tests/Native.UnitTests/DevelopExportAbi/preview_denoise_texture.cpp
+        tests/Native.UnitTests/DevelopExportAbi/preview_color_route.cpp
+        tests/Native.UnitTests/DevelopExportAbi/run_state.cpp
+        tests/Native.UnitTests/DevelopExportAbi/auto_adjust.cpp
+        tests/Native.UnitTests/DevelopExportAbi/defect_region.cpp
+        tests/Native.UnitTests/DevelopExportAbi/soft_proof.cpp
+        tests/Native.UnitTests/DevelopExportAbi/probe.cpp
         tests/fixtures/tiff/synthetic_wic_tiff.cpp
     )
     target_include_directories(
         negaflow_develop_export_abi_tests
-        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/tiff"
+        PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/tiff"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/Native.UnitTests/DevelopExportAbi"
     )
     target_link_libraries(
         negaflow_develop_export_abi_tests
