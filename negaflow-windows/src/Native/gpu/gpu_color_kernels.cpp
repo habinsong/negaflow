@@ -10,6 +10,7 @@
 #include "negaflow/gpu/shaders/color_grade_ColorGradeMain.h"
 #include "negaflow/gpu/shaders/color_mixer_ColorMixerMain.h"
 #include "negaflow/gpu/shaders/bw_toning_BwToningMain.h"
+#include "negaflow/gpu/shaders/digital_bw_film_DigitalBwFilmMain.h"
 #include "negaflow/gpu/shaders/primary_calibration_PrimaryCalibrationMain.h"
 
 namespace negaflow::gpu {
@@ -125,7 +126,70 @@ static_assert(sizeof(BwToningConstants) == 64U, "four constant registers");
         std::isfinite(setup.strength) && std::isfinite(setup.mode);
 }
 
+// HLSL `cbuffer DigitalBwFilmConstants` 와 같은 배치여야 합니다.
+struct alignas(16) DigitalBwFilmConstants final {
+    GpuPointwiseExtent extent{};
+    float weights[3]{0.0F, 0.0F, 0.0F};
+    float contrast{0.0F};
+    float toe{0.0F};
+    float shoulder{0.0F};
+    float deepen{0.0F};
+    float black{0.0F};
+    float white{0.0F};
+    float intensity{0.0F};
+    float padding[2]{0.0F, 0.0F};
+};
+
+static_assert(sizeof(DigitalBwFilmConstants) == 64U, "four constant registers");
+
+[[nodiscard]] bool finite_digital_bw(const GpuDigitalBwFilmSetup& setup) noexcept {
+    return finite_offsets(setup.weights) && std::isfinite(setup.contrast) &&
+        std::isfinite(setup.toe) && std::isfinite(setup.shoulder) &&
+        std::isfinite(setup.deepen) && std::isfinite(setup.black) &&
+        std::isfinite(setup.white) && std::isfinite(setup.intensity);
+}
+
 }  // namespace
+
+GpuKernelStatus GpuDigitalBwFilm::create(
+    const GpuDevice& device,
+    GpuDigitalBwFilm& kernel) noexcept {
+    return GpuPointwiseKernel::create(
+        device,
+        negaflow_digital_bw_film_cs,
+        sizeof(negaflow_digital_bw_film_cs),
+        sizeof(DigitalBwFilmConstants),
+        kernel.kernel_);
+}
+
+GpuKernelStatus GpuDigitalBwFilm::dispatch(
+    const GpuDevice& device,
+    const GpuWorkingImage& source,
+    GpuWorkingImage& destination,
+    const GpuDigitalBwFilmSetup& setup) const noexcept {
+    if (!finite_digital_bw(setup)) {
+        return GpuKernelStatus::non_finite_parameter;
+    }
+    if (!setup.active) {
+        // CPU 판은 프로파일이 없거나 강도가 임계 이하이면 `copy_active_pixels` 로 원본을
+        // 그대로 내보냅니다. 여기서 커널을 돌리면 흑백 변환이 걸려 컬러가 사라집니다.
+        const GpuImageStatus copied = destination.copy_from(device, source);
+        return copied == GpuImageStatus::ok ? GpuKernelStatus::ok
+                                            : GpuKernelStatus::invalid_arguments;
+    }
+    DigitalBwFilmConstants payload{};
+    for (int index = 0; index < 3; ++index) {
+        payload.weights[index] = setup.weights[index];
+    }
+    payload.contrast = setup.contrast;
+    payload.toe = setup.toe;
+    payload.shoulder = setup.shoulder;
+    payload.deepen = setup.deepen;
+    payload.black = setup.black;
+    payload.white = setup.white;
+    payload.intensity = setup.intensity;
+    return kernel_.dispatch(device, source, destination, &payload, sizeof(payload));
+}
 
 GpuKernelStatus GpuBwToning::create(const GpuDevice& device, GpuBwToning& kernel) noexcept {
     return GpuPointwiseKernel::create(

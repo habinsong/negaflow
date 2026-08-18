@@ -8,6 +8,7 @@
 // | 컬러 믹서(HSL) | `:74` `colorMixerHSL` | `imaging/color_mixer.cpp` `apply_color_mixer` | `shaders/color_mixer.hlsl` |
 // | 원색 보정 | `:151` `calibrationPrimaries` | `imaging/primary_calibration.cpp` | `shaders/primary_calibration.hlsl` |
 // | 흑백 조색 | `:123` `bwToning` | `imaging/bw_toning.cpp` `apply_bw_toning` | `shaders/bw_toning.hlsl` |
+// | 디지털 흑백 유제 | `:826` `digitalBWFilm` | `imaging/digital_bw_emulsion_response.cpp` | `shaders/digital_bw_film.hlsl` |
 //
 // CPU 판을 **대체하지 않습니다.** 나란히 두고 상위에서 장치 가용성으로 고릅니다.
 
@@ -111,6 +112,41 @@ public:
         const GpuWorkingImage& source,
         GpuWorkingImage& destination,
         const GpuBwToningSetup& setup) const noexcept;
+
+    [[nodiscard]] bool is_valid() const noexcept { return kernel_.is_valid(); }
+
+private:
+    GpuPointwiseKernel kernel_{};
+};
+
+// `imaging::DigitalBwEmulsionSetup` 과 같은 값입니다.
+//
+// ☠️ **여기서 계산하지 마십시오.** `imaging::prepare_digital_bw_emulsion_response` 가 만든 것을
+//    그대로 옮겨 담으십시오 — 필름 프로파일 표가 CPU 쪽에 있습니다.
+struct GpuDigitalBwFilmSetup final {
+    float weights[3]{0.2126F, 0.7152F, 0.0722F};
+    float contrast{0.0F};
+    float toe{0.0F};
+    float shoulder{0.0F};
+    float deepen{0.0F};
+    float black{0.0F};
+    float white{1.0F};
+    float intensity{0.0F};
+    // 거짓이면 CPU 는 원본을 그대로 복사합니다. GPU 도 그렇게 합니다.
+    bool active{false};
+};
+
+class GpuDigitalBwFilm final {
+public:
+    [[nodiscard]] static GpuKernelStatus create(
+        const GpuDevice& device,
+        GpuDigitalBwFilm& kernel) noexcept;
+
+    [[nodiscard]] GpuKernelStatus dispatch(
+        const GpuDevice& device,
+        const GpuWorkingImage& source,
+        GpuWorkingImage& destination,
+        const GpuDigitalBwFilmSetup& setup) const noexcept;
 
     [[nodiscard]] bool is_valid() const noexcept { return kernel_.is_valid(); }
 

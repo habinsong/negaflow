@@ -23,6 +23,7 @@
 #include "negaflow/imaging/color_grading.h"
 #include "negaflow/imaging/color_mixer.h"
 #include "negaflow/imaging/bw_toning.h"
+#include "negaflow/imaging/digital_bw_emulsion_response.h"
 #include "negaflow/imaging/primary_calibration.h"
 
 namespace {
@@ -441,6 +442,108 @@ void bw_matches_cpu(const GpuDevice& device, const char* const label) {
     }
 }
 
+// 디지털 흑백 유제 — macOS `digitalBWFilm`. CPU 판이 화소 계산을 `double` 로 하므로
+// float32 GPU 와의 오차가 다른 커널보다 클 수 있습니다. 허용치는 그대로 `1e-5` 입니다.
+struct DigitalBwCase final {
+    const char* name;
+    negaflow::imaging::DigitalBwEmulsionResponseParameters parameters;
+};
+
+const DigitalBwCase digital_bw_cases[] = {
+    // 프로파일 없음 — CPU 는 원본을 그대로 복사합니다.
+    {"dbw_none", {negaflow::imaging::FilmEmulation::none, 1.0}},
+    {"dbw_half", {negaflow::imaging::FilmEmulation::tri_x_400, 0.5}},
+    {"dbw_full", {negaflow::imaging::FilmEmulation::tri_x_400, 1.0}},
+    {"dbw_hp5", {negaflow::imaging::FilmEmulation::hp5_plus, 0.8}},
+    {"dbw_tmax", {negaflow::imaging::FilmEmulation::tmax_100, 0.65}},
+};
+
+void digital_bw_matches_cpu(const GpuDevice& device, const char* const label) {
+    negaflow::gpu::GpuDigitalBwFilm kernel{};
+    if (negaflow::gpu::GpuDigitalBwFilm::create(device, kernel) != GpuKernelStatus::ok) {
+        expect(false, "digital bw kernel must be creatable");
+        return;
+    }
+
+    const std::vector<Rgba32F> source = make_ramp();
+    GpuWorkingImage input{};
+    if (GpuWorkingImage::upload(device, source.data(), width, height, width, input) !=
+        GpuImageStatus::ok) {
+        expect(false, "digital bw source upload must succeed");
+        return;
+    }
+    GpuWorkingImage output{};
+    if (GpuWorkingImage::create(device, width, height, output) != GpuImageStatus::ok) {
+        expect(false, "digital bw destination must be creatable");
+        return;
+    }
+
+    for (const DigitalBwCase& scenario : digital_bw_cases) {
+        // ☠️ 응답 계수를 시험에서 다시 만들지 않습니다 — CPU 와 같은 함수를 씁니다.
+        const negaflow::imaging::DigitalBwEmulsionSetup cpu_setup =
+            negaflow::imaging::prepare_digital_bw_emulsion_response(scenario.parameters);
+        negaflow::gpu::GpuDigitalBwFilmSetup gpu_setup{};
+        for (int index = 0; index < 3; ++index) {
+            gpu_setup.weights[index] = cpu_setup.weights[index];
+        }
+        gpu_setup.contrast = cpu_setup.contrast;
+        gpu_setup.toe = cpu_setup.toe;
+        gpu_setup.shoulder = cpu_setup.shoulder;
+        gpu_setup.deepen = cpu_setup.deepen;
+        gpu_setup.black = cpu_setup.black;
+        gpu_setup.white = cpu_setup.white;
+        gpu_setup.intensity = cpu_setup.intensity;
+        gpu_setup.active = cpu_setup.active;
+
+        if (kernel.dispatch(device, input, output, gpu_setup) != GpuKernelStatus::ok) {
+            expect(false, "digital bw dispatch must succeed");
+            continue;
+        }
+        std::vector<Rgba32F> gpu_pixels(source.size());
+        if (output.download(device, gpu_pixels.data(), width) != GpuImageStatus::ok) {
+            expect(false, "digital bw download must succeed");
+            continue;
+        }
+
+        std::vector<Rgba32F> cpu_pixels(source.size());
+        const negaflow::core::ConstImageView view{
+            source.data(), source.size(), width, height, width};
+        const negaflow::core::ImageView out{
+            cpu_pixels.data(), cpu_pixels.size(), width, height, width};
+        const negaflow::core::KernelStatus cpu_status =
+            negaflow::imaging::apply_digital_bw_emulsion_response(view, out, scenario.parameters);
+        if (cpu_status != negaflow::core::KernelStatus::ok) {
+            // 프로파일이 없는 경우는 CPU 가 invalid_parameter 를 냅니다. 그때 GPU 도
+            // 원본 복사이므로 결과 비교는 의미가 있습니다 — 원본과 같아야 합니다.
+            bool identical = true;
+            for (std::size_t index = 0U; index < source.size() && identical; ++index) {
+                identical = source[index].red == gpu_pixels[index].red &&
+                    source[index].green == gpu_pixels[index].green &&
+                    source[index].blue == gpu_pixels[index].blue;
+            }
+            expect(identical, "inactive digital bw must pass the source through untouched");
+            std::cout << "[gpu] " << label << ' ' << scenario.name << " pass-through\n";
+            continue;
+        }
+
+        float worst = 0.0F;
+        for (std::size_t index = 0U; index < cpu_pixels.size(); ++index) {
+            worst = std::max(worst, std::abs(cpu_pixels[index].red - gpu_pixels[index].red));
+            worst = std::max(worst, std::abs(cpu_pixels[index].green - gpu_pixels[index].green));
+            worst = std::max(worst, std::abs(cpu_pixels[index].blue - gpu_pixels[index].blue));
+            worst = std::max(worst, std::abs(cpu_pixels[index].alpha - gpu_pixels[index].alpha));
+        }
+        if (worst > tolerance) {
+            std::cerr << "FAIL: " << label << ' ' << scenario.name << " max delta " << worst
+                      << '\n';
+            ++failures;
+        } else {
+            std::cout << "[gpu] " << label << ' ' << scenario.name << " max delta " << worst
+                      << '\n';
+        }
+    }
+}
+
 }  // namespace
 
 int main() {
@@ -453,6 +556,7 @@ int main() {
     mixer_matches_cpu(warp, "warp");
     primary_matches_cpu(warp, "warp");
     bw_matches_cpu(warp, "warp");
+    digital_bw_matches_cpu(warp, "warp");
 
     const GpuDevice hardware = GpuDevice::create(GpuDevicePreference::hardware_only);
     if (hardware.is_usable()) {
@@ -461,6 +565,7 @@ int main() {
         mixer_matches_cpu(hardware, "hardware");
         primary_matches_cpu(hardware, "hardware");
         bw_matches_cpu(hardware, "hardware");
+        digital_bw_matches_cpu(hardware, "hardware");
     } else {
         std::cout << "[gpu] hardware absent, WARP only\n";
     }

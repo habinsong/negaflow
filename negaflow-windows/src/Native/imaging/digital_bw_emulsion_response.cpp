@@ -81,6 +81,30 @@ void copy_active_pixels(
 
 }  // namespace
 
+DigitalBwEmulsionSetup prepare_digital_bw_emulsion_response(
+    const DigitalBwEmulsionResponseParameters& parameters) noexcept {
+    DigitalBwEmulsionSetup setup{};
+    const DigitalBwFilmProfile* const profile =
+        digital_bw_film_profile(parameters.emulation);
+    if (profile == nullptr || !std::isfinite(parameters.intensity) ||
+        !has_digital_bw_emulsion_response_change(parameters)) {
+        return setup;
+    }
+    const Response response = make_response(*profile, parameters.intensity);
+    for (std::size_t channel = 0U; channel < 3U; ++channel) {
+        setup.weights[channel] = static_cast<float>(response.weights[channel]);
+    }
+    setup.contrast = static_cast<float>(response.contrast);
+    setup.toe = static_cast<float>(response.toe);
+    setup.shoulder = static_cast<float>(response.shoulder);
+    setup.deepen = static_cast<float>(response.deepen);
+    setup.black = static_cast<float>(response.black);
+    setup.white = static_cast<float>(response.white);
+    setup.intensity = static_cast<float>(response.intensity);
+    setup.active = true;
+    return setup;
+}
+
 bool valid_digital_bw_emulsion_response_parameters(
     const DigitalBwEmulsionResponseParameters& parameters) noexcept {
     return std::isfinite(parameters.intensity) &&
@@ -120,6 +144,7 @@ negaflow::core::KernelStatus apply_digital_bw_emulsion_response(
         return negaflow::core::KernelStatus::ok;
     }
 
+    // 준비 계산은 `prepare_digital_bw_emulsion_response` 와 같은 `make_response` 하나에서 옵니다.
     const Response response = make_response(*profile, parameters.intensity);
     for (std::uint32_t row = 0U; row < input.height; ++row) {
         const std::size_t input_offset =

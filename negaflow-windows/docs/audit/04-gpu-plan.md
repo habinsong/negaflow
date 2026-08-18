@@ -68,6 +68,7 @@
 > | `colorMixerHSL` | WARP **0~6.0e-08** · NVIDIA **0~1.3e-06** |
 > | `negativeInvert` (현상 최대 비용 단계) | WARP **7.5e-08~1.5e-07** · NVIDIA **8.9e-08~1.8e-07** |
 > | `bwToning` | WARP **0~1.2e-07** · NVIDIA **1.2e-07~1.8e-07** |
+> | `digitalBWFilm` (CPU 는 `double`) | WARP **3.0e-07~4.2e-07** · NVIDIA **4.2e-07~4.8e-07** |
 > | `calibrationPrimaries` | WARP **전부 0** · NVIDIA **0~1.4e-06** |
 > | 매개변수 조합 | 11개 — 양수/음수 대비, 임계 미만, clamp, 각 마스크 |
 > | 새 시험 | `native.gpu_device` · `native.gpu_working_image` · `native.gpu_basic_tone` 전부 통과 |
@@ -178,6 +179,40 @@ Core Image 의 기본 작업 형식은 **half float** 입니다. Windows 는 `Rg
 | 31 | `digitalFilmGrainDensity` | 800 | `digital_film_grain.cpp` |
 | 32 | `digitalBWFilm` | 826 | `digital_bw_film_look.cpp` |
 
+> ### 2026-08-18 실제 대조 결과 — 위 표의 오른쪽 열은 **추정이었고 일부 틀렸습니다**
+>
+> 이식하면서 하나씩 열어 확인했습니다. **확정된 것만** 적습니다.
+>
+> | # | 커널 | 실제 Windows 대응 | 상태 |
+> |---:|---|---|---|
+> | 1 | `colorMixerHSL` | `color_mixer.cpp` `apply_color_mixer` | **이식함** |
+> | 2 | `colorGrade` | `color_grading.cpp` `apply_color_grading` | **이식함** |
+> | 3 | `bwToning` | `bw_toning.cpp` `apply_bw_toning` | **이식함** |
+> | 32 | `digitalBWFilm` | `digital_bw_emulsion_response.cpp` (CPU 는 `double`) | **이식함** |
+> | 4 | `calibrationPrimaries` | `primary_calibration.cpp` | **이식함** |
+> | 5 | `basicTone` | `tone_mapping.cpp` `apply_basic_tone` | **이식함** |
+> | 6 | `parametricToneCurve` | `tone_mapping.cpp` `apply_parametric_tone_curve` | **이식함** |
+> | 18 | `negativeInvert` | **`core/negative_inversion.cpp`** (imaging 아님) | **이식함** |
+> | 17 | `boundedRelativeGrade` | `rescue_grade.cpp` 아님 — **`scanner_target_grade.cpp:62-64`** 안에 박혀 있음 | ☠️ **단순 이식 불가** (아래) |
+> | 22 | `digitalSceneReconstruct` | **없음** | CPU 부터 없음 |
+> | 23 | `digitalFilmDensity` | **없음** | 〃 |
+> | 24 | `digitalInterImage` | **없음** | 〃 |
+> | 25 | `digitalPrintPaper` | **없음** | 〃 |
+> | 26 | `digitalReversalTransmit` | **없음** | 〃 |
+> | 28 | `digitalToDisplayGamma` | **없음** | 〃 |
+> | 29 | `digitalToLinearLight` | **없음** | 〃 |
+>
+> **22~26·28·29 는 `digital_film_physics.cpp` 가 아닙니다.** 그 파일은 필름별 산란·할레이션·
+> 그레인 **프로파일 표**일 뿐이고 커널이 아닙니다. 개념어(`scene_reconstruct`·`inter_image`·
+> `print_paper`·`reversal_transmit`·`film_density`)로 `src/Native/` 를 훑어도 **히트 0** 입니다.
+> [`01-backend-gaps.md`](01-backend-gaps.md) 가 적은 `DigitalFilmDevelop`·`SceneReconstruct` 결손과
+> 같은 것입니다. **GPU 이전에 CPU 이식이 먼저입니다.**
+>
+> ☠️ **17 `boundedRelativeGrade` 는 화소별 옮겨쓰기가 아닙니다.** Windows 는 그 혼합을
+> `scanner_target_grade.cpp` 의 화소 루프 안에서 하고, 그 안의 `transformed_srgb`·`gamut_scale`
+> 이 **전부 `double`** 입니다. float32 GPU 로 옮기면 `1e-5` 를 못 지킬 수 있습니다.
+> 옮기려면 먼저 **CPU 를 float 로 내려도 골든이 안 바뀌는지** 재야 합니다. 재기 전에는 손대지 마십시오.
+>
 > ⚠️ **먼저 [`../verification/2026-08-10-macos-kernel-audit.md`](../verification/2026-08-10-macos-kernel-audit.md) 를 읽으십시오.**
 > 그 문서가 **이미 수식 1:1 대조를 했습니다**(2026-08-10 기준):
 > `basicTone`·`parametricToneCurve`·`negativeInvert`·`colorMixerHSL`·`colorGrade`·
