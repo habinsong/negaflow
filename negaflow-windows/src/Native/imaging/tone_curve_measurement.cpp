@@ -1,5 +1,7 @@
 #include "negaflow/imaging/tone_curve_measurement.h"
 
+
+
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -185,6 +187,16 @@ ToneCurveMeasurementResult measure_parametric_tone_curve_bands(
     }
 
     try {
+        // ☠️ 이 표본 추출은 **GPU 로 옮길 수 없습니다.** `sampled_luma` 가 가중치와 누적을
+        //    `double` 로 하는데 D3D11 의 double 은 **선택 기능**이라 벤더에 따라 없습니다
+        //    (`docs/audit/13-performance-playbook.md` 18절). float 로 낮추면 백분위가 달라지고
+        //    밴드가 달라져 **출력 화소가 달라집니다.**
+        //
+        // ☠️ **병렬화도 해 봤고 더 느렸습니다 — 되돌렸습니다.**
+        //    `for_each_row_block` 으로 행을 나눠 봤더니 tone_adjust 가 257.95 → 283~288 ms 로
+        //    **25 ms 늘었습니다**(3회 반복, 값은 안 바뀜). 표본 격자가 256×171 정도라 나눌 일이
+        //    적은데, `core/parallel_rows.cpp` 가 **호출마다 `std::thread` 를 새로 만들기**
+        //    때문입니다(19절). **영속 워커 풀이 서기 전에는 다시 시도하지 마십시오.**
         std::vector<double> luma_values{};
         luma_values.reserve(static_cast<std::size_t>(interior_count));
         const double inverse_scale = 1.0 / scale;
