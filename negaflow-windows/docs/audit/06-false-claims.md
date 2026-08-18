@@ -177,3 +177,80 @@
 > **규칙: "왜 막혔나" 를 적을 때도 근거를 열어야 합니다.**
 > "됐다" 만 증명이 필요한 것이 아닙니다. **"안 된다" 도 증명이 필요합니다** —
 > 틀린 장애물은 되지도 않을 일을 미루게 만듭니다.
+
+---
+
+## 11. ☠️ 9절이 **죽은 커널과 산 커널을 견줬습니다** (2026-08-19 정정)
+
+9절은 `digitalFilmColor`(macOS `:774`)와 Windows `digital_film_color_preset.cpp` 를 견주고
+*"다른 알고리즘"*, *"GPU 로 옮기기 전에 어느 쪽이 맞는지 정해야 한다"* 고 적었습니다.
+
+**틀렸습니다. 그 macOS 커널은 죽어 있습니다.**
+
+| 확인한 것 | 결과 |
+|---|---|
+| `digitalFilmColor` 를 부르는 곳 | `DigitalFilmLook.swift:97` 의 `DigitalFilmColor.apply` **하나** |
+| `DigitalFilmColor.apply` 를 부르는 곳 | **없습니다.** `.swift` 1,035개 전수 grep — 정의만 남아 있습니다 |
+| 그럼 무엇이 도나 | `DigitalFilmLook.swift:68` 의 **`DigitalFilmColorPresetStage`** 입니다 |
+| `DigitalFilmColorPresetStage` 가 하는 일 | `digitalToDisplayGamma` → `ColorMixerStage` → `ColorGradingStage` → `CalibrationStage` → `digitalToLinearLight` → `CIMix` |
+
+**Windows `digital_film_color_preset.cpp` 는 바로 그 산 스테이지를 옮긴 것입니다.**
+mixer·grading·calibration 세 개뿐인 이유가 그것이고, `hue` 가 안 나오는 이유도 그것입니다.
+9절이 *"담을 자리 자체가 없다"* 고 적은 것은 **담을 필요가 없는 것**이었습니다.
+
+### 같은 확인을 나머지에도 했습니다 — **옮기면 안 되는 것이 6개**입니다
+
+[`04`](04-gpu-plan.md) 0.3절이 *"CPU 판부터 없음 (7)"* 으로 적은 것 중 **다섯**이
+여기 해당합니다. 호출 사슬을 끝까지 따라간 결과입니다:
+
+| macOS 커널 | 유일한 호출부 | 그 호출부를 부르는 곳 |
+|---|---|---|
+| `digitalSceneReconstruct` | `DigitalSceneReconstruct.apply` | **없음** |
+| `digitalFilmDensity` | `DigitalFilmDevelop.exposeDensity` | `DigitalFilmDevelop.apply` → **없음** |
+| `digitalInterImage` | `DigitalFilmDevelop.interImage` | 〃 |
+| `digitalPrintPaper` | `DigitalFilmDevelop.printOnPaper` | 〃 |
+| `digitalReversalTransmit` | `DigitalFilmDevelop.transmit` | 〃 |
+| `digitalFilmColor` | `DigitalFilmColor.apply` | **없음** |
+
+이미 알려진 넷(`scannerLowSatChroma`·`scannerMidtoneChroma`·`gamutSoftClip`·
+`highlightDesaturate`)과 합치면 **옮기면 안 되는 것이 10개**입니다.
+**소스에 있다는 이유로 옮기면 macOS 에 없는 효과를 만들어 냅니다.**
+
+살아 있는 둘은 `digitalToDisplayGamma`·`digitalToLinearLight` 이고,
+`DigitalFilmColorPresetStage` 가 도메인 왕복에 씁니다. **그 둘은 이식했습니다**(`ba1c063`).
+
+### 어떻게 찾았나
+
+`grep -rn --include=*.swift '"digitalFilmColor"' .` 로 **커널 이름 문자열**을 세고,
+히트가 난 함수의 이름으로 다시 grep 해 **호출 사슬을 끝까지** 따라갔습니다.
+9절은 커널 본문 두 개를 나란히 읽는 데서 멈췄습니다 — **본문을 읽는 것만으로는
+부족합니다. 그 함수가 불리는지도 봐야 합니다.**
+
+---
+
+## 12. ☠️ `noritsuTexture` — Windows CPU 판이 **이미 있습니다** (2026-08-19 정정)
+
+[`14`](14-remaining-gpu-methodology.md) 3절이 *"Windows CPU 판이 없습니다
+(`grep noritsuTexture` → win=0). **CPU 부터**입니다"* 라고 적었습니다.
+
+**있습니다.** `imaging/scanner_target_grade.cpp:86` `apply_noritsu_texture` 입니다.
+`apply_scanner_target_grade` 가 `target == ScannerTargetStyle::noritsu` 일 때 부릅니다(`:181`).
+macOS 커널의 게이트 두 개(`lo < 0 || hi > 1`, `lumaO <= 1e-5`), 플로어
+`max(yO*0.45, min(yO, 0.008))`, 공통 축소까지 그대로 있습니다.
+
+**틀린 이유: camelCase 커널 이름으로 grep 했습니다.** Windows 는 snake_case 이므로
+`noritsuTexture` 로는 영원히 0 히트입니다. 남은 것은 **GPU 이식뿐**입니다.
+
+> **규칙: 이식 여부를 커널 이름으로 grep 하지 마십시오.** 두 저장소의 명명 규칙이
+> 다릅니다. 개념어(`noritsu`·`halation`·`grain`)로 찾고, 찾은 파일을 **열어서** 판정하십시오.
+
+---
+
+## 13. `film_scan_denoise` GPU 오케스트레이터 — **제품 경로에 있습니다** (2026-08-19 정정)
+
+[`04`](04-gpu-plan.md) 0.4절 5번과 [`14`](14-remaining-gpu-methodology.md) 7.2절이
+*"타일을 도는 코드는 지금 **시험 안에만** 있습니다"* 라고 적었습니다.
+
+**아닙니다.** `gpu/gpu_film_scan_stage.cpp` 가 `make_tile`(CPU 와 같은 512/18)로 타일을 돌고,
+`pipeline/gpu_accelerator.cpp` `apply_film_scan_denoise` 가 그것을 부르며,
+`stages/finish.cpp` 가 그 진입점을 씁니다. 문서가 쓰인 뒤에 배선된 것을 반영하지 못했습니다.

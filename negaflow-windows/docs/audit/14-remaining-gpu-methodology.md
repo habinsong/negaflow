@@ -23,6 +23,45 @@
 
 ---
 
+## 0.0 ☠️ 2026-08-19 — **이 문서의 0.1·0.2·2·3·7.2 절이 틀렸습니다**
+
+이 문서는 2026-08-18 에 04 의 오판 셋을 잡으며 쓰였습니다. 그 뒤 실제로 이식하면서
+**이 문서 자신의 오판 셋**이 드러났습니다. 같은 종류의 실수입니다 — 본문은 읽었는데
+**그 함수가 불리는지는 안 봤습니다.**
+
+| 이 문서가 적은 것 | 실제 | 근거 |
+|---|---|---|
+| **2절** `digitalFilmColor` — *"Windows 가 다른 알고리즘이다. GPU 이전에 어느 쪽이 맞는지 정해야 한다"* | **macOS 커널이 죽어 있습니다.** `DigitalFilmColor.apply` 만 부르고, 그 함수는 `.swift` 1,035개 어디에서도 안 불립니다. 산 것은 `DigitalFilmColorPresetStage` 이고 Windows 는 **그것을 옮긴 것**입니다 | [`06`](06-false-claims.md) 11절 |
+| **3절** `noritsuTexture` — *"Windows CPU 판이 없습니다(win=0). CPU 부터입니다"* | **있습니다.** `scanner_target_grade.cpp:86` `apply_noritsu_texture`. camelCase 커널 이름으로 grep 해서 0 히트가 났던 것입니다 | [`06`](06-false-claims.md) 12절 |
+| **7.2절** `film_scan_denoise` — *"타일 루프가 시험 안에만 있습니다"* | **제품 경로에 있습니다.** `gpu_film_scan_stage.cpp` → `gpu_accelerator.cpp` → `stages/finish.cpp` | [`06`](06-false-claims.md) 13절 |
+
+그리고 **6절 전체가 무효**입니다. 그 절은 *"CPU 판부터 없는 일곱 — 가상 현상 사슬"* 을
+사슬 순서대로 이식하라고 적었습니다. 그중 **다섯이 macOS 에서 죽은 커널**입니다.
+옮기면 macOS 에 없는 효과를 만들어 냅니다. 살아 있는 둘
+(`digitalToDisplayGamma`·`digitalToLinearLight`)은 이식했습니다.
+
+> ### 이 문서가 스스로 어긴 규칙
+>
+> 8절에 *"macOS 원문을 열었습니다. 문서·파일 이름으로 판정한 것은 0절에서 세 개가
+> 틀렸습니다"* 라고 적어 두고, **호출부는 안 봤습니다.**
+>
+> **규칙을 하나 더 답니다: 커널 본문을 읽는 것으로 끝내지 마십시오.
+> `grep` 으로 그 함수를 부르는 곳을 찾고, 그 호출부를 부르는 곳을 다시 찾아
+> **살아 있는 진입점에 닿을 때까지** 따라가십시오.** 닿지 않으면 죽은 코드입니다.
+>
+> **그리고 이식 여부를 커널 이름으로 grep 하지 마십시오.** macOS 는 camelCase,
+> Windows 는 snake_case 입니다. 개념어로 찾고 파일을 열어 판정하십시오.
+
+### 1절(노이즈)은 유효했습니다 — 실측으로 확인
+
+좌표 해시를 HLSL `uint` 로 옮기니 **비트 단위로 같았습니다**(오차 2.98e-08 은 뒤따르는
+`pow`/`exp` 의 것). 보간 경로(`size > 1.01`)는 제품 표의 `size` 가 1.10~1.60 이라
+**항상 탑니다.** CPU 가 `double`, GPU 가 float 인데도 값이 안 튀는 이유는
+**쌍선형 보간이 연속**이기 때문입니다 — 격자 경계에서 `floor` 가 한 칸 밀려도
+밀린 쪽 가중치가 0/1 로 붙습니다. 전체 사슬 실측 오차 **4.2e-07**.
+
+---
+
 ## 0. ☠️ 먼저 — [`04`](04-gpu-plan.md) 0.3절의 오류 세 개
 
 전부 **macOS 원문과 Windows 소스를 열어서** 확인했습니다. 이름과 문서만 보고 적었던 것입니다.
@@ -101,7 +140,7 @@ CPU/GPU/타일/재시도가 전부 같은 값을 냅니다 — 그것이 검증 
 
 ---
 
-## 2. `digitalFilmColor` — 화소별, 지금 붙일 수 있습니다 (다만 **Windows 가 다른 알고리즘입니다**)
+## 2. ~~`digitalFilmColor`~~ — ☠️ **무효.** 그 커널은 macOS 에서 죽었습니다 (0.0절)
 
 ### ☠️ 먼저 확인된 발산 — 이것부터 판단이 필요합니다
 
@@ -134,7 +173,7 @@ CPU/GPU/타일/재시도가 전부 같은 값을 냅니다 — 그것이 검증 
 
 ---
 
-## 3. `noritsuTexture` — 막혀 있지 않습니다. `digitalHalation` 과 같은 모양입니다
+## 3. `noritsuTexture` — ☠️ **CPU 판은 이미 있습니다**(0.0절). 남은 것은 GPU 뿐
 
 ### 근거
 
@@ -218,7 +257,7 @@ macOS 가 sRGB 도메인에서 더하는 이유가 그것입니다.
 
 ---
 
-## 6. CPU 판부터 없는 일곱 — **가상 현상 사슬**입니다. 하나씩 떼지 마십시오
+## 6. ~~CPU 판부터 없는 일곱~~ — ☠️ **무효.** 다섯이 죽은 커널입니다 (0.0절)
 
 `digitalSceneReconstruct` → `digitalFilmDensity` → `digitalInterImage` →
 `digitalPrintPaper` **또는** `digitalReversalTransmit` → (`digitalHalation` **이식됨**) →

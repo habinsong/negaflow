@@ -42,9 +42,54 @@
 
 ---
 
-## 0. 지금 어디까지 왔나 (2026-08-18)
+## 0. 지금 어디까지 왔나 (2026-08-19)
 
-### 0.0 진척률 — 세는 방법을 먼저 밝힙니다
+> ### 2026-08-19 갱신 — 아래 0.0~0.4 는 **2026-08-18 판**입니다. 이 상자가 그 뒤를 적습니다.
+>
+> **① 옮기면 안 되는 것이 4개가 아니라 10개입니다.** 호출 사슬을 끝까지 따라가니
+> `digitalSceneReconstruct`·`digitalFilmDensity`·`digitalInterImage`·`digitalPrintPaper`·
+> `digitalReversalTransmit`·`digitalFilmColor` **여섯이 macOS 에서 죽어 있습니다**
+> (호출부가 정의만 있고 아무도 안 부릅니다). 0.3절의 *"CPU 판부터 없음 (7)"* 중
+> 다섯이 여기 해당하고, 남은 둘(`digitalToDisplayGamma`·`digitalToLinearLight`)은
+> 이식했습니다. 근거는 [`06`](06-false-claims.md) 11절.
+>
+> **② `noritsuTexture` 는 Windows CPU 판이 이미 있습니다**
+> (`scanner_target_grade.cpp:86` `apply_noritsu_texture`). camelCase 로 grep 해서
+> 못 찾았던 것입니다 → [`06`](06-false-claims.md) 12절.
+>
+> **③ `film_scan_denoise` GPU 오케스트레이터는 제품 경로에 있습니다**
+> (`gpu_film_scan_stage.cpp` → `gpu_accelerator.cpp` → `stages/finish.cpp`)
+> → [`06`](06-false-claims.md) 13절.
+>
+> **④ 디지털 필름 룩 사슬 다섯을 이식하고 오케스트레이터로 묶었습니다.**
+> 헐레이션(커널은 있었고 표에 `nullptr` 이라 **1 ms 도 안 줄고 있었습니다**) ·
+> 33³ 색 큐브 · 아큐턴스 · 스톡 색 프리셋 · 밀도 그레인.
+>
+> **실측 (5088×3401 실제 스캔, RTX 4060 Ti, 프리뷰 3600, `--develop-timing … filmlook`)**
+>
+> | 단계 | CPU (`NEGA_GPU=0`) | 지금 | |
+> |---|---:|---:|---:|
+> | `film_look` | **35,126.25 ms** | **370.22 ms** | **−98.9%** |
+> | `tone_adjust` | 1,239.65 ms | 440.28 ms | −64.5% |
+> | 전체 | **37,016.98 ms** | **809.75 ms** | **−97.8% (45.7배)** |
+>
+> 사슬 오케스트레이터가 왜 필요했는지 — 재료 다섯을 **각자** GPU 로 돌렸을 때
+> `film_look` 이 1,926 ms 였습니다. 24MP 에서 왕복이 다섯 번(277 MB × 10)이라
+> **전송이 커널을 삼켰습니다.** 한 번 올려 한 번 내리니 370 ms 입니다 —
+> 3절의 *"단계마다 올렸다 내리면 집니다"* 가 실측으로 재확인된 것입니다.
+>
+> **필름 스캔 경로**(사용자 실사용 경로)는 이 사슬을 지나지 않습니다. 그쪽 실측은
+> 전체 **753 ms** 이고 내역은 `develop` 306.79 · `tone_adjust` 239.10 · `output` 106.97 입니다.
+>
+> **남은 것**: `noritsuTexture` GPU · `boundedRelativeGrade`(`double` 계측 먼저) ·
+> `filmGrain`(ColorModel) · CIVibrance 33³ 표 · `ditherAdd`(기능 신설) ·
+> `channelClippingOverlay`(기능+UI 신설) · `CIAreaAverage` 리덕션 ·
+> `GpuMipHalve` 배선 · 검출 형태학 오케스트레이터 · 흑백 디지털 룩 사슬.
+
+### 0.0 — 아래는 2026-08-18 판입니다
+
+
+#### 진척률 — 세는 방법을 먼저 밝힙니다
 
 ☠️ **"몇 %" 는 세는 기준을 안 밝히면 거짓말입니다.** 세 가지로 나눠 셉니다.
 
