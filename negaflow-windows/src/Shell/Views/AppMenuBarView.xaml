@@ -135,5 +135,43 @@
                 AutomationProperties.AutomationId="negaflow.menu.open-print"
                 Click="OnOpenPrintClick" />
         </MenuBarItem>
+        <!--
+          macOS AppWorkflowMenuCommands CommandMenu(.menuLibrary).
+          가져오기 네 항목은 파일 메뉴와 같은 명령을 부르고, 구분선 뒤에 격자·비교·살펴보기.
+        -->
+        <MenuBarItem
+            x:Name="LibraryMenu"
+            AutomationProperties.AutomationId="negaflow.menu.library"
+            Title="Library">
+            <MenuFlyoutItem
+                x:Name="LibraryImportImagesItem"
+                AutomationProperties.AutomationId="negaflow.menu.library.import-images"
+                Click="OnImportImagesClick" />
+            <MenuFlyoutItem
+                x:Name="LibraryImportFolderItem"
+                AutomationProperties.AutomationId="negaflow.menu.library.import-folder"
+                Click="OnImportFolderClick" />
+            <MenuFlyoutItem
+                x:Name="LibraryRefreshItem"
+                AutomationProperties.AutomationId="negaflow.menu.library.refresh"
+                Click="OnRefreshLibraryClick" />
+            <MenuFlyoutItem
+                x:Name="LibraryLoadScannerItem"
+                AutomationProperties.AutomationId="negaflow.menu.library.load-scanner"
+                Click="OnLoadScannerClick" />
+            <MenuFlyoutSeparator />
+            <MenuFlyoutItem
+                x:Name="LibraryGridItem"
+                AutomationProperties.AutomationId="negaflow.menu.library.grid"
+                Click="OnLibraryGridClick" />
+            <MenuFlyoutItem
+                x:Name="LibraryCompareItem"
+                AutomationProperties.AutomationId="negaflow.menu.library.compare"
+                Click="OnLibraryCompareClick" />
+            <MenuFlyoutItem
+                x:Name="LibrarySurveyItem"
+                AutomationProperties.AutomationId="negaflow.menu.library.survey"
+                Click="OnLibrarySurveyClick" />
+        </MenuBarItem>
     </MenuBar>
 </UserControl>

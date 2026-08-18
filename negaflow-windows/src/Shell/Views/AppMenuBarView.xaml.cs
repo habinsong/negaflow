@@ -7,8 +7,9 @@ using Negaflow.Shell.Shortcuts;
 namespace Negaflow.Shell.Views;
 
 /// <summary>
-/// macOS <c>AppStandardMenuCommands</c> 의 앱·파일·편집·보기 메뉴입니다. Windows 에는
-/// 시스템 앱 메뉴가 없어서 창 안 <see cref="MenuBar"/> 가 그 자리입니다.
+/// macOS <c>AppStandardMenuCommands</c> 와 <c>AppWorkflowMenuCommands</c> 의
+/// 앱·파일·편집·보기·라이브러리 메뉴입니다. Windows 에는 시스템 앱 메뉴가 없어서 창 안
+/// <see cref="MenuBar"/> 가 그 자리입니다.
 /// </summary>
 public sealed partial class AppMenuBarView : UserControl
 {
@@ -73,6 +74,17 @@ public sealed partial class AppMenuBarView : UserControl
         SetItem(OpenDevelopItem, "shortcutOpenDevelop",
             WorkflowShortcutAction.OpenDevelopWorkspace);
         SetItem(OpenPrintItem, "menuPrint", WorkflowShortcutAction.OpenPrintWorkspace);
+
+        string library = AppResources.Get("menuLibrary", "Text");
+        LibraryMenu.Title = library;
+        AutomationProperties.SetName(LibraryMenu, library);
+        SetItem(LibraryImportImagesItem, "shortcutImportImages", WorkflowShortcutAction.ImportImages);
+        SetItem(LibraryImportFolderItem, "shortcutImportFolder", WorkflowShortcutAction.ImportFolder);
+        SetItem(LibraryRefreshItem, "shortcutRefreshLibrary", WorkflowShortcutAction.RefreshLibrary);
+        SetItem(LibraryLoadScannerItem, "loadScanner", WorkflowShortcutAction.LoadScanner);
+        SetItem(LibraryGridItem, "libraryCullingGrid", WorkflowShortcutAction.LibraryGrid);
+        SetItem(LibraryCompareItem, "libraryCullingCompare", WorkflowShortcutAction.LibraryCompare);
+        SetItem(LibrarySurveyItem, "libraryCullingSurvey", WorkflowShortcutAction.LibrarySurvey);
     }
 
     private static void SetItem(
@@ -160,6 +172,15 @@ public sealed partial class AppMenuBarView : UserControl
 
     private void OnOpenPrintClick(object sender, RoutedEventArgs args) =>
         RaiseCommand(sender, args, WorkflowShortcutAction.OpenPrintWorkspace);
+
+    private void OnLibraryGridClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.LibraryGrid);
+
+    private void OnLibraryCompareClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.LibraryCompare);
+
+    private void OnLibrarySurveyClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.LibrarySurvey);
 
     private void RaiseCommand(object sender, RoutedEventArgs args, WorkflowShortcutAction action)
     {

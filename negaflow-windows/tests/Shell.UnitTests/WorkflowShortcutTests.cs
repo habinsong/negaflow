@@ -88,6 +88,21 @@ internal static class WorkflowShortcutTests
             "workflow_shortcut_toggle_fullscreen_matches_mac_control_remap");
 
         Check(
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.LibraryGrid) ==
+                new WorkflowShortcut("g", WorkflowShortcutModifiers.None) &&
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.LibraryCompare) ==
+                new WorkflowShortcut("c", WorkflowShortcutModifiers.None) &&
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.LibrarySurvey) ==
+                new WorkflowShortcut("n", WorkflowShortcutModifiers.None) &&
+            WorkflowShortcutActions.Group(WorkflowShortcutAction.LibraryGrid) ==
+                WorkflowShortcutGroup.Library &&
+            WorkflowShortcutActions.Group(WorkflowShortcutAction.LibraryCompare) ==
+                WorkflowShortcutGroup.Library &&
+            WorkflowShortcutActions.Group(WorkflowShortcutAction.LibrarySurvey) ==
+                WorkflowShortcutGroup.Library,
+            "workflow_shortcut_library_culling_keys_match_mac");
+
+        Check(
             defaults.Resolve("p", WorkflowShortcutModifiers.None) ==
                 WorkflowShortcutAction.PickPhoto &&
             defaults.Resolve("x", WorkflowShortcutModifiers.None) ==

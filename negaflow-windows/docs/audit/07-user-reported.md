@@ -77,7 +77,7 @@ macOS `App/AppMenuCommands.swift` · `AppStandardMenuCommands.swift` · `AppWork
 | 파일 | `:16` (`after: .newItem`), `:38` (`after: .importExport`) | **2026-08-19.** `AppMenuBarView` 둘째 메뉴 `파일`. PID 31928: UIA `이미지 가져오기` · `폴더 가져오기` · `라이브러리 새로고침` · `스캐너 불러오기` · `빠른 내보내기` · `내보내기`. 인화에서 `스캐너 불러오기` → 라이브러리 + 스캔 패널(Plustek OpticFilm 8100 · 프리뷰/스캔). 시스템 New/Open/Close 없음(OS 강제). 인화 모듈 빠른 내보내기는 아직 현상 경로 |
 | 편집 | `:54` (`replacing: .undoRedo`), `:66` (`.pasteboard`), `:78` (`.textEditing`) | **2026-08-19.** `AppMenuBarView` 셋째 메뉴 `편집`. PID 29540: UIA `되돌리기` · `다시 실행` · `현상 설정 복사` · `현상 설정 붙여넣기` · `선택` · `제외` · `negaflow에서 제거` + 단축키 표시(Ctrl+Z 등). `제외` → 카드 빨간 깃발, `되돌리기` → 깃발 사라짐. 메뉴 클릭이 GridView 선택을 비워도 catalog `ActiveFrameId` 로 명령을 건다. 시스템 잘라내기/복사/붙여넣기 없음(OS 강제) |
 | 보기 | `:95` (`after: .sidebar`), `:112` (`after: .toolbar`) | **2026-08-19.** `AppMenuBarView` 넷째 메뉴 `보기`. PID 31828: UIA `사이드바 보기/숨기기` · `필름스트립 보기/숨기기` · `인스펙터 보기/숨기기` · `전체 화면 시작` · `라이브러리` · `현상` · `인화`. `현상` → 현상 작업공간. 사이드바 숨김(현상 왼쪽 패널 없음) → 인스펙터 숨김(히스토그램 트리 0). 전체 화면은 `AppWindow` FullScreen presenter, 단축키 Ctrl+Alt+Shift+F(macOS ⌃⌘F 의 control→Alt+Shift). 라이브러리 화면의 가져오기 칸은 `IsSidebarVisible` 을 안 씀 |
-| 라이브러리 | `AppWorkflowMenuCommands.swift:8` `CommandMenu(.menuLibrary)` | **없음** |
+| 라이브러리 | `AppWorkflowMenuCommands.swift:8` `CommandMenu(.menuLibrary)` | **2026-08-19.** `AppMenuBarView` 다섯째 메뉴 `라이브러리`. PID 27388: UIA `이미지 가져오기` · `폴더 가져오기` · `라이브러리 새로고침` · `스캐너 불러오기` · `격자` · `비교` · `살펴보기` + 단축키 Ctrl+I / Ctrl+Shift+I / Ctrl+R / Ctrl+Alt+L / G / C / N. 인화에서 `살펴보기` → 라이브러리. `비교` → 빈 비교(`사진 두 장을 선택하세요`). `격자` → 카드 격자 복귀. macOS 는 격자/비교/살펴보기에서 `activeWorkspaceModule = .library` |
 | 사진 | `:47` `CommandMenu(.menuPhoto)` | **없음** |
 | 현상 | `:135` `CommandMenu(.menuDevelop)` | **없음** |
 | 스캐너 | `:250` `CommandMenu(.menuScanner)` | **없음** |
@@ -87,7 +87,7 @@ macOS `App/AppMenuCommands.swift` · `AppStandardMenuCommands.swift` · `AppWork
 
 Parsec macOS 메뉴 줄: `negaflow · 파일 · 편집 · 보기 · 라이브러리 · 사진 · 현상 · 스캐너 · 내보내기 · 윈도우 · 도움말`.
 
-**판정: 앱·파일·편집·보기 메뉴를 이식함. 나머지 7개는 없습니다.**
+**판정: 앱·파일·편집·보기·라이브러리 메뉴를 이식함. 나머지 6개는 없습니다.**
 
 ---
 
@@ -477,7 +477,7 @@ DevelopLookLabel         DevelopLookSelector
 2. **E1 프리뷰 프록시 캐시 + 2단 렌더** — 네이티브 2슬롯+Lanczos 현상 붙임. 5088×3401 상자 1280 두 번째 **43.1 ms · decode 0**. 앱에서 노출 0→0.80 과 히스토그램 갱신 확인. **FrameCacheManager FIFO 는 10번.**
 3. **C1 필름 베이스** — C1.1~C1.9. RealScan 리베이트 집기 `0.40 0.13 0.07` + 현상본 유지.
 4. **E4 인화 프리뷰** — **닫음.** 현상본 먼저, 칸이 크면 표시 크기 현상. 다음: B 메뉴막대
-5. **B 메뉴막대** — 앱·파일·편집·보기 이식함. 다음: 라이브러리 메뉴
+5. **B 메뉴막대** — 앱·파일·편집·보기·라이브러리 이식함. 다음: 사진 메뉴
 6. **D1 초기화 · D5 undo**
 7. **GPU** ([`04`](04-gpu-plan.md))
 8. **D2·D3 비교 캡슐·줌 HUD**

@@ -232,6 +232,12 @@ public sealed partial class WorkspaceShellView : UserControl
                 state.SelectWorkspace(WorkspaceModule.Library);
                 LibraryWorkspace.PresentScannerSetup();
                 return true;
+            case WorkflowShortcutAction.LibraryGrid:
+            case WorkflowShortcutAction.LibraryCompare:
+            case WorkflowShortcutAction.LibrarySurvey:
+                // macOS AppModel+WorkflowShortcuts: libraryCullingMode + activeWorkspaceModule = .library
+                state.SelectWorkspace(WorkspaceModule.Library);
+                return LibraryWorkspace.InvokeShortcut(action);
             case WorkflowShortcutAction.QuickExport:
                 _ = DevelopWorkspace.QuickExportAsync();
                 return true;
