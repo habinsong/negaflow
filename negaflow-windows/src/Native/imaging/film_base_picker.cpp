@@ -138,13 +138,13 @@ struct PixelRect final {
     if (!grid.has_value()) {
         return std::nullopt;
     }
-    const std::optional<BaseMeasurement> measurement =
+    const std::optional<FilmBaseMeasurement> measurement =
         film_base_detail::connected_component_base(*grid, film_type);
-    if (!measurement.has_value() || !std::isfinite((*measurement)[0]) ||
-        !std::isfinite((*measurement)[1]) || !std::isfinite((*measurement)[2])) {
+    if (!measurement.has_value() || !std::isfinite(measurement->rgb[0]) ||
+        !std::isfinite(measurement->rgb[1]) || !std::isfinite(measurement->rgb[2])) {
         return std::nullopt;
     }
-    return clamp_rgb(*measurement);
+    return clamp_rgb(measurement->rgb);
 }
 
 // macOS `FilmBasePicker.medianRGB` — 영역의 채널별 <b>중앙값</b>입니다. 평균이 아닌 이유는

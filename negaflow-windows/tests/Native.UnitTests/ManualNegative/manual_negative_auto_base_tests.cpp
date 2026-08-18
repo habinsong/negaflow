@@ -180,9 +180,11 @@ void test_auto_negative_base_resolution() {
         &strip_excluded);
     expect(
         coherent_strip.has_value() &&
-            std::abs((*coherent_strip)[0] - 0.69) < 1.0e-6 &&
-            std::abs((*coherent_strip)[1] - 0.49) < 1.0e-6 &&
-            std::abs((*coherent_strip)[2] - 0.29) < 1.0e-6,
+            std::abs(coherent_strip->rgb[0] - 0.69) < 1.0e-6 &&
+            std::abs(coherent_strip->rgb[1] - 0.49) < 1.0e-6 &&
+            std::abs(coherent_strip->rgb[2] - 0.29) < 1.0e-6 &&
+            coherent_strip->diagnostics.method ==
+                negaflow::imaging::FilmBaseMeasurementMethod::strip_fallback,
         "strip fallback drops clipped strips before the coherent cluster");
 
     auto continuous_border_image = make_auto_base_image({0.005F, 0.005F, 0.005F, 1.0F});

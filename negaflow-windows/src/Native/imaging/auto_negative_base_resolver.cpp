@@ -100,43 +100,47 @@ AutoNegativeBaseResult resolve_auto_negative_base(
         if (!grid.has_value()) {
             return result;
         }
-        if (const std::optional<BaseMeasurement> component =
+        const auto apply = [&result](const FilmBaseMeasurement& measurement,
+                                     const AutoNegativeBaseSource source) {
+            result.dmin = narrow_measurement(measurement.rgb);
+            result.source = source;
+            result.diagnostics = measurement.diagnostics;
+        };
+        if (const std::optional<FilmBaseMeasurement> component =
                 connected_component_base(*grid, film_type)) {
-            result.dmin = narrow_measurement(*component);
-            result.source = AutoNegativeBaseSource::connected_component;
+            apply(*component, AutoNegativeBaseSource::connected_component);
             return with_chromogenic_fallback(result);
         }
         const std::optional<std::vector<bool>> exclusion = non_film_exclusion(*grid, film_type);
         const std::vector<bool>* excluded = exclusion.has_value() ? &*exclusion : nullptr;
-        const std::optional<BaseMeasurement> edge =
+        const std::optional<FilmBaseMeasurement> edge =
             continuous_border_base(*grid, film_type, excluded);
-        const std::optional<BaseMeasurement> distributed =
+        const std::optional<FilmBaseMeasurement> distributed =
             distributed_base(*grid, film_type, excluded);
         if (edge.has_value() && distributed.has_value()) {
-            const double edge_luma = ((*edge)[0] + (*edge)[1] + (*edge)[2]) / 3.0;
+            const double edge_luma =
+                (edge->rgb[0] + edge->rgb[1] + edge->rgb[2]) / 3.0;
             const double distributed_luma =
-                ((*distributed)[0] + (*distributed)[1] + (*distributed)[2]) / 3.0;
+                (distributed->rgb[0] + distributed->rgb[1] + distributed->rgb[2]) / 3.0;
             const bool use_edge = edge_luma >= distributed_luma * 0.85;
-            result.dmin = narrow_measurement(use_edge ? *edge : *distributed);
-            result.source = use_edge
-                ? AutoNegativeBaseSource::continuous_border
-                : AutoNegativeBaseSource::distributed_mask;
+            apply(
+                use_edge ? *edge : *distributed,
+                use_edge
+                    ? AutoNegativeBaseSource::continuous_border
+                    : AutoNegativeBaseSource::distributed_mask);
             return with_chromogenic_fallback(result);
         }
         if (edge.has_value()) {
-            result.dmin = narrow_measurement(*edge);
-            result.source = AutoNegativeBaseSource::continuous_border;
+            apply(*edge, AutoNegativeBaseSource::continuous_border);
             return with_chromogenic_fallback(result);
         }
         if (distributed.has_value()) {
-            result.dmin = narrow_measurement(*distributed);
-            result.source = AutoNegativeBaseSource::distributed_mask;
+            apply(*distributed, AutoNegativeBaseSource::distributed_mask);
             return with_chromogenic_fallback(result);
         }
-        if (const std::optional<BaseMeasurement> strip =
+        if (const std::optional<FilmBaseMeasurement> strip =
                 strip_fallback_base(*grid, film_type, excluded)) {
-            result.dmin = narrow_measurement(*strip);
-            result.source = AutoNegativeBaseSource::strip_fallback;
+            apply(*strip, AutoNegativeBaseSource::strip_fallback);
             return with_chromogenic_fallback(result);
         }
         if (const std::optional<BaseMeasurement> scene_edge =

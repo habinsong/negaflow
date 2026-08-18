@@ -11,7 +11,7 @@ namespace negaflow::imaging::auto_base_detail {
 
 // 프레임 사이 띠에서 잽니다. 여백이 화면 밖으로 잘린 스캔에서 마지막으로 남는 실제
 // 베이스입니다.
-[[nodiscard]] std::optional<film_base_detail::BaseMeasurement> strip_fallback_base(
+[[nodiscard]] std::optional<FilmBaseMeasurement> strip_fallback_base(
     const film_base_detail::SampleGrid& grid,
     NegativeFilmType film_type,
     const std::vector<bool>* excluded);

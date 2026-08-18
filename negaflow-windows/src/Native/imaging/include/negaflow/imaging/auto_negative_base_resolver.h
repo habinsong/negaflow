@@ -1,8 +1,10 @@
 #pragma once
 
+#include "negaflow/imaging/film_base_measurement.h"
 #include "negaflow/imaging/manual_negative_developer.h"
 
 #include <array>
+#include <optional>
 
 namespace negaflow::imaging {
 
@@ -31,6 +33,7 @@ struct AutoNegativeBaseResult final {
     AutoNegativeBaseStatus status{AutoNegativeBaseStatus::invalid_image};
     AutoNegativeBaseSource source{AutoNegativeBaseSource::fallback};
     std::array<float, 3> dmin{};
+    std::optional<FilmBaseMeasurementDiagnostics> diagnostics{};
 };
 
 // The deterministic macOS-compatible automatic base resolver. It samples only the

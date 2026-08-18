@@ -44,7 +44,7 @@
 | 4 | **현상 타깃 MAIN·HS·SP·F135·HR 선택 안 됨** | 타깃 바가 `Views/Library/Defaults/LibraryDevelopDefaultsPanel.xaml.cs:61` 에**만** 있음. 현상 뷰는 `DevelopWorkspaceView.xaml.cs:305` 에서 **읽기만** 함 | **미수정** |
 | 5 | **필름 프로필·룩 작동 안 함** | `DevelopFilmLookPanel.xaml.cs:74-88` 은 붙어 있음. #1 과 겹칠 가능성(강도 슬라이더) | **원인 미확정** |
 | 6 | 오탈자 `타깋` `룹` | `ko-KR/Resources.resw:1066,1068`. macOS 원문은 `타깃`·`룩` | **미수정** |
-| 6.5 | **필름 베이스 수동 — 베이스 스포이드 없음** | macOS `FilmBasePicker.swift`(149줄) + 캔버스 오버레이 + 인스펙터 캡슐이 전부 없었음. 수동 모드에서 베이스를 집을 유일한 수단 | **2026-08-18 이식함**(`d39e55e`). 엔진·ABI·Interop·UI 전부. 시험 7개. **앱에서 집어 본 적은 없음** |
+| 6.5 | **필름 베이스 수동 — 베이스 스포이드 없음** | macOS `FilmBasePicker.swift`(149줄) + 캔버스 오버레이 + 인스펙터 캡슐이 전부 없었음. 수동 모드에서 베이스를 집을 유일한 수단 | **2026-08-18 이식함**(`d39e55e`). 2026-08-19 앱: 알약·프롬프트·캔버스 클릭으로 피커가 꺼짐. 장면 클릭은 Dmin 유지. 리베이트 성공 집기는 아직 없음 |
 | 6.6 | **필름 베이스 자동 — 창작 관문** | `connected_component_base` 의 `candidate_peak` 게이트가 macOS 에 없는 것 | **2026-08-18 제거함**(`cfd5e88`). 죽은 코드였음 — 17장 dmin **바이트 동일** |
 | 7 | **스캐너에서 DPI·심도·프레임 규격 고르면 앱 종료** | `LibraryScanPanel.xaml` 92·122·135행 셀렉터의 `SelectionChanged` | **종료 지점 미확인** |
 | 8 | **스캐너 플러그인 로딩 자체가 안 됨** | `Shell.Core/Scanner/` 20파일 존재. 동작 미확인 | **미확인** |

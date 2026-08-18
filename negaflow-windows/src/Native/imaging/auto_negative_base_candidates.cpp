@@ -9,30 +9,28 @@
 
 namespace negaflow::imaging::auto_base_detail {
 
-using film_base_detail::BaseMeasurement;
 using film_base_detail::SampleGrid;
-using film_base_detail::SampleGridGeometry;
 using film_base_detail::candidate_indices;
 using film_base_detail::candidate_luma_peak;
-using film_base_detail::coherent_measurement;
-using film_base_detail::connected_component_base;
-using film_base_detail::finite_rgb;
-using film_base_detail::has_compatible_layout;
-using film_base_detail::is_component_candidate;
-using film_base_detail::luma_of;
-using film_base_detail::make_sample_grid;
-using film_base_detail::make_sample_grid_geometry;
 using film_base_detail::median;
 using film_base_detail::percentile;
-using film_base_detail::upper_median;
+using film_base_detail::samples_from_indices;
 
-[[nodiscard]] std::optional<BaseMeasurement> coherent_measurement(
+[[nodiscard]] std::optional<FilmBaseMeasurement> measure_selected(
+    const FilmBaseMeasurementMethod method,
     const SampleGrid& grid,
-    const std::vector<std::size_t>& selected) {
-    return coherent_measurement(grid.pixels, selected);
+    const std::vector<std::size_t>& selected,
+    const std::size_t candidate_count) {
+    return build_film_base_measurement(
+        method,
+        static_cast<int>(grid.pixels.size()),
+        static_cast<int>(candidate_count),
+        samples_from_indices(grid, selected),
+        static_cast<int>(grid.width),
+        static_cast<int>(grid.height));
 }
 
-[[nodiscard]] std::optional<BaseMeasurement> continuous_border_base(
+[[nodiscard]] std::optional<FilmBaseMeasurement> continuous_border_base(
     const SampleGrid& grid,
     const NegativeFilmType film_type,
     const std::vector<bool>* excluded) {
@@ -83,10 +81,16 @@ using film_base_detail::upper_median;
     for (std::uint32_t x = 0U; x < grid.width; ++x) {
         continuous = continuous || ((x < edge_x || x >= grid.width - edge_x) && column_counts[x] >= vertical);
     }
-    return continuous ? coherent_measurement(grid, bright) : std::nullopt;
+    return continuous
+        ? measure_selected(
+              FilmBaseMeasurementMethod::continuous_border,
+              grid,
+              bright,
+              candidates.size())
+        : std::nullopt;
 }
 
-[[nodiscard]] std::optional<BaseMeasurement> distributed_base(
+[[nodiscard]] std::optional<FilmBaseMeasurement> distributed_base(
     const SampleGrid& grid,
     const NegativeFilmType film_type,
     const std::vector<bool>* excluded) {
@@ -110,7 +114,13 @@ using film_base_detail::upper_median;
         if (grid.lumas[index] >= cut) { bright.push_back(index); }
     }
     const std::size_t minimum = std::max<std::size_t>(32U, candidates.size() * 2U / 100U);
-    return bright.size() >= minimum ? coherent_measurement(grid, bright) : std::nullopt;
+    return bright.size() >= minimum
+        ? measure_selected(
+              FilmBaseMeasurementMethod::distributed_mask,
+              grid,
+              bright,
+              candidates.size())
+        : std::nullopt;
 }
 
 }  // namespace negaflow::imaging::auto_base_detail

@@ -10,6 +10,12 @@
 #include <utility>
 
 namespace negaflow::imaging::film_base_detail {
+
+using negaflow::imaging::FilmBaseMeasurement;
+using negaflow::imaging::FilmBaseMeasurementMethod;
+using negaflow::imaging::FilmBaseSample;
+using negaflow::imaging::build_film_base_measurement;
+
 namespace {
 
 // NEGA_DEBUG 진단입니다. macOS 와 성분 목록을 그대로 대조하기 위한 opt-in 출력이며 반전
@@ -70,6 +76,29 @@ namespace {
     return (static_cast<double>(pixel.red) + static_cast<double>(pixel.green) +
             static_cast<double>(pixel.blue)) /
         3.0;
+}
+
+[[nodiscard]] FilmBaseSample sample_at(const SampleGrid& grid, const std::size_t index) {
+    return FilmBaseSample{
+        static_cast<int>(index % grid.width),
+        static_cast<int>(index / grid.width),
+        {
+            static_cast<double>(grid.pixels[index].red),
+            static_cast<double>(grid.pixels[index].green),
+            static_cast<double>(grid.pixels[index].blue),
+        },
+    };
+}
+
+[[nodiscard]] std::vector<FilmBaseSample> samples_from_indices(
+    const SampleGrid& grid,
+    const std::vector<std::size_t>& selected) {
+    std::vector<FilmBaseSample> samples;
+    samples.reserve(selected.size());
+    for (const std::size_t index : selected) {
+        samples.push_back(sample_at(grid, index));
+    }
+    return samples;
 }
 
 [[nodiscard]] std::optional<BaseMeasurement> coherent_measurement(
@@ -169,7 +198,7 @@ namespace {
     };
 }
 
-[[nodiscard]] std::optional<BaseMeasurement> connected_component_base(
+[[nodiscard]] std::optional<FilmBaseMeasurement> connected_component_base(
     const SampleGrid& grid,
     const NegativeFilmType film_type) {
     const std::uint32_t width = grid.width;
@@ -319,8 +348,15 @@ namespace {
     std::sort(members.begin(), members.end(), [&grid](const std::size_t left, const std::size_t right) {
         return grid.lumas[left] > grid.lumas[right];
     });
+    const std::size_t member_count = members.size();
     members.resize(std::max(members.size() / 2U, std::min(members.size(), std::size_t{24U})));
-    return coherent_measurement(grid.pixels, members);
+    return build_film_base_measurement(
+        FilmBaseMeasurementMethod::connected_component,
+        static_cast<int>(count),
+        static_cast<int>(member_count),
+        samples_from_indices(grid, members),
+        static_cast<int>(width),
+        static_cast<int>(height));
 }
 
 [[nodiscard]] std::optional<SampleGrid> make_sample_grid(const WorkingImage& image) {

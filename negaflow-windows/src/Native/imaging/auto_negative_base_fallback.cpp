@@ -32,7 +32,7 @@ using film_base_detail::median;
 using film_base_detail::percentile;
 using film_base_detail::upper_median;
 
-[[nodiscard]] std::optional<BaseMeasurement> strip_fallback_base(
+[[nodiscard]] std::optional<FilmBaseMeasurement> strip_fallback_base(
     const SampleGrid& grid,
     const NegativeFilmType film_type,
     const std::vector<bool>* excluded) {
@@ -89,23 +89,22 @@ using film_base_detail::upper_median;
         }
     }
     if (red.empty()) { return std::nullopt; }
-    // macOS `borderFallback` 은 걸러 낸 스트립 평균을 `FilmBaseSample` 로 만든 뒤
-    // `FilmBaseMeasurementBuilder.build` → `coherentCluster` 를 부릅니다. 채널을 따로
-    // 중앙값 내면 luma 이상치 스트립이 R/G/B 를 제각각 잡아당깁니다.
-    std::vector<negaflow::core::Rgba32F> strip_pixels;
-    std::vector<std::size_t> selected;
-    strip_pixels.reserve(red.size());
+    std::vector<FilmBaseSample> selected;
     selected.reserve(red.size());
     for (std::size_t index = 0U; index < red.size(); ++index) {
-        selected.push_back(strip_pixels.size());
-        strip_pixels.push_back({
-            static_cast<float>(red[index]),
-            static_cast<float>(green[index]),
-            static_cast<float>(blue[index]),
-            1.0F,
+        selected.push_back(FilmBaseSample{
+            static_cast<int>(index),
+            0,
+            {red[index], green[index], blue[index]},
         });
     }
-    return coherent_measurement(strip_pixels, selected);
+    return build_film_base_measurement(
+        FilmBaseMeasurementMethod::strip_fallback,
+        static_cast<int>(grid.pixels.size()),
+        static_cast<int>(selected.size()),
+        selected,
+        static_cast<int>(selected.size()),
+        1);
 }
 
 [[nodiscard]] std::optional<BaseMeasurement> scene_edge_fallback_base(

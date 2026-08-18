@@ -553,6 +553,7 @@ add_library(negaflow_imaging STATIC
     src/Native/imaging/color_grading.cpp
     src/Native/imaging/color_mixer.cpp
     src/Native/imaging/film_base_picker.cpp
+    src/Native/imaging/film_base_measurement.cpp
     src/Native/imaging/film_base_sampling.cpp
     src/Native/imaging/film_emulation_acutance.cpp
     src/Native/imaging/film_emulation_acutance_profiles.cpp
@@ -1111,6 +1112,18 @@ if(BUILD_TESTING)
         PRIVATE negaflow_imaging negaflow_project_options
     )
     add_test(NAME native.film_base_picker COMMAND negaflow_film_base_picker_tests)
+
+    add_executable(negaflow_film_base_measurement_diagnostics_tests
+        tests/Native.UnitTests/film_base_measurement_diagnostics_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_film_base_measurement_diagnostics_tests
+        PRIVATE negaflow_imaging negaflow_project_options
+    )
+    add_test(
+        NAME native.film_base_measurement_diagnostics
+        COMMAND negaflow_film_base_measurement_diagnostics_tests
+    )
 
     add_executable(negaflow_gpu_device_tests
         tests/Native.UnitTests/gpu_device_tests.cpp

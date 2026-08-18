@@ -7,6 +7,7 @@
 // 한쪽만 고쳐지고 같은 클릭이 자동 추정과 다른 Dmin 을 냅니다.
 
 #include "negaflow/core/pixel.h"
+#include "negaflow/imaging/film_base_measurement.h"
 #include "negaflow/imaging/manual_negative_developer.h"
 
 #include <array>
@@ -77,8 +78,17 @@ struct SampleGridGeometry final {
     const SampleGrid& grid,
     NegativeFilmType film_type);
 
+// 격자 칸을 macOS `FilmBaseSample` 로 바꿉니다.
+[[nodiscard]] negaflow::imaging::FilmBaseSample sample_at(
+    const SampleGrid& grid,
+    std::size_t index);
+
+[[nodiscard]] std::vector<negaflow::imaging::FilmBaseSample> samples_from_indices(
+    const SampleGrid& grid,
+    const std::vector<std::size_t>& selected);
+
 // macOS `FilmBaseEstimator.connectedBaseComponent`.
-[[nodiscard]] std::optional<BaseMeasurement> connected_component_base(
+[[nodiscard]] std::optional<negaflow::imaging::FilmBaseMeasurement> connected_component_base(
     const SampleGrid& grid,
     NegativeFilmType film_type);
 

@@ -4,6 +4,7 @@
 #include "negaflow/imaging/scanner_tiff_to_working.h"
 
 #include <chrono>
+#include <cstddef>
 #include <filesystem>
 #include <iostream>
 #include <string_view>
@@ -71,8 +72,26 @@ int run_auto_base_probe(const int argument_count, const wchar_t* const arguments
               << ",\"film\":\"" << (monochrome ? "bw" : "color") << '"'
               << ",\"source\":\"" << source_name(resolved.source) << '"'
               << ",\"dmin\":[" << resolved.dmin[0] << ',' << resolved.dmin[1]
-              << ',' << resolved.dmin[2] << ']'
-              << ",\"microseconds\":"
+              << ',' << resolved.dmin[2] << ']';
+    if (resolved.diagnostics.has_value()) {
+        const auto& diagnostics = *resolved.diagnostics;
+        std::cout << ",\"method\":\""
+                  << negaflow::imaging::film_base_measurement_method_name(diagnostics.method)
+                  << "\",\"evidenceScore\":" << diagnostics.evidence_score
+                  << ",\"sampledPixelCount\":" << diagnostics.sampled_pixel_count
+                  << ",\"anomalies\":[";
+        for (std::size_t index = 0U; index < diagnostics.anomalies.size(); ++index) {
+            if (index > 0U) {
+                std::cout << ',';
+            }
+            std::cout << '"'
+                      << negaflow::imaging::film_base_measurement_anomaly_name(
+                             diagnostics.anomalies[index])
+                      << '"';
+        }
+        std::cout << ']';
+    }
+    std::cout << ",\"microseconds\":"
               << std::chrono::duration_cast<std::chrono::microseconds>(
                      finished - started)
                      .count()

@@ -250,10 +250,32 @@ macOS `FilmBaseEstimator.swift` 전량 · `FilmBaseStatistics.coherentCluster` �
 
 | 항목 | 내용 |
 |---|---|
-| **`FilmBaseMeasurementDiagnostics`** | **186줄, 통째로 없음.** Method 4 + Anomaly 8 + EvidenceComponents. sidecar/신뢰도 |
+| **sidecar `confidence` JSON** | macOS `Sidecar.swift` 는 `confidence = evidenceScore`, `confidenceBasis = measuredEvidenceScoreV1`. Windows 내보내기 sidecar 에는 아직 안 붙음 |
 | **`frame.baseRGB` 카탈로그 영속** | macOS 는 렌더 후 `ScanFrame.baseRGB` 를 저장. Windows `LastAppliedBase` 는 세션·프레임 전환까지 |
 | **피커 폭 픽셀 자** | 넓은 패널에서 ComboBox 가 276 에서 멈추는지는 다시 재야 함 |
-| **스포이드를 앱에서 집기** | 시험 7개. 앱 클릭은 아직 없음 |
+| **스포이드로 미노광 베이스를 집어 Dmin 이 바뀜** | 캔버스 클릭은 피커를 끄고 Dmin 을 유지함(장면 클릭 → 거부 경로). 리베이트가 보이는 프레임에서 성공 집기는 아직 없음 |
+
+### C1.5 2026-08-19 — `FilmBaseMeasurementDiagnostics` 1:1
+
+macOS `Film/FilmBaseMeasurementDiagnostics.swift`(186) · `FilmBaseMeasurementBuilder.build` ·
+`FilmBaseStatistics.coherentCluster` 를
+`film_base_measurement.h/.cpp` 로 옮기고, 자동 베이스 네 실측 경로가 같은 빌더를 거칩니다.
+
+| 항목 | Windows | 근거 |
+|---|---|---|
+| Method 4 | `connectedComponent` / `continuousBorder` / `distributedMask` / `stripFallback` (Codable raw 동일) | 헤더 enum + `film_base_measurement_method_name` |
+| Anomaly 8 · 같은 순서 · 같은 임계 | fallbackEstimate, 32, 0.02, 0.65, 0.04, 0.015, 0.01, 0.10 | `film_base_measurement.cpp` 202–226행 = Swift 123–131행 |
+| EvidenceComponents 7항 최솟값 = `evidenceScore` | 64 / 0.02 / spatial / 0.08 / 0.03 / 0.05 / inlier. `isCalibratedProbability=false` | Swift 113–121, 148–149 |
+| `coherentCluster` | MAD×1.4826×3, 바닥 1e-4, 유지 `max(4,n/4)` 아니면 원본. RGB **비클램프** | Swift `FilmBaseStatistics` 9–26. 피커만 `clamp_rgb` |
+| 배선 | connected / border / distributed / strip → `diagnostics` 복사. `scene_edge`·상수 fallback·수동·스포이드는 `nullopt` | macOS 도 추정/수동에는 measurement 없음 |
+
+검증:
+
+- `native.film_base_measurement_diagnostics` · `native.film_base_picker` · `native.manual_negative_developer` x64-release 통과.
+- `negaflow-cli --auto-base-probe` `frame1.tiff` 5088×3401 color: `source=connected_component` `method=connectedComponent` `dmin=[0.22128,0.13298,0.0710158]` `evidenceScore=0.729107` `sampledPixelCount=43776` `anomalies=[]` 49726 µs.
+- `run-app` x64 Release `-SkipBuild` PID 6840. 자동 모드 정착 후 UIA `base 0.22 0.13 0.07` — 프로브와 소수 둘째 자리 일치. 미리보기 대비가 수동 0.90/0.65/0.45 때보다 살아남.
+- 수동 → 스포이드 알약 → 프롬프트 `미노광 필름 베이스(사진 사이/가장자리)를 클릭하세요 · Esc 취소`. 캔버스 UIA 클릭 후 프롬프트 사라짐, 슬라이더 0.90/0.65/0.45 유지. 거부 문구는 이 화면에서 확인 못 함.
+- Parsec macOS `OpticFilm8100_frame_5` 베이스 탭: `base 0.23 0.15 0.07` · 자동 선택. 폴더 `develop_right_base_panel.png` 와 카드 구조(헤더·읽음·자동/필름/수동) 같음. 프레임이 달라 숫자는 Windows frame_1 과 다를 수밖에 없음.
 
 ### 앞 판에서 바로잡은 것
 
@@ -358,7 +380,7 @@ DevelopLookLabel         DevelopLookSelector
 
 1. **A1·A2 크래시** — 스택부터. **A3(2026-08-19) `developReset.Value` 도 닫음.**
 2. **E1 프리뷰 프록시 캐시 + 2단 렌더** — 네이티브 2슬롯+Lanczos 현상 붙임. 5088×3401 상자 1280 두 번째 **43.1 ms · decode 0**. 앱에서 노출 0→0.80 과 히스토그램 갱신 확인. **FrameCacheManager FIFO 는 10번.**
-3. **C1 필름 베이스** — 검은 이미지. macOS 4파일 대조
+3. **C1 필름 베이스** — C1.1~C1.5. 다음: sidecar confidence · `frame.baseRGB` 영속 · 276 자 · 리베이트 스포이드 성공 집기
 4. **E4 인화 프리뷰** — 현상본 쓰도록
 5. **B 메뉴막대 11개**
 6. **D1 초기화 · D5 undo**
