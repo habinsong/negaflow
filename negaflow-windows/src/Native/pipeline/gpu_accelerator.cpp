@@ -78,6 +78,9 @@ GpuAccelerator::GpuAccelerator() noexcept {
                 gpu::GpuKernelStatus::ok &&
             gpu::GpuColorModel::create(state->device, state->color_model) ==
                 gpu::GpuKernelStatus::ok;
+        state->target_grade_ready =
+            gpu::GpuScannerTargetGrade::create(state->device, state->target_grade) ==
+            gpu::GpuKernelStatus::ok;
     }
     state_ = state;
 }

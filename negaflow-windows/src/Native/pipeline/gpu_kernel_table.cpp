@@ -203,6 +203,20 @@ bool accelerate_color_model(
     return accelerator.apply_color_model(pixels, width, height, stride_pixels, parameters);
 }
 
+bool accelerate_scanner_target_grade(
+    float* const pixels,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::uint32_t stride_pixels,
+    const imaging::ScannerTargetGradeSetup* const setup) noexcept {
+    GpuAccelerator& accelerator = GpuAccelerator::shared();
+    if (!accelerator.available()) {
+        return false;
+    }
+    return accelerator.apply_scanner_target_grade(
+        pixels, width, height, stride_pixels, setup);
+}
+
 // 프로세스 수명 동안 살아 있어야 합니다 — `install_kernel_accelerator` 는 포인터만 갖습니다.
 const imaging::KernelAccelerator kernel_table{
     accelerate_opening,
@@ -217,6 +231,7 @@ const imaging::KernelAccelerator kernel_table{
     accelerate_digital_film_look,
     accelerate_muted_scene_vibrance,
     accelerate_color_model,
+    accelerate_scanner_target_grade,
 };
 
 }  // namespace

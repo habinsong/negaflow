@@ -315,6 +315,13 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/scanner_target_grade.hlsl"
+    ScannerTargetGradeMain
+    negaflow_scanner_target_grade_cs
+    NEGAFLOW_SCANNER_TARGET_GRADE_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/morphology.hlsl"
     MorphologyHorizontalMain
     negaflow_morphology_horizontal_cs
@@ -382,6 +389,7 @@ add_library(negaflow_gpu STATIC
     "${NEGAFLOW_ACUTANCE_V_HEADER}"
     "${NEGAFLOW_MUTED_SCENE_VIBRANCE_HEADER}"
     "${NEGAFLOW_COLOR_MODEL_HEADER}"
+    "${NEGAFLOW_SCANNER_TARGET_GRADE_HEADER}"
     "${NEGAFLOW_MORPHOLOGY_H_HEADER}"
     "${NEGAFLOW_MORPHOLOGY_V_HEADER}"
     "${NEGAFLOW_BIPOLAR_TOP_HAT_HEADER}"
@@ -400,6 +408,7 @@ add_library(negaflow_gpu STATIC
     src/Native/gpu/gpu_film_emulation_acutance.cpp
     src/Native/gpu/gpu_film_look_stage.cpp
     src/Native/gpu/gpu_vibrance.cpp
+    src/Native/gpu/gpu_scanner_target_grade.cpp
     src/Native/gpu/gpu_lookup_table.cpp
     src/Native/gpu/gpu_image_pool.cpp
     src/Native/gpu/gpu_morphology.cpp
@@ -1186,6 +1195,17 @@ if(BUILD_TESTING)
         PRIVATE negaflow_gpu negaflow_imaging negaflow_core negaflow_project_options
     )
     add_test(NAME native.gpu_vibrance COMMAND negaflow_gpu_vibrance_tests)
+
+    add_executable(negaflow_gpu_scanner_target_grade_tests
+        tests/Native.UnitTests/gpu_scanner_target_grade_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_gpu_scanner_target_grade_tests
+        PRIVATE negaflow_pipeline negaflow_imaging negaflow_core negaflow_project_options
+    )
+    add_test(
+        NAME native.gpu_scanner_target_grade
+        COMMAND negaflow_gpu_scanner_target_grade_tests)
 
     add_executable(negaflow_gpu_morphology_tests
         tests/Native.UnitTests/gpu_morphology_tests.cpp

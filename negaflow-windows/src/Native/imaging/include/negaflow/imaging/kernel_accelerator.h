@@ -176,6 +176,20 @@ using ColorModelFunction = bool (*)(
     std::uint32_t stride_pixels,
     const ColorModelParameters* parameters) noexcept;
 
+// 스캐너 타겟 프로파일 그레이드입니다. **엔진에서 가장 비싼 화소별 커널**입니다 —
+// 노리츠 프리뷰 실측으로 병렬화 뒤에도 16,201 ms 이고 전체의 90% 를 넘습니다.
+// `setup` 은 CPU 가 화소 루프 밖에서 만든 것을 그대로 넘깁니다.
+//
+// ☠️ **근사한 것입니다.** CPU 는 Lab 왕복을 `double` 로 돌고 GPU 는 float 입니다.
+struct ScannerTargetGradeSetup;
+
+using ScannerTargetGradeFunction = bool (*)(
+    float* pixels,
+    std::uint32_t width,
+    std::uint32_t height,
+    std::uint32_t stride_pixels,
+    const ScannerTargetGradeSetup* setup) noexcept;
+
 struct KernelAccelerator final {
     // ── 정확한 것 (언제나 켭니다) ────────────────────────────────────────────
     MorphologyPlaneFunction opening{nullptr};
@@ -192,6 +206,7 @@ struct KernelAccelerator final {
     DigitalFilmLookFunction digital_film_look{nullptr};
     MutedSceneVibranceFunction muted_scene_vibrance{nullptr};
     ColorModelFunction color_model{nullptr};
+    ScannerTargetGradeFunction scanner_target_grade{nullptr};
 };
 
 // 프로세스 시작에 한 번 설치합니다. `nullptr` 을 주면 해제합니다.

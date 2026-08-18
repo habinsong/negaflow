@@ -1,5 +1,8 @@
 #include "negaflow/imaging/scanner_target_grade.h"
 
+#include "negaflow/core/parallel_rows.h"
+#include "negaflow/imaging/kernel_accelerator.h"
+
 #include "scanner_target_color.h"
 #include "scanner_target_measure.h"
 #include "scanner_target_profile.h"
@@ -49,60 +52,153 @@ void apply_profile_grade(
         }
     }
 
-    for (std::uint32_t y = 0U; y < image.height; ++y) {
-        for (std::uint32_t x = 0U; x < image.width; ++x) {
-            auto& pixel = image.pixels[
-                static_cast<std::size_t>(y) * image.stride_pixels + x];
-            const Rgb encoded{
-                srgb_encode(pixel.red),
-                srgb_encode(pixel.green),
-                srgb_encode(pixel.blue),
-            };
-            const double low = std::min({encoded.red, encoded.green, encoded.blue});
-            const double high = std::max({encoded.red, encoded.green, encoded.blue});
-            const double domain_weight = smoothstep(0.0, 0.02, low) *
-                (1.0 - smoothstep(0.98, 1.0, high));
-            if (domain_weight <= 0.0) continue;
-            const Rgb candidate = transformed_srgb(
-                encoded, profile, tone, strength, chroma_keep, monochrome, false);
-            const Rgb reciprocal = transformed_srgb(
-                encoded, profile, tone, strength, chroma_keep, monochrome, true);
-            const double scale = gamut_scale(encoded, candidate, reciprocal);
-            const Rgb graded{
-                srgb_decode(encoded.red + ((candidate.red - encoded.red) * scale)),
-                srgb_decode(encoded.green + ((candidate.green - encoded.green) * scale)),
-                srgb_decode(encoded.blue + ((candidate.blue - encoded.blue) * scale)),
-            };
-            pixel.red = static_cast<float>(
-                pixel.red + ((graded.red - pixel.red) * domain_weight));
-            pixel.green = static_cast<float>(
-                pixel.green + ((graded.green - pixel.green) * domain_weight));
-            pixel.blue = static_cast<float>(
-                pixel.blue + ((graded.blue - pixel.blue) * domain_weight));
+    // GPU 판이 받을 값입니다. 표를 두 곳에서 만들면 그 순간 두 벌이 되므로 여기서
+    // 한 번 만들고, CPU 루프와 GPU 둘 다 **같은 것**을 씁니다.
+    ScannerTargetGradeSetup setup{};
+    for (std::size_t i = 0U; i < ScannerTargetGradeSetup::tone_knots; ++i) {
+        setup.tone_xs[i] = static_cast<float>(profile.tone_xs[i]);
+        setup.tone_ys[i] = static_cast<float>(tone[i]);
+    }
+    setup.neutral_count = static_cast<std::uint32_t>(std::min(
+        profile.neutral_count, ScannerTargetGradeSetup::neutral_capacity));
+    for (std::size_t i = 0U; i < setup.neutral_count; ++i) {
+        setup.neutral_bins[i][0] = static_cast<float>(profile.neutral_bins[i].luma);
+        setup.neutral_bins[i][1] = static_cast<float>(profile.neutral_bins[i].a);
+        setup.neutral_bins[i][2] = static_cast<float>(profile.neutral_bins[i].b);
+    }
+    setup.hue_count = static_cast<std::uint32_t>(
+        std::min(profile.hue_count, ScannerTargetGradeSetup::hue_capacity));
+    for (std::size_t i = 0U; i < setup.hue_count; ++i) {
+        setup.hue_anchors[i][0] = static_cast<float>(profile.hue_anchors[i].hue);
+        setup.hue_anchors[i][1] = static_cast<float>(profile.hue_anchors[i].gain);
+        setup.hue_anchors[i][2] = static_cast<float>(profile.hue_anchors[i].rotation);
+    }
+    for (std::size_t i = 0U; i < ScannerTargetGradeSetup::chroma_capacity; ++i) {
+        setup.chroma_bands[i][0] = static_cast<float>(profile.chroma_bands[i].luma);
+        setup.chroma_bands[i][1] = static_cast<float>(profile.chroma_bands[i].gain);
+    }
+    setup.strength = static_cast<float>(strength);
+    setup.chroma_keep = static_cast<float>(chroma_keep);
+    setup.monochrome = monochrome;
+
+    // ☠️ **엔진에서 가장 비싼 화소별 커널입니다** — 노리츠 프리뷰 실측 58,995 ms
+    //    (병렬화 뒤 16,201 ms)로 전체의 90% 를 넘었습니다. 화소마다 `transformed_srgb`
+    //    를 두 번 돌리고 그 안에 Lab 왕복·`atan2`·`log`·`exp`·`pow` 가 줄줄이 있습니다.
+    //
+    // ☠️ **근사입니다**(CPU 는 Lab 왕복이 `double`). `ApproximateAcceleratorScope`
+    //    안에서만 돕니다 — 내보내기·골든은 CPU 그대로입니다.
+    if (approximate_acceleration_allowed() && image.stride_pixels <= 0xFFFFFFFFULL) {
+        if (const KernelAccelerator* const table = kernel_accelerator();
+            table != nullptr && table->scanner_target_grade != nullptr) {
+            if (table->scanner_target_grade(
+                    reinterpret_cast<float*>(image.pixels),
+                    image.width,
+                    image.height,
+                    static_cast<std::uint32_t>(image.stride_pixels),
+                    &setup)) {
+                return;
+            }
         }
     }
+
+    // ☠️ **행마다 독립입니다.** 화소는 자기 값만 읽고 자기 자리에만 씁니다 —
+    //    쪼개도 값이 비트 단위로 같습니다. 앞 판은 직렬이었고, 실측으로 이 단계가
+    //    엔진에서 가장 비쌌습니다(노리츠 프리뷰 58,995 ms, 전체의 97.5%).
+    //
+    // ☠️ `work_units` 에 **행 수가 아니라 화소 수 × 화소당 무게**를 넘깁니다.
+    //    행 수(3,401)만 넘기면 문턱(1M)을 못 넘어 병렬화가 **조용히 꺼집니다** —
+    //    플레이북 21절이 적은 함정입니다. 화소마다 `transformed_srgb` 를 두 번
+    //    돌리므로 무게를 2 로 둡니다.
+    const std::uint64_t work_units =
+        static_cast<std::uint64_t>(image.width) * image.height * 2ULL;
+    negaflow::core::for_each_row_block(
+        image.height,
+        work_units,
+        [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+            for (std::uint32_t y = first_row; y < first_row + row_count; ++y) {
+                for (std::uint32_t x = 0U; x < image.width; ++x) {
+                    auto& pixel = image.pixels[
+                        static_cast<std::size_t>(y) * image.stride_pixels + x];
+                    const Rgb encoded{
+                        srgb_encode(pixel.red),
+                        srgb_encode(pixel.green),
+                        srgb_encode(pixel.blue),
+                    };
+                    const double low = std::min({encoded.red, encoded.green, encoded.blue});
+                    const double high = std::max({encoded.red, encoded.green, encoded.blue});
+                    const double domain_weight = smoothstep(0.0, 0.02, low) *
+                        (1.0 - smoothstep(0.98, 1.0, high));
+                    if (domain_weight <= 0.0) continue;
+                    const Rgb candidate = transformed_srgb(
+                        encoded, profile, tone, strength, chroma_keep, monochrome, false);
+                    const Rgb reciprocal = transformed_srgb(
+                        encoded, profile, tone, strength, chroma_keep, monochrome, true);
+                    const double scale = gamut_scale(encoded, candidate, reciprocal);
+                    const Rgb graded{
+                        srgb_decode(encoded.red + ((candidate.red - encoded.red) * scale)),
+                        srgb_decode(encoded.green + ((candidate.green - encoded.green) * scale)),
+                        srgb_decode(encoded.blue + ((candidate.blue - encoded.blue) * scale)),
+                    };
+                    pixel.red = static_cast<float>(
+                        pixel.red + ((graded.red - pixel.red) * domain_weight));
+                    pixel.green = static_cast<float>(
+                        pixel.green + ((graded.green - pixel.green) * domain_weight));
+                    pixel.blue = static_cast<float>(
+                        pixel.blue + ((graded.blue - pixel.blue) * domain_weight));
+                }
+            }
+        });
 }
 
 void apply_noritsu_texture(
     const negaflow::core::ImageView image,
     std::vector<Rgb>& scratch) {
-    constexpr std::array<double, 5U> weights{{0.037657, 0.239936, 0.444814, 0.239936, 0.037657}};
+    // 값은 공개 상수 한 곳에서 옵니다 — GPU 셰이더도 같은 것을 받습니다.
+    const ScannerTargetTextureSetup texture = scanner_target_texture_setup();
+    std::array<double, 5U> weights{};
+    for (std::size_t i = 0U; i < ScannerTargetTextureSetup::taps; ++i) {
+        weights[i] = texture.weights[i];
+    }
+
+    // ⚠️ **아직 GPU 판이 없습니다.** 이 커널에는 하드 게이트가 있습니다 —
+    //    `low < 0 || high > 1` 이면 화소를 통째로 통과시킵니다. 그 경계 근처에서
+    //    CPU(`double`)와 GPU(float)의 1ulp 차이가 "질감을 얹는다/안 얹는다" 를
+    //    뒤집으므로, 이식하면 CPU/GPU 최대 오차가 **누적 오차가 아니라 질감 자체의
+    //    크기**가 됩니다. 옮길 때는 그 값과 화소 수를 시험이 같이 고정해야 합니다.
+
     const auto coordinate = [](const std::int64_t value, const std::uint32_t limit) {
         return static_cast<std::uint32_t>(std::clamp<std::int64_t>(value, 0, limit - 1U));
     };
-    for (std::uint32_t y = 0U; y < image.height; ++y) {
-        for (std::uint32_t x = 0U; x < image.width; ++x) {
-            Rgb sum{};
-            for (std::int64_t k = -2; k <= 2; ++k) {
-                const auto sample = image.pixels[static_cast<std::size_t>(y) * image.stride_pixels +
-                    coordinate(static_cast<std::int64_t>(x) + k, image.width)];
-                const double w = weights[static_cast<std::size_t>(k + 2)];
-                sum.red += sample.red * w; sum.green += sample.green * w; sum.blue += sample.blue * w;
+    // 수평 저역. 행마다 독립입니다 — 자기 행만 읽고 자기 행만 씁니다.
+    const std::uint64_t work_units =
+        static_cast<std::uint64_t>(image.width) * image.height * 5ULL;
+    negaflow::core::for_each_row_block(
+        image.height,
+        work_units,
+        [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+            for (std::uint32_t y = first_row; y < first_row + row_count; ++y) {
+                for (std::uint32_t x = 0U; x < image.width; ++x) {
+                    Rgb sum{};
+                    for (std::int64_t k = -2; k <= 2; ++k) {
+                        const auto sample = image.pixels[
+                            static_cast<std::size_t>(y) * image.stride_pixels +
+                            coordinate(static_cast<std::int64_t>(x) + k, image.width)];
+                        const double w = weights[static_cast<std::size_t>(k + 2)];
+                        sum.red += sample.red * w;
+                        sum.green += sample.green * w;
+                        sum.blue += sample.blue * w;
+                    }
+                    scratch[static_cast<std::size_t>(y) * image.width + x] = sum;
+                }
             }
-            scratch[static_cast<std::size_t>(y) * image.width + x] = sum;
-        }
-    }
-    for (std::uint32_t y = 0U; y < image.height; ++y) {
+        });
+    // 수직 저역 + 언샤프. `scratch` 는 여기서 **읽기 전용**이고 화소는 자기 자리에만
+    // 쓰므로 행 블록이 값을 바꾸지 않습니다.
+    negaflow::core::for_each_row_block(
+        image.height,
+        work_units,
+        [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+    for (std::uint32_t y = first_row; y < first_row + row_count; ++y) {
         for (std::uint32_t x = 0U; x < image.width; ++x) {
             Rgb blur{};
             for (std::int64_t k = -2; k <= 2; ++k) {
@@ -121,7 +217,8 @@ void apply_noritsu_texture(
             const double y_original = srgb_encode(original_luma);
             const double y_blur = srgb_encode(blur_luma);
             const double floor_y = std::max(y_original * 0.45, std::min(y_original, 0.008));
-            const double y_new = clamp(y_original + (0.6 * (y_original - y_blur)), floor_y, 1.0);
+            const double y_new = clamp(
+                y_original + (texture.amount * (y_original - y_blur)), floor_y, 1.0);
             double gain = srgb_decode(y_new) / original_luma;
             const double maximum = high * gain;
             if (maximum > 1.0) gain /= maximum;
@@ -130,9 +227,23 @@ void apply_noritsu_texture(
             pixel.blue = static_cast<float>(pixel.blue * gain);
         }
     }
+        });
 }
 
 }  // namespace
+
+ScannerTargetTextureSetup scanner_target_texture_setup() noexcept {
+    // σ ≈ 0.9 의 이산 가우시안 5탭과 감마 도메인 USM 게인입니다
+    // (macOS `noritsuSharpenRadius = 0.9`, `noritsuSharpenAmount = 0.6`).
+    ScannerTargetTextureSetup setup{};
+    setup.weights[0] = 0.037657F;
+    setup.weights[1] = 0.239936F;
+    setup.weights[2] = 0.444814F;
+    setup.weights[3] = 0.239936F;
+    setup.weights[4] = 0.037657F;
+    setup.amount = 0.6F;
+    return setup;
+}
 
 negaflow::core::KernelStatus apply_scanner_target_grade(
     const negaflow::core::ImageView image,

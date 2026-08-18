@@ -26,6 +26,7 @@
 #include "negaflow/imaging/film_emulation_acutance.h"
 #include "negaflow/imaging/film_emulation_color.h"
 #include "negaflow/imaging/film_scan_denoise.h"
+#include "negaflow/imaging/scanner_target_grade.h"
 #include "negaflow/imaging/working_film_look.h"
 #include "negaflow/imaging/kernel_accelerator.h"
 #include "negaflow/imaging/working_tone_adjuster.h"
@@ -169,6 +170,15 @@ public:
         std::uint32_t height,
         std::uint32_t stride_pixels,
         const imaging::ColorModelParameters* parameters) noexcept;
+
+    // 엔진에서 가장 비싼 화소별 커널입니다 — 노리츠 프리뷰 실측으로 병렬화 뒤에도
+    // 16,201 ms 이고 전체의 90% 를 넘습니다.
+    [[nodiscard]] bool apply_scanner_target_grade(
+        float* pixels,
+        std::uint32_t width,
+        std::uint32_t height,
+        std::uint32_t stride_pixels,
+        const imaging::ScannerTargetGradeSetup* setup) noexcept;
 
     [[nodiscard]] bool apply_morphology_plane(
         const float* source,

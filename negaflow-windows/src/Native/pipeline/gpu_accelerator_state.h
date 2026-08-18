@@ -22,6 +22,7 @@
 #include "negaflow/gpu/gpu_morphology.h"
 #include "negaflow/gpu/gpu_negative_invert.h"
 #include "negaflow/gpu/gpu_tone_stage.h"
+#include "negaflow/gpu/gpu_scanner_target_grade.h"
 #include "negaflow/gpu/gpu_vibrance.h"
 #include "negaflow/gpu/gpu_working_image.h"
 #include "negaflow/pipeline/gpu_accelerator.h"
@@ -61,6 +62,9 @@ struct GpuAccelerator::State final {
     gpu::GpuMutedSceneVibrance muted_vibrance{};
     gpu::GpuColorModel color_model{};
     bool vibrance_ready{false};
+    // 엔진에서 가장 비싼 화소별 커널입니다. 따로 만들어 이것만 실패해도 나머지가 돕니다.
+    gpu::GpuScannerTargetGrade target_grade{};
+    bool target_grade_ready{false};
     // ☠️ **작업 텍스처는 하나의 묶음을 나눠 씁니다.** 진입점마다 자기 것을 만들면
     //    24MP 에서 264 MB 텍스처를 호출마다 할당·해제하고, 실측으로 그 할당이
     //    다운로드 시간의 큰 몫이었습니다. 필름 룩 오케스트레이터도 이 묶음을 받습니다.

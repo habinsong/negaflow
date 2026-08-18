@@ -78,4 +78,35 @@ bool GpuAccelerator::apply_color_model(
     return pool[1].download(state_->device, rgba, stride_pixels) == gpu::GpuImageStatus::ok;
 }
 
+bool GpuAccelerator::apply_scanner_target_grade(
+    float* const pixels,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::uint32_t stride_pixels,
+    const imaging::ScannerTargetGradeSetup* const setup) noexcept {
+    if (!available() || pixels == nullptr || setup == nullptr) {
+        return false;
+    }
+    if (width == 0U || height == 0U || stride_pixels < width) {
+        return false;
+    }
+    const std::lock_guard<std::mutex> guard{state_->lock};
+    if (!state_->target_grade_ready) {
+        return false;
+    }
+    if (!state_->pool.ensure(state_->device, width, height)) {
+        return false;
+    }
+    gpu::GpuWorkingImage* const pool = state_->pool.images();
+    auto* const rgba = reinterpret_cast<core::Rgba32F*>(pixels);
+    if (pool[0].upload_into(state_->device, rgba, stride_pixels) != gpu::GpuImageStatus::ok) {
+        return false;
+    }
+    if (state_->target_grade.dispatch(state_->device, pool[0], pool[1], *setup) !=
+        gpu::GpuKernelStatus::ok) {
+        return false;
+    }
+    return pool[1].download(state_->device, rgba, stride_pixels) == gpu::GpuImageStatus::ok;
+}
+
 }  // namespace negaflow::pipeline

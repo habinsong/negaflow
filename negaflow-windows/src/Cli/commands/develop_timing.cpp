@@ -1,6 +1,7 @@
 #include "develop_timing.h"
 
 #include <chrono>
+#include <cstdint>
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
@@ -23,6 +24,18 @@ namespace {
 // 왜 별도 명령인가 — `--develop-negative-tiff` 는 `imaging::` 을 직접 불러
 // `run_develop` 을 지나지 않습니다. 그 경로로는 단계별 표가 나오지 않습니다.
 // **재는 자리와 실제 도는 자리가 다르면 그 숫자는 거짓말입니다.**
+
+// 프리뷰 화소의 지문입니다. **병렬화가 값을 바꾸지 않았다**를 증명할 때 씁니다 —
+// 같은 입력에 대해 직렬 빌드와 병렬 빌드의 이 값이 같아야 합니다.
+// FNV-1a 64비트. 암호용이 아니라 대조용입니다.
+[[nodiscard]] std::uint64_t fingerprint(const std::vector<std::uint8_t>& bytes) noexcept {
+    std::uint64_t hash = 1469598103934665603ULL;
+    for (const std::uint8_t byte : bytes) {
+        hash ^= static_cast<std::uint64_t>(byte);
+        hash *= 1099511628211ULL;
+    }
+    return hash;
+}
 
 [[nodiscard]] bool parse_float(const std::wstring_view text, float& value) noexcept {
     try {
@@ -114,6 +127,22 @@ int run_develop_timing(const int argument_count, const wchar_t* const arguments[
         request.tone.curve.darks = -0.15F;
     }
 
+    // 스캐너 타겟 그레이드는 `develop_target` 이 main 이 아닐 때만 돕니다. 기본으로
+    // 재면 그 단계가 **0.00 ms** 로 나오고, 그것을 "빠르다" 로 읽으면 틀립니다 —
+    // 안 돈 것입니다. `noritsu` 는 그 위에 장치 질감(luminance USM)까지 얹습니다.
+    for (int index = 2; index < argument_count; ++index) {
+        const std::wstring_view token{arguments[index]};
+        if (token == L"noritsu") {
+            request.develop_target = pipeline::DevelopTarget::noritsu;
+        } else if (token == L"sp3000") {
+            request.develop_target = pipeline::DevelopTarget::sp3000;
+        } else if (token == L"f135") {
+            request.develop_target = pipeline::DevelopTarget::f135;
+        } else if (token == L"hr") {
+            request.develop_target = pipeline::DevelopTarget::hr;
+        }
+    }
+
     // ☠️ 디지털 필름 룩은 **필름 스캔 경로가 지나지 않습니다**(`working_film_look.cpp`).
     //    스캔본에는 이미 유제를 통과한 신호가 들어 있어 같은 물리를 두 번 얹지 않기
     //    때문입니다. 그래서 헐레이션·그레인을 재려면 원본 종류를 바꿔야 하고,
@@ -153,7 +182,9 @@ int run_develop_timing(const int argument_count, const wchar_t* const arguments[
             std::cout << ',';
         }
         std::cout << "{\"succeeded\":" << (outcome.succeeded ? "true" : "false")
-                  << ",\"wall_microseconds\":" << wall;
+                  << ",\"wall_microseconds\":" << wall
+                  << ",\"pixel_fingerprint\":\"" << std::hex << fingerprint(pixels)
+                  << std::dec << "\"";
         if (!outcome.succeeded) {
             std::cout << ",\"failed_stage\":\""
                       << pipeline::develop_export_stage_name(outcome.failed_stage)

@@ -2,6 +2,7 @@
 
 #include "negaflow/core/pixel.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <string_view>
 
@@ -20,6 +21,52 @@ struct ScannerTargetGradeInfo final {
     bool relative_signature_applied{false};
     float scene_anchor_weight{0.0F};
 };
+
+// 프로파일 그레이드가 화소 루프 **밖에서** 정하는 값 전부입니다. GPU 판이 이것을
+// 그대로 받습니다 — 표를 두 곳에서 만들면 그 순간 두 벌이 되어 갈라집니다.
+//
+// ☠️ **`double` 을 float 로 내려 담습니다.** CPU 판은 Lab 왕복을 `double` 로 돌지만
+//    (sRGB 왕복은 CPU 도 이미 float 입니다 — `scanner_target_color.cpp:23-29`),
+//    D3D11 의 double 은 선택 기능이라 내장 GPU 범용성이 보장되지 않습니다.
+//    그래서 GPU 판은 **근사**이고, 오차는 동치 시험이 재서 적습니다.
+//
+// 배열 크기는 `scanner_target_profile.h` 의 고정 크기와 같아야 합니다.
+struct ScannerTargetGradeSetup final {
+    static constexpr std::size_t tone_knots = 9U;
+    static constexpr std::size_t neutral_capacity = 10U;
+    static constexpr std::size_t hue_capacity = 8U;
+    static constexpr std::size_t chroma_capacity = 3U;
+
+    float tone_xs[tone_knots]{};
+    // 세기·장면 앵커까지 반영해 호스트가 이미 만든 출력값입니다.
+    float tone_ys[tone_knots]{};
+    // (luma, a, b)
+    float neutral_bins[neutral_capacity][3]{};
+    // (hue, gain, rotation)
+    float hue_anchors[hue_capacity][3]{};
+    // (luma, gain)
+    float chroma_bands[chroma_capacity][2]{};
+    std::uint32_t neutral_count{0U};
+    std::uint32_t hue_count{0U};
+    float strength{0.0F};
+    float chroma_keep{0.0F};
+    bool monochrome{false};
+};
+
+// NORITSU 장치 질감(감마 도메인 luminance USM)의 값들입니다.
+//
+// macOS `ScannerTargetGrade+Texture.swift` 의 `noritsuSharpenRadius = 0.9` ·
+// `noritsuSharpenAmount = 0.6` 에 대응합니다. 5탭 가중치는 그 σ 의 이산 가우시안입니다.
+//
+// ☠️ **한 곳에만 둡니다.** CPU 루프와 GPU 셰이더가 같은 값을 봐야 합니다 —
+//    셰이더에 숫자를 다시 적으면 그 순간 두 벌이 됩니다.
+struct ScannerTargetTextureSetup final {
+    static constexpr std::size_t taps = 5U;
+    float weights[taps]{};
+    float amount{0.0F};
+};
+
+[[nodiscard]] ScannerTargetTextureSetup scanner_target_texture_setup() noexcept;
 
 // Applies the macOS documented target character and, where provenance permits,
 // the matched NORITSU/SP-3000 relative signature in gamma-domain tone and Lab
