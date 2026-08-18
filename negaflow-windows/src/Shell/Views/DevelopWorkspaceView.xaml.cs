@@ -328,6 +328,15 @@ public sealed partial class DevelopWorkspaceView : UserControl
             thumbnails?.Publish(settled.Id, pixels, width, height);
         }
 
+        if (panel is not null && outcome.Result is { Succeeded: true } applied)
+        {
+            panel.RememberAppliedBase(
+                applied.AppliedDminRed,
+                applied.AppliedDminGreen,
+                applied.AppliedDminBlue);
+            BaseCard.Sync();
+        }
+
         crop.MarkPreviewReady();
         PreviewCanvas.RenderCropOverlay();
     }

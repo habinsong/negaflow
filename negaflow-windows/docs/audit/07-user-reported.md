@@ -175,10 +175,10 @@ NEGA_DEBUG=1 negaflow-cli --auto-base-probe <source.tiff>   # 성분 목록까�
 | # | macOS | Windows | 판정 |
 |---|---|---|---|
 | 1 | 헤더 아이콘 `circle.lefthalf.filled` (반원 채운 원) | Segoe 글리프 `E706`(= 밝기) 이었음 | **2026-08-18 고침** — Segoe 에 같은 그림이 없어 `Viewbox`+`Ellipse`+`Path` 로 반원 채운 원을 직접 그림 |
-| 2 | 헤더 `trailing: baseReadout` — `baseReadoutFormat` 으로 R/G/B 표시 | `ManualBaseValueText` | 있음 ✓ (형식 대조 필요) |
+| 2 | 헤더 `trailing: baseReadout` — `baseReadoutFormat` 으로 R/G/B 표시 | `ManualBaseValueText` | **2026-08-19** `developBaseReadoutFormat` + 마지막 미리보기 `AppliedDmin`. 앱 UIA `base 0.22 0.13 0.07` (OpticFilm8100_frame_1). 카탈로그 `frame.baseRGB` 영속은 아직 없음 |
 | 3 | **`SegmentedPicker`** — 자동/필름/수동이 **붙어 있는 한 덩어리** | `RadioButton` 3개가 간격 4로 떨어져 있었음 | **2026-08-18 고침** — 테두리 하나 안에 붙인 한 덩어리로. `NegaflowSegmentStyle`(라디오 글리프 제거, Checked → `NegaflowSelectionBrush`) 신설 |
 | 4 | `.disabled(!frame.filmType.requiresInversion)` — `FilmType.swift:23` 은 `colorNegative`·`bwNegative` 만 true | `DevelopBaseEditor.CanEdit` = `ColorNegative or BlackAndWhiteNegative`, `DevelopBaseCard.xaml.cs:141-144` 에서 세 모드 단추에 적용 | **일치 확인함(2026-08-18)** |
-| 5 | preset: 필름스톡 · 광원 · 프로파일 **3줄**, 각 줄이 `basePresetPickerRow`, `.frame(maxWidth: basePresetPickerWidth)` = **276** (`BaseControlSection.swift:21,140`) | `FilmStockSelector`·`LightSourceSelector`·`ScannerProfileSelector` 3줄, **폭 지정 없음 = stretch** | 줄 구성 ✓ / **폭 여전히 다름 — 미수정** |
+| 5 | preset: 필름스톡 · 광원 · 프로파일 **3줄**, 각 줄이 `basePresetPickerRow`, `.frame(maxWidth: basePresetPickerWidth)` = **276** (`BaseControlSection.swift:21,140`) | `FilmStockSelector`·`LightSourceSelector`·`ScannerProfileSelector` 3줄, **폭 지정 없음 = stretch** | **2026-08-19** 라벨 폭 86 + ComboBox `MaxWidth=276` + 줄 최소 높이 26. 앱에서 필름 모드 3줄 확인. 인스펙터가 86+12+276 보다 좁아 피커는 남은 폭을 씀(macOS 주석과 같음). 픽셀 자 276은 넓은 패널에서 다시 재야 함 |
 | 6 | manual: **`InspectorActionPill(pickBase)`** — 스포이드 토글 + `reset` 버튼, `isActive` 시 강조, `.snappy(0.18)` 애니메이션 | **2026-08-18 이식함** — `BasePickerPill`(본문 MinHeight 31 · Padding 7,0,0,0 · 리셋 23×23 · Margin 0,0,3,0 · CornerRadius 16), 수동 모드에서만 보임 | **고침** |
 | 7 | manual: `InspectorSlider(baseRed/Green/Blue, range: 0...1, doubleClickResetValue: nil)` | 3개, `CanReset="False"` | **2026-08-18 고침** — `ConfigureRanges()` 가 macOS 와 같은 `0…1` 을 줌 (`49dab68`) |
 
@@ -226,14 +226,34 @@ NEGA_DEBUG=1 negaflow-cli --auto-base-probe <source.tiff>   # 성분 목록까�
 
 **아직 확인 못 한 것: 앱 화면에서 실제로 집어 본 적이 없습니다.** 시험 통과 ≠ 앱 동작입니다.
 
-### 남은 것 (아직 대조 안 함)
+### C1.4 2026-08-19 — 5함수 전수 대조 + strip_fallback / readout / 피커
+
+macOS `FilmBaseEstimator.swift` 전량 · `FilmBaseStatistics.coherentCluster` ·
+`FilmBaseMeasurementBuilder.build` · `BaseControlSection.swift` 를 Windows
+`auto_negative_base_{exclusion,candidates,fallback,resolver}.cpp` ·
+`film_base_sampling.cpp` · `DevelopBaseCard` 와 다시 댔습니다.
+
+**4함수는 상수·게이트가 같았습니다** (`non_film_exclusion` /
+`continuous_border_base` / `distributed_base` / `connected_component_base` 의
+이미 이식된 경로). `brightest_coherent_mode` 는 성분 강등 안의 `medianRB` 로
+이미 있습니다.
+
+**확정 공백 3건 중 이번에 옮긴 것:**
+
+| 공백 | 한 일 | 검증 |
+|---|---|---|
+| `strip_fallback_base` 가 채널 독립 중앙값+clamp | 걸러 낸 스트립 평균을 `coherent_measurement` 에 넘김. `brightStrips` 의 luma≥0.97 을 **집합에서도** 뺌(이전엔 밝기 기준에만 씀) | `native.manual_negative_developer` 통과. 기존 masked-strip 평균 시험 유지. 새 시험: 준클리핑 오른쪽 스트립을 빼면 (0.69, 0.49, 0.29). 네 스트립 이하에서는 macOS 도 `max(4,n/4)` 바닥 때문에 MAD 이상치를 다시 전부 씀 — 그 경로의 수치 차이는 클리핑 컷 |
+| 헤더가 `"Auto"` / 필름 이름 / `F3 / F3 / F3` / `"not set"` 영어를 지음 | `developBaseReadoutFormat` 6언어(`base %.2f %.2f %.2f` / Basis / ベース / 片基). 미리보기 `AppliedDmin` 을 `LastAppliedBase` 로 표시 | `run-app` x64 Release PID 29336. UIA `184 텍스트 base 0.22 0.13 0.07`. Shell 1072 assertions |
+| 프리셋 ComboBox stretch | 라벨 86 + `MaxWidth` 276 + 줄 최소 26 | 필름 모드에서 필름스톡·광원·프로파일 3줄. 인스펙터가 좁아 피커는 남은 폭 |
+
+**아직 남은 것**
 
 | 항목 | 내용 |
 |---|---|
-| **자동 경로 5함수** | `non_film_exclusion` · `brightest_coherent_mode` · `continuous_border_base` · `distributed_base` · `strip_fallback_base` 를 macOS `nonFilmExclusion` · `brightestCoherentMode` · `sampleBrightOrangeBase` · `sampleDistributedOrangeBase` · `borderFallback` 과 대조해야 합니다. **17장이 전부 연결 성분에서 끝나 이 경로가 돌지 않았기 때문에** 못 댔습니다 — 다른 스캔에서는 돕니다 |
-| **`FilmBaseMeasurementDiagnostics`** | **186줄, 통째로 없음**(2026-08-18 재확인). `Method` 4종(`connectedComponent`/`continuousBorder`/`distributedMask`/`stripFallback`) + `Anomaly` **8종**(`fallbackEstimate`·`lowSampleSupport`·`sparseSampleCoverage`·`limitedSpatialCoverage`·`unstableLuma`·`inconsistentChannels`·`clippedSamples`·`heavyOutlierRejection`) + `EvidenceComponents` + `FilmBaseMeasurementBuilder`. 이름이 아니라 개념(`evidence`/`anomal`/`confidence`)으로 훑어도 **히트 0** |
-| **프리셋 피커 폭** | C1.2 5번 — macOS **276**, Windows stretch |
-| **헤더 `baseReadout` 형식** | C1.2 2번 — `baseReadoutFormat` 과 문자열 대조 안 함 |
+| **`FilmBaseMeasurementDiagnostics`** | **186줄, 통째로 없음.** Method 4 + Anomaly 8 + EvidenceComponents. sidecar/신뢰도 |
+| **`frame.baseRGB` 카탈로그 영속** | macOS 는 렌더 후 `ScanFrame.baseRGB` 를 저장. Windows `LastAppliedBase` 는 세션·프레임 전환까지 |
+| **피커 폭 픽셀 자** | 넓은 패널에서 ComboBox 가 276 에서 멈추는지는 다시 재야 함 |
+| **스포이드를 앱에서 집기** | 시험 7개. 앱 클릭은 아직 없음 |
 
 ### 앞 판에서 바로잡은 것
 

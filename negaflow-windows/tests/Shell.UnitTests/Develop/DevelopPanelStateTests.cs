@@ -76,6 +76,19 @@ internal static class DevelopPanelStateTests
 
             Check(panel.Select("frame-1"), "panel_select");
             Check(panel.CanExport, "panel_can_export_after_select");
+            Check(panel.LastAppliedBase is null, "panel_has_no_applied_base_until_preview");
+            panel.RememberAppliedBase(0.72F, 0.54F, 0.34F);
+            ManualBaseRgb expectedApplied = new(0.72F, 0.54F, 0.34F);
+            Check(
+                panel.LastAppliedBase == expectedApplied,
+                "panel_remembers_applied_base_from_preview");
+            Check(
+                DevelopBaseReadout.Format("base %.2f %.2f %.2f", expectedApplied) ==
+                    "base 0.72 0.54 0.34",
+                "panel_base_readout_uses_macos_fixed2_format");
+            Check(panel.Select("frame-2") && panel.LastAppliedBase is null,
+                "panel_clears_applied_base_when_the_frame_changes");
+            Check(panel.Select("frame-1"), "panel_reselect_after_base_readout");
             Check(panel.Tone.MaximumExposureStops == 5.0, "panel_exposure_range_from_engine");
 
             Check(

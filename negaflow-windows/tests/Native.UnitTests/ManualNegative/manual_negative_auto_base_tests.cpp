@@ -1,5 +1,7 @@
 #include "manual_negative_test_support.h"
 
+#include "auto_negative_base_fallback.h"
+
 #include "negaflow/core/negative_inversion.h"
 #include "negaflow/imaging/auto_negative_base_resolver.h"
 #include "negaflow/imaging/film_stock_base_resolver.h"
@@ -133,6 +135,55 @@ void test_auto_negative_base_resolution() {
             std::abs(masked_strip.dmin[1] - (16.595F / 52.0F)) < 1.0e-5F &&
             std::abs(masked_strip.dmin[2] - (9.995F / 52.0F)) < 1.0e-5F,
         "non-film mask is applied before the grid strip fallback");
+
+    // macOS `brightStrips` 는 luma≥0.97 스트립을 집합에서 뺀 뒤, 남은 평균을
+    // `FilmBaseMeasurementBuilder`/`coherentCluster` 에 넘깁니다. 네 스트립 이하면
+    // MAD 이상치 제거는 `max(4, n/4)` 바닥 때문에 다시 전부 쓰므로, 여기서 확인하는
+    // 차이는 준클리핑 스트립을 중앙값에 넣지 않는 것입니다.
+    negaflow::imaging::film_base_detail::SampleGrid strip_grid{};
+    strip_grid.width = 20U;
+    strip_grid.height = 20U;
+    const std::size_t strip_count =
+        static_cast<std::size_t>(strip_grid.width) * strip_grid.height;
+    strip_grid.pixels.assign(strip_count, {0.005F, 0.005F, 0.005F, 1.0F});
+    strip_grid.lumas.assign(strip_count, 0.005);
+    std::vector<bool> strip_excluded(strip_count, false);
+    const auto set_strip_cell = [&strip_grid](
+                                    const std::uint32_t x,
+                                    const std::uint32_t y,
+                                    const float red,
+                                    const float green,
+                                    const float blue) {
+        const std::size_t index =
+            static_cast<std::size_t>(y) * strip_grid.width + x;
+        strip_grid.pixels[index] = {red, green, blue, 1.0F};
+        strip_grid.lumas[index] =
+            (static_cast<double>(red) + static_cast<double>(green) +
+             static_cast<double>(blue)) /
+            3.0;
+    };
+    for (std::uint32_t column = 0U; column < strip_grid.width; ++column) {
+        set_strip_cell(column, 0U, 0.70F, 0.50F, 0.30F);
+        set_strip_cell(column, strip_grid.height - 1U, 0.68F, 0.48F, 0.28F);
+    }
+    for (std::uint32_t row = 1U; row + 1U < strip_grid.height; ++row) {
+        set_strip_cell(strip_grid.width - 1U, row, 0.99F, 0.99F, 0.99F);
+        strip_excluded[static_cast<std::size_t>(row) * strip_grid.width] = true;
+    }
+    strip_excluded[0] = true;
+    strip_excluded[strip_grid.width - 1U] = true;
+    strip_excluded[strip_count - strip_grid.width] = true;
+    strip_excluded[strip_count - 1U] = true;
+    const auto coherent_strip = negaflow::imaging::auto_base_detail::strip_fallback_base(
+        strip_grid,
+        negaflow::imaging::NegativeFilmType::color,
+        &strip_excluded);
+    expect(
+        coherent_strip.has_value() &&
+            std::abs((*coherent_strip)[0] - 0.69) < 1.0e-6 &&
+            std::abs((*coherent_strip)[1] - 0.49) < 1.0e-6 &&
+            std::abs((*coherent_strip)[2] - 0.29) < 1.0e-6,
+        "strip fallback drops clipped strips before the coherent cluster");
 
     auto continuous_border_image = make_auto_base_image({0.005F, 0.005F, 0.005F, 1.0F});
     for (negaflow::core::Rgba32F& pixel : continuous_border_image.pixels) {

@@ -62,6 +62,17 @@ public sealed class DevelopPanelState
 
     public ManualBaseRgb? ManualBase => SelectedFrame?.ManualBase;
 
+    /// <summary>
+    /// macOS <c>ScanFrame.baseRGB</c> — 마지막 미리보기가 쓴 Dmin 입니다. 카탈로그에는 아직
+    /// 남기지 않으며, 프레임을 바꾸면 비웁니다.
+    /// </summary>
+    public ManualBaseRgb? LastAppliedBase { get; private set; }
+
+    public void RememberAppliedBase(float red, float green, float blue)
+    {
+        LastAppliedBase = new ManualBaseRgb(red, green, blue);
+    }
+
     public BaseEstimationMode BaseMode => SelectedFrame?.Base.Mode ?? BaseEstimationMode.Auto;
 
     public bool CanEditBase => DevelopBaseEditor.CanEdit(SelectedFrame);
@@ -128,11 +139,18 @@ public sealed class DevelopPanelState
         {
             if (string.Equals(frame.Id, frameId, StringComparison.Ordinal))
             {
+                if (SelectedFrame is not { } current ||
+                    !string.Equals(current.Id, frame.Id, StringComparison.Ordinal))
+                {
+                    LastAppliedBase = null;
+                }
+
                 SelectedFrame = frame;
                 return true;
             }
         }
         SelectedFrame = null;
+        LastAppliedBase = null;
         return false;
     }
     /// <summary>

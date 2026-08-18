@@ -82,24 +82,30 @@ using film_base_detail::upper_median;
     std::vector<double> red, green, blue;
     for (const auto& strip : strips) {
         const double luma = strip_luma(strip);
+        // macOS `brightStrips` — 준클리핑(0.97+)은 밝기 기준에서도, 고른 집합에서도 뺍니다.
+        if (luma >= 0.97) { continue; }
         if (luma >= brightest * 0.55 && luma >= base_level * 0.50) {
             red.push_back(strip[0]); green.push_back(strip[1]); blue.push_back(strip[2]);
         }
     }
     if (red.empty()) { return std::nullopt; }
-    return BaseMeasurement{
-        std::clamp(
-            median(std::move(red)),
-            static_cast<double>(minimum_manual_dmin),
-            static_cast<double>(maximum_manual_dmin)),
-        std::clamp(
-            median(std::move(green)),
-            static_cast<double>(minimum_manual_dmin),
-            static_cast<double>(maximum_manual_dmin)),
-        std::clamp(
-            median(std::move(blue)),
-            static_cast<double>(minimum_manual_dmin),
-            static_cast<double>(maximum_manual_dmin))};
+    // macOS `borderFallback` 은 걸러 낸 스트립 평균을 `FilmBaseSample` 로 만든 뒤
+    // `FilmBaseMeasurementBuilder.build` → `coherentCluster` 를 부릅니다. 채널을 따로
+    // 중앙값 내면 luma 이상치 스트립이 R/G/B 를 제각각 잡아당깁니다.
+    std::vector<negaflow::core::Rgba32F> strip_pixels;
+    std::vector<std::size_t> selected;
+    strip_pixels.reserve(red.size());
+    selected.reserve(red.size());
+    for (std::size_t index = 0U; index < red.size(); ++index) {
+        selected.push_back(strip_pixels.size());
+        strip_pixels.push_back({
+            static_cast<float>(red[index]),
+            static_cast<float>(green[index]),
+            static_cast<float>(blue[index]),
+            1.0F,
+        });
+    }
+    return coherent_measurement(strip_pixels, selected);
 }
 
 [[nodiscard]] std::optional<BaseMeasurement> scene_edge_fallback_base(

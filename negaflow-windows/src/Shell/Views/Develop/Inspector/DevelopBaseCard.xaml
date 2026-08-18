@@ -86,26 +86,56 @@
                     Checked="OnBaseManualModeChecked" />
             </Grid>
         </Border>
+        <!-- macOS `basePresetPickerRow`: 라벨 폭 86, 피커 maxWidth 276, 줄 간격 12, 최소 높이 26. -->
         <StackPanel x:Name="FilmBaseControls" Spacing="8">
-            <TextBlock x:Name="FilmStockLabel" FontSize="12" />
-            <ComboBox
-                x:Name="FilmStockSelector"
-                AutomationProperties.AutomationId="negaflow.develop.base.film-stock"
-                DisplayMemberPath="DisplayName"
-                SelectionChanged="OnFilmStockSelectionChanged" />
-            <TextBlock x:Name="LightSourceLabel" FontSize="12" />
-            <ComboBox
-                x:Name="LightSourceSelector"
-                AutomationProperties.AutomationId="negaflow.develop.base.light-source"
-                DisplayMemberPath="DisplayName"
-                SelectionChanged="OnLightSourceSelectionChanged" />
-            <!-- macOS 는 필름·광원 다음 셋째 줄에 스캐너 프로파일을 둡니다. -->
-            <TextBlock x:Name="ScannerProfileLabel" FontSize="12" />
-            <ComboBox
-                x:Name="ScannerProfileSelector"
-                AutomationProperties.AutomationId="negaflow.develop.base.scanner-profile"
-                DisplayMemberPath="Label"
-                SelectionChanged="OnScannerProfileSelectionChanged" />
+            <Grid MinHeight="26" ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="86" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="FilmStockLabel" VerticalAlignment="Center" FontSize="12" TextTrimming="CharacterEllipsis" />
+                <ComboBox
+                    x:Name="FilmStockSelector"
+                    Grid.Column="1"
+                    MinHeight="24"
+                    MaxWidth="276"
+                    HorizontalAlignment="Stretch"
+                    AutomationProperties.AutomationId="negaflow.develop.base.film-stock"
+                    DisplayMemberPath="DisplayName"
+                    SelectionChanged="OnFilmStockSelectionChanged" />
+            </Grid>
+            <Grid MinHeight="26" ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="86" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="LightSourceLabel" VerticalAlignment="Center" FontSize="12" TextTrimming="CharacterEllipsis" />
+                <ComboBox
+                    x:Name="LightSourceSelector"
+                    Grid.Column="1"
+                    MinHeight="24"
+                    MaxWidth="276"
+                    HorizontalAlignment="Stretch"
+                    AutomationProperties.AutomationId="negaflow.develop.base.light-source"
+                    DisplayMemberPath="DisplayName"
+                    SelectionChanged="OnLightSourceSelectionChanged" />
+            </Grid>
+            <Grid MinHeight="26" ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="86" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="ScannerProfileLabel" VerticalAlignment="Center" FontSize="12" TextTrimming="CharacterEllipsis" />
+                <ComboBox
+                    x:Name="ScannerProfileSelector"
+                    Grid.Column="1"
+                    MinHeight="24"
+                    MaxWidth="276"
+                    HorizontalAlignment="Stretch"
+                    AutomationProperties.AutomationId="negaflow.develop.base.scanner-profile"
+                    DisplayMemberPath="Label"
+                    SelectionChanged="OnScannerProfileSelectionChanged" />
+            </Grid>
         </StackPanel>
         <!-- macOS `InspectorActionPill(pickBase)` — 스포이드 토글과 초기화가 한 캡슐입니다.
              본문 최소 높이 31, 왼쪽 여백 7, 초기화 원 23×23, 오른쪽 여백 3, 캡슐 테두리.

@@ -1,4 +1,3 @@
-using System.Globalization;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
@@ -194,30 +193,17 @@ public sealed partial class DevelopBaseCard : UserControl
 
     private void UpdateManualBaseText()
     {
-        if (panel?.SelectedFrame?.Base.Mode == BaseEstimationMode.Auto)
+        // macOS `baseReadout` — `frame.baseRGB` 가 있을 때만 `baseReadoutFormat` 을 씁니다.
+        // 모드 이름·필름 이름을 지어내지 않습니다.
+        if (panel?.LastAppliedBase is not { } applied)
         {
-            ManualBaseValueText.Text = "Auto";
+            ManualBaseValueText.Text = string.Empty;
             return;
         }
-        if (panel?.SelectedFrame?.Base.Mode == BaseEstimationMode.Preset)
-        {
-            FilmStockOption? filmStock = BundledFilmBaseOptions.FilmStocks.FirstOrDefault(
-                option => option.Id == panel.SelectedFrame.Base.FilmStockDminId);
-            ManualBaseValueText.Text = filmStock?.Id is not null
-                ? filmStock.DisplayName
-                : panel.SelectedFrame.Base.FilmStockDminId is null
-                    ? "Select film stock"
-                    : "Film preset unavailable";
-            return;
-        }
-        if (panel?.ManualBase is { } manualBase)
-        {
-            ManualBaseValueText.Text = string.Create(
-                CultureInfo.CurrentCulture,
-                $"{manualBase.Red:F3} / {manualBase.Green:F3} / {manualBase.Blue:F3}");
-            return;
-        }
-        ManualBaseValueText.Text = "not set";
+
+        ManualBaseValueText.Text = DevelopBaseReadout.Format(
+            AppResources.Get("developBaseReadoutFormat", "Value"),
+            applied);
     }
 
     /// <summary>

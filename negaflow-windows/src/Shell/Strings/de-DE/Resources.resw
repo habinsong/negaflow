@@ -763,6 +763,7 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developBaseModeAuto.Content" xml:space="preserve"><value>Automatisch</value><comment>AppLocalizedPhrase.baseModeAuto</comment></data>
   <data name="developBaseModeFilm.Content" xml:space="preserve"><value>Film</value><comment>AppLocalizedPhrase.baseModeFilm</comment></data>
   <data name="developBaseModeManual.Content" xml:space="preserve"><value>Manuell</value><comment>AppLocalizedPhrase.baseModeManual</comment></data>
+  <data name="developBaseReadoutFormat.Value" xml:space="preserve"><value>Basis %.2f %.2f %.2f</value><comment>AppLocalizedPhrase.baseReadoutFormat</comment></data>
   <data name="developFilmStock.Text" xml:space="preserve"><value>Filmmaterial</value><comment>AppLocalizedPhrase.filmStock</comment></data>
   <data name="developLightSource.Text" xml:space="preserve"><value>Lichtquelle</value><comment>AppLocalizedPhrase.lightSource</comment></data>
   <data name="developMidtones.Text" xml:space="preserve"><value>Mitteltöne</value><comment>AppLocalizedPhrase.midtones</comment></data>
