@@ -144,8 +144,9 @@
 > `film_look` **27,343 → 215 ms**, 전체 29,413 → 611 ms. 동치 3.28e-07.
 > 상세 [`15`](15-gpu-handoff.md) 3.7.
 >
-> **남은 것**(자세한 절차는 [`15`](15-gpu-handoff.md)):
-> `boundedRelativeGrade`/`box_mean` double 계측(3.8) · GrainMend 스크래치 각도 GPU.
+> **2026-08-19 — 3.8 double 계측.** `box_mean` 을 잠깐 float 로 내려도
+> frame_1 자동 검출 610/9331 이 같았습니다. 제품은 double 유지.
+> 밴드 평균 double 은 D3D11 선택 기능이라 **이식 불가**. 다음: 스크래치 각도 GPU.
 
 ### 0.0 — 아래는 2026-08-18 판입니다
 
