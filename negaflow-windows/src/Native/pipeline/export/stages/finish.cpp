@@ -5,6 +5,7 @@
 #include "negaflow/core/cancel_flag.h"
 #include "negaflow/core/pixel.h"
 #include "negaflow/imaging/working_image_resample.h"
+#include "negaflow/pipeline/gpu_accelerator.h"
 
 #include <algorithm>
 #include <cmath>
@@ -27,10 +28,27 @@ std::optional<DevelopExportOutcome> apply_finish_stages(
     tracker.begin(
         DevelopExportStage::film_scan_denoise,
         cost_of(denoise_cost, request.film_scan_denoise.strength > 0.0F));
-    auto film_scan_denoise = negaflow::imaging::apply_film_scan_denoise(
-        std::move(grain_image),
-        request.film_scan_denoise,
-        negaflow::core::CancelFlag{control.cancel_flag});
+    // ☠️ **GPU 를 먼저 시도하고, 처리하지 못했으면 CPU 로 갑니다.**
+    //    CPU 판의 주석 원문 — *"On a 17 MP scan this stage was by far the most expensive
+    //    in the whole develop."* 그래서 프리뷰·검출에서 이것이 가장 크게 체감됩니다.
+    //    내보내기는 `cpu_only` 라 값이 그대로입니다.
+    const GpuUsePolicy gpu_policy = (preview != nullptr || detect != nullptr)
+        ? GpuUsePolicy::allowed
+        : GpuUsePolicy::cpu_only;
+    negaflow::imaging::FilmScanDenoiseResult film_scan_denoise{};
+    const GpuDenoiseOutcome accelerated_denoise =
+        GpuAccelerator::shared().apply_film_scan_denoise(
+            gpu_policy, grain_image, request.film_scan_denoise);
+    if (accelerated_denoise.handled) {
+        film_scan_denoise.status = negaflow::imaging::FilmScanDenoiseStatus::ok;
+        film_scan_denoise.info = accelerated_denoise.info;
+        film_scan_denoise.image = std::move(grain_image);
+    } else {
+        film_scan_denoise = negaflow::imaging::apply_film_scan_denoise(
+            std::move(grain_image),
+            request.film_scan_denoise,
+            negaflow::core::CancelFlag{control.cancel_flag});
+    }
     if (film_scan_denoise.status ==
         negaflow::imaging::FilmScanDenoiseStatus::cancelled) {
         return cancelled_outcome(DevelopExportStage::film_scan_denoise);

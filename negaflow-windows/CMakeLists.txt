@@ -223,6 +223,13 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/guide_pack.hlsl"
+    GuidePackMain
+    negaflow_guide_pack_cs
+    NEGAFLOW_GUIDE_PACK_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/digital_halation.hlsl"
     HalationBaseMain
     negaflow_halation_base_cs
@@ -291,6 +298,7 @@ add_library(negaflow_gpu STATIC
     "${NEGAFLOW_MEDIAN3_HEADER}"
     "${NEGAFLOW_GAMMA_LIFT_HEADER}"
     "${NEGAFLOW_FILM_SCAN_SHRINK_HEADER}"
+    "${NEGAFLOW_GUIDE_PACK_HEADER}"
     "${NEGAFLOW_HALATION_BASE_HEADER}"
     "${NEGAFLOW_HALATION_ACCUMULATE_HEADER}"
     "${NEGAFLOW_MORPHOLOGY_H_HEADER}"
@@ -304,6 +312,8 @@ add_library(negaflow_gpu STATIC
     src/Native/gpu/gpu_film_scan.cpp
     src/Native/gpu/gpu_digital_halation.cpp
     src/Native/gpu/gpu_morphology.cpp
+    src/Native/gpu/gpu_tone_stage.cpp
+    src/Native/gpu/gpu_film_scan_stage.cpp
     src/Native/gpu/gpu_neighborhood.cpp
     src/Native/gpu/gpu_stage_kernels.cpp
     src/Native/gpu/gpu_pointwise.cpp
@@ -520,6 +530,7 @@ add_library(negaflow_pipeline STATIC
     src/Native/pipeline/export/support/preview.cpp
     src/Native/pipeline/export/support/progress.cpp
     src/Native/pipeline/film_look_workspace.cpp
+    src/Native/pipeline/gpu_accelerator.cpp
 )
 target_include_directories(negaflow_pipeline
     PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/pipeline/include"
@@ -534,6 +545,9 @@ target_link_libraries(
         negaflow_output
     PRIVATE
         negaflow_core
+        # GPU 가속 진입점(`gpu_accelerator.cpp`)이 쓰는 유일한 자리입니다.
+        # 의존 방향은 `gpu -> imaging`, `pipeline -> {imaging, gpu}` 입니다 — 순환이 없습니다.
+        negaflow_gpu
         negaflow_project_options
 )
 
@@ -1032,6 +1046,15 @@ if(BUILD_TESTING)
         PRIVATE negaflow_gpu negaflow_imaging negaflow_core negaflow_project_options
     )
     add_test(NAME native.gpu_morphology COMMAND negaflow_gpu_morphology_tests)
+
+    add_executable(negaflow_gpu_accelerator_tests
+        tests/Native.UnitTests/gpu_accelerator_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_gpu_accelerator_tests
+        PRIVATE negaflow_pipeline negaflow_imaging negaflow_core negaflow_project_options
+    )
+    add_test(NAME native.gpu_accelerator COMMAND negaflow_gpu_accelerator_tests)
 
     add_executable(negaflow_tone_pipeline_tests
         tests/Native.UnitTests/tone_pipeline_tests.cpp

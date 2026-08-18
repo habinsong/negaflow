@@ -4,6 +4,7 @@
 
 #include "negaflow/core/pixel.h"
 #include "negaflow/imaging/working_tone_adjuster.h"
+#include "negaflow/pipeline/gpu_accelerator.h"
 
 #include <utility>
 
@@ -34,11 +35,26 @@ std::optional<DevelopExportOutcome> apply_look_stages(
     RunTracker& tracker,
     LookWorkspaceOutput& workspace,
     negaflow::imaging::WorkingImage developed_image,
+    const GpuUsePolicy gpu_policy,
     LookStageOutput& out) noexcept {
     tracker.begin(DevelopExportStage::tone_adjust, cost_of(tone_cost, true));
-    auto adjusted = negaflow::imaging::apply_working_tone_adjustments(
-        std::move(developed_image),
-        request.tone);
+
+    // ☠️ **GPU 를 먼저 시도하고, 처리하지 못했으면 CPU 로 갑니다.**
+    //    가속기는 실패할 때 이미지를 손대지 않으므로(`gpu_accelerator.h`) 그대로 이어서
+    //    CPU 판을 부르면 됩니다. 두 경로의 화소는 동치 시험이 `1e-5` 로 묶습니다.
+    negaflow::imaging::WorkingToneAdjustResult adjusted{};
+    const GpuToneOutcome accelerated =
+        GpuAccelerator::shared().apply_working_tone_adjustments(
+            gpu_policy, developed_image, request.tone, {});
+    if (accelerated.handled) {
+        adjusted.status = negaflow::imaging::WorkingToneAdjustStatus::ok;
+        adjusted.info = accelerated.info;
+        adjusted.image = std::move(developed_image);
+    } else {
+        adjusted = negaflow::imaging::apply_working_tone_adjustments(
+            std::move(developed_image),
+            request.tone);
+    }
     if (adjusted.status != negaflow::imaging::WorkingToneAdjustStatus::ok) {
         if (adjusted.status ==
             negaflow::imaging::WorkingToneAdjustStatus::kernel_failed) {

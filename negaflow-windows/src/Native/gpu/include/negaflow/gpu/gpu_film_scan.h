@@ -18,6 +18,9 @@
 
 #include <cstdint>
 
+struct ID3D11ComputeShader;
+struct ID3D11Buffer;
+
 #include "negaflow/gpu/gpu_pointwise.h"
 #include "negaflow/imaging/film_scan_denoise.h"
 
@@ -44,6 +47,39 @@ public:
 
 private:
     GpuPointwiseKernel kernel_{};
+};
+
+// `film_scan_denoise_tile.cpp:74-77` 입니다 — `guide = luminance(fine)` 를 만들고
+// 가이드 필터가 요구하는 묶음 `(source.rgb, guide)` 로 담습니다.
+//
+// ☠️ 이 커널이 없으면 이 한 걸음 때문에 타일마다 다운로드 2회 + 업로드 1회가 붙습니다.
+class GpuGuidePack final {
+public:
+    GpuGuidePack() noexcept = default;
+
+    [[nodiscard]] static GpuKernelStatus create(
+        const GpuDevice& device,
+        GpuGuidePack& kernel) noexcept;
+
+    // `lifted` 와 `fine` 은 같은 크기여야 하고 `destination` 과 달라야 합니다.
+    [[nodiscard]] GpuKernelStatus dispatch(
+        const GpuDevice& device,
+        const GpuWorkingImage& lifted,
+        const GpuWorkingImage& fine,
+        GpuWorkingImage& destination) const noexcept;
+
+    [[nodiscard]] bool is_valid() const noexcept { return shader_ != nullptr; }
+
+    ~GpuGuidePack();
+    GpuGuidePack(const GpuGuidePack&) = delete;
+    GpuGuidePack& operator=(const GpuGuidePack&) = delete;
+
+private:
+    void reset() noexcept;
+
+    // SRV 를 둘 묶으므로 `GpuPointwiseKernel`(하나) 을 쓸 수 없습니다.
+    ID3D11ComputeShader* shader_{nullptr};
+    ID3D11Buffer* constants_{nullptr};
 };
 
 class GpuFilmScanShrink final {

@@ -10,6 +10,7 @@
 #include "negaflow/gpu/gpu_working_image.h"
 #include "negaflow/gpu/shaders/film_scan_shrink_FilmScanShrinkMain.h"
 #include "negaflow/gpu/shaders/gamma_lift_GammaLiftMain.h"
+#include "negaflow/gpu/shaders/guide_pack_GuidePackMain.h"
 
 namespace negaflow::gpu {
 namespace {
@@ -248,6 +249,92 @@ GpuKernelStatus GpuFilmScanShrink::dispatch(
         nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
     ID3D11UnorderedAccessView* const no_uav[1] = {nullptr};
     context->CSSetShaderResources(0U, 6U, no_srv);
+    context->CSSetUnorderedAccessViews(0U, 1U, no_uav, nullptr);
+    context->CSSetShader(nullptr, nullptr, 0U);
+    return GpuKernelStatus::ok;
+}
+
+GpuGuidePack::~GpuGuidePack() { reset(); }
+
+void GpuGuidePack::reset() noexcept {
+    if (constants_ != nullptr) {
+        constants_->Release();
+        constants_ = nullptr;
+    }
+    if (shader_ != nullptr) {
+        shader_->Release();
+        shader_ = nullptr;
+    }
+}
+
+GpuKernelStatus GpuGuidePack::create(const GpuDevice& device, GpuGuidePack& kernel) noexcept {
+    kernel.reset();
+    if (!device.is_usable()) {
+        return GpuKernelStatus::device_unavailable;
+    }
+    ID3D11ComputeShader* shader = nullptr;
+    if (FAILED(device.device()->CreateComputeShader(
+            negaflow_guide_pack_cs, sizeof(negaflow_guide_pack_cs), nullptr, &shader))) {
+        return GpuKernelStatus::resource_creation_failed;
+    }
+    D3D11_BUFFER_DESC description{};
+    description.ByteWidth = sizeof(GpuPointwiseExtent);
+    description.Usage = D3D11_USAGE_DYNAMIC;
+    description.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    description.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+    ID3D11Buffer* constants = nullptr;
+    if (FAILED(device.device()->CreateBuffer(&description, nullptr, &constants))) {
+        shader->Release();
+        return GpuKernelStatus::resource_creation_failed;
+    }
+    kernel.shader_ = shader;
+    kernel.constants_ = constants;
+    return GpuKernelStatus::ok;
+}
+
+GpuKernelStatus GpuGuidePack::dispatch(
+    const GpuDevice& device,
+    const GpuWorkingImage& lifted,
+    const GpuWorkingImage& fine,
+    GpuWorkingImage& destination) const noexcept {
+    if (!device.is_usable() || shader_ == nullptr || constants_ == nullptr) {
+        return GpuKernelStatus::device_unavailable;
+    }
+    if (!lifted.is_valid() || !fine.is_valid() || !destination.is_valid() ||
+        lifted.width() != destination.width() || lifted.height() != destination.height() ||
+        fine.width() != destination.width() || fine.height() != destination.height() ||
+        lifted.texture() == destination.texture() ||
+        fine.texture() == destination.texture()) {
+        return GpuKernelStatus::invalid_arguments;
+    }
+
+    GpuPointwiseExtent payload{};
+    payload.width = destination.width();
+    payload.height = destination.height();
+
+    ID3D11DeviceContext* context = device.context();
+    D3D11_MAPPED_SUBRESOURCE mapped{};
+    if (FAILED(context->Map(constants_, 0U, D3D11_MAP_WRITE_DISCARD, 0U, &mapped))) {
+        return GpuKernelStatus::resource_creation_failed;
+    }
+    std::memcpy(mapped.pData, &payload, sizeof(payload));
+    context->Unmap(constants_, 0U);
+
+    ID3D11ShaderResourceView* sources[2] = {lifted.srv(), fine.srv()};
+    ID3D11UnorderedAccessView* destination_view = destination.uav();
+    ID3D11Buffer* constant_view = constants_;
+    context->CSSetShader(shader_, nullptr, 0U);
+    context->CSSetShaderResources(0U, 2U, sources);
+    context->CSSetUnorderedAccessViews(0U, 1U, &destination_view, nullptr);
+    context->CSSetConstantBuffers(0U, 1U, &constant_view);
+    context->Dispatch(
+        group_count(destination.width(), gpu_thread_group_width),
+        group_count(destination.height(), gpu_thread_group_height),
+        1U);
+
+    ID3D11ShaderResourceView* const no_srv[2] = {nullptr, nullptr};
+    ID3D11UnorderedAccessView* const no_uav[1] = {nullptr};
+    context->CSSetShaderResources(0U, 2U, no_srv);
     context->CSSetUnorderedAccessViews(0U, 1U, no_uav, nullptr);
     context->CSSetShader(nullptr, nullptr, 0U);
     return GpuKernelStatus::ok;

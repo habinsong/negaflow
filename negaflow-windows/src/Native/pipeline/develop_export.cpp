@@ -1,5 +1,7 @@
 #include "negaflow/pipeline/develop_export.h"
 
+#include "negaflow/pipeline/gpu_accelerator.h"
+
 #include "export/stages/decode.h"
 #include "export/stages/defect.h"
 #include "export/stages/finish.h"
@@ -163,8 +165,18 @@ using develop_export_detail::validate_request;
     }
 
     LookStageOutput look{};
+    // 값이 바이트까지 같아야 하는 경로(내보내기·골든)는 CPU 로 둡니다.
+    // 사용자가 기다리는 프리뷰·검출에서만 GPU 를 켭니다 — `gpu_accelerator.h` 의 정책표.
+    const GpuUsePolicy gpu_policy = (preview != nullptr || detect != nullptr)
+        ? GpuUsePolicy::allowed
+        : GpuUsePolicy::cpu_only;
     if (auto failed = apply_look_stages(
-            request, tracker, look_workspace, std::move(invert.image), look)) {
+            request,
+            tracker,
+            look_workspace,
+            std::move(invert.image),
+            gpu_policy,
+            look)) {
         return *failed;
     }
 
