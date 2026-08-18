@@ -7,16 +7,19 @@
 // | | macOS | Windows CPU | 셰이더 |
 // |---|---|---|---|
 // | 박스 블러 | `CIBoxBlur` (`FilmScanDenoise.swift:154`) | `imaging/film_scan_denoise_filters.cpp` `box_blur` | `shaders/box_blur.hlsl` |
+// | 가우시안 | `CIGaussianBlur` (네 곳) | 〃 `gaussian_blur` · `imaging/texture_stage_gaussian.h` | `shaders/gaussian_blur.hlsl` |
 //
 // 가이드 필터 4커널(`gfProduct`·`gfCoeffA`·`gfCoeffB`·`gfApply`)과 `filmScanShrink` 가
 // 박스 평균에 물려 있습니다. 그래서 그 커널들보다 이것이 먼저입니다.
 
 #include <cstdint>
+#include <vector>
 
 #include "negaflow/gpu/gpu_pointwise.h"
 
 struct ID3D11ComputeShader;
 struct ID3D11Buffer;
+struct ID3D11ShaderResourceView;
 
 namespace negaflow::gpu {
 
@@ -70,6 +73,110 @@ private:
     ID3D11ComputeShader* horizontal_{nullptr};
     ID3D11ComputeShader* vertical_{nullptr};
     ID3D11Buffer* constants_{nullptr};
+};
+
+// 3×3 중앙값입니다. macOS `CIMedianFilter`(`FilmScanDenoise.swift:171`),
+// Windows CPU `imaging/film_scan_denoise_filters.cpp:77` `median3`.
+//
+// ☠️ **여기에는 부동소수 산술이 없습니다.** 중앙값은 아홉 개 중 하나를 고르는 일이라
+//    고르는 방법이 달라도 고른 값은 같습니다 — CPU 의 `nth_element` 와 셰이더의 정렬
+//    네트워크는 **비트 단위로 같은 값**을 냅니다. 평균·보간을 넣으면 그 성질이 깨집니다.
+//
+// 알파는 원본을 그대로 씁니다. CPU 의 `Rgb` 가 알파를 들고 다니지 않습니다.
+class GpuMedian3 final {
+public:
+    GpuMedian3() noexcept = default;
+    ~GpuMedian3();
+
+    GpuMedian3(const GpuMedian3&) = delete;
+    GpuMedian3& operator=(const GpuMedian3&) = delete;
+    GpuMedian3(GpuMedian3&& other) noexcept;
+    GpuMedian3& operator=(GpuMedian3&& other) noexcept;
+
+    [[nodiscard]] static GpuKernelStatus create(const GpuDevice& device, GpuMedian3& kernel) noexcept;
+
+    // 한 패스입니다. `source` 와 `destination` 은 서로 달라야 합니다.
+    // `med5`(중앙값 두 번)는 호출부가 이것을 두 번 걸어 만듭니다 — CPU `film_scan_denoise_tile.cpp:83`
+    // 이 그렇게 합니다.
+    [[nodiscard]] GpuKernelStatus dispatch(
+        const GpuDevice& device,
+        const GpuWorkingImage& source,
+        GpuWorkingImage& destination) const noexcept;
+
+    [[nodiscard]] bool is_valid() const noexcept { return kernel_.is_valid(); }
+
+private:
+    GpuPointwiseKernel kernel_{};
+};
+
+// 가장자리 처리입니다. CPU `texture_stage_math.h:29` `GaussianEdgeMode` 와 같은 순서입니다 —
+// 셰이더가 이 정수를 그대로 받으므로 순서를 바꾸지 마십시오.
+enum class GpuGaussianEdgeMode : std::int32_t {
+    // 경계 화소를 늘립니다. `film_scan_denoise` 의 가우시안이 이것입니다.
+    clamp = 0,
+    // 경계 화소 자신을 접습니다(`-1 → 0`, `limit → limit - 1`). Core Image 의 동작입니다.
+    mirror = 1,
+    // 범위 밖은 **더하지 않습니다.** 가중치 합이 줄어 가장자리가 어두워집니다.
+    transparent = 2,
+};
+
+// 분리형(수평 → 수직) 가우시안입니다.
+//
+// ☠️ 가중치는 **호스트가 CPU 와 같은 코드로** 계산합니다(`weights_for_sigma`). 셰이더에서
+//    `exp` 를 부르면 CPU 와 마지막 비트가 갈리고 그 차이가 전 화소에 곱해집니다.
+class GpuGaussianBlur final {
+public:
+    GpuGaussianBlur() noexcept = default;
+    ~GpuGaussianBlur();
+
+    GpuGaussianBlur(const GpuGaussianBlur&) = delete;
+    GpuGaussianBlur& operator=(const GpuGaussianBlur&) = delete;
+    GpuGaussianBlur(GpuGaussianBlur&& other) noexcept;
+    GpuGaussianBlur& operator=(GpuGaussianBlur&& other) noexcept;
+
+    [[nodiscard]] static GpuKernelStatus create(
+        const GpuDevice& device,
+        GpuGaussianBlur& kernel) noexcept;
+
+    // `imaging/coreimage_gaussian.h` 의 `coreimage_gaussian_effective_sigma` 로 σ 를 구하고
+    // `-support…+support` 의 정규화 가중치를 만듭니다. CPU 두 판과 **같은 계산**입니다:
+    // `film_scan_denoise_filters.cpp:19-31` · `texture_stage_gaussian.h:31-42`.
+    //
+    // ⚠️ 지원 반경 하한이 CPU 두 판에서 다릅니다 — `texture_stage` 는 `max(1, …)` 로 1 을
+    //    보장하고 `film_scan_denoise` 는 그러지 않습니다. `minimum_support` 로 부르는 쪽이
+    //    자기 판을 고릅니다. **여기서 한쪽으로 통일하지 마십시오.**
+    [[nodiscard]] static std::vector<float> weights_for_sigma(float sigma, int minimum_support);
+
+    // `source` → `scratch`(수평) → `destination`(수직). 세 장이 모두 같은 크기여야 하고
+    // 서로 달라야 합니다.
+    //
+    // `weights` 는 `weights_for_sigma` 가 준 것이어야 하고 길이는 홀수여야 합니다
+    // (`radius * 2 + 1`). 길이 1 이면 흐림이 없어 원본을 그대로 내보냅니다.
+    [[nodiscard]] GpuKernelStatus dispatch(
+        const GpuDevice& device,
+        const GpuWorkingImage& source,
+        GpuWorkingImage& scratch,
+        GpuWorkingImage& destination,
+        const std::vector<float>& weights,
+        GpuGaussianEdgeMode edge_mode,
+        bool blur_alpha) const noexcept;
+
+    [[nodiscard]] bool is_valid() const noexcept { return horizontal_ != nullptr; }
+
+private:
+    void reset() noexcept;
+    // 가중치 버퍼는 탭 수가 바뀔 때만 다시 만듭니다. 같은 σ 로 프레임마다 부르는 경로에서
+    // 매번 만들면 그 비용이 커널보다 큽니다.
+    [[nodiscard]] GpuKernelStatus ensure_weights(
+        const GpuDevice& device,
+        const std::vector<float>& weights) const noexcept;
+
+    ID3D11ComputeShader* horizontal_{nullptr};
+    ID3D11ComputeShader* vertical_{nullptr};
+    ID3D11Buffer* constants_{nullptr};
+    mutable ID3D11Buffer* weights_{nullptr};
+    mutable ID3D11ShaderResourceView* weights_view_{nullptr};
+    mutable std::size_t weight_capacity_{0};
 };
 
 // 가이드 필터입니다. macOS `gfProduct`·`gfCoeffA`·`gfCoeffB`·`gfApply` 넷과

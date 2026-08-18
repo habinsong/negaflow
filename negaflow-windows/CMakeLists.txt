@@ -188,6 +188,41 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/gaussian_blur.hlsl"
+    GaussianHorizontalMain
+    negaflow_gaussian_horizontal_cs
+    NEGAFLOW_GAUSSIAN_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/gaussian_blur.hlsl"
+    GaussianVerticalMain
+    negaflow_gaussian_vertical_cs
+    NEGAFLOW_GAUSSIAN_V_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/median3.hlsl"
+    Median3Main
+    negaflow_median3_cs
+    NEGAFLOW_MEDIAN3_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/gamma_lift.hlsl"
+    GammaLiftMain
+    negaflow_gamma_lift_cs
+    NEGAFLOW_GAMMA_LIFT_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/film_scan_shrink.hlsl"
+    FilmScanShrinkMain
+    negaflow_film_scan_shrink_cs
+    NEGAFLOW_FILM_SCAN_SHRINK_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/guided_filter.hlsl"
     GuidedCoefficientsMain
     negaflow_guided_coefficients_cs
@@ -216,10 +251,17 @@ add_library(negaflow_gpu STATIC
     "${NEGAFLOW_GUIDED_PREPARE_HEADER}"
     "${NEGAFLOW_GUIDED_COEFFICIENTS_HEADER}"
     "${NEGAFLOW_GUIDED_APPLY_HEADER}"
+    "${NEGAFLOW_GAUSSIAN_H_HEADER}"
+    "${NEGAFLOW_GAUSSIAN_V_HEADER}"
+    "${NEGAFLOW_MEDIAN3_HEADER}"
+    "${NEGAFLOW_GAMMA_LIFT_HEADER}"
+    "${NEGAFLOW_FILM_SCAN_SHRINK_HEADER}"
     "${NEGAFLOW_PARAMETRIC_TONE_CURVE_HEADER}"
     src/Native/gpu/gpu_color_kernels.cpp
     src/Native/gpu/gpu_negative_invert.cpp
     src/Native/gpu/gpu_guided_filter.cpp
+    src/Native/gpu/gpu_gaussian_blur.cpp
+    src/Native/gpu/gpu_film_scan.cpp
     src/Native/gpu/gpu_neighborhood.cpp
     src/Native/gpu/gpu_stage_kernels.cpp
     src/Native/gpu/gpu_pointwise.cpp
@@ -232,7 +274,11 @@ target_include_directories(negaflow_gpu
     PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated"
 )
 target_link_libraries(negaflow_gpu PRIVATE negaflow_project_options)
-target_link_libraries(negaflow_gpu PUBLIC negaflow_core d3d11 dxgi)
+# GPU 커널은 CPU 커널의 이식입니다. 상수를 **같은 코드에서** 읽어야 값이 갈리지 않으므로
+# imaging 의 공개 헤더가 필요합니다 — `coreimage_gaussian.h` 의 σ 계산,
+# `film_scan_denoise.h` 의 감마 리프트 지수·유도 필터 ε·필름별 세기 표.
+# imaging 은 core·color·imageio 만 쓰고 gpu 를 쓰지 않으므로 순환이 없습니다.
+target_link_libraries(negaflow_gpu PUBLIC negaflow_core negaflow_imaging d3d11 dxgi)
 
 add_library(negaflow_color STATIC
     src/Native/color/icc_profile.cpp
@@ -877,12 +923,39 @@ if(BUILD_TESTING)
 
     add_executable(negaflow_gpu_neighborhood_tests
         tests/Native.UnitTests/gpu_neighborhood_tests.cpp
+        tests/Native.UnitTests/GpuNeighborhood/gpu_neighborhood_test_support.cpp
+        tests/Native.UnitTests/GpuNeighborhood/gpu_box_blur_tests.cpp
+        tests/Native.UnitTests/GpuNeighborhood/gpu_gaussian_tests.cpp
+        tests/Native.UnitTests/GpuNeighborhood/gpu_median3_tests.cpp
+        tests/Native.UnitTests/GpuNeighborhood/gpu_guided_filter_tests.cpp
+    )
+    target_include_directories(
+        negaflow_gpu_neighborhood_tests
+        PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/Native.UnitTests"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/Native.UnitTests/GpuNeighborhood"
     )
     target_link_libraries(
         negaflow_gpu_neighborhood_tests
         PRIVATE negaflow_gpu negaflow_core negaflow_project_options
     )
     add_test(NAME native.gpu_neighborhood COMMAND negaflow_gpu_neighborhood_tests)
+
+    add_executable(negaflow_gpu_film_scan_tests
+        tests/Native.UnitTests/gpu_film_scan_tests.cpp
+        tests/Native.UnitTests/GpuFilmScan/gpu_film_scan_chain.cpp
+    )
+    target_include_directories(
+        negaflow_gpu_film_scan_tests
+        PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/Native.UnitTests"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/Native.UnitTests/GpuFilmScan"
+    )
+    target_link_libraries(
+        negaflow_gpu_film_scan_tests
+        PRIVATE negaflow_gpu negaflow_imaging negaflow_core negaflow_project_options
+    )
+    add_test(NAME native.gpu_film_scan COMMAND negaflow_gpu_film_scan_tests)
 
     add_executable(negaflow_tone_pipeline_tests
         tests/Native.UnitTests/tone_pipeline_tests.cpp

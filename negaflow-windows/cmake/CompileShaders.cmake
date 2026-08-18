@@ -45,6 +45,13 @@ message(STATUS "Negaflow HLSL compiler: ${NEGAFLOW_FXC}")
 function(negaflow_compile_compute_shader source_path entry_point symbol_name output_variable)
     get_filename_component(source_absolute "${source_path}" ABSOLUTE)
     get_filename_component(source_stem "${source_path}" NAME_WE)
+    get_filename_component(source_directory "${source_absolute}" DIRECTORY)
+
+    # `.hlsli` 조각을 고쳐도 다시 컴파일되지 않던 문제입니다 — 의존이 `.hlsl` 하나뿐이라
+    # 셰이더가 옛 조각으로 남아 있었습니다. 조각은 몇 개 안 되므로 전부 의존으로 겁니다.
+    # 조각 하나를 고치면 셰이더가 전부 다시 도는 것은 의도한 것입니다: 조각은 수식을
+    # 담고 있고, 조용히 옛 것으로 남는 것보다 다시 도는 편이 낫습니다.
+    file(GLOB negaflow_shader_fragments CONFIGURE_DEPENDS "${source_directory}/*.hlsli")
     set(generated_header
         "${CMAKE_CURRENT_BINARY_DIR}/generated/negaflow/gpu/shaders/${source_stem}_${entry_point}.h")
 
@@ -63,7 +70,7 @@ function(negaflow_compile_compute_shader source_path entry_point symbol_name out
             /WX
             /Zpc
             "${source_absolute}"
-        DEPENDS "${source_absolute}"
+        DEPENDS "${source_absolute}" ${negaflow_shader_fragments}
         COMMENT "fxc cs_5_0 ${source_stem}:${entry_point}"
         VERBATIM
     )

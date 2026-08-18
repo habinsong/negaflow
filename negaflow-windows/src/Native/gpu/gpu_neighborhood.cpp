@@ -8,6 +8,7 @@
 #include "negaflow/gpu/gpu_working_image.h"
 #include "negaflow/gpu/shaders/box_blur_BoxBlurHorizontalMain.h"
 #include "negaflow/gpu/shaders/box_blur_BoxBlurVerticalMain.h"
+#include "negaflow/gpu/shaders/median3_Median3Main.h"
 
 namespace negaflow::gpu {
 namespace {
@@ -191,6 +192,30 @@ GpuKernelStatus GpuBoxBlur::dispatch(
     run_pass(context, horizontal_, constants_, source, scratch, group_count(source.height()));
     run_pass(context, vertical_, constants_, scratch, destination, group_count(source.width()));
     return GpuKernelStatus::ok;
+}
+
+// 중앙값은 텍스처 하나를 읽고 하나에 쓰며 상수는 크기뿐입니다 — 화소별 커널과 모양이
+// 같습니다. 그래서 골격을 다시 쓰지 않고 `GpuPointwiseKernel` 을 그대로 씁니다.
+// (커널이 이웃을 보느냐는 셰이더 안의 일이고, 바인딩 모양은 같습니다.)
+GpuMedian3::~GpuMedian3() = default;
+GpuMedian3::GpuMedian3(GpuMedian3&& other) noexcept = default;
+GpuMedian3& GpuMedian3::operator=(GpuMedian3&& other) noexcept = default;
+
+GpuKernelStatus GpuMedian3::create(const GpuDevice& device, GpuMedian3& kernel) noexcept {
+    return GpuPointwiseKernel::create(
+        device,
+        negaflow_median3_cs,
+        sizeof(negaflow_median3_cs),
+        sizeof(GpuPointwiseExtent),
+        kernel.kernel_);
+}
+
+GpuKernelStatus GpuMedian3::dispatch(
+    const GpuDevice& device,
+    const GpuWorkingImage& source,
+    GpuWorkingImage& destination) const noexcept {
+    GpuPointwiseExtent constants{};
+    return kernel_.dispatch(device, source, destination, &constants, sizeof(constants));
 }
 
 }  // namespace negaflow::gpu

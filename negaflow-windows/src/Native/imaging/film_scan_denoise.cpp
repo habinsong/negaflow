@@ -35,21 +35,6 @@ void discard_pixels(WorkingImage& image) noexcept {
     };
 }
 
-[[nodiscard]] Profile profile_for(
-    const FilmScanDenoiseFilmProfile profile) noexcept {
-    switch (profile) {
-        case FilmScanDenoiseFilmProfile::color_negative:
-            return {1.0F, 1.0F, 0.6F, 0.8F, 0.45F, false};
-        case FilmScanDenoiseFilmProfile::color_positive:
-            return {1.0F, 0.9F, 1.1F, 0.25F, 0.65F, false};
-        case FilmScanDenoiseFilmProfile::black_and_white_negative:
-            return {1.15F, 0.0F, 0.7F, 0.0F, 0.45F, true};
-        case FilmScanDenoiseFilmProfile::black_and_white_positive:
-            return {1.15F, 0.0F, 1.1F, 0.0F, 0.65F, true};
-    }
-    return {};
-}
-
 }  // namespace
 
 bool valid_film_scan_denoise_parameters(
@@ -93,7 +78,7 @@ FilmScanDenoiseResult apply_film_scan_denoise(
         std::vector<Rgb> output(
             pixel_count(result.image.width, result.image.height));
         result.info.output_scratch_bytes = output.size() * sizeof(Rgb);
-        const Profile profile = profile_for(parameters.film_profile);
+        const Profile profile = film_scan_denoise_film_scalars(parameters.film_profile);
 
         // Each tile reads an apron but writes only its own core, and the cores are
         // disjoint. That is what makes the tile rows independent, so splitting them
