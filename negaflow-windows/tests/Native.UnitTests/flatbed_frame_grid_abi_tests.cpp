@@ -1,4 +1,5 @@
-#include "negaflow_abi.h"
+#include "negaflow/abi/build_info.h"
+#include "negaflow/abi/flatbed_detect.h"
 
 #include <cmath>
 #include <cstdint>

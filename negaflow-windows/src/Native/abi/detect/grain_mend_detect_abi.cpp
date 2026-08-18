@@ -1,4 +1,4 @@
-#include "negaflow_abi.h"
+#include "negaflow/abi/grain_mend_detect.h"
 
 #include "support/abi_text.h"
 #include "request/develop_request_map.h"

@@ -1,4 +1,4 @@
-#include "negaflow_abi.h"
+#include "negaflow/abi/auto_adjust.h"
 
 #include "negaflow/imaging/auto_adjust.h"
 

@@ -1,4 +1,5 @@
-#include "negaflow_abi.h"
+#include "negaflow/abi/build_info.h"
+#include "negaflow/abi/infrared_detect.h"
 #include "synthetic_wic_tiff.h"
 
 #include <Windows.h>

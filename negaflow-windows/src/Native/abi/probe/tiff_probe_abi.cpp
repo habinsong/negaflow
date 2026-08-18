@@ -1,4 +1,4 @@
-#include "negaflow_abi.h"
+#include "negaflow/abi/source_probe.h"
 
 #include "negaflow/core/tiff_probe.h"
 

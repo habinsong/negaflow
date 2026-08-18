@@ -1,4 +1,4 @@
-#include "negaflow_abi.h"
+#include "negaflow/abi/infrared_detect.h"
 
 #include "negaflow/imaging/infrared_defect_detector.h"
 #include "negaflow/imageio/wic_tiff_decoder.h"

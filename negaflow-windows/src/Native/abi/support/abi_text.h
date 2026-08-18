@@ -1,6 +1,6 @@
 #pragma once
 
-#include "negaflow_abi.h"
+#include "negaflow/abi/develop_enums.h"
 
 #include <cstdint>
 #include <string_view>

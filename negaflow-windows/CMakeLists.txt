@@ -124,6 +124,9 @@ target_link_libraries(
 
 add_library(negaflow_imaging STATIC
     src/Native/imaging/auto_adjust.cpp
+    src/Native/imaging/auto_negative_base_candidates.cpp
+    src/Native/imaging/auto_negative_base_exclusion.cpp
+    src/Native/imaging/auto_negative_base_fallback.cpp
     src/Native/imaging/auto_negative_base_resolver.cpp
     src/Native/imaging/film_stock_base_resolver.cpp
     src/Native/imaging/color_grading.cpp
@@ -136,6 +139,8 @@ add_library(negaflow_imaging STATIC
       src/Native/imaging/film_emulation_profiles.cpp
       src/Native/imaging/film_emulation_registry.cpp
       src/Native/imaging/film_scan_denoise.cpp
+      src/Native/imaging/film_scan_denoise_filters.cpp
+      src/Native/imaging/film_scan_denoise_tile.cpp
       src/Native/imaging/bw_toning.cpp
       src/Native/imaging/color_model.cpp
       src/Native/imaging/digital_bw_emulsion_response.cpp
@@ -148,9 +153,18 @@ add_library(negaflow_imaging STATIC
       src/Native/imaging/defect_component_repair.cpp
       src/Native/imaging/defect_component_mask.cpp
       src/Native/imaging/defect_component_structure.cpp
+      src/Native/imaging/defect_component_structure_fill.cpp
+      src/Native/imaging/defect_component_structure_probe.cpp
       src/Native/imaging/defect_component_texture.cpp
       src/Native/imaging/defect_clone_stamp.cpp
+      src/Native/imaging/defect_clone_stamp_mask.cpp
+      src/Native/imaging/defect_clone_stamp_patch.cpp
+      src/Native/imaging/defect_clone_stamp_patch_stack.cpp
       src/Native/imaging/defect_heal_brush.cpp
+      src/Native/imaging/defect_heal_brush_patch_search.cpp
+      src/Native/imaging/defect_heal_brush_patch_stack.cpp
+      src/Native/imaging/defect_heal_brush_repair.cpp
+      src/Native/imaging/defect_heal_brush_stroke.cpp
       src/Native/imaging/grain_mend.cpp
       src/Native/imaging/grain_mend_classifier.cpp
       src/Native/imaging/grain_mend_component_classification.cpp
@@ -170,8 +184,20 @@ add_library(negaflow_imaging STATIC
       src/Native/imaging/grain_mend_speck_detector.cpp
       src/Native/imaging/grain_mend_stitch.cpp
       src/Native/imaging/grain_mend_tiled.cpp
+      src/Native/imaging/flatbed_frame_bands.cpp
       src/Native/imaging/flatbed_frame_grid_detector.cpp
+      src/Native/imaging/flatbed_frame_grid_fit.cpp
+      src/Native/imaging/flatbed_frame_profiles.cpp
+      src/Native/imaging/flatbed_frame_signal.cpp
+      src/Native/imaging/infrared_alignment.cpp
+      src/Native/imaging/infrared_alignment_math.cpp
+      src/Native/imaging/infrared_baseline.cpp
+      src/Native/imaging/infrared_clusters.cpp
+      src/Native/imaging/infrared_components.cpp
+      src/Native/imaging/infrared_confirmation.cpp
+      src/Native/imaging/infrared_defect_alignment.cpp
       src/Native/imaging/infrared_defect_detector.cpp
+      src/Native/imaging/infrared_planes.cpp
       src/Native/imaging/icm_icc_converter.cpp
       src/Native/imaging/image_transform.cpp
       src/Native/imaging/working_image_resample.cpp
@@ -182,7 +208,11 @@ add_library(negaflow_imaging STATIC
       src/Native/imaging/scene_correction.cpp
       src/Native/imaging/rescue_grade.cpp
       src/Native/imaging/scanner_profile_grade.cpp
+      src/Native/imaging/scanner_target_color.cpp
       src/Native/imaging/scanner_target_grade.cpp
+      src/Native/imaging/scanner_target_measure.cpp
+      src/Native/imaging/scanner_target_profile.cpp
+      src/Native/imaging/scanner_target_response.cpp
     src/Native/imaging/manual_negative_developer.cpp
     src/Native/imaging/mipmap_downsampler.cpp
     src/Native/imaging/point_curve.cpp

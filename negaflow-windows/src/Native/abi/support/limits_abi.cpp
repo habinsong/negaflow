@@ -1,4 +1,4 @@
-#include "negaflow_abi.h"
+#include "negaflow/abi/limits.h"
 
 #include "negaflow/imaging/manual_negative_developer.h"
 #include "negaflow/imaging/working_tone_adjuster.h"

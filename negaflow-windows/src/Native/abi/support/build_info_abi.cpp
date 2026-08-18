@@ -1,4 +1,4 @@
-#include "negaflow_abi.h"
+#include "negaflow/abi/build_info.h"
 
 #include "support/abi_text.h"
 

@@ -1,4 +1,4 @@
-#include "negaflow_abi.h"
+#include "negaflow/abi/soft_proof.h"
 
 #include "negaflow/color/gamut_check.h"
 

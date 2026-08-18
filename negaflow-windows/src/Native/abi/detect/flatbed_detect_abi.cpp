@@ -1,4 +1,4 @@
-#include "negaflow_abi.h"
+#include "negaflow/abi/flatbed_detect.h"
 
 #include "negaflow/imaging/flatbed_frame_grid_detector.h"
 

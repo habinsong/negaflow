@@ -1,4 +1,4 @@
-#include "negaflow_abi.h"
+#include "negaflow/abi/develop_entry.h"
 #include "negaflow/imageio/wic_tiff_decoder.h"
 
 #include <Windows.h>

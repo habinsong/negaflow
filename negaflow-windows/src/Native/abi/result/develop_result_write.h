@@ -1,6 +1,7 @@
 #pragma once
 
-#include "negaflow_abi.h"
+#include "negaflow/abi/develop_output.h"
+#include "negaflow/abi/develop_result.h"
 
 #include "negaflow/pipeline/develop_export.h"
 

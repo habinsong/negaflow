@@ -1,5 +1,5 @@
 #include "negaflow/core/build_info.h"
-#include "negaflow_abi.h"
+#include "negaflow/abi/build_info.h"
 
 #include <algorithm>
 #include <array>
