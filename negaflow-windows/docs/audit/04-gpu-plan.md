@@ -137,7 +137,21 @@ Core Image 의 기본 작업 형식은 **half float** 입니다. Windows 는 `Rg
 | 31 | `digitalFilmGrainDensity` | 800 | `digital_film_grain.cpp` |
 | 32 | `digitalBWFilm` | 826 | `digital_bw_film_look.cpp` |
 
-> ⚠️ **오른쪽 열은 파일명으로 짐작한 것입니다.** 커널을 옮기기 전에 **그 파일을 열어 수식이 같은지 먼저 확인**하십시오.
+> ⚠️ **먼저 [`../verification/2026-08-10-macos-kernel-audit.md`](../verification/2026-08-10-macos-kernel-audit.md) 를 읽으십시오.**
+> 그 문서가 **이미 수식 1:1 대조를 했습니다**(2026-08-10 기준):
+> `basicTone`·`parametricToneCurve`·`negativeInvert`·`colorMixerHSL`·`colorGrade`·
+> `calibrationPrimaries`·`bwToning`·텍스처 = **일치**, `filmGrain` = 수식 일치·잡음원만 다름.
+> **이 9개는 GPU 이식 시 CPU 코드를 그대로 HLSL 로 옮기면 됩니다.**
+>
+> ☠️ **그리고 아래 세 커널은 macOS 활성 파이프라인이 부르지 않습니다** (같은 문서 "없어서 맞는 것들"):
+> **8·9 `scannerLowSatChroma`/`scannerMidtoneChroma`, 15 `gamutSoftClip`, 19 `highlightDesaturate`.**
+> 정의만 남아 있고 호출부가 **없습니다.** PostPipeline 주석의 *"타겟 프로파일 밖의 고정 NR·명부
+> 탈채도·추가 gamut 압축은 적용하지 않는다"* 와 일치합니다.
+> **소스에 있다는 이유로 GPU 로 옮기면 macOS 에 없는 효과를 만들어 냅니다. 옮기지 마십시오.**
+> 나머지 커널도 **옮기기 전에 호출부가 살아 있는지부터** 확인하십시오.
+>
+> ⚠️ 위 대조는 **2026-08-10 기준**입니다. 그 뒤 바뀐 곳은 다시 봐야 합니다.
+> 나머지 열은 파일명으로 짐작한 것입니다. **그 파일을 열어 수식이 같은지 확인**하십시오.
 > 다르면 **CPU 쪽이 이미 틀린 것**이고, GPU 이식보다 그것을 먼저 고쳐야 합니다.
 > 20·21 은 macOS 에 있고 Windows 에 **없는 기능**입니다 — GPU 이전에 **CPU 이식이 먼저**입니다.
 
