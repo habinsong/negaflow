@@ -11,6 +11,7 @@ include(CTest)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(CompilerWarnings)
+include(CompileShaders)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -92,6 +93,29 @@ target_include_directories(negaflow_core
 )
 target_link_libraries(negaflow_core PRIVATE negaflow_project_options)
 
+# Direct3D 11 컴퓨트. 벤더 중립입니다 — 내장(Intel/AMD)·외장(Intel/NVIDIA/AMD)을 똑같이 다루고
+# 벤더 ID 로 거르지 않습니다. 하한은 기능 수준 11_0 하나이며, 하드웨어가 없으면 WARP 로,
+# 그것도 없으면 기존 CPU 경로로 떨어집니다. CUDA·벤더 확장·SM 6.0 을 쓰지 않습니다.
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/basic_tone.hlsl"
+    BasicToneMain
+    negaflow_basic_tone_cs
+    NEGAFLOW_BASIC_TONE_HEADER
+)
+
+add_library(negaflow_gpu STATIC
+    "${NEGAFLOW_BASIC_TONE_HEADER}"
+    src/Native/gpu/gpu_basic_tone.cpp
+    src/Native/gpu/gpu_device.cpp
+    src/Native/gpu/gpu_working_image.cpp
+)
+target_include_directories(negaflow_gpu
+    PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/include"
+    PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated"
+)
+target_link_libraries(negaflow_gpu PRIVATE negaflow_project_options)
+target_link_libraries(negaflow_gpu PUBLIC negaflow_core d3d11 dxgi)
+
 add_library(negaflow_color STATIC
     src/Native/color/icc_profile.cpp
     src/Native/color/soft_proof.cpp
@@ -112,6 +136,10 @@ add_library(negaflow_imageio STATIC
     src/Native/imageio/image_file_observation.cpp
     src/Native/imageio/wic_standard_image_decoder.cpp
     src/Native/imageio/wic_tiff_decoder.cpp
+    src/Native/imageio/wic_tiff_frame.cpp
+    src/Native/imageio/wic_tiff_preflight.cpp
+    src/Native/imageio/wic_tiff_rows.cpp
+    src/Native/imageio/wic_tiff_support.cpp
 )
 target_include_directories(negaflow_imageio
     PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/imageio/include"
@@ -147,6 +175,7 @@ add_library(negaflow_imaging STATIC
       src/Native/imaging/digital_bw_film_look.cpp
       src/Native/imaging/digital_bw_film_profile.cpp
       src/Native/imaging/digital_film_color_preset.cpp
+      src/Native/imaging/digital_film_color_preset_table.cpp
       src/Native/imaging/digital_film_grain.cpp
       src/Native/imaging/digital_film_physics.cpp
       src/Native/imaging/digital_halation.cpp
@@ -183,6 +212,7 @@ add_library(negaflow_imaging STATIC
       src/Native/imaging/grain_mend_resample.cpp
       src/Native/imaging/grain_mend_speck_detector.cpp
       src/Native/imaging/grain_mend_stitch.cpp
+      src/Native/imaging/grain_mend_tile_plan.cpp
       src/Native/imaging/grain_mend_tiled.cpp
       src/Native/imaging/flatbed_frame_bands.cpp
       src/Native/imaging/flatbed_frame_grid_detector.cpp
@@ -203,6 +233,8 @@ add_library(negaflow_imaging STATIC
       src/Native/imaging/working_image_resample.cpp
     src/Native/imaging/linear_scanner_converter.cpp
       src/Native/imaging/local_dodge_burn.cpp
+      src/Native/imaging/local_dodge_burn_blur.cpp
+      src/Native/imaging/local_dodge_burn_masks.cpp
       src/Native/imaging/muted_scene_vibrance.cpp
       src/Native/imaging/muted_scene_vibrance_table.cpp
       src/Native/imaging/scene_correction.cpp
@@ -222,6 +254,7 @@ add_library(negaflow_imaging STATIC
     src/Native/imaging/tone_curve_measurement.cpp
     src/Native/imaging/tone_mapping.cpp
     src/Native/imaging/texture_stage.cpp
+    src/Native/imaging/texture_stage_effects.cpp
     src/Native/imaging/working_film_look.cpp
     src/Native/imaging/working_tone_adjuster.cpp
 )
@@ -240,9 +273,13 @@ add_library(negaflow_output STATIC
     src/Native/output/png_structure_reader.cpp
     src/Native/output/tiff_ifd_allowlist.cpp
     src/Native/output/wic_jpeg_export.cpp
+    src/Native/output/wic_jpeg_encode.cpp
+    src/Native/output/wic_jpeg_verify.cpp
     src/Native/output/wic_png_export.cpp
     src/Native/output/wic_srgb16_support.cpp
     src/Native/output/wic_tiff_export.cpp
+    src/Native/output/wic_tiff_encode.cpp
+    src/Native/output/wic_tiff_verify.cpp
     src/Native/output/working_to_srgb16.cpp
 )
 target_include_directories(negaflow_output
@@ -299,6 +336,8 @@ add_library(negaflow_native SHARED
     src/Native/abi/adjust/auto_adjust_abi.cpp
     src/Native/abi/detect/flatbed_detect_abi.cpp
     src/Native/abi/detect/grain_mend_detect_abi.cpp
+    src/Native/abi/detect/grain_mend_detect_shared.cpp
+    src/Native/abi/detect/grain_mend_detect_v1_v3.cpp
     src/Native/abi/detect/infrared_detect_abi.cpp
     src/Native/abi/export/develop_export_v1_v21.cpp
     src/Native/abi/preview/develop_preview_v1_v10.cpp
@@ -500,6 +539,16 @@ if(BUILD_TESTING)
 
     add_executable(negaflow_tiff_probe_tests
         tests/Native.UnitTests/tiff_probe_tests.cpp
+        tests/Native.UnitTests/TiffProbe/tiff_probe_test_bytes.cpp
+        tests/Native.UnitTests/TiffProbe/tiff_probe_test_fixtures.cpp
+        tests/Native.UnitTests/TiffProbe/tiff_probe_valid_tests.cpp
+        tests/Native.UnitTests/TiffProbe/tiff_probe_malformed_tests.cpp
+    )
+    target_include_directories(
+        negaflow_tiff_probe_tests
+        PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/Native.UnitTests"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/Native.UnitTests/TiffProbe"
     )
     target_link_libraries(
         negaflow_tiff_probe_tests
@@ -639,6 +688,33 @@ if(BUILD_TESTING)
     )
     add_test(NAME native.film_base_picker COMMAND negaflow_film_base_picker_tests)
 
+    add_executable(negaflow_gpu_device_tests
+        tests/Native.UnitTests/gpu_device_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_gpu_device_tests
+        PRIVATE negaflow_gpu negaflow_project_options
+    )
+    add_test(NAME native.gpu_device COMMAND negaflow_gpu_device_tests)
+
+    add_executable(negaflow_gpu_working_image_tests
+        tests/Native.UnitTests/gpu_working_image_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_gpu_working_image_tests
+        PRIVATE negaflow_gpu negaflow_core negaflow_project_options
+    )
+    add_test(NAME native.gpu_working_image COMMAND negaflow_gpu_working_image_tests)
+
+    add_executable(negaflow_gpu_basic_tone_tests
+        tests/Native.UnitTests/gpu_basic_tone_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_gpu_basic_tone_tests
+        PRIVATE negaflow_gpu negaflow_imaging negaflow_core negaflow_project_options
+    )
+    add_test(NAME native.gpu_basic_tone COMMAND negaflow_gpu_basic_tone_tests)
+
     add_executable(negaflow_tone_pipeline_tests
         tests/Native.UnitTests/tone_pipeline_tests.cpp
     )
@@ -758,10 +834,18 @@ if(BUILD_TESTING)
 
     add_executable(negaflow_grain_mend_tests
         tests/Native.UnitTests/grain_mend_tests.cpp
+        tests/Native.UnitTests/GrainMend/grain_mend_test_support.cpp
+        tests/Native.UnitTests/GrainMend/grain_mend_repair_tests.cpp
+        tests/Native.UnitTests/GrainMend/grain_mend_protection_tests.cpp
+        tests/Native.UnitTests/GrainMend/grain_mend_detection_tests.cpp
+        tests/Native.UnitTests/GrainMend/grain_mend_contract_tests.cpp
     )
     target_include_directories(
         negaflow_grain_mend_tests
-        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/imaging"
+        PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/imaging"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/Native.UnitTests"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/Native.UnitTests/GrainMend"
     )
     target_link_libraries(
         negaflow_grain_mend_tests
@@ -937,6 +1021,15 @@ if(BUILD_TESTING)
 
     add_executable(negaflow_texture_stage_tests
         tests/Native.UnitTests/texture_stage_tests.cpp
+        tests/Native.UnitTests/TextureStage/texture_stage_test_support.cpp
+        tests/Native.UnitTests/TextureStage/texture_stage_control_tests.cpp
+        tests/Native.UnitTests/TextureStage/texture_stage_golden_tests.cpp
+    )
+    target_include_directories(
+        negaflow_texture_stage_tests
+        PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/Native.UnitTests"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/Native.UnitTests/TextureStage"
     )
     target_link_libraries(
         negaflow_texture_stage_tests
@@ -1188,11 +1281,17 @@ if(BUILD_TESTING)
 
     add_executable(negaflow_wic_tiff_decoder_tests
         tests/Native.UnitTests/wic_tiff_decoder_tests.cpp
+        tests/Native.UnitTests/WicTiffDecoder/wic_tiff_decoder_test_support.cpp
+        tests/Native.UnitTests/WicTiffDecoder/wic_tiff_decoder_lzw_tests.cpp
+        tests/Native.UnitTests/WicTiffDecoder/wic_tiff_decoder_stream_tests.cpp
         tests/fixtures/tiff/synthetic_wic_tiff.cpp
     )
     target_include_directories(
         negaflow_wic_tiff_decoder_tests
-        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/tiff"
+        PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/tiff"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/Native.UnitTests"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/Native.UnitTests/WicTiffDecoder"
     )
     target_link_libraries(
         negaflow_wic_tiff_decoder_tests
