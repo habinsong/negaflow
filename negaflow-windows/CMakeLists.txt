@@ -97,6 +97,20 @@ target_link_libraries(negaflow_core PRIVATE negaflow_project_options)
 # 벤더 ID 로 거르지 않습니다. 하한은 기능 수준 11_0 하나이며, 하드웨어가 없으면 WARP 로,
 # 그것도 없으면 기존 CPU 경로로 떨어집니다. CUDA·벤더 확장·SM 6.0 을 쓰지 않습니다.
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -104,10 +118,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -118,6 +160,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -125,10 +181,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -139,6 +223,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -146,10 +244,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -160,6 +286,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -167,10 +307,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -181,6 +349,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -188,10 +370,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -202,6 +412,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -209,10 +433,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -223,6 +475,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -230,10 +496,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -244,6 +538,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -251,10 +559,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -265,6 +601,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -272,10 +622,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -286,6 +664,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -293,10 +685,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -307,6 +727,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -314,10 +748,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -328,6 +790,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -335,10 +811,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -349,6 +853,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -356,10 +874,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -370,6 +916,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -377,10 +937,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -391,6 +979,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -398,10 +1000,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -412,6 +1042,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -419,10 +1063,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -433,6 +1105,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -440,10 +1126,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -454,6 +1168,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -461,10 +1189,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -475,6 +1231,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -482,10 +1252,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -496,6 +1294,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -503,10 +1315,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -517,6 +1357,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -524,10 +1378,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -538,6 +1420,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -545,10 +1441,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -559,6 +1483,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -566,10 +1504,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -580,6 +1546,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -587,10 +1567,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -601,6 +1609,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -608,10 +1630,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -622,6 +1672,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -629,10 +1693,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -643,6 +1735,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -650,10 +1756,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -664,6 +1798,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -671,10 +1819,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -685,6 +1861,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -692,10 +1882,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -706,6 +1924,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -713,10 +1945,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -727,6 +1987,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -734,10 +2008,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -748,6 +2050,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -755,10 +2071,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -769,6 +2113,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -776,10 +2134,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -790,6 +2176,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -797,10 +2197,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -811,6 +2239,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -818,10 +2260,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -832,6 +2302,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -839,10 +2323,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -853,6 +2365,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -860,10 +2386,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -874,6 +2428,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -881,10 +2449,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -895,6 +2491,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -902,10 +2512,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -916,6 +2554,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -923,10 +2575,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -937,6 +2617,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -944,10 +2638,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -958,6 +2680,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -965,10 +2701,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -979,6 +2743,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -986,10 +2764,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1000,6 +2806,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1007,10 +2827,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1021,6 +2869,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1028,10 +2890,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1042,6 +2932,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1049,10 +2953,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1063,6 +2995,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1070,10 +3016,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1084,6 +3058,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1091,10 +3079,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1105,6 +3121,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1112,10 +3142,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1126,6 +3184,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1133,10 +3205,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1147,6 +3247,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1154,10 +3268,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1168,6 +3310,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1175,10 +3331,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1189,6 +3373,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1196,10 +3394,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1210,6 +3436,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1217,10 +3457,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1231,6 +3499,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1238,10 +3520,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1252,6 +3562,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1259,10 +3583,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1273,6 +3625,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1280,10 +3646,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1294,6 +3688,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1301,10 +3709,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1315,6 +3751,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1322,10 +3772,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1336,6 +3814,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1343,10 +3835,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1357,6 +3877,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1364,10 +3898,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1378,6 +3940,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1385,10 +3961,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1399,6 +4003,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1406,10 +4024,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1420,6 +4066,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1427,10 +4087,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1441,6 +4129,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1448,10 +4150,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1462,6 +4192,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1469,10 +4213,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1483,6 +4255,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1490,10 +4276,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1504,6 +4318,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1511,10 +4339,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1525,6 +4381,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1532,10 +4402,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1546,6 +4444,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1553,10 +4465,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1567,6 +4507,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1574,10 +4528,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1588,6 +4570,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1595,10 +4591,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1609,6 +4633,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1616,10 +4654,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1630,6 +4696,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1637,10 +4717,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1651,6 +4759,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1658,10 +4780,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1672,6 +4822,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1679,10 +4843,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1693,6 +4885,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1700,10 +4906,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1714,6 +4948,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1721,10 +4969,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1735,6 +5011,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1742,10 +5032,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1756,6 +5074,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1763,10 +5095,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1777,6 +5137,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1784,10 +5158,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1798,6 +5200,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1805,10 +5221,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1819,6 +5263,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1826,10 +5284,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1840,6 +5326,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1847,10 +5347,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1861,6 +5389,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1868,10 +5410,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1882,6 +5452,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1889,10 +5473,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1903,6 +5515,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1910,10 +5536,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1924,6 +5578,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1931,10 +5599,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1945,6 +5641,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1952,10 +5662,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1966,6 +5704,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1973,10 +5725,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -1987,6 +5767,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -1994,10 +5788,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2008,6 +5830,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2015,10 +5851,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2029,6 +5893,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2036,10 +5914,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2050,6 +5956,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2057,10 +5977,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2071,6 +6019,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2078,10 +6040,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2092,6 +6082,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2099,10 +6103,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2113,6 +6145,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2120,10 +6166,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2134,6 +6208,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2141,10 +6229,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2155,6 +6271,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2162,10 +6292,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2176,6 +6334,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2183,10 +6355,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2197,6 +6397,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2204,10 +6418,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2218,6 +6460,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2225,10 +6481,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2239,6 +6523,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2246,10 +6544,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2260,6 +6586,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2267,10 +6607,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2281,6 +6649,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2288,10 +6670,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2302,6 +6712,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2309,10 +6733,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2323,6 +6775,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2330,10 +6796,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2344,6 +6838,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2351,10 +6859,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2365,6 +6901,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2372,10 +6922,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2386,6 +6964,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2393,10 +6985,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2407,6 +7027,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2414,10 +7048,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2428,6 +7090,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2435,10 +7111,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2449,6 +7153,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2456,10 +7174,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2470,6 +7216,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2477,10 +7237,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2491,6 +7279,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2498,10 +7300,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2512,6 +7342,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2519,10 +7363,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2533,6 +7405,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2540,10 +7426,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2554,6 +7468,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2561,10 +7489,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2575,6 +7531,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2582,10 +7552,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2596,6 +7594,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2603,10 +7615,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2617,6 +7657,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2624,10 +7678,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2638,6 +7720,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2645,10 +7741,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2659,6 +7783,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2666,10 +7804,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2680,6 +7846,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2687,10 +7867,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2701,6 +7909,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2708,10 +7930,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2722,6 +7972,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2729,10 +7993,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2743,6 +8035,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2750,10 +8056,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2764,6 +8098,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/exposure.hlsl"
     ExposureMain
     negaflow_exposure_cs
@@ -2771,10 +8119,38 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurHorizontalMain
+    negaflow_box_blur_horizontal_cs
+    NEGAFLOW_BOX_BLUR_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
+    BoxBlurVerticalMain
+    negaflow_box_blur_vertical_cs
+    NEGAFLOW_BOX_BLUR_V_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -2794,9 +8170,12 @@ add_library(negaflow_gpu STATIC
     "${NEGAFLOW_DIGITAL_BW_FILM_HEADER}"
     "${NEGAFLOW_EXPOSURE_HEADER}"
     "${NEGAFLOW_POINT_CURVE_HEADER}"
+    "${NEGAFLOW_BOX_BLUR_H_HEADER}"
+    "${NEGAFLOW_BOX_BLUR_V_HEADER}"
     "${NEGAFLOW_PARAMETRIC_TONE_CURVE_HEADER}"
     src/Native/gpu/gpu_color_kernels.cpp
     src/Native/gpu/gpu_negative_invert.cpp
+    src/Native/gpu/gpu_neighborhood.cpp
     src/Native/gpu/gpu_stage_kernels.cpp
     src/Native/gpu/gpu_pointwise.cpp
     src/Native/gpu/gpu_tone_kernels.cpp
@@ -3435,6 +8814,15 @@ if(BUILD_TESTING)
         PRIVATE negaflow_gpu negaflow_imaging negaflow_core negaflow_project_options
     )
     add_test(NAME native.gpu_stage_kernels COMMAND negaflow_gpu_stage_kernel_tests)
+
+    add_executable(negaflow_gpu_neighborhood_tests
+        tests/Native.UnitTests/gpu_neighborhood_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_gpu_neighborhood_tests
+        PRIVATE negaflow_gpu negaflow_core negaflow_project_options
+    )
+    add_test(NAME native.gpu_neighborhood COMMAND negaflow_gpu_neighborhood_tests)
 
     add_executable(negaflow_tone_pipeline_tests
         tests/Native.UnitTests/tone_pipeline_tests.cpp
