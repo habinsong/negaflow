@@ -30,6 +30,15 @@ struct PreviewTarget final {
     bool clipping_overlay{false};
 };
 
+// macOS `displayProxy` 와 같은 상자 맞춤. 종횡비를 유지하고 긴 변을 먼저 맞춘다.
+void preview_fit_size(
+    std::uint32_t source_width,
+    std::uint32_t source_height,
+    std::uint32_t maximum_width,
+    std::uint32_t maximum_height,
+    std::uint32_t& width,
+    std::uint32_t& height) noexcept;
+
 // 작업 화상을 표시용 BGRA8 로 상자 평균 축소해 쓴다. 게시 파일 경로와는 무관하다.
 [[nodiscard]] DevelopExportOutcome write_preview(
     const negaflow::imaging::WorkingImage& image,

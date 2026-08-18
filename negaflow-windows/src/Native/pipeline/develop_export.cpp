@@ -19,6 +19,7 @@
 #include "export/support/gamut.h"
 #include "export/support/outcome.h"
 #include "export/support/preview.h"
+#include "export/support/preview_proxy.h"
 #include "export/support/progress.h"
 
 #include <stop_token>
@@ -97,6 +98,9 @@ using develop_export_detail::apply_look_stages;
 using develop_export_detail::cancelled_outcome;
 using develop_export_detail::decode_source;
 using develop_export_detail::invert_source;
+using develop_export_detail::preview_proxy_materialize;
+using develop_export_detail::preview_proxy_try_take;
+using develop_export_detail::PreviewProxyHint;
 using develop_export_detail::observe_source_before;
 using develop_export_detail::plan_total_cost;
 using develop_export_detail::prepare_look_workspace;
@@ -138,15 +142,22 @@ using develop_export_detail::validate_request;
         return *failed;
     }
 
+    // macOS `preloadedPreviewRaw` — 슬라이더는 디코드 0회, 프록시 raw 에서 현상.
+    PreviewProxyHint proxy_hint{};
     negaflow::imaging::WorkingImage decoded_image{};
-    if (auto failed = decode_source(request, tracker, stop, observed, decoded_image)) {
-        return *failed;
-    }
+    const bool used_preview_proxy = preview != nullptr && detect == nullptr &&
+        preview_proxy_try_take(request, observed, *preview, decoded_image, proxy_hint);
 
     DefectRecipeStageResult defect_recipe{};
-    if (auto failed = apply_defect_stage(
-            request, preview, detect, tracker, decoded_image, defect_recipe)) {
-        return *failed;
+    if (!used_preview_proxy) {
+        if (auto failed = decode_source(request, tracker, stop, observed, decoded_image)) {
+            return *failed;
+        }
+
+        if (auto failed = apply_defect_stage(
+                request, preview, detect, tracker, decoded_image, defect_recipe)) {
+            return *failed;
+        }
     }
 
     // macOS `runRegionDetect` 는 반전·톤·필름룩 전 cleaned raw 에서 검출한다.
@@ -168,6 +179,17 @@ using develop_export_detail::validate_request;
         return cancelled_outcome(DevelopExportStage::grain_mend);
     }
 
+    if (preview != nullptr && !used_preview_proxy) {
+        if (auto failed = preview_proxy_materialize(
+                request,
+                observed,
+                *preview,
+                decoded_image,
+                proxy_hint)) {
+            return *failed;
+        }
+    }
+
     LookWorkspaceOutput look_workspace{};
     if (auto failed =
             prepare_look_workspace(request, decoded_image.width, look_workspace)) {
@@ -175,7 +197,12 @@ using develop_export_detail::validate_request;
     }
 
     InvertStageOutput invert{};
-    if (auto failed = invert_source(request, tracker, std::move(decoded_image), invert)) {
+    if (auto failed = invert_source(
+            request,
+            tracker,
+            std::move(decoded_image),
+            invert,
+            proxy_hint.image_is_proxy || proxy_hint.has_base ? &proxy_hint : nullptr)) {
         return *failed;
     }
 

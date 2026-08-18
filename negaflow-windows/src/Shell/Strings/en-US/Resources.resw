@@ -684,6 +684,10 @@ Load a scanner from Library to scan film.</value>
     <value>Color Grading</value>
     <comment>AppLocalizedPhrase.colorGrading</comment>
   </data>
+  <data name="developReset.Value" xml:space="preserve">
+    <value>Reset</value>
+    <comment>AppLocalizedPhrase.reset</comment>
+  </data>
   <data name="developResetSectionFormat.Value" xml:space="preserve">
     <value>Reset %@</value>
     <comment>AppLocalizedPhrase.resetSectionFormat</comment>

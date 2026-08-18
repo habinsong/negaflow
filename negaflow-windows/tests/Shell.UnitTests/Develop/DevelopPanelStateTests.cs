@@ -30,6 +30,7 @@ internal static class DevelopPanelStateTests
         ToneLimits limits = new(
             MaximumExposureStops: 5.0f,
             MaximumToneControl: 1.0f,
+            MaximumEndpointToneControl: 2.0f,
             MinimumFilmEmulationIntensity: 0.0,
             MaximumFilmEmulationIntensity: 1.0);
 

@@ -147,7 +147,9 @@ run_develop()
   → apply_defect_stage → ... → publish_developed
 ```
 
-`src/Native/pipeline/export/stages/decode.cpp` 에 프로세스 단일 슬롯 캐시가 있습니다(2026-08-18). 같은 경로·같은 `ImageFileObservation` 이면 `decode_source` 가 디스크 TIFF 를 다시 읽지 않고 `WorkingImage` 를 복사합니다. macOS 의 `preloadedPreviewRaw` 와 같은 뜻입니다. 아직 없는 것: 프레임별 2슬롯, `interactiveProxyDimension`(1024…3600), `waitForDevelopSettle` 0.14초, 정착 프록시에서 Lanczos 축소.
+`src/Native/pipeline/export/stages/decode.cpp` 에 프로세스 단일 슬롯 **풀해상도** 캐시가 있습니다(2026-08-18). 같은 경로·같은 `ImageFileObservation` 이면 `decode_source` 가 디스크 TIFF 를 다시 읽지 않고 `WorkingImage` 를 복사합니다.
+
+**2026-08-19.** macOS `cachedInteractivePreviewRaw` / `cachedSettledPreviewRaw` 에 해당하는 **프리뷰 raw 2슬롯**을 `export/support/preview_proxy.cpp` 에 붙였습니다. 프리뷰는 결함 recipe 를 원본에서 적용하고, 자동/프리셋 베이스도 **원본**에서 푼 뒤(`resolve_negative_base`), `displayProxy` 와 같이 Lanczos3 로 미리보기 상자에 맞춘 다음 반전·톤·룩을 돌립니다. 검출(`DetectTarget`)과 내보내기는 이 축소를 타지 않습니다. 결함 recipe 가 비어 있지 않으면 프록시 슬롯을 쓰지 않습니다(좌표가 원본이기 때문). `FrameCacheManager` FIFO·다중 프레임 상주는 아직 없습니다.
 
 프리뷰(`abi/preview/develop_preview_*.cpp`)·검출·내보내기가 **같은 `run_develop`** 을 씁니다.
 그래서 슬라이더를 한 칸 움직여도 내보내기와 같은 준비 비용을 전부 냅니다.
@@ -175,8 +177,12 @@ if let full = snapshot.preloadedFullPreviewRaw { ... }        // GPU Lanczos 축
 **2026-08-18**: `DevelopPreviewProxy.cs` 가 macOS 상수를 갖고, `PreviewCoordinator` 가 표시 크기
 적응 패스 뒤 무편집 0.14초면 3600 정착을 돌립니다. **고정 1600×1200 은 제거됐습니다.**
 
-> ⚠️ **앱에서 정착 패스 ms 를 재지 않았습니다.** 이식했다는 것과 빨라졌다는 것은 다릅니다.
-> 계측기가 없어서 못 쟀습니다 — [`13-performance-playbook.md`](13-performance-playbook.md) 2절.
+**2026-08-19**: 네이티브 프리뷰가 이제 그 상자 크기에서 **현상**합니다. `native.preview_proxy_cache` 가
+`develop_preview` 를 두 번 부릅니다 — 두 번째 decode runs **0**, 노출을 바꾸면 화소가 바뀌고,
+내보내기 해상도는 원본입니다. 5088×3401 상자 1280 두 번째 **43.1 ms**. 셸 시험은 정착이 1280 다음
+3600 을 부르는지 확인합니다(1067 assertions).
+
+> ⚠️ **앱 설치본에서 슬라이더 벽시계는 아직 이 문장을 쓰는 시점에 재는 중**입니다.
 
 ---
 

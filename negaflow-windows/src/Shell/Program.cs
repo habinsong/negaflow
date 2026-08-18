@@ -79,6 +79,31 @@ internal static class Program
             return;
         }
 
+        int firstChanceCount = 0;
+        AppDomain.CurrentDomain.FirstChanceException += (_, args) =>
+        {
+            if (Interlocked.Increment(ref firstChanceCount) > 40)
+            {
+                return;
+            }
+
+            try
+            {
+                string directory = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "Negaflow",
+                    "Logs");
+                Directory.CreateDirectory(directory);
+                File.AppendAllText(
+                    Path.Combine(directory, "startup-first-chance.txt"),
+                    args.Exception.GetType().FullName + ": " +
+                    args.Exception.Message + Environment.NewLine);
+            }
+            catch (Exception)
+            {
+            }
+        };
+
         Application.Start(static _ =>
         {
             SynchronizationContext.SetSynchronizationContext(

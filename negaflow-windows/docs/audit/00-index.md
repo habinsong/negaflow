@@ -200,11 +200,12 @@ Windows 전 트리를 19개 키워드로 훑은 결과입니다.
 CPU C++ 입니다.** 사용자가 겪는 "뭘 해도 수 초"의 절반이 여기서 옵니다.
 계획은 [`04-gpu-plan.md`](04-gpu-plan.md).
 
-### 2.2 프리뷰가 슬라이더 한 칸마다 원본 TIFF 를 **다시 디코드**합니다
+### 2.2 프리뷰가 슬라이더마다 원본 TIFF 를 다시 디코드하던 것 (2026-08-19 완화)
 
 `src/Native/pipeline/develop_export.cpp:101` `run_develop` 은 호출마다
 `observe_source_before` → `decode_source` 를 지나갑니다.
-`src/Native/pipeline/export/stages/decode.cpp` 에 `cache`/`preloaded`/`reuse` 는 **히트 0** 입니다.
+`src/Native/pipeline/export/stages/decode.cpp` 에 프로세스 단일 슬롯 풀해상도 캐시가 있고(2026-08-18),
+프리뷰 raw 2슬롯+Lanczos 현상은 2026-08-19 에 붙었습니다([`01`](01-backend-gaps.md) 3.1). 내보내기·검출은 원본 해상도입니다.
 
 macOS 는 정반대입니다:
 

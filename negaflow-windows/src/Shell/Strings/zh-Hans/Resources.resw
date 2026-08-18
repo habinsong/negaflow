@@ -684,6 +684,10 @@
     <value>颜色分级</value>
     <comment>AppLocalizedPhrase.colorGrading</comment>
   </data>
+  <data name="developReset.Value" xml:space="preserve">
+    <value>重置</value>
+    <comment>AppLocalizedPhrase.reset</comment>
+  </data>
   <data name="developResetSectionFormat.Value" xml:space="preserve">
     <value>重置%@</value>
     <comment>AppLocalizedPhrase.resetSectionFormat</comment>

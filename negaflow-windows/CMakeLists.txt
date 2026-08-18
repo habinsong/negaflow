@@ -708,6 +708,7 @@ add_library(negaflow_pipeline STATIC
     src/Native/pipeline/export/support/gamut.cpp
     src/Native/pipeline/export/support/outcome.cpp
     src/Native/pipeline/export/support/preview.cpp
+    src/Native/pipeline/export/support/preview_proxy.cpp
     src/Native/pipeline/export/support/progress.cpp
     src/Native/pipeline/film_look_workspace.cpp
     src/Native/pipeline/gpu_accelerator.cpp
@@ -1777,6 +1778,23 @@ if(BUILD_TESTING)
     add_test(
         NAME native.working_image_resample
         COMMAND negaflow_working_image_resample_tests
+    )
+
+    add_executable(negaflow_preview_proxy_cache_tests
+        tests/Native.UnitTests/preview_proxy_cache_tests.cpp
+        tests/fixtures/tiff/synthetic_wic_tiff.cpp
+    )
+    target_include_directories(
+        negaflow_preview_proxy_cache_tests
+        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/tiff"
+    )
+    target_link_libraries(
+        negaflow_preview_proxy_cache_tests
+        PRIVATE negaflow_pipeline negaflow_project_options
+    )
+    add_test(
+        NAME native.preview_proxy_cache
+        COMMAND negaflow_preview_proxy_cache_tests
     )
 
     add_executable(negaflow_digital_film_material_tests

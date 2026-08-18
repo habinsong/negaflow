@@ -48,6 +48,7 @@ A1 재현(2026-08-18 04:50, 04:59): 작업 옵션 → 설정 클릭. 프로세�
 
 검증(2026-08-18 05:16): 같은 경로로 설정 클릭. `Negaflow.Shell` PID 23648 유지, 창 제목 `설정`, UIA `settings.category.general` = `일반`. 그 클릭 구간에 Application Error 없음.
 | A2 | **스캐너에서 DPI·심도·프레임 규격 고르면 앱 종료** | 시뮬레이터 켠 뒤 프레임 규격을 다른 항목으로 고르면 종료. Application Error `Microsoft.UI.Xaml.dll` `0xc000027b`, WER `8000ffff`. `UpdateOptions` → `Render` → `FillTagged` 가 열린 ComboBox 에서 `Items.Clear()` | **2026-08-18 고침.** 목록이 같을 때는 지우지 않고 선택만 바꾼다. 같은 경로로 해상도/심도/프레임 규격 변경 후 프로세스 1개 유지, 프레임 규격 선택값 `35 mm · 24 × 18`. |
+| A3 | **현상 워크스페이스를 열면 앱 종료** | 2026-08-19 `run-app` x64 Release. WER `802b000a` / `XamlParseException` `Cannot create instance of DevelopWorkspaceView`. First-chance: `Missing localized resource: developReset.Value`. `DevelopBaseCard.Localize` 가 스포이드 리셋에 `AppLocalizedPhrase.reset` 을 쓰는데 6언어 resw 에 키가 없음 | **2026-08-19 고침.** `developReset.Value` = Reset/초기화/リセット/Zurücksetzen/Réinitialiser/重置. 같은 경로로 `Negaflow.Shell` PID 유지, 현상 화면·노출 0.80 입력 확인. |
 
 **둘 다 재현 후 예외 스택을 잡아야 합니다.** 추측으로 고치지 않습니다.
 
@@ -288,8 +289,8 @@ NEGA_DEBUG=1 negaflow-cli --auto-base-probe <source.tiff>
 
 | # | 증상 | 원인 (확정) |
 |---|---|---|
-| E1 | 사진 바꾸면 수 초 | `run_develop` 이 호출마다 `decode_source` — 5088×3401 16bit, 실측 **2,695 ms**. 캐시 **없음** |
-| E2 | 우측탭 기능 하나 써도 수 초 | 같은 원인. macOS 는 프록시 캐시로 **디코드 0회** |
+| E1 | 사진 바꾸면 수 초 | **2026-08-19.** 디코드 단일 슬롯 + **프리뷰 raw 프록시 2슬롯**(인터랙티브/정착). 프리뷰는 결함·필름베이스를 원본에서 푼 뒤 `displayProxy` 와 같이 Lanczos3 로 상자 맞춤하고 **그 작은 raw 에서 현상**. 내보내기·검출은 원본 해상도. 실측 5088×3401: 상자 1280 두 번째 프리뷰 **43.1 ms · decode runs 0** (첫 549.6 ms 중 decode 187.9). 상자 3600 두 번째 **260.6 ms · decode 0**. 앱 슬라이더 벽시계는 아직 설치본에서 재는 중. |
+| E2 | 우측탭 기능 하나 써도 수 초 | E1 과 같은 경로. CLI/시험은 두 번째 호출에서 디코드 0. **앱에서 슬라이더를 두 번 끌어 확인하는 것이 남음.** |
 | E3 | GrainMend 자동·가이드·브러시·복제 전부 느림 | 위 + **GPU 코드 0줄** |
 | E4 | **인화 프리뷰가 깨짐** | `Views/Print/Preview/PrintPreviewRenderer.cs:323-325` 가 **360px 썸네일**을 확대. macOS `PrintCanvasView.swift:165-167` 은 `developedImage` 먼저 |
 
@@ -335,8 +336,8 @@ DevelopLookLabel         DevelopLookSelector
 
 ## G. 다음 순서 (사용자 요구 반영)
 
-1. **A1·A2 크래시** — 스택부터
-2. **E1 프리뷰 프록시 캐시 + 2단 렌더** — 슬라이더당 −2,695 ms ([`04`](04-gpu-plan.md) 6.1)
+1. **A1·A2 크래시** — 스택부터. **A3(2026-08-19) `developReset.Value` 도 닫음.**
+2. **E1 프리뷰 프록시 캐시 + 2단 렌더** — 네이티브 2슬롯+Lanczos 현상 붙임. 5088×3401 상자 1280 두 번째 **43.1 ms · decode 0**. 앱에서 노출 0→0.80 과 히스토그램 갱신 확인. **FrameCacheManager FIFO 는 10번.**
 3. **C1 필름 베이스** — 검은 이미지. macOS 4파일 대조
 4. **E4 인화 프리뷰** — 현상본 쓰도록
 5. **B 메뉴막대 11개**

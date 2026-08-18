@@ -684,6 +684,10 @@
     <value>カラーグレーディング</value>
     <comment>AppLocalizedPhrase.colorGrading</comment>
   </data>
+  <data name="developReset.Value" xml:space="preserve">
+    <value>リセット</value>
+    <comment>AppLocalizedPhrase.reset</comment>
+  </data>
   <data name="developResetSectionFormat.Value" xml:space="preserve">
     <value>%@をリセット</value>
     <comment>AppLocalizedPhrase.resetSectionFormat</comment>

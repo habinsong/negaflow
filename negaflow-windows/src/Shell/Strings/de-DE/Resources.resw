@@ -684,6 +684,10 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
     <value>Farb-Grading</value>
     <comment>AppLocalizedPhrase.colorGrading</comment>
   </data>
+  <data name="developReset.Value" xml:space="preserve">
+    <value>Zurücksetzen</value>
+    <comment>AppLocalizedPhrase.reset</comment>
+  </data>
   <data name="developResetSectionFormat.Value" xml:space="preserve">
     <value>%@ zurücksetzen</value>
     <comment>AppLocalizedPhrase.resetSectionFormat</comment>

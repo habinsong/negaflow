@@ -119,7 +119,7 @@ internal static class EditPersistenceTests
             Check(host.Open(roots) == LibraryHostState.Open, "brush_stroke_open");
             DevelopPanelState panel = new(
                 host,
-                new ToneLimits(5.0f, 1.0f, 0.0, 1.0),
+                new ToneLimits(5.0f, 1.0f, 2.0f, 0.0, 1.0),
                 new NegativeLimits(0.001f, 1.0f));
             Check(panel.Select(frameId.ToString("D")), "defect_editor_selects_frame");
 

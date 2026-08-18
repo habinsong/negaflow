@@ -49,6 +49,7 @@ internal sealed class FakeExporter : IDevelopExporter
     public Func<byte[], GrainMendDetectionResult>? DetectBehaviour;
     public SoftProofSettings? LastSoftProof;
     public bool LastClippingOverlay;
+    public readonly List<uint> PreviewMaximumWidths = [];
 
     public GrainMendDetectionResult DetectGrainMend(
         DevelopExportRequest request,
@@ -88,7 +89,7 @@ internal sealed class FakeExporter : IDevelopExporter
         SoftProofSettings? softProof = null,
         bool clippingOverlay = false)
     {
-        _ = maximumWidth;
+        PreviewMaximumWidths.Add(maximumWidth);
         _ = maximumHeight;
         Interlocked.Increment(ref CallCount);
         LastThreadId = Environment.CurrentManagedThreadId;

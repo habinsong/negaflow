@@ -684,6 +684,10 @@
     <value>컬러 그레이딩</value>
     <comment>AppLocalizedPhrase.colorGrading</comment>
   </data>
+  <data name="developReset.Value" xml:space="preserve">
+    <value>초기화</value>
+    <comment>AppLocalizedPhrase.reset</comment>
+  </data>
   <data name="developResetSectionFormat.Value" xml:space="preserve">
     <value>%@ 초기화</value>
     <comment>AppLocalizedPhrase.resetSectionFormat</comment>

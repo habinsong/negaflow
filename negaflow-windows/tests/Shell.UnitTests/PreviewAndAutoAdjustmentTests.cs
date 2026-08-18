@@ -189,6 +189,22 @@ internal static class PreviewAndAutoAdjustmentTests
         Check(!faulting.IsRendering, "preview_clears_flag_after_fault");
 
         VerifyPreviewSoftProof(first, quiet);
+        VerifyPreviewSettlePass(first);
+    }
+
+    private static void VerifyPreviewSettlePass(LibraryFrameSnapshot frame)
+    {
+        FakeDispatcher dispatcher = new(accepts: true);
+        FakeExporter exporter = new(_ => OkResult());
+        PreviewCoordinator coordinator = new(exporter, dispatcher, () => 1100);
+
+        coordinator.RequestAsync(frame, _ => { }).GetAwaiter().GetResult();
+        Check(exporter.CallCount == 2, "preview_settle_runs_interactive_then_full");
+        Check(
+            exporter.PreviewMaximumWidths.Count == 2 &&
+                exporter.PreviewMaximumWidths[0] == 1280 &&
+                exporter.PreviewMaximumWidths[1] == 3600,
+            "preview_settle_uses_macos_proxy_then_3600");
     }
 
     // Soft proof is a view setting, so it belongs to the coordinator rather than to a

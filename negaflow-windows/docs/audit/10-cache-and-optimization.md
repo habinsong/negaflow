@@ -60,8 +60,12 @@ macOS `Services/Cache/` **6파일 474줄** 을 Windows 와 대조했습니다.
 > - cleaned raw: 원본 해상도 16bit RGBA 한 장(6000×4000 ≈ 183MB).
 > - developed: 현상본 + 변형-전 base + 정착 프록시 raw 등 파생 버퍼 합계.
 
-**이 "정착 프록시 raw" 가 곧 [`01`](01-backend-gaps.md) 3.1 의 프리뷰 프록시입니다 —
-Windows 가 매번 다시 디코드하는 바로 그것입니다. 캐시 계층이 없으니 캐시할 곳도 없습니다.**
+**이 "정착 프록시 raw" 가 곧 [`01`](01-backend-gaps.md) 3.1 의 프리뷰 프록시입니다.**
+
+**2026-08-19.** 프로세스 안 프리뷰 raw 2슬롯(`preview_proxy.cpp`)은 붙었습니다 — 인터랙티브/정착,
+Lanczos3, 두 번째 `develop_preview` decode 0. **아직 없는 것:** 프레임별 FIFO 상주
+(`FrameCacheManager`), 메모리 압력, 설정 탭. 사진 A→B→A 로 돌아가면 슬롯이 덮여
+Lanczos 를 다시 합니다.
 
 ### 1.2 FIFO 와 축출 정책 (그대로 옮길 값)
 

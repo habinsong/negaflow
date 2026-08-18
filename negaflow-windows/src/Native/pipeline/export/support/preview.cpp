@@ -25,6 +25,33 @@ namespace {
 
 }  // namespace
 
+void preview_fit_size(
+    const std::uint32_t source_width,
+    const std::uint32_t source_height,
+    const std::uint32_t maximum_width,
+    const std::uint32_t maximum_height,
+    std::uint32_t& width,
+    std::uint32_t& height) noexcept {
+    width = preview_extent(source_width, maximum_width);
+    height = source_width == 0U
+        ? 0U
+        : static_cast<std::uint32_t>(
+              (static_cast<std::uint64_t>(source_height) * width) / source_width);
+    if (height == 0U) {
+        height = 1U;
+    }
+    if (height > maximum_height) {
+        height = maximum_height;
+        width = source_height == 0U
+            ? 0U
+            : static_cast<std::uint32_t>(
+                  (static_cast<std::uint64_t>(source_width) * height) / source_height);
+        if (width == 0U) {
+            width = 1U;
+        }
+    }
+}
+
 DevelopExportOutcome write_preview(
     const negaflow::imaging::WorkingImage& image,
     const PreviewTarget& target,
@@ -42,20 +69,15 @@ DevelopExportOutcome write_preview(
 
     // Fit inside the box without changing the aspect ratio. Integer arithmetic on the
     // larger side first so a very wide frame does not round its short side to zero.
-    std::uint32_t width = preview_extent(source_width, target.maximum_width);
-    std::uint32_t height = static_cast<std::uint32_t>(
-        (static_cast<std::uint64_t>(source_height) * width) / source_width);
-    if (height == 0U) {
-        height = 1U;
-    }
-    if (height > target.maximum_height) {
-        height = target.maximum_height;
-        width = static_cast<std::uint32_t>(
-            (static_cast<std::uint64_t>(source_width) * height) / source_height);
-        if (width == 0U) {
-            width = 1U;
-        }
-    }
+    std::uint32_t width = 0U;
+    std::uint32_t height = 0U;
+    preview_fit_size(
+        source_width,
+        source_height,
+        target.maximum_width,
+        target.maximum_height,
+        width,
+        height);
 
     const std::uint64_t required =
         static_cast<std::uint64_t>(width) * static_cast<std::uint64_t>(height) * 4ULL;

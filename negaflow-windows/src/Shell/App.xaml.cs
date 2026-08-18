@@ -16,8 +16,54 @@ public partial class App : Application
 
     public App()
     {
-        InitializeComponent();
+        UnhandledException += OnUnhandledException;
+        try
+        {
+            InitializeComponent();
+        }
+        catch (Exception exception)
+        {
+            WriteStartupFault("InitializeComponent", exception);
+            throw;
+        }
         AppInstance.GetCurrent().Activated += OnRedirectedActivation;
+    }
+
+    private static void OnUnhandledException(
+        object sender,
+        Microsoft.UI.Xaml.UnhandledExceptionEventArgs args)
+    {
+        WriteStartupFault("UnhandledException", args.Exception);
+    }
+
+    private static void WriteStartupFault(string stage, Exception exception)
+    {
+        try
+        {
+            string directory = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Negaflow",
+                "Logs");
+            Directory.CreateDirectory(directory);
+            Exception? current = exception;
+            var text = new System.Text.StringBuilder();
+            text.AppendLine(stage);
+            while (current is not null)
+            {
+                text.AppendLine(current.GetType().FullName);
+                text.AppendLine(current.Message);
+                text.AppendLine(current.StackTrace);
+                text.AppendLine("---");
+                current = current.InnerException;
+            }
+
+            File.WriteAllText(
+                Path.Combine(directory, "startup-fault.txt"),
+                text.ToString());
+        }
+        catch (Exception)
+        {
+        }
     }
 
     /// <summary>
@@ -51,12 +97,20 @@ public partial class App : Application
         LookPresetLibrary.Load(Path.Combine(AppContext.BaseDirectory, "presets"));
         var settingsStore = new PresentationSettingsStore();
         var workspaceState = new WorkspacePresentationState(settingsStore);
-        mainWindow = new MainWindow(
-            settingsStore,
-            workspaceState,
-            new NativeEngineStatusService(),
-            OpenLibrary(),
-            thumbnails);
+        try
+        {
+            mainWindow = new MainWindow(
+                settingsStore,
+                workspaceState,
+                new NativeEngineStatusService(),
+                OpenLibrary(),
+                thumbnails);
+        }
+        catch (Exception exception)
+        {
+            WriteStartupFault("MainWindow", exception);
+            throw;
+        }
         mainWindow.Closed += OnMainWindowClosed;
         restoreSignal = new RestoreSignalWindow(() =>
         {

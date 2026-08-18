@@ -701,7 +701,11 @@ src/Native/gpu/
 `PreviewCoordinator` 가 표시 크기 적응 패스 뒤 무편집 0.14초면 3600 정착을 돌립니다.
 고정 1600×1200 은 제거됐습니다.
 
-**아직 안 된 것: 앱에서 정착 패스 ms 를 재지 않았습니다.** 0단계 계측기가 나오면 그것으로 잽니다.
+**2026-08-19:** 프리뷰는 더 이상 풀해상도로 현상한 뒤 `write_preview` 만 줄이지 않습니다.
+`preview_proxy_materialize` 가 결함·베이스 이후 Lanczos3 로 상자에 맞추고, 인터랙티브/정착
+두 슬롯에 raw 를 둡니다. 5088×3401 · 상자 1280 두 번째 `develop_preview` **43.1 ms**, decode 0.
+CLI `--develop-timing` 3600 마지막 회차 GPU **291 ms**(develop 86.8 · tone 72.6). CPU 마지막 **490 ms**.
+앱 슬라이더 벽시계는 설치본에서 확인 중.
 
 macOS 대응 상수:
 

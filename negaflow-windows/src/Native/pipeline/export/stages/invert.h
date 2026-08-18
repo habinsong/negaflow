@@ -2,6 +2,7 @@
 
 #include "negaflow/pipeline/develop_export.h"
 
+#include "export/support/preview_proxy.h"
 #include "export/support/progress.h"
 #include "negaflow/imaging/manual_negative_developer.h"
 #include "negaflow/imaging/scanner_to_working.h"
@@ -20,10 +21,17 @@ struct InvertStageOutput final {
     bool positive{false};
 };
 
+// 프록시 축소 전에 원본에서 베이스를 풉니다. macOS 추정은 표시 프록시와 별개입니다.
+[[nodiscard]] std::optional<DevelopExportOutcome> resolve_negative_base(
+    const DevelopExportRequest& request,
+    const negaflow::imaging::WorkingImage& image,
+    PreviewProxyHint& hint) noexcept;
+
 [[nodiscard]] std::optional<DevelopExportOutcome> invert_source(
     const DevelopExportRequest& request,
     RunTracker& tracker,
     negaflow::imaging::WorkingImage decoded,
-    InvertStageOutput& out) noexcept;
+    InvertStageOutput& out,
+    const PreviewProxyHint* hint = nullptr) noexcept;
 
 }  // namespace negaflow::pipeline::develop_export_detail
