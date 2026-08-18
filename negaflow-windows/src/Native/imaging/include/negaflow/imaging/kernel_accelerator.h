@@ -42,6 +42,18 @@ using MorphologyPlaneFunction = bool (*)(
     std::uint32_t height,
     std::uint32_t radius) noexcept;
 
+// 같은 반경의 양극 톱햇을 RGB 세 평면에 한 왕복으로 돌립니다.
+using MorphologyRgbFunction = bool (*)(
+    const float* red,
+    const float* green,
+    const float* blue,
+    float* out_red,
+    float* out_green,
+    float* out_blue,
+    std::uint32_t width,
+    std::uint32_t height,
+    std::uint32_t radius) noexcept;
+
 // 산란·헐레이션입니다. `pixels` 는 `stride_pixels * height` 개의 RGBA float 이고
 // 제자리에서 바뀝니다. 재료·세기는 CPU 판과 같은 값이어야 합니다.
 using DigitalHalationFunction = bool (*)(
@@ -190,11 +202,75 @@ using ScannerTargetGradeFunction = bool (*)(
     std::uint32_t stride_pixels,
     const ScannerTargetGradeSetup* setup) noexcept;
 
+// NORITSU 장치 질감입니다. `setup` 은 `scanner_target_texture_setup()` 이 만든 것입니다.
+//
+// ☠️ **근사한 것입니다.** CPU 는 두 패스를 `double` 로 누적하고, 하드 게이트가 있어
+//    경계 화소는 1ulp 로 결과가 갈립니다.
+struct ScannerTargetTextureSetup;
+
+using ScannerTargetTextureFunction = bool (*)(
+    float* pixels,
+    std::uint32_t width,
+    std::uint32_t height,
+    std::uint32_t stride_pixels,
+    const ScannerTargetTextureSetup* setup) noexcept;
+
+// TextureStage `filmGrain`. `amount` 는 이미 `strength * 0.055` 입니다.
+//
+// ☠️ **근사입니다.** 좌표 해시는 비트 일치, 루마·smoothstep 은 float.
+using TextureGrainFunction = bool (*)(
+    float* pixels,
+    std::uint32_t width,
+    std::uint32_t height,
+    std::uint32_t stride_pixels,
+    float amount) noexcept;
+
+// 프리뷰 전용 클리핑 오버레이. `destination` 에 레이어를 씁니다. 원본은 안 바꿉니다.
+using ChannelClippingOverlayFunction = bool (*)(
+    const float* source,
+    float* destination,
+    std::uint32_t width,
+    std::uint32_t height,
+    std::uint32_t source_stride_pixels,
+    std::uint32_t destination_stride_pixels) noexcept;
+
+// macOS `CIAreaAverage` 대응. `mean` 은 rgba 넷, `count` 는 영역 화소 수입니다.
+//
+// ☠️ **근사입니다.** CPU 행 우선 double vs GPU groupshared 트리. 평균 1e-5.
+using AreaAverageFunction = bool (*)(
+    const float* pixels,
+    std::uint32_t width,
+    std::uint32_t height,
+    std::uint32_t stride_pixels,
+    std::uint32_t origin_x,
+    std::uint32_t origin_y,
+    std::uint32_t extent_width,
+    std::uint32_t extent_height,
+    float mean[4],
+    std::uint64_t* count) noexcept;
+
+// `downsample_for_statistics` 의 2x2 `halve` 를 `wanted_levels` 번 반복합니다.
+// 마지막 단계를 `destination` 에 폭 간격으로 씁니다. CPU 판과 **비트 단위로 같습니다.**
+// 전송이 질 수 있어 제품 경로는 프리뷰 스코프에서만 부릅니다.
+using MipHalveLevelsFunction = bool (*)(
+    const float* source,
+    std::uint32_t width,
+    std::uint32_t height,
+    std::uint32_t stride_pixels,
+    int wanted_levels,
+    float* destination,
+    std::uint32_t destination_capacity,
+    std::uint32_t* out_width,
+    std::uint32_t* out_height) noexcept;
+
 struct KernelAccelerator final {
     // ── 정확한 것 (언제나 켭니다) ────────────────────────────────────────────
     MorphologyPlaneFunction opening{nullptr};
     MorphologyPlaneFunction closing{nullptr};
     MorphologyPlaneFunction bipolar_top_hat{nullptr};
+    MorphologyRgbFunction bipolar_top_hat_rgb{nullptr};
+    MorphologyRgbFunction opening_rgb{nullptr};
+    MorphologyRgbFunction closing_rgb{nullptr};
 
     // ── 근사한 것 (`ApproximateAcceleratorScope` 안에서만) ────────────────────
     DigitalHalationFunction digital_halation{nullptr};
@@ -207,6 +283,11 @@ struct KernelAccelerator final {
     MutedSceneVibranceFunction muted_scene_vibrance{nullptr};
     ColorModelFunction color_model{nullptr};
     ScannerTargetGradeFunction scanner_target_grade{nullptr};
+    ScannerTargetTextureFunction noritsu_texture{nullptr};
+    TextureGrainFunction texture_grain{nullptr};
+    ChannelClippingOverlayFunction channel_clipping_overlay{nullptr};
+    AreaAverageFunction area_average{nullptr};
+    MipHalveLevelsFunction mip_halve_levels{nullptr};
 };
 
 // 프로세스 시작에 한 번 설치합니다. `nullptr` 을 주면 해제합니다.

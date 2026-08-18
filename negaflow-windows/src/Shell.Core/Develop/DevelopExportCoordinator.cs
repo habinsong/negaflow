@@ -22,7 +22,8 @@ public interface IDevelopExporter
         uint maximumHeight,
         byte[] pixels,
         DevelopRun? run = null,
-        SoftProofSettings? softProof = null);
+        SoftProofSettings? softProof = null,
+        bool clippingOverlay = false);
 
     /// <summary>
     /// GrainMend 가 무엇을 고칠지 재기만 합니다. 빈 <paramref name="mask"/> 로 부르면 필요한
@@ -48,14 +49,16 @@ public sealed class NativeDevelopExporterAdapter : IDevelopExporter
         uint maximumHeight,
         byte[] pixels,
         DevelopRun? run = null,
-        SoftProofSettings? softProof = null) =>
+        SoftProofSettings? softProof = null,
+        bool clippingOverlay = false) =>
         NativeDevelopExporter.Preview(
             request,
             maximumWidth,
             maximumHeight,
             pixels,
             run,
-            softProof);
+            softProof,
+            clippingOverlay);
 
     public GrainMendDetectionResult DetectGrainMend(
         DevelopExportRequest request,

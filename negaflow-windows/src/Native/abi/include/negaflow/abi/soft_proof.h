@@ -41,6 +41,9 @@ typedef struct nf_soft_proof_v1 {
     uint32_t warn_out_of_gamut;
     float paper_white_rgb[3];
     float black_ink_rgb[3];
+    /* Preview-only clipping overlay (macOS clippingOverlayEnabled). Older callers
+       that send the original 40-byte layout leave this off. */
+    uint32_t clipping_overlay;
 } nf_soft_proof_v1;
 
 /* Reads `wtpt` and `bkpt` out of an ICC profile and reports whether it can serve as a

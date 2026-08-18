@@ -64,9 +64,18 @@ struct ScannerTargetTextureSetup final {
     static constexpr std::size_t taps = 5U;
     float weights[taps]{};
     float amount{0.0F};
+    // macOS `noritsuTexture` 의 플로어·루마 게이트. 셰이더에 다시 적지 않습니다.
+    float floor_ratio{0.0F};
+    float floor_absolute{0.0F};
+    float luma_gate{0.0F};
 };
 
 [[nodiscard]] ScannerTargetTextureSetup scanner_target_texture_setup() noexcept;
+
+// NORITSU 전용 감마 도메인 luminance USM. 다른 타깃은 부르지 않습니다.
+// 근사 GPU 판은 `ApproximateAcceleratorScope` 안에서만 돕니다.
+[[nodiscard]] negaflow::core::KernelStatus apply_noritsu_texture(
+    negaflow::core::ImageView image) noexcept;
 
 // Applies the macOS documented target character and, where provenance permits,
 // the matched NORITSU/SP-3000 relative signature in gamma-domain tone and Lab

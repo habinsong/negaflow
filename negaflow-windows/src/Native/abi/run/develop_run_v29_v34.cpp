@@ -8,6 +8,7 @@
 
 #include <chrono>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 
@@ -391,6 +392,11 @@ nf_status_t NF_CALL nf_develop_preview_v34(
         for (std::size_t channel = 0U; channel < 3U; ++channel) {
             proof.paper.white[channel] = static_cast<double>(soft_proof->paper_white_rgb[channel]);
             proof.paper.black[channel] = static_cast<double>(soft_proof->black_ink_rgb[channel]);
+        }
+        if (soft_proof->struct_size >=
+            static_cast<std::uint32_t>(offsetof(nf_soft_proof_v1, clipping_overlay) +
+                                       sizeof(soft_proof->clipping_overlay))) {
+            proof.clipping_overlay = soft_proof->clipping_overlay != 0U;
         }
     }
     negaflow::pipeline::DevelopRunControl control{};

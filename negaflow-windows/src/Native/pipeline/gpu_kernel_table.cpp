@@ -64,6 +64,73 @@ bool accelerate_bipolar_top_hat(
         source, destination, width, height, radius, imaging::MorphologyKind::bipolar_top_hat);
 }
 
+bool accelerate_morphology_rgb(
+    const float* const red,
+    const float* const green,
+    const float* const blue,
+    float* const out_red,
+    float* const out_green,
+    float* const out_blue,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::uint32_t radius,
+    const imaging::MorphologyKind kind) noexcept {
+    GpuAccelerator& accelerator = GpuAccelerator::shared();
+    if (!accelerator.available()) {
+        return false;
+    }
+    return accelerator.apply_morphology_rgb(
+        red, green, blue, out_red, out_green, out_blue, width, height, radius, kind);
+}
+
+bool accelerate_opening_rgb(
+    const float* const red,
+    const float* const green,
+    const float* const blue,
+    float* const out_red,
+    float* const out_green,
+    float* const out_blue,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::uint32_t radius) noexcept {
+    return accelerate_morphology_rgb(
+        red, green, blue, out_red, out_green, out_blue, width, height, radius,
+        imaging::MorphologyKind::opening);
+}
+
+bool accelerate_closing_rgb(
+    const float* const red,
+    const float* const green,
+    const float* const blue,
+    float* const out_red,
+    float* const out_green,
+    float* const out_blue,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::uint32_t radius) noexcept {
+    return accelerate_morphology_rgb(
+        red, green, blue, out_red, out_green, out_blue, width, height, radius,
+        imaging::MorphologyKind::closing);
+}
+
+bool accelerate_bipolar_top_hat_rgb(
+    const float* const red,
+    const float* const green,
+    const float* const blue,
+    float* const out_red,
+    float* const out_green,
+    float* const out_blue,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::uint32_t radius) noexcept {
+    GpuAccelerator& accelerator = GpuAccelerator::shared();
+    if (!accelerator.available()) {
+        return false;
+    }
+    return accelerator.apply_morphology_bipolar_top_hat_rgb(
+        red, green, blue, out_red, out_green, out_blue, width, height, radius);
+}
+
 // 네거티브 반전입니다. 형태학과 달리 **근사**이고(곱셈·초월함수), 현상 한 번에 **한 번만**
 // 불리므로 왕복이 1회입니다 — 형태학이 느려진 두 이유(수십 번 왕복·직렬화) 중 하나가 없습니다.
 // 실측으로 프리뷰 856 ms 중 353 ms(41%)가 이 단계입니다.
@@ -217,11 +284,162 @@ bool accelerate_scanner_target_grade(
         pixels, width, height, stride_pixels, setup);
 }
 
+bool accelerate_noritsu_texture(
+    float* const pixels,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::uint32_t stride_pixels,
+    const imaging::ScannerTargetTextureSetup* const setup) noexcept {
+    GpuAccelerator& accelerator = GpuAccelerator::shared();
+    if (!accelerator.available()) {
+        return false;
+    }
+    return accelerator.apply_noritsu_texture(
+        pixels, width, height, stride_pixels, setup);
+}
+
+// 2026-08-19 실측(5088×3401 프리뷰, grain 0.40, RTX 4060 Ti):
+//   texture 단계 CPU 26.84 ms / GPU 69.52 ms. 커널은 맞지만 왕복이 집니다.
+//   기본은 끕니다. `NEGA_GPU_TEXTURE_GRAIN=1` 로만 켭니다.
+[[nodiscard]] bool texture_grain_enabled_by_environment() noexcept {
+    char value[8]{};
+    std::size_t length = 0U;
+    if (getenv_s(&length, value, sizeof(value), "NEGA_GPU_TEXTURE_GRAIN") != 0 ||
+        length == 0U) {
+        return false;
+    }
+    return value[0] == 49;  // 49 == '1'
+}
+
+bool accelerate_texture_grain(
+    float* const pixels,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::uint32_t stride_pixels,
+    const float amount) noexcept {
+    if (!texture_grain_enabled_by_environment()) {
+        return false;
+    }
+    GpuAccelerator& accelerator = GpuAccelerator::shared();
+    if (!accelerator.available()) {
+        return false;
+    }
+    return accelerator.apply_texture_grain(pixels, width, height, stride_pixels, amount);
+}
+
+bool accelerate_channel_clipping_overlay(
+    const float* const source,
+    float* const destination,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::uint32_t source_stride_pixels,
+    const std::uint32_t destination_stride_pixels) noexcept {
+    GpuAccelerator& accelerator = GpuAccelerator::shared();
+    if (!accelerator.available()) {
+        return false;
+    }
+    return accelerator.apply_channel_clipping_overlay(
+        source,
+        destination,
+        width,
+        height,
+        source_stride_pixels,
+        destination_stride_pixels);
+}
+
+// 2026-08-19 실측(5088×3401 전체 프레임, RTX 4060 Ti, x2 마지막 회차):
+//   CPU 25.109 ms / GPU 33.397 ms. 리덕션은 맞지만 업로드가 집니다.
+//   기본은 끕니다. `NEGA_GPU_AREA_AVERAGE=1` 로만 켭니다.
+[[nodiscard]] bool area_average_enabled_by_environment() noexcept {
+    char value[8]{};
+    std::size_t length = 0U;
+    if (getenv_s(&length, value, sizeof(value), "NEGA_GPU_AREA_AVERAGE") != 0 ||
+        length == 0U) {
+        return false;
+    }
+    return value[0] == 49;  // 49 == '1'
+}
+
+bool accelerate_area_average(
+    const float* const pixels,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::uint32_t stride_pixels,
+    const std::uint32_t origin_x,
+    const std::uint32_t origin_y,
+    const std::uint32_t extent_width,
+    const std::uint32_t extent_height,
+    float mean[4],
+    std::uint64_t* const count) noexcept {
+    if (!area_average_enabled_by_environment()) {
+        return false;
+    }
+    GpuAccelerator& accelerator = GpuAccelerator::shared();
+    if (!accelerator.available() || count == nullptr) {
+        return false;
+    }
+    return accelerator.apply_area_average(
+        pixels,
+        width,
+        height,
+        stride_pixels,
+        origin_x,
+        origin_y,
+        extent_width,
+        extent_height,
+        mean,
+        count);
+}
+
+// 2026-08-19 실측(5088×3401 프리뷰 x2 마지막): 전체 617.69 → 629.15 ms. 이득 없음.
+// 기본은 끕니다. `NEGA_GPU_MIP_HALVE=1` 로만 켭니다. GenerateMips 는 쓰지 않습니다.
+[[nodiscard]] bool mip_halve_enabled_by_environment() noexcept {
+    char value[8]{};
+    std::size_t length = 0U;
+    if (getenv_s(&length, value, sizeof(value), "NEGA_GPU_MIP_HALVE") != 0 ||
+        length == 0U) {
+        return false;
+    }
+    return value[0] == 49;  // 49 == '1'
+}
+
+bool accelerate_mip_halve_levels(
+    const float* const source,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::uint32_t stride_pixels,
+    const int wanted_levels,
+    float* const destination,
+    const std::uint32_t destination_capacity,
+    std::uint32_t* const out_width,
+    std::uint32_t* const out_height) noexcept {
+    if (!mip_halve_enabled_by_environment()) {
+        return false;
+    }
+    GpuAccelerator& accelerator = GpuAccelerator::shared();
+    if (!accelerator.available() || out_width == nullptr || out_height == nullptr) {
+        return false;
+    }
+    return accelerator.apply_mip_halve_levels(
+        source,
+        width,
+        height,
+        stride_pixels,
+        wanted_levels,
+        destination,
+        destination_capacity,
+        out_width,
+        out_height);
+}
+
 // 프로세스 수명 동안 살아 있어야 합니다 — `install_kernel_accelerator` 는 포인터만 갖습니다.
 const imaging::KernelAccelerator kernel_table{
     accelerate_opening,
     accelerate_closing,
     accelerate_bipolar_top_hat,
+    accelerate_bipolar_top_hat_rgb,
+    accelerate_opening_rgb,
+    accelerate_closing_rgb,
     accelerate_digital_halation,
     accelerate_negative_inversion,
     accelerate_digital_film_grain,
@@ -232,40 +450,31 @@ const imaging::KernelAccelerator kernel_table{
     accelerate_muted_scene_vibrance,
     accelerate_color_model,
     accelerate_scanner_target_grade,
+    accelerate_noritsu_texture,
+    accelerate_texture_grain,
+    accelerate_channel_clipping_overlay,
+    accelerate_area_average,
+    accelerate_mip_halve_levels,
 };
 
 }  // namespace
 
 namespace {
 
-// ☠️ **기본은 꺼짐입니다. 실측이 더 느렸기 때문입니다.**
+// 2026-08-19 재측정(5088×3401, RTX 4060 Ti, 전송 경로 개선 뒤, 각 3회):
 //
-// 2026-08-18 실측(5100×3408 실제 스캔, RTX 4060 Ti, 각 2회):
+//   | 검출 벽시계 | 중앙값 |
+//   |---|---:|
+//   | CPU (`NEGA_GPU=0`) | **18,052 ms** |
+//   | GPU 형태학(호출마다 왕복) | **15,383 ms** |
 //
-//   | 검출 | 1회 | 2회 |
-//   |---|---:|---:|
-//   | CPU (`NEGA_GPU=0`) | **9,312 ms** | **9,104 ms** |
-//   | GPU 형태학 | 12,146 ms | 11,462 ms |
-//
-// 결과는 같습니다(성분 1367개, 채택 16,074 화소 — 비트 단위 일치가 지켜집니다).
-// **느려진 이유는 커널이 아니라 구조입니다:**
-//
-//   1. **평면마다 왕복합니다.** 검출은 타일 12개 × 반경 여러 개로 형태학을 수십 번 부르고,
-//      지금은 호출마다 업로드·다운로드를 합니다. 커널이 아무리 빨라도 전송이 지배합니다.
-//   2. **직렬화됩니다.** D3D11 즉시 컨텍스트가 스레드 안전하지 않아 GPU 호출이 자물쇠
-//      하나를 지납니다. CPU 경로는 워커 4개로 **병렬**인데, GPU 로 바꾸면 그것이 직렬이 됩니다.
-//
-// 즉 4중 병렬 CPU 작업을 직렬 GPU 작업 + 왕복으로 바꾼 것이라 느려지는 것이 당연합니다.
-// **고치는 길은 검출 전체를 GPU 에 머무르게 하는 오케스트레이터**입니다 — 04 3절의
-// "단계마다 올렸다 내리면 집니다" 가 여기에도 그대로 적용됩니다.
-//
-// 그때까지 `NEGA_GPU_MORPHOLOGY=1` 로만 켭니다. 커널·시험·이음매는 그대로 두어
-// 오케스트레이터가 서면 바로 쓸 수 있습니다.
+// 결과는 같습니다(성분 610, 채택 9,331). 전송이 줄어든 뒤에는 호출마다 왕복해도
+// CPU 보다 빠릅니다. **기본은 켭니다.** `NEGA_GPU_MORPHOLOGY=0` 으로만 끕니다.
 [[nodiscard]] bool morphology_enabled_by_environment() noexcept {
     char value[8]{};
     std::size_t length = 0U;
     if (getenv_s(&length, value, sizeof(value), "NEGA_GPU_MORPHOLOGY") != 0 || length == 0U) {
-        return false;
+        return true;
     }
     return value[0] != 48;  // 48 == '0'
 }
@@ -280,13 +489,16 @@ void install_gpu_kernel_accelerator() noexcept {
         if (!GpuAccelerator::shared().available()) {
             return;
         }
-        // ☠️ 형태학은 실측이 더 느려 기본에서 뺍니다(위 주석의 표). 반전은 왕복이 1회라
-        //    사정이 다르므로 그대로 둡니다 — 근사이므로 스코프 안에서만 돕니다.
+        // 형태학은 2026-08-19 재측정에서 CPU 보다 빨라 기본으로 켭니다. 끄려면
+        //    `NEGA_GPU_MORPHOLOGY=0`. 값은 비트 단위로 같습니다.
         static imaging::KernelAccelerator effective = kernel_table;
         if (!morphology_enabled_by_environment()) {
             effective.opening = nullptr;
             effective.closing = nullptr;
             effective.bipolar_top_hat = nullptr;
+            effective.bipolar_top_hat_rgb = nullptr;
+            effective.opening_rgb = nullptr;
+            effective.closing_rgb = nullptr;
         }
         imaging::install_kernel_accelerator(&effective);
     });

@@ -259,6 +259,16 @@ public sealed partial class SettingsRootView : UserControl
         }
     }
 
+    private void OnClippingOverlayToggled(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (!isUpdating)
+        {
+            workspaceState?.SetClippingOverlayEnabled(ClippingOverlayToggle.IsOn);
+        }
+    }
+
     private void OnImageHashToggled(object sender, RoutedEventArgs args)
     {
         _ = sender;
@@ -331,6 +341,7 @@ public sealed partial class SettingsRootView : UserControl
         ScannerEmulationSummary.Text = AppResources.Get("settingsColorUnassigned", "Text");
         SynchronizeScanTab(preferences);
         PixelSamplerToggle.IsOn = preferences.PixelSamplerEnabled;
+        ClippingOverlayToggle.IsOn = preferences.ClippingOverlayEnabled;
         LanguageComboBox.SelectedIndex = Math.Max(
             0,
             AppLanguages.All.ToList().IndexOf(AppLanguages.Normalize(preferences.Language)));

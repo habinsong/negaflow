@@ -322,6 +322,48 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/noritsu_texture.hlsl"
+    NoritsuTextureHorizontalMain
+    negaflow_noritsu_texture_horizontal_cs
+    NEGAFLOW_NORITSU_TEXTURE_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/noritsu_texture.hlsl"
+    NoritsuTextureVerticalMain
+    negaflow_noritsu_texture_vertical_cs
+    NEGAFLOW_NORITSU_TEXTURE_V_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/texture_grain.hlsl"
+    TextureGrainMain
+    negaflow_texture_grain_cs
+    NEGAFLOW_TEXTURE_GRAIN_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/channel_clipping_overlay.hlsl"
+    ChannelClippingOverlayMain
+    negaflow_channel_clipping_overlay_cs
+    NEGAFLOW_CHANNEL_CLIPPING_OVERLAY_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/area_average.hlsl"
+    ReduceImageMain
+    negaflow_area_average_image_cs
+    NEGAFLOW_AREA_AVERAGE_IMAGE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/area_average.hlsl"
+    ReducePartialsMain
+    negaflow_area_average_partials_cs
+    NEGAFLOW_AREA_AVERAGE_PARTIALS_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/morphology.hlsl"
     MorphologyHorizontalMain
     negaflow_morphology_horizontal_cs
@@ -390,6 +432,12 @@ add_library(negaflow_gpu STATIC
     "${NEGAFLOW_MUTED_SCENE_VIBRANCE_HEADER}"
     "${NEGAFLOW_COLOR_MODEL_HEADER}"
     "${NEGAFLOW_SCANNER_TARGET_GRADE_HEADER}"
+    "${NEGAFLOW_NORITSU_TEXTURE_H_HEADER}"
+    "${NEGAFLOW_NORITSU_TEXTURE_V_HEADER}"
+    "${NEGAFLOW_TEXTURE_GRAIN_HEADER}"
+    "${NEGAFLOW_CHANNEL_CLIPPING_OVERLAY_HEADER}"
+    "${NEGAFLOW_AREA_AVERAGE_IMAGE_HEADER}"
+    "${NEGAFLOW_AREA_AVERAGE_PARTIALS_HEADER}"
     "${NEGAFLOW_MORPHOLOGY_H_HEADER}"
     "${NEGAFLOW_MORPHOLOGY_V_HEADER}"
     "${NEGAFLOW_BIPOLAR_TOP_HAT_HEADER}"
@@ -409,6 +457,10 @@ add_library(negaflow_gpu STATIC
     src/Native/gpu/gpu_film_look_stage.cpp
     src/Native/gpu/gpu_vibrance.cpp
     src/Native/gpu/gpu_scanner_target_grade.cpp
+    src/Native/gpu/gpu_noritsu_texture.cpp
+    src/Native/gpu/gpu_texture_grain.cpp
+    src/Native/gpu/gpu_channel_clipping_overlay.cpp
+    src/Native/gpu/gpu_area_average.cpp
     src/Native/gpu/gpu_lookup_table.cpp
     src/Native/gpu/gpu_image_pool.cpp
     src/Native/gpu/gpu_morphology.cpp
@@ -570,6 +622,8 @@ add_library(negaflow_imaging STATIC
     src/Native/imaging/scanner_to_working.cpp
     src/Native/imaging/tone_curve_measurement.cpp
     src/Native/imaging/tone_mapping.cpp
+    src/Native/imaging/area_average.cpp
+    src/Native/imaging/channel_clipping_overlay.cpp
     src/Native/imaging/texture_stage.cpp
     src/Native/imaging/texture_stage_effects.cpp
     src/Native/imaging/working_film_look.cpp
@@ -1207,6 +1261,66 @@ if(BUILD_TESTING)
         NAME native.gpu_scanner_target_grade
         COMMAND negaflow_gpu_scanner_target_grade_tests)
 
+    add_executable(negaflow_gpu_noritsu_texture_tests
+        tests/Native.UnitTests/gpu_noritsu_texture_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_gpu_noritsu_texture_tests
+        PRIVATE negaflow_pipeline negaflow_gpu negaflow_imaging negaflow_core
+            negaflow_project_options
+    )
+    add_test(
+        NAME native.gpu_noritsu_texture
+        COMMAND negaflow_gpu_noritsu_texture_tests)
+
+    add_executable(negaflow_gpu_texture_grain_tests
+        tests/Native.UnitTests/gpu_texture_grain_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_gpu_texture_grain_tests
+        PRIVATE negaflow_pipeline negaflow_gpu negaflow_imaging negaflow_core
+            negaflow_project_options
+    )
+    add_test(
+        NAME native.gpu_texture_grain
+        COMMAND negaflow_gpu_texture_grain_tests)
+
+    add_executable(negaflow_gpu_channel_clipping_overlay_tests
+        tests/Native.UnitTests/gpu_channel_clipping_overlay_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_gpu_channel_clipping_overlay_tests
+        PRIVATE negaflow_pipeline negaflow_gpu negaflow_imaging negaflow_core
+            negaflow_project_options
+    )
+    add_test(
+        NAME native.gpu_channel_clipping_overlay
+        COMMAND negaflow_gpu_channel_clipping_overlay_tests)
+
+    add_executable(negaflow_gpu_area_average_tests
+        tests/Native.UnitTests/gpu_area_average_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_gpu_area_average_tests
+        PRIVATE negaflow_pipeline negaflow_gpu negaflow_imaging negaflow_core
+            negaflow_project_options
+    )
+    add_test(
+        NAME native.gpu_area_average
+        COMMAND negaflow_gpu_area_average_tests)
+
+    add_executable(negaflow_gpu_mip_halve_product_tests
+        tests/Native.UnitTests/gpu_mip_halve_product_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_gpu_mip_halve_product_tests
+        PRIVATE negaflow_pipeline negaflow_gpu negaflow_imaging negaflow_core
+            negaflow_project_options
+    )
+    add_test(
+        NAME native.gpu_mip_halve_product
+        COMMAND negaflow_gpu_mip_halve_product_tests)
+
     add_executable(negaflow_gpu_morphology_tests
         tests/Native.UnitTests/gpu_morphology_tests.cpp
     )
@@ -1219,6 +1333,21 @@ if(BUILD_TESTING)
         PRIVATE negaflow_gpu negaflow_imaging negaflow_core negaflow_project_options
     )
     add_test(NAME native.gpu_morphology COMMAND negaflow_gpu_morphology_tests)
+
+    add_executable(negaflow_gpu_morphology_product_tests
+        tests/Native.UnitTests/gpu_morphology_product_tests.cpp
+    )
+    target_include_directories(
+        negaflow_gpu_morphology_product_tests
+        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/imaging"
+    )
+    target_link_libraries(
+        negaflow_gpu_morphology_product_tests
+        PRIVATE negaflow_pipeline negaflow_imaging negaflow_core negaflow_project_options
+    )
+    add_test(
+        NAME native.gpu_morphology_product
+        COMMAND negaflow_gpu_morphology_product_tests)
 
     add_executable(negaflow_gpu_accelerator_tests
         tests/Native.UnitTests/gpu_accelerator_tests.cpp

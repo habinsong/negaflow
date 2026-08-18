@@ -242,11 +242,40 @@ bool merge_micro_speck_mask(
         }
         std::vector<float> minimum_response(count, std::numeric_limits<float>::max());
         std::vector<float> maximum_response(count, 0.0F);
-        for (const auto& channel : image.channels) {
-            const std::vector<float> closed = closing(channel, image.width, image.height, radius);
-            const std::vector<float> background = opening(closed, image.width, image.height, radius);
+        const RgbPlanes closed = closing_rgb(
+            image.channels[0],
+            image.channels[1],
+            image.channels[2],
+            image.width,
+            image.height,
+            radius);
+        const RgbPlanes background = closed.red.empty()
+            ? RgbPlanes{}
+            : opening_rgb(
+                  closed.red,
+                  closed.green,
+                  closed.blue,
+                  image.width,
+                  image.height,
+                  radius);
+        const bool used_packed = !background.red.empty();
+        for (std::size_t channel = 0U; channel < image.channels.size(); ++channel) {
+            std::vector<float> fallback_background{};
+            const std::vector<float>* background_plane = nullptr;
+            if (used_packed) {
+                background_plane = channel == 0U
+                    ? &background.red
+                    : (channel == 1U ? &background.green : &background.blue);
+            } else {
+                const std::vector<float> fallback_closed = closing(
+                    image.channels[channel], image.width, image.height, radius);
+                fallback_background = opening(
+                    fallback_closed, image.width, image.height, radius);
+                background_plane = &fallback_background;
+            }
             for (std::size_t index = 0U; index < count; ++index) {
-                const float response = std::max(0.0F, background[index] - channel[index]);
+                const float response =
+                    std::max(0.0F, (*background_plane)[index] - image.channels[channel][index]);
                 minimum_response[index] = std::min(minimum_response[index], response);
                 maximum_response[index] = std::max(maximum_response[index], response);
             }

@@ -1,7 +1,10 @@
 #include "negaflow/imaging/mipmap_downsampler.h"
 
+#include "negaflow/imaging/kernel_accelerator.h"
+
 #include <algorithm>
 #include <cmath>
+#include <utility>
 
 namespace negaflow::imaging {
 namespace {
@@ -106,15 +109,65 @@ DownsampledProxy downsample_for_statistics(
     std::uint32_t current_width = source.width;
     std::uint32_t current_height = source.height;
     std::size_t current_stride = source.stride_pixels;
-    for (int step = 0; step < wanted; ++step) {
-        if (current_width < 2U || current_height < 2U) {
-            break;
+
+    // 큰 축소만 GPU. 마지막 이중선형은 CPU `double` 그대로.
+    // GenerateMips 는 필터가 규정되지 않아 쓰지 않습니다.
+    bool used_gpu = false;
+    if (wanted > 0 && approximate_acceleration_allowed()) {
+        if (const KernelAccelerator* const table = kernel_accelerator();
+            table != nullptr && table->mip_halve_levels != nullptr) {
+            std::uint32_t last_width = source.width;
+            std::uint32_t last_height = source.height;
+            int steps = 0;
+            for (int step = 0; step < wanted; ++step) {
+                if (last_width < 2U || last_height < 2U) {
+                    break;
+                }
+                last_width = std::max(1U, last_width / 2U);
+                last_height = std::max(1U, last_height / 2U);
+                ++steps;
+            }
+            if (steps > 0) {
+                Level gpu_level{};
+                gpu_level.width = last_width;
+                gpu_level.height = last_height;
+                gpu_level.pixels.resize(
+                    static_cast<std::size_t>(last_width) * last_height);
+                std::uint32_t out_width = 0U;
+                std::uint32_t out_height = 0U;
+                if (table->mip_halve_levels(
+                        reinterpret_cast<const float*>(source.pixels),
+                        source.width,
+                        source.height,
+                        static_cast<std::uint32_t>(source.stride_pixels),
+                        steps,
+                        reinterpret_cast<float*>(gpu_level.pixels.data()),
+                        last_width * last_height,
+                        &out_width,
+                        &out_height) &&
+                    out_width == last_width && out_height == last_height) {
+                    levels.push_back(std::move(gpu_level));
+                    current = levels.back().pixels.data();
+                    current_width = levels.back().width;
+                    current_height = levels.back().height;
+                    current_stride = levels.back().width;
+                    used_gpu = true;
+                }
+            }
         }
-        levels.push_back(halve(current, current_width, current_height, current_stride));
-        current = levels.back().pixels.data();
-        current_width = levels.back().width;
-        current_height = levels.back().height;
-        current_stride = levels.back().width;
+    }
+
+    if (!used_gpu) {
+        for (int step = 0; step < wanted; ++step) {
+            if (current_width < 2U || current_height < 2U) {
+                break;
+            }
+            levels.push_back(halve(current, current_width, current_height, current_stride));
+            current = levels.back().pixels.data();
+            current_width = levels.back().width;
+            current_height = levels.back().height;
+            current_stride = levels.back().width;
+        }
     }
 
     for (std::uint32_t y = 0U; y < target_height; ++y) {

@@ -54,7 +54,7 @@ internal static class NativeDevelopAbiSizes
     internal const int RunStateV1Size = 16;
     internal const int AutoAdjustResultV1Size = 88;
     internal const int SoftProofMediaV1Size = 40;
-    internal const int SoftProofV1Size = 40;
+    internal const int SoftProofV1Size = 44;
     internal const int GrainMendDetectParametersV1Size = 40;
     internal const int GrainMendDetectParametersV2Size = 72;
     internal const int GrainMendDetectParametersV3Size = 80;

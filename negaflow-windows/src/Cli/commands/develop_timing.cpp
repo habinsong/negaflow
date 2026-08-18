@@ -5,10 +5,14 @@
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
 
+#include "negaflow/imaging/area_average.h"
+#include "negaflow/imaging/kernel_accelerator.h"
+#include "negaflow/imaging/scanner_tiff_to_working.h"
 #include "negaflow/pipeline/develop_export.h"
 #include "negaflow/pipeline/gpu_accelerator.h"
 #include "negaflow/pipeline/stage_timing.h"
@@ -55,7 +59,10 @@ int usage() {
                  "  filmlook — 디지털 원본 필름 룩(헐레이션·색 큐브·아큐턴스·색 "
                  "프리셋·그레인)까지 켭니다.\n"
                  "             필름 스캔 경로는 이 사슬을 지나지 않으므로, 그 다섯 "
-                 "단계를 재려면 이것이 있어야 합니다.\n";
+                 "단계를 재려면 이것이 있어야 합니다.\n"
+                 "  grain — TextureStage filmGrain 을 0.40 으로 켭니다(기본 0 이면 단계가 비어 있음).\n"
+                 "  areaavg — 디코드된 working 이미지에 CIAreaAverage 대응 면적 평균을 재어 stderr 에 찍습니다.\n"
+                 "             GPU 면적평균은 기본 끔. NEGA_GPU_AREA_AVERAGE=1 로만 켭니다.\n";
     return 2;
 }
 
@@ -159,6 +166,16 @@ int run_develop_timing(const int argument_count, const wchar_t* const arguments[
             request.base_estimation_mode =
                 pipeline::NegativeBaseEstimationMode::auto_estimate;
         }
+        if (std::wstring_view{arguments[index]} == L"grain") {
+            request.texture.grain = 0.40F;
+        }
+    }
+
+    bool measure_area_average = false;
+    for (int index = 2; index < argument_count; ++index) {
+        if (std::wstring_view{arguments[index]} == L"areaavg") {
+            measure_area_average = true;
+        }
     }
 
     // macOS 정착 프리뷰와 같은 한 변입니다(`fullMaxDimension`).
@@ -195,6 +212,44 @@ int run_develop_timing(const int argument_count, const wchar_t* const arguments[
         if (run + 1 == repeats) {
             std::cout << "]}\n";
             pipeline::dump_stage_timings();
+            if (measure_area_average) {
+                negaflow::imageio::WicTiffDecodeControl decode_control{};
+                decode_control.rows_per_copy = 64U;
+                auto prepared = negaflow::imaging::decode_scanner_tiff_to_working_rows(
+                    request.source, {}, {}, decode_control);
+                if (prepared.decode.status !=
+                        negaflow::imageio::WicTiffDecodeStatus::ok ||
+                    prepared.working.status !=
+                        negaflow::imaging::ScannerToWorkingStatus::ok) {
+                    std::cerr << "[timing] area_average decode_failed\n";
+                    return 1;
+                }
+                pipeline::install_gpu_kernel_accelerator();
+                std::optional<negaflow::imaging::ApproximateAcceleratorScope> scope{};
+                if (pipeline::GpuAccelerator::shared().available()) {
+                    scope.emplace();
+                }
+                negaflow::imaging::AreaAverage average{};
+                const auto started_avg = std::chrono::steady_clock::now();
+                const bool ok = negaflow::imaging::area_average(
+                    prepared.working.image,
+                    0U,
+                    0U,
+                    prepared.working.image.width,
+                    prepared.working.image.height,
+                    average);
+                const auto finished_avg = std::chrono::steady_clock::now();
+                const double milliseconds =
+                    static_cast<double>(
+                        std::chrono::duration_cast<std::chrono::microseconds>(
+                            finished_avg - started_avg)
+                            .count()) /
+                    1000.0;
+                std::cerr << "[timing] area_average ok=" << (ok ? "true" : "false")
+                          << " count=" << average.count << " mean=" << average.red << ","
+                          << average.green << "," << average.blue << " ms=" << milliseconds
+                          << (scope.has_value() ? " path=gpu-allowed\n" : " path=cpu\n");
+            }
             return outcome.succeeded ? 0 : 1;
         }
     }

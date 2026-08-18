@@ -26,6 +26,8 @@ struct PreviewTarget final {
     std::uint8_t* pixels{nullptr};
     std::size_t capacity_bytes{0};
     negaflow::color::SoftProofTransfer proof{};
+    // macOS `clippingOverlayEnabled`. 현상 결과는 안 바꾸고 표시만 얹습니다.
+    bool clipping_overlay{false};
 };
 
 // 작업 화상을 표시용 BGRA8 로 상자 평균 축소해 쓴다. 게시 파일 경로와는 무관하다.

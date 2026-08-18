@@ -85,6 +85,11 @@ public sealed record ShellPreferences
     public bool PixelSamplerEnabled { get; init; }
 
     /// <summary>
+    /// macOS <c>clippingOverlayEnabled</c>. 현상 결과는 바꾸지 않고 미리보기에만 경계를 표시합니다.
+    /// </summary>
+    public bool ClippingOverlayEnabled { get; init; }
+
+    /// <summary>
     /// 앱 언어입니다. 빈 문자열이면 시스템 언어를 따릅니다 — macOS 의 <c>system</c> 과 같은
     /// 뜻이며, 그때는 Windows 가 고른 것을 그대로 씁니다.
     /// </summary>

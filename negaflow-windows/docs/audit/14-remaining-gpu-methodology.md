@@ -173,7 +173,9 @@ CPU/GPU/타일/재시도가 전부 같은 값을 냅니다 — 그것이 검증 
 
 ---
 
-## 3. `noritsuTexture` — ☠️ **CPU 판은 이미 있습니다**(0.0절). 남은 것은 GPU 뿐
+## 3. `noritsuTexture` — **2026-08-19 GPU 붙임.** 절차는 [`15`](15-gpu-handoff.md) 3.1
+
+아래 1번은 틀린 채 남아 있습니다(0.0절). 다시 따라가지 마십시오.
 
 ### 근거
 
@@ -342,13 +344,11 @@ SM 6.0 의 wave intrinsics(`WaveActiveSum`)가 더 빠르지만 **wave 크기가
 [`13`](13-performance-playbook.md) 14절(러닝 섬)과 **같은 함정**입니다.
 CPU 가 어떤 순서로 더하는지 **먼저 읽고** 맞추거나, 못 맞추면 `1e-5` 동치로 선언하고 적으십시오.
 
-### 7.4 `GpuMipHalve` — 만들어 놓고 **안 쓰고 있습니다**
+### 7.4 `GpuMipHalve` — **2026-08-19 배선, 기본 끔**
 
-비트 단위 일치까지 증명했는데 배선이 없습니다. 쓸 곳 셋:
-`film_base_sampling.cpp`(자동 베이스 표본 격자) · `manual_negative_developer.cpp`
-(`scene_density_range`, 자동 Dmax) · `muted_scene_vibrance.cpp`.
-
-**절차**: 한 곳씩 배선 → `--develop-timing` 으로 **전후 6회씩** → 이득 없으면 되돌리고 수치를 적습니다.
+`downsample_for_statistics` 에 붙였습니다. 제품 경로 비트 일치.
+프리뷰 x2 마지막 전체 617.69 → 629.15 ms 라 이득 없어 `NEGA_GPU_MIP_HALVE=1` 로만 켭니다.
+`GenerateMips` 는 필터 미규정·조용한 실패라 쓰지 않습니다. 숫자는 [`15`](15-gpu-handoff.md) 3.6.
 
 ---
 

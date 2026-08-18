@@ -81,6 +81,22 @@ GpuAccelerator::GpuAccelerator() noexcept {
         state->target_grade_ready =
             gpu::GpuScannerTargetGrade::create(state->device, state->target_grade) ==
             gpu::GpuKernelStatus::ok;
+        state->noritsu_texture_ready =
+            gpu::GpuNoritsuTexture::create(state->device, state->noritsu_texture) ==
+            gpu::GpuKernelStatus::ok;
+        state->texture_grain_ready =
+            gpu::GpuTextureGrain::create(state->device, state->texture_grain) ==
+            gpu::GpuKernelStatus::ok;
+        state->clipping_overlay_ready =
+            gpu::GpuChannelClippingOverlay::create(
+                state->device, state->clipping_overlay) ==
+            gpu::GpuKernelStatus::ok;
+        state->area_average_ready =
+            gpu::GpuAreaAverage::create(state->device, state->area_average) ==
+            gpu::GpuKernelStatus::ok;
+        state->mip_halve_ready =
+            gpu::GpuMipHalve::create(state->device, state->mip_halve) ==
+            gpu::GpuKernelStatus::ok;
     }
     state_ = state;
 }
@@ -160,9 +176,12 @@ bool GpuAccelerator::apply_morphology_plane(
     if (!state_->morphology_ready) {
         return false;
     }
+    if (!state_->pool.ensure(state_->device, width, height)) {
+        return false;
+    }
 
-    // 검출은 단일 채널 평면을 다루고 GPU 텍스처는 RGBA 입니다. 빨강 채널에 담습니다 —
-    // 형태학은 채널마다 독립이라 나머지 셋은 무엇이 들어가도 결과가 안 바뀝니다.
+    // 단일 채널을 RGBA 에 복제합니다. 형태학은 채널마다 독립이라 값은 같습니다.
+    // 텍스처는 풀에서 가져옵니다 — 호출마다 만들면 전송 개선이 도로 사라집니다.
     const std::size_t count = static_cast<std::size_t>(width) * height;
     std::vector<core::Rgba32F>& staging = state_->morphology_staging;
     staging.resize(count);
@@ -170,52 +189,123 @@ bool GpuAccelerator::apply_morphology_plane(
         staging[index] = {source[index], source[index], source[index], source[index]};
     }
 
-    gpu::GpuWorkingImage input{};
-    if (gpu::GpuWorkingImage::upload(
-            state_->device, staging.data(), width, height, width, input) !=
-        gpu::GpuImageStatus::ok) {
-        return false;
-    }
-
-    gpu::GpuWorkingImage scratch[gpu::GpuMorphology::top_hat_scratch_count]{};
-    const int needed = kind == imaging::MorphologyKind::bipolar_top_hat
-        ? gpu::GpuMorphology::top_hat_scratch_count
-        : gpu::GpuMorphology::filter_scratch_count;
-    for (int index = 0; index < needed; ++index) {
-        if (gpu::GpuWorkingImage::create(state_->device, width, height, scratch[index]) !=
-            gpu::GpuImageStatus::ok) {
-            return false;
-        }
-    }
-    gpu::GpuWorkingImage output{};
-    if (gpu::GpuWorkingImage::create(state_->device, width, height, output) !=
-        gpu::GpuImageStatus::ok) {
+    gpu::GpuWorkingImage* const pool = state_->pool.images();
+    if (pool[0].upload_into(state_->device, staging.data(), width) != gpu::GpuImageStatus::ok) {
         return false;
     }
 
     gpu::GpuKernelStatus status = gpu::GpuKernelStatus::invalid_arguments;
+    gpu::GpuWorkingImage* const scratch = &pool[gpu::GpuImagePool::scratch_first];
     switch (kind) {
         case imaging::MorphologyKind::opening:
-            status = state_->morphology.opening(state_->device, input, scratch, output, radius);
+            status = state_->morphology.opening(state_->device, pool[0], scratch, pool[1], radius);
             break;
         case imaging::MorphologyKind::closing:
-            status = state_->morphology.closing(state_->device, input, scratch, output, radius);
+            status = state_->morphology.closing(state_->device, pool[0], scratch, pool[1], radius);
             break;
         case imaging::MorphologyKind::bipolar_top_hat:
-            status =
-                state_->morphology.bipolar_top_hat(state_->device, input, scratch, output, radius);
+            status = state_->morphology.bipolar_top_hat(
+                state_->device, pool[0], scratch, pool[1], radius);
             break;
     }
     if (status != gpu::GpuKernelStatus::ok) {
         return false;
     }
-    if (output.download(state_->device, staging.data(), width) != gpu::GpuImageStatus::ok) {
+    if (pool[1].download(state_->device, staging.data(), width) != gpu::GpuImageStatus::ok) {
         return false;
     }
     for (std::size_t index = 0U; index < count; ++index) {
         destination[index] = staging[index].red;
     }
     return true;
+}
+
+bool GpuAccelerator::apply_morphology_rgb(
+    const float* const red,
+    const float* const green,
+    const float* const blue,
+    float* const out_red,
+    float* const out_green,
+    float* const out_blue,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::uint32_t radius,
+    const imaging::MorphologyKind kind) noexcept {
+    if (!available() || red == nullptr || green == nullptr || blue == nullptr ||
+        out_red == nullptr || out_green == nullptr || out_blue == nullptr) {
+        return false;
+    }
+    if (width == 0U || height == 0U) {
+        return false;
+    }
+    const std::lock_guard<std::mutex> guard{state_->lock};
+    if (!state_->morphology_ready) {
+        return false;
+    }
+    if (!state_->pool.ensure(state_->device, width, height)) {
+        return false;
+    }
+
+    const std::size_t count = static_cast<std::size_t>(width) * height;
+    std::vector<core::Rgba32F>& staging = state_->morphology_staging;
+    staging.resize(count);
+    for (std::size_t index = 0U; index < count; ++index) {
+        staging[index] = {red[index], green[index], blue[index], 0.0F};
+    }
+
+    gpu::GpuWorkingImage* const pool = state_->pool.images();
+    if (pool[0].upload_into(state_->device, staging.data(), width) != gpu::GpuImageStatus::ok) {
+        return false;
+    }
+    gpu::GpuWorkingImage* const scratch = &pool[gpu::GpuImagePool::scratch_first];
+    gpu::GpuKernelStatus status = gpu::GpuKernelStatus::invalid_arguments;
+    switch (kind) {
+        case imaging::MorphologyKind::opening:
+            status = state_->morphology.opening(state_->device, pool[0], scratch, pool[1], radius);
+            break;
+        case imaging::MorphologyKind::closing:
+            status = state_->morphology.closing(state_->device, pool[0], scratch, pool[1], radius);
+            break;
+        case imaging::MorphologyKind::bipolar_top_hat:
+            status = state_->morphology.bipolar_top_hat(
+                state_->device, pool[0], scratch, pool[1], radius);
+            break;
+    }
+    if (status != gpu::GpuKernelStatus::ok) {
+        return false;
+    }
+    if (pool[1].download(state_->device, staging.data(), width) != gpu::GpuImageStatus::ok) {
+        return false;
+    }
+    for (std::size_t index = 0U; index < count; ++index) {
+        out_red[index] = staging[index].red;
+        out_green[index] = staging[index].green;
+        out_blue[index] = staging[index].blue;
+    }
+    return true;
+}
+
+bool GpuAccelerator::apply_morphology_bipolar_top_hat_rgb(
+    const float* const red,
+    const float* const green,
+    const float* const blue,
+    float* const out_red,
+    float* const out_green,
+    float* const out_blue,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::uint32_t radius) noexcept {
+    return apply_morphology_rgb(
+        red,
+        green,
+        blue,
+        out_red,
+        out_green,
+        out_blue,
+        width,
+        height,
+        radius,
+        imaging::MorphologyKind::bipolar_top_hat);
 }
 
 bool GpuAccelerator::apply_negative_inversion(

@@ -155,7 +155,8 @@ internal static unsafe class NativeDevelopExportCommand
         uint maximumHeight,
         Span<byte> pixels,
         DevelopRun? run = null,
-        SoftProofSettings? softProof = null)
+        SoftProofSettings? softProof = null,
+        bool clippingOverlay = false)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentOutOfRangeException.ThrowIfZero(maximumWidth);
@@ -164,7 +165,15 @@ internal static unsafe class NativeDevelopExportCommand
         {
             throw new ArgumentException("The preview buffer is empty.", nameof(pixels));
         }
-        return Render(request, maximumWidth, maximumHeight, pixels, run, softProof, null)
+        return Render(
+            request,
+            maximumWidth,
+            maximumHeight,
+            pixels,
+            run,
+            softProof,
+            null,
+            clippingOverlay: clippingOverlay)
             .Result;
     }
 }

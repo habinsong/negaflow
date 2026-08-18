@@ -167,6 +167,8 @@ public sealed partial class DevelopWorkspaceView : UserControl
                 new NativeDevelopExporterAdapter(),
                 uiDispatcher,
                 DisplayTargetPixels);
+            previewCoordinator.ClippingOverlayEnabled =
+                workspaceState?.Current.ClippingOverlayEnabled == true;
             GrainMendPanel.SetDetectCoordinator(new GrainMendDetectCoordinator(
                 new NativeDevelopExporterAdapter(),
                 uiDispatcher));
@@ -406,6 +408,12 @@ public sealed partial class DevelopWorkspaceView : UserControl
     {
         _ = sender;
         layout.Update(preferences);
+        if (previewCoordinator is { } coordinator &&
+            coordinator.ClippingOverlayEnabled != preferences.ClippingOverlayEnabled)
+        {
+            coordinator.ClippingOverlayEnabled = preferences.ClippingOverlayEnabled;
+            RequestPreview();
+        }
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs args)

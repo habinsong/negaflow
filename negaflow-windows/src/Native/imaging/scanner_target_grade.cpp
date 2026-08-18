@@ -150,21 +150,19 @@ void apply_profile_grade(
         });
 }
 
-void apply_noritsu_texture(
+void apply_noritsu_texture_cpu(
     const negaflow::core::ImageView image,
-    std::vector<Rgb>& scratch) {
-    // 값은 공개 상수 한 곳에서 옵니다 — GPU 셰이더도 같은 것을 받습니다.
-    const ScannerTargetTextureSetup texture = scanner_target_texture_setup();
+    std::vector<Rgb>& scratch,
+    const ScannerTargetTextureSetup& texture) {
     std::array<double, 5U> weights{};
     for (std::size_t i = 0U; i < ScannerTargetTextureSetup::taps; ++i) {
         weights[i] = texture.weights[i];
     }
 
-    // ⚠️ **아직 GPU 판이 없습니다.** 이 커널에는 하드 게이트가 있습니다 —
-    //    `low < 0 || high > 1` 이면 화소를 통째로 통과시킵니다. 그 경계 근처에서
-    //    CPU(`double`)와 GPU(float)의 1ulp 차이가 "질감을 얹는다/안 얹는다" 를
-    //    뒤집으므로, 이식하면 CPU/GPU 최대 오차가 **누적 오차가 아니라 질감 자체의
-    //    크기**가 됩니다. 옮길 때는 그 값과 화소 수를 시험이 같이 고정해야 합니다.
+    // 하드 게이트: `low < 0 || high > 1` 이면 화소를 통째로 통과시킵니다.
+    // 그 경계 근처에서 CPU(`double`)와 GPU(float)의 1ulp 차이가
+    // "질감을 얹는다/안 얹는다" 를 뒤집습니다. 시험은 최대 오차와 이탈 화소
+    // 비율을 같이 겁니다.
 
     const auto coordinate = [](const std::int64_t value, const std::uint32_t limit) {
         return static_cast<std::uint32_t>(std::clamp<std::int64_t>(value, 0, limit - 1U));
@@ -211,12 +209,17 @@ void apply_noritsu_texture(
             const double low = std::min({pixel.red, pixel.green, pixel.blue});
             const double high = std::max({pixel.red, pixel.green, pixel.blue});
             const double original_luma = (0.2126 * pixel.red) + (0.7152 * pixel.green) + (0.0722 * pixel.blue);
-            if (low < 0.0 || high > 1.0 || original_luma <= 1.0e-5) continue;
+            if (low < 0.0 || high > 1.0 ||
+                original_luma <= static_cast<double>(texture.luma_gate)) {
+                continue;
+            }
             const double blur_luma = clamp((0.2126 * blur.red) + (0.7152 * blur.green) +
                 (0.0722 * blur.blue), 0.0, 1.0);
             const double y_original = srgb_encode(original_luma);
             const double y_blur = srgb_encode(blur_luma);
-            const double floor_y = std::max(y_original * 0.45, std::min(y_original, 0.008));
+            const double floor_y = std::max(
+                y_original * static_cast<double>(texture.floor_ratio),
+                std::min(y_original, static_cast<double>(texture.floor_absolute)));
             const double y_new = clamp(
                 y_original + (texture.amount * (y_original - y_blur)), floor_y, 1.0);
             double gain = srgb_decode(y_new) / original_luma;
@@ -235,6 +238,7 @@ void apply_noritsu_texture(
 ScannerTargetTextureSetup scanner_target_texture_setup() noexcept {
     // σ ≈ 0.9 의 이산 가우시안 5탭과 감마 도메인 USM 게인입니다
     // (macOS `noritsuSharpenRadius = 0.9`, `noritsuSharpenAmount = 0.6`).
+    // 플로어·루마 게이트는 macOS `noritsuTexture` 본문 그대로입니다.
     ScannerTargetTextureSetup setup{};
     setup.weights[0] = 0.037657F;
     setup.weights[1] = 0.239936F;
@@ -242,7 +246,40 @@ ScannerTargetTextureSetup scanner_target_texture_setup() noexcept {
     setup.weights[3] = 0.239936F;
     setup.weights[4] = 0.037657F;
     setup.amount = 0.6F;
+    setup.floor_ratio = 0.45F;
+    setup.floor_absolute = 0.008F;
+    setup.luma_gate = 1.0e-5F;
     return setup;
+}
+
+negaflow::core::KernelStatus apply_noritsu_texture(
+    const negaflow::core::ImageView image) noexcept {
+    const auto view_status = negaflow::core::validate_image_view(image);
+    if (view_status != negaflow::core::KernelStatus::ok) {
+        return view_status;
+    }
+    const ScannerTargetTextureSetup setup = scanner_target_texture_setup();
+    if (approximate_acceleration_allowed() && image.stride_pixels <= 0xFFFFFFFFULL) {
+        if (const KernelAccelerator* const table = kernel_accelerator();
+            table != nullptr && table->noritsu_texture != nullptr) {
+            if (table->noritsu_texture(
+                    reinterpret_cast<float*>(image.pixels),
+                    image.width,
+                    image.height,
+                    static_cast<std::uint32_t>(image.stride_pixels),
+                    &setup)) {
+                return negaflow::core::KernelStatus::ok;
+            }
+        }
+    }
+    try {
+        std::vector<Rgb> scratch(
+            static_cast<std::size_t>(image.width) * image.height);
+        apply_noritsu_texture_cpu(image, scratch, setup);
+    } catch (const std::bad_alloc&) {
+        return negaflow::core::KernelStatus::buffer_too_small;
+    }
+    return negaflow::core::KernelStatus::ok;
 }
 
 negaflow::core::KernelStatus apply_scanner_target_grade(
@@ -290,9 +327,10 @@ negaflow::core::KernelStatus apply_scanner_target_grade(
         }
 
         if (target == ScannerTargetStyle::noritsu) {
-            std::vector<Rgb> scratch(
-                static_cast<std::size_t>(image.width) * image.height);
-            apply_noritsu_texture(image, scratch);
+            const auto texture_status = apply_noritsu_texture(image);
+            if (texture_status != negaflow::core::KernelStatus::ok) {
+                return texture_status;
+            }
             info.texture_applied = true;
         }
     } catch (const std::bad_alloc&) {

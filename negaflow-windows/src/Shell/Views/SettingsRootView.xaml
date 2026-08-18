@@ -148,7 +148,10 @@
                                 </ComboBox>
                             </Grid>
                             <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
-                            <ToggleSwitch x:Name="ClippingOverlayToggle" x:Uid="colorClippingOverlay" IsEnabled="False" />
+                            <ToggleSwitch
+                                x:Name="ClippingOverlayToggle"
+                                x:Uid="colorClippingOverlay"
+                                Toggled="OnClippingOverlayToggled" />
                             <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
                             <ToggleSwitch
                                 x:Name="PixelSamplerToggle"

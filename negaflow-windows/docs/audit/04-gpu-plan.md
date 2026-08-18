@@ -107,7 +107,21 @@
 > | GPU | **859.18** | −94.7% |
 > | | | **합계 −98.5%** |
 >
-> 노리츠 프리뷰 전체 **60,536 → 2,038 ms**. 병렬화가 값을 안 바꿨다는 것은
+> **2026-08-19 — TextureStage `filmGrain` GPU + 클리핑 오버레이.**
+> 그레인 동치 NVIDIA 5.96e-08 / WARP 0. 프리뷰 `texture` 단계는 GPU 가 **더 느림**
+> (26.84 → 69.52 ms)이라 기본 끔(`NEGA_GPU_TEXTURE_GRAIN=1`).
+> `ditherAdd` 는 8bit CPU 경로에 이미 있음 — 별도 GPU 패스 없음.
+> 클리핑 오버레이는 설정+프리뷰 합성+비트 일치 GPU. 상세 [`15`](15-gpu-handoff.md) 3.3·3.4.
+>
+> **2026-08-19 — `CIAreaAverage` 리덕션 GPU.** `groupshared` 트리, wave 없음.
+> 동치 2.98e-08. 5088×3401 전체 CPU **25.109 ms** / GPU **33.397 ms** 라 기본 끔
+> (`NEGA_GPU_AREA_AVERAGE=1`). 상세 [`15`](15-gpu-handoff.md) 3.5.
+>
+> **2026-08-19 — 장치 질감도 GPU.** `target_grade` **887.44 → 231.33 ms**,
+> 노리츠 프리뷰 전체 **2,040 → 1,288 ms**. 질감 단독 동치 7.15e-07(NVIDIA) /
+> 5.96e-07(WARP). 상세 [`15`](15-gpu-handoff.md) 3.1.
+>
+> 노리츠 프리뷰 전체(그레이드 GPU 직후) **60,536 → 2,038 ms**. 병렬화가 값을 안 바꿨다는 것은
 > 프리뷰 지문으로 증명했습니다(직렬·병렬 둘 다 `cfe1f1b11f1cc9a3`).
 >
 > ☠️ **macOS 는 같은 수식을 64³ 큐브로 262,144번만 풉니다**
@@ -122,10 +136,12 @@
 > **필름 스캔 경로 753 → 585 ms**, 디지털 필름 룩 810 → 642 ms.
 > 실측 `CIVibrance` 33³ 표(`muted_scene_vibrance`·`color_model`)도 이식했습니다.
 >
-> **남은 것**(자세한 절차는 [`15`](15-gpu-handoff.md)): 노리츠 장치 질감 GPU · `boundedRelativeGrade`(`double` 계측 먼저) ·
-> `filmGrain`(ColorModel) · `ditherAdd`(기능 신설) ·
-> `channelClippingOverlay`(기능+UI 신설) · `CIAreaAverage` 리덕션 ·
-> `GpuMipHalve` 배선 · 검출 형태학 오케스트레이터 · 흑백 디지털 룩 사슬.
+> **2026-08-19 — `GpuMipHalve` 배선.** `downsample_for_statistics` 에 붙임.
+> 제품 경로 비트 일치. 프리뷰 x2 마지막 전체 617.69 → 629.15 ms 라 **이득 없음**,
+> 기본 끔(`NEGA_GPU_MIP_HALVE=1`). `GenerateMips` 미사용. 상세 [`15`](15-gpu-handoff.md) 3.6.
+>
+> **남은 것**(자세한 절차는 [`15`](15-gpu-handoff.md)): 흑백 디지털 룩 사슬 ·
+> `boundedRelativeGrade`/`box_mean` double 계측(3.8) · GrainMend 스크래치 각도 GPU.
 
 ### 0.0 — 아래는 2026-08-18 판입니다
 

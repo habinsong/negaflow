@@ -98,6 +98,9 @@ public sealed class WorkspacePresentationState
     public void SetPixelSamplerEnabled(bool value) =>
         settingsStore.Update(current => current with { PixelSamplerEnabled = value });
 
+    public void SetClippingOverlayEnabled(bool value) =>
+        settingsStore.Update(current => current with { ClippingOverlayEnabled = value });
+
     public void SetDefaultScanRotation(Negaflow.Catalog.ImageRotation rotation) =>
         settingsStore.Update(current => current with { DefaultScanRotation = rotation });
 

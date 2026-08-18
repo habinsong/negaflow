@@ -6,6 +6,7 @@
 #include "negaflow/core/parallel_rows.h"
 #include "negaflow/core/pixel.h"
 #include "negaflow/core/pointwise.h"
+#include "negaflow/imaging/channel_clipping_overlay.h"
 #include "negaflow/imaging/display_gamut_map.h"
 
 #include <algorithm>
@@ -98,6 +99,10 @@ DevelopExportOutcome write_preview(
             float red = 0.0F;
             float green = 0.0F;
             float blue = 0.0F;
+            float overlay_red = 0.0F;
+            float overlay_green = 0.0F;
+            float overlay_blue = 0.0F;
+            float overlay_alpha = 0.0F;
             std::uint32_t count = 0U;
             bool finite = true;
             for (std::uint32_t sy = source_y0; sy < source_y1; ++sy) {
@@ -120,6 +125,14 @@ DevelopExportOutcome write_preview(
                         (folded.green * proof.scale[1]) + proof.bias[1]);
                     blue += negaflow::color::linear_to_srgb_encoded(
                         (folded.blue * proof.scale[2]) + proof.bias[2]);
+                    if (target.clipping_overlay) {
+                        const auto overlay =
+                            negaflow::imaging::channel_clipping_overlay_pixel(source);
+                        overlay_red += overlay.red;
+                        overlay_green += overlay.green;
+                        overlay_blue += overlay.blue;
+                        overlay_alpha += overlay.alpha;
+                    }
                     ++count;
                 }
                 if (!finite) {
@@ -150,6 +163,24 @@ DevelopExportOutcome write_preview(
             destination[1] = quantise(green, 1U);
             destination[2] = quantise(red, 0U);
             destination[3] = 0xFFU;
+            if (target.clipping_overlay) {
+                const float oa = overlay_alpha * inverse_count;
+                if (oa > 0.0F) {
+                    const float keep = 1.0F - oa;
+                    const auto blend = [oa, keep, inverse_count](
+                                           const std::uint8_t dest,
+                                           const float overlay_sum) noexcept {
+                        const float mixed =
+                            (overlay_sum * inverse_count) +
+                            ((static_cast<float>(dest) / 255.0F) * keep);
+                        return static_cast<std::uint8_t>(
+                            std::clamp(mixed, 0.0F, 1.0F) * 255.0F + 0.5F);
+                    };
+                    destination[0] = blend(destination[0], overlay_blue);
+                    destination[1] = blend(destination[1], overlay_green);
+                    destination[2] = blend(destination[2], overlay_red);
+                }
+            }
         }
       }
         });

@@ -185,7 +185,8 @@ internal static class ScannerWorkflowTests
             uint maximumHeight,
             byte[] pixels,
             DevelopRun? run = null,
-            SoftProofSettings? softProof = null) =>
+            SoftProofSettings? softProof = null,
+            bool clippingOverlay = false) =>
             throw new NotSupportedException();
 
         public GrainMendDetectionResult DetectGrainMend(

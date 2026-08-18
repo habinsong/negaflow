@@ -4,6 +4,7 @@
 
 #include "negaflow/core/parallel_rows.h"
 #include "negaflow/imaging/coreimage_gaussian.h"
+#include "negaflow/imaging/kernel_accelerator.h"
 
 #include <algorithm>
 #include <atomic>
@@ -40,6 +41,21 @@ void apply_unsharp(
 
 void apply_grain(WorkingImage& image, const float strength) noexcept {
     const float amount = strength * 0.055F;
+    // ☠️ **근사입니다**(루마·smoothstep). 해시는 uint32 이라 GPU 와 비트 일치합니다.
+    //    `ApproximateAcceleratorScope` 안에서만 돕니다 — 내보내기·골든은 CPU 그대로입니다.
+    if (approximate_acceleration_allowed()) {
+        if (const KernelAccelerator* const table = kernel_accelerator();
+            table != nullptr && table->texture_grain != nullptr) {
+            if (table->texture_grain(
+                    reinterpret_cast<float*>(image.pixels.data()),
+                    image.width,
+                    image.height,
+                    image.stride_pixels,
+                    amount)) {
+                return;
+            }
+        }
+    }
     // The noise is a hash of the absolute pixel coordinate, not a running sequence, so
     // rows are independent and the split reproduces the same grain exactly.
     const std::uint64_t work_units =

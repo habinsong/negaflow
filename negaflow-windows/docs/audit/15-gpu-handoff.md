@@ -27,7 +27,7 @@
 |---|---:|---:|---:|
 | 필름 스캔 프리뷰 | 911.35 ms(2026-08-18 기준선) | **584.71 ms** | |
 | 디지털 필름 룩 | 37,016.98 ms | **641.93 ms** | **−98.3%** |
-| **노리츠 타겟** | **60,536.19 ms** | **2,037.53 ms** | **−96.6%** |
+| **노리츠 타겟** | **60,536.19 ms** | **1,287.55 ms** | **−97.9%** |
 
 이번 세션에서 이식·배선한 것: 밀도 그레인 · 헐레이션(배선만 빠져 있었음) ·
 스톡 색 프리셋 · 33³ 필름 색 큐브 · 아큐턴스 · **필름 룩 사슬 오케스트레이터** ·
@@ -151,8 +151,12 @@ CPU 커널은 "변화 없음" 이면 커널을 안 돌리고 **원본을 복사*
 | 디지털 필름 룩 **사슬 전체** | `working_film_look.cpp` → `GpuFilmLookStage` | 1.13e-06 |
 | ↳ 헐레이션 · 색 큐브 · 아큐턴스 · 색 프리셋 · 그레인 | 각자 진입점도 남아 있음(흑백 룩이 씀) | 4.5e-06 이하 |
 | 흐린 장면 vibrance · 컬러 모델 | `muted_scene_vibrance.cpp` · `color_model.cpp` | **WARP 0**, NVIDIA 1.2e-07 |
-| 스캐너 타겟 그레이드 | `scanner_target_grade.cpp` | 1e-4 (노리츠는 2절 참고) |
-| 형태학(검출) | `grain_mend_morphology.cpp` | **0**(비트 일치) — 다만 **기본 꺼짐**, 아래 3절 |
+| 스캐너 타겟 그레이드 | `scanner_target_grade.cpp` | 1e-4 (노리츠 합성은 게이트 뒤집힘 5e-3) |
+| NORITSU 장치 질감 | `apply_noritsu_texture` → `GpuNoritsuTexture` | NVIDIA **7.15e-07**, WARP **5.96e-07**. 게이트 화소는 원본과 비트 일치 |
+| 형태학(검출) | `grain_mend_morphology.cpp` + RGB 오케스트레이터 | **0**(비트 일치). **기본 켬.** 자동 검출 18.1s → **5.3s** |
+| TextureStage `filmGrain` | `apply_grain` → `GpuTextureGrain` | NVIDIA **5.96e-08**, WARP **0**. **기본 끔** — 프리뷰 texture 단계가 더 느림(아래 3.4) |
+| 채널 클리핑 오버레이 | `apply_channel_clipping_overlay` + 프리뷰 합성 | **0**(비트 일치). 현상 화소는 안 바꿈 |
+| `CIAreaAverage` 면적 평균 | `area_average` → `GpuAreaAverage` | NVIDIA **2.98e-08**. **기본 끔** — 업로드가 리덕션보다 큼(아래 3.5) |
 
 계측기: `--develop-timing`(단계 표 + 프리뷰 지문) · `--gpu-transfer-bench`(전송) ·
 `NEGA_TIMING=1`(어디서든 표 출력) · `NEGA_GPU=0`(GPU 끄기) ·
@@ -162,61 +166,158 @@ CPU 커널은 "변화 없음" 이면 커널을 안 돌리고 **원본을 복사*
 
 ## 3. 남은 일 — 우선순위 순서
 
-### 3.1 노리츠 장치 질감 GPU (**바로 이어서 하기 좋음 — 절반 되어 있음**)
+### 3.1 노리츠 장치 질감 GPU — **2026-08-19 붙임**
 
-`apply_noritsu_texture` 는 아직 CPU 입니다. 준비는 끝나 있습니다:
+`GpuNoritsuTexture` + `shaders/noritsu_texture.hlsl`. 가중치·세기·플로어·루마 게이트는
+`scanner_target_texture_setup()` 한 곳만 씁니다. 게이트 순서·hue 공통 축소는
+CPU/`noritsuTexture` 와 같습니다.
 
-- 상수가 이미 공개 한 곳에 있습니다 — `scanner_target_texture_setup()`
-  (`imaging/include/negaflow/imaging/scanner_target_grade.h`).
-  CPU 루프도 그것을 씁니다. **셰이더에 숫자를 다시 적지 마십시오.**
-- 모양은 아큐턴스(`gpu_film_emulation_acutance.*`)와 **같습니다** —
-  분리형 5탭 저역 두 패스 + 원본을 함께 읽는 언샤프.
-- ☠️ 게이트 두 개를 **순서까지** 그대로 옮기십시오:
-  `lo < 0 || hi > 1` → 원본 통과, `lumaO <= 1e-5` → 원본 통과.
-  플로어 `max(yO*0.45, min(yO, 0.008))` 의 상수 둘도 그대로.
-  마지막 `mx > 1` 공통 축소는 hue 보존입니다 — 채널별 클립으로 바꾸면 색이 틀어집니다.
-- 시험은 위 규칙 7 대로 **최대 오차 + 이탈 화소 비율**을 같이 걸으십시오.
+**동치** (`native.gpu_noritsu_texture`, 97×53, 게이트 띠 포함):
 
-기대: `target_grade` 859 ms 중 질감 몫(CPU)이 빠지고 왕복도 하나 줄어듭니다.
+| 경로 | 최대 오차 | >1e-4 화소 | 게이트 화소 |
+|---|---:|---:|---|
+| NVIDIA 제품 경로 | **7.15e-07** | 0 / 5,141 | 586개, 원본과 비트 일치 |
+| WARP | **5.96e-07** | 0 / 5,141 | 〃 |
 
-### 3.2 검출 형태학 오케스트레이터
+GPU 가 안 돌면 시험이 실패합니다(`apply_noritsu_texture` 가 `true` 여야 함).
+`native.gpu_scanner_target_grade` · `native.scanner_target_grade` 도 통과.
 
-커널은 서 있고 **비트 단위로 일치**하는데 **기본에서 꺼져 있습니다** —
-실측이 더 느렸기 때문입니다(CPU 9,104~9,312 ms vs GPU 11,462~12,146 ms).
-원인은 커널이 아니라 **평면마다 왕복** + D3D11 자물쇠가 4중 병렬 CPU 를 직렬로 만드는 것.
+**실측** (5088×3401, RTX 4060 Ti, `--develop-timing … x3 noritsu`):
 
-☠️ **재기 전에 `NEGA_GPU_MORPHOLOGY` 를 켜지 마십시오.** 지금 켜면 느려집니다.
-고치는 길은 검출 전체가 GPU 에 머무는 오케스트레이터입니다 —
-`GpuFilmLookStage` 와 같은 모양으로, 평면 넷을 한 번 올리고 열기·닫기·톱햇을
-연속 디스패치로 돌리고 마지막에 한 번 내립니다.
-**전송이 이미 절반으로 줄었으므로(규칙 4) 다시 재는 것부터 하십시오** — 판정이
-바뀌었을 수 있습니다.
+| | 붙이기 전 | 지금 |
+|---|---:|---:|
+| `target_grade` | **887.44 ms** | **231.33 ms** |
+| 전체 | **2,040.37 ms** | **1,287.55 ms** |
 
-### 3.3 아직 없는 기능 둘 (GPU 이전에 **기능부터**)
+프리뷰 지문은 `198bfb1b29646af7` → `6ebfe937620bc6a` 로 바뀌었습니다.
+질감이 프리뷰에서 GPU(float 누적)로 바뀌었기 때문입니다. 내보내기·골든은
+`ApproximateAcceleratorScope` 밖이라 **CPU 그대로**입니다.
+`NEGA_GPU=0` 지문은 `f4e15a5eff17d2a6` 입니다. 붙이기 전 CPU 전용 지문은
+이 세션에서 **안 쟀습니다** — GPU 켠 상태만 기준선이었습니다.
 
-| 무엇 | macOS | 무엇을 만들어야 하나 |
-|---|---|---|
-| `ditherAdd` | `Adjustments/OutputDither.swift` → `ExportRenderedImage`·`DevelopFrameRenderer+Developed` 에서 **8bit 변환 직전** | ① 노이즈는 `digital_film_grain.cpp` 의 **좌표 해시를 재사용**(새로 만들지 마십시오) ② CPU 커널을 `output/` 에 ③ 배선은 **sRGB 인코딩 뒤, 8bit 양자화 직전** ④ 그 다음 GPU. ☠️ 선형광에서 `1/255` 를 더하면 암부에서 수십 배로 보입니다 |
-| `channelClippingOverlay` | `Imaging/ChannelClippingOverlay.swift` — `AppModel+PresentationSettings.clippingOverlayEnabled` 로 켜는 **표시 옵션** | ① **UI 부터**([`11`](11-ui-verification-protocol.md) 절차로 macOS 위치 확인) ② 프리뷰 위에 얹는 오버레이 층(현상 결과를 **바꾸면 안 됩니다**) ③ 커널은 화소별이라 **마지막**. ☠️ 경계는 `<= 0.0` / `>= 1.0` 입니다 — `< 0` / `> 1` 로 바꾸면 정확히 0/1 인 화소가 경고에서 빠집니다. ☠️ 프리멀티 나눗셈은 Windows 작업 이미지가 프리멀티가 **아니면 빼야** 합니다 |
+### 3.2 검출 형태학 — **2026-08-19 재측정 후 기본 켬 + RGB 오케스트레이터**
 
-### 3.4 `filmGrain`(ColorModel 쪽)
+사용자 맥 실측 목표(품질 타협 없음): **자동 < 5~10초(그보다 빠르게)**,
+가이드·브러시·복제·IR **1초 미만**. 해상도를 깎거나 후보를 줄여 시간을
+맞추지 않습니다. 자동 전체 프레임은 macOS `detectComponents` 와 같이
+**다운스케일하지 않습니다**(1800 으로 줄이면 3~8px 먼지가 사라짐).
 
-macOS `ColorModel.swift:109`. Windows `color_model.cpp` 에는 그레인 항목이 **없습니다** —
-먼저 macOS 호출부가 살아 있는지 규칙 1 대로 확인하고, 살아 있으면 **CPU 부터**입니다.
+**재측정** (5088×3401, RTX 4060 Ti, 3회, 결과 성분 610 · 채택 9,331 고정):
 
-### 3.5 `CIAreaAverage` 대응 병렬 리덕션
+| 경로 | 벽시계 중앙값 |
+|---|---:|
+| CPU (`NEGA_GPU=0`) | **18,052 ms** |
+| GPU 형태학, 호출마다 왕복(`NEGA_GPU_MORPHOLOGY=1`, 옛 이음매) | **15,383 ms** |
+| 풀 재사용 + RGB 톱햇(먼지) | **7,915 ms** |
+| + RGB 열기/닫기(미세입자) | **5,323 ms** (4,671 / 5,323 / 5,567) |
 
-히스토그램·자동 보정용 원시연산. `groupshared` 트리로 가십시오 —
-SM 6.0 wave intrinsics 는 wave 크기가 하드웨어마다 달라 **내장/외장 범용 요구와
-충돌**합니다([`04`](04-gpu-plan.md) 의 `cs_5_0` 하한).
-☠️ 부동소수 덧셈은 결합법칙이 없습니다. **CPU 가 어떤 순서로 더하는지 먼저 읽고**
-맞추거나, 못 맞추면 `1e-5` 동치로 선언하고 적으십시오.
+타일 안에서 스크래치 행을 다시 병렬화하면 워커 4개와 겹쳐 **이득 없음**(5.2~5.6 s).
+되돌렸습니다. 5초를 안정적으로 밑돌리려면 스크래치 각도 커널을 GPU 로 옮기는 쪽이 다음입니다.
 
-### 3.6 `GpuMipHalve` 배선
+제품 경로 동치: `native.gpu_morphology_product` — GPU 가 안 돌면 실패,
+열기·닫기·톱햇·RGB 톱햇·RGB 열기 **비트 단위 일치**.
 
-비트 단위 일치까지 증명해 놓고 **아무도 안 씁니다.** 쓸 곳 셋:
-`film_base_sampling.cpp` · `manual_negative_developer.cpp` · `muted_scene_vibrance.cpp`.
-한 곳씩 배선 → `--develop-timing` 으로 전후 6회씩 → **이득 없으면 되돌리고 수치를 적으십시오.**
+기본은 켭니다. 끄려면 `NEGA_GPU_MORPHOLOGY=0`.
+
+남은 자동 병목은 **스크래치 각도**(벽시계에 ~4.5~5.0 s 기여).
+5초를 안정적으로 밑돌려면 그다음이 여기입니다. 값을 바꾸지 말고 GPU 로 옮기십시오.
+
+### 3.3 `ditherAdd` · `channelClippingOverlay` — **2026-08-19 호출부 확정**
+
+**`ditherAdd` — CPU 가 이미 제품 경로에 있습니다. GPU 커널은 안 붙였습니다.**
+
+살아 있는 호출부:
+- macOS `OutputDither.apply` → `ExportRenderedImage` · `DevelopFrameRenderer+Developed` (8bit 직전, sRGB 인코딩 뒤 ±0.5/255)
+- Windows 내보내기 8bit: `output/working_to_srgb16.cpp` `quantize_component_8`
+- Windows 프리뷰 8bit: `preview.cpp` + `display_dither_offset`
+
+둘 다 sRGB 도메인에서 한 스텝 안의 좌표 해시 잡음입니다. 프리뷰 `output` 단계(3600 상자 평균+인코딩+디더)는 GPU 켠 프리뷰에서 **120.86 ms**, CPU 전용에서 **116.64 ms** — 디더만의 비용이 아니라 축소·인코딩이 대부분입니다. 별도 GPU 패스를 넣으면 왕복이 이 해시 한 줄보다 큽니다. 16bit 내보내기는 macOS 와 같이 디더하지 않습니다.
+
+**`channelClippingOverlay` — CPU 분류 + 설정 + 프리뷰 합성 + GPU 동치.**
+
+- macOS: 설정 `clippingOverlayEnabled`, 커널 경계 `<=0` / `>=1`, opacity 0.62, 색 (0.055,0.24,0.82)/(0.90,0.07,0.055)/(0.64,0.10,0.70), 프리뷰 전용
+- Windows 작업 이미지는 프리멀티가 아니라 `rgb/a` 를 **빼었습니다**
+- 설정 토글을 켜고 `ShellPreferences.ClippingOverlayEnabled` 로 남깁니다
+- `write_preview` 가 상자 평균 때 같은 분류를 얹습니다. 내보내기 요청에는 필드가 없습니다
+- `native.gpu_channel_clipping_overlay`: GPU 가 안 돌면 실패, CPU 와 **비트 일치**
+
+앱 설치본에서 토글을 눌러 화면을 확인하지는 **아직** 않았습니다.
+
+### 3.4 `filmGrain`(TextureStage) — **2026-08-19 GPU 붙임, 기본 끔**
+
+규칙 1: 살아 있는 호출부는 `ColorModel.apply` 가 아니라 **`TextureStage.apply`**
+(`ColorModel.swift:106-114`, `params.grain > 1e-3`, `amount = grain * 0.055`).
+Windows CPU 는 이미 `texture_stage_effects.cpp` `apply_grain` 입니다. `color_model.cpp` 에
+없는 것은 맞지만, **빠진 기능이 아니었습니다.**
+
+**동치** (`native.gpu_texture_grain`, 97×53, grain 0.40):
+
+| 경로 | 최대 오차 |
+|---|---:|
+| NVIDIA 제품 경로 | **5.96e-08** |
+| WARP | **0** |
+
+GPU 가 안 돌면 시험이 실패합니다. 제품 경로 시험은 `NEGA_GPU_TEXTURE_GRAIN=1` 로 표를 엽니다.
+
+**실측** (5088×3401, grain 0.40, 프리뷰 3600, x2 마지막 회차):
+
+| | CPU (`NEGA_GPU=0`) | GPU texture 켬 |
+|---|---:|---:|
+| `texture` 단계 | **26.84 ms** | **69.52 ms** |
+| 프리뷰 전체 | 969.55 ms | 662.89 ms |
+
+전체 벽시계가 줄어든 것은 develop/tone GPU 덕분입니다. **texture 단계만 보면 GPU 가 졌습니다**
+(왕복 > 커널). 그래서 기본은 끕니다. `NEGA_GPU_TEXTURE_GRAIN=1` 로만 켭니다.
+사슬 안에 이미 올라가 있을 때만 이득이 날 수 있습니다 — 그때 다시 재십시오.
+
+### 3.5 `CIAreaAverage` 대응 병렬 리덕션 — **2026-08-19 GPU 붙임, 기본 끔**
+
+살아 있는 macOS 호출부는 `FilmBaseEstimator.averageRGB`(스트립 폴백)뿐입니다.
+Windows `strip_fallback_base` 는 격자+제외 마스크를 직접 평균하므로 **이 함수로 바꾸지 않았습니다.**
+AutoLevels 주석이 말하듯 히스토그램을 면적평균으로 대체할 수 없습니다.
+
+원시연산 `area_average` + `shaders/area_average.hlsl`. `cs_5_0` `groupshared` 트리만 씁니다.
+Wave 내장은 쓰지 않습니다. CPU 는 행 우선 `double`, GPU 는 float 트리 — 허용 오차 **1e-5**.
+
+**동치** (`native.gpu_area_average`, 97×53 전체 + ROI 40×20):
+
+| 경로 | 최대 오차 | 화소 수 |
+|---|---:|---:|
+| NVIDIA 직접 + 제품 경로 | **2.98e-08** | 5,141 / 800 |
+| GPU 가 안 돌면 시험 실패 | | |
+
+**실측** (5088×3401 전체 17,304,288 px, RTX 4060 Ti, `--develop-timing … x2 areaavg`):
+
+| | CPU (`NEGA_GPU=0`) | GPU 허용 |
+|---|---:|---:|
+| `area_average` | **25.109 ms** | **33.397 ms** |
+| 평균 RGB | 0.130627, 0.0616215, 0.0293909 | 같은 자릿수 |
+
+업로드(약 264 MB)가 리덕션을 이깁니다. 규칙 4. 기본은 끕니다.
+`NEGA_GPU_AREA_AVERAGE=1` 로만 켭니다. 이미 GPU 에 올라가 있는 사슬 안에서만 다시 재십시오.
+
+### 3.6 `GpuMipHalve` 배선 — **2026-08-19 배선, 기본 끔**
+
+`downsample_for_statistics` 한 곳이 세 호출부를 모두 탑니다. `GenerateMips` 는
+필터가 규정되지 않고 미지원 포맷은 조용히 실패해서 **안 씁니다.**
+이미 있는 `GpuMipHalve`(2x2 평균, 홀수 변 재사용)만 쓰고 마지막 이중선형은 CPU `double`.
+
+**동치** (`native.gpu_mip_halve_product`): GPU 가 안 돌면 실패.
+97×53→20×11, 61×37→12×8 제품 경로 **비트 일치**.
+프리뷰 지문 `651295e35c738fca` 유지.
+
+**실측** (5088×3401, RTX 4060 Ti, `--develop-timing … x2` 마지막 회차):
+
+| | 배선 전 GPU | 배선 후 GPU |
+|---|---:|---:|
+| `develop` | 212.91 ms | 205.10 ms |
+| `tone_adjust` | 177.28 ms | 204.12 ms |
+| 전체 | **617.69 ms** | **629.15 ms** |
+| 벽시계 | 625.74 ms | 637.30 ms |
+
+전체·벽시계가 줄지 않았습니다. 규칙 4. 기본은 끕니다.
+`NEGA_GPU_MIP_HALVE=1` 로만 켭니다. x6 한 번은 마지막 회차 `output` 486 ms 로
+흔들려 대표값으로 안 씁니다.
 
 ### 3.7 흑백 디지털 룩 사슬
 

@@ -62,6 +62,7 @@ public sealed class PreviewCoordinator
     // Set from the UI thread, read on a worker, so it goes under the same lock as
     // everything else here rather than acquiring its own rule.
     private SoftProofSettings? softProof;
+    private bool clippingOverlayEnabled;
 
     public PreviewCoordinator(
         IDevelopExporter exporter,
@@ -149,6 +150,27 @@ public sealed class PreviewCoordinator
             lock (gate)
             {
                 softProof = value;
+            }
+        }
+    }
+
+    /// <summary>
+    /// macOS <c>clippingOverlayEnabled</c>. 다음 렌더부터 적용됩니다.
+    /// </summary>
+    public bool ClippingOverlayEnabled
+    {
+        get
+        {
+            lock (gate)
+            {
+                return clippingOverlayEnabled;
+            }
+        }
+        set
+        {
+            lock (gate)
+            {
+                clippingOverlayEnabled = value;
             }
         }
     }
@@ -258,6 +280,7 @@ public sealed class PreviewCoordinator
         // Read once, here, so the whole render uses one proof state even if the property
         // changes while it is inside the engine. That render is superseded anyway.
         SoftProofSettings? proof = SoftProof;
+        bool clippingOverlay = ClippingOverlayEnabled;
 
         try
         {
@@ -268,7 +291,8 @@ public sealed class PreviewCoordinator
                 interactiveEdge,
                 interactiveEdge,
                 run,
-                proof).ConfigureAwait(false);
+                proof,
+                clippingOverlay).ConfigureAwait(false);
             if (!settleEnabled ||
                 interactive.Kind != DevelopExportOutcomeKind.Completed ||
                 interactiveEdge >= DevelopPreviewProxy.FullMaxDimension - 0.5)
@@ -287,7 +311,8 @@ public sealed class PreviewCoordinator
                 settled,
                 settled,
                 run,
-                proof).ConfigureAwait(false);
+                proof,
+                clippingOverlay).ConfigureAwait(false);
             return settledOutcome.Kind == DevelopExportOutcomeKind.Cancelled
                 ? interactive
                 : settledOutcome;
@@ -353,7 +378,8 @@ public sealed class PreviewCoordinator
         uint width,
         uint height,
         DevelopRun run,
-        SoftProofSettings? proof)
+        SoftProofSettings? proof,
+        bool clippingOverlay)
     {
         DevelopExportResult result = await Task.Run(() => exporter.Preview(
             developRequest,
@@ -361,7 +387,8 @@ public sealed class PreviewCoordinator
             height,
             pixels,
             run,
-            proof)).ConfigureAwait(false);
+            proof,
+            clippingOverlay)).ConfigureAwait(false);
         if (result.Cancelled)
         {
             return PreviewOutcome.Cancelled();

@@ -246,6 +246,105 @@ std::vector<float> bipolar_top_hat(
     return magnitude;
 }
 
+RgbPlanes run_rgb(
+    const std::vector<float>& red,
+    const std::vector<float>& green,
+    const std::vector<float>& blue,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::uint32_t radius,
+    negaflow::imaging::MorphologyRgbFunction function) {
+    RgbPlanes planes{};
+    if (function == nullptr || red.size() != green.size() || green.size() != blue.size()) {
+        return planes;
+    }
+    planes.red.resize(red.size());
+    planes.green.resize(green.size());
+    planes.blue.resize(blue.size());
+    if (function(
+            red.data(),
+            green.data(),
+            blue.data(),
+            planes.red.data(),
+            planes.green.data(),
+            planes.blue.data(),
+            width,
+            height,
+            radius)) {
+        return planes;
+    }
+    return {};
+}
+
+RgbPlanes opening_rgb(
+    const std::vector<float>& red,
+    const std::vector<float>& green,
+    const std::vector<float>& blue,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::uint32_t radius) {
+    const KernelAccelerator* const accelerator = kernel_accelerator();
+    return run_rgb(
+        red,
+        green,
+        blue,
+        width,
+        height,
+        radius,
+        accelerator != nullptr ? accelerator->opening_rgb : nullptr);
+}
+
+RgbPlanes closing_rgb(
+    const std::vector<float>& red,
+    const std::vector<float>& green,
+    const std::vector<float>& blue,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::uint32_t radius) {
+    const KernelAccelerator* const accelerator = kernel_accelerator();
+    return run_rgb(
+        red,
+        green,
+        blue,
+        width,
+        height,
+        radius,
+        accelerator != nullptr ? accelerator->closing_rgb : nullptr);
+}
+
+RgbPlanes bipolar_top_hat_rgb(
+    const std::vector<float>& red,
+    const std::vector<float>& green,
+    const std::vector<float>& blue,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::uint32_t radius) {
+    RgbPlanes planes{};
+    if (red.size() != green.size() || green.size() != blue.size()) {
+        return planes;
+    }
+    if (const KernelAccelerator* const accelerator = kernel_accelerator();
+        accelerator != nullptr && accelerator->bipolar_top_hat_rgb != nullptr) {
+        planes.red.resize(red.size());
+        planes.green.resize(green.size());
+        planes.blue.resize(blue.size());
+        if (accelerator->bipolar_top_hat_rgb(
+                red.data(),
+                green.data(),
+                blue.data(),
+                planes.red.data(),
+                planes.green.data(),
+                planes.blue.data(),
+                width,
+                height,
+                radius)) {
+            return planes;
+        }
+        planes = {};
+    }
+    return planes;
+}
+
 std::vector<float> box_mean(
     const std::vector<float>& source,
     const std::uint32_t width,

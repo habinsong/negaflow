@@ -152,13 +152,29 @@ void find_candidates(
         std::vector<float> noise_scale{};
         std::vector<float> far_texture{};
         constexpr std::array<std::uint32_t, 3U> dust_radii{4U, 8U, 12U};
-        for (const auto& channel : image.channels) {
-            for (const std::uint32_t radius : dust_radii) {
-                if (cancel.requested()) {
-                    return;
-                }
-                const std::vector<float> magnitude = bipolar_top_hat(
-                    channel, image.width, image.height, radius);
+        for (const std::uint32_t radius : dust_radii) {
+            if (cancel.requested()) {
+                return;
+            }
+            const RgbPlanes packed = bipolar_top_hat_rgb(
+                image.channels[0],
+                image.channels[1],
+                image.channels[2],
+                image.width,
+                image.height,
+                radius);
+            const bool used_packed = !packed.red.empty();
+            const std::array<const std::vector<float>*, 3U> magnitudes{
+                used_packed ? &packed.red : nullptr,
+                used_packed ? &packed.green : nullptr,
+                used_packed ? &packed.blue : nullptr};
+            for (std::size_t channel = 0U; channel < image.channels.size(); ++channel) {
+                const std::vector<float> fallback = used_packed
+                    ? std::vector<float>{}
+                    : bipolar_top_hat(
+                          image.channels[channel], image.width, image.height, radius);
+                const std::vector<float>& magnitude =
+                    used_packed ? *magnitudes[channel] : fallback;
                 for (std::size_t index = 0U; index < count; ++index) {
                     dust_magnitude[index] =
                         std::max(dust_magnitude[index], magnitude[index]);

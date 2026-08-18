@@ -180,6 +180,55 @@ public:
         std::uint32_t stride_pixels,
         const imaging::ScannerTargetGradeSetup* setup) noexcept;
 
+    // NORITSU 장치 질감. 그레이드 뒤에 붙고, 왕복이 한 번입니다.
+    [[nodiscard]] bool apply_noritsu_texture(
+        float* pixels,
+        std::uint32_t width,
+        std::uint32_t height,
+        std::uint32_t stride_pixels,
+        const imaging::ScannerTargetTextureSetup* setup) noexcept;
+
+    // TextureStage `filmGrain`. `amount` 는 이미 `strength * 0.055` 입니다.
+    [[nodiscard]] bool apply_texture_grain(
+        float* pixels,
+        std::uint32_t width,
+        std::uint32_t height,
+        std::uint32_t stride_pixels,
+        float amount) noexcept;
+
+    // 프리뷰 전용 클리핑 오버레이. `destination` 에 레이어를 씁니다.
+    [[nodiscard]] bool apply_channel_clipping_overlay(
+        const float* source,
+        float* destination,
+        std::uint32_t width,
+        std::uint32_t height,
+        std::uint32_t source_stride_pixels,
+        std::uint32_t destination_stride_pixels) noexcept;
+
+    [[nodiscard]] bool apply_area_average(
+        const float* pixels,
+        std::uint32_t width,
+        std::uint32_t height,
+        std::uint32_t stride_pixels,
+        std::uint32_t origin_x,
+        std::uint32_t origin_y,
+        std::uint32_t extent_width,
+        std::uint32_t extent_height,
+        float mean[4],
+        std::uint64_t* count) noexcept;
+
+    // `halve` 를 `wanted_levels` 번. 마지막 밉을 `destination` 에 씁니다.
+    [[nodiscard]] bool apply_mip_halve_levels(
+        const float* source,
+        std::uint32_t width,
+        std::uint32_t height,
+        std::uint32_t stride_pixels,
+        int wanted_levels,
+        float* destination,
+        std::uint32_t destination_capacity,
+        std::uint32_t* out_width,
+        std::uint32_t* out_height) noexcept;
+
     [[nodiscard]] bool apply_morphology_plane(
         const float* source,
         float* destination,
@@ -187,6 +236,31 @@ public:
         std::uint32_t height,
         std::uint32_t radius,
         imaging::MorphologyKind kind) noexcept;
+
+    // 같은 반경의 형태학을 채널 셋에 한 번 올립니다. 셰이더는 채널마다 독립입니다.
+    [[nodiscard]] bool apply_morphology_rgb(
+        const float* red,
+        const float* green,
+        const float* blue,
+        float* out_red,
+        float* out_green,
+        float* out_blue,
+        std::uint32_t width,
+        std::uint32_t height,
+        std::uint32_t radius,
+        imaging::MorphologyKind kind) noexcept;
+
+    // 같은 반경의 양극 톱햇을 채널 셋에 한 번 올립니다. 셰이더는 채널마다 독립입니다.
+    [[nodiscard]] bool apply_morphology_bipolar_top_hat_rgb(
+        const float* red,
+        const float* green,
+        const float* blue,
+        float* out_red,
+        float* out_green,
+        float* out_blue,
+        std::uint32_t width,
+        std::uint32_t height,
+        std::uint32_t radius) noexcept;
 
 private:
     GpuAccelerator() noexcept;

@@ -160,6 +160,8 @@ struct DevelopPreviewProof final {
     // 색역을 벗어나는 화소를 미리보기 위에 표시할지. 판정은 ICM 이 하며, 못 하면
     // **표시하지 않습니다** — 근사로 대신하지 않는 것이 이 기능의 계약입니다.
     bool warn_out_of_gamut{false};
+    // macOS `clippingOverlayEnabled`. 소프트 프루프와 같이 미리보기 전용입니다.
+    bool clipping_overlay{false};
 };
 
 // Which stage refused. The caller reports the stage together with the stage's own

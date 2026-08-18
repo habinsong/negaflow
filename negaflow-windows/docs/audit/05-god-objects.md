@@ -29,73 +29,99 @@
 
 # 05 — God object (500줄 초과) — 실측
 
-기준: **500줄 초과는 금지. 넘기려면 사유를 문서에 적을 것.**
-아래는 2026-08-18 에 `wc -l` 로 직접 잰 것입니다.
+기준: **500줄 초과는 금지. 넘기려면 사유를 이 문서에 적을 것.**
+정확히 500줄은 초과가 아니다.
+
+아래는 2026-08-18 22:41에 `negaflow-windows/src`와 `tests`의 `.cs`·`.cpp`·`.h`·`.xaml` **1,229개**(src 982, tests 247)를 물리 줄 수(`ReadLine`)로 다시 잰 것이다. 이 파일의 이전 본문은 같은 날짜로 28+7개를 적었으나, 그 뒤 분해를 반영하지 않았다.
+
+**지금 500줄 초과는 3개다. 사유 없는 초과는 0개다. 미해결 God object 파일은 없다.**
 
 ---
 
-## 1. `src/` — 28개
+## 1. 지금 500줄을 넘는 파일 — 3개
 
 | 줄 | 파일 | 사유 판정 |
 |---:|---|---|
-| **9,003** | `src/Native/imaging/muted_scene_vibrance_table.cpp` | **사유 있음(정당).** `scripts/generate-civibrance-table.ps1` 이 만든 **생성 파일**. macOS `CIFilter("CIVibrance")` 는 Apple 비공개 커널이라 33³×6평면 LUT 로 측정 이식했고 golden 해시가 `docs/verification/macos-golden/vibrance/README.md` 에 있음. 손으로 고칠 파일이 아님 |
-| **1,863** | `src/Native/abi/include/negaflow_abi.h` | **사유 필요.** ABI 표면 전체. 버전별로 쪼갤 수 있음 |
-| **1,197** | `src/Native/imaging/infrared_defect_detector.cpp` | **분할 필요.** macOS 는 같은 일을 11파일 1,584줄로 나눔(`InfraredDefectRemoval+Alignment/Baseline/Clusters/Components/Confirmation/Planes/Spectral/…`) |
-| 945 | `src/Native/imaging/defect_heal_brush.cpp` | 분할 필요 |
-| 893 | `src/Native/imaging/auto_negative_base_resolver.cpp` | 분할 필요. macOS 는 `FilmBaseEstimator`+`Statistics`+`SampleGrid`+`MeasurementDiagnostics` 4파일 |
-| 885 | `src/Catalog.Core/Storage/CatalogBackupStore.cs` | 분할 필요 |
-| 862 | `src/Native/imaging/flatbed_frame_grid_detector.cpp` | 분할 필요. macOS 는 4파일 |
-| 856 | `src/Catalog.Core/Defects/DefectSidecarCodec.cs` | 분할 필요 |
-| 849 | `src/Interop/DevelopExport.cs` | 분할 필요 |
-| 802 | `src/Native/imaging/film_scan_denoise.cpp` | 분할 필요 |
-| 787 | `src/Interop/NativeMethods.cs` | P/Invoke 표면 — 사유 필요 |
-| 765 | `src/Native/imageio/wic_tiff_decoder.cpp` | 분할 필요 |
-| 713 | `src/Native/imaging/scanner_target_grade.cpp` | 분할 필요. macOS 는 8파일 1,697줄 |
-| 700 | `src/Catalog.Core/Defects/DefectRecipeValidator.cs` | 분할 필요 |
-| 681 | `src/Catalog.Core/Storage/CatalogCommitVerifier.cs` | 분할 필요 |
-| 656 | `src/Native/imaging/local_dodge_burn.cpp` | 분할 필요 |
-| 646 | `src/Native/imaging/texture_stage.cpp` | 분할 필요 |
-| 597 | `src/Native/imaging/digital_film_color_preset.cpp` | 분할 필요 |
-| 592 | `src/Shell.Core/Print/PrintPackageLayout.cs` | 분할 필요 |
-| 577 | `src/Native/output/wic_jpeg_export.cpp` | 분할 필요 |
-| 570 | `src/Native/output/wic_tiff_export.cpp` | 분할 필요 |
-| 568 | `src/Native/imaging/defect_component_structure.cpp` | 분할 필요 |
-| 551 | `src/Catalog.Core/Defects/DefectSidecarStore.cs` | 분할 필요 |
-| 543 | `src/Native/imaging/grain_mend_tiled.cpp` | 분할 필요 |
-| 541 | `src/Catalog.Core/Storage/SqliteCatalogStore.cs` | 분할 필요 |
-| 522 | `src/Native/imaging/defect_clone_stamp.cpp` | 분할 필요 |
-| 515 | `src/Native/core/tiff_deflate_validator.cpp` | 분할 필요 |
-| 511 | `src/Native/abi/detect/grain_mend_detect_abi.cpp` | 분할 필요 |
+| **9,003** | `src/Native/imaging/muted_scene_vibrance_table.cpp` | **사유 있음.** `scripts/generate-civibrance-table.ps1`이 만든 생성 데이터. 첫 줄이 `Do not edit by hand`다. macOS `CIFilter("CIVibrance")`는 Apple 비공개 커널이라 33³×6평면 LUT로 측정해 담았고, golden 해시는 `docs/verification/macos-golden/vibrance/README.md`에 있다. 실행 로직은 `muted_scene_vibrance.cpp`와 `vibrance_math.h`에 있다. 줄만 큰 표이므로 파일 분할은 God object 해소가 아니다 |
+| **606** | `tests/Native.UnitTests/DevelopExportAbi/defect_region.cpp` | **사유 있음.** 한 장의 합성 TIFF 위에서 v18–v29 결함 preview/export를 순서대로 묶은 고정 fixture. 뒤 단언이 앞 단계의 화소·SHA·bound 요청을 그대로 쓴다 |
+| **526** | `tests/Native.ConformanceTests/scalar_conformance.cpp` | **사유 있음.** scalar/native conformance 단일 suite. 제품 상태·오케스트레이션·I/O를 소유하지 않는다 |
 
-## 2. `tests/` — 7개
+`src/` 생산 코드에서 500줄을 넘는 파일은 생성 표 1개뿐이다.
+
+## 2. 정확히 500줄 — 1개
+
+| 줄 | 파일 | 판정 |
+|---:|---|---|
+| 500 | `tests/fixtures/tiff/synthetic_wic_tiff.cpp` | 기준선 이하. 테스트 fixture 생성기. 제품 상태·오케스트레이션 없음 |
+
+## 3. 이 문서 이전 본문이 분할 대상으로 적은 파일
+
+이전 본문의 src 28개·tests 7개 중, 1절에 남은 3개를 빼면 **지금은 전부 500줄 이하다.** 이 목록을 보고 다시 쪼개지 마십시오.
+
+| 이전 본문 | 지금 | 파일 |
+|---:|---:|---|
+| 1,863 | 24 | `src/Native/abi/include/negaflow_abi.h` — 선언 없는 집계 include. 본문은 도메인 헤더 |
+| 1,197 | 330 | `src/Native/imaging/infrared_defect_detector.cpp` |
+| 945 | 182 | `src/Native/imaging/defect_heal_brush.cpp` |
+| 893 | 165 | `src/Native/imaging/auto_negative_base_resolver.cpp` |
+| 885 | 286 | `src/Catalog.Core/Storage/CatalogBackupStore.cs` |
+| 862 | 116 | `src/Native/imaging/flatbed_frame_grid_detector.cpp` |
+| 856 | 100 | `src/Catalog.Core/Defects/DefectSidecarCodec.cs` |
+| 849 | 194 | `src/Interop/DevelopExport.cs` |
+| 802 | 179 | `src/Native/imaging/film_scan_denoise.cpp` |
+| 787 | 22 | `src/Interop/NativeMethods.cs` |
+| 765 | 186 | `src/Native/imageio/wic_tiff_decoder.cpp` |
+| 713 | 199 | `src/Native/imaging/scanner_target_grade.cpp` |
+| 700 | 238 | `src/Catalog.Core/Defects/DefectRecipeValidator.cs` |
+| 681 | 220 | `src/Catalog.Core/Storage/CatalogCommitVerifier.cs` |
+| 656 | 194 | `src/Native/imaging/local_dodge_burn.cpp` |
+| 646 | 211 | `src/Native/imaging/texture_stage.cpp` |
+| 597 | 175 | `src/Native/imaging/digital_film_color_preset.cpp` |
+| 592 | 256 | `src/Shell.Core/Print/PrintPackageLayout.cs` |
+| 577 | 209 | `src/Native/output/wic_jpeg_export.cpp` |
+| 570 | 302 | `src/Native/output/wic_tiff_export.cpp` |
+| 568 | 188 | `src/Native/imaging/defect_component_structure.cpp` |
+| 551 | 266 | `src/Catalog.Core/Defects/DefectSidecarStore.cs` |
+| 543 | 389 | `src/Native/imaging/grain_mend_tiled.cpp` |
+| 541 | 240 | `src/Catalog.Core/Storage/SqliteCatalogStore.cs` |
+| 522 | 184 | `src/Native/imaging/defect_clone_stamp.cpp` |
+| 515 | 346 | `src/Native/core/tiff_deflate_validator.cpp` |
+| 511 | 117 | `src/Native/abi/detect/grain_mend_detect_abi.cpp` |
+| 1,131 | 35 | `tests/Native.UnitTests/grain_mend_tests.cpp` — suite 진입점만 |
+| 824 | 23 | `tests/Native.UnitTests/tiff_probe_tests.cpp` |
+| 772 | 18 | `tests/Native.UnitTests/manual_negative_developer_tests.cpp` |
+| 728 | 36 | `tests/Native.UnitTests/wic_tiff_decoder_tests.cpp` |
+| 620 | 22 | `tests/Native.UnitTests/texture_stage_tests.cpp` |
+
+## 4. 500줄 바로 아래 생산 파사드 — 미해결이 아님
+
+줄 수가 커도 이미 협력 타입에 위임하는 공개 파사드다. 새 책임이 붙으면 다시 잰다.
 
 | 줄 | 파일 |
 |---:|---|
-| 1,131 | `tests/Native.UnitTests/grain_mend_tests.cpp` |
-| 824 | `tests/Native.UnitTests/tiff_probe_tests.cpp` |
-| 772 | `tests/Native.UnitTests/manual_negative_developer_tests.cpp` |
-| 728 | `tests/Native.UnitTests/wic_tiff_decoder_tests.cpp` |
-| 620 | `tests/Native.UnitTests/texture_stage_tests.cpp` |
-| 606 | `tests/Native.UnitTests/DevelopExportAbi/defect_region.cpp` |
-| 526 | `tests/Native.ConformanceTests/scalar_conformance.cpp` |
+| 489 | `src/Shell.Core/Develop/DevelopPanelState.cs` |
+| 488 | `src/Shell.Core/Library/LibraryHostService.cs` |
+| 421 | `src/Shell/Views/DevelopWorkspaceView.xaml.cs` |
+| 387 | `src/Shell.Core/Library/LibraryDocument.cs` |
 
----
+## 5. 더 오래된 문서의 거대 파일 표
 
-## 3. 기존 문서의 God object 표는 **전부 낡았습니다**
+`docs/progress/brief-for-agent.md` 11절 · `handoff-2026-08-17-2.md` 10절이 적은 수치는 더 이전이다. 지금 줄 수는 아래다.
 
-`docs/progress/brief-for-agent.md` 11절 · `handoff-2026-08-17-2.md` 10절 의 표를 실측했습니다.
-
-| 문서가 적은 것 | 문서의 줄 | **실제** |
+| 문서가 적은 것 | 옛 문서의 줄 | 지금 |
 |---|---:|---:|
 | `src/Native/abi/negaflow_abi.cpp` | 6,264 | **14** |
-| `src/Shell/Views/DevelopWorkspaceView.xaml.cs` | 4,835 | **329** |
-| `tests/Native.UnitTests/develop_export_abi_tests.cpp` | 4,107 | **파일 없음** |
+| `src/Shell/Views/DevelopWorkspaceView.xaml.cs` | 4,835 | **421** |
+| `tests/Native.UnitTests/develop_export_abi_tests.cpp` | 4,107 | **파일 없음** (`DevelopExportAbi/`로 이동) |
 | `src/Shell/Views/LibraryWorkspaceView.xaml.cs` | 2,835 | **327** |
 | `src/Shell/Views/DevelopWorkspaceView.xaml` | 2,508 | **297** |
 | `src/Interop/NativeDevelopExporter.cs` | 2,342 | **95** |
-| `src/Native/pipeline/develop_export.cpp` | 1,575 | **256** |
+| `src/Native/pipeline/develop_export.cpp` | 1,575 | **282** |
 | `src/Native/core/tiff_probe.cpp` | 1,425 | **278** |
 | `src/Shell/Views/LibraryWorkspaceView.xaml` | 975 | **472** |
 | `src/Shell/Views/PrintWorkspaceView.Composition.cs` | 826 | **192** |
+| `src/Interop/NativeDevelopExportV2.cs` | (옛 표에 없음) | **파일 없음** (`Interop/DevelopExport/Layout/`로 이동) |
 
-**10개 전부 이미 쪼개졌는데 문서는 그대로였습니다.** 이 표를 보고 일하면 없는 문제를 고칩니다.
+이 표를 보고 일하면 없는 문제를 고칩니다.
+
+`docs/implementation/god-object-remediation.md`, `docs/STATUS.md`, `docs/progress/next-steps.md`의 “947개 중 33개 초과”·`infrared_defect_detector.cpp` 1,197줄 표기도 이 실측과 어긋난다. 줄 수 실측의 자리는 이 파일이다.

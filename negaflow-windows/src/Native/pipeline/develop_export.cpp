@@ -267,6 +267,7 @@ DevelopExportOutcome develop_preview(
         proof.enabled && proof.simulate_paper_and_black_ink
             ? negaflow::color::soft_proof_transfer(proof.paper)
             : negaflow::color::SoftProofTransfer{},
+        proof.clipping_overlay,
     };
     DevelopExportOutcome outcome = run_develop(request, &target, control);
     if (outcome.succeeded && proof.enabled && proof.warn_out_of_gamut) {

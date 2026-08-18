@@ -38,7 +38,8 @@ internal static unsafe class NativeDevelopPreviewRender
         ulong* previewPointCount = null,
         // macOS `applyingWholeFrameAutomaticRiskFlag` 의 결과입니다. 자동에서만 채워집니다.
         bool* automaticRisk = null,
-        double* automaticCandidateFraction = null)
+        double* automaticCandidateFraction = null,
+        bool clippingOverlay = false)
     {
         ValidateLayoutAndEnums(request);
         GrainMendDetectionOptions effectiveDetectionOptions =
@@ -74,20 +75,25 @@ internal static unsafe class NativeDevelopPreviewRender
         NativeDevelopRunStateV1* runState = run is null ? null : run.StatePointer;
 
         NativeSoftProofV1 nativeProof = default;
-        if (softProof is not null)
+        if (softProof is not null || clippingOverlay)
         {
             nativeProof.StructSize = (uint)sizeof(NativeSoftProofV1);
-            nativeProof.Enabled = softProof.IsEnabled ? 1U : 0U;
+            nativeProof.Enabled = softProof is { IsEnabled: true } ? 1U : 0U;
             nativeProof.SimulatePaperAndBlackInk =
-                softProof.Simulation == SoftProofSimulation.PaperAndBlackInk ? 1U : 0U;
-            nativeProof.PaperWhiteRgb[0] = (float)softProof.PaperWhite.Red;
-            nativeProof.PaperWhiteRgb[1] = (float)softProof.PaperWhite.Green;
-            nativeProof.PaperWhiteRgb[2] = (float)softProof.PaperWhite.Blue;
-            nativeProof.BlackInkRgb[0] = (float)softProof.BlackInk.Red;
-            nativeProof.BlackInkRgb[1] = (float)softProof.BlackInk.Green;
-            nativeProof.BlackInkRgb[2] = (float)softProof.BlackInk.Blue;
+                softProof?.Simulation == SoftProofSimulation.PaperAndBlackInk ? 1U : 0U;
+            if (softProof is not null)
+            {
+                nativeProof.PaperWhiteRgb[0] = (float)softProof.PaperWhite.Red;
+                nativeProof.PaperWhiteRgb[1] = (float)softProof.PaperWhite.Green;
+                nativeProof.PaperWhiteRgb[2] = (float)softProof.PaperWhite.Blue;
+                nativeProof.BlackInkRgb[0] = (float)softProof.BlackInk.Red;
+                nativeProof.BlackInkRgb[1] = (float)softProof.BlackInk.Green;
+                nativeProof.BlackInkRgb[2] = (float)softProof.BlackInk.Blue;
+            }
+            nativeProof.ClippingOverlay = clippingOverlay ? 1U : 0U;
         }
-        NativeSoftProofV1* proofPointer = softProof is null ? null : &nativeProof;
+        NativeSoftProofV1* proofPointer =
+            softProof is null && !clippingOverlay ? null : &nativeProof;
 
         fixed (char* sourcePath = request.SourcePath)
         fixed (char* destinationPath = request.DestinationPath)
