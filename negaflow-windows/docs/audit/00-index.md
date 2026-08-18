@@ -235,7 +235,7 @@ macOS 는 정반대입니다:
 | 프론트 — 없음 | **11개 표면** | [`02`](02-frontend-gaps.md) |
 | 프론트 — 백엔드 미연결 | **6개** | [`02`](02-frontend-gaps.md) 3절 |
 | 창작(macOS 에 없음) | **4개** | [`03`](03-feature-status.md) 4절 |
-| GPU | **2026-08-18 착수**(`aa0d59f`) — 기반 + 커널 **5/32**. 파이프라인 미연결 | [`04`](04-gpu-plan.md) · [`13`](13-performance-playbook.md) |
+| GPU | **2026-08-18 착수**(`aa0d59f`) — 기반 + 커널 **7/32**. 파이프라인 미연결 | [`04`](04-gpu-plan.md) · [`13`](13-performance-playbook.md) |
 | God object(500줄 초과) | **28개**(src) + 7개(tests) | [`05`](05-god-objects.md) |
 | 기존 문서의 틀린 서술 | **6건** | [`06`](06-false-claims.md) |
 

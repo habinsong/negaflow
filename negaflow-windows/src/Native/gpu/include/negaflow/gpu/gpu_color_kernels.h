@@ -6,6 +6,8 @@
 // |---|---|---|---|
 // | 컬러 그레이딩 | `ChromabaseMetalKernels.swift:101` `colorGrade` | `imaging/color_grading.cpp` `apply_color_grading` | `shaders/color_grade.hlsl` |
 // | 컬러 믹서(HSL) | `:74` `colorMixerHSL` | `imaging/color_mixer.cpp` `apply_color_mixer` | `shaders/color_mixer.hlsl` |
+// | 원색 보정 | `:151` `calibrationPrimaries` | `imaging/primary_calibration.cpp` | `shaders/primary_calibration.hlsl` |
+// | 흑백 조색 | `:123` `bwToning` | `imaging/bw_toning.cpp` `apply_bw_toning` | `shaders/bw_toning.hlsl` |
 //
 // CPU 판을 **대체하지 않습니다.** 나란히 두고 상위에서 장치 가용성으로 고릅니다.
 
@@ -78,6 +80,37 @@ public:
         const GpuWorkingImage& source,
         GpuWorkingImage& destination,
         const GpuPrimaryCalibrationParameters& parameters) const noexcept;
+
+    [[nodiscard]] bool is_valid() const noexcept { return kernel_.is_valid(); }
+
+private:
+    GpuPointwiseKernel kernel_{};
+};
+
+// `imaging::BwToningSetup` 과 같은 값입니다.
+//
+// ☠️ 색조를 **여기서 계산하지 마십시오.** `imaging::prepare_bw_toning` 이 만든 것을 그대로
+//    옮겨 담으십시오(채도 0.78 고정의 HSV 변환입니다).
+struct GpuBwToningSetup final {
+    float shadow_tint[3]{1.0F, 1.0F, 1.0F};
+    float highlight_tint[3]{1.0F, 1.0F, 1.0F};
+    float strength{0.0F};
+    float mode{0.0F};
+    // 거짓이면 **중성화만** 합니다. 커널을 건너뛰면 안 됩니다 — 흑백 변환이 사라집니다.
+    bool tone{false};
+};
+
+class GpuBwToning final {
+public:
+    [[nodiscard]] static GpuKernelStatus create(
+        const GpuDevice& device,
+        GpuBwToning& kernel) noexcept;
+
+    [[nodiscard]] GpuKernelStatus dispatch(
+        const GpuDevice& device,
+        const GpuWorkingImage& source,
+        GpuWorkingImage& destination,
+        const GpuBwToningSetup& setup) const noexcept;
 
     [[nodiscard]] bool is_valid() const noexcept { return kernel_.is_valid(); }
 

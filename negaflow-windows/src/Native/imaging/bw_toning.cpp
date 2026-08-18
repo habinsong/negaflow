@@ -72,6 +72,22 @@ struct Rgb final {
 
 }  // namespace
 
+BwToningSetup prepare_bw_toning(const BwToningParameters& parameters) noexcept {
+    const Rgb shadow = hsv_tint(parameters.shadow_hue);
+    const Rgb highlight = hsv_tint(parameters.highlight_hue);
+    BwToningSetup setup{};
+    setup.shadow_tint[0] = shadow.red;
+    setup.shadow_tint[1] = shadow.green;
+    setup.shadow_tint[2] = shadow.blue;
+    setup.highlight_tint[0] = highlight.red;
+    setup.highlight_tint[1] = highlight.green;
+    setup.highlight_tint[2] = highlight.blue;
+    setup.strength = static_cast<float>(parameters.strength);
+    setup.mode = parameters.mode == BwToningMode::sepia ? 1.0F : 0.0F;
+    setup.tone = parameters.mode != BwToningMode::none && parameters.strength > 1.0e-4;
+    return setup;
+}
+
 bool valid_bw_toning_parameters(
     const BwToningParameters& parameters) noexcept {
     return (parameters.mode == BwToningMode::none ||
@@ -106,12 +122,14 @@ BwToningResult apply_bw_toning(
         return result;
     }
 
-    const bool tone = parameters.mode != BwToningMode::none &&
-                      parameters.strength > 1.0e-4;
-    const float strength = static_cast<float>(parameters.strength);
-    const float mode = parameters.mode == BwToningMode::sepia ? 1.0F : 0.0F;
-    const Rgb shadow_tint = hsv_tint(parameters.shadow_hue);
-    const Rgb highlight_tint = hsv_tint(parameters.highlight_hue);
+    // 준비 계산은 `prepare_bw_toning` 한 곳에만 둡니다 — GPU 경로도 같은 것을 씁니다.
+    const BwToningSetup setup = prepare_bw_toning(parameters);
+    const bool tone = setup.tone;
+    const float strength = setup.strength;
+    const float mode = setup.mode;
+    const Rgb shadow_tint{setup.shadow_tint[0], setup.shadow_tint[1], setup.shadow_tint[2]};
+    const Rgb highlight_tint{
+        setup.highlight_tint[0], setup.highlight_tint[1], setup.highlight_tint[2]};
 
     for (std::uint32_t y = 0U; y < image.height; ++y) {
         for (std::uint32_t x = 0U; x < image.width; ++x) {

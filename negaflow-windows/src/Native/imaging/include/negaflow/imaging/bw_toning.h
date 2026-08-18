@@ -40,6 +40,22 @@ struct BwToningResult final {
     WorkingImage image{};
 };
 
+// 화소마다 같은 값이라 한 번만 계산합니다. GPU 경로가 이것을 상수 버퍼로 올립니다 —
+// **다시 구현하지 마십시오.** 두 벌이 되면 조용히 갈라집니다.
+struct BwToningSetup final {
+    // `hsv_tint(shadow_hue)` / `hsv_tint(highlight_hue)` — 채도는 0.78 고정입니다.
+    float shadow_tint[3]{1.0F, 1.0F, 1.0F};
+    float highlight_tint[3]{1.0F, 1.0F, 1.0F};
+    float strength{0.0F};
+    // 세피아 1.0, 셀레늄 0.0. macOS 커널의 `control.y` 와 같습니다.
+    float mode{0.0F};
+    // 모드가 `none` 이거나 강도가 임계 이하이면 거짓입니다. 그때는 중성화만 하고 조색은 건너뜁니다.
+    bool tone{false};
+};
+
+[[nodiscard]] BwToningSetup prepare_bw_toning(
+    const BwToningParameters& parameters) noexcept;
+
 [[nodiscard]] bool valid_bw_toning_parameters(
     const BwToningParameters& parameters) noexcept;
 

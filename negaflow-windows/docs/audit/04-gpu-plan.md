@@ -66,6 +66,8 @@
 > | `parametricToneCurve` | WARP **6.0e-08~1.2e-07** · NVIDIA **2.4e-07** |
 > | `colorGrade` | WARP **0~1.8e-07** · NVIDIA **6.0e-08~2.4e-07** |
 > | `colorMixerHSL` | WARP **0~6.0e-08** · NVIDIA **0~1.3e-06** |
+> | `negativeInvert` (현상 최대 비용 단계) | WARP **7.5e-08~1.5e-07** · NVIDIA **8.9e-08~1.8e-07** |
+> | `bwToning` | WARP **0~1.2e-07** · NVIDIA **1.2e-07~1.8e-07** |
 > | `calibrationPrimaries` | WARP **전부 0** · NVIDIA **0~1.4e-06** |
 > | 매개변수 조합 | 11개 — 양수/음수 대비, 임계 미만, clamp, 각 마스크 |
 > | 새 시험 | `native.gpu_device` · `native.gpu_working_image` · `native.gpu_basic_tone` 전부 통과 |

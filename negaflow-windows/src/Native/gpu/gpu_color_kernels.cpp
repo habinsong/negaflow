@@ -9,6 +9,7 @@
 #include "negaflow/gpu/gpu_working_image.h"
 #include "negaflow/gpu/shaders/color_grade_ColorGradeMain.h"
 #include "negaflow/gpu/shaders/color_mixer_ColorMixerMain.h"
+#include "negaflow/gpu/shaders/bw_toning_BwToningMain.h"
 #include "negaflow/gpu/shaders/primary_calibration_PrimaryCalibrationMain.h"
 
 namespace negaflow::gpu {
@@ -106,7 +107,56 @@ constexpr float primary_identity_epsilon = 1.0e-4F;
         std::abs(parameters.blue_saturation) >= primary_identity_epsilon;
 }
 
+// HLSL `cbuffer BwToningConstants` 와 같은 배치여야 합니다.
+struct alignas(16) BwToningConstants final {
+    GpuPointwiseExtent extent{};
+    float shadow_tint[3]{0.0F, 0.0F, 0.0F};
+    float strength{0.0F};
+    float highlight_tint[3]{0.0F, 0.0F, 0.0F};
+    float mode{0.0F};
+    float tone{0.0F};
+    float padding[3]{0.0F, 0.0F, 0.0F};
+};
+
+static_assert(sizeof(BwToningConstants) == 64U, "four constant registers");
+
+[[nodiscard]] bool finite_bw(const GpuBwToningSetup& setup) noexcept {
+    return finite_offsets(setup.shadow_tint) && finite_offsets(setup.highlight_tint) &&
+        std::isfinite(setup.strength) && std::isfinite(setup.mode);
+}
+
 }  // namespace
+
+GpuKernelStatus GpuBwToning::create(const GpuDevice& device, GpuBwToning& kernel) noexcept {
+    return GpuPointwiseKernel::create(
+        device,
+        negaflow_bw_toning_cs,
+        sizeof(negaflow_bw_toning_cs),
+        sizeof(BwToningConstants),
+        kernel.kernel_);
+}
+
+GpuKernelStatus GpuBwToning::dispatch(
+    const GpuDevice& device,
+    const GpuWorkingImage& source,
+    GpuWorkingImage& destination,
+    const GpuBwToningSetup& setup) const noexcept {
+    if (!finite_bw(setup)) {
+        return GpuKernelStatus::non_finite_parameter;
+    }
+    // ☠️ `tone` 이 거짓이어도 **복사로 건너뛰지 않습니다.** CPU 판은 그때도 흑백 중성화를
+    //    합니다(`bw_toning.cpp` 의 `pixel.red = pixel.green = pixel.blue = neutral`).
+    //    여기서 복사하면 사진이 컬러로 남습니다.
+    BwToningConstants payload{};
+    for (int index = 0; index < 3; ++index) {
+        payload.shadow_tint[index] = setup.shadow_tint[index];
+        payload.highlight_tint[index] = setup.highlight_tint[index];
+    }
+    payload.strength = setup.strength;
+    payload.mode = setup.mode;
+    payload.tone = setup.tone ? 1.0F : 0.0F;
+    return kernel_.dispatch(device, source, destination, &payload, sizeof(payload));
+}
 
 GpuKernelStatus GpuPrimaryCalibration::create(
     const GpuDevice& device,
