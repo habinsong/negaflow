@@ -147,7 +147,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
             "user-presets.json"));
         Adjustments.ConfigureRanges(panel.Tone.MaximumExposureStops, panel.Tone.MaximumToneControl);
         HistogramView.ConfigureRanges(panel.Tone.MaximumExposureStops, panel.Tone.MaximumToneControl);
-        BaseCard.ConfigureRanges(panel.MinimumManualDmin, panel.MaximumManualDmin);
+        BaseCard.ConfigureRanges();
         GeometryCard.ConfigureRanges();
         // 미리보기는 캔버스에 맞는 크기면 충분합니다. 전체 해상도로 그리면 슬라이더를 끄는
         // 동안 엔진이 밀립니다.

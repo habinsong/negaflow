@@ -35,12 +35,18 @@ public sealed partial class DevelopBaseCard : UserControl
         ScannerProfileSelector.ItemsSource = ScannerProfileChoices();
     }
 
-    public void ConfigureRanges(double minimum, double maximum)
+    /// <summary>
+    /// 수동 베이스 슬라이더의 범위입니다. macOS
+    /// <c>BaseControlSection.swift</c> 는 <c>InspectorSlider(…, range: 0...1)</c> 로 <b>0…1</b> 을
+    /// 씁니다 — 엔진 한계(<c>clampedDmin</c> 의 1e-3)는 슬라이더가 아니라 반전이 거는 것입니다.
+    /// 엔진 한계를 슬라이더 최소로 쓰면 눈금이 0.001 씩 밀려 macOS 와 다른 값이 됩니다.
+    /// </summary>
+    public void ConfigureRanges()
     {
         foreach (InspectorSlider slider in new[] { BaseRedControl, BaseGreenControl, BaseBlueControl })
         {
-            slider.Minimum = minimum;
-            slider.Maximum = maximum;
+            slider.Minimum = 0.0;
+            slider.Maximum = 1.0;
         }
     }
 

@@ -169,6 +169,39 @@ negaflow-cli --auto-base-probe <source.tiff> [color|bw]
 NEGA_DEBUG=1 negaflow-cli --auto-base-probe <source.tiff>   # 성분 목록까지
 ```
 
+### C1.2 필름 베이스 **UI/UX** 대조 — `BaseControlSection.swift` ↔ `DevelopBaseCard.xaml`
+
+| # | macOS | Windows | 판정 |
+|---|---|---|---|
+| 1 | 헤더 아이콘 `circle.lefthalf.filled` (반원 채운 원) | `FontIcon Glyph="&#xE706;"` (Segoe = 밝기) | **모양 다름.** SVG 로 그려야 함 |
+| 2 | 헤더 `trailing: baseReadout` — `baseReadoutFormat` 으로 R/G/B 표시 | `ManualBaseValueText` | 있음 ✓ (형식 대조 필요) |
+| 3 | **`SegmentedPicker`** — 자동/필름/수동이 **붙어 있는 한 덩어리** | `RadioButton` 3개를 `Grid` 에 나눠 놓음 | **모양 다름** |
+| 4 | `.disabled(!frame.filmType.requiresInversion)` | 코드비하인드 확인 필요 | 미확인 |
+| 5 | preset: 필름스톡 · 광원 · 프로파일 **3줄**, 각 줄이 `basePresetPickerRow`, 피커 폭 **276** | `FilmStockSelector`·`LightSourceSelector`·`ScannerProfileSelector` 3줄, 폭 stretch | 줄 구성 ✓ / **폭 다름** |
+| 6 | manual: **`InspectorActionPill(pickBase)`** — 스포이드 토글 + `reset` 버튼, `isActive` 시 강조, `.snappy(0.18)` 애니메이션 | **없음** | **통째로 없음** |
+| 7 | manual: `InspectorSlider(baseRed/Green/Blue, range: 0...1, doubleClickResetValue: nil)` | 3개, `CanReset="False"`, 범위는 엔진 한계(1e-3…1.0) | 범위 **다름** (macOS 는 `0...1`) |
+
+### C1.3 베이스 스포이드 — **엔진·캔버스·인스펙터 전부 없음**
+
+`BasePicker` · `basePickerMode` · `PickBase` · `EyeDropper` — Windows 히트 **전부 0**.
+
+macOS 가 가진 것:
+
+| macOS | 줄 | 하는 일 |
+|---|---:|---|
+| `Chromabase/Film/FilmBasePicker.swift` | **149** | 클릭 지점에서 베이스 샘플. ① 로컬 창(짧은 변 × **0.12**)에서 베이스 연결 성분 **스냅** ② 실패 시 영역(짧은 변 × **0.01**, 최소 3px) **채널 중앙값** ③ `baseReference` 로 스캔 전체 기준 **타당성 검사**(`isPlausibleBase`) |
+| `CanvasView+HUDTools.swift:99` `basePickerOverlay` | 30 | 투명 히트 사각형 + `SpatialTapGesture` → 0…1 정규(y-down). 상단에 `eyedropper` 아이콘 + `basePickerOverlayPrompt` 캡슐(`.caption.weight(.semibold)`, 가로 패딩 10 · 세로 5, `liquidSurface(cornerRadius: 8)`, 위 12). **Esc 로 해제** |
+| `CanvasView+HUDTools.swift:130` `handleBasePick` | 10 | 표시 정규 → `displayUnitToBase(unit, baseSize:)` → `model.pickFilmBase` → 스포이드 모드 해제 |
+| `BaseControlSection.swift:68` `InspectorActionPill` | — | 인스펙터의 토글 + 리셋 |
+
+**왜 중요한가**: `FilmBasePicker` 주석 원문 —
+*"평판 프리뷰는 필름 밖(투과 광원 창 바깥의 검정 띠, 빈 베드)까지 담기 때문에, 클릭이 조금만
+빗나가도 필름이 아닌 픽셀이 Dmin 으로 앉아 현상 결과가 통째로 검게 죽었다(실측: 검정 띠 클릭
+→ base 0.004 → 반전 전 구간 클리핑)."*
+
+**즉 수동 모드에서 사용자가 베이스를 집는 유일한 수단이 Windows 에 없고, 지금은 슬라이더
+3개를 손으로 맞추는 수밖에 없습니다.**
+
 ### 남은 것 (아직 대조 안 함)
 
 `non_film_exclusion` · `brightest_coherent_mode` · `continuous_border_base` ·
