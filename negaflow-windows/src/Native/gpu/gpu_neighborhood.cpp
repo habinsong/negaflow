@@ -20,7 +20,9 @@ constexpr std::uint32_t box_blur_group = 64U;
 struct alignas(16) BoxBlurConstants final {
     GpuPointwiseExtent extent{};
     std::int32_t radius{0};
-    float padding[3]{0.0F, 0.0F, 0.0F};
+    // 1 이면 알파까지 흐립니다. 가이드 필터가 네 스칼라를 한 텍스처에 담을 때 씁니다.
+    std::int32_t blur_alpha{0};
+    float padding[2]{0.0F, 0.0F};
 };
 
 static_assert(sizeof(BoxBlurConstants) == 32U, "extent register + radius register");
@@ -142,7 +144,8 @@ GpuKernelStatus GpuBoxBlur::dispatch(
     const GpuWorkingImage& source,
     GpuWorkingImage& scratch,
     GpuWorkingImage& destination,
-    const std::int32_t radius) const noexcept {
+    const std::int32_t radius,
+    const bool blur_alpha) const noexcept {
     if (!device.is_usable() || horizontal_ == nullptr || vertical_ == nullptr ||
         constants_ == nullptr) {
         return GpuKernelStatus::device_unavailable;
@@ -175,6 +178,7 @@ GpuKernelStatus GpuBoxBlur::dispatch(
     payload.extent.width = source.width();
     payload.extent.height = source.height();
     payload.radius = radius;
+    payload.blur_alpha = blur_alpha ? 1 : 0;
 
     D3D11_MAPPED_SUBRESOURCE mapped{};
     if (FAILED(context->Map(constants_, 0U, D3D11_MAP_WRITE_DISCARD, 0U, &mapped))) {
