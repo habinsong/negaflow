@@ -104,6 +104,36 @@ using DigitalFilmColorPresetFunction = bool (*)(
     const DigitalFilmColorPreset* preset,
     float strength) noexcept;
 
+// 필름 스톡 색 큐브(33³ 3D LUT)입니다. CPU 판(`imaging/film_emulation_color.cpp`
+// `apply_film_emulation_color_cube`)과 같은 셈이어야 합니다. `cube` 는 CPU 가 만든 표를
+// 그대로 넘깁니다 — 만드는 일은 GPU 로 옮기지 않습니다(화소마다 같은 값이라 옮길 이유가
+// 없고, 옮기면 두 벌이 됩니다).
+//
+// ☠️ **근사한 것입니다**(sRGB 왕복의 `pow`). 표와 삼선형 보간 자체는 CPU 와 같은
+//    float 연산이라 그 자리에서는 오차가 안 생깁니다.
+struct FilmEmulationColorCube;
+
+using FilmEmulationCubeFunction = bool (*)(
+    float* pixels,
+    std::uint32_t width,
+    std::uint32_t height,
+    std::uint32_t stride_pixels,
+    const FilmEmulationColorCube* cube) noexcept;
+
+// 필름 스톡 아큐턴스(분리형 11탭 가우시안 언샤프)입니다. `setup` 은 CPU 의
+// `prepare_film_emulation_acutance` 가 만든 것을 그대로 넘깁니다 — 가중치를 두 곳에서
+// 만들면 그 순간 두 벌이 됩니다.
+//
+// ☠️ **근사한 것입니다.** CPU 는 두 패스를 `double` 로 누적하고 GPU 는 float 입니다.
+struct FilmEmulationAcutanceSetup;
+
+using FilmEmulationAcutanceFunction = bool (*)(
+    float* pixels,
+    std::uint32_t width,
+    std::uint32_t height,
+    std::uint32_t stride_pixels,
+    const FilmEmulationAcutanceSetup* setup) noexcept;
+
 struct KernelAccelerator final {
     // ── 정확한 것 (언제나 켭니다) ────────────────────────────────────────────
     MorphologyPlaneFunction opening{nullptr};
@@ -115,6 +145,8 @@ struct KernelAccelerator final {
     NegativeInversionFunction negative_inversion{nullptr};
     DigitalFilmGrainFunction digital_film_grain{nullptr};
     DigitalFilmColorPresetFunction digital_film_color_preset{nullptr};
+    FilmEmulationCubeFunction film_emulation_cube{nullptr};
+    FilmEmulationAcutanceFunction film_emulation_acutance{nullptr};
 };
 
 // 프로세스 시작에 한 번 설치합니다. `nullptr` 을 주면 해제합니다.

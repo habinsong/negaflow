@@ -226,4 +226,33 @@ GpuKernelStatus GpuPointwiseKernel::dispatch_pair(
         source.width(), source.height());
 }
 
+GpuKernelStatus GpuPointwiseKernel::dispatch_with_extra(
+    const GpuDevice& device,
+    const GpuWorkingImage& source,
+    ID3D11ShaderResourceView* const extra,
+    GpuWorkingImage& destination,
+    void* const constants,
+    const std::size_t constant_bytes) const noexcept {
+    if (!device.is_usable() || shader_ == nullptr || constants_ == nullptr) {
+        return GpuKernelStatus::device_unavailable;
+    }
+    if (constants == nullptr || constant_bytes != constant_bytes_ || extra == nullptr) {
+        return GpuKernelStatus::invalid_arguments;
+    }
+    if (!source.is_valid() || !destination.is_valid()) {
+        return GpuKernelStatus::invalid_arguments;
+    }
+    if (source.width() != destination.width() || source.height() != destination.height()) {
+        return GpuKernelStatus::invalid_arguments;
+    }
+    if (source.texture() == destination.texture()) {
+        return GpuKernelStatus::invalid_arguments;
+    }
+
+    ID3D11ShaderResourceView* const sources[2] = {source.srv(), extra};
+    return write_constants_and_dispatch(
+        device, shader_, constants_, sources, 2U, destination, constants, constant_bytes,
+        source.width(), source.height());
+}
+
 }  // namespace negaflow::gpu

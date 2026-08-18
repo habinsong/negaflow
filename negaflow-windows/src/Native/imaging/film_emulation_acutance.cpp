@@ -2,6 +2,8 @@
 
 #include "film_emulation_acutance_profiles.h"
 
+#include "negaflow/imaging/kernel_accelerator.h"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -209,6 +211,26 @@ bool has_film_emulation_acutance_change(
            std::clamp(parameters.intensity, 0.0, 1.0) > identity_threshold;
 }
 
+FilmEmulationAcutanceSetup prepare_film_emulation_acutance(
+    const FilmEmulationAcutanceParameters& parameters) noexcept {
+    FilmEmulationAcutanceSetup setup{};
+    if (!has_film_emulation_acutance_change(parameters)) {
+        return setup;
+    }
+    const FilmEmulationAcutanceProfileData* const profile =
+        detail::film_emulation_acutance_profile_data(parameters.emulation);
+    if (profile == nullptr) {
+        return setup;
+    }
+    const GaussianKernel kernel = build_kernel(profile->gaussian_sigma);
+    for (std::size_t index = 0U; index < kernel_width; ++index) {
+        setup.weights[index] = kernel.weights[index];
+    }
+    setup.amount = static_cast<float>(film_emulation_acutance_amount(parameters));
+    setup.applied = true;
+    return setup;
+}
+
 std::size_t film_emulation_acutance_scratch_pixel_count(
     const std::uint32_t width) noexcept {
     constexpr std::size_t rows =
@@ -300,6 +322,26 @@ negaflow::core::KernelStatus apply_film_emulation_acutance(
     if (profile == nullptr) {
         return negaflow::core::KernelStatus::invalid_parameter;
     }
+    // ☠️ **근사입니다.** CPU 는 두 패스를 `double` 로 누적하고 GPU 는 float 입니다.
+    //    `ApproximateAcceleratorScope` 안에서만 돕니다 — 내보내기·골든은 CPU 그대로입니다.
+    if (exact_in_place && approximate_acceleration_allowed()) {
+        if (const KernelAccelerator* const table = kernel_accelerator();
+            table != nullptr && table->film_emulation_acutance != nullptr &&
+            output.stride_pixels <= 0xFFFFFFFFULL) {
+            const FilmEmulationAcutanceSetup setup =
+                prepare_film_emulation_acutance(parameters);
+            if (setup.applied &&
+                table->film_emulation_acutance(
+                    reinterpret_cast<float*>(output.pixels),
+                    output.width,
+                    output.height,
+                    static_cast<std::uint32_t>(output.stride_pixels),
+                    &setup)) {
+                return negaflow::core::KernelStatus::ok;
+            }
+        }
+    }
+
     const GaussianKernel kernel = build_kernel(profile->gaussian_sigma);
     const double amount = film_emulation_acutance_amount(parameters);
     const std::uint32_t support = film_emulation_acutance_support;

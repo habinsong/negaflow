@@ -37,6 +37,22 @@ struct FilmEmulationAcutanceScratch final {
     std::size_t pixel_capacity;
 };
 
+// 화소 루프 **밖에서** 한 번 정해지는 것들입니다. 분리형 11탭 가우시안의 가중치와
+// 언샤프 세기.
+//
+// ☠️ **GPU 판이 이것을 그대로 씁니다.** 가중치를 두 곳에서 만들면 그 순간 두 벌이 되고,
+//    `exp` 구현 차이가 화소마다 실립니다. `prepare_color_grading` 과 같은 이유로
+//    준비 계산을 한 곳에만 둡니다.
+struct FilmEmulationAcutanceSetup final {
+    float weights[film_emulation_acutance_scratch_rows]{};
+    float amount{0.0F};
+    // 거짓이면 CPU 는 커널을 안 돌리고 **원본을 복사**합니다. GPU 도 같아야 합니다.
+    bool applied{false};
+};
+
+[[nodiscard]] FilmEmulationAcutanceSetup prepare_film_emulation_acutance(
+    const FilmEmulationAcutanceParameters& parameters) noexcept;
+
 [[nodiscard]] bool valid_film_emulation_acutance_parameters(
     const FilmEmulationAcutanceParameters& parameters) noexcept;
 [[nodiscard]] bool has_film_emulation_acutance_change(

@@ -16,6 +16,7 @@
 
 struct ID3D11ComputeShader;
 struct ID3D11Buffer;
+struct ID3D11ShaderResourceView;
 
 namespace negaflow::gpu {
 
@@ -91,6 +92,18 @@ public:
         const GpuDevice& device,
         const GpuWorkingImage& source,
         const GpuWorkingImage& second,
+        GpuWorkingImage& destination,
+        void* constants,
+        std::size_t constant_bytes) const noexcept;
+
+    // `t1` 에 **텍스처가 아닌 것**(구조화 버퍼 등)을 묶는 판입니다. 3D LUT 가 그렇습니다 —
+    // `Texture3D` + 하드웨어 삼선형은 필터 가중치가 8비트 고정소수라 CPU 와 값이
+    // 갈립니다(D3D11 은 서브텍셀 정밀도를 8비트만 보장합니다). 그래서 표를 버퍼로 올리고
+    // **셰이더가 CPU 와 같은 float 연산으로** 보간합니다.
+    [[nodiscard]] GpuKernelStatus dispatch_with_extra(
+        const GpuDevice& device,
+        const GpuWorkingImage& source,
+        ID3D11ShaderResourceView* extra,
         GpuWorkingImage& destination,
         void* constants,
         std::size_t constant_bytes) const noexcept;

@@ -1,5 +1,7 @@
 #include "negaflow/imaging/film_emulation_color.h"
 
+#include "negaflow/imaging/kernel_accelerator.h"
+
 #include "film_emulation_profiles.h"
 #include "negaflow/color/srgb_transfer.h"
 
@@ -398,6 +400,25 @@ negaflow::core::KernelStatus apply_film_emulation_color_cube(
     }
     if (!valid_cube_entries(*cube)) {
         return negaflow::core::KernelStatus::invalid_parameter;
+    }
+
+    // ☠️ **근사입니다**(sRGB 왕복의 `pow`). 표와 삼선형 보간은 CPU 와 같은 float
+    //    연산이라 그 자리에서는 오차가 안 생깁니다.
+    //    입출력이 별칭이어도 됩니다 — GPU 판은 텍스처 두 장을 오가므로 겹침이 없습니다.
+    if (approximate_acceleration_allowed()) {
+        if (const KernelAccelerator* const table = kernel_accelerator();
+            table != nullptr && table->film_emulation_cube != nullptr &&
+            input.pixels == output.pixels && input.stride_pixels == output.stride_pixels &&
+            output.stride_pixels <= 0xFFFFFFFFULL) {
+            if (table->film_emulation_cube(
+                    reinterpret_cast<float*>(output.pixels),
+                    output.width,
+                    output.height,
+                    static_cast<std::uint32_t>(output.stride_pixels),
+                    cube)) {
+                return negaflow::core::KernelStatus::ok;
+            }
+        }
     }
 
     for (std::uint32_t row = 0U; row < input.height; ++row) {

@@ -1,48 +1,14 @@
 #include "negaflow/pipeline/gpu_accelerator.h"
 
-#include <mutex>
-#include <cstdlib>
-#include <vector>
-#include <new>
+#include "gpu_accelerator_state.h"
 
-#include "negaflow/gpu/gpu_device.h"
-#include "negaflow/gpu/gpu_digital_film_color_preset.h"
-#include "negaflow/gpu/gpu_digital_film_grain.h"
-#include "negaflow/gpu/gpu_digital_halation.h"
-#include "negaflow/gpu/gpu_film_scan_stage.h"
-#include "negaflow/gpu/gpu_morphology.h"
-#include "negaflow/gpu/gpu_negative_invert.h"
-#include "negaflow/gpu/gpu_working_image.h"
-#include "negaflow/gpu/gpu_tone_stage.h"
+#include <cstdlib>
+#include <mutex>
+#include <new>
+#include <vector>
 
 namespace negaflow::pipeline {
 
-struct GpuAccelerator::State final {
-    // ☠️ D3D11 즉시 컨텍스트는 스레드 안전하지 않습니다. 모든 GPU 호출이 이 자물쇠
-    //    안에서 돕니다 — 빼면 두 현상이 겹칠 때 조용히 깨집니다.
-    std::mutex lock{};
-    gpu::GpuDevice device{};
-    gpu::GpuToneStage tone{};
-    gpu::GpuFilmScanDenoiseStage denoise{};
-    gpu::GpuMorphology morphology{};
-    bool morphology_ready{false};
-    gpu::GpuNegativeInvert invert{};
-    bool invert_ready{false};
-    // 디지털 필름 룩의 재료 커널 둘입니다. 둘 다 이 사슬에서만 불리므로 따로 만들고,
-    // 이것만 실패해도 톤·디노이즈·반전은 그대로 돕니다.
-    gpu::GpuGaussianBlur gaussian{};
-    gpu::GpuDigitalHalation halation{};
-    bool halation_ready{false};
-    gpu::GpuDigitalFilmGrain grain{};
-    bool grain_ready{false};
-    gpu::GpuDigitalFilmColorPreset preset{};
-    bool preset_ready{false};
-    // 평면 ↔ RGBA 변환용. 매 호출 할당하지 않으려고 들고 있습니다.
-    std::vector<core::Rgba32F> morphology_staging{};
-    bool usable{false};
-    // `GpuAdapterInfo::description` 은 고정 배열이라 수명이 장치와 같습니다.
-    const char* adapter{""};
-};
 
 namespace {
 
@@ -95,6 +61,12 @@ GpuAccelerator::GpuAccelerator() noexcept {
             gpu::GpuKernelStatus::ok;
         state->preset_ready =
             gpu::GpuDigitalFilmColorPreset::create(state->device, state->preset) ==
+            gpu::GpuKernelStatus::ok;
+        state->cube_ready =
+            gpu::GpuFilmEmulationCube::create(state->device, state->cube) ==
+            gpu::GpuKernelStatus::ok;
+        state->acutance_ready =
+            gpu::GpuFilmEmulationAcutance::create(state->device, state->acutance) ==
             gpu::GpuKernelStatus::ok;
     }
     state_ = state;
@@ -281,149 +253,6 @@ bool GpuAccelerator::apply_negative_inversion(
         return false;
     }
     return output.download(state_->device, rgba, stride_pixels) == gpu::GpuImageStatus::ok;
-}
-
-bool GpuAccelerator::apply_digital_halation(
-    float* const pixels,
-    const std::uint32_t width,
-    const std::uint32_t height,
-    const std::uint32_t stride_pixels,
-    const double* const scatter_strength,
-    const double* const halation_strength,
-    const double radius_ratio,
-    const double strength) noexcept {
-    if (!available() || pixels == nullptr || scatter_strength == nullptr ||
-        halation_strength == nullptr) {
-        return false;
-    }
-    if (width == 0U || height == 0U || stride_pixels < width) {
-        return false;
-    }
-    imaging::DigitalHalationMaterial material{};
-    for (std::size_t channel = 0U; channel < 3U; ++channel) {
-        material.scatter_strength[channel] = scatter_strength[channel];
-        material.halation_strength[channel] = halation_strength[channel];
-    }
-    material.radius_ratio = radius_ratio;
-    const gpu::GpuDigitalHalation::Parameters parameters =
-        gpu::GpuDigitalHalation::resolve(material, strength, width, height);
-    if (!parameters.applied) {
-        // CPU 도 같은 자리에서 원본 그대로 돌려줍니다. 여기서 `false` 를 내면 CPU 가
-        // 같은 판정을 한 번 더 하고 역시 원본을 냅니다 — 값은 같고 일만 두 번입니다.
-        return true;
-    }
-
-    const std::lock_guard<std::mutex> guard{state_->lock};
-    if (!state_->halation_ready) {
-        return false;
-    }
-    auto* const rgba = reinterpret_cast<core::Rgba32F*>(pixels);
-    gpu::GpuWorkingImage source{};
-    if (gpu::GpuWorkingImage::upload(state_->device, rgba, width, height, stride_pixels, source) !=
-        gpu::GpuImageStatus::ok) {
-        return false;
-    }
-    gpu::GpuWorkingImage scratch[gpu::GpuDigitalHalation::scratch_count]{};
-    for (int index = 0; index < gpu::GpuDigitalHalation::scratch_count; ++index) {
-        if (gpu::GpuWorkingImage::create(state_->device, width, height, scratch[index]) !=
-            gpu::GpuImageStatus::ok) {
-            return false;
-        }
-    }
-    gpu::GpuWorkingImage destination{};
-    if (gpu::GpuWorkingImage::create(state_->device, width, height, destination) !=
-        gpu::GpuImageStatus::ok) {
-        return false;
-    }
-    if (state_->halation.dispatch(
-            state_->device, state_->gaussian, source, scratch, destination, parameters) !=
-        gpu::GpuKernelStatus::ok) {
-        return false;
-    }
-    return destination.download(state_->device, rgba, stride_pixels) == gpu::GpuImageStatus::ok;
-}
-
-bool GpuAccelerator::apply_digital_film_grain(
-    float* const pixels,
-    const std::uint32_t width,
-    const std::uint32_t height,
-    const std::uint32_t stride_pixels,
-    const float amplitude,
-    const float chroma_ratio,
-    const float size) noexcept {
-    if (!available() || pixels == nullptr) {
-        return false;
-    }
-    if (width == 0U || height == 0U || stride_pixels < width) {
-        return false;
-    }
-    const std::lock_guard<std::mutex> guard{state_->lock};
-    if (!state_->grain_ready) {
-        return false;
-    }
-    // 호출부(`digital_film_grain.cpp`)가 이미 조기 반환을 지나왔으므로 여기서는 적용이
-    // 확정입니다. `resolve` 를 다시 부르면 세기가 두 번 곱해집니다 — 호출부가 준
-    // `amplitude` 는 **이미 세기가 곱해진** 값입니다.
-    gpu::GpuDigitalFilmGrain::Parameters parameters{};
-    parameters.amplitude = amplitude;
-    parameters.chroma_ratio = chroma_ratio;
-    parameters.size = size;
-    parameters.applied = true;
-
-    auto* const rgba = reinterpret_cast<core::Rgba32F*>(pixels);
-    gpu::GpuWorkingImage source{};
-    gpu::GpuWorkingImage destination{};
-    if (gpu::GpuWorkingImage::upload(state_->device, rgba, width, height, stride_pixels, source) !=
-            gpu::GpuImageStatus::ok ||
-        gpu::GpuWorkingImage::create(state_->device, width, height, destination) !=
-            gpu::GpuImageStatus::ok) {
-        return false;
-    }
-    if (state_->grain.dispatch(state_->device, source, destination, parameters) !=
-        gpu::GpuKernelStatus::ok) {
-        return false;
-    }
-    return destination.download(state_->device, rgba, stride_pixels) == gpu::GpuImageStatus::ok;
-}
-
-bool GpuAccelerator::apply_digital_film_color_preset(
-    float* const pixels,
-    const std::uint32_t width,
-    const std::uint32_t height,
-    const std::uint32_t stride_pixels,
-    const imaging::DigitalFilmColorPreset* const preset,
-    const float strength) noexcept {
-    if (!available() || pixels == nullptr || preset == nullptr) {
-        return false;
-    }
-    if (width == 0U || height == 0U || stride_pixels < width) {
-        return false;
-    }
-    const std::lock_guard<std::mutex> guard{state_->lock};
-    if (!state_->preset_ready) {
-        return false;
-    }
-    auto* const rgba = reinterpret_cast<core::Rgba32F*>(pixels);
-    gpu::GpuWorkingImage source{};
-    if (gpu::GpuWorkingImage::upload(state_->device, rgba, width, height, stride_pixels, source) !=
-        gpu::GpuImageStatus::ok) {
-        return false;
-    }
-    gpu::GpuWorkingImage scratch[gpu::GpuDigitalFilmColorPreset::scratch_count]{};
-    for (int index = 0; index < gpu::GpuDigitalFilmColorPreset::scratch_count; ++index) {
-        if (gpu::GpuWorkingImage::create(state_->device, width, height, scratch[index]) !=
-            gpu::GpuImageStatus::ok) {
-            return false;
-        }
-    }
-    const gpu::GpuWorkingImage* result = nullptr;
-    if (state_->preset.dispatch(
-            state_->device, source, scratch, result, *preset, strength) !=
-            gpu::GpuKernelStatus::ok ||
-        result == nullptr) {
-        return false;
-    }
-    return result->download(state_->device, rgba, stride_pixels) == gpu::GpuImageStatus::ok;
 }
 
 }  // namespace negaflow::pipeline

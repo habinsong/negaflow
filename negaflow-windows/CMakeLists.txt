@@ -280,6 +280,27 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/film_emulation_cube.hlsl"
+    FilmEmulationCubeMain
+    negaflow_film_emulation_cube_cs
+    NEGAFLOW_FILM_EMULATION_CUBE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/film_emulation_acutance.hlsl"
+    AcutanceHorizontalMain
+    negaflow_acutance_horizontal_cs
+    NEGAFLOW_ACUTANCE_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/film_emulation_acutance.hlsl"
+    AcutanceVerticalMain
+    negaflow_acutance_vertical_cs
+    NEGAFLOW_ACUTANCE_V_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/morphology.hlsl"
     MorphologyHorizontalMain
     negaflow_morphology_horizontal_cs
@@ -342,6 +363,9 @@ add_library(negaflow_gpu STATIC
     "${NEGAFLOW_DIGITAL_FILM_GRAIN_HEADER}"
     "${NEGAFLOW_DIGITAL_GAMMA_ENCODE_HEADER}"
     "${NEGAFLOW_DIGITAL_GAMMA_DECODE_MIX_HEADER}"
+    "${NEGAFLOW_FILM_EMULATION_CUBE_HEADER}"
+    "${NEGAFLOW_ACUTANCE_H_HEADER}"
+    "${NEGAFLOW_ACUTANCE_V_HEADER}"
     "${NEGAFLOW_MORPHOLOGY_H_HEADER}"
     "${NEGAFLOW_MORPHOLOGY_V_HEADER}"
     "${NEGAFLOW_BIPOLAR_TOP_HAT_HEADER}"
@@ -356,6 +380,9 @@ add_library(negaflow_gpu STATIC
     src/Native/gpu/gpu_digital_halation.cpp
     src/Native/gpu/gpu_digital_film_grain.cpp
     src/Native/gpu/gpu_digital_film_color_preset.cpp
+    src/Native/gpu/gpu_film_emulation_cube.cpp
+    src/Native/gpu/gpu_film_emulation_acutance.cpp
+    src/Native/gpu/gpu_lookup_table.cpp
     src/Native/gpu/gpu_morphology.cpp
     src/Native/gpu/gpu_tone_stage.cpp
     src/Native/gpu/gpu_film_scan_stage.cpp
@@ -577,6 +604,7 @@ add_library(negaflow_pipeline STATIC
     src/Native/pipeline/export/support/progress.cpp
     src/Native/pipeline/film_look_workspace.cpp
     src/Native/pipeline/gpu_accelerator.cpp
+    src/Native/pipeline/gpu_accelerator_film_look.cpp
     src/Native/pipeline/gpu_kernel_table.cpp
     src/Native/pipeline/stage_timing.cpp
 )
@@ -1105,6 +1133,28 @@ if(BUILD_TESTING)
     add_test(
         NAME native.gpu_digital_film_color_preset
         COMMAND negaflow_gpu_digital_film_color_preset_tests)
+
+    add_executable(negaflow_gpu_film_emulation_cube_tests
+        tests/Native.UnitTests/gpu_film_emulation_cube_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_gpu_film_emulation_cube_tests
+        PRIVATE negaflow_gpu negaflow_imaging negaflow_core negaflow_project_options
+    )
+    add_test(
+        NAME native.gpu_film_emulation_cube
+        COMMAND negaflow_gpu_film_emulation_cube_tests)
+
+    add_executable(negaflow_gpu_film_emulation_acutance_tests
+        tests/Native.UnitTests/gpu_film_emulation_acutance_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_gpu_film_emulation_acutance_tests
+        PRIVATE negaflow_gpu negaflow_imaging negaflow_core negaflow_project_options
+    )
+    add_test(
+        NAME native.gpu_film_emulation_acutance
+        COMMAND negaflow_gpu_film_emulation_acutance_tests)
 
     add_executable(negaflow_gpu_morphology_tests
         tests/Native.UnitTests/gpu_morphology_tests.cpp
