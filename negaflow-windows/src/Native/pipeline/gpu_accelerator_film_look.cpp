@@ -244,4 +244,30 @@ bool GpuAccelerator::apply_digital_film_look(
     return true;
 }
 
+bool GpuAccelerator::apply_digital_bw_film_look(
+    float* const pixels,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::uint32_t stride_pixels,
+    const imaging::DigitalBwFilmLookPlan* const plan,
+    imaging::DigitalBwFilmLookApplied* const applied) noexcept {
+    if (!available() || pixels == nullptr || plan == nullptr || applied == nullptr) {
+        return false;
+    }
+    if (width == 0U || height == 0U || stride_pixels < width) {
+        return false;
+    }
+    const std::lock_guard<std::mutex> guard{state_->lock};
+    if (!state_->film_look_ready) {
+        return false;
+    }
+    const gpu::GpuFilmLookStage::BwResult result = state_->film_look.apply_bw(
+        state_->device, state_->pool, pixels, width, height, stride_pixels, *plan);
+    if (!result.handled) {
+        return false;
+    }
+    *applied = result.applied;
+    return true;
+}
+
 }  // namespace negaflow::pipeline

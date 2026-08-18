@@ -3,6 +3,7 @@
 #include "negaflow/imaging/digital_bw_film_profile.h"
 #include "negaflow/imaging/digital_film_grain.h"
 #include "negaflow/imaging/digital_halation.h"
+#include "negaflow/imaging/kernel_accelerator.h"
 
 #include <algorithm>
 #include <array>
@@ -74,6 +75,54 @@ DigitalBwFilmLookResult apply_digital_bw_film_look(
         *digital_bw_film_profile(parameters.emulation);
     const double halation_strength =
         resolve_override(parameters.halation_override, strength);
+
+    if (approximate_acceleration_allowed()) {
+        if (const KernelAccelerator* const table = kernel_accelerator();
+            table != nullptr && table->digital_bw_film_look != nullptr) {
+            DigitalBwFilmLookPlan plan{};
+            plan.halation_material = {
+                {profile.scatter_strength, profile.scatter_strength,
+                 profile.scatter_strength},
+                {profile.halation_strength, profile.halation_strength,
+                 profile.halation_strength},
+                profile.halation_radius_ratio,
+            };
+            plan.halation_strength = halation_strength;
+            plan.halation_requested = true;
+            plan.emulsion = prepare_digital_bw_emulsion_response(
+                {parameters.emulation, strength});
+            const FilmEmulationAcutanceParameters acutance{
+                parameters.emulation, strength};
+            plan.acutance = has_film_emulation_acutance_change(acutance)
+                ? prepare_film_emulation_acutance(acutance)
+                : FilmEmulationAcutanceSetup{};
+            plan.grain = {profile.grain_amplitude, 0.0, profile.grain_size};
+            plan.grain_strength = resolve_override(parameters.grain_override, strength);
+            plan.grain_requested = true;
+            DigitalBwFilmLookApplied applied{};
+            if (table->digital_bw_film_look(
+                    reinterpret_cast<float*>(result.image.pixels.data()),
+                    result.image.width,
+                    result.image.height,
+                    result.image.stride_pixels,
+                    &plan,
+                    &applied)) {
+                result.info.digital_halation_applied = applied.halation;
+                result.info.emulsion_response_applied = applied.emulsion;
+                result.info.acutance_applied = applied.acutance;
+                result.info.digital_grain_applied = applied.grain;
+                result.info.kernel_status =
+                    negaflow::core::validate_finite_pixels(const_view(result.image));
+                if (result.info.kernel_status != negaflow::core::KernelStatus::ok) {
+                    result.status = DigitalBwFilmLookStatus::emulsion_response_failed;
+                    discard_pixels(result.image);
+                    return result;
+                }
+                result.status = DigitalBwFilmLookStatus::ok;
+                return result;
+            }
+        }
+    }
     const DigitalHalationMaterial halation_material{
         {profile.scatter_strength, profile.scatter_strength,
          profile.scatter_strength},

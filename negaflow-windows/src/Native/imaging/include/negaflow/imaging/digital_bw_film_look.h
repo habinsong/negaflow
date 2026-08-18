@@ -1,6 +1,8 @@
 #pragma once
 
 #include "negaflow/imaging/digital_bw_emulsion_response.h"
+#include "negaflow/imaging/digital_film_grain.h"
+#include "negaflow/imaging/digital_halation.h"
 #include "negaflow/imaging/film_emulation_acutance.h"
 #include "negaflow/imaging/scanner_to_working.h"
 
@@ -40,6 +42,25 @@ struct DigitalBwFilmLookResult final {
     DigitalBwFilmLookStatus status{DigitalBwFilmLookStatus::invalid_parameter};
     DigitalBwFilmLookInfo info{};
     WorkingImage image{};
+};
+
+// GPU 사슬용 계획. 게이트는 CPU 가 한 번만 판정합니다.
+struct DigitalBwFilmLookPlan final {
+    DigitalHalationMaterial halation_material{};
+    double halation_strength{0.0};
+    bool halation_requested{false};
+    DigitalBwEmulsionSetup emulsion{};
+    FilmEmulationAcutanceSetup acutance{};
+    DigitalFilmGrainProfile grain{0.0, 0.0, 1.0};
+    double grain_strength{0.0};
+    bool grain_requested{false};
+};
+
+struct DigitalBwFilmLookApplied final {
+    bool halation{false};
+    bool emulsion{false};
+    bool acutance{false};
+    bool grain{false};
 };
 
 [[nodiscard]] bool valid_digital_bw_film_look_parameters(

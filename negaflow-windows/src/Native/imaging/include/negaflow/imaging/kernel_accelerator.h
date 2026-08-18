@@ -155,6 +155,8 @@ using FilmEmulationAcutanceFunction = bool (*)(
 // 호출부는 그대로 CPU 사슬로 갑니다.
 struct DigitalFilmLookPlan;
 struct DigitalFilmLookApplied;
+struct DigitalBwFilmLookPlan;
+struct DigitalBwFilmLookApplied;
 
 using DigitalFilmLookFunction = bool (*)(
     float* pixels,
@@ -163,6 +165,14 @@ using DigitalFilmLookFunction = bool (*)(
     std::uint32_t stride_pixels,
     const DigitalFilmLookPlan* plan,
     DigitalFilmLookApplied* applied) noexcept;
+
+using DigitalBwFilmLookFunction = bool (*)(
+    float* pixels,
+    std::uint32_t width,
+    std::uint32_t height,
+    std::uint32_t stride_pixels,
+    const DigitalBwFilmLookPlan* plan,
+    DigitalBwFilmLookApplied* applied) noexcept;
 
 // 흐린 장면 vibrance 입니다. `amount` 는 CPU 가 축소본에서 장면 평균 채도를 재서
 // 정한 값입니다 — 여기서 다시 재지 않습니다(축소기가 얽혀 있고 화소마다 같은 값입니다).
@@ -280,6 +290,7 @@ struct KernelAccelerator final {
     FilmEmulationCubeFunction film_emulation_cube{nullptr};
     FilmEmulationAcutanceFunction film_emulation_acutance{nullptr};
     DigitalFilmLookFunction digital_film_look{nullptr};
+    DigitalBwFilmLookFunction digital_bw_film_look{nullptr};
     MutedSceneVibranceFunction muted_scene_vibrance{nullptr};
     ColorModelFunction color_model{nullptr};
     ScannerTargetGradeFunction scanner_target_grade{nullptr};

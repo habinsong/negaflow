@@ -237,7 +237,7 @@ macOS 는 정반대입니다:
 | 프론트 — 없음 | **11개 표면** | [`02`](02-frontend-gaps.md) |
 | 프론트 — 백엔드 미연결 | **6개** | [`02`](02-frontend-gaps.md) 3절 |
 | 창작(macOS 에 없음) | **4개** | [`03`](03-feature-status.md) 4절 |
-| GPU | **2026-08-19.** 3.1–3.6 닫힘. 면적평균·밉축소·TextureStage 그레인은 전송이 져 **기본 끔**. 다음: [`15`](15-gpu-handoff.md) 3.7 흑백 룩 사슬 · 3.8 double 계측 · 스크래치 각도 | [`04`](04-gpu-plan.md) 0절 · [`15`](15-gpu-handoff.md) |
+| GPU | **2026-08-19.** 3.1–3.7 닫힘. 흑백 룩 사슬 `film_look` 27,343 → 215 ms. 다음: [`15`](15-gpu-handoff.md) 3.8 double 계측 · 스크래치 각도 | [`04`](04-gpu-plan.md) 0절 · [`15`](15-gpu-handoff.md) |
 | God object(500줄 초과) | **초과 3개, 사유 없는 미해결 0.** src 생성 표 1 + tests fixture/suite 2. 이전 28+7은 이미 쪼개짐 | [`05`](05-god-objects.md) |
 | 기존 문서의 틀린 서술 | **13건** | [`06`](06-false-claims.md) |
 

@@ -1321,6 +1321,18 @@ if(BUILD_TESTING)
         NAME native.gpu_mip_halve_product
         COMMAND negaflow_gpu_mip_halve_product_tests)
 
+    add_executable(negaflow_gpu_bw_film_look_tests
+        tests/Native.UnitTests/gpu_bw_film_look_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_gpu_bw_film_look_tests
+        PRIVATE negaflow_pipeline negaflow_gpu negaflow_imaging negaflow_core
+            negaflow_project_options
+    )
+    add_test(
+        NAME native.gpu_bw_film_look
+        COMMAND negaflow_gpu_bw_film_look_tests)
+
     add_executable(negaflow_gpu_morphology_tests
         tests/Native.UnitTests/gpu_morphology_tests.cpp
     )

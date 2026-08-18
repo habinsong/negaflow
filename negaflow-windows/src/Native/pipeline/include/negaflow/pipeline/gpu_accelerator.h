@@ -156,6 +156,14 @@ public:
         const imaging::DigitalFilmLookPlan* plan,
         imaging::DigitalFilmLookApplied* applied) noexcept;
 
+    [[nodiscard]] bool apply_digital_bw_film_look(
+        float* pixels,
+        std::uint32_t width,
+        std::uint32_t height,
+        std::uint32_t stride_pixels,
+        const imaging::DigitalBwFilmLookPlan* plan,
+        imaging::DigitalBwFilmLookApplied* applied) noexcept;
+
     // 실측 `CIVibrance` 표를 쓰는 둘입니다. 표는 프로세스에 **한 벌**만 올라갑니다.
     [[nodiscard]] bool apply_muted_scene_vibrance(
         float* pixels,

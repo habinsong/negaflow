@@ -243,6 +243,21 @@ bool accelerate_digital_film_look(
         pixels, width, height, stride_pixels, plan, applied);
 }
 
+bool accelerate_digital_bw_film_look(
+    float* const pixels,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::uint32_t stride_pixels,
+    const imaging::DigitalBwFilmLookPlan* const plan,
+    imaging::DigitalBwFilmLookApplied* const applied) noexcept {
+    GpuAccelerator& accelerator = GpuAccelerator::shared();
+    if (!accelerator.available()) {
+        return false;
+    }
+    return accelerator.apply_digital_bw_film_look(
+        pixels, width, height, stride_pixels, plan, applied);
+}
+
 bool accelerate_muted_scene_vibrance(
     float* const pixels,
     const std::uint32_t width,
@@ -447,6 +462,7 @@ const imaging::KernelAccelerator kernel_table{
     accelerate_film_emulation_cube,
     accelerate_film_emulation_acutance,
     accelerate_digital_film_look,
+    accelerate_digital_bw_film_look,
     accelerate_muted_scene_vibrance,
     accelerate_color_model,
     accelerate_scanner_target_grade,

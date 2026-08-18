@@ -59,6 +59,21 @@ public:
         std::uint32_t stride_pixels,
         const imaging::DigitalFilmLookPlan& plan) const noexcept;
 
+    struct BwResult final {
+        bool handled{false};
+        imaging::DigitalBwFilmLookApplied applied{};
+    };
+
+    // 흑백 사슬: 헐레이션 → 유제 응답 → 아큐턴스 → 그레인. 왕복 한 번.
+    [[nodiscard]] BwResult apply_bw(
+        const GpuDevice& device,
+        GpuImagePool& pool,
+        float* pixels,
+        std::uint32_t width,
+        std::uint32_t height,
+        std::uint32_t stride_pixels,
+        const imaging::DigitalBwFilmLookPlan& plan) const noexcept;
+
     [[nodiscard]] bool is_valid() const noexcept { return state_ != nullptr; }
 
 private:

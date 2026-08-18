@@ -156,6 +156,7 @@ CPU 커널은 "변화 없음" 이면 커널을 안 돌리고 **원본을 복사*
 | 형태학(검출) | `grain_mend_morphology.cpp` + RGB 오케스트레이터 | **0**(비트 일치). **기본 켬.** 자동 검출 18.1s → **5.3s** |
 | TextureStage `filmGrain` | `apply_grain` → `GpuTextureGrain` | NVIDIA **5.96e-08**, WARP **0**. **기본 끔** — 프리뷰 texture 단계가 더 느림(아래 3.4) |
 | 채널 클리핑 오버레이 | `apply_channel_clipping_overlay` + 프리뷰 합성 | **0**(비트 일치). 현상 화소는 안 바꿈 |
+| 흑백 디지털 룩 **사슬** | `apply_digital_bw_film_look` → `GpuFilmLookStage::apply_bw` | NVIDIA **3.28e-07**. **기본 켬.** |
 | `CIAreaAverage` 면적 평균 | `area_average` → `GpuAreaAverage` | NVIDIA **2.98e-08**. **기본 끔** — 업로드가 리덕션보다 큼(아래 3.5) |
 
 계측기: `--develop-timing`(단계 표 + 프리뷰 지문) · `--gpu-transfer-bench`(전송) ·
@@ -319,10 +320,29 @@ Wave 내장은 쓰지 않습니다. CPU 는 행 우선 `double`, GPU 는 float �
 `NEGA_GPU_MIP_HALVE=1` 로만 켭니다. x6 한 번은 마지막 회차 `output` 486 ms 로
 흔들려 대표값으로 안 씁니다.
 
-### 3.7 흑백 디지털 룩 사슬
+### 3.7 흑백 디지털 룩 사슬 — **2026-08-19 오케스트레이터 붙임, 기본 켬**
 
-`digital_bw_film_look.cpp` 는 아직 재료별 진입점만 씁니다(헐레이션·그레인).
-컬러 쪽처럼 사슬 오케스트레이터로 묶을 수 있습니다.
+순서(macOS/`apply_digital_bw_film_look` 와 같음): 헐레이션 → 유제 응답 → 아큐턴스 → 밀도 그레인.
+게이트는 CPU 가 `DigitalBwFilmLookPlan` 에 담고, GPU 는 `GpuFilmLookStage::apply_bw` 가
+한 번 올려 한 번 내립니다. `GenerateMips` 와 무관합니다.
+
+**동치** (`native.gpu_bw_film_look`, 64×48, Tri-X 0.80):
+
+| 경로 | 최대 오차 |
+|---|---:|
+| NVIDIA 직접 + 제품 경로 | **3.28e-07** |
+
+GPU 가 안 돌면 시험이 실패합니다.
+
+**실측** (5088×3401, RTX 4060 Ti, `--develop-timing … x2 bwlook` 마지막 회차):
+
+| | CPU (`NEGA_GPU=0`) | GPU |
+|---|---:|---:|
+| `film_look` | **27,343.04 ms** | **215.11 ms** |
+| 전체 | **29,412.69 ms** | **610.80 ms** |
+
+프리뷰 지문 `6c6611b1deb86cb7` → `49aed1144126c81c` (근사 사슬). 내보내기·골든은
+스코프 밖이라 CPU 그대로입니다.
 
 ### 3.8 남은 `double` 두 곳 — **재기 전에 손대지 마십시오**
 

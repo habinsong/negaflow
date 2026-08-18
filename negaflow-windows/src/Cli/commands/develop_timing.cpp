@@ -60,6 +60,7 @@ int usage() {
                  "프리셋·그레인)까지 켭니다.\n"
                  "             필름 스캔 경로는 이 사슬을 지나지 않으므로, 그 다섯 "
                  "단계를 재려면 이것이 있어야 합니다.\n"
+                 "  bwlook — 디지털 원본 흑백 룩(헐레이션·유제·아큐턴스·그레인)을 켭니다.\n"
                  "  grain — TextureStage filmGrain 을 0.40 으로 켭니다(기본 0 이면 단계가 비어 있음).\n"
                  "  areaavg — 디코드된 working 이미지에 CIAreaAverage 대응 면적 평균을 재어 stderr 에 찍습니다.\n"
                  "             GPU 면적평균은 기본 끔. NEGA_GPU_AREA_AVERAGE=1 로만 켭니다.\n";
@@ -92,7 +93,8 @@ int run_develop_timing(const int argument_count, const wchar_t* const arguments[
 
     int repeats = 1;
     if (argument_count >= 7 && std::wstring_view{arguments[6]} != L"nocurve" &&
-        std::wstring_view{arguments[6]} != L"filmlook") {
+        std::wstring_view{arguments[6]} != L"filmlook" &&
+        std::wstring_view{arguments[6]} != L"bwlook") {
         float parsed = 0.0F;
         if (!parse_float(arguments[6], parsed) || parsed < 1.0F || parsed > 20.0F) {
             return usage();
@@ -162,6 +164,18 @@ int run_develop_timing(const int argument_count, const wchar_t* const arguments[
             request.film_look.intensity = 0.8;
             // 디지털 원본은 반전 단계를 지나지 않습니다 —
             // `validate.cpp:66` 이 네거티브 극성과 디지털 원본의 조합을 거부합니다.
+            request.film_polarity = pipeline::FilmPolarity::positive;
+            request.base_estimation_mode =
+                pipeline::NegativeBaseEstimationMode::auto_estimate;
+        }
+        if (std::wstring_view{arguments[index]} == L"bwlook") {
+            request.film_look.source_kind =
+                negaflow::imaging::DevelopSourceKind::rendered_digital;
+            request.film_look.emulation = negaflow::imaging::FilmEmulation::tri_x_400;
+            request.film_look.intensity = 0.8;
+            request.film_look.monochrome = true;
+            request.negative.film_type =
+                negaflow::imaging::NegativeFilmType::black_and_white;
             request.film_polarity = pipeline::FilmPolarity::positive;
             request.base_estimation_mode =
                 pipeline::NegativeBaseEstimationMode::auto_estimate;
