@@ -223,6 +223,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/digital_halation.hlsl"
+    HalationBaseMain
+    negaflow_halation_base_cs
+    NEGAFLOW_HALATION_BASE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/digital_halation.hlsl"
+    HalationAccumulateMain
+    negaflow_halation_accumulate_cs
+    NEGAFLOW_HALATION_ACCUMULATE_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/guided_filter.hlsl"
     GuidedCoefficientsMain
     negaflow_guided_coefficients_cs
@@ -256,12 +270,15 @@ add_library(negaflow_gpu STATIC
     "${NEGAFLOW_MEDIAN3_HEADER}"
     "${NEGAFLOW_GAMMA_LIFT_HEADER}"
     "${NEGAFLOW_FILM_SCAN_SHRINK_HEADER}"
+    "${NEGAFLOW_HALATION_BASE_HEADER}"
+    "${NEGAFLOW_HALATION_ACCUMULATE_HEADER}"
     "${NEGAFLOW_PARAMETRIC_TONE_CURVE_HEADER}"
     src/Native/gpu/gpu_color_kernels.cpp
     src/Native/gpu/gpu_negative_invert.cpp
     src/Native/gpu/gpu_guided_filter.cpp
     src/Native/gpu/gpu_gaussian_blur.cpp
     src/Native/gpu/gpu_film_scan.cpp
+    src/Native/gpu/gpu_digital_halation.cpp
     src/Native/gpu/gpu_neighborhood.cpp
     src/Native/gpu/gpu_stage_kernels.cpp
     src/Native/gpu/gpu_pointwise.cpp
@@ -956,6 +973,15 @@ if(BUILD_TESTING)
         PRIVATE negaflow_gpu negaflow_imaging negaflow_core negaflow_project_options
     )
     add_test(NAME native.gpu_film_scan COMMAND negaflow_gpu_film_scan_tests)
+
+    add_executable(negaflow_gpu_digital_halation_tests
+        tests/Native.UnitTests/gpu_digital_halation_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_gpu_digital_halation_tests
+        PRIVATE negaflow_gpu negaflow_imaging negaflow_core negaflow_project_options
+    )
+    add_test(NAME native.gpu_digital_halation COMMAND negaflow_gpu_digital_halation_tests)
 
     add_executable(negaflow_tone_pipeline_tests
         tests/Native.UnitTests/tone_pipeline_tests.cpp

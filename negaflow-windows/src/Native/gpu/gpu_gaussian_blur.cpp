@@ -145,6 +145,25 @@ std::vector<float> GpuGaussianBlur::weights_for_sigma(
     return weights;
 }
 
+std::vector<float> GpuGaussianBlur::weights_for_halation_sigma(const float sigma) {
+    // `imaging/digital_halation.cpp:51` `gaussian_weights` 를 그대로 옮긴 것입니다.
+    // Core Image 분산 보정 0.08 이 **없고**, 지수와 합계를 `double` 로 굴립니다.
+    const auto radius = std::max(1, static_cast<int>(std::ceil(3.0F * sigma)));
+    std::vector<float> weights(static_cast<std::size_t>(radius) * 2U + 1U);
+    double total = 0.0;
+    for (int offset = -radius; offset <= radius; ++offset) {
+        const double distance = offset;
+        const float weight = static_cast<float>(std::exp(
+            -(distance * distance) / (2.0 * static_cast<double>(sigma) * sigma)));
+        weights[static_cast<std::size_t>(offset + radius)] = weight;
+        total += weight;
+    }
+    for (float& weight : weights) {
+        weight = static_cast<float>(weight / total);
+    }
+    return weights;
+}
+
 GpuKernelStatus GpuGaussianBlur::create(
     const GpuDevice& device,
     GpuGaussianBlur& kernel) noexcept {

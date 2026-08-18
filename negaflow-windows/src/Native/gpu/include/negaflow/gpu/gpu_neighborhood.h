@@ -147,6 +147,14 @@ public:
     //    자기 판을 고릅니다. **여기서 한쪽으로 통일하지 마십시오.**
     [[nodiscard]] static std::vector<float> weights_for_sigma(float sigma, int minimum_support);
 
+    // ☠️ **CPU 에 가우시안 가중치를 만드는 식이 두 가지 있습니다. 합치지 마십시오.**
+    //    `imaging/digital_halation.cpp:51` `gaussian_weights` 는 위와 다릅니다:
+    //      · Core Image 분산 보정 **0.08 이 없습니다** — 지수도 반경도 생 σ 를 씁니다.
+    //      · 지수와 합계를 **`double` 로** 굴리고 마지막에 float 로 내립니다.
+    //      · 지원 반경은 `max(1, ceil(3σ))`.
+    //    같은 "가우시안" 이라도 값이 다르므로 **부르는 쪽이 자기 것을 고릅니다.**
+    [[nodiscard]] static std::vector<float> weights_for_halation_sigma(float sigma);
+
     // `source` → `scratch`(수평) → `destination`(수직). 세 장이 모두 같은 크기여야 하고
     // 서로 달라야 합니다.
     //
