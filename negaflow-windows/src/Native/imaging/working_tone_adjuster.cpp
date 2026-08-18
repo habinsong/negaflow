@@ -50,8 +50,8 @@ bool valid_working_tone_adjust_parameters(
            finite_in_range(parameters.basic.density, maximum_tone_control) &&
            finite_in_range(parameters.basic.highlights, maximum_tone_control) &&
            finite_in_range(parameters.basic.shadows, maximum_tone_control) &&
-           finite_in_range(parameters.basic.whites, maximum_tone_control) &&
-           finite_in_range(parameters.basic.blacks, maximum_tone_control) &&
+           finite_in_range(parameters.basic.whites, maximum_endpoint_tone_control) &&
+           finite_in_range(parameters.basic.blacks, maximum_endpoint_tone_control) &&
            finite_in_range(parameters.curve.highlights, maximum_tone_control) &&
            finite_in_range(parameters.curve.lights, maximum_tone_control) &&
            finite_in_range(parameters.curve.darks, maximum_tone_control) &&

@@ -29,7 +29,7 @@ public sealed partial class DevelopToneSection : UserControl
         panel = hostPanel;
     }
 
-    public void ConfigureRanges(double exposureStops, double toneControl)
+    public void ConfigureRanges(double exposureStops, double toneControl, double endpointToneControl)
     {
         ExposureControl.Minimum = -exposureStops;
         ExposureControl.Maximum = exposureStops;
@@ -38,13 +38,20 @@ public sealed partial class DevelopToneSection : UserControl
                      ContrastControl,
                      HighlightsControl,
                      ShadowsControl,
-                     WhitesControl,
-                     BlacksControl,
                      DensityControl,
                  })
         {
             slider.Minimum = -toneControl;
             slider.Maximum = toneControl;
+        }
+
+        // 흰색 계열 / 검정 계열만 더 넓습니다. macOS `DevelopToneRange.whites`·`blacks` 가
+        // `-2...2` 입니다 — 끝점(백점·흑점) 제어라 ±1 로는 밀리지 않는 장면이 있습니다.
+        // 숫자를 여기 박지 않습니다. 엔진이 `nf_get_tone_limits_v1` 로 알려 준 값을 씁니다.
+        foreach (InspectorSlider slider in new[] { WhitesControl, BlacksControl })
+        {
+            slider.Minimum = -endpointToneControl;
+            slider.Maximum = endpointToneControl;
         }
     }
 

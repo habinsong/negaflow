@@ -14,6 +14,10 @@ typedef struct nf_tone_limits_v1 {
     uint32_t struct_size;
     float maximum_exposure_stops;
     float maximum_tone_control;
+    /* 흰색 계열 / 검정 계열만 더 넓습니다 — macOS `DevelopToneRange.whites`·`blacks` 가 `-2...2`
+       입니다. 끝점(백점·흑점) 제어라 ±1 로는 밀리지 않는 장면이 있습니다. 이 필드는 기존
+       구조체의 패딩 자리에 들어가므로 다른 필드의 오프셋도 struct_size 도 바뀌지 않습니다. */
+    float maximum_endpoint_tone_control;
     double minimum_film_emulation_intensity;
     double maximum_film_emulation_intensity;
 } nf_tone_limits_v1;

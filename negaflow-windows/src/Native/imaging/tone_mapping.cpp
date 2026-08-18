@@ -121,12 +121,16 @@ negaflow::core::KernelStatus apply_basic_tone(
                                   (1.0F - smoothstep(0.32F, 0.46F, encoded_luma));
         target += parameters.shadows * 0.10F * shadow_mask;
 
+        // macOS `basicTone` 은 커널 안에서 `clamp(whitesAmount, -2.0, 2.0)` 을 겁니다
+        // (`ChromabaseMetalKernels.swift:231,235`). 범위는 `DevelopToneRange.whites`·`blacks`
+        // 의 `-2...2` 이고, 계수(0.12/0.06)와 마스크는 그대로 둡니다.
+        // 2026-08-18 이전에는 이 clamp 가 없어 범위를 넘는 값이 그대로 곱해졌습니다.
         const float white_mask = smoothstep(0.68F, 0.92F, encoded_luma);
-        target += parameters.whites * 0.12F * white_mask;
+        target += std::clamp(parameters.whites, -2.0F, 2.0F) * 0.12F * white_mask;
 
         const float black_mask = smoothstep(0.0F, 0.03F, encoded_luma) *
                                  (1.0F - smoothstep(0.14F, 0.30F, encoded_luma));
-        target += parameters.blacks * 0.06F * black_mask;
+        target += std::clamp(parameters.blacks, -2.0F, 2.0F) * 0.06F * black_mask;
 
         const float new_luma = negaflow::color::srgb_encoded_to_linear(
             clamp_unit(target));

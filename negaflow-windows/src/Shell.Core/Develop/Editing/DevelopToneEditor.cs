@@ -21,6 +21,9 @@ internal sealed class DevelopToneEditor
 
     public double MaximumToneControl => limits.MaximumToneControl;
 
+    /// <summary>흰색 계열 / 검정 계열 전용 상한입니다. macOS `DevelopToneRange` 가 ±2 입니다.</summary>
+    public double MaximumEndpointToneControl => limits.MaximumEndpointToneControl;
+
     public DevelopEditResult ApplyAutoTone(
         LibraryFrameSnapshot? frame,
         AutoAdjustSettings settings)
@@ -54,10 +57,10 @@ internal sealed class DevelopToneEditor
         SetTone(frame, tone => tone with { Shadow = limits.ClampToneControl(value) });
 
     public DevelopEditResult SetWhites(LibraryFrameSnapshot? frame, double value) =>
-        SetTone(frame, tone => tone with { Whites = limits.ClampToneControl(value) });
+        SetTone(frame, tone => tone with { Whites = limits.ClampEndpointToneControl(value) });
 
     public DevelopEditResult SetBlacks(LibraryFrameSnapshot? frame, double value) =>
-        SetTone(frame, tone => tone with { Blacks = limits.ClampToneControl(value) });
+        SetTone(frame, tone => tone with { Blacks = limits.ClampEndpointToneControl(value) });
 
     public DevelopEditResult SetDensity(LibraryFrameSnapshot? frame, double value) =>
         SetTone(frame, tone => tone with { Density = limits.ClampToneControl(value) });

@@ -96,9 +96,12 @@ public sealed partial class DevelopAdjustmentStack : UserControl
         Detail.Bind(hostPanel);
     }
 
-    public void ConfigureRanges(double exposureStops, double toneControl)
+    public void ConfigureRanges(
+        double exposureStops,
+        double toneControl,
+        double endpointToneControl)
     {
-        Tone.ConfigureRanges(exposureStops, toneControl);
+        Tone.ConfigureRanges(exposureStops, toneControl, endpointToneControl);
         ToneCurve.ConfigureRanges(toneControl);
         Calibration.ConfigureRanges(toneControl);
         Detail.ConfigureRanges(toneControl);

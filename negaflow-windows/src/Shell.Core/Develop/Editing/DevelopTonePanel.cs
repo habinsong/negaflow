@@ -26,6 +26,8 @@ public sealed class DevelopTonePanel
 
     public double MaximumToneControl => editor.MaximumToneControl;
 
+    public double MaximumEndpointToneControl => editor.MaximumEndpointToneControl;
+
     public bool CanEdit => panel.SelectedFrame is not null;
 
     public double Exposure => panel.SelectedFrame?.Tone.Exposure ?? 0.0;

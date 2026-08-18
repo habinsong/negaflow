@@ -151,7 +151,10 @@ public sealed partial class DevelopWorkspaceView : UserControl
             "Negaflow",
             "Development",
             "user-presets.json"));
-        Adjustments.ConfigureRanges(panel.Tone.MaximumExposureStops, panel.Tone.MaximumToneControl);
+        Adjustments.ConfigureRanges(
+            panel.Tone.MaximumExposureStops,
+            panel.Tone.MaximumToneControl,
+            panel.Tone.MaximumEndpointToneControl);
         HistogramView.ConfigureRanges(panel.Tone.MaximumExposureStops, panel.Tone.MaximumToneControl);
         BaseCard.ConfigureRanges();
         GeometryCard.ConfigureRanges();

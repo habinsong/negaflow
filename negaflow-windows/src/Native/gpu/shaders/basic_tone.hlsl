@@ -4,10 +4,9 @@
 //
 // 상수·마스크 경계·연산 순서를 바꾸지 마십시오. 하나라도 다르면 macOS 와 결과가 갈립니다.
 //
-// ⚠️ 알려진 CPU/macOS 차이 하나 — macOS 는 커널 안에서 whites/blacks 를 ±2 로 clamp 하지만
-//    Windows `apply_basic_tone` 은 clamp 하지 않습니다. 이 셰이더는 **Windows CPU 를 따릅니다**
-//    (안 그러면 GPU 와 CPU 가 갈려 동치 시험이 무의미해집니다). 어느 쪽이 맞는지는 별건이며
-//    docs/audit 에 적어 두었습니다. 여기서 몰래 고치지 마십시오.
+// 2026-08-18: whites/blacks 의 ±2 clamp 를 macOS 와 맞춰 CPU·GPU 양쪽에 넣었습니다.
+//    같이 고친 것 — `maximum_endpoint_tone_control = 2.0F`. 그 전 Windows 는 두 값을 ±1 로
+//    막아 macOS 에서 되는 조작이 여기서는 요청 자체가 거부되었습니다.
 
 
 #include "tone_shared.hlsli"
@@ -73,13 +72,14 @@ void BasicToneMain(uint3 id : SV_DispatchThreadID) {
     float shadowMask = smoothstep(0.02, 0.08, encodedLuma) * (1.0 - smoothstep(0.32, 0.46, encodedLuma));
     target += ShadowAmount * 0.10 * shadowMask;
 
-    // 백점.
+    // 백점. macOS 는 커널 안에서 ±2 로 clamp 합니다(`ChromabaseMetalKernels.swift:231`).
+    // 범위는 `DevelopToneRange.whites` 의 `-2...2` 이고 계수 0.12 와 마스크는 그대로 둡니다.
     float whiteMask = smoothstep(0.68, 0.92, encodedLuma);
-    target += WhitesAmount * 0.12 * whiteMask;
+    target += clamp(WhitesAmount, -2.0, 2.0) * 0.12 * whiteMask;
 
-    // 흑점: 순검정 바로 위 띠, y=0 앵커.
+    // 흑점: 순검정 바로 위 띠, y=0 앵커. 같은 이유로 ±2 clamp(`:235`).
     float blackMask = smoothstep(0.0, 0.03, encodedLuma) * (1.0 - smoothstep(0.14, 0.30, encodedLuma));
-    target += BlacksAmount * 0.06 * blackMask;
+    target += clamp(BlacksAmount, -2.0, 2.0) * 0.06 * blackMask;
 
     float newLuma = SrgbEncodedToLinear(clamp(target, 0.0, 1.0));
     float delta = newLuma - sourceLuma;

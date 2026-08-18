@@ -19,6 +19,15 @@ namespace negaflow::imaging {
 inline constexpr float maximum_exposure_stops = 5.0F;
 inline constexpr float maximum_tone_control = 1.0F;
 
+// 흰색 계열 / 검정 계열만 ±2 입니다. macOS `DevelopToneRange.whites`·`blacks` 가
+// `-2...2` 이고, 그 주석 원문 — *"끝점(백점·흑점) 제어라 ±1 로는 밀리지 않는 장면이 있어
+// ±2 로 둔다. 커널 계수(basicTone 의 whites 0.12 / blacks 0.06)와 마스크는 바꾸지 않는다 —
+// ±1 구간의 결과는 이전과 완전히 동일하고, 넓어진 구간만 같은 기울기로 이어진다."*
+//
+// 2026-08-18 이전 Windows 는 이것을 `maximum_tone_control`(±1)로 막아, macOS 에서 되는
+// 조작이 여기서는 **요청 자체가 거부**되었습니다(픽셀을 버리고 실패로 돌아갔습니다).
+inline constexpr float maximum_endpoint_tone_control = 2.0F;
+
 enum class WorkingToneAdjustStatus : std::uint8_t {
     ok = 0,
     invalid_parameter,

@@ -18,6 +18,8 @@ nf_status_t NF_CALL nf_get_tone_limits_v1(nf_tone_limits_v1* const output) {
     const std::uint32_t declared_size = output->struct_size;
     output->maximum_exposure_stops = negaflow::imaging::maximum_exposure_stops;
     output->maximum_tone_control = negaflow::imaging::maximum_tone_control;
+    output->maximum_endpoint_tone_control =
+        negaflow::imaging::maximum_endpoint_tone_control;
     output->minimum_film_emulation_intensity = 0.0;
     output->maximum_film_emulation_intensity = 1.0;
     output->struct_size = declared_size;

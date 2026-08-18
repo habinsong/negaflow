@@ -8,6 +8,7 @@ internal struct NativeToneLimitsV1
     internal uint StructSize;
     internal float MaximumExposureStops;
     internal float MaximumToneControl;
+    internal float MaximumEndpointToneControl;
     internal double MinimumFilmEmulationIntensity;
     internal double MaximumFilmEmulationIntensity;
 }
@@ -22,6 +23,7 @@ internal struct NativeToneLimitsV1
 public sealed record ToneLimits(
     float MaximumExposureStops,
     float MaximumToneControl,
+    float MaximumEndpointToneControl,
     double MinimumFilmEmulationIntensity,
     double MaximumFilmEmulationIntensity)
 {
@@ -41,6 +43,8 @@ public sealed record ToneLimits(
             raw.MaximumExposureStops <= 0 ||
             !float.IsFinite(raw.MaximumToneControl) ||
             raw.MaximumToneControl <= 0 ||
+            !float.IsFinite(raw.MaximumEndpointToneControl) ||
+            raw.MaximumEndpointToneControl < raw.MaximumToneControl ||
             !double.IsFinite(raw.MinimumFilmEmulationIntensity) ||
             !double.IsFinite(raw.MaximumFilmEmulationIntensity) ||
             raw.MinimumFilmEmulationIntensity >= raw.MaximumFilmEmulationIntensity)
@@ -53,6 +57,7 @@ public sealed record ToneLimits(
         return new ToneLimits(
             raw.MaximumExposureStops,
             raw.MaximumToneControl,
+            raw.MaximumEndpointToneControl,
             raw.MinimumFilmEmulationIntensity,
             raw.MaximumFilmEmulationIntensity);
     }
@@ -69,6 +74,16 @@ public sealed record ToneLimits(
                 MinimumFilmEmulationIntensity,
                 MaximumFilmEmulationIntensity)
             : MinimumFilmEmulationIntensity;
+
+    /// <summary>
+    /// 흰색 계열 / 검정 계열 전용입니다. macOS <c>DevelopToneRange.whites</c>·<c>blacks</c> 가
+    /// <c>-2...2</c> 라 나머지 톤 컨트롤(±1)보다 넓습니다 — 끝점(백점·흑점) 제어라 ±1 로는
+    /// 밀리지 않는 장면이 있습니다.
+    /// </summary>
+    public double ClampEndpointToneControl(double value) =>
+        double.IsFinite(value)
+            ? Math.Clamp(value, -MaximumEndpointToneControl, MaximumEndpointToneControl)
+            : 0.0;
 
     public double ClampToneControl(double value) =>
         double.IsFinite(value)
