@@ -2,6 +2,10 @@
 
 #include "negaflow/pipeline/gpu_accelerator.h"
 
+#include "negaflow/imaging/kernel_accelerator.h"
+
+#include <optional>
+
 #include "export/stages/decode.h"
 #include "export/stages/defect.h"
 #include "export/stages/finish.h"
@@ -108,6 +112,21 @@ using develop_export_detail::validate_request;
     if (auto failed = validate_request(request, preview, detect)) {
         return *failed;
     }
+    // 값이 바이트까지 같아야 하는 경로(내보내기·골든)는 CPU 로 둡니다. 사용자가 기다리는
+    // 프리뷰·검출에서만 GPU 를 켭니다 — `gpu_accelerator.h` 의 정책표.
+    //
+    // ☠️ 이 판정을 **여기서** 합니다. 반전 단계가 아래에서 도는데, 그 단계 안의 GPU 가속은
+    //    `ApproximateAcceleratorScope` 를 보고 켜지므로 스코프가 먼저 열려 있어야 합니다.
+    //    스코프는 스레드마다 따로라 다른 스레드의 내보내기는 영향을 안 받습니다.
+    const GpuUsePolicy gpu_policy = (preview != nullptr || detect != nullptr)
+        ? GpuUsePolicy::allowed
+        : GpuUsePolicy::cpu_only;
+    std::optional<negaflow::imaging::ApproximateAcceleratorScope> approximate_scope{};
+    if (gpu_policy == GpuUsePolicy::allowed) {
+        install_gpu_kernel_accelerator();
+        approximate_scope.emplace();
+    }
+
     RunTracker tracker{control, plan_total_cost(request, preview != nullptr)};
     std::stop_source stop{};
     if (tracker.cancelled()) {
@@ -165,11 +184,6 @@ using develop_export_detail::validate_request;
     }
 
     LookStageOutput look{};
-    // 값이 바이트까지 같아야 하는 경로(내보내기·골든)는 CPU 로 둡니다.
-    // 사용자가 기다리는 프리뷰·검출에서만 GPU 를 켭니다 — `gpu_accelerator.h` 의 정책표.
-    const GpuUsePolicy gpu_policy = (preview != nullptr || detect != nullptr)
-        ? GpuUsePolicy::allowed
-        : GpuUsePolicy::cpu_only;
     if (auto failed = apply_look_stages(
             request,
             tracker,

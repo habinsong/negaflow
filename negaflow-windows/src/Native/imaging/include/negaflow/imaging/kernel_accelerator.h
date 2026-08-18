@@ -54,6 +54,22 @@ using DigitalHalationFunction = bool (*)(
     double radius_ratio,
     double strength) noexcept;
 
+// 네거티브 반전입니다. CPU 판(`core/negative_inversion.cpp` `apply_negative_inversion`)과
+// 같은 셈이어야 합니다. `pixels` 는 `stride_pixels * height` 개의 RGBA float 이고 제자리에서
+// 바뀝니다. `dmin`·`dmax_normalized` 는 채널 셋, `response` 는 `{yCeil, amplitude, rate, shape}`
+// 넷입니다 — macOS 커널이 받는 것과 같은 넷입니다.
+//
+// ☠️ **근사한 것입니다.** 곱셈·초월함수가 들어가 CPU 와 마지막 비트가 다를 수 있습니다
+//    (실측 1.8e-07). `ApproximateAcceleratorScope` 안에서만 돕니다.
+using NegativeInversionFunction = bool (*)(
+    float* pixels,
+    std::uint32_t width,
+    std::uint32_t height,
+    std::uint32_t stride_pixels,
+    const float* dmin,
+    const float* dmax_normalized,
+    const float* response) noexcept;
+
 struct KernelAccelerator final {
     // ── 정확한 것 (언제나 켭니다) ────────────────────────────────────────────
     MorphologyPlaneFunction opening{nullptr};
@@ -62,6 +78,7 @@ struct KernelAccelerator final {
 
     // ── 근사한 것 (`ApproximateAcceleratorScope` 안에서만) ────────────────────
     DigitalHalationFunction digital_halation{nullptr};
+    NegativeInversionFunction negative_inversion{nullptr};
 };
 
 // 프로세스 시작에 한 번 설치합니다. `nullptr` 을 주면 해제합니다.

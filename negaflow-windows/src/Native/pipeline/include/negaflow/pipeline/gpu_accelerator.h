@@ -79,6 +79,20 @@ public:
     //
     // `source` 와 `destination` 은 `width * height` 개이고 겹치지 않아야 합니다.
     // 처리했으면 `true`. `false` 면 호출부가 CPU 로 갑니다.
+    // 네거티브 반전입니다. 현상에서 가장 비싼 단계입니다(실측 프리뷰 856ms 중 353ms).
+    //
+    // ☠️ **근사입니다**(곱셈·초월함수, 실측 오차 1.8e-07). 호출부가
+    //    `ApproximateAcceleratorScope` 안에서만 부릅니다 — 내보내기·골든은 CPU 그대로입니다.
+    //    `response` 는 `{yCeil, amplitude, rate, shape}` 넷입니다.
+    [[nodiscard]] bool apply_negative_inversion(
+        float* pixels,
+        std::uint32_t width,
+        std::uint32_t height,
+        std::uint32_t stride_pixels,
+        const float* dmin,
+        const float* dmax_normalized,
+        const float* response) noexcept;
+
     [[nodiscard]] bool apply_morphology_plane(
         const float* source,
         float* destination,

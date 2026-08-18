@@ -1,5 +1,7 @@
 #include "negaflow/imaging/manual_negative_developer.h"
 
+#include "negaflow/imaging/kernel_accelerator.h"
+
 #include "negaflow/imaging/mipmap_downsampler.h"
 
 #include "bilinear_rgb_sampler.h"
@@ -317,11 +319,35 @@ ManualNegativeDevelopResult develop_manual_negative(
         result.image.height,
         result.image.stride_pixels,
     };
-    result.info.kernel_status = negaflow::core::apply_negative_inversion(
-        input,
-        output,
-        kernel_parameters,
-        response);
+    // 현상 전체에서 가장 비싼 단계입니다 — 실측으로 프리뷰 856 ms 중 **353 ms(41%)**.
+    // 화소마다 채널별 `log10`·`pow`·`exp` 가 돌기 때문입니다.
+    //
+    // ☠️ 형태학과 달리 **근사**입니다(곱셈·초월함수). `ApproximateAcceleratorScope`
+    //    안에서만 돕니다 — 프리뷰·검출만 그 스코프를 엽니다. 내보내기·골든은 CPU 그대로입니다.
+    //    그리고 형태학과 달리 **한 번만** 불리므로 왕복이 1회입니다.
+    bool accelerated = false;
+    if (approximate_acceleration_allowed()) {
+        if (const KernelAccelerator* const table = kernel_accelerator();
+            table != nullptr && table->negative_inversion != nullptr) {
+            const std::array<float, 4> response_values{
+                response.y_ceiling, response.amplitude, response.rate, response.shape};
+            accelerated = table->negative_inversion(
+                reinterpret_cast<float*>(result.image.pixels.data()),
+                result.image.width,
+                result.image.height,
+                result.image.stride_pixels,
+                kernel_parameters.dmin.data(),
+                kernel_parameters.dmax_normalized.data(),
+                response_values.data());
+        }
+    }
+    result.info.kernel_status = accelerated
+        ? negaflow::core::KernelStatus::ok
+        : negaflow::core::apply_negative_inversion(
+              input,
+              output,
+              kernel_parameters,
+              response);
     if (result.info.kernel_status != negaflow::core::KernelStatus::ok) {
         result.status = ManualNegativeDevelopStatus::kernel_failed;
         discard_pixels(result.image);

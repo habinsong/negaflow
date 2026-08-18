@@ -1,0 +1,126 @@
+#include "develop_timing.h"
+
+#include <chrono>
+#include <cstdlib>
+#include <filesystem>
+#include <iostream>
+#include <string>
+#include <string_view>
+#include <vector>
+
+#include "negaflow/pipeline/develop_export.h"
+#include "negaflow/pipeline/gpu_accelerator.h"
+#include "negaflow/pipeline/stage_timing.h"
+
+namespace negaflow::cli {
+namespace {
+
+// 프리뷰 한 장을 실제 파이프라인으로 뽑고 단계별 표를 찍습니다.
+//
+// 왜 프리뷰인가 — 사용자가 기다리는 경로가 그것이고, GPU 정책도 프리뷰·검출에서만
+// 켜집니다(`gpu_accelerator.h`). 내보내기로 재면 GPU 가 안 도는 시간을 재게 됩니다.
+//
+// 왜 별도 명령인가 — `--develop-negative-tiff` 는 `imaging::` 을 직접 불러
+// `run_develop` 을 지나지 않습니다. 그 경로로는 단계별 표가 나오지 않습니다.
+// **재는 자리와 실제 도는 자리가 다르면 그 숫자는 거짓말입니다.**
+
+[[nodiscard]] bool parse_float(const std::wstring_view text, float& value) noexcept {
+    try {
+        const std::wstring copy{text};
+        std::size_t consumed = 0U;
+        value = std::stof(copy, &consumed);
+        return consumed == copy.size();
+    } catch (...) {
+        return false;
+    }
+}
+
+int usage() {
+    std::cerr << "usage: negaflow-cli --develop-timing <source> "
+                 "[<dmin-r> <dmin-g> <dmin-b>] [repeats]\n"
+                 "  NEGA_GPU=0 으로 CPU 만, 기본은 GPU 허용입니다.\n";
+    return 2;
+}
+
+}  // namespace
+
+int run_develop_timing(const int argument_count, const wchar_t* const arguments[]) {
+    if (argument_count < 3 || argument_count > 7) {
+        return usage();
+    }
+
+    pipeline::DevelopExportRequest request{};
+    request.source = std::filesystem::path{arguments[2]};
+    request.film_polarity = pipeline::FilmPolarity::negative;
+    request.base_estimation_mode = pipeline::NegativeBaseEstimationMode::auto_estimate;
+
+    if (argument_count >= 6) {
+        float red = 0.0F;
+        float green = 0.0F;
+        float blue = 0.0F;
+        if (!parse_float(arguments[3], red) || !parse_float(arguments[4], green) ||
+            !parse_float(arguments[5], blue)) {
+            return usage();
+        }
+        request.base_estimation_mode = pipeline::NegativeBaseEstimationMode::manual;
+        request.negative.dmin = {red, green, blue};
+    }
+
+    int repeats = 1;
+    if (argument_count == 7) {
+        float parsed = 0.0F;
+        if (!parse_float(arguments[6], parsed) || parsed < 1.0F || parsed > 20.0F) {
+            return usage();
+        }
+        repeats = static_cast<int>(parsed);
+    }
+
+    // 슬라이더를 실제로 민 것과 같게 톤을 켭니다. 전부 0 이면 단계가 통째로 건너뛰어져
+    // **아무것도 안 재게 됩니다.**
+    request.tone.exposure_stops = 0.3F;
+    request.tone.basic.contrast = 0.4F;
+    request.tone.basic.shadows = 0.2F;
+    request.tone.basic.highlights = -0.2F;
+    request.tone.curve.lights = 0.15F;
+    request.tone.curve.darks = -0.15F;
+
+    // macOS 정착 프리뷰와 같은 한 변입니다(`fullMaxDimension`).
+    constexpr std::uint32_t preview_edge = 3600U;
+    std::vector<std::uint8_t> pixels(
+        static_cast<std::size_t>(preview_edge) * preview_edge * 4U);
+
+    std::cout << "{\"schema_version\":1,\"operation\":\"develop_timing\",\"gpu\":\""
+              << pipeline::GpuAccelerator::shared().adapter_description() << "\",\"runs\":[";
+
+    for (int run = 0; run < repeats; ++run) {
+        pipeline::reset_stage_timings();
+        const auto started = std::chrono::steady_clock::now();
+        const pipeline::DevelopExportOutcome outcome = pipeline::develop_preview(
+            request, preview_edge, preview_edge, pixels.data(), pixels.size());
+        const auto finished = std::chrono::steady_clock::now();
+        const auto wall = std::chrono::duration_cast<std::chrono::microseconds>(
+                              finished - started)
+                              .count();
+        if (run != 0) {
+            std::cout << ',';
+        }
+        std::cout << "{\"succeeded\":" << (outcome.succeeded ? "true" : "false")
+                  << ",\"wall_microseconds\":" << wall;
+        if (!outcome.succeeded) {
+            std::cout << ",\"failed_stage\":\""
+                      << pipeline::develop_export_stage_name(outcome.failed_stage)
+                      << "\",\"failure\":\"" << outcome.failure_name << '"';
+        }
+        std::cout << '}';
+        // 마지막 회차의 표만 찍습니다 — 앞 회차는 캐시가 차는 중이라 대표값이 아닙니다.
+        if (run + 1 == repeats) {
+            std::cout << "]}\n";
+            pipeline::dump_stage_timings();
+            return outcome.succeeded ? 0 : 1;
+        }
+    }
+    std::cout << "]}\n";
+    return 0;
+}
+
+}  // namespace negaflow::cli

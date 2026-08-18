@@ -8,6 +8,7 @@
 #include "negaflow/gpu/gpu_device.h"
 #include "negaflow/gpu/gpu_film_scan_stage.h"
 #include "negaflow/gpu/gpu_morphology.h"
+#include "negaflow/gpu/gpu_negative_invert.h"
 #include "negaflow/gpu/gpu_working_image.h"
 #include "negaflow/gpu/gpu_tone_stage.h"
 
@@ -22,6 +23,8 @@ struct GpuAccelerator::State final {
     gpu::GpuFilmScanDenoiseStage denoise{};
     gpu::GpuMorphology morphology{};
     bool morphology_ready{false};
+    gpu::GpuNegativeInvert invert{};
+    bool invert_ready{false};
     // 평면 ↔ RGBA 변환용. 매 호출 할당하지 않으려고 들고 있습니다.
     std::vector<core::Rgba32F> morphology_staging{};
     bool usable{false};
@@ -64,6 +67,11 @@ GpuAccelerator::GpuAccelerator() noexcept {
         // 형태학은 따로 만듭니다. 이것만 실패해도 톤·디노이즈는 그대로 돕니다.
         state->morphology_ready =
             gpu::GpuMorphology::create(state->device, state->morphology) ==
+            gpu::GpuKernelStatus::ok;
+        // 반전은 현상에서 가장 비싼 단계입니다(실측 41%). 따로 만들어 이것만 실패해도
+        // 나머지가 그대로 돌게 합니다.
+        state->invert_ready =
+            gpu::GpuNegativeInvert::create(state->device, state->invert) ==
             gpu::GpuKernelStatus::ok;
     }
     state_ = state;
@@ -202,6 +210,56 @@ bool GpuAccelerator::apply_morphology_plane(
     return true;
 }
 
+bool GpuAccelerator::apply_negative_inversion(
+    float* const pixels,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::uint32_t stride_pixels,
+    const float* const dmin,
+    const float* const dmax_normalized,
+    const float* const response) noexcept {
+    if (!available() || pixels == nullptr || dmin == nullptr || dmax_normalized == nullptr ||
+        response == nullptr) {
+        return false;
+    }
+    if (width == 0U || height == 0U || stride_pixels < width) {
+        return false;
+    }
+    const std::lock_guard<std::mutex> guard{state_->lock};
+    if (!state_->invert_ready) {
+        return false;
+    }
+
+    auto* const rgba = reinterpret_cast<core::Rgba32F*>(pixels);
+    gpu::GpuWorkingImage input{};
+    if (gpu::GpuWorkingImage::upload(
+            state_->device, rgba, width, height, stride_pixels, input) !=
+        gpu::GpuImageStatus::ok) {
+        return false;
+    }
+    gpu::GpuWorkingImage output{};
+    if (gpu::GpuWorkingImage::create(state_->device, width, height, output) !=
+        gpu::GpuImageStatus::ok) {
+        return false;
+    }
+
+    gpu::GpuNegativeInvertParameters parameters{};
+    for (int channel = 0; channel < 3; ++channel) {
+        parameters.dmin[channel] = dmin[channel];
+        parameters.dmax_normalized[channel] = dmax_normalized[channel];
+    }
+    parameters.response_y_ceiling = response[0];
+    parameters.response_amplitude = response[1];
+    parameters.response_rate = response[2];
+    parameters.response_shape = response[3];
+
+    if (state_->invert.dispatch(state_->device, input, output, parameters) !=
+        gpu::GpuKernelStatus::ok) {
+        return false;
+    }
+    return output.download(state_->device, rgba, stride_pixels) == gpu::GpuImageStatus::ok;
+}
+
 namespace {
 
 // `imaging` 안쪽 커널을 GPU 로 보내는 표입니다. `imaging` 은 `gpu` 를 링크할 수 없으므로
@@ -257,12 +315,32 @@ bool accelerate_bipolar_top_hat(
         source, destination, width, height, radius, imaging::MorphologyKind::bipolar_top_hat);
 }
 
+// 네거티브 반전입니다. 형태학과 달리 **근사**이고(곱셈·초월함수), 현상 한 번에 **한 번만**
+// 불리므로 왕복이 1회입니다 — 형태학이 느려진 두 이유(수십 번 왕복·직렬화) 중 하나가 없습니다.
+// 실측으로 프리뷰 856 ms 중 353 ms(41%)가 이 단계입니다.
+bool accelerate_negative_inversion(
+    float* const pixels,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::uint32_t stride_pixels,
+    const float* const dmin,
+    const float* const dmax_normalized,
+    const float* const response) noexcept {
+    GpuAccelerator& accelerator = GpuAccelerator::shared();
+    if (!accelerator.available()) {
+        return false;
+    }
+    return accelerator.apply_negative_inversion(
+        pixels, width, height, stride_pixels, dmin, dmax_normalized, response);
+}
+
 // 프로세스 수명 동안 살아 있어야 합니다 — `install_kernel_accelerator` 는 포인터만 갖습니다.
-const imaging::KernelAccelerator morphology_table{
+const imaging::KernelAccelerator kernel_table{
     accelerate_opening,
     accelerate_closing,
     accelerate_bipolar_top_hat,
-    nullptr,
+    nullptr,                        // digital_halation — 아직 이음매 없음
+    accelerate_negative_inversion,
 };
 
 }  // namespace
@@ -307,15 +385,19 @@ void install_gpu_kernel_accelerator() noexcept {
     // 여러 번 불려도 한 번만 겁니다. 검출이 돌 때마다 부르는 자리라 필요합니다.
     static std::once_flag once{};
     std::call_once(once, []() noexcept {
-        // 실측이 더 느렸습니다. 기본은 꺼짐이고 환경 변수로만 켭니다 — 위 주석의 표를 보십시오.
-        if (!morphology_enabled_by_environment()) {
-            return;
-        }
         // 장치가 없으면 표를 걸지 않습니다 — 매 호출 실패보다 아예 안 묻는 편이 쌉니다.
         if (!GpuAccelerator::shared().available()) {
             return;
         }
-        imaging::install_kernel_accelerator(&morphology_table);
+        // ☠️ 형태학은 실측이 더 느려 기본에서 뺍니다(위 주석의 표). 반전은 왕복이 1회라
+        //    사정이 다르므로 그대로 둡니다 — 근사이므로 스코프 안에서만 돕니다.
+        static imaging::KernelAccelerator effective = kernel_table;
+        if (!morphology_enabled_by_environment()) {
+            effective.opening = nullptr;
+            effective.closing = nullptr;
+            effective.bipolar_top_hat = nullptr;
+        }
+        imaging::install_kernel_accelerator(&effective);
     });
 }
 

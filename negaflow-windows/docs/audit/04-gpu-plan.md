@@ -136,9 +136,14 @@
    원인은 커널이 아니라 구조 — **평면마다 왕복**하고, D3D11 자물쇠 때문에 **4중 병렬 CPU 가
    직렬 GPU 로** 바뀝니다. `NEGA_GPU_MORPHOLOGY=1` 로만 켜집니다.
    고치는 길은 **검출 오케스트레이터**입니다. 자세한 것은 [`13`](13-performance-playbook.md) 15절.
-2. **톤·디노이즈의 속도는 아직 안 쟀습니다.** `NEGA_TIMING=1` 로 단계별 표가 나오지만
-   `run_develop` 을 지나는 경로에서만입니다 — CLI 의 `--develop-negative-tiff` 는
-   `imaging::` 을 직접 불러 그 표에 안 잡힙니다.
+2. ✅ **프리뷰 경로를 쟀고, 최대 단계였던 반전을 붙였습니다.**
+   `negaflow-cli --develop-timing` 신설. 5100×3408 실제 스캔:
+   `develop`(반전) **353.61 → 261.49 ms(−26%)**, 전체 **856.45 → 782.59 ms(−9%)**.
+   반전은 **근사**라 `ApproximateAcceleratorScope`(프리뷰·검출) 안에서만 돕니다 —
+   내보내기·골든은 CPU 그대로이고 native 83/83 이 그것을 지킵니다.
+   형태학과 반대 결과가 난 이유는 [`13`](13-performance-playbook.md) 16절.
+3. **`tone_adjust` 가 이제 최대(296 ms)입니다.** GPU 톤 단계가 붙어 있는데도 그렇습니다 —
+   **왜인지 아직 안 봤습니다.** `ID3D11Query` 타임스탬프로 전송과 커널을 갈라야 합니다.
 2. **내장 GPU 실기 확인을 못 했습니다.** 이 기계에 Intel/AMD 내장이 없습니다.
    범용성은 **코드 구조로만** 보장돼 있습니다(벤더 ID 로 거르는 코드 0줄, FL 11_0 공통 하한,
    `DXGI_ADAPTER_FLAG_SOFTWARE` 만 제외, WARP 폴백).
