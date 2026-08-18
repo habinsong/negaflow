@@ -938,6 +938,18 @@ if(BUILD_TESTING)
 
     add_executable(negaflow_gpu_color_kernel_tests
         tests/Native.UnitTests/gpu_color_kernel_tests.cpp
+        tests/Native.UnitTests/GpuColorKernels/gpu_color_kernel_test_support.cpp
+        tests/Native.UnitTests/GpuColorKernels/gpu_color_grade_tests.cpp
+        tests/Native.UnitTests/GpuColorKernels/gpu_color_mixer_tests.cpp
+        tests/Native.UnitTests/GpuColorKernels/gpu_primary_calibration_tests.cpp
+        tests/Native.UnitTests/GpuColorKernels/gpu_bw_toning_tests.cpp
+        tests/Native.UnitTests/GpuColorKernels/gpu_digital_bw_film_tests.cpp
+    )
+    target_include_directories(
+        negaflow_gpu_color_kernel_tests
+        PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/Native.UnitTests"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/Native.UnitTests/GpuColorKernels"
     )
     target_link_libraries(
         negaflow_gpu_color_kernel_tests
