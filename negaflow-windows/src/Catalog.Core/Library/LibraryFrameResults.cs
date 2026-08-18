@@ -22,6 +22,9 @@ public enum LibraryFrameError
     /// <summary><c>manualBaseRGB</c> 가 유한한 세 채널 배열이 아닙니다.</summary>
     InvalidManualBase,
 
+    /// <summary><c>baseRGB</c> 가 있으면 유한한 세 채널이어야 합니다.</summary>
+    InvalidAppliedBase,
+
     InvalidBaseRecipe,
 
     /// <summary><c>presetID</c> 가 문자열이 아니거나 비어 있습니다.</summary>

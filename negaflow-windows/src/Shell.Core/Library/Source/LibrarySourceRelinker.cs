@@ -111,6 +111,8 @@ internal sealed class LibrarySourceRelinker(
             }
             JsonObject updated = (JsonObject)state.Payloads[index].DeepClone();
             updated[LibraryFrameReader.SourcePathName] = newPath;
+            // macOS `frame.baseRGB = nil` — 다른 원본의 실측 Dmin 을 새 파일에 남기지 않습니다.
+            updated.Remove(LibraryFrameReader.BaseRgbName);
             if (infrared is not null)
             {
                 updated[LibraryFrameReader.InfraredPathName] = infrared;

@@ -127,7 +127,7 @@ macOS `Sources/Chromabase/` **159파일**을 개념 키워드로 Windows 전 트
 | `Profiles/ScannerTargetGrade` (8파일) | 1,697 | 749 | **44%** | `+Signature`·`+PositiveSignature`·`+Texture`·`+DocumentedCharacter` 히트 **0** |
 | `Profiles/ScannerProfile` (5파일) | 681 | 297 | **44%** | `ScannerProfileRegistry` 없음, `Matcher` 히트 1 |
 | `Engine` (6파일) | 1,718 | 256 | **15%** | 포지티브 파이프라인·Metal 커널·샘플링 풀 없음 |
-| `Film` (11파일) | 1,993 | 1,379+ | **진단+sidecar 이식함** | 피커·Diagnostics·sidecar confidence 2026-08-19. `frame.baseRGB` 영속은 남음 |
+| `Film` (11파일) | 1,993 | 1,379+ | **진단+sidecar+baseRGB 이식함** | C1.5~C1.7. 남은 것: 276 자·리베이트 스포이드 |
 | `Digital` (13파일) | 2,435 | 1,618 | **66%** | `DigitalFilmDevelop`·`SceneReconstruct` 없음 |
 | `Export` (23파일) | 3,985 | 2,703 | **68%** | `RenderManifest` 5파일·감마워닝·ICC 스냅샷 없음 |
 

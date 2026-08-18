@@ -115,6 +115,38 @@ internal static class LibraryFrameCoreJsonReader
     /// macOS 와 같은 0...5 별점입니다. frame record 최상위에 있고, 키가 없는 legacy row 는 0 입니다.
     /// 범위를 벗어난 값은 조용히 자르지 않고 거부합니다 — 카탈로그가 손상됐다는 뜻입니다.
     /// </summary>
+    internal static bool TryReadAppliedBase(
+        JsonElement frameRecord,
+        out ManualBaseRgb? appliedBase)
+    {
+        appliedBase = null;
+        if (!frameRecord.TryGetProperty(BaseRgbName, out JsonElement element) ||
+            element.ValueKind == JsonValueKind.Null)
+        {
+            return true;
+        }
+        if (element.ValueKind != JsonValueKind.Array || element.GetArrayLength() != 3)
+        {
+            return false;
+        }
+
+        Span<double> channels = stackalloc double[3];
+        int index = 0;
+        foreach (JsonElement channel in element.EnumerateArray())
+        {
+            if (channel.ValueKind != JsonValueKind.Number ||
+                !channel.TryGetDouble(out double value) ||
+                !double.IsFinite(value))
+            {
+                return false;
+            }
+            channels[index++] = value;
+        }
+
+        appliedBase = new ManualBaseRgb(channels[0], channels[1], channels[2]);
+        return true;
+    }
+
     internal static bool TryReadRating(JsonElement frameRecord, out int rating)
     {
         rating = 0;

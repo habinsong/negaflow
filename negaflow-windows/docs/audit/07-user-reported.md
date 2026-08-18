@@ -251,7 +251,7 @@ macOS `FilmBaseEstimator.swift` 전량 · `FilmBaseStatistics.coherentCluster` �
 | 항목 | 내용 |
 |---|---|
 | **sidecar `confidence` JSON** | **2026-08-19 이식함**(C1.6). 앱 내보내기 `OpticFilm8100_frame_1.tiff.negaflow.json` 에 `confidence=0.7291067` · `confidenceBasis=measuredEvidenceScoreV1` · `method=connectedComponent` |
-| **`frame.baseRGB` 카탈로그 영속** | macOS 는 렌더 후 `ScanFrame.baseRGB` 를 저장. Windows `LastAppliedBase` 는 세션·프레임 전환까지 |
+| **`frame.baseRGB` 카탈로그 영속** | **2026-08-19 이식함.** `params` 형제 `baseRGB` 세 채널. 미리보기 후 `AppliedBaseWriter`. 프레임 전환 시 카탈로그에서 복원. relink 는 키를 지움 |
 | **피커 폭 픽셀 자** | 넓은 패널에서 ComboBox 가 276 에서 멈추는지는 다시 재야 함 |
 | **스포이드로 미노광 베이스를 집어 Dmin 이 바뀜** | 캔버스 클릭은 피커를 끄고 Dmin 을 유지함(장면 클릭 → 거부 경로). 리베이트가 보이는 프레임에서 성공 집기는 아직 없음 |
 
@@ -298,6 +298,22 @@ macOS `Sidecar.FilmBaseDiagnostics.init` · `ExportFrameWriter+Sidecars` 를
 - `FilmBaseSidecarTests` + 기존 sidecar 시험 포함 Shell.UnitTests **1093 assertions**.
 - `run-app` x64 Release PID 31912. 자동 `base 0.22 0.13 0.07` 뒤 소스 탭에서 사이드카 켜고 내보내기.
 - `OpticFilm8100_frame_1.tiff.negaflow.json` (2794바이트): `method=connectedComponent` `sampledPixelCount=43776` `confidence=0.7291067194749321` `confidenceBasis=measuredEvidenceScoreV1` `anomalies=[]`. 프로브와 같은 실측.
+- 키 대조(앱 JSON ↔ Swift Codable): `rgb`/`source`/`dmin`/`dmax`/`densityRange`/`confidence`/`confidenceBasis`/`confidenceIsCalibratedProbability`/`measurement` + measurement 의 `schemaVersion`/`method`/`sampledPixelCount`/`candidateCount`/`selectedSampleCount`/`retainedSampleCount`/`sampleCoverage`/`spatialCoverage`/`medianLuma`/`lumaMAD`/`channelMAD`/`chromaticityMAD`/`clippedFraction`/`outlierFraction`/`evidenceComponents`(7항)/`evidenceScore`/`isCalibratedProbability`/`anomalies`. 수동은 confidence·basis·measurement 가 null.
+
+### C1.7 2026-08-19 — `frame.baseRGB` 카탈로그 영속
+
+macOS `ScanFrame.baseRGB` · `LibraryFrameRecord.baseRGB` · `applyBaseCache` (`result.base?.rgb`) 를
+Windows `LibraryFrameSnapshot.AppliedBase` + `AppliedBaseWriter` 로 옮겼습니다.
+
+| 항목 | Windows | 근거 |
+|---|---|---|
+| 자리 | frame record `baseRGB` — **params 형제** | Swift `LibraryFrameRecord.baseRGB` |
+| 쓰기 | 미리보기 성공 후 `RememberAppliedBase` → `EditFrameRecord` | `AppModel+DevelopRendering.applyBaseCache` |
+| 읽기 | 없으면 legacy null. 있으면 유한 3채널 | `makeFrame` `count == 3` |
+| 프레임 전환 | 그 프레임의 `AppliedBase` 를 읽음 | ScanFrame 이 값을 들고 있음 |
+| relink | `baseRGB` 키 삭제 | `AppModel+SourceRelink` `frame.baseRGB = nil` |
+
+프리뷰 프록시 슬롯은 `light_gain` 을 키에 넣습니다. white-led 뒤 warm-led 는 슬롯 미스 + applied dmin 변경 (`native.preview_proxy_cache`).
 
 ### 앞 판에서 바로잡은 것
 
@@ -402,7 +418,7 @@ DevelopLookLabel         DevelopLookSelector
 
 1. **A1·A2 크래시** — 스택부터. **A3(2026-08-19) `developReset.Value` 도 닫음.**
 2. **E1 프리뷰 프록시 캐시 + 2단 렌더** — 네이티브 2슬롯+Lanczos 현상 붙임. 5088×3401 상자 1280 두 번째 **43.1 ms · decode 0**. 앱에서 노출 0→0.80 과 히스토그램 갱신 확인. **FrameCacheManager FIFO 는 10번.**
-3. **C1 필름 베이스** — C1.1~C1.6. 다음: `frame.baseRGB` 영속 · 276 자 · 리베이트 스포이드 성공 집기
+3. **C1 필름 베이스** — C1.1~C1.7. 다음: 피커 276 자 · 리베이트 스포이드 성공 집기
 4. **E4 인화 프리뷰** — 현상본 쓰도록
 5. **B 메뉴막대 11개**
 6. **D1 초기화 · D5 undo**

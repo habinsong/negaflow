@@ -87,8 +87,10 @@ internal static class DevelopPanelStateTests
                     "base 0.72 0.54 0.34",
                 "panel_base_readout_uses_macos_fixed2_format");
             Check(panel.Select("frame-2") && panel.LastAppliedBase is null,
-                "panel_clears_applied_base_when_the_frame_changes");
-            Check(panel.Select("frame-1"), "panel_reselect_after_base_readout");
+                "panel_clears_applied_base_when_the_frame_has_none");
+            Check(
+                panel.Select("frame-1") && panel.LastAppliedBase == expectedApplied,
+                "panel_restores_applied_base_from_catalog");
             Check(panel.Tone.MaximumExposureStops == 5.0, "panel_exposure_range_from_engine");
 
             Check(

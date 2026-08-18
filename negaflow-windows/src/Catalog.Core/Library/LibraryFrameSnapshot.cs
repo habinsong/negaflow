@@ -220,6 +220,12 @@ public sealed record LibraryFrameSnapshot(
     public AppMetadataOverlay? AppMetadata { get; init; }
 
     /// <summary>
+    /// macOS <c>ScanFrame.baseRGB</c> — 마지막 현상이 쓴 Dmin 입니다. 카탈로그
+    /// <c>baseRGB</c> 에 남고, 수동 샘플 <see cref="ManualBase"/> 와는 자리가 다릅니다.
+    /// </summary>
+    public ManualBaseRgb? AppliedBase { get; init; }
+
+    /// <summary>
     /// macOS-compatible base mode and preset identifiers. This is persisted independently
     /// from <see cref="ManualBase"/> because changing modes does not erase a manual sample.
     /// </summary>

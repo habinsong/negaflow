@@ -109,7 +109,8 @@
 > **2026-08-18: 필름 베이스는 함수 단위로 다시 대조해 창작 관문을 제거했고, 스포이드까지 이식했습니다**([`07`](07-user-reported.md) C1.1~C1.3).
 > **2026-08-19: strip_fallback 을 `coherent_measurement`+0.97 컷에 맞추고, 헤더 `baseReadoutFormat` 과 피커 86/276 을 앱에서 확인했습니다**(C1.4).
 > **2026-08-19: `FilmBaseMeasurementDiagnostics` 를 빌더까지 1:1 로 옮기고 자동 네 실측 경로에 붙였습니다**(C1.5).
-> **2026-08-19: 내보내기 sidecar 에 `filmBaseDiagnostics`/`confidence=evidenceScore` 를 붙였습니다**(C1.6). `frame.baseRGB` 영속·276 자·리베이트 스포이드 성공 집기는 남음.
+> **2026-08-19: 내보내기 sidecar 에 `filmBaseDiagnostics`/`confidence=evidenceScore` 를 붙였습니다**(C1.6).
+> **2026-08-19: `frame.baseRGB` 를 카탈로그에 남기고, 프리뷰 프록시 슬롯에 `light_gain` 을 넣었습니다**(C1.7). 276 자·리베이트 스포이드는 남음.
 >
 > **그리고 아래 7개는 "코드에 있으니 됐다" 로 판정했다가 사용자가 앱을 열어서 잡은 것입니다:**
 > 슬라이더 정수 스냅 · 값 입력 불가 · 좌우 뒤집기 안 보임 · 현상 타깃 설정 경로 없음 ·

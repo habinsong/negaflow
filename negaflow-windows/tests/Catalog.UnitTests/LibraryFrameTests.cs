@@ -11,7 +11,11 @@ namespace Negaflow.Catalog.UnitTests;
 
 internal static class LibraryFrameTests
 {
-    public static void RunAppMetadataPersistence() => LibraryAppMetadataTests.Run();
+    public static void RunAppMetadataPersistence()
+    {
+        LibraryAppMetadataTests.Run();
+        LibraryAppliedBaseTests.Run();
+    }
 
     public static void RunFrameBehavior()
     {

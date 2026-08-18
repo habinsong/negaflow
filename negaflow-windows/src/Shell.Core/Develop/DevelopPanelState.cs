@@ -63,14 +63,33 @@ public sealed class DevelopPanelState
     public ManualBaseRgb? ManualBase => SelectedFrame?.ManualBase;
 
     /// <summary>
-    /// macOS <c>ScanFrame.baseRGB</c> — 마지막 미리보기가 쓴 Dmin 입니다. 카탈로그에는 아직
-    /// 남기지 않으며, 프레임을 바꾸면 비웁니다.
+    /// macOS <c>ScanFrame.baseRGB</c> — 마지막 미리보기가 쓴 Dmin 입니다. 카탈로그
+    /// <c>baseRGB</c> 에 남기고, 프레임을 고르면 그 값을 다시 읽습니다.
     /// </summary>
     public ManualBaseRgb? LastAppliedBase { get; private set; }
 
     public void RememberAppliedBase(float red, float green, float blue)
     {
-        LastAppliedBase = new ManualBaseRgb(red, green, blue);
+        ManualBaseRgb rgb = new(red, green, blue);
+        LastAppliedBase = rgb;
+        if (SelectedFrame is not { } frame)
+        {
+            return;
+        }
+        if (host.EditFrameRecord(frame.Id, record => AppliedBaseWriter.Apply(record, rgb))
+            != LibraryFrameError.None)
+        {
+            return;
+        }
+        foreach (LibraryFrameSnapshot updated in host.Frames)
+        {
+            if (string.Equals(updated.Id, frame.Id, StringComparison.Ordinal))
+            {
+                SelectedFrame = updated;
+                LastAppliedBase = updated.AppliedBase ?? rgb;
+                return;
+            }
+        }
     }
 
     public BaseEstimationMode BaseMode => SelectedFrame?.Base.Mode ?? BaseEstimationMode.Auto;
@@ -139,13 +158,8 @@ public sealed class DevelopPanelState
         {
             if (string.Equals(frame.Id, frameId, StringComparison.Ordinal))
             {
-                if (SelectedFrame is not { } current ||
-                    !string.Equals(current.Id, frame.Id, StringComparison.Ordinal))
-                {
-                    LastAppliedBase = null;
-                }
-
                 SelectedFrame = frame;
+                LastAppliedBase = frame.AppliedBase;
                 return true;
             }
         }

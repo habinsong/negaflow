@@ -80,9 +80,9 @@ UI/UX(WinUI 3 컨트롤 속성 — Slider.StepFrequency 기본값이 1 인 것�
 1. 크래시 2개 — 설정 버튼, 스캐너 DPI/심도/프레임규격. 스택부터 잡아라
 2. 프리뷰 프록시 캐시 + 2단 렌더 + 0.14초 정착 (docs/audit/04 6.1절)
    run_develop 이 호출마다 원본 TIFF 를 다시 디코드한다(실측 2,695ms). macOS 는 디코드 0회다
-3. 필름 베이스 — 2026-08-18 관문 제거+스포이드, C1.4 strip/readout/피커, C1.5 Diagnostics,
-   C1.6 sidecar confidence(앱 JSON 0.7291067 / measuredEvidenceScoreV1). 남은 것:
-   frame.baseRGB 카탈로그 영속, 넓은 패널에서 276 자, 리베이트 스포이드 성공 집기
+3. 필름 베이스 — C1.4~C1.7. sidecar 앱 JSON 0.7291067 / measuredEvidenceScoreV1,
+   catalog `baseRGB` 영속, 프록시 슬롯 light_gain. 남은 것: 넓은 패널 276 자,
+   리베이트 스포이드 성공 집기
 4. 인화 프리뷰 — 360px 썸네일 확대라 깨진다. 현상본을 써라
 5. 메모리 캐시·FIFO 474줄 이식 (docs/audit/10 — 상수 전부 적혀 있다)
 6. 메뉴막대 11개

@@ -61,6 +61,8 @@ public static class LibraryFrameReader
     internal const string ParametersName = "params";
     /// <summary>macOS 와 같이 <c>params</c> 형제입니다. 델타와 프리셋을 섞어 두지 않습니다.</summary>
     public const string LookPresetIdName = "presetID";
+    /// <summary>macOS <c>LibraryFrameRecord.baseRGB</c> — 마지막 현상이 쓴 Dmin. params 형제가 아닙니다.</summary>
+    public const string BaseRgbName = "baseRGB";
     internal const string BaseEstimationModeName = "baseEstimationMode";
     internal const string ManualBaseName = "manualBaseRGB";
     internal const string FilmStockDminIdName = "filmStockDminID";
@@ -225,6 +227,10 @@ public static class LibraryFrameReader
             lookPresetId = parsedPresetId;
         }
 
+        if (!TryReadAppliedBase(frameRecord, out ManualBaseRgb? appliedBase))
+        {
+            return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidAppliedBase);
+        }
         if (!TryReadRating(frameRecord, out int rating))
         {
             return LibraryFrameReadResult.Failure(LibraryFrameError.InvalidRating);
@@ -340,6 +346,7 @@ public static class LibraryFrameReader
             InfraredPath = infraredPath,
             SourceMetadata = sourceMetadata,
             AppMetadata = appMetadata,
+            AppliedBase = appliedBase,
             Base = baseRecipe,
             LookPresetId = lookPresetId,
             PointCurves = pointCurves,
