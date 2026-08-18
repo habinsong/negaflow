@@ -1,5 +1,7 @@
 #include "negaflow/core/parallel_rows.h"
 
+#include "row_block_pool.h"
+
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -102,22 +104,24 @@ void run_row_blocks(
     }
 
     const std::uint32_t block_count = reserved + 1U;
-    std::array<std::thread, maximum_row_blocks> workers{};
-    std::uint32_t started = 0U;
+
+    // 블록은 **영속 워커 풀**로 넘깁니다. 예전에는 호출마다 `std::thread` 를 새로
+    // 만들었는데, 큰 이미지에서는 묻히지만 작은 작업에서는 생성 비용이 이득을 먹었습니다 —
+    // 실측으로 256×171 표본 격자에서 25 ms 손해였습니다
+    // (`docs/audit/13-performance-playbook.md` 19절).
+    //
+    // ☠️ 예약(`reserve_extra_threads`)이 풀 크기와 같은 예산을 쓰므로, 예약이 K 개
+    //    잡혔다는 것은 **놀고 있는 워커가 K 개 있다는 뜻**입니다. 워커 안에서 다시 이 함수를
+    //    불러도 예약이 0 이 되어 직접 돌 뿐, 자기가 낸 일을 기다리며 멈추지 않습니다.
+    row_block_pool_detail::PendingCounter pending{};
     for (std::uint32_t index = 1U; index < block_count; ++index) {
         const RowBlock block = block_at(height, block_count, index);
         if (block.row_count == 0U) {
             continue;
         }
-        try {
-            workers[started] = std::thread(
-                [function, context, block]() noexcept {
-                    function(context, block.first_row, block.row_count);
-                });
-            ++started;
-        } catch (...) {
-            // Thread creation is the only failure here and it is recoverable: run the
-            // block inline so the pass still covers every row.
+        if (!row_block_pool_detail::submit(
+                function, context, block.first_row, block.row_count, pending)) {
+            // 넘기지 못했으면 그 블록을 직접 돕니다. 어떤 이유로든 한 행도 빠뜨리지 않습니다.
             function(context, block.first_row, block.row_count);
         }
     }
@@ -127,9 +131,7 @@ void run_row_blocks(
         function(context, own.first_row, own.row_count);
     }
 
-    for (std::uint32_t index = 0U; index < started; ++index) {
-        workers[index].join();
-    }
+    row_block_pool_detail::wait_for(pending);
     release_extra_threads(reserved);
 }
 

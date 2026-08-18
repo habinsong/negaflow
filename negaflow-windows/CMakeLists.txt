@@ -69,6 +69,7 @@ add_library(negaflow_core STATIC
     src/Native/core/build_info.cpp
     src/Native/core/negative_inversion.cpp
     src/Native/core/parallel_rows.cpp
+    src/Native/core/row_block_pool.cpp
     src/Native/core/pixel.cpp
     src/Native/core/pointwise.cpp
     src/Native/core/tiff/io/endian.cpp

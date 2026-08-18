@@ -2,6 +2,8 @@
 
 
 
+
+
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -192,11 +194,18 @@ ToneCurveMeasurementResult measure_parametric_tone_curve_bands(
         //    (`docs/audit/13-performance-playbook.md` 18절). float 로 낮추면 백분위가 달라지고
         //    밴드가 달라져 **출력 화소가 달라집니다.**
         //
-        // ☠️ **병렬화도 해 봤고 더 느렸습니다 — 되돌렸습니다.**
-        //    `for_each_row_block` 으로 행을 나눠 봤더니 tone_adjust 가 257.95 → 283~288 ms 로
-        //    **25 ms 늘었습니다**(3회 반복, 값은 안 바뀜). 표본 격자가 256×171 정도라 나눌 일이
-        //    적은데, `core/parallel_rows.cpp` 가 **호출마다 `std::thread` 를 새로 만들기**
-        //    때문입니다(19절). **영속 워커 풀이 서기 전에는 다시 시도하지 마십시오.**
+        // ☠️ **병렬화를 두 번 시도했고 두 번 다 이득이 없었습니다. 단일 스레드가 맞습니다.**
+        //
+        //    1차(영속 풀 없을 때): tone_adjust 257.95 → 283~288 ms. **25 ms 손해.**
+        //       원인은 호출마다 `std::thread` 를 만들던 것(19절).
+        //    2차(영속 풀 세운 뒤): 263.95 / 292.81 / 292.97 ms — 직렬(265.77 / 294.32)과
+        //       **겹칩니다. 이득이 없습니다.**
+        //
+        //    풀이 원인이 아니었습니다. 표본 하나가 원본의 20×20 남짓을 흩어 읽어
+        //    **메모리 대역폭에 묶여** 있습니다. 코어를 늘려도 읽어 올 대역이 그대로입니다.
+        //
+        //    **다시 시도하지 마십시오.** 줄이려면 읽는 양 자체를 줄여야 하는데, 그러려면
+        //    표본 방식을 바꿔야 하고 그것은 백분위를 바꿔 **출력 화소를 바꿉니다.**
         std::vector<double> luma_values{};
         luma_values.reserve(static_cast<std::size_t>(interior_count));
         const double inverse_scale = 1.0 / scale;
