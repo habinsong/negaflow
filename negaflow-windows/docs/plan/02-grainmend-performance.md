@@ -189,3 +189,25 @@ src/Native/gpu/
 디코드가 남는 가장 큰 CPU 항목이 됩니다. macOS 는 첫 검출 뒤 **세션 캐시**
 (`defectSessionRaw`)를 두어 재검출에서 디코드를 건너뜁니다 — Windows 도 같은 캐시가 필요합니다
 (03 문서의 재검출 경로와 함께).
+
+---
+
+## 최신화 (2026-08-18)
+
+이 문서의 **측정값은 그대로 유효합니다**(2026-08-17, `OpticFilm8100_frame_4.tiff` 5088×3401).
+그 뒤에 확인·결정된 것:
+
+| 항목 | 결과 |
+|---|---|
+| GPU 구현 | **여전히 0줄.** 10개 키워드 히트 0, `.hlsl` 0개 |
+| GPU 이식 대상 | macOS `ChromabaseMetalKernels.swift` 의 `[[stitchable]]` 커널 **32개**(전부 화소별). 목록은 [`../audit/04-gpu-plan.md`](../audit/04-gpu-plan.md) 1.3 |
+| ☠️ 주의 | 그중 **3개는 macOS 가 부르지 않습니다** — `scannerLowSatChroma`/`scannerMidtoneChroma`·`gamutSoftClip`·`highlightDesaturate`. 옮기면 없는 효과를 만듭니다 |
+| 이웃 연산 | macOS 는 Apple 내장 필터(`CIGaussianBlur`·`CIBoxBlur`·`CIMedianFilter`·`CIAreaAverage`)로 처리. **Windows 는 직접 만들어야 합니다** |
+| 형태학 47%(미세 입자까지 82%) | **van Herk / Gil-Werman** 으로 구조 요소 크기와 **무관한 O(1)**. 침식·팽창은 분리 가능 → 수평·수직 2패스. 방법은 [`../audit/13-performance-playbook.md`](../audit/13-performance-playbook.md) 4.3 |
+| API | D3D11 컴퓨트, 하한 **FL 11_0**, 포맷 `R32G32B32A32_FLOAT` |
+| 디코드 2,695 ms | `decode.cpp` 에 프로세스 단일 슬롯 캐시가 들어감(2026-08-18). 첫 호출은 그대로, 같은 프레임 재호출은 디스크 디코드 안 함 |
+| 프리뷰 2단 렌더 | `DevelopPreviewProxy.cs` 로 macOS 상수 이식됨. **효과 ms 는 미측정** |
+
+**그리고 이 문서가 못 다룬 것: 현상·보정·룩·인화 단계별 ms 를 아무도 안 쟀습니다.**
+사용자가 "우측탭 뭘 써도 수 초" 라고 한 그 구간입니다.
+계측기가 없어서 못 쟀습니다 — [`../audit/13-performance-playbook.md`](../audit/13-performance-playbook.md) 2절이 0단계입니다.

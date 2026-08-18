@@ -161,19 +161,22 @@ if let full = snapshot.preloadedFullPreviewRaw { ... }        // GPU Lanczos 축
 
 주석 원문: *"수십 MP 원본을 디스크에서 재디코딩(수백 ms)하는 대신 한 번의 Lanczos 축소로 끝난다."*
 
-### 3.2 macOS 의 2단 렌더가 Windows 에 없습니다
+### 3.2 macOS 의 2단 렌더 — 2026-08-18 이식됨(효과 미측정)
 
 | macOS | 값 | Windows |
 |---|---|---|
-| `interactiveMaxDimension` | 2560 (폴백) | 없음 |
-| `interactiveProxyDimension()` | 표시 픽셀 → 256 양자화, 1024~3600 | 없음 |
-| `fullMaxDimension` (정착) | 3600 | 없음 |
-| `fastPreviewMaxDimension` | 720 | 없음 |
-| `waitForDevelopSettle` | **0.14초** 무편집 대기 | 없음 |
-| `cachedInteractivePreviewRaw` / `cachedSettledPreviewRaw` | 두 슬롯 | 없음 |
+| `interactiveMaxDimension` | 2560 (폴백) | `DevelopPreviewProxy.cs` |
+| `interactiveProxyDimension()` | 표시 픽셀 → 256 양자화, 1024~3600 | 〃 |
+| `fullMaxDimension` (정착) | 3600 | 〃 |
+| `fastPreviewMaxDimension` | 720 | 〃 |
+| `waitForDevelopSettle` | **0.14초** 무편집 대기 | 〃 |
+| `cachedInteractivePreviewRaw` / `cachedSettledPreviewRaw` | 두 슬롯 | `decode.cpp` 는 아직 **프로세스 단일 슬롯**. 프레임별 2슬롯 아님 |
 
-Windows 는 `DevelopWorkspaceView.xaml.cs:157` 에서 `new PreviewCoordinator(..., 1600, 1200)`
-**고정 한 단계**입니다. 표시 크기에 맞추지도, 정착 패스로 올리지도 않습니다.
+**2026-08-18**: `DevelopPreviewProxy.cs` 가 macOS 상수를 갖고, `PreviewCoordinator` 가 표시 크기
+적응 패스 뒤 무편집 0.14초면 3600 정착을 돌립니다. **고정 1600×1200 은 제거됐습니다.**
+
+> ⚠️ **앱에서 정착 패스 ms 를 재지 않았습니다.** 이식했다는 것과 빨라졌다는 것은 다릅니다.
+> 계측기가 없어서 못 쟀습니다 — [`13-performance-playbook.md`](13-performance-playbook.md) 2절.
 
 ---
 

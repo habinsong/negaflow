@@ -148,3 +148,24 @@ macOS 호스트 없이 이 질문을 닫을 수 있는지 다시 확인했습니
 **macOS 세션에서 여전히 할 일은 위의 1픽셀 측정 하나입니다.** 추가로 `applyingGaussianBlur`
 의 0.16 문턱이 `CIGaussianBlur(inputRadius:)` 에도 같게 나타나는지 보면, 두 API 가 같은
 파라미터를 쓴다는 것이 바로 확인됩니다.
+
+---
+
+## 후속 (2026-08-18) — 이 문서가 GPU 이식의 전제입니다
+
+[`../audit/04-gpu-plan.md`](../audit/04-gpu-plan.md) 가 같은 파일(`ChromabaseMetalKernels.swift`)에서
+`[[stitchable]]` 커널 **32개**를 세어 GPU 이식 대상 목록으로 삼았습니다.
+
+**이 문서의 두 결과가 그 목록을 거르는 필터입니다:**
+
+1. **위 "일치" 9개**(`basicTone`·`parametricToneCurve`·`negativeInvert`·`colorMixerHSL`·
+   `colorGrade`·`calibrationPrimaries`·`bwToning`·텍스처·`filmGrain`)는 수식이 이미 대조돼 있어
+   **CPU 코드를 그대로 HLSL 로 옮기면 됩니다.**
+2. **"없어서 맞는 것들" 3개**(`ScannerNoiseReduction`의 `scannerLowSatChroma`/`scannerMidtoneChroma`,
+   `gamutSoftClip`, `highlightDesaturate`)는 macOS 활성 파이프라인이 **부르지 않습니다.**
+   **GPU 로 옮기면 macOS 에 없는 효과를 만듭니다. 옮기지 마십시오.**
+
+또 하나 이 문서가 확인한 원칙 — *"macOS 에 있으니 옮긴다"로 갔으면 게시 결과를 잘못 바꿨을
+것입니다. 어느 조건에서 걸리는지까지 봐야 합니다."* — **GPU 이식에도 그대로 적용됩니다.**
+
+> ⚠️ 위 대조는 **2026-08-10 기준**입니다. 그 뒤 바뀐 커널은 다시 대야 합니다.

@@ -171,3 +171,22 @@ macOS `MemoryCacheSettingsSection.swift`(111줄)가 내는 것:
 | 4 | 설정 → 메모리 캐시 섹션(111줄) — 자동/수동 · 슬라이더 2 · 되돌리기 · 도움말 3줄 |
 | 5 | 개발자 모드가 켤 화면 만들기(`DevelopDebugFrame` 포함) |
 | 6 | 캔버스 **우클릭** 배경색 메뉴 + HUD 대비색 연동 |
+
+---
+
+## 최적화 방법론은 [`13-performance-playbook.md`](13-performance-playbook.md)
+
+이 문서는 **macOS 가 무엇을 캐시하는지**(FIFO·메모리 상한·개발자 모드 상수)를 다룹니다.
+**어떻게 빠르게 만들지**는 13번입니다 — 2026-08-18 실측으로 새로 확인한 것:
+
+| 항목 | 실측 |
+|---|---|
+| SIMD | 히트 **11개, 전부 `flatbed_frame_*` 3파일**. 화소 파이프라인에 **없음** |
+| 스레드 풀 | **없음.** `core/parallel_rows.cpp:113` 이 호출마다 `std::thread` 를 새로 만듦 |
+| 컴파일러 스위치 | `CMakeLists.txt` 에 `/arch:` · `/GL` · `/LTCG` · `/fp:` **하나도 없음** |
+| `ArrayPool` | 관리 트리 히트 **0**. 단 `PreviewCoordinator.cs:112` 는 선할당돼 있어 문제 없음 |
+| 표시 경로 | `DevelopPreviewCanvas.Present()` 가 프레임 전체 복사 — 3600×2400 이면 **34.6 MB/프레임**(산술, ms 미측정) |
+
+**`/GL` + `/LTCG` 는 값을 안 바꾸면서 얻는 것이라 가장 먼저 시도할 것.**
+`/fp:fast` 와 `/arch:AVX2` 는 **골든값을 바꿀 수 있습니다** — 켤 때마다 골든 시험과
+실측 17장 dmin 을 돌리십시오.

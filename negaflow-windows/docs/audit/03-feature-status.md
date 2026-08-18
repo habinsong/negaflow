@@ -56,7 +56,9 @@
 | 14 | **초기화(모든 보정·사진 각도) 없음** | macOS `Tools/ResetControlsSection.swift:14,23` 의 `onResetAllAdjustments`·`onResetPhotoAngle` 두 단추. Windows `ResetAllAdjustments`·`ResetControlsSection`·`InspectorResetter`·`ResetAngle` 전부 히트 **0**. macOS `DevelopInspectorResetter.swift`(104줄) 대응 없음 | **없음 확정** |
 | 15 | **인화 프리뷰가 저해상도 썸네일이라 깨짐** | `Views/Print/Preview/PrintPreviewRenderer.cs:323-325` 가 `thumbnails()?.TryGet(frame.Id)` → `DecodeThumbnail(jpeg)` 로 **360px 썸네일**을 그대로 확대. macOS `PrintCanvasView.swift:165-167` 은 `frame.developedImage ?? packagePreview ?? thumbnailImage` 순서로 **현상본이 먼저** | **원인 확정** |
 | 16 | 프리뷰가 뭘 해도 수 초 | `run_develop` 이 호출마다 원본 디코드. 캐시 없음 | **원인 확정** |
-| 17 | GrainMend 자동·가이드·브러시·복제 전부 느림 | 위와 같은 원인 + GPU 없음 | **원인 확정** |
+| 17 | GrainMend 자동·가이드·브러시·복제 전부 느림 | 위와 같은 원인 + GPU 없음. 검출 8,932 ms 중 **형태학이 47%, 미세 입자까지 82%** | **원인 확정.** 계획 [`04`](04-gpu-plan.md)(무엇을) + [`13`](13-performance-playbook.md)(어떻게, vHGW 로 구조 요소 무관 O(1)) |
+| 17.1 | **현상·보정·룩·인화가 느린 정확한 내역** | **아무도 안 쟀습니다.** `src/Native/pipeline/` 에 단계별 ms 계측기가 **없음**(`elapsed`·`duration_ms`·`stage_ms` 히트 0) | **미측정 — 이것이 0단계**([`13`](13-performance-playbook.md) 2절) |
+| 17.2 | **CPU 쪽 안 켠 것** | SIMD 히트 11개 전부 `flatbed_frame_*`(화소 경로 0) · 스레드 풀 없음(`parallel_rows.cpp:113` 호출마다 `std::thread`) · `CMakeLists.txt` 에 `/arch:`·`/GL`·`/LTCG` 없음 | **실측 확인**([`13`](13-performance-playbook.md) 1·3절) |
 
 ---
 
