@@ -12,6 +12,7 @@
 #include "GpuNeighborhood/gpu_gaussian_tests.h"
 #include "GpuNeighborhood/gpu_guided_filter_tests.h"
 #include "GpuNeighborhood/gpu_median3_tests.h"
+#include "GpuNeighborhood/gpu_mip_halve_tests.h"
 #include "GpuNeighborhood/gpu_neighborhood_test_support.h"
 #include "negaflow/gpu/gpu_device.h"
 
@@ -28,6 +29,7 @@ void run_all(const GpuDevice& device, const char* const label) {
     gpu_neighborhood_tests::gaussian_matches_reference(device, label);
     gpu_neighborhood_tests::median3_matches_reference(device, label);
     gpu_neighborhood_tests::guided_filter_matches_reference(device, label);
+    gpu_neighborhood_tests::mip_halve_matches_reference(device, label);
 }
 
 }  // namespace

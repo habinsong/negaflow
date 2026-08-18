@@ -232,4 +232,45 @@ private:
     ID3D11Buffer* constants_{nullptr};
 };
 
+// 밉맵 한 단계 축소입니다. CPU 판은 `imaging/mipmap_downsampler.cpp` 의 `halve` 이고
+// **비트 단위로 같습니다** — float32 덧셈 셋과 2의 거듭제곱 곱셈뿐이라 그렇습니다.
+//
+// 이 결과가 파라메트릭 톤 커브의 밴드 백분위로 가므로 근사면 출력 화소가 달라집니다.
+// 최종 이중선형 보간은 CPU 판이 `double` 을 쓰므로 여기서 하지 않습니다 — 큰 축소만
+// GPU 가 하고 작아진 뒤의 보간은 CPU 가 그대로 합니다.
+class GpuMipHalve final {
+public:
+    GpuMipHalve() noexcept = default;
+    ~GpuMipHalve();
+
+    GpuMipHalve(const GpuMipHalve&) = delete;
+    GpuMipHalve& operator=(const GpuMipHalve&) = delete;
+    GpuMipHalve(GpuMipHalve&& other) noexcept;
+    GpuMipHalve& operator=(GpuMipHalve&& other) noexcept;
+
+    [[nodiscard]] static GpuKernelStatus create(
+        const GpuDevice& device,
+        GpuMipHalve& kernel) noexcept;
+
+    // `destination` 은 각 변이 `max(1, source/2)` 여야 합니다.
+    [[nodiscard]] GpuKernelStatus dispatch(
+        const GpuDevice& device,
+        const GpuWorkingImage& source,
+        GpuWorkingImage& destination) const noexcept;
+
+    // CPU 판이 고르는 단계 수와 같은 셈입니다 — `floor(log2(source_width / target_width))`.
+    // 부모가 2보다 작아지면 거기서 멈추는 것도 같습니다.
+    [[nodiscard]] static int wanted_level_count(
+        std::uint32_t source_width,
+        std::uint32_t target_width) noexcept;
+
+    [[nodiscard]] bool is_valid() const noexcept { return shader_ != nullptr; }
+
+private:
+    void reset() noexcept;
+
+    ID3D11ComputeShader* shader_{nullptr};
+    ID3D11Buffer* constants_{nullptr};
+};
+
 }  // namespace negaflow::gpu

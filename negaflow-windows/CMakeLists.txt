@@ -97,10 +97,24 @@ target_link_libraries(negaflow_core PRIVATE negaflow_project_options)
 # 벤더 ID 로 거르지 않습니다. 하한은 기능 수준 11_0 하나이며, 하드웨어가 없으면 WARP 로,
 # 그것도 없으면 기존 CPU 경로로 떨어집니다. CUDA·벤더 확장·SM 6.0 을 쓰지 않습니다.
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
+    MipHalveMain
+    negaflow_mip_halve_cs
+    NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/basic_tone.hlsl"
     BasicToneMain
     negaflow_basic_tone_cs
     NEGAFLOW_BASIC_TONE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
+    MipHalveMain
+    negaflow_mip_halve_cs
+    NEGAFLOW_MIP_HALVE_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -111,10 +125,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
+    MipHalveMain
+    negaflow_mip_halve_cs
+    NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/color_grade.hlsl"
     ColorGradeMain
     negaflow_color_grade_cs
     NEGAFLOW_COLOR_GRADE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
+    MipHalveMain
+    negaflow_mip_halve_cs
+    NEGAFLOW_MIP_HALVE_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -125,10 +153,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
+    MipHalveMain
+    negaflow_mip_halve_cs
+    NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/primary_calibration.hlsl"
     PrimaryCalibrationMain
     negaflow_primary_calibration_cs
     NEGAFLOW_PRIMARY_CALIBRATION_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
+    MipHalveMain
+    negaflow_mip_halve_cs
+    NEGAFLOW_MIP_HALVE_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -139,10 +181,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
+    MipHalveMain
+    negaflow_mip_halve_cs
+    NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/bw_toning.hlsl"
     BwToningMain
     negaflow_bw_toning_cs
     NEGAFLOW_BW_TONING_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
+    MipHalveMain
+    negaflow_mip_halve_cs
+    NEGAFLOW_MIP_HALVE_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -153,10 +209,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
+    MipHalveMain
+    negaflow_mip_halve_cs
+    NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/point_curve.hlsl"
     PointCurveMain
     negaflow_point_curve_cs
     NEGAFLOW_POINT_CURVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
+    MipHalveMain
+    negaflow_mip_halve_cs
+    NEGAFLOW_MIP_HALVE_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -167,10 +237,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
+    MipHalveMain
+    negaflow_mip_halve_cs
+    NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/box_blur.hlsl"
     BoxBlurVerticalMain
     negaflow_box_blur_vertical_cs
     NEGAFLOW_BOX_BLUR_V_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
+    MipHalveMain
+    negaflow_mip_halve_cs
+    NEGAFLOW_MIP_HALVE_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -181,10 +265,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
+    MipHalveMain
+    negaflow_mip_halve_cs
+    NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/guided_filter.hlsl"
     GuidedApplyMain
     negaflow_guided_apply_cs
     NEGAFLOW_GUIDED_APPLY_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
+    MipHalveMain
+    negaflow_mip_halve_cs
+    NEGAFLOW_MIP_HALVE_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -195,10 +293,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
+    MipHalveMain
+    negaflow_mip_halve_cs
+    NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/gaussian_blur.hlsl"
     GaussianVerticalMain
     negaflow_gaussian_vertical_cs
     NEGAFLOW_GAUSSIAN_V_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
+    MipHalveMain
+    negaflow_mip_halve_cs
+    NEGAFLOW_MIP_HALVE_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -209,10 +321,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
+    MipHalveMain
+    negaflow_mip_halve_cs
+    NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/gamma_lift.hlsl"
     GammaLiftMain
     negaflow_gamma_lift_cs
     NEGAFLOW_GAMMA_LIFT_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
+    MipHalveMain
+    negaflow_mip_halve_cs
+    NEGAFLOW_MIP_HALVE_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -223,10 +349,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
+    MipHalveMain
+    negaflow_mip_halve_cs
+    NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/guide_pack.hlsl"
     GuidePackMain
     negaflow_guide_pack_cs
     NEGAFLOW_GUIDE_PACK_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
+    MipHalveMain
+    negaflow_mip_halve_cs
+    NEGAFLOW_MIP_HALVE_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -237,10 +377,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
+    MipHalveMain
+    negaflow_mip_halve_cs
+    NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/digital_halation.hlsl"
     HalationAccumulateMain
     negaflow_halation_accumulate_cs
     NEGAFLOW_HALATION_ACCUMULATE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
+    MipHalveMain
+    negaflow_mip_halve_cs
+    NEGAFLOW_MIP_HALVE_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -251,10 +405,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
+    MipHalveMain
+    negaflow_mip_halve_cs
+    NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/morphology.hlsl"
     MorphologyVerticalMain
     negaflow_morphology_vertical_cs
     NEGAFLOW_MORPHOLOGY_V_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
+    MipHalveMain
+    negaflow_mip_halve_cs
+    NEGAFLOW_MIP_HALVE_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -265,10 +433,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
+    MipHalveMain
+    negaflow_mip_halve_cs
+    NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/guided_filter.hlsl"
     GuidedCoefficientsMain
     negaflow_guided_coefficients_cs
     NEGAFLOW_GUIDED_COEFFICIENTS_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
+    MipHalveMain
+    negaflow_mip_halve_cs
+    NEGAFLOW_MIP_HALVE_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -293,6 +475,7 @@ add_library(negaflow_gpu STATIC
     "${NEGAFLOW_GUIDED_PREPARE_HEADER}"
     "${NEGAFLOW_GUIDED_COEFFICIENTS_HEADER}"
     "${NEGAFLOW_GUIDED_APPLY_HEADER}"
+    "${NEGAFLOW_MIP_HALVE_HEADER}"
     "${NEGAFLOW_GAUSSIAN_H_HEADER}"
     "${NEGAFLOW_GAUSSIAN_V_HEADER}"
     "${NEGAFLOW_MEDIAN3_HEADER}"
@@ -308,6 +491,7 @@ add_library(negaflow_gpu STATIC
     src/Native/gpu/gpu_color_kernels.cpp
     src/Native/gpu/gpu_negative_invert.cpp
     src/Native/gpu/gpu_guided_filter.cpp
+    src/Native/gpu/gpu_mip_halve.cpp
     src/Native/gpu/gpu_gaussian_blur.cpp
     src/Native/gpu/gpu_film_scan.cpp
     src/Native/gpu/gpu_digital_halation.cpp
@@ -998,6 +1182,7 @@ if(BUILD_TESTING)
         tests/Native.UnitTests/GpuNeighborhood/gpu_box_blur_tests.cpp
         tests/Native.UnitTests/GpuNeighborhood/gpu_gaussian_tests.cpp
         tests/Native.UnitTests/GpuNeighborhood/gpu_median3_tests.cpp
+        tests/Native.UnitTests/GpuNeighborhood/gpu_mip_halve_tests.cpp
         tests/Native.UnitTests/GpuNeighborhood/gpu_guided_filter_tests.cpp
     )
     target_include_directories(
