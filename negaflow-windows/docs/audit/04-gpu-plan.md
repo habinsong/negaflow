@@ -44,7 +44,7 @@
 
 ## 0. 지금 어디까지 왔나 (2026-08-18)
 
-### 0.1 이식 완료 — 커널 10개 + 이웃 원시연산 1개
+### 0.1 이식 완료 — 화소별 커널 11개 + 이웃 원시연산 4개
 
 전부 **CPU/GPU 동치 시험으로 고정**돼 있습니다(허용 오차 `1e-5`). 수치는 이 기계 실측입니다 —
 **RTX 4060 Ti · FL 11_1 · VRAM 7949MB**, 그리고 하드웨어 없는 경우를 위한 **WARP**.
@@ -61,17 +61,15 @@
 | `negativeInvert` | `:557` | `core/negative_inversion.cpp` | 1.5e-07 | 1.8e-07 |
 | `bwToning` | `:123` | `imaging/bw_toning.cpp` | 1.2e-07 | 1.8e-07 |
 | `digitalBWFilm` | `:826` | `imaging/digital_bw_emulsion_response.cpp` | 4.2e-07 | 4.8e-07 |
-| **박스 블러**(원시연산) | `CIBoxBlur` | `imaging/film_scan_denoise_filters.cpp` | **0** | **0** |
+| `gfProduct`·`gfCoeffA`·`gfCoeffB`·`gfApply` | `:466`~`:486` | `film_scan_denoise_filters.cpp` `guided_base` | **0** | 4.1e-06 |
+| `filmScanShrink` | `:362` | `film_scan_denoise_tile.cpp` `process_tile` | 1.2e-07 | 5.0e-06 |
+| **박스 블러**(원시연산) | `CIBoxBlur` | `film_scan_denoise_filters.cpp` `box_blur` ×2 | **0** | **0** |
+| **가우시안**(원시연산) | `CIGaussianBlur` | 〃 `gaussian_blur` · `texture_stage_gaussian.h` | **0** | **0** |
+| **3×3 중앙값**(원시연산) | `CIMedianFilter` | 〃 `median3` | **0** | **0** |
+| **감마 리프트** | (CI 체인 밖) | `film_scan_denoise_tile.cpp` `extract_lifted_tile` | 6.0e-08 | 1.2e-07 |
 
-허용치의 **1/7 이하**입니다. 노출·원색보정·박스블러는 **비트 단위 일치**입니다.
-
-> ### ✅ 톤 단계 7/7 — 우측 인스펙터 경로가 전부 GPU 커널을 갖췄습니다
->
-> `apply_working_tone_adjustments` 의 하위 7단계 — **노출 · 기본 톤 · 파라메트릭 커브 ·
-> 포인트 커브 · 컬러 믹서 · 컬러 그레이딩 · 원색 보정** — 이 전부 이식됐습니다.
-> 사용자가 *"우측탭 뭘 써도 수 초"* 라고 한 그 경로입니다.
->
-> **이제 파이프라인 연결이 의미를 갖습니다** — 업로드 1회 → 7단계 GPU 상주 → 다운로드 1회.
+> `filmScanShrink` 줄은 **CPU 리프트를 올린 상태**의 사슬 전체 오차입니다. GPU `pow` 로
+> 리프트하면 2.1e-05 ~ 6.2e-05 가 됩니다 — 이유는 0.5절입니다.
 
 ### 0.2 만든 뼈대
 
@@ -80,37 +78,81 @@
 | `gpu/gpu_device.*` | D3D11 장치·컨텍스트 하나(macOS `sharedRenderContext` 대응). FL 11_0 하한, WARP 폴백, **벤더 ID 로 거르지 않음** |
 | `gpu/gpu_working_image.*` | `R32G32B32A32_FLOAT` 텍스처 + SRV/UAV, 업로드·다운로드·복사, `GpuStagingRing`(더블 버퍼) |
 | `gpu/gpu_pointwise.*` | 화소별 커널이 공유하는 골격 — 커널마다 복사하면 32벌이 어긋납니다 |
-| `gpu/gpu_neighborhood.*` | 이웃 원시연산. 지금은 박스 블러 |
+| `gpu/gpu_neighborhood.*` | 박스 블러 · 3×3 중앙값 |
+| `gpu/gpu_gaussian_blur.cpp` | 분리형 가우시안. 가중치는 **호스트가 CPU 와 같은 코드로** 만들어 `StructuredBuffer<float>` 로 넘깁니다 |
+| `gpu/gpu_guided_filter.cpp` | 가이드 필터 4단 |
+| `gpu/gpu_film_scan.*` | 감마 리프트 · `filmScanShrink` |
 | `gpu/gpu_tone_kernels.*` · `gpu_color_kernels.*` · `gpu_negative_invert.*` · `gpu_stage_kernels.*` | 커널 래퍼 |
-| `gpu/shaders/*.hlsl` · `*.hlsli` | 셰이더 + 공용 조각(`tone_shared` · `hsl_shared`) |
+| `gpu/shaders/*.hlsl` · `*.hlsli` | 셰이더 + 공용 조각(`tone_shared` · `hsl_shared` · `film_scan_shared`) |
 | `cmake/CompileShaders.cmake` | `fxc` 로 빌드 시 컴파일해 헤더 임베드(`/T cs_5_0 /O3 /Gis /WX /Zpc`) |
 
 ### 0.3 남은 것 — 무엇이 왜 막혔는지
 
 | 상태 | 커널 | 왜 |
 |---|---|---|
-| ☠️ **옮기지 말 것** (3) | `scannerLowSatChroma`·`scannerMidtoneChroma`·`gamutSoftClip`·`highlightDesaturate` | **macOS 활성 파이프라인이 부르지 않습니다.** 옮기면 없는 효과를 만듭니다 |
+| ☠️ **옮기지 말 것** (4) | `scannerLowSatChroma`·`scannerMidtoneChroma`·`gamutSoftClip`·`highlightDesaturate` | **macOS 활성 파이프라인이 부르지 않습니다.** 옮기면 없는 효과를 만듭니다 |
 | **CPU 판부터 없음** (7) | `digitalSceneReconstruct`·`digitalFilmDensity`·`digitalInterImage`·`digitalPrintPaper`·`digitalReversalTransmit`·`digitalToDisplayGamma`·`digitalToLinearLight` | Windows 히트 **0**. GPU 이전에 **CPU 이식이 먼저** |
 | **Windows 기능 자체가 없음** (2) | `ditherAdd`·`channelClippingOverlay` | `OutputDither.swift`·`ChannelClippingOverlay.swift` 미이식 |
 | **정밀도 확인 필요** (1) | `boundedRelativeGrade` | `scanner_target_grade.cpp:62-64` 안에 박혀 있고 그 안이 **전부 `double`**. float32 로 옮기면 `1e-5` 를 못 지킬 수 있음 |
-| **선행 조건 남음** | `gfProduct`·`gfCoeffA`·`gfCoeffB`·`gfApply`·`filmScanShrink` | **박스 블러가 섰으므로 이제 열렸습니다** |
-| 〃 | `digitalHalation` | **가우시안** 원시연산 필요 |
+| **선행 조건 남음** | `digitalHalation` | 가우시안이 섰으므로 **열렸습니다** |
 | 〃 | `filmGrain`·`digitalFilmGrainDensity` | **노이즈 씨앗 규칙**을 macOS 와 대조해야 함 |
 | 〃 | `digitalFilmColor` | **3D LUT**(`Texture3D`) 필요 |
 | 〃 | `noritsuTexture` | 이웃 접근 |
+| **원시연산 남음** | `CIAreaAverage` 대응 | 병렬 리덕션. 히스토그램·자동 보정용 |
 
 ### 0.4 ☠️ 아직 **아닌** 것 — 됐다고 적지 마십시오
 
 1. **파이프라인에 연결되지 않았습니다.** 커널은 시험에서만 돕니다.
    `stages/look.cpp` 는 여전히 CPU `apply_working_tone_adjustments` 만 부릅니다.
+   `stages/finish.cpp` 도 CPU `apply_film_scan_denoise` 만 부릅니다.
 2. **속도를 재지 않았습니다.** 동치만 증명했지 **빨라졌는지는 모릅니다.**
    단계별 ms 계측기가 아직 없습니다 — [`13`](13-performance-playbook.md) 2절이 0단계입니다.
 3. **내장 GPU 실기 확인을 못 했습니다.** 이 기계에 Intel/AMD 내장이 없습니다.
    범용성은 **코드 구조로만** 보장돼 있습니다(벤더 ID 로 거르는 코드 0줄, FL 11_0 공통 하한,
    `DXGI_ADAPTER_FLAG_SOFTWARE` 만 제외, WARP 폴백).
 4. **전송 대역폭을 재지 않았습니다.** 3절의 384 MB 는 산술입니다.
+5. **`film_scan_denoise` 의 GPU 오케스트레이터가 없습니다.** 타일을 도는 코드는 지금
+   **시험 안에만** 있습니다(`tests/Native.UnitTests/GpuFilmScan/`). 제품 경로에 넣으려면
+   0.5절의 타일 규칙을 그대로 옮겨야 합니다.
 
-### 0.5 이식하면서 시험이 잡은 실제 버그 3개
+### 0.5 ☠️ GPU 도 CPU 와 **같은 타일**로 나눠야 값이 같습니다 (2026-08-18 실측)
+
+`film_scan_denoise` 를 이식하며 **재서** 확정한 것입니다. 이것은 성능 선택이 아니라
+**값의 조건**입니다.
+
+박스 블러는 러닝 섬이라 **수학적으로는 창 안만 보지만 수치적으로는 그 행의 0번 화소부터
+누적한 반올림을 들고 옵니다.** CPU 는 512px 타일마다 그 행의 0에서 새로 시작하고, 전체를
+한 번에 도는 GPU 는 이미지의 0에서 시작합니다 — 같은 화소에서 누적 이력이 달라집니다.
+
+에이프런 18 은 **필터 지원**(가우시안 4 + 가이드 7 + 7)으로는 충분합니다.
+모자란 것은 지원이 아니라 **누적 이력**입니다.
+
+| 어떻게 돌렸나 | 최대 오차 | 최악 화소 |
+|---|---:|---|
+| 폭 400(타일 하나) 전체 한 번에 | 1.2e-07 | — |
+| 폭 600(경계 512 지남) 전체 한 번에 | **4.3e-05** | x=531·534·580 — **전부 경계 너머** |
+| 폭 600, CPU 와 같은 512/18 타일 | **1.2e-07** | — |
+
+부수 효과로 메모리 문제도 풀립니다 — 전체를 한 번에 돌면 중간 텍스처 13장이 24MP 에서
+**5 GB** 인데, 530×530 타일이면 **58 MB** 입니다. 8절의 "타일 분할 필수" 와 같은 결론에
+**다른 이유로** 도착한 것입니다.
+
+### 0.6 ☠️ `pow` 는 CPU 와 마지막 비트가 같을 수 없고, 이 사슬이 그것을 키웁니다
+
+CPU 가 계산한 감마 리프트를 그대로 올리면 나머지 사슬 전체가 **1.2e-07** 로 맞습니다.
+GPU `pow` 를 쓰면 **2.1e-05 ~ 6.2e-05** 가 됩니다. 리프트 자체의 차이는
+**1 ulp(WARP 5.96e-08) · 2 ulp(NVIDIA 1.19e-07)** 뿐입니다.
+
+키우는 것은 가이드 필터의 `1 / (variance + 0.001)` 입니다 — `variance` 가
+`mean(guide²) − mean(guide)²` 라 평탄한 곳에서 **자리수가 거의 다 상쇄됩니다.**
+macOS 도 같은 식이므로 이것은 **이식이 만든 문제가 아니라 알고리즘의 조건수**입니다.
+
+HLSL `pow` 는 `exp2(y * log2(x))` 이고 D3D11 은 그 둘에 각각 상대오차 2^-21 을 허용합니다.
+`std::pow` 와 같게 만들 방법이 표준 안에 없습니다. 고치려면 HLSL 에 double-float 로 `pow` 를
+직접 써야 하고 그 자체로 검증이 필요합니다 — **하지 않았습니다.**
+출처: [Floating-point rules](https://learn.microsoft.com/en-us/windows/win32/direct3d11/floating-point-rules)
+
+### 0.7 이식하면서 시험이 잡은 실제 버그 5개
 
 **동치 시험이 없었으면 전부 조용히 틀린 채로 갔을 것들입니다.**
 
@@ -119,10 +161,13 @@
 | `colorMixerHSL` | delta **0.1** | CPU 는 "변화 없음" 이면 커널을 안 돌리고 **원본을 복사**합니다. GPU 가 커널을 돌려 HSL 왕복이 [0,1] 밖 값을 클램프했습니다 |
 | 박스 블러 | delta **0.38** | HLSL `cbuffer` 에 `Extent` 뒤 `float2` 패딩을 안 적어 `Radius` 가 **8바이트 앞에서** 읽혔습니다. 컴파일·실행·경고 전부 통과하고 값만 틀립니다 |
 | `basicTone` whites/blacks | 범위 밖 요청이 **통째로 거부** | Windows 가 macOS 의 ±2 대신 ±1 로 막고 있었고 clamp 도 없었습니다 — 엔진부터 슬라이더까지 7곳을 고쳤습니다 |
+| 박스 블러 (2차) | 가이드 필터 delta **3.8e-05** | **CPU `box_blur` 가 두 벌이고 누적 괄호가 다릅니다** — `float` 판은 `sum + (a-b)`, `Rgb` 판은 `(sum + a) - b`. 시험 참조도 GPU 도 한 순서로 통일해 두어 **둘 다 실제 CPU 와 달랐습니다.** `blur_alpha=true` 경로에 시험이 아예 없어서 통과했습니다 |
+| `CompileShaders.cmake` | 조용한 스테일 | `.hlsl` 만 의존으로 걸어 **`.hlsli` 조각을 고쳐도 다시 컴파일되지 않았습니다** |
 
-규칙으로 박아 둔 것: [`13`](13-performance-playbook.md) 12절(조기 반환) · 13절(상수 버퍼 배치) · 14절(러닝 섬 순서).
+규칙으로 박아 둔 것: [`13`](13-performance-playbook.md) 12절(조기 반환) · 13절(상수 버퍼 배치) ·
+14절(러닝 섬 순서) · 15절(누적 이력과 타일) · 16절(초월함수).
 
-### 0.6 착수 전 상태 (2026-08-18 이전)
+### 0.8 착수 전 상태 (2026-08-18 이전)
 
 
 | 사실 | 어떻게 쟀나 | 값 |
@@ -280,14 +325,14 @@ Core Image 의 기본 작업 형식은 **half float** 입니다. Windows 는 `Rg
 macOS 커널이 전부 화소별인 이유는 **이웃 연산을 Apple 내장 필터가 대신하기 때문**입니다.
 Windows 에는 그 내장 필터가 없습니다. **여기가 실제 작업량입니다.**
 
-| macOS 내장 필터 | 쓰이는 곳 | Windows 에서 만들 것 |
-|---|---|---|
-| `CIGaussianBlur` | `ColorModel.swift:128,166` · `FilmScanDenoise.swift:96` · `LocalDodgeBurnStage.swift:169` · `ScannerNoiseReduction+Color.swift:19` | **분리형 가우시안** — 수평 1D + 수직 1D, `groupshared` 타일 캐시 |
-| `CIBoxBlur` | `FilmScanDenoise.swift:154` | **분리형 박스** — 슬라이딩 윈도우로 화소당 O(1) |
-| `CIMedianFilter` (3×3) | `FilmScanDenoise.swift:171` | **3×3 중앙값** — 9원소 정렬 네트워크 |
-| `CIAreaAverage` | 히스토그램·자동 보정 | **병렬 리덕션** |
-| `CIRandomGenerator` | 그레인·디더 노이즈 | **결정적 해시 노이즈.** macOS 와 화소값까지 맞춰야 하면 **씨앗 규칙부터 대조** |
-| `CIVibrance` | `ColorModel` | **이미 CPU 로 이식돼 있음** — Apple 비공개 커널이라 33³ LUT 로 측정 이식(`muted_scene_vibrance_table.cpp` 9,003줄). GPU 에서는 `Texture3D` + `SampleLevel` **한 번**. **GPU 이득이 가장 큰 곳 중 하나** |
+| macOS 내장 필터 | 쓰이는 곳 | Windows 에서 만들 것 | 상태 |
+|---|---|---|---|
+| `CIGaussianBlur` | `ColorModel.swift:128,166` · `FilmScanDenoise.swift:96` · `LocalDodgeBurnStage.swift:169` · `ScannerNoiseReduction+Color.swift:19` | **분리형 가우시안** — 수평 1D + 수직 1D | ✅ `gaussian_blur.hlsl`. **delta 0**. `groupshared` 타일 캐시는 아직 — 재고 나서 |
+| `CIBoxBlur` | `FilmScanDenoise.swift:154` | **분리형 박스** — 슬라이딩 윈도우로 화소당 O(1) | ✅ `box_blur.hlsl`. **delta 0** |
+| `CIMedianFilter` (3×3) | `FilmScanDenoise.swift:171` | **3×3 중앙값** — 9원소 정렬 네트워크 | ✅ `median3.hlsl`. **delta 0** — 부동소수 산술이 없어 고른 값이 같습니다 |
+| `CIAreaAverage` | 히스토그램·자동 보정 | **병렬 리덕션** | ❌ 아직 |
+| `CIRandomGenerator` | 그레인·디더 노이즈 | **결정적 해시 노이즈.** macOS 와 화소값까지 맞춰야 하면 **씨앗 규칙부터 대조** | ❌ 아직 |
+| `CIVibrance` | `ColorModel` | **이미 CPU 로 이식돼 있음** — Apple 비공개 커널이라 33³ LUT 로 측정 이식(`muted_scene_vibrance_table.cpp` 9,003줄). GPU 에서는 `Texture3D` + `SampleLevel` **한 번**. **GPU 이득이 가장 큰 곳 중 하나** | ❌ 아직 |
 
 ---
 
@@ -488,6 +533,8 @@ macOS 대응 상수:
 | 위험 | 내용 | 대응 |
 |---|---|---|
 | **큰 스캔** | D3D11 FL 11_0 의 `Texture2D` 한 변 상한은 **16384**. 평판 고해상 스캔은 이것을 넘을 수 있습니다 | **타일 분할 필수.** 사용자 실제 최대 스캔 크기를 **재서** 이 칸을 채울 것 |
+| **타일은 성능이 아니라 값의 조건** | `film_scan_denoise` 는 GPU 도 **CPU 와 같은 512/18 타일**로 나눠야 값이 같습니다 — 러닝 섬의 누적 이력 때문입니다(0.5절 실측) | 이 단계의 GPU 오케스트레이터는 `make_tile` 을 그대로 씁니다. 다른 단계도 러닝 섬을 쓰면 같은 규칙입니다 |
+| **초월함수** | HLSL `pow`·`exp`·`log` 는 `std::pow` 와 마지막 비트가 다릅니다(D3D11 이 상대오차 2^-21 을 허용) | 조건수가 큰 사슬 앞에 있으면 수백 배로 커집니다(0.6절). **재서 적을 것** — 못 맞추면 "다르다" 고 적습니다 |
 | **내장 GPU 메모리** | 내장은 시스템 메모리를 나눠 씁니다. float32 RGBA 는 화소당 16바이트 | 타일 + 핑퐁 2장까지만. 상한 초과 시 CPU 폴백 |
 | **드라이버별 부동소수** | 최적화 재배열로 벤더마다 값이 갈릴 수 있음 | `/Gis` + `precise`. 동치 시험이 벤더별로 다르게 깨지면 **여기부터** 봅니다 |
 | **노이즈 재현성** | `CIRandomGenerator` 를 대체하면 그레인 무늬가 macOS 와 달라짐 | 씨앗 규칙을 먼저 대조. 못 맞추면 **"다르다" 고 적을 것** |
@@ -499,6 +546,8 @@ macOS 대응 상수:
 
 1. **단계별 실제 ms** — 계측기가 없어 `decode 2,695 ms` 와 검출 내역 말고는 기준선이 없습니다.
 2. **업로드/다운로드 실제 대역폭** — 3절의 384 MB 는 산술이고 ms 가 아닙니다.
-3. **이 기계의 GPU** — 어떤 장치이고 FL 이 얼마인지 아직 안 찍었습니다. 2단계에서 찍습니다.
-4. **사용자 최대 스캔 크기** — 16384 한계에 걸리는지 미확인.
-5. **1.3절 오른쪽 열** — 파일명 추정이고 수식 대조를 안 했습니다.
+3. **사용자 최대 스캔 크기** — 16384 한계에 걸리는지 미확인.
+4. **1.3절 오른쪽 열의 남은 칸** — 이식한 것은 대조했고, 나머지는 파일명 추정 그대로입니다.
+5. **GPU 타일 크기** — `film_scan_denoise` 는 CPU 와 같아야 하므로 512/18 로 고정입니다.
+   다른 단계는 재기 전에는 정하지 마십시오.
+6. **`pow` 를 double-float 로 직접 쓰면 맞출 수 있는지** — 시도하지 않았습니다.
