@@ -364,6 +364,27 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/scratch_angle.hlsl"
+    RidgeMain
+    negaflow_scratch_angle_ridge_cs
+    NEGAFLOW_SCRATCH_ANGLE_RIDGE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/scratch_angle.hlsl"
+    IntegrateMain
+    negaflow_scratch_angle_integrate_cs
+    NEGAFLOW_SCRATCH_ANGLE_INTEGRATE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/scratch_angle.hlsl"
+    MaxMain
+    negaflow_scratch_angle_max_cs
+    NEGAFLOW_SCRATCH_ANGLE_MAX_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/morphology.hlsl"
     MorphologyHorizontalMain
     negaflow_morphology_horizontal_cs
@@ -438,6 +459,9 @@ add_library(negaflow_gpu STATIC
     "${NEGAFLOW_CHANNEL_CLIPPING_OVERLAY_HEADER}"
     "${NEGAFLOW_AREA_AVERAGE_IMAGE_HEADER}"
     "${NEGAFLOW_AREA_AVERAGE_PARTIALS_HEADER}"
+    "${NEGAFLOW_SCRATCH_ANGLE_RIDGE_HEADER}"
+    "${NEGAFLOW_SCRATCH_ANGLE_INTEGRATE_HEADER}"
+    "${NEGAFLOW_SCRATCH_ANGLE_MAX_HEADER}"
     "${NEGAFLOW_MORPHOLOGY_H_HEADER}"
     "${NEGAFLOW_MORPHOLOGY_V_HEADER}"
     "${NEGAFLOW_BIPOLAR_TOP_HAT_HEADER}"
@@ -461,6 +485,7 @@ add_library(negaflow_gpu STATIC
     src/Native/gpu/gpu_texture_grain.cpp
     src/Native/gpu/gpu_channel_clipping_overlay.cpp
     src/Native/gpu/gpu_area_average.cpp
+    src/Native/gpu/gpu_scratch_angle.cpp
     src/Native/gpu/gpu_lookup_table.cpp
     src/Native/gpu/gpu_image_pool.cpp
     src/Native/gpu/gpu_morphology.cpp
@@ -688,6 +713,7 @@ add_library(negaflow_pipeline STATIC
     src/Native/pipeline/gpu_accelerator.cpp
     src/Native/pipeline/gpu_accelerator_film_look.cpp
     src/Native/pipeline/gpu_accelerator_color.cpp
+    src/Native/pipeline/gpu_accelerator_scratch.cpp
     src/Native/pipeline/gpu_kernel_table.cpp
     src/Native/pipeline/stage_timing.cpp
 )
@@ -1332,6 +1358,22 @@ if(BUILD_TESTING)
     add_test(
         NAME native.gpu_bw_film_look
         COMMAND negaflow_gpu_bw_film_look_tests)
+
+    add_executable(negaflow_gpu_scratch_angle_tests
+        tests/Native.UnitTests/gpu_scratch_angle_tests.cpp
+    )
+    target_include_directories(
+        negaflow_gpu_scratch_angle_tests
+        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/imaging"
+    )
+    target_link_libraries(
+        negaflow_gpu_scratch_angle_tests
+        PRIVATE negaflow_pipeline negaflow_gpu negaflow_imaging negaflow_core
+            negaflow_project_options
+    )
+    add_test(
+        NAME native.gpu_scratch_angle
+        COMMAND negaflow_gpu_scratch_angle_tests)
 
     add_executable(negaflow_gpu_morphology_tests
         tests/Native.UnitTests/gpu_morphology_tests.cpp

@@ -226,6 +226,27 @@ public:
         std::uint64_t* count) noexcept;
 
     // `halve` 를 `wanted_levels` 번. 마지막 밉을 `destination` 에 씁니다.
+    [[nodiscard]] bool apply_scratch_angle_maps(
+        const float* bright,
+        const std::uint8_t* valid,
+        float* ridge,
+        float* integrated,
+        std::uint32_t width,
+        std::uint32_t height,
+        const imaging::ScratchAngleTaps* taps,
+        float balance_limit) noexcept;
+
+    [[nodiscard]] bool apply_scratch_angle_stack(
+        const float* bright,
+        const std::uint8_t* valid,
+        float* best_ridge,
+        float* best_integrated,
+        std::uint32_t width,
+        std::uint32_t height,
+        const imaging::ScratchAngleTaps* taps,
+        int angle_count,
+        float balance_limit) noexcept;
+
     [[nodiscard]] bool apply_mip_halve_levels(
         const float* source,
         std::uint32_t width,
@@ -284,5 +305,26 @@ private:
 // `imaging` 안쪽 커널이 GPU 를 쓰게 표를 겁니다. 프로세스 시작에 한 번 부르십시오.
 // 장치가 없으면 아무것도 하지 않습니다.
 void install_gpu_kernel_accelerator() noexcept;
+
+bool accelerate_scratch_angle_maps(
+    const float* bright,
+    const std::uint8_t* valid,
+    float* ridge,
+    float* integrated,
+    std::uint32_t width,
+    std::uint32_t height,
+    const imaging::ScratchAngleTaps* taps,
+    float balance_limit) noexcept;
+
+bool accelerate_scratch_angle_stack(
+    const float* bright,
+    const std::uint8_t* valid,
+    float* best_ridge,
+    float* best_integrated,
+    std::uint32_t width,
+    std::uint32_t height,
+    const imaging::ScratchAngleTaps* taps,
+    int angle_count,
+    float balance_limit) noexcept;
 
 }  // namespace negaflow::pipeline

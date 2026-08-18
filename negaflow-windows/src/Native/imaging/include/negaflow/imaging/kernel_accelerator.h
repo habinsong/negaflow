@@ -262,6 +262,38 @@ using AreaAverageFunction = bool (*)(
 // `downsample_for_statistics` 의 2x2 `halve` 를 `wanted_levels` 번 반복합니다.
 // 마지막 단계를 `destination` 에 폭 간격으로 씁니다. CPU 판과 **비트 단위로 같습니다.**
 // 전송이 질 수 있어 제품 경로는 프리뷰 스코프에서만 부릅니다.
+// GrainMend 한 각도의 탭. CPU `make_offsets` 가 채웁니다. GPU 는 다시 계산하지 않습니다.
+struct ScratchAngleTaps final {
+    std::int32_t center[5][2]{};
+    std::int32_t positive[5][2]{};
+    std::int32_t negative[5][2]{};
+    std::int32_t along[25][2]{};
+    std::int32_t along_count{0};
+    std::int32_t curve[13][2]{};
+    std::int32_t curve_count{0};
+};
+
+using ScratchAngleMapsFunction = bool (*)(
+    const float* bright,
+    const std::uint8_t* valid,
+    float* ridge,
+    float* integrated,
+    std::uint32_t width,
+    std::uint32_t height,
+    const ScratchAngleTaps* taps,
+    float balance_limit) noexcept;
+
+using ScratchAngleStackFunction = bool (*)(
+    const float* bright,
+    const std::uint8_t* valid,
+    float* best_ridge,
+    float* best_integrated,
+    std::uint32_t width,
+    std::uint32_t height,
+    const ScratchAngleTaps* taps,
+    int angle_count,
+    float balance_limit) noexcept;
+
 using MipHalveLevelsFunction = bool (*)(
     const float* source,
     std::uint32_t width,
@@ -281,6 +313,8 @@ struct KernelAccelerator final {
     MorphologyRgbFunction bipolar_top_hat_rgb{nullptr};
     MorphologyRgbFunction opening_rgb{nullptr};
     MorphologyRgbFunction closing_rgb{nullptr};
+    ScratchAngleMapsFunction scratch_angle_maps{nullptr};
+    ScratchAngleStackFunction scratch_angle_stack{nullptr};
 
     // ── 근사한 것 (`ApproximateAcceleratorScope` 안에서만) ────────────────────
     DigitalHalationFunction digital_halation{nullptr};

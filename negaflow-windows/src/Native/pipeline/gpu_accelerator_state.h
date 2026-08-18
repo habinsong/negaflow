@@ -23,6 +23,7 @@
 #include "negaflow/gpu/gpu_negative_invert.h"
 #include "negaflow/gpu/gpu_tone_stage.h"
 #include "negaflow/gpu/gpu_area_average.h"
+#include "negaflow/gpu/gpu_scratch_angle.h"
 #include "negaflow/gpu/gpu_channel_clipping_overlay.h"
 #include "negaflow/gpu/gpu_neighborhood.h"
 #include "negaflow/gpu/gpu_noritsu_texture.h"
@@ -80,6 +81,8 @@ struct GpuAccelerator::State final {
     bool area_average_ready{false};
     gpu::GpuMipHalve mip_halve{};
     bool mip_halve_ready{false};
+    gpu::GpuScratchAngle scratch_angle{};
+    bool scratch_angle_ready{false};
     gpu::GpuWorkingImage mip_a{};
     gpu::GpuWorkingImage mip_b{};
     // ☠️ **작업 텍스처는 하나의 묶음을 나눠 씁니다.** 진입점마다 자기 것을 만들면

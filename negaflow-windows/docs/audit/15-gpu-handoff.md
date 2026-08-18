@@ -154,6 +154,7 @@ CPU 커널은 "변화 없음" 이면 커널을 안 돌리고 **원본을 복사*
 | 스캐너 타겟 그레이드 | `scanner_target_grade.cpp` | 1e-4 (노리츠 합성은 게이트 뒤집힘 5e-3) |
 | NORITSU 장치 질감 | `apply_noritsu_texture` → `GpuNoritsuTexture` | NVIDIA **7.15e-07**, WARP **5.96e-07**. 게이트 화소는 원본과 비트 일치 |
 | 형태학(검출) | `grain_mend_morphology.cpp` + RGB 오케스트레이터 | **0**(비트 일치). **기본 켬.** 자동 검출 18.1s → **5.3s** |
+| 스크래치 각도(검출) | `make_scratch_angle_maps` + 8각도 스택 | ridge 0.03(1/2257). **기본 켬.** 검출 **4.66s**, 610/9331 |
 | TextureStage `filmGrain` | `apply_grain` → `GpuTextureGrain` | NVIDIA **5.96e-08**, WARP **0**. **기본 끔** — 프리뷰 texture 단계가 더 느림(아래 3.4) |
 | 채널 클리핑 오버레이 | `apply_channel_clipping_overlay` + 프리뷰 합성 | **0**(비트 일치). 현상 화소는 안 바꿈 |
 | 흑백 디지털 룩 **사슬** | `apply_digital_bw_film_look` → `GpuFilmLookStage::apply_bw` | NVIDIA **3.28e-07**. **기본 켬.** |
@@ -220,8 +221,21 @@ GPU 가 안 돌면 시험이 실패합니다(`apply_noritsu_texture` 가 `true` 
 
 기본은 켭니다. 끄려면 `NEGA_GPU_MORPHOLOGY=0`.
 
-남은 자동 병목은 **스크래치 각도**(벽시계에 ~4.5~5.0 s 기여).
-5초를 안정적으로 밑돌려면 그다음이 여기입니다. 값을 바꾸지 말고 GPU 로 옮기십시오.
+**2026-08-19 스크래치 각도 GPU.** 여덟 각도를 한 번 올려 돌립니다.
+`native.gpu_scratch_angle`: GPU 미실행 시 실패. 61×37 / 45° ridge 최대 오차 **0.03**
+(균형 임계 1화소 / 2257), 적분 **0.00667**(7화소). frame_1 자동 **610 / 9,331** 유지
+(등급 표·먼지 평균도 동일).
+
+| 경로 | 검출 | scratch_angles | 전체 |
+|---|---:|---:|---:|
+| CPU (`NEGA_GPU=0`) | **17,276 ms** | **5,586 ms** | **17,407 ms** |
+| GPU 형태학만 (직전) | 4,890 ms | 4,794 ms | 5,027 ms |
+| + 스크래치 각도 GPU | **4,527 ms** | **1,705 ms** | **4,663 ms** |
+
+이 한 장 자동은 **5초 안**입니다. 가이드·브러시·복제·IR 즉각은 설치 앱에서
+아직 안 쟀습니다.
+
+기본 켭니다. 끄려면 `NEGA_GPU=0`.
 
 ### 3.3 `ditherAdd` · `channelClippingOverlay` — **2026-08-19 호출부 확정**
 

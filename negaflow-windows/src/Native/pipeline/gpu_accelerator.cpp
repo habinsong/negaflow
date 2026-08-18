@@ -97,6 +97,9 @@ GpuAccelerator::GpuAccelerator() noexcept {
         state->mip_halve_ready =
             gpu::GpuMipHalve::create(state->device, state->mip_halve) ==
             gpu::GpuKernelStatus::ok;
+        state->scratch_angle_ready =
+            gpu::GpuScratchAngle::create(state->device, state->scratch_angle) ==
+            gpu::GpuKernelStatus::ok;
     }
     state_ = state;
 }

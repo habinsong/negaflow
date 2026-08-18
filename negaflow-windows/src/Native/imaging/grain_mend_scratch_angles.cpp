@@ -1,6 +1,7 @@
 #include "grain_mend_scratch_angles.h"
 
 #include "grain_mend_detection_image.h"
+#include "negaflow/imaging/kernel_accelerator.h"
 
 #include <algorithm>
 #include <array>
@@ -142,7 +143,50 @@ void integrate_ridge(
 }
 
 
+void copy_offsets(
+    const std::vector<Offset>& offsets,
+    std::int32_t (*destination)[2],
+    const int capacity) {
+    const int count = std::min(capacity, static_cast<int>(offsets.size()));
+    for (int index = 0; index < count; ++index) {
+        destination[index][0] = offsets[static_cast<std::size_t>(index)].x;
+        destination[index][1] = offsets[static_cast<std::size_t>(index)].y;
+    }
+}
+
 }  // namespace
+
+void fill_scratch_angle_taps(
+    const double degrees,
+    const bool multi_scale,
+    negaflow::imaging::ScratchAngleTaps& taps) {
+    const double radians = degrees * 3.14159265358979323846 / 180.0;
+    const double dx = std::cos(radians);
+    const double dy = std::sin(radians);
+    const double perpendicular_x = -dy;
+    const double perpendicular_y = dx;
+    copy_offsets(make_offsets(scratch_short_half, dx, dy), taps.center, 5);
+    copy_offsets(
+        make_offsets(
+            scratch_short_half, dx, dy, scratch_side_offset, perpendicular_x, perpendicular_y),
+        taps.positive,
+        5);
+    copy_offsets(
+        make_offsets(
+            scratch_short_half, dx, dy, -scratch_side_offset, perpendicular_x, perpendicular_y),
+        taps.negative,
+        5);
+    const auto along = make_offsets(scratch_long_half, dx, dy);
+    copy_offsets(along, taps.along, 25);
+    taps.along_count = static_cast<std::int32_t>(along.size());
+    if (multi_scale) {
+        const auto curve = make_offsets(scratch_curve_half, dx, dy);
+        copy_offsets(curve, taps.curve, 13);
+        taps.curve_count = static_cast<std::int32_t>(curve.size());
+    } else {
+        taps.curve_count = 0;
+    }
+}
 
 void make_scratch_angle_maps(
     const DetectionImage& image,
@@ -152,6 +196,32 @@ void make_scratch_angle_maps(
     const bool multi_scale,
     ScratchAngleMaps& result) {
     const std::size_t count = checked_pixel_count(image.width, image.height);
+    if (result.ridge.size() != count) {
+        result.ridge.resize(count);
+    }
+    if (result.integrated.size() != count) {
+        result.integrated.resize(count);
+    }
+    std::fill(result.ridge.begin(), result.ridge.end(), 0.0F);
+    std::fill(result.integrated.begin(), result.integrated.end(), 0.0F);
+
+    negaflow::imaging::ScratchAngleTaps taps{};
+    fill_scratch_angle_taps(angle_degrees, multi_scale, taps);
+    if (const KernelAccelerator* const table = kernel_accelerator();
+        table != nullptr && table->scratch_angle_maps != nullptr) {
+        if (table->scratch_angle_maps(
+                image.brightest_channel.data(),
+                valid.data(),
+                result.ridge.data(),
+                result.integrated.data(),
+                image.width,
+                image.height,
+                &taps,
+                balance_limit)) {
+            return;
+        }
+    }
+
     const double radians = angle_degrees * 3.14159265358979323846 / 180.0;
     const double dx = std::cos(radians);
     const double dy = std::sin(radians);
@@ -180,14 +250,6 @@ void make_scratch_angle_maps(
         positive_offsets,
         negative_offsets);
 
-    if (result.ridge.size() != count) {
-        result.ridge.resize(count);
-    }
-    if (result.integrated.size() != count) {
-        result.integrated.resize(count);
-    }
-    std::fill(result.ridge.begin(), result.ridge.end(), 0.0F);
-    std::fill(result.integrated.begin(), result.integrated.end(), 0.0F);
     constexpr float short_taps =
         static_cast<float>(scratch_short_half * 2 + 1);
     for (std::uint32_t y = 0U; y < image.height; ++y) {

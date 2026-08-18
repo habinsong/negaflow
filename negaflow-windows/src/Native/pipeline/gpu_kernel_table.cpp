@@ -455,6 +455,8 @@ const imaging::KernelAccelerator kernel_table{
     accelerate_bipolar_top_hat_rgb,
     accelerate_opening_rgb,
     accelerate_closing_rgb,
+    accelerate_scratch_angle_maps,
+    accelerate_scratch_angle_stack,
     accelerate_digital_halation,
     accelerate_negative_inversion,
     accelerate_digital_film_grain,

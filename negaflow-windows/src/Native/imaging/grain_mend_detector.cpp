@@ -4,6 +4,8 @@
 #include "grain_mend_morphology.h"
 #include "grain_mend_scratch_angles.h"
 
+#include "negaflow/imaging/kernel_accelerator.h"
+
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -358,6 +360,25 @@ void find_candidates(
     };
     const float scratch_balance_limit = static_cast<float>(
         0.10 - protect_detail * 0.04);
+    bool used_gpu_stack = false;
+    if (const KernelAccelerator* const table = kernel_accelerator();
+        table != nullptr && table->scratch_angle_stack != nullptr) {
+        std::array<negaflow::imaging::ScratchAngleTaps, 8> tap_sets{};
+        for (std::size_t angle = 0U; angle < angles.size(); ++angle) {
+            fill_scratch_angle_taps(angles[angle], labeled_detection, tap_sets[angle]);
+        }
+        used_gpu_stack = table->scratch_angle_stack(
+            image.brightest_channel.data(),
+            valid.data(),
+            local_ridge.data(),
+            best.data(),
+            image.width,
+            image.height,
+            tap_sets.data(),
+            static_cast<int>(angles.size()),
+            scratch_balance_limit);
+    }
+    if (!used_gpu_stack) {
     const unsigned int hardware_threads = std::thread::hardware_concurrency();
     const std::size_t worker_count = std::clamp<std::size_t>(
         hardware_threads == 0U ? 2U : hardware_threads,
@@ -401,6 +422,7 @@ void find_candidates(
                 local_ridge[index] = std::max(local_ridge[index], maps.ridge[index]);
             }
         }
+    }
     }
     const std::vector<float> scratch_floor =
         box_mean(best, image.width, image.height, 12U);
