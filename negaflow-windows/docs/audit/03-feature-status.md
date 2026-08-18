@@ -54,7 +54,7 @@
 | 12 | **내보내기·빠른 내보내기 부실** | macOS Export **41파일 7,034줄** → Windows **6파일**. 배치·체크포인트·저널·트랜잭션·검증등급 전부 없음 | **없음 확정** |
 | 13 | **GrainMend IR 프론트 없음** | `DevelopGrainMendPanel.xaml` 도구 단추 4개(자동·가이드·브러시·복제). **IR 단추 없음** | **없음 확정** |
 | 14 | **초기화(모든 보정·사진 각도) 없음** | macOS `Tools/ResetControlsSection.swift:14,23` 의 `onResetAllAdjustments`·`onResetPhotoAngle` 두 단추. Windows `ResetAllAdjustments`·`ResetControlsSection`·`InspectorResetter`·`ResetAngle` 전부 히트 **0**. macOS `DevelopInspectorResetter.swift`(104줄) 대응 없음 | **없음 확정** |
-| 15 | **인화 프리뷰가 저해상도 썸네일이라 깨짐** | `Views/Print/Preview/PrintPreviewRenderer.cs:323-325` 가 `thumbnails()?.TryGet(frame.Id)` → `DecodeThumbnail(jpeg)` 로 **360px 썸네일**을 그대로 확대. macOS `PrintCanvasView.swift:165-167` 은 `frame.developedImage ?? packagePreview ?? thumbnailImage` 순서로 **현상본이 먼저** | **원인 확정** |
+| 15 | **인화 프리뷰가 저해상도 썸네일이라 깨짐** | `Views/Print/Preview/PrintPreviewRenderer.cs:323-325` 가 `thumbnails()?.TryGet(frame.Id)` → `DecodeThumbnail(jpeg)` 로 **360px 썸네일**을 그대로 확대. macOS `PrintCanvasView.swift:165-167` 은 `frame.developedImage ?? packagePreview ?? thumbnailImage` 순서로 **현상본이 먼저** | **2026-08-19 고침.** 현상 화소 기억 + 칸이 크면 `PrintPreviewResolution` 으로 현상본 업그레이드. 앱 인화 판에서 현상본 확인 |
 | 16 | 프리뷰가 뭘 해도 수 초 | `run_develop` 이 호출마다 원본 디코드. 캐시 없음 | **원인 확정** |
 | 17 | GrainMend 자동·가이드·브러시·복제 전부 느림 | 위와 같은 원인 + GPU 없음. 검출 8,932 ms 중 **형태학이 47%, 미세 입자까지 82%** | **원인 확정.** 계획 [`04`](04-gpu-plan.md)(무엇을) + [`13`](13-performance-playbook.md)(어떻게, vHGW 로 구조 요소 무관 O(1)) |
 | 17.1 | **현상·보정·룩·인화가 느린 정확한 내역** | **아무도 안 쟀습니다.** `src/Native/pipeline/` 에 단계별 ms 계측기가 **없음**(`elapsed`·`duration_ms`·`stage_ms` 히트 0) | **미측정 — 이것이 0단계**([`13`](13-performance-playbook.md) 2절) |

@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Negaflow.Catalog;
 using Negaflow.Interop;
+using Negaflow.Shell.Print;
 
 namespace Negaflow.Shell.Library;
 
@@ -44,6 +45,11 @@ public sealed class ThumbnailService : IAsyncDisposable
     private readonly SemaphoreSlim renderSlots = new(MaximumConcurrentRenders, MaximumConcurrentRenders);
     private readonly ConcurrentDictionary<string, byte[]> memory = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, Task> inFlight = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, DevelopedPreview> developed = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, Task> developedInFlight = new(StringComparer.Ordinal);
+
+    /// <summary>현상 미리보기 화소입니다. 인화 판은 360 JPEG 가 아니라 이것을 먼저 씁니다.</summary>
+    public readonly record struct DevelopedPreview(byte[] Pixels, int Width, int Height);
 
     public ThumbnailService(
         IDevelopExporter exporter,
@@ -69,6 +75,64 @@ public sealed class ThumbnailService : IAsyncDisposable
     /// <summary>이미 들고 있는 썸네일 JPEG 입니다. 없으면 null 이며 렌더를 시작하지 않습니다.</summary>
     public byte[]? TryGet(string frameId) =>
         memory.TryGetValue(frameId, out byte[]? jpeg) ? jpeg : null;
+
+    /// <summary>
+    /// 현상 워크스페이스가 그린 미리보기입니다. 인화는 이 화소를 먼저 쓰고, 없으면
+    /// 360 JPEG 로 자리를 채웁니다.
+    /// </summary>
+    public bool TryGetDeveloped(string frameId, out DevelopedPreview preview) =>
+        developed.TryGetValue(frameId, out preview);
+
+    /// <summary>
+    /// macOS <c>ScanFrame.developedImage</c> 자리입니다. 미리보기 버퍼는 다음 렌더가
+    /// 덮어쓰므로 여기서 복사합니다.
+    /// </summary>
+    public void RememberDeveloped(string frameId, ReadOnlySpan<byte> bgra, int width, int height)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(frameId);
+        int bytes = width * height * 4;
+        if (width <= 0 || height <= 0 || bgra.Length < bytes)
+        {
+            return;
+        }
+
+        developed[frameId] = new DevelopedPreview(bgra[..bytes].ToArray(), width, height);
+    }
+
+    /// <summary>
+    /// macOS <c>preparePrintPackageDisplayPreview</c> — 칸이 현재 래스터보다 크면
+    /// 표시 크기로 현상본을 올립니다. 360 썸네일을 확대해 깨지지 않게 하려는 것입니다.
+    /// </summary>
+    public void RequestDeveloped(LibraryFrameSnapshot frame, int maxDimension)
+    {
+        ArgumentNullException.ThrowIfNull(frame);
+        if (maxDimension <= 0)
+        {
+            return;
+        }
+        if (TryGetDeveloped(frame.Id, out DevelopedPreview existing) &&
+            !PrintPreviewResolution.NeedsUpgrade(
+                (int)PrintPreviewResolution.PixelDimension(existing.Width, existing.Height),
+                maxDimension))
+        {
+            return;
+        }
+        string frameId = frame.Id;
+        if (developedInFlight.ContainsKey(frameId))
+        {
+            return;
+        }
+        Task job = Task.Run(() => ProduceDevelopedAsync(frame, maxDimension));
+        if (!developedInFlight.TryAdd(frameId, job))
+        {
+            return;
+        }
+        _ = job.ContinueWith(
+            _ => developedInFlight.TryRemove(frameId, out Task? _),
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
+    }
 
     /// <summary>
     /// 썸네일을 확보합니다. 이미 있으면 아무 일도 하지 않고, 없으면 디스크를 거쳐 현상까지
@@ -125,6 +189,7 @@ public sealed class ThumbnailService : IAsyncDisposable
     {
         ArgumentException.ThrowIfNullOrEmpty(frameId);
         memory.TryRemove(frameId, out _);
+        developed.TryRemove(frameId, out _);
         disk.Remove(frameId, PathFor(frameId));
     }
 
@@ -165,6 +230,51 @@ public sealed class ThumbnailService : IAsyncDisposable
             }
             Store(frame.Id, jpeg);
             RaiseReady(frame.Id);
+        }
+        finally
+        {
+            renderSlots.Release();
+        }
+    }
+
+    private async Task ProduceDevelopedAsync(LibraryFrameSnapshot frame, int maxDimension)
+    {
+        if (!frame.CanDevelop)
+        {
+            return;
+        }
+
+        await renderSlots.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            if (TryGetDeveloped(frame.Id, out DevelopedPreview existing) &&
+                !PrintPreviewResolution.NeedsUpgrade(
+                    (int)PrintPreviewResolution.PixelDimension(existing.Width, existing.Height),
+                    maxDimension))
+            {
+                return;
+            }
+
+            string unusedDestination = Path.ChangeExtension(frame.SourcePath, ".print-preview.png");
+            if (DevelopRequestFactory.Create(frame, unusedDestination).Request is not { } request)
+            {
+                return;
+            }
+
+            uint edge = DevelopPreviewProxy.BufferEdge(maxDimension);
+            byte[] pixels = new byte[(long)edge * edge * 4];
+            DevelopExportResult result = exporter.Preview(request, edge, edge, pixels);
+            if (!result.Succeeded || result.ImageWidth == 0U || result.ImageHeight == 0U)
+            {
+                return;
+            }
+
+            RememberDeveloped(frame.Id, pixels, (int)result.ImageWidth, (int)result.ImageHeight);
+            RaiseReady(frame.Id);
+        }
+        catch (Exception error) when (error is not OperationCanceledException)
+        {
+            _ = error;
         }
         finally
         {

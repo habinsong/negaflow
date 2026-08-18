@@ -129,7 +129,7 @@
 | 6 | 방향 — 세로/가로 | `print_portrait_orientation` · `print_landscape_orientation_restored` |
 | 7 | 시트 배경 · 눈금자 · 줌 | `print_sheet_gray` · `print_ruler_off` · `print_zoom_in` |
 | 8 | 하단 필름스트립 카드 크기 | `print_filmstrip_card_size_up` |
-| 9 | **중앙 프리뷰 화질** — 지금 **360px 썸네일 확대라 깨짐** | `print_overview` ([`07`](07-user-reported.md) E4) |
+| 9 | **중앙 프리뷰 화질** — **E4 현상본.** 줌 HUD·패키지 셀 업그레이드 앱 실측은 남음 | `print_overview` ([`07`](07-user-reported.md) E4) |
 
 ---
 
@@ -179,7 +179,7 @@ Windows: computer-use zoom [x0,y0,x1,y1]
 | 슬라이더 값 입력 | `TextBox` + `KeyDown` 있음 | **포커스가 안 가서 입력 불가** |
 | 좌우 뒤집기 | `FlipHorizontalButton` 있음 | **사용자는 안 보인다고 함** |
 | 현상 타깃 | `DevelopTargets.Visible` 있음 | **현상 뷰에 설정 경로 없음** |
-| 인화 프리뷰 | 렌더러 있음 | **360px 썸네일 확대라 깨짐** |
+| 인화 프리뷰 | 렌더러 있음 | **E4 현상본.** 단일 이미지 앱 확인. 패키지·줌은 남음 |
 | GrainMend IR | 엔진 1,570줄 있음 | **단추가 없음** |
 | 폴더별 현상 | 프로세스·타깃 있음 | **적용 단추가 없음** |
 

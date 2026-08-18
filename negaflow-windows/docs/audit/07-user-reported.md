@@ -429,7 +429,7 @@ NEGA_DEBUG=1 negaflow-cli --auto-base-probe <source.tiff>
 | E1 | 사진 바꾸면 수 초 | **2026-08-19.** 디코드 단일 슬롯 + **프리뷰 raw 프록시 2슬롯**(인터랙티브/정착). 프리뷰는 결함·필름베이스를 원본에서 푼 뒤 `displayProxy` 와 같이 Lanczos3 로 상자 맞춤하고 **그 작은 raw 에서 현상**. 내보내기·검출은 원본 해상도. 실측 5088×3401: 상자 1280 두 번째 프리뷰 **43.1 ms · decode runs 0** (첫 549.6 ms 중 decode 187.9). 상자 3600 두 번째 **260.6 ms · decode 0**. 앱 슬라이더 벽시계는 아직 설치본에서 재는 중. |
 | E2 | 우측탭 기능 하나 써도 수 초 | E1 과 같은 경로. CLI/시험은 두 번째 호출에서 디코드 0. **앱에서 슬라이더를 두 번 끌어 확인하는 것이 남음.** |
 | E3 | GrainMend 자동·가이드·브러시·복제 전부 느림 | 위 + **GPU 코드 0줄** |
-| E4 | **인화 프리뷰가 깨짐** | `Views/Print/Preview/PrintPreviewRenderer.cs:323-325` 가 **360px 썸네일**을 확대. macOS `PrintCanvasView.swift:165-167` 은 `developedImage` 먼저 |
+| E4 | **인화 프리뷰가 깨짐** | **2026-08-19.** `developedImage ?? thumbnail` 순. 현상 미리보기 화소를 기억하고, 칸이 더 크면 `PrintPreviewResolution.renderDimension`(720…2560) 으로 현상본을 올림. 앱: RealScan·OpticFilm8100_frame_1 인화 판에 현상본, 열차 번호 2355 판독. 360 JPEG 확대 아님 |
 
 ---
 
@@ -476,7 +476,7 @@ DevelopLookLabel         DevelopLookSelector
 1. **A1·A2 크래시** — 스택부터. **A3(2026-08-19) `developReset.Value` 도 닫음.**
 2. **E1 프리뷰 프록시 캐시 + 2단 렌더** — 네이티브 2슬롯+Lanczos 현상 붙임. 5088×3401 상자 1280 두 번째 **43.1 ms · decode 0**. 앱에서 노출 0→0.80 과 히스토그램 갱신 확인. **FrameCacheManager FIFO 는 10번.**
 3. **C1 필름 베이스** — C1.1~C1.9. RealScan 리베이트 집기 `0.40 0.13 0.07` + 현상본 유지.
-4. **E4 인화 프리뷰** — 360px 썸네일 확대라 깨진다. 현상본을 써라
+4. **E4 인화 프리뷰** — **닫음.** 현상본 먼저, 칸이 크면 표시 크기 현상. 다음: B 메뉴막대
 5. **B 메뉴막대 11개**
 6. **D1 초기화 · D5 undo**
 7. **GPU** ([`04`](04-gpu-plan.md))

@@ -83,7 +83,8 @@ UI/UX(WinUI 3 컨트롤 속성 — Slider.StepFrequency 기본값이 1 인 것�
 3. 필름 베이스 — C1.4~C1.9. sidecar 앱 JSON 0.7291067 / measuredEvidenceScoreV1,
    catalog `baseRGB` 영속, 프록시 슬롯 light_gain, 넓은 패널 피커 시각 276 DIP,
    RealScan 리베이트 집기 Dmin 0.40/0.13/0.07 + 현상본 유지.
-4. 인화 프리뷰 — 360px 썸네일 확대라 깨진다. 현상본을 써라
+4. 인화 프리뷰 — C1 다음 E4. 현상본 먼저, 칸이 크면 renderDimension(720…2560).
+   앱 OpticFilm8100_frame_1 인화 판에서 열차 번호 판독. 360 확대 아님.
 5. 메모리 캐시·FIFO 474줄 이식 (docs/audit/10 — 상수 전부 적혀 있다)
 6. 메뉴막대 11개
 7. 초기화(모든 보정·사진 각도) · undo/redo

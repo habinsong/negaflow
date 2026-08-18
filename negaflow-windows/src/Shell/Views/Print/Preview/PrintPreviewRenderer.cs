@@ -1,6 +1,9 @@
+using System.IO;
+using System.Runtime.InteropServices.WindowsRuntime;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Shapes;
 using Negaflow.Catalog;
 using Negaflow.Shell.Library;
@@ -319,11 +322,18 @@ internal sealed class PrintPreviewRenderer
             Height = Math.Max(1, rect.Height * scale),
             Stretch = Stretch.Fill,
         };
-        // 썸네일이 아직 없으면 회색 자리만 둡니다 — 판의 짜임은 그림 없이도 옳습니다.
-        if (thumbnails()?.TryGet(frame.Id) is { } jpeg)
+        ThumbnailService? cache = thumbnails();
+        // macOS PrintSingleImagePageView: developedImage ?? rawPreviewImage ?? thumbnailImage.
+        // 현상본이 있으면 그것을 쓰고, 칸이 더 크면 표시 크기로 올립니다.
+        if (cache?.TryGetDeveloped(frame.Id, out ThumbnailService.DevelopedPreview developed) == true)
+        {
+            image.Source = BgraBitmap(developed);
+        }
+        else if (cache?.TryGet(frame.Id) is { } jpeg)
         {
             image.Source = LibraryWorkspaceView.DecodeThumbnail(jpeg);
         }
+        RequestDevelopedIfNeeded(cache, frame, rect, scale);
         Border host = new()
         {
             Width = image.Width,
@@ -339,5 +349,50 @@ internal sealed class PrintPreviewRenderer
         Canvas.SetLeft(host, rect.X * scale);
         Canvas.SetTop(host, rect.Y * scale);
         return host;
+    }
+
+    private void RequestDevelopedIfNeeded(
+        ThumbnailService? cache,
+        LibraryFrameSnapshot frame,
+        PrintRect rect,
+        double scale)
+    {
+        if (cache is null)
+        {
+            return;
+        }
+
+        double dpi = surface.CanvasHost.XamlRoot?.RasterizationScale ?? 1;
+        if (dpi <= 0)
+        {
+            dpi = 1;
+        }
+
+        double displayPixels = Math.Max(rect.Width, rect.Height) * scale * dpi;
+        int current = cache.TryGetDeveloped(frame.Id, out ThumbnailService.DevelopedPreview developed)
+            ? (int)PrintPreviewResolution.PixelDimension(developed.Width, developed.Height)
+            : 0;
+        if (!PrintPreviewResolution.NeedsUpgrade(current, displayPixels))
+        {
+            return;
+        }
+
+        double target = PrintPreviewResolution.RenderDimension(displayPixels);
+        if (target > 0)
+        {
+            cache.RequestDeveloped(frame, (int)target);
+        }
+    }
+
+    private static WriteableBitmap BgraBitmap(ThumbnailService.DevelopedPreview preview)
+    {
+        WriteableBitmap bitmap = new(preview.Width, preview.Height);
+        int written = preview.Width * preview.Height * 4;
+        using (Stream buffer = bitmap.PixelBuffer.AsStream())
+        {
+            buffer.Write(preview.Pixels, 0, written);
+        }
+        bitmap.Invalidate();
+        return bitmap;
     }
 }

@@ -382,6 +382,8 @@ public sealed partial class DevelopWorkspaceView : UserControl
         // 않으려고 여기서 넘깁니다.
         if (panel?.SelectedFrame is { } settled)
         {
+            // 인화 판은 360 JPEG 가 아니라 방금 그린 현상본을 씁니다.
+            thumbnails?.RememberDeveloped(settled.Id, pixels, width, height);
             thumbnails?.Publish(settled.Id, pixels, width, height);
         }
 

@@ -103,6 +103,6 @@ Windows 히트가 각각 **3건 · 1건** 뿐입니다 — 사실상 이식하�
 |---|---|---|---|---|---|
 | 라이브러리 | 레일 3개만(macOS 는 `WorkflowSidebar`+`sidebarTab` 저장) | 별점·플래그·거부·스캔 2개 **없음** | — | 필터 캡슐 순서/글자 어긋남 | 썸네일 격자 |
 | 현상 | `DevelopSourceRail`/`Sidebar` | 사진 번호 대신 파일명 | 초기화·비교·줌 **없음** | 줌 HUD **없음** | **매번 디코드(2,695 ms)** |
-| 인화 | macOS `PrintWorkspaceSidebar.swift` **없음** | — | 레이아웃 템플릿 **없음** | — | **360px 썸네일 확대 → 깨짐** |
+| 인화 | macOS `PrintWorkspaceSidebar.swift` **없음** | — | 레이아웃 템플릿 **없음** | — | **E4 현상본 프리뷰.** 사이드바·템플릿·줌 HUD 는 남음 |
 
 자세한 것은 [`02-frontend-gaps.md`](02-frontend-gaps.md) · [`07-user-reported.md`](07-user-reported.md).
