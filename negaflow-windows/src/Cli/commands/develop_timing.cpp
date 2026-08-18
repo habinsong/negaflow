@@ -45,7 +45,7 @@ int usage() {
 }  // namespace
 
 int run_develop_timing(const int argument_count, const wchar_t* const arguments[]) {
-    if (argument_count < 3 || argument_count > 7) {
+    if (argument_count < 3 || argument_count > 8) {
         return usage();
     }
 
@@ -67,7 +67,7 @@ int run_develop_timing(const int argument_count, const wchar_t* const arguments[
     }
 
     int repeats = 1;
-    if (argument_count == 7) {
+    if (argument_count >= 7 && std::wstring_view{arguments[6]} != L"nocurve") {
         float parsed = 0.0F;
         if (!parse_float(arguments[6], parsed) || parsed < 1.0F || parsed > 20.0F) {
             return usage();
@@ -81,8 +81,21 @@ int run_develop_timing(const int argument_count, const wchar_t* const arguments[
     request.tone.basic.contrast = 0.4F;
     request.tone.basic.shadows = 0.2F;
     request.tone.basic.highlights = -0.2F;
-    request.tone.curve.lights = 0.15F;
-    request.tone.curve.darks = -0.15F;
+
+    // ☠️ 파라메트릭 커브는 **GPU 경로 한가운데서 한 번 내립니다.** 밴드 측정
+    //    (`measure_parametric_tone_curve_bands`)이 전 화소를 CPU `double` 로 훑기 때문입니다.
+    //    커브를 끄고 켜면서 재면 그 왕복 비용이 그대로 드러납니다 —
+    //    마지막 인자에 `nocurve` 를 주면 끕니다.
+    bool curve = true;
+    for (int index = 2; index < argument_count; ++index) {
+        if (std::wstring_view{arguments[index]} == L"nocurve") {
+            curve = false;
+        }
+    }
+    if (curve) {
+        request.tone.curve.lights = 0.15F;
+        request.tone.curve.darks = -0.15F;
+    }
 
     // macOS 정착 프리뷰와 같은 한 변입니다(`fullMaxDimension`).
     constexpr std::uint32_t preview_edge = 3600U;
