@@ -237,6 +237,27 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/morphology.hlsl"
+    MorphologyHorizontalMain
+    negaflow_morphology_horizontal_cs
+    NEGAFLOW_MORPHOLOGY_H_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/morphology.hlsl"
+    MorphologyVerticalMain
+    negaflow_morphology_vertical_cs
+    NEGAFLOW_MORPHOLOGY_V_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/morphology.hlsl"
+    BipolarTopHatMain
+    negaflow_bipolar_top_hat_cs
+    NEGAFLOW_BIPOLAR_TOP_HAT_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/guided_filter.hlsl"
     GuidedCoefficientsMain
     negaflow_guided_coefficients_cs
@@ -272,6 +293,9 @@ add_library(negaflow_gpu STATIC
     "${NEGAFLOW_FILM_SCAN_SHRINK_HEADER}"
     "${NEGAFLOW_HALATION_BASE_HEADER}"
     "${NEGAFLOW_HALATION_ACCUMULATE_HEADER}"
+    "${NEGAFLOW_MORPHOLOGY_H_HEADER}"
+    "${NEGAFLOW_MORPHOLOGY_V_HEADER}"
+    "${NEGAFLOW_BIPOLAR_TOP_HAT_HEADER}"
     "${NEGAFLOW_PARAMETRIC_TONE_CURVE_HEADER}"
     src/Native/gpu/gpu_color_kernels.cpp
     src/Native/gpu/gpu_negative_invert.cpp
@@ -279,6 +303,7 @@ add_library(negaflow_gpu STATIC
     src/Native/gpu/gpu_gaussian_blur.cpp
     src/Native/gpu/gpu_film_scan.cpp
     src/Native/gpu/gpu_digital_halation.cpp
+    src/Native/gpu/gpu_morphology.cpp
     src/Native/gpu/gpu_neighborhood.cpp
     src/Native/gpu/gpu_stage_kernels.cpp
     src/Native/gpu/gpu_pointwise.cpp
@@ -982,6 +1007,19 @@ if(BUILD_TESTING)
         PRIVATE negaflow_gpu negaflow_imaging negaflow_core negaflow_project_options
     )
     add_test(NAME native.gpu_digital_halation COMMAND negaflow_gpu_digital_halation_tests)
+
+    add_executable(negaflow_gpu_morphology_tests
+        tests/Native.UnitTests/gpu_morphology_tests.cpp
+    )
+    target_include_directories(
+        negaflow_gpu_morphology_tests
+        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/imaging"
+    )
+    target_link_libraries(
+        negaflow_gpu_morphology_tests
+        PRIVATE negaflow_gpu negaflow_imaging negaflow_core negaflow_project_options
+    )
+    add_test(NAME native.gpu_morphology COMMAND negaflow_gpu_morphology_tests)
 
     add_executable(negaflow_tone_pipeline_tests
         tests/Native.UnitTests/tone_pipeline_tests.cpp
