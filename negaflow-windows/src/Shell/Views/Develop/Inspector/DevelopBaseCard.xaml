@@ -24,7 +24,21 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <FontIcon Grid.Column="0" Width="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE706;" />
+            <!-- macOS `circle.lefthalf.filled` — 왼쪽 절반만 채운 원입니다. Segoe MDL2 에는
+                 같은 그림이 없어(E706 은 밝기 아이콘) 직접 그립니다. 바깥 원 지름 14,
+                 왼쪽 반원을 채웁니다. -->
+            <Viewbox Grid.Column="0" Width="16" Height="16">
+                <Grid Width="16" Height="16">
+                    <Ellipse
+                        Width="14"
+                        Height="14"
+                        Stroke="{ThemeResource TextFillColorSecondaryBrush}"
+                        StrokeThickness="1.3" />
+                    <Path
+                        Data="M 8,1 A 7,7 0 0 0 8,15 Z"
+                        Fill="{ThemeResource TextFillColorSecondaryBrush}" />
+                </Grid>
+            </Viewbox>
             <TextBlock x:Name="BaseSectionTitleText" Grid.Column="1" Margin="8,0,0,0" FontSize="14" FontWeight="SemiBold" />
             <TextBlock
                 x:Name="ManualBaseValueText"
@@ -32,35 +46,46 @@
                 FontSize="11"
                 Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
         </Grid>
-        <Grid
+        <!-- macOS `SegmentedPicker` — 자동/필름/수동이 **붙어 있는 한 덩어리**입니다.
+             라디오 3개를 간격 4로 떼어 놓으면 모양이 다릅니다. 테두리 한 겹 안에 칸을
+             나누고 선택된 칸만 바탕을 칠합니다. -->
+        <Border
             x:Name="BaseModeControl"
             AutomationProperties.AutomationId="negaflow.develop.base"
             AutomationProperties.Name="Film base mode"
-            ColumnSpacing="4">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <RadioButton
-                x:Name="BaseAutoModeButton"
-                Grid.Column="0"
-                AutomationProperties.AutomationId="negaflow.develop.base.mode.auto"
-                GroupName="BaseEstimationMode"
-                Checked="OnBaseAutoModeChecked" />
-            <RadioButton
-                x:Name="BaseFilmModeButton"
-                Grid.Column="1"
-                AutomationProperties.AutomationId="negaflow.develop.base.mode.film"
-                GroupName="BaseEstimationMode"
-                Checked="OnBaseFilmModeChecked" />
-            <RadioButton
-                x:Name="BaseManualModeButton"
-                Grid.Column="2"
-                AutomationProperties.AutomationId="negaflow.develop.base.mode.manual"
-                GroupName="BaseEstimationMode"
-                Checked="OnBaseManualModeChecked" />
-        </Grid>
+            BorderBrush="{ThemeResource NegaflowDividerBrush}"
+            BorderThickness="1"
+            CornerRadius="7"
+            Padding="1">
+            <Grid ColumnSpacing="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <RadioButton
+                    x:Name="BaseAutoModeButton"
+                    Grid.Column="0"
+                    Style="{StaticResource NegaflowSegmentStyle}"
+                    AutomationProperties.AutomationId="negaflow.develop.base.mode.auto"
+                    GroupName="BaseEstimationMode"
+                    Checked="OnBaseAutoModeChecked" />
+                <RadioButton
+                    x:Name="BaseFilmModeButton"
+                    Grid.Column="1"
+                    Style="{StaticResource NegaflowSegmentStyle}"
+                    AutomationProperties.AutomationId="negaflow.develop.base.mode.film"
+                    GroupName="BaseEstimationMode"
+                    Checked="OnBaseFilmModeChecked" />
+                <RadioButton
+                    x:Name="BaseManualModeButton"
+                    Grid.Column="2"
+                    Style="{StaticResource NegaflowSegmentStyle}"
+                    AutomationProperties.AutomationId="negaflow.develop.base.mode.manual"
+                    GroupName="BaseEstimationMode"
+                    Checked="OnBaseManualModeChecked" />
+            </Grid>
+        </Border>
         <StackPanel x:Name="FilmBaseControls" Spacing="8">
             <TextBlock x:Name="FilmStockLabel" FontSize="12" />
             <ComboBox
@@ -82,7 +107,50 @@
                 DisplayMemberPath="Label"
                 SelectionChanged="OnScannerProfileSelectionChanged" />
         </StackPanel>
-        <!-- Minimum/Maximum 은 엔진이 알려 준 값으로 코드에서 설정한다. -->
+        <!-- macOS `InspectorActionPill(pickBase)` — 스포이드 토글과 초기화가 한 캡슐입니다.
+             본문 최소 높이 31, 왼쪽 여백 7, 초기화 원 23×23, 오른쪽 여백 3, 캡슐 테두리.
+             켜져 있으면 강조색 0.18 바탕에 0.45 테두리, 꺼져 있으면 0.06/0.12 입니다. -->
+        <Border
+            x:Name="BasePickerPill"
+            HorizontalAlignment="Stretch"
+            BorderThickness="1"
+            CornerRadius="16">
+            <Grid ColumnSpacing="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Button
+                    x:Name="BasePickerButton"
+                    Grid.Column="0"
+                    MinHeight="31"
+                    Padding="7,0,0,0"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Left"
+                    AutomationProperties.AutomationId="negaflow.develop.base.pick"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Click="OnBasePickerToggled"
+                    CornerRadius="12">
+                    <TextBlock x:Name="BasePickerText" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                </Button>
+                <Button
+                    x:Name="BasePickerResetButton"
+                    Grid.Column="1"
+                    Width="23"
+                    Height="23"
+                    Margin="0,0,3,0"
+                    Padding="0"
+                    AutomationProperties.AutomationId="negaflow.develop.base.pick.reset"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Click="OnBasePickerResetClicked"
+                    CornerRadius="12">
+                    <FontIcon FontSize="11" Glyph="&#xE10E;" />
+                </Button>
+            </Grid>
+        </Border>
+        <!-- 범위는 macOS 와 같은 0…1 입니다(코드에서 설정). -->
         <StackPanel x:Name="ManualBaseControls" Spacing="10">
             <controls:InspectorSlider
                 x:Name="BaseRedControl"

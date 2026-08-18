@@ -1177,4 +1177,9 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developDefectClassScratchDiagonal.Text" xml:space="preserve"><value>Diagonaler Kratzer</value><comment>AppLocalizedPhrase.defectScratchDiagonal</comment></data>
   <data name="developDefectClassEmulsionDamage.Text" xml:space="preserve"><value>Emulsionsschaden</value><comment>AppLocalizedPhrase.defectEmulsionDamage</comment></data>
   <data name="developDefectClassMicroSpeck.Text" xml:space="preserve"><value>Mikropartikel</value><comment>AppLocalizedPhrase.defectMicroSpeck</comment></data>
+  <data name="developPickBase.Text" xml:space="preserve"><value>Basis-Pipette</value><comment>AppLocalizedPhrase.pickBase</comment></data>
+  <data name="developPickBaseHelp.Value" xml:space="preserve"><value>Klicken Sie vor der Umkehrung in den Rohdaten auf unbelichtete Filmbasis, um Dmin zu messen.</value><comment>AppLocalizedPhrase.pickBaseHelp</comment></data>
+  <data name="developBasePickerPrompt.Text" xml:space="preserve"><value>Unbelichtete Filmbasis anklicken (zwischen den Bildern oder am Rand) · Esc zum Abbrechen</value><comment>AppLocalizedPhrase.basePickerOverlayPrompt</comment></data>
+  <data name="developBasePickNotFilmBase.Text" xml:space="preserve"><value>Diese Stelle ist keine Filmbasis. Klicken Sie auf unbelichtete Basis zwischen den Bildern oder am Rand.</value></data>
+  <data name="developBasePickFailed.Text" xml:space="preserve"><value>Die Quelle konnte nicht gelesen werden, daher wurde keine Basis ermittelt.</value></data>
 </root>

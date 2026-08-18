@@ -1177,4 +1177,9 @@
   <data name="developDefectClassScratchDiagonal.Text" xml:space="preserve"><value>斜向划痕</value><comment>AppLocalizedPhrase.defectScratchDiagonal</comment></data>
   <data name="developDefectClassEmulsionDamage.Text" xml:space="preserve"><value>药膜损伤</value><comment>AppLocalizedPhrase.defectEmulsionDamage</comment></data>
   <data name="developDefectClassMicroSpeck.Text" xml:space="preserve"><value>微小颗粒</value><comment>AppLocalizedPhrase.defectMicroSpeck</comment></data>
+  <data name="developPickBase.Text" xml:space="preserve"><value>片基吸管</value><comment>AppLocalizedPhrase.pickBase</comment></data>
+  <data name="developPickBaseHelp.Value" xml:space="preserve"><value>在反相前的原始数据上点按未曝光的片基，以实测 Dmin。</value><comment>AppLocalizedPhrase.pickBaseHelp</comment></data>
+  <data name="developBasePickerPrompt.Text" xml:space="preserve"><value>点按未曝光的片基（画幅之间或片边） · 按 Esc 取消</value><comment>AppLocalizedPhrase.basePickerOverlayPrompt</comment></data>
+  <data name="developBasePickNotFilmBase.Text" xml:space="preserve"><value>该位置不是片基。请点按画幅之间或片边的未曝光片基。</value></data>
+  <data name="developBasePickFailed.Text" xml:space="preserve"><value>无法读取原始数据，未能取得片基。</value></data>
 </root>

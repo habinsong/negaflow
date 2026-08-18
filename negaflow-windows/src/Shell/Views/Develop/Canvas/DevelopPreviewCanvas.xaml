@@ -86,6 +86,30 @@
         Stretch="Uniform"
         Visibility="Collapsed" />
 
+    <!-- macOS `basePickerOverlay` — 스포이드 모드일 때 사진 위에 안내 캡슐을 띄웁니다.
+         아이콘 + 문구, 가로 패딩 10 · 세로 5, 모서리 8, 위 12. 클릭은 캔버스가 받습니다. -->
+    <Border
+        x:Name="BasePickerPrompt" x:FieldModifier="internal"
+        Margin="0,12,0,0"
+        Padding="10,5"
+        HorizontalAlignment="Center"
+        VerticalAlignment="Top"
+        AutomationProperties.AutomationId="negaflow.canvas.base-picker.prompt"
+        Background="#CC101010"
+        CornerRadius="8"
+        IsHitTestVisible="False"
+        Visibility="Collapsed">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+            <FontIcon FontSize="12" Foreground="#FFE6E6E6" Glyph="&#xEF3C;" />
+            <TextBlock
+                x:Name="BasePickerPromptText" x:FieldModifier="internal"
+                VerticalAlignment="Center"
+                FontSize="12"
+                FontWeight="SemiBold"
+                Foreground="#FFE6E6E6" />
+        </StackPanel>
+    </Border>
+
     <Canvas x:Name="GuidedDefectOverlay" x:FieldModifier="internal" IsHitTestVisible="False" Visibility="Collapsed">
         <Rectangle
             x:Name="GuidedDefectSelection" x:FieldModifier="internal"

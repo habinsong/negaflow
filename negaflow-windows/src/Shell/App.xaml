@@ -56,6 +56,67 @@
 
             <controls:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
 
+            <!-- macOS `SegmentedPicker` 의 한 칸입니다. 라디오 표시(동그라미)를 지우고
+                 칸 전체를 누를 수 있게 하며, 고른 칸만 바탕을 칠합니다 — macOS 는 세 칸이
+                 붙어 있는 한 덩어리이고 칸마다 동그라미가 붙지 않습니다. -->
+            <Style x:Key="NegaflowSegmentStyle" TargetType="RadioButton">
+                <Setter Property="MinWidth" Value="0" />
+                <Setter Property="MinHeight" Value="26" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                <Setter Property="HorizontalContentAlignment" Value="Center" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="RadioButton">
+                            <Grid
+                                x:Name="SegmentRoot"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="6">
+                                <ContentPresenter
+                                    Margin="6,0"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Content="{TemplateBinding Content}"
+                                    FontSize="{TemplateBinding FontSize}"
+                                    TextWrapping="NoWrap" />
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup x:Name="CommonStates">
+                                        <VisualState x:Name="Normal" />
+                                        <VisualState x:Name="PointerOver">
+                                            <VisualState.Setters>
+                                                <Setter Target="SegmentRoot.Background" Value="{ThemeResource NegaflowSubtleFillBrush}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Pressed">
+                                            <VisualState.Setters>
+                                                <Setter Target="SegmentRoot.Background" Value="{ThemeResource NegaflowSubtleFillBrush}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Disabled">
+                                            <VisualState.Setters>
+                                                <Setter Target="SegmentRoot.Opacity" Value="0.4" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                                    <VisualStateGroup x:Name="CheckStates">
+                                        <VisualState x:Name="Unchecked" />
+                                        <VisualState x:Name="Checked">
+                                            <VisualState.Setters>
+                                                <Setter Target="SegmentRoot.Background" Value="{ThemeResource NegaflowSelectionBrush}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Indeterminate" />
+                                    </VisualStateGroup>
+                                </VisualStateManager.VisualStateGroups>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
             <Style x:Key="NegaflowToolbarTextButtonStyle" TargetType="Button">
                 <Setter Property="MinWidth" Value="74" />
                 <Setter Property="MaxWidth" Value="86" />

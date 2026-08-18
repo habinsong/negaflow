@@ -57,7 +57,13 @@ public sealed partial class DevelopWorkspaceView : UserControl
             () => workspaceState?.Current.PixelSamplerEnabled == true,
             () => panel?.SelectedFrame?.SourcePath,
             () => softProofPreferences.IsEnabled);
-        PreviewCanvas.TryHandlePointerPressed = GrainMendPanel.TryHandlePointerPressed;
+        // macOS `basePickerOverlay` 는 결함 도구보다 위에 놓입니다 — 스포이드가 켜져 있으면
+        // 클릭이 먼저 여기로 옵니다.
+        PreviewCanvas.TryHandlePointerPressed = args =>
+            TryHandleBasePick(args) || GrainMendPanel.TryHandlePointerPressed(args);
+        BaseCard.BasePickerModeChanged += (_, _) =>
+            PreviewCanvas.ShowBasePickerPrompt(BaseCard.IsBasePickerActive);
+        BaseCard.ManualBaseResetRequested += (_, _) => ResetManualBase();
         PreviewCanvas.TryHandlePointerMoved = GrainMendPanel.TryHandlePointerMoved;
         PreviewCanvas.TryHandlePointerReleased = GrainMendPanel.TryHandlePointerReleased;
         PreviewCanvas.HandlePointerCancelled = GrainMendPanel.HandlePointerCancelled;
@@ -198,6 +204,76 @@ public sealed partial class DevelopWorkspaceView : UserControl
             return;
         }
         _ = previewCoordinator.RequestAsync(frame, ShowPreview);
+    }
+
+    /// <summary>
+    /// macOS <c>handleBasePick(atDisplayUnit:)</c> — 스포이드가 켜져 있을 때의 캔버스 클릭입니다.
+    /// 표시 정규 좌표를 원본 정규로 되돌린 뒤 <c>FilmBasePicker.sample</c> 에 넘기고, 성립하는
+    /// 값만 수동 Dmin 으로 앉힙니다. 성립하지 않으면 <b>Dmin 을 바꾸지 않고</b> 안내만 냅니다 —
+    /// 필름 밖 검정 띠가 Dmin 이 되면 반전이 전 구간 클리핑되어 사진이 통째로 검게 죽습니다.
+    /// </summary>
+    private bool TryHandleBasePick(Microsoft.UI.Xaml.Input.PointerRoutedEventArgs args)
+    {
+        if (!BaseCard.IsBasePickerActive ||
+            panel?.SelectedFrame is not { SourceMetadata: { } metadata } frame ||
+            frame.SourcePath is not { Length: > 0 } sourcePath ||
+            !PreviewCanvas.TryMapPointer(args, out CropDisplayPoint point))
+        {
+            return false;
+        }
+        args.Handled = true;
+        // macOS 도 픽셀 샘플러와 같이 baseSize 를 넘겨 미세 회전 역변환까지 정확히 풉니다.
+        if (!DevelopDisplayGeometry.TryMapDisplayToRaw(
+                frame.ImageTransform,
+                metadata.PixelWidth,
+                metadata.PixelHeight,
+                point.X,
+                point.Y,
+                out double rawX,
+                out double rawY))
+        {
+            return true;
+        }
+
+        bool monochrome = frame.Route.FilmType is FilmType.BlackAndWhiteNegative;
+        FilmBasePick picked = FilmBasePick.Sample(sourcePath, rawX, rawY, monochrome);
+        BaseCard.CancelBasePicker();
+        PreviewCanvas.ShowBasePickerPrompt(false);
+        if (picked.Outcome != FilmBasePickOutcome.Picked || panel is null)
+        {
+            ExportStatusText.Text = AppResources.Get(
+                picked.Outcome == FilmBasePickOutcome.NotFilmBase
+                    ? "developBasePickNotFilmBase"
+                    : "developBasePickFailed",
+                "Text");
+            return true;
+        }
+        if (panel.SetManualBase(picked.Red, picked.Green, picked.Blue) != LibraryFrameError.None)
+        {
+            return true;
+        }
+        ExportStatusText.Text = string.Empty;
+        BaseCard.ShowManualValues(panel);
+        BaseCard.Sync();
+        RequestPreview();
+        return true;
+    }
+
+    /// <summary>macOS <c>resetManualBase</c> — 수동 Dmin 을 제안값으로 되돌립니다.</summary>
+    private void ResetManualBase()
+    {
+        if (panel is null)
+        {
+            return;
+        }
+        double suggested = panel.SuggestedManualDmin;
+        if (panel.SetManualBase(suggested, suggested, suggested) != LibraryFrameError.None)
+        {
+            return;
+        }
+        BaseCard.ShowManualValues(panel);
+        BaseCard.Sync();
+        RequestPreview();
     }
 
     /// <summary>

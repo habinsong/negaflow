@@ -128,6 +128,8 @@ add_library(negaflow_imaging STATIC
     src/Native/imaging/film_stock_base_resolver.cpp
     src/Native/imaging/color_grading.cpp
     src/Native/imaging/color_mixer.cpp
+    src/Native/imaging/film_base_picker.cpp
+    src/Native/imaging/film_base_sampling.cpp
     src/Native/imaging/film_emulation_acutance.cpp
     src/Native/imaging/film_emulation_acutance_profiles.cpp
       src/Native/imaging/film_emulation_color.cpp
@@ -273,6 +275,7 @@ add_library(negaflow_native SHARED
     src/Native/abi/preview/develop_preview_v11_v21.cpp
     src/Native/abi/probe/standard_image_probe_abi.cpp
     src/Native/abi/probe/tiff_probe_abi.cpp
+    src/Native/abi/pick/film_base_pick_abi.cpp
     src/Native/abi/proof/gamut_check_abi.cpp
     src/Native/abi/proof/soft_proof_abi.cpp
     src/Native/abi/request/develop_request_enums.cpp
@@ -596,6 +599,15 @@ if(BUILD_TESTING)
         PRIVATE negaflow_imaging negaflow_project_options
     )
     add_test(NAME native.manual_negative_developer COMMAND negaflow_manual_negative_developer_tests)
+
+    add_executable(negaflow_film_base_picker_tests
+        tests/Native.UnitTests/film_base_picker_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_film_base_picker_tests
+        PRIVATE negaflow_imaging negaflow_project_options
+    )
+    add_test(NAME native.film_base_picker COMMAND negaflow_film_base_picker_tests)
 
     add_executable(negaflow_tone_pipeline_tests
         tests/Native.UnitTests/tone_pipeline_tests.cpp

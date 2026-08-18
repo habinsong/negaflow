@@ -1177,4 +1177,9 @@ Load a scanner from Library to scan film.</value>
   <data name="developDefectClassScratchDiagonal.Text" xml:space="preserve"><value>Diagonal Scratch</value><comment>AppLocalizedPhrase.defectScratchDiagonal</comment></data>
   <data name="developDefectClassEmulsionDamage.Text" xml:space="preserve"><value>Emulsion Damage</value><comment>AppLocalizedPhrase.defectEmulsionDamage</comment></data>
   <data name="developDefectClassMicroSpeck.Text" xml:space="preserve"><value>Micro Specks</value><comment>AppLocalizedPhrase.defectMicroSpeck</comment></data>
+  <data name="developPickBase.Text" xml:space="preserve"><value>Base Eyedropper</value><comment>AppLocalizedPhrase.pickBase</comment></data>
+  <data name="developPickBaseHelp.Value" xml:space="preserve"><value>Click unexposed film base on raw data before inversion to measure Dmin.</value><comment>AppLocalizedPhrase.pickBaseHelp</comment></data>
+  <data name="developBasePickerPrompt.Text" xml:space="preserve"><value>Click unexposed film base (between frames or edge) · Esc to cancel</value><comment>AppLocalizedPhrase.basePickerOverlayPrompt</comment></data>
+  <data name="developBasePickNotFilmBase.Text" xml:space="preserve"><value>That spot is not film base. Click the unexposed base between frames or at the edge.</value></data>
+  <data name="developBasePickFailed.Text" xml:space="preserve"><value>Could not read the source, so no base was picked.</value></data>
 </root>

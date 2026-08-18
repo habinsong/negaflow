@@ -1177,4 +1177,9 @@
   <data name="developDefectClassScratchDiagonal.Text" xml:space="preserve"><value>斜めキズ</value><comment>AppLocalizedPhrase.defectScratchDiagonal</comment></data>
   <data name="developDefectClassEmulsionDamage.Text" xml:space="preserve"><value>乳剤面の損傷</value><comment>AppLocalizedPhrase.defectEmulsionDamage</comment></data>
   <data name="developDefectClassMicroSpeck.Text" xml:space="preserve"><value>微細粒子</value><comment>AppLocalizedPhrase.defectMicroSpeck</comment></data>
+  <data name="developPickBase.Text" xml:space="preserve"><value>ベーススポイト</value><comment>AppLocalizedPhrase.pickBase</comment></data>
+  <data name="developPickBaseHelp.Value" xml:space="preserve"><value>反転前の元データで未露光のフィルムベースをクリックし、Dmin を実測します。</value><comment>AppLocalizedPhrase.pickBaseHelp</comment></data>
+  <data name="developBasePickerPrompt.Text" xml:space="preserve"><value>未露光のフィルムベース（コマ間または端）をクリック · Esc でキャンセル</value><comment>AppLocalizedPhrase.basePickerOverlayPrompt</comment></data>
+  <data name="developBasePickNotFilmBase.Text" xml:space="preserve"><value>その位置はフィルムベースではありません。コマ間または端の未露光ベースをクリックしてください。</value></data>
+  <data name="developBasePickFailed.Text" xml:space="preserve"><value>元データを読めなかったため、ベースを取得できませんでした。</value></data>
 </root>

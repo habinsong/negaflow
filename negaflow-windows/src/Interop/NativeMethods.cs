@@ -550,6 +550,15 @@ internal static partial class NativeMethods
         uint outputColorSpace,
         uint* supported);
 
+    [LibraryImport(LibraryName, EntryPoint = "nf_pick_film_base_v1", StringMarshalling = StringMarshalling.Utf16)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    internal static unsafe partial uint nf_pick_film_base_v1(
+        string sourcePath,
+        double unitX,
+        double unitY,
+        uint filmType,
+        NativeFilmBasePickV1* result);
+
     [LibraryImport(LibraryName, EntryPoint = "nf_read_soft_proof_media_v1")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     internal static unsafe partial uint nf_read_soft_proof_media_v1(

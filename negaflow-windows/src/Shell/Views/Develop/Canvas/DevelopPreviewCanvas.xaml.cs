@@ -174,8 +174,17 @@ public sealed partial class DevelopPreviewCanvas : UserControl
 
     public void HideDefectOverlay() => defects.Hide();
 
+    /// <summary>
+    /// macOS <c>basePickerOverlay</c> — 스포이드 모드일 때만 안내 캡슐이 뜹니다.
+    /// </summary>
+    public void ShowBasePickerPrompt(bool visible)
+    {
+        BasePickerPrompt.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+    }
+
     public void Localize()
     {
+        BasePickerPromptText.Text = AppResources.Get("developBasePickerPrompt", "Text");
         SetButtonText(CropApplyButton, AppResources.Get("developCropApply", "Text"));
         SetButtonText(CropFullButton, AppResources.Get("developCropFull", "Text"));
         SetButtonText(CropCancelButton, AppResources.Get("developCropCancel", "Text"));

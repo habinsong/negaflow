@@ -1177,4 +1177,9 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="developDefectClassScratchDiagonal.Text" xml:space="preserve"><value>Rayure diagonale</value><comment>AppLocalizedPhrase.defectScratchDiagonal</comment></data>
   <data name="developDefectClassEmulsionDamage.Text" xml:space="preserve"><value>Émulsion endommagée</value><comment>AppLocalizedPhrase.defectEmulsionDamage</comment></data>
   <data name="developDefectClassMicroSpeck.Text" xml:space="preserve"><value>Micro-particules</value><comment>AppLocalizedPhrase.defectMicroSpeck</comment></data>
+  <data name="developPickBase.Text" xml:space="preserve"><value>Pipette de base</value><comment>AppLocalizedPhrase.pickBase</comment></data>
+  <data name="developPickBaseHelp.Value" xml:space="preserve"><value>Cliquez sur la base non exposée du film, sur les données brutes avant inversion, pour mesurer le Dmin.</value><comment>AppLocalizedPhrase.pickBaseHelp</comment></data>
+  <data name="developBasePickerPrompt.Text" xml:space="preserve"><value>Cliquez sur la base non exposée du film (entre les vues ou sur le bord) · Échap pour annuler</value><comment>AppLocalizedPhrase.basePickerOverlayPrompt</comment></data>
+  <data name="developBasePickNotFilmBase.Text" xml:space="preserve"><value>Cet endroit n'est pas la base du film. Cliquez sur la base non exposée entre les vues ou sur le bord.</value></data>
+  <data name="developBasePickFailed.Text" xml:space="preserve"><value>Impossible de lire la source, aucune base n'a été relevée.</value></data>
 </root>

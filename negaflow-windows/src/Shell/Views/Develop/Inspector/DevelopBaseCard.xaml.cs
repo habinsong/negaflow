@@ -26,6 +26,30 @@ public sealed partial class DevelopBaseCard : UserControl
     /// <summary>수동 Dmin 슬라이더를 놓은 뒤 선택 행과 미리보기를 맞출 때 올립니다.</summary>
     public event EventHandler? ManualBaseCommitted;
 
+    /// <summary>
+    /// macOS <c>basePickerMode</c> — 캔버스 스포이드가 켜졌는지입니다. 캔버스가 이 값을 보고
+    /// 클릭을 받습니다.
+    /// </summary>
+    public bool IsBasePickerActive { get; private set; }
+
+    /// <summary>스포이드 토글이 바뀌면 올립니다. 캔버스 오버레이를 켜고 끄는 자리입니다.</summary>
+    public event EventHandler? BasePickerModeChanged;
+
+    /// <summary>macOS <c>resetManualBase</c> — 수동 Dmin 을 제안값으로 되돌립니다.</summary>
+    public event EventHandler? ManualBaseResetRequested;
+
+    /// <summary>스포이드 모드를 끕니다. 클릭을 받았거나 도구를 떠날 때 캔버스가 부릅니다.</summary>
+    public void CancelBasePicker()
+    {
+        if (!IsBasePickerActive)
+        {
+            return;
+        }
+        IsBasePickerActive = false;
+        ApplyBasePickerVisual();
+        BasePickerModeChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     public void Bind(DevelopPanelState hostPanel)
     {
         ArgumentNullException.ThrowIfNull(hostPanel);
@@ -67,6 +91,44 @@ public sealed partial class DevelopBaseCard : UserControl
         BaseRedControl.Label = AppResources.Get("developBaseRed", "Text");
         BaseGreenControl.Label = AppResources.Get("developBaseGreen", "Text");
         BaseBlueControl.Label = AppResources.Get("developBaseBlue", "Text");
+        BasePickerText.Text = AppResources.Get("developPickBase", "Text");
+        string pickHelp = AppResources.Get("developPickBaseHelp", "Value");
+        AutomationProperties.SetName(BasePickerButton, pickHelp);
+        ToolTipService.SetToolTip(BasePickerButton, pickHelp);
+        string reset = AppResources.Get("developReset", "Value");
+        AutomationProperties.SetName(BasePickerResetButton, reset);
+        ToolTipService.SetToolTip(BasePickerResetButton, reset);
+    }
+
+    private void OnBasePickerToggled(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        IsBasePickerActive = !IsBasePickerActive;
+        ApplyBasePickerVisual();
+        BasePickerModeChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void OnBasePickerResetClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        ManualBaseResetRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// macOS <c>InspectorActionPill</c>: 켜져 있으면 강조색 0.18 바탕에 0.45 테두리,
+    /// 꺼져 있으면 primary 0.06 바탕에 0.12 테두리입니다.
+    /// </summary>
+    private void ApplyBasePickerVisual()
+    {
+        BasePickerPill.Background = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources[
+            IsBasePickerActive ? "NegaflowSelectionBrush" : "NegaflowSubtleFillBrush"];
+        BasePickerPill.BorderBrush = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources[
+            IsBasePickerActive ? "NegaflowSelectionBrush" : "NegaflowDividerBrush"];
+        AutomationProperties.SetItemStatus(
+            BasePickerButton,
+            AppResources.Get(IsBasePickerActive ? "selected" : "notSelected", "Value"));
     }
 
     public void Sync()
@@ -98,9 +160,16 @@ public sealed partial class DevelopBaseCard : UserControl
         FilmStockSelector.IsEnabled = canEdit && panel.BaseMode == BaseEstimationMode.Preset;
         LightSourceSelector.IsEnabled = canEdit && panel.BaseMode == BaseEstimationMode.Preset;
         ScannerProfileSelector.IsEnabled = canEdit && panel.BaseMode == BaseEstimationMode.Preset;
-        ManualBaseControls.Visibility = canEdit && panel.BaseMode == BaseEstimationMode.Manual
-            ? Visibility.Visible
-            : Visibility.Collapsed;
+        // macOS 는 `if frame.params.baseEstimationMode == .manual` 안에서 스포이드 필과
+        // R/G/B 슬라이더를 함께 냅니다.
+        bool manual = canEdit && panel.BaseMode == BaseEstimationMode.Manual;
+        ManualBaseControls.Visibility = manual ? Visibility.Visible : Visibility.Collapsed;
+        BasePickerPill.Visibility = manual ? Visibility.Visible : Visibility.Collapsed;
+        if (!manual)
+        {
+            CancelBasePicker();
+        }
+        ApplyBasePickerVisual();
         UpdateManualBaseText();
     }
 
