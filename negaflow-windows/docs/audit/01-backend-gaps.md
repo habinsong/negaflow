@@ -201,3 +201,31 @@ if let full = snapshot.preloadedFullPreviewRaw { ... }        // GPU Lanczos 축
 
 **`MonotoneCubic` 이름이 없다고 "톤 곡선이 macOS 와 다르다"고 적은 기존 문서는 틀렸습니다** —
 [`06-false-claims.md`](06-false-claims.md) 1절.
+
+---
+
+## 6. GPU 이식이 드러낸 결손 (2026-08-18)
+
+커널을 옮기면서 macOS `[[stitchable]]` 커널 32개의 Windows 대응을 **하나씩 열어 확인**했습니다.
+그 과정에서 나온 결손입니다 — 이름이 아니라 **개념어로** 훑어 확정한 것들입니다.
+
+| macOS 커널 | Windows | 확인 방법 |
+|---|---|---|
+| `digitalSceneReconstruct` | **없음** | `scene_reconstruct` 로 `src/Native/` 전수 → 히트 0 |
+| `digitalFilmDensity` | **없음** | `film_density` → 히트 0 |
+| `digitalInterImage` | **없음** | `inter_image` → 히트 0 |
+| `digitalPrintPaper` | **없음** | `print_paper` → 히트 0 |
+| `digitalReversalTransmit` | **없음** | `reversal_transmit` → 히트 0 |
+| `digitalToDisplayGamma` | **없음** | `digital_halation.cpp` 안에도 없음 |
+| `digitalToLinearLight` | **없음** | 〃 |
+| `ditherAdd` | **없음** | `OutputDither.swift` 미이식 — 1.3절과 같음 |
+| `channelClippingOverlay` | **없음** | `ChannelClippingOverlay.swift` 미이식 |
+
+**`digital_film_physics.cpp` 는 이것들의 구현이 아닙니다.** 그 파일은 필름별 산란·할레이션·
+그레인 **프로파일 표**(125줄)일 뿐입니다. [`04-gpu-plan.md`](04-gpu-plan.md) 의 앞 판이 그것을
+대응으로 적었던 것은 **파일명으로 짐작한 오류**이고 2026-08-18 에 정정했습니다.
+
+이 결손은 2절이 적은 `Digital` (13파일) 66% 커버리지의 실체입니다 —
+`DigitalFilmDevelop`·`SceneReconstruct` 가 통째로 없습니다.
+
+**GPU 이전에 CPU 이식이 먼저입니다.** 없는 것을 GPU 로 옮길 수는 없습니다.

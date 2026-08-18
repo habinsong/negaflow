@@ -42,54 +42,88 @@
 
 ---
 
-## 0. 근거 — 이 문서가 딛고 있는 실측
+## 0. 지금 어디까지 왔나 (2026-08-18)
 
-> ### ✅ 2026-08-18 착수함 (`aa0d59f`)
->
-> 아래 표의 "히트 0" 은 **착수 전 상태**입니다. 지금은 `src/Native/gpu/` 가 있습니다.
->
-> | 만든 것 | 무엇 |
-> |---|---|
-> | `gpu/gpu_device.*` | D3D11 장치·컨텍스트 하나. FL 11_0 하한, WARP 폴백, **벤더 ID 로 거르지 않음** |
-> | `gpu/gpu_working_image.*` | `R32G32B32A32_FLOAT` 텍스처 + SRV/UAV, 업로드·다운로드, `GpuStagingRing`(더블 버퍼) |
-> | `gpu/shaders/*.hlsl` | `basic_tone` · `parametric_tone_curve` · `color_grade` + 공용 `tone_shared.hlsli` |
-> | `gpu/gpu_pointwise.*` | 화소별 커널 32개가 공유하는 골격 — 바인딩·디스패치·상수 |
-> | `gpu/gpu_tone_kernels.*` · `gpu_color_kernels.*` | `basicTone` · `parametricToneCurve` · `colorGrade` |
-> | `cmake/CompileShaders.cmake` | `fxc` 로 빌드 시 컴파일해 헤더 임베드 |
->
-> **실측** — 이 기계 RTX 4060 Ti, **FL 11_1**, VRAM 7949MB. Parsec 가상 어댑터는 규칙대로 걸러짐.
->
-> | 시험 | 결과 |
-> |---|---|
-> | 텍스처 왕복 | WARP·NVIDIA 양쪽 **비트 단위 일치**. 행 여백 미오염 |
-> | `basicTone` CPU/GPU 최대 오차 | WARP **1.8e-07~6.0e-07** · NVIDIA **3.6e-07~7.7e-07** (허용 1e-5) |
-> | `parametricToneCurve` | WARP **6.0e-08~1.2e-07** · NVIDIA **2.4e-07** |
-> | `colorGrade` | WARP **0~1.8e-07** · NVIDIA **6.0e-08~2.4e-07** |
-> | `colorMixerHSL` | WARP **0~6.0e-08** · NVIDIA **0~1.3e-06** |
-> | `negativeInvert` (현상 최대 비용 단계) | WARP **7.5e-08~1.5e-07** · NVIDIA **8.9e-08~1.8e-07** |
-> | `bwToning` | WARP **0~1.2e-07** · NVIDIA **1.2e-07~1.8e-07** |
-> | `digitalBWFilm` (CPU 는 `double`) | WARP **3.0e-07~4.2e-07** · NVIDIA **4.2e-07~4.8e-07** |
-> | 노출 (macOS 전용 커널 없음) | **양쪽 전부 0 — 비트 단위 일치** |
-> | 포인트 커브 (LUT 적용) | WARP **1.8e-07~3.6e-07** · NVIDIA **3.0e-07~3.6e-07** |
-> | **박스 블러**(이웃 원시연산) | **양쪽 전 반경에서 0 — 비트 단위 일치** |
->
-> ### ✅ 톤 단계가 전부 GPU 커널을 갖췄습니다
+### 0.1 이식 완료 — 커널 10개 + 이웃 원시연산 1개
+
+전부 **CPU/GPU 동치 시험으로 고정**돼 있습니다(허용 오차 `1e-5`). 수치는 이 기계 실측입니다 —
+**RTX 4060 Ti · FL 11_1 · VRAM 7949MB**, 그리고 하드웨어 없는 경우를 위한 **WARP**.
+
+| 커널 | macOS | Windows CPU | WARP 최대 오차 | NVIDIA 최대 오차 |
+|---|---|---|---:|---:|
+| 노출 | (전용 커널 없음) | `core/pointwise.cpp` `apply_exposure` | **0** | **0** |
+| `basicTone` | `:185` | `imaging/tone_mapping.cpp` | 6.0e-07 | 7.7e-07 |
+| `parametricToneCurve` | `:242` | `imaging/tone_mapping.cpp` | 1.2e-07 | 2.4e-07 |
+| 포인트 커브 | `PointCurveStage` | `imaging/point_curve.cpp` | 3.6e-07 | 3.6e-07 |
+| `colorMixerHSL` | `:74` | `imaging/color_mixer.cpp` | 6.0e-08 | 1.3e-06 |
+| `colorGrade` | `:101` | `imaging/color_grading.cpp` | 1.8e-07 | 2.4e-07 |
+| `calibrationPrimaries` | `:151` | `imaging/primary_calibration.cpp` | **0** | 1.4e-06 |
+| `negativeInvert` | `:557` | `core/negative_inversion.cpp` | 1.5e-07 | 1.8e-07 |
+| `bwToning` | `:123` | `imaging/bw_toning.cpp` | 1.2e-07 | 1.8e-07 |
+| `digitalBWFilm` | `:826` | `imaging/digital_bw_emulsion_response.cpp` | 4.2e-07 | 4.8e-07 |
+| **박스 블러**(원시연산) | `CIBoxBlur` | `imaging/film_scan_denoise_filters.cpp` | **0** | **0** |
+
+허용치의 **1/7 이하**입니다. 노출·원색보정·박스블러는 **비트 단위 일치**입니다.
+
+> ### ✅ 톤 단계 7/7 — 우측 인스펙터 경로가 전부 GPU 커널을 갖췄습니다
 >
 > `apply_working_tone_adjustments` 의 하위 7단계 — **노출 · 기본 톤 · 파라메트릭 커브 ·
 > 포인트 커브 · 컬러 믹서 · 컬러 그레이딩 · 원색 보정** — 이 전부 이식됐습니다.
-> 사용자가 "우측탭 뭘 써도 수 초" 라고 한 그 경로입니다.
+> 사용자가 *"우측탭 뭘 써도 수 초"* 라고 한 그 경로입니다.
+>
 > **이제 파이프라인 연결이 의미를 갖습니다** — 업로드 1회 → 7단계 GPU 상주 → 다운로드 1회.
-> | `calibrationPrimaries` | WARP **전부 0** · NVIDIA **0~1.4e-06** |
-> | 매개변수 조합 | 11개 — 양수/음수 대비, 임계 미만, clamp, 각 마스크 |
-> | 새 시험 | `native.gpu_device` · `native.gpu_working_image` · `native.gpu_basic_tone` 전부 통과 |
->
-> ⚠️ **이 기계에는 Intel/AMD 내장이 없습니다.** 범용성은 **코드 구조로만** 보장돼 있고
-> 내장 GPU 실기 확인은 **못 했습니다.** 됐다고 적지 마십시오.
->
-> ⚠️ **아직 파이프라인에 연결되지 않았습니다.** 커널은 시험에서만 돕니다.
-> `stages/look.cpp` 가 아직 CPU `apply_working_tone_adjustments` 만 부릅니다.
 
-### 착수 전 상태 (2026-08-18 이전)
+### 0.2 만든 뼈대
+
+| 파일 | 무엇 |
+|---|---|
+| `gpu/gpu_device.*` | D3D11 장치·컨텍스트 하나(macOS `sharedRenderContext` 대응). FL 11_0 하한, WARP 폴백, **벤더 ID 로 거르지 않음** |
+| `gpu/gpu_working_image.*` | `R32G32B32A32_FLOAT` 텍스처 + SRV/UAV, 업로드·다운로드·복사, `GpuStagingRing`(더블 버퍼) |
+| `gpu/gpu_pointwise.*` | 화소별 커널이 공유하는 골격 — 커널마다 복사하면 32벌이 어긋납니다 |
+| `gpu/gpu_neighborhood.*` | 이웃 원시연산. 지금은 박스 블러 |
+| `gpu/gpu_tone_kernels.*` · `gpu_color_kernels.*` · `gpu_negative_invert.*` · `gpu_stage_kernels.*` | 커널 래퍼 |
+| `gpu/shaders/*.hlsl` · `*.hlsli` | 셰이더 + 공용 조각(`tone_shared` · `hsl_shared`) |
+| `cmake/CompileShaders.cmake` | `fxc` 로 빌드 시 컴파일해 헤더 임베드(`/T cs_5_0 /O3 /Gis /WX /Zpc`) |
+
+### 0.3 남은 것 — 무엇이 왜 막혔는지
+
+| 상태 | 커널 | 왜 |
+|---|---|---|
+| ☠️ **옮기지 말 것** (3) | `scannerLowSatChroma`·`scannerMidtoneChroma`·`gamutSoftClip`·`highlightDesaturate` | **macOS 활성 파이프라인이 부르지 않습니다.** 옮기면 없는 효과를 만듭니다 |
+| **CPU 판부터 없음** (7) | `digitalSceneReconstruct`·`digitalFilmDensity`·`digitalInterImage`·`digitalPrintPaper`·`digitalReversalTransmit`·`digitalToDisplayGamma`·`digitalToLinearLight` | Windows 히트 **0**. GPU 이전에 **CPU 이식이 먼저** |
+| **Windows 기능 자체가 없음** (2) | `ditherAdd`·`channelClippingOverlay` | `OutputDither.swift`·`ChannelClippingOverlay.swift` 미이식 |
+| **정밀도 확인 필요** (1) | `boundedRelativeGrade` | `scanner_target_grade.cpp:62-64` 안에 박혀 있고 그 안이 **전부 `double`**. float32 로 옮기면 `1e-5` 를 못 지킬 수 있음 |
+| **선행 조건 남음** | `gfProduct`·`gfCoeffA`·`gfCoeffB`·`gfApply`·`filmScanShrink` | **박스 블러가 섰으므로 이제 열렸습니다** |
+| 〃 | `digitalHalation` | **가우시안** 원시연산 필요 |
+| 〃 | `filmGrain`·`digitalFilmGrainDensity` | **노이즈 씨앗 규칙**을 macOS 와 대조해야 함 |
+| 〃 | `digitalFilmColor` | **3D LUT**(`Texture3D`) 필요 |
+| 〃 | `noritsuTexture` | 이웃 접근 |
+
+### 0.4 ☠️ 아직 **아닌** 것 — 됐다고 적지 마십시오
+
+1. **파이프라인에 연결되지 않았습니다.** 커널은 시험에서만 돕니다.
+   `stages/look.cpp` 는 여전히 CPU `apply_working_tone_adjustments` 만 부릅니다.
+2. **속도를 재지 않았습니다.** 동치만 증명했지 **빨라졌는지는 모릅니다.**
+   단계별 ms 계측기가 아직 없습니다 — [`13`](13-performance-playbook.md) 2절이 0단계입니다.
+3. **내장 GPU 실기 확인을 못 했습니다.** 이 기계에 Intel/AMD 내장이 없습니다.
+   범용성은 **코드 구조로만** 보장돼 있습니다(벤더 ID 로 거르는 코드 0줄, FL 11_0 공통 하한,
+   `DXGI_ADAPTER_FLAG_SOFTWARE` 만 제외, WARP 폴백).
+4. **전송 대역폭을 재지 않았습니다.** 3절의 384 MB 는 산술입니다.
+
+### 0.5 이식하면서 시험이 잡은 실제 버그 3개
+
+**동치 시험이 없었으면 전부 조용히 틀린 채로 갔을 것들입니다.**
+
+| 무엇 | 증상 | 원인 |
+|---|---|---|
+| `colorMixerHSL` | delta **0.1** | CPU 는 "변화 없음" 이면 커널을 안 돌리고 **원본을 복사**합니다. GPU 가 커널을 돌려 HSL 왕복이 [0,1] 밖 값을 클램프했습니다 |
+| 박스 블러 | delta **0.38** | HLSL `cbuffer` 에 `Extent` 뒤 `float2` 패딩을 안 적어 `Radius` 가 **8바이트 앞에서** 읽혔습니다. 컴파일·실행·경고 전부 통과하고 값만 틀립니다 |
+| `basicTone` whites/blacks | 범위 밖 요청이 **통째로 거부** | Windows 가 macOS 의 ±2 대신 ±1 로 막고 있었고 clamp 도 없었습니다 — 엔진부터 슬라이더까지 7곳을 고쳤습니다 |
+
+규칙으로 박아 둔 것: [`13`](13-performance-playbook.md) 12절(조기 반환) · 13절(상수 버퍼 배치) · 14절(러닝 섬 순서).
+
+### 0.6 착수 전 상태 (2026-08-18 이전)
+
 
 | 사실 | 어떻게 쟀나 | 값 |
 |---|---|---|
