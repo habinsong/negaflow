@@ -20,6 +20,7 @@
 #include "negaflow/gpu/gpu_device.h"
 #include "negaflow/gpu/gpu_working_image.h"
 #include "negaflow/imaging/color_grading.h"
+#include "negaflow/imaging/color_mixer.h"
 
 namespace {
 
@@ -35,6 +36,7 @@ void expect(const bool condition, const char* const message) {
 using negaflow::core::Rgba32F;
 using negaflow::gpu::GpuColorGrade;
 using negaflow::gpu::GpuColorGradeSetup;
+using negaflow::gpu::GpuColorMixer;
 using negaflow::gpu::GpuDevice;
 using negaflow::gpu::GpuDevicePreference;
 using negaflow::gpu::GpuImageStatus;
@@ -157,6 +159,106 @@ void grade_matches_cpu(const GpuDevice& device, const char* const label) {
         "zero width is rejected rather than patched");
 }
 
+// 컬러 믹서 — macOS `colorMixerHSL`. 밴드 8개마다 색상/채도/광도.
+struct MixerCase final {
+    const char* name;
+    int band;          // -1 이면 전 밴드
+    float hue;
+    float saturation;
+    float luminance;
+};
+
+const MixerCase mixer_cases[] = {
+    {"mixer_neutral", -1, 0.0F, 0.0F, 0.0F},
+    {"mixer_red_hue", 0, 0.8F, 0.0F, 0.0F},
+    {"mixer_orange_sat", 1, 0.0F, 0.7F, 0.0F},
+    {"mixer_yellow_lum", 2, 0.0F, 0.0F, 0.6F},
+    {"mixer_green_all", 3, -0.5F, -0.4F, 0.3F},
+    {"mixer_aqua", 4, 0.4F, 0.5F, -0.5F},
+    {"mixer_blue", 5, -0.9F, 0.9F, 0.0F},
+    {"mixer_purple", 6, 0.3F, -0.8F, 0.4F},
+    {"mixer_magenta_wrap", 7, 0.95F, 0.2F, -0.2F},
+    {"mixer_every_band", -1, 0.35F, -0.25F, 0.2F},
+};
+
+void mixer_matches_cpu(const GpuDevice& device, const char* const label) {
+    GpuColorMixer kernel{};
+    if (GpuColorMixer::create(device, kernel) != GpuKernelStatus::ok) {
+        expect(false, "mixer kernel must be creatable");
+        return;
+    }
+
+    const std::vector<Rgba32F> source = make_ramp();
+    GpuWorkingImage input{};
+    if (GpuWorkingImage::upload(device, source.data(), width, height, width, input) !=
+        GpuImageStatus::ok) {
+        expect(false, "mixer source upload must succeed");
+        return;
+    }
+    GpuWorkingImage output{};
+    if (GpuWorkingImage::create(device, width, height, output) != GpuImageStatus::ok) {
+        expect(false, "mixer destination must be creatable");
+        return;
+    }
+
+    for (const MixerCase& scenario : mixer_cases) {
+        negaflow::imaging::ColorMixerParameters cpu_parameters{};
+        negaflow::gpu::GpuColorMixerParameters gpu_parameters{};
+        for (std::size_t band = 0U; band < negaflow::imaging::color_mixer_band_count; ++band) {
+            const bool touched =
+                scenario.band < 0 || static_cast<std::size_t>(scenario.band) == band;
+            if (!touched) {
+                continue;
+            }
+            cpu_parameters.hue[band] = scenario.hue;
+            cpu_parameters.saturation[band] = scenario.saturation;
+            cpu_parameters.luminance[band] = scenario.luminance;
+            gpu_parameters.hue[band] = scenario.hue;
+            gpu_parameters.saturation[band] = scenario.saturation;
+            gpu_parameters.luminance[band] = scenario.luminance;
+        }
+
+        if (kernel.dispatch(device, input, output, gpu_parameters) != GpuKernelStatus::ok) {
+            expect(false, "mixer dispatch must succeed");
+            continue;
+        }
+        std::vector<Rgba32F> gpu_pixels(source.size());
+        if (output.download(device, gpu_pixels.data(), width) != GpuImageStatus::ok) {
+            expect(false, "mixer download must succeed");
+            continue;
+        }
+
+        std::vector<Rgba32F> cpu_pixels(source.size());
+        const negaflow::core::ConstImageView view{
+            source.data(), source.size(), width, height, width};
+        const negaflow::core::ImageView out{
+            cpu_pixels.data(), cpu_pixels.size(), width, height, width};
+        (void)negaflow::imaging::apply_color_mixer(view, out, cpu_parameters);
+
+        float worst = 0.0F;
+        for (std::size_t index = 0U; index < cpu_pixels.size(); ++index) {
+            worst = std::max(worst, std::abs(cpu_pixels[index].red - gpu_pixels[index].red));
+            worst = std::max(worst, std::abs(cpu_pixels[index].green - gpu_pixels[index].green));
+            worst = std::max(worst, std::abs(cpu_pixels[index].blue - gpu_pixels[index].blue));
+            worst = std::max(worst, std::abs(cpu_pixels[index].alpha - gpu_pixels[index].alpha));
+        }
+        if (worst > tolerance) {
+            std::cerr << "FAIL: " << label << ' ' << scenario.name << " max delta " << worst
+                      << '\n';
+            ++failures;
+        } else {
+            std::cout << "[gpu] " << label << ' ' << scenario.name << " max delta " << worst
+                      << '\n';
+        }
+    }
+
+    negaflow::gpu::GpuColorMixerParameters bad{};
+    bad.saturation[3] = std::numeric_limits<float>::quiet_NaN();
+    expect(
+        kernel.dispatch(device, input, output, bad) == GpuKernelStatus::non_finite_parameter,
+        "NaN mixer band is rejected");
+}
+
 }  // namespace
 
 int main() {
@@ -166,11 +268,13 @@ int main() {
         return 1;
     }
     grade_matches_cpu(warp, "warp");
+    mixer_matches_cpu(warp, "warp");
 
     const GpuDevice hardware = GpuDevice::create(GpuDevicePreference::hardware_only);
     if (hardware.is_usable()) {
         std::cout << "[gpu] hardware: " << hardware.capability().adapter.description.data() << '\n';
         grade_matches_cpu(hardware, "hardware");
+        mixer_matches_cpu(hardware, "hardware");
     } else {
         std::cout << "[gpu] hardware absent, WARP only\n";
     }

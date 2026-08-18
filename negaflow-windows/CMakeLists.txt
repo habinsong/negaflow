@@ -97,10 +97,24 @@ target_link_libraries(negaflow_core PRIVATE negaflow_project_options)
 # 벤더 ID 로 거르지 않습니다. 하한은 기능 수준 11_0 하나이며, 하드웨어가 없으면 WARP 로,
 # 그것도 없으면 기존 CPU 경로로 떨어집니다. CUDA·벤더 확장·SM 6.0 을 쓰지 않습니다.
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/color_mixer.hlsl"
+    ColorMixerMain
+    negaflow_color_mixer_cs
+    NEGAFLOW_COLOR_MIXER_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/color_grade.hlsl"
     ColorGradeMain
     negaflow_color_grade_cs
     NEGAFLOW_COLOR_GRADE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/color_mixer.hlsl"
+    ColorMixerMain
+    negaflow_color_mixer_cs
+    NEGAFLOW_COLOR_MIXER_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -111,10 +125,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/color_mixer.hlsl"
+    ColorMixerMain
+    negaflow_color_mixer_cs
+    NEGAFLOW_COLOR_MIXER_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/color_grade.hlsl"
     ColorGradeMain
     negaflow_color_grade_cs
     NEGAFLOW_COLOR_GRADE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/color_mixer.hlsl"
+    ColorMixerMain
+    negaflow_color_mixer_cs
+    NEGAFLOW_COLOR_MIXER_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -127,6 +155,7 @@ negaflow_compile_compute_shader(
 add_library(negaflow_gpu STATIC
     "${NEGAFLOW_BASIC_TONE_HEADER}"
     "${NEGAFLOW_COLOR_GRADE_HEADER}"
+    "${NEGAFLOW_COLOR_MIXER_HEADER}"
     "${NEGAFLOW_PARAMETRIC_TONE_CURVE_HEADER}"
     src/Native/gpu/gpu_color_kernels.cpp
     src/Native/gpu/gpu_pointwise.cpp

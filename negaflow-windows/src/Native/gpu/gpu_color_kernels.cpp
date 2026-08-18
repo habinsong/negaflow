@@ -8,6 +8,7 @@
 #include "negaflow/gpu/gpu_device.h"
 #include "negaflow/gpu/gpu_working_image.h"
 #include "negaflow/gpu/shaders/color_grade_ColorGradeMain.h"
+#include "negaflow/gpu/shaders/color_mixer_ColorMixerMain.h"
 
 namespace negaflow::gpu {
 namespace {
@@ -37,7 +38,80 @@ static_assert(sizeof(ColorGradeConstants) == 64U, "four constant registers");
         std::isfinite(setup.width);
 }
 
+// HLSL `cbuffer ColorMixerConstants` 와 같은 배치여야 합니다.
+// 상수 버퍼의 배열은 **원소마다 16바이트**를 차지합니다 — `float[8]` 로 두면 셰이더가 읽는
+// 자리와 어긋나 조용히 틀린 밴드를 씁니다. 그래서 `float4` 로 채웁니다.
+struct alignas(16) ColorMixerConstants final {
+    GpuPointwiseExtent extent{};
+    float hue[GpuColorMixerParameters::band_count][4]{};
+    float saturation[GpuColorMixerParameters::band_count][4]{};
+    float luminance[GpuColorMixerParameters::band_count][4]{};
+};
+
+static_assert(sizeof(ColorMixerConstants) == 400U, "extent + three 8-element float4 arrays");
+
+// `imaging/color_mixer.cpp` 의 `identity_epsilon` 과 같은 값이어야 합니다.
+constexpr float mixer_identity_epsilon = 1.0e-4F;
+
+// CPU 판 `has_color_mixer_change` 와 같은 판정입니다.
+[[nodiscard]] bool mixer_changes(const GpuColorMixerParameters& parameters) noexcept {
+    for (int index = 0; index < GpuColorMixerParameters::band_count; ++index) {
+        if (std::abs(parameters.hue[index]) >= mixer_identity_epsilon ||
+            std::abs(parameters.saturation[index]) >= mixer_identity_epsilon ||
+            std::abs(parameters.luminance[index]) >= mixer_identity_epsilon) {
+            return true;
+        }
+    }
+    return false;
+}
+
+[[nodiscard]] bool finite_mixer(const GpuColorMixerParameters& parameters) noexcept {
+    for (int index = 0; index < GpuColorMixerParameters::band_count; ++index) {
+        if (!std::isfinite(parameters.hue[index]) ||
+            !std::isfinite(parameters.saturation[index]) ||
+            !std::isfinite(parameters.luminance[index])) {
+            return false;
+        }
+    }
+    return true;
+}
+
 }  // namespace
+
+GpuKernelStatus GpuColorMixer::create(const GpuDevice& device, GpuColorMixer& kernel) noexcept {
+    return GpuPointwiseKernel::create(
+        device,
+        negaflow_color_mixer_cs,
+        sizeof(negaflow_color_mixer_cs),
+        sizeof(ColorMixerConstants),
+        kernel.kernel_);
+}
+
+GpuKernelStatus GpuColorMixer::dispatch(
+    const GpuDevice& device,
+    const GpuWorkingImage& source,
+    GpuWorkingImage& destination,
+    const GpuColorMixerParameters& parameters) const noexcept {
+    if (!finite_mixer(parameters)) {
+        return GpuKernelStatus::non_finite_parameter;
+    }
+    if (!mixer_changes(parameters)) {
+        // ☠️ CPU 판 `apply_color_mixer` 는 변화가 없으면 `copy_validated_rows` 로 **원본을
+        //    그대로** 내보냅니다(`color_mixer.cpp:227`). 여기서 커널을 돌리면 HSL 왕복이
+        //    [0,1] 밖 값을 클램프해 CPU 와 갈립니다 — 작업 이미지는 그 범위 밖 값을
+        //    일부러 남기므로 실제로 갈립니다(실측: 최대 0.1).
+        const GpuImageStatus copied = destination.copy_from(device, source);
+        return copied == GpuImageStatus::ok ? GpuKernelStatus::ok
+                                            : GpuKernelStatus::invalid_arguments;
+    }
+    ColorMixerConstants payload{};
+    for (int index = 0; index < GpuColorMixerParameters::band_count; ++index) {
+        payload.hue[index][0] = parameters.hue[index];
+        payload.saturation[index][0] = parameters.saturation[index];
+        payload.luminance[index][0] = parameters.luminance[index];
+    }
+    return kernel_.dispatch(device, source, destination, &payload, sizeof(payload));
+}
 
 GpuKernelStatus GpuColorGrade::create(const GpuDevice& device, GpuColorGrade& kernel) noexcept {
     return GpuPointwiseKernel::create(

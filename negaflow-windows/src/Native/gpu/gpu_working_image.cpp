@@ -265,6 +265,26 @@ GpuImageStatus GpuWorkingImage::download(
     return read;
 }
 
+GpuImageStatus GpuWorkingImage::copy_from(
+    const GpuDevice& device,
+    const GpuWorkingImage& source) noexcept {
+    if (!device.is_usable()) {
+        return GpuImageStatus::device_unavailable;
+    }
+    if (!source.is_valid() || texture_ == nullptr) {
+        return GpuImageStatus::invalid_dimensions;
+    }
+    if (source.width() != width_ || source.height() != height_) {
+        return GpuImageStatus::invalid_dimensions;
+    }
+    if (source.texture() == texture_) {
+        // 자기 자신으로의 복사는 D3D11 이 거부합니다. 할 일이 없으므로 성공으로 봅니다.
+        return GpuImageStatus::ok;
+    }
+    device.context()->CopyResource(texture_, source.texture());
+    return GpuImageStatus::ok;
+}
+
 GpuStagingRing::~GpuStagingRing() { reset(); }
 
 GpuStagingRing::GpuStagingRing(GpuStagingRing&& other) noexcept

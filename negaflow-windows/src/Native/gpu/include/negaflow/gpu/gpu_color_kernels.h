@@ -5,6 +5,7 @@
 // | | macOS | Windows CPU | 셰이더 |
 // |---|---|---|---|
 // | 컬러 그레이딩 | `ChromabaseMetalKernels.swift:101` `colorGrade` | `imaging/color_grading.cpp` `apply_color_grading` | `shaders/color_grade.hlsl` |
+// | 컬러 믹서(HSL) | `:74` `colorMixerHSL` | `imaging/color_mixer.cpp` `apply_color_mixer` | `shaders/color_mixer.hlsl` |
 //
 // CPU 판을 **대체하지 않습니다.** 나란히 두고 상위에서 장치 가용성으로 고릅니다.
 
@@ -26,6 +27,33 @@ struct GpuColorGradeSetup final {
     float highlight_offset[3]{0.0F, 0.0F, 0.0F};
     float pivot{0.5F};
     float width{0.30F};
+};
+
+// `imaging::ColorMixerParameters` 와 같은 값입니다. 밴드 8개(빨강·주황·노랑·초록·하늘·파랑·
+// 보라·자홍) 각각 색상/채도/광도.
+struct GpuColorMixerParameters final {
+    static constexpr int band_count = 8;
+    float hue[band_count]{};
+    float saturation[band_count]{};
+    float luminance[band_count]{};
+};
+
+class GpuColorMixer final {
+public:
+    [[nodiscard]] static GpuKernelStatus create(
+        const GpuDevice& device,
+        GpuColorMixer& kernel) noexcept;
+
+    [[nodiscard]] GpuKernelStatus dispatch(
+        const GpuDevice& device,
+        const GpuWorkingImage& source,
+        GpuWorkingImage& destination,
+        const GpuColorMixerParameters& parameters) const noexcept;
+
+    [[nodiscard]] bool is_valid() const noexcept { return kernel_.is_valid(); }
+
+private:
+    GpuPointwiseKernel kernel_{};
 };
 
 class GpuColorGrade final {

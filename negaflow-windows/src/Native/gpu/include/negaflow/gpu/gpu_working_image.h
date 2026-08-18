@@ -83,6 +83,13 @@ public:
         core::Rgba32F* pixels,
         std::uint32_t stride_pixels) const noexcept;
 
+    // 같은 크기의 다른 텍스처 내용을 그대로 가져옵니다. CPU 커널들이 "변화 없음" 일 때
+    // `copy_validated_rows` 로 원본을 그대로 내보내는 것과 같은 자리입니다 — 그때 커널을
+    // 돌리면 클램프 같은 부수효과가 붙어 CPU 와 값이 갈립니다.
+    [[nodiscard]] GpuImageStatus copy_from(
+        const GpuDevice& device,
+        const GpuWorkingImage& source) noexcept;
+
     [[nodiscard]] bool is_valid() const noexcept { return texture_ != nullptr; }
     [[nodiscard]] std::uint32_t width() const noexcept { return width_; }
     [[nodiscard]] std::uint32_t height() const noexcept { return height_; }
