@@ -69,6 +69,15 @@
 > | `negativeInvert` (현상 최대 비용 단계) | WARP **7.5e-08~1.5e-07** · NVIDIA **8.9e-08~1.8e-07** |
 > | `bwToning` | WARP **0~1.2e-07** · NVIDIA **1.2e-07~1.8e-07** |
 > | `digitalBWFilm` (CPU 는 `double`) | WARP **3.0e-07~4.2e-07** · NVIDIA **4.2e-07~4.8e-07** |
+> | 노출 (macOS 전용 커널 없음) | **양쪽 전부 0 — 비트 단위 일치** |
+> | 포인트 커브 (LUT 적용) | WARP **1.8e-07~3.6e-07** · NVIDIA **3.0e-07~3.6e-07** |
+>
+> ### ✅ 톤 단계가 전부 GPU 커널을 갖췄습니다
+>
+> `apply_working_tone_adjustments` 의 하위 7단계 — **노출 · 기본 톤 · 파라메트릭 커브 ·
+> 포인트 커브 · 컬러 믹서 · 컬러 그레이딩 · 원색 보정** — 이 전부 이식됐습니다.
+> 사용자가 "우측탭 뭘 써도 수 초" 라고 한 그 경로입니다.
+> **이제 파이프라인 연결이 의미를 갖습니다** — 업로드 1회 → 7단계 GPU 상주 → 다운로드 1회.
 > | `calibrationPrimaries` | WARP **전부 0** · NVIDIA **0~1.4e-06** |
 > | 매개변수 조합 | 11개 — 양수/음수 대비, 임계 미만, clamp, 각 마스크 |
 > | 새 시험 | `native.gpu_device` · `native.gpu_working_image` · `native.gpu_basic_tone` 전부 통과 |
