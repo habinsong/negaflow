@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <cstdio>
 #include <thread>
 
 namespace negaflow::core {
@@ -99,11 +100,26 @@ void run_row_blocks(
     const std::uint32_t reserved =
         desired_blocks > 1U ? reserve_extra_threads(desired_blocks - 1U) : 0U;
     if (reserved == 0U) {
+#if defined(NEGA_ROW_BLOCK_TRACE)
+        std::fprintf(
+            stderr,
+            "[rowblock] height=%u work=%llu blocks=1 (inline)\n",
+            height,
+            static_cast<unsigned long long>(work_units));
+#endif
         function(context, 0U, height);
         return;
     }
 
     const std::uint32_t block_count = reserved + 1U;
+#if defined(NEGA_ROW_BLOCK_TRACE)
+    std::fprintf(
+        stderr,
+        "[rowblock] height=%u work=%llu blocks=%u\n",
+        height,
+        static_cast<unsigned long long>(work_units),
+        block_count);
+#endif
 
     // 블록은 **영속 워커 풀**로 넘깁니다. 예전에는 호출마다 `std::thread` 를 새로
     // 만들었는데, 큰 이미지에서는 묻히지만 작은 작업에서는 생성 비용이 이득을 먹었습니다 —

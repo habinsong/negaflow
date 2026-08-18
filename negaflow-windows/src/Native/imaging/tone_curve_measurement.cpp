@@ -1,10 +1,10 @@
 #include "negaflow/imaging/tone_curve_measurement.h"
 
-
-
-
+#include "negaflow/core/parallel_rows.h"
 
 #include <algorithm>
+#include <chrono>
+#include <cstdio>
 #include <cmath>
 #include <limits>
 #include <new>
@@ -194,31 +194,67 @@ ToneCurveMeasurementResult measure_parametric_tone_curve_bands(
         //    (`docs/audit/13-performance-playbook.md` 18절). float 로 낮추면 백분위가 달라지고
         //    밴드가 달라져 **출력 화소가 달라집니다.**
         //
-        // ☠️ **병렬화를 두 번 시도했고 두 번 다 이득이 없었습니다. 단일 스레드가 맞습니다.**
+        // ☠️ **`work_units` 에 표본 격자 크기를 넘기면 안 됩니다.**
+        //    격자는 236×162 = 38,232 밖에 안 되는데 `run_row_blocks` 는
+        //    100만(`minimum_parallel_row_work_units`) 미만이면 **쪼개지 않고 통째로 직렬 실행**합니다.
+        //    격자 크기를 넘기면 병렬화가 **조용히 꺼진 채** 돕니다 — 경고도 실패도 없습니다.
         //
-        //    1차(영속 풀 없을 때): tone_adjust 257.95 → 283~288 ms. **25 ms 손해.**
-        //       원인은 호출마다 `std::thread` 를 만들던 것(19절).
-        //    2차(영속 풀 세운 뒤): 263.95 / 292.81 / 292.97 ms — 직렬(265.77 / 294.32)과
-        //       **겹칩니다. 이득이 없습니다.**
+        //    표본 하나가 원본에서 `inverse_scale` 변의 정사각형을 읽으므로, 진짜 작업량은
+        //    격자 × `ceil(inverse_scale)²` 입니다. 5100 폭이면 38,232 × 400 ≈ **1,686만**.
         //
-        //    풀이 원인이 아니었습니다. 표본 하나가 원본의 20×20 남짓을 흩어 읽어
-        //    **메모리 대역폭에 묶여** 있습니다. 코어를 늘려도 읽어 올 대역이 그대로입니다.
+        //    ☠️ 앞서 두 번 "병렬화해도 이득이 없다" 고 적었던 것은 **이 문턱에 걸려
+        //       스레드가 하나도 안 뜬 상태를 잰 것**이었습니다. 그리고 그 결과에
+        //       "메모리 대역폭에 묶였다" 는, **재지 않은 설명**을 붙였습니다.
+        //       실제로는 이 루프만 떼어 재면 **32.0 ms → 5.0 ms (6.4배)** 입니다
+        //       (`docs/audit/13-performance-playbook.md` 21절).
         //
-        //    **다시 시도하지 마십시오.** 줄이려면 읽는 양 자체를 줄여야 하는데, 그러려면
-        //    표본 방식을 바꿔야 하고 그것은 백분위를 바꿔 **출력 화소를 바꿉니다.**
-        std::vector<double> luma_values{};
-        luma_values.reserve(static_cast<std::size_t>(interior_count));
+        // 결과는 직렬과 **비트 단위로 같습니다** — 표본끼리 독립이고, 각 블록이 자기 행의
+        // 자리에만 적으며, 뒤에서 어차피 정렬합니다.
+        std::vector<double> luma_values(static_cast<std::size_t>(interior_count));
         const double inverse_scale = 1.0 / scale;
-        for (std::uint32_t target_y = inset_y; target_y < end_y; ++target_y) {
-            for (std::uint32_t target_x = inset_x; target_x < end_x; ++target_x) {
-                luma_values.push_back(sampled_luma(
-                    image,
-                    target_x,
-                    target_y,
-                    inverse_scale));
-            }
-        }
+        const std::uint32_t column_span = end_x - inset_x;
+        const std::uint32_t row_span = end_y - inset_y;
+        const std::uint64_t source_pixels_per_sample = static_cast<std::uint64_t>(
+            std::max(1.0, std::ceil(inverse_scale) * std::ceil(inverse_scale)));
+#if defined(NEGA_SAMPLE_TRACE)
+        const auto trace_started = std::chrono::steady_clock::now();
+#endif
+        negaflow::core::for_each_row_block(
+            row_span,
+            interior_count * source_pixels_per_sample,
+            [&](const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+                for (std::uint32_t row = first_row; row < first_row + row_count; ++row) {
+                    double* const destination =
+                        luma_values.data() + (static_cast<std::size_t>(row) * column_span);
+                    const std::uint32_t target_y = inset_y + row;
+                    for (std::uint32_t column = 0U; column < column_span; ++column) {
+                        destination[column] = sampled_luma(
+                            image,
+                            inset_x + column,
+                            target_y,
+                            inverse_scale);
+                    }
+                }
+            });
+#if defined(NEGA_SAMPLE_TRACE)
+        const auto trace_sampled = std::chrono::steady_clock::now();
+#endif
         std::sort(luma_values.begin(), luma_values.end());
+#if defined(NEGA_SAMPLE_TRACE)
+        const auto trace_sorted = std::chrono::steady_clock::now();
+        std::fprintf(
+            stderr,
+            "[bandsample] grid=%ux%u source_reads=%llu sample_us=%lld sort_us=%lld\n",
+            column_span,
+            row_span,
+            static_cast<unsigned long long>(interior_count * source_pixels_per_sample),
+            static_cast<long long>(std::chrono::duration_cast<std::chrono::microseconds>(
+                                       trace_sampled - trace_started)
+                                       .count()),
+            static_cast<long long>(std::chrono::duration_cast<std::chrono::microseconds>(
+                                       trace_sorted - trace_sampled)
+                                       .count()));
+#endif
         result.info.bands = derive_bands(luma_values);
         result.info.sampling_mode = ToneCurveSamplingMode::portable_area_v1;
         result.info.sampled_luma_count = luma_values.size();
