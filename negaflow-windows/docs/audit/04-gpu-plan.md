@@ -142,12 +142,14 @@
    반전은 **근사**라 `ApproximateAcceleratorScope`(프리뷰·검출) 안에서만 돕니다 —
    내보내기·골든은 CPU 그대로이고 native 83/83 이 그것을 지킵니다.
    형태학과 반대 결과가 난 이유는 [`13`](13-performance-playbook.md) 16절.
-3. ✅ **`tone_adjust` 가 왜 덜 빨라지는지 갈랐습니다** — [`13`](13-performance-playbook.md) 17절.
-   범인은 다운로드가 아니라 **밴드 측정**입니다. `measure_parametric_tone_curve_bands` 가
-   `validate_finite_pixels` 와 `downsample_for_statistics` 로 **전 화소를 CPU 로 두 번** 훑고,
-   그 비용(약 140 ms)은 CPU 경로와 **같습니다**. 다운로드는 4 ms 뿐입니다.
-   고치려면 **축소를 GPU 로** 옮기고 작은 프록시만 내려야 하는데, 축소가 CPU 와 비트 단위로
-   같아야 합니다 — 백분위가 달라지면 밴드가 달라지고 출력 화소가 달라집니다. **아직 안 했습니다.**
+3. ✅ **`tone_adjust` 를 갈라서 뺄 수 있는 것을 뺐습니다** — [`13`](13-performance-playbook.md) 17·18절.
+   범인은 다운로드(4 ms)가 아니라 **밴드 측정**이었습니다. 그중 `validate_finite_pixels` 를
+   `GpuFiniteCheck`(원자 플래그 + 4바이트 회수)로 옮겨 **tone_adjust 296.88 → 257.95 ms(−13%)**,
+   전체 **782.59 → 735.20 ms**. CPU 기준으로는 911.35 → 735.20 = **−19%**.
+   ☠️ 18절에 **제 앞 판정이 틀렸던 것**도 적었습니다 — 밴드 측정은 `downsample_for_statistics` 를
+   부르지 않고 `double` 면적평균을 직접 돕니다. `GpuMipHalve` 는 자동 베이스·장면밀도·
+   바이브런스 쪽 원시연산이고, 비트 단위 일치는 그대로 유효합니다.
+   남은 `double` 면적평균은 **옮길 수 없습니다** — D3D11 의 double 은 선택 기능입니다.
 4. 4방향 실측(CPU/GPU × 커브 켬/끔) 전체 표도 17절에 있습니다.
 2. **내장 GPU 실기 확인을 못 했습니다.** 이 기계에 Intel/AMD 내장이 없습니다.
    범용성은 **코드 구조로만** 보장돼 있습니다(벤더 ID 로 거르는 코드 0줄, FL 11_0 공통 하한,

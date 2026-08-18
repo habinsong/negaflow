@@ -119,9 +119,14 @@ void set_fallback(ToneCurveMeasurementResult& result) noexcept {
 
 ToneCurveMeasurementResult measure_parametric_tone_curve_bands(
     const negaflow::core::ConstImageView image,
-    const ToneCurveMeasurementLimits& limits) noexcept {
+    const ToneCurveMeasurementLimits& limits,
+    const bool pixels_already_finite) noexcept {
     ToneCurveMeasurementResult result{};
-    result.kernel_status = negaflow::core::validate_finite_pixels(image);
+    // 레이아웃은 언제나 봅니다. 화소 유한성만 호출부가 이미 증명했으면 건너뜁니다 —
+    // 그 확인은 전 화소를 한 번 더 훑고, 실측에서 톤 단계 비용의 큰 몫이었습니다.
+    result.kernel_status = pixels_already_finite
+        ? negaflow::core::validate_image_view(image)
+        : negaflow::core::validate_finite_pixels(image);
     if (result.kernel_status != negaflow::core::KernelStatus::ok) {
         result.status = ToneCurveMeasurementStatus::invalid_input;
         return result;

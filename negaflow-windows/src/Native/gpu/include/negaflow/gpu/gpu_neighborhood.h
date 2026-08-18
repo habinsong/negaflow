@@ -19,6 +19,7 @@
 
 struct ID3D11ComputeShader;
 struct ID3D11Buffer;
+struct ID3D11UnorderedAccessView;
 struct ID3D11ShaderResourceView;
 
 namespace negaflow::gpu {
@@ -271,6 +272,44 @@ private:
 
     ID3D11ComputeShader* shader_{nullptr};
     ID3D11Buffer* constants_{nullptr};
+};
+
+// 전 화소 유한성 확인입니다. CPU 판은 `core/pixel.cpp` `validate_finite_pixels`.
+//
+// ☠️ **"있다/없다" 만 말합니다.** CPU 판은 어느 행이 처음 실패했는지까지 돌려주므로,
+//    플래그가 서면 호출부가 CPU 판을 그대로 부릅니다. 실패는 드물고, 드문 쪽에 비용을
+//    몰아주는 것이 맞습니다.
+class GpuFiniteCheck final {
+public:
+    GpuFiniteCheck() noexcept = default;
+    ~GpuFiniteCheck();
+
+    GpuFiniteCheck(const GpuFiniteCheck&) = delete;
+    GpuFiniteCheck& operator=(const GpuFiniteCheck&) = delete;
+    GpuFiniteCheck(GpuFiniteCheck&& other) noexcept;
+    GpuFiniteCheck& operator=(GpuFiniteCheck&& other) noexcept;
+
+    [[nodiscard]] static GpuKernelStatus create(
+        const GpuDevice& device,
+        GpuFiniteCheck& kernel) noexcept;
+
+    // `all_finite` 는 전 화소의 RGB 가 유한할 때만 참입니다. 알파는 보지 않습니다 —
+    // CPU 판이 그렇습니다.
+    [[nodiscard]] GpuKernelStatus dispatch(
+        const GpuDevice& device,
+        const GpuWorkingImage& source,
+        bool& all_finite) const noexcept;
+
+    [[nodiscard]] bool is_valid() const noexcept { return shader_ != nullptr; }
+
+private:
+    void reset() noexcept;
+
+    ID3D11ComputeShader* shader_{nullptr};
+    ID3D11Buffer* constants_{nullptr};
+    ID3D11Buffer* flag_{nullptr};
+    ID3D11UnorderedAccessView* flag_view_{nullptr};
+    ID3D11Buffer* readback_{nullptr};
 };
 
 }  // namespace negaflow::gpu

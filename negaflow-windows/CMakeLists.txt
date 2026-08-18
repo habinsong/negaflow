@@ -97,10 +97,24 @@ target_link_libraries(negaflow_core PRIVATE negaflow_project_options)
 # 벤더 ID 로 거르지 않습니다. 하한은 기능 수준 11_0 하나이며, 하드웨어가 없으면 WARP 로,
 # 그것도 없으면 기존 CPU 경로로 떨어집니다. CUDA·벤더 확장·SM 6.0 을 쓰지 않습니다.
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
     MipHalveMain
     negaflow_mip_halve_cs
     NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -111,10 +125,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
     MipHalveMain
     negaflow_mip_halve_cs
     NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -125,10 +153,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
     MipHalveMain
     negaflow_mip_halve_cs
     NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -139,10 +181,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
     MipHalveMain
     negaflow_mip_halve_cs
     NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -153,10 +209,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
     MipHalveMain
     negaflow_mip_halve_cs
     NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -167,10 +237,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
     MipHalveMain
     negaflow_mip_halve_cs
     NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -181,10 +265,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
     MipHalveMain
     negaflow_mip_halve_cs
     NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -195,10 +293,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
     MipHalveMain
     negaflow_mip_halve_cs
     NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -209,10 +321,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
     MipHalveMain
     negaflow_mip_halve_cs
     NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -223,10 +349,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
     MipHalveMain
     negaflow_mip_halve_cs
     NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -237,10 +377,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
     MipHalveMain
     negaflow_mip_halve_cs
     NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -251,10 +405,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
     MipHalveMain
     negaflow_mip_halve_cs
     NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -265,10 +433,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
     MipHalveMain
     negaflow_mip_halve_cs
     NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -279,10 +461,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
     MipHalveMain
     negaflow_mip_halve_cs
     NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -293,10 +489,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
     MipHalveMain
     negaflow_mip_halve_cs
     NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -307,10 +517,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
     MipHalveMain
     negaflow_mip_halve_cs
     NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -321,10 +545,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
     MipHalveMain
     negaflow_mip_halve_cs
     NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -335,10 +573,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
     MipHalveMain
     negaflow_mip_halve_cs
     NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -349,10 +601,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
     MipHalveMain
     negaflow_mip_halve_cs
     NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -363,10 +629,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
     MipHalveMain
     negaflow_mip_halve_cs
     NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -377,10 +657,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
     MipHalveMain
     negaflow_mip_halve_cs
     NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -391,10 +685,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
     MipHalveMain
     negaflow_mip_halve_cs
     NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -405,10 +713,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
     MipHalveMain
     negaflow_mip_halve_cs
     NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -419,10 +741,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
     MipHalveMain
     negaflow_mip_halve_cs
     NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -433,10 +769,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
     MipHalveMain
     negaflow_mip_halve_cs
     NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -447,10 +797,24 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/mip_halve.hlsl"
     MipHalveMain
     negaflow_mip_halve_cs
     NEGAFLOW_MIP_HALVE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
+    FiniteCheckMain
+    negaflow_finite_check_cs
+    NEGAFLOW_FINITE_CHECK_HEADER
 )
 
 negaflow_compile_compute_shader(
@@ -476,6 +840,7 @@ add_library(negaflow_gpu STATIC
     "${NEGAFLOW_GUIDED_COEFFICIENTS_HEADER}"
     "${NEGAFLOW_GUIDED_APPLY_HEADER}"
     "${NEGAFLOW_MIP_HALVE_HEADER}"
+    "${NEGAFLOW_FINITE_CHECK_HEADER}"
     "${NEGAFLOW_GAUSSIAN_H_HEADER}"
     "${NEGAFLOW_GAUSSIAN_V_HEADER}"
     "${NEGAFLOW_MEDIAN3_HEADER}"
@@ -491,6 +856,7 @@ add_library(negaflow_gpu STATIC
     src/Native/gpu/gpu_color_kernels.cpp
     src/Native/gpu/gpu_negative_invert.cpp
     src/Native/gpu/gpu_guided_filter.cpp
+    src/Native/gpu/gpu_finite_check.cpp
     src/Native/gpu/gpu_mip_halve.cpp
     src/Native/gpu/gpu_gaussian_blur.cpp
     src/Native/gpu/gpu_film_scan.cpp

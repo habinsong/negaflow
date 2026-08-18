@@ -8,6 +8,7 @@
 #include "negaflow/gpu/gpu_color_kernels.h"
 #include "negaflow/gpu/gpu_device.h"
 #include "negaflow/gpu/gpu_stage_kernels.h"
+#include "negaflow/gpu/gpu_neighborhood.h"
 #include "negaflow/gpu/gpu_tone_kernels.h"
 #include "negaflow/gpu/gpu_working_image.h"
 
@@ -120,6 +121,8 @@ struct GpuToneStage::State final {
     //    그 뒤 한 걸음이라도 실패해 CPU 로 되돌아갈 때 CPU 가 **반쯤 처리된 화소**를
     //    다시 처리하게 됩니다. 그 순간 값이 조용히 틀어집니다.
     mutable std::vector<negaflow::core::Rgba32F> measurement_pixels{};
+    // 밴드 측정 앞의 전 화소 유한성 확인을 GPU 에서 합니다. 4바이트만 회수합니다.
+    GpuFiniteCheck finite{};
 
     [[nodiscard]] bool ensure_images(
         const GpuDevice& device,
@@ -169,7 +172,8 @@ GpuKernelStatus GpuToneStage::create(const GpuDevice& device, GpuToneStage& stag
         GpuPointCurve::create(device, state->point_curve) == GpuKernelStatus::ok &&
         GpuColorMixer::create(device, state->mixer) == GpuKernelStatus::ok &&
         GpuColorGrade::create(device, state->grade) == GpuKernelStatus::ok &&
-        GpuPrimaryCalibration::create(device, state->primary) == GpuKernelStatus::ok;
+        GpuPrimaryCalibration::create(device, state->primary) == GpuKernelStatus::ok &&
+        GpuFiniteCheck::create(device, state->finite) == GpuKernelStatus::ok;
     if (!made) {
         delete state;
         return GpuKernelStatus::resource_creation_failed;
@@ -281,8 +285,15 @@ GpuToneStageResult GpuToneStage::apply(
             image.width,
             image.height,
             image.width};
-        result.info.measurement =
-            imaging::measure_parametric_tone_curve_bands(snapshot, measurement_limits);
+        // ☠️ 유한성은 **GPU 에서** 봤습니다 — 전 화소를 CPU 로 한 번 더 훑지 않습니다.
+        //    플래그가 서면(비유한 화소가 있으면) 확인을 CPU 판에 맡깁니다: 어느 행이
+        //    처음 실패했는지는 그쪽만 압니다.
+        bool all_finite = false;
+        if (state_->finite.dispatch(device, *read, all_finite) != GpuKernelStatus::ok) {
+            all_finite = false;
+        }
+        result.info.measurement = imaging::measure_parametric_tone_curve_bands(
+            snapshot, measurement_limits, all_finite);
         if (result.info.measurement.status != ToneCurveMeasurementStatus::ok) {
             // CPU 판과 같은 실패입니다. 여기서 끝내면 CPU 로 다시 돌 이유가 없습니다 —
             // 이미지는 측정 직전 상태로 내려와 있으므로 CPU 판에 맡깁니다.
