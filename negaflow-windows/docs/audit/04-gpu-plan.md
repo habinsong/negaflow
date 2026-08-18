@@ -98,14 +98,31 @@
 > 전부 `double` 이고 `log`·`exp`·`pow`·`fmod` 가 여러 번 돕니다. `noritsu` 는 그것을
 > **두 번**(기본 + 상대 시그니처) 태우고 장치 질감(`noritsuTexture`)까지 얹습니다.
 >
-> **이것이 남은 GPU 작업의 1순위입니다.** 근거는 [`06`](06-false-claims.md) 14절.
+> **고쳤습니다 — 두 걸음입니다.**
+>
+> | | ms | |
+> |---|---:|---:|
+> | 처음(직렬 CPU) | **58,995.23** | |
+> | 행 블록 병렬(비트 단위 동일) | **16,201** | −72.5% |
+> | GPU | **859.18** | −94.7% |
+> | | | **합계 −98.5%** |
+>
+> 노리츠 프리뷰 전체 **60,536 → 2,038 ms**. 병렬화가 값을 안 바꿨다는 것은
+> 프리뷰 지문으로 증명했습니다(직렬·병렬 둘 다 `cfe1f1b11f1cc9a3`).
+>
+> ☠️ **macOS 는 같은 수식을 64³ 큐브로 262,144번만 풉니다**
+> (`ScannerTargetGrade+Apply.swift` 의 `CIColorCubeWithColorSpace`).
+> Windows 는 화소마다 풉니다 — 24MP 에서 **66배**입니다. 이번 작업은 Windows 의 셈을
+> 옮긴 것이고, **큐브로 바꾸는 것은 값이 달라지는 별건**입니다.
+>
+> 근거는 [`06`](06-false-claims.md) 14절, 이어서 할 일은 [`15`](15-gpu-handoff.md).
 >
 > **전송을 재고 고쳤습니다** — 왕복 145 → **63.5 ms**(3절 상자). 진입점 여덟이
 > 작업 텍스처를 호출마다 만들던 것도 `GpuImagePool` 로 묶었습니다. 그 결과
 > **필름 스캔 경로 753 → 585 ms**, 디지털 필름 룩 810 → 642 ms.
 > 실측 `CIVibrance` 33³ 표(`muted_scene_vibrance`·`color_model`)도 이식했습니다.
 >
-> **남은 것**: `noritsuTexture` GPU · `boundedRelativeGrade`(`double` 계측 먼저) ·
+> **남은 것**(자세한 절차는 [`15`](15-gpu-handoff.md)): 노리츠 장치 질감 GPU · `boundedRelativeGrade`(`double` 계측 먼저) ·
 > `filmGrain`(ColorModel) · `ditherAdd`(기능 신설) ·
 > `channelClippingOverlay`(기능+UI 신설) · `CIAreaAverage` 리덕션 ·
 > `GpuMipHalve` 배선 · 검출 형태학 오케스트레이터 · 흑백 디지털 룩 사슬.

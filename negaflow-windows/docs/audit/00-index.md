@@ -142,7 +142,8 @@
 | [`11-ui-verification-protocol.md`](11-ui-verification-protocol.md) | **프론트엔드 검증 절차** — computer-use 크롭 · Parsec · 스크린샷 84장 · 판정표 |
 | [`12-repos-and-licence.md`](12-repos-and-licence.md) | **저장소 두 개와 라이선스** — Apache 2.0 vs GPL, macOS 코드 불가침 |
 | [`13-performance-playbook.md`](13-performance-playbook.md) | **성능·품질 플레이북** — 04 가 *무엇을* 옮길지라면 이건 *어떻게* 빠르게. 계측기부터 · 스레드 풀 · 컴파일러 스위치 · vHGW 형태학 · 분리형 컨볼루션 · 더블 버퍼 다운로드 · 품질 지키는 법 |
-| [`14-remaining-gpu-methodology.md`](14-remaining-gpu-methodology.md) | **남은 GPU 작업의 절차서** — 커널마다 macOS 원문 근거 · Windows 현재 상태 · 진짜 장애물 · 절차 · 검증 기준. ☠️ 0절이 04 의 오판 셋(3D LUT·이웃 접근·씨앗 규칙)을 정정하고, 2절이 `digitalFilmColor` 의 **알고리즘 발산**을 새로 잡아냅니다 |
+| [`14-remaining-gpu-methodology.md`](14-remaining-gpu-methodology.md) | **남은 GPU 작업의 절차서**(2026-08-18). ☠️ **0.0절이 이 문서 자신의 오판 셋을 정정합니다** — 2·3·6·7.2절은 무효이거나 낡았습니다. **지금 기준은 [`15`](15-gpu-handoff.md)** |
+| [`15-gpu-handoff.md`](15-gpu-handoff.md) | **GPU 인수인계(2026-08-19) — 이어서 할 사람이 먼저 읽을 문서.** 지킬 규칙 일곱(전부 이번에 실제로 틀렸던 것에서 나왔습니다) · 지금 GPU 가 도는 자리 · 남은 일 우선순위 · 확인 못 한 것 · 작업 절차 |
 
 ---
 
@@ -236,7 +237,7 @@ macOS 는 정반대입니다:
 | 프론트 — 없음 | **11개 표면** | [`02`](02-frontend-gaps.md) |
 | 프론트 — 백엔드 미연결 | **6개** | [`02`](02-frontend-gaps.md) 3절 |
 | 창작(macOS 에 없음) | **4개** | [`03`](03-feature-status.md) 4절 |
-| GPU | **2026-08-19.** 디지털 필름 룩 사슬 다섯 이식 + **사슬 오케스트레이터**(한 번 올려 한 번 내림). 실측 `film_look` **35,126 → 370 ms(−98.9%)**, 전체 **37,017 → 810 ms(−97.8%)**. 필름 스캔 경로는 753 ms. ☠️ **옮기면 안 되는 커널이 4개가 아니라 10개**(macOS 에서 죽은 것 6개 추가 확인) · `noritsuTexture` CPU 판은 이미 있었음 · `film_scan_denoise` 오케스트레이터도 이미 배선돼 있었음 | [`04`](04-gpu-plan.md) 0절 · [`06`](06-false-claims.md) 11~13절 |
+| GPU | **2026-08-19.** 디지털 필름 룩 사슬 + 스캐너 타겟 그레이드 + CIVibrance 표 이식, 전송 경로·텍스처 풀까지. 실측 **노리츠 60,536 → 2,038 ms(−96.6%)**, 디지털 룩 **37,017 → 642 ms(−98.3%)**, 필름 스캔 585 ms. ☠️ 옮기면 안 되는 커널 **10개**(macOS 에서 죽은 것 6개 추가 확인). **이어서 할 일과 규칙은 [`15`](15-gpu-handoff.md)** | [`04`](04-gpu-plan.md) 0절 · [`15`](15-gpu-handoff.md) |
 | God object(500줄 초과) | **초과 3개, 사유 없는 미해결 0.** src 생성 표 1 + tests fixture/suite 2. 이전 28+7은 이미 쪼개짐 | [`05`](05-god-objects.md) |
 | 기존 문서의 틀린 서술 | **13건** | [`06`](06-false-claims.md) |
 
