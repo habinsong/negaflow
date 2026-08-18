@@ -1,0 +1,130 @@
+#include "manual_negative_test_support.h"
+
+#include "negaflow/core/negative_inversion.h"
+#include "negaflow/imaging/auto_negative_base_resolver.h"
+#include "negaflow/imaging/film_stock_base_resolver.h"
+
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <iostream>
+#include <limits>
+#include <utility>
+#include <vector>
+
+namespace manual_negative_tests {
+
+void test_manual_negative_development() {
+    negaflow::imaging::WorkingImage source = make_working_image();
+    std::array<negaflow::core::Rgba32F, 2> expected{};
+    const negaflow::core::NegativeInversionParameters reference_parameters{
+        {0.72F, 0.32F, 0.15F},
+        {1.55F, 1.55F, 1.55F},
+    };
+    const auto reference_status = negaflow::core::apply_negative_inversion(
+        {source.pixels.data(), source.pixels.size(), 2U, 1U, 2U},
+        {expected.data(), expected.size(), 2U, 1U, 2U},
+        reference_parameters,
+        negaflow::core::color_negative_print_response());
+    expect(reference_status == negaflow::core::KernelStatus::ok, "reference inversion succeeds");
+
+    const negaflow::imaging::ManualNegativeDevelopParameters parameters{
+        {0.72F, 0.32F, 0.15F},
+        negaflow::imaging::NegativeFilmType::color,
+    };
+    const auto developed = negaflow::imaging::develop_manual_negative(
+        std::move(source),
+        parameters);
+    expect(
+        developed.status == negaflow::imaging::ManualNegativeDevelopStatus::ok,
+        "manual color negative development succeeds");
+    expect(
+        developed.info.dmax_normalized == std::array<float, 3>{1.55F, 1.55F, 1.55F},
+        "color generic density range is fixed");
+    expect(developed.image.pixels.size() == expected.size(), "developed pixel count");
+    if (developed.image.pixels.size() == expected.size()) {
+        expect(pixels_equal(developed.image.pixels[0], expected[0]), "first in-place pixel exact");
+        expect(pixels_equal(developed.image.pixels[1], expected[1]), "second in-place pixel exact");
+        expect(developed.image.pixels[1].alpha == 0.5F, "alpha is preserved in place");
+    }
+
+    const negaflow::imaging::ManualNegativeDevelopParameters clamped_parameters{
+        {0.0F, 2.0F, 0.5F},
+        negaflow::imaging::NegativeFilmType::black_and_white,
+    };
+    const auto clamped = negaflow::imaging::develop_manual_negative(
+        make_working_image(),
+        clamped_parameters);
+    expect(
+        clamped.status == negaflow::imaging::ManualNegativeDevelopStatus::ok &&
+            clamped.info.applied_dmin == std::array<float, 3>{0.001F, 1.0F, 0.5F},
+        "manual Dmin follows baseline clamp");
+    expect(
+        clamped.info.dmax_normalized == std::array<float, 3>{2.17F, 2.17F, 2.17F},
+        "B&W generic density range is fixed");
+
+    const negaflow::imaging::ManualNegativeDevelopParameters scene_parameters{
+        {0.80F, 0.60F, 0.40F},
+        negaflow::imaging::NegativeFilmType::color,
+    };
+    const auto scene = negaflow::imaging::develop_manual_negative(
+        make_scene_working_image(),
+        scene_parameters);
+    expect(
+        scene.status == negaflow::imaging::ManualNegativeDevelopStatus::ok,
+        "scene-ranged manual development succeeds");
+    expect(
+        std::abs(scene.info.dmax_normalized[0] - 1.10F) < 1.0e-4F &&
+            std::abs(scene.info.dmax_normalized[1] - 0.99F) < 1.0e-4F &&
+            std::abs(scene.info.dmax_normalized[2] - 0.88F) < 1.0e-4F,
+        "scene-ranged manual development uses the robust low percentile per channel");
+    expect(
+        scene.info.dmax_normalized[0] != scene.info.dmax_normalized[2],
+        "color scene range retains per-channel density differences");
+    expect(
+        scene.info.muted_scene_vibrance.applied &&
+            scene.info.muted_scene_vibrance.amount == 0.5,
+        "non-preset color scene runs muted-scene vibrance after inversion");
+
+    const auto affine_proxy_scene = negaflow::imaging::develop_manual_negative(
+        make_affine_proxy_scene_image(),
+        {{0.80F, 0.80F, 0.80F}, negaflow::imaging::NegativeFilmType::color});
+    const float affine_proxy_expected = std::log10(0.80F / 0.12F);
+    expect(
+        affine_proxy_scene.status == negaflow::imaging::ManualNegativeDevelopStatus::ok &&
+            std::abs(affine_proxy_scene.info.dmax_normalized[0] - affine_proxy_expected) < 1.0e-5F &&
+            std::abs(affine_proxy_scene.info.dmax_normalized[1] - affine_proxy_expected) < 1.0e-5F &&
+            std::abs(affine_proxy_scene.info.dmax_normalized[2] - affine_proxy_expected) < 1.0e-5F,
+        "scene-range proxy uses uniform pixel-centre bilinear affine sampling on both axes");
+
+    negaflow::imaging::ManualNegativeDevelopParameters preset_parameters = scene_parameters;
+    preset_parameters.use_preset_response = true;
+    preset_parameters.preset_dmax_normalized = {2.04F, 2.23F, 2.23F};
+    const auto preset_scene = negaflow::imaging::develop_manual_negative(
+        make_scene_working_image(),
+        preset_parameters);
+    expect(
+        preset_scene.status == negaflow::imaging::ManualNegativeDevelopStatus::ok &&
+            preset_scene.info.dmax_normalized[0] < preset_scene.info.dmax_normalized[1] &&
+            std::abs(preset_scene.info.dmax_normalized[1] - preset_scene.info.dmax_normalized[2]) < 1.0e-5F,
+        "preset keeps the measured density scale and stock channel ratio");
+    expect(
+        !preset_scene.info.muted_scene_vibrance.applied,
+        "preset color scene bypasses muted-scene vibrance");
+
+    const auto scene_bw = negaflow::imaging::develop_manual_negative(
+        make_scene_working_image(),
+        {scene_parameters.dmin, negaflow::imaging::NegativeFilmType::black_and_white});
+    expect(
+        scene_bw.status == negaflow::imaging::ManualNegativeDevelopStatus::ok &&
+            scene_bw.info.dmax_normalized[0] == scene_bw.info.dmax_normalized[1] &&
+            scene_bw.info.dmax_normalized[1] == scene_bw.info.dmax_normalized[2],
+        "B&W scene range remains neutral");
+    expect(
+        !scene_bw.info.muted_scene_vibrance.applied,
+        "B&W scene-ranged development bypasses muted-scene vibrance");
+}
+
+}  // namespace manual_negative_tests

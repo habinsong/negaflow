@@ -1,5 +1,6 @@
 #pragma once
 
+#include "negaflow/core/pixel.h"
 #include "negaflow/imaging/grain_mend.h"
 
 #include <cstddef>
@@ -16,43 +17,40 @@ void expect(bool condition, const char* message);
 
 [[nodiscard]] negaflow::imaging::WorkingImage make_clean_image(
     std::uint32_t width = 96U,
-    std::uint32_t height = 96U);
+    std::uint32_t height = 72U);
 
 [[nodiscard]] negaflow::imaging::WorkingImage make_uniform_image(
     std::uint32_t width,
     std::uint32_t height,
-    float value);
+    float value = 0.20F);
 
 [[nodiscard]] bool same_pixels(
-    const negaflow::imaging::WorkingImage& first,
-    const negaflow::imaging::WorkingImage& second);
+    const std::vector<negaflow::core::Rgba32F>& left,
+    const std::vector<negaflow::core::Rgba32F>& right) noexcept;
 
 // 채널마다 다른 잡음을 얹습니다. 휘도만 보면 지워지는 색 먼지를 만들 때 씁니다.
 void add_chromatic_grain(
     negaflow::imaging::WorkingImage& image,
-    float amplitude,
-    std::uint32_t seed);
+    std::uint32_t seed,
+    std::uint32_t probability_per_thousand,
+    float amplitude);
 
 void add_dark_micro_speck(
     negaflow::imaging::WorkingImage& image,
     std::uint32_t x,
     std::uint32_t y,
-    float depth);
+    std::uint32_t size,
+    float drop);
 
 [[nodiscard]] float pixel_error(
-    const negaflow::imaging::WorkingImage& first,
-    const negaflow::imaging::WorkingImage& second,
-    std::size_t index);
+    negaflow::core::Rgba32F actual,
+    negaflow::core::Rgba32F expected) noexcept;
 
 // 옅은 스크래치를 그리고 그 화소 자리를 냅니다. 검출이 실제로 그 자리를 잡았는지 보려면
 // 그린 자리를 알아야 합니다.
 [[nodiscard]] std::vector<std::size_t> draw_faint_scratch(
     negaflow::imaging::WorkingImage& image,
-    std::uint32_t x0,
-    std::uint32_t y0,
-    std::uint32_t x1,
-    std::uint32_t y1,
-    float depth);
+    double angle_degrees);
 
 // 수리 경로: 먼지·가는 스크래치·대각·색 먼지·축 밖 스크래치.
 void test_dust_and_thin_scratch_are_repaired();
