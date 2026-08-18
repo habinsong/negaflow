@@ -2,17 +2,19 @@
 //
 // macOS  : `ChromabaseMetalKernels.swift:185` `basicTone`
 // CPU 판 : `imaging/tone_mapping.cpp:79` `apply_basic_tone`
-// GPU 판 : `gpu/shaders/basic_tone.hlsl` + `gpu/gpu_basic_tone.cpp`
+// 커브   : `ChromabaseMetalKernels.swift:242` `parametricToneCurve` ↔ `tone_mapping.cpp:143`
+// GPU 판 : `gpu/shaders/basic_tone.hlsl` · `parametric_tone_curve.hlsl` + `gpu/gpu_tone_kernels.cpp`
 //
 // 허용 오차 `1e-5` 는 float32 반올림 범위입니다. 이보다 크게 벌어지면 반올림이 아니라
 // 이식 실수입니다 — 오차를 늘리지 말고 커널을 고치십시오.
 
-#include "negaflow/gpu/gpu_basic_tone.h"
+#include "negaflow/gpu/gpu_tone_kernels.h"
 
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <iostream>
+#include <limits>
 #include <string_view>
 #include <vector>
 
@@ -38,6 +40,8 @@ using negaflow::gpu::GpuDevice;
 using negaflow::gpu::GpuDevicePreference;
 using negaflow::gpu::GpuImageStatus;
 using negaflow::gpu::GpuKernelStatus;
+using negaflow::gpu::GpuParametricToneCurve;
+using negaflow::gpu::GpuParametricToneCurveParameters;
 using negaflow::gpu::GpuWorkingImage;
 
 constexpr float tolerance = 1.0e-5F;
@@ -169,6 +173,94 @@ void kernel_matches_cpu(const GpuDevice& device, const char* const label) {
     }
 }
 
+// 파라메트릭 커브 — macOS `parametricToneCurve`. 밴드 경계까지 인자로 넘어가는지 봅니다.
+struct CurveCase final {
+    const char* name;
+    negaflow::imaging::ParametricToneCurveParameters parameters;
+    negaflow::imaging::ParametricToneCurveBands bands;
+};
+
+const CurveCase curve_cases[] = {
+    {"curve_neutral", {}, {}},
+    {"curve_shadows", {0.0F, 0.0F, 0.0F, 0.9F}, {}},
+    {"curve_darks", {0.0F, 0.0F, -0.8F, 0.0F}, {}},
+    {"curve_lights", {0.0F, 0.7F, 0.0F, 0.0F}, {}},
+    {"curve_highlights", {-0.85F, 0.0F, 0.0F, 0.0F}, {}},
+    {"curve_all", {0.5F, -0.4F, 0.35F, -0.6F}, {}},
+    // 밴드를 기본값과 다르게 줘서 상수로 박히지 않았는지 확인합니다.
+    {"curve_custom_bands", {0.4F, 0.4F, -0.4F, 0.4F},
+     {0.02F, 0.19F, 0.15F, 0.42F, 0.30F, 0.74F, 0.40F, 0.60F}},
+};
+
+void curve_matches_cpu(const GpuDevice& device, const char* const label) {
+    GpuParametricToneCurve kernel{};
+    if (GpuParametricToneCurve::create(device, kernel) != GpuKernelStatus::ok) {
+        expect(false, "curve kernel must be creatable");
+        return;
+    }
+
+    const std::vector<Rgba32F> source = make_ramp();
+    GpuWorkingImage input{};
+    if (GpuWorkingImage::upload(device, source.data(), width, height, width, input) !=
+        GpuImageStatus::ok) {
+        expect(false, "curve source upload must succeed");
+        return;
+    }
+    GpuWorkingImage output{};
+    if (GpuWorkingImage::create(device, width, height, output) != GpuImageStatus::ok) {
+        expect(false, "curve destination must be creatable");
+        return;
+    }
+
+    for (const CurveCase& scenario : curve_cases) {
+        const GpuParametricToneCurveParameters gpu_parameters{
+            scenario.parameters.highlights, scenario.parameters.lights,
+            scenario.parameters.darks,      scenario.parameters.shadows,
+            scenario.bands.shadow_low,      scenario.bands.shadow_high,
+            scenario.bands.dark_low,        scenario.bands.dark_high,
+            scenario.bands.light_low,       scenario.bands.light_high,
+            scenario.bands.highlight_low,   scenario.bands.highlight_high};
+        if (kernel.dispatch(device, input, output, gpu_parameters) != GpuKernelStatus::ok) {
+            expect(false, "curve dispatch must succeed");
+            continue;
+        }
+        std::vector<Rgba32F> gpu_pixels(source.size());
+        if (output.download(device, gpu_pixels.data(), width) != GpuImageStatus::ok) {
+            expect(false, "curve download must succeed");
+            continue;
+        }
+
+        std::vector<Rgba32F> cpu_pixels(source.size());
+        const negaflow::core::ConstImageView view{source.data(), source.size(), width, height, width};
+        const negaflow::core::ImageView out{cpu_pixels.data(), cpu_pixels.size(), width, height, width};
+        (void)negaflow::imaging::apply_parametric_tone_curve(
+            view, out, scenario.parameters, scenario.bands);
+
+        float worst = 0.0F;
+        for (std::size_t index = 0U; index < cpu_pixels.size(); ++index) {
+            worst = std::max(worst, std::abs(cpu_pixels[index].red - gpu_pixels[index].red));
+            worst = std::max(worst, std::abs(cpu_pixels[index].green - gpu_pixels[index].green));
+            worst = std::max(worst, std::abs(cpu_pixels[index].blue - gpu_pixels[index].blue));
+            worst = std::max(worst, std::abs(cpu_pixels[index].alpha - gpu_pixels[index].alpha));
+        }
+        if (worst > tolerance) {
+            std::cerr << "FAIL: " << label << ' ' << scenario.name << " max delta " << worst
+                      << '\n';
+            ++failures;
+        } else {
+            std::cout << "[gpu] " << label << ' ' << scenario.name << " max delta " << worst
+                      << '\n';
+        }
+    }
+
+    // 밴드에 NaN 이 들어오면 CPU 판처럼 거절해야 합니다 — 마스크가 통째로 죽습니다.
+    GpuParametricToneCurveParameters bad_bands{};
+    bad_bands.dark_high = std::numeric_limits<float>::quiet_NaN();
+    expect(
+        kernel.dispatch(device, input, output, bad_bands) == GpuKernelStatus::non_finite_parameter,
+        "NaN band edge is rejected like the CPU path");
+}
+
 void rejects_bad_arguments(const GpuDevice& device) {
     GpuBasicTone kernel{};
     if (GpuBasicTone::create(device, kernel) != GpuKernelStatus::ok) {
@@ -231,6 +323,7 @@ int main() {
         return 1;
     }
     kernel_matches_cpu(warp, "warp");
+    curve_matches_cpu(warp, "warp");
     rejects_bad_arguments(warp);
 
     // 하드웨어가 있으면 같은 것을 하드웨어에서도 봅니다. 드라이버마다 부동소수 재배열이
@@ -239,6 +332,7 @@ int main() {
     if (hardware.is_usable()) {
         std::cout << "[gpu] hardware: " << hardware.capability().adapter.description.data() << '\n';
         kernel_matches_cpu(hardware, "hardware");
+        curve_matches_cpu(hardware, "hardware");
         rejects_bad_arguments(hardware);
     } else {
         std::cout << "[gpu] hardware absent, WARP only\n";
@@ -247,7 +341,7 @@ int main() {
     status_names_are_stable();
 
     if (failures != 0) {
-        std::cerr << failures << " gpu basic tone check(s) failed\n";
+        std::cerr << failures << " gpu tone kernel check(s) failed\n";
         return 1;
     }
     std::cout << "gpu basic tone checks passed\n";
