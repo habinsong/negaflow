@@ -75,6 +75,15 @@ public:
         std::uint32_t stride_pixels,
         GpuWorkingImage& image) noexcept;
 
+    // 이미 만들어 둔 텍스처에 호스트 화소를 **덮어씁니다.** 위 정적 판과 달리 자원을
+    // 다시 만들지 않으므로, 텍스처를 풀로 들고 재사용하는 경로가 쓸 수 있습니다
+    // (사슬 오케스트레이터가 그렇습니다 — 프레임마다 여섯 장을 다시 만들면 그 비용이
+    // 커널보다 큽니다).
+    [[nodiscard]] GpuImageStatus upload_into(
+        const GpuDevice& device,
+        const core::Rgba32F* pixels,
+        std::uint32_t stride_pixels) const noexcept;
+
     // GPU → 호스트. 스테이징 텍스처를 거칩니다(D3D11 은 이것 말고 읽는 길이 없습니다).
     // ☠️ D3D11 의 `Map` 은 **동기화합니다** — 밀린 GPU 작업이 끝날 때까지 CPU 가 멈춥니다.
     //    매 프레임 내리는 경로에서는 `GpuStagingRing` 을 쓰십시오.

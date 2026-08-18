@@ -80,6 +80,38 @@ struct WorkingFilmLookResult final {
     WorkingImage image{};
 };
 
+// 디지털 원본 사슬을 GPU 오케스트레이터에 넘길 때 쓰는 계획입니다.
+//
+// 왜 계획을 CPU 가 만드나 — 재료마다 "돌릴지 말지" 를 정하는 게이트가 있고, 그 판정을
+// GPU 쪽에서 다시 하면 **두 벌이 되어 갈라집니다.** 여기서는 CPU 가 한 번 판정해
+// 넘기고, GPU 는 **순서대로 돌리기만** 합니다. 비어 있는 칸(널 포인터·`applied=false`·
+// 세기 0)은 건너뜁니다 — 그것이 CPU 의 조기 반환과 같은 자리입니다.
+//
+// 왜 오케스트레이터가 따로 필요한가 — 재료마다 올렸다 내리면 24MP 에서 왕복이 다섯 번,
+// 277 MB × 10 입니다. 실측으로 그 전송이 커널보다 훨씬 컸습니다.
+struct DigitalFilmLookPlan final {
+    DigitalHalationMaterial halation_material{};
+    double halation_strength{0.0};
+    bool halation_requested{false};
+    // 널이면 색 큐브를 건너뜁니다.
+    const FilmEmulationColorCube* cube{nullptr};
+    FilmEmulationAcutanceSetup acutance{};
+    // 널이면 색 프리셋을 건너뜁니다.
+    const DigitalFilmColorPreset* preset{nullptr};
+    float preset_strength{0.0F};
+    DigitalFilmGrainProfile grain{0.0, 0.0, 1.0};
+    double grain_strength{0.0};
+    bool grain_requested{false};
+};
+
+struct DigitalFilmLookApplied final {
+    bool halation{false};
+    bool color{false};
+    bool acutance{false};
+    bool preset{false};
+    bool grain{false};
+};
+
 [[nodiscard]] bool valid_working_film_look_parameters(
     const WorkingFilmLookParameters& parameters) noexcept;
 

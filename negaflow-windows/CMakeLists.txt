@@ -382,6 +382,7 @@ add_library(negaflow_gpu STATIC
     src/Native/gpu/gpu_digital_film_color_preset.cpp
     src/Native/gpu/gpu_film_emulation_cube.cpp
     src/Native/gpu/gpu_film_emulation_acutance.cpp
+    src/Native/gpu/gpu_film_look_stage.cpp
     src/Native/gpu/gpu_lookup_table.cpp
     src/Native/gpu/gpu_morphology.cpp
     src/Native/gpu/gpu_tone_stage.cpp
@@ -1177,6 +1178,17 @@ if(BUILD_TESTING)
         PRIVATE negaflow_pipeline negaflow_imaging negaflow_core negaflow_project_options
     )
     add_test(NAME native.gpu_accelerator COMMAND negaflow_gpu_accelerator_tests)
+
+    add_executable(negaflow_gpu_film_look_stage_tests
+        tests/Native.UnitTests/gpu_film_look_stage_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_gpu_film_look_stage_tests
+        PRIVATE negaflow_pipeline negaflow_imaging negaflow_core negaflow_project_options
+    )
+    add_test(
+        NAME native.gpu_film_look_stage
+        COMMAND negaflow_gpu_film_look_stage_tests)
 
     add_executable(negaflow_tone_pipeline_tests
         tests/Native.UnitTests/tone_pipeline_tests.cpp

@@ -161,6 +161,21 @@ bool accelerate_film_emulation_acutance(
         pixels, width, height, stride_pixels, setup);
 }
 
+bool accelerate_digital_film_look(
+    float* const pixels,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::uint32_t stride_pixels,
+    const imaging::DigitalFilmLookPlan* const plan,
+    imaging::DigitalFilmLookApplied* const applied) noexcept {
+    GpuAccelerator& accelerator = GpuAccelerator::shared();
+    if (!accelerator.available()) {
+        return false;
+    }
+    return accelerator.apply_digital_film_look(
+        pixels, width, height, stride_pixels, plan, applied);
+}
+
 // 프로세스 수명 동안 살아 있어야 합니다 — `install_kernel_accelerator` 는 포인터만 갖습니다.
 const imaging::KernelAccelerator kernel_table{
     accelerate_opening,
@@ -172,6 +187,7 @@ const imaging::KernelAccelerator kernel_table{
     accelerate_digital_film_color_preset,
     accelerate_film_emulation_cube,
     accelerate_film_emulation_acutance,
+    accelerate_digital_film_look,
 };
 
 }  // namespace

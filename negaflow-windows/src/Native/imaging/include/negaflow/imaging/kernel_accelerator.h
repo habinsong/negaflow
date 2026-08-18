@@ -134,6 +134,24 @@ using FilmEmulationAcutanceFunction = bool (*)(
     std::uint32_t stride_pixels,
     const FilmEmulationAcutanceSetup* setup) noexcept;
 
+// 디지털 원본 필름 룩 **사슬 전체**입니다. 재료마다 올렸다 내리면 24MP 에서 왕복이
+// 다섯 번(277 MB × 10)이고, 실측으로 그 전송이 커널보다 컸습니다. 이 진입점은
+// **한 번 올려 한 번 내립니다.**
+//
+// 게이트는 `plan` 이 이미 담고 있습니다 — GPU 쪽에서 다시 판정하면 두 벌이 됩니다.
+// 처리했으면 `applied` 를 채우고 `true`. 실패하면 **이미지를 손대지 않고** `false` 이며,
+// 호출부는 그대로 CPU 사슬로 갑니다.
+struct DigitalFilmLookPlan;
+struct DigitalFilmLookApplied;
+
+using DigitalFilmLookFunction = bool (*)(
+    float* pixels,
+    std::uint32_t width,
+    std::uint32_t height,
+    std::uint32_t stride_pixels,
+    const DigitalFilmLookPlan* plan,
+    DigitalFilmLookApplied* applied) noexcept;
+
 struct KernelAccelerator final {
     // ── 정확한 것 (언제나 켭니다) ────────────────────────────────────────────
     MorphologyPlaneFunction opening{nullptr};
@@ -147,6 +165,7 @@ struct KernelAccelerator final {
     DigitalFilmColorPresetFunction digital_film_color_preset{nullptr};
     FilmEmulationCubeFunction film_emulation_cube{nullptr};
     FilmEmulationAcutanceFunction film_emulation_acutance{nullptr};
+    DigitalFilmLookFunction digital_film_look{nullptr};
 };
 
 // 프로세스 시작에 한 번 설치합니다. `nullptr` 을 주면 해제합니다.

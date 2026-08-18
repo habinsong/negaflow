@@ -1,6 +1,7 @@
 #include "negaflow/imaging/working_film_look.h"
 
 #include "negaflow/imaging/film_emulation_registry.h"
+#include "negaflow/imaging/kernel_accelerator.h"
 
 #include <algorithm>
 #include <cmath>
@@ -62,6 +63,61 @@ void fail_kernel(
     result.info.kernel_status = status;
     result.status = WorkingFilmLookStatus::kernel_failed;
     discard_pixels(result.image);
+}
+
+// GPU 오케스트레이터에 넘길 계획을 만듭니다.
+//
+// ☠️ **여기가 게이트를 판정하는 유일한 자리입니다.** 아래 CPU 사슬의 조건과 한 글자도
+//    달라선 안 됩니다 — 다르면 GPU 와 CPU 가 다른 것을 하고, 그 차이는 값으로만 드러납니다.
+//    비어 있는 칸(널 포인터·`applied=false`·`requested=false`)이 곧 CPU 의 조기 반환입니다.
+[[nodiscard]] bool try_plan_digital_film_look(
+    const WorkingFilmLookParameters& parameters,
+    const FilmEmulationColorParameters& color,
+    const FilmEmulationAcutanceParameters& acutance,
+    const WorkingFilmLookWorkspace& workspace,
+    DigitalFilmLookPlan& plan) noexcept {
+    const DigitalFilmPhysics* const physics =
+        digital_film_physics(parameters.emulation);
+    if (physics == nullptr) {
+        // CPU 사슬은 물성이 없으면 헐레이션·그레인을 항등으로 지납니다. 그 경우까지
+        // GPU 로 흉내내지 않고 CPU 에 맡깁니다 — 드문 경로에 두 벌을 만들 이유가 없습니다.
+        return false;
+    }
+    const double strength = std::clamp(parameters.intensity, 0.0, 1.0);
+
+    plan.halation_material = {
+        physics->scatter_strength,
+        physics->halation_strength,
+        physics->halation_radius_ratio};
+    plan.halation_strength = parameters.halation_override > 1.0e-3
+        ? std::clamp(parameters.halation_override, 0.0, 1.0)
+        : strength;
+    plan.halation_requested = true;
+
+    plan.cube = has_film_emulation_color_change(color) ? workspace.color_cube : nullptr;
+    if (plan.cube != nullptr && !plan.cube->ready) {
+        return false;
+    }
+
+    plan.acutance = has_film_emulation_acutance_change(acutance)
+        ? prepare_film_emulation_acutance(acutance)
+        : FilmEmulationAcutanceSetup{};
+
+    // 색 프리셋의 세기는 CPU 사슬과 같은 `strength * 0.5` 입니다 — LUT 가 이미 스톡 색을
+    // 담고 있어 보조 프리셋은 절반만 더합니다(macOS `DigitalFilmLook.swift:68`).
+    const float preset_strength =
+        static_cast<float>(std::clamp(strength * 0.5, 0.0, 1.0));
+    const DigitalFilmColorPreset* const preset =
+        digital_film_color_preset(parameters.emulation);
+    plan.preset = (preset != nullptr && preset_strength > 1.0e-3F) ? preset : nullptr;
+    plan.preset_strength = preset_strength;
+
+    plan.grain = physics->grain;
+    plan.grain_strength = parameters.grain_override > 1.0e-3
+        ? std::clamp(parameters.grain_override, 0.0, 1.0)
+        : strength;
+    plan.grain_requested = true;
+    return true;
 }
 
 }  // namespace
@@ -228,6 +284,61 @@ WorkingFilmLookResult apply_working_film_look(
         return result;
     }
 
+    // 색 큐브는 **CPU 가 만듭니다** — 35,937 칸이고 프리셋·세기가 바뀔 때만 다시
+    // 만들어지므로 GPU 로 옮길 이유가 없고, 옮기면 두 벌이 됩니다. GPU 사슬과 CPU 사슬이
+    // **같은 표**를 봐야 하므로 두 갈래보다 앞에서 만듭니다.
+    if (has_film_emulation_color_change(color)) {
+        if (workspace.color_cube->ready &&
+            workspace.color_cube->emulation == color.emulation &&
+            workspace.color_cube->intensity_step ==
+                result.info.color_intensity_step) {
+            result.info.color_cube_reused = true;
+        } else {
+            const negaflow::core::KernelStatus build_status =
+                build_film_emulation_color_cube(color, *workspace.color_cube);
+            if (build_status != negaflow::core::KernelStatus::ok) {
+                fail_kernel(result, build_status);
+                return result;
+            }
+            result.info.color_cube_built = true;
+        }
+    }
+
+    // ☠️ 사슬 전체를 GPU 에 머무르게 하는 자리입니다. 재료마다 올렸다 내리면 24MP 에서
+    //    왕복이 다섯 번(277 MB × 10)이고, 실측으로 그 전송이 커널보다 컸습니다.
+    //    **게이트 판정은 여기서 합니다** — GPU 는 계획대로 돌리기만 합니다. 실패하면
+    //    이미지를 손대지 않으므로 아래 CPU 사슬이 그대로 이어집니다.
+    if (digital && approximate_acceleration_allowed()) {
+        if (const KernelAccelerator* const table = kernel_accelerator();
+            table != nullptr && table->digital_film_look != nullptr) {
+            DigitalFilmLookPlan plan{};
+            if (try_plan_digital_film_look(parameters, color, acutance, workspace, plan)) {
+                DigitalFilmLookApplied applied{};
+                if (table->digital_film_look(
+                        reinterpret_cast<float*>(result.image.pixels.data()),
+                        result.image.width,
+                        result.image.height,
+                        result.image.stride_pixels,
+                        &plan,
+                        &applied)) {
+                    result.info.digital_halation_applied = applied.halation;
+                    result.info.color_applied = applied.color;
+                    result.info.acutance_applied = applied.acutance;
+                    result.info.digital_color_preset_applied = applied.preset;
+                    result.info.digital_grain_applied = applied.grain;
+                    result.info.kernel_status =
+                        negaflow::core::validate_finite_pixels(const_view(result.image));
+                    if (result.info.kernel_status != negaflow::core::KernelStatus::ok) {
+                        fail_kernel(result, result.info.kernel_status);
+                        return result;
+                    }
+                    result.status = WorkingFilmLookStatus::ok;
+                    return result;
+                }
+            }
+        }
+    }
+
     if (digital) {
         const double strength = std::clamp(parameters.intensity, 0.0, 1.0);
         const double halation_strength = parameters.halation_override > 1.0e-3
@@ -247,20 +358,6 @@ WorkingFilmLookResult apply_working_film_look(
     }
 
     if (has_film_emulation_color_change(color)) {
-        if (workspace.color_cube->ready &&
-            workspace.color_cube->emulation == color.emulation &&
-            workspace.color_cube->intensity_step ==
-                result.info.color_intensity_step) {
-            result.info.color_cube_reused = true;
-        } else {
-            const negaflow::core::KernelStatus build_status =
-                build_film_emulation_color_cube(color, *workspace.color_cube);
-            if (build_status != negaflow::core::KernelStatus::ok) {
-                fail_kernel(result, build_status);
-                return result;
-            }
-            result.info.color_cube_built = true;
-        }
         const negaflow::core::KernelStatus color_status =
             apply_film_emulation_color_cube(
                 const_view(result.image),

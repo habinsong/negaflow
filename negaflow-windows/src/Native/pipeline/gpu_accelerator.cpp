@@ -68,6 +68,9 @@ GpuAccelerator::GpuAccelerator() noexcept {
         state->acutance_ready =
             gpu::GpuFilmEmulationAcutance::create(state->device, state->acutance) ==
             gpu::GpuKernelStatus::ok;
+        state->film_look_ready =
+            gpu::GpuFilmLookStage::create(state->device, state->film_look) ==
+            gpu::GpuKernelStatus::ok;
     }
     state_ = state;
 }

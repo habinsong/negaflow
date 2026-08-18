@@ -16,6 +16,7 @@
 #include "negaflow/gpu/gpu_digital_halation.h"
 #include "negaflow/gpu/gpu_film_emulation_acutance.h"
 #include "negaflow/gpu/gpu_film_emulation_cube.h"
+#include "negaflow/gpu/gpu_film_look_stage.h"
 #include "negaflow/gpu/gpu_film_scan_stage.h"
 #include "negaflow/gpu/gpu_morphology.h"
 #include "negaflow/gpu/gpu_negative_invert.h"
@@ -49,6 +50,10 @@ struct GpuAccelerator::State final {
     bool cube_ready{false};
     gpu::GpuFilmEmulationAcutance acutance{};
     bool acutance_ready{false};
+    // 사슬 전체를 GPU 에 머무르게 하는 오케스트레이터. 재료별 진입점은 흑백 룩처럼
+    // 사슬 밖에서 부르는 자리를 위해 그대로 둡니다.
+    gpu::GpuFilmLookStage film_look{};
+    bool film_look_ready{false};
     // 평면 ↔ RGBA 변환용. 매 호출 할당하지 않으려고 들고 있습니다.
     std::vector<core::Rgba32F> morphology_staging{};
     bool usable{false};

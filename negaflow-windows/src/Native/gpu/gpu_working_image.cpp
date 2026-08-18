@@ -244,6 +244,25 @@ GpuImageStatus GpuWorkingImage::upload(
     return GpuImageStatus::ok;
 }
 
+GpuImageStatus GpuWorkingImage::upload_into(
+    const GpuDevice& device,
+    const core::Rgba32F* const pixels,
+    const std::uint32_t stride_pixels) const noexcept {
+    if (pixels == nullptr) {
+        return GpuImageStatus::buffer_size_mismatch;
+    }
+    if (!is_valid() || !device.is_usable()) {
+        return GpuImageStatus::device_unavailable;
+    }
+    if (stride_pixels < width_) {
+        return GpuImageStatus::invalid_dimensions;
+    }
+    const UINT source_pitch =
+        static_cast<UINT>(static_cast<std::size_t>(stride_pixels) * sizeof(core::Rgba32F));
+    device.context()->UpdateSubresource(texture_, 0U, nullptr, pixels, source_pitch, 0U);
+    return GpuImageStatus::ok;
+}
+
 GpuImageStatus GpuWorkingImage::download(
     const GpuDevice& device,
     core::Rgba32F* const pixels,

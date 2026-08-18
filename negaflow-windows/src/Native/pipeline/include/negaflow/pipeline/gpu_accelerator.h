@@ -25,6 +25,7 @@
 #include "negaflow/imaging/film_emulation_acutance.h"
 #include "negaflow/imaging/film_emulation_color.h"
 #include "negaflow/imaging/film_scan_denoise.h"
+#include "negaflow/imaging/working_film_look.h"
 #include "negaflow/imaging/kernel_accelerator.h"
 #include "negaflow/imaging/working_tone_adjuster.h"
 
@@ -142,6 +143,16 @@ public:
         std::uint32_t height,
         std::uint32_t stride_pixels,
         const imaging::FilmEmulationAcutanceSetup* setup) noexcept;
+
+    // 디지털 필름 룩 **사슬 전체**입니다. 재료별 진입점과 달리 왕복이 **한 번**입니다 —
+    // 24MP 에서 재료마다 올렸다 내리면 277 MB × 10 이 오갑니다.
+    [[nodiscard]] bool apply_digital_film_look(
+        float* pixels,
+        std::uint32_t width,
+        std::uint32_t height,
+        std::uint32_t stride_pixels,
+        const imaging::DigitalFilmLookPlan* plan,
+        imaging::DigitalFilmLookApplied* applied) noexcept;
 
     [[nodiscard]] bool apply_morphology_plane(
         const float* source,

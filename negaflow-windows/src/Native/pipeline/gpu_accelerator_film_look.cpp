@@ -227,4 +227,30 @@ bool GpuAccelerator::apply_film_emulation_acutance(
     return destination.download(state_->device, rgba, stride_pixels) == gpu::GpuImageStatus::ok;
 }
 
+bool GpuAccelerator::apply_digital_film_look(
+    float* const pixels,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::uint32_t stride_pixels,
+    const imaging::DigitalFilmLookPlan* const plan,
+    imaging::DigitalFilmLookApplied* const applied) noexcept {
+    if (!available() || pixels == nullptr || plan == nullptr || applied == nullptr) {
+        return false;
+    }
+    if (width == 0U || height == 0U || stride_pixels < width) {
+        return false;
+    }
+    const std::lock_guard<std::mutex> guard{state_->lock};
+    if (!state_->film_look_ready) {
+        return false;
+    }
+    const gpu::GpuFilmLookResult result = state_->film_look.apply(
+        state_->device, pixels, width, height, stride_pixels, *plan);
+    if (!result.handled) {
+        return false;
+    }
+    *applied = result.applied;
+    return true;
+}
+
 }  // namespace negaflow::pipeline
