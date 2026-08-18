@@ -178,7 +178,7 @@ NEGA_DEBUG=1 negaflow-cli --auto-base-probe <source.tiff>   # 성분 목록까�
 | 2 | 헤더 `trailing: baseReadout` — `baseReadoutFormat` 으로 R/G/B 표시 | `ManualBaseValueText` | **2026-08-19** `developBaseReadoutFormat` + 마지막 미리보기 `AppliedDmin`. 앱 UIA `base 0.22 0.13 0.07` (OpticFilm8100_frame_1). 카탈로그 `frame.baseRGB` 영속은 아직 없음 |
 | 3 | **`SegmentedPicker`** — 자동/필름/수동이 **붙어 있는 한 덩어리** | `RadioButton` 3개가 간격 4로 떨어져 있었음 | **2026-08-18 고침** — 테두리 하나 안에 붙인 한 덩어리로. `NegaflowSegmentStyle`(라디오 글리프 제거, Checked → `NegaflowSelectionBrush`) 신설 |
 | 4 | `.disabled(!frame.filmType.requiresInversion)` — `FilmType.swift:23` 은 `colorNegative`·`bwNegative` 만 true | `DevelopBaseEditor.CanEdit` = `ColorNegative or BlackAndWhiteNegative`, `DevelopBaseCard.xaml.cs:141-144` 에서 세 모드 단추에 적용 | **일치 확인함(2026-08-18)** |
-| 5 | preset: 필름스톡 · 광원 · 프로파일 **3줄**, 각 줄이 `basePresetPickerRow`, `.frame(maxWidth: basePresetPickerWidth)` = **276** (`BaseControlSection.swift:21,140`) | `FilmStockSelector`·`LightSourceSelector`·`ScannerProfileSelector` 3줄, **폭 지정 없음 = stretch** | **2026-08-19** 라벨 폭 86 + ComboBox `MaxWidth=276` + 줄 최소 높이 26. 앱에서 필름 모드 3줄 확인. 인스펙터가 86+12+276 보다 좁아 피커는 남은 폭을 씀(macOS 주석과 같음). 픽셀 자 276은 넓은 패널에서 다시 재야 함 |
+| 5 | preset: 필름스톡 · 광원 · 프로파일 **3줄**, 각 줄이 `basePresetPickerRow`, `.frame(maxWidth: basePresetPickerWidth)` = **276** (`BaseControlSection.swift:21,140`) | `FilmStockSelector`·`LightSourceSelector`·`ScannerProfileSelector` 3줄, **폭 지정 없음 = stretch** | **2026-08-19** 라벨 폭 86 + ComboBox `MaxWidth=276` + 줄 최소 높이 26. **C1.8** 넓은 패널(persist 560)에서 시각 베젤 **276 DIP**. 좁은 패널에서는 남은 폭(257 DIP). XAML 추가 수정 없음 |
 | 6 | manual: **`InspectorActionPill(pickBase)`** — 스포이드 토글 + `reset` 버튼, `isActive` 시 강조, `.snappy(0.18)` 애니메이션 | **2026-08-18 이식함** — `BasePickerPill`(본문 MinHeight 31 · Padding 7,0,0,0 · 리셋 23×23 · Margin 0,0,3,0 · CornerRadius 16), 수동 모드에서만 보임 | **고침** |
 | 7 | manual: `InspectorSlider(baseRed/Green/Blue, range: 0...1, doubleClickResetValue: nil)` | 3개, `CanReset="False"` | **2026-08-18 고침** — `ConfigureRanges()` 가 macOS 와 같은 `0…1` 을 줌 (`49dab68`) |
 
@@ -244,7 +244,7 @@ macOS `FilmBaseEstimator.swift` 전량 · `FilmBaseStatistics.coherentCluster` �
 |---|---|---|
 | `strip_fallback_base` 가 채널 독립 중앙값+clamp | 걸러 낸 스트립 평균을 `coherent_measurement` 에 넘김. `brightStrips` 의 luma≥0.97 을 **집합에서도** 뺌(이전엔 밝기 기준에만 씀) | `native.manual_negative_developer` 통과. 기존 masked-strip 평균 시험 유지. 새 시험: 준클리핑 오른쪽 스트립을 빼면 (0.69, 0.49, 0.29). 네 스트립 이하에서는 macOS 도 `max(4,n/4)` 바닥 때문에 MAD 이상치를 다시 전부 씀 — 그 경로의 수치 차이는 클리핑 컷 |
 | 헤더가 `"Auto"` / 필름 이름 / `F3 / F3 / F3` / `"not set"` 영어를 지음 | `developBaseReadoutFormat` 6언어(`base %.2f %.2f %.2f` / Basis / ベース / 片基). 미리보기 `AppliedDmin` 을 `LastAppliedBase` 로 표시 | `run-app` x64 Release PID 29336. UIA `184 텍스트 base 0.22 0.13 0.07`. Shell 1072 assertions |
-| 프리셋 ComboBox stretch | 라벨 86 + `MaxWidth` 276 + 줄 최소 26 | 필름 모드에서 필름스톡·광원·프로파일 3줄. 인스펙터가 좁아 피커는 남은 폭 |
+| 프리셋 ComboBox stretch | 라벨 86 + `MaxWidth` 276 + 줄 최소 26 | **C1.8** 넓은 패널 시각 베젤 276 DIP. 좁으면 남은 폭 |
 
 **아직 남은 것**
 
@@ -252,7 +252,7 @@ macOS `FilmBaseEstimator.swift` 전량 · `FilmBaseStatistics.coherentCluster` �
 |---|---|
 | **sidecar `confidence` JSON** | **2026-08-19 이식함**(C1.6). 앱 내보내기 `OpticFilm8100_frame_1.tiff.negaflow.json` 에 `confidence=0.7291067` · `confidenceBasis=measuredEvidenceScoreV1` · `method=connectedComponent` |
 | **`frame.baseRGB` 카탈로그 영속** | **2026-08-19 이식함.** `params` 형제 `baseRGB` 세 채널. 미리보기 후 `AppliedBaseWriter`. 프레임 전환 시 카탈로그에서 복원. relink 는 키를 지움 |
-| **피커 폭 픽셀 자** | 넓은 패널에서 ComboBox 가 276 에서 멈추는지는 다시 재야 함 |
+| **피커 폭 픽셀 자** | **2026-08-19 C1.8 닫음.** 넓은 패널 시각 베젤 276 DIP. UIA 는 284(히트 8 DIP) |
 | **스포이드로 미노광 베이스를 집어 Dmin 이 바뀜** | 캔버스 클릭은 피커를 끄고 Dmin 을 유지함(장면 클릭 → 거부 경로). 리베이트가 보이는 프레임에서 성공 집기는 아직 없음 |
 
 ### C1.5 2026-08-19 — `FilmBaseMeasurementDiagnostics` 1:1
@@ -314,6 +314,30 @@ Windows `LibraryFrameSnapshot.AppliedBase` + `AppliedBaseWriter` 로 옮겼습�
 | relink | `baseRGB` 키 삭제 | `AppModel+SourceRelink` `frame.baseRGB = nil` |
 
 프리뷰 프록시 슬롯은 `light_gain` 을 키에 넣습니다. white-led 뒤 warm-led 는 슬롯 미스 + applied dmin 변경 (`native.preview_proxy_cache`).
+
+### C1.8 2026-08-19 — 넓은 인스펙터에서 필름 모드 피커 276
+
+macOS `BaseControlSection.swift:21,136-141` 은 고정 폭이 아니라 **상한 276** 입니다.
+주석 원문: 패널을 좁히면 세 컨트롤이 남은 폭을 나눠 줄어들고, 고정 폭이면 오른쪽이 잘립니다.
+
+**Windows x64 Release PID 7328**, `GetDpiForWindow=144`, persist `inspectorWidth=560`
+(패널 상한 `ShellLayoutMetrics.PanelMaximumWidth`). 현상 → 베이스 → 필름.
+
+| 측정 | 값 |
+|---|---|
+| 라벨 `FilmStockLabel` UIA | **86.00 DIP** (129 px) |
+| 세 ComboBox UIA | 426 px = **284.00 DIP** |
+| 스크린샷 베젤 스캔 | 채움이 UIA 안쪽으로 ~2/~3 px → **414 px = 276 DIP** |
+| 베이스 카드 그룹 | 532 DIP (= 560 − leading 8 − trailing 20) |
+| 피커 오른쪽 ~ 창 오른쪽 | 102 DIP (남은 칸을 채우지 않음) |
+| 이전 좁은 패널 | 386 px = **257.3 DIP** (86+12+276=374 보다 좁아서 줄어듦) |
+
+UIA 284 는 ComboBox 히트/포커스 패딩 약 8 DIP 입니다. 보이는 베젤은 276 에서 멈춥니다.
+`MaxWidth=276` + `Stretch` 가 넓은 패널에서 상한을 지킵니다. XAML 을 더 고치지 않았습니다.
+
+**Parsec macOS** `OpticFilm8100_frame_5` 현상 → 베이스 → 필름: 필름 스톡·광원·프로파일 3줄,
+선택 안 함/없음. 그 인스펙터는 374 보다 좁아 피커 시각 폭 **≈201 DIP**(줄여 쓰는 경로).
+Swift 주석과 같습니다.
 
 ### 앞 판에서 바로잡은 것
 
@@ -418,7 +442,7 @@ DevelopLookLabel         DevelopLookSelector
 
 1. **A1·A2 크래시** — 스택부터. **A3(2026-08-19) `developReset.Value` 도 닫음.**
 2. **E1 프리뷰 프록시 캐시 + 2단 렌더** — 네이티브 2슬롯+Lanczos 현상 붙임. 5088×3401 상자 1280 두 번째 **43.1 ms · decode 0**. 앱에서 노출 0→0.80 과 히스토그램 갱신 확인. **FrameCacheManager FIFO 는 10번.**
-3. **C1 필름 베이스** — C1.1~C1.7. 다음: 피커 276 자 · 리베이트 스포이드 성공 집기
+3. **C1 필름 베이스** — C1.1~C1.8. 다음: 리베이트 스포이드 성공 집기
 4. **E4 인화 프리뷰** — 현상본 쓰도록
 5. **B 메뉴막대 11개**
 6. **D1 초기화 · D5 undo**
