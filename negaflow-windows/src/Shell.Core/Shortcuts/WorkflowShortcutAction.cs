@@ -76,6 +76,7 @@ public enum WorkflowShortcutAction
     // 끝에 붙입니다. 설정 JSON 이 enum 을 숫자로 저장하므로 가운데에 끼우면 기존
     // 단축키 덮어쓰기가 다른 명령을 가리키게 됩니다.
     LoadScanner,
+    ToggleFullScreen,
 }
 
 public static class WorkflowShortcutActions
@@ -116,7 +117,8 @@ public static class WorkflowShortcutActions
         WorkflowShortcutAction.OpenLibraryWorkspace or
         WorkflowShortcutAction.OpenDevelopWorkspace or
         WorkflowShortcutAction.OpenPrintWorkspace or
-        WorkflowShortcutAction.ToggleBeforeAfter => WorkflowShortcutGroup.View,
+        WorkflowShortcutAction.ToggleBeforeAfter or
+        WorkflowShortcutAction.ToggleFullScreen => WorkflowShortcutGroup.View,
 
         WorkflowShortcutAction.DetectScanners or
         WorkflowShortcutAction.PreviewScan or
@@ -218,6 +220,14 @@ public static class WorkflowShortcutActions
         // macOS 는 command+option+L 입니다.
         WorkflowShortcutAction.LoadScanner =>
             new("l", WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Alt),
+        // macOS 는 command+control+F. Windows 에서 command 는 Control, macOS control 은
+        // Control 과 겹쳐 Alt+Shift 로 옮깁니다. command+option+F(플랫베드 프레임 추가)와
+        // 같은 키가 되지 않게 합니다.
+        WorkflowShortcutAction.ToggleFullScreen =>
+            new("f",
+                WorkflowShortcutModifiers.Control |
+                    WorkflowShortcutModifiers.Alt |
+                    WorkflowShortcutModifiers.Shift),
         _ => WorkflowShortcut.None,
     };
 

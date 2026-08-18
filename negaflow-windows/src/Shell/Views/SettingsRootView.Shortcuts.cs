@@ -318,6 +318,8 @@ public sealed partial class SettingsRootView
             AppResources.Get("shortcutShowHideFilmstrip", "Text"),
         WorkflowShortcutAction.ShowHideInspector =>
             AppResources.Get("shortcutShowHideInspector", "Text"),
+        WorkflowShortcutAction.ToggleFullScreen =>
+            AppResources.Get("commandToggleFullScreen", "Text"),
         WorkflowShortcutAction.OpenLibraryWorkspace =>
             AppResources.Get("shortcutOpenLibrary", "Text"),
         WorkflowShortcutAction.OpenDevelopWorkspace =>

@@ -348,6 +348,14 @@
     <value>編集</value>
     <comment>AppLocalizedText.menuEdit</comment>
   </data>
+  <data name="menuView.Text" xml:space="preserve">
+    <value>表示</value>
+    <comment>AppLocalizedText.menuView</comment>
+  </data>
+  <data name="commandToggleFullScreen.Text" xml:space="preserve">
+    <value>フルスクリーンにする</value>
+    <comment>AppLocalizedText.commandToggleFullScreen</comment>
+  </data>
   <data name="menuFile.Text" xml:space="preserve">
     <value>ファイル</value>
     <comment>AppLocalizedText.menuFile</comment>

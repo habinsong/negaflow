@@ -348,6 +348,14 @@
     <value>편집</value>
     <comment>AppLocalizedText.menuEdit</comment>
   </data>
+  <data name="menuView.Text" xml:space="preserve">
+    <value>보기</value>
+    <comment>AppLocalizedText.menuView</comment>
+  </data>
+  <data name="commandToggleFullScreen.Text" xml:space="preserve">
+    <value>전체 화면 시작</value>
+    <comment>AppLocalizedText.commandToggleFullScreen</comment>
+  </data>
   <data name="menuFile.Text" xml:space="preserve">
     <value>파일</value>
     <comment>AppLocalizedText.menuFile</comment>

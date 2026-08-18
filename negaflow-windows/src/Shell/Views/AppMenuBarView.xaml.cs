@@ -7,8 +7,8 @@ using Negaflow.Shell.Shortcuts;
 namespace Negaflow.Shell.Views;
 
 /// <summary>
-/// macOS <c>AppStandardMenuCommands</c> 의 앱·파일·편집 메뉴입니다. Windows 에는 시스템
-/// 앱 메뉴가 없어서 창 안 <see cref="MenuBar"/> 가 그 자리입니다.
+/// macOS <c>AppStandardMenuCommands</c> 의 앱·파일·편집·보기 메뉴입니다. Windows 에는
+/// 시스템 앱 메뉴가 없어서 창 안 <see cref="MenuBar"/> 가 그 자리입니다.
 /// </summary>
 public sealed partial class AppMenuBarView : UserControl
 {
@@ -56,6 +56,23 @@ public sealed partial class AppMenuBarView : UserControl
         SetItem(PickItem, "shortcutPickPhoto", WorkflowShortcutAction.PickPhoto);
         SetItem(RejectItem, "shortcutRejectPhoto", WorkflowShortcutAction.RejectPhoto);
         SetItem(DeletePhotoItem, "shortcutDeletePhoto", WorkflowShortcutAction.DeletePhoto);
+
+        string view = AppResources.Get("menuView", "Text");
+        ViewMenu.Title = view;
+        AutomationProperties.SetName(ViewMenu, view);
+        SetItem(ShowHideSidebarItem, "shortcutShowHideSidebar",
+            WorkflowShortcutAction.ShowHideSidebar);
+        SetItem(ShowHideFilmstripItem, "shortcutShowHideFilmstrip",
+            WorkflowShortcutAction.ShowHideFilmstrip);
+        SetItem(ShowHideInspectorItem, "shortcutShowHideInspector",
+            WorkflowShortcutAction.ShowHideInspector);
+        SetItem(ToggleFullScreenItem, "commandToggleFullScreen",
+            WorkflowShortcutAction.ToggleFullScreen);
+        SetItem(OpenLibraryItem, "shortcutOpenLibrary",
+            WorkflowShortcutAction.OpenLibraryWorkspace);
+        SetItem(OpenDevelopItem, "shortcutOpenDevelop",
+            WorkflowShortcutAction.OpenDevelopWorkspace);
+        SetItem(OpenPrintItem, "menuPrint", WorkflowShortcutAction.OpenPrintWorkspace);
     }
 
     private static void SetItem(
@@ -122,6 +139,27 @@ public sealed partial class AppMenuBarView : UserControl
 
     private void OnDeletePhotoClick(object sender, RoutedEventArgs args) =>
         RaiseCommand(sender, args, WorkflowShortcutAction.DeletePhoto);
+
+    private void OnShowHideSidebarClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.ShowHideSidebar);
+
+    private void OnShowHideFilmstripClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.ShowHideFilmstrip);
+
+    private void OnShowHideInspectorClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.ShowHideInspector);
+
+    private void OnToggleFullScreenClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.ToggleFullScreen);
+
+    private void OnOpenLibraryClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.OpenLibraryWorkspace);
+
+    private void OnOpenDevelopClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.OpenDevelopWorkspace);
+
+    private void OnOpenPrintClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.OpenPrintWorkspace);
 
     private void RaiseCommand(object sender, RoutedEventArgs args, WorkflowShortcutAction action)
     {

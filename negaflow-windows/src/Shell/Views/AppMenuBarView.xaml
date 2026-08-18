@@ -97,5 +97,43 @@
                 AutomationProperties.AutomationId="negaflow.menu.delete-photo"
                 Click="OnDeletePhotoClick" />
         </MenuBarItem>
+        <!--
+          macOS AppStandardMenuCommands after:.sidebar + after:.toolbar.
+          Windows 에는 시스템 보기 메뉴가 없어서 이 일곱 항목이 보기 메뉴 전부입니다.
+        -->
+        <MenuBarItem
+            x:Name="ViewMenu"
+            AutomationProperties.AutomationId="negaflow.menu.view"
+            Title="View">
+            <MenuFlyoutItem
+                x:Name="ShowHideSidebarItem"
+                AutomationProperties.AutomationId="negaflow.menu.sidebar"
+                Click="OnShowHideSidebarClick" />
+            <MenuFlyoutItem
+                x:Name="ShowHideFilmstripItem"
+                AutomationProperties.AutomationId="negaflow.menu.filmstrip"
+                Click="OnShowHideFilmstripClick" />
+            <MenuFlyoutItem
+                x:Name="ShowHideInspectorItem"
+                AutomationProperties.AutomationId="negaflow.menu.inspector"
+                Click="OnShowHideInspectorClick" />
+            <MenuFlyoutItem
+                x:Name="ToggleFullScreenItem"
+                AutomationProperties.AutomationId="negaflow.menu.fullscreen"
+                Click="OnToggleFullScreenClick" />
+            <MenuFlyoutSeparator />
+            <MenuFlyoutItem
+                x:Name="OpenLibraryItem"
+                AutomationProperties.AutomationId="negaflow.menu.open-library"
+                Click="OnOpenLibraryClick" />
+            <MenuFlyoutItem
+                x:Name="OpenDevelopItem"
+                AutomationProperties.AutomationId="negaflow.menu.open-develop"
+                Click="OnOpenDevelopClick" />
+            <MenuFlyoutItem
+                x:Name="OpenPrintItem"
+                AutomationProperties.AutomationId="negaflow.menu.open-print"
+                Click="OnOpenPrintClick" />
+        </MenuBarItem>
     </MenuBar>
 </UserControl>

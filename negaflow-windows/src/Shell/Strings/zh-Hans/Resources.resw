@@ -348,6 +348,14 @@
     <value>编辑</value>
     <comment>AppLocalizedText.menuEdit</comment>
   </data>
+  <data name="menuView.Text" xml:space="preserve">
+    <value>视图</value>
+    <comment>AppLocalizedText.menuView</comment>
+  </data>
+  <data name="commandToggleFullScreen.Text" xml:space="preserve">
+    <value>进入全屏幕</value>
+    <comment>AppLocalizedText.commandToggleFullScreen</comment>
+  </data>
   <data name="menuFile.Text" xml:space="preserve">
     <value>文件</value>
     <comment>AppLocalizedText.menuFile</comment>

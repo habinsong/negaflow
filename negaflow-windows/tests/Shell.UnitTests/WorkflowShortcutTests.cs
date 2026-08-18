@@ -77,6 +77,17 @@ internal static class WorkflowShortcutTests
             "workflow_shortcut_edit_menu_keys_match_mac");
 
         Check(
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.ToggleFullScreen) ==
+                new WorkflowShortcut(
+                    "f",
+                    WorkflowShortcutModifiers.Control |
+                        WorkflowShortcutModifiers.Alt |
+                        WorkflowShortcutModifiers.Shift) &&
+            WorkflowShortcutActions.Group(WorkflowShortcutAction.ToggleFullScreen) ==
+                WorkflowShortcutGroup.View,
+            "workflow_shortcut_toggle_fullscreen_matches_mac_control_remap");
+
+        Check(
             defaults.Resolve("p", WorkflowShortcutModifiers.None) ==
                 WorkflowShortcutAction.PickPhoto &&
             defaults.Resolve("x", WorkflowShortcutModifiers.None) ==

@@ -348,6 +348,14 @@ Load a scanner from Library to scan film.</value>
     <value>Edit</value>
     <comment>AppLocalizedText.menuEdit</comment>
   </data>
+  <data name="menuView.Text" xml:space="preserve">
+    <value>View</value>
+    <comment>AppLocalizedText.menuView</comment>
+  </data>
+  <data name="commandToggleFullScreen.Text" xml:space="preserve">
+    <value>Enter Full Screen</value>
+    <comment>AppLocalizedText.commandToggleFullScreen</comment>
+  </data>
   <data name="menuFile.Text" xml:space="preserve">
     <value>File</value>
     <comment>AppLocalizedText.menuFile</comment>

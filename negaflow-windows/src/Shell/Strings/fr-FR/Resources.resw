@@ -348,6 +348,14 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
     <value>Édition</value>
     <comment>AppLocalizedText.menuEdit</comment>
   </data>
+  <data name="menuView.Text" xml:space="preserve">
+    <value>Présentation</value>
+    <comment>AppLocalizedText.menuView</comment>
+  </data>
+  <data name="commandToggleFullScreen.Text" xml:space="preserve">
+    <value>Passer en plein écran</value>
+    <comment>AppLocalizedText.commandToggleFullScreen</comment>
+  </data>
   <data name="menuFile.Text" xml:space="preserve">
     <value>Fichier</value>
     <comment>AppLocalizedText.menuFile</comment>

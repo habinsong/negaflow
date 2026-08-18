@@ -344,6 +344,14 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
     <value>Bearbeiten</value>
     <comment>AppLocalizedText.menuEdit</comment>
   </data>
+  <data name="menuView.Text" xml:space="preserve">
+    <value>Darstellung</value>
+    <comment>AppLocalizedText.menuView</comment>
+  </data>
+  <data name="commandToggleFullScreen.Text" xml:space="preserve">
+    <value>Vollbildmodus aktivieren</value>
+    <comment>AppLocalizedText.commandToggleFullScreen</comment>
+  </data>
   <data name="menuDevelop.Text" xml:space="preserve">
     <value>Entwickeln</value>
     <comment>AppLocalizedText.menuDevelop</comment>

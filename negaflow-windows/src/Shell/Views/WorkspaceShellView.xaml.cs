@@ -1,4 +1,5 @@
 using Microsoft.UI.Input;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
@@ -13,6 +14,7 @@ public sealed partial class WorkspaceShellView : UserControl
 {
     private WorkspacePresentationState? workspaceState;
     private LibraryHostService? libraryHost;
+    private Microsoft.UI.WindowId? hostWindowId;
     private bool isInitialized;
 
     public WorkspaceShellView()
@@ -46,6 +48,7 @@ public sealed partial class WorkspaceShellView : UserControl
         isInitialized = true;
         workspaceState = state;
         this.libraryHost = libraryHost;
+        hostWindowId = windowId;
         if (libraryHost is not null)
         {
             libraryHost.RestoreActiveFrame(state.Current.ActiveFrameId);
@@ -214,6 +217,9 @@ public sealed partial class WorkspaceShellView : UserControl
             case WorkflowShortcutAction.ShowHideFilmstrip:
                 state.ToggleFilmstrip();
                 return true;
+            case WorkflowShortcutAction.ToggleFullScreen:
+                ToggleFullScreen();
+                return true;
             case WorkflowShortcutAction.ImportImages:
                 LibraryWorkspace.OnImportClicked(LibraryWorkspace, new RoutedEventArgs());
                 return true;
@@ -257,6 +263,20 @@ public sealed partial class WorkspaceShellView : UserControl
         // 사용자는 무엇이 일어났는지 볼 수 없습니다.
         return state.Current.SelectedWorkspace == WorkspaceModule.Library &&
             LibraryWorkspace.InvokeShortcut(action);
+    }
+
+    /// <summary>macOS <c>NSApp.keyWindow?.toggleFullScreen</c> — WinUI FullScreen presenter.</summary>
+    private void ToggleFullScreen()
+    {
+        if (hostWindowId is not { } id)
+        {
+            return;
+        }
+        AppWindow appWindow = AppWindow.GetFromWindowId(id);
+        appWindow.SetPresenter(
+            appWindow.Presenter.Kind == AppWindowPresenterKind.FullScreen
+                ? AppWindowPresenterKind.Overlapped
+                : AppWindowPresenterKind.FullScreen);
     }
 
     private void OnLibraryFrameOpenRequested(object? sender, LibraryFrameListItem item)
