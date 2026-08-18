@@ -111,3 +111,25 @@
 | GPU | "2단계 진행" | **착수 0** |
 | `DefectOverlayImage` 불투명도 | 언급 없음 | **창작 0.75** 있었음 → 제거 |
 | 프리뷰 성능 원인 | "형태학이 82%" | 그것도 맞지만 **프리뷰는 매번 디코드(2,695 ms)가 더 큼** |
+| `applySceneRanged` | "없음" | **이름만 없고 이식돼 있었음** — `scene_density_range` |
+| `FilmBaseStatistics.swift` | "없음" | **이름만 없고 이식돼 있었음** — `coherentCluster`/`median`/`percentile` 셋 다 |
+| `FilmBaseSampleGrid.swift` | "없음" | **이름만 없고 이식돼 있었음** — `SampleGrid`·`make_sample_grid` |
+| `connected_component_base` 의 `candidate_peak` 관문 | 언급 없음 | **창작이었고 죽은 코드였음.** golden 8100 에서 조건이 거짓(`0.1186 < 0.0584`), 17장 전부 통과 못 함 → 제거 후 dmin **바이트 동일** |
+
+---
+
+## 8. 이 감사 자신의 오류 — 2026-08-18
+
+**위 표 마지막 세 줄은 전부 같은 실수입니다: 파일명·함수명으로 찾아서 "없음" 으로 적은 것.**
+
+> **이름이 같다고 있는 것이 아니듯, 이름이 없다고 없는 것도 아닙니다. 함수 안을 읽어야 합니다.**
+
+**그리고 [`04-gpu-plan.md`](04-gpu-plan.md) 의 앞 판이 같은 종류였습니다.**
+"무엇을 GPU 로 옮길까" 를 **Windows CPU 파일 목록에서 역으로 추측**해 커널 이름을 지어냈습니다
+(`tone.hlsl`·`grading.hlsl` 따위). macOS 가 GPU 에서 **실제로** 돌리는 것을 세지 않았습니다.
+
+2026-08-18 다시 썼습니다: `Chromabase/Engine/ChromabaseMetalKernels.swift` 를 열어
+`[[stitchable]]` 커널 **32개**를 세었고, 같은 파일에서 `destCoord`·`.sample(` 히트가 **0** 인 것으로
+**32개 전부 화소별**임을 확인했습니다. 이웃 연산은 Apple 내장 필터
+(`CIGaussianBlur`·`CIBoxBlur`·`CIMedianFilter`·`CIAreaAverage`)가 하고 있었습니다 —
+**그것이 Windows 에서 직접 만들어야 하는 부분**입니다.

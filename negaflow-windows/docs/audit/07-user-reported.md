@@ -173,46 +173,86 @@ NEGA_DEBUG=1 negaflow-cli --auto-base-probe <source.tiff>   # 성분 목록까�
 
 | # | macOS | Windows | 판정 |
 |---|---|---|---|
-| 1 | 헤더 아이콘 `circle.lefthalf.filled` (반원 채운 원) | `FontIcon Glyph="&#xE706;"` (Segoe = 밝기) | **모양 다름.** SVG 로 그려야 함 |
+| 1 | 헤더 아이콘 `circle.lefthalf.filled` (반원 채운 원) | Segoe 글리프 `E706`(= 밝기) 이었음 | **2026-08-18 고침** — Segoe 에 같은 그림이 없어 `Viewbox`+`Ellipse`+`Path` 로 반원 채운 원을 직접 그림 |
 | 2 | 헤더 `trailing: baseReadout` — `baseReadoutFormat` 으로 R/G/B 표시 | `ManualBaseValueText` | 있음 ✓ (형식 대조 필요) |
-| 3 | **`SegmentedPicker`** — 자동/필름/수동이 **붙어 있는 한 덩어리** | `RadioButton` 3개를 `Grid` 에 나눠 놓음 | **모양 다름** |
-| 4 | `.disabled(!frame.filmType.requiresInversion)` | 코드비하인드 확인 필요 | 미확인 |
-| 5 | preset: 필름스톡 · 광원 · 프로파일 **3줄**, 각 줄이 `basePresetPickerRow`, 피커 폭 **276** | `FilmStockSelector`·`LightSourceSelector`·`ScannerProfileSelector` 3줄, 폭 stretch | 줄 구성 ✓ / **폭 다름** |
-| 6 | manual: **`InspectorActionPill(pickBase)`** — 스포이드 토글 + `reset` 버튼, `isActive` 시 강조, `.snappy(0.18)` 애니메이션 | **없음** | **통째로 없음** |
-| 7 | manual: `InspectorSlider(baseRed/Green/Blue, range: 0...1, doubleClickResetValue: nil)` | 3개, `CanReset="False"`, 범위는 엔진 한계(1e-3…1.0) | 범위 **다름** (macOS 는 `0...1`) |
+| 3 | **`SegmentedPicker`** — 자동/필름/수동이 **붙어 있는 한 덩어리** | `RadioButton` 3개가 간격 4로 떨어져 있었음 | **2026-08-18 고침** — 테두리 하나 안에 붙인 한 덩어리로. `NegaflowSegmentStyle`(라디오 글리프 제거, Checked → `NegaflowSelectionBrush`) 신설 |
+| 4 | `.disabled(!frame.filmType.requiresInversion)` — `FilmType.swift:23` 은 `colorNegative`·`bwNegative` 만 true | `DevelopBaseEditor.CanEdit` = `ColorNegative or BlackAndWhiteNegative`, `DevelopBaseCard.xaml.cs:141-144` 에서 세 모드 단추에 적용 | **일치 확인함(2026-08-18)** |
+| 5 | preset: 필름스톡 · 광원 · 프로파일 **3줄**, 각 줄이 `basePresetPickerRow`, `.frame(maxWidth: basePresetPickerWidth)` = **276** (`BaseControlSection.swift:21,140`) | `FilmStockSelector`·`LightSourceSelector`·`ScannerProfileSelector` 3줄, **폭 지정 없음 = stretch** | 줄 구성 ✓ / **폭 여전히 다름 — 미수정** |
+| 6 | manual: **`InspectorActionPill(pickBase)`** — 스포이드 토글 + `reset` 버튼, `isActive` 시 강조, `.snappy(0.18)` 애니메이션 | **2026-08-18 이식함** — `BasePickerPill`(본문 MinHeight 31 · Padding 7,0,0,0 · 리셋 23×23 · Margin 0,0,3,0 · CornerRadius 16), 수동 모드에서만 보임 | **고침** |
+| 7 | manual: `InspectorSlider(baseRed/Green/Blue, range: 0...1, doubleClickResetValue: nil)` | 3개, `CanReset="False"` | **2026-08-18 고침** — `ConfigureRanges()` 가 macOS 와 같은 `0…1` 을 줌 (`49dab68`) |
 
-### C1.3 베이스 스포이드 — **엔진·캔버스·인스펙터 전부 없음**
+### C1.3 베이스 스포이드 — **2026-08-18 이식함** (`d39e55e`)
 
-`BasePicker` · `basePickerMode` · `PickBase` · `EyeDropper` — Windows 히트 **전부 0**.
+앞 판에 *"엔진·캔버스·인스펙터 전부 없음"* 으로 적혀 있던 항목입니다. 이제 끝에서 끝까지 있습니다.
 
-macOS 가 가진 것:
+**왜 중요했나** — `FilmBasePicker.swift` 주석 원문:
 
-| macOS | 줄 | 하는 일 |
+> 평판 프리뷰는 필름 밖(투과 광원 창 바깥의 검정 띠, 빈 베드)까지 담기 때문에, 클릭이 조금만
+> 빗나가도 필름이 아닌 픽셀이 Dmin 으로 앉아 현상 결과가 통째로 검게 죽었다(실측: 검정 띠 클릭
+> → base 0.004 → 반전 전 구간 클리핑).
+
+| macOS | 줄 | Windows |
 |---|---:|---|
-| `Chromabase/Film/FilmBasePicker.swift` | **149** | 클릭 지점에서 베이스 샘플. ① 로컬 창(짧은 변 × **0.12**)에서 베이스 연결 성분 **스냅** ② 실패 시 영역(짧은 변 × **0.01**, 최소 3px) **채널 중앙값** ③ `baseReference` 로 스캔 전체 기준 **타당성 검사**(`isPlausibleBase`) |
-| `CanvasView+HUDTools.swift:99` `basePickerOverlay` | 30 | 투명 히트 사각형 + `SpatialTapGesture` → 0…1 정규(y-down). 상단에 `eyedropper` 아이콘 + `basePickerOverlayPrompt` 캡슐(`.caption.weight(.semibold)`, 가로 패딩 10 · 세로 5, `liquidSurface(cornerRadius: 8)`, 위 12). **Esc 로 해제** |
-| `CanvasView+HUDTools.swift:130` `handleBasePick` | 10 | 표시 정규 → `displayUnitToBase(unit, baseSize:)` → `model.pickFilmBase` → 스포이드 모드 해제 |
-| `BaseControlSection.swift:68` `InspectorActionPill` | — | 인스펙터의 토글 + 리셋 |
+| `Chromabase/Film/FilmBasePicker.swift` | 149 | `imaging/film_base_picker.cpp` (268) |
+| `CanvasView+HUDTools.swift:99` `basePickerOverlay` | 30 | `DevelopPreviewCanvas.xaml` `BasePickerPrompt` + `ShowBasePickerPrompt(bool)` |
+| `CanvasView+HUDTools.swift:130` `handleBasePick` | 10 | `DevelopWorkspaceView.xaml.cs` `TryHandleBasePick(args)` |
+| `BaseControlSection.swift:68` `InspectorActionPill` | — | `DevelopBaseCard.xaml` `BasePickerPill` |
+| — | — | ABI `nf_pick_film_base_v1` · Interop `FilmBasePick.Sample` |
 
-**왜 중요한가**: `FilmBasePicker` 주석 원문 —
-*"평판 프리뷰는 필름 밖(투과 광원 창 바깥의 검정 띠, 빈 베드)까지 담기 때문에, 클릭이 조금만
-빗나가도 필름이 아닌 픽셀이 Dmin 으로 앉아 현상 결과가 통째로 검게 죽었다(실측: 검정 띠 클릭
-→ base 0.004 → 반전 전 구간 클리핑)."*
+**이식한 알고리즘** (macOS 상수 그대로):
 
-**즉 수동 모드에서 사용자가 베이스를 집는 유일한 수단이 Windows 에 없고, 지금은 슬라이더
-3개를 손으로 맞추는 수밖에 없습니다.**
+| 단계 | 값 |
+|---|---|
+| 1차 스냅 | 로컬 창 = 짧은 변 × **0.12**, 최소 **48**, 잘린 창이 **32×32** 이상일 때만 → 베이스 연결 성분 |
+| 2차 폴백 | 영역 = 짧은 변 × **0.01**(최소 3px) 의 **채널 중앙값**(평균 아님 — 엣지 마킹·먼지에 끌립니다) |
+| 타당성 | `is_component_candidate` **그리고** luma ≥ 스캔 전체 기준(후보 luma p99) × **0.5** |
+| 실패 시 | **Dmin 을 바꾸지 않습니다** — 위 주석의 "검게 죽는" 자리 |
+
+**좌표계 차이 1건**: macOS 는 y 를 뒤집습니다(Core Image 는 y-up). Windows 는 y-down 이라
+뒤집지 않습니다. **이것은 창작이 아니라 좌표계가 달라서 필요한 것이고, 코드에 주석으로 적었습니다.**
+
+**공통 코드 추출**: macOS 는 추정기와 피커가 같은 모듈의 함수를 씁니다. Windows 도 같게 하려고
+`film_base_sampling.h/.cpp` 를 새로 만들어 `SampleGrid`·`percentile`·`median`·`upper_median`·
+`is_component_candidate`·`coherent_measurement`·`connected_component_base` 등을 옮겼습니다.
+**코드를 다시 쓰지 않고 그대로 잘라 옮겼고**, 실측 코퍼스 17장의 dmin 이
+**리팩터 전후 바이트까지 동일**한 것으로 확인했습니다. `auto_negative_base_resolver.cpp` 908 → **546줄**.
+
+**시험**: `native.film_base_picker` **7개** — 띠 채택 · 빗나간 클릭 스냅 · **검정 띠 거절** ·
+장면 거절 · 잘못된 입력 · 중립 베이스 · 상태 이름.
+
+**문자열**: macOS 원문 그대로 6개 언어(`developPickBase.Text`, `developPickBaseHelp.Value`,
+`developBasePickerPrompt.Text`, `developBasePickNotFilmBase.Text`, `developBasePickFailed.Text`).
+
+**아직 확인 못 한 것: 앱 화면에서 실제로 집어 본 적이 없습니다.** 시험 통과 ≠ 앱 동작입니다.
 
 ### 남은 것 (아직 대조 안 함)
 
-`non_film_exclusion` · `brightest_coherent_mode` · `continuous_border_base` ·
-`distributed_base` · `strip_fallback_base` 다섯 함수는 이번에 **대조하지 않았습니다.**
-17장 전부 연결 성분 단계에서 끝나 이 경로가 돌지 않았기 때문입니다 — 그러나 다른 스캔에서는
-돕니다. macOS `nonFilmExclusion` · `brightestCoherentMode` · `sampleBrightOrangeBase` ·
-`sampleDistributedOrangeBase` · `borderFallback` 과 대조해야 합니다.
+| 항목 | 내용 |
+|---|---|
+| **자동 경로 5함수** | `non_film_exclusion` · `brightest_coherent_mode` · `continuous_border_base` · `distributed_base` · `strip_fallback_base` 를 macOS `nonFilmExclusion` · `brightestCoherentMode` · `sampleBrightOrangeBase` · `sampleDistributedOrangeBase` · `borderFallback` 과 대조해야 합니다. **17장이 전부 연결 성분에서 끝나 이 경로가 돌지 않았기 때문에** 못 댔습니다 — 다른 스캔에서는 돕니다 |
+| **`FilmBaseMeasurementDiagnostics`** | **186줄, 통째로 없음**(2026-08-18 재확인). `Method` 4종(`connectedComponent`/`continuousBorder`/`distributedMask`/`stripFallback`) + `Anomaly` **8종**(`fallbackEstimate`·`lowSampleSupport`·`sparseSampleCoverage`·`limitedSpatialCoverage`·`unstableLuma`·`inconsistentChannels`·`clippedSamples`·`heavyOutlierRejection`) + `EvidenceComponents` + `FilmBaseMeasurementBuilder`. 이름이 아니라 개념(`evidence`/`anomal`/`confidence`)으로 훑어도 **히트 0** |
+| **프리셋 피커 폭** | C1.2 5번 — macOS **276**, Windows stretch |
+| **헤더 `baseReadout` 형식** | C1.2 2번 — `baseReadoutFormat` 과 문자열 대조 안 함 |
 
-또한 **`FilmBasePicker.swift`(149줄, 수동 스포이드)** 는 Windows 히트 0 이고,
-**`FilmBaseMeasurementDiagnostics`(186줄, 증거 점수·이상 징후 8종)** 도 없습니다.
-수동 모드에서 캔버스 스포이드로 베이스를 집는 경로를 확인해야 합니다.
+### 앞 판에서 바로잡은 것
+
+| 앞 판 서술 | 실제 |
+|---|---|
+| `Film/FilmBaseStatistics.swift` **없음** | **이름만 없고 이식돼 있었음** — `coherentCluster`/`median`/`percentile` 셋 다 있음 |
+| `Film/FilmBaseSampleGrid.swift` **없음** | **이름만 없고 이식돼 있었음** — `SampleGrid`·`make_sample_grid` |
+
+**둘 다 파일명으로 찾아 "없음" 으로 적은 것입니다.** `applySceneRanged` 때와 같은 실수입니다 —
+**이름이 같다고 있는 것이 아니듯, 이름이 없다고 없는 것도 아닙니다. 함수 안을 읽어야 합니다.**
+
+### 계측기
+
+```bash
+negaflow-cli --auto-base-probe <source.tiff> [color|bw]
+```
+
+```bash
+NEGA_DEBUG=1 negaflow-cli --auto-base-probe <source.tiff>
+```
 
 ---
 
@@ -296,7 +336,7 @@ DevelopLookLabel         DevelopLookSelector
 ## G. 다음 순서 (사용자 요구 반영)
 
 1. **A1·A2 크래시** — 스택부터
-2. **E1 프리뷰 프록시 캐시 + 2단 렌더** — 슬라이더당 −2,695 ms ([`04`](04-gpu-plan.md) 3.0)
+2. **E1 프리뷰 프록시 캐시 + 2단 렌더** — 슬라이더당 −2,695 ms ([`04`](04-gpu-plan.md) 6.1)
 3. **C1 필름 베이스** — 검은 이미지. macOS 4파일 대조
 4. **E4 인화 프리뷰** — 현상본 쓰도록
 5. **B 메뉴막대 11개**

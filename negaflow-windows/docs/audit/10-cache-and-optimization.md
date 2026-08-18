@@ -167,7 +167,7 @@ macOS `MemoryCacheSettingsSection.swift`(111줄)가 내는 것:
 |---|---|
 | 1 | `FrameCacheBudget` · `FrameCachePolicy` · `FrameCacheManager`(FIFO) · `FrameCacheResidencyStore` **474줄 이식** — 위 상수 그대로 |
 | 2 | Windows 메모리 압력 감시 — `DispatchSource` 대응은 `CreateMemoryResourceNotification` 또는 `QueryMemoryResourceNotification` |
-| 3 | 캐시에 담을 **cleaned raw** 와 **developed(정착 프록시 포함)** 버퍼를 실제로 만들 것 ([`04`](04-gpu-plan.md) 3.0) |
+| 3 | 캐시에 담을 **cleaned raw** 와 **developed(정착 프록시 포함)** 버퍼를 실제로 만들 것 ([`04`](04-gpu-plan.md) 6.1) |
 | 4 | 설정 → 메모리 캐시 섹션(111줄) — 자동/수동 · 슬라이더 2 · 되돌리기 · 도움말 3줄 |
 | 5 | 개발자 모드가 켤 화면 만들기(`DevelopDebugFrame` 포함) |
 | 6 | 캔버스 **우클릭** 배경색 메뉴 + HUD 대비색 연동 |
