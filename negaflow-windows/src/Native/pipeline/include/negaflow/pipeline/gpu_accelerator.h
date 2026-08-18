@@ -93,6 +93,31 @@ public:
         const float* dmax_normalized,
         const float* response) noexcept;
 
+    // 디지털 필름 룩의 재료 커널 둘입니다. 필름 스캔이 아니라 **디지털 원본** 경로에서만
+    // 돕니다 — 스캔본에는 이미 유제를 통과한 신호가 있어 같은 물리를 두 번 얹지 않습니다.
+    //
+    // ☠️ 둘 다 **근사**입니다. 호출부(`imaging/digital_halation.cpp`·`digital_film_grain.cpp`)가
+    //    `ApproximateAcceleratorScope` 안에서만 부릅니다.
+    //    `amplitude` 는 **이미 세기가 곱해진** 값입니다 — 여기서 다시 곱하지 마십시오.
+    [[nodiscard]] bool apply_digital_halation(
+        float* pixels,
+        std::uint32_t width,
+        std::uint32_t height,
+        std::uint32_t stride_pixels,
+        const double* scatter_strength,
+        const double* halation_strength,
+        double radius_ratio,
+        double strength) noexcept;
+
+    [[nodiscard]] bool apply_digital_film_grain(
+        float* pixels,
+        std::uint32_t width,
+        std::uint32_t height,
+        std::uint32_t stride_pixels,
+        float amplitude,
+        float chroma_ratio,
+        float size) noexcept;
+
     [[nodiscard]] bool apply_morphology_plane(
         const float* source,
         float* destination,

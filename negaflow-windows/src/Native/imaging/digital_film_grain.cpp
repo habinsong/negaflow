@@ -1,5 +1,7 @@
 #include "negaflow/imaging/digital_film_grain.h"
 
+#include "negaflow/imaging/kernel_accelerator.h"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -134,6 +136,33 @@ DigitalFilmGrainResult apply_digital_film_grain_material(
     }
     const double amplitude = profile.amplitude * bounded_strength;
     const float chroma = static_cast<float>(profile.chroma_ratio);
+    // ☠️ **근사입니다**(밀도 응답이 `log10`·`sqrt`·`exp`·`pow`). 좌표 해시 자체는
+    //    uint32 라 GPU 와 비트 단위로 같고, 사슬 전체 실측 오차는 4.2e-07 입니다.
+    //    `ApproximateAcceleratorScope` 안에서만 돕니다 — 내보내기·골든은 CPU 그대로입니다.
+    if (approximate_acceleration_allowed()) {
+        if (const KernelAccelerator* const table = kernel_accelerator();
+            table != nullptr && table->digital_film_grain != nullptr) {
+            if (table->digital_film_grain(
+                    reinterpret_cast<float*>(result.image.pixels.data()),
+                    result.image.width,
+                    result.image.height,
+                    result.image.stride_pixels,
+                    static_cast<float>(amplitude),
+                    chroma,
+                    static_cast<float>(profile.size))) {
+                result.info.kernel_status =
+                    negaflow::core::validate_finite_pixels(const_view(result.image));
+                if (result.info.kernel_status != negaflow::core::KernelStatus::ok) {
+                    result.status = DigitalFilmGrainStatus::kernel_failed;
+                    discard_pixels(result.image);
+                    return result;
+                }
+                result.info.applied = true;
+                result.status = DigitalFilmGrainStatus::ok;
+                return result;
+            }
+        }
+    }
     for (std::uint32_t y = 0U; y < result.image.height; ++y) {
         for (std::uint32_t x = 0U; x < result.image.width; ++x) {
             auto& pixel = result.image.pixels[

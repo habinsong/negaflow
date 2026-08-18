@@ -70,6 +70,22 @@ using NegativeInversionFunction = bool (*)(
     const float* dmax_normalized,
     const float* response) noexcept;
 
+// 밀도 의존 그레인입니다. CPU 판(`imaging/digital_film_grain.cpp`
+// `apply_digital_film_grain_material`)과 같은 셈이어야 합니다. `pixels` 는
+// `stride_pixels * height` 개의 RGBA float 이고 제자리에서 바뀝니다.
+// `amplitude` 는 **이미 세기가 곱해진** 값이고, CPU 가 화소 루프 밖에서 만드는 것과 같습니다.
+//
+// ☠️ **근사한 것입니다.** 밀도 응답이 `log10`·`sqrt`·`exp`·`pow` 라 CPU 와 마지막 비트가
+//    다를 수 있습니다(실측 4.2e-07). 좌표 해시 자체는 uint32 라 **비트 단위로 같습니다.**
+using DigitalFilmGrainFunction = bool (*)(
+    float* pixels,
+    std::uint32_t width,
+    std::uint32_t height,
+    std::uint32_t stride_pixels,
+    float amplitude,
+    float chroma_ratio,
+    float size) noexcept;
+
 struct KernelAccelerator final {
     // ── 정확한 것 (언제나 켭니다) ────────────────────────────────────────────
     MorphologyPlaneFunction opening{nullptr};
@@ -79,6 +95,7 @@ struct KernelAccelerator final {
     // ── 근사한 것 (`ApproximateAcceleratorScope` 안에서만) ────────────────────
     DigitalHalationFunction digital_halation{nullptr};
     NegativeInversionFunction negative_inversion{nullptr};
+    DigitalFilmGrainFunction digital_film_grain{nullptr};
 };
 
 // 프로세스 시작에 한 번 설치합니다. `nullptr` 을 주면 해제합니다.

@@ -1,5 +1,7 @@
 #include "negaflow/imaging/digital_halation.h"
 
+#include "negaflow/imaging/kernel_accelerator.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -224,6 +226,29 @@ DigitalHalationResult apply_digital_halation_material(
         material.radius_ratio <= 0.0) {
         result.status = DigitalHalationStatus::ok;
         return result;
+    }
+
+    // ☠️ **근사입니다**(가우시안 가중치의 곱셈·합). 실측 오차는 delta 0 이지만 그것은
+    //    이 가우시안이 직접 컨볼루션이라 러닝 섬의 누적 이력이 없기 때문이고, 산술 자체는
+    //    근사 분류입니다. `ApproximateAcceleratorScope` 안에서만 돕니다.
+    if (approximate_acceleration_allowed()) {
+        if (const KernelAccelerator* const table = kernel_accelerator();
+            table != nullptr && table->digital_halation != nullptr) {
+            if (table->digital_halation(
+                    reinterpret_cast<float*>(result.image.pixels.data()),
+                    result.image.width,
+                    result.image.height,
+                    result.image.stride_pixels,
+                    material.scatter_strength.data(),
+                    material.halation_strength.data(),
+                    material.radius_ratio,
+                    strength)) {
+                result.info.applied = true;
+                result.info.kernel_status = negaflow::core::KernelStatus::ok;
+                result.status = DigitalHalationStatus::ok;
+                return result;
+            }
+        }
     }
 
     try {

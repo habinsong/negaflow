@@ -37,8 +37,12 @@ namespace {
 
 int usage() {
     std::cerr << "usage: negaflow-cli --develop-timing <source> "
-                 "[<dmin-r> <dmin-g> <dmin-b>] [repeats]\n"
-                 "  NEGA_GPU=0 으로 CPU 만, 기본은 GPU 허용입니다.\n";
+                 "[<dmin-r> <dmin-g> <dmin-b>] [repeats] [nocurve] [filmlook]\n"
+                 "  NEGA_GPU=0 으로 CPU 만, 기본은 GPU 허용입니다.\n"
+                 "  filmlook — 디지털 원본 필름 룩(헐레이션·색 큐브·아큐턴스·색 "
+                 "프리셋·그레인)까지 켭니다.\n"
+                 "             필름 스캔 경로는 이 사슬을 지나지 않으므로, 그 다섯 "
+                 "단계를 재려면 이것이 있어야 합니다.\n";
     return 2;
 }
 
@@ -67,12 +71,25 @@ int run_develop_timing(const int argument_count, const wchar_t* const arguments[
     }
 
     int repeats = 1;
-    if (argument_count >= 7 && std::wstring_view{arguments[6]} != L"nocurve") {
+    if (argument_count >= 7 && std::wstring_view{arguments[6]} != L"nocurve" &&
+        std::wstring_view{arguments[6]} != L"filmlook") {
         float parsed = 0.0F;
         if (!parse_float(arguments[6], parsed) || parsed < 1.0F || parsed > 20.0F) {
             return usage();
         }
         repeats = static_cast<int>(parsed);
+    }
+    // dmin 셋을 안 줄 때도 회차를 정할 수 있어야 합니다 — 자동 베이스로 재는 것이
+    // 사용자가 실제로 쓰는 경로입니다. `xN` 은 자리와 무관하게 읽습니다.
+    for (int index = 2; index < argument_count; ++index) {
+        const std::wstring_view token{arguments[index]};
+        if (token.size() >= 2U && token.front() == L'x') {
+            float parsed = 0.0F;
+            if (!parse_float(token.substr(1U), parsed) || parsed < 1.0F || parsed > 20.0F) {
+                return usage();
+            }
+            repeats = static_cast<int>(parsed);
+        }
     }
 
     // 슬라이더를 실제로 민 것과 같게 톤을 켭니다. 전부 0 이면 단계가 통째로 건너뛰어져
@@ -95,6 +112,24 @@ int run_develop_timing(const int argument_count, const wchar_t* const arguments[
     if (curve) {
         request.tone.curve.lights = 0.15F;
         request.tone.curve.darks = -0.15F;
+    }
+
+    // ☠️ 디지털 필름 룩은 **필름 스캔 경로가 지나지 않습니다**(`working_film_look.cpp`).
+    //    스캔본에는 이미 유제를 통과한 신호가 들어 있어 같은 물리를 두 번 얹지 않기
+    //    때문입니다. 그래서 헐레이션·그레인을 재려면 원본 종류를 바꿔야 하고,
+    //    그렇게 재야 **실제로 도는 자리**와 같은 것을 재는 것입니다.
+    for (int index = 2; index < argument_count; ++index) {
+        if (std::wstring_view{arguments[index]} == L"filmlook") {
+            request.film_look.source_kind =
+                negaflow::imaging::DevelopSourceKind::rendered_digital;
+            request.film_look.emulation = negaflow::imaging::FilmEmulation::portra_400;
+            request.film_look.intensity = 0.8;
+            // 디지털 원본은 반전 단계를 지나지 않습니다 —
+            // `validate.cpp:66` 이 네거티브 극성과 디지털 원본의 조합을 거부합니다.
+            request.film_polarity = pipeline::FilmPolarity::positive;
+            request.base_estimation_mode =
+                pipeline::NegativeBaseEstimationMode::auto_estimate;
+        }
     }
 
     // macOS 정착 프리뷰와 같은 한 변입니다(`fullMaxDimension`).
