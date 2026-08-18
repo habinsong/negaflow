@@ -56,6 +56,35 @@ private:
     GpuPointwiseKernel kernel_{};
 };
 
+// `imaging::PrimaryCalibrationParameters` 와 같은 값입니다. 원색 3개의 색상/채도.
+// 믹서와 달리 **광도 조정이 없습니다.**
+struct GpuPrimaryCalibrationParameters final {
+    float red_hue{0.0F};
+    float red_saturation{0.0F};
+    float green_hue{0.0F};
+    float green_saturation{0.0F};
+    float blue_hue{0.0F};
+    float blue_saturation{0.0F};
+};
+
+class GpuPrimaryCalibration final {
+public:
+    [[nodiscard]] static GpuKernelStatus create(
+        const GpuDevice& device,
+        GpuPrimaryCalibration& kernel) noexcept;
+
+    [[nodiscard]] GpuKernelStatus dispatch(
+        const GpuDevice& device,
+        const GpuWorkingImage& source,
+        GpuWorkingImage& destination,
+        const GpuPrimaryCalibrationParameters& parameters) const noexcept;
+
+    [[nodiscard]] bool is_valid() const noexcept { return kernel_.is_valid(); }
+
+private:
+    GpuPointwiseKernel kernel_{};
+};
+
 class GpuColorGrade final {
 public:
     [[nodiscard]] static GpuKernelStatus create(

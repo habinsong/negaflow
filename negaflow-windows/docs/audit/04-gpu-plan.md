@@ -65,6 +65,8 @@
 > | `basicTone` CPU/GPU 최대 오차 | WARP **1.8e-07~6.0e-07** · NVIDIA **3.6e-07~7.7e-07** (허용 1e-5) |
 > | `parametricToneCurve` | WARP **6.0e-08~1.2e-07** · NVIDIA **2.4e-07** |
 > | `colorGrade` | WARP **0~1.8e-07** · NVIDIA **6.0e-08~2.4e-07** |
+> | `colorMixerHSL` | WARP **0~6.0e-08** · NVIDIA **0~1.3e-06** |
+> | `calibrationPrimaries` | WARP **전부 0** · NVIDIA **0~1.4e-06** |
 > | 매개변수 조합 | 11개 — 양수/음수 대비, 임계 미만, clamp, 각 마스크 |
 > | 새 시험 | `native.gpu_device` · `native.gpu_working_image` · `native.gpu_basic_tone` 전부 통과 |
 >

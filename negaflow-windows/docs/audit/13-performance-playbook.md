@@ -336,3 +336,29 @@ macOS `DevelopToneRange.whites/blacks` 는 `-2...2` 입니다.
 **GPU 커널은 CPU 를 따르게 뒀습니다** — GPU 만 고치면 CPU/GPU 동치 시험이 무의미해집니다.
 **어느 쪽을 맞출지는 별건이고, 고칠 때 CPU·GPU 를 같이 고쳐야 합니다.**
 UI 슬라이더가 ±2 를 넘길 수 있는지 확인한 뒤 판단하십시오.
+
+---
+
+## 12. 이식이 잡아낸 CPU/GPU 의미 차이 — "변화 없음" 은 복사입니다
+
+`colorMixerHSL` 을 옮기다 동치 시험이 잡은 것입니다. **셰이더 수식은 맞았는데 결과가 갈렸습니다.**
+
+CPU 커널들은 매개변수가 하나도 안 움직였으면 **커널을 돌리지 않고 원본을 그대로 내보냅니다**:
+
+```cpp
+// imaging/color_mixer.cpp:227
+if (!has_color_mixer_change(parameters)) {
+    negaflow::core::copy_validated_rows(input, output);
+    return negaflow::core::KernelStatus::ok;
+}
+```
+
+GPU 가 그 경우에도 커널을 돌리면 HSL 왕복이 `clamp(rgb, 0, 1)` 을 지나며 **[0,1] 밖 값을 잘라 냅니다.**
+작업 이미지는 그 범위 밖 값을 **일부러** 남기므로(하이라이트 여유·포화색) 실제로 갈립니다 —
+**실측 최대 delta 0.1.**
+
+**규칙: 커널을 옮길 때 수식만 보지 말고 그 앞의 조기 반환도 같이 옮기십시오.**
+지금까지 확인한 조기 반환 — `apply_color_mixer:227` · `apply_primary_calibration` ·
+`apply_color_grading`. `GpuWorkingImage::copy_from`(`CopyResource`)가 그 자리를 맡습니다.
+
+**아직 안 본 것: 나머지 커널의 조기 반환.** 옮길 때마다 확인하십시오.

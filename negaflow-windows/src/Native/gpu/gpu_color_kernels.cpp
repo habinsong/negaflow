@@ -9,6 +9,7 @@
 #include "negaflow/gpu/gpu_working_image.h"
 #include "negaflow/gpu/shaders/color_grade_ColorGradeMain.h"
 #include "negaflow/gpu/shaders/color_mixer_ColorMixerMain.h"
+#include "negaflow/gpu/shaders/primary_calibration_PrimaryCalibrationMain.h"
 
 namespace negaflow::gpu {
 namespace {
@@ -76,7 +77,72 @@ constexpr float mixer_identity_epsilon = 1.0e-4F;
     return true;
 }
 
+// HLSL `cbuffer PrimaryCalibrationConstants` 와 같은 배치여야 합니다.
+struct alignas(16) PrimaryCalibrationConstants final {
+    GpuPointwiseExtent extent{};
+    float hue[3][4]{};
+    float saturation[3][4]{};
+};
+
+static_assert(sizeof(PrimaryCalibrationConstants) == 112U, "extent + two 3-element float4 arrays");
+
+// `imaging/primary_calibration.cpp` 의 `identity_epsilon` 과 같은 값이어야 합니다.
+constexpr float primary_identity_epsilon = 1.0e-4F;
+
+[[nodiscard]] bool primary_values_finite(
+    const GpuPrimaryCalibrationParameters& parameters) noexcept {
+    return std::isfinite(parameters.red_hue) && std::isfinite(parameters.red_saturation) &&
+        std::isfinite(parameters.green_hue) && std::isfinite(parameters.green_saturation) &&
+        std::isfinite(parameters.blue_hue) && std::isfinite(parameters.blue_saturation);
+}
+
+// CPU 판 `has_primary_calibration_change` 와 같은 판정입니다.
+[[nodiscard]] bool primary_changes(const GpuPrimaryCalibrationParameters& parameters) noexcept {
+    return std::abs(parameters.red_hue) >= primary_identity_epsilon ||
+        std::abs(parameters.red_saturation) >= primary_identity_epsilon ||
+        std::abs(parameters.green_hue) >= primary_identity_epsilon ||
+        std::abs(parameters.green_saturation) >= primary_identity_epsilon ||
+        std::abs(parameters.blue_hue) >= primary_identity_epsilon ||
+        std::abs(parameters.blue_saturation) >= primary_identity_epsilon;
+}
+
 }  // namespace
+
+GpuKernelStatus GpuPrimaryCalibration::create(
+    const GpuDevice& device,
+    GpuPrimaryCalibration& kernel) noexcept {
+    return GpuPointwiseKernel::create(
+        device,
+        negaflow_primary_calibration_cs,
+        sizeof(negaflow_primary_calibration_cs),
+        sizeof(PrimaryCalibrationConstants),
+        kernel.kernel_);
+}
+
+GpuKernelStatus GpuPrimaryCalibration::dispatch(
+    const GpuDevice& device,
+    const GpuWorkingImage& source,
+    GpuWorkingImage& destination,
+    const GpuPrimaryCalibrationParameters& parameters) const noexcept {
+    if (!primary_values_finite(parameters)) {
+        return GpuKernelStatus::non_finite_parameter;
+    }
+    if (!primary_changes(parameters)) {
+        // CPU 판과 같은 자리에서 원본을 그대로 내보냅니다 — 커널을 돌리면 HSL 왕복이
+        // [0,1] 밖 값을 클램프해 CPU 와 갈립니다.
+        const GpuImageStatus copied = destination.copy_from(device, source);
+        return copied == GpuImageStatus::ok ? GpuKernelStatus::ok
+                                            : GpuKernelStatus::invalid_arguments;
+    }
+    PrimaryCalibrationConstants payload{};
+    payload.hue[0][0] = parameters.red_hue;
+    payload.hue[1][0] = parameters.green_hue;
+    payload.hue[2][0] = parameters.blue_hue;
+    payload.saturation[0][0] = parameters.red_saturation;
+    payload.saturation[1][0] = parameters.green_saturation;
+    payload.saturation[2][0] = parameters.blue_saturation;
+    return kernel_.dispatch(device, source, destination, &payload, sizeof(payload));
+}
 
 GpuKernelStatus GpuColorMixer::create(const GpuDevice& device, GpuColorMixer& kernel) noexcept {
     return GpuPointwiseKernel::create(

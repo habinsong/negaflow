@@ -21,6 +21,7 @@
 #include "negaflow/gpu/gpu_working_image.h"
 #include "negaflow/imaging/color_grading.h"
 #include "negaflow/imaging/color_mixer.h"
+#include "negaflow/imaging/primary_calibration.h"
 
 namespace {
 
@@ -259,6 +260,91 @@ void mixer_matches_cpu(const GpuDevice& device, const char* const label) {
         "NaN mixer band is rejected");
 }
 
+// 원색 보정 — macOS `calibrationPrimaries`. 믹서와 모양은 같지만 상수가 다르고 광도가 없습니다.
+struct PrimaryCase final {
+    const char* name;
+    negaflow::imaging::PrimaryCalibrationParameters parameters;
+};
+
+const PrimaryCase primary_cases[] = {
+    {"primary_neutral", {}},
+    {"primary_red_hue", {0.9F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F}},
+    {"primary_red_sat", {0.0F, 0.8F, 0.0F, 0.0F, 0.0F, 0.0F}},
+    {"primary_green", {0.0F, 0.0F, -0.7F, 0.5F, 0.0F, 0.0F}},
+    {"primary_blue", {0.0F, 0.0F, 0.0F, 0.0F, 0.6F, -0.9F}},
+    {"primary_all", {0.4F, -0.3F, -0.5F, 0.35F, 0.25F, 0.45F}},
+};
+
+void primary_matches_cpu(const GpuDevice& device, const char* const label) {
+    negaflow::gpu::GpuPrimaryCalibration kernel{};
+    if (negaflow::gpu::GpuPrimaryCalibration::create(device, kernel) != GpuKernelStatus::ok) {
+        expect(false, "primary kernel must be creatable");
+        return;
+    }
+
+    const std::vector<Rgba32F> source = make_ramp();
+    GpuWorkingImage input{};
+    if (GpuWorkingImage::upload(device, source.data(), width, height, width, input) !=
+        GpuImageStatus::ok) {
+        expect(false, "primary source upload must succeed");
+        return;
+    }
+    GpuWorkingImage output{};
+    if (GpuWorkingImage::create(device, width, height, output) != GpuImageStatus::ok) {
+        expect(false, "primary destination must be creatable");
+        return;
+    }
+
+    for (const PrimaryCase& scenario : primary_cases) {
+        const negaflow::gpu::GpuPrimaryCalibrationParameters gpu_parameters{
+            scenario.parameters.red_hue,
+            scenario.parameters.red_saturation,
+            scenario.parameters.green_hue,
+            scenario.parameters.green_saturation,
+            scenario.parameters.blue_hue,
+            scenario.parameters.blue_saturation};
+
+        if (kernel.dispatch(device, input, output, gpu_parameters) != GpuKernelStatus::ok) {
+            expect(false, "primary dispatch must succeed");
+            continue;
+        }
+        std::vector<Rgba32F> gpu_pixels(source.size());
+        if (output.download(device, gpu_pixels.data(), width) != GpuImageStatus::ok) {
+            expect(false, "primary download must succeed");
+            continue;
+        }
+
+        std::vector<Rgba32F> cpu_pixels(source.size());
+        const negaflow::core::ConstImageView view{
+            source.data(), source.size(), width, height, width};
+        const negaflow::core::ImageView out{
+            cpu_pixels.data(), cpu_pixels.size(), width, height, width};
+        (void)negaflow::imaging::apply_primary_calibration(view, out, scenario.parameters);
+
+        float worst = 0.0F;
+        for (std::size_t index = 0U; index < cpu_pixels.size(); ++index) {
+            worst = std::max(worst, std::abs(cpu_pixels[index].red - gpu_pixels[index].red));
+            worst = std::max(worst, std::abs(cpu_pixels[index].green - gpu_pixels[index].green));
+            worst = std::max(worst, std::abs(cpu_pixels[index].blue - gpu_pixels[index].blue));
+            worst = std::max(worst, std::abs(cpu_pixels[index].alpha - gpu_pixels[index].alpha));
+        }
+        if (worst > tolerance) {
+            std::cerr << "FAIL: " << label << ' ' << scenario.name << " max delta " << worst
+                      << '\n';
+            ++failures;
+        } else {
+            std::cout << "[gpu] " << label << ' ' << scenario.name << " max delta " << worst
+                      << '\n';
+        }
+    }
+
+    negaflow::gpu::GpuPrimaryCalibrationParameters bad{};
+    bad.green_hue = std::numeric_limits<float>::quiet_NaN();
+    expect(
+        kernel.dispatch(device, input, output, bad) == GpuKernelStatus::non_finite_parameter,
+        "NaN primary control is rejected");
+}
+
 }  // namespace
 
 int main() {
@@ -269,12 +355,14 @@ int main() {
     }
     grade_matches_cpu(warp, "warp");
     mixer_matches_cpu(warp, "warp");
+    primary_matches_cpu(warp, "warp");
 
     const GpuDevice hardware = GpuDevice::create(GpuDevicePreference::hardware_only);
     if (hardware.is_usable()) {
         std::cout << "[gpu] hardware: " << hardware.capability().adapter.description.data() << '\n';
         grade_matches_cpu(hardware, "hardware");
         mixer_matches_cpu(hardware, "hardware");
+        primary_matches_cpu(hardware, "hardware");
     } else {
         std::cout << "[gpu] hardware absent, WARP only\n";
     }
