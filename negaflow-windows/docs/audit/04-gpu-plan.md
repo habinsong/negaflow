@@ -52,8 +52,9 @@
 > |---|---|
 > | `gpu/gpu_device.*` | D3D11 장치·컨텍스트 하나. FL 11_0 하한, WARP 폴백, **벤더 ID 로 거르지 않음** |
 > | `gpu/gpu_working_image.*` | `R32G32B32A32_FLOAT` 텍스처 + SRV/UAV, 업로드·다운로드, `GpuStagingRing`(더블 버퍼) |
-> | `gpu/shaders/basic_tone.hlsl` | macOS `basicTone`(1.3절 5번) 이식 |
-> | `gpu/gpu_basic_tone.*` | 셰이더·상수 버퍼 보관 + 디스패치 |
+> | `gpu/shaders/*.hlsl` | `basic_tone` · `parametric_tone_curve` · `color_grade` + 공용 `tone_shared.hlsli` |
+> | `gpu/gpu_pointwise.*` | 화소별 커널 32개가 공유하는 골격 — 바인딩·디스패치·상수 |
+> | `gpu/gpu_tone_kernels.*` · `gpu_color_kernels.*` | `basicTone` · `parametricToneCurve` · `colorGrade` |
 > | `cmake/CompileShaders.cmake` | `fxc` 로 빌드 시 컴파일해 헤더 임베드 |
 >
 > **실측** — 이 기계 RTX 4060 Ti, **FL 11_1**, VRAM 7949MB. Parsec 가상 어댑터는 규칙대로 걸러짐.
@@ -62,6 +63,8 @@
 > |---|---|
 > | 텍스처 왕복 | WARP·NVIDIA 양쪽 **비트 단위 일치**. 행 여백 미오염 |
 > | `basicTone` CPU/GPU 최대 오차 | WARP **1.8e-07~6.0e-07** · NVIDIA **3.6e-07~7.7e-07** (허용 1e-5) |
+> | `parametricToneCurve` | WARP **6.0e-08~1.2e-07** · NVIDIA **2.4e-07** |
+> | `colorGrade` | WARP **0~1.8e-07** · NVIDIA **6.0e-08~2.4e-07** |
 > | 매개변수 조합 | 11개 — 양수/음수 대비, 임계 미만, clamp, 각 마스크 |
 > | 새 시험 | `native.gpu_device` · `native.gpu_working_image` · `native.gpu_basic_tone` 전부 통과 |
 >

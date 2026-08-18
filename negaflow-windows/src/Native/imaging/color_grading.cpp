@@ -204,6 +204,27 @@ struct PreparedRegion final {
 
 }  // namespace
 
+ColorGradingSetup prepare_color_grading(
+    const ColorGradingParameters& parameters) noexcept {
+    const PreparedRegion shadows = prepare_region(parameters.shadows);
+    const PreparedRegion midtones = prepare_region(parameters.midtones);
+    const PreparedRegion highlights = prepare_region(parameters.highlights);
+    ColorGradingSetup setup{};
+    setup.shadow_offset[0] = shadows.offset.red;
+    setup.shadow_offset[1] = shadows.offset.green;
+    setup.shadow_offset[2] = shadows.offset.blue;
+    setup.midtone_offset[0] = midtones.offset.red;
+    setup.midtone_offset[1] = midtones.offset.green;
+    setup.midtone_offset[2] = midtones.offset.blue;
+    setup.highlight_offset[0] = highlights.offset.red;
+    setup.highlight_offset[1] = highlights.offset.green;
+    setup.highlight_offset[2] = highlights.offset.blue;
+    setup.pivot = std::clamp(0.5F + (parameters.balance * 0.30F), 0.15F, 0.85F);
+    setup.width =
+        (0.10F * (1.0F - parameters.blending)) + (0.50F * parameters.blending);
+    return setup;
+}
+
 bool has_color_grading_change(
     const ColorGradingParameters& parameters) noexcept {
     return region_has_change(parameters.shadows) ||
@@ -241,16 +262,16 @@ negaflow::core::KernelStatus apply_color_grading(
         return negaflow::core::KernelStatus::ok;
     }
 
-    const PreparedRegion shadows = prepare_region(parameters.shadows);
-    const PreparedRegion midtones = prepare_region(parameters.midtones);
-    const PreparedRegion highlights = prepare_region(parameters.highlights);
-    const float pivot = std::clamp(
-        0.5F + (parameters.balance * 0.30F),
-        0.15F,
-        0.85F);
-    const float width =
-        (0.10F * (1.0F - parameters.blending)) +
-        (0.50F * parameters.blending);
+    // 준비 계산은 `prepare_color_grading` 한 곳에만 둡니다 — GPU 경로도 같은 것을 씁니다.
+    const ColorGradingSetup setup = prepare_color_grading(parameters);
+    const PreparedRegion shadows{
+        {setup.shadow_offset[0], setup.shadow_offset[1], setup.shadow_offset[2]}};
+    const PreparedRegion midtones{
+        {setup.midtone_offset[0], setup.midtone_offset[1], setup.midtone_offset[2]}};
+    const PreparedRegion highlights{
+        {setup.highlight_offset[0], setup.highlight_offset[1], setup.highlight_offset[2]}};
+    const float pivot = setup.pivot;
+    const float width = setup.width;
     return negaflow::core::transform_validated_pointwise(
         input,
         output,

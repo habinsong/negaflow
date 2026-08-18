@@ -21,6 +21,22 @@ struct ColorGradingParameters final {
     float balance{0.0F};
 };
 
+// 화소마다 같은 값이라 한 번만 계산합니다. GPU 경로가 이것을 상수 버퍼로 올립니다 —
+// **다시 구현하지 마십시오.** 두 벌이 되면 조용히 갈라집니다.
+struct ColorGradingSetup final {
+    // 영역별 RGB 오프셋입니다. `(tint - tint_luma) * 0.75 + luminance * 0.22`.
+    float shadow_offset[3]{0.0F, 0.0F, 0.0F};
+    float midtone_offset[3]{0.0F, 0.0F, 0.0F};
+    float highlight_offset[3]{0.0F, 0.0F, 0.0F};
+    // `clamp(0.5 + balance * 0.30, 0.15, 0.85)`
+    float pivot{0.5F};
+    // `0.10 * (1 - blending) + 0.50 * blending` — 항상 0.10 이상입니다.
+    float width{0.30F};
+};
+
+[[nodiscard]] ColorGradingSetup prepare_color_grading(
+    const ColorGradingParameters& parameters) noexcept;
+
 [[nodiscard]] bool has_color_grading_change(
     const ColorGradingParameters& parameters) noexcept;
 [[nodiscard]] bool valid_color_grading_parameters(

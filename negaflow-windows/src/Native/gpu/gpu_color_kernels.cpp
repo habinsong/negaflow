@@ -1,0 +1,76 @@
+#include "negaflow/gpu/gpu_color_kernels.h"
+
+// fxc 가 만든 헤더는 `const BYTE ...[]` 로 나오므로 Windows 타입이 먼저 보여야 합니다.
+#include <windows.h>
+
+#include <cmath>
+
+#include "negaflow/gpu/gpu_device.h"
+#include "negaflow/gpu/gpu_working_image.h"
+#include "negaflow/gpu/shaders/color_grade_ColorGradeMain.h"
+
+namespace negaflow::gpu {
+namespace {
+
+// HLSL `cbuffer ColorGradeConstants` 와 같은 배치여야 합니다.
+// HLSL 은 `float3` + `float` 를 16바이트 레지스터 하나에 채웁니다 — 그래서 pivot/width 가
+// 오프셋 뒤에 하나씩 붙어 있습니다. 순서를 바꾸면 조용히 어긋납니다.
+struct alignas(16) ColorGradeConstants final {
+    GpuPointwiseExtent extent{};
+    float shadow_offset[3]{0.0F, 0.0F, 0.0F};
+    float pivot{0.0F};
+    float midtone_offset[3]{0.0F, 0.0F, 0.0F};
+    float width{0.0F};
+    float highlight_offset[3]{0.0F, 0.0F, 0.0F};
+    float padding{0.0F};
+};
+
+static_assert(sizeof(ColorGradeConstants) == 64U, "four constant registers");
+
+[[nodiscard]] bool finite_offsets(const float (&offset)[3]) noexcept {
+    return std::isfinite(offset[0]) && std::isfinite(offset[1]) && std::isfinite(offset[2]);
+}
+
+[[nodiscard]] bool finite_setup(const GpuColorGradeSetup& setup) noexcept {
+    return finite_offsets(setup.shadow_offset) && finite_offsets(setup.midtone_offset) &&
+        finite_offsets(setup.highlight_offset) && std::isfinite(setup.pivot) &&
+        std::isfinite(setup.width);
+}
+
+}  // namespace
+
+GpuKernelStatus GpuColorGrade::create(const GpuDevice& device, GpuColorGrade& kernel) noexcept {
+    return GpuPointwiseKernel::create(
+        device,
+        negaflow_color_grade_cs,
+        sizeof(negaflow_color_grade_cs),
+        sizeof(ColorGradeConstants),
+        kernel.kernel_);
+}
+
+GpuKernelStatus GpuColorGrade::dispatch(
+    const GpuDevice& device,
+    const GpuWorkingImage& source,
+    GpuWorkingImage& destination,
+    const GpuColorGradeSetup& setup) const noexcept {
+    if (!finite_setup(setup)) {
+        return GpuKernelStatus::non_finite_parameter;
+    }
+    // 폭이 0 이면 미드톤 가중치가 0 나누기가 됩니다. CPU 판은 `prepare_color_grading` 이
+    // 0.10 이상을 보장해서 그 자리에 가드가 없습니다 — 여기서는 그 보장이 깨진 채로
+    // 들어오는 것을 거절합니다. 조용히 0.001 을 끼워 넣으면 CPU 와 값이 갈립니다.
+    if (!(setup.width > 0.0F)) {
+        return GpuKernelStatus::non_finite_parameter;
+    }
+    ColorGradeConstants payload{};
+    for (int index = 0; index < 3; ++index) {
+        payload.shadow_offset[index] = setup.shadow_offset[index];
+        payload.midtone_offset[index] = setup.midtone_offset[index];
+        payload.highlight_offset[index] = setup.highlight_offset[index];
+    }
+    payload.pivot = setup.pivot;
+    payload.width = setup.width;
+    return kernel_.dispatch(device, source, destination, &payload, sizeof(payload));
+}
+
+}  // namespace negaflow::gpu
