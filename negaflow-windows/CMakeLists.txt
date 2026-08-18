@@ -532,6 +532,7 @@ add_library(negaflow_pipeline STATIC
     src/Native/pipeline/export/support/progress.cpp
     src/Native/pipeline/film_look_workspace.cpp
     src/Native/pipeline/gpu_accelerator.cpp
+    src/Native/pipeline/stage_timing.cpp
 )
 target_include_directories(negaflow_pipeline
     PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/pipeline/include"

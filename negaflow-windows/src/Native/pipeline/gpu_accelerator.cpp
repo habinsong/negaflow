@@ -1,6 +1,7 @@
 #include "negaflow/pipeline/gpu_accelerator.h"
 
 #include <mutex>
+#include <cstdlib>
 #include <vector>
 #include <new>
 
@@ -28,9 +29,28 @@ struct GpuAccelerator::State final {
     const char* adapter{""};
 };
 
+namespace {
+
+[[nodiscard]] bool gpu_disabled_by_environment() noexcept {
+    // `NEGA_GPU=0` 이면 GPU 를 아예 열지 않습니다. 문제를 가를 때와 전후를 잴 때 씁니다 —
+    // 코드를 고쳐 끄면 무엇을 껐는지 기록이 안 남습니다.
+    char value[8]{};
+    std::size_t length = 0U;
+    if (getenv_s(&length, value, sizeof(value), "NEGA_GPU") != 0 || length == 0U) {
+        return false;
+    }
+    return value[0] == 48;  // 48 == 0
+}
+
+}  // namespace
+
 GpuAccelerator::GpuAccelerator() noexcept {
     auto* const state = new (std::nothrow) State{};
     if (state == nullptr) {
+        return;
+    }
+    if (gpu_disabled_by_environment()) {
+        state_ = state;
         return;
     }
     // `automatic` — 하드웨어를 먼저 찾고 없으면 WARP 입니다. 벤더로 거르지 않습니다.
@@ -247,10 +267,50 @@ const imaging::KernelAccelerator morphology_table{
 
 }  // namespace
 
+namespace {
+
+// ☠️ **기본은 꺼짐입니다. 실측이 더 느렸기 때문입니다.**
+//
+// 2026-08-18 실측(5100×3408 실제 스캔, RTX 4060 Ti, 각 2회):
+//
+//   | 검출 | 1회 | 2회 |
+//   |---|---:|---:|
+//   | CPU (`NEGA_GPU=0`) | **9,312 ms** | **9,104 ms** |
+//   | GPU 형태학 | 12,146 ms | 11,462 ms |
+//
+// 결과는 같습니다(성분 1367개, 채택 16,074 화소 — 비트 단위 일치가 지켜집니다).
+// **느려진 이유는 커널이 아니라 구조입니다:**
+//
+//   1. **평면마다 왕복합니다.** 검출은 타일 12개 × 반경 여러 개로 형태학을 수십 번 부르고,
+//      지금은 호출마다 업로드·다운로드를 합니다. 커널이 아무리 빨라도 전송이 지배합니다.
+//   2. **직렬화됩니다.** D3D11 즉시 컨텍스트가 스레드 안전하지 않아 GPU 호출이 자물쇠
+//      하나를 지납니다. CPU 경로는 워커 4개로 **병렬**인데, GPU 로 바꾸면 그것이 직렬이 됩니다.
+//
+// 즉 4중 병렬 CPU 작업을 직렬 GPU 작업 + 왕복으로 바꾼 것이라 느려지는 것이 당연합니다.
+// **고치는 길은 검출 전체를 GPU 에 머무르게 하는 오케스트레이터**입니다 — 04 3절의
+// "단계마다 올렸다 내리면 집니다" 가 여기에도 그대로 적용됩니다.
+//
+// 그때까지 `NEGA_GPU_MORPHOLOGY=1` 로만 켭니다. 커널·시험·이음매는 그대로 두어
+// 오케스트레이터가 서면 바로 쓸 수 있습니다.
+[[nodiscard]] bool morphology_enabled_by_environment() noexcept {
+    char value[8]{};
+    std::size_t length = 0U;
+    if (getenv_s(&length, value, sizeof(value), "NEGA_GPU_MORPHOLOGY") != 0 || length == 0U) {
+        return false;
+    }
+    return value[0] != 48;  // 48 == '0'
+}
+
+}  // namespace
+
 void install_gpu_kernel_accelerator() noexcept {
     // 여러 번 불려도 한 번만 겁니다. 검출이 돌 때마다 부르는 자리라 필요합니다.
     static std::once_flag once{};
     std::call_once(once, []() noexcept {
+        // 실측이 더 느렸습니다. 기본은 꺼짐이고 환경 변수로만 켭니다 — 위 주석의 표를 보십시오.
+        if (!morphology_enabled_by_environment()) {
+            return;
+        }
         // 장치가 없으면 표를 걸지 않습니다 — 매 호출 실패보다 아예 안 묻는 편이 쌉니다.
         if (!GpuAccelerator::shared().available()) {
             return;

@@ -2,6 +2,7 @@
 
 #include "negaflow/imaging/grain_mend.h"
 #include "negaflow/imaging/scanner_tiff_to_working.h"
+#include "negaflow/pipeline/gpu_accelerator.h"
 
 #include <array>
 #include <charconv>
@@ -161,6 +162,9 @@ int run_grain_mend_detect(
         roi.width = 0.5;
         roi.height = 0.5;
     }
+    // 검출 안쪽의 형태학이 GPU 를 쓰게 표를 겁니다. 여러 번 불러도 한 번만 겁니다.
+    // `NEGA_GPU=0` 이면 장치를 안 열므로 표도 안 걸리고 CPU 그대로 돕니다.
+    negaflow::pipeline::install_gpu_kernel_accelerator();
     const negaflow::imaging::GrainMendDetection detection =
         negaflow::imaging::detect_grain_mend(
             prepared.working.image, parameters, roi);

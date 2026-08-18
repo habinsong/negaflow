@@ -1,6 +1,7 @@
 #pragma once
 
 #include "negaflow/pipeline/develop_export.h"
+#include "negaflow/pipeline/stage_timing.h"
 
 #include "negaflow/imageio/image_content_hash.h"
 #include "negaflow/imageio/wic_tiff_decoder.h"
@@ -59,6 +60,11 @@ public:
 
 private:
     void publish(std::uint64_t reached) noexcept;
+
+    // 지금 재고 있는 단계와 그 시작 눈금(`QueryPerformanceCounter`).
+    // 계측이 꺼져 있으면 둘 다 손대지 않습니다 — 켜지 않은 실행에는 비용이 없습니다.
+    DevelopExportStage timed_stage_{DevelopExportStage::none};
+    std::int64_t stage_started_{0};
 
     DevelopRunControl control_{};
     std::uint32_t total_cost_{1U};

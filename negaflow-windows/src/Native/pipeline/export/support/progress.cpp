@@ -1,10 +1,25 @@
 #include "progress.h"
 
+#include <windows.h>
+
 #include <algorithm>
 #include <atomic>
 #include <cmath>
 
 namespace negaflow::pipeline::develop_export_detail {
+namespace {
+
+// 눈금 주파수는 부팅 뒤 안 바뀝니다. 한 번만 묻습니다 — 매 단계 물으면 그 자체가 비용입니다.
+[[nodiscard]] std::int64_t performance_frequency() noexcept {
+    static const std::int64_t frequency = []() noexcept {
+        LARGE_INTEGER value{};
+        (void)::QueryPerformanceFrequency(&value);
+        return value.QuadPart > 0 ? value.QuadPart : 1;
+    }();
+    return frequency;
+}
+
+}  // namespace
 
 std::uint32_t plan_total_cost(
     const DevelopExportRequest& request,
@@ -67,6 +82,14 @@ bool RunTracker::cancelled() const noexcept {
 void RunTracker::begin(
     const DevelopExportStage stage,
     const std::uint32_t cost) noexcept {
+    // 앞 단계가 `finish()` 없이 끝났으면(실패·취소) 그 시간은 버립니다 —
+    // 반쯤 돈 단계를 합에 넣으면 표가 거짓말을 합니다.
+    if (negaflow::pipeline::stage_timing_enabled()) {
+        timed_stage_ = stage;
+        LARGE_INTEGER now{};
+        (void)::QueryPerformanceCounter(&now);
+        stage_started_ = now.QuadPart;
+    }
     stage_cost_ = cost;
     if (control_.progress_stage != nullptr) {
         std::atomic_ref<std::uint32_t>(*control_.progress_stage)
@@ -83,6 +106,19 @@ void RunTracker::within(const double fraction) noexcept {
 }
 
 void RunTracker::finish() noexcept {
+    if (negaflow::pipeline::stage_timing_enabled() &&
+        timed_stage_ != DevelopExportStage::none) {
+        LARGE_INTEGER now{};
+        (void)::QueryPerformanceCounter(&now);
+        const std::int64_t ticks = now.QuadPart - stage_started_;
+        if (ticks > 0) {
+            negaflow::pipeline::record_stage_timing(
+                timed_stage_,
+                static_cast<std::uint64_t>(
+                    (ticks * 1000000) / performance_frequency()));
+        }
+        timed_stage_ = DevelopExportStage::none;
+    }
     completed_cost_ += stage_cost_;
     stage_cost_ = 0U;
     publish(completed_cost_);

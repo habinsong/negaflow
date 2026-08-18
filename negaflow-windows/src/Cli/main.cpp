@@ -5,6 +5,8 @@
 #include "commands/develop_negative_tiff.h"
 #include "commands/export_developed_png.h"
 #include "commands/auto_base_probe.h"
+
+#include "negaflow/pipeline/stage_timing.h"
 #include "commands/grain_mend_detect.h"
 #include "commands/export_developed_tiff.h"
 #include "commands/hash_image.h"
@@ -269,7 +271,23 @@ int run_wic_tiff_decode(const int argument_count, const wchar_t* const arguments
 
 }  // namespace
 
+namespace {
+
+// `NEGA_TIMING=1` 이면 어떤 명령이든 끝에 단계별 표를 stderr 로 찍습니다.
+// 명령마다 따로 붙이지 않는 이유는 **재는 자리를 빠뜨리지 않기 위해서**입니다.
+struct StageTimingDump final {
+    ~StageTimingDump() {
+        if (negaflow::pipeline::stage_timing_enabled()) {
+            negaflow::pipeline::dump_stage_timings();
+        }
+    }
+};
+
+}  // namespace
+
 int wmain(const int argument_count, const wchar_t* const arguments[]) {
+    const StageTimingDump timing_dump{};
+
     if (argument_count == 1) {
         std::cout << negaflow::core::build_info_json() << '\n';
         return 0;
