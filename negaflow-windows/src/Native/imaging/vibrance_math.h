@@ -1,5 +1,6 @@
 #pragma once
 
+#include "negaflow/imaging/muted_scene_vibrance.h"
 #include "negaflow/imaging/muted_scene_vibrance_table.h"
 
 #include <algorithm>
@@ -48,18 +49,11 @@ namespace negaflow::imaging::detail {
     const float fg = axis(green, g0);
     const float fb = axis(blue, b0);
 
-    // amount 판 두 장을 고른다. −0.05보다 낮은 쪽은 측정상 같은 음수 slope를 쓰고,
-    // 나머지 표 밖은 양끝 slope를 쓴다. amount 자체는 그대로 곱하므로 0은 정확한 항등이다.
-    std::uint32_t low = 0U;
-    while (low + 2U < vibrance_table_plane_count &&
-           amount > vibrance_table_amounts[low + 1U]) {
-        ++low;
-    }
-    const float span =
-        vibrance_table_amounts[low + 1U] - vibrance_table_amounts[low];
-    const float blend = span > 0.0F
-        ? std::clamp((amount - vibrance_table_amounts[low]) / span, 0.0F, 1.0F)
-        : 0.0F;
+    // amount 판 두 장의 선택은 **공개 함수 한 곳**에 있습니다 — GPU 판도 같은 것을
+    // 씁니다. 두 곳에서 고르면 판이 어긋나는 순간 색이 통째로 달라집니다.
+    const VibrancePlaneSelection selection = select_vibrance_planes(amount);
+    const std::uint32_t low = selection.low;
+    const float blend = selection.blend;
 
     const auto sample = [&](const std::uint32_t plane,
                             const std::uint32_t dr,

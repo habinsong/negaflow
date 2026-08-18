@@ -1,5 +1,6 @@
 #include "negaflow/imaging/muted_scene_vibrance.h"
 #include "negaflow/imaging/mipmap_downsampler.h"
+#include "negaflow/imaging/kernel_accelerator.h"
 
 #include "bilinear_rgb_sampler.h"
 #include "vibrance_math.h"
@@ -72,6 +73,23 @@ constexpr double activation_threshold = 0.01;
 
 }  // namespace
 
+VibrancePlaneSelection select_vibrance_planes(const float amount) noexcept {
+    // −0.05보다 낮은 쪽은 측정상 같은 음수 slope 를 쓰고, 나머지 표 밖은 양끝 slope 를
+    // 씁니다. amount 자체는 그대로 곱하므로 0 은 정확한 항등입니다.
+    VibrancePlaneSelection selection{};
+    while (selection.low + 2U < detail::vibrance_table_plane_count &&
+           amount > detail::vibrance_table_amounts[selection.low + 1U]) {
+        ++selection.low;
+    }
+    const float span = detail::vibrance_table_amounts[selection.low + 1U] -
+                       detail::vibrance_table_amounts[selection.low];
+    selection.blend = span > 0.0F
+        ? std::clamp(
+              (amount - detail::vibrance_table_amounts[selection.low]) / span, 0.0F, 1.0F)
+        : 0.0F;
+    return selection;
+}
+
 MutedSceneVibranceResult apply_muted_scene_vibrance(
     const negaflow::core::ImageView image,
     const bool monochrome) noexcept {
@@ -111,6 +129,27 @@ MutedSceneVibranceResult apply_muted_scene_vibrance(
     }
 
     const float amount = static_cast<float>(result.info.amount);
+    // ☠️ **근사입니다**(33³ 표의 삼선형 + 곱셈). `ApproximateAcceleratorScope` 안에서만
+    //    돕니다 — 내보내기·골든은 CPU 그대로입니다. 세기는 위에서 이미 정해졌습니다.
+    if (approximate_acceleration_allowed() && image.stride_pixels <= 0xFFFFFFFFULL) {
+        if (const KernelAccelerator* const table = kernel_accelerator();
+            table != nullptr && table->muted_scene_vibrance != nullptr) {
+            if (table->muted_scene_vibrance(
+                    reinterpret_cast<float*>(image.pixels),
+                    image.width,
+                    image.height,
+                    static_cast<std::uint32_t>(image.stride_pixels),
+                    amount)) {
+                result.status = negaflow::core::validate_finite_pixels(input);
+                if (result.status != negaflow::core::KernelStatus::ok) {
+                    result.status = negaflow::core::KernelStatus::non_finite_output;
+                    return result;
+                }
+                result.info.applied = true;
+                return result;
+            }
+        }
+    }
     for (std::uint32_t row = 0U; row < image.height; ++row) {
         auto* const row_pixels =
             image.pixels + (static_cast<std::size_t>(row) * image.stride_pixels);

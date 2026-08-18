@@ -301,6 +301,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/muted_scene_vibrance.hlsl"
+    MutedSceneVibranceMain
+    negaflow_muted_scene_vibrance_cs
+    NEGAFLOW_MUTED_SCENE_VIBRANCE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/color_model.hlsl"
+    ColorModelMain
+    negaflow_color_model_cs
+    NEGAFLOW_COLOR_MODEL_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/morphology.hlsl"
     MorphologyHorizontalMain
     negaflow_morphology_horizontal_cs
@@ -366,6 +380,8 @@ add_library(negaflow_gpu STATIC
     "${NEGAFLOW_FILM_EMULATION_CUBE_HEADER}"
     "${NEGAFLOW_ACUTANCE_H_HEADER}"
     "${NEGAFLOW_ACUTANCE_V_HEADER}"
+    "${NEGAFLOW_MUTED_SCENE_VIBRANCE_HEADER}"
+    "${NEGAFLOW_COLOR_MODEL_HEADER}"
     "${NEGAFLOW_MORPHOLOGY_H_HEADER}"
     "${NEGAFLOW_MORPHOLOGY_V_HEADER}"
     "${NEGAFLOW_BIPOLAR_TOP_HAT_HEADER}"
@@ -383,7 +399,9 @@ add_library(negaflow_gpu STATIC
     src/Native/gpu/gpu_film_emulation_cube.cpp
     src/Native/gpu/gpu_film_emulation_acutance.cpp
     src/Native/gpu/gpu_film_look_stage.cpp
+    src/Native/gpu/gpu_vibrance.cpp
     src/Native/gpu/gpu_lookup_table.cpp
+    src/Native/gpu/gpu_image_pool.cpp
     src/Native/gpu/gpu_morphology.cpp
     src/Native/gpu/gpu_tone_stage.cpp
     src/Native/gpu/gpu_film_scan_stage.cpp
@@ -606,6 +624,7 @@ add_library(negaflow_pipeline STATIC
     src/Native/pipeline/film_look_workspace.cpp
     src/Native/pipeline/gpu_accelerator.cpp
     src/Native/pipeline/gpu_accelerator_film_look.cpp
+    src/Native/pipeline/gpu_accelerator_color.cpp
     src/Native/pipeline/gpu_kernel_table.cpp
     src/Native/pipeline/stage_timing.cpp
 )
@@ -688,6 +707,7 @@ add_executable(negaflow_cli
     src/Cli/commands/develop_negative_tiff.cpp
     src/Cli/commands/auto_base_probe.cpp
     src/Cli/commands/develop_timing.cpp
+    src/Cli/commands/gpu_transfer_bench.cpp
     src/Cli/commands/grain_mend_detect.cpp
     src/Cli/commands/Export/developed_export_options.cpp
     src/Cli/commands/Export/developed_export_report.cpp
@@ -705,6 +725,7 @@ target_link_libraries(
     PRIVATE
         negaflow_core
         negaflow_color
+        negaflow_gpu
         negaflow_imageio
         negaflow_imaging
         negaflow_output
@@ -1156,6 +1177,15 @@ if(BUILD_TESTING)
     add_test(
         NAME native.gpu_film_emulation_acutance
         COMMAND negaflow_gpu_film_emulation_acutance_tests)
+
+    add_executable(negaflow_gpu_vibrance_tests
+        tests/Native.UnitTests/gpu_vibrance_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_gpu_vibrance_tests
+        PRIVATE negaflow_gpu negaflow_imaging negaflow_core negaflow_project_options
+    )
+    add_test(NAME native.gpu_vibrance COMMAND negaflow_gpu_vibrance_tests)
 
     add_executable(negaflow_gpu_morphology_tests
         tests/Native.UnitTests/gpu_morphology_tests.cpp

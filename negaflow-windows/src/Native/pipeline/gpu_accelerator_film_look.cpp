@@ -51,30 +51,24 @@ bool GpuAccelerator::apply_digital_halation(
     if (!state_->halation_ready) {
         return false;
     }
-    auto* const rgba = reinterpret_cast<core::Rgba32F*>(pixels);
-    gpu::GpuWorkingImage source{};
-    if (gpu::GpuWorkingImage::upload(state_->device, rgba, width, height, stride_pixels, source) !=
-        gpu::GpuImageStatus::ok) {
+    if (!state_->pool.ensure(state_->device, width, height)) {
         return false;
     }
-    gpu::GpuWorkingImage scratch[gpu::GpuDigitalHalation::scratch_count]{};
-    for (int index = 0; index < gpu::GpuDigitalHalation::scratch_count; ++index) {
-        if (gpu::GpuWorkingImage::create(state_->device, width, height, scratch[index]) !=
-            gpu::GpuImageStatus::ok) {
-            return false;
-        }
-    }
-    gpu::GpuWorkingImage destination{};
-    if (gpu::GpuWorkingImage::create(state_->device, width, height, destination) !=
-        gpu::GpuImageStatus::ok) {
+    gpu::GpuWorkingImage* const pool = state_->pool.images();
+    auto* const rgba = reinterpret_cast<core::Rgba32F*>(pixels);
+    if (pool[0].upload_into(state_->device, rgba, stride_pixels) != gpu::GpuImageStatus::ok) {
         return false;
     }
     if (state_->halation.dispatch(
-            state_->device, state_->gaussian, source, scratch, destination, parameters) !=
-        gpu::GpuKernelStatus::ok) {
+            state_->device,
+            state_->gaussian,
+            pool[0],
+            &pool[gpu::GpuImagePool::scratch_first],
+            pool[1],
+            parameters) != gpu::GpuKernelStatus::ok) {
         return false;
     }
-    return destination.download(state_->device, rgba, stride_pixels) == gpu::GpuImageStatus::ok;
+    return pool[1].download(state_->device, rgba, stride_pixels) == gpu::GpuImageStatus::ok;
 }
 
 bool GpuAccelerator::apply_digital_film_grain(
@@ -104,20 +98,19 @@ bool GpuAccelerator::apply_digital_film_grain(
     parameters.size = size;
     parameters.applied = true;
 
-    auto* const rgba = reinterpret_cast<core::Rgba32F*>(pixels);
-    gpu::GpuWorkingImage source{};
-    gpu::GpuWorkingImage destination{};
-    if (gpu::GpuWorkingImage::upload(state_->device, rgba, width, height, stride_pixels, source) !=
-            gpu::GpuImageStatus::ok ||
-        gpu::GpuWorkingImage::create(state_->device, width, height, destination) !=
-            gpu::GpuImageStatus::ok) {
+    if (!state_->pool.ensure(state_->device, width, height)) {
         return false;
     }
-    if (state_->grain.dispatch(state_->device, source, destination, parameters) !=
+    gpu::GpuWorkingImage* const pool = state_->pool.images();
+    auto* const rgba = reinterpret_cast<core::Rgba32F*>(pixels);
+    if (pool[0].upload_into(state_->device, rgba, stride_pixels) != gpu::GpuImageStatus::ok) {
+        return false;
+    }
+    if (state_->grain.dispatch(state_->device, pool[0], pool[1], parameters) !=
         gpu::GpuKernelStatus::ok) {
         return false;
     }
-    return destination.download(state_->device, rgba, stride_pixels) == gpu::GpuImageStatus::ok;
+    return pool[1].download(state_->device, rgba, stride_pixels) == gpu::GpuImageStatus::ok;
 }
 
 bool GpuAccelerator::apply_digital_film_color_preset(
@@ -137,23 +130,22 @@ bool GpuAccelerator::apply_digital_film_color_preset(
     if (!state_->preset_ready) {
         return false;
     }
-    auto* const rgba = reinterpret_cast<core::Rgba32F*>(pixels);
-    gpu::GpuWorkingImage source{};
-    if (gpu::GpuWorkingImage::upload(state_->device, rgba, width, height, stride_pixels, source) !=
-        gpu::GpuImageStatus::ok) {
+    if (!state_->pool.ensure(state_->device, width, height)) {
         return false;
     }
-    gpu::GpuWorkingImage scratch[gpu::GpuDigitalFilmColorPreset::scratch_count]{};
-    for (int index = 0; index < gpu::GpuDigitalFilmColorPreset::scratch_count; ++index) {
-        if (gpu::GpuWorkingImage::create(state_->device, width, height, scratch[index]) !=
-            gpu::GpuImageStatus::ok) {
-            return false;
-        }
+    gpu::GpuWorkingImage* const pool = state_->pool.images();
+    auto* const rgba = reinterpret_cast<core::Rgba32F*>(pixels);
+    if (pool[0].upload_into(state_->device, rgba, stride_pixels) != gpu::GpuImageStatus::ok) {
+        return false;
     }
     const gpu::GpuWorkingImage* result = nullptr;
     if (state_->preset.dispatch(
-            state_->device, source, scratch, result, *preset, strength) !=
-            gpu::GpuKernelStatus::ok ||
+            state_->device,
+            pool[0],
+            &pool[gpu::GpuImagePool::scratch_first],
+            result,
+            *preset,
+            strength) != gpu::GpuKernelStatus::ok ||
         result == nullptr) {
         return false;
     }
@@ -176,20 +168,19 @@ bool GpuAccelerator::apply_film_emulation_cube(
     if (!state_->cube_ready) {
         return false;
     }
-    auto* const rgba = reinterpret_cast<core::Rgba32F*>(pixels);
-    gpu::GpuWorkingImage source{};
-    gpu::GpuWorkingImage destination{};
-    if (gpu::GpuWorkingImage::upload(state_->device, rgba, width, height, stride_pixels, source) !=
-            gpu::GpuImageStatus::ok ||
-        gpu::GpuWorkingImage::create(state_->device, width, height, destination) !=
-            gpu::GpuImageStatus::ok) {
+    if (!state_->pool.ensure(state_->device, width, height)) {
         return false;
     }
-    if (state_->cube.dispatch(state_->device, source, destination, *cube) !=
+    gpu::GpuWorkingImage* const pool = state_->pool.images();
+    auto* const rgba = reinterpret_cast<core::Rgba32F*>(pixels);
+    if (pool[0].upload_into(state_->device, rgba, stride_pixels) != gpu::GpuImageStatus::ok) {
+        return false;
+    }
+    if (state_->cube.dispatch(state_->device, pool[0], pool[1], *cube) !=
         gpu::GpuKernelStatus::ok) {
         return false;
     }
-    return destination.download(state_->device, rgba, stride_pixels) == gpu::GpuImageStatus::ok;
+    return pool[1].download(state_->device, rgba, stride_pixels) == gpu::GpuImageStatus::ok;
 }
 
 bool GpuAccelerator::apply_film_emulation_acutance(
@@ -208,23 +199,23 @@ bool GpuAccelerator::apply_film_emulation_acutance(
     if (!state_->acutance_ready) {
         return false;
     }
+    if (!state_->pool.ensure(state_->device, width, height)) {
+        return false;
+    }
+    gpu::GpuWorkingImage* const pool = state_->pool.images();
     auto* const rgba = reinterpret_cast<core::Rgba32F*>(pixels);
-    gpu::GpuWorkingImage source{};
-    gpu::GpuWorkingImage scratch[gpu::GpuFilmEmulationAcutance::scratch_count]{};
-    gpu::GpuWorkingImage destination{};
-    if (gpu::GpuWorkingImage::upload(state_->device, rgba, width, height, stride_pixels, source) !=
-            gpu::GpuImageStatus::ok ||
-        gpu::GpuWorkingImage::create(state_->device, width, height, scratch[0]) !=
-            gpu::GpuImageStatus::ok ||
-        gpu::GpuWorkingImage::create(state_->device, width, height, destination) !=
-            gpu::GpuImageStatus::ok) {
+    if (pool[0].upload_into(state_->device, rgba, stride_pixels) != gpu::GpuImageStatus::ok) {
         return false;
     }
-    if (state_->acutance.dispatch(state_->device, source, scratch, destination, *setup) !=
-        gpu::GpuKernelStatus::ok) {
+    if (state_->acutance.dispatch(
+            state_->device,
+            pool[0],
+            &pool[gpu::GpuImagePool::scratch_first],
+            pool[1],
+            *setup) != gpu::GpuKernelStatus::ok) {
         return false;
     }
-    return destination.download(state_->device, rgba, stride_pixels) == gpu::GpuImageStatus::ok;
+    return pool[1].download(state_->device, rgba, stride_pixels) == gpu::GpuImageStatus::ok;
 }
 
 bool GpuAccelerator::apply_digital_film_look(
@@ -245,7 +236,7 @@ bool GpuAccelerator::apply_digital_film_look(
         return false;
     }
     const gpu::GpuFilmLookResult result = state_->film_look.apply(
-        state_->device, pixels, width, height, stride_pixels, *plan);
+        state_->device, state_->pool, pixels, width, height, stride_pixels, *plan);
     if (!result.handled) {
         return false;
     }

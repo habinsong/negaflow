@@ -71,6 +71,13 @@ GpuAccelerator::GpuAccelerator() noexcept {
         state->film_look_ready =
             gpu::GpuFilmLookStage::create(state->device, state->film_look) ==
             gpu::GpuKernelStatus::ok;
+        state->vibrance_ready =
+            gpu::GpuVibranceTable::create(state->device, state->vibrance_table) ==
+                gpu::GpuKernelStatus::ok &&
+            gpu::GpuMutedSceneVibrance::create(state->device, state->muted_vibrance) ==
+                gpu::GpuKernelStatus::ok &&
+            gpu::GpuColorModel::create(state->device, state->color_model) ==
+                gpu::GpuKernelStatus::ok;
     }
     state_ = state;
 }
@@ -228,16 +235,14 @@ bool GpuAccelerator::apply_negative_inversion(
         return false;
     }
 
-    auto* const rgba = reinterpret_cast<core::Rgba32F*>(pixels);
-    gpu::GpuWorkingImage input{};
-    if (gpu::GpuWorkingImage::upload(
-            state_->device, rgba, width, height, stride_pixels, input) !=
-        gpu::GpuImageStatus::ok) {
+    if (!state_->pool.ensure(state_->device, width, height)) {
         return false;
     }
-    gpu::GpuWorkingImage output{};
-    if (gpu::GpuWorkingImage::create(state_->device, width, height, output) !=
-        gpu::GpuImageStatus::ok) {
+    gpu::GpuWorkingImage* const pool = state_->pool.images();
+    auto* const rgba = reinterpret_cast<core::Rgba32F*>(pixels);
+    gpu::GpuWorkingImage& input = pool[0];
+    gpu::GpuWorkingImage& output = pool[1];
+    if (input.upload_into(state_->device, rgba, stride_pixels) != gpu::GpuImageStatus::ok) {
         return false;
     }
 

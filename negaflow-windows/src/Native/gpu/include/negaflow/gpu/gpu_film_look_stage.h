@@ -15,11 +15,13 @@
 //    **비어 있지 않은 칸을 순서대로 돌리기만** 합니다.
 //
 // 텍스처 여섯 장을 씁니다 — 핑퐁 둘(`0`,`1`)과 스크래치 넷(`2`…`5`). 헐레이션이 넷을
-// 한꺼번에 쓰므로 그것이 최대치입니다. 24MP 에서 6 × 277 MB ≈ 1.66 GB 이고, 못 잡으면
-// **처리하지 않았다고 돌려줍니다** — 호출부가 재료별 경로나 CPU 로 갑니다.
+// 한꺼번에 쓰므로 그것이 최대치입니다. ☠️ **그 여섯 장은 호출부가 주는
+// `GpuImagePool` 입니다.** 자기 것을 따로 들면 24MP 에서 1.6 GB 가 두 벌이 됩니다.
+// 풀을 못 잡으면 **처리하지 않았다고 돌려줍니다** — 호출부가 재료별 경로나 CPU 로 갑니다.
 
 #include <cstdint>
 
+#include "negaflow/gpu/gpu_image_pool.h"
 #include "negaflow/gpu/gpu_pointwise.h"
 #include "negaflow/imaging/working_film_look.h"
 
@@ -50,6 +52,7 @@ public:
     // 않으므로). 그래야 호출부가 CPU 로 이어서 갈 수 있습니다.
     [[nodiscard]] GpuFilmLookResult apply(
         const GpuDevice& device,
+        GpuImagePool& pool,
         float* pixels,
         std::uint32_t width,
         std::uint32_t height,

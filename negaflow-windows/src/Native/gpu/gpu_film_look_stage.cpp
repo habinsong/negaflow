@@ -8,15 +8,14 @@
 #include "negaflow/gpu/gpu_digital_halation.h"
 #include "negaflow/gpu/gpu_film_emulation_acutance.h"
 #include "negaflow/gpu/gpu_film_emulation_cube.h"
+#include "negaflow/gpu/gpu_image_pool.h"
 #include "negaflow/gpu/gpu_neighborhood.h"
 #include "negaflow/gpu/gpu_working_image.h"
 
 namespace negaflow::gpu {
 namespace {
 
-// 핑퐁 둘 + 스크래치 넷. 헐레이션이 스크래치 넷을 한꺼번에 쓰므로 그것이 최대치입니다.
-constexpr int pool_size = 6;
-constexpr int scratch_first = 2;
+constexpr int scratch_first = GpuImagePool::scratch_first;
 
 }  // namespace
 
@@ -28,35 +27,6 @@ struct GpuFilmLookStage::State final {
     GpuDigitalFilmColorPreset preset{};
     GpuDigitalFilmGrain grain{};
 
-    // 크기가 바뀔 때만 다시 만듭니다. 프레임마다 만들면 그 비용이 커널보다 큽니다.
-    mutable GpuWorkingImage pool[pool_size]{};
-    mutable std::uint32_t width{0U};
-    mutable std::uint32_t height{0U};
-
-    [[nodiscard]] bool ensure_pool(
-        const GpuDevice& device,
-        const std::uint32_t needed_width,
-        const std::uint32_t needed_height) const noexcept {
-        if (pool[0].is_valid() && width == needed_width && height == needed_height) {
-            return true;
-        }
-        for (int index = 0; index < pool_size; ++index) {
-            if (GpuWorkingImage::create(device, needed_width, needed_height, pool[index]) !=
-                GpuImageStatus::ok) {
-                // 못 잡으면 전부 놓습니다 — 반쯤 잡은 상태로 두면 다음 호출이
-                // 크기가 맞는다고 믿고 씁니다.
-                for (int reset = 0; reset < pool_size; ++reset) {
-                    pool[reset] = GpuWorkingImage{};
-                }
-                width = 0U;
-                height = 0U;
-                return false;
-            }
-        }
-        width = needed_width;
-        height = needed_height;
-        return true;
-    }
 };
 
 GpuFilmLookStage::~GpuFilmLookStage() {
@@ -93,6 +63,7 @@ GpuKernelStatus GpuFilmLookStage::create(
 
 GpuFilmLookResult GpuFilmLookStage::apply(
     const GpuDevice& device,
+    GpuImagePool& pool_holder,
     float* const pixels,
     const std::uint32_t width,
     const std::uint32_t height,
@@ -105,12 +76,12 @@ GpuFilmLookResult GpuFilmLookStage::apply(
     if (width == 0U || height == 0U || stride_pixels < width) {
         return result;
     }
-    if (!state_->ensure_pool(device, width, height)) {
+    if (!pool_holder.ensure(device, width, height)) {
         return result;
     }
 
     auto* const rgba = reinterpret_cast<core::Rgba32F*>(pixels);
-    GpuWorkingImage* const pool = state_->pool;
+    GpuWorkingImage* const pool = pool_holder.images();
     if (pool[0].upload_into(device, rgba, stride_pixels) != GpuImageStatus::ok) {
         return result;
     }

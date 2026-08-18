@@ -152,6 +152,30 @@ using DigitalFilmLookFunction = bool (*)(
     const DigitalFilmLookPlan* plan,
     DigitalFilmLookApplied* applied) noexcept;
 
+// 흐린 장면 vibrance 입니다. `amount` 는 CPU 가 축소본에서 장면 평균 채도를 재서
+// 정한 값입니다 — 여기서 다시 재지 않습니다(축소기가 얽혀 있고 화소마다 같은 값입니다).
+//
+// ☠️ **근사한 것입니다**(33³ 표의 삼선형 + 곱셈).
+using MutedSceneVibranceFunction = bool (*)(
+    float* pixels,
+    std::uint32_t width,
+    std::uint32_t height,
+    std::uint32_t stride_pixels,
+    float amount) noexcept;
+
+// 컬러 모델(온도·틴트·색 깊이·vibrance·채도·원색)입니다. CPU 판
+// (`imaging/color_model.cpp` `apply_color_model`)과 같은 순서·같은 게이트여야 합니다.
+//
+// ☠️ **근사한 것입니다.**
+struct ColorModelParameters;
+
+using ColorModelFunction = bool (*)(
+    float* pixels,
+    std::uint32_t width,
+    std::uint32_t height,
+    std::uint32_t stride_pixels,
+    const ColorModelParameters* parameters) noexcept;
+
 struct KernelAccelerator final {
     // ── 정확한 것 (언제나 켭니다) ────────────────────────────────────────────
     MorphologyPlaneFunction opening{nullptr};
@@ -166,6 +190,8 @@ struct KernelAccelerator final {
     FilmEmulationCubeFunction film_emulation_cube{nullptr};
     FilmEmulationAcutanceFunction film_emulation_acutance{nullptr};
     DigitalFilmLookFunction digital_film_look{nullptr};
+    MutedSceneVibranceFunction muted_scene_vibrance{nullptr};
+    ColorModelFunction color_model{nullptr};
 };
 
 // 프로세스 시작에 한 번 설치합니다. `nullptr` 을 주면 해제합니다.

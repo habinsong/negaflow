@@ -22,6 +22,7 @@
 #include <cstdint>
 
 #include "negaflow/imaging/digital_film_color_preset.h"
+#include "negaflow/imaging/color_model.h"
 #include "negaflow/imaging/film_emulation_acutance.h"
 #include "negaflow/imaging/film_emulation_color.h"
 #include "negaflow/imaging/film_scan_denoise.h"
@@ -153,6 +154,21 @@ public:
         std::uint32_t stride_pixels,
         const imaging::DigitalFilmLookPlan* plan,
         imaging::DigitalFilmLookApplied* applied) noexcept;
+
+    // 실측 `CIVibrance` 표를 쓰는 둘입니다. 표는 프로세스에 **한 벌**만 올라갑니다.
+    [[nodiscard]] bool apply_muted_scene_vibrance(
+        float* pixels,
+        std::uint32_t width,
+        std::uint32_t height,
+        std::uint32_t stride_pixels,
+        float amount) noexcept;
+
+    [[nodiscard]] bool apply_color_model(
+        float* pixels,
+        std::uint32_t width,
+        std::uint32_t height,
+        std::uint32_t stride_pixels,
+        const imaging::ColorModelParameters* parameters) noexcept;
 
     [[nodiscard]] bool apply_morphology_plane(
         const float* source,

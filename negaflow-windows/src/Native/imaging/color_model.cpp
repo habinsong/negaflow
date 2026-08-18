@@ -2,6 +2,8 @@
 
 #include "vibrance_math.h"
 
+#include "negaflow/imaging/kernel_accelerator.h"
+
 #include "negaflow/core/pointwise.h"
 
 #include <algorithm>
@@ -147,6 +149,23 @@ negaflow::core::KernelStatus apply_color_model(
     }
 
     const bool active = has_color_model_change(parameters);
+    // ☠️ **근사입니다**(33³ 표의 삼선형 + 곱셈). 입출력이 같은 버퍼일 때만 GPU 로
+    //    보냅니다 — GPU 판은 텍스처 두 장을 오가므로 겹침이 없습니다.
+    if (active && approximate_acceleration_allowed() &&
+        input.pixels == output.pixels && input.stride_pixels == output.stride_pixels &&
+        output.stride_pixels <= 0xFFFFFFFFULL) {
+        if (const KernelAccelerator* const table = kernel_accelerator();
+            table != nullptr && table->color_model != nullptr) {
+            if (table->color_model(
+                    reinterpret_cast<float*>(output.pixels),
+                    output.width,
+                    output.height,
+                    static_cast<std::uint32_t>(output.stride_pixels),
+                    &parameters)) {
+                return negaflow::core::KernelStatus::ok;
+            }
+        }
+    }
     return negaflow::core::transform_validated_pointwise(
         input,
         output,

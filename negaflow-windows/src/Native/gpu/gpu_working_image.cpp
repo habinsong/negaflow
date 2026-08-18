@@ -5,6 +5,7 @@
 #include <cstring>
 #include <utility>
 
+#include "negaflow/core/parallel_rows.h"
 #include "negaflow/gpu/gpu_device.h"
 
 namespace negaflow::gpu {
@@ -34,25 +35,41 @@ constexpr DXGI_FORMAT working_format = DXGI_FORMAT_R32G32B32A32_FLOAT;
 
 // 행 피치가 다른 두 버퍼 사이에서 한 행씩 옮깁니다. GPU 쪽 피치는 드라이버가 정합니다
 // (256바이트 정렬이 흔합니다) — 절대 `width * 16` 이라고 가정하지 마십시오.
+// 회수한 화소를 호스트 버퍼로 옮깁니다.
+//
+// ☠️ **행 블록으로 쪼갭니다.** 24MP RGBA float32 는 264 MB 이고, 한 스레드 `memcpy` 로는
+//    수십 ms 가 그대로 나갑니다. 행이 서로 독립이라 쪼개도 값이 같습니다 —
+//    `parallel_rows.h` 의 계약이 그것입니다.
+//
+// ☠️ `work_units` 에 **행 수가 아니라 바이트 수**를 넘깁니다. 행 수만 넘기면 24MP 에서도
+//    3,401 이라 문턱(1M)을 못 넘어 **병렬화가 조용히 꺼집니다** — 플레이북 21절이 적은
+//    바로 그 함정입니다.
 void copy_rows(
-    std::byte* destination,
+    std::byte* const destination,
     const std::size_t destination_pitch,
-    const std::byte* source,
+    const std::byte* const source,
     const std::size_t source_pitch,
     const std::size_t row_bytes,
     const std::uint32_t height) noexcept {
-    for (std::uint32_t row = 0U; row < height; ++row) {
-        std::memcpy(
-            destination + (static_cast<std::size_t>(row) * destination_pitch),
-            source + (static_cast<std::size_t>(row) * source_pitch),
-            row_bytes);
-    }
+    negaflow::core::for_each_row_block(
+        height,
+        static_cast<std::uint64_t>(row_bytes) * height,
+        [destination, destination_pitch, source, source_pitch, row_bytes](
+            const std::uint32_t first_row, const std::uint32_t row_count) noexcept {
+            for (std::uint32_t row = first_row; row < first_row + row_count; ++row) {
+                std::memcpy(
+                    destination + (static_cast<std::size_t>(row) * destination_pitch),
+                    source + (static_cast<std::size_t>(row) * source_pitch),
+                    row_bytes);
+            }
+        });
 }
 
 [[nodiscard]] ID3D11Texture2D* make_staging(
     const GpuDevice& device,
     const std::uint32_t width,
-    const std::uint32_t height) noexcept {
+    const std::uint32_t height,
+    const UINT cpu_access = D3D11_CPU_ACCESS_READ) noexcept {
     D3D11_TEXTURE2D_DESC description{};
     description.Width = width;
     description.Height = height;
@@ -62,7 +79,7 @@ void copy_rows(
     description.SampleDesc.Count = 1U;
     description.Usage = D3D11_USAGE_STAGING;
     description.BindFlags = 0U;
-    description.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+    description.CPUAccessFlags = cpu_access;
 
     ID3D11Texture2D* texture = nullptr;
     if (FAILED(device.device()->CreateTexture2D(&description, nullptr, &texture))) {
@@ -129,11 +146,15 @@ GpuWorkingImage::GpuWorkingImage(GpuWorkingImage&& other) noexcept
     : texture_(other.texture_),
       srv_(other.srv_),
       uav_(other.uav_),
+      staging_(other.staging_),
+      upload_staging_(other.upload_staging_),
       width_(other.width_),
       height_(other.height_) {
     other.texture_ = nullptr;
     other.srv_ = nullptr;
     other.uav_ = nullptr;
+    other.staging_ = nullptr;
+    other.upload_staging_ = nullptr;
     other.width_ = 0U;
     other.height_ = 0U;
 }
@@ -144,11 +165,15 @@ GpuWorkingImage& GpuWorkingImage::operator=(GpuWorkingImage&& other) noexcept {
         texture_ = other.texture_;
         srv_ = other.srv_;
         uav_ = other.uav_;
+        staging_ = other.staging_;
+        upload_staging_ = other.upload_staging_;
         width_ = other.width_;
         height_ = other.height_;
         other.texture_ = nullptr;
         other.srv_ = nullptr;
         other.uav_ = nullptr;
+        other.staging_ = nullptr;
+        other.upload_staging_ = nullptr;
         other.width_ = 0U;
         other.height_ = 0U;
     }
@@ -156,6 +181,14 @@ GpuWorkingImage& GpuWorkingImage::operator=(GpuWorkingImage&& other) noexcept {
 }
 
 void GpuWorkingImage::reset() noexcept {
+    if (upload_staging_ != nullptr) {
+        upload_staging_->Release();
+        upload_staging_ = nullptr;
+    }
+    if (staging_ != nullptr) {
+        staging_->Release();
+        staging_ = nullptr;
+    }
     if (uav_ != nullptr) {
         uav_->Release();
         uav_ = nullptr;
@@ -257,6 +290,30 @@ GpuImageStatus GpuWorkingImage::upload_into(
     if (stride_pixels < width_) {
         return GpuImageStatus::invalid_dimensions;
     }
+
+    // ☠️ `UpdateSubresource` 는 드라이버가 **한 스레드로** 우리 버퍼를 자기 영역에
+    //    복사합니다. 24MP(264 MB)에서 실측 44 ms 였습니다. 쓰기 스테이징에 직접
+    //    `Map` 해서 **행 블록으로 나눠** 채우면 그 복사가 코어를 나눠 씁니다.
+    //    스테이징을 못 만들면 `UpdateSubresource` 로 돌아갑니다 — 값은 같습니다.
+    if (upload_staging_ == nullptr) {
+        upload_staging_ = make_staging(device, width_, height_, D3D11_CPU_ACCESS_WRITE);
+    }
+    if (upload_staging_ != nullptr) {
+        D3D11_MAPPED_SUBRESOURCE mapped{};
+        if (SUCCEEDED(device.context()->Map(upload_staging_, 0U, D3D11_MAP_WRITE, 0U, &mapped))) {
+            copy_rows(
+                reinterpret_cast<std::byte*>(mapped.pData),
+                static_cast<std::size_t>(mapped.RowPitch),
+                reinterpret_cast<const std::byte*>(pixels),
+                static_cast<std::size_t>(stride_pixels) * sizeof(core::Rgba32F),
+                static_cast<std::size_t>(width_) * sizeof(core::Rgba32F),
+                height_);
+            device.context()->Unmap(upload_staging_, 0U);
+            device.context()->CopyResource(texture_, upload_staging_);
+            return GpuImageStatus::ok;
+        }
+    }
+
     const UINT source_pitch =
         static_cast<UINT>(static_cast<std::size_t>(stride_pixels) * sizeof(core::Rgba32F));
     device.context()->UpdateSubresource(texture_, 0U, nullptr, pixels, source_pitch, 0U);
@@ -273,15 +330,14 @@ GpuImageStatus GpuWorkingImage::download(
     if (texture_ == nullptr) {
         return GpuImageStatus::invalid_dimensions;
     }
-    ID3D11Texture2D* staging = make_staging(device, width_, height_);
-    if (staging == nullptr) {
-        return GpuImageStatus::allocation_failed;
+    if (staging_ == nullptr) {
+        staging_ = make_staging(device, width_, height_);
+        if (staging_ == nullptr) {
+            return GpuImageStatus::allocation_failed;
+        }
     }
-    device.context()->CopyResource(staging, texture_);
-    const GpuImageStatus read =
-        read_staging(device, staging, pixels, width_, height_, stride_pixels);
-    staging->Release();
-    return read;
+    device.context()->CopyResource(staging_, texture_);
+    return read_staging(device, staging_, pixels, width_, height_, stride_pixels);
 }
 
 GpuImageStatus GpuWorkingImage::copy_from(

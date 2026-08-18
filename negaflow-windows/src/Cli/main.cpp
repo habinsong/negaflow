@@ -6,6 +6,7 @@
 #include "commands/export_developed_png.h"
 #include "commands/auto_base_probe.h"
 #include "commands/develop_timing.h"
+#include "commands/gpu_transfer_bench.h"
 
 #include "negaflow/pipeline/stage_timing.h"
 #include "commands/grain_mend_detect.h"
@@ -322,6 +323,9 @@ int wmain(const int argument_count, const wchar_t* const arguments[]) {
     }
     if (command == L"--develop-timing") {
         return negaflow::cli::run_develop_timing(argument_count, arguments);
+    }
+    if (command == L"--gpu-transfer-bench") {
+        return negaflow::cli::run_gpu_transfer_bench(argument_count, arguments);
     }
     if (command == L"--auto-base-probe") {
         return negaflow::cli::run_auto_base_probe(argument_count, arguments);
