@@ -17,7 +17,7 @@ public static unsafe class NativeGamutCheck
     public static bool IsSupported(ExportColorSpace space)
     {
         uint supported = 0U;
-        uint status = NativeMethods.nf_gamut_check_supported_v1((uint)space, &supported);
+        uint status = NativeColorProof.nf_gamut_check_supported_v1((uint)space, &supported);
         return status == 0U && supported != 0U;
     }
 }

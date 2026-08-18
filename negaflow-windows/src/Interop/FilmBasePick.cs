@@ -52,7 +52,7 @@ public readonly record struct FilmBasePick(
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
         NativeFilmBasePickV1 raw = default;
         raw.StructSize = (uint)sizeof(NativeFilmBasePickV1);
-        uint status = NativeMethods.nf_pick_film_base_v1(
+        uint status = NativeColorProof.nf_pick_film_base_v1(
             sourcePath,
             unitX,
             unitY,

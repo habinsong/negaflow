@@ -24,7 +24,7 @@ public sealed record NegativeLimits(float MinimumManualDmin, float MaximumManual
         NativeNegativeLimitsV1 raw = default;
         raw.StructSize = (uint)sizeof(NativeNegativeLimitsV1);
 
-        uint status = NativeMethods.nf_get_negative_limits_v1(ref raw);
+        uint status = NativeLimits.nf_get_negative_limits_v1(ref raw);
         if (status != 0)
         {
             throw new NativeBootstrapException(

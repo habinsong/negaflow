@@ -181,7 +181,7 @@ public static unsafe class NativeInfraredDefectDetector
         {
             NativeDevelopRunStateV1* state = run is null ? null : run.StatePointer;
             uint* cancel = state is null ? null : &state->CancelRequested;
-            status = NativeMethods.nf_detect_infrared_defects_v1(
+            status = NativeInfraredDetect.nf_detect_infrared_defects_v1(
                 infraredPixels,
                 checked(width * (uint)sizeof(float)),
                 redPixels,
@@ -218,7 +218,7 @@ public static unsafe class NativeInfraredDefectDetector
         {
             NativeDevelopRunStateV1* state = run is null ? null : run.StatePointer;
             uint* cancel = state is null ? null : &state->CancelRequested;
-            status = NativeMethods.nf_detect_infrared_defects_from_tiff_v1(
+            status = NativeInfraredDetect.nf_detect_infrared_defects_from_tiff_v1(
                 visible,
                 infrared,
                 &nativeParameters,
@@ -299,7 +299,7 @@ public static unsafe class NativeInfraredDefectDetector
         {
             if (handle != 0)
             {
-                NativeMethods.nf_infrared_detection_destroy_v1(handle);
+                NativeInfraredDetect.nf_infrared_detection_destroy_v1(handle);
             }
         }
     }
@@ -308,7 +308,7 @@ public static unsafe class NativeInfraredDefectDetector
     {
         NativeInfraredClusterV1 cluster = default;
         cluster.StructSize = (uint)sizeof(NativeInfraredClusterV1);
-        uint status = NativeMethods.nf_infrared_detection_get_cluster_v1(
+        uint status = NativeInfraredDetect.nf_infrared_detection_get_cluster_v1(
             handle, index, &cluster, null, 0, null, 0);
         if (status != StatusOk) throw NativeFailure("nf_infrared_detection_get_cluster_v1", status);
         int maskLength = checked((int)cluster.CoreMaskByteCount);
@@ -326,7 +326,7 @@ public static unsafe class NativeInfraredDefectDetector
         fixed (byte* maskBytes = mask)
         fixed (byte* attenuationBytes = attenuation)
         {
-            status = NativeMethods.nf_infrared_detection_get_cluster_v1(
+            status = NativeInfraredDetect.nf_infrared_detection_get_cluster_v1(
                 handle,
                 index,
                 &cluster,
@@ -349,7 +349,7 @@ public static unsafe class NativeInfraredDefectDetector
     {
         NativeInfraredComponentV1 component = default;
         component.StructSize = (uint)sizeof(NativeInfraredComponentV1);
-        uint status = NativeMethods.nf_infrared_detection_get_component_v1(
+        uint status = NativeInfraredDetect.nf_infrared_detection_get_component_v1(
             handle, index, &component, null, 0);
         if (status != StatusOk) throw NativeFailure("nf_infrared_detection_get_component_v1", status);
         InfraredDefectClass classification = (InfraredDefectClass)component.Classification;
@@ -363,7 +363,7 @@ public static unsafe class NativeInfraredDefectDetector
         component.StructSize = (uint)sizeof(NativeInfraredComponentV1);
         fixed (NativeInfraredPreviewPointV1* nativePointBuffer = nativePoints)
         {
-            status = NativeMethods.nf_infrared_detection_get_component_v1(
+            status = NativeInfraredDetect.nf_infrared_detection_get_component_v1(
                 handle, index, &component, nativePointBuffer, (ulong)nativePoints.Length);
         }
         if (status != StatusOk) throw NativeFailure("nf_infrared_detection_get_component_v1", status);

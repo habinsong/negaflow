@@ -251,7 +251,7 @@ internal static class CatalogPendingRestoreStore
                 CatalogPendingRestoreError.InvalidPendingSnapshot);
         }
 
-        if (CatalogCommitVerifier.HasUnresolvedRollbackArtifact(roots))
+        if (CatalogCommitRollback.HasUnresolvedRollbackArtifact(roots))
         {
             return CatalogPendingRestoreApplicationResult.Failure(
                 CatalogPendingRestoreError.SafetyBackupFailed);
@@ -294,7 +294,7 @@ internal static class CatalogPendingRestoreStore
         }
         else if (current.Error == CatalogStoreError.NotFound)
         {
-            if (CatalogCommitVerifier.HasBlockingArtifactWhenPrimaryMissing(roots) ||
+            if (CatalogCommitRollback.HasBlockingArtifactWhenPrimaryMissing(roots) ||
                 DefectSidecarStore.HasAnyArtifact(roots))
             {
                 return CatalogPendingRestoreApplicationResult.Failure(
@@ -345,7 +345,7 @@ internal static class CatalogPendingRestoreStore
         }
 
         DefectCatalogHealthResult appliedHealth =
-            DefectSidecarStore.ValidateCatalogDeclarations(roots, snapshot);
+            DefectSidecarCatalogHealth.ValidateCatalogDeclarations(roots, snapshot);
         if (!appliedHealth.IsHealthy)
         {
             return CatalogPendingRestoreApplicationResult.Failure(
@@ -408,7 +408,7 @@ internal static class CatalogPendingRestoreStore
         bool catalogRestored = previous.Snapshot is { } previousSnapshot
             ? CatalogCommitVerifier.Commit(previousSnapshot, roots).IsSuccess
             : previous.Error == CatalogStoreError.NotFound &&
-              CatalogCommitVerifier.RemovePrimaryIfMatches(applied, roots);
+              CatalogCommitRollback.RemovePrimaryIfMatches(applied, roots);
         return defectsRestored && catalogRestored;
     }
 

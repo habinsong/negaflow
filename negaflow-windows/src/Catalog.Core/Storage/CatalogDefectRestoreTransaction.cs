@@ -337,7 +337,7 @@ internal sealed class CatalogDefectRestoreTransaction
             }
             string fileName = DefectSidecarStore.FileName(frameId);
             expected.Add(fileName);
-            if (!DefectSidecarStore.ReadFile(
+            if (!DefectSidecarFile.ReadFile(
                     Path.Combine(directory, fileName),
                     frameId).IsSuccess)
             {

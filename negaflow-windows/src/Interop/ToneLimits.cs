@@ -30,7 +30,7 @@ public sealed record ToneLimits(
         NativeToneLimitsV1 raw = default;
         raw.StructSize = (uint)sizeof(NativeToneLimitsV1);
 
-        uint status = NativeMethods.nf_get_tone_limits_v1(ref raw);
+        uint status = NativeLimits.nf_get_tone_limits_v1(ref raw);
         if (status != 0)
         {
             throw new NativeBootstrapException(

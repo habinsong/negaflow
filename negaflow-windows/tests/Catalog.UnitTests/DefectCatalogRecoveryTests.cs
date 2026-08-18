@@ -265,7 +265,7 @@ internal static class DefectCatalogRecoveryTests
                 out CatalogDefectRestoreTransaction? recoveredTransaction);
         Check(recovery == CatalogPendingRestoreError.None && recoveredTransaction is not null,
             "interrupted_restore_recognizes_completed_defect_swap");
-        Check(DefectSidecarStore.ValidateCatalogDeclarations(
+        Check(DefectSidecarCatalogHealth.ValidateCatalogDeclarations(
                 roots,
                 CatalogBackupStore.ValidateGeneration(pendingPath).Snapshot!).IsHealthy,
             "interrupted_restore_swapped_defects_match_pending_catalog");

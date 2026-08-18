@@ -99,7 +99,7 @@ public static unsafe class NativeFlatbedFrameGridDetector
         {
             NativeDevelopRunStateV1* state = run is null ? null : run.StatePointer;
             uint* cancel = state is null ? null : &state->CancelRequested;
-            status = NativeMethods.nf_detect_flatbed_frame_grid_v1(
+            status = NativeFlatbedDetect.nf_detect_flatbed_frame_grid_v1(
                 pixels,
                 checked(width * (uint)sizeof(float)),
                 width,
@@ -145,7 +145,7 @@ public static unsafe class NativeFlatbedFrameGridDetector
             {
                 NativeFlatbedFrameDetectionV1 detection = default;
                 detection.StructSize = (uint)sizeof(NativeFlatbedFrameDetectionV1);
-                uint readStatus = NativeMethods.nf_flatbed_frame_grid_get_detection_v1(
+                uint readStatus = NativeFlatbedDetect.nf_flatbed_frame_grid_get_detection_v1(
                     handle, (ulong)index, &detection);
                 if (readStatus != StatusOk)
                 {
@@ -177,7 +177,7 @@ public static unsafe class NativeFlatbedFrameGridDetector
         {
             if (handle != 0)
             {
-                NativeMethods.nf_flatbed_frame_grid_destroy_v1(handle);
+                NativeFlatbedDetect.nf_flatbed_frame_grid_destroy_v1(handle);
             }
         }
     }

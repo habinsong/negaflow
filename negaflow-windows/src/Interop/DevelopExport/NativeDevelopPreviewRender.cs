@@ -186,7 +186,7 @@ internal static unsafe class NativeDevelopPreviewRender
                 // 중첩 구조라 가장 안쪽 V2 의 StructSize 가 전체 크기를 말합니다.
                 NativeGrainMendDetectionV4 detectionV4 = default;
                 detectionV4.V3.V2.StructSize = (uint)sizeof(NativeGrainMendDetectionV4);
-                status = NativeMethods.nf_develop_detect_grain_mend_v6(
+                status = NativeGrainMendDetect.nf_develop_detect_grain_mend_v6(
                     &v27,
                     &detectionParameters,
                     pixels.IsEmpty ? null : pixelBuffer,
@@ -228,7 +228,7 @@ internal static unsafe class NativeDevelopPreviewRender
                         request),
                     request,
                     null, null, null, null, null, null, null, null), request);
-                status = NativeMethods.nf_develop_preview_v34(
+                status = NativeDevelopRun.nf_develop_preview_v34(
                     &native,
                     proofPointer,
                     maximumWidth,

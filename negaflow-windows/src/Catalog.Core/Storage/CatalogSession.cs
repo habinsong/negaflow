@@ -118,7 +118,7 @@ public sealed class CatalogSession : IDisposable
         if (catalog.Snapshot is { } snapshot)
         {
             DefectCatalogHealthResult health =
-                DefectSidecarStore.ValidateCatalogDeclarations(roots, snapshot);
+                DefectSidecarCatalogHealth.ValidateCatalogDeclarations(roots, snapshot);
             if (!health.IsHealthy)
             {
                 held.Dispose();
@@ -158,7 +158,7 @@ public sealed class CatalogSession : IDisposable
             {
                 return CatalogWriteResult.Failure(CatalogStoreError.RollbackFailed);
             }
-            if (!DefectSidecarStore.ValidateCatalogDeclarations(roots, snapshot).IsHealthy)
+            if (!DefectSidecarCatalogHealth.ValidateCatalogDeclarations(roots, snapshot).IsHealthy)
             {
                 return CatalogWriteResult.Failure(
                     CatalogStoreError.MissingAuthoritativeData);
@@ -225,7 +225,7 @@ public sealed class CatalogSession : IDisposable
         {
             RequireOpen();
             if (mutationBlocked ||
-                CatalogCommitVerifier.HasUnresolvedRollbackArtifact(roots))
+                CatalogCommitRollback.HasUnresolvedRollbackArtifact(roots))
             {
                 mutationBlocked = true;
                 return CatalogBackupCreateResult.Failure(
@@ -283,7 +283,7 @@ public sealed class CatalogSession : IDisposable
         {
             RequireOpen();
             if (mutationBlocked ||
-                CatalogCommitVerifier.HasUnresolvedRollbackArtifact(roots))
+                CatalogCommitRollback.HasUnresolvedRollbackArtifact(roots))
             {
                 mutationBlocked = true;
                 return CatalogBackupCreateResult.Failure(
@@ -330,7 +330,7 @@ public sealed class CatalogSession : IDisposable
         lock (writeGate)
         {
             RequireOpen();
-            if (CatalogCommitVerifier.HasUnresolvedRollbackArtifact(roots))
+            if (CatalogCommitRollback.HasUnresolvedRollbackArtifact(roots))
             {
                 mutationBlocked = true;
                 return CatalogReadResult.Failure(CatalogStoreError.RollbackFailed);
@@ -345,7 +345,7 @@ public sealed class CatalogSession : IDisposable
             {
                 return CatalogReadResult.Failure(CatalogStoreError.RollbackFailed);
             }
-            if (CatalogCommitVerifier.HasBlockingArtifactWhenPrimaryMissing(roots))
+            if (CatalogCommitRollback.HasBlockingArtifactWhenPrimaryMissing(roots))
             {
                 return CatalogReadResult.Failure(
                     CatalogStoreError.MissingAuthoritativeData);

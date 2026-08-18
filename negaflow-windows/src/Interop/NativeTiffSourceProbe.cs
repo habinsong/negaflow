@@ -56,7 +56,7 @@ public static unsafe class NativeTiffSourceProbe
         uint status;
         fixed (char* path = sourcePath)
         {
-            status = NativeMethods.nf_probe_tiff_source_v1(path, &result);
+            status = NativeSourceProbe.nf_probe_tiff_source_v1(path, &result);
         }
         if (status != StatusOk)
         {
@@ -99,7 +99,7 @@ public static unsafe class NativeStandardImageSourceProbe
         uint status;
         fixed (char* path = sourcePath)
         {
-            status = NativeMethods.nf_probe_standard_image_source_v1(path, &result);
+            status = NativeSourceProbe.nf_probe_standard_image_source_v1(path, &result);
         }
         if (status != StatusOk)
         {

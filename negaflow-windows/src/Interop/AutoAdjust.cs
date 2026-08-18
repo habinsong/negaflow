@@ -100,7 +100,7 @@ public static unsafe class NativeAutoAdjust
         uint status;
         fixed (byte* buffer = pixels)
         {
-            status = NativeMethods.nf_auto_adjust_v1(buffer, width, height, strideBytes, &raw);
+            status = NativeAutoAdjustEntry.nf_auto_adjust_v1(buffer, width, height, strideBytes, &raw);
         }
 
         if (status != StatusOk)

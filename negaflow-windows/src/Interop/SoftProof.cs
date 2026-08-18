@@ -132,7 +132,7 @@ public static unsafe class NativeSoftProof
         uint status;
         fixed (byte* bytes = iccProfile)
         {
-            status = NativeMethods.nf_read_soft_proof_media_v1(
+            status = NativeColorProof.nf_read_soft_proof_media_v1(
                 bytes,
                 checked((uint)iccProfile.Length),
                 &raw);

@@ -1,34 +1,11 @@
-using System.Runtime.InteropServices;
-
 namespace Negaflow.Catalog;
-
-internal sealed record DefectSidecarCatalogEntry(
-    string CatalogFrameId,
-    Guid FrameId,
-    string Path,
-    DefectRecipeSnapshot Snapshot);
-
-internal readonly record struct DefectCatalogHealthResult(
-    IReadOnlyList<DefectSidecarCatalogEntry>? Entries,
-    DefectSidecarError Error)
-{
-    public bool IsHealthy => Error == DefectSidecarError.None && Entries is not null;
-
-    public static DefectCatalogHealthResult Healthy(
-        IReadOnlyList<DefectSidecarCatalogEntry> entries) =>
-        new(entries, DefectSidecarError.None);
-
-    public static DefectCatalogHealthResult Failure(DefectSidecarError error) =>
-        new(null, error);
-}
 
 internal static class DefectSidecarStore
 {
     public const long MaximumFileBytes = 128L * 1_024 * 1_024;
 
-    private const uint MoveFileReplaceExisting = 0x00000001;
-    private const uint MoveFileWriteThrough = 0x00000008;
-    private static readonly object Gate = new();
+
+    internal static readonly object Gate = new();
     private static readonly Dictionary<string, ulong> RevisionFloors =
         new(StringComparer.OrdinalIgnoreCase);
 
@@ -52,12 +29,12 @@ internal static class DefectSidecarStore
                 return DefectSidecarReadResult.Failure(
                     DefectSidecarError.InvalidFrameId);
             }
-            if (!HasValidRoots(roots))
+            if (!DefectSidecarFile.HasValidRoots(roots))
             {
                 return DefectSidecarReadResult.Failure(
                     DefectSidecarError.InvalidStorageRoots);
             }
-            return ReadFile(PathFor(roots, frameId), frameId);
+            return DefectSidecarFile.ReadFile(PathFor(roots, frameId), frameId);
         }
     }
 
@@ -86,14 +63,14 @@ internal static class DefectSidecarStore
                 return DefectSidecarDeleteResult.Failure(
                     DefectSidecarError.InvalidSnapshot);
             }
-            if (!HasValidRoots(roots))
+            if (!DefectSidecarFile.HasValidRoots(roots))
             {
                 return DefectSidecarDeleteResult.Failure(
                     DefectSidecarError.InvalidStorageRoots);
             }
 
             string path = PathFor(roots, frameId);
-            string key = RevisionKey(path);
+            string key = DefectSidecarFile.RevisionKey(path);
             RevisionFloors[key] = Math.Max(
                 RevisionFloors.GetValueOrDefault(key),
                 minimumRevision);
@@ -125,74 +102,6 @@ internal static class DefectSidecarStore
         }
     }
 
-    public static DefectCatalogHealthResult ValidateCatalogDeclarations(
-        StorageRootSet roots,
-        CatalogSnapshot snapshot)
-    {
-        ArgumentNullException.ThrowIfNull(roots);
-        ArgumentNullException.ThrowIfNull(snapshot);
-        lock (Gate)
-        {
-            if (!HasValidRoots(roots))
-            {
-                return DefectCatalogHealthResult.Failure(
-                    DefectSidecarError.InvalidStorageRoots);
-            }
-            if (File.Exists(roots.DefectRecipeRoot) ||
-                StoragePathPolicy.IsExistingReparsePoint(roots.DefectRecipeRoot))
-            {
-                return DefectCatalogHealthResult.Failure(
-                    DefectSidecarError.ReparsePointNotAllowed);
-            }
-
-            List<DefectSidecarCatalogEntry> entries = [];
-            HashSet<Guid> frameIds = [];
-            foreach (CatalogEntityRow frame in snapshot.Rows(CatalogEntityTable.Frames))
-            {
-                if (!frame.Payload.TryGetPropertyValue(
-                        "hasDefectEdits",
-                        out System.Text.Json.Nodes.JsonNode? node) ||
-                    node is null)
-                {
-                    continue;
-                }
-                if (node is not System.Text.Json.Nodes.JsonValue value ||
-                    !value.TryGetValue(out bool hasEdits))
-                {
-                    return DefectCatalogHealthResult.Failure(
-                        DefectSidecarError.InvalidContent);
-                }
-                if (!hasEdits)
-                {
-                    continue;
-                }
-                if (!Guid.TryParseExact(frame.Id, "D", out Guid frameId) ||
-                    frameId == Guid.Empty ||
-                    !frameIds.Add(frameId))
-                {
-                    return DefectCatalogHealthResult.Failure(
-                        DefectSidecarError.InvalidFrameId);
-                }
-
-                string path = PathFor(roots, frameId);
-                DefectSidecarReadResult read = ReadFile(path, frameId);
-                if (read.Snapshot is not { } recipe)
-                {
-                    return DefectCatalogHealthResult.Failure(read.Error);
-                }
-                entries.Add(new DefectSidecarCatalogEntry(
-                    frame.Id,
-                    frameId,
-                    path,
-                    recipe));
-            }
-            entries.Sort((left, right) => StringComparer.Ordinal.Compare(
-                left.CatalogFrameId,
-                right.CatalogFrameId));
-            return DefectCatalogHealthResult.Healthy(entries);
-        }
-    }
-
     public static bool HasAnyArtifact(StorageRootSet roots)
     {
         ArgumentNullException.ThrowIfNull(roots);
@@ -216,58 +125,11 @@ internal static class DefectSidecarStore
         }
     }
 
-    internal static DefectSidecarReadResult ReadFile(
-        string path,
-        Guid expectedFrameId)
-    {
-        try
-        {
-            if (Directory.Exists(path) ||
-                StoragePathPolicy.IsExistingReparsePoint(path))
-            {
-                return DefectSidecarReadResult.Failure(
-                    DefectSidecarError.ReparsePointNotAllowed);
-            }
-            if (!File.Exists(path))
-            {
-                return DefectSidecarReadResult.Failure(
-                    DefectSidecarError.NotFound);
-            }
-            FileInfo info = new(path);
-            if (info.Length is < 0 or > MaximumFileBytes)
-            {
-                return DefectSidecarReadResult.Failure(
-                    DefectSidecarError.InvalidContent);
-            }
-            byte[] data = File.ReadAllBytes(path);
-            if (data.LongLength > MaximumFileBytes)
-            {
-                return DefectSidecarReadResult.Failure(
-                    DefectSidecarError.InvalidContent);
-            }
-            return DefectSidecarCodec.Decode(
-                data,
-                expectedFrameId,
-                validateCompressedMasks: true);
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return DefectSidecarReadResult.Failure(
-                DefectSidecarError.AccessDenied);
-        }
-        catch (Exception error) when (error is
-            IOException or NotSupportedException or ArgumentException or PathTooLongException)
-        {
-            return DefectSidecarReadResult.Failure(
-                DefectSidecarError.IoFailure);
-        }
-    }
-
-    private static DefectSidecarWriteResult WriteLocked(
+    internal static DefectSidecarWriteResult WriteLocked(
         StorageRootSet roots,
         DefectRecipeSnapshot supplied)
     {
-        if (!HasValidRoots(roots))
+        if (!DefectSidecarFile.HasValidRoots(roots))
         {
             return DefectSidecarWriteResult.Failure(
                 DefectSidecarError.InvalidStorageRoots);
@@ -298,8 +160,8 @@ internal static class DefectSidecarStore
         }
 
         string path = PathFor(roots, snapshot.FrameId);
-        string key = RevisionKey(path);
-        DefectSidecarReadResult existing = ReadFile(path, snapshot.FrameId);
+        string key = DefectSidecarFile.RevisionKey(path);
+        DefectSidecarReadResult existing = DefectSidecarFile.ReadFile(path, snapshot.FrameId);
         ulong diskRevision = 0;
         bool allowsSourceBinding = false;
         if (existing.Snapshot is { } current)
@@ -377,14 +239,14 @@ internal static class DefectSidecarStore
 
         try
         {
-            PrepareDirectory(roots.DefectRecipeRoot);
+            DefectSidecarFile.PrepareDirectory(roots.DefectRecipeRoot);
             if (Directory.Exists(path) ||
                 StoragePathPolicy.IsExistingReparsePoint(path))
             {
                 return DefectSidecarWriteResult.Failure(
                     DefectSidecarError.ReparsePointNotAllowed);
             }
-            WriteAtomic(path, data, snapshot);
+            DefectSidecarFile.WriteAtomic(path, data, snapshot);
             RevisionFloors[key] = snapshot.RecipeRevision;
             return DefectSidecarWriteResult.Success(
                 DefectSidecarWriteKind.Written);
@@ -401,151 +263,4 @@ internal static class DefectSidecarStore
                 DefectSidecarError.IoFailure);
         }
     }
-
-    private static void PrepareDirectory(string directory)
-    {
-        if (File.Exists(directory))
-        {
-            throw new IOException("Defects sidecar root is a file.");
-        }
-        Directory.CreateDirectory(directory);
-        if (StoragePathPolicy.IsExistingReparsePoint(directory))
-        {
-            throw new IOException("Defects sidecar root is a reparse point.");
-        }
-    }
-
-    private static void WriteAtomic(
-        string destination,
-        byte[] data,
-        DefectRecipeSnapshot expected)
-    {
-        string directory = Path.GetDirectoryName(destination)!;
-        string temporary = Path.Combine(directory, $".sidecar-{Guid.NewGuid():N}.tmp");
-        string displaced = Path.Combine(directory, $".sidecar-{Guid.NewGuid():N}.previous");
-        bool destinationExisted = File.Exists(destination);
-        bool committed = false;
-        try
-        {
-            using (FileStream stream = new(
-                temporary,
-                FileMode.CreateNew,
-                FileAccess.Write,
-                FileShare.None,
-                bufferSize: 1024 * 1024,
-                FileOptions.WriteThrough))
-            {
-                stream.Write(data);
-                stream.Flush(flushToDisk: true);
-            }
-
-            if (destinationExisted)
-            {
-                File.Replace(
-                    temporary,
-                    destination,
-                    displaced,
-                    ignoreMetadataErrors: false);
-            }
-            else if (!MoveFileEx(
-                ToExtendedPath(temporary),
-                ToExtendedPath(destination),
-                MoveFileWriteThrough))
-            {
-                throw new IOException("Defects sidecar promotion failed.");
-            }
-
-            DefectSidecarReadResult readback = ReadFile(destination, expected.FrameId);
-            if (readback.Snapshot is not { } persisted ||
-                !DefectSidecarCodec.AreSameSnapshot(expected, persisted))
-            {
-                throw new IOException("Defects sidecar readback failed.");
-            }
-            committed = true;
-        }
-        catch
-        {
-            if (destinationExisted && File.Exists(displaced))
-            {
-                _ = MoveFileEx(
-                    ToExtendedPath(displaced),
-                    ToExtendedPath(destination),
-                    MoveFileReplaceExisting | MoveFileWriteThrough);
-            }
-            else if (!destinationExisted && File.Exists(destination) &&
-                !StoragePathPolicy.IsExistingReparsePoint(destination))
-            {
-                File.Delete(destination);
-            }
-            throw;
-        }
-        finally
-        {
-            TryDeleteRegularFile(temporary);
-            if (committed)
-            {
-                TryDeleteRegularFile(displaced);
-            }
-        }
-    }
-
-    private static bool HasValidRoots(StorageRootSet roots)
-    {
-        try
-        {
-            return Path.IsPathFullyQualified(roots.LibraryRoot) &&
-                Path.IsPathFullyQualified(roots.DefectRecipeRoot) &&
-                StoragePathPolicy.IsLexicallyContained(
-                    roots.LibraryRoot,
-                    roots.DefectRecipeRoot) &&
-                !StoragePathPolicy.IsExistingReparsePoint(roots.LibraryRoot);
-        }
-        catch (Exception error) when (error is
-            ArgumentException or NotSupportedException or PathTooLongException)
-        {
-            return false;
-        }
-    }
-
-    private static string RevisionKey(string path) => Path.GetFullPath(path);
-
-    private static void TryDeleteRegularFile(string path)
-    {
-        try
-        {
-            if (File.Exists(path) &&
-                !StoragePathPolicy.IsExistingReparsePoint(path) &&
-                (File.GetAttributes(path) & FileAttributes.Directory) == 0)
-            {
-                File.Delete(path);
-            }
-        }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
-        {
-            // Recovery artifact는 다음 startup health check가 드러냅니다.
-        }
-    }
-
-    private static string ToExtendedPath(string path)
-    {
-        string fullPath = Path.GetFullPath(path);
-        if (fullPath.StartsWith(@"\\?\", StringComparison.Ordinal))
-        {
-            return fullPath;
-        }
-        return fullPath.StartsWith(@"\\", StringComparison.Ordinal)
-            ? @"\\?\UNC\" + fullPath[2..]
-            : @"\\?\" + fullPath;
-    }
-
-    [DllImport(
-        "kernel32.dll",
-        EntryPoint = "MoveFileExW",
-        CharSet = CharSet.Unicode,
-        SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool MoveFileEx(
-        string existingFileName,
-        string newFileName,
-        uint flags);
 }

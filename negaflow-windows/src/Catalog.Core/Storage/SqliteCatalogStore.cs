@@ -1,5 +1,3 @@
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using Microsoft.Data.Sqlite;
 
 namespace Negaflow.Catalog;
@@ -23,14 +21,7 @@ internal static class SqliteCatalogStore
     /// position 을 다시 매길 때 쓰는 임시 오프셋입니다. <c>position</c> 이 UNIQUE 이므로 옮겨야 하는
     /// row 를 먼저 이 범위로 밀어내지 않으면 재배치 도중 제약을 어깁니다.
     /// </summary>
-    private const long PositionRelocationOffset = 1L << 40;
 
-    private const int SqliteBusy = 5;
-    private const int SqliteLocked = 6;
-    private const int SqliteReadOnly = 8;
-    private const int SqliteIoError = 10;
-    private const int SqliteFull = 13;
-    private const int SqliteCantOpen = 14;
 
     public static CatalogReadResult Read(string catalogPath)
     {
@@ -49,15 +40,15 @@ internal static class SqliteCatalogStore
 
         try
         {
-            using SqliteConnection connection = OpenConnection(
+            using SqliteConnection connection = SqliteCatalogSchema.OpenConnection(
                 catalogPath,
                 SqliteOpenMode.ReadOnly);
-            if (!IsIntegral(connection))
+            if (!SqliteCatalogSchema.IsIntegral(connection))
             {
                 return CatalogReadResult.Failure(CatalogStoreError.CorruptDatabase);
             }
 
-            long storageVersion = ScalarInt64(connection, "PRAGMA user_version");
+            long storageVersion = SqliteCatalogSchema.ScalarInt64(connection, "PRAGMA user_version");
             if (storageVersion != StorageSchemaVersion)
             {
                 return CatalogReadResult.Failure(
@@ -65,7 +56,7 @@ internal static class SqliteCatalogStore
                     (int)storageVersion);
             }
 
-            if (!TryReadMetadata(
+            if (!SqliteCatalogRows.TryReadMetadata(
                     connection,
                     out int catalogVersion,
                     out int minimumReaderVersion,
@@ -84,7 +75,7 @@ internal static class SqliteCatalogStore
             Dictionary<CatalogEntityTable, IReadOnlyList<CatalogEntityRow>> tables = [];
             foreach (CatalogEntityTable table in CatalogEntityTables.All)
             {
-                if (!TryReadRows(connection, table, out IReadOnlyList<CatalogEntityRow>? rows))
+                if (!SqliteCatalogRows.TryReadRows(connection, table, out IReadOnlyList<CatalogEntityRow>? rows))
                 {
                     return CatalogReadResult.Failure(CatalogStoreError.MalformedContent);
                 }
@@ -99,7 +90,7 @@ internal static class SqliteCatalogStore
         }
         catch (SqliteException error)
         {
-            return CatalogReadResult.Failure(ClassifySqlite(error));
+            return CatalogReadResult.Failure(SqliteCatalogSchema.ClassifySqlite(error));
         }
         catch (UnauthorizedAccessException)
         {
@@ -125,10 +116,10 @@ internal static class SqliteCatalogStore
             return CatalogWriteResult.Failure(CatalogStoreError.UnsupportedCatalogVersion);
         }
 
-        Dictionary<CatalogEntityTable, List<DesiredRow>> desired = [];
+        Dictionary<CatalogEntityTable, List<SqliteCatalogRows.DesiredRow>> desired = [];
         foreach (CatalogEntityTable table in CatalogEntityTables.All)
         {
-            if (!TryProject(snapshot.Rows(table), out List<DesiredRow>? projected))
+            if (!SqliteCatalogRows.TryProject(snapshot.Rows(table), out List<SqliteCatalogRows.DesiredRow>? projected))
             {
                 return CatalogWriteResult.Failure(CatalogStoreError.InvalidSnapshot);
             }
@@ -148,15 +139,15 @@ internal static class SqliteCatalogStore
             }
 
             bool existed = File.Exists(catalogPath);
-            using SqliteConnection connection = OpenConnection(
+            using SqliteConnection connection = SqliteCatalogSchema.OpenConnection(
                 catalogPath,
                 SqliteOpenMode.ReadWriteCreate);
 
-            Execute(connection, "PRAGMA journal_mode=DELETE");
-            Execute(connection, "PRAGMA synchronous=FULL");
-            Execute(connection, "PRAGMA foreign_keys=ON");
+            SqliteCatalogSchema.Execute(connection, "PRAGMA journal_mode=DELETE");
+            SqliteCatalogSchema.Execute(connection, "PRAGMA synchronous=FULL");
+            SqliteCatalogSchema.Execute(connection, "PRAGMA foreign_keys=ON");
 
-            long storageVersion = ScalarInt64(connection, "PRAGMA user_version");
+            long storageVersion = SqliteCatalogSchema.ScalarInt64(connection, "PRAGMA user_version");
             if (existed)
             {
                 if (storageVersion != StorageSchemaVersion)
@@ -164,7 +155,7 @@ internal static class SqliteCatalogStore
                     return CatalogWriteResult.Failure(
                         CatalogStoreError.UnsupportedStorageVersion);
                 }
-                CreateTables(connection);
+                SqliteCatalogSchema.CreateTables(connection);
             }
             else
             {
@@ -174,28 +165,28 @@ internal static class SqliteCatalogStore
                     return CatalogWriteResult.Failure(
                         CatalogStoreError.UnsupportedStorageVersion);
                 }
-                CreateTables(connection);
-                Execute(connection, $"PRAGMA user_version={StorageSchemaVersion}");
+                SqliteCatalogSchema.CreateTables(connection);
+                SqliteCatalogSchema.Execute(connection, $"PRAGMA user_version={StorageSchemaVersion}");
             }
 
-            Execute(connection, "BEGIN IMMEDIATE");
+            SqliteCatalogSchema.Execute(connection, "BEGIN IMMEDIATE");
             try
             {
-                UpsertMetadata(connection, snapshot);
+                SqliteCatalogRows.UpsertMetadata(connection, snapshot);
                 foreach (CatalogEntityTable table in CatalogEntityTables.All)
                 {
-                    SynchronizeRows(connection, table, desired[table]);
+                    SqliteCatalogRows.SynchronizeRows(connection, table, desired[table]);
                 }
-                Execute(connection, "COMMIT");
+                SqliteCatalogSchema.Execute(connection, "COMMIT");
             }
             catch
             {
-                TryRollback(connection);
+                SqliteCatalogSchema.TryRollback(connection);
                 throw;
             }
 
             // commit 뒤 readback 입니다. 여기서 실패하면 성공으로 보고하지 않습니다.
-            if (!IsIntegral(connection))
+            if (!SqliteCatalogSchema.IsIntegral(connection))
             {
                 return CatalogWriteResult.Failure(CatalogStoreError.CorruptDatabase);
             }
@@ -203,7 +194,7 @@ internal static class SqliteCatalogStore
         }
         catch (SqliteException error)
         {
-            return CatalogWriteResult.Failure(ClassifySqlite(error));
+            return CatalogWriteResult.Failure(SqliteCatalogSchema.ClassifySqlite(error));
         }
         catch (UnauthorizedAccessException)
         {
@@ -227,12 +218,12 @@ internal static class SqliteCatalogStore
 
         try
         {
-            using SqliteConnection connection = OpenConnection(
+            using SqliteConnection connection = SqliteCatalogSchema.OpenConnection(
                 catalogPath,
                 SqliteOpenMode.ReadOnly);
-            return IsIntegral(connection) &&
-                ScalarInt64(connection, "PRAGMA user_version") == StorageSchemaVersion &&
-                TryReadMetadata(
+            return SqliteCatalogSchema.IsIntegral(connection) &&
+                SqliteCatalogSchema.ScalarInt64(connection, "PRAGMA user_version") == StorageSchemaVersion &&
+                SqliteCatalogRows.TryReadMetadata(
                     connection,
                     out int catalogVersion,
                     out int minimumReaderVersion,
@@ -246,296 +237,4 @@ internal static class SqliteCatalogStore
             return false;
         }
     }
-
-    private readonly record struct DesiredRow(string Id, long Position, byte[] Payload);
-
-    private static SqliteConnection OpenConnection(string catalogPath, SqliteOpenMode mode)
-    {
-        // Pooling 은 반드시 꺼 둡니다. 6.0 부터 native 연결이 기본으로 pool 되어 Close 뒤에도
-        // 파일 핸들이 남고, 그러면 backup 교체와 pending restore 의 파일 치환이 실패합니다.
-        SqliteConnectionStringBuilder builder = new()
-        {
-            DataSource = catalogPath,
-            Mode = mode,
-            Cache = SqliteCacheMode.Private,
-            Pooling = false,
-            ForeignKeys = true,
-            DefaultTimeout = 5,
-        };
-        SqliteConnection connection = new(builder.ConnectionString);
-        connection.Open();
-        return connection;
-    }
-
-    private static void Execute(SqliteConnection connection, string sql)
-    {
-        using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = sql;
-        command.ExecuteNonQuery();
-    }
-
-    private static void TryRollback(SqliteConnection connection)
-    {
-        try
-        {
-            Execute(connection, "ROLLBACK");
-        }
-        catch (SqliteException)
-        {
-            // transaction 이 이미 끝났으면 되돌릴 것이 없습니다. 원래 실패를 덮지 않습니다.
-        }
-    }
-
-    private static long ScalarInt64(SqliteConnection connection, string sql)
-    {
-        using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = sql;
-        object? value = command.ExecuteScalar();
-        return value is null or DBNull ? 0L : Convert.ToInt64(value, provider: null);
-    }
-
-    private static bool IsIntegral(SqliteConnection connection)
-    {
-        using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = "PRAGMA integrity_check";
-        using SqliteDataReader reader = command.ExecuteReader();
-        return reader.Read() &&
-            !reader.IsDBNull(0) &&
-            string.Equals(reader.GetString(0), "ok", StringComparison.Ordinal);
-    }
-
-    private static void CreateTables(SqliteConnection connection)
-    {
-        Execute(connection, """
-            CREATE TABLE IF NOT EXISTS catalog_metadata (
-              singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
-              catalog_version INTEGER NOT NULL,
-              minimum_reader_version INTEGER NOT NULL,
-              active_roll_id TEXT
-            )
-            """);
-        foreach (CatalogEntityTable table in CatalogEntityTables.All)
-        {
-            Execute(connection, $"""
-                CREATE TABLE IF NOT EXISTS {CatalogEntityTables.SqlName(table)} (
-                  id TEXT PRIMARY KEY NOT NULL,
-                  position INTEGER NOT NULL UNIQUE CHECK (position >= 0),
-                  payload BLOB NOT NULL
-                )
-                """);
-        }
-    }
-
-    private static bool TryReadMetadata(
-        SqliteConnection connection,
-        out int catalogVersion,
-        out int minimumReaderVersion,
-        out string? activeRollId)
-    {
-        catalogVersion = 0;
-        minimumReaderVersion = 0;
-        activeRollId = null;
-
-        using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = """
-            SELECT catalog_version, minimum_reader_version, active_roll_id
-            FROM catalog_metadata WHERE singleton = 1
-            """;
-        using SqliteDataReader reader = command.ExecuteReader();
-        if (!reader.Read())
-        {
-            return false;
-        }
-        catalogVersion = reader.GetInt32(0);
-        minimumReaderVersion = reader.GetInt32(1);
-        activeRollId = reader.IsDBNull(2) ? null : reader.GetString(2);
-        return !reader.Read();
-    }
-
-    private static void UpsertMetadata(SqliteConnection connection, CatalogSnapshot snapshot)
-    {
-        using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = """
-            INSERT INTO catalog_metadata(
-              singleton, catalog_version, minimum_reader_version, active_roll_id
-            ) VALUES(1, $version, $reader, $activeRoll)
-            ON CONFLICT(singleton) DO UPDATE SET
-              catalog_version=excluded.catalog_version,
-              minimum_reader_version=excluded.minimum_reader_version,
-              active_roll_id=excluded.active_roll_id
-            """;
-        command.Parameters.AddWithValue("$version", snapshot.CatalogVersion);
-        command.Parameters.AddWithValue("$reader", snapshot.MinimumReaderVersion);
-        command.Parameters.AddWithValue(
-            "$activeRoll",
-            (object?)snapshot.ActiveRollId ?? DBNull.Value);
-        command.ExecuteNonQuery();
-    }
-
-    private static bool TryReadRows(
-        SqliteConnection connection,
-        CatalogEntityTable table,
-        out IReadOnlyList<CatalogEntityRow> rows)
-    {
-        List<CatalogEntityRow> decoded = [];
-        rows = decoded;
-
-        using SqliteCommand command = connection.CreateCommand();
-        command.CommandText =
-            $"SELECT id, payload FROM {CatalogEntityTables.SqlName(table)} ORDER BY position ASC";
-        using SqliteDataReader reader = command.ExecuteReader();
-        while (reader.Read())
-        {
-            if (reader.IsDBNull(0) || reader.IsDBNull(1))
-            {
-                return false;
-            }
-            string id = reader.GetString(0);
-            byte[] payload = (byte[])reader.GetValue(1);
-            JsonNode? node;
-            try
-            {
-                node = JsonNode.Parse(payload);
-            }
-            catch (JsonException)
-            {
-                return false;
-            }
-            if (node is not JsonObject payloadObject || id.Length == 0)
-            {
-                return false;
-            }
-            decoded.Add(new CatalogEntityRow(id, payloadObject));
-        }
-        return true;
-    }
-
-    private static bool TryProject(
-        IReadOnlyList<CatalogEntityRow> rows,
-        out List<DesiredRow> projected)
-    {
-        projected = new List<DesiredRow>(rows.Count);
-        HashSet<string> seen = new(StringComparer.Ordinal);
-        for (int index = 0; index < rows.Count; index++)
-        {
-            CatalogEntityRow row = rows[index];
-            if (row is null || string.IsNullOrEmpty(row.Id) || !seen.Add(row.Id))
-            {
-                return false;
-            }
-            projected.Add(new DesiredRow(
-                row.Id,
-                index,
-                CatalogJson.SerializeCanonical(row.Payload)));
-        }
-        return true;
-    }
-
-    private static void SynchronizeRows(
-        SqliteConnection connection,
-        CatalogEntityTable table,
-        List<DesiredRow> desired)
-    {
-        string name = CatalogEntityTables.SqlName(table);
-        Dictionary<string, long> existing = ReadPositions(connection, name);
-
-        HashSet<string> desiredIds = new(desired.Count, StringComparer.Ordinal);
-        foreach (DesiredRow row in desired)
-        {
-            desiredIds.Add(row.Id);
-        }
-
-        List<string> removed = [];
-        foreach (KeyValuePair<string, long> entry in existing)
-        {
-            if (!desiredIds.Contains(entry.Key))
-            {
-                removed.Add(entry.Key);
-            }
-        }
-        if (removed.Count > 0)
-        {
-            using SqliteCommand delete = connection.CreateCommand();
-            delete.CommandText = $"DELETE FROM {name} WHERE id = $id";
-            SqliteParameter deleteId = delete.Parameters.Add("$id", SqliteType.Text);
-            foreach (string id in removed)
-            {
-                deleteId.Value = id;
-                delete.ExecuteNonQuery();
-            }
-        }
-
-        // position 은 UNIQUE 이므로 자리를 바꾸는 row 를 먼저 충돌하지 않는 범위로 밀어냅니다.
-        // 자리가 그대로인 row 는 건드리지 않으므로 페이지를 다시 쓰지 않습니다.
-        List<string> moved = [];
-        foreach (DesiredRow row in desired)
-        {
-            if (existing.TryGetValue(row.Id, out long current) && current != row.Position)
-            {
-                moved.Add(row.Id);
-            }
-        }
-        if (moved.Count > 0)
-        {
-            using SqliteCommand bump = connection.CreateCommand();
-            bump.CommandText =
-                $"UPDATE {name} SET position = position + $offset WHERE id = $id";
-            bump.Parameters.AddWithValue("$offset", PositionRelocationOffset);
-            SqliteParameter bumpId = bump.Parameters.Add("$id", SqliteType.Text);
-            foreach (string id in moved)
-            {
-                bumpId.Value = id;
-                bump.ExecuteNonQuery();
-            }
-        }
-
-        if (desired.Count == 0)
-        {
-            return;
-        }
-
-        using SqliteCommand upsert = connection.CreateCommand();
-        upsert.CommandText = $"""
-            INSERT INTO {name}(id, position, payload) VALUES($id, $position, $payload)
-            ON CONFLICT(id) DO UPDATE SET
-              position=excluded.position,
-              payload=excluded.payload
-            WHERE {name}.position != excluded.position
-               OR {name}.payload != excluded.payload
-            """;
-        SqliteParameter upsertId = upsert.Parameters.Add("$id", SqliteType.Text);
-        SqliteParameter upsertPosition = upsert.Parameters.Add("$position", SqliteType.Integer);
-        SqliteParameter upsertPayload = upsert.Parameters.Add("$payload", SqliteType.Blob);
-        foreach (DesiredRow row in desired)
-        {
-            upsertId.Value = row.Id;
-            upsertPosition.Value = row.Position;
-            upsertPayload.Value = row.Payload;
-            upsert.ExecuteNonQuery();
-        }
-    }
-
-    private static Dictionary<string, long> ReadPositions(
-        SqliteConnection connection,
-        string tableName)
-    {
-        Dictionary<string, long> positions = new(StringComparer.Ordinal);
-        using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = $"SELECT id, position FROM {tableName}";
-        using SqliteDataReader reader = command.ExecuteReader();
-        while (reader.Read())
-        {
-            positions[reader.GetString(0)] = reader.GetInt64(1);
-        }
-        return positions;
-    }
-
-    private static CatalogStoreError ClassifySqlite(SqliteException error) =>
-        error.SqliteErrorCode switch
-        {
-            SqliteBusy or SqliteLocked => CatalogStoreError.Busy,
-            SqliteReadOnly => CatalogStoreError.AccessDenied,
-            SqliteIoError or SqliteFull or SqliteCantOpen => CatalogStoreError.IoFailure,
-            _ => CatalogStoreError.CorruptDatabase,
-        };
 }

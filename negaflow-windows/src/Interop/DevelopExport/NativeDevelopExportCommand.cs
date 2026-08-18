@@ -127,7 +127,7 @@ internal static unsafe class NativeDevelopExportCommand
                 NativeDevelopExportRequestV34 native = BuildRequestV34(BuildRequestV33(
                     v32, request, make, model, software, artist, copyright, filmType,
                     filmStock, capturedAt), request);
-                status = NativeMethods.nf_develop_export_v34(
+                status = NativeDevelopRun.nf_develop_export_v34(
                     &native,
                     runState,
                     &raw);

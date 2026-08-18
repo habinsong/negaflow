@@ -18,6 +18,29 @@ internal static class PreviewAndAutoAdjustmentTests
     {
         VerifyAutoAdjustCoordinator();
         VerifyPreviewCoordinator();
+        VerifyPreviewProxyDimension();
+    }
+
+    private static void VerifyPreviewProxyDimension()
+    {
+        Check(
+            DevelopPreviewProxy.InteractiveProxyDimension(0) ==
+                DevelopPreviewProxy.InteractiveMaxDimension,
+            "proxy_unknown_display_uses_interactive_max");
+        Check(
+            DevelopPreviewProxy.InteractiveProxyDimension(900) ==
+                DevelopPreviewProxy.InteractiveMinDimension,
+            "proxy_below_min_clamps_to_1024");
+        Check(
+            DevelopPreviewProxy.InteractiveProxyDimension(1100) == 1280,
+            "proxy_quantizes_up_to_256");
+        Check(
+            DevelopPreviewProxy.InteractiveProxyDimension(4000) ==
+                DevelopPreviewProxy.FullMaxDimension,
+            "proxy_above_full_clamps_to_3600");
+        Check(
+            DevelopPreviewProxy.SettleWindow == TimeSpan.FromMilliseconds(140),
+            "proxy_settle_window_is_macos_140ms");
     }
 
     private static void VerifyAutoAdjustCoordinator()
