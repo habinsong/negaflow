@@ -1,5 +1,7 @@
 #include "grain_mend_morphology.h"
 
+#include "negaflow/imaging/kernel_accelerator.h"
+
 #include <algorithm>
 #include <atomic>
 #include <cstddef>
@@ -152,6 +154,17 @@ std::vector<float> opening(
     if (source.empty() || width == 0U || height == 0U || radius == 0U) {
         return source;
     }
+    // 형태학은 창 안에서 **하나를 고르는** 일이라 부동소수 산술이 없습니다. 창과 가장자리
+    // 처리가 같으면 고른 값도 같으므로 GPU 결과가 CPU 와 **비트 단위로 같습니다** —
+    // 그래서 내보내기·골든 경로에서도 켭니다(`kernel_accelerator.h` 의 "정확한 것").
+    if (const KernelAccelerator* const accelerator = kernel_accelerator();
+        accelerator != nullptr && accelerator->opening != nullptr) {
+        std::vector<float> accelerated(source.size());
+        if (accelerator->opening(source.data(), accelerated.data(), width, height, radius)) {
+            return accelerated;
+        }
+        // 실패하면 조용히 CPU 로 갑니다. GPU 가 없거나 메모리가 모자란 경우입니다.
+    }
     std::vector<float> first(source.size());
     std::vector<float> result(source.size());
     box_filter<true>(source, first, result, width, height, radius);
@@ -167,6 +180,13 @@ std::vector<float> closing(
     if (source.empty() || width == 0U || height == 0U || radius == 0U) {
         return source;
     }
+    if (const KernelAccelerator* const accelerator = kernel_accelerator();
+        accelerator != nullptr && accelerator->closing != nullptr) {
+        std::vector<float> accelerated(source.size());
+        if (accelerator->closing(source.data(), accelerated.data(), width, height, radius)) {
+            return accelerated;
+        }
+    }
     std::vector<float> first(source.size());
     std::vector<float> result(source.size());
     box_filter<false>(source, first, result, width, height, radius);
@@ -181,6 +201,14 @@ std::vector<float> bipolar_top_hat(
     const std::uint32_t radius) {
     if (source.empty() || width == 0U || height == 0U || radius == 0U) {
         return std::vector<float>(source.size(), 0.0F);
+    }
+    if (const KernelAccelerator* const accelerator = kernel_accelerator();
+        accelerator != nullptr && accelerator->bipolar_top_hat != nullptr) {
+        std::vector<float> accelerated(source.size());
+        if (accelerator->bipolar_top_hat(
+                source.data(), accelerated.data(), width, height, radius)) {
+            return accelerated;
+        }
     }
     const BackgroundMorphologyLease lease{};
     std::future<std::vector<float>> opened_future{};

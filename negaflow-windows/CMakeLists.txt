@@ -425,6 +425,7 @@ add_library(negaflow_imaging STATIC
       src/Native/imaging/grain_mend_shape.cpp
       src/Native/imaging/grain_mend_structure_lines.cpp
       src/Native/imaging/grain_mend_morphology.cpp
+      src/Native/imaging/kernel_accelerator.cpp
       src/Native/imaging/grain_mend_resample.cpp
       src/Native/imaging/grain_mend_speck_detector.cpp
       src/Native/imaging/grain_mend_stitch.cpp

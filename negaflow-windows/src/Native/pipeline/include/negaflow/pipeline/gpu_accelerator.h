@@ -22,6 +22,7 @@
 #include <cstdint>
 
 #include "negaflow/imaging/film_scan_denoise.h"
+#include "negaflow/imaging/kernel_accelerator.h"
 #include "negaflow/imaging/working_tone_adjuster.h"
 
 namespace negaflow::pipeline {
@@ -69,6 +70,23 @@ public:
         imaging::WorkingImage& image,
         const imaging::FilmScanDenoiseParameters& parameters) noexcept;
 
+    // 단일 채널 평면 형태학입니다. GrainMend 검출 안쪽에서 불립니다.
+    //
+    // ☠️ 여기에는 `GpuUsePolicy` 가 **없습니다.** 형태학은 창 안에서 하나를 고르는 일이라
+    //    부동소수 산술이 없고 CPU 와 **비트 단위로 같습니다**(시험이 전 반경에서 고정).
+    //    그래서 내보내기·골든 경로에서도 켭니다 — 값이 안 바뀌므로 막을 이유가 없습니다.
+    //    곱셈·덧셈이 들어가는 커널을 이 방식으로 붙이지 마십시오.
+    //
+    // `source` 와 `destination` 은 `width * height` 개이고 겹치지 않아야 합니다.
+    // 처리했으면 `true`. `false` 면 호출부가 CPU 로 갑니다.
+    [[nodiscard]] bool apply_morphology_plane(
+        const float* source,
+        float* destination,
+        std::uint32_t width,
+        std::uint32_t height,
+        std::uint32_t radius,
+        imaging::MorphologyKind kind) noexcept;
+
 private:
     GpuAccelerator() noexcept;
     ~GpuAccelerator();
@@ -79,5 +97,9 @@ private:
     struct State;
     State* state_{nullptr};
 };
+
+// `imaging` 안쪽 커널이 GPU 를 쓰게 표를 겁니다. 프로세스 시작에 한 번 부르십시오.
+// 장치가 없으면 아무것도 하지 않습니다.
+void install_gpu_kernel_accelerator() noexcept;
 
 }  // namespace negaflow::pipeline
