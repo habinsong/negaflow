@@ -3,6 +3,7 @@
 #include "synthetic_wic_tiff.h"
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
@@ -172,6 +173,55 @@ int main(int argc, char** argv) {
             "export stays larger than the preview proxy");
     }
     std::filesystem::remove(request.destination, ignored);
+
+    request.base_estimation_mode = negaflow::pipeline::NegativeBaseEstimationMode::preset;
+    request.tone.exposure_stops = 0.25F;
+    negaflow::imaging::FilmStockBasePreset white_led{};
+    white_led.dmin = {0.22F, 0.13F, 0.07F};
+    white_led.dmax_normalized = {1.70F, 1.80F, 2.15F};
+    white_led.light_gain = {0.98F, 1.0F, 1.04F};
+    request.film_stock_preset = white_led;
+    std::vector<std::uint8_t> gain_a_pixels = first_pixels;
+    std::vector<std::uint8_t> gain_a_again_pixels = first_pixels;
+    std::vector<std::uint8_t> gain_b_pixels = first_pixels;
+    negaflow::pipeline::reset_stage_timings();
+    const auto gain_a = negaflow::pipeline::develop_preview(
+        request, preview_box, preview_box, gain_a_pixels.data(), gain_a_pixels.size());
+    expect(gain_a.succeeded, "white-led preview succeeds");
+    const std::array<float, 3> dmin_white = gain_a.applied_dmin;
+
+    negaflow::pipeline::reset_stage_timings();
+    const auto gain_a_again = negaflow::pipeline::develop_preview(
+        request,
+        preview_box,
+        preview_box,
+        gain_a_again_pixels.data(),
+        gain_a_again_pixels.size());
+    expect(gain_a_again.succeeded, "same light gain preview succeeds");
+    expect(
+        stage_runs(negaflow::pipeline::DevelopExportStage::decode) == 0U,
+        "same light gain hits the proxy slot");
+    expect(
+        gain_a_again.applied_dmin[0] == dmin_white[0] &&
+            gain_a_again.applied_dmin[1] == dmin_white[1] &&
+            gain_a_again.applied_dmin[2] == dmin_white[2],
+        "same light gain keeps applied dmin");
+
+    negaflow::imaging::FilmStockBasePreset warm_led = white_led;
+    warm_led.light_gain = {1.06F, 1.0F, 0.92F};
+    request.film_stock_preset = warm_led;
+    negaflow::pipeline::reset_stage_timings();
+    const auto gain_b = negaflow::pipeline::develop_preview(
+        request, preview_box, preview_box, gain_b_pixels.data(), gain_b_pixels.size());
+    expect(gain_b.succeeded, "warm-led preview succeeds");
+    expect(
+        stage_runs(negaflow::pipeline::DevelopExportStage::decode) >= 1U,
+        "light-gain change misses the proxy slot");
+    expect(
+        gain_b.applied_dmin[0] != dmin_white[0] ||
+            gain_b.applied_dmin[2] != dmin_white[2],
+        "changing light gain changes applied dmin");
+
     if (wrote_temp) {
         std::filesystem::remove(source, ignored);
     }

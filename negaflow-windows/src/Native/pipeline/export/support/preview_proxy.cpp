@@ -25,6 +25,7 @@ struct PreviewRawSlot final {
     FilmPolarity polarity{FilmPolarity::negative};
     std::array<float, 3> preset_dmin{};
     std::array<float, 3> preset_dmax{};
+    std::array<float, 3> preset_light_gain{};
     bool has_preset{false};
     negaflow::imaging::WorkingImage image{};
     PreviewProxyHint hint{};
@@ -55,7 +56,8 @@ PreviewRawSlot g_settled{};
         return false;
     }
     return slot.preset_dmin == request.film_stock_preset->dmin &&
-        slot.preset_dmax == request.film_stock_preset->dmax_normalized;
+        slot.preset_dmax == request.film_stock_preset->dmax_normalized &&
+        slot.preset_light_gain == request.film_stock_preset->light_gain;
 }
 
 [[nodiscard]] bool slot_matches(
@@ -82,6 +84,7 @@ void remember_preset(PreviewRawSlot& slot, const DevelopExportRequest& request) 
     if (slot.has_preset) {
         slot.preset_dmin = request.film_stock_preset->dmin;
         slot.preset_dmax = request.film_stock_preset->dmax_normalized;
+        slot.preset_light_gain = request.film_stock_preset->light_gain;
     }
 }
 
