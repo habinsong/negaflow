@@ -20,6 +20,8 @@ public sealed partial class WorkspaceShellView : UserControl
         InitializeComponent();
     }
 
+    public event EventHandler? AboutRequested;
+
     public event EventHandler? SettingsRequested;
 
     public UIElement TitleBarElement => Toolbar.TitleBarElement;
@@ -103,14 +105,16 @@ public sealed partial class WorkspaceShellView : UserControl
             PrintWorkspace.ShowLibrary(libraryHost);
         }
         Toolbar.SettingsRequested += OnToolbarSettingsRequested;
+        AppMenu.AboutRequested += OnAppMenuAboutRequested;
+        AppMenu.SettingsRequested += OnToolbarSettingsRequested;
         state.Changed += OnStateChanged;
         UpdateWorkspace(state.Current.SelectedWorkspace);
         Unloaded += OnUnloaded;
     }
 
     /// <summary>
-    /// 작업 흐름 단축키입니다. macOS 는 메뉴 막대가 이 일을 하지만 Windows 앱에는 메뉴 막대가
-    /// 없으므로 창이 직접 받습니다.
+    /// 작업 흐름 단축키입니다. macOS 는 메뉴 막대가 이 일을 합니다. Windows 는 창 안
+    /// 메뉴와 이 키 처리가 같이 받습니다.
     /// </summary>
     /// <remarks>
     /// **글자를 입력하는 중이면 손대지 않습니다.** 이름 상자에 "p" 를 치는 것이 사진을 선택으로
@@ -247,6 +251,13 @@ public sealed partial class WorkspaceShellView : UserControl
         SettingsRequested?.Invoke(this, EventArgs.Empty);
     }
 
+    private void OnAppMenuAboutRequested(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        AboutRequested?.Invoke(this, EventArgs.Empty);
+    }
+
     private async void OnToolbarQuickExportRequested(object? sender, EventArgs args)
     {
         _ = sender;
@@ -285,6 +296,8 @@ public sealed partial class WorkspaceShellView : UserControl
         _ = sender;
         _ = args;
         Toolbar.SettingsRequested -= OnToolbarSettingsRequested;
+        AppMenu.AboutRequested -= OnAppMenuAboutRequested;
+        AppMenu.SettingsRequested -= OnToolbarSettingsRequested;
         Toolbar.QuickExportRequested -= OnToolbarQuickExportRequested;
         DevelopWorkspace.QuickExportAvailabilityChanged -= OnQuickExportAvailabilityChanged;
         DevelopWorkspace.ScannerSetupRequested -= OnDevelopScannerSetupRequested;

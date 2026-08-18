@@ -8,6 +8,7 @@ public sealed partial class MainWindow : Window
     private readonly PresentationSettingsStore settingsStore;
     private readonly WorkspacePresentationState workspaceState;
     private SettingsWindow? settingsWindow;
+    private AboutNegaflowWindow? aboutWindow;
 
     public MainWindow(
         PresentationSettingsStore settingsStore,
@@ -28,6 +29,7 @@ public sealed partial class MainWindow : Window
             AppWindow.Id,
             thumbnails);
         ShellView.SettingsRequested += OnSettingsRequested;
+        ShellView.AboutRequested += OnAboutRequested;
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(ShellView.TitleBarElement);
         ShellView.Loaded += OnShellLoaded;
@@ -91,6 +93,19 @@ public sealed partial class MainWindow : Window
         settingsWindow.Activate();
     }
 
+    private void OnAboutRequested(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (aboutWindow is null)
+        {
+            aboutWindow = new AboutNegaflowWindow(settingsStore);
+            aboutWindow.Closed += OnAboutWindowClosed;
+        }
+
+        aboutWindow.Activate();
+    }
+
     /// <summary>
     /// 두 번째 실행이 기존 프로세스로 넘어왔을 때 이 창을 다시 보여 줍니다. 최소화면이면
     /// 복원합니다 — 뒤에 숨어 있으면 사용자는 또 켜진 줄 압니다.
@@ -116,6 +131,17 @@ public sealed partial class MainWindow : Window
         settingsWindow = null;
     }
 
+    private void OnAboutWindowClosed(object sender, WindowEventArgs args)
+    {
+        _ = args;
+        if (sender is AboutNegaflowWindow closedWindow)
+        {
+            closedWindow.Closed -= OnAboutWindowClosed;
+        }
+
+        aboutWindow = null;
+    }
+
     private void OnSettingsChanged(object? sender, ShellPreferences preferences)
     {
         _ = sender;
@@ -139,8 +165,11 @@ public sealed partial class MainWindow : Window
         ShellView.Loaded -= OnShellLoaded;
         ShellView.SizeChanged -= OnShellSizeChanged;
         ShellView.SettingsRequested -= OnSettingsRequested;
+        ShellView.AboutRequested -= OnAboutRequested;
         settingsStore.Changed -= OnSettingsChanged;
         settingsWindow?.Close();
         settingsWindow = null;
+        aboutWindow?.Close();
+        aboutWindow = null;
     }
 }

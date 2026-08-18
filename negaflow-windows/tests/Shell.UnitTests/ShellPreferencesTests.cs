@@ -127,6 +127,11 @@ internal static class ShellPreferencesTests
             ShellLayoutMetrics.SettingsWindowWidth, "baseline_settings_width");
         Check(Read(root, "settings", "window_height") ==
             ShellLayoutMetrics.SettingsWindowHeight, "baseline_settings_height");
+        Check(
+            ShellLayoutMetrics.AboutWindowWidth == 460 &&
+                ShellLayoutMetrics.AboutWindowHeight == 330 &&
+                ShellLayoutMetrics.AboutIconSize == 96,
+            "about_window_matches_macos_contentsize");
     }
 
     private static double Read(JsonElement root, string group, string name) =>

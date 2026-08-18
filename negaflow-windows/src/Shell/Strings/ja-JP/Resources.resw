@@ -87,6 +87,22 @@
     <value>クイック書き出し</value>
     <comment>AppLocalizedText.commandQuickExport</comment>
   </data>
+  <data name="aboutAnniversaryMessage.Text" xml:space="preserve">
+    <value>ニエプスが人類最初の一枚を写してから二百年。その夏に寄せて。</value>
+    <comment>AppLocalizedText.aboutAnniversaryMessage</comment>
+  </data>
+  <data name="aboutVersionLabel.Text" xml:space="preserve">
+    <value>バージョン</value>
+    <comment>AppLocalizedText.aboutVersionLabel</comment>
+  </data>
+  <data name="commandAboutNegaflow.Text" xml:space="preserve">
+    <value>negaflow について</value>
+    <comment>AppLocalizedText.commandAboutNegaflow</comment>
+  </data>
+  <data name="commandAboutNegaflow.Value" xml:space="preserve">
+    <value>negaflow について</value>
+    <comment>AppLocalizedText.commandAboutNegaflow</comment>
+  </data>
   <data name="commandSettings.Text" xml:space="preserve">
     <value>設定</value>
     <comment>AppLocalizedText.commandSettings</comment>

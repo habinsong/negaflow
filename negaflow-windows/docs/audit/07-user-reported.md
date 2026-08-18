@@ -65,14 +65,15 @@ A1 재현(2026-08-18 04:50, 04:59): 작업 옵션 → 설정 클릭. 프로세�
 
 ---
 
-## B. 메뉴막대 — **통째로 없음**
+## B. 메뉴막대
 
 macOS `App/AppMenuCommands.swift` · `AppStandardMenuCommands.swift` · `AppWorkflowMenuCommands.swift`
-세 파일이 메뉴막대를 냅니다.
+세 파일이 메뉴막대를 냅니다. Windows 는 시스템 앱 메뉴가 없어서 **창 안 `MenuBar`** 가
+그 자리입니다(OS 강제 차이).
 
 | macOS 메뉴 | 정의 위치 | Windows |
 |---|---|---|
-| negaflow에 관하여 / 설정 | `AppStandardMenuCommands.swift:10` (`.appInfo`) | **없음** |
+| negaflow에 관하여 / 설정 | `AppStandardMenuCommands.swift:10` (`.appInfo`) | **2026-08-19.** `AppMenuBarView` 첫 메뉴 `negaflow`. 앱 PID 28956: UIA `negaflow에 관하여` / `설정`. About 창 제목·니엡스 문구·`버전 1.0.0.0`·Copyright. 물리 690×495 = 460×330@1.5. **설정 클릭:** 설정 창 제목 `설정`, 물리 1140×960 = 760×640@1.5, 탭 일반·인터페이스·워크플로우·스캔·디스크·내보내기·단축키·법적 고지 |
 | 파일 | `:16` (`after: .newItem`), `:38` (`after: .importExport`) | **없음** |
 | 편집 | `:54` (`replacing: .undoRedo`), `:66` (`.pasteboard`), `:78` (`.textEditing`) | **없음** |
 | 보기 | `:95` (`after: .sidebar`), `:112` (`after: .toolbar`) | **없음** |
@@ -84,10 +85,9 @@ macOS `App/AppMenuCommands.swift` · `AppStandardMenuCommands.swift` · `AppWork
 | 윈도우 | 표준 | **없음** |
 | 도움말 | `AppStandardMenuCommands.swift:136` (`after: .help`) | **없음** |
 
-Windows 전 트리에서 `MenuBar` · `MenuBarItem` **히트 0**.
-`Localization/Core/AppMenuCatalog.swift` 에 메뉴 문자열 카탈로그까지 있는데 대응이 없습니다.
+Parsec macOS 메뉴 줄: `negaflow · 파일 · 편집 · 보기 · 라이브러리 · 사진 · 현상 · 스캐너 · 내보내기 · 윈도우 · 도움말`.
 
-**판정: 메뉴막대 11개가 전부 없습니다. 단축키·명령 접근 경로가 통째로 빠졌습니다.**
+**판정: 앱 메뉴(관하여/설정)만 이식함. 나머지 10개는 없습니다.**
 
 ---
 
@@ -477,7 +477,7 @@ DevelopLookLabel         DevelopLookSelector
 2. **E1 프리뷰 프록시 캐시 + 2단 렌더** — 네이티브 2슬롯+Lanczos 현상 붙임. 5088×3401 상자 1280 두 번째 **43.1 ms · decode 0**. 앱에서 노출 0→0.80 과 히스토그램 갱신 확인. **FrameCacheManager FIFO 는 10번.**
 3. **C1 필름 베이스** — C1.1~C1.9. RealScan 리베이트 집기 `0.40 0.13 0.07` + 현상본 유지.
 4. **E4 인화 프리뷰** — **닫음.** 현상본 먼저, 칸이 크면 표시 크기 현상. 다음: B 메뉴막대
-5. **B 메뉴막대 11개**
+5. **B 메뉴막대** — 앱 메뉴(관하여/설정) 이식함. 다음: 파일 메뉴
 6. **D1 초기화 · D5 undo**
 7. **GPU** ([`04`](04-gpu-plan.md))
 8. **D2·D3 비교 캡슐·줌 HUD**

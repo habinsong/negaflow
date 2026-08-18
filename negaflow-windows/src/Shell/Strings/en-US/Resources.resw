@@ -87,6 +87,22 @@
     <value>Quick Export</value>
     <comment>AppLocalizedText.commandQuickExport</comment>
   </data>
+  <data name="aboutAnniversaryMessage.Text" xml:space="preserve">
+    <value>Celebrating this summer, the bicentennial of Niépce's first-ever photograph.</value>
+    <comment>AppLocalizedText.aboutAnniversaryMessage</comment>
+  </data>
+  <data name="aboutVersionLabel.Text" xml:space="preserve">
+    <value>Version</value>
+    <comment>AppLocalizedText.aboutVersionLabel</comment>
+  </data>
+  <data name="commandAboutNegaflow.Text" xml:space="preserve">
+    <value>About negaflow</value>
+    <comment>AppLocalizedText.commandAboutNegaflow</comment>
+  </data>
+  <data name="commandAboutNegaflow.Value" xml:space="preserve">
+    <value>About negaflow</value>
+    <comment>AppLocalizedText.commandAboutNegaflow</comment>
+  </data>
   <data name="commandSettings.Text" xml:space="preserve">
     <value>Settings</value>
     <comment>AppLocalizedText.commandSettings</comment>

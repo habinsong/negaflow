@@ -87,6 +87,22 @@
     <value>빠른 내보내기</value>
     <comment>AppLocalizedText.commandQuickExport</comment>
   </data>
+  <data name="aboutAnniversaryMessage.Text" xml:space="preserve">
+    <value>니엡스가 찍은 최초의 사진으로부터 200주년인 올해 여름을 기념하며.</value>
+    <comment>AppLocalizedText.aboutAnniversaryMessage</comment>
+  </data>
+  <data name="aboutVersionLabel.Text" xml:space="preserve">
+    <value>버전</value>
+    <comment>AppLocalizedText.aboutVersionLabel</comment>
+  </data>
+  <data name="commandAboutNegaflow.Text" xml:space="preserve">
+    <value>negaflow에 관하여</value>
+    <comment>AppLocalizedText.commandAboutNegaflow</comment>
+  </data>
+  <data name="commandAboutNegaflow.Value" xml:space="preserve">
+    <value>negaflow에 관하여</value>
+    <comment>AppLocalizedText.commandAboutNegaflow</comment>
+  </data>
   <data name="commandSettings.Text" xml:space="preserve">
     <value>설정</value>
     <comment>AppLocalizedText.commandSettings</comment>

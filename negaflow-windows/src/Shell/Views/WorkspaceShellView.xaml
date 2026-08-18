@@ -9,14 +9,16 @@
     <Grid Background="{ThemeResource NegaflowWindowBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="40" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="1" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
         <views:WorkspaceToolbarView x:Name="Toolbar" Grid.Row="0" />
-        <Border Grid.Row="1" Background="{ThemeResource NegaflowDividerBrush}" />
+        <views:AppMenuBarView x:Name="AppMenu" Grid.Row="1" />
+        <Border Grid.Row="2" Background="{ThemeResource NegaflowDividerBrush}" />
 
-        <Grid Grid.Row="2">
+        <Grid Grid.Row="3">
             <views:LibraryWorkspaceView x:Name="LibraryWorkspace" Visibility="Collapsed" />
             <views:DevelopWorkspaceView x:Name="DevelopWorkspace" />
             <views:PrintWorkspaceView x:Name="PrintWorkspace" Visibility="Collapsed" />

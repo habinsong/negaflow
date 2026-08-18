@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Negaflow.Shell.Views.AppMenuBarView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!--
+      macOS 메뉴막대는 화면 맨 위(시스템)에 있습니다. Windows 는 창 안에 두므로
+      제목줄 아래 한 줄이 그 자리입니다. 첫 메뉴는 앱 메뉴(.appInfo) 입니다.
+    -->
+    <MenuBar
+        x:Name="Host"
+        AutomationProperties.AutomationId="negaflow.menu.bar"
+        Background="{ThemeResource NegaflowWindowBrush}">
+        <MenuBarItem
+            x:Name="AppMenu"
+            AutomationProperties.AutomationId="negaflow.menu.app"
+            Title="negaflow">
+            <MenuFlyoutItem
+                x:Name="AboutItem"
+                AutomationProperties.AutomationId="negaflow.menu.about"
+                Click="OnAboutClick" />
+            <MenuFlyoutItem
+                x:Name="SettingsItem"
+                AutomationProperties.AutomationId="negaflow.menu.settings"
+                Click="OnSettingsClick" />
+        </MenuBarItem>
+    </MenuBar>
+</UserControl>

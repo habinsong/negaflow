@@ -38,4 +38,9 @@ public static class ShellLayoutMetrics
 
     public const double SettingsWindowWidth = 760;
     public const double SettingsWindowHeight = 640;
+
+    /// <summary>macOS <c>AboutNegaflowView.contentSize</c> 460×330.</summary>
+    public const double AboutWindowWidth = 460;
+    public const double AboutWindowHeight = 330;
+    public const double AboutIconSize = 96;
 }

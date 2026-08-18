@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Negaflow.Shell.Views.AboutNegaflowView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel
+        Width="460"
+        Height="330"
+        HorizontalAlignment="Center"
+        VerticalAlignment="Center"
+        Spacing="0">
+        <Image
+            Width="96"
+            Height="96"
+            Margin="0,0,0,12"
+            AutomationProperties.AccessibilityView="Raw"
+            Source="ms-appx:///Assets/AppIcon-App-1024.png"
+            Stretch="Uniform" />
+        <TextBlock
+            Margin="0,0,0,10"
+            HorizontalAlignment="Center"
+            FontSize="22"
+            FontWeight="SemiBold"
+            Text="negaflow" />
+        <TextBlock
+            x:Name="AnniversaryText"
+            MaxWidth="390"
+            Margin="0,0,0,10"
+            HorizontalAlignment="Center"
+            FontSize="14"
+            FontWeight="Bold"
+            TextAlignment="Center"
+            TextWrapping="Wrap" />
+        <TextBlock
+            x:Name="VersionText"
+            HorizontalAlignment="Center"
+            FontSize="14"
+            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+        <TextBlock
+            x:Name="CopyrightText"
+            Margin="0,12,0,0"
+            HorizontalAlignment="Center"
+            FontSize="12"
+            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+    </StackPanel>
+</UserControl>

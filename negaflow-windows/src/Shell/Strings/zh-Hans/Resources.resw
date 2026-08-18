@@ -87,6 +87,22 @@
     <value>快速导出</value>
     <comment>AppLocalizedText.commandQuickExport</comment>
   </data>
+  <data name="aboutAnniversaryMessage.Text" xml:space="preserve">
+    <value>谨以此夏，纪念尼埃普斯拍下人类第一张照片二百周年。</value>
+    <comment>AppLocalizedText.aboutAnniversaryMessage</comment>
+  </data>
+  <data name="aboutVersionLabel.Text" xml:space="preserve">
+    <value>版本</value>
+    <comment>AppLocalizedText.aboutVersionLabel</comment>
+  </data>
+  <data name="commandAboutNegaflow.Text" xml:space="preserve">
+    <value>关于 negaflow</value>
+    <comment>AppLocalizedText.commandAboutNegaflow</comment>
+  </data>
+  <data name="commandAboutNegaflow.Value" xml:space="preserve">
+    <value>关于 negaflow</value>
+    <comment>AppLocalizedText.commandAboutNegaflow</comment>
+  </data>
   <data name="commandSettings.Text" xml:space="preserve">
     <value>设置</value>
     <comment>AppLocalizedText.commandSettings</comment>
