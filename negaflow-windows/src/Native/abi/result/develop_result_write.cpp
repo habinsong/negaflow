@@ -2,6 +2,8 @@
 
 #include "support/abi_text.h"
 
+#include "negaflow/imaging/film_base_measurement.h"
+
 #include <chrono>
 #include <cstdint>
 #include <cstring>
@@ -162,6 +164,49 @@ void write_outcome_v3(
     result.cancelled = outcome.cancelled ? 1U : 0U;
     result.reserved = 0U;
     result.struct_size = declared_size;
+    if (declared_size >= static_cast<std::uint32_t>(sizeof(nf_develop_export_result_v4))) {
+        auto& packed = reinterpret_cast<nf_develop_export_result_v4&>(result).measurement;
+        std::memset(&packed, 0, sizeof(packed));
+        packed.method = 0xFFFFFFFFU;
+        if (outcome.measurement_method.has_value()) {
+            packed.method = static_cast<std::uint32_t>(*outcome.measurement_method);
+        }
+        if (outcome.measurement_diagnostics.has_value()) {
+            const auto& diagnostics = *outcome.measurement_diagnostics;
+            packed.present = 1U;
+            packed.schema_version = static_cast<std::uint32_t>(diagnostics.schema_version);
+            packed.method = static_cast<std::uint32_t>(diagnostics.method);
+            packed.sampled_pixel_count = diagnostics.sampled_pixel_count;
+            packed.candidate_count = diagnostics.candidate_count;
+            packed.selected_sample_count = diagnostics.selected_sample_count;
+            packed.retained_sample_count = diagnostics.retained_sample_count;
+            packed.is_calibrated_probability =
+                diagnostics.is_calibrated_probability ? 1U : 0U;
+            std::uint32_t bits = 0U;
+            for (const auto anomaly : diagnostics.anomalies) {
+                bits |= 1U << static_cast<std::uint32_t>(anomaly);
+            }
+            packed.anomaly_bits = bits;
+            packed.sample_coverage = diagnostics.sample_coverage;
+            packed.spatial_coverage = diagnostics.spatial_coverage;
+            packed.median_luma = diagnostics.median_luma;
+            packed.luma_mad = diagnostics.luma_mad;
+            packed.channel_mad[0] = diagnostics.channel_mad[0];
+            packed.channel_mad[1] = diagnostics.channel_mad[1];
+            packed.channel_mad[2] = diagnostics.channel_mad[2];
+            packed.chromaticity_mad = diagnostics.chromaticity_mad;
+            packed.clipped_fraction = diagnostics.clipped_fraction;
+            packed.outlier_fraction = diagnostics.outlier_fraction;
+            packed.sample_support = diagnostics.evidence_components.sample_support;
+            packed.ev_sample_coverage = diagnostics.evidence_components.sample_coverage;
+            packed.ev_spatial_coverage = diagnostics.evidence_components.spatial_coverage;
+            packed.luma_uniformity = diagnostics.evidence_components.luma_uniformity;
+            packed.channel_consistency = diagnostics.evidence_components.channel_consistency;
+            packed.unclipped_samples = diagnostics.evidence_components.unclipped_samples;
+            packed.inlier_retention = diagnostics.evidence_components.inlier_retention;
+            packed.evidence_score = diagnostics.evidence_score;
+        }
+    }
 }
 
 }  // namespace negaflow::abi::detail

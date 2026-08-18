@@ -15,6 +15,32 @@ void apply_resolved_base(InvertStageOutput& out, const PreviewProxyHint& hint) n
     out.base_source = hint.base_source;
     out.negative.use_preset_response = hint.use_preset_response;
     out.negative.preset_dmax_normalized = hint.preset_dmax_normalized;
+    out.measurement_method = hint.measurement_method;
+    out.diagnostics = hint.diagnostics;
+}
+
+[[nodiscard]] std::optional<negaflow::imaging::FilmBaseMeasurementMethod> method_of(
+    const negaflow::imaging::AutoNegativeBaseSource source) noexcept {
+    using negaflow::imaging::AutoNegativeBaseSource;
+    using negaflow::imaging::FilmBaseMeasurementMethod;
+    switch (source) {
+        case AutoNegativeBaseSource::connected_component:
+            return FilmBaseMeasurementMethod::connected_component;
+        case AutoNegativeBaseSource::continuous_border:
+            return FilmBaseMeasurementMethod::continuous_border;
+        case AutoNegativeBaseSource::distributed_mask:
+            return FilmBaseMeasurementMethod::distributed_mask;
+        case AutoNegativeBaseSource::strip_fallback:
+            return FilmBaseMeasurementMethod::strip_fallback;
+        case AutoNegativeBaseSource::scene_edge:
+        case AutoNegativeBaseSource::fallback:
+            return std::nullopt;
+    }
+    return std::nullopt;
+}
+
+[[nodiscard]] bool identity_light_gain(const std::array<float, 3>& gain) noexcept {
+    return gain[0] == 1.0F && gain[1] == 1.0F && gain[2] == 1.0F;
 }
 
 }  // namespace
@@ -33,6 +59,8 @@ std::optional<DevelopExportOutcome> resolve_negative_base(
             DevelopExportStage::develop,
             negaflow::imaging::auto_negative_base_status_name(resolved.status));
     }
+    hint.measurement_method = method_of(resolved.source);
+    hint.diagnostics = resolved.diagnostics;
     if (request.base_estimation_mode == NegativeBaseEstimationMode::preset) {
         if (!request.film_stock_preset.has_value()) {
             return fail(DevelopExportStage::develop, "missing_film_stock_preset");
@@ -42,9 +70,16 @@ std::optional<DevelopExportOutcome> resolve_negative_base(
         if (negaflow::imaging::confident_auto_negative_base_source(resolved.source)) {
             hint.dmin = resolved.dmin;
             hint.base_source = DevelopBaseSource::preset_measured;
+            // macOS `applyLightSourceGain` keeps source but drops measurement
+            // diagnostics when a non-neutral gain is applied.
+            if (!identity_light_gain(request.film_stock_preset->light_gain)) {
+                hint.diagnostics = std::nullopt;
+            }
         } else {
             hint.dmin = request.film_stock_preset->dmin;
             hint.base_source = DevelopBaseSource::preset_fallback;
+            hint.measurement_method = std::nullopt;
+            hint.diagnostics = std::nullopt;
         }
         for (std::size_t channel = 0U; channel < hint.dmin.size(); ++channel) {
             hint.dmin[channel] *= request.film_stock_preset->light_gain[channel];

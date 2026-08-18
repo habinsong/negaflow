@@ -93,6 +93,20 @@ public static class ExportSidecarWriter
             ["rating"] = content.Rating,
             ["pickState"] = content.PickState,
         };
+        if (content.BaseSample is { } sample)
+        {
+            root["baseSample"] = new JsonObject
+            {
+                ["r"] = sample.R,
+                ["g"] = sample.G,
+                ["b"] = sample.B,
+                ["source"] = sample.Source,
+            };
+        }
+        if (content.FilmBaseDiagnostics is { } diagnostics)
+        {
+            root["filmBaseDiagnostics"] = WriteFilmBaseDiagnostics(diagnostics);
+        }
         if (content.PresetName is { } presetName)
         {
             root["presetName"] = presetName;
@@ -189,6 +203,13 @@ public static class ExportSidecarWriter
         {
             attributes.Add(("negaflow:PresetName", presetName));
         }
+        if (content.BaseSample is { } sample)
+        {
+            attributes.Add(("negaflow:BaseSampleR", Number(sample.R)));
+            attributes.Add(("negaflow:BaseSampleG", Number(sample.G)));
+            attributes.Add(("negaflow:BaseSampleB", Number(sample.B)));
+            attributes.Add(("negaflow:BaseSampleSource", sample.Source));
+        }
         foreach ((string name, JsonNode? value) in content.Parameters ?? [])
         {
             // 숫자 축만 냅니다. 중첩 노드는 JSON 사이드카가 그대로 담습니다.
@@ -279,6 +300,83 @@ public static class ExportSidecarWriter
         }
     }
 
+    /// <summary>macOS <c>Sidecar.FilmBaseDiagnostics</c> Codable 키입니다.</summary>
+    private static JsonObject WriteFilmBaseDiagnostics(FilmBaseDiagnosticsSidecar diagnostics)
+    {
+        var node = new JsonObject
+        {
+            ["rgb"] = JsonArrayOf(diagnostics.Rgb),
+            ["source"] = diagnostics.Source,
+            ["dmin"] = JsonArrayOf(diagnostics.Dmin),
+            ["dmax"] = diagnostics.Dmax is { } dmax ? JsonArrayOf(dmax) : null,
+            ["densityRange"] = diagnostics.DensityRange is { } range
+                ? JsonArrayOf(range)
+                : null,
+            ["confidence"] = diagnostics.Confidence,
+            ["confidenceBasis"] = diagnostics.ConfidenceBasis,
+            ["confidenceIsCalibratedProbability"] =
+                diagnostics.ConfidenceIsCalibratedProbability,
+        };
+        if (diagnostics.Measurement is { } measurement)
+        {
+            node["measurement"] = WriteMeasurement(measurement);
+        }
+        else
+        {
+            node["measurement"] = null;
+        }
+        return node;
+    }
+
+    private static JsonObject WriteMeasurement(FilmBaseMeasurementSnapshot measurement)
+    {
+        var anomalies = new JsonArray();
+        foreach (string anomaly in measurement.Anomalies)
+        {
+            anomalies.Add(anomaly);
+        }
+        return new JsonObject
+        {
+            ["schemaVersion"] = measurement.SchemaVersion,
+            ["method"] = measurement.Method,
+            ["sampledPixelCount"] = measurement.SampledPixelCount,
+            ["candidateCount"] = measurement.CandidateCount,
+            ["selectedSampleCount"] = measurement.SelectedSampleCount,
+            ["retainedSampleCount"] = measurement.RetainedSampleCount,
+            ["sampleCoverage"] = measurement.SampleCoverage,
+            ["spatialCoverage"] = measurement.SpatialCoverage,
+            ["medianLuma"] = measurement.MedianLuma,
+            ["lumaMAD"] = measurement.LumaMad,
+            ["channelMAD"] = JsonArrayOf(measurement.ChannelMad),
+            ["chromaticityMAD"] = measurement.ChromaticityMad,
+            ["clippedFraction"] = measurement.ClippedFraction,
+            ["outlierFraction"] = measurement.OutlierFraction,
+            ["evidenceComponents"] = new JsonObject
+            {
+                ["sampleSupport"] = measurement.SampleSupport,
+                ["sampleCoverage"] = measurement.EvidenceSampleCoverage,
+                ["spatialCoverage"] = measurement.EvidenceSpatialCoverage,
+                ["lumaUniformity"] = measurement.LumaUniformity,
+                ["channelConsistency"] = measurement.ChannelConsistency,
+                ["unclippedSamples"] = measurement.UnclippedSamples,
+                ["inlierRetention"] = measurement.InlierRetention,
+            },
+            ["evidenceScore"] = measurement.EvidenceScore,
+            ["isCalibratedProbability"] = measurement.IsCalibratedProbability,
+            ["anomalies"] = anomalies,
+        };
+    }
+
+    private static JsonArray JsonArrayOf(IReadOnlyList<double> values)
+    {
+        var array = new JsonArray();
+        foreach (double value in values)
+        {
+            array.Add(value);
+        }
+        return array;
+    }
+
     private static void AddIfPresent(JsonObject owner, string name, string? value)
     {
         if (value is not null)
@@ -322,6 +420,10 @@ public sealed record ExportSidecarContent
 
     /// <summary>catalog 의 <c>params</c> 노드 그대로입니다.</summary>
     public JsonObject? Parameters { get; init; }
+
+    public FilmBaseSampleSidecar? BaseSample { get; init; }
+
+    public FilmBaseDiagnosticsSidecar? FilmBaseDiagnostics { get; init; }
 
     public AppMetadataOverlay? AppMetadata { get; init; }
 

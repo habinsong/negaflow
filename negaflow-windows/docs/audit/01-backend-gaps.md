@@ -100,7 +100,7 @@ macOS `Sources/Chromabase/` **159파일**을 개념 키워드로 Windows 전 트
 
 | macOS | Windows |
 |---|---|
-| `Film/FilmBaseMeasurementDiagnostics.swift` (186) | **2026-08-19 이식함** → `film_base_measurement.h/.cpp`. Method 4 + Anomaly 8 + EvidenceComponents + builder. 자동 네 실측 경로가 빌더를 통과. sidecar `confidence` JSON 은 아직 없음. 시험 `native.film_base_measurement_diagnostics`. 실측 TIFF `evidenceScore=0.729107` |
+| `Film/FilmBaseMeasurementDiagnostics.swift` (186) | **2026-08-19 이식함** → `film_base_measurement.h/.cpp` + 내보내기 sidecar `filmBaseDiagnostics`. 앱 JSON `confidence=0.7291067` · `measuredEvidenceScoreV1` |
 | `Film/FilmBasePicker.swift` (149) | **2026-08-18 이식함** → `imaging/film_base_picker.cpp`(268) + `abi/pick/film_base_pick_abi.cpp` + `Interop/FilmBasePick.cs`. 시험 `native.film_base_picker` 7개 |
 | `Film/FilmBaseSampleGrid.swift` (64) | **이름만 없고 이식돼 있음** — `film_base_sampling.cpp` 의 `SampleGrid`·`make_sample_grid`·`make_sample_grid_geometry` |
 | `Film/FilmBaseStatistics.swift` (44) | **이름만 없고 이식돼 있음** — `coherentCluster`/`median`/`percentile` 셋 전부 `film_base_sampling.cpp` 의 `coherent_measurement`/`median`/`percentile`. **앞 판정이 틀렸습니다** — 파일명으로 찾아 "없음" 으로 적었던 것 |
@@ -127,7 +127,7 @@ macOS `Sources/Chromabase/` **159파일**을 개념 키워드로 Windows 전 트
 | `Profiles/ScannerTargetGrade` (8파일) | 1,697 | 749 | **44%** | `+Signature`·`+PositiveSignature`·`+Texture`·`+DocumentedCharacter` 히트 **0** |
 | `Profiles/ScannerProfile` (5파일) | 681 | 297 | **44%** | `ScannerProfileRegistry` 없음, `Matcher` 히트 1 |
 | `Engine` (6파일) | 1,718 | 256 | **15%** | 포지티브 파이프라인·Metal 커널·샘플링 풀 없음 |
-| `Film` (11파일) | 1,993 | 1,379+ | **진단 빌더 이식함** | 피커 2026-08-18, Diagnostics 2026-08-19. sidecar `confidence`·`frame.baseRGB` 영속은 남음 |
+| `Film` (11파일) | 1,993 | 1,379+ | **진단+sidecar 이식함** | 피커·Diagnostics·sidecar confidence 2026-08-19. `frame.baseRGB` 영속은 남음 |
 | `Digital` (13파일) | 2,435 | 1,618 | **66%** | `DigitalFilmDevelop`·`SceneReconstruct` 없음 |
 | `Export` (23파일) | 3,985 | 2,703 | **68%** | `RenderManifest` 5파일·감마워닝·ICC 스냅샷 없음 |
 

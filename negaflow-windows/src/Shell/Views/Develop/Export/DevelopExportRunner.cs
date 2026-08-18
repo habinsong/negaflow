@@ -23,7 +23,10 @@ internal sealed class DevelopExportRunner
     /// 병합 없이 덮어쓰지 않습니다. 사진 자체는 이미 게시된 뒤이므로 여기서 실패해도 사진은
     /// 남습니다 — 실패는 상태 줄로만 알립니다.
     /// </summary>
-    internal void WriteExportArtifacts(LibraryFrameSnapshot frame, string outputPath)
+    internal void WriteExportArtifacts(
+        LibraryFrameSnapshot frame,
+        string outputPath,
+        DevelopExportResult? exported = null)
     {
         if (view.libraryHost is null || (!view.exportSettings.WriteSidecar && !view.exportSettings.WriteOriginalRaw))
         {
@@ -50,6 +53,27 @@ internal sealed class DevelopExportRunner
         {
             return;
         }
+        FilmBaseSampleSidecar? baseSample = null;
+        FilmBaseDiagnosticsSidecar? filmBase = null;
+        if (exported is { Succeeded: true } result &&
+            (result.AppliedDminRed > 0 || result.AppliedDminGreen > 0 ||
+             result.AppliedDminBlue > 0))
+        {
+            string source = FilmBaseDiagnosticsSidecar.SourceName(
+                result.BaseSource,
+                result.MeasurementMethod);
+            baseSample = FilmBaseDiagnosticsSidecar.Sample(
+                result.AppliedDminRed,
+                result.AppliedDminGreen,
+                result.AppliedDminBlue,
+                source);
+            filmBase = FilmBaseDiagnosticsSidecar.From(
+                result.AppliedDminRed,
+                result.AppliedDminGreen,
+                result.AppliedDminBlue,
+                source,
+                result.Measurement);
+        }
         JsonObject? record = view.libraryHost.FrameRecord(frame.Id);
         ExportSidecarContent content = new()
         {
@@ -64,6 +88,8 @@ internal sealed class DevelopExportRunner
             PresetName = frame.LookPresetId,
             Parameters = record?["params"] as JsonObject,
             AppMetadata = frame.AppMetadata,
+            BaseSample = baseSample,
+            FilmBaseDiagnostics = filmBase,
         };
         if (ExportSidecarWriter.Write(outputPath, content) is { } failure)
         {
@@ -110,7 +136,7 @@ internal sealed class DevelopExportRunner
                     view.OutputStatusText.Text = DevelopPanelState.Describe(outcome);
                     if (outcome is { Kind: DevelopExportOutcomeKind.Completed, Result.Succeeded: true })
                     {
-                        WriteExportArtifacts(frame, exportedPath);
+                        WriteExportArtifacts(frame, exportedPath, outcome.Result);
                         completedPath = exportedPath;
                     }
                 },

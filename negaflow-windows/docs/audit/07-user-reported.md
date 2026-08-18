@@ -250,7 +250,7 @@ macOS `FilmBaseEstimator.swift` 전량 · `FilmBaseStatistics.coherentCluster` �
 
 | 항목 | 내용 |
 |---|---|
-| **sidecar `confidence` JSON** | macOS `Sidecar.swift` 는 `confidence = evidenceScore`, `confidenceBasis = measuredEvidenceScoreV1`. Windows 내보내기 sidecar 에는 아직 안 붙음 |
+| **sidecar `confidence` JSON** | **2026-08-19 이식함**(C1.6). 앱 내보내기 `OpticFilm8100_frame_1.tiff.negaflow.json` 에 `confidence=0.7291067` · `confidenceBasis=measuredEvidenceScoreV1` · `method=connectedComponent` |
 | **`frame.baseRGB` 카탈로그 영속** | macOS 는 렌더 후 `ScanFrame.baseRGB` 를 저장. Windows `LastAppliedBase` 는 세션·프레임 전환까지 |
 | **피커 폭 픽셀 자** | 넓은 패널에서 ComboBox 가 276 에서 멈추는지는 다시 재야 함 |
 | **스포이드로 미노광 베이스를 집어 Dmin 이 바뀜** | 캔버스 클릭은 피커를 끄고 Dmin 을 유지함(장면 클릭 → 거부 경로). 리베이트가 보이는 프레임에서 성공 집기는 아직 없음 |
@@ -276,6 +276,28 @@ macOS `Film/FilmBaseMeasurementDiagnostics.swift`(186) · `FilmBaseMeasurementBu
 - `run-app` x64 Release `-SkipBuild` PID 6840. 자동 모드 정착 후 UIA `base 0.22 0.13 0.07` — 프로브와 소수 둘째 자리 일치. 미리보기 대비가 수동 0.90/0.65/0.45 때보다 살아남.
 - 수동 → 스포이드 알약 → 프롬프트 `미노광 필름 베이스(사진 사이/가장자리)를 클릭하세요 · Esc 취소`. 캔버스 UIA 클릭 후 프롬프트 사라짐, 슬라이더 0.90/0.65/0.45 유지. 거부 문구는 이 화면에서 확인 못 함.
 - Parsec macOS `OpticFilm8100_frame_5` 베이스 탭: `base 0.23 0.15 0.07` · 자동 선택. 폴더 `develop_right_base_panel.png` 와 카드 구조(헤더·읽음·자동/필름/수동) 같음. 프레임이 달라 숫자는 Windows frame_1 과 다를 수밖에 없음.
+
+### C1.6 2026-08-19 — sidecar `FilmBaseDiagnostics`
+
+macOS `Sidecar.FilmBaseDiagnostics.init` · `ExportFrameWriter+Sidecars` 를
+`FilmBaseSidecar` + `ExportSidecarWriter.BuildJson` 에 옮겼습니다.
+
+| 항목 | Windows | 근거 |
+|---|---|---|
+| `confidence` | `measurement?.evidenceScore` | Swift 90행 |
+| `confidenceBasis` | 실측이면 `measuredEvidenceScoreV1`, 아니면 null | Swift 91행 |
+| `confidenceIsCalibratedProbability` | `measurement?.isCalibratedProbability` | Swift 92행 |
+| `measurement` | Codable 키 그대로 중첩. 수동·스포이드·상수 폴백은 null | Swift 89행, 시험 `testSidecarCarriesMeasuredEvidenceAndDoesNotInventManualConfidence` |
+| `source` | connected/distributed → `auto`, border/strip → `border`, 수동·프리셋 폴백 → `manual` | `FilmBaseEstimator` + `FilmBase.Source` |
+| `dmin` | `-log10(max(rgb, 1e-6))`. `dmax`/`densityRange` 는 null | Swift 86–88행 |
+| `baseSample` | r/g/b/source. XMP `negaflow:BaseSample*` | `Sidecar+XMP.swift` 104–108행 |
+| 배선 | invert 가 진단을 outcome 에 복사. 결과 v4(344바이트)로 ABI. 광원 게인이 1이 아니면 macOS `applyLightSourceGain` 처럼 진단만 뺌 | `invert.cpp` · `develop_result_v4` |
+
+검증:
+
+- `FilmBaseSidecarTests` + 기존 sidecar 시험 포함 Shell.UnitTests **1093 assertions**.
+- `run-app` x64 Release PID 31912. 자동 `base 0.22 0.13 0.07` 뒤 소스 탭에서 사이드카 켜고 내보내기.
+- `OpticFilm8100_frame_1.tiff.negaflow.json` (2794바이트): `method=connectedComponent` `sampledPixelCount=43776` `confidence=0.7291067194749321` `confidenceBasis=measuredEvidenceScoreV1` `anomalies=[]`. 프로브와 같은 실측.
 
 ### 앞 판에서 바로잡은 것
 
@@ -380,7 +402,7 @@ DevelopLookLabel         DevelopLookSelector
 
 1. **A1·A2 크래시** — 스택부터. **A3(2026-08-19) `developReset.Value` 도 닫음.**
 2. **E1 프리뷰 프록시 캐시 + 2단 렌더** — 네이티브 2슬롯+Lanczos 현상 붙임. 5088×3401 상자 1280 두 번째 **43.1 ms · decode 0**. 앱에서 노출 0→0.80 과 히스토그램 갱신 확인. **FrameCacheManager FIFO 는 10번.**
-3. **C1 필름 베이스** — C1.1~C1.5. 다음: sidecar confidence · `frame.baseRGB` 영속 · 276 자 · 리베이트 스포이드 성공 집기
+3. **C1 필름 베이스** — C1.1~C1.6. 다음: `frame.baseRGB` 영속 · 276 자 · 리베이트 스포이드 성공 집기
 4. **E4 인화 프리뷰** — 현상본 쓰도록
 5. **B 메뉴막대 11개**
 6. **D1 초기화 · D5 undo**

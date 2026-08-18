@@ -65,6 +65,8 @@ DevelopExportOutcome publish_developed(
     outcome.output_sharpening_applied = output_sharpening.info.applied;
     outcome.applied_dmin = invert.developed_info.applied_dmin;
     outcome.base_source = invert.base_source;
+    outcome.measurement_method = invert.measurement_method;
+    outcome.measurement_diagnostics = invert.diagnostics;
 
     if (preview != nullptr) {
         DevelopExportOutcome preview_outcome =

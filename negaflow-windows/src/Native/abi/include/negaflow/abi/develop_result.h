@@ -74,6 +74,44 @@ typedef struct nf_develop_export_result_v3 {
     uint32_t reserved;
 } nf_develop_export_result_v3;
 
+/* Packed `FilmBaseMeasurementDiagnostics` for sidecar JSON. `present` is 1 only
+   when the measurement body is valid. `method` is 0..3 or 0xFFFFFFFF when the
+   export has no measured method (manual / constant fallback). */
+typedef struct nf_film_base_measurement_v1 {
+    uint32_t present;
+    uint32_t schema_version;
+    uint32_t method;
+    int32_t sampled_pixel_count;
+    int32_t candidate_count;
+    int32_t selected_sample_count;
+    int32_t retained_sample_count;
+    uint32_t is_calibrated_probability;
+    uint32_t anomaly_bits;
+    uint32_t reserved;
+    double sample_coverage;
+    double spatial_coverage;
+    double median_luma;
+    double luma_mad;
+    double channel_mad[3];
+    double chromaticity_mad;
+    double clipped_fraction;
+    double outlier_fraction;
+    double sample_support;
+    double ev_sample_coverage;
+    double ev_spatial_coverage;
+    double luma_uniformity;
+    double channel_consistency;
+    double unclipped_samples;
+    double inlier_retention;
+    double evidence_score;
+} nf_film_base_measurement_v1;
+
+/* v4 keeps every v3 field at the same offset and appends the measurement. */
+typedef struct nf_develop_export_result_v4 {
+    nf_develop_export_result_v3 v3;
+    nf_film_base_measurement_v1 measurement;
+} nf_develop_export_result_v4;
+
 #define NF_DEVELOP_PROGRESS_COMPLETE 1000U
 
 /* Shared, caller-owned run state for one develop call.

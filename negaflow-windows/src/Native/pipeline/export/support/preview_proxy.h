@@ -3,6 +3,7 @@
 #include "export/stages/observe.h"
 #include "export/support/preview.h"
 
+#include "negaflow/imaging/film_base_measurement.h"
 #include "negaflow/pipeline/develop_export.h"
 
 #include <array>
@@ -19,6 +20,8 @@ struct PreviewProxyHint final {
     DevelopBaseSource base_source{DevelopBaseSource::manual};
     bool use_preset_response{false};
     std::array<float, 3> preset_dmax_normalized{};
+    std::optional<negaflow::imaging::FilmBaseMeasurementMethod> measurement_method{};
+    std::optional<negaflow::imaging::FilmBaseMeasurementDiagnostics> diagnostics{};
 };
 
 // 같은 파일·관측·상자·베이스 모드이면 작은 raw 를 돌려주고 디코드를 건너뜁니다.

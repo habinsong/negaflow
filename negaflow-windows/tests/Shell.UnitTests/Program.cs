@@ -56,6 +56,7 @@ internal static class Program
         LibraryOrganizationTests.Run();
         ScannerWorkflowTests.Run();
         PrintOutputTests.Run();
+        FilmBaseSidecarTests.Run();
         ScanSessionTests.Run();
 
         var report = new

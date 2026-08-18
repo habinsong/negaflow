@@ -52,6 +52,8 @@ internal static unsafe class NativeDevelopRequestValidator
             sizeof(NativeDevelopExportRequestV33) != RequestV33Size ||
             sizeof(NativeDevelopExportResultV2) != ResultV2Size ||
             sizeof(NativeDevelopExportResultV3) != ResultV3Size ||
+            sizeof(NativeFilmBaseMeasurementV1) != FilmBaseMeasurementV1Size ||
+            sizeof(NativeDevelopExportResultV4) != ResultV4Size ||
             sizeof(NativeDevelopRunStateV1) != RunStateV1Size ||
             sizeof(NativeAutoAdjustResultV1) != AutoAdjustResultV1Size ||
             sizeof(NativeSoftProofMediaV1) != SoftProofMediaV1Size ||

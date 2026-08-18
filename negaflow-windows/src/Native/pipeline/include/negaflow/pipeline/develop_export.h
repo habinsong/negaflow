@@ -234,6 +234,8 @@ struct DevelopExportOutcome final {
     std::uint64_t output_file_bytes{0U};
     std::array<float, 3> applied_dmin{};
     DevelopBaseSource base_source{DevelopBaseSource::manual};
+    std::optional<negaflow::imaging::FilmBaseMeasurementMethod> measurement_method{};
+    std::optional<negaflow::imaging::FilmBaseMeasurementDiagnostics> measurement_diagnostics{};
 };
 
 // Runs decode, manual negative develop, tone, Film Look, RGB GrainMend,

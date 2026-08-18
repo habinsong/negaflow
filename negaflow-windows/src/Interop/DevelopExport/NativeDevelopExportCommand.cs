@@ -29,8 +29,8 @@ internal static unsafe class NativeDevelopExportCommand
         NativeDefectRecipeEditRefV1[] defectEditOrder = BuildDefectEditOrder(request);
         byte[] defectSourceSha256 = BuildDefectSourceSha256(request);
 
-        NativeDevelopExportResultV3 raw = default;
-        raw.StructSize = (uint)sizeof(NativeDevelopExportResultV3);
+        NativeDevelopExportResultV4 raw = default;
+        raw.StructSize = (uint)sizeof(NativeDevelopExportResultV4);
         uint status;
 
         // A null run state is the pre-v22 behaviour: the call simply runs to the end.
@@ -130,7 +130,7 @@ internal static unsafe class NativeDevelopExportCommand
                 status = NativeDevelopRun.nf_develop_export_v34(
                     &native,
                     runState,
-                    &raw);
+                    (NativeDevelopExportResultV3*)&raw);
             }
         }
 

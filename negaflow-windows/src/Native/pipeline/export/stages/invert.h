@@ -17,6 +17,8 @@ struct InvertStageOutput final {
     negaflow::imaging::ManualNegativeDevelopParameters negative{};
     DevelopBaseSource base_source{DevelopBaseSource::manual};
     negaflow::imaging::ManualNegativeDevelopInfo developed_info{};
+    std::optional<negaflow::imaging::FilmBaseMeasurementMethod> measurement_method{};
+    std::optional<negaflow::imaging::FilmBaseMeasurementDiagnostics> diagnostics{};
     bool negative_source{false};
     bool positive{false};
 };
