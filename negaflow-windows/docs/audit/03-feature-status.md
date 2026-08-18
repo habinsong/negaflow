@@ -58,7 +58,8 @@
 | 16 | 프리뷰가 뭘 해도 수 초 | `run_develop` 이 호출마다 원본 디코드. 캐시 없음 | **원인 확정** |
 | 17 | GrainMend 자동·가이드·브러시·복제 전부 느림 | 위와 같은 원인 + GPU 없음. 검출 8,932 ms 중 **형태학이 47%, 미세 입자까지 82%** | **원인 확정.** 계획 [`04`](04-gpu-plan.md)(무엇을) + [`13`](13-performance-playbook.md)(어떻게, vHGW 로 구조 요소 무관 O(1)) |
 | 17.1 | **현상·보정·룩·인화가 느린 정확한 내역** | **아무도 안 쟀습니다.** `src/Native/pipeline/` 에 단계별 ms 계측기가 **없음**(`elapsed`·`duration_ms`·`stage_ms` 히트 0) | **미측정 — 이것이 0단계**([`13`](13-performance-playbook.md) 2절) |
-| 17.2 | **CPU 쪽 안 켠 것** | SIMD 히트 11개 전부 `flatbed_frame_*`(화소 경로 0) · 스레드 풀 없음(`parallel_rows.cpp:113` 호출마다 `std::thread`) · `CMakeLists.txt` 에 `/arch:`·`/GL`·`/LTCG` 없음 | **실측 확인**([`13`](13-performance-playbook.md) 1·3절) |
+| 17.3 | **GPU 착수** | `src/Native/gpu/` — D3D11 컴퓨트, FL 11_0 하한, WARP 폴백, 벤더 중립. `basicTone` 커널 1개 이식, CPU/GPU 오차 **3.6e-07~7.7e-07**(허용 1e-5), WARP·NVIDIA 양쪽 | **2026-08-18 착수**(`aa0d59f`). **파이프라인 미연결, 속도 미측정, 내장 GPU 실기 미확인** |
+| 17.2 | **CPU 쪽 안 켠 것** | SIMD 히트 11개 전부 `flatbed_frame_*`(화소 경로 0) · 스레드 풀 없음(`parallel_rows.cpp:113` 호출마다 `std::thread`) · `/arch:`·`/GL`·`/LTCG` 없음(`/fp:precise` 는 `cmake/CompilerWarnings.cmake:12` 에 있음) | **실측 확인**([`13`](13-performance-playbook.md) 1·3절) |
 
 ---
 

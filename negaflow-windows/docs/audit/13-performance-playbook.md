@@ -63,10 +63,10 @@
 
 | 항목 | 측정 방법 | 결과 | 뜻 |
 |---|---|---|---|
-| GPU 코드 | 10개 키워드로 `src/` 전수 | **히트 0**, `.hlsl` **0개** | [`04`](04-gpu-plan.md) |
+| GPU 코드 | 10개 키워드로 `src/` 전수 | **2026-08-18 착수함**(`aa0d59f`) — `src/Native/gpu/` 4파일 + `basic_tone.hlsl`. 착수 전에는 히트 0 이었음 | [`04`](04-gpu-plan.md) 0절 |
 | **SIMD** | `__m128`·`__m256`·`_mm_`·`immintrin` | **히트 11, 전부 `flatbed_frame_*` 3파일** | **화소 파이프라인에 SIMD 가 없습니다** |
 | **스레드 풀** | `src/Native/core/parallel_rows.cpp:113` | 호출마다 `std::thread(...)` **새로 생성** | **영속 풀이 없습니다** |
-| 컴파일러 최적화 | `CMakeLists.txt` 에서 `/arch:` · `/GL` · `/LTCG` · `/fp:` | **하나도 없음** (Release 기본 `/O2` 만) | 켤 수 있는 것을 안 켰습니다 |
+| 컴파일러 최적화 | `CMakeLists.txt` **와** `cmake/CompilerWarnings.cmake` 전수 | **`/fp:precise` 는 있음**(명시). `/arch:` · `/GL` · `/LTCG` 는 **없음** (Release 기본 `/O2` 만) | `/GL`+`/LTCG` 를 안 켰습니다 |
 | 관리 쪽 버퍼 | `ArrayPool` | **히트 0** 전 트리 | 단 `PreviewCoordinator.cs:112` 는 버퍼를 **미리 한 번** 잡습니다 — 여긴 문제 없음 |
 | 프리뷰 표시 | `DevelopPreviewCanvas.Present()` | `PixelBuffer.AsStream()` 으로 **프레임 전체 복사** | 3600×2400 이면 프레임당 **34.6 MB** 복사 |
 | 단계별 ms | 위 0절 | **없음** | 기준선 없음 |
@@ -125,13 +125,15 @@ workers[started] = std::thread(
 
 ### 3.2 컴파일러 스위치 — 켤 수 있는 것을 안 켰습니다
 
-`CMakeLists.txt` 에 `/arch:` · `/GL` · `/LTCG` · `/fp:` 가 **하나도 없습니다.**
+`cmake/CompilerWarnings.cmake` 는 `/W4 /WX /permissive- /Zc:__cplusplus /Zc:preprocessor /utf-8`
+**`/fp:precise`** `/sdl /guard:cf` 를 겁니다. **`/fp:precise` 는 이미 명시돼 있습니다.**
+없는 것은 **`/arch:` · `/GL` · `/LTCG`** 셋입니다.
 
 | 스위치 | 효과 | ☠️ 위험 |
 |---|---|---|
 | `/GL` + `/LTCG` | 링크 시 최적화. 인라인이 파일 경계를 넘음 | 낮음. 빌드 시간만 늘어남 |
 | `/fp:fast` | 부동소수 재배열 허용 | **높음. 절대 그냥 켜지 마십시오** — 골든값이 바뀝니다 |
-| `/fp:precise` (기본) | 지금 상태 | — |
+| `/fp:precise` | **이미 켜져 있음**(`cmake/CompilerWarnings.cmake:12`). 유지할 것 | — |
 | `/arch:AVX2` | 벡터 명령 + **FMA 축약** | **중간~높음.** FMA 로 반올림이 달라져 골든이 흔들릴 수 있음 |
 
 **규칙: 스위치를 켤 때마다 골든 시험(`2026-08-16-macos-pixel-golden.md`)과 실측 17장 dmin 을 돌리십시오.**
@@ -297,3 +299,40 @@ N−1 프레임을 CPU 가 읽습니다. 이렇게 안 하면 프리뷰가 매 �
 - [Removing CPU-GPU sync stalls — Intel](https://www.intel.com/content/www/us/en/developer/articles/case-study/removing-cpu-gpu-sync-stalls-in-galactic-civilizations-3.html)
 - [D3D11 Texture Update Costs — eatplayhate](https://eatplayhate.me/2013/09/29/d3d11-texture-update-costs/)
 - [Guided Image Filtering (OpenCL 구현) — GitHub](https://github.com/nlamprian/GuidedFilter)
+
+---
+
+## 10. 착수 기록 (2026-08-18, `aa0d59f`)
+
+| 한 것 | 실측 |
+|---|---|
+| `src/Native/gpu/` 기반 4파일 + `cmake/CompileShaders.cmake` | 이 기계 **RTX 4060 Ti, FL 11_1, VRAM 7949MB** |
+| 텍스처 왕복(업로드/다운로드, 행 피치 다름) | WARP·NVIDIA 양쪽 **비트 단위 일치** |
+| `basicTone` 커널 CPU/GPU 동치 | WARP **1.8e-07~6.0e-07** · NVIDIA **3.6e-07~7.7e-07** (허용 1e-5) |
+| 4.1 스레드 그룹 | `[numthreads(8,8,1)]` = 64. 셰이더와 `gpu_basic_tone.cpp` 의 상수를 **같이** 바꿔야 함 |
+| 4.5 더블 버퍼 다운로드 | `GpuStagingRing` 으로 구현. 깊이 1을 요청해도 2로 올림 |
+| `/Gis` | fxc 플래그에 넣음 |
+
+**아직 안 한 것 (정직하게):**
+
+1. **파이프라인 연결 안 됨.** 커널은 시험에서만 돕니다. `stages/look.cpp` 는 여전히 CPU 만 부릅니다.
+2. **속도를 안 쟀습니다.** 동치만 증명했지 **빨라졌는지는 모릅니다.** 계측기(2절)가 먼저입니다.
+3. **내장 GPU 실기 확인 못 함.** 이 기계에 Intel/AMD 내장이 없습니다. 범용성은 **코드 구조로만** 보장돼 있습니다.
+4. 커널 1개 / 대상 32개 중.
+
+## 11. 이식하다 발견한 CPU 차이 — `basicTone` whites/blacks
+
+macOS `basicTone` 은 **커널 안에서** 두 값을 clamp 합니다:
+
+```metal
+target += clamp(whitesAmount, -2.0, 2.0) * 0.12 * whiteMask;
+target += clamp(blacksAmount, -2.0, 2.0) * 0.06 * blackMask;
+```
+
+**Windows 에는 그 clamp 가 없습니다.** `imaging/tone_mapping.cpp` `apply_basic_tone` 에도,
+관리 쪽(`Shell.Core/Develop/`·`Interop/`)에도 히트가 없습니다.
+macOS `DevelopToneRange.whites/blacks` 는 `-2...2` 입니다.
+
+**GPU 커널은 CPU 를 따르게 뒀습니다** — GPU 만 고치면 CPU/GPU 동치 시험이 무의미해집니다.
+**어느 쪽을 맞출지는 별건이고, 고칠 때 CPU·GPU 를 같이 고쳐야 합니다.**
+UI 슬라이더가 ±2 를 넘길 수 있는지 확인한 뒤 판단하십시오.

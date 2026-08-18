@@ -183,7 +183,7 @@ macOS `MemoryCacheSettingsSection.swift`(111줄)가 내는 것:
 |---|---|
 | SIMD | 히트 **11개, 전부 `flatbed_frame_*` 3파일**. 화소 파이프라인에 **없음** |
 | 스레드 풀 | **없음.** `core/parallel_rows.cpp:113` 이 호출마다 `std::thread` 를 새로 만듦 |
-| 컴파일러 스위치 | `CMakeLists.txt` 에 `/arch:` · `/GL` · `/LTCG` · `/fp:` **하나도 없음** |
+| 컴파일러 스위치 | `/fp:precise` 는 `cmake/CompilerWarnings.cmake:12` 에 **있음**. 없는 것은 **`/arch:` · `/GL` · `/LTCG`** |
 | `ArrayPool` | 관리 트리 히트 **0**. 단 `PreviewCoordinator.cs:112` 는 선할당돼 있어 문제 없음 |
 | 표시 경로 | `DevelopPreviewCanvas.Present()` 가 프레임 전체 복사 — 3600×2400 이면 **34.6 MB/프레임**(산술, ms 미측정) |
 

@@ -42,7 +42,36 @@
 
 ---
 
-## 0. 근거 — 이 문서가 딛고 있는 실측 (2026-08-18)
+## 0. 근거 — 이 문서가 딛고 있는 실측
+
+> ### ✅ 2026-08-18 착수함 (`aa0d59f`)
+>
+> 아래 표의 "히트 0" 은 **착수 전 상태**입니다. 지금은 `src/Native/gpu/` 가 있습니다.
+>
+> | 만든 것 | 무엇 |
+> |---|---|
+> | `gpu/gpu_device.*` | D3D11 장치·컨텍스트 하나. FL 11_0 하한, WARP 폴백, **벤더 ID 로 거르지 않음** |
+> | `gpu/gpu_working_image.*` | `R32G32B32A32_FLOAT` 텍스처 + SRV/UAV, 업로드·다운로드, `GpuStagingRing`(더블 버퍼) |
+> | `gpu/shaders/basic_tone.hlsl` | macOS `basicTone`(1.3절 5번) 이식 |
+> | `gpu/gpu_basic_tone.*` | 셰이더·상수 버퍼 보관 + 디스패치 |
+> | `cmake/CompileShaders.cmake` | `fxc` 로 빌드 시 컴파일해 헤더 임베드 |
+>
+> **실측** — 이 기계 RTX 4060 Ti, **FL 11_1**, VRAM 7949MB. Parsec 가상 어댑터는 규칙대로 걸러짐.
+>
+> | 시험 | 결과 |
+> |---|---|
+> | 텍스처 왕복 | WARP·NVIDIA 양쪽 **비트 단위 일치**. 행 여백 미오염 |
+> | `basicTone` CPU/GPU 최대 오차 | WARP **1.8e-07~6.0e-07** · NVIDIA **3.6e-07~7.7e-07** (허용 1e-5) |
+> | 매개변수 조합 | 11개 — 양수/음수 대비, 임계 미만, clamp, 각 마스크 |
+> | 새 시험 | `native.gpu_device` · `native.gpu_working_image` · `native.gpu_basic_tone` 전부 통과 |
+>
+> ⚠️ **이 기계에는 Intel/AMD 내장이 없습니다.** 범용성은 **코드 구조로만** 보장돼 있고
+> 내장 GPU 실기 확인은 **못 했습니다.** 됐다고 적지 마십시오.
+>
+> ⚠️ **아직 파이프라인에 연결되지 않았습니다.** 커널은 시험에서만 돕니다.
+> `stages/look.cpp` 가 아직 CPU `apply_working_tone_adjustments` 만 부릅니다.
+
+### 착수 전 상태 (2026-08-18 이전)
 
 | 사실 | 어떻게 쟀나 | 값 |
 |---|---|---|
