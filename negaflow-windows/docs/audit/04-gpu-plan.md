@@ -44,7 +44,7 @@
 
 ## 0. 지금 어디까지 왔나 (2026-08-18)
 
-### 0.1 이식 완료 — 화소별 커널 11개 + 이웃 원시연산 4개
+### 0.1 이식 완료 — 화소별 커널 12개 + 이웃 원시연산 5개
 
 전부 **CPU/GPU 동치 시험으로 고정**돼 있습니다(허용 오차 `1e-5`). 수치는 이 기계 실측입니다 —
 **RTX 4060 Ti · FL 11_1 · VRAM 7949MB**, 그리고 하드웨어 없는 경우를 위한 **WARP**.
@@ -66,10 +66,15 @@
 | **박스 블러**(원시연산) | `CIBoxBlur` | `film_scan_denoise_filters.cpp` `box_blur` ×2 | **0** | **0** |
 | **가우시안**(원시연산) | `CIGaussianBlur` | 〃 `gaussian_blur` · `texture_stage_gaussian.h` | **0** | **0** |
 | **3×3 중앙값**(원시연산) | `CIMedianFilter` | 〃 `median3` | **0** | **0** |
+| `digitalHalation` | `:712` | `imaging/digital_halation.cpp` | **0** | **0** |
 | **감마 리프트** | (CI 체인 밖) | `film_scan_denoise_tile.cpp` `extract_lifted_tile` | 6.0e-08 | 1.2e-07 |
+| **형태학**(원시연산) | (검출 경로, CI 아님) | `imaging/grain_mend_morphology.cpp` | **0** | **0** |
 
 > `filmScanShrink` 줄은 **CPU 리프트를 올린 상태**의 사슬 전체 오차입니다. GPU `pow` 로
-> 리프트하면 2.1e-05 ~ 6.2e-05 가 됩니다 — 이유는 0.5절입니다.
+> 리프트하면 2.1e-05 ~ 6.2e-05 가 됩니다 — 이유는 **0.6절**입니다.
+>
+> `digitalHalation` 도 가우시안을 쓰지만 **delta 0** 입니다. 그 가우시안은 직접
+> 컨볼루션이라 러닝 섬의 누적 이력이 없고, 앞에 `pow` 도 없기 때문입니다.
 
 ### 0.2 만든 뼈대
 
@@ -82,6 +87,8 @@
 | `gpu/gpu_gaussian_blur.cpp` | 분리형 가우시안. 가중치는 **호스트가 CPU 와 같은 코드로** 만들어 `StructuredBuffer<float>` 로 넘깁니다 |
 | `gpu/gpu_guided_filter.cpp` | 가이드 필터 4단 |
 | `gpu/gpu_film_scan.*` | 감마 리프트 · `filmScanShrink` |
+| `gpu/gpu_digital_halation.*` | 산란·헐레이션 재분배 |
+| `gpu/gpu_morphology.*` | 열기·닫기·양극 톱햇. **검출 CPU 의 82%** |
 | `gpu/gpu_tone_kernels.*` · `gpu_color_kernels.*` · `gpu_negative_invert.*` · `gpu_stage_kernels.*` | 커널 래퍼 |
 | `gpu/shaders/*.hlsl` · `*.hlsli` | 셰이더 + 공용 조각(`tone_shared` · `hsl_shared` · `film_scan_shared`) |
 | `cmake/CompileShaders.cmake` | `fxc` 로 빌드 시 컴파일해 헤더 임베드(`/T cs_5_0 /O3 /Gis /WX /Zpc`) |
@@ -94,11 +101,11 @@
 | **CPU 판부터 없음** (7) | `digitalSceneReconstruct`·`digitalFilmDensity`·`digitalInterImage`·`digitalPrintPaper`·`digitalReversalTransmit`·`digitalToDisplayGamma`·`digitalToLinearLight` | Windows 히트 **0**. GPU 이전에 **CPU 이식이 먼저** |
 | **Windows 기능 자체가 없음** (2) | `ditherAdd`·`channelClippingOverlay` | `OutputDither.swift`·`ChannelClippingOverlay.swift` 미이식 |
 | **정밀도 확인 필요** (1) | `boundedRelativeGrade` | `scanner_target_grade.cpp:62-64` 안에 박혀 있고 그 안이 **전부 `double`**. float32 로 옮기면 `1e-5` 를 못 지킬 수 있음 |
-| **선행 조건 남음** | `digitalHalation` | 가우시안이 섰으므로 **열렸습니다** |
-| 〃 | `filmGrain`·`digitalFilmGrainDensity` | **노이즈 씨앗 규칙**을 macOS 와 대조해야 함 |
+| **선행 조건 남음** | `filmGrain`·`digitalFilmGrainDensity` | **노이즈 씨앗 규칙**을 macOS 와 대조해야 함 |
 | 〃 | `digitalFilmColor` | **3D LUT**(`Texture3D`) 필요 |
 | 〃 | `noritsuTexture` | 이웃 접근 |
 | **원시연산 남음** | `CIAreaAverage` 대응 | 병렬 리덕션. 히스토그램·자동 보정용 |
+| **정밀도 확인 필요** (2) | `grain_mend_morphology.cpp` `box_mean` | 적분영상을 **`double` 로** 누적합니다(`:240`). float32 GPU 로는 그 값을 못 냅니다. D3D11 의 double 은 **선택 기능**(`D3D11_FEATURE_DOUBLES`)이라 내장 GPU 범용성도 보장되지 않습니다. **CPU 를 float 로 내려도 골든이 안 바뀌는지 먼저 재십시오** |
 
 ### 0.4 ☠️ 아직 **아닌** 것 — 됐다고 적지 마십시오
 
@@ -114,6 +121,12 @@
 5. **`film_scan_denoise` 의 GPU 오케스트레이터가 없습니다.** 타일을 도는 코드는 지금
    **시험 안에만** 있습니다(`tests/Native.UnitTests/GpuFilmScan/`). 제품 경로에 넣으려면
    0.5절의 타일 규칙을 그대로 옮겨야 합니다.
+6. **검출 파이프라인이 GPU 형태학을 부르지 않습니다.** 커널은 섰고 값도 정확하지만
+   `grain_mend_detector.cpp` 는 여전히 CPU `opening`/`closing` 만 부릅니다.
+   **여기가 지금 가장 큰 덩어리입니다** — 검출 CPU 의 82%.
+7. **형태학은 화소당 O(r) 로 두었습니다.** 반경이 12 이하라 고른 선택이고, 반경 무관
+   O(1)(vHGW) 로 바꾸는 것은 성능 작업입니다. **재고 나서** 하십시오 — 선택 연산이라
+   알고리즘을 바꿔도 값은 그대로입니다.
 
 ### 0.5 ☠️ GPU 도 CPU 와 **같은 타일**로 나눠야 값이 같습니다 (2026-08-18 실측)
 
@@ -513,6 +526,26 @@ macOS 대응 상수:
 
 **형태학 하나가 82%.** 대상 파일: `grain_mend_morphology.cpp` · `grain_mend_detector.cpp` ·
 `grain_mend_speck_detector.cpp` · `grain_mend_scratch_angles.cpp` · `grain_mend_detection_image.cpp`
+
+> ### ✅ 2026-08-18 — 형태학 커널은 섰습니다. 연결이 아직입니다
+>
+> `gpu/gpu_morphology.*` 가 `opening`·`closing`·`bipolar_top_hat` 을 냅니다.
+> 실제로 쓰이는 반경 전부(**0·1·3·4·8·12**)에서 WARP·NVIDIA 양쪽 **delta 정확히 0** 입니다.
+> min/max 는 선택 연산이라 부동소수 산술이 없어서, 시험이 허용 오차가 아니라 **0** 을
+> 요구합니다.
+>
+> 플레이북 4.3 이 요구한 두 가지를 먼저 확인했습니다:
+> **① CPU 는 이미 vHGW(단조 덱)입니다.** ② **구조 요소는 분리형 정사각형**이고
+> 45° 사선 요소는 이 코드에 없습니다.
+>
+> ☠️ **아직 아닌 것:** `grain_mend_detector.cpp` 는 여전히 CPU 판만 부릅니다.
+> 커널이 정확해도 **연결 전에는 1 ms 도 줄지 않습니다.**
+>
+> ⚠️ GPU 셰이더는 화소당 **O(r)** 로 창을 직접 훑습니다. 반경이 12 이하라 고른 선택이고,
+> 반경 무관 O(1) 로 바꾸는 것은 성능 작업입니다 — **재고 나서** 하십시오.
+>
+> ☠️ `box_mean` 은 **옮기지 않았습니다.** 적분영상을 `double` 로 누적합니다(`:240`).
+> D3D11 의 double 은 선택 기능이라 내장 GPU 범용성이 보장되지 않습니다.
 
 ---
 
