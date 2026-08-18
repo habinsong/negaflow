@@ -54,6 +54,29 @@ internal static class WorkflowShortcutTests
             "workflow_shortcut_load_scanner_matches_mac");
 
         Check(
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.Undo) ==
+                new WorkflowShortcut("z", WorkflowShortcutModifiers.Control) &&
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.Redo) ==
+                new WorkflowShortcut(
+                    "z",
+                    WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Shift) &&
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.CopyDevelopSettings) ==
+                new WorkflowShortcut(
+                    "c",
+                    WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Shift) &&
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.PasteDevelopSettings) ==
+                new WorkflowShortcut(
+                    "v",
+                    WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Shift) &&
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.PickPhoto) ==
+                new WorkflowShortcut("p", WorkflowShortcutModifiers.None) &&
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.RejectPhoto) ==
+                new WorkflowShortcut("x", WorkflowShortcutModifiers.None) &&
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.DeletePhoto) ==
+                new WorkflowShortcut("delete", WorkflowShortcutModifiers.None),
+            "workflow_shortcut_edit_menu_keys_match_mac");
+
+        Check(
             defaults.Resolve("p", WorkflowShortcutModifiers.None) ==
                 WorkflowShortcutAction.PickPhoto &&
             defaults.Resolve("x", WorkflowShortcutModifiers.None) ==

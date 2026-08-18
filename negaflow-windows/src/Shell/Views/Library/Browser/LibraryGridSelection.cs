@@ -71,8 +71,31 @@ internal sealed class LibraryGridSelection
     internal LibraryFrameSnapshot? ActionableFrame() =>
         view.FrameListView?.SelectedItem is LibraryFrameListItem item ? item.Frame : null;
 
-    internal IReadOnlyList<LibraryFrameListItem> SelectedItems() =>
-        [.. view.FrameListView.SelectedItems.OfType<LibraryFrameListItem>()];
+    internal IReadOnlyList<LibraryFrameListItem> SelectedItems()
+    {
+        LibraryFrameListItem[] fromView =
+            [.. view.FrameListView.SelectedItems.OfType<LibraryFrameListItem>()];
+        if (fromView.Length > 0)
+        {
+            return fromView;
+        }
+        // MenuBar 클릭이 Grouped GridView 선택을 비울 수 있습니다. catalog 선택이 남으면
+        // 그 사진에 메뉴 명령을 겁니다 — macOS 는 메뉴를 열어도 actionableFrame 이 유지됩니다.
+        if (view.libraryHost is not { } host)
+        {
+            return [];
+        }
+        HashSet<string> ids = [.. host.SelectedFrameIds];
+        if (host.ActiveFrameId is { } active)
+        {
+            ids.Add(active);
+        }
+        if (ids.Count == 0)
+        {
+            return [];
+        }
+        return [.. view.allItems.Where(item => ids.Contains(item.Id))];
+    }
 
     /// <summary>
     /// 격자에서 한 칸 옮깁니다. 고른 것이 없으면 첫 칸부터 시작합니다 — macOS 도 그렇게 하며,

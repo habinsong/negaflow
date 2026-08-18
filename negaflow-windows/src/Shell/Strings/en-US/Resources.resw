@@ -344,6 +344,10 @@ Load a scanner from Library to scan film.</value>
     <value>Develop</value>
     <comment>AppLocalizedText.menuDevelop</comment>
   </data>
+  <data name="menuEdit.Text" xml:space="preserve">
+    <value>Edit</value>
+    <comment>AppLocalizedText.menuEdit</comment>
+  </data>
   <data name="menuFile.Text" xml:space="preserve">
     <value>File</value>
     <comment>AppLocalizedText.menuFile</comment>

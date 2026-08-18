@@ -344,6 +344,10 @@
     <value>显影</value>
     <comment>AppLocalizedText.menuDevelop</comment>
   </data>
+  <data name="menuEdit.Text" xml:space="preserve">
+    <value>编辑</value>
+    <comment>AppLocalizedText.menuEdit</comment>
+  </data>
   <data name="menuFile.Text" xml:space="preserve">
     <value>文件</value>
     <comment>AppLocalizedText.menuFile</comment>

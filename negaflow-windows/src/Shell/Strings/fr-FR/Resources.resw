@@ -344,6 +344,10 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
     <value>Développement</value>
     <comment>AppLocalizedText.menuDevelop</comment>
   </data>
+  <data name="menuEdit.Text" xml:space="preserve">
+    <value>Édition</value>
+    <comment>AppLocalizedText.menuEdit</comment>
+  </data>
   <data name="menuFile.Text" xml:space="preserve">
     <value>Fichier</value>
     <comment>AppLocalizedText.menuFile</comment>

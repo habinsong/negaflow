@@ -340,6 +340,10 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
     <value>Entwickeln</value>
     <comment>AppLocalizedText.menuDevelop</comment>
   </data>
+  <data name="menuEdit.Text" xml:space="preserve">
+    <value>Bearbeiten</value>
+    <comment>AppLocalizedText.menuEdit</comment>
+  </data>
   <data name="menuDevelop.Text" xml:space="preserve">
     <value>Entwickeln</value>
     <comment>AppLocalizedText.menuDevelop</comment>

@@ -7,7 +7,7 @@ using Negaflow.Shell.Shortcuts;
 namespace Negaflow.Shell.Views;
 
 /// <summary>
-/// macOS <c>AppStandardMenuCommands</c> 의 앱 메뉴와 파일 메뉴입니다. Windows 에는 시스템
+/// macOS <c>AppStandardMenuCommands</c> 의 앱·파일·편집 메뉴입니다. Windows 에는 시스템
 /// 앱 메뉴가 없어서 창 안 <see cref="MenuBar"/> 가 그 자리입니다.
 /// </summary>
 public sealed partial class AppMenuBarView : UserControl
@@ -22,7 +22,7 @@ public sealed partial class AppMenuBarView : UserControl
 
     public event EventHandler? SettingsRequested;
 
-    public event EventHandler<WorkflowShortcutAction>? FileCommandRequested;
+    public event EventHandler<WorkflowShortcutAction>? CommandRequested;
 
     public void Localize()
     {
@@ -37,19 +37,37 @@ public sealed partial class AppMenuBarView : UserControl
         string file = AppResources.Get("menuFile", "Text");
         FileMenu.Title = file;
         AutomationProperties.SetName(FileMenu, file);
-        SetItem(ImportImagesItem, "shortcutImportImages");
-        SetItem(ImportFolderItem, "shortcutImportFolder");
-        SetItem(RefreshLibraryItem, "shortcutRefreshLibrary");
-        SetItem(LoadScannerItem, "loadScanner");
-        SetItem(QuickExportItem, "commandQuickExport");
-        SetItem(ExportItem, "commandExport");
+        SetItem(ImportImagesItem, "shortcutImportImages", WorkflowShortcutAction.ImportImages);
+        SetItem(ImportFolderItem, "shortcutImportFolder", WorkflowShortcutAction.ImportFolder);
+        SetItem(RefreshLibraryItem, "shortcutRefreshLibrary", WorkflowShortcutAction.RefreshLibrary);
+        SetItem(LoadScannerItem, "loadScanner", WorkflowShortcutAction.LoadScanner);
+        SetItem(QuickExportItem, "commandQuickExport", WorkflowShortcutAction.QuickExport);
+        SetItem(ExportItem, "commandExport", WorkflowShortcutAction.ExportPhoto);
+
+        string edit = AppResources.Get("menuEdit", "Text");
+        EditMenu.Title = edit;
+        AutomationProperties.SetName(EditMenu, edit);
+        SetItem(UndoItem, "shortcutUndo", WorkflowShortcutAction.Undo);
+        SetItem(RedoItem, "shortcutRedo", WorkflowShortcutAction.Redo);
+        SetItem(CopyDevelopSettingsItem, "shortcutCopyDevelopSettings",
+            WorkflowShortcutAction.CopyDevelopSettings);
+        SetItem(PasteDevelopSettingsItem, "shortcutPasteDevelopSettings",
+            WorkflowShortcutAction.PasteDevelopSettings);
+        SetItem(PickItem, "shortcutPickPhoto", WorkflowShortcutAction.PickPhoto);
+        SetItem(RejectItem, "shortcutRejectPhoto", WorkflowShortcutAction.RejectPhoto);
+        SetItem(DeletePhotoItem, "shortcutDeletePhoto", WorkflowShortcutAction.DeletePhoto);
     }
 
-    private static void SetItem(MenuFlyoutItem item, string key)
+    private static void SetItem(
+        MenuFlyoutItem item,
+        string key,
+        WorkflowShortcutAction action)
     {
         string text = AppResources.Get(key, "Text");
         item.Text = text;
         AutomationProperties.SetName(item, text);
+        item.KeyboardAcceleratorTextOverride =
+            WorkflowShortcutActions.Default(action).Display();
     }
 
     private void OnAboutClick(object sender, RoutedEventArgs args)
@@ -67,27 +85,48 @@ public sealed partial class AppMenuBarView : UserControl
     }
 
     private void OnImportImagesClick(object sender, RoutedEventArgs args) =>
-        RaiseFile(sender, args, WorkflowShortcutAction.ImportImages);
+        RaiseCommand(sender, args, WorkflowShortcutAction.ImportImages);
 
     private void OnImportFolderClick(object sender, RoutedEventArgs args) =>
-        RaiseFile(sender, args, WorkflowShortcutAction.ImportFolder);
+        RaiseCommand(sender, args, WorkflowShortcutAction.ImportFolder);
 
     private void OnRefreshLibraryClick(object sender, RoutedEventArgs args) =>
-        RaiseFile(sender, args, WorkflowShortcutAction.RefreshLibrary);
+        RaiseCommand(sender, args, WorkflowShortcutAction.RefreshLibrary);
 
     private void OnLoadScannerClick(object sender, RoutedEventArgs args) =>
-        RaiseFile(sender, args, WorkflowShortcutAction.LoadScanner);
+        RaiseCommand(sender, args, WorkflowShortcutAction.LoadScanner);
 
     private void OnQuickExportClick(object sender, RoutedEventArgs args) =>
-        RaiseFile(sender, args, WorkflowShortcutAction.QuickExport);
+        RaiseCommand(sender, args, WorkflowShortcutAction.QuickExport);
 
     private void OnExportClick(object sender, RoutedEventArgs args) =>
-        RaiseFile(sender, args, WorkflowShortcutAction.ExportPhoto);
+        RaiseCommand(sender, args, WorkflowShortcutAction.ExportPhoto);
 
-    private void RaiseFile(object sender, RoutedEventArgs args, WorkflowShortcutAction action)
+    private void OnUndoClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.Undo);
+
+    private void OnRedoClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.Redo);
+
+    private void OnCopyDevelopSettingsClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.CopyDevelopSettings);
+
+    private void OnPasteDevelopSettingsClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.PasteDevelopSettings);
+
+    private void OnPickClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.PickPhoto);
+
+    private void OnRejectClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.RejectPhoto);
+
+    private void OnDeletePhotoClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.DeletePhoto);
+
+    private void RaiseCommand(object sender, RoutedEventArgs args, WorkflowShortcutAction action)
     {
         _ = sender;
         _ = args;
-        FileCommandRequested?.Invoke(this, action);
+        CommandRequested?.Invoke(this, action);
     }
 }

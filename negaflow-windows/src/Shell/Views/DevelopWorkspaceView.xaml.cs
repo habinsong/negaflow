@@ -453,6 +453,18 @@ public sealed partial class DevelopWorkspaceView : UserControl
     /// <summary>macOS <c>exportSelectionToFolder</c> — 출력 패널이 정한 폴더·형식입니다.</summary>
     public Task ExportPhotoAsync() => LeftPanel.ExportPanel.runner.RunExportAsync();
 
+    /// <summary>macOS <c>copyDevelopSettings</c> — 프리셋 패널과 같은 클립보드입니다.</summary>
+    internal void CopyDevelopSettingsFromMenu() => _ = panel?.CopyDevelopSettings();
+
+    /// <summary>macOS <c>pasteDevelopSettings</c> — 고른 사진이 없으면 조용히 끝납니다.</summary>
+    internal void PasteDevelopSettingsFromMenu()
+    {
+        if (panel is not null)
+        {
+            _ = panel.PasteDevelopSettings();
+        }
+    }
+
     /// <summary>
     /// 고른 프로파일의 용지 흰색과 잉크 검정을 미리보기에 겁니다.
     /// </summary>

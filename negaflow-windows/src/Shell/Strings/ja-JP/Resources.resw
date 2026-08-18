@@ -344,6 +344,10 @@
     <value>現像</value>
     <comment>AppLocalizedText.menuDevelop</comment>
   </data>
+  <data name="menuEdit.Text" xml:space="preserve">
+    <value>編集</value>
+    <comment>AppLocalizedText.menuEdit</comment>
+  </data>
   <data name="menuFile.Text" xml:space="preserve">
     <value>ファイル</value>
     <comment>AppLocalizedText.menuFile</comment>

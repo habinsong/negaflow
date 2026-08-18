@@ -107,7 +107,7 @@ public sealed partial class WorkspaceShellView : UserControl
         Toolbar.SettingsRequested += OnToolbarSettingsRequested;
         AppMenu.AboutRequested += OnAppMenuAboutRequested;
         AppMenu.SettingsRequested += OnToolbarSettingsRequested;
-        AppMenu.FileCommandRequested += OnAppMenuFileCommandRequested;
+        AppMenu.CommandRequested += OnAppMenuCommandRequested;
         state.Changed += OnStateChanged;
         UpdateWorkspace(state.Current.SelectedWorkspace);
         Unloaded += OnUnloaded;
@@ -239,6 +239,19 @@ public sealed partial class WorkspaceShellView : UserControl
                     _ = DevelopWorkspace.ExportPhotoAsync();
                 }
                 return true;
+            case WorkflowShortcutAction.Undo:
+            case WorkflowShortcutAction.Redo:
+                return LibraryWorkspace.InvokeShortcut(action);
+            case WorkflowShortcutAction.CopyDevelopSettings:
+                DevelopWorkspace.CopyDevelopSettingsFromMenu();
+                return true;
+            case WorkflowShortcutAction.PasteDevelopSettings:
+                DevelopWorkspace.PasteDevelopSettingsFromMenu();
+                return true;
+            case WorkflowShortcutAction.PickPhoto:
+            case WorkflowShortcutAction.RejectPhoto:
+            case WorkflowShortcutAction.DeletePhoto:
+                return LibraryWorkspace.InvokeShortcut(action);
         }
         // 나머지는 지금 보이는 화면이 맡습니다. 보이지 않는 화면이 조용히 사진을 바꾸면
         // 사용자는 무엇이 일어났는지 볼 수 없습니다.
@@ -281,7 +294,7 @@ public sealed partial class WorkspaceShellView : UserControl
         AboutRequested?.Invoke(this, EventArgs.Empty);
     }
 
-    private void OnAppMenuFileCommandRequested(object? sender, WorkflowShortcutAction action)
+    private void OnAppMenuCommandRequested(object? sender, WorkflowShortcutAction action)
     {
         _ = sender;
         _ = Invoke(action);
@@ -327,7 +340,7 @@ public sealed partial class WorkspaceShellView : UserControl
         Toolbar.SettingsRequested -= OnToolbarSettingsRequested;
         AppMenu.AboutRequested -= OnAppMenuAboutRequested;
         AppMenu.SettingsRequested -= OnToolbarSettingsRequested;
-        AppMenu.FileCommandRequested -= OnAppMenuFileCommandRequested;
+        AppMenu.CommandRequested -= OnAppMenuCommandRequested;
         Toolbar.QuickExportRequested -= OnToolbarQuickExportRequested;
         DevelopWorkspace.QuickExportAvailabilityChanged -= OnQuickExportAvailabilityChanged;
         DevelopWorkspace.ScannerSetupRequested -= OnDevelopScannerSetupRequested;

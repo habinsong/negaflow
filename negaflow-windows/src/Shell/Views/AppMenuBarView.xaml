@@ -58,5 +58,44 @@
                 AutomationProperties.AutomationId="negaflow.menu.export"
                 Click="OnExportClick" />
         </MenuBarItem>
+        <!--
+          macOS AppStandardMenuCommands replacing:.undoRedo + after:.pasteboard + after:.textEditing.
+          Windows 에는 시스템 잘라내기/복사/붙여넣기가 없어서 앱이 정의한 일곱 항목이 편집 메뉴입니다.
+        -->
+        <MenuBarItem
+            x:Name="EditMenu"
+            AutomationProperties.AutomationId="negaflow.menu.edit"
+            Title="Edit">
+            <MenuFlyoutItem
+                x:Name="UndoItem"
+                AutomationProperties.AutomationId="negaflow.menu.undo"
+                Click="OnUndoClick" />
+            <MenuFlyoutItem
+                x:Name="RedoItem"
+                AutomationProperties.AutomationId="negaflow.menu.redo"
+                Click="OnRedoClick" />
+            <MenuFlyoutSeparator />
+            <MenuFlyoutItem
+                x:Name="CopyDevelopSettingsItem"
+                AutomationProperties.AutomationId="negaflow.menu.copy-develop"
+                Click="OnCopyDevelopSettingsClick" />
+            <MenuFlyoutItem
+                x:Name="PasteDevelopSettingsItem"
+                AutomationProperties.AutomationId="negaflow.menu.paste-develop"
+                Click="OnPasteDevelopSettingsClick" />
+            <MenuFlyoutSeparator />
+            <MenuFlyoutItem
+                x:Name="PickItem"
+                AutomationProperties.AutomationId="negaflow.menu.pick"
+                Click="OnPickClick" />
+            <MenuFlyoutItem
+                x:Name="RejectItem"
+                AutomationProperties.AutomationId="negaflow.menu.reject"
+                Click="OnRejectClick" />
+            <MenuFlyoutItem
+                x:Name="DeletePhotoItem"
+                AutomationProperties.AutomationId="negaflow.menu.delete-photo"
+                Click="OnDeletePhotoClick" />
+        </MenuBarItem>
     </MenuBar>
 </UserControl>
