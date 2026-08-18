@@ -157,8 +157,7 @@ public sealed partial class DevelopWorkspaceView : UserControl
             previewCoordinator = new PreviewCoordinator(
                 new NativeDevelopExporterAdapter(),
                 uiDispatcher,
-                1600,
-                1200);
+                DisplayTargetPixels);
             GrainMendPanel.SetDetectCoordinator(new GrainMendDetectCoordinator(
                 new NativeDevelopExporterAdapter(),
                 uiDispatcher));
@@ -199,6 +198,20 @@ public sealed partial class DevelopWorkspaceView : UserControl
             return;
         }
         _ = previewCoordinator.RequestAsync(frame, ShowPreview);
+    }
+
+    /// <summary>
+    /// macOS <c>canvasDisplayTargetPixels</c> — 캔버스 긴 변 × DPI 배율입니다.
+    /// </summary>
+    private double DisplayTargetPixels()
+    {
+        double scale = PreviewCanvas.XamlRoot?.RasterizationScale ?? 1;
+        if (scale <= 0)
+        {
+            scale = 1;
+        }
+
+        return Math.Max(PreviewCanvas.ActualWidth, PreviewCanvas.ActualHeight) * scale;
     }
 
     private void ShowPreview(PreviewOutcome outcome)

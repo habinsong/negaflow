@@ -1,4 +1,5 @@
 using Microsoft.Windows.ApplicationModel.Resources;
+using System.Runtime.InteropServices;
 
 namespace Negaflow.Shell.Localization;
 
@@ -10,7 +11,20 @@ internal static class AppResources
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         ArgumentException.ThrowIfNullOrWhiteSpace(property);
-        string value = Loader.GetString($"{key}/{property}");
+        string value;
+        try
+        {
+            value = Loader.GetString($"{key}/{property}");
+        }
+        catch (COMException exception) when (unchecked((uint)exception.HResult) == 0x80073B17)
+        {
+            // ResourceLoader 는 없는 키에 빈 문자열이 아니라 0x80073B17 을 던집니다.
+            // https://learn.microsoft.com/windows/uwp/app-resources/localize-strings-ui-manifest
+            throw new InvalidOperationException(
+                $"Missing localized resource: {key}.{property}",
+                exception);
+        }
+
         if (string.IsNullOrEmpty(value))
         {
             throw new InvalidOperationException($"Missing localized resource: {key}.{property}");

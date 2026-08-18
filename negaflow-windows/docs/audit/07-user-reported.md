@@ -38,8 +38,16 @@
 
 | # | 증상 | 확인한 것 | 상태 |
 |---|---|---|---|
-| A1 | **설정 버튼 누르면 앱 터짐** | `src/Shell/SettingsWindow.xaml(.cs)` + `Views/SettingsRootView.xaml(.cs)` + `.ScanTab.cs` + `.Shortcuts.cs` 존재 | **스택 미확인** |
-| A2 | **스캐너에서 DPI·심도·프레임 규격 고르면 앱 종료** | `Views/Library/Scanner/LibraryScanPanel.xaml` 92행 `ScanResolutionSelector` · 122행 `ScanBitDepthSelector` · 135행 `ScanFrameFormatSelector`, 각각 `SelectionChanged` | **스택 미확인** |
+| A1 | **설정 버튼 누르면 앱 터짐** | 작업 옵션 → 설정 클릭으로 재현. `ResourceLoader.GetString` `COMException 0x80073B17` (`developAutoDefect.Text` 없음) → `XamlParseException` / WER `802b000a` | **2026-08-18 고침.** 스위치는 `developGrainMendAuto.Content` / `developGrainMendGuided.Content`. `TryResource` 가 `COMException` 도 잡음. `AppResources.Get` 은 `0x80073B17` 을 `InvalidOperationException` 으로 바꿈. 같은 클릭으로 창 제목 `설정`, UIA `일반` 확인. |
+    
+A1 재현(2026-08-18 04:50, 04:59): 작업 옵션 → 설정 클릭. 프로세스 종료. Application Error `Microsoft.UI.Xaml.dll` / `0xc000027b`, WER `combase.dll` / `802b000a` (`E_XAMLPARSEFAILED`).
+
+스택(파일로 잡은 관리 예외): `SettingsRootView.ctor` → `LocalizeScanTab` → `SetSwitchHeader("developAutoDefect")` → `AppResources.Get` → `ResourceLoader.GetString` `COMException 0x80073B17` NamedResource 없음. `TryResource` 는 `InvalidOperationException` 만 잡고 있어 창 생성이 `XamlParseException` 으로 깨졌다.
+
+고친 것: 스위치를 macOS `autoDefect`/`guidedDefect` 에 해당하는 기존 키 `developGrainMendAuto.Content` / `developGrainMendGuided.Content` 로 붙임. `TryResource` 가 `COMException` 도 잡음. `AppResources.Get` 은 `0x80073B17` 을 `InvalidOperationException` 으로 바꿈.
+
+검증(2026-08-18 05:16): 같은 경로로 설정 클릭. `Negaflow.Shell` PID 23648 유지, 창 제목 `설정`, UIA `settings.category.general` = `일반`. 그 클릭 구간에 Application Error 없음.
+| A2 | **스캐너에서 DPI·심도·프레임 규격 고르면 앱 종료** | 시뮬레이터 켠 뒤 프레임 규격을 다른 항목으로 고르면 종료. Application Error `Microsoft.UI.Xaml.dll` `0xc000027b`, WER `8000ffff`. `UpdateOptions` → `Render` → `FillTagged` 가 열린 ComboBox 에서 `Items.Clear()` | **2026-08-18 고침.** 목록이 같을 때는 지우지 않고 선택만 바꾼다. 같은 경로로 해상도/심도/프레임 규격 변경 후 프로세스 1개 유지, 프레임 규격 선택값 `35 mm · 24 × 18`. |
 
 **둘 다 재현 후 예외 스택을 잡아야 합니다.** 추측으로 고치지 않습니다.
 
@@ -86,12 +94,92 @@ Windows 전 트리에서 `MenuBar` · `MenuBarItem` **히트 0**.
 
 | # | 항목 | macOS | Windows | 판정 |
 |---|---|---|---|---|
-| C1 | **필름 베이스 자동/필름/수동** | `BaseControlSection.swift:20` `[.auto, .preset, .manual]` — 모드 이름은 **같음**. 엔진은 `FilmBaseEstimator` + `FilmBaseStatistics` + `FilmBaseSampleGrid` + `FilmBaseMeasurementDiagnostics` **4파일** | `BaseEstimationMode { Auto, Preset, Manual }` — 이름 같음. 엔진은 `auto_negative_base_resolver.cpp` **1파일 893줄**. `FilmBaseStatistics`·`FilmBasePicker`·`FilmBaseMeasurementDiagnostics` **히트 0** | **엔진 재작성.** 통계·진단 없이 다시 씀 → **사용자 보고: 이미지가 검게 터짐** |
+| C1 | **필름 베이스 자동/필름/수동** | `BaseControlSection.swift:20` `[.auto, .preset, .manual]`. 엔진은 `FilmBaseEstimator`(659줄) + `FilmBaseSampleGrid` + `FilmBaseStatistics` + `FilmBaseMeasurementDiagnostics` | `auto_negative_base_resolver.cpp` 1파일 + `film_stock_base_resolver.cpp`. **2026-08-18 함수 단위로 전수 대조함** — 아래 C1.1 | **대부분 일치. 창작 1건 제거함** |
 | C2 | **노이즈 감소(디테일 및 효과)** | 슬라이더 5개(`strength` **0.05…1** · luma · chroma · darkTone · detail). 엔진은 `ScannerNoiseReduction.swift` + `+Color` + `+Guided` **3파일** + `Profiles/Noise` 4파일 | 슬라이더 5개 이름은 같음(`DevelopDetailSection.xaml:59-63`). **엔진 `ScannerNoiseReduction*` 히트 0**, 대신 `film_scan_denoise.cpp` 802줄. `strength` 의 `ResetValue="0"` 은 macOS 최소 **0.05** 보다 낮음 | **백엔드 창작.** UI 만 같고 엔진이 다름 |
 | C3 | **좌우 뒤집기 없음** | `GeometryToolSection.swift:144` `flipHorizontal`, `:147` `flipVertical` | `DevelopGeometryCard.xaml:39` `FlipHorizontalButton`, `:40` `FlipVerticalButton` — **XAML 에는 있음** | **화면에 안 보임.** 카드가 접혀 있거나 글리프(`E7B7`/`E7B8`)가 안 그려질 가능성. **원인 미확정** |
 | C4 | **각도 조절 UI 창작** | `angleDial`(`CropAngleDial`) + `angleRow`(값 + 리셋 + 슬라이더), `setStraighten` | `CropAngleDialControl` + `StraightenAngleControl`(=`InspectorSlider`) — 구조는 같음 | **눈금이 정수였음.** `InspectorSlider` 의 `StepFrequency` 미지정 → 각도가 1도 단위로만 움직임. **2026-08-18 0.01 로 고침**. 배치·모양 차이는 별도 확인 필요 |
 | C5 | **컬렉션 창작** | `Features/Library/Model/Collections/` + `LibraryOrganizerSection.swift` + `LibraryOrganizerNameSheet.swift` + `LibraryOrganizerProjection.swift` | `LibraryOrganizer*` **히트 0**. 레일에 `CollectionsRailButton` 만 있음 | **UI 만 있고 뒤가 없음** |
 | C6 | **스캔·스캐너 시뮬레이터** | `Features/Scanning/` 21파일 4,446줄 + `ScannerKit/` 50파일 | `Shell.Core/Scanner/` 20파일 + `Views/Library/Scanner/` 5파일 999줄 | **동작 안 함(사용자 보고).** 플러그인 로딩 자체가 안 됨 |
+
+---
+
+## C1.1 필름 베이스 — 함수 단위 전수 대조 (2026-08-18)
+
+macOS `Film/` 4파일 + `ChromabaseEngine+NegativePipeline.resolveFilmBase` +
+`NegativeInversion` 을 Windows 와 **함수·상수 단위**로 전부 댔습니다.
+
+### 일치하는 것 (창작 아님 — 이전 판정을 바로잡습니다)
+
+| macOS | Windows | 결과 |
+|---|---|---|
+| `isFilmBaseCandidate` | `is_component_candidate` | luma 0.012~0.85(컬러)/0.92(B&W), `r≥g-0.01`, `g≥b-0.01`, `r−b ≥ max(0.004, 0.10·peak)`, B&W 허용오차 `0.12·peak + 0.01` — **전부 동일** |
+| `candidateLumaFloor` = peak × 0.10, peak = 후보 luma p99 | `floor = percentile(candidate_lumas, 0.99) * 0.10` | 동일 |
+| `nonFilmLuma 0.88` + Chebyshev 반경 2 팽창 | 동일 | 동일 |
+| `brighterNeighborRatio 1.15`, `neighborRadius 2` | 동일 | 동일 |
+| `coherentCount = max(24, count×0.004)` | `max(24, count*4/1000)` | 동일 |
+| 강등 규칙 `demoteMinLuma 0.60` · `0.12…0.87` · `demoteRBRatio 0.75` | 동일 | 동일 |
+| 형제 병합 `p75 ≥ best×0.90 && ≤ best/0.90` | 동일 | 동일 |
+| 상위 절반 선택 `max(count/2, min(count,24))` | 동일 | 동일 |
+| `FilmBaseStatistics.coherentCluster` MAD×1.4826×3, 채널 median | `coherent_measurement` | 동일 |
+| `clampedDmin` `[1e-3, 1.0]` | `minimum_manual_dmin 1e-3` / `maximum_manual_dmin 1.0` | 동일 |
+| `estimateFallbackBaseFromScene` (64~320, edge 0.06, p99 peak, floor `max(0.02, peak×0.45)`, p90) | `scene_edge_fallback_base` | **줄 단위로 동일** |
+| `LightSourceProfileRegistry` 게인 5종 | `light_gain()` | `0.98/1.00/1.04`·`1.06/1.00/0.92`·`1.09/1.00/0.88`·`0.97/1.03/1.00` — 동일. B&W 는 1.0 (macOS `neutralBase` 가드와 같음) |
+| `presetStats` — 스케일은 실측, 채널 **비율**은 프리셋 | `use_preset_response` 분기 | 동일 |
+| `sampleStats` (auto 실측 Dmax) — gate 1.12, darkCut 0.15, baseRatio 1.5/0.55, p0.002, floor `10^-1.8`, `max(0.4, …)`, 기하평균, `(x−0.42)/0.20` smoothstep | `scene_density_range` | **전부 동일** |
+| `estimate` 체인 순서 (성분 → 경계 → 분산 → 스트립) | `resolve_auto_negative_base` | 동일 |
+| 다운샘플 | macOS CoreImage affine 축소(면적 평균) ↔ Windows `downsample_for_statistics`(밉맵) | 같은 성질 |
+
+**`applySceneRanged` 는 이름만 없고 이식돼 있습니다** — Windows 는 `develop_manual_negative`
+안에서 `use_preset_response == false` 일 때 `scene_density_range` 를 씁니다. 이름으로
+찾았을 때 "히트 0" 이던 것을 **없다고 적었던 것은 틀렸습니다.**
+
+### 창작 1건 — **제거함**
+
+`connected_component_base` 에 macOS 에 없는 관문이 있었습니다(`d4a3fcb`):
+
+```cpp
+const double candidate_peak = floor * 10.0;
+if (selected_index == 0U && candidate_peak > 0.0 && selected_p75 < candidate_peak * 0.5) {
+    return std::nullopt;   // ← macOS 에 이런 판정이 없습니다
+}
+```
+
+그 커밋 메시지는 *"macOS 의 첫 단계는 증거가 약하면 nil 을 낸다"* 고 적었지만,
+macOS `connectedBaseComponent` 가 nil 을 내는 조건은 **① 셀 0개 ② 성분이 하나도
+`coherentCount` 를 못 넘음 ③ `coherentCluster` 가 nil** 뿐입니다. p75 를 후보 봉우리와
+견주는 관문은 **없습니다.**
+
+**계측기로 확인한 것** (`--auto-base-probe` 를 이번에 붙였습니다):
+
+- 8100 golden frame_1 — 성분 **8개**, 1위 `cells=891 p75=0.118606`, 후보 봉우리 `0.116775`.
+  관문 조건 `0.1186 < 0.0584` 은 **거짓** → 발동조차 하지 않음.
+  결과 `connected_component` **0.190995 / 0.093966 / 0.0710797**,
+  macOS **0.1913 / 0.0939 / 0.0711** — 일치.
+- 커밋이 말한 "단일 성분 p75 0.0168" 은 지금 `#7 cells=15093 p75=0.016479` 로 **8개 중 꼴찌**입니다.
+  그 사이 다른 커밋이 진짜 원인을 고쳤고 관문은 **죽은 코드**로 남아 있었습니다.
+- **실측 코퍼스 17장**(사용자 스캔 15 + golden 8100 + V700) 전부 `connected_component` 로
+  답하며, **관문 제거 전후 값이 바이트까지 동일**합니다.
+
+로컬 게이트: native 71/71, catalog 721, shell **1065** assertions, 경고 0.
+
+### 계측기
+
+```bash
+negaflow-cli --auto-base-probe <source.tiff> [color|bw]
+NEGA_DEBUG=1 negaflow-cli --auto-base-probe <source.tiff>   # 성분 목록까지
+```
+
+### 남은 것 (아직 대조 안 함)
+
+`non_film_exclusion` · `brightest_coherent_mode` · `continuous_border_base` ·
+`distributed_base` · `strip_fallback_base` 다섯 함수는 이번에 **대조하지 않았습니다.**
+17장 전부 연결 성분 단계에서 끝나 이 경로가 돌지 않았기 때문입니다 — 그러나 다른 스캔에서는
+돕니다. macOS `nonFilmExclusion` · `brightestCoherentMode` · `sampleBrightOrangeBase` ·
+`sampleDistributedOrangeBase` · `borderFallback` 과 대조해야 합니다.
+
+또한 **`FilmBasePicker.swift`(149줄, 수동 스포이드)** 는 Windows 히트 0 이고,
+**`FilmBaseMeasurementDiagnostics`(186줄, 증거 점수·이상 징후 8종)** 도 없습니다.
+수동 모드에서 캔버스 스포이드로 베이스를 집는 경로를 확인해야 합니다.
 
 ---
 
@@ -184,3 +272,21 @@ DevelopLookLabel         DevelopLookSelector
 8. **D2·D3 비교 캡슐·줌 HUD**
 9. **D4 IR 프론트 · D6 내보내기 · D7 인화**
 10. **F 문자열**
+    
+---
+
+## C.2 추가 보고 — 여러 인스턴스 (2026-08-18)
+
+| # | 증상 | 확인한 것 | 상태 |
+|---|---|---|---|
+| C14 | **앱을 동시에 여러 개 띄우면 고장난다** | Windows App SDK 기본은 multi-instance. OnLaunched 가 실행마다 새 MainWindow + 새 LibraryHostService 를 열었다. macOS 는 앱 프로세스 하나. | **2026-08-18 막음.** 로컬 뮤텍스가 COM 보다 앞에서 선출. 패키지된 두 번째 실행은 AppInstance 키 negaflow.primary 로 넘김. 패키지 없이 exe 직접 실행은 Application.Start 가 REGDB_E_CLASSNOTREG 로 죽으므로 창을 열지 않음. 실측 06:21 AUMID 동시 2회 프로세스 1개, 크래시 0. |
+
+실측 (등록은 그대로 두고 AUMID 만 다시 실행):
+
+- 첫 실행: `Negaflow.Shell` PID **20384**, 시작 04:39:08
+- 같은 AUMID 재실행 1회: 프로세스 **1개**, PID **20384** 유지
+- 같은 AUMID 재실행 2회: 프로세스 **1개**, PID **20384** 유지
+- 새 Application Error / .NET Runtime 이벤트: **없음**
+
+주의: `scripts/run-app.ps1 -SkipBuild` 는 `Add-AppxPackage -Register -ForceApplicationShutdown` 이라 패키지를 다시 등록하면서 기존 프로세스를 죽인다. 그것은 설치 경로이지 두 번째 실행이 아니다.
+

@@ -50,6 +50,10 @@ public sealed class PreviewCoordinator
     private readonly byte[] pixels;
     private readonly Lock gate = new();
 
+    private readonly Func<double>? displayTargetPixels;
+    private readonly bool settleEnabled;
+    private int developRevision;
+
     private bool isRunning;
     private PreviewRequest? pending;
     // The handle for the render currently inside the engine. Held under the same lock as
@@ -64,6 +68,35 @@ public sealed class PreviewCoordinator
         IUiDispatcher dispatcher,
         uint maximumWidth,
         uint maximumHeight)
+        : this(exporter, dispatcher, maximumWidth, maximumHeight, displayTargetPixels: null, settleEnabled: false)
+    {
+    }
+
+    /// <summary>
+    /// macOS <c>renderLatestDevelopment</c> 과 같은 두 패스입니다. 표시 크기 적응 프록시 뒤에
+    /// 0.14초 무편집이면 3600 정착을 돌립니다.
+    /// </summary>
+    public PreviewCoordinator(
+        IDevelopExporter exporter,
+        IUiDispatcher dispatcher,
+        Func<double> displayTargetPixels)
+        : this(
+            exporter,
+            dispatcher,
+            DevelopPreviewProxy.BufferEdge(DevelopPreviewProxy.FullMaxDimension),
+            DevelopPreviewProxy.BufferEdge(DevelopPreviewProxy.FullMaxDimension),
+            displayTargetPixels,
+            settleEnabled: true)
+    {
+    }
+
+    private PreviewCoordinator(
+        IDevelopExporter exporter,
+        IUiDispatcher dispatcher,
+        uint maximumWidth,
+        uint maximumHeight,
+        Func<double>? displayTargetPixels,
+        bool settleEnabled)
     {
         ArgumentNullException.ThrowIfNull(exporter);
         ArgumentNullException.ThrowIfNull(dispatcher);
@@ -74,6 +107,8 @@ public sealed class PreviewCoordinator
         this.dispatcher = dispatcher;
         this.maximumWidth = maximumWidth;
         this.maximumHeight = maximumHeight;
+        this.displayTargetPixels = displayTargetPixels;
+        this.settleEnabled = settleEnabled;
         pixels = new byte[(long)maximumWidth * maximumHeight * 4];
     }
 
@@ -226,30 +261,120 @@ public sealed class PreviewCoordinator
 
         try
         {
-            DevelopExportResult result = await Task.Run(() => exporter.Preview(
+            uint interactiveEdge = InteractiveEdge();
+            int revision = NextRevision();
+            PreviewOutcome interactive = await PreviewOnceAsync(
                 developRequest,
-                maximumWidth,
-                maximumHeight,
-                pixels,
+                interactiveEdge,
+                interactiveEdge,
                 run,
-                proof)).ConfigureAwait(false);
-            if (result.Cancelled)
+                proof).ConfigureAwait(false);
+            if (!settleEnabled ||
+                interactive.Kind != DevelopExportOutcomeKind.Completed ||
+                interactiveEdge >= DevelopPreviewProxy.FullMaxDimension - 0.5)
             {
-                return PreviewOutcome.Cancelled();
+                return interactive;
             }
-            return new PreviewOutcome(
-                DevelopExportOutcomeKind.Completed,
-                result.Succeeded ? pixels : null,
-                result.ImageWidth,
-                result.ImageHeight,
-                result,
-                DevelopRequestRefusal.None,
-                null);
+
+            if (!await WaitForSettleAsync(revision, run).ConfigureAwait(false))
+            {
+                return interactive;
+            }
+
+            uint settled = DevelopPreviewProxy.BufferEdge(DevelopPreviewProxy.FullMaxDimension);
+            PreviewOutcome settledOutcome = await PreviewOnceAsync(
+                developRequest,
+                settled,
+                settled,
+                run,
+                proof).ConfigureAwait(false);
+            return settledOutcome.Kind == DevelopExportOutcomeKind.Cancelled
+                ? interactive
+                : settledOutcome;
         }
         catch (Exception error) when (error is not OperationCanceledException)
         {
             return PreviewOutcome.Faulted(error.Message);
         }
+    }
+
+    private uint InteractiveEdge()
+    {
+        double display = displayTargetPixels?.Invoke() ?? DevelopPreviewProxy.InteractiveMaxDimension;
+        return DevelopPreviewProxy.BufferEdge(
+            DevelopPreviewProxy.InteractiveProxyDimension(display));
+    }
+
+    private int NextRevision()
+    {
+        lock (gate)
+        {
+            return ++developRevision;
+        }
+    }
+
+    /// <summary>macOS <c>waitForDevelopSettle</c> — 0.14초 동안 새 요청이 없으면 true.</summary>
+    private async Task<bool> WaitForSettleAsync(int revision, DevelopRun run)
+    {
+        DateTime deadline = DateTime.UtcNow + DevelopPreviewProxy.SettleWindow;
+        while (DateTime.UtcNow < deadline)
+        {
+            if (run.IsCancelRequested)
+            {
+                return false;
+            }
+
+            lock (gate)
+            {
+                if (pending is not null || developRevision != revision)
+                {
+                    return false;
+                }
+            }
+
+            try
+            {
+                await Task.Delay(25).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                return false;
+            }
+        }
+
+        lock (gate)
+        {
+            return pending is null && developRevision == revision && !run.IsCancelRequested;
+        }
+    }
+
+    private async Task<PreviewOutcome> PreviewOnceAsync(
+        DevelopExportRequest developRequest,
+        uint width,
+        uint height,
+        DevelopRun run,
+        SoftProofSettings? proof)
+    {
+        DevelopExportResult result = await Task.Run(() => exporter.Preview(
+            developRequest,
+            width,
+            height,
+            pixels,
+            run,
+            proof)).ConfigureAwait(false);
+        if (result.Cancelled)
+        {
+            return PreviewOutcome.Cancelled();
+        }
+
+        return new PreviewOutcome(
+            DevelopExportOutcomeKind.Completed,
+            result.Succeeded ? pixels : null,
+            result.ImageWidth,
+            result.ImageHeight,
+            result,
+            DevelopRequestRefusal.None,
+            null);
     }
 
     private void Deliver(PreviewOutcome outcome, Action<PreviewOutcome> onCompleted)

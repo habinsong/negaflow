@@ -146,8 +146,7 @@ run_develop()
   → apply_defect_stage → ... → publish_developed
 ```
 
-`src/Native/pipeline/export/stages/decode.cpp` 에서 `cache` · `preloaded` · `reuse`
-**히트 0** — 캐시가 없습니다.
+`src/Native/pipeline/export/stages/decode.cpp` 에 프로세스 단일 슬롯 캐시가 있습니다(2026-08-18). 같은 경로·같은 `ImageFileObservation` 이면 `decode_source` 가 디스크 TIFF 를 다시 읽지 않고 `WorkingImage` 를 복사합니다. macOS 의 `preloadedPreviewRaw` 와 같은 뜻입니다. 아직 없는 것: 프레임별 2슬롯, `interactiveProxyDimension`(1024…3600), `waitForDevelopSettle` 0.14초, 정착 프록시에서 Lanczos 축소.
 
 프리뷰(`abi/preview/develop_preview_*.cpp`)·검출·내보내기가 **같은 `run_develop`** 을 씁니다.
 그래서 슬라이더를 한 칸 움직여도 내보내기와 같은 준비 비용을 전부 냅니다.

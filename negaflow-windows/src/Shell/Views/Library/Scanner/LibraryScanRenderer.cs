@@ -186,11 +186,47 @@ internal sealed class LibraryScanRenderer
         IReadOnlyList<(object Text, object Tag)> items,
         object? selectedTag)
     {
+        if (!NeedsRebuild(selector, items))
+        {
+            SelectTagged(selector, selectedTag);
+            return;
+        }
+
+        // 열린 콤보의 항목을 지우면 WinUI 가 0xc000027b 로 프로세스를 죽입니다.
+        // 프레임 규격을 고를 때 그렇게 재현됐습니다. 목록이 달라질 때만 다시 채웁니다.
         selector.Items.Clear();
         foreach ((object text, object tag) in items)
         {
             selector.Items.Add(new ComboBoxItem { Content = text, Tag = tag });
         }
+
+        SelectTagged(selector, selectedTag);
+    }
+
+    private static bool NeedsRebuild(
+        ComboBox selector,
+        IReadOnlyList<(object Text, object Tag)> items)
+    {
+        if (selector.Items.Count != items.Count)
+        {
+            return true;
+        }
+
+        for (int index = 0; index < items.Count; index++)
+        {
+            if (selector.Items[index] is not ComboBoxItem existing ||
+                !Equals(existing.Tag, items[index].Tag) ||
+                !Equals(existing.Content, items[index].Text))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static void SelectTagged(ComboBox selector, object? selectedTag)
+    {
         foreach (object item in selector.Items)
         {
             if (item is ComboBoxItem candidate && Equals(candidate.Tag, selectedTag))

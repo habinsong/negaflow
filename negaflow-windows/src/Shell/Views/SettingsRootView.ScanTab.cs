@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Negaflow.Catalog;
 using Negaflow.Shell.Localization;
+using System.Runtime.InteropServices;
 
 namespace Negaflow.Shell.Views;
 
@@ -86,12 +87,16 @@ public sealed partial class SettingsRootView
     /// 더 나쁩니다.
     /// </summary>
     private static string TryResource(string key)
+        => TryResource(key, "Text");
+
+    private static string TryResource(string key, string property)
     {
         try
         {
-            return AppResources.Get(key, "Text");
+            return AppResources.Get(key, property);
         }
-        catch (InvalidOperationException)
+        catch (Exception exception) when (
+            exception is InvalidOperationException or COMException)
         {
             return key;
         }
@@ -119,14 +124,15 @@ public sealed partial class SettingsRootView
         ScannerTruthEmpty.Text = AppResources.Get("settingsScannerTruthNone", "Text");
         MicroSpecksHeading.Text = AppResources.Get("settingsMicroSpecksSection", "Text");
         MicroSpecksHelp.Text = AppResources.Get("settingsMicroSpecksHelp", "Text");
-        SetSwitchHeader(AutoDefectMicroSpecksToggle, "developAutoDefect");
-        SetSwitchHeader(GuidedDefectMicroSpecksToggle, "developGuidedDefect");
+        // macOS AppLocalizedPhrase.autoDefect / guidedDefect
+        SetSwitchHeader(AutoDefectMicroSpecksToggle, "developGrainMendAuto", "Content");
+        SetSwitchHeader(GuidedDefectMicroSpecksToggle, "developGrainMendGuided", "Content");
         BuildScannerTruth();
     }
 
-    private static void SetSwitchHeader(ToggleSwitch toggle, string key)
+    private static void SetSwitchHeader(ToggleSwitch toggle, string key, string property = "Text")
     {
-        string text = TryResource(key);
+        string text = TryResource(key, property);
         toggle.Header = text;
         AutomationProperties.SetName(toggle, text);
     }

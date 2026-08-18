@@ -17,6 +17,28 @@ namespace {
            _wcsicmp(extension.c_str(), L".tiff") == 0;
 }
 
+// macOS `cachedInteractivePreviewRaw` / `preloadedPreviewRaw` 에 해당합니다.
+// 같은 파일·같은 관측이면 디스크 TIFF 를 다시 읽지 않습니다. 프로세스 하나이므로
+// 단일 슬롯이면 충분합니다 — 프레임이 바뀌면 경로/관측이 달라져 자동으로 교체됩니다.
+struct DecodedSourceCache final {
+    std::filesystem::path path{};
+    negaflow::imageio::ImageFileObservation observation{};
+    negaflow::imaging::WorkingImage image{};
+    bool occupied{false};
+};
+
+DecodedSourceCache g_decoded_source_cache{};
+
+[[nodiscard]] bool cache_matches(
+    const std::filesystem::path& path,
+    const negaflow::imageio::ImageFileObservation& observation) noexcept {
+    return g_decoded_source_cache.occupied &&
+           g_decoded_source_cache.path == path &&
+           negaflow::imageio::same_image_file_observation(
+               g_decoded_source_cache.observation,
+               observation);
+}
+
 }  // namespace
 
 std::optional<DevelopExportOutcome> decode_source(
@@ -26,6 +48,16 @@ std::optional<DevelopExportOutcome> decode_source(
     const ObservedSource& observed,
     negaflow::imaging::WorkingImage& decoded_image) noexcept {
     tracker.begin(DevelopExportStage::decode, cost_of(decode_cost, true));
+    if (cache_matches(request.source, observed.before.observation))
+    {
+        decoded_image = g_decoded_source_cache.image;
+        tracker.finish();
+        if (tracker.cancelled()) {
+            return cancelled_outcome(DevelopExportStage::decode);
+        }
+        return std::nullopt;
+    }
+
     DecodeProgressBridge decode_progress{tracker, stop};
     negaflow::imageio::WicTiffDecodeControl decode_control{};
     decode_control.rows_per_copy = request.rows_per_copy;
@@ -102,6 +134,11 @@ std::optional<DevelopExportOutcome> decode_source(
         return fail(
             DevelopExportStage::observe_source_after, "source_changed_during_decode");
     }
+
+    g_decoded_source_cache.path = request.source;
+    g_decoded_source_cache.observation = observed.before.observation;
+    g_decoded_source_cache.image = decoded_image;
+    g_decoded_source_cache.occupied = true;
 
     tracker.finish();
     if (tracker.cancelled()) {

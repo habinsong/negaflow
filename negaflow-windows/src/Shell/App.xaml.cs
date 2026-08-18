@@ -3,6 +3,7 @@ using Negaflow.Catalog;
 using Negaflow.Shell.Library;
 using Negaflow.Shell.Services;
 using System.Runtime.InteropServices;
+using Microsoft.Windows.AppLifecycle;
 
 namespace Negaflow.Shell;
 
@@ -11,10 +12,12 @@ public partial class App : Application
     private Window? mainWindow;
     private LibraryHostService? libraryHost;
     private ThumbnailService? thumbnails;
+    private RestoreSignalWindow? restoreSignal;
 
     public App()
     {
         InitializeComponent();
+        AppInstance.GetCurrent().Activated += OnRedirectedActivation;
     }
 
     /// <summary>
@@ -55,7 +58,42 @@ public partial class App : Application
             OpenLibrary(),
             thumbnails);
         mainWindow.Closed += OnMainWindowClosed;
+        restoreSignal = new RestoreSignalWindow(() =>
+        {
+            if (mainWindow is MainWindow window)
+            {
+                if (window.DispatcherQueue.HasThreadAccess)
+                {
+                    window.BringToFront();
+                    return;
+                }
+
+                _ = window.DispatcherQueue.TryEnqueue(window.BringToFront);
+            }
+        });
         mainWindow.Activate();
+    }
+
+    /// <summary>
+    /// 두 번째 실행이 여기로 넘어온 자리입니다. 새 창을 만들지 않고 이미 있는 메인 창만
+    /// 다시 보여 줍니다.
+    /// </summary>
+    private void OnRedirectedActivation(object? sender, AppActivationArguments args)
+    {
+        _ = sender;
+        _ = args;
+        if (mainWindow is not MainWindow window)
+        {
+            return;
+        }
+
+        if (window.DispatcherQueue.HasThreadAccess)
+        {
+            window.BringToFront();
+            return;
+        }
+
+        _ = window.DispatcherQueue.TryEnqueue(window.BringToFront);
     }
 
     /// <summary>
@@ -108,6 +146,10 @@ public partial class App : Application
     {
         _ = sender;
         _ = args;
+        AppInstance.GetCurrent().Activated -= OnRedirectedActivation;
+        AppInstance.GetCurrent().UnregisterKey();
+        restoreSignal?.Dispose();
+        restoreSignal = null;
         // 세션을 놓아야 다음 실행이 카탈로그의 작성자가 될 수 있습니다.
         libraryHost?.Dispose();
         libraryHost = null;

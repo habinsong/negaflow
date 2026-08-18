@@ -13,6 +13,13 @@
     <UseWinUI>true</UseWinUI>
     <DefaultLanguage>en-US</DefaultLanguage>
     <WindowsPackageType>MSIX</WindowsPackageType>
+    <!-- 생성된 Program.Main 을 끄고 Program.cs 에서 두 번째 실행을 넘깁니다.
+         창·카탈로그를 만든 뒤에는 늦습니다. -->
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
+    <!-- DeploymentManager 모듈 초기화는 Program.Main 보다 먼저 돌아, 패키지 없이
+         exe 를 직접 실행한 두 번째 프로세스가 REGDB_E_CLASSNOTREG (0x80040154) 로
+         죽습니다. 선출은 Main 에서 하고, 이긴 프로세스만 Initialize 합니다. -->
+    <WindowsAppSdkDeploymentManagerInitialize>false</WindowsAppSdkDeploymentManagerInitialize>
     <WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained>
     <EnableMsixTooling>true</EnableMsixTooling>
     <ApplicationIcon>Assets\Negaflow.ico</ApplicationIcon>

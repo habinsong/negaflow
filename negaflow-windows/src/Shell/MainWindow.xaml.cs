@@ -91,6 +91,20 @@ public sealed partial class MainWindow : Window
         settingsWindow.Activate();
     }
 
+    /// <summary>
+    /// 두 번째 실행이 기존 프로세스로 넘어왔을 때 이 창을 다시 보여 줍니다. 최소화면이면
+    /// 복원합니다 — 뒤에 숨어 있으면 사용자는 또 켜진 줄 압니다.
+    /// </summary>
+    internal void BringToFront()
+    {
+        if (AppWindow.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Minimized } presenter)
+        {
+            presenter.Restore();
+        }
+
+        Activate();
+    }
+
     private void OnSettingsWindowClosed(object sender, WindowEventArgs args)
     {
         _ = args;

@@ -307,7 +307,6 @@
                             <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
                             <ToggleSwitch
                                 x:Name="SoftProofToggle"
-                                x:Uid="settingsExportSoftProofLabel"
                                 AutomationProperties.AutomationId="settings.export.softProof"
                                 Toggled="OnSoftProofToggled" />
                             <StackPanel x:Name="SoftProofDetailPanel" Spacing="12" Visibility="Collapsed">
@@ -322,7 +321,6 @@
                                             Click="OnChooseSoftProofProfile" />
                                         <Button
                                             x:Name="SoftProofResetProfileButton"
-                                            x:Uid="developTabReset"
                                             Visibility="Collapsed"
                                             AutomationProperties.AutomationId="settings.export.softProof.resetProfile"
                                             Click="OnResetSoftProofProfile" />
@@ -348,7 +346,6 @@
                                             Click="OnChoosePrinterProfile" />
                                         <Button
                                             x:Name="PrinterProfileResetButton"
-                                            x:Uid="developTabReset"
                                             Visibility="Collapsed"
                                             AutomationProperties.AutomationId="settings.export.printerProfile.reset"
                                             Click="OnResetPrinterProfile" />
@@ -376,7 +373,6 @@
                                 </Grid>
                                 <ToggleSwitch
                                     x:Name="GamutWarningToggle"
-                                    x:Uid="settingsColorGamutWarning"
                                     AutomationProperties.AutomationId="settings.export.gamutWarning"
                                     Toggled="OnGamutWarningToggled" />
                                 <TextBlock

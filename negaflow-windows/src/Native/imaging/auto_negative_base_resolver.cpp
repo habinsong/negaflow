@@ -8,12 +8,21 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
+#include <cstdlib>
 #include <limits>
 #include <optional>
 #include <vector>
 
 namespace negaflow::imaging {
 namespace {
+
+// NEGA_DEBUG 진단입니다. macOS 와 성분 목록을 그대로 대조하기 위한 opt-in 출력이며 반전
+// 수식에는 들어가지 않습니다.
+[[nodiscard]] bool base_debug_enabled() noexcept {
+    std::size_t length = 0U;
+    return getenv_s(&length, nullptr, 0U, "NEGA_DEBUG") == 0 && length > 0U;
+}
 
 constexpr std::array<float, 3> color_fallback{0.86F, 0.68F, 0.50F};
 constexpr std::array<float, 3> monochrome_fallback{0.80F, 0.80F, 0.80F};
@@ -279,6 +288,31 @@ struct SampleGridGeometry final {
     std::sort(components.begin(), components.end(), [](const Component& left, const Component& right) {
         return left.p75 > right.p75;
     });
+    // 성분 목록 진단(NEGA_DEBUG opt-in). macOS 는 `components.sort { $0.p75 > $1.p75 }` 뒤에
+    // 곧바로 강등·형제 병합으로 갑니다 — 어느 성분이 몇 개 셀로 어떤 p75 를 냈는지가 갈리면
+    // 베이스가 통째로 달라지므로, 값이 어긋날 때 여기부터 봅니다.
+    if (base_debug_enabled()) {
+        std::size_t interior_cells = 0U;
+        for (std::size_t index = 0U; index < count; ++index) {
+            if (interior[index]) {
+                ++interior_cells;
+            }
+        }
+        std::fprintf(
+            stderr,
+            "[base-cc] grid=%ux%u count=%zu floor=%.6f peak=%.6f minSize=%zu "
+            "interior=%zu components=%zu\n",
+            width, height, count, floor, floor * 10.0, minimum_size, interior_cells,
+            components.size());
+        for (std::size_t index = 0U; index < components.size() && index < 8U; ++index) {
+            std::fprintf(
+                stderr,
+                "[base-cc]   #%zu cells=%zu p75=%.6f\n",
+                index,
+                components[index].cells.size(),
+                components[index].p75);
+        }
+    }
     std::size_t selected_index = 0U;
     if (film_type == NegativeFilmType::color && components.front().p75 >= 0.60) {
         const auto median_red_minus_blue = [&grid](const Component& component) {
@@ -307,25 +341,6 @@ struct SampleGridGeometry final {
         }
     }
     const double selected_p75 = components[selected_index].p75;
-
-    // 고른 성분이 후보 밝기 봉우리에 한참 못 미치면 이것은 필름 베이스가 아니다.
-    //
-    // 베이스는 오렌지 마스크 후보들 가운데 **가장 밝은** 결맞은 구조다. 후보 분포의
-    // 봉우리보다 훨씬 어두운 성분을 베이스로 채택하면, 실제 베이스는 성분을 이루지
-    // 못했고 어두운 덩어리 하나만 남았다는 뜻이다. 그 값을 Dmin 으로 쓰면 대부분
-    // 화소의 밀도가 음수가 되어 사진이 통째로 검게 눌린다(OpticFilm 8100 실기: 성분
-    // 하나, p75 0.0168, 후보 봉우리 0.122 — 결과 median 19).
-    //
-    // 여기서 포기하면 호출부의 다음 전략(경계·분산 마스크)이 받는다. 같은 프레임에서
-    // 그 전략은 0.1764/0.0929/0.0703 을 내며 macOS 의 0.1913/0.0939/0.0711 에 가깝다.
-    // 정상 프레임(V700)은 고른 성분이 후보 봉우리와 사실상 같아 이 관문에 걸리지 않는다.
-    // 강등이 일어났다면 더 어두운 성분을 **일부러** 고른 것이므로 이 관문을 적용하지 않는다.
-    // 웜 백라이트 강등은 밝은 쪽이 광원이라고 판단한 결과이지 증거가 약한 것이 아니다.
-    const double candidate_peak = floor * 10.0;
-    if (selected_index == 0U && candidate_peak > 0.0 &&
-        selected_p75 < candidate_peak * 0.5) {
-        return std::nullopt;
-    }
 
     std::vector<std::size_t> members;
     for (const Component& component : components) {

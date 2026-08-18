@@ -90,7 +90,7 @@ macOS 는 반대입니다.
 ### 3.0 우선순위 0 — 프리뷰 프록시 캐시 (GPU 이전에 이것부터)
 
 **GPU 를 붙여도 매번 원본을 디코드하면 소용없습니다.**
-`run_develop` 이 호출마다 `observe_source_before` + `decode_source` 를 지납니다(실측 2,695 ms).
+`run_develop` 은 여전히 `observe_source_before` + `decode_source` 를 지납니다. 2026-08-18 부터 `decode_source` 는 같은 파일·같은 관측이면 디스크 디코드를 건너뜁니다. 첫 호출의 2,695 ms 는 그대로이고, 같은 프레임의 다음 호출은 그 TIFF 디코드를 다시 하지 않습니다. 슬라이더 체감은 이후 단계(톤·룩 CPU)에 남습니다. 2026-08-18: `DevelopPreviewProxy` 가 macOS 상수(1024…3600, step 256, settle 0.14s)를 갖고, `PreviewCoordinator` 가 표시 크기 적응 패스 뒤 무편집 0.14초면 3600 정착을 돌립니다. 고정 1600×1200 은 제거했습니다. 앱에서 정착 패스 ms 는 아직 안 쟀습니다.
 
 macOS 를 그대로 옮깁니다.
 

@@ -4,6 +4,7 @@
 #include "negaflow/imageio/wic_tiff_decoder.h"
 #include "commands/develop_negative_tiff.h"
 #include "commands/export_developed_png.h"
+#include "commands/auto_base_probe.h"
 #include "commands/grain_mend_detect.h"
 #include "commands/export_developed_tiff.h"
 #include "commands/hash_image.h"
@@ -35,6 +36,7 @@ void print_help() {
                  "  negaflow-cli --develop-negative-tiff <path> <dmin-r> <dmin-g> <dmin-b> <color|bw> [<exposure> <contrast> <curve-highlights> <curve-lights> <curve-darks> <curve-shadows>] [<film_scan> <film-emulation> <film-look-intensity>]\n"
                  "  negaflow-cli --export-developed-png16 <source> <destination> <dmin-r> <dmin-g> <dmin-b> <color|bw> [<exposure> <contrast> <curve-highlights> <curve-lights> <curve-darks> <curve-shadows>] [<film_scan> <film-emulation> <film-look-intensity>]\n"
                  "  negaflow-cli --export-developed-tiff16 <source> <destination> <dmin-r> <dmin-g> <dmin-b> <color|bw> [<exposure> <contrast> <curve-highlights> <curve-lights> <curve-darks> <curve-shadows>] [<film_scan> <film-emulation> <film-look-intensity>]\n"
+                 "  negaflow-cli --auto-base-probe <source> [color|bw]\n"
                  "  negaflow-cli --sha256-image <path>\n"
                  "  negaflow-cli --help\n";
 }
@@ -298,6 +300,9 @@ int wmain(const int argument_count, const wchar_t* const arguments[]) {
     }
     if (command == L"--export-developed-tiff16") {
         return negaflow::cli::run_export_developed_tiff(argument_count, arguments);
+    }
+    if (command == L"--auto-base-probe") {
+        return negaflow::cli::run_auto_base_probe(argument_count, arguments);
     }
     if (command == L"--grain-mend-detect") {
         return negaflow::cli::run_grain_mend_detect(argument_count, arguments);

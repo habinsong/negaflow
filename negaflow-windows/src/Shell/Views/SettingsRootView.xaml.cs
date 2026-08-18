@@ -404,6 +404,15 @@ public sealed partial class SettingsRootView : UserControl
         LocalizeToggle(ScannerSimulatorToggle);
         LocalizeToggle(DevelopImportsToggle);
         LocalizeToggle(ImageHashToggle);
+        // ToggleSwitch 에는 Header, Button 에는 Content 가 있습니다. 리소스 키가
+        // .Text/.Value 라서 x:Uid 로 붙이면 WinUI 가 0x802B000A 로 프로세스를 죽입니다.
+        SoftProofToggle.Header = AppResources.Get("settingsExportSoftProofLabel", "Text");
+        AutomationProperties.SetName(SoftProofToggle, SoftProofToggle.Header.ToString());
+        GamutWarningToggle.Header = AppResources.Get("settingsColorGamutWarning", "Text");
+        AutomationProperties.SetName(GamutWarningToggle, GamutWarningToggle.Header.ToString());
+        string reset = AppResources.Get("developTabReset", "Value");
+        SoftProofResetProfileButton.Content = reset;
+        PrinterProfileResetButton.Content = reset;
     }
 
     private static void SetCategoryText(
