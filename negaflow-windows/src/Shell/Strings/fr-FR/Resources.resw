@@ -344,6 +344,10 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
     <value>Développement</value>
     <comment>AppLocalizedText.menuDevelop</comment>
   </data>
+  <data name="menuFile.Text" xml:space="preserve">
+    <value>Fichier</value>
+    <comment>AppLocalizedText.menuFile</comment>
+  </data>
   <data name="menuLibrary.Content" xml:space="preserve">
     <value>Bibliothèque</value>
     <comment>AppLocalizedText.menuLibrary</comment>
@@ -1037,6 +1041,7 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="shortcutImportImages.Text" xml:space="preserve"><value>Importer des images</value><comment>AppLocalizedText.commandImportImages</comment></data>
   <data name="shortcutImportFolder.Text" xml:space="preserve"><value>Importer un dossier</value><comment>AppLocalizedText.importFolder</comment></data>
   <data name="shortcutRefreshLibrary.Text" xml:space="preserve"><value>Actualiser la bibliothèque</value><comment>AppLocalizedText.commandRefreshLibrary</comment></data>
+  <data name="loadScanner.Text" xml:space="preserve"><value>Charger le scanner</value><comment>AppLocalizedText.loadScanner</comment></data>
   <data name="shortcutPreviousPhoto.Text" xml:space="preserve"><value>Image précédente</value><comment>AppLocalizedText.previousFrame</comment></data>
   <data name="shortcutNextPhoto.Text" xml:space="preserve"><value>Image suivante</value><comment>AppLocalizedText.nextFrame</comment></data>
   <data name="shortcutPickPhoto.Text" xml:space="preserve"><value>Retenir</value><comment>AppLocalizedText.commandPick</comment></data>

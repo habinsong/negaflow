@@ -344,6 +344,10 @@
     <value>現像</value>
     <comment>AppLocalizedText.menuDevelop</comment>
   </data>
+  <data name="menuFile.Text" xml:space="preserve">
+    <value>ファイル</value>
+    <comment>AppLocalizedText.menuFile</comment>
+  </data>
   <data name="menuLibrary.Content" xml:space="preserve">
     <value>ライブラリ</value>
     <comment>AppLocalizedText.menuLibrary</comment>
@@ -1037,6 +1041,7 @@
   <data name="shortcutImportImages.Text" xml:space="preserve"><value>画像を読み込む</value><comment>AppLocalizedText.commandImportImages</comment></data>
   <data name="shortcutImportFolder.Text" xml:space="preserve"><value>フォルダーを読み込む</value><comment>AppLocalizedText.importFolder</comment></data>
   <data name="shortcutRefreshLibrary.Text" xml:space="preserve"><value>ライブラリを更新</value><comment>AppLocalizedText.commandRefreshLibrary</comment></data>
+  <data name="loadScanner.Text" xml:space="preserve"><value>スキャナーを読み込む</value><comment>AppLocalizedText.loadScanner</comment></data>
   <data name="shortcutPreviousPhoto.Text" xml:space="preserve"><value>前のコマ</value><comment>AppLocalizedText.previousFrame</comment></data>
   <data name="shortcutNextPhoto.Text" xml:space="preserve"><value>次のコマ</value><comment>AppLocalizedText.nextFrame</comment></data>
   <data name="shortcutPickPhoto.Text" xml:space="preserve"><value>採用</value><comment>AppLocalizedText.commandPick</comment></data>

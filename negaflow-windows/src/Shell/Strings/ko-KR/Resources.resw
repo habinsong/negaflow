@@ -344,6 +344,10 @@
     <value>현상</value>
     <comment>AppLocalizedText.menuDevelop</comment>
   </data>
+  <data name="menuFile.Text" xml:space="preserve">
+    <value>파일</value>
+    <comment>AppLocalizedText.menuFile</comment>
+  </data>
   <data name="menuLibrary.Content" xml:space="preserve">
     <value>라이브러리</value>
     <comment>AppLocalizedText.menuLibrary</comment>
@@ -1037,6 +1041,7 @@
   <data name="shortcutImportImages.Text" xml:space="preserve"><value>이미지 가져오기</value><comment>AppLocalizedText.commandImportImages</comment></data>
   <data name="shortcutImportFolder.Text" xml:space="preserve"><value>폴더 가져오기</value><comment>AppLocalizedText.importFolder</comment></data>
   <data name="shortcutRefreshLibrary.Text" xml:space="preserve"><value>라이브러리 새로고침</value><comment>AppLocalizedText.commandRefreshLibrary</comment></data>
+  <data name="loadScanner.Text" xml:space="preserve"><value>스캐너 불러오기</value><comment>AppLocalizedText.loadScanner</comment></data>
   <data name="shortcutPreviousPhoto.Text" xml:space="preserve"><value>이전 사진</value><comment>AppLocalizedText.previousFrame</comment></data>
   <data name="shortcutNextPhoto.Text" xml:space="preserve"><value>다음 사진</value><comment>AppLocalizedText.nextFrame</comment></data>
   <data name="shortcutPickPhoto.Text" xml:space="preserve"><value>선택</value><comment>AppLocalizedText.commandPick</comment></data>

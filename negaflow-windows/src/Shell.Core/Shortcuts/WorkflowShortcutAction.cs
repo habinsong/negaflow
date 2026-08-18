@@ -73,6 +73,9 @@ public enum WorkflowShortcutAction
     ScanFrame,
     QuickExport,
     ExportPhoto,
+    // 끝에 붙입니다. 설정 JSON 이 enum 을 숫자로 저장하므로 가운데에 끼우면 기존
+    // 단축키 덮어쓰기가 다른 명령을 가리키게 됩니다.
+    LoadScanner,
 }
 
 public static class WorkflowShortcutActions
@@ -88,6 +91,7 @@ public static class WorkflowShortcutActions
         WorkflowShortcutAction.ImportImages or
         WorkflowShortcutAction.ImportFolder or
         WorkflowShortcutAction.RefreshLibrary or
+        WorkflowShortcutAction.LoadScanner or
         WorkflowShortcutAction.LibraryGrid or
         WorkflowShortcutAction.LibraryCompare or
         WorkflowShortcutAction.LibrarySurvey => WorkflowShortcutGroup.Library,
@@ -211,6 +215,9 @@ public static class WorkflowShortcutActions
         WorkflowShortcutAction.QuickExport => new("e", WorkflowShortcutModifiers.Control),
         WorkflowShortcutAction.ExportPhoto =>
             new("e", WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Shift),
+        // macOS 는 command+option+L 입니다.
+        WorkflowShortcutAction.LoadScanner =>
+            new("l", WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Alt),
         _ => WorkflowShortcut.None,
     };
 

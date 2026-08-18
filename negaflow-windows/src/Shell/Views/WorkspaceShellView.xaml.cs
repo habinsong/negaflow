@@ -107,6 +107,7 @@ public sealed partial class WorkspaceShellView : UserControl
         Toolbar.SettingsRequested += OnToolbarSettingsRequested;
         AppMenu.AboutRequested += OnAppMenuAboutRequested;
         AppMenu.SettingsRequested += OnToolbarSettingsRequested;
+        AppMenu.FileCommandRequested += OnAppMenuFileCommandRequested;
         state.Changed += OnStateChanged;
         UpdateWorkspace(state.Current.SelectedWorkspace);
         Unloaded += OnUnloaded;
@@ -213,8 +214,30 @@ public sealed partial class WorkspaceShellView : UserControl
             case WorkflowShortcutAction.ShowHideFilmstrip:
                 state.ToggleFilmstrip();
                 return true;
+            case WorkflowShortcutAction.ImportImages:
+                LibraryWorkspace.OnImportClicked(LibraryWorkspace, new RoutedEventArgs());
+                return true;
+            case WorkflowShortcutAction.ImportFolder:
+                LibraryWorkspace.OnImportFoldersClicked(LibraryWorkspace, new RoutedEventArgs());
+                return true;
+            case WorkflowShortcutAction.RefreshLibrary:
+                return LibraryWorkspace.InvokeShortcut(action);
+            case WorkflowShortcutAction.LoadScanner:
+                state.SelectWorkspace(WorkspaceModule.Library);
+                LibraryWorkspace.PresentScannerSetup();
+                return true;
             case WorkflowShortcutAction.QuickExport:
                 _ = DevelopWorkspace.QuickExportAsync();
+                return true;
+            case WorkflowShortcutAction.ExportPhoto:
+                if (state.Current.SelectedWorkspace == WorkspaceModule.Print)
+                {
+                    PrintWorkspace.ExportFromMenu();
+                }
+                else
+                {
+                    _ = DevelopWorkspace.ExportPhotoAsync();
+                }
                 return true;
         }
         // 나머지는 지금 보이는 화면이 맡습니다. 보이지 않는 화면이 조용히 사진을 바꾸면
@@ -258,6 +281,12 @@ public sealed partial class WorkspaceShellView : UserControl
         AboutRequested?.Invoke(this, EventArgs.Empty);
     }
 
+    private void OnAppMenuFileCommandRequested(object? sender, WorkflowShortcutAction action)
+    {
+        _ = sender;
+        _ = Invoke(action);
+    }
+
     private async void OnToolbarQuickExportRequested(object? sender, EventArgs args)
     {
         _ = sender;
@@ -298,6 +327,7 @@ public sealed partial class WorkspaceShellView : UserControl
         Toolbar.SettingsRequested -= OnToolbarSettingsRequested;
         AppMenu.AboutRequested -= OnAppMenuAboutRequested;
         AppMenu.SettingsRequested -= OnToolbarSettingsRequested;
+        AppMenu.FileCommandRequested -= OnAppMenuFileCommandRequested;
         Toolbar.QuickExportRequested -= OnToolbarQuickExportRequested;
         DevelopWorkspace.QuickExportAvailabilityChanged -= OnQuickExportAvailabilityChanged;
         DevelopWorkspace.ScannerSetupRequested -= OnDevelopScannerSetupRequested;

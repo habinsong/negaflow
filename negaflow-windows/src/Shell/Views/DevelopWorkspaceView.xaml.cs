@@ -450,6 +450,9 @@ public sealed partial class DevelopWorkspaceView : UserControl
         NotifyQuickExportAvailabilityChanged();
     }
 
+    /// <summary>macOS <c>exportSelectionToFolder</c> — 출력 패널이 정한 폴더·형식입니다.</summary>
+    public Task ExportPhotoAsync() => LeftPanel.ExportPanel.runner.RunExportAsync();
+
     /// <summary>
     /// 고른 프로파일의 용지 흰색과 잉크 검정을 미리보기에 겁니다.
     /// </summary>

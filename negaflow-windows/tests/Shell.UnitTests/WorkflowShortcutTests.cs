@@ -45,6 +45,15 @@ internal static class WorkflowShortcutTests
 
         // macOS 와 같은 훑기 키입니다. 이 넷이 틀리면 손에 밴 흐름이 통째로 어긋납니다.
         Check(
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.LoadScanner) ==
+                new WorkflowShortcut(
+                    "l",
+                    WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Alt) &&
+            WorkflowShortcutActions.Group(WorkflowShortcutAction.LoadScanner) ==
+                WorkflowShortcutGroup.Library,
+            "workflow_shortcut_load_scanner_matches_mac");
+
+        Check(
             defaults.Resolve("p", WorkflowShortcutModifiers.None) ==
                 WorkflowShortcutAction.PickPhoto &&
             defaults.Resolve("x", WorkflowShortcutModifiers.None) ==

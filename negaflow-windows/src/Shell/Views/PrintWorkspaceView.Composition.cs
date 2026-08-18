@@ -181,8 +181,11 @@ public sealed partial class PrintWorkspaceView
     {
         _ = sender;
         _ = args;
-        printExport?.Export(workspaceState, PrintSources);
+        ExportFromMenu();
     }
+
+    /// <summary>macOS 인화 모듈의 <c>exportSelectionToFolder(for:)</c> 입니다.</summary>
+    internal void ExportFromMenu() => printExport?.Export(workspaceState, PrintSources);
 
     private static PrintSizeMm SourcePixelSize(LibraryFrameSnapshot frame) =>
         PrintPreviewRenderer.SourcePixelSize(frame);

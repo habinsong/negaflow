@@ -39,6 +39,9 @@ internal sealed class LibraryShortcuts
                     view.ShowLibrary(host, view.importWindowId ?? default);
                 }
                 return true;
+            case WorkflowShortcutAction.LoadScanner:
+                view.PresentScannerSetup();
+                return true;
             case WorkflowShortcutAction.LibraryGrid:
                 return ApplyCullingMode(LibraryCullingMode.Grid);
             case WorkflowShortcutAction.LibraryCompare:

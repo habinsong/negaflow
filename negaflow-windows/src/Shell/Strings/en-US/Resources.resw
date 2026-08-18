@@ -344,6 +344,10 @@ Load a scanner from Library to scan film.</value>
     <value>Develop</value>
     <comment>AppLocalizedText.menuDevelop</comment>
   </data>
+  <data name="menuFile.Text" xml:space="preserve">
+    <value>File</value>
+    <comment>AppLocalizedText.menuFile</comment>
+  </data>
   <data name="menuLibrary.Content" xml:space="preserve">
     <value>Library</value>
     <comment>AppLocalizedText.menuLibrary</comment>
@@ -1037,6 +1041,7 @@ Load a scanner from Library to scan film.</value>
   <data name="shortcutImportImages.Text" xml:space="preserve"><value>Import Photos</value><comment>AppLocalizedText.commandImportImages</comment></data>
   <data name="shortcutImportFolder.Text" xml:space="preserve"><value>Import Folder</value><comment>AppLocalizedText.importFolder</comment></data>
   <data name="shortcutRefreshLibrary.Text" xml:space="preserve"><value>Refresh Library</value><comment>AppLocalizedText.commandRefreshLibrary</comment></data>
+  <data name="loadScanner.Text" xml:space="preserve"><value>Load Scanner</value><comment>AppLocalizedText.loadScanner</comment></data>
   <data name="shortcutPreviousPhoto.Text" xml:space="preserve"><value>Previous Frame</value><comment>AppLocalizedText.previousFrame</comment></data>
   <data name="shortcutNextPhoto.Text" xml:space="preserve"><value>Next Frame</value><comment>AppLocalizedText.nextFrame</comment></data>
   <data name="shortcutPickPhoto.Text" xml:space="preserve"><value>Pick</value><comment>AppLocalizedText.commandPick</comment></data>

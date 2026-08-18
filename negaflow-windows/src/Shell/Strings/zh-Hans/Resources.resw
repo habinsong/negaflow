@@ -344,6 +344,10 @@
     <value>显影</value>
     <comment>AppLocalizedText.menuDevelop</comment>
   </data>
+  <data name="menuFile.Text" xml:space="preserve">
+    <value>文件</value>
+    <comment>AppLocalizedText.menuFile</comment>
+  </data>
   <data name="menuLibrary.Content" xml:space="preserve">
     <value>图库</value>
     <comment>AppLocalizedText.menuLibrary</comment>
@@ -1037,6 +1041,7 @@
   <data name="shortcutImportImages.Text" xml:space="preserve"><value>导入图像</value><comment>AppLocalizedText.commandImportImages</comment></data>
   <data name="shortcutImportFolder.Text" xml:space="preserve"><value>导入文件夹</value><comment>AppLocalizedText.importFolder</comment></data>
   <data name="shortcutRefreshLibrary.Text" xml:space="preserve"><value>刷新图库</value><comment>AppLocalizedText.commandRefreshLibrary</comment></data>
+  <data name="loadScanner.Text" xml:space="preserve"><value>加载扫描仪</value><comment>AppLocalizedText.loadScanner</comment></data>
   <data name="shortcutPreviousPhoto.Text" xml:space="preserve"><value>上一张</value><comment>AppLocalizedText.previousFrame</comment></data>
   <data name="shortcutNextPhoto.Text" xml:space="preserve"><value>下一张</value><comment>AppLocalizedText.nextFrame</comment></data>
   <data name="shortcutPickPhoto.Text" xml:space="preserve"><value>留用</value><comment>AppLocalizedText.commandPick</comment></data>

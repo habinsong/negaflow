@@ -268,6 +268,7 @@ public sealed partial class SettingsRootView
         WorkflowShortcutAction.ImportImages => AppResources.Get("shortcutImportImages", "Text"),
         WorkflowShortcutAction.ImportFolder => AppResources.Get("shortcutImportFolder", "Text"),
         WorkflowShortcutAction.RefreshLibrary => AppResources.Get("shortcutRefreshLibrary", "Text"),
+        WorkflowShortcutAction.LoadScanner => AppResources.Get("loadScanner", "Text"),
         WorkflowShortcutAction.LibraryGrid => AppResources.Get("libraryCullingGrid", "Text"),
         WorkflowShortcutAction.LibraryCompare =>
             AppResources.Get("libraryCullingCompare", "Text"),

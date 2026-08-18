@@ -24,5 +24,39 @@
                 AutomationProperties.AutomationId="negaflow.menu.settings"
                 Click="OnSettingsClick" />
         </MenuBarItem>
+        <!--
+          macOS AppStandardMenuCommands CommandGroup(after: .newItem) + (after: .importExport).
+          Windows 에는 시스템 파일 메뉴가 없어서 이 여섯 항목이 파일 메뉴 전부입니다.
+        -->
+        <MenuBarItem
+            x:Name="FileMenu"
+            AutomationProperties.AutomationId="negaflow.menu.file"
+            Title="File">
+            <MenuFlyoutItem
+                x:Name="ImportImagesItem"
+                AutomationProperties.AutomationId="negaflow.menu.import-images"
+                Click="OnImportImagesClick" />
+            <MenuFlyoutItem
+                x:Name="ImportFolderItem"
+                AutomationProperties.AutomationId="negaflow.menu.import-folder"
+                Click="OnImportFolderClick" />
+            <MenuFlyoutItem
+                x:Name="RefreshLibraryItem"
+                AutomationProperties.AutomationId="negaflow.menu.refresh-library"
+                Click="OnRefreshLibraryClick" />
+            <MenuFlyoutItem
+                x:Name="LoadScannerItem"
+                AutomationProperties.AutomationId="negaflow.menu.load-scanner"
+                Click="OnLoadScannerClick" />
+            <MenuFlyoutSeparator />
+            <MenuFlyoutItem
+                x:Name="QuickExportItem"
+                AutomationProperties.AutomationId="negaflow.menu.quick-export"
+                Click="OnQuickExportClick" />
+            <MenuFlyoutItem
+                x:Name="ExportItem"
+                AutomationProperties.AutomationId="negaflow.menu.export"
+                Click="OnExportClick" />
+        </MenuBarItem>
     </MenuBar>
 </UserControl>
