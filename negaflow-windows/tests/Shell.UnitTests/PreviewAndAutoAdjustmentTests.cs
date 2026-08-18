@@ -188,6 +188,48 @@ internal static class PreviewAndAutoAdjustmentTests
         Check(fault?.Kind == DevelopExportOutcomeKind.Faulted, "preview_faulted");
         Check(!faulting.IsRendering, "preview_clears_flag_after_fault");
 
+        // 엔진이 실패를 돌려도 Completed+빈 화소로 위장하면 캔버스가 ShowEmpty 를 칩니다.
+        PreviewOutcome? failedRender = null;
+        PreviewCoordinator failed = new(new FakeExporter(_ => FailedResult("decode")), quiet, 64, 64);
+        failed.RequestAsync(first, outcome => failedRender = outcome).GetAwaiter().GetResult();
+        Check(failedRender?.Kind == DevelopExportOutcomeKind.Faulted, "preview_failed_render_is_faulted");
+        Check(failedRender?.Pixels is null, "preview_failed_render_has_no_pixels");
+
+        // 취소가 OperationCanceledException 으로 새어 나와도 마지막 요청은 그려져야 합니다.
+        ManualResetEventSlim oceStarted = new(false);
+        ManualResetEventSlim oceRelease = new(false);
+        int oceCalls = 0;
+        FakeExporter oceExporter = new(_ =>
+        {
+            int call = Interlocked.Increment(ref oceCalls);
+            if (call == 1)
+            {
+                oceStarted.Set();
+                oceRelease.Wait();
+                throw new OperationCanceledException();
+            }
+            return OkResult();
+        });
+        PreviewCoordinator oceCoordinator = new(oceExporter, quiet, 64, 64);
+        PreviewOutcome? oceLast = null;
+        int oceDelivered = 0;
+        Task oceLoop = oceCoordinator.RequestAsync(first, outcome =>
+        {
+            Interlocked.Increment(ref oceDelivered);
+            oceLast = outcome;
+        });
+        oceStarted.Wait();
+        oceCoordinator.RequestAsync(first, outcome =>
+        {
+            Interlocked.Increment(ref oceDelivered);
+            oceLast = outcome;
+        });
+        oceRelease.Set();
+        oceLoop.GetAwaiter().GetResult();
+        Check(oceDelivered == 1, "preview_oce_keeps_the_pending_request");
+        Check(oceLast?.Kind == DevelopExportOutcomeKind.Completed, "preview_oce_delivers_the_last_request");
+        Check(!oceCoordinator.IsRendering, "preview_oce_clears_rendering_flag");
+
         VerifyPreviewSoftProof(first, quiet);
         VerifyPreviewSettlePass(first);
     }

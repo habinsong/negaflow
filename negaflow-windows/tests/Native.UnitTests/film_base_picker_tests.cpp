@@ -159,6 +159,33 @@ void verify_neutral_base() {
         "film_base_picker_accepts_a_neutral_base_for_black_and_white");
 }
 
+/// RealScan.tiff 와 같은 631×403 잘린 프레임 — 가장자리 24px 가 오렌지 리베이트.
+void verify_picks_a_narrow_rebate_on_a_small_frame() {
+    constexpr std::uint32_t width = 631U;
+    constexpr std::uint32_t height = 403U;
+    constexpr std::uint32_t rebate = 24U;
+    negaflow::imaging::WorkingImage image = make_image(width, height);
+    fill(image, 0U, 0U, width, rebate, base_pixel);
+    fill(image, 0U, height - rebate, width, rebate, base_pixel);
+    fill(image, 0U, 0U, rebate, height, base_pixel);
+    fill(image, width - rebate, 0U, rebate, height, base_pixel);
+
+    const negaflow::imaging::FilmBasePickResult edge =
+        negaflow::imaging::sample_film_base(
+            image, 0.02, 0.50, negaflow::imaging::NegativeFilmType::color);
+    expect(
+        edge.status == negaflow::imaging::FilmBasePickStatus::ok &&
+            near(edge.rgb[0], base_pixel.red),
+        "film_base_picker_accepts_a_narrow_rebate_edge");
+
+    const negaflow::imaging::FilmBasePickResult scene =
+        negaflow::imaging::sample_film_base(
+            image, 0.50, 0.50, negaflow::imaging::NegativeFilmType::color);
+    expect(
+        scene.status == negaflow::imaging::FilmBasePickStatus::implausible,
+        "film_base_picker_rejects_the_scene_inside_a_rebated_frame");
+}
+
 void verify_status_names() {
     expect(
         std::string_view{negaflow::imaging::film_base_pick_status_name(
@@ -175,6 +202,7 @@ int main() {
     verify_rejects_the_scene();
     verify_rejects_bad_input();
     verify_neutral_base();
+    verify_picks_a_narrow_rebate_on_a_small_frame();
     verify_status_names();
     if (failures != 0) {
         std::cerr << failures << " film base picker checks failed\n";

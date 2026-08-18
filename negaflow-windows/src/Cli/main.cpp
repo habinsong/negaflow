@@ -5,6 +5,7 @@
 #include "commands/develop_negative_tiff.h"
 #include "commands/export_developed_png.h"
 #include "commands/auto_base_probe.h"
+#include "commands/pick_film_base.h"
 #include "commands/develop_timing.h"
 #include "commands/gpu_transfer_bench.h"
 
@@ -41,6 +42,7 @@ void print_help() {
                  "  negaflow-cli --export-developed-png16 <source> <destination> <dmin-r> <dmin-g> <dmin-b> <color|bw> [<exposure> <contrast> <curve-highlights> <curve-lights> <curve-darks> <curve-shadows>] [<film_scan> <film-emulation> <film-look-intensity>]\n"
                  "  negaflow-cli --export-developed-tiff16 <source> <destination> <dmin-r> <dmin-g> <dmin-b> <color|bw> [<exposure> <contrast> <curve-highlights> <curve-lights> <curve-darks> <curve-shadows>] [<film_scan> <film-emulation> <film-look-intensity>]\n"
                  "  negaflow-cli --auto-base-probe <source> [color|bw]\n"
+                 "  negaflow-cli --pick-film-base <source> <unit-x> <unit-y> [color|bw]\n"
                  "  negaflow-cli --sha256-image <path>\n"
                  "  negaflow-cli --help\n";
 }
@@ -329,6 +331,9 @@ int wmain(const int argument_count, const wchar_t* const arguments[]) {
     }
     if (command == L"--auto-base-probe") {
         return negaflow::cli::run_auto_base_probe(argument_count, arguments);
+    }
+    if (command == L"--pick-film-base") {
+        return negaflow::cli::run_pick_film_base(argument_count, arguments);
     }
     if (command == L"--grain-mend-detect") {
         return negaflow::cli::run_grain_mend_detect(argument_count, arguments);

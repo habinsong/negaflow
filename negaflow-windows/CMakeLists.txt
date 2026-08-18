@@ -797,6 +797,7 @@ add_executable(negaflow_cli
     src/Cli/main.cpp
     src/Cli/commands/develop_negative_tiff.cpp
     src/Cli/commands/auto_base_probe.cpp
+    src/Cli/commands/pick_film_base.cpp
     src/Cli/commands/develop_timing.cpp
     src/Cli/commands/gpu_transfer_bench.cpp
     src/Cli/commands/grain_mend_detect.cpp

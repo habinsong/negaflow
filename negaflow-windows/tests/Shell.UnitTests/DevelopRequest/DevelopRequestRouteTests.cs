@@ -127,6 +127,16 @@ internal static class DevelopRequestRouteTests
                 positiveFilm.Request?.BaseEstimationMode == DevelopBaseEstimationMode.Manual,
             "develop_request_positive_film_bypasses_negative_base");
 
+        DevelopRequestResult rawEyedropper = DevelopRequestFactory.Create(
+            Frame(new ManualBaseRgb(0.9, 0.65, 0.45)),
+            destination,
+            uninvertedSource: true);
+        Check(
+            rawEyedropper.IsSuccess &&
+                rawEyedropper.Request?.FilmPolarity == FilmPolarity.Positive &&
+                rawEyedropper.Request?.FilmType == NegativeFilmType.Color,
+            "develop_request_eyedropper_shows_uninverted_raw");
+
         Check(
             DevelopRequestFactory.Create(
                 Frame(new ManualBaseRgb(0.2, 0.2, 0.2)),

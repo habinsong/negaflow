@@ -57,7 +57,8 @@ public static class DevelopRequestFactory
         LibraryFrameSnapshot frame,
         string destinationPath,
         DevelopExportFormat format = DevelopExportFormat.Png16,
-        ExportEncodingOptions? encoding = null)
+        ExportEncodingOptions? encoding = null,
+        bool uninvertedSource = false)
     {
         ArgumentNullException.ThrowIfNull(frame);
         // 인코딩 값은 게시되는 파일에만 영향을 줍니다. preview 는 항상 기본값으로 도므로 크기·
@@ -178,7 +179,10 @@ public static class DevelopRequestFactory
             OutputSharpeningMedium = output.OutputSharpeningMedium,
             OutputSharpeningDpi = output.Dpi,
             FilmType = MapFilmType(frame.Route.FilmType),
-            FilmPolarity = positive ? FilmPolarity.Positive : FilmPolarity.Negative,
+            // macOS `selectCompareMode(.raw)` — 스포이드는 반전 전 raw 를 본다.
+            FilmPolarity = positive || uninvertedSource
+                ? FilmPolarity.Positive
+                : FilmPolarity.Negative,
             BaseEstimationMode = baseMode,
             DminRed = (float)manualBase.Red,
             DminGreen = (float)manualBase.Green,

@@ -253,7 +253,7 @@ macOS `FilmBaseEstimator.swift` 전량 · `FilmBaseStatistics.coherentCluster` �
 | **sidecar `confidence` JSON** | **2026-08-19 이식함**(C1.6). 앱 내보내기 `OpticFilm8100_frame_1.tiff.negaflow.json` 에 `confidence=0.7291067` · `confidenceBasis=measuredEvidenceScoreV1` · `method=connectedComponent` |
 | **`frame.baseRGB` 카탈로그 영속** | **2026-08-19 이식함.** `params` 형제 `baseRGB` 세 채널. 미리보기 후 `AppliedBaseWriter`. 프레임 전환 시 카탈로그에서 복원. relink 는 키를 지움 |
 | **피커 폭 픽셀 자** | **2026-08-19 C1.8 닫음.** 넓은 패널 시각 베젤 276 DIP. UIA 는 284(히트 8 DIP) |
-| **스포이드로 미노광 베이스를 집어 Dmin 이 바뀜** | 캔버스 클릭은 피커를 끄고 Dmin 을 유지함(장면 클릭 → 거부 경로). 리베이트가 보이는 프레임에서 성공 집기는 아직 없음 |
+| **스포이드로 미노광 베이스를 집어 Dmin 이 바뀜** | **2026-08-19 C1.9.** RealScan.tiff 왼쪽 리베이트 클릭 → 슬라이더·헤더 `0.40 0.13 0.07`, 캔버스는 현상본 유지 |
 
 ### C1.5 2026-08-19 — `FilmBaseMeasurementDiagnostics` 1:1
 
@@ -338,6 +338,39 @@ UIA 284 는 ComboBox 히트/포커스 패딩 약 8 DIP 입니다. 보이는 베�
 **Parsec macOS** `OpticFilm8100_frame_5` 현상 → 베이스 → 필름: 필름 스톡·광원·프로파일 3줄,
 선택 안 함/없음. 그 인스펙터는 374 보다 좁아 피커 시각 폭 **≈201 DIP**(줄여 쓰는 경로).
 Swift 주석과 같습니다.
+
+### C1.9 2026-08-19 — RealScan 리베이트 스포이드가 Dmin 을 바꾼다
+
+macOS `handleBasePick` 은 표시 좌표를 raw 로 되돌린 뒤 `pickFilmBase` 를 `Task.detached` 로
+샘플하고, `basePickerMode = false` 가 `selectCompareMode(.developed)` 를 겁니다.
+
+**앱에서 안 바뀌던 원인 두 가지(추측이 아니라 재현으로 확정):**
+
+1. **WIC COM 아파트.** `nf_pick_film_base_v1` 디코더는 `COINIT_MULTITHREADED` 를 요구합니다.
+   WinUI 스레드는 STA 라서 UI 에서 직접 열면 `RPC_E_CHANGED_MODE` 로 디코드가 실패하고
+   Dmin 이 그대로입니다. macOS 와 같이 워커에서 샘플합니다.
+2. **현상본에서는 주황 리베이트가 안 보입니다.** 스포이드를 켜면
+   `selectCompareMode(.raw)` 와 같이 `FilmPolarity.Positive` 로 반전 전 원본을 그립니다.
+   장면 클릭은 여전히 `NotFilmBase` 로 Dmin 을 유지합니다(macOS `isPlausibleBase`).
+
+**집기 직후 빈 캔버스** — 피커를 끄는 `onChange` 가 현상 미리보기를 한 번 더 요청해, 취소된
+렌더가 `Completed`+빈 화소로 배달되면 `ShowEmpty`("이미지를 가져오세요") 가 났습니다.
+집기 중에는 그 요청을 건너뛰고, 실패 렌더는 `Faulted`/`Cancelled` 로 두며, 이미 그림이
+있으면 지우지 않습니다. `OperationCanceledException` 이 pending 을 지워 마지막 요청이
+사라지던 경로도 막았습니다.
+
+**Windows x64 Release PID 28372** (`run-app`), `GetDpiForWindow` 이전 실측 144.
+RealScan.tiff · 수동 · 스포이드 켬 → 원본(주황 리베이트) · 왼쪽 띠 클릭.
+
+| 단계 | UIA / 화면 |
+|---|---|
+| 리셋 | 슬라이더·헤더 `0.25 0.25 0.25`, 캔버스 현상본 |
+| 스포이드 켬 | 프롬프트 `미노광 필름 베이스(사진 사이/가장자리)를 클릭하세요 · Esc 취소`. 원본 주황 |
+| 장면/캔버스 밖 클릭 | Dmin `0.25` 유지. 캔버스는 현상본(비지 않음) |
+| 왼쪽 리베이트 | 슬라이더 `+0.40 / +0.13 / +0.07`. 헤더 `base 0.40 0.13 0.07`. 캔버스 현상본(올리브 숲, 주황 원본 아님) |
+
+CLI `--pick-film-base` 와 엔진 게이트는 같음: 가장자리 0.02–0.05 채택, 0.10·중앙 거부.
+`native.film_base_picker` x64-release 통과. Shell 1099 assertions.
 
 ### 앞 판에서 바로잡은 것
 
@@ -442,8 +475,8 @@ DevelopLookLabel         DevelopLookSelector
 
 1. **A1·A2 크래시** — 스택부터. **A3(2026-08-19) `developReset.Value` 도 닫음.**
 2. **E1 프리뷰 프록시 캐시 + 2단 렌더** — 네이티브 2슬롯+Lanczos 현상 붙임. 5088×3401 상자 1280 두 번째 **43.1 ms · decode 0**. 앱에서 노출 0→0.80 과 히스토그램 갱신 확인. **FrameCacheManager FIFO 는 10번.**
-3. **C1 필름 베이스** — C1.1~C1.8. 다음: 리베이트 스포이드 성공 집기
-4. **E4 인화 프리뷰** — 현상본 쓰도록
+3. **C1 필름 베이스** — C1.1~C1.9. RealScan 리베이트 집기 `0.40 0.13 0.07` + 현상본 유지.
+4. **E4 인화 프리뷰** — 360px 썸네일 확대라 깨진다. 현상본을 써라
 5. **B 메뉴막대 11개**
 6. **D1 초기화 · D5 undo**
 7. **GPU** ([`04`](04-gpu-plan.md))

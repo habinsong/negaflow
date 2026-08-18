@@ -63,6 +63,7 @@ public sealed class PreviewCoordinator
     // everything else here rather than acquiring its own rule.
     private SoftProofSettings? softProof;
     private bool clippingOverlayEnabled;
+    private bool uninvertedSource;
 
     public PreviewCoordinator(
         IDevelopExporter exporter,
@@ -150,6 +151,28 @@ public sealed class PreviewCoordinator
             lock (gate)
             {
                 softProof = value;
+            }
+        }
+    }
+
+    /// <summary>
+    /// macOS <c>selectCompareMode(.raw)</c> — 베이스 스포이드가 켜져 있으면 반전 전
+    /// 원본을 그립니다. 다음 렌더부터 적용됩니다.
+    /// </summary>
+    public bool UninvertedSource
+    {
+        get
+        {
+            lock (gate)
+            {
+                return uninvertedSource;
+            }
+        }
+        set
+        {
+            lock (gate)
+            {
+                uninvertedSource = value;
             }
         }
     }
@@ -271,7 +294,15 @@ public sealed class PreviewCoordinator
         // 미리보기는 파일을 쓰지 않지만 요청 팩토리는 목적지를 요구합니다. 네이티브가 무시하는
         // 자리이므로 frame 옆의 이름을 넣어 두고, 실제로는 아무것도 만들어지지 않습니다.
         string unusedDestination = Path.ChangeExtension(frame.SourcePath, ".preview.png");
-        DevelopRequestResult built = DevelopRequestFactory.Create(frame, unusedDestination);
+        bool rawSource;
+        lock (gate)
+        {
+            rawSource = uninvertedSource;
+        }
+        DevelopRequestResult built = DevelopRequestFactory.Create(
+            frame,
+            unusedDestination,
+            uninvertedSource: rawSource);
         if (built.Request is not { } developRequest)
         {
             return PreviewOutcome.Refused(built.Refusal);
@@ -317,7 +348,13 @@ public sealed class PreviewCoordinator
                 ? interactive
                 : settledOutcome;
         }
-        catch (Exception error) when (error is not OperationCanceledException)
+        catch (OperationCanceledException)
+        {
+            // 취소는 예외가 아니라 다음 요청이 이겼다는 뜻입니다. 여기서 던지면
+            // RunLoop 가 pending 을 지워 마지막 미리보기가 화면에 안 남습니다.
+            return PreviewOutcome.Cancelled();
+        }
+        catch (Exception error)
         {
             return PreviewOutcome.Faulted(error.Message);
         }
@@ -389,14 +426,18 @@ public sealed class PreviewCoordinator
             run,
             proof,
             clippingOverlay)).ConfigureAwait(false);
-        if (result.Cancelled)
+        if (result.Cancelled || run.IsCancelRequested)
         {
             return PreviewOutcome.Cancelled();
+        }
+        if (!result.Succeeded)
+        {
+            return PreviewOutcome.Faulted(result.FailureName);
         }
 
         return new PreviewOutcome(
             DevelopExportOutcomeKind.Completed,
-            result.Succeeded ? pixels : null,
+            pixels,
             result.ImageWidth,
             result.ImageHeight,
             result,

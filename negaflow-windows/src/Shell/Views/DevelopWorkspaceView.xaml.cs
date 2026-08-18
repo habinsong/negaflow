@@ -34,6 +34,9 @@ public sealed partial class DevelopWorkspaceView : UserControl
     internal readonly DevelopAutoAdjustActions autoAdjust;
     internal readonly DevelopCropSession cropSession;
     internal readonly DevelopWorkspaceCopy copy;
+    // macOS `pickFilmBase` 가 Task 로 샘플하는 동안 피커를 먼저 끕니다. 그 사이
+    // onChange 가 현상본을 요청하면 샘플과 렌더가 겹치고, 취소된 렌더가 빈 캔버스를 남깁니다.
+    private bool basePickInFlight;
 
     public DevelopWorkspaceView()
     {
@@ -62,7 +65,19 @@ public sealed partial class DevelopWorkspaceView : UserControl
         PreviewCanvas.TryHandlePointerPressed = args =>
             TryHandleBasePick(args) || GrainMendPanel.TryHandlePointerPressed(args);
         BaseCard.BasePickerModeChanged += (_, _) =>
+        {
             PreviewCanvas.ShowBasePickerPrompt(BaseCard.IsBasePickerActive);
+            // macOS `onChange(of: basePickerMode)` — 켜면 Raw, 끄면 현상본.
+            if (previewCoordinator is not null)
+            {
+                previewCoordinator.UninvertedSource = BaseCard.IsBasePickerActive;
+            }
+            // 집기 중이면 샘플이 끝난 뒤 ApplyPickedFilmBase 가 한 번만 요청합니다.
+            if (!basePickInFlight)
+            {
+                RequestPreview();
+            }
+        };
         BaseCard.ManualBaseResetRequested += (_, _) => ResetManualBase();
         PreviewCanvas.TryHandlePointerMoved = GrainMendPanel.TryHandlePointerMoved;
         PreviewCanvas.TryHandlePointerReleased = GrainMendPanel.TryHandlePointerReleased;
@@ -241,27 +256,60 @@ public sealed partial class DevelopWorkspaceView : UserControl
         }
 
         bool monochrome = frame.Route.FilmType is FilmType.BlackAndWhiteNegative;
-        FilmBasePick picked = FilmBasePick.Sample(sourcePath, rawX, rawY, monochrome);
+        // macOS `pickFilmBase` 는 `Task.detached` 로 샘플합니다. WIC 디코더는
+        // COINIT_MULTITHREADED 를 요구하는데 WinUI 스레드는 STA 라서, 여기서 직접
+        // 열면 `RPC_E_CHANGED_MODE` 로 디코드가 실패하고 Dmin 이 그대로입니다.
+        string path = sourcePath;
+        double unitX = rawX;
+        double unitY = rawY;
+        Microsoft.UI.Dispatching.DispatcherQueue queue = DispatcherQueue;
+        basePickInFlight = true;
         BaseCard.CancelBasePicker();
         PreviewCanvas.ShowBasePickerPrompt(false);
-        if (picked.Outcome != FilmBasePickOutcome.Picked || panel is null)
+        _ = System.Threading.Tasks.Task.Run(() =>
         {
-            ExportStatusText.Text = AppResources.Get(
-                picked.Outcome == FilmBasePickOutcome.NotFilmBase
-                    ? "developBasePickNotFilmBase"
-                    : "developBasePickFailed",
-                "Text");
-            return true;
-        }
-        if (panel.SetManualBase(picked.Red, picked.Green, picked.Blue) != LibraryFrameError.None)
-        {
-            return true;
-        }
-        ExportStatusText.Text = string.Empty;
-        BaseCard.ShowManualValues(panel);
-        BaseCard.Sync();
-        RequestPreview();
+            FilmBasePick picked;
+            try
+            {
+                picked = FilmBasePick.Sample(path, unitX, unitY, monochrome);
+            }
+            catch
+            {
+                picked = new FilmBasePick(FilmBasePickOutcome.SourceUnavailable, 0.0, 0.0, 0.0);
+            }
+            _ = queue.TryEnqueue(() => ApplyPickedFilmBase(picked));
+        });
         return true;
+    }
+
+    private void ApplyPickedFilmBase(FilmBasePick picked)
+    {
+        try
+        {
+            if (picked.Outcome != FilmBasePickOutcome.Picked || panel is null)
+            {
+                ExportStatusText.Text = AppResources.Get(
+                    picked.Outcome == FilmBasePickOutcome.NotFilmBase
+                        ? "developBasePickNotFilmBase"
+                        : "developBasePickFailed",
+                    "Text");
+                RequestPreview();
+                return;
+            }
+            if (panel.SetManualBase(picked.Red, picked.Green, picked.Blue) != LibraryFrameError.None)
+            {
+                RequestPreview();
+                return;
+            }
+            ExportStatusText.Text = string.Empty;
+            BaseCard.ShowManualValues(panel);
+            BaseCard.Sync();
+            RequestPreview();
+        }
+        finally
+        {
+            basePickInFlight = false;
+        }
     }
 
     /// <summary>macOS <c>resetManualBase</c> — 수동 Dmin 을 제안값으로 되돌립니다.</summary>
@@ -299,23 +347,32 @@ public sealed partial class DevelopWorkspaceView : UserControl
     {
         // 샘플러가 읽을 버퍼는 화면에 그린 것과 같아야 합니다 — 다른 것을 읽으면 보이는 색과
         // 적히는 수가 갈립니다.
-        PreviewCanvas.KeepPreviewPixels(outcome.Pixels, outcome.Width, outcome.Height);
         if (outcome.Kind != DevelopExportOutcomeKind.Completed ||
             outcome.Pixels is not { } pixels ||
             outcome.Width == 0U ||
             outcome.Height == 0U)
         {
-            PreviewCanvas.ShowEmpty();
-            HistogramView.Clear();
-            // 현상이 실패한 것과 사진이 없는 것은 다릅니다. 같은 빈 화면만 내면 사용자는
-            // 사진을 넣으라는 말을 다시 읽을 뿐이고, 무엇이 잘못됐는지 알 길이 없습니다.
+            // 취소는 이미 지나간 상태입니다. 마지막 그림을 지우면 스포이드 직후처럼
+            // 겹친 요청이 빈 캔버스("이미지를 가져오세요")를 남깁니다.
+            if (outcome.Kind == DevelopExportOutcomeKind.Cancelled)
+            {
+                return;
+            }
             string reason = outcome.Kind == DevelopExportOutcomeKind.Completed
                 ? $"{outcome.Result?.FailedStage} {outcome.Result?.FailureName}"
-                : outcome.Refusal.ToString();
+                : outcome.Kind == DevelopExportOutcomeKind.Faulted
+                    ? outcome.FaultMessage ?? outcome.Kind.ToString()
+                    : outcome.Refusal.ToString();
             ExportStatusText.Text =
                 $"{AppResources.Get("developPreviewFailed", "Text")} ({reason})";
+            if (!PreviewCanvas.HasPreview)
+            {
+                PreviewCanvas.ShowEmpty();
+                HistogramView.Clear();
+            }
             return;
         }
+        PreviewCanvas.KeepPreviewPixels(pixels, outcome.Width, outcome.Height);
 
         int width = (int)outcome.Width;
         int height = (int)outcome.Height;
