@@ -133,3 +133,47 @@
 **32개 전부 화소별**임을 확인했습니다. 이웃 연산은 Apple 내장 필터
 (`CIGaussianBlur`·`CIBoxBlur`·`CIMedianFilter`·`CIAreaAverage`)가 하고 있었습니다 —
 **그것이 Windows 에서 직접 만들어야 하는 부분**입니다.
+
+---
+
+## 9. ☠️ `digitalFilmColor` — Windows 가 **다른 알고리즘**입니다 (2026-08-18 발견)
+
+이름만 보면 이식된 것처럼 보입니다. **안을 읽으면 아닙니다.**
+
+| | 무엇을 하나 |
+|---|---|
+| **macOS** `ChromabaseMetalKernels.swift:774` | 색 행렬 3행 + 채널 리프트 → 그림자/명부 틴트 → **hue 6앵커 원형 보간 채도 변조**. `FilmEmulationProfile` 의 `mR/mG/mB`·`iieHue[6]`·`iie` 로 구동 |
+| **Windows** `imaging/digital_film_color_preset.cpp` | **`apply_color_mixer` + `apply_color_grading` + `apply_primary_calibration`** 세 커널을 프리셋 값으로 순서대로 태웁니다 |
+
+`hue` 라는 단어가 그 Windows 파일에 **한 번도 안 나옵니다**(`grep` 확인).
+`DigitalFilmColorPreset` 구조체도 `mixer`·`grading`·`calibration` 세 개뿐이라
+**macOS 커널의 파라미터(행렬·틴트·hue 앵커)를 담을 자리 자체가 없습니다.**
+
+**즉 "비슷한 결과를 노린 재구성" 이지 이식이 아닙니다.**
+
+> ☠️ **GPU 로 옮기기 전에 어느 쪽이 맞는지 정해야 합니다.**
+> 지금 옮기면 **틀린 것을 빠르게 만들 뿐**입니다.
+> 절차는 [`14`](14-remaining-gpu-methodology.md) 2절.
+
+### 이 항목을 어떻게 찾았나
+
+`grep -ril digitalFilmColor negaflow-windows/src` 가 **4 히트**를 냈습니다.
+히트 수만 보고 "있음" 으로 적을 뻔했습니다. **파일을 열어서** 아닌 것을 확인했습니다 —
+8절이 적은 *"이름이 같다고 있는 것이 아니다"* 의 **세 번째 사례**입니다.
+
+---
+
+## 10. ☠️ [`04`](04-gpu-plan.md) 0.3절의 "선행 조건" 셋이 전부 오판이었습니다 (2026-08-18)
+
+| 적었던 것 | 실제 | 어떻게 확인했나 |
+|---|---|---|
+| `digitalFilmColor` — **"3D LUT(`Texture3D`) 필요"** | 텍스처 샘플링이 **한 줄도 없습니다.** 완전 화소별. 3D LUT 는 `ScannerTargetGrade` 의 `CIColorCube` 이고 **다른 커널 얘기**였습니다 | `:774` 본문을 읽음 |
+| `noritsuTexture` — **"이웃 접근"** | 입력이 `src`+`blurred` 두 장인 **화소별** 커널. 이웃 연산은 가우시안이고 `GpuGaussianBlur` 는 **이미 delta 0**. 이식한 `digitalHalation`(블러 3장 입력)과 **같은 모양** | `:505` 본문을 읽음 |
+| `filmGrain`·`digitalFilmGrainDensity` — **"씨앗 규칙을 macOS 와 대조해야 함"** | **이미 정해져 있습니다.** Windows CPU 가 좌표 해시 필드를 쓰고(`digital_film_grain.cpp:25-36`, 전부 uint32 → HLSL 에서 비트 단위 재현 가능), 헤더가 *"statistical, not pixel-exact"* 계약을 명시합니다 | `digital_film_grain.h:41-44` 와 `.cpp` 를 읽음 |
+
+**셋 다 macOS 커널 본문을 안 읽고 적은 것입니다.** 04 앞 판(8절)과 **같은 실수를 축소판으로**
+반복했습니다 — 그때는 파일 목록에서 추측했고, 이번에는 커널 이름과 주석 한 줄에서 추측했습니다.
+
+> **규칙: "왜 막혔나" 를 적을 때도 근거를 열어야 합니다.**
+> "됐다" 만 증명이 필요한 것이 아닙니다. **"안 된다" 도 증명이 필요합니다** —
+> 틀린 장애물은 되지도 않을 일을 미루게 만듭니다.

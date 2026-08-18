@@ -142,6 +142,7 @@
 | [`11-ui-verification-protocol.md`](11-ui-verification-protocol.md) | **프론트엔드 검증 절차** — computer-use 크롭 · Parsec · 스크린샷 84장 · 판정표 |
 | [`12-repos-and-licence.md`](12-repos-and-licence.md) | **저장소 두 개와 라이선스** — Apache 2.0 vs GPL, macOS 코드 불가침 |
 | [`13-performance-playbook.md`](13-performance-playbook.md) | **성능·품질 플레이북** — 04 가 *무엇을* 옮길지라면 이건 *어떻게* 빠르게. 계측기부터 · 스레드 풀 · 컴파일러 스위치 · vHGW 형태학 · 분리형 컨볼루션 · 더블 버퍼 다운로드 · 품질 지키는 법 |
+| [`14-remaining-gpu-methodology.md`](14-remaining-gpu-methodology.md) | **남은 GPU 작업의 절차서** — 커널마다 macOS 원문 근거 · Windows 현재 상태 · 진짜 장애물 · 절차 · 검증 기준. ☠️ 0절이 04 의 오판 셋(3D LUT·이웃 접근·씨앗 규칙)을 정정하고, 2절이 `digitalFilmColor` 의 **알고리즘 발산**을 새로 잡아냅니다 |
 
 ---
 

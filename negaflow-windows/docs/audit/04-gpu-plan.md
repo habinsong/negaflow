@@ -55,7 +55,7 @@ macOS `ChromabaseMetalKernels.swift` 의 `[[stitchable]]` 커널은 **정확히 
 | 기준 | 진척 | 근거 |
 |---|---|---|
 | **① 커널 이식** (28개 중) | **14 / 28 = 50%** | 0.1절 표. 전부 CPU/GPU 동치 시험으로 고정(`1e-5`) |
-| **② 커널 중 *지금 막혀 있지 않은* 것** | **14 / 15 = 93%** | 남은 14개 중 **13개는 GPU 문제가 아닙니다** — CPU 판이 없거나(7) · Windows 기능 자체가 없거나(2) · 선행 조건(4). 실제로 지금 붙일 수 있는 것은 `boundedRelativeGrade` 하나 |
+| **② 커널 중 *GPU 자체가 막혀 있지 않은* 것** | **14 / 14 = 100%** | ☠️ **2026-08-18 정정.** 남은 14개 중 **GPU 쪽 장애물이 있는 것은 `boundedRelativeGrade` 하나뿐**입니다(CPU 가 `double`). 나머지 13개는 **CPU 이식·기능 이식·이식 정확성** 문제이지 GPU 문제가 아닙니다. "3D LUT 필요"·"이웃 접근"·"씨앗 규칙 대조" 는 셋 다 **제 오판이었습니다** → [`14`](14-remaining-gpu-methodology.md) 0절 |
 | **③ 제품 경로 반영** | **부분** | 톤 7단계 · 반전 · 유한성 확인은 **붙었습니다**. `film_scan_denoise` 오케스트레이터 **없음**, 형태학 **기본 꺼짐**, `GpuMipHalve` **미배선** — 0.4절 |
 
 **커널 외에 만든 것**(분자에 안 셌습니다): 이웃 원시연산 5개(박스·가우시안·중앙값·형태학·밉축소) ·
@@ -129,9 +129,9 @@ CPU **911.35 ms** → 지금 **약 720 ms**. `develop` 348.56 → 261.49(−25%)
 | **CPU 판부터 없음** (7) | `digitalSceneReconstruct`·`digitalFilmDensity`·`digitalInterImage`·`digitalPrintPaper`·`digitalReversalTransmit`·`digitalToDisplayGamma`·`digitalToLinearLight` | Windows 히트 **0**. GPU 이전에 **CPU 이식이 먼저** |
 | **Windows 기능 자체가 없음** (2) | `ditherAdd`·`channelClippingOverlay` | `OutputDither.swift`·`ChannelClippingOverlay.swift` 미이식 |
 | **정밀도 확인 필요** (1) | `boundedRelativeGrade` | `scanner_target_grade.cpp:62-64` 안에 박혀 있고 그 안이 **전부 `double`**. float32 로 옮기면 `1e-5` 를 못 지킬 수 있음 |
-| **선행 조건 남음** | `filmGrain`·`digitalFilmGrainDensity` | **노이즈 씨앗 규칙**을 macOS 와 대조해야 함 |
-| 〃 | `digitalFilmColor` | **3D LUT**(`Texture3D`) 필요 |
-| 〃 | `noritsuTexture` | 이웃 접근 |
+| ~~선행 조건 남음~~ **막혀 있지 않음** | `filmGrain`·`digitalFilmGrainDensity` | ☠️ **앞 판정 틀림.** 씨앗 규칙은 **이미 정해져 있습니다** — Windows CPU 가 좌표 해시 필드를 쓰고(`digital_film_grain.cpp:25-36`, 전부 uint32) 헤더가 *"statistical, not pixel-exact"* 계약을 명시합니다. 맞출 상대는 Apple 이 아니라 **Windows CPU 필드**입니다 → [`14`](14-remaining-gpu-methodology.md) 0.3·1절 |
+| 〃 | `digitalFilmColor` | ☠️ **앞 판정 틀림. 3D LUT 가 필요 없습니다** — `:774` 에 텍스처 샘플링이 **한 줄도 없습니다**(행렬+틴트+hue 6앵커 보간, 완전 화소별). 3D LUT 는 `ScannerTargetGrade` 의 `CIColorCube` 이고 **다른 얘기**였습니다. 진짜 문제는 **Windows 가 다른 알고리즘**이라는 것 → [`14`](14-remaining-gpu-methodology.md) 0.1·2절 |
+| 〃 | `noritsuTexture` | ☠️ **앞 판정 틀림.** 이웃 접근은 **이미 해결돼 있습니다** — 입력이 `src`+`blurred` 두 장인 **화소별** 커널이고 `GpuGaussianBlur` 는 delta 0 입니다. 이식한 `digitalHalation` 과 **같은 모양**입니다. CPU 판이 없는 것뿐 → [`14`](14-remaining-gpu-methodology.md) 0.2·3절 |
 | **원시연산 남음** | `CIAreaAverage` 대응 | 병렬 리덕션. 히스토그램·자동 보정용 |
 | **정밀도 확인 필요** (2) | `grain_mend_morphology.cpp` `box_mean` | 적분영상을 **`double` 로** 누적합니다(`:240`). float32 GPU 로는 그 값을 못 냅니다. D3D11 의 double 은 **선택 기능**(`D3D11_FEATURE_DOUBLES`)이라 내장 GPU 범용성도 보장되지 않습니다. **CPU 를 float 로 내려도 골든이 안 바뀌는지 먼저 재십시오** |
 
