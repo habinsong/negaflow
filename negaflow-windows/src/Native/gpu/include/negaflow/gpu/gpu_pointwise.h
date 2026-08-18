@@ -81,6 +81,20 @@ public:
         void* constants,
         std::size_t constant_bytes) const noexcept;
 
+    // 입력이 **둘**인 화소별 커널입니다. `second` 는 `t1` 로 묶입니다.
+    //
+    // 왜 여기인가 — macOS 커널 중 여럿이 입력을 둘 받습니다(`noritsuTexture` 의
+    // `src`+`blurred`, `boundedRelativeGrade` 의 `src`+`graded`, 색 프리셋의
+    // 결과+원본). 커널마다 따로 바인딩을 쓰면 슬롯 해제를 한 곳만 빠뜨려도
+    // 다음 패스가 조용히 옛 텍스처를 읽습니다.
+    [[nodiscard]] GpuKernelStatus dispatch_pair(
+        const GpuDevice& device,
+        const GpuWorkingImage& source,
+        const GpuWorkingImage& second,
+        GpuWorkingImage& destination,
+        void* constants,
+        std::size_t constant_bytes) const noexcept;
+
     [[nodiscard]] bool is_valid() const noexcept { return shader_ != nullptr; }
 
 private:

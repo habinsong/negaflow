@@ -86,6 +86,24 @@ using DigitalFilmGrainFunction = bool (*)(
     float chroma_ratio,
     float size) noexcept;
 
+// 디지털 원본 전용 스톡 색 프리셋입니다. CPU 판(`imaging/digital_film_color_preset.cpp`)과
+// 같은 셈이어야 합니다. `preset` 은 프리셋 표가 준 것을 그대로 넘기고, `strength` 는
+// 이미 [0,1] 로 잘린 값입니다.
+//
+// 전방 선언만 쓰는 이유 — 이 헤더는 `imaging` 전체가 포함하는 자리라 무거운 헤더를
+// 끌어오면 재컴파일이 번집니다. 포인터만 넘기므로 정의가 필요 없습니다.
+//
+// ☠️ **근사한 것입니다**(감마 왕복의 `pow`, HSL 왕복의 곱셈).
+struct DigitalFilmColorPreset;
+
+using DigitalFilmColorPresetFunction = bool (*)(
+    float* pixels,
+    std::uint32_t width,
+    std::uint32_t height,
+    std::uint32_t stride_pixels,
+    const DigitalFilmColorPreset* preset,
+    float strength) noexcept;
+
 struct KernelAccelerator final {
     // ── 정확한 것 (언제나 켭니다) ────────────────────────────────────────────
     MorphologyPlaneFunction opening{nullptr};
@@ -96,6 +114,7 @@ struct KernelAccelerator final {
     DigitalHalationFunction digital_halation{nullptr};
     NegativeInversionFunction negative_inversion{nullptr};
     DigitalFilmGrainFunction digital_film_grain{nullptr};
+    DigitalFilmColorPresetFunction digital_film_color_preset{nullptr};
 };
 
 // 프로세스 시작에 한 번 설치합니다. `nullptr` 을 주면 해제합니다.

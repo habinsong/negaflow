@@ -119,6 +119,21 @@ bool accelerate_digital_film_grain(
         pixels, width, height, stride_pixels, amplitude, chroma_ratio, size);
 }
 
+bool accelerate_digital_film_color_preset(
+    float* const pixels,
+    const std::uint32_t width,
+    const std::uint32_t height,
+    const std::uint32_t stride_pixels,
+    const imaging::DigitalFilmColorPreset* const preset,
+    const float strength) noexcept {
+    GpuAccelerator& accelerator = GpuAccelerator::shared();
+    if (!accelerator.available()) {
+        return false;
+    }
+    return accelerator.apply_digital_film_color_preset(
+        pixels, width, height, stride_pixels, preset, strength);
+}
+
 // 프로세스 수명 동안 살아 있어야 합니다 — `install_kernel_accelerator` 는 포인터만 갖습니다.
 const imaging::KernelAccelerator kernel_table{
     accelerate_opening,
@@ -127,6 +142,7 @@ const imaging::KernelAccelerator kernel_table{
     accelerate_digital_halation,
     accelerate_negative_inversion,
     accelerate_digital_film_grain,
+    accelerate_digital_film_color_preset,
 };
 
 }  // namespace

@@ -110,6 +110,61 @@ GpuKernelStatus GpuPointwiseKernel::create(
     return GpuKernelStatus::ok;
 }
 
+namespace {
+
+// 두 판이 공유하는 부분입니다. 크기 검증·상수 기록·디스패치·해제가 한 벌만 있어야
+// 슬롯 해제를 빠뜨릴 자리가 없습니다.
+[[nodiscard]] GpuKernelStatus write_constants_and_dispatch(
+    const GpuDevice& device,
+    ID3D11ComputeShader* const shader,
+    ID3D11Buffer* const constant_buffer,
+    ID3D11ShaderResourceView* const* const sources,
+    const UINT source_count,
+    GpuWorkingImage& destination,
+    void* const constants,
+    const std::size_t constant_bytes,
+    const std::uint32_t width,
+    const std::uint32_t height) noexcept {
+    // 크기는 여기서 채웁니다. 커널마다 채우게 두면 한 곳만 빠뜨려도 조용히 어긋납니다.
+    GpuPointwiseExtent extent{};
+    extent.width = width;
+    extent.height = height;
+    std::memcpy(constants, &extent, sizeof(extent));
+
+    ID3D11DeviceContext* context = device.context();
+
+    D3D11_MAPPED_SUBRESOURCE mapped{};
+    if (FAILED(context->Map(constant_buffer, 0U, D3D11_MAP_WRITE_DISCARD, 0U, &mapped))) {
+        return GpuKernelStatus::resource_creation_failed;
+    }
+    std::memcpy(mapped.pData, constants, constant_bytes);
+    context->Unmap(constant_buffer, 0U);
+
+    ID3D11UnorderedAccessView* destination_view = destination.uav();
+    ID3D11Buffer* constant_view = constant_buffer;
+
+    context->CSSetShader(shader, nullptr, 0U);
+    context->CSSetShaderResources(0U, source_count, sources);
+    context->CSSetUnorderedAccessViews(0U, 1U, &destination_view, nullptr);
+    context->CSSetConstantBuffers(0U, 1U, &constant_view);
+
+    context->Dispatch(
+        group_count(width, gpu_thread_group_width),
+        group_count(height, gpu_thread_group_height),
+        1U);
+
+    // 바인딩을 풀어 둡니다. 다음 패스가 같은 텍스처를 SRV 로 읽을 때 D3D11 이
+    // "이미 UAV 로 묶여 있다" 며 바인딩을 조용히 무시하는 것을 막습니다.
+    ID3D11ShaderResourceView* const no_srv[2] = {nullptr, nullptr};
+    ID3D11UnorderedAccessView* const no_uav[1] = {nullptr};
+    context->CSSetShaderResources(0U, 2U, no_srv);
+    context->CSSetUnorderedAccessViews(0U, 1U, no_uav, nullptr);
+    context->CSSetShader(nullptr, nullptr, 0U);
+    return GpuKernelStatus::ok;
+}
+
+}  // namespace
+
 GpuKernelStatus GpuPointwiseKernel::dispatch(
     const GpuDevice& device,
     const GpuWorkingImage& source,
@@ -133,43 +188,42 @@ GpuKernelStatus GpuPointwiseKernel::dispatch(
         return GpuKernelStatus::invalid_arguments;
     }
 
-    // 크기는 여기서 채웁니다. 커널마다 채우게 두면 한 곳만 빠뜨려도 조용히 어긋납니다.
-    GpuPointwiseExtent extent{};
-    extent.width = source.width();
-    extent.height = source.height();
-    std::memcpy(constants, &extent, sizeof(extent));
+    ID3D11ShaderResourceView* const sources[1] = {source.srv()};
+    return write_constants_and_dispatch(
+        device, shader_, constants_, sources, 1U, destination, constants, constant_bytes,
+        source.width(), source.height());
+}
 
-    ID3D11DeviceContext* context = device.context();
-
-    D3D11_MAPPED_SUBRESOURCE mapped{};
-    if (FAILED(context->Map(constants_, 0U, D3D11_MAP_WRITE_DISCARD, 0U, &mapped))) {
-        return GpuKernelStatus::resource_creation_failed;
+GpuKernelStatus GpuPointwiseKernel::dispatch_pair(
+    const GpuDevice& device,
+    const GpuWorkingImage& source,
+    const GpuWorkingImage& second,
+    GpuWorkingImage& destination,
+    void* const constants,
+    const std::size_t constant_bytes) const noexcept {
+    if (!device.is_usable() || shader_ == nullptr || constants_ == nullptr) {
+        return GpuKernelStatus::device_unavailable;
     }
-    std::memcpy(mapped.pData, constants, constant_bytes);
-    context->Unmap(constants_, 0U);
+    if (constants == nullptr || constant_bytes != constant_bytes_) {
+        return GpuKernelStatus::invalid_arguments;
+    }
+    if (!source.is_valid() || !second.is_valid() || !destination.is_valid()) {
+        return GpuKernelStatus::invalid_arguments;
+    }
+    if (source.width() != destination.width() || source.height() != destination.height() ||
+        second.width() != destination.width() || second.height() != destination.height()) {
+        return GpuKernelStatus::invalid_arguments;
+    }
+    if (source.texture() == destination.texture() ||
+        second.texture() == destination.texture()) {
+        // 한 자원을 SRV 와 UAV 로 동시에 묶을 수 없습니다.
+        return GpuKernelStatus::invalid_arguments;
+    }
 
-    ID3D11ShaderResourceView* source_view = source.srv();
-    ID3D11UnorderedAccessView* destination_view = destination.uav();
-    ID3D11Buffer* constant_view = constants_;
-
-    context->CSSetShader(shader_, nullptr, 0U);
-    context->CSSetShaderResources(0U, 1U, &source_view);
-    context->CSSetUnorderedAccessViews(0U, 1U, &destination_view, nullptr);
-    context->CSSetConstantBuffers(0U, 1U, &constant_view);
-
-    context->Dispatch(
-        group_count(source.width(), gpu_thread_group_width),
-        group_count(source.height(), gpu_thread_group_height),
-        1U);
-
-    // 바인딩을 풀어 둡니다. 다음 패스가 같은 텍스처를 SRV 로 읽을 때 D3D11 이
-    // "이미 UAV 로 묶여 있다" 며 바인딩을 조용히 무시하는 것을 막습니다.
-    ID3D11ShaderResourceView* const no_srv[1] = {nullptr};
-    ID3D11UnorderedAccessView* const no_uav[1] = {nullptr};
-    context->CSSetShaderResources(0U, 1U, no_srv);
-    context->CSSetUnorderedAccessViews(0U, 1U, no_uav, nullptr);
-    context->CSSetShader(nullptr, nullptr, 0U);
-    return GpuKernelStatus::ok;
+    ID3D11ShaderResourceView* const sources[2] = {source.srv(), second.srv()};
+    return write_constants_and_dispatch(
+        device, shader_, constants_, sources, 2U, destination, constants, constant_bytes,
+        source.width(), source.height());
 }
 
 }  // namespace negaflow::gpu

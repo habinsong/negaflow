@@ -21,6 +21,7 @@
 
 #include <cstdint>
 
+#include "negaflow/imaging/digital_film_color_preset.h"
 #include "negaflow/imaging/film_scan_denoise.h"
 #include "negaflow/imaging/kernel_accelerator.h"
 #include "negaflow/imaging/working_tone_adjuster.h"
@@ -117,6 +118,14 @@ public:
         float amplitude,
         float chroma_ratio,
         float size) noexcept;
+
+    [[nodiscard]] bool apply_digital_film_color_preset(
+        float* pixels,
+        std::uint32_t width,
+        std::uint32_t height,
+        std::uint32_t stride_pixels,
+        const imaging::DigitalFilmColorPreset* preset,
+        float strength) noexcept;
 
     [[nodiscard]] bool apply_morphology_plane(
         const float* source,

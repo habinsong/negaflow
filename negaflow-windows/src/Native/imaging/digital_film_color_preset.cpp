@@ -1,5 +1,7 @@
 #include "negaflow/imaging/digital_film_color_preset.h"
 
+#include "negaflow/imaging/kernel_accelerator.h"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -73,6 +75,27 @@ DigitalFilmColorPresetResult apply_digital_film_color_preset(
     if (preset == nullptr || strength <= 1.0e-3F) {
         result.status = DigitalFilmColorPresetStatus::ok;
         return result;
+    }
+    // ☠️ **근사입니다**(감마 왕복의 `pow`, 색 커널 셋의 HSL 왕복).
+    //    `ApproximateAcceleratorScope` 안에서만 돕니다 — 내보내기·골든은 CPU 그대로입니다.
+    //    GPU 판은 타일을 쓰지 않으므로 `scratch_peak_bytes` 는 0 입니다. 셋 다 화소별이라
+    //    타일이 값의 조건이 아니고(러닝 섬이 없습니다), 호스트 스크래치도 필요 없습니다.
+    if (approximate_acceleration_allowed()) {
+        if (const KernelAccelerator* const table = kernel_accelerator();
+            table != nullptr && table->digital_film_color_preset != nullptr) {
+            if (table->digital_film_color_preset(
+                    reinterpret_cast<float*>(result.image.pixels.data()),
+                    result.image.width,
+                    result.image.height,
+                    result.image.stride_pixels,
+                    preset,
+                    strength)) {
+                result.info.applied = true;
+                result.info.kernel_status = negaflow::core::KernelStatus::ok;
+                result.status = DigitalFilmColorPresetStatus::ok;
+                return result;
+            }
+        }
     }
     try {
         const std::size_t width = result.image.width;

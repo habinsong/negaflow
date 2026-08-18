@@ -266,6 +266,20 @@ negaflow_compile_compute_shader(
 )
 
 negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/digital_film_color_preset.hlsl"
+    DigitalGammaEncodeMain
+    negaflow_digital_gamma_encode_cs
+    NEGAFLOW_DIGITAL_GAMMA_ENCODE_HEADER
+)
+
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/digital_film_color_preset.hlsl"
+    DigitalGammaDecodeMixMain
+    negaflow_digital_gamma_decode_mix_cs
+    NEGAFLOW_DIGITAL_GAMMA_DECODE_MIX_HEADER
+)
+
+negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/morphology.hlsl"
     MorphologyHorizontalMain
     negaflow_morphology_horizontal_cs
@@ -326,6 +340,8 @@ add_library(negaflow_gpu STATIC
     "${NEGAFLOW_HALATION_BASE_HEADER}"
     "${NEGAFLOW_HALATION_ACCUMULATE_HEADER}"
     "${NEGAFLOW_DIGITAL_FILM_GRAIN_HEADER}"
+    "${NEGAFLOW_DIGITAL_GAMMA_ENCODE_HEADER}"
+    "${NEGAFLOW_DIGITAL_GAMMA_DECODE_MIX_HEADER}"
     "${NEGAFLOW_MORPHOLOGY_H_HEADER}"
     "${NEGAFLOW_MORPHOLOGY_V_HEADER}"
     "${NEGAFLOW_BIPOLAR_TOP_HAT_HEADER}"
@@ -339,6 +355,7 @@ add_library(negaflow_gpu STATIC
     src/Native/gpu/gpu_film_scan.cpp
     src/Native/gpu/gpu_digital_halation.cpp
     src/Native/gpu/gpu_digital_film_grain.cpp
+    src/Native/gpu/gpu_digital_film_color_preset.cpp
     src/Native/gpu/gpu_morphology.cpp
     src/Native/gpu/gpu_tone_stage.cpp
     src/Native/gpu/gpu_film_scan_stage.cpp
@@ -1077,6 +1094,17 @@ if(BUILD_TESTING)
     add_test(
         NAME native.gpu_digital_film_grain
         COMMAND negaflow_gpu_digital_film_grain_tests)
+
+    add_executable(negaflow_gpu_digital_film_color_preset_tests
+        tests/Native.UnitTests/gpu_digital_film_color_preset_tests.cpp
+    )
+    target_link_libraries(
+        negaflow_gpu_digital_film_color_preset_tests
+        PRIVATE negaflow_gpu negaflow_imaging negaflow_core negaflow_project_options
+    )
+    add_test(
+        NAME native.gpu_digital_film_color_preset
+        COMMAND negaflow_gpu_digital_film_color_preset_tests)
 
     add_executable(negaflow_gpu_morphology_tests
         tests/Native.UnitTests/gpu_morphology_tests.cpp
