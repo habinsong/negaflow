@@ -1251,4 +1251,5 @@
   <data name="commandKeyboardShortcuts.Text" xml:space="preserve"><value>단축키</value><comment>AppLocalizedText.commandKeyboardShortcuts</comment></data>
   <data name="developResetPhotoAngle.Text" xml:space="preserve"><value>사진 각도 초기화</value><comment>AppLocalizedPhrase.resetPhotoAngle</comment></data>
   <data name="developResetAdjustmentsHelp.Text" xml:space="preserve"><value>편집(회전/크롭)을 제외한 모든 보정 값을 초기화합니다.</value><comment>AppLocalizedPhrase.resetAdjustmentsHelp</comment></data>
+  <data name="settingsColorSystemDisplayProfile.Text" xml:space="preserve"><value>시스템 디스플레이 프로파일</value><comment>AppLocalizedText.colorSystemDisplayProfile (ColorSync 는 macOS 전용이라 뺌)</comment></data>
 </root>

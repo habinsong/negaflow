@@ -1251,4 +1251,5 @@
   <data name="commandKeyboardShortcuts.Text" xml:space="preserve"><value>キーボードショートカット</value><comment>AppLocalizedText.commandKeyboardShortcuts</comment></data>
   <data name="developResetPhotoAngle.Text" xml:space="preserve"><value>写真の角度をリセット</value><comment>AppLocalizedPhrase.resetPhotoAngle</comment></data>
   <data name="developResetAdjustmentsHelp.Text" xml:space="preserve"><value>ジオメトリ（回転/切り抜き）以外のすべての補正値をリセットします。</value><comment>AppLocalizedPhrase.resetAdjustmentsHelp</comment></data>
+  <data name="settingsColorSystemDisplayProfile.Text" xml:space="preserve"><value>システムのディスプレイプロファイル</value><comment>AppLocalizedText.colorSystemDisplayProfile (ColorSync 는 macOS 전용이라 뺌)</comment></data>
 </root>

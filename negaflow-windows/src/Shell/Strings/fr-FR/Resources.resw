@@ -1251,4 +1251,5 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="commandKeyboardShortcuts.Text" xml:space="preserve"><value>Raccourcis clavier</value><comment>AppLocalizedText.commandKeyboardShortcuts</comment></data>
   <data name="developResetPhotoAngle.Text" xml:space="preserve"><value>Réinitialiser l’angle</value><comment>AppLocalizedPhrase.resetPhotoAngle</comment></data>
   <data name="developResetAdjustmentsHelp.Text" xml:space="preserve"><value>Réinitialise tous les réglages, à l'exception de la géométrie (rotation/recadrage).</value><comment>AppLocalizedPhrase.resetAdjustmentsHelp</comment></data>
+  <data name="settingsColorSystemDisplayProfile.Text" xml:space="preserve"><value>Profil d'affichage du système</value><comment>AppLocalizedText.colorSystemDisplayProfile (ColorSync 는 macOS 전용이라 뺌)</comment></data>
 </root>

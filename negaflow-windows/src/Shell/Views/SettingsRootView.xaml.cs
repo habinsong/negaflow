@@ -37,6 +37,21 @@ public sealed partial class SettingsRootView : UserControl
         Unloaded += OnUnloaded;
     }
 
+    /// <summary>
+    /// macOS <c>monitorProfileSummary</c> — 화면 색 프로파일 이름입니다. 창이 아직 없거나
+    /// 프로파일을 못 읽으면 macOS 와 같은 자리에 대체 문구를 냅니다.
+    /// </summary>
+    private string MonitorProfileName()
+    {
+        if (pickerWindowId is { } id &&
+            MonitorColorProfile.Name(Microsoft.UI.Win32Interop.GetWindowFromWindowId(id))
+                is { Length: > 0 } name)
+        {
+            return name;
+        }
+        return AppResources.Get("settingsColorSystemDisplayProfile", "Text");
+    }
+
     private void OnCategoryClick(object sender, RoutedEventArgs args)
     {
         _ = args;
@@ -339,6 +354,8 @@ public sealed partial class SettingsRootView : UserControl
             ? $"{profileName} · {SimulationLabel(proof.Simulation)}"
             : AppResources.Get("settingsColorOff", "Text");
         ScannerEmulationSummary.Text = AppResources.Get("settingsColorUnassigned", "Text");
+        // macOS monitorProfileSummary — 화면에 걸린 프로파일 이름, 못 읽으면 대체 문구.
+        MonitorProfileSummary.Text = MonitorProfileName();
         SynchronizeScanTab(preferences);
         PixelSamplerToggle.IsOn = preferences.PixelSamplerEnabled;
         ClippingOverlayToggle.IsOn = preferences.ClippingOverlayEnabled;

@@ -1251,4 +1251,5 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="commandKeyboardShortcuts.Text" xml:space="preserve"><value>Tastaturkurzbefehle</value><comment>AppLocalizedText.commandKeyboardShortcuts</comment></data>
   <data name="developResetPhotoAngle.Text" xml:space="preserve"><value>Bildwinkel zurücksetzen</value><comment>AppLocalizedPhrase.resetPhotoAngle</comment></data>
   <data name="developResetAdjustmentsHelp.Text" xml:space="preserve"><value>Setzt alle Anpassungen außer der Geometrie (Drehen/Zuschneiden) zurück.</value><comment>AppLocalizedPhrase.resetAdjustmentsHelp</comment></data>
+  <data name="settingsColorSystemDisplayProfile.Text" xml:space="preserve"><value>System-Anzeigeprofil</value><comment>AppLocalizedText.colorSystemDisplayProfile (ColorSync 는 macOS 전용이라 뺌)</comment></data>
 </root>

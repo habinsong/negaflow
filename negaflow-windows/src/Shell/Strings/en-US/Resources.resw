@@ -1251,4 +1251,5 @@ Load a scanner from Library to scan film.</value>
   <data name="commandKeyboardShortcuts.Text" xml:space="preserve"><value>Keyboard Shortcuts</value><comment>AppLocalizedText.commandKeyboardShortcuts</comment></data>
   <data name="developResetPhotoAngle.Text" xml:space="preserve"><value>Reset Photo Angle</value><comment>AppLocalizedPhrase.resetPhotoAngle</comment></data>
   <data name="developResetAdjustmentsHelp.Text" xml:space="preserve"><value>Reset all adjustment values except geometry (rotate/crop).</value><comment>AppLocalizedPhrase.resetAdjustmentsHelp</comment></data>
+  <data name="settingsColorSystemDisplayProfile.Text" xml:space="preserve"><value>System display profile</value><comment>AppLocalizedText.colorSystemDisplayProfile (ColorSync 는 macOS 전용이라 뺌)</comment></data>
 </root>
