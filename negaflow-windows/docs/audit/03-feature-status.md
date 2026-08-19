@@ -158,6 +158,7 @@ Reveal · 가용성 스토어 · 소스 실체화 · 추적 이벤트 · UI 7파
 | 23 | **현상 좌측탭 프로세스·타깃이 화면에만 있고 안 붙음** | **고침.** `DevelopDefaultsChanged` 를 아무도 듣지 않았다 — [`07`](07-user-reported.md) K2 |
 | 24 | **앱이 아예 안 뜸(XamlParseException)** | **고침.** resw 새 항목 20개가 다른 `<data>` 안에 들어가 MakePri 가 통째로 무시했다 — [`07`](07-user-reported.md) K1 |
 | 25 | **타깃을 잇달아 바꾸면 앱 강제 종료** | **고침.** 상주 프레임이 사라진 버퍼를 가리켰다 — [`07`](07-user-reported.md) J2.1 |
+| 26 | **`native.gpu_film_scan` 이 가끔 SegFault** | **원인 확정·닫음.** GPU 가 아니라 `row_block_pool` 의 완료 통지였다(호출부 스택의 계수기를 워커가 늦게 만짐). 27회 중 3회 → **292회 연속 통과** — [`01`](01-backend-gaps.md) 9.4 |
 
 기준선(2026-08-20 x64-release, 마지막 게이트): native **102/102** · catalog **747** ·
 shell **1411** · 경고 0.

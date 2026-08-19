@@ -1224,9 +1224,15 @@ if(BUILD_TESTING)
     )
     add_test(NAME native.gpu_neighborhood COMMAND negaflow_gpu_neighborhood_tests)
 
+    # ☠️ 크래시 기록기를 같이 넣습니다. 이 시험은 2026-08-19 에 27회 중 3회
+    #    SegFault 로 죽었는데, 시험 실행 파일은 `negaflow_native` 를 링크하지 않아
+    #    DLL 안의 VEH 기록기가 없었습니다. 그래서 스택을 한 번도 못 잡았습니다.
+    #    다시 죽으면 이번에는 `%LOCALAPPDATA%/Negaflow/Logs/native-crash.txt` 에
+    #    남고, `scripts/symbolize-rva.ps1 -Module <이 exe>` 로 함수·줄을 봅니다.
     add_executable(negaflow_gpu_film_scan_tests
         tests/Native.UnitTests/gpu_film_scan_tests.cpp
         tests/Native.UnitTests/GpuFilmScan/gpu_film_scan_chain.cpp
+        src/Native/abi/support/crash_log.cpp
     )
     target_include_directories(
         negaflow_gpu_film_scan_tests

@@ -289,9 +289,39 @@ GpuAccelerator::shared().flush_resident_if(invert.image.pixels.data());
 | Release 심볼 | `cmake/CompilerWarnings.cmake` — `/Zi` `/DEBUG` `/OPT:REF` `/MAP`. `/OPT:ICF` 는 **켜지 않습니다** |
 | RVA → 함수·줄 | `scripts/symbolize-rva.ps1 -Rva 0x1546cb` |
 
-### 9.4 `native.gpu_film_scan` 간헐 SEGFAULT
+### 9.4 `native.gpu_film_scan` 간헐 SEGFAULT — **원인 확정 (2026-08-20)**
 
-2026-08-19 인수인계의 "27회 중 3회 실패" 는 **2026-08-20 고침 이후 재현되지 않습니다** —
-`--repeat until-fail:40` **40/40 통과**(+ 앞서 15회). 같은 원인이라고 **단정하지는 않습니다**:
-상주 범위 수명 버그가 GPU 경로 전체에 걸려 있었으므로 개연성은 높지만, 실패했을 때의
-스택을 잡아 두지 못했습니다. 다시 나오면 9.3 의 기록기가 이번에는 남깁니다.
+**결론: 원인은 GPU 가 아니라 `core/row_block_pool.cpp` 의 완료 통지였습니다** —
+호출부 스택에 있는 `PendingCounter` 를 워커가 **사라진 뒤에** 만졌습니다(use-after-free).
+
+#### 어떻게 확정했나
+
+| 단계 | 증거 |
+|---|---|
+| ① 후보 배제 | 이 시험은 `negaflow_native` 를 **링크하지 않습니다**(CMake: `negaflow_gpu` · `negaflow_imaging` · `negaflow_core`). `GpuResidentScope` 도 `develop_export` 도 한 줄 안 씁니다 — 그러므로 9.1·9.1.1 의 상주 버퍼 수명은 **이 시험의 원인일 수 없습니다** |
+| ② 공통 코드 | 그 대신 `negaflow_core` 를 씁니다. 시험은 타일마다 GPU 이미지를 12장 만들고 타일 경계를 지나가도록 폭 600 으로 돌리며, 그 행 복사가 `parallel_rows` → `row_block_pool` 을 탑니다 |
+| ③ 같은 자리의 크래시를 **앱에서 잡음** | 앱 크래시 기록의 워커 스택이 `row_block_pool.cpp:37` → `memcpy` 였습니다([`07`](07-user-reported.md) J2) |
+| ④ 코드 | `--remaining` 뒤 **잠금 밖에서** `notify_all` 하면, 깬 대기자가 `remaining == 0` 을 보고 돌아가 스택의 `PendingCounter`(뮤텍스·조건변수)를 없앱니다. 그 뒤 워커가 그것을 만집니다 |
+| ⑤ 고침 | 통지를 `lock_guard` **안**으로 옮겼습니다(2026-08-20) |
+| ⑥ 재현으로 확인 | 고치기 전 **27회 중 3회 실패**. 고친 뒤 **292회 연속 통과**(`--repeat until-fail:120` + 프로세스 6~8개 동시 172회) + `native.gpu_` 26개 묶음 **12바퀴 전부 통과** + ctest 102/102 |
+
+11% 실패율이 292회 연속 통과로 바뀔 확률은 사실상 0 입니다(≈0.89^292 ≈ 1e-15).
+
+#### 다시 나면 이번에는 스택이 남습니다
+
+시험 실행 파일이 `negaflow_native` 를 링크하지 않아 **DLL 안의 VEH 기록기가 없었고**,
+그래서 앞 세션은 스택을 한 번도 못 잡았습니다. `crash_log.cpp` 를 이 시험 타깃에도
+넣었습니다(CMake). 다시 죽으면:
+
+```powershell
+type $env:LOCALAPPDATA/Negaflow/Logs/native-crash.txt
+./scripts/symbolize-rva.ps1 -Rva 0x… -Module out/build/native/x64-release/Release/negaflow_gpu_film_scan_tests.exe
+```
+
+#### 남은 위험 (정직하게)
+
+통지를 잠금 안으로 옮겨도, **다른 스레드가 막 풀어 준 뮤텍스를 곧바로 없애는** 창은
+원리적으로 남습니다(대기자가 깨어 돌아가며 `PendingCounter` 를 파괴하는 사이 워커의
+`lock_guard` 소멸자가 아직 그 뮤텍스를 만지는 경우). 실측으로는 292회 동안 나오지
+않았지만, 완전히 없애려면 계수기를 원자값으로 두고 마지막 감소자가 소유권을 넘기는
+형태로 바꿔야 합니다. **아직 안 했습니다.**

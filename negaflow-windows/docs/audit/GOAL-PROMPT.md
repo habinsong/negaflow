@@ -137,7 +137,9 @@ scripts\build-managed.ps1 -Preset x64-release    관리
 scripts\ci-gate.ps1 -Preset x64-release          로컬 게이트 전체
 현재 기준(2026-08-20 x64-release 실측): native **102/102**, catalog **737**,
 shell **1384** assertions, 경고 0. 이 숫자가 줄면 안 된다.
-native.gpu_film_scan 간헐 SEGFAULT 는 08-20 고침 뒤 55회 연속 통과다(단정은 안 한다, 01 9.4).
+native.gpu_film_scan 간헐 SEGFAULT 는 원인을 확정하고 닫았다 — GPU 가 아니라
+core/row_block_pool.cpp 의 완료 통지였다(호출부 스택의 PendingCounter 를 워커가 늦게 만짐).
+27회 중 3회 실패 -> 292회 연속 통과. 증거와 남은 위험은 01 9.4.
 카탈로그 시험이 가끔 빨간색이던 것은 검사기가 디렉터리 승격을 막던 것이고 고쳤다(문서 17).
 GPU 경로마다 CPU 폴백을 두고 두 경로가 같은 값을 내는지 시험으로 고정해라. WARP 로도 돌려라.
 

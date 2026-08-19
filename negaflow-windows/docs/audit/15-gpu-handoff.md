@@ -425,7 +425,13 @@ ctest --preset x64-release          # 기준 native 102/102 (2026-08-20). 줄면
 ①은 함수 지역 변수만 고칩니다. 단계 안에서 죽는 중간 버퍼가 같은 날 또 죽였습니다
 ([`07`](07-user-reported.md) J2.1).
 
-`native.gpu_film_scan` 의 간헐 SEGFAULT(앞 세션 27회 중 3회)는 그 뒤 **55회 연속 통과**
-입니다. 같은 원인이라고 단정하지는 않습니다 — 실패 스택을 못 잡았습니다.
-다시 나오면 `src/Native/abi/support/crash_log.cpp` 가 예외 코드·RVA·스택을 남기고,
-`scripts/symbolize-rva.ps1` 이 함수·줄로 되돌립니다(Release 도 PDB 를 냅니다).
+### `native.gpu_film_scan` 간헐 SEGFAULT — 원인 확정
+
+**GPU 가 아니었습니다.** 그 시험은 `negaflow_native` 를 링크하지 않아 상주 스코프를
+쓰지도 않습니다. 원인은 두 라이브러리가 함께 쓰는 `core/row_block_pool.cpp` 의
+완료 통지가 잠금 **밖**에 있어, 호출부 스택의 `PendingCounter` 가 사라진 뒤 워커가
+그것을 만진 것이었습니다. 통지를 잠금 안으로 옮긴 뒤 **292회 연속 통과**(전에는 27회
+중 3회 실패) + `native.gpu_` 묶음 12바퀴 전부 통과.
+
+증거·재현 수치·남은 위험은 [`01`](01-backend-gaps.md) 9.4.
+시험 타깃에도 크래시 기록기를 넣어 두었으니 다시 나면 이번에는 스택이 남습니다.

@@ -259,7 +259,7 @@ macOS 표 전수 대조 2,670건 중 다른 것 0 · 라이브러리 **폴더별
 | 엔진 — 큰 구멍 | 포지티브 경로 · IT8/스캐너 노이즈 · 내보내기 매니페스트/배치 | [`01`](01-backend-gaps.md) |
 | 프론트 — 큰 구멍 | 좌측 세로 레일(라이브러리 3개뿐) · 라이브러리 필터 캡슐 배치 · 내보내기 35파일 · 인화 사이드바/템플릿 · 아이콘 SVG | [`02`](02-frontend-gaps.md) · [`08`](08-icons-and-chrome.md) |
 | 설정 | 디스크·메모리캐시·지원번들·법적고지·색관리 섹션 | [`09`](09-shortcuts-and-settings.md) |
-| GPU | **3.1–3.8 닫음.** 남은 확인만 15 4절 | [`15`](15-gpu-handoff.md) |
+| GPU | **3.1–3.8 닫음.** `native.gpu_film_scan` 간헐 SEGFAULT **원인 확정·닫음**(GPU 아님 — `row_block_pool` 통지) | [`15`](15-gpu-handoff.md) · [`01`](01-backend-gaps.md) 9.4 |
 | God object | **생산 10개가 500줄 초과**(2026-08-20 실측). 생성 표·시험 3은 사유 있음 | [`05`](05-god-objects.md) |
 | 이 묶음이 틀렸던 것 | GPU 0줄 · 캐시 전무 · 매번 디코드 · 단축키 24개 · God object 닫음 | [`06`](06-false-claims.md) 16절 |
 
