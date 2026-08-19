@@ -1249,4 +1249,6 @@
   <data name="menuHelp.Text" xml:space="preserve"><value>ヘルプ</value><comment>AppLocalizedText.menuHelp</comment></data>
   <data name="commandNegaflowHelp.Text" xml:space="preserve"><value>クイックスタート</value><comment>AppLocalizedText.commandNegaflowHelp</comment></data>
   <data name="commandKeyboardShortcuts.Text" xml:space="preserve"><value>キーボードショートカット</value><comment>AppLocalizedText.commandKeyboardShortcuts</comment></data>
+  <data name="developResetPhotoAngle.Text" xml:space="preserve"><value>写真の角度をリセット</value><comment>AppLocalizedPhrase.resetPhotoAngle</comment></data>
+  <data name="developResetAdjustmentsHelp.Text" xml:space="preserve"><value>ジオメトリ（回転/切り抜き）以外のすべての補正値をリセットします。</value><comment>AppLocalizedPhrase.resetAdjustmentsHelp</comment></data>
 </root>

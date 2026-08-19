@@ -24,6 +24,16 @@ internal sealed class DevelopInspectorChrome
         view.Adjustments.SectionExpansionRequested += OnAdjustmentSectionExpansion;
     }
 
+    internal void SelectTab(DevelopInspectorTab tab)
+    {
+        if (tab != DevelopInspectorTab.Edit)
+        {
+            view.cropSession.Cancel();
+        }
+        view.inspectorPresentation.SelectTab(tab);
+        Apply();
+    }
+
     internal void Apply()
     {
         if (!view.isInspectorPresentationReady)
@@ -46,6 +56,11 @@ internal sealed class DevelopInspectorChrome
         view.GeometryCard.Visibility = view.inspectorPresentation.SelectedTab == DevelopInspectorTab.Edit
             ? Visibility.Visible
             : Visibility.Collapsed;
+        // macOS resetToolContent — 초기화 탭은 ResetControlsSection 하나를 냅니다.
+        view.ResetCard.Visibility = view.inspectorPresentation.SelectedTab == DevelopInspectorTab.Reset
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        view.ResetCard.Show(view.panel);
         view.Adjustments.Apply(view.inspectorPresentation);
         view.isSynchronizingInspectorPresentation = false;
     }

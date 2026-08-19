@@ -875,14 +875,20 @@ public sealed partial class DevelopWorkspaceView : UserControl
         OnCompareModeChosen(panel.Compare.Mode);
     }
 
+    /// <summary>
+    /// macOS <c>resetAllDevelopAdjustments</c> 뒤에는 <c>scheduleRedevelop</c> 이 옵니다.
+    /// 값만 지우고 화면을 그대로 두면 사용자는 초기화가 안 된 줄 압니다.
+    /// </summary>
     internal void ResetAllAdjustmentsFromMenu()
     {
-        if (panel is null)
+        if (panel is null || panel.ResetAllAdjustments() != LibraryFrameError.None)
         {
             return;
         }
 
-        _ = panel.ResetAllAdjustments();
+        SynchronizeInspectorValues();
+        SyncToneControls();
+        RequestPreview();
     }
 
     internal void CopyDevelopSettingsFromMenu() => _ = panel?.CopyDevelopSettings();

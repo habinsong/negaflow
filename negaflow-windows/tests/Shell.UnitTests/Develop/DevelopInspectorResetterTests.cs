@@ -92,6 +92,7 @@ internal static class DevelopInspectorResetterTests
             Check(panel.Color.ColorModel == ColorModelRecipe.Identity, "reset_redo_clears_color");
 
             VerifyNeutralPresetComesBack(panel, host);
+            VerifyPhotoAngleReset(panel);
         }
         finally
         {
@@ -141,6 +142,35 @@ internal static class DevelopInspectorResetterTests
         {
             LookPresetLibrary.SetForTests(saved);
         }
+    }
+
+    /// <summary>
+    /// macOS <c>resetPhotoAngle</c> 은 회전과 수평 보정만 0 으로 돌리고 크롭·뒤집기는
+    /// 그대로 둡니다. 잠금은 <c>canResetPhotoAngle</c>(회전≠0 또는 |각도| ≥ 1e-4)입니다.
+    /// </summary>
+    private static void VerifyPhotoAngleReset(DevelopPanelState panel)
+    {
+        Check(panel.SetStraightenAngle(0) == LibraryFrameError.None, "reset_angle_clear");
+        Check(!panel.CanResetPhotoAngle, "reset_angle_locked_when_identity");
+
+        Check(panel.SetStraightenAngle(1e-4) == LibraryFrameError.None, "reset_angle_threshold");
+        Check(panel.CanResetPhotoAngle, "reset_angle_open_at_threshold");
+
+        Check(
+            panel.SetCrop(new ImageCropRect(0.1, 0.1, 0.8, 0.8)) == LibraryFrameError.None,
+            "reset_angle_set_crop");
+        Check(panel.SetStraightenAngle(3.5) == LibraryFrameError.None, "reset_angle_set_angle");
+        Check(panel.Rotate(clockwise: true) == LibraryFrameError.None, "reset_angle_rotate");
+
+        Check(panel.ResetPhotoAngle() == LibraryFrameError.None, "reset_angle_ok");
+        Check(
+            panel.SelectedFrame!.ImageTransform.Rotation == ImageRotation.Degrees0 &&
+            panel.SelectedFrame.ImageTransform.StraightenAngle == 0,
+            "reset_angle_clears_rotation_and_straighten");
+        Check(
+            panel.SelectedFrame.ImageTransform.Crop is { Width: 0.8 },
+            "reset_angle_keeps_crop");
+        Check(!panel.CanResetPhotoAngle, "reset_angle_locked_after_reset");
     }
 
     private static bool PickLook(DevelopPanelState panel, LibraryHostService host, string id)

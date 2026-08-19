@@ -68,6 +68,21 @@ internal sealed class DevelopTransformEditor
                     StraightenAngle = Math.Clamp(angle, -45.0, 45.0),
                 });
 
+    /// <summary>
+    /// macOS <c>AppModel.resetPhotoAngle</c> — 회전과 수평 보정만 0 으로 돌리고 크롭·뒤집기는
+    /// 그대로 둡니다(<c>AppModel+TransformControls.swift:42-47</c>).
+    /// </summary>
+    public DevelopEditResult ResetPhotoAngle(LibraryFrameSnapshot? frame) =>
+        frame is null
+            ? Missing()
+            : Set(
+                frame,
+                frame.ImageTransform with
+                {
+                    Rotation = ImageRotation.Degrees0,
+                    StraightenAngle = 0.0,
+                });
+
     public DevelopEditResult SetCrop(LibraryFrameSnapshot? frame, ImageCropRect? crop) =>
         frame is null
             ? Missing()

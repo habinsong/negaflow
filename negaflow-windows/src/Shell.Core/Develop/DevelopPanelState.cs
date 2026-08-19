@@ -546,6 +546,19 @@ public sealed class DevelopPanelState
 
     public bool AutoNeutralBalance => SelectedFrame?.AutoNeutralBalance ?? false;
 
+    /// <summary>macOS <c>resetPhotoAngle</c> — 회전과 수평 보정만 되돌립니다.</summary>
+    public LibraryFrameError ResetPhotoAngle() =>
+        RefreshAfterEdit(transformEditor.ResetPhotoAngle(SelectedFrame));
+
+    /// <summary>
+    /// macOS <c>canResetPhotoAngle</c> — 회전이 0 이 아니거나 수평 보정이 1e-4 이상일 때만
+    /// 누를 수 있습니다(<c>DevelopWorkflowInspector.swift:246-248</c>).
+    /// </summary>
+    public bool CanResetPhotoAngle =>
+        SelectedFrame is { } frame &&
+        (frame.ImageTransform.Rotation != ImageRotation.Degrees0 ||
+            Math.Abs(frame.ImageTransform.StraightenAngle) >= 1e-4);
+
     public LibraryFrameError SetStraightenAngle(double angle) =>
         RefreshAfterEdit(transformEditor.SetStraightenAngle(SelectedFrame, angle));
 

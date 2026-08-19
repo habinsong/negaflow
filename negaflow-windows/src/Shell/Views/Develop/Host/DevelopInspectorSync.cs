@@ -19,6 +19,8 @@ internal sealed class DevelopInspectorSync
         view.BaseCard.RecipeChanged += OnBaseRecipeChanged;
         view.BaseCard.ManualBaseCommitted += OnManualBaseCommitted;
         view.GeometryCard.TransformRequested += OnGeometryTransformRequested;
+        view.ResetCard.ResetAllAdjustmentsRequested += OnResetAllAdjustmentsRequested;
+        view.ResetCard.ResetPhotoAngleRequested += OnResetPhotoAngleRequested;
         view.GeometryCard.AspectChosen += view.cropSession.OnAspectChosen;
         view.GeometryCard.AspectLockToggled += view.cropSession.OnAspectLockToggled;
         view.HistogramView.ValueChanged += OnHistogramValueChanged;
@@ -49,6 +51,7 @@ internal sealed class DevelopInspectorSync
         // Auto에는 수동 base가 없으므로 slider에는 시작 위치만 보입니다. 사용자가 값을 바꾸면
         // manual mode로 전환되며, 그 전까지 preview/export는 native Auto resolver를 사용합니다.
         view.BaseCard.ShowManualValues(view.panel);
+        view.ResetCard.Show(view.panel);
         view.isSynchronizingInspector = false;
     }
 
@@ -71,6 +74,8 @@ internal sealed class DevelopInspectorSync
         {
             return;
         }
+        // macOS `onChange(of: frame.imageTransform.displayName)` → `resetViewport`.
+        view.panel.Viewport.Reset();
         Synchronize();
         view.RequestPreview();
     }
@@ -88,6 +93,25 @@ internal sealed class DevelopInspectorSync
         _ = args;
         Synchronize();
         view.RequestPreview();
+    }
+
+    /// <summary>macOS <c>resetAllAdjustments</c> — 인스펙터 단추와 메뉴가 같은 길입니다.</summary>
+    private void OnResetAllAdjustmentsRequested(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        view.ResetAllAdjustmentsFromMenu();
+    }
+
+    /// <summary>
+    /// macOS <c>resetPhotoAngle</c> — 회전과 수평 보정만 되돌립니다. 기하가 바뀌므로 다른
+    /// 회전·뒤집기와 같이 뷰포트도 되돌립니다.
+    /// </summary>
+    private void OnResetPhotoAngleRequested(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        UpdateImageTransform(state => state.ResetPhotoAngle());
     }
 
     private void OnResetRequested(

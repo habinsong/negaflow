@@ -1249,4 +1249,6 @@
   <data name="menuHelp.Text" xml:space="preserve"><value>도움말</value><comment>AppLocalizedText.menuHelp</comment></data>
   <data name="commandNegaflowHelp.Text" xml:space="preserve"><value>빠른 시작</value><comment>AppLocalizedText.commandNegaflowHelp</comment></data>
   <data name="commandKeyboardShortcuts.Text" xml:space="preserve"><value>단축키</value><comment>AppLocalizedText.commandKeyboardShortcuts</comment></data>
+  <data name="developResetPhotoAngle.Text" xml:space="preserve"><value>사진 각도 초기화</value><comment>AppLocalizedPhrase.resetPhotoAngle</comment></data>
+  <data name="developResetAdjustmentsHelp.Text" xml:space="preserve"><value>편집(회전/크롭)을 제외한 모든 보정 값을 초기화합니다.</value><comment>AppLocalizedPhrase.resetAdjustmentsHelp</comment></data>
 </root>

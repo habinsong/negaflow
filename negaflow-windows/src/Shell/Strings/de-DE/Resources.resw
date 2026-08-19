@@ -1249,4 +1249,6 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="menuHelp.Text" xml:space="preserve"><value>Hilfe</value><comment>AppLocalizedText.menuHelp</comment></data>
   <data name="commandNegaflowHelp.Text" xml:space="preserve"><value>Schnellstart</value><comment>AppLocalizedText.commandNegaflowHelp</comment></data>
   <data name="commandKeyboardShortcuts.Text" xml:space="preserve"><value>Tastaturkurzbefehle</value><comment>AppLocalizedText.commandKeyboardShortcuts</comment></data>
+  <data name="developResetPhotoAngle.Text" xml:space="preserve"><value>Bildwinkel zurücksetzen</value><comment>AppLocalizedPhrase.resetPhotoAngle</comment></data>
+  <data name="developResetAdjustmentsHelp.Text" xml:space="preserve"><value>Setzt alle Anpassungen außer der Geometrie (Drehen/Zuschneiden) zurück.</value><comment>AppLocalizedPhrase.resetAdjustmentsHelp</comment></data>
 </root>

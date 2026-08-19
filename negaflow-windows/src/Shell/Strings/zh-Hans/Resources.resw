@@ -1249,4 +1249,6 @@
   <data name="menuHelp.Text" xml:space="preserve"><value>帮助</value><comment>AppLocalizedText.menuHelp</comment></data>
   <data name="commandNegaflowHelp.Text" xml:space="preserve"><value>快速入门</value><comment>AppLocalizedText.commandNegaflowHelp</comment></data>
   <data name="commandKeyboardShortcuts.Text" xml:space="preserve"><value>键盘快捷键</value><comment>AppLocalizedText.commandKeyboardShortcuts</comment></data>
+  <data name="developResetPhotoAngle.Text" xml:space="preserve"><value>重置照片角度</value><comment>AppLocalizedPhrase.resetPhotoAngle</comment></data>
+  <data name="developResetAdjustmentsHelp.Text" xml:space="preserve"><value>重置除几何（旋转/裁剪）外的所有调整值。</value><comment>AppLocalizedPhrase.resetAdjustmentsHelp</comment></data>
 </root>
