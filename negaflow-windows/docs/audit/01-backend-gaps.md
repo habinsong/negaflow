@@ -258,7 +258,22 @@ std::optional<GpuResidentScope> resident_scope{};
 if (gpu_policy == GpuUsePolicy::allowed) { resident_scope.emplace(); }
 ```
 
-**규칙: 상주 범위는 그것이 채우는 버퍼보다 먼저 선언합니다.** 새 단계를 붙일 때도 같습니다.
+**규칙 ①: 상주 범위는 그것이 채우는 버퍼보다 먼저 선언합니다.**
+
+### 9.1.1 그것만으로는 부족했습니다 — `flush_resident_if`
+
+같은 날 타깃을 잇달아 바꾸니 또 죽었습니다. 선언 순서는 **함수 지역 변수**만 고칩니다.
+단계 함수들은 이미지를 **값으로 받아 다 쓰고 버리므로**, 그 중간 버퍼가 묶인 채
+사라지면 스코프가 끝날 때 여전히 해제된 메모리에 씁니다(스택은
+[`07`](07-user-reported.md) J2.1 에 그대로 붙였습니다).
+
+```cpp
+// 넘기기 직전에 — 그 버퍼가 묶여 있으면 지금 내리고 묶음을 풉니다.
+GpuAccelerator::shared().flush_resident_if(invert.image.pixels.data());
+```
+
+**규칙 ②: 버퍼를 단계에 넘겨 버릴 때는 넘기기 직전에 `flush_resident_if` 를 부릅니다.**
+묶여 있지 않으면 아무 일도 하지 않으므로 상주 최적화는 그대로입니다.
 
 ### 9.2 `core/row_block_pool.cpp` — 통지를 잠금 안으로
 

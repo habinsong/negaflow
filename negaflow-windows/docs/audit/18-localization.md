@@ -104,3 +104,20 @@ for f in scripts/*.ps1; do echo "$(head -c 3 "$f" | od -An -tx1 | tr -d '
 ## 7. 남은 것 — 5절 그대로
 
 심볼 못 찾음 180건(30개 심볼)은 **아직 안 갈랐습니다.** 이 세션에서도 못 했습니다.
+
+
+---
+
+## 8. ☠️ resw 를 손으로 고칠 때의 함정 (2026-08-20)
+
+새 항목 20개가 `<data name="printOutputSection.Content" ...>` **안쪽에** 들어갔습니다.
+
+- XML 로는 올바릅니다 → 파서·정규식 검사 모두 통과합니다.
+- 그러나 **MakePri 는 중첩된 `<data>` 를 세지 않습니다** → PRI 에서 20개가 빠집니다.
+- 앱은 `AppResources.Get` 에서 던지고, 그 자리가 `PrintWorkspaceView` 생성자라
+  `XamlParseException` 으로 **창을 아예 못 엽니다.**
+
+**항목은 반드시 루트의 직계 자식으로 넣으십시오.** 여러 줄짜리 항목
+(`<value>`/`<comment>` 가 다음 줄에 있는 것) 바로 뒤에 끼워 넣다가 이렇게 됩니다.
+
+검사와 되돌리는 법은 [`11`](11-ui-verification-protocol.md) 6.5.

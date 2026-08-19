@@ -43,7 +43,7 @@
 | 1 | 우측탭 슬라이더가 **1씩** 움직임 | `Views/Controls/InspectorSlider.xaml` 에 `StepFrequency` 미지정 → WinUI 기본 **1**, `SnapsTo` 기본 StepValues. macOS 는 `Slider(value:in:)` 에 `step:` 없음 = 연속 | **고침(0.01)** |
 | 2 | 숫자 눌러도 **입력·Enter·ESC 안 됨** | `InspectorSlider.xaml.cs BeginEditing()` 이 TextBox 를 막 `Visible` 로 바꾼 **같은 틱에** `Focus()` 호출 → 배치 전이라 실패 → 포커스가 방금 접은 단추를 떠나 슬라이더로 감. `IsTabStop="False"` 도 겹침 | **고침** |
 | 3 | **톤 곡선 작동 안 함** | 네 축이 `InspectorSlider` 라 #1 직격. 범위가 ±작은 값이면 정수 스냅으로 **양 끝만** 잡힘. 점 커브 엔진 자체(`point_curve.cpp`)는 macOS 와 일치 | #1 고침으로 해소 예상, **미검증** |
-| 4 | **현상 타깃 MAIN·HS·SP·F135·HR 선택 안 됨** | 타깃 바가 `Views/Library/Defaults/LibraryDevelopDefaultsPanel.xaml.cs:61` 에**만** 있었음 | **아직 부분.** 현상 메뉴 타깃 하위 메뉴 7개(2026-08-19)와 **라이브러리 폴더 머리줄**(2026-08-20, [`07`](07-user-reported.md) F.1.1)로는 바뀐다. 현상 뷰 **인스펙터 안**의 프로세스/타깃 UI 는 **여전히 없음 — 사용자가 2026-08-20 에 다시 지적** |
+| 4 | **현상 타깃 MAIN·HS·SP·F135·HR 선택 안 됨** | 타깃 바가 `Views/Library/Defaults/LibraryDevelopDefaultsPanel.xaml.cs:61` 에**만** 있었음 | **2026-08-20 닫음.** 현상 뷰 좌측탭에서 고르면 필름 프로파일·프리뷰·메뉴 체크가 함께 따라온다(UIA 확인). 메뉴 타깃 하위 7개·라이브러리 폴더 머리줄도 그대로 — [`07`](07-user-reported.md) K2 |
 | 5 | **필름 프로필·룩 작동 안 함** | `DevelopFilmLookPanel.xaml.cs:74-88` 은 붙어 있음. #1 과 겹칠 가능성(강도 슬라이더) | **원인 미확정** |
 | 6 | 오탈자 `타깋` `룹` | `ko-KR/Resources.resw`. macOS 원문은 `타깃`·`룩` | **2026-08-19 고침.** `필름스톡`·`중간톤` 과 설정 5건까지 6언어로 맞춤 — [`07`](07-user-reported.md) F |
 | 6.5 | **필름 베이스 수동 — 베이스 스포이드 없음** | macOS `FilmBasePicker.swift`(149줄) + 캔버스 오버레이 + 인스펙터 캡슐이 전부 없었음. 수동 모드에서 베이스를 집을 유일한 수단 | **2026-08-18 이식함**(`d39e55e`). **C1.9** RealScan 리베이트 클릭 → Dmin `0.40 0.13 0.07`, 헤더·현상본 유지. 장면 클릭은 Dmin 유지 |
@@ -155,4 +155,9 @@ Reveal · 가용성 스토어 · 소스 실체화 · 추적 이벤트 · UI 7파
 | 21 | **자동 레벨을 여러 번 누르면 앱 강제 종료** | **고침.** `develop_export.cpp` 소멸 순서 — [`07`](07-user-reported.md) J2 |
 | 22 | **PowerShell 스크립트 문자열이 전부 깨짐** | **고침.** Windows PowerShell 5.1 은 BOM 없는 파일을 ANSI(cp949)로 읽습니다. 한글이 든 `.ps1` 6개에 UTF-8 BOM — [`11`](11-ui-verification-protocol.md) 4절 |
 
-기준선(2026-08-20 x64-release): native **102/102** · catalog **737** · shell **1384** · 경고 0.
+| 23 | **현상 좌측탭 프로세스·타깃이 화면에만 있고 안 붙음** | **고침.** `DevelopDefaultsChanged` 를 아무도 듣지 않았다 — [`07`](07-user-reported.md) K2 |
+| 24 | **앱이 아예 안 뜸(XamlParseException)** | **고침.** resw 새 항목 20개가 다른 `<data>` 안에 들어가 MakePri 가 통째로 무시했다 — [`07`](07-user-reported.md) K1 |
+| 25 | **타깃을 잇달아 바꾸면 앱 강제 종료** | **고침.** 상주 프레임이 사라진 버퍼를 가리켰다 — [`07`](07-user-reported.md) J2.1 |
+
+기준선(2026-08-20 x64-release, 마지막 게이트): native **102/102** · catalog **747** ·
+shell **1411** · 경고 0.

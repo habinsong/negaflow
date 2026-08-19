@@ -579,11 +579,81 @@ C++ 는 선언의 **역순**으로 지웁니다. 상주 범위가 먼저 죽으�
 
 **재현으로 확인:** 같은 조작 160회 + UIA 토글 24회, 죽지 않음. `native-crash.txt` 새 줄 없음.
 
+### J2.1 ☠️ 그 고침은 **절반이었습니다** (같은 날 다시 죽음)
+
+현상 좌측탭에서 타깃(MAIN/HS/SP/F135/HR)을 잇달아 누르니 **또 죽었습니다.** 이번에는
+`crash_log.cpp` 가 남겼고, `symbolize-rva.ps1` 로 스택 전체를 되돌렸습니다:
+
+```
+develop_run_v29_v34.cpp:416
+ -> develop_export.cpp:348 -> :299(함수 끝) -> :271
+    -> ~GpuResidentScope -> end_resident(gpu_accelerator_resident.cpp:157)
+       -> flush_unlocked(:22) -> GpuWorkingImage::download(:402 -> :169)
+          -> copy_rows -> parallel_rows.cpp:150 -> row_block_pool.cpp:37 -> memcpy
+```
+
+`access write at 0x...` — **해제된 메모리에 쓰기**입니다.
+
+원인: 상주 프레임(`State::ResidentFrame::host`)은 **남의 버퍼를 가리키는 생포인터**입니다.
+단계 함수들은 이미지를 **값으로 받아**(`std::move(invert.image)` 등) 다 쓰고 버리는데,
+그 버퍼가 사라져도 묶음은 남습니다. 앞선 고침(선언 순서)은 **함수 지역 변수**의 파괴
+순서만 바로잡았을 뿐, 단계 **안에서** 죽는 중간 버퍼는 그대로였습니다.
+
+**고침:** `GpuAccelerator::flush_resident_if(host)` — 그 버퍼가 지금 묶여 있을 때만
+내리고 묶음을 풉니다(아니면 아무 일도 안 하므로 상주 최적화는 그대로). `develop_export.cpp`
+가 이미지를 넘기기 직전 네 자리에서 부릅니다(invert → look → grain → finish).
+
+**재현으로 확인:** 타깃 15회 연속 전환 + 자동 색상/레벨 토글 20회, 죽지 않음.
+`native-crash.txt` 새 줄 없음. ctest 102/102 · catalog 747 · shell 1411 · 경고 0.
+
 ### J3 남은 것
 
 - 알약 아이콘 3개가 macOS SF Symbol 과 다릅니다 -> [`08`](08-icons-and-chrome.md) 5절
 - `negaflow.develop.quick-actions` 자동화 ID 가 `StackPanel` 에 있어 UIA 로 안 잡힙니다
   (컨트롤 뷰에 안 올라오는 요소입니다). 판정에 쓰려면 잡히는 요소로 옮겨야 합니다
+
+---
+
+## K. 2026-08-20 — 현상 좌측탭 프로세스·타깃 (사용자가 두 번 지적)
+
+> "지금 현상 프로세스, 타깃 UI/UX 없는데 그거 제대로 만들고 백엔드 코드 제대로 만들어라"
+
+### K1 앱이 아예 **안 떴습니다** — resw 중첩
+
+띄워서 확인하려는데 창이 열리지 않았습니다. `%LOCALAPPDATA%\Negaflow\Logs\startup-fault.txt` :
+
+```
+Microsoft.UI.Xaml.Markup.XamlParseException
+Cannot create instance of type 'Negaflow.Shell.Views.PrintWorkspaceView'
+System.InvalidOperationException: Missing localized resource: printOutputProcess.Text
+```
+
+resw 에는 그 키가 **있었습니다**(6개 언어 모두). 그런데 `makepri dump` 로 세어 보니
+PRI 에는 741개 중 **20개가 통째로 빠져** 있었고, 빠진 것이 전부 그날 새로 붙은
+`printLayoutTemplate*` · `printOutput*` · `printCprint*` · `printProof*` 였습니다.
+
+원인: 그 20개가 `<data name="printOutputSection.Content" ...>` **안쪽에** 들어가
+있었습니다. XML 로는 올바르지만(그래서 파서·정규식 검사는 통과) **MakePri 는 중첩된
+`<data>` 를 세지 않습니다.** 형제 자리로 되돌려 고쳤습니다 — 문구는 한 글자도
+손대지 않았습니다.
+
+**교훈:** resw 를 손으로 고친 뒤에는 **PRI 에 들어갔는지**까지 봐야 합니다
+([`11`](11-ui-verification-protocol.md) 6.5).
+
+### K2 UI 는 있었고, **백엔드가 안 붙어 있었습니다**
+
+앱이 뜬 뒤 UIA 로 재현했습니다.
+
+| 증상 | 원인 | 고침 |
+|---|---|---|
+| 타깃 막대가 낱개 단추 다섯 개(간격 4 · 파란 배경) | macOS `SegmentedPicker` 와 다른 창작 | `Styles/Segments.xaml` — 트랙 라운딩 11 · 여백 3 · 칸 사이 3 · 칸 높이 28 · 고른 칸 8. 필름 베이스 모드 세 칸도 같은 판형 |
+| 타깃을 눌러도 **필름 프로파일이 안 따라옴** | 값을 바꾼 뒤 이 구획을 다시 읽지 않음 | 바꾼 뒤 다시 읽습니다(알림 → 다시 읽기 순서) |
+| 카탈로그만 바뀌고 **화면·프리뷰는 옛 값** | `DevelopDefaultsChanged` 를 **아무도 듣지 않았습니다** | `DevelopInspectorSync` 가 받아 프레임을 다시 읽고 인스펙터·프리뷰를 갱신(macOS `applyDevelopTarget` → `developFrame`) |
+| 룩 칸이 비어 보임 | 프레임에 룩이 없을 때 아무것도 안 고름 | macOS 처럼 `neutral` 을 보입니다 |
+
+**재현으로 확인(UIA):** MAIN→HS→SP→F135→HR 을 눌러 필름 프로파일이
+`MAIN`→`HS`→`SP`→(피커 접힘, 이름만) 로 따라오고, 룩이 `Neutral` 로 보입니다.
+메뉴(현상 > 타깃)의 체크도 같이 움직입니다 — 모델이 실제로 바뀐 증거입니다.
 
 ---
 

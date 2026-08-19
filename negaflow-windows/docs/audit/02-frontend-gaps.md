@@ -166,7 +166,7 @@ macOS 는 `InfraredImportPairing` + 선택 시 `runInfraredCleanIfNeeded` 입니
 
 | 표면 | 증상 | 확인한 것 |
 |---|---|---|
-| **현상 프로세스·타깃 (MAIN·HS·SP·F135·HR)** | 현상 뷰에 **UI 자체가 없음** | 타깃 바는 `Views/Library/Defaults/LibraryDevelopDefaultsPanel.xaml.cs:61 BuildDevelopTargetBar()` 와 **폴더 머리줄(2026-08-20)** 에만 있습니다. 현상 뷰는 `DevelopWorkspaceView.xaml.cs:305` 에서 **읽기만** 하고 설정 호출이 없습니다. 메뉴(현상 > 프로세스/타깃)로는 바뀝니다. **사용자가 2026-08-20 에 다시 지적 — 다음 순서 1번** |
+| **현상 프로세스·타깃 (MAIN·HS·SP·F135·HR)** | **2026-08-20 닫음** | 현상 뷰 좌측탭(라이브러리 탭)의 `LibraryDevelopDefaultsPanel` 이 macOS `DevelopDefaultsSection` 자리입니다. 이날 ① 타깃 막대를 macOS `SegmentedPicker` 판형으로 바꾸고 ② 값이 바뀌면 구획을 다시 읽게 하고 ③ `DevelopDefaultsChanged` 를 `DevelopInspectorSync` 가 받아 프레임을 다시 읽고 프리뷰를 다시 걸게 했습니다. UIA 로 MAIN→HS→SP→F135→HR 전환·필름 프로파일 추종·메뉴 체크까지 확인 — [`07`](07-user-reported.md) K2 |
 | **필름 프로필 / 룩** | 작동 안 함 | `DevelopFilmLookPanel.xaml.cs` 는 붙어 있으나 사용자 확인 결과 반영 안 됨. 슬라이더 눈금 문제(아래)와 겹칠 가능성 |
 | **우측 인스펙터 슬라이더 전체** | 1씩만 움직임이었음 | **2026-08-18 0.01 로 고침** |
 | **슬라이더 값 직접 입력** | 숫자 눌러도 입력 안 됨이었음 | **2026-08-18 고침** |
@@ -207,6 +207,14 @@ macOS 는 `InfraredImportPairing` + 선택 시 `runInfraredCleanIfNeeded` 입니
 같은 날 **설정에서 언어를 바꿔도 안 바뀌던 원인 셋**도 고쳤습니다.
 상세 [`18`](18-localization.md). `sync-swift-ui-strings.ps1` 은 여전히 돌리지 마십시오
 (그 스크립트는 문구를 **덮어씁니다**).
+
+### 4.0 세그먼트 컨트롤 — 2026-08-20 다시 짬
+
+macOS `Shared/UI/SegmentedPicker.swift` 를 그대로 옮겼습니다: 트랙 라운딩 **11** ·
+여백 **3** · 칸 사이 **3** · 칸 높이 **28** · 고른 칸 라운딩 **8** · 트랙 바탕
+`Color.primary.opacity(0.07)`. Swift 에 마우스 올림 상태가 없어 만들지 않았습니다.
+판형은 `src/Shell/Styles/Segments.xaml`. 쓰는 곳: 현상 타깃 다섯 칸,
+필름 베이스 모드 세 칸. 이전 판은 낱개 단추(간격 4 · 파란 배경)라 모양이 달랐습니다.
 
 ### 4.1 빠른 동작 알약 — 2026-08-20 다시 짬
 

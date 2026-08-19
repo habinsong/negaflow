@@ -408,3 +408,24 @@ Windows PowerShell 5.1 은 **BOM 이 없으면 ANSI(이 기계는 cp949)로** �
 
 곁들여: 함수 안에서 `Write-Output` 을 쓰고 호출을 `$null = Show-Element ...` 로 받으면
 **출력이 통째로 사라집니다**(함수의 파이프라인 출력이므로). 진단용 줄은 `Write-Host` 로.
+
+### 6.5 문구를 고쳤으면 **PRI 에 들어갔는지**까지 보십시오
+
+resw 에 있다고 앱에 있는 것이 아닙니다. 2026-08-20 에 새 항목 20개가 다른 `<data>`
+**안쪽에** 들어가 있었고, XML 로는 올바르지만 MakePri 가 통째로 무시해
+**앱이 아예 안 떴습니다**(`Missing localized resource` → `XamlParseException`).
+
+```powershell
+# PowerShell 은 경로에 / 도 받습니다. 문서에서 역슬래시가 깨지지 않게 / 로 적습니다.
+$make = 'C:/Program Files (x86)/Windows Kits/10/bin/10.0.26100.0/x64/makepri.exe'
+& $make dump /if out/run/win-x64-release/payload/resources.pri /of dump.xml /o
+Select-String -Path dump.xml -Pattern '"printOutputProcess"'
+```
+
+빠른 자동 검사(중첩된 `<data>` 는 0이어야 합니다):
+
+```python
+import xml.etree.ElementTree as ET
+root = ET.parse(path).getroot()
+nested = sum(len(d.findall('data')) for d in root.findall('data'))
+```
