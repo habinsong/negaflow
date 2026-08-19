@@ -1,0 +1,346 @@
+> # ☠️ 하드코딩 · 가짜 구현 · 창작 · 병신 백엔드 · 병신 프론트엔드 = 죽음 ☠️
+>
+> **🔬 추측·가설 금지.** "냄새난다" 고 덮지 말고 **냄새의 원인을 찾아 없애십시오.**
+> 재현하고, 스택을 잡고, 계측해서 원인을 **확정**한 뒤에 고칩니다.
+> 원인을 못 잡았으면 **"못 잡았다" 고 적으십시오** — 추측으로 고친 것은 다음 사람의 함정입니다.
+>
+> **🌐 모르면 웹 검색을 적극적으로** 하십시오 — 특히 GPU·최적화·UI/UX 구현. 찾은 것은 출처를 남기십시오.
+>
+> **백엔드**: macOS Swift 파일을 **먼저 열고** 코드를 1:1 로 그대로 옮깁니다.
+> 상수 하나, 임계 하나, 게이트 순서 하나도 지어내지 마십시오.
+>
+> **저장소**: 본체 `C:\Users\habin\negaflow\`(Apache 2.0) · 스캐너 `C:\Users\habin\negaflow-scanner-sane\`(GPL).
+> **두 저장소의 `negaflow-mac\` 은 절대 고치지 마십시오.**
+>
+> 규칙 [`00-index.md`](00-index.md) · UI 검증 [`11`](11-ui-verification-protocol.md) · 라이선스 [`12`](12-repos-and-licence.md)
+
+---
+
+# 19 — 스캔 이미지 파이프라인: frame_4 · frame_5 노이즈와 ICC v4
+
+**보고(2026-08-19~20):** "윈도우 negaflow 에서 tiff 컬러 네거티브를 보면 노이즈가 존나 많다.
+frame_4 가 가장 심하고 frame_5 도 마찬가지다. **현상 안 된 원본**을 봐도 베이스 색이 이상하고
+컬러 노이즈가 심하다. 같은 파일을 맥 negaflow 로 보면 깨끗하다."
+
+이 문서는 그 보고를 끝까지 계측한 기록입니다. **고친 것 / 무죄로 확정한 것 / 아직 못 잡은 것**
+셋을 나눠 적습니다. 못 잡은 것은 못 잡았다고 적습니다.
+
+대상: `C:\Users\habin\OneDrive\바탕 화면\negaflow_test\OpticFilm8100_frame_*.tiff`
+(Plustek OpticFilm 8100, 5088×3401, 16bit, 15장)
+
+---
+
+## 1. 두 파일은 형식부터 다르다
+
+`negaflow-cli --probe-tiff` 실측:
+
+| | frame_4 | frame_5 |
+|---|---|---|
+| 바이트 순서 | **big-endian** | little-endian |
+| 압축 | **LZW(5)**, strip 1134, RowsPerStrip 3, Predictor 없음 | 없음(1), strip 1 |
+| 채널 | **4** (`extra_samples=[1]` 연관 알파) | 3 |
+| ICC | **572 바이트** | 없음 |
+| 파일 크기 | 127,163,416 | 103,825,968 |
+
+15장 전수 조사 결과 **두 갈래뿐**입니다.
+
+- **원본 스캔 갈래** — frame 1·2·3·5·8·9·10·11·13 (little-endian, 무압축, RGB, ICC 없음)
+- **파생 갈래** — frame 4·6·7·12·14·15 (big-endian, LZW, RGBA, 572B ICC)
+
+파생 갈래 6장은 **형식이 완전히 같습니다.** 즉 "frame_4 만 유별나다" 는 형식으로 설명되지 않습니다.
+
+### 1.1 frame_4 의 ICC 는 애플이 쓴 v4 리니어 프로파일
+
+| 항목 | 값 |
+|---|---|
+| version | **4.0** |
+| class / space / PCS | `mntr` / `RGB` / `XYZ` |
+| cmm / platform / creator | `appl` / `APPL` / `appl` |
+| desc | **`sRGB IEC61966-2.1 Linear`** |
+| cprt | `Copyright Apple Inc., 2019` |
+| wtpt | 0.9642 / 1.0 / 0.8249 (D50) |
+| rXYZ·gXYZ·bXYZ | sRGB 원색의 D50 적응값 |
+| rTRC·gTRC·bTRC | **`para` 타입 0, g = 1.0 (리니어)** |
+| 기타 | `chad`(sf32), **`cicp`: primaries=1, transfer=8(리니어), matrix=0, full_range=1** |
+
+파일 스스로 "sRGB 원색 + **감마 1.0**" 이라고 선언합니다. 애플이 붙인 프로파일이므로
+**frame 4·6·7·12·14·15 는 macOS 를 한 번 거쳐 다시 저장된 파생본**입니다.
+
+---
+
+## 2. 무죄로 확정한 것 — 전부 실측
+
+### 2.1 LZW 압축 해제 · 바이트 순서 (무죄)
+
+독립 LZW 디코더(TIFF 방식, MSB-first, early change)를 따로 짜서 WIC 출력과 대조:
+
+```
+5088x3401 samples=4 rows_per_strip=3 compression=5 predictor=1 strips=1134 big=1
+independent raster bytes=138434304  expected=138434304
+differing_samples=0 of 69217152   worst_delta=0
+```
+
+**6,921만 샘플 전부 일치, 불일치 0.**
+
+### 2.2 앱이 쓰는 64행 분할 읽기 (무죄)
+
+`rows_per_copy=64` 로 잘라 읽은 것 vs 통째로 읽은 것:
+
+```
+differing_samples=0 of 69217152   worst_delta=0
+```
+
+### 2.3 GPU 프리뷰 vs CPU 프리뷰 (무죄)
+
+`NEGA_GPU=0` 으로 끄고 같은 프레임을 2560 상자로 렌더해 BMP 바이트 비교:
+
+```
+differing_bytes=433105 of 17520640 (2.47%)  mean_delta=1.00  worst=1
+```
+
+최대 1/255 — 부동소수 반올림 수준.
+
+### 2.4 Windows ICM 색 변환 (거의 무죄, 2.5절 참고)
+
+frame_4 의 ICC 를 그대로 물려 왕복:
+
+- 회색 램프 왕복 오차 **최대 19.1 / 65535**(입력 60730), 통상 3~15
+- 색 탐침(리니어 입력 → ICM 왕복 → 오차, 코드 단위):
+
+| 입력 (R,G,B) | 뜻 | 오차 |
+|---|---|---|
+| 14608, 8534, 4417 | frame_4 자동 dmin | −2, +6, **−14** |
+| 20456, 11373, 6357 | 채널 최대 | −2, −5, +6 |
+| 6554, 3277, 1311 | 어두운 네거티브 | −1, +5, −7 |
+| 65535, 0, 0 | 순수 R | 0, +7, 0 |
+| 0,65535,0 / 0,0,65535 | 순수 G·B | **정확** |
+| 32768 ×3 | 중간 회색 | −11, −4, +5 |
+
+mscms 는 이 v4 프로파일을 **제대로 먹습니다.** "Windows 가 v4 를 못 읽는다" 는 추측은 실측으로 틀렸습니다.
+
+### 2.5 다만 그 작은 오차가 반전으로 증폭된다
+
+ICC 를 **떼어낸 동일 화소 사본**(IFD 에서 태그 34675 만 제거)을 같은 dmin 으로 현상해 16bit PNG 비교:
+
+| 채널 | 평균 차 | 최대 차 | >256코드 비율 |
+|---|---:|---:|---:|
+| R | 21.04 | 119 | 0.000% |
+| G | 28.30 | 314 | 0.000% |
+| **B** | **107.80** | **463** | **11.067%** |
+
+차이 그림은 **매끈하고 파랑 편중** — 무작위 잡음이 아니라 계통 오차입니다. 컬러 네거티브의
+파랑은 리니어에서 최대 0.097, 즉 **6,400/65535 코드**가 전부이고 반전이 그 구간을 약 15배로
+늘립니다. 입력 14코드 오차가 출력 100코드가 됩니다.
+
+**결론: ICM 은 정확하지만 이 파일의 파랑에는 여유가 없다.** "베이스 색이 미묘하게 다르다" 의
+정체이고, **노이즈의 정체는 아닙니다.**
+
+### 2.6 WIC 스케일러 (무죄)
+
+frame_4 는 RGBA 라 프리뷰 디코드에서 `IWICBitmapScaler` 를 타고 RGB 프레임은
+[`wic_tiff_decoder.cpp`](../../src/Native/imageio/wic_tiff_decoder.cpp) 의
+`allow_scaler = layout != rgb16` 때문에 건너뜁니다. 2560 축소 실측:
+
+| 모드 | meanG | meanAbsLaplacianG |
+|---|---:|---:|
+| HighQualityCubic (생산 경로) | 3814.2 | 451.93 |
+| BoxAverage (기준) | 3813.7 | 530.98 |
+| FullRes (원본) | 3814.2 | 563.02 |
+| Fant | **CopyPixels 실패 0x80070057** | — |
+| NearestNeighbor / Linear / Cubic | 32656 (쓰레기) | — |
+
+생산이 쓰는 HighQualityCubic 은 평균이 원본과 일치하고 박스 평균보다 부드럽습니다.
+에일리어싱이 아닙니다. **Fant 실패와 나머지 세 모드의 쓰레기 출력은 WIC 자체의 함정이니
+모드를 바꾸지 마십시오.**
+
+### 2.7 데이터 자체는 프레임마다 다르지 않다
+
+| 프레임 | 변환 | channel_max |
+|---|---|---|
+| 4 | `embedded_icc_via_windows_icm_srgb16_to_linear_srgb_f32` | 0.3121 / 0.17352 / 0.09699 |
+| 4 (ICC 제거) | `linear_scanner_raw_to_linear_srgb_f32` | 0.31218 / 0.17359 / 0.09706 |
+| 5 | `linear_scanner_raw_to_linear_srgb_f32` | 0.31495 / 0.17111 / 0.09885 |
+| 6·7·12·14·15 | — | 0.3099 ~ 0.3672, 같은 성격 |
+
+자동 베이스도 같은 롤답게 일치합니다 — frame_4 `[0.2229, 0.1302, 0.0674]` ·
+frame_5 `[0.2274, 0.1344, 0.0711]` · frame_6 `[0.2269, 0.1344, 0.0710]`.
+
+**frame_4 만 유별난 데이터가 아닙니다.**
+
+---
+
+## 3. 고친 것 — 원본(Raw) 뷰가 현상 레시피를 얹고 있었다
+
+**"원본부터 베이스 병신, 컬러노이즈 병신" 의 실제 원인입니다.**
+
+| | macOS | Windows (고치기 전) |
+|---|---|---|
+| 원본 뷰 | `DevelopFrameRenderer.renderRawPreview` — 원본 CIImage 에 **기하 변환만** | `DevelopRequestFactory.Create(uninvertedSource: true)` — **레시피 전체를 반전만 빼고 적용** |
+
+카탈로그(`library.sqlite`)에 저장돼 있던 값:
+
+- **frame_4** — `autoLevels: true`, **`developTarget: "noritsu"`**(표시명 **HS**)
+- **frame_5** — `autoLevels: true`, `autoNeutralBalance: true`, `exposure 0.26`, `density 0.4`, `blacks 0.15`, `contrast −0.128`
+
+`autoLevels` 가 채널을 각각 끝까지 늘려 주황 마스크를 **탈색**시키고, HS 타깃의 **감마 도메인
+루마 USM(radius 0.9, amount 0.6)** 이 그레인을 깎아 세웁니다. frame_4 프리뷰 실측:
+
+| 채널 | MAIN | HS | 증가 |
+|---|---:|---:|---:|
+| R 고주파 σ | 5.70 | 6.69 | **+17%** |
+| G 고주파 σ | 4.98 | 6.46 | **+30%** |
+| B 고주파 σ | 4.80 | 5.74 | **+20%** |
+| 채널 평균 이동 | — | R +3.2 / G −1.4 / B −2.6 | 베이스 색 이동 |
+
+**둘 다 문제이고 frame_4 가 더 심한 이유**가 이것입니다 — frame_4 에만 HS 가 추가로 얹힙니다.
+
+**고침:** [`DevelopRequestFactory.cs`](../../src/Shell.Core/Develop/DevelopRequestFactory.cs) —
+`uninvertedSource` 일 때 톤·커브·믹서·그레이딩·캘리브레이션·노이즈리덕션·흑백토닝·닷지번·
+필름룩·스캐너프로파일·현상타깃·autoLevels 를 전부 항등으로. 결함 제거만 남깁니다(macOS 도
+raw 프리뷰에 cleaned raw 를 넘김).
+
+### 3.1 곁다리로 같이 고친 것 — 도구 상태가 프레임을 따라가지 않았다
+
+macOS 는 `frame.showDeveloped`(비교 모드)와 `basePickerFrameID`(스포이드)를 **프레임마다** 답니다.
+Windows 는 작업공간에 한 벌뿐이라, 한 프레임에서 `원본` 이나 스포이드를 켜면 **그 뒤로 여는
+사진마다** 반전 전 네거티브가 나왔습니다.
+
+- [`CanvasCompareState.cs`](../../src/Shell.Core/Develop/Canvas/CanvasCompareState.cs) — `BindFrame()` 으로 프레임별 보관, 처음 보는 프레임은 현상본
+- [`DevelopFrameList.cs`](../../src/Shell/Views/Develop/Host/DevelopFrameList.cs) — 프레임 전환 시 스포이드 해제 + `UninvertedSource` 재계산
+
+---
+
+## 4. 아직 안 고친 것 — 사진앱과 negaflow 의 원본이 다르다
+
+사용자 기준: **"현상 안 된 원본이 윈도우 기본 사진앱과 다르면 문제다."**
+
+2560 상자로 렌더해 화소 단위 비교(대각선이 0 이면 같은 그림):
+
+| 원본 | 대각선 평균 오차 (B/G/R) | 최대 | 판정 |
+|---|---|---:|---|
+| **frame_4** | 0.30 / 0.30 / 0.42 | **4/255** | 사실상 동일 |
+| **frame_5** | 30.10 / 47.01 / 63.87 | **78/255** | 크게 다름 |
+
+### 4.1 frame_5 — ICC 없는 파일을 리니어로 읽는다
+
+| frame_5 원본 | B 평균 | G 평균 | R 평균 | B 고주파 σ |
+|---|---:|---:|---:|---:|
+| Windows 사진앱 | 4.9 | 12.4 | 30.1 | 0.45 |
+| negaflow 원본 | **37.3** | **61.4** | **95.8** | **1.49** |
+
+파랑이 **7.6배 밝고 노이즈가 3.3배**입니다. 원인은
+[`decoded_image.h`](../../src/Native/imageio/include/negaflow/imageio/decoded_image.h) 의
+`UntaggedRgbTransfer::linear_scanner` — 태그 없는 TIFF 를 **리니어**로 읽고 sRGB 로 인코딩합니다.
+어두운 쪽 기울기가 12.92 배라 그림자와 함께 노이즈 바닥이 같이 올라옵니다. 사진앱은 태그가
+없으면 **이미 sRGB** 로 봅니다(WIC 기본).
+
+**그런데 macOS 도 똑같이 리니어로 읽습니다.** `ImageLoader.loadImported` 의 기본값이
+`untaggedTIFFRole: .linearScannerRaw` 이고 주석에 근거까지 있습니다 — *"같은 파일을 sRGB 로
+읽으면 Dmin 실측이 실패하고 결과가 흰색으로 붕뜬다."* 웹 검색으로도 확인됩니다: VueScan RAW /
+SilverFast HDRi 는 16bit 에서 리니어입니다(일반 TIFF 출력은 감마).
+
+**따라서 frame_5 의 사진앱 불일치는 Windows 만의 버그가 아니라 두 플랫폼 공통의 설계입니다.**
+
+### 4.2 frame_4 — 사진앱은 v4 프로파일을 안 먹는 것으로 보인다
+
+| frame_4 원본 | R | G | B |
+|---|---:|---:|---:|
+| ICC 적용 (negaflow = WIC 컬러변환) | 84.5 | 49.9 | 26.5 |
+| **ICC 무시 (= 실제 사진앱 화면의 진한 주황)** | 22.4 | 7.7 | 2.3 |
+
+`IWICColorTransform` 으로 ICC 를 적용해 재현한 그림은 negaflow 와 4/255 이내로 같습니다.
+그런데 **실제 사진앱 화면은 ICC 를 뗀 쪽과 같은 진한 주황**입니다. MS 문서는 "사진앱은 임베드
+프로파일을 쓴다" 고 하지만 이 v4 프로파일에서는 실제 동작이 다릅니다.
+
+**⚠️ 확정도:** ① 사용자 스크린샷의 색·채도와 ② ICC 를 뗀 렌더의 수치가 맞아떨어지는 것으로
+**추론**한 것입니다. 사진앱 내부를 계측한 것이 아니고 문서 근거도 못 찾았습니다.
+
+---
+
+## 5. 고친다면 — macOS 와 어떻게 어긋나는가
+
+### 갈래 A — 태그 없는 TIFF 를 sRGB 로 읽는다 (frame_5 를 사진앱에 맞춤)
+
+- 고칠 곳: `DecodedImage.untagged_rgb_transfer` 기본값을 `srgb_encoded` 로
+- **macOS 와 어긋남:** macOS 기본은 `.linearScannerRaw`. 값 도메인이 달라져
+  **자동 Dmin 실측이 실패하고 반전 결과가 흰색으로 붕뜹니다**(macOS 주석의 실측 기록).
+  프레임 9장(1·2·3·5·8·9·10·11·13)의 현상 결과가 전부 달라집니다.
+- **판정: 하면 안 됨.**
+
+### 갈래 B — TIFF 의 임베드 ICC 를 무시한다 (frame_4 를 사진앱에 맞춤)
+
+- 고칠 곳: `scanner_to_working.cpp` 의 ICC 분기를 끄고 `linear_scanner_raw` 로 통일
+- **macOS 와 어긋남:** macOS `profileAwareImage` 는 프로파일이 **있으면** 그것을 쓰고
+  `shouldInterpretAsLinearRaw` 는 `kCGImagePropertyProfileName == nil` 일 때만 참입니다.
+  즉 macOS 는 frame_4 의 v4 프로파일을 **읽습니다.** 무시하면 파생 갈래 6장(4·6·7·12·14·15)의
+  베이스·dmin·현상 결과가 전부 macOS 와 달라집니다.
+- **판정: 하면 안 됨.**
+
+### 갈래 C — 지금대로 둔다 (선택함)
+
+- 파일이 스스로 선언한 값 도메인을 따릅니다. macOS 와 일치합니다.
+- 대가: **frame_4 를 사진앱으로 열면 negaflow 원본 뷰와 색이 다릅니다.** 사진앱이 v4 를 안 먹기
+  때문이며, 맞추면 macOS 가 깨집니다.
+- **사진앱은 기준이 아닙니다. 기준은 macOS negaflow 입니다.**
+
+### 갈래 D — 아직 안 해 본 것 (권함)
+
+값 도메인을 건드리지 말고 **ICM 왕복을 없애는** 길이 남아 있습니다. 지금은
+`ICC → (mscms) → sRGB 16bit 인코딩 → 다시 리니어` 로 **두 번 굽습니다.** 이 프로파일은
+sRGB 원색 + 감마 1.0 이라 수학적으로 항등인데 굳이 왕복시켜 ±14 코드를 얻고 있습니다.
+프로파일이 리니어 sRGB(또는 sRGB 원색 + 알려진 TRC)임을 읽어 **행렬·TRC 를 직접 적용**하면
+왕복 오차가 사라집니다. macOS 와도 어긋나지 않습니다(Core Image 도 프로파일을 해석해 한 번에
+작업 공간으로 옮깁니다).
+
+→ 예상 효과: 2.5절의 파랑 평균 107.8 코드 차이가 0 에 수렴. **노이즈는 안 줄어듭니다.**
+
+---
+
+## 6. 못 잡은 것 — 정직하게
+
+**사용자는 frame_4·frame_5 둘 다 "맥보다 컬러노이즈가 많다" 고, 같은 파일을 두 기계에서
+동시에 보고 판정했습니다. 그 차이를 이 기계에서 재현하지 못했습니다.**
+
+- 이 기계에 macOS 가 없어 **macOS 출력과의 화소 대조를 못 했습니다.** 감사 규칙상 Parsec 으로
+  맥 화면을 봐야 하나 이번 조사에서는 못 했습니다.
+- Windows 쪽 단계는 전부 계측해 무죄로 확정했습니다 — 디코드(비트 일치) · ICM(±14코드) ·
+  GPU(±1/255) · 스케일러(원본과 평균 일치).
+- 3절의 레시피 오적용은 **원본 뷰**를 확실히 망가뜨리고 있었고 고쳤습니다. 다만 그것이 사용자가
+  본 **현상본의 컬러노이즈**까지 전부 설명하는지는 **확인 못 했습니다.**
+- 6.1 노이즈 수치 자체가 프레임 간 직접 비교가 안 됩니다. 같은 좌표에서 잰 frame_4(평균 51000 대)와
+  frame_5·6(평균 25000~31000 대)은 밝기가 달라 σ 를 나란히 놓을 수 없습니다.
+  **밝기를 맞춘 평탄 구역으로 다시 재야 합니다.**
+
+### 다음 사람이 할 일
+
+1. **macOS 로 frame_4·frame_5 를 현상해 16bit 로 내보내고**, 같은 dmin·같은 설정으로 뽑은 Windows
+   결과와 화소 비교. 이것 없이는 "맥보다 노이즈가 많다" 를 확정도 반증도 못 합니다.
+2. 밝기 맞춘 평탄 구역(하늘)에서 고주파 σ 재측정 — 프레임 간 비교가 성립하도록.
+3. 갈래 D(ICM 왕복 제거) 구현.
+4. 3절 고침이 적용된 빌드에서 사용자 재확인 — 원본 뷰의 베이스 색·그레인이 잡혔는지.
+
+---
+
+## 7. 이 조사에서 쓴 연장
+
+| 연장 | 무엇을 재나 |
+|---|---|
+| `lzwcheck.cpp` | 독립 LZW 디코더 vs WIC — 샘플 단위 대조 |
+| `decodecheck.cpp` | 64행 분할 읽기 vs 통째 읽기 |
+| `ramp.cpp` | 실제 ICC 로 회색 램프·색 탐침 왕복 오차 |
+| `photosview.cpp` | 사진앱과 같은 길(WIC + ICC→sRGB)로 8bit 렌더 |
+| `previewdump.cpp` | `pipeline::develop_preview` 직접 호출 + 고주파 σ |
+| `pngdiff.cpp` / `bmpdiff.cpp` | 16bit PNG · 32bpp BMP 화소 대조(채널 뒤바뀜 포함) |
+| `noise.cpp` | 지정 구역 채널별 고주파 σ |
+| `stripicc.ps1` | TIFF IFD 에서 태그 34675 만 제거(화소 불변) |
+| `tiffdump.ps1` | IFD 전체 + ICC 추출 |
+
+CLI 는 `--probe-tiff` · `--prepare-scanner-tiff` · `--auto-base-probe` ·
+`--export-developed-png16` · `--develop-timing` 과 `NEGA_GPU=0` 을 같이 씁니다.
+
+## 8. 출처
+
+- [VueScan File Formats](https://www.hamrick.com/vuescan/html/vuesc24.htm) — RAW 는 8bit 초과에서 리니어, 일반 TIFF 출력은 감마
+- [How to make linear scans with SilverFast](https://www.sebastian-schlueter.com/blog/2017/2/10/how-to-make-a-linear-scan-with-silverfast-88) — HDR Raw 가 리니어 16bit
+- [Windows 11 색 관리 FAQ (Microsoft Photos)](https://www.asus.com/us/support/faq/1051315/) — 임베드 프로파일이 있으면 쓰고, 없으면 sRGB 로 본다는 서술
+- [advanced color icc profiles — Microsoft Learn](https://learn.microsoft.com/en-us/windows/win32/wcs/advanced-color-icc-profiles)

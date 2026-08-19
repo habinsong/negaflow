@@ -43,7 +43,7 @@
 | 1 | 우측탭 슬라이더가 **1씩** 움직임 | `Views/Controls/InspectorSlider.xaml` 에 `StepFrequency` 미지정 → WinUI 기본 **1**, `SnapsTo` 기본 StepValues. macOS 는 `Slider(value:in:)` 에 `step:` 없음 = 연속 | **고침(0.01)** |
 | 2 | 숫자 눌러도 **입력·Enter·ESC 안 됨** | `InspectorSlider.xaml.cs BeginEditing()` 이 TextBox 를 막 `Visible` 로 바꾼 **같은 틱에** `Focus()` 호출 → 배치 전이라 실패 → 포커스가 방금 접은 단추를 떠나 슬라이더로 감. `IsTabStop="False"` 도 겹침 | **고침** |
 | 3 | **톤 곡선 작동 안 함** | 네 축이 `InspectorSlider` 라 #1 직격. 범위가 ±작은 값이면 정수 스냅으로 **양 끝만** 잡힘. 점 커브 엔진 자체(`point_curve.cpp`)는 macOS 와 일치 | #1 고침으로 해소 예상, **미검증** |
-| 4 | **현상 타깃 MAIN·HS·SP·F135·HR 선택 안 됨** | 타깃 바가 `Views/Library/Defaults/LibraryDevelopDefaultsPanel.xaml.cs:61` 에**만** 있었음 | **2026-08-19 부분.** 현상 메뉴 타깃 하위 메뉴 7개로 어느 화면에서든 바꿀 수 있고 지금 값에 체크가 붙는다(앱 UIA 확인). 현상 뷰 **인스펙터 안**의 타깃 바는 아직 없음 |
+| 4 | **현상 타깃 MAIN·HS·SP·F135·HR 선택 안 됨** | 타깃 바가 `Views/Library/Defaults/LibraryDevelopDefaultsPanel.xaml.cs:61` 에**만** 있었음 | **아직 부분.** 현상 메뉴 타깃 하위 메뉴 7개(2026-08-19)와 **라이브러리 폴더 머리줄**(2026-08-20, [`07`](07-user-reported.md) F.1.1)로는 바뀐다. 현상 뷰 **인스펙터 안**의 프로세스/타깃 UI 는 **여전히 없음 — 사용자가 2026-08-20 에 다시 지적** |
 | 5 | **필름 프로필·룩 작동 안 함** | `DevelopFilmLookPanel.xaml.cs:74-88` 은 붙어 있음. #1 과 겹칠 가능성(강도 슬라이더) | **원인 미확정** |
 | 6 | 오탈자 `타깋` `룹` | `ko-KR/Resources.resw`. macOS 원문은 `타깃`·`룩` | **2026-08-19 고침.** `필름스톡`·`중간톤` 과 설정 5건까지 6언어로 맞춤 — [`07`](07-user-reported.md) F |
 | 6.5 | **필름 베이스 수동 — 베이스 스포이드 없음** | macOS `FilmBasePicker.swift`(149줄) + 캔버스 오버레이 + 인스펙터 캡슐이 전부 없었음. 수동 모드에서 베이스를 집을 유일한 수단 | **2026-08-18 이식함**(`d39e55e`). **C1.9** RealScan 리베이트 클릭 → Dmin `0.40 0.13 0.07`, 헤더·현상본 유지. 장면 클릭은 Dmin 유지 |
@@ -52,18 +52,18 @@
 | 8 | **스캐너 플러그인 로딩 자체가 안 됨** | `Shell.Core/Scanner/` 20파일 존재. 동작 미확인 | **미확인** |
 | 9 | **비교 캡슐** | 캡슐+분할 클립 2026-08-19. Before 소스 메뉴·앱 클릭 실측 남음 | **부분** |
 | 10 | **줌 HUD** | 수식+단추+끌기 2026-08-19. 앱 드래그 실측·인화 HUD 는 남음 | **부분** |
-| 11 | **좌측 세로 레일이 가짜** | `LibrarySourceRail.cs:74-76` 이 내는 것은 3개(Import·Files·Collections). macOS 는 `WorkflowSidebar` + `WorkspacePresentationStore.sidebarTab` 저장까지 | **없음 확정** |
+| 11 | **좌측 세로 레일이 가짜** | `LibrarySourceRail.cs:74-76` 이 내는 것은 3개(Import·Files·Collections). macOS 는 `WorkflowSidebar` + `WorkspacePresentationStore.sidebarTab` 저장까지 | **없음 확정.** 2026-08-20 사용자가 **3뷰 전부**(라이브러리/현상/인화)의 세로 레일·좌측탭·우측탭·상단탭을 지시 |
 | 12 | **내보내기·빠른 내보내기 부실** | macOS Export **41파일 7,034줄** → Windows **6파일**. 배치·체크포인트·저널·트랜잭션·검증등급 전부 없음 | **없음 확정** |
 | 13 | **GrainMend IR** | 짝짓기+선택 자동 정리 2026-08-19. Swift 에 5번째 도구 단추 없음 | **부분** |
-| 14 | **초기화(모든 보정·사진 각도) 없음** | macOS `Tools/ResetControlsSection.swift:14,23` 의 `onResetAllAdjustments`·`onResetPhotoAngle` 두 단추. Windows `ResetAllAdjustments`·`ResetControlsSection`·`InspectorResetter`·`ResetAngle` 전부 히트 **0**. macOS `DevelopInspectorResetter.swift`(104줄) 대응 없음 | **없음 확정** |
+| 14 | **초기화(모든 보정·사진 각도)** | `DevelopResetCard` + `DevelopInspectorResetter` + 현상 메뉴. 베이스·기하는 유지 | **2026-08-19 붙음** |
 | 15 | **인화 프리뷰가 저해상도 썸네일이라 깨짐** | `Views/Print/Preview/PrintPreviewRenderer.cs:323-325` 가 `thumbnails()?.TryGet(frame.Id)` → `DecodeThumbnail(jpeg)` 로 **360px 썸네일**을 그대로 확대. macOS `PrintCanvasView.swift:165-167` 은 `frame.developedImage ?? packagePreview ?? thumbnailImage` 순서로 **현상본이 먼저** | **2026-08-19 고침.** 현상 화소 기억 + 칸이 크면 `PrintPreviewResolution` 으로 현상본 업그레이드. 앱 인화 판에서 현상본 확인 |
-| 16 | 프리뷰가 뭘 해도 수 초 | `run_develop` 이 호출마다 원본 디코드. 캐시 없음 | **원인 확정** |
-| 17 | GrainMend 자동·가이드·브러시·복제 전부 느림 | 위와 같은 원인 + GPU 없음. 검출 8,932 ms 중 **형태학이 47%, 미세 입자까지 82%** | **원인 확정.** 계획 [`04`](04-gpu-plan.md)(무엇을) + [`13`](13-performance-playbook.md)(어떻게, vHGW 로 구조 요소 무관 O(1)) |
-| 17.1 | **현상·보정·룩·인화가 느린 정확한 내역** | **아무도 안 쟀습니다.** `src/Native/pipeline/` 에 단계별 ms 계측기가 **없음**(`elapsed`·`duration_ms`·`stage_ms` 히트 0) | **미측정 — 이것이 0단계**([`13`](13-performance-playbook.md) 2절) |
+| 16 | 프리뷰가 뭘 해도 수 초 | 고치기 전: 매번 디코드. 지금: FIFO + 2슬롯. CLI 1280 두 번째 43.1 ms. **앱 벽시계 미측정** | [`16`](16-preview-handoff.md) |
+| 17 | GrainMend 자동이 느림 | 형태학+스크래치 각도 GPU 기본 켬. 검출 17.3s → **4.66s**. 가이드·브러시·복제·IR 즉각은 앱 미측정 | [`15`](15-gpu-handoff.md) 3.2 |
+| 17.1 | 현상·보정 단계별 ms | **있음.** `--develop-timing` · `NEGA_TIMING=1` · `stage_timing.cpp` | 닫음 |
 | 17.3 | **GPU 착수** | `src/Native/gpu/` — D3D11 컴퓨트, FL 11_0 하한, WARP 폴백, 벤더 중립. 화소별 커널 **11개** + 이웃 원시연산 **4개**(박스·가우시안·3×3 중앙값·가이드필터) 이식, 전부 CPU 동치 `1e-5` 고정. **박스·가우시안·중앙값은 전 조건 비트 단위 일치.** **톤 단계 7/7 완주**(우측 인스펙터 경로 전체) + **`filmScanShrink` 전 사슬**(`apply_film_scan_denoise` 와 직접 대조, CPU 와 같은 512/18 타일로 1.2e-07) | **2026-08-18.** 상세는 [`04`](04-gpu-plan.md) 0절 |
-| 17.4 | **GPU 가 아직 아닌 것** | ① 파이프라인 미연결(`stages/look.cpp`·`stages/finish.cpp` 는 CPU 만 부름) ② 속도 미측정(계측기 없음) ③ 내장 GPU 실기 미확인(이 기계에 Intel/AMD 내장 없음) ④ 전송 대역폭 미측정 ⑤ `film_scan_denoise` 타일 오케스트레이터가 **시험 안에만** 있음 | **정직하게 미완** |
+| 17.4 | **GPU 가 아직 아닌 것** | 내장 GPU 실기 · `GpuImagePool` 내장 메모리 · 64³ 큐브는 별건. 커널 3.1–3.8 은 닫음 | [`15`](15-gpu-handoff.md) 4절 |
 | 17.5 | **GPU 가 재서 확정한 제약 둘** | ① 러닝 섬을 쓰는 단계는 GPU 도 **CPU 와 같은 타일**로 나눠야 값이 같습니다 — 창 밖을 안 봐도 **누적 이력**이 따라옵니다(전체 한 번에 4.3e-05, 같은 타일 1.2e-07) ② HLSL `pow` 는 `std::pow` 와 **마지막 비트가 같을 수 없고**(D3D11 이 `log2`·`exp2` 에 2^-21 허용), 가이드 필터의 `1/(variance+ε)` 이 그 1 ulp 를 2e-05~6e-05 로 키웁니다 | [`13`](13-performance-playbook.md) 15·16절 |
-| 17.2 | **CPU 쪽 안 켠 것** | SIMD 히트 11개 전부 `flatbed_frame_*`(화소 경로 0) · 스레드 풀 없음(`parallel_rows.cpp:113` 호출마다 `std::thread`) · `/arch:`·`/GL`·`/LTCG` 없음(`/fp:precise` 는 `cmake/CompilerWarnings.cmake:12` 에 있음) | **실측 확인**([`13`](13-performance-playbook.md) 1·3절) |
+| 17.2 | **CPU 쪽 안 켠 것** | SIMD 는 `flatbed_frame_*` 만. 스레드 풀은 **있음**(`row_block_pool`). `/GL`·`/LTCG` 없음 | [`13`](13-performance-playbook.md) |
 
 ---
 
@@ -73,13 +73,13 @@
 
 | macOS | 줄 | Windows |
 |---|---:|---|
-| `Tools/ResetControlsSection.swift` | 44 | **없음** — 모든 보정 초기화 / 사진 각도 초기화 |
-| `DevelopInspectorResetter.swift` | 104 | **없음** — 섹션별 초기화 로직 |
+| `Tools/ResetControlsSection.swift` | 44 | **있음.** `DevelopResetCard` |
+| `DevelopInspectorResetter.swift` | 104 | **있음.** `DevelopInspectorResetter.cs` |
 | `DevelopInspectorKeyboardController.swift` | — | **없음** |
 | `DevelopInspectorProfileMatcher.swift` | — | **없음** |
-| `Histogram/InteractiveHistogramView.swift` | — | **없음** — 히스토그램은 그리지만 상호작용 없음 |
-| `Tools/DefectControlsSection.swift` | — | **없음**(히트 0) |
-| `Develop/DevelopHistory.swift` + `AppModel+DefectHistory.swift` | 228 | **없음** — **undo/redo 자체가 없음** |
+| `Histogram/InteractiveHistogramView.swift` | — | 히스토그램은 그림. 상호작용 없음 |
+| `Tools/DefectControlsSection.swift` | — | 히트 0 |
+| `DevelopHistory` + `DefectHistory` | 228 | `FrameEditHistory` 있음. 이력 **패널**은 없음 |
 
 ### 2.2 캔버스
 
@@ -95,8 +95,11 @@
 ### 2.3 라이브러리
 
 `FilmstripScope` · `FrameStepButton` · `FrameRenameSheet` · `LibraryCompareView` ·
-`LibraryFolderDevelopmentControls` · `LibraryOrganizerSection` · `LibraryOrganizerNameSheet` ·
+`LibraryOrganizerSection` · `LibraryOrganizerNameSheet` ·
 `HorizontalFilmstripWheelBridge` — 전부 히트 0.
+
+`LibraryFolderDevelopmentControls` 는 **2026-08-20 에 붙었습니다**
+(`LibraryFolderDevelopment.cs` + 폴더 머리줄 프로세스/타깃/적용).
 
 ### 2.4 인화
 
@@ -116,9 +119,9 @@ Reveal · 가용성 스토어 · 소스 실체화 · 추적 이벤트 · UI 7파
 | | macOS | Windows |
 |---|---|---|
 | 크기 | `thumbnailMaxDimension = 360` | `ThumbnailService.MaximumDimension = 360` ✔ |
-| 언제 만드나 | 정착 패스마다 현상 결과로 덮어씀 (`AppModel+DevelopRendering.swift:236`) — 인터랙티브 패스는 건너뜀 → 디스크 IO 는 정착 1회 | 정착 패스 자체가 없음 |
-| 네거티브 최초 | 빠른 포지티브 썸네일 → 정착 결과로 교체 (`AppModel+Develop.swift:111`) | 대응 없음 |
-| 인화 뷰에서 | **현상본 우선**, 썸네일은 최후 폴백 | **썸네일만** 씀 → 확대하면 깨짐 |
+| 언제 만드나 | 정착 패스마다 현상 결과로 덮어씀. 인터랙티브는 건너뜀 | 정착에서만 `RememberDeveloped`/`Publish` |
+| 네거티브 최초 | 빠른 포지티브 썸네일 → 정착 결과로 교체 | 대응 없음 |
+| 인화 뷰에서 | 현상본 우선 | **2026-08-19.** 현상본 먼저. 칸이 크면 `PrintPreviewResolution` |
 
 ---
 
@@ -135,7 +138,21 @@ Reveal · 가용성 스토어 · 소스 실체화 · 추적 이벤트 · UI 7파
 
 ## 5. 아직 원인을 못 잡은 것 (정직하게)
 
-1. 스캐너 DPI/심도/프레임규격 선택 시 **앱 종료** — 재현 후 스택 필요
-2. 스캐너 플러그인 로딩 실패 — 로그 필요
-3. 필름 프로필·룩이 안 먹는 정확한 이유 — 슬라이더 눈금 문제 고친 뒤 재확인 필요
-4. 복제 도장 칩을 눌러도 캔버스 컨트롤 바가 안 뜨는 이유 — 클릭 미도달인지 버튼 비활성인지 미확정
+1. 스캐너 DPI/심도/프레임규격 종료 — **A2 고침.** 플러그인 로딩 실패는 로그 필요
+2. 필름 프로필·룩이 안 먹는 정확한 이유 — 슬라이더 고친 뒤 앱 재확인 안 함
+3. 복제 도장 칩 → 캔버스 바 — 클릭 미도달인지 비활성인지 미확정
+4. A4 `0xc0000409` 가 패치 들어간 `run-app` Develop 클릭에서 사라졌는지 — 코드는 있음, 그 클릭은 약함
+
+---
+
+## 6. 2026-08-20 갱신
+
+| # | 무엇 | 상태 |
+|---|---|---|
+| 18 | **다국어가 설정에서 안 바뀜** | **고침.** 원인 셋(정적 `ResourceLoader` · 다시 칠할 길 없음 · `x:Uid` 는 한 번만 풀림). macOS 표 전수 대조 2,670건 중 다른 것 0 — [`18`](18-localization.md) |
+| 19 | **폴더별 현상 프로세스·타깃·적용** | **붙음.** [`07`](07-user-reported.md) F.1.1. 앱 실측은 아직 |
+| 20 | **자동 색상/레벨/톤/화이트 밸런스 알약 모양·클릭·글자** | **고침.** WinUI 기본 `ToggleButton` 판형이 원인 — [`07`](07-user-reported.md) J1 |
+| 21 | **자동 레벨을 여러 번 누르면 앱 강제 종료** | **고침.** `develop_export.cpp` 소멸 순서 — [`07`](07-user-reported.md) J2 |
+| 22 | **PowerShell 스크립트 문자열이 전부 깨짐** | **고침.** Windows PowerShell 5.1 은 BOM 없는 파일을 ANSI(cp949)로 읽습니다. 한글이 든 `.ps1` 6개에 UTF-8 BOM — [`11`](11-ui-verification-protocol.md) 4절 |
+
+기준선(2026-08-20 x64-release): native **102/102** · catalog **737** · shell **1384** · 경고 0.

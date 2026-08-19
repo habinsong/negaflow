@@ -1,6 +1,7 @@
 # 07 — UI 격차 감사 (실제 화면 대조)
 
-2026-08-17. macOS 스크린샷(`negaflow_mac_screenshot/`, 1343×768)과 실행 중인 Windows 앱
+2026-08-17. 당시 macOS 스크린샷(`negaflow_mac_screenshot/`, 1343×768, **2026-08-19 폐기**)과 실행 중인 Windows 앱
+현재 살아 있는 기준은 `C:\Users\habin\맥negaflow 스크린샷\`(목록 `docs/audit/11` 1.3절). 이 문서의 판정은 2026-08-17 캡처 기록이다.
 화면(3840×2160, 1456×816 로 축소 캡처)을 잘라 나란히 놓고 확인한 것만 적습니다.
 
 판정: **없음**(macOS 에 있는데 Windows 에 없음) / **창작**(macOS 에 없는데 Windows 가 지어냄) /

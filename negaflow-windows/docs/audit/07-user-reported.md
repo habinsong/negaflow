@@ -495,23 +495,116 @@ DevelopLookLabel         DevelopLookSelector
 (있는 `*ApplyButton` 은 크롭과 브러시 것뿐). 그리고 이것은 **폴더별**이 아니라
 "라이브러리 기본값" 패널입니다 — macOS 는 폴더를 골라 그 안의 프레임에 **일괄 적용**합니다.
 
-**판정: 프론트엔드에 적용 단추 없음, 백엔드에 일괄 적용 경로 없음. 그래서 작동하지 않습니다.**
+**판정(2026-08-19): 프론트엔드에 적용 단추 없음, 백엔드에 일괄 적용 경로 없음.**
+
+### F.1.1 닫음 — 2026-08-20
+
+| 무엇 | Windows | macOS 대응 |
+|---|---|---|
+| 백엔드 | `Shell.Core/Library/LibraryFolderDevelopment.cs` | `AppModel+LibraryFolderDevelopment.swift` |
+| 보이는 타깃 | Main · Noritsu · Sp3000 · F135 · Hr **5개** | `visibleTargets` 와 같은 순서 |
+| 적용 | `Apply(host, frames, process, target, progress)` — 프레임마다 `EditRoute` → `Edit(ProfileAfterTargetChange)` | `applyLibraryFolderDevelopment(process:target:frames:progress:)` |
+| UI | `LibraryWorkspaceView.xaml` 폴더 머리줄: 프로세스 98×30 · 타깃 84×30 · **적용** 30 높이, 라운딩 8, 진행 문구 | `LibraryFolderBatchPicker` 2개 + `LibraryFolderApplyButton` |
+| 자동화 ID | `negaflow.library.folder-develop-apply` | — |
+
+피커는 **초안**입니다(`LibrarySourceRail.folderDrafts`) — macOS 도 `@State` 로 들고 있다가
+**적용을 눌러야** 프레임에 씁니다. 고르기만 해서는 사진이 바뀌지 않습니다.
+
+시험: `tests/Shell.UnitTests/LibraryFolderDevelopmentTests.cs`.
+**앱에서 눌러 본 실측은 아직입니다** — 폴더 머리줄을 띄우고 확인해야 합니다.
 
 ---
 
-## G. 다음 순서 (2026-08-19 재집계)
+## J. 2026-08-20 사용자 보고 — 빠른 동작 알약
+
+> "자동색상/자동레벨/자동톤/자동 화이트 밸런스 ... 버튼 눌렀을때 음영 크기도 이상하고,
+> 클릭도 이상하고, 클릭후에 글자는 거의 안보이고 무엇보다 버튼 누르면 앱 강제 종료됨"
+
+### J1 모양 - 세 가지가 전부 같은 원인(WinUI 기본 판형)
+
+macOS `DevelopQuickActionsSection.swift` 의 `QuickTogglePill` 은 `.buttonStyle(.plain)` 에
+손수 칠한 바탕만 씁니다:
+
+| macOS | 값 |
+|---|---|
+| 알약 전체 | `frame(maxWidth: .infinity, minHeight: 32)` + `contentShape(Rectangle())` |
+| 켜짐 | `Color.accentColor.opacity(0.2)`, 라운딩 **12** |
+| 마우스 올림 | `Color.primary.opacity(0.12)` |
+| 글자·아이콘 | 켜짐 `accentColor` / 꺼짐 `Color.primary` |
+| 바깥 표면 | `liquidSurface(cornerRadius: 15)` |
+
+Windows 는 기본 `ToggleButton` 판형을 그대로 썼습니다. 그 판형은 **켜지면
+ContentPresenter 를 강조색으로 꽉 칠하고 글자색도 바꿉니다.** 거기에 코드가 글자색을
+다시 강조색으로 칠했으니 **강조색 바탕 + 강조색 글자** — 그래서 글자가 안 보였습니다.
+칠이 테두리·안쪽 여백만큼 작아져 "음영 크기"가 어긋났고, 누를 수 있는 자리도
+알약 전체가 아니었습니다.
+
+**고침(2026-08-20):** `src/Shell/Styles/Pills.xaml` 에 판형 셋을 새로 짰습니다 —
+`NegaflowPillToggleStyle` · `NegaflowPillButtonStyle` · `NegaflowPillResetButtonStyle`.
+바탕은 `Background="Transparent"` 인 격자(전체가 눌립니다), 켜짐 칠은 별도 `Border`
+(라운딩 12, `NegaflowAccentSoftBrush` = 강조색 20%), 글자는 `NegaflowAccentBrush`.
+**WinUI 의 `ToggleButton` 은 켜짐도 `CommonStates` 한 무리로 다룹니다**(WPF 처럼
+`CheckStates` 가 따로 있지 않습니다) — `Checked`/`CheckedPointerOver`/`CheckedPressed`/
+`CheckedDisabled` 네 상태에 같은 설정을 답니다.
+
+앱 실측(UIA, 150% 배율이라 물리 화소):
+
+| | 실측 | 논리(1.5로 나눔) | macOS 스크린샷 |
+|---|---:|---:|---:|
+| 알약 높이 | 48 | **32** | 32 |
+| 칸 사이 | 12 | **8** | 8 |
+| 줄 사이 | 12 | **8** | 8 |
+| 되돌리기 | 36x36 | **24x24** | 24x24 |
+
+`ToggleState` 는 UIA 로 24회 눌러 On/Off 가 번갈아 바뀌는 것까지 확인했습니다.
+
+### J2 강제 종료 - 원인은 **소멸 순서**였습니다
+
+가설로 만든 스트레스 시험(`preview_auto_levels_stress`)은 **10/10 통과** - 재현하지
+못했습니다. 가설이 틀렸습니다. 사용자 지적대로 **로그를 붙이고 단추를 여러 번 눌러**
+재현했습니다(3번째 클릭에서 `0xC0000005`).
+
+| 단계 | 무엇 |
+|---|---|
+| 1 | `src/Native/abi/support/crash_log.cpp` - VEH 로 예외 코드·주소·모듈 RVA·스택 RVA 를 `%LOCALAPPDATA%\Negaflow\Logs\native-crash.txt` 에 남김 |
+| 2 | `cmake/CompilerWarnings.cmake` - Release 도 `/Zi` `/DEBUG` `/OPT:REF` `/MAP`. (`/OPT:ICF` 는 **켜지 않습니다** - 람다가 접히면 스택이 거짓말을 합니다) |
+| 3 | `scripts/symbolize-rva.ps1` - dbghelp `SymFromAddr`+`SymGetLineFromAddr64` 로 RVA 를 함수·줄로 |
+| 4 | 확정: `pipeline/develop_export.cpp` 가 `GpuResidentScope` 를 **단계 출력보다 뒤에** 선언 |
+
+C++ 는 선언의 **역순**으로 지웁니다. 상주 범위가 먼저 죽으며 `flush_resident()` 가
+**이미 사라진 출력 버퍼**에 내려썼습니다. 출력들을 범위보다 **앞에** 선언해 고쳤습니다.
+
+곁가지로 `core/row_block_pool.cpp` 의 완료 통지를 잠금 **안**으로 옮겼습니다
+(`--remaining` 뒤 잠금 밖에서 `notify_all` 하면 기다리는 쪽 스택이 먼저 풀릴 수 있습니다).
+
+**재현으로 확인:** 같은 조작 160회 + UIA 토글 24회, 죽지 않음. `native-crash.txt` 새 줄 없음.
+
+### J3 남은 것
+
+- 알약 아이콘 3개가 macOS SF Symbol 과 다릅니다 -> [`08`](08-icons-and-chrome.md) 5절
+- `negaflow.develop.quick-actions` 자동화 ID 가 `StackPanel` 에 있어 UIA 로 안 잡힙니다
+  (컨트롤 뷰에 안 올라오는 요소입니다). 판정에 쓰려면 잡히는 요소로 옮겨야 합니다
+
+---
+
+## G. 다음 순서 (2026-08-20 갱신)
 
 닫힘(다시 하지 말 것): A1·A2·A3 · E1 네이티브 캐시 · C1.1–C1.9 · E4 · B 메뉴 10/11 ·
-D1 초기화 · D5 슬라이더 undo · GPU 3.1–3.8 · D2/D3 코드 · D4 짝짓기 · F 9건 · 단축키 열거자.
+D1 초기화 · D5 슬라이더 undo · GPU 3.1–3.8 · D2/D3 코드 · D4 짝짓기 · F 9건 · 단축키 열거자 ·
+**F.1 폴더별 적용** · **J1 알약 모양** · **J2 자동 레벨 강제 종료** · **다국어 즉시 전환**.
 
 지금 남은 것:
 
-1. **앱 실측** — 슬라이더 벽시계 · A4 Develop 클릭 · IR 쌍 가져오기 · Before 메뉴 클릭
-2. **05 생산 God object 6개** — 사유를 적거나 나누기
-3. **09 설정** — 디스크·메모리캐시·지원번들·법적고지·색관리 섹션
-4. **D6 내보내기 배치/저널 · D7 인화 사이드바/템플릿**
-5. **F.1 폴더별 적용 단추** · C7 상단 별점 · 08 아이콘 SVG · 필터 캡슐 배치
-6. **16** 커브 중간 왕복은 재서 기각. 해상도 접기 금지
+1. **현상 좌측 프로세스/타깃 UI + 백엔드** — 사용자가 두 번 지적. 아래 3절 표 첫 줄
+2. **3뷰 좌측 세로 레일·좌측탭·우측탭·상단탭 1:1** — [`02`](02-frontend-gaps.md) 2.3
+3. **앱 실측** — 슬라이더 벽시계 · A4 Develop 클릭 · IR 쌍 가져오기 · Before 메뉴 클릭 ·
+   F.1 적용 단추를 앱에서 눌러 보기
+4. **05 생산 God object 10개** — 사유를 적거나 나누기 (`LibraryWorkspaceView.xaml` 이
+   폴더 머리줄 때문에 504줄로 넘었습니다 — 이 세션이 넘긴 것입니다)
+5. **09 설정** — 디스크·메모리캐시·지원번들 섹션
+6. **D6 내보내기 배치/저널 · D7 인화 사이드바/템플릿**
+7. C7 상단 별점 · 08 아이콘 SVG·알약 아이콘 3 · 필터 캡슐 배치
+8. **16** 커브 중간 왕복은 재서 기각. 해상도 접기 금지
     
 ---
 

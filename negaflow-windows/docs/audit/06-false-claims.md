@@ -65,13 +65,10 @@
 
 ---
 
-## 3. "GPU 를 할 때" 문서가 있는데 GPU 코드는 0줄
+## 3. "GPU 를 할 때" 문서가 있는데 GPU 코드는 0줄 — **그때는 맞았고 지금은 틀림**
 
-`docs/plan/02-grainmend-performance.md` 는 D3D11 선택 근거와 13단계 우선순위표를 담고 있고,
-`brief-for-agent.md` 는 이것을 "2단계"로 적었습니다. 그러나 실제 트리에는
-`d3d11`·`ComputeShader`·`.hlsl` 등 **19개 키워드 전부 히트 0** 입니다.
-
-**판정: 계획만 있고 착수 0. 문서가 "진행 중"으로 읽히지 않도록 상태를 명시해야 합니다.**
+2026-08-18 아침에는 `d3d11` 히트 0 이 맞았습니다. **그날 착수했고 3.1–3.8은 닫혔습니다**
+([`15`](15-gpu-handoff.md)). `plan/02` 를 "아직 GPU 0줄"로 읽지 마십시오.
 
 ---
 
@@ -112,7 +109,7 @@
 | God object 10개 | 6,264 / 4,835 / … | 14 / 329 / … 전부 분할됨 |
 | GPU | "2단계 진행" | 감사 시점 **착수 0** 이었음. **2026-08-18 실제 착수**(`aa0d59f`) — `src/Native/gpu/` + 커널 1개, CPU 동치 1e-5 고정. 다만 **파이프라인 미연결·속도 미측정** |
 | `DefectOverlayImage` 불투명도 | 언급 없음 | **창작 0.75** 있었음 → 제거 |
-| 프리뷰 성능 원인 | "형태학이 82%" | 그것도 맞지만 **프리뷰는 매번 디코드(2,695 ms)가 더 큼** |
+| 프리뷰 성능 원인 | "형태학이 82%" | 검출에는 맞음. 프리뷰의 2,695 ms 디코드는 **고치기 전**. 지금은 FIFO+2슬롯 |
 | `applySceneRanged` | "없음" | **이름만 없고 이식돼 있었음** — `scene_density_range` |
 | `FilmBaseStatistics.swift` | "없음" | **이름만 없고 이식돼 있었음** — `coherentCluster`/`median`/`percentile` 셋 다 |
 | `FilmBaseSampleGrid.swift` | "없음" | **이름만 없고 이식돼 있었음** — `SampleGrid`·`make_sample_grid` |
@@ -296,18 +293,18 @@ macOS 커널의 게이트 두 개(`lo < 0 || hi > 1`, `lumaO <= 1e-5`), 플로�
 
 ## 15. 문서가 낡아 "없다" 고 적힌 것들 (2026-08-19 기계 대조로 정정)
 
-### 15.1 단축키 "74 vs 55 · 없는 것 24개" → **66 vs 64 · 없는 것 4개**
+### 15.1 단축키 "74 vs 55 · 없는 것 24개" → **66 vs 68 · 없는 것 0**
 
-[`09`](09-shortcuts-and-settings.md) 1.1·1.2 가 낡았습니다. 두 열거자를 기계로 뺐습니다:
+2026-08-19 재집계. 두 열거자를 기계로 뺐습니다:
 
 ```
 enum WorkflowShortcutAction (Swift)  66 케이스
-enum WorkflowShortcutAction (C#)     64 케이스
-없는 것 4: toggleScannerSimulator · addFlatbedFrame · removeFlatbedFrame · openHelp
-Windows 에만 2: Undo · Redo (macOS 는 표준 편집 메뉴의 .undoRedo 를 갈아 끼움)
+enum WorkflowShortcutAction (C#)     68 케이스
+macOS 에 없고 Windows 에만 2: Undo · Redo (macOS 는 표준 편집 메뉴 .undoRedo)
+없는 것 0 — 스캐너 넷과 openHelp 까지 붙음
 ```
 
-없는 4개는 전부 **아직 없는 메뉴(스캐너·도움말)** 에 붙는 것들입니다.
+앞 판의 "64 · 없는 것 4개" 는 그 넷을 붙이기 **전**입니다.
 
 ### 15.2 문자열 오류 11건 중 **2건은 오류가 아니었습니다**
 
@@ -332,3 +329,41 @@ Windows 에만 2: Undo · Redo (macOS 는 표준 편집 메뉴의 .undoRedo 를 
 **그래서 고치지 않고 그대로 두었습니다.** 필요한 것은 생성기가 아니라 **대조기**입니다 —
 resw 항목의 `<comment>` 에 이미 `AppLocalizedPhrase.<key>` 같은 원본 심볼이 적혀 있으므로,
 그것을 macOS 표와 언어별로 비교만 하고 **쓰지 않는** 검사기를 따로 만들어야 합니다.
+
+---
+
+## 16. 이 감사 묶음이 2026-08-19 에 낡아 틀린 것
+
+같은 실수를 문서로 다시 만들지 않기 위해, **이 폴더가 코드와 어긋나 있던 문장**을 모읍니다.
+
+| 적혀 있던 것 | 실제 (2026-08-19 재집계) |
+|---|---|
+| GPU 히트 0 · 파이프라인 미연결 | `src/Native/gpu/` 60+38. 3.1–3.8 닫음 |
+| 슬라이더마다 TIFF 2,695 ms 디코드 | 프레임 FIFO + 프리뷰 raw 2슬롯. 상자 1280 두 번째 43.1 ms · decode 0 |
+| `FrameCacheManager` 히트 0 | `FrameCacheBudget`/`Policy`/`Residency` + native `frame_cache_budget` |
+| 계측기 없음 · `elapsed` 히트 0 | `stage_timing.cpp` · `--develop-timing` · `NEGA_TIMING=1` |
+| 스레드 풀 없음 · 호출마다 `std::thread` | `row_block_pool` 영속 워커 |
+| God object 닫음 · 사유 없는 초과 0 | 생산 **10개**가 500줄 초과(2026-08-20, [`05`](05-god-objects.md)) |
+| 단축키 없는 것 24개 · 그다음 4개 | **0**. 66 vs 68 (Undo/Redo 는 Windows 만) |
+| 초기화 히트 0 | `DevelopResetCard` · `DevelopInspectorResetter` |
+| GrainMend IR 프론트 없음 | 짝짓기 + 선택 시 `runInfraredCleanIfNeeded`. Swift 에도 5번째 단추 없음 |
+| 비교 캡슐·줌 HUD 없음 | `CanvasCompareHud` · `CanvasToolHud` 2026-08-19 |
+| 설정 크래시 미확인 | A1 고침(2026-08-18) |
+| `ShortcutRecorder` 히트 0 | `SettingsRootView.Shortcuts.cs` 가 키를 받음 |
+
+**이름이 없다고 없는 것이 아니고, 예전에 없어서 적은 문장을 오늘도 쓰지 마십시오.**
+함수 안을 읽고, 이 16절을 먼저 보십시오.
+
+
+---
+
+## 17. 이 세션이 스스로 틀렸던 것 — 2026-08-20
+
+**추측으로 만든 시험은 검증이 아닙니다.** 같은 함정을 다시 밟지 않도록 적어 둡니다.
+
+| 내가 적었던 것 | 실제 |
+|---|---|
+| "자동 레벨 크래시는 **겹친 렌더**가 상주 프레임 버퍼를 놓아서일 것이다" 하고 `preview_auto_levels_stress` 를 만들었다 | **10/10 통과 — 재현 못 했습니다.** 가설이 틀렸습니다. 진짜 원인은 겹침이 아니라 **한 스레드 안의 소멸 순서**였습니다(`GpuResidentScope` 를 출력보다 뒤에 선언). 사용자 지적대로 **로그를 붙이고 단추를 여러 번 누르니** 3번째에서 재현됐습니다 |
+| 스크린샷의 화소값을 그대로 색 사양으로 쓰려 했다 | 맥 스크린샷 PNG 에는 **모니터 ICC 프로파일**(`TFG24F07W`)이 박혀 있습니다. 그 숫자는 sRGB 도 P3 도 아닌 **그 모니터의 장치값**입니다. **색은 Swift 원본에서**(`Color.accentColor` = systemBlue), **자리·크기·비율만 스크린샷에서** 가져와야 합니다 — [`11`](11-ui-verification-protocol.md) 4.3 |
+| 빌드 스크립트의 한글 깨짐을 "콘솔 코드페이지 탓" 으로 넘겼다 | **파일 탓이었습니다.** Windows PowerShell 5.1 은 **BOM 없는 파일을 ANSI(cp949)로** 읽습니다. 한글이 든 `.ps1` 6개에 UTF-8 BOM 을 넣어 고쳤습니다 |
+| (앞 세션) "`native.gpu_film_scan` SEGFAULT 는 원인 미확정" | 고친 뒤 **55회 연속 통과**. 다만 **같은 원인이라고 단정하지 않습니다** — 실패 스택을 못 잡았습니다([`01`](01-backend-gaps.md) 9.4) |

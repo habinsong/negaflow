@@ -14,9 +14,10 @@
 - 한 section만 확장되고 UIA Expand/Collapse 의미를 제공하는지
 - 새 문자열이 6개 로캘 리소스에 존재하는지
 
-비교 캡처는 `negaflow_mac_screenshot/develop_right_basic_restored.png`,
+비교 캡처는 당시 `negaflow_mac_screenshot/develop_right_basic_restored.png`,
 `develop_right_base_panel.png`, `develop_overview.png`입니다. Windows 로컬 렌더 캡처는
 `C:\Users\habin\.codex\visualizations\2026\08\09\019fe570-d6dc-7ee0-ad46-6cff083952ae\windows-develop-fit-full.png`입니다.
+**(2026-08-19: `negaflow_mac_screenshot/` 폐기. 같은 구역의 살아 있는 화면은 `C:\Users\habin\맥negaflow 스크린샷\현상뷰\현상뷰_기본.png` · `현상뷰_우측탭_아이콘6탭바_베이스_자동.png`.)**
 
 ## 실행
 

@@ -30,7 +30,13 @@
 **"있음" 으로 적지 마십시오.** 이번 세션에 검출기가 "오케스트레이션은 있음" 으로 적혀
 있었지만 실제로는 다른 경로를 쓰고 있었습니다.
 
-## 2. 스크린샷 목록 (`negaflow_mac_screenshot/`, 1343×768)
+## 2. 스크린샷 목록
+
+**2026-08-19:** 아래 영문 파일명 목록은 폐기된 `negaflow_mac_screenshot/`(옛 84장)이다.
+살아 있는 기준은 `C:\Users\habin\맥negaflow 스크린샷\` PNG 50장이다. 파일 하나하나와
+폴더에 없는 상태는 `docs/audit/11` 1.3절. 아래 이름을 디스크에서 찾지 마십시오.
+
+### 폐기된 옛 목록 (참고만, 파일이 없음)
 
 ### 라이브러리 (28장)
 `library_overview_grid_100_percent` · `library_all_photos_view_restored` ·

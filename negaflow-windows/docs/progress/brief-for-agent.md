@@ -21,7 +21,7 @@ macOS 에 없는 것을 만들지 않고, macOS 에 있는 것을 빼지 않습�
 |---|---|
 | `C:\Users\habin\negaflow\negaflow-mac\` | **macOS 원본 (Swift).** 정답입니다. 고치지 마십시오 |
 | `C:\Users\habin\negaflow\negaflow-windows\` | **Windows 판.** 여기를 고칩니다 |
-| `C:\Users\habin\negaflow\negaflow_mac_screenshot\` | macOS 실행 화면 62장 (1343×768) |
+| `C:\Users\habin\맥negaflow 스크린샷\` | macOS 실행 화면 PNG 50장. 목록 `docs/audit/11` 1.3절. 옛 `negaflow_mac_screenshot\` 폐기 |
 | `C:\Users\habin\negaflow-scanner-sane\` | 스캐너 플러그인 (별도 저장소) |
 
 macOS 주요 위치:

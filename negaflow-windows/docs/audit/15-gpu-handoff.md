@@ -9,6 +9,8 @@
 > **저장소**: 본체 `C:\Users\habin\negaflow\`(Apache 2.0) · 스캐너 `C:\Users\habin\negaflow-scanner-sane\`(GPL).
 > **두 저장소의 `negaflow-mac\` 은 절대 고치지 마십시오.**
 >
+> **화면 도구 — 자세히.** `windows-mcp` / `windows-gui` MCP 는 **절대 금지.** 켜지 말고 호출하지 말고 대용으로도 쓰지 마십시오. Windows 앱·Parsec 맥 화면은 **computer-use 만.** computer-use 도 **꼭 필요할 때만** 씁니다(토큰). **씁니다:** 화면에 보이는지·눌러서 값이 바뀌는지·잘림/정렬을 이 작업에서 새로 봐야 하고 코드·시험·스크린샷·로그로 부족할 때. **쓰지 않습니다:** GPU/네이티브/시험만 고칠 때, 스크린샷+코드로 충분할 때, 같은 화면 재캡처, "일단 띄워 보자". 쓸 때도 **해당 구역만 크롭.** 전문 [`00`](00-index.md) · [`11`](11-ui-verification-protocol.md).
+>
 > 규칙 [`00-index.md`](00-index.md) · 무엇을 옮기나 [`04`](04-gpu-plan.md) ·
 > 어떻게 빠르게 [`13`](13-performance-playbook.md) · 틀린 서술 [`06`](06-false-claims.md)
 
@@ -166,7 +168,7 @@ CPU 커널은 "변화 없음" 이면 커널을 안 돌리고 **원본을 복사*
 
 ---
 
-## 3. 남은 일 — 우선순위 순서
+## 3. 닫은 일 — 2026-08-19 (다시 이식하지 말 것)
 
 ### 3.1 노리츠 장치 질감 GPU — **2026-08-19 붙임**
 
@@ -214,7 +216,7 @@ GPU 가 안 돌면 시험이 실패합니다(`apply_noritsu_texture` 가 `true` 
 | + RGB 열기/닫기(미세입자) | **5,323 ms** (4,671 / 5,323 / 5,567) |
 
 타일 안에서 스크래치 행을 다시 병렬화하면 워커 4개와 겹쳐 **이득 없음**(5.2~5.6 s).
-되돌렸습니다. 5초를 안정적으로 밑돌리려면 스크래치 각도 커널을 GPU 로 옮기는 쪽이 다음입니다.
+되돌렸습니다. 스크래치 각도 GPU 는 같은 날 붙였습니다(바로 아래).
 
 제품 경로 동치: `native.gpu_morphology_product` — GPU 가 안 돌면 실패,
 열기·닫기·톱햇·RGB 톱햇·RGB 열기 **비트 단위 일치**.
@@ -365,7 +367,9 @@ GPU 가 안 돌면 시험이 실패합니다.
 | `grain_mend_morphology.cpp` `box_mean` (지금 348행) | 같은 5088×3401 자동 검출. `double` 적분과 임시 `float` 적분 둘 다 **성분 610 · 채택 9,331**, 등급 표·`dust_magnitude_mean` 0.0408385 동일. 제품은 **double 로 되돌렸습니다.** GPU 적분은 이 한 장만으로 전 골든을 증명하지 못해 안 붙입니다. |
 | 밴드 측정의 `double` 면적평균 | D3D11 의 double 은 선택 기능이라 **옮길 수 없습니다**([`04`](04-gpu-plan.md) 0.4절). |
 
-다음 구현 가능한 GPU 일은 **스크래치 각도**(검출 벽시계 ~4.8–5.6 s).
+스크래치 각도 GPU 는 3.2에서 닫혔습니다. **다음에 커널을 더 옮기지 마십시오.**
+남은 확인은 4절(내장 GPU 실기 · 풀 메모리 · 타겟 그레이드 큐브는 별건).
+프리뷰 단계마다 왕복하는 문제는 [`16`](16-preview-handoff.md) 입니다.
 
 ---
 
@@ -400,9 +404,25 @@ cmake --build --preset x64-release --target <새 시험>
 .\out\build\native\x64-release\Release\<새 시험>.exe
 
 # 4) 전체 시험
-ctest --preset x64-release          # 지금 90/90
+ctest --preset x64-release          # 기준 native 102/102 (2026-08-20). 줄면 안 됨
 
 # 5) 다시 잰다. 커밋 메시지에 **전후 숫자와 실측 오차**를 적는다.
 ```
 
 **GPU 를 안 쓰고 재려면** `NEGA_GPU=0`. **켜고 끄며 재는 것**이 유일한 증거입니다.
+
+
+---
+
+## 6. 2026-08-20 — GPU 경로에서 고친 것
+
+`pipeline/develop_export.cpp` 가 `GpuResidentScope` 를 **단계 출력보다 뒤에** 선언해,
+소멸 역순으로 상주 범위가 먼저 죽으며 `flush_resident()` 가 **이미 사라진 출력**에
+내려썼습니다. 앱에서 자동 레벨을 세 번쯤 누르면 `0xC0000005` 였습니다.
+
+**규칙: 상주 범위는 그것이 채우는 버퍼보다 먼저 선언합니다.**
+
+`native.gpu_film_scan` 의 간헐 SEGFAULT(앞 세션 27회 중 3회)는 그 뒤 **55회 연속 통과**
+입니다. 같은 원인이라고 단정하지는 않습니다 — 실패 스택을 못 잡았습니다.
+다시 나오면 `src/Native/abi/support/crash_log.cpp` 가 예외 코드·RVA·스택을 남기고,
+`scripts/symbolize-rva.ps1` 이 함수·줄로 되돌립니다(Release 도 PDB 를 냅니다).

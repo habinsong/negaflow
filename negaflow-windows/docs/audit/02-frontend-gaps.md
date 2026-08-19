@@ -12,10 +12,12 @@
 >
 > **프론트엔드**: ① computer-use 로 Windows 앱을 **구역별 크롭**해서 보고
 > ② **Parsec 으로 macOS negaflow** 를 같은 구역으로 보고
-> ③ **스크린샷 84장**(`negaflow_mac_screenshot/`)을 확인한 **뒤에만** 판정합니다.
+> ③ **스크린샷 50장**(`C:\Users\habin\맥negaflow 스크린샷\`)을 확인한 **뒤에만** 판정합니다. 폴더·파일 전체 목록은 [`11`](11-ui-verification-protocol.md) 1.3절.
 > **모양·크기·위치·정렬·색상·내용·텍스트 안 잘림** 일곱 가지를 전부 맞춥니다.
 > XAML 에 있다고 "있음" 이 아닙니다 — **화면에 보여야** 있는 것이고,
 > **눌러서 값이 안 바뀌면 가짜**입니다.
+>
+> **화면 도구 — 자세히.** `windows-mcp` / `windows-gui` MCP 는 **절대 금지.** 켜지 말고 호출하지 말고 대용으로도 쓰지 마십시오. Windows 앱·Parsec 맥 화면은 **computer-use 만.** computer-use 도 **꼭 필요할 때만** 씁니다(토큰). **씁니다:** 이 작업에서 화면에 보이는지·눌러서 값이 바뀌는지·잘림/정렬/색을 새로 판정해야 하고 코드·단위시험·스크린샷 50장·기존 로그로는 부족할 때. **쓰지 않습니다:** 백엔드·네이티브·시험만 고칠 때, 스크린샷 폴더+Swift/XAML 으로 충분할 때, 방금 본 화면을 다시 찍을 때, "일단 띄워 보자" 탐색. 쓸 때도 전체를 반복 찍지 말고 **해당 구역만 크롭.** 전문은 [`00`](00-index.md) · [`11`](11-ui-verification-protocol.md).
 >
 > **저장소**: 본체 `C:\Users\habin\negaflow\`(Apache 2.0) · 스캐너 `C:\Users\habin\negaflow-scanner-sane\`(GPL).
 > **두 저장소의 `negaflow-mac\` 은 절대 고치지 마십시오.** 코드 파쿠리·라이선스·특허·저작권 위반 금지.
@@ -56,23 +58,19 @@ macOS `Features/Canvas/` 22파일 2,654줄.
 
 | macOS | 줄 | Windows |
 |---|---:|---|
-| `CanvasCompareControls.swift` | 197 | **없음** (`CompareDivider`·`compareMode` 히트 0) |
-| `CanvasCompareDivider.swift` | 166 | **없음** |
-| `CanvasViewportState.swift` | 71 | **없음** (`ZoomLevel`·`ZoomIn`·`ZoomOut`·`FitToWindow` 히트 **0**) |
-| `CanvasToolHUD.swift` | 98 | 일부(GrainMend HUD 만) |
+| `CanvasCompareControls.swift` | 197 | `CanvasCompareHud` + `CanvasCompareState` (2026-08-19). Before 소스 메뉴 남음 |
+| `CanvasCompareDivider.swift` | 166 | `CanvasCompareDividerState` + 선/손잡이 (2026-08-19) |
+| `CanvasViewportState.swift` | 71 | `CanvasViewportState` + `CanvasViewportGeometry` (2026-08-19) |
+| `CanvasToolHUD.swift` | 98 | `CanvasToolHud` 단추·퍼센트·끌기 (2026-08-19) |
 | `CanvasHUDLayer.swift` | 39 | 일부 |
-| `CanvasHUDPlacement.swift` | — | **없음** |
+| `CanvasHUDPlacement.swift` | — | `CanvasHudPlacement` + `CanvasHudInteractionState` |
 | `CanvasScrollPanBridge.swift` | — | **없음** |
 | `CanvasView+Comparison.swift` | — | **없음** |
 
-**원본 / 현상본 / 좌우 분할 / 상하 분할 비교 캡슐이 없습니다.**
-macOS `CanvasCompareMode` 는 `.original` · `.developed` · `.splitVertical` · `.splitHorizontal`
-네 가지이고 `CanvasCompareControls.swift:130-176` 이 캡슐을 냅니다. Windows 에는 이 개념이
-없습니다 — `NeutralPreview`(원본 프리뷰) 히트도 **0** 이라 비교할 원본 이미지 자체를 만들지
-않습니다.
-
-**줌 HUD 도 없습니다.** `ZoomLevel`·`ZoomIn`·`ZoomOut`·`FitToWindow` 전부 히트 0.
-하단 바에 `100% ⌃` 가 보이지만 macOS 의 `− 108% +` 와 다르고, 뒤에 뷰포트 상태가 없습니다.
+**비교 캡슐·분할 클립·HUD 끌기·Before 소스(MAIN/무보정/원본/`frame:`)는 2026-08-19 붙임.**
+무보정 Before 는 `ExportFlatMaster.Neutralize` 로 한 번 더 현상합니다.
+줌 HUD 는 `CanvasToolHud`(− / % / 맞춤 / +) + `CanvasViewportState`.
+앱에서 Before 메뉴 클릭·인화 HUD 위치는 실측이 남음.
 
 ### 2.2 라이브러리 뷰 — macOS 22개 중 없는 것
 
@@ -81,8 +79,8 @@ macOS `CanvasCompareMode` 는 `.original` · `.developed` · `.splitVertical` ·
 | `Filmstrip/FilmstripScope.swift` | **없음** (히트 0) |
 | `Filmstrip/FrameStepButton.swift` | **없음** (히트 0) |
 | `FrameRenameSheet.swift` | **없음** (히트 0) |
-| `LibraryCompareView.swift` | **없음** (히트 0) |
-| `LibraryFolderDevelopmentControls.swift` | **없음** (히트 0) |
+| `LibraryCompareView.swift` | 파일명 히트 0. **훑어보기 모드는 있음** — `LibraryCullingMode.Compare`/`Survey` + 단축키 C/N |
+| `LibraryFolderDevelopmentControls.swift` | **2026-08-20 붙음** — `LibraryFolderDevelopment.cs` + 폴더 머리줄 프로세스/타깃/적용([`07`](07-user-reported.md) F.1.1). 앱 실측은 아직 |
 | `LibraryOrganizerSection.swift` · `LibraryOrganizerNameSheet.swift` | **없음** (히트 0) |
 | `LibraryStackBadge.swift` · `LibraryStackMenu.swift` | 히트 2 (거의 없음) |
 | `LibraryFrameContextMenu.swift` | 히트 1 (거의 없음) |
@@ -105,6 +103,14 @@ macOS 는 `WorkflowSidebar.swift` + `SidebarViews.swift` + `WorkspacePresentatio
 세로로 놓았을 뿐, 탭마다 들어갈 내용·상태 저장·macOS 와 같은 아이콘/선택 표시가 없습니다.
 
 **판정: 위치·크기·모양이 macOS 와 다르고, 탭 안의 기능이 비어 있습니다(②번).**
+
+> **2026-08-20 사용자 지시(다시 열림).** "라이브러리/현상뷰/인화뷰의 좌측탭(좌측탭에 있는
+> 왼쪽 세로탭바 포함, 세로탭바의 기능별 UI/UX 및 백엔드 포함) 과 우측탭, 상단탭 모두
+> 제대로 UI/UX 와 백엔드 구현해라." — 세 뷰 전부입니다. 대조할 스크린샷:
+> `라이브러리뷰_좌측탭_세로탭_컬렉션.png` · `..._파일트리뷰.png` ·
+> `현상뷰_좌측탭_세로탭_{필름,프리셋,프리셋(디지털),버전,파일구조,내보내기}.png` ·
+> `인화뷰_좌측탭_세로탭_내보내기.png` — 즉 macOS 세로 레일 탭은
+> **라이브러리 3 · 현상 6 · 인화 4** 이고 Windows 는 라이브러리 3개만 냅니다.
 
 ### 2.4 인화 뷰 — macOS 19파일 중
 
@@ -143,19 +149,16 @@ Windows 에 있는 것: `DevelopExportPanel.xaml(.cs)` · `DevelopExportControlS
 `QuickExportSizeSelector`·`QuickExportJpegQualitySlider` 넷만 있습니다. macOS 의 레시피·
 네이밍 템플릿·메타데이터 정책·검증 등급·저널이 전부 빠졌습니다.
 
-### 2.6 GrainMend IR — 프론트엔드가 **아예 없음**
+### 2.6 GrainMend IR — 5번째 단추가 아니라 짝짓기
 
-`DevelopGrainMendPanel.xaml` 의 도구 단추는 **4개뿐**입니다:
+`DevelopGrainMendPanel` 도구 단추는 **4개**입니다. **Swift 도 5번째 IR 단추가 없습니다.**
+macOS 는 `InfraredImportPairing` + 선택 시 `runInfraredCleanIfNeeded` 입니다.
 
-```
-GrainMendAutoButton  GrainMendGuidedButton  GrainMendBrushButton  GrainMendCloneButton
-```
+**2026-08-19 붙음:** `InfraredFilmCompatibility` · `InfraredImportPairing` ·
+`InfraredCleanPolicy` · 선택/`SetSelection` 에서 `TryInfraredCleanIfNeeded`.
+스캔 publish 는 이미 IR 을 돌립니다.
 
-**IR 단추가 없습니다.** Views 전체에서 `Infrared` 히트는 라이브러리 필터 토글과 스캔
-토글뿐이고, GrainMend 카드에는 한 글자도 없습니다.
-
-백엔드는 있습니다(`infrared_defect_detector.cpp` 1,197줄 + `defect_infrared_stage.cpp`,
-합 1,570줄 / macOS 1,584줄). **엔진은 있는데 부를 화면이 없습니다.**
+앱에서 IR 쌍을 가져와 레이어가 생기는지, 기존 장에 IR 만 붙이기는 **못 쟀습니다.**
 
 ---
 
@@ -163,10 +166,10 @@ GrainMendAutoButton  GrainMendGuidedButton  GrainMendBrushButton  GrainMendClone
 
 | 표면 | 증상 | 확인한 것 |
 |---|---|---|
-| **현상 타깃 MAIN·HS·SP·F135·HR** | 현상 뷰에서 **선택 불가** | 타깃 바는 `Views/Library/Defaults/LibraryDevelopDefaultsPanel.xaml.cs:61 BuildDevelopTargetBar()` 에만 있습니다. 현상 뷰는 `DevelopWorkspaceView.xaml.cs:305` 에서 **읽기만** 하고 설정 호출이 없습니다 |
+| **현상 프로세스·타깃 (MAIN·HS·SP·F135·HR)** | 현상 뷰에 **UI 자체가 없음** | 타깃 바는 `Views/Library/Defaults/LibraryDevelopDefaultsPanel.xaml.cs:61 BuildDevelopTargetBar()` 와 **폴더 머리줄(2026-08-20)** 에만 있습니다. 현상 뷰는 `DevelopWorkspaceView.xaml.cs:305` 에서 **읽기만** 하고 설정 호출이 없습니다. 메뉴(현상 > 프로세스/타깃)로는 바뀝니다. **사용자가 2026-08-20 에 다시 지적 — 다음 순서 1번** |
 | **필름 프로필 / 룩** | 작동 안 함 | `DevelopFilmLookPanel.xaml.cs` 는 붙어 있으나 사용자 확인 결과 반영 안 됨. 슬라이더 눈금 문제(아래)와 겹칠 가능성 |
-| **우측 인스펙터 슬라이더 전체** | **1씩만 움직임** | `InspectorSlider.xaml` 에 `StepFrequency` 미지정 → WinUI 기본 **1**, `SnapsTo` 기본 StepValues. macOS 는 `Slider(value:in:)` 에 `step:` 없음 = 연속. **2026-08-18 0.01 로 고침** |
-| **슬라이더 값 직접 입력** | 숫자 눌러도 입력·Enter·ESC 안 됨 | `BeginEditing()` 이 TextBox 를 막 보이게 한 **같은 틱에** `Focus()` 호출 → 배치 전이라 실패, 포커스가 슬라이더로 튐. `IsTabStop="False"` 도 겹침. **2026-08-18 고침** |
+| **우측 인스펙터 슬라이더 전체** | 1씩만 움직임이었음 | **2026-08-18 0.01 로 고침** |
+| **슬라이더 값 직접 입력** | 숫자 눌러도 입력 안 됨이었음 | **2026-08-18 고침** |
 | **톤 곡선** | 작동 안 함 | 네 축 슬라이더가 `InspectorSlider` 라 위 눈금 문제 직격(범위가 ±작은 값이면 정수 스냅으로 **양 끝만** 잡힘). 점 커브 엔진(`point_curve.cpp`)은 macOS 와 일치 |
 | **정렬 방향(오름/내림)** | 토글 없음 | `SortDirection` 히트 3, `Ascending`/`Descending` 12/10 — 상태는 있으나 macOS 의 토글 UI 없음 |
 | **상단바 별점·플래그·거부** | 없음 | `Rating` 39 · `Flag` 78 · `Reject` 50 히트는 라이브러리 쪽. **현상 상단바에 없음** |
@@ -195,7 +198,22 @@ GrainMendAutoButton  GrainMendGuidedButton  GrainMendBrushButton  GrainMendClone
 | `libraryShowInExplorer.Content` | `파일 탐색기에서 보기` | `Finder에서 보기` — **의도적 플랫폼 차이(정당)** |
 | `developGrainMendCloneSourceHint.Text` | `Alt 클릭으로…` | `⌥ 클릭으로…` — **의도적 플랫폼 차이(정당)** |
 
-**11건이 실제 오류입니다.** 나머지 언어 5종은 같은 대조를 하지 않았습니다(macOS 표 필요).
+**9건은 2026-08-19 에 고쳤습니다.** `B&amp;W` 와 `{0} 사본 %d` 는 오류가 아니었습니다
+([`06`](06-false-claims.md) 15.2 · [`07`](07-user-reported.md) F).
+
+**2026-08-20: 전수 대조를 했습니다.** `scripts/compare-mac-strings.py` 가 resw 주석이
+가리키는 Swift 심볼을 macOS 표에서 찾아 6개 언어를 통째로 비교합니다 —
+**2,670건 중 다른 것 0**, OS 강제 예외 24건(Finder→파일 탐색기, ⌥→Alt, `%@`→`{0}` 등).
+같은 날 **설정에서 언어를 바꿔도 안 바뀌던 원인 셋**도 고쳤습니다.
+상세 [`18`](18-localization.md). `sync-swift-ui-strings.ps1` 은 여전히 돌리지 마십시오
+(그 스크립트는 문구를 **덮어씁니다**).
+
+### 4.1 빠른 동작 알약 — 2026-08-20 다시 짬
+
+자동 색상·자동 레벨(토글)·자동 톤·자동 화이트 밸런스(동작+되돌리기) 네 알약을
+macOS 구조 그대로 다시 만들었습니다. WinUI 기본 `ToggleButton` 판형이 켜짐에
+ContentPresenter 를 강조색으로 꽉 칠해 **글자가 안 보이던 것**이 원인이었습니다.
+판형은 `src/Shell/Styles/Pills.xaml`. 상세 [`07`](07-user-reported.md) J1.
 
 ---
 
@@ -203,6 +221,6 @@ GrainMendAutoButton  GrainMendGuidedButton  GrainMendBrushButton  GrainMendClone
 
 | 증상 | 확인한 것 |
 |---|---|
-| **DPI·심도·프레임 규격을 고르면 앱 종료** | `LibraryScanPanel.xaml` 에 `ScanResolutionSelector`(92행) · `ScanBitDepthSelector`(122행) · `ScanFrameFormatSelector`(135행) 가 있고 각각 `SelectionChanged` 를 겁니다. **종료 지점은 아직 못 잡았습니다** — 재현 후 스택을 봐야 합니다 |
+| **DPI·심도·프레임 규격을 고르면 앱 종료** | **2026-08-18 고침.** 열린 ComboBox 에서 `Items.Clear()` 가 원인이었음. 목록이 같으면 지우지 않음([`07`](07-user-reported.md) A2) |
 | **플러그인 로딩 자체가 안 됨** | `Shell.Core/Scanner/` 에 20개 파일(Discovery·ProcessHost·Protocol·TrustStore)이 있습니다. 동작 확인 안 했습니다 |
 | 프레임 규격 행 | `ScanFrameFormatRow` 가 `Visibility="Collapsed"` 로 시작(128행) — 언제 켜지는지 확인 필요 |

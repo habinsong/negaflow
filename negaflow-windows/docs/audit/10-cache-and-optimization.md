@@ -12,10 +12,12 @@
 >
 > **프론트엔드**: ① computer-use 로 Windows 앱을 **구역별 크롭**해서 보고
 > ② **Parsec 으로 macOS negaflow** 를 같은 구역으로 보고
-> ③ **스크린샷 84장**(`negaflow_mac_screenshot/`)을 확인한 **뒤에만** 판정합니다.
+> ③ **스크린샷 50장**(`C:\Users\habin\맥negaflow 스크린샷\`)을 확인한 **뒤에만** 판정합니다. 폴더·파일 전체 목록은 [`11`](11-ui-verification-protocol.md) 1.3절.
 > **모양·크기·위치·정렬·색상·내용·텍스트 안 잘림** 일곱 가지를 전부 맞춥니다.
 > XAML 에 있다고 "있음" 이 아닙니다 — **화면에 보여야** 있는 것이고,
 > **눌러서 값이 안 바뀌면 가짜**입니다.
+>
+> **화면 도구 — 자세히.** `windows-mcp` / `windows-gui` MCP 는 **절대 금지.** 켜지 말고 호출하지 말고 대용으로도 쓰지 마십시오. Windows 앱·Parsec 맥 화면은 **computer-use 만.** computer-use 도 **꼭 필요할 때만** 씁니다(토큰). **씁니다:** 이 작업에서 화면에 보이는지·눌러서 값이 바뀌는지·잘림/정렬/색을 새로 판정해야 하고 코드·단위시험·스크린샷 50장·기존 로그로는 부족할 때. **쓰지 않습니다:** 백엔드·네이티브·시험만 고칠 때, 스크린샷 폴더+Swift/XAML 으로 충분할 때, 방금 본 화면을 다시 찍을 때, "일단 띄워 보자" 탐색. 쓸 때도 전체를 반복 찍지 말고 **해당 구역만 크롭.** 전문은 [`00`](00-index.md) · [`11`](11-ui-verification-protocol.md).
 >
 > **저장소**: 본체 `C:\Users\habin\negaflow\`(Apache 2.0) · 스캐너 `C:\Users\habin\negaflow-scanner-sane\`(GPL).
 > **두 저장소의 `negaflow-mac\` 은 절대 고치지 마십시오.** 코드 파쿠리·라이선스·특허·저작권 위반 금지.
@@ -33,19 +35,16 @@ macOS `Services/Cache/` **6파일 474줄** 을 Windows 와 대조했습니다.
 
 ---
 
-## 1. 프레임 메모리 캐시 — Windows 에 **한 글자도 없음**
+## 1. 프레임 메모리 캐시 — **2026-08-19 이식됨. 설정 탭만 없음**
 
-| macOS | 줄 | 하는 일 | Windows |
-|---|---:|---|---|
-| `FrameCacheManager.swift` | 120 | **FIFO 재등록 + 한도 초과분 축출** | **히트 0** |
-| `FrameCacheResidencyStore.swift` | 122 | 어느 프레임이 상주 중인지 | **히트 0** |
-| `FrameCacheBudget.swift` | 107 | 설치 메모리 → 상주 프레임 수 환산 | **히트 0** |
-| `AppModel+MemoryPressure.swift` | 54 | 압력 이벤트에 축출 연결 | **히트 0** |
-| `FrameCachePolicy.swift` | 49 | 압력 단계별 한도 | **히트 0** |
-| `MemoryPressureMonitor.swift` | 22 | `DispatchSource.MemoryPressureEvent` 감시 | **히트 0** |
-
-`FrameCacheManager` · `FrameCacheBudget` · `FrameCachePolicy` · `FrameCacheResidency` ·
-`MemoryPressure` · `evictCleanedRaw` · `evictDeveloped` — **전부 히트 0.**
+| macOS | 줄 | Windows |
+|---|---:|---|
+| `FrameCacheManager.swift` | 120 | `FrameResidency.cs` — developed FIFO 재등록·축출·선택 프레임 보호 |
+| `FrameCacheBudget.swift` | 107 | `FrameCacheBudget.cs` + native `frame_cache_budget.*`. 비율은 그대로, **한 프레임 비용만 실제 바이트**(Rgba32F 16바이트라 macOS 8바이트 추정의 2배) |
+| `FrameCachePolicy.swift` | 49 | `FrameCachePolicy.cs` |
+| `FrameCacheResidencyStore.swift` | 122 | developed 는 `FrameResidency`. cleaned raw 는 `decode.cpp` FIFO |
+| `AppModel+MemoryPressure.swift` | 54 | **없음** |
+| `MemoryPressureMonitor.swift` | 22 | **없음** — `CreateMemoryResourceNotification` 미배선 |
 
 ### 1.1 macOS 가 캐시하는 두 가지 (사용자가 지목한 것)
 
@@ -62,10 +61,11 @@ macOS `Services/Cache/` **6파일 474줄** 을 Windows 와 대조했습니다.
 
 **이 "정착 프록시 raw" 가 곧 [`01`](01-backend-gaps.md) 3.1 의 프리뷰 프록시입니다.**
 
-**2026-08-19.** 프로세스 안 프리뷰 raw 2슬롯(`preview_proxy.cpp`)은 붙었습니다 — 인터랙티브/정착,
-Lanczos3, 두 번째 `develop_preview` decode 0. **아직 없는 것:** 프레임별 FIFO 상주
-(`FrameCacheManager`), 메모리 압력, 설정 탭. 사진 A→B→A 로 돌아가면 슬롯이 덮여
-Lanczos 를 다시 합니다.
+프리뷰 raw 2슬롯은 `preview_raw_store`(프레임 키 + mutex + `shared_ptr`)입니다.
+프로세스 전역 2슬롯은 지웠습니다([`07`](07-user-reported.md) H).
+
+**아직 없는 것:** 메모리 압력 감시, 설정 → 메모리 캐시 섹션(자동/수동 슬라이더).
+예산 상수는 코드에 있고 UI 가 없습니다.
 
 ### 1.2 FIFO 와 축출 정책 (그대로 옮길 값)
 
@@ -100,8 +100,7 @@ Lanczos 를 다시 합니다.
 > 한도는 "미리 잡아 두는 양"이 아니라 **상한**이다. 실제로 방문한 프레임만 버퍼를 갖고,
 > 한도를 넘으면 오래된 것부터 내려놓는다.
 
-**판정: Windows 는 프레임 버퍼를 붙들지도, 내려놓지도 않습니다. 캐시가 없으니 매번 다시
-만들고(→ 느림), 메모리 압력에 반응할 방법도 없습니다.**
+**판정: FIFO 상주는 있습니다. 압력 이벤트와 설정 탭이 없습니다.**
 
 ---
 
@@ -154,27 +153,26 @@ macOS `MemoryCacheSettingsSection.swift`(111줄)가 내는 것:
 
 | macOS | 무엇 | Windows |
 |---|---|---|
-| `DevelopFrameRenderer.metalQueue` (`DevelopFrameRenderer.swift:37`) | **단일 Metal command queue** — GPU 작업 정렬로 "빈/검은 프레임" 동기화 버블 제거 | GPU 없음 ([`04`](04-gpu-plan.md)) |
-| `interactiveProxyDimension()` 256 양자화 | 창 크기 미세 변화에 **캐시 유지** | 없음 |
-| `waitForDevelopSettle` 0.14초 | 드래그 중 풀해상도 렌더 안 함 | 없음 |
-| `fastPreviewMaxDimension = 720` | 최초 표시용 빠른 프리뷰 | 없음 |
-| `Engine/SamplingContextPool.swift` | 샘플링 컨텍스트 재사용 | 히트 0 |
-| `DefectRemoval/ConcurrentResultStore.swift` | 검출 결과 동시 수집 | 히트 0 |
-| `DefectRemoval/DefectParallelAccumulators.swift` | 병렬 누산기 | 히트 0 |
-| 정착 패스에서만 디스크 썸네일 쓰기 (`AppModel+DevelopRendering.swift:236-238`) | 인터랙티브 패스는 건너뛰어 **디스크 IO 1회** | 없음 |
+| `DevelopFrameRenderer.metalQueue` | 단일 GPU 큐 | `gpu_device` 컨텍스트 하나. [`15`](15-gpu-handoff.md) |
+| `interactiveProxyDimension()` 256 양자화 | 창 미세 변화에 캐시 유지 | **있음.** `DevelopPreviewProxy` |
+| `waitForDevelopSettle` 0.14초 | 드래그 중 정착 안 함 | **있음.** `PreviewCoordinator` |
+| `fastPreviewMaxDimension = 720` | 최초 빠른 프리뷰 | 상수 있음. 앱 체감 미측정 |
+| `SamplingContextPool` | 샘플링 컨텍스트 재사용 | 히트 0 |
+| `ConcurrentResultStore` · `DefectParallelAccumulators` | 검출 동시 수집 | 히트 0 |
+| 정착 패스에서만 디스크 썸네일 | 인터랙티브는 건너뜀 | `RememberDeveloped`/`Publish` 를 정착에서만 |
 
 ---
 
 ## 6. 할 일
 
-| 순서 | 내용 |
-|---|---|
-| 1 | `FrameCacheBudget` · `FrameCachePolicy` · `FrameCacheManager`(FIFO) · `FrameCacheResidencyStore` **474줄 이식** — 위 상수 그대로 |
-| 2 | Windows 메모리 압력 감시 — `DispatchSource` 대응은 `CreateMemoryResourceNotification` 또는 `QueryMemoryResourceNotification` |
-| 3 | 캐시에 담을 **cleaned raw** 와 **developed(정착 프록시 포함)** 버퍼를 실제로 만들 것 ([`04`](04-gpu-plan.md) 6.1) |
-| 4 | 설정 → 메모리 캐시 섹션(111줄) — 자동/수동 · 슬라이더 2 · 되돌리기 · 도움말 3줄 |
-| 5 | 개발자 모드가 켤 화면 만들기(`DevelopDebugFrame` 포함) |
-| 6 | 캔버스 **우클릭** 배경색 메뉴 + HUD 대비색 연동 |
+| 순서 | 내용 | 상태 |
+|---|---|---|
+| 1 | FIFO·예산·상주 | **닫음.** 1절 |
+| 2 | 메모리 압력 감시 | **없음** |
+| 3 | cleaned raw / developed 버퍼 | **닫음.** 디코드 FIFO + 프리뷰 raw + developed 상주 |
+| 4 | 설정 → 메모리 캐시 섹션 | **없음** |
+| 5 | 개발자 모드 화면 | 토글만 있음 |
+| 6 | 캔버스 우클릭 배경 + HUD 대비 | HUD `CanvasHudChrome` 은 있음. 우클릭 메뉴는 없음 |
 
 ---
 
@@ -185,12 +183,21 @@ macOS `MemoryCacheSettingsSection.swift`(111줄)가 내는 것:
 
 | 항목 | 실측 |
 |---|---|
-| SIMD | 히트 **11개, 전부 `flatbed_frame_*` 3파일**. 화소 파이프라인에 **없음** |
-| 스레드 풀 | **없음.** `core/parallel_rows.cpp:113` 이 호출마다 `std::thread` 를 새로 만듦 |
-| 컴파일러 스위치 | `/fp:precise` 는 `cmake/CompilerWarnings.cmake:12` 에 **있음**. 없는 것은 **`/arch:` · `/GL` · `/LTCG`** |
-| `ArrayPool` | 관리 트리 히트 **0**. 단 `PreviewCoordinator.cs:112` 는 선할당돼 있어 문제 없음 |
-| 표시 경로 | `DevelopPreviewCanvas.Present()` 가 프레임 전체 복사 — 3600×2400 이면 **34.6 MB/프레임**(산술, ms 미측정) |
+| SIMD | 히트 11개, 전부 `flatbed_frame_*`. 화소 파이프라인에 없음 |
+| 스레드 풀 | **있음.** `row_block_pool` 영속 워커. 예전 호출마다 `std::thread` 는 지움 |
+| 컴파일러 스위치 | `/fp:precise` 있음. `/arch:` · `/GL` · `/LTCG` 없음 |
+| 표시 경로 | 정착에서만 34.6 MB 복사. 인터랙티브는 비트맵 두 벌 재사용 |
 
 **`/GL` + `/LTCG` 는 값을 안 바꾸면서 얻는 것이라 가장 먼저 시도할 것.**
 `/fp:fast` 와 `/arch:AVX2` 는 **골든값을 바꿀 수 있습니다** — 켤 때마다 골든 시험과
 실측 17장 dmin 을 돌리십시오.
+
+
+---
+
+## 2026-08-20 확인
+
+이 문서의 표는 그대로 유효합니다. 이날 캐시·예산 코드는 건드리지 않았습니다.
+다만 Release 빌드 스위치가 하나 늘었습니다 — `/Zi` `/DEBUG` `/OPT:REF` `/MAP`(심볼).
+**코드 생성은 바뀌지 않으므로 위 실측 숫자는 다시 재지 않아도 됩니다**
+([`13`](13-performance-playbook.md) 22절). `/GL`·`/LTCG` 는 여전히 안 켰습니다.

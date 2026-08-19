@@ -3,6 +3,8 @@
 > **🔬 추측·가설 금지.** "냄새난다" 고 덮지 말고 **냄새의 원인을 찾아 없애십시오.**
 > **🌐 모르면 웹 검색을 적극적으로** 하십시오 — 특히 GPU·최적화·UI/UX 구현.
 > 규칙 [`00-index.md`](00-index.md)
+>
+> **화면 도구 — 자세히.** `windows-mcp` / `windows-gui` MCP 는 **절대 금지.** 켜지 말고 호출하지 말고 대용으로도 쓰지 마십시오. Windows 앱·Parsec 맥 화면은 **computer-use 만.** computer-use 도 **꼭 필요할 때만** 씁니다(토큰). **씁니다:** 이 작업에서 화면에 보이는지·눌러서 값이 바뀌는지·잘림/정렬/색을 새로 판정해야 하고 코드·단위시험·스크린샷 50장·기존 로그로는 부족할 때. **쓰지 않습니다:** 백엔드·네이티브·시험만 고칠 때, 스크린샷 폴더+Swift/XAML 으로 충분할 때, 방금 본 화면을 다시 찍을 때, "일단 띄워 보자" 탐색. 쓸 때도 전체를 반복 찍지 말고 **해당 구역만 크롭.** 전문은 [`00`](00-index.md) · [`11`](11-ui-verification-protocol.md).
 
 ---
 
@@ -75,8 +77,20 @@ C:\Users\habin\negaflow\
 │   ├── src\Catalog.Core\        카탈로그
 │   ├── src\Interop\             P/Invoke
 │   └── docs\audit\              ← 이 문서
-└── negaflow_mac_screenshot\ ← macOS 실행 화면 84장 (라이브러리 43·현상 24·인화 17)
 ```
+
+저장소 **밖** 기준 화면 (저장소 안 `negaflow_mac_screenshot\` 는 폐기. 쓰지 말 것):
+
+```
+C:\Users\habin\맥negaflow 스크린샷\     ← macOS 실행 화면 PNG 50장. 파일 하나라도 빼먹지 말 것
+├── 라이브러리뷰\    4
+├── 현상뷰\          22
+├── 인화뷰\          4
+├── 메뉴막대\        10
+└── 설정\            10
+```
+
+전체 파일명·화면에 보이는 내용은 [`11`](11-ui-verification-protocol.md) 1.3절.
 
 ### 1.2 `C:\Users\habin\negaflow-scanner-sane\` — 스캐너 플러그인 (**GPL**)
 
@@ -139,3 +153,21 @@ SANE 은 GPL 입니다. GPL 코드를 Apache 2.0 본체에 **링크하면 본체
 | SF Symbols 그림 그대로 | **금지** — 같은 뜻의 아이콘을 직접 그림 |
 
 **헷갈리면 넣지 말고 물어보십시오.** 나중에 지우는 것보다 안 넣는 것이 쌉니다.
+
+
+---
+
+## 2026-08-20 확인 — 새 의존성 없음
+
+이날 붙은 것은 전부 **OS 에 이미 있는 것**만 씁니다. `THIRD_PARTY_NOTICES.md` 에 더할 것이
+없습니다.
+
+| 새 파일 | 무엇을 쓰나 | 라이선스 |
+|---|---|---|
+| `src/Native/abi/support/crash_log.cpp` | `AddVectoredExceptionHandler`·`RtlCaptureStackBackTrace` (Win32) | OS API |
+| `scripts/symbolize-rva.ps1` | `dbghelp.dll` (Windows 동봉) | OS API |
+| `src/Shell/Styles/Pills.xaml` | WinUI 판형. macOS Swift 를 우리 손으로 옮긴 것 | 같은 프로젝트 |
+| `scripts/compare-mac-strings.py` | 표준 라이브러리만 | — |
+
+**SF Symbols 그림은 여전히 쓸 수 없습니다.** 아이콘이 다른 자리는
+[`08`](08-icons-and-chrome.md) 5절에 적었고, 대체는 **직접 그린 `PathIcon`** 이어야 합니다.

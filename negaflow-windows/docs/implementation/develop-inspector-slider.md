@@ -72,9 +72,10 @@ runtime 증거는 아직 없습니다.
 
 ## 2026-08-09 Develop inspector 구조·히스토그램 체크포인트
 
-고정 macOS 기준 `2fa1d6297378673b58b8bec72025e968ccc3125c`와 사용자 제공
+고정 macOS 기준 `2fa1d6297378673b58b8bec72025e968ccc3125c`와 당시 사용자 제공
 `negaflow_mac_screenshot/develop_right_basic_restored.png`,
 `develop_right_base_panel.png`를 기준으로 오른쪽 Inspector의 첫 구조 결함을 닫았습니다.
+**(2026-08-19: 그 폴더는 폐기. 같은 구역의 살아 있는 화면은 `C:\Users\habin\맥negaflow 스크린샷\현상뷰\현상뷰_기본.png` · `현상뷰_우측탭_아이콘6탭바_베이스_자동.png`.)**
 
 - 순서는 `Histogram → Basic/Base/Edit/Defects/Info/Reset → tab content → common adjustments`입니다.
 - Histogram은 118 DIP 한 카드에서 64-bin luma/R/G/B, clipping channel, Shadow/Density/Exposure/Highlight

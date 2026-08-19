@@ -12,10 +12,12 @@
 >
 > **프론트엔드**: ① computer-use 로 Windows 앱을 **구역별 크롭**해서 보고
 > ② **Parsec 으로 macOS negaflow** 를 같은 구역으로 보고
-> ③ **스크린샷 84장**(`negaflow_mac_screenshot/`)을 확인한 **뒤에만** 판정합니다.
+> ③ **스크린샷 50장**(`C:\Users\habin\맥negaflow 스크린샷\`)을 확인한 **뒤에만** 판정합니다. 폴더·파일 전체 목록은 [`11`](11-ui-verification-protocol.md) 1.3절.
 > **모양·크기·위치·정렬·색상·내용·텍스트 안 잘림** 일곱 가지를 전부 맞춥니다.
 > XAML 에 있다고 "있음" 이 아닙니다 — **화면에 보여야** 있는 것이고,
 > **눌러서 값이 안 바뀌면 가짜**입니다.
+>
+> **화면 도구 — 자세히.** `windows-mcp` / `windows-gui` MCP 는 **절대 금지.** 켜지 말고 호출하지 말고 대용으로도 쓰지 마십시오. Windows 앱·Parsec 맥 화면은 **computer-use 만.** computer-use 도 **꼭 필요할 때만** 씁니다(토큰). **씁니다:** 이 작업에서 화면에 보이는지·눌러서 값이 바뀌는지·잘림/정렬/색을 새로 판정해야 하고 코드·단위시험·스크린샷 50장·기존 로그로는 부족할 때. **쓰지 않습니다:** 백엔드·네이티브·시험만 고칠 때, 스크린샷 폴더+Swift/XAML 으로 충분할 때, 방금 본 화면을 다시 찍을 때, "일단 띄워 보자" 탐색. 쓸 때도 전체를 반복 찍지 말고 **해당 구역만 크롭.** 전문은 [`00`](00-index.md) · [`11`](11-ui-verification-protocol.md).
 >
 > **저장소**: 본체 `C:\Users\habin\negaflow\`(Apache 2.0) · 스캐너 `C:\Users\habin\negaflow-scanner-sane\`(GPL).
 > **두 저장소의 `negaflow-mac\` 은 절대 고치지 마십시오.** 코드 파쿠리·라이선스·특허·저작권 위반 금지.
@@ -27,32 +29,40 @@
 ---
 
 
-# 05 — God object (500줄 초과) — 실측
+# 05 — God object (500줄 초과) — **2026-08-19 다시 열림**
 
 기준: **500줄 초과는 금지. 넘기려면 사유를 이 문서에 적을 것.**
 정확히 500줄은 초과가 아니다.
 
-아래는 2026-08-18 22:41에 `negaflow-windows/src`와 `tests`의 `.cs`·`.cpp`·`.h`·`.xaml` **1,229개**(src 982, tests 247)를 물리 줄 수(`ReadLine`)로 다시 잰 것이다. 이 파일의 이전 본문은 같은 날짜로 28+7개를 적었으나, 그 뒤 분해를 반영하지 않았다.
+2026-08-18 22:41 본문은 "초과 3개 · 사유 없는 미해결 0 · 닫음" 이었다.
+**2026-08-19 재집계** (`src/`·`tests/` `.cs`·`.cpp`·`.h`·`.xaml`·`.hlsl`·`.hlsli` 1,405개,
+물리 줄 `Measure-Object -Line`): **500줄 초과 9개.**
+생성 표 1 + 시험 2는 사유가 있다. **생산 6개는 사유가 없다.**
 
-**지금 500줄 초과는 3개다. 사유 없는 초과는 0개다. 미해결 God object 파일은 없다.**
+이미 쪼갠 옛 파일을 그 표만 보고 다시 쪼개지 마십시오(3절). **새로 넘은 생산 6개**는
+다시 나누거나 사유를 적어야 한다.
 
 ---
 
-## 1. 지금 500줄을 넘는 파일 — 3개
+## 1. 지금 500줄을 넘는 파일 — 9개
 
 | 줄 | 파일 | 사유 판정 |
 |---:|---|---|
-| **9,003** | `src/Native/imaging/muted_scene_vibrance_table.cpp` | **사유 있음.** `scripts/generate-civibrance-table.ps1`이 만든 생성 데이터. 첫 줄이 `Do not edit by hand`다. macOS `CIFilter("CIVibrance")`는 Apple 비공개 커널이라 33³×6평면 LUT로 측정해 담았고, golden 해시는 `docs/verification/macos-golden/vibrance/README.md`에 있다. 실행 로직은 `muted_scene_vibrance.cpp`와 `vibrance_math.h`에 있다. 줄만 큰 표이므로 파일 분할은 God object 해소가 아니다 |
-| **606** | `tests/Native.UnitTests/DevelopExportAbi/defect_region.cpp` | **사유 있음.** 한 장의 합성 TIFF 위에서 v18–v29 결함 preview/export를 순서대로 묶은 고정 fixture. 뒤 단언이 앞 단계의 화소·SHA·bound 요청을 그대로 쓴다 |
-| **526** | `tests/Native.ConformanceTests/scalar_conformance.cpp` | **사유 있음.** scalar/native conformance 단일 suite. 제품 상태·오케스트레이션·I/O를 소유하지 않는다 |
+| **8,999** | `src/Native/imaging/muted_scene_vibrance_table.cpp` | **사유 있음.** `scripts/generate-civibrance-table.ps1` 생성 표. `Do not edit by hand`. 실행 로직은 `muted_scene_vibrance.cpp` |
+| **862** | `src/Shell/Views/DevelopWorkspaceView.xaml.cs` | **사유 없음.** 2026-08-18 표는 421. 프리뷰·메뉴·비교가 다시 모였다 |
+| **665** | `src/Shell/Views/Develop/Canvas/DevelopPreviewCanvas.xaml.cs` | **사유 없음.** 비교 클립·HUD·스포이드가 한 파일 |
+| **637** | `src/Shell.Core/Develop/PreviewCoordinator.cs` | **사유 없음.** 정착·취소·배달이 한 타입 |
+| **583** | `tests/Native.UnitTests/DevelopExportAbi/defect_region.cpp` | **사유 있음.** v18–v29 결함 preview/export 한 장 fixture |
+| **556** | `src/Shell.Core/Develop/DevelopPanelState.cs` | **사유 없음.** 2026-08-18 표는 489. 파사드에 IR·리셋이 붙음 |
+| **518** | `src/Shell.Core/Library/LibraryHostService.cs` | **사유 없음.** 2026-08-18 표는 488 |
+| **512** | `src/Shell/Views/WorkspaceShellView.xaml.cs` | **사유 없음.** 메뉴막대 단축키 분기가 모였다 |
+| **502** | `tests/Native.ConformanceTests/scalar_conformance.cpp` | **사유 있음.** scalar conformance 단일 suite |
 
-`src/` 생산 코드에서 500줄을 넘는 파일은 생성 표 1개뿐이다.
+`src/` 생산 코드에서 사유 없이 500줄을 넘는 파일은 **6개**다.
 
-## 2. 정확히 500줄 — 1개
+## 2. 정확히 500줄
 
-| 줄 | 파일 | 판정 |
-|---:|---|---|
-| 500 | `tests/fixtures/tiff/synthetic_wic_tiff.cpp` | 기준선 이하. 테스트 fixture 생성기. 제품 상태·오케스트레이션 없음 |
+2026-08-19 재집계에서 정확히 500줄인 파일은 **0개**다.
 
 ## 3. 이 문서 이전 본문이 분할 대상으로 적은 파일
 
@@ -93,16 +103,16 @@
 | 728 | 36 | `tests/Native.UnitTests/wic_tiff_decoder_tests.cpp` |
 | 620 | 22 | `tests/Native.UnitTests/texture_stage_tests.cpp` |
 
-## 4. 500줄 바로 아래 생산 파사드 — 미해결이 아님
-
-줄 수가 커도 이미 협력 타입에 위임하는 공개 파사드다. 새 책임이 붙으면 다시 잰다.
+## 4. 500줄 바로 아래 — 참고 (2026-08-20)
 
 | 줄 | 파일 |
 |---:|---|
-| 489 | `src/Shell.Core/Develop/DevelopPanelState.cs` |
-| 488 | `src/Shell.Core/Library/LibraryHostService.cs` |
-| 421 | `src/Shell/Views/DevelopWorkspaceView.xaml.cs` |
-| 387 | `src/Shell.Core/Library/LibraryDocument.cs` |
+| 495 | `src/Shell.Core/Develop/DevelopPanelState.cs` — **5줄 남았다** |
+| 381 | `src/Shell/Views/LibraryWorkspaceView.xaml.cs` |
+| 325 | `src/Shell.Core/Library/LibraryDocument.cs` |
+| 298 | `src/Shell/Views/DevelopWorkspaceView.xaml` |
+
+`src/Native/gpu/gpu_working_image.cpp` 는 489 → **542** 로 넘어가 1절로 옮겼다.
 
 ## 5. 더 오래된 문서의 거대 파일 표
 
@@ -111,12 +121,12 @@
 | 문서가 적은 것 | 옛 문서의 줄 | 지금 |
 |---|---:|---:|
 | `src/Native/abi/negaflow_abi.cpp` | 6,264 | **14** |
-| `src/Shell/Views/DevelopWorkspaceView.xaml.cs` | 4,835 | **421** |
+| `src/Shell/Views/DevelopWorkspaceView.xaml.cs` | 4,835 | **862** (2026-08-18 421에서 다시 증가) |
 | `tests/Native.UnitTests/develop_export_abi_tests.cpp` | 4,107 | **파일 없음** (`DevelopExportAbi/`로 이동) |
-| `src/Shell/Views/LibraryWorkspaceView.xaml.cs` | 2,835 | **327** |
+| `src/Shell/Views/LibraryWorkspaceView.xaml.cs` | 2,835 | **318** |
 | `src/Shell/Views/DevelopWorkspaceView.xaml` | 2,508 | **297** |
 | `src/Interop/NativeDevelopExporter.cs` | 2,342 | **95** |
-| `src/Native/pipeline/develop_export.cpp` | 1,575 | **282** |
+| `src/Native/pipeline/develop_export.cpp` | 1,575 | **314** |
 | `src/Native/core/tiff_probe.cpp` | 1,425 | **278** |
 | `src/Shell/Views/LibraryWorkspaceView.xaml` | 975 | **472** |
 | `src/Shell/Views/PrintWorkspaceView.Composition.cs` | 826 | **192** |

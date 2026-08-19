@@ -14,7 +14,7 @@
 ## 사용자 목표
 
 1. GrainMend 기능이 동작하지 않고 "고칠 것을 찾지 못했습니다"만 표시된다. 자동·가이드·브러시·복제 도구·IR을 모두 macOS와 동일하게 동작하게 한다. 복제 도구가 잘려 보이는 문제도 수정한다.
-2. 창작한 UI/UX를 제거하고 각종 뷰의 크기·모양·모서리 라운딩·위치·정렬을 macOS와 동일하게 한다. 누락된 현상 버튼, 아예 만들지 않은 UI/UX, 백엔드에 연결되지 않은 UI를 모두 구현·연결한다. `C:\Users\habin\negaflow\negaflow_mac_screenshot`의 기준 화면을 그대로 대조한다.
+2. 창작한 UI/UX를 제거하고 각종 뷰의 크기·모양·모서리 라운딩·위치·정렬을 macOS와 동일하게 한다. 누락된 현상 버튼, 아예 만들지 않은 UI/UX, 백엔드에 연결되지 않은 UI를 모두 구현·연결한다. `C:\Users\habin\맥negaflow 스크린샷`의 기준 화면을 그대로 대조한다. 파일 전체 목록은 `docs/audit/11` 1.3절. 옛 `negaflow_mac_screenshot` 은 폐기.
 3. Library에서 사진을 불러온 뒤 Develop에서 이미지와 썸네일이 보여야 하며 하단 탭 전체가 동작해야 한다. Library와 Develop을 분리된 데이터 흐름으로 두지 않는다.
 4. 창작한 Develop 좌측 탭을 제거하고 macOS Develop 좌측 탭의 모든 기능과 여러 사진을 다루는 흐름을 동일하게 구현한다. Library 좌측 탭에만 있는 기능으로 축소하지 않는다.
 5. 창작한 UI/UX 때문에 글자가 잘리거나 가려지는 문제를 모든 화면·상태·지원 언어에서 수정한다.
@@ -22,7 +22,7 @@
 7. 자동 톤·자동 색상·자동 레벨이 모두 동작하고 실시간 사용에 적합한 속도를 내게 한다.
 8. 이미지 crop·rotate·flip을 포함한 모든 이미지 편집 기능의 속도와 반응성을 개선한다.
 9. Print에서 선택한 이미지가 표시되게 하고 UI/UX와 전체 기능을 macOS와 동일하게 구현한다.
-10. macOS 스크린샷과 동일한 UI/UX 위치·크기·모양 및 기능을 모두 구현한다. `computer-use`로 연결된 8100과 V700 스캐너를 사용해 스캔·보정·인화·내보내기 전체 흐름을 검증한다. `C:\Users\habin\OneDrive\바탕 화면\negaflow_test`로 일반 이미지 경로를 테스트하고 `C:\Users\habin\Downloads\golden\golden`으로 IR을 테스트한다. `C:\Users\habin\negaflow\negaflow-windows`와 `C:\Users\habin\negaflow-scanner-sane` 양쪽을 모두 수정·검증한다. 스크린샷 기준은 `C:\Users\habin\negaflow\negaflow_mac_screenshot`, macOS 코드 기준은 `C:\Users\habin\negaflow\negaflow-mac`과 `C:\Users\habin\negaflow-scanner-sane\negaflow-mac`이다. 검증되지 않은 상태에서 "다했습니다" 또는 "완성했습니다"라고 주장하지 않는다.
+10. macOS 스크린샷과 동일한 UI/UX 위치·크기·모양 및 기능을 모두 구현한다. `computer-use`로 연결된 8100과 V700 스캐너를 사용해 스캔·보정·인화·내보내기 전체 흐름을 검증한다. `C:\Users\habin\OneDrive\바탕 화면\negaflow_test`로 일반 이미지 경로를 테스트하고 `C:\Users\habin\Downloads\golden\golden`으로 IR을 테스트한다. `C:\Users\habin\negaflow\negaflow-windows`와 `C:\Users\habin\negaflow-scanner-sane` 양쪽을 모두 수정·검증한다. 스크린샷 기준은 `C:\Users\habin\맥negaflow 스크린샷`(PNG 50장, 목록 `docs/audit/11` 1.3절. 옛 `negaflow_mac_screenshot` 폐기), macOS 코드 기준은 `C:\Users\habin\negaflow\negaflow-mac`과 `C:\Users\habin\negaflow-scanner-sane\negaflow-mac`이다. 검증되지 않은 상태에서 "다했습니다" 또는 "완성했습니다"라고 주장하지 않는다.
 
 ## 추가 운영 요구
 

@@ -4,11 +4,11 @@ macOS 원본: `Sources/negaflowApp/Features/Defects/` (46개 파일, 6,417줄).
 
 ## 0. 스크린샷 상황
 
-`negaflow_mac_screenshot/` 에 있는 것:
+살아 있는 기준은 `C:\Users\habin\맥negaflow 스크린샷\`. 옛 `negaflow_mac_screenshot/` 는 폐기.
 
 | 파일 | 담긴 것 |
 |---|---|
-| `develop_right_grainmend_panel.png` | **인스펙터 카드만** — 제목 + 도구 4개(자동/가이드/브러시/복제 도장) + 각 도구의 ↺ |
+| `현상뷰\현상뷰_우측탭_아이콘6탭바_GrainMend.png` | **인스펙터 카드만** — 제목 + 도구 4개(자동/가이드/브러시/복제 도장) |
 
 **검출 중에만 뜨는 캔버스 캡슐·종류별 칩·브러시 바·복제 바는 어느 스크린샷에도 없습니다.**
 그 부분은 Swift 코드만으로 옮기고, 옮긴 뒤 **사용자에게 화면을 보여 확인받습니다.**

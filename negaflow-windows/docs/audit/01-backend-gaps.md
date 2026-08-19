@@ -12,10 +12,12 @@
 >
 > **프론트엔드**: ① computer-use 로 Windows 앱을 **구역별 크롭**해서 보고
 > ② **Parsec 으로 macOS negaflow** 를 같은 구역으로 보고
-> ③ **스크린샷 84장**(`negaflow_mac_screenshot/`)을 확인한 **뒤에만** 판정합니다.
+> ③ **스크린샷 50장**(`C:\Users\habin\맥negaflow 스크린샷\`)을 확인한 **뒤에만** 판정합니다. 폴더·파일 전체 목록은 [`11`](11-ui-verification-protocol.md) 1.3절.
 > **모양·크기·위치·정렬·색상·내용·텍스트 안 잘림** 일곱 가지를 전부 맞춥니다.
 > XAML 에 있다고 "있음" 이 아닙니다 — **화면에 보여야** 있는 것이고,
 > **눌러서 값이 안 바뀌면 가짜**입니다.
+>
+> **화면 도구 — 자세히.** `windows-mcp` / `windows-gui` MCP 는 **절대 금지.** 켜지 말고 호출하지 말고 대용으로도 쓰지 마십시오. Windows 앱·Parsec 맥 화면은 **computer-use 만.** computer-use 도 **꼭 필요할 때만** 씁니다(토큰). **씁니다:** 이 작업에서 화면에 보이는지·눌러서 값이 바뀌는지·잘림/정렬/색을 새로 판정해야 하고 코드·단위시험·스크린샷 50장·기존 로그로는 부족할 때. **쓰지 않습니다:** 백엔드·네이티브·시험만 고칠 때, 스크린샷 폴더+Swift/XAML 으로 충분할 때, 방금 본 화면을 다시 찍을 때, "일단 띄워 보자" 탐색. 쓸 때도 전체를 반복 찍지 말고 **해당 구역만 크롭.** 전문은 [`00`](00-index.md) · [`11`](11-ui-verification-protocol.md).
 >
 > **저장소**: 본체 `C:\Users\habin\negaflow\`(Apache 2.0) · 스캐너 `C:\Users\habin\negaflow-scanner-sane\`(GPL).
 > **두 저장소의 `negaflow-mac\` 은 절대 고치지 마십시오.** 코드 파쿠리·라이선스·특허·저작권 위반 금지.
@@ -34,21 +36,18 @@ macOS `Sources/Chromabase/` **159파일**을 개념 키워드로 Windows 전 트
 
 ---
 
-## 1. 완전히 없음 — 히트 0 (28개 개념)
+## 1. 완전히 없음 — 2026-08-19 재집계
 
-### 1.1 GPU · 실행 장치 (가장 큼)
+2026-08-18 표의 "28개 개념 히트 0" 은 **그 날 아침** 기준입니다. GPU·필름 베이스 진단·8bit 디더·
+클리핑 오버레이·현상 undo 는 그 뒤에 붙었습니다. 아래는 **지금 없는 것**만 남깁니다.
 
-| macOS | 줄 | Windows |
-|---|---:|---|
-| `Engine/ChromabaseMetalKernels.swift` | — | **없음** |
-| `Engine/SamplingContextPool.swift` | — | **없음** |
-| CoreImage 전반 (`CIImage` 83파일) | — | **없음** |
+### 1.1 GPU · 실행 장치 — **있음. 이 절은 닫음**
 
-`d3d11` · `D3D11` · `Direct3D` · `ID3D11Device` · `ComputeShader` · `.hlsl` · `DirectML` ·
-`DirectCompute` · `CUDA` · `OpenCL` · `Vulkan` · `ID2D1` · `Direct2D` · `DXGI` · `Win2D`
-**전부 히트 0.** 셰이더 파일(`.hlsl`/`.cso`/`.fx`)도 0개.
+`src/Native/gpu/` cpp/h **60** + 셰이더 **38**. `ID3D11Device` 히트 있음.
+3.1–3.8 닫힘. 다시 이식하지 말 것. [`15`](15-gpu-handoff.md).
 
-**Windows 이미지 파이프라인은 전부 스칼라 CPU C++ 입니다.** → [`04-gpu-plan.md`](04-gpu-plan.md)
+`SamplingContextPool` 이름은 없습니다. Core Image 는 Windows 에 없습니다 — D3D11 컴퓨트가
+그 자리입니다.
 
 ### 1.2 현상 경로
 
@@ -62,15 +61,13 @@ macOS `Sources/Chromabase/` **159파일**을 개념 키워드로 Windows 전 트
 
 ### 1.3 편집 상태 · 이력
 
-| macOS | 줄 | Windows | 영향 |
-|---|---:|---|---|
-| `Develop/DevelopHistory.swift` | 23 | **없음** | **현상 undo/redo 스택 자체가 없음** |
-| `Features/Defects/Workflow/AppModel+DefectHistory.swift` | 205 | **없음** | 결함 도구 undo — 복제/브러시 캡슐의 되돌리기 단추가 걸 곳이 없음 |
-| `Develop/DevelopKeyboardNudge.swift` | — | **없음** | 키보드 미세 조정 |
-| `Develop/DevelopToneRange.swift` | — | **없음** | 톤 범위 모델 |
-| `Develop/DevelopDebugFrame.swift` | — | **없음** | 디버그 오버레이 |
-
-`CanUndo` 히트 6건은 전부 `Library*` (라이브러리 편집 undo)이고 **현상·결함과 무관**합니다.
+| macOS | Windows | 지금 |
+|---|---|---|
+| `DevelopHistory` / `AppModel+FrameEditHistory` | `FrameEditHistory` + `DevelopInspectorResetter` | **2026-08-19 붙음.** 초기화 undo · 슬라이더 0.7s 묶음. 히스토리 **패널**은 없음 |
+| `AppModel+DefectHistory` | `DevelopPanelState.CanUndoDefectEdit` | 결함 undo 게이트는 있음. 205줄 이력 **패널**은 없음 |
+| `DevelopKeyboardNudge` | **없음** | 키보드 미세 조정 |
+| `DevelopToneRange` | **없음** | 톤 범위 모델 |
+| `DevelopDebugFrame` | **없음** | 개발자 모드 디버그 오버레이 |
 
 ### 1.4 스캐너 프로파일링
 
@@ -93,8 +90,8 @@ macOS `Sources/Chromabase/` **159파일**을 개념 키워드로 Windows 전 트
 | `Export/ExportEngine.swift` | 1 | **없음** |
 | `Export/ExportRenderedImage.swift` | 1 | **없음** |
 | `Export/PrintPackageRenderer.swift` | 1 | **없음** |
-| `Imaging/ChannelClippingOverlay.swift` | 1 | **없음** — 채널 클리핑 표시 |
-| `Adjustments/OutputDither.swift` | 1 | **없음** — 8bit 출력 디더 |
+| `Imaging/ChannelClippingOverlay.swift` | 1 | **2026-08-19 붙음.** 설정 토글 + 프리뷰 합성 + GPU 비트 일치. 앱 토글 실측은 못 함([`15`](15-gpu-handoff.md) 3.3) |
+| `Adjustments/OutputDither.swift` | 1 | **있음.** 8bit CPU 경로 `quantize_component_8` · 프리뷰 `display_dither_offset`. 별도 GPU 패스 없음 |
 
 ### 1.6 필름 베이스 측정
 
@@ -147,12 +144,15 @@ run_develop()
   → apply_defect_stage → ... → publish_developed
 ```
 
-`src/Native/pipeline/export/stages/decode.cpp` 에 프로세스 단일 슬롯 **풀해상도** 캐시가 있습니다(2026-08-18). 같은 경로·같은 `ImageFileObservation` 이면 `decode_source` 가 디스크 TIFF 를 다시 읽지 않고 `WorkingImage` 를 복사합니다.
+`decode.cpp` 는 **프레임 키 FIFO + mutex + `shared_ptr`** 입니다(2026-08-19).
+프로세스 전역 단일 슬롯은 지웠습니다 — 썸네일이 현상 슬롯을 덮어 UAF 가 났습니다([`07`](07-user-reported.md) H).
 
-**2026-08-19.** macOS `cachedInteractivePreviewRaw` / `cachedSettledPreviewRaw` 에 해당하는 **프리뷰 raw 2슬롯**을 `export/support/preview_proxy.cpp` 에 붙였습니다. 프리뷰는 결함 recipe 를 원본에서 적용하고, 자동/프리셋 베이스도 **원본**에서 푼 뒤(`resolve_negative_base`), `displayProxy` 와 같이 Lanczos3 로 미리보기 상자에 맞춘 다음 반전·톤·룩을 돌립니다. 검출(`DetectTarget`)과 내보내기는 이 축소를 타지 않습니다. 결함 recipe 가 비어 있지 않으면 프록시 슬롯을 쓰지 않습니다(좌표가 원본이기 때문). `FrameCacheManager` FIFO·다중 프레임 상주는 아직 없습니다.
+프리뷰 raw 는 `preview_raw_store` 가 프레임별로 인터랙티브/정착 두 슬롯을 들고,
+정착 raw 가 있으면 인터랙티브를 Lanczos 로 파생합니다(디코드 0).
+관리 쪽 `FrameResidency` 가 developed FIFO 입니다. 설정 탭의 메모리 캐시 UI 는 없습니다([`10`](10-cache-and-optimization.md)).
 
-프리뷰(`abi/preview/develop_preview_*.cpp`)·검출·내보내기가 **같은 `run_develop`** 을 씁니다.
-그래서 슬라이더를 한 칸 움직여도 내보내기와 같은 준비 비용을 전부 냅니다.
+프리뷰·검출·내보내기는 같은 `run_develop` 입니다. 프리뷰만 상자 크기에서 현상합니다.
+검출과 내보내기는 원본 해상도입니다.
 
 **macOS 는 정반대입니다** (`DevelopFrameRenderer+Input.swift:48-66`):
 
@@ -172,17 +172,14 @@ if let full = snapshot.preloadedFullPreviewRaw { ... }        // GPU Lanczos 축
 | `fullMaxDimension` (정착) | 3600 | 〃 |
 | `fastPreviewMaxDimension` | 720 | 〃 |
 | `waitForDevelopSettle` | **0.14초** 무편집 대기 | 〃 |
-| `cachedInteractivePreviewRaw` / `cachedSettledPreviewRaw` | 두 슬롯 | `decode.cpp` 는 아직 **프로세스 단일 슬롯**. 프레임별 2슬롯 아님 |
+| `cachedInteractivePreviewRaw` / `cachedSettledPreviewRaw` | 두 슬롯 | `preview_raw_store` **프레임별** 2슬롯 |
 
-**2026-08-18**: `DevelopPreviewProxy.cs` 가 macOS 상수를 갖고, `PreviewCoordinator` 가 표시 크기
-적응 패스 뒤 무편집 0.14초면 3600 정착을 돌립니다. **고정 1600×1200 은 제거됐습니다.**
+`DevelopPreviewProxy.cs` 가 macOS 상수(1024…3600, step 256, settle 0.14s)를 갖고,
+`PreviewCoordinator` 가 표시 크기 적응 패스 뒤 무편집 0.14초면 3600 정착을 돌립니다.
+고정 1600×1200 은 없습니다. 인터랙티브 상자 접기는 넣었다가 되돌렸습니다([`07`](07-user-reported.md) H.9).
 
-**2026-08-19**: 네이티브 프리뷰가 이제 그 상자 크기에서 **현상**합니다. `native.preview_proxy_cache` 가
-`develop_preview` 를 두 번 부릅니다 — 두 번째 decode runs **0**, 노출을 바꾸면 화소가 바뀌고,
-내보내기 해상도는 원본입니다. 5088×3401 상자 1280 두 번째 **43.1 ms**. 셸 시험은 정착이 1280 다음
-3600 을 부르는지 확인합니다(1067 assertions).
-
-> ⚠️ **앱 설치본에서 슬라이더 벽시계는 아직 이 문장을 쓰는 시점에 재는 중**입니다.
+CLI: 5088×3401 상자 1280 두 번째 **43.1 ms · decode 0**. 3600 `nocurve` 단계 합 **65.0 ms**.
+앱 슬라이더 벽시계는 **못 쟀습니다.**
 
 ---
 
@@ -190,7 +187,7 @@ if let full = snapshot.preloadedFullPreviewRaw { ... }        // GPU Lanczos 축
 
 | Windows | 줄 | 판정 |
 |---|---:|---|
-| `imaging/muted_scene_vibrance_table.cpp` | 9,003 | **정당함.** macOS 는 `CIFilter("CIVibrance")` 라는 Apple 비공개 커널을 씁니다. Windows 는 그것을 33³ LUT 로 **측정해** 옮겼고 golden 해시가 문서에 있습니다. 창작이 아니라 이식 수단입니다. 다만 God object 입니다 |
+| `imaging/muted_scene_vibrance_table.cpp` | 9,003 | **정당함.** macOS 는 `CIFilter("CIVibrance")` 라는 Apple 비공개 커널을 씁니다. Windows 는 그것을 33³ LUT 로 **측정해** 옮겼고 golden 해시가 문서에 있습니다. 창작이 아니라 이식 수단입니다. [`05`](05-god-objects.md) 에 사유 있음. **다시 쪼개지 말 것** |
 | `DefectOverlayImage` 의 `Opacity="0.75"` | 1줄 | **창작이었음 — 2026-08-18 제거.** macOS 는 불투명도를 색마다 넣습니다 |
 | `NativeEngineStatusService` 의 `ABI 0.48 · X64` | — | **창작이었음 — `f5d9a5b` 에서 제거** |
 | GrainMend 캡슐 `CornerRadius="999"` | — | **창작이었음 — `f5d9a5b` 에서 18/15 로 수정** |
@@ -227,11 +224,59 @@ if let full = snapshot.preloadedFullPreviewRaw { ... }        // GPU Lanczos 축
 | `ditherAdd` | **없음** | `OutputDither.swift` 미이식 — 1.3절과 같음 |
 | `channelClippingOverlay` | **없음** | `ChannelClippingOverlay.swift` 미이식 |
 
-**`digital_film_physics.cpp` 는 이것들의 구현이 아닙니다.** 그 파일은 필름별 산란·할레이션·
-그레인 **프로파일 표**(125줄)일 뿐입니다. [`04-gpu-plan.md`](04-gpu-plan.md) 의 앞 판이 그것을
-대응으로 적었던 것은 **파일명으로 짐작한 오류**이고 2026-08-18 에 정정했습니다.
+**`digital_film_physics.cpp` 는 이것들의 구현이 아닙니다.** 프로파일 표입니다.
 
-이 결손은 2절이 적은 `Digital` (13파일) 66% 커버리지의 실체입니다 —
-`DigitalFilmDevelop`·`SceneReconstruct` 가 통째로 없습니다.
+`digitalToDisplayGamma`·`digitalToLinearLight` 는 이식했습니다.
+`ditherAdd`·`channelClippingOverlay` 는 1.5절 — **있음.**
 
-**GPU 이전에 CPU 이식이 먼저입니다.** 없는 것을 GPU 로 옮길 수는 없습니다.
+`digitalSceneReconstruct`·`digitalFilmDensity`·`digitalInterImage`·`digitalPrintPaper`·
+`digitalReversalTransmit`·`digitalFilmColor` 여섯은 **macOS 에서도 죽은 커널**입니다
+([`06`](06-false-claims.md) 11절). **옮기지 마십시오.**
+
+살아 있는 디지털 룩은 `DigitalFilmColorPresetStage` / `digital_film_color_preset.cpp` 입니다.
+
+
+---
+
+## 9. 2026-08-20 — 엔진에서 고친 것
+
+### 9.1 `develop_export.cpp` 소멸 순서 (강제 종료의 원인)
+
+`GpuResidentScope` 를 **단계 출력보다 뒤에** 선언해 두었습니다. C++ 는 선언의 역순으로
+지우므로 상주 범위가 먼저 죽고, 그 소멸자의 `flush_resident()` 가 **이미 사라진**
+`InvertStageOutput`/`LookStageOutput`/`GrainStageOutput`/`FinishStageOutput` 에
+화소를 내려썼습니다. 앱에서는 자동 레벨 단추를 3번쯤 누르면 `0xC0000005` 로 죽었습니다.
+
+```cpp
+// 고친 뒤 — 출력이 먼저, 상주 범위가 나중(= 상주 범위가 먼저 죽고 출력은 살아 있음)
+InvertStageOutput invert{};
+LookStageOutput look{};
+GrainStageOutput grain{};
+FinishStageOutput finish{};
+
+std::optional<GpuResidentScope> resident_scope{};
+if (gpu_policy == GpuUsePolicy::allowed) { resident_scope.emplace(); }
+```
+
+**규칙: 상주 범위는 그것이 채우는 버퍼보다 먼저 선언합니다.** 새 단계를 붙일 때도 같습니다.
+
+### 9.2 `core/row_block_pool.cpp` — 통지를 잠금 안으로
+
+`--pending->remaining` 뒤 **잠금 밖에서** `notify_all` 하면, 깨어난 쪽이 조건을 확인하고
+스택 프레임(`PendingCounter`)을 풀어버린 뒤에 통지가 그 조건 변수를 만질 수 있습니다.
+통지를 `lock_guard` 안으로 옮겼습니다.
+
+### 9.3 크래시를 잡는 연장 (다음 사람용)
+
+| 무엇 | 어디 |
+|---|---|
+| VEH 크래시 기록기 | `src/Native/abi/support/crash_log.cpp` → `%LOCALAPPDATA%\Negaflow\Logs\native-crash.txt` |
+| Release 심볼 | `cmake/CompilerWarnings.cmake` — `/Zi` `/DEBUG` `/OPT:REF` `/MAP`. `/OPT:ICF` 는 **켜지 않습니다** |
+| RVA → 함수·줄 | `scripts/symbolize-rva.ps1 -Rva 0x1546cb` |
+
+### 9.4 `native.gpu_film_scan` 간헐 SEGFAULT
+
+2026-08-19 인수인계의 "27회 중 3회 실패" 는 **2026-08-20 고침 이후 재현되지 않습니다** —
+`--repeat until-fail:40` **40/40 통과**(+ 앞서 15회). 같은 원인이라고 **단정하지는 않습니다**:
+상주 범위 수명 버그가 GPU 경로 전체에 걸려 있었으므로 개연성은 높지만, 실패했을 때의
+스택을 잡아 두지 못했습니다. 다시 나오면 9.3 의 기록기가 이번에는 남깁니다.
