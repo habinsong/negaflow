@@ -99,11 +99,25 @@ internal static class CatalogBackupFiles
         $"backup-{sequence.ToString("D20", CultureInfo.InvariantCulture)}-" +
         $"{createdAt.ToUniversalTime():yyyyMMdd-HHmmss-fff}-{Guid.NewGuid():N}";
 
-    internal static bool MoveDirectory(string sourcePath, string destinationPath) =>
-        MoveFileEx(
-            ToExtendedPath(sourcePath),
-            ToExtendedPath(destinationPath),
-            MoveFileWriteThrough);
+    /// <summary>검사기가 잠깐 잡고 있으면 다시 겁니다 — <see cref="StorageMoveRetryPolicy"/>.</summary>
+    internal static bool MoveDirectory(string sourcePath, string destinationPath)
+    {
+        string source = ToExtendedPath(sourcePath);
+        string destination = ToExtendedPath(destinationPath);
+        for (int attempt = 0; ; attempt++)
+        {
+            if (MoveFileEx(source, destination, MoveFileWriteThrough))
+            {
+                return true;
+            }
+            int win32Error = Marshal.GetLastWin32Error();
+            if (!StorageMoveRetryPolicy.ShouldRetry(win32Error, attempt))
+            {
+                return false;
+            }
+            StorageMoveRetryPolicy.Wait(attempt);
+        }
+    }
 
     internal static string ToExtendedPath(string path)
     {

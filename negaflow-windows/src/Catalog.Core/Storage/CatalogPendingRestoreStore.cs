@@ -51,11 +51,11 @@ internal static class CatalogPendingRestoreStore
                 return CatalogPendingRestoreScheduleResult.Failure(
                     CatalogPendingRestoreError.InvalidPendingSnapshot);
             }
-            if (File.Exists(destinationPath) ||
-                Directory.Exists(destinationPath) ||
-                !CatalogPendingRestoreFiles.PromoteDirectory(
-                    stagingPath,
-                    destinationPath))
+            bool destinationTaken = File.Exists(destinationPath) ||
+                Directory.Exists(destinationPath);
+            bool movedIntoPlace = !destinationTaken &&
+                CatalogPendingRestoreFiles.PromoteDirectory(stagingPath, destinationPath);
+            if (!movedIntoPlace)
             {
                 return CatalogPendingRestoreScheduleResult.Failure(
                     CatalogPendingRestoreError.IoFailure);

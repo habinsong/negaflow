@@ -453,11 +453,25 @@ internal sealed class CatalogDefectRestoreTransaction
             StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool MoveDirectory(string source, string destination) =>
-        MoveFileEx(
-            ToExtendedPath(source),
-            ToExtendedPath(destination),
-            MoveFileWriteThrough);
+    /// <summary>검사기가 잠깐 잡고 있으면 다시 겁니다 — <see cref="StorageMoveRetryPolicy"/>.</summary>
+    private static bool MoveDirectory(string source, string destination)
+    {
+        string from = ToExtendedPath(source);
+        string to = ToExtendedPath(destination);
+        for (int attempt = 0; ; attempt++)
+        {
+            if (MoveFileEx(from, to, MoveFileWriteThrough))
+            {
+                return true;
+            }
+            int win32Error = Marshal.GetLastWin32Error();
+            if (!StorageMoveRetryPolicy.ShouldRetry(win32Error, attempt))
+            {
+                return false;
+            }
+            StorageMoveRetryPolicy.Wait(attempt);
+        }
+    }
 
     private static string ToExtendedPath(string path)
     {

@@ -137,10 +137,34 @@ internal static class CatalogPendingRestoreFiles
     }
 
     public static bool PromoteDirectory(string sourcePath, string destinationPath) =>
-        MoveFileEx(
-            ToExtendedPath(sourcePath),
-            ToExtendedPath(destinationPath),
-            MoveFileWriteThrough);
+        PromoteDirectory(sourcePath, destinationPath, out _);
+
+    /// <summary>
+    /// 실패하면 <paramref name="win32Error"/> 에 Win32 오류를 담습니다. 오류를 P/Invoke
+    /// 직후에 읽지 않으면 그 사이의 관리 호출이 값을 덮어씁니다.
+    /// </summary>
+    public static bool PromoteDirectory(
+        string sourcePath,
+        string destinationPath,
+        out int win32Error)
+    {
+        string source = ToExtendedPath(sourcePath);
+        string destination = ToExtendedPath(destinationPath);
+        for (int attempt = 0; ; attempt++)
+        {
+            if (MoveFileEx(source, destination, MoveFileWriteThrough))
+            {
+                win32Error = 0;
+                return true;
+            }
+            win32Error = Marshal.GetLastWin32Error();
+            if (!StorageMoveRetryPolicy.ShouldRetry(win32Error, attempt))
+            {
+                return false;
+            }
+            StorageMoveRetryPolicy.Wait(attempt);
+        }
+    }
 
     public static bool TryReadMarker(
         StorageRootSet roots,
