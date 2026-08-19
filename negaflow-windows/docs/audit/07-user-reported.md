@@ -90,14 +90,15 @@ macOS `App/AppMenuCommands.swift` · `AppStandardMenuCommands.swift` · `AppWork
 | 라이브러리 | `AppWorkflowMenuCommands.swift:8` `CommandMenu(.menuLibrary)` | **2026-08-19.** `AppMenuBarView` 다섯째 메뉴 `라이브러리`. PID 27388: UIA `이미지 가져오기` · `폴더 가져오기` · `라이브러리 새로고침` · `스캐너 불러오기` · `격자` · `비교` · `살펴보기` + 단축키 Ctrl+I / Ctrl+Shift+I / Ctrl+R / Ctrl+Alt+L / G / C / N. 인화에서 `살펴보기` → 라이브러리. `비교` → 빈 비교(`사진 두 장을 선택하세요`). `격자` → 카드 격자 복귀. macOS 는 격자/비교/살펴보기에서 `activeWorkspaceModule = .library` |
 | 사진 | `:47` `CommandMenu(.menuPhoto)` | **2026-08-19.** `AppMenuBarView` 여섯째 메뉴 `사진`. PID 8148: UIA 18항목 — 이전/다음 · 선택/해제/제외/제거 · 별점 초기화·별 1–5개 · 가상 사본 · 현상 설정 복사/붙여넣기 · 좌/우 90도 · 좌우/상하 반전. 단축키 `[` `]` P U X Delete 0–5 Ctrl+' Ctrl+Shift+C/V Ctrl+Shift+[/] Ctrl+Alt+H/V. `별 3개` → 카드 별 3. `다음 사진`(] 과 같은 Invoke) → 옆 카드로 선택 이동. 폴더 묶음 GridView 는 그룹을 펴서 옮김 |
 | 현상 | `:135` `CommandMenu(.menuDevelop)` | **2026-08-19.** `AppMenuBarView` 일곱째 메뉴 `현상`. PID 29760 UIA: 자동 톤(Ctrl+U) · 자동 화이트 밸런스(Ctrl+Shift+U) · 자동 색상(Ctrl+Shift+B) · 자동 레벨(Ctrl+Shift+L) · 노이즈 감소(Ctrl+Alt+N) · 프로세스(C-41/ECN-2 · E-6 · D-76 · B&W Reversal) · 타깃(MAIN·PRINT·HS·SP·F135·HR·EXPIRED) · 자르기 영역(R) · 베이스 스포이드(W) · GrainMend(자동 Shift+Q · 가이드 Q · 브러시 B · 복제 도장 S) · 모든 보정 초기화(Ctrl+Shift+R) · 좌우 이전/이후(\). Toggle·체크는 지금 사진 값을 따름 |
-| 스캐너 | `:250` `CommandMenu(.menuScanner)` | **없음** |
-| 내보내기 | `:292` `CommandMenu(.menuExport)` | **없음** |
-| 윈도우 | 표준 | **없음** |
-| 도움말 | `AppStandardMenuCommands.swift:136` (`after: .help`) | **없음** |
+| 스캐너 | `:250` `CommandMenu(.menuScanner)` | **2026-08-19.** PID 23740 UIA: `스캐너 다시 찾기`(Ctrl+Shift+D) · `스캐너 시뮬레이터`(Ctrl+Alt+D, Toggle) · `프리뷰 스캔`(Ctrl+Alt+P) · `사진 스캔`(Ctrl+Alt+S). 평판일 때만 나오는 `프레임 추가/제거`(Ctrl+Alt+F / Ctrl+Alt+Delete)는 이 장치에서 macOS 처럼 **나오지 않음**. 메뉴에서 시뮬레이터 켜고 끄기 확인 |
+| 내보내기 | `:292` `CommandMenu(.menuExport)` | **2026-08-19.** PID 34092 UIA: `빠른 내보내기`(Ctrl+E) · `내보내기`(Ctrl+Shift+E). 잠금은 `canQuickExportSelection` / `canExportSelection`(+이름 규칙) |
+| 윈도우 | 표준(AppKit) | **넣지 않음(OS 강제).** Swift 에 `CommandGroup` 정의가 **없습니다** — macOS 의 윈도우 메뉴는 AppKit 이 주는 표준 메뉴입니다. Windows 에는 대응 표준이 없어 지어내지 않습니다(편집 메뉴의 잘라내기/복사/붙여넣기, 파일 메뉴의 New/Open/Close 와 같은 이유) |
+| 도움말 | `AppStandardMenuCommands.swift:136` (`after: .help`) | **2026-08-19.** PID 34092 UIA: `단축키`(단축키 없음, 설정의 단축키 탭을 엶) · `빠른 시작`(Ctrl+Shift+H). 빠른 시작 창 560×480, 3단계 문구·문서 버전 확인 |
 
 Parsec macOS 메뉴 줄: `negaflow · 파일 · 편집 · 보기 · 라이브러리 · 사진 · 현상 · 스캐너 · 내보내기 · 윈도우 · 도움말`.
 
-**판정: 앱·파일·편집·보기·라이브러리·사진 메뉴를 이식함. 나머지 5개는 없습니다.**
+**판정(2026-08-19): 11개 중 10개를 이식했습니다.** 남은 하나인 `윈도우` 는 macOS 에서도
+Swift 가 만들지 않는 AppKit 표준 메뉴라 Windows 에 대응이 없습니다 — 지어내지 않습니다.
 
 ---
 
