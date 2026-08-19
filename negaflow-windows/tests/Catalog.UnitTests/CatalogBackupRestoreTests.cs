@@ -97,7 +97,8 @@ internal static class CatalogBackupRestoreTests
         CatalogBackupCreateResult withDefect =
             session.CreateBackupForTesting(now.AddMinutes(2));
         Check(withDefect.IsSuccess && withDefect.Sequence == 2,
-            "backup_defect_generation_created");
+            "backup_defect_generation_created",
+            () => $"{withDefect.Error} seq={withDefect.Sequence}");
         Check(withDefect.GenerationPath is not null &&
               File.Exists(Path.Combine(
                   withDefect.GenerationPath,
@@ -121,11 +122,17 @@ internal static class CatalogBackupRestoreTests
         Check(session.Write(Snapshot("backup-b", Row("frame-2", "two"))).IsSuccess,
             "backup_second_catalog_write");
         CatalogBackupCreateResult second = session.CreateBackupForTesting(now.AddMinutes(3));
-        Check(second.IsSuccess && second.Sequence == 3, "backup_second_sequence");
+        Check(
+            second.IsSuccess && second.Sequence == 3,
+            "backup_second_sequence",
+            () => $"{second.Error} seq={second.Sequence}");
         Check(session.Write(Snapshot("backup-c", Row("frame-3", "three"))).IsSuccess,
             "backup_third_catalog_write");
         CatalogBackupCreateResult third = session.CreateBackupForTesting(now.AddMinutes(4));
-        Check(third.IsSuccess && third.Sequence == 4, "backup_third_sequence");
+        Check(
+            third.IsSuccess && third.Sequence == 4,
+            "backup_third_sequence",
+            () => $"{third.Error} seq={third.Sequence}");
 
         string future = Path.Combine(roots.BackupRoot, "backup-future-version");
         Directory.CreateDirectory(future);
@@ -323,10 +330,12 @@ internal static class CatalogBackupRestoreTests
                 string generationId = selected.GenerationPath is null
                     ? string.Empty
                     : Path.GetFileName(selected.GenerationPath);
-                Check(initial.ScheduleRestoreForTesting(
-                        generationId,
-                        now.AddMinutes(1)).IsSuccess,
-                    "pending_future_schedule_success");
+                CatalogPendingRestoreScheduleResult futureSchedule =
+                    initial.ScheduleRestoreForTesting(generationId, now.AddMinutes(1));
+                Check(
+                    futureSchedule.IsSuccess,
+                    "pending_future_schedule_success",
+                    () => $"{futureSchedule.Error} generation='{generationId}'");
             }
         }
         SetStorageVersion(futureRoots.CatalogPath, 99);
@@ -375,10 +384,12 @@ internal static class CatalogBackupRestoreTests
                 string generationId = selected.GenerationPath is null
                     ? string.Empty
                     : Path.GetFileName(selected.GenerationPath);
-                Check(initial.ScheduleRestoreForTesting(
-                        generationId,
-                        now.AddMinutes(1)).IsSuccess,
-                    "pending_cleanup_schedule_success");
+                CatalogPendingRestoreScheduleResult cleanupSchedule =
+                    initial.ScheduleRestoreForTesting(generationId, now.AddMinutes(1));
+                Check(
+                    cleanupSchedule.IsSuccess,
+                    "pending_cleanup_schedule_success",
+                    () => $"{cleanupSchedule.Error} generation='{generationId}'");
             }
         }
 

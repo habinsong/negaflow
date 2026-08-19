@@ -135,10 +135,12 @@ internal static class DefectCatalogRecoveryTests
                           "current-defect",
                           DefectCatalogRow(currentFrameId, "current"))).IsSuccess,
                     "defect_restore_current_generation_written");
-                Check(restore.ScheduleRestoreForTesting(
-                        generationId,
-                        now.AddMinutes(1)).IsSuccess,
-                    "defect_restore_schedule_with_sidecars");
+                CatalogPendingRestoreScheduleResult withSidecars =
+                    restore.ScheduleRestoreForTesting(generationId, now.AddMinutes(1));
+                Check(
+                    withSidecars.IsSuccess,
+                    "defect_restore_schedule_with_sidecars",
+                    () => $"{withSidecars.Error} generation='{generationId}'");
             }
         }
 
@@ -226,8 +228,12 @@ internal static class DefectCatalogRecoveryTests
             string generationId = selectedBackup.GenerationPath is null
                 ? string.Empty
                 : Path.GetFileName(selectedBackup.GenerationPath);
-            Check(initial.ScheduleRestoreForTesting(generationId, now.AddMinutes(1)).IsSuccess,
-                "interrupted_restore_scheduled");
+            CatalogPendingRestoreScheduleResult interrupted =
+                initial.ScheduleRestoreForTesting(generationId, now.AddMinutes(1));
+            Check(
+                interrupted.IsSuccess,
+                "interrupted_restore_scheduled",
+                () => $"{interrupted.Error} generation='{generationId}'");
         }
 
         Check(CatalogPendingRestoreFiles.TryReadMarker(roots, out CatalogPendingRestoreMarker read) &&
