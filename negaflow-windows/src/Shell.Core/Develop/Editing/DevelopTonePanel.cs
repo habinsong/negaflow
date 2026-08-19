@@ -90,7 +90,9 @@ public sealed class DevelopTonePanel
         panel.RefreshAfterEdit(editor.SetCurveShadows(panel.SelectedFrame, value));
 
     public LibraryFrameError ResetBasicTone() =>
-        panel.RefreshAfterEdit(editor.ResetBasicTone(panel.SelectedFrame));
+        panel.RefreshAfterEdit(editor.ResetBasicTone(
+            panel.SelectedFrame,
+            DevelopInspectorResetter.NeutralPresetId));
 
     public LibraryFrameError ResetToneCurve() =>
         panel.RefreshAfterEdit(editor.ResetToneCurve(panel.SelectedFrame));

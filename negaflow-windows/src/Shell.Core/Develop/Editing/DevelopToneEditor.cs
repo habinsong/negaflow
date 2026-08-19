@@ -77,8 +77,17 @@ internal sealed class DevelopToneEditor
     public DevelopEditResult SetCurveShadows(LibraryFrameSnapshot? frame, double value) =>
         SetTone(frame, tone => tone with { CurveShadows = limits.ClampToneControl(value) });
 
-    public DevelopEditResult ResetBasicTone(LibraryFrameSnapshot? frame) =>
-        SetTone(frame, tone => tone with
+    /// <summary>
+    /// macOS <c>DevelopInspectorResetter.reset(.tone)</c> — 일곱 값과 함께
+    /// <c>frame.preset = neutralPreset</c> 도 되돌립니다.
+    /// </summary>
+    public DevelopEditResult ResetBasicTone(LibraryFrameSnapshot? frame, string? neutralPresetId)
+    {
+        if (frame is null)
+        {
+            return new(LibraryFrameError.MissingId, false);
+        }
+        ToneAdjustment tone = frame.Tone with
         {
             Exposure = 0,
             Contrast = 0,
@@ -87,7 +96,14 @@ internal sealed class DevelopToneEditor
             Shadow = 0,
             Whites = 0,
             Blacks = 0,
-        });
+        };
+        return Edit(
+            frame,
+            new LibraryFrameEdit(
+                tone,
+                frame.ManualBase,
+                LookPreset: new LookPresetSelection(neutralPresetId)));
+    }
 
     public DevelopEditResult ResetToneCurve(LibraryFrameSnapshot? frame)
     {

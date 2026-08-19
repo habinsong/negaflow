@@ -39,6 +39,8 @@ public sealed class DevelopPanelState
         toneEditor = new DevelopToneEditor(host, limits);
         transformEditor = new DevelopTransformEditor(host);
         versionPresets = new DevelopVersionPresetController(host);
+        Compare = new CanvasCompareState();
+        Viewport = new CanvasViewportState();
         Tone = new DevelopTonePanel(this, toneEditor);
         Color = new DevelopColorPanel(this, colorEditor);
         DefectLayers = new DevelopDefectLayerPanel(this, defectEditor);
@@ -92,6 +94,9 @@ public sealed class DevelopPanelState
         }
     }
 
+    internal InfraredDefectApplyResult? TryInfraredCleanIfNeeded() =>
+        SelectedFrame is { } frame ? host.TryInfraredCleanIfNeeded(frame.Id) : null;
+
     public BaseEstimationMode BaseMode => SelectedFrame?.Base.Mode ?? BaseEstimationMode.Auto;
 
     public bool CanEditBase => DevelopBaseEditor.CanEdit(SelectedFrame);
@@ -135,6 +140,11 @@ public sealed class DevelopPanelState
 
     public LibraryFrameSnapshot? SelectedFrame { get; private set; }
 
+    public CanvasCompareState Compare { get; }
+
+    /// <summary>macOS <c>CanvasView.viewport</c>.</summary>
+    public CanvasViewportState Viewport { get; }
+
     /// <summary>기본 톤과 톤 커브의 조작 표면입니다.</summary>
     public DevelopTonePanel Tone { get; }
 
@@ -160,6 +170,16 @@ public sealed class DevelopPanelState
             {
                 SelectedFrame = frame;
                 LastAppliedBase = frame.AppliedBase;
+                _ = host.TryInfraredCleanIfNeeded(frame.Id);
+                foreach (LibraryFrameSnapshot updated in host.Frames)
+                {
+                    if (string.Equals(updated.Id, frame.Id, StringComparison.Ordinal))
+                    {
+                        SelectedFrame = updated;
+                        LastAppliedBase = updated.AppliedBase ?? LastAppliedBase;
+                        break;
+                    }
+                }
                 return true;
             }
         }
@@ -308,6 +328,55 @@ public sealed class DevelopPanelState
     public LibraryFrameError ResetDetailAndEffects()
     {
         return RefreshAfterEdit(effectsEditor.Reset(SelectedFrame));
+    }
+
+    /// <summary>macOS <c>selectCompareMode</c>.</summary>
+    public void SelectCompareMode(CanvasCompareMode mode)
+    {
+        if (SelectedFrame is { } frame)
+        {
+            Compare.DevelopTarget = frame.DevelopTarget;
+        }
+
+        Compare.Select(mode);
+    }
+
+    /// <summary>macOS <c>beforeContentRaw =</c>.</summary>
+    public void SelectCompareBefore(string id, Func<string, bool>? frameExists = null) =>
+        Compare.SelectBefore(id, frameExists);
+
+    /// <summary>macOS <c>toggleDevelopedShortcut</c>.</summary>
+    public void ToggleBeforeAfter()
+    {
+        if (SelectedFrame is { } frame)
+        {
+            Compare.DevelopTarget = frame.DevelopTarget;
+        }
+
+        Compare.ToggleDeveloped();
+    }
+
+    /// <summary>
+    /// macOS <c>AppModel.resetAllDevelopAdjustments(frame:neutralPreset:)</c>. 호출부가
+    /// 프리셋을 정하지 않으면 macOS 인스펙터와 같이 "neutral" 을 되돌려 놓습니다 — 앞서는
+    /// 프리셋을 아예 지워서 macOS 와 다른 그림이 나왔습니다.
+    /// </summary>
+    public LibraryFrameError ResetAllAdjustments(string? neutralPresetId = null)
+    {
+        neutralPresetId ??= DevelopInspectorResetter.NeutralPresetId;
+        if (SelectedFrame is not { } frame)
+        {
+            return LibraryFrameError.MissingId;
+        }
+
+        LibraryFrameEdit edit = DevelopInspectorResetter.ResetAllAdjustments(
+            frame,
+            neutralPresetId);
+        LibraryFrameError error = host.EditUndoable(
+            frame.Id,
+            LibraryHostService.UndoActions.ResetAdjustments,
+            edit);
+        return RefreshAfterEdit(new DevelopEditResult(error, error == LibraryFrameError.None));
     }
 
     public LibraryFrameError SetTexture(TextureRecipe texture)
