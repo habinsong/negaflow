@@ -46,11 +46,10 @@ Windows 대응과 **함수·열거자 단위**로 대조했습니다.
 | 줄 | **1,198** | 947 |
 | 동작(action) 열거자 | **66** | **68** (2026-08-19 실측 — 없는 것 0) |
 
-### 1.2 macOS 에 있고 Windows 에 없는 동작 — **24개가 아니라 4개** (2026-08-19 정정)
+### 1.2 macOS 에 있고 Windows 에 없는 동작 — **0개** (2026-08-19 재집계)
 
-앞 판의 "74 vs 55 · 없는 것 24개" 는 **낡았습니다.** 두 열거자를 기계로 뺀 결과입니다
-(`WorkflowShortcutActions.swift` 의 `enum WorkflowShortcutAction` 66 케이스 ↔
-`WorkflowShortcutAction.cs` 64):
+앞 판의 "74 vs 55 · 없는 것 24개" 와 "66 vs 64 · 없는 것 4개" 는 **둘 다 낡았습니다.**
+두 열거자: Swift 66 ↔ C# 68.
 
 | 분류 | 없는 동작 | 왜 |
 |---|---|---|
@@ -70,14 +69,13 @@ Windows 에만 있는 둘은 `Undo` · `Redo` 입니다(66 + 2 = 68) — macOS �
 
 | macOS | 줄 | 하는 일 | Windows |
 |---|---:|---|---|
-| `ShortcutRecorderField.swift` | **232** | 키를 눌러 **단축키를 직접 녹화**하는 입력 필드 | **없음**(히트 0) |
-| `Workflow/WorkflowShortcutRecorder.swift` | 30 | 녹화 상태 기계 | **없음** |
-| `Workflow/WorkflowShortcutStore.swift` | 80 | 사용자가 바꾼 단축키 **저장** | **없음** |
-| `WorkflowShortcutsSettingsSection.swift` | 109 | 설정의 단축키 탭 화면 | `SettingsRootView.Shortcuts.cs` 343줄 — **대조 안 함** |
-| `Workflow/WorkflowShortcutModifiers.swift` | — | 수정자 키 정규화 | `WorkflowShortcut.cs` 70줄에 일부 |
+| `ShortcutRecorderField.swift` | **232** | 키를 눌러 녹화 | `SettingsRootView.Shortcuts.cs` `recordingAction` + `OnShortcutRecorderKeyDown` |
+| `WorkflowShortcutRecorder.swift` | 30 | 녹화 상태 | 같은 파일의 `recordingAction`/`rejectedAction` |
+| `WorkflowShortcutStore.swift` | 80 | 바꾼 단축키 저장 | `WorkflowShortcutMap` — 기본값과 같아지면 덮어쓰기에서 지움 |
+| `WorkflowShortcutsSettingsSection.swift` | 109 | 단축키 탭 | `SettingsRootView.Shortcuts.cs` |
+| `WorkflowShortcutModifiers.swift` | — | 수정자 정규화 | `WorkflowShortcut.cs` |
 
-**판정: Windows 단축키는 고정 표(`WorkflowShortcutMap.cs` 180줄)이고,
-macOS 처럼 사용자가 녹화해 바꾸고 저장하는 기능이 없습니다.**
+**판정: 녹화·저장은 설정 탭에 있습니다.** 232줄 필드와 픽셀 단위 대조는 안 했습니다.
 
 ---
 
@@ -127,9 +125,9 @@ macOS 처럼 사용자가 녹화해 바꾸고 저장하는 기능이 없습니�
 | **단축키** | 279 | `WorkflowShortcutsSettingsSection`(109줄) + `ShortcutRecorderField`(232줄) **녹화·저장** | `SettingsRootView.Shortcuts.cs` 343줄 — **녹화·저장 없음**(1.3절) |
 | **법적 고지** | 285 | `LegalNoticeSettingsSection`(41줄) | **없음** |
 
-**요약: 탭 8개의 이름과 순서는 맞지만, 그 안의 macOS 섹션 11개가 전부 히트 0 입니다.**
-가장 큰 구멍은 **디스크 탭**(macOS 715줄 → Windows 토글 1개)과
-**색 관리**(166줄 → 없음), **메모리 캐시**(111줄 → 없음)입니다.
+**요약: 탭 8개의 이름과 순서는 맞습니다.** 픽셀 샘플러 토글은 있습니다.
+없는 큰 구멍은 **디스크 탭**(저장 위치·백업·복원·보관), **색 관리 섹션**,
+**메모리 캐시 섹션**, **지원 번들**, **법적 고지 본문**, **스캔 저장 위치**입니다.
 
 ### 2.2 탭 **안의 내용은 전부 다시 씀** — 11개 섹션 히트 0
 
@@ -168,26 +166,22 @@ Windows 는 **토글 하나**입니다. 백업·복원·보관·캐시 관리가
 **지원 번들(`SupportBundleSettingsSection` 61줄)도 없습니다** — [`07`](07-user-reported.md) C9
 진단 기능 미구현과 같은 자리입니다.
 
-### 2.3 설정 버튼을 누르면 앱이 터짐
+### 2.3 설정 버튼을 누르면 앱이 터짐 — **고침**
 
-사용자 보고. 파일은 있습니다:
-`SettingsWindow.xaml(.cs)` 60줄 · `SettingsRootView.xaml` 479줄 + `.xaml.cs` 437줄 +
-`.ScanTab.cs` 183줄 + `.Shortcuts.cs` 343줄.
-
-**예외 스택을 못 잡았습니다.** 재현 후 스택을 봐야 원인을 말할 수 있습니다.
-추측으로 고치지 않습니다.
+[`07`](07-user-reported.md) A1. `developAutoDefect.Text` 없음 → 기존 GrainMend 키로 붙임.
+같은 클릭으로 설정 창 확인.
 
 ---
 
 ## 3. 할 일
 
-| 순서 | 내용 |
-|---|---|
-| 1 | **설정 크래시 스택 잡기** — 그다음에야 고칠 수 있음 |
-| 2 | 없는 단축키 **24개** 이식 (특히 결함 도구 4 · 타깃 4 · 자동 보정 5) |
-| 3 | `ShortcutRecorderField`(232줄) + `WorkflowShortcutStore`(80줄) 이식 — 사용자가 바꿀 수 있게 |
-| 4 | **디스크 탭** — `DiskStorageSettingsSection`(317줄) + 백업/복원/보관/캐시 5화면 |
-| 5 | **색 관리 탭 내용**(166줄) |
-| 6 | `SupportBundleSettingsSection`(61줄) — 진단 |
-| 7 | 법적 고지(41줄) · 스캔 저장 위치(89줄) |
-| 8 | 탭 아이콘 8개 SF Symbols → SVG ([`08`](08-icons-and-chrome.md)) |
+| 순서 | 내용 | 상태 |
+|---|---|---|
+| 1 | 설정 크래시 | **닫음** A1 |
+| 2 | 단축키 열거자 | **닫음.** 66 vs 68, 없는 것 0 |
+| 3 | 녹화·저장 | 설정 탭에 있음. 픽셀 대조는 남음 |
+| 4 | 디스크 탭 5화면 | **없음** |
+| 5 | 색 관리 섹션 | ComboBox 하나. 166줄 섹션 없음 |
+| 6 | 지원 번들 | **없음** |
+| 7 | 법적 고지 · 스캔 저장 위치 | **없음** |
+| 8 | 탭 아이콘 SVG | [`08`](08-icons-and-chrome.md) |

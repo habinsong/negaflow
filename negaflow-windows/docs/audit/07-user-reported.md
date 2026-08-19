@@ -60,7 +60,8 @@ A4 확인(2026-08-19): `get-app-state` 의 UIA 순회/`--restore-window` 는 썸
 검증: x64 Debug `ctest -R "native.preview_raw_store|native.preview_proxy_cache"` 2/2. 동시 프리뷰 4스레드×6라운드 실패 0. `dotnet run` Shell.UnitTests Debug x64 assertions 1127 failures [].
 **2026-08-19 `run-app -SkipBuild` x64 Release:** PID **4972** 유지, 창 제목 `negaflow`, WS 1369 MB, 10분 안 WER `0xc0000409` 없음. Develop 단추를 이 실행에서 새로 누르지는 않았다.
 
-**둘 다 재현 후 예외 스택을 잡아야 합니다.** 추측으로 고치지 않습니다.
+A1·A2 스택은 잡았고 고쳤습니다. A4 는 코드·단위시험까지 있고, Develop 단추를 누른
+`run-app` Release 재현은 약합니다.
 
 ---
 
@@ -423,7 +424,7 @@ NEGA_DEBUG=1 negaflow-cli --auto-base-probe <source.tiff>
 
 | # | 항목 | macOS |
 |---|---|---|
-| D1 | **초기화 — 모든 보정 / 사진 각도** | `Tools/ResetControlsSection.swift:14,23` (`onResetAllAdjustments`, `onResetPhotoAngle`) + `DevelopInspectorResetter.swift`(104줄). Windows `ResetAllAdjustments`·`ResetControlsSection`·`InspectorResetter`·`ResetAngle` **전부 0** |
+| D1 | **초기화 — 모든 보정 / 사진 각도** | **2026-08-19 붙음.** `DevelopResetCard` + `DevelopInspectorResetter` + 현상 메뉴 |
 | D2 | **비교 캡슐** | 토글+분할+Before 소스 2026-08-19. 앱에서 메뉴 클릭 실측은 남음 |
 | D3 | **줌 HUD** | 수식+단추+끌기 2026-08-19 (`CanvasHudInteractionState`). 인화 HUD 위치는 남음 |
 | D4 | **GrainMend IR 프론트엔드** | 짝짓기+선택 시 자동 정리 2026-08-19. GrainMend 5번째 단추는 Swift 에도 없음 |
@@ -439,7 +440,7 @@ NEGA_DEBUG=1 negaflow-cli --auto-base-probe <source.tiff>
 |---|---|---|
 | E1 | 사진 바꾸면 수 초 | **2026-08-19.** 디코드 단일 슬롯 + **프리뷰 raw 프록시 2슬롯**(인터랙티브/정착). 프리뷰는 결함·필름베이스를 원본에서 푼 뒤 `displayProxy` 와 같이 Lanczos3 로 상자 맞춤하고 **그 작은 raw 에서 현상**. 내보내기·검출은 원본 해상도. 실측 5088×3401: 상자 1280 두 번째 프리뷰 **43.1 ms · decode runs 0** (첫 549.6 ms 중 decode 187.9). 상자 3600 두 번째 **260.6 ms · decode 0**. 앱 슬라이더 벽시계는 아직 설치본에서 재는 중. |
 | E2 | 우측탭 기능 하나 써도 수 초 | E1 과 같은 경로. CLI/시험은 두 번째 호출에서 디코드 0. **앱에서 슬라이더를 두 번 끌어 확인하는 것이 남음.** |
-| E3 | GrainMend 자동·가이드·브러시·복제 전부 느림 | 위 + **GPU 코드 0줄** |
+| E3 | GrainMend 자동이 느림 | 형태학+스크래치 각도 GPU 기본 켬. 검출 **4.66s**. 가이드·브러시·복제·IR 즉각은 앱 미측정 |
 | E4 | **인화 프리뷰가 깨짐** | **2026-08-19.** `developedImage ?? thumbnail` 순. 현상 미리보기 화소를 기억하고, 칸이 더 크면 `PrintPreviewResolution.renderDimension`(720…2560) 으로 현상본을 올림. 앱: RealScan·OpticFilm8100_frame_1 인화 판에 현상본, 열차 번호 2355 판독. 360 JPEG 확대 아님 |
 
 ---
@@ -498,28 +499,19 @@ DevelopLookLabel         DevelopLookSelector
 
 ---
 
-## G. 다음 순서 (사용자 요구 반영)
+## G. 다음 순서 (2026-08-19 재집계)
 
-1. **A1·A2 크래시** — 스택부터. **A3(2026-08-19) `developReset.Value` 도 닫음.**
-2. **E1 프리뷰 프록시 캐시 + 2단 렌더** — 네이티브 2슬롯+Lanczos 현상 붙임. 5088×3401 상자 1280 두 번째 **43.1 ms · decode 0**. 앱에서 노출 0→0.80 과 히스토그램 갱신 확인. **FrameCacheManager FIFO 는 10번.**
-3. **C1 필름 베이스** — C1.1~C1.9. RealScan 리베이트 집기 `0.40 0.13 0.07` + 현상본 유지.
-4. **E4 인화 프리뷰** — **닫음.** 현상본 먼저, 칸이 크면 표시 크기 현상. 다음: B 메뉴막대
-5. **B 메뉴막대** — 앱·파일·편집·보기·라이브러리·사진 이식함. 현상 메뉴에
-   **모든 보정 초기화** 붙임(2026-08-19). 이전/이후·결함은 핸들러 없어 넣지 않음.
-6. **D1 초기화** — `DevelopInspectorResetter` + 메뉴/단축키. 베이스·기하 유지.
-   **D5** 초기화 undo + 슬라이더 0.7s 묶음(`FrameEditHistory`, `host.Edit` 길목).
-   결함 undo·히스토리 패널은 남음.
-7. **GPU 3.1–3.8 닫음.** 다시 이식하지 말 것. 남은 확인은 [`15`](15-gpu-handoff.md) 4절.
-   프리뷰 invert→tone 상주 + BGRA8 출력은 2026-08-19 붙임(Release `nocurve`
-   단계 합 **65.0 ms**, `output` **7.01 ms**). 다음: 커브 중간 왕복 · [`16`](16-preview-handoff.md)
-8. **D2 비교** — 상태 + 캡슐 + 분할 클립 + Before 소스(MAIN/무보정/원본/`frame:`).
-   **D3 줌** — 수식 + HUD 단추 + 끌기(`minimumDistance` 4, 겹침 회피).
-   인화 HUD 위치 `(width-96, height-28)` 는 남음.
-9. **D4 IR** — `InfraredFilmCompatibility` + `InfraredImportPairing` +
-   선택 시 `runInfraredCleanIfNeeded`. 스캔 publish 는 이미 IR 을 돌림.
-   이미 있는 장에 IR 만 붙이기· stray IR 프레임 정리는 남음.
-   **D6 내보내기 · D7 인화** 남음.
-10. **F 문자열**
+닫힘(다시 하지 말 것): A1·A2·A3 · E1 네이티브 캐시 · C1.1–C1.9 · E4 · B 메뉴 10/11 ·
+D1 초기화 · D5 슬라이더 undo · GPU 3.1–3.8 · D2/D3 코드 · D4 짝짓기 · F 9건 · 단축키 열거자.
+
+지금 남은 것:
+
+1. **앱 실측** — 슬라이더 벽시계 · A4 Develop 클릭 · IR 쌍 가져오기 · Before 메뉴 클릭
+2. **05 생산 God object 6개** — 사유를 적거나 나누기
+3. **09 설정** — 디스크·메모리캐시·지원번들·법적고지·색관리 섹션
+4. **D6 내보내기 배치/저널 · D7 인화 사이드바/템플릿**
+5. **F.1 폴더별 적용 단추** · C7 상단 별점 · 08 아이콘 SVG · 필터 캡슐 배치
+6. **16** 커브 중간 왕복은 재서 기각. 해상도 접기 금지
     
 ---
 
@@ -538,6 +530,16 @@ DevelopLookLabel         DevelopLookSelector
 
 주의: `scripts/run-app.ps1 -SkipBuild` 는 `Add-AppxPackage -Register -ForceApplicationShutdown` 이라 패키지를 다시 등록하면서 기존 프로세스를 죽인다. 그것은 설치 경로이지 두 번째 실행이 아니다.
 
+
+---
+
+## I. 2026-08-20 사용자 보고
+
+| # | 증상 | 원인 (확정) | 상태 |
+|---|---|---|---|
+| I1 | **설정에서 언어를 바꿔도 안 바뀐다** | ① `AppResources` 의 `ResourceLoader` 가 `static readonly` 라 만들 때의 언어 문맥을 계속 씀 ② 문구를 다시 걸어 주는 길이 아예 없음 ③ `x:Uid` 56곳은 XAML 을 읽을 때 한 번만 풀림 | **2026-08-20 고침.** MRT Core `ResourceContext` 교체 + `LanguageChanged` 로 화면 전체 다시 걸기 + `x:Uid` → 코드. 앱에서 메뉴막대가 그 자리에서 한국어↔English 로 바뀌는 것 확인([`18`](18-localization.md) 1절) |
+| I2 | **다국어를 창작하지 말고 macOS 것 그대로** | resw 주석의 원본 심볼로 macOS 표와 전수 대조 → **16건이 손으로 옮기다 달라져 있었음**(`settingsDefaultScanRotationHelp` 5언어 등) | **2026-08-20 고침.** 대조기 `scripts/compare-mac-strings.py`. 지금 다른 것 **0건**, OS 강제 예외 4개만 남김([`18`](18-localization.md) 3·4절) |
+| I3 | **UI/UX 를 스크린샷과 대조하지 않았다** | 이번 세션은 메뉴·백엔드만 고치고 `맥negaflow 스크린샷` 50장을 한 장도 열지 않았음 | **미착수.** 다음 세션의 첫 일 |
 
 ---
 

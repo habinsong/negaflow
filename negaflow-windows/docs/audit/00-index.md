@@ -132,125 +132,107 @@
 > **2026-08-19: RealScan 리베이트 스포이드가 Dmin 0.40/0.13/0.07 로 바꾸고 현상본을 유지합니다**(C1.9).
 >
 > **그리고 아래 7개는 "코드에 있으니 됐다" 로 판정했다가 사용자가 앱을 열어서 잡은 것입니다:**
-> 슬라이더 정수 스냅 · 값 입력 불가 · 좌우 뒤집기 안 보임 · 현상 타깃 설정 경로 없음 ·
-> 인화 프리뷰 360 확대는 E4 에서 현상본으로 바꿈 · IR 단추 없음 · 폴더별 현상 적용 단추 없음.
+> 슬라이더 정수 스냅 · 값 입력 불가(둘 다 고침) · 좌우 뒤집기 안 보임(원인 미확정) ·
+> 현상 타깃은 메뉴로 바꿈 · 인화 프리뷰 360 확대는 E4 에서 현상본으로 바꿈 ·
+> IR 은 5번째 단추가 아니라 짝짓기(코드 붙음) · 폴더별 현상 적용 단추는 아직 없음.
 
 ---
 
-# negaflow Windows 감사 — 2026-08-18
+# negaflow Windows 감사 — 2026-08-19 재집계
 
-**사용자 지시로 macOS 원본 코드와 Windows 코드를 직접 대조해 만든 문서입니다.**
-"있음/없음"을 파일 이름으로 판정하지 않았습니다 — 개념 키워드로 **코드 본문**을 훑고,
-의심스러운 것은 **파일을 열어 함수·상수 단위로 대조**했습니다.
+2026-08-18 에 macOS 원본과 Windows 코드를 함수·상수 단위로 대조해 만든 묶음입니다.
+**2026-08-19 에 코드 본문으로 다시 세었습니다.** 그날 이후 붙은 것(GPU 3.1–3.8, 프리뷰 상주,
+FIFO, 메뉴막대, 비교/줌 HUD, 초기화, IR 짝짓기)을 "없음"으로 두지 마십시오.
 
-> 이 문서 묶음은 `docs/plan/07`, `docs/plan/08` 과 `docs/progress/*` 를 **대체**합니다.
-> 그 문서들에 틀린 내용이 있습니다 — [`06-false-claims.md`](06-false-claims.md) 에 목록이 있습니다.
+> `docs/plan/07`·`08` 과 옛 `docs/progress/*` 를 이 묶음보다 우선하지 마십시오.
+> 그 문서와 **이 묶음 자신의 옛 판**에 틀린 서술이 있습니다 — [`06`](06-false-claims.md).
 
 ---
 
 ## 0. 문서 지도
 
-| 문서 | 내용 |
+| 문서 | 지금 역할 |
 |---|---|
-| [`01-backend-gaps.md`](01-backend-gaps.md) | 엔진 159개 파일 대조. 없는 것·얇은 것·창작·문제 |
-| [`02-frontend-gaps.md`](02-frontend-gaps.md) | 3뷰 + 인스펙터. 없는 것·백엔드 미연결·창작 |
-| [`03-feature-status.md`](03-feature-status.md) | 기능 단위 미구현·가짜·창작 |
-| [`04-gpu-plan.md`](04-gpu-plan.md) | **GPU 이식 계획 + 진행 상황.** 3.1–3.8은 닫힘. **0절이 현재 상태.** 타일=값의 조건(0.5)·초월함수(0.6). 죽은 커널은 옮기지 말 것 |
-| [`05-god-objects.md`](05-god-objects.md) | **닫음.** 사유 없는 미해결 0. 다시 쪼개지 말 것 |
-| [`06-false-claims.md`](06-false-claims.md) | **기존 문서의 틀린 서술** |
-| [`07-user-reported.md`](07-user-reported.md) | **사용자 실사용 보고 전체** — 크래시·메뉴막대·창작 판정 |
-| [`08-icons-and-chrome.md`](08-icons-and-chrome.md) | 아이콘 117 vs 56, 바·캡슐 배치 |
-| [`09-shortcuts-and-settings.md`](09-shortcuts-and-settings.md) | **단축키 66 vs 64(2026-08-19 실측, 없는 것 4개)** · 설정 8탭 전체 내용 대조 |
-| [`10-cache-and-optimization.md`](10-cache-and-optimization.md) | **메모리 캐시·FIFO·축출 상수** · 개발자 모드 · 캔버스 배경 우클릭 |
-| [`11-ui-verification-protocol.md`](11-ui-verification-protocol.md) | **프론트엔드 검증 절차** — computer-use 크롭 · Parsec · 스크린샷 50장 **폴더·파일 전체 목록** · 판정표 |
-| [`12-repos-and-licence.md`](12-repos-and-licence.md) | **저장소 두 개와 라이선스** — Apache 2.0 vs GPL, macOS 코드 불가침 |
-| [`13-performance-playbook.md`](13-performance-playbook.md) | **성능·품질 플레이북** — 04 가 *무엇을* 옮길지라면 이건 *어떻게* 빠르게. 계측기부터 · 스레드 풀 · 컴파일러 스위치 · vHGW 형태학 · 분리형 컨볼루션 · 더블 버퍼 다운로드 · 품질 지키는 법 |
-| [`14-remaining-gpu-methodology.md`](14-remaining-gpu-methodology.md) | GPU 방법론(2026-08-18). **할 일 목록 아님.** 2·3·6·7.2절 무효. 지금 기준은 [`15`](15-gpu-handoff.md) |
-| [`15-gpu-handoff.md`](15-gpu-handoff.md) | **GPU 인수인계.** 3.1–3.8 **닫음.** 규칙 일곱 · 도는 자리 · 확인 못 한 것(4절) |
-| [`17-storage-robustness.md`](17-storage-robustness.md) | **카탈로그 백업·복원이 간헐적으로 깨지던 원인(2026-08-19).** 디렉터리 승격이 검사기 때문에 `win32=5` 로 막힘. 12회 중 5회 실패 → 15회 중 0회 |
-| [`16-preview-handoff.md`](16-preview-handoff.md) | ☠️ **프리뷰/정착 프리뷰 인수인계(2026-08-19).** invert→tone 상주 + BGRA8 출력. Release 3600 `nocurve` 단계 합 **65.0 ms**, `output` **7.01 ms**. 남은 것: 커브 중간 왕복 · 앱 1GB 누수 실측 · A4 `run-app` |
+| [`01-backend-gaps.md`](01-backend-gaps.md) | 엔진 구멍. **GPU 히트 0·매번 디코드는 낡은 문장.** 남은 큰 구멍은 포지티브 경로·IT8·내보내기 매니페스트 |
+| [`02-frontend-gaps.md`](02-frontend-gaps.md) | 3뷰. 비교/줌/초기화/IR 짝짓기는 붙음. 폴더 적용·내보내기 배치·인화 사이드바는 남음 |
+| [`03-feature-status.md`](03-feature-status.md) | 기능 단위 상태 |
+| [`04-gpu-plan.md`](04-gpu-plan.md) | *무엇을* GPU 로 옮겼나. 3.1–3.8 닫힘. 타일=값(0.5)·초월함수(0.6). **다시 이식하지 말 것** |
+| [`05-god-objects.md`](05-god-objects.md) | **다시 열림.** 2026-08-19 재집계 500줄 초과 9개. 생성 표·시험 3은 사유 있음. 생산 6개는 사유 없음 |
+| [`06-false-claims.md`](06-false-claims.md) | 틀린 서술. **16절이 이 감사 자신이 낡아 틀린 것** |
+| [`07-user-reported.md`](07-user-reported.md) | 사용자 실사용 보고. 크래시 A1–A3 고침. A4 코드 있음·Develop 클릭 실측은 약함 |
+| [`08-icons-and-chrome.md`](08-icons-and-chrome.md) | 아이콘 117 vs 56. 비교/줌 HUD 는 붙음. 필터 캡슐 배치는 남음 |
+| [`09-shortcuts-and-settings.md`](09-shortcuts-and-settings.md) | 단축키 **66 vs 68 · 없는 동작 0**(Undo/Redo 는 Windows 만). 녹화는 설정 탭에 있음. 디스크·메모리캐시 UI 는 남음 |
+| [`10-cache-and-optimization.md`](10-cache-and-optimization.md) | FIFO·예산은 **이식됨**. 설정 탭·메모리 압력 감시는 없음 |
+| [`11-ui-verification-protocol.md`](11-ui-verification-protocol.md) | 프론트 검증 절차 + 스크린샷 50장 **파일 전체 목록** |
+| [`12-repos-and-licence.md`](12-repos-and-licence.md) | Apache 2.0 본체 / GPL 스캐너. macOS 코드 불가침 |
+| [`13-performance-playbook.md`](13-performance-playbook.md) | *어떻게* 빠르게. 계측기·영속 워커 풀은 **있음**. `/GL`·`/LTCG` 는 없음 |
+| [`14-remaining-gpu-methodology.md`](14-remaining-gpu-methodology.md) | **할 일 목록 아님.** 2·3·6·7.2절 무효. 기준은 [`15`](15-gpu-handoff.md) |
+| [`15-gpu-handoff.md`](15-gpu-handoff.md) | GPU 인수인계. 3.1–3.8 닫음. 남은 확인 4절 |
+| [`16-preview-handoff.md`](16-preview-handoff.md) | 프리뷰 상주 + BGRA8. 3600 `nocurve` 단계 합 **65.0 ms**. 앱 슬라이더 벽시계는 못 잼 |
+| [`18-localization.md`](18-localization.md) | **다국어(2026-08-20).** 언어를 바꿔도 안 바뀌던 원인 셋 · macOS 표와 전수 대조기(`scripts/compare-mac-strings.py`, 2,670건 중 다른 것 0) · OS 강제 예외 4개 |
+| [`17-storage-robustness.md`](17-storage-robustness.md) | 카탈로그 디렉터리 승격 `win32=5` 재시도. 12회 중 5회 실패 → 15회 중 0회 |
 
 ---
 
-## 1. 규모 (실측)
+## 1. 규모 (2026-08-19 실측)
 
 | | macOS | Windows |
 |---|---:|---:|
-| 소스 파일 | 749 Swift | 292 C++(.cpp/.h) + 416 C#/XAML |
-| 엔진 | `Chromabase/` 159파일 | `src/Native/` |
-| 앱 | `negaflowApp/` 529파일 | `src/Shell/` · `src/Shell.Core/` |
-| 스캐너 | `ScannerKit/` 50파일 | 별도 저장소 |
+| 소스 파일 | 749 Swift | Native **499** `.cpp/.h` + 관리 **552** `.cs/.xaml` + GPU 셰이더 **38** `.hlsl/.hlsli` |
+| 엔진 | `Chromabase/` | `src/Native/` (`gpu/` cpp/h **60**) |
+| 앱 | `negaflowApp/` | `src/Shell/` · `src/Shell.Core/` |
+| 스캐너 | `ScannerKit/` | 별도 저장소 |
 
-기능별 줄 수:
+2026-08-18 표의 "292 C++ + 416 C#" 는 그 시점 수입니다. GPU·프리뷰 상주·캔버스 HUD 가 붙은 뒤 파일이 늘었습니다.
 
-| 영역 | macOS | Windows | 비 |
-|---|---:|---:|---:|
-| Library | 14,876 | 5,478 | **37%** |
-| Develop | 8,333 | 12,452 | 149% |
-| Print | 6,037 | 2,671 | **44%** |
-| Canvas | 2,654 | (Develop 에 포함) | — |
-| Defects | 6,517 | 11,622(네이티브 포함) | 178% |
-| Export | 7,034 | 2,703 | **38%** |
-| Scanning | 4,446 | 별도 저장소 | — |
-
-**Library·Print·Export 가 macOS 의 절반도 안 됩니다.**
+기능별 줄 수는 2026-08-18 감사의 영역 비율 지표입니다(Library 37% · Print 44% · Export 38% · Develop 149%).
+2026-08-19 에 영역별 재집계는 하지 않았습니다. 그 비율은 **배치 내보내기·인화 사이드바·폴더 적용**
+이 얇다는 뜻이지 현상 엔진이 없다는 뜻이 아닙니다.
 
 ---
 
-## 2. 이번 감사의 가장 큰 발견 셋
+## 2. 지금 사실 (2026-08-19)
 
-### 2.1 GPU — **0줄이 아니다. 3.1–3.8은 닫음**
+### 2.1 GPU — 3.1–3.8 닫음. 다시 이식하지 말 것
 
-2026-08-18 감사가 "GPU 히트 0"으로 적었던 것은 **낡은 발견**입니다. 다시 이식하지 마십시오.
+D3D11 컴퓨트 + HLSL. 톤 7단계·필름룩 사슬·노리츠 `target_grade`·형태학·스크래치 각도.
+자동 검출 17.3s → **4.66s**, 610/9331 유지. 상세 [`15`](15-gpu-handoff.md).
 
-지금: D3D11 컴퓨트 + HLSL, 톤 7단계·필름룩 사슬·노리츠 `target_grade`·형태학·스크래치 각도.
-자동 검출 17.3s → **4.66s**, 610/9331 유지. 상세 [`04`](04-gpu-plan.md) 0절 · [`15`](15-gpu-handoff.md).
+남은 것은 커널이 아닙니다: 내장 GPU 실기, `GpuImagePool` 내장 메모리, 타겟 그레이드 64³ 큐브는
+값이 달라지는 별건(15 4절). 가이드·브러시·복제·IR 즉각은 앱 미측정.
 
-**남은 GPU 확인만** (다시 커널을 옮기는 일이 아님): 내장 GPU 실기, `GpuImagePool` 내장 메모리,
-타겟 그레이드 64³ 큐브는 값이 달라지는 별건([`15`](15-gpu-handoff.md) 4절). 가이드·브러시·복제·IR
-즉각은 앱 미측정. 프리뷰 단계마다 왕복하는 문제는 [`16`](16-preview-handoff.md).
+### 2.2 프리뷰 — 슬라이더마다 원본 TIFF 를 다시 읽지 않음
 
-### 2.2 프리뷰가 슬라이더마다 원본 TIFF 를 다시 디코드하던 것 (2026-08-19 완화)
+옛 문장 "매번 5088×3401 을 2,695 ms 디코드" 는 **고치기 전**입니다.
 
-`src/Native/pipeline/develop_export.cpp:101` `run_develop` 은 호출마다
-`observe_source_before` → `decode_source` 를 지나갑니다.
-`src/Native/pipeline/export/stages/decode.cpp` 에 프로세스 단일 슬롯 풀해상도 캐시가 있고(2026-08-18),
-프리뷰 raw 2슬롯+Lanczos 현상은 2026-08-19 에 붙었습니다([`01`](01-backend-gaps.md) 3.1). 내보내기·검출은 원본 해상도입니다.
+지금: 프레임 키 FIFO 디코드 캐시 + 인터랙티브/정착 raw 2슬롯 + Lanczos3 상자 맞춤.
+정착 raw 가 있으면 인터랙티브는 디코드 없이 파생합니다. CLI 5088×3401 상자 1280 두 번째
+**43.1 ms · decode 0**. 3600 `nocurve` 단계 합 **65.0 ms**, `output` **7.01 ms**.
+상세 [`16`](16-preview-handoff.md) · [`07`](07-user-reported.md) H.
 
-macOS 는 정반대입니다:
+내보내기·검출은 원본 해상도입니다. `run_develop` 한 진입점은 그대로입니다 — 프리뷰만
+프록시 상자를 탑니다.
 
-- `DevelopFrameRenderer.swift:11-31` — 인터랙티브 프록시(표시 크기 적응, 256 양자화,
-  1024~3600)와 정착 프록시(3600) **두 단계**
-- `AppModel+DevelopRendering.swift:355-390` — `cachedInteractivePreviewRaw` /
-  `cachedSettledPreviewRaw` 두 슬롯에 **디코드 결과를 캐시**
-- `DevelopFrameRenderer+Input.swift:51-52` — 주석 원문:
-  *"요청 치수 캐시가 없어도 정착(풀) raw 프록시가 있으면 GPU 다운스케일로 파생한다.
-  수십 MP 원본을 디스크에서 재디코딩(수백 ms)하는 대신 한 번의 Lanczos 축소로 끝난다."*
-- `AppModel+DevelopRendering.swift:334` — 정착 대기창 **0.14초**
+앱에서 슬라이더를 끄는 벽시계와 작업 집합 ~1GB 주장은 **이 재집계에서 앱으로 못 쟀습니다.**
 
-즉 macOS 는 슬라이더를 끄는 동안 **디코드를 0회** 합니다. Windows 는 매번 5088×3401
-16bit TIFF 를 다시 읽습니다(실측 2,695 ms).
+### 2.3 닫힌 프론트 (다시 "없음"으로 적지 말 것)
 
-### 2.3 `run_develop` 가 프리뷰·검출·내보내기 **한 경로**입니다
-
-`develop_export.cpp:101` 의 `run_develop(request, preview, control, detect)` 하나에
-프리뷰(`PreviewTarget`), 검출(`DetectTarget`), 내보내기가 모두 들어갑니다. 그래서 프리뷰
-한 장에도 내보내기와 같은 준비 비용(관찰·해시·디코드)이 붙습니다.
+메뉴막대 10/11(윈도우는 AppKit 표준이라 안 만듦) · 단축키 열거자 결손 0 · 초기화 두 단추 ·
+비교 캡슐+분할 · 줌 HUD+끌기 · IR 짝짓기+선택 시 자동 정리 · 필름 베이스 C1.1–C1.9 ·
+인화 프리뷰 현상본 · 슬라이더 0.01+값 입력 · 문자열 오류 9건.
 
 ---
 
-## 3. 판정 요약
+## 3. 판정 요약 (2026-08-19)
 
-| 분류 | 개수 | 상세 |
-|---|---:|---|
-| 엔진 — 완전히 없음 | **28개 개념** | [`01`](01-backend-gaps.md) 1절 |
-| 엔진 — 있으나 macOS 의 절반 이하 | **6개 서브시스템** | [`01`](01-backend-gaps.md) 2절 |
-| 프론트 — 없음 | **11개 표면** | [`02`](02-frontend-gaps.md) |
-| 프론트 — 백엔드 미연결 | **6개** | [`02`](02-frontend-gaps.md) 3절 |
-| 창작(macOS 에 없음) | **4개** | [`03`](03-feature-status.md) 4절 |
-| GPU | **3.1–3.8 닫음.** 다시 이식하지 말 것. 남은 확인은 [`15`](15-gpu-handoff.md) 4절 | [`04`](04-gpu-plan.md) 0절 · [`15`](15-gpu-handoff.md) |
-| God object(500줄 초과) | **닫음.** 사유 없는 미해결 0. 다시 쪼개지 말 것. 생성 표 1 + tests 2는 사유 있음 | [`05`](05-god-objects.md) |
-| 기존 문서의 틀린 서술 | **13건** | [`06`](06-false-claims.md) |
+| 분류 | 지금 | 상세 |
+|---|---|---|
+| 엔진 — 큰 구멍 | 포지티브 경로 · IT8/스캐너 노이즈 · 내보내기 매니페스트/배치 | [`01`](01-backend-gaps.md) |
+| 프론트 — 큰 구멍 | 폴더별 적용 · 라이브러리 필터 캡슐 배치 · 내보내기 35파일 · 인화 사이드바/템플릿 · 아이콘 SVG | [`02`](02-frontend-gaps.md) · [`08`](08-icons-and-chrome.md) |
+| 설정 | 디스크·메모리캐시·지원번들·법적고지·색관리 섹션 | [`09`](09-shortcuts-and-settings.md) |
+| GPU | **3.1–3.8 닫음.** 남은 확인만 15 4절 | [`15`](15-gpu-handoff.md) |
+| God object | **생산 6개가 다시 500줄 초과.** 생성 표·시험 3은 사유 있음 | [`05`](05-god-objects.md) |
+| 이 묶음이 틀렸던 것 | GPU 0줄 · 캐시 전무 · 매번 디코드 · 단축키 24개 · God object 닫음 | [`06`](06-false-claims.md) 16절 |
 
 ---
 
