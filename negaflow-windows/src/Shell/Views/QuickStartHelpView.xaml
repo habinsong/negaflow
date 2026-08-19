@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Negaflow.Shell.Views.QuickStartHelpView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!--
+      macOS QuickStartHelpView — ScrollView 안에 머리글 · 단계 셋 · 구분선 · 꼬리줄.
+      여백 32, 구획 사이 24, 단계 안 16/6, 아이콘 칸 28, 본문 최대 폭 720 은 Swift 그대로입니다.
+    -->
+    <ScrollViewer
+        HorizontalScrollMode="Disabled"
+        VerticalScrollBarVisibility="Auto">
+        <StackPanel
+            MaxWidth="720"
+            Margin="32"
+            HorizontalAlignment="Left"
+            Spacing="24">
+            <StackPanel Spacing="8">
+                <TextBlock
+                    x:Name="TitleText"
+                    FontSize="28"
+                    FontWeight="SemiBold"
+                    TextWrapping="Wrap" />
+                <TextBlock
+                    x:Name="IntroductionText"
+                    FontSize="14"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    TextWrapping="Wrap" />
+            </StackPanel>
+
+            <Grid ColumnSpacing="16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="28" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <FontIcon
+                    VerticalAlignment="Top"
+                    AutomationProperties.AccessibilityView="Raw"
+                    FontSize="20"
+                    Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                    Glyph="&#xE896;" />
+                <StackPanel Grid.Column="1" Spacing="6">
+                    <TextBlock
+                        x:Name="ImportTitleText"
+                        FontSize="14"
+                        FontWeight="SemiBold"
+                        TextWrapping="Wrap" />
+                    <TextBlock
+                        x:Name="ImportDetailText"
+                        FontSize="14"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        TextWrapping="Wrap" />
+                </StackPanel>
+            </Grid>
+
+            <Grid ColumnSpacing="16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="28" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <FontIcon
+                    VerticalAlignment="Top"
+                    AutomationProperties.AccessibilityView="Raw"
+                    FontSize="20"
+                    Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                    Glyph="&#xE9E9;" />
+                <StackPanel Grid.Column="1" Spacing="6">
+                    <TextBlock
+                        x:Name="DevelopTitleText"
+                        FontSize="14"
+                        FontWeight="SemiBold"
+                        TextWrapping="Wrap" />
+                    <TextBlock
+                        x:Name="DevelopDetailText"
+                        FontSize="14"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        TextWrapping="Wrap" />
+                </StackPanel>
+            </Grid>
+
+            <Grid ColumnSpacing="16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="28" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <FontIcon
+                    VerticalAlignment="Top"
+                    AutomationProperties.AccessibilityView="Raw"
+                    FontSize="20"
+                    Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                    Glyph="&#xE898;" />
+                <StackPanel Grid.Column="1" Spacing="6">
+                    <TextBlock
+                        x:Name="ExportTitleText"
+                        FontSize="14"
+                        FontWeight="SemiBold"
+                        TextWrapping="Wrap" />
+                    <TextBlock
+                        x:Name="ExportDetailText"
+                        FontSize="14"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        TextWrapping="Wrap" />
+                </StackPanel>
+            </Grid>
+
+            <Rectangle
+                Height="1"
+                Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
+
+            <Grid ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock
+                    x:Name="ShortcutNoteText"
+                    FontSize="12"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    TextWrapping="Wrap" />
+                <TextBlock
+                    x:Name="VersionText"
+                    Grid.Column="1"
+                    VerticalAlignment="Bottom"
+                    FontSize="12"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            </Grid>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

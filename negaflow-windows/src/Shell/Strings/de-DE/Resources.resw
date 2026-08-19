@@ -1236,4 +1236,17 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="canvasCompareBeforeSourceHelp.Text" xml:space="preserve"><value>Quelle für die Vorher-Ansicht wählen</value><comment>AppLocalizedPhrase.beforeSourceHelp</comment></data>
   <data name="canvasComparePhoto.Text" xml:space="preserve"><value>Foto</value><comment>AppLocalizedText.menuPhoto</comment></data>
   <data name="developAdjustment.Text" xml:space="preserve"><value>Anpassen</value><comment>Windows undo noun for FrameEditHistory; macOS UndoManager has no action name</comment></data>
+  <data name="helpQuickStartTitle.Text" xml:space="preserve"><value>Schnellstart</value><comment>QuickStartHelpContent.title</comment></data>
+  <data name="helpQuickStartIntroduction.Text" xml:space="preserve"><value>Der grundlegende Ablauf vom Import oder Scan über die Entwicklung bis zum Export.</value><comment>QuickStartHelpContent.introduction</comment></data>
+  <data name="helpQuickStartImportTitle.Text" xml:space="preserve"><value>1. Importieren oder scannen</value><comment>QuickStartHelpContent.importTitle</comment></data>
+  <data name="helpQuickStartImportDetail.Text" xml:space="preserve"><value>Importieren Sie Fotos oder scannen Sie mit einem externen Scanner-Plugin. Quelldateien bleiben unverändert.</value><comment>QuickStartHelpContent.importDetail</comment></data>
+  <data name="helpQuickStartDevelopTitle.Text" xml:space="preserve"><value>2. Entwickeln</value><comment>QuickStartHelpContent.developTitle</comment></data>
+  <data name="helpQuickStartDevelopDetail.Text" xml:space="preserve"><value>Passen Sie Farbe und Ton standardmäßig mit MAIN und manuellen Reglern an. Automatik wird nur ausdrücklich angewendet.</value><comment>QuickStartHelpContent.developDetail</comment></data>
+  <data name="helpQuickStartExportTitle.Text" xml:space="preserve"><value>3. Exportieren</value><comment>QuickStartHelpContent.exportTitle</comment></data>
+  <data name="helpQuickStartExportDetail.Text" xml:space="preserve"><value>Prüfen Sie Zielordner und Format und exportieren Sie das nichtdestruktive Ergebnis als neue Datei.</value><comment>QuickStartHelpContent.exportDetail</comment></data>
+  <data name="helpQuickStartVersionLabel.Text" xml:space="preserve"><value>Dokumentationsversion</value><comment>QuickStartHelpContent.versionLabel</comment></data>
+  <data name="helpQuickStartShortcutNote.Text" xml:space="preserve"><value>Öffnen Sie den Schnellstart jederzeit mit Ctrl+Shift+H.</value><comment>QuickStartHelpContent.shortcutNote</comment></data>
+  <data name="menuHelp.Text" xml:space="preserve"><value>Hilfe</value><comment>AppLocalizedText.menuHelp</comment></data>
+  <data name="commandNegaflowHelp.Text" xml:space="preserve"><value>Schnellstart</value><comment>AppLocalizedText.commandNegaflowHelp</comment></data>
+  <data name="commandKeyboardShortcuts.Text" xml:space="preserve"><value>Tastaturkurzbefehle</value><comment>AppLocalizedText.commandKeyboardShortcuts</comment></data>
 </root>

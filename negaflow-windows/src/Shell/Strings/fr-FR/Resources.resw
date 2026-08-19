@@ -1236,4 +1236,17 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="canvasCompareBeforeSourceHelp.Text" xml:space="preserve"><value>Choisir la source de l'état Avant</value><comment>AppLocalizedPhrase.beforeSourceHelp</comment></data>
   <data name="canvasComparePhoto.Text" xml:space="preserve"><value>Photo</value><comment>AppLocalizedText.menuPhoto</comment></data>
   <data name="developAdjustment.Text" xml:space="preserve"><value>Réglage</value><comment>Windows undo noun for FrameEditHistory; macOS UndoManager has no action name</comment></data>
+  <data name="helpQuickStartTitle.Text" xml:space="preserve"><value>Démarrage rapide</value><comment>QuickStartHelpContent.title</comment></data>
+  <data name="helpQuickStartIntroduction.Text" xml:space="preserve"><value>Le flux essentiel, de l’importation ou la numérisation au développement et à l’exportation.</value><comment>QuickStartHelpContent.introduction</comment></data>
+  <data name="helpQuickStartImportTitle.Text" xml:space="preserve"><value>1. Importer ou numériser</value><comment>QuickStartHelpContent.importTitle</comment></data>
+  <data name="helpQuickStartImportDetail.Text" xml:space="preserve"><value>Importez des photos ou numérisez avec un module externe de scanner. Les fichiers source restent inchangés.</value><comment>QuickStartHelpContent.importDetail</comment></data>
+  <data name="helpQuickStartDevelopTitle.Text" xml:space="preserve"><value>2. Développer</value><comment>QuickStartHelpContent.developTitle</comment></data>
+  <data name="helpQuickStartDevelopDetail.Text" xml:space="preserve"><value>Réglez la couleur et la tonalité avec MAIN et les réglages manuels par défaut. Les réglages automatiques restent optionnels.</value><comment>QuickStartHelpContent.developDetail</comment></data>
+  <data name="helpQuickStartExportTitle.Text" xml:space="preserve"><value>3. Exporter</value><comment>QuickStartHelpContent.exportTitle</comment></data>
+  <data name="helpQuickStartExportDetail.Text" xml:space="preserve"><value>Vérifiez le dossier et le format, puis exportez le résultat non destructif dans un nouveau fichier.</value><comment>QuickStartHelpContent.exportDetail</comment></data>
+  <data name="helpQuickStartVersionLabel.Text" xml:space="preserve"><value>Version de la documentation</value><comment>QuickStartHelpContent.versionLabel</comment></data>
+  <data name="helpQuickStartShortcutNote.Text" xml:space="preserve"><value>Ouvrez ce démarrage rapide à tout moment avec Ctrl+Shift+H.</value><comment>QuickStartHelpContent.shortcutNote</comment></data>
+  <data name="menuHelp.Text" xml:space="preserve"><value>Aide</value><comment>AppLocalizedText.menuHelp</comment></data>
+  <data name="commandNegaflowHelp.Text" xml:space="preserve"><value>Démarrage rapide</value><comment>AppLocalizedText.commandNegaflowHelp</comment></data>
+  <data name="commandKeyboardShortcuts.Text" xml:space="preserve"><value>Raccourcis clavier</value><comment>AppLocalizedText.commandKeyboardShortcuts</comment></data>
 </root>

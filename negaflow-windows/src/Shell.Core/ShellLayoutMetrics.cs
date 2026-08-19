@@ -43,4 +43,13 @@ public static class ShellLayoutMetrics
     public const double AboutWindowWidth = 460;
     public const double AboutWindowHeight = 330;
     public const double AboutIconSize = 96;
+
+    /// <summary>macOS <c>QuickStartHelpView</c> — 최소 560×480, 본문 최대 폭 720, 여백 32.</summary>
+    public const double QuickStartWindowWidth = 560;
+    public const double QuickStartWindowHeight = 480;
+    public const double QuickStartContentMaximumWidth = 720;
+    public const double QuickStartContentPadding = 32;
+    public const double QuickStartSectionSpacing = 24;
+    public const double QuickStartStepSpacing = 16;
+    public const double QuickStartStepIconWidth = 28;
 }

@@ -9,6 +9,7 @@ public enum WorkflowShortcutGroup
     View,
     Scanner,
     Export,
+    Help,
 }
 
 /// <summary>
@@ -91,6 +92,7 @@ public enum WorkflowShortcutAction
     ToggleScannerSimulator,
     AddFlatbedFrame,
     RemoveFlatbedFrame,
+    OpenHelp,
 }
 
 public static class WorkflowShortcutActions
@@ -142,6 +144,8 @@ public static class WorkflowShortcutActions
 
         WorkflowShortcutAction.QuickExport or
         WorkflowShortcutAction.ExportPhoto => WorkflowShortcutGroup.Export,
+
+        WorkflowShortcutAction.OpenHelp => WorkflowShortcutGroup.Help,
 
         _ => WorkflowShortcutGroup.Develop,
     };
@@ -269,6 +273,9 @@ public static class WorkflowShortcutActions
             new("f", WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Alt),
         WorkflowShortcutAction.RemoveFlatbedFrame =>
             new("delete", WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Alt),
+        // macOS 는 command+shift+H 입니다.
+        WorkflowShortcutAction.OpenHelp =>
+            new("h", WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Shift),
         _ => WorkflowShortcut.None,
     };
 

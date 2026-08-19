@@ -25,6 +25,9 @@ public sealed partial class AppMenuBarView : UserControl
 
     public event EventHandler? SettingsRequested;
 
+    /// <summary>macOS <c>OpenSettingsTabButton(tab: .shortcuts)</c> — 설정의 단축키 탭.</summary>
+    public event EventHandler? KeyboardShortcutsRequested;
+
     public event EventHandler<WorkflowShortcutAction>? CommandRequested;
 
     public void Localize()
@@ -198,6 +201,15 @@ public sealed partial class AppMenuBarView : UserControl
         AutomationProperties.SetName(ExportMenu, export);
         SetItem(ExportMenuQuickItem, "commandQuickExport", WorkflowShortcutAction.QuickExport);
         SetItem(ExportMenuExportItem, "commandExport", WorkflowShortcutAction.ExportPhoto);
+
+        string help = AppResources.Get("menuHelp", "Text");
+        HelpMenu.Title = help;
+        AutomationProperties.SetName(HelpMenu, help);
+        // macOS 의 이 항목은 단축키가 없는 단추입니다 — 설정의 단축키 탭을 엽니다.
+        string shortcuts = AppResources.Get("commandKeyboardShortcuts", "Text");
+        KeyboardShortcutsItem.Text = shortcuts;
+        AutomationProperties.SetName(KeyboardShortcutsItem, shortcuts);
+        SetItem(QuickStartHelpItem, "commandNegaflowHelp", WorkflowShortcutAction.OpenHelp);
         SetItem(
             ResetAdjustmentsItem,
             "shortcutResetAdjustments",
@@ -248,6 +260,16 @@ public sealed partial class AppMenuBarView : UserControl
         _ = args;
         SettingsRequested?.Invoke(this, EventArgs.Empty);
     }
+
+    private void OnKeyboardShortcutsClick(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        KeyboardShortcutsRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void OnQuickStartHelpClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.OpenHelp);
 
     private void OnImportImagesClick(object sender, RoutedEventArgs args) =>
         RaiseCommand(sender, args, WorkflowShortcutAction.ImportImages);

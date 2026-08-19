@@ -436,5 +436,22 @@
                 AutomationProperties.AutomationId="negaflow.menu.export.export"
                 Click="OnExportClick" />
         </MenuBarItem>
+        <!--
+          macOS AppStandardMenuCommands CommandGroup(after: .help) — 단축키(설정의 단축키
+          탭을 엽니다)와 빠른 시작 창 두 항목입니다.
+        -->
+        <MenuBarItem
+            x:Name="HelpMenu"
+            AutomationProperties.AutomationId="negaflow.menu.help"
+            Title="Help">
+            <MenuFlyoutItem
+                x:Name="KeyboardShortcutsItem"
+                AutomationProperties.AutomationId="negaflow.menu.help.shortcuts"
+                Click="OnKeyboardShortcutsClick" />
+            <MenuFlyoutItem
+                x:Name="QuickStartHelpItem"
+                AutomationProperties.AutomationId="negaflow.menu.help.quick-start"
+                Click="OnQuickStartHelpClick" />
+        </MenuBarItem>
     </MenuBar>
 </UserControl>

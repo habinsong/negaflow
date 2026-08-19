@@ -219,6 +219,21 @@ internal static class WorkflowShortcutTests
                 WorkflowShortcutGroup.Scanner,
             "workflow_shortcut_scanner_menu_keys_match_mac");
 
+        // macOS WorkflowShortcutActions.swift:213 — 빠른 시작은 command+shift+H 이고
+        // 묶음은 help 입니다(:138-139).
+        Check(
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.OpenHelp) ==
+                new WorkflowShortcut(
+                    "h",
+                    WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Shift) &&
+            WorkflowShortcutActions.Group(WorkflowShortcutAction.OpenHelp) ==
+                WorkflowShortcutGroup.Help &&
+            defaults.Resolve(
+                "h",
+                WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Shift) ==
+                WorkflowShortcutAction.OpenHelp,
+            "workflow_shortcut_help_key_matches_mac");
+
         Check(
             defaults.Resolve("p", WorkflowShortcutModifiers.None) ==
                 WorkflowShortcutAction.PickPhoto &&

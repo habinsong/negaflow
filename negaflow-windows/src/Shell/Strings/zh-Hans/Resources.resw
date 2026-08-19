@@ -1236,4 +1236,17 @@
   <data name="canvasCompareBeforeSourceHelp.Text" xml:space="preserve"><value>选择“调整前”的来源</value><comment>AppLocalizedPhrase.beforeSourceHelp</comment></data>
   <data name="canvasComparePhoto.Text" xml:space="preserve"><value>照片</value><comment>AppLocalizedText.menuPhoto</comment></data>
   <data name="developAdjustment.Text" xml:space="preserve"><value>调整</value><comment>Windows undo noun for FrameEditHistory; macOS UndoManager has no action name</comment></data>
+  <data name="helpQuickStartTitle.Text" xml:space="preserve"><value>快速入门</value><comment>QuickStartHelpContent.title</comment></data>
+  <data name="helpQuickStartIntroduction.Text" xml:space="preserve"><value>从导入或扫描到显影和导出的基本流程。</value><comment>QuickStartHelpContent.introduction</comment></data>
+  <data name="helpQuickStartImportTitle.Text" xml:space="preserve"><value>1. 导入或扫描</value><comment>QuickStartHelpContent.importTitle</comment></data>
+  <data name="helpQuickStartImportDetail.Text" xml:space="preserve"><value>导入照片，或通过外部扫描仪插件进行扫描。原始文件不会被修改。</value><comment>QuickStartHelpContent.importDetail</comment></data>
+  <data name="helpQuickStartDevelopTitle.Text" xml:space="preserve"><value>2. 显影</value><comment>QuickStartHelpContent.developTitle</comment></data>
+  <data name="helpQuickStartDevelopDetail.Text" xml:space="preserve"><value>默认使用MAIN和手动调整来处理颜色与影调。自动调整仅在明确选择时应用。</value><comment>QuickStartHelpContent.developDetail</comment></data>
+  <data name="helpQuickStartExportTitle.Text" xml:space="preserve"><value>3. 导出</value><comment>QuickStartHelpContent.exportTitle</comment></data>
+  <data name="helpQuickStartExportDetail.Text" xml:space="preserve"><value>确认目标文件夹和格式后，将非破坏性显影结果导出为新文件。</value><comment>QuickStartHelpContent.exportDetail</comment></data>
+  <data name="helpQuickStartVersionLabel.Text" xml:space="preserve"><value>文档版本</value><comment>QuickStartHelpContent.versionLabel</comment></data>
+  <data name="helpQuickStartShortcutNote.Text" xml:space="preserve"><value>随时按Ctrl+Shift+H打开快速入门。</value><comment>QuickStartHelpContent.shortcutNote</comment></data>
+  <data name="menuHelp.Text" xml:space="preserve"><value>帮助</value><comment>AppLocalizedText.menuHelp</comment></data>
+  <data name="commandNegaflowHelp.Text" xml:space="preserve"><value>快速入门</value><comment>AppLocalizedText.commandNegaflowHelp</comment></data>
+  <data name="commandKeyboardShortcuts.Text" xml:space="preserve"><value>键盘快捷键</value><comment>AppLocalizedText.commandKeyboardShortcuts</comment></data>
 </root>

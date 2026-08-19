@@ -9,6 +9,7 @@ public sealed partial class MainWindow : Window
     private readonly WorkspacePresentationState workspaceState;
     private SettingsWindow? settingsWindow;
     private AboutNegaflowWindow? aboutWindow;
+    private QuickStartHelpWindow? quickStartHelpWindow;
 
     public MainWindow(
         PresentationSettingsStore settingsStore,
@@ -29,6 +30,7 @@ public sealed partial class MainWindow : Window
             AppWindow.Id,
             thumbnails);
         ShellView.SettingsRequested += OnSettingsRequested;
+        ShellView.QuickStartHelpRequested += OnQuickStartHelpRequested;
         ShellView.AboutRequested += OnAboutRequested;
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(ShellView.TitleBarElement);
@@ -91,6 +93,30 @@ public sealed partial class MainWindow : Window
         }
 
         settingsWindow.Activate();
+    }
+
+    private void OnQuickStartHelpRequested(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (quickStartHelpWindow is null)
+        {
+            quickStartHelpWindow = new QuickStartHelpWindow(settingsStore);
+            quickStartHelpWindow.Closed += OnQuickStartHelpWindowClosed;
+        }
+
+        quickStartHelpWindow.Activate();
+    }
+
+    private void OnQuickStartHelpWindowClosed(object sender, WindowEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (quickStartHelpWindow is not null)
+        {
+            quickStartHelpWindow.Closed -= OnQuickStartHelpWindowClosed;
+            quickStartHelpWindow = null;
+        }
     }
 
     private void OnAboutRequested(object? sender, EventArgs args)
@@ -165,6 +191,7 @@ public sealed partial class MainWindow : Window
         ShellView.Loaded -= OnShellLoaded;
         ShellView.SizeChanged -= OnShellSizeChanged;
         ShellView.SettingsRequested -= OnSettingsRequested;
+        ShellView.QuickStartHelpRequested -= OnQuickStartHelpRequested;
         ShellView.AboutRequested -= OnAboutRequested;
         settingsStore.Changed -= OnSettingsChanged;
         settingsWindow?.Close();

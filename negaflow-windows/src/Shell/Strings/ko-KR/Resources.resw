@@ -1236,4 +1236,17 @@
   <data name="canvasCompareBeforeSourceHelp.Text" xml:space="preserve"><value>이전 보기 소스 선택</value><comment>AppLocalizedPhrase.beforeSourceHelp</comment></data>
   <data name="canvasComparePhoto.Text" xml:space="preserve"><value>사진</value><comment>AppLocalizedText.menuPhoto</comment></data>
   <data name="developAdjustment.Text" xml:space="preserve"><value>보정</value><comment>Windows undo noun for FrameEditHistory; macOS UndoManager has no action name</comment></data>
+  <data name="helpQuickStartTitle.Text" xml:space="preserve"><value>빠른 시작</value><comment>QuickStartHelpContent.title</comment></data>
+  <data name="helpQuickStartIntroduction.Text" xml:space="preserve"><value>가져오기 또는 스캔부터 현상과 내보내기까지의 기본 흐름입니다.</value><comment>QuickStartHelpContent.introduction</comment></data>
+  <data name="helpQuickStartImportTitle.Text" xml:space="preserve"><value>1. 가져오기 또는 스캔</value><comment>QuickStartHelpContent.importTitle</comment></data>
+  <data name="helpQuickStartImportDetail.Text" xml:space="preserve"><value>사진을 가져오거나 외부 스캐너 플러그인으로 스캔합니다. 원본 파일은 변경하지 않습니다.</value><comment>QuickStartHelpContent.importDetail</comment></data>
+  <data name="helpQuickStartDevelopTitle.Text" xml:space="preserve"><value>2. 현상</value><comment>QuickStartHelpContent.developTitle</comment></data>
+  <data name="helpQuickStartDevelopDetail.Text" xml:space="preserve"><value>MAIN과 수동 보정을 기본으로 색상과 톤을 조정합니다. 자동 보정은 직접 선택할 때만 적용됩니다.</value><comment>QuickStartHelpContent.developDetail</comment></data>
+  <data name="helpQuickStartExportTitle.Text" xml:space="preserve"><value>3. 내보내기</value><comment>QuickStartHelpContent.exportTitle</comment></data>
+  <data name="helpQuickStartExportDetail.Text" xml:space="preserve"><value>대상 폴더와 형식을 확인한 뒤 비파괴 현상 결과를 새 파일로 내보냅니다.</value><comment>QuickStartHelpContent.exportDetail</comment></data>
+  <data name="helpQuickStartVersionLabel.Text" xml:space="preserve"><value>문서 버전</value><comment>QuickStartHelpContent.versionLabel</comment></data>
+  <data name="helpQuickStartShortcutNote.Text" xml:space="preserve"><value>빠른 시작은 언제든지 Ctrl+Shift+H로 열 수 있습니다.</value><comment>QuickStartHelpContent.shortcutNote</comment></data>
+  <data name="menuHelp.Text" xml:space="preserve"><value>도움말</value><comment>AppLocalizedText.menuHelp</comment></data>
+  <data name="commandNegaflowHelp.Text" xml:space="preserve"><value>빠른 시작</value><comment>AppLocalizedText.commandNegaflowHelp</comment></data>
+  <data name="commandKeyboardShortcuts.Text" xml:space="preserve"><value>단축키</value><comment>AppLocalizedText.commandKeyboardShortcuts</comment></data>
 </root>

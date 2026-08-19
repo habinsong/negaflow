@@ -1236,4 +1236,17 @@ Load a scanner from Library to scan film.</value>
   <data name="canvasCompareBeforeSourceHelp.Text" xml:space="preserve"><value>Choose Before source</value><comment>AppLocalizedPhrase.beforeSourceHelp</comment></data>
   <data name="canvasComparePhoto.Text" xml:space="preserve"><value>Photo</value><comment>AppLocalizedText.menuPhoto</comment></data>
   <data name="developAdjustment.Text" xml:space="preserve"><value>Adjust</value><comment>Windows undo noun for FrameEditHistory; macOS UndoManager has no action name</comment></data>
+  <data name="helpQuickStartTitle.Text" xml:space="preserve"><value>Quick Start</value><comment>QuickStartHelpContent.title</comment></data>
+  <data name="helpQuickStartIntroduction.Text" xml:space="preserve"><value>The essential flow from import or scan through develop and export.</value><comment>QuickStartHelpContent.introduction</comment></data>
+  <data name="helpQuickStartImportTitle.Text" xml:space="preserve"><value>1. Import or Scan</value><comment>QuickStartHelpContent.importTitle</comment></data>
+  <data name="helpQuickStartImportDetail.Text" xml:space="preserve"><value>Import photos or scan through an external scanner plugin. Source files remain unchanged.</value><comment>QuickStartHelpContent.importDetail</comment></data>
+  <data name="helpQuickStartDevelopTitle.Text" xml:space="preserve"><value>2. Develop</value><comment>QuickStartHelpContent.developTitle</comment></data>
+  <data name="helpQuickStartDevelopDetail.Text" xml:space="preserve"><value>Adjust color and tone with MAIN and manual controls by default. Automatic adjustments remain opt-in.</value><comment>QuickStartHelpContent.developDetail</comment></data>
+  <data name="helpQuickStartExportTitle.Text" xml:space="preserve"><value>3. Export</value><comment>QuickStartHelpContent.exportTitle</comment></data>
+  <data name="helpQuickStartExportDetail.Text" xml:space="preserve"><value>Confirm the destination and format, then export the non-destructive result as a new file.</value><comment>QuickStartHelpContent.exportDetail</comment></data>
+  <data name="helpQuickStartVersionLabel.Text" xml:space="preserve"><value>Documentation version</value><comment>QuickStartHelpContent.versionLabel</comment></data>
+  <data name="helpQuickStartShortcutNote.Text" xml:space="preserve"><value>Open Quick Start at any time with Ctrl+Shift+H.</value><comment>QuickStartHelpContent.shortcutNote</comment></data>
+  <data name="menuHelp.Text" xml:space="preserve"><value>Help</value><comment>AppLocalizedText.menuHelp</comment></data>
+  <data name="commandNegaflowHelp.Text" xml:space="preserve"><value>Quick Start</value><comment>AppLocalizedText.commandNegaflowHelp</comment></data>
+  <data name="commandKeyboardShortcuts.Text" xml:space="preserve"><value>Keyboard Shortcuts</value><comment>AppLocalizedText.commandKeyboardShortcuts</comment></data>
 </root>

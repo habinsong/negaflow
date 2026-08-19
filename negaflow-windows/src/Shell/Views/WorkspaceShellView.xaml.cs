@@ -28,6 +28,9 @@ public sealed partial class WorkspaceShellView : UserControl
 
     public event EventHandler? SettingsRequested;
 
+    /// <summary>macOS <c>QuickStartHelpScene</c> 창을 여는 요청입니다.</summary>
+    public event EventHandler? QuickStartHelpRequested;
+
     public UIElement TitleBarElement => Toolbar.TitleBarElement;
 
     public void UpdateCaptionInsets(double left, double right) =>
@@ -113,6 +116,7 @@ public sealed partial class WorkspaceShellView : UserControl
         Toolbar.SettingsRequested += OnToolbarSettingsRequested;
         AppMenu.AboutRequested += OnAppMenuAboutRequested;
         AppMenu.SettingsRequested += OnToolbarSettingsRequested;
+        AppMenu.KeyboardShortcutsRequested += OnKeyboardShortcutsRequested;
         AppMenu.CommandRequested += OnAppMenuCommandRequested;
         state.Changed += OnStateChanged;
         LibraryWorkspace.ScannerMenuStateChanged += OnScannerMenuStateChanged;
@@ -326,6 +330,9 @@ public sealed partial class WorkspaceShellView : UserControl
             case WorkflowShortcutAction.TargetHr:
             case WorkflowShortcutAction.TargetExpired:
                 return LibraryWorkspace.InvokeShortcut(action);
+            case WorkflowShortcutAction.OpenHelp:
+                QuickStartHelpRequested?.Invoke(this, EventArgs.Empty);
+                return true;
             case WorkflowShortcutAction.DetectScanners:
             case WorkflowShortcutAction.ToggleScannerSimulator:
             case WorkflowShortcutAction.PreviewScan:
@@ -448,6 +455,18 @@ public sealed partial class WorkspaceShellView : UserControl
         SettingsRequested?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>
+    /// macOS <c>OpenSettingsTabButton</c> 은 탭을 먼저 저장하고 설정을 엽니다. 여기서도
+    /// 같은 차례입니다 — 설정 화면은 저장된 탭을 그대로 따라옵니다.
+    /// </summary>
+    private void OnKeyboardShortcutsRequested(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        workspaceState?.SelectSettingsCategory(SettingsCategory.Shortcuts);
+        SettingsRequested?.Invoke(this, EventArgs.Empty);
+    }
+
     private void OnAppMenuAboutRequested(object? sender, EventArgs args)
     {
         _ = sender;
@@ -507,6 +526,7 @@ public sealed partial class WorkspaceShellView : UserControl
         Toolbar.SettingsRequested -= OnToolbarSettingsRequested;
         AppMenu.AboutRequested -= OnAppMenuAboutRequested;
         AppMenu.SettingsRequested -= OnToolbarSettingsRequested;
+        AppMenu.KeyboardShortcutsRequested -= OnKeyboardShortcutsRequested;
         AppMenu.CommandRequested -= OnAppMenuCommandRequested;
         LibraryWorkspace.ScannerMenuStateChanged -= OnScannerMenuStateChanged;
         Toolbar.QuickExportRequested -= OnToolbarQuickExportRequested;

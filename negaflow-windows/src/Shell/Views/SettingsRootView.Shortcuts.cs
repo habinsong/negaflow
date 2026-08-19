@@ -254,6 +254,7 @@ public sealed partial class SettingsRootView
         WorkflowShortcutGroup.View => "shortcutGroupView",
         WorkflowShortcutGroup.Scanner => "shortcutGroupScanner",
         WorkflowShortcutGroup.Export => "shortcutGroupExport",
+        WorkflowShortcutGroup.Help => "menuHelp",
         _ => "shortcutGroupDevelop",
     }, "Text");
 
@@ -351,6 +352,8 @@ public sealed partial class SettingsRootView
         WorkflowShortcutAction.AddFlatbedFrame => AppResources.Get("scanAddFrame", "Text"),
         WorkflowShortcutAction.RemoveFlatbedFrame =>
             AppResources.Get("scanRemoveFrame", "Text"),
+        WorkflowShortcutAction.OpenHelp =>
+            AppResources.Get("commandNegaflowHelp", "Text"),
         WorkflowShortcutAction.QuickExport => AppResources.Get("shortcutQuickExport", "Text"),
         _ => AppResources.Get("shortcutExportPhoto", "Text"),
     };
