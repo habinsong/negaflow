@@ -54,6 +54,24 @@ if ($Unregister) {
     return
 }
 
+# 앞서 띄워 둔 앱은 payload 폴더의 파일(clrjit.dll 등)을 잠그고 있다. 그 상태로 payload 를
+# 지우면 Remove-Item 이 UnauthorizedAccessException 으로 죽는다. 뒤에서 Add-AppxPackage
+# -ForceApplicationShutdown 이 하는 일을 payload 를 다시 풀기 전으로 당긴다.
+function Stop-PayloadProcesses {
+    $running = @()
+    foreach ($process in (Get-Process -ErrorAction SilentlyContinue)) {
+        $path = try { $process.Path } catch { $null }
+        if ($path -and $path.StartsWith($payloadDirectory, [System.StringComparison]::OrdinalIgnoreCase)) {
+            $running += $process
+        }
+    }
+    foreach ($process in $running) {
+        Write-Host "[run-app] stopping $($process.ProcessName) ($($process.Id)) - it is running from the payload" -ForegroundColor DarkGray
+        Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+        $null = $process.WaitForExit(10000)
+    }
+}
+
 # makeappx 는 Windows SDK 와 함께 온다. 여러 SDK 가 깔려 있으면 가장 높은 버전을 쓴다.
 function Resolve-MakeAppx {
     $command = Get-Command makeappx -ErrorAction SilentlyContinue
@@ -107,6 +125,7 @@ if (-not $SkipBuild) {
     }
 
     if (Test-Path -LiteralPath $payloadDirectory) {
+        Stop-PayloadProcesses
         Remove-Item -LiteralPath $payloadDirectory -Recurse -Force
     }
     & (Resolve-MakeAppx) unpack /p $appPackages[0].FullName /d $payloadDirectory /o /nv

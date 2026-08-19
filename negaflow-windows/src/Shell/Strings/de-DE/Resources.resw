@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
   <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
     <xsd:element name="root" msdata:IsDataSet="true">
@@ -1175,16 +1175,16 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developExportMetadataCopyright.Text" xml:space="preserve"><value>Nur Urheberrecht</value><comment>ExportMetadataLocalizedText.copyrightOnly</comment></data>
   <data name="developExportMetadataRemoveLocation.Text" xml:space="preserve"><value>Standort entfernen</value><comment>ExportMetadataLocalizedText.removeLocation</comment></data>
   <data name="developExportMetadataMinimal.Text" xml:space="preserve"><value>Minimal</value><comment>ExportMetadataLocalizedText.minimal</comment></data>
-  <data name="settingsDefaultScanRotation.Text" xml:space="preserve"><value>Standard-Scandrehung</value><comment>AppLocalizedPhrase.settingsDefaultScanRotationPicker</comment></data>
+  <data name="settingsDefaultScanRotation.Text" xml:space="preserve"><value>Standard-Scanausrichtung</value><comment>AppLocalizedPhrase.settingsDefaultScanRotationPicker</comment></data>
   <data name="settingsDefaultScanRotationHelp.Text" xml:space="preserve"><value>Gilt nur für neu gescannte Fotos. Vorhandene Fotos bleiben unverändert.</value><comment>AppLocalizedPhrase.settingsDefaultScanRotationHelp</comment></data>
   <data name="settingsRotation0.Text" xml:space="preserve"><value>Keine</value><comment>ImageRotation.degrees0</comment></data>
   <data name="settingsRotation90.Text" xml:space="preserve"><value>90°</value><comment>ImageRotation.degrees90</comment></data>
   <data name="settingsRotation180.Text" xml:space="preserve"><value>180°</value><comment>ImageRotation.degrees180</comment></data>
   <data name="settingsRotation270.Text" xml:space="preserve"><value>270°</value><comment>ImageRotation.degrees270</comment></data>
-  <data name="settingsScannerTruth.Text" xml:space="preserve"><value>Scannerfunktionen</value><comment>AppLocalizedPhrase.scannerTruth</comment></data>
+  <data name="settingsScannerTruth.Text" xml:space="preserve"><value>Scanner-Informationen</value><comment>AppLocalizedPhrase.scannerTruth</comment></data>
   <data name="settingsScannerTruthNone.Text" xml:space="preserve"><value>Scanner anschließen, um die gemeldeten Werte zu sehen.</value><comment>Windows only: no scanner connected yet.</comment></data>
-  <data name="settingsMicroSpecksSection.Text" xml:space="preserve"><value>Standard für Mikroflecken</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecks</comment></data>
-  <data name="settingsMicroSpecksHelp.Text" xml:space="preserve"><value>Ob ein neu geöffnetes Defektwerkzeug nach kleinsten Flecken sucht.</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecksHelp</comment></data>
+  <data name="settingsMicroSpecksSection.Text" xml:space="preserve"><value>Mikropartikel standardmäßig erkennen</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecks</comment></data>
+  <data name="settingsMicroSpecksHelp.Text" xml:space="preserve"><value>Startwert für neue Bilder, getrennt für Automatik und Geführt gespeichert. Jedes Bild behält sein eigenes Kontrollkästchen und lässt sich weiterhin einzeln umschalten.</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecksHelp</comment></data>
   <data name="samplerOriginal.Text" xml:space="preserve"><value>Original</value><comment>PixelSamplerLocalizedText[0]</comment></data>
   <data name="samplerWorking.Text" xml:space="preserve"><value>Arbeitsfarbraum</value><comment>PixelSamplerLocalizedText[1]</comment></data>
   <data name="samplerProof.Text" xml:space="preserve"><value>Proof</value><comment>PixelSamplerLocalizedText[2]</comment></data>
@@ -1220,4 +1220,20 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developBasePickerPrompt.Text" xml:space="preserve"><value>Unbelichtete Filmbasis anklicken (zwischen den Bildern oder am Rand) · Esc zum Abbrechen</value><comment>AppLocalizedPhrase.basePickerOverlayPrompt</comment></data>
   <data name="developBasePickNotFilmBase.Text" xml:space="preserve"><value>Diese Stelle ist keine Filmbasis. Klicken Sie auf unbelichtete Basis zwischen den Bildern oder am Rand.</value></data>
   <data name="developBasePickFailed.Text" xml:space="preserve"><value>Die Quelle konnte nicht gelesen werden, daher wurde keine Basis ermittelt.</value></data>
+  <data name="canvasZoomOut.Text" xml:space="preserve"><value>Verkleinern</value><comment>AppLocalizedPhrase.zoomOut</comment></data>
+  <data name="canvasZoomIn.Text" xml:space="preserve"><value>Vergrößern</value><comment>AppLocalizedPhrase.zoomIn</comment></data>
+  <data name="canvasZoomPercentHelp.Text" xml:space="preserve"><value>Zoomstufe in Prozent eingeben</value><comment>AppLocalizedPhrase.zoomPercentHelp</comment></data>
+  <data name="canvasFitToScreen.Text" xml:space="preserve"><value>Einpassen</value><comment>AppLocalizedPhrase.fitToScreen</comment></data>
+  <data name="canvasActualSize.Text" xml:space="preserve"><value>Originalgröße</value><comment>AppLocalizedPhrase.actualSize</comment></data>
+  <data name="canvasZoomApply.Text" xml:space="preserve"><value>Anwenden</value><comment>AppLocalizedPhrase.apply</comment></data>
+  <data name="canvasCompareRaw.Text" xml:space="preserve"><value>Rohscan</value><comment>AppLocalizedPhrase.raw</comment></data>
+  <data name="canvasCompareDeveloped.Text" xml:space="preserve"><value>Entwickelt</value><comment>AppLocalizedPhrase.developed</comment></data>
+  <data name="canvasCompareSplitVertical.Text" xml:space="preserve"><value>Vorher/Nachher nebeneinander</value><comment>AppLocalizedPhrase.compareSplitVertical</comment></data>
+  <data name="canvasCompareSplitHorizontal.Text" xml:space="preserve"><value>Vorher/Nachher übereinander</value><comment>AppLocalizedPhrase.compareSplitHorizontal</comment></data>
+  <data name="canvasCompareBefore.Text" xml:space="preserve"><value>Vorher</value><comment>AppLocalizedPhrase.before</comment></data>
+  <data name="canvasCompareUnedited.Text" xml:space="preserve"><value>Unbearbeitet</value><comment>AppLocalizedPhrase.unedited</comment></data>
+  <data name="canvasCompareCurrentImage.Text" xml:space="preserve"><value>Aktuelles Bild</value><comment>AppLocalizedPhrase.currentImage</comment></data>
+  <data name="canvasCompareBeforeSourceHelp.Text" xml:space="preserve"><value>Quelle für die Vorher-Ansicht wählen</value><comment>AppLocalizedPhrase.beforeSourceHelp</comment></data>
+  <data name="canvasComparePhoto.Text" xml:space="preserve"><value>Foto</value><comment>AppLocalizedText.menuPhoto</comment></data>
+  <data name="developAdjustment.Text" xml:space="preserve"><value>Anpassen</value><comment>Windows undo noun for FrameEditHistory; macOS UndoManager has no action name</comment></data>
 </root>

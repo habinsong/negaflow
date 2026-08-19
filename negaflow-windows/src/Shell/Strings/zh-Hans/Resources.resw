@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
   <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
     <xsd:element name="root" msdata:IsDataSet="true">
@@ -1175,16 +1175,16 @@
   <data name="developExportMetadataCopyright.Text" xml:space="preserve"><value>仅版权</value><comment>ExportMetadataLocalizedText.copyrightOnly</comment></data>
   <data name="developExportMetadataRemoveLocation.Text" xml:space="preserve"><value>移除位置</value><comment>ExportMetadataLocalizedText.removeLocation</comment></data>
   <data name="developExportMetadataMinimal.Text" xml:space="preserve"><value>最少</value><comment>ExportMetadataLocalizedText.minimal</comment></data>
-  <data name="settingsDefaultScanRotation.Text" xml:space="preserve"><value>默认扫描旋转</value><comment>AppLocalizedPhrase.settingsDefaultScanRotationPicker</comment></data>
+  <data name="settingsDefaultScanRotation.Text" xml:space="preserve"><value>扫描默认方向</value><comment>AppLocalizedPhrase.settingsDefaultScanRotationPicker</comment></data>
   <data name="settingsDefaultScanRotationHelp.Text" xml:space="preserve"><value>仅应用于新扫描的照片。</value><comment>AppLocalizedPhrase.settingsDefaultScanRotationHelp</comment></data>
   <data name="settingsRotation0.Text" xml:space="preserve"><value>无</value><comment>ImageRotation.degrees0</comment></data>
   <data name="settingsRotation90.Text" xml:space="preserve"><value>90°</value><comment>ImageRotation.degrees90</comment></data>
   <data name="settingsRotation180.Text" xml:space="preserve"><value>180°</value><comment>ImageRotation.degrees180</comment></data>
   <data name="settingsRotation270.Text" xml:space="preserve"><value>270°</value><comment>ImageRotation.degrees270</comment></data>
-  <data name="settingsScannerTruth.Text" xml:space="preserve"><value>扫描仪能力</value><comment>AppLocalizedPhrase.scannerTruth</comment></data>
+  <data name="settingsScannerTruth.Text" xml:space="preserve"><value>扫描仪信息</value><comment>AppLocalizedPhrase.scannerTruth</comment></data>
   <data name="settingsScannerTruthNone.Text" xml:space="preserve"><value>连接扫描仪后将显示其报告的能力。</value><comment>Windows only: no scanner connected yet.</comment></data>
-  <data name="settingsMicroSpecksSection.Text" xml:space="preserve"><value>微尘点默认值</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecks</comment></data>
-  <data name="settingsMicroSpecksHelp.Text" xml:space="preserve"><value>新打开的瑕疵工具是否从最小尘点开始查找。</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecksHelp</comment></data>
+  <data name="settingsMicroSpecksSection.Text" xml:space="preserve"><value>默认检测微小颗粒</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecks</comment></data>
+  <data name="settingsMicroSpecksHelp.Text" xml:space="preserve"><value>新照片的初始值，自动与引导分别记住。每张照片都有各自的复选框，仍可单独开启或关闭。</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecksHelp</comment></data>
   <data name="samplerOriginal.Text" xml:space="preserve"><value>原始</value><comment>PixelSamplerLocalizedText[0]</comment></data>
   <data name="samplerWorking.Text" xml:space="preserve"><value>工作</value><comment>PixelSamplerLocalizedText[1]</comment></data>
   <data name="samplerProof.Text" xml:space="preserve"><value>打样</value><comment>PixelSamplerLocalizedText[2]</comment></data>
@@ -1220,4 +1220,20 @@
   <data name="developBasePickerPrompt.Text" xml:space="preserve"><value>点按未曝光的片基（画幅之间或片边） · 按 Esc 取消</value><comment>AppLocalizedPhrase.basePickerOverlayPrompt</comment></data>
   <data name="developBasePickNotFilmBase.Text" xml:space="preserve"><value>该位置不是片基。请点按画幅之间或片边的未曝光片基。</value></data>
   <data name="developBasePickFailed.Text" xml:space="preserve"><value>无法读取原始数据，未能取得片基。</value></data>
+  <data name="canvasZoomOut.Text" xml:space="preserve"><value>缩小</value><comment>AppLocalizedPhrase.zoomOut</comment></data>
+  <data name="canvasZoomIn.Text" xml:space="preserve"><value>放大</value><comment>AppLocalizedPhrase.zoomIn</comment></data>
+  <data name="canvasZoomPercentHelp.Text" xml:space="preserve"><value>输入缩放百分比</value><comment>AppLocalizedPhrase.zoomPercentHelp</comment></data>
+  <data name="canvasFitToScreen.Text" xml:space="preserve"><value>适合窗口</value><comment>AppLocalizedPhrase.fitToScreen</comment></data>
+  <data name="canvasActualSize.Text" xml:space="preserve"><value>实际大小</value><comment>AppLocalizedPhrase.actualSize</comment></data>
+  <data name="canvasZoomApply.Text" xml:space="preserve"><value>应用</value><comment>AppLocalizedPhrase.apply</comment></data>
+  <data name="canvasCompareRaw.Text" xml:space="preserve"><value>原片</value><comment>AppLocalizedPhrase.raw</comment></data>
+  <data name="canvasCompareDeveloped.Text" xml:space="preserve"><value>显影后</value><comment>AppLocalizedPhrase.developed</comment></data>
+  <data name="canvasCompareSplitVertical.Text" xml:space="preserve"><value>左右对比调整前/调整后</value><comment>AppLocalizedPhrase.compareSplitVertical</comment></data>
+  <data name="canvasCompareSplitHorizontal.Text" xml:space="preserve"><value>上下对比调整前/调整后</value><comment>AppLocalizedPhrase.compareSplitHorizontal</comment></data>
+  <data name="canvasCompareBefore.Text" xml:space="preserve"><value>调整前</value><comment>AppLocalizedPhrase.before</comment></data>
+  <data name="canvasCompareUnedited.Text" xml:space="preserve"><value>未调整</value><comment>AppLocalizedPhrase.unedited</comment></data>
+  <data name="canvasCompareCurrentImage.Text" xml:space="preserve"><value>当前图像</value><comment>AppLocalizedPhrase.currentImage</comment></data>
+  <data name="canvasCompareBeforeSourceHelp.Text" xml:space="preserve"><value>选择“调整前”的来源</value><comment>AppLocalizedPhrase.beforeSourceHelp</comment></data>
+  <data name="canvasComparePhoto.Text" xml:space="preserve"><value>照片</value><comment>AppLocalizedText.menuPhoto</comment></data>
+  <data name="developAdjustment.Text" xml:space="preserve"><value>调整</value><comment>Windows undo noun for FrameEditHistory; macOS UndoManager has no action name</comment></data>
 </root>

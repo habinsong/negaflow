@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
   <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
     <xsd:element name="root" msdata:IsDataSet="true">
@@ -1181,10 +1181,10 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="settingsRotation90.Text" xml:space="preserve"><value>90°</value><comment>ImageRotation.degrees90</comment></data>
   <data name="settingsRotation180.Text" xml:space="preserve"><value>180°</value><comment>ImageRotation.degrees180</comment></data>
   <data name="settingsRotation270.Text" xml:space="preserve"><value>270°</value><comment>ImageRotation.degrees270</comment></data>
-  <data name="settingsScannerTruth.Text" xml:space="preserve"><value>Capacités du scanner</value><comment>AppLocalizedPhrase.scannerTruth</comment></data>
+  <data name="settingsScannerTruth.Text" xml:space="preserve"><value>Informations scanner</value><comment>AppLocalizedPhrase.scannerTruth</comment></data>
   <data name="settingsScannerTruthNone.Text" xml:space="preserve"><value>Connectez un scanner pour voir ce qu’il signale.</value><comment>Windows only: no scanner connected yet.</comment></data>
-  <data name="settingsMicroSpecksSection.Text" xml:space="preserve"><value>Valeurs par défaut des micro-taches</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecks</comment></data>
-  <data name="settingsMicroSpecksHelp.Text" xml:space="preserve"><value>Si un outil de défauts nouvellement ouvert cherche les plus petites taches.</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecksHelp</comment></data>
+  <data name="settingsMicroSpecksSection.Text" xml:space="preserve"><value>Détecter les micro-particules par défaut</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecks</comment></data>
+  <data name="settingsMicroSpecksHelp.Text" xml:space="preserve"><value>Valeur de départ des nouvelles vues, mémorisée séparément pour les modes automatique et guidé. Chaque vue garde sa propre case, vous pouvez donc l'activer ou la désactiver photo par photo.</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecksHelp</comment></data>
   <data name="samplerOriginal.Text" xml:space="preserve"><value>Original</value><comment>PixelSamplerLocalizedText[0]</comment></data>
   <data name="samplerWorking.Text" xml:space="preserve"><value>Travail</value><comment>PixelSamplerLocalizedText[1]</comment></data>
   <data name="samplerProof.Text" xml:space="preserve"><value>Épreuve</value><comment>PixelSamplerLocalizedText[2]</comment></data>
@@ -1220,4 +1220,20 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="developBasePickerPrompt.Text" xml:space="preserve"><value>Cliquez sur la base non exposée du film (entre les vues ou sur le bord) · Échap pour annuler</value><comment>AppLocalizedPhrase.basePickerOverlayPrompt</comment></data>
   <data name="developBasePickNotFilmBase.Text" xml:space="preserve"><value>Cet endroit n'est pas la base du film. Cliquez sur la base non exposée entre les vues ou sur le bord.</value></data>
   <data name="developBasePickFailed.Text" xml:space="preserve"><value>Impossible de lire la source, aucune base n'a été relevée.</value></data>
+  <data name="canvasZoomOut.Text" xml:space="preserve"><value>Zoom arrière</value><comment>AppLocalizedPhrase.zoomOut</comment></data>
+  <data name="canvasZoomIn.Text" xml:space="preserve"><value>Zoom avant</value><comment>AppLocalizedPhrase.zoomIn</comment></data>
+  <data name="canvasZoomPercentHelp.Text" xml:space="preserve"><value>Saisissez le pourcentage de zoom</value><comment>AppLocalizedPhrase.zoomPercentHelp</comment></data>
+  <data name="canvasFitToScreen.Text" xml:space="preserve"><value>Ajuster</value><comment>AppLocalizedPhrase.fitToScreen</comment></data>
+  <data name="canvasActualSize.Text" xml:space="preserve"><value>Taille réelle</value><comment>AppLocalizedPhrase.actualSize</comment></data>
+  <data name="canvasZoomApply.Text" xml:space="preserve"><value>Appliquer</value><comment>AppLocalizedPhrase.apply</comment></data>
+  <data name="canvasCompareRaw.Text" xml:space="preserve"><value>Brut</value><comment>AppLocalizedPhrase.raw</comment></data>
+  <data name="canvasCompareDeveloped.Text" xml:space="preserve"><value>Développée</value><comment>AppLocalizedPhrase.developed</comment></data>
+  <data name="canvasCompareSplitVertical.Text" xml:space="preserve"><value>Avant/Après côte à côte</value><comment>AppLocalizedPhrase.compareSplitVertical</comment></data>
+  <data name="canvasCompareSplitHorizontal.Text" xml:space="preserve"><value>Avant/Après haut/bas</value><comment>AppLocalizedPhrase.compareSplitHorizontal</comment></data>
+  <data name="canvasCompareBefore.Text" xml:space="preserve"><value>Avant</value><comment>AppLocalizedPhrase.before</comment></data>
+  <data name="canvasCompareUnedited.Text" xml:space="preserve"><value>Sans corrections</value><comment>AppLocalizedPhrase.unedited</comment></data>
+  <data name="canvasCompareCurrentImage.Text" xml:space="preserve"><value>Image actuelle</value><comment>AppLocalizedPhrase.currentImage</comment></data>
+  <data name="canvasCompareBeforeSourceHelp.Text" xml:space="preserve"><value>Choisir la source de l'état Avant</value><comment>AppLocalizedPhrase.beforeSourceHelp</comment></data>
+  <data name="canvasComparePhoto.Text" xml:space="preserve"><value>Photo</value><comment>AppLocalizedText.menuPhoto</comment></data>
+  <data name="developAdjustment.Text" xml:space="preserve"><value>Réglage</value><comment>Windows undo noun for FrameEditHistory; macOS UndoManager has no action name</comment></data>
 </root>

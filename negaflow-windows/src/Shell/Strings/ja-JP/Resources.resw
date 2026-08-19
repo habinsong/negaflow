@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
   <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
     <xsd:element name="root" msdata:IsDataSet="true">
@@ -1175,16 +1175,16 @@
   <data name="developExportMetadataCopyright.Text" xml:space="preserve"><value>著作権のみ</value><comment>ExportMetadataLocalizedText.copyrightOnly</comment></data>
   <data name="developExportMetadataRemoveLocation.Text" xml:space="preserve"><value>位置情報を削除</value><comment>ExportMetadataLocalizedText.removeLocation</comment></data>
   <data name="developExportMetadataMinimal.Text" xml:space="preserve"><value>最小</value><comment>ExportMetadataLocalizedText.minimal</comment></data>
-  <data name="settingsDefaultScanRotation.Text" xml:space="preserve"><value>スキャンの既定回転</value><comment>AppLocalizedPhrase.settingsDefaultScanRotationPicker</comment></data>
+  <data name="settingsDefaultScanRotation.Text" xml:space="preserve"><value>スキャンの既定の向き</value><comment>AppLocalizedPhrase.settingsDefaultScanRotationPicker</comment></data>
   <data name="settingsDefaultScanRotationHelp.Text" xml:space="preserve"><value>新しくスキャンした写真にのみ適用されます。</value><comment>AppLocalizedPhrase.settingsDefaultScanRotationHelp</comment></data>
   <data name="settingsRotation0.Text" xml:space="preserve"><value>なし</value><comment>ImageRotation.degrees0</comment></data>
   <data name="settingsRotation90.Text" xml:space="preserve"><value>90°</value><comment>ImageRotation.degrees90</comment></data>
   <data name="settingsRotation180.Text" xml:space="preserve"><value>180°</value><comment>ImageRotation.degrees180</comment></data>
   <data name="settingsRotation270.Text" xml:space="preserve"><value>270°</value><comment>ImageRotation.degrees270</comment></data>
-  <data name="settingsScannerTruth.Text" xml:space="preserve"><value>スキャナーの能力</value><comment>AppLocalizedPhrase.scannerTruth</comment></data>
+  <data name="settingsScannerTruth.Text" xml:space="preserve"><value>スキャナー情報</value><comment>AppLocalizedPhrase.scannerTruth</comment></data>
   <data name="settingsScannerTruthNone.Text" xml:space="preserve"><value>スキャナーを接続すると報告内容が表示されます。</value><comment>Windows only: no scanner connected yet.</comment></data>
-  <data name="settingsMicroSpecksSection.Text" xml:space="preserve"><value>微細な斑の既定値</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecks</comment></data>
-  <data name="settingsMicroSpecksHelp.Text" xml:space="preserve"><value>新しく開く欠陥ツールが最小の斑まで探すか。</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecksHelp</comment></data>
+  <data name="settingsMicroSpecksSection.Text" xml:space="preserve"><value>微細粒子を既定で検出</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecks</comment></data>
+  <data name="settingsMicroSpecksHelp.Text" xml:space="preserve"><value>新しいコマの初期値で、自動とガイドを別々に覚えます。コマごとにチェックボックスがあるので、写真ごとに切り替えられます。</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecksHelp</comment></data>
   <data name="samplerOriginal.Text" xml:space="preserve"><value>オリジナル</value><comment>PixelSamplerLocalizedText[0]</comment></data>
   <data name="samplerWorking.Text" xml:space="preserve"><value>作業</value><comment>PixelSamplerLocalizedText[1]</comment></data>
   <data name="samplerProof.Text" xml:space="preserve"><value>校正</value><comment>PixelSamplerLocalizedText[2]</comment></data>
@@ -1220,4 +1220,20 @@
   <data name="developBasePickerPrompt.Text" xml:space="preserve"><value>未露光のフィルムベース（コマ間または端）をクリック · Esc でキャンセル</value><comment>AppLocalizedPhrase.basePickerOverlayPrompt</comment></data>
   <data name="developBasePickNotFilmBase.Text" xml:space="preserve"><value>その位置はフィルムベースではありません。コマ間または端の未露光ベースをクリックしてください。</value></data>
   <data name="developBasePickFailed.Text" xml:space="preserve"><value>元データを読めなかったため、ベースを取得できませんでした。</value></data>
+  <data name="canvasZoomOut.Text" xml:space="preserve"><value>縮小</value><comment>AppLocalizedPhrase.zoomOut</comment></data>
+  <data name="canvasZoomIn.Text" xml:space="preserve"><value>拡大</value><comment>AppLocalizedPhrase.zoomIn</comment></data>
+  <data name="canvasZoomPercentHelp.Text" xml:space="preserve"><value>表示倍率を入力</value><comment>AppLocalizedPhrase.zoomPercentHelp</comment></data>
+  <data name="canvasFitToScreen.Text" xml:space="preserve"><value>全体表示</value><comment>AppLocalizedPhrase.fitToScreen</comment></data>
+  <data name="canvasActualSize.Text" xml:space="preserve"><value>実際のサイズ</value><comment>AppLocalizedPhrase.actualSize</comment></data>
+  <data name="canvasZoomApply.Text" xml:space="preserve"><value>適用</value><comment>AppLocalizedPhrase.apply</comment></data>
+  <data name="canvasCompareRaw.Text" xml:space="preserve"><value>元画像</value><comment>AppLocalizedPhrase.raw</comment></data>
+  <data name="canvasCompareDeveloped.Text" xml:space="preserve"><value>現像後</value><comment>AppLocalizedPhrase.developed</comment></data>
+  <data name="canvasCompareSplitVertical.Text" xml:space="preserve"><value>左右で補正前/補正後を比較</value><comment>AppLocalizedPhrase.compareSplitVertical</comment></data>
+  <data name="canvasCompareSplitHorizontal.Text" xml:space="preserve"><value>上下で補正前/補正後を比較</value><comment>AppLocalizedPhrase.compareSplitHorizontal</comment></data>
+  <data name="canvasCompareBefore.Text" xml:space="preserve"><value>補正前</value><comment>AppLocalizedPhrase.before</comment></data>
+  <data name="canvasCompareUnedited.Text" xml:space="preserve"><value>補正なし</value><comment>AppLocalizedPhrase.unedited</comment></data>
+  <data name="canvasCompareCurrentImage.Text" xml:space="preserve"><value>現在の画像</value><comment>AppLocalizedPhrase.currentImage</comment></data>
+  <data name="canvasCompareBeforeSourceHelp.Text" xml:space="preserve"><value>補正前のソースを選択</value><comment>AppLocalizedPhrase.beforeSourceHelp</comment></data>
+  <data name="canvasComparePhoto.Text" xml:space="preserve"><value>写真</value><comment>AppLocalizedText.menuPhoto</comment></data>
+  <data name="developAdjustment.Text" xml:space="preserve"><value>補正</value><comment>Windows undo noun for FrameEditHistory; macOS UndoManager has no action name</comment></data>
 </root>

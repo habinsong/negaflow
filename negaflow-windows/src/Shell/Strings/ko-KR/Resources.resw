@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
   <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
     <xsd:element name="root" msdata:IsDataSet="true">
@@ -796,9 +796,9 @@
   <data name="developBaseModeFilm.Content" xml:space="preserve"><value>필름</value><comment>AppLocalizedPhrase.baseModeFilm</comment></data>
   <data name="developBaseModeManual.Content" xml:space="preserve"><value>수동</value><comment>AppLocalizedPhrase.baseModeManual</comment></data>
   <data name="developBaseReadoutFormat.Value" xml:space="preserve"><value>base %.2f %.2f %.2f</value><comment>AppLocalizedPhrase.baseReadoutFormat</comment></data>
-  <data name="developFilmStock.Text" xml:space="preserve"><value>필름스톡</value><comment>AppLocalizedPhrase.filmStock</comment></data>
+  <data name="developFilmStock.Text" xml:space="preserve"><value>필름 스톡</value><comment>AppLocalizedPhrase.filmStock</comment></data>
   <data name="developLightSource.Text" xml:space="preserve"><value>광원</value><comment>AppLocalizedPhrase.lightSource</comment></data>
-  <data name="developMidtones.Text" xml:space="preserve"><value>중간톤</value><comment>AppLocalizedPhrase.midtones</comment></data>
+  <data name="developMidtones.Text" xml:space="preserve"><value>중간 톤</value><comment>AppLocalizedPhrase.midtones</comment></data>
   <data name="developLuminance.Text" xml:space="preserve"><value>광도</value><comment>AppLocalizedPhrase.luminance</comment></data>
   <data name="developBlending.Text" xml:space="preserve"><value>혼합</value><comment>AppLocalizedPhrase.blending</comment></data>
   <data name="developBalance.Text" xml:space="preserve"><value>균형</value><comment>AppLocalizedPhrase.balance</comment></data>
@@ -1101,9 +1101,9 @@
   <data name="librarySourceMoveFailed.Text" xml:space="preserve"><value>원본 파일을 이동하지 못했습니다. 변경 사항을 되돌렸습니다.</value><comment>AppLocalizedPhrase.sourceMoveFailedStatus</comment></data>
   <data name="libraryDevelopDefaults.Text" xml:space="preserve"><value>현상</value><comment>AppLocalizedText.developDefaults</comment></data>
   <data name="libraryProcess.Text" xml:space="preserve"><value>프로세스</value><comment>AppLocalizedPhrase.process</comment></data>
-  <data name="libraryTarget.Text" xml:space="preserve"><value>타깋</value><comment>AppLocalizedPhrase.target</comment></data>
+  <data name="libraryTarget.Text" xml:space="preserve"><value>타깃</value><comment>AppLocalizedPhrase.target</comment></data>
   <data name="libraryFilmProfile.Text" xml:space="preserve"><value>필름 프로필</value><comment>AppLocalizedPhrase.filmProfile</comment></data>
-  <data name="libraryLook.Text" xml:space="preserve"><value>룹</value><comment>AppLocalizedPhrase.look</comment></data>
+  <data name="libraryLook.Text" xml:space="preserve"><value>룩</value><comment>AppLocalizedPhrase.look</comment></data>
   <data name="libraryRemovalUndoFormat.Text" xml:space="preserve"><value>카탈로그 항목 %d개 제거 · 되돌리기 가능</value><comment>AppLocalizedPhrase.libraryRemovalUndoAvailableFormat</comment></data>
   <data name="shortcutUndo.Text" xml:space="preserve"><value>되돌리기</value><comment>AppLocalizedText.commandUndo</comment></data>
   <data name="shortcutRedo.Text" xml:space="preserve"><value>다시 실행</value><comment>AppLocalizedText.commandRedo</comment></data>
@@ -1175,16 +1175,16 @@
   <data name="developExportMetadataCopyright.Text" xml:space="preserve"><value>저작권만</value><comment>ExportMetadataLocalizedText.copyrightOnly</comment></data>
   <data name="developExportMetadataRemoveLocation.Text" xml:space="preserve"><value>위치 제거</value><comment>ExportMetadataLocalizedText.removeLocation</comment></data>
   <data name="developExportMetadataMinimal.Text" xml:space="preserve"><value>최소</value><comment>ExportMetadataLocalizedText.minimal</comment></data>
-  <data name="settingsDefaultScanRotation.Text" xml:space="preserve"><value>기본 스캔 회전</value><comment>AppLocalizedPhrase.settingsDefaultScanRotationPicker</comment></data>
+  <data name="settingsDefaultScanRotation.Text" xml:space="preserve"><value>스캔 기본 방향</value><comment>AppLocalizedPhrase.settingsDefaultScanRotationPicker</comment></data>
   <data name="settingsDefaultScanRotationHelp.Text" xml:space="preserve"><value>새로 스캔한 사진에만 걸립니다. 기존 사진은 그대로입니다.</value><comment>AppLocalizedPhrase.settingsDefaultScanRotationHelp</comment></data>
   <data name="settingsRotation0.Text" xml:space="preserve"><value>없음</value><comment>ImageRotation.degrees0</comment></data>
   <data name="settingsRotation90.Text" xml:space="preserve"><value>90°</value><comment>ImageRotation.degrees90</comment></data>
   <data name="settingsRotation180.Text" xml:space="preserve"><value>180°</value><comment>ImageRotation.degrees180</comment></data>
   <data name="settingsRotation270.Text" xml:space="preserve"><value>270°</value><comment>ImageRotation.degrees270</comment></data>
-  <data name="settingsScannerTruth.Text" xml:space="preserve"><value>스캐너 성능</value><comment>AppLocalizedPhrase.scannerTruth</comment></data>
+  <data name="settingsScannerTruth.Text" xml:space="preserve"><value>스캐너 정보</value><comment>AppLocalizedPhrase.scannerTruth</comment></data>
   <data name="settingsScannerTruthNone.Text" xml:space="preserve"><value>스캐너를 연결하면 장치가 보고하는 값이 나옵니다.</value><comment>Windows only: no scanner connected yet.</comment></data>
-  <data name="settingsMicroSpecksSection.Text" xml:space="preserve"><value>미세 반점 기본값</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecks</comment></data>
-  <data name="settingsMicroSpecksHelp.Text" xml:space="preserve"><value>새로 여는 결함 도구가 가장 작은 반점까지 찾기로 시작할지입니다.</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecksHelp</comment></data>
+  <data name="settingsMicroSpecksSection.Text" xml:space="preserve"><value>미세 입자 기본 검출</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecks</comment></data>
+  <data name="settingsMicroSpecksHelp.Text" xml:space="preserve"><value>새 프레임의 시작값이며 자동과 가이드를 따로 기억합니다. 프레임마다 체크박스가 따로 있어 사진별로 켜고 끔 수 있습니다.</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecksHelp</comment></data>
   <data name="samplerOriginal.Text" xml:space="preserve"><value>원본</value><comment>PixelSamplerLocalizedText[0]</comment></data>
   <data name="samplerWorking.Text" xml:space="preserve"><value>작업</value><comment>PixelSamplerLocalizedText[1]</comment></data>
   <data name="samplerProof.Text" xml:space="preserve"><value>프루프</value><comment>PixelSamplerLocalizedText[2]</comment></data>
@@ -1220,4 +1220,20 @@
   <data name="developBasePickerPrompt.Text" xml:space="preserve"><value>미노광 필름 베이스(사진 사이/가장자리)를 클릭하세요 · Esc 취소</value><comment>AppLocalizedPhrase.basePickerOverlayPrompt</comment></data>
   <data name="developBasePickNotFilmBase.Text" xml:space="preserve"><value>그 자리는 필름 베이스가 아닙니다. 사진 사이나 가장자리의 미노광 베이스를 클릭하세요.</value></data>
   <data name="developBasePickFailed.Text" xml:space="preserve"><value>원본을 읽지 못해 베이스를 집지 못했습니다.</value></data>
+  <data name="canvasZoomOut.Text" xml:space="preserve"><value>축소</value><comment>AppLocalizedPhrase.zoomOut</comment></data>
+  <data name="canvasZoomIn.Text" xml:space="preserve"><value>확대</value><comment>AppLocalizedPhrase.zoomIn</comment></data>
+  <data name="canvasZoomPercentHelp.Text" xml:space="preserve"><value>확대율 입력</value><comment>AppLocalizedPhrase.zoomPercentHelp</comment></data>
+  <data name="canvasFitToScreen.Text" xml:space="preserve"><value>맞춤</value><comment>AppLocalizedPhrase.fitToScreen</comment></data>
+  <data name="canvasActualSize.Text" xml:space="preserve"><value>원본 크기</value><comment>AppLocalizedPhrase.actualSize</comment></data>
+  <data name="canvasZoomApply.Text" xml:space="preserve"><value>적용</value><comment>AppLocalizedPhrase.apply</comment></data>
+  <data name="canvasCompareRaw.Text" xml:space="preserve"><value>원본</value><comment>AppLocalizedPhrase.raw</comment></data>
+  <data name="canvasCompareDeveloped.Text" xml:space="preserve"><value>현상본</value><comment>AppLocalizedPhrase.developed</comment></data>
+  <data name="canvasCompareSplitVertical.Text" xml:space="preserve"><value>좌우 이전/이후</value><comment>AppLocalizedPhrase.compareSplitVertical</comment></data>
+  <data name="canvasCompareSplitHorizontal.Text" xml:space="preserve"><value>상하 이전/이후</value><comment>AppLocalizedPhrase.compareSplitHorizontal</comment></data>
+  <data name="canvasCompareBefore.Text" xml:space="preserve"><value>이전</value><comment>AppLocalizedPhrase.before</comment></data>
+  <data name="canvasCompareUnedited.Text" xml:space="preserve"><value>무보정</value><comment>AppLocalizedPhrase.unedited</comment></data>
+  <data name="canvasCompareCurrentImage.Text" xml:space="preserve"><value>현재 이미지</value><comment>AppLocalizedPhrase.currentImage</comment></data>
+  <data name="canvasCompareBeforeSourceHelp.Text" xml:space="preserve"><value>이전 보기 소스 선택</value><comment>AppLocalizedPhrase.beforeSourceHelp</comment></data>
+  <data name="canvasComparePhoto.Text" xml:space="preserve"><value>사진</value><comment>AppLocalizedText.menuPhoto</comment></data>
+  <data name="developAdjustment.Text" xml:space="preserve"><value>보정</value><comment>Windows undo noun for FrameEditHistory; macOS UndoManager has no action name</comment></data>
 </root>
