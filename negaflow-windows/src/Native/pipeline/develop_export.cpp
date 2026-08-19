@@ -22,6 +22,7 @@
 #include "export/support/preview_proxy.h"
 #include "export/support/progress.h"
 
+#include <new>
 #include <stop_token>
 #include <utility>
 
@@ -96,6 +97,7 @@ using develop_export_detail::apply_grade_stages;
 using develop_export_detail::apply_grain_stage;
 using develop_export_detail::apply_look_stages;
 using develop_export_detail::cancelled_outcome;
+using develop_export_detail::fail;
 using develop_export_detail::decode_source;
 using develop_export_detail::invert_source;
 using develop_export_detail::preview_proxy_materialize;
@@ -108,11 +110,13 @@ using develop_export_detail::publish_developed;
 using develop_export_detail::validate_request;
 
 // 공개 진입점은 여기로 모인다. 단계 본문은 export/ 아래 번역 단위가 소유한다.
-[[nodiscard]] DevelopExportOutcome run_develop(
+//
+// ☠️ **`noexcept` 가 아닙니다.** 아래 `run_develop` 이 감쌉니다 — 이유는 그쪽 주석에.
+[[nodiscard]] DevelopExportOutcome run_develop_unguarded(
     const DevelopExportRequest& request,
     const PreviewTarget* const preview,
     const DevelopRunControl& control,
-    const DetectTarget* const detect = nullptr) noexcept {
+    const DetectTarget* const detect) {
     if (auto failed = validate_request(request, preview, detect)) {
         return *failed;
     }
@@ -150,7 +154,8 @@ using develop_export_detail::validate_request;
 
     DefectRecipeStageResult defect_recipe{};
     if (!used_preview_proxy) {
-        if (auto failed = decode_source(request, tracker, stop, observed, decoded_image)) {
+        if (auto failed = decode_source(
+                request, tracker, stop, observed, decoded_image, preview)) {
             return *failed;
         }
 
@@ -196,7 +201,29 @@ using develop_export_detail::validate_request;
         return *failed;
     }
 
+    // macOS `CIImage` 사슬은 GPU 에 머물고, 평가 지점은
+    // `DevelopFrameRenderer+Developed.swift` `renderDisplayCGImage` 의
+    // `context.createCGImage(..., format: .RGBA8)` 한 번입니다
+    // (`sharedRenderContext`). 디코드는 묶지 않습니다 — 썸네일과 현상이
+    // 직렬화됩니다. 항등 finish 는 호스트를 만지지 않고, `write_preview` 가
+    // BGRA8 로 내립니다.
+    // ☠️ **선언 차례가 곧 파괴 차례입니다.** 상주 스코프의 소멸자는 GPU 에 머문 화소를
+    //    호스트로 내리는데, 그 대상은 아래 단계 출력이 들고 있는 버퍼입니다. 스코프를
+    //    이 자리보다 **먼저** 선언하면 함수가 끝날 때 이미지가 먼저 사라지고, 그 뒤에
+    //    소멸자가 **해제된 메모리에 씁니다.** 2026-08-20 자동 레벨/자동 색상 단추를
+    //    여러 번 누르면 앱이 죽던 원인이 이것이었습니다 — 크래시는 언제나
+    //    `gpu_working_image.cpp` `copy_rows` 안의 memcpy 였습니다(0xc0000005 쓰기).
+    //    그래서 단계 출력들을 먼저 선언하고, 스코프를 **마지막에** 선언합니다.
     InvertStageOutput invert{};
+    LookStageOutput look{};
+    GrainStageOutput grain{};
+    FinishStageOutput finish{};
+
+    std::optional<GpuResidentScope> resident_scope{};
+    if (gpu_policy == GpuUsePolicy::allowed) {
+        resident_scope.emplace();
+    }
+
     if (auto failed = invert_source(
             request,
             tracker,
@@ -210,7 +237,6 @@ using develop_export_detail::validate_request;
         return *failed;
     }
 
-    LookStageOutput look{};
     if (auto failed = apply_look_stages(
             request,
             tracker,
@@ -221,7 +247,6 @@ using develop_export_detail::validate_request;
         return *failed;
     }
 
-    GrainStageOutput grain{};
     if (auto failed = apply_grain_stage(
             request, control, detect, tracker, std::move(look.image), grain)) {
         return *failed;
@@ -230,7 +255,6 @@ using develop_export_detail::validate_request;
         return grain.detect_outcome;
     }
 
-    FinishStageOutput finish{};
     if (auto failed = apply_finish_stages(
             request,
             control,
@@ -254,6 +278,30 @@ using develop_export_detail::validate_request;
         look,
         grain,
         finish);
+}
+
+// ☠️ 예외 차단막입니다. 이 파이프라인은 화소 버퍼를 통째로 들고 다니고
+//    (5088×3401 `Rgba32F` = 277MB 한 장), 그 할당은 실패할 수 있습니다. 그런데 공개
+//    진입점 셋이 전부 `noexcept` 이므로, 예외가 여기까지 올라오면 C++ 는
+//    `std::terminate` → `abort()` 로 **프로세스를 죽입니다.**
+//
+//    실제로 죽고 있었습니다 — Windows 이벤트 로그의 `0xc0000409` 세 건이 전부
+//    `Negaflow.Native.dll +0xf4969` 이고, 그 자리를 디스어셈블하면
+//    `raise(SIGABRT)` → `IsProcessorFeaturePresent(23)` → `int 29h`, 곧 CRT `abort()`
+//    입니다. 메모리가 모자란 것은 앱이 죽을 이유가 아니라 **이 렌더가 실패할 이유**이므로,
+//    호출자가 읽을 수 있는 outcome 으로 바꿔 돌려줍니다.
+[[nodiscard]] DevelopExportOutcome run_develop(
+    const DevelopExportRequest& request,
+    const PreviewTarget* const preview,
+    const DevelopRunControl& control,
+    const DetectTarget* const detect = nullptr) noexcept {
+    try {
+        return run_develop_unguarded(request, preview, control, detect);
+    } catch (const std::bad_alloc&) {
+        return fail(DevelopExportStage::none, "out_of_memory");
+    } catch (...) {
+        return fail(DevelopExportStage::none, "unhandled_exception");
+    }
 }
 
 }  // namespace

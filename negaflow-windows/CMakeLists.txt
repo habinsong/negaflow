@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.30)
+﻿cmake_minimum_required(VERSION 3.30)
 
 project(
     NegaflowWindows
@@ -94,9 +94,8 @@ target_include_directories(negaflow_core
 )
 target_link_libraries(negaflow_core PRIVATE negaflow_project_options)
 
-# Direct3D 11 컴퓨트. 벤더 중립입니다 — 내장(Intel/AMD)·외장(Intel/NVIDIA/AMD)을 똑같이 다루고
-# 벤더 ID 로 거르지 않습니다. 하한은 기능 수준 11_0 하나이며, 하드웨어가 없으면 WARP 로,
-# 그것도 없으면 기존 CPU 경로로 떨어집니다. CUDA·벤더 확장·SM 6.0 을 쓰지 않습니다.
+# Direct3D 11 而댄벂?? 踰ㅻ뜑 以묐┰?낅땲?????댁옣(Intel/AMD)쨌?몄옣(Intel/NVIDIA/AMD)???묎컳???ㅻ（怨?# 踰ㅻ뜑 ID 濡?嫄곕Ⅴ吏 ?딆뒿?덈떎. ?섑븳? 湲곕뒫 ?섏? 11_0 ?섎굹?대ŉ, ?섎뱶?⑥뼱媛 ?놁쑝硫?WARP 濡?
+# 洹멸쾬???놁쑝硫?湲곗〈 CPU 寃쎈줈濡??⑥뼱吏묐땲?? CUDA쨌踰ㅻ뜑 ?뺤옣쨌SM 6.0 ???곗? ?딆뒿?덈떎.
 negaflow_compile_compute_shader(
     "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/finite_check.hlsl"
     FiniteCheckMain
@@ -419,6 +418,13 @@ negaflow_compile_compute_shader(
     NEGAFLOW_GUIDED_PREPARE_HEADER
 )
 
+negaflow_compile_compute_shader(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/shaders/preview_display_encode.hlsl"
+    PreviewDisplayEncodeMain
+    negaflow_preview_display_encode_cs
+    NEGAFLOW_PREVIEW_DISPLAY_ENCODE_HEADER
+)
+
 add_library(negaflow_gpu STATIC
     "${NEGAFLOW_BASIC_TONE_HEADER}"
     "${NEGAFLOW_COLOR_GRADE_HEADER}"
@@ -436,6 +442,7 @@ add_library(negaflow_gpu STATIC
     "${NEGAFLOW_GUIDED_APPLY_HEADER}"
     "${NEGAFLOW_MIP_HALVE_HEADER}"
     "${NEGAFLOW_FINITE_CHECK_HEADER}"
+    "${NEGAFLOW_PREVIEW_DISPLAY_ENCODE_HEADER}"
     "${NEGAFLOW_GAUSSIAN_H_HEADER}"
     "${NEGAFLOW_GAUSSIAN_V_HEADER}"
     "${NEGAFLOW_MEDIAN3_HEADER}"
@@ -497,16 +504,16 @@ add_library(negaflow_gpu STATIC
     src/Native/gpu/gpu_tone_kernels.cpp
     src/Native/gpu/gpu_device.cpp
     src/Native/gpu/gpu_working_image.cpp
+    src/Native/gpu/gpu_preview_display_encode.cpp
 )
 target_include_directories(negaflow_gpu
     PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/gpu/include"
     PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated"
 )
 target_link_libraries(negaflow_gpu PRIVATE negaflow_project_options)
-# GPU 커널은 CPU 커널의 이식입니다. 상수를 **같은 코드에서** 읽어야 값이 갈리지 않으므로
-# imaging 의 공개 헤더가 필요합니다 — `coreimage_gaussian.h` 의 σ 계산,
-# `film_scan_denoise.h` 의 감마 리프트 지수·유도 필터 ε·필름별 세기 표.
-# imaging 은 core·color·imageio 만 쓰고 gpu 를 쓰지 않으므로 순환이 없습니다.
+# GPU 而ㅻ꼸? CPU 而ㅻ꼸???댁떇?낅땲?? ?곸닔瑜?**媛숈? 肄붾뱶?먯꽌** ?쎌뼱??媛믪씠 媛덈━吏 ?딆쑝誘濡?# imaging ??怨듦컻 ?ㅻ뜑媛 ?꾩슂?⑸땲????`coreimage_gaussian.h` ??? 怨꾩궛,
+# `film_scan_denoise.h` ??媛먮쭏 由ы봽??吏?샕룹쑀???꾪꽣 琯쨌?꾨쫫蹂??멸린 ??
+# imaging ? core쨌color쨌imageio 留??곌퀬 gpu 瑜??곗? ?딆쑝誘濡??쒗솚???놁뒿?덈떎.
 target_link_libraries(negaflow_gpu PUBLIC negaflow_core negaflow_imaging d3d11 dxgi)
 
 add_library(negaflow_color STATIC
@@ -520,7 +527,7 @@ target_include_directories(negaflow_color
     PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/color/include"
 )
 target_link_libraries(negaflow_color PRIVATE negaflow_project_options)
-# ICM 의 gamut-check 변환(mscms)을 씁니다. 색역 판정은 근사하지 않습니다.
+# ICM ??gamut-check 蹂??mscms)???곷땲?? ?됱뿭 ?먯젙? 洹쇱궗?섏? ?딆뒿?덈떎.
 target_link_libraries(negaflow_color PUBLIC mscms)
 
 add_library(negaflow_imageio STATIC
@@ -706,13 +713,16 @@ add_library(negaflow_pipeline STATIC
     src/Native/pipeline/export/stages/observe.cpp
     src/Native/pipeline/export/stages/publish.cpp
     src/Native/pipeline/export/stages/validate.cpp
+    src/Native/pipeline/export/support/frame_cache_budget.cpp
     src/Native/pipeline/export/support/gamut.cpp
     src/Native/pipeline/export/support/outcome.cpp
     src/Native/pipeline/export/support/preview.cpp
     src/Native/pipeline/export/support/preview_proxy.cpp
+    src/Native/pipeline/export/support/preview_raw_store.cpp
     src/Native/pipeline/export/support/progress.cpp
     src/Native/pipeline/film_look_workspace.cpp
     src/Native/pipeline/gpu_accelerator.cpp
+    src/Native/pipeline/gpu_accelerator_resident.cpp
     src/Native/pipeline/gpu_accelerator_film_look.cpp
     src/Native/pipeline/gpu_accelerator_color.cpp
     src/Native/pipeline/gpu_accelerator_scratch.cpp
@@ -732,8 +742,8 @@ target_link_libraries(
         negaflow_output
     PRIVATE
         negaflow_core
-        # GPU 가속 진입점(`gpu_accelerator.cpp`)이 쓰는 유일한 자리입니다.
-        # 의존 방향은 `gpu -> imaging`, `pipeline -> {imaging, gpu}` 입니다 — 순환이 없습니다.
+        # GPU 媛??吏꾩엯??`gpu_accelerator.cpp`)???곕뒗 ?좎씪???먮━?낅땲??
+        # ?섏〈 諛⑺뼢? `gpu -> imaging`, `pipeline -> {imaging, gpu}` ?낅땲?????쒗솚???놁뒿?덈떎.
         negaflow_gpu
         negaflow_project_options
 )
@@ -771,6 +781,7 @@ add_library(negaflow_native SHARED
     src/Native/abi/run/develop_run_v23_v28.cpp
     src/Native/abi/run/develop_run_v29_v34.cpp
     src/Native/abi/support/abi_layout.cpp
+    src/Native/abi/support/crash_log.cpp
     src/Native/abi/support/abi_text.cpp
     src/Native/abi/support/build_info_abi.cpp
     src/Native/abi/support/limits_abi.cpp
@@ -801,6 +812,7 @@ add_executable(negaflow_cli
     src/Cli/commands/develop_timing.cpp
     src/Cli/commands/gpu_transfer_bench.cpp
     src/Cli/commands/grain_mend_detect.cpp
+    src/Cli/commands/grain_mend_detect_pipeline.cpp
     src/Cli/commands/Export/developed_export_options.cpp
     src/Cli/commands/Export/developed_export_report.cpp
     src/Cli/commands/Export/export_developed_image_command.cpp
@@ -1081,8 +1093,7 @@ if(BUILD_TESTING)
     )
     add_test(NAME native.wic_tiff_export COMMAND negaflow_wic_tiff_export_tests)
 
-    # 이 묶음은 `aaedfe7` 에서 God object 를 쪼개며 `ManualNegative/` 로 나뉘었는데 여기에
-    # 등록되지 않아 그때부터 링크가 깨져 있었습니다. 다른 분할 묶음과 같은 방식으로 답니다.
+    # ??臾띠쓬? `aaedfe7` ?먯꽌 God object 瑜?履쇨컻硫?`ManualNegative/` 濡??섎돇?덈뒗???ш린??    # ?깅줉?섏? ?딆븘 洹몃븣遺??留곹겕媛 源⑥졇 ?덉뿀?듬땲?? ?ㅻⅨ 遺꾪븷 臾띠쓬怨?媛숈? 諛⑹떇?쇰줈 ?듬땲??
     add_executable(negaflow_manual_negative_developer_tests
         tests/Native.UnitTests/manual_negative_developer_tests.cpp
         tests/Native.UnitTests/ManualNegative/manual_negative_test_support.cpp
@@ -1421,9 +1432,14 @@ if(BUILD_TESTING)
     add_executable(negaflow_gpu_accelerator_tests
         tests/Native.UnitTests/gpu_accelerator_tests.cpp
     )
+    target_include_directories(
+        negaflow_gpu_accelerator_tests
+        PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/pipeline"
+    )
     target_link_libraries(
         negaflow_gpu_accelerator_tests
-        PRIVATE negaflow_pipeline negaflow_imaging negaflow_core negaflow_project_options
+        PRIVATE negaflow_pipeline negaflow_imaging negaflow_color negaflow_core
+            negaflow_project_options
     )
     add_test(NAME native.gpu_accelerator COMMAND negaflow_gpu_accelerator_tests)
 
@@ -1811,6 +1827,44 @@ if(BUILD_TESTING)
         COMMAND negaflow_preview_proxy_cache_tests
     )
 
+    add_executable(negaflow_preview_raw_store_tests
+        tests/Native.UnitTests/preview_raw_store_tests.cpp
+        tests/fixtures/tiff/synthetic_wic_tiff.cpp
+    )
+    target_include_directories(
+        negaflow_preview_raw_store_tests
+        PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/tiff"
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/pipeline"
+    )
+    target_link_libraries(
+        negaflow_preview_raw_store_tests
+        PRIVATE negaflow_pipeline negaflow_project_options
+    )
+    add_test(
+        NAME native.preview_raw_store
+        COMMAND negaflow_preview_raw_store_tests
+    )
+
+    add_executable(negaflow_preview_auto_levels_stress_tests
+        tests/Native.UnitTests/preview_auto_levels_stress_tests.cpp
+        tests/fixtures/tiff/synthetic_wic_tiff.cpp
+    )
+    target_include_directories(
+        negaflow_preview_auto_levels_stress_tests
+        PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/tiff"
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/Native/pipeline"
+    )
+    target_link_libraries(
+        negaflow_preview_auto_levels_stress_tests
+        PRIVATE negaflow_pipeline negaflow_project_options
+    )
+    add_test(
+        NAME native.preview_auto_levels_stress
+        COMMAND negaflow_preview_auto_levels_stress_tests
+    )
+
     add_executable(negaflow_digital_film_material_tests
         tests/Native.UnitTests/digital_film_material_tests.cpp
     )
@@ -1921,7 +1975,7 @@ if(BUILD_TESTING)
     )
     # The reference macOS checkout owns this scan; it is read, never written. The path
     # used to be one segment short, which silently degraded every real-TIFF test to its
-    # synthetic-only branch — the checks looked like they were running and were not.
+    # synthetic-only branch ??the checks looked like they were running and were not.
     set(
         NEGAFLOW_SOURCE_TIFF_FIXTURE
         "${CMAKE_CURRENT_SOURCE_DIR}/../negaflow-mac/Sources/ScannerKit/Resources/Frame.tiff"

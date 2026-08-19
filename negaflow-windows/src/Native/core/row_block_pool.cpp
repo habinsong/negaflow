@@ -97,11 +97,18 @@ private:
                 queue_.pop_front();
             }
             task.function(task.context, task.first_row, task.row_count);
+            // ☠️ **알림은 잠금 안에서 합니다.** 밖에서 알리면 그 사이에 대기자가 깨어
+            //    `remaining == 0` 을 보고 돌아가 버립니다 — 그러면 호출부 스택의
+            //    `PendingCounter`(뮤텍스·조건변수)가 사라진 뒤에 이 스레드가 그것을
+            //    만지게 됩니다. 2026-08-20 자동 레벨 크래시가 이 자리였습니다:
+            //    사라진 계수기를 줄이는 바람에 다음 호출부의 대기가 일찍 풀렸고,
+            //    아직 도는 워커가 이미 없어진 버퍼에 memcpy 했습니다
+            //    (0xc0000005, 워커 스택 row_block_pool.cpp:37 → memcpy).
             {
                 const std::lock_guard<std::mutex> guard{task.pending->lock};
                 --task.pending->remaining;
+                task.pending->done.notify_all();
             }
-            task.pending->done.notify_all();
         }
     }
 
