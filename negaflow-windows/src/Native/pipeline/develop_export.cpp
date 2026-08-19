@@ -237,6 +237,10 @@ using develop_export_detail::validate_request;
         return *failed;
     }
 
+    // ☠️ 아래 단계들은 이미지를 **값으로 받아 다 쓰고 버립니다.** 그 버퍼가 상주로
+    //    묶여 있으면 단계가 끝나며 사라지고, 스코프가 끝날 때 해제된 메모리에 씁니다.
+    //    그래서 넘기기 직전에 그 버퍼만 내리고 묶음을 풉니다.
+    GpuAccelerator::shared().flush_resident_if(invert.image.pixels.data());
     if (auto failed = apply_look_stages(
             request,
             tracker,
@@ -247,6 +251,7 @@ using develop_export_detail::validate_request;
         return *failed;
     }
 
+    GpuAccelerator::shared().flush_resident_if(look.image.pixels.data());
     if (auto failed = apply_grain_stage(
             request, control, detect, tracker, std::move(look.image), grain)) {
         return *failed;
@@ -255,6 +260,7 @@ using develop_export_detail::validate_request;
         return grain.detect_outcome;
     }
 
+    GpuAccelerator::shared().flush_resident_if(grain.applied.image.pixels.data());
     if (auto failed = apply_finish_stages(
             request,
             control,
@@ -268,6 +274,9 @@ using develop_export_detail::validate_request;
         return *failed;
     }
 
+    // 마무리 단계의 화소는 `finish.sharpening.image` 가 들고 있습니다. publish 가
+    // 그것을 읽고 내보내므로 여기서 한 번 내려 두면 스코프가 끝날 때 할 일이 없습니다.
+    GpuAccelerator::shared().flush_resident_if(finish.sharpening.image.pixels.data());
     return publish_developed(
         request,
         preview,

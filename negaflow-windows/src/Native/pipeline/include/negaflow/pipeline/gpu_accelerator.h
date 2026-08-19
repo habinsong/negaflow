@@ -60,6 +60,37 @@ public:
     [[nodiscard]] static GpuAccelerator& shared() noexcept;
 
     [[nodiscard]] bool available() const noexcept;
+    // 프리뷰 사슬을 GPU 에 묶습니다. 스코프가 살아 있는 동안 D3D11 자물쇠를 들고,
+    // 끝에서 호스트가 낡았으면 한 번 내립니다. macOS `CIImage` 지연 평가.
+    // `DevelopFrameRenderer.sharedRenderContext`.
+    [[nodiscard]] bool begin_resident() noexcept;
+    void end_resident() noexcept;
+    void flush_resident() noexcept;
+    // `host` 가 지금 상주로 묶여 있으면 **그것만** 내리고 묶음을 풉니다.
+    // 곧 사라질 버퍼를 넘겨받은 자리에서 부릅니다 — 그대로 두면 상주 스코프가
+    // 나중에 **해제된 메모리에 씁니다**(2026-08-20 크래시).
+    void flush_resident_if(const void* host) noexcept;
+    [[nodiscard]] bool has_resident_image(
+        const float* pixels,
+        std::uint32_t width,
+        std::uint32_t height) noexcept;
+    [[nodiscard]] bool check_resident_finite(
+        const float* pixels,
+        std::uint32_t width,
+        std::uint32_t height,
+        std::uint32_t stride_pixels,
+        bool* all_finite) noexcept;
+    // 상주 작업 화상을 표시용 BGRA8 로 내립니다. macOS
+    // `createCGImage(..., format: .RGBA8)`. 상자 평균·클리핑 오버레이가 없을 때만
+    // 호출부가 부릅니다. 성공하면 호스트 float 을 다시 내리지 않습니다.
+    [[nodiscard]] bool try_encode_preview_bgra(
+        const float* pixels,
+        std::uint32_t width,
+        std::uint32_t height,
+        std::uint8_t* destination,
+        std::uint32_t destination_stride_bytes,
+        const float proof_scale[3],
+        const float proof_bias[3]) noexcept;
     // 어떤 장치를 잡았는지. 없으면 빈 문자열입니다. 진단·로그용입니다.
     [[nodiscard]] const char* adapter_description() const noexcept;
 
@@ -294,6 +325,7 @@ public:
 private:
     GpuAccelerator() noexcept;
     ~GpuAccelerator();
+    bool flush_unlocked() noexcept;
 
     GpuAccelerator(const GpuAccelerator&) = delete;
     GpuAccelerator& operator=(const GpuAccelerator&) = delete;
@@ -305,6 +337,30 @@ private:
 // `imaging` 안쪽 커널이 GPU 를 쓰게 표를 겁니다. 프로세스 시작에 한 번 부르십시오.
 // 장치가 없으면 아무것도 하지 않습니다.
 void install_gpu_kernel_accelerator() noexcept;
+
+// 프리뷰 invert→tone 사슬을 GPU 에 묶습니다. 생성 실패(장치 없음)면 아무 일도 없습니다.
+class GpuResidentScope final {
+public:
+    GpuResidentScope() noexcept;
+    ~GpuResidentScope();
+
+    GpuResidentScope(const GpuResidentScope&) = delete;
+    GpuResidentScope& operator=(const GpuResidentScope&) = delete;
+
+private:
+    bool held_{false};
+};
+
+struct GpuHostTransferStats final {
+    std::uint64_t uploads{0};
+    std::uint64_t downloads{0};
+    std::uint64_t uploaded_pixels{0};
+    std::uint64_t downloaded_pixels{0};
+    std::uint64_t downloaded_bytes{0};
+};
+
+void reset_gpu_host_transfer_stats() noexcept;
+[[nodiscard]] GpuHostTransferStats gpu_host_transfer_stats() noexcept;
 
 bool accelerate_scratch_angle_maps(
     const float* bright,
