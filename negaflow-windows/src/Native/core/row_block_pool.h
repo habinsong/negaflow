@@ -14,19 +14,26 @@
 //    예약이 K 개 잡혔다는 것은 **놀고 있는 워커가 K 개 있다는 뜻**입니다.
 //    예약이 0 이면 호출한 스레드가 전부 직접 돕니다(이전과 같은 폴백).
 
-#include <condition_variable>
+#include <atomic>
 #include <cstdint>
-#include <mutex>
 
 namespace negaflow::core::row_block_pool_detail {
 
 using BlockFunction = void (*)(void* context, std::uint32_t first_row, std::uint32_t row_count);
 
 // 호출부가 스택에 두는 완료 계수기입니다. 워커가 블록을 끝낼 때마다 하나 줄입니다.
+//
+// ☠️ **원자값 하나뿐입니다 — 뮤텍스도 조건변수도 여기 두지 않습니다.**
+//    예전에는 여기에 뮤텍스·조건변수가 있었고, 워커가 "줄이고 알리는" 동안 대기자가
+//    깨어 돌아가며 이 구조체를 **스택에서 없앨 수 있었습니다.** 그러면 워커가 사라진
+//    뮤텍스를 만집니다(use-after-free). 알림을 잠금 안으로 옮겨 창을 좁혔지만,
+//    "남이 막 풀어 준 뮤텍스를 곧바로 없애는" 창은 원리적으로 남았습니다.
+//
+//    그래서 기다림에 쓰는 뮤텍스·조건변수를 **풀이 소유**합니다(풀은 프로세스 수명입니다).
+//    워커가 이 구조체를 만지는 **마지막 순간은 `fetch_sub` 하나**이고, 대기자는 그
+//    값이 0 이 된 것을 본 뒤에만 돌아옵니다 — 그 뒤로 워커가 만질 것이 없습니다.
 struct PendingCounter final {
-    std::mutex lock{};
-    std::condition_variable done{};
-    std::uint32_t remaining{0U};
+    std::atomic<std::uint32_t> remaining{0U};
 };
 
 // 블록 하나를 워커에게 넘깁니다. `pending` 은 호출부가 소유하며, 워커가 일을 끝내면
