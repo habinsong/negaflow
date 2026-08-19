@@ -3,62 +3,160 @@
     x:Class="Negaflow.Shell.Views.Develop.Inspector.DevelopQuickActionsCard"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:controls="using:Negaflow.Shell.Views.Controls">
+    xmlns:primitives="using:Microsoft.UI.Xaml.Controls.Primitives">
+
+<!--
+    macOS DevelopQuickActionsSection — LazyVGrid 두 칸, 칸 사이 8, 줄 사이 8.
+    · 자동 색상 · 자동 레벨 = QuickTogglePill
+    · 자동 톤 · 자동 화이트 밸런스 = QuickActionPill (오른쪽에 24×24 원형 되돌리기, 사이 2)
+    · 알약 = liquidSurface(cornerRadius: 15) 위에 안쪽 라운딩 12, 최소 높이 32.
+    카드 배경을 두지 않습니다 — macOS 도 이 구획만 표면이고 카드가 아닙니다.
+    · showsResetAll: false — 현상 인스펙터는 "모두 초기화" 를 여기 두지 않습니다.
+-->
+<StackPanel
+    x:Name="QuickActionsRoot"
+    HorizontalAlignment="Stretch"
+    AutomationProperties.AutomationId="negaflow.develop.quick-actions">
+<Grid
+    x:Name="QuickActionsGrid"
+    HorizontalAlignment="Stretch"
+    ColumnSpacing="8"
+    RowSpacing="8">
+    <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*" />
+        <ColumnDefinition Width="*" />
+    </Grid.ColumnDefinitions>
+    <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="Auto" />
+    </Grid.RowDefinitions>
 
     <Border
-        x:Name="QuickActionsCard"
-        HorizontalAlignment="Stretch"
-        Padding="10"
-        AutomationProperties.AutomationId="negaflow.develop.quick-actions"
-        Background="{ThemeResource NegaflowCardBrush}"
-        CornerRadius="14">
-        <StackPanel Spacing="8">
-            <!-- macOS 는 자동 색상·자동 레벨(토글)과 자동 톤·자동 화이트
-                 밸런스(동작)를 2×2 로 놓고, 토글 두 개는 음화에서만 냅니다. -->
-            <Grid ColumnSpacing="8" RowSpacing="8">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-                <ToggleButton
-                    x:Name="AutoColorToggle"
-                    Grid.Row="0"
-                    Grid.Column="0"
-                    HorizontalAlignment="Stretch"
-                    AutomationProperties.AutomationId="negaflow.develop.auto-color"
-                    Checked="OnAutoColorToggled"
-                    Unchecked="OnAutoColorToggled" />
-                <ToggleButton
-                    x:Name="AutoLevelsToggle"
-                    Grid.Row="0"
-                    Grid.Column="1"
-                    HorizontalAlignment="Stretch"
-                    AutomationProperties.AutomationId="negaflow.develop.auto-levels"
-                    Checked="OnAutoLevelsToggled"
-                    Unchecked="OnAutoLevelsToggled" />
-                <Button
-                    x:Name="AutoToneButton"
-                    Grid.Row="1"
-                    Grid.Column="0"
-                    HorizontalAlignment="Stretch"
-                    AutomationProperties.AutomationId="negaflow.develop.auto-tone"
-                    Click="OnAutoToneClicked" />
-                <Button
-                    x:Name="AutoWhiteBalanceButton"
-                    Grid.Row="1"
-                    Grid.Column="1"
-                    HorizontalAlignment="Stretch"
-                    AutomationProperties.AutomationId="negaflow.develop.auto-white-balance"
-                    Click="OnAutoWhiteBalanceClicked" />
-            </Grid>
-            <TextBlock
-                x:Name="AutoAdjustStatusText"
-                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                TextWrapping="Wrap" />
-        </StackPanel>
+        x:Name="AutoColorSurface"
+        Grid.Row="0"
+        Grid.Column="0"
+        Background="{ThemeResource NegaflowSubtleFillBrush}"
+        CornerRadius="15">
+        <primitives:ToggleButton
+            x:Name="AutoColorToggle"
+            AutomationProperties.AutomationId="negaflow.develop.auto-color"
+            Checked="OnAutoColorToggled"
+            Style="{StaticResource NegaflowPillToggleStyle}"
+            Unchecked="OnAutoColorToggled">
+            <StackPanel
+                HorizontalAlignment="Center"
+                Orientation="Horizontal"
+                Spacing="6">
+                <FontIcon FontSize="13" Glyph="&#xE790;" />
+                <TextBlock x:Name="AutoColorText" TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+        </primitives:ToggleButton>
     </Border>
+
+    <Border
+        x:Name="AutoLevelsSurface"
+        Grid.Row="0"
+        Grid.Column="1"
+        Background="{ThemeResource NegaflowSubtleFillBrush}"
+        CornerRadius="15">
+        <primitives:ToggleButton
+            x:Name="AutoLevelsToggle"
+            AutomationProperties.AutomationId="negaflow.develop.auto-levels"
+            Checked="OnAutoLevelsToggled"
+            Style="{StaticResource NegaflowPillToggleStyle}"
+            Unchecked="OnAutoLevelsToggled">
+            <StackPanel
+                HorizontalAlignment="Center"
+                Orientation="Horizontal"
+                Spacing="6">
+                <FontIcon FontSize="13" Glyph="&#xE9D2;" />
+                <TextBlock x:Name="AutoLevelsText" TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+        </primitives:ToggleButton>
+    </Border>
+
+    <Border
+        x:Name="AutoTonePill"
+        Grid.Row="1"
+        Grid.Column="0"
+        Background="{ThemeResource NegaflowSubtleFillBrush}"
+        CornerRadius="15">
+        <Grid ColumnSpacing="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Button
+                x:Name="AutoToneButton"
+                AutomationProperties.AutomationId="negaflow.develop.auto-tone"
+                Click="OnAutoToneClicked"
+                Style="{StaticResource NegaflowPillButtonStyle}">
+                <StackPanel
+                    HorizontalAlignment="Center"
+                    Orientation="Horizontal"
+                    Spacing="6">
+                    <FontIcon FontSize="13" Glyph="&#xE7A1;" />
+                    <TextBlock x:Name="AutoToneText" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </Button>
+            <Button
+                x:Name="AutoToneResetButton"
+                Grid.Column="1"
+                Margin="0,0,3,0"
+                AutomationProperties.AutomationId="negaflow.develop.auto-tone.reset"
+                Click="OnAutoToneResetClicked"
+                Style="{StaticResource NegaflowPillResetButtonStyle}">
+                <FontIcon FontSize="11" Glyph="&#xE777;" />
+            </Button>
+        </Grid>
+    </Border>
+
+    <Border
+        x:Name="AutoWhiteBalancePill"
+        Grid.Row="1"
+        Grid.Column="1"
+        Background="{ThemeResource NegaflowSubtleFillBrush}"
+        CornerRadius="15">
+        <Grid ColumnSpacing="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Button
+                x:Name="AutoWhiteBalanceButton"
+                AutomationProperties.AutomationId="negaflow.develop.auto-white-balance"
+                Click="OnAutoWhiteBalanceClicked"
+                Style="{StaticResource NegaflowPillButtonStyle}">
+                <StackPanel
+                    HorizontalAlignment="Center"
+                    Orientation="Horizontal"
+                    Spacing="6">
+                    <FontIcon FontSize="13" Glyph="&#xE793;" />
+                    <TextBlock x:Name="AutoWhiteBalanceText" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </Button>
+            <Button
+                x:Name="AutoWhiteBalanceResetButton"
+                Grid.Column="1"
+                Margin="0,0,3,0"
+                AutomationProperties.AutomationId="negaflow.develop.auto-white-balance.reset"
+                Click="OnAutoWhiteBalanceResetClicked"
+                Style="{StaticResource NegaflowPillResetButtonStyle}">
+                <FontIcon FontSize="11" Glyph="&#xE777;" />
+            </Button>
+        </Grid>
+    </Border>
+
+</Grid>
+
+    <!-- macOS 는 실패를 화면에 적지 않고 AutoAdjustTrace 로만 남깁니다. 여기서는
+         실패했을 때만 한 줄을 띄우고, 평소에는 접어서 자리를 차지하지 않습니다. -->
+    <TextBlock
+        x:Name="AutoAdjustStatusText"
+        Margin="0,8,0,0"
+        FontSize="12"
+        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+        TextWrapping="Wrap"
+        Visibility="Collapsed" />
+</StackPanel>
 </UserControl>

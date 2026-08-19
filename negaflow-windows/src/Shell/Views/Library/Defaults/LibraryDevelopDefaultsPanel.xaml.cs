@@ -58,6 +58,10 @@ public sealed partial class LibraryDevelopDefaultsPanel : UserControl
         BuildDevelopTargetBar();
     }
 
+    /// <summary>
+    /// macOS <c>SegmentedPicker(options: visibleTargets, …)</c> 입니다. 칸은 라디오라
+    /// 한 번에 하나만 켜지고, 켜진 칸은 판형이 칠합니다 — 여기서 색을 손대지 않습니다.
+    /// </summary>
     private void BuildDevelopTargetBar()
     {
         DevelopTargetBar.Children.Clear();
@@ -65,20 +69,28 @@ public sealed partial class LibraryDevelopDefaultsPanel : UserControl
         foreach (DevelopTarget target in DevelopTargets.Visible)
         {
             DevelopTarget value = target;
-            Button button = new()
+            RadioButton segment = new()
             {
                 Content = DevelopTargets.DisplayName(target),
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                FontSize = 11,
-                Padding = new Thickness(2, 4, 2, 4),
+                Style = (Style)Application.Current.Resources["NegaflowSegmentStyle"],
+                GroupName = "DevelopTarget",
                 Tag = target,
             };
             AutomationProperties.SetAutomationId(
-                button,
+                segment,
                 "negaflow.library.develop.target." + target.ToString().ToLowerInvariant());
-            button.Click += (_, _) => ApplyDevelopTarget(value);
-            Grid.SetColumn(button, column++);
-            DevelopTargetBar.Children.Add(button);
+            // macOS 도 이미 고른 칸을 다시 눌렀을 때는 아무것도 하지 않습니다
+            // (`if option != selection { selection = option }`).
+            segment.Checked += (_, _) =>
+            {
+                if (isSynchronizingDevelopDefaults)
+                {
+                    return;
+                }
+                ApplyDevelopTarget(value);
+            };
+            Grid.SetColumn(segment, column++);
+            DevelopTargetBar.Children.Add(segment);
         }
     }
 
@@ -97,20 +109,16 @@ public sealed partial class LibraryDevelopDefaultsPanel : UserControl
 
         DevelopTarget target = frame?.DevelopTarget ?? DevelopTarget.Main;
         DevelopTarget family = DevelopTargets.Family(target);
-        foreach (Button button in DevelopTargetBar.Children.OfType<Button>())
-        {
-            bool selected = button.Tag is DevelopTarget candidate && candidate == family;
-            button.IsEnabled = enabled;
-            button.Background = selected
-                ? new SolidColorBrush(Windows.UI.Color.FromArgb(0x2D, 0x6B, 0x8B, 0xFF))
-                : new SolidColorBrush(Microsoft.UI.Colors.Transparent);
-            button.FontWeight = selected ? FontWeights.SemiBold : FontWeights.Normal;
-            button.Opacity = selected ? 1 : 0.72;
-        }
 
         isSynchronizingDevelopDefaults = true;
         try
         {
+            foreach (RadioButton segment in DevelopTargetBar.Children.OfType<RadioButton>())
+            {
+                segment.IsEnabled = enabled;
+                segment.IsChecked = segment.Tag is DevelopTarget candidate && candidate == family;
+            }
+
             DevelopProcessSelector.SelectedItem = ProcessChoices
                 .FirstOrDefault(choice => choice.Process == (frame is null
                     ? DevelopmentProcess.C41
@@ -118,9 +126,15 @@ public sealed partial class LibraryDevelopDefaultsPanel : UserControl
                         frame.Route.FilmType,
                         frame.Route.SourceSignalKind == SourceSignalKind.RenderedDigital)));
             BuildFilmProfileChoices(frame, family);
-            DevelopLookSelector.ItemsSource = LookChoices();
-            DevelopLookSelector.SelectedItem = LookChoices()
-                .FirstOrDefault(choice => choice.Id == frame?.LookPresetId);
+            IReadOnlyList<ScannerProfileChoice> looks = LookChoices();
+            DevelopLookSelector.ItemsSource = looks;
+            // macOS `lookPresetBinding` 은 프레임에 룩이 없으면 **neutral 을 보여 줍니다**
+            // (`model.actionableFrame?.preset ?? neutralPreset`). 비워 두면 사용자는
+            // 룩이 없는 것인지 못 읽은 것인지 알 수 없습니다.
+            DevelopLookSelector.SelectedItem =
+                looks.FirstOrDefault(choice => choice.Id == frame?.LookPresetId)
+                ?? looks.FirstOrDefault(choice =>
+                    string.Equals(choice.Id, "neutral", StringComparison.Ordinal));
         }
         finally
         {
@@ -136,6 +150,9 @@ public sealed partial class LibraryDevelopDefaultsPanel : UserControl
     private void BuildFilmProfileChoices(LibraryFrameSnapshot? frame, DevelopTarget family)
     {
         List<ScannerProfileChoice> choices = [];
+        // 고를 것이 있는 갈래로 돌아오면 고르개를 다시 보입니다.
+        DevelopFilmProfileText.Visibility = Visibility.Collapsed;
+        DevelopFilmProfileSelector.Visibility = Visibility.Visible;
         if (family == DevelopTarget.Main)
         {
             foreach (DevelopTarget candidate in DevelopTargets.MainFamily)
@@ -163,6 +180,11 @@ public sealed partial class LibraryDevelopDefaultsPanel : UserControl
                 choice.Id == frame?.Base.ScannerProfileId);
             return;
         }
+        // macOS 는 이 갈래에서 고르개 대신 타깃 이름만 흐린 글씨로 둡니다 — 고를 것이 없으므로
+        // 고르개 테두리를 남기면 누를 수 있는 것처럼 보입니다.
+        DevelopFilmProfileText.Text = DevelopTargets.DisplayName(family);
+        DevelopFilmProfileText.Visibility = Visibility.Visible;
+        DevelopFilmProfileSelector.Visibility = Visibility.Collapsed;
         choices.Add(new ScannerProfileChoice(null, DevelopTargets.DisplayName(family)));
         DevelopFilmProfileSelector.ItemsSource = choices;
         DevelopFilmProfileSelector.SelectedIndex = 0;
@@ -208,7 +230,7 @@ public sealed partial class LibraryDevelopDefaultsPanel : UserControl
         if (libraryHost.EditRoute(frame.Id, DevelopRouteSelection.FromProcess(choice.Process)) ==
             LibraryFrameError.None)
         {
-            LibraryChanged?.Invoke(this, EventArgs.Empty);
+            NotifyChanged();
         }
     }
 
@@ -222,20 +244,24 @@ public sealed partial class LibraryDevelopDefaultsPanel : UserControl
         {
             return;
         }
-        string? profileId = DevelopTargets.ProfileAfterTargetChange(
-            target,
-            frame.Route.FilmType,
-            frame.Base.ScannerProfileId);
-        if (host.Edit(
-                frame.Id,
-                new LibraryFrameEdit(
-                    frame.Tone,
-                    frame.ManualBase,
-                    frame.Base with { ScannerProfileId = profileId },
-                    DevelopTarget: target)) == LibraryFrameError.None)
+        if (DevelopDefaultsCommands.ApplyTarget(host, frame, target) == LibraryFrameError.None)
         {
-            LibraryChanged?.Invoke(this, EventArgs.Empty);
+            NotifyChanged();
         }
+    }
+
+    /// <summary>
+    /// 값을 바꾼 뒤에는 **이 구획을 다시 그립니다.** macOS 는 피커가 상태에 묶여 있어
+    /// 타깃을 바꾸면 필름 프로파일 목록이 그 자리에서 따라옵니다(`targetFamily` 가 바뀌므로).
+    /// Windows 는 스스로 다시 읽지 않으면 옛 목록이 남습니다 — 실제로 HS 로 바꿔도
+    /// 필름 프로파일이 `MAIN` 으로 남아 있었습니다.
+    /// </summary>
+    private void NotifyChanged()
+    {
+        // 먼저 알립니다 — 뷰가 카탈로그에서 프레임을 다시 읽어야 아래 Synchronize 가
+        // **새 값**을 봅니다. 순서를 뒤집으면 옛 스냅숏을 읽어 방금 고른 칸이 도로 풀립니다.
+        LibraryChanged?.Invoke(this, EventArgs.Empty);
+        Synchronize();
     }
 
     /// <summary>단축키가 부른 타깃 전환입니다. 타깃 막대를 누른 것과 같은 길을 탑니다.</summary>
@@ -248,18 +274,12 @@ public sealed partial class LibraryDevelopDefaultsPanel : UserControl
         {
             return;
         }
-        DevelopmentProcess process = action switch
+        if (DevelopDefaultsCommands.ApplyProcess(
+                host,
+                frame,
+                DevelopDefaultsCommands.ProcessFor(action)) == LibraryFrameError.None)
         {
-            WorkflowShortcutAction.ProcessColorPositive => DevelopmentProcess.E6,
-            WorkflowShortcutAction.ProcessBwNegative => DevelopmentProcess.D76,
-            WorkflowShortcutAction.ProcessBwPositive =>
-                DevelopmentProcess.BlackAndWhiteReversal,
-            _ => DevelopmentProcess.C41,
-        };
-        if (host.EditRoute(frame.Id, DevelopRouteSelection.FromProcess(process)) ==
-            LibraryFrameError.None)
-        {
-            LibraryChanged?.Invoke(this, EventArgs.Empty);
+            NotifyChanged();
         }
     }
 
@@ -296,7 +316,7 @@ public sealed partial class LibraryDevelopDefaultsPanel : UserControl
                     frame.ManualBase,
                     frame.Base with { ScannerProfileId = choice.Id })) == LibraryFrameError.None)
         {
-            LibraryChanged?.Invoke(this, EventArgs.Empty);
+            NotifyChanged();
         }
     }
 
@@ -318,7 +338,7 @@ public sealed partial class LibraryDevelopDefaultsPanel : UserControl
                     frame.ManualBase,
                     LookPreset: new LookPresetSelection(choice.Id))) == LibraryFrameError.None)
         {
-            LibraryChanged?.Invoke(this, EventArgs.Empty);
+            NotifyChanged();
         }
     }
 }

@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [ValidateSet('x64-debug', 'x64-release')]
     [string]$Preset = 'x64-release',

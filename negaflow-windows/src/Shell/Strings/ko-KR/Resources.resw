@@ -436,6 +436,26 @@
     <value>출력</value>
     <comment>AppLocalizedText.printOutputSection</comment>
   </data>
+  <data name="printLayoutTemplateSection.Text" xml:space="preserve"><value>레이아웃 템플릿</value></data>
+  <data name="printLayoutTemplateName.Text" xml:space="preserve"><value>템플릿 이름</value></data>
+  <data name="printLayoutTemplateSave.Content" xml:space="preserve"><value>저장</value></data>
+  <data name="printLayoutTemplateApply.Content" xml:space="preserve"><value>적용</value></data>
+  <data name="printLayoutTemplateDelete.Content" xml:space="preserve"><value>삭제</value></data>
+  <data name="printLayoutTemplateLocked.Text" xml:space="preserve"><value>템플릿 파일을 읽을 수 없어 저장이 잠겼습니다</value></data>
+  <data name="printLayoutTemplateFull.Text" xml:space="preserve"><value>템플릿은 100개까지 담을 수 있습니다</value></data>
+  <data name="printLayoutTemplateDuplicate.Text" xml:space="preserve"><value>같은 이름의 템플릿이 이미 있습니다</value></data>
+  <data name="printOutputProcess.Text" xml:space="preserve"><value>출력 방식</value></data>
+  <data name="printOutputStandard.Text" xml:space="preserve"><value>일반 출력</value></data>
+  <data name="printOutputCprint.Text" xml:space="preserve"><value>C-print</value></data>
+  <data name="printCprintSection.Text" xml:space="preserve"><value>C-print</value></data>
+  <data name="printCprintLab.Text" xml:space="preserve"><value>인화소</value></data>
+  <data name="printCprintPaper.Text" xml:space="preserve"><value>인화지</value></data>
+  <data name="printCprintCustom.Text" xml:space="preserve"><value>사용자 정의</value></data>
+  <data name="printProofSection.Text" xml:space="preserve"><value>인화 미리보기</value></data>
+  <data name="printProofProfile.Text" xml:space="preserve"><value>인화 프로파일</value></data>
+  <data name="printProofPreview.Text" xml:space="preserve"><value>인화 미리보기</value></data>
+  <data name="printProofOff.Text" xml:space="preserve"><value>끔</value></data>
+  <data name="printProofOn.Text" xml:space="preserve"><value>켬</value></data>
   <data name="printPaperSize.Text" xml:space="preserve">
     <value>용지 크기</value>
     <comment>AppLocalizedText.printPaperSize</comment>
@@ -808,6 +828,8 @@
   <data name="developColorGradingWheelHelp.Value" xml:space="preserve"><value>화살표 키로 색조와 채도를 조정합니다. Shift 를 누르면 더 크게 움직입니다.</value></data>
   <data name="developAll.Text" xml:space="preserve"><value>모두</value><comment>AppLocalizedPhrase.all</comment></data>
   <data name="developRed.Text" xml:space="preserve"><value>빨강</value><comment>AppLocalizedPhrase.red</comment></data>
+  <data name="developDynamicRangeChannel.Text" xml:space="preserve"><value>DR</value></data>
+  <data name="developToneCurveHelp.Text" xml:space="preserve"><value>클릭으로 점 추가 · 드래그로 이동 · 더블클릭으로 삭제</value></data>
   <data name="developGreen.Text" xml:space="preserve"><value>초록</value><comment>AppLocalizedPhrase.green</comment></data>
   <data name="developBlue.Text" xml:space="preserve"><value>파랑</value><comment>AppLocalizedPhrase.blue</comment></data>
   <data name="developCurveInput.Text" xml:space="preserve"><value>입력</value></data>
@@ -844,6 +866,15 @@
   <data name="developVersionRestore.Content" xml:space="preserve"><value>되돌리기</value></data>
   <data name="developVersionDelete.Content" xml:space="preserve"><value>삭제</value></data>
   <data name="developVersionNamePlaceholder.Text" xml:space="preserve"><value>버전 이름</value></data>
+  <data name="developVirtualCopySection.Text" xml:space="preserve"><value>가상 사본</value></data>
+  <data name="developHistorySection.Text" xml:space="preserve"><value>기록</value></data>
+  <data name="developHistoryEmpty.Text" xml:space="preserve"><value>기록 없음</value></data>
+  <data name="developHistoryRecord.Content" xml:space="preserve"><value>기록</value></data>
+  <data name="developHistoryApply.Content" xml:space="preserve"><value>적용</value></data>
+  <data name="developHistoryNameFormat.Value" xml:space="preserve"><value>기록 {0}</value></data>
+  <data name="developSnapshotSection.Text" xml:space="preserve"><value>스냅샷</value></data>
+  <data name="developSnapshotEmpty.Text" xml:space="preserve"><value>스냅샷 없음</value></data>
+  <data name="developSnapshotNameFormat.Value" xml:space="preserve"><value>스냅샷 {0}</value></data>
   <data name="developVersionsEmpty.Text" xml:space="preserve"><value>저장된 버전이 없습니다.</value></data>
   <data name="developSectionPresets.Text" xml:space="preserve"><value>프리셋</value></data>
   <data name="developCopyPaste.Text" xml:space="preserve"><value>복사 / 붙여넣기</value></data>
@@ -1258,4 +1289,7 @@
   <data name="developResetPhotoAngle.Text" xml:space="preserve"><value>사진 각도 초기화</value><comment>AppLocalizedPhrase.resetPhotoAngle</comment></data>
   <data name="developResetAdjustmentsHelp.Text" xml:space="preserve"><value>편집(회전/크롭)을 제외한 모든 보정 값을 초기화합니다.</value><comment>AppLocalizedPhrase.resetAdjustmentsHelp</comment></data>
   <data name="settingsColorSystemDisplayProfile.Text" xml:space="preserve"><value>시스템 디스플레이 프로파일</value><comment>AppLocalizedText.colorSystemDisplayProfile (ColorSync 는 macOS 전용이라 뺌)</comment></data>
+  <data name="developAutoToneHelp.Text" xml:space="preserve"><value>자동 톤 Command-U — 히스토그램으로 노출, 대비, 밝은 영역, 어두운 영역, 흰색 계열, 검정 계열, 생동감을 보정합니다.</value><comment>AppLocalizedPhrase.autoToneHelp</comment></data>
+  <data name="developAutoWhiteBalanceHelp.Text" xml:space="preserve"><value>자동 화이트 밸런스 Shift-Command-U — 그레이 월드 방식으로 색온도와 틴트를 중립화합니다.</value><comment>AppLocalizedPhrase.autoWhiteBalanceHelp</comment></data>
+  <data name="libraryFolderApply.Content" xml:space="preserve"><value>적용</value><comment>AppLocalizedPhrase.apply</comment></data>
 </root>

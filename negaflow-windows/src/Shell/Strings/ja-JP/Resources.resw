@@ -436,6 +436,26 @@
     <value>出力</value>
     <comment>AppLocalizedText.printOutputSection</comment>
   </data>
+  <data name="printLayoutTemplateSection.Text" xml:space="preserve"><value>Layout template</value></data>
+  <data name="printLayoutTemplateName.Text" xml:space="preserve"><value>Template name</value></data>
+  <data name="printLayoutTemplateSave.Content" xml:space="preserve"><value>Save</value></data>
+  <data name="printLayoutTemplateApply.Content" xml:space="preserve"><value>Apply</value></data>
+  <data name="printLayoutTemplateDelete.Content" xml:space="preserve"><value>Delete</value></data>
+  <data name="printLayoutTemplateLocked.Text" xml:space="preserve"><value>Saving is locked because the template file could not be read</value></data>
+  <data name="printLayoutTemplateFull.Text" xml:space="preserve"><value>Up to 100 templates can be stored</value></data>
+  <data name="printLayoutTemplateDuplicate.Text" xml:space="preserve"><value>A template with that name already exists</value></data>
+  <data name="printOutputProcess.Text" xml:space="preserve"><value>Output method</value></data>
+  <data name="printOutputStandard.Text" xml:space="preserve"><value>Standard</value></data>
+  <data name="printOutputCprint.Text" xml:space="preserve"><value>C-print</value></data>
+  <data name="printCprintSection.Text" xml:space="preserve"><value>C-print</value></data>
+  <data name="printCprintLab.Text" xml:space="preserve"><value>Lab</value></data>
+  <data name="printCprintPaper.Text" xml:space="preserve"><value>Paper</value></data>
+  <data name="printCprintCustom.Text" xml:space="preserve"><value>Custom</value></data>
+  <data name="printProofSection.Text" xml:space="preserve"><value>Print preview</value></data>
+  <data name="printProofProfile.Text" xml:space="preserve"><value>Print profile</value></data>
+  <data name="printProofPreview.Text" xml:space="preserve"><value>Print preview</value></data>
+  <data name="printProofOff.Text" xml:space="preserve"><value>Off</value></data>
+  <data name="printProofOn.Text" xml:space="preserve"><value>On</value></data>
   <data name="printPaperSize.Text" xml:space="preserve">
     <value>用紙サイズ</value>
     <comment>AppLocalizedText.printPaperSize</comment>
@@ -808,6 +828,8 @@
   <data name="developColorGradingWheelHelp.Value" xml:space="preserve"><value>矢印キーで色相と彩度を調整します。Shift を押すと大きく動きます。</value></data>
   <data name="developAll.Text" xml:space="preserve"><value>すべて</value><comment>AppLocalizedPhrase.all</comment></data>
   <data name="developRed.Text" xml:space="preserve"><value>レッド</value><comment>AppLocalizedPhrase.red</comment></data>
+  <data name="developDynamicRangeChannel.Text" xml:space="preserve"><value>DR</value></data>
+  <data name="developToneCurveHelp.Text" xml:space="preserve"><value>Click to add a point · drag to move · double-click to delete</value></data>
   <data name="developGreen.Text" xml:space="preserve"><value>グリーン</value><comment>AppLocalizedPhrase.green</comment></data>
   <data name="developBlue.Text" xml:space="preserve"><value>ブルー</value><comment>AppLocalizedPhrase.blue</comment></data>
   <data name="developCurveInput.Text" xml:space="preserve"><value>入力</value></data>
@@ -844,6 +866,15 @@
   <data name="developVersionRestore.Content" xml:space="preserve"><value>復元</value></data>
   <data name="developVersionDelete.Content" xml:space="preserve"><value>削除</value></data>
   <data name="developVersionNamePlaceholder.Text" xml:space="preserve"><value>バージョン名</value></data>
+  <data name="developVirtualCopySection.Text" xml:space="preserve"><value>Virtual Copy</value></data>
+  <data name="developHistorySection.Text" xml:space="preserve"><value>History</value></data>
+  <data name="developHistoryEmpty.Text" xml:space="preserve"><value>No history</value></data>
+  <data name="developHistoryRecord.Content" xml:space="preserve"><value>Record</value></data>
+  <data name="developHistoryApply.Content" xml:space="preserve"><value>Apply</value></data>
+  <data name="developHistoryNameFormat.Value" xml:space="preserve"><value>History {0}</value></data>
+  <data name="developSnapshotSection.Text" xml:space="preserve"><value>Snapshot</value></data>
+  <data name="developSnapshotEmpty.Text" xml:space="preserve"><value>No snapshots</value></data>
+  <data name="developSnapshotNameFormat.Value" xml:space="preserve"><value>Snapshot {0}</value></data>
   <data name="developVersionsEmpty.Text" xml:space="preserve"><value>保存されたバージョンはありません。</value></data>
   <data name="developSectionPresets.Text" xml:space="preserve"><value>プリセット</value></data>
   <data name="developCopyPaste.Text" xml:space="preserve"><value>コピー / ペースト</value></data>
@@ -1258,4 +1289,7 @@
   <data name="developResetPhotoAngle.Text" xml:space="preserve"><value>写真の角度をリセット</value><comment>AppLocalizedPhrase.resetPhotoAngle</comment></data>
   <data name="developResetAdjustmentsHelp.Text" xml:space="preserve"><value>ジオメトリ（回転/切り抜き）以外のすべての補正値をリセットします。</value><comment>AppLocalizedPhrase.resetAdjustmentsHelp</comment></data>
   <data name="settingsColorSystemDisplayProfile.Text" xml:space="preserve"><value>システムのディスプレイプロファイル</value><comment>AppLocalizedText.colorSystemDisplayProfile (ColorSync 는 macOS 전용이라 뺌)</comment></data>
+  <data name="developAutoToneHelp.Text" xml:space="preserve"><value>自動トーン Command-U — ヒストグラムに基づいて露光量、コントラスト、ハイライト、シャドウ、白レベル、黒レベル、自然な彩度を補正します。</value><comment>AppLocalizedPhrase.autoToneHelp</comment></data>
+  <data name="developAutoWhiteBalanceHelp.Text" xml:space="preserve"><value>自動ホワイトバランス Shift-Command-U — グレーワールド法で色温度と色かぶりを中和します。</value><comment>AppLocalizedPhrase.autoWhiteBalanceHelp</comment></data>
+  <data name="libraryFolderApply.Content" xml:space="preserve"><value>適用</value><comment>AppLocalizedPhrase.apply</comment></data>
 </root>

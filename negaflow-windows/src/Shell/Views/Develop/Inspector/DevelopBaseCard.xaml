@@ -46,18 +46,15 @@
                 FontSize="11"
                 Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
         </Grid>
-        <!-- macOS `SegmentedPicker` — 자동/필름/수동이 **붙어 있는 한 덩어리**입니다.
-             라디오 3개를 간격 4로 떼어 놓으면 모양이 다릅니다. 테두리 한 겹 안에 칸을
-             나누고 선택된 칸만 바탕을 칠합니다. -->
+        <!-- macOS `SegmentedPicker`(BaseControlSection.swift:31) — 자동/필름/수동이
+             **붙어 있는 한 덩어리**입니다. 트랙 라운딩 11 · 여백 3 · 칸 사이 3 ·
+             칸 높이 28 · 고른 칸 라운딩 8. 판형은 `Styles/Segments.xaml`. -->
         <Border
             x:Name="BaseModeControl"
             AutomationProperties.AutomationId="negaflow.develop.base"
             AutomationProperties.Name="Film base mode"
-            BorderBrush="{ThemeResource NegaflowDividerBrush}"
-            BorderThickness="1"
-            CornerRadius="7"
-            Padding="1">
-            <Grid ColumnSpacing="1">
+            Style="{StaticResource NegaflowSegmentTrackStyle}">
+            <Grid ColumnSpacing="3">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="*" />

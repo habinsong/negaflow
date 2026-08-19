@@ -3,48 +3,98 @@
     x:Class="Negaflow.Shell.Views.Library.Defaults.LibraryDevelopDefaultsPanel"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <StackPanel Spacing="12">
-                        <!-- 현상 기본값: macOS DevelopDefaultsSection 입니다. 프로세스, 타깃,
-                             그리고 필름 프로파일과 룩이 한 줄에 옵니다. -->
-                        <TextBlock x:Name="DevelopDefaultsText" x:FieldModifier="internal" FontSize="13" FontWeight="SemiBold" />
-                        <Border Padding="12" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="8">
-                            <StackPanel Spacing="9">
-                                <TextBlock x:Name="DevelopProcessLabel" x:FieldModifier="internal" FontSize="12" />
-                                <ComboBox
-                                    x:Name="DevelopProcessSelector" x:FieldModifier="internal"
-                                    HorizontalAlignment="Stretch"
-                                    AutomationProperties.AutomationId="negaflow.library.develop.process"
-                                    DisplayMemberPath="Name"
-                                    FontSize="12"
-                                    SelectionChanged="OnDevelopProcessChanged" />
-                                <TextBlock x:Name="DevelopTargetLabel" x:FieldModifier="internal" FontSize="12" />
-                                <!-- macOS 는 다섯 칸 세그먼트입니다. 폭을 똑같이 나눠 가집니다. -->
-                                <Grid x:Name="DevelopTargetBar" x:FieldModifier="internal" ColumnSpacing="4">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                </Grid>
-                                <TextBlock x:Name="DevelopFilmProfileLabel" x:FieldModifier="internal" FontSize="12" />
-                                <ComboBox
-                                    x:Name="DevelopFilmProfileSelector" x:FieldModifier="internal"
-                                    HorizontalAlignment="Stretch"
-                                    AutomationProperties.AutomationId="negaflow.library.develop.film-profile"
-                                    DisplayMemberPath="Label"
-                                    FontSize="12"
-                                    SelectionChanged="OnDevelopFilmProfileChanged" />
-                                <TextBlock x:Name="DevelopLookLabel" x:FieldModifier="internal" FontSize="12" />
-                                <ComboBox
-                                    x:Name="DevelopLookSelector" x:FieldModifier="internal"
-                                    HorizontalAlignment="Stretch"
-                                    AutomationProperties.AutomationId="negaflow.library.develop.look"
-                                    DisplayMemberPath="Label"
-                                    FontSize="12"
-                                    SelectionChanged="OnDevelopLookChanged" />
-                            </StackPanel>
-                        </Border>
+    <!-- macOS `DevelopDefaultsSection` (현상뷰 좌측탭 · 스크린샷 `현상뷰_기본.png`).
+         구성은 위에서 아래로 세 줄입니다.
+           ① 프로세스 — 라벨 왼쪽, 고르개 오른쪽 (한 줄)
+           ② 타깃    — 라벨 한 줄, 그 아래 다섯 칸 세그먼트가 폭을 똑같이 나눠 가짐
+           ③ 필름 프로파일 + 룩 — 한 줄. 프로파일이 남는 폭을 먹고, 룩은 오른쪽 고정폭.
+         macOS 는 ②③ 의 라벨을 `labelsHidden()` 으로 숨깁니다. 여기서도 숨기되 요소는
+         남겨 두어 화면 낭독기가 읽을 이름을 그대로 유지합니다. -->
+    <StackPanel Spacing="8">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+            <FontIcon FontSize="12" Glyph="&#xE722;" />
+            <TextBlock
+                x:Name="DevelopDefaultsText" x:FieldModifier="internal"
+                FontSize="13"
+                FontWeight="SemiBold" />
+        </StackPanel>
+        <Border Padding="12" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="8">
+            <StackPanel Spacing="9">
+                <!-- ① 프로세스 -->
+                <Grid ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock
+                        x:Name="DevelopProcessLabel" x:FieldModifier="internal"
+                        VerticalAlignment="Center"
+                        FontSize="12" />
+                    <ComboBox
+                        x:Name="DevelopProcessSelector" x:FieldModifier="internal"
+                        Grid.Column="1"
+                        HorizontalAlignment="Right"
+                        AutomationProperties.AutomationId="negaflow.library.develop.process"
+                        DisplayMemberPath="Name"
+                        FontSize="12"
+                        SelectionChanged="OnDevelopProcessChanged" />
+                </Grid>
+
+                <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
+
+                <!-- ② 타깃 -->
+                <TextBlock
+                    x:Name="DevelopTargetLabel" x:FieldModifier="internal"
+                    FontSize="12" />
+                <!-- macOS `SegmentedPicker` — 트랙 라운딩 11 · 여백 3 · 칸 사이 3 ·
+                     칸 높이 28 · 고른 칸 라운딩 8. 다섯 칸이 폭을 똑같이 나눠 가집니다. -->
+                <Border Style="{StaticResource NegaflowSegmentTrackStyle}">
+                    <Grid x:Name="DevelopTargetBar" x:FieldModifier="internal" ColumnSpacing="3">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                    </Grid>
+                </Border>
+
+                <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
+
+                <!-- ③ 필름 프로파일 + 룩 -->
+                <Grid ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <!-- F135·HR 은 고를 것이 없어 macOS 가 이름만 흐린 글씨로 보입니다. -->
+                    <TextBlock
+                        x:Name="DevelopFilmProfileText" x:FieldModifier="internal"
+                        VerticalAlignment="Center"
+                        FontSize="12"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        TextTrimming="CharacterEllipsis"
+                        Visibility="Collapsed" />
+                    <ComboBox
+                        x:Name="DevelopFilmProfileSelector" x:FieldModifier="internal"
+                        HorizontalAlignment="Stretch"
+                        AutomationProperties.AutomationId="negaflow.library.develop.film-profile"
+                        DisplayMemberPath="Label"
+                        FontSize="12"
+                        SelectionChanged="OnDevelopFilmProfileChanged" />
+                    <ComboBox
+                        x:Name="DevelopLookSelector" x:FieldModifier="internal"
+                        Grid.Column="1"
+                        AutomationProperties.AutomationId="negaflow.library.develop.look"
+                        DisplayMemberPath="Label"
+                        FontSize="12"
+                        SelectionChanged="OnDevelopLookChanged" />
+                    <!-- 낭독기 이름만 담습니다. macOS 도 이 두 칸의 라벨은 숨깁니다. -->
+                    <TextBlock x:Name="DevelopFilmProfileLabel" x:FieldModifier="internal" Visibility="Collapsed" />
+                    <TextBlock x:Name="DevelopLookLabel" x:FieldModifier="internal" Visibility="Collapsed" />
+                </Grid>
+            </StackPanel>
+        </Border>
     </StackPanel>
 </UserControl>

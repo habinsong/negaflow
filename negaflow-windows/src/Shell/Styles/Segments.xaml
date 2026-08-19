@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+        macOS `SegmentedPicker`(Shared/UI/SegmentedPicker.swift) 그대로입니다.
+
+          HStack(spacing: 3) { … }
+              Text(...).font(.callout.weight(isSelected ? .semibold : .regular))
+                       .foregroundStyle(isSelected ? Color.primary : Color.secondary)
+                       .frame(maxWidth: .infinity)
+                       .frame(height: 28)
+                       .background { if isSelected { RoundedRectangle(cornerRadius: 8).fill(.background) } }
+                       .contentShape(Rectangle())
+          .padding(3)
+          .frame(maxWidth: .infinity)
+          .background { RoundedRectangle(cornerRadius: 11).fill(Color.primary.opacity(0.07)) }
+
+        즉 **칸 높이 28 · 칸 사이 3 · 고른 칸 라운딩 8 · 트랙 라운딩 11 · 트랙 여백 3 ·
+        트랙 바탕 primary 7%** 입니다. Swift 에 마우스 올림 상태가 없으므로 여기서도
+        만들지 않습니다.
+
+        트랙은 `NegaflowSegmentTrackStyle` 을 쓴 `Border` 가 맡습니다. 칸은 라디오지만
+        동그라미를 그리지 않고 칸 전체를 누릅니다.
+    -->
+
+    <Style x:Key="NegaflowSegmentTrackStyle" TargetType="Border">
+        <Setter Property="Padding" Value="3" />
+        <Setter Property="CornerRadius" Value="11" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="Background" Value="{ThemeResource NegaflowSegmentTrackBrush}" />
+    </Style>
+
+    <Style x:Key="NegaflowSegmentStyle" TargetType="RadioButton">
+        <Setter Property="MinWidth" Value="0" />
+        <Setter Property="MinHeight" Value="28" />
+        <Setter Property="Height" Value="28" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="UseSystemFocusVisuals" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Grid x:Name="SegmentRoot" Background="Transparent" CornerRadius="8">
+                        <Border x:Name="SegmentThumb" CornerRadius="8" />
+                        <ContentPresenter
+                            x:Name="SegmentContent"
+                            Margin="6,0"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Content="{TemplateBinding Content}"
+                            FontSize="{TemplateBinding FontSize}"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            TextWrapping="NoWrap" />
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal" />
+                                <VisualState x:Name="PointerOver" />
+                                <VisualState x:Name="Pressed" />
+                                <VisualState x:Name="Disabled">
+                                    <VisualState.Setters>
+                                        <Setter Target="SegmentRoot.Opacity" Value="0.4" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="CheckStates">
+                                <VisualState x:Name="Unchecked" />
+                                <VisualState x:Name="Checked">
+                                    <VisualState.Setters>
+                                        <Setter Target="SegmentThumb.Background" Value="{ThemeResource NegaflowSegmentThumbBrush}" />
+                                        <Setter Target="SegmentContent.Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}" />
+                                        <Setter Target="SegmentContent.FontWeight" Value="SemiBold" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Indeterminate" />
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</ResourceDictionary>

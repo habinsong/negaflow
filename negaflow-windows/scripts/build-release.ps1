@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [ValidateSet('x64', 'ARM64')]
     [string]$Architecture = 'x64',

@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     # 이벤트 로그의 "오류 오프셋"(모듈 기준 RVA), 예: 0x1546cb
     [Parameter(Mandatory)][string]$Rva,

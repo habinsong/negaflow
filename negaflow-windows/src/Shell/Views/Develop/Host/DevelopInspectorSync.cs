@@ -27,6 +27,31 @@ internal sealed class DevelopInspectorSync
         view.LeftPanel.PresetsPanel.RecipeReplaced += OnPresetRecipeReplaced;
         view.LeftPanel.VersionsPanel.VersionRestored += OnVersionRestored;
         view.LeftPanel.FilmLookPanel.LookChanged += OnFilmLookChanged;
+        view.LeftPanel.DevelopDefaultsChanged += OnDevelopDefaultsChanged;
+    }
+
+    /// <summary>
+    /// 좌측탭의 프로세스·타깃·필름 프로파일·룩이 카탈로그를 고쳤습니다.
+    /// macOS <c>applyDevelopTarget</c>/<c>applyDevelopmentProcess</c> 는 모델을 고친 뒤
+    /// 곧바로 <c>developFrame</c> 을 겁니다. 여기서도 프레임을 카탈로그에서 다시 읽고,
+    /// 인스펙터를 맞추고, 프리뷰를 다시 겁니다.
+    ///
+    /// ☠️ 이것이 없으면 카탈로그만 바뀌고 화면은 옛 값에 머뭅니다 — 실제로 타깃을 눌러도
+    ///    필름 프로파일이 안 따라오고 사진도 다시 그려지지 않았습니다.
+    /// </summary>
+    private void OnDevelopDefaultsChanged(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        if (view.panel?.SelectedFrame is not { } frame)
+        {
+            return;
+        }
+        view.panel.Select(frame.Id);
+        Synchronize();
+        SyncBase();
+        SyncTone();
+        view.RequestPreview();
     }
 
     internal void Synchronize()
