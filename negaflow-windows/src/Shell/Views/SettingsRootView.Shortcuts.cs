@@ -346,6 +346,11 @@ public sealed partial class SettingsRootView
             AppResources.Get("shortcutDetectScanners", "Text"),
         WorkflowShortcutAction.PreviewScan => AppResources.Get("shortcutPreviewScan", "Text"),
         WorkflowShortcutAction.ScanFrame => AppResources.Get("shortcutScanFrame", "Text"),
+        WorkflowShortcutAction.ToggleScannerSimulator =>
+            AppResources.Get("commandToggleScannerSimulator", "Header"),
+        WorkflowShortcutAction.AddFlatbedFrame => AppResources.Get("scanAddFrame", "Text"),
+        WorkflowShortcutAction.RemoveFlatbedFrame =>
+            AppResources.Get("scanRemoveFrame", "Text"),
         WorkflowShortcutAction.QuickExport => AppResources.Get("shortcutQuickExport", "Text"),
         _ => AppResources.Get("shortcutExportPhoto", "Text"),
     };

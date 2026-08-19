@@ -40,6 +40,7 @@ internal static class Program
         PreviewOrderingTests.Run();
         DevelopMetadataTests.Run();
         DevelopMenuStateTests.Run();
+        ScannerMenuStateTests.Run();
         ExportPanelProjectionTests.Run();
         FilmLookMenuProjectionTests.Run();
         GrainMendCardProjectionTests.Run();

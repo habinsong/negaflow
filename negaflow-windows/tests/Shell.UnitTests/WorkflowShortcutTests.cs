@@ -196,6 +196,29 @@ internal static class WorkflowShortcutTests
                 WorkflowShortcutAction.CloneStampTool,
             "workflow_shortcut_defect_tool_keys_resolve");
 
+        // macOS WorkflowShortcutActions.swift:204-210 — 스캐너 다섯은 command+shift+D /
+        // command+option+D / +P / +S / +F / +delete 입니다.
+        Check(
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.ToggleScannerSimulator) ==
+                new WorkflowShortcut(
+                    "d",
+                    WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Alt) &&
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.AddFlatbedFrame) ==
+                new WorkflowShortcut(
+                    "f",
+                    WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Alt) &&
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.RemoveFlatbedFrame) ==
+                new WorkflowShortcut(
+                    "delete",
+                    WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Alt) &&
+            WorkflowShortcutActions.Group(WorkflowShortcutAction.ToggleScannerSimulator) ==
+                WorkflowShortcutGroup.Scanner &&
+            WorkflowShortcutActions.Group(WorkflowShortcutAction.AddFlatbedFrame) ==
+                WorkflowShortcutGroup.Scanner &&
+            WorkflowShortcutActions.Group(WorkflowShortcutAction.RemoveFlatbedFrame) ==
+                WorkflowShortcutGroup.Scanner,
+            "workflow_shortcut_scanner_menu_keys_match_mac");
+
         Check(
             defaults.Resolve("p", WorkflowShortcutModifiers.None) ==
                 WorkflowShortcutAction.PickPhoto &&

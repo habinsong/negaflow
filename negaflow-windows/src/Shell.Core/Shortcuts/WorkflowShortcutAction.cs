@@ -88,6 +88,9 @@ public enum WorkflowShortcutAction
     GuidedDefectTool,
     BrushDefectTool,
     CloneStampTool,
+    ToggleScannerSimulator,
+    AddFlatbedFrame,
+    RemoveFlatbedFrame,
 }
 
 public static class WorkflowShortcutActions
@@ -131,8 +134,11 @@ public static class WorkflowShortcutActions
         WorkflowShortcutAction.ToggleFullScreen => WorkflowShortcutGroup.View,
 
         WorkflowShortcutAction.DetectScanners or
+        WorkflowShortcutAction.ToggleScannerSimulator or
         WorkflowShortcutAction.PreviewScan or
-        WorkflowShortcutAction.ScanFrame => WorkflowShortcutGroup.Scanner,
+        WorkflowShortcutAction.ScanFrame or
+        WorkflowShortcutAction.AddFlatbedFrame or
+        WorkflowShortcutAction.RemoveFlatbedFrame => WorkflowShortcutGroup.Scanner,
 
         WorkflowShortcutAction.QuickExport or
         WorkflowShortcutAction.ExportPhoto => WorkflowShortcutGroup.Export,
@@ -256,6 +262,13 @@ public static class WorkflowShortcutActions
         WorkflowShortcutAction.GuidedDefectTool => new("q", WorkflowShortcutModifiers.None),
         WorkflowShortcutAction.BrushDefectTool => new("b", WorkflowShortcutModifiers.None),
         WorkflowShortcutAction.CloneStampTool => new("s", WorkflowShortcutModifiers.None),
+        // macOS 는 command+option+D / +F / +delete 입니다.
+        WorkflowShortcutAction.ToggleScannerSimulator =>
+            new("d", WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Alt),
+        WorkflowShortcutAction.AddFlatbedFrame =>
+            new("f", WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Alt),
+        WorkflowShortcutAction.RemoveFlatbedFrame =>
+            new("delete", WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Alt),
         _ => WorkflowShortcut.None,
     };
 

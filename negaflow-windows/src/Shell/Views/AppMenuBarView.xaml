@@ -384,5 +384,40 @@
                 AutomationProperties.AutomationId="negaflow.menu.develop.before-after"
                 Click="OnToggleBeforeAfterClick" />
         </MenuBarItem>
+        <!--
+          macOS AppWorkflowMenuCommands CommandMenu(.menuScanner).
+          스캐너 다시 찾기 · 시뮬레이터 토글 · 프리뷰/사진 스캔 · (평판일 때만) 프레임 추가·제거.
+        -->
+        <MenuBarItem
+            x:Name="ScannerMenu"
+            AutomationProperties.AutomationId="negaflow.menu.scanner"
+            Title="Scanner">
+            <MenuFlyoutItem
+                x:Name="DetectScannersItem"
+                AutomationProperties.AutomationId="negaflow.menu.scanner.detect"
+                Click="OnDetectScannersClick" />
+            <ToggleMenuFlyoutItem
+                x:Name="ScannerSimulatorItem"
+                AutomationProperties.AutomationId="negaflow.menu.scanner.simulator"
+                Click="OnToggleScannerSimulatorClick" />
+            <MenuFlyoutSeparator />
+            <MenuFlyoutItem
+                x:Name="PreviewScanItem"
+                AutomationProperties.AutomationId="negaflow.menu.scanner.preview"
+                Click="OnPreviewScanClick" />
+            <MenuFlyoutItem
+                x:Name="ScanFrameItem"
+                AutomationProperties.AutomationId="negaflow.menu.scanner.scan"
+                Click="OnScanFrameClick" />
+            <MenuFlyoutSeparator x:Name="FlatbedSeparator" />
+            <MenuFlyoutItem
+                x:Name="AddFlatbedFrameItem"
+                AutomationProperties.AutomationId="negaflow.menu.scanner.flatbed-add"
+                Click="OnAddFlatbedFrameClick" />
+            <MenuFlyoutItem
+                x:Name="RemoveFlatbedFrameItem"
+                AutomationProperties.AutomationId="negaflow.menu.scanner.flatbed-remove"
+                Click="OnRemoveFlatbedFrameClick" />
+        </MenuBarItem>
     </MenuBar>
 </UserControl>

@@ -39,6 +39,72 @@ public sealed partial class LibraryScanPanel : UserControl
     /// <summary>카탈로그에 올린 뒤 격자를 다시 그릴 때 올립니다.</summary>
     public event EventHandler? LibraryChanged;
 
+    /// <summary>
+    /// 세션 값이 화면에 반영될 때마다 올립니다. 창 안 메뉴막대가 macOS 스캐너 메뉴처럼
+    /// 지금 상태를 되비추려면 이 신호가 필요합니다.
+    /// </summary>
+    public event EventHandler? MenuStateChanged;
+
+    /// <summary>macOS 스캐너 메뉴가 읽는 값입니다.</summary>
+    public ScannerMenuState MenuState => scanSession is { } session
+        ? new ScannerMenuState(
+            !session.IsDetecting && !session.IsScanning,
+            session.SimulatorEnabled,
+            session.CanPreview,
+            session.CanScan,
+            session.UsesFlatbedRegionWorkflow)
+        : ScannerMenuState.Empty;
+
+    /// <summary>macOS <c>.detectScanners</c> — 다시 찾기 단추와 같은 길입니다.</summary>
+    public async Task DetectScannersFromMenuAsync()
+    {
+        EnsureSession();
+        RaiseMenuStateChanged();
+        if (scanSession is { IsDetecting: false, IsScanning: false } session)
+        {
+            await session.RefreshDevicesAsync();
+        }
+    }
+
+    /// <summary>macOS <c>.toggleScannerSimulator</c> — 시뮬레이터 스위치와 같은 길입니다.</summary>
+    public async Task ToggleSimulatorFromMenuAsync()
+    {
+        EnsureSession();
+        if (scanSession is not { } session)
+        {
+            RaiseMenuStateChanged();
+            return;
+        }
+        session.SetSimulatorEnabled(!session.SimulatorEnabled);
+        RaiseMenuStateChanged();
+        if (session.State is ScanSessionState.NoDevice)
+        {
+            await session.RefreshDevicesAsync();
+        }
+    }
+
+    /// <summary>macOS <c>.previewScan</c>.</summary>
+    public Task PreviewScanFromMenuAsync() => runner.RunAsync(preview: true);
+
+    /// <summary>macOS <c>.scanFrame</c> — 한 장입니다.</summary>
+    public Task ScanFrameFromMenuAsync() => runner.RunAsync(preview: false);
+
+    /// <summary>macOS <c>.addFlatbedFrame</c>.</summary>
+    public void AddFlatbedFrameFromMenu()
+    {
+        _ = scanSession?.AddRegion();
+        renderer.Render();
+    }
+
+    /// <summary>macOS <c>.removeFlatbedFrame</c>.</summary>
+    public void RemoveFlatbedFrameFromMenu()
+    {
+        _ = scanSession?.DeleteSelectedRegion();
+        renderer.Render();
+    }
+
+    internal void RaiseMenuStateChanged() => MenuStateChanged?.Invoke(this, EventArgs.Empty);
+
     public void Bind(LibraryHostService host)
     {
         ArgumentNullException.ThrowIfNull(host);
@@ -141,10 +207,20 @@ public sealed partial class LibraryScanPanel : UserControl
         _ = args;
         if (DispatcherQueue.HasThreadAccess)
         {
-            renderer.Render();
+            RenderAndNotify();
             return;
         }
-        _ = DispatcherQueue.TryEnqueue(renderer.Render);
+        _ = DispatcherQueue.TryEnqueue(RenderAndNotify);
+    }
+
+    /// <summary>
+    /// 화면과 메뉴막대는 같은 값을 봅니다. 스캔 절이 접혀 있어도(<c>Render</c> 가 일찍
+    /// 돌아가도) 메뉴는 갱신돼야 하므로 여기서 함께 올립니다.
+    /// </summary>
+    private void RenderAndNotify()
+    {
+        renderer.Render();
+        RaiseMenuStateChanged();
     }
 
     private void OnScanApprovePluginClicked(object sender, RoutedEventArgs args)

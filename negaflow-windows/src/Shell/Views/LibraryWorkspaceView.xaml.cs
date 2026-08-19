@@ -289,6 +289,44 @@ public sealed partial class LibraryWorkspaceView : UserControl
         await ScanPanel.DetectOnLoadAsync();
     }
 
+    /// <summary>macOS 스캐너 메뉴가 읽는 값입니다.</summary>
+    internal ScannerMenuState ScannerMenuState => ScanPanel.MenuState;
+
+    /// <summary>스캔 세션 값이 바뀌면 메뉴막대가 따라오도록 셸에 알립니다.</summary>
+    internal event EventHandler? ScannerMenuStateChanged
+    {
+        add => ScanPanel.MenuStateChanged += value;
+        remove => ScanPanel.MenuStateChanged -= value;
+    }
+
+    /// <summary>macOS 스캐너 메뉴의 여섯 명령입니다. 패널 단추와 같은 길을 탑니다.</summary>
+    internal bool InvokeScannerShortcut(WorkflowShortcutAction action)
+    {
+        switch (action)
+        {
+            case WorkflowShortcutAction.DetectScanners:
+                _ = ScanPanel.DetectScannersFromMenuAsync();
+                return true;
+            case WorkflowShortcutAction.ToggleScannerSimulator:
+                _ = ScanPanel.ToggleSimulatorFromMenuAsync();
+                return true;
+            case WorkflowShortcutAction.PreviewScan:
+                _ = ScanPanel.PreviewScanFromMenuAsync();
+                return true;
+            case WorkflowShortcutAction.ScanFrame:
+                _ = ScanPanel.ScanFrameFromMenuAsync();
+                return true;
+            case WorkflowShortcutAction.AddFlatbedFrame:
+                ScanPanel.AddFlatbedFrameFromMenu();
+                return true;
+            case WorkflowShortcutAction.RemoveFlatbedFrame:
+                ScanPanel.RemoveFlatbedFrameFromMenu();
+                return true;
+            default:
+                return false;
+        }
+    }
+
     private void OnImportScannerClicked(object sender, RoutedEventArgs args)
     {
         _ = sender;

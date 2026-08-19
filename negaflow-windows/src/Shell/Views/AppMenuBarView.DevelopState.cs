@@ -1,3 +1,4 @@
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Negaflow.Catalog;
 using Negaflow.Shell.Develop;
@@ -27,5 +28,23 @@ public sealed partial class AppMenuBarView
         TargetF135Item.IsChecked = state.IsTargetChecked(DevelopTarget.F135);
         TargetHrItem.IsChecked = state.IsTargetChecked(DevelopTarget.Hr);
         TargetExpiredItem.IsChecked = state.IsTargetChecked(DevelopTarget.Rescue);
+    }
+
+    /// <summary>
+    /// 스캐너 메뉴의 잠금과 체크입니다. macOS 는 <c>disabled(...)</c> 로 잠그고 평판 갈래는
+    /// <c>if</c> 로 아예 내지 않으므로, 여기서도 숨깁니다.
+    /// </summary>
+    public void SyncScannerState(ScannerMenuState state)
+    {
+        DetectScannersItem.IsEnabled = state.CanDetect;
+        ScannerSimulatorItem.IsChecked = state.SimulatorEnabled;
+        PreviewScanItem.IsEnabled = state.CanPreview;
+        ScanFrameItem.IsEnabled = state.CanScan;
+        Visibility flatbed = state.UsesFlatbedRegionWorkflow
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        FlatbedSeparator.Visibility = flatbed;
+        AddFlatbedFrameItem.Visibility = flatbed;
+        RemoveFlatbedFrameItem.Visibility = flatbed;
     }
 }

@@ -175,6 +175,22 @@ public sealed partial class AppMenuBarView : UserControl
             WorkflowShortcutAction.BrushDefectTool);
         SetCaption(CloneStampToolItem, DefectToolTitle(defect, "developGrainMendClone"),
             WorkflowShortcutAction.CloneStampTool);
+
+        // AppLocalizedText.menuScanner 는 설정의 단축키 묶음 머리줄과 같은 문구입니다.
+        string scanner = AppResources.Get("shortcutGroupScanner", "Text");
+        ScannerMenu.Title = scanner;
+        AutomationProperties.SetName(ScannerMenu, scanner);
+        SetItem(DetectScannersItem, "shortcutDetectScanners",
+            WorkflowShortcutAction.DetectScanners);
+        SetCaption(
+            ScannerSimulatorItem,
+            AppResources.Get("commandToggleScannerSimulator", "Header"),
+            WorkflowShortcutAction.ToggleScannerSimulator);
+        SetItem(PreviewScanItem, "shortcutPreviewScan", WorkflowShortcutAction.PreviewScan);
+        SetItem(ScanFrameItem, "shortcutScanFrame", WorkflowShortcutAction.ScanFrame);
+        SetItem(AddFlatbedFrameItem, "scanAddFrame", WorkflowShortcutAction.AddFlatbedFrame);
+        SetItem(RemoveFlatbedFrameItem, "scanRemoveFrame",
+            WorkflowShortcutAction.RemoveFlatbedFrame);
         SetItem(
             ResetAdjustmentsItem,
             "shortcutResetAdjustments",
@@ -408,6 +424,24 @@ public sealed partial class AppMenuBarView : UserControl
 
     private void OnCloneStampToolClick(object sender, RoutedEventArgs args) =>
         RaiseCommand(sender, args, WorkflowShortcutAction.CloneStampTool);
+
+    private void OnDetectScannersClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.DetectScanners);
+
+    private void OnToggleScannerSimulatorClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.ToggleScannerSimulator);
+
+    private void OnPreviewScanClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.PreviewScan);
+
+    private void OnScanFrameClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.ScanFrame);
+
+    private void OnAddFlatbedFrameClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.AddFlatbedFrame);
+
+    private void OnRemoveFlatbedFrameClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.RemoveFlatbedFrame);
 
     private void RaiseCommand(object sender, RoutedEventArgs args, WorkflowShortcutAction action)
     {

@@ -115,7 +115,9 @@ public sealed partial class WorkspaceShellView : UserControl
         AppMenu.SettingsRequested += OnToolbarSettingsRequested;
         AppMenu.CommandRequested += OnAppMenuCommandRequested;
         state.Changed += OnStateChanged;
+        LibraryWorkspace.ScannerMenuStateChanged += OnScannerMenuStateChanged;
         SyncDevelopMenu();
+        AppMenu.SyncScannerState(LibraryWorkspace.ScannerMenuState);
         UpdateWorkspace(state.Current.SelectedWorkspace);
         Unloaded += OnUnloaded;
     }
@@ -323,6 +325,14 @@ public sealed partial class WorkspaceShellView : UserControl
             case WorkflowShortcutAction.TargetHr:
             case WorkflowShortcutAction.TargetExpired:
                 return LibraryWorkspace.InvokeShortcut(action);
+            case WorkflowShortcutAction.DetectScanners:
+            case WorkflowShortcutAction.ToggleScannerSimulator:
+            case WorkflowShortcutAction.PreviewScan:
+            case WorkflowShortcutAction.ScanFrame:
+            case WorkflowShortcutAction.AddFlatbedFrame:
+            case WorkflowShortcutAction.RemoveFlatbedFrame:
+                // macOS 는 스캐너 명령으로 작업공간을 바꾸지 않습니다.
+                return LibraryWorkspace.InvokeScannerShortcut(action);
             case WorkflowShortcutAction.CropTool:
                 state.SelectWorkspace(WorkspaceModule.Develop);
                 DevelopWorkspace.ToggleCropFromMenu();
@@ -397,6 +407,13 @@ public sealed partial class WorkspaceShellView : UserControl
         SyncDevelopMenu();
     }
 
+    private void OnScannerMenuStateChanged(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        AppMenu.SyncScannerState(LibraryWorkspace.ScannerMenuState);
+    }
+
     /// <summary>
     /// macOS 현상 메뉴는 그릴 때마다 <c>actionableFrame</c> 을 읽습니다. WinUI 는 메뉴를 여는
     /// 순간을 알려 주지 않으므로 값이 바뀔 때마다 밀어 넣습니다.
@@ -437,6 +454,7 @@ public sealed partial class WorkspaceShellView : UserControl
         // ToggleMenuFlyoutItem 은 눌리는 즉시 스스로 체크를 뒤집습니다. 명령이 아무 것도 바꾸지
         // 못했으면(사진이 없거나 편집이 거절됐으면) 그 체크는 거짓말이므로 되돌립니다.
         SyncDevelopMenu();
+        AppMenu.SyncScannerState(LibraryWorkspace.ScannerMenuState);
     }
 
     private async void OnToolbarQuickExportRequested(object? sender, EventArgs args)
@@ -480,6 +498,7 @@ public sealed partial class WorkspaceShellView : UserControl
         AppMenu.AboutRequested -= OnAppMenuAboutRequested;
         AppMenu.SettingsRequested -= OnToolbarSettingsRequested;
         AppMenu.CommandRequested -= OnAppMenuCommandRequested;
+        LibraryWorkspace.ScannerMenuStateChanged -= OnScannerMenuStateChanged;
         Toolbar.QuickExportRequested -= OnToolbarQuickExportRequested;
         DevelopWorkspace.QuickExportAvailabilityChanged -= OnQuickExportAvailabilityChanged;
         DevelopWorkspace.ScannerSetupRequested -= OnDevelopScannerSetupRequested;
