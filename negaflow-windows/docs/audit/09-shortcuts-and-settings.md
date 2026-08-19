@@ -12,10 +12,12 @@
 >
 > **프론트엔드**: ① computer-use 로 Windows 앱을 **구역별 크롭**해서 보고
 > ② **Parsec 으로 macOS negaflow** 를 같은 구역으로 보고
-> ③ **스크린샷 84장**(`negaflow_mac_screenshot/`)을 확인한 **뒤에만** 판정합니다.
+> ③ **스크린샷 50장**(`C:\Users\habin\맥negaflow 스크린샷\`)을 확인한 **뒤에만** 판정합니다. 폴더·파일 전체 목록은 [`11`](11-ui-verification-protocol.md) 1.3절.
 > **모양·크기·위치·정렬·색상·내용·텍스트 안 잘림** 일곱 가지를 전부 맞춥니다.
 > XAML 에 있다고 "있음" 이 아닙니다 — **화면에 보여야** 있는 것이고,
 > **눌러서 값이 안 바뀌면 가짜**입니다.
+>
+> **화면 도구 — 자세히.** `windows-mcp` / `windows-gui` MCP 는 **절대 금지.** 켜지 말고 호출하지 말고 대용으로도 쓰지 마십시오. Windows 앱·Parsec 맥 화면은 **computer-use 만.** computer-use 도 **꼭 필요할 때만** 씁니다(토큰). **씁니다:** 이 작업에서 화면에 보이는지·눌러서 값이 바뀌는지·잘림/정렬/색을 새로 판정해야 하고 코드·단위시험·스크린샷 50장·기존 로그로는 부족할 때. **쓰지 않습니다:** 백엔드·네이티브·시험만 고칠 때, 스크린샷 폴더+Swift/XAML 으로 충분할 때, 방금 본 화면을 다시 찍을 때, "일단 띄워 보자" 탐색. 쓸 때도 전체를 반복 찍지 말고 **해당 구역만 크롭.** 전문은 [`00`](00-index.md) · [`11`](11-ui-verification-protocol.md).
 >
 > **저장소**: 본체 `C:\Users\habin\negaflow\`(Apache 2.0) · 스캐너 `C:\Users\habin\negaflow-scanner-sane\`(GPL).
 > **두 저장소의 `negaflow-mac\` 은 절대 고치지 마십시오.** 코드 파쿠리·라이선스·특허·저작권 위반 금지.
@@ -42,26 +44,28 @@ Windows 대응과 **함수·열거자 단위**로 대조했습니다.
 |---|---:|---:|
 | 파일 | 9 | 5 |
 | 줄 | **1,198** | 947 |
-| 동작(action) 열거자 | **74** | **55** |
+| 동작(action) 열거자 | **66** | **64** (2026-08-19 실측) |
 
-### 1.2 macOS 에 있고 Windows 에 **없는 동작 24개**
+### 1.2 macOS 에 있고 Windows 에 없는 동작 — **24개가 아니라 4개** (2026-08-19 정정)
 
-`WorkflowShortcutActions.swift` ↔ `WorkflowShortcutAction.cs` 를 열거자 단위로 뺀 결과입니다.
+앞 판의 "74 vs 55 · 없는 것 24개" 는 **낡았습니다.** 두 열거자를 기계로 뺀 결과입니다
+(`WorkflowShortcutActions.swift` 의 `enum WorkflowShortcutAction` 66 케이스 ↔
+`WorkflowShortcutAction.cs` 64):
 
-| 분류 | 없는 동작 |
-|---|---|
-| **현상 자동 보정 5** | `autoTone` · `autoWhiteBalance` · `toggleAutoColor` · `toggleAutoLevels` · `toggleNoiseReduction` |
-| **도구 6** | `cropTool` · `basePickerTool` · `autoDefectTool` · `guidedDefectTool` · `brushDefectTool` · `cloneStampTool` |
-| **현상 타깃 4** | `targetHS` · `targetSP` · `targetF135` · `targetHR` |
-| **프로세스 2** | `processBWNegative` · `processBWPositive` |
-| **스캐너 4** | `loadScanner` · `toggleScannerSimulator` · `addFlatbedFrame` · `removeFlatbedFrame` |
-| **보기 1** | `toggleFullScreen` |
-| **도움말 2** | `help` · `openHelp` |
+| 분류 | 없는 동작 | 왜 |
+|---|---|---|
+| **스캐너 3** | `toggleScannerSimulator` · `addFlatbedFrame` · `removeFlatbedFrame` | 스캐너 메뉴가 아직 없음 |
+| **도움말 1** | `openHelp` | 도움말 메뉴가 아직 없음 |
 
-**현상 타깃 4개가 없는 것**은 [`07`](07-user-reported.md) C4(현상 뷰에서 타깃 선택 불가)와
-같은 뿌리입니다 — 타깃을 바꾸는 경로가 UI 에도 단축키에도 없습니다.
+Windows 에만 있는 둘은 `Undo` · `Redo` 입니다 — macOS 는 표준 편집 메뉴의
+`.undoRedo` 를 갈아 끼우므로 열거자에 없습니다(OS 강제 차이).
 
-**결함 도구 4개(자동·가이드·브러시·복제)와 크롭·베이스 피커 단축키가 없습니다.**
+**닫힌 것**(앞 판이 "없음" 으로 적었던 20개): 현상 자동 보정 5 · `cropTool` ·
+`basePickerTool` · 결함 도구 4(2026-08-19, shift+Q / Q / B / S) · 현상 타깃 4 ·
+프로세스 2 · `loadScanner` · `toggleFullScreen`.
+
+**남은 진짜 결손은 단축키 표가 아니라 [`09`](09-shortcuts-and-settings.md) 1.3 의
+녹화·저장 기능입니다.**
 
 ### 1.3 없는 구조 — 사용자가 직접 바꾸는 기능
 

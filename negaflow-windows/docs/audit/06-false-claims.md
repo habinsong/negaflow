@@ -12,10 +12,12 @@
 >
 > **프론트엔드**: ① computer-use 로 Windows 앱을 **구역별 크롭**해서 보고
 > ② **Parsec 으로 macOS negaflow** 를 같은 구역으로 보고
-> ③ **스크린샷 84장**(`negaflow_mac_screenshot/`)을 확인한 **뒤에만** 판정합니다.
+> ③ **스크린샷 50장**(`C:\Users\habin\맥negaflow 스크린샷\`)을 확인한 **뒤에만** 판정합니다. 폴더·파일 전체 목록은 [`11`](11-ui-verification-protocol.md) 1.3절.
 > **모양·크기·위치·정렬·색상·내용·텍스트 안 잘림** 일곱 가지를 전부 맞춥니다.
 > XAML 에 있다고 "있음" 이 아닙니다 — **화면에 보여야** 있는 것이고,
 > **눌러서 값이 안 바뀌면 가짜**입니다.
+>
+> **화면 도구 — 자세히.** `windows-mcp` / `windows-gui` MCP 는 **절대 금지.** 켜지 말고 호출하지 말고 대용으로도 쓰지 마십시오. Windows 앱·Parsec 맥 화면은 **computer-use 만.** computer-use 도 **꼭 필요할 때만** 씁니다(토큰). **씁니다:** 이 작업에서 화면에 보이는지·눌러서 값이 바뀌는지·잘림/정렬/색을 새로 판정해야 하고 코드·단위시험·스크린샷 50장·기존 로그로는 부족할 때. **쓰지 않습니다:** 백엔드·네이티브·시험만 고칠 때, 스크린샷 폴더+Swift/XAML 으로 충분할 때, 방금 본 화면을 다시 찍을 때, "일단 띄워 보자" 탐색. 쓸 때도 전체를 반복 찍지 말고 **해당 구역만 크롭.** 전문은 [`00`](00-index.md) · [`11`](11-ui-verification-protocol.md).
 >
 > **저장소**: 본체 `C:\Users\habin\negaflow\`(Apache 2.0) · 스캐너 `C:\Users\habin\negaflow-scanner-sane\`(GPL).
 > **두 저장소의 `negaflow-mac\` 은 절대 고치지 마십시오.** 코드 파쿠리·라이선스·특허·저작권 위반 금지.
@@ -288,3 +290,45 @@ macOS 커널의 게이트 두 개(`lo < 0 || hi > 1`, `lumaO <= 1e-5`), 플로�
 > **규칙: 0.00 ms 를 보면 먼저 "그 단계가 돌았는가" 를 물으십시오.**
 > 계측기의 기본값이 그 단계를 건너뛰면, 표는 조용히 "비용 없음" 처럼 보입니다.
 > `--develop-timing` 에 `noritsu`·`sp3000`·`f135`·`hr` 를 넣은 이유가 그것입니다.
+
+
+---
+
+## 15. 문서가 낡아 "없다" 고 적힌 것들 (2026-08-19 기계 대조로 정정)
+
+### 15.1 단축키 "74 vs 55 · 없는 것 24개" → **66 vs 64 · 없는 것 4개**
+
+[`09`](09-shortcuts-and-settings.md) 1.1·1.2 가 낡았습니다. 두 열거자를 기계로 뺐습니다:
+
+```
+enum WorkflowShortcutAction (Swift)  66 케이스
+enum WorkflowShortcutAction (C#)     64 케이스
+없는 것 4: toggleScannerSimulator · addFlatbedFrame · removeFlatbedFrame · openHelp
+Windows 에만 2: Undo · Redo (macOS 는 표준 편집 메뉴의 .undoRedo 를 갈아 끼움)
+```
+
+없는 4개는 전부 **아직 없는 메뉴(스캐너·도움말)** 에 붙는 것들입니다.
+
+### 15.2 문자열 오류 11건 중 **2건은 오류가 아니었습니다**
+
+- `filmLookDigitalOnly` 의 `Digital B&amp;W` — `.resw` 는 XML 이므로 `&amp;` 가 정상
+  이스케이프이고 `ResourceLoader` 는 `Digital B&W` 를 돌려줍니다. WinUI 는 `&` 를
+  단축키 밑줄로 먹지 않습니다.
+- `namedFrameCopyDisplayFormat` 의 `{0} 사본 %d` — `{0}` 은 macOS `%@` 자리를 대신하는
+  이름 칸이고 `LibraryWorkspaceCopy.cs:24` 가 이름을 끼웁니다. 숫자 치환기가 `%d` 만
+  알기 때문에 나눠 둔 것이며 주석에 그 이유가 적혀 있습니다.
+
+나머지 9건은 실제 오류였고 2026-08-19 에 고쳤습니다([`07`](07-user-reported.md) F).
+
+### 15.3 ☠️ `scripts/sync-swift-ui-strings.ps1` 은 **깨져 있고 돌리면 문자열을 지웁니다**
+
+- 경로가 저장소 재편 전 그대로입니다: `<repo>/Sources/negaflowApp/...` 를 찾다가
+  `DirectoryNotFoundException` 으로 죽습니다. 지금 자리는 `negaflow-mac/Sources/...`.
+- 더 위험한 것: 이 스크립트는 `baseline/swift-ui-string-map.json`(**92개 항목**)만 보고
+  `Resources.resw` 를 **통째로 다시 씁니다.** 지금 resw 에는 **685개**가 있으므로
+  `-Check` 없이 돌리면 **593개가 사라집니다.**
+- CI 는 이 스크립트를 부르지 않습니다(`grep` 히트는 문서 2곳뿐).
+
+**그래서 고치지 않고 그대로 두었습니다.** 필요한 것은 생성기가 아니라 **대조기**입니다 —
+resw 항목의 `<comment>` 에 이미 `AppLocalizedPhrase.<key>` 같은 원본 심볼이 적혀 있으므로,
+그것을 macOS 표와 언어별로 비교만 하고 **쓰지 않는** 검사기를 따로 만들어야 합니다.

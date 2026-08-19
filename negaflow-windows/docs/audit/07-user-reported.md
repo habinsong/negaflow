@@ -12,10 +12,12 @@
 >
 > **프론트엔드**: ① computer-use 로 Windows 앱을 **구역별 크롭**해서 보고
 > ② **Parsec 으로 macOS negaflow** 를 같은 구역으로 보고
-> ③ **스크린샷 84장**(`negaflow_mac_screenshot/`)을 확인한 **뒤에만** 판정합니다.
+> ③ **스크린샷 50장**(`C:\Users\habin\맥negaflow 스크린샷\`)을 확인한 **뒤에만** 판정합니다. 폴더·파일 전체 목록은 [`11`](11-ui-verification-protocol.md) 1.3절.
 > **모양·크기·위치·정렬·색상·내용·텍스트 안 잘림** 일곱 가지를 전부 맞춥니다.
 > XAML 에 있다고 "있음" 이 아닙니다 — **화면에 보여야** 있는 것이고,
 > **눌러서 값이 안 바뀌면 가짜**입니다.
+>
+> **화면 도구 — 자세히.** `windows-mcp` / `windows-gui` MCP 는 **절대 금지.** 켜지 말고 호출하지 말고 대용으로도 쓰지 마십시오. Windows 앱·Parsec 맥 화면은 **computer-use 만.** computer-use 도 **꼭 필요할 때만** 씁니다(토큰). **씁니다:** 이 작업에서 화면에 보이는지·눌러서 값이 바뀌는지·잘림/정렬/색을 새로 판정해야 하고 코드·단위시험·스크린샷 50장·기존 로그로는 부족할 때. **쓰지 않습니다:** 백엔드·네이티브·시험만 고칠 때, 스크린샷 폴더+Swift/XAML 으로 충분할 때, 방금 본 화면을 다시 찍을 때, "일단 띄워 보자" 탐색. 쓸 때도 전체를 반복 찍지 말고 **해당 구역만 크롭.** 전문은 [`00`](00-index.md) · [`11`](11-ui-verification-protocol.md).
 >
 > **저장소**: 본체 `C:\Users\habin\negaflow\`(Apache 2.0) · 스캐너 `C:\Users\habin\negaflow-scanner-sane\`(GPL).
 > **두 저장소의 `negaflow-mac\` 은 절대 고치지 마십시오.** 코드 파쿠리·라이선스·특허·저작권 위반 금지.
@@ -49,6 +51,14 @@ A1 재현(2026-08-18 04:50, 04:59): 작업 옵션 → 설정 클릭. 프로세�
 검증(2026-08-18 05:16): 같은 경로로 설정 클릭. `Negaflow.Shell` PID 23648 유지, 창 제목 `설정`, UIA `settings.category.general` = `일반`. 그 클릭 구간에 Application Error 없음.
 | A2 | **스캐너에서 DPI·심도·프레임 규격 고르면 앱 종료** | 시뮬레이터 켠 뒤 프레임 규격을 다른 항목으로 고르면 종료. Application Error `Microsoft.UI.Xaml.dll` `0xc000027b`, WER `8000ffff`. `UpdateOptions` → `Render` → `FillTagged` 가 열린 ComboBox 에서 `Items.Clear()` | **2026-08-18 고침.** 목록이 같을 때는 지우지 않고 선택만 바꾼다. 같은 경로로 해상도/심도/프레임 규격 변경 후 프로세스 1개 유지, 프레임 규격 선택값 `35 mm · 24 × 18`. |
 | A3 | **현상 워크스페이스를 열면 앱 종료** | 2026-08-19 `run-app` x64 Release. WER `802b000a` / `XamlParseException` `Cannot create instance of DevelopWorkspaceView`. First-chance: `Missing localized resource: developReset.Value`. `DevelopBaseCard.Localize` 가 스포이드 리셋에 `AppLocalizedPhrase.reset` 을 쓰는데 6언어 resw 에 키가 없음 | **2026-08-19 고침.** `developReset.Value` = Reset/초기화/リセット/Zurücksetzen/Réinitialiser/重置. 같은 경로로 `Negaflow.Shell` PID 유지, 현상 화면·노출 0.80 입력 확인. |
+| A4 | **Native `0xc0000409` 로 프로세스 종료** (`orca computer get-app-state` 와 겹치면 잘 남) | WER param 7 = `FAST_FAIL_FATAL_APP_EXIT`. `Negaflow.Native.dll+0xF4969` 디스어셈블 = CRT `abort()`. 같은 시각에 `0xc0000374` 힙 손상도 있음. `orca` 가 Native 를 직접 찌르는 코드는 없음. HEAD 디코드/프리뷰 raw 는 **프로세스 전역 슬롯 + 잠금 없음**. `ThumbnailService` 동시 3 + 현상 프리뷰가 같은 `develop_preview` 로 들어와 슬롯을 덮어쓰고 복사 중 해제 → UAF | **2026-08-19 코드·단위시험.** 프레임 키 + `mutex` + `shared_ptr<const WorkingImage>` + 바이트 예산. `run_develop` 은 `bad_alloc`/`...` 을 outcome 으로 돌림. `native.preview_raw_store` · `native.preview_proxy_cache` x64 Debug 통과. Shell.UnitTests 1127 통과. **아직 안 한 것:** 이 패치가 들어간 `run-app` x64 Release 실측. |
+
+A4 확인(2026-08-19): `get-app-state` 의 UIA 순회/`--restore-window` 는 썸네일·레이아웃·프리뷰를 한꺼번에 깨우는 방아쇠일 뿐, 고유 원인이 아니다. 같은 `abort` RVA 는 orca 없이 난 dump 도 있다. 호출 스택 전체(누가 `abort` 를 불렀는지)는 Release PDB 미배포 + CDB 부재로 dump 에서 못 뽑았다.
+
+고친 것: `decode.cpp` 상주 캐시와 `preview_raw_store` 를 프레임별로 나누고 잠그고, 꺼낸 쪽이 `shared_ptr` 을 들고 있는 동안 버퍼를 해제하지 않는다. 관리 쪽 `ThumbnailService.developed` 도 `FrameResidency` 한도로 내린다. 공개 `run_develop` 은 `noexcept` 경계에서 예외를 outcome 으로 바꾼다.
+
+검증: x64 Debug `ctest -R "native.preview_raw_store|native.preview_proxy_cache"` 2/2. 동시 프리뷰 4스레드×6라운드 실패 0. `dotnet run` Shell.UnitTests Debug x64 assertions 1127 failures [].
+**2026-08-19 `run-app -SkipBuild` x64 Release:** PID **4972** 유지, 창 제목 `negaflow`, WS 1369 MB, 10분 안 WER `0xc0000409` 없음. Develop 단추를 이 실행에서 새로 누르지는 않았다.
 
 **둘 다 재현 후 예외 스택을 잡아야 합니다.** 추측으로 고치지 않습니다.
 
@@ -79,7 +89,7 @@ macOS `App/AppMenuCommands.swift` · `AppStandardMenuCommands.swift` · `AppWork
 | 보기 | `:95` (`after: .sidebar`), `:112` (`after: .toolbar`) | **2026-08-19.** `AppMenuBarView` 넷째 메뉴 `보기`. PID 31828: UIA `사이드바 보기/숨기기` · `필름스트립 보기/숨기기` · `인스펙터 보기/숨기기` · `전체 화면 시작` · `라이브러리` · `현상` · `인화`. `현상` → 현상 작업공간. 사이드바 숨김(현상 왼쪽 패널 없음) → 인스펙터 숨김(히스토그램 트리 0). 전체 화면은 `AppWindow` FullScreen presenter, 단축키 Ctrl+Alt+Shift+F(macOS ⌃⌘F 의 control→Alt+Shift). 라이브러리 화면의 가져오기 칸은 `IsSidebarVisible` 을 안 씀 |
 | 라이브러리 | `AppWorkflowMenuCommands.swift:8` `CommandMenu(.menuLibrary)` | **2026-08-19.** `AppMenuBarView` 다섯째 메뉴 `라이브러리`. PID 27388: UIA `이미지 가져오기` · `폴더 가져오기` · `라이브러리 새로고침` · `스캐너 불러오기` · `격자` · `비교` · `살펴보기` + 단축키 Ctrl+I / Ctrl+Shift+I / Ctrl+R / Ctrl+Alt+L / G / C / N. 인화에서 `살펴보기` → 라이브러리. `비교` → 빈 비교(`사진 두 장을 선택하세요`). `격자` → 카드 격자 복귀. macOS 는 격자/비교/살펴보기에서 `activeWorkspaceModule = .library` |
 | 사진 | `:47` `CommandMenu(.menuPhoto)` | **2026-08-19.** `AppMenuBarView` 여섯째 메뉴 `사진`. PID 8148: UIA 18항목 — 이전/다음 · 선택/해제/제외/제거 · 별점 초기화·별 1–5개 · 가상 사본 · 현상 설정 복사/붙여넣기 · 좌/우 90도 · 좌우/상하 반전. 단축키 `[` `]` P U X Delete 0–5 Ctrl+' Ctrl+Shift+C/V Ctrl+Shift+[/] Ctrl+Alt+H/V. `별 3개` → 카드 별 3. `다음 사진`(] 과 같은 Invoke) → 옆 카드로 선택 이동. 폴더 묶음 GridView 는 그룹을 펴서 옮김 |
-| 현상 | `:135` `CommandMenu(.menuDevelop)` | **없음** |
+| 현상 | `:135` `CommandMenu(.menuDevelop)` | **2026-08-19.** `AppMenuBarView` 일곱째 메뉴 `현상`. PID 29760 UIA: 자동 톤(Ctrl+U) · 자동 화이트 밸런스(Ctrl+Shift+U) · 자동 색상(Ctrl+Shift+B) · 자동 레벨(Ctrl+Shift+L) · 노이즈 감소(Ctrl+Alt+N) · 프로세스(C-41/ECN-2 · E-6 · D-76 · B&W Reversal) · 타깃(MAIN·PRINT·HS·SP·F135·HR·EXPIRED) · 자르기 영역(R) · 베이스 스포이드(W) · GrainMend(자동 Shift+Q · 가이드 Q · 브러시 B · 복제 도장 S) · 모든 보정 초기화(Ctrl+Shift+R) · 좌우 이전/이후(\). Toggle·체크는 지금 사진 값을 따름 |
 | 스캐너 | `:250` `CommandMenu(.menuScanner)` | **없음** |
 | 내보내기 | `:292` `CommandMenu(.menuExport)` | **없음** |
 | 윈도우 | 표준 | **없음** |
@@ -275,7 +285,7 @@ macOS `Film/FilmBaseMeasurementDiagnostics.swift`(186) · `FilmBaseMeasurementBu
 - `negaflow-cli --auto-base-probe` `frame1.tiff` 5088×3401 color: `source=connected_component` `method=connectedComponent` `dmin=[0.22128,0.13298,0.0710158]` `evidenceScore=0.729107` `sampledPixelCount=43776` `anomalies=[]` 49726 µs.
 - `run-app` x64 Release `-SkipBuild` PID 6840. 자동 모드 정착 후 UIA `base 0.22 0.13 0.07` — 프로브와 소수 둘째 자리 일치. 미리보기 대비가 수동 0.90/0.65/0.45 때보다 살아남.
 - 수동 → 스포이드 알약 → 프롬프트 `미노광 필름 베이스(사진 사이/가장자리)를 클릭하세요 · Esc 취소`. 캔버스 UIA 클릭 후 프롬프트 사라짐, 슬라이더 0.90/0.65/0.45 유지. 거부 문구는 이 화면에서 확인 못 함.
-- Parsec macOS `OpticFilm8100_frame_5` 베이스 탭: `base 0.23 0.15 0.07` · 자동 선택. 폴더 `develop_right_base_panel.png` 와 카드 구조(헤더·읽음·자동/필름/수동) 같음. 프레임이 달라 숫자는 Windows frame_1 과 다를 수밖에 없음.
+- Parsec macOS `OpticFilm8100_frame_5` 베이스 탭: `base 0.23 0.15 0.07` · 자동 선택. `C:\Users\habin\맥negaflow 스크린샷\현상뷰\현상뷰_우측탭_아이콘6탭바_베이스_자동.png` 와 카드 구조(헤더·읽음·자동/필름/수동) 같음. 프레임이 달라 숫자는 Windows frame_1 과 다를 수밖에 없음.
 
 ### C1.6 2026-08-19 — sidecar `FilmBaseDiagnostics`
 
@@ -413,10 +423,10 @@ NEGA_DEBUG=1 negaflow-cli --auto-base-probe <source.tiff>
 | # | 항목 | macOS |
 |---|---|---|
 | D1 | **초기화 — 모든 보정 / 사진 각도** | `Tools/ResetControlsSection.swift:14,23` (`onResetAllAdjustments`, `onResetPhotoAngle`) + `DevelopInspectorResetter.swift`(104줄). Windows `ResetAllAdjustments`·`ResetControlsSection`·`InspectorResetter`·`ResetAngle` **전부 0** |
-| D2 | **비교 캡슐 원본/현상본/좌우분할/상하분할** | `CanvasCompareControls.swift`(197줄) + `CanvasCompareDivider.swift`(166줄) + `CanvasView+Comparison.swift`. Windows `CompareDivider`·`compareMode`·`SplitHorizontal`·`NeutralPreview` **전부 0** |
-| D3 | **줌 HUD** | `CanvasViewportState.swift`(71줄). Windows `ZoomLevel`·`ZoomIn`·`ZoomOut`·`FitToWindow` **전부 0** |
-| D4 | **GrainMend IR 프론트엔드** | Windows `DevelopGrainMendPanel.xaml` 도구 단추 4개(자동·가이드·브러시·복제). **IR 없음**. 엔진 1,570줄은 있음 |
-| D5 | **undo/redo** | `DevelopHistory.swift` + `AppModel+DefectHistory.swift`(228줄). Windows 는 라이브러리 undo 만 있고 현상·결함 undo **없음** |
+| D2 | **비교 캡슐** | 토글+분할+Before 소스 2026-08-19. 앱에서 메뉴 클릭 실측은 남음 |
+| D3 | **줌 HUD** | 수식+단추+끌기 2026-08-19 (`CanvasHudInteractionState`). 인화 HUD 위치는 남음 |
+| D4 | **GrainMend IR 프론트엔드** | 짝짓기+선택 시 자동 정리 2026-08-19. GrainMend 5번째 단추는 Swift 에도 없음 |
+| D5 | **undo/redo** | 초기화 undo + 슬라이더 0.7s 묶음 2026-08-19 (`FrameEditHistory`). 결함 undo·히스토리 패널은 남음 |
 | D6 | **내보내기 35파일** | 배치·체크포인트·커밋저널·트랜잭션·검증등급·Reveal·가용성·실체화·추적 + UI 7개 |
 | D7 | **인화 8파일** | 커스텀 패키지 오버레이·레이아웃 템플릿·아티팩트 배치·캡션 포맷터·설정 이력·사이드바·매니페스트 검사 |
 
@@ -433,11 +443,27 @@ NEGA_DEBUG=1 negaflow-cli --auto-base-probe <source.tiff>
 
 ---
 
-## F. 문자열 오류 (macOS 원문 대조 13건 중 실오류 11건)
+## F. 문자열 오류 — **2026-08-19 아홉 건 고침, 두 건은 오류가 아니었음**
 
-`타깋`→`타깃` · `룹`→`룩` · `필름스톡`→`필름 스톡` · `중간톤`→`중간 톤` ·
-`Digital B&amp;W` 이스케이프 노출 · `{0} 사본 %d` 형식지정자 혼용 ·
-`기본 스캔 회전`/`스캐너 성능`/`미세 반점 기본값` + 도움말 2건 macOS 원문과 다름.
+| # | 키 | 앞 | macOS 원문 | 상태 |
+|---|---|---|---|---|
+| F1 | `libraryTarget` | `타깋` | `타깃` | **고침.** 현상 메뉴 타깃 하위 메뉴 이름으로 앱에 그대로 보였음(UIA) |
+| F2 | `libraryLook` | `룹` | `룩` | **고침** |
+| F3 | `developFilmStock` | `필름스톡` | `필름 스톡` | **고침** |
+| F4 | `developMidtones` | `중간톤` | `중간 톤` | **고침** |
+| F5 | `settingsDefaultScanRotationPicker` | 기본 스캔 회전 | 스캔 기본 방향 | **고침(6언어)** |
+| F6 | `scannerTruth` | 스캐너 성능 | 스캐너 정보 | **고침(6언어)** |
+| F7 | `defaultDefectMicroSpecks` | 미세 반점 기본값 | 미세 입자 기본 검출 | **고침(6언어)** |
+| F8 | `defaultDefectMicroSpecksHelp` | "새로 여는 결함 도구가…" | "새 프레임의 시작값이며 자동과 가이드를 따로 기억합니다…" | **고침(6언어)** |
+| F9 | 프로세스 메뉴 문구 | `컬러 네거티브` 등 번역 이름 | `C-41/ECN-2` · `E-6` · `D-76` · `B&W Reversal` | **고침**(`developmentProcessName`) |
+| ~~F10~~ | `filmLookDigitalOnly` 의 `Digital B&amp;W` | — | — | **오류 아님.** `.resw` 는 XML 이라 `&amp;` 가 정상 이스케이프이고 화면에는 `Digital B&W` 로 나옴 |
+| ~~F11~~ | `namedFrameCopyDisplayFormat` `{0} 사본 %d` | — | `%@ 사본 %d` | **오류 아님.** `{0}` 은 macOS `%@` 자리를 대신하는 이름 칸이고 `LibraryWorkspaceCopy.cs:24` 가 이름을 끼움 |
+
+**남은 것:** 685개 resw 항목 전체를 macOS 표와 기계로 대조한 적이 **없습니다.**
+`scripts/sync-swift-ui-strings.ps1` 은 저장소 구조가 바뀌기 전 경로
+(`<repo>/Sources/negaflowApp/...`)를 보고 있어 지금은 **깨져 있고**, 매핑
+(`baseline/swift-ui-string-map.json`)에 92개만 있어 그대로 돌리면 나머지 593개를
+지웁니다. 쓰지 마십시오 — 대조기는 따로 만들어야 합니다.
 
 ---
 
@@ -477,11 +503,21 @@ DevelopLookLabel         DevelopLookSelector
 2. **E1 프리뷰 프록시 캐시 + 2단 렌더** — 네이티브 2슬롯+Lanczos 현상 붙임. 5088×3401 상자 1280 두 번째 **43.1 ms · decode 0**. 앱에서 노출 0→0.80 과 히스토그램 갱신 확인. **FrameCacheManager FIFO 는 10번.**
 3. **C1 필름 베이스** — C1.1~C1.9. RealScan 리베이트 집기 `0.40 0.13 0.07` + 현상본 유지.
 4. **E4 인화 프리뷰** — **닫음.** 현상본 먼저, 칸이 크면 표시 크기 현상. 다음: B 메뉴막대
-5. **B 메뉴막대** — 앱·파일·편집·보기·라이브러리·사진 이식함. 다음: 현상 메뉴
-6. **D1 초기화 · D5 undo**
-7. **GPU** ([`04`](04-gpu-plan.md))
-8. **D2·D3 비교 캡슐·줌 HUD**
-9. **D4 IR 프론트 · D6 내보내기 · D7 인화**
+5. **B 메뉴막대** — 앱·파일·편집·보기·라이브러리·사진 이식함. 현상 메뉴에
+   **모든 보정 초기화** 붙임(2026-08-19). 이전/이후·결함은 핸들러 없어 넣지 않음.
+6. **D1 초기화** — `DevelopInspectorResetter` + 메뉴/단축키. 베이스·기하 유지.
+   **D5** 초기화 undo + 슬라이더 0.7s 묶음(`FrameEditHistory`, `host.Edit` 길목).
+   결함 undo·히스토리 패널은 남음.
+7. **GPU 3.1–3.8 닫음.** 다시 이식하지 말 것. 남은 확인은 [`15`](15-gpu-handoff.md) 4절.
+   프리뷰 invert→tone 상주 + BGRA8 출력은 2026-08-19 붙임(Release `nocurve`
+   단계 합 **65.0 ms**, `output` **7.01 ms**). 다음: 커브 중간 왕복 · [`16`](16-preview-handoff.md)
+8. **D2 비교** — 상태 + 캡슐 + 분할 클립 + Before 소스(MAIN/무보정/원본/`frame:`).
+   **D3 줌** — 수식 + HUD 단추 + 끌기(`minimumDistance` 4, 겹침 회피).
+   인화 HUD 위치 `(width-96, height-28)` 는 남음.
+9. **D4 IR** — `InfraredFilmCompatibility` + `InfraredImportPairing` +
+   선택 시 `runInfraredCleanIfNeeded`. 스캔 publish 는 이미 IR 을 돌림.
+   이미 있는 장에 IR 만 붙이기· stray IR 프레임 정리는 남음.
+   **D6 내보내기 · D7 인화** 남음.
 10. **F 문자열**
     
 ---
@@ -501,3 +537,211 @@ DevelopLookLabel         DevelopLookSelector
 
 주의: `scripts/run-app.ps1 -SkipBuild` 는 `Add-AppxPackage -Register -ForceApplicationShutdown` 이라 패키지를 다시 등록하면서 기존 프로세스를 죽인다. 그것은 설치 경로이지 두 번째 실행이 아니다.
 
+
+---
+
+## H. 2026-08-19 — 슬라이더 지연 · 사진 전환 크래시의 원인과 조치
+
+사용자 보고: "현상뷰 우측탭 슬라이더 값 조절하면 수초", "사진 바꾸면 앱 터짐",
+"이미지 전환도 느림". **추측 없이 원인을 확정한 뒤 고쳤습니다.**
+
+### H.1 크래시 — 원인 확정 (이벤트 로그 + 디스어셈블)
+
+Windows 이벤트 로그 `Application Error`:
+
+| 시각 | 코드 | 모듈 |
+|---|---|---|
+| 09:01:08 · 09:06:07 · 10:38:08 | `0xc0000409` | **`Negaflow.Native.dll +0xf4969`** (세 번 다 같은 오프셋) |
+| 10:37:53 | `0xc0000374` (힙 손상) | `ntdll.dll` |
+
+`+0xf4969` 를 `dumpbin /disasm` 으로 풀었습니다:
+
+```
+sub rsp,28h ; call ... ; mov ecx,16h ; call raise      ← SIGABRT
+mov ecx,17h ; call IsProcessorFeaturePresent           ← PF_FASTFAIL_AVAILABLE
+mov ecx,7   ; int 29h                                  ← __fastfail(FAST_FAIL_FATAL_APP_EXIT)
+```
+
+**CRT `abort()`** 입니다. 곧 `noexcept` 함수에서 예외가 새어 `std::terminate` 로 간 것입니다.
+
+### H.2 진짜 원인 — 프리뷰 프록시 슬롯이 **프로세스 전역 2개**였음
+
+macOS 는 이 두 슬롯을 **`ScanFrame` 에 붙여** 둡니다
+(`ScanFrame.swift:176-182` `cachedInteractivePreviewRaw` / `cachedSettledPreviewRaw` /
+`cachedInteractivePreviewRawDimension`). Windows 는 `preview_proxy.cpp` 의
+**전역 두 개**로 옮겨 놓았고, 거기서 두 가지가 한꺼번에 깨졌습니다.
+
+**① 썸네일이 현상 슬롯을 계속 덮어썼습니다.**
+`ThumbnailService.Render`(`ThumbnailService.cs:295`)가 `exporter.Preview(request, 360, 360, …)`
+로 **같은 `develop_preview`** 를 부릅니다. `slot_for_box(360,360)` 은 360 < 3600 이라
+`g_interactive` — 슬라이더가 쓰는 바로 그 슬롯입니다. `DevelopFrameList.cs:73-80` 이
+현상 뷰 새로고침마다 **모든 프레임**에 썸네일을 요청하고 동시 실행이 3개
+(`MaximumConcurrentRenders`)이므로, 슬라이더의 다음 요청은 상자가 안 맞아 **매번 미스** →
+원본 재디코드 + 원본 해상도 베이스 해석 + Lanczos.
+`decode.cpp` 의 디코드 캐시도 **경로 하나짜리 단일 슬롯**이라 같이 날아갔습니다.
+
+**② 그 전역에 잠금이 한 글자도 없었습니다.**
+썸네일 스레드의 `slot.image = image`(옛 버퍼 해제 후 재할당)와 프리뷰 스레드의
+`image = slot.image`(그 버퍼 읽기)가 겹쳐 **use-after-free**. 이것이 H.1 의 두 코드입니다.
+사진을 바꾸는 순간이 썸네일이 한꺼번에 뜨는 때라 경합이 최대였습니다.
+
+`WorkingImage` 는 화소당 `Rgba32F` 16바이트라 5088×3401 한 장이 **277 MB** 입니다.
+캐시 히트마다 그것을 통째로 복사하고 있었습니다.
+
+### H.3 조치 (네이티브)
+
+| 파일 | 무엇 |
+|---|---|
+| `export/support/preview_raw_store.{h,cpp}` (신규) | **프레임 키** 기반 상주 캐시. 뮤텍스 + `shared_ptr<const WorkingImage>`. macOS `markDevelopedResident` 의 **FIFO 재등록** + `trimDeveloped` |
+| `export/support/frame_cache_budget.{h,cpp}` (신규) | macOS `FrameCacheBudget` 이식. 비율(16GB 25% → 96GB 35%)과 배분비(190 : 2×170)는 그대로, **한 프레임 비용만 실제 바이트로** — Windows 는 화소당 16바이트라 macOS 추정(8바이트 가정)의 2배이기 때문 |
+| `export/support/preview_proxy.cpp` | 전역 2슬롯 제거. macOS `preloadedFullPreviewRaw` 이식 — **정착 raw 가 있으면 인터랙티브를 Lanczos 로 파생**하고 디코드하지 않음(`DevelopFrameRenderer+Input.swift:51-52`) |
+| `export/stages/decode.cpp` | 단일 슬롯 → 프레임별 FIFO + 뮤텍스 + `shared_ptr`. 복사는 **잠금 밖에서** |
+| `develop_export.cpp` | `run_develop` 에 예외 차단막. 메모리 부족은 **프로세스를 죽일 이유가 아니라 이 렌더가 실패할 이유** → `out_of_memory` outcome |
+
+### H.4 조치 (셸)
+
+| 파일 | 무엇 |
+|---|---|
+| `Library/Cache/FrameCachePolicy.cs` · `FrameCacheBudget.cs` · `FrameResidency.cs` (신규) | macOS `FrameCachePolicy` · `FrameCacheBudget` · `FrameCacheManager` 이식(선택 프레임 보호 포함) |
+| `ThumbnailService.cs` | `developed` 사전에 **축출이 없어** 프레임당 34.6MB 를 영구 보유하던 것을 FIFO 로. `PublishFromDeveloped` 추가 — 866만 화소 축소를 UI 스레드에서 워커로 |
+| `DevelopWorkspaceView.xaml.cs` | `RememberDeveloped`/`Publish` 를 **정착 패스에서만**. 앞 판은 슬라이더 한 칸에 **두 번** 34.6MB 복사 + 축소를 UI 스레드에서 함 |
+| `DevelopPreviewCanvas.xaml.cs` | 인터랙티브/정착 치수가 달라 매번 새로 만들던 `WriteableBitmap` 을 두 벌 돌려 씀 |
+| `PreviewCoordinator.cs` | 화소 버퍼 **두 장 교대** — 배달한 버퍼를 다음 렌더가 덮어써 히스토그램·스포이드가 찢어진 화소를 읽던 것 |
+
+### H.5 Windows 전용 최적화 — 인터랙티브 상자를 실측으로 접음
+
+`--gpu-transfer-bench` 실측(264 MB, RTX 4060 Ti):
+
+| | ms |
+|---|---:|
+| 업로드 | 8.5 |
+| **디스패치** | **0.014** |
+| 다운로드 | 58 |
+
+**연산은 공짜이고 왕복 전송이 전부입니다.** 단계마다 왕복하므로 3600 정착 한 장이
+GPU 허용 **298 ms**(CPU 전용 453 ms). 단계별: `develop` 113 · `tone_adjust` 75 · `output` 81.
+
+macOS 는 인터랙티브 패스를 캔버스 디바이스 픽셀 그대로 그립니다 — 파이프라인 전체가
+CoreImage/Metal 이라 됩니다. Windows 는 아직 대부분 CPU 라 같은 치수(이 화면 150% DPI 에서
+3072 = 630만 화소)면 한 칸에 200 ms 가 넘습니다.
+그래서 `DevelopPreviewProxy.InteractiveProxyDimension` 에 **실측 처리량 기반 접기**를
+넣었습니다. 예산은 macOS `waitForDevelopSettle` 0.14초의 **절반(70 ms)** — 정착 판정이
+서기 전에 인터랙티브가 최소 두 장 나와야 따라온다고 느끼기 때문입니다.
+하한은 macOS `interactiveMinDimension` 1024, 계단은 macOS 256 그대로.
+**화질은 잃지 않습니다** — 손을 멈추면 0.14초 뒤 정착 패스가 3600 으로 다시 그립니다.
+
+### H.6 실측 (실제 5088×3401 OpticFilm 스캔, 사이에 다른 프레임 썸네일 렌더를 낀 앱과 같은 상황)
+
+| | 슬라이더 한 칸 (네이티브 인터랙티브 패스, 1280 상자) |
+|---|---:|
+| 고치기 전 (= 매번 콜드) | **573.4 ms** |
+| 고친 뒤 (캐시 적중) | **45.9 ms** |
+
+앱 작업 집합: **2,054 MB → 1,181 MB**(실행 직후).
+
+### H.7 시험
+
+- `tests/Native.UnitTests/preview_raw_store_tests.cpp` (신규) — ① 다른 프레임 썸네일이
+  현상 프록시를 안 밀어냄 ② 새 인터랙티브 상자가 정착본에서 파생(디코드 0회)
+  ③ 4스레드 동시 프리뷰가 전부 성공
+- `tests/Shell.UnitTests/FrameResidencyTests.cs` (신규) — FIFO 축출 · 재등록 · 선택 프레임
+  보호 · macOS 예산 상수 · 인터랙티브 접기
+
+게이트: native **101/101**, catalog **731**, shell **1133**, 경고 0.
+
+### H.8 확인 못 한 것 — 정직하게
+
+- **앱에서 슬라이더 벽시계를 아직 못 쟀습니다.** 네이티브 패스와 UI 스레드 작업은
+  각각 쟀지만, 사용자가 끄는 동안의 체감은 앱에서 재야 합니다.
+- **invert→tone 왕복은 2026-08-19 에 한 번으로 줄였습니다.** 아직 남은 것은
+  `output` BGRA8 내리기와 커브 중간 측정 왕복입니다. 앱 슬라이더 벽시계는
+  **못 쟀습니다.**
+- 스테이징 읽기를 `MOVNTDQA` 스트리밍 로드로 바꿔 봤으나 **58 → 61 ms 로 더 느렸습니다**
+  (이 드라이버의 스테이징은 write-combined 가 아님). 되돌렸습니다 — 가설은 기각입니다.
+
+### H.9 정정 — 인터랙티브 상자 접기는 **되돌렸습니다**
+
+H.5 에 적은 "실측 처리량으로 인터랙티브 상자 접기"를 넣었다가 **제거했습니다.**
+속도는 붙었지만 사용자가 곧바로 "프리뷰가 저해상도라 깨져 보인다"고 잡아냈습니다.
+**해상도를 깎아 얻는 속도는 답이 아닙니다.** `interactiveProxyDimension` 은 macOS 그대로
+(표시 픽셀 → 256 양자화 → 1024…3600)로 되돌렸고, 속도는 파이프라인에서 내야 합니다.
+
+### H.10 "사진이 바로 반영이 안 된다" — 원인 둘, 조치 둘
+
+사용자 보고: 손잡이는 따라오는데 **그림이 안 바뀐다.**
+
+**① 인터랙티브 렌더를 매번 취소하고 버렸습니다.**
+`PreviewCoordinator.RequestAsync` 가 새 요청마다 `activeRun.Cancel()` 하고
+`RunLoopAsync` 는 취소된 결과를 배달하지 않습니다. 그래서 **계속 끄는 동안에는 어떤 렌더도
+완주하지 못해 화면이 한 장도 안 바뀌었습니다** — 손을 멈춰야 비로소 한 장이 나왔습니다.
+→ **인터랙티브는 취소하지 않고 끝까지 그려 배달**하고, 곧바로 최신 값으로 다음 장을 그립니다.
+정착(3600)은 길고 결과가 이미 지나간 상태이므로 그대로 끊습니다.
+시험 `preview_cancels_the_superseded_render` · `preview_delivers_only_the_last_request` 가
+**옛 동작을 못 박고 있었습니다** — 계약을 고쳐
+`preview_lets_the_interactive_render_finish` · `preview_delivers_every_finished_interactive_render`
+로 바꿨습니다.
+
+**② 인터랙티브 결과가 화면에 아예 안 나갔습니다.**
+`RenderAsync` 가 결과를 **하나만** 돌려주므로, 손을 멈춰 정착이 성립하면 인터랙티브 그림은
+버려지고 정착본이 나올 때까지(3600 에서 약 300 ms) 옛 그림이 남았습니다. macOS 는 인터랙티브
+패스가 끝나면 그 자리에서 `frame.developedImage` 를 갈아 끼웁니다
+(`AppModel+DevelopRendering.swift:81-84`).
+→ 인터랙티브를 **그 자리에서 배달**하고, 정착본이 오면 다시 배달합니다.
+
+### H.11 "다른 사진으로 이동이 느리다"
+
+전환하면 새 사진의 콜드 렌더가 끝날 때까지 캔버스에 **옛 사진**이 남았습니다.
+macOS 는 `ScanFrame.developedImage` 가 프레임마다 남아 있어 고르는 즉시 뜹니다.
+Windows 는 그 화소를 `ThumbnailService.TryGetDeveloped` 에 **이미 갖고 있으면서 쓰지
+않았습니다.**
+→ `DevelopWorkspaceView.PresentCachedDeveloped` — 사진을 바꾸는 순간 그 사진의 마지막
+현상본을 곧바로 올리고, 없으면 360 썸네일을 올립니다(macOS `thumbnailImage` 폴백).
+
+### H.12 남은 것 — **GPU 왕복이 전부입니다**
+
+`--gpu-transfer-bench` 실측(264 MB, RTX 4060 Ti):
+
+| | ms |
+|---|---:|
+| 업로드 | 8.5 |
+| **디스패치** | **0.014** |
+| 다운로드 | 58 |
+
+**연산은 사실상 공짜입니다.** 그런데 단계마다 올렸다 내립니다 — 3600 정착 한 장이
+GPU 허용 **298 ms**(CPU 전용 453 ms), 단계별 `develop` 113 · `tone_adjust` 75 · `output` 81.
+`gpu_tone_stage.cpp:278` 은 톤 커브가 켜져 있으면 밴드 측정 때문에 **중간에 한 번 더**
+내려받습니다.
+
+**2026-08-19 상주 사슬(①의 첫 조각).** macOS `CIImage` 가 마지막에 한 번 평가되는 것과
+같게, 프리뷰 `invert`→`tone` 을 `GpuResidentScope` 로 묶었습니다
+(`DevelopFrameRenderer.sharedRenderContext`). 커널은 새로 만들지 않았습니다.
+
+| | H.12 직전 (같은 원본, RTX 4060 Ti, 상자 3600) | 지금 Release `nocurve` 두 번째 |
+|---|---:|---:|
+| `develop` | 113 | **55.5** |
+| `tone_adjust` | 75 | **19.3** |
+| `output` | 81 | **64.2** |
+| 단계 합 | 298 | **153.7** |
+| 벽시계 두 번째 | 298 | **182** |
+
+시험 `native.gpu_accelerator` `invert_then_tone_is_one_host_round_trip`:
+풀해상도 **올리기 1 · 내리기 1**, CPU 대비 최대 오차 **1.43e-06**. 같은 숫자 두 번.
+커브가 켜지면 밴드 측정 때문에 중간 내리기가 남습니다.
+
+**2026-08-19 ② BGRA8 출력.** macOS `createCGImage(.RGBA8)` 대응.
+`write_preview` 가 1:1 이면 `try_encode_preview_bgra`. 항등 look/grain/finish 는
+낡은 float 호스트를 안 만집니다. Release `nocurve` 두 번째: `output` **78.15 → 7.01 ms**,
+`tone_adjust` **18.99 → 0.02**, 단계 합 **167.7 → 65.0**, 벽시계 **196 → 93 ms**.
+CLI 작업 집합 봉우리 **557 MB**(앞 판 508). 시험
+`invert_then_tone_preview_is_one_bgra_download`: 올리기 1 · 내리기 1 ·
+`downloaded_bytes = w*h*4` · 8비트 ≤1 코드. Debug/Release 각 2회 + Debug ctest 101/101.
+
+**아직 남은 것:**
+③ 커브 중간 float 왕복. **2026-08-19 실측:** 있는 `GpuMipHalve` 로 측정하면
+GPU/CPU **2.55e-04**(허용 1e-5). 기각·되돌림. `GpuAreaAverage` 는 격자 대체 불가.
+CLI 커브 켬 두 번째 `tone_adjust` **25.59 ms**(상자 3600, BGRA8 이후 바이너리).
+앱 작업 집합 ~1GB/렌더 누수는 **이 세션에서 앱으로 못 쟀다.**
+A4 `run-app` x64 Release 실측도 **못 했다**(코드는 들어가 있음).
+
+**기각한 가설:** 스테이징 읽기를 `MOVNTDQA` 스트리밍 로드로 바꿔 봤으나 58 → 61 ms 로
+**더 느렸습니다**. 이 드라이버의 스테이징은 write-combined 가 아닙니다. 되돌렸습니다.

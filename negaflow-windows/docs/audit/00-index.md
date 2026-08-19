@@ -81,7 +81,7 @@
 > |---|---|---|
 > | **1** | **Windows 앱을 computer-use 로 직접 본다** | 띄우고 **구역별로 크롭(`zoom`)** 해서 확대 |
 > | **2** | **Parsec 으로 macOS negaflow 를 직접 본다** | 같은 화면·같은 구역을 크롭해 나란히 댄다 |
-> | **3** | **스크린샷 폴더 84장을 확인한다** | `negaflow_mac_screenshot/` — 라이브러리 43 · 현상 24 · 인화 17 |
+> | **3** | **스크린샷 폴더 50장을 확인한다** | `C:\Users\habin\맥negaflow 스크린샷\` — 라이브러리뷰 4 · 현상뷰 22 · 인화뷰 4 · 메뉴막대 10 · 설정 10. **파일 하나라도 빼먹지 말 것.** 전체 목록은 [`11`](11-ui-verification-protocol.md) 1.3절 |
 >
 > ## 일곱 가지를 전부 맞춥니다
 >
@@ -92,6 +92,23 @@
 > - **XAML 에 요소가 있다고 "있음" 으로 적지 마십시오.** 화면에 **보여야** 있는 것입니다.
 > - **눌러서 값이 안 바뀌면 그것은 가짜입니다.** 고칠 때까지 **비활성**으로 두십시오.
 > - 전체 스크린샷만 보고 판정 금지 — 1456×819 로 줄면 2px 도 잘린 글자도 안 보입니다.
+>
+> # ⛔ 화면 도구 — `windows-mcp` 절대 금지 · computer-use 는 최소
+>
+> | 도구 | 규칙 |
+> |---|---|
+> | **windows-mcp** · **windows-gui MCP** | **절대 금지.** 켜지 말고, 호출하지 말고, 대용으로도 쓰지 마십시오. |
+> | **computer-use** | Windows 앱·Parsec 맥 화면을 눈으로 볼 때의 **유일한** 도구. **꼭 필요할 때만.** 토큰을 아끼십시오. |
+>
+> **씁니다** — 이 작업에서 화면에 보이는지, 눌러서 값이 바뀌는지, 잘림·정렬·색을 **새로** 판정해야 하고, 코드·단위시험·스크린샷 50장·이미 있는 로그로는 부족한 때.
+>
+> **쓰지 않습니다**
+> - 백엔드·네이티브·시험만 고칠 때
+> - 스크린샷 폴더와 Swift/XAML 대조로 충분할 때
+> - 방금 본 같은 화면을 다시 찍을 때
+> - "일단 띄워 보자" 탐색
+>
+> 쓸 때도 전체 화면을 반복 찍지 말고 **해당 구역만 크롭(`zoom`)** 합니다.
 >
 > **절차 전문: [`11-ui-verification-protocol.md`](11-ui-verification-protocol.md)**
 >
@@ -138,18 +155,19 @@
 | [`01-backend-gaps.md`](01-backend-gaps.md) | 엔진 159개 파일 대조. 없는 것·얇은 것·창작·문제 |
 | [`02-frontend-gaps.md`](02-frontend-gaps.md) | 3뷰 + 인스펙터. 없는 것·백엔드 미연결·창작 |
 | [`03-feature-status.md`](03-feature-status.md) | 기능 단위 미구현·가짜·창작 |
-| [`04-gpu-plan.md`](04-gpu-plan.md) | **GPU 이식 계획 + 진행 상황.** **0절이 현재 상태입니다** — 이식 완료 화소별 커널 11개 + 이웃 원시연산 4개와 실측 오차, 남은 것이 왜 막혔는지, 아직 아닌 것 5가지, 시험이 잡은 실제 버그 5개. **0.5절(타일은 값의 조건)·0.6절(초월함수)이 이번에 재서 확정한 제약입니다.** macOS `[[stitchable]]` 커널 32개 중 4개는 **macOS 가 부르지 않고** 7개는 **Windows CPU 판부터 없습니다** |
-| [`05-god-objects.md`](05-god-objects.md) | 500줄 초과 전체(실측) |
+| [`04-gpu-plan.md`](04-gpu-plan.md) | **GPU 이식 계획 + 진행 상황.** 3.1–3.8은 닫힘. **0절이 현재 상태.** 타일=값의 조건(0.5)·초월함수(0.6). 죽은 커널은 옮기지 말 것 |
+| [`05-god-objects.md`](05-god-objects.md) | **닫음.** 사유 없는 미해결 0. 다시 쪼개지 말 것 |
 | [`06-false-claims.md`](06-false-claims.md) | **기존 문서의 틀린 서술** |
 | [`07-user-reported.md`](07-user-reported.md) | **사용자 실사용 보고 전체** — 크래시·메뉴막대·창작 판정 |
 | [`08-icons-and-chrome.md`](08-icons-and-chrome.md) | 아이콘 117 vs 56, 바·캡슐 배치 |
-| [`09-shortcuts-and-settings.md`](09-shortcuts-and-settings.md) | **단축키 74 vs 55** · 설정 8탭 전체 내용 대조 |
+| [`09-shortcuts-and-settings.md`](09-shortcuts-and-settings.md) | **단축키 66 vs 64(2026-08-19 실측, 없는 것 4개)** · 설정 8탭 전체 내용 대조 |
 | [`10-cache-and-optimization.md`](10-cache-and-optimization.md) | **메모리 캐시·FIFO·축출 상수** · 개발자 모드 · 캔버스 배경 우클릭 |
-| [`11-ui-verification-protocol.md`](11-ui-verification-protocol.md) | **프론트엔드 검증 절차** — computer-use 크롭 · Parsec · 스크린샷 84장 · 판정표 |
+| [`11-ui-verification-protocol.md`](11-ui-verification-protocol.md) | **프론트엔드 검증 절차** — computer-use 크롭 · Parsec · 스크린샷 50장 **폴더·파일 전체 목록** · 판정표 |
 | [`12-repos-and-licence.md`](12-repos-and-licence.md) | **저장소 두 개와 라이선스** — Apache 2.0 vs GPL, macOS 코드 불가침 |
 | [`13-performance-playbook.md`](13-performance-playbook.md) | **성능·품질 플레이북** — 04 가 *무엇을* 옮길지라면 이건 *어떻게* 빠르게. 계측기부터 · 스레드 풀 · 컴파일러 스위치 · vHGW 형태학 · 분리형 컨볼루션 · 더블 버퍼 다운로드 · 품질 지키는 법 |
-| [`14-remaining-gpu-methodology.md`](14-remaining-gpu-methodology.md) | **남은 GPU 작업의 절차서**(2026-08-18). ☠️ **0.0절이 이 문서 자신의 오판 셋을 정정합니다** — 2·3·6·7.2절은 무효이거나 낡았습니다. **지금 기준은 [`15`](15-gpu-handoff.md)** |
-| [`15-gpu-handoff.md`](15-gpu-handoff.md) | **GPU 인수인계(2026-08-19) — 이어서 할 사람이 먼저 읽을 문서.** 지킬 규칙 일곱(전부 이번에 실제로 틀렸던 것에서 나왔습니다) · 지금 GPU 가 도는 자리 · 남은 일 우선순위 · 확인 못 한 것 · 작업 절차 |
+| [`14-remaining-gpu-methodology.md`](14-remaining-gpu-methodology.md) | GPU 방법론(2026-08-18). **할 일 목록 아님.** 2·3·6·7.2절 무효. 지금 기준은 [`15`](15-gpu-handoff.md) |
+| [`15-gpu-handoff.md`](15-gpu-handoff.md) | **GPU 인수인계.** 3.1–3.8 **닫음.** 규칙 일곱 · 도는 자리 · 확인 못 한 것(4절) |
+| [`16-preview-handoff.md`](16-preview-handoff.md) | ☠️ **프리뷰/정착 프리뷰 인수인계(2026-08-19).** invert→tone 상주 + BGRA8 출력. Release 3600 `nocurve` 단계 합 **65.0 ms**, `output` **7.01 ms**. 남은 것: 커브 중간 왕복 · 앱 1GB 누수 실측 · A4 `run-app` |
 
 ---
 
@@ -180,31 +198,16 @@
 
 ## 2. 이번 감사의 가장 큰 발견 셋
 
-### 2.1 GPU 코드가 **한 줄도** 없습니다
+### 2.1 GPU — **0줄이 아니다. 3.1–3.8은 닫음**
 
-Windows 전 트리를 19개 키워드로 훑은 결과입니다.
+2026-08-18 감사가 "GPU 히트 0"으로 적었던 것은 **낡은 발견**입니다. 다시 이식하지 마십시오.
 
-| 키워드 | 히트 파일 수 |
-|---|---:|
-| `d3d11` · `D3D11` · `Direct3D` · `ID3D11Device` | **0** |
-| `ComputeShader` · `compute_shader` · `.hlsl` | **0** |
-| `DirectML` · `DirectCompute` · `CUDA` · `OpenCL` · `Vulkan` | **0** |
-| `ID2D1` · `Direct2D` · `DXGI` · `Win2D` · `CanvasDevice` | **0** |
+지금: D3D11 컴퓨트 + HLSL, 톤 7단계·필름룩 사슬·노리츠 `target_grade`·형태학·스크래치 각도.
+자동 검출 17.3s → **4.66s**, 610/9331 유지. 상세 [`04`](04-gpu-plan.md) 0절 · [`15`](15-gpu-handoff.md).
 
-`.hlsl`/`.cso`/`.fx` 셰이더 파일도 **0개**입니다.
-
-같은 조사를 macOS 에 하면:
-
-| 키워드 | 히트 파일 수 |
-|---|---:|
-| `CIImage` | **83** |
-| `CIContext` | 27 |
-| `CIFilter` | 13 |
-| `MTLCommandQueue` | 1 (`DevelopFrameRenderer`) |
-
-**macOS 는 이미지 파이프라인 전체가 CoreImage → Metal GPU 입니다. Windows 는 전부 스칼라
-CPU C++ 입니다.** 사용자가 겪는 "뭘 해도 수 초"의 절반이 여기서 옵니다.
-계획은 [`04-gpu-plan.md`](04-gpu-plan.md).
+**남은 GPU 확인만** (다시 커널을 옮기는 일이 아님): 내장 GPU 실기, `GpuImagePool` 내장 메모리,
+타겟 그레이드 64³ 큐브는 값이 달라지는 별건([`15`](15-gpu-handoff.md) 4절). 가이드·브러시·복제·IR
+즉각은 앱 미측정. 프리뷰 단계마다 왕복하는 문제는 [`16`](16-preview-handoff.md).
 
 ### 2.2 프리뷰가 슬라이더마다 원본 TIFF 를 다시 디코드하던 것 (2026-08-19 완화)
 
@@ -244,8 +247,8 @@ macOS 는 정반대입니다:
 | 프론트 — 없음 | **11개 표면** | [`02`](02-frontend-gaps.md) |
 | 프론트 — 백엔드 미연결 | **6개** | [`02`](02-frontend-gaps.md) 3절 |
 | 창작(macOS 에 없음) | **4개** | [`03`](03-feature-status.md) 4절 |
-| GPU | **2026-08-19.** 3.1–3.8 + 스크래치 각도. 자동 검출 17.3s → **4.66s**, 610/9331 유지. 가이드·브러시·복제·IR 즉각은 앱 미측정 | [`04`](04-gpu-plan.md) 0절 · [`15`](15-gpu-handoff.md) |
-| God object(500줄 초과) | **초과 3개, 사유 없는 미해결 0.** src 생성 표 1 + tests fixture/suite 2. 이전 28+7은 이미 쪼개짐 | [`05`](05-god-objects.md) |
+| GPU | **3.1–3.8 닫음.** 다시 이식하지 말 것. 남은 확인은 [`15`](15-gpu-handoff.md) 4절 | [`04`](04-gpu-plan.md) 0절 · [`15`](15-gpu-handoff.md) |
+| God object(500줄 초과) | **닫음.** 사유 없는 미해결 0. 다시 쪼개지 말 것. 생성 표 1 + tests 2는 사유 있음 | [`05`](05-god-objects.md) |
 | 기존 문서의 틀린 서술 | **13건** | [`06`](06-false-claims.md) |
 
 ---

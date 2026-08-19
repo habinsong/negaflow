@@ -12,10 +12,12 @@
 >
 > **프론트엔드**: ① computer-use 로 Windows 앱을 **구역별 크롭**해서 보고
 > ② **Parsec 으로 macOS negaflow** 를 같은 구역으로 보고
-> ③ **스크린샷 84장**(`negaflow_mac_screenshot/`)을 확인한 **뒤에만** 판정합니다.
+> ③ **스크린샷 50장**(`C:\Users\habin\맥negaflow 스크린샷\`)을 확인한 **뒤에만** 판정합니다. 폴더·파일 전체 목록은 [`11`](11-ui-verification-protocol.md) 1.3절.
 > **모양·크기·위치·정렬·색상·내용·텍스트 안 잘림** 일곱 가지를 전부 맞춥니다.
 > XAML 에 있다고 "있음" 이 아닙니다 — **화면에 보여야** 있는 것이고,
 > **눌러서 값이 안 바뀌면 가짜**입니다.
+>
+> **화면 도구 — 자세히.** `windows-mcp` / `windows-gui` MCP 는 **절대 금지.** 켜지 말고 호출하지 말고 대용으로도 쓰지 마십시오. Windows 앱·Parsec 맥 화면은 **computer-use 만.** computer-use 도 **꼭 필요할 때만** 씁니다(토큰). **씁니다:** 이 작업에서 화면에 보이는지·눌러서 값이 바뀌는지·잘림/정렬/색을 새로 판정해야 하고 코드·단위시험·스크린샷 50장·기존 로그로는 부족할 때. **쓰지 않습니다:** 백엔드·네이티브·시험만 고칠 때, 스크린샷 폴더+Swift/XAML 으로 충분할 때, 방금 본 화면을 다시 찍을 때, "일단 띄워 보자" 탐색. 쓸 때도 전체를 반복 찍지 말고 **해당 구역만 크롭.** 전문은 [`00`](00-index.md) · [`11`](11-ui-verification-protocol.md).
 >
 > **저장소**: 본체 `C:\Users\habin\negaflow\`(Apache 2.0) · 스캐너 `C:\Users\habin\negaflow-scanner-sane\`(GPL).
 > **두 저장소의 `negaflow-mac\` 은 절대 고치지 마십시오.** 코드 파쿠리·라이선스·특허·저작권 위반 금지.
@@ -41,18 +43,18 @@
 | 1 | 우측탭 슬라이더가 **1씩** 움직임 | `Views/Controls/InspectorSlider.xaml` 에 `StepFrequency` 미지정 → WinUI 기본 **1**, `SnapsTo` 기본 StepValues. macOS 는 `Slider(value:in:)` 에 `step:` 없음 = 연속 | **고침(0.01)** |
 | 2 | 숫자 눌러도 **입력·Enter·ESC 안 됨** | `InspectorSlider.xaml.cs BeginEditing()` 이 TextBox 를 막 `Visible` 로 바꾼 **같은 틱에** `Focus()` 호출 → 배치 전이라 실패 → 포커스가 방금 접은 단추를 떠나 슬라이더로 감. `IsTabStop="False"` 도 겹침 | **고침** |
 | 3 | **톤 곡선 작동 안 함** | 네 축이 `InspectorSlider` 라 #1 직격. 범위가 ±작은 값이면 정수 스냅으로 **양 끝만** 잡힘. 점 커브 엔진 자체(`point_curve.cpp`)는 macOS 와 일치 | #1 고침으로 해소 예상, **미검증** |
-| 4 | **현상 타깃 MAIN·HS·SP·F135·HR 선택 안 됨** | 타깃 바가 `Views/Library/Defaults/LibraryDevelopDefaultsPanel.xaml.cs:61` 에**만** 있음. 현상 뷰는 `DevelopWorkspaceView.xaml.cs:305` 에서 **읽기만** 함 | **미수정** |
+| 4 | **현상 타깃 MAIN·HS·SP·F135·HR 선택 안 됨** | 타깃 바가 `Views/Library/Defaults/LibraryDevelopDefaultsPanel.xaml.cs:61` 에**만** 있었음 | **2026-08-19 부분.** 현상 메뉴 타깃 하위 메뉴 7개로 어느 화면에서든 바꿀 수 있고 지금 값에 체크가 붙는다(앱 UIA 확인). 현상 뷰 **인스펙터 안**의 타깃 바는 아직 없음 |
 | 5 | **필름 프로필·룩 작동 안 함** | `DevelopFilmLookPanel.xaml.cs:74-88` 은 붙어 있음. #1 과 겹칠 가능성(강도 슬라이더) | **원인 미확정** |
-| 6 | 오탈자 `타깋` `룹` | `ko-KR/Resources.resw:1066,1068`. macOS 원문은 `타깃`·`룩` | **미수정** |
+| 6 | 오탈자 `타깋` `룹` | `ko-KR/Resources.resw`. macOS 원문은 `타깃`·`룩` | **2026-08-19 고침.** `필름스톡`·`중간톤` 과 설정 5건까지 6언어로 맞춤 — [`07`](07-user-reported.md) F |
 | 6.5 | **필름 베이스 수동 — 베이스 스포이드 없음** | macOS `FilmBasePicker.swift`(149줄) + 캔버스 오버레이 + 인스펙터 캡슐이 전부 없었음. 수동 모드에서 베이스를 집을 유일한 수단 | **2026-08-18 이식함**(`d39e55e`). **C1.9** RealScan 리베이트 클릭 → Dmin `0.40 0.13 0.07`, 헤더·현상본 유지. 장면 클릭은 Dmin 유지 |
 | 6.6 | **필름 베이스 자동 — 창작 관문** | `connected_component_base` 의 `candidate_peak` 게이트가 macOS 에 없는 것 | **2026-08-18 제거함**(`cfd5e88`). 죽은 코드였음 — 17장 dmin **바이트 동일** |
 | 7 | **스캐너에서 DPI·심도·프레임 규격 고르면 앱 종료** | `LibraryScanPanel.xaml` 92·122·135행 셀렉터의 `SelectionChanged` | **종료 지점 미확인** |
 | 8 | **스캐너 플러그인 로딩 자체가 안 됨** | `Shell.Core/Scanner/` 20파일 존재. 동작 미확인 | **미확인** |
-| 9 | **비교 캡슐(원본/현상본/좌우/상하) 없음** | macOS `CanvasCompareControls.swift`(197줄)·`CanvasCompareDivider.swift`(166줄) 대응 **히트 0** | **없음 확정** |
-| 10 | **줌 HUD 없음** | `ZoomLevel`·`ZoomIn`·`ZoomOut`·`FitToWindow` 히트 **0**. macOS `CanvasViewportState.swift` 대응 없음 | **없음 확정** |
+| 9 | **비교 캡슐** | 캡슐+분할 클립 2026-08-19. Before 소스 메뉴·앱 클릭 실측 남음 | **부분** |
+| 10 | **줌 HUD** | 수식+단추+끌기 2026-08-19. 앱 드래그 실측·인화 HUD 는 남음 | **부분** |
 | 11 | **좌측 세로 레일이 가짜** | `LibrarySourceRail.cs:74-76` 이 내는 것은 3개(Import·Files·Collections). macOS 는 `WorkflowSidebar` + `WorkspacePresentationStore.sidebarTab` 저장까지 | **없음 확정** |
 | 12 | **내보내기·빠른 내보내기 부실** | macOS Export **41파일 7,034줄** → Windows **6파일**. 배치·체크포인트·저널·트랜잭션·검증등급 전부 없음 | **없음 확정** |
-| 13 | **GrainMend IR 프론트 없음** | `DevelopGrainMendPanel.xaml` 도구 단추 4개(자동·가이드·브러시·복제). **IR 단추 없음** | **없음 확정** |
+| 13 | **GrainMend IR** | 짝짓기+선택 자동 정리 2026-08-19. Swift 에 5번째 도구 단추 없음 | **부분** |
 | 14 | **초기화(모든 보정·사진 각도) 없음** | macOS `Tools/ResetControlsSection.swift:14,23` 의 `onResetAllAdjustments`·`onResetPhotoAngle` 두 단추. Windows `ResetAllAdjustments`·`ResetControlsSection`·`InspectorResetter`·`ResetAngle` 전부 히트 **0**. macOS `DevelopInspectorResetter.swift`(104줄) 대응 없음 | **없음 확정** |
 | 15 | **인화 프리뷰가 저해상도 썸네일이라 깨짐** | `Views/Print/Preview/PrintPreviewRenderer.cs:323-325` 가 `thumbnails()?.TryGet(frame.Id)` → `DecodeThumbnail(jpeg)` 로 **360px 썸네일**을 그대로 확대. macOS `PrintCanvasView.swift:165-167` 은 `frame.developedImage ?? packagePreview ?? thumbnailImage` 순서로 **현상본이 먼저** | **2026-08-19 고침.** 현상 화소 기억 + 칸이 크면 `PrintPreviewResolution` 으로 현상본 업그레이드. 앱 인화 판에서 현상본 확인 |
 | 16 | 프리뷰가 뭘 해도 수 초 | `run_develop` 이 호출마다 원본 디코드. 캐시 없음 | **원인 확정** |
@@ -83,10 +85,10 @@
 
 | macOS | 줄 | Windows |
 |---|---:|---|
-| `CanvasCompareControls.swift` | 197 | **없음** |
-| `CanvasCompareDivider.swift` | 166 | **없음** |
-| `CanvasViewportState.swift` | 71 | **없음** |
-| `CanvasHUDPlacement.swift` | — | **없음** |
+| `CanvasCompareControls.swift` | 197 | `CanvasCompareHud` (2026-08-19). Before 소스 메뉴 남음 |
+| `CanvasCompareDivider.swift` | 166 | `CanvasCompareDividerState` (2026-08-19) |
+| `CanvasViewportState.swift` | 71 | `CanvasViewportState` (2026-08-19) |
+| `CanvasHUDPlacement.swift` | — | `CanvasHudPlacement` + 끌기 상태 |
 | `CanvasScrollPanBridge.swift` | — | **없음** |
 | `CanvasView+Comparison.swift` | — | **없음** |
 
