@@ -66,7 +66,7 @@
                 VerticalAlignment="Center"
                 Spacing="5">
                 <FontIcon FontSize="20" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE7C8;" />
-                <TextBlock x:Uid="noImages" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                <TextBlock x:Name="NoImagesLocalized" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
             </StackPanel>
 
             <!--
@@ -83,6 +83,8 @@
                 ScrollViewer.HorizontalScrollMode="Enabled"
                 ScrollViewer.VerticalScrollBarVisibility="Disabled"
                 ScrollViewer.VerticalScrollMode="Disabled"
+                IsItemClickEnabled="True"
+                ItemClick="OnFrameItemClick"
                 SelectionChanged="OnFrameSelectionChanged"
                 SelectionMode="Single"
                 Visibility="Collapsed">

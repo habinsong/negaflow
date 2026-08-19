@@ -30,11 +30,11 @@
                 BorderThickness="0"
                 IsEnabled="False">
                 <StackPanel Orientation="Horizontal" Spacing="4">
-                    <TextBlock x:Uid="sortInputOrder" FontSize="11" />
+                    <TextBlock x:Name="SortInputOrderLocalized" FontSize="11" />
                     <FontIcon FontSize="9" Glyph="&#xE74A;" />
                 </StackPanel>
             </Button>
-            <TextBlock x:Uid="libraryAllShort" VerticalAlignment="Center" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            <TextBlock x:Name="LibraryAllShortLocalized" VerticalAlignment="Center" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
             <TextBlock VerticalAlignment="Center" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="100%" />
             <Button
                 Width="24"

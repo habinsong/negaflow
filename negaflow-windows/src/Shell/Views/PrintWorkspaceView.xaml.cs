@@ -120,8 +120,19 @@ public sealed partial class PrintWorkspaceView : UserControl
                 : ShellLayoutMetrics.SidebarRegularRailWidth);
     }
 
+    /// <summary>언어가 바뀌면 문구를 다시 겁니다.</summary>
+    public void Localize()
+    {
+        LocalizeControls();
+        LocalizePrintInspector();
+        LocalizeCustomEditor();
+    }
+
     private void LocalizeControls()
     {
+        PrintContentSectionLocalized.Content = AppResources.Get("printContentSection", "Content");
+        PrintOutputSectionLocalized.Content = AppResources.Get("printOutputSection", "Content");
+        PrintLayoutSectionLocalized.Text = AppResources.Get("printLayoutSection", "Text");
         SetNameAndTooltip(FilesRailButton, "libraryFiles");
         SetNameAndTooltip(ExportRailButton, "exportSection");
         FilesHeaderText.Text = AppResources.Get("libraryFiles", "Text");

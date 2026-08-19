@@ -90,7 +90,7 @@
                         <TextBlock x:Name="ImportSectionText" x:FieldModifier="internal" FontSize="13" FontWeight="SemiBold" />
                         <Border Padding="12" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="8">
                             <StackPanel Spacing="9">
-                                <TextBlock x:Uid="importHint" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                <TextBlock x:Name="ImportHintLocalized" x:FieldModifier="internal" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
                                 <!-- macOS 의 가져오기 막대입니다. 세 방법이 같은 자리를 나눠 씁니다. -->
                                 <Grid ColumnSpacing="4">
                                     <Grid.ColumnDefinitions>
@@ -162,7 +162,7 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" VerticalAlignment="Center" Orientation="Horizontal" Spacing="6">
-                    <TextBlock x:Uid="libraryAllPhotos" FontSize="14" FontWeight="SemiBold" />
+                    <TextBlock x:Name="LibraryAllPhotosLocalized" x:FieldModifier="internal" FontSize="14" FontWeight="SemiBold" />
                     <TextBlock x:Name="LibraryCountText" x:FieldModifier="internal" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Horizontal" Spacing="8">
@@ -337,7 +337,7 @@
             <Grid Grid.Row="3">
                 <StackPanel x:Name="EmptyLibraryPanel" x:FieldModifier="internal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="9">
                     <FontIcon FontSize="34" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Glyph="&#xE8FD;" />
-                    <TextBlock x:Uid="noImages" HorizontalAlignment="Center" FontSize="18" FontWeight="SemiBold" />
+                    <TextBlock x:Name="NoImagesLocalized" x:FieldModifier="internal" HorizontalAlignment="Center" FontSize="18" FontWeight="SemiBold" />
                     <Button x:Name="EmptyImportImagesButton" x:FieldModifier="internal" HorizontalAlignment="Center" Click="OnImportClicked" />
                 </StackPanel>
 
@@ -398,8 +398,7 @@
                                                 SelectedIndex="{Binding ProcessIndex, Mode=OneWay}"
                                                 SelectionChanged="OnFolderProcessChanged"
                                                 Tag="{Binding}" />
-                                            <Button
-                                                x:Uid="libraryLocateFolder"
+                                            <Button x:Uid="libraryLocateFolder"
                                                 Grid.Column="3"
                                                 Margin="8,0,0,0"
                                                 Tag="{Binding}"
@@ -460,7 +459,6 @@
                     </Border>
                     <TextBox
                         x:Name="LibrarySearchBox" x:FieldModifier="internal"
-                        x:Uid="librarySearchPlaceholder"
                         Width="280"
                         Height="28"
                         AutomationProperties.AutomationId="negaflow.library.search"

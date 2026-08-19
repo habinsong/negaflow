@@ -77,6 +77,7 @@ public partial class App : Application
             string language = AppLanguages.Normalize(
                 new PresentationSettingsStore().Current.Language);
             Windows.Globalization.ApplicationLanguages.PrimaryLanguageOverride = language;
+            Negaflow.Shell.Localization.AppResources.SetLanguage(language);
         }
         catch (Exception exception) when (exception is IOException or
             UnauthorizedAccessException or ArgumentException or COMException)

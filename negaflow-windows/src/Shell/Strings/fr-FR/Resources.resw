@@ -136,11 +136,11 @@
     <comment>AppLocalizedPhrase.developerMode</comment>
   </data>
   <data name="developAutoTone.Content" xml:space="preserve">
-    <value>Ton automatique</value>
+    <value>Tonalité auto</value>
     <comment>AppLocalizedPhrase.commandAutoTone</comment>
   </data>
   <data name="developAutoWhiteBalance.Content" xml:space="preserve">
-    <value>Balance des blancs automatique</value>
+    <value>Balance des blancs auto</value>
     <comment>AppLocalizedPhrase.commandAutoWhiteBalance</comment>
   </data>
   <data name="developAutoAdjustFailed.Text" xml:space="preserve">
@@ -826,7 +826,7 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="developLibrary.Text" xml:space="preserve"><value>Bibliothèque</value></data>
   <data name="developExportFormat.Text" xml:space="preserve"><value>Format</value><comment>AppLocalizedText.exportFormatLabel</comment></data>
   <data name="developExportFolder.Text" xml:space="preserve"><value>Dossier</value><comment>AppLocalizedText.exportFolderLabel</comment></data>
-  <data name="developExportFolderChange.Content" xml:space="preserve"><value>Modifier</value><comment>AppLocalizedPhrase.rename</comment></data>
+  <data name="developExportFolderChange.Content" xml:space="preserve"><value>Modifier</value><comment>AppLocalizedText.exportChangeFolder</comment></data>
   <data name="developExportFolderBesideSource.Text" xml:space="preserve"><value>À côté de l'original</value></data>
   <data name="developExportNamePattern.Text" xml:space="preserve"><value>Modèle de nom</value><comment>ExportNamingLocalizedText.pattern</comment></data>
   <data name="developExportRunning.Text" xml:space="preserve"><value>Développement…</value></data>
@@ -922,6 +922,12 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="developGrainMendFoundNothing.Text" xml:space="preserve"><value>Rien à réparer n'a été trouvé</value></data>
   <data name="developGrainMendFoundFormat.Value" xml:space="preserve"><value>%d zones trouvées. Entrée pour supprimer, Échap pour annuler</value></data>
   <data name="developGrainMendDetectFailed.Text" xml:space="preserve"><value>La détection a échoué</value></data>
+  <data name="developInfraredCleanDetecting.Text" xml:space="preserve"><value>Détection des défauts via le canal infrarouge</value><comment>AppLocalizedPhrase.infraredCleanDetectingStatus</comment></data>
+  <data name="developInfraredCleanAppliedFormat.Value" xml:space="preserve"><value>%d défauts supprimés grâce au canal infrarouge</value><comment>AppLocalizedPhrase.infraredCleanAppliedFormat</comment></data>
+  <data name="developInfraredCleanNoDefects.Text" xml:space="preserve"><value>Aucun défaut trouvé dans le canal infrarouge</value><comment>AppLocalizedPhrase.infraredCleanNoDefectsStatus</comment></data>
+  <data name="developInfraredCleanSkippedBW.Text" xml:space="preserve"><value>Nettoyage IR ignoré : le film N&amp;B porte une image argentique qui bloque l’infrarouge</value><comment>AppInfraredText.unverifiedFilm</comment></data>
+  <data name="developInfraredCleanCoverageAbort.Text" xml:space="preserve"><value>Nettoyage IR interrompu : masque trop étendu (vérifiez le type de film ou l'alignement IR)</value><comment>AppLocalizedPhrase.infraredCleanCoverageAbortStatus</comment></data>
+  <data name="developInfraredCleanFailed.Text" xml:space="preserve"><value>Échec de la détection des défauts IR</value><comment>AppLocalizedPhrase.infraredCleanFailedStatus</comment></data>
   <data name="developExportChangeFolder.Content" xml:space="preserve"><value>Modifier</value><comment>AppLocalizedText.exportChangeFolder</comment></data>
   <data name="developExportCompressionDeflate.Content" xml:space="preserve"><value>ZIP</value><comment>ExportEncoding.deflate</comment></data>
   <data name="developExportCompressionLzw.Content" xml:space="preserve"><value>LZW</value><comment>ExportEncoding.lzw</comment></data>
@@ -1118,7 +1124,7 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="librarySurveyNeedsSelectionTitle.Text" xml:space="preserve"><value>Sélectionnez des photos</value><comment>AppCullingText.surveyNeedsSelectionTitle</comment></data>
   <data name="librarySurveyNeedsSelectionBody.Text" xml:space="preserve"><value>Sélectionnez plusieurs photos dans la grille pour les examiner ensemble.</value><comment>AppCullingText.surveyNeedsSelectionDescription</comment></data>
   <data name="printOrientation.Text" xml:space="preserve"><value>Orientation</value><comment>AppLocalizedPhrase.orientation</comment></data>
-  <data name="printPerforation.Text" xml:space="preserve"><value>Perforation</value><comment>AppLocalizedPhrase.perforation</comment></data>
+  <data name="printPerforation.Text" xml:space="preserve"><value>Perforations</value><comment>AppLocalizedPhrase.perforation</comment></data>
   <data name="printMarginFormat.Text" xml:space="preserve"><value>Marge {0} mm</value><comment>AppLocalizedPhrase.margin</comment></data>
   <data name="printResolution.Text" xml:space="preserve"><value>Résolution</value><comment>AppLocalizedPhrase.resolution</comment></data>
   <data name="printSheetSection.Text" xml:space="preserve"><value>Planche-contact</value><comment>AppLocalizedPhrase.contactSheet</comment></data>
@@ -1176,7 +1182,7 @@ Chargez un scanner depuis Bibliothèque pour numériser un film.</value>
   <data name="developExportMetadataRemoveLocation.Text" xml:space="preserve"><value>Supprimer la position</value><comment>ExportMetadataLocalizedText.removeLocation</comment></data>
   <data name="developExportMetadataMinimal.Text" xml:space="preserve"><value>Minimales</value><comment>ExportMetadataLocalizedText.minimal</comment></data>
   <data name="settingsDefaultScanRotation.Text" xml:space="preserve"><value>Rotation de numérisation par défaut</value><comment>AppLocalizedPhrase.settingsDefaultScanRotationPicker</comment></data>
-  <data name="settingsDefaultScanRotationHelp.Text" xml:space="preserve"><value>S’applique aux nouvelles numérisations. Les photos existantes ne changent pas.</value><comment>AppLocalizedPhrase.settingsDefaultScanRotationHelp</comment></data>
+  <data name="settingsDefaultScanRotationHelp.Text" xml:space="preserve"><value>Appliquée aux nouvelles numérisations sans orientation définie. Le brut du scanner est généralement stocké à l'envers (180°).</value><comment>AppLocalizedPhrase.settingsDefaultScanRotationHelp</comment></data>
   <data name="settingsRotation0.Text" xml:space="preserve"><value>Aucune</value><comment>ImageRotation.degrees0</comment></data>
   <data name="settingsRotation90.Text" xml:space="preserve"><value>90°</value><comment>ImageRotation.degrees90</comment></data>
   <data name="settingsRotation180.Text" xml:space="preserve"><value>180°</value><comment>ImageRotation.degrees180</comment></data>

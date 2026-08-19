@@ -826,7 +826,7 @@
   <data name="developLibrary.Text" xml:space="preserve"><value>라이브러리</value></data>
   <data name="developExportFormat.Text" xml:space="preserve"><value>형식</value><comment>AppLocalizedText.exportFormatLabel</comment></data>
   <data name="developExportFolder.Text" xml:space="preserve"><value>폴더</value><comment>AppLocalizedText.exportFolderLabel</comment></data>
-  <data name="developExportFolderChange.Content" xml:space="preserve"><value>변경</value><comment>AppLocalizedPhrase.rename</comment></data>
+  <data name="developExportFolderChange.Content" xml:space="preserve"><value>변경</value><comment>AppLocalizedText.exportChangeFolder</comment></data>
   <data name="developExportFolderBesideSource.Text" xml:space="preserve"><value>원본 옆</value></data>
   <data name="developExportNamePattern.Text" xml:space="preserve"><value>파일명 패턴</value><comment>ExportNamingLocalizedText.pattern</comment></data>
   <data name="developExportRunning.Text" xml:space="preserve"><value>현상 중…</value></data>
@@ -922,6 +922,12 @@
   <data name="developGrainMendFoundNothing.Text" xml:space="preserve"><value>고칠 것을 찾지 못했습니다</value></data>
   <data name="developGrainMendFoundFormat.Value" xml:space="preserve"><value>%d 곳을 찾았습니다. Enter 로 제거, Esc 로 취소</value></data>
   <data name="developGrainMendDetectFailed.Text" xml:space="preserve"><value>결함을 찾지 못했습니다</value></data>
+  <data name="developInfraredCleanDetecting.Text" xml:space="preserve"><value>적외선 채널에서 결함 검출 중</value><comment>AppLocalizedPhrase.infraredCleanDetectingStatus</comment></data>
+  <data name="developInfraredCleanAppliedFormat.Value" xml:space="preserve"><value>적외선 채널로 결함 %d개를 제거했습니다</value><comment>AppLocalizedPhrase.infraredCleanAppliedFormat</comment></data>
+  <data name="developInfraredCleanNoDefects.Text" xml:space="preserve"><value>적외선 채널에서 결함이 발견되지 않았습니다</value><comment>AppLocalizedPhrase.infraredCleanNoDefectsStatus</comment></data>
+  <data name="developInfraredCleanSkippedBW.Text" xml:space="preserve"><value>IR 결함 제거 건너뜀: 흑백 필름은 화상이 은입자라 적외선이 통과하지 않습니다</value><comment>AppInfraredText.unverifiedFilm</comment></data>
+  <data name="developInfraredCleanCoverageAbort.Text" xml:space="preserve"><value>IR 결함 제거 중단: 마스크가 과대합니다(필름 종류/IR 정렬 확인)</value><comment>AppLocalizedPhrase.infraredCleanCoverageAbortStatus</comment></data>
+  <data name="developInfraredCleanFailed.Text" xml:space="preserve"><value>IR 결함 검출에 실패했습니다</value><comment>AppLocalizedPhrase.infraredCleanFailedStatus</comment></data>
   <data name="developExportChangeFolder.Content" xml:space="preserve"><value>변경</value><comment>AppLocalizedText.exportChangeFolder</comment></data>
   <data name="developExportCompressionDeflate.Content" xml:space="preserve"><value>ZIP</value><comment>ExportEncoding.deflate</comment></data>
   <data name="developExportCompressionLzw.Content" xml:space="preserve"><value>LZW</value><comment>ExportEncoding.lzw</comment></data>
@@ -1176,7 +1182,7 @@
   <data name="developExportMetadataRemoveLocation.Text" xml:space="preserve"><value>위치 제거</value><comment>ExportMetadataLocalizedText.removeLocation</comment></data>
   <data name="developExportMetadataMinimal.Text" xml:space="preserve"><value>최소</value><comment>ExportMetadataLocalizedText.minimal</comment></data>
   <data name="settingsDefaultScanRotation.Text" xml:space="preserve"><value>스캔 기본 방향</value><comment>AppLocalizedPhrase.settingsDefaultScanRotationPicker</comment></data>
-  <data name="settingsDefaultScanRotationHelp.Text" xml:space="preserve"><value>새로 스캔한 사진에만 걸립니다. 기존 사진은 그대로입니다.</value><comment>AppLocalizedPhrase.settingsDefaultScanRotationHelp</comment></data>
+  <data name="settingsDefaultScanRotationHelp.Text" xml:space="preserve"><value>방향이 지정되지 않은 새 스캔에 적용됩니다. 스캐너 원본은 보통 180° 뒤집혀 저장됩니다.</value><comment>AppLocalizedPhrase.settingsDefaultScanRotationHelp</comment></data>
   <data name="settingsRotation0.Text" xml:space="preserve"><value>없음</value><comment>ImageRotation.degrees0</comment></data>
   <data name="settingsRotation90.Text" xml:space="preserve"><value>90°</value><comment>ImageRotation.degrees90</comment></data>
   <data name="settingsRotation180.Text" xml:space="preserve"><value>180°</value><comment>ImageRotation.degrees180</comment></data>
@@ -1184,7 +1190,7 @@
   <data name="settingsScannerTruth.Text" xml:space="preserve"><value>스캐너 정보</value><comment>AppLocalizedPhrase.scannerTruth</comment></data>
   <data name="settingsScannerTruthNone.Text" xml:space="preserve"><value>스캐너를 연결하면 장치가 보고하는 값이 나옵니다.</value><comment>Windows only: no scanner connected yet.</comment></data>
   <data name="settingsMicroSpecksSection.Text" xml:space="preserve"><value>미세 입자 기본 검출</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecks</comment></data>
-  <data name="settingsMicroSpecksHelp.Text" xml:space="preserve"><value>새 프레임의 시작값이며 자동과 가이드를 따로 기억합니다. 프레임마다 체크박스가 따로 있어 사진별로 켜고 끔 수 있습니다.</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecksHelp</comment></data>
+  <data name="settingsMicroSpecksHelp.Text" xml:space="preserve"><value>새 프레임의 시작값이며 자동과 가이드를 따로 기억합니다. 프레임마다 체크박스가 따로 있어 사진별로 켜고 끌 수 있습니다.</value><comment>AppLocalizedPhrase.defaultDefectMicroSpecksHelp</comment></data>
   <data name="samplerOriginal.Text" xml:space="preserve"><value>원본</value><comment>PixelSamplerLocalizedText[0]</comment></data>
   <data name="samplerWorking.Text" xml:space="preserve"><value>작업</value><comment>PixelSamplerLocalizedText[1]</comment></data>
   <data name="samplerProof.Text" xml:space="preserve"><value>프루프</value><comment>PixelSamplerLocalizedText[2]</comment></data>

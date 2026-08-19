@@ -178,8 +178,15 @@ public sealed partial class WorkspaceToolbarView : UserControl
             AppResources.Get(isOn ? "on" : "off", "Value"));
     }
 
+    /// <summary>언어가 바뀌면 문구를 다시 겁니다.</summary>
+    public void Localize() => LocalizeControls();
+
     private void LocalizeControls()
     {
+        CommandQuickExportLocalized.Text = AppResources.Get("commandQuickExport", "Text");
+        CommandExportLocalized.Text = AppResources.Get("commandExport", "Text");
+        // 활성 사진 이름은 고른 사진에 따라 바뀝니다 — 이름을 지우지 않도록 그 길로 다시 겁니다.
+        UpdateActiveFrame();
         LibraryButton.Content = AppResources.Get("menuLibrary", "Content");
         DevelopButton.Content = AppResources.Get("menuDevelop", "Content");
         PrintButton.Content = AppResources.Get("menuPrint", "Content");

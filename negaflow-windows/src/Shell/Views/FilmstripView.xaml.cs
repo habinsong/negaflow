@@ -14,6 +14,7 @@ public sealed partial class FilmstripView : UserControl
     private WorkspacePresentationState? workspaceState;
     private bool isResizing;
     private bool isSynchronizingSelection;
+    private bool itemClickRaised;
     private double liveHeight = ShellLayoutMetrics.FilmstripDefaultHeight;
     private IReadOnlyList<LibraryFrameListItem> items = [];
 
@@ -76,10 +77,27 @@ public sealed partial class FilmstripView : UserControl
         }
     }
 
+    private void OnFrameItemClick(object sender, ItemClickEventArgs args)
+    {
+        _ = sender;
+        if (isSynchronizingSelection || args.ClickedItem is not LibraryFrameListItem item)
+        {
+            return;
+        }
+        // 이미 고른 칸을 다시 눌러도, 빠른 클릭으로 SelectionChanged 가 빠져도 여기로 옵니다.
+        itemClickRaised = true;
+        FrameSelected?.Invoke(this, item);
+    }
+
     private void OnFrameSelectionChanged(object sender, SelectionChangedEventArgs args)
     {
         _ = sender;
         _ = args;
+        if (itemClickRaised)
+        {
+            itemClickRaised = false;
+            return;
+        }
         if (isSynchronizingSelection || FrameStrip.SelectedItem is not LibraryFrameListItem item)
         {
             return;
@@ -212,6 +230,7 @@ public sealed partial class FilmstripView : UserControl
 
     private void LocalizeControls()
     {
+        NoImagesLocalized.Text = AppResources.Get("noImages", "Text");
         string resize = AppResources.Get("filmstripHeightHelp", "Value");
         AutomationProperties.SetName(ResizeThumb, resize);
         ToolTipService.SetToolTip(ResizeThumb, resize);

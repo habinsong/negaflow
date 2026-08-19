@@ -207,8 +207,8 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
                 <Button x:Name="LayoutTabButton" Grid.Column="0" Background="{ThemeResource NegaflowSelectionBrush}" BorderThickness="0" CornerRadius="12" />
-                <Button x:Uid="printContentSection" Grid.Column="1" Background="Transparent" BorderThickness="0" IsEnabled="False" />
-                <Button x:Uid="printOutputSection" Grid.Column="2" Background="Transparent" BorderThickness="0" IsEnabled="False" />
+                <Button x:Name="PrintContentSectionLocalized" Grid.Column="1" Background="Transparent" BorderThickness="0" IsEnabled="False" />
+                <Button x:Name="PrintOutputSectionLocalized" Grid.Column="2" Background="Transparent" BorderThickness="0" IsEnabled="False" />
             </Grid>
             <Border Grid.Row="2" Background="{ThemeResource NegaflowDividerBrush}" />
             <ScrollViewer Grid.Row="3">
@@ -217,7 +217,7 @@
                         <StackPanel Spacing="10">
                             <StackPanel Orientation="Horizontal" Spacing="7">
                                 <FontIcon FontSize="13" Glyph="&#xE740;" />
-                                <TextBlock x:Uid="printLayoutSection" FontSize="13" FontWeight="SemiBold" />
+                                <TextBlock x:Name="PrintLayoutSectionLocalized" FontSize="13" FontWeight="SemiBold" />
                             </StackPanel>
                             <Grid ColumnSpacing="10">
                                 <Grid.ColumnDefinitions>

@@ -826,7 +826,7 @@ Load a scanner from Library to scan film.</value>
   <data name="developLibrary.Text" xml:space="preserve"><value>Library</value></data>
   <data name="developExportFormat.Text" xml:space="preserve"><value>Format</value><comment>AppLocalizedText.exportFormatLabel</comment></data>
   <data name="developExportFolder.Text" xml:space="preserve"><value>Folder</value><comment>AppLocalizedText.exportFolderLabel</comment></data>
-  <data name="developExportFolderChange.Content" xml:space="preserve"><value>Change</value><comment>AppLocalizedPhrase.rename</comment></data>
+  <data name="developExportFolderChange.Content" xml:space="preserve"><value>Change</value><comment>AppLocalizedText.exportChangeFolder</comment></data>
   <data name="developExportFolderBesideSource.Text" xml:space="preserve"><value>Beside the original</value></data>
   <data name="developExportNamePattern.Text" xml:space="preserve"><value>Filename Pattern</value><comment>ExportNamingLocalizedText.pattern</comment></data>
   <data name="developExportRunning.Text" xml:space="preserve"><value>Developing…</value></data>
@@ -922,6 +922,12 @@ Load a scanner from Library to scan film.</value>
   <data name="developGrainMendFoundNothing.Text" xml:space="preserve"><value>Nothing to repair was found</value></data>
   <data name="developGrainMendFoundFormat.Value" xml:space="preserve"><value>Found %d spots. Enter to remove, Esc to cancel</value></data>
   <data name="developGrainMendDetectFailed.Text" xml:space="preserve"><value>The detection failed</value></data>
+  <data name="developInfraredCleanDetecting.Text" xml:space="preserve"><value>Detecting defects from the infrared channel</value><comment>AppLocalizedPhrase.infraredCleanDetectingStatus</comment></data>
+  <data name="developInfraredCleanAppliedFormat.Value" xml:space="preserve"><value>Removed %d defects using the infrared channel</value><comment>AppLocalizedPhrase.infraredCleanAppliedFormat</comment></data>
+  <data name="developInfraredCleanNoDefects.Text" xml:space="preserve"><value>No defects found in the infrared channel</value><comment>AppLocalizedPhrase.infraredCleanNoDefectsStatus</comment></data>
+  <data name="developInfraredCleanSkippedBW.Text" xml:space="preserve"><value>IR clean skipped: B&amp;W film carries a silver image that blocks infrared</value><comment>AppInfraredText.unverifiedFilm</comment></data>
+  <data name="developInfraredCleanCoverageAbort.Text" xml:space="preserve"><value>IR clean aborted: defect mask too large (check film type or IR alignment)</value><comment>AppLocalizedPhrase.infraredCleanCoverageAbortStatus</comment></data>
+  <data name="developInfraredCleanFailed.Text" xml:space="preserve"><value>IR defect detection failed</value><comment>AppLocalizedPhrase.infraredCleanFailedStatus</comment></data>
   <data name="developExportChangeFolder.Content" xml:space="preserve"><value>Change</value><comment>AppLocalizedText.exportChangeFolder</comment></data>
   <data name="developExportCompressionDeflate.Content" xml:space="preserve"><value>ZIP</value><comment>ExportEncoding.deflate</comment></data>
   <data name="developExportCompressionLzw.Content" xml:space="preserve"><value>LZW</value><comment>ExportEncoding.lzw</comment></data>
@@ -1176,7 +1182,7 @@ Load a scanner from Library to scan film.</value>
   <data name="developExportMetadataRemoveLocation.Text" xml:space="preserve"><value>Remove Location</value><comment>ExportMetadataLocalizedText.removeLocation</comment></data>
   <data name="developExportMetadataMinimal.Text" xml:space="preserve"><value>Minimal</value><comment>ExportMetadataLocalizedText.minimal</comment></data>
   <data name="settingsDefaultScanRotation.Text" xml:space="preserve"><value>Default scan rotation</value><comment>AppLocalizedPhrase.settingsDefaultScanRotationPicker</comment></data>
-  <data name="settingsDefaultScanRotationHelp.Text" xml:space="preserve"><value>Applied to newly scanned photos. Existing photos are untouched.</value><comment>AppLocalizedPhrase.settingsDefaultScanRotationHelp</comment></data>
+  <data name="settingsDefaultScanRotationHelp.Text" xml:space="preserve"><value>Applied to new scans with no orientation set. Scanner raw is usually stored upside-down (180°).</value><comment>AppLocalizedPhrase.settingsDefaultScanRotationHelp</comment></data>
   <data name="settingsRotation0.Text" xml:space="preserve"><value>None</value><comment>ImageRotation.degrees0</comment></data>
   <data name="settingsRotation90.Text" xml:space="preserve"><value>90°</value><comment>ImageRotation.degrees90</comment></data>
   <data name="settingsRotation180.Text" xml:space="preserve"><value>180°</value><comment>ImageRotation.degrees180</comment></data>

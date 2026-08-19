@@ -77,6 +77,16 @@ public sealed partial class LibraryWorkspaceView : UserControl
         Loaded += OnLoaded;
     }
 
+    /// <summary>언어가 바뀌면 문구를 다시 겁니다. macOS 는 model.appLanguage 하나로 됩니다.</summary>
+    public void Localize()
+    {
+        copy.Localize();
+        ScanPanel.Localize();
+        DevelopDefaultsPanel.Localize();
+        CollectionsPanel.Localize();
+        CullingSurface.Localize();
+    }
+
     public void Initialize(WorkspacePresentationState state)
     {
         ArgumentNullException.ThrowIfNull(state);

@@ -136,7 +136,7 @@
     <comment>AppLocalizedPhrase.developerMode</comment>
   </data>
   <data name="developAutoTone.Content" xml:space="preserve">
-    <value>Auto-Tonwert</value>
+    <value>Automatische Tonwerte</value>
     <comment>AppLocalizedPhrase.commandAutoTone</comment>
   </data>
   <data name="developAutoWhiteBalance.Content" xml:space="preserve">
@@ -826,7 +826,7 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developLibrary.Text" xml:space="preserve"><value>Bibliothek</value></data>
   <data name="developExportFormat.Text" xml:space="preserve"><value>Format</value><comment>AppLocalizedText.exportFormatLabel</comment></data>
   <data name="developExportFolder.Text" xml:space="preserve"><value>Ordner</value><comment>AppLocalizedText.exportFolderLabel</comment></data>
-  <data name="developExportFolderChange.Content" xml:space="preserve"><value>Ändern</value><comment>AppLocalizedPhrase.rename</comment></data>
+  <data name="developExportFolderChange.Content" xml:space="preserve"><value>Ändern</value><comment>AppLocalizedText.exportChangeFolder</comment></data>
   <data name="developExportFolderBesideSource.Text" xml:space="preserve"><value>Neben dem Original</value></data>
   <data name="developExportNamePattern.Text" xml:space="preserve"><value>Dateinamensmuster</value><comment>ExportNamingLocalizedText.pattern</comment></data>
   <data name="developExportRunning.Text" xml:space="preserve"><value>Entwickeln…</value></data>
@@ -922,6 +922,12 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developGrainMendFoundNothing.Text" xml:space="preserve"><value>Nichts zu reparieren gefunden</value></data>
   <data name="developGrainMendFoundFormat.Value" xml:space="preserve"><value>%d Stellen gefunden. Eingabetaste zum Entfernen, Esc zum Abbrechen</value></data>
   <data name="developGrainMendDetectFailed.Text" xml:space="preserve"><value>Die Erkennung ist fehlgeschlagen</value></data>
+  <data name="developInfraredCleanDetecting.Text" xml:space="preserve"><value>Defekte werden über den Infrarotkanal erkannt</value><comment>AppLocalizedPhrase.infraredCleanDetectingStatus</comment></data>
+  <data name="developInfraredCleanAppliedFormat.Value" xml:space="preserve"><value>%d Defekte über den Infrarotkanal entfernt</value><comment>AppLocalizedPhrase.infraredCleanAppliedFormat</comment></data>
+  <data name="developInfraredCleanNoDefects.Text" xml:space="preserve"><value>Keine Defekte im Infrarotkanal gefunden</value><comment>AppLocalizedPhrase.infraredCleanNoDefectsStatus</comment></data>
+  <data name="developInfraredCleanSkippedBW.Text" xml:space="preserve"><value>IR-Reinigung übersprungen: S/W-Film trägt ein Silberbild, das Infrarot blockiert</value><comment>AppInfraredText.unverifiedFilm</comment></data>
+  <data name="developInfraredCleanCoverageAbort.Text" xml:space="preserve"><value>IR-Reinigung abgebrochen: Defektmaske zu groß (Filmtyp/IR-Ausrichtung prüfen)</value><comment>AppLocalizedPhrase.infraredCleanCoverageAbortStatus</comment></data>
+  <data name="developInfraredCleanFailed.Text" xml:space="preserve"><value>IR-Defekterkennung fehlgeschlagen</value><comment>AppLocalizedPhrase.infraredCleanFailedStatus</comment></data>
   <data name="developExportChangeFolder.Content" xml:space="preserve"><value>Ändern</value><comment>AppLocalizedText.exportChangeFolder</comment></data>
   <data name="developExportCompressionDeflate.Content" xml:space="preserve"><value>ZIP</value><comment>ExportEncoding.deflate</comment></data>
   <data name="developExportCompressionLzw.Content" xml:space="preserve"><value>LZW</value><comment>ExportEncoding.lzw</comment></data>
@@ -1176,7 +1182,7 @@ Laden Sie einen Scanner aus der Mediathek, um Film zu scannen.</value>
   <data name="developExportMetadataRemoveLocation.Text" xml:space="preserve"><value>Standort entfernen</value><comment>ExportMetadataLocalizedText.removeLocation</comment></data>
   <data name="developExportMetadataMinimal.Text" xml:space="preserve"><value>Minimal</value><comment>ExportMetadataLocalizedText.minimal</comment></data>
   <data name="settingsDefaultScanRotation.Text" xml:space="preserve"><value>Standard-Scanausrichtung</value><comment>AppLocalizedPhrase.settingsDefaultScanRotationPicker</comment></data>
-  <data name="settingsDefaultScanRotationHelp.Text" xml:space="preserve"><value>Gilt nur für neu gescannte Fotos. Vorhandene Fotos bleiben unverändert.</value><comment>AppLocalizedPhrase.settingsDefaultScanRotationHelp</comment></data>
+  <data name="settingsDefaultScanRotationHelp.Text" xml:space="preserve"><value>Wird auf neue Scans ohne festgelegte Ausrichtung angewendet. Scanner-Rohdaten werden meist um 180° gedreht gespeichert.</value><comment>AppLocalizedPhrase.settingsDefaultScanRotationHelp</comment></data>
   <data name="settingsRotation0.Text" xml:space="preserve"><value>Keine</value><comment>ImageRotation.degrees0</comment></data>
   <data name="settingsRotation90.Text" xml:space="preserve"><value>90°</value><comment>ImageRotation.degrees90</comment></data>
   <data name="settingsRotation180.Text" xml:space="preserve"><value>180°</value><comment>ImageRotation.degrees180</comment></data>

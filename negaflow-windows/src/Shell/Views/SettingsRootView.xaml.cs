@@ -31,6 +31,7 @@ public sealed partial class SettingsRootView : UserControl
         workspaceState = state;
         pickerWindowId = windowId;
         state.Changed += OnStateChanged;
+        AppResources.LanguageChanged += OnLanguageResourcesChanged;
         UpdateState(state.Current);
         BuildShortcutGroups();
         BuildShortcutRows();
@@ -50,6 +51,16 @@ public sealed partial class SettingsRootView : UserControl
             return name;
         }
         return AppResources.Get("settingsColorSystemDisplayProfile", "Text");
+    }
+
+    /// <summary>설정 창이 열려 있는 동안 언어를 바꾸면 이 창부터 바뀌어야 합니다.</summary>
+    private void OnLanguageResourcesChanged(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        LocalizeControls();
+        BuildShortcutGroups();
+        BuildShortcutRows();
     }
 
     private void OnCategoryClick(object sender, RoutedEventArgs args)
@@ -260,8 +271,10 @@ public sealed partial class SettingsRootView : UserControl
         }
         string language = AppLanguages.All[index];
         workspaceState?.SetLanguage(language);
-        // 다음 실행에서 이 언어로 뜨도록 지금 적어 둡니다.
+        // 다음 실행에서도 이 언어로 뜨도록 적어 둡니다.
         Windows.Globalization.ApplicationLanguages.PrimaryLanguageOverride = language;
+        // macOS 는 고르는 즉시 모든 문구가 바뀝니다. 다시 시작하게 두지 않습니다.
+        AppResources.SetLanguage(language);
     }
 
     private void OnPixelSamplerToggled(object sender, RoutedEventArgs args)
@@ -358,6 +371,10 @@ public sealed partial class SettingsRootView : UserControl
         MonitorProfileSummary.Text = MonitorProfileName();
         SynchronizeScanTab(preferences);
         PixelSamplerToggle.IsOn = preferences.PixelSamplerEnabled;
+        // macOS PixelSamplerSettingsRow — 도움말은 켜져 있을 때만 냅니다(`if store.isEnabled`).
+        PixelSamplerHelp.Visibility = preferences.PixelSamplerEnabled
+            ? Visibility.Visible
+            : Visibility.Collapsed;
         ClippingOverlayToggle.IsOn = preferences.ClippingOverlayEnabled;
         LanguageComboBox.SelectedIndex = Math.Max(
             0,
@@ -406,6 +423,61 @@ public sealed partial class SettingsRootView : UserControl
 
     private void LocalizeControls()
     {
+        // x:Uid 로 걸려 있던 문구입니다. 언어를 바꾸면 그 문구만 옛 언어로 남으므로
+        // 여기서 겁니다.
+        SettingsLanguagePickerLocalized.Text = AppResources.Get("settingsLanguagePicker", "Text");
+        DeveloperModeToggle.Header = AppResources.Get("developerMode", "Header");
+        SettingsCanvasBackgroundPickerLocalized.Text =
+            AppResources.Get("settingsCanvasBackgroundPicker", "Text");
+        CanvasBackgroundBlackLocalized.Content =
+            AppResources.Get("canvasBackgroundBlack", "Content");
+        CanvasBackgroundGrayLocalized.Content = AppResources.Get("canvasBackgroundGray", "Content");
+        CanvasBackgroundWhiteLocalized.Content =
+            AppResources.Get("canvasBackgroundWhite", "Content");
+        ClippingOverlayToggle.Header = AppResources.Get("colorClippingOverlay", "Header");
+        ScannerSimulatorToggle.Header = AppResources.Get("commandToggleScannerSimulator", "Header");
+        DevelopImportsToggle.Header = AppResources.Get("developImportsAutomatically", "Header");
+        QuickExportSectionLocalized.Text = AppResources.Get("quickExportSection", "Text");
+        SettingsQuickExportFormatLocalized.Text =
+            AppResources.Get("settingsQuickExportFormat", "Text");
+        SettingsQuickExportDPILocalized.Text = AppResources.Get("settingsQuickExportDPI", "Text");
+        SettingsQuickExportSizeLocalized.Text = AppResources.Get("settingsQuickExportSize", "Text");
+        SettingsQuickExportFolderLocalized.Text =
+            AppResources.Get("settingsQuickExportFolder", "Text");
+        SettingsColorManagementSectionLocalized.Text =
+            AppResources.Get("settingsColorManagementSection", "Text");
+        SettingsExportColorLabelLocalized.Text =
+            AppResources.Get("settingsExportColorLabel", "Text");
+        SoftProofChooseProfileButton.Content =
+            AppResources.Get("developExportChangeFolder", "Content");
+        SoftProofProfileError.Text = AppResources.Get("softProofInvalidICC", "Text");
+        PrinterProfileButton.Content = AppResources.Get("developExportChangeFolder", "Content");
+        PrinterProfileError.Text = AppResources.Get("softProofInvalidICC", "Text");
+        SettingsExportProofLabelLocalized.Text =
+            AppResources.Get("settingsExportProofLabel", "Text");
+        SettingsSoftProofProfileOnlyLocalized.Content =
+            AppResources.Get("settingsSoftProofProfileOnly", "Content");
+        SettingsSoftProofPaperAndBlackLocalized.Content =
+            AppResources.Get("settingsSoftProofPaperAndBlack", "Content");
+        GamutUnavailableReason.Text =
+            AppResources.Get("settingsColorGamutUnavailableReason", "Text");
+        SettingsColorScannerInputLocalized.Text =
+            AppResources.Get("settingsColorScannerInput", "Text");
+        SettingsColorWorkingLocalized.Text = AppResources.Get("settingsColorWorking", "Text");
+        SettingsColorMonitorLocalized.Text = AppResources.Get("settingsColorMonitor", "Text");
+        SettingsColorExportLocalized.Text = AppResources.Get("settingsColorExport", "Text");
+        SettingsColorSoftProofLocalized.Text = AppResources.Get("settingsColorSoftProof", "Text");
+        ShortcutResetAllButton.Content = AppResources.Get("shortcutResetAll", "Content");
+        LegalLicenseTitleLocalized.Text = AppResources.Get("legalLicenseTitle", "Text");
+        LegalLicenseBodyLocalized.Text = AppResources.Get("legalLicenseBody", "Text");
+        LegalTrademarkTitleLocalized.Text = AppResources.Get("legalTrademarkTitle", "Text");
+        LegalTrademarkBodyLocalized.Text = AppResources.Get("legalTrademarkBody", "Text");
+        LegalNamesTitleLocalized.Text = AppResources.Get("legalNamesTitle", "Text");
+        LegalNamesBodyLocalized.Text = AppResources.Get("legalNamesBody", "Text");
+        LegalProfilesTitleLocalized.Text = AppResources.Get("legalProfilesTitle", "Text");
+        LegalProfilesBodyLocalized.Text = AppResources.Get("legalProfilesBody", "Text");
+        LegalAffiliationTitleLocalized.Text = AppResources.Get("legalAffiliationTitle", "Text");
+        LegalAffiliationBodyLocalized.Text = AppResources.Get("legalAffiliationBody", "Text");
         SetCategoryText(GeneralButton, GeneralLabel, GeneralHeading, "settingsGeneralTab");
         SetCategoryText(InterfaceButton, InterfaceLabel, InterfaceHeading, "settingsInterfaceTab");
         SetCategoryText(WorkflowButton, WorkflowLabel, WorkflowHeading, "settingsWorkflowTab");
@@ -466,6 +538,7 @@ public sealed partial class SettingsRootView : UserControl
     {
         _ = sender;
         _ = args;
+        AppResources.LanguageChanged -= OnLanguageResourcesChanged;
         if (workspaceState is not null)
         {
             workspaceState.Changed -= OnStateChanged;

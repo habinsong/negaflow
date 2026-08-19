@@ -193,7 +193,7 @@
     <comment>AppLocalizedText.libraryImportFailed</comment>
   </data>
   <data name="libraryLocateOriginal.Content" xml:space="preserve">
-    <value>定位原始照片</value>
+    <value>查找原始文件</value>
     <comment>AppLocalizedPhrase.locateOriginal</comment>
   </data>
   <data name="libraryRelinkFailed.Text" xml:space="preserve">
@@ -826,7 +826,7 @@
   <data name="developLibrary.Text" xml:space="preserve"><value>图库</value></data>
   <data name="developExportFormat.Text" xml:space="preserve"><value>格式</value><comment>AppLocalizedText.exportFormatLabel</comment></data>
   <data name="developExportFolder.Text" xml:space="preserve"><value>文件夹</value><comment>AppLocalizedText.exportFolderLabel</comment></data>
-  <data name="developExportFolderChange.Content" xml:space="preserve"><value>更改</value><comment>AppLocalizedPhrase.rename</comment></data>
+  <data name="developExportFolderChange.Content" xml:space="preserve"><value>更改</value><comment>AppLocalizedText.exportChangeFolder</comment></data>
   <data name="developExportFolderBesideSource.Text" xml:space="preserve"><value>与原片同一位置</value></data>
   <data name="developExportNamePattern.Text" xml:space="preserve"><value>文件名模式</value><comment>ExportNamingLocalizedText.pattern</comment></data>
   <data name="developExportRunning.Text" xml:space="preserve"><value>正在冲洗…</value></data>
@@ -922,6 +922,12 @@
   <data name="developGrainMendFoundNothing.Text" xml:space="preserve"><value>未找到需要修复的地方</value></data>
   <data name="developGrainMendFoundFormat.Value" xml:space="preserve"><value>找到 %d 处。按 Enter 移除，Esc 取消</value></data>
   <data name="developGrainMendDetectFailed.Text" xml:space="preserve"><value>检测失败</value></data>
+  <data name="developInfraredCleanDetecting.Text" xml:space="preserve"><value>正在通过红外通道检测瑕疵</value><comment>AppLocalizedPhrase.infraredCleanDetectingStatus</comment></data>
+  <data name="developInfraredCleanAppliedFormat.Value" xml:space="preserve"><value>已通过红外通道移除 %d 处瑕疵</value><comment>AppLocalizedPhrase.infraredCleanAppliedFormat</comment></data>
+  <data name="developInfraredCleanNoDefects.Text" xml:space="preserve"><value>红外通道中未发现瑕疵</value><comment>AppLocalizedPhrase.infraredCleanNoDefectsStatus</comment></data>
+  <data name="developInfraredCleanSkippedBW.Text" xml:space="preserve"><value>已跳过 IR 除尘：黑白胶片的影像由银粒构成，会阻挡红外线</value><comment>AppInfraredText.unverifiedFilm</comment></data>
+  <data name="developInfraredCleanCoverageAbort.Text" xml:space="preserve"><value>红外除尘已中止：瑕疵蒙版过大（请检查胶片类型或红外对齐）</value><comment>AppLocalizedPhrase.infraredCleanCoverageAbortStatus</comment></data>
+  <data name="developInfraredCleanFailed.Text" xml:space="preserve"><value>红外瑕疵检测失败</value><comment>AppLocalizedPhrase.infraredCleanFailedStatus</comment></data>
   <data name="developExportChangeFolder.Content" xml:space="preserve"><value>更改</value><comment>AppLocalizedText.exportChangeFolder</comment></data>
   <data name="developExportCompressionDeflate.Content" xml:space="preserve"><value>ZIP</value><comment>ExportEncoding.deflate</comment></data>
   <data name="developExportCompressionLzw.Content" xml:space="preserve"><value>LZW</value><comment>ExportEncoding.lzw</comment></data>
@@ -1118,7 +1124,7 @@
   <data name="librarySurveyNeedsSelectionTitle.Text" xml:space="preserve"><value>请选择照片</value><comment>AppCullingText.surveyNeedsSelectionTitle</comment></data>
   <data name="librarySurveyNeedsSelectionBody.Text" xml:space="preserve"><value>在网格中选择多张照片即可在同一画面中查看。</value><comment>AppCullingText.surveyNeedsSelectionDescription</comment></data>
   <data name="printOrientation.Text" xml:space="preserve"><value>方向</value><comment>AppLocalizedPhrase.orientation</comment></data>
-  <data name="printPerforation.Text" xml:space="preserve"><value>穿孔</value><comment>AppLocalizedPhrase.perforation</comment></data>
+  <data name="printPerforation.Text" xml:space="preserve"><value>齿孔</value><comment>AppLocalizedPhrase.perforation</comment></data>
   <data name="printMarginFormat.Text" xml:space="preserve"><value>边距 {0} mm</value><comment>AppLocalizedPhrase.margin</comment></data>
   <data name="printResolution.Text" xml:space="preserve"><value>分辨率</value><comment>AppLocalizedPhrase.resolution</comment></data>
   <data name="printSheetSection.Text" xml:space="preserve"><value>接触印样</value><comment>AppLocalizedPhrase.contactSheet</comment></data>
@@ -1176,7 +1182,7 @@
   <data name="developExportMetadataRemoveLocation.Text" xml:space="preserve"><value>移除位置</value><comment>ExportMetadataLocalizedText.removeLocation</comment></data>
   <data name="developExportMetadataMinimal.Text" xml:space="preserve"><value>最少</value><comment>ExportMetadataLocalizedText.minimal</comment></data>
   <data name="settingsDefaultScanRotation.Text" xml:space="preserve"><value>扫描默认方向</value><comment>AppLocalizedPhrase.settingsDefaultScanRotationPicker</comment></data>
-  <data name="settingsDefaultScanRotationHelp.Text" xml:space="preserve"><value>仅应用于新扫描的照片。</value><comment>AppLocalizedPhrase.settingsDefaultScanRotationHelp</comment></data>
+  <data name="settingsDefaultScanRotationHelp.Text" xml:space="preserve"><value>应用于未设置方向的新扫描。扫描仪原始图像通常上下颠倒（180°）保存。</value><comment>AppLocalizedPhrase.settingsDefaultScanRotationHelp</comment></data>
   <data name="settingsRotation0.Text" xml:space="preserve"><value>无</value><comment>ImageRotation.degrees0</comment></data>
   <data name="settingsRotation90.Text" xml:space="preserve"><value>90°</value><comment>ImageRotation.degrees90</comment></data>
   <data name="settingsRotation180.Text" xml:space="preserve"><value>180°</value><comment>ImageRotation.degrees180</comment></data>

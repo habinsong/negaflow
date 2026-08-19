@@ -86,7 +86,7 @@
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="230" />
                                 </Grid.ColumnDefinitions>
-                                <TextBlock x:Uid="settingsLanguagePicker" VerticalAlignment="Center" />
+                                <TextBlock x:Name="SettingsLanguagePickerLocalized" VerticalAlignment="Center" />
                                 <ComboBox
                                     x:Name="LanguageComboBox"
                                     Grid.Column="1"
@@ -126,7 +126,7 @@
                                 </ComboBox>
                             </Grid>
                             <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
-                            <ToggleSwitch x:Name="DeveloperModeToggle" x:Uid="developerMode" IsEnabled="False" />
+                            <ToggleSwitch x:Name="DeveloperModeToggle" IsEnabled="False" />
                         </StackPanel>
                     </Border>
                 </StackPanel>
@@ -140,17 +140,16 @@
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="230" />
                                 </Grid.ColumnDefinitions>
-                                <TextBlock x:Uid="settingsCanvasBackgroundPicker" VerticalAlignment="Center" />
+                                <TextBlock x:Name="SettingsCanvasBackgroundPickerLocalized" VerticalAlignment="Center" />
                                 <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" IsEnabled="False" SelectedIndex="0">
-                                    <ComboBoxItem x:Uid="canvasBackgroundBlack" />
-                                    <ComboBoxItem x:Uid="canvasBackgroundGray" />
-                                    <ComboBoxItem x:Uid="canvasBackgroundWhite" />
+                                    <ComboBoxItem x:Name="CanvasBackgroundBlackLocalized" />
+                                    <ComboBoxItem x:Name="CanvasBackgroundGrayLocalized" />
+                                    <ComboBoxItem x:Name="CanvasBackgroundWhiteLocalized" />
                                 </ComboBox>
                             </Grid>
                             <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
                             <ToggleSwitch
                                 x:Name="ClippingOverlayToggle"
-                                x:Uid="colorClippingOverlay"
                                 Toggled="OnClippingOverlayToggled" />
                             <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
                             <ToggleSwitch
@@ -170,9 +169,9 @@
                     <TextBlock x:Name="WorkflowHeading" FontSize="24" FontWeight="SemiBold" />
                     <Border Padding="18" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="10">
                         <StackPanel Spacing="12">
-                            <ToggleSwitch x:Name="ScannerSimulatorToggle" x:Uid="commandToggleScannerSimulator" IsEnabled="False" />
+                            <ToggleSwitch x:Name="ScannerSimulatorToggle" IsEnabled="False" />
                             <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
-                            <ToggleSwitch x:Name="DevelopImportsToggle" x:Uid="developImportsAutomatically" IsEnabled="False" />
+                            <ToggleSwitch x:Name="DevelopImportsToggle" IsEnabled="False" />
                             <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
                             <TextBlock x:Name="MicroSpecksHeading" FontSize="13" FontWeight="SemiBold" />
                             <ToggleSwitch
@@ -257,10 +256,10 @@
                     <TextBlock x:Name="ExportHeading" FontSize="24" FontWeight="SemiBold" />
                     <Border Padding="18" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="10">
                         <StackPanel Spacing="12">
-                            <TextBlock x:Uid="quickExportSection" FontSize="13" FontWeight="SemiBold" />
+                            <TextBlock x:Name="QuickExportSectionLocalized" FontSize="13" FontWeight="SemiBold" />
                             <Grid ColumnSpacing="16">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="230" /></Grid.ColumnDefinitions>
-                                <TextBlock x:Uid="settingsQuickExportFormat" VerticalAlignment="Center" />
+                                <TextBlock x:Name="SettingsQuickExportFormatLocalized" VerticalAlignment="Center" />
                                 <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" IsEnabled="False" SelectedIndex="0">
                                     <ComboBoxItem Content="JPEG" />
                                     <ComboBoxItem Content="PNG" />
@@ -269,7 +268,7 @@
                             <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
                             <Grid ColumnSpacing="16">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="230" /></Grid.ColumnDefinitions>
-                                <TextBlock x:Uid="settingsQuickExportDPI" VerticalAlignment="Center" />
+                                <TextBlock x:Name="SettingsQuickExportDPILocalized" VerticalAlignment="Center" />
                                 <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" IsEnabled="False" SelectedIndex="0">
                                     <ComboBoxItem x:Name="SourceDpiItem" />
                                 </ComboBox>
@@ -277,7 +276,7 @@
                             <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
                             <Grid ColumnSpacing="16">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="230" /></Grid.ColumnDefinitions>
-                                <TextBlock x:Uid="settingsQuickExportSize" VerticalAlignment="Center" />
+                                <TextBlock x:Name="SettingsQuickExportSizeLocalized" VerticalAlignment="Center" />
                                 <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" IsEnabled="False" SelectedIndex="0">
                                     <ComboBoxItem x:Name="FullSizeItem" />
                                 </ComboBox>
@@ -285,17 +284,17 @@
                             <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
                             <Grid ColumnSpacing="16">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="230" /></Grid.ColumnDefinitions>
-                                <TextBlock x:Uid="settingsQuickExportFolder" VerticalAlignment="Center" />
+                                <TextBlock x:Name="SettingsQuickExportFolderLocalized" VerticalAlignment="Center" />
                                 <TextBlock Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="—" />
                             </Grid>
                         </StackPanel>
                     </Border>
                     <Border Padding="18" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="10">
                         <StackPanel Spacing="12">
-                            <TextBlock x:Uid="settingsColorManagementSection" FontSize="13" FontWeight="SemiBold" />
+                            <TextBlock x:Name="SettingsColorManagementSectionLocalized" FontSize="13" FontWeight="SemiBold" />
                             <Grid ColumnSpacing="16">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="230" /></Grid.ColumnDefinitions>
-                                <TextBlock x:Uid="settingsExportColorLabel" VerticalAlignment="Center" />
+                                <TextBlock x:Name="SettingsExportColorLabelLocalized" VerticalAlignment="Center" />
                                 <ComboBox
                                     x:Name="ExportColorSpaceComboBox"
                                     Grid.Column="1"
@@ -319,7 +318,6 @@
                                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
                                         <Button
                                             x:Name="SoftProofChooseProfileButton"
-                                            x:Uid="developExportChangeFolder"
                                             AutomationProperties.AutomationId="settings.export.softProof.chooseProfile"
                                             Click="OnChooseSoftProofProfile" />
                                         <Button
@@ -331,7 +329,6 @@
                                 </Grid>
                                 <TextBlock
                                     x:Name="SoftProofProfileError"
-                                    x:Uid="softProofInvalidICC"
                                     Visibility="Collapsed"
                                     TextWrapping="Wrap"
                                     FontSize="12"
@@ -344,7 +341,6 @@
                                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
                                         <Button
                                             x:Name="PrinterProfileButton"
-                                            x:Uid="developExportChangeFolder"
                                             AutomationProperties.AutomationId="settings.export.printerProfile.choose"
                                             Click="OnChoosePrinterProfile" />
                                         <Button
@@ -356,22 +352,21 @@
                                 </Grid>
                                 <TextBlock
                                     x:Name="PrinterProfileError"
-                                    x:Uid="softProofInvalidICC"
                                     Visibility="Collapsed"
                                     TextWrapping="Wrap"
                                     FontSize="12"
                                     Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
                                 <Grid ColumnSpacing="16">
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="230" /></Grid.ColumnDefinitions>
-                                    <TextBlock x:Uid="settingsExportProofLabel" VerticalAlignment="Center" />
+                                    <TextBlock x:Name="SettingsExportProofLabelLocalized" VerticalAlignment="Center" />
                                     <ComboBox
                                         x:Name="SoftProofSimulationComboBox"
                                         Grid.Column="1"
                                         HorizontalAlignment="Stretch"
                                         AutomationProperties.AutomationId="settings.export.softProof.simulation"
                                         SelectionChanged="OnSoftProofSimulationChanged">
-                                        <ComboBoxItem x:Uid="settingsSoftProofProfileOnly" />
-                                        <ComboBoxItem x:Uid="settingsSoftProofPaperAndBlack" />
+                                        <ComboBoxItem x:Name="SettingsSoftProofProfileOnlyLocalized" />
+                                        <ComboBoxItem x:Name="SettingsSoftProofPaperAndBlackLocalized" />
                                     </ComboBox>
                                 </Grid>
                                 <ToggleSwitch
@@ -380,7 +375,6 @@
                                     Toggled="OnGamutWarningToggled" />
                                 <TextBlock
                                     x:Name="GamutUnavailableReason"
-                                    x:Uid="settingsColorGamutUnavailableReason"
                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                     TextWrapping="Wrap"
                                     FontSize="12" />
@@ -388,31 +382,31 @@
                             <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
                             <Grid ColumnSpacing="16">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="230" /></Grid.ColumnDefinitions>
-                                <TextBlock x:Uid="settingsColorScannerInput" VerticalAlignment="Center" />
+                                <TextBlock x:Name="SettingsColorScannerInputLocalized" VerticalAlignment="Center" />
                                 <TextBlock x:Name="ScannerEmulationSummary" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             </Grid>
                             <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
                             <Grid ColumnSpacing="16">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="230" /></Grid.ColumnDefinitions>
-                                <TextBlock x:Uid="settingsColorWorking" VerticalAlignment="Center" />
+                                <TextBlock x:Name="SettingsColorWorkingLocalized" VerticalAlignment="Center" />
                                 <TextBlock Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Linear sRGB (Chromabase)" />
                             </Grid>
                             <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
                             <Grid ColumnSpacing="16">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="230" /></Grid.ColumnDefinitions>
-                                <TextBlock x:Uid="settingsColorMonitor" VerticalAlignment="Center" />
+                                <TextBlock x:Name="SettingsColorMonitorLocalized" VerticalAlignment="Center" />
                                 <TextBlock x:Name="MonitorProfileSummary" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
                             </Grid>
                             <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
                             <Grid ColumnSpacing="16">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="230" /></Grid.ColumnDefinitions>
-                                <TextBlock x:Uid="settingsColorExport" VerticalAlignment="Center" />
+                                <TextBlock x:Name="SettingsColorExportLocalized" VerticalAlignment="Center" />
                                 <TextBlock x:Name="ExportColorSpaceSummary" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             </Grid>
                             <Border Height="1" Background="{ThemeResource NegaflowDividerBrush}" />
                             <Grid ColumnSpacing="16">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="230" /></Grid.ColumnDefinitions>
-                                <TextBlock x:Uid="settingsColorSoftProof" VerticalAlignment="Center" />
+                                <TextBlock x:Name="SettingsColorSoftProofLocalized" VerticalAlignment="Center" />
                                 <TextBlock x:Name="SoftProofSummary" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             </Grid>
                         </StackPanel>
@@ -438,7 +432,6 @@
                     <Border Padding="18" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="10">
                         <Button
                             x:Name="ShortcutResetAllButton"
-                            x:Uid="shortcutResetAll"
                             HorizontalAlignment="Left"
                             AutomationProperties.AutomationId="settings.shortcuts.reset-all"
                             Click="OnShortcutResetAllClicked" />
@@ -449,32 +442,32 @@
                     <TextBlock x:Name="LegalHeading" FontSize="24" FontWeight="SemiBold" />
                     <Border Padding="18" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="10">
                         <StackPanel Spacing="8">
-                            <TextBlock x:Uid="legalLicenseTitle" FontSize="13" FontWeight="SemiBold" />
-                            <TextBlock x:Uid="legalLicenseBody" IsTextSelectionEnabled="True" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                            <TextBlock x:Name="LegalLicenseTitleLocalized" FontSize="13" FontWeight="SemiBold" />
+                            <TextBlock x:Name="LegalLicenseBodyLocalized" IsTextSelectionEnabled="True" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
                     <Border Padding="18" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="10">
                         <StackPanel Spacing="8">
-                            <TextBlock x:Uid="legalTrademarkTitle" FontSize="13" FontWeight="SemiBold" />
-                            <TextBlock x:Uid="legalTrademarkBody" IsTextSelectionEnabled="True" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                            <TextBlock x:Name="LegalTrademarkTitleLocalized" FontSize="13" FontWeight="SemiBold" />
+                            <TextBlock x:Name="LegalTrademarkBodyLocalized" IsTextSelectionEnabled="True" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
                     <Border Padding="18" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="10">
                         <StackPanel Spacing="8">
-                            <TextBlock x:Uid="legalNamesTitle" FontSize="13" FontWeight="SemiBold" />
-                            <TextBlock x:Uid="legalNamesBody" IsTextSelectionEnabled="True" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                            <TextBlock x:Name="LegalNamesTitleLocalized" FontSize="13" FontWeight="SemiBold" />
+                            <TextBlock x:Name="LegalNamesBodyLocalized" IsTextSelectionEnabled="True" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
                     <Border Padding="18" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="10">
                         <StackPanel Spacing="8">
-                            <TextBlock x:Uid="legalProfilesTitle" FontSize="13" FontWeight="SemiBold" />
-                            <TextBlock x:Uid="legalProfilesBody" IsTextSelectionEnabled="True" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                            <TextBlock x:Name="LegalProfilesTitleLocalized" FontSize="13" FontWeight="SemiBold" />
+                            <TextBlock x:Name="LegalProfilesBodyLocalized" IsTextSelectionEnabled="True" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
                     <Border Padding="18" Background="{ThemeResource NegaflowCardBrush}" CornerRadius="10">
                         <StackPanel Spacing="8">
-                            <TextBlock x:Uid="legalAffiliationTitle" FontSize="13" FontWeight="SemiBold" />
-                            <TextBlock x:Uid="legalAffiliationBody" IsTextSelectionEnabled="True" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                            <TextBlock x:Name="LegalAffiliationTitleLocalized" FontSize="13" FontWeight="SemiBold" />
+                            <TextBlock x:Name="LegalAffiliationBodyLocalized" IsTextSelectionEnabled="True" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
                 </StackPanel>

@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml.Input;
 using Negaflow.Catalog;
 using Negaflow.Interop;
 using Negaflow.Shell.Develop;
+using Negaflow.Shell.Localization;
 using Negaflow.Shell.Shortcuts;
 using Windows.System;
 using Windows.UI.Core;
@@ -119,6 +120,7 @@ public sealed partial class WorkspaceShellView : UserControl
         AppMenu.KeyboardShortcutsRequested += OnKeyboardShortcutsRequested;
         AppMenu.CommandRequested += OnAppMenuCommandRequested;
         state.Changed += OnStateChanged;
+        AppResources.LanguageChanged += OnLanguageChanged;
         LibraryWorkspace.ScannerMenuStateChanged += OnScannerMenuStateChanged;
         SyncDevelopMenu();
         AppMenu.SyncScannerState(LibraryWorkspace.ScannerMenuState);
@@ -416,6 +418,24 @@ public sealed partial class WorkspaceShellView : UserControl
         SyncDevelopMenu();
     }
 
+    /// <summary>
+    /// macOS 는 <c>model.appLanguage</c> 가 바뀌면 모든 문구가 그 자리에서 다시 그려집니다.
+    /// WinUI 는 그런 관찰이 없으므로 열려 있는 화면에 직접 다시 걸어 줍니다.
+    /// </summary>
+    private void OnLanguageChanged(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        AppMenu.Localize();
+        Toolbar.Localize();
+        LibraryWorkspace.Localize();
+        DevelopWorkspace.Localize();
+        PrintWorkspace.Localize();
+        SyncDevelopMenu();
+        AppMenu.SyncScannerState(LibraryWorkspace.ScannerMenuState);
+        SyncExportMenu();
+    }
+
     private void OnScannerMenuStateChanged(object? sender, EventArgs args)
     {
         _ = sender;
@@ -529,6 +549,7 @@ public sealed partial class WorkspaceShellView : UserControl
         AppMenu.KeyboardShortcutsRequested -= OnKeyboardShortcutsRequested;
         AppMenu.CommandRequested -= OnAppMenuCommandRequested;
         LibraryWorkspace.ScannerMenuStateChanged -= OnScannerMenuStateChanged;
+        AppResources.LanguageChanged -= OnLanguageChanged;
         Toolbar.QuickExportRequested -= OnToolbarQuickExportRequested;
         DevelopWorkspace.QuickExportAvailabilityChanged -= OnQuickExportAvailabilityChanged;
         DevelopWorkspace.ScannerSetupRequested -= OnDevelopScannerSetupRequested;

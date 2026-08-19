@@ -14,6 +14,11 @@ internal sealed class LibraryWorkspaceCopy
 
     internal void Localize()
     {
+        view.ImportHintLocalized.Text = AppResources.Get("importHint", "Text");
+        view.LibraryAllPhotosLocalized.Text = AppResources.Get("libraryAllPhotos", "Text");
+        view.NoImagesLocalized.Text = AppResources.Get("noImages", "Text");
+        view.LibrarySearchBox.PlaceholderText =
+            AppResources.Get("librarySearchPlaceholder", "PlaceholderText");
         // 사진 이름은 Shell.Core 가 짓지만 문구는 여기에 있습니다. 꽂아 두지 않으면 카드가
         // 영어 기본값으로 불립니다.
         LibraryFrameNaming.NumberFormat = static number =>

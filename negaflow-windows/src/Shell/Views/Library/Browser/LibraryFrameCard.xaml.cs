@@ -1,4 +1,5 @@
-using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml;
+using Negaflow.Shell.Localization;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 
@@ -10,7 +11,16 @@ namespace Negaflow.Shell.Views.Library.Browser;
 /// </summary>
 public sealed partial class LibraryFrameCard : UserControl
 {
-    public LibraryFrameCard() => InitializeComponent();
+    public LibraryFrameCard()
+    {
+        InitializeComponent();
+        Localize();
+    }
+
+    /// <summary>x:Uid 대신 코드에서 겁니다 — 언어를 바꾸면 카드가 다시 만들어집니다.</summary>
+    public void Localize() =>
+        LibraryLocateOriginalLocalized.Content =
+            AppResources.Get("libraryLocateOriginal", "Content");
 
     public event RightTappedEventHandler? CardRightTapped;
 

@@ -193,7 +193,7 @@
     <comment>AppLocalizedText.libraryImportFailed</comment>
   </data>
   <data name="libraryLocateOriginal.Content" xml:space="preserve">
-    <value>元の写真を探す</value>
+    <value>オリジナルを指定</value>
     <comment>AppLocalizedPhrase.locateOriginal</comment>
   </data>
   <data name="libraryRelinkFailed.Text" xml:space="preserve">
@@ -213,7 +213,7 @@
     <comment>AppLocalizedText.importImages</comment>
   </data>
   <data name="importFolder.Content" xml:space="preserve">
-    <value>フォルダを読み込む</value>
+    <value>フォルダーを読み込む</value>
     <comment>AppLocalizedText.importFolder</comment>
   </data>
   <data name="libraryFolderImportResult.Text" xml:space="preserve">
@@ -826,7 +826,7 @@
   <data name="developLibrary.Text" xml:space="preserve"><value>ライブラリ</value></data>
   <data name="developExportFormat.Text" xml:space="preserve"><value>形式</value><comment>AppLocalizedText.exportFormatLabel</comment></data>
   <data name="developExportFolder.Text" xml:space="preserve"><value>フォルダー</value><comment>AppLocalizedText.exportFolderLabel</comment></data>
-  <data name="developExportFolderChange.Content" xml:space="preserve"><value>変更</value><comment>AppLocalizedPhrase.rename</comment></data>
+  <data name="developExportFolderChange.Content" xml:space="preserve"><value>変更</value><comment>AppLocalizedText.exportChangeFolder</comment></data>
   <data name="developExportFolderBesideSource.Text" xml:space="preserve"><value>元ファイルの隣</value></data>
   <data name="developExportNamePattern.Text" xml:space="preserve"><value>ファイル名パターン</value><comment>ExportNamingLocalizedText.pattern</comment></data>
   <data name="developExportRunning.Text" xml:space="preserve"><value>現像中…</value></data>
@@ -922,6 +922,12 @@
   <data name="developGrainMendFoundNothing.Text" xml:space="preserve"><value>修復するものが見つかりませんでした</value></data>
   <data name="developGrainMendFoundFormat.Value" xml:space="preserve"><value>%d 箇所見つかりました。Enter で除去、Esc で取消</value></data>
   <data name="developGrainMendDetectFailed.Text" xml:space="preserve"><value>検出に失敗しました</value></data>
+  <data name="developInfraredCleanDetecting.Text" xml:space="preserve"><value>赤外線チャンネルからゴミ・キズを検出中</value><comment>AppLocalizedPhrase.infraredCleanDetectingStatus</comment></data>
+  <data name="developInfraredCleanAppliedFormat.Value" xml:space="preserve"><value>赤外線チャンネルでゴミ・キズを %d件除去しました</value><comment>AppLocalizedPhrase.infraredCleanAppliedFormat</comment></data>
+  <data name="developInfraredCleanNoDefects.Text" xml:space="preserve"><value>赤外線チャンネルにゴミ・キズは見つかりませんでした</value><comment>AppLocalizedPhrase.infraredCleanNoDefectsStatus</comment></data>
+  <data name="developInfraredCleanSkippedBW.Text" xml:space="preserve"><value>IR クリーニングをスキップ: 白黒フィルムは画像が銀粒子なので赤外線を通しません</value><comment>AppInfraredText.unverifiedFilm</comment></data>
+  <data name="developInfraredCleanCoverageAbort.Text" xml:space="preserve"><value>赤外線クリーニングを中止: マスクが大きすぎます（フィルムタイプまたは IR 位置合わせを確認）</value><comment>AppLocalizedPhrase.infraredCleanCoverageAbortStatus</comment></data>
+  <data name="developInfraredCleanFailed.Text" xml:space="preserve"><value>赤外線でのゴミ・キズ検出に失敗しました</value><comment>AppLocalizedPhrase.infraredCleanFailedStatus</comment></data>
   <data name="developExportChangeFolder.Content" xml:space="preserve"><value>変更</value><comment>AppLocalizedText.exportChangeFolder</comment></data>
   <data name="developExportCompressionDeflate.Content" xml:space="preserve"><value>ZIP</value><comment>ExportEncoding.deflate</comment></data>
   <data name="developExportCompressionLzw.Content" xml:space="preserve"><value>LZW</value><comment>ExportEncoding.lzw</comment></data>
@@ -1100,7 +1106,7 @@
   <data name="libraryVirtualCopy.Content" xml:space="preserve"><value>仮想コピー</value><comment>AppLocalizedPhrase.virtualCopy</comment></data>
   <data name="librarySourceMoveFailed.Text" xml:space="preserve"><value>元ファイルを移動できませんでした。変更を元に戻しました。</value><comment>AppLocalizedPhrase.sourceMoveFailedStatus</comment></data>
   <data name="libraryDevelopDefaults.Text" xml:space="preserve"><value>現像</value><comment>AppLocalizedText.developDefaults</comment></data>
-  <data name="libraryProcess.Text" xml:space="preserve"><value>現像処理</value><comment>AppLocalizedPhrase.process</comment></data>
+  <data name="libraryProcess.Text" xml:space="preserve"><value>プロセス</value><comment>AppLocalizedPhrase.process</comment></data>
   <data name="libraryTarget.Text" xml:space="preserve"><value>ターゲット</value><comment>AppLocalizedPhrase.target</comment></data>
   <data name="libraryFilmProfile.Text" xml:space="preserve"><value>フィルムプロファイル</value><comment>AppLocalizedPhrase.filmProfile</comment></data>
   <data name="libraryLook.Text" xml:space="preserve"><value>ルック</value><comment>AppLocalizedPhrase.look</comment></data>
@@ -1176,7 +1182,7 @@
   <data name="developExportMetadataRemoveLocation.Text" xml:space="preserve"><value>位置情報を削除</value><comment>ExportMetadataLocalizedText.removeLocation</comment></data>
   <data name="developExportMetadataMinimal.Text" xml:space="preserve"><value>最小</value><comment>ExportMetadataLocalizedText.minimal</comment></data>
   <data name="settingsDefaultScanRotation.Text" xml:space="preserve"><value>スキャンの既定の向き</value><comment>AppLocalizedPhrase.settingsDefaultScanRotationPicker</comment></data>
-  <data name="settingsDefaultScanRotationHelp.Text" xml:space="preserve"><value>新しくスキャンした写真にのみ適用されます。</value><comment>AppLocalizedPhrase.settingsDefaultScanRotationHelp</comment></data>
+  <data name="settingsDefaultScanRotationHelp.Text" xml:space="preserve"><value>向きが未設定の新規スキャンに適用されます。スキャナー原稿は通常180°反転して保存されます。</value><comment>AppLocalizedPhrase.settingsDefaultScanRotationHelp</comment></data>
   <data name="settingsRotation0.Text" xml:space="preserve"><value>なし</value><comment>ImageRotation.degrees0</comment></data>
   <data name="settingsRotation90.Text" xml:space="preserve"><value>90°</value><comment>ImageRotation.degrees90</comment></data>
   <data name="settingsRotation180.Text" xml:space="preserve"><value>180°</value><comment>ImageRotation.degrees180</comment></data>

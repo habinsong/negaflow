@@ -9,6 +9,14 @@ public sealed partial class StatusBarView : UserControl
     public StatusBarView()
     {
         InitializeComponent();
+        Localize();
+    }
+
+    /// <summary>언어가 바뀌면 다시 겁니다. x:Uid 는 읽을 때 한 번만 풀리기 때문입니다.</summary>
+    public void Localize()
+    {
+        SortInputOrderLocalized.Text = AppResources.Get("sortInputOrder", "Text");
+        LibraryAllShortLocalized.Text = AppResources.Get("libraryAllShort", "Text");
     }
 
     public void Initialize(NativeEngineStatus status)

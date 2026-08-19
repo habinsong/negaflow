@@ -3,6 +3,7 @@
     x:Class="Negaflow.Shell.Views.Develop.Canvas.DevelopPreviewCanvas"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Negaflow.Shell.Views.Develop.Canvas"
     xmlns:grainmend="using:Negaflow.Shell.Views.Develop.GrainMend">
     <Grid
         x:Name="CanvasHost"
@@ -19,9 +20,8 @@
     SizeChanged="OnCanvasSizeChanged">
     <StackPanel x:Name="EmptyCanvasPanel" x:FieldModifier="internal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
         <FontIcon FontSize="42" Foreground="#FF8A8A8A" Glyph="&#xE91B;" />
-        <TextBlock x:Uid="emptyCanvasTitle" HorizontalAlignment="Center" FontSize="18" FontWeight="SemiBold" Foreground="#FFE2E2E2" />
-        <TextBlock
-            x:Uid="emptyCanvasDescription"
+        <TextBlock x:Name="EmptyCanvasTitleLocalized" HorizontalAlignment="Center" FontSize="18" FontWeight="SemiBold" Foreground="#FFE2E2E2" />
+        <TextBlock x:Name="EmptyCanvasDescriptionLocalized"
             MaxWidth="420"
             HorizontalAlignment="Center"
             TextAlignment="Center"
@@ -31,9 +31,41 @@
 
     <Image
         x:Name="PreviewImage" x:FieldModifier="internal"
-        Margin="24"
+        HorizontalAlignment="Left"
+        VerticalAlignment="Top"
         AutomationProperties.AutomationId="negaflow.canvas.preview"
-        Stretch="Uniform"
+        Stretch="Fill"
+        Visibility="Collapsed" />
+
+    <!-- macOS splitVerticalImage / splitHorizontalImage 의 before. after 는 PreviewImage. -->
+    <Image
+        x:Name="CompareBeforeImage" x:FieldModifier="internal"
+        HorizontalAlignment="Left"
+        VerticalAlignment="Top"
+        AutomationProperties.AutomationId="negaflow.canvas.compare.before"
+        IsHitTestVisible="False"
+        Stretch="Fill"
+        Visibility="Collapsed" />
+
+    <Canvas
+        x:Name="CompareDividerLayer" x:FieldModifier="internal"
+        IsHitTestVisible="False"
+        Visibility="Collapsed">
+        <Rectangle
+            x:Name="CompareDividerLine" x:FieldModifier="internal"
+            Fill="#BFFFFFFF" />
+        <Rectangle
+            x:Name="CompareDividerHandle" x:FieldModifier="internal"
+            Fill="#E6FFFFFF"
+            RadiusX="2"
+            RadiusY="2"
+            Stroke="#40000000"
+            StrokeThickness="1" />
+    </Canvas>
+
+    <local:CanvasCompareLabels
+        x:Name="CompareLabels"
+        x:FieldModifier="internal"
         Visibility="Collapsed" />
 
     <!-- 픽셀 샘플러의 읽은 값입니다. 설정에서 켰을 때만 나옵니다. -->
@@ -80,10 +112,11 @@
          소스 화소는 불투명해야 하므로 아예 보이지 않습니다. -->
     <Image
         x:Name="DefectOverlayImage" x:FieldModifier="internal"
-        Margin="24"
+        HorizontalAlignment="Left"
+        VerticalAlignment="Top"
         AutomationProperties.AutomationId="negaflow.canvas.defect-overlay"
         IsHitTestVisible="False"
-        Stretch="Uniform"
+        Stretch="Fill"
         Visibility="Collapsed" />
 
     <!-- macOS `basePickerOverlay` — 스포이드 모드일 때 사진 위에 안내 캡슐을 띄웁니다.
@@ -162,5 +195,32 @@
     <!-- macOS RegionDefectOverlay 의 캡슐 두 줄입니다. 크롭과 결함 도구는 서로를 끄므로
          가장 위에 두어도 다투지 않습니다. -->
     <grainmend:DevelopGrainMendHud x:Name="GrainMendHud" x:FieldModifier="internal" />
+
+    <!-- macOS CanvasCompareToggle — 기본 위치는 왼쪽 위 margin 12. -->
+    <local:CanvasCompareHud
+        x:Name="CompareHud"
+        x:FieldModifier="internal"
+        HorizontalAlignment="Left"
+        VerticalAlignment="Top"
+        Visibility="Collapsed"
+        PointerPressed="OnCompareHudPointerPressed"
+        PointerMoved="OnHudPointerMoved"
+        PointerReleased="OnHudPointerReleased"
+        PointerCanceled="OnHudPointerCanceled"
+        PointerCaptureLost="OnHudPointerCanceled"
+        SizeChanged="OnCompareHudSizeChanged" />
+
+    <!-- macOS CanvasToolHUD — `resolvedCanvasHUDOrigins` 가 좌표를 잡는다. -->
+    <local:CanvasToolHud
+        x:Name="ZoomHud"
+        x:FieldModifier="internal"
+        HorizontalAlignment="Left"
+        VerticalAlignment="Top"
+        PointerPressed="OnZoomHudPointerPressed"
+        PointerMoved="OnHudPointerMoved"
+        PointerReleased="OnHudPointerReleased"
+        PointerCanceled="OnHudPointerCanceled"
+        PointerCaptureLost="OnHudPointerCanceled"
+        SizeChanged="OnZoomHudSizeChanged" />
 </Grid>
 </UserControl>

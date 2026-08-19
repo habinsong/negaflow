@@ -66,8 +66,7 @@
                         Text="{Binding StackCount}" />
                 </StackPanel>
             </Border>
-            <Button
-                x:Uid="libraryLocateOriginal"
+            <Button x:Name="LibraryLocateOriginalLocalized"
                 Margin="5"
                 Padding="6,2"
                 HorizontalAlignment="Left"
