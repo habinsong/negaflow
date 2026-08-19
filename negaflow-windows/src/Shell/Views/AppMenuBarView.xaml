@@ -262,5 +262,127 @@
                 AutomationProperties.AutomationId="negaflow.menu.photo.flip-vertical"
                 Click="OnFlipVerticalClick" />
         </MenuBarItem>
+        <!--
+          macOS AppWorkflowMenuCommands CommandMenu(.menuDevelop).
+          자동 톤/WB/색/레벨/NR · 프로세스 · 타깃 · 크롭 · 베이스 스포이드.
+          초기화는 AppModel.resetAllDevelopAdjustments. 이전/이후·결함은 핸들러가
+          생길 때까지 넣지 않습니다.
+        -->
+        <MenuBarItem
+            x:Name="DevelopMenu"
+            AutomationProperties.AutomationId="negaflow.menu.develop"
+            Title="Develop">
+            <MenuFlyoutItem
+                x:Name="AutoToneItem"
+                AutomationProperties.AutomationId="negaflow.menu.develop.auto-tone"
+                Click="OnAutoToneClick" />
+            <MenuFlyoutItem
+                x:Name="AutoWhiteBalanceItem"
+                AutomationProperties.AutomationId="negaflow.menu.develop.auto-wb"
+                Click="OnAutoWhiteBalanceClick" />
+            <ToggleMenuFlyoutItem
+                x:Name="ToggleAutoColorItem"
+                AutomationProperties.AutomationId="negaflow.menu.develop.auto-color"
+                Click="OnToggleAutoColorClick" />
+            <ToggleMenuFlyoutItem
+                x:Name="ToggleAutoLevelsItem"
+                AutomationProperties.AutomationId="negaflow.menu.develop.auto-levels"
+                Click="OnToggleAutoLevelsClick" />
+            <ToggleMenuFlyoutItem
+                x:Name="ToggleNoiseReductionItem"
+                AutomationProperties.AutomationId="negaflow.menu.develop.noise"
+                Click="OnToggleNoiseReductionClick" />
+            <MenuFlyoutSeparator />
+            <MenuFlyoutSubItem
+                x:Name="ProcessSubmenu"
+                AutomationProperties.AutomationId="negaflow.menu.develop.process">
+                <ToggleMenuFlyoutItem
+                    x:Name="ProcessColorNegativeItem"
+                    AutomationProperties.AutomationId="negaflow.menu.develop.process.color-neg"
+                    Click="OnProcessColorNegativeClick" />
+                <ToggleMenuFlyoutItem
+                    x:Name="ProcessColorPositiveItem"
+                    AutomationProperties.AutomationId="negaflow.menu.develop.process.color-pos"
+                    Click="OnProcessColorPositiveClick" />
+                <ToggleMenuFlyoutItem
+                    x:Name="ProcessBwNegativeItem"
+                    AutomationProperties.AutomationId="negaflow.menu.develop.process.bw-neg"
+                    Click="OnProcessBwNegativeClick" />
+                <ToggleMenuFlyoutItem
+                    x:Name="ProcessBwPositiveItem"
+                    AutomationProperties.AutomationId="negaflow.menu.develop.process.bw-pos"
+                    Click="OnProcessBwPositiveClick" />
+            </MenuFlyoutSubItem>
+            <MenuFlyoutSubItem
+                x:Name="TargetSubmenu"
+                AutomationProperties.AutomationId="negaflow.menu.develop.target">
+                <ToggleMenuFlyoutItem
+                    x:Name="TargetMainItem"
+                    AutomationProperties.AutomationId="negaflow.menu.develop.target.main"
+                    Click="OnTargetMainClick" />
+                <ToggleMenuFlyoutItem
+                    x:Name="TargetPrintItem"
+                    AutomationProperties.AutomationId="negaflow.menu.develop.target.print"
+                    Click="OnTargetPrintClick" />
+                <ToggleMenuFlyoutItem
+                    x:Name="TargetNoritsuItem"
+                    AutomationProperties.AutomationId="negaflow.menu.develop.target.hs"
+                    Click="OnTargetNoritsuClick" />
+                <ToggleMenuFlyoutItem
+                    x:Name="TargetSp3000Item"
+                    AutomationProperties.AutomationId="negaflow.menu.develop.target.sp"
+                    Click="OnTargetSp3000Click" />
+                <ToggleMenuFlyoutItem
+                    x:Name="TargetF135Item"
+                    AutomationProperties.AutomationId="negaflow.menu.develop.target.f135"
+                    Click="OnTargetF135Click" />
+                <ToggleMenuFlyoutItem
+                    x:Name="TargetHrItem"
+                    AutomationProperties.AutomationId="negaflow.menu.develop.target.hr"
+                    Click="OnTargetHrClick" />
+                <ToggleMenuFlyoutItem
+                    x:Name="TargetExpiredItem"
+                    AutomationProperties.AutomationId="negaflow.menu.develop.target.expired"
+                    Click="OnTargetExpiredClick" />
+            </MenuFlyoutSubItem>
+            <MenuFlyoutSeparator />
+            <MenuFlyoutItem
+                x:Name="CropToolItem"
+                AutomationProperties.AutomationId="negaflow.menu.develop.crop"
+                Click="OnCropToolClick" />
+            <MenuFlyoutItem
+                x:Name="BasePickerToolItem"
+                AutomationProperties.AutomationId="negaflow.menu.develop.pick-base"
+                Click="OnBasePickerToolClick" />
+            <MenuFlyoutSubItem
+                x:Name="DefectSubmenu"
+                AutomationProperties.AutomationId="negaflow.menu.develop.defect">
+                <MenuFlyoutItem
+                    x:Name="AutoDefectToolItem"
+                    AutomationProperties.AutomationId="negaflow.menu.develop.defect.auto"
+                    Click="OnAutoDefectToolClick" />
+                <MenuFlyoutItem
+                    x:Name="GuidedDefectToolItem"
+                    AutomationProperties.AutomationId="negaflow.menu.develop.defect.guided"
+                    Click="OnGuidedDefectToolClick" />
+                <MenuFlyoutItem
+                    x:Name="BrushDefectToolItem"
+                    AutomationProperties.AutomationId="negaflow.menu.develop.defect.brush"
+                    Click="OnBrushDefectToolClick" />
+                <MenuFlyoutItem
+                    x:Name="CloneStampToolItem"
+                    AutomationProperties.AutomationId="negaflow.menu.develop.defect.clone"
+                    Click="OnCloneStampToolClick" />
+            </MenuFlyoutSubItem>
+            <MenuFlyoutSeparator />
+            <MenuFlyoutItem
+                x:Name="ResetAdjustmentsItem"
+                AutomationProperties.AutomationId="negaflow.menu.develop.reset-adjustments"
+                Click="OnResetAdjustmentsClick" />
+            <MenuFlyoutItem
+                x:Name="ToggleBeforeAfterItem"
+                AutomationProperties.AutomationId="negaflow.menu.develop.before-after"
+                Click="OnToggleBeforeAfterClick" />
+        </MenuBarItem>
     </MenuBar>
 </UserControl>

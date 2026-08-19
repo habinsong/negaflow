@@ -1,6 +1,8 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
+using Negaflow.Catalog;
+using Negaflow.Shell.Develop;
 using Negaflow.Shell.Localization;
 using Negaflow.Shell.Shortcuts;
 
@@ -8,7 +10,7 @@ namespace Negaflow.Shell.Views;
 
 /// <summary>
 /// macOS <c>AppStandardMenuCommands</c> 와 <c>AppWorkflowMenuCommands</c> 의
-/// 앱·파일·편집·보기·라이브러리·사진 메뉴입니다. Windows 에는 시스템 앱 메뉴가 없어서 창 안
+/// 앱·파일·편집·보기·라이브러리·사진·현상 메뉴입니다. Windows 에는 시스템 앱 메뉴가 없어서 창 안
 /// <see cref="MenuBar"/> 가 그 자리입니다.
 /// </summary>
 public sealed partial class AppMenuBarView : UserControl
@@ -112,6 +114,75 @@ public sealed partial class AppMenuBarView : UserControl
         SetItem(FlipHorizontalItem, "shortcutFlipHorizontal",
             WorkflowShortcutAction.FlipHorizontal);
         SetItem(FlipVerticalItem, "shortcutFlipVertical", WorkflowShortcutAction.FlipVertical);
+
+        string develop = AppResources.Get("menuDevelop", "Text");
+        DevelopMenu.Title = develop;
+        AutomationProperties.SetName(DevelopMenu, develop);
+        SetCaption(AutoToneItem, AppResources.Get("developAutoTone", "Content"),
+            WorkflowShortcutAction.AutoTone);
+        SetCaption(AutoWhiteBalanceItem, AppResources.Get("developAutoWhiteBalance", "Content"),
+            WorkflowShortcutAction.AutoWhiteBalance);
+        SetCaption(ToggleAutoColorItem, AppResources.Get("developAutoColor", "Content"),
+            WorkflowShortcutAction.ToggleAutoColor);
+        SetCaption(ToggleAutoLevelsItem, AppResources.Get("developAutoLevels", "Content"),
+            WorkflowShortcutAction.ToggleAutoLevels);
+        SetItem(ToggleNoiseReductionItem, "developNoiseReduction",
+            WorkflowShortcutAction.ToggleNoiseReduction);
+        string process = AppResources.Get("shortcutProcess", "Text");
+        ProcessSubmenu.Text = process;
+        AutomationProperties.SetName(ProcessSubmenu, process);
+        // macOS 는 항목 문구로 filmType.developmentProcessName 을 씁니다 — "C-41/ECN-2"
+        // 처럼 공정 규격 이름이고 번역하지 않습니다(LocalizedDomainDisplayNames.swift:50).
+        SetCaption(ProcessColorNegativeItem, DevelopProcesses.DisplayName(DevelopmentProcess.C41),
+            WorkflowShortcutAction.ProcessColorNegative);
+        SetCaption(ProcessColorPositiveItem, DevelopProcesses.DisplayName(DevelopmentProcess.E6),
+            WorkflowShortcutAction.ProcessColorPositive);
+        SetCaption(ProcessBwNegativeItem, DevelopProcesses.DisplayName(DevelopmentProcess.D76),
+            WorkflowShortcutAction.ProcessBwNegative);
+        SetCaption(
+            ProcessBwPositiveItem,
+            DevelopProcesses.DisplayName(DevelopmentProcess.BlackAndWhiteReversal),
+            WorkflowShortcutAction.ProcessBwPositive);
+        string target = AppResources.Get("libraryTarget", "Text");
+        TargetSubmenu.Text = target;
+        AutomationProperties.SetName(TargetSubmenu, target);
+        SetCaption(TargetMainItem, DevelopTargets.DisplayName(DevelopTarget.Main),
+            WorkflowShortcutAction.TargetMain);
+        SetCaption(TargetPrintItem, DevelopTargets.DisplayName(DevelopTarget.Print),
+            WorkflowShortcutAction.TargetPrint);
+        SetCaption(TargetNoritsuItem, DevelopTargets.DisplayName(DevelopTarget.Noritsu),
+            WorkflowShortcutAction.TargetNoritsu);
+        SetCaption(TargetSp3000Item, DevelopTargets.DisplayName(DevelopTarget.Sp3000),
+            WorkflowShortcutAction.TargetSp3000);
+        SetCaption(TargetF135Item, DevelopTargets.DisplayName(DevelopTarget.F135),
+            WorkflowShortcutAction.TargetF135);
+        SetCaption(TargetHrItem, DevelopTargets.DisplayName(DevelopTarget.Hr),
+            WorkflowShortcutAction.TargetHr);
+        SetCaption(TargetExpiredItem, DevelopTargets.DisplayName(DevelopTarget.Rescue),
+            WorkflowShortcutAction.TargetExpired);
+        SetItem(CropToolItem, "developCropArea", WorkflowShortcutAction.CropTool);
+        SetItem(BasePickerToolItem, "developPickBase", WorkflowShortcutAction.BasePickerTool);
+        // macOS Menu(AppLocalizedPhrase.inspectorTabDefect) 안의 네 도구입니다. 항목 문구는
+        // Swift 의 defectToolTitle 과 같이 "결함: 자동" 처럼 탭 이름을 앞에 답니다.
+        string defect = AppResources.Get("developTabDefects", "Value");
+        DefectSubmenu.Text = defect;
+        AutomationProperties.SetName(DefectSubmenu, defect);
+        SetCaption(AutoDefectToolItem, DefectToolTitle(defect, "developGrainMendAuto"),
+            WorkflowShortcutAction.AutoDefectTool);
+        SetCaption(GuidedDefectToolItem, DefectToolTitle(defect, "developGrainMendGuided"),
+            WorkflowShortcutAction.GuidedDefectTool);
+        SetCaption(BrushDefectToolItem, DefectToolTitle(defect, "developGrainMendBrush"),
+            WorkflowShortcutAction.BrushDefectTool);
+        SetCaption(CloneStampToolItem, DefectToolTitle(defect, "developGrainMendClone"),
+            WorkflowShortcutAction.CloneStampTool);
+        SetItem(
+            ResetAdjustmentsItem,
+            "shortcutResetAdjustments",
+            WorkflowShortcutAction.ResetAdjustments);
+        SetItem(
+            ToggleBeforeAfterItem,
+            "shortcutToggleBeforeAfter",
+            WorkflowShortcutAction.ToggleBeforeAfter);
     }
 
     private static void SetItem(
@@ -119,6 +190,10 @@ public sealed partial class AppMenuBarView : UserControl
         string key,
         WorkflowShortcutAction action) =>
         SetCaption(item, AppResources.Get(key, "Text"), action);
+
+    /// <summary>macOS <c>defectToolTitle</c> — "결함: 자동" 처럼 탭 이름을 앞에 답니다.</summary>
+    private static string DefectToolTitle(string defect, string toolKey) =>
+        defect + ": " + AppResources.Get(toolKey, "Content");
 
     private static void SetStarItem(
         MenuFlyoutItem item,
@@ -174,6 +249,12 @@ public sealed partial class AppMenuBarView : UserControl
 
     private void OnRedoClick(object sender, RoutedEventArgs args) =>
         RaiseCommand(sender, args, WorkflowShortcutAction.Redo);
+
+    private void OnToggleBeforeAfterClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.ToggleBeforeAfter);
+
+    private void OnResetAdjustmentsClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.ResetAdjustments);
 
     private void OnCopyDevelopSettingsClick(object sender, RoutedEventArgs args) =>
         RaiseCommand(sender, args, WorkflowShortcutAction.CopyDevelopSettings);
@@ -261,6 +342,72 @@ public sealed partial class AppMenuBarView : UserControl
 
     private void OnFlipVerticalClick(object sender, RoutedEventArgs args) =>
         RaiseCommand(sender, args, WorkflowShortcutAction.FlipVertical);
+
+    private void OnAutoToneClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.AutoTone);
+
+    private void OnAutoWhiteBalanceClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.AutoWhiteBalance);
+
+    private void OnToggleAutoColorClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.ToggleAutoColor);
+
+    private void OnToggleAutoLevelsClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.ToggleAutoLevels);
+
+    private void OnToggleNoiseReductionClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.ToggleNoiseReduction);
+
+    private void OnProcessColorNegativeClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.ProcessColorNegative);
+
+    private void OnProcessColorPositiveClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.ProcessColorPositive);
+
+    private void OnProcessBwNegativeClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.ProcessBwNegative);
+
+    private void OnProcessBwPositiveClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.ProcessBwPositive);
+
+    private void OnTargetMainClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.TargetMain);
+
+    private void OnTargetPrintClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.TargetPrint);
+
+    private void OnTargetNoritsuClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.TargetNoritsu);
+
+    private void OnTargetSp3000Click(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.TargetSp3000);
+
+    private void OnTargetF135Click(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.TargetF135);
+
+    private void OnTargetHrClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.TargetHr);
+
+    private void OnTargetExpiredClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.TargetExpired);
+
+    private void OnCropToolClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.CropTool);
+
+    private void OnBasePickerToolClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.BasePickerTool);
+
+    private void OnAutoDefectToolClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.AutoDefectTool);
+
+    private void OnGuidedDefectToolClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.GuidedDefectTool);
+
+    private void OnBrushDefectToolClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.BrushDefectTool);
+
+    private void OnCloneStampToolClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.CloneStampTool);
 
     private void RaiseCommand(object sender, RoutedEventArgs args, WorkflowShortcutAction action)
     {

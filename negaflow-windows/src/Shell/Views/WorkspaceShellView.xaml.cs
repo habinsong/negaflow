@@ -3,7 +3,9 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Negaflow.Catalog;
 using Negaflow.Interop;
+using Negaflow.Shell.Develop;
 using Negaflow.Shell.Shortcuts;
 using Windows.System;
 using Windows.UI.Core;
@@ -53,6 +55,7 @@ public sealed partial class WorkspaceShellView : UserControl
         {
             libraryHost.RestoreActiveFrame(state.Current.ActiveFrameId);
             libraryHost.SelectionChanged += OnLibrarySelectionChanged;
+            libraryHost.FrameEdited += OnLibraryFrameEdited;
             state.SetActiveFrame(libraryHost.ActiveFrameId);
         }
         NativeEngineStatus nativeEngineStatus = nativeEngineStatusService.Probe();
@@ -112,6 +115,7 @@ public sealed partial class WorkspaceShellView : UserControl
         AppMenu.SettingsRequested += OnToolbarSettingsRequested;
         AppMenu.CommandRequested += OnAppMenuCommandRequested;
         state.Changed += OnStateChanged;
+        SyncDevelopMenu();
         UpdateWorkspace(state.Current.SelectedWorkspace);
         Unloaded += OnUnloaded;
     }
@@ -254,6 +258,12 @@ public sealed partial class WorkspaceShellView : UserControl
             case WorkflowShortcutAction.Undo:
             case WorkflowShortcutAction.Redo:
                 return LibraryWorkspace.InvokeShortcut(action);
+            case WorkflowShortcutAction.ToggleBeforeAfter:
+                DevelopWorkspace.ToggleBeforeAfterFromMenu();
+                return true;
+            case WorkflowShortcutAction.ResetAdjustments:
+                DevelopWorkspace.ResetAllAdjustmentsFromMenu();
+                return true;
             case WorkflowShortcutAction.CopyDevelopSettings:
                 DevelopWorkspace.CopyDevelopSettingsFromMenu();
                 return true;
@@ -285,6 +295,57 @@ public sealed partial class WorkspaceShellView : UserControl
                 return true;
             case WorkflowShortcutAction.FlipVertical:
                 DevelopWorkspace.UpdateImageTransform(state => state.FlipVertically());
+                return true;
+            case WorkflowShortcutAction.AutoTone:
+                DevelopWorkspace.RunAutoToneFromMenu();
+                return true;
+            case WorkflowShortcutAction.AutoWhiteBalance:
+                DevelopWorkspace.RunAutoWhiteBalanceFromMenu();
+                return true;
+            case WorkflowShortcutAction.ToggleAutoColor:
+                DevelopWorkspace.ToggleAutoColorFromMenu();
+                return true;
+            case WorkflowShortcutAction.ToggleAutoLevels:
+                DevelopWorkspace.ToggleAutoLevelsFromMenu();
+                return true;
+            case WorkflowShortcutAction.ToggleNoiseReduction:
+                DevelopWorkspace.ToggleNoiseReductionFromMenu();
+                return true;
+            case WorkflowShortcutAction.ProcessColorNegative:
+            case WorkflowShortcutAction.ProcessColorPositive:
+            case WorkflowShortcutAction.ProcessBwNegative:
+            case WorkflowShortcutAction.ProcessBwPositive:
+            case WorkflowShortcutAction.TargetMain:
+            case WorkflowShortcutAction.TargetPrint:
+            case WorkflowShortcutAction.TargetNoritsu:
+            case WorkflowShortcutAction.TargetSp3000:
+            case WorkflowShortcutAction.TargetF135:
+            case WorkflowShortcutAction.TargetHr:
+            case WorkflowShortcutAction.TargetExpired:
+                return LibraryWorkspace.InvokeShortcut(action);
+            case WorkflowShortcutAction.CropTool:
+                state.SelectWorkspace(WorkspaceModule.Develop);
+                DevelopWorkspace.ToggleCropFromMenu();
+                return true;
+            case WorkflowShortcutAction.BasePickerTool:
+                state.SelectWorkspace(WorkspaceModule.Develop);
+                DevelopWorkspace.ToggleBasePickerFromMenu();
+                return true;
+            case WorkflowShortcutAction.AutoDefectTool:
+                state.SelectWorkspace(WorkspaceModule.Develop);
+                DevelopWorkspace.RunAutoDefectFromMenu();
+                return true;
+            case WorkflowShortcutAction.GuidedDefectTool:
+                state.SelectWorkspace(WorkspaceModule.Develop);
+                DevelopWorkspace.ToggleGuidedDefectFromMenu();
+                return true;
+            case WorkflowShortcutAction.BrushDefectTool:
+                state.SelectWorkspace(WorkspaceModule.Develop);
+                DevelopWorkspace.ToggleBrushDefectFromMenu();
+                return true;
+            case WorkflowShortcutAction.CloneStampTool:
+                state.SelectWorkspace(WorkspaceModule.Develop);
+                DevelopWorkspace.ToggleCloneStampFromMenu();
                 return true;
         }
         // 나머지는 지금 보이는 화면이 맡습니다. 보이지 않는 화면이 조용히 사진을 바꾸면
@@ -326,6 +387,33 @@ public sealed partial class WorkspaceShellView : UserControl
         _ = sender;
         _ = args;
         workspaceState?.SetActiveFrame(libraryHost?.ActiveFrameId);
+        SyncDevelopMenu();
+    }
+
+    private void OnLibraryFrameEdited(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        SyncDevelopMenu();
+    }
+
+    /// <summary>
+    /// macOS 현상 메뉴는 그릴 때마다 <c>actionableFrame</c> 을 읽습니다. WinUI 는 메뉴를 여는
+    /// 순간을 알려 주지 않으므로 값이 바뀔 때마다 밀어 넣습니다.
+    /// </summary>
+    private void SyncDevelopMenu()
+    {
+        if (libraryHost is not { } host)
+        {
+            AppMenu.SyncDevelopState(DevelopMenuState.Empty);
+            return;
+        }
+        // 메뉴 클릭이 GridView 선택을 비워도 catalog 의 활성 사진은 남습니다.
+        string? activeId = host.ActiveFrameId;
+        LibraryFrameSnapshot? frame = activeId is null
+            ? null
+            : host.Frames.FirstOrDefault(candidate => candidate.Id == activeId);
+        AppMenu.SyncDevelopState(DevelopMenuState.From(frame));
     }
 
     private void OnToolbarSettingsRequested(object? sender, EventArgs args)
@@ -346,6 +434,9 @@ public sealed partial class WorkspaceShellView : UserControl
     {
         _ = sender;
         _ = Invoke(action);
+        // ToggleMenuFlyoutItem 은 눌리는 즉시 스스로 체크를 뒤집습니다. 명령이 아무 것도 바꾸지
+        // 못했으면(사진이 없거나 편집이 거절됐으면) 그 체크는 거짓말이므로 되돌립니다.
+        SyncDevelopMenu();
     }
 
     private async void OnToolbarQuickExportRequested(object? sender, EventArgs args)
@@ -399,6 +490,7 @@ public sealed partial class WorkspaceShellView : UserControl
         if (libraryHost is not null)
         {
             libraryHost.SelectionChanged -= OnLibrarySelectionChanged;
+            libraryHost.FrameEdited -= OnLibraryFrameEdited;
         }
     }
 }

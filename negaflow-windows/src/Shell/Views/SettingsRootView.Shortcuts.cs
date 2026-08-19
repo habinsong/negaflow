@@ -294,10 +294,11 @@ public sealed partial class SettingsRootView
             AppResources.Get("shortcutCopyDevelopSettings", "Text"),
         WorkflowShortcutAction.PasteDevelopSettings =>
             AppResources.Get("shortcutPasteDevelopSettings", "Text"),
-        WorkflowShortcutAction.ProcessColorNegative => Process("filmTypeColorNegative"),
-        WorkflowShortcutAction.ProcessColorPositive => Process("filmTypeColorPositive"),
-        WorkflowShortcutAction.ProcessBwNegative => Process("filmTypeBlackAndWhiteNegative"),
-        WorkflowShortcutAction.ProcessBwPositive => Process("filmTypeBlackAndWhitePositive"),
+        WorkflowShortcutAction.ProcessColorNegative => Process(DevelopmentProcess.C41),
+        WorkflowShortcutAction.ProcessColorPositive => Process(DevelopmentProcess.E6),
+        WorkflowShortcutAction.ProcessBwNegative => Process(DevelopmentProcess.D76),
+        WorkflowShortcutAction.ProcessBwPositive =>
+            Process(DevelopmentProcess.BlackAndWhiteReversal),
         WorkflowShortcutAction.TargetMain => Target(DevelopTarget.Main),
         WorkflowShortcutAction.TargetPrint => Target(DevelopTarget.Print),
         WorkflowShortcutAction.TargetNoritsu => Target(DevelopTarget.Noritsu),
@@ -320,6 +321,21 @@ public sealed partial class SettingsRootView
             AppResources.Get("shortcutShowHideInspector", "Text"),
         WorkflowShortcutAction.ToggleFullScreen =>
             AppResources.Get("commandToggleFullScreen", "Text"),
+        WorkflowShortcutAction.AutoTone => AppResources.Get("developAutoTone", "Content"),
+        WorkflowShortcutAction.AutoWhiteBalance =>
+            AppResources.Get("developAutoWhiteBalance", "Content"),
+        WorkflowShortcutAction.ToggleAutoColor =>
+            AppResources.Get("developAutoColor", "Content"),
+        WorkflowShortcutAction.ToggleAutoLevels =>
+            AppResources.Get("developAutoLevels", "Content"),
+        WorkflowShortcutAction.ToggleNoiseReduction =>
+            AppResources.Get("developNoiseReduction", "Text"),
+        WorkflowShortcutAction.CropTool => AppResources.Get("developCropArea", "Text"),
+        WorkflowShortcutAction.BasePickerTool => AppResources.Get("developPickBase", "Text"),
+        WorkflowShortcutAction.AutoDefectTool => Defect("developGrainMendAuto"),
+        WorkflowShortcutAction.GuidedDefectTool => Defect("developGrainMendGuided"),
+        WorkflowShortcutAction.BrushDefectTool => Defect("developGrainMendBrush"),
+        WorkflowShortcutAction.CloneStampTool => Defect("developGrainMendClone"),
         WorkflowShortcutAction.OpenLibraryWorkspace =>
             AppResources.Get("shortcutOpenLibrary", "Text"),
         WorkflowShortcutAction.OpenDevelopWorkspace =>
@@ -340,7 +356,16 @@ public sealed partial class SettingsRootView
     private static string Target(DevelopTarget target) =>
         AppResources.Get("libraryTarget", "Text") + ": " + DevelopTargets.DisplayName(target);
 
-    private static string Process(string filmTypeKey) =>
+    /// <summary>
+    /// macOS 는 "프로세스: C-41/ECN-2" 처럼 공정 규격 이름을 붙입니다
+    /// (WorkflowShortcutActions.swift:280-287) — 공정 이름은 번역하지 않습니다.
+    /// </summary>
+    private static string Process(DevelopmentProcess process) =>
         AppResources.Get("shortcutProcess", "Text") + ": " +
-        AppResources.Get(filmTypeKey, "Text");
+        DevelopProcesses.DisplayName(process);
+
+    /// <summary>macOS <c>defectToolTitle</c> — "결함: 자동".</summary>
+    private static string Defect(string toolKey) =>
+        AppResources.Get("developTabDefects", "Value") + ": " +
+        AppResources.Get(toolKey, "Content");
 }

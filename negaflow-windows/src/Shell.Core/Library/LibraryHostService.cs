@@ -107,9 +107,19 @@ public sealed class LibraryHostService : IDisposable
 
     public event EventHandler? SelectionChanged;
 
+    /// <summary>
+    /// 편집이 실제로 값을 바꾼 뒤 한 번 납니다. 창 안 메뉴막대가 macOS 의 메뉴 Toggle 처럼
+    /// 지금 값을 되비추려면 이 신호가 필요합니다 — WinUI <c>MenuBarItem</c> 에는 메뉴를 여는
+    /// 순간에 나는 이벤트가 없습니다.
+    /// </summary>
+    public event EventHandler? FrameEdited;
+
     /// <summary>고른 순서를 지키며, 카탈로그에 없는 id 는 버립니다.</summary>
     public void SetSelection(IEnumerable<string> frameIds, string? activeFrameId = null)
-        => selection.Set(Frames, frameIds, activeFrameId);
+    {
+        selection.Set(Frames, frameIds, activeFrameId);
+        TryInfraredCleanIfNeeded(ActiveFrameId);
+    }
 
     /// <summary>
     /// 앱을 다시 열 때 저장된 active frame을 복구합니다. 없거나 원본이 오프라인이면 macOS처럼
@@ -170,15 +180,43 @@ public sealed class LibraryHostService : IDisposable
     /// 하면 한 군데만 빠져도 그 편집이 조용히 사라집니다.
     /// </summary>
     public LibraryFrameError Edit(string frameId, LibraryFrameEdit edit) =>
-        AfterEdit(document is null
-            ? LibraryFrameError.MissingId
-            : document.Edit(frameId, edit));
+        AfterCoalescedDevelopEdit(frameId, () =>
+            document is null
+                ? LibraryFrameError.MissingId
+                : document.Edit(frameId, edit));
+
+    /// <summary>
+    /// macOS <c>registerDevelopAdjustmentUndo</c> — 초기화처럼 한 번에 여러 슬라이더를
+    /// 지우는 동작은 ⌘Z / Ctrl+Z 로 되돌려야 합니다.
+    /// </summary>
+    public LibraryFrameError EditUndoable(
+        string frameId,
+        string actionName,
+        LibraryFrameEdit edit)
+    {
+        if (document is not { } open)
+        {
+            return LibraryFrameError.MissingId;
+        }
+
+        frameEdits.Clear(frameId);
+        open.CaptureUndo(actionName);
+        LibraryFrameError error = open.Edit(frameId, edit);
+        if (error != LibraryFrameError.None)
+        {
+            _ = open.Undo();
+            return error;
+        }
+
+        return AfterEdit(error);
+    }
 
     /// <summary>필름 룩처럼 develop route 자체를 바꾸는 편집입니다.</summary>
     public LibraryFrameError EditRoute(string frameId, DevelopRouteSelection selection) =>
-        AfterEdit(document is null
-            ? LibraryFrameError.MissingId
-            : document.EditRoute(frameId, selection));
+        AfterCoalescedDevelopEdit(frameId, () =>
+            document is null
+                ? LibraryFrameError.MissingId
+                : document.EditRoute(frameId, selection));
 
     public IReadOnlyList<LibraryCollectionSnapshot> Collections =>
         document?.Collections ?? [];
@@ -307,6 +345,8 @@ public sealed class LibraryHostService : IDisposable
         public const string CreateStack = "libraryStackGroup";
         public const string UngroupStack = "libraryStackUngroup";
         public const string ToggleStack = "libraryStackCollapse";
+        public const string ResetAdjustments = "commandResetAdjustments";
+        public const string DevelopAdjustment = "developAdjustment";
     }
 
     public bool CanUndo => document?.CanUndo == true;
@@ -320,6 +360,7 @@ public sealed class LibraryHostService : IDisposable
     /// <summary>한 단계 되돌리고 저장합니다. 되돌린 동작의 이름을 돌려줍니다.</summary>
     public string? Undo()
     {
+        frameEdits.Clear();
         string? name = document?.Undo();
         if (name is not null)
         {
@@ -330,12 +371,90 @@ public sealed class LibraryHostService : IDisposable
 
     public string? Redo()
     {
+        frameEdits.Clear();
         string? name = document?.Redo();
         if (name is not null)
         {
             _ = SaveIfDirty();
         }
         return name;
+    }
+
+    private readonly FrameEditHistory frameEdits = new();
+    private readonly HashSet<string> infraredCleanAttempted = new(StringComparer.Ordinal);
+
+    /// <summary>macOS <c>runInfraredCleanIfNeeded</c>.</summary>
+    public InfraredDefectApplyResult? TryInfraredCleanIfNeeded(string? frameId)
+    {
+        if (document is null || frameId is null)
+        {
+            return null;
+        }
+
+        LibraryFrameSnapshot? frame = Frames.FirstOrDefault(candidate =>
+            string.Equals(candidate.Id, frameId, StringComparison.Ordinal));
+        bool attempted = infraredCleanAttempted.Contains(frameId);
+        if (!InfraredCleanPolicy.ShouldRun(frame, attempted) || frame is null)
+        {
+            return null;
+        }
+
+        infraredCleanAttempted.Add(frameId);
+        if (!DefectSourceIdentityReader.TryRead(frame.SourcePath, out DefectSourceIdentity identity) ||
+            frame.InfraredPath is not { } infraredPath)
+        {
+            if (InfraredCleanPolicy.ShouldRearm(InfraredDefectApplyStatus.DetectionFailed))
+            {
+                infraredCleanAttempted.Remove(frameId);
+            }
+
+            return new InfraredDefectApplyResult(
+                InfraredDefectApplyStatus.DetectionFailed,
+                null,
+                null,
+                DefectSidecarError.None,
+                CatalogStoreError.None);
+        }
+
+        InfraredDefectApplyResult result = InfraredDefectRecipeCoordinator.RunFiles(
+            document,
+            frame,
+            identity,
+            frame.SourcePath,
+            infraredPath);
+        if (InfraredCleanPolicy.ShouldRearm(result.Status))
+        {
+            infraredCleanAttempted.Remove(frameId);
+        }
+
+        return result;
+    }
+
+    /// <summary>macOS <c>recordFrameEditIfChanged</c> — <see cref="Edit"/> 길목.</summary>
+    private LibraryFrameError AfterCoalescedDevelopEdit(
+        string frameId,
+        Func<LibraryFrameError> edit)
+    {
+        if (document is not { } open)
+        {
+            return LibraryFrameError.MissingId;
+        }
+
+        DateTime now = DateTime.UtcNow;
+        bool captured = frameEdits.ConsumeCapture(frameId, now);
+        if (captured)
+        {
+            open.CaptureUndo(UndoActions.DevelopAdjustment);
+        }
+
+        LibraryFrameError error = edit();
+        if (error != LibraryFrameError.None && captured)
+        {
+            _ = open.Undo();
+            return error;
+        }
+
+        return AfterEdit(error);
     }
 
     /// <summary>
@@ -392,6 +511,7 @@ public sealed class LibraryHostService : IDisposable
         if (error == LibraryFrameError.None)
         {
             ScheduleSave();
+            FrameEdited?.Invoke(this, EventArgs.Empty);
         }
         return error;
     }

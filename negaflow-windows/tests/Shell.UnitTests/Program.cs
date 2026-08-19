@@ -36,7 +36,10 @@ internal static class Program
         LibraryCullingTests.Run();
         PrintCompositionTests.Run();
         PrintPreviewResolutionTests.Run();
+        FrameResidencyTests.Run();
+        PreviewOrderingTests.Run();
         DevelopMetadataTests.Run();
+        DevelopMenuStateTests.Run();
         ExportPanelProjectionTests.Run();
         FilmLookMenuProjectionTests.Run();
         GrainMendCardProjectionTests.Run();

@@ -1,4 +1,4 @@
-namespace Negaflow.Shell.Shortcuts;
+﻿namespace Negaflow.Shell.Shortcuts;
 
 /// <summary>macOS <c>WorkflowShortcutGroup</c> 과 같은 묶음입니다. 설정 표의 머리줄이 됩니다.</summary>
 public enum WorkflowShortcutGroup
@@ -77,6 +77,17 @@ public enum WorkflowShortcutAction
     // 단축키 덮어쓰기가 다른 명령을 가리키게 됩니다.
     LoadScanner,
     ToggleFullScreen,
+    AutoTone,
+    AutoWhiteBalance,
+    ToggleAutoColor,
+    ToggleAutoLevels,
+    ToggleNoiseReduction,
+    CropTool,
+    BasePickerTool,
+    AutoDefectTool,
+    GuidedDefectTool,
+    BrushDefectTool,
+    CloneStampTool,
 }
 
 public static class WorkflowShortcutActions
@@ -117,7 +128,6 @@ public static class WorkflowShortcutActions
         WorkflowShortcutAction.OpenLibraryWorkspace or
         WorkflowShortcutAction.OpenDevelopWorkspace or
         WorkflowShortcutAction.OpenPrintWorkspace or
-        WorkflowShortcutAction.ToggleBeforeAfter or
         WorkflowShortcutAction.ToggleFullScreen => WorkflowShortcutGroup.View,
 
         WorkflowShortcutAction.DetectScanners or
@@ -228,6 +238,24 @@ public static class WorkflowShortcutActions
                 WorkflowShortcutModifiers.Control |
                     WorkflowShortcutModifiers.Alt |
                     WorkflowShortcutModifiers.Shift),
+        // macOS 는 command+U / command+shift+U.
+        WorkflowShortcutAction.AutoTone => new("u", WorkflowShortcutModifiers.Control),
+        WorkflowShortcutAction.AutoWhiteBalance =>
+            new("u", WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Shift),
+        WorkflowShortcutAction.ToggleAutoColor =>
+            new("b", WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Shift),
+        WorkflowShortcutAction.ToggleAutoLevels =>
+            new("l", WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Shift),
+        // macOS 는 command+option+N.
+        WorkflowShortcutAction.ToggleNoiseReduction =>
+            new("n", WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Alt),
+        WorkflowShortcutAction.CropTool => new("r", WorkflowShortcutModifiers.None),
+        WorkflowShortcutAction.BasePickerTool => new("w", WorkflowShortcutModifiers.None),
+        // macOS 는 shift+Q / Q / B / S 입니다.
+        WorkflowShortcutAction.AutoDefectTool => new("q", WorkflowShortcutModifiers.Shift),
+        WorkflowShortcutAction.GuidedDefectTool => new("q", WorkflowShortcutModifiers.None),
+        WorkflowShortcutAction.BrushDefectTool => new("b", WorkflowShortcutModifiers.None),
+        WorkflowShortcutAction.CloneStampTool => new("s", WorkflowShortcutModifiers.None),
         _ => WorkflowShortcut.None,
     };
 

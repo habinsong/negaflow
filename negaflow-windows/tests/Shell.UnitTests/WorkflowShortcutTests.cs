@@ -138,6 +138,65 @@ internal static class WorkflowShortcutTests
             "workflow_shortcut_photo_menu_keys_match_mac");
 
         Check(
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.AutoTone) ==
+                new WorkflowShortcut("u", WorkflowShortcutModifiers.Control) &&
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.AutoWhiteBalance) ==
+                new WorkflowShortcut(
+                    "u",
+                    WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Shift) &&
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.ToggleAutoColor) ==
+                new WorkflowShortcut(
+                    "b",
+                    WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Shift) &&
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.ToggleAutoLevels) ==
+                new WorkflowShortcut(
+                    "l",
+                    WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Shift) &&
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.ToggleNoiseReduction) ==
+                new WorkflowShortcut(
+                    "n",
+                    WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Alt) &&
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.CropTool) ==
+                new WorkflowShortcut("r", WorkflowShortcutModifiers.None) &&
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.BasePickerTool) ==
+                new WorkflowShortcut("w", WorkflowShortcutModifiers.None) &&
+            WorkflowShortcutActions.Group(WorkflowShortcutAction.AutoTone) ==
+                WorkflowShortcutGroup.Develop &&
+            WorkflowShortcutActions.Group(WorkflowShortcutAction.CropTool) ==
+                WorkflowShortcutGroup.Develop,
+            "workflow_shortcut_develop_menu_keys_match_mac");
+
+        // macOS WorkflowShortcutActions.swift:188-191 — 결함 네 도구는 shift+Q / Q / B / S,
+        // 묶음은 develop 입니다. 이전/이후(\)도 macOS 는 develop 묶음입니다(:130).
+        Check(
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.AutoDefectTool) ==
+                new WorkflowShortcut("q", WorkflowShortcutModifiers.Shift) &&
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.GuidedDefectTool) ==
+                new WorkflowShortcut("q", WorkflowShortcutModifiers.None) &&
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.BrushDefectTool) ==
+                new WorkflowShortcut("b", WorkflowShortcutModifiers.None) &&
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.CloneStampTool) ==
+                new WorkflowShortcut("s", WorkflowShortcutModifiers.None) &&
+            WorkflowShortcutActions.Group(WorkflowShortcutAction.AutoDefectTool) ==
+                WorkflowShortcutGroup.Develop &&
+            WorkflowShortcutActions.Group(WorkflowShortcutAction.CloneStampTool) ==
+                WorkflowShortcutGroup.Develop &&
+            WorkflowShortcutActions.Group(WorkflowShortcutAction.ToggleBeforeAfter) ==
+                WorkflowShortcutGroup.Develop,
+            "workflow_shortcut_defect_tool_keys_match_mac");
+
+        Check(
+            defaults.Resolve("q", WorkflowShortcutModifiers.Shift) ==
+                WorkflowShortcutAction.AutoDefectTool &&
+            defaults.Resolve("q", WorkflowShortcutModifiers.None) ==
+                WorkflowShortcutAction.GuidedDefectTool &&
+            defaults.Resolve("b", WorkflowShortcutModifiers.None) ==
+                WorkflowShortcutAction.BrushDefectTool &&
+            defaults.Resolve("s", WorkflowShortcutModifiers.None) ==
+                WorkflowShortcutAction.CloneStampTool,
+            "workflow_shortcut_defect_tool_keys_resolve");
+
+        Check(
             defaults.Resolve("p", WorkflowShortcutModifiers.None) ==
                 WorkflowShortcutAction.PickPhoto &&
             defaults.Resolve("x", WorkflowShortcutModifiers.None) ==

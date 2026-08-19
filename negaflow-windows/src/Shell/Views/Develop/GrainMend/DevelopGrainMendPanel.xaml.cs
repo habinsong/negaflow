@@ -282,18 +282,19 @@ public sealed partial class DevelopGrainMendPanel : UserControl
 
     internal void RequestPreview() => requestPreview?.Invoke();
 
-    private async void OnGrainMendAutoClicked(object sender, RoutedEventArgs args)
+    /// <summary>
+    /// macOS <c>handleDevelopToolShortcutRequest</c> 의 <c>.autoDefectTool</c> — 전체 프레임
+    /// 표시 ROI(0,0,1,1)로 검출을 겁니다. 칩을 누른 것과 같은 길입니다.
+    /// </summary>
+    internal Task RunAutoDefectAsync()
     {
-        _ = sender;
-        _ = args;
         SetTool(GrainMendTool.None);
-        await detector.DetectAsync(new DefectRect(0.0, 0.0, 1.0, 1.0));
+        return detector.DetectAsync(new DefectRect(0.0, 0.0, 1.0, 1.0));
     }
 
-    private void OnGrainMendGuidedClicked(object sender, RoutedEventArgs args)
+    /// <summary>macOS <c>.guidedDefectTool</c> — 켜져 있으면 끕니다.</summary>
+    internal void ToggleGuidedDefect()
     {
-        _ = sender;
-        _ = args;
         review.ClearPending();
         SetTool(grainMend.Strokes.Tool == GrainMendTool.Guided
             ? GrainMendTool.None
@@ -304,22 +305,44 @@ public sealed partial class DevelopGrainMendPanel : UserControl
         }
     }
 
+    /// <summary>macOS <c>.brushDefectTool</c> — 켜져 있으면 끕니다.</summary>
+    internal void ToggleBrushDefect() =>
+        SetTool(grainMend.Strokes.Tool == GrainMendTool.Brush
+            ? GrainMendTool.None
+            : GrainMendTool.Brush);
+
+    /// <summary>macOS <c>.cloneStampTool</c> — 켜져 있으면 끕니다.</summary>
+    internal void ToggleCloneStamp() =>
+        SetTool(grainMend.Strokes.Tool == GrainMendTool.Clone
+            ? GrainMendTool.None
+            : GrainMendTool.Clone);
+
+    private async void OnGrainMendAutoClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        await RunAutoDefectAsync();
+    }
+
+    private void OnGrainMendGuidedClicked(object sender, RoutedEventArgs args)
+    {
+        _ = sender;
+        _ = args;
+        ToggleGuidedDefect();
+    }
+
     private void OnGrainMendBrushClicked(object sender, RoutedEventArgs args)
     {
         _ = sender;
         _ = args;
-        SetTool(grainMend.Strokes.Tool == GrainMendTool.Brush
-            ? GrainMendTool.None
-            : GrainMendTool.Brush);
+        ToggleBrushDefect();
     }
 
     private void OnGrainMendCloneClicked(object sender, RoutedEventArgs args)
     {
         _ = sender;
         _ = args;
-        SetTool(grainMend.Strokes.Tool == GrainMendTool.Clone
-            ? GrainMendTool.None
-            : GrainMendTool.Clone);
+        ToggleCloneStamp();
     }
 
     private void OnGrainMendAutoResetClicked(object sender, RoutedEventArgs args)
