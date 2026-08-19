@@ -125,7 +125,8 @@ scripts\build.ps1 -Preset x64-release            네이티브
 scripts\build-managed.ps1 -Preset x64-release    관리
 scripts\ci-gate.ps1 -Preset x64-release          로컬 게이트 전체
 현재 기준(2026-08-19 x64-release 실측): native **101/101**, catalog **731**,
-shell **1333** assertions, 경고 0. 이 숫자가 줄면 안 된다.
+shell **1339** assertions, 경고 0. 이 숫자가 줄면 안 된다.
+카탈로그 시험이 가끔 빨간색이던 것은 검사기가 디렉터리 승격을 막던 것이고 고쳤다(문서 17).
 GPU 경로마다 CPU 폴백을 두고 두 경로가 같은 값을 내는지 시험으로 고정해라. WARP 로도 돌려라.
 
 ■ 보고 규칙

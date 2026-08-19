@@ -167,6 +167,7 @@
 | [`13-performance-playbook.md`](13-performance-playbook.md) | **성능·품질 플레이북** — 04 가 *무엇을* 옮길지라면 이건 *어떻게* 빠르게. 계측기부터 · 스레드 풀 · 컴파일러 스위치 · vHGW 형태학 · 분리형 컨볼루션 · 더블 버퍼 다운로드 · 품질 지키는 법 |
 | [`14-remaining-gpu-methodology.md`](14-remaining-gpu-methodology.md) | GPU 방법론(2026-08-18). **할 일 목록 아님.** 2·3·6·7.2절 무효. 지금 기준은 [`15`](15-gpu-handoff.md) |
 | [`15-gpu-handoff.md`](15-gpu-handoff.md) | **GPU 인수인계.** 3.1–3.8 **닫음.** 규칙 일곱 · 도는 자리 · 확인 못 한 것(4절) |
+| [`17-storage-robustness.md`](17-storage-robustness.md) | **카탈로그 백업·복원이 간헐적으로 깨지던 원인(2026-08-19).** 디렉터리 승격이 검사기 때문에 `win32=5` 로 막힘. 12회 중 5회 실패 → 15회 중 0회 |
 | [`16-preview-handoff.md`](16-preview-handoff.md) | ☠️ **프리뷰/정착 프리뷰 인수인계(2026-08-19).** invert→tone 상주 + BGRA8 출력. Release 3600 `nocurve` 단계 합 **65.0 ms**, `output` **7.01 ms**. 남은 것: 커브 중간 왕복 · 앱 1GB 누수 실측 · A4 `run-app` |
 
 ---
