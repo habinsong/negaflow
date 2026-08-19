@@ -191,6 +191,13 @@ public sealed partial class AppMenuBarView : UserControl
         SetItem(AddFlatbedFrameItem, "scanAddFrame", WorkflowShortcutAction.AddFlatbedFrame);
         SetItem(RemoveFlatbedFrameItem, "scanRemoveFrame",
             WorkflowShortcutAction.RemoveFlatbedFrame);
+
+        // AppLocalizedText.menuExport 는 설정의 단축키 묶음 머리줄과 같은 문구입니다.
+        string export = AppResources.Get("shortcutGroupExport", "Text");
+        ExportMenu.Title = export;
+        AutomationProperties.SetName(ExportMenu, export);
+        SetItem(ExportMenuQuickItem, "commandQuickExport", WorkflowShortcutAction.QuickExport);
+        SetItem(ExportMenuExportItem, "commandExport", WorkflowShortcutAction.ExportPhoto);
         SetItem(
             ResetAdjustmentsItem,
             "shortcutResetAdjustments",

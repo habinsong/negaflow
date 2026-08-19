@@ -419,5 +419,22 @@
                 AutomationProperties.AutomationId="negaflow.menu.scanner.flatbed-remove"
                 Click="OnRemoveFlatbedFrameClick" />
         </MenuBarItem>
+        <!--
+          macOS AppWorkflowMenuCommands CommandMenu(.menuExport) — 두 항목입니다.
+          잠금은 canQuickExportSelection / canExportSelection 을 따릅니다.
+        -->
+        <MenuBarItem
+            x:Name="ExportMenu"
+            AutomationProperties.AutomationId="negaflow.menu.export"
+            Title="Export">
+            <MenuFlyoutItem
+                x:Name="ExportMenuQuickItem"
+                AutomationProperties.AutomationId="negaflow.menu.export.quick"
+                Click="OnQuickExportClick" />
+            <MenuFlyoutItem
+                x:Name="ExportMenuExportItem"
+                AutomationProperties.AutomationId="negaflow.menu.export.export"
+                Click="OnExportClick" />
+        </MenuBarItem>
     </MenuBar>
 </UserControl>

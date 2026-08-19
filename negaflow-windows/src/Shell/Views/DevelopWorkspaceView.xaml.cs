@@ -98,6 +98,14 @@ public sealed partial class DevelopWorkspaceView : UserControl
 
     public bool CanQuickExport => panel?.CanExport == true;
 
+    /// <summary>
+    /// macOS <c>canExportSelection</c> = <c>canQuickExportSelection</c> 에 이름 규칙이
+    /// 올바른지를 더한 것입니다(<c>AppModel+BatchExport.swift:7-9</c>).
+    /// </summary>
+    public bool CanExportPhoto =>
+        CanQuickExport &&
+        ExportNamingTemplate.IsValid(LeftPanel.ExportPanel.Settings.NamingTemplate);
+
     public void Initialize(
         WorkspacePresentationState state,
         NativeEngineStatus nativeEngineStatus)

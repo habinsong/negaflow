@@ -118,6 +118,7 @@ public sealed partial class WorkspaceShellView : UserControl
         LibraryWorkspace.ScannerMenuStateChanged += OnScannerMenuStateChanged;
         SyncDevelopMenu();
         AppMenu.SyncScannerState(LibraryWorkspace.ScannerMenuState);
+        SyncExportMenu();
         UpdateWorkspace(state.Current.SelectedWorkspace);
         Unloaded += OnUnloaded;
     }
@@ -398,6 +399,7 @@ public sealed partial class WorkspaceShellView : UserControl
         _ = args;
         workspaceState?.SetActiveFrame(libraryHost?.ActiveFrameId);
         SyncDevelopMenu();
+        SyncExportMenu();
     }
 
     private void OnLibraryFrameEdited(object? sender, EventArgs args)
@@ -413,6 +415,12 @@ public sealed partial class WorkspaceShellView : UserControl
         _ = args;
         AppMenu.SyncScannerState(LibraryWorkspace.ScannerMenuState);
     }
+
+    /// <summary>macOS 내보내기 메뉴의 두 잠금을 지금 값으로 맞춥니다.</summary>
+    private void SyncExportMenu() =>
+        AppMenu.SyncExportState(
+            DevelopWorkspace.CanQuickExport,
+            DevelopWorkspace.CanExportPhoto);
 
     /// <summary>
     /// macOS 현상 메뉴는 그릴 때마다 <c>actionableFrame</c> 을 읽습니다. WinUI 는 메뉴를 여는
@@ -455,6 +463,7 @@ public sealed partial class WorkspaceShellView : UserControl
         // 못했으면(사진이 없거나 편집이 거절됐으면) 그 체크는 거짓말이므로 되돌립니다.
         SyncDevelopMenu();
         AppMenu.SyncScannerState(LibraryWorkspace.ScannerMenuState);
+        SyncExportMenu();
     }
 
     private async void OnToolbarQuickExportRequested(object? sender, EventArgs args)
@@ -468,6 +477,7 @@ public sealed partial class WorkspaceShellView : UserControl
     {
         _ = sender;
         _ = args;
+        SyncExportMenu();
         Toolbar.SetQuickExportEnabled(DevelopWorkspace.CanQuickExport);
     }
 

@@ -47,4 +47,17 @@ public sealed partial class AppMenuBarView
         AddFlatbedFrameItem.Visibility = flatbed;
         RemoveFlatbedFrameItem.Visibility = flatbed;
     }
+
+    /// <summary>
+    /// macOS 내보내기 메뉴의 잠금입니다 — <c>canQuickExportSelection</c> ·
+    /// <c>canExportSelection</c>(= 앞의 것 + 이름 규칙이 올바를 때).
+    /// </summary>
+    public void SyncExportState(bool canQuickExport, bool canExport)
+    {
+        ExportMenuQuickItem.IsEnabled = canQuickExport;
+        ExportMenuExportItem.IsEnabled = canExport;
+        // 파일 메뉴의 같은 두 명령도 같은 잠금을 씁니다 — macOS 도 두 자리에 같은 것을 냅니다.
+        QuickExportItem.IsEnabled = canQuickExport;
+        ExportItem.IsEnabled = canExport;
+    }
 }
