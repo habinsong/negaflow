@@ -263,7 +263,29 @@ public sealed partial class WorkspaceShellView : UserControl
             case WorkflowShortcutAction.PickPhoto:
             case WorkflowShortcutAction.RejectPhoto:
             case WorkflowShortcutAction.DeletePhoto:
+            case WorkflowShortcutAction.PreviousPhoto:
+            case WorkflowShortcutAction.NextPhoto:
+            case WorkflowShortcutAction.ClearPick:
+            case WorkflowShortcutAction.RateZero:
+            case WorkflowShortcutAction.RateOne:
+            case WorkflowShortcutAction.RateTwo:
+            case WorkflowShortcutAction.RateThree:
+            case WorkflowShortcutAction.RateFour:
+            case WorkflowShortcutAction.RateFive:
+            case WorkflowShortcutAction.CreateVirtualCopy:
                 return LibraryWorkspace.InvokeShortcut(action);
+            case WorkflowShortcutAction.RotateLeft:
+                DevelopWorkspace.UpdateImageTransform(state => state.Rotate(clockwise: false));
+                return true;
+            case WorkflowShortcutAction.RotateRight:
+                DevelopWorkspace.UpdateImageTransform(state => state.Rotate(clockwise: true));
+                return true;
+            case WorkflowShortcutAction.FlipHorizontal:
+                DevelopWorkspace.UpdateImageTransform(state => state.FlipHorizontally());
+                return true;
+            case WorkflowShortcutAction.FlipVertical:
+                DevelopWorkspace.UpdateImageTransform(state => state.FlipVertically());
+                return true;
         }
         // 나머지는 지금 보이는 화면이 맡습니다. 보이지 않는 화면이 조용히 사진을 바꾸면
         // 사용자는 무엇이 일어났는지 볼 수 없습니다.

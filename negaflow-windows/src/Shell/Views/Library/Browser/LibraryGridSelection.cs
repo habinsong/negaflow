@@ -103,17 +103,62 @@ internal sealed class LibraryGridSelection
     /// </summary>
     internal bool Move(int offset)
     {
-        if (view.FrameListView.Items.Count == 0)
+        IReadOnlyList<LibraryFrameListItem> order = VisibleGridItems();
+        if (order.Count == 0)
         {
             return false;
         }
-        int current = view.FrameListView.SelectedIndex;
+        string? currentId = (view.FrameListView.SelectedItem as LibraryFrameListItem)?.Id
+            ?? view.libraryHost?.ActiveFrameId;
+        int current = -1;
+        if (currentId is not null)
+        {
+            for (int index = 0; index < order.Count; ++index)
+            {
+                if (string.Equals(order[index].Id, currentId, StringComparison.Ordinal))
+                {
+                    current = index;
+                    break;
+                }
+            }
+        }
         int next = current < 0
-            ? (offset > 0 ? 0 : view.FrameListView.Items.Count - 1)
-            : Math.Clamp(current + offset, 0, view.FrameListView.Items.Count - 1);
-        view.FrameListView.SelectedIndex = next;
-        view.FrameListView.ScrollIntoView(view.FrameListView.Items[next]);
+            ? (offset > 0 ? 0 : order.Count - 1)
+            : Math.Clamp(current + offset, 0, order.Count - 1);
+        SelectFrame(order[next].Id);
         return true;
+    }
+
+    /// <summary>
+    /// 폴더/필름 묶음 GridView 는 <see cref="GridView.Items"/> 가 그룹이라 사진을 펼칩니다.
+    /// macOS <c>interactionFrameIDs</c> 와 같은 훑기 순서입니다.
+    /// </summary>
+    private List<LibraryFrameListItem> VisibleGridItems()
+    {
+        List<LibraryFrameListItem> items = [];
+        CollectVisible(view.FrameListView.Items, items);
+        return items;
+    }
+
+    private static void CollectVisible(
+        System.Collections.IEnumerable source,
+        List<LibraryFrameListItem> items)
+    {
+        foreach (object candidate in source)
+        {
+            switch (candidate)
+            {
+                case LibraryFrameListItem item:
+                    items.Add(item);
+                    break;
+                case IEnumerable<LibraryFrameListItem> section:
+                    items.AddRange(section);
+                    break;
+                case Microsoft.UI.Xaml.Data.ICollectionViewGroup group:
+                    CollectVisible(group.GroupItems, items);
+                    break;
+            }
+        }
     }
 
     internal void Synchronize(IReadOnlyList<LibraryFrameListItem> visibleItems)
@@ -172,10 +217,9 @@ internal sealed class LibraryGridSelection
     /// <summary>트리에서 frame 을 누르면 격자의 선택도 따라갑니다.</summary>
     internal void SelectFrame(string frameId)
     {
-        foreach (object candidate in view.FrameListView.Items)
+        foreach (LibraryFrameListItem item in VisibleGridItems())
         {
-            if (candidate is LibraryFrameListItem item &&
-                string.Equals(item.Id, frameId, StringComparison.Ordinal))
+            if (string.Equals(item.Id, frameId, StringComparison.Ordinal))
             {
                 view.FrameListView.SelectedItem = item;
                 view.FrameListView.ScrollIntoView(item);

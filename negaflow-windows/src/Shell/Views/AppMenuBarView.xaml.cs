@@ -8,7 +8,7 @@ namespace Negaflow.Shell.Views;
 
 /// <summary>
 /// macOS <c>AppStandardMenuCommands</c> 와 <c>AppWorkflowMenuCommands</c> 의
-/// 앱·파일·편집·보기·라이브러리 메뉴입니다. Windows 에는 시스템 앱 메뉴가 없어서 창 안
+/// 앱·파일·편집·보기·라이브러리·사진 메뉴입니다. Windows 에는 시스템 앱 메뉴가 없어서 창 안
 /// <see cref="MenuBar"/> 가 그 자리입니다.
 /// </summary>
 public sealed partial class AppMenuBarView : UserControl
@@ -85,14 +85,52 @@ public sealed partial class AppMenuBarView : UserControl
         SetItem(LibraryGridItem, "libraryCullingGrid", WorkflowShortcutAction.LibraryGrid);
         SetItem(LibraryCompareItem, "libraryCullingCompare", WorkflowShortcutAction.LibraryCompare);
         SetItem(LibrarySurveyItem, "libraryCullingSurvey", WorkflowShortcutAction.LibrarySurvey);
+
+        string photo = AppResources.Get("shortcutGroupPhoto", "Text");
+        PhotoMenu.Title = photo;
+        AutomationProperties.SetName(PhotoMenu, photo);
+        SetItem(PreviousPhotoItem, "shortcutPreviousPhoto", WorkflowShortcutAction.PreviousPhoto);
+        SetItem(NextPhotoItem, "shortcutNextPhoto", WorkflowShortcutAction.NextPhoto);
+        SetItem(PhotoPickItem, "shortcutPickPhoto", WorkflowShortcutAction.PickPhoto);
+        SetItem(ClearPickItem, "shortcutClearPick", WorkflowShortcutAction.ClearPick);
+        SetItem(PhotoRejectItem, "shortcutRejectPhoto", WorkflowShortcutAction.RejectPhoto);
+        SetItem(PhotoDeleteItem, "shortcutDeletePhoto", WorkflowShortcutAction.DeletePhoto);
+        SetItem(RateZeroItem, "shortcutRateZero", WorkflowShortcutAction.RateZero);
+        SetStarItem(RateOneItem, 1, WorkflowShortcutAction.RateOne);
+        SetStarItem(RateTwoItem, 2, WorkflowShortcutAction.RateTwo);
+        SetStarItem(RateThreeItem, 3, WorkflowShortcutAction.RateThree);
+        SetStarItem(RateFourItem, 4, WorkflowShortcutAction.RateFour);
+        SetStarItem(RateFiveItem, 5, WorkflowShortcutAction.RateFive);
+        SetCaption(VirtualCopyItem, AppResources.Get("libraryVirtualCopy", "Content"),
+            WorkflowShortcutAction.CreateVirtualCopy);
+        SetItem(PhotoCopyDevelopItem, "shortcutCopyDevelopSettings",
+            WorkflowShortcutAction.CopyDevelopSettings);
+        SetItem(PhotoPasteDevelopItem, "shortcutPasteDevelopSettings",
+            WorkflowShortcutAction.PasteDevelopSettings);
+        SetItem(RotateLeftItem, "shortcutRotateLeft", WorkflowShortcutAction.RotateLeft);
+        SetItem(RotateRightItem, "shortcutRotateRight", WorkflowShortcutAction.RotateRight);
+        SetItem(FlipHorizontalItem, "shortcutFlipHorizontal",
+            WorkflowShortcutAction.FlipHorizontal);
+        SetItem(FlipVerticalItem, "shortcutFlipVertical", WorkflowShortcutAction.FlipVertical);
     }
 
     private static void SetItem(
         MenuFlyoutItem item,
         string key,
+        WorkflowShortcutAction action) =>
+        SetCaption(item, AppResources.Get(key, "Text"), action);
+
+    private static void SetStarItem(
+        MenuFlyoutItem item,
+        int value,
+        WorkflowShortcutAction action) =>
+        SetCaption(item, AppResources.FormatIntegers("libraryStarFormat", "Text", value), action);
+
+    private static void SetCaption(
+        MenuFlyoutItem item,
+        string text,
         WorkflowShortcutAction action)
     {
-        string text = AppResources.Get(key, "Text");
         item.Text = text;
         AutomationProperties.SetName(item, text);
         item.KeyboardAcceleratorTextOverride =
@@ -181,6 +219,48 @@ public sealed partial class AppMenuBarView : UserControl
 
     private void OnLibrarySurveyClick(object sender, RoutedEventArgs args) =>
         RaiseCommand(sender, args, WorkflowShortcutAction.LibrarySurvey);
+
+    private void OnPreviousPhotoClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.PreviousPhoto);
+
+    private void OnNextPhotoClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.NextPhoto);
+
+    private void OnClearPickClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.ClearPick);
+
+    private void OnRateZeroClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.RateZero);
+
+    private void OnRateOneClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.RateOne);
+
+    private void OnRateTwoClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.RateTwo);
+
+    private void OnRateThreeClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.RateThree);
+
+    private void OnRateFourClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.RateFour);
+
+    private void OnRateFiveClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.RateFive);
+
+    private void OnVirtualCopyClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.CreateVirtualCopy);
+
+    private void OnRotateLeftClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.RotateLeft);
+
+    private void OnRotateRightClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.RotateRight);
+
+    private void OnFlipHorizontalClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.FlipHorizontal);
+
+    private void OnFlipVerticalClick(object sender, RoutedEventArgs args) =>
+        RaiseCommand(sender, args, WorkflowShortcutAction.FlipVertical);
 
     private void RaiseCommand(object sender, RoutedEventArgs args, WorkflowShortcutAction action)
     {

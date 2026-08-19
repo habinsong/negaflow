@@ -103,6 +103,41 @@ internal static class WorkflowShortcutTests
             "workflow_shortcut_library_culling_keys_match_mac");
 
         Check(
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.PreviousPhoto) ==
+                new WorkflowShortcut("[", WorkflowShortcutModifiers.None) &&
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.NextPhoto) ==
+                new WorkflowShortcut("]", WorkflowShortcutModifiers.None) &&
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.ClearPick) ==
+                new WorkflowShortcut("u", WorkflowShortcutModifiers.None) &&
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.RateZero) ==
+                new WorkflowShortcut("0", WorkflowShortcutModifiers.None) &&
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.RateFive) ==
+                new WorkflowShortcut("5", WorkflowShortcutModifiers.None) &&
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.CreateVirtualCopy) ==
+                new WorkflowShortcut("'", WorkflowShortcutModifiers.Control) &&
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.RotateLeft) ==
+                new WorkflowShortcut(
+                    "[",
+                    WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Shift) &&
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.RotateRight) ==
+                new WorkflowShortcut(
+                    "]",
+                    WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Shift) &&
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.FlipHorizontal) ==
+                new WorkflowShortcut(
+                    "h",
+                    WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Alt) &&
+            WorkflowShortcutActions.Default(WorkflowShortcutAction.FlipVertical) ==
+                new WorkflowShortcut(
+                    "v",
+                    WorkflowShortcutModifiers.Control | WorkflowShortcutModifiers.Alt) &&
+            WorkflowShortcutActions.Group(WorkflowShortcutAction.PreviousPhoto) ==
+                WorkflowShortcutGroup.Photo &&
+            WorkflowShortcutActions.Group(WorkflowShortcutAction.RotateLeft) ==
+                WorkflowShortcutGroup.Develop,
+            "workflow_shortcut_photo_menu_keys_match_mac");
+
+        Check(
             defaults.Resolve("p", WorkflowShortcutModifiers.None) ==
                 WorkflowShortcutAction.PickPhoto &&
             defaults.Resolve("x", WorkflowShortcutModifiers.None) ==

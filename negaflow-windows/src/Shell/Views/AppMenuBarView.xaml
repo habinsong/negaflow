@@ -173,5 +173,94 @@
                 AutomationProperties.AutomationId="negaflow.menu.library.survey"
                 Click="OnLibrarySurveyClick" />
         </MenuBarItem>
+        <!--
+          macOS AppWorkflowMenuCommands CommandMenu(.menuPhoto).
+          이전/다음 · 깃발 · 별점 · 가상 사본 · 현상 설정 · 회전/반전. 창작 항목 없음.
+        -->
+        <MenuBarItem
+            x:Name="PhotoMenu"
+            AutomationProperties.AutomationId="negaflow.menu.photo"
+            Title="Photo">
+            <MenuFlyoutItem
+                x:Name="PreviousPhotoItem"
+                AutomationProperties.AutomationId="negaflow.menu.photo.previous"
+                Click="OnPreviousPhotoClick" />
+            <MenuFlyoutItem
+                x:Name="NextPhotoItem"
+                AutomationProperties.AutomationId="negaflow.menu.photo.next"
+                Click="OnNextPhotoClick" />
+            <MenuFlyoutSeparator />
+            <MenuFlyoutItem
+                x:Name="PhotoPickItem"
+                AutomationProperties.AutomationId="negaflow.menu.photo.pick"
+                Click="OnPickClick" />
+            <MenuFlyoutItem
+                x:Name="ClearPickItem"
+                AutomationProperties.AutomationId="negaflow.menu.photo.clear-pick"
+                Click="OnClearPickClick" />
+            <MenuFlyoutItem
+                x:Name="PhotoRejectItem"
+                AutomationProperties.AutomationId="negaflow.menu.photo.reject"
+                Click="OnRejectClick" />
+            <MenuFlyoutItem
+                x:Name="PhotoDeleteItem"
+                AutomationProperties.AutomationId="negaflow.menu.photo.delete"
+                Click="OnDeletePhotoClick" />
+            <MenuFlyoutSeparator />
+            <MenuFlyoutItem
+                x:Name="RateZeroItem"
+                AutomationProperties.AutomationId="negaflow.menu.photo.rate-0"
+                Click="OnRateZeroClick" />
+            <MenuFlyoutItem
+                x:Name="RateOneItem"
+                AutomationProperties.AutomationId="negaflow.menu.photo.rate-1"
+                Click="OnRateOneClick" />
+            <MenuFlyoutItem
+                x:Name="RateTwoItem"
+                AutomationProperties.AutomationId="negaflow.menu.photo.rate-2"
+                Click="OnRateTwoClick" />
+            <MenuFlyoutItem
+                x:Name="RateThreeItem"
+                AutomationProperties.AutomationId="negaflow.menu.photo.rate-3"
+                Click="OnRateThreeClick" />
+            <MenuFlyoutItem
+                x:Name="RateFourItem"
+                AutomationProperties.AutomationId="negaflow.menu.photo.rate-4"
+                Click="OnRateFourClick" />
+            <MenuFlyoutItem
+                x:Name="RateFiveItem"
+                AutomationProperties.AutomationId="negaflow.menu.photo.rate-5"
+                Click="OnRateFiveClick" />
+            <MenuFlyoutSeparator />
+            <MenuFlyoutItem
+                x:Name="VirtualCopyItem"
+                AutomationProperties.AutomationId="negaflow.menu.photo.virtual-copy"
+                Click="OnVirtualCopyClick" />
+            <MenuFlyoutItem
+                x:Name="PhotoCopyDevelopItem"
+                AutomationProperties.AutomationId="negaflow.menu.photo.copy-develop"
+                Click="OnCopyDevelopSettingsClick" />
+            <MenuFlyoutItem
+                x:Name="PhotoPasteDevelopItem"
+                AutomationProperties.AutomationId="negaflow.menu.photo.paste-develop"
+                Click="OnPasteDevelopSettingsClick" />
+            <MenuFlyoutSeparator />
+            <MenuFlyoutItem
+                x:Name="RotateLeftItem"
+                AutomationProperties.AutomationId="negaflow.menu.photo.rotate-left"
+                Click="OnRotateLeftClick" />
+            <MenuFlyoutItem
+                x:Name="RotateRightItem"
+                AutomationProperties.AutomationId="negaflow.menu.photo.rotate-right"
+                Click="OnRotateRightClick" />
+            <MenuFlyoutItem
+                x:Name="FlipHorizontalItem"
+                AutomationProperties.AutomationId="negaflow.menu.photo.flip-horizontal"
+                Click="OnFlipHorizontalClick" />
+            <MenuFlyoutItem
+                x:Name="FlipVerticalItem"
+                AutomationProperties.AutomationId="negaflow.menu.photo.flip-vertical"
+                Click="OnFlipVerticalClick" />
+        </MenuBarItem>
     </MenuBar>
 </UserControl>
