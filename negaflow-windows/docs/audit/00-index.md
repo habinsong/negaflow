@@ -184,7 +184,7 @@
 | [`15-gpu-handoff.md`](15-gpu-handoff.md) | GPU 인수인계. 3.1–3.8 닫음. 남은 확인 4절 |
 | [`16-preview-handoff.md`](16-preview-handoff.md) | 프리뷰 상주 + BGRA8. 3600 `nocurve` 단계 합 **65.0 ms**. 앱 슬라이더 벽시계는 못 잼 |
 | [`18-localization.md`](18-localization.md) | **다국어(2026-08-20).** 언어를 바꿔도 안 바뀌던 원인 셋 · macOS 표와 전수 대조기(`scripts/compare-mac-strings.py`, 2,670건 중 다른 것 0) · OS 강제 예외 4개 |
-| [`19-image-pipeline-frame4-frame5.md`](19-image-pipeline-frame4-frame5.md) | **스캔 이미지(2026-08-20).** frame_4·frame_5 노이즈/베이스 보고 계측. 디코드·ICM·GPU·스케일러 **무죄 확정** · 원인은 원본 뷰가 레시피를 얹던 것(고침) · 사진앱 불일치는 **고치면 macOS 가 깨짐** · macOS 대조는 **못 함** |
+| [`19-image-pipeline-frame4-frame5.md`](19-image-pipeline-frame4-frame5.md) | **스캔 이미지(2026-08-20).** 맥 내보내기와 **화소 대조 완료** — 노이즈는 같음(색공간 P3 vs sRGB 착시) · 톤 차이는 **dmin 하나** · frame_5 는 맞고 frame_4 만 어긋남 · 맥이 고른 성분까지 특정(6.7) |
 | [`17-storage-robustness.md`](17-storage-robustness.md) | 카탈로그 디렉터리 승격 `win32=5` 재시도. 12회 중 5회 실패 → 15회 중 0회 |
 
 ---
